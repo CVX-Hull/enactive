@@ -1,8 +1,9 @@
 import { isDeepStrictEqual } from 'node:util';
 import { createHash } from 'node:crypto';
 import { Agent } from '@earendil-works/pi-agent-core';
-import { Type, AssistantMessageEventStream } from '@earendil-works/pi-ai';
+import { Type, AssistantMessageEventStream, isRetryableAssistantError } from '@earendil-works/pi-ai';
 import { stream } from '@earendil-works/pi-ai/api/openai-completions';
+import { retryProviderRequest } from '@earendil-works/pi-ai/utils/provider-retry';
 import { McpClient, StdioTransport, toLlmContent } from '@earendil-works/pi-mcp';
 
 export const INPUT_LIMIT_BYTES = 1_048_576;
@@ -10,6 +11,8 @@ export const INPUT_LIMIT_BYTES = 1_048_576;
 // Their values can alter request headers or enable raw SDK logging.
 const AMBIENT_PROVIDER_SETTINGS = ['OPENAI_LOG', 'OPENAI_CUSTOM_HEADERS', 'OPENAI_ORG_ID', 'OPENAI_PROJECT_ID'];
 const MCP_LIMIT_BYTES = 32 * 1_048_576;
+const PROVIDER_ERROR_LIMIT_BYTES = 16_384;
+const MAX_RETRY_DELAY_MS = 5000;
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const positive = value => typeof value === 'number' && Number.isFinite(value) && value > 0;
 const text = value => typeof value === 'string' && value.length > 0;
@@ -135,6 +138,47 @@ function payloadSize(payload) {
   return {text_parts:textParts, text_bytes:textBytes, image_parts:imageParts, image_bytes:imageBytes, payload_bytes:Buffer.byteLength(JSON.stringify(payload))};
 }
 
+// Inspect only a bounded refusal, never assistant output. Reader cancellation
+// releases a pending read without waiting on an untrusted source's cancel hook.
+async function refusalBody(response, signal) {
+  signal.throwIfAborted();
+  if (!response.body) return '';
+  const reader = response.body.getReader(), chunks = [];
+  let bytes = 0;
+  const cancel = () => { void reader.cancel().catch(() => {}); };
+  signal.addEventListener('abort', cancel, {once:true});
+  try {
+    for (;;) {
+      signal.throwIfAborted();
+      const {done, value} = await reader.read();
+      signal.throwIfAborted();
+      if (done) break;
+      bytes += value.byteLength;
+      if (bytes > PROVIDER_ERROR_LIMIT_BYTES) {
+        cancel();
+        throw new HostError('provider-error');
+      }
+      chunks.push(value);
+    }
+    return new TextDecoder('utf-8', {fatal:true}).decode(Buffer.concat(chunks));
+  } finally {
+    signal.removeEventListener('abort', cancel);
+    reader.releaseLock();
+  }
+}
+
+function retryableRefusal(body) {
+  const error = JSON.parse(body)?.error;
+  if (!object(error)) return false;
+  const kind = [error.type, error.code].filter(text).join(' ');
+  const details = [error.type, error.code, error.message].filter(text).join(' ');
+  // Pi's positive classifier is deliberately broad. Explicit non-transient
+  // kinds must win even when their message also mentions a rate limit or 429.
+  if (/(?:auth|api[_ -]?key|permission|invalid|malformed|context|quota|billing|budget|payment|credit)/i.test(kind)
+      || /(?:authenticat|authorizat|api[_ -]?key|permission|invalid[_ -]?(?:request|parameter)|malformed|context[_ -]?(?:length|window)|quota|billing|budget|payment|credit)/i.test(details)) return false;
+  return isRetryableAssistantError({stopReason:'error', errorMessage:details});
+}
+
 /** Run one finite host. fetch injection exercises the actual Pi serializer in tests. */
 export async function runHost(options) {
   const started = performance.now();
@@ -247,33 +291,63 @@ export async function runHost(options) {
         const apiKey = (options.env ?? process.env)[configuration.api_key_env];
         if (!text(apiKey)) { stop('missing-api-key'); return failureStream(model, fatal); }
         try {
-          requestId = `request-${++requests}`;
           requestUsageAvailable = false;
           requestTimer = setTimeout(() => stop('request-timeout'), Math.min(configuration.request_timeout_seconds * 1000, totalMs));
           const requestSignal = AbortSignal.any([streamOptions.signal, stopped.signal].filter(Boolean));
-          let first = false;
           const backendModels = new Set();
           const actualFetch = options.fetch ?? globalThis.fetch;
-          const observedFetch = async (url, init) => {
+          let attempts = 0, previousRequestId;
+          const observedFetch = (url, init) => retryProviderRequest(async () => {
+            requestSignal.throwIfAborted();
             if (fatal) throw new HostError(fatal);
+            if (requests >= configuration.max_requests) {
+              stop('request-limit');
+              throw new HostError(fatal);
+            }
+            requireThat(typeof init?.body === 'string', 'invalid-provider-payload');
+            const payload = JSON.parse(init.body);
+            const attemptId = requestId = `request-${++requests}`;
+            requestInFlight = true;
+            attempts++;
+            if (previousRequestId) emit('provider-retry', {stage:'started', request_id:attemptId, previous_request_id:previousRequestId});
+            emit('request-start', {request_id:attemptId, model:model.id, provider:model.provider, ...payloadSize(payload), payload});
             let response;
             try { response = await actualFetch(url, init); }
             catch { if (!fatal) stop('provider-error'); throw new HostError(fatal); }
-            emit('response-headers', {request_id:requestId, status:response.status});
-            if (!response.body) return response;
-            const body = response.body.pipeThrough(new TransformStream({transform(chunk, controller) {
-              if (!first) { first = true; emit('response-first-chunk', {request_id:requestId}); }
+            if (fatal || requestSignal.aborted) {
+              void response.body?.cancel().catch(() => {});
+              throw new HostError(fatal ?? 'provider-error');
+            }
+            emit('response-headers', {request_id:attemptId, status:response.status});
+            let first = false;
+            const body = response.body?.pipeThrough(new TransformStream({transform(chunk, controller) {
+              if (!first) { first = true; emit('response-first-chunk', {request_id:attemptId}); }
               controller.enqueue(chunk);
             }}));
-            return new Response(body, {status:response.status, statusText:response.statusText, headers:response.headers});
-          };
-          requestInFlight = true;
-          return stream(model, context, {...streamOptions, apiKey, fetch:observedFetch, env:{}, signal:requestSignal, maxRetries:0, cacheRetention:'short', maxTokens:model.maxTokens, timeoutMs:configuration.request_timeout_seconds * 1000, reasoningEffort:options.effort === 'off' ? undefined : options.effort, onPayload:payload => {
-            if (fatal) throw new HostError(fatal);
-            // Retain the actual JSON body in the existing private trace. Headers
-            // and the API key are transport options, never part of this payload.
-            emit('request-start', {request_id:requestId, model:model.id, provider:model.provider, ...payloadSize(payload), payload:JSON.parse(JSON.stringify(payload))});
-          }, onProviderStreamEvent:chunk => {
+            response = new Response(body ?? null, {status:response.status, statusText:response.statusText, headers:response.headers});
+            if (response.status !== 429 || attempts !== 1 || response.headers.get('x-should-retry') === 'false') return response;
+            const errorBody = await refusalBody(response, requestSignal);
+            if (!retryableRefusal(errorBody)) return new Response(errorBody, {status:response.status, headers:response.headers});
+            emit('response-complete', {request_id:attemptId, model:model.id, provider:model.provider, stop_reason:'error', http_status:429, usage_available:false, usage:null, cost_source:null});
+            requestInFlight = false;
+            if (requests >= configuration.max_requests) {
+              stop('request-limit');
+              throw new HostError(fatal);
+            }
+            previousRequestId = attemptId;
+            emit('provider-retry', {stage:'eligible', request_id:attemptId, max_retry_delay_ms:MAX_RETRY_DELAY_MS});
+            const error = new Error('provider-rate-limit');
+            error.status = 429;
+            error.headers = new Headers();
+            for (const name of ['retry-after-ms', 'retry-after']) {
+              const value = response.headers.get(name);
+              if (value !== null) error.headers.set(name, value);
+            }
+            throw error;
+          }, {maxRetries:1, maxRetryDelayMs:MAX_RETRY_DELAY_MS, signal:requestSignal});
+          // The outer request timer includes classification, SDK backoff and
+          // both HTTP attempts. Disable the provider stream's nested retries.
+          return stream(model, context, {...streamOptions, apiKey, fetch:observedFetch, env:{}, signal:requestSignal, maxRetries:0, cacheRetention:'short', maxTokens:model.maxTokens, timeoutMs:configuration.request_timeout_seconds * 1000, reasoningEffort:options.effort === 'off' ? undefined : options.effort, onProviderStreamEvent:chunk => {
             const usage = chunk?.usage ?? chunk?.choices?.[0]?.usage;
             // Pi initializes absent usage to zero. Only publish normalized totals
             // when the provider actually reported both input and output counts.

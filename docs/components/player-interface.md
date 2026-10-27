@@ -134,7 +134,16 @@ guide distinguishes highlighting, invocation and later effect inspection. This
 adds no tool, argument format, execution authority or semantic-success check.
 
 The campaign driver always uses the generic Pi core host with the same MCP server
-and handoff/custody guards. Both original and successor start fresh, with explicit
+and handoff/custody guards. Within one inference request, the host can retry one
+eligible HTTP429 before assistant output through Pi's abortable provider helper.
+Every HTTP attempt consumes the same request allowance and has a distinct trace
+identity; classification, backoff and both attempts share the original timeout and
+host deadline. Explicit non-transient errors, cancellation and partial-stream
+failures remain terminal. This provider-only recovery neither repeats a tool/input
+nor revives a closed host or mission. The [host contract](../../tools/player_host/README.md)
+owns exact eligibility, bounds and unknown-usage receipts.
+
+Both original and successor start fresh, with explicit
 frozen context instead of file-reading tools. Removed Codex launch/resume/host
 selector options are rejected. The host keeps original MCP text/images complete
 in its private trace and carries all text and MCP error status into provider-visible
