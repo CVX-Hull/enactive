@@ -39,7 +39,9 @@ and limited supported advice adoption. Complete independent seven-day survival,
 normal lifecycle and useful apparent cadence remain unaccepted. The
 [evidence index](work.md) links decisive results and failures; GitHub owns current
 execution and remaining actions. Source repairs do not retrospectively qualify
-failed runs.
+failed runs. Later [fast-player012](acceptance/2026-10-25-program-breadth.md#corrected-routine-and-fresh-player-follow-through012--27-october-2026)
+stores a same-family correction and completes registered fresh retrieval/normal
+ending, but establishes no executable application; that capability remains incomplete.
 
 The [registered lifecycle](components/mission-execution.md#lifecycle-and-change-review)
 can keep an initial post-Load menu provisional. Explicit bounded dismissal must
