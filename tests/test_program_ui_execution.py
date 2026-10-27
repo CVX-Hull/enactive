@@ -13,7 +13,7 @@ from tests.test_procedures import procedure
 
 
 CODE = """function step(view, state) {
- const key = (key, next) => ({status:'act', state:next,
+ const key = (key, next) => ({status:'act', state:{...state,...next},
    input:{type:'key',key,modifiers:[]}, reason:'synthetic transfer fixture'});
  if (state.activated)
    return {status:'done',state,input:null,reason:'inspect actual transfer effect'};
@@ -26,7 +26,11 @@ CODE = """function step(view, state) {
  if (matches.length !== 1 || !matches[0].enabled || selected < 0)
    return {status:'yield',state,input:null,reason:'target absent, disabled or ambiguous'};
  const target = ui.rows.findIndex(row => row.id === matches[0].id);
- if (target === selected) return key('ENTER', {opened:true,activated:true});
+ if (target === selected) {
+   if (state.objective === 'highlight')
+     return {status:'done',state,input:null,reason:'highlight reached; invocation not requested'};
+   return key('ENTER', {opened:true,activated:true});
+ }
  return key(target > selected ? 'DOWN' : 'UP', state);
 }"""
 
@@ -96,9 +100,11 @@ class ProgramUIExecutionTests(unittest.TestCase):
         finally:
             f.doCleanups()
 
-    def invoke(self, f, entry, *, primitives=8):
-        request = f.control('program', dict(state={}, intent='Synthetic transfer',
-            expected='Inspect sample transfer effect', interrupt_allowed=False), request_id='program-ui',
+    def invoke(self, f, entry, *, primitives=8, objective='invoke'):
+        intent = ('Highlight the target without invoking it' if objective == 'highlight'
+                  else 'Invoke the target, then stop for independent effect inspection')
+        request = f.control('program', dict(state=dict(objective=objective), intent=intent,
+            expected=intent, interrupt_allowed=False), request_id='program-ui',
             limits=dict(primitives=primitives, wall_seconds=120, game_seconds=1200),
             procedure=dict(mission_id=entry['mission_id'], revision_id=entry['id'],
                 use_id='ui-use', applicability='Represented synthetic transfer list'))
@@ -110,6 +116,26 @@ class ProgramUIExecutionTests(unittest.TestCase):
         self.assertEqual(f.runtime._ledger.request(request['request_id'])['request'], frozen)
         self.assertEqual(request, frozen)
         return result
+
+    def test_highlight_and_invoke_objectives_have_distinct_effect_oracles(self):
+        # These are explicit fictional UI objectives, not model or native evidence.
+        def reached(objective, effects, ui):
+            if objective == 'highlight':
+                return (ui is not None and ui['selected'] == 'target'
+                        and effects['activated'] == [] and effects['carried'] == 0)
+            return (effects['activated'] == ['target'] and effects['carried'] == 1
+                    and effects['available'] == 0)
+
+        for objective in ('highlight', 'invoke'):
+            with self.subTest(objective=objective), self.fixture() as (f, entry, effects):
+                result = self.invoke(f, entry, objective=objective)
+                self.assertEqual(result['result']['program']['status'], 'done')
+                self.assertFalse(result['result']['program']['task_success_verified'])
+                ui = f.bridge.value['ui']
+                self.assertTrue(reached(objective, effects, ui))
+                opposite = 'invoke' if objective == 'highlight' else 'highlight'
+                self.assertFalse(reached(opposite, effects, ui))
+                self.assertEqual('ENTER' in effects['keys'], objective == 'invoke')
 
     def assert_trace(self, f, entry, result, keys):
         self.assertEqual(result['state'], 'partial', result)

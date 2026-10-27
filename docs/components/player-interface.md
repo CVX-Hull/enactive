@@ -116,6 +116,14 @@ software neither moves misplaced fields nor adds another memory type's fields
 to repair a draft. Pi can reject malformed arguments before MCP dispatch, so its
 union-schema diagnostics are not evidence of a missing gameplay capability.
 
+The existing `enactive_skill` description carries the evaluator-derived program
+result schema once in the selected tool loadout. A defensive data copy from
+`policy_program.program_result_schema` keeps presentation from mutating the
+validator's contract. It makes the complete key/text/click return shapes explicit;
+program clicks omit geometry while ordinary direct clicks retain theirs. The
+guide distinguishes highlighting, invocation and later effect inspection. This
+adds no tool, argument format, execution authority or semantic-success check.
+
 The campaign driver always uses the generic Pi core host with the same MCP server
 and handoff/custody guards. Both original and successor start fresh, with explicit
 frozen context instead of file-reading tools. Removed Codex launch/resume/host

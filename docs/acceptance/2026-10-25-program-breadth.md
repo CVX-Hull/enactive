@@ -3,7 +3,7 @@ owner: lead
 review_trigger: Correction to program-breadth evidence or a later actual qualification
 status: historical
 date: 2026-10-25
-scope: Represented-UI source probe, ten bounded native cases and a later passive guidance screen; useful effects, failures and normal ending without responsiveness qualification
+scope: Represented-UI source probe, ten bounded native cases, passive guidance screen and canonical program presentation; no responsiveness qualification
 ---
 
 # Program breadth: useful effects, failures and normal ending
@@ -32,6 +32,9 @@ retains its own original conditions and failures.
 The later [target-selection guidance screen](#target-selection-guidance-screen--26-october-2026)
 records a rejected candidate and assessment-context limitations; it starts no
 eleventh native case or responsiveness claim.
+The later [canonical contract presentation](#canonical-program-contract-presentation--26-october-2026)
+verifies the existing program shape in the actual offline MCP/Pi loadout; model
+understanding and useful play remain separate qualifications.
 
 ## Tested path and causal controls
 
@@ -866,3 +869,36 @@ All12 requests reported usage:16,832 uncached input,60,800 cache-read and89,276 
 The guide baseline/candidate sizes were25,836/27,470 UTF-8 bytes; actual system messages were26,285/27,919 bytes and the single tool declaration228 bytes. Constructed request bodies totalled362,568 bytes, maximum31,172. Output including reasoning totalled36,028 baseline versus53,248 candidate tokens. Request-start→completion median/max was60.577/95.956s baseline and95.130/147.370s candidate. Sequential host intervals totalled948.979s, including startup/closure. These are this text screen's diagnostic costs, not isolated inference, upload or a causal guide-latency effect. There was no actual useful visible game effect, display/paint measurement or20-decision responsiveness cohort. Fast passive evaluation, stop correctness and generation latency cannot qualify apparent gameplay cadence.
 
 All12 host and12 MCP PIDs were independently absent after owned closure. No controller/game/native admission, Save operation or game-state modification was performed by the screen. All hosts returned normally and no supervisor timeout-cleanup branch ran; synthetic process closure is not a new normal-game-ending demonstration. Private originals, the candidate/baseline guides, fixed cases/oracles, review receipts, source/response traces, evaluations, costs and OS closure are retained under `.runtime/iteration256/`. The initial fixture-ID pattern error was caught and corrected before credential access; it is retained as a preparation error. The guidance candidate remains historical assessment evidence, while the preceding current guide/runtime remain unchanged. #164/#177/#145 acceptance remains open.
+
+## Canonical program contract presentation — 26 October 2026
+
+[#258](https://github.com/CVX-Hull/enactive/issues/258) delivers an explicit program-result contract through the existing `enactive_skill` description. Its JSON schema is a defensive copy of the evaluator's current canonical schema, derived from ordinary input with program click geometry removed. It appears once in the selected sixteen-tool loadout. Key/text/click alternatives, required discriminator/modifier fields and act versus yield/done input are explicit; direct clicks still require geometry on their separate path. No tool argument schema, tool name/order/read-only flag, version, authority, storage, model default or executor changed. The evaluator class, schema builder and V8 bridge are unchanged. Shape validity is not applicability, task success or input permission.
+
+This addresses the specific context/assessment gap following256. The retained010 production request already included sixteen tools and the direct-input shapes; the old synthetic screen had one boundary-only tool. The production direct schema was not missing. The distinct program step shape is now explicit rather than inferred across those two paths. The compact guide points to the published card and distinguishes highlighting, invocation, termination and effect inspection; it does not duplicate the schema. Component/protocol explanations describe the same unchanged execution contract. The rejected256 guidance and all original failures/scores remain intact.
+
+### Contract and producer evidence
+
+The published card was parsed from actual skill help and checked against real `PolicyProgram` evaluations. Valid key, text, click, yield and done shapes pass; missing type/modifiers, act/null, non-null yield/done and program-supplied geometry fail both the published shape and evaluator. Mutating an exported nested schema copy cannot alter later readers or runtime validation. Ordinary direct-click validation continues to require its informing geometry. The official MCP client verifies all21 tool descriptions, schemas, ordering and read-only annotations without invoking the mission client.
+
+The maintained Pi production-discovery test now uses the actual sixteen-tool deciding profile and current compact guide. A real project MCP subprocess and real Pi serializer forward every current description/argument schema unchanged. The exact canonical program card occurs once; the test checks direct geometry required versus program geometry omitted, original context prefix and owned child closure. Its injected response provides no model inference or remote-provider qualification. Separate retained captures repeat that same production path with three fresh MCP children, zero tool invocations and an injected SSE terminal response; all children are absent before settlement. These are source/serialization checks, not a replacement one-tool schema fixture.
+
+The existing represented-UI writer fixture now states two different objectives: highlight the target **without invocation**, or invoke it and stop for independent effect inspection. Real JavaScript runs through the existing writer in both cases. The highlight oracle requires current target focus and no activation/transfer; the invocation oracle requires the fixture's actual transfer. Each rejects the other behavior. Both preserve `task_success_verified=false`; program done alone is insufficient. These are fictional synthetic effects, not native game evidence or player-authored learning.
+
+Twenty-five focused presentation/evaluator/writer tests passed in4.534s; the complete existing Pi/MCP conformance integration lane passed in8.114s, including real local HTTP fixtures. Fast checks passed in2.47s. The initial new metadata test incorrectly iterated `ListToolsResult` instead of its tools list; the original failure is retained and the repaired test/full focused set passed. The first broad host run hit sandbox loopback EPERM; the same actual lane passed with local-loopback access. No failure was replaced with a passing mock. Source review and protected publication remain separate evidence from these checks.
+
+### Size, local cost and scope
+
+| Measured surface | Before | After |
+| --- | ---: | ---: |
+| Canonical result schema |1,294 bytes |1,294 bytes |
+| `enactive_skill` description |1,014 bytes |2,632 bytes |
+| Actual sixteen-tool declarations, Pi JSON encoding |50,833 bytes |52,709 bytes |
+| Compact guide |25,836 bytes |26,282 bytes |
+
+Thus the skill description adds1,618 UTF-8 bytes, serialized declarations add1,876 and the guide adds446. The new metadata is static, with unchanged tool ordering; no per-request timestamp/identity was added to the stable help. The current guide-only capture's system message is27,126 bytes and complete constructed body80,414 bytes. It is not the old mission-specific system prompt or an actual upload measurement.
+
+Three cold Python import/spec-building samples had median80.187ms before and108.106ms after. Three current production-MCP/Pi initialization-through-request samples were355.692/583.098/447.910ms; whole fixture hosts took428.097/771.610/515.639ms including response and closure. These small local samples include process/import/scheduling work and do not isolate causal card overhead, model inference or a universal startup budget. Existing finite startup guards were retained. No faster useful-play, cache benefit, paint or apparent-cadence claim follows.
+
+All21 source tool schemas/names/read-only flags/order match the preceding source; all sixteen actual Pi argument declarations also match the retained010 Pi declarations. An initial comparison of raw Python64-bit metadata bounds to JavaScript-serialized numbers was corrected to compare source-to-source and Pi-to-Pi. The existing serializer behavior was not changed or relabeled a new schema defect.
+
+Private audit, baseline descriptions, actual captured payloads/events, cold samples, original failed/repaired check logs and source comparisons are retained under `.runtime/iteration258/`. This iteration made zero external provider requests, used no Keychain credential and admitted no controller/game/native run; cumulative paid-request accounting remains475. Fixture process closure is not a new normal-game-ending demonstration. #256 remains a rejected/insufficient-evidence decision; any later comparison needs its own prospective objective, complete common context and finite allocation. #164's useful cadence, #177's semantic learning and #145's independent campaign remain unqualified.
