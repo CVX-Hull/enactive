@@ -24,8 +24,8 @@ Source support for clicks is not full mouse qualification or cross-game support.
 
 The source now implements the ordinary-input foundation through the existing
 writer, with optional semantic preconditions above it. Current contracts are
-native7/mission11/ledger12/archive6, with procedure/3, campaign-memory/6 and
-reflection/2; gameplay/2 is unchanged. Physical events may reach changed ordinary
+native7/mission11/ledger13/archive6, with procedure/3, campaign-memory/6 and
+reflection/3; gameplay/2 is unchanged. Physical events may reach changed ordinary
 screens under uninterrupted custody, while semantic refresh remains strict.
 Explicit Observe permits a new decision from a changed healthy owned prompt,
 clearing stale quantity proof while preserving original scope and costs. Known
@@ -314,7 +314,7 @@ does not claim those qualifications or replace authentic CDDA lifecycle proofs.
 coordinated replacement. Update producers, validators, reservation/receipt
 readers, recovery/procedure provenance, SDK/catalogue, fixtures and current
 guidance together; reject superseded formats and remove the old direct branch.
-The nested records are procedure/3, campaign-memory/6 and reflection/2, with
+The nested records are procedure/3, campaign-memory/6 and reflection/3, with
 admission update policy `facts-procedures-reflection/3`. Their source schemas own
 exact shapes. No compatibility reader or flag-based old path. Closed native5/
 mission9 runs, original pins and accepted learning004 evidence remain immutable

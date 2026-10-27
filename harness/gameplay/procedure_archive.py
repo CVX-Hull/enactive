@@ -369,6 +369,7 @@ class SealedProcedureArchive:
 
     def _load_primitives(self, database: sqlite3.Connection, mission: str) -> None:
         seen = set()
+        native_ids = set()
         positions = {}
         dispositions = {}
         for identity, parent, intent, native_id, state, result, effect in self._rows(database,
@@ -376,6 +377,9 @@ class SealedProcedureArchive:
             _id(identity)
             if native_id is not None:
                 _id(native_id)
+                if native_id in native_ids:
+                    raise ProcedureLibraryError("Historical primitives reuse an immutable native request identity")
+                native_ids.add(native_id)
             if identity in seen or parent not in self._requests[mission] or state not in _PRIMITIVE_TERMINAL:
                 raise ProcedureLibraryError("Historical primitive has no terminal retained request")
             seen.add(identity)

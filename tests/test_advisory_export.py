@@ -155,6 +155,16 @@ class AdvisoryExportTests(unittest.TestCase):
         with self.assertRaisesRegex(ContractError, 'delivery disposition'):
             self.library(changed)
 
+    def test_duplicate_native_identity_refuses_after_recomputed_original_pins_and_projection(self):
+        _, _, _, receipt, _, pin = self.fixture.known_archive()
+        artifact, = self.export(pin)
+        receipt['logical_action_id'] = 'logical-2'
+        changed = self.rebind_corrupt_originals(artifact, pin,
+            "INSERT INTO primitives SELECT 'logical-2',request_id,intent,native_id,state,?,effect FROM primitives WHERE id='logical-1'",
+            (canonical(receipt),))
+        with self.assertRaisesRegex(ContractError, 'reuse an immutable native request identity'):
+            self.library(changed)
+
     def test_all_dependency_pins_and_qualified_lineage_are_still_required(self):
         from tests.test_procedures import successor
         _, _, first, a = self.fixture.archive()
