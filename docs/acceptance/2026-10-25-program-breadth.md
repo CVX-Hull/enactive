@@ -3,7 +3,7 @@ owner: lead
 review_trigger: Correction to program-breadth evidence or a later actual qualification
 status: historical
 date: 2026-10-25
-scope: Represented-UI source probe and ten bounded native cases; scoped useful effects, authoring failures and normal ending without responsiveness qualification
+scope: Represented-UI source probe, ten bounded native cases and a later passive guidance screen; useful effects, failures and normal ending without responsiveness qualification
 ---
 
 # Program breadth: useful effects, failures and normal ending
@@ -29,6 +29,9 @@ allocation; the source probe itself starts no game or provider call. The
 mandatory generic Pi host remains current independently of model selection.
 The separately scoped #251/#253 follow-through is recorded in010; each actor
 retains its own original conditions and failures.
+The later [target-selection guidance screen](#target-selection-guidance-screen--26-october-2026)
+records a rejected candidate and assessment-context limitations; it starts no
+eleventh native case or responsiveness claim.
 
 ## Tested path and causal controls
 
@@ -826,3 +829,40 @@ All55 requests reported usage:476,223 uncached input,5,461,120 cache-read and51,
 Cached-input share was91.9792%. Four request projections omitted six repeated historical image parts, maximum32 candidate/30 retained images; none blocked a current result group. These are repeated omission instances, not six distinct lost images. All text/tool pairing and private originals remain. Constructed bodies total111,219,323 bytes(maximum3,745,802),896 repeated image appearances/68,679,778 decoded image bytes. The first system context contains34,145 characters; serialized16-tool declarations occupy50,833 bytes. Different mission briefs, errors, useful tasks and image histories prevent attributing a benefit to these sizes or comparing009/010 as a causal speed experiment. API spans(median9.918s/max126.969s), cache share and request count remain diagnostics; upload, server inference, attention and physical paint are not isolated.
 
 Private evidence is retained under `.runtime/campaigns/program-breadth-010/` and `.runtime/missions/program-breadth-010/`, with independent review, original trace/final text, frozen conditions, closed accounting, source/primitive/procedure joins, browser export, opaque Save manifests and OS closure. This completes the selected implementation and finite scoped assessment, with the adverse effects and corrected claims retained. #164's complete useful cadence and #145's independent campaign remain open; no automatic011 or new policy follows from this closeout.
+
+## Target-selection guidance screen — 26 October 2026
+
+[#256](https://github.com/CVX-Hull/enactive/issues/256) implemented and assessed one generic guidance candidate after010. **Reject/defer adoption; no native assessment was eligible.** The final candidate failed three required positive checks and established no eligible named target/phase improvement. The candidate guide was restored byte-for-byte to the preceding guide. This completes a bounded decision, not a successful gameplay or responsiveness improvement.
+
+### Exact reproduction and candidate
+
+Passive replay through the maintained `PolicyProgram` reproduced all21 original evaluation attempts from010: three valid returns followed by the original act/null error in `op-e6d333…`, and17 valid evaluations in `op-fb2470…`. It used the original immutable procedure source and each retained view/state; no native input or Save interpretation occurred. In the latter operation, the selected row went from row0 through wrapped rows23/22/21. The `/flashlight/` match identified the smartphone at row8; the code then toggled and confirmed the selected wrapper at row21 without testing equality. The supplied visible rows/selection were sufficient to expose this discrepancy. This is a policy decision failure, not evidence of a missing executor. An exploratory agent's contrary absent-target reading was rejected against the exact ledger and replay; original game evidence was unchanged.
+
+Candidate commit `ba66d83036bc6744535cdd6a1c9f07f3fbab02af`, based on `ece5d7d`, adds one1,634-byte guide unit. It explains current target identity/enabled state, current selected-ID lookup, phase checks, yield on insufficient evidence and separate outcome verification, with two fictional protocol examples. No tool description/schema, runtime, authority, memory format, dependency, native build or model configuration changed. Fast checks passed in2.96s; the commit hook passed in2.26s. Seventeen existing evaluator tests passed in1.062s. Those checks are separate from the model assessment.
+
+### Prospective screen and observed result
+
+The frozen assessment used12 fresh one-request Pi1.4.0 hosts: three development and three final task pairs. Within each pair, the exact guide unit was the only transmitted context difference. Both arms used the pinned `deepseek-ai/DeepSeek-V4.1-Flash-1017:zRTkTPfs` DeepInfra route, medium string,16,384 output,240-second request guard and30-image policy. Serialized requests confirm those fields, not backend effort. Public model metadata/schema/pricing were checked before Keychain access. The host exposed one passive synthetic-boundary tool and no game/mission/input capability; the model made zero tool calls and received zero images. This is a text-authoring screen, not the native16-tool/vision configuration or a gameplay-speed comparison.
+
+Each generated policy faced ten frozen checks: three target activation/navigation positives and seven insufficient-evidence/phase negatives. Final tasks changed labels, display formats, order and state/phase compositions, including a changed purpose with the original category/title. Each positive required actual synthetic ENTER on the intended row and a subsequent stop on an unfamiliar follow-up; universal abstention failed. Final eligibility required every candidate positive/negative to pass, no unsafe consequential selection, no lost baseline positive and at least one named target/phase improvement supported by a valid baseline decision. Invalid baseline artifacts or evaluator faults could not count as that improvement. A pre-admission review caught and repaired that aggregation defect before any paid request; direct oracle checks included universal-abstention rejection and valid positive navigation. All60 fixture UI shapes validated against the existing contract.
+
+| Final task family | Baseline positives / negatives | Candidate positives / negatives |
+| --- | --- | --- |
+| Depot credential, multiline labels |0/3 ·5/7 |3/3 ·7/7 |
+| Laboratory capsule, prefixed labels |0/3 ·7/7 |0/3 ·7/7 |
+| Museum loan, suffix labels |0/3 ·4/7 |3/3 ·7/7 |
+| Total |0/9 ·16/21 |6/9 ·21/21 |
+
+These are30 paired fixture checks from three generated policies per final arm, not30 independent gameplay goals or a reliability estimate. All12 responses produced parseable source artifacts and all hosts exited0 without timeout. Final-lab candidate navigation/reordered checks proposed `{key:…}` without the required type/modifier fields; validation stopped before any input. Its already-highlighted check terminated explicitly without invoking the row. That did not satisfy the frozen ENTER requirement. No valid unsafe consequential proposal was observed. All21 candidate final negative reasons respected the original no-global-absence/no-unsupported-success rule. Every final candidate-pass/baseline-fail difference involved a baseline return-validation error, so the eligible named target/phase gain count is0. The native gate therefore failed; the conditional80-request native partition was not used and grants no later authority.
+
+**Method limitation:** the lead supplied the compact guide and synthetic task, but omitted the complete ordinary-input JSON schema. The guide enumerates keys/modifiers and the result envelope without spelling out the full input object; the sole fixture tool supplied only boundary prose. Missing input fields dominated both arms, limiting attribution to target/phase judgment. The shared task also used “select … for inspection,” while the frozen positive oracle required invocation with ENTER; the lab policy explicitly interpreted this as highlighting without invocation. The original score is retained, with that intent ambiguity disclosed. No prompt repair, output-field insertion, retuning, replacement request or relaxed oracle followed. This screen does not establish that the guidance caused semantic regression, that its target-matching ideas are ineffective, or that a smaller model is unsuitable. The evidence is insufficient for this candidate's adoption under the declared gate.
+
+Independent outcome review replayed all120 screen checks and the21 retained010 attempts, verified every transmitted pair and the accounting, and supported the negative native-eligibility decision. The owned follow-through is with #164: before any separately selected later comparison, supply the existing complete input/result schema equally to both arms, make highlight versus invocation intent explicit, and verify the actual producer/evaluator contract before spending on semantic claims. #177 retains010's real selector/phase and broader learning limitations; no new executor, validator, model tier or full-campaign gate follows.
+
+### Costs, latency limits and closure
+
+All12 requests reported usage:16,832 uncached input,60,800 cache-read and89,276 output tokens, including76,541 reasoning tokens. Cached-input share was78.3182%. The configured estimate is$0.057296800, not an invoice. The full screen reservation is$2.6345472; cumulative475 actual requests retain$102.5736704 full reservation and$1.153847696 known configured estimates. Four prior usage records and invoices remain unknown; the separate older44-call allocation stays closed. Original planning allowed12screening plus80conditional native, at most555 requests/$120.1373184 within$150. Unused conditional allowance, failures and cache savings renew no cap or actor.
+
+The guide baseline/candidate sizes were25,836/27,470 UTF-8 bytes; actual system messages were26,285/27,919 bytes and the single tool declaration228 bytes. Constructed request bodies totalled362,568 bytes, maximum31,172. Output including reasoning totalled36,028 baseline versus53,248 candidate tokens. Request-start→completion median/max was60.577/95.956s baseline and95.130/147.370s candidate. Sequential host intervals totalled948.979s, including startup/closure. These are this text screen's diagnostic costs, not isolated inference, upload or a causal guide-latency effect. There was no actual useful visible game effect, display/paint measurement or20-decision responsiveness cohort. Fast passive evaluation, stop correctness and generation latency cannot qualify apparent gameplay cadence.
+
+All12 host and12 MCP PIDs were independently absent after owned closure. No controller/game/native admission, Save operation or game-state modification was performed by the screen. All hosts returned normally and no supervisor timeout-cleanup branch ran; synthetic process closure is not a new normal-game-ending demonstration. Private originals, the candidate/baseline guides, fixed cases/oracles, review receipts, source/response traces, evaluations, costs and OS closure are retained under `.runtime/iteration256/`. The initial fixture-ID pattern error was caught and corrected before credential access; it is retained as a preparation error. The guidance candidate remains historical assessment evidence, while the preceding current guide/runtime remain unchanged. #164/#177/#145 acceptance remains open.
