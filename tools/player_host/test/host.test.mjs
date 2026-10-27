@@ -20,6 +20,10 @@ function reply(content = 'finished', calls = [], withUsage = true, reasoning, ca
     {id:'fixture-response',model:'fixture-backend',choices:[{index:0,delta:{},finish_reason:calls.length?'tool_calls':'stop'}],...(withUsage ? {usage:{prompt_tokens:11,completion_tokens:5,total_tokens:16}} : {})}];
   return new Response(chunks.map(chunk=>'data: '+JSON.stringify(chunk)+'\n\n').join('')+'data: [DONE]\n\n', {headers:{'content-type':'text/event-stream'}});
 }
+function rateLimit(error = {type:'rate_limit_error', message:'Rate limit exceeded'}, headers = {}) {
+  return new Response(JSON.stringify({error}), {status:429,
+    headers:{'content-type':'application/json', 'retry-after-ms':'0', ...headers}});
+}
 async function scenario(t, sequence, overrides = {}) {
   assert.ok(python, 'Set ENACTIVE_TEST_PYTHON to a Python with the official mcp package');
   const dir = await mkdtemp(join(tmpdir(),'pi-host-test-'));
@@ -33,7 +37,8 @@ async function scenario(t, sequence, overrides = {}) {
     return typeof item === 'function' ? item(init) : item;
   };
   const mcpConfig = {command:resolve(python),args:[fixture,log,pid],cwd:dir,enabled:true,required:true,enabled_tools:['observe','mutate','integer'],startup_timeout_sec:5,tool_timeout_sec:2,default_tools_approval_mode:'never',tools:{}};
-  const options = {configuration:route(), mcpConfig, context:'Frozen player guide', prompt:'Offline mission', model:model.id, effort:'off', timeoutSeconds:10, env:{OFFLINE_TEST_KEY:'fixture-key', UNRELATED_HOST_SECRET:'must-not-inherit'}, fetch, onEvent:event=>events.push(event), ...overrides};
+  const options = {configuration:route(), mcpConfig, context:'Frozen player guide', prompt:'Offline mission', model:model.id, effort:'off', timeoutSeconds:10, env:{OFFLINE_TEST_KEY:'fixture-key', UNRELATED_HOST_SECRET:'must-not-inherit'}, fetch, ...overrides,
+    onEvent:event=>{events.push(event);overrides.onEvent?.(event);}};
   if (overrides.fixtureStartupDelay !== undefined) mcpConfig.args.push(String(overrides.fixtureStartupDelay));
   if (overrides.enabledTools) mcpConfig.enabled_tools=overrides.enabledTools;
   if (overrides.fixtureToolTimeoutSeconds) mcpConfig.tool_timeout_sec=overrides.fixtureToolTimeoutSeconds;
@@ -354,4 +359,141 @@ test('HTTP refusal status is retained before SDK rejection without raw error or 
   const completed=events.find(event=>event.type==='response-complete');
   assert.equal(completed.usage_available,false);assert.equal(completed.usage,null);
   assert.ok(!JSON.stringify({result,events}).includes('fixture-key'));
+});
+
+test('eligible 429 consumes a separate attempt with identical context and one tool execution',async t=>{
+  const {result,events,payloads,calls}=await scenario(t,[
+    rateLimit({type:'rate_limit_error',message:'Rate limited; fixture-key private upstream text'}),
+    reply(null,[['mutate',{mode:'ok',index:1}]]),reply()]);
+  assert.equal(result.ok,true);assert.equal(result.requests,3);
+  assert.deepEqual(payloads[0],payloads[1]);
+  const starts=events.filter(e=>e.type==='request-start');
+  assert.deepEqual(starts.map(e=>e.request_id),['request-1','request-2','request-3']);
+  assert.deepEqual(starts.map(e=>e.payload),payloads);
+  assert.deepEqual(events.filter(e=>e.type==='response-headers').map(e=>e.status),[429,200,200]);
+  const completed=events.filter(e=>e.type==='response-complete');
+  assert.deepEqual(completed.map(e=>e.request_id),starts.map(e=>e.request_id));
+  assert.equal(completed[0].http_status,429);assert.equal(completed[0].usage,null);
+  assert.equal(completed[0].usage_available,false);assert.equal(completed[0].cost_source,null);
+  assert.equal(completed[1].usage_available,true);
+  assert.deepEqual(calls.map(c=>[c.index,c.phase]),[[1,'start'],[1,'end']]);
+  assert.equal(events.find(e=>e.type==='tool-start').request_id,'request-2');
+  assert.ok(!JSON.stringify({result,events}).includes('fixture-key'));
+});
+test('repeated 429 stops after exactly two charged attempts',async t=>{
+  const {result,payloads,events,calls}=await scenario(t,[rateLimit(),rateLimit(),reply()]);
+  assert.equal(result.ok,false);assert.equal(result.reason,'provider-error');
+  assert.equal(result.requests,2);assert.equal(payloads.length,2);assert.equal(calls.length,0);
+  assert.deepEqual(events.filter(e=>e.type==='response-complete').map(e=>e.request_id),['request-1','request-2']);
+});
+test('429 at the request cap stops before backoff or another fetch',async t=>{
+  const configuration=route();configuration.max_requests=1;
+  const {result,payloads,events}=await scenario(t,[rateLimit(),reply()],{configuration});
+  assert.equal(result.reason,'request-limit');assert.equal(result.requests,1);assert.equal(payloads.length,1);
+  assert.equal(events.filter(e=>e.type==='response-complete').length,1);
+  assert.ok(!events.some(e=>e.type==='provider-retry'));
+});
+test('quota, authorization and malformed 429 errors remain terminal despite retry-looking text',async t=>{
+  for (const error of [
+    {code:'insufficient_quota',message:'Rate limited'},
+    {type:'quota_exceeded',message:'Rate limited'},
+    {type:'authentication_error',code:'invalid_api_key',message:'Rate limit exceeded'},
+    {type:'auth_error',message:'Rate limit exceeded'},
+    {type:'invalid_request_error',code:'invalid_parameter',message:'HTTP 429'},
+    {type:'rate_limit_error',message:'Invalid API key; too many requests'},
+    {message:'Billing limit reached; rate limit exceeded'},
+    {message:'Quota exhausted; too many requests'},
+    {message:'Payment required; too many requests'},
+    {message:'Your account has exhausted its credits. Rate limit exceeded.'},
+    {message:'Unknown fixture-key private detail'},
+  ]) await t.test(JSON.stringify(error),async sub=>{
+    const {result,payloads,events}=await scenario(sub,[rateLimit(error),reply()]);
+    assert.equal(result.reason,'provider-error');assert.equal(result.requests,1);assert.equal(payloads.length,1);
+    assert.ok(!JSON.stringify({result,events}).includes('fixture-key'));
+  });
+});
+test('retry suppression header and excessive server delay do not send another attempt',async t=>{
+  for (const headers of [{'x-should-retry':'false'},{'retry-after-ms':'6000'}]) await t.test(JSON.stringify(headers),async sub=>{
+    const {result,payloads,events}=await scenario(sub,[rateLimit(undefined,headers),reply()]);
+    assert.equal(result.reason,'provider-error');assert.equal(result.requests,1);assert.equal(payloads.length,1);
+    assert.equal(events.filter(e=>e.type==='response-complete').length,1);
+  });
+});
+test('malformed and oversized refusal bodies cannot authorize a retry',async t=>{
+  for (const body of ['not JSON',JSON.stringify({error:{message:'Rate limit '+ 'x'.repeat(17000)}})]) await t.test(String(body.length),async sub=>{
+    const {result,payloads}=await scenario(sub,[new Response(body,{status:429}),reply()]);
+    assert.equal(result.reason,'provider-error');assert.equal(result.requests,1);assert.equal(payloads.length,1);
+  });
+});
+test('request timeout and cancellation interrupt backoff without a second attempt',async t=>{
+  for (const cancel of [false,true]) await t.test(String(cancel),async sub=>{
+    const configuration=route();configuration.request_timeout_seconds=.1;
+    const controller=new AbortController();
+    const {result,payloads,events}=await scenario(sub,[()=>{
+      if(cancel) setTimeout(()=>controller.abort(),20);
+      return rateLimit(undefined,{'retry-after-ms':'1000'});
+    },reply()],{configuration,signal:controller.signal});
+    assert.equal(result.reason,cancel?'cancelled':'request-timeout');
+    assert.equal(result.requests,1);assert.equal(payloads.length,1);
+    assert.equal(events.filter(e=>e.type==='response-complete').length,1);
+  });
+});
+test('a stalled refusal body is cancellable without waiting for its cancel hook',async t=>{
+  const controller=new AbortController();
+  const {result,payloads}=await scenario(t,[()=>{
+    setTimeout(()=>controller.abort(),20);
+    return new Response(new ReadableStream({cancel:()=>new Promise(()=>{})}),{status:429});
+  }],{signal:controller.signal});
+  assert.equal(result.reason,'cancelled');assert.equal(result.requests,1);assert.equal(payloads.length,1);
+});
+test('both HTTP attempts share the original request timer',async t=>{
+  t.mock.timers.enable({apis:['setTimeout']});
+  const configuration=route();configuration.request_timeout_seconds=1;
+  const controller=new AbortController();
+  let eligible=false, secondStarted=false;
+  const waitFor=async predicate=>{
+    const until=Date.now()+5000;
+    while(!predicate() && Date.now()<until) await realDelay(20);
+    assert.ok(predicate(),'fixture must reach the controlled retry stage');
+  };
+  const {result,payloads,events}=await scenario(t,[
+    rateLimit(undefined,{'retry-after-ms':'600'}),
+    init=>{
+      secondStarted=true;
+      return new Promise((resolve,reject)=>{
+        const timer=setTimeout(()=>resolve(reply()),600);
+        init.signal.addEventListener('abort',()=>{clearTimeout(timer);reject(new Error('aborted'));},{once:true});
+      });
+    },
+  ],{configuration,signal:controller.signal,
+    onEvent:e=>{if(e.type==='provider-retry'&&e.stage==='eligible')eligible=true;},
+    synchronize:async()=>{
+      try {
+        await waitFor(()=>eligible);
+        t.mock.timers.tick(600);
+        await waitFor(()=>secondStarted);
+        t.mock.timers.tick(401);
+        await realDelay(20);
+        // A wrongly renewed timer would permit the response at1200ms; the
+        // original1000ms timer must already have aborted that fetch.
+        t.mock.timers.tick(200);
+      } catch(error) {
+        controller.abort();t.mock.timers.tick(10000);throw error;
+      }
+    },
+  });
+  assert.equal(result.reason,'request-timeout');assert.equal(result.requests,2);
+  assert.equal(payloads.length,2);
+  assert.deepEqual(events.filter(e=>e.type==='response-complete').map(e=>e.request_id),['request-1','request-2']);
+});
+test('host deadline also covers provider retry backoff',async t=>{
+  const {result,payloads}=await scenario(t,[rateLimit(undefined,{'retry-after-ms':'4000'}),reply()],{timeoutSeconds:2});
+  assert.equal(result.reason,'host-timeout');assert.equal(payloads.length,1);
+});
+test('a partial provider stream is never retried and cannot dispatch its tool',async t=>{
+  const first='data: '+JSON.stringify({choices:[{index:0,delta:{role:'assistant',tool_calls:[{index:0,id:'partial',type:'function',function:{name:'mutate',arguments:'{"mode":"ok"}'}}]},finish_reason:null}]})+'\n\n';
+  const {result,payloads,calls}=await scenario(t,[new Response(new ReadableStream({start(c){
+    c.enqueue(new TextEncoder().encode(first));c.error(new Error('fixture-key private stream failure'));
+  }}),{headers:{'content-type':'text/event-stream'}}),reply()]);
+  assert.equal(result.reason,'provider-error');assert.equal(payloads.length,1);assert.equal(calls.length,0);
 });

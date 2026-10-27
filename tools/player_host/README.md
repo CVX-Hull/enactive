@@ -98,6 +98,25 @@ mutates the parent environment or a profile. No key values, headers or raw
 provider exceptions are emitted. Pi cache retention is explicitly `short`, preserving the maintained default
 while preventing an ambient `PI_CACHE_RETENTION` override.
 
+One inference request may recover from one eligible HTTP429 before assistant
+output, using Pi's maintained abortable provider-retry helper. Its classifier reads
+at most16KiB of a JSON error object; explicit authorization/invalid-request kinds,
+quota/billing limits, malformed or unrecognized errors stay terminal. A provider
+`x-should-retry:false` also suppresses recovery. The second429, other HTTP statuses,
+transport failures and partial-stream failures are terminal. The provider stream's
+own retries remain disabled, so there is no nested retry loop or assistant-turn
+restart. Error text is neither traced nor sent back as model context.
+
+`max_requests` counts each actual provider HTTP fetch attempt, including the retry.
+The host checks and charges immediately before fetching; a refused extra attempt
+has no fabricated request/completion. Both attempts send the same serialized
+context under one original request timer, combined abort signal and host deadline.
+Classification, backoff and response reading consume that timer. Pi rejects a
+provider-requested retry delay over5seconds; its bounded default backoff applies
+when no valid delay is supplied. Cancellation interrupts backoff and bounded error
+reading. The first eligible refusal records unknown usage, without a zero-price
+assumption; another attempt requires spare capacity before any backoff.
+
 The MCP config is the driver's current flat server table, with explicit command,
 args, cwd, enabled tools and finite startup/tool timeouts. `enabled` must be true;
 `required`, if present, must be boolean. Missing allowlisted tools fail before
@@ -113,7 +132,8 @@ gets one explicit `MCP isError: true` text marker because the provider serialize
 otherwise drops error metadata. A known error can lead to deliberate collection
 or correction. A transport/client error, rejected call, timeout or cancellation
 latches the first fatal reason, aborts the agent, closes the child and suppresses
-remaining calls and inference. There is no retry, reconnect, replay, fallback,
+remaining calls and inference. The bounded provider-only429 recovery above never
+retries a tool/gameplay submission or grants reconnect, replay, fallback,
 automatic compaction or session restoration.
 
 The host reserves at most one second (one quarter of short runs) from its total
@@ -125,7 +145,7 @@ Events carry UTC `wall_time`, host-relative `monotonic_ms`, request IDs and tool
 call IDs where applicable. `request-start` reports message text parts/UTF-8 bytes,
 image parts/decoded bytes and complete serialized payload bytes. Text counts
 include tool-call argument strings; schema bytes are included in payload bytes.
-Its `payload` field retains the complete JSON body actually prepared for the
+Its `payload` field retains the complete JSON body at each actual HTTP fetch for the
 provider, including schemas, context, images and forwarded reasoning/tool history.
 These private run traces contain model context; headers and API keys are excluded.
 Unforwarded assistant content and failed final text are not retained. Body
@@ -139,6 +159,12 @@ with `usage_available:false`; a reported complete input/output count enables
 normalized usage, with `cost_source` distinguishing provider totals from configured
 rate estimates. HTTP refusal status is retained before SDK rejection. Full `tool-result` events retain
 operation/source joins. `tool-refused`, `abort` and `settled` retain refusal and
-failure outcomes. Internal blocked provider attempts create no fabricated
-response-completion receipt. Model attention, provider inference start and
+failure outcomes. An eligible429 attempt has a transport-derived
+`response-complete` with `http_status:429`, error stop reason and unknown usage;
+the final attempt is completed by the SDK assistant message. Backoff aborts and
+excessive-delay refusals do not duplicate that first receipt. `provider-retry`
+marks eligibility with the configured delay ceiling, then a second-attempt start
+with the preceding request ID; monotonic intervals expose actual waiting without
+inventing the SDK's planned delay. Internal blocked provider attempts create no
+fabricated response-completion receipt. Model attention, provider inference start and
 physical paint timestamps are unavailable and declared at `host-start`.
