@@ -3,7 +3,7 @@ owner: lead
 review_trigger: Correction to program-breadth evidence or a later actual qualification
 status: historical
 date: 2026-10-25
-scope: Represented-UI source probe, ten bounded native cases, passive guidance screen and canonical program presentation; no responsiveness qualification
+scope: Represented-UI source probe, eleven bounded native cases, guidance/baseline authoring screens and canonical program presentation; no responsiveness qualification
 ---
 
 # Program breadth: useful effects, failures and normal ending
@@ -35,6 +35,9 @@ eleventh native case or responsiveness claim.
 The later [canonical contract presentation](#canonical-program-contract-presentation--26-october-2026)
 verifies the existing program shape in the actual offline MCP/Pi loadout; model
 understanding and useful play remain separate qualifications.
+The fresh [complete-context baseline and native011](#complete-context-baseline-and-native011--26-october-2026)
+passes its synthetic gate and records ordinary flashlight pickup/normal ending,
+with unexecuted program drafts, failed revision and marking-representation limits.
 
 ## Tested path and causal controls
 
@@ -902,3 +905,64 @@ Three cold Python import/spec-building samples had median80.187ms before and108.
 All21 source tool schemas/names/read-only flags/order match the preceding source; all sixteen actual Pi argument declarations also match the retained010 Pi declarations. An initial comparison of raw Python64-bit metadata bounds to JavaScript-serialized numbers was corrected to compare source-to-source and Pi-to-Pi. The existing serializer behavior was not changed or relabeled a new schema defect.
 
 Private audit, baseline descriptions, actual captured payloads/events, cold samples, original failed/repaired check logs and source comparisons are retained under `.runtime/iteration258/`. This iteration made zero external provider requests, used no Keychain credential and admitted no controller/game/native run; cumulative paid-request accounting remains475. Fixture process closure is not a new normal-game-ending demonstration. #256 remains a rejected/insufficient-evidence decision; any later comparison needs its own prospective objective, complete common context and finite allocation. #164's useful cadence, #177's semantic learning and #145's independent campaign remain unqualified.
+
+## Complete-context baseline and native011 — 26 October 2026
+
+[#260](https://github.com/CVX-Hull/enactive/issues/260) completed a fresh qualification with the current guide/model after258. **The six-generation authoring screen passed; native011 demonstrated one useful ordinary pickup and normal ending. No native program ran or corrected procedure revision was stored.** Keep those results separate. This is neither adoption of256's retired candidate nor causal evidence that258 improved decisions, and it does not qualify complete-player responsiveness or campaign readiness.
+
+### Frozen screen and actual context
+
+Six fresh single-request Pi1.4.0 hosts used three fictional situation/format families, each with explicit highlight-without-invocation and invoke-once-then-inspect objectives. Each policy faced three positives (navigation, already focused, rotated/rekeyed) and eight negatives (not rendered, ambiguous, disabled, unknown focus, unavailable UI, changed title, changed purpose with unchanged title/category, completed local phase). The source freeze is `590bb089`; independently reviewed manifest `899cee1279bcd8cd6711779fd09b656e87f434a88172993879c4dc484654c67f` binds33 artifacts. Cases, prompts, oracles and limits were frozen before credential access. No replacement, field repair, new prompt arm or post-result oracle change occurred.
+
+| Fresh generation | Positive checks | Negative checks | Wrong consequential inputs |
+| --- | ---: | ---: | ---: |
+| Calibration / highlight |3/3 |8/8 |0 |
+| Calibration / invoke |3/3 |8/8 |0 |
+| Dispatch / invoke |3/3 |8/8 |0 |
+| Dispatch / highlight |3/3 |8/8 |0 |
+| Sample / highlight |3/3 |8/8 |0 |
+| Sample / invoke |3/3 |8/8 |0 |
+
+Independent real-PolicyProgram replay reproduced66/66 checks and found no unsupported global-absence or success claims. Highlight policies never invoked; invoke policies selected the intended row once and stopped before follow-up input. These are checks of six authored policies, not66 independent goals, a reliability estimate or actual gameplay effects.
+
+The screen used current PlayerTools metadata, the production MCP server and maintained Pi serializer. A fixture-only refusal records every attempted tool call before `player.call`, with no MissionClient endpoint. An injected call verified refusal; all actual generations made zero tool attempts. Every prepared request contains the same sixteen tool declarations and system guide/MCP instructions as258's production reference, including the canonical card once. Declarations occupy52,709 UTF-8 bytes; shared system context27,126 bytes. This screen supplies structured fictional UI, no PNGs or native/vision qualification.
+
+The pinned DeepInfra route remains `deepseek-ai/DeepSeek-V4.1-Flash-1017:zRTkTPfs`, medium string,16,384 output,240s guard and30-image policy. Fresh [exact-version metadata](https://api.deepinfra.com/models/deepseek-ai/DeepSeek-V4.1-Flash-1017?version=zRTkTPfs) and [chat schema](https://api.deepinfra.com/models/deepseek-ai/DeepSeek-V4.1-Flash-1017/schema/openai-chat-completions?version=zRTkTPfs) declared public/nondeprecated status,1,048,576 context,131,072 maximum output, image/tools and medium support. These declarations and forwarded fields do not attest backend effort or efficacy. The [model page](https://deepinfra.com/deepseek-ai/DeepSeek-V4.1-Flash-1017/api) lists standard and51%-promotional prices; accounting retains standard configured$0.20/$0.60/$0.006 per million input/output/cached tokens. Configured estimates are not invoices.
+
+Preparation passed25 focused tests/86subtests in4.87s and fast checks in2.65s. Independent review caught interruption cleanup and partial-artifact accounting gaps. Injected regressions additionally exposed a duplicate record-construction keyword and an absent-generation-directory write failure. These were repaired before paid calls: owned children are reaped on interruption/callback error/timeout, and six missing/partial/malformed generations retain all66 declared failed IDs. They are preparation errors, not model failures. Reference decisions and opposite-objective/malformed/abstention checks passed before the final clean admission review. All twelve actual screen host/MCP PIDs were absent after closure.
+
+### Native011: useful ordinary effect, failed program application
+
+After the original screen gate and independent semantic review passed, a separately reviewed prospective package admitted one fresh `program-breadth-011` / `player-program-breadth-011`. Exact source/native pins, current guide, sixteen tools and model configuration were retained; native SHA is `96e58aa08e7f8dd74c42f1bd30bc48a11ebd0eca16deac4cd810e1e843b6fe70`. The existing windowed/project-local preparation and six unchanged custody helpers were verified. Fresh source/CI/provider/pricing/process checks preceded credentials and Start. No donor, adviser, successor, lead tactic/input, save edit or forced variation was used; old001–010 actors stayed closed.
+
+The player loaded the legitimate EnactiveLearning04/Ellis save, reconciled the unknown Load transition, completed grounded identity/adoption and chose to recover a flashlight from the current floor. Ordinary ENTER on a merely highlighted row produced “No items were selected.” The player subsequently marked the flashlight and confirmed pickup. Successful operation `op-aed11edf84eb4189ac9b138ca24efe0f` is a **new ordinary direct root**, not a prompt-scoped program or program-assisted execution. Source `d0543…` shows `You pick up: 1 flashlight (off)` and turn5213307→5213308. No unintended consequential item loss/activation was observed; the wrapper remained on the floor. Historical drop/activation messages already visible before the pickup are not new011 actions.
+
+| Highlight only; no item queued | Flashlight marked and queued |
+| --- | --- |
+| ![Unmarked floor pickup list; flashlight highlighted, ITEMS TO PICK UP empty.](assets/program-breadth-011/pickup-unmarked.png) | ![Marked flashlight; plus marker and one queued item are visibly present.](assets/program-breadth-011/pickup-marked.png) |
+
+![Actual ordinary pickup result: flashlight off acquired, normal play and pickup message visible.](assets/program-breadth-011/pickup-result.png)
+
+The player authored revision1 of `procedure-425f7365…`, but program drafts at requests31/new_root and33/prompt were both `not_submitted`: the selected snapshot still had an open prompt, and that scope did not support a program child. No program ledger request, evaluation, input, branch or executable reuse occurred. These refusals enforce the existing own-root contract; they are not evidence of invalid callback syntax or a missing universal executor. The procedure's highlight→ENTER premise was contradicted by ordinary operation `op-4c8c7c4ee45f4da887cd88a5a20082df`. Revision2 storage was refused for unavailable parent; the subsequent context call's player-selected4096-byte limit omitted the procedure. The stored revision1 remains active but known inadequate for this multiselect scene; no corrected revision was stored/applied.
+
+The native marking distinction also exposes an observation limit: sources `5b7bed…` and `070671…` have **identical complete program-view projections**, including row text/IDs/focus, while pixels show minus→plus and an empty→populated ITEMS TO PICK UP pane. This is a concrete missing represented fact. It did not cause the two pre-admission scope refusals, and a program never ran. Retain ordinary image-informed interpretation; any structured marking support needs its own reviewed contract scope, not inferred pixels or relaxed ownership. The synthetic screen explicitly supplied simpler ENTER-invokes-row semantics and did not qualify this native multiselect affordance.
+
+Independent outcome review accepts the frozen narrow native functional core: useful ordinary effect, no observed unintended consequential loss/activation, honest program-lineage limitation and normal ending; ordinary fallback was allowed and program use conditional. It rejects program-application/revision and broader readiness claims. The original player report is retained with corrections: actual59 provider requests, Finish about796.1s after mission admission, successful ENTER in a new root, and no supported explanation that HUD Activity `None`→`Light` was pre-existing character glow. That label change is observed, without a causal activation explanation. The published unmarked image also does not support using the report's12.1-lb starting value as its matched weight baseline.
+
+### Ending, apparent progress and costs
+
+Registered SavedCheckpoint `op-27c92…`, OwnedNormalExit0 `op-40ce…` and NormalFinish(stopped) `op-4709…` are independently retained. Save began about659.3s after admission, Finish about796.1s; the host settled about826.1s after launch. Both the1,200s begin-ending and1,800s normal-finish gates passed. The player left objective completion unclaimed in the registered Finish. Load, Save and Quit retain three charged unknown ACKs, separately reconciled without replay. Final unresolved effects are empty; that does not erase those unknown primitive records.
+
+Final accounting has21 charged primitives:17 returned,3 unknown and1 rejected;41 ledger operations;71 archived frames/5,343,163 bytes; one game second advanced. The native host made59 requests with no timeout or successor, within its separate60-request allocation. Native/player/MCP/driver/controller PIDs and port8766 were verified absent. No native cleanup signal was needed; the controller was stopped only after normal game closure. A missing post-save hash artifact was completed after verified closure using the existing opaque hash helper:242 files before/after, zero added/removed,11 changed hashes, no parsing/edits. Registered lifecycle evidence, not those opaque hashes, proves Save/exit/Finish.
+
+The passive background browser retained exact source/frame correspondence: first rendered floor list→rendered pickup result **168.758s**; marked row→rendered result **25.415s**. The useful result frame's native-capture→DOM proxy is **245ms**. The first two include exposed authoring/refusal/correction work; the third is a different display lane. Browser epoch joins assume a shared host wall clock; decode/DOM/animation opportunity is not physical paint. This is one ordinary useful workflow, no local program effect and no20-genuine-decision/p95 cohort. It does not qualify #164's apparent responsiveness.
+
+| Accounting lane | New actual requests | Configured estimate | Full reservation |
+| --- | ---: | ---: | ---: |
+| Six-generation screen |6 |$0.031452064 |$1.3172736 |
+| Native011 |59 |$0.204127976 |$12.9531904 |
+| Cumulative after011 |540 |$1.389427736 known |$116.8441344 |
+
+The cumulative known estimate excludes four earlier unknown usage records and all invoices; the older separate44-call allocation stays closed. All59 native responses supplied usage:725,284 uncached input,5,424,896 cache-read,44,203 output including28,269 reported reasoning tokens. Known-input cached share is88.2071%. Stable native system context is32,506 bytes and tool declarations52,709; total constructed bodies119,350,098 bytes, maximum3,673,957. These are constructed JSON, not wire/upload costs. Maximum forwarded images was30; the final projection omitted four older images with provenance retained and no blocked latest group. The [automatic caching contract](https://docs.deepinfra.com/chat/prompt-caching) does not turn cache share into a causal latency result. Native API median/max8.205/95.454s and screen79.713/148.616s remain diagnostic spans, not isolated inference or useful-effect clocks.
+
+Private originals, frozen cases/oracles/helpers, failed/repaired preparation checks, actual payloads/images, ledgers, review receipts, browser timing and closure records remain under `.runtime/iteration260/` and `.runtime/campaigns/program-breadth-011/`. All three published PNGs are byte-identical to their retained native frames. The one unused native request and all old unused partitions are retired, not renewed. No new default, prompt arm, source/runtime/schema/authority change or012 follows. Existing #164/#177 own phase/applicability and exact-parent-detail follow-through; #191 owns the demonstrated marking-representation question without presuming a new framework. #217's distinct lifecycle cue and broader interruption/learning/portability gates remain unqualified; #145 stays no-go under #164.
