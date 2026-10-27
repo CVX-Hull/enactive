@@ -1,0 +1,189 @@
+{
+  "qualification": "native-markers-001",
+  "date": "2026-10-27",
+  "source_commit": "2693badcdf5b629fc70e912057a4c4564c38da31",
+  "engine_commit": "7b2efa5cea38e4d4d97dd0e63b28b9148623da59",
+  "native": {
+    "source_commit": "2693badcdf5b629fc70e912057a4c4564c38da31",
+    "built_binary_sha256": "6645bf1537319cdfcf4f1cbc6e4384d8e6c7ed41a97e66a2c6c475c34f6db528",
+    "installed_binary_sha256": "71e51f5301e873e6832eb50c7456f29b5e40e9c7f2e7a38d241e36873c778597",
+    "native_sources": {
+      "cdda_harness.cpp": "e0838afe48212f5a6fd646a9b506260f92f3ebb01166a0ef40ea5ea45277a81a",
+      "cdda_harness.h": "7dbed42d8fca0065cca4ccae9d29562e3fb341526894d7184fd2fd43d4a755a0"
+    },
+    "native_protocol": 7,
+    "installed_bytes": 54032112,
+    "wrapper_sha256": "fbab53f7e0b8faf9d55823fcecc0475df9f5ba9bb54a05535fda3df88b584868",
+    "native_launched": false
+  },
+  "admission": {
+    "schema": "mission/11",
+    "record_type": "MissionAdmission",
+    "mission_id": "marker-qualification-001",
+    "objective": "Qualify native7 literal inventory mark/unmark evidence without confirmation, then normal Save/owned exit/Finish; technical observation only.",
+    "player_id": "technical-marker268",
+    "scenario": {
+      "mode": "load",
+      "world": "EnactiveLearning04",
+      "character": "Ellis"
+    },
+    "limits": {
+      "inputs": 160,
+      "wall_seconds": 1500,
+      "game_seconds": 600,
+      "frames": 512,
+      "frame_bytes": 134217728,
+      "requests": 192,
+      "primitive_mappings": 160
+    },
+    "cleanup_reserve": {
+      "inputs": 40,
+      "wall_seconds": 300,
+      "frames": 64,
+      "frame_bytes": 16777216
+    },
+    "allowed_skills": [
+      "menu",
+      "inspect",
+      "direct"
+    ],
+    "allowed_lifecycle": [
+      "launch",
+      "load",
+      "save",
+      "exit",
+      "finish"
+    ],
+    "update_policy": "facts-procedures-reflection/3",
+    "configuration": {
+      "source_commit": "2693badcdf5b629fc70e912057a4c4564c38da31",
+      "native_sha256": "71e51f5301e873e6832eb50c7456f29b5e40e9c7f2e7a38d241e36873c778597",
+      "skills": "native7-mission11-marker1-programview2",
+      "lessons": "technical-observation-no-procedure-learning",
+      "model": "technical-no-llm",
+      "effort": "none"
+    },
+    "learning": null
+  },
+  "verified_closeout": {
+    "marker_triplet": [
+      {
+        "sequence": 24,
+        "source_id": "eb2dc57c04d481bde421d719c6007b84c87479b33c7414a7056aff639cc40aa5",
+        "row": {
+          "enabled": true,
+          "hotkey": "a",
+          "id": "row-0",
+          "rendered_marker": "-",
+          "text": "pocket knife"
+        },
+        "selected": "row-0",
+        "png_sha256": "cff57cfedc0f2f197a813a811bfd9f6c09bb71e6619be9fd98714b78f6d0e414",
+        "passive_program": {
+          "status": "yield",
+          "input": null,
+          "state": {
+            "marker": "-"
+          },
+          "reason": "Passive literal inspection only"
+        }
+      },
+      {
+        "sequence": 25,
+        "source_id": "cfe9b4fcc4163aacb50e73c8e1af391e2344bc7e757d3e6b9278a153bf35260f",
+        "row": {
+          "enabled": true,
+          "hotkey": "a",
+          "id": "row-0",
+          "rendered_marker": "+",
+          "text": "pocket knife"
+        },
+        "selected": "row-0",
+        "png_sha256": "b5d126dd09378a13c337b8c539cf220793c523b494030a510426d32130c3b3a2",
+        "passive_program": {
+          "status": "yield",
+          "input": null,
+          "state": {
+            "marker": "+"
+          },
+          "reason": "Passive literal inspection only"
+        }
+      },
+      {
+        "sequence": 26,
+        "source_id": "7a4c048aa9ea1285209739f60946087d79731099c075a5f0eee6002d028657a8",
+        "row": {
+          "enabled": true,
+          "hotkey": "a",
+          "id": "row-0",
+          "rendered_marker": "-",
+          "text": "pocket knife"
+        },
+        "selected": "row-0",
+        "png_sha256": "cff57cfedc0f2f197a813a811bfd9f6c09bb71e6619be9fd98714b78f6d0e414",
+        "passive_program": {
+          "status": "yield",
+          "input": null,
+          "state": {
+            "marker": "-"
+          },
+          "reason": "Passive literal inspection only"
+        }
+      }
+    ],
+    "retained_store_unchanged": true,
+    "save_files_before": 248,
+    "save_files_after": 248,
+    "save_changed": [
+      "EnactiveLearning04/#RWxsaXM=.ano.json",
+      "EnactiveLearning04/#RWxsaXM=.pt",
+      "EnactiveLearning04/#RWxsaXM=.sav.zzip",
+      "EnactiveLearning04/maps/-1.3.0.zzip",
+      "EnactiveLearning04/maps/-1.3.1.zzip",
+      "EnactiveLearning04/master.gsav",
+      "EnactiveLearning04/overmaps/o.-1.0.zzip",
+      "EnactiveLearning04/overmaps/o.-1.1.zzip",
+      "EnactiveLearning04/overmaps/o.0.0.zzip",
+      "EnactiveLearning04/overmaps/o.0.1.zzip"
+    ],
+    "save_added": [],
+    "save_deleted": [],
+    "only_admitted_world_changed": true,
+    "native_exit_code": 0,
+    "normal_finish": "stopped",
+    "charged_inputs": 20,
+    "unknown_acknowledgements": 3,
+    "unreconciled_effects": 0,
+    "finish_elapsed_seconds": 569.4509699344635,
+    "service_port_closed": true,
+    "mission_worker_alive": false,
+    "provider_requests": 0,
+    "limitations": [
+      "Technical passive projection only; no generated gameplay procedure application",
+      "No native partial # marker exercised",
+      "No apparent-latency/model/cadence qualification"
+    ]
+  },
+  "artifact_hashes": {
+    "canceled.png": "bc8a3c6860f9d10e9a5729e0c868eded4865aaa38a6bd643d4ee2edffcae7ad1",
+    "marked.png": "b5d126dd09378a13c337b8c539cf220793c523b494030a510426d32130c3b3a2",
+    "unmarked-again.png": "cff57cfedc0f2f197a813a811bfd9f6c09bb71e6619be9fd98714b78f6d0e414",
+    "unmarked.png": "cff57cfedc0f2f197a813a811bfd9f6c09bb71e6619be9fd98714b78f6d0e414"
+  },
+  "private_evidence": {
+    "root": ".runtime/iteration268/run001",
+    "mission": ".runtime/missions/marker-qualification-001",
+    "old_bridge": ".runtime/incidents/native6-to7-marker268/bridge",
+    "frozen_package_hashes": {
+      "admission.json": "36c3484f6a2d2a1d7382adebd6f1aba19b91911637913a34276bde9ded6d4f62",
+      "brief.md": "72c1b4a120f0d340749039cb18b6b1f5ee79787d758a04122d5f963eb43f2e8c",
+      "custodian.py": "5947bdaac3e9c94e0945070cf3423fcaa97a98a05a02e3299a163052fa5cc07e",
+      "development-checks.json": "611d6100f3ed4ae4b9fe14db1681707f13de04dab31315ef7ee8dc6f53ed657c",
+      "operator.py": "8f1bb88b902d613285c302e605d0645855fce0fe962deeffba3322efd7f452e9",
+      "source-native.json": "2c3e3156df4bd86947cf87c973084186ab4b27c5135761b8730c45dd920b2584",
+      "window-options.json": "9c2c99d87fbb4a71496b47c006bdcc4c9997da05576804f2d614ab4e89cc7d47"
+    },
+    "custodian_final_sha256": "f82e35b508bbdff70b8a851f1261144775b46a32c1997656896dca2fc54d6d57"
+  },
+  "note": "native.native_launched=false is immutable pre-admission preparation state; this result records one actual owned native launch and normal exit. No model/learned application/cadence claim."
+}
