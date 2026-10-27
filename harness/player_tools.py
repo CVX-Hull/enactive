@@ -1,6 +1,7 @@
 """Structured player adapter; the existing mission ingress remains the executor.
 
-Handles are bounded process-local copies of explicitly returned status/sources.
+Handles are bounded process-local copies of explicitly returned status/sources
+and canonical procedure results.
 They confer no authority, survive no restart and never silently refresh a choice.
 """
 from __future__ import annotations
@@ -178,8 +179,8 @@ def request_tool_specs() -> tuple[ToolSpec, ...]:
             "Each support group explicitly chooses primary plus additional source/claim IDs; primary=false never implies image support. "
             "Unobserved grounding stays source-free: every group requires primary=false and sources=[], with claim premises allowed. "
             + ("Correction supersedes come only from explicit retired_ids. " if kind == "correct" else "Remember supersedes are empty. ")
-            + ("For Procedures choose content/program, support/counterexamples and parent=null for a new family or an explicit qualified revision already revealed by enactive_context. "
-               "Software derives schema, record/mission/family/revision IDs, revision number and frozen admission environment from that selected cached context; do not supply them. "
+            + ("For Procedures choose content/program, support/counterexamples and parent=null for a new family or an explicit qualified revision revealed by enactive_context or a completed accepted Procedure write result, including original-result collection. "
+               "Software derives schema, record/mission/family/revision IDs and revision number from the assigned operation and selected cached parent, and frozen admission environment from the selected snapshot; do not supply them. "
                "Alternatively choose entry_type=procedure_candidate with proposal_index/candidate_index read by enactive_advice for this exact snapshot. Software submits that original candidate through the same writer; no copying or automatic adoption. "
                if kind == "remember" else "")
             + "No inferred support, truth, success or automatic lesson promotion.",
@@ -413,6 +414,18 @@ class PlayerTools:
         operation = response.get("operation")
         request = operation.get("request") if isinstance(operation, dict) else None
         delivered = envelope.get("transport") == "delivered" and envelope.get("reason") is None
+        if (delivered and response.get("status") == "accepted" and isinstance(request, dict)
+                and request.get("request_id") == envelope.get("operation_id")
+                and operation.get("state") == "completed" and request.get("kind") == "remember"
+                and request.get("entry_type") == "procedure"):
+            result = operation.get("result")
+            if isinstance(result, dict) and result.get("entry") is not None:
+                record = validate_procedure(result["entry"])
+                if record != request.get("entry") or record["mission_id"] != request.get("mission_id"):
+                    raise ContractError("Completed procedure result differs from its original request")
+                # This returned record is descriptive parent material, not a
+                # current-head, source, applicability or input-authority check.
+                self._remember(self.procedures, (record["mission_id"], record["id"]), record)
         collection = None
         refusal = admission_refusal_feedback(envelope)
         if refusal is not None:
@@ -755,7 +768,8 @@ class PlayerTools:
         if parent is not None:
             record = self.procedures.get((parent["mission_id"], parent["revision_id"]))
             if record is None:
-                raise ContractError("Parent revision unavailable; explicitly retrieve its procedure through enactive_context")
+                raise ContractError("Parent revision unavailable; explicitly retrieve its procedure through "
+                    "enactive_context or collect its original completed write result")
         return author_procedure(entry, mission_id=mission["mission_id"], identity=identity,
             environment=environment, parent=record)
 

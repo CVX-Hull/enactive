@@ -58,6 +58,12 @@ reads current context, selects applicable routines and revises them against actu
 outcomes. Revision retains support/counterexamples and ancestry. Historical
 procedures are fallible candidates; game/configuration applicability and current
 visible evidence govern use. Old world facts do not become current possession.
+The player's bounded descriptive parent cache retains canonical completed accepted
+Procedure write results as well as records explicitly returned by context. Explicit
+original-result collection can reveal the same stored record after delay or
+restart; no write is replayed. The player chooses the qualified parent, and the
+writer retains its current-head, branch, source and environment checks. Cache
+presence establishes neither applicability nor successful learning/application.
 
 The existing advisory mailbox accepts passive work while a skill runs. Writer
 boundaries/idle ticks commit records; the runtime performs no model/network wait

@@ -1,5 +1,6 @@
-"""Semantic procedure authoring over cached context and actual SDK staging."""
+"""Semantic procedure authoring over revealed records and actual SDK staging."""
 from copy import deepcopy
+import asyncio
 import json
 from pathlib import Path
 import tempfile
@@ -7,10 +8,14 @@ import unittest
 
 from harness.gameplay.contracts import ContractError
 from harness.gameplay.mission_contracts import validate_request
+from harness.mission_client import MissionClientError, _envelope
+from harness.player_mcp import make_server
 from harness.player_tools import PlayerTools
+from mcp.client import Client
 from tests import test_campaign_procedures as procedure_fixture
 from tests.test_player_claims import StagingClient
 from tests.test_mission_request_producer import snapshot
+from tests.test_mission_contracts import request as memory_request
 from tests.test_procedures import procedure
 from tests.test_reflection_exchange import proposal
 
@@ -27,7 +32,11 @@ class ProcedureClient(StagingClient):
             self.events.append('context')
             return dict(status='accepted', context=dict(mission_id=request['mission_id'],
                                                         packet=deepcopy(self.packet)))
-        return super()._json(path, data=data, **options)
+        response = super()._json(path, data=data, **options)
+        if request['kind'] == 'remember' and request['entry_type'] == 'procedure':
+            response['operation']['result'] = dict(memory_version=len(self.writes),
+                entry=deepcopy(request['entry']), grants_authority=False)
+        return response
 
 
 class PlayerProcedureAuthoringTests(unittest.TestCase):
@@ -82,9 +91,12 @@ class PlayerProcedureAuthoringTests(unittest.TestCase):
         self.assertNotIn('id', candidate)
         self.assertNotIn('support', candidate)
         self.assertNotIn('program', candidate)
+        self.assertEqual(self.player.procedures, {})  # Exposure is not adoption.
         self.adopt(proposal_index=2)
         self.assertEqual(self.client.writes[0]['entry'], self.offered['candidates'][0])
         self.assertEqual(self.client.writes[0]['entry_type'], 'procedure')
+        record = self.client.writes[0]['entry']
+        self.assertEqual(self.player.procedures[(record['mission_id'], record['id'])], record)
         validate_request(self.client.writes[0])
 
     def test_exact_advice_detail_and_adoption_use_defensive_original_copy(self):
@@ -153,7 +165,7 @@ class PlayerProcedureAuthoringTests(unittest.TestCase):
         self.assertEqual(self.client.writes, [])
         self.assertEqual(self.client.events, [])
 
-    def test_explicit_parent_requires_revealed_context_and_derives_family_revision(self):
+    def test_explicit_parent_requires_revealed_record_and_derives_family_revision(self):
         parent = procedure()
         selection = dict(mission_id=parent['mission_id'], revision_id=parent['id'])
         with self.assertRaisesRegex(ContractError, 'explicitly retrieve'):
@@ -197,12 +209,77 @@ class PlayerProcedureAuthoringTests(unittest.TestCase):
         records[-1]['goal'] = 'mutated external data'
         self.assertNotEqual(self.player.procedures[('mission-a','revision-33')]['goal'], records[-1]['goal'])
 
+    def completed(self, record, identity='accepted-procedure'):
+        request = memory_request('remember', request_id=identity, mission_id=record['mission_id'],
+            entry_type='procedure', entry=deepcopy(record))
+        validate_request(request)
+        return _envelope(dict(status='accepted', operation=dict(request=request, state='completed',
+            result=dict(entry=deepcopy(record), memory_version=1, grants_authority=False))), identity)
+
+    def test_completed_results_are_bounded_qualified_independent_copies(self):
+        for n in range(34):
+            self.player._finish(self.completed(procedure(id=f'revision-{n}', procedure_id=f'family-{n}')))
+        self.assertEqual(len(self.player.procedures), 32)
+        self.assertNotIn(('mission-a','revision-0'), self.player.procedures)
+        # An explicit repeated result refreshes the existing cache position.
+        self.player._finish(self.completed(procedure(id='revision-2', procedure_id='family-2')))
+        self.player._finish(self.completed(procedure(id='revision-34', procedure_id='family-34')))
+        self.assertIn(('mission-a','revision-2'), self.player.procedures)
+        self.assertNotIn(('mission-a','revision-3'), self.player.procedures)
+        record = procedure(mission_id='other-mission', id='revision-33')
+        envelope = self.completed(record)
+        output, _ = self.player._finish(envelope)
+        self.assertIn(('mission-a','revision-33'), self.player.procedures)
+        output['response']['operation']['result']['entry']['goal'] = 'changed output'
+        envelope['response']['operation']['result']['entry']['goal'] = 'changed envelope'
+        record['goal'] = 'changed caller'
+        self.assertEqual(self.player.procedures[('other-mission','revision-33')]['goal'], procedure()['goal'])
+        self.assertEqual(len(self.player.procedures), 32)
+        restarted = PlayerTools(self.client)
+        self.assertEqual(restarted.procedures, {})
+        restarted._finish(self.completed(procedure()))  # An explicit collected receipt can reveal data again.
+        self.assertIn(('mission-a',procedure()['id']), restarted.procedures)
+
+    def test_nonfinal_uncertain_rejected_and_nonprocedure_results_never_reveal_a_parent(self):
+        base = self.completed(procedure())
+        variants = []
+        for state in ('accepted','running','blocked','failed','paused'):
+            v=deepcopy(base);v['response']['operation']['state']=state;variants.append(v)
+        for changes in (dict(transport='uncertain'),dict(reason='Original outcome uncertain'),
+                        dict(operation_id='another-operation')):
+            variants.append({**deepcopy(base),**changes})
+        v=deepcopy(base);v['response']['status']='rejected';variants.append(v)
+        v=deepcopy(base);v['response']['operation']['request']['entry_type']='claim';variants.append(v)
+        for result in (None,{},dict(entry=None)):
+            v=deepcopy(base);v['response']['operation']['result']=result;variants.append(v)
+        for v in variants:
+            with self.subTest(envelope=v):
+                self.player._finish(v)
+                self.assertEqual(self.player.procedures, {})
+        self.assertEqual(self.client.writes, [])
+
+    def test_invalid_or_mismatched_completed_record_fails_without_revealing_or_rewriting(self):
+        base = self.completed(procedure())
+        for change in (dict(goal=None),dict(id='other-revision'),dict(mission_id='other-mission'),
+                       dict(reason='Another canonical body')):
+            v=deepcopy(base);v['response']['operation']['result']['entry'].update(change)
+            before=deepcopy(v)
+            with self.subTest(change=change),self.assertRaises(ContractError):self.player._finish(v)
+            self.assertEqual(v,before)
+            self.assertEqual(self.player.procedures,{})
+        v=deepcopy(base)
+        v['response']['operation']['request']['mission_id']='other-mission'
+        with self.assertRaisesRegex(ContractError,'differs'):
+            self.player._finish(v)
+        self.assertEqual(self.player.procedures,{})
+        self.assertEqual(self.client.writes,[])
+
 
 class PlayerProcedureLedgerTests(unittest.TestCase):
     setUp = procedure_fixture.CampaignProcedureTests.setUp
     episode = procedure_fixture.CampaignProcedureTests.episode
 
-    def test_semantic_authoring_and_revision_reach_actual_memory_guards(self):
+    def connection(self, first_response=None):
         root = self.ledger.directory.parent
         (root / '.runtime').mkdir()
         client = StagingClient(root)
@@ -211,32 +288,116 @@ class PlayerProcedureLedgerTests(unittest.TestCase):
             configuration=dict(procedure_environment=procedure()['environment'])), native={}, source=None)
         player.snapshots['chosen'] = selected
         entry = {k:v for k,v in procedure(support=[self.episode()]).items() if k not in MECHANICAL}
+        calls = []
         def receiver(path, *, data=None, **options):
             body = json.loads(data)
+            calls.append(body['kind'])
+            if body['kind'] == 'result':
+                return dict(status='accepted', operation=self.ledger.request(body['operation_id']))
             if body['kind'] == 'context':
-                packet = self.memory.context(body['scope'], body['query'], max_bytes=32768,
+                packet = self.memory.context(body['scope'], body['query'], max_bytes=body['max_bytes'],
                     now_monotonic=100, now_timestamp_ms=1_000_000)
                 return dict(status='accepted', context=dict(mission_id=self.admission.mission_id, packet=packet))
             self.ledger.begin_request(body, now=1000)
             result = self.memory.apply(body, now=1000)
             self.ledger.complete_request(body['request_id'], 'completed', result, now=1000)
+            if calls == ['remember'] and first_response is not None:
+                if first_response == 'uncertain':raise MissionClientError('Injected lost first response')
+                return dict(status='accepted',operation=dict(request=body,state='running',result=None))
             return dict(status='accepted', operation=dict(request=body, state='completed', result=result))
         client._json = receiver
+        return client, player, entry, calls
+
+    def revision_loop(self, first_response=None):
+        client, player, entry, calls = self.connection(first_response)
         def remember(content, identity):
             output, _ = player.call('enactive_remember', dict(snapshot_id='chosen', request_id=identity,
                 wait_seconds=0, intent=dict(entry_type='procedure', entry=content)))
-            return output['response']['operation']['result']['entry']
-        first = remember(entry, 'first-artifact')
-        player.call('enactive_context', dict(snapshot_id='chosen', intent=dict(handoff=None,
-            scope=dict(session='native-session', coordinate_epoch=0), query='water', max_bytes=32768)))
+            return output
+        output = remember(entry, 'first-artifact')
+        if first_response is not None:
+            self.assertEqual(player.procedures,{})
+            first = self.ledger.memory_records('procedure')[0]['entry']
+            attempt={**entry,'parent':dict(mission_id=first['mission_id'],revision_id=first['id'])}
+            with self.assertRaisesRegex(ContractError,'Parent revision unavailable'):
+                remember(attempt,'unrevealed-successor')
+            self.assertEqual(calls,['remember'])
+            # A fresh adapter has no receipt cache; original collection, not
+            # another submission or an automatic context read, reveals it.
+            player=PlayerTools(client)
+            player.snapshots['chosen']=dict(snapshot_id='chosen',mission=snapshot(epoch=0,
+                configuration=dict(procedure_environment=procedure()['environment'])),native={},source=None)
+            output,_=player.call('enactive_result',dict(mission_id=self.admission.mission_id,
+                operation_id='first-artifact',wait_seconds=0))
+        first=output['response']['operation']['result']['entry']
+        self.assertEqual(player.procedures[(first['mission_id'],first['id'])],first)
         changed = {**entry, 'parent':dict(mission_id=first['mission_id'], revision_id=first['id']),
                    'reason':'Revised scoped interpretation'}
-        second = remember(changed, 'revised-artifact')
+        second = remember(changed, 'revised-artifact')['response']['operation']['result']['entry']
         self.assertEqual(second['procedure_id'], first['procedure_id'])
         self.assertEqual(second['revision'], 2)
+        self.assertEqual(second['parent'],changed['parent'])
+        self.assertEqual(calls.count('remember'),2)
+        self.assertNotIn('context',calls)
+        self.assertEqual(calls.count('result'),first_response is not None)
         with self.assertRaisesRegex(ContractError, 'branches|stale'):
             remember(changed, 'incomparable-artifact')
         self.assertEqual(len(self.ledger.memory_records('procedure')), 2)
+
+    def test_semantic_authoring_and_revision_reach_actual_memory_guards(self):
+        self.revision_loop()
+
+    def test_pending_first_response_requires_explicit_original_collection(self):
+        self.revision_loop('running')
+
+    def test_uncertain_first_response_requires_explicit_original_collection_without_replay(self):
+        self.revision_loop('uncertain')
+
+    def test_omitted_unrevealed_parent_requires_explicit_sufficient_context(self):
+        _,player,entry,calls=self.connection()
+        output,_=player.call('enactive_remember',dict(snapshot_id='chosen',request_id='first',wait_seconds=0,
+            intent=dict(entry_type='procedure',entry=entry)))
+        first=output['response']['operation']['result']['entry'];player.procedures.clear()
+        changed={**entry,'parent':dict(mission_id=first['mission_id'],revision_id=first['id'])}
+        for maximum in (1024,32768):
+            output,_=player.call('enactive_context',dict(snapshot_id='chosen',intent=dict(handoff=None,
+                scope=dict(session='native-session',coordinate_epoch=0),query='water',max_bytes=maximum)))
+            if maximum==1024:
+                self.assertEqual(output['response']['context']['packet']['procedures'],[])
+                self.assertEqual(player.procedures,{})
+                with self.assertRaisesRegex(ContractError,'Parent revision unavailable'):
+                    player.call('enactive_remember',dict(snapshot_id='chosen',request_id='too-early',wait_seconds=0,
+                        intent=dict(entry_type='procedure',entry=changed)))
+                self.assertEqual(calls.count('remember'),1)
+        player.call('enactive_remember',dict(snapshot_id='chosen',request_id='successor',wait_seconds=0,
+            intent=dict(entry_type='procedure',entry=changed)))
+        self.assertEqual(len(self.ledger.memory_records('procedure')),2)
+        self.assertEqual(calls.count('context'),2)
+
+    def test_official_mcp_preserves_completed_records_and_explicit_successor(self):
+        _,player,entry,calls=self.connection()
+        async def exercise():
+            async with Client(make_server(player)) as client:
+                tools=(await client.list_tools()).tools
+                expected=list(player.model_specs.values())
+                self.assertEqual([t.name for t in tools],[s.name for s in expected])
+                for actual,spec in zip(tools,expected):
+                    self.assertEqual(actual.input_schema,spec.schema)
+                    self.assertEqual(actual.description,spec.description)
+                    self.assertEqual(actual.annotations.read_only_hint,spec.read_only)
+                async def write(content):
+                    result=await client.call_tool('enactive_remember',dict(snapshot_id='chosen',
+                        intent=dict(entry_type='procedure',entry=content)))
+                    self.assertFalse(result.is_error)
+                    return json.loads(result.content[0].text)['response']['operation']['result']['entry']
+                first=await write(entry)
+                self.assertEqual(player.procedures[(first['mission_id'],first['id'])],first)
+                second=await write({**entry,'parent':dict(mission_id=first['mission_id'],revision_id=first['id'])})
+                self.assertEqual(second['procedure_id'],first['procedure_id'])
+                self.assertEqual(second['revision'],2)
+        asyncio.run(exercise())
+        self.assertEqual(calls,['remember','remember'])
+        self.assertEqual(len(self.ledger.memory_records('procedure')),2)
 
 
 if __name__ == '__main__':

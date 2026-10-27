@@ -33,6 +33,15 @@ view and image. Mechanical IDs, waits, canonical metadata and joins belong to
 software. It must not guess intent, choose supporting evidence, repair malformed
 arguments, replay input or turn a detail read into a new observation.
 
+Procedure parents can be revealed by explicit context or a canonical completed
+accepted write result, including explicit original-result collection. Player tools
+validate and retain that returned record in the same32-entry, qualified
+mission/revision cache; the player still selects the exact parent. Pending or
+uncertain writes and advice exposure reveal no parent. Cache copies survive no
+restart and confer no current-head, applicability or input authority; the receiver
+still checks lineage, environment and support. Eviction/restart needs an explicit
+context read or original-result collection, without replay or automatic retrieval.
+
 For a reconciled initial Load menu, the transition result explains the separate
 same-root readmission required before menu dismissal and identity inspection.
 The producer refuses a premature skill from that selected paused snapshot before
