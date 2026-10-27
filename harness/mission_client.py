@@ -14,6 +14,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 
+from .gameplay.advisory_capture import SOURCE_VERSION, validate_source as validate_advisory_source
 from .gameplay.contracts import MAX_JSON_BYTES, json_object
 from .gameplay.contracts import canonical
 from .gameplay.mission_contracts import MAX_REQUEST_BYTES, VERSION, validate_admission_refusal, validate_request
@@ -301,18 +302,21 @@ class MissionClient:
         # Reuse current ID validation without allowing a path or caller URL.
         validate_request(dict(schema=VERSION, kind="result", mission_id=mission_id, operation_id=source_id))
         query = urlencode(dict(mission_id=mission_id, source_id=source_id))
-        return self._retained_source("/api/mission/", query, source_id)
+        return self._retained_source("/api/mission/", query, source_id, mission_id=mission_id)
 
-    def _retained_source(self, prefix: str, query: str, source_id: str) -> tuple[dict, bytes]:
+    def _retained_source(self, prefix: str, query: str, source_id: str, *, mission_id: str) -> tuple[dict, bytes]:
         try:
             metadata = self._json(prefix + "source?" + query)
-            if (set(metadata) != {"reference", "observation", "disposition", "grants_authority"}
-                    or metadata["disposition"] not in ("retained", "disputed")
-                    or metadata["grants_authority"] is not False):
-                raise MissionClientError("Source metadata unavailable or invalid")
-            identity, _ = _source_binding(metadata)
-            if identity != source_id:
-                raise MissionClientError("Source identity differs from requested source")
+            if metadata.get("schema") == SOURCE_VERSION:
+                metadata = validate_advisory_source(metadata, mission_id=mission_id, source_id=source_id)
+            else:
+                if (set(metadata) != {"reference", "observation", "disposition", "grants_authority"}
+                        or metadata["disposition"] not in ("retained", "disputed")
+                        or metadata["grants_authority"] is not False):
+                    raise MissionClientError("Source metadata unavailable or invalid")
+                identity, _ = _source_binding(metadata)
+                if identity != source_id:
+                    raise MissionClientError("Source identity differs from requested source")
             image = self._fetch(prefix + "frame?" + query, maximum=_FRAME_BYTES)
             if (not image.startswith(b"\x89PNG\r\n\x1a\n")
                     or hashlib.sha256(image).hexdigest() != metadata["reference"]["frame_sha256"]):
@@ -324,7 +328,7 @@ class MissionClient:
     @staticmethod
     def _reflection_scope(mission_id: str, reflector_id: str, job_id: str = "read",
                           command_id: str = "read") -> dict:
-        return validate_command(dict(schema="reflection/2", kind="claim", mission_id=mission_id,
+        return validate_command(dict(schema="reflection/3", kind="claim", mission_id=mission_id,
             reflector_id=reflector_id, job_id=job_id, command_id=command_id))
 
     @staticmethod
@@ -447,7 +451,7 @@ class MissionClient:
         """Read an exact job source; never Observe or use the player source path."""
         self._reflection_scope(mission_id, reflector_id, job_id, source_id)
         query = urlencode(dict(mission_id=mission_id, reflector_id=reflector_id, job_id=job_id, source_id=source_id))
-        return self._retained_source("/api/reflection/", query, source_id)
+        return self._retained_source("/api/reflection/", query, source_id, mission_id=mission_id)
 
     def reflection_advice(self, mission_id: str, proposal_id: str) -> dict:
         """Read one passive proposal; it is never accepted memory or authority."""

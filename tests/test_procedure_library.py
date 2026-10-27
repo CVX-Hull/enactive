@@ -1,4 +1,4 @@
-"""Sealed synthetic archives: integrity/closure, never gameplay acceptance."""
+"""Offline current archive validation, before export; not live donor ingress."""
 import fcntl
 from copy import deepcopy
 import hashlib
@@ -14,7 +14,7 @@ from harness.gameplay.contracts import ContractError, EvidenceRef
 from harness.gameplay.evidence import EvidenceStore, MAX_FRAMES, _identity
 from harness.gameplay.mission_contracts import LearningPolicy
 from harness.gameplay.contracts import canonical
-from harness.gameplay.procedure_library import ProcedureLibrary
+from harness.gameplay.procedure_archive import SealedProcedureArchive
 from harness.gameplay.procedures import project_procedures
 from tests.test_mission_ledger import intent, known_receipt
 from tests.test_gameplay_evidence import observation, png
@@ -26,7 +26,7 @@ def digest(data):
     return hashlib.sha256(data).hexdigest()
 
 
-class ProcedureLibraryTests(unittest.TestCase):
+class SealedProcedureArchiveTests(unittest.TestCase):
     def setUp(self):
         owned = Path(__file__).resolve().parents[1] / ".runtime" / "procedure-library-tests"
         owned.mkdir(parents=True, exist_ok=True)
@@ -58,7 +58,7 @@ class ProcedureLibraryTests(unittest.TestCase):
                 "context_bytes": 65536, "result_bytes": 32768, "job_seconds": 180, "total_seconds": 3600}}
         db = sqlite3.connect(directory / "mission.sqlite3")
         with db:
-            db.execute("PRAGMA user_version=12")
+            db.execute("PRAGMA user_version=13")
             db.execute("CREATE TABLE metadata(key TEXT PRIMARY KEY,value TEXT NOT NULL)")
             db.execute("CREATE TABLE requests(id TEXT PRIMARY KEY,payload TEXT,digest TEXT,state TEXT,result TEXT)")
             db.execute("CREATE TABLE primitives(id TEXT PRIMARY KEY,request_id TEXT,intent TEXT,native_id TEXT,state TEXT,result TEXT,effect TEXT)")
@@ -98,7 +98,7 @@ class ProcedureLibraryTests(unittest.TestCase):
         return self.pin(directory.name)
 
     def library(self, *pins):
-        library = ProcedureLibrary(self.root, pins, current_mission_id="current")
+        library = SealedProcedureArchive(self.root, pins, current_mission_id="current")
         self.addCleanup(library.close)
         return library
 
@@ -638,7 +638,7 @@ class ProcedureLibraryTests(unittest.TestCase):
             self.library(pin)
 
 
-class PausedProcedureLibraryTests(ProcedureLibraryTests):
+class PausedSealedProcedureArchiveTests(SealedProcedureArchiveTests):
     """Apply the same integrity and closure checks to closed paused archives."""
 
     def archive(self, mission="mission-a", *, records=None, dependencies=(), phase="paused"):

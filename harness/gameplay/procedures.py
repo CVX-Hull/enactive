@@ -6,6 +6,7 @@ input authority. Callers own source validation and environment-pin matching.
 from __future__ import annotations
 
 from collections.abc import Sequence
+from copy import deepcopy
 import hashlib
 from typing import Any
 
@@ -16,6 +17,7 @@ from .contracts import (
 from .contracts import canonical
 
 VERSION = "procedure/3"
+IMPORT_VERSION = "procedure-import/1"
 MAX_PROCEDURE_BYTES = 32_768
 MAX_PROCEDURE_RECORDS = 256
 
@@ -53,11 +55,56 @@ _SCHEMA = _object({
     "support": _array(_EPISODE, 8, 1), "counterexamples": _array(_EPISODE, 8),
     "status": _enum("candidate", "active", "disputed", "retired"), "reason": _TEXT,
 })
+# These are current advisory data contracts, never historical execution schemas.
+# Original syntax admission and binding to archive bytes remain the importer's job.
+_ORIGINAL_SCHEMA = deepcopy(_SCHEMA)
+_ORIGINAL_SCHEMA["properties"]["environment"]["properties"]["native_protocol"]["const"] = 6
+_SHA256 = {"type": "string", "minLength": 64, "maxLength": 64, "pattern": "^[a-f0-9]{64}$"}
+_IMPORT_SCHEMA = deepcopy(_ORIGINAL_SCHEMA)
+_IMPORT_SCHEMA["properties"].update({
+    "schema": {"const": IMPORT_VERSION}, "record_type": {"const": "HistoricalProcedure"},
+    "advisory_only": {"const": True},
+    "origin": _object({
+        "schema": {"const": VERSION}, "record_type": {"const": "Procedure"},
+        "record_sha256": _SHA256, "ledger_sha256": _SHA256, "index_sha256": _SHA256,
+        "program_view": {"const": "program-view/1"},
+    }),
+})
+_IMPORT_SCHEMA["required"].extend(("advisory_only", "origin"))
+_LINEAGE_SCHEMA = {"oneOf": [_SCHEMA, _IMPORT_SCHEMA]}
 
 
 def procedure_schema() -> dict[str, Any]:
     """Return a defensive copy of the closed procedure/3 record schema."""
     return json_object(_SCHEMA)
+
+
+def lineage_node_schema() -> dict[str, Any]:
+    """Return the closed current/advisory lineage union, without execution eligibility."""
+    return json_object(_LINEAGE_SCHEMA)
+
+
+def import_procedure(body: str, *, ledger_sha256: str, index_sha256: str) -> dict[str, Any]:
+    """Derive advisory data from an original procedure/3 native6 stored JSON body.
+
+    The hash binds the exact supplied UTF-8 string, including whitespace. This
+    pure conversion authenticates neither that string nor its archive pins and
+    does not replace full offline validation of the original archive.
+    """
+    if not isinstance(body, str):
+        raise ContractError("Procedure import requires an original stored JSON string")
+    try:
+        digest = hashlib.sha256(body.encode("utf-8")).hexdigest()
+    except UnicodeError as exc:
+        raise ContractError("Procedure import requires valid UTF-8 JSON") from exc
+    original = _validate_node(body, _ORIGINAL_SCHEMA)
+    return validate_lineage_node({
+        **original, "schema": IMPORT_VERSION, "record_type": "HistoricalProcedure",
+        "advisory_only": True,
+        "origin": {"schema": VERSION, "record_type": "Procedure", "record_sha256": digest,
+                   "ledger_sha256": ledger_sha256, "index_sha256": index_sha256,
+                   "program_view": "program-view/1"},
+    })
 
 
 def procedure_authoring_schema() -> dict[str, Any]:
@@ -91,7 +138,7 @@ def author_procedure(
     else:
         if parent is None:
             raise ContractError("Procedure successor requires a selected parent revision")
-        selected = validate_procedure(parent)
+        selected = validate_lineage_node(parent)
         if semantic["parent"] != {"mission_id": selected["mission_id"], "revision_id": selected["id"]}:
             raise ContractError("Procedure parent must match the selected qualified revision")
         family, revision = selected["procedure_id"], selected["revision"] + 1
@@ -103,8 +150,21 @@ def author_procedure(
 
 def validate_procedure(value: dict[str, Any] | str | bytes) -> dict[str, Any]:
     """Validate shape and byte bounds, returning an independent decoded copy."""
+    return _validate_node(value, _SCHEMA)
+
+
+def validate_lineage_node(value: dict[str, Any] | str | bytes) -> dict[str, Any]:
+    """Validate bounded current or historical advisory lineage data, not authority."""
     result = json_object(value)
-    validate_json(result, _SCHEMA)
+    # Select the closed variant before validation so validate_json's additional
+    # strict integer checks still traverse every field (they do not walk oneOf).
+    schema = _SCHEMA if result.get("schema") == VERSION else _IMPORT_SCHEMA
+    return _validate_node(result, schema)
+
+
+def _validate_node(value: dict[str, Any] | str | bytes, schema: dict[str, Any]) -> dict[str, Any]:
+    result = json_object(value)
+    validate_json(result, schema)
     try:
         size = len(canonical(result).encode("utf-8"))
     except UnicodeError as exc:
@@ -133,7 +193,7 @@ def project_procedures(
 
     revisions: dict[tuple[str, str], dict[str, Any]] = {}
     for value in records:
-        record = validate_procedure(value)
+        record = validate_lineage_node(value)
         identity = (record["mission_id"], record["id"])
         if identity in revisions and revisions[identity] != record:
             raise ContractError("Conflicting copies of an immutable procedure revision")

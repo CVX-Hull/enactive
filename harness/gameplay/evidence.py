@@ -166,10 +166,19 @@ def validate_native_progression(before: dict, after: dict, *, now_timestamp_ms: 
 def _validate_observation(value: dict[str, Any] | str | bytes) -> dict[str, Any]:
     observation = json_object(value)
     validate_json(observation, _OBSERVATION)
+    validate_visible_ui(observation["ui"])
+    return _capture_consistency(observation)
+
+
+def _capture_consistency(observation: dict[str, Any]) -> dict[str, Any]:
+    """Check capture facts after a caller validates its own data contract.
+
+    Current observations and explicitly advisory captures share these facts.
+    This does not validate a wire version, historical UI grammar or authority.
+    """
     if observation["status"] == "dispatched" or observation["frame_ok"] is not True:
         raise EvidenceError("A failed or unfinished capture is missing evidence")
     validate_geometry(observation["frame_geometry"])
-    validate_visible_ui(observation["ui"])
     kind = observation["boundary"]["kind"]
     if kind == "normal_play":
         if (not observation["in_game"] or observation["category"] != "DEFAULTMODE" or observation["scene"] is None

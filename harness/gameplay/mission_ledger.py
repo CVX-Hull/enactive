@@ -21,7 +21,7 @@ from .contracts import canonical
 from .native_receipts import validate_ordinary_mapping, validate_published_input
 from .mission_contracts import MemoryRequestRefusal, VERSION, MissionAdmission, InputObservation, SourceRevalidation, validate_handoff_binding, effect_reconciliation, validate_effect_reconciliation, validate_delivery_resolution, validate_handoff_result, validate_lifecycle_transition, validate_memory_entry, validate_normal_adoption, validate_normal_exit, validate_normal_finish, validate_prompt_result, validate_request, validate_saved_checkpoint, validate_readmission
 
-DB_VERSION = 12
+DB_VERSION = 13
 MAX_DATABASE_BYTES = 64 * 1024 * 1024
 MAX_RECEIPT_BYTES = 65_536
 MAX_EFFECT_BYTES = 32_768

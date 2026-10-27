@@ -578,10 +578,12 @@ class MissionCreationTests(MissionCreationFixture, unittest.TestCase):
         self.assertEqual(sum(row.get("action") == "CONFIRM" for row in self.bridge.delivered), 0)
 
     def test_creation_adopts_and_retrieves_with_real_pinned_library(self):
-        archive = library_fixtures.ProcedureLibraryTests()
+        archive = library_fixtures.SealedProcedureArchiveTests()
         archive.root = self.controller.root
         archive.environment = library_fixtures.procedure()["environment"]
         _, _, record, pin = archive.archive()
+        from harness.gameplay.advisory_export import export_current
+        export_current(archive.root, [pin], validator_revision="0" * 40)
         self.a = replace(self.a, learning=LearningPolicy(archive.environment, (LibrarySource(**pin),)))
         adopted = self.create()
         self.assertEqual(adopted["result"]["normal_adoption"]["scope"]["coordinate_epoch"], 0)

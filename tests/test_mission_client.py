@@ -494,5 +494,43 @@ class MissionClientTests(unittest.TestCase):
             with self.assertRaises(MissionClientError): self.client.source("mission-test", source_id)
 
 
+    def test_advisory_source_reads_original_image_without_becoming_current_input_metadata(self):
+        from harness.gameplay.mission_requests import _source_binding
+        from tests.test_advisory_capture import historical_source
+        _, metadata = historical_source()
+        source_id = metadata["reference"]["observation_id"]
+        self.server.callback = lambda handler, body: handler.reply(
+            metadata if urlsplit(handler.path).path == "/api/mission/source" else png())
+        value, image = self.client.source("old-mission", source_id)
+        self.assertEqual((value, image), (metadata, png()))
+        self.assertNotIn("observation", value)
+        with self.assertRaises(ContractError):
+            _source_binding(value)
+        self.assertEqual(value["capture"]["original_protocol"], 6)
+
+    def test_advisory_source_refuses_wrong_scope_provenance_authority_and_raw_legacy_metadata(self):
+        from tests.test_advisory_capture import historical_source
+        original, metadata = historical_source()
+        source_id = metadata["reference"]["observation_id"]
+        variants = [{**metadata, "mission_id": "foreign"}, {**metadata, "grants_authority": True},
+            {**metadata, "schema": "advisory-source/0"},
+            {**metadata, "origin": {**metadata["origin"], "native_protocol": 7}},
+            dict(reference=metadata["reference"], observation=original,
+                 disposition="retained", grants_authority=False)]
+        for variant in variants:
+            self.server.callback = lambda handler, body: handler.reply(variant)
+            with self.subTest(variant=variant), self.assertRaises(MissionClientError):
+                self.client.source("old-mission", source_id)
+        self.assertTrue(all(urlsplit(call[1]).path == "/api/mission/source" for call in self.server.calls))
+
+    def test_advisory_source_image_hash_is_still_required(self):
+        from tests.test_advisory_capture import historical_source
+        _, metadata = historical_source()
+        self.server.callback = lambda handler, body: handler.reply(
+            metadata if urlsplit(handler.path).path == "/api/mission/source" else png(b"changed"))
+        with self.assertRaises(MissionClientError):
+            self.client.source("old-mission", metadata["reference"]["observation_id"])
+
+
 if __name__ == "__main__":
     unittest.main()

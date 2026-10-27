@@ -9,8 +9,8 @@ from jsonschema import Draft202012Validator
 from harness.gameplay.contracts import ContractError
 from harness.gameplay.contracts import canonical
 from harness.gameplay.procedures import (
-    author_procedure, procedure_authoring_schema, procedure_schema, project_procedures,
-    validate_procedure,
+    author_procedure, import_procedure, lineage_node_schema, procedure_authoring_schema,
+    procedure_schema, project_procedures, validate_lineage_node, validate_procedure,
 )
 
 
@@ -42,6 +42,144 @@ def successor(parent, **changes):
         "parent": {"mission_id": parent["mission_id"], "revision_id": parent["id"]},
         **changes,
     })
+
+
+def historical(record=None):
+    original = procedure() if record is None else deepcopy(record)
+    original["environment"]["native_protocol"] = 6
+    return import_procedure(canonical(original), ledger_sha256="b" * 64, index_sha256="c" * 64)
+
+
+class HistoricalProcedureTests(unittest.TestCase):
+    def test_import_preserves_original_semantics_and_hashes_exact_stored_utf8_body(self):
+        original = procedure(status="active", program={"language": "javascript/1",
+                                                      "source": "return '水';"})
+        original["environment"]["native_protocol"] = 6
+        body = " \n" + json.dumps(original, ensure_ascii=False, indent=2) + "\n"
+        node = import_procedure(body, ledger_sha256="b" * 64, index_sha256="c" * 64)
+        self.assertEqual(node, {**original, "schema": "procedure-import/1",
+                               "record_type": "HistoricalProcedure", "advisory_only": True,
+                               "origin": {"schema": "procedure/3", "record_type": "Procedure",
+                                          "record_sha256": hashlib.sha256(body.encode()).hexdigest(),
+                                          "ledger_sha256": "b" * 64, "index_sha256": "c" * 64,
+                                          "program_view": "program-view/1"}})
+        self.assertNotEqual(node["origin"]["record_sha256"],
+                            hashlib.sha256(canonical(original).encode()).hexdigest())
+        for value in (node, canonical(node), canonical(node).encode()):
+            result = validate_lineage_node(value)
+            self.assertEqual(result, node)
+            result["environment"]["configuration"] = "changed"
+        self.assertEqual(node["environment"], original["environment"])
+        with self.assertRaises(ContractError):
+            validate_procedure(node)
+        self.assertEqual(validate_lineage_node(procedure()), procedure())
+
+    def test_union_schema_is_closed_tagged_and_defensively_copied(self):
+        schema = lineage_node_schema()
+        Draft202012Validator.check_schema(schema)
+        self.assertEqual(len(schema["oneOf"]), 2)
+        for variant in schema["oneOf"]:
+            self.assertFalse(variant["additionalProperties"])
+        schema["oneOf"][1]["properties"]["environment"]["properties"]["native_protocol"] = {}
+        schema["oneOf"][0]["required"].clear()
+        self.assertTrue(lineage_node_schema()["oneOf"][0]["required"])
+        node = historical()
+        for field in node:
+            invalid = deepcopy(node)
+            del invalid[field]
+            with self.subTest(missing=field), self.assertRaises(ContractError):
+                validate_lineage_node(invalid)
+        for path in ((), ("origin",), ("environment",), ("support", 0)):
+            invalid = deepcopy(node)
+            target = invalid
+            for key in path:
+                target = target[key]
+            target["extra"] = True
+            with self.subTest(path=path), self.assertRaises(ContractError):
+                validate_lineage_node(invalid)
+
+    def test_forged_tags_environment_origin_and_unbounded_records_refuse(self):
+        node = historical()
+        invalid = [procedure(environment={**procedure()["environment"], "native_protocol": 6}),
+                   {**node, "schema": "procedure/3", "record_type": "Procedure"},
+                   {**procedure(), "schema": "procedure-import/1", "record_type": "HistoricalProcedure"},
+                   {**node, "advisory_only": False},
+                   {**node, "environment": procedure()["environment"]}]
+        for field, value in (("schema", "procedure/2"), ("record_type", "HistoricalProcedure"),
+                             ("record_sha256", "A" * 64), ("ledger_sha256", "b" * 63),
+                             ("index_sha256", "c" * 65), ("program_view", "program-view/2")):
+            invalid.append({**node, "origin": {**node["origin"], field: value}})
+        invalid.extend([{**node, "parameters": node["parameters"] * 2},
+                        {**node, "program": {"language": "javascript/1", "source": "x" * 32768}}])
+        for value in invalid:
+            with self.subTest(value=str(value)[:100]), self.assertRaises(ContractError):
+                validate_lineage_node(value)
+        for value in (procedure(), {**procedure(), "schema": "procedure/2"}, node,
+                      {**procedure(), "environment": {**node["environment"], "native_protocol": 5}}):
+            with self.subTest(original=value["schema"]), self.assertRaises(ContractError):
+                import_procedure(canonical(value), ledger_sha256="b" * 64, index_sha256="c" * 64)
+        for body in (node, b"{}", "{", "\ud800"):
+            with self.subTest(body=str(body)[:30]), self.assertRaises(ContractError):
+                import_procedure(body, ledger_sha256="b" * 64, index_sha256="c" * 64)
+        with self.assertRaises(ContractError):
+            import_procedure(canonical({**procedure(), "environment": node["environment"]}),
+                             ledger_sha256="invalid", index_sha256="c" * 64)
+
+    def test_lineage_union_preserves_strict_integer_and_exact_byte_bounds(self):
+        for node in (procedure(), historical()):
+            for invalid in ({**node, "revision": 1.0}, {**node, "revision": True},
+                            {**node, "environment": {**node["environment"],
+                                                    "native_protocol": float(node["environment"]["native_protocol"])}}):
+                with self.subTest(schema=node["schema"], invalid=invalid), self.assertRaises(ContractError):
+                    validate_lineage_node(invalid)
+        node = historical(procedure(steps=[{"intent": "x" * 1024, "expected": "x" * 1024,
+                                            "on_unexpected": "x" * 1024} for _ in range(10)]))
+        size = len(canonical(node).encode())
+        node["goal"] = "x" * (32768 - size + len(node["goal"]))
+        self.assertEqual(len(canonical(node).encode()), 32768)
+        self.assertEqual(validate_lineage_node(node), node)
+        node["goal"] += "x"
+        with self.assertRaises(ContractError):
+            validate_lineage_node(node)
+        original = {key: value for key, value in node.items() if key not in ("advisory_only", "origin")}
+        original.update(schema="procedure/3", record_type="Procedure")
+        # Import metadata itself must fit the same bound, even if the original fits.
+        with self.assertRaises(ContractError):
+            import_procedure(canonical(original), ledger_sha256="b" * 64, index_sha256="c" * 64)
+
+    def test_exact_selected_historical_head_authors_current_same_family_revision_three(self):
+        root = historical()
+        child = historical(successor(root, mission_id="older-mission", status="active"))
+        entry = ProcedureAuthoringTests().entry(
+            parent={"mission_id": child["mission_id"], "revision_id": child["id"]})
+        current = author_procedure(entry, mission_id="current-mission", identity="request-3",
+                                   environment=procedure()["environment"], parent=child)
+        self.assertEqual(current["procedure_id"], root["procedure_id"])
+        self.assertEqual(current["revision"], 3)
+        self.assertEqual(current["parent"], entry["parent"])
+        self.assertEqual(validate_procedure(current), current)
+        self.assertEqual(current["environment"]["native_protocol"], 7)
+        for records in ([root, child, current], [current, child, root, child]):
+            self.assertEqual(project_procedures(records), {root["procedure_id"]: current})
+        with self.assertRaises(ContractError):
+            author_procedure(entry, mission_id="current-mission", identity="request-3",
+                             environment=procedure()["environment"], parent=root)
+        with self.assertRaises(ContractError):
+            author_procedure(entry, mission_id="current-mission", identity="request-3",
+                             environment=child["environment"], parent=child)
+
+    def test_historical_projection_keeps_parent_branch_and_conflict_refusals(self):
+        root = historical()
+        child = historical(successor(root))
+        cases = [[child], [root, {**child, "parent": {"mission_id": "foreign", "revision_id": root["id"]}}],
+                 [root, {**child, "procedure_id": "another-family"}],
+                 [root, {**child, "revision": 3}], [root, child, {**child, "id": "branch"}],
+                 [root, child, {**child, "origin": {**child["origin"], "record_sha256": "d" * 64}}],
+                 [root, {**root, "schema": "procedure/3", "record_type": "Procedure"}]]
+        for records in cases:
+            with self.subTest(records=str(records)[:80]), self.assertRaises(ContractError):
+                project_procedures(records)
+        self.assertEqual(project_procedures([child, root]), {root["procedure_id"]: child})
 
 
 class ProcedureValidationTests(unittest.TestCase):

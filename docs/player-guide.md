@@ -205,7 +205,11 @@ denial or stop solely because a successful tool ran from a read-only host.
 - `enactive_context` retrieves bounded memory; `enactive_source` retrieves an exact
   retained image. `enactive_remember`/`correct` retain fallible supported knowledge
   and Work. Software records procedure/action/result attribution; no per-key
-  narrative or usage report is required.
+  narrative or usage report is required. HistoricalProcedure is advisory lineage;
+  its old code cannot execute. Explicitly retrieve its qualified head and support,
+  then author a current revision with that exact parent and current evidence.
+  Software preserves the family/revision; you judge applicability and correction.
+  Historical images never establish a current input checkpoint or world fact.
 - For a Claim, choose its meaning, value, coverage, status, grounding and support
   groups; use the current focused Claim schema. Software supplies the record/ID,
   interpretation kind, native order and real host assertion time. Identity keys
