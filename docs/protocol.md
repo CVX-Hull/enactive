@@ -293,6 +293,12 @@ Invalid semantic whole-field creation-name targets use the same guarded local
 draft refusal, retaining the strict complete admitted identity requirement.
 Ordinary bounded input remains a separate explicit player choice; software does
 not truncate a target, choose clearing keys or construct replacement chunks.
+During a semantic whole-field edit, a returned clear of an interpreted nonempty
+field that leaves byte-identical pixels stops the remaining replacement text for
+fresh player interpretation. An interpreted empty field may have a no-op clear.
+A changed image still does not prove the field cleared or the target was entered;
+separate fresh interpretation is required before committing. Original charges,
+root limits and authority remain unchanged.
 Positively pure new mutation-preparation and pure advisory-submit validation
 refusals before SDK submission return `submission=not_submitted` and no collection
 handle; no new request exists to collect. Ordinary mutation refusal checks the

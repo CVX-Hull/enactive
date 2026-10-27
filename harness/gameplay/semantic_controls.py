@@ -434,7 +434,12 @@ class SemanticControlSkill:
                                     verification_required=True)
             if self._control_shape(after) != self._shape:
                 raise _ControlBlocked("Control scope/category/action set changed during focus/edit")
-            if pending.action != "TEXT.CLEAR" and pending.before.frame_sha256 == result.after.frame_sha256:
+            unchanged = pending.before.frame_sha256 == result.after.frame_sha256
+            if (unchanged and pending.action == "TEXT.CLEAR" and self._request["skill_kind"] == "edit"
+                    and self._request["perception"]["visible_text"]):
+                raise _ControlBlocked("Clearing the nonempty field made no visible progress; "
+                                      "fresh player interpretation is required before replacement text")
+            if pending.action != "TEXT.CLEAR" and unchanged:
                 raise _ControlBlocked("Byte-identical PNG shows no progress; fresh player verification is required")
             if self._index == len(self._plan):
                 return self._finish("Unverified focus/text batch returned; fresh player interpretation is required",
