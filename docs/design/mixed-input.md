@@ -310,7 +310,7 @@ without CDDA menu/neighbor/save assumptions. Full runtime extraction, setup/endi
 cancellation and a real second integration remain explicit #191 work; this slice
 does not claim those qualifications or replace authentic CDDA lifecycle proofs.
 
-**Migration and retained evidence.** Native7/mission11/ledger12/archive6 form the
+**Migration and retained evidence.** Native7/mission11/ledger13/archive6 form the
 coordinated replacement. Update producers, validators, reservation/receipt
 readers, recovery/procedure provenance, SDK/catalogue, fixtures and current
 guidance together; reject superseded formats and remove the old direct branch.

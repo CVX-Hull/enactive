@@ -59,6 +59,7 @@ actual timing and menu-only cleanup do not qualify the player or full campaign.
 | [Fresh-creation013 failure](acceptance/2026-10-25-program-breadth.md#fresh-creation013-http429-and-ineffective-nonempty-clear--27-october-2026) | HTTP429 ended setup before play; an ineffective nonempty clear separately produced a wrong world name. The post-closure source safeguard stops replacement after unchanged pixels; native clear behavior, useful application and normal ending remain unqualified |
 | [Bounded provider recovery](acceptance/2026-10-27-provider-recovery-offline.md) | Offline actual-attempt accounting, one eligible HTTP429 retry and original timeout/cancellation bounds; no provider-availability, native or apparent-latency qualification |
 | [Rendered inventory markers](acceptance/2026-10-27-rendered-markers.md) | Coordinated native7/store6/program-view2 cutover; actual same-row mark/unmark/cancel and normal technical ending, with retained/MCP/passive program equality. No generated gameplay application, native partial marker or cadence qualification |
+| [Historical advisory import](acceptance/2026-10-27-historical-advisory-import.md) | Original routine/image preservation, actual current memory/HTTP/MCP/Pi retrieval and synthetic same-family current revision/export. Old execution and authority remain refused; no new player correction, program effect, cadence or gameplay ending |
 
 The [acceptance directory](acceptance/) retains other successes, intermediate
 failures and their costs. Original unknown acknowledgments remain distinct from
