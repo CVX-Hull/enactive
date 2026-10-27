@@ -74,6 +74,16 @@ marker grants no source-read proof or authority. Existing source IDs remain in
 their unmodified text; the player can request the exact source again through its
 available tools. No tool is called automatically to restore an image.
 
+The request-only projection also appends one clearly labelled, software-generated
+resource-status message after history. It reports actual HTTP attempts charged
+before that request and remaining allowance including it. An eligible retry uses
+the identical body, so its note remains the original context-construction snapshot;
+the next assistant turn includes both charged attempts. This bookkeeping is not a
+human task, gameplay evidence, a read declaration, authority or a quality/latency
+metric. It does not enter canonical agent history, accumulate old notes or change
+the stable system/tool prefix. The hard cap, deadlines and frozen ending reserves
+still apply; seeing a counter does not establish that a player will honor them.
+
 Original agent messages and complete MCP `tool-result` trace entries retain the
 pixels. `request-start.payload` records the actual projected provider body; context
 projection events expose the count and omissions. This is a declared image-history

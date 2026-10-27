@@ -42,6 +42,9 @@ execution and remaining actions. Source repairs do not retrospectively qualify
 failed runs. Later [fast-player012](acceptance/2026-10-25-program-breadth.md#corrected-routine-and-fresh-player-follow-through012--27-october-2026)
 stores a same-family correction and completes registered fresh retrieval/normal
 ending, but establishes no executable application; that capability remains incomplete.
+[Current imported-lineage follow-through](acceptance/2026-10-27-imported-correction-follow-through.md)
+retains setup-deadline and target-manufacture failures; useful corrected-program
+application remains unaccepted.
 
 The [registered lifecycle](components/mission-execution.md#lifecycle-and-change-review)
 can keep an initial post-Load menu provisional. Explicit bounded dismissal must
