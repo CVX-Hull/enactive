@@ -1009,3 +1009,161 @@ performed. Faster apparent play, real counterexample application/reuse, marking
 representation and the full responsiveness cohort remain unqualified under
 #164/#177/#191. The previous540-request accounting and retired allocations are
 unchanged.
+
+## Corrected routine and fresh-player follow-through012 — 27 October 2026
+
+**The required [#264](https://github.com/CVX-Hull/enactive/issues/264) capability
+is incomplete.** The original stored a genuine same-family correction, and a
+registered fresh successor retrieved it, eventually claimed/readmitted and ended
+normally. Neither host invoked a program: the complete traces and all57 mission
+requests contain zero program submissions, evaluations or inputs. Ordinary play,
+storage and clean ending cannot substitute for the required executable application
+contributing to useful gameplay. #262 remains Done; this does not retrospectively
+change011 or qualify the whole player, learning benefit or responsiveness.
+
+### Frozen scope and preparation
+
+The one-admission development case used main `9a57c57cdd60943edd6029ce8676361041314d4e`,
+the unchanged prepared native6 binary `96e58aa0…`, registered Load of
+EnactiveLearning04/Ellis and the normally closed, hash-pinned native011 library.
+Two fresh Pi hosts used the version-pinned DeepSeek Flash1017 route, medium effort,
+16384 output cap,1048576 context window,30 historical images and240s request guard.
+The original and successor each had60 requests; no paid authoring screen, adviser,
+model fallback, source change or second admission occurred. This used known failure
+evidence for development, not a held-out causal comparison.
+
+Focused preflight passed174 tests/509 subtests plus fast checks. The actual current
+producer→MCP→Pi capture verified the selected16 tool names/descriptions/order and
+schemas through the existing JavaScript JSON codec, with the current guide/profile
+and canonical program card. A direct Python comparison initially exposed existing
+JavaScript Number rounding of64-bit schema maxima; the configured roundtrip matched,
+without a schema/coercion change. Injected two-host custody tests covered parent/birth
+identity, a reused PID and an unlaunched successor. Actual native/library/provider
+and exact source PR/full plus main-smoke qualification were rechecked before keys.
+Public model metadata/schema still declared this route's text/image/tools/medium
+support; declaration does not prove backend reasoning, perception or useful speed.
+[Version-pinned metadata](https://api.deepinfra.com/models/deepseek-ai/DeepSeek-V4.1-Flash-1017?version=zRTkTPfs).
+
+Independent filled-package review caught two preparation errors before live work:
+ending was initially allowed beyond the actual1800s ordinary-dispatch cutoff
+(2400wall minus600protected reserve), and a literal historical source handle had
+an extra prefix. Exact JSON episode references and synchronized clocks corrected
+both. Original handoff targeted900s, ending began by1500s and Finish was required
+before1800s; guardian Stop at1800s remained exceptional failure cleanup. The revised
+package passed delta review and21 injected deadline/phase cases. Two launch commands
+were automatically rejected before execution for run-specific credential/data
+consent; the human then explicitly authorized264's named Keychain item, same
+player-visible game data to DeepInfra, two hosts/120 requests and spending ceiling.
+Only the subsequently accepted command read the key and launched the finite run.
+
+### Original correction and the limits of the acquired item
+
+The original retrieved native011's canonical parent and actual contrary image,
+then ordinarily highlighted, marked and acquired one wrapper. Request26 stored
+`revision-c5e2cff8…` in012 as revision2 of `procedure-425f7365…`, explicitly parented
+to011's `revision-425f7365…`. Its support joins the three actual012 request/source
+pairs below; its counterexample joins011's actual failed-confirm episode. This is
+real same-family storage, not another revision1 family. The callback is unexecuted:
+its marking state records an action request rather than proof of a visible mark,
+and its applicability does not explicitly exclude an already-marked initial row.
+Those limitations need current image-informed judgment and effect verification
+before later use; accepted storage establishes no reliable routine.
+
+| Retained source | What the actual frame establishes |
+| --- | --- |
+| `2cc11b54…` · [inventory before](assets/program-breadth-012/inventory-before.png) | Three wrappers containing protein ration and two containing frozen protein ration were already carried before pickup. |
+| `75241c13…` · [highlighted](assets/program-breadth-012/pickup-highlighted.png) | The floor row says `wrapper`; ITEMS TO PICK UP is empty. |
+| `6d427ed7…` · [marked](assets/program-breadth-012/pickup-marked.png) | A plus and populated queue pane show a distinct marking step. The structured rows/selection do not represent that distinction. |
+| `7e29ee05…` · [result](assets/program-breadth-012/pickup-result.png) | The log says “You pick up: 1 wrapper”; acquisition occurred. Its contents, nutrition and useful survival effect are not established. |
+
+The original report's “genuine food/ration item acquired” overstates this evidence;
+existing carried rations do not establish the acquired wrapper's contents. Do not
+infer that it was empty either. All four published PNGs are byte-identical to the
+retained originals. Ordinary acquisition and one game second advanced are separate
+from usefulness. No teacher program, lead tactic, save edit or manufactured pickup
+state was supplied.
+
+Two Work drafts failed argument validation before the writer. Inspection of the
+exact retained assistant arguments against the intended Work branch finds prose
+with spaces in `available[0].subject` and `predicted_output[0].subject`, where the
+current schema requires bounded identifiers. The union diagnostic selected an
+irrelevant Claim branch; this is misleading feedback, not a demonstrated valid-body
+writer defect. A separate Claim draft carrying both quantity and state was also
+refused and corrected. The actor retained remaining intent in a Claim; no Work
+record was stored, so handoff's complete unfinished Work set was genuinely empty.
+The actor reports remain unchanged, with these corrections recorded here.
+
+### Fresh retrieval, failed application and normal ending
+
+Registered handoff `op-4bb3de6f…` issued the real checkpoints. The fresh successor's
+request2 retrieved the corrected revision and required source references; its
+transcript includes actual historical/current images. There were **eight Claim
+attempts: seven blocked, then completed** at `op-ff0b431d…`, followed by explicit
+readmission `op-294050c4…`. Six refusals cited invalid current-source declarations;
+one cited fresh-version/successor-bound context and used the original actor ID
+instead of the assigned successor. All eight used the same packet ID. This does
+not establish a stale-version bug. The successful declaration used four issued
+current-source IDs and five qualified procedure-source pairs. Missing/extraneous
+IDs and one changed actor caused needless exposed work; guards remained intact.
+The reports' “fourth substantive,” five blocked and approximate request counts
+are superseded by these actual totals. #164 owns the diagnostic/mechanical-join
+opportunity without automatic reads, false read proof or weakened authority.
+
+The successor searched through supported visible play, encountering no nearby
+pickup and no visible items in its scan, then moved north. **No legitimate applicable
+target was established within that bounded search.** This is narrower than its
+report's “no honest target existed”: unseen shelter areas/basement and a longer
+expedition remain unknown. No program invocation or useful program effect followed.
+Correct abstention and ordinary exploration do not deliver264's core, and the case
+does not prove a missing executor or model incapacity. Before another admission,
+reshape the useful task/applicability and handoff fit explicitly; do not drop items,
+roll back a save or repeat unrelated attempts to manufacture a passing application.
+
+Normal ending is independently retained. An initial Save confirmation selected No;
+a new Save root later reached the actual owned main menu. Same-root reconciliation
+`op-db13401c…` registered SavedCheckpoint; `op-e48b1268…` registered OwnedNormalExit
+with returncode0; `op-049c2a2c…` registered NormalFinish(stopped), objective completion
+unclaimed. Finish occurred about1461s after admission, before1800s. Unknown Load,
+Save-click and Exit-click acknowledgments remain charged historical unknowns,
+separately reconciled without replay; final unresolved effects are empty.
+
+### Accounting, measurement gaps and disposition
+
+| Lane | Actual new requests | Configured estimate | Full consumed-request reservation |
+| --- | ---: | ---: | ---: |
+| Original |32 |$0.060382904 |$7.0254592 |
+| Fresh successor |48 |$0.194398992 |$10.5381888 |
+| New012 total |80 |$0.254781896 |$17.5636480 |
+| Cumulative |620 |$1.644209632 known |$134.4077824 |
+
+All80 responses supplied usage:760,015 uncached input,6,870,016 cache-read and102,598
+output tokens, including73,774 reported reasoning tokens. Configured estimates are
+not invoices and exclude four earlier unknown usage records. The full consumed
+reservation uses each actual request's conservative cap;40 unused prospective
+requests are retired and do not become another admission. The separate older44-call
+allocation remains closed. Automatic [prefix caching](https://docs.deepinfra.com/chat/prompt-caching)
+and cache share do not establish useful-effect latency.
+
+The ledger retains57 operations,32 charged primitives (29returned/3unknown),99
+frames/10,016,816 bytes,78 Claims/one Procedure/no Work and five game seconds. Native
+host API median/max were10.931/86.635s for the original and12.406/54.942s for the
+successor; these include serving/transport/generation, not isolated inference or
+apparent useful progress. All actual requests retained stable tools and system
+context, with at most30 forwarded images. The passive spectator opened after
+startup and retained local timing in its UI, but browser automation was unavailable
+at export and no complete timing JSON was recovered. DOM/paint endpoints are
+unmeasured; no20-genuine-useful-decision cohort or local program-effect clock exists.
+#164's responsiveness thresholds and #145's no-go remain unchanged.
+
+Both hosts and driver exited0 without timeout or signals. The native child exited0
+normally without a cleanup signal; only the controller received SIGINT, after
+native/host closure. All five recorded player/MCP/native identities plus controller/driver and
+port8766 were verified absent. Opaque Save hashes retained242 files before/after,
+zero added/removed and11 changed, without parsing or edits. Private frozen packages,
+initial preparation failures, actual payloads/ledgers/frames, corrected accounting,
+reviews and closure are under `.runtime/iteration264/` and
+`.runtime/campaigns/program-breadth-012/`. Independent outcome review confirms the
+incomplete core and the narrower positive evidence. #264 stays incomplete pending
+explicit rescope; #177 keeps broader correction/application/reuse and #191 keeps
+its representation/portability questions. No source/default/authority change,
+new allocation or second admission follows from this report.
