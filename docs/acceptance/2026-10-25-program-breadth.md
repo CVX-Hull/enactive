@@ -1067,7 +1067,13 @@ real same-family storage, not another revision1 family. The callback is unexecut
 its marking state records an action request rather than proof of a visible mark,
 and its applicability does not explicitly exclude an already-marked initial row.
 Those limitations need current image-informed judgment and effect verification
-before later use; accepted storage establishes no reliable routine.
+before later use; accepted storage establishes no reliable routine. A passive
+post-closure check projected the retained highlighted/marked views identically. In
+explicitly counterfactual continuations after its marking phase, the callback still
+proposed ENTER when the wanted row disappeared or selection became unavailable,
+contradicting its own declared invalidators. These were undispatched component
+proposals, not native execution or native counterexamples; the player must still
+own any later evidence-grounded correction and applicability judgment.
 
 | Retained source | What the actual frame establishes |
 | --- | --- |
