@@ -432,7 +432,7 @@ class SemanticControlTests(unittest.TestCase):
                     self.assertEqual(outcome.pending_logical_id, intent.logical_id)
                 self.assertIs(self.propose(skill), outcome)
 
-    def test_identical_png_focus_and_literal_stop_but_clear_can_be_identical(self):
+    def test_identical_png_focus_and_literal_stop_but_empty_clear_can_be_identical(self):
         skill = self.skill()
         intent = self.propose(skill)
         result = self.accept(skill, intent, self.frame(same=intent.before))
@@ -447,6 +447,32 @@ class SemanticControlTests(unittest.TestCase):
         result = self.accept(skill, literal, self.editor_frame(same=literal.before))
         self.assertEqual((result.disposition, result.proposed_count), ("partial", 2))
         self.assertTrue(result.verification_required)
+
+    def test_nonempty_clear_without_visible_progress_stops_before_replacement(self):
+        for visible in ("En", " "):
+            with self.subTest(visible=visible):
+                skill = self.editor(text="EnactiveCorrection13", visible=visible)
+                clear = self.propose(skill)
+                self.assertEqual(clear.action, "TEXT.CLEAR")
+                after = self.editor_frame(same=clear.before)
+                result = self.accept(skill, clear, after)
+                self.assertIsInstance(result, ControlOutcome)
+                self.assertEqual((result.disposition, result.proposed_count), ("partial", 1))
+                self.assertTrue(result.verification_required)
+                self.assertIsNone(result.pending_logical_id)
+                self.assertIn(after, result.evidence)
+                self.assertIn("nonempty field", result.reason)
+                self.assertIs(self.propose(skill), result)
+
+    def test_nonempty_clear_with_changed_pixels_keeps_unverified_replacement(self):
+        skill = self.editor(text="AB", visible="En")
+        for expected in ("TEXT.CLEAR", "A", "B"):
+            intent = self.propose(skill)
+            self.assertEqual(intent.action, expected)
+            result = self.accept(skill, intent, self.editor_frame())
+        self.assertEqual((result.disposition, result.proposed_count), ("partial", 3))
+        self.assertTrue(result.verification_required)
+        self.assertIs(self.propose(skill), result)
 
     def editor_frame(self, **changes):
         return self.frame(category="STRING_INPUT", actions=["TEXT.CLEAR", "TEXT.CONFIRM"], **changes)

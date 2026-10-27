@@ -1157,8 +1157,10 @@ successor; these include serving/transport/generation, not isolated inference or
 apparent useful progress. All actual requests retained stable tools and system
 context, with at most30 forwarded images. The passive spectator opened after
 startup and retained local timing in its UI, but browser automation was unavailable
-at export and no complete timing JSON was recovered. DOM/paint endpoints are
-unmeasured; no20-genuine-useful-decision cohort or local program-effect clock exists.
+at that closeout's export and no complete timing JSON was recovered then. A later
+passive page-history download during013 recovered frame/DOM records, described below;
+physical paint and useful-effect endpoints remain unmeasured. No20-genuine-useful-decision
+cohort or local program-effect clock exists.
 #164's responsiveness thresholds and #145's no-go remain unchanged.
 
 Both hosts and driver exited0 without timeout or signals. The native child exited0
@@ -1173,3 +1175,131 @@ incomplete core and the narrower positive evidence. #264 stays incomplete pendin
 explicit rescope; #177 keeps broader correction/application/reuse and #191 keeps
 its representation/portability questions. No source/default/authority change,
 new allocation or second admission follows from this report.
+
+## Fresh-creation013: HTTP429 and ineffective nonempty clear — 27 October 2026
+
+**Incomplete.** The explicitly selected additional case ended during creation after
+22 provider requests. No character was adopted, useful ordinary effect established,
+procedure retrieved/stored/applied, handoff issued or successor launched. The
+original host and driver exited1 after HTTP429; engineering Stop and native SIGTERM
+were exceptional cleanup, not normal Save/exit/Finish. #264 remains incomplete.
+
+### Frozen case and preparation
+
+The case assessed `284635346be3d177decae8992fb4cf43c17bfbf0`, the unchanged native6
+binary `96e58aa0…` and the same explicit Pi1.4.0/DeepInfra Flash1017 version,
+medium effort,16384output/1048576context/30historical-image/240s-request settings.
+It admitted default fresh creation of EnactiveCorrection13/Morgan, with pinned,
+read-only011+012 libraries. Historical correction data supplied no current identity,
+possession or guaranteed useful task. The original had to establish a visible useful
+task still available before handoff; no teacher code, lead tactics, engineered loot
+or gameplay rescue was supplied.
+
+The user explicitly selected one additional admission, two hosts with80requests
+each/160new maximum and a$170 cumulative ceiling. Prospective full reservation was
+$169.5350784;012's unused40 remained retired. Hard mission3600wall/600protected
+cleanup gave3000ordinary seconds. The initial Create root ceiling was64primitives/
+1200wall; this actor selected1050wall. Handoff issuance targeted1200missionwall,
+Claim/readmission1380, ending2400 and Finish before3000. Creation timing was an
+unqualified forecast, not a guarantee; no third admission followed this allocation.
+
+Preflight passed82focused lifecycle/library tests with176subtests and fast checks;
+actual current16-tool producer→MCP→Pi serialization, guide/profile inclusion and
+injected two-role custody/reused-PID checks passed without provider/tool dispatch.
+The prepared native guard, exact libraries, public model controls/prices, ownership
+and exact protected runtime/publication source evidence were rechecked before the
+key. Independent package review corrected an initially wrong main-publication
+profile requirement to editorial, preserving the runtime baseline's separate
+full/main-smoke chain. Final source-binding review found no open findings.
+
+The first launch command was automatically rejected before execution despite
+standing gameplay instructions. The human then explicitly authorized case013's
+named Keychain item, player-visible game data/context to the existing DeepInfra
+endpoint and finite envelope. Only the subsequently accepted command accessed the
+key and started the run. No rejected command made a paid request or launched CDDA.
+
+### Visible naming failure, separate from the provider failure
+
+An initial bounded name edit exhausted its three-proposal child allowance after
+typing a prefix. A later edit `op-6f199c8e…` requested the complete admitted world
+name. Its first primitive returned `TEXT.CLEAR`, advancing native revision17→18,
+but the actual before/after PNGs were byte-identical and still visibly contained
+`En`. The control exempted every clear from its unchanged-image stopping rule,
+then appended all20replacement characters. The resulting world name was
+**EnEnactiveCorrection13**, not the admitted identity. The player's second edit
+interpretation said `E`; the retained image shows `En`. Neither an action ACK nor
+that interpretation establishes a cleared field.
+
+| Original retained image | Evidence and limit |
+| --- | --- |
+| [Nonempty field](assets/program-breadth-013/unchanged-nonempty-clear.png), `b29c5919…` | Before clear; after-clear `aec01e1a…` has the same SHA256 `114e7705…` and identical visible prefix. |
+| [Wrong world name](assets/program-breadth-013/wrong-world-name.png), `bd3ebb52…` | The form visibly contains the duplicated prefix. Later opaque additions use that world name; no admitted character identity was established. |
+
+Both published PNGs are byte-identical to their retained originals. The registered
+clear action uses the existing native keybinding route. Why the native/ImGui field
+did not clear remains unqualified; no alternate clearing recipe or native fix is
+claimed from this evidence.
+
+After closure, the semantic-edit safeguard now stops remaining replacement text
+when clearing an interpreted nonempty field returns byte-identical pixels. The
+interpreted-empty-field exception remains, as do other control paths, original
+charges, limits, authority and separate fresh interpretation before commit. Changed
+pixels still do not prove semantic success. Focused tests passed103cases/98subtests,
+including the initially failing nonempty/whitespace regressions and unchanged
+creation/item paths. A passive component reproduction using the original PNG bytes
+and retained semantic edit values, with synthetic receiver/custody/clock bindings,
+confirmed that assessed source proposed the next `E`, while the safeguarded source
+returned partial after one proposal with no replacement input. This is a source
+regression check, not another native run or retroactive repair of013. Native clear
+behavior and complete character creation remain unqualified; PR receipts own the
+source candidate's independent review and protected validation.
+
+Request22 separately received **HTTP429**, followed by `stop_reason:error`,
+`provider-error` and host settlement after365.387s. The specific provider quota,
+rate or upstream reason was not retained. This terminal provider failure is
+distinct from the already-observed naming defect; no model incapacity, text-tool
+cause of429 or safe automatic retry is established. No host restart, third actor
+or new admission occurred.
+
+### Accounting, cleanup and remaining qualification
+
+The22actual requests supplied21usage records:109,347uncached input,
+964,480cache-read and13,099output tokens, including7,634reported reasoning tokens.
+Known new configured estimate is$0.03551568; request22usage is unknown. Cumulative
+actual requests are642, known configured estimate$1.679725312 and consumed full-cap
+reservation$139.2377856. Invoices, four older usage records and this missing usage
+remain unknown. The138unused013requests are retired; they grant no later case.
+
+The ledger retains20operations,39charged primitives all returned,96menu-only
+observations/1,911,408bytes and no memory records. Game time is unavailable because
+normal play was never adopted. All requests retained stable system/tools, at most
+18images and no historical-image omissions. Constructed JSON bodies totalled
+9,924,911bytes/max843,348; this is not wire/upload time. API-span median/max were
+12.992/64.041s, including the error sample; none measures apparent useful progress.
+No useful-decision cohort or program-effect sample exists.
+
+Engineering Stop `op-c30b76c3…` completed to paused/epoch1 and cleared the private
+lifecycle phase. Final persisted history is paused/epoch3 with reason “Mission
+runtime closed,” not NormalFinish. After SIGTERM, the native PID temporarily
+appeared as `<defunct>`; the identity guard refused further signals and retained
+`native_cleanup_unresolved:true`. The post-controller census and a later exact-PID/
+port check found all recorded processes and8766absent. Final absence does not erase
+the earlier flag or establish native returncode0/normal ending. Opaque file hashes
+show242→248files: six additions only under EnEnactiveCorrection13, with zero changed
+or removed preexisting files. No save contents were parsed or edited.
+
+A final passive observer-timing/3 download retained616frame records:482from012's
+three sessions and134from013, with no page-history frame drops. Its8192status
+records reported13,089older status drops. This later recovery supplements012's
+failed closeout export; it is not complete startup/status coverage or proof that
+every mission source was displayed. Capture/decode/DOM and animation-opportunity
+clocks remain proxies, not physical paint, model attention or useful-effect clocks.
+#164's latency criteria and #145's no-go remain unchanged.
+
+Independent closed-run review verified the core failure, original-frame hashes,
+wrong-name evidence, HTTP429 classification, no successor and two-stage cleanup
+history. Frozen packages, original traces/SQLite/frames, accounting, passive
+reproduction and observer downloads remain project-local under the013run and
+`.runtime/iteration264/run013/`. The source safeguard does not deliver264's missing
+fresh-player useful application. Any additional native qualification needs an
+explicit new finite scope; no unused requests or clean source checks renew013.

@@ -64,6 +64,8 @@ denial or stop solely because a successful tool ran from a read-only host.
   Ordinary `direct` inputs use `perception=null`; visible-control interpretations
   belong to menu/edit/item controls. Inspect the returned image/effect; a delivered
   input is not task success.
+  If clearing a nonempty interpreted field leaves identical pixels, the edit stops
+  before replacement text. Reassess the returned image before choosing another input.
   Semantic name editing replaces the whole field with the complete admitted
   identity; it is not partial text entry. If an optional skill cannot represent
   the target, choose ordinary bounded input from current visible evidence.
