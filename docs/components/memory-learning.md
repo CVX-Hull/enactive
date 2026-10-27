@@ -19,6 +19,12 @@ input?” Solid arrows carry ordinary play/memory updates; dotted arrows carry
 bounded advisory data. Boxes are logical roles, not necessarily separate processes.
 The flow below is its text equivalent. [Editable source](../diagrams/asynchronous-reflection.mmd).
 
+The current reader requires native7/store6 donor evidence. Closed native6/store5
+campaigns remain immutable archives, with their old qualification intact; they are
+not silently converted or supported by a compatibility reader. New missions use
+fresh evidence stores. The [protocol](../protocol.md#passive-gameplay-records-and-evidence)
+owns migration and historical-source limits.
+
 The current library permits eight explicit donor pins to cover the observed
 four-ancestor plus fifth-donor continuation. Full donor closure and exact archive
 pins remain mandatory, including for a self-contained procedure in that donor.

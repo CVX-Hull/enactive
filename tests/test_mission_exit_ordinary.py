@@ -237,7 +237,7 @@ class OrdinaryExitTests(unittest.TestCase):
     def test_known_unexpected_native_row_jump_keeps_ordinary_exit_scope(self):
         self.ready()
         original = self.behavior
-        rows = [dict(id=f"row-{i}", text=label, enabled=True, hotkey=None)
+        rows = [dict(id=f"row-{i}", text=label, enabled=True, hotkey=None, rendered_marker=None)
                 for i, label in enumerate(("One", "Two", "Three"))]
         def jump(bridge, request):
             if request.get("action") == "QUIT":

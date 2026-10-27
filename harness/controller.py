@@ -112,7 +112,7 @@ def validate_state(value: dict[str, Any], request_id: str | None = None) -> None
                 "actions": list, "status": str, "error": str, "paused": bool,
                 "timestamp_ms": int, "frame_ok": bool, "in_game": bool, "frame": str,
                 "pause_origin": str, "takeover_generation": int}
-    if type(value.get("protocol")) is not int or value["protocol"] != 6:
+    if type(value.get("protocol")) is not int or value["protocol"] != 7:
         raise ControlError("Unsupported response protocol; observe after fixing the bridge")
     if request_id is not None and value.get("id") != request_id:
         raise ControlError("Response id does not match request")
@@ -182,7 +182,7 @@ def validate_control_request(request: dict[str, Any]) -> None:
         valid_id = str(uuid.UUID(request.get("id", ""))) == request.get("id")
     except (ValueError, TypeError, AttributeError):
         valid_id = False
-    if (set(request) != fields or type(request.get("protocol")) is not int or request["protocol"] != 6
+    if (set(request) != fields or type(request.get("protocol")) is not int or request["protocol"] != 7
             or not valid_id or len(request["id"]) > 80
             or not isinstance(request.get("session"), str) or not request["session"]
             or type(request.get("control_generation")) is not int or request["control_generation"] < 0
@@ -198,7 +198,7 @@ def validate_control_request(request: dict[str, Any]) -> None:
 
 def validate_control_response(value: dict[str, Any], request_id: str | None = None) -> None:
     if (set(value) != {"protocol", "id", "status", "error", "state"}
-            or type(value.get("protocol")) is not int or value["protocol"] != 6
+            or type(value.get("protocol")) is not int or value["protocol"] != 7
             or not isinstance(value.get("id"), str) or not value["id"]
             or not isinstance(value.get("status"), str) or value["status"] not in CONTROL_TERMINAL | {"dispatched"}
             or not isinstance(value.get("error"), str) or not isinstance(value.get("state"), dict)
@@ -477,7 +477,7 @@ class Controller:
                 if kind not in boundary["recovery_operations"]:
                     raise ControlError("Recovery operation is not advertised at this boundary")
                 created = int(time.time() * 1000)
-                request = {"protocol": 6, "id": str(uuid.uuid4()), "kind": kind, "session": state["session"],
+                request = {"protocol": 7, "id": str(uuid.uuid4()), "kind": kind, "session": state["session"],
                            "control_generation": boundary["control_generation"], "authority": self.authority.copy(),
                            "created_ms": created, "deadline_ms": created + 2000}
                 if kind != "request_interrupt":
@@ -634,7 +634,7 @@ class Controller:
                         check_preflight()
                         authority = self.authority.copy()
                     created = int(time.time() * 1000)
-                    request = {"protocol": 6, "id": str(uuid.uuid4()), "kind": kind,
+                    request = {"protocol": 7, "id": str(uuid.uuid4()), "kind": kind,
                                "session": observed["session"], "control_generation": expected_control_generation,
                                "authority": authority, "created_ms": created, "deadline_ms": created + 2000}
                     if kind == "answer_interrupt":
@@ -812,7 +812,7 @@ class Controller:
                 raise ControlError(f"Malformed stored direct input: {exc}") from exc
             if request["require_exact_frame"] is not False:
                 raise ControlError("Direct input must bind the actual receiver without exact-image equality")
-        if (set(request) != fields or type(request.get("protocol")) is not int or request["protocol"] != 6
+        if (set(request) != fields or type(request.get("protocol")) is not int or request["protocol"] != 7
                 or not isinstance(request.get("id"), str) or not request["id"]
                 or type(request.get("deadline_ms")) is not int):
             raise ControlError("Unsupported stored request format; migrate or archive offline")
@@ -1104,7 +1104,7 @@ class Controller:
             if unpublished_refusal is not None:
                 self._expired_before_publication("Original dispatch deadline expired before publication", unpublished_refusal)
             return {"status": "controller_error", "error": "Original dispatch deadline expired before publication"}
-        request = {"protocol": 6, "id": request_id, "kind": kind,
+        request = {"protocol": 7, "id": request_id, "kind": kind,
                    "deadline_ms": int((wall_sample + remaining) * 1000), **payload}
         if kind not in {"observe", "pause"}:
             if self.state is None:

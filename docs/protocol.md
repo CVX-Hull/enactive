@@ -6,7 +6,7 @@ status: active
 
 # Bridge and guarded-play contract
 
-Protocol version: 6.
+Protocol version: 7.
 
 This is the detailed current contract supporting [architecture](architecture.md).
 Use the component views for understanding before this exact reference:
@@ -15,12 +15,14 @@ Use the component views for understanding before this exact reference:
 and [observer/operations](components/observer-operations.md). Select the relevant
 section below; routine contributors and players need not read this whole reference.
 Authority rules are [S-PROTOCOL](engineering.md#s-protocol-command-and-observation-authority).
-Current source is native6/mission11/ledger12/archive5, with procedure/3,
-campaign-memory/6 and reflection/2; gameplay/2 is unchanged. The matching rebuilt
-native is qualified for ordinary input and the coherent normal lifecycle in
-[capture001](acceptance/2026-10-22-native-capture-preconditions.md). That run has
-capture-name churn but no checked PNG drift; persistent pixel drift and the
-retained-capture commit race remain source-tested, not natively exercised.
+Current source is native7/mission11/ledger12/archive6, with procedure/3,
+campaign-memory/6, reflection/2 and program-view/2; gameplay/2 is unchanged.
+Matching native7 marker qualification is a separate required lane from the
+historical native6 ordinary-input/normal-lifecycle evidence in
+[capture001](acceptance/2026-10-22-native-capture-preconditions.md). That old run
+has capture-name churn but no checked PNG drift; it does not qualify this new
+marker boundary. Persistent pixel drift and the retained-capture commit race
+remain source-tested, not natively exercised.
 [Learning006](acceptance/2026-10-22-discovery-learning-sixth-attempt.md)
 and [native001](acceptance/2026-10-22-native-save-refresh.md) provide bounded
 graphical qualification; wider input/geometry and the full independent campaign
@@ -89,7 +91,7 @@ never holds controller locks. Only registered mission operations can request a
 lease; service startup, admission and transport Resume never establish identity.
 
 A leased call submits one registered action, permitted key or direct physical
-event, using native-v6 observation and input checks. Intended boundary and human takeover generation are
+event, using native-v7 observation and input checks. Intended boundary and human takeover generation are
 bound in native action/key/resume requests and checked at native commit. The original command admission generation and exact live lease
 are checked around queueing/preflight and immediately before atomic publication.
 Every walk step uses its original entry generation. Pre-takeover or pre-acquisition
@@ -1027,7 +1029,7 @@ existing admission and establishes no native survival outcome.
 its Pause reason; former Stop `finish` fields and every prior mission schema
 reject. The current mission/11 contract migrates CLI, viewer, requests, results and fixtures
 without an alias or automatic old-admission import. Campaign-memory/6, procedure/3,
-reflection/2, SQLite ledger12, native wire6 and archive5 migrate together; gameplay/2
+reflection/2, SQLite ledger12, native wire7 and archive6 migrate together; gameplay/2
 remains unchanged. Prior accepted reports and raw older mission/memory/ledger
 artifacts remain historical evidence, not current request inputs. Closed failed
 missions stay closed; a new admission uses a new mission directory, with no
@@ -1528,8 +1530,13 @@ mental attention, semantic success, organic adoption or learning benefit.
 
 The supplied `ui` retains the existing visible-UI shape: `purpose`, `title`,
 `rows`, `selected`, `filter`, `count` and `coverage=rendered_rows_only`. Each row
-has `id`, `text`, `enabled` and nullable `hotkey`; `selected` is null or the ID
-of one current row. These local row IDs carry no hidden item identity or stable
+has `id`, `text`, `enabled`, nullable `hotkey` and required nullable
+`rendered_marker` (a literal string of1–8 characters). The current CDDA inventory
+renderer supplies its actually drawn `-`, `+` or `#` only when that marker cell
+and its row label are visible; other/unavailable markers are null. The literal
+does not assert universal selection semantics, quantity, full selection coverage
+or acquisition. Labels remain unchanged. `selected` is null or the ID of one
+focused current row, independently of marking. These local row IDs carry no hidden item identity or stable
 meaning across views. Obtain a position by matching the current ID to current
 rows, rather than parsing its spelling. Semantic menu `perception.selected`
 separately denotes a numeric position in the player's interpreted rows.
@@ -1537,7 +1544,8 @@ The [visible-UI schema](../harness/gameplay/mission_contracts.py) and
 [ordinary input schema](../harness/gameplay/native_input.py) remain the shared
 data contracts. Program keys use their existing closed named-key set or one
 printable ASCII character; semantic action labels are not additional physical
-keys. No projection, input capability, format or version changes with this clarification.
+keys. The current `program-view/2` carries the native7 UI contract without adding
+input capability. Earlier program-view formats are not current interfaces.
 
 Mission10 keeps `skill_kind=direct` on the existing writer, with a passive ordinary
 policy separate from semantic menu planning. Its closed goal contains `input`,
@@ -1723,8 +1731,8 @@ writes, including after a stop, never acquire or restore authority.
 
 The read-only library uses SQLite over hash-verified bytes, shared archive locks
 and derived project paths. It never reopens a runtime writer, restores a phase or
-imports old-world Claims/Work as current facts. Only current ledger12/archive5
-input with the exact native6/mission11 procedure environment is eligible. Earlier
+imports old-world Claims/Work as current facts. Only current ledger12/archive6
+input with the exact native7/mission11 procedure environment is eligible. Earlier
 contracts, including learning004/006, remain immutable historical evidence,
 unmountable as current libraries. Eligible archive phases are completed, failed,
 stopped and paused, with physical and internal closure required in every case:
@@ -2190,7 +2198,7 @@ validation. JSON input is bounded to 1 MiB. The injected planner below consumes 
 the runtime above connects the passive planner, supervisor and bounded skill.
 Broader task formation remains outside this [first slice](design/gameplay.md).
 
-[EvidenceStore](../harness/gameplay/evidence.py) retains successful native-v6
+[EvidenceStore](../harness/gameplay/evidence.py) retains successful native-v7
 normal/menu/activity/recovery/unsupported diagnostic frames with their actual
 coverage. `current()` requires a positively marked normal scene for movement;
 `current_boundary()` checks freshness/integrity without granting input permission.
@@ -2199,7 +2207,10 @@ Native `ui` is null or bounded rendered-row coverage only; omitted rows, titles,
 filter/count and null selection are unknown, not absence. Inventory rows follow
 the visible renderer's selecting columns; the engine's non-selecting cosmetic
 selection-summary column is omitted. Other actionable columns, disabled rows,
-renderer order and active focus remain represented when visible. This is not
+renderer order and active focus remain represented when visible. Each row also
+retains its literal rendered marker independently of focus; an unrendered/clipped
+marker is null, not unmarked. The capture joins marker and label within the same
+row draw, including item-symbol offsets, with no label-based matching. This is not
 label deduplication: genuine duplicate actionable targets remain ambiguous.
 Quantities and complete selected-item coverage remain player interpretations of
 the actual screen, not native stock or acquisition facts. Native facts never
@@ -2251,12 +2262,19 @@ predicate path was accepted in
 [bounded-skill acceptance](acceptance/2026-10-17-bounded-skills.md) for its tested
 scope. This does not establish general campaign evidence ingestion.
 
-The evidence store uses format version 5 and exposes `source_status(reference)`
+The evidence store uses format version 6 and exposes `source_status(reference)`
 as `retained` or `disputed` after identity/integrity verification. Disputes persist
 across newer observations and reopening, including after damaged bytes are restored.
 Stale current authority alone does not dispute historical truth. Earlier stores
 are archived evidence, not current runtime inputs; create a fresh store for a new
-task. Neither historical status grants current input permission.
+task. The current donor reader likewise requires store6/native7. Closed
+native6/store5 campaigns remain immutable archival evidence and are not supported
+donors; no synthetic marker insertion, old-format reader or historical hash rewrite
+is provided. Mission/11, campaign-memory/6, Procedure/3 and source-reference shapes
+remain current; new procedure environments name native7. Engine saves remain
+engine-owned and can be loaded only under a fresh supported admission, without
+importing an old mission's authority or evidence store. Neither historical status
+grants current input permission.
 
 `authority_generation()` is process-local invalidation history: it advances when
 current identity changes, validation invalidates evidence, or the store closes.

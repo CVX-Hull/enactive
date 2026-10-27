@@ -34,7 +34,7 @@ def published_receipt(*, native_id="native-uuid-1", logical_id="logical-1", prop
     proposed = proposed or intent()
     payload = ({} if proposed["kind"] == "resume" else
                {"input" if proposed["kind"] == "direct" else proposed["kind"]: proposed["value"]})
-    native = dict(protocol=6, id=native_id, kind=proposed["kind"], session=proposed["expected_session"],
+    native = dict(protocol=7, id=native_id, kind=proposed["kind"], session=proposed["expected_session"],
         revision=proposed["expected_revision"], boundary_id=proposed["expected_boundary_id"], takeover_generation=0,
         authority=dict(controller_boot_id=controller_boot_id, counter=1), deadline_ms=1,
         frame=frame or f"frame-{proposed['expected_session']}-{proposed['expected_revision']}.png",

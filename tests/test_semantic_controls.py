@@ -57,7 +57,7 @@ class SemanticControlTests(unittest.TestCase):
     def test_any_key_popup_with_represented_choices_is_not_acknowledged(self):
         before = self.frame(category="POPUP_WAIT", actions=["toggle_language_to_en", "ANY_INPUT", "COORDINATE"],
             change=lambda value: value.update(ui=dict(purpose="uilist", title="Choose", rows=[
-                dict(id="choice", text="Yes", enabled=True, hotkey=None)], selected="choice",
+                dict(id="choice", text="Yes", enabled=True, hotkey=None, rendered_marker=None)], selected="choice",
                 filter=None, count=None, coverage="rendered_rows_only")))
         skill = self.skill(before, view=self.view(before, kind="dismissal"),
             goal=dict(purpose="Close visible prompt", label="Cancel", outcome="dismissed"))
@@ -312,7 +312,7 @@ class SemanticControlTests(unittest.TestCase):
 
     def test_native_same_vertical_rows_must_agree_but_other_region_is_not_native(self):
         def native(value):
-            value["ui"] = dict(purpose="uilist", title="", rows=[dict(id=f"row-{n}", text=str(n), enabled=True, hotkey=None)
+            value["ui"] = dict(purpose="uilist", title="", rows=[dict(id=f"row-{n}", text=str(n), enabled=True, hotkey=None, rendered_marker=None)
                 for n in range(12)], selected="row-0", filter=None, count=None, coverage="rendered_rows_only")
         before = self.frame(category="UILIST", actions=["UILIST.UP", "UILIST.DOWN", "CONFIRM"], change=native)
         for mode in ("label", "enabled", "order", "selection"):
@@ -331,7 +331,7 @@ class SemanticControlTests(unittest.TestCase):
     def test_native_inventory_vertical_rows_and_selection_cannot_be_overridden(self):
         def inventory(value):
             value["ui"] = dict(purpose="inventory", title="Inventory",
-                rows=[dict(id=f"item-{n}", text=str(n), enabled=True, hotkey=None) for n in range(12)],
+                rows=[dict(id=f"item-{n}", text=str(n), enabled=True, hotkey=None, rendered_marker=None) for n in range(12)],
                 selected="item-0", filter=None, count=None, coverage="rendered_rows_only")
         for category in ("INVENTORY", "INVENTORY_SELECTOR"):
             before = self.frame(category=category, actions=["UP", "DOWN", "PREV_COLUMN", "NEXT_COLUMN"],
@@ -362,7 +362,7 @@ class SemanticControlTests(unittest.TestCase):
             for mode in ("jump", "null", "disabled", "unchanged", "valid"):
                 with self.subTest(category=category, after_selection=mode):
                     def native(value, selected):
-                        rows = [dict(id=f"row-{n}", text=str(n), enabled=n != 1, hotkey=None) for n in range(12)]
+                        rows = [dict(id=f"row-{n}", text=str(n), enabled=n != 1, hotkey=None, rendered_marker=None) for n in range(12)]
                         value["ui"] = dict(purpose=purpose, title="", rows=rows,
                             selected=None if selected is None else f"row-{selected}",
                             filter=None, count=None, coverage="rendered_rows_only")

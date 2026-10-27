@@ -27,7 +27,7 @@ def primitive_record(identity, owner, *, revision=10, action="NEXT_TAB", kind="a
         expected_boundary_id="menu-boundary", source_before="before-" + identity,
         preflight_source="preflight-" + identity, revalidation=None, input_observation=None,
         reservation_id="reservation-" + identity)
-    native = dict(protocol=6, id="native-" + identity, kind=kind, session="setup-session", revision=revision,
+    native = dict(protocol=7, id="native-" + identity, kind=kind, session="setup-session", revision=revision,
         boundary_id="menu-boundary", takeover_generation=0,
         authority=dict(controller_boot_id="boot-a", counter=revision), deadline_ms=1000,
         frame=f"frame-setup-session-{revision}.png", require_exact_frame=False,
@@ -42,7 +42,7 @@ def primitive_record(identity, owner, *, revision=10, action="NEXT_TAB", kind="a
         processing_error=None, evidence_loss=None)
     if state == "returned":
         receipt.update(received_monotonic=100 + revision, evidence_loss="Synthetic omitted after-source",
-            native_ack=dict(protocol=6, id=native["id"], session="setup-session", revision=revision + 1,
+            native_ack=dict(protocol=7, id=native["id"], session="setup-session", revision=revision + 1,
                 status="ready", error="", paused=False, pause_origin="none", takeover_generation=0,
                 timestamp_ms=1000, frame_ok=True, frame=f"frame-setup-session-{revision + 1}.png",
                 boundary=dict(kind="menu", id="menu-boundary", control_generation=0, input_receiver=True,

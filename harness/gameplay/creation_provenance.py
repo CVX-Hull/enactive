@@ -150,7 +150,7 @@ def creation_input_chain(requests: tuple[dict, ...], primitives: tuple[dict, ...
         native = json_object(encoded)
         binding = receipt.get("dispatch_binding")
         validate_json(binding, _BINDING)
-        _require(canonical(native) == encoded and native.get("protocol") == 6
+        _require(canonical(native) == encoded and native.get("protocol") == 7
                  and all(native.get(key) == value for key, value in {
                      "id": native_id, "kind": intent["kind"], "session": intent["expected_session"],
                      "revision": intent["expected_revision"], "boundary_id": intent["expected_boundary_id"],

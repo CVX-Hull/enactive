@@ -142,9 +142,9 @@ are tracked under [#240](https://github.com/CVX-Hull/enactive/issues/240), indep
 of model selection and campaign readiness. Frozen preparation and
 supported lifecycle are in the [runbook](runbook.md#bounded-player-host-activation).
 
-The current source uses native6/mission11/ledger12/archive5 with procedure/3,
+The current source uses native7/mission11/ledger12/archive6 with procedure/3,
 campaign-memory/6 and reflection/2; gameplay/2 is unchanged. Build and qualify the
-matching native6 binary before new native support claims. Historical native5
+matching native7 binary before new native support claims. Historical native5/native6
 learning and lifecycle results do not qualify this candidate. See
 [coordinated migration](runbook.md#coordinated-migration) before using existing
 runtime state; old libraries are not current-contract inputs.

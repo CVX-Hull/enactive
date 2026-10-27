@@ -80,7 +80,7 @@ class SetupTests(unittest.TestCase):
                 '                } else {\n'
                 '                    trim_and_print( win, point( text_x, yy ), text_width, entry_cell_cache.color, text );\n'
                 '                }\n            }\n\n            x1 = x2;\n        }\n\n'
-                '        if( entry.is_item() ) {\n            int xx = p.x;\n        }\n    }\n}\n'
+                '        if( entry.is_item() ) {\n            int xx = p.x;\n            if( entry.get_invlet() != \'\\0\' ) {\n                mvwputch( win, point( p.x, yy ), entry.get_invlet_color(), entry.get_invlet() );\n            }\n            xx += 2;\n            if( get_option<bool>( "ITEM_SYMBOLS" ) ) {\n                const nc_color color = entry.any_item()->color();\n                mvwputch( win, point( xx, yy ), color, entry.any_item()->symbol() );\n                xx += 2;\n            }\n            if( allows_selecting() && activatable() && multiselect ) {\n                if( entry.chosen_count == 0 ) {\n                    mvwputch( win, point( xx, yy ), c_dark_gray, \'-\' );\n                } else if( entry.chosen_count >= entry.get_available_count() ) {\n                    mvwputch( win, point( xx, yy ), c_light_green, \'+\' );\n                } else {\n                    mvwputch( win, point( xx, yy ), c_light_green, \'#\' );\n                }\n            }\n        }\n    }\n\n    if( pages_count() > 1 ) {\n    }\n}\n'
                 'void unrelated() { trim_and_print( win, point( 0, 0 ), 10, c_white, hidden ); }\n'),
 
             "src/input_popup.cpp": ('    if( data->EventFlag == ImGuiInputTextFlags_CallbackEdit ) {\n'
@@ -168,7 +168,7 @@ class SetupTests(unittest.TestCase):
         return subprocess.run([sys.executable, str(repository / "tools/patch_game.py"), str(source)],
                               text=True, capture_output=True, check=False)
 
-    def test_native_v6_patch_is_repeatable_and_scopes_exact_input_paths(self):
+    def test_native_v7_patch_is_repeatable_and_scopes_exact_input_paths(self):
         repository, source = self.patch_fixture()
         first = self.run_patch(repository, source)
         self.assertEqual(first.returncode, 0, first.stderr)
@@ -224,7 +224,7 @@ class SetupTests(unittest.TestCase):
 
     def test_native_direct_schema_translation_and_commit_guards(self):
         native = (Path(__file__).resolve().parents[1] / "native/cdda_harness.cpp").read_text()
-        self.assertIn('integer_member( request, "protocol" ) != 6', native)
+        self.assertIn('integer_member( request, "protocol" ) != 7', native)
         self.assertNotIn('integer_member( request, "protocol" ) != 4', native)
         direct = native[native.index('direct_input direct_event('):native.index('bool uuid_id(')]
         for guard in ('input.size() != 3', 'input.size() != 2', 'input.size() != 5',
@@ -356,28 +356,37 @@ class SetupTests(unittest.TestCase):
             '                if( allows_selecting() && cell_index == 0 && entry.is_item() && text_x >= 0 &&\n'
             '                    text_x + static_cast<int>( text_width ) <= getmaxx( win ) &&\n'
             '                    yy >= 0 && yy < getmaxy( win ) ) {\n'
-            '                    const std::string label = remove_color_tags( trim_by_length( text, text_width ) );\n'
+            '                    harness_label = remove_color_tags( trim_by_length( text, text_width ) );\n'
             '                    const char invlet = entry.get_invlet();\n'
-            '                    const std::string hotkey = p.x >= 0 && p.x < getmaxx( win ) &&\n'
+            '                    harness_hotkey = p.x >= 0 && p.x < getmaxx( win ) &&\n'
             '                        invlet >= 32 && invlet <= 126 ? std::string( 1, invlet ) : std::string();\n'
-            '                    cdda_harness::ui_row( label, entry.is_selectable(), hotkey, selected );\n'
             '                }\n')
         self.assertEqual(inventory.count(inventory_hook), 1)
         self.assertEqual(inventory.count('cdda_harness::ui_row('), 1)
         self.assertIn('text_width, entry_cell_cache.color, text );\n                }\n' + inventory_hook, inventory)
         # Removing only the two attestation hooks/include recovers the original
         # renderer, including visible-column/page/cell fences and disabled draws.
-        self.assertEqual(inventory.replace(inventory_hook, '').replace(
+        restored = inventory.replace(inventory_hook, '').replace(
             '    cdda_harness::ui_begin( "inventory", "INVENTORY", "" );\n', '').replace(
-            '#include "cdda_harness.h"\n', ''), original_inventory)
+            '#include "cdda_harness.h"\n', '').replace(
+            '        std::optional<std::string> harness_label;\n'
+            '        std::string harness_hotkey;\n'
+            '        std::optional<char> harness_marker;\n', '').replace(
+            '        if( harness_label ) {\n'
+            '            cdda_harness::ui_row( *harness_label, entry.is_selectable(), harness_hotkey, selected, harness_marker );\n'
+            '        }\n', '')
+        for marker in ('-', '+', '#'):
+            restored = restored.replace(
+                f"                    harness_marker = cdda_harness::visible_marker( '{marker}', xx, yy, getmaxx( win ), getmaxy( win ) );\n", '')
+        self.assertEqual(restored, original_inventory)
         self.assertIn('void unrelated() { trim_and_print( win, point( 0, 0 ), 10, c_white, hidden ); }', inventory)
         manager = (source / "src/ui_manager.cpp").read_text()
         self.assertIn('cdda_harness::ui_redraw( ui.is_on_top );\n                        ui.redraw_cb( ui );', manager)
 
-    def test_native_v6_commit_and_presented_ui_guards(self):
+    def test_native_v7_commit_and_presented_ui_guards(self):
         # Source-lane checks establish executable guard placement, not C++ execution.
         native = (Path(__file__).resolve().parents[1] / "native/cdda_harness.cpp").read_text()
-        self.assertIn('out.member( "protocol", 6 )', native)
+        self.assertIn('out.member( "protocol", 7 )', native)
         self.assertNotIn(r'\"protocol\":3', native)
         self.assertIn('out.member( "pause_origin", pause_origin )', native)
         self.assertIn('out.member( "takeover_generation", takeover_generation )', native)

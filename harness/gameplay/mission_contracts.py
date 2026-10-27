@@ -211,7 +211,8 @@ _ENTRIES = {"claim": _CLAIM, "work": _WORK, "decision": _DECISION, "procedure": 
 _VISIBLE_UI = _object({
     "purpose": _text(128), "title": _text(1024, empty=True),
     "rows": _array(_object({"id": _ID, "text": _text(1024, empty=True),
-                            "enabled": {"type": "boolean"}, "hotkey": _nullable(_text(32))}), 32),
+                            "enabled": {"type": "boolean"}, "hotkey": _nullable(_text(32)),
+                            "rendered_marker": _nullable(_text(8))}), 32),
     "selected": _nullable(_ID), "filter": _nullable(_text(128, empty=True)),
     "count": _nullable(_text(32, empty=True)), "coverage": {"const": "rendered_rows_only"},
 })

@@ -497,3 +497,25 @@ test('a partial provider stream is never retried and cannot dispatch its tool',a
   }}),{headers:{'content-type':'text/event-stream'}}),reply()]);
   assert.equal(result.reason,'provider-error');assert.equal(payloads.length,1);assert.equal(calls.length,0);
 });
+
+test('rendered marker literals survive production MCP presentation and actual Pi serialization',async()=>{
+  const root=fileURLToPath(new URL('../../../',import.meta.url));
+  const payloads=[],events=[];
+  const responses=[reply(null,[['enactive_snapshot',{}]]),reply()];
+  const result=await runHost({configuration:route(),mcpConfig:{command:resolve(python),
+    args:['-m','tests.test_player_tools','--stdio-fixture'],cwd:root,enabled:true,
+    enabled_tools:['enactive_snapshot'],startup_timeout_sec:5,tool_timeout_sec:2},
+    context:'Offline marker presentation fixture',prompt:'Read one snapshot.',model:model.id,
+    effort:'off',timeoutSeconds:10,env:{OFFLINE_TEST_KEY:'fixture-key'},
+    fetch:async(_url,init)=>{payloads.push(JSON.parse(init.body));return responses.shift();},
+    onEvent:e=>events.push(e)});
+  assert.equal(result.ok,true);assert.equal(payloads.length,2);
+  const tool=payloads[1].messages.find(message=>message.role==='tool');
+  const snapshot=JSON.parse(tool.content);
+  assert.deepEqual(snapshot.source.observation.ui.rows.map(row=>row.rendered_marker),['-','+',null]);
+  assert.deepEqual(snapshot.source.observation.ui.rows.map(row=>row.text),['item','item','item']);
+  assert.equal(snapshot.source.observation.ui.selected,'row-0');
+  assert.equal(events.filter(event=>event.type==='tool-start').length,1);
+  const pid=events.find(event=>event.type==='mcp-connected').child_pid;
+  assert.throws(()=>process.kill(pid,0),{code:'ESRCH'});
+});

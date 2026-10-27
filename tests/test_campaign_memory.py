@@ -86,7 +86,7 @@ class CampaignMemoryTests(unittest.TestCase):
             value["scene"]["position"] = position
         if menu:
             value.update(scene=None, category="UILIST", ui={"purpose": "UILIST", "title": "Alarm",
-                "rows": [{"id": "row-1", "text": "8 hours", "enabled": True, "hotkey": "8"}],
+                "rows": [{"id": "row-1", "text": "8 hours", "enabled": True, "hotkey": "8", "rendered_marker": None}],
                 "selected": "row-1", "filter": None, "count": None, "coverage": "rendered_rows_only"})
             value["boundary"]["kind"] = "menu"
         (self.bridge / value["frame"]).write_bytes(png())

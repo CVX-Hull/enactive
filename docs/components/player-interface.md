@@ -30,7 +30,10 @@ role, orchestration or paid allowance is activated by this host requirement.
 The flow is selected snapshot + explicit player intent → request composition →
 durable SDK stage → existing mission ingress → original collection → decision
 view and image. Mechanical IDs, waits, canonical metadata and joins belong to
-software. It must not guess intent, choose supporting evidence, repair malformed
+software. Native7's nullable literal `rendered_marker` stays separate from row
+labels and focused `selected` ID through retained sources, MCP/Pi presentation
+and `program-view/2`. An unknown marker is not unmarked or a task-success fact.
+Software must not guess intent, choose supporting evidence, repair malformed
 arguments, replay input or turn a detail read into a new observation.
 
 Procedure parents can be revealed by explicit context or a canonical completed

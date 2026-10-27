@@ -18,7 +18,7 @@ class ExitRetirementTests(unittest.TestCase):
         self.controller = Controller(Path(self.temp.name))
         self.addCleanup(self.controller.close)
         self.request = {
-            "protocol": 6, "id": "native-exit", "kind": "key", "key": "y",
+            "protocol": 7, "id": "native-exit", "kind": "key", "key": "y",
             "session": "owned-session", "revision": 3, "boundary_id": "exit-confirmation",
             "takeover_generation": 0, "authority": self.controller.authority.copy(),
             "frame": "exit.png", "require_exact_frame": True,

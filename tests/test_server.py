@@ -91,7 +91,7 @@ class ServerTests(unittest.TestCase):
         state.update(category="UILIST", in_game=False, scene=None,
             actions=["UILIST.UP", "UILIST.DOWN", "CONFIRM", "UILIST.QUIT"],
             ui=dict(purpose="uilist", title="", rows=[dict(id=f"row-{i}", text="x" * 1024,
-                enabled=True, hotkey=None) for i in range(32)], selected="row-0", filter=None,
+                enabled=True, hotkey=None, rendered_marker=None) for i in range(32)], selected="row-0", filter=None,
                 count=None, coverage="rendered_rows_only"))
         state["boundary"].update(kind="menu", id="large-menu")
         validate_state(state)  # Synthetic data within native row/text bounds.
@@ -561,7 +561,7 @@ class ServerTests(unittest.TestCase):
         path = self.controller.bridge / "controller.json"
         self.assertEqual(path.stat().st_mode & 0o777, 0o600)
         self.assertEqual(json.loads(path.read_text())["token"], self.controller.token)
-        self.assertEqual(json.loads(path.read_text())["protocol"], 6)
+        self.assertEqual(json.loads(path.read_text())["protocol"], 7)
 
     def test_token_required_and_not_in_url(self):
         self.assertEqual(self.post({"kind": "pause"}, **{"X-CDDA-Token": "wrong"})[0], 403)

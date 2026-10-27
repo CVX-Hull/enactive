@@ -112,7 +112,7 @@ class PlayerViewCompactionTests(unittest.TestCase):
         receipt.update(transport_disposition="unknown", reason="Original reply lost",
             processing_error="Original processing failed", evidence_loss="Original frame unavailable",
             future_status=dict(delivery="unknown"),
-            control=dict(request=dict(protocol=6, id="native"), result=dict(status="unknown", state=None)))
+            control=dict(request=dict(protocol=7, id="native"), result=dict(status="unknown", state=None)))
         original["native"].update(frozen=True, pause_requested=True, pending={"operation_id": "unresolved"},
             error="Original connection unavailable")
         operation = dict(id="unresolved", state="unknown", result=dict(outcome="unknown", required="Observe"))

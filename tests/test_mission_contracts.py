@@ -348,13 +348,27 @@ class MissionContractTests(unittest.TestCase):
             with self.assertRaises(ContractError): validate_memory_entry(bad, "decision")
 
     def test_rendered_ui_rejects_hidden_fields_and_nonvisible_selection(self):
-        ui = {"purpose": "UILIST", "title": "Choose", "rows": [{"id": "row-1", "text": "Eight hours", "enabled": True, "hotkey": "8"}],
+        ui = {"purpose": "UILIST", "title": "Choose", "rows": [{"id": "row-1", "text": "Eight hours", "enabled": True, "hotkey": "8", "rendered_marker": None}],
               "selected": "row-1", "filter": None, "count": None, "coverage": "rendered_rows_only"}
         self.assertIsNone(validate_visible_ui(None))
         self.assertEqual(validate_visible_ui(ui), ui)
         for bad in [{**ui, "hidden_inventory": []}, {**ui, "selected": "off-page"},
                     {**ui, "rows": ui["rows"] * 2}, {**ui, "rows": [{**ui["rows"][0], "engine_item_id": 1}]}]:
             with self.assertRaises(ContractError): validate_visible_ui(bad)
+
+    def test_rendered_marker_is_required_literal_evidence_separate_from_label_and_focus(self):
+        row = dict(id="row-1", text="flashlight (off)", enabled=True, hotkey="a", rendered_marker=None)
+        ui = dict(purpose="inventory", title="", rows=[row], selected="row-1",
+                  filter=None, count=None, coverage="rendered_rows_only")
+        for marker in (None, "-", "+", "#", "\u2611"):
+            with self.subTest(marker=marker):
+                value = {**ui, "rows": [{**row, "rendered_marker": marker}]}
+                self.assertEqual(validate_visible_ui(value), value)
+                self.assertEqual(value["rows"][0]["text"], "flashlight (off)")
+                self.assertEqual(value["selected"], "row-1")
+        for bad in ({k: v for k, v in row.items() if k != "rendered_marker"},
+                    *({**row, "rendered_marker": marker} for marker in (True, 1, "", "x" * 9))):
+            with self.assertRaises(ContractError): validate_visible_ui({**ui, "rows": [bad]})
 
     def test_duplicate_nonfinite_oversized_and_mutable_alias_inputs_reject(self):
         for value in ['{"schema":"mission/11","kind":"observe","kind":"stop"}',

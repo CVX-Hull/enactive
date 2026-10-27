@@ -18,7 +18,7 @@ from .policy_program import PolicyProgram, PolicyProgramError
 
 def program_view(observation: dict) -> dict:
     """Project an already-retained visible observation, without authority metadata."""
-    return json_object({"schema": "program-view/1",
+    return json_object({"schema": "program-view/2",
         **{key: observation[key] for key in ("category", "actions", "in_game", "ui", "scene", "frame_geometry")},
         "boundary": {key: observation["boundary"][key] for key in ("kind", "input_receiver")},
         "omissions": ["No PNG pixels or pixel-derived detections in this program view; null UI/scene is unavailable, not empty.",

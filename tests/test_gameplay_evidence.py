@@ -1,4 +1,4 @@
-"""Synthetic native-v6 observations only; never real CDDA/pipeline acceptance."""
+"""Synthetic native-v7 observations only; never real CDDA/pipeline acceptance."""
 from copy import deepcopy
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager, nullcontext
@@ -32,7 +32,7 @@ def black_png():
 
 
 def observation(number=1, *, session="synthetic-world", timestamp_ms=1_000_000):
-    return {"protocol": 6, "pause_origin": "none", "takeover_generation": 0, "ui": None, "id": "", "session": session, "revision": number,
+    return {"protocol": 7, "pause_origin": "none", "takeover_generation": 0, "ui": None, "id": "", "session": session, "revision": number,
             "category": "DEFAULTMODE", "actions": ["UP", "DOWN", "LEFT", "RIGHT"],
             "status": "ready", "error": "", "paused": False,
             "timestamp_ms": timestamp_ms, "frame_ok": True,
@@ -121,8 +121,8 @@ class EvidenceTests(unittest.TestCase):
     def menu(self):
         value = observation()
         value.update(category="UILIST", scene=None, ui={"purpose": "UILIST", "title": "Alarm",
-            "rows": [{"id": "rendered-1", "text": "8 hours", "enabled": True, "hotkey": "8"},
-                     {"id": "rendered-2", "text": "4 hours", "enabled": True, "hotkey": "4"}],
+            "rows": [{"id": "rendered-1", "text": "8 hours", "enabled": True, "hotkey": "8", "rendered_marker": None},
+                     {"id": "rendered-2", "text": "4 hours", "enabled": True, "hotkey": "4", "rendered_marker": None}],
             "selected": "rendered-1", "filter": None, "count": None, "coverage": "rendered_rows_only"})
         value["boundary"]["kind"] = "menu"
         return value
@@ -346,7 +346,7 @@ class EvidenceTests(unittest.TestCase):
     def test_menu_is_retained_without_scene_time_or_movement_permission(self):
         value = observation()
         value.update(category="UILIST", scene=None, ui={"purpose": "UILIST", "title": "Alarm",
-            "rows": [{"id": "rendered-1", "text": "8 hours", "enabled": True, "hotkey": "8"}],
+            "rows": [{"id": "rendered-1", "text": "8 hours", "enabled": True, "hotkey": "8", "rendered_marker": None}],
             "selected": "rendered-1", "filter": None, "count": None, "coverage": "rendered_rows_only"})
         value["boundary"]["kind"] = "menu"
         ref = self.ingest(self.publish(value))
@@ -1118,7 +1118,7 @@ class EvidenceTests(unittest.TestCase):
         self.store.close()
         manifest = self.directory / "evidence.json"
         original = manifest.read_bytes()
-        for version in (None, 0, 1, 2, 3, 4, True, 5.0):
+        for version in (None, 0, 1, 2, 3, 4, 5, True, 6.0):
             with self.subTest(version=version):
                 value = json.loads(original)
                 if version is None:

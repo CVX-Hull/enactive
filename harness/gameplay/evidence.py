@@ -51,7 +51,7 @@ _SCENE = _object({
         "required": ["dx", "dy", "visible"], "additionalProperties": False}, 8, 8),
 })
 _OBSERVATION = _object({
-    "protocol": {"type": "integer", "const": 6},
+    "protocol": {"type": "integer", "const": 7},
     "pause_origin": {"enum": list(PAUSE_ORIGINS)}, "takeover_generation": _INT,
     "ui": {"anyOf": [visible_ui_schema(), {"type": "null"}]}, "id": _text(128, empty=True),
     "session": {**_ID, "pattern": "^[A-Za-z0-9_-]+$"}, "revision": _INT,
@@ -327,7 +327,7 @@ class EvidenceStore:
                     raise EvidenceError("Invalid evidence manifest")
                 value = json.loads(manifest.read_bytes(), parse_constant=_reject_constant, object_pairs_hook=_pairs)
                 if (type(value) is not dict or set(value) != {"store_version", "entries", "session", "retired_sessions", "blocked", "disputed"}
-                        or type(value["store_version"]) is not int or value["store_version"] != 5
+                        or type(value["store_version"]) is not int or value["store_version"] != 6
                         or type(value["entries"]) is not list or len(value["entries"]) > MAX_FRAMES
                         or type(value["retired_sessions"]) is not list or len(value["retired_sessions"]) > MAX_FRAMES
                         or any(type(s) is not str or not 1 <= len(s) <= 128 for s in value["retired_sessions"])
@@ -378,7 +378,7 @@ class EvidenceStore:
         self._usage()
 
     def _manifest(self) -> dict[str, Any]:
-        return {"store_version": 5, "session": self._session, "retired_sessions": self._retired_sessions,
+        return {"store_version": 6, "session": self._session, "retired_sessions": self._retired_sessions,
                  "blocked": self._blocked, "disputed": self._disputed,
                  "entries": [{"reference": item.reference.to_dict(), "observation": item.observation,
                               "initial_lag_seconds": item.initial_lag_seconds,
@@ -567,7 +567,7 @@ class EvidenceStore:
     def ingest(self, value: dict[str, Any] | str | bytes, *, received_monotonic: float,
                now_monotonic: float, now_timestamp_ms: int,
                reservation: CapacityReservation | None = None) -> EvidenceRef:
-        """Retain a current native-v6 observation with its actual first receipt.
+        """Retain a current native-v7 observation with its actual first receipt.
 
         Repeated source identity reuses original receipt/lag and immutable copied
         source; bridge-cache eviction is harmless after initial retention. Altered

@@ -1122,7 +1122,7 @@ class MissionLedger:
         resolution = self.request(proof["reconciliation_request_id"])
         root = self.request(proof["root_id"])
         native = json_object(proof["native_request_json"])
-        if type(native.get("authority")) is not dict or type(native.get("protocol")) is not int or native["protocol"] != 6:
+        if type(native.get("authority")) is not dict or type(native.get("protocol")) is not int or native["protocol"] != 7:
             raise LedgerError("Delivery proof lacks its original native authority envelope")
         receipt = p["result"] or {}
         binding = receipt.get("dispatch_binding") or {}
@@ -1737,7 +1737,7 @@ class MissionLedger:
                 or any(receipt.get(key) != intent[key] for key in ("kind", "value", "expected_session",
                     "expected_revision", "expected_boundary_id", "source_before", "preflight_source"))
                 or not receipt.get("source_after") or receipt.get("received_monotonic") is None
-                or native.get("protocol") != 6 or native.get("kind") != "resume"
+                or native.get("protocol") != 7 or native.get("kind") != "resume"
                 or native.get("id") != primitive["native_id"] or native.get("require_exact_frame") is not True
                 or native.get("session") != intent["expected_session"]
                 or native.get("revision") != intent["expected_revision"]

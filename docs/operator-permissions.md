@@ -277,11 +277,11 @@ authority/evidence/global-budget faults still stop.
 Explicit Observe can close an exhausted ordinary macro with `macro_closure` before
 the player chooses a new direct root from the fresh owned menu. It renews no
 mission allowance or consent. Old-source/queued children refuse; user Pause and
-unsettled delivery still stop. Current source/help is native6/mission11. After a
+unsettled delivery still stop. Current source/help is native7/mission11. After a
 known direct ACK with stale/unavailable current evidence, explicit Observe can
 refresh a read-only scope across its exact authenticated operation rotation,
-without restoring failed custody or renewing limits. Actual native6 graphical
-qualification remains pending.
+without restoring failed custody or renewing limits. Matching native7 marker qualification is separate from the historical native6
+graphical evidence.
 Historical preapproval/gameplay reports below retain their original scopes.
 
 Choose a whole returned snapshot/source consistently after focus changes. For

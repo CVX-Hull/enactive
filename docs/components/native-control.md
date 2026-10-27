@@ -27,6 +27,13 @@ It is not a process-isolation diagram. [Editable source](../diagrams/run-ownersh
 | Recovery composition | Separate paused control requests and original uncertain-dispatch evidence | [mission_recovery.py](../../harness/mission_recovery.py); [detailed native recovery design](../design/native-control.md) |
 | Shared movement policy | Pure conservative visible-cell rules used by controller walk and movement skill | [movement.py](../../harness/movement.py) |
 
+Native7 visible rows preserve labels and focus while carrying a separate nullable
+literal rendered marker. The CDDA binding records the actual inventory marker
+cell only when visible, in the same row draw; null does not mean unmarked. Other
+games need their own visible producer, without inheriting CDDA marker semantics.
+The [protocol](../protocol.md#passive-gameplay-records-and-evidence) owns current
+wire/store migration and archival limits.
+
 Native metadata is restricted to player-visible information, excluding saves,
 unseen maps and hidden threats. Physical ordinary input and semantic shortcuts
 have different applicability checks; neither bypasses custody, receiver or original

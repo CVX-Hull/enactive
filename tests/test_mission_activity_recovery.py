@@ -72,7 +72,7 @@ class ActivityControls:
                 if self.after_commit:
                     self.after_commit(req)
                 if self.publish:
-                    atomic_json(bridge / "control-response.json", dict(protocol=6, id=req["id"],
+                    atomic_json(bridge / "control-response.json", dict(protocol=7, id=req["id"],
                         status=status, error="", state=native))
         except BaseException as exc:
             self.failures.append(exc)

@@ -274,7 +274,7 @@ class MissionRuntimeTests(unittest.TestCase):
                 if moves == 2:
                     bridge.value.update(scene=None, category="UILIST", actions=["UILIST.QUIT"],
                         ui=dict(purpose="uilist", title="Interact with survivor", rows=[
-                            dict(id="row-0", text="Talk", enabled=True, hotkey=None)],
+                            dict(id="row-0", text="Talk", enabled=True, hotkey=None, rendered_marker=None)],
                             selected="row-0", filter=None, count=None, coverage="rendered_rows_only"))
                     bridge.value["boundary"].update(kind="menu", id="npc-choice")
                 else:
@@ -510,7 +510,7 @@ class MissionRuntimeTests(unittest.TestCase):
 
     def native_choices(self, *, effect=None, **changes):
         ui = dict(purpose="uilist", title="Choices", rows=[
-            dict(id=f"row-{n}", text=text, enabled=True, hotkey=None)
+            dict(id=f"row-{n}", text=text, enabled=True, hotkey=None, rendered_marker=None)
             for n, text in enumerate(("One", "Two", "Three"))],
             selected="row-0", filter=None, count=None, coverage="rendered_rows_only")
         def focus(bridge, request):

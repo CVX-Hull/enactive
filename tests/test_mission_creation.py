@@ -89,8 +89,8 @@ class MissionCreationFixture:
                 self.stage = "load"
                 self.menu("UILIST", ["UILIST.UP", "UILIST.DOWN", "CONFIRM", "UILIST.QUIT"])
                 rows = [
-                    dict(id="row-0", text=self.a.scenario.character, enabled=True, hotkey=None),
-                    dict(id="row-1", text="<- Back to Main Menu", enabled=True, hotkey="q")]
+                    dict(id="row-0", text=self.a.scenario.character, enabled=True, hotkey=None, rendered_marker=None),
+                    dict(id="row-1", text="<- Back to Main Menu", enabled=True, hotkey="q", rendered_marker=None)]
                 bridge.value["ui"] = dict(purpose="uilist", title="",
                     rows=copy.deepcopy(getattr(self, "load_rows", rows)),
                     selected=getattr(self, "load_selected", "row-0"),
@@ -971,20 +971,20 @@ class MissionCreationTests(MissionCreationFixture, unittest.TestCase):
 
     def test_reload_other_selected_character_is_rejected_before_input(self):
         self.reject_reload_row([
-            dict(id="row-0", text=self.a.scenario.character, enabled=True, hotkey=None),
-            dict(id="row-1", text="Other", enabled=True, hotkey=None)], "row-1", "Other")
+            dict(id="row-0", text=self.a.scenario.character, enabled=True, hotkey=None, rendered_marker=None),
+            dict(id="row-1", text="Other", enabled=True, hotkey=None, rendered_marker=None)], "row-1", "Other")
 
     def test_reload_missing_admitted_character_is_rejected_before_input(self):
-        self.reject_reload_row([dict(id="row-0", text="Other", enabled=True, hotkey=None)], "row-0", "Other")
+        self.reject_reload_row([dict(id="row-0", text="Other", enabled=True, hotkey=None, rendered_marker=None)], "row-0", "Other")
 
     def test_reload_disabled_admitted_character_is_rejected_before_input(self):
         self.reject_reload_row([
-            dict(id="row-0", text=self.a.scenario.character, enabled=False, hotkey=None),
-            dict(id="row-1", text="Other", enabled=True, hotkey=None)], "row-1", "Other")
+            dict(id="row-0", text=self.a.scenario.character, enabled=False, hotkey=None, rendered_marker=None),
+            dict(id="row-1", text="Other", enabled=True, hotkey=None, rendered_marker=None)], "row-1", "Other")
 
     def test_reload_duplicate_admitted_character_is_rejected_before_input(self):
         self.reject_reload_row([
-            dict(id=f"row-{index}", text=self.a.scenario.character, enabled=True, hotkey=None)
+            dict(id=f"row-{index}", text=self.a.scenario.character, enabled=True, hotkey=None, rendered_marker=None)
             for index in range(2)], "row-0", self.a.scenario.character)
 
     def test_return_from_reload_picker_retires_selection_stage(self):

@@ -198,7 +198,7 @@ class ProcedureLibrary:
         value = json.loads(encoded, object_pairs_hook=_pairs, parse_constant=_reject_constant)
         if (type(value) is not dict
                 or set(value) != {"store_version", "entries", "session", "retired_sessions", "blocked", "disputed"}
-                or type(value["store_version"]) is not int or value["store_version"] != 5
+                or type(value["store_version"]) is not int or value["store_version"] != 6
                 or type(value["entries"]) is not list or len(value["entries"]) > MAX_FRAMES
                 or type(value["retired_sessions"]) is not list or len(value["retired_sessions"]) > MAX_FRAMES
                 or type(value["blocked"]) is not list or len(value["blocked"]) > MAX_FRAMES

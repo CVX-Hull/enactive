@@ -23,7 +23,7 @@ class MenuTests(unittest.TestCase):
         self.addCleanup(self.store.close)
         self.clocks = dict(now_monotonic=100.0, now_timestamp_ms=1_000_000)
         self.number = 0
-        self.rows = [dict(id=f"row-{n}", text=text, enabled=True, hotkey=None)
+        self.rows = [dict(id=f"row-{n}", text=text, enabled=True, hotkey=None, rendered_marker=None)
                      for n, text in enumerate(("One", "Two", "Three", "Four"))]
 
     def frame(self, selected=0, *, change=None):
@@ -200,7 +200,7 @@ class MenuTests(unittest.TestCase):
     def test_missing_hidden_disabled_and_duplicate_enabled_targets_block(self):
         for mode in ("missing", "disabled", "duplicate", "hidden"):
             with self.subTest(mode=mode):
-                self.rows = [dict(id=f"row-{n}", text=t, enabled=True, hotkey=None)
+                self.rows = [dict(id=f"row-{n}", text=t, enabled=True, hotkey=None, rendered_marker=None)
                              for n, t in enumerate(("One", "Two", "Three", "Four"))]
                 if mode == "disabled": self.rows[3]["enabled"] = False
                 if mode == "duplicate": self.rows[2]["text"] = "Four"
