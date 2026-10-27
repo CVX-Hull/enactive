@@ -263,7 +263,7 @@ class MissionDeliveryEvidenceTests(unittest.TestCase):
             request = copy.deepcopy(bridge.requests[0])
         native = recovery_state("interrupt_confirmation", owner=request["id"],
                                 generation=1, revision=c.state["revision"] + 1)
-        terminal = {"protocol": 6, "id": request["id"], "status": "prompt_opened", "error": "", "state": native}
+        terminal = {"protocol": 7, "id": request["id"], "status": "prompt_opened", "error": "", "state": native}
         atomic_json(c.bridge / "control-response.json", terminal)
         original = copy.deepcopy(c.state)
         proof = self.proof(request)

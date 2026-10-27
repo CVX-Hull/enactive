@@ -113,13 +113,19 @@ replace_once(source / "src/uilist.cpp",
     '                        const std::string harness_text = harness_label( str1, ImGui::GetCursorScreenPos() );\n'
     '                        cataimgui::draw_colored_text( str1, color );\n'
     '                        if( !harness_text.empty() ) {\n'
-    '                            cdda_harness::ui_row( harness_text, entry.enabled, "", is_selected );\n'
+    '                            cdda_harness::ui_row( harness_text, entry.enabled, "", is_selected, std::nullopt );\n'
     '                        }')
 
 # These hooks run inside the existing visible-column/page/cell loops, after
 # denial widths, hidden cells and trimming have been resolved by the renderer.
 # Use the engine's selecting predicate to omit the cosmetic selected-items column.
 # Do not enumerate inventory locations, hidden children or latent entry caches.
+replace_once(source / "src/inventory_ui.cpp",
+    '        const bool selected = active && is_highlighted( entry );',
+    '        const bool selected = active && is_highlighted( entry );\n'
+    '        std::optional<std::string> harness_label;\n'
+    '        std::string harness_hotkey;\n'
+    '        std::optional<char> harness_marker;')
 replace_once(source / "src/inventory_ui.cpp",
     'void inventory_selector::refresh_window()\n{\n'
     '    cata_assert( w_inv );',
@@ -133,14 +139,27 @@ replace_once(source / "src/inventory_ui.cpp",
     '                if( allows_selecting() && cell_index == 0 && entry.is_item() && text_x >= 0 &&\n'
     '                    text_x + static_cast<int>( text_width ) <= getmaxx( win ) &&\n'
     '                    yy >= 0 && yy < getmaxy( win ) ) {\n'
-    '                    const std::string label = remove_color_tags( trim_by_length( text, text_width ) );\n'
+    '                    harness_label = remove_color_tags( trim_by_length( text, text_width ) );\n'
     '                    const char invlet = entry.get_invlet();\n'
-    '                    const std::string hotkey = p.x >= 0 && p.x < getmaxx( win ) &&\n'
+    '                    harness_hotkey = p.x >= 0 && p.x < getmaxx( win ) &&\n'
     "                        invlet >= 32 && invlet <= 126 ? std::string( 1, invlet ) : std::string();\n"
-    '                    cdda_harness::ui_row( label, entry.is_selectable(), hotkey, selected );\n'
     '                }\n'
     '            }\n\n            x1 = x2;\n        }\n\n'
     '        if( entry.is_item() ) {\n            int xx = p.x;')
+
+# Record each literal only after its existing draw, using that exact cell. A
+# complete row is appended once, so duplicates/overflow cannot mutate another row.
+for marker, color in (("-", "c_dark_gray"), ("+", "c_light_green"), ("#", "c_light_green")):
+    draw = f"                    mvwputch( win, point( xx, yy ), {color}, '{marker}' );"
+    replace_once(source / "src/inventory_ui.cpp", draw,
+        draw + f"\n                    harness_marker = cdda_harness::visible_marker( '{marker}', xx, yy, getmaxx( win ), getmaxy( win ) );")
+replace_once(source / "src/inventory_ui.cpp",
+    '        }\n    }\n\n    if( pages_count() > 1 ) {',
+    '        }\n'
+    '        if( harness_label ) {\n'
+    '            cdda_harness::ui_row( *harness_label, entry.is_selectable(), harness_hotkey, selected, harness_marker );\n'
+    '        }\n'
+    '    }\n\n    if( pages_count() > 1 ) {')
 
 # The guard spans handle_input, including retries and nested keybinding UI.
 replace_once(source / "src/input_context.cpp",

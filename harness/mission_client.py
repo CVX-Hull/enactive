@@ -108,7 +108,7 @@ class MissionClient:
             with self._runtime() as runtime, _directory("bridge", parent=runtime) as bridge:
                 config = json_object(_regular_bytes(bridge, "controller.json", _CONFIG_BYTES))
             port, token = config.get("port"), config.get("token")
-            if (type(config.get("protocol")) is not int or config["protocol"] != 6
+            if (type(config.get("protocol")) is not int or config["protocol"] != 7
                     or type(port) is not int or not 1 <= port <= 65535
                     or type(token) is not str or not token
                     or not token.isascii() or any(ord(character) < 33 or ord(character) == 127 for character in token)):

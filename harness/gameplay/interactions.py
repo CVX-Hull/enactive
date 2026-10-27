@@ -12,8 +12,8 @@ from .evidence import EvidenceError
 def check_visible_row_agreement(view: dict, state: dict) -> None:
     """Reject contradictions with native rows for the same vertical control.
 
-    Native rows attest only rendered labels, enabled flags, order and selection.
-    Item quantities remain player interpretation, without native confirmation.
+    This agreement checks rendered labels, enabled flags, order and focus.
+    Literal marker evidence is separate; quantities remain player interpretation.
     """
     ui = state["ui"]
     if view["control"] != "vertical" or ui is None or ui["purpose"] not in ("uilist", "inventory"):

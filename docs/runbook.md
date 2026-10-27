@@ -179,7 +179,7 @@ the native window. Unsupported upstream error screens may need native dismissal.
 Observe to reconcile current state, then explicitly resume only when interpretable.
 Do not resend an uncertain action. New observations do not prove its old objective.
 The player must handle routine prompts through the current ordinary-input path
-rather than requiring the user or lead to press a key. Native6 attests the actual
+rather than requiring the user or lead to press a key. Native7 attests the actual
 ordinary receiver independently of menu category names; an unfamiliar category
 alone is not an unsupported-input judgment. The dated direction-query qualification
 below covers ordinary selection/cancellation, not every prompt. Current source,
@@ -373,7 +373,7 @@ an incident archive and document the explicit transition to a fresh bridge with
 unresolved work still tracked. No replay or save editing is permitted. Historical
 reports and journals stay immutable; they need no runtime reader.
 
-Build manifests require `schema_version: 1`; current evidence stores require store version 5.
+Build manifests require `schema_version: 1`; current evidence stores require store version 6.
 Never just relabel an unknown file. A reviewed one-time build-manifest migration
 must first verify workspace ownership, pinned source/headers and binary hashes,
 then record before/after hashes. Alternatively preserve the old manifest/workspace
@@ -387,13 +387,23 @@ unresolved identities as verified `incident/1` references in
 `historical-incidents.json`; startup validates referenced bytes without parsing
 old protocol records. These remain visible historical unknowns and grant no
 execution permission. Its evidence format3 accepted native4 observations.
-For the current native6/mission11/ledger12/archive5/memory6 cutover, apply the same
+The current `incident/1` reference list admits at most256 individual identities
+and128KiB of ASCII-escaped JSON, preserving room in the existing status/client
+envelope. Larger histories require explicit reshaping; do not bundle or drop IDs
+to make a migration appear resolved.
+For the current native7/mission11/ledger12/archive6/memory6 cutover, apply the same
 stopped, hash-inventoried incident archive procedure. Preserve prior mission
 ledgers/archives as historical evidence; do not relabel them as eligible procedure
-libraries or restore their execution authority. Current stores accept native6
-only. Procedure/3 and reflection/2 also reject older records. Historical
+libraries or restore their execution authority. Current stores accept native7/store6
+only; closed native6/store5 campaigns remain archival and cannot be donor pins. Procedure/3 and reflection/2 also reject older records. Historical
 learning004/006 libraries keep their original contracts and are not relabelled or
 mounted as current.
+
+Archive the entire quiescent old bridge and preserve its unresolved identities as
+verified historical incident references before starting a fresh native7 bridge;
+never relabel old requests or restore execution authority. Use a fresh store for
+the new admission. Upstream engine saves are not edited or converted by this
+migration; an ordinary Load still requires fresh identity/adoption.
 
 For current-contract donors, the procedure library accepts completed, failed,
 stopped and paused archives only after physical and internal closure: both shared

@@ -60,7 +60,7 @@ class ProgramUIExecutionTests(unittest.TestCase):
                 key = request['input']['key']
                 effects['keys'].append(key)
                 if key == 'i':
-                    rows = [dict(id=identity, text=label, enabled=True, hotkey=None)
+                    rows = [dict(id=identity, text=label, enabled=True, hotkey=None, rendered_marker=None)
                         for identity, label in [('a', 'Inspect sample'), ('b', 'Leave sample'),
                                                 ('target', 'Transfer sample')]]
                     ui = dict(purpose='uilist', title='Fixture transfer', rows=rows,

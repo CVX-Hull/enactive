@@ -33,7 +33,7 @@ class OrdinaryInputTests(unittest.TestCase):
     def frame(self, *, same=None, **changes):
         self.counter += 1
         geometry = dict(window_width=1, window_height=1, output_width=1, output_height=1, viewport=[0, 0, 1, 1])
-        value = dict(protocol=6, id="", session="visible-interface", revision=self.counter,
+        value = dict(protocol=7, id="", session="visible-interface", revision=self.counter,
             category="UNSEEN_RECEIVER", actions=[], status="ready", error="", paused=False,
             timestamp_ms=self.clocks["now_timestamp_ms"], frame_ok=True,
             frame=f"frame-visible-interface-{self.counter}.png", in_game=False,

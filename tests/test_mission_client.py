@@ -73,7 +73,7 @@ class MissionClientTests(unittest.TestCase):
         self.bridge = self.root / ".runtime" / "bridge"
         self.bridge.mkdir(parents=True)
         self.server = self.start_stub()
-        self.config = dict(protocol=6, port=self.server.server_port, token="private-test-token")
+        self.config = dict(protocol=7, port=self.server.server_port, token="private-test-token")
         self.write_config()
         self.client = MissionClient(self.root)
 
@@ -116,7 +116,7 @@ class MissionClientTests(unittest.TestCase):
                  dict(port="8765"), dict(token=""), dict(token=None), dict(token="header\ninjection")]
         for changes in cases:
             with self.subTest(changes=changes):
-                self.config = dict(protocol=6, port=self.server.server_port, token="private-test-token") | changes
+                self.config = dict(protocol=7, port=self.server.server_port, token="private-test-token") | changes
                 self.write_config()
                 with self.assertRaises(MissionClientError) as raised:
                     self.client.status()
@@ -136,7 +136,7 @@ class MissionClientTests(unittest.TestCase):
         config.unlink()
         config.write_bytes(b" " * (65536 + 1))
         with self.assertRaises(MissionClientError): self.client.status()
-        config.write_text('{"protocol":6,"protocol":6}')
+        config.write_text('{"protocol":7,"protocol":7}')
         with self.assertRaises(MissionClientError): self.client.status()
         config.unlink()
         self.bridge.rmdir()

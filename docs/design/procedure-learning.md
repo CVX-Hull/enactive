@@ -16,10 +16,10 @@ is advisory knowledge about how to attempt a goal under stated conditions.
 The current component architecture and protocol own implemented behavior; dated
 reports own qualification. Remaining research/evaluation proposals here do not
 define a second current contract. Current source uses procedure/3, campaign-memory/6 and reflection/2
-with native6/mission11/ledger12/archive5; gameplay/2 is unchanged. Admission uses
+with native7/mission11/ledger12/archive6; gameplay/2 is unchanged. Admission uses
 `facts-procedures-reflection/3`. Remaining research/evaluation proposals below are
-not guarantees. The matching native6 build passed and is installed; bounded graphical qualification
-is retained in the current protocol's dated reports. Learning009 demonstrates
+not guarantees. Matching native7 build and marker qualification are separate required lanes;
+native6 graphical results retain only their original scope in dated reports. Learning009 demonstrates
 bounded authorship/revision/reuse, fresh-successor application and normal lifecycle;
 useful cadence and the complete fresh independent campaign remain unaccepted.
 Earlier learning004/006 evidence keeps its original environment and scope; its
@@ -261,7 +261,7 @@ linear ancestry resolves independently of input order. Identical copies dedupe;
 changed copies, missing parents, multiple roots or incomparable branches refuse.
 No branch selection or merge is inferred from timestamps or numeric revisions.
 
-The current environment pins `engine_commit`, `native_protocol=6`,
+The current environment pins `engine_commit`, `native_protocol=7`,
 `mission_schema="mission/11"` and a bounded configuration description. Matching
 these identifies interface applicability, not equivalent world facts or a guarantee
 that the described conditions hold. Episode references qualify request/source IDs

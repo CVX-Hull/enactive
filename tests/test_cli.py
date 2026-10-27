@@ -13,7 +13,7 @@ from harness import __main__ as cli
 
 class DiscoveryTests(unittest.TestCase):
     def test_mixed_or_missing_protocol_never_contacts_service(self):
-        for version in (None, 1, 2, 3, 4, 5, 7, True, 6.0, "6"):
+        for version in (None, 1, 2, 3, 4, 5, 6, 8, True, 7.0, "7"):
             with self.subTest(version=version):
                 config = {"port": 8766, "token": "local", "protocol": version}
                 output = StringIO()
@@ -25,7 +25,7 @@ class DiscoveryTests(unittest.TestCase):
                 self.assertIn("Unsupported service protocol", output.getvalue())
 
     def test_matching_service_uses_discovered_port(self):
-        config = {"port": 8766, "token": "local", "protocol": 6}
+        config = {"port": 8766, "token": "local", "protocol": 7}
         opener = Mock()
         opener.open.return_value = BytesIO(b'{"paused":true}')
         with patch.object(cli, "read_json", return_value=config), \
@@ -44,7 +44,7 @@ class RecoveryCliTests(unittest.TestCase):
             opener.open.side_effect = HTTPError("http://local", 409, "Conflict", {}, BytesIO(result))
         else:
             opener.open.return_value = BytesIO(result)
-        with patch.object(cli, "read_json", return_value={"protocol": 6, "port": 8766, "token": "local"}), \
+        with patch.object(cli, "read_json", return_value={"protocol": 7, "port": 8766, "token": "local"}), \
                 patch.object(cli, "build_opener", return_value=opener), \
                 patch("sys.argv", ["harness", *arguments]), redirect_stdout(output), redirect_stderr(StringIO()):
             code = cli.main()

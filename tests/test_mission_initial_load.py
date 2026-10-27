@@ -272,7 +272,7 @@ class InitialLoadTests(MissionCreationFixture, unittest.TestCase):
         self.assertEqual(self.runtime.status()["spent_inputs"], 0)
 
     def test_initial_load_keeps_unique_enabled_character_precondition(self):
-        self.load_rows = [dict(id="row-0", text="Another character", enabled=True, hotkey=None)]
+        self.load_rows = [dict(id="row-0", text="Another character", enabled=True, hotkey=None, rendered_marker=None)]
         self.picker()
         selection = self.control("wrong-character", self.a.scenario.character, parent="initial-load")
         selection["perception"] = None

@@ -768,12 +768,20 @@ class _FixtureClient:
     """Only SDK framing/image-format fixture; it proves no game state or action."""
     from tests.test_gameplay_evidence import png
     image = png()
+    @staticmethod
+    def visible_ui():
+        return dict(purpose="inventory", title="",
+                rows=[dict(id="row-0", text="item", enabled=True, hotkey="a", rendered_marker="-"),
+                      dict(id="row-1", text="item", enabled=True, hotkey="b", rendered_marker="+"),
+                      dict(id="row-2", text="item", enabled=True, hotkey="c", rendered_marker=None)],
+                selected="row-0", filter=None, count=None, coverage="rendered_rows_only")
+
     def staged_request(self, mission_id, request_id):
         return None
 
     def status(self):
         return dict(state=dict(session="sdk-session", health="healthy", actions=["open"],
-            scene={"position": [1, 2, 0]}, ui={"visible": "menu"}),
+            scene={"position": [1, 2, 0]}, ui=self.visible_ui()),
             mission=dict(mission_id="sdk-fixture", epoch=1,
             current_source=dict(observation_id="sdk-source"), prompt_phase=None,
             lifecycle_phase=None, activity_phase=None, progress={"history": ["duplicated"]},
@@ -783,7 +791,7 @@ class _FixtureClient:
         if source_id == "unavailable":
             raise OSError("Selected original source unavailable; choose a retained source")
         return dict(reference=dict(observation_id=source_id), observation=dict(actions=["open"],
-            scene={"position": [1, 2, 0]}, ui={"visible": "menu"}),
+            scene={"position": [1, 2, 0]}, ui=self.visible_ui()),
                     disposition="retained", grants_authority=False), self.image
 
     def collect(self, **arguments):

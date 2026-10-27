@@ -227,7 +227,7 @@ class GovernanceTests(unittest.TestCase):
                     self.assertTrue(all("overdue" in warning for warning in warnings))
 
     def test_development_reports_warnings_alongside_protocol_failure(self):
-        self.replace("docs/protocol.md", "Protocol version: 6.", "Protocol version: 1.")
+        self.replace("docs/protocol.md", "Protocol version: 7.", "Protocol version: 1.")
         result, _, errors = self.run_cli(["--development"])
         self.assertEqual(result, 1)
         self.assertIn("Governance warning:", errors)
@@ -309,19 +309,19 @@ class GovernanceTests(unittest.TestCase):
     def test_protocol_drift_at_each_representation_is_detected(self):
         self.assertEqual(governance.check_protocol(self.root), [])
         changes = [
-            ("native/cdda_harness.cpp", 'out.member( "protocol", 6 )', 'out.member( "protocol", 1 )'),
-            ("native/cdda_harness.cpp", 'integer_member( request, "protocol" ) != 6 )', 'integer_member( request, "protocol" ) != 1 )'),
-            ("harness/controller.py", '"protocol": 6', '"protocol": 1'),
-            ("harness/controller.py", '"protocol": 6', '"protocol": "1"'),
-            ("harness/controller.py", 'value["protocol"] != 6', 'value["protocol"] != 1'),
-            ("harness/server.py", '"protocol": 6', '"protocol": 1'),
-            ("harness/__main__.py", 'config["protocol"] != 6', 'config["protocol"] != 1'),
-            ("harness/controller.py", 'request["protocol"] != 6', 'request["protocol"] != 1'),
-            ("web/app.js", 'displayed.protocol !== 6', 'displayed.protocol !== 1'),
-            ("native/cdda_harness.cpp", r'\"protocol\":6', r'\"protocol\":2'),
-            ("native/cdda_harness.cpp", 'integer_member( request, "protocol" ) != 6 ||', 'integer_member( request, "protocol" ) != 2 ||'),
-            ("harness/gameplay/evidence.py", '"protocol": {"type": "integer", "const": 6}', '"protocol": {"type": "integer", "const": 2}'),
-            ("docs/protocol.md", 'Protocol version: 6.', 'Protocol version: 1.'),
+            ("native/cdda_harness.cpp", 'out.member( "protocol", 7 )', 'out.member( "protocol", 1 )'),
+            ("native/cdda_harness.cpp", 'integer_member( request, "protocol" ) != 7 )', 'integer_member( request, "protocol" ) != 1 )'),
+            ("harness/controller.py", '"protocol": 7', '"protocol": 1'),
+            ("harness/controller.py", '"protocol": 7', '"protocol": "1"'),
+            ("harness/controller.py", 'value["protocol"] != 7', 'value["protocol"] != 1'),
+            ("harness/server.py", '"protocol": 7', '"protocol": 1'),
+            ("harness/__main__.py", 'config["protocol"] != 7', 'config["protocol"] != 1'),
+            ("harness/controller.py", 'request["protocol"] != 7', 'request["protocol"] != 1'),
+            ("web/app.js", 'displayed.protocol !== 7', 'displayed.protocol !== 1'),
+            ("native/cdda_harness.cpp", r'\"protocol\":7', r'\"protocol\":2'),
+            ("native/cdda_harness.cpp", 'integer_member( request, "protocol" ) != 7 ||', 'integer_member( request, "protocol" ) != 2 ||'),
+            ("harness/gameplay/evidence.py", '"protocol": {"type": "integer", "const": 7}', '"protocol": {"type": "integer", "const": 2}'),
+            ("docs/protocol.md", 'Protocol version: 7.', 'Protocol version: 1.'),
         ]
         for name, before, after in changes:
             with self.subTest(name=name, before=before):
@@ -330,7 +330,7 @@ class GovernanceTests(unittest.TestCase):
                 self.replace(name, after, before)
 
     def test_protocol_refactor_requires_checker_review(self):
-        self.replace("native/cdda_harness.cpp", 'out.member( "protocol", 6 )',
+        self.replace("native/cdda_harness.cpp", 'out.member( "protocol", 7 )',
                      'out.member( "protocol", CURRENT_PROTOCOL )')
         self.assertIn("representation", "\n".join(governance.check_protocol(self.root)))
 

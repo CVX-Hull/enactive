@@ -26,7 +26,7 @@ def procedure(**changes):
                    "on_unexpected": "Stop and reassess"}],
         "progress": ["Water is visibly carried"], "stop_conditions": ["Target met"],
         "limits": ["Not assessed with hostile creatures nearby"],
-        "environment": {"engine_commit": "a" * 40, "native_protocol": 6,
+        "environment": {"engine_commit": "a" * 40, "native_protocol": 7,
                         "mission_schema": "mission/11", "configuration": "Ordinary setup"},
         "support": [{"mission_id": "episode-mission", "request_ids": ["request-1"],
                      "source_ids": ["source-1"], "interpretation": "One observed attempt"}],

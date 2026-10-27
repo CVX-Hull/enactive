@@ -161,7 +161,7 @@ void refresh_identity() {
     packet = {};
     packet.strings = {{"id", "input-1"}, {"session", session}, {"boundary_id", boundary_id},
                       {"frame", frame_name}, {"kind", "direct"}};
-    packet.integers = {{"protocol", 6}, {"revision", revision}, {"takeover_generation", takeover_generation},
+    packet.integers = {{"protocol", 7}, {"revision", revision}, {"takeover_generation", takeover_generation},
                        {"deadline_ms", 5000}};
     packet.booleans = {{"require_exact_frame", false}};
     packet.objects = {{"authority", {}}, {"input", {}}};
@@ -182,20 +182,20 @@ bool hard_fault( const std::function<void()> &run ) {
 int main( int argc, char **argv ) {
     try {
         require( argc == 2 ); const std::string scenario = argv[1]; int context = 1, second = 2;
-        if( scenario == "control-postcommit-feed" || scenario == "control-postcommit-publish" || scenario == "control-wire5" ) {
+        if( scenario == "control-postcommit-feed" || scenario == "control-postcommit-publish" || scenario == "control-wire6" ) {
             scope owner( boundary_kind::activity_poll );
             scope active( "DEFAULTMODE", {"pause"}, &context ); input_receiver receiver;
             refresh_identity(); activity_eligible = true;
             packet = {};
             packet.strings = {{"id", "11111111-1111-1111-1111-111111111111"}, {"session", session}, {"kind", "request_interrupt"}};
-            packet.integers = {{"protocol", scenario == "control-wire5" ? 5 : 6}, {"control_generation", control_generation},
+            packet.integers = {{"protocol", scenario == "control-wire6" ? 6 : 7}, {"control_generation", control_generation},
                                {"created_ms", 1000}, {"deadline_ms", 3000}};
             packet.objects["authority"] = {};
             std::ofstream( "control.json" ) << "fixture packet";
             fail_feed = scenario == "control-postcommit-feed"; fail_publish = scenario == "control-postcommit-publish";
             input_event event; require( !production_poll_control( keyboard_mode::keychar, event ) );
             require( paused && pause_origin == "fault" );
-            if( scenario == "control-wire5" ) { require( statuses == std::vector<std::string>{"rejected"} ); }
+            if( scenario == "control-wire6" ) { require( statuses == std::vector<std::string>{"rejected"} ); }
             else {
                 require( std::find( statuses.begin(), statuses.end(), "rejected" ) == statuses.end() );
                 require( statuses.back() == "dispatched" && waiting_interrupt.empty() && injected_interrupt.empty() );
@@ -343,7 +343,7 @@ int main( int argc, char **argv ) {
                         else if( scenario != "expected-refusal" ) { encoder_ok = false; }
                     }
                     else if( scenario == "hard-fault" || scenario == "human-fault" ) { authority_ok = false; }
-                    else if( scenario == "wire5" ) { packet.integers["protocol"] = 5; }
+                    else if( scenario == "wire6" ) { packet.integers["protocol"] = 6; }
                     else if( scenario == "postcommit-feed" ) { fail_feed = true; }
                     else if( scenario == "postcommit-publish" ) { fail_publish = true; }
                     else if( scenario == "postcommit-unlink" ) { fail_unlink = true; }

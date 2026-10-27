@@ -109,6 +109,10 @@ the player author observation-conditioned JavaScript procedures over ordinary
 inputs through the same writer. Host bounds and automatic action/result joins
 remain outside generated control flow. Its current view supplies structured
 visible state, without pixels; image-only conditions return to the player.
+[Literal inventory markers](acceptance/2026-10-27-rendered-markers.md) are
+qualified on one native mark/unmark/cancel sequence with normal ending, separately
+from row labels and focus. This representation check establishes no useful
+player-authored program application or cadence improvement.
 Novel interfaces must remain discoverable through ordinary input, rather than
 requiring a hand-written semantic handler. Bounded organic learning is demonstrated;
 useful apparent cadence and the complete fresh campaign remain unqualified.

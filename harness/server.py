@@ -66,7 +66,7 @@ class Server(ThreadingHTTPServer):
             self.mission = MissionRuntime(controller)
             self._mission_closed = False
             atomic_json(controller.bridge / "controller.json", {
-                "protocol": 6, "port": self.port, "token": controller.token})
+                "protocol": 7, "port": self.port, "token": controller.token})
         except BaseException:
             self.server_close()
             raise

@@ -24,15 +24,15 @@ Source support for clicks is not full mouse qualification or cross-game support.
 
 The source now implements the ordinary-input foundation through the existing
 writer, with optional semantic preconditions above it. Current contracts are
-native6/mission11/ledger12/archive5, with procedure/3, campaign-memory/6 and
+native7/mission11/ledger12/archive6, with procedure/3, campaign-memory/6 and
 reflection/2; gameplay/2 is unchanged. Physical events may reach changed ordinary
 screens under uninterrupted custody, while semantic refresh remains strict.
 Explicit Observe permits a new decision from a changed healthy owned prompt,
 clearing stale quantity proof while preserving original scope and costs. Known
 ACK evidence remains immutable and separate from any actual current snapshot.
 The [delivery impact map](../changes/057-discovery-learning-campaign.md#ordinary-input-foundation-and-artifact-impact)
-and #191 identify remaining game-integration and qualification gaps. The matching
-native6 export shape is unchanged; [capture001](../acceptance/2026-10-22-native-capture-preconditions.md)
+and #191 identify remaining game-integration and qualification gaps. The new native7 export adds separate literal marker evidence. Historical native6
+[capture001](../acceptance/2026-10-22-native-capture-preconditions.md)
 qualifies ordinary input and normal lifecycle on the rebuilt boundary. Its checked
 PNG pairs match despite changed capture names; persistent pixel drift and the
 retained-capture commit race remain source-tested, unexercised natively. Earlier
@@ -75,7 +75,7 @@ changed mapping returns a known refusal and fresh evidence for another decision.
 Keys/scalars do not require identical pixels or click geometry. Optional semantic
 shortcuts retain their appropriate exact-image/native-state preconditions.
 
-**Receiver attestation.** Native6 adds mandatory boolean
+**Receiver attestation.** Native7 retains the mandatory boolean
 `boundary.input_receiver`. It attests a live ordinary engine event receiver, not
 semantic coverage or a desired effect. Instrument the existing SDL
 `input_manager::get_input_event()` with a game-thread RAII receiver scope before
@@ -95,7 +95,7 @@ activity recovery operations remain tied to their exact owner/depth, as does the
 existing owned interrupt query. Nested help or a transient context is not an
 activity-interruption receiver merely because an ancestor is an activity.
 
-**Native contract.** All ordinary/control requests and observations use native6;
+**Native contract.** All ordinary/control requests and observations use native7;
 native5 rejects. The direct event payload stays key/text/click. Direct requests
 must use `require_exact_frame=false`; their exact transport session/revision/
 boundary/frame are the actual fresh dispatch capture, not the old model image.
@@ -310,7 +310,7 @@ without CDDA menu/neighbor/save assumptions. Full runtime extraction, setup/endi
 cancellation and a real second integration remain explicit #191 work; this slice
 does not claim those qualifications or replace authentic CDDA lifecycle proofs.
 
-**Migration and retained evidence.** Native6/mission11/ledger12/archive5 form the
+**Migration and retained evidence.** Native7/mission11/ledger12/archive6 form the
 coordinated replacement. Update producers, validators, reservation/receipt
 readers, recovery/procedure provenance, SDK/catalogue, fixtures and current
 guidance together; reject superseded formats and remove the old direct branch.
@@ -520,7 +520,7 @@ drift policy above. Current [native source](../../native/cdda_harness.cpp),
 [protocol](../protocol.md#transport-and-state) own the executable contract; no
 historical worker brief activates a runtime or establishes graphical qualification.
 
-All native requests/responses/control envelopes require protocol6 and reject older
+All native requests/responses/control envelopes require protocol7 and reject older
 versions. Existing semantic `key`/`action` and registered lifecycle/control requests
 keep their stronger eligibility policies. Ordinary `kind="direct"` uses one
 `input` payload on the same channel. Actual fresh dispatch source, authority,
@@ -562,7 +562,7 @@ named arrows may refuse in keychar mode before commit rather than emulate
 diagonal/held-key policy; supported combinations must not read or mutate physical
 key state during preflight. Full Unicode/category/shortcut parity is not claimed.
 
-Every protocol6 observation requires `frame_geometry`, null when its frame is not
+Every protocol7 observation requires `frame_geometry`, null when its frame is not
 attested; otherwise an object with positive `window_width`, `window_height`,
 `output_width`, `output_height` (each at most16384) and `viewport` as four integers
 `[x,y,width,height]` wholly inside that output. Capture the full default render

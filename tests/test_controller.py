@@ -29,7 +29,7 @@ def frame_geometry():
 
 
 def state(request_id="", *, revision=1, **changes):
-    value = {"protocol": 6, "pause_origin": "none", "takeover_generation": 0, "ui": None, "id": request_id, "session": "game-test", "revision": revision,
+    value = {"protocol": 7, "pause_origin": "none", "takeover_generation": 0, "ui": None, "id": request_id, "session": "game-test", "revision": revision,
              "category": "DEFAULTMODE", "actions": ["UP", "DOWN", "LEFT", "RIGHT", "INVENTORY"],
              "status": "ready", "error": "", "paused": False,
              "timestamp_ms": int(time.time() * 1000), "frame_ok": True, "in_game": True,
@@ -197,7 +197,7 @@ class ControlBridge:
                         result = "answer_delivered" if request["kind"] == "answer_interrupt" else "dismissal_delivered"
                     if self.after_commit:
                         self.after_commit(self, request)
-                response = {"protocol": 6, "id": request["id"], "status": result,
+                response = {"protocol": 7, "id": request["id"], "status": result,
                             "error": "revoked" if result == "rejected" else "", "state": value}
                 (self.bridge / "control-claimed.json").unlink(missing_ok=True)
                 if self.publish_result:
@@ -237,7 +237,7 @@ class ControllerTests(unittest.TestCase):
     def test_control_envelopes_are_exact_v4_and_prompt_owner_is_mandatory(self):
         value = recovery_state("interrupt_confirmation", owner=str(uuid.uuid4()))
         validate_state(value)
-        response = {"protocol": 6, "id": value["boundary"]["interrupt_request_id"],
+        response = {"protocol": 7, "id": value["boundary"]["interrupt_request_id"],
                     "status": "prompt_opened", "error": "", "state": value}
         validate_control_response(response)
         for mutate in (lambda v: v.update(protocol=2), lambda v: v.update(extra=1),
@@ -247,7 +247,7 @@ class ControllerTests(unittest.TestCase):
             mutate(broken)
             with self.assertRaises(ControlError):
                 validate_control_response(broken)
-        request = {"protocol": 6, "id": str(uuid.uuid4()), "kind": "request_interrupt", "session": "world",
+        request = {"protocol": 7, "id": str(uuid.uuid4()), "kind": "request_interrupt", "session": "world",
                    "control_generation": 1, "authority": {"controller_boot_id": "boot", "counter": 1},
                    "created_ms": 1000, "deadline_ms": 3000}
         validate_control_request(request)
@@ -411,7 +411,7 @@ c.recover('continue_debug_once', expected_session=c.state['session'], expected_c
             (self.controller.bridge / "control.json").rename(self.controller.bridge / "control-claimed.json")
             value = recovery_state("debug_prompt", generation=1, revision=4)
             value.update(frame_ok=False, frame="", frame_geometry=None)
-            response = {"protocol": 6, "id": request["id"], "status": "dispatched", "error": "", "state": value}
+            response = {"protocol": 7, "id": request["id"], "status": "dispatched", "error": "", "state": value}
             atomic_json(self.controller.bridge / "control-response.json", response)
             (self.controller.bridge / "control-claimed.json").unlink()
             process.kill()
@@ -448,7 +448,7 @@ c.recover('continue_debug_once', expected_session=c.state['session'], expected_c
     def test_orphan_control_claim_and_malformed_passive_state_fail_closed(self):
         self.controller.close()
         created = int(time.time() * 1000)
-        request = {"protocol": 6, "id": str(uuid.uuid4()), "kind": "request_interrupt", "session": "world",
+        request = {"protocol": 7, "id": str(uuid.uuid4()), "kind": "request_interrupt", "session": "world",
                    "control_generation": 0, "authority": {"controller_boot_id": "boot", "counter": 1},
                    "created_ms": created, "deadline_ms": created + 2000}
         path = self.controller.bridge / "control-claimed.json"
@@ -476,7 +476,7 @@ c.recover('continue_debug_once', expected_session=c.state['session'], expected_c
             result = self.controller.recover("continue_debug_once", timeout=0.04, **self.recovery_expect())
             self.assertEqual(result["status"], "unknown")
             request = fake.requests[0]
-        original = {"protocol": 6, "id": "ordinary-unknown", "kind": "action", "action": "UP",
+        original = {"protocol": 7, "id": "ordinary-unknown", "kind": "action", "action": "UP",
                     "session": "game-test", "revision": 1, "deadline_ms": 1,
                     "boundary_id": "game-test-b1", "takeover_generation": 0,
                     "frame": "frame-game-test-1.png", "require_exact_frame": False,
@@ -485,7 +485,7 @@ c.recover('continue_debug_once', expected_session=c.state['session'], expected_c
         atomic_json(self.controller.admissions / "ordinary-unknown.json", original)
         value = recovery_state("debug_prompt", generation=request["control_generation"] + 1)
         value.update(frame_ok=False, frame="", frame_geometry=None)
-        atomic_json(self.controller.bridge / "control-response.json", {"protocol": 6, "id": request["id"],
+        atomic_json(self.controller.bridge / "control-response.json", {"protocol": 7, "id": request["id"],
                     "status": "dismissal_delivered", "error": "", "state": value})
         self.controller.status()
         self.assertEqual(self.controller.control_pending["id"], request["id"])
@@ -537,16 +537,55 @@ c.recover('continue_debug_once', expected_session=c.state['session'], expected_c
         with self.assertRaises(ControlError):
             validate_state(state(legacy_frame="old.png"))
 
+    def test_historical_cutover_preserves_individual_references_within_client_envelope(self):
+        from harness.mission_client import MissionClient
+        from harness.server import Server
+        self.controller.close()
+        archive = self.root / ".runtime/incidents/native6/request.json"
+        archive.parent.mkdir(parents=True)
+        original = b'{"protocol":6, archival bytes are not runtime input'
+        archive.write_bytes(original)
+        reference = dict(channel="gameplay", source_path=str(archive.relative_to(self.root)),
+            source_sha256=hashlib.sha256(original).hexdigest(), reason="Original delivery remains unknown")
+        path = self.controller.bridge / "historical-incidents.json"
+        for count, reason in ((133, "Original delivery remains unknown"), (256, "unknown"), (256, "x" * 280)):
+            atomic_json(path, dict(schema="incident/1", incidents=[dict(reference, id=f"original-{i}",
+                reason=reason) for i in range(count)]))
+            self.controller = Controller(self.root)
+            self.addCleanup(self.controller.close)
+            self.assertTrue(self.controller.pause_requested)
+            self.assertIsNone(self.controller._mission_lease)
+            server = Server(self.controller, 0)
+            thread = threading.Thread(target=server.serve_forever, kwargs=dict(poll_interval=.01), daemon=True)
+            thread.start()
+            try:
+                status = MissionClient(self.root).status()
+                self.assertEqual(len(status["historical_unknowns"]), count)
+                self.assertLess(len(json.dumps(status).encode()), 1_048_576)
+            finally:
+                server.shutdown()
+                thread.join(2)
+                server.server_close()
+                self.controller.close()
+        for count, reason in ((257, "unknown"), (256, "x" * 1024), (133, "\u754c" * 1024)):
+            atomic_json(path, dict(schema="incident/1", incidents=[dict(reference, id=f"original-{i}",
+                reason=reason) for i in range(count)]))
+            before = path.read_bytes()
+            with self.subTest(count=count, reason_bytes=len(reason.encode())), self.assertRaises(ControlError):
+                Controller(self.root)
+            self.assertEqual(path.read_bytes(), before)
+            self.assertEqual(archive.read_bytes(), original)
+
     def test_startup_rejects_unsupported_stored_versions_and_preserves_evidence(self):
         self.controller.close()
-        request = {"protocol": 6, "id": "uncertain", "kind": "action", "action": "UP",
+        request = {"protocol": 7, "id": "uncertain", "kind": "action", "action": "UP",
                    "session": "world", "revision": 1, "boundary_id": "world-b1", "takeover_generation": 0, "deadline_ms": 1,
                    "frame": "frame-world-1.png", "require_exact_frame": False,
                    "authority": {"controller_boot_id": "old-boot", "counter": 1}}
         bridge = self.controller.bridge
         for relative in ("admissions/uncertain.json", "claimed.json", "response.json"):
             path = bridge / relative
-            for version in (None, 1, 2, 3, 4, 5, True, 6.0):
+            for version in (None, 1, 2, 3, 4, 5, 6, True, 7.0):
                 with self.subTest(path=relative, version=version):
                     value = state() if relative == "response.json" else request.copy()
                     if version is None:
@@ -581,7 +620,7 @@ c.recover('continue_debug_once', expected_session=c.state['session'], expected_c
         for index in range(61):
             request_id = f"retained-{index:03d}"
             atomic_json(self.controller.admissions / f"{request_id}.json",
-                        {"protocol": 6, "id": request_id, "kind": "action", "action": "UP",
+                        {"protocol": 7, "id": request_id, "kind": "action", "action": "UP",
                          "session": "world", "revision": 1, "boundary_id": "world-b1", "takeover_generation": 0, "deadline_ms": 1,
                          "frame": "frame-world-1.png", "require_exact_frame": False,
                          "authority": {"controller_boot_id": "old-boot", "counter": 1}})
@@ -784,7 +823,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
     def test_startup_pauses_retires_and_never_replays(self):
         self.controller.close()
         bridge = self.root / ".runtime" / "bridge"
-        atomic_json(bridge / "request.json", {"protocol": 6, "kind": "key", "key": "x", "id": "old",
+        atomic_json(bridge / "request.json", {"protocol": 7, "kind": "key", "key": "x", "id": "old",
             "session": "world", "revision": 1, "boundary_id": "world-b1", "takeover_generation": 0, "deadline_ms": 1,
             "frame": "frame-world-1.png", "require_exact_frame": False,
             "authority": {"controller_boot_id": "old-boot", "counter": 1}})
@@ -3239,7 +3278,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                     self.assertEqual(set(request), {"protocol", "id", "kind", "deadline_ms"})
 
     def test_current_stored_input_requires_frame_and_strict_boolean_without_old_reader(self):
-        request = {"protocol": 6, "id": "restore", "kind": "action", "action": "UP", "deadline_ms": 1,
+        request = {"protocol": 7, "id": "restore", "kind": "action", "action": "UP", "deadline_ms": 1,
             "session": "world", "revision": 1, "boundary_id": "world-b1", "takeover_generation": 0,
             "authority": {"controller_boot_id": "boot", "counter": 1},
             "frame": "frame-world-1.png", "require_exact_frame": False}

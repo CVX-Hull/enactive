@@ -251,7 +251,7 @@ vm.runInContext(fs.readFileSync(path.join(__dirname, '../web/app.js'), 'utf8'), 
 const run = source => vm.runInContext(source, context);
 function render(revision, frame, changes = {}, apply = true) {
   context.input = {connection: 'fresh', age_ms: 0, pause_requested: false, frozen: false,
-    mission: null, latency_ms: 10, goal: '', events: [], state: {protocol: 6, pause_origin: 'none', takeover_generation: 0, ui: null, boundary: {kind: 'normal_play', input_receiver: true, id: 'b-normal', control_generation: 0, recovery_operations: [], interrupt_request_id: null}, timestamp_ms: epoch ?? Date.now(), session: 'test', revision, frame,
+    mission: null, latency_ms: 10, goal: '', events: [], state: {protocol: 7, pause_origin: 'none', takeover_generation: 0, ui: null, boundary: {kind: 'normal_play', input_receiver: true, id: 'b-normal', control_generation: 0, recovery_operations: [], interrupt_request_id: null}, timestamp_ms: epoch ?? Date.now(), session: 'test', revision, frame,
       frame_ok: true, frame_geometry: {window_width: 800, window_height: 600, output_width: 800, output_height: 600, viewport: [0, 0, 800, 600]}, status: 'ready', actions: [], ...changes}};
   if (changes.frame_ok === false && !Object.hasOwn(changes, 'frame_geometry')) context.input.state.frame_geometry = null;
   if (apply) run('render(input)');
@@ -359,10 +359,10 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
     assert.equal(pending.length, pendingCount, 'malformed geometry must not start decode');
     assert.throws(() => run('authority()'), /Wait for/);
     assert.equal(element('resume').disabled, true);
-    assert.match(element('error').textContent, /protocol 6|geometry/i);
+    assert.match(element('error').textContent, /protocol 7|geometry/i);
     assert.equal(element('pause').disabled, false);
   }
-  for (const protocol of [4, 5, 7, '6']) {
+  for (const protocol of [4, 5, 6, 8, '7']) {
     render(9, `unsupported-wire-${protocol}.png`, {protocol});
     assert.equal(pending.length, 0, `native ${protocol} has no supported decode path`);
     assert.throws(() => run('authority()'), /Wait for/);
@@ -379,7 +379,7 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   render(9, 'valid-after-bad.png');
   await decode();
   assert.equal(run('authority().expected_revision'), 9);
-  assert.doesNotMatch(element('error').textContent, /protocol 6|geometry/i);
+  assert.doesNotMatch(element('error').textContent, /protocol 7|geometry/i);
   render(9, 'mismatched-dimensions.png', {frame_geometry: {...geometry, output_width: 801}});
   await decode();
   assert.throws(() => run('authority()'), /Wait for/);
@@ -1484,5 +1484,5 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   assert.equal(bounded.status.length, 8192);
   assert.ok(bounded.dropped.status > 0, 'overflow remains explicit rather than silently claiming complete coverage');
   assert.equal(bounded.status.at(-1).bounded_export_sample, 8192);
-  console.log('Viewer regressions passed: native6 geometry and decoded authority/freshness; mission11 observation and memory6 history; assignment-bound successor evidence before adoption; terminal snapshot versus historical uncertainty; reconnect without replay; bounded native/status/DOM clock correlation with monotonic durations; independent Pause and ordinary recovery; rotated credentials without action replay; one bounded rejected-Pause retry; recorded terminal diagnostics.');
+  console.log('Viewer regressions passed: native7 geometry and decoded authority/freshness; mission11 observation and memory6 history; assignment-bound successor evidence before adoption; terminal snapshot versus historical uncertainty; reconnect without replay; bounded native/status/DOM clock correlation with monotonic durations; independent Pause and ordinary recovery; rotated credentials without action replay; one bounded rejected-Pause retry; recorded terminal diagnostics.');
 })().catch(error => { console.error(error); process.exitCode = 1; });

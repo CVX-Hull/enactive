@@ -65,7 +65,7 @@ $('show-observer-export').addEventListener('click', () => {
   $('observer-export').hidden = false;
 });
 function validFrameGeometry(state) {
-  if (state?.protocol !== 6 || typeof state.frame_ok !== 'boolean') return false;
+  if (state?.protocol !== 7 || typeof state.frame_ok !== 'boolean') return false;
   const geometry = state.frame_geometry;
   if (!state.frame_ok) return geometry === null;
   if (!record(geometry) || Object.keys(geometry).sort().join(',') !==
@@ -153,13 +153,13 @@ function authority() {
   if (!currentFrame()) {
     throw new Error('Wait for the current game frame before choosing an input.');
   }
-  if (displayed.protocol !== 6 || displayed.boundary?.input_receiver !== true || !['normal_play', 'menu'].includes(displayed.boundary?.kind)) {
+  if (displayed.protocol !== 7 || displayed.boundary?.input_receiver !== true || !['normal_play', 'menu'].includes(displayed.boundary?.kind)) {
     throw new Error('This input boundary needs native control. Observe again after returning to supported play or a menu.');
   }
   return {expected_session: displayed.session, expected_revision: displayed.revision};
 }
 function eligibleRecovery(kind) {
-  if (!currentFrame() || displayed.protocol !== 6) return false;
+  if (!currentFrame() || displayed.protocol !== 7) return false;
   const boundary = displayed.boundary;
   const expected = {request_interrupt: 'activity_poll', answer_interrupt: 'interrupt_confirmation',
     continue_debug_once: 'debug_prompt'};
@@ -718,7 +718,7 @@ function render(data, statusSample = null) {
   $('position').textContent = position ? `Relative position ${position.join(', ')}` : 'Player position unavailable';
   $('frame-shell').classList.toggle('stale', !currentFrame());
   const validGeometry = validFrameGeometry(state);
-  if (state && !validGeometry) frameError = 'Unsupported native protocol 6 metadata or invalid required frame geometry; current frame unavailable.';
+  if (state && !validGeometry) frameError = 'Unsupported native protocol 7 metadata or invalid required frame geometry; current frame unavailable.';
   else if (frameError.startsWith('Unsupported native protocol')) frameError = '';
   if (validGeometry && state.frame_ok && state.status !== 'dispatched') {
     loadFrame(state, statusSample);

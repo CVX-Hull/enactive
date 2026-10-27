@@ -302,8 +302,8 @@ def check_protocol(root: Path) -> list[str]:
         expected = expected_counts.get(label, 1)
         if len(versions) != expected:
             errors.append(f"{label}: protocol representation changed; expected {expected} recognized literals, found {versions!r}; review checker")
-        elif any(type(version) is not int or version != 6 for version in versions):
-            errors.append(f"{label}: protocol drift: expected supported v6, found {versions!r}; review contract and checker")
+        elif any(type(version) is not int or version != 7 for version in versions):
+            errors.append(f"{label}: protocol drift: expected supported v7, found {versions!r}; review contract and checker")
     return errors
 
 

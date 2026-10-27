@@ -24,7 +24,7 @@ def procedure():
             "steps": [{"intent": "Inspect", "expected": "Visible needs",
                        "on_unexpected": "Reassess"}], "progress": ["Needs visible"],
             "stop_conditions": ["Needs interpreted"], "limits": [],
-            "environment": {"engine_commit": "a" * 40, "native_protocol": 6,
+            "environment": {"engine_commit": "a" * 40, "native_protocol": 7,
                             "mission_schema": "mission/11", "configuration": "ordinary"},
             "support": [{"mission_id": "mission-a", "request_ids": ["request-1"],
                          "source_ids": ["source-1"], "interpretation": "One example"}],

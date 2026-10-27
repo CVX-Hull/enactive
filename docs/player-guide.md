@@ -117,10 +117,14 @@ denial or stop solely because a successful tool ran from a read-only host.
   nor a highlighted target establishes a useful effect.
   The same writer applies original finite limits, records sources/actions/results
   and stops on unknown delivery. Done is program termination, not verified success.
-  View `program-view/1` contains current category/actions/in_game/ui/scene/frame_geometry
+  View `program-view/2` contains current category/actions/in_game/ui/scene/frame_geometry
   and boundary kind/input_receiver. It contains no pixels; null UI/scene means
-  unavailable. For supplied UI, `rows` contains current `{id,text,enabled,hotkey}`
-  records and `ui.selected` is a row ID string or null. Locate that ID in the
+  unavailable. For supplied UI, `rows` contains current
+  `{id,text,enabled,hotkey,rendered_marker}` records. `rendered_marker` is a literal
+  visible marker or null (unknown), separate from label and focus. Current CDDA
+  multiselect rows can show `-`, `+` or `#`; interpret their meaning for that UI,
+  yield when required evidence is unavailable, and verify any eventual effect.
+  `ui.selected` is a focused row ID string or null. Locate that ID in the
   current rows to obtain a position; its spelling is not an item identity or
   numeric position. Semantic `perception.selected` instead uses the interpreted
   row's numeric position. UI coverage includes only rendered rows.

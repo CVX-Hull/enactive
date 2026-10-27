@@ -62,9 +62,9 @@ class NativeReceiverTests(unittest.TestCase):
                          'comparison-fence-boundary', 'comparison-fence-session',
                          'semantic-exact', 'semantic-drift', 'comparison-io', 'comparison-symlink',
                          'stale', 'authority', 'pause', 'receiver-exit', 'receiver-changed-at-commit',
-                         'expected-refusal', 'wire5', 'hard-fault', 'human-fault', 'postcommit-feed',
+                         'expected-refusal', 'wire6', 'hard-fault', 'human-fault', 'postcommit-feed',
                          'postcommit-publish', 'postcommit-unlink', 'control-first', 'control-postcommit-feed',
-                         'control-postcommit-publish', 'control-wire5', 'refusal-capture-failure',
+                         'control-postcommit-publish', 'control-wire6', 'refusal-capture-failure',
                          'refusal-capture-human', 'refusal-storage-failure'):
             with self.subTest(scenario=scenario), tempfile.TemporaryDirectory(dir=self.root) as directory:
                 result = subprocess.run([str(self.binary), scenario], cwd=directory,
@@ -74,9 +74,9 @@ class NativeReceiverTests(unittest.TestCase):
 
     def test_wire_and_live_publication_contract(self):
         native = (Path(__file__).resolve().parents[1] / 'native/cdda_harness.cpp').read_text()
-        self.assertIn('out.member( "protocol", 6 );', native)
-        self.assertEqual(native.count('integer_member( request, "protocol" ) != 6'), 2)
-        self.assertIn(r'\"protocol\":6', native)
+        self.assertIn('out.member( "protocol", 7 );', native)
+        self.assertEqual(native.count('integer_member( request, "protocol" ) != 7'), 2)
+        self.assertIn(r'\"protocol\":7', native)
         self.assertNotIn('integer_member( request, "protocol" ) != 5', native)
         self.assertIn('out.member( "input_receiver", ordinary_receiver() );', native)
         self.assertNotIn('menus.count( name )', native)

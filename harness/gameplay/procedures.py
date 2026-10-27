@@ -47,7 +47,7 @@ _SCHEMA = _object({
     "environment": _object({
         "engine_commit": {"type": "string", "minLength": 40, "maxLength": 40,
                           "pattern": "^[a-f0-9]{40}$"},
-        "native_protocol": {"type": "integer", "const": 6},
+        "native_protocol": {"type": "integer", "const": 7},
         "mission_schema": {"const": "mission/11"}, "configuration": _TEXT,
     }),
     "support": _array(_EPISODE, 8, 1), "counterexamples": _array(_EPISODE, 8),

@@ -187,6 +187,7 @@ struct visible_row {
     bool enabled;
     std::string hotkey;
     bool selected;
+    std::optional<char> rendered_marker;
 };
 struct visible_ui {
     std::string purpose;
@@ -231,6 +232,9 @@ void write_ui( JsonOut &out, const visible_ui &ui )
         out.member( "hotkey" );
         if( row.hotkey.empty() ) { out.write_null(); }
         else { out.write( row.hotkey ); }
+        out.member( "rendered_marker" );
+        if( row.rendered_marker ) { out.write( std::string( 1, *row.rendered_marker ) ); }
+        else { out.write_null(); }
         out.end_object();
         if( row.selected ) { selected = id; }
     }
@@ -333,7 +337,7 @@ void write_observation( JsonOut &out, const std::string &id, const std::string &
                         long long capture_ms, const std::optional<frame_geometry> &geometry )
 {
     out.start_object();
-    out.member( "protocol", 6 );
+    out.member( "protocol", 7 );
     out.member( "id", id );
     out.member( "session", session );
     out.member( "revision", revision );
@@ -481,7 +485,7 @@ void publish_control( const std::string &id, const std::string &status,
     std::ifstream snapshot( path( "state.json" ) );
     std::ofstream stream( path( "control-response.json.tmp" ) );
     stream.exceptions( std::ios::badbit | std::ios::failbit );
-    stream << "{\"protocol\":6,\"id\":";
+    stream << "{\"protocol\":7,\"id\":";
     { JsonOut out( stream ); out.write( id ); }
     stream << ",\"status\":";
     { JsonOut out( stream ); out.write( status ); }
@@ -951,7 +955,7 @@ bool poll_control( keyboard_mode mode, input_event &event )
         else if( kind != "request_interrupt" ) { throw std::runtime_error( "unsupported control kind" ); }
         const long long created = integer_member( request, "created_ms" );
         const long long deadline = integer_member( request, "deadline_ms" );
-        if( request.size() != fields || integer_member( request, "protocol" ) != 6 ||
+        if( request.size() != fields || integer_member( request, "protocol" ) != 7 ||
             created < 0 || created > now_ms() + 1000 || deadline != created + 2000 || deadline < now_ms() ) {
             throw std::runtime_error( "unsupported control envelope or expired request" );
         }
@@ -1070,10 +1074,18 @@ void ui_begin( const std::string &purpose, const std::string &category, const st
     if( !enabled() || !ui_top ) { return; }
     staged_ui = visible_ui { ui_text( purpose, 128 ), category, ui_text( title, 1024 ), {} };
 }
-void ui_row( const std::string &text, bool enabled, const std::string &hotkey, bool selected )
+std::optional<char> visible_marker( char literal, int x, int y, int width, int height )
+{
+    // Called immediately after the corresponding one-cell marker is drawn.
+    if( x < 0 || x >= width || y < 0 || y >= height ) { return std::nullopt; }
+    return literal;
+}
+void ui_row( const std::string &text, bool enabled, const std::string &hotkey, bool selected,
+             std::optional<char> rendered_marker )
 {
     if( !ui_top || !staged_ui || staged_ui->rows.size() >= 32 ) { return; }
-    staged_ui->rows.push_back( { ui_text( text, 1024 ), enabled, ui_text( hotkey, 32 ), selected } );
+    staged_ui->rows.push_back( { ui_text( text, 1024 ), enabled, ui_text( hotkey, 32 ), selected,
+                                rendered_marker } );
 }
 
 bool enabled()
@@ -1362,7 +1374,7 @@ bool poll( keyboard_mode mode, input_event &event )
         if( id.empty() || id.size() > 80 || !seen_ids.insert( id ).second ) {
             throw std::runtime_error( "invalid or duplicate request id" );
         }
-        if( integer_member( request, "protocol" ) != 6 ) {
+        if( integer_member( request, "protocol" ) != 7 ) {
             throw std::runtime_error( "unsupported protocol" );
         }
         const std::string kind = request.get_string( "kind" );

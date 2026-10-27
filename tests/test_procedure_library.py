@@ -47,7 +47,7 @@ class ProcedureLibraryTests(unittest.TestCase):
         frame.write_bytes(png())
         reference = EvidenceRef(identity, native["session"], native["revision"], native["timestamp_ms"],
             100.0, native["scene"]["turn"], str(frame), digest(png()), "normal_play").to_dict()
-        index = {"store_version": 5, "session": mission, "retired_sessions": [], "blocked": [],
+        index = {"store_version": 6, "session": mission, "retired_sessions": [], "blocked": [],
                  "disputed": [], "entries": [{"reference": reference, "observation": native,
                                                "initial_lag_seconds": 0.0, "retention": "current"}]}
         (frames.parent / "evidence.json").write_text(canonical(index))
@@ -173,7 +173,7 @@ class ProcedureLibraryTests(unittest.TestCase):
         normal = observation(session=directory.name)
         menu = observation(2, session=directory.name)
         menu.update(category="UILIST", scene=None, ui={"purpose": "UILIST", "title": "Alarm",
-            "rows": [{"id": "rendered-1", "text": "8 hours", "enabled": True, "hotkey": "8"}],
+            "rows": [{"id": "rendered-1", "text": "8 hours", "enabled": True, "hotkey": "8", "rendered_marker": None}],
             "selected": "rendered-1", "filter": None, "count": None, "coverage": "rendered_rows_only"})
         menu["boundary"]["kind"] = "menu"
         originals = {}
@@ -276,7 +276,7 @@ class ProcedureLibraryTests(unittest.TestCase):
             with self.subTest(sql=sql), self.assertRaises(ContractError):
                 self.library(pin)
             (directory / "mission.sqlite3").write_bytes(data)
-        for field, value in (("store_version", 3), ("store_version", 4), ("blocked", ["0" * 64]), ("disputed", ["0" * 64])):
+        for field, value in (("store_version", 3), ("store_version", 4), ("store_version", 5), ("blocked", ["0" * 64]), ("disputed", ["0" * 64])):
             path = directory / "evidence" / "evidence.json"
             before = path.read_bytes()
             pin = self.edit_index(directory, lambda index: index.update({field: value}))
