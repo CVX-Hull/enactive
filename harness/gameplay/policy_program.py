@@ -39,6 +39,11 @@ def _result_schema() -> dict:
 
 _RESULT_SCHEMA = _result_schema()
 
+
+def program_result_schema() -> dict:
+    """Copy the evaluator's current result shape for read-only presentation."""
+    return json_object(_RESULT_SCHEMA)
+
 # The policy is compiled in a separate Function scope, so it cannot access the
 # bridge's captured intrinsics. The returned bridge is held only by Python.
 # Clone descriptor-checked data into prototype-free containers before stringify:

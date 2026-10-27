@@ -1494,6 +1494,15 @@ success. Engine fault/yield keeps healthy ordinary fallback; Pause/custody/stora
 failures and unknown delivery keep their existing stopping policy. No input is
 replayed, and a pending result is collected by its original operation ID.
 
+The current `enactive_skill` description publishes this complete result/input
+JSON shape from the evaluator's canonical schema through a defensive copy.
+This is presentation of the existing contract, not another validator or tool
+argument schema. Direct-input click geometry remains required on that separate
+path. Shape validity does not establish applicability, input authority or useful
+effect. State whether a task requires highlighting without invocation or actual
+invocation followed by effect inspection; `done` cannot substitute for either
+task's required evidence.
+
 Program-view/1 contains only current category/actions/in_game/ui/scene/frame_geometry
 and boundary kind/input_receiver, with explicit omissions. It has no PNG pixels,
 unseen map/inventory, save access, mission/source/custody identifiers or authority fields. Null structured

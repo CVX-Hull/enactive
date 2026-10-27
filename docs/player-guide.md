@@ -102,6 +102,12 @@ denial or stop solely because a successful tool ran from a read-only host.
   consent with `perception=null`. JavaScript `step(view,state)` returns exactly
   `{status,state,input,reason}`: act proposes ordinary key/text/click, yield/done
   require null input. Omit click geometry; software binds it from the current view.
+  The `enactive_skill` description publishes the complete program result JSON
+  Schema from the evaluator, including each input object's required fields.
+  Use that program shape, rather than copying a direct skill's click geometry.
+  Make the goal explicit: highlighting a row without invoking it differs from
+  invoking it and returning for effect inspection. Neither program termination
+  nor a highlighted target establishes a useful effect.
   The same writer applies original finite limits, records sources/actions/results
   and stops on unknown delivery. Done is program termination, not verified success.
   View `program-view/1` contains current category/actions/in_game/ui/scene/frame_geometry

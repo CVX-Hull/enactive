@@ -275,13 +275,30 @@ test('real production MCP discovery forwards exact current nested schemas only',
   const { execFile } = await import('node:child_process');
   const { promisify } = await import('node:util');
   const root=fileURLToPath(new URL('../../../',import.meta.url));
-  const {stdout}=await promisify(execFile)(python,['-c','import json; from harness.player_tools import tool_specs; print(json.dumps({s.name:s.schema for s in tool_specs()}))'],{cwd:root,maxBuffer:INPUT_LIMIT_BYTES});
+  const {stdout}=await promisify(execFile)(python,['-c','import json; from harness.player_tools import tool_specs; print(json.dumps({s.name:{"schema":s.schema,"description":s.description} for s in tool_specs()}))'],{cwd:root,maxBuffer:INPUT_LIMIT_BYTES});
   const expected=JSON.parse(stdout), payloads=[], events=[];
-  const chosen=['enactive_skill','enactive_result','enactive_snapshot','enactive_source'];
-  const result=await runHost({configuration:route(),mcpConfig:{command:resolve(python),args:['-m','harness.player_mcp'],cwd:root,enabled:true,enabled_tools:chosen,startup_timeout_sec:5,tool_timeout_sec:1},context:'Frozen context',prompt:'Do not call tools.',model:model.id,effort:'off',timeoutSeconds:10,env:{OFFLINE_TEST_KEY:'fixture-key'},fetch:async(_url,init)=>{payloads.push(JSON.parse(init.body));return reply();},onEvent:e=>events.push(e)});
+  // The current deciding profile excludes lead admission and the advisory role.
+  const chosen=Object.keys(expected).filter(name=>name!=='enactive_start'&&!name.startsWith('enactive_reflect_'));
+  assert.equal(chosen.length,16);
+  const context=await readFile(join(root,'docs/player-guide.md'),'utf8');
+  const result=await runHost({configuration:route(),mcpConfig:{command:resolve(python),args:['-m','harness.player_mcp'],cwd:root,enabled:true,enabled_tools:chosen,startup_timeout_sec:5,tool_timeout_sec:1},context,prompt:'Do not call tools.',model:model.id,effort:'off',timeoutSeconds:10,env:{OFFLINE_TEST_KEY:'fixture-key'},fetch:async(_url,init)=>{payloads.push(JSON.parse(init.body));return reply();},onEvent:e=>events.push(e)});
   assert.equal(result.ok,true);
   assert.deepEqual(payloads[0].tools.map(tool=>tool.function.name),chosen);
-  for(const tool of payloads[0].tools) assert.deepEqual(tool.function.parameters,expected[tool.function.name]);
+  for(const tool of payloads[0].tools) {
+    assert.deepEqual(tool.function.parameters,expected[tool.function.name].schema);
+    assert.equal(tool.function.description,expected[tool.function.name].description);
+  }
+  const skill=payloads[0].tools.find(tool=>tool.function.name==='enactive_skill').function;
+  const published=JSON.parse(skill.description.split('\nProgram result schema: ')[1].split('\n')[0]);
+  assert.deepEqual(published.required,['status','state','input','reason']);
+  assert.equal(JSON.stringify(payloads[0]).split('Program result schema: ').length-1,1);
+  const direct=skill.parameters.properties.intent.anyOf.find(branch=>branch.properties.skill_kind.const==='direct');
+  const directClick=direct.properties.goal.properties.input.anyOf.find(branch=>branch.properties.type.const==='click');
+  assert.ok(directClick.required.includes('geometry'));
+  const programClick=published.then.properties.input.anyOf.find(branch=>branch.properties.type.const==='click');
+  assert.ok(!programClick.required.includes('geometry'));
+  assert.equal(programClick.properties.geometry,undefined);
+  assert.ok(payloads[0].messages[0].content.startsWith(context));
   assert.ok(payloads[0].messages[0].content.includes('Software assigns request IDs'));
   assert.throws(()=>process.kill(events.find(e=>e.type==='mcp-connected').child_pid,0),{code:'ESRCH'});
 });
