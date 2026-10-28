@@ -625,8 +625,32 @@ test('both HTTP attempts share the original request timer',async t=>{
   assert.deepEqual(events.filter(e=>e.type==='response-complete').map(e=>e.request_id),['request-1','request-2']);
 });
 test('host deadline also covers provider retry backoff',async t=>{
-  const {result,payloads}=await scenario(t,[rateLimit(undefined,{'retry-after-ms':'4000'}),reply()],{timeoutSeconds:2});
+  // Startup under CI load may exceed the host's work window. Reach the
+  // actual eligible backoff first, then advance only the controlled clock.
+  t.mock.timers.enable({apis:['setTimeout']});
+  const controller=new AbortController();
+  let eligible=false, abortReason;
+  const {result,payloads,events}=await scenario(t,[rateLimit(undefined,{'retry-after-ms':'4000'}),reply()],{
+    timeoutSeconds:2,fixtureStartupDelay:1.6,signal:controller.signal,
+    expectedAbort:'host-timeout',advanceCleanupTimers:()=>t.mock.timers.tick(1000),
+    onEvent:e=>{if(e.type==='provider-retry'&&e.stage==='eligible')eligible=true;
+      if(e.type==='abort')abortReason=e.reason;},
+    synchronize:async()=>{
+      try {
+        const until=Date.now()+10000;
+        while(!eligible&&Date.now()<until)await realDelay(20);
+        assert.ok(eligible,'fixture must enter actual retry backoff before its deadline tick');
+        t.mock.timers.tick(2001);
+        assert.equal(abortReason,'host-timeout');
+      } finally {
+        if(!eligible)controller.abort();
+        t.mock.timers.tick(10000);
+      }
+    },
+  });
   assert.equal(result.reason,'host-timeout');assert.equal(payloads.length,1);
+  assert.equal(result.requests,1);
+  assert.equal(events.filter(e=>e.type==='provider-retry'&&e.stage==='started').length,0);
 });
 test('a partial provider stream is never retried and cannot dispatch its tool',async t=>{
   const first='data: '+JSON.stringify({choices:[{index:0,delta:{role:'assistant',tool_calls:[{index:0,id:'partial',type:'function',function:{name:'mutate',arguments:'{"mode":"ok"}'}}]},finish_reason:null}]})+'\n\n';

@@ -177,6 +177,18 @@ Native code/build were unchanged, so no new build was needed. Formal protected
 PR and actual-main receipts belong to the integration PR linked from #264; fast
 and focused source checks alone qualify neither gameplay nor full regression.
 
+The first protected full run [40748935230](https://github.com/CVX-Hull/enactive/actions/runs/40748935230)
+retains one failed Pi conformance wrapper, with 2,322 other tests and 4,359 subtests
+passing. Its two-second host-deadline fixture expired during real MCP startup,
+before the backoff it intended to test; the expanded conformance suite also
+outgrew its 90-second outer watchdog. A delayed-startup reproduction fails with the
+same zero-request assertion. The repair reuses the existing controlled-clock
+pattern: reach actual retry eligibility, advance the original host clock, require
+abort before cleanup pumping, and verify one attempt/no retry. Only the whole-suite
+watchdog becomes 180 seconds; production host/request deadlines and gameplay limits
+are unchanged. The failed run is retained; the corrected candidate still requires
+full protected regression and actual-main verification.
+
 ## Apparent latency, context and cost
 
 Apparent useful latency includes learning, context acquisition, repair, useful
