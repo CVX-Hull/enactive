@@ -1,5 +1,6 @@
 """Exceptional writer shutdown with controlled OS children, never game inputs."""
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -10,6 +11,7 @@ import unittest
 from unittest.mock import patch
 
 from harness.controller import Controller
+from harness.mission_client import MissionClient
 from harness.mission_runtime import MissionRuntime
 from harness.native_process import NativeProcess
 from harness.server import Server
@@ -120,7 +122,19 @@ class MissionShutdownTests(unittest.TestCase):
         discovery = json.loads((self.controller.bridge / "controller.json").read_text())
         boot = self.controller.authority["controller_boot_id"]
         self.assertEqual(discovery["controller_boot_id"], boot)
-        server.server_close()
+        self.assertEqual(discovery["controller_pid"], os.getpid())
+        thread = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": .01}, daemon=True)
+        thread.start()
+        try:
+            # The actual SDK reads private discovery and sends its controller
+            # token through the production loopback HTTP handler.
+            status = MissionClient(self.root).status()
+            self.assertEqual(status["controller_boot_id"], boot)
+            self.assertEqual(status["controller_pid"], os.getpid())
+        finally:
+            server.shutdown()
+            thread.join(1)
+            server.server_close()
         path = self.controller.bridge / f"mission-shutdown-{boot}.json"
         data = json.loads(path.read_text())
         self.assertEqual(data["controller_boot_id"], boot)

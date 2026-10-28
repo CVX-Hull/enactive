@@ -12,7 +12,7 @@ from __future__ import annotations
 import argparse
 from contextlib import ExitStack, contextmanager
 from datetime import datetime, timezone
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, DecimalException
 import hashlib
 import json
 import math
@@ -24,12 +24,15 @@ import subprocess
 import sys
 import time
 
+from harness.gameplay.contracts import json_object
 from harness.gameplay.mission_contracts import MissionAdmission
 from harness.player_tools import PlayerTools
 from tools.campaign_player import TERMINAL, _DeadlineClient
 
 STARTUP_SECONDS = 30.0
 SHUTDOWN_SECONDS = 60.0
+_MANIFEST_KEYS = frozenset(("schema", "mission_id", "source_commit", "max_hosts", "effort",
+    "begin_normal_ending_seconds", "complete_normal_ending_before_seconds", "files", "validation", "provider"))
 _INPUTS = ("admission.json", "player-pi-configuration.json", "player-host-configuration.json",
     "pi-player-context.txt", "original-player-prompt.txt", "successor-player-brief.txt")
 _ARTIFACTS = ("custodian-receipt.json", "custodian-clock.json", "custodian-start.json", "custodian-admission.json",
@@ -50,10 +53,7 @@ def _read(path: Path) -> bytes:
 
 
 def _json(path: Path) -> dict:
-    value = json.loads(_read(path))
-    if type(value) is not dict:
-        raise RunError("Expected a JSON object")
-    return value
+    return json_object(_read(path))
 
 
 def _redacted(value: dict) -> dict:
@@ -95,16 +95,22 @@ def _source(root: Path, expected: str) -> None:
         raise RunError("Run requires the exact clean committed checkpoint")
 
 
-def _preflight(root: Path, mission_id: str) -> tuple[Path, dict, dict]:
+def _preflight(root: Path, mission_id: str, *, node: str = "node") -> tuple[Path, dict, dict]:
     if re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}", mission_id) is None:
         raise RunError("Invalid mission identity")
+    if not isinstance(node, str) or not node:
+        raise RunError("Expected a trusted Node executable argument")
     run = root / ".runtime" / "campaigns" / mission_id
     frozen, prep = run / "frozen", run / "preparation"
     for path in (root / ".runtime", root / ".runtime" / "campaigns", run, frozen, prep):
         if path.is_symlink() or not path.is_dir():
             raise RunError("Run requires existing project-local directories")
+    for name in ("bridge", "missions", "mission-requests"):
+        path = root / ".runtime" / name
+        if path.is_symlink() or path.exists() and not path.is_dir():
+            raise RunError("Owned runtime paths must remain project-local directories")
     profile = _json(frozen / "manifest.json")
-    if (profile.get("schema") != "campaign-run/1" or profile.get("mission_id") != mission_id
+    if (set(profile) != _MANIFEST_KEYS or profile.get("schema") != "campaign-run/1" or profile.get("mission_id") != mission_id
             or type(profile.get("max_hosts")) is not int or profile["max_hosts"] not in (1, 2)):
         raise RunError("Unsupported frozen run manifest")
     files = profile.get("files")
@@ -123,11 +129,12 @@ def _preflight(root: Path, mission_id: str) -> tuple[Path, dict, dict]:
         raise RunError("Admission and run source/identity differ")
     _source(root, source)
     validation = profile.get("validation", {})
-    if type(validation) is not dict:
+    if type(validation) is not dict or set(validation) != {"fast", "focused"}:
         raise RunError("Expected frozen development evidence declarations")
     for kind in ("fast", "focused"):
         check = validation.get(kind, {})
-        if type(check) is not dict or check.get("passed") is not True or check.get("source_commit") != source:
+        if (type(check) is not dict or set(check) != {"source_commit", "passed"}
+                or check.get("passed") is not True or check.get("source_commit") != source):
             raise RunError("Declare passing exact-source fast and focused development evidence")
     begin, ending = (profile.get(key) for key in
         ("begin_normal_ending_seconds", "complete_normal_ending_before_seconds"))
@@ -136,41 +143,46 @@ def _preflight(root: Path, mission_id: str) -> tuple[Path, dict, dict]:
             or ending > current.limits.wall_seconds - current.cleanup_reserve.wall_seconds):
         raise RunError("Frozen ending and shutdown reserves do not fit the original mission")
     route = _json(frozen / "player-pi-configuration.json")
-    node = profile.get("node", "node")
     effort = profile.get("effort")
-    if (not isinstance(node, str) or not node or route.get("api_key_env") != "DEEPINFRA_API_KEY"
+    if not isinstance(effort, str) or not effort:
+        raise RunError("Expected a frozen player effort string")
+    if (route.get("api_key_env") != "DEEPINFRA_API_KEY"
             or type(route.get("model")) is not dict
             or route["model"].get("id") != current.configuration.model):
         raise RunError("Frozen route differs from the admission or credential route")
-    # Reuse the maintained host's pure validator; this executes no provider work.
-    validator = ("import {readFileSync} from 'node:fs'; "
-        "import {validateConfiguration} from './tools/player_host/host.mjs'; "
-        "const c=JSON.parse(readFileSync(process.argv[1],'utf8')); "
-        "validateConfiguration(c,process.argv[2],process.argv[3]);")
-    subprocess.run([node, "--input-type=module", "-e", validator,
-        str(frozen / "player-pi-configuration.json"), current.configuration.model, effort],
-        cwd=root, env=_clean_env(), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-        timeout=5, check=True)
     host = _json(frozen / "player-host-configuration.json")
     if (host.get("args") != ["-m", "harness.player_mcp"] or host.get("cwd") != str(root)
             or host.get("command") != sys.executable or host.get("enabled") is not True
             or host.get("required") is not True):
         raise RunError("Frozen MCP entry must use this interpreter and maintained player module")
+    # Both maintained host validators execute with the trusted operator's Node
+    # argument, never an executable selected by the frozen data.
+    validator = ("import {readFileSync} from 'node:fs'; "
+        "import {validateConfiguration,validateMcpConfiguration} from './tools/player_host/host.mjs'; "
+        "const read=p=>JSON.parse(readFileSync(p,'utf8')); "
+        "validateConfiguration(read(process.argv[1]),process.argv[3],process.argv[4]); "
+        "validateMcpConfiguration(read(process.argv[2]));")
+    subprocess.run([node, "--input-type=module", "-e", validator,
+        str(frozen / "player-pi-configuration.json"), str(frozen / "player-host-configuration.json"),
+        current.configuration.model, effort], cwd=root, env=_clean_env(),
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=5, check=True)
     provider = profile.get("provider", {})
-    if type(provider) is not dict:
-        raise RunError("Expected frozen provider reservation")
     names = ("prior_requests", "new_requests_max", "total_requests_max")
+    costs = ("prior_reservation_usd", "per_request_reservation_usd", "total_reservation_usd", "reservation_limit_usd")
+    if type(provider) is not dict or set(provider) != {*names, *costs}:
+        raise RunError("Expected frozen provider reservation")
     if (any(type(provider.get(key)) is not int or provider[key] < 0 for key in names)
             or provider["new_requests_max"] != route["max_requests"] * profile["max_hosts"]
             or provider["total_requests_max"] != provider["prior_requests"] + provider["new_requests_max"]):
         raise RunError("Frozen provider request reservation is inconsistent")
     try:
-        prior, per, total, limit = (Decimal(provider[key]) for key in
-            ("prior_reservation_usd", "per_request_reservation_usd", "total_reservation_usd", "reservation_limit_usd"))
+        if any(type(provider[key]) is not str for key in costs):
+            raise RunError("Frozen provider monetary reservations require decimal strings")
+        prior, per, total, limit = (Decimal(provider[key]) for key in costs)
         if (any(not value.is_finite() or value < 0 for value in (prior, per, total, limit))
                 or per <= 0 or prior + per * provider["new_requests_max"] != total or total > limit):
             raise RunError("Frozen provider monetary reservation is inconsistent")
-    except (InvalidOperation, KeyError, TypeError):
+    except (DecimalException, KeyError, TypeError):
         raise RunError("Frozen provider monetary reservation is invalid") from None
     if os.path.lexists(root / ".runtime" / "missions" / mission_id):
         raise RunError("Prior mission exists; never reopen or resume it")
@@ -184,11 +196,12 @@ def _preflight(root: Path, mission_id: str) -> tuple[Path, dict, dict]:
             total_bytes += len(data)
             if total_bytes > 16_777_216:
                 raise RunError("Prior admission inspection exceeds its bound")
-            item = json.loads(data)
-            if type(item) is not dict:
-                raise RunError("Prior admission stage is invalid")
-            if item.get("kind") == "start" and item.get("admission", {}).get("mission_id") == mission_id:
-                raise RunError("Prior admission intent exists; collection only, no new run")
+            item = json_object(data)
+            if item.get("kind") == "start":
+                if type(item.get("admission")) is not dict:
+                    raise RunError("Prior admission stage is invalid")
+                if item["admission"].get("mission_id") == mission_id:
+                    raise RunError("Prior admission intent exists; collection only, no new run")
     # The maintained driver exclusively reserves these later. Refuse existing
     # evidence before admission as well; it must never become a resume switch.
     driver_paths = [prep / f"driver-{name}.json" for name in
@@ -204,23 +217,29 @@ def _preflight(root: Path, mission_id: str) -> tuple[Path, dict, dict]:
 
 def _stop_child(child: subprocess.Popen, *, deadline: float, first_wait: float) -> dict:
     """Stop only this retained child; nested driver cleanup gets more than 6s."""
-    receipt = {"signals": [], "returncode": child.poll(), "exit_unresolved": False}
-    for sig, wait in ((signal.SIGINT, first_wait), (signal.SIGTERM, 2.0), (signal.SIGKILL, 1.0)):
-        if child.poll() is not None:
-            break
-        remaining = deadline - time.monotonic()
-        if remaining <= 0:
-            break
-        try:
-            child.send_signal(sig)
-            receipt["signals"].append(sig.name)
-        except ProcessLookupError:
-            pass
-        try:
-            child.wait(timeout=min(wait, remaining))
-        except subprocess.TimeoutExpired:
-            continue
-    receipt.update(returncode=child.poll(), exit_unresolved=child.poll() is None)
+    receipt = {"signals": [], "returncode": None, "exit_unresolved": True}
+    try:
+        for sig, wait in ((signal.SIGINT, first_wait), (signal.SIGTERM, 2.0), (signal.SIGKILL, 1.0)):
+            if child.poll() is not None:
+                break
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            try:
+                child.send_signal(sig)
+                receipt["signals"].append(sig.name)
+            except ProcessLookupError:
+                pass
+            try:
+                child.wait(timeout=min(wait, remaining))
+            except subprocess.TimeoutExpired:
+                continue
+        code = child.poll()
+        receipt.update(returncode=code, exit_unresolved=code is None)
+    except (OSError, subprocess.SubprocessError) as exc:
+        # A failure on one exact handle cannot skip the other owned child's
+        # independent cleanup. Retain uncertainty without exception bodies.
+        receipt["error_type"] = type(exc).__name__
     return receipt
 
 
@@ -251,12 +270,12 @@ def _admitted(result: dict, request_id: str, mission_id: str) -> bool:
         and mission.get("mission_id") == mission_id and mission.get("phase") == "admitted")
 
 
-def run_campaign(*, root: Path, mission_id: str, port: int = 8766) -> dict:
+def run_campaign(*, root: Path, mission_id: str, port: int = 8766, node: str = "node") -> dict:
     """One fresh admission, one finite driver, exact owned-child cleanup receipts."""
     root = root.resolve(strict=True)
     if type(port) is not int or not 1 <= port <= 65535:
         raise RunError("Invalid controller port")
-    run, profile, admission = _preflight(root, mission_id)
+    run, profile, admission = _preflight(root, mission_id, node=node)
     if not os.environ.get("DEEPINFRA_API_KEY"):
         raise RunError("Supplied provider credential is unavailable; no admission")
     with ExitStack() as stack:
@@ -336,7 +355,7 @@ def run_campaign(*, root: Path, mission_id: str, port: int = 8766) -> dict:
             driver = launch("driver", [sys.executable, "-m", "tools.campaign_player", "--root", str(root),
                 "--run-dir", str(run), "--mission-id", mission_id, "--model", admission["configuration"]["model"],
                 "--effort", profile["effort"], "--max-hosts", str(profile["max_hosts"]),
-                "--node", profile.get("node", "node"), "--timeout-seconds", str(remaining)], driver_env)
+                "--node", node, "--timeout-seconds", str(remaining)], driver_env)
             del driver_env
             while driver.poll() is None:
                 if interrupted or time.monotonic() >= ending_deadline or controller.poll() is not None:
@@ -389,7 +408,8 @@ def run_campaign(*, root: Path, mission_id: str, port: int = 8766) -> dict:
                     except (OSError, ValueError, TypeError):
                         receipt["native_cleanup_unknown"] = True
             receipt["deciding_hosts_quiescent"] = driver is None
-            if driver is not None and driver.poll() is not None:
+            if (driver is not None and receipt["children"]["driver"]["exit_unresolved"] is False
+                    and driver.poll() is not None):
                 try:
                     report = _json(run / "preparation" / "driver-report.json")
                     hosts = report.get("hosts")
@@ -410,6 +430,7 @@ def main() -> None:
     parser.add_argument("--root", type=Path, required=True)
     parser.add_argument("--mission-id", required=True)
     parser.add_argument("--port", type=int, default=8766)
+    parser.add_argument("--node", default="node", help="Trusted operator-selected Node runtime; never frozen run data")
     try:
         receipt = run_campaign(**vars(parser.parse_args()))
     except (OSError, ValueError, TypeError, subprocess.SubprocessError):

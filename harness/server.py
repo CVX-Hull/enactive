@@ -161,7 +161,7 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/status":
             mission = self.server.mission.status()
             self._json(200, {**controller.status(), "mission": mission,
-                "controller_boot_id": controller.authority["controller_boot_id"],
+                "controller_boot_id": controller.authority["controller_boot_id"], "controller_pid": os.getpid(),
                 "deciding_host": deciding_host_status(controller.root, mission)})
             return
         if path == "/frame.png":
