@@ -10,10 +10,26 @@ The live library accepts only `advisory-export/1`, from paths derived from trust
 root, mission ID and exact original ledger/index SHA256 pins. Raw current or legacy
 donor directories are refused. Offline engineering export first validates physical
 and internal closure under both shared source locks: eligible phases are completed,
-failed, stopped and paused; requests/primitives/effects and reflective work must be
-settled. Current raw donors use ledger13/archive6/native7. Existing exported
+failed, stopped and paused; requests and primitives must be terminal and reflective
+work settled. Current raw donors use ledger13/archive6/native7. Existing exported
 ancestry is an explicit dependency of a new current export, never a raw legacy
 fallback. A paused source writer excludes offline export with its exclusive locks.
+
+A sealed current donor may retain an ordinary `unknown` without effect proof only
+when its actual publication is authenticated: exact logical/native/intent mapping,
+bounded canonical native7 packet, explicit unknown disposition and null ACK/after,
+and intact informing/entry/preflight sources. The packet binds to the final
+preflight, not an earlier informing frame; original entry/custody checks remain.
+Missing publication, foreign custody, corrupt sources and prepared/published work
+still refuse. Original unknown state, absent effect and separately later observations
+remain unchanged in both original bytes and derived data. Publication is not delivery
+or an effect, episode prose remains fallible and all advisory envelopes grant no
+authority. Current same-mission uncertainty still fences input. This eligibility
+extension changes no persisted shape and creates no reconciliation or old consent.
+The unresolved request remains ineligible as a procedure support or counterexample
+episode, including through imported ancestry and new revision selection. An
+unrelated unknown does not erase other validated episodes. Raw request/source
+retrieval retains uncertainty and establishes no interpreted outcome.
 
 One explicit offline migration supports the native6/store5/ledger12 baseline
 validated at Git9a57c57cdd60943edd6029ce8676361041314d4e. Original SQLite, index and
@@ -21,8 +37,10 @@ PNG bytes remain unchanged. The current importer reads bounded original snapshot
 in memory, reconstructs the captured projection and compares it independently with
 the export; validator names or flags are not certification. It retains source,
 path/alias/hash/size, terminal disposition, native correlation, separate unknown-
-effect proof, qualified episode and full ancestry predicates. It imports no legacy
-module, runs no Git/subprocess, reopens no actor and follows no original path.
+effect proof, qualified episode and full ancestry predicates. Its settled-effect
+requirement is unchanged; the unresolved-publication exception is current-native7
+only. It imports no legacy module, runs no Git/subprocess, reopens no actor and
+follows no original path.
 Earlier unsupported baselines remain archives, including learning004/006.
 
 A closed `procedure-import/1` HistoricalProcedure preserves original identity,

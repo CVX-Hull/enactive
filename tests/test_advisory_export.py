@@ -1,4 +1,5 @@
 """Real SQLite/files for current export/import, with synthetic observations only."""
+from contextlib import closing
 import hashlib
 import json
 from pathlib import Path
@@ -58,6 +59,26 @@ class AdvisoryExportTests(unittest.TestCase):
             self.export(pin)
         self.assertEqual(after_export, {str(p.relative_to(self.root)): p.read_bytes() for p in self.root.rglob('*') if p.is_file()})
 
+    def test_unresolved_publication_export_preserves_unknown_and_later_observation_separately(self):
+        directory, _, later_id, _, record, pin = self.fixture.unresolved_archive()
+        before = {str(p.relative_to(directory)): p.read_bytes() for p in directory.rglob('*') if p.is_file()}
+        artifact, = self.export(pin)
+        library = self.library(pin)
+        self.assertEqual(library.records(), (record,))
+        self.assertEqual(library.request(directory.name, 'uncertain-step')['state'], 'unknown')
+        manifest = json.loads((artifact / 'manifest.json').read_bytes())
+        primitive, = manifest['data']['primitives']
+        self.assertEqual(primitive[4], 'unknown')
+        self.assertIsNone(primitive[6])
+        receipt = json.loads(primitive[5])
+        self.assertIsNone(receipt['native_ack'])
+        self.assertIsNone(receipt['source_after'])
+        metadata, _ = library.source(directory.name, later_id)
+        self.assertFalse(metadata['grants_authority'])
+        with self.assertRaises(ContractError):
+            _source_binding(metadata)
+        self.assertEqual(before, {str(p.relative_to(directory)): p.read_bytes() for p in directory.rglob('*') if p.is_file()})
+
     def test_published_projection_is_deterministic_from_pinned_original_blobs(self):
         directory, _, _, pin = self.fixture.archive()
         artifact, = self.export(pin)
@@ -115,19 +136,25 @@ class AdvisoryExportTests(unittest.TestCase):
         with self.assertRaises(ContractError):
             library.source(directory.name, identity)
 
-    def rebind_corrupt_originals(self, artifact, pin, sql, parameters=()):
+    def rebind_corrupt_originals(self, artifact, pin, sql, parameters=(), *, mutate_index=None):
         """Attacker updates original bytes AND all derived fields/pins in fixture.
 
         Live semantic guards must still refuse; this avoids merely exercising an
         outer digest or projection mismatch. No production original is modified.
         """
         database_path = artifact / 'mission.sqlite3'
-        with sqlite3.connect(database_path) as database:
-            database.execute(sql, parameters)
+        with closing(sqlite3.connect(database_path)) as database:
+            with database:
+                database.execute(sql, parameters)
         new = {**pin, 'ledger_sha256': hashlib.sha256(database_path.read_bytes()).hexdigest()}
         manifest_path = artifact / 'manifest.json'
         manifest = json.loads(manifest_path.read_bytes())
-        index = json.loads((artifact / 'evidence/evidence.json').read_bytes())
+        index_path = artifact / 'evidence/evidence.json'
+        index = json.loads(index_path.read_bytes())
+        if mutate_index is not None:
+            mutate_index(index)
+            index_path.write_bytes(_canonical(index))
+            new['index_sha256'] = hashlib.sha256(index_path.read_bytes()).hexdigest()
         with captured_database(database_path.read_bytes()) as database:
             data = derive_data(database, index, new)
         manifest.update(source=new, data=data)
@@ -135,6 +162,80 @@ class AdvisoryExportTests(unittest.TestCase):
         target = self.root.joinpath(*artifact_parts(new['mission_id'], new))
         artifact.rename(target)
         return new
+
+    def test_unresolved_publication_guards_survive_recomputed_original_pins_and_projection(self):
+        names = ('ack', 'after', 'missing_ack', 'missing_after', 'disposition', 'published',
+                 'native_id', 'logical_id', 'packet_protocol', 'packet_frame', 'packet_revision',
+                 'packet_session', 'packet_takeover', 'packet_noncanonical', 'missing_receipt',
+                 'missing_native_id', 'prepared', 'published_state', 'bad_effect',
+                 'missing_informing', 'foreign_informing', 'missing_preflight', 'binding_takeover',
+                 'unresolved_support', 'unresolved_counterexample')
+        for number, name in enumerate(names):
+            with self.subTest(name=name):
+                directory, _, later_id, receipt, _, pin = self.fixture.unresolved_archive('unknown-' + str(number))
+                artifact, = self.export(pin)
+                intent = json.loads(json.loads((artifact / 'manifest.json').read_bytes())['data']['primitives'][0][2])
+                packet = json.loads(receipt['native_request_json'])
+                mutate_index = None
+                sql, parameters = 'UPDATE primitives SET result=?', None
+                if name in ('ack', 'after', 'missing_ack', 'missing_after'):
+                    key = 'native_ack' if name in ('ack', 'missing_ack') else 'source_after'
+                    if name.startswith('missing'):
+                        receipt.pop(key)
+                    else:
+                        receipt[key] = {} if key == 'native_ack' else later_id
+                elif name in ('disposition', 'published', 'native_id', 'logical_id'):
+                    key, value = {'disposition': ('transport_disposition', 'returned'),
+                        'published': ('published', False), 'native_id': ('native_request_id', 'foreign'),
+                        'logical_id': ('logical_action_id', 'foreign')}[name]
+                    receipt[key] = value
+                elif name.startswith('packet_'):
+                    key = name.removeprefix('packet_')
+                    if key == 'noncanonical':
+                        receipt['native_request_json'] = ' ' + receipt['native_request_json']
+                    else:
+                        packet[key] = {'protocol': 6, 'frame': 'frame-foreign-9.png', 'revision': 99,
+                                       'session': 'foreign', 'takeover': 1}[key]
+                        if key == 'takeover':
+                            packet['takeover_generation'] = packet.pop('takeover')
+                        receipt['native_request_json'] = canonical(packet)
+                elif name in ('missing_receipt', 'missing_native_id', 'prepared', 'published_state', 'bad_effect'):
+                    sql, parameters = {'missing_receipt': ('UPDATE primitives SET result=NULL', ()),
+                        'missing_native_id': ('UPDATE primitives SET native_id=NULL', ()),
+                        'prepared': ("UPDATE primitives SET state='prepared'", ()),
+                        'published_state': ("UPDATE primitives SET state='published'", ()),
+                        'bad_effect': ("UPDATE primitives SET effect='{}'", ())}[name]
+                elif name == 'missing_informing':
+                    payload = json.loads(next(row[1] for row in json.loads((artifact / 'manifest.json').read_bytes())['data']['requests']
+                                             if row[0] == 'uncertain-step'))
+                    payload['sources'].append('absent-informing-source')
+                    encoded = canonical(payload)
+                    sql, parameters = 'UPDATE requests SET payload=?,digest=? WHERE id=?', (
+                        encoded, hashlib.sha256(encoded.encode()).hexdigest(), 'uncertain-step')
+                elif name in ('unresolved_support', 'unresolved_counterexample'):
+                    record = json.loads((artifact / 'manifest.json').read_bytes())['data']['procedures'][0]['record']
+                    episode = dict(record['support'][0], request_ids=['uncertain-step'])
+                    record['support' if name == 'unresolved_support' else 'counterexamples'] = [episode]
+                    sql, parameters = 'UPDATE memory SET body=?', (canonical(record),)
+                elif name in ('foreign_informing', 'binding_takeover'):
+                    if name == 'foreign_informing':
+                        intent['source_before'] = receipt['source_before'] = later_id
+                        intent['input_observation']['current']['source_id'] = later_id
+                    else:
+                        for binding in intent['input_observation']['original'], intent['input_observation']['current']:
+                            binding['takeover_generation'] = 1
+                    sql, parameters = 'UPDATE primitives SET intent=?,result=?', (canonical(intent), canonical(receipt))
+                else:
+                    checked = intent['preflight_source']
+                    def remove(index):
+                        index['entries'] = [e for e in index['entries'] if e['reference']['observation_id'] != checked]
+                    mutate_index = remove
+                    sql, parameters = 'SELECT 1', ()
+                if parameters is None:
+                    parameters = (canonical(receipt),)
+                changed = self.rebind_corrupt_originals(artifact, pin, sql, parameters, mutate_index=mutate_index)
+                with self.assertRaises(ContractError):
+                    self.library(changed)
 
     def test_semantic_terminal_allowlists_and_reflection_closure_survive_recomputed_pins(self):
         for number, (sql, parameters) in enumerate((
