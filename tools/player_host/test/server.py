@@ -66,6 +66,11 @@ def handoff_receipt(mode):
     if mode == "pending":
         value["settled"] = False
         value["response"]["operation"]["state"] = "running"
+    if mode == "transport-uncertain":
+        value.update(transport="uncertain", settled=False, response=None,
+            reason="Submission response unavailable; collect the original operation")
+    if mode == "not-admitted":
+        value.update(submission="not_admitted", response=None)
     if mode == "foreign":
         issued["mission_id"] = "foreign"
     if mode == "old":

@@ -657,7 +657,7 @@ test('direct handoff settles without another model turn',async t=>{
   assert.deepEqual(calls.map(c=>c.tool),['enactive_handoff']);
 });
 test('only this host pending or uncertain handoff can settle through collection',async t=>{
-  for(const mode of ['pending','uncertain']) await t.test(mode,async sub=>{
+  for(const mode of ['pending','uncertain','transport-uncertain']) await t.test(mode,async sub=>{
     const {result,calls}=await scenario(sub,[
       reply(null,[['enactive_handoff',{...handoffArgs,mode}]]),
       reply(null,[['enactive_result',{mission_id:'mission',operation_id:'issued-handoff',mode:'newer'}]])
@@ -671,6 +671,12 @@ test('a fresh successor can inspect issuance without ending its host',async t=>{
     reply(null,[['enactive_result',{mission_id:'mission',operation_id:'issued-handoff'}]]),reply()
   ],{enabledTools:handoffTools});
   assert.equal(result.reason,'completed');assert.equal(result.requests,2);
+  assert.equal(events.filter(e=>e.type==='handoff').length,0);
+});
+test('proven nonadmission cannot arm settlement of another issuance',async t=>{
+  const {result,events}=await scenario(t,[reply(null,[['enactive_handoff',{...handoffArgs,mode:'not-admitted'}]]),
+    reply(null,[['enactive_result',{mission_id:'mission',operation_id:'issued-handoff'}]]),reply()],{enabledTools:handoffTools});
+  assert.equal(result.reason,'completed');assert.equal(result.requests,3);
   assert.equal(events.filter(e=>e.type==='handoff').length,0);
 });
 test('ordinary plain-text collection errors preserve explicit correction',async t=>{

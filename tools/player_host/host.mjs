@@ -202,9 +202,9 @@ function inspectHandoff(name, args, result, pending) {
   }
   const operation = value?.response?.operation;
   let origin = pending;
-  if (direct) {
+  if (direct && !['not_submitted', 'not_admitted'].includes(value?.submission)) {
     const collection = value?.original_collection;
-    const identity = operation?.kind === 'handoff'
+    const identity = operation?.kind === 'handoff' || value?.transport === 'uncertain' && value.settled === false
       ? {mission_id:value.next_snapshot?.mission?.mission_id, operation_id:value.operation_id}
       : result.isError === true && collection?.tool === 'enactive_result' ? collection.arguments : undefined;
     if (text(identity?.mission_id) && text(identity?.operation_id)) {
