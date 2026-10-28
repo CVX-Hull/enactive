@@ -23,6 +23,7 @@ from harness.gameplay.contracts import ContractError
 from harness.gameplay.evidence import EvidenceError, same_native_custody, same_native_state, validate_native_progression
 from harness.gameplay.mission_contracts import PAUSE_ORIGINS, validate_visible_ui
 from harness.gameplay.native_input import validate_geometry, validate_input
+from harness.gameplay.native_receipts import matches_rejected_ack
 
 MAX_REQUEST = 4096
 MAX_WAIT = 15.0
@@ -1940,7 +1941,8 @@ class Controller:
                 raise MissionInputRefusal(reason)
         raise ControlError(message)
 
-    def check_mission_refusal(self, lease: MissionLease, generation: int, *, command_work: int) -> dict[str, Any]:
+    def check_mission_refusal(self, lease: MissionLease, generation: int, *, command_work: int,
+                              rejected_ack: dict | None = None) -> dict[str, Any]:
         """Read-only common custody fence for a healthy zero-input refusal."""
         with self.data_lock:
             self._check_owner(lease, generation)
@@ -1951,7 +1953,8 @@ class Controller:
                 raise ControlError("Competing work or Pause prevents local refusal")
             state = self.state
             validate_state(state)
-            if (state["status"] != "ready" or state["error"] or state["paused"]
+            cached_rejection = matches_rejected_ack(state, rejected_ack)
+            if ((state["status"] != "ready" or state["error"]) and not cached_rejection or state["paused"]
                     or not state["frame_ok"] or not state["frame"]
                     or state["boundary"]["kind"] not in INPUT_BOUNDARIES
                     or not state["boundary"]["input_receiver"]):

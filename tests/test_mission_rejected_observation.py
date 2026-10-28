@@ -50,10 +50,9 @@ class RejectedObservationTests(unittest.TestCase):
 
         def ready(*args, **kwargs):
             raw = execute(*args, **kwargs)
-            if healthy:
-                self.bridge.value.update(status="ready", error="")
-                self.bridge.publish(copy.deepcopy(self.bridge.value))
-                self.controller.status()
+            if not healthy:
+                with self.controller.data_lock:
+                    self.controller.state["frame_ok"] = False
             if fault == "store":
                 self.runtime._store._authority_generation += 1
             elif fault == "integrity":
@@ -169,15 +168,16 @@ class RejectedObservationTests(unittest.TestCase):
             return True
         self.bridge.behavior = refuse
         execute = self.controller.execute_mission
+        rejection_observe_count = None
         def ready(*args, **kwargs):
-            nonlocal prior_scene
+            nonlocal rejection_observe_count, prior_scene
             prior_scene = copy.deepcopy(self.bridge.value["scene"])
             raw = execute(*args, **kwargs)
             if raw["result"].get("status") != "rejected":
                 return raw
-            self.bridge.value.update(status="ready", error="")
-            self.bridge.publish(copy.deepcopy(self.bridge.value))
-            self.controller.status()
+            rejection_observe_count = sum(p["kind"] == "observe" for p in self.bridge.requests)
+            # Real native rejection remains cached until the player's explicit
+            # Observe; do not manufacture a ready sample before returning.
             if fault == "store":
                 self.runtime._store._authority_generation += 1
             elif fault == "integrity":
@@ -193,6 +193,12 @@ class RejectedObservationTests(unittest.TestCase):
                 raw["processing_error"] = "Injected controller processing failure"
             elif fault == "ack":
                 raw["result"]["id"] = "mismatched-rejection"
+            elif fault in ("cached_id", "cached_clock", "cached_error", "capture"):
+                key, value = {"cached_id": ("id", "another-rejection"),
+                    "cached_clock": ("timestamp_ms", self.controller.state["timestamp_ms"] + 1),
+                    "cached_error": ("error", "Different refusal"), "capture": ("frame_ok", False)}[fault]
+                with self.controller.data_lock:
+                    self.controller.state[key] = value
             return raw
         dispatch = self.runtime._dispatch
         def feedback(*args, **kwargs):
@@ -205,6 +211,7 @@ class RejectedObservationTests(unittest.TestCase):
         with patch.object(self.controller, "execute_mission", side_effect=ready), \
                 patch.object(self.runtime, "_dispatch", side_effect=feedback):
             operation = self.send(request)
+        self.assertEqual(sum(p["kind"] == "observe" for p in self.bridge.requests), rejection_observe_count)
         unknown = fault == "ack"
         self.assertEqual(operation["state"], "unknown" if unknown else "partial" if prefix else "blocked", operation)
         self.assertEqual(self.bridge.delivered[:len(before)], before)
@@ -236,6 +243,7 @@ class RejectedObservationTests(unittest.TestCase):
                     status = case.runtime.status()
                     self.assertEqual(status["phase"], "active", status)
                     self.assertIsNone(status["current_source"])
+                    self.assertEqual(case.controller.state["status"], "rejected")
                     self.assertTrue(status["prompt_phase"]["observation_needed"])
                     lease, phase = case.runtime._lease, case.runtime._prompt_phase
                     self.assertEqual(phase.observation_generation, lease.pause_generation)
@@ -265,7 +273,8 @@ class RejectedObservationTests(unittest.TestCase):
                     case.doCleanups()
 
     def test_semantic_native_rejection_cannot_hide_custody_storage_or_global_fault(self):
-        for fault in ("store", "integrity", "takeover", "operator_pause", "game_budget", "processing"):
+        for fault in ("store", "integrity", "takeover", "operator_pause", "game_budget", "processing",
+                      "cached_id", "cached_clock", "cached_error", "capture"):
             with self.subTest(fault=fault):
                 case = type(self)()
                 case.setUp()
@@ -275,6 +284,15 @@ class RejectedObservationTests(unittest.TestCase):
                     self.assertIsNone(case.runtime._prompt_phase)
                 finally:
                     case.doCleanups()
+
+    def test_pending_rejection_pointer_cannot_borrow_another_primitive(self):
+        self.semantic_rejection()
+        self.runtime._prompt_phase = replace(self.runtime._prompt_phase,
+            observation_rejection="not-the-settled-rejection")
+        observed = self.observe()
+        self.assertEqual(observed["state"], "blocked")
+        self.assertIsNone(self.runtime._lease)
+        self.assertIsNone(self.runtime._prompt_phase)
 
     def test_miscorrelated_semantic_rejection_stays_unknown(self):
         self.semantic_rejection(fault="ack")

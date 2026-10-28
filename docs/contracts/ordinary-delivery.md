@@ -94,4 +94,15 @@ stopping paths. A missing current frame alone neither undelivers an ACK nor
 permits another scalar. These are source-tested paths; new native/graphical
 qualification remains pending.
 
+
+The native's exact cached rejected response may remain visible until explicit
+Observe. A private pending-observation pointer selects its already settled logical
+primitive; the writer verifies the owning root/child, source and original native
+mapping. Only read-only checks may match that exact projected ACK instead of a
+ready response. They still require a valid frame/receiver and unchanged native,
+controller, Pause, takeover, store and mission custody. No response is rewritten
+as ready. Actual Observe must return ready evidence before publishing any new
+binding and clears the private pointer. Reopen does not restore this allowance;
+ordinary input admission remains ready-only.
+
 [Contract index](../protocol.md).

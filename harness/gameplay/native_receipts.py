@@ -45,6 +45,12 @@ def compact_native_ack(full_native_state: dict) -> dict:
     return _validate_ack({key: full_native_state[key] for key in _ACK_FIELDS})
 
 
+def matches_rejected_ack(state: dict, ack: dict | None) -> bool:
+    """Match one authenticated cached refusal, never capture/input eligibility."""
+    return (ack is not None and ack.get("status") == "rejected"
+            and state.get("status") == "rejected" and compact_native_ack(state) == ack)
+
+
 def validate_published_input(intent: dict, receipt: dict, *, logical_id: str, native_id: str | None) -> dict:
     """Verify exact published admission without fabricating a terminal ACK.
 
