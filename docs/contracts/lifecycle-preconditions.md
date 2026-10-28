@@ -55,8 +55,10 @@ no input, refreshes no source and invents no Claims. The player explicitly
 dismisses an open identity screen and selects both grounded identity Claims.
 Selected retained Claims are validated before interpreting count or subjects.
 Authored Claims must equal their earlier admitted memory payload; a selected native
-fact must equal the literal projection of its retained source. Only a positively
-typed semantic identity refusal can preserve the phase. The refusal rechecks the
+fact must equal the literal projection of its retained source. The established transition, identity-inspection input and saved-checkpoint prefix
+are checked with the ledger's existing result/primitive validators independently
+of Claim count, subjects or values; initial-Load menu lineage retains its source
+checks. Only a positively typed semantic identity refusal can preserve the phase. The refusal rechecks the
 phase and selected Claims' grounding bytes without refreshing them. Missing or
 contradictory trusted requests, receipts, frames, storage and candidate timeline
 failures retire the phase and lease; they are not caller-correction feedback.

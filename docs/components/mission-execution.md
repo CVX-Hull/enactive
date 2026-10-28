@@ -126,8 +126,9 @@ owns the precise initial-history, custody and dismissal restrictions.
 
 An unsuitable identity selection preserves only a positively healthy create/load
 phase. The ledger authenticates selected authored Claims against their admitted
-payload before interpreting subjects. The receiver verifies phase/selected source
-bytes and native-fact projections, then rechecks custody, lease, capacity and the
+payload before interpreting subjects. The receiver authenticates established phase transition/inspection/saved proofs
+before any selection refusal, verifies phase/selected source bytes and native-fact
+projections, then rechecks custody, lease, capacity and the
 original limits. Only the typed semantic refusal retains the PhaseReceipt; trusted
 history, receipt and candidate-timeline faults retire phase/lease. Paired
 [initial Load regressions](../../tests/test_mission_initial_load.py) cover explicit
@@ -137,10 +138,13 @@ classification; they do not relabel the [failed Pi pilot](../acceptance/2026-10-
 or establish new native qualification.
 
 Review a change from the owner/phase and flow down to shared limits, publication,
-receipt/reopen readers and tests. The large runtime and ledger remain concentrated
-implementation seams; this map does not claim they have been refactored. Extract
-only a demonstrated responsibility with one retained writer/store, after scoped
-design review.
+receipt/reopen readers and tests. Shared memory contracts/provenance ports and CDDA scene/time projection now have
+separate owners. The runtime and ledger retain centralized phase orchestration
+and accounting/proof validation: moving their remaining private state access into
+facades would add interfaces without removing that coupling. This is an explicit
+scoped choice, not a size-based claim that no further decomposition can help.
+Reassess at a demonstrated change boundary, retaining one writer/store and migrating
+all consumers after scoped design review.
 
 ## Assurance and evidence
 

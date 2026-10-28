@@ -52,7 +52,7 @@ required. A browser-code upgrade needs a normal page reload. For a game crash/re
 the bundle-based [start procedure](start-observe.md#start-and-observe), use normal CDDA load UI,
 and acquire new session authority.
 Old-session commands must not be reused, including after normal save/reload in the
-same process. Native-v6 rejects older and mixed components; restart a
+same process. The [current native contract](../protocol.md) rejects older and mixed components; restart a
 matching controller and native build, then observe. No save-file repair/editing is prescribed.
 
 Input admissions are durably retained in `.runtime/bridge/admissions/` before

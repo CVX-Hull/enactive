@@ -1563,6 +1563,88 @@ class MissionLedger:
             selected[entry["id"]] = row
         return selected
 
+    def _check_identity_inspection(self, request_id: str, inspection_id: str, *,
+                                   root_id: str, actor_id: str, epoch: int, session: str,
+                                   source_id: str | None = None) -> None:
+        inspect = self._earlier_request(request_id, inspection_id)
+        data, inspect_result = inspect["request"], inspect["result"]
+        if (inspect["state"] != "completed" or data["kind"] != "skill"
+                or data["skill_kind"] != "inspect" or data["goal"]["purpose"] != "character_identity"
+                or data["phase_id"] != root_id or inspect["epoch"] != epoch
+                or inspect_result is None or type(inspect_result.get("identity_screen_source_id")) is not str
+                or type(inspect_result.get("phase")) is not dict
+                or inspect_result["phase"].get("phase_kind") != "lifecycle"
+                or type(inspect_result.get("source_ids")) is not list
+                or inspect_result["identity_screen_source_id"] not in inspect_result["source_ids"]
+                or inspect_result["identity_screen_source_id"] not in inspect_result["phase"].get("source_ids", [])
+                or source_id is not None and inspect_result["identity_screen_source_id"] != source_id):
+            raise LedgerError("Identity inspection lost its exact phase, actor, epoch or source")
+        self._check_prompt_result(inspection_id, data, inspect_result,
+            actor_id=actor_id, request_state=inspect["state"])
+        inspection_inputs = [p for p in self.primitive_records()
+            if p["request_id"] == inspection_id]
+        if len(inspection_inputs) != 1:
+            raise LedgerError("Identity inspection requires its unique charged player_data primitive")
+        primitive = inspection_inputs[0]
+        intent, receipt = primitive["intent"], primitive["result"] or {}
+        expected = {"logical_action_id": primitive["logical_id"], "native_request_id": primitive["native_id"],
+            "transport_disposition": "returned", "published": True,
+            "source_after": inspect_result["identity_screen_source_id"],
+            **{key: intent[key] for key in ("kind", "value", "expected_session", "expected_revision",
+                "expected_boundary_id", "source_before", "preflight_source")}}
+        if (intent["kind"] != "action" or intent["value"] != "player_data"
+                or intent["expected_session"] != session
+                or primitive["state"] != "returned" or primitive["native_id"] is None
+                or any(receipt.get(key) != value for key, value in expected.items())):
+            raise LedgerError("Identity inspection lacks its exact returned published player_data receipt")
+        validate_ordinary_mapping(intent, receipt, logical_id=primitive["logical_id"],
+            native_id=primitive["native_id"], disposition=primitive["state"])
+
+    def check_adoption_phase_history(self, request_id: str, *, root_id: str, actor_id: str,
+                                    epoch: int, operation: str, transition_id: str | None,
+                                    inspection_id: str | None, session: str | None,
+                                    first_normal_source_id: str | None,
+                                    inspection_source_id: str | None = None,
+                                    saved_id: str | None = None, require_inspection: bool = False) -> bool:
+        """Authenticate the established phase prefix before selection applicability.
+
+        This reuses normal result/primitive validators for a bounded referenced
+        transition, inspection and saved checkpoint; it does not scan every
+        historical frame or fabricate a prospective identity/adoption result.
+        Returns whether the actual transition used the initial-Load menu prefix.
+        """
+        if require_inspection and (transition_id is None or inspection_id is None or session is None):
+            raise LedgerError("Awaiting adoption lost its established transition or inspection")
+        provisional = False
+        if transition_id is not None:
+            row, transition = self._lifecycle_record(request_id, transition_id, "lifecycle_transition")
+            self._check_prompt_result(transition_id, row["request"], row["result"],
+                actor_id=actor_id, request_state=row["state"])
+            if (row["request"].get("phase_id") != root_id or transition["origin_request_id"] != root_id
+                    or transition["operation"] != operation or transition["reconciled_epoch"] != epoch):
+                raise LedgerError("Adoption phase lost its exact retained transition")
+            provisional = row["result"]["phase"]["stage"] == "awaiting_control"
+            if provisional:
+                self.initial_load_menu_chain(transition_id,
+                    through_request_id=inspection_id or request_id,
+                    first_normal_source_id=first_normal_source_id)
+        if inspection_id is not None:
+            if transition_id is None or session is None:
+                raise LedgerError("Inspection lost its established normal transition")
+            self._earlier_request(inspection_id, transition_id)
+            self._check_identity_inspection(request_id, inspection_id, root_id=root_id,
+                actor_id=actor_id, epoch=epoch, session=session, source_id=inspection_source_id)
+        if saved_id is not None:
+            row, _ = self._lifecycle_record(request_id, saved_id, "saved_checkpoint")
+            issued, consumed = self._handoffs()
+            actors = [(0, MissionAdmission.from_dict(self._get("admission")).player_id)] + sorted(
+                (issued[identity]["epoch"], self.request(claim)["result"]["player_id"])
+                for identity, claim in consumed.items())
+            saved_actor = next(player for generation, player in reversed(actors) if generation <= row["epoch"])
+            self._check_prompt_result(saved_id, row["request"], row["result"],
+                actor_id=saved_actor, request_state=row["state"])
+        return provisional
+
     def _check_normal_adoption(self, request_id: str, data: dict, value: dict) -> None:
         proof = validate_normal_adoption(value)
         initial_load = data["operation"] == "load" and self._get("admission")["scenario"]["mode"] == "load"
@@ -1573,6 +1655,11 @@ class MissionLedger:
                 initial_load = False
         transition_row, transition = self._lifecycle_record(request_id, proof["transition_result_request_id"], "lifecycle_transition")
         transition = validate_lifecycle_transition(transition)
+        self.check_adoption_phase_history(request_id, root_id=proof["origin_request_id"],
+            actor_id=transition["actor_id"], epoch=data["epoch"], operation=data["operation"],
+            transition_id=proof["transition_result_request_id"], inspection_id=proof["identity_inspect_request_id"],
+            session=proof["scope"]["session"], first_normal_source_id=proof["first_normal_source_id"],
+            saved_id=proof["saved_checkpoint_request_id"], require_inspection=True)
         inspect = self._earlier_request(request_id, proof["identity_inspect_request_id"])
         inspect_data, inspect_result = inspect["request"], inspect["result"]
         self._earlier_request(proof["identity_inspect_request_id"], proof["transition_result_request_id"])
@@ -1597,22 +1684,6 @@ class MissionLedger:
                 through_request_id=proof["identity_inspect_request_id"],
                 first_normal_source_id=proof["first_normal_source_id"])
         claims = self.adoption_claims(request_id, data["identity_claim_ids"])
-        inspection_inputs = [p for p in self.primitive_records()
-            if p["request_id"] == proof["identity_inspect_request_id"]]
-        if len(inspection_inputs) != 1:
-            raise LedgerError("Identity inspection requires its unique charged player_data primitive")
-        primitive = inspection_inputs[0]
-        intent, receipt = primitive["intent"], primitive["result"] or {}
-        expected = {"logical_action_id": primitive["logical_id"], "native_request_id": primitive["native_id"],
-            "transport_disposition": "returned", "published": True,
-            "source_after": inspect_result["identity_screen_source_id"],
-            **{key: intent[key] for key in ("kind", "value", "expected_session", "expected_revision",
-                "expected_boundary_id", "source_before", "preflight_source")}}
-        if (intent["kind"] != "action" or intent["value"] != "player_data"
-                or intent["expected_session"] != proof["scope"]["session"]
-                or primitive["state"] != "returned" or primitive["native_id"] is None
-                or any(receipt.get(key) != value for key, value in expected.items())):
-            raise LedgerError("Identity inspection lacks its exact returned published player_data receipt")
         scenario = self._get("admission")["scenario"]
         selected_claims = []
         # Authenticate every selected immutable record and the saved proof before
@@ -1900,7 +1971,7 @@ class MissionLedger:
                 raise LedgerError("Operation result cannot be rewritten")
             if "phase" in result:
                 issued, consumed = self._handoffs()
-                actors = [(0, self.admission.player_id)] + sorted((issued[identity]["epoch"], self.request(claim)["result"]["player_id"])
+                actors = [(0, MissionAdmission.from_dict(self._get("admission")).player_id)] + sorted((issued[identity]["epoch"], self.request(claim)["result"]["player_id"])
                     for identity, claim in consumed.items())
                 actor = next(player for epoch, player in reversed(actors) if epoch <= old["epoch"])
                 if actor != state["player_id"]:

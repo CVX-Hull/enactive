@@ -189,7 +189,10 @@ class LifecycleTests(unittest.TestCase):
         inspect_preflight = self.preflight(newer)
         screen = self.ingest(session, category="PLAYER_INFO", in_game=True)
         self.primitive(inspect_id, newer, screen, value="player_data", preflight=inspect_preflight)
-        self.complete(inspect_id, dict(identity_screen_source_id=screen.observation_id, source_ids=[screen.observation_id]))
+        self.complete(inspect_id, dict(identity_screen_source_id=screen.observation_id,
+            source_ids=[newer.observation_id, screen.observation_id],
+            phase=self.phase(root, transition["operation"], "awaiting_identity",
+                newer.observation_id, screen.observation_id)))
         checkpoint = self.ingest(session, turn)
         world_id, character_id = root + "-world", root + "-character"
         for identity, subject, source in ((world_id, "world", world_source or before), (character_id, "character", screen)):

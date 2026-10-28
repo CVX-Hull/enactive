@@ -34,7 +34,18 @@ actor/allocation was started during this cleanup.
 Independent design review required native cleanup through the existing owner and
 integrity checks before semantic refusals. Subsequent source review caught an
 extracted uniqueness constraint and an early subject-selection path; both were
-repaired and covered before integration. A baseline schema comparison verifies
+repaired and covered before integration. Final cross-boundary review additionally exposed incomplete/wrong-subject selection
+paths that skipped established input proofs. The bounded phase-history check now
+reuses the existing transition/inspection/saved validators before every healthy
+refusal, with paired missing-primitive/PhaseReceipt/ACK regressions. The inspection requires
+its actual typed phase and screen-source membership before the shared validator.
+Fault injection now runs on the target writer entry after review exposed a race
+with preceding publication; the old direct mutation could fail before target
+admission. A synthetic historical fixture was migrated to the real producer's
+existing inspection PhaseReceipt rather than weakening that requirement.
+Its first focused run caught
+pre-initialization admission access on reopen; using the persisted admission during
+verification repairs that actual failure. A baseline schema comparison verifies
 the restored memory definitions. Native facts selected mistakenly also require
 their exact retained visible projection, without an invented authored request.
 

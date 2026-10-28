@@ -1087,6 +1087,18 @@ class RegisteredLifecycle:
             raise BudgetError("Original lifecycle phase primitive limit exhausted")
         r._capacity(frames=2, byte_count=2 * MAX_FRAME_BYTES)
         r._store.preflight_retention()
+        provisional = r._ledger.check_adoption_phase_history(work.request["request_id"],
+            root_id=phase.root_id, actor_id=phase.actor_id, epoch=phase.epoch, operation=phase.operation,
+            transition_id=phase.transition_request, inspection_id=phase.identity_inspect,
+            session=None if phase.first_normal is None else phase.first_normal.session,
+            first_normal_source_id=None if phase.first_normal is None else phase.first_normal.observation_id,
+            inspection_source_id=None if phase.identity_screen is None else phase.identity_screen.observation_id,
+            saved_id=phase.saved_checkpoint, require_inspection=phase.stage == "awaiting_adoption")
+        if provisional:
+            from .gameplay.lifecycle import initial_load_menu_sources
+            initial_load_menu_sources(r._ledger, r._store, transition_id=phase.transition_request,
+                through_request_id=phase.identity_inspect or work.request["request_id"],
+                first_normal_source_id=None if phase.first_normal is None else phase.first_normal.observation_id)
         # A semantic mistake does not excuse damaged grounding evidence. Read
         # the retained phase and selected Claim sources without refreshing them.
         sources = {ref.observation_id: ref for ref in r._store.historical_references}
