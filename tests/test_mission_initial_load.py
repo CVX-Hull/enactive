@@ -141,6 +141,94 @@ class InitialLoadTests(MissionCreationFixture, unittest.TestCase):
         corrected = self.correct_identity(character_id, "correct-character", self.a.scenario.character)
         return world_id, corrected["id"]
 
+    def prepare_misgrounded_world(self):
+        world_id, character_id = self.prepare_corrected_identity()
+        screen = self.runtime._registered_lifecycle.phase.identity_screen
+        mistaken_id = self.remember_identity("screen-world", "world", screen, 0)
+        return mistaken_id, world_id, character_id, screen
+
+    def test_world_on_identity_screen_can_be_replaced_by_fresh_menu_claim(self):
+        mistaken_id, world_id, character_id, _ = self.prepare_misgrounded_world()
+        unknown = deepcopy(next(p for p in self.runtime._ledger.primitive_records()
+            if p["request_id"] == "character"))
+        self.assertEqual(unknown["state"], "unknown")
+        self.assert_correctable_selection(mistaken_id, character_id)
+        proper = deepcopy(next(row["entry"] for row in self.runtime._ledger.memory_records("claim")
+            if row["entry"]["id"] == world_id))
+        proper.update(id="cross-scope-world", supersedes=[mistaken_id])
+        refused = self.run_request(dict(schema="mission/11", kind="correct", request_id="cross-scope-correct",
+            mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"], entry_type="claim", entry=proper,
+            retired_ids=[mistaken_id], reason="Replace the unsupported world grounding with the actual menu"))
+        self.assertEqual(refused["state"], "blocked", refused)
+        self.assertIn("exact scope", refused["result"]["reason"])
+        reference = next(ref for ref in self.runtime._store.historical_references
+            if ref.observation_id == proper["sources"][0])
+        fresh_id = self.remember_identity("fresh-menu-world", "world", reference, 0)
+        adopted = self.run_request(self.lifecycle("fresh-menu-adoption", "load", parent="initial-load",
+            claims=[fresh_id, character_id]))
+        self.assertEqual(adopted["state"], "completed", adopted)
+        self.assertEqual(next(p for p in self.runtime._ledger.primitive_records()
+            if p["request_id"] == "character"), unknown)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
+
+    def test_misgrounded_world_cannot_hide_corrupt_selected_pixels(self):
+        mistaken_id, _, character_id, screen = self.prepare_misgrounded_world()
+        def corrupt():
+            path = Path(screen.frame_path)
+            path.chmod(0o600)
+            path.write_bytes(b"corrupt selected world source")
+        self.assert_wrong_identity_fault(mistaken_id, character_id, corrupt)
+
+    def test_misgrounded_world_cannot_hide_corrupt_launch_pixels(self):
+        mistaken_id, _, character_id, _ = self.prepare_misgrounded_world()
+        launch_id = self.runtime._owned_launch.request_id
+        launch_source = self.runtime._ledger.request(launch_id)["result"]["source_ids"][0]
+        reference = next(ref for ref in self.runtime._store.historical_references
+            if ref.observation_id == launch_source)
+        def corrupt():
+            path = Path(reference.frame_path)
+            path.chmod(0o600)
+            path.write_bytes(b"corrupt original launch endpoint")
+        self.assert_wrong_identity_fault(mistaken_id, character_id, corrupt)
+
+    def test_wrong_identity_value_cannot_hide_corrupt_launch_pixels(self):
+        world_id, character_id, _, _ = self.prepare_wrong_identity()
+        source_id = self.runtime._ledger.request(self.runtime._owned_launch.request_id)["result"]["source_ids"][0]
+        reference = next(ref for ref in self.runtime._store.historical_references
+            if ref.observation_id == source_id)
+        def corrupt():
+            path = Path(reference.frame_path)
+            path.chmod(0o600)
+            path.write_bytes(b"corrupt launch before early semantic refusal")
+        self.assert_wrong_identity_fault(world_id, character_id, corrupt)
+
+    def test_misgrounded_world_cannot_hide_missing_launch_endpoint(self):
+        from harness.gameplay.contracts import canonical
+        mistaken_id, _, character_id, _ = self.prepare_misgrounded_world()
+        launch_id = self.runtime._owned_launch.request_id
+        def corrupt():
+            result = self.runtime._ledger.request(launch_id)["result"]
+            result["source_ids"] = ["f" * 64]
+            self.runtime._ledger._db.execute("UPDATE requests SET result=? WHERE id=?", (canonical(result), launch_id))
+        self.assert_wrong_identity_fault(mistaken_id, character_id, corrupt)
+
+    def test_misgrounded_world_cannot_hide_damaged_transition(self):
+        mistaken_id, _, character_id, _ = self.prepare_misgrounded_world()
+        self.assert_wrong_identity_fault(mistaken_id, character_id, self.remove_primitive("character"))
+
+    def test_misgrounded_world_cannot_hide_forged_claim_payload(self):
+        mistaken_id, _, character_id, _ = self.prepare_misgrounded_world()
+        self.assert_wrong_identity_fault(mistaken_id, character_id, self.change_selected_claim(mistaken_id,
+            lambda entry: entry.update(text="Unadmitted interpretation replacement")))
+
+    def test_misgrounded_world_cannot_hide_lost_current_lease(self):
+        mistaken_id, _, character_id, _ = self.prepare_misgrounded_world()
+        def lose_lease():
+            with self.controller.data_lock:
+                self.controller._mission_lease = None
+        self.assert_wrong_identity_fault(mistaken_id, character_id, lose_lease)
+
     def correct_identity(self, identity, request_id, name, *, retired=None):
         entry = deepcopy(next(row["entry"] for row in self.runtime._ledger.memory_records("claim")
             if row["entry"]["id"] == identity))

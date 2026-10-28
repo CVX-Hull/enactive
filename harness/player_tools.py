@@ -178,7 +178,9 @@ def request_tool_specs() -> tuple[ToolSpec, ...]:
             "coordinate_epoch=null uses only matching published coordinate_scope; before adoption or without a match, explicitly select the epoch from existing provisional_scope or a historical receipt. "
             "Each support group explicitly chooses primary plus additional source/claim IDs; primary=false never implies image support. "
             "Unobserved grounding stays source-free: every group requires primary=false and sources=[], with claim premises allowed. "
-            + ("Correction supersedes come only from explicit retired_ids. " if kind == "correct" else "Remember supersedes are empty. ")
+            + ("Correction supersedes come only from explicit retired_ids and require the existing exact scope. "
+               "If grounding changes session/scope, remember a fresh Claim instead. "
+               if kind == "correct" else "Remember supersedes are empty. ")
             + ("For Procedures choose content/program, support/counterexamples and parent=null for a new family or an explicit qualified revision revealed by enactive_context or a completed accepted Procedure write result, including original-result collection. "
                "Software derives schema, record/mission/family/revision IDs and revision number from the assigned operation and selected cached parent, and frozen admission environment from the selected snapshot; do not supply them. "
                "Alternatively choose entry_type=procedure_candidate with proposal_index/candidate_index read by enactive_advice for this exact snapshot. Software submits that original candidate through the same writer; no copying or automatic adoption. "

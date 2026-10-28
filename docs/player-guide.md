@@ -247,6 +247,16 @@ that bypasses the committed creation route cannot prove fresh character creation
 These CDDA stages are not a universal menu taxonomy; native qualification of the
 new lifecycle fallback remains pending.
 
+For this CDDA Create/Load proof, ground the world Claim in a retained menu from
+the same owned setup root **before its first normal-play boundary** that visibly
+shows the world name. Ground the character Claim in the separate identity
+inspection. A character screen or an admitted target string alone does not prove
+the world. If the selected world source is unsuitable but ownership/history are
+healthy, use the refusal feedback and submit a new explicit selection under the
+original phase. Correction requires the old Claim's exact scope; when the proper
+grounding belongs to another session, author a fresh Claim instead of changing
+scope through correction. Choose and interpret the actual evidence yourself.
+
 | Current situation | Interface operation and verification |
 | --- | --- |
 | Admitted, no owned child | First `enactive_snapshot`; then `enactive_lifecycle` with its handle, `scope=new_root`, `operation=launch`, no source. Launch sends no creation intent and establishes no character identity. |

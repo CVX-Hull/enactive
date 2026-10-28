@@ -1094,6 +1094,10 @@ class RegisteredLifecycle:
             first_normal_source_id=None if phase.first_normal is None else phase.first_normal.observation_id,
             inspection_source_id=None if phase.identity_screen is None else phase.identity_screen.observation_id,
             saved_id=phase.saved_checkpoint, require_inspection=phase.stage == "awaiting_adoption")
+        if phase.transition_request is not None:
+            from .gameplay.lifecycle import owned_launch_sources
+            transition = r._ledger.request(phase.transition_request)["result"]["lifecycle_transition"]
+            owned_launch_sources(r._ledger, r._store, transition)
         if provisional:
             from .gameplay.lifecycle import initial_load_menu_sources
             initial_load_menu_sources(r._ledger, r._store, transition_id=phase.transition_request,
@@ -1164,8 +1168,13 @@ class RegisteredLifecycle:
                 "session": phase.first_normal.session, "coordinate_epoch": sessions.index(phase.first_normal.session)},
             "grants_authority": False}
         result = {"normal_adoption": proof, "phase": self.receipt(phase, "complete"), "grants_authority": False}
+        from .gameplay.lifecycle import world_identity_source_refusal
         try:
             r._ledger._check_normal_adoption(data["request_id"], data, proof)
+            reason = world_identity_source_refusal(r._ledger, r._store,
+                request_id=data["request_id"], adoption=proof)
+            if reason is not None:
+                raise AdoptionIdentityRefusal(reason)
         except AdoptionIdentityRefusal as exc:
             return self._adoption_refusal(work, phase, f"Adoption not committed: {exc}")
         from .gameplay.lifecycle import candidate_timeline

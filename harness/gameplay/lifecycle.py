@@ -26,6 +26,90 @@ def _require(condition: bool, reason: str) -> None:
         raise EvidenceError(reason)
 
 
+def owned_launch_sources(ledger: MissionLedger, store: EvidenceStore, proof: dict) -> tuple[EvidenceRef, ...]:
+    """Authenticate every original launch endpoint before interpreting a source."""
+    row = ledger._earlier_request(proof["origin_request_id"], proof["launch_request_id"])
+    launch, launched = row["request"], row["result"] or {}
+    _require(launch["kind"] == "lifecycle" and launch.get("operation") == "launch"
+             and launch.get("phase_id") is None and row["state"] == "completed"
+             and launched.get("native_ready") is True
+             and (launched.get("process") or {}).get("launch_id") == proof["launch_id"],
+             "Transition has no earlier owned launch")
+    identities = launched.get("source_ids")
+    _require(type(identities) is list and bool(identities), "Owned launch lacks a retained menu")
+    sources = {ref.observation_id: ref for ref in store.historical_references}
+    refs = []
+    for identity in identities:
+        _require(type(identity) is str and identity in sources, "Owned launch source is absent from the evidence archive")
+        ref = sources[identity]
+        obs = store.observation(ref)
+        _require(ref.boundary_kind == "menu" and obs["category"] == "MAIN_MENU"
+                 and not obs["in_game"] and obs["takeover_generation"] == proof["before_takeover_generation"],
+                 "Owned launch baseline differs from the transition")
+        refs.append(ref)
+    positions = {ref.observation_id: index for index, ref in enumerate(store.historical_references)}
+    _require(proof["before_source_id"] in sources and proof["after_source_id"] in sources,
+             "Transition source is absent from the evidence archive")
+    before, after = sources[proof["before_source_id"]], sources[proof["after_source_id"]]
+    before_obs, after_obs = store.observation(before), store.observation(after)
+    _require(max(positions[ref.observation_id] for ref in refs) <= positions[before.observation_id]
+             < positions[after.observation_id]
+             and before_obs["takeover_generation"] == proof["before_takeover_generation"]
+             and after_obs["takeover_generation"] == proof["after_takeover_generation"],
+             "Transition sources contradict canonical order or takeover baseline")
+    return tuple(refs)
+
+
+def world_identity_source_refusal(ledger: MissionLedger, store: EvidenceStore, *,
+                                  request_id: str, adoption: dict) -> str | None:
+    """Positive source applicability only; damaged proof/archive inputs stay fatal.
+
+    Live selection uses a reason as caller feedback after its healthy-phase guard;
+    historical projection treats the identical predicate as strict rejection.
+    """
+    adoption = validate_normal_adoption(adoption)
+    transition_id = adoption["transition_result_request_id"]
+    row, proof = ledger._lifecycle_record(request_id, transition_id, "lifecycle_transition")
+    proof = validate_lifecycle_transition(proof)
+    ledger._check_prompt_result(transition_id, row["request"], row["result"],
+        actor_id=proof["actor_id"], request_state=row["state"])
+    launch_refs = owned_launch_sources(ledger, store, proof)
+    references = store.historical_references
+    positions = {ref.observation_id: index for index, ref in enumerate(references)}
+    sources = {ref.observation_id: ref for ref in references}
+    first_id = adoption["first_normal_source_id"]
+    _require(first_id in sources, "Adoption first normal source is absent from the evidence archive")
+    first = sources[first_id]
+    observed = store.observation(first)
+    _require(first.boundary_kind == "normal_play" and observed["in_game"],
+             "Adoption first normal source is not a retained normal boundary")
+    _require(positions[first_id] >= positions[proof["after_source_id"]],
+             "Adoption first normal source precedes its transition")
+    world_id = adoption["world_claim_id"]
+    selected = ledger.adoption_claims(request_id, [world_id])
+    _require(world_id in selected, "Adoption world identity claim is missing")
+    world = selected[world_id]["entry"]
+    rows = ledger.request_records()
+    phase_sources = {sid for record in rows
+        if _phase_member(record["request"], record["request"]["request_id"], adoption["origin_request_id"])
+        for sid in record["request"].get("sources", []) + (record["result"] or {}).get("source_ids", [])}
+    selected_sources = []
+    for identity in world["sources"]:
+        _require(identity in sources, "World identity source is absent from the evidence archive")
+        ref = sources[identity]
+        selected_sources.append((ref, store.observation(ref)))
+    launch_position = max(positions[ref.observation_id] for ref in launch_refs)
+    if not selected_sources or not all(ref.boundary_kind == "menu"
+               and obs["takeover_generation"] == proof["before_takeover_generation"]
+               and ref.observation_id in phase_sources
+               and launch_position <= positions[ref.observation_id] < positions[first_id]
+               for ref, obs in selected_sources):
+        return ("World identity was not observed in this owned root phase. Select a retained menu "
+            "from this Load/Create root before its first normal boundary that visibly shows the world. "
+            "If grounding changes session scope, author a fresh Claim; correction cannot cross scope.")
+    return None
+
+
 def initial_load_menu_sources(ledger: MissionLedger, store: EvidenceStore, *, transition_id: str,
                               first_normal_source_id: str | None = None,
                               through_request_id: str | None = None,
@@ -251,23 +335,8 @@ def _project(ledger: MissionLedger, store: EvidenceStore, *, rows: tuple[dict, .
                  and request(terminal_id)["epoch"] == proof["origin_epoch"]
                  and request(identity)["epoch"] == proof["reconciled_epoch"],
                  "Lifecycle transition lost its immutable phase, scenario, epoch or request order")
-        launch_id = proof["launch_request_id"]
-        launch = request(launch_id)
-        launched = requests[launch_id]["result"] or {}
-        _require(launch["kind"] == "lifecycle" and launch.get("operation") == "launch"
-                 and launch.get("phase_id") is None and requests[launch_id]["state"] == "completed"
-                 and launched.get("native_ready") is True
-                 and (launched.get("process") or {}).get("launch_id") == proof["launch_id"]
-                 and order[launch_id] < order[root_id], "Transition has no earlier owned launch")
-        launch_sources = launched.get("source_ids", [])
-        _require(bool(launch_sources), "Owned launch lacks a retained menu")
-        launch_refs = []
-        for sid in launch_sources:
-            ref, obs = source(sid)
-            _require(ref.boundary_kind == "menu" and obs["category"] == "MAIN_MENU"
-                     and not obs["in_game"] and obs["takeover_generation"] == proof["before_takeover_generation"],
-                     "Owned launch baseline differs from the transition")
-            launch_refs.append(ref)
+        launch_refs = owned_launch_sources(ledger, store, proof)
+        launch_sources = [ref.observation_id for ref in launch_refs]
         before, before_obs = source(proof["before_source_id"])
         after, after_obs = source(proof["after_source_id"])
         phase = requests[identity]["result"]["phase"]
@@ -277,11 +346,6 @@ def _project(ledger: MissionLedger, store: EvidenceStore, *, rows: tuple[dict, .
             "takeover_generation": "after_takeover_generation"}.items())
             and {before.observation_id, after.observation_id, *launch_sources} <= set(phase["source_ids"]),
             "Transition differs from its retained owned phase audit")
-        _require(max(positions[r.observation_id] for r in launch_refs) <= positions[before.observation_id]
-                 < positions[after.observation_id]
-                 and before_obs["takeover_generation"] == proof["before_takeover_generation"]
-                 and after_obs["takeover_generation"] == proof["after_takeover_generation"],
-                 "Transition sources contradict canonical order or takeover baseline")
         _require(proof["terminal_logical_id"] in primitives, "Transition terminal primitive is missing")
         primitive = primitives[proof["terminal_logical_id"]]
         intent, receipt = primitive["intent"], primitive["result"] or {}
@@ -418,19 +482,10 @@ def _project(ledger: MissionLedger, store: EvidenceStore, *, rows: tuple[dict, .
         launch = requests[proof["launch_request_id"]]["result"]
         _require(adoption["world_claim_id"] in claims, "Adoption world identity claim is missing")
         world_scope = dict(expected_scope, session=claims[adoption["world_claim_id"]]["scope"]["session"])
-        world = identity_claim(adoption["world_claim_id"], subject="world", scope=world_scope,
+        identity_claim(adoption["world_claim_id"], subject="world", scope=world_scope,
                                value=ledger.admission.scenario.world, result_id=result_id)
-        phase_sources = {sid for rid, row in requests.items() if _phase_member(row["request"], rid, root_id)
-                         for sid in row["request"].get("sources", []) + (row["result"] or {}).get("source_ids", [])}
-        for sid in world["sources"]:
-            ref, obs = source(sid)
-            # The player interprets the visible name; menu taxonomy is not proof
-            # of identity. Owned phase provenance and source order apply below.
-            _require(ref.boundary_kind == "menu"
-                     and obs["takeover_generation"] == proof["before_takeover_generation"]
-                     and sid in phase_sources
-                     and max(positions[s] for s in launch["source_ids"]) <= positions[sid] < positions[first.observation_id],
-                     "World identity was not observed in this owned root phase")
+        reason = world_identity_source_refusal(ledger, store, request_id=result_id, adoption=adoption)
+        _require(reason is None, reason or "Invalid world source applicability")
         character = identity_claim(adoption["character_claim_id"], subject="character", scope=expected_scope,
                                    value=ledger.admission.scenario.character, result_id=result_id)
         inspect_id = adoption["identity_inspect_request_id"]

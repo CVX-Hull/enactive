@@ -86,6 +86,10 @@ exact driver handle time to settle nested hosts, then requests exceptional Stop
 when needed and closes its exact controller child. Only the settled mission
 writer closes a retained native handle under the
 [exceptional shutdown contract](../contracts/lifecycle-exit.md#exceptional-writer-shutdown).
+Controller and driver launch in separate OS sessions so terminal cancellation
+reaches the custodian first. It still signals only each retained child handle;
+there is no production process-group signalling or PID adoption. Controlled
+terminal-style fixtures check child-written cleanup evidence and settlement order.
 This can terminate an unsaved owned game. Missing/lost controller or native custody,
 unsettled writers/hosts and absent matching shutdown receipts remain unknown;
 no PID scan, process adoption, group signal or replay repairs them. Cleanup does

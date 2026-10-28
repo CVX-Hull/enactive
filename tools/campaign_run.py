@@ -291,8 +291,9 @@ def run_campaign(*, root: Path, mission_id: str, port: int = 8766, node: str = "
         ending_deadline = None
         cleanup_deadline = time.monotonic() + STARTUP_SECONDS + SHUTDOWN_SECONDS
         def launch(name, argv, env):
+            # Keep terminal cancellation in the custodian; cleanup uses each exact handle.
             child = subprocess.Popen(argv, cwd=root, env=env, stdin=subprocess.DEVNULL,
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
             receipt["children"][name] = {"pid": child.pid, "started_timestamp": time.time(),
                 "console_output": "suppressed; use maintained structured driver evidence"}
             return child
