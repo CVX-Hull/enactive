@@ -106,15 +106,61 @@ class MissionShutdownTests(unittest.TestCase):
             release.wait(3)
         with patch.object(self.runtime._registered_reflection, "tick", side_effect=blocked):
             self.assertTrue(entered.wait(1))
-            with patch.object(self.runtime._thread, "join"), patch.object(
-                    native, "close_exceptional", wraps=native.close_exceptional) as cleanup:
+            with patch.object(native, "close_exceptional", wraps=native.close_exceptional) as cleanup:
+                started = time.monotonic()
                 receipt = self.runtime.close()
+                self.assertLess(time.monotonic() - started, 1.2)
                 self.assertFalse(receipt["writer_settled"])
                 self.assertFalse(receipt["native_absence_verified"])
                 cleanup.assert_not_called()
                 self.assertIsNone(child.poll())
             release.set()
         self.assertTrue(self.runtime.close()["writer_settled"])
+
+    def test_settled_writer_gets_native_cleanup_grace(self):
+        child = self.child()
+        native = self.runtime._native
+        close = native.close_exceptional
+        def slow_cleanup(**kwargs):
+            # Settled work may need more than the original .6-second wait.
+            time.sleep(.8)
+            return close(**kwargs)
+        with patch.object(native, "close_exceptional", side_effect=slow_cleanup):
+            receipt = self.runtime.close()
+        self.assertIsNotNone(child.poll())
+        self.assertTrue(receipt["writer_settled"])
+        self.assertTrue(receipt["native_absence_verified"])
+
+    def test_still_blocked_cleanup_returns_unknown_without_racing_storage(self):
+        self.child()
+        entered, release = threading.Event(), threading.Event()
+        native = self.runtime._native
+        close = native.close_exceptional
+        storage = self.runtime._close_storage
+        def blocked_cleanup(**kwargs):
+            entered.set()
+            release.wait(10)
+            return close(**kwargs)
+        joins = []
+        real_join = self.runtime._thread.join
+        def bounded_fixture_join(timeout):
+            joins.append(timeout)
+            real_join(min(timeout, .1))
+        with patch.object(native, "close_exceptional", side_effect=blocked_cleanup), patch.object(
+                self.runtime, "_close_storage", wraps=storage) as cleanup_storage:
+            self.runtime._closed.set()
+            self.assertTrue(entered.wait(1))
+            try:
+                with patch.object(self.runtime._thread, "join", side_effect=bounded_fixture_join):
+                    receipt = self.runtime.close()
+                self.assertEqual(joins, [.6, 4.5])
+                self.assertFalse(receipt["writer_settled"])
+                self.assertFalse(receipt["native_absence_verified"])
+                cleanup_storage.assert_not_called()
+            finally:
+                release.set()
+                real_join(3)
+        self.assertFalse(self.runtime._thread.is_alive())
 
     def test_server_publishes_matching_advisory_shutdown_without_token(self):
         self.runtime.close()

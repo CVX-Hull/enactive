@@ -151,6 +151,10 @@ covering TERM and KILL waits. Launch and ordinary wait cancellation do not send
 signals. No PID lookup/adoption, process-group signal or source history restores
 this custody. A caller whose writer remains blocked reports cleanup unknown and
 must not race that writer's native handle or storage.
+`close()` keeps its original work-settlement wait. Its additional finite cleanup
+grace applies only after the writer has entered final shutdown; blocked active
+work cannot consume that grace. A late transition into cleanup may conservatively
+return unknown, and a published receipt does not substitute for thread settlement.
 
 Shutdown distinguishes not launched, previously exited, exceptionally closed and
 cleanup unknown. It separately retains any verified NormalExit proof, unresolved

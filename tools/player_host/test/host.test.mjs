@@ -44,8 +44,26 @@ async function scenario(t, sequence, overrides = {}) {
   if (overrides.enabledTools) mcpConfig.enabled_tools=overrides.enabledTools;
   if (overrides.fixtureToolTimeoutSeconds) mcpConfig.tool_timeout_sec=overrides.fixtureToolTimeoutSeconds;
   const running = runHost(options);
-  try { await overrides.synchronize?.({log}); }
-  catch (error) { await running; throw error; }
+  let settled=false;
+  void running.then(()=>{settled=true;},()=>{settled=true;});
+  const drainCleanupClock=async()=>{
+    if(!overrides.advanceCleanupTimers)return;
+    const until=Date.now()+5000;
+    while(!settled && Date.now()<until) {
+      await realDelay(10);
+      if(!settled)overrides.advanceCleanupTimers();
+    }
+    assert.ok(settled,'mocked cleanup timers must settle within five real seconds');
+  };
+  try {
+    await overrides.synchronize?.({log});
+    if(overrides.advanceCleanupTimers) {
+      // The original work tick must already have stopped the host. Pumping
+      // cleanup afterward cannot conceal a renewed or missing work deadline.
+      assert.equal(events.find(event=>event.type==='abort')?.reason,overrides.expectedAbort);
+    }
+  } catch (error) { await drainCleanupClock();await running;throw error; }
+  await drainCleanupClock();
   const result = await running;
   let calls=[]; try { calls=(await readFile(log,'utf8')).trim().split('\n').filter(Boolean).map(JSON.parse); } catch {}
   const childPid = Number(await readFile(pid,'utf8'));
@@ -266,6 +284,7 @@ test('partial field output and later heartbeat retain diagnostics without renewi
     body=c;c.enqueue(new TextEncoder().encode(first));
     init.signal.addEventListener('abort',()=>c.error(new Error('aborted')),{once:true});
   }}),{headers:{'content-type':'text/event-stream'}})],{configuration,signal:controller.signal,
+    expectedAbort:'request-timeout',advanceCleanupTimers:()=>t.mock.timers.tick(1000),
     onEvent:event=>{if(event.type==='response-backend')parsed=true;},
     synchronize:async()=>{
       try {
@@ -327,6 +346,7 @@ test('host deadline interrupts an actually started tool and closes its child',as
   const controller=new AbortController();
   const {result,calls}=await scenario(t,[reply(null,[['mutate',{mode:'wait'}]])],{
     timeoutSeconds:10,fixtureToolTimeoutSeconds:30,signal:controller.signal,
+    expectedAbort:'host-timeout',advanceCleanupTimers:()=>t.mock.timers.tick(1000),
     synchronize:async({log})=>{
       let started=false;
       try {
@@ -583,6 +603,7 @@ test('both HTTP attempts share the original request timer',async t=>{
       });
     },
   ],{configuration,signal:controller.signal,
+    expectedAbort:'request-timeout',advanceCleanupTimers:()=>t.mock.timers.tick(1000),
     onEvent:e=>{if(e.type==='provider-retry'&&e.stage==='eligible')eligible=true;},
     synchronize:async()=>{
       try {

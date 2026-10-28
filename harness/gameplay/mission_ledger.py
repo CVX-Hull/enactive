@@ -1544,19 +1544,38 @@ class MissionLedger:
         return tuple(chain)
 
     def adoption_claims(self, request_id: str, identities: list[str]) -> dict[str, dict]:
-        """Validate selected retained Claims before interpreting applicability.
+        """Authenticate selection and the assertions that can affect its frontier.
 
         Authored Claims must equal their admitted payload. Native facts have no
         authored request; their exact visible projection is verified by the CDDA
         receiver before retaining a selection refusal.
         """
+        rows = self.memory_records("claim")
+        claims = {row["entry"]["id"]: row["entry"] for row in rows}
+        def group(entry):
+            return (canonical(entry["scope"]), *(entry["key"][key]
+                for key in ("subject", "property", "unit")))
+        groups = {group(claims[identity]) for identity in identities if identity in claims}
+        related = set(identities) | {identity for identity, entry in claims.items() if group(entry) in groups}
+        # Corrections may change a key. Include both directions and supporting
+        # ancestors so corrupted influence cannot masquerade as caller error.
+        while True:
+            expanded = related | {identity for identity, entry in claims.items()
+                if set(entry["supersedes"]) & related}
+            for identity in related & claims.keys():
+                expanded.update(claims[identity]["supersedes"])
+                expanded.update(parent for support in claims[identity]["supports"] for parent in support["claims"])
+            if expanded == related:
+                break
+            related = expanded
         selected = {}
-        for row in self.memory_records("claim"):
-            if row["entry"]["id"] not in identities:
+        for row in rows:
+            if row["entry"]["id"] not in related:
                 continue
             entry = validate_memory_entry(row["entry"], "claim")
             if entry["kind"] == "interpretation":
-                data = self._earlier_request(request_id, row["event_id"])["request"]
+                data = (self._earlier_request(request_id, row["event_id"]) if entry["id"] in identities
+                    else self.request(row["event_id"]))["request"]
                 if (data["kind"] not in ("remember", "correct") or data["entry_type"] != "claim"
                         or data["entry"] != entry):
                     raise LedgerError("Identity Claim differs from its immutable admitted memory request")
@@ -1696,19 +1715,20 @@ class MissionLedger:
         if proof["saved_checkpoint_request_id"] is not None:
             _, saved = self._lifecycle_record(request_id, proof["saved_checkpoint_request_id"], "saved_checkpoint")
             validate_saved_checkpoint(saved)
+        from .campaign_memory import CampaignMemory
+        from .cdda_identity import adoption_identity_refusal
+        entries = {row["entry"]["id"]: row["entry"] for row in self.memory_records("claim")}
+        frontiers, retired = CampaignMemory._frontier(entries,
+            selected_ids={identity for identity, entry in entries.items()
+                if entry["key"]["property"] == "identity" and entry["key"]["unit"] == "name"})
         for subject, entry in selected_claims:
-            if (entry["key"]["property"] != "identity" or entry["key"]["subject"] != subject
-                    or entry["status"] not in ("current", "last_seen")
-                    or any(group["claims"] for group in entry["supports"])):
-                raise AdoptionIdentityRefusal("Normal adoption requires directly supported admitted identity Claims")
-            name = scenario[subject]
-            if entry["value"] != {"quantity": None, "state": name}:
-                state_preview = repr(entry["value"]["state"])[:160]
-                raise AdoptionIdentityRefusal(f"Normal adoption {subject} identity value must equal the admitted name {name!r}; "
-                    f"selected Claim state preview: {state_preview}. "
-                    "Interpret the retained evidence and explicitly correct the Claim before adopting.")
-            if subject == "character" and (entry["scope"] != proof["scope"]
-                    or entry["sources"] != [inspect_result["identity_screen_source_id"]]):
+            scope = (dict(proof["scope"], session=entry["scope"]["session"])
+                if subject == "world" else proof["scope"])
+            reason = adoption_identity_refusal(entry, subject=subject, scope=scope, name=scenario[subject],
+                claims=entries, frontiers=frontiers, retired=retired)
+            if reason is not None:
+                raise AdoptionIdentityRefusal(reason)
+            if subject == "character" and entry["sources"] != [inspect_result["identity_screen_source_id"]]:
                 raise AdoptionIdentityRefusal("Select a character identity Claim with the exact inspected source/scope")
 
     def _check_saved_checkpoint(self, request_id: str, data: dict, result: dict) -> None:

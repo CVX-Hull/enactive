@@ -63,6 +63,29 @@ The supervisor records cleanup errors without abandoning independent owned clean
 unknown custody stays unknown. Current shutdown instructions and operations migrate
 with the new exceptional close behavior, including its unsaved-game consequence.
 
+The first protected full run on `4a8dffb` failed: 2 failed, 2,280 passed and
+4,304 subtests passed. The failures were the original bounded-close assertion
+and a 90-second Node conformance timeout. Adding native cleanup grace to every
+writer wait caused the first failure; the writer now signals final shutdown before
+that extra grace is available. Blocked work keeps its original bound and unknown
+receipt. A controlled Node reproduction separately showed globally mocked timers
+freezing transport cleanup after the last work-clock tick. The test fixture now
+checks the original abort reason before advancing cleanup time within five real
+seconds; production timers and the 90-second watchdog are unchanged. Timeout
+diagnostics retain complete partial TAP. The original CI timeout's precise test
+remains unknown because that earlier output was truncated.
+
+Additional genuine-authorship probes caught retired/conflicting frontier and wrong
+world-epoch selections that still reached a fatal candidate check. A single CDDA
+applicability classifier now serves ledger selection and historical projection.
+Influencing corrections/supports are authenticated as well as selected Claims;
+their source integrity is checked before preserving authority. Review also caught
+a later equivalent assertion being treated as a selected future reference. Related
+records authenticate their own immutable requests; selected identities must still
+precede adoption. Existing later-correction invalidation remains unchanged. Paired
+corruption, explicit correction, equivalent-order and reopen cases cover these
+repairs. The failed candidate/run remains retained, not replaced by later success.
+
 ## Reuse and maintenance
 
 The repository keeps its responsibility-based source layout and ordinary Git/GitHub

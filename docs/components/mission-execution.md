@@ -125,9 +125,10 @@ validator service. The [protocol](../contracts/lifecycle-create-load.md)
 owns the precise initial-history, custody and dismissal restrictions.
 
 An unsuitable identity selection preserves only a positively healthy create/load
-phase. The ledger authenticates selected authored Claims against their admitted
-payload before interpreting subjects. The receiver authenticates established phase transition/inspection/saved proofs
-before any selection refusal, verifies phase/selected source bytes and native-fact
+phase. The ledger authenticates selected authored Claims and frontier influences
+against their admitted payloads before interpreting applicability. Live and
+historical checks reuse one CDDA scope/support/frontier classifier. The receiver authenticates established phase transition/inspection/saved proofs
+before any selection refusal, verifies phase/influencing source bytes and native-fact
 projections, then rechecks custody, lease, capacity and the
 original limits. Only the typed semantic refusal retains the PhaseReceipt; trusted
 history, receipt and candidate-timeline faults retire phase/lease. Paired

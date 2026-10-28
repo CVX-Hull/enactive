@@ -127,6 +127,7 @@ class MissionRuntime:
         self._metadata = threading.Lock()
         self._queue: Queue[_Work] = Queue(maxsize=1)
         self._closed = threading.Event()
+        self._shutdown_started = threading.Event()
         self._shutdown_receipt: dict | None = None
         self._pending_pauses: list[tuple[str, str]] = []
         self._handles: list[_Work] = []
@@ -3297,6 +3298,7 @@ class MissionRuntime:
                         self._fault(exc)
                     self._record_settlement_timing(work, finalized=finalized)
         finally:
+            self._shutdown_started.set()
             self._cancel_queue()
             # Revoke authority even when terminal persistence is broken. Only this
             # settled writer owns native cleanup and storage; close() never races it.
@@ -3426,7 +3428,11 @@ class MissionRuntime:
             self._closed.set()
             self._cancel_queue()
         # A blocked writer owns its storage until its finally clause; never close underneath it.
-        self._thread.join(min(16.0, self.controller.timeout + 0.5) + 4.5)
+        self._thread.join(min(16.0, self.controller.timeout + 0.5))
+        # Native cleanup gets its own finite wait only after work has settled.
+        # A blocked active writer must still return at the original close bound.
+        if self._thread.is_alive() and self._shutdown_started.is_set():
+            self._thread.join(4.5)
         with self._metadata:
             receipt = copy.deepcopy(self._shutdown_receipt)
         if self._thread.is_alive() or receipt is None:

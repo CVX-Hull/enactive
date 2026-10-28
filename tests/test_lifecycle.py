@@ -480,7 +480,7 @@ class LifecycleTests(unittest.TestCase):
         replacement["key"].update(property="place", unit="display")
         replacement["supersedes"] = ["create-character"]
         self.correct(replacement)
-        with self.assertRaisesRegex(EvidenceError, "wrong value, scope, kind or status"):
+        with self.assertRaisesRegex(EvidenceError, "current identity frontier Claim; this Claim was replaced"):
             adopted_timeline(self.ledger, self.store)
 
     def test_unrelated_nonidentity_dependency_cycle_still_rejects_adoption(self):
@@ -501,7 +501,7 @@ class LifecycleTests(unittest.TestCase):
         conflict["key"]["coverage_id"] = "another-visible-screen"
         conflict["value"]["state"] = "Other"
         self.ledger._db.execute("UPDATE memory SET body=? WHERE record_id='other-coverage'", (canonical(conflict),))
-        with self.assertRaisesRegex(EvidenceError, "conflicting durable assertions"):
+        with self.assertRaisesRegex(EvidenceError, "conflicting durable identity Claims"):
             adopted_timeline(self.ledger, self.store)
 
     def test_conflicting_identity_assertion_rejects(self):
