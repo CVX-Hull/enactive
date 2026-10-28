@@ -46,7 +46,7 @@ planner remains candidate-only; explorers/reviewers never send game inputs.
   source history; custom infrastructure needs a concrete gap and maintenance owner.
   Rely on configured DB/OS/library contracts; justify residual checks and recovery
   against actual deployment, failure evidence, latency and maintenance cost.
-- Use the [development-first workflow](docs/project-management.md#development-first-delivery):
+- Use the [development-first workflow](docs/workflows/development.md#development-first-delivery):
   fast checkpoint checks and relevant focused tests before development play;
   independent review and the appropriate protected CI profile before formal acceptance/merge;
   broad source changes require full regression before merge.

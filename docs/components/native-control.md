@@ -31,15 +31,15 @@ Native7 visible rows preserve labels and focus while carrying a separate nullabl
 literal rendered marker. The CDDA binding records the actual inventory marker
 cell only when visible, in the same row draw; null does not mean unmarked. Other
 games need their own visible producer, without inheriting CDDA marker semantics.
-The [protocol](../protocol.md#passive-gameplay-records-and-evidence) owns current
+The [protocol](../contracts/gameplay-evidence.md#passive-gameplay-records-and-evidence) owns current
 wire/store migration and archival limits.
 
 Native metadata is restricted to player-visible information, excluding saves,
 unseen maps and hidden threats. Physical ordinary input and semantic shortcuts
 have different applicability checks; neither bypasses custody, receiver or original
 deadlines. A capture's historical integrity and its suitability for a current
-semantic action are distinct. [Protocol](../protocol.md#controller-run-ownership)
-owns precise fences and [transport](../protocol.md#transport-and-state) its wire shape.
+semantic action are distinct. [Protocol](../contracts/controller-ownership.md#controller-run-ownership)
+owns precise fences and [transport](../contracts/native-observations.md#native-request-lifecycle-and-unknown-outcomes) its wire shape.
 
 ## Pause, unknown effects and restart
 
@@ -75,9 +75,9 @@ actual-game qualification.
 
 | User consequence | Invariant and contract | Mechanism, representative assertion and limit |
 | --- | --- | --- |
-| Rendering churn retargets an input or stale authority reaches dispatch | Keep the original non-image capture; reject changed session, revision or boundary. [Ownership contract](../protocol.md#controller-run-ownership). | Controller preflight: [controller tests](../../tests/test_controller.py), selected by `assurance_freshness`, assert original capture binding across render churn and no action delivery after changed authority. A fake bridge exercises the host side, not SDL/game behavior. |
-| An input commits to the wrong receiver or after user revocation | Native checks receiver/custody and Pause/takeover again at commit. [Ownership contract](../protocol.md#controller-run-ownership). | Native poll/dispatch gates: [receiver tests](../../tests/test_native_receiver.py) `test_production_receiver_and_dispatch` (`assurance_native`) executes extracted production C++ with explicit doubles. Its [comparison-fence scenarios](../../tests/native_receiver_fixture.cpp) assert refusal/fault and zero input feeds after changed receiver, Pause or takeover. This compiled component is not a patched CDDA build or graphical acceptance. |
-| A passing fixture is mistaken for safe input across every native condition | New support needs matching built source and actual affected native qualification. [Recovery contract](../protocol.md#explicit-operator-recovery). | C-NATIVE's [capture report](../acceptance/2026-10-22-native-capture-preconditions.md) demonstrates scoped ordinary input and normal same-character lifecycle; persistent pixel drift and retained-A/newer-B timing remain unexercised there. [Local refusal](../acceptance/2026-10-22-native-local-refusal.md) demonstrates a separate ordinary refusal/cancellation path, not wider mouse, takeover or interruption coverage. |
+| Rendering churn retargets an input or stale authority reaches dispatch | Keep the original non-image capture; reject changed session, revision or boundary. [Ownership contract](../contracts/controller-ownership.md#controller-run-ownership). | Controller preflight: [controller tests](../../tests/test_controller.py), selected by `assurance_freshness`, assert original capture binding across render churn and no action delivery after changed authority. A fake bridge exercises the host side, not SDL/game behavior. |
+| An input commits to the wrong receiver or after user revocation | Native checks receiver/custody and Pause/takeover again at commit. [Ownership contract](../contracts/controller-ownership.md#controller-run-ownership). | Native poll/dispatch gates: [receiver tests](../../tests/test_native_receiver.py) `test_production_receiver_and_dispatch` (`assurance_native`) executes extracted production C++ with explicit doubles. Its [comparison-fence scenarios](../../tests/native_receiver_fixture.cpp) assert refusal/fault and zero input feeds after changed receiver, Pause or takeover. This compiled component is not a patched CDDA build or graphical acceptance. |
+| A passing fixture is mistaken for safe input across every native condition | New support needs matching built source and actual affected native qualification. [Recovery contract](../contracts/operator-recovery.md#explicit-operator-recovery). | C-NATIVE's [capture report](../acceptance/2026-10-22-native-capture-preconditions.md) demonstrates scoped ordinary input and normal same-character lifecycle; persistent pixel drift and retained-A/newer-B timing remain unexercised there. [Local refusal](../acceptance/2026-10-22-native-local-refusal.md) demonstrates a separate ordinary refusal/cancellation path, not wider mouse, takeover or interruption coverage. |
 
 Host-side queue and Pause coverage also includes [controller](../../tests/test_controller.py)
 `test_walk_stop_revokes_queued_generation_and_pause_race`, which asserts the queued

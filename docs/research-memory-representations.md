@@ -232,7 +232,7 @@ the existing supervisor/controller can validate and execute it. An observation
 request still needs that authority. Separately, candidate lessons retain context
 and counterexamples, undergo held-out evaluation, and are rejected/revised or
 reviewed for a later authorized version change. There is no automatic promotion.
-The [current memory contract](protocol.md#passive-task-memory) remains authoritative.
+The [current memory contract](contracts/injected-planner.md#passive-task-memory) remains authoritative.
 
 The conceptual roles map onto existing types rather than introducing six new
 services: `EvidenceRef`/`Fact` retain observation references; `Interpretation`,

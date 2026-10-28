@@ -68,7 +68,7 @@ Neither undoes committed input nor guarantees activity interruption. Unknown
 delivery stays charged and unreplayed; supported collection/reconciliation retain
 uncertainty. Restart restores history, never a lease.
 [Control view](components/native-control.md), [runbook](runbook.md),
-[exact recovery contract](protocol.md#explicit-operator-recovery).
+[exact recovery contract](contracts/operator-recovery.md#explicit-operator-recovery).
 
 ## Observation and deployment boundaries
 
@@ -121,21 +121,21 @@ The injected planner port and TaskMemory/waypoint libraries are passive study
 components. They return candidates and own no controller lease or live task/planner
 endpoint in MissionRuntime. No concrete planner provider is connected to that
 service. They are not a generic autonomous campaign executor.
-[Exact passive contract](protocol.md#bounded-injected-planner).
+[Exact passive contract](contracts/injected-planner.md#bounded-injected-planner).
 
 ## Passive skill verification
 
 The offline movement verifier proposes an input and consumes correlated feedback;
 the caller owns dispatch. It shares the pure policy with controller walk. Current
 missions also compose skills through their writer.
-[Passive contract](protocol.md#passive-bounded-movement-skills) and
+[Passive contract](contracts/movement-skills.md#passive-bounded-movement-skills) and
 [diagram](diagrams/skill.svg) distinguish proposal/verification from live authority.
 
 ## Passive task supervision
 
 The waypoint supervisor combines passive planning, memory and movement for one
 waypoint/return study. It owns no input capability and cannot silently become the
-live player. [Contract](protocol.md#passive-waypoint-supervision) and
+live player. [Contract](contracts/movement-skills.md#passive-waypoint-supervision) and
 [diagram](diagrams/supervisor.svg) retain that scope.
 
 ## Run ownership and operator takeover
@@ -144,11 +144,11 @@ One exact in-process controller capability belongs to MissionRuntime. Competing
 ordinary writers reject; cached status and Pause remain available. Internal
 rotation cannot erase user Pause.
 [Ownership view](components/native-control.md) leads to the
-[exact contract](protocol.md#controller-run-ownership).
+[exact contract](contracts/controller-ownership.md#controller-run-ownership).
 
 ## Coordinated change
 
-Apply [S-MIGRATION](engineering.md#s-migration-one-current-contract-coordinated-migration):
+Apply [S-MIGRATION](standards/migration.md#s-migration-one-current-contract-coordinated-migration):
 one current contract; coordinate producers, consumers, state, fixtures and guidance.
 No compatibility shim or downgrade. Distinct version numbers describe distinct
 contracts; [protocol](protocol.md) owns the current reference. Historical artifacts
@@ -184,7 +184,7 @@ Scope work from the affected system responsibility down to components, contracts
 state/callers, code, tests and procedures. Review the highest changed boundary
 before committing its implementation. An unchanged parent needs a link and impact
 statement, not recursive approvals. Select checks from consequence and uncertainty
-under the [assurance tiers](project-management.md#risk-based-assurance).
+under the [assurance tiers](workflows/review.md#risk-based-assurance).
 
 Import Linter checks declared dependency directions; protocol/document checks catch
 selected drift. They do not prove semantic truth. Source tests, native builds,

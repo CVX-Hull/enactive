@@ -8,7 +8,7 @@ status: active
 
 Start with the [overview](overview.md), then zoom into the part you want to
 challenge. This page defines the information organization required by
-[S-DOCS](engineering.md#s-docs-useful-maintained-documentation); it is not a work
+[S-DOCS](standards/documentation.md#s-docs-useful-maintained-documentation); it is not a work
 tracker. The lead maintains this organization with component maintainers.
 
 Deciding players take the shorter path: the [player guide](player-guide.md), their
@@ -56,7 +56,7 @@ to finish all design before feedback or to mirror directories mechanically.
 | `tools/` | Maintained engineering/check/launch/study entry points, including the generic Pi host. Reuse these rather than growing a private source framework in run directories. |
 | `web/` | Passive spectator presentation; it owns no gameplay authority. |
 | `tests/` | Behavioral/component assertions and explicit doubles, mapped by the testing guide. Actual game outcomes are a separate evidence lane. |
-| Current `docs/` pages and `components/` | Purpose, policy, responsibility explanation and operating guidance; exact interfaces remain in protocol/schema/source. |
+| Current `docs/` pages and `components/` | Purpose and responsibility explanation; root indices route to exact `contracts/`, mandatory `standards/`, decision `workflows/` and task `operations/`. Schemas/source retain their declared interface scope. |
 | `docs/acceptance/`, `changes/`, `decisions/` | Dated evidence and rationale with explicit status; they supply context, not current work or input permission. |
 | Ignored `.runtime/` | Owned run data, frozen inputs and original raw evidence. It is not a second maintained source tree or tracker; a fresh checkout does not contain it. |
 
@@ -67,15 +67,36 @@ reader or implementation boundary benefits; migrate every caller/link together
 and preserve original evidence. Git retains earlier structure. No second index,
 documentation service or source-history database is required.
 
-Content granularity remains a concern even where the directory hierarchy is
-sound. Large references that mix exact contracts, explanation, procedures and
-historical qualifications burden focused reading and review. Navigation is a
-first repair, not a substitute for decomposition. The owned
-[contract decomposition](https://github.com/CVX-Hull/enactive/issues/276) follow-up
-must preserve one current home per rule and migrate links/checkers together.
-Generated control maps are lookup references; they are not a required linear
-reading path. Reader-task review under S-DOCS/C-USABILITY checks discoverability
-and reviewability; file counts and valid links do not establish comprehension.
+The [protocol](protocol.md), [engineering](engineering.md),
+[project workflow](project-management.md) and [runbook](runbook.md) are routing
+indices. Their existing headings remain useful bookmarks; task-sized current
+bodies live in `contracts/`, `standards/`, `workflows/` and `operations/`.
+Use direct links to the relevant body when citing a rule. The engineering index
+retains the standard IDs and principle/control mappings consumed by governance;
+the protocol index retains the current version and migration declaration.
+These are metadata homes, not copies of the leaf requirements.
+
+Decompose by a concrete reader task, authority boundary or cohesive change surface.
+Split a mixed contract again when a reader cannot review the needed task without
+reading unrelated interfaces. Keep the original requirements, update relative
+links and current consumers together, and retain historical bookmarks as routing
+anchors. A renamed large file or an index above an unchanged large body does not
+resolve mixed responsibilities. No file-size quota, new registry or second current
+home is needed. Generated control maps are lookup references; they are not a
+required linear reading path. Reader-task review under S-DOCS/C-USABILITY checks
+discoverability and reviewability; file counts and valid links do not establish
+comprehension.
+
+### Follow a concrete reader task
+
+| Task | Reader route and consequence |
+| --- | --- |
+| Find a rule and its owner | [Engineering index](engineering.md) → the named [standard body](standards/documentation.md), whose frontmatter identifies its owner/review trigger; the index owns the principle/control mapping. Follow linked subtopics only for the affected part of the rule. |
+| Implement Load and adopt identity | [Launch/admission](contracts/mission-admission.md#owned-launch-and-initial-load-admission) → [Load transitions and initial menu dismissal](contracts/lifecycle-create-load.md) → [source preconditions](contracts/lifecycle-preconditions.md) → [identity adoption](contracts/lifecycle-preconditions.md#normal-identity-adoption-and-historical-proof). [Diagnostic readmission](contracts/lifecycle-create-load.md#lifecycle-diagnostic-observation-and-readmission) handles the paused phase; reopening restores no authority. |
+| Collect an uncertain request | [Transport and original result collection](contracts/player-transport.md) → [unknown-delivery reconciliation](contracts/delivery-reconciliation.md), with [certified nonadmission](contracts/player-transport.md#certified-request-admission-refusal) as a distinct correction path. Preserve the original identity and uncertainty. |
+| Replace a deciding player | [Handoff issuance](contracts/handoff-issuance.md) → [successor context, Claim and readmission](contracts/handoff-issuance.md#successor-context-claim-and-readmission); the [host activation procedure](operations/player-host.md) operates the actual host. Issuance alone does not activate a successor. |
+| Operate the host | [Typed mission procedure](operations/mission-requests.md) → [bounded host activation](operations/player-host.md); use [mission ownership](operations/mission-ownership.md) and [Pause/timeout recovery](operations/pause-timeout.md) for the relevant fault. |
+| Distinguish development from acceptance | [Development checkpoint table](workflows/development.md) → [minimum checks/escalation](workflows/development.md#minimum-checks-and-escalation) → [protected CI profiles](workflows/ci-profiles.md). A finite development run and a formal outcome claim have different evidence requirements. |
 
 ## One authoritative home per kind of fact
 
@@ -101,7 +122,7 @@ versions; historical records preserve original observations, including failures.
 An iteration's core, optional scope, appetite and decision belong in its existing
 Issue, with stage/sequence in the Project. Link component designs and consolidated
 evidence; do not add a local iteration backlog, a document per task or a report per
-attempt. [Work scales](project-management.md#work-items-and-flow) distinguish the
+attempt. [Work scales](workflows/work-items.md#work-items-and-flow) distinguish the
 iteration from commits, feedback checkpoints and finite runtime attempts.
 
 ## Lifecycle and maintenance

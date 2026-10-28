@@ -254,7 +254,7 @@ Use `enactive_snapshot` or an explicitly returned next snapshot, choose a source
 and physical or semantic intent, then call the named skill/lifecycle/memory tool with finite
 limits. MCP software assigns the stable request ID and bounded collection wait;
 the model does not supply `request_id` or `wait_seconds`. The adapter uses the
-[pure canonical producer](protocol.md#skill-request-binding-errors) internally;
+[pure canonical producer](contracts/request-binding.md#skill-request-binding-errors) internally;
 software owns serialization, durable staging, submission, bounded collection and
 actual-image presentation. The player does not write routine JSON files, private
 helpers or polling scripts. CLI/raw protocol clients remain engineering tools,
@@ -271,7 +271,7 @@ retargeting; clicks retain the original image geometry. The original informing
 source, entry observation, actual preflight and ACK after-source remain distinct.
 Semantic shortcuts keep their strict preconditions. Known delivery is separate
 from current input eligibility and any later processing/evidence-loss stop. See
-[ordinary input](protocol.md#ordinary-discovery-and-procedure-data). Genuine
+[ordinary input](contracts/procedure-programs.md#ordinary-discovery-and-procedure-data). Genuine
 authority/evidence/global-budget faults still stop.
 
 Explicit Observe can close an exhausted ordinary macro with `macro_closure` before
@@ -340,7 +340,7 @@ The clean-context brief identifies configured tools/evidence scope, actor/phase,
 limits and reserve. Pause, completed tools, explicit quiescence and empty live
 slots precede inspection or registered handoff. Original unknowns and accounting
 never reset. Role names/instructions are workflow controls, not a sandbox. Follow
-the [current actor contract](protocol.md#designated-campaign-operator).
+the [current actor contract](contracts/mission-admission.md#designated-campaign-operator).
 
 [#97](https://github.com/CVX-Hull/enactive/issues/97)'s
 [two-phase result](acceptance/2026-10-18-campaign-operator.md) records actual

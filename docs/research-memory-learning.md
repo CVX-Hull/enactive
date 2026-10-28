@@ -8,7 +8,7 @@ review_trigger: Before memory or learning implementation; new relevant evidence,
 
 Research cutoff: **2026-10-18**. This is an evidence review and discussion proposal,
 not an implemented contract or a commitment to training. The current
-[protocol](protocol.md#passive-task-memory) remains authoritative. No gameplay,
+[protocol](contracts/injected-planner.md#passive-task-memory) remains authoritative. No gameplay,
 weight training, model service, database installation or paid API experiment was
 performed for this review.
 
