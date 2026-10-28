@@ -3261,6 +3261,12 @@ class MissionRuntime:
             disposition, result = "blocked", {"reason": f"{type(exc).__name__}: {exc}"[:1024], "grants_authority": False}
             result["source_ids"] = [] if self._current is None else [self._current.observation_id]
             self._diagnostic = result["reason"]
+            if data["kind"] == "claim" and isinstance(exc, HandoffEvidenceError):
+                result["next_step"] = (
+                    "Claim did not complete. Source reads do not complete Claim. If the original handoff is still live, "
+                    "correct the indicated packet/read declarations and submit a new enactive_claim; after it completes, "
+                    "use enactive_readmit linked to that successful Claim. Gameplay skills/lifecycle require readmission. "
+                    "An authority failure before readmission revokes the handoff; these diagnostics grant no authority.")
             if (not isinstance(exc, (HandoffEvidenceError, RecoveryEvidenceError))
                     or isinstance(exc, (OSError, LedgerError))):
                 self._stop_after_failure(result["reason"])

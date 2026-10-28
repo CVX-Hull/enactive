@@ -250,6 +250,14 @@ snapshot has no source, explicitly read the retained final exit source with
 `enactive_source` and select its returned ID for the separate Finish root.
 Do not substitute identity Claims or infer Finish from process exit.
 
+A fresh successor completes **Claim → readmit → gameplay input** in that order.
+Reading all sources after a refused Claim does not complete it. Correct an explicit
+packet/declaration refusal and submit Claim again while its original issuance is
+live, then link readmission to the successful Claim. A skill/lifecycle input before
+readmission is an authority failure that revokes the handoff; later corrected
+arguments cannot restore it. Other authority/Pause/uncertainty failures retain
+their stop rules.
+
 ## Current registered CDDA lifecycle
 
 This adapter has specialized creation/identity/save proofs. Owned create/load/save

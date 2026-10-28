@@ -294,6 +294,9 @@ class MissionHandoffTests(MissionCreationFixture, unittest.TestCase):
         self.assertIn("extra=1 (omitted=0)", result["result"]["reason"])
         self.assertIn(work["sources"][0], result["result"]["reason"])
         self.assertIn("not-an-issued-source", result["result"]["reason"])
+        self.assertIn("Claim did not complete", result["result"]["next_step"])
+        self.assertIn("enactive_claim", result["result"]["next_step"])
+        self.assertIn("enactive_readmit", result["result"]["next_step"])
         after = self.runtime.status()
         for field in ("epoch", "actor_id", "phase", "spent_inputs"):
             self.assertEqual(after[field], before[field])
@@ -580,7 +583,10 @@ class MissionHandoffTests(MissionCreationFixture, unittest.TestCase):
         self.assertEqual(result["state"], "completed", result)
         self.assertEqual(self.run_request(data), result)
         data["request_id"] = "other-claim"
-        self.assertEqual(self.run_request(data)["state"], "blocked")
+        refused = self.run_request(data)
+        self.assertEqual(refused["state"], "blocked")
+        self.assertIn("Claim requires its live unconsumed handoff", refused["result"]["reason"])
+        self.assertNotIn("next_step", refused["result"])
         self.assertEqual(self.runtime.status()["actor_id"], "successor")
 
     def test_resume_refreshes_an_aged_checkpoint_without_renewing_limits(self):

@@ -205,7 +205,7 @@ def request_tool_specs() -> tuple[ToolSpec, ...]:
             _object({**common, "intent": _without(request_schema(kind), *headers, "kind")})))
     claim = _without(request_schema("claim"), *headers, "kind", "pause_generation", "takeover_generation",
         "expected_session", "expected_revision", "expected_boundary_id", "expected_pause_origin")
-    specs.append(ToolSpec("enactive_claim", "Claim a selected issued handoff using explicit packet IDs and truthful source-read declarations. Bindings come from that exact retained issuance.",
+    specs.append(ToolSpec("enactive_claim", "Claim a selected issued handoff using explicit packet IDs and truthful source-read declarations. Bindings come from that exact retained issuance. Source reads alone do not complete Claim. After a correctable evidence refusal, correct and resubmit Claim while that issuance remains live, then separately enactive_readmit with the successful Claim ID. Gameplay input before readmission causes an authority stop and revokes the handoff.",
         _object({**common, "intent": claim})))
     readmit = []
     for mode in ("handoff", "recovery"):
