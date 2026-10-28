@@ -19,7 +19,9 @@ A sealed current donor may retain an ordinary `unknown` without effect proof onl
 when its actual publication is authenticated: exact logical/native/intent mapping,
 bounded canonical native7 packet, explicit unknown disposition and null ACK/after,
 and intact informing/entry/preflight sources. The packet binds to the final
-preflight, not an earlier informing frame; original entry/custody checks remain.
+preflight, not an earlier informing frame. Each original entry matches its owning
+request's session/revision/boundary; entry refresh and final preflight preserve
+native session, Pause, takeover and control custody without requiring equal pixels.
 Missing publication, foreign custody, corrupt sources and prepared/published work
 still refuse. Original unknown state, absent effect and separately later observations
 remain unchanged in both original bytes and derived data. Publication is not delivery

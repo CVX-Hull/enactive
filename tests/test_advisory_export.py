@@ -1,5 +1,6 @@
 """Real SQLite/files for current export/import, with synthetic observations only."""
 from contextlib import closing
+from copy import deepcopy
 import hashlib
 import json
 from pathlib import Path
@@ -10,7 +11,7 @@ import unittest
 
 from harness.gameplay.advisory_export import artifact_parts, derive_data, export_current
 from harness.gameplay.contracts import ContractError, canonical
-from harness.gameplay.evidence import _canonical
+from harness.gameplay.evidence import _canonical, _identity
 from harness.gameplay.mission_requests import _source_binding
 from harness.gameplay.procedure_library import ProcedureLibrary
 from harness.gameplay.procedure_archive import captured_database
@@ -236,6 +237,60 @@ class AdvisoryExportTests(unittest.TestCase):
                 changed = self.rebind_corrupt_originals(artifact, pin, sql, parameters, mutate_index=mutate_index)
                 with self.assertRaises(ContractError):
                     self.library(changed)
+
+    def test_unresolved_original_entry_keeps_its_request_and_native_custody(self):
+        for mode in ('export', 'import'):
+            for fault in ('session', 'revision', 'boundary', 'control', 'pause'):
+                with self.subTest(mode=mode, fault=fault):
+                    directory, _, later, _, _, pin = self.fixture.unresolved_archive(mode + '-' + fault)
+                    target = self.export(pin)[0] if mode == 'import' else directory
+                    with closing(sqlite3.connect(target / 'mission.sqlite3')) as database:
+                        request = json.loads(database.execute(
+                            "SELECT payload FROM requests WHERE id='uncertain-step'").fetchone()[0])
+                        intent = json.loads(database.execute('SELECT intent FROM primitives').fetchone()[0])
+                        if fault == 'session':
+                            request['sources'] = [later]
+                            intent['input_observation']['original']['source_id'] = later
+                        elif fault == 'revision':
+                            request['expected_revision'] = 0
+                        elif fault == 'boundary':
+                            request['expected_boundary_id'] = 'borrowed-boundary'
+                        else:
+                            index_path = target / 'evidence/evidence.json'
+                            index = json.loads(index_path.read_bytes())
+                            original = intent['input_observation']['original']['source_id']
+                            entry = deepcopy(next(e for e in index['entries']
+                                                  if e['reference']['observation_id'] == original))
+                            entry['observation']['frame'] = 'frame-' + directory.name + '-900.png'
+                            if fault == 'control':
+                                entry['observation']['boundary']['control_generation'] += 1
+                            else:
+                                entry['observation'].update(paused=True, pause_origin='host')
+                            identity = _identity(entry['observation'])
+                            entry['reference'].update(observation_id=identity,
+                                frame_path=str(Path(entry['reference']['frame_path']).with_name(identity + '.png')))
+                            shutil.copyfile(target / 'evidence/frames' / (original + '.png'),
+                                            target / 'evidence/frames' / (identity + '.png'))
+                            index['entries'].append(entry)
+                            index_path.write_bytes(_canonical(index))
+                            request['sources'] = [identity]
+                            intent['input_observation']['original']['source_id'] = identity
+                        encoded = canonical(request)
+                        with database:
+                            database.execute("UPDATE requests SET payload=?,digest=? WHERE id='uncertain-step'",
+                                             (encoded, hashlib.sha256(encoded.encode()).hexdigest()))
+                    if mode == 'import':
+                        # Recompute both original pins and the full projection;
+                        # the refusal must come from semantic custody validation.
+                        changed = self.rebind_corrupt_originals(target, self.fixture.pin(directory.name),
+                            'UPDATE primitives SET intent=?', (canonical(intent),),
+                            mutate_index=lambda index: None)
+                        with self.assertRaises(ContractError):
+                            self.library(changed)
+                    else:
+                        pin = self.fixture.edit_db(directory, 'UPDATE primitives SET intent=?', (canonical(intent),))
+                        with self.assertRaises(ContractError):
+                            self.export(pin)
 
     def test_semantic_terminal_allowlists_and_reflection_closure_survive_recomputed_pins(self):
         for number, (sql, parameters) in enumerate((

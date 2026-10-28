@@ -24,7 +24,7 @@ from .memory_ports import ProcedureLibraryError, ProcedureEpisodeRefusal
 from .contracts import canonical, ContractError, EvidenceRef, _pairs, _reject_constant, json_object, validate_json
 from .evidence import (
     MAX_FRAME_BYTES, MAX_FRAMES, MAX_BYTES, MAX_METADATA_BYTES, MAX_AGE_SECONDS, MAX_HISTORICAL_LAG_SECONDS, _check_frame_bytes,
-    _identity, _validate_observation,
+    _identity, _validate_observation, same_native_custody,
 )
 from .mission_contracts import MAX_LIBRARY_SOURCES, MissionAdmission, validate_effect_reconciliation, validate_request
 from .mission_ledger import DB_VERSION, MissionLedger, _intent, _primitive_parent, _ordinary_sequence
@@ -388,7 +388,7 @@ class SealedProcedureArchive:
             receipt = {} if result is None else _object(result)
             if state == "unknown" and effect is None:
                 self._unresolved_publication(mission, intent, receipt, logical_id=identity,
-                    native_id=native_id, informing_sources=request["sources"])
+                    native_id=native_id, request=request)
                 self._unresolved_requests.add((mission, parent))
             elif state == "unknown":
                 resolution = validate_effect_reconciliation(_object(effect, 32_768))
@@ -426,14 +426,14 @@ class SealedProcedureArchive:
 
     def _unresolved_publication(self, mission: str, intent: dict, receipt: dict, *,
                                 logical_id: str, native_id: str | None,
-                                informing_sources: list[str]) -> None:
+                                request: dict) -> None:
         """Retain authenticated current publication as unknown, never as effect proof."""
         if (self._index_version(mission) != 6 or intent["kind"] not in ("action", "key", "direct", "resume")
                 or receipt.get("transport_disposition") != "unknown"
                 or any(key not in receipt or receipt[key] is not None for key in ("native_ack", "source_after"))):
             raise ProcedureLibraryError("Unresolved history requires current publication without ACK or after-source")
         entries = self._entries[mission]
-        required = {intent["source_before"], intent["preflight_source"], *informing_sources}
+        required = {intent["source_before"], intent["preflight_source"], *request["sources"]}
         for field in ("input_observation", "revalidation"):
             if intent[field] is not None:
                 for binding in (intent[field]["original"], intent[field]["current"]):
@@ -444,9 +444,18 @@ class SealedProcedureArchive:
                         raise ProcedureLibraryError("Unresolved publication lost its informing observation binding")
         if any(identity not in entries or entries[identity]["observation"]["protocol"] != 7 for identity in required):
             raise ProcedureLibraryError("Unresolved publication requires retained current informing sources")
+        for field in ("input_observation", "revalidation"):
+            if intent[field] is None:
+                continue
+            original = entries[intent[field]["original"]["source_id"]]["observation"]
+            current = entries[intent[field]["current"]["source_id"]]["observation"]
+            if ((original["session"], original["revision"], original["boundary"]["id"]) !=
+                    (request["expected_session"], request["expected_revision"], request["expected_boundary_id"])
+                    or not same_native_custody(original, current)):
+                raise ProcedureLibraryError("Unresolved publication entry contradicts its request or native custody")
         before = entries[intent["source_before"]]["observation"]
         preflight = entries[intent["preflight_source"]]["observation"]
-        if any(before[key] != preflight[key] for key in ("session", "takeover_generation")):
+        if not same_native_custody(before, preflight):
             raise ProcedureLibraryError("Unresolved publication borrowed foreign informing custody")
         validate_published_input(intent, receipt, logical_id=logical_id, native_id=native_id)
         # Native packet frame equality belongs to the actual final preflight,
