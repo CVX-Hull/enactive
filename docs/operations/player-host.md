@@ -23,11 +23,15 @@ arbitrary descendants or aliases are unsupported. Prepare these run-local files:
 - `frozen/pi-player-context.txt`: the actual frozen guide/context content supplied
   to both fresh hosts. The player has no shell or file-reading tools; paths to
   undeclared files are not supplied context.
-- `frozen/player-pi-configuration.json`: closed `pi-player-host/2` route with
-  `model`, `api_key_env`, `max_requests`, `request_timeout_seconds` and required
+- `frozen/player-pi-configuration.json`: closed `pi-player-host/3` route with
+  `model`, `api_key_env`, `max_requests`, `request_timeout_seconds`, required
+  `service_tier` (`default` or `priority`) and required
   positive integer `max_context_images`. Freeze the selected provider's verified
   image-part bound (30 for the tested DeepInfra route); this is not a universal
-  limit. Historical version1 files are not accepted or rewritten. The current
+  limit. Historical version1/2 files are not accepted or rewritten. Freeze verified
+  tier support/prices, including any surcharge in configured costs and the
+  conservative request reservation; requested priority is distinct from the
+  optional applied-tier stream echo. See the route contract below. The current
   supported provider contract is explicit Pi `openai-completions` metadata with
   text/image inputs, context/output capacities, cost and reasoning settings.
   Its ID must match `--model`; effort must be explicitly supported rather than

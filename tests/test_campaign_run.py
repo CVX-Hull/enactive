@@ -32,7 +32,7 @@ class CampaignRunTests(unittest.TestCase):
         value = admission()
         self.admission = replace(value, configuration=replace(value.configuration, model="fixture-model")).to_dict()
         inputs = {"admission.json": self.admission, "player-pi-configuration.json": {
-            "schema": "pi-player-host/2", "model": {"id": "fixture-model", "name": "Offline fixture",
+            "schema": "pi-player-host/3", "service_tier": "default", "model": {"id": "fixture-model", "name": "Offline fixture",
                 "api": "openai-completions", "provider": "fixture", "baseUrl": "https://fixture.invalid/v1",
                 "reasoning": False, "input": ["text", "image"],
                 "cost": {"input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0},
@@ -81,7 +81,8 @@ class CampaignRunTests(unittest.TestCase):
         source = Path(__file__).resolve().parents[1] / "tools/player_host"
         target = self.root / "tools/player_host"
         target.mkdir(parents=True)
-        (target / "host.mjs").write_bytes((source / "host.mjs").read_bytes())
+        for name in ("host.mjs", "validation-feedback.mjs"):
+            (target / name).write_bytes((source / name).read_bytes())
         dependencies = source / "node_modules"
         if not dependencies.is_dir():
             dependencies = Path(sys.prefix).parent / "tools/player_host/node_modules"

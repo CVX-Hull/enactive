@@ -37,12 +37,13 @@ function bounded(value) {
 /** One frozen route, without credential values, ambient discovery or effort clamping. */
 export function validateConfiguration(configuration, selectedModel, effort) {
   bounded(configuration);
-  closed(configuration, ['schema', 'model', 'api_key_env', 'max_requests', 'max_context_images', 'request_timeout_seconds']);
-  requireThat(configuration.schema === 'pi-player-host/2');
+  closed(configuration, ['schema', 'model', 'api_key_env', 'max_requests', 'max_context_images', 'request_timeout_seconds', 'service_tier']);
+  requireThat(configuration.schema === 'pi-player-host/3');
   requireThat(/^[A-Za-z_][A-Za-z0-9_]*$/.test(configuration.api_key_env ?? '') && !AMBIENT_PROVIDER_SETTINGS.includes(configuration.api_key_env));
   requireThat(Number.isSafeInteger(configuration.max_requests) && configuration.max_requests > 0);
   requireThat(Number.isSafeInteger(configuration.max_context_images) && configuration.max_context_images > 0);
   requireThat(finiteMilliseconds(configuration.request_timeout_seconds));
+  requireThat(['default', 'priority'].includes(configuration.service_tier));
   const model = configuration.model;
   closed(model, ['id', 'name', 'api', 'provider', 'baseUrl', 'input', 'reasoning', 'thinkingLevelMap', 'cost', 'contextWindow', 'maxTokens', 'compat', 'type']);
   requireThat(model.api === 'openai-completions' && model.id === selectedModel && text(model.id) && text(model.name) && text(model.provider));
@@ -290,7 +291,7 @@ export async function runHost(options) {
     const mcp = validateMcpConfiguration(options.mcpConfig);
     requireThat(typeof options.prompt === 'string' && typeof options.context === 'string', 'invalid-input');
     bounded(options.prompt); bounded(options.context);
-    emit('host-start', {schema:configuration.schema, model:configuration.model.id, provider:configuration.model.provider, api:configuration.model.api, effort:options.effort, max_requests:configuration.max_requests, max_context_images:configuration.max_context_images, unsupported_features:['compaction', 'session-restore', 'model-fallback', 'reconnect', 'replay', 'ambient-tools', 'resource-discovery'], missing_endpoints:['model-attention', 'server-inference-start', 'physical-paint'], cleanup_budget_ms:cleanupBudget});
+    emit('host-start', {schema:configuration.schema, requested_service_tier:configuration.service_tier, model:configuration.model.id, provider:configuration.model.provider, api:configuration.model.api, effort:options.effort, max_requests:configuration.max_requests, max_context_images:configuration.max_context_images, unsupported_features:['compaction', 'session-restore', 'model-fallback', 'reconnect', 'replay', 'ambient-tools', 'resource-discovery'], missing_endpoints:['model-attention', 'server-inference-start', 'physical-paint'], cleanup_budget_ms:cleanupBudget});
     if (fatal) throw new HostError(fatal);
     requireThat(!AMBIENT_PROVIDER_SETTINGS.some(name => Object.hasOwn(process.env, name)), 'ambient-provider-configuration');
     // The MCP subprocess gets only locale and executable lookup, never provider
@@ -385,7 +386,7 @@ export async function runHost(options) {
           requestUsageAvailable = false;
           requestTimer = setTimeout(() => stop('request-timeout'), Math.min(configuration.request_timeout_seconds * 1000, totalMs));
           const requestSignal = AbortSignal.any([streamOptions.signal, stopped.signal].filter(Boolean));
-          const backendModels = new Set();
+          const backendModels = new Set(), observedServiceTiers = new Set();
           const actualFetch = options.fetch ?? globalThis.fetch;
           let attempts = 0, previousRequestId;
           const observedFetch = (url, init) => retryProviderRequest(async () => {
@@ -445,7 +446,9 @@ export async function runHost(options) {
           }, {maxRetries:1, maxRetryDelayMs:MAX_RETRY_DELAY_MS, signal:requestSignal});
           // The outer request timer includes classification, SDK backoff and
           // both HTTP attempts. Disable the provider stream's nested retries.
-          return stream(model, context, {...streamOptions, apiKey, fetch:observedFetch, env:{}, signal:requestSignal, maxRetries:0, cacheRetention:'short', maxTokens:model.maxTokens, timeoutMs:configuration.request_timeout_seconds * 1000, reasoningEffort:options.effort === 'off' ? undefined : options.effort, onProviderStreamEvent:chunk => {
+          return stream(model, context, {...streamOptions, apiKey, fetch:observedFetch, env:{}, signal:requestSignal, maxRetries:0, cacheRetention:'short', maxTokens:model.maxTokens, timeoutMs:configuration.request_timeout_seconds * 1000, reasoningEffort:options.effort === 'off' ? undefined : options.effort,
+            onPayload:payload => configuration.service_tier === 'priority' ? {...payload, service_tier:'priority'} : undefined,
+            onProviderStreamEvent:chunk => {
             responseProgress.provider_events++;
             const eventAt = responseProgress.last_provider_event_ms = performance.now() - started;
             const delta = Array.isArray(chunk?.choices) ? chunk.choices[0]?.delta : undefined;
@@ -459,6 +462,13 @@ export async function runHost(options) {
             responseProgress.reasoning_bytes += reasoningBytes;
             responseProgress.tool_argument_bytes += toolBytes;
             if (contentBytes + reasoningBytes + toolBytes > 0) responseProgress.last_field_delta_ms = eventAt;
+            // Optional provider echo only; missing/unrecognized values remain unknown.
+            // This does not change delivery, retries, configured prices or authority.
+            const tier = chunk?.service_tier;
+            if (['default', 'priority', 'flex'].includes(tier) && !observedServiceTiers.has(`${requestId}:${tier}`)) {
+              observedServiceTiers.add(`${requestId}:${tier}`);
+              emit('response-service-tier', {request_id:requestId, applied_service_tier:tier});
+            }
             const usage = chunk?.usage ?? chunk?.choices?.[0]?.usage;
             // Pi initializes absent usage to zero. Only publish normalized totals
             // when the provider actually reported both input and output counts.

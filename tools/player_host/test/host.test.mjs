@@ -14,7 +14,7 @@ const python = process.env.ENACTIVE_TEST_PYTHON;
 const fixture = fileURLToPath(new URL('server.py', import.meta.url));
 const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j1ioAAAAASUVORK5CYII=';
 const model = { id: 'fixture-model', name: 'Offline fixture', api: 'openai-completions', provider: 'fixture', baseUrl: 'https://fixture.invalid/v1', reasoning: false, input: ['text', 'image'], cost: {input:0, output:0, cacheRead:0, cacheWrite:0}, contextWindow: 100000, maxTokens: 1024, compat: { supportsDeveloperRole:false, supportsStore:false, supportsUsageInStreaming:true } };
-const route = () => ({schema:'pi-player-host/2', model:structuredClone(model), api_key_env:'OFFLINE_TEST_KEY', max_requests:4, max_context_images:4, request_timeout_seconds:2});
+const route = () => ({schema:'pi-player-host/3',service_tier:'default', model:structuredClone(model), api_key_env:'OFFLINE_TEST_KEY', max_requests:4, max_context_images:4, request_timeout_seconds:2});
 function reply(content = 'finished', calls = [], withUsage = true, reasoning, callPrefix = 'call') {
   const delta = {role:'assistant', ...(content === null ? {} : {content}), ...(reasoning ? {reasoning_content:reasoning} : {}), ...(calls.length ? {tool_calls:calls.map(([name,args],index)=>({index,id:`${callPrefix}-${index}`,type:'function',function:{name,arguments:JSON.stringify(args)}}))} : {})};
   const chunks = [{id:'fixture-response',model:'fixture-backend',choices:[{index:0,delta,finish_reason:null}]},
@@ -78,11 +78,38 @@ test('route is closed, graphical, finite and model/effort exact', ()=>{
   assert.throws(()=>validateConfiguration(route(),'other','off'));
   assert.throws(()=>validateConfiguration(route(),model.id,'low'));
   assert.throws(()=>validateConfiguration({...route(),schema:'pi-player-host/1'},model.id,'off'));
+  assert.throws(()=>validateConfiguration({...route(),schema:'pi-player-host/2'},model.id,'off'));
+  for (const service_tier of [undefined,null,true,1,'flex','auto','',{},[]]) {
+    assert.throws(()=>validateConfiguration({...route(),service_tier},model.id,'off'));
+  }
+  assert.doesNotThrow(()=>validateConfiguration({...route(),service_tier:'priority'},model.id,'off'));
   for (const value of [undefined,0,-1,1.5,true,'2',NaN,Infinity,Number.MAX_SAFE_INTEGER+1]) {
     assert.throws(()=>validateConfiguration({...route(),max_context_images:value},model.id,'off'));
   }
   const missing=route();delete missing.max_context_images;
   assert.throws(()=>validateConfiguration(missing,model.id,'off'));
+});
+
+test('frozen serving tier uses the SDK payload hook and reports only observed stream echoes',async t=>{
+  const withTier=tier=>new Response([
+    {model:'fixture-backend',service_tier:tier,choices:[{index:0,delta:{role:'assistant',content:'done'},finish_reason:null}]},
+    {model:'fixture-backend',service_tier:tier,choices:[{index:0,delta:{},finish_reason:'stop'}]},
+  ].map(chunk=>'data: '+JSON.stringify(chunk)+'\n\n').join('')+'data: [DONE]\n\n',{headers:{'content-type':'text/event-stream'}});
+  const ordinary=await scenario(t,[withTier('default')]);
+  assert.equal(ordinary.result.ok,true);
+  assert.equal(Object.hasOwn(ordinary.payloads[0],'service_tier'),false);
+  assert.equal(ordinary.events.find(e=>e.type==='host-start').requested_service_tier,'default');
+  for(const echo of ['priority','default',undefined,'fixture-key private tier']) {
+    const configuration={...route(),service_tier:'priority'};
+    const actual=await scenario(t,[withTier(echo)],{configuration});
+    assert.equal(actual.result.ok,true);
+    assert.deepEqual(actual.payloads[0],{...ordinary.payloads[0],service_tier:'priority'});
+    assert.equal(actual.events.find(e=>e.type==='host-start').requested_service_tier,'priority');
+    const tiers=actual.events.filter(e=>e.type==='response-service-tier');
+    assert.deepEqual(tiers.map(e=>[e.request_id,e.applied_service_tier]),['priority','default'].includes(echo)?[['request-1',echo]]:[]);
+    assert.equal(actual.payloads.length,1,'missing or fallback echo cannot retry inference');
+    assert.ok(!JSON.stringify(actual.events).includes('fixture-key private tier'));
+  }
 });
 
 test('image projection copies canonical messages and protects the entire latest tool batch',()=>{

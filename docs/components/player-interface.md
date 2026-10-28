@@ -195,6 +195,12 @@ evidence, a source-read declaration, input authority or a latency/quality metric
 It helps the player assess its frozen reserves without changing the cap or
 qualifying actual ending behavior.
 
+The frozen serving tier is explicit in the current route: default leaves provider
+scheduling unchanged; priority uses Pi's payload hook. Requested tier and optional
+known provider stream echoes are separate diagnostics. Neither changes model,
+authority, retry eligibility or deadlines. Configure verified tier prices and
+conservative reservations; missing echoes and invoice costs remain unknown.
+
 Both original and successor start fresh, with explicit
 frozen context instead of file-reading tools. Removed Codex launch/resume/host
 selector options are rejected. The host keeps original MCP text/images complete

@@ -50,9 +50,9 @@ below, no fatal failure latch, successful owned MCP closure, and a successful
 final-file write. `runHost(options)` is the
 programmatic seam; tests inject `fetch` there. No fake-provider CLI is exposed.
 
-The closed route has exactly `schema: "pi-player-host/2"`, `model`,
-`api_key_env`, `max_requests`, `request_timeout_seconds` and the required positive
-integer `max_context_images`. Version1 and missing/invalid limits are rejected;
+The closed route has exactly `schema: "pi-player-host/3"`, `model`,
+`api_key_env`, `max_requests`, `request_timeout_seconds`, `service_tier` and the required positive
+integer `max_context_images`. Versions1/2 and missing/invalid fields are rejected;
 closed historical configurations are evidence, not runnable current inputs.
 `model` contains Pi's
 explicit `id`, `name`, `api: "openai-completions"`, `provider`, `baseUrl`,
@@ -62,6 +62,21 @@ explicit `id`, `name`, `api: "openai-completions"`, `provider`, `baseUrl`,
 query strings and fragments, arbitrary headers, other APIs and unknown fields
 are refused. Model metadata and costs are configuration, not verified provider
 capabilities or billing evidence.
+
+Freeze `service_tier` as `default` or `priority`. Default leaves the API field
+unset; priority adds only `service_tier: "priority"` through Pi's maintained
+`onPayload` hook. Verify support and pricing for the exact provider/model before
+selection. For the tested DeepInfra route, requested priority uses all configured
+rates and conservative per-attempt reservations at1.5× standard. This is a
+conservative configured estimate, separate from provider-reported estimates,
+actual applied-tier prices and invoices. DeepInfra may serve an unsupported
+priority request at the default tier. There is no tier/model fallback or retry
+triggered by the echo. `host-start.requested_service_tier` records selection;
+`response-service-tier` records a parsed stream echo only for known
+`default`/`priority`/`flex` values, once per value per HTTP attempt. Missing echo
+remains unknown. Nonstream provider probes do not establish stream-echo support;
+serving tier, cache counts and request spans do not qualify useful apparent latency.
+See [DeepInfra's current contract](https://docs.deepinfra.com/chat/overview#service-tier).
 
 Freeze the actual provider's image-part allowance explicitly; the host imposes no
 universal provider limit. Pi's maintained `transformContext` hook keeps the newest
