@@ -179,13 +179,68 @@ function retryableRefusal(body) {
   return isRetryableAssistantError({stopReason:'error', errorMessage:details});
 }
 
+// This is a host-settlement hint from the actual MCP response, not successor
+// authority. campaign_player still validates the full canonical issuance and
+// fresh runtime/custody state before assigning another actor.
+function inspectHandoff(name, args, result, pending) {
+  if (!['enactive_handoff', 'enactive_result'].includes(name)) return {};
+  const direct = name === 'enactive_handoff';
+  // A successor may deliberately read its assigned issuance before Claim. Only
+  // collection of a handoff originated by THIS host can settle this host.
+  if (!direct && (!pending || args.mission_id !== pending.mission_id
+      || args.operation_id !== pending.operation_id)) return {};
+  const blocks = result.content?.filter(part => part.type === 'text') ?? [];
+  let value;
+  try {
+    if (blocks.length !== 1) throw new Error('Not one envelope');
+    value = JSON.parse(blocks[0].text);
+  } catch {
+    // Ordinary MCP errors can be plain text. Without claimed completion they
+    // retain their existing model-visible correction/collection behavior.
+    if (direct && result.isError !== true) throw new HostError('invalid-handoff-receipt');
+    return {};
+  }
+  const operation = value?.response?.operation;
+  let origin = pending;
+  if (direct && !['not_submitted', 'not_admitted'].includes(value?.submission)) {
+    const collection = value?.original_collection;
+    const identity = collection?.tool === 'enactive_result' ? collection.arguments
+      : operation?.kind === 'handoff' || value?.transport === 'uncertain' && value.settled === false
+        ? {mission_id:value.next_snapshot?.mission?.mission_id, operation_id:value.operation_id} : undefined;
+    if (text(identity?.mission_id) && text(identity?.operation_id)) {
+      origin = {...identity, intent:structuredClone(args.intent)};
+    }
+  }
+  if (operation?.state !== 'completed'
+      || (!direct && operation.kind !== 'handoff' && operation.result?.record_type !== 'Handoff')) return {pending:origin};
+  const issued = operation.result, mission = value.next_snapshot?.mission;
+  requireThat(result.isError !== true && value.presentation_schema === 'player-view/5'
+    && value.transport === 'delivered' && value.settled === true && value.response.status === 'accepted'
+    && operation.kind === 'handoff'
+    && issued?.schema === 'mission/11' && issued.record_type === 'Handoff' && issued.grants_authority === false
+    && text(issued.handoff_id) && text(issued.mission_id) && text(issued.original_player_id)
+    && text(issued.post_pause_source_id) && value.operation_id === issued.handoff_id
+    && operation.request_id === issued.handoff_id
+    && origin?.mission_id === issued.mission_id && origin.operation_id === issued.handoff_id
+    && origin.intent?.successor_role === issued.successor_role
+    && isDeepStrictEqual(origin.intent?.unfinished_work_ids, issued.unfinished_work_ids)
+    && mission?.mission_id === issued.mission_id && mission.actor_id === issued.original_player_id
+    && mission.player_id === issued.original_player_id && mission.phase === 'handoff'
+    && mission.pause_cause === 'internal_handoff' && mission.lease_owner === null
+    && mission.active_operation === null && mission.progress_operation_id === issued.handoff_id,
+  'invalid-handoff-receipt');
+  // A later read-only Observe may be current; the issued post-Pause checkpoint
+  // remains fixed and the driver validates its actual native binding separately.
+  return {pending:origin, completed:{mission_id:issued.mission_id, handoff_id:issued.handoff_id}};
+}
+
 /** Run one finite host. fetch injection exercises the actual Pi serializer in tests. */
 export async function runHost(options) {
   const started = performance.now();
   const emit = (type, fields = {}) => options.onEvent?.({type, wall_time:new Date().toISOString(), monotonic_ms:performance.now() - started, ...fields});
   let agent, client, transport, fatal, closing = false, requests = 0, requestId, requestTimer, requestInFlight = false, requestUsageAvailable = false;
   let workTimer, deadlineTimer;
-  let responseProgress;
+  let responseProgress, handoff, pendingHandoff;
   const progressSnapshot = () => responseProgress ? {...responseProgress,
     scope:requestInFlight ? 'current-http-attempt' : 'last-http-attempt'} : null;
   const stopped = new AbortController();
@@ -259,6 +314,17 @@ export async function runHost(options) {
         catch { stop('mcp-call-failed'); throw new HostError(fatal); }
         if (fatal) throw new HostError(fatal);
         emit('tool-result', {request_id:requestId, tool_call_id:toolCallId, tool:name, result});
+        try {
+          const transition = inspectHandoff(name, args, result, pendingHandoff);
+          if (transition.pending) pendingHandoff = transition.pending;
+          if (transition.completed) handoff = transition.completed;
+          if (handoff) emit('handoff', {request_id:requestId, tool_call_id:toolCallId, ...handoff, grants_authority:false});
+        } catch {
+          // Pi turns thrown tool errors into model-visible results. Latch the
+          // host failure too so incoherent completion cannot schedule more work.
+          stop('invalid-handoff-receipt');
+          throw new HostError(fatal);
+        }
         const content = toLlmContent(result);
         if (result.isError === true) content.unshift({type:'text', text:'MCP isError: true'});
         return {content, details:undefined, isError:result.isError === true};
@@ -290,11 +356,18 @@ export async function runHost(options) {
       },
       beforeToolCall:({toolCall, args}) => {
         if (fatal) return {block:true, reason:fatal, terminate:true};
+        if (handoff) {
+          emit('tool-refused', {request_id:requestId, tool_call_id:toolCall.id, tool:toolCall.name, reason:'handoff', dispatched:false});
+          return {block:true, reason:'Host ended after completed handoff; no further tool dispatch.', terminate:true};
+        }
         if (!isDeepStrictEqual(toolCall.arguments, args)) {
           emit('tool-refused', {request_id:requestId, tool_call_id:toolCall.id, tool:toolCall.name, reason:'tool-arguments-changed', dispatched:false});
           return {block:true, reason:'MCP input not sent: SDK changed arguments; explicitly correct the call.'};
         }
       },
+      // Pi's per-result terminate hint requires every result in the batch to
+      // terminate. finishTurn also handles ordinary tools preceding a handoff.
+      finishTurn:() => handoff ? {action:'end'} : undefined,
       streamFn:(model, context, streamOptions) => {
         if (fatal) return failureStream(model, fatal);
         if (requests >= configuration.max_requests) { stop('request-limit'); return failureStream(model, fatal); }
@@ -404,7 +477,7 @@ export async function runHost(options) {
     });
     await agent.prompt(options.prompt);
     const terminal = agent.state.messages.findLast(message => message.role === 'assistant');
-    if (!fatal && terminal?.stopReason !== 'stop') stop('incomplete-terminal-response');
+    if (!fatal && terminal?.stopReason !== 'stop' && !(handoff && terminal?.stopReason === 'toolUse')) stop('incomplete-terminal-response');
   } catch (error) {
     if (!fatal) stop(error instanceof HostError ? error.reason : 'host-failed');
   } finally {
@@ -414,8 +487,8 @@ export async function runHost(options) {
     clearTimeout(deadlineTimer);
   }
   const terminal = agent?.state.messages.findLast(message => message.role === 'assistant');
-  const finalText = !fatal ? (terminal?.content ?? []).filter(part => part.type === 'text').map(part => part.text).join('\n') : '';
-  const result = {ok:!fatal, reason:fatal ?? 'completed', requests, finalText};
+  const finalText = !fatal && !handoff ? (terminal?.content ?? []).filter(part => part.type === 'text').map(part => part.text).join('\n') : '';
+  const result = {ok:!fatal, reason:fatal ?? (handoff ? 'handoff' : 'completed'), requests, finalText};
   emit('settled', {ok:result.ok, reason:result.reason, requests, native_cleanup_claimed:false});
   return result;
 }

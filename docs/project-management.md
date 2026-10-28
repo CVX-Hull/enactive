@@ -138,6 +138,51 @@ An early menu failure is development evidence,
 not a reason to redefine success or publish a new acceptance package before trying
 again. Other iterations name their equivalent meaningful checkpoint in the issue.
 
+### Gameplay as the primary feedback loop
+
+Real gameplay is the main test of player behavior and system composition. Give
+the player a coherent useful objective and enough finite capacity to encounter
+its consequences. Prefer substantive acquisition, exploration, survival and
+continuation over separate games for technical checkboxes. Let routines,
+corrections and reuse arise from actual experience; do not manufacture a bad
+parent, counterexample, task or need to satisfy a learning demonstration. Preserve
+the selected acceptance requirements when they do not occur naturally: report
+incomplete, learn from the trajectory and shape the next development continuation.
+
+Choose the next development run to resolve an important observed failure or
+assumption about useful play. Offline fixtures isolate that failure and protect
+the changed boundary; they cannot establish model judgment, organic behavior,
+context sufficiency, native consequences or end-to-end usefulness. Use fast and
+focused checks, an inspected committed checkpoint and current native/configuration
+evidence to return to play promptly. Full PR and actual-main completion are not
+automatic prerequisites for development play. Consolidate independent review,
+required broad regression and protected publication at the integration/acceptance
+checkpoint. Applicable authority, identity, uncertainty, migration, cleanup and
+resource failures still block affected input. Never use a development label to
+bypass a known failure or count assisted play as independent.
+
+API spending is an approved development/research resource, not an optimization
+target that outranks revealing gameplay. The lead records a prospective finite
+allocation within the user's actual authorization, preserves cleanup capacity
+and reassesses at meaningful boundaries. Standing approval is reused within its
+scope; this policy itself grants no provider spending or data-export permission.
+Choose models/context/harnesses by observed useful outcomes and apparent time to
+useful progress, including useful local execution while inference is pending.
+Call count, API duration, cache hits and token cost remain diagnostic measures.
+Report known configured API estimates, provider invoices, missing usage and
+conservative worst-case reservations separately; a reservation is not measured
+spending. Include setup/review/rework burden and explicitly unknown labor when
+judging the whole workflow. No labor database, cost-saving quota or per-action
+approval ceremony is required.
+
+Keep the existing Issue's next action grounded in what the trajectory revealed.
+Freeze each new admission's data and original limits; use maintained launch/control
+paths and Git source identity. Reuse unchanged setup/check evidence and avoid
+copying a new launcher or repeating an unchanged readiness proof for every case.
+Retain failures and original raw evidence; consolidate their conclusions in the
+existing evidence family when the behavior composes or a concrete blocker merits
+integration. A run is feedback, not automatically a new iteration or publication.
+
 ### Minimum checks and escalation
 
 Run `.venv/bin/python tools/check.py --fast` and the focused tests that exercise the

@@ -11,6 +11,12 @@ challenge. This page defines the information organization required by
 [S-DOCS](engineering.md#s-docs-useful-maintained-documentation); it is not a work
 tracker. The lead maintains this organization with component maintainers.
 
+Deciding players take the shorter path: the [player guide](player-guide.md), their
+frozen mission and current selected tool schema. Engineering history, proposals
+and acceptance inventories are outside routine player context. Contributors use
+the responsibility map below; the [protocol navigation](protocol.md#contract-navigation)
+leads directly to exact interfaces when needed.
+
 ![Purpose and standards constrain system/component design; exact contracts/code produce scoped evidence.](diagrams/architecture-review.svg)
 
 This current diagram answers “Where do I start reviewing a change?” Arrows show
@@ -40,6 +46,36 @@ Decompose recursively where complexity or risk warrants it. A small leaf may nee
 only a section, docstring or schema; do not create an empty page for every class.
 Cross-cutting concerns can span branches. This is a review hierarchy, not a demand
 to finish all design before feedback or to mirror directories mechanically.
+
+## Repository boundaries
+
+| Location | Responsibility and limit |
+| --- | --- |
+| `harness/` and `schemas/` | Current writer, control, evidence/memory and contracts. Existing CDDA identity/time/observation coupling is disclosed in architecture; this is not yet a portable plugin boundary. |
+| `native/` | The small CDDA integration and its upstream provenance. Shared learning/orchestration does not belong in game patches. |
+| `tools/` | Maintained engineering/check/launch/study entry points, including the generic Pi host. Reuse these rather than growing a private source framework in run directories. |
+| `web/` | Passive spectator presentation; it owns no gameplay authority. |
+| `tests/` | Behavioral/component assertions and explicit doubles, mapped by the testing guide. Actual game outcomes are a separate evidence lane. |
+| Current `docs/` pages and `components/` | Purpose, policy, responsibility explanation and operating guidance; exact interfaces remain in protocol/schema/source. |
+| `docs/acceptance/`, `changes/`, `decisions/` | Dated evidence and rationale with explicit status; they supply context, not current work or input permission. |
+| Ignored `.runtime/` | Owned run data, frozen inputs and original raw evidence. It is not a second maintained source tree or tracker; a fresh checkout does not contain it. |
+
+Keep these ownership boundaries when reorganizing. A large historical corpus or
+long file alone does not justify a rename or framework. First repair navigation,
+stale authority and duplicate summaries. Split a contract/module when a concrete
+reader or implementation boundary benefits; migrate every caller/link together
+and preserve original evidence. Git retains earlier structure. No second index,
+documentation service or source-history database is required.
+
+Content granularity remains a concern even where the directory hierarchy is
+sound. Large references that mix exact contracts, explanation, procedures and
+historical qualifications burden focused reading and review. Navigation is a
+first repair, not a substitute for decomposition. The owned
+[contract decomposition](https://github.com/CVX-Hull/enactive/issues/276) follow-up
+must preserve one current home per rule and migrate links/checkers together.
+Generated control maps are lookup references; they are not a required linear
+reading path. Reader-task review under S-DOCS/C-USABILITY checks discoverability
+and reviewability; file counts and valid links do not establish comprehension.
 
 ## One authoritative home per kind of fact
 

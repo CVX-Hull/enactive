@@ -41,6 +41,13 @@ against [evaluation criteria](evaluation.md). A source test, compiled component,
 full native build and real gameplay are separate evidence lanes. Preserve failed
 runs and unexercised branches; passing another lane cannot relabel them.
 
+Development gameplay is the primary feedback loop for player behavior and useful
+system composition. The table identifies what offline checks can establish; it
+does not make comprehensive offline qualification a prerequisite to discovering
+failures in the game. Use the
+[gameplay feedback policy](project-management.md#gameplay-as-the-primary-feedback-loop)
+for coherent missions, focused reproductions and the development/acceptance split.
+
 ## Select checks from the changed responsibility
 
 Use the [development checkpoint](project-management.md#minimum-checks-and-escalation)

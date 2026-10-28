@@ -34,6 +34,15 @@ of useful lighting, and normal Save/owned exit/Finish. The
 from a runtime recovery defect. That failed model/configuration does not cancel
 the required host migration.
 
+Development prioritizes authentic useful gameplay as the main behavioral feedback
+loop. Players pursue coherent objectives; learning and reuse must emerge from
+actual consequences. Focused offline checks support prompt returns to play, while
+consolidated acceptance retains independent review and protected validation.
+Approved API spending serves revealing play; apparent useful progress, quality
+and total engineering burden guide decisions. The
+[workflow](project-management.md#gameplay-as-the-primary-feedback-loop) owns the
+decision rules and the distinction between estimates, invoices and reservations.
+
 Bounded independent play has demonstrated supplies/travel, procedure revision/reuse
 and limited supported advice adoption. Complete independent seven-day survival,
 normal lifecycle and useful apparent cadence remain unaccepted. The
@@ -44,8 +53,11 @@ stores a same-family correction and completes registered fresh retrieval/normal
 ending, but establishes no executable application; that capability remains incomplete.
 [Current imported-lineage follow-through](acceptance/2026-10-27-imported-correction-follow-through.md)
 retains setup-deadline, target-manufacture, player-qualification and provider-timeout
-failures. A fresh current-lineage case adopted identity but reached no routine or
-successor application. Useful corrected-program application remains unaccepted.
+failures. A later fresh current-lineage case authored and ran a parent, stored a
+substantive correction and issued a handoff, then continued original-host calls
+that invalidated succession. The host now settles after a coherent completed
+handoff receipt; this source repair does not qualify a new native outcome. Useful
+corrected-program application remains unaccepted.
 
 The [registered lifecycle](components/mission-execution.md#lifecycle-and-change-review)
 can keep an initial post-Load menu provisional. Explicit bounded dismissal must

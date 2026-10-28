@@ -391,10 +391,13 @@ ordinary engine input and current visible evidence; it cannot relax remote guard
 Routine admitted gameplay, observation, memory, lifecycle, handoff and supporting
 request/result plumbing must incur neither human approval nor automatic approval/
 guardrail-review round trips. Configure the supported project-scoped execution
-path during setup. Before ordinary gameplay or player replacement,
-verify effective project trust/rule loading and a harmless live call from the
-actual designated player, using its exact configured tool entry point. A rule match alone
-does not pass this gate. Resolve recurring reviews in setup; do not normalize
+path during setup. Verify the selected host's effective configuration and a
+harmless live call through the actual designated player's configured tool entry
+point. Reuse unchanged verified setup as the operator procedure permits; recheck
+changed host/tool/permission boundaries. Codex project trust/rule loading applies
+only when the engineering launcher uses that mechanism; the Pi player loads no
+coding-agent configuration. A rule match alone does not establish usable access.
+Resolve recurring reviews in setup; do not normalize
 them as the gameplay loop. Preserve native freshness, single-executor and Pause
 checks. [Operator permissions](operator-permissions.md#preflight-for-every-campaign)
 owns the procedure and its limits.
@@ -496,6 +499,10 @@ progressively detailed links. Split by reader, authority, cohesion or change
 frequency; no universal line/page count or documentation-volume target applies.
 Use a diagram only when it clarifies a boundary or interaction. Generate mechanical
 reference from an existing authoritative structure when it reduces duplication.
+On a material documentation change, C-USABILITY walks the intended reader task:
+find the current rule and owner, understand its consequence, and trace the needed
+detail without reconstructing history. Mixed-purpose or oversized references that
+prevent this focused review need decomposition; a table of links alone is insufficient.
 Documentation generators and checks follow S-CODE's reuse decision and review
 requirement; stewardship/schema rules do not justify rebuilding their parsers.
 
@@ -577,6 +584,14 @@ Use small integrated changes and inexpensive feedback within the larger outcome;
 neither a task nor a runtime attempt automatically defines an iteration. Required
 quality/evidence cannot become optional scope; a successful investigation is not
 delivery of a capability it found unsuccessful. C-REVIEW checks selection and fit.
+For gameplay, authentic useful development play is the primary behavioral feedback
+loop. Use focused offline checks to isolate observed failures and protect changed
+boundaries; follow the [gameplay feedback policy](project-management.md#gameplay-as-the-primary-feedback-loop)
+instead of adding publication/readiness gates before each ordinary attempt.
+At the existing boundary/outcome review, revisit applicable earlier violations
+and trace the constraint to its maintained mechanism, regression or explicit
+owned evidence gap. Retired gates need a new justified decision before returning;
+do not quietly inherit them from old run scripts or chat summaries.
 Before assigning implementation, record the outcome and highest changed boundary,
 then affected components, interfaces/state/callers, code/tests and operating docs.
 Review from that boundary down, using the [risk-based assurance policy](project-management.md#risk-based-assurance).

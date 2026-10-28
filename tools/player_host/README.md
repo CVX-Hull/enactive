@@ -45,8 +45,9 @@ node tools/player_host/run.mjs \
 Each frozen file and stdin is limited to 1 MiB. Files must be regular files.
 The driver exclusively reserves the final path; the runner writes that existing
 path only after successful terminal completion. JSONL events go to stdout.
-Exit zero requires terminal assistant `stop`, no fatal failure latch, successful
-owned MCP closure, and a successful final-file write. `runHost(options)` is the
+Exit zero requires terminal assistant `stop` or the completed-handoff settlement
+below, no fatal failure latch, successful owned MCP closure, and a successful
+final-file write. `runHost(options)` is the
 programmatic seam; tests inject `fetch` there. No fake-provider CLI is exposed.
 
 The closed route has exactly `schema: "pi-player-host/2"`, `model`,
@@ -145,6 +146,32 @@ latches the first fatal reason, aborts the agent, closes the child and suppresse
 remaining calls and inference. The bounded provider-only429 recovery above never
 retries a tool/gameplay submission or grants reconnect, replay, fallback,
 automatic compaction or session restoration.
+
+A coherent completed handoff response from `enactive_handoff` or collection of
+that host's own pending/uncertain handoff ends this host. Only the actual MCP receipt is inspected:
+current `player-view/5` and `mission/11`, settled delivered accepted completion,
+matching issuance/operation, original actor/mission and an issued post-Pause source.
+Successor-role/Work selections must match this host's original handoff intent.
+Collection is armed only by its actual handoff response or original-collection
+identity after an uncertain handoff call, and must name that same mission/operation.
+MCP preserves the assigned collection identity on unfinished/uncertain responses even
+when their immediate snapshot is unavailable; the host does not guess the mission.
+A fresh successor's read of its assigned issuance does not settle its host. A
+newer read-only Observe can be current while the issued checkpoint stays fixed;
+the driver checks the actual checkpoint/native binding separately.
+Claimed but incoherent completion is fatal; draft refusals, unfinished results
+and ordinary collection errors leave explicit correction/collection available. Model prose and other tools are
+not settlement evidence.
+
+The host latches the receipt, refuses every later call in that sequential batch
+before dispatch, and uses Pi's maintained `finishTurn` hook to end before another
+provider request, including batches with ordinary tools before handoff. Original
+MCP results remain intact in the trace. Settlement has reason `handoff`, can end
+with assistant `toolUse`, and writes empty final text (a newline in the reserved
+CLI file). Fatal cancellation, deadlines, transport and cleanup failures still
+win. This ends the original host; it grants no successor authority or native
+cleanup. The driver still validates the complete canonical issuance and fresh
+runtime/custody/actor/source/Pause/budget state before assigning a fresh successor.
 
 The host reserves at most one second (one quarter of short runs) from its total
 budget for cleanup. Stdio closure uses at most 500 ms each for stdin grace and

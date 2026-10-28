@@ -68,6 +68,11 @@ def make_server(player: PlayerTools, *, advisory_idle_seconds: float = 0) -> Ser
             # never creates a new request ID or replays an admitted operation.
             value, png = await call_player(player, params.name, arguments, advisory_idle_seconds=advisory_idle_seconds)
             refusal = admission_refusal_feedback(value)
+            if collection is not None and (value.get("transport") == "uncertain" or value.get("settled") is False):
+                # The assigned identity survives pending work/lost reply even when the
+                # immediate snapshot is unavailable. This is collection-only,
+                # never proof of admission, delivery or permission to replay.
+                value = dict(value, original_collection=collection)
             # A cancelled worker may still finish later. It cannot establish
             # presentation; only this synchronous response-building path can.
             value, png = player.present_image(params.name, value, png)

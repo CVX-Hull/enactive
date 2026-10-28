@@ -3,7 +3,7 @@ owner: lead
 review_trigger: Imported correction follow-through evidence; supersede with new evidence
 status: historical
 date: 2026-10-27
-scope: Closed015/016 and fresh014, rejected017–021 qualifications, and bounded host diagnostics; no useful corrected-program acceptance
+scope: Closed015/016 and native014/017/018, rejected017–021 qualifications, and host diagnostics/settlement; no useful corrected-program acceptance
 ---
 
 # Correction follow-through and player qualification
@@ -351,3 +351,112 @@ last-attempt scope. A review found an initial unguarded choice-collection iterat
 could change behavior on an SDK-skipped shape; array guards and a focused negative
 fixture corrected it before publication. Appropriate protected source/actual-main
 checks remain a separate evidence lane.
+
+
+## Native017 refusal and native018 handoff failure
+
+These are native cases, distinct from the earlier Qwen qualification configurations
+with overlapping numbers. Both use accepted source
+`0a7a4e04fb2bac0f158ad5fce346407ef83f3f25`, native7/store6/program-view2,
+Pi1.4.0 and pinned DeepSeek Flash1017 `zRTkTPfs`/medium, an empty historical
+ProcedureLibrary and the existing Ellis Load. Exact full PR40603109343 and
+actual-main40604251720 each passed2227tests/4276subtests before these admissions.
+No historical policy, synthetic fixture, save contents or engineering corpus was
+supplied to the players. Original raw artifacts remain local under campaign and
+mission `program-breadth-017` and `program-breadth-018`. UTC event timestamps below
+identify raw records; these runs occurred on October27 in the operator's Eastern
+local date.
+
+Native017's first request returnedHTTP429 with118body bytes and no parsed model
+events or usage receipt. The host did not classify it as eligible for retry. No
+native game, tool/input, frame or memory record followed. Controller/player/MCP
+closed; persisted mission state is paused/internal recovery with zero spent inputs.
+A separate post-closure census found all four owned PIDs and8766 absent.119unused
+attempts were retired. The refusal's exact cause remains unknown.
+
+Two separately allocated generic text-only provider diagnostics then returned429
+and200. The latter body was closed at headers; it proves request acceptance only,
+not generation, gameplay capability or reliable continuation. The first recorded
+capacity and invalid-looking error categories without retaining raw message text;
+this does not establish a classifier defect. Both usages remain unknown. An
+exact-payload diagnostic had been rejected before any request; the generic requests
+contained no repository/game context, images or tools. There was no hidden retry
+or restoration of the closed actor.
+
+Native018 adopted identity at00:25:28UTC. One ordinary UP input moved Ellis from
+`[0,0,0]` to`[0,-1,0]`. The player authored current parent revision
+`revision-1c538c805eab497f1ee1ff08357c99a179a45b43183c443114eb780c4e2768ea`
+and selected it on a lawful program root. Four evaluations and three ordinary LEFT
+inputs moved Ellis to`[-3,-1,0]`. This is real executable displacement; the returned
+program explicitly leaves task-success verification to the player. No independently
+useful storage acquisition/benefit or the Work's claimed three available clear-floor
+tiles is established.
+
+![Original retained source before the parent program.](assets/correction-018/before.png)
+
+![Original retained source after three LEFT inputs, showing new bench-slow messages.](assets/correction-018/after.png)
+
+These are byte-identical originals from source IDs
+`7c81ccd2e5276cb37eccba3a4e2d24b1302663c2d200d6636f4295d9515f775b`
+and`9fe74c28e4684c07369be75c6ccad16edf093a7128e27bc2ad04beb0bf92d853`;
+PNG SHA256 values are`3e93641658df6173b3b6fe8d68e02061a577167e6ee7965bb9885e8f441523bd`
+and`be9a32f57d6d1cda3f774bb1f84ab65e2fb7b8998159a075c18a0da76601d23b`.
+Earlier log lines visible in the before frame are history, not new018actions.
+New moving-onto/off-bench messages support a genuine furniture-related correction.
+Same-family revision
+`revision-5e38e31502f85b9723cca22f7b37dbd94860efae0da51b64e3a4b2983dcc9773`
+adds neighbor/furniture and creature checks; no deliberate bad-parent intent is
+established. It was never executed. Mara Pinto appears only after the final parent
+input, so the player's claim that it kept stepping while the newly visible survivor
+was present is unsupported.
+
+Handoff`op-c74ac37e9a7c4a12b3bbbb5d57a5d7a1` succeeded at00:32:04UTC,
+with unfinished Work and post-Pause source
+`29a658da17c55949d4a6fc4a404b6a6535fdce43bd2394d2be88fa056cd322b1`.
+The original host continued requests25–29, including two Save roots after its lease
+ended. The first changed handoff to paused; the driver correctly refused succession.
+The lead's initial compact-call interpretation incorrectly described a refusal;
+the full settled result proves issuance. The host must end on the actual issuance,
+rather than rely on another generated final report. No old issuance is restored.
+
+There was no successor, corrected-program application or normal Save/owned exit0/
+Finish. Guardian Stop/nativeSIGTERM were exceptional cleanup. Original defunct/
+unresolved cleanup flags remain separate from later five-PID/8766 absence. One
+Load input retains unknown ACK with separate transition/effect proof.29Claims
+comprise two player interpretations and27native facts; there are two Procedures
+and one Work. All358donor/export hashes and248opaque save identities remained
+unchanged. Retained evidence has38PNGs/4,134,592bytes and a495,616-byte ledger.
+Independent outcome review checked raw operations, frames, accounting and limits.
+
+| Lane | Actual attempts | Known configured estimate | Consumed conservative reservation |
+| --- | ---: | ---: | ---: |
+| Native017 | 1 | Unknown | $0.2195456 |
+| Generic diagnostics | 2 | Unknown | $0.4390912 |
+| Native018 | 29 | $0.073564248 | $6.3668224 |
+| Cumulative through018 | 767 | $2.022953396known | $165.6209408 |
+
+All29native018usages are known:221,598uncached input,1,755,008cache-read and
+31,191output tokens, including19,354reasoning tokens within output. The player's
+final28-attempt claim is incorrect.91unused018attempts are retired. Earlier missing
+usage and invoices remain unknown; conservative reservations are not actual expense.
+Local program execution does not establish useful apparent cadence, a causal
+learning/context/cache benefit or the full #164 cohort. #264 remains incomplete.
+
+## Host settlement repair and workflow direction
+
+The bounded repair uses pinned Pi's maintained turn-completion hook after an actual
+coherent completed handoff receipt. Later same-batch calls are refused before
+dispatch; no extra provider turn or generated final report is needed. Explicit
+collection can settle only a handoff originated in this host, preserving successor
+issuance reads and ordinary collection errors. The canonical driver still checks
+current custody, actor, Pause, source and budget before successor assignment.
+Cancellation/transport/cleanup failures override success. Offline checks and
+protected publication qualify source behavior only; no new native result is implied.
+
+The [development workflow](../project-management.md#gameplay-as-the-primary-feedback-loop)
+prioritizes authentic useful missions over technical checkbox runs or API savings.
+The prior full-PR-and-main gate before each development attempt was an extra
+operating restriction, not required by that workflow. It is retired prospectively;
+all historical checks/failures remain. Formal acceptance and merge retain their
+applicable reviews, regression and protected checks. No new gameplay run is
+allocated by this report or by the separate repository/workflow audit.

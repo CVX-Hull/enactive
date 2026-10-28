@@ -111,6 +111,12 @@ not establish this fact. Machine binding/digest fields stay out of default MCP
 context; raw SDK evidence retains them. See the
 [exact contract](../protocol.md#certified-request-admission-refusal).
 
+An unfinished/uncertain mutation response retains its assigned `original_collection` in the
+MCP presentation even when the immediate snapshot is unavailable. It comes from
+the original composed call, not a guessed mission or refreshed source. This is
+collection-only guidance; it proves neither admission/delivery nor permission to
+replay. Proven unsubmitted/nonadmitted responses do not gain that uncertainty path.
+
 An advisory Claim's validated `busy, admitted=false` receipt proves zero admission;
 its local fence can be released for another bounded attempt. Missing receipts,
 uncertainty and admitted commands remain collection-only. This exception does not
@@ -145,6 +151,18 @@ host deadline. Explicit non-transient errors, cancellation and partial-stream
 failures remain terminal. This provider-only recovery neither repeats a tool/input
 nor revives a closed host or mission. The [host contract](../../tools/player_host/README.md)
 owns exact eligibility, bounds and unknown-usage receipts.
+
+A coherent completed handoff MCP receipt settles the original host before another
+model request. Collected completion must match a pending/uncertain handoff
+originated by this host; successor issuance reads remain ordinary reads. Later
+calls in the same sequential batch are refused before
+dispatch; the maintained Pi turn-completion hook also handles ordinary tools
+preceding handoff. The receipt remains unchanged, final text is empty and all
+fatal/cleanup guards still win. This is host settlement only: the driver retains
+full canonical issuance and fresh actor/source/custody/Pause/budget validation
+before any successor. Draft refusals and unfinished collection do not settle the
+host. The [route contract](../../tools/player_host/README.md) owns exact receipt
+coherence and settlement behavior.
 
 The host appends one software-generated resource-status message after the
 request-only projected history: actual HTTP attempts charged before this request,
