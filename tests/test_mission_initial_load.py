@@ -8,6 +8,7 @@ from unittest.mock import patch
 from harness.gameplay.lifecycle import adopted_timeline
 from harness.mission_runtime import MissionRuntime
 from tests.test_mission_creation import MissionCreationFixture
+from tests.test_gameplay_evidence import black_png, png
 
 
 class InitialLoadTests(MissionCreationFixture, unittest.TestCase):
@@ -479,6 +480,34 @@ class InitialLoadTests(MissionCreationFixture, unittest.TestCase):
         self.assertEqual(self.runtime.status()["lifecycle_phase"]["stage"], "awaiting_transition")
         self.observe("loaded-observe")
         return world
+
+    def test_paused_load_render_drift_preserves_explicit_identity_path(self):
+        self.bridge.visible_bytes = lambda _: black_png() if self.bridge.editor_text else png()
+        world = self.pending_initial_load()
+        self.assertEqual(self.run_request(self.lifecycle("reconciled", "load", parent="initial-load"))["state"], "completed")
+        phase = self.runtime._registered_lifecycle.phase
+        unknown = deepcopy(self.runtime._ledger.request("character"))
+        before = self.runtime.status()["spent_inputs"]
+        self.bridge.editor_text = "rendering changed after Load reconciliation"
+        self.controller.observe_mission(deadline_monotonic=None)
+        refused = self.run_request(self.control("premature-inspect", "Character", kind="inspect", parent="initial-load"))
+        self.assertEqual(refused["state"], "blocked", refused)
+        self.assertIn("explicit readmission first", refused["result"]["reason"])
+        self.assertIs(self.runtime._registered_lifecycle.phase, phase)
+        self.assertEqual(self.runtime.status()["spent_inputs"], before)
+        self.assertIsNone(self.runtime._lease)
+        self.assertEqual(self.run_request(self.lifecycle("readmitted", "load", parent="initial-load"))["state"], "completed")
+        self.assertEqual(self.runtime.status()["spent_inputs"], before + 1)
+        self.assertEqual(self.run_request(self.control("inspected", "Character", kind="inspect", parent="initial-load"))["state"], "completed")
+        screen = self.runtime._current
+        world_id = self.remember_identity("world", "world", world, 0)
+        character_id = self.remember_identity("character", "character", screen, 0)
+        self.assertEqual(self.run_request(self.control("returned", "Cancel", parent="initial-load"))["state"], "partial")
+        adopted = self.run_request(self.lifecycle("adopted", "load", parent="initial-load", claims=[world_id, character_id]))
+        self.assertEqual(adopted["state"], "completed", adopted)
+        self.assertEqual(self.runtime._ledger.request("character"), unknown)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
 
     def delivery_reconciliation(self):
         return dict(schema="mission/11", kind="reconcile", request_id="wrong-recovery",

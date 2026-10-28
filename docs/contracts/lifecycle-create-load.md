@@ -111,8 +111,11 @@ a lease. The committed transition and exact terminal effect are revalidated thro
 the ledger's existing proof checks, tied to the immutable first normal source and
 reconciled epoch. The owned child/operator/actor/native lineage must remain exact;
 prepared/published or unreconciled inputs and live leases/pending slots reject.
-Exact PNG/native equivalence, original refresh deadlines, game and capacity checks
-still apply. Repeated diagnostic refreshes change only the checkpoint and retained
+Diagnostic captures retain actual returned evidence under ordinary custody checks;
+they do not establish unchanged pixels or complete native facts. Subsequent
+registered readmission/Resume uses `native_state` at normal play and exact PNGs at
+setup/menu checkpoints. Original refresh deadlines, game and capacity checks still
+apply. Repeated diagnostic refreshes change only the checkpoint and retained
 evidence costs. They cannot Resume, adopt identity or reconstruct a reopened phase;
 the next explicit same-root lifecycle child still charges its own Resume.
 Use `enactive_lifecycle` with lifecycle scope, the same create/load operation and
@@ -123,12 +126,17 @@ transition/effect proof before activation and dispatch.
 A premature exact identity-inspection request can return a correctable zero-input
 refusal while retaining that private paused phase. This requires the same proof,
 owned process/operator/actor/epoch, quiescent delivery, exact current source and
-native PNG, support integrity, original deadlines/game/root/input/mapping limits
-and retention/cleanup headroom. No refresh, activation, lease or Resume occurs.
+complete native state, authenticated retained launch/transition/terminal preflight
+and selected source bytes, original deadlines/game/root/input/mapping limits and
+retention/cleanup headroom. Incidental live PNG differences in this normal context
+alone do not retire the phase to explain that prerequisite. No refresh, activation,
+lease or Resume occurs.
 An aged intact checkpoint may explain the missing prerequisite without becoming
 fresh; a NEW explicit lifecycle request still performs its full refresh and input
-preflight. Wrong metadata/support, changed pixels, user Pause/takeover, unsettled
-input, uncommitted proof, lost child or exhausted limits keep stopping behavior.
+preflight. Wrong metadata/support, corrupt retained evidence, changed required native
+state, user Pause/takeover, unsettled input, uncommitted proof, lost child or exhausted
+limits keep stopping behavior. Identity screens and adoption retain their separate
+exact-PNG checks.
 An immutable blocked result is never reinterpreted as permission or success.
 
 [Contract index](../protocol.md).
