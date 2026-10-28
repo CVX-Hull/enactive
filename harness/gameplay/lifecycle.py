@@ -26,8 +26,49 @@ def _require(condition: bool, reason: str) -> None:
         raise EvidenceError(reason)
 
 
-def owned_launch_sources(ledger: MissionLedger, store: EvidenceStore, proof: dict) -> tuple[EvidenceRef, ...]:
-    """Authenticate every original launch endpoint before interpreting a source."""
+def lifecycle_input_sources(store: EvidenceStore, intent: dict, after_id: str) -> tuple[EvidenceRef, EvidenceRef]:
+    """Authenticate the distinct dispatch preflight as well as its endpoints."""
+    references = store.historical_references
+    sources = {ref.observation_id: ref for ref in references}
+    positions = {ref.observation_id: index for index, ref in enumerate(references)}
+    identities = (intent["source_before"], intent["preflight_source"], after_id)
+    _require(all(identity in sources for identity in identities), "Lifecycle input source is absent from the evidence archive")
+    before, preflight, after = (sources[identity] for identity in identities)
+    store.observation(before)
+    preflight_obs = store.observation(preflight)
+    store.observation(after)
+    _require(positions[before.observation_id] <= positions[preflight.observation_id] < positions[after.observation_id]
+             and preflight.session == before.session
+             and (intent["expected_session"], intent["expected_revision"], intent["expected_boundary_id"]) ==
+                 (preflight.session, preflight.revision, preflight_obs["boundary"]["id"]),
+             "Lifecycle preflight is outside its source interval or differs from dispatch")
+    return before, preflight
+
+
+def identity_inspection_sources(ledger: MissionLedger, store: EvidenceStore, *, inspection_id: str,
+                                first: EvidenceRef, screen: EvidenceRef) -> None:
+    """Share the retained inspection-input proof with live refusal and history."""
+    matches = [p for p in ledger.primitive_records() if p["request_id"] == inspection_id
+        and p["intent"]["kind"] == "action" and p["intent"]["value"] == "player_data"
+        and p["state"] == "returned" and (p["result"] or {}).get("source_after") == screen.observation_id
+        and p["intent"]["expected_session"] == first.session and (p["result"] or {}).get("published") is True]
+    _require(len(matches) == 1, "Identity screen has no unique returned player_data primitive")
+    primitive = matches[0]
+    intent, receipt = primitive["intent"], primitive["result"]
+    before, preflight = lifecycle_input_sources(store, intent, screen.observation_id)
+    positions = {ref.observation_id: index for index, ref in enumerate(store.historical_references)}
+    _require(before.session == first.session and preflight.session == first.session
+             and positions[first.observation_id] <= positions[before.observation_id],
+             "Identity inspection primitive borrowed an earlier or foreign session source")
+    for key, value in {"logical_action_id": primitive["logical_id"],
+                       "native_request_id": primitive["native_id"], "transport_disposition": "returned",
+                       **{k: intent[k] for k in ("kind", "value", "expected_session", "expected_revision",
+                           "expected_boundary_id", "source_before", "preflight_source")}}.items():
+        _require(receipt.get(key) == value, "Identity inspection receipt contradicts its primitive")
+
+
+def owned_transition_sources(ledger: MissionLedger, store: EvidenceStore, proof: dict) -> tuple[EvidenceRef, ...]:
+    """Authenticate the owned launch and terminal dispatch before interpreting a source."""
     row = ledger._earlier_request(proof["origin_request_id"], proof["launch_request_id"])
     launch, launched = row["request"], row["result"] or {}
     _require(launch["kind"] == "lifecycle" and launch.get("operation") == "launch"
@@ -57,6 +98,7 @@ def owned_launch_sources(ledger: MissionLedger, store: EvidenceStore, proof: dic
              and before_obs["takeover_generation"] == proof["before_takeover_generation"]
              and after_obs["takeover_generation"] == proof["after_takeover_generation"],
              "Transition sources contradict canonical order or takeover baseline")
+    lifecycle_input_sources(store, ledger.primitive(proof["terminal_logical_id"])["intent"], after.observation_id)
     return tuple(refs)
 
 
@@ -73,7 +115,7 @@ def world_identity_source_refusal(ledger: MissionLedger, store: EvidenceStore, *
     proof = validate_lifecycle_transition(proof)
     ledger._check_prompt_result(transition_id, row["request"], row["result"],
         actor_id=proof["actor_id"], request_state=row["state"])
-    launch_refs = owned_launch_sources(ledger, store, proof)
+    launch_refs = owned_transition_sources(ledger, store, proof)
     references = store.historical_references
     positions = {ref.observation_id: index for index, ref in enumerate(references)}
     sources = {ref.observation_id: ref for ref in references}
@@ -335,7 +377,7 @@ def _project(ledger: MissionLedger, store: EvidenceStore, *, rows: tuple[dict, .
                  and request(terminal_id)["epoch"] == proof["origin_epoch"]
                  and request(identity)["epoch"] == proof["reconciled_epoch"],
                  "Lifecycle transition lost its immutable phase, scenario, epoch or request order")
-        launch_refs = owned_launch_sources(ledger, store, proof)
+        launch_refs = owned_transition_sources(ledger, store, proof)
         launch_sources = [ref.observation_id for ref in launch_refs]
         before, before_obs = source(proof["before_source_id"])
         after, after_obs = source(proof["after_source_id"])
@@ -359,12 +401,6 @@ def _project(ledger: MissionLedger, store: EvidenceStore, *, rows: tuple[dict, .
                            "transport_disposition": primitive["state"], **{k: intent[k] for k in
                            ("kind", "value", "expected_session", "expected_revision", "expected_boundary_id", "source_before", "preflight_source")}}.items():
             _require(receipt.get(key) == value, "Transition primitive receipt contradicts its immutable intent")
-        preflight, preflight_obs = source(intent["preflight_source"])
-        _require(positions[before.observation_id] <= positions[preflight.observation_id] < positions[after.observation_id]
-                 and preflight.session == before.session
-                 and (intent["expected_session"], intent["expected_revision"], intent["expected_boundary_id"]) ==
-                     (preflight.session, preflight.revision, preflight_obs["boundary"]["id"]),
-                 "Transition preflight is outside its source interval or differs from dispatch")
         if proof["operation"] == "create":
             from .creation_provenance import creation_input_chain, validate_creation_sources
             chain = creation_input_chain(tuple(requests.values()), tuple(primitives.values()),
@@ -503,24 +539,7 @@ def _project(ledger: MissionLedger, store: EvidenceStore, *, rows: tuple[dict, .
                  and obs["takeover_generation"] == proof["after_takeover_generation"]
                  and positions[first.observation_id] < positions[screen_id] < positions[checkpoint.observation_id],
                  "Character inspection is outside its adoption checkpoints")
-        matches = [p for p in primitives.values() if p["request_id"] == inspect_id
-                   and p["intent"]["kind"] == "action" and p["intent"]["value"] == "player_data"
-                   and p["state"] == "returned" and (p["result"] or {}).get("source_after") == screen_id
-                   and p["intent"]["expected_session"] == first.session and (p["result"] or {}).get("published") is True]
-        _require(len(matches) == 1, "Identity screen has no unique returned player_data primitive")
-        inspected_primitive = matches[0]
-        inspected_intent, inspected_receipt = inspected_primitive["intent"], inspected_primitive["result"]
-        inspect_before, _ = source(inspected_intent["source_before"])
-        inspect_preflight, _ = source(inspected_intent["preflight_source"])
-        _require(inspect_before.session == first.session and inspect_preflight.session == first.session
-                 and positions[first.observation_id] <= positions[inspect_before.observation_id]
-                 <= positions[inspect_preflight.observation_id] < positions[screen_id],
-                 "Identity inspection primitive borrowed an earlier or foreign session source")
-        for key, value in {"logical_action_id": inspected_primitive["logical_id"],
-                           "native_request_id": inspected_primitive["native_id"], "transport_disposition": "returned",
-                           **{k: inspected_intent[k] for k in ("kind", "value", "expected_session", "expected_revision",
-                               "expected_boundary_id", "source_before", "preflight_source")}}.items():
-            _require(inspected_receipt.get(key) == value, "Identity inspection receipt contradicts its primitive")
+        identity_inspection_sources(ledger, store, inspection_id=inspect_id, first=first, screen=screen)
         if index == 0:
             _require(adoption["saved_checkpoint_request_id"] is None, "Initial entry cannot borrow a saved checkpoint")
         else:

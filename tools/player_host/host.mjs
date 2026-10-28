@@ -227,7 +227,10 @@ function inspectHandoff(name, args, result, pending) {
     && mission?.mission_id === issued.mission_id && mission.actor_id === issued.original_player_id
     && mission.player_id === issued.original_player_id && mission.phase === 'handoff'
     && mission.pause_cause === 'internal_handoff' && mission.lease_owner === null
-    && mission.active_operation === null && mission.progress_operation_id === issued.handoff_id,
+    // The completed result can be presented before its own writer clears the
+    // active slot. A different operation (or an absent field) is incoherent.
+    && (mission.active_operation === null || mission.active_operation === issued.handoff_id)
+    && mission.progress_operation_id === issued.handoff_id,
   'invalid-handoff-receipt');
   // A later read-only Observe may be current; the issued post-Pause checkpoint
   // remains fixed and the driver validates its actual native binding separately.

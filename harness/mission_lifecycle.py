@@ -1095,9 +1095,13 @@ class RegisteredLifecycle:
             inspection_source_id=None if phase.identity_screen is None else phase.identity_screen.observation_id,
             saved_id=phase.saved_checkpoint, require_inspection=phase.stage == "awaiting_adoption")
         if phase.transition_request is not None:
-            from .gameplay.lifecycle import owned_launch_sources
+            from .gameplay.lifecycle import owned_transition_sources
             transition = r._ledger.request(phase.transition_request)["result"]["lifecycle_transition"]
-            owned_launch_sources(r._ledger, r._store, transition)
+            owned_transition_sources(r._ledger, r._store, transition)
+        if phase.identity_inspect is not None:
+            from .gameplay.lifecycle import identity_inspection_sources
+            identity_inspection_sources(r._ledger, r._store, inspection_id=phase.identity_inspect,
+                first=phase.first_normal, screen=phase.identity_screen)
         if provisional:
             from .gameplay.lifecycle import initial_load_menu_sources
             initial_load_menu_sources(r._ledger, r._store, transition_id=phase.transition_request,

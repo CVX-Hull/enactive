@@ -33,6 +33,14 @@ retiring a save does not renew a failed mission or establish a normal ending.
 Preserve manifests before removing owned build directories/downloads. Identify
 the exact path from the build manifest and verify its checkout ownership marker;
 never use broad /tmp or global-cache cleanup.
+
+Use the app's artifact inventory and archive operation for managed worktrees.
+A Git bundle preserves source; it does not establish checkout ownership or preserve
+ignored dependencies and runtime evidence. If the app is unavailable, or reports
+a checkout as primary or owned by another task, retain it rather than forcing a
+Git/filesystem removal. Resume cleanup when ownership can be verified. Keep the
+canonical runtime owner and needed local evidence available throughout cleanup.
+
 For a lost temporary build, re-extract using setup. For an unreadable archive,
 remove only the named corrupt cache entry after preserving diagnostics.
 

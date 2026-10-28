@@ -70,8 +70,9 @@ failures retire the phase and lease; they are not caller-correction feedback.
 World-source applicability uses the same owned-root menu/launch-to-first-normal
 interval and takeover predicate in live selection and historical projection. A
 healthy but unsuitable selected source can be replaced explicitly without losing
-the phase. All launch endpoints, transition/first-normal sources and selected bytes
-are authenticated before that classification; missing/mutated history remains
+the phase. All launch endpoints, transition/first-normal and selected sources,
+plus each transition/identity-inspection input's distinct preflight bytes and dispatch
+binding are authenticated before that classification; missing/mutated history remains
 fatal, including when another semantic mistake is found first. Exact-scope Claim
 correction is unchanged: grounding in another scope needs a fresh authored Claim.
 Reopen verifies history but reconstructs no process handle, phase, lineage, lease

@@ -192,6 +192,35 @@ class InitialLoadTests(MissionCreationFixture, unittest.TestCase):
             path.write_bytes(b"corrupt original launch endpoint")
         self.assert_wrong_identity_fault(mistaken_id, character_id, corrupt)
 
+    def corrupt_primitive_preflight(self, request_id):
+        primitive = next(p for p in self.runtime._ledger.primitive_records()
+            if p["request_id"] == request_id)
+        identity = primitive["intent"]["preflight_source"]
+        self.assertNotEqual(identity, primitive["intent"]["source_before"])
+        self.assertNotEqual(identity, (primitive["result"] or {}).get("source_after"))
+        reference = next(ref for ref in self.runtime._store.historical_references
+            if ref.observation_id == identity)
+        def corrupt():
+            path = Path(reference.frame_path)
+            path.chmod(0o600)
+            path.write_bytes(b"corrupt distinct primitive preflight")
+        return corrupt
+
+    def test_misgrounded_world_cannot_hide_corrupt_transition_preflight(self):
+        mistaken_id, _, character_id, _ = self.prepare_misgrounded_world()
+        self.assert_wrong_identity_fault(mistaken_id, character_id,
+            self.corrupt_primitive_preflight("character"))
+
+    def test_wrong_identity_value_cannot_hide_corrupt_transition_preflight(self):
+        world_id, character_id, _, _ = self.prepare_wrong_identity()
+        self.assert_wrong_identity_fault(world_id, character_id,
+            self.corrupt_primitive_preflight("character"))
+
+    def test_misgrounded_world_cannot_hide_corrupt_inspection_preflight(self):
+        mistaken_id, _, character_id, _ = self.prepare_misgrounded_world()
+        self.assert_wrong_identity_fault(mistaken_id, character_id,
+            self.corrupt_primitive_preflight("inspected"))
+
     def test_wrong_identity_value_cannot_hide_corrupt_launch_pixels(self):
         world_id, character_id, _, _ = self.prepare_wrong_identity()
         source_id = self.runtime._ledger.request(self.runtime._owned_launch.request_id)["result"]["source_ids"][0]
