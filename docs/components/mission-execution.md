@@ -22,14 +22,14 @@ the player still interprets the effect. A menu is a valid returned outcome.
 
 | Block | Owned responsibility/state | Source and deeper contract |
 | --- | --- | --- |
-| MissionRuntime | One queue/worker, admission, handles, active lease and phase composition, cached status; owned launch, exit phase and Finish | [runtime](../../harness/mission_runtime.py); [mission lifecycle](../protocol.md#integrated-mission-lifecycle) |
-| Registered lifecycle | Create/load, visible identity/adoption, normal Save and associated private phase | [lifecycle](../../harness/mission_lifecycle.py); [preconditions](../protocol.md#lifecycle-action-preconditions) |
-| Registered activity | Owned long activity and exact interruption/answer/resume composition | [activity](../../harness/mission_activity.py); [item/activity composition](../protocol.md#selected-item-inspection-and-activity-composition) |
-| Registered recovery | Original uncertain dispatch custody and typed effect reconciliation; no replay | [recovery](../../harness/mission_recovery.py); [operator recovery](../protocol.md#explicit-operator-recovery) |
-| Registered handoff | Quiescent player replacement, source/Work packet and epoch transition | [handoff](../../harness/mission_handoff.py); [replacement](../protocol.md#quiescent-player-replacement) |
+| MissionRuntime | One queue/worker, admission, handles, active lease and phase composition, cached status; owned launch, exit phase and Finish | [runtime](../../harness/mission_runtime.py); [mission lifecycle](../contracts/mission-admission.md#integrated-mission-lifecycle) |
+| Registered lifecycle | Create/load, visible identity/adoption, normal Save and associated private phase | [lifecycle](../../harness/mission_lifecycle.py); [preconditions](../contracts/lifecycle-preconditions.md#lifecycle-action-preconditions) |
+| Registered activity | Owned long activity and exact interruption/answer/resume composition | [activity](../../harness/mission_activity.py); [item/activity composition](../contracts/item-inspection.md#activity-polling-interruption-and-resumption) |
+| Registered recovery | Original uncertain dispatch custody and typed effect reconciliation; no replay | [recovery](../../harness/mission_recovery.py); [operator recovery](../contracts/operator-recovery.md#explicit-operator-recovery) |
+| Registered handoff | Quiescent player replacement, source/Work packet and epoch transition | [handoff](../../harness/mission_handoff.py); [replacement](../contracts/handoff-issuance.md#quiescent-player-replacement) |
 | Skills/program evaluator | One ordinary proposal from current visible feedback; no controller/process capability | [gameplay package](../../harness/gameplay/); [program_input](../../harness/gameplay/program_input.py) |
 | MissionLedger | Durable request/primitive/effect/memory records and original cumulative accounting | [ledger](../../harness/gameplay/mission_ledger.py); [memory/evidence view](memory-learning.md) |
-| ObservedMap | Runtime-owned process-local lossy route-candidate cache, separate from evidence and memory Claims | [navigation](../../harness/gameplay/navigation.py); [evidence contract](../protocol.md#passive-gameplay-records-and-evidence) |
+| ObservedMap | Runtime-owned process-local lossy route-candidate cache, separate from evidence and memory Claims | [navigation](../../harness/gameplay/navigation.py); [evidence contract](../contracts/gameplay-evidence.md#passive-gameplay-records-and-evidence) |
 
 Admission is not Resume. A request must satisfy the current actor/epoch, custody,
 source and original local/whole limits before dispatch. Durable intent precedes
@@ -55,7 +55,7 @@ Local refusal with positively healthy custody preserves the scope for a new
 explicit decision; actual integrity/authority loss or uncertain delivery stops it.
 Observe can retain changed visible evidence under its declared observation bounds;
 it does not replenish spent execution roots or prove task success. Exact behavior
-is in [binding errors](../protocol.md#skill-request-binding-errors), not a menu
+is in [binding errors](../contracts/request-binding.md#skill-request-binding-errors), not a menu
 whitelist in this explanation. Repeated SDK calls must not silently mint a new
 parent allowance. Generic autonomous strategy/inference overlap is not yet qualified.
 
@@ -121,25 +121,31 @@ menu-only history retains evidence and costs, with unavailable game time and no
 restored phase or authority. Creation, continuity reload and normal Save retain
 their existing paths; this is not general cleanup of unadopted sessions. Reusing
 RegisteredLifecycle and one ledger helper avoids a second writer, store or
-validator service. The [protocol](../protocol.md#integrated-mission-lifecycle)
+validator service. The [protocol](../contracts/lifecycle-create-load.md)
 owns the precise initial-history, custody and dismissal restrictions.
 
-An invalid adoption request preserves a positively healthy create/load phase so
-the player can explicitly correct its screen state or identity Claim selection.
-The new zero-input refusal rechecks custody, current exact evidence, lease, storage
-and original limits before returning its PhaseReceipt; checked health faults still
-end the phase. The existing later candidate-proof catch has a known historical
-evidence classification gap tracked under [#176](https://github.com/CVX-Hull/enactive/issues/176):
-adoption is blocked, but unhealthy history does not always retire the phase.
-The [failed Pi pilot](../acceptance/2026-10-25-pi-configuration-pilot.md)
-motivated this source repair. Its actual native correction branch remains
-unqualified; a synthetic correction cannot relabel that failed run.
+An unsuitable identity selection preserves only a positively healthy create/load
+phase. The ledger authenticates selected authored Claims and frontier influences
+against their admitted payloads before interpreting applicability. Live and
+historical checks reuse one CDDA scope/support/frontier classifier. The receiver authenticates established phase transition/inspection/saved proofs
+before any selection refusal, verifies phase/influencing source bytes and native-fact
+projections, then rechecks custody, lease, capacity and the
+original limits. Only the typed semantic refusal retains the PhaseReceipt; trusted
+history, receipt and candidate-timeline faults retire phase/lease. Paired
+[initial Load regressions](../../tests/test_mission_initial_load.py) cover explicit
+healthy correction and the same mistake with corrupted pixels, missing primitives
+or altered authored payload/subjects. These SQLite/archive fixtures resolve source
+classification; they do not relabel the [failed Pi pilot](../acceptance/2026-10-25-pi-configuration-pilot.md)
+or establish new native qualification.
 
 Review a change from the owner/phase and flow down to shared limits, publication,
-receipt/reopen readers and tests. The large runtime and ledger remain concentrated
-implementation seams; this map does not claim they have been refactored. Extract
-only a demonstrated responsibility with one retained writer/store, after scoped
-design review.
+receipt/reopen readers and tests. Shared memory contracts/provenance ports and CDDA scene/time projection now have
+separate owners. The runtime and ledger retain centralized phase orchestration
+and accounting/proof validation: moving their remaining private state access into
+facades would add interfaces without removing that coupling. This is an explicit
+scoped choice, not a size-based claim that no further decomposition can help.
+Reassess at a demonstrated change boundary, retaining one writer/store and migrating
+all consumers after scoped design review.
 
 ## Assurance and evidence
 
@@ -150,9 +156,9 @@ executes its fixture regressions.
 
 | User consequence | Invariant and contract | Mechanism, representative assertion and limit |
 | --- | --- | --- |
-| A recent status view hides spent inputs or uncertain effects | Original cumulative charges and unknowns survive reopening. [Mission lifecycle](../protocol.md#integrated-mission-lifecycle). | MissionLedger counters: [ledger tests](../../tests/test_mission_ledger.py) `test_measured_counts_use_cumulative_rows_and_preserve_unknowns_across_reopen` asserts counts beyond recent history, preserved unknowns and isolated returned copies. Real SQLite/filesystem evidence does not prove native input or useful effect. |
-| A crash resumes an unfinished phase with fresh authority | Reopen preserves history and charge, pauses the mission and restores no private phase/lease. [Ownership](../protocol.md#controller-run-ownership) and [lifecycle](../protocol.md#integrated-mission-lifecycle). | Ledger crash transition: [ledger tests](../../tests/test_mission_ledger.py) `test_phase_crash_preserves_unknown_cost_and_does_not_restore_authority` asserts paused/unknown state, retained costs, no authority and refused activation. Together these two cases form `assurance_execution`; simulated reopening does not exercise a native crash. |
-| Successful phase bookkeeping is mistaken for a successful campaign or ending | Save/reload, identity continuity and succession need their actual proofs; ACK and task success remain distinct. [Lifecycle preconditions](../protocol.md#lifecycle-action-preconditions) and [handoff](../protocol.md#quiescent-player-replacement). | Registered composition: [handoff tests](../../tests/test_mission_handoff.py) `test_quiescent_bound_context_claim_and_separately_charged_resume` asserts no lease after Claim and a separately charged readmission, using a fake bridge. [C-NATIVE](../controls.md#c-native--native-build-and-real-game-acceptance-manual)'s [capture qualification](../acceptance/2026-10-22-native-capture-preconditions.md) demonstrates scoped same-character Save/reload/ending; [useful-play readiness](../acceptance/2026-10-25-useful-play-readiness.md) retains an incomplete ending. Neither qualifies independent seven days. |
+| A recent status view hides spent inputs or uncertain effects | Original cumulative charges and unknowns survive reopening. [Mission lifecycle](../contracts/mission-status.md). | MissionLedger counters: [ledger tests](../../tests/test_mission_ledger.py) `test_measured_counts_use_cumulative_rows_and_preserve_unknowns_across_reopen` asserts counts beyond recent history, preserved unknowns and isolated returned copies. Real SQLite/filesystem evidence does not prove native input or useful effect. |
+| A crash resumes an unfinished phase with fresh authority | Reopen preserves history and charge, pauses the mission and restores no private phase/lease. [Ownership](../contracts/controller-ownership.md#controller-run-ownership) and [lifecycle](../contracts/lifecycle-preconditions.md#normal-identity-adoption-and-historical-proof). | Ledger crash transition: [ledger tests](../../tests/test_mission_ledger.py) `test_phase_crash_preserves_unknown_cost_and_does_not_restore_authority` asserts paused/unknown state, retained costs, no authority and refused activation. Together these two cases form `assurance_execution`; simulated reopening does not exercise a native crash. |
+| Successful phase bookkeeping is mistaken for a successful campaign or ending | Save/reload, identity continuity and succession need their actual proofs; ACK and task success remain distinct. [Lifecycle preconditions](../contracts/lifecycle-preconditions.md#lifecycle-action-preconditions) and [handoff](../contracts/handoff-issuance.md#quiescent-player-replacement). | Registered composition: [handoff tests](../../tests/test_mission_handoff.py) `test_quiescent_bound_context_claim_and_separately_charged_resume` asserts no lease after Claim and a separately charged readmission, using a fake bridge. [C-NATIVE](../controls.md#c-native--native-build-and-real-game-acceptance-manual)'s [capture qualification](../acceptance/2026-10-22-native-capture-preconditions.md) demonstrates scoped same-character Save/reload/ending; [useful-play readiness](../acceptance/2026-10-25-useful-play-readiness.md) retains an incomplete ending. Neither qualifies independent seven days. |
 
 Focused runtime/lifecycle/handoff/activity/recovery tests add boundary cases;
 source tests, compiled components, actual native qualification and campaign

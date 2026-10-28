@@ -7,7 +7,7 @@ import unittest
 
 from harness.gameplay.contracts import ContractError, EvidenceRef
 from harness.gameplay.evidence import EvidenceError, EvidenceStore
-from harness.gameplay.timeline import GameTimeline, SessionContinuity, game_timeline
+from harness.gameplay.cdda_timeline import GameTimeline, SessionContinuity, game_timeline
 from tests.test_gameplay_evidence import observation, png
 
 

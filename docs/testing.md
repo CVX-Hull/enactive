@@ -7,8 +7,8 @@ status: active
 # Testing: responsibilities, selection and overlap
 
 Start from the affected [component responsibility](architecture.md), then its
-contract and tests. [Engineering](engineering.md#s-code-maintainable-implementation)
-owns test requirements; [delivery policy](project-management.md#protected-ci-profiles)
+contract and tests. [Engineering](standards/testing.md)
+owns test requirements; [delivery policy](workflows/ci-profiles.md#protected-ci-profiles)
 owns checkpoint and protected CI decisions. This guide explains how to choose and
 review coverage. It is neither a test inventory nor a record of passing runs.
 The adopted source contract below does not establish that any particular hosted
@@ -33,7 +33,7 @@ A fixture's own assumptions and each assertion determine the supported claim.
 | Host operation and evaluation tooling — [observer operations](components/observer-operations.md) | [campaign host](../tests/test_campaign_player.py), [host status](../tests/test_host_status.py), [evaluation](../tests/test_evaluation.py), [study runner](../tests/test_memory_study_runner.py) | Mechanical host continuity, passive status, metric/report integrity and controlled studies. Fake processes and synthetic accounting are not independent host or campaign outcomes. |
 | Mandatory generic provider/MCP host — [player interface](components/player-interface.md) | [Node conformance wrapper](../tests/test_pi_player_host.py), [driver](../tests/test_campaign_player.py), [host package](../tools/player_host/package.json) | Actual pinned SDK request serialization, full MCP text/images/errors, restricted schemas, sequential dispatch, finite bounds and owned subprocess cleanup against synthetic provider/server behavior. Driver tests cover the sole generic path, removed-option refusal and independent exit-before-successor boundary. These fixtures do not qualify inference, model perception, native game or useful cadence. |
 | Spectator and server presentation — [observer operations](components/observer-operations.md) | [server](../tests/test_server.py), [viewer](../tests/test_viewer.cjs) | HTTP presentation/authentication and production viewer JavaScript under controlled DOM/image decoding and delayed responses. The Node viewer fixture does not prove real browser rendering, accessibility or physical display latency. |
-| Engineering controls and preparation — [delivery policy](project-management.md#protected-ci-profiles) | [CI selection](../tests/test_ci.py), [governance](../tests/test_governance.py), [documents](../tests/test_documents.py), [diagrams](../tests/test_diagrams.py), [setup](../tests/test_setup.py), [tool configuration](../tests/test_devtools.py) | Selector evidence, failure handling, metadata, bounded source forms, rendered-output freshness and setup/configuration boundaries. Passing metadata or source checks does not prove prose truth; setup fixtures do not build or launch the game. |
+| Engineering controls and preparation — [delivery policy](workflows/ci-profiles.md#protected-ci-profiles) | [CI selection](../tests/test_ci.py), [governance](../tests/test_governance.py), [documents](../tests/test_documents.py), [diagrams](../tests/test_diagrams.py), [setup](../tests/test_setup.py), [tool configuration](../tests/test_devtools.py) | Selector evidence, failure handling, metadata, bounded source forms, rendered-output freshness and setup/configuration boundaries. Passing metadata or source checks does not prove prose truth; setup fixtures do not build or launch the game. |
 
 True game qualification starts with matching prepared native source/build and
 finite [native/operator procedures](runbook.md), then retained visible outcomes
@@ -45,12 +45,12 @@ Development gameplay is the primary feedback loop for player behavior and useful
 system composition. The table identifies what offline checks can establish; it
 does not make comprehensive offline qualification a prerequisite to discovering
 failures in the game. Use the
-[gameplay feedback policy](project-management.md#gameplay-as-the-primary-feedback-loop)
+[gameplay feedback policy](workflows/development.md#gameplay-as-the-primary-feedback-loop)
 for coherent missions, focused reproductions and the development/acceptance split.
 
 ## Select checks from the changed responsibility
 
-Use the [development checkpoint](project-management.md#minimum-checks-and-escalation)
+Use the [development checkpoint](workflows/development.md#minimum-checks-and-escalation)
 for fast structural checks plus focused behavioral and failure cases. Follow the
 flow across changed producer/consumer boundaries, rather than selecting only the
 module with the edited line. A local focused pass supports its named scope.
@@ -135,7 +135,7 @@ These are representative evidence paths, not proof that every control is effecti
 | Consequence to challenge | Invariant / existing mechanism | Representative evidence and limit |
 | --- | --- | --- |
 | Unknown control references or stale structural guidance are accepted | C-GOVERNANCE validates registry/schema/references and generated-map freshness. [Documentation](documentation.md) owns artifact roles. | [Governance assertions](../tests/test_governance.py), including valid records and unknown/duplicate/missing-field refusal, are selected by `assurance_governance`. C-PORTABLE also runs metadata/link/diagram checks. Structure and registered markers do not prove prose truth, semantic completeness or successful review. |
-| A passing fixture or wrong candidate is treated as release acceptance | C-RELEASE/C-REVIEW verify exact candidate, appropriate lanes and original failure dispositions under [protected publication](project-management.md#protected-ci-profiles). | [CI selection assertions](../tests/test_ci.py) exercise evidence eligibility and failure handling; actual PR/main jobs and C-RELEASE's [dated publication receipt](https://github.com/CVX-Hull/enactive/pull/230#issuecomment-6401079659) establish only the exercised hosted configuration. [C-RELEASE](controls.md#c-release--exact-candidate-and-evidence-review-manual) still requires current publication verification; source tests alone do not prove current GitHub settings, real game behavior or maintainer approval. |
+| A passing fixture or wrong candidate is treated as release acceptance | C-RELEASE/C-REVIEW verify exact candidate, appropriate lanes and original failure dispositions under [protected publication](workflows/ci-profiles.md#protected-ci-profiles). | [CI selection assertions](../tests/test_ci.py) exercise evidence eligibility and failure handling; actual PR/main jobs and C-RELEASE's [dated publication receipt](https://github.com/CVX-Hull/enactive/pull/230#issuecomment-6401079659) establish only the exercised hosted configuration. [C-RELEASE](controls.md#c-release--exact-candidate-and-evidence-review-manual) still requires current publication verification; source tests alone do not prove current GitHub settings, real game behavior or maintainer approval. |
 | Mapping and controls drift or cost more than the decisions they support | Component owners and lead use C-REVIEW/C-MAINTENANCE at changed-contract/assertion, failure and meaningful integration triggers. | Inspect a responsibility map against actual assertions and ask whether a reader can find the rule, lane and gap. Retain findings/costs in the existing Issue/PR; simplify or retire poor-value detail. A parser, tag count or agent reader challenge does not establish human comprehension or reduced delivery time. |
 
 ## Advisory test-impact experiment

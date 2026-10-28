@@ -49,7 +49,7 @@ For a reconciled initial Load menu, the transition result explains the separate
 same-root readmission required before menu dismissal and identity inspection.
 The producer refuses a premature skill from that selected paused snapshot before
 staging; it does not refresh evidence, Resume or establish current authority.
-The [lifecycle contract](../protocol.md#integrated-mission-lifecycle) owns the sequence.
+The [lifecycle contract](../contracts/lifecycle-create-load.md) owns the sequence.
 
 For an activity child, the player chooses only the step and any explicit YES/NO
 answer. Before staging, player tools collect the exact original request selected
@@ -62,7 +62,7 @@ other boundary refuses locally before staging. A returned menu/`awaiting_control
 requires a new player decision under the same published root and limits. This
 as-of check does not replace live runtime validation or repair an unknown action.
 Activity start still requires the player's operation, target, duration and
-interrupt consent. The [protocol](../protocol.md#skill-request-binding-errors)
+interrupt consent. The [protocol](../contracts/request-binding.md#skill-request-binding-errors)
 owns the distinction between semantic duration and an ordinary root's ceiling.
 
 ## Context and failure boundaries
@@ -92,8 +92,8 @@ A positively pure new preparation refusal can be `not_submitted`. Existing stage
 failed stage lookup and uncertainty from staging onward retain original collection
 arguments. A transport or presentation error proves neither delivery nor
 nondelivery. Restart cannot reconstruct missing settled identities or permission
-to replay. The [binding contract](../protocol.md#skill-request-binding-errors)
-and [operator contract](../protocol.md#designated-campaign-operator) own exact rules.
+to replay. The [binding contract](../contracts/request-binding.md#skill-request-binding-errors)
+and [operator contract](../contracts/mission-admission.md#designated-campaign-operator) own exact rules.
 
 For a selected active, idle prompt with no activity/lifecycle phase, a refused new
 root points to explicit Observe. Observe may close a locally exhausted ordinary
@@ -109,7 +109,7 @@ identity. No nonexistent operation is collected, and the refused stage is retain
 without replay. Generic refusals, malformed certificates and lost responses do
 not establish this fact. Machine binding/digest fields stay out of default MCP
 context; raw SDK evidence retains them. See the
-[exact contract](../protocol.md#certified-request-admission-refusal).
+[exact contract](../contracts/player-transport.md#certified-request-admission-refusal).
 
 An unfinished/uncertain mutation response retains its assigned `original_collection` in the
 MCP presentation even when the immediate snapshot is unavailable. It comes from
@@ -210,7 +210,7 @@ useful lighting and normal Save/owned exit/Finish; whole-player cadence and
 fully automatic final-menu handling remain unqualified.
 The mandatory host requirement stands independently of that model decision;
 historical Codex trajectories remain comparator evidence, not an execution option.
-[Preparation and limits](../runbook.md#bounded-player-host-activation)
+[Preparation and limits](../operations/player-host.md#bounded-player-host-activation)
 and [measurement meaning](../evaluation.md#pi-host-events) own those details.
 
 ## Assurance and evidence
@@ -225,9 +225,9 @@ from instantiating an executor.
 
 | User consequence | Invariant and contract | Mechanism, representative assertion and limit |
 | --- | --- | --- |
-| A lost response or repeated call sends another action | Staged intent stays immutable; uncertainty requires original collection. [Original submission contract](../protocol.md#integrated-mission-lifecycle). | MissionClient staging: [client](../../tests/test_mission_client.py) `test_duplicate_only_collects_same_operation_and_changed_payload_refuses` asserts one submission followed by result collection and rejects changed payload. [Player tools](../../tests/test_player_tools.py) `test_unknown_delivery_is_preserved_without_retry_or_implicit_input` asserts one ambiguous submission, unchanged delivered inputs and retained uncertainty. These `assurance_ingress` fixtures do not prove real host delivery. |
+| A lost response or repeated call sends another action | Staged intent stays immutable; uncertainty requires original collection. [Original submission contract](../contracts/player-transport.md). | MissionClient staging: [client](../../tests/test_mission_client.py) `test_duplicate_only_collects_same_operation_and_changed_payload_refuses` asserts one submission followed by result collection and rejects changed payload. [Player tools](../../tests/test_player_tools.py) `test_unknown_delivery_is_preserved_without_retry_or_implicit_input` asserts one ambiguous submission, unchanged delivered inputs and retained uncertainty. These `assurance_ingress` fixtures do not prove real host delivery. |
 | Compact context erases the player's evidence or changes retained detail | Project only known binding fields, preserve authored content and isolate copies. [Context boundary](#context-and-failure-boundaries). | Decision projection: [view tests](../../tests/test_player_view.py), selected by `assurance_context`, assert authored claim/procedure preservation and no cache mutation/aliasing. Synthetic records and a controlled client do not prove sufficient context or actual image presentation. |
-| A mechanically valid response still leaves the player unable to continue | The actual host must load the schema, show relevant evidence and support a useful next decision. [Operator contract](../protocol.md#designated-campaign-operator). | [C-USABILITY](../controls.md#c-usability--operator-understanding-review-manual) requires observed use and reader judgment. The retained [useful-play assessment](../acceptance/2026-10-25-useful-play-readiness.md) demonstrates bounded continuation but records failed normal ending and rejected whole-player readiness. Tags and SDK passes cannot qualify this outcome. |
+| A mechanically valid response still leaves the player unable to continue | The actual host must load the schema, show relevant evidence and support a useful next decision. [Operator contract](../contracts/mission-admission.md#designated-campaign-operator). | [C-USABILITY](../controls.md#c-usability--operator-understanding-review-manual) requires observed use and reader judgment. The retained [useful-play assessment](../acceptance/2026-10-25-useful-play-readiness.md) demonstrates bounded continuation but records failed normal ending and rejected whole-player readiness. Tags and SDK passes cannot qualify this outcome. |
 | Host defaults truncate evidence, hide an error or replay after uncertain transport | Current MCP text/image/error and original-collection contract; sequential mutations and no semantic argument repair. | [Pi conformance](../../tests/test_pi_player_host.py) exercises the pinned SDK's constructed next request, restricted tools, error marker, full content, coercion refusal, transport stop and owned-child closure with synthetic responses. It does not establish actual provider semantics, image comprehension or game outcomes. |
 
 The [evaluation](../evaluation.md#latency-budgets-for-interactive-play) owns useful

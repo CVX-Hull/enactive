@@ -2,7 +2,8 @@
 
 The mission writer serializes launch/wait calls. Process state is advisory: even
 zero exit requires separate native readiness and ordinary save/menu evidence.
-This adapter never adopts a PID, sends input/signals or repairs preparation.
+Launch/wait never signal. Exceptional shutdown signals only the retained child;
+it never adopts a PID, sends game input or repairs preparation.
 """
 from __future__ import annotations
 
@@ -246,3 +247,40 @@ class NativeProcess:
                 return self._interrupted("deadline")
             except OSError as exc:
                 raise NativeProcessError(f"Owned child wait failed: {exc}") from exc
+
+
+    def close_exceptional(self, *, deadline_monotonic: float) -> dict:
+        """Bounded last-resort cleanup of the exact retained handle, never normal exit.
+
+        Only the settled mission writer calls this after revoking input authority.
+        The original deadline covers TERM and KILL waits together. No PID lookup,
+        process-group signal or descendant adoption can widen this custody.
+        """
+        self._deadline(deadline_monotonic)
+        signals = []
+        error = None
+        child = self._child
+        if child is not None:
+            try:
+                for name, action in (("SIGTERM", child.terminate), ("SIGKILL", child.kill)):
+                    if child.poll() is not None:
+                        break
+                    remaining = self._remaining(deadline_monotonic)
+                    try:
+                        action()
+                        signals.append(name)
+                    except ProcessLookupError:
+                        pass
+                    try:
+                        child.wait(timeout=min(2.0, remaining) if name == "SIGTERM"
+                            else self._remaining(deadline_monotonic))
+                    except subprocess.TimeoutExpired:
+                        continue
+            except (_Deadline, OSError, NativeProcessError) as exc:
+                error = type(exc).__name__
+        result = self.status()
+        result.update(signals=signals, normal_ending_claimed=False, grants_authority=False)
+        result["outcome"] = ("cleanup_unknown" if result["running"] else
+            "exceptional_closed" if signals else result["outcome"])
+        result["error"] = error
+        return result

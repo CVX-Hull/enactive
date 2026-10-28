@@ -1,6 +1,7 @@
 """New admitted Load, separate from continuity reload; synthetic game only."""
 from dataclasses import replace
 from copy import deepcopy
+from pathlib import Path
 import unittest
 from unittest.mock import patch
 
@@ -97,7 +98,7 @@ class InitialLoadTests(MissionCreationFixture, unittest.TestCase):
             self.assert_premature_continuation_fault()
         self.assertEqual(self.runtime._ledger.request("initial-load")["deadline"], deadline)
 
-    def test_identity_value_refusal_names_character_and_allows_explicit_correction(self):
+    def prepare_wrong_identity(self):
         world = self.pending_initial_load()
         self.assertEqual(self.run_request(self.lifecycle("reconciled", "load", parent="initial-load"))["state"], "completed")
         self.assertEqual(self.run_request(self.lifecycle("readmitted", "load", parent="initial-load"))["state"], "completed")
@@ -107,6 +108,10 @@ class InitialLoadTests(MissionCreationFixture, unittest.TestCase):
         wrong_name = self.a.scenario.character + " (Male)"
         character_id = self.remember_identity("selected-character", "character", screen, 0, value=wrong_name)
         self.assertEqual(self.run_request(self.control("dismissed", "Cancel", parent="initial-load"))["state"], "partial")
+        return world_id, character_id, screen, wrong_name
+
+    def test_identity_value_refusal_names_character_and_allows_explicit_correction(self):
+        world_id, character_id, screen, wrong_name = self.prepare_wrong_identity()
         phase, lease = self.runtime._registered_lifecycle.phase, self.runtime._lease
         deadline = self.runtime._ledger.request("initial-load")["deadline"]
         delivered = len(self.bridge.delivered)
@@ -130,6 +135,223 @@ class InitialLoadTests(MissionCreationFixture, unittest.TestCase):
         self.assertEqual(original["value"]["state"], wrong_name)
         with self.runtime._ledger._mutex:
             self.runtime._ledger._verify(self.a)
+
+    def prepare_corrected_identity(self):
+        world_id, character_id, _, _ = self.prepare_wrong_identity()
+        corrected = self.correct_identity(character_id, "correct-character", self.a.scenario.character)
+        return world_id, corrected["id"]
+
+    def correct_identity(self, identity, request_id, name, *, retired=None):
+        entry = deepcopy(next(row["entry"] for row in self.runtime._ledger.memory_records("claim")
+            if row["entry"]["id"] == identity))
+        retired = [identity] if retired is None else retired
+        entry.update(id=request_id + "-claim", value=dict(quantity=None, state=name), supersedes=retired)
+        response = self.run_request(dict(schema="mission/11", kind="correct", request_id=request_id,
+            mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"], entry_type="claim", entry=entry,
+            retired_ids=retired, reason="Correct the interpreted identity using the retained visible source"))
+        self.assertEqual(response["state"], "completed", response)
+        return entry
+
+    def assert_correctable_selection(self, world_id, character_id):
+        phase, lease = self.runtime._registered_lifecycle.phase, self.runtime._lease
+        deadline = self.runtime._ledger.request("initial-load")["deadline"]
+        delivered = len(self.bridge.delivered)
+        refused = self.run_request(self.lifecycle("frontier-refusal", "load", parent="initial-load",
+            claims=[world_id, character_id]))
+        self.assertEqual(refused["state"], "blocked", refused)
+        self.assertIn("No input was sent", refused["result"]["reason"])
+        self.assertIs(self.runtime._registered_lifecycle.phase, phase)
+        self.assertIs(self.runtime._lease, lease)
+        self.assertEqual(self.runtime._ledger.request("initial-load")["deadline"], deadline)
+        self.assertEqual(len(self.bridge.delivered), delivered)
+
+    def test_retired_identity_selection_preserves_phase_for_replacement(self):
+        world_id, character_id = self.prepare_corrected_identity()
+        replacement = self.correct_identity(world_id, "replace-world", self.a.scenario.world)
+        self.assert_correctable_selection(world_id, character_id)
+        adopted = self.run_request(self.lifecycle("replacement-adoption", "load", parent="initial-load",
+            claims=[replacement["id"], character_id]))
+        self.assertEqual(adopted["state"], "completed", adopted)
+
+    def test_authentic_identity_conflict_preserves_phase_for_explicit_correction(self):
+        world_id, character_id = self.prepare_corrected_identity()
+        original = next(row["entry"] for row in self.runtime._ledger.memory_records("claim")
+            if row["entry"]["id"] == world_id)
+        conflict = deepcopy(original)
+        conflict.update(id="conflicting-world", value=dict(quantity=None, state="Other world"))
+        response = self.run_request(dict(schema="mission/11", kind="remember", request_id="remember-conflict",
+            mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"], entry_type="claim", entry=conflict))
+        self.assertEqual(response["state"], "completed", response)
+        self.assert_correctable_selection(world_id, character_id)
+        replacement = self.correct_identity(world_id, "resolve-world", self.a.scenario.world,
+            retired=[world_id, conflict["id"]])
+        adopted = self.run_request(self.lifecycle("resolved-adoption", "load", parent="initial-load",
+            claims=[replacement["id"], character_id]))
+        self.assertEqual(adopted["state"], "completed", adopted)
+
+    def test_corrupt_frontier_influence_cannot_preserve_retired_selection(self):
+        world_id, character_id = self.prepare_corrected_identity()
+        replacement = self.correct_identity(world_id, "replace-world", self.a.scenario.world)
+        def corrupt():
+            from harness.gameplay.contracts import canonical
+            replacement["value"]["state"] = "Corrupted world"
+            self.runtime._ledger._db.execute("UPDATE memory SET body=? WHERE record_id=?",
+                (canonical(replacement), replacement["id"]))
+        self.assert_wrong_identity_fault(world_id, character_id, corrupt)
+
+    def test_equivalent_equal_order_identity_assertions_remain_admissible(self):
+        world_id, character_id = self.prepare_corrected_identity()
+        original = next(row["entry"] for row in self.runtime._ledger.memory_records("claim")
+            if row["entry"]["id"] == world_id)
+        equivalent = deepcopy(original)
+        equivalent["id"] = "equivalent-world"
+        response = self.run_request(dict(schema="mission/11", kind="remember", request_id="remember-equivalent",
+            mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"], entry_type="claim", entry=equivalent))
+        self.assertEqual(response["state"], "completed", response)
+        adopted = self.run_request(self.lifecycle("equivalent-adoption", "load", parent="initial-load",
+            claims=[world_id, character_id]))
+        self.assertEqual(adopted["state"], "completed", adopted)
+
+    def test_wrong_world_epoch_preserves_phase_for_original_selection(self):
+        world_id, character_id = self.prepare_corrected_identity()
+        original = next(row["entry"] for row in self.runtime._ledger.memory_records("claim")
+            if row["entry"]["id"] == world_id)
+        wrong = deepcopy(original)
+        wrong["id"] = "wrong-epoch-world"
+        wrong["scope"]["coordinate_epoch"] = 1
+        response = self.run_request(dict(schema="mission/11", kind="remember", request_id="remember-wrong-epoch",
+            mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"], entry_type="claim", entry=wrong))
+        self.assertEqual(response["state"], "completed", response)
+        self.assert_correctable_selection(wrong["id"], character_id)
+        adopted = self.run_request(self.lifecycle("right-epoch-adoption", "load", parent="initial-load",
+            claims=[world_id, character_id]))
+        self.assertEqual(adopted["state"], "completed", adopted)
+
+    def test_later_equivalent_identity_does_not_poison_historical_adoption(self):
+        adopted = self.initial_load()
+        world_id = adopted["result"]["normal_adoption"]["world_claim_id"]
+        equivalent = deepcopy(next(row["entry"] for row in self.runtime._ledger.memory_records("claim")
+            if row["entry"]["id"] == world_id))
+        equivalent["id"] = "later-equivalent-world"
+        response = self.run_request(dict(schema="mission/11", kind="remember", request_id="remember-later-equivalent",
+            mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"], entry_type="claim", entry=equivalent))
+        self.assertEqual(response["state"], "completed", response)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
+        self.runtime.close()
+        self.runtime = MissionRuntime(self.controller)
+        self.assertEqual(self.start()["state"], "completed")
+        self.assertEqual(len(adopted_timeline(self.runtime._ledger, self.runtime._store).segments), 1)
+
+    def assert_wrong_identity_fault(self, world_id, character_id, corruption, *, claims=None):
+        delivered = len(self.bridge.delivered)
+        deadline = self.runtime._ledger.request("initial-load")["deadline"]
+        lifecycle = self.runtime._registered_lifecycle
+        command = lifecycle.command
+        injected = []
+
+        def corrupt_at_adoption(work):
+            if work.request["request_id"] == "unhealthy-adoption":
+                # Result visibility precedes trailing publication. Inject on the
+                # single writer only after this target request is admitted, so a
+                # prior request's finalization cannot consume the fault first.
+                corruption()
+                injected.append(work.request["request_id"])
+            return command(work)
+
+        with patch.object(lifecycle, "command", side_effect=corrupt_at_adoption):
+            rejected = self.run_request(self.lifecycle("unhealthy-adoption", "load", parent="initial-load",
+                claims=[world_id, character_id] if claims is None else claims))
+        self.assertEqual(injected, ["unhealthy-adoption"])
+        self.assertEqual(rejected["state"], "blocked", rejected)
+        self.assertNotIn("No input was sent", rejected["result"]["reason"])
+        self.assertIsNone(self.runtime._registered_lifecycle.phase)
+        self.assertIsNone(self.runtime._lease)
+        self.assertEqual(len(self.bridge.delivered), delivered)
+        self.assertEqual(self.runtime._ledger.request("initial-load")["deadline"], deadline)
+
+    def remove_primitive(self, request_id):
+        return lambda: self.runtime._ledger._db.execute(
+            "DELETE FROM primitives WHERE request_id=?", (request_id,))
+
+    def test_wrong_identity_cannot_hide_corrupt_inspection_pixels(self):
+        world_id, character_id, screen, _ = self.prepare_wrong_identity()
+        def corrupt():
+            path = Path(screen.frame_path)
+            path.chmod(0o600)
+            path.write_bytes(b"corrupt retained inspection")
+        self.assert_wrong_identity_fault(world_id, character_id, corrupt)
+
+    def test_wrong_identity_cannot_hide_missing_inspection_primitive(self):
+        world_id, character_id, _, _ = self.prepare_wrong_identity()
+        self.assert_wrong_identity_fault(world_id, character_id, self.remove_primitive("inspected"))
+
+    def change_selected_claim(self, character_id, change):
+        from harness.gameplay.contracts import canonical
+        def corrupt():
+            original = next(row["entry"] for row in self.runtime._ledger.memory_records("claim")
+                if row["entry"]["id"] == character_id)
+            change(original)
+            self.runtime._ledger._db.execute("UPDATE memory SET body=? WHERE record_id=?",
+                (canonical(original), character_id))
+        return corrupt
+
+    def test_wrong_identity_cannot_hide_changed_admitted_claim(self):
+        world_id, character_id, _, _ = self.prepare_wrong_identity()
+        self.assert_wrong_identity_fault(world_id, character_id, self.change_selected_claim(character_id,
+            lambda entry: entry["value"].update(state="Unadmitted replacement")))
+
+    def test_wrong_identity_subject_cannot_hide_changed_admitted_claim(self):
+        world_id, character_id, _, _ = self.prepare_wrong_identity()
+        self.assert_wrong_identity_fault(world_id, character_id, self.change_selected_claim(character_id,
+            lambda entry: entry["key"].update(subject="world", coverage_id="visible-world-menu")))
+
+    def test_incomplete_selection_cannot_hide_missing_inspection_primitive(self):
+        world_id, character_id, _, _ = self.prepare_wrong_identity()
+        self.assert_wrong_identity_fault(world_id, character_id, self.remove_primitive("inspected"), claims=[world_id])
+
+    def test_wrong_subject_selection_cannot_hide_missing_inspection_primitive(self):
+        world_id, character_id, _, _ = self.prepare_wrong_identity()
+        world = next(row["entry"] for row in self.runtime._ledger.memory_records("claim")
+            if row["entry"]["id"] == world_id)
+        reference = next(ref for ref in self.runtime._store.historical_references
+            if ref.observation_id == world["sources"][0])
+        other_world = self.remember_identity("other-world", "world", reference, 0)
+        self.assert_wrong_identity_fault(world_id, character_id, self.remove_primitive("inspected"),
+            claims=[world_id, other_world])
+
+    def test_wrong_identity_value_cannot_hide_missing_transition_primitive(self):
+        world_id, character_id, _, _ = self.prepare_wrong_identity()
+        self.assert_wrong_identity_fault(world_id, character_id, self.remove_primitive("character"))
+
+    def test_incomplete_selection_cannot_hide_missing_inspection_phase(self):
+        from harness.gameplay.contracts import canonical
+        world_id, character_id, _, _ = self.prepare_wrong_identity()
+        def corrupt():
+            result = self.runtime._ledger.request("inspected")["result"]
+            del result["phase"]
+            self.runtime._ledger._db.execute("UPDATE requests SET result=? WHERE id='inspected'", (canonical(result),))
+        self.assert_wrong_identity_fault(world_id, character_id, corrupt, claims=[world_id])
+
+    def test_incomplete_selection_cannot_hide_missing_inspection_source_membership(self):
+        from harness.gameplay.contracts import canonical
+        world_id, character_id, _, _ = self.prepare_wrong_identity()
+        def corrupt():
+            result = self.runtime._ledger.request("inspected")["result"]
+            result["source_ids"] = []
+            self.runtime._ledger._db.execute("UPDATE requests SET result=? WHERE id='inspected'", (canonical(result),))
+        self.assert_wrong_identity_fault(world_id, character_id, corrupt, claims=[world_id])
+
+    def test_incomplete_selection_cannot_hide_missing_inspection_ack(self):
+        from harness.gameplay.contracts import canonical
+        world_id, character_id, _, _ = self.prepare_wrong_identity()
+        def corrupt():
+            primitive = next(row for row in self.runtime._ledger.primitive_records()
+                if row["request_id"] == "inspected")
+            del primitive["result"]["native_ack"]
+            self.runtime._ledger._db.execute("UPDATE primitives SET result=? WHERE id=?",
+                (canonical(primitive["result"]), primitive["logical_id"]))
+        self.assert_wrong_identity_fault(world_id, character_id, corrupt, claims=[world_id])
 
     def pending_initial_load(self):
         world = self.picker()

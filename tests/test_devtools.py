@@ -35,6 +35,10 @@ class DevToolTests(unittest.TestCase):
         (self.root / "harness/gameplay").mkdir()
         self.write("gameplay/__init__.py", "")
         self.write("gameplay/evidence.py", "import json\n")
+        for module in ("campaign_memory", "memory_contracts", "memory_ports", "source_contracts", "timeline",
+                       "mission_contracts", "mission_ledger", "mission_memory", "procedure_library", "procedure_archive",
+                       "cdda_identity", "cdda_memory", "cdda_timeline"):
+            self.write(f"gameplay/{module}.py", "")
 
     def write(self, filename, source):
         (self.root / "harness" / filename).write_text(source)
@@ -57,7 +61,7 @@ class DevToolTests(unittest.TestCase):
     def test_composition_root_and_http_adapter_are_allowed(self):
         result = self.lint_imports()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIn("5 kept, 0 broken", result.stdout)
+        self.assertIn("6 kept, 0 broken", result.stdout)
 
     def test_player_adapters_cannot_import_an_executor_directly_or_indirectly(self):
         for source in ("mission_client", "player_tools", "player_mcp"):
@@ -71,6 +75,11 @@ class DevToolTests(unittest.TestCase):
         self.write("mission_client.py", "from . import helper\n")
         self.write("helper.py", "from . import mission_runtime\n")
         self.assert_broken(self.lint_imports(), "harness.mission_client", "harness.helper")
+
+    def test_shared_memory_cannot_acquire_mission_binding_indirectly(self):
+        self.write("gameplay/campaign_memory.py", "from . import helper\n")
+        self.write("gameplay/helper.py", "from . import mission_ledger\n")
+        self.assert_broken(self.lint_imports(), "harness.gameplay.campaign_memory", "harness.gameplay.mission_ledger")
 
     def test_movement_policy_cannot_acquire_io_or_gameplay_dependencies(self):
         for module in ("harness.controller", "harness.gameplay.evidence", "time", "pathlib", "os"):

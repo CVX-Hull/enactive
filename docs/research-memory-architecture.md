@@ -55,8 +55,8 @@ Code anchors: [baseline runtime start](https://github.com/CVX-Hull/enactive/blob
 [skill registry](../harness/gameplay/skills.py). Relevant functions are `_start`,
 `_submit_or_verify`, `TaskMemory.refresh`, `_validate_observation` and `EvidenceStore.historical_facts`;
 source navigation must use actual names when these change. The current
-[operator contract](protocol.md#designated-campaign-operator),
-[passive memory](protocol.md#passive-task-memory) and
+[operator contract](contracts/mission-admission.md#designated-campaign-operator),
+[passive memory](contracts/injected-planner.md#passive-task-memory) and
 [monitor proposal](design/outcome-monitoring.md) distinguish these scopes.
 
 ## What the earlier research and real run change

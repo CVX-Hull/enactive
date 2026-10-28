@@ -8,7 +8,7 @@ status: active
 
 Use this page, the frozen mission brief and current selected tool descriptions as
 the initial working set. This is interface guidance, not a tactical plan. The
-[protocol](protocol.md#integrated-mission-lifecycle) owns the contract; inspect a
+[protocol](contracts/mission-admission.md#integrated-mission-lifecycle) owns the contract; inspect a
 specific section only when needed. Engineering/source archaeology belongs outside
 the deciding hot path. Do not recursively search `.runtime`, prior host traces,
 saves or the engine to learn how to call tools. They are not a player knowledge
@@ -323,6 +323,6 @@ a gameplay key or repair memory. The lead assesses closed evidence independently
 
 This guide's maintenance check is a focused comparison with current tool schemas,
 phase receipts and lifecycle implementation whenever its review trigger fires.
-[The runbook](runbook.md#typed-mission-requests-and-the-player) owns detailed recovery
+[The runbook](operations/mission-requests.md#typed-mission-requests-and-the-player) owns detailed recovery
 and operator procedure. Tests and native evidence qualify their actual scope;
 this guide does not establish a new capability.

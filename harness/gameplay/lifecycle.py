@@ -7,6 +7,7 @@ EvidenceStore integrity checks may persistently quarantine invalid source eviden
 from __future__ import annotations
 
 from .campaign_memory import CampaignMemory
+from .cdda_identity import adoption_identity_refusal
 from .contracts import ContractError, EvidenceRef, json_object
 from .evidence import EvidenceError, EvidenceStore
 from .mission_contracts import (
@@ -17,7 +18,7 @@ from .mission_contracts import (
 from .mission_ledger import MissionLedger
 from .native_receipts import compact_native_ack
 from .semantic_controls import dismissal_input
-from .timeline import MAX_TIMELINE_SEGMENTS, GameTimeline, SessionContinuity, game_timeline
+from .cdda_timeline import MAX_TIMELINE_SEGMENTS, GameTimeline, SessionContinuity, game_timeline
 
 
 def _require(condition: bool, reason: str) -> None:
@@ -188,7 +189,6 @@ def _project(ledger: MissionLedger, store: EvidenceStore, *, rows: tuple[dict, .
     identity_ids = {identity for identity, claim in claims.items()
                     if claim["key"]["property"] == "identity" and claim["key"]["unit"] == "name"}
     frontiers, retired = CampaignMemory._frontier(claims, selected_ids=identity_ids)
-    frontier_ids = {identity for group in frontiers for identity in group}
     proofs: dict[str, dict[str, dict]] = {}
     validators = {"lifecycle_transition": validate_lifecycle_transition,
                   "normal_adoption": validate_normal_adoption,
@@ -353,7 +353,7 @@ def _project(ledger: MissionLedger, store: EvidenceStore, *, rows: tuple[dict, .
             initial_load_menu_sources(ledger, store, transition_id=next(iter(proofs["lifecycle_transition"])))
         return None
 
-    def identity_claim(identity: str, *, subject: str, scope: dict, coverage: str, value: str, result_id: str) -> dict:
+    def identity_claim(identity: str, *, subject: str, scope: dict, value: str, result_id: str) -> dict:
         _require(identity in claims, "Adoption identity claim is missing")
         claim = claims[identity]
         event_id = claim_rows[identity]["event_id"]
@@ -361,29 +361,13 @@ def _project(ledger: MissionLedger, store: EvidenceStore, *, rows: tuple[dict, .
         _require(order[event_id] < order[result_id] and remembered["kind"] in ("remember", "correct")
                  and remembered["entry_type"] == "claim" and remembered["entry"] == claim,
                  "Identity claim has no earlier immutable memory request")
-        _require(claim["kind"] == "interpretation" and claim["scope"] == scope
-                 and claim["key"] == dict(subject=subject, property="identity", unit="name", coverage_id=coverage)
-                 and claim["value"] == dict(quantity=None, state=value)
-                 and claim["status"] in ("current", "last_seen") and identity not in retired
-                 and identity in frontier_ids and bool(claim["sources"])
-                 and bool(claim["supports"]), "Adoption identity has wrong value, scope, kind or status")
+        reason = adoption_identity_refusal(claim, subject=subject, scope=scope, name=value,
+            claims=claims, frontiers=frontiers, retired=retired)
+        _require(reason is None, reason or "Invalid identity applicability")
         if claim["supersedes"]:
             _require(remembered["kind"] == "correct"
                      and set(remembered["retired_ids"]) == set(claim["supersedes"]),
                      "Corrected identity lacks its exact explicit retirement request")
-        frontier = next(group for group in frontiers if identity in group)
-        active_frontier = [claims[item] for item in frontier if item not in retired]
-        _require(all(other["value"] == claim["value"] and other["observed_time"] == claim["observed_time"]
-                     for other in active_frontier), "Identity has conflicting or incomparable frontier assertions")
-        for group in claim["supports"]:
-            _require(not group["claims"] and bool(group["sources"])
-                     and set(group["sources"]) <= set(claim["sources"]), "Identity needs direct retained source support")
-        _require(set(claim["sources"]) == {s for group in claim["supports"] for s in group["sources"]},
-                 "Identity contains unsupported source annotations")
-        _require(not any(other["id"] != identity and other["id"] in frontier_ids - retired and other["scope"] == scope
-                         and all(other["key"][key] == claim["key"][key] for key in ("subject", "property", "unit"))
-                         and (other["value"] != claim["value"] or other["status"] in ("disputed", "retired", "unknown"))
-                         for other in claims.values()), "Identity has conflicting durable assertions")
         observed = []
         for sid in claim["sources"]:
             ref, obs = source(sid)
@@ -435,7 +419,7 @@ def _project(ledger: MissionLedger, store: EvidenceStore, *, rows: tuple[dict, .
         _require(adoption["world_claim_id"] in claims, "Adoption world identity claim is missing")
         world_scope = dict(expected_scope, session=claims[adoption["world_claim_id"]]["scope"]["session"])
         world = identity_claim(adoption["world_claim_id"], subject="world", scope=world_scope,
-                               coverage="visible-world-menu", value=ledger.admission.scenario.world, result_id=result_id)
+                               value=ledger.admission.scenario.world, result_id=result_id)
         phase_sources = {sid for rid, row in requests.items() if _phase_member(row["request"], rid, root_id)
                          for sid in row["request"].get("sources", []) + (row["result"] or {}).get("source_ids", [])}
         for sid in world["sources"]:
@@ -448,7 +432,7 @@ def _project(ledger: MissionLedger, store: EvidenceStore, *, rows: tuple[dict, .
                      and max(positions[s] for s in launch["source_ids"]) <= positions[sid] < positions[first.observation_id],
                      "World identity was not observed in this owned root phase")
         character = identity_claim(adoption["character_claim_id"], subject="character", scope=expected_scope,
-                                   coverage="visible-character-screen", value=ledger.admission.scenario.character, result_id=result_id)
+                                   value=ledger.admission.scenario.character, result_id=result_id)
         inspect_id = adoption["identity_inspect_request_id"]
         inspect = request(inspect_id)
         inspected = requests[inspect_id]["result"] or {}

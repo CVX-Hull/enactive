@@ -12,12 +12,11 @@ import math
 import re
 from typing import Any, Callable
 
-from .contracts import ContractError, EvidenceRef, json_object
-from .evidence import CapacityError, EvidenceError, EvidenceStore
+from .contracts import ContractError, json_object
+from .source_contracts import CapacityError, EvidenceError, SourceReference
 from .contracts import canonical
-from .mission_contracts import MAX_CONTEXT_BYTES, MAX_HANDOFF_CONTEXT_BYTES, MAX_HANDOFF_SOURCES, MEMORY_VERSION, VERSION, MemoryRequestRefusal, validate_memory_entry, validate_work_view, validate_request
-from .mission_ledger import MissionLedger, RequestNotFound
-from .procedure_library import ProcedureEpisodeRefusal
+from .memory_contracts import MAX_CONTEXT_BYTES, MAX_HANDOFF_CONTEXT_BYTES, MAX_HANDOFF_SOURCES, MEMORY_VERSION, MemoryRequestRefusal, validate_memory_entry, validate_work_view, validate_scope, validate_context_query
+from .memory_ports import MemoryRepository, MemorySources, MemoryRecordNotFound, ProcedureEpisodeRefusal
 from .procedures import MAX_PROCEDURE_RECORDS, project_procedures
 
 MAX_CLAIMS = 32
@@ -65,7 +64,7 @@ class CampaignMemory:
     after restart callers retrieve again. The durable Decision's frozen fields
     retain its exact version/query and selected IDs, without a second packet log.
     """
-    def __init__(self, ledger: MissionLedger, store: EvidenceStore, library=None):
+    def __init__(self, ledger: MemoryRepository, store: MemorySources, library=None):
         self.ledger = ledger
         self.store = store
         self.library = library
@@ -78,7 +77,7 @@ class CampaignMemory:
 
     def _procedure_heads(self) -> dict[str, dict]:
         records = self._procedure_records()
-        policy = self.ledger.admission.learning
+        policy = self.ledger.learning
         if (records and policy is None or policy is not None and policy.library_sources and self.library is None):
             raise ContractError("Procedure retrieval requires its admitted library and environment")
         if policy is not None and any(record["schema"] == "procedure/3"
@@ -91,7 +90,7 @@ class CampaignMemory:
         return {"mission_id": entry["mission_id"], "revision_id": entry["id"]}
 
     def procedure_source(self, mission_id: str, source_id: str) -> tuple[dict, bytes]:
-        if mission_id == self.ledger.admission.mission_id:
+        if mission_id == self.ledger.mission_id:
             return self.store.export_source(source_id)
         if self.library is None:
             raise ContractError("Historical procedure evidence is not admitted")
@@ -115,12 +114,12 @@ class CampaignMemory:
             refusal = MemoryRequestRefusal if new else ContractError
             for episode in record["support"] + record["counterexamples"]:
                 mission = episode["mission_id"]
-                if mission == self.ledger.admission.mission_id:
+                if mission == self.ledger.mission_id:
                     linked = set()
                     for identity in episode["request_ids"]:
                         try:
                             request = self.ledger.request(identity)
-                        except RequestNotFound as exc:
+                        except MemoryRecordNotFound as exc:
                             if not new:
                                 raise
                             raise MemoryRequestRefusal("Procedure episode request is not retained") from exc
@@ -176,15 +175,12 @@ class CampaignMemory:
         return _copy(chosen)
 
     def _scope(self, scope: dict) -> dict:
-        scope = validate_request({"schema": VERSION, "kind": "context", "handoff": None,
-            "mission_id": self.ledger.admission.mission_id, "scope": scope,
-            "query": "scope validation", "max_bytes": MAX_CONTEXT_BYTES})["scope"]
-        return scope
+        return validate_scope(scope, mission_id=self.ledger.mission_id)
 
-    def _references(self) -> dict[str, EvidenceRef]:
+    def _references(self) -> dict[str, SourceReference]:
         return {ref.observation_id: ref for ref in self.store.historical_references}
 
-    def _sources(self, entry: dict) -> list[EvidenceRef]:
+    def _sources(self, entry: dict) -> list[SourceReference]:
         refs = self._references()
         result = []
         for identity in entry["sources"]:
@@ -232,18 +228,14 @@ class CampaignMemory:
     def apply(self, request: dict, *, now: float) -> dict:
         """Append admitted memory; `now` is the ledger's real wall time in seconds."""
         _clock(now)
-        data = validate_request(request)
-        if data["kind"] not in ("remember", "correct"):
-            raise ContractError("Memory apply requires remember/correct")
-        if self.ledger.request(data["request_id"])["request"] != data:
-            raise ContractError("Memory request differs from its durable admitted payload")
+        data = self.ledger.validate_application(request)
         entry, kind = data["entry"], data["entry_type"]
         if kind == "decision":
             return self.record_decision(entry, now=now, event_id=data["request_id"])
         if kind == "procedure":
-            if self.ledger.admission.learning is None:
+            if self.ledger.learning is None:
                 raise MemoryRequestRefusal("Procedure adaptation is not admitted")
-            if entry["environment"] != dict(self.ledger.admission.learning.environment):
+            if entry["environment"] != dict(self.ledger.learning.environment):
                 raise MemoryRequestRefusal("Procedure environment differs from frozen admission")
             existing = self._procedure_records()
             self._procedure_heads()  # Existing history is never a candidate refusal.
@@ -284,35 +276,6 @@ class CampaignMemory:
                 raise MemoryRequestRefusal("Work references an unknown or differently scoped primitive effect")
         sequence = self.ledger.append_memory(data["request_id"], kind, entry, now=now, candidate=True)
         return _copy({"memory_version": sequence, "entry": entry, "grants_authority": False})
-
-    def capture_native(self, reference: EvidenceRef, scope: dict, *, now: float) -> dict:
-        """Literal scene values; host assertion receipt never borrows the native clock."""
-        _clock(now)
-        scope = self._scope(scope)
-        if reference.session != scope["session"]:
-            raise ContractError("Native source differs from exact memory session")
-        observation = self.store.observation(reference)
-        scene = observation["scene"]
-        entries = []
-        existing = {row["entry"]["id"]: row["entry"] for row in self.ledger.memory_records("claim")}
-        sequence = max((row["sequence"] for kind in ("claim", "work", "decision", "procedure")
-                        for row in self.ledger.memory_records(kind)), default=0)
-        if scene is not None:
-            facts = [("player-position", "local-coordinate", {"quantity": None, "state": canonical({"position": scene["position"]})}),
-                     ("observed-turn", "turn", {"quantity": None, "state": str(scene["turn"])}),
-                     ("visible-creatures", "count", {"quantity": len(scene["visible_creatures"]), "state": None})]
-            for subject, unit, value in facts:
-                identity = _identity("native-", {"source": reference.observation_id, "scope": scope, "subject": subject})
-                entry = validate_memory_entry({"schema": MEMORY_VERSION, "record_type": "Claim", "id": identity,
-                    "kind": "native_fact", "key": {"subject": subject, "property": "place", "unit": unit,
-                        "coverage_id": "native-scene"}, "value": value, "text": subject,
-                    "scope": scope, "observed_time": {"revision": reference.revision, "turn": reference.turn},
-                    "received_time": existing.get(identity, {}).get("received_time", int(now * 1000)), "coverage": "literal player-visible scene fields",
-                    "sources": [reference.observation_id], "supports": [{"sources": [reference.observation_id], "claims": []}],
-                    "status": "current", "supersedes": []}, "claim")
-                sequence = max(sequence, self.ledger.append_memory(identity, "claim", entry, now=now))
-                entries.append(entry)
-        return _copy({"memory_version": sequence, "entries": entries, "grants_authority": False})
 
     @staticmethod
     def _validate_claim_history(claims: dict[str, dict]) -> None:
@@ -397,7 +360,7 @@ class CampaignMemory:
         return result
 
     @staticmethod
-    def _effects(entry: dict, refs: dict[str, EvidenceRef], primitives: tuple[dict, ...]) -> list[str]:
+    def _effects(entry: dict, refs: dict[str, SourceReference], primitives: tuple[dict, ...]) -> list[str]:
         sources = [refs[s] for s in entry["sources"] if s in refs]
         affected = []
         for primitive in primitives:
@@ -410,7 +373,7 @@ class CampaignMemory:
         return affected
 
     @staticmethod
-    def _work_views(rows: tuple[dict, ...], refs: dict[str, EvidenceRef]) -> tuple[dict, dict]:
+    def _work_views(rows: tuple[dict, ...], refs: dict[str, SourceReference]) -> tuple[dict, dict]:
         """Latest planning fields plus a coherent observed-state source frontier.
 
         Work has no independent native clock field. Its retained source boundary
@@ -472,8 +435,7 @@ class CampaignMemory:
         if not complete and (support_source_ids or source_status is not None):
             raise ContractError("Additional source checks require complete handoff context")
         scope = self._scope(scope)
-        validate_request({"schema": VERSION, "kind": "context", "handoff": None, "mission_id": scope["mission_id"],
-                          "scope": scope, "query": query, "max_bytes": min(max_bytes, MAX_CONTEXT_BYTES)})
+        validate_context_query(scope, query, min(max_bytes, MAX_CONTEXT_BYTES))
         _clock(now_monotonic)
         _wall_clock(now_timestamp_ms)
         rows = {kind: self.ledger.memory_records(kind) for kind in ("claim", "work", "decision", "procedure")}
@@ -492,7 +454,7 @@ class CampaignMemory:
             different_orders = len({canonical(claims[i]["observed_time"]) for i in ids}) > 1
             if different_values or different_orders:
                 disputed.update(ids)
-        mission_id = self.ledger.admission.mission_id
+        mission_id = self.ledger.mission_id
         checks: dict[tuple[str, str], str] = {}
 
         def qualified_current(identities: set[str]) -> set[tuple[str, str]]:

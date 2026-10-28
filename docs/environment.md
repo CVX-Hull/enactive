@@ -6,7 +6,7 @@ status: active
 
 # Environment ownership and retained evidence
 
-Use [setup](setup.md) for installation, [runbook](runbook.md#evidence-retention-and-cleanup)
+Use [setup](setup.md) for installation, [runbook](operations/evidence-cleanup.md#evidence-retention-and-cleanup)
 for operation/retirement, and the [overview](overview.md) for supported scope.
 This page maps owned resources and exceptional environment changes. Dated reports
 and adjacent private manifests own individual build, run and cleanup receipts;

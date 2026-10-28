@@ -68,7 +68,7 @@ Neither undoes committed input nor guarantees activity interruption. Unknown
 delivery stays charged and unreplayed; supported collection/reconciliation retain
 uncertainty. Restart restores history, never a lease.
 [Control view](components/native-control.md), [runbook](runbook.md),
-[exact recovery contract](protocol.md#explicit-operator-recovery).
+[exact recovery contract](contracts/operator-recovery.md#explicit-operator-recovery).
 
 ## Observation and deployment boundaries
 
@@ -91,14 +91,23 @@ qualification is CDDA on this Mac, not a delivered universal plugin interface.
 | One writer, finite costs, uncertainty and request/result correlation | Supported receiver, custody and timing attestations |
 | Campaign/evidence review and spectator presentation | Game-specific identity, persistence and outcome evidence |
 
-Menu categories, inventory/count provenance, coordinates, turn units and Save/
-identity transitions are integration concepts. Coupling remains in native
-classification, MissionRuntime, mission contracts/ledger, lifecycle proofs and
-preparation. The CDDA patch is deliberately game-specific. Extract demonstrated
-seams using the existing writer/store/input foundation, without another executor
-or speculative game framework. An independently shaped fixture tests a seam;
-actual portability needs another real integration.
-[#191](https://github.com/CVX-Hull/enactive/issues/191) owns follow-through.
+Shared memory consumes passive repository/source ports. The mission adapter owns
+request admission/provenance; the CDDA adapter projects literal scene facts and
+validates world/character interpretation. Shared time arithmetic consumes explicit
+projected seconds and authenticated adjacent endpoints. CDDA's adapter owns turn
+conversion, same-turn reload continuity and retained reference integrity.
+
+Menu categories, inventory/count provenance, coordinates and Save/identity
+transitions remain integration concepts in native classification, MissionRuntime,
+mission contracts/ledger, lifecycle proofs and preparation. `gameplay/2` EvidenceRef
+and `cdda-visible/1` remain the current CDDA binding's formats; these are not a
+universal observation schema. The source separation preserves current persisted
+representations and adds neither another executor nor a speculative game framework.
+[Memory and source ports](components/memory-learning.md#internal-responsibilities)
+and [time projection](contracts/gameplay-evidence.md#binding-projections) identify
+the concrete interfaces. Independently shaped fixtures exercise the seam; actual
+portability still needs another real integration under
+[#191](https://github.com/CVX-Hull/enactive/issues/191).
 A seven-day CDDA result would not prove family-wide support.
 
 ## Separate recovery and memory boundaries
@@ -121,21 +130,21 @@ The injected planner port and TaskMemory/waypoint libraries are passive study
 components. They return candidates and own no controller lease or live task/planner
 endpoint in MissionRuntime. No concrete planner provider is connected to that
 service. They are not a generic autonomous campaign executor.
-[Exact passive contract](protocol.md#bounded-injected-planner).
+[Exact passive contract](contracts/injected-planner.md#bounded-injected-planner).
 
 ## Passive skill verification
 
 The offline movement verifier proposes an input and consumes correlated feedback;
 the caller owns dispatch. It shares the pure policy with controller walk. Current
 missions also compose skills through their writer.
-[Passive contract](protocol.md#passive-bounded-movement-skills) and
+[Passive contract](contracts/movement-skills.md#passive-bounded-movement-skills) and
 [diagram](diagrams/skill.svg) distinguish proposal/verification from live authority.
 
 ## Passive task supervision
 
 The waypoint supervisor combines passive planning, memory and movement for one
 waypoint/return study. It owns no input capability and cannot silently become the
-live player. [Contract](protocol.md#passive-waypoint-supervision) and
+live player. [Contract](contracts/movement-skills.md#passive-waypoint-supervision) and
 [diagram](diagrams/supervisor.svg) retain that scope.
 
 ## Run ownership and operator takeover
@@ -144,11 +153,11 @@ One exact in-process controller capability belongs to MissionRuntime. Competing
 ordinary writers reject; cached status and Pause remain available. Internal
 rotation cannot erase user Pause.
 [Ownership view](components/native-control.md) leads to the
-[exact contract](protocol.md#controller-run-ownership).
+[exact contract](contracts/controller-ownership.md#controller-run-ownership).
 
 ## Coordinated change
 
-Apply [S-MIGRATION](engineering.md#s-migration-one-current-contract-coordinated-migration):
+Apply [S-MIGRATION](standards/migration.md#s-migration-one-current-contract-coordinated-migration):
 one current contract; coordinate producers, consumers, state, fixtures and guidance.
 No compatibility shim or downgrade. Distinct version numbers describe distinct
 contracts; [protocol](protocol.md) owns the current reference. Historical artifacts
@@ -184,7 +193,7 @@ Scope work from the affected system responsibility down to components, contracts
 state/callers, code, tests and procedures. Review the highest changed boundary
 before committing its implementation. An unchanged parent needs a link and impact
 statement, not recursive approvals. Select checks from consequence and uncertainty
-under the [assurance tiers](project-management.md#risk-based-assurance).
+under the [assurance tiers](workflows/review.md#risk-based-assurance).
 
 Import Linter checks declared dependency directions; protocol/document checks catch
 selected drift. They do not prove semantic truth. Source tests, native builds,

@@ -140,13 +140,13 @@ useful native play, whole-player speed and normal lifecycle remain unqualified
 for that configuration. Mandatory host activation and any fresh finite qualification
 are tracked under [#240](https://github.com/CVX-Hull/enactive/issues/240), independently
 of model selection and campaign readiness. Frozen preparation and
-supported lifecycle are in the [runbook](runbook.md#bounded-player-host-activation).
+supported lifecycle are in the [runbook](operations/player-host.md#bounded-player-host-activation).
 
 The current source uses native7/mission11/ledger13/archive6 with procedure/3,
 campaign-memory/6 and reflection/3; gameplay/2 is unchanged. Build and qualify the
 matching native7 binary before new native support claims. Historical native5/native6
 learning and lifecycle results do not qualify this candidate. See
-[coordinated migration](runbook.md#coordinated-migration) before using existing
+[coordinated migration](operations/migration.md#coordinated-migration) before using existing
 runtime state; old libraries are not current-contract inputs.
 
 ## Configure the structured player tools
@@ -323,7 +323,7 @@ app is already present. `--install` refuses while a CDDA Tiles process is runnin
 It delegates to [prepare_game.py](../tools/prepare_game.py), which installs the
 binary, signs it locally, preserves the original binary, writes the launch
 wrapper, and forces the project user directory and windowed options. Launch
-the prepared app bundle through the [runbook](runbook.md#start-and-observe), which
+the prepared app bundle through the [runbook](operations/start-observe.md#start-and-observe), which
 executes that wrapper; do not launch an unprepared stock app. Normal game
 saves remain managed through CDDA's UI.
 
@@ -383,7 +383,7 @@ success. Exact acceptance is tracked in
 ```
 
 The default command is full, equivalent to `--profile full`. Explicit strict
-profiles are available for the [delivery policy](project-management.md#protected-ci-profiles):
+profiles are available for the [delivery policy](workflows/ci-profiles.md#protected-ci-profiles):
 
 ```sh
 .venv/bin/python tools/check.py --profile editorial
@@ -437,12 +437,12 @@ For fast development checkpoints, `.githooks/pre-commit` runs
 `.venv/bin/python tools/check.py --fast`: syntax/lint, import contracts, JS syntax,
 document structure/links, governance and whitespace, without behavioral tests or
 browser-based diagram rendering. Run relevant focused tests separately.
-[Development-first delivery](project-management.md#development-first-delivery) owns
+[Development-first delivery](workflows/development.md#development-first-delivery) owns
 when the appropriate profile and independent review gate formal acceptance.
 
 [The portable CI job](../.github/workflows/check.yml) runs `python tools/ci.py` on
 PRs targeting main and pushes to main. The adapter selects and reports a strict
-profile under the [delivery policy](project-management.md#protected-ci-profiles).
+profile under the [delivery policy](workflows/ci-profiles.md#protected-ci-profiles).
 It cancels superseded PR runs, without cancelling running main checks, and avoids
 duplicate feature-branch push/PR jobs. The always-present required `controller`
 job has no path filters. CI validates the selected portable lane on Linux; it
@@ -464,7 +464,7 @@ The active `.runtime/build-manifest.json` requires exact integer `schema_version
 Setup rejects unversioned, old or future manifests without rewriting them. Fresh
 `--extract` writes the current format; preserve an existing manifest/build before
 recreating it. A one-time verified offline conversion follows the
-[runbook](runbook.md#coordinated-migration). There is no automatic legacy reader.
+[runbook](operations/migration.md#coordinated-migration). There is no automatic legacy reader.
 
 ## Evidence and releases
 
@@ -472,7 +472,7 @@ Before a release/checkpoint, inspect the staged diff and candidate scope, run th
 common lane against that candidate, and record exact commit/tree identity, tools,
 results and unexecuted lanes in a dated acceptance report. If partially staging,
 check an isolated export of the staged candidate rather than treating a working-tree
-hook as proof. Native changes additionally follow the [native acceptance lane](runbook.md#native-acceptance-lane).
+hook as proof. Native changes additionally follow the [native acceptance lane](operations/native-acceptance.md#native-acceptance-lane).
 Commit the source before native acceptance. Use that Git commit/tree and subsequent
 `git diff`/PR identities for source provenance; do not duplicate Git with per-source
 checksum inventories. If relevant source changes, checkpoint again and repeat the

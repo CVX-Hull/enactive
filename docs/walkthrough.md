@@ -7,7 +7,7 @@ review_trigger: Spectator controls, observation authority or first-session workf
 # Understand your first spectator session
 
 This walkthrough explains what to look for. Use [setup](setup.md) for installation
-and [start and observe](runbook.md#start-and-observe) for the exact launch commands.
+and [start and observe](operations/start-observe.md#start-and-observe) for the exact launch commands.
 The game stays in a normal window; the browser spectator is another view of it.
 
 ## Read the spectator
@@ -47,6 +47,6 @@ the intended outcome. Resume follows the current registered ownership and phase.
 
 Use **Pause control**, or native keyboard/button input to take over. New remote
 inputs stop; an existing native activity may still need interruption in the game
-window. If an outcome is unknown, follow [recovery](runbook.md#pause-timeout-and-recovery)
+window. If an outcome is unknown, follow [recovery](operations/pause-timeout.md#pause-timeout-and-recovery)
 instead of repeating the input. The [action/recovery diagrams](architecture.md#action-and-recovery-views)
 explain why these steps matter. This walkthrough adds no survival or combat guarantee.

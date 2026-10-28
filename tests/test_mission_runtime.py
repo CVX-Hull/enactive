@@ -1305,8 +1305,10 @@ class MissionRuntimeTests(unittest.TestCase):
             self.runtime.command(request)
             self.assertTrue(entered.wait(2))
             started = time.monotonic()
-            self.runtime.close()
+            receipt = self.runtime.close()
             self.assertLess(time.monotonic() - started, 1.8)
+            self.assertFalse(receipt["writer_settled"])
+            self.assertFalse(receipt["native_absence_verified"])
             self.assertTrue(self.runtime._thread.is_alive())
             self.assertIsNotNone(self.runtime._ledger._db)
             self.assertFalse(self.runtime._store._lock.closed)
@@ -1315,6 +1317,7 @@ class MissionRuntimeTests(unittest.TestCase):
         self.assertFalse(self.runtime._thread.is_alive())
         self.assertIsNone(self.runtime._ledger._db)
         self.assertTrue(self.runtime._store._lock.closed)
+        self.assertTrue(self.runtime.close()["writer_settled"])
         self.assertEqual([r for r in self.bridge.delivered if r["kind"] == "action"], [])
 
     def test_constructor_strict_start_holding_lease_and_cache_are_passive(self):

@@ -26,7 +26,7 @@ bytes. The importer independently binds captured data to those originals and
 checks settlement, source and ancestry. Historical procedures use a distinct
 advisory node and images use `advisory-source/1`; neither is a current observation
 or executable routine. New missions use native7/store6 evidence and ledger13.
-The [protocol](../protocol.md#passive-gameplay-records-and-evidence) owns migration
+The [protocol](../contracts/gameplay-evidence.md#passive-gameplay-records-and-evidence) owns migration
 and historical-source limits.
 
 The current library permits eight explicit donor pins to cover the observed
@@ -45,9 +45,28 @@ when measured closure, payload or setup cost approaches those limits under
 | EvidenceStore | Immutable selected observations/frames, integrity, source disposition and finite retention reservations; exact metadata length cache avoids repeated serialization | [evidence.py](../../harness/gameplay/evidence.py) |
 | MissionLedger | SQLite canonical requests, primitives, effects, memory/procedure/reflection records and costs | [mission_ledger.py](../../harness/gameplay/mission_ledger.py) |
 | CampaignMemory | Derived claims/Work/context, conflicts, applicability, procedure ancestry and selected packets | [campaign_memory.py](../../harness/gameplay/campaign_memory.py) |
+| Passive memory ports | Memory data, repository/source interfaces and source failure types; no mission executor or CDDA visible-schema assumption | [contracts](../../harness/gameplay/memory_contracts.py), [ports](../../harness/gameplay/memory_ports.py), [sources](../../harness/gameplay/source_contracts.py) |
+| Mission/CDDA adapters | Exact admitted mutation payloads; visible world/character identity, literal scene facts and turn/continuity interpretation | [mission memory](../../harness/gameplay/mission_memory.py), [identity](../../harness/gameplay/cdda_identity.py), [scene](../../harness/gameplay/cdda_memory.py), [time](../../harness/gameplay/cdda_timeline.py) |
 | Offline export and historical library | Validate sealed current donors, publish immutable exports, independently check original-byte bindings and qualified dependencies; no old actor or current world facts | [export](../../harness/gameplay/advisory_export.py), [library](../../harness/gameplay/procedure_library.py) |
 | Reflective exchange | Bounded passive work claim/results and candidate proposals | [reflection.py](../../harness/gameplay/reflection.py), [mission_reflection.py](../../harness/mission_reflection.py) |
 | Program evaluator | Execute selected procedure data over current supplied observations, yielding ordinary proposals | [policy_program.py](../../harness/gameplay/policy_program.py), [program_input.py](../../harness/gameplay/program_input.py) |
+
+![CDDA projections authenticate data before shared memory and time arithmetic.](../diagrams/binding-projections.svg)
+
+This current logical view answers “Which observation and clock assumptions belong
+to CDDA?” Arrows carry validated data/provenance, never input permission. The table
+and flow below are its text equivalent; boxes do not imply separate processes.
+[Editable source](../diagrams/binding-projections.mmd).
+
+The shared reducer receives passive data ports, with no controller/process
+reference. `MissionMemory` validates the complete mutation and equality with its
+durable admitted payload; an abstract append method does not bypass admission.
+The retained `revision`/`turn` fields are optional partial-order counters, never
+elapsed seconds in shared memory. CDDA scene interpretation is outside the reducer.
+Import Linter prevents direct or indirect reintroduction of mission/CDDA/storage
+implementation dependencies into these shared modules. Independent data fixtures
+exercise [memory ports](../../tests/test_memory_ports.py) and [projected time](../../tests/test_observed_time.py);
+they do not qualify another game or establish useful memory application.
 
 SQLite and ordinary OS/library contracts supply their configured persistence and
 file/process behavior. Project code owns domain provenance, finite capacity and
@@ -117,9 +136,9 @@ shared authoring, explicit candidate selection and horizon-aware allocation.
 It retains broader questions about relevance, strategic questions and learning
 benefit; these are not established by source checks or offline timing.
 
-[Ordinary/procedure contracts](../protocol.md#ordinary-discovery-and-procedure-data),
-[handoff](../protocol.md#quiescent-player-replacement) and
-[passive memory](../protocol.md#passive-task-memory) own exact rules. The older
+[Ordinary/procedure contracts](../contracts/procedure-programs.md#ordinary-discovery-and-procedure-data),
+[handoff](../contracts/handoff-issuance.md#quiescent-player-replacement) and
+[passive memory](../contracts/injected-planner.md#passive-task-memory) own exact rules. The older
 passive TaskMemory/planner/supervisor libraries are offline study components,
 not the current deciding player or live mission API.
 
@@ -136,10 +155,10 @@ benefit or complete memory coverage.
 
 | User consequence | Invariant and contract | Mechanism, representative assertion and limit |
 | --- | --- | --- |
-| Lost evidence revives an old possession claim, or invalid support becomes trusted | Preserve unknown frontiers and reject forward/cyclic support. [Evidence](../protocol.md#passive-gameplay-records-and-evidence) and [procedure/memory contract](../protocol.md#ordinary-discovery-and-procedure-data). | CampaignMemory validation: [memory tests](../../tests/test_campaign_memory.py), selected by `assurance_memory`, assert unknown newest stock after SQLite reopen and rejection of durable cyclic support. Real retained files/SQLite with synthetic observations do not prove current game possession. |
-| A generated routine renews its budget or blocks ordinary fallback | Programs propose within one original request; faults yield no input and healthy ordinary fallback remains available. [Program contract](../protocol.md#ordinary-discovery-and-procedure-data). | Evaluator plus the [mission writer](mission-execution.md): [program execution](../../tests/test_program_execution.py) `test_original_input_limit_stops_without_new_request_or_allowance` asserts two deliveries under one request; `test_program_fault_is_zero_input_and_preserves_ordinary_fallback` asserts zero program deliveries and a later ordinary input. `assurance_program` uses real JavaScript execution with synthetic transport, not game efficacy. |
-| Conflicting advice silently becomes an adopted procedure | Advisory proposals remain candidate data; source/cutoff checks precede player adoption. [Procedure/advice contract](../protocol.md#ordinary-discovery-and-procedure-data). | ReflectionLedger validation: [reflection tests](../../tests/test_reflection_ledger.py) `test_conflicting_command_and_proposal_cutoff_refuse_without_adoption` asserts refusals and empty proposal/procedure records. This `assurance_advice` case proves refusal bookkeeping, not useful advice or model judgment. |
-| A failed or stopped donor either loses useful procedures or restores authority | Historical archives preserve validated data and pins without current permission. [Procedure/library contract](../protocol.md#ordinary-discovery-and-procedure-data). | Offline sealed validation: [archive tests](../../tests/test_procedure_library.py) `test_closed_campaign_outcomes_preserve_procedure_data_without_authority` (`assurance_advice`) asserts preserved records/bytes/pins and no authority across closed outcomes. [Current export tests](../../tests/test_advisory_export.py) separately exercise immutable artifacts, dependency closure and refusal after recomputed pins. Synthetic archives do not prove fresh-successor application in play. |
+| Lost evidence revives an old possession claim, or invalid support becomes trusted | Preserve unknown frontiers and reject forward/cyclic support. [Evidence](../contracts/gameplay-evidence.md#passive-gameplay-records-and-evidence) and [procedure/memory contract](../contracts/procedure-programs.md#procedure-roots-learning-and-memory-validation). | CampaignMemory validation: [memory tests](../../tests/test_campaign_memory.py), selected by `assurance_memory`, assert unknown newest stock after SQLite reopen and rejection of durable cyclic support. Real retained files/SQLite with synthetic observations do not prove current game possession. |
+| A generated routine renews its budget or blocks ordinary fallback | Programs propose within one original request; faults yield no input and healthy ordinary fallback remains available. [Program contract](../contracts/procedure-programs.md#ordinary-discovery-and-procedure-data). | Evaluator plus the [mission writer](mission-execution.md): [program execution](../../tests/test_program_execution.py) `test_original_input_limit_stops_without_new_request_or_allowance` asserts two deliveries under one request; `test_program_fault_is_zero_input_and_preserves_ordinary_fallback` asserts zero program deliveries and a later ordinary input. `assurance_program` uses real JavaScript execution with synthetic transport, not game efficacy. |
+| Conflicting advice silently becomes an adopted procedure | Advisory proposals remain candidate data; source/cutoff checks precede player adoption. [Procedure/advice contract](../contracts/advisory-reflection.md). | ReflectionLedger validation: [reflection tests](../../tests/test_reflection_ledger.py) `test_conflicting_command_and_proposal_cutoff_refuse_without_adoption` asserts refusals and empty proposal/procedure records. This `assurance_advice` case proves refusal bookkeeping, not useful advice or model judgment. |
+| A failed or stopped donor either loses useful procedures or restores authority | Historical archives preserve validated data and pins without current permission. [Procedure/library contract](../contracts/historical-import.md). | Offline sealed validation: [archive tests](../../tests/test_procedure_library.py) `test_closed_campaign_outcomes_preserve_procedure_data_without_authority` (`assurance_advice`) asserts preserved records/bytes/pins and no authority across closed outcomes. [Current export tests](../../tests/test_advisory_export.py) separately exercise immutable artifacts, dependency closure and refusal after recomputed pins. Synthetic archives do not prove fresh-successor application in play. |
 
 Actual fresh-successor application and useful advisory overlap have bounded
 [useful-play evidence](../acceptance/2026-10-25-useful-play-readiness.md): short

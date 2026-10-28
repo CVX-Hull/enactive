@@ -4,6 +4,7 @@ from __future__ import annotations
 import hmac
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
+import os
 import re
 import threading
 from pathlib import Path
@@ -66,7 +67,8 @@ class Server(ThreadingHTTPServer):
             self.mission = MissionRuntime(controller)
             self._mission_closed = False
             atomic_json(controller.bridge / "controller.json", {
-                "protocol": 7, "port": self.port, "token": controller.token})
+                "protocol": 7, "port": self.port, "token": controller.token,
+                "controller_boot_id": controller.authority["controller_boot_id"], "controller_pid": os.getpid()})
         except BaseException:
             self.server_close()
             raise
@@ -79,7 +81,13 @@ class Server(ThreadingHTTPServer):
             try:
                 self.mission.pause("Service shutdown", cause="internal_recovery")
             finally:
-                self.mission.close()
+                receipt = self.mission.close()
+                if type(receipt) is not dict:
+                    receipt = {"writer_settled": False, "native_cleanup": {"outcome": "cleanup_unknown"},
+                        "native_absence_verified": False, "acceptance_claimed": False, "grants_authority": False}
+                boot_id = self.controller.authority["controller_boot_id"]
+                atomic_json(self.controller.bridge / f"mission-shutdown-{boot_id}.json",
+                    {"controller_boot_id": boot_id, "cleanup": receipt, "grants_authority": False})
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -153,6 +161,7 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/status":
             mission = self.server.mission.status()
             self._json(200, {**controller.status(), "mission": mission,
+                "controller_boot_id": controller.authority["controller_boot_id"], "controller_pid": os.getpid(),
                 "deciding_host": deciding_host_status(controller.root, mission)})
             return
         if path == "/frame.png":

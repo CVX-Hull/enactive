@@ -1,0 +1,13 @@
+---
+title: Current finite campaign custody and exceptional shutdown
+---
+flowchart TB
+  accTitle: The custodian delegates host and native cleanup to their actual owners
+  accDescr: One maintained custodian reads frozen data and owns exact controller and driver child handles. The driver owns the Pi hosts. The controller contains one mission writer, which owns a NativeProcess child. On cancellation, failure or deadline, the custodian stops the driver with bounded nested cleanup time, requests exceptional Stop and closes its controller. Only the settled writer may exceptionally terminate its retained native handle after authority revocation. A boot-bound shutdown receipt reports closure or unknown; neither exceptional cleanup nor process absence proves normal ending or game acceptance. No process scan, PID adoption or process group signalling is used.
+  F["Frozen run data<br/>finite limits and source"] --> C["Maintained campaign custodian"]
+  C -->|"Retained Popen"| D["Campaign driver<br/>owns Pi host cleanup"]
+  C -->|"Retained Popen"| S["Controller process<br/>writer and NativeProcess"]
+  D --> P["Original Pi host<br/>at most one fresh successor"]
+  S -->|"Retained Popen<br/>exceptional close after revocation<br/>and writer settlement"| N["Owned native game child"]
+  X["Cancellation, failure or deadline"] -->|"Quiesce driver; then Stop and close controller"| C
+  S -. "Matching boot receipt<br/>closed or unknown" .-> C

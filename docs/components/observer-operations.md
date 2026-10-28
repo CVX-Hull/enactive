@@ -12,15 +12,24 @@ cached ownership, mission progress, uncertainty and cost. It does not choose
 tactics or execute the player's plan. All services are local; public network
 exposure is outside the supported deployment.
 
+![The finite custodian delegates deciding-host and native cleanup to their retained owners.](../diagrams/campaign-custody.svg)
+
+This current process view answers “Who closes a failed finite run?” Solid arrows
+identify ownership or shutdown order; the dotted arrow is advisory evidence. The
+[custodian procedure](../operations/campaign-run.md) is its text equivalent.
+[Editable source](../diagrams/campaign-custody.mmd). Exceptional shutdown can close
+an unsaved owned game and is never a normal-ending or acceptance claim.
+
 ## Internal responsibilities
 
 | Block | Responsibility and state | Implementation / operating reference |
 | --- | --- | --- |
 | Server/CLI | Assemble runtime/controller and expose local typed ingress, status, frame and Pause | [server.py](../../harness/server.py), [CLI](../../harness/__main__.py); [runbook](../runbook.md) |
+| Finite run custodian | Freeze-data admission, original ending/cleanup allowances, exact controller/driver custody and boot-bound shutdown observation; no tactical input | [campaign_run.py](../../tools/campaign_run.py); [finite run procedure](../operations/campaign-run.md) |
 | Viewer | Render actual image and cached projections, label current vs historical state, serialize polling, retain bounded timing samples | [app.js](../../web/app.js), [web](../../web/) |
 | Host projection | Read existing driver receipts and distinguish original/successor observed events; no process discovery or activation | [host_status.py](../../harness/host_status.py) |
 | Setup/build | Pinned project-local dependencies/native source, explicit windowed userdir, signed build provenance | [tools](../../tools/); [setup](../setup.md), [environment history](../environment.md) |
-| Retention | Preserve run evidence and original saves; verify owned artifacts before retiring disposable worlds/processes | [runbook retention](../runbook.md#evidence-retention-and-cleanup) |
+| Retention | Preserve run evidence and original saves; verify owned artifacts before retiring disposable worlds/processes | [runbook retention](../operations/evidence-cleanup.md#evidence-retention-and-cleanup) |
 
 The wrapper requests background window startup; those child-process hints are not
 global Mac settings or proof of OS focus. Prepared operation uses explicit project
@@ -57,8 +66,8 @@ executes the Python fixtures and the separate Node viewer suite.
 
 | User consequence | Invariant and contract | Mechanism, representative assertion and limit |
 | --- | --- | --- |
-| A driver ending is displayed as a verified host exit or new mission authority | Status projects existing receipts, retains unresolved exits and cannot mutate mission state. [Host projection contract](../protocol.md#quiescent-player-replacement). | HostStatus and server projection: [host status](../../tests/test_host_status.py) `test_unresolved_exit_stays_unknown_even_when_driver_ended` asserts unresolved exit; [server](../../tests/test_server.py) `test_status_projects_host_receipts_without_mutating_mission_or_exposing_process_details` asserts unchanged mission, no runtime calls and no private process data. `assurance_observer` uses controlled receipts/runtime, not process-liveness proof. |
-| A delayed frame looks current or presentation triggers input | Frame/session/revision ordering gates presentation; passive rendering grants no authority. [Transport/state](../protocol.md#transport-and-state) and [ownership](../protocol.md#controller-run-ownership). | Viewer decode/authority guards: [Node viewer assertions](../../tests/test_viewer.cjs) retain the prior displayed revision when an obsolete decode completes, require the latest decode for authority and assert objective rendering sends no request. Controlled DOM/images are a separate executable lane from pytest; they do not prove real browser layout or physical paint. |
+| A driver ending is displayed as a verified host exit or new mission authority | Status projects existing receipts, retains unresolved exits and cannot mutate mission state. [Host projection contract](../contracts/mission-status.md). | HostStatus and server projection: [host status](../../tests/test_host_status.py) `test_unresolved_exit_stays_unknown_even_when_driver_ended` asserts unresolved exit; [server](../../tests/test_server.py) `test_status_projects_host_receipts_without_mutating_mission_or_exposing_process_details` asserts unchanged mission, no runtime calls and no private process data. `assurance_observer` uses controlled receipts/runtime, not process-liveness proof. |
+| A delayed frame looks current or presentation triggers input | Frame/session/revision ordering gates presentation; passive rendering grants no authority. [Transport/state](../contracts/native-observations.md#native-request-lifecycle-and-unknown-outcomes) and [ownership](../contracts/controller-ownership.md#controller-run-ownership). | Viewer decode/authority guards: [Node viewer assertions](../../tests/test_viewer.cjs) retain the prior displayed revision when an obsolete decode completes, require the latest decode for authority and assert objective rendering sends no request. Controlled DOM/images are a separate executable lane from pytest; they do not prove real browser layout or physical paint. |
 | An apparently responsive spectator is mistaken for watchable, useful play | Actual presentation and useful cadence require observed outcomes under the evaluation cohort. [Latency definitions](../evaluation.md#latency-budgets-for-interactive-play). | [C-USABILITY](../controls.md#c-usability--operator-understanding-review-manual) uses manual observation: [local refusal](../acceptance/2026-10-22-native-local-refusal.md#observer-and-timing) records actual STOPPED/HISTORY/DISCONNECTED presentation. The [useful-play assessment](../acceptance/2026-10-25-useful-play-readiness.md#latency-separate-measured-lanes) retains browser decode proxies but no qualifying routine cohort or physical-paint measurement. Neither tags nor Node passes qualify cadence. |
 
 Actual graphical observation checks the relevant working flow, separately from

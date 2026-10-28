@@ -40,7 +40,7 @@ actual consequences. Focused offline checks support prompt returns to play, whil
 consolidated acceptance retains independent review and protected validation.
 Approved API spending serves revealing play; apparent useful progress, quality
 and total engineering burden guide decisions. The
-[workflow](project-management.md#gameplay-as-the-primary-feedback-loop) owns the
+[workflow](workflows/development.md#gameplay-as-the-primary-feedback-loop) owns the
 decision rules and the distinction between estimates, invoices and reservations.
 
 Bounded independent play has demonstrated supplies/travel, procedure revision/reuse
@@ -96,7 +96,7 @@ reduces measured local overhead; the complete player's apparent responsiveness
 and independent campaign remain separate acceptance questions.
 
 [Editable diagram](diagrams/player.mmd) · [Architecture](architecture.md) ·
-[Player contract](protocol.md#designated-campaign-operator)
+[Player contract](contracts/mission-admission.md#designated-campaign-operator)
 
 ## What works and what the evidence means
 
@@ -160,9 +160,9 @@ which remains unavailable.
 
 ## How development reaches acceptance
 
-We plan [iterations around a useful outcome or explicit learning decision](project-management.md#outcome-focused-iterations),
+We plan [iterations around a useful outcome or explicit learning decision](workflows/work-items.md#outcome-focused-iterations),
 including its relevant review, validation and completion work. Small integrated
-changes and focused feedback build toward that outcome. The [development-first workflow](project-management.md#development-first-delivery)
+changes and focused feedback build toward that outcome. The [development-first workflow](workflows/development.md#development-first-delivery)
 owns the required checks, independent review and protected publication gates.
 Progress, a passing test or an investigated failure cannot substitute for the full
 requested outcome. The [control map](controls.md) records enforcement and gaps.
@@ -189,7 +189,7 @@ Prefer existing engine/platform capabilities and maintained tools when they adva
 the overall objective. Useful long-term accelerators can justify investment;
 choices and reversal conditions belong in [ADRs](decisions/002-local-contract.md).
 We keep one current contract and migrate all affected callers/state together under
-[S-MIGRATION](engineering.md#s-migration-one-current-contract-coordinated-migration).
+[S-MIGRATION](standards/migration.md#s-migration-one-current-contract-coordinated-migration).
 
 ## How you stay in control of the project
 

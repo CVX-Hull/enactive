@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import argparse
+from html.parser import HTMLParser
+import json
+import frontmatter
 from pathlib import Path
 import shutil
 import subprocess
@@ -25,26 +28,113 @@ if __package__ in (None, ""):
 from tools.ci import COMPONENT_TESTS, SMOKE_TESTS
 
 
+class _HTMLAnchors(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.anchors = set()
+        self.text = []
+
+    def handle_starttag(self, tag, attrs):
+        for key, value in attrs:
+            if value and (key == "id" or tag == "a" and key == "name"):
+                self.anchors.add(value)
+
+    def handle_data(self, data):
+        self.text.append(data)
+
+
+def _heading_text(children) -> str:
+    parts = []
+    for token in children or ():
+        if token.type in ("text", "code_inline"):
+            parts.append(token.content)
+        elif token.type in ("softbreak", "hardbreak"):
+            parts.append(" ")
+        elif token.type == "image":
+            parts.append(_heading_text(token.children))
+        elif token.type == "html_inline":
+            html = _HTMLAnchors()
+            html.feed(token.content)
+            parts.extend(html.text)
+    return "".join(parts)
+
+
 def check_documents(root: Path) -> list[str]:
+    root = root.resolve()
     errors = [f"Missing required document: {name}" for name in REQUIRED_DOCS
               if not (root / name).is_file()]
     markdown = [*(root / name for name in ("README.md", "AGENTS.md", "NOTICE.md", "CONTRIBUTING.md", "SECURITY.md")), *sorted((root / "docs").rglob("*.md"))]
     parser = MarkdownIt("commonmark").enable("table")
+    documents = {}
     for document in markdown:
         if not document.is_file():
             continue
-        for token in (child for block in parser.parse(document.read_text())
-                      for child in (block.children or [])):
-            link = token.attrGet("href") if token.type == "link_open" else (
-                token.attrGet("src") if token.type == "image" else None)
-            if link is None:
-                continue
+        parsed = frontmatter.loads(document.read_text())
+        tokens = parser.parse(parsed.content)
+        headings, explicit, links = [], set(), []
+        for index, block in enumerate(tokens):
+            if block.type == "heading_open":
+                headings.append(_heading_text(tokens[index + 1].children))
+            if block.type in ("html_block", "html_inline"):
+                html = _HTMLAnchors()
+                html.feed(block.content)
+                explicit.update(html.anchors)
+            for child in block.children or ():
+                if child.type == "html_inline":
+                    html = _HTMLAnchors()
+                    html.feed(child.content)
+                    explicit.update(html.anchors)
+                link = child.attrGet("href") if child.type == "link_open" else (
+                    child.attrGet("src") if child.type == "image" else None)
+                if link is not None:
+                    links.append(link)
+        documents[document.resolve()] = dict(headings=headings, anchors=explicit,
+            links=links, current=parsed.metadata.get("status") in ("active", "proposed"))
+    node = shutil.which("node")
+    if node is None:
+        errors.append("Node.js is required to validate GitHub Markdown fragments")
+        return errors
+    try:
+        result = subprocess.run([node, str(ROOT / "tools/document_anchors.mjs")],
+            input=json.dumps([doc["headings"] for doc in documents.values()]),
+            text=True, capture_output=True, timeout=30, check=True, cwd=ROOT)
+        for doc, anchors in zip(documents.values(), json.loads(result.stdout), strict=True):
+            doc["anchors"].update(anchors)
+    except (OSError, ValueError, subprocess.SubprocessError):
+        errors.append("GitHub heading validator unavailable; install project-local package-lock.json dependencies")
+        return errors
+    graph = {}
+    for document, doc in documents.items():
+        graph[document] = set()
+        for link in doc["links"]:
             parsed = urlsplit(link)
-            if parsed.scheme or parsed.netloc or not parsed.path:
+            if parsed.scheme or parsed.netloc:
                 continue
-            target = (document.parent / unquote(parsed.path)).resolve()
+            target = (document.parent / unquote(parsed.path)).resolve() if parsed.path else document
             if not target.is_relative_to(root.resolve()) or not target.exists():
                 errors.append(f"Broken local link in {document.relative_to(root)}: {link}")
+                continue
+            if target in documents:
+                graph[document].add(target)
+                # Frozen historical prose retains its original links. Current
+                # guidance must point to an actual current or historical anchor.
+                if doc["current"] and parsed.fragment and unquote(parsed.fragment) not in documents[target]["anchors"]:
+                    errors.append(f"Broken local fragment in {document.relative_to(root)}: {link}")
+    # Each responsibility index must actually lead to its canonical content.
+    # This checks reachability, not task comprehension or arbitrary file sizes.
+    for index, directory in (("protocol.md", "contracts"), ("engineering.md", "standards"),
+                             ("project-management.md", "workflows"), ("runbook.md", "operations")):
+        reachable, pending = set(), [(root / "docs" / index).resolve()]
+        while pending:
+            path = pending.pop()
+            if path in reachable:
+                continue
+            reachable.add(path)
+            pending.extend(target for target in graph.get(path, ())
+                           if documents.get(target, {}).get("current"))
+        for path in (root / "docs" / directory).rglob("*.md"):
+            if documents.get(path.resolve(), {}).get("current") and path.resolve() not in reachable:
+                errors.append(f"Current content is unreachable from docs/{index}: {path.relative_to(root)}")
     return errors
 
 
@@ -94,7 +184,7 @@ def _check(argv: list[str] | None = None) -> int:
     errors = check_documents(ROOT)
     if errors:
         raise ValueError("\n".join(errors))
-    print("Required documents and local Markdown file links: passed", flush=True)
+    print("Required documents, current Markdown fragments and responsibility navigation: passed", flush=True)
     run([sys.executable, "-m", "tools.documents"])
     run([sys.executable, "tools/governance.py"] + (["--development"] if args.fast else []))
     if not args.fast:

@@ -131,7 +131,7 @@ organizational research synthesis, not experiments on Enactive.
 | [GitHub Projects best practices](https://docs.github.com/en/issues/planning-and-tracking-with-projects/learning-about-projects/best-practices-for-projects), linked issues, source of truth and decomposition | Native project/issue relationships support a single changing work record | Project fields own stage/estimates, Issues own outcome/acceptance, PRs own implementation evidence. Static README/docs link rather than mirror live checkpoints; configuration still needs actual verification |
 
 The [documentation system](documentation.md), S-ARCH/S-DOCS/S-WORK and
-[risk-based assurance](project-management.md#risk-based-assurance) are local design
+[risk-based assurance](workflows/review.md#risk-based-assurance) are local design
 choices. They align with these sources without claiming standards conformance,
 measured productivity gains or automatic semantic completeness. Diagram/source
 checks cannot prove comprehension. The October24 audit tests navigation and
@@ -147,7 +147,7 @@ risk-driven engineering, shaping/discovery and recent AI-development evidence;
 the lead checked central sources and an independent reviewer checked the synthesis.
 It is not an exhaustive systematic review or proof of a locally optimal cadence.
 The user adopted the recommendations on October25. The current policy is
-[outcome-focused iterations](project-management.md#outcome-focused-iterations),
+[outcome-focused iterations](workflows/work-items.md#outcome-focused-iterations),
 not this research history or a claim of Scrum/Kanban conformance.
 
 | Primary source and scope read | Support | Transfer limit / local consequence |
@@ -187,8 +187,8 @@ recent academic selection, production CI and assurance/traceability; the lead
 checked central methods, results and limitations. Searches began with 2026/2025,
 then 2024 and foundations. This is a targeted review, not an exhaustive systematic
 review or a claim that any selector is state of the art for this project.
-The current [assurance policy](project-management.md#risk-based-assurance),
-[CI profiles](project-management.md#protected-ci-profiles) and
+The current [assurance policy](workflows/review.md#risk-based-assurance),
+[CI profiles](workflows/ci-profiles.md#protected-ci-profiles) and
 [test responsibility guide](testing.md) remain authoritative. The
 [proposed pilot #225](https://github.com/CVX-Hull/enactive/issues/225) owns action
 items; this research does not adopt a new selection mechanism or gameplay review.

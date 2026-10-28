@@ -20,7 +20,8 @@ explains artifact authority and [architecture](architecture.md) the current syst
 Use [campaign issue #145](https://github.com/CVX-Hull/enactive/issues/145) for the
 actual campaign disposition, [parent #136](https://github.com/CVX-Hull/enactive/issues/136)
 for the independent-play outcome and [workflow assessment #274](https://github.com/CVX-Hull/enactive/issues/274)
-for engineering conclusions and owned follow-ups. The earlier
+for engineering conclusions and [resolution #277](https://github.com/CVX-Hull/enactive/issues/277)
+for the integrated source/document/workflow repairs. The earlier
 [assessment #75](https://github.com/CVX-Hull/enactive/issues/75) retains its closed historical scope.
 A source repair, bounded demo or successful CI
 does not replace independent seven-day acceptance.
@@ -29,7 +30,7 @@ The generic gameplay host is mandatory under
 [#240](https://github.com/CVX-Hull/enactive/issues/240), independently of provider/model
 selection. The failed Pi/DeepInfra configuration below cannot veto that cutover.
 Current activation and actual qualification limits live in the
-[player component](components/player-interface.md) and [runbook](runbook.md#bounded-player-host-activation);
+[player component](components/player-interface.md) and [runbook](operations/player-host.md#bounded-player-host-activation);
 historical host comparisons remain evidence rather than current execution options.
 
 The [execution-first boundary](changes/064-execution-first-learning.md) connects
@@ -59,8 +60,8 @@ separately reconciled effects. A later repair cannot relabel an earlier failed r
 ## Campaign delivery path
 
 The linked Project and campaign Issues own sequencing, allocations and remaining
-gates. [Development-first delivery](project-management.md#development-first-delivery)
-and [risk-based assurance](project-management.md#risk-based-assurance) define
+gates. [Development-first delivery](workflows/development.md#development-first-delivery)
+and [risk-based assurance](workflows/review.md#risk-based-assurance) define
 feedback and acceptance timing. Current architecture/contracts own implemented
 behavior; historical change briefs retain rationale and prior research crosswalks.
 
@@ -68,7 +69,7 @@ behavior; historical change briefs retain rationale and prior research crosswalk
 
 Git retains earlier versions of this index. The [migration report](acceptance/2026-10-18-enactive-migration.md)
 records repository replacement. Save/process retirement follows the
-[runbook](runbook.md#evidence-retention-and-cleanup) and [environment history](environment.md).
+[runbook](operations/evidence-cleanup.md#evidence-retention-and-cleanup) and [environment history](environment.md).
 Removing a failed world from an active menu does not erase evidence or change its
 outcome. Private runtime evidence stays project-local and is not wholly versioned
 or verified merely because a public report links it.

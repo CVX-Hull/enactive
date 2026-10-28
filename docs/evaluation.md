@@ -13,7 +13,7 @@ response-token and tool-call/gap evidence; isolated inference, hidden approval
 telemetry and full event-to-useful-effect latency remain unavailable where not
 explicitly instrumented. An empty call list does not establish zero total cost.
 
-The [passive supervisor](protocol.md#passive-waypoint-supervision) exposes bounded
+The [passive supervisor](contracts/movement-skills.md#passive-waypoint-supervision) exposes bounded
 action/decision events and the original planner port's accounting snapshot. Merge
 one snapshot at the chosen cutoff, then record its events once in elapsed-time
 order. The caller and independent assessor still supply manifest, final outcome,
@@ -72,7 +72,7 @@ pilot retains its actual negative result; mandatory host delivery belongs to
 
 The [responsive-player brief](changes/060-responsive-player.md) records the latest
 closed-host diagnosis, proposed initial numerical targets and configuration
-admission experiment. [S-UX](engineering.md#s-ux-understandable-and-controllable-experience)
+admission experiment. [S-UX](standards/experience.md#s-ux-understandable-and-controllable-experience)
 requires prospective cadence/quality criteria for new responsiveness claims;
 the slow current arrangement is not qualified. New requirements do not rewrite
 a frozen deciding run's acceptance. A functional run can remain useful evidence
@@ -83,7 +83,7 @@ uninstrumented interval or fewer than the required useful decisions establishes
 no percentile pass; a measured miss rejects the configuration. Neither alone
 requires an otherwise eligible, finite development run to end. Continue only
 within the original coupled forecast, ending deadline and authority/delivery
-constraints under the [development workflow](project-management.md#minimum-checks-and-escalation).
+constraints under the [development workflow](workflows/development.md#minimum-checks-and-escalation).
 Retain acquisition, repair, slow intervals and failures in total costs. Do not
 relax the numerical targets, retrospectively alter a frozen brief or call a
 seven-day functional result a responsive service without the required evidence.

@@ -19,7 +19,10 @@ from typing import Any
 from .contracts import ContractError, json_object
 from .contracts import canonical
 from .native_receipts import validate_ordinary_mapping, validate_published_input
-from .mission_contracts import MemoryRequestRefusal, VERSION, MissionAdmission, InputObservation, SourceRevalidation, validate_handoff_binding, effect_reconciliation, validate_effect_reconciliation, validate_delivery_resolution, validate_handoff_result, validate_lifecycle_transition, validate_memory_entry, validate_normal_adoption, validate_normal_exit, validate_normal_finish, validate_prompt_result, validate_request, validate_saved_checkpoint, validate_readmission
+from .mission_contracts import VERSION, MissionAdmission, InputObservation, SourceRevalidation, validate_handoff_binding, effect_reconciliation, validate_effect_reconciliation, validate_delivery_resolution, validate_handoff_result, validate_lifecycle_transition, validate_memory_entry, validate_normal_adoption, validate_normal_exit, validate_normal_finish, validate_prompt_result, validate_request, validate_saved_checkpoint, validate_readmission
+from .memory_contracts import MemoryRequestRefusal
+
+from .memory_ports import MemoryRecordNotFound
 
 DB_VERSION = 13
 MAX_DATABASE_BYTES = 64 * 1024 * 1024
@@ -52,7 +55,7 @@ class LedgerError(ContractError):
     """Invalid or unavailable accounting. Caller must revoke input before repair."""
 
 
-class RequestNotFound(LedgerError):
+class RequestNotFound(LedgerError, MemoryRecordNotFound):
     """An exact request lookup found no row; trusted durable references stay fatal."""
 
 
@@ -61,6 +64,14 @@ class RequestAdmissionRefusal(LedgerError):
 
     Duplicate, budget, persistence and arbitrary validation failures are not this
     type. The receiver still checks cancellation and exact absence before proof.
+    """
+
+
+class AdoptionIdentityRefusal(LedgerError):
+    """An authenticated selected Claim is unsuitable for normal adoption.
+
+    This class describes only caller-correctable semantics. Trusted history,
+    storage and evidence failures must never be converted to this type.
     """
 
 
@@ -1532,6 +1543,127 @@ class MissionLedger:
             raise LedgerError("First normal source lacks its returned initial-menu dismissal chain")
         return tuple(chain)
 
+    def adoption_claims(self, request_id: str, identities: list[str]) -> dict[str, dict]:
+        """Authenticate selection and the assertions that can affect its frontier.
+
+        Authored Claims must equal their admitted payload. Native facts have no
+        authored request; their exact visible projection is verified by the CDDA
+        receiver before retaining a selection refusal.
+        """
+        rows = self.memory_records("claim")
+        claims = {row["entry"]["id"]: row["entry"] for row in rows}
+        def group(entry):
+            return (canonical(entry["scope"]), *(entry["key"][key]
+                for key in ("subject", "property", "unit")))
+        groups = {group(claims[identity]) for identity in identities if identity in claims}
+        related = set(identities) | {identity for identity, entry in claims.items() if group(entry) in groups}
+        # Corrections may change a key. Include both directions and supporting
+        # ancestors so corrupted influence cannot masquerade as caller error.
+        while True:
+            expanded = related | {identity for identity, entry in claims.items()
+                if set(entry["supersedes"]) & related}
+            for identity in related & claims.keys():
+                expanded.update(claims[identity]["supersedes"])
+                expanded.update(parent for support in claims[identity]["supports"] for parent in support["claims"])
+            if expanded == related:
+                break
+            related = expanded
+        selected = {}
+        for row in rows:
+            if row["entry"]["id"] not in related:
+                continue
+            entry = validate_memory_entry(row["entry"], "claim")
+            if entry["kind"] == "interpretation":
+                data = (self._earlier_request(request_id, row["event_id"]) if entry["id"] in identities
+                    else self.request(row["event_id"]))["request"]
+                if (data["kind"] not in ("remember", "correct") or data["entry_type"] != "claim"
+                        or data["entry"] != entry):
+                    raise LedgerError("Identity Claim differs from its immutable admitted memory request")
+            selected[entry["id"]] = row
+        return selected
+
+    def _check_identity_inspection(self, request_id: str, inspection_id: str, *,
+                                   root_id: str, actor_id: str, epoch: int, session: str,
+                                   source_id: str | None = None) -> None:
+        inspect = self._earlier_request(request_id, inspection_id)
+        data, inspect_result = inspect["request"], inspect["result"]
+        if (inspect["state"] != "completed" or data["kind"] != "skill"
+                or data["skill_kind"] != "inspect" or data["goal"]["purpose"] != "character_identity"
+                or data["phase_id"] != root_id or inspect["epoch"] != epoch
+                or inspect_result is None or type(inspect_result.get("identity_screen_source_id")) is not str
+                or type(inspect_result.get("phase")) is not dict
+                or inspect_result["phase"].get("phase_kind") != "lifecycle"
+                or type(inspect_result.get("source_ids")) is not list
+                or inspect_result["identity_screen_source_id"] not in inspect_result["source_ids"]
+                or inspect_result["identity_screen_source_id"] not in inspect_result["phase"].get("source_ids", [])
+                or source_id is not None and inspect_result["identity_screen_source_id"] != source_id):
+            raise LedgerError("Identity inspection lost its exact phase, actor, epoch or source")
+        self._check_prompt_result(inspection_id, data, inspect_result,
+            actor_id=actor_id, request_state=inspect["state"])
+        inspection_inputs = [p for p in self.primitive_records()
+            if p["request_id"] == inspection_id]
+        if len(inspection_inputs) != 1:
+            raise LedgerError("Identity inspection requires its unique charged player_data primitive")
+        primitive = inspection_inputs[0]
+        intent, receipt = primitive["intent"], primitive["result"] or {}
+        expected = {"logical_action_id": primitive["logical_id"], "native_request_id": primitive["native_id"],
+            "transport_disposition": "returned", "published": True,
+            "source_after": inspect_result["identity_screen_source_id"],
+            **{key: intent[key] for key in ("kind", "value", "expected_session", "expected_revision",
+                "expected_boundary_id", "source_before", "preflight_source")}}
+        if (intent["kind"] != "action" or intent["value"] != "player_data"
+                or intent["expected_session"] != session
+                or primitive["state"] != "returned" or primitive["native_id"] is None
+                or any(receipt.get(key) != value for key, value in expected.items())):
+            raise LedgerError("Identity inspection lacks its exact returned published player_data receipt")
+        validate_ordinary_mapping(intent, receipt, logical_id=primitive["logical_id"],
+            native_id=primitive["native_id"], disposition=primitive["state"])
+
+    def check_adoption_phase_history(self, request_id: str, *, root_id: str, actor_id: str,
+                                    epoch: int, operation: str, transition_id: str | None,
+                                    inspection_id: str | None, session: str | None,
+                                    first_normal_source_id: str | None,
+                                    inspection_source_id: str | None = None,
+                                    saved_id: str | None = None, require_inspection: bool = False) -> bool:
+        """Authenticate the established phase prefix before selection applicability.
+
+        This reuses normal result/primitive validators for a bounded referenced
+        transition, inspection and saved checkpoint; it does not scan every
+        historical frame or fabricate a prospective identity/adoption result.
+        Returns whether the actual transition used the initial-Load menu prefix.
+        """
+        if require_inspection and (transition_id is None or inspection_id is None or session is None):
+            raise LedgerError("Awaiting adoption lost its established transition or inspection")
+        provisional = False
+        if transition_id is not None:
+            row, transition = self._lifecycle_record(request_id, transition_id, "lifecycle_transition")
+            self._check_prompt_result(transition_id, row["request"], row["result"],
+                actor_id=actor_id, request_state=row["state"])
+            if (row["request"].get("phase_id") != root_id or transition["origin_request_id"] != root_id
+                    or transition["operation"] != operation or transition["reconciled_epoch"] != epoch):
+                raise LedgerError("Adoption phase lost its exact retained transition")
+            provisional = row["result"]["phase"]["stage"] == "awaiting_control"
+            if provisional:
+                self.initial_load_menu_chain(transition_id,
+                    through_request_id=inspection_id or request_id,
+                    first_normal_source_id=first_normal_source_id)
+        if inspection_id is not None:
+            if transition_id is None or session is None:
+                raise LedgerError("Inspection lost its established normal transition")
+            self._earlier_request(inspection_id, transition_id)
+            self._check_identity_inspection(request_id, inspection_id, root_id=root_id,
+                actor_id=actor_id, epoch=epoch, session=session, source_id=inspection_source_id)
+        if saved_id is not None:
+            row, _ = self._lifecycle_record(request_id, saved_id, "saved_checkpoint")
+            issued, consumed = self._handoffs()
+            actors = [(0, MissionAdmission.from_dict(self._get("admission")).player_id)] + sorted(
+                (issued[identity]["epoch"], self.request(claim)["result"]["player_id"])
+                for identity, claim in consumed.items())
+            saved_actor = next(player for generation, player in reversed(actors) if generation <= row["epoch"])
+            self._check_prompt_result(saved_id, row["request"], row["result"],
+                actor_id=saved_actor, request_state=row["state"])
+        return provisional
+
     def _check_normal_adoption(self, request_id: str, data: dict, value: dict) -> None:
         proof = validate_normal_adoption(value)
         initial_load = data["operation"] == "load" and self._get("admission")["scenario"]["mode"] == "load"
@@ -1542,6 +1674,11 @@ class MissionLedger:
                 initial_load = False
         transition_row, transition = self._lifecycle_record(request_id, proof["transition_result_request_id"], "lifecycle_transition")
         transition = validate_lifecycle_transition(transition)
+        self.check_adoption_phase_history(request_id, root_id=proof["origin_request_id"],
+            actor_id=transition["actor_id"], epoch=data["epoch"], operation=data["operation"],
+            transition_id=proof["transition_result_request_id"], inspection_id=proof["identity_inspect_request_id"],
+            session=proof["scope"]["session"], first_normal_source_id=proof["first_normal_source_id"],
+            saved_id=proof["saved_checkpoint_request_id"], require_inspection=True)
         inspect = self._earlier_request(request_id, proof["identity_inspect_request_id"])
         inspect_data, inspect_result = inspect["request"], inspect["result"]
         self._earlier_request(proof["identity_inspect_request_id"], proof["transition_result_request_id"])
@@ -1565,47 +1702,34 @@ class MissionLedger:
             self.initial_load_menu_chain(proof["transition_result_request_id"],
                 through_request_id=proof["identity_inspect_request_id"],
                 first_normal_source_id=proof["first_normal_source_id"])
-        claims = {row["entry"]["id"]: row for row in self.memory_records("claim")}
-        inspection_inputs = [p for p in self.primitive_records()
-            if p["request_id"] == proof["identity_inspect_request_id"]]
-        if len(inspection_inputs) != 1:
-            raise LedgerError("Identity inspection requires its unique charged player_data primitive")
-        primitive = inspection_inputs[0]
-        intent, receipt = primitive["intent"], primitive["result"] or {}
-        expected = {"logical_action_id": primitive["logical_id"], "native_request_id": primitive["native_id"],
-            "transport_disposition": "returned", "published": True,
-            "source_after": inspect_result["identity_screen_source_id"],
-            **{key: intent[key] for key in ("kind", "value", "expected_session", "expected_revision",
-                "expected_boundary_id", "source_before", "preflight_source")}}
-        if (intent["kind"] != "action" or intent["value"] != "player_data"
-                or intent["expected_session"] != proof["scope"]["session"]
-                or primitive["state"] != "returned" or primitive["native_id"] is None
-                or any(receipt.get(key) != value for key, value in expected.items())):
-            raise LedgerError("Identity inspection lacks its exact returned published player_data receipt")
+        claims = self.adoption_claims(request_id, data["identity_claim_ids"])
         scenario = self._get("admission")["scenario"]
-        for subject, name in (("world", scenario["world"]), ("character", scenario["character"])):
+        selected_claims = []
+        # Authenticate every selected immutable record and the saved proof before
+        # deciding applicability. A bad selection cannot hide damaged history.
+        for subject in ("world", "character"):
             selected = claims.get(proof[f"{subject}_claim_id"])
             if selected is None:
                 raise LedgerError("Normal adoption references a missing identity Claim")
-            entry = selected["entry"]
-            memory_request = self._earlier_request(request_id, selected["event_id"])["request"]
-            if (memory_request["kind"] not in ("remember", "correct") or memory_request["entry_type"] != "claim"
-                    or memory_request["entry"] != entry or entry["key"]["property"] != "identity"
-                    or entry["key"]["subject"] != subject
-                    or entry["status"] not in ("current", "last_seen")
-                    or any(group["claims"] for group in entry["supports"])):
-                raise LedgerError("Normal adoption requires directly supported admitted identity Claims")
-            if entry["value"] != {"quantity": None, "state": name}:
-                state_preview = repr(entry["value"]["state"])[:160]
-                raise LedgerError(f"Normal adoption {subject} identity value must equal the admitted name {name!r}; "
-                    f"selected Claim state preview: {state_preview}. "
-                    "Interpret the retained evidence and explicitly correct the Claim before adopting.")
-            if subject == "character" and (entry["scope"] != proof["scope"]
-                    or entry["sources"] != [inspect_result["identity_screen_source_id"]]):
-                raise LedgerError("Character identity lost its exact inspected source/scope")
+            selected_claims.append((subject, selected["entry"]))
         if proof["saved_checkpoint_request_id"] is not None:
             _, saved = self._lifecycle_record(request_id, proof["saved_checkpoint_request_id"], "saved_checkpoint")
             validate_saved_checkpoint(saved)
+        from .campaign_memory import CampaignMemory
+        from .cdda_identity import adoption_identity_refusal
+        entries = {row["entry"]["id"]: row["entry"] for row in self.memory_records("claim")}
+        frontiers, retired = CampaignMemory._frontier(entries,
+            selected_ids={identity for identity, entry in entries.items()
+                if entry["key"]["property"] == "identity" and entry["key"]["unit"] == "name"})
+        for subject, entry in selected_claims:
+            scope = (dict(proof["scope"], session=entry["scope"]["session"])
+                if subject == "world" else proof["scope"])
+            reason = adoption_identity_refusal(entry, subject=subject, scope=scope, name=scenario[subject],
+                claims=entries, frontiers=frontiers, retired=retired)
+            if reason is not None:
+                raise AdoptionIdentityRefusal(reason)
+            if subject == "character" and entry["sources"] != [inspect_result["identity_screen_source_id"]]:
+                raise AdoptionIdentityRefusal("Select a character identity Claim with the exact inspected source/scope")
 
     def _check_saved_checkpoint(self, request_id: str, data: dict, result: dict) -> None:
         proof = validate_saved_checkpoint(result["saved_checkpoint"])
@@ -1867,7 +1991,7 @@ class MissionLedger:
                 raise LedgerError("Operation result cannot be rewritten")
             if "phase" in result:
                 issued, consumed = self._handoffs()
-                actors = [(0, self.admission.player_id)] + sorted((issued[identity]["epoch"], self.request(claim)["result"]["player_id"])
+                actors = [(0, MissionAdmission.from_dict(self._get("admission")).player_id)] + sorted((issued[identity]["epoch"], self.request(claim)["result"]["player_id"])
                     for identity, claim in consumed.items())
                 actor = next(player for epoch, player in reversed(actors) if epoch <= old["epoch"])
                 if actor != state["player_id"]:

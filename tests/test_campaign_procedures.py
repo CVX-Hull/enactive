@@ -1,4 +1,6 @@
 """Player-authored data over synthetic retained episodes, not real learning."""
+
+from harness.gameplay.mission_memory import MissionMemory
 from pathlib import Path
 import tempfile
 import unittest
@@ -7,7 +9,8 @@ from unittest.mock import patch
 from harness.gameplay.campaign_memory import CampaignMemory
 from harness.gameplay.contracts import ContractError
 from harness.gameplay.evidence import CapacityError, EvidenceError, EvidenceStore
-from harness.gameplay.mission_contracts import LearningPolicy, MEMORY_VERSION
+from harness.gameplay.mission_contracts import LearningPolicy
+from harness.gameplay.memory_contracts import MEMORY_VERSION
 from harness.gameplay.mission_ledger import MissionLedger
 from tests.test_gameplay_evidence import observation, png
 from tests.test_mission_contracts import admission, claim, request, scope, skill
@@ -28,7 +31,7 @@ class CampaignProcedureTests(unittest.TestCase):
         self.admission = admission(learning=self.policy)
         self.ledger = MissionLedger(root / "mission", admission=self.admission, now=1000)
         self.addCleanup(self.ledger.close)
-        self.memory = CampaignMemory(self.ledger, self.store)
+        self.memory = CampaignMemory(MissionMemory(self.ledger), self.store)
 
     def episode(self, number=30):
         value = observation(number, session="native-session")
@@ -220,5 +223,5 @@ class CampaignProcedureTests(unittest.TestCase):
         self.ledger.close()
         self.ledger = MissionLedger(directory, now=1000)
         self.addCleanup(self.ledger.close)
-        self.memory = CampaignMemory(self.ledger, self.store)
+        self.memory = CampaignMemory(MissionMemory(self.ledger), self.store)
         self.assertEqual(self.context()["procedures"], [second])

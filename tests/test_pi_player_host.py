@@ -15,8 +15,14 @@ class PiPlayerHostTests(unittest.TestCase):
         tests = sorted((package / "test").glob("*.test.mjs"))
         self.assertTrue(tests, "Pi host conformance tests are required")
         environment = {**os.environ, "ENACTIVE_TEST_PYTHON": sys.executable}
-        result = subprocess.run(["node", "--test", *map(str, tests)], cwd=package,
-            env=environment, capture_output=True, text=True, timeout=90)
+        try:
+            result = subprocess.run(["node", "--test", *map(str, tests)], cwd=package,
+                env=environment, capture_output=True, text=True, timeout=90)
+        except subprocess.TimeoutExpired as error:
+            def decoded(value):
+                return value.decode(errors="replace") if isinstance(value, bytes) else value or ""
+            self.fail("Pi conformance exceeded 90 seconds. Complete partial TAP:\n"
+                + decoded(error.output) + "\nstderr:\n" + decoded(error.stderr))
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
 

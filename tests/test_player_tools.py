@@ -12,7 +12,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from harness.gameplay.contracts import ContractError, validate_json
-from harness.gameplay.mission_contracts import MAX_HANDOFF_SOURCES
+from harness.gameplay.memory_contracts import MAX_HANDOFF_SOURCES
 from harness.gameplay.mission_requests import compose_request
 from harness.mission_client import MissionClient
 from harness.player_mcp import make_server
