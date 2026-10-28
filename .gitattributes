@@ -1,0 +1,3 @@
+# Review source and rendered visuals; generated references remain expandable.
+docs/diagrams/*.svg linguist-generated=true
+docs/controls.md linguist-generated=true

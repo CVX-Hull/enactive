@@ -86,7 +86,9 @@ and root Resume's dispatch custody. Text batches retain their first observation
 and each actual scalar. Human explanation text is not proof authority. The original
 ACK can remain unknown; its cost/history/admission file stay retained. Retirement
 clears only matching expired ordinary in-memory pending input after durable
-recording, stays paused/frozen and sends no input or signals.
+recording and stays paused/frozen. [Exceptional writer shutdown](#exceptional-writer-shutdown)
+may close the retained native child; it sends no gameplay input and proves no
+normal ending.
 Lifecycle PhaseReceipt/exit proof are historical data, never restored permissions.
 Any unexpected normal frame remains diagnostic: registered identity/adoption is
 required before time cost, maps, native memory facts or ordinary dispatch, including
@@ -137,3 +139,32 @@ current mission phase and independent acceptance. Synthetic tests do not qualify
 native final shutdown or the independent mission.
 
 [Contract index](../protocol.md).
+
+
+## Exceptional writer shutdown
+
+Service closure, permanent writer failure and custodian cancellation do not perform
+Save, normal exit or Finish. They revoke input, cancel queued work and settle the
+single writer before native cleanup. The settled writer alone may call
+`NativeProcess.close_exceptional` on its retained `Popen`, with one finite deadline
+covering TERM and KILL waits. Launch and ordinary wait cancellation do not send
+signals. No PID lookup/adoption, process-group signal or source history restores
+this custody. A caller whose writer remains blocked reports cleanup unknown and
+must not race that writer's native handle or storage.
+
+Shutdown distinguishes not launched, previously exited, exceptionally closed and
+cleanup unknown. It separately retains any verified NormalExit proof, unresolved
+custody requests, input revocation and persistence confirmation. Failure to persist
+Pause does not renew authority: the controller revokes its in-memory lease before
+its durable write, and the settled writer still attempts owned cleanup. Unexpected
+pre-revocation failures retain unknown and do not authorize native signals.
+Neither a zero exit code nor exceptional closure satisfies normal ending.
+
+The server discovery and authenticated status include descriptive
+`controller_boot_id`; discovery also identifies `controller_pid`. These bind the
+custodian's retained controller child and do not authorize PID adoption. On closure,
+the server atomically publishes
+`.runtime/bridge/mission-shutdown-<controller_boot_id>.json`, containing that boot ID,
+the advisory runtime cleanup result and `grants_authority:false`, without its token.
+A missing, mismatched or unsettled receipt cannot establish native absence. Reopen
+never replays shutdown or reconstructs a process handle from this receipt.

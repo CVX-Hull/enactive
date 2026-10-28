@@ -130,7 +130,8 @@ def check_documents(root: Path) -> list[str]:
             if path in reachable:
                 continue
             reachable.add(path)
-            pending.extend(graph.get(path, ()))
+            pending.extend(target for target in graph.get(path, ())
+                           if documents.get(target, {}).get("current"))
         for path in (root / "docs" / directory).rglob("*.md"):
             if documents.get(path.resolve(), {}).get("current") and path.resolve() not in reachable:
                 errors.append(f"Current content is unreachable from docs/{index}: {path.relative_to(root)}")

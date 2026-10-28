@@ -176,3 +176,26 @@ The [repair brief](../changes/023-walk-reassessment.md) explains scope and migra
 its conservative movement guards remain shared with mission navigation.
 
 [Contract index](../protocol.md).
+
+
+## Binding projections
+
+The current `gameplay/2` EvidenceRef and `cdda-visible/1` identify CDDA observations.
+A shared source port supplies identity, session, revision, optional opaque counter,
+receipt clocks and an advisory serialized reference; it grants no current input
+permission. CDDA EvidenceStore validates the current native format and retained
+bytes. Shared memory uses [memory data contracts](../../harness/gameplay/memory_contracts.py)
+without interpreting a native scene or equating an observed counter with seconds.
+The [mission adapter](../../harness/gameplay/mission_memory.py) authenticates mutation
+payloads; the [CDDA adapter](../../harness/gameplay/cdda_memory.py) projects native facts.
+
+The shared [timeline](../../harness/gameplay/timeline.py) consumes immutable
+`TimePoint(source_id, session, revision, seconds)` data plus exact `TimeContinuity`
+endpoints authenticated by its binding. It rejects missing/reordered links,
+regressing revisions/time, duplicate sources and contradictory same-revision time.
+It sums only within-session deltas; a new session's counter origin contributes no
+gap-time inference. CDDA's [time adapter](../../harness/gameplay/cdda_timeline.py)
+projects observed turn seconds, requires equal-turn reload endpoints and verifies
+canonical reference equality and retained endpoint bytes before returning game time.
+These source seams preserve the current wire/persisted formats; a second actual
+binding and its qualification remain separate work.

@@ -53,12 +53,15 @@ feedback and the actual PhaseReceipt only after healthy custody, lease, exact
 checkpoint/pixels, original deadlines/budgets and storage are verified. It sends
 no input, refreshes no source and invents no Claims. The player explicitly
 dismisses an open identity screen and selects both grounded identity Claims.
-Failures of the health preconditions checked by these new refusal paths remain
-fatal. The later candidate-proof catch has a known historical-evidence
-classification/phase-retirement gap tracked under [#176](https://github.com/CVX-Hull/enactive/issues/176)
-and the [component limits](../components/mission-execution.md#lifecycle-and-change-review);
-strict adoption still rejects the corrupt proof. Reopen verifies
-history but reconstructs no process handle, phase, lineage, lease or queued input.
+Selected retained Claims are validated before interpreting count or subjects.
+Authored Claims must equal their earlier admitted memory payload; a selected native
+fact must equal the literal projection of its retained source. Only a positively
+typed semantic identity refusal can preserve the phase. The refusal rechecks the
+phase and selected Claims' grounding bytes without refreshing them. Missing or
+contradictory trusted requests, receipts, frames, storage and candidate timeline
+failures retire the phase and lease; they are not caller-correction feedback.
+Reopen verifies history but reconstructs no process handle, phase, lineage, lease
+or queued input.
 Native007 qualified the selected actual creation/save/load path. The later
 [independent024 mission](../acceptance/2026-10-21-independent-supply-shelter.md) exercises
 actual fresh-context memory and the full bounded supply/shelter/lifecycle outcome.

@@ -18,7 +18,7 @@ class TimePoint:
     revision: int
     seconds: int
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if any(type(value) is not str or not value for value in (self.source_id, self.session)):
             raise ContractError("Observed time requires exact source and session identities")
         if type(self.revision) is not int or self.revision < 0 or type(self.seconds) is not int:
@@ -41,7 +41,7 @@ class Timeline:
 def compose_timeline(points: tuple[TimePoint, ...], links: tuple[TimeContinuity, ...]) -> Timeline | None:
     """Compose session deltas, never infer gap time across a reload/counter reset."""
     if type(points) is not tuple or type(links) is not tuple or len(links) > MAX_CONTINUITY_LINKS:
-        raise ContractError("Timeline requires bounded immutable points and links")
+        raise ContractError("Timeline requires immutable points and bounded links")
     for point in points:
         if type(point) is not TimePoint:
             raise ContractError("Timeline requires projected TimePoint values")

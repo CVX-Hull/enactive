@@ -20,7 +20,8 @@ explains artifact authority and [architecture](architecture.md) the current syst
 Use [campaign issue #145](https://github.com/CVX-Hull/enactive/issues/145) for the
 actual campaign disposition, [parent #136](https://github.com/CVX-Hull/enactive/issues/136)
 for the independent-play outcome and [workflow assessment #274](https://github.com/CVX-Hull/enactive/issues/274)
-for engineering conclusions and owned follow-ups. The earlier
+for engineering conclusions and [resolution #277](https://github.com/CVX-Hull/enactive/issues/277)
+for the integrated source/document/workflow repairs. The earlier
 [assessment #75](https://github.com/CVX-Hull/enactive/issues/75) retains its closed historical scope.
 A source repair, bounded demo or successful CI
 does not replace independent seven-day acceptance.

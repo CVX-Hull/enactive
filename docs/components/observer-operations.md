@@ -12,11 +12,20 @@ cached ownership, mission progress, uncertainty and cost. It does not choose
 tactics or execute the player's plan. All services are local; public network
 exposure is outside the supported deployment.
 
+![The finite custodian delegates deciding-host and native cleanup to their retained owners.](../diagrams/campaign-custody.svg)
+
+This current process view answers “Who closes a failed finite run?” Solid arrows
+identify ownership or shutdown order; the dotted arrow is advisory evidence. The
+[custodian procedure](../operations/campaign-run.md) is its text equivalent.
+[Editable source](../diagrams/campaign-custody.mmd). Exceptional shutdown can close
+an unsaved owned game and is never a normal-ending or acceptance claim.
+
 ## Internal responsibilities
 
 | Block | Responsibility and state | Implementation / operating reference |
 | --- | --- | --- |
 | Server/CLI | Assemble runtime/controller and expose local typed ingress, status, frame and Pause | [server.py](../../harness/server.py), [CLI](../../harness/__main__.py); [runbook](../runbook.md) |
+| Finite run custodian | Freeze-data admission, original ending/cleanup allowances, exact controller/driver custody and boot-bound shutdown observation; no tactical input | [campaign_run.py](../../tools/campaign_run.py); [finite run procedure](../operations/campaign-run.md) |
 | Viewer | Render actual image and cached projections, label current vs historical state, serialize polling, retain bounded timing samples | [app.js](../../web/app.js), [web](../../web/) |
 | Host projection | Read existing driver receipts and distinguish original/successor observed events; no process discovery or activation | [host_status.py](../../harness/host_status.py) |
 | Setup/build | Pinned project-local dependencies/native source, explicit windowed userdir, signed build provenance | [tools](../../tools/); [setup](../setup.md), [environment history](../environment.md) |

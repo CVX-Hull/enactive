@@ -49,6 +49,13 @@ class DocumentLinkTests(unittest.TestCase):
         self.write("docs/protocol.md", self.current("[adoption](contracts/leaf.md#lifecycle)"))
         self.assertEqual(check_documents(self.root), [])
 
+    def test_historical_route_cannot_make_current_content_reachable(self):
+        self.write("docs/protocol.md", self.current("[old evidence](old.md)"))
+        self.write("docs/old.md", "---\nstatus: historical\n---\n[stale](contracts/leaf.md#removed)")
+        self.write("docs/contracts/leaf.md", self.current("# Current contract"))
+        self.assertTrue(any("unreachable from docs/protocol.md" in error
+            for error in check_documents(self.root)))
+
     def test_missing_files_and_path_escape_are_always_rejected(self):
         self.write("README.md", "[missing](docs/absent.md) ![escape](../elsewhere.png)")
         errors = check_documents(self.root)

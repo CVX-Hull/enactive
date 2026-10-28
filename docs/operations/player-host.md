@@ -6,7 +6,8 @@ status: active
 
 # Bounded player host activation
 
-After external mission admission, use the
+For maintained fresh admission/controller lifetime, start with the
+[finite campaign custodian](campaign-run.md). After external mission admission, use the
 [campaign player driver](../../tools/campaign_player.py) to run the frozen original
 and at most one clean successor. The generic Pi core host is the sole current
 campaign execution path. Install the [locked host package](../setup.md#install-the-generic-gameplay-host)

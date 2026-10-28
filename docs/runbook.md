@@ -9,6 +9,9 @@ status: active
 Supported scope: one prepared local macOS game.
 For fresh installation use [setup](setup.md); use [overview](overview.md) for limits.
 
+Use the [finite campaign custodian](operations/campaign-run.md) when a fresh run
+needs maintained controller lifetime and admission as well as the player driver.
+
 ## When a mission owns execution
 
 - [When a mission owns execution](operations/mission-ownership.md).

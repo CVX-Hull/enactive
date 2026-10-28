@@ -284,7 +284,7 @@
       "name": "Live authority and input guards",
       "mode": "runtime",
       "scope": "Single-controller mission dispatch and admission, original typed operation accounting, HTTP trust boundary, historical memory observer and spectator input freshness.",
-      "mechanism": "One current typed mission contract and one authenticated writer use exact controller leases, immutable sources, original root/child/mission limits and durable intent/result accounting. Captured samples retain their as-of identity and original clocks across healthy newer views under unchanged custody; semantic applicability is separately proved. Ordinary healthy non-equivalence refuses input and requires a distinct decision/Observe lineage; future clocks, revision contradictions and immutable-source changes remain faults. Native independently checks receiver, session, revision, boundary, custody, Pause/takeover, pending control and original clocks/deadline. Retained native-issued captures preserve their original timestamp and complete normalized observation metadata; non-image-conditioned input may survive incidental rendering churn without retargeting or renewing freshness. Clicks and image-conditioned input retain applicable exact-image/geometry checks. Registered normal Save start and provisional identity readmission use native-state equivalence; setup, confirmation, actual identity-screen and recovery retain their stronger policies. Owned creation/save/load, committed transition/effect proof, first-normal identity, separate charged readmission and canonical identity adoption remain mandatory. Unknown delivery is never replayed or rewritten: bounded diagnostic collection and explicit effect reconciliation retain original receipts, costs and uncertainty. Ordinary known-unpublished capture refusal preserves only qualified read-only custody until explicit Observe and new intent; fatal ownership, processing/storage, global budget and historical-integrity faults still stop. Original navigation/activity/menu/editor/item scopes, quantities and deadlines survive continuation, with no automatic prompt confirmation or new allowance. Quiescent handoff/claim retains actor history and unfinished Work; history, memory, advice and packets grant no input authority. Normal Finish requires exact owned exits and coherent objective Work, writes an immutable report and sends no native input. The spectator distinguishes live custody and unresolved effects from historical frames, memory, results and process samples. The protocol owns detailed predicates and supported limits; portable tests and dated native reports provide separate evidence. The generic host settles its own coherent completed handoff before further dispatch/inference. MCP retains the assigned collection identity through unfinished/uncertain responses; the driver independently validates live succession. Neither mechanism reconstructs authority.",
+      "mechanism": "One current typed mission contract and one authenticated writer use exact controller leases, immutable sources, original root/child/mission limits and durable intent/result accounting. Captured samples retain their as-of identity and original clocks across healthy newer views under unchanged custody; semantic applicability is separately proved. Ordinary healthy non-equivalence refuses input and requires a distinct decision/Observe lineage; future clocks, revision contradictions and immutable-source changes remain faults. Native independently checks receiver, session, revision, boundary, custody, Pause/takeover, pending control and original clocks/deadline. Retained native-issued captures preserve their original timestamp and complete normalized observation metadata; non-image-conditioned input may survive incidental rendering churn without retargeting or renewing freshness. Clicks and image-conditioned input retain applicable exact-image/geometry checks. Registered normal Save start and provisional identity readmission use native-state equivalence; setup, confirmation, actual identity-screen and recovery retain their stronger policies. Owned creation/save/load, committed transition/effect proof, first-normal identity, separate charged readmission and canonical identity adoption remain mandatory. Unknown delivery is never replayed or rewritten: bounded diagnostic collection and explicit effect reconciliation retain original receipts, costs and uncertainty. Ordinary known-unpublished capture refusal preserves only qualified read-only custody until explicit Observe and new intent; fatal ownership, processing/storage, global budget and historical-integrity faults still stop. Original navigation/activity/menu/editor/item scopes, quantities and deadlines survive continuation, with no automatic prompt confirmation or new allowance. Quiescent handoff/claim retains actor history and unfinished Work; history, memory, advice and packets grant no input authority. Normal Finish requires exact owned exits and coherent objective Work, writes an immutable report and sends no native input. The spectator distinguishes live custody and unresolved effects from historical frames, memory, results and process samples. The protocol owns detailed predicates and supported limits; portable tests and dated native reports provide separate evidence. The generic host settles its own coherent completed handoff before further dispatch/inference. MCP retains the assigned collection identity through unfinished/uncertain responses; the driver independently validates live succession. Neither mechanism reconstructs authority. Only typed identity-selection refusals retain healthy adoption; authenticated payload/history faults retire authority. Settled-writer exceptional native cleanup uses its retained child handle after input revocation and records unknown custody separately from normal exit.",
       "owner": "controller and viewer maintainer",
       "trigger": "every relevant request, observation and image decode",
       "evidence": [
@@ -351,7 +351,11 @@
         "docs/acceptance/2026-10-21-independent-supply-shelter.md",
         "tools/player_host/host.mjs",
         "tools/player_host/test/host.test.mjs",
-        "tests/test_player_mcp.py"
+        "tests/test_player_mcp.py",
+        "tests/test_mission_initial_load.py",
+        "tests/test_mission_shutdown.py",
+        "tools/campaign_run.py",
+        "tests/test_campaign_run.py"
       ],
       "failure_response": "Reject or freeze further dispatch; expose error and reconcile by observation before explicit resume.",
       "limitations": "Source controls and synthetic fixtures do not establish native effects or unattended survival. Learning006 qualifies bounded discovery, procedure refinement/reuse, actual successor application and normal lifecycle; disclosed technical assistance and no causal-learning claim remain. Failed fresh008 qualifies neither a day nor a normal ending: four native rejections and persistent Save pixel drift ended exceptionally. Capture001 qualifies ordinary input and normal lifecycle on the subsequent matching build; actual persistentpixel drift and the retainedcapture commit race remain unexercised there. Pause cannot undo committed input or cancel an activity; stalls may delay revocation. Visible review-free tool calls do not establish hidden host telemetry, attention, inference latency or causal benefit. Wider mouse/geometry, selected activity/recovery interactions and game-family portability remain specifically scoped gaps; authoritative details are in the protocol and dated reports.",
@@ -361,20 +365,20 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-27",
-        "outcome": "Failed native018 on source0a7 after parent execution/correction and a valid handoff: original-host continuation invalidated succession; driver refused successor and no normal ending occurred. Subsequent source repair has no new native qualification.",
-        "scope": "29 actual provider attempts, four parent evaluations/three LEFT inputs; original unknown ACK and exceptional cleanup/unresolved flag retained separately from later process absence. This native exercise preceded audit274.",
+        "outcome": "Scoped source/reader/tooling exercise; native and gameplay qualification remain separate.",
+        "scope": "Paired healthy correction/corrupt-history cases and controlled-child shutdown strengthen source boundaries. Real native closure, useful successor application and apparent cadence remain separate unqualified outcomes.",
         "evidence": [
-          "docs/acceptance/2026-10-27-imported-correction-follow-through.md"
+          "docs/acceptance/2026-10-27-audit-resolution.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-27",
         "effectiveness": "partially_effective",
-        "findings": "Handoff continuation escaped the prior integration path; producer-consumer review corrected original-host binding and unavailable-snapshot collection. Native follow-through and existing adoption-history classification remain unqualified/open.",
-        "cost": "Existing source/CI/run receipts and focused offline tests reused. Whole human/model review and waiting labor is unknown; no productivity or causal-usability claim.",
-        "follow_up": "@CVX-Hull owns #264 native follow-through, #176 adoption-history classification and #164 maintained-launcher consolidation; each Issue owns acceptance and timing.",
+        "findings": "Paired healthy correction/corrupt-history cases and controlled-child shutdown strengthen source boundaries. Real native closure, useful successor application and apparent cadence remain separate unqualified outcomes.",
+        "cost": "Existing project-local tools and targeted fixtures/reviews reused; one coherent protected regression candidate. No total human/model labor, sustained usability or causal productivity measurement.",
+        "follow_up": "@CVX-Hull: Use the maintained finite custodian for fresh runs; qualify affected native/product outcomes in their existing Issues, preserving failed runs and original limits.",
         "evidence": [
-          "docs/acceptance/2026-10-27-gameplay-workflow-audit.md"
+          "docs/acceptance/2026-10-27-audit-resolution.md"
         ]
       },
       "next_review": "2027-01-15"
@@ -493,7 +497,9 @@
         "docs/acceptance/2026-10-27-gameplay-workflow-audit.md",
         "docs/acceptance/2026-10-24-audit-remediation.md",
         "docs/acceptance/2026-10-27-imported-correction-follow-through.md",
-        "docs/acceptance/2026-10-19-seven-day-survival.md"
+        "docs/acceptance/2026-10-19-seven-day-survival.md",
+        "docs/documentation.md",
+        "tests/test_document_links.py"
       ],
       "failure_response": "Correct misleading flows or guidance and retain consequential limits before milestone acceptance.",
       "limitations": "Human judgment; no automated usability score or user study is claimed. Document links do not prove comprehension. The whole player configuration remains unqualified for apparent responsiveness: no representative 20-useful-decision cohort or complete ready-to-visible p95 exists. Dated reports retain earlier Luna, default-context, compaction, mechanical-binding and functional-learning failures and qualifications. Component timings, cached-token counters, elapsed game time and successful catalog loading are not latency acceptance. Wider game-family behavior, actual fresh-successor application on the repaired boundary and complete lifecycle/campaign outcomes remain separate.",
@@ -503,20 +509,20 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-27",
-        "outcome": "Scoped manual review performed; residual gaps and formal source/native qualification remain explicit.",
-        "scope": "Manual reader-path and content-granularity review; no new UI, native gameplay or usability study.",
+        "outcome": "Scoped source/reader/tooling exercise; native and gameplay qualification remain separate.",
+        "scope": "Reader-task review traced rules, Load/adoption, collection, handoff, host operation and development/acceptance across focused canonical bodies. Positional links and historical-route leakage were repaired; no formal usability study or cadence qualification is claimed.",
         "evidence": [
-          "docs/acceptance/2026-10-27-gameplay-workflow-audit.md"
+          "docs/acceptance/2026-10-27-audit-resolution.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-27",
         "effectiveness": "partially_effective",
-        "findings": "Navigation/ownership improved, but oversized mixed-purpose references remain a readability/reviewability risk. User concern and escaped contradictions warrant focused decomposition, not a byte quota or new platform. Apparent useful cadence remains unqualified.",
-        "cost": "Existing source/CI/run receipts and focused offline tests reused. Whole human/model review and waiting labor is unknown; no productivity or causal-usability claim.",
-        "follow_up": "@CVX-Hull owns #276 focused contract decomposition and #164 apparent-cadence evidence; #274 owns this scoped audit closure. No new blanket gate before useful development play.",
+        "findings": "Reader-task review traced rules, Load/adoption, collection, handoff, host operation and development/acceptance across focused canonical bodies. Positional links and historical-route leakage were repaired; no formal usability study or cadence qualification is claimed.",
+        "cost": "Existing project-local tools and targeted fixtures/reviews reused; one coherent protected regression candidate. No total human/model labor, sustained usability or causal productivity measurement.",
+        "follow_up": "@CVX-Hull: Repeat the concrete reader task when responsibilities, contracts or operations change; continue actual useful-cadence evidence under #164.",
         "evidence": [
-          "docs/acceptance/2026-10-27-gameplay-workflow-audit.md"
+          "docs/acceptance/2026-10-27-audit-resolution.md"
         ]
       },
       "next_review": "2027-01-15"
@@ -526,7 +532,7 @@
       "name": "Architectural dependency contracts",
       "mode": "automatic",
       "scope": "Declared controller and server dependency boundaries, including indirect imports through harness modules. All passive gameplay modules, including supervision, must not import controller, HTTP, CLI or process/build tooling. Shared movement policy cannot depend on consumers, clock, filesystem or transport.",
-      "mechanism": "Import Linter uses the pyproject.toml forbidden contracts: controller cannot depend on server, CLI, declared network modules or build tooling; server cannot depend on CLI/tools; CLI may compose both. Fourth forbidden contract isolates harness.movement; negative import fixtures exercise it.",
+      "mechanism": "Import Linter enforces the dependency contracts in pyproject.toml for controller/server, player ingress, pure movement and shared memory/time. Negative import fixtures exercise direct and indirect forbidden dependencies. Shared memory/time depends on passive data ports; Import Linter rejects mission/CDDA/store implementation imports even indirectly. Existing controller/server/player/movement isolation remains.",
       "owner": "harness maintainer",
       "trigger": "common command; architecture changes require rule review",
       "evidence": [
@@ -536,7 +542,10 @@
         "docs/architecture.md",
         "docs/decisions/003-development-controls.md",
         "docs/acceptance/2026-10-17-bounded-skills.md",
-        "docs/acceptance/2026-10-17-passive-supervisor.md"
+        "docs/acceptance/2026-10-17-passive-supervisor.md",
+        "harness/gameplay/memory_ports.py",
+        "harness/gameplay/source_contracts.py",
+        "tests/test_memory_ports.py"
       ],
       "failure_response": "Remove reversed dependency or review the boundary and checker together before accepting changed architecture.",
       "limitations": "Static import graph with configured external roots. Dynamic imports, external-package internals, undeclared libraries and semantic C++ isolation remain review concerns; this is not comprehensive module layering.",
@@ -545,22 +554,22 @@
       "rationale": null,
       "replacement": null,
       "last_exercise": {
-        "date": "2026-10-17",
-        "outcome": "Passed within round010 portable/review scope; no native or live-provider claim.",
-        "scope": "Four Import Linter contracts including the new controller-free passive supervisor; existing negative fixtures remain active.",
+        "date": "2026-10-27",
+        "outcome": "Scoped source/reader/tooling exercise; native and gameplay qualification remain separate.",
+        "scope": "The demonstrated memory/time seam is enforced by a negative indirect-import fixture. Schema comparison and independently shaped fixtures preserve the existing data contract; another game integration remains unqualified.",
         "evidence": [
-          "docs/acceptance/2026-10-17-passive-supervisor.md"
+          "docs/acceptance/2026-10-27-audit-resolution.md"
         ]
       },
       "maintenance_review": {
-        "date": "2026-10-17",
+        "date": "2026-10-27",
+        "effectiveness": "partially_effective",
+        "findings": "The demonstrated memory/time seam is enforced by a negative indirect-import fixture. Schema comparison and independently shaped fixtures preserve the existing data contract; another game integration remains unqualified.",
+        "cost": "Existing project-local tools and targeted fixtures/reviews reused; one coherent protected regression candidate. No total human/model labor, sustained usability or causal productivity measurement.",
+        "follow_up": "@CVX-Hull: Revisit this seam at the next actual binding or a recurring integration change; do not add a speculative framework.",
         "evidence": [
-          "docs/acceptance/2026-10-17-passive-supervisor.md"
-        ],
-        "effectiveness": "effective",
-        "findings": "Independent reviews found expiry ordering, terminal status, foreign-world budgets, missing completion evidence and sticky-dispute admission defects. Regression fixes and rereviews passed; controls remain bounded and do not prove native/model effectiveness.",
-        "cost": "Existing project-local tools, 313 portable tests, one isolated worker and targeted independent reviews; no new generic framework or global dependency.",
-        "follow_up": "@CVX-Hull owns live follow-up through [#75](https://github.com/CVX-Hull/enactive/issues/75); the Issue owns acceptance, allocation and stage. This scoped maintenance assessment does not close product outcomes or renew evidence."
+          "docs/acceptance/2026-10-27-audit-resolution.md"
+        ]
       },
       "next_review": "2027-01-15"
     },
@@ -597,7 +606,8 @@
         ".github/pull_request_template.md",
         "docs/testing.md",
         "docs/acceptance/2026-10-27-gameplay-workflow-audit.md",
-        "docs/acceptance/2026-10-24-audit-remediation.md"
+        "docs/acceptance/2026-10-24-audit-remediation.md",
+        "docs/acceptance/2026-10-27-audit-resolution.md"
       ],
       "failure_response": "Reshape or split an unfit core before commitment; resolve material findings or record scoped owner/reason/revisit exception without waiving user constraints or required evidence; after two unsuccessful worker repairs lead takes back the work.",
       "limitations": "Review selection, reasoning quality, semantic authority/duplication, realistic fixtures and complete finding reconciliation require judgment. Static checks cannot prove them. Same-account agent review is not GitHub human approval or OS isolation. No review establishes unexercised native behavior, unrestricted portability, model attention, useful latency or causal learning benefit. This is no per-action gameplay approval or mandatory review committee.",
@@ -607,20 +617,20 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-27",
-        "outcome": "Scoped manual review performed; residual gaps and formal source/native qualification remain explicit.",
-        "scope": "Independent normative, implementation/consumer, ownership and workflow reviews with finding adjudication; formal publication remains a separate lane.",
+        "outcome": "Scoped source/reader/tooling exercise; native and gameplay qualification remain separate.",
+        "scope": "Independent design/source/reader reviews caught classification, schema, navigation and custodian producer-consumer gaps before publication. All source fixes are integrated in one candidate; synthetic fixtures do not establish native or campaign acceptance.",
         "evidence": [
-          "docs/acceptance/2026-10-27-gameplay-workflow-audit.md"
+          "docs/acceptance/2026-10-27-audit-resolution.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-27",
         "effectiveness": "partially_effective",
-        "findings": "Review found and corrected three unfinished handoff-consumer defects and documentation contradictions. Earlier practice still added full-PR/main development gates despite existing policy; maintained operating paths and explicit violated-constraint follow-through are required.",
-        "cost": "Existing source/CI/run receipts and focused offline tests reused. Whole human/model review and waiting labor is unknown; no productivity or causal-usability claim.",
-        "follow_up": "@CVX-Hull owns #274 audit/source closure and the explicit #176/#191/#164/#276 follow-ups; #264 remains incomplete. Reassess touched constraints at the next material change or relevant failure.",
+        "findings": "Independent design/source/reader reviews caught classification, schema, navigation and custodian producer-consumer gaps before publication. All source fixes are integrated in one candidate; synthetic fixtures do not establish native or campaign acceptance.",
+        "cost": "Existing project-local tools and targeted fixtures/reviews reused; one coherent protected regression candidate. No total human/model labor, sustained usability or causal productivity measurement.",
+        "follow_up": "@CVX-Hull: Challenge actual code/data ownership and complete caller migration at integration; original #264 gameplay outcome remains unaccepted.",
         "evidence": [
-          "docs/acceptance/2026-10-27-gameplay-workflow-audit.md"
+          "docs/acceptance/2026-10-27-audit-resolution.md"
         ]
       },
       "next_review": "2027-01-15"
@@ -630,7 +640,7 @@
       "name": "Registry, evidence schema and map validation",
       "mode": "automatic",
       "scope": "Standard mappings, control lifecycle/maintenance, document stewardship, local references, curated manifest metadata and generated map.",
-      "mechanism": "Existing jsonschema and python-frontmatter validate lifecycle records, references, active-only mappings and current protocol/source agreement; the generator detects map drift. Every strict profile and standalone governance enforce current-date due checks. Fast development checkpoints visibly warn for calendar expiry only, for every control. --as-of forecasts strictly; no mode renews records.",
+      "mechanism": "Existing jsonschema and python-frontmatter validate lifecycle records, references, active-only mappings and current protocol/source agreement; the generator detects map drift. Every strict profile and standalone governance enforce current-date due checks. Fast development checkpoints visibly warn for calendar expiry only, for every control. --as-of forecasts strictly; no mode renews records. Current Markdown links additionally validate implicit GitHub heading IDs using the existing Markdown parser plus pinned github-slugger, explicit anchors and current responsibility-index reachability. Historical prose is not a current navigation path.",
       "owner": "maintainer",
       "trigger": "common command; regenerate map after registry change",
       "evidence": [
@@ -645,7 +655,10 @@
         "tests/test_documents.py",
         "schemas/document.schema.json",
         "docs/acceptance/2026-10-17-bounded-skills.md",
-        "docs/acceptance/2026-10-17-passive-supervisor.md"
+        "docs/acceptance/2026-10-17-passive-supervisor.md",
+        "tools/document_anchors.mjs",
+        "tests/test_document_links.py",
+        "docs/documentation.md"
       ],
       "failure_response": "Fix missing/unknown mappings, unsafe references or metadata; regenerate stale map with --write and inspect the result.",
       "limitations": "Structure, recorded dates and local file existence are checked, not prose truth, artifact hashes outside diagram receipts, media availability, actual review/execution, owner performance or historical lifecycle authorization. Due checks run only when invoked; fragment targets are not validated.",
@@ -654,22 +667,22 @@
       "rationale": null,
       "replacement": null,
       "last_exercise": {
-        "date": "2026-10-24",
-        "outcome": "Passed scoped source/document/control checks and independent review; exact later candidate/main CI and gameplay remain separate.",
-        "scope": "Post-audit governance/documentation remediation: strict full versus warning-only calendar expiry at fast checkpoints, one document/task authority and preserved historical evidence.",
+        "date": "2026-10-27",
+        "outcome": "Scoped source/reader/tooling exercise; native and gameplay qualification remain separate.",
+        "scope": "Current-fragment and historical-intermediate regressions cover the new narrow navigation guard. Metadata, map and protocol checks remain structural; reader comprehension and prose truth need review.",
         "evidence": [
-          "docs/acceptance/2026-10-24-audit-remediation.md"
+          "docs/acceptance/2026-10-27-audit-resolution.md"
         ]
       },
       "maintenance_review": {
-        "date": "2026-10-24",
-        "evidence": [
-          "docs/acceptance/2026-10-24-audit-remediation.md"
-        ],
+        "date": "2026-10-27",
         "effectiveness": "partially_effective",
-        "findings": "Focused negative tests preserve strict structural/protocol/map enforcement while calendar-only expiry warns in development. Independent policy and reader reviews preserve event-triggered stops and repair lost historical fragments plus duplicated delegation authority. Semantic truth, review quality, actual native/campaign outcomes and sustained control effectiveness remain outside these checks.",
-        "cost": "Integrated 143-test lane 29.335s and 48-test prompt lane 44.739s, with fast checks and scoped independent reviews. Lanes cover different responsibilities; no additive productivity or inference claim. Whole review/model/waiting cost is not reliably measured. Existing mature tools reused, no new service.",
-        "follow_up": "@CVX-Hull owns live follow-up through [#199](https://github.com/CVX-Hull/enactive/issues/199); the Issue owns acceptance, allocation and stage. This scoped maintenance assessment does not close product outcomes or renew evidence."
+        "findings": "Current-fragment and historical-intermediate regressions cover the new narrow navigation guard. Metadata, map and protocol checks remain structural; reader comprehension and prose truth need review.",
+        "cost": "Existing project-local tools and targeted fixtures/reviews reused; one coherent protected regression candidate. No total human/model labor, sustained usability or causal productivity measurement.",
+        "follow_up": "@CVX-Hull: Reassess navigation at changed document responsibility boundaries and actual reader failure; maintain the existing metadata/parser/toolchain.",
+        "evidence": [
+          "docs/acceptance/2026-10-27-audit-resolution.md"
+        ]
       },
       "next_review": "2027-01-15"
     },
@@ -733,7 +746,9 @@
         "native/upstream.json",
         "tests/test_setup.py",
         "docs/setup.md",
-        "docs/environment.md"
+        "docs/environment.md",
+        "docs/acceptance/2026-10-27-audit-resolution.md",
+        "package.json"
       ],
       "failure_response": "Stop failed stage, preserve diagnostics and retry only after identifying the corrupt input or owned workspace.",
       "limitations": "Portable fixtures do not perform fresh downloads, native compilation/signing or install. Existing-host recipe is historical; broader hosts remain unverified.",
@@ -742,22 +757,22 @@
       "rationale": null,
       "replacement": null,
       "last_exercise": {
-        "date": "2026-10-17",
-        "outcome": "Passed within recorded scope after preserved repairs; limitations retained.",
-        "scope": "Fresh owned extraction/build, source hashes/anchors, final incremental rebuild, installation/signing and windowed launch.",
+        "date": "2026-10-27",
+        "outcome": "Scoped source/reader/tooling exercise; native and gameplay qualification remain separate.",
+        "scope": "The project-local GitHub slugger fills a concrete anchor gap. A narrow CLI KaTeX override removes the reported advisory using Mermaid's already-resolved patched version; npm reports zero advisories. No global install or lifecycle script. Other-host/native setup qualification is unchanged.",
         "evidence": [
-          "docs/acceptance/2026-10-17-foundation-implementation.md"
+          "docs/acceptance/2026-10-27-audit-resolution.md"
         ]
       },
       "maintenance_review": {
-        "date": "2026-10-17",
-        "evidence": [
-          "docs/acceptance/2026-10-17-foundation-implementation.md"
-        ],
+        "date": "2026-10-27",
         "effectiveness": "partially_effective",
-        "findings": "Compiled source compared with checkpoint; no global installs or setup changes. Successful only on recorded Mac; other hosts remain unverified.",
-        "cost": "Existing cache/toolchain reused; full compile plus incremental menu repair.",
-        "follow_up": "@CVX-Hull owns live follow-up through [#75](https://github.com/CVX-Hull/enactive/issues/75); the Issue owns acceptance, allocation and stage. This scoped maintenance assessment does not close product outcomes or renew evidence."
+        "findings": "The project-local GitHub slugger fills a concrete anchor gap. A narrow CLI KaTeX override removes the reported advisory using Mermaid's already-resolved patched version; npm reports zero advisories. No global install or lifecycle script. Other-host/native setup qualification is unchanged.",
+        "cost": "Existing project-local tools and targeted fixtures/reviews reused; one coherent protected regression candidate. No total human/model labor, sustained usability or causal productivity measurement.",
+        "follow_up": "@CVX-Hull: Remove the narrow override when the selected published CLI admits the patched dependency; maintain project-local pins and verify renderer changes.",
+        "evidence": [
+          "docs/acceptance/2026-10-27-audit-resolution.md"
+        ]
       },
       "next_review": "2027-01-15"
     },
@@ -828,7 +843,9 @@
         "docs/changes/062-player-decision-context.md",
         "docs/testing.md",
         "docs/acceptance/2026-10-27-gameplay-workflow-audit.md",
-        "docs/acceptance/2026-10-24-audit-remediation.md"
+        "docs/acceptance/2026-10-24-audit-remediation.md",
+        "tools/campaign_run.py",
+        "docs/acceptance/2026-10-27-audit-resolution.md"
       ],
       "failure_response": "Record the owner and action in the existing Issue, repair guidance and preserve failures. Retire saves only through owned archive/hash verification and applicable authorization in the runbook; cleanup is not normal game completion.",
       "limitations": "Review quality and event-trigger detection remain manual. No background scheduler, automatic drift measurement or deletion job; passing date checks proves only that recorded dates are not overdue, not that review occurred.",
@@ -838,20 +855,20 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-27",
-        "outcome": "Scoped manual review performed; residual gaps and formal source/native qualification remain explicit.",
-        "scope": "Triggered assessment of development-gate drift, repeated private launchers, document granularity and current control-map usefulness.",
+        "outcome": "Scoped source/reader/tooling exercise; native and gameplay qualification remain separate.",
+        "scope": "The repeated private custodian is replaced with one maintained data-driven entry point and exact child ownership. Mixed current content is decomposed; known dependency advisory is repaired. Whole engineering effort and sustained operational benefit remain unknown.",
         "evidence": [
-          "docs/acceptance/2026-10-27-gameplay-workflow-audit.md"
+          "docs/acceptance/2026-10-27-audit-resolution.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-27",
         "effectiveness": "partially_effective",
-        "findings": "Controls were structurally current but did not prevent repeated gate drift, content overgrowth or the native handoff composition failure. This update narrows repeated evidence inventories, keeps existing owners/triggers and records concrete residual work. No new scheduler, metrics service or per-run committee.",
-        "cost": "Existing source/CI/run receipts and focused offline tests reused. Whole human/model review and waiting labor is unknown; no productivity or causal-usability claim.",
-        "follow_up": "@CVX-Hull owns #274 closure; #164 consolidates maintained launch paths before another custom copy and #276 decomposes oversized references. Existing event triggers apply before the unchanged January 15, 2027 due date.",
+        "findings": "The repeated private custodian is replaced with one maintained data-driven entry point and exact child ownership. Mixed current content is decomposed; known dependency advisory is repaired. Whole engineering effort and sustained operational benefit remain unknown.",
+        "cost": "Existing project-local tools and targeted fixtures/reviews reused; one coherent protected regression candidate. No total human/model labor, sustained usability or causal productivity measurement.",
+        "follow_up": "@CVX-Hull: Use existing failure/change/resumption triggers and the unchanged due date. Reassess private executable copies, source coupling and reader friction if they recur.",
         "evidence": [
-          "docs/acceptance/2026-10-27-gameplay-workflow-audit.md"
+          "docs/acceptance/2026-10-27-audit-resolution.md"
         ]
       },
       "next_review": "2027-01-15"
@@ -878,7 +895,10 @@
         "docs/acceptance/2026-10-17-public-recovery-evaluation.md",
         "docs/acceptance/2026-10-17-passive-supervisor.md",
         "docs/acceptance/2026-10-18-integrated-player.md",
-        "docs/acceptance/2026-10-18-walk-reassessment.md"
+        "docs/acceptance/2026-10-18-walk-reassessment.md",
+        "docs/acceptance/2026-10-27-audit-resolution.md",
+        "docs/diagrams/binding-projections.mmd",
+        "docs/diagrams/campaign-custody.mmd"
       ],
       "failure_response": "Fix syntax or missing setup; regenerate stale output and inspect the rendered result. Never call a denied browser launch a passed check. Resolve semantic/readability findings through C-USABILITY/C-REVIEW.",
       "limitations": "Receipt freshness is not cross-host byte equality or proof against deliberate falsification. Rendering and SVG metadata do not prove meaning, accessibility for every reader or readable layout. Human rendered inspection is required. Ubuntu 24.04 CI was exercised with a scoped runner Chrome sandbox profile; other Linux hosts remain unverified.",
@@ -887,22 +907,22 @@
       "rationale": "Required to keep user-facing visual explanations reviewable and synchronized.",
       "replacement": null,
       "last_exercise": {
-        "date": "2026-10-18",
-        "outcome": "Updated recovery diagram rendered and inspected; actual native spectator hold image retained.",
-        "scope": "Pinned local Mermaid; lead and independent reviewer inspected760px-wide recovery PNG against protocol/code, no clipping. Actual browser shows frozen state, disabled Resume and user Pause.",
+        "date": "2026-10-27",
+        "outcome": "Scoped source/reader/tooling exercise; native and gameplay qualification remain separate.",
+        "scope": "Current logical memory/time and process cleanup boundaries have named questions, text equivalents, accessible renders and independent semantic/visual review. A rendered diagram does not prove runtime or gameplay behavior.",
         "evidence": [
-          "docs/acceptance/2026-10-18-walk-reassessment.md"
+          "docs/acceptance/2026-10-27-audit-resolution.md"
         ]
       },
       "maintenance_review": {
-        "date": "2026-10-18",
+        "date": "2026-10-27",
+        "effectiveness": "partially_effective",
+        "findings": "Current logical memory/time and process cleanup boundaries have named questions, text equivalents, accessible renders and independent semantic/visual review. A rendered diagram does not prove runtime or gameplay behavior.",
+        "cost": "Existing project-local tools and targeted fixtures/reviews reused; one coherent protected regression candidate. No total human/model labor, sustained usability or causal productivity measurement.",
+        "follow_up": "@CVX-Hull: Update the relevant current boundary view with behavior, then inspect at ordinary width; preserve proposed/historical visuals in their original roles.",
         "evidence": [
-          "docs/acceptance/2026-10-18-walk-reassessment.md"
-        ],
-        "effectiveness": "unassessed",
-        "findings": "Added stopped-walk reconciliation to existing recovery view rather than a second diagram. File-URL navigation was denied and not retried; trusted offline artifact rendering provided diagram inspection without browser navigation.",
-        "cost": "Existing project-local tools and one serialized runtime; one worker plus independent reviews. Two probes total17charges and856.281seconds through native closeout; review/publication continues original45-minute envelope. Model/approval spend and sustained benefit unmeasured.",
-        "follow_up": "@CVX-Hull owns live follow-up through [#143](https://github.com/CVX-Hull/enactive/issues/143); the Issue owns acceptance, allocation and stage. This scoped maintenance assessment does not close product outcomes or renew evidence."
+          "docs/acceptance/2026-10-27-audit-resolution.md"
+        ]
       },
       "next_review": "2027-01-15"
     }

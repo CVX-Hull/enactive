@@ -44,7 +44,7 @@ passed hosted suite locally solely to complete a checklist.
 
 The local commit hook runs the fast command. Development play need not wait for
 CI, but formal acceptance/merge requires the actual successful exact-candidate
-check under the profile policy below. It may complete after an unchanged development
+check under the [CI profile policy](ci-profiles.md#protected-ci-profiles). It may complete after an unchanged development
 run, before acceptance is granted. C-PORTABLE/C-RELEASE own the mechanical
 boundaries; C-REVIEW checks selected tests, outcome scope and evidence rather than
 approving ordinary gameplay actions.

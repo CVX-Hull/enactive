@@ -56,7 +56,7 @@ No fixed sprint duration, story-point target, maintenance percentage or AI capac
 multiplier is prescribed. Start with a cohesive M-or-smaller scoped outcome and
 adjust from comparable local evidence; large aggregates need bounded children.
 The lead checks goal, fit and completion capacity at Ready and integration review
-under C-REVIEW, retaining the two-writer/shared-runtime limits below.
+under C-REVIEW, retaining the [two-writer/shared-runtime limits](../standards/agents.md).
 
 | Status | Entry/exit policy |
 | --- | --- |

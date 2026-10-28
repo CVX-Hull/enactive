@@ -81,7 +81,8 @@ The underlying record validator still reads original rejected request history;
 old failures are retained unchanged and cannot become executable through reopening.
 
 Cached process facts are last samples, not a liveness guarantee. Shutdown journals
-any owned child without signals; reopening restores no process handle. Only a
+any owned child through the [exceptional shutdown contract](lifecycle-exit.md#exceptional-writer-shutdown);
+reopening restores no process handle. Only a
 validated committed OwnedNormalExit resolves that launch's historical custody.
 Otherwise attempted/uncertain launches remain unavailable, with no PID adoption.
 Process absence or exit code alone cannot prove a normal save/exit.

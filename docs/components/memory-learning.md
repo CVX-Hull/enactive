@@ -45,9 +45,28 @@ when measured closure, payload or setup cost approaches those limits under
 | EvidenceStore | Immutable selected observations/frames, integrity, source disposition and finite retention reservations; exact metadata length cache avoids repeated serialization | [evidence.py](../../harness/gameplay/evidence.py) |
 | MissionLedger | SQLite canonical requests, primitives, effects, memory/procedure/reflection records and costs | [mission_ledger.py](../../harness/gameplay/mission_ledger.py) |
 | CampaignMemory | Derived claims/Work/context, conflicts, applicability, procedure ancestry and selected packets | [campaign_memory.py](../../harness/gameplay/campaign_memory.py) |
+| Passive memory ports | Memory data, repository/source interfaces and source failure types; no mission executor or CDDA visible-schema assumption | [contracts](../../harness/gameplay/memory_contracts.py), [ports](../../harness/gameplay/memory_ports.py), [sources](../../harness/gameplay/source_contracts.py) |
+| Mission/CDDA adapters | Exact admitted mutation payloads; visible world/character identity, literal scene facts and turn/continuity interpretation | [mission memory](../../harness/gameplay/mission_memory.py), [identity](../../harness/gameplay/cdda_identity.py), [scene](../../harness/gameplay/cdda_memory.py), [time](../../harness/gameplay/cdda_timeline.py) |
 | Offline export and historical library | Validate sealed current donors, publish immutable exports, independently check original-byte bindings and qualified dependencies; no old actor or current world facts | [export](../../harness/gameplay/advisory_export.py), [library](../../harness/gameplay/procedure_library.py) |
 | Reflective exchange | Bounded passive work claim/results and candidate proposals | [reflection.py](../../harness/gameplay/reflection.py), [mission_reflection.py](../../harness/mission_reflection.py) |
 | Program evaluator | Execute selected procedure data over current supplied observations, yielding ordinary proposals | [policy_program.py](../../harness/gameplay/policy_program.py), [program_input.py](../../harness/gameplay/program_input.py) |
+
+![CDDA projections authenticate data before shared memory and time arithmetic.](../diagrams/binding-projections.svg)
+
+This current logical view answers “Which observation and clock assumptions belong
+to CDDA?” Arrows carry validated data/provenance, never input permission. The table
+and flow below are its text equivalent; boxes do not imply separate processes.
+[Editable source](../diagrams/binding-projections.mmd).
+
+The shared reducer receives passive data ports, with no controller/process
+reference. `MissionMemory` validates the complete mutation and equality with its
+durable admitted payload; an abstract append method does not bypass admission.
+The retained `revision`/`turn` fields are optional partial-order counters, never
+elapsed seconds in shared memory. CDDA scene interpretation is outside the reducer.
+Import Linter prevents direct or indirect reintroduction of mission/CDDA/storage
+implementation dependencies into these shared modules. Independent data fixtures
+exercise [memory ports](../../tests/test_memory_ports.py) and [projected time](../../tests/test_observed_time.py);
+they do not qualify another game or establish useful memory application.
 
 SQLite and ordinary OS/library contracts supply their configured persistence and
 file/process behavior. Project code owns domain provenance, finite capacity and

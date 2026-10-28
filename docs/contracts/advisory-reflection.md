@@ -49,7 +49,7 @@ notification to return promptly on work or closure. Other transport/tool waits
 remain at most15 seconds. The adapter caps claim/collection at15 seconds and the
 remaining original call allowance; no job window or resource limit is renewed.
 The default player's60-second MCP timeout is unchanged. The optional frozen
-adviser profile below can hold idle waiting in software across these polls; it
+[adviser profile](../operations/player-host.md) can hold idle waiting in software across these polls; it
 does not extend execution or claim deadlines or promise a hard wall deadline.
 Only the existing writer applies claims/submissions. Claims charge their original
 finite wall window without refund; software receipt time judges submission

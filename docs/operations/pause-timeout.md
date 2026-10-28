@@ -68,28 +68,22 @@ Use CDDA's normal Save menu before quitting. Stop the controller with Ctrl-C; it
 leaves remote control paused. Saves are in `.runtime/user/`. Never treat a stale
 frame or old acceptance record as proof a current process is healthy.
 
-For an authorized failed-run cleanup after the player has permanently quiesced,
-preserve the final status, streams and save integrity manifest first. If normal
-ending is unsupported, verify the exact native PID, its live controller parent
-and prepared executable/userdir against that run's owned launch evidence. Send
-exceptional SIGTERM only to that verified child **while its controller is still
-alive**, and wait finitely for native exit (an OS zombie has exited but awaits
-parent reaping). Use the run's finite cleanup allowance; a still-running child
-needs explicit owned-process disposition, not a claim of success. For an authorized
-failed-run cleanup, a retained stack sample can distinguish a crash modal from
-healthy execution. After a finite SIGTERM wait, reverify the same owned PID,
-parent, executable and userdir before exceptional SIGKILL if it remains stuck.
-Record both intents, actual exit and unresolved effects; never close a crash
-dialog by replaying gameplay or assume an alive PID is responsive. Then stop the
-controller so its existing retained `Popen` handle can poll/reap and record the
-actual exit status. Check final owned-process/listener absence. Never target an
-unrelated process or use a source/signal repair to resume the failed player.
+For an authorized failed-run cleanup, preserve final status and original run
+evidence. Use the [maintained campaign custodian](campaign-run.md), which first
+allows the actual driver to settle its deciding hosts, requests exceptional Stop
+when needed, and closes its exact controller child. Controller shutdown now asks
+the settled mission writer to close its retained native child exceptionally. This
+can terminate an unsaved game; use ordinary Save/exit before service closure when
+normal ending is still supported. No gameplay input is manufactured by cleanup.
 
-Controller closure itself only records native status; it does not terminate the
-game. Cached `/api/status` is not a new child poll. If the parent exited first,
-later native PID absence cannot recover its exit code or cause. Retain that gap
-as unknown, as in fresh016; do not call signal cleanup a normal Save/exit or
-rewrite the earlier cleanup intent after discovering this limitation.
+The [shutdown contract](../contracts/lifecycle-exit.md#exceptional-writer-shutdown)
+distinguishes normal prior exit, exceptional termination and unknown custody.
+Only a matching boot-bound receipt with a settled writer and verified absence
+supports owned native closure. A blocked/lost writer or controller, missing receipt
+or unresolved launch remains unknown. Do not replace the retained handle with a
+PID scan, adopt another process, or infer exit code/cause from later PID absence.
+A closed source fixture does not qualify native Save/exit or gameplay success;
+original unknowns in earlier failed runs remain historical.
 
 ## Operator recovery
 

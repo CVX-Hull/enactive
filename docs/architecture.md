@@ -91,14 +91,23 @@ qualification is CDDA on this Mac, not a delivered universal plugin interface.
 | One writer, finite costs, uncertainty and request/result correlation | Supported receiver, custody and timing attestations |
 | Campaign/evidence review and spectator presentation | Game-specific identity, persistence and outcome evidence |
 
-Menu categories, inventory/count provenance, coordinates, turn units and Save/
-identity transitions are integration concepts. Coupling remains in native
-classification, MissionRuntime, mission contracts/ledger, lifecycle proofs and
-preparation. The CDDA patch is deliberately game-specific. Extract demonstrated
-seams using the existing writer/store/input foundation, without another executor
-or speculative game framework. An independently shaped fixture tests a seam;
-actual portability needs another real integration.
-[#191](https://github.com/CVX-Hull/enactive/issues/191) owns follow-through.
+Shared memory consumes passive repository/source ports. The mission adapter owns
+request admission/provenance; the CDDA adapter projects literal scene facts and
+validates world/character interpretation. Shared time arithmetic consumes explicit
+projected seconds and authenticated adjacent endpoints. CDDA's adapter owns turn
+conversion, same-turn reload continuity and retained reference integrity.
+
+Menu categories, inventory/count provenance, coordinates and Save/identity
+transitions remain integration concepts in native classification, MissionRuntime,
+mission contracts/ledger, lifecycle proofs and preparation. `gameplay/2` EvidenceRef
+and `cdda-visible/1` remain the current CDDA binding's formats; these are not a
+universal observation schema. The source separation preserves current persisted
+representations and adds neither another executor nor a speculative game framework.
+[Memory and source ports](components/memory-learning.md#internal-responsibilities)
+and [time projection](contracts/gameplay-evidence.md#binding-projections) identify
+the concrete interfaces. Independently shaped fixtures exercise the seam; actual
+portability still needs another real integration under
+[#191](https://github.com/CVX-Hull/enactive/issues/191).
 A seven-day CDDA result would not prove family-wide support.
 
 ## Separate recovery and memory boundaries

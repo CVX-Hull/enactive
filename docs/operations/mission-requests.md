@@ -97,14 +97,15 @@ separates implemented components from remaining independent-play acceptance.
    handling. Dismissal uses its exact registered context action (TEXT.QUIT,
    UILIST.QUIT, WORLDGEN_CONFIRM.QUIT or ordinary QUIT). A rowless any-key
    POPUP_WAIT supports one SPACE acknowledgement under the exact signature in
-   [the protocol](../protocol.md); other controls are never guessed. Dismissal returns
+   [the exact control contract](../contracts/request-binding.md#semantic-menu-controls-and-prompt-limits); other controls are never guessed. Dismissal returns
    partial for effect
    verification and never automatically answers a new prompt. Original
    root/child limits and unknowns stay recorded. Untouched-menu exit uses its owned
    lifecycle root and an explicit interpreted confirmation child. It is not a
    character save/exit path. Item/activity, creation/save/reload and handoff adapters
    compose in source. Scoped native lifecycle and actual024primary/successor
-   evidence are linked above; neither promises every future interface or campaign outcome.
+   evidence are retained in [native capture qualification](../acceptance/2026-10-22-native-capture-preconditions.md)
+   and [independent024](../acceptance/2026-10-21-independent-supply-shelter.md); neither promises every future interface or campaign outcome.
 7. Pause prevents further admission, without undoing an input or native activity.
    Honor user Pause/takeover; do not auto-Resume or restore a phase from disk. A
    stopped deciding attempt remains stopped. Retain its original artifacts and

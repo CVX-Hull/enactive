@@ -51,7 +51,7 @@ to finish all design before feedback or to mirror directories mechanically.
 
 | Location | Responsibility and limit |
 | --- | --- |
-| `harness/` and `schemas/` | Current writer, control, evidence/memory and contracts. Existing CDDA identity/time/observation coupling is disclosed in architecture; this is not yet a portable plugin boundary. |
+| `harness/` and `schemas/` | Current writer, control, evidence/memory and contracts. Shared memory/time ports and explicit CDDA projections are described in architecture; actual game-family qualification remains open. |
 | `native/` | The small CDDA integration and its upstream provenance. Shared learning/orchestration does not belong in game patches. |
 | `tools/` | Maintained engineering/check/launch/study entry points, including the generic Pi host. Reuse these rather than growing a private source framework in run directories. |
 | `web/` | Passive spectator presentation; it owns no gameplay authority. |
@@ -154,7 +154,7 @@ Do not copy a full test inventory or all historical results into architecture.
 An unexercised lane is an explicit gap, with existing owned work where known; an
 inventory count or fresh link cannot turn it into qualified behavior.
 
-The existing [controls](controls.md) enforce metadata, links, generated-map
+The existing [controls](controls.md) enforce metadata, current local fragments and responsibility-index reachability, generated-map
 freshness, diagram rendering and selected dependency/protocol relationships.
 C-REVIEW checks authority, coherence and changed-boundary diagrams; C-USABILITY
 checks whether a reader can answer the intended question; C-MAINTENANCE reviews
@@ -162,3 +162,18 @@ drift and control cost at its existing triggers. Passing a parser or a date chec
 cannot prove meaning or maintainability. Repeated navigation failures, stale
 copies, escaped defects or excessive review effort trigger repair or simplification
 in the existing Issue, not a new tracker or semantic-checking framework.
+
+
+Current fragment checks use the existing Markdown parser plus the pinned
+GitHub slugger, including duplicate headings and explicit anchors. Historical
+prose retains its original fragments; historical pages cannot supply a current
+navigation route. Reader-task review still checks positional prose references,
+semantic destinations, one canonical rule home and task granularity. These are
+judgment tasks, not claims established by a valid heading or reachable file.
+
+
+GitHub's [generated-file attributes](https://docs.github.com/en/repositories/working-with-files/managing-files/customizing-how-changed-files-appear-on-github)
+collapse generated SVG/control-map text in review by default. Review their
+maintained Mermaid/registry sources and actual rendered views; generated outputs
+remain tracked and expandable, with the same rendering/freshness checks. This
+reduces encoded font/reference noise without creating another review service.

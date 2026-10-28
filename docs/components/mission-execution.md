@@ -124,16 +124,17 @@ RegisteredLifecycle and one ledger helper avoids a second writer, store or
 validator service. The [protocol](../contracts/lifecycle-create-load.md)
 owns the precise initial-history, custody and dismissal restrictions.
 
-An invalid adoption request preserves a positively healthy create/load phase so
-the player can explicitly correct its screen state or identity Claim selection.
-The new zero-input refusal rechecks custody, current exact evidence, lease, storage
-and original limits before returning its PhaseReceipt; checked health faults still
-end the phase. The existing later candidate-proof catch has a known historical
-evidence classification gap tracked under [#176](https://github.com/CVX-Hull/enactive/issues/176):
-adoption is blocked, but unhealthy history does not always retire the phase.
-The [failed Pi pilot](../acceptance/2026-10-25-pi-configuration-pilot.md)
-motivated this source repair. Its actual native correction branch remains
-unqualified; a synthetic correction cannot relabel that failed run.
+An unsuitable identity selection preserves only a positively healthy create/load
+phase. The ledger authenticates selected authored Claims against their admitted
+payload before interpreting subjects. The receiver verifies phase/selected source
+bytes and native-fact projections, then rechecks custody, lease, capacity and the
+original limits. Only the typed semantic refusal retains the PhaseReceipt; trusted
+history, receipt and candidate-timeline faults retire phase/lease. Paired
+[initial Load regressions](../../tests/test_mission_initial_load.py) cover explicit
+healthy correction and the same mistake with corrupted pixels, missing primitives
+or altered authored payload/subjects. These SQLite/archive fixtures resolve source
+classification; they do not relabel the [failed Pi pilot](../acceptance/2026-10-25-pi-configuration-pilot.md)
+or establish new native qualification.
 
 Review a change from the owner/phase and flow down to shared limits, publication,
 receipt/reopen readers and tests. The large runtime and ledger remain concentrated

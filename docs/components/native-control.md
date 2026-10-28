@@ -27,6 +27,14 @@ It is not a process-isolation diagram. [Editable source](../diagrams/run-ownersh
 | Recovery composition | Separate paused control requests and original uncertain-dispatch evidence | [mission_recovery.py](../../harness/mission_recovery.py); [detailed native recovery design](../design/native-control.md) |
 | Shared movement policy | Pure conservative visible-cell rules used by controller walk and movement skill | [movement.py](../../harness/movement.py) |
 
+The process adapter owns bounded exceptional termination as well as launch/wait.
+Only the settled mission writer invokes it after input revocation; a blocked writer
+or lost handle yields unknown cleanup. Normal lifecycle exit and exceptional
+termination have separate receipts and acceptance meanings. See the
+[shutdown contract](../contracts/lifecycle-exit.md#exceptional-writer-shutdown) and
+[controlled-child regressions](../../tests/test_mission_shutdown.py). Reopen cannot
+adopt a native PID from those receipts.
+
 Native7 visible rows preserve labels and focus while carrying a separate nullable
 literal rendered marker. The CDDA binding records the actual inventory marker
 cell only when visible, in the same row draw; null does not mean unmarked. Other

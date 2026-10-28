@@ -8,12 +8,12 @@ from .mission_contracts import validate_memory_entry
 from .mission_ledger import MissionLedger
 
 
-def _validate_wall(now):
+def _validate_wall(now: float) -> None:
     if type(now) not in (int, float) or not math.isfinite(now) or now < 0:
         raise ContractError("Memory requires finite nonnegative time")
 
 
-def _identity(prefix, value):
+def _identity(prefix: str, value: dict) -> str:
     return prefix + hashlib.sha256(canonical(value).encode()).hexdigest()
 
 
