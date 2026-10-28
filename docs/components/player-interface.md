@@ -51,6 +51,14 @@ The producer refuses a premature skill from that selected paused snapshot before
 staging; it does not refresh evidence, Resume or establish current authority.
 The [lifecycle contract](../contracts/lifecycle-create-load.md) owns the sequence.
 
+Before first owned launch, a disconnected, empty source-free bootstrap Observe
+returns the existing launch guidance without publishing a native capture. The
+receiver distinguishes the controller's initial reconciliation diagnostic from
+other faults; connected unowned observations and pending recovery retain their
+paths. This prevents an absent renderer from stranding a pending capture while
+leaving all live Launch guards intact. The
+[admission contract](../contracts/mission-admission.md) owns the exact conditions.
+
 For an activity child, the player chooses only the step and any explicit YES/NO
 answer. Before staging, player tools collect the exact original request selected
 by the published phase through the existing read-only result interface. The pure

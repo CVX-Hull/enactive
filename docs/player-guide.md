@@ -29,6 +29,9 @@ denial or stop solely because a successful tool ran from a read-only host.
   launch handle. Without an owned child, then use source-free
   `enactive_lifecycle(operation=launch, scope=new_root, source_id=null)` with that
   handle and valid finite limits. Select create/load from its returned menu.
+  On a clean disconnected source-free admission, Observe returns launch guidance
+  without a capture; it does not prepare or create the child. Existing diagnostic
+  observations and pending reconciliation retain their separate paths.
   Source-free means no informing image is required; it does not mean an empty
   snapshot handle is accepted. Keep this entry point in initial player context.
   The admitted scenario is a setup target, not an observed world/character fact.

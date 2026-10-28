@@ -20,7 +20,7 @@ from uuid import UUID
 
 from .gameplay.mission_memory import MissionMemory
 from .gameplay.cdda_memory import capture_native
-from .controller import Controller, ControlError, MissionInputRefusal, MissionLease, validate_state
+from .controller import Controller, ControlError, MissionInputRefusal, MissionLease, STARTUP_RECONCILIATION_PROMPT, validate_state
 from .native_process import NativeProcess
 from .mission_lifecycle import LifecycleRequestRefusal, NormalPhase, RegisteredLifecycle
 from .mission_handoff import HandoffEvidenceError, HandoffPhase, RegisteredHandoff
@@ -1138,6 +1138,17 @@ class MissionRuntime:
             return self._poll_activity(work)[1]
         if phase is not None:
             return self._observe_prompt(work, phase)
+        if (self._native is None and self._owned_launch is None and not self._lost_process_custody
+                and self._current is None and self._ledger.snapshot(now=self._wall())["phase"] == "admitted"):
+            native = self.controller.status()
+            if (native["connection"] == "disconnected" and native["pending"] is None
+                    and native["control_pending"] is None
+                    and native["error"] in ("", STARTUP_RECONCILIATION_PROMPT)
+                    and not (native["state"] or {}).get("error")):
+                # Match source-free admission instead of stranding an Observe
+                # slot without a renderer. Existing faults, connected unowned
+                # views and pending reconciliation keep their ordinary path.
+                return self._bootstrap(work)
         self._capacity()
         state, received = self._observe_native(work)
         normals = [r for r in self._store.historical_references if r.boundary_kind == "normal_play"]
