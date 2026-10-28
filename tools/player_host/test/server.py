@@ -66,9 +66,14 @@ def handoff_receipt(mode):
     if mode == "pending":
         value["settled"] = False
         value["response"]["operation"]["state"] = "running"
-    if mode == "transport-uncertain":
+    if mode in ("transport-uncertain", "transport-no-snapshot"):
         value.update(transport="uncertain", settled=False, response=None,
-            reason="Submission response unavailable; collect the original operation")
+            reason="Submission response unavailable; collect the original operation",
+            original_collection=dict(tool="enactive_result", arguments=dict(
+                mission_id="mission", operation_id="issued-handoff")))
+        if mode == "transport-no-snapshot":
+            value.pop("next_snapshot")
+            value["snapshot_error"] = "Current context unavailable"
     if mode == "not-admitted":
         value.update(submission="not_admitted", response=None)
     if mode == "foreign":

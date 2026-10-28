@@ -204,9 +204,9 @@ function inspectHandoff(name, args, result, pending) {
   let origin = pending;
   if (direct && !['not_submitted', 'not_admitted'].includes(value?.submission)) {
     const collection = value?.original_collection;
-    const identity = operation?.kind === 'handoff' || value?.transport === 'uncertain' && value.settled === false
-      ? {mission_id:value.next_snapshot?.mission?.mission_id, operation_id:value.operation_id}
-      : result.isError === true && collection?.tool === 'enactive_result' ? collection.arguments : undefined;
+    const identity = collection?.tool === 'enactive_result' ? collection.arguments
+      : operation?.kind === 'handoff' || value?.transport === 'uncertain' && value.settled === false
+        ? {mission_id:value.next_snapshot?.mission?.mission_id, operation_id:value.operation_id} : undefined;
     if (text(identity?.mission_id) && text(identity?.operation_id)) {
       origin = {...identity, intent:structuredClone(args.intent)};
     }

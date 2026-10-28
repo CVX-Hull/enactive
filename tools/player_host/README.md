@@ -154,6 +154,8 @@ matching issuance/operation, original actor/mission and an issued post-Pause sou
 Successor-role/Work selections must match this host's original handoff intent.
 Collection is armed only by its actual handoff response or original-collection
 identity after an uncertain handoff call, and must name that same mission/operation.
+MCP preserves the assigned collection identity on unfinished/uncertain responses even
+when their immediate snapshot is unavailable; the host does not guess the mission.
 A fresh successor's read of its assigned issuance does not settle its host. A
 newer read-only Observe can be current while the issued checkpoint stays fixed;
 the driver checks the actual checkpoint/native binding separately.

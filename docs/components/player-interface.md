@@ -111,6 +111,12 @@ not establish this fact. Machine binding/digest fields stay out of default MCP
 context; raw SDK evidence retains them. See the
 [exact contract](../protocol.md#certified-request-admission-refusal).
 
+An unfinished/uncertain mutation response retains its assigned `original_collection` in the
+MCP presentation even when the immediate snapshot is unavailable. It comes from
+the original composed call, not a guessed mission or refreshed source. This is
+collection-only guidance; it proves neither admission/delivery nor permission to
+replay. Proven unsubmitted/nonadmitted responses do not gain that uncertainty path.
+
 An advisory Claim's validated `busy, admitted=false` receipt proves zero admission;
 its local fence can be released for another bounded attempt. Missing receipts,
 uncertainty and admitted commands remain collection-only. This exception does not

@@ -866,6 +866,12 @@ independent gameplay objective.
 
 ### Skill request binding errors
 
+MCP preserves a mutation's assigned `original_collection` on unfinished or transport-uncertain
+responses, including when its immediate snapshot cannot be obtained. The identity
+comes from the original composed invocation; it grants only exact collection,
+not admission, delivery proof, replay, source freshness or input authority.
+Proven unsubmitted/nonadmitted refusals retain their separate correction path.
+
 Construct `expected_session`, `expected_revision` and `expected_boundary_id`
 programmatically from the single chosen retained observation associated with the
 cited source. Use existing JSON tooling; do not copy opaque fields independently

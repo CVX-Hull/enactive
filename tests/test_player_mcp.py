@@ -143,6 +143,39 @@ class RefusalMCPTests(unittest.TestCase):
             self.run_client(exercise)
         self.assertEqual(self.server.calls, [])
 
+    def test_lost_reply_and_missing_snapshot_keep_original_collection_without_error(self):
+        self.mode = "lost"
+        async def exercise(client):
+            result = await client.call_tool("enactive_observe", dict(snapshot_id="selected"))
+            self.assertFalse(result.is_error)
+            value = self.value(result)
+            self.assertEqual(value["transport"], "uncertain")
+            self.assertFalse(value["settled"])
+            self.assertNotIn("next_snapshot", value)
+            self.assertIn("snapshot_error", value)
+            self.assertEqual(value["original_collection"], dict(tool="enactive_result", arguments=dict(
+                mission_id="mission-test", operation_id=self.proofs[-1]["request_id"])))
+            self.assertEqual(value["operation_id"], self.proofs[-1]["request_id"])
+        with patch.object(self.player, "snapshot", side_effect=MissionClientError("Current context unavailable")):
+            self.run_client(exercise)
+        self.assertEqual([call[3]["kind"] for call in self.server.calls if call[3]], ["observe"])
+
+    def test_pending_response_without_snapshot_keeps_assigned_collection(self):
+        async def pending(player, name, arguments, **kwargs):
+            return dict(transport="delivered", settled=False, operation_id=arguments["request_id"],
+                response=dict(status="accepted", operation=dict(kind="observe", state="running")),
+                snapshot_error="Current context unavailable"), None
+        async def exercise(client):
+            result = await client.call_tool("enactive_observe", dict(snapshot_id="selected"))
+            self.assertFalse(result.is_error)
+            value = self.value(result)
+            self.assertEqual(value["original_collection"], dict(tool="enactive_result", arguments=dict(
+                mission_id="mission-test", operation_id=value["operation_id"])))
+            self.assertNotIn("next_snapshot", value)
+        with patch("harness.player_mcp.call_player", side_effect=pending):
+            self.run_client(exercise)
+        self.assertEqual(self.server.calls, [])
+
     def test_missing_current_context_does_not_undo_validated_refusal(self):
         async def exercise(client):
             result = await client.call_tool("enactive_observe", dict(snapshot_id="selected"))

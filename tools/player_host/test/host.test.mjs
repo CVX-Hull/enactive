@@ -657,7 +657,7 @@ test('direct handoff settles without another model turn',async t=>{
   assert.deepEqual(calls.map(c=>c.tool),['enactive_handoff']);
 });
 test('only this host pending or uncertain handoff can settle through collection',async t=>{
-  for(const mode of ['pending','uncertain','transport-uncertain']) await t.test(mode,async sub=>{
+  for(const mode of ['pending','uncertain','transport-uncertain','transport-no-snapshot']) await t.test(mode,async sub=>{
     const {result,calls}=await scenario(sub,[
       reply(null,[['enactive_handoff',{...handoffArgs,mode}]]),
       reply(null,[['enactive_result',{mission_id:'mission',operation_id:'issued-handoff',mode:'newer'}]])
