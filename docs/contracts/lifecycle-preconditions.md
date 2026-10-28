@@ -12,6 +12,7 @@ Lifecycle source policy distinguishes the registered action from incidental pixe
 | --- | --- |
 | Owned normal Save at `save_start` | `native_state`; preserve the original root, first-normal identity, budgets/deadlines and interaction lease through refresh, then perform the existing single checked lifecycle rotation before Save dispatch. |
 | Creation/load `awaiting_identity` at normal play | `native_state` for provisional refresh, its separately charged registered Resume and entry to identity inspection. Original committed transition/effect proof, owned child, actor/epoch/Pause lineage and subsequent identity Claims/adoption remain mandatory. |
+| Live claimed handoff at normal play | `native_state` for its bounded readmission refresh and separately charged Resume only. Issued checkpoint/Claim, private phase, actor/epoch, boot/Pause/takeover, original limits and verified returned same-session Resume remain mandatory; history grants no consent. |
 | Setup forms/rows, identity screen, explicit confirmations and other lifecycle checkpoints | Existing exact-PNG policy; a normal-context rule cannot authorize a different stage or operation. |
 | Ordinary create/load/save menu controls | InputObservation at entry and ordinary dispatch at actual preflight; no pixel or menu-label equivalence. Original custody, root limits, click geometry and text structural stops remain. |
 

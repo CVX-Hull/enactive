@@ -1,5 +1,6 @@
 """Player replacement through actual controller/SQLite/archive, synthetic UI only."""
 import copy
+import json
 from pathlib import Path
 import unittest
 import time
@@ -10,6 +11,7 @@ from harness.mission_runtime import MissionRuntime
 from tests.test_mission_creation import MissionCreationFixture
 from tests.test_mission_contracts import claim
 from tests.test_request_receipts import settled_timing
+from tests.test_gameplay_evidence import png, black_png
 
 
 class MissionHandoffTests(MissionCreationFixture, unittest.TestCase):
@@ -531,6 +533,125 @@ class MissionHandoffTests(MissionCreationFixture, unittest.TestCase):
         result = self.run_request(self.readmit())
         self.assertEqual(result["state"], "completed", result)
         self.assertEqual(self.runtime.status()["deadline"], deadline)
+
+    def claimed_pixel_handoff(self):
+        # Valid one-pixel PNGs match this synthetic bridge's 1x1 geometry.
+        # Only rendering changes; native state remains independently checked.
+        self.bridge.visible_bytes = lambda _: black_png() if self.bridge.editor_text else png()
+        self.create()
+        issued = self.handoff()
+        self.assertEqual(issued["state"], "completed", issued)
+        claimed = self.run_request(self.claim(self.context()["context"]["packet"]))
+        self.assertEqual(claimed["state"], "completed", claimed)
+        return issued, claimed
+
+    def assert_pixel_readmission(self, issued, claimed, *, preflight):
+        before = self.runtime.status()
+        result = self.run_request(self.readmit())
+        self.assertEqual(result["state"], "completed", result)
+        self.assertEqual(self.runtime.status()["deadline"], before["deadline"])
+        self.assertEqual(self.runtime.status()["epoch"], before["epoch"])
+        self.assertEqual(self.runtime.status()["spent_inputs"], before["spent_inputs"] + 1)
+        self.assertEqual(self.runtime._lease.actor_id, "successor")
+        self.assertEqual(self.runtime._ledger.request("handoff")["result"], issued["result"])
+        self.assertEqual(self.runtime._ledger.request("claim")["result"], claimed["result"])
+        primitive, = (p for p in self.runtime._ledger.primitive_records() if p["request_id"] == "readmit")
+        self.assertEqual((primitive["intent"]["kind"], primitive["state"]), ("resume", "returned"))
+        sources = {ref.observation_id: ref for ref in self.runtime._store.historical_references}
+        proof = result["result"]["readmission"]
+        initial = sources[proof["post_pause_source_id"]]
+        refreshed = sources[proof["revalidated_source_id"]]
+        checked = sources[primitive["intent"]["preflight_source"]]
+        self.assertEqual(len({initial.observation_id, refreshed.observation_id, checked.observation_id}), 3)
+        self.assertNotEqual((refreshed if preflight else initial).frame_sha256,
+                            (checked if preflight else refreshed).frame_sha256)
+        self.assertTrue(self.runtime._store.equivalent(initial, checked, rule="native_state"))
+        resume, = (r for r in self.bridge.requests if r["kind"] == "resume" and r.get("id") == primitive["native_id"])
+        self.assertIs(resume["require_exact_frame"], False)
+        self.assertIsNone(primitive["intent"]["revalidation"])
+        with self.controller._journal_lock:
+            events = [json.loads(line) for line in self.controller.journal.read_text().splitlines()]
+        audit, = (e["outcome"] for e in events
+            if e["request"]["kind"] == "mission_handoff_resume_checkpoint")
+        self.assertEqual(audit, dict(request_id="readmit", handoff_id="handoff", claim_request_id="claim",
+            before_source_id=initial.observation_id, refreshed_source_id=refreshed.observation_id,
+            rule="native_state", grants_authority=False))
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
+
+    def test_claimed_normal_readmit_accepts_changed_png_at_refresh(self):
+        issued, claimed = self.claimed_pixel_handoff()
+        self.bridge.editor_text = "render changed without native state change"
+        self.assert_pixel_readmission(issued, claimed, preflight=False)
+        self.runtime.close()
+        self.runtime = MissionRuntime(self.controller)
+        self.addCleanup(self.runtime.close)
+        self.assertEqual(self.start()["state"], "completed")
+        self.assertIsNone(self.runtime._lease)
+        self.assertIsNone(self.runtime._registered_handoff.phase)
+
+    def test_claimed_normal_readmit_accepts_changed_png_at_resume_preflight(self):
+        issued, claimed = self.claimed_pixel_handoff()
+        original = self.runtime._resume_intent
+        def drift(*args, **kwargs):
+            proposal = original(*args, **kwargs)
+            self.bridge.editor_text = "render changed at final Resume preflight"
+            return proposal
+        with patch.object(self.runtime, "_resume_intent", side_effect=drift):
+            self.assert_pixel_readmission(issued, claimed, preflight=True)
+
+    def assert_readmit_fault_without_resume(self):
+        requests = len(self.bridge.requests)
+        spent = self.runtime.status()["spent_inputs"]
+        result = self.run_request(self.readmit())
+        self.assertEqual(result["state"], "blocked", result)
+        self.assertEqual(self.runtime.status()["spent_inputs"], spent)
+        self.assertFalse(any(r["kind"] == "resume" for r in self.bridge.requests[requests:]))
+        self.assertIsNone(self.runtime._lease)
+        self.assertIsNone(self.runtime._registered_handoff.phase)
+
+    def test_claimed_normal_readmit_rejects_changed_scene(self):
+        self.claimed_pixel_handoff()
+        self.bridge.value["scene"]["position"][0] += 1
+        self.assert_readmit_fault_without_resume()
+
+    def test_claimed_normal_readmit_rejects_changed_geometry(self):
+        self.claimed_pixel_handoff()
+        self.bridge.value["frame_geometry"]["window_width"] += 1
+        self.assert_readmit_fault_without_resume()
+
+    @staticmethod
+    def corrupt_frame(reference):
+        path = Path(reference.frame_path)
+        path.chmod(0o600)
+        path.write_bytes(b"damaged retained PNG")
+
+    def test_claimed_normal_readmit_rejects_damaged_original_bytes(self):
+        self.claimed_pixel_handoff()
+        original = self.runtime._registered_handoff.readmit
+        def corrupt(work):
+            self.corrupt_frame(self.runtime._registered_handoff.phase.checkpoint)
+            return original(work)
+        with patch.object(self.runtime._registered_handoff, "readmit", side_effect=corrupt):
+            self.assert_readmit_fault_without_resume()
+
+    def test_claimed_normal_readmit_rejects_damaged_refreshed_bytes(self):
+        self.claimed_pixel_handoff()
+        original = self.runtime._store.equivalent
+        def corrupt(before, after, **kwargs):
+            self.corrupt_frame(after)
+            return original(before, after, **kwargs)
+        with patch.object(self.runtime._store, "equivalent", side_effect=corrupt):
+            self.assert_readmit_fault_without_resume()
+
+    def test_claimed_normal_readmit_rejects_damaged_preflight_bytes(self):
+        self.claimed_pixel_handoff()
+        original = self.runtime._store.reserve_dispatch
+        def corrupt(before, *, preflight, **kwargs):
+            self.corrupt_frame(preflight)
+            return original(before, preflight=preflight, **kwargs)
+        with patch.object(self.runtime._store, "reserve_dispatch", side_effect=corrupt):
+            self.assert_readmit_fault_without_resume()
 
     def test_pause_in_resume_preflight_preserves_charge_and_sends_no_resume(self):
         self.create()

@@ -91,8 +91,15 @@ matches but that issued source is omitted, the ledger refuses before admission
 with the exact required ID and no input. An explicit NEW corrected request remains
 subject to all original live handoff, source, Pause and resource guards; this
 feedback grants no eligibility or Resume. It freshly observes
-and compares exact paused native state/encoded pixels, retains that new source,
-bounds the initial Observe command-lock/native wait by that same deadline (and
+and compares complete paused native state under the existing `native_state` rule
+for this claimed normal-play Resume, retaining authenticated original/new images.
+Incidental pixel changes alone do not require another Claim. Every other native
+field, current private-phase/custody/Pause guard and original limit still applies;
+missing/corrupt bytes remain fatal. This is no perceptual image equivalence or
+recovery/setup exemption. A private Resume-checkpoint journal record links original
+and refreshed IDs and the rule without inventing a lease-bound SourceRevalidation.
+Readmission bounds the initial Observe command-lock/native wait by that same
+deadline (and
 the controller's existing15-second ceiling), charges one Resume before publication,
 then obtains a fresh successor lease only
 from the verified same normal session. Its typed Readmission correlates the claim,

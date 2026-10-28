@@ -193,6 +193,22 @@ class MissionRecoveryCollectionTests(unittest.TestCase):
         with self.runtime._ledger._mutex:
             self.runtime._ledger._verify(self.a)
 
+    def test_recovery_resume_keeps_exact_image_at_final_preflight(self):
+        self.ready_resolution()
+        self.bridge.behavior = None
+        original = self.runtime._resume_intent
+        def drift(*args, **kwargs):
+            proposal = original(*args, **kwargs)
+            self.bridge.editor_text = "changed image at recovery Resume preflight"
+            return proposal
+        count = len(self.bridge.delivered)
+        with patch.object(self.runtime, "_resume_intent", side_effect=drift):
+            result = self.run_request(self.readmit_request())
+        self.assertEqual(result["state"], "blocked", result)
+        self.assertIn("image differs", result["result"]["reason"])
+        self.assertFalse(any(row["kind"] == "resume" for row in self.bridge.delivered[count:]))
+        self.assertIsNone(self.runtime._lease)
+
     def test_recovered_suffix_menu_transfers_to_original_root_without_new_allowance(self):
         candidate, _ = self.ready_resolution()
         original = self.runtime._ledger.primitive(candidate.logical_id)

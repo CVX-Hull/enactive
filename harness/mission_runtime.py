@@ -2321,9 +2321,13 @@ class MissionRuntime:
                        self._prompt_phase.game_anchor if self._prompt_phase is not None else original)
         control = isinstance(proposal, ActivityIntent)
         ordinary = proposal.kind == "direct"
-        lifecycle_image = lifecycle is not None and not (
+        lifecycle_native_state = (
             isinstance(lifecycle, NormalPhase)
-            and self._registered_lifecycle.source_rule(lifecycle) == "native_state")
+            and self._registered_lifecycle.source_rule(lifecycle) == "native_state"
+            or isinstance(lifecycle, HandoffPhase) and isinstance(proposal, _ResumeIntent)
+            and work.request["kind"] == "readmit" and work.request["mode"] == "handoff"
+            and self._registered_handoff.source_rule(lifecycle) == "native_state")
+        lifecycle_image = lifecycle is not None and not lifecycle_native_state
         image_informed = not ordinary and (work.request.get("perception") is not None
                           or lifecycle_image or activity is not None)
         rule = "ordinary_input" if ordinary else "exact_png_bytes" if image_informed else "native_state"

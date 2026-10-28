@@ -291,6 +291,13 @@ class RegisteredHandoff:
             self.phase = replace(phase, claim_request_id=data["request_id"])
         return "completed", result
 
+    @staticmethod
+    def source_rule(phase: HandoffPhase) -> str:
+        # A claimed normal-context Resume is not conditioned on incidental
+        # pixels. Issued/read sources remain immutable and byte-authenticated.
+        normal_claim = phase.claim_request_id is not None and phase.checkpoint.boundary_kind == "normal_play"
+        return "native_state" if normal_claim else "exact_png_bytes"
+
     def readmit(self, work: _Work) -> tuple[str, dict]:
         r, data, phase = self.runtime, work.request, self.phase
         if (phase is None or phase.claim_request_id != data["claim_request_id"]
@@ -302,8 +309,15 @@ class RegisteredHandoff:
         r._capacity()
         state, received = self._observe(work)
         ref = r._ingest(state, received)
-        if not r._store.equivalent(phase.checkpoint, ref, rule="exact_png_bytes"):
+        rule = self.source_rule(phase)
+        if not r._store.equivalent(phase.checkpoint, ref, rule=rule):
             raise EvidenceError("Readmission changed the paused handoff checkpoint")
+        # Like lifecycle Resume, this has no lease-bound SourceRevalidation.
+        # The private audit relation grants no authority or historical consent.
+        r._record("mission_handoff_resume_checkpoint", {"request_id": data["request_id"],
+            "handoff_id": phase.handoff_id, "claim_request_id": phase.claim_request_id,
+            "before_source_id": phase.checkpoint.observation_id, "refreshed_source_id": ref.observation_id,
+            "rule": rule, "grants_authority": False})
         phase = replace(phase, checkpoint=ref)
         with r._metadata:
             r._check_cancelled(work)
