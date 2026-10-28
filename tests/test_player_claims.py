@@ -1,4 +1,6 @@
 """Semantic adapter and real SDK staging with synthetic evidence, never native play."""
+
+from harness.gameplay.mission_memory import MissionMemory
 from copy import deepcopy
 import hashlib
 import os
@@ -342,7 +344,7 @@ class PlayerClaimLedgerTests(unittest.TestCase):
     def test_adapter_correction_retires_actual_ledger_claim_and_preserves_backend_guards(self):
         self.ledger.close()
         self.ledger = MissionLedger(self.root / 'claim-ledger', admission=admission(), now=time.time())
-        self.memory = CampaignMemory(self.ledger, self.store)
+        self.memory = CampaignMemory(MissionMemory(self.ledger), self.store)
         reference = self.source()
         (self.root / '.runtime').mkdir()
         client = StagingClient(self.root)

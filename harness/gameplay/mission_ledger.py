@@ -19,7 +19,10 @@ from typing import Any
 from .contracts import ContractError, json_object
 from .contracts import canonical
 from .native_receipts import validate_ordinary_mapping, validate_published_input
-from .mission_contracts import MemoryRequestRefusal, VERSION, MissionAdmission, InputObservation, SourceRevalidation, validate_handoff_binding, effect_reconciliation, validate_effect_reconciliation, validate_delivery_resolution, validate_handoff_result, validate_lifecycle_transition, validate_memory_entry, validate_normal_adoption, validate_normal_exit, validate_normal_finish, validate_prompt_result, validate_request, validate_saved_checkpoint, validate_readmission
+from .mission_contracts import VERSION, MissionAdmission, InputObservation, SourceRevalidation, validate_handoff_binding, effect_reconciliation, validate_effect_reconciliation, validate_delivery_resolution, validate_handoff_result, validate_lifecycle_transition, validate_memory_entry, validate_normal_adoption, validate_normal_exit, validate_normal_finish, validate_prompt_result, validate_request, validate_saved_checkpoint, validate_readmission
+from .memory_contracts import MemoryRequestRefusal
+
+from .memory_ports import MemoryRecordNotFound
 
 DB_VERSION = 13
 MAX_DATABASE_BYTES = 64 * 1024 * 1024
@@ -52,7 +55,7 @@ class LedgerError(ContractError):
     """Invalid or unavailable accounting. Caller must revoke input before repair."""
 
 
-class RequestNotFound(LedgerError):
+class RequestNotFound(LedgerError, MemoryRecordNotFound):
     """An exact request lookup found no row; trusted durable references stay fatal."""
 
 
@@ -61,6 +64,14 @@ class RequestAdmissionRefusal(LedgerError):
 
     Duplicate, budget, persistence and arbitrary validation failures are not this
     type. The receiver still checks cancellation and exact absence before proof.
+    """
+
+
+class AdoptionIdentityRefusal(LedgerError):
+    """An authenticated selected Claim is unsuitable for normal adoption.
+
+    This class describes only caller-correctable semantics. Trusted history,
+    storage and evidence failures must never be converted to this type.
     """
 
 
@@ -1532,6 +1543,26 @@ class MissionLedger:
             raise LedgerError("First normal source lacks its returned initial-menu dismissal chain")
         return tuple(chain)
 
+    def adoption_claims(self, request_id: str, identities: list[str]) -> dict[str, dict]:
+        """Validate selected retained Claims before interpreting applicability.
+
+        Authored Claims must equal their admitted payload. Native facts have no
+        authored request; their exact visible projection is verified by the CDDA
+        receiver before retaining a selection refusal.
+        """
+        selected = {}
+        for row in self.memory_records("claim"):
+            if row["entry"]["id"] not in identities:
+                continue
+            entry = validate_memory_entry(row["entry"], "claim")
+            if entry["kind"] == "interpretation":
+                data = self._earlier_request(request_id, row["event_id"])["request"]
+                if (data["kind"] not in ("remember", "correct") or data["entry_type"] != "claim"
+                        or data["entry"] != entry):
+                    raise LedgerError("Identity Claim differs from its immutable admitted memory request")
+            selected[entry["id"]] = row
+        return selected
+
     def _check_normal_adoption(self, request_id: str, data: dict, value: dict) -> None:
         proof = validate_normal_adoption(value)
         initial_load = data["operation"] == "load" and self._get("admission")["scenario"]["mode"] == "load"
@@ -1565,7 +1596,7 @@ class MissionLedger:
             self.initial_load_menu_chain(proof["transition_result_request_id"],
                 through_request_id=proof["identity_inspect_request_id"],
                 first_normal_source_id=proof["first_normal_source_id"])
-        claims = {row["entry"]["id"]: row for row in self.memory_records("claim")}
+        claims = self.adoption_claims(request_id, data["identity_claim_ids"])
         inspection_inputs = [p for p in self.primitive_records()
             if p["request_id"] == proof["identity_inspect_request_id"]]
         if len(inspection_inputs) != 1:
@@ -1583,29 +1614,31 @@ class MissionLedger:
                 or any(receipt.get(key) != value for key, value in expected.items())):
             raise LedgerError("Identity inspection lacks its exact returned published player_data receipt")
         scenario = self._get("admission")["scenario"]
-        for subject, name in (("world", scenario["world"]), ("character", scenario["character"])):
+        selected_claims = []
+        # Authenticate every selected immutable record and the saved proof before
+        # deciding applicability. A bad selection cannot hide damaged history.
+        for subject in ("world", "character"):
             selected = claims.get(proof[f"{subject}_claim_id"])
             if selected is None:
                 raise LedgerError("Normal adoption references a missing identity Claim")
-            entry = selected["entry"]
-            memory_request = self._earlier_request(request_id, selected["event_id"])["request"]
-            if (memory_request["kind"] not in ("remember", "correct") or memory_request["entry_type"] != "claim"
-                    or memory_request["entry"] != entry or entry["key"]["property"] != "identity"
-                    or entry["key"]["subject"] != subject
+            selected_claims.append((subject, selected["entry"]))
+        if proof["saved_checkpoint_request_id"] is not None:
+            _, saved = self._lifecycle_record(request_id, proof["saved_checkpoint_request_id"], "saved_checkpoint")
+            validate_saved_checkpoint(saved)
+        for subject, entry in selected_claims:
+            if (entry["key"]["property"] != "identity" or entry["key"]["subject"] != subject
                     or entry["status"] not in ("current", "last_seen")
                     or any(group["claims"] for group in entry["supports"])):
-                raise LedgerError("Normal adoption requires directly supported admitted identity Claims")
+                raise AdoptionIdentityRefusal("Normal adoption requires directly supported admitted identity Claims")
+            name = scenario[subject]
             if entry["value"] != {"quantity": None, "state": name}:
                 state_preview = repr(entry["value"]["state"])[:160]
-                raise LedgerError(f"Normal adoption {subject} identity value must equal the admitted name {name!r}; "
+                raise AdoptionIdentityRefusal(f"Normal adoption {subject} identity value must equal the admitted name {name!r}; "
                     f"selected Claim state preview: {state_preview}. "
                     "Interpret the retained evidence and explicitly correct the Claim before adopting.")
             if subject == "character" and (entry["scope"] != proof["scope"]
                     or entry["sources"] != [inspect_result["identity_screen_source_id"]]):
-                raise LedgerError("Character identity lost its exact inspected source/scope")
-        if proof["saved_checkpoint_request_id"] is not None:
-            _, saved = self._lifecycle_record(request_id, proof["saved_checkpoint_request_id"], "saved_checkpoint")
-            validate_saved_checkpoint(saved)
+                raise AdoptionIdentityRefusal("Select a character identity Claim with the exact inspected source/scope")
 
     def _check_saved_checkpoint(self, request_id: str, data: dict, result: dict) -> None:
         proof = validate_saved_checkpoint(result["saved_checkpoint"])

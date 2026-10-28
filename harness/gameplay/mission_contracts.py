@@ -18,22 +18,15 @@ from .contracts import (
 from .native_input import direct_goal_schema, validate_input
 from .procedures import procedure_schema, validate_procedure
 
-class MemoryRequestRefusal(ContractError):
-    """A positively identified validation failure of a new memory candidate.
-
-    This says nothing about retained evidence, storage health or input authority.
-    """
+from .memory_contracts import (MAX_CONTEXT_BYTES, MAX_HANDOFF_CONTEXT_BYTES,
+    MAX_HANDOFF_SOURCES, _ENTRIES,
+    validate_memory_entry as validate_shared_memory_entry)
+from .cdda_identity import validate_identity_claim
 
 
 VERSION = "mission/11"
 ADMISSION_REFUSAL_VERSION = "mission-refusal/1"
-MEMORY_VERSION = "campaign-memory/6"
-IDENTITY_UNIT = "name"
-IDENTITY_COVERAGE = {"world": "visible-world-menu", "character": "visible-character-screen"}
 MAX_REQUEST_BYTES = 65_536
-MAX_CONTEXT_BYTES = 32_768
-MAX_HANDOFF_CONTEXT_BYTES = 131_072
-MAX_HANDOFF_SOURCES = 128
 MAX_LIBRARY_SOURCES = 8
 # Explicit campaign retention ceilings; ordinary defaults remain smaller.
 MAX_RETAINED_FRAMES = 8192
@@ -165,49 +158,6 @@ _GOALS = {
     "program": _object({"state": {"type": "object"}, "intent": _text(1024),
                          "expected": _text(1024), "interrupt_allowed": {"type": "boolean"}}),
 }
-_KEY = _object({"subject": _ID, "property": _enum("need", "supply", "place", "work", "identity"),
-                "unit": _text(32), "coverage_id": _ID})
-_VALUE = _object({"quantity": _nullable(_integer(2**31 - 1)),
-                  "state": _nullable(_text(1024))})
-_ORDER = _object({"revision": _nullable(_integer()), "turn": _nullable(_TURN)})
-_SUPPORT = _object({"sources": _IDS, "claims": _IDS})
-_CLAIM = _object({
-    "schema": {"const": MEMORY_VERSION}, "record_type": {"const": "Claim"},
-    "id": _ID, "kind": _enum("native_fact", "interpretation"), "key": _KEY,
-    "value": _VALUE, "text": _text(1024), "scope": _SCOPE,
-    "observed_time": _ORDER, "received_time": _TIME, "coverage": _text(1024),
-    "sources": _IDS, "supports": _array(_SUPPORT, 8),
-    "status": _enum("current", "last_seen", "inferred", "disputed", "retired", "unknown"),
-    "supersedes": _IDS,
-})
-_QUANTITY = _object({"subject": _ID, "quantity": _integer(2**31 - 1),
-                     "unit": _text(32), "coverage_id": _ID})
-_WORK = _object({
-    "schema": {"const": MEMORY_VERSION}, "record_type": {"const": "Work"},
-    "id": _ID, "intent": _text(1024), "scope": _SCOPE, "stage": _text(128),
-    "predecessor_work_id": _nullable(_ID),
-    "progress": _nullable(_integer(100)),
-    "available": _array(_QUANTITY, 16), "committed": _array(_QUANTITY, 16),
-    "predicted_output": _array(_QUANTITY, 16), "observed_output": _array(_QUANTITY, 16),
-    "unresolved_effects": {**_array(_ID, 16), "uniqueItems": True},
-    "sources": _IDS, "next_verification": _text(1024),
-    "status": _enum("planned", "active", "interrupted", "completed", "failed", "unknown"),
-})
-_WORK_VIEW = _object({**_WORK["properties"],
-    "record_type": {"const": "WorkView"},
-    "sources": {**_array(_ID, MAX_HANDOFF_SOURCES), "uniqueItems": True},
-})
-_DECISION = _object({
-    "schema": {"const": MEMORY_VERSION}, "record_type": {"const": "Decision"},
-    "id": _ID, "packet_id": _ID, "scope": _SCOPE, "query": _text(1024), "memory_version": _integer(),
-    "claim_ids": {**_array(_ID, 32), "uniqueItems": True},
-    "work_ids": {**_array(_ID, 16), "uniqueItems": True},
-    "source_ids": {**_array(_ID, MAX_HANDOFF_SOURCES), "uniqueItems": True},
-    "procedure_refs": {**_array(_PROCEDURE_REF, 16), "uniqueItems": True},
-    "procedure_sources": {**_array(_QUALIFIED_SOURCE, MAX_HANDOFF_SOURCES), "uniqueItems": True},
-    "omitted": _integer(), "reason": _text(1024),
-})
-_ENTRIES = {"claim": _CLAIM, "work": _WORK, "decision": _DECISION, "procedure": procedure_schema()}
 _VISIBLE_UI = _object({
     "purpose": _text(128), "title": _text(1024, empty=True),
     "rows": _array(_object({"id": _ID, "text": _text(1024, empty=True),
@@ -760,38 +710,11 @@ def validate_visible_ui(value: dict | None) -> dict | None:
     return data
 
 
-def validate_work_view(value: dict | str | bytes) -> dict:
-    """A coherent projection may retain more premises than one raw assertion."""
-    return _decode(value, _WORK_VIEW, maximum=MAX_HANDOFF_CONTEXT_BYTES)
-
-
 def validate_memory_entry(value: dict | str | bytes, entry_type: str, *, player=False) -> dict:
-    if not isinstance(entry_type, str) or entry_type not in _ENTRIES:
-        raise ContractError("Unknown memory entry type")
-    result = (validate_procedure(value) if entry_type == "procedure" else _decode(value, _ENTRIES[entry_type]))
+    """Compose shared memory data with this mission's CDDA identity binding."""
+    result = validate_shared_memory_entry(value, entry_type, player=player)
     if entry_type == "claim":
-        if player and result["kind"] != "interpretation":
-            raise ContractError("A player cannot assert a native fact")
-        content = result["value"]
-        if content["quantity"] is not None and content["state"] is not None:
-            raise ContractError("A value is a quantity or state, never both")
-        if content["quantity"] is None and content["state"] is None and result["status"] not in ("unknown", "disputed", "retired"):
-            raise ContractError("An unsupported value must remain unknown/disputed/retired")
-        if result["key"]["property"] == "identity":
-            key = result["key"]
-            if (result["kind"] != "interpretation" or key["subject"] not in IDENTITY_COVERAGE
-                    or key["unit"] != IDENTITY_UNIT or key["coverage_id"] != IDENTITY_COVERAGE[key["subject"]]
-                    or content["quantity"] is not None):
-                raise ContractError("Identity is a fallible visible world/menu or character/screen name")
-        for support in result["supports"]:
-            if not support["sources"] and not support["claims"]:
-                raise ContractError("Empty support group cannot establish a claim")
-            if result["id"] in support["claims"]:
-                raise ContractError("A claim cannot support itself")
-            if not set(support["sources"]) <= set(result["sources"]):
-                raise ContractError("Support must reference declared sources")
-    elif entry_type == "work" and result["predecessor_work_id"] == result["id"]:
-        raise ContractError("Work cannot precede itself")
+        validate_identity_claim(result)
     return result
 
 

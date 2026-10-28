@@ -17,7 +17,7 @@ from .mission_contracts import (
 from .mission_ledger import MissionLedger
 from .native_receipts import compact_native_ack
 from .semantic_controls import dismissal_input
-from .timeline import MAX_TIMELINE_SEGMENTS, GameTimeline, SessionContinuity, game_timeline
+from .cdda_timeline import MAX_TIMELINE_SEGMENTS, GameTimeline, SessionContinuity, game_timeline
 
 
 def _require(condition: bool, reason: str) -> None:

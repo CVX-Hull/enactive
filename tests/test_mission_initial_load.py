@@ -1,6 +1,7 @@
 """New admitted Load, separate from continuity reload; synthetic game only."""
 from dataclasses import replace
 from copy import deepcopy
+from pathlib import Path
 import unittest
 from unittest.mock import patch
 
@@ -97,7 +98,7 @@ class InitialLoadTests(MissionCreationFixture, unittest.TestCase):
             self.assert_premature_continuation_fault()
         self.assertEqual(self.runtime._ledger.request("initial-load")["deadline"], deadline)
 
-    def test_identity_value_refusal_names_character_and_allows_explicit_correction(self):
+    def prepare_wrong_identity(self):
         world = self.pending_initial_load()
         self.assertEqual(self.run_request(self.lifecycle("reconciled", "load", parent="initial-load"))["state"], "completed")
         self.assertEqual(self.run_request(self.lifecycle("readmitted", "load", parent="initial-load"))["state"], "completed")
@@ -107,6 +108,10 @@ class InitialLoadTests(MissionCreationFixture, unittest.TestCase):
         wrong_name = self.a.scenario.character + " (Male)"
         character_id = self.remember_identity("selected-character", "character", screen, 0, value=wrong_name)
         self.assertEqual(self.run_request(self.control("dismissed", "Cancel", parent="initial-load"))["state"], "partial")
+        return world_id, character_id, screen, wrong_name
+
+    def test_identity_value_refusal_names_character_and_allows_explicit_correction(self):
+        world_id, character_id, screen, wrong_name = self.prepare_wrong_identity()
         phase, lease = self.runtime._registered_lifecycle.phase, self.runtime._lease
         deadline = self.runtime._ledger.request("initial-load")["deadline"]
         delivered = len(self.bridge.delivered)
@@ -130,6 +135,51 @@ class InitialLoadTests(MissionCreationFixture, unittest.TestCase):
         self.assertEqual(original["value"]["state"], wrong_name)
         with self.runtime._ledger._mutex:
             self.runtime._ledger._verify(self.a)
+
+    def assert_wrong_identity_fault(self, world_id, character_id):
+        delivered = len(self.bridge.delivered)
+        deadline = self.runtime._ledger.request("initial-load")["deadline"]
+        rejected = self.run_request(self.lifecycle("unhealthy-adoption", "load", parent="initial-load",
+            claims=[world_id, character_id]))
+        self.assertEqual(rejected["state"], "blocked", rejected)
+        self.assertNotIn("No input was sent", rejected["result"]["reason"])
+        self.assertIsNone(self.runtime._registered_lifecycle.phase)
+        self.assertIsNone(self.runtime._lease)
+        self.assertEqual(len(self.bridge.delivered), delivered)
+        self.assertEqual(self.runtime._ledger.request("initial-load")["deadline"], deadline)
+
+    def test_wrong_identity_cannot_hide_corrupt_inspection_pixels(self):
+        world_id, character_id, screen, _ = self.prepare_wrong_identity()
+        path = Path(screen.frame_path)
+        path.chmod(0o600)
+        path.write_bytes(b"corrupt retained inspection")
+        self.assert_wrong_identity_fault(world_id, character_id)
+
+    def test_wrong_identity_cannot_hide_missing_inspection_primitive(self):
+        world_id, character_id, _, _ = self.prepare_wrong_identity()
+        self.runtime._ledger._db.execute("DELETE FROM primitives WHERE request_id='inspected'")
+        self.assert_wrong_identity_fault(world_id, character_id)
+
+    def test_wrong_identity_cannot_hide_changed_admitted_claim(self):
+        from harness.gameplay.contracts import canonical
+        world_id, character_id, _, _ = self.prepare_wrong_identity()
+        original = next(row["entry"] for row in self.runtime._ledger.memory_records("claim")
+            if row["entry"]["id"] == character_id)
+        original["value"]["state"] = "Unadmitted replacement"
+        self.runtime._ledger._db.execute("UPDATE memory SET body=? WHERE record_id=?",
+            (canonical(original), character_id))
+        self.assert_wrong_identity_fault(world_id, character_id)
+
+    def test_wrong_identity_subject_cannot_hide_changed_admitted_claim(self):
+        from harness.gameplay.contracts import canonical
+        world_id, character_id, _, _ = self.prepare_wrong_identity()
+        original = next(row["entry"] for row in self.runtime._ledger.memory_records("claim")
+            if row["entry"]["id"] == character_id)
+        original["key"]["subject"] = "world"
+        original["key"]["coverage_id"] = "visible-world-menu"
+        self.runtime._ledger._db.execute("UPDATE memory SET body=? WHERE record_id=?",
+            (canonical(original), character_id))
+        self.assert_wrong_identity_fault(world_id, character_id)
 
     def pending_initial_load(self):
         world = self.picker()

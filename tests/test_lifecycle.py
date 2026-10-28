@@ -1,4 +1,6 @@
 """Synthetic ledger/source adoption proofs; no native acceptance or input authority."""
+
+from harness.gameplay.mission_memory import MissionMemory
 from copy import deepcopy
 from dataclasses import replace
 import json
@@ -97,14 +99,14 @@ class LifecycleTests(unittest.TestCase):
     def remember(self, entry):
         data = request("remember", request_id="remember-" + entry["id"], entry_type="claim", entry=entry)
         self.begin(data)
-        result = CampaignMemory(self.ledger, self.store, self.library).apply(data, now=1000)
+        result = CampaignMemory(MissionMemory(self.ledger), self.store, self.library).apply(data, now=1000)
         self.complete(data["request_id"], result)
 
     def correct(self, entry):
         data = request("correct", request_id="correct-" + entry["id"], entry_type="claim", entry=entry,
             retired_ids=entry["supersedes"], reason="Correct visible character identity transcription")
         self.begin(data)
-        result = CampaignMemory(self.ledger, self.store, self.library).apply(data, now=1000)
+        result = CampaignMemory(MissionMemory(self.ledger), self.store, self.library).apply(data, now=1000)
         self.complete(data["request_id"], result)
 
     def primitive(self, request_id, before, after, *, value="CONFIRM", preflight, unknown_operation=None):
@@ -610,7 +612,7 @@ class LifecycleTests(unittest.TestCase):
             candidate_timeline(self.ledger, self.store, request_id=created["result"], result=invalid)
         self.complete(created["result"], created["proposed"])
         self.assertEqual(adopted_timeline(self.ledger, self.store), timeline)
-        packet = CampaignMemory(self.ledger, self.store, self.library).context(
+        packet = CampaignMemory(MissionMemory(self.ledger), self.store, self.library).context(
             created["adoption"]["scope"], "water", max_bytes=32768,
             now_monotonic=100, now_timestamp_ms=1_000_000)
         self.assertEqual(packet["procedures"], [record])
@@ -622,12 +624,12 @@ class LifecycleTests(unittest.TestCase):
     def test_learning_memory_still_requires_library_and_matching_environment(self):
         self.admit_library()
         with self.assertRaisesRegex(ContractError, "requires its admitted library and environment"):
-            CampaignMemory(self.ledger, self.store)
+            CampaignMemory(MissionMemory(self.ledger), self.store)
         policy = replace(self.a.learning, environment=dict(self.a.learning.environment, configuration="Other setup"))
         ledger = self.enterContext(MissionLedger(self.root / "other-environment",
             admission=replace(self.a, learning=policy), now=1000))
         with self.assertRaisesRegex(ContractError, "crosses its admitted environment"):
-            CampaignMemory(ledger, self.store, self.library)
+            CampaignMemory(MissionMemory(ledger), self.store, self.library)
 
     def test_candidate_invalid_source_rejects_before_immutable_commit(self):
         created = self.create(pending=True)

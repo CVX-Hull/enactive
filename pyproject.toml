@@ -50,6 +50,20 @@ forbidden_modules = [
     "http", "urllib", "socket", "subprocess", "tools", "time", "pathlib", "os",
 ]
 
+[[tool.importlinter.contracts]]
+name = "Shared memory and time do not depend on mission or CDDA bindings"
+type = "forbidden"
+source_modules = [
+    "harness.gameplay.campaign_memory", "harness.gameplay.memory_contracts",
+    "harness.gameplay.memory_ports", "harness.gameplay.source_contracts", "harness.gameplay.timeline",
+]
+forbidden_modules = [
+    "harness.gameplay.mission_contracts", "harness.gameplay.mission_ledger",
+    "harness.gameplay.mission_memory", "harness.gameplay.evidence",
+    "harness.gameplay.procedure_library", "harness.gameplay.procedure_archive",
+    "harness.gameplay.cdda_identity", "harness.gameplay.cdda_memory", "harness.gameplay.cdda_timeline",
+]
+
 [tool.pytest.ini_options]
 addopts = "--strict-markers"
 testpaths = ["tests"]

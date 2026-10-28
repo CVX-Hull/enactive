@@ -24,6 +24,7 @@ from .mission_contracts import (
     MAX_RETAINED_FRAMES, MAX_RETAINED_BYTES, PAUSE_ORIGINS, visible_ui_schema, validate_visible_ui,
 )
 from .native_input import geometry_schema, validate_geometry
+from .source_contracts import EvidenceError, FreshnessError, CapacityError
 from .contracts import (
     ContractError, EvidenceRef, Fact, Interpretation, Vector, _BOUNDARY, _ID,
     _INT, _VECTOR, MAX_JSON_BYTES, _pairs, _reject_constant, _array, _integer, _object, _text, json_object, validate_json,
@@ -67,22 +68,6 @@ _OBSERVATION = _object({
                           "interrupt_request_id": {"anyOf": [_ID, {"type": "null"}]}}),
     "scene": {"anyOf": [_SCENE, {"type": "null"}]},
 })
-
-
-class EvidenceError(ContractError):
-    """Evidence missing, inconsistent, stale, or unavailable; stop and re-observe."""
-
-
-class FreshnessError(EvidenceError):
-    """Original clock-check facts for audit; no source refresh or input authority."""
-
-    def __init__(self, details: dict):
-        super().__init__("Observation is stale or clock continuity is unknown")
-        self.details = details
-
-
-class CapacityError(EvidenceError):
-    """Retention cannot be guaranteed before dispatch; nothing is deleted."""
 
 
 @dataclass(frozen=True)

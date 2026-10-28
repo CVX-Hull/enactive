@@ -20,6 +20,7 @@ import sqlite3
 import stat
 from typing import Any
 
+from .memory_ports import ProcedureLibraryError, ProcedureEpisodeRefusal
 from .contracts import canonical, ContractError, EvidenceRef, _pairs, _reject_constant, json_object, validate_json
 from .evidence import (
     MAX_FRAME_BYTES, MAX_FRAMES, MAX_BYTES, MAX_METADATA_BYTES, MAX_AGE_SECONDS, MAX_HISTORICAL_LAG_SECONDS, _check_frame_bytes,
@@ -37,14 +38,6 @@ MAX_ARCHIVE_BYTES = MAX_BYTES
 _ELIGIBLE_ARCHIVE_PHASES = frozenset({"completed", "failed", "stopped", "paused"})
 _REQUEST_TERMINAL = frozenset({"completed", "partial", "blocked", "failed", "unknown", "paused"})
 _PRIMITIVE_TERMINAL = frozenset({"returned", "rejected", "not_dispatched", "unknown"})
-
-
-class ProcedureLibraryError(ContractError):
-    """Historical support is unavailable or not an admitted sealed closure."""
-
-
-class ProcedureEpisodeRefusal(ProcedureLibraryError):
-    """An episode selects a mission/request/source outside the pinned support."""
 
 
 @contextmanager

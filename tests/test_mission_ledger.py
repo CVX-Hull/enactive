@@ -1,4 +1,7 @@
 """SQLite failure/restart probes. No native dispatch or gameplay is simulated."""
+
+from harness.gameplay.mission_memory import MissionMemory
+from harness.gameplay.cdda_memory import capture_native
 from contextlib import closing
 from dataclasses import replace
 import hashlib
@@ -1084,25 +1087,26 @@ class LedgerTests(unittest.TestCase):
         (bridge / native["frame"]).write_bytes(png())
         with EvidenceStore(bridge, Path(self.tmp.name) / "sources", max_frames=2) as store:
             ref = store.ingest(native, received_monotonic=100, now_monotonic=100, now_timestamp_ms=1_000_000)
-            memory = CampaignMemory(self.ledger, store)
-            captured = memory.capture_native(ref, scope(), now=1001)
+            memory = CampaignMemory(MissionMemory(self.ledger), store)
+            captured = capture_native(self.ledger, store, ref, scope(), now=1001)
             self.assertEqual(len(captured["entries"]), 3)
             self.assertEqual(captured["memory_version"], maximum - 1)
             authored = claim(id="last-authored", sources=[ref.observation_id],
                 supports=[{"sources": [ref.observation_id], "claims": []}])
             self.assertEqual(self.ledger.append_memory("authored", "claim", authored, now=1002), maximum)
-            again = memory.capture_native(ref, scope(), now=1003)
+            again = capture_native(self.ledger, store, ref, scope(), now=1003)
             self.assertEqual(again["entries"], captured["entries"])
             self.assertEqual(again["memory_version"], maximum)
             with self.assertRaisesRegex(BudgetError, "Memory event retention limit reached"):
                 self.ledger.append_memory("extra-authored", "claim", claim(id="extra-authored"), now=1003)
             other_scope = {**scope(), "coordinate_epoch": 1}
             with self.assertRaisesRegex(BudgetError, "Memory event retention limit reached"):
-                memory.capture_native(ref, other_scope, now=1003)
+                capture_native(self.ledger, store, ref, other_scope, now=1003)
             self.assertEqual(len(self.ledger.memory_records("claim")), maximum)
 
     def test_other_memory_retention_ceilings_remain_unchanged(self):
-        from harness.gameplay.mission_contracts import LearningPolicy, MEMORY_VERSION
+        from harness.gameplay.mission_contracts import LearningPolicy
+        from harness.gameplay.memory_contracts import MEMORY_VERSION
         from tests.test_mission_contracts import scope
         from tests.test_procedures import procedure
         work = dict(schema=MEMORY_VERSION, record_type="Work", id="last-work", predecessor_work_id=None,

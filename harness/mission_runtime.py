@@ -18,6 +18,8 @@ import time
 from typing import Any
 from uuid import UUID
 
+from .gameplay.mission_memory import MissionMemory
+from .gameplay.cdda_memory import capture_native
 from .controller import Controller, ControlError, MissionInputRefusal, MissionLease, validate_state
 from .native_process import NativeProcess
 from .mission_lifecycle import LifecycleRequestRefusal, NormalPhase, RegisteredLifecycle
@@ -30,7 +32,8 @@ from .gameplay.contracts import ContractError, EvidenceRef, PrimitiveResult
 from .gameplay.evidence import MAX_AGE_SECONDS, MAX_FRAME_BYTES, CapacityError, CapacityReservation, EvidenceError, EvidenceStore, FreshnessError, same_native_custody, same_native_state, validate_native_progression
 from .gameplay.interaction import MenuIntent, MenuOutcome, MenuSkill
 from .gameplay.contracts import canonical
-from .gameplay.mission_contracts import VERSION, MissionAdmission, InputObservation, SourceBinding, SourceRevalidation, MemoryRequestRefusal, make_admission_refusal, validate_submission
+from .gameplay.mission_contracts import VERSION, MissionAdmission, InputObservation, SourceBinding, SourceRevalidation, make_admission_refusal, validate_submission
+from .gameplay.memory_contracts import MemoryRequestRefusal
 from .gameplay.mission_ledger import BudgetError, LedgerError, LocalBudgetRefusal, MissionLedger, RequestAdmissionRefusal, RequestNotFound, TERMINAL
 from .gameplay.native_receipts import compact_native_ack
 from .gameplay.navigation import NavigationIntent, NavigationOutcome, NavigationSkill, ObservedMap
@@ -38,7 +41,7 @@ from .gameplay.input_contracts import ControlIntent, ControlOutcome
 from .gameplay.semantic_controls import SemanticControlSkill
 from .gameplay.ordinary_input import OrdinaryInputSkill
 from .gameplay.program_input import ProgramInputSkill
-from .gameplay.timeline import SessionContinuity, game_timeline
+from .gameplay.cdda_timeline import SessionContinuity, game_timeline
 
 MissionIntent = NavigationIntent | MenuIntent | ControlIntent
 
@@ -886,7 +889,7 @@ class MissionRuntime:
                 from .gameplay.procedure_library import ProcedureLibrary
                 library = ProcedureLibrary(self.controller.root,
                     [asdict(source) for source in admission.learning.library_sources], current_mission_id=admission.mission_id)
-            self._memory = CampaignMemory(ledger, store, library)
+            self._memory = CampaignMemory(MissionMemory(ledger), store, library)
         except Exception:
             if library is not None:
                 library.close()
@@ -926,7 +929,7 @@ class MissionRuntime:
 
     def _capture_memory(self, reference: EvidenceRef) -> None:
         if reference.boundary_kind == "normal_play":
-            receipt = self._memory.capture_native(reference, self._coordinate_scope(reference), now=self._wall())
+            receipt = capture_native(self._ledger, self._store, reference, self._coordinate_scope(reference), now=self._wall())
             self._record("mission_native_memory", receipt)
             self._memory_version = receipt["memory_version"]
 

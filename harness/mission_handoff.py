@@ -11,9 +11,8 @@ from typing import TYPE_CHECKING, Callable
 
 from .controller import MAX_WAIT, ControlError
 from .gameplay.contracts import EvidenceRef
-from .gameplay.mission_contracts import (
-    VERSION, MAX_HANDOFF_CONTEXT_BYTES, MAX_HANDOFF_SOURCES, HANDOFF_CONTEXT_RESERVE,
-)
+from .gameplay.mission_contracts import VERSION, HANDOFF_CONTEXT_RESERVE
+from .gameplay.memory_contracts import MAX_HANDOFF_CONTEXT_BYTES, MAX_HANDOFF_SOURCES
 from .gameplay.evidence import CapacityError, EvidenceError, same_native_state
 from .gameplay.mission_ledger import BudgetError, LedgerError
 

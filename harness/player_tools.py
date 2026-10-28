@@ -17,11 +17,11 @@ import uuid
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import best_match
 
+from .gameplay.cdda_identity import IDENTITY_COVERAGE, IDENTITY_UNIT
 from .gameplay.contracts import ContractError, _object, canonical, json_object, validate_json
 from .gameplay.evidence import same_native_state
-from .gameplay.mission_contracts import (
-    VERSION, SKILLS, IDENTITY_COVERAGE, IDENTITY_UNIT, MAX_HANDOFF_SOURCES, perception_schema, request_schema, validate_request,
-)
+from .gameplay.mission_contracts import VERSION, SKILLS, perception_schema, request_schema, validate_request
+from .gameplay.memory_contracts import MAX_HANDOFF_SOURCES
 from .gameplay.mission_requests import _source_binding, compose_request
 from .gameplay.policy_program import program_result_schema
 from .gameplay.procedures import author_procedure, procedure_authoring_schema, validate_lineage_node, validate_procedure

@@ -4,6 +4,9 @@ These fixtures are not historical campaign frames, gameplay or efficacy evidence
 The actual canonical EvidenceStore and SQLite ledger exercise source integrity and
 restart behavior; no input authority or controller is involved.
 """
+
+from harness.gameplay.mission_memory import MissionMemory
+from harness.gameplay.cdda_memory import capture_native
 from copy import deepcopy
 from contextlib import closing
 import inspect
@@ -21,7 +24,8 @@ from harness.gameplay.campaign_memory import CampaignMemory
 from harness.gameplay.contracts import ContractError
 from harness.gameplay.evidence import CapacityError, EvidenceStore
 from harness.gameplay.contracts import canonical
-from harness.gameplay.mission_contracts import MEMORY_VERSION, VERSION, MemoryRequestRefusal, validate_memory_entry, validate_work_view
+from harness.gameplay.mission_contracts import VERSION, validate_memory_entry
+from harness.gameplay.memory_contracts import MEMORY_VERSION, MemoryRequestRefusal, validate_work_view
 from harness.gameplay.mission_ledger import LedgerError, MissionLedger
 from tests.test_gameplay_evidence import observation, png
 from tests.test_mission_contracts import admission, claim, request, scope, skill
@@ -76,7 +80,7 @@ class CampaignMemoryTests(unittest.TestCase):
         self.ledger = MissionLedger(self.root / "mission", admission=admission(), now=1000)
         self.addCleanup(lambda: self.store.close())
         self.addCleanup(lambda: self.ledger.close())
-        self.memory = CampaignMemory(self.ledger, self.store)
+        self.memory = CampaignMemory(MissionMemory(self.ledger), self.store)
         self.serial = 0
 
     def source(self, revision=30, *, turn=4, session="native-session", menu=False, position=None, timestamp_ms=1_000_000):
@@ -215,7 +219,7 @@ class CampaignMemoryTests(unittest.TestCase):
         self.ledger.close(); self.store.close()
         self.ledger = MissionLedger(self.root / "mission", now=1000)
         self.store = EvidenceStore(self.bridge, self.root / "sources", max_frames=128)
-        self.memory = CampaignMemory(self.ledger, self.store)
+        self.memory = CampaignMemory(MissionMemory(self.ledger), self.store)
         packet = self.context()
         self.assertEqual([c["id"] for c in packet["claims"]], ["new"])
         self.assertIsNone(packet["claims"][0]["value"]["quantity"])
@@ -407,17 +411,17 @@ class CampaignMemoryTests(unittest.TestCase):
 
     def test_native_capture_literal_only_player_forgery_and_time_binding_reject(self):
         ref = self.source()
-        result = self.memory.capture_native(ref, scope(), now=1000)
+        result = capture_native(self.ledger, self.store, ref, scope(), now=1000)
         self.assertEqual(len(result["entries"]), 3)
         self.assertEqual({e["kind"] for e in result["entries"]}, {"native_fact"})
         self.assertEqual({e["key"]["property"] for e in result["entries"]}, {"place"})
-        again = self.memory.capture_native(ref, scope(), now=1000)
+        again = capture_native(self.ledger, self.store, ref, scope(), now=1000)
         self.assertEqual(again, result)
         with self.assertRaises(ContractError): self.remember(self.assertion("forged", ref, kind="native_fact"))
         with self.assertRaises(ContractError): self.remember(self.assertion("wrong-time", ref, observed_time={"revision": 29, "turn": 4}))
         with self.assertRaises(ContractError): self.remember(self.assertion("wrong-coverage", ref, scope={**scope(), "session": "other"}))
         menu = self.source(31, menu=True)
-        menu_capture = self.memory.capture_native(menu, scope(), now=1000)
+        menu_capture = capture_native(self.ledger, self.store, menu, scope(), now=1000)
         self.assertEqual(menu_capture["entries"], [])
         self.assertEqual(menu_capture["memory_version"], result["memory_version"])
         with self.assertRaises(ContractError): self.remember(self.assertion("invented-turn", menu, observed_time={"revision": 31, "turn": 4}))
@@ -427,17 +431,17 @@ class CampaignMemoryTests(unittest.TestCase):
         wall = wall_ms / 1000
         self.ledger.close()
         self.ledger = MissionLedger(self.root / "wall-mission", admission=admission(), now=wall)
-        self.memory = CampaignMemory(self.ledger, self.store)
+        self.memory = CampaignMemory(MissionMemory(self.ledger), self.store)
         ref = self.source(timestamp_ms=wall_ms)
         entry = self.assertion("receipt", ref, received_time=wall_ms)
         data = request("remember", schema=VERSION, entry_type="claim", entry=entry)
         self.ledger.begin_request(data, now=wall)
         result = self.memory.apply(data, now=wall)
         self.assertEqual(result["entry"]["received_time"], wall_ms)
-        captured = self.memory.capture_native(ref, scope(), now=wall + 1)
+        captured = capture_native(self.ledger, self.store, ref, scope(), now=wall + 1)
         self.assertTrue(all(e["received_time"] == wall_ms + 1000 for e in captured["entries"]))
         self.assertNotEqual(captured["entries"][0]["received_time"], ref.timestamp_ms)
-        repeated = self.memory.capture_native(ref, scope(), now=wall + 2)
+        repeated = capture_native(self.ledger, self.store, ref, scope(), now=wall + 2)
         self.assertEqual(captured, repeated)
         packet = self.memory.context(scope(), "water", max_bytes=32768,
             now_monotonic=101, now_timestamp_ms=wall_ms + 1000)
@@ -556,7 +560,7 @@ class CampaignMemoryTests(unittest.TestCase):
         self.ledger.close(); self.store.close()
         self.ledger = MissionLedger(self.root / "mission", now=1000)
         self.store = EvidenceStore(self.bridge, self.root / "sources", max_frames=128)
-        self.memory = CampaignMemory(self.ledger, self.store)
+        self.memory = CampaignMemory(MissionMemory(self.ledger), self.store)
         packet = self.context()
         reopened = packet["work"][0]
         self.assertEqual(reopened["status"], "unknown")
@@ -751,7 +755,7 @@ class CampaignMemoryTests(unittest.TestCase):
         result = self.memory.record_decision(entry, now=1000)
         self.assertEqual(result["packet_id"], packet["packet_id"])
         self.assertEqual(self.ledger.memory_records("decision")[0]["entry"], entry)
-        self.memory = CampaignMemory(self.ledger, self.store)
+        self.memory = CampaignMemory(MissionMemory(self.ledger), self.store)
         with self.assertRaises(ContractError): self.memory.record_decision({**entry, "id": "after-restart"}, now=1000)
 
     def test_passive_module_has_no_input_or_process_authority(self):

@@ -15,7 +15,7 @@ from .gameplay.contracts import ContractError, EvidenceRef, canonical
 from .gameplay.evidence import MAX_FRAME_BYTES, CapacityReservation, EvidenceError, same_native_state
 from .gameplay.interaction import MenuOutcome, MenuSkill
 from .gameplay.mission_contracts import VERSION, InputObservation, SourceRevalidation
-from .gameplay.mission_ledger import BudgetError, LedgerError
+from .gameplay.mission_ledger import AdoptionIdentityRefusal, BudgetError, LedgerError
 from .gameplay.input_contracts import ControlIntent, ControlOutcome
 from .gameplay.semantic_controls import SemanticControlSkill, dismissal_input
 from .gameplay.ordinary_input import OrdinaryInputSkill
@@ -1087,6 +1087,30 @@ class RegisteredLifecycle:
             raise BudgetError("Original lifecycle phase primitive limit exhausted")
         r._capacity(frames=2, byte_count=2 * MAX_FRAME_BYTES)
         r._store.preflight_retention()
+        # A semantic mistake does not excuse damaged grounding evidence. Read
+        # the retained phase and selected Claim sources without refreshing them.
+        sources = {ref.observation_id: ref for ref in r._store.historical_references}
+        required = {ref.observation_id for ref in
+            (phase.first_normal, phase.identity_screen, phase.checkpoint) if ref is not None}
+        selected_ids = set(work.request.get("identity_claim_ids", ()))
+        selected_claims = r._ledger.adoption_claims(work.request["request_id"], list(selected_ids))
+        for row in selected_claims.values():
+            required.update(row["entry"]["sources"])
+        for identity in required:
+            if identity not in sources:
+                raise EvidenceError("Adoption refusal lost retained grounding evidence")
+            r._store.observation(sources[identity])
+        from .gameplay.cdda_memory import project_native_claims
+        for row in selected_claims.values():
+            entry = row["entry"]
+            if entry["kind"] == "native_fact":
+                if len(entry["sources"]) != 1:
+                    raise LedgerError("Native Claim lost its unique grounding source")
+                ref = sources[entry["sources"][0]]
+                expected = project_native_claims(ref, entry["scope"], r._store.observation(ref),
+                    received_time=entry["received_time"])
+                if row["event_id"] != entry["id"] or entry not in expected:
+                    raise LedgerError("Native Claim differs from its retained visible projection")
         r._check_cancelled(work)
         stage = phase.stage if phase.stage in ("awaiting_identity", "awaiting_adoption") else "awaiting_control"
         return "blocked", {"reason": reason + " No input was sent; the original phase and limits remain. "
@@ -1105,8 +1129,9 @@ class RegisteredLifecycle:
                 or phase.identity_inspect is None or phase.identity_screen is None
                 or phase.checkpoint.boundary_kind != "normal_play"):
             raise ControlError("Normal adoption needs completed owned transition and visible identity inspection/return")
-        claims = {row["entry"]["id"]: row["entry"] for row in r._ledger.memory_records("claim")}
-        selected = [claims.get(identity) for identity in data["identity_claim_ids"]]
+        claims = r._ledger.adoption_claims(data["request_id"], data["identity_claim_ids"])
+        selected = [None if identity not in claims else claims[identity]["entry"]
+            for identity in data["identity_claim_ids"]]
         if len(selected) != 2 or any(entry is None for entry in selected):
             return self._adoption_refusal(work, phase,
                 "Adoption requires exactly two retained identity Claims: one world and one character. "
@@ -1129,11 +1154,10 @@ class RegisteredLifecycle:
         result = {"normal_adoption": proof, "phase": self.receipt(phase, "complete"), "grants_authority": False}
         try:
             r._ledger._check_normal_adoption(data["request_id"], data, proof)
-            from .gameplay.lifecycle import candidate_timeline
-            candidate_timeline(r._ledger, r._store, request_id=data["request_id"], result=result)
-        except ContractError as exc:
-            return "blocked", {"reason": f"Adoption not committed: {exc}",
-                "phase": self.receipt(phase, "awaiting_adoption"), "grants_authority": False}
+        except AdoptionIdentityRefusal as exc:
+            return self._adoption_refusal(work, phase, f"Adoption not committed: {exc}")
+        from .gameplay.lifecycle import candidate_timeline
+        candidate_timeline(r._ledger, r._store, request_id=data["request_id"], result=result)
         return "completed", result
 
     def after_commit(self, work: _Work, disposition: str, result: dict) -> None:

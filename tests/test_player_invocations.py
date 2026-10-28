@@ -14,7 +14,7 @@ from mcp import Client
 
 from harness.mission_client import MissionClientError
 from harness.gameplay.contracts import ContractError
-from harness.gameplay.mission_contracts import MAX_HANDOFF_SOURCES
+from harness.gameplay.memory_contracts import MAX_HANDOFF_SOURCES
 from harness.player_mcp import make_server
 from harness.player_tools import PlayerTools, tool_specs, _validate_arguments
 from tests.test_player_claims import StagingClient
