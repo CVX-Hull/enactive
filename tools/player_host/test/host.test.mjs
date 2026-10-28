@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
+import { McpClient } from '@earendil-works/pi-mcp';
 import { runHost, validateConfiguration, validateMcpConfiguration, projectImageContext, INPUT_LIMIT_BYTES } from '../host.mjs';
 
 const realSetTimeout = globalThis.setTimeout;
@@ -634,4 +635,86 @@ test('rendered marker literals survive production MCP presentation and actual Pi
   assert.equal(events.filter(event=>event.type==='tool-start').length,1);
   const pid=events.find(event=>event.type==='mcp-connected').child_pid;
   assert.throws(()=>process.kill(pid,0),{code:'ESRCH'});
+});
+
+const handoffArgs = {snapshot_id:'selected-snapshot',intent:{successor_role:'player',unfinished_work_ids:[]}};
+const handoffTools = ['mutate','enactive_handoff','enactive_result'];
+test('completed handoff fences later batch inputs and ends even after an earlier ordinary tool',async t=>{
+  const {result,payloads,calls,events}=await scenario(t,[reply('not a final gameplay report',[
+    ['mutate',{mode:'ok',index:1}],['enactive_handoff',handoffArgs],['mutate',{mode:'ok',index:2}]
+  ])],{enabledTools:handoffTools});
+  assert.deepEqual(result,{ok:true,reason:'handoff',requests:1,finalText:''});
+  assert.equal(payloads.length,1);
+  assert.deepEqual(calls.filter(c=>c.tool==='mutate').map(c=>[c.phase,c.index]),[['start',1],['end',1]]);
+  assert.equal(events.filter(e=>e.type==='handoff').length,1);
+  const receipt=events.find(e=>e.type==='tool-result'&&e.tool==='enactive_handoff').result;
+  assert.equal(JSON.parse(receipt.content[0].text).response.operation.result.handoff_id,'issued-handoff');
+  assert.deepEqual(events.filter(e=>e.type==='tool-refused').map(e=>[e.tool,e.reason,e.dispatched]),[['mutate','handoff',false]]);
+});
+test('direct handoff settles without another model turn',async t=>{
+  const {result,calls}=await scenario(t,[reply(null,[['enactive_handoff',handoffArgs]])],{enabledTools:handoffTools});
+  assert.equal(result.reason,'handoff');assert.equal(result.ok,true);assert.equal(result.requests,1);
+  assert.deepEqual(calls.map(c=>c.tool),['enactive_handoff']);
+});
+test('only this host pending or uncertain handoff can settle through collection',async t=>{
+  for(const mode of ['pending','uncertain']) await t.test(mode,async sub=>{
+    const {result,calls}=await scenario(sub,[
+      reply(null,[['enactive_handoff',{...handoffArgs,mode}]]),
+      reply(null,[['enactive_result',{mission_id:'mission',operation_id:'issued-handoff',mode:'newer'}]])
+    ],{enabledTools:handoffTools});
+    assert.equal(result.reason,'handoff');assert.equal(result.ok,true);assert.equal(result.requests,2);
+    assert.deepEqual(calls.map(c=>c.tool),['enactive_handoff','enactive_result']);
+  });
+});
+test('a fresh successor can inspect issuance without ending its host',async t=>{
+  const {result,events}=await scenario(t,[
+    reply(null,[['enactive_result',{mission_id:'mission',operation_id:'issued-handoff'}]]),reply()
+  ],{enabledTools:handoffTools});
+  assert.equal(result.reason,'completed');assert.equal(result.requests,2);
+  assert.equal(events.filter(e=>e.type==='handoff').length,0);
+});
+test('ordinary plain-text collection errors preserve explicit correction',async t=>{
+  const {result}=await scenario(t,[
+    reply(null,[['enactive_handoff',{...handoffArgs,mode:'pending'}]]),
+    reply(null,[['enactive_result',{mission_id:'mission',operation_id:'issued-handoff',mode:'plain-error'}]]),
+    reply(null,[['enactive_result',{mission_id:'mission',operation_id:'issued-handoff'}]])
+  ],{enabledTools:handoffTools});
+  assert.equal(result.reason,'handoff');assert.equal(result.requests,3);
+});
+test('refused and pending handoffs allow a new explicit model decision',async t=>{
+  for(const mode of ['refused','pending']) await t.test(mode,async sub=>{
+    const {result,events}=await scenario(sub,[reply(null,[['enactive_handoff',{...handoffArgs,mode}]]),reply()],{enabledTools:handoffTools});
+    assert.equal(result.reason,'completed');assert.equal(result.requests,2);
+    assert.equal(events.filter(e=>e.type==='handoff').length,0);
+  });
+});
+test('incoherent claimed handoffs stop before another input or provider request',async t=>{
+  for(const mode of ['foreign','old','source','actor','operation','error','malformed']) await t.test(mode,async sub=>{
+    const {result,calls,payloads}=await scenario(sub,[reply(null,[['enactive_handoff',{...handoffArgs,mode}],['mutate',{mode:'ok'}]])],{enabledTools:handoffTools});
+    assert.equal(result.ok,false);assert.equal(result.reason,'invalid-handoff-receipt');
+    assert.equal(payloads.length,1);assert.deepEqual(calls.map(c=>c.tool),['enactive_handoff']);
+  });
+});
+test('reading a different operation cannot settle this host pending handoff',async t=>{
+  for(const args of [{mission_id:'foreign',operation_id:'issued-handoff'},{mission_id:'mission',operation_id:'other-operation'}]) await t.test(args.operation_id+args.mission_id,async sub=>{
+    const {result,events}=await scenario(sub,[reply(null,[['enactive_handoff',{...handoffArgs,mode:'pending'}]]),
+      reply(null,[['enactive_result',args]]),reply()],{enabledTools:handoffTools});
+    assert.equal(result.ok,true);assert.equal(result.reason,'completed');assert.equal(result.requests,3);
+    assert.equal(events.filter(e=>e.type==='handoff').length,0);
+  });
+});
+test('cancellation dominates an otherwise coherent handoff',async t=>{
+  const controller=new AbortController();
+  const {result,events}=await scenario(t,[reply(null,[['enactive_handoff',handoffArgs]])],{
+    enabledTools:handoffTools,signal:controller.signal,onEvent:e=>{if(e.type==='handoff')controller.abort();}});
+  assert.equal(events.filter(e=>e.type==='handoff').length,1);
+  assert.equal(result.ok,false);assert.equal(result.reason,'cancelled');assert.equal(result.finalText,'');
+});
+test('owned cleanup failure dominates handoff settlement',async t=>{
+  const original=McpClient.prototype.close;
+  McpClient.prototype.close=async function(){await original.call(this);throw new Error('fixture cleanup failure');};
+  try {
+    const {result}=await scenario(t,[reply(null,[['enactive_handoff',handoffArgs]])],{enabledTools:handoffTools});
+    assert.equal(result.ok,false);assert.equal(result.reason,'mcp-cleanup-failed');assert.equal(result.finalText,'');
+  } finally {McpClient.prototype.close=original;}
 });

@@ -49,4 +49,52 @@ async def integer(value: int) -> int:
     record({"tool": "integer", "value": value})
     return value
 
+
+def handoff_receipt(mode):
+    issued = dict(schema="mission/11", record_type="Handoff", grants_authority=False,
+        handoff_id="issued-handoff", mission_id="mission", original_player_id="original",
+        post_pause_source_id="paused-source", successor_role="player", unfinished_work_ids=[])
+    mission = dict(mission_id="mission", actor_id="original", player_id="original",
+        phase="handoff", pause_cause="internal_handoff", lease_owner=None, active_operation=None,
+        progress_operation_id="issued-handoff", current_source=dict(observation_id="paused-source"))
+    value = dict(presentation_schema="player-view/5", transport="delivered", settled=True,
+        operation_id="issued-handoff", next_snapshot=dict(mission=mission),
+        response=dict(status="accepted", operation=dict(kind="handoff", state="completed",
+            request_id="issued-handoff", result=issued)))
+    if mode == "refused":
+        return dict(error="Correct this draft", submission="not_submitted")
+    if mode == "pending":
+        value["settled"] = False
+        value["response"]["operation"]["state"] = "running"
+    if mode == "foreign":
+        issued["mission_id"] = "foreign"
+    if mode == "old":
+        issued["schema"] = "mission/10"
+    if mode == "source":
+        issued["post_pause_source_id"] = None
+    if mode == "newer":
+        mission["current_source"]["observation_id"] = "newer-read-only-source"
+    if mode == "actor":
+        mission["actor_id"] = "other-actor"
+    if mode == "operation":
+        value["operation_id"] = "other-operation"
+    if mode == "uncertain":
+        return dict(error="Presentation failed after staging", original_collection=dict(
+            tool="enactive_result", arguments=dict(mission_id="mission", operation_id="issued-handoff")))
+    return value
+
+
+@server.tool()
+async def enactive_handoff(snapshot_id: str, intent: dict, mode: str = "complete") -> CallToolResult:
+    record(dict(tool="enactive_handoff", mode=mode))
+    value = handoff_receipt(mode)
+    return CallToolResult(content=[TextContent(type="text", text="{" if mode == "malformed" else json.dumps(value))], isError=mode in ("error", "uncertain"))
+
+
+@server.tool()
+async def enactive_result(mission_id: str, operation_id: str, mode: str = "complete") -> CallToolResult:
+    record(dict(tool="enactive_result", mode=mode))
+    return CallToolResult(content=[TextContent(type="text", text="Formatting failed" if mode == "plain-error"
+        else json.dumps(handoff_receipt(mode)))], isError=mode == "plain-error")
+
 server.run(transport="stdio")

@@ -11,14 +11,14 @@ import { once } from 'node:events';
 const python=process.env.ENACTIVE_TEST_PYTHON;
 const runner=fileURLToPath(new URL('../run.mjs',import.meta.url));
 const fixture=fileURLToPath(new URL('server.py',import.meta.url));
-async function cli(t, handle, extraEnv = {}) {
+async function cli(t, handle, extraEnv = {}, enabledTools = ['observe']) {
   const dir=await mkdtemp(join(tmpdir(),'pi-host-cli-'));
   t.after(()=>rm(dir,{recursive:true,force:true}));
   const server=createServer(handle); server.listen(0,'127.0.0.1'); await once(server,'listening');
   t.after(()=>{server.closeAllConnections();server.close();});
   const model={id:'fixture',name:'fixture',api:'openai-completions',provider:'fixture',baseUrl:`http://127.0.0.1:${server.address().port}/v1`,input:['text','image'],reasoning:false,cost:{input:0,output:0,cacheRead:0,cacheWrite:0},contextWindow:10000,maxTokens:100};
   const route={schema:'pi-player-host/2',model,api_key_env:'CLI_FIXTURE_KEY',max_requests:1,max_context_images:4,request_timeout_seconds:5};
-  const mcp={command:resolve(python),args:[fixture,join(dir,'log'),join(dir,'pid')],cwd:dir,enabled:true,required:true,enabled_tools:['observe'],startup_timeout_sec:3,tool_timeout_sec:1};
+  const mcp={command:resolve(python),args:[fixture,join(dir,'log'),join(dir,'pid')],cwd:dir,enabled:true,required:true,enabled_tools:enabledTools,startup_timeout_sec:3,tool_timeout_sec:1};
   const paths={route:join(dir,'route.json'),mcp:join(dir,'mcp.json'),context:join(dir,'context.txt'),final:join(dir,'final.txt')};
   await Promise.all([writeFile(paths.route,JSON.stringify(route)),writeFile(paths.mcp,JSON.stringify(mcp)),writeFile(paths.context,'Frozen player guide'),writeFile(paths.final,'reserved')]);
   const child=spawn(process.execPath,[runner,'--config',paths.route,'--mcp-config',paths.mcp,'--context',paths.context,'--model','fixture','--effort','off','--timeout-seconds','10','-o',paths.final],{env:{PATH:process.env.PATH,CLI_FIXTURE_KEY:'sentinel-private-key',...extraEnv},stdio:['pipe','pipe','pipe']});
@@ -64,4 +64,19 @@ for(const name of ['OPENAI_LOG','OPENAI_CUSTOM_HEADERS','OPENAI_ORG_ID','OPENAI_
   assert.equal(run.read().events.at(-1).reason,'ambient-provider-configuration');
   assert.ok(!JSON.stringify(run.read()).includes('sentinel-ambient-private-value'));
   assert.equal(run.read().stderr,'');
+});
+
+test('CLI completed handoff exits zero with empty final text and no extra HTTP request',async t=>{
+  let requests=0;
+  const args={snapshot_id:'selected-snapshot',intent:{successor_role:'player',unfinished_work_ids:[]}};
+  const run=await cli(t,(_req,res)=>{
+    requests++;res.writeHead(200,{'content-type':'text/event-stream'});
+    res.end('data: '+JSON.stringify({id:'fixture',model:'fixture-backend',choices:[{index:0,delta:{role:'assistant',tool_calls:[{index:0,id:'handoff-call',type:'function',function:{name:'enactive_handoff',arguments:JSON.stringify(args)}}]},finish_reason:'tool_calls'}]})+'\n\ndata: [DONE]\n\n');
+  },{},['enactive_handoff']);
+  const [code]=await run.finished;
+  assert.equal(code,0);assert.equal(requests,1);
+  assert.equal(run.read().events.at(-1).reason,'handoff');
+  assert.equal(await readFile(run.paths.final,'utf8'),'\n');
+  const pid=Number(await readFile(join(run.dir,'pid'),'utf8'));
+  assert.throws(()=>process.kill(pid,0),{code:'ESRCH'});
 });

@@ -36,6 +36,18 @@ input identity blocks startup instead of fabricating a synthetic request. An off
 migration must preserve uncertainty and cannot grant authority or replay inputs.
 See [coordinated migration](runbook.md#coordinated-migration).
 
+## Contract navigation
+
+| Boundary | Exact reference |
+| --- | --- |
+| One writer and input custody | [Controller run ownership](#controller-run-ownership), [operator recovery](#explicit-operator-recovery) |
+| Admission, phases and normal ending | [Mission lifecycle](#integrated-mission-lifecycle), [lifecycle preconditions](#lifecycle-action-preconditions) |
+| Current player tools and source binding | [Skill binding](#skill-request-binding-errors), [item/activity composition](#selected-item-inspection-and-activity-composition) |
+| Player replacement | [Quiescent handoff](#quiescent-player-replacement) |
+| Request/result and memory/procedure formats | [Transport and state](#transport-and-state), [ordinary discovery/procedure data](#ordinary-discovery-and-procedure-data) |
+| Ordinary observations and retained evidence | [Closed-loop observations](#closed-loop-play-and-observations), [passive records/evidence](#passive-gameplay-records-and-evidence) |
+| Offline study components, without live input authority | [Task memory](#passive-task-memory), [injected planner](#bounded-injected-planner), [movement verifier](#passive-bounded-movement-skills), [waypoint supervision](#passive-waypoint-supervision) |
+
 ## Controller run ownership
 
 The in-process controller API exposes `acquire_mission(mission_id, epoch,
@@ -1177,6 +1189,17 @@ remain unsupported by delivery reconciliation.
 
 ### Quiescent player replacement
 
+The generic host settles when the actual MCP result contains a coherent current
+completed handoff issuance, including explicit collection of a pending/uncertain
+handoff originated by that host. A successor's read-only issuance retrieval does
+not settle its host; ordinary collection errors retain their correction path.
+It blocks later same-batch tool dispatch and ends the model turn without another
+inference request or generated final report. This does not assign a successor:
+the campaign driver independently validates the full issuance and fresh runtime
+state before assignment. Incoherent claimed completion fails closed; fatal
+cancellation, timeout and transport/cleanup errors override host success. See the
+[host contract](../tools/player_host/README.md) for the presentation binding.
+
 `handoff` requires settled adopted normal play, the retained owned child, sole
 runtime handle/empty queue and reconciled effects. It identifies up to32 retained
 checkpoints and every unfinished Work item (up to16); completed/failed Work with
@@ -2220,9 +2243,12 @@ unknown fields, wrong types, unsupported enums, nonfinite numbers and contradict
 completion claims. Nested values are immutable; `to_dict` encodes these already
 validated frozen values into fresh containers without repeating schema validation.
 Raw serialized input and explicit trust-boundary receipt checks retain their
-validation. JSON input is bounded to 1 MiB. The injected planner below consumes these records;
-the runtime above connects the passive planner, supervisor and bounded skill.
-Broader task formation remains outside this [first slice](design/gameplay.md).
+validation. JSON input is bounded to 1 MiB. The injected planner and supervisor
+below consume these records in passive/offline studies. MissionRuntime has no
+live planner/supervisor endpoint or concrete planner provider; its deciding player
+and writer are the separate live execution path. The
+[first-slice design](design/gameplay.md) retains historical rationale, not a claim
+that those study components are connected to the current runtime.
 
 [EvidenceStore](../harness/gameplay/evidence.py) retains successful native-v7
 normal/menu/activity/recovery/unsupported diagnostic frames with their actual
