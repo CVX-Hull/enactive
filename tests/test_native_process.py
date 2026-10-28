@@ -424,5 +424,75 @@ class NativeProcessTests(unittest.TestCase):
         self.assert_no_signals()
 
 
+class ExceptionalCleanupTests(unittest.TestCase):
+    """Controlled OS children exercise handle custody without launching a game."""
+
+    def test_cleanup_signals_only_retained_child_and_reports_exceptional_closure(self):
+        import sys
+        import time
+        with tempfile.TemporaryDirectory() as directory:
+            native = NativeProcess(Path(directory), "0" * 64)
+            owned = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"])
+            unrelated = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"])
+            try:
+                native._child, native._launch_id = owned, "controlled-child"
+                result = native.close_exceptional(deadline_monotonic=time.monotonic() + 2)
+                self.assertEqual(result["outcome"], "exceptional_closed")
+                self.assertFalse(result["running"])
+                self.assertEqual(result["signals"], ["SIGTERM"])
+                self.assertFalse(result["normal_ending_claimed"])
+                self.assertIsNone(unrelated.poll())
+            finally:
+                for child in (owned, unrelated):
+                    if child.poll() is None:
+                        child.kill()
+                    child.wait(timeout=3)
+
+    def test_expired_cleanup_never_signals_or_adopts_pid(self):
+        import time
+        with tempfile.TemporaryDirectory() as directory:
+            native = NativeProcess(Path(directory), "0" * 64)
+            child = Mock()
+            child.poll.return_value = None
+            child.pid = 1234
+            native._child, native._launch_id = child, "retained"
+            result = native.close_exceptional(deadline_monotonic=time.monotonic() - 1)
+            self.assertEqual(result["outcome"], "cleanup_unknown")
+            child.terminate.assert_not_called()
+            child.kill.assert_not_called()
+            self.assertEqual(result["signals"], [])
+
+    def test_no_owned_handle_proves_only_no_launch(self):
+        import time
+        with tempfile.TemporaryDirectory() as directory:
+            result = NativeProcess(Path(directory), "0" * 64).close_exceptional(
+                deadline_monotonic=time.monotonic() + 1)
+            self.assertEqual(result["outcome"], "not_launched")
+            self.assertFalse(result["normal_ending_claimed"])
+
+
+    def test_term_resistant_owned_child_escalates_to_kill_within_original_deadline(self):
+        import sys
+        import time
+        with tempfile.TemporaryDirectory() as directory:
+            process = NativeProcess(Path(directory), "0" * 64)
+            child = subprocess.Popen([sys.executable, "-c",
+                "import signal,time; signal.signal(signal.SIGTERM,signal.SIG_IGN); print('ready',flush=True); time.sleep(30)"],
+                stdout=subprocess.PIPE, text=True)
+            try:
+                self.assertEqual(child.stdout.readline().strip(), "ready")
+                process._child, process._launch_id = child, "resistant-fixture"
+                started = time.monotonic()
+                result = process.close_exceptional(deadline_monotonic=started + 3)
+                self.assertEqual(result["signals"], ["SIGTERM", "SIGKILL"])
+                self.assertEqual(result["outcome"], "exceptional_closed")
+                self.assertLess(time.monotonic() - started, 3)
+            finally:
+                if child.poll() is None:
+                    child.kill()
+                child.wait(timeout=3)
+                child.stdout.close()
+
+
 if __name__ == "__main__":
     unittest.main()

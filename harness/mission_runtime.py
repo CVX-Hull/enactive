@@ -127,6 +127,7 @@ class MissionRuntime:
         self._metadata = threading.Lock()
         self._queue: Queue[_Work] = Queue(maxsize=1)
         self._closed = threading.Event()
+        self._shutdown_receipt: dict | None = None
         self._pending_pauses: list[tuple[str, str]] = []
         self._handles: list[_Work] = []
         self._operations: dict[str, dict] = {}
@@ -176,7 +177,9 @@ class MissionRuntime:
         """Read only cache and clocks; never reconcile, verify or complete work."""
         with self._metadata:
             value = copy.deepcopy(self._snapshot)
+            shutdown = copy.deepcopy(self._shutdown_receipt)
         if value is not None:
+            value["shutdown_receipt"] = shutdown
             now, wall = self._clock(), self._wall()
             valid_clock = (type(now) in (int, float) and type(wall) in (int, float)
                 and math.isfinite(now) and math.isfinite(wall) and 0 <= now <= 1e12 and 0 <= wall <= 1e12)
@@ -3295,20 +3298,68 @@ class MissionRuntime:
                     self._record_settlement_timing(work, finalized=finalized)
         finally:
             self._cancel_queue()
+            # Revoke authority even when terminal persistence is broken. Only this
+            # settled writer owns native cleanup and storage; close() never races it.
+            revoked = False
+            stop_persisted = False
+            try:
+                self.controller.stop_input()
+                revoked = stop_persisted = True
+            except OSError as exc:
+                # Controller clears its in-memory lease before durable authority
+                # and Pause writes. A disk failure cannot skip owned cleanup.
+                revoked = True
+                self._diagnostic = f"Shutdown stop persistence unconfirmed: {type(exc).__name__}"[:1024]
+            except Exception as exc:
+                self._diagnostic = f"Shutdown authority revocation failed: {type(exc).__name__}"[:1024]
             try:
                 self._apply_pauses()
                 self._registered_reflection.finish(permanent=True)
-                if self._native is not None:
+            except Exception as exc:
+                self._diagnostic = f"Terminal persistence failed: {type(exc).__name__}"[:1024]
+            cleanup = {"outcome": "not_launched", "running": False, "signals": [],
+                "normal_ending_claimed": False, "grants_authority": False}
+            verified = False
+            if self._native is not None:
+                try:
+                    facts = self._native.status()
+                    if self._ledger is not None:
+                        verified = any(row["state"] == "completed" and row["result"] is not None
+                            and row["result"].get("normal_exit", {}).get("launch_id") == facts["launch_id"]
+                            for row in self._ledger.request_records())
+                except Exception:
+                    # Historical normal-exit evidence is independent of cleanup.
+                    pass
+                try:
+                    cleanup = (self._native.close_exceptional(deadline_monotonic=time.monotonic() + 4.0)
+                        if revoked else {**self._native.status(), "outcome": "cleanup_unknown",
+                            "signals": [], "normal_ending_claimed": False, "grants_authority": False})
+                    if type(cleanup) is not dict or cleanup.get("outcome") not in (
+                            "not_launched", "exited", "exceptional_closed", "cleanup_unknown"):
+                        raise ValueError("Invalid native cleanup receipt")
                     self._native_facts = self._native.status()
-                    verified = self._ledger is not None and any(row["state"] == "completed" and row["result"] is not None
-                        and row["result"].get("normal_exit", {}).get("launch_id") == self._native_facts["launch_id"]
-                        for row in self._ledger.request_records())
+                except Exception as exc:
+                    cleanup = {"outcome": "cleanup_unknown", "running": None, "signals": [],
+                        "error_type": type(exc).__name__, "normal_ending_claimed": False, "grants_authority": False}
+            receipt = {"writer_settled": True, "input_authority_revoked": revoked,
+                "input_stop_persistence_confirmed": stop_persisted,
+                "native_cleanup": cleanup, "normal_exit_verified": verified,
+                "unresolved_custody_requests": list(self._lost_process_custody),
+                "native_absence_verified": cleanup["outcome"] in ("not_launched", "exited", "exceptional_closed")
+                    and not self._lost_process_custody,
+                "acceptance_claimed": False, "grants_authority": False}
+            with self._metadata:
+                self._shutdown_receipt = receipt
+            try:
+                if self._native is not None:
                     self._record("mission_process_shutdown_custody", {"process": self._native_facts,
-                        "normal_exit_verified": verified, "restored_from_disk": False, "grants_authority": False})
+                        "normal_exit_verified": verified, "cleanup": cleanup,
+                        "restored_from_disk": False, "grants_authority": False})
                 self._publish()
             except Exception as exc:
-                self._diagnostic = f"Terminal persistence failed: {exc}"[:1024]
-            self._close_storage()
+                self._diagnostic = f"Shutdown receipt persistence failed: {type(exc).__name__}"[:1024]
+            finally:
+                self._close_storage()
 
     def _stop_after_failure(self, reason: str) -> None:
         try:
@@ -3369,10 +3420,16 @@ class MissionRuntime:
         self._bindings.clear()
         self._lease, self._rotation = None, None
 
-    def close(self) -> None:
+    def close(self) -> dict:
         if not self._closed.is_set():
             self.pause("Mission runtime closed", cause="internal_recovery")
             self._closed.set()
             self._cancel_queue()
         # A blocked writer owns its storage until its finally clause; never close underneath it.
-        self._thread.join(min(16.0, self.controller.timeout + 0.5))
+        self._thread.join(min(16.0, self.controller.timeout + 0.5) + 4.5)
+        with self._metadata:
+            receipt = copy.deepcopy(self._shutdown_receipt)
+        if self._thread.is_alive() or receipt is None:
+            return {"writer_settled": False, "native_cleanup": {"outcome": "cleanup_unknown"},
+                "native_absence_verified": False, "acceptance_claimed": False, "grants_authority": False}
+        return receipt
