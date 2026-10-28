@@ -2,7 +2,13 @@
 import { lstat, open, writeFile } from 'node:fs/promises';
 import { INPUT_LIMIT_BYTES, HostError, runHost } from './host.mjs';
 
-const output = event => process.stdout.write(JSON.stringify(event) + '\n');
+const output = event => {
+  const start = performance.now(), line = JSON.stringify(event) + '\n';
+  const encoded = performance.now(), accepted = process.stdout.write(line);
+  const enqueued = performance.now();
+  return {json_ms:encoded - start, enqueue_ms:enqueued - encoded,
+    bytes:Buffer.byteLength(line), backpressure_signals:accepted ? 0 : 1};
+};
 const started = performance.now();
 const controller = new AbortController();
 const cancel = () => controller.abort();

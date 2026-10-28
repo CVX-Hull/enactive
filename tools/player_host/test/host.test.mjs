@@ -331,6 +331,15 @@ test('response diagnostics count UTF8 fragments and reset for each actual reques
   assert.ok(a.last_field_delta_ms<=a.last_provider_event_ms);
   assert.ok(a.last_body_chunk_ms<=completed[0].monotonic_ms);
   assert.equal(a.scope,'current-http-attempt');
+  assert.equal(a.first_reasoning_delta_ms,a.first_provider_event_ms);
+  assert.equal(a.first_content_delta_ms,a.first_provider_event_ms);
+  assert.equal(a.first_tool_argument_delta_ms,a.first_provider_event_ms);
+  assert.equal(b.first_reasoning_delta_ms,null);
+  assert.equal(a.response_id,'fixture-response');
+  assert.ok(events.find(e=>e.type==='provider-payload-ready').sdk_prepare_ms>=0);
+  assert.ok(events.find(e=>e.type==='request-start').host_inspection_ms>=0);
+  assert.ok(events.find(e=>e.type==='request-fetch-start').monotonic_ms>=events.find(e=>e.type==='request-start').monotonic_ms);
+  assert.equal(events.at(-1).event_output.json_ms,null);
   assert.ok(!JSON.stringify(a).includes('思'));
 });
 test('partial field output and later heartbeat retain diagnostics without renewing the deadline',async t=>{
@@ -360,6 +369,10 @@ test('partial field output and later heartbeat retain diagnostics without renewi
   assert.equal(result.reason,'request-timeout');assert.equal(payloads.length,1);assert.equal(calls.length,0);
   const progress=events.find(event=>event.type==='abort').response_progress;
   assert.equal(progress.scope,'current-http-attempt');assert.equal(progress.request_id,'request-1');
+  assert.ok(progress.first_tool_argument_delta_ms!==null);
+  assert.ok(progress.first_content_delta_ms!==null);
+  assert.ok(progress.last_body_chunk_ms>progress.last_field_delta_ms);
+  assert.ok(progress.max_body_chunk_gap_ms>0);
   assert.equal(progress.body_bytes,Buffer.byteLength(first+heartbeat));assert.equal(progress.body_chunks,2);
   assert.equal(progress.provider_events,1);assert.equal(progress.content_bytes,Buffer.byteLength(content));
   assert.equal(progress.tool_argument_bytes,Buffer.byteLength(argumentsText));
@@ -527,6 +540,22 @@ test('HTTP refusal status is retained before SDK rejection without raw error or 
   const completed=events.find(event=>event.type==='response-complete');
   assert.equal(completed.usage_available,false);assert.equal(completed.usage,null);
   assert.ok(!JSON.stringify({result,events}).includes('fixture-key'));
+});
+
+test('inspected refusal and provider identities retain bounded IDs without raw text or credentials',async t=>{
+  const {result,events}=await scenario(t,[rateLimit({type:'invalid_request_error',code:'engine_overloaded',message:'fixture-key private detail'})]);
+  assert.equal(result.reason,'provider-error');assert.equal(result.requests,1);
+  const refusal=events.find(e=>e.type==='provider-refusal');
+  assert.equal(refusal.error_type,'invalid_request_error');assert.equal(refusal.error_code,'engine_overloaded');
+  assert.ok(!JSON.stringify(events).includes('fixture-key'));
+  const bad=new Response('data: '+JSON.stringify({id:'fixture-key',provider:'fixture-key',choices:[{index:0,delta:{content:'ok'},finish_reason:'stop'}]})+'\n\ndata: [DONE]\n\n',
+    {headers:{'content-type':'text/event-stream','x-request-id':'fixture-key'}});
+  const observed=await scenario(t,[bad]);
+  assert.equal(observed.result.ok,true);
+  assert.equal(observed.events.find(e=>e.type==='response-headers').provider_request_id,null);
+  const progress=observed.events.find(e=>e.type==='response-complete').response_progress;
+  assert.equal(progress.response_id,null);assert.equal(progress.reported_provider,null);
+  assert.ok(!JSON.stringify(observed.events).includes('fixture-key'));
 });
 
 test('request budget is fresh request-only bookkeeping after unchanged history',async t=>{

@@ -269,3 +269,24 @@ does not establish absence of backend generation or explain a timeout. Recording
 progress never renews a timer, retries a partial response, changes provider
 context or authorizes tool input. Its observation overhead belongs in subsequent
 live measurements.
+
+Telemetry version1 adds first/last/max consecutive gaps for body chunks, parsed
+provider events and nonempty reasoning/content/tool-argument fragments. Missing
+first/last values stay null; max gaps exclude silence after the last fragment.
+`provider-payload-ready`, `request-fetch-start`, projection/inspection timings
+and the CLI's `settled.event_output` separate some local preparation and logging
+costs from Fetch intervals. Output measurements cover synchronous callback,
+serialization and enqueue time, bytes and backpressure signals **before** the
+settled event; they do not measure disk durability or async drain. Library callers
+without sink instrumentation retain null sink measurements. Observing overhead
+still adds work and must be measured during subsequent play.
+
+`host-start` records the configured output cap, context window and effort mapping;
+these are transmitted configuration, not backend effort attestation. Sanitized
+bounded response/provider IDs and `x-request-id` permit later correlation when
+reported. `provider-refusal` records only type/code from the first429 body that
+the existing recovery path already inspects; header-suppressed, later, malformed
+or other-status errors retain unknown codes. No error message, extra body/header
+logging, extra fetch, retry, timer renewal or dispatch is added. Use the existing
+[offline evaluator](../../docs/evaluation.md#retained-host-and-browser-analysis)
+to analyze traces; future telemetry versions are not silently interpreted.

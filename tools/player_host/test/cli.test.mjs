@@ -54,6 +54,9 @@ test('CLI writes the driver-reserved final path only after terminal success',asy
   const run=await cli(t,(_req,res)=>{res.writeHead(200,{'content-type':'text/event-stream'});res.end('data: '+JSON.stringify({id:'fixture',model:'fixture-backend',choices:[{index:0,delta:{role:'assistant',content:'final answer'},finish_reason:'stop'}]})+'\n\ndata: [DONE]\n\n');});
   const [code]=await run.finished;
   assert.equal(code,0);assert.equal(await readFile(run.paths.final,'utf8'),'final answer\n');
+  const sink=run.read().events.at(-1).event_output;
+  assert.ok(sink.events>0&&sink.bytes>0);
+  assert.ok(sink.json_ms>=0&&sink.enqueue_ms>=0);
 });
 
 for(const name of ['OPENAI_LOG','OPENAI_CUSTOM_HEADERS','OPENAI_ORG_ID','OPENAI_PROJECT_ID']) test(`CLI refuses ambient SDK ${name} without inference or secret output`, async t=>{

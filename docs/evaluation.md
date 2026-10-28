@@ -259,6 +259,50 @@ Required loss/correction/integrity and current-authority checks must remain;
 reuse the existing SQLite/journal if evidence establishes a storage gap. #154
 owns this follow-up without adding a new framework gate to the current mission.
 
+## Retained host and browser analysis
+
+Use the existing read-only evaluator for repeatable diagnostics:
+
+```sh
+.venv/bin/python -m tools.evaluate host-summary .runtime/campaigns --format markdown
+.venv/bin/python -m tools.evaluate host-summary path/to/driver-original.jsonl
+.venv/bin/python -m tools.evaluate witness-summary .runtime/missions/MISSION path/to/observer-export.json
+```
+
+Directory discovery selects known `driver-*.jsonl`, `*-active.jsonl` and
+`evidence/host-traces/*.jsonl` locations, including immediate child campaigns.
+Other trace locations require explicit file paths. JSON output retains compact
+per-request diagnostics and declared frozen source/model configuration. Empty,
+unsupported and invalid files remain in coverage; invalid input returns exit1
+after reporting coverage. Unsupported formats are inventoried, not converted or
+claimed analyzed. SHA256 duplicate-content groups are exposed, never pooled as
+independent experiments. Missing historical fields stay unknown.
+
+Host analysis separates response, tool and observed canceled intervals, reported
+usage coverage, reasoning as a subset of output, stream progress and local overhead.
+Only SDK `stop`/`toolUse` responses enter the uncensored response distribution;
+that is transport completion, not useful success. Missing endpoints or overlapping
+request/tool spans suppress the host-time share. Output divided by time after the
+first body chunk is an empirical streaming proxy, not pure decoder throughput.
+Failed work, correction costs and whole-host elapsed time remain visible.
+
+Witness analysis accepts the current evidence index and `observer-timing/3` only.
+It joins exact public frame identities and capture epochs, deduplicates overlapping
+exports, retains missing witnesses and signed invalid clock intervals, and reports
+export drops. It checks metadata coherence, not image bytes, source applicability,
+physical paint or player attention. An earlier negative interval cannot be hidden
+by selecting a later positive witness. Inspect same-host wall-clock assumptions
+and retained images separately before a useful-effect claim. Goal membership and
+usefulness still need the frozen cohort and independent outcome assessment above.
+
+The [October28 analysis](acceptance/2026-10-28-latency-diagnostics.md) records corpus
+coverage, current endpoint research and its concrete consequences. Extending
+`tools.evaluate`, the existing JSON validation hooks, Pi callbacks and retained
+files fills the observed diagnostic gap without another store, service or
+dependency. Lead owns these thin projections; replace them when maintained tools
+supply equivalent joins. CLI help records finite resource limits. New fields
+cannot retrospectively fill older endpoint or logging-overhead gaps.
+
 ## Caller contract
 
 Use `RunRecorder(manifest)`, `record(event)`, `finish(outcome)` and `write(path)`
