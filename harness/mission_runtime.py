@@ -2634,7 +2634,7 @@ class MissionRuntime:
                 self._stop_after_failure(current_error)
         typed_refusal = (envelope_valid and not control and lifecycle is None and activity is None
                          and not raw["published"] and raw["result"].get("status") == "rejected")
-        if (ordinary and envelope_valid and disposition == "rejected" and raw["published"] and prepared
+        if (envelope_valid and disposition == "rejected" and raw["published"] and prepared
                 and after is None and lifecycle is None and activity is None
                 and not processing_fatal and evidence_loss is None):
             # An authenticated native refusal settled no input, but the lease
@@ -2838,11 +2838,11 @@ class MissionRuntime:
                         outcome = ControlOutcome("partial", "Known input returned; explicit Observe required before a new input decision",
                             proposed_count, tuple(dict.fromkeys((original, proposal.before, feedback.after))), None, True,
                             "ordinary_input", input_observation=relation if isinstance(relation, InputObservation) else None)
-                    elif feedback.transport_disposition == "not_dispatched":
+                    elif feedback.transport_disposition in ("not_dispatched", "rejected"):
                         # _dispatch authenticated this read-only scope. Passive
                         # semantic attribution requires fresh current evidence;
-                        # it cannot turn positively known nondelivery into an
-                        # unknown input merely because the old entry aged.
+                        # it cannot turn positively known nondelivery (including
+                        # a native rejection) into unknown when the entry aged.
                         outcome = ControlOutcome("partial" if proposed_count > 1 else "blocked", feedback.reason,
                             proposed_count, tuple(dict.fromkeys((*skill._sources, original, proposal.before))), None, proposed_count > 1,
                             "ordinary_input" if data["skill_kind"] in ("direct", "program") else
@@ -2976,7 +2976,7 @@ class MissionRuntime:
                 live = self._live()[0]
                 self._capture_custody(observed, live)
                 changed = current != feedback.after or not same_native_state(observed, live)
-            if (feedback.transport_disposition == "not_dispatched" and self._prompt_phase is not None
+            if (feedback.transport_disposition in ("not_dispatched", "rejected") and self._prompt_phase is not None
                     and self._prompt_phase.observation_generation is not None):
                 outcome = NavigationOutcome("partial" if skill._steps else "blocked", feedback.reason,
                     skill._steps, skill._proposals, skill._position,

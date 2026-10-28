@@ -78,6 +78,16 @@ image/geometry refusals can precede controller preparation. Navigation reports
 prefix and every prepared charge remain recorded. Only explicit Observe and a
 new player choice can continue; no old suffix resumes. Source regressions cover
 these cases; an actual native occurrence and complete campaign remain separate.
+
+An authenticated published native rejection also retains this read-only scope
+for ordinary leased semantic actions, navigation and menu choices. The primitive keeps its
+original charge and rejected ACK, with no after-frame or inferred effect. The
+writer checks the same custody, source/storage, clock and global-limit guards;
+the error text does not classify the continuation. Explicit Observe is required
+before a fresh decision, even when the rejection leaves the visible state unchanged.
+Aged semantic evidence cannot turn that known nondelivery into unknown. This
+excludes lifecycle, registered activity/recovery and any processing/evidence fault.
+
 Unknown delivery, actual clock/session regression, controller processing,
 integrity/storage, lifecycle/activity/recovery and global exhaustion keep their
 stopping paths. A missing current frame alone neither undelivers an ACK nor
