@@ -67,6 +67,16 @@ reader or implementation boundary benefits; migrate every caller/link together
 and preserve original evidence. Git retains earlier structure. No second index,
 documentation service or source-history database is required.
 
+Content granularity remains a concern even where the directory hierarchy is
+sound. Large references that mix exact contracts, explanation, procedures and
+historical qualifications burden focused reading and review. Navigation is a
+first repair, not a substitute for decomposition. The owned
+[contract decomposition](https://github.com/CVX-Hull/enactive/issues/276) follow-up
+must preserve one current home per rule and migrate links/checkers together.
+Generated control maps are lookup references; they are not a required linear
+reading path. Reader-task review under S-DOCS/C-USABILITY checks discoverability
+and reviewability; file counts and valid links do not establish comprehension.
+
 ## One authoritative home per kind of fact
 
 | Artifact role | Owns | Does not own |

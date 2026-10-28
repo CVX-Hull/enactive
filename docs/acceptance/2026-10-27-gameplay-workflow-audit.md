@@ -79,6 +79,7 @@ and verify-fixes review covers the resulting candidate before publication.
 | Shared CDDA identity/observation/time assumptions | **Defer to191, lead owner.** Current contracts/memory/timeline still carry CDDA-specific world/character, visible schema and turn semantics. Existing architecture discloses this and family-wide support remains unqualified. Extract one demonstrated seam when a second actual binding or recurring integration change establishes its shape; no speculative game framework or second executor. |
 | Repeated private custodian copies and low-confidence effort fit | **Fix operating direction; maintained-launcher follow-up in164.** Reuse unchanged driver/setup/check evidence and Git source identity. The next admission brief must use the existing checkpoint policy rather than cloning the full-publication gate. Consolidating repeated custody/admission code needs its own bounded implementation/cleanup tests before the next custom launcher copy; preserve all old frozen programs as evidence. Record one honest remaining-fit judgment with unknown labor, not a timer service or silently renewed appetite. |
 | Broad physical repo moves or a new documentation platform | **Refute as current remedy.** Existing responsibility/authority boundaries are useful. Inventory size alone establishes no extraction benefit. Improve navigation and stale ownership claims now; require a concrete reader/module boundary before moving source/contracts and migrate all callers together. |
+| Oversized mixed-purpose current content | **Defer focused decomposition to276, lead owner.** The baseline protocol is 183,885 bytes, standards 53,948 and workflow 50,824. Size is a risk signal; the escaped current/historical contradictions and the user's readability/reviewability concern give a concrete reason to improve granularity. Navigation alone is insufficient. Extract a cohesive current contract boundary, separate explanation/procedure/history, migrate all links/checkers and verify reader tasks. This work is triggered by the next consequential contract/document reorganization; it is not a blanket prerequisite for useful development play. |
 
 The deferred source/product gaps remain real. This audit does not label them fixed,
 close their outcome Issues or grant native acceptance. Their owners, trigger and
@@ -103,11 +104,50 @@ unchanged; the native017/018 record is consolidated into its existing evidence
 family. Current pages explain behavior and limits rather than accumulating another
 per-run checkpoint. These changes do not claim measured usability improvement.
 
-Protocol remains a large exact reference, and MissionRuntime/ledger remain large
-source owners. Split by a demonstrated interface/reader responsibility when doing
-so reduces change/navigation cost, not merely to reduce line or file counts.
+The directory hierarchy is reasonable; the content does not yet support focused
+reading/review well enough. The protocol and policy files remain large references
+mixing several reader needs. Issue #276 owns decomposition into task-sized current
+contracts and separate explanation/procedure/history, using the existing component
+boundaries. Reader acceptance covers Load/adoption, recovery, handoff, collection
+and development-versus-acceptance lookup without reading the full corpus. No
+formal usability study or arbitrary byte quota is claimed.
+
+The four affected control entries had accumulated chronological evidence
+inventories. Their definitions now use current mechanism/assertion links and
+representative evidence families; original reports remain in Git. This reduces
+the generated map from 90,864 to 72,976 bytes. C-REVIEW/C-USABILITY/C-MAINTENANCE
+mechanisms are clearer, with honest partial-effectiveness records and unchanged
+January 15, 2027 due dates. C-RUNTIME records the latest native018 failure on
+its original source; new source/contract review is not a repaired native exercise.
+
+MissionRuntime/ledger also remain large source owners. Split by a demonstrated
+interface/reader responsibility when doing so reduces change/navigation cost.
 Current module boundaries and links must migrate together; Git retains the prior
 layout. The present audit establishes no need for a new generic adapter framework.
+
+## Maintaining constraints after violations
+
+Existing principle/standard/control IDs remain the constraint system. Consequential
+change and incident review revisit the affected constraint and the actual failure
+path, using the current mechanism and executable assertion or explicit gap. They
+do not require another per-action approval or a new registry. Source changes,
+native qualification and useful gameplay acceptance remain separate closure facts.
+
+| Earlier violation or risk | Maintained mechanism and evidence | Remaining obligation |
+| --- | --- | --- |
+| Original host continued after successful handoff | Host settlement and same-batch fence; actual Pi/MCP regression plus canonical driver guards, under C-RUNTIME/C-REVIEW | Fresh useful native succession remains264; no retrospective018success |
+| Lost replies/current context led to identity assumptions | Assigned collection identity from MCP, actual HTTP/MCP lost-response regression, no replay/admission inference | Unhealthy historical adoption classification remains176 |
+| Manufactured target or technical proxy counted toward learning | Prospective useful objective and independent actual-game outcome review under C-USABILITY/C-REVIEW | Organic usefulness is judgment/evidence, not a metadata checker;264remains open |
+| Extra publication gates and duplicated private launchers | Development checkpoint policy, maintained entry points and event-triggered C-MAINTENANCE review |164owns launcher consolidation before another custom copy; old frozen scripts stay historical |
+| Cost reservation confused with spending; renewed scope assumptions | Separate estimates/invoices/unknowns/reservations and a fresh finite allocation/fit judgment in the existing Issue | No silent revival of old actors, slots or appetite; unknown labor stays unknown |
+| Stale/mixed documentation and unreadable inventories | One authoritative home, reader-task C-USABILITY review and existing metadata/link/generated-map checks |276owns content decomposition; semantic review remains manual and dates alone prove no effectiveness |
+
+The registry records the four controls' scoped exercise/review and explicit
+limitations. Previous records remain in Git; no other control date, status,
+standard mapping or due date is renewed. A repeated violation triggers the existing
+owner to strengthen the actual boundary/test or simplify the failed process.
+Closing an audit never erases the unresolved product gaps or guarantees recurrence
+cannot happen.
 
 ## Verification and retained limits
 

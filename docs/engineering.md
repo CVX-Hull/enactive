@@ -499,6 +499,10 @@ progressively detailed links. Split by reader, authority, cohesion or change
 frequency; no universal line/page count or documentation-volume target applies.
 Use a diagram only when it clarifies a boundary or interaction. Generate mechanical
 reference from an existing authoritative structure when it reduces duplication.
+On a material documentation change, C-USABILITY walks the intended reader task:
+find the current rule and owner, understand its consequence, and trace the needed
+detail without reconstructing history. Mixed-purpose or oversized references that
+prevent this focused review need decomposition; a table of links alone is insufficient.
 Documentation generators and checks follow S-CODE's reuse decision and review
 requirement; stewardship/schema rules do not justify rebuilding their parsers.
 
@@ -584,6 +588,10 @@ For gameplay, authentic useful development play is the primary behavioral feedba
 loop. Use focused offline checks to isolate observed failures and protect changed
 boundaries; follow the [gameplay feedback policy](project-management.md#gameplay-as-the-primary-feedback-loop)
 instead of adding publication/readiness gates before each ordinary attempt.
+At the existing boundary/outcome review, revisit applicable earlier violations
+and trace the constraint to its maintained mechanism, regression or explicit
+owned evidence gap. Retired gates need a new justified decision before returning;
+do not quietly inherit them from old run scripts or chat summaries.
 Before assigning implementation, record the outcome and highest changed boundary,
 then affected components, interfaces/state/callers, code/tests and operating docs.
 Review from that boundary down, using the [risk-based assurance policy](project-management.md#risk-based-assurance).
