@@ -97,7 +97,7 @@ tree or live work tracker. No new documentation service, registry or metrics sto
 The changes repair navigation without relocating evidence: a direct player path
 in the [documentation map](../documentation.md), an explicit directory ownership
 table, a task-oriented [protocol index](../protocol.md#contract-navigation), and
-six stable evidence families in [work](../work.md) instead of nineteen dense rows
+six stable evidence families in [work](../work.md) instead of eighteen dense rows
 of attempt summaries. Original dated reports, source IDs and screenshots remain
 unchanged; the native017/018 record is consolidated into its existing evidence
 family. Current pages explain behavior and limits rather than accumulating another
