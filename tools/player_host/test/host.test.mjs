@@ -243,6 +243,40 @@ test('request maximum is finite and exits unsuccessful if continuation needed',a
   assert.equal(result.ok,false); assert.equal(result.reason,'request-limit'); assert.equal(payloads.length,1);
   assert.equal(events.find(event=>event.type==='abort').response_progress.scope,'last-http-attempt');
 });
+test('actual memory schema refusal gives stable precise feedback, explicit correction dispatches, MCP errors stay intact',async t=>{
+  const entry={schema:'campaign-memory/6',record_type:'Work',id:'fixture-work',intent:'Retain a partial fixture task',
+    scope:{mission_id:'fixture',session:'fixture-session',coordinate_epoch:0},stage:'x'.repeat(244),
+    predecessor_work_id:null,progress:null,available:[{subject:'small cardboard box',quantity:1,unit:'items',coverage_id:'visible-subset'}],
+    committed:[],predicted_output:[],observed_output:[],unresolved_effects:[],sources:['fixture-source'],
+    next_verification:'Inspect the next retained observation',status:'active'};
+  const bad={snapshot_id:'fixture-snapshot',intent:{entry_type:'work',entry}};
+  const fixed=structuredClone(bad);fixed.intent.entry.stage='partial';
+  fixed.intent.entry.available[0].subject='small_cardboard_box';
+  const mcpError=structuredClone(fixed);mcpError.intent.entry.stage='mcp-error';
+  const configuration=route();configuration.max_requests=6;
+  const {result,calls,payloads,events}=await scenario(t,[
+    reply(null,[['enactive_remember',bad]],true,undefined,'bad'),
+    reply(null,[['enactive_remember',fixed]],true,undefined,'fixed'),
+    reply(null,[['observe',{}]],true,undefined,'later'),
+    reply(null,[['enactive_remember',mcpError]],true,undefined,'mcp-error'),reply()
+  ],{configuration,enabledTools:['enactive_remember','observe']});
+  assert.equal(result.ok,true);
+  assert.deepEqual(calls.filter(c=>c.tool==='enactive_remember').map(c=>c.intent),[fixed.intent,mcpError.intent]);
+  const first=payloads[1].messages.find(m=>m.role==='tool'&&m.tool_call_id==='bad-0').content;
+  assert.match(first,/entry.stage: must not have more than 128/);
+  assert.match(first,/entry.available.0.subject: must match pattern/);
+  assert.ok(!first.includes('intent.entry.value'));
+  for(const payload of payloads.slice(2)) {
+    assert.equal(payload.messages.find(m=>m.role==='tool'&&m.tool_call_id==='bad-0').content,first);
+  }
+  const diagnostics=events.filter(e=>e.type==='tool-validation-feedback');assert.equal(diagnostics.length,1);
+  assert.match(diagnostics[0].original_result.content[0].text,/intent.entry.value/);
+  assert.equal(diagnostics[0].projected_text,first);
+  const actualMcpError=payloads[4].messages.find(m=>m.role==='tool'&&m.tool_call_id==='mcp-error-0').content;
+  assert.match(actualMcpError,/MCP isError: true/);assert.match(actualMcpError,/fixture MCP refusal/);
+  assert.deepEqual(payloads[0].tools,payloads[4].tools,'the actual full schema remains stable');
+});
+
 test('provider errors are nonzero without leaking exception or key',async t=>{
   const {result,events}=await scenario(t,[()=>{throw new Error('fixture-key private upstream details');}]);
   assert.equal(result.ok,false); assert.equal(result.reason,'provider-error');

@@ -5,6 +5,7 @@ import { Type, AssistantMessageEventStream, isRetryableAssistantError } from '@e
 import { stream } from '@earendil-works/pi-ai/api/openai-completions';
 import { retryProviderRequest } from '@earendil-works/pi-ai/utils/provider-retry';
 import { McpClient, StdioTransport, toLlmContent } from '@earendil-works/pi-mcp';
+import { createValidationFeedback } from './validation-feedback.mjs';
 
 export const INPUT_LIMIT_BYTES = 1_048_576;
 // openai@7.19.0 client.mjs reads these despite Pi's scoped env option.
@@ -333,6 +334,8 @@ export async function runHost(options) {
         return {content, details:undefined, isError:result.isError === true};
       }};
     });
+    const validationFeedback = createValidationFeedback(tools, diagnostic =>
+      emit('tool-validation-feedback', {request_id:`request-${requests + 1}`, ...diagnostic}));
     agent = new Agent({
       initialState:{systemPrompt:options.context + (client.instructions ? '\n\nMCP server instructions:\n' + client.instructions : ''), model:configuration.model, thinkingLevel:options.effort, tools},
       toolExecution:'sequential',
@@ -341,7 +344,9 @@ export async function runHost(options) {
         // Pi requires this hook never to throw/reject. Latch a terminal stop and
         // return safe canonical context; streamFn checks it before charging/fetch.
         try {
-          const projection = projectImageContext(messages, configuration.max_context_images);
+          // Memoize against canonical SDK objects before image projection clones
+          // them. Earlier diagnostic text remains stable in subsequent prefixes.
+          const projection = projectImageContext(validationFeedback(messages), configuration.max_context_images);
           emit('context-image-projection', {request_id:`request-${requests + 1}`, ...projection.summary});
           if (projection.summary.blocked) stop('context-image-limit');
           // Request-only bookkeeping follows history, preserving the stable

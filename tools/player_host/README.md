@@ -92,6 +92,28 @@ window, without text summarization, automatic compaction, replay or permission
 renewal. Qualification must include actual continuation and apparent effects;
 reducing images alone is not a latency pass.
 
+Pi1.4.0's full `anyOf` validation can describe an unrelated memory type when a
+selected Work body is invalid. `validation-feedback.mjs` supplies a request-only
+diagnostic using the same `validateToolArguments`, narrowing only the existing
+`intent.entry_type` alternatives and retaining surrounding constraints. It never
+changes arguments, tool schemas, normal SDK validation, execution or collection.
+It requires a unique completed call/result batch, `isError`, absent `durationMs`,
+one text part with the exact SDK validation header, a known unambiguous branch,
+and no parser `argumentsError`. In pinned Pi, executed calls always carry a
+duration, including zero and exceptions. Parser/blocked errors have other headers;
+MCP errors keep their original path. If the narrowed check passes, the original
+refusal stays. No independent validator, successful-call revalidation or SDK fork
+is introduced.
+
+Canonical history stays unchanged. The existing trace's
+`tool-validation-feedback` event retains the original SDK result, exact call ID
+and projected text before forwarding. A weak memo of canonical call/result
+objects avoids repeating diagnostic work and keeps earlier feedback stable in
+later request prefixes; batch pairing is checked anew. This happens before image
+projection clones messages. These diagnostics prove neither semantic truth nor
+gameplay success and grant no input authority. Recheck these SDK assumptions on
+upgrade and retire the helper when upstream supplies precise union feedback.
+
 For nonreasoning models effort must be `off`. For reasoning models the selected
 Pi effort (`off`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`) must have a
 non-null explicit `thinkingLevelMap` entry, with

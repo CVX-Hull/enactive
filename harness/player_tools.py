@@ -172,6 +172,9 @@ def request_tool_specs() -> tuple[ToolSpec, ...]:
         specs.append(ToolSpec("enactive_" + kind,
             "Write explicit evidence-linked memory through the existing ledger. "
             "Set intent.entry_type alongside intent.entry, never inside entry. The selected entry contains only that memory type's fields. "
+            "For Work, stage is a short label (at most 128 characters); subject and coverage_id are stable identifier labels, "
+            "not phrases with spaces. Quantities count only the stated subject within the supported coverage; "
+            "do not add overlapping counts or turn an unverified quantity into an observed result. "
             "For Claims choose key, value, text, coverage, status, grounding and support groups. "
             "Identity keys choose world/character; software supplies the existing name unit/coverage, interpretation kind, schema/record type, Claim ID, scope/native observation order and host receipt time. "
             "Source grounding source_id=null selects the exact cached snapshot source; explicit IDs require a prior source read. "

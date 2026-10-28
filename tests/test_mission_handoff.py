@@ -5,13 +5,17 @@ from pathlib import Path
 import unittest
 import time
 import threading
+from dataclasses import replace
 from unittest.mock import patch
 
 from harness.mission_runtime import MissionRuntime
+from harness.mission_handoff import _declaration_diagnostic
+from harness.gameplay.mission_contracts import LearningPolicy
 from tests.test_mission_creation import MissionCreationFixture
 from tests.test_mission_contracts import claim
 from tests.test_request_receipts import settled_timing
 from tests.test_gameplay_evidence import png, black_png
+from tests.test_procedures import procedure
 
 
 class MissionHandoffTests(MissionCreationFixture, unittest.TestCase):
@@ -281,12 +285,67 @@ class MissionHandoffTests(MissionCreationFixture, unittest.TestCase):
         packet = self.context()["context"]["packet"]
         data = self.claim(packet)
         self.assertNotIn(work["sources"][0], data["read_source_ids"])
+        data["read_source_ids"].append("not-an-issued-source")
+        before = self.runtime.status()
         result = self.run_request(data)
         self.assertEqual(result["state"], "blocked", result)
         self.assertIn("Work support", result["result"]["reason"])
+        self.assertIn("missing=1 (omitted=0)", result["result"]["reason"])
+        self.assertIn("extra=1 (omitted=0)", result["result"]["reason"])
+        self.assertIn(work["sources"][0], result["result"]["reason"])
+        self.assertIn("not-an-issued-source", result["result"]["reason"])
+        after = self.runtime.status()
+        for field in ("epoch", "actor_id", "phase", "spent_inputs"):
+            self.assertEqual(after[field], before[field])
+        self.assertIsNone(self.runtime._lease)
         data["request_id"] = "reads-work"
-        data["read_source_ids"] += work["sources"]
+        data["read_source_ids"] = sorted((set(data["read_source_ids"]) - {"not-an-issued-source"})
+            | set(work["sources"]))
         self.assertEqual(self.run_request(data)["state"], "completed")
+
+    def test_procedure_declaration_differences_remain_correctable_before_actor_change(self):
+        entry = procedure()
+        self.a = replace(self.a, learning=LearningPolicy(entry["environment"]))
+        self.create()
+        self.observe("procedure-support")
+        ref, _ = self.current()
+        entry.update(mission_id=self.a.mission_id, support=[dict(mission_id=self.a.mission_id,
+            request_ids=["procedure-support"], source_ids=[ref.observation_id], interpretation="Synthetic observed support")])
+        stored = self.run_request(self.operation("remember", "remember-procedure", entry_type="procedure", entry=entry))
+        self.assertEqual(stored["state"], "completed", stored)
+        self.observe("new-checkpoint")
+        self.handoff()
+        packet = self.context(query="water")["context"]["packet"]
+        self.assertEqual(packet["procedure_sources"], [dict(mission_id=self.a.mission_id, source_id=ref.observation_id)])
+        data = self.claim(packet, read_procedure_sources=[dict(mission_id="unissued-mission", source_id="unissued-source")])
+        before = self.runtime.status()
+        result = self.run_request(data)
+        self.assertEqual(result["state"], "blocked", result)
+        reason = result["result"]["reason"]
+        self.assertIn("missing=1 (omitted=0)", reason)
+        self.assertIn("extra=1 (omitted=0)", reason)
+        self.assertIn(self.a.mission_id + "/" + ref.observation_id, reason)
+        self.assertIn("unissued-mission/unissued-source", reason)
+        after = self.runtime.status()
+        for field in ("epoch", "actor_id", "phase", "spent_inputs"):
+            self.assertEqual(after[field], before[field])
+        self.assertIsNone(self.runtime._lease)
+        data.update(request_id="reads-procedure", read_procedure_sources=packet["procedure_sources"])
+        self.assertEqual(self.run_request(data)["state"], "completed")
+
+    def test_declaration_previews_fit_persisted_reason_without_partial_identifiers(self):
+        for message, width, preview in (
+            ("Claim read declarations must cover checkpoints/retained Work support and refer to issued sources.", 128, 3),
+            ("Claim must declare exact complete procedure support from issued packets.", 257, 1),
+        ):
+            missing = {str(index).zfill(3) + "m" * (width - 3) for index in range(128)}
+            extra = {str(index).zfill(3) + "e" * (width - 3) for index in range(128)}
+            reason = "HandoffEvidenceError: " + _declaration_diagnostic(message, missing, extra, preview=preview)
+            self.assertLessEqual(len(reason), 1024)
+            self.assertIn(f"missing=128 (omitted={128 - preview})", reason)
+            self.assertIn(f"extra=128 (omitted={128 - preview})", reason)
+            for identity in sorted(missing)[:preview] + sorted(extra)[:preview]:
+                self.assertIn(identity, reason)
 
     def test_work_source_loss_after_retrieval_requires_new_unknown_packet(self):
         self.create()

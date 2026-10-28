@@ -46,7 +46,10 @@ def _selected_phase(snapshot: dict, scope: str, intent: dict, primary: str | Non
             raise ContractError("The selected snapshot still has an open prompt. "
                 "Explicitly call enactive_observe with this snapshot before choosing another root. "
                 "Observe may report macro_closure for an exhausted ordinary prompt; inspect its returned "
-                "phase and visible state, then deliberately choose a continuation or a new bounded root. "
+                "phase and visible state. If prompt_phase remains open, continue that original root with "
+                "a supported scope=prompt child; another Observe does not guarantee closure. "
+                "A program requires new_root and cannot replace an open prompt root. "
+                "Choose a new bounded root only after the phase actually closes. "
                 "Mission remaining_limits describe the whole mission, not the local root's remaining allowance. "
                 "This as-of guidance neither closes a phase nor resumes Pause, resolves unknown delivery "
                 "or grants input authority.")

@@ -97,8 +97,9 @@ and [operator contract](../contracts/mission-admission.md#designated-campaign-op
 
 For a selected active, idle prompt with no activity/lifecycle phase, a refused new
 root points to explicit Observe. Observe may close a locally exhausted ordinary
-macro; the player inspects its returned phase and chooses a continuation or a new
-bounded root. The composer neither performs that read nor promises closure. Whole
+macro; if the returned prompt remains open, supported prompt children retain that
+original root. A program requires a new root after actual phase closure. The
+composer neither performs that read nor promises closure. Whole
 mission capacity is not local root capacity. Pause, pending operations and other
 phases retain their distinct rules; the original root and all costs remain intact.
 
@@ -133,6 +134,19 @@ Memory authoring keeps its type selector at `intent.entry_type`, alongside
 software neither moves misplaced fields nor adds another memory type's fields
 to repair a draft. Pi can reject malformed arguments before MCP dispatch, so its
 union-schema diagnostics are not evidence of a missing gameplay capability.
+
+The pinned Pi1.4.0 host projects a positively identified SDK memory-validation
+refusal into diagnostics for the explicitly selected `intent.entry_type` branch.
+It uses the same SDK validator, keeps surrounding schema constraints and changes
+neither arguments nor normal validation/dispatch. Parser errors, executed MCP
+errors, unknown/ambiguous selectors and unpaired history keep their original
+path. The original SDK result and exact projection join remain in the existing
+host trace; canonical messages stay intact. Computed diagnostics are memoized
+against canonical call/result objects before image copying and remain stable in
+later request history. This is error presentation, not a source-read receipt,
+semantic validation or automatic repair. Recheck the discriminator and remove
+the helper when a Pi upgrade provides precise union diagnostics; the
+[host contract](../../tools/player_host/README.md) owns its pinned details.
 
 The existing `enactive_skill` description carries the evaluator-derived program
 result schema once in the selected tool loadout. A defensive data copy from

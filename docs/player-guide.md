@@ -143,7 +143,9 @@ denial or stop solely because a successful tool ran from a read-only host.
   marked `submission=not_submitted` has no original operation to collect. Follow
   its supported next step or correct the selected arguments under original limits.
   An open, idle prompt can require explicit Observe before a new root: inspect
-  the returned phase or `macro_closure`, then choose the next bounded input.
+  the returned phase or `macro_closure`. If `prompt_phase` remains open, use a
+  supported `scope=prompt` child under that original root. Observe does not promise
+  closure; a program still requires `new_root` and cannot replace the prompt root.
   Whole-mission remaining capacity is not the local root's remaining allowance. Errors
   during staging, dispatch or presentation retain uncertain collection unless an
   actually validated `not_admitted` refusal is preserved. A new invocation is a new
@@ -204,7 +206,13 @@ denial or stop solely because a successful tool ran from a read-only host.
   the original limits; do not replay the rejected request or assume an editor changed.
 - `enactive_context` retrieves bounded memory; `enactive_source` retrieves an exact
   retained image. `enactive_remember`/`correct` retain fallible supported knowledge
-  and Work. Software records procedure/action/result attribution; no per-key
+  and Work. Work's `stage` is a short label of at most128 characters; quantity
+  `subject` and `coverage_id` are identifiers, not phrases with spaces. Count only
+  the declared subject within supported coverage; overlapping groupings and
+  unverified quantities do not become observed totals. Pi can give focused
+  diagnostics for the explicitly selected memory type after a schema refusal;
+  correcting those fields does not establish truth or task success.
+  Software records procedure/action/result attribution; no per-key
   narrative or usage report is required. HistoricalProcedure is advisory lineage;
   its old code cannot execute. Explicitly retrieve its qualified head and support,
   then author a current revision with that exact parent and current evidence.
