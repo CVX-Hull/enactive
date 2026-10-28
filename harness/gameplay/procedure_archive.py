@@ -24,11 +24,11 @@ from .memory_ports import ProcedureLibraryError, ProcedureEpisodeRefusal
 from .contracts import canonical, ContractError, EvidenceRef, _pairs, _reject_constant, json_object, validate_json
 from .evidence import (
     MAX_FRAME_BYTES, MAX_FRAMES, MAX_BYTES, MAX_METADATA_BYTES, MAX_AGE_SECONDS, MAX_HISTORICAL_LAG_SECONDS, _check_frame_bytes,
-    _identity, _validate_observation,
+    _identity, _validate_observation, same_native_custody,
 )
 from .mission_contracts import MAX_LIBRARY_SOURCES, MissionAdmission, validate_effect_reconciliation, validate_request
 from .mission_ledger import DB_VERSION, MissionLedger, _intent, _primitive_parent, _ordinary_sequence
-from .native_receipts import compact_native_ack, validate_ordinary_mapping
+from .native_receipts import compact_native_ack, validate_ordinary_mapping, validate_published_input
 from .procedures import MAX_PROCEDURE_RECORDS, procedure_schema, project_procedures, validate_procedure
 
 MAX_DATABASE_BYTES = 64 * 1024 * 1024
@@ -126,6 +126,7 @@ class SealedProcedureArchive:
         self._requests: dict[str, dict[str, dict]] = {}
         self._entries: dict[str, dict[str, dict]] = {}
         self._links: dict[str, dict[str, set[str]]] = {}
+        self._unresolved_requests: set[tuple[str, str]] = set()
         self._dependencies: dict[str, dict[str, dict]] = {}
         self._environments: dict[str, dict | None] = {}
         try:
@@ -384,9 +385,12 @@ class SealedProcedureArchive:
             dispositions[parent] = state
             MissionLedger._check_source_transition(intent, request["epoch"], mission,
                 informing_sources=request["sources"])
-            if state == "unknown":
-                if effect is None:
-                    raise ProcedureLibraryError("Historical primitive effects remain unresolved")
+            receipt = {} if result is None else _object(result)
+            if state == "unknown" and effect is None:
+                self._unresolved_publication(mission, intent, receipt, logical_id=identity,
+                    native_id=native_id, request=request)
+                self._unresolved_requests.add((mission, parent))
+            elif state == "unknown":
                 resolution = validate_effect_reconciliation(_object(effect, 32_768))
                 proof = resolution["proof"]
                 if not set(resolution["sources"]) <= self._entries[mission].keys():
@@ -408,7 +412,6 @@ class SealedProcedureArchive:
                 raise ProcedureLibraryError("Effect resolution contradicts original primitive disposition")
             if result is None and state != "unknown":
                 raise ProcedureLibraryError("Historical terminal primitive lost its receipt")
-            receipt = {} if result is None else _object(result)
             self._mapping(mission, intent, receipt, logical_id=identity, native_id=native_id, disposition=state)
             if intent["kind"] in ("action", "key", "direct", "resume") and state in ("returned", "rejected"):
                 self._ordinary_captures(mission, intent, receipt)
@@ -420,6 +423,44 @@ class SealedProcedureArchive:
             if receipt.get("source_after") is not None:
                 linked.add(_id(receipt["source_after"]))
             self._links[mission][parent].update(linked)
+
+    def _unresolved_publication(self, mission: str, intent: dict, receipt: dict, *,
+                                logical_id: str, native_id: str | None,
+                                request: dict) -> None:
+        """Retain authenticated current publication as unknown, never as effect proof."""
+        if (self._index_version(mission) != 6 or intent["kind"] not in ("action", "key", "direct", "resume")
+                or receipt.get("transport_disposition") != "unknown"
+                or any(key not in receipt or receipt[key] is not None for key in ("native_ack", "source_after"))):
+            raise ProcedureLibraryError("Unresolved history requires current publication without ACK or after-source")
+        entries = self._entries[mission]
+        required = {intent["source_before"], intent["preflight_source"], *request["sources"]}
+        for field in ("input_observation", "revalidation"):
+            if intent[field] is not None:
+                for binding in (intent[field]["original"], intent[field]["current"]):
+                    required.add(binding["source_id"])
+                    source = entries.get(binding["source_id"])
+                    if (source is None or binding["takeover_generation"]
+                            != source["observation"]["takeover_generation"]):
+                        raise ProcedureLibraryError("Unresolved publication lost its informing observation binding")
+        if any(identity not in entries or entries[identity]["observation"]["protocol"] != 7 for identity in required):
+            raise ProcedureLibraryError("Unresolved publication requires retained current informing sources")
+        for field in ("input_observation", "revalidation"):
+            if intent[field] is None:
+                continue
+            original = entries[intent[field]["original"]["source_id"]]["observation"]
+            current = entries[intent[field]["current"]["source_id"]]["observation"]
+            if ((original["session"], original["revision"], original["boundary"]["id"]) !=
+                    (request["expected_session"], request["expected_revision"], request["expected_boundary_id"])
+                    or not same_native_custody(original, current)):
+                raise ProcedureLibraryError("Unresolved publication entry contradicts its request or native custody")
+        before = entries[intent["source_before"]]["observation"]
+        preflight = entries[intent["preflight_source"]]["observation"]
+        if not same_native_custody(before, preflight):
+            raise ProcedureLibraryError("Unresolved publication borrowed foreign informing custody")
+        validate_published_input(intent, receipt, logical_id=logical_id, native_id=native_id)
+        # Native packet frame equality belongs to the actual final preflight,
+        # not an earlier informing capture. This checks no ACK/effect endpoint.
+        self._ordinary_captures(mission, intent, receipt)
 
     def _ordinary_captures(self, mission: str, intent: dict, receipt: dict) -> None:
         """Audit retained capture linkage separately from known delivery."""
@@ -467,6 +508,8 @@ class SealedProcedureArchive:
         for identity in episode["request_ids"]:
             if identity not in self._requests[mission]:
                 raise ProcedureEpisodeRefusal("Procedure episode request is not retained")
+            if (mission, identity) in self._unresolved_requests:
+                raise ProcedureEpisodeRefusal("Procedure episode has unresolved original input effects")
             linked.update(self._links[mission][identity])
         for identity in episode["source_ids"]:
             if identity not in self._entries[mission] or identity not in linked:

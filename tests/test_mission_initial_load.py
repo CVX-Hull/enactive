@@ -8,6 +8,7 @@ from unittest.mock import patch
 from harness.gameplay.lifecycle import adopted_timeline
 from harness.mission_runtime import MissionRuntime
 from tests.test_mission_creation import MissionCreationFixture
+from tests.test_gameplay_evidence import black_png, png
 
 
 class InitialLoadTests(MissionCreationFixture, unittest.TestCase):
@@ -140,6 +141,123 @@ class InitialLoadTests(MissionCreationFixture, unittest.TestCase):
         world_id, character_id, _, _ = self.prepare_wrong_identity()
         corrected = self.correct_identity(character_id, "correct-character", self.a.scenario.character)
         return world_id, corrected["id"]
+
+    def prepare_misgrounded_world(self):
+        world_id, character_id = self.prepare_corrected_identity()
+        screen = self.runtime._registered_lifecycle.phase.identity_screen
+        mistaken_id = self.remember_identity("screen-world", "world", screen, 0)
+        return mistaken_id, world_id, character_id, screen
+
+    def test_world_on_identity_screen_can_be_replaced_by_fresh_menu_claim(self):
+        mistaken_id, world_id, character_id, _ = self.prepare_misgrounded_world()
+        unknown = deepcopy(next(p for p in self.runtime._ledger.primitive_records()
+            if p["request_id"] == "character"))
+        self.assertEqual(unknown["state"], "unknown")
+        self.assert_correctable_selection(mistaken_id, character_id)
+        proper = deepcopy(next(row["entry"] for row in self.runtime._ledger.memory_records("claim")
+            if row["entry"]["id"] == world_id))
+        proper.update(id="cross-scope-world", supersedes=[mistaken_id])
+        refused = self.run_request(dict(schema="mission/11", kind="correct", request_id="cross-scope-correct",
+            mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"], entry_type="claim", entry=proper,
+            retired_ids=[mistaken_id], reason="Replace the unsupported world grounding with the actual menu"))
+        self.assertEqual(refused["state"], "blocked", refused)
+        self.assertIn("exact scope", refused["result"]["reason"])
+        reference = next(ref for ref in self.runtime._store.historical_references
+            if ref.observation_id == proper["sources"][0])
+        fresh_id = self.remember_identity("fresh-menu-world", "world", reference, 0)
+        adopted = self.run_request(self.lifecycle("fresh-menu-adoption", "load", parent="initial-load",
+            claims=[fresh_id, character_id]))
+        self.assertEqual(adopted["state"], "completed", adopted)
+        self.assertEqual(next(p for p in self.runtime._ledger.primitive_records()
+            if p["request_id"] == "character"), unknown)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
+
+    def test_misgrounded_world_cannot_hide_corrupt_selected_pixels(self):
+        mistaken_id, _, character_id, screen = self.prepare_misgrounded_world()
+        def corrupt():
+            path = Path(screen.frame_path)
+            path.chmod(0o600)
+            path.write_bytes(b"corrupt selected world source")
+        self.assert_wrong_identity_fault(mistaken_id, character_id, corrupt)
+
+    def test_misgrounded_world_cannot_hide_corrupt_launch_pixels(self):
+        mistaken_id, _, character_id, _ = self.prepare_misgrounded_world()
+        launch_id = self.runtime._owned_launch.request_id
+        launch_source = self.runtime._ledger.request(launch_id)["result"]["source_ids"][0]
+        reference = next(ref for ref in self.runtime._store.historical_references
+            if ref.observation_id == launch_source)
+        def corrupt():
+            path = Path(reference.frame_path)
+            path.chmod(0o600)
+            path.write_bytes(b"corrupt original launch endpoint")
+        self.assert_wrong_identity_fault(mistaken_id, character_id, corrupt)
+
+    def corrupt_primitive_preflight(self, request_id):
+        primitive = next(p for p in self.runtime._ledger.primitive_records()
+            if p["request_id"] == request_id)
+        identity = primitive["intent"]["preflight_source"]
+        self.assertNotEqual(identity, primitive["intent"]["source_before"])
+        self.assertNotEqual(identity, (primitive["result"] or {}).get("source_after"))
+        reference = next(ref for ref in self.runtime._store.historical_references
+            if ref.observation_id == identity)
+        def corrupt():
+            path = Path(reference.frame_path)
+            path.chmod(0o600)
+            path.write_bytes(b"corrupt distinct primitive preflight")
+        return corrupt
+
+    def test_misgrounded_world_cannot_hide_corrupt_transition_preflight(self):
+        mistaken_id, _, character_id, _ = self.prepare_misgrounded_world()
+        self.assert_wrong_identity_fault(mistaken_id, character_id,
+            self.corrupt_primitive_preflight("character"))
+
+    def test_wrong_identity_value_cannot_hide_corrupt_transition_preflight(self):
+        world_id, character_id, _, _ = self.prepare_wrong_identity()
+        self.assert_wrong_identity_fault(world_id, character_id,
+            self.corrupt_primitive_preflight("character"))
+
+    def test_misgrounded_world_cannot_hide_corrupt_inspection_preflight(self):
+        mistaken_id, _, character_id, _ = self.prepare_misgrounded_world()
+        self.assert_wrong_identity_fault(mistaken_id, character_id,
+            self.corrupt_primitive_preflight("inspected"))
+
+    def test_wrong_identity_value_cannot_hide_corrupt_launch_pixels(self):
+        world_id, character_id, _, _ = self.prepare_wrong_identity()
+        source_id = self.runtime._ledger.request(self.runtime._owned_launch.request_id)["result"]["source_ids"][0]
+        reference = next(ref for ref in self.runtime._store.historical_references
+            if ref.observation_id == source_id)
+        def corrupt():
+            path = Path(reference.frame_path)
+            path.chmod(0o600)
+            path.write_bytes(b"corrupt launch before early semantic refusal")
+        self.assert_wrong_identity_fault(world_id, character_id, corrupt)
+
+    def test_misgrounded_world_cannot_hide_missing_launch_endpoint(self):
+        from harness.gameplay.contracts import canonical
+        mistaken_id, _, character_id, _ = self.prepare_misgrounded_world()
+        launch_id = self.runtime._owned_launch.request_id
+        def corrupt():
+            result = self.runtime._ledger.request(launch_id)["result"]
+            result["source_ids"] = ["f" * 64]
+            self.runtime._ledger._db.execute("UPDATE requests SET result=? WHERE id=?", (canonical(result), launch_id))
+        self.assert_wrong_identity_fault(mistaken_id, character_id, corrupt)
+
+    def test_misgrounded_world_cannot_hide_damaged_transition(self):
+        mistaken_id, _, character_id, _ = self.prepare_misgrounded_world()
+        self.assert_wrong_identity_fault(mistaken_id, character_id, self.remove_primitive("character"))
+
+    def test_misgrounded_world_cannot_hide_forged_claim_payload(self):
+        mistaken_id, _, character_id, _ = self.prepare_misgrounded_world()
+        self.assert_wrong_identity_fault(mistaken_id, character_id, self.change_selected_claim(mistaken_id,
+            lambda entry: entry.update(text="Unadmitted interpretation replacement")))
+
+    def test_misgrounded_world_cannot_hide_lost_current_lease(self):
+        mistaken_id, _, character_id, _ = self.prepare_misgrounded_world()
+        def lose_lease():
+            with self.controller.data_lock:
+                self.controller._mission_lease = None
+        self.assert_wrong_identity_fault(mistaken_id, character_id, lose_lease)
 
     def correct_identity(self, identity, request_id, name, *, retired=None):
         entry = deepcopy(next(row["entry"] for row in self.runtime._ledger.memory_records("claim")
@@ -362,6 +480,34 @@ class InitialLoadTests(MissionCreationFixture, unittest.TestCase):
         self.assertEqual(self.runtime.status()["lifecycle_phase"]["stage"], "awaiting_transition")
         self.observe("loaded-observe")
         return world
+
+    def test_paused_load_render_drift_preserves_explicit_identity_path(self):
+        self.bridge.visible_bytes = lambda _: black_png() if self.bridge.editor_text else png()
+        world = self.pending_initial_load()
+        self.assertEqual(self.run_request(self.lifecycle("reconciled", "load", parent="initial-load"))["state"], "completed")
+        phase = self.runtime._registered_lifecycle.phase
+        unknown = deepcopy(self.runtime._ledger.request("character"))
+        before = self.runtime.status()["spent_inputs"]
+        self.bridge.editor_text = "rendering changed after Load reconciliation"
+        self.controller.observe_mission(deadline_monotonic=None)
+        refused = self.run_request(self.control("premature-inspect", "Character", kind="inspect", parent="initial-load"))
+        self.assertEqual(refused["state"], "blocked", refused)
+        self.assertIn("explicit readmission first", refused["result"]["reason"])
+        self.assertIs(self.runtime._registered_lifecycle.phase, phase)
+        self.assertEqual(self.runtime.status()["spent_inputs"], before)
+        self.assertIsNone(self.runtime._lease)
+        self.assertEqual(self.run_request(self.lifecycle("readmitted", "load", parent="initial-load"))["state"], "completed")
+        self.assertEqual(self.runtime.status()["spent_inputs"], before + 1)
+        self.assertEqual(self.run_request(self.control("inspected", "Character", kind="inspect", parent="initial-load"))["state"], "completed")
+        screen = self.runtime._current
+        world_id = self.remember_identity("world", "world", world, 0)
+        character_id = self.remember_identity("character", "character", screen, 0)
+        self.assertEqual(self.run_request(self.control("returned", "Cancel", parent="initial-load"))["state"], "partial")
+        adopted = self.run_request(self.lifecycle("adopted", "load", parent="initial-load", claims=[world_id, character_id]))
+        self.assertEqual(adopted["state"], "completed", adopted)
+        self.assertEqual(self.runtime._ledger.request("character"), unknown)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
 
     def delivery_reconciliation(self):
         return dict(schema="mission/11", kind="reconcile", request_id="wrong-recovery",

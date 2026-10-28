@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import textwrap
 import time
 import unittest
 from unittest.mock import Mock, patch
@@ -219,7 +220,8 @@ class CampaignRunTests(unittest.TestCase):
                 "state": "completed", "result": {"admitted": True}}},
             "next_snapshot": {"mission": {"mission_id": "mission-test", "phase": "admitted"}}}
 
-    def exercise(self, *, ack=True, lost=False, deadline=False, cancel=False, nonterminal=False, signal_error=False, node="node"):
+    def exercise(self, *, ack=True, lost=False, deadline=False, cancel=False, nonterminal=False,
+            signal_error=False, node="node", terminal_cancel_ready=None):
         """Actual children stand in for controller/driver; SDK is an explicit double."""
         children, launches = [], []
         real_popen = subprocess.Popen
@@ -235,39 +237,66 @@ class CampaignRunTests(unittest.TestCase):
         player.snapshot.return_value = ({"snapshot_id": "snap", "mission": {"mission_id": "mission-test",
             "phase": "active" if nonterminal else "completed"}}, None)
         signals = []
+        real_signals = run._signals
+        events = self.root / ".runtime/bridge/cleanup-events.jsonl"
         @contextmanager
         def cancellation():
-            yield signals
+            if terminal_cancel_ready is not None:
+                with real_signals() as interrupted:
+                    yield interrupted
+            else:
+                yield signals
         def popen(argv, **kwargs):
             role = "controller" if "harness" in argv else "driver"
             launches.append((role, argv, kwargs["env"].copy()))
             if role == "controller":
-                code = ("import signal,time,pathlib,json; "
-                    "signal.signal(signal.SIGINT,lambda *a: exit(0)); time.sleep(30)")
+                evidence = shutdown
+                value = {"controller_boot_id": boot, "grants_authority": False,
+                    "cleanup": {"writer_settled": True, "native_absence_verified": True}}
             else:
                 if cancel:
                     signals.append("SIGTERM")
                 if lost:
                     children[0].kill()
                     children[0].wait(timeout=2)
-                report = self.run / "preparation/driver-report.json"
-                report.write_text(json.dumps({"hosts": [{"returncode": 0}]}))
-                code = "import time; time.sleep(30)" if deadline or cancel or signal_error else "pass"
+                evidence = self.run / "preparation/driver-report.json"
+                value = {"hosts": [{"returncode": 0}]}
+                if terminal_cancel_ready is None:
+                    evidence.write_text(json.dumps(value))
+            ready = self.root / f"{role}.ready"
+            ready.unlink(missing_ok=True)
+            code = textwrap.dedent(f"""\
+                import json, pathlib, signal, time
+                def cleanup(*args):
+                    # A second SIGINT during cleanup must remain observable.
+                    signal.signal(signal.SIGINT, signal.default_int_handler)
+                    with pathlib.Path({str(events)!r}).open('a') as stream:
+                        stream.write({role + '-cleanup-start'!r} + '\\n')
+                    time.sleep(.2)
+                    pathlib.Path({str(evidence)!r}).write_text(json.dumps({value!r}))
+                    with pathlib.Path({str(events)!r}).open('a') as stream:
+                        stream.write({role + '-cleanup-complete'!r} + '\\n')
+                    raise SystemExit(0)
+                signal.signal(signal.SIGINT, cleanup)
+                pathlib.Path({str(ready)!r}).touch()
+                time.sleep(30)
+                """)
+            if role == "driver" and not (deadline or cancel or signal_error or terminal_cancel_ready is not None):
+                code = f"import pathlib; pathlib.Path({str(ready)!r}).touch()"
             child = real_popen([sys.executable, "-c", code], **kwargs)
             children.append(child)
+            ready_deadline = time.monotonic() + 3
+            while not ready.exists() and child.poll() is None and time.monotonic() < ready_deadline:
+                time.sleep(.01)
+            self.assertTrue(ready.exists(), f"{role} did not install its signal handler")
+            if role == "driver" and terminal_cancel_ready is not None:
+                terminal_cancel_ready.touch()
             if role == "driver" and signal_error:
                 child.send_signal = Mock(side_effect=OSError("fixture private failure body"))
             if role == "controller":
                 discovery.write_text(json.dumps({"controller_boot_id": boot,
                     "port": 8766, "controller_pid": child.pid}))
             return child
-        real_stop = run._stop_child
-        def stop(child, **kwargs):
-            receipt = real_stop(child, **kwargs)
-            if child is children[0] and not lost:
-                shutdown.write_text(json.dumps({"controller_boot_id": boot, "grants_authority": False,
-                    "cleanup": {"writer_settled": True, "native_absence_verified": True}}))
-            return receipt
         if deadline or signal_error:
             self.profile["begin_normal_ending_seconds"] = .05
             self.profile["complete_normal_ending_before_seconds"] = .15
@@ -275,8 +304,7 @@ class CampaignRunTests(unittest.TestCase):
         before = {path.name: path.read_bytes() for path in self.frozen.iterdir()}
         try:
             with patch.object(run.subprocess, "Popen", side_effect=popen), patch.object(run, "_DeadlineClient", return_value=client), patch.object(
-                    run, "PlayerTools", return_value=player), patch.object(run, "_stop_child", side_effect=stop), patch.object(
-                    run, "_signals", cancellation):
+                    run, "PlayerTools", return_value=player), patch.object(run, "_signals", cancellation):
                 receipt = run.run_campaign(root=self.root, mission_id="mission-test", node=node)
             self.assertEqual(before, {path.name: path.read_bytes() for path in self.frozen.iterdir()})
             self.assertEqual(sum(call.args[0] == "enactive_start" for call in player.call.call_args_list), 1)
@@ -311,6 +339,67 @@ class CampaignRunTests(unittest.TestCase):
             run.run_campaign(root=self.root, mission_id="mission-test")
         for path in (self.run / "preparation").iterdir():
             self.assertNotIn(b"fixture-private-value", path.read_bytes())
+
+    @unittest.skipUnless(os.name == "posix", "Terminal process-group cancellation requires POSIX")
+    def test_terminal_sigint_settles_isolated_driver_then_controller(self):
+        ready = self.root / "custodian.ready"
+        unrelated_ready = self.root / "unrelated.ready"
+        # Only this retained fixture session receives the terminal-style broadcast.
+        code = textwrap.dedent("""\
+            import json, sys
+            from pathlib import Path
+            from tests.test_campaign_run import CampaignRunTests
+            fixture = CampaignRunTests()
+            fixture.setUp()
+            try:
+                receipt, _ = fixture.exercise(terminal_cancel_ready=Path(sys.argv[1]))
+                events = (fixture.root / '.runtime/bridge/cleanup-events.jsonl').read_text().splitlines()
+                print(json.dumps({'receipt': receipt, 'events': events}))
+            finally:
+                fixture.doCleanups()
+            """)
+        unrelated_code = (f"import pathlib,time; pathlib.Path({str(unrelated_ready)!r}).touch(); "
+            "time.sleep(30)")
+        children = []
+        started = time.monotonic()
+        try:
+            unrelated = subprocess.Popen([sys.executable, "-c", unrelated_code], start_new_session=True)
+            children.append(unrelated)
+            custodian = subprocess.Popen([sys.executable, "-c", code, str(ready)],
+                cwd=Path(__file__).resolve().parents[1], start_new_session=True,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            children.append(custodian)
+            ready_deadline = time.monotonic() + 5
+            while not (ready.exists() and unrelated_ready.exists()) and time.monotonic() < ready_deadline:
+                self.assertIsNone(custodian.poll(), "Custodian fixture exited before readiness")
+                self.assertIsNone(unrelated.poll(), "Unrelated fixture exited before readiness")
+                time.sleep(.01)
+            self.assertTrue(ready.exists() and unrelated_ready.exists(), "Fixture readiness timed out")
+            self.assertEqual(os.getsid(custodian.pid), custodian.pid)
+            self.assertEqual(os.getpgid(custodian.pid), custodian.pid)
+            os.killpg(custodian.pid, signal.SIGINT)
+            output, errors = custodian.communicate(timeout=5)
+            self.assertEqual(custodian.returncode, 0, errors)
+            result = json.loads(output)
+            receipt = result["receipt"]
+            self.assertEqual(receipt["signals"], ["SIGINT"])
+            self.assertEqual(receipt["outcome"], "incomplete")
+            self.assertTrue(receipt["native_absence_verified"])
+            self.assertTrue(receipt["deciding_hosts_quiescent"])
+            self.assertEqual(receipt["shutdown_receipt"]["controller_boot_id"], receipt["controller_boot_id"])
+            for role in ("driver", "controller"):
+                self.assertEqual(receipt["children"][role]["returncode"], 0)
+                self.assertEqual(receipt["children"][role]["signals"], ["SIGINT"])
+                self.assertFalse(receipt["children"][role]["exit_unresolved"])
+            self.assertEqual(result["events"], ["driver-cleanup-start", "driver-cleanup-complete",
+                "controller-cleanup-start", "controller-cleanup-complete"])
+            self.assertIsNone(unrelated.poll())
+            self.assertLess(time.monotonic() - started, 10)
+        finally:
+            for child in children:
+                if child.poll() is None:
+                    child.kill()
+                child.communicate(timeout=3)
 
     def test_exclusive_artifact_collision_never_launches_controller(self):
         path = self.run / "preparation/custodian-receipt.json"

@@ -11,7 +11,8 @@ Lifecycle source policy distinguishes the registered action from incidental pixe
 | Private checkpoint/intent | Refresh and dispatch precondition |
 | --- | --- |
 | Owned normal Save at `save_start` | `native_state`; preserve the original root, first-normal identity, budgets/deadlines and interaction lease through refresh, then perform the existing single checked lifecycle rotation before Save dispatch. |
-| Creation/load `awaiting_identity` at normal play | `native_state` for provisional refresh, its separately charged registered Resume and entry to identity inspection. Original committed transition/effect proof, owned child, actor/epoch/Pause lineage and subsequent identity Claims/adoption remain mandatory. |
+| Creation/load `awaiting_identity` at normal play | `native_state` for provisional refresh, its separately charged registered Resume and entry to identity inspection. A premature paused inspection can explain the separate Resume prerequisite without comparing incidental live PNGs; it authenticates retained provenance and sends no input. Original committed transition/effect proof, owned child, actor/epoch/Pause lineage and subsequent identity Claims/adoption remain mandatory. |
+| Live claimed handoff at normal play | `native_state` for its bounded readmission refresh and separately charged Resume only. Issued checkpoint/Claim, private phase, actor/epoch, boot/Pause/takeover, original limits and verified returned same-session Resume remain mandatory; history grants no consent. |
 | Setup forms/rows, identity screen, explicit confirmations and other lifecycle checkpoints | Existing exact-PNG policy; a normal-context rule cannot authorize a different stage or operation. |
 | Ordinary create/load/save menu controls | InputObservation at entry and ordinary dispatch at actual preflight; no pixel or menu-label equivalence. Original custody, root limits, click geometry and text structural stops remain. |
 
@@ -67,6 +68,14 @@ checks. Only a positively typed semantic identity refusal can preserve the phase
 phase and influencing Claims' grounding bytes without refreshing them. Missing or
 contradictory trusted requests, receipts, frames, storage and candidate timeline
 failures retire the phase and lease; they are not caller-correction feedback.
+World-source applicability uses the same owned-root menu/launch-to-first-normal
+interval and takeover predicate in live selection and historical projection. A
+healthy but unsuitable selected source can be replaced explicitly without losing
+the phase. All launch endpoints, transition/first-normal and selected sources,
+plus each transition/identity-inspection input's distinct preflight bytes and dispatch
+binding are authenticated before that classification; missing/mutated history remains
+fatal, including when another semantic mistake is found first. Exact-scope Claim
+correction is unchanged: grounding in another scope needs a fresh authored Claim.
 Reopen verifies history but reconstructs no process handle, phase, lineage, lease
 or queued input.
 Native007 qualified the selected actual creation/save/load path. The later

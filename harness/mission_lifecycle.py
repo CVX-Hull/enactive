@@ -585,8 +585,15 @@ class RegisteredLifecycle:
             self.guard(work, phase, diagnostic=True)
             self._binding_request(work, phase.checkpoint)
             current, _ = r._store.inspect_current_boundary(**r._clocks())
-            if current != phase.checkpoint or r.controller._frame_sha256(r._live()[0]) != current.frame_sha256:
-                raise EvidenceError("Paused identity request lost its current source or exact native pixels")
+            if current != phase.checkpoint:
+                raise EvidenceError("Paused identity request lost its exact retained checkpoint")
+            # This normal-context prerequisite refusal sends no input and does
+            # not refresh evidence. The diagnostic guard already checks complete
+            # native state; incidental current pixels cannot revoke its phase.
+            # Authenticate the launch/terminal bytes influencing that guard too.
+            from .gameplay.lifecycle import owned_transition_sources
+            transition = r._ledger.request(phase.transition_request)["result"]["lifecycle_transition"]
+            owned_transition_sources(r._ledger, r._store, transition)
             for identity in data["sources"]:
                 self._source(identity)
             r._deadline(work, current)
@@ -1094,6 +1101,14 @@ class RegisteredLifecycle:
             first_normal_source_id=None if phase.first_normal is None else phase.first_normal.observation_id,
             inspection_source_id=None if phase.identity_screen is None else phase.identity_screen.observation_id,
             saved_id=phase.saved_checkpoint, require_inspection=phase.stage == "awaiting_adoption")
+        if phase.transition_request is not None:
+            from .gameplay.lifecycle import owned_transition_sources
+            transition = r._ledger.request(phase.transition_request)["result"]["lifecycle_transition"]
+            owned_transition_sources(r._ledger, r._store, transition)
+        if phase.identity_inspect is not None:
+            from .gameplay.lifecycle import identity_inspection_sources
+            identity_inspection_sources(r._ledger, r._store, inspection_id=phase.identity_inspect,
+                first=phase.first_normal, screen=phase.identity_screen)
         if provisional:
             from .gameplay.lifecycle import initial_load_menu_sources
             initial_load_menu_sources(r._ledger, r._store, transition_id=phase.transition_request,
@@ -1164,8 +1179,13 @@ class RegisteredLifecycle:
                 "session": phase.first_normal.session, "coordinate_epoch": sessions.index(phase.first_normal.session)},
             "grants_authority": False}
         result = {"normal_adoption": proof, "phase": self.receipt(phase, "complete"), "grants_authority": False}
+        from .gameplay.lifecycle import world_identity_source_refusal
         try:
             r._ledger._check_normal_adoption(data["request_id"], data, proof)
+            reason = world_identity_source_refusal(r._ledger, r._store,
+                request_id=data["request_id"], adoption=proof)
+            if reason is not None:
+                raise AdoptionIdentityRefusal(reason)
         except AdoptionIdentityRefusal as exc:
             return self._adoption_refusal(work, phase, f"Adoption not committed: {exc}")
         from .gameplay.lifecycle import candidate_timeline

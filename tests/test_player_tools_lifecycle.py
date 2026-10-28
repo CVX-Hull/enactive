@@ -805,7 +805,8 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
                     case.doCleanups()
 
     def test_premature_identity_refusal_does_not_conceal_integrity_or_budget_faults(self):
-        for fault in ("uncommitted_transition", "wrong_actor", "takeover", "changed_pixels",
+        for fault in ("uncommitted_transition", "wrong_actor", "takeover", "retained_pixels",
+                      "terminal_preflight", "launch_pixels", "changed_scene", "changed_geometry",
                       "wrong_source", "process_lost", "published", "retention", "active_ledger", "root_budget"):
             with self.subTest(fault=fault):
                 case = StructuredLifecycleTests("test_premature_identity_inspection_preserves_phase_for_explicit_readmission")
@@ -823,11 +824,31 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
                         elif fault == "takeover":
                             with case.controller.data_lock:
                                 case.controller.state["takeover_generation"] += 1
-                        elif fault == "changed_pixels":
-                            # Corrupt only the disposable fixture's native frame,
-                            # not a historical/native mission archive.
-                            state = case.runtime._live()[0]
-                            Path(case.controller.bridge / state["frame"]).write_bytes(b"\x89PNG\r\n\x1a\nchanged live pixels")
+                        elif fault in ("retained_pixels", "terminal_preflight", "launch_pixels"):
+                            if fault == "retained_pixels":
+                                ref = owner.checkpoint
+                            elif fault == "terminal_preflight":
+                                proof = case.runtime._ledger.request(owner.transition_request)["result"]["lifecycle_transition"]
+                                sid = case.runtime._ledger.primitive(proof["terminal_logical_id"])["intent"]["preflight_source"]
+                                ref = next(r for r in case.runtime._store.historical_references if r.observation_id == sid)
+                                case.assertNotEqual(ref, owner.checkpoint)
+                            else:
+                                ref = owner.launch.checkpoint
+                                case.assertNotEqual(ref, owner.checkpoint)
+                            # Corrupt only a disposable fixture's immutable archive.
+                            frame = Path(ref.frame_path)
+                            frame.unlink()
+                            frame.write_bytes(b"corrupt retained provenance")
+                        elif fault == "changed_scene":
+                            with case.controller.data_lock:
+                                case.controller.state["scene"]["position"][0] += 1
+                            case.bridge.value["scene"]["position"][0] += 1
+                            case.controller.observe_mission(deadline_monotonic=None)
+                        elif fault == "changed_geometry":
+                            with case.controller.data_lock:
+                                case.controller.state["frame_geometry"]["output_width"] += 1
+                            case.bridge.value["frame_geometry"]["output_width"] += 1
+                            case.controller.observe_mission(deadline_monotonic=None)
                         elif fault == "wrong_source":
                             request["sources"] = [world.observation_id]
                         elif fault == "process_lost":
@@ -1003,13 +1024,27 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         self.assertEqual(self.runtime._ledger.request("character-yes"), original_unknown)
 
     def test_premature_identity_inspection_preserves_phase_for_explicit_readmission(self):
-        _, original_unknown = self.paused_identity()
+        self.assert_premature_identity_inspection()
+
+    def test_paused_identity_prerequisite_refusal_tolerates_normal_render_drift(self):
+        self.assert_premature_identity_inspection(pixel_drift=True)
+
+    def assert_premature_identity_inspection(self, *, pixel_drift=False):
+        self.bridge.visible_bytes = lambda _: black_png() if self.bridge.editor_text else png()
+        world, original_unknown = self.paused_identity()
         self.observe("identity-checkpoint")
         phase = self.runtime._registered_lifecycle.phase
         before = self.runtime.status()
         root_deadline = self.runtime._ledger.request("create")["deadline"]
         delivered = len(self.bridge.delivered)
         request = self.control("premature-identity-inspect", "Character", kind="inspect")
+        if pixel_drift:
+            # Inject a second valid rendered frame without changing native state
+            # or refreshing the retained checkpoint. This refusal sends no input.
+            self.bridge.editor_text = "normal rendering changed while paused"
+            self.controller.observe_mission(deadline_monotonic=None)
+            self.assertNotEqual(self.controller._frame_sha256(self.runtime._live()[0]),
+                                phase.checkpoint.frame_sha256)
         blocked = self.run_request(request)
         self.assertEqual(blocked["state"], "blocked", blocked)
         self.assertIn("enactive_lifecycle", blocked["result"]["reason"])
@@ -1029,6 +1064,12 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         inspected = self.run_request(self.control("identity-inspect-after-readmit", "Character", kind="inspect"))
         self.assertEqual(inspected["state"], "completed", inspected)
         self.assertEqual(self.runtime.status()["spent_inputs"], before["spent_inputs"] + 2)
+        screen = self.runtime._current
+        world_id = self.remember_identity("world", "world", world, 0)
+        character_id = self.remember_identity("character", "character", screen, 0)
+        self.assertEqual(self.run_request(self.control("identity-return", "Cancel"))["state"], "partial")
+        adopted = self.run_request(self.lifecycle("adopt-after-prerequisite", parent="create", claims=[world_id, character_id]))
+        self.assertEqual(adopted["state"], "completed", adopted)
         self.assertEqual(self.runtime._ledger.request("character-yes"), original_unknown)
         with self.runtime._ledger._mutex:
             self.runtime._ledger._verify(self.a)

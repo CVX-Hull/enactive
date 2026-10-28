@@ -35,7 +35,7 @@ from .gameplay.contracts import canonical
 from .gameplay.mission_contracts import VERSION, MissionAdmission, InputObservation, SourceBinding, SourceRevalidation, make_admission_refusal, validate_submission
 from .gameplay.memory_contracts import MemoryRequestRefusal
 from .gameplay.mission_ledger import BudgetError, LedgerError, LocalBudgetRefusal, MissionLedger, RequestAdmissionRefusal, RequestNotFound, TERMINAL
-from .gameplay.native_receipts import compact_native_ack
+from .gameplay.native_receipts import compact_native_ack, matches_rejected_ack, validate_ordinary_mapping
 from .gameplay.navigation import NavigationIntent, NavigationOutcome, NavigationSkill, ObservedMap
 from .gameplay.input_contracts import ControlIntent, ControlOutcome
 from .gameplay.semantic_controls import SemanticControlSkill
@@ -82,6 +82,7 @@ class _PromptPhase:
     takeover_generation: int
     quantity_editor: bool = False
     observation_generation: int | None = None
+    observation_rejection: str | None = None
 
 
 @dataclass(frozen=True)
@@ -701,7 +702,8 @@ class MissionRuntime:
         return advanced
 
     def _open_prompt(self, work: _Work, original: EvidenceRef, after: EvidenceRef,
-                     mark: tuple[str, int], *, observation_generation: int | None = None) -> _PromptPhase:
+                     mark: tuple[str, int], *, observation_generation: int | None = None,
+                     observation_rejection: str | None = None) -> _PromptPhase:
         state, _, boot = self._check_lease()
         ledger = self._ledger.snapshot(now=self._wall())
         if (mark != self._operator_mark() or boot != mark[0] or ledger["epoch"] != work.request["epoch"]
@@ -713,7 +715,7 @@ class MissionRuntime:
         phase = _PromptPhase(work.request.get("phase_id") or work.request["request_id"], after,
             work.game_anchor or original, ledger["player_id"],
             ledger["epoch"], boot, mark[1], state["takeover_generation"],
-            observation_generation=observation_generation)
+            observation_generation=observation_generation, observation_rejection=observation_rejection)
         with self._metadata:
             self._check_cancelled(work)
             if self._prompt_phase is not None:
@@ -723,7 +725,7 @@ class MissionRuntime:
         return phase
 
     def _await_current_observation(self, work: _Work, before: EvidenceRef, original: EvidenceRef,
-                                   mark: tuple[str, int], reason: str) -> None:
+                                   mark: tuple[str, int], reason: str, *, rejected_logical_id: str | None = None) -> None:
         """Keep only the existing scope's read-only lineage across this rotation."""
         _, generation, _ = self._check_lease()
         binding = self._bindings[before.observation_id][1]
@@ -737,11 +739,12 @@ class MissionRuntime:
         phase = self._prompt_phase
         if phase is None:
             phase = self._open_prompt(work, original, before, mark,
-                                      observation_generation=generation)
+                                      observation_generation=generation, observation_rejection=rejected_logical_id)
         else:
             if phase.checkpoint != before:
                 raise EvidenceError("Read-only observation cannot replace an unrelated prompt checkpoint")
-            phase = replace(phase, observation_generation=generation, quantity_editor=False)
+            phase = replace(phase, observation_generation=generation, quantity_editor=False,
+                            observation_rejection=rejected_logical_id)
             with self._metadata:
                 self._check_cancelled(work)
                 self._prompt_phase = phase
@@ -795,13 +798,34 @@ class MissionRuntime:
         return SourceBinding(reference.observation_id, self._admission.mission_id, ledger["epoch"],
             ledger["player_id"], boot, generation, state["takeover_generation"], self._store.authority_generation())
 
-    def _capture_custody(self, observed: dict, state: dict | None) -> None:
+    def _rejected_observation_ack(self, phase: _PromptPhase) -> dict | None:
+        """Resolve one private read-only pointer; never recover it on reopen."""
+        if phase.observation_rejection is None:
+            return None
+        primitive = self._ledger.primitive(phase.observation_rejection)
+        parent = self._ledger.request(primitive["request_id"])["request"]
+        receipt = primitive["result"]
+        if (phase.observation_generation is None or primitive["state"] != "rejected"
+                or primitive["intent"]["kind"] not in ("action", "key", "direct")
+                or parent["kind"] != "skill" or parent["epoch"] != phase.epoch
+                or (parent.get("phase_id") or parent["request_id"]) != phase.root_id
+                or receipt is None or receipt["source_before"] != phase.checkpoint.observation_id
+                or receipt["source_after"] is not None or primitive["effect"] is not None
+                or receipt["dispatch_binding"]["actor_id"] != phase.actor_id
+                or receipt["dispatch_binding"]["controller_boot_id"] != phase.controller_boot_id):
+            raise LedgerError("Pending observation lost its exact rejected primitive")
+        validate_ordinary_mapping(primitive["intent"], receipt, logical_id=phase.observation_rejection,
+                                 native_id=primitive["native_id"], disposition="rejected")
+        return receipt["native_ack"]
+
+    def _capture_custody(self, observed: dict, state: dict | None, *, rejected_ack: dict | None = None) -> None:
         """A captured sample survives healthy visible change, never custody loss."""
         if state is None:
             raise EvidenceError("Current native custody is unavailable")
-        for value in (observed, state):
+        for index, value in enumerate((observed, state)):
             validate_state(value)
-            if value["status"] != "ready" or value["error"] or not value["frame_ok"]:
+            cached_rejection = index == 1 and matches_rejected_ack(value, rejected_ack)
+            if ((value["status"] != "ready" or value["error"]) and not cached_rejection or not value["frame_ok"]):
                 raise EvidenceError("Captured or current native observation is unhealthy")
         if not same_native_custody(observed, state):
             raise EvidenceError("Captured source crossed native custody or immutable capture identity")
@@ -973,9 +997,14 @@ class MissionRuntime:
         if self._store.source_status(phase.checkpoint) != "retained":
             raise EvidenceError("Observe prompt authority lost: source_retention")
         before = self._store.observation(phase.checkpoint)
+        rejected_ack = self._rejected_observation_ack(phase) if pending and reference is None else None
+        cached_rejection = matches_rejected_ack(state, rejected_ack)
+        if cached_rejection:
+            self._capture_custody(before, state, rejected_ack=rejected_ack)
         if (phase.checkpoint.boundary_kind not in (("normal_play", "menu") if pending else ("menu",))
                 or state["session"] != phase.checkpoint.session
-                or state["status"] != "ready" or state["error"] or state["paused"] or not state["frame_ok"]
+                or (state["status"] != "ready" or state["error"]) and not cached_rejection
+                or state["paused"] or not state["frame_ok"]
                 or state["boundary"]["kind"] not in ("menu", "normal_play")
                 or state["takeover_generation"] != phase.takeover_generation
                 or state["boundary"]["control_generation"] != before["boundary"]["control_generation"]
@@ -1071,7 +1100,7 @@ class MissionRuntime:
                     self._prompt_phase = None
             return result
         advanced = replace(phase, checkpoint=reference, quantity_editor=phase.quantity_editor if relation else False,
-                           observation_generation=None)
+                           observation_generation=None, observation_rejection=None)
         with self._metadata:
             self._check_cancelled(work)
             if self._prompt_phase is not phase:
@@ -1981,7 +2010,8 @@ class MissionRuntime:
         self._prompt_guard(work.request, before)
 
     def _ordinary_refusal_guard(self, work: _Work, before: EvidenceRef,
-                                logical_id: str | None = None, *, command_work: int = 0) -> bool:
+                                logical_id: str | None = None, *, command_work: int = 0,
+                                rejected_ack: dict | None = None) -> bool:
         """Shared health proof for ordinary nondelivery, never input permission."""
         data, phase = work.request, self._prompt_phase
         if (data["kind"] != "skill"
@@ -1990,9 +2020,10 @@ class MissionRuntime:
                 or self._registered_recovery.continuation is not None):
             return False
         self._dispatch_authority_guard(work, before, local_limits=False)
-        native = self.controller.check_mission_refusal(self._lease, self._lease.pause_generation, command_work=command_work)
+        native = self.controller.check_mission_refusal(self._lease, self._lease.pause_generation,
+            command_work=command_work, rejected_ack=rejected_ack)
         observed = self._store.observation(before)
-        self._capture_custody(observed, native)
+        self._capture_custody(observed, native, rejected_ack=rejected_ack)
         state = self._ledger.snapshot(now=self._wall())
         if not state["clock_valid"] or state["unreconciled"]:
             raise LedgerError("Local refusal cannot hide clock faults or unresolved delivery")
@@ -2321,9 +2352,13 @@ class MissionRuntime:
                        self._prompt_phase.game_anchor if self._prompt_phase is not None else original)
         control = isinstance(proposal, ActivityIntent)
         ordinary = proposal.kind == "direct"
-        lifecycle_image = lifecycle is not None and not (
+        lifecycle_native_state = (
             isinstance(lifecycle, NormalPhase)
-            and self._registered_lifecycle.source_rule(lifecycle) == "native_state")
+            and self._registered_lifecycle.source_rule(lifecycle) == "native_state"
+            or isinstance(lifecycle, HandoffPhase) and isinstance(proposal, _ResumeIntent)
+            and work.request["kind"] == "readmit" and work.request["mode"] == "handoff"
+            and self._registered_handoff.source_rule(lifecycle) == "native_state")
+        lifecycle_image = lifecycle is not None and not lifecycle_native_state
         image_informed = not ordinary and (work.request.get("perception") is not None
                           or lifecycle_image or activity is not None)
         rule = "ordinary_input" if ordinary else "exact_png_bytes" if image_informed else "native_state"
@@ -2630,14 +2665,15 @@ class MissionRuntime:
                 self._stop_after_failure(current_error)
         typed_refusal = (envelope_valid and not control and lifecycle is None and activity is None
                          and not raw["published"] and raw["result"].get("status") == "rejected")
-        if (ordinary and envelope_valid and disposition == "rejected" and raw["published"] and prepared
+        if (envelope_valid and disposition == "rejected" and raw["published"] and prepared
                 and after is None and lifecycle is None and activity is None
                 and not processing_fatal and evidence_loss is None):
             # An authenticated native refusal settled no input, but the lease
             # rotation already happened. Preserve only read-only lineage after
             # re-proving healthy custody; never retry or manufacture an ACK frame.
-            if self._ordinary_refusal_guard(work, proposal.before, proposal.logical_id):
-                self._await_current_observation(work, proposal.before, original, operator_mark, reason)
+            if self._ordinary_refusal_guard(work, proposal.before, proposal.logical_id, rejected_ack=native_ack):
+                self._await_current_observation(work, proposal.before, original, operator_mark, reason,
+                                                rejected_logical_id=proposal.logical_id)
         if (ordinary and envelope_valid or local_nonpublication or typed_refusal) and disposition == "not_dispatched":
             live = self._live()
             if processing_fatal or evidence_loss is not None:
@@ -2834,11 +2870,11 @@ class MissionRuntime:
                         outcome = ControlOutcome("partial", "Known input returned; explicit Observe required before a new input decision",
                             proposed_count, tuple(dict.fromkeys((original, proposal.before, feedback.after))), None, True,
                             "ordinary_input", input_observation=relation if isinstance(relation, InputObservation) else None)
-                    elif feedback.transport_disposition == "not_dispatched":
+                    elif feedback.transport_disposition in ("not_dispatched", "rejected"):
                         # _dispatch authenticated this read-only scope. Passive
                         # semantic attribution requires fresh current evidence;
-                        # it cannot turn positively known nondelivery into an
-                        # unknown input merely because the old entry aged.
+                        # it cannot turn positively known nondelivery (including
+                        # a native rejection) into unknown when the entry aged.
                         outcome = ControlOutcome("partial" if proposed_count > 1 else "blocked", feedback.reason,
                             proposed_count, tuple(dict.fromkeys((*skill._sources, original, proposal.before))), None, proposed_count > 1,
                             "ordinary_input" if data["skill_kind"] in ("direct", "program") else
@@ -2972,7 +3008,7 @@ class MissionRuntime:
                 live = self._live()[0]
                 self._capture_custody(observed, live)
                 changed = current != feedback.after or not same_native_state(observed, live)
-            if (feedback.transport_disposition == "not_dispatched" and self._prompt_phase is not None
+            if (feedback.transport_disposition in ("not_dispatched", "rejected") and self._prompt_phase is not None
                     and self._prompt_phase.observation_generation is not None):
                 outcome = NavigationOutcome("partial" if skill._steps else "blocked", feedback.reason,
                     skill._steps, skill._proposals, skill._position,

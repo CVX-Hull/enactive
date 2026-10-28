@@ -23,8 +23,9 @@ The live reader accepts only immutable `advisory-export/1` artifacts. Engineerin
 exports sealed current missions before admission; an explicit offline migration
 can preserve the selected native6/store5 baseline without rewriting its original
 bytes. The importer independently binds captured data to those originals and
-checks settlement, source and ancestry. Historical procedures use a distinct
-advisory node and images use `advisory-source/1`; neither is a current observation
+checks terminal closure, source and ancestry, preserving authenticated current
+unknown publications without inventing an effect. Historical procedures use a
+distinct advisory node and images use `advisory-source/1`; neither is a current observation
 or executable routine. New missions use native7/store6 evidence and ledger13.
 The [protocol](../contracts/gameplay-evidence.md#passive-gameplay-records-and-evidence) owns migration
 and historical-source limits.
@@ -114,8 +115,13 @@ deadline. No maintained subgoal tree or additional permanent model tier is assum
 
 ## Failure, bounds and ownership
 
-Unknown delivery and disputed/lost sources remain explicit. Corrections preserve
-history and conflicting premises. A complete handoff Work packet must fit its
+Unknown delivery and disputed/lost sources remain explicit. A sealed current donor
+can retain a fully authenticated unknown publication as advisory data while its
+ACK/effect remain unknown; the [import contract](../contracts/historical-import.md)
+keeps that eligibility separate from current input and the legacy baseline.
+Unresolved requests cannot qualify procedure support/counterexample episodes;
+unrelated validated history remains available. Corrections preserve history and
+conflicting premises. A complete handoff Work packet must fit its
 declared bounds before relinquishing the player lease. Reopen can validate history
 but cannot restore private phases, consent or a fresh observation.
 

@@ -12,14 +12,14 @@ import pytest
 
 from harness.gameplay.contracts import ContractError, EvidenceRef
 from harness.gameplay.evidence import EvidenceStore, MAX_FRAMES, _identity
-from harness.gameplay.mission_contracts import LearningPolicy
+from harness.gameplay.mission_contracts import LearningPolicy, InputObservation, SourceBinding
 from harness.gameplay.contracts import canonical
 from harness.gameplay.procedure_archive import SealedProcedureArchive
 from harness.gameplay.procedures import project_procedures
 from tests.test_mission_ledger import intent, known_receipt
-from tests.test_gameplay_evidence import observation, png
+from tests.test_gameplay_evidence import observation, png, black_png
 from tests.test_procedures import procedure, successor
-from tests.test_mission_contracts import admission
+from tests.test_mission_contracts import admission, skill
 
 
 def digest(data):
@@ -373,7 +373,83 @@ class SealedProcedureArchiveTests(unittest.TestCase):
             canonical(proposed), "native-uuid-1", "returned", canonical(receipt), None))
         self.assertEqual(self.library(pin).records(), (record,))
 
-    def test_unknown_primitive_needs_settled_effect_and_live_primitive_refuses(self):
+    def unresolved_archive(self, mission="mission-a"):
+        directory, original_id, record, _ = self.archive(mission)
+        index_path = directory / "evidence/evidence.json"
+        index = json.loads(index_path.read_bytes())
+        captures = []
+        for number, content in ((2, png()), (3, black_png())):
+            item = deepcopy(index["entries"][0])
+            item["observation"].update(frame=f"frame-{mission}-{number}.png",
+                timestamp_ms=item["observation"]["timestamp_ms"] + number)
+            identity = _identity(item["observation"])
+            frame = directory / "evidence/frames" / (identity + ".png")
+            frame.write_bytes(content)
+            item["reference"].update(observation_id=identity,
+                timestamp_ms=item["observation"]["timestamp_ms"], frame_path=str(frame), frame_sha256=digest(content))
+            item["retention"] = "preflight" if number == 3 else "current"
+            index["entries"].append(item)
+            captures.append(item)
+        current_id, checked_id = (item["reference"]["observation_id"] for item in captures)
+        original = SourceBinding(original_id, mission, 0, "player-test", "controller-test", 0, 0, 1)
+        current = SourceBinding(current_id, mission, 0, "player-test", "controller-test", 0, 0, 2)
+        physical = dict(type="key", key="ESC", modifiers=[])
+        proposed = intent(kind="direct", value=physical, source_before=current_id, preflight_source=checked_id,
+            expected_session=mission, expected_revision=1, input_observation=InputObservation(original, current).to_dict())
+        receipt = known_receipt(proposed=proposed, frame=captures[-1]["observation"]["frame"])
+        receipt.update(transport_disposition="unknown", native_ack=None, source_after=None, received_monotonic=None)
+        request = skill(request_id="uncertain-step", mission_id=mission, skill_kind="direct",
+            goal=dict(input=physical, intent="Dismiss a visible screen",
+                expected="The visible screen changes", interrupt_allowed=False),
+            sources=[original_id], expected_session=mission, expected_revision=1,
+            expected_boundary_id=index["entries"][0]["observation"]["boundary"]["id"],
+            limits=dict(primitives=1, wall_seconds=60, game_seconds=60))
+        payload = canonical(request)
+        self.edit_db(directory, "INSERT INTO requests VALUES (?,?,?,?,?)",
+            ("uncertain-step", payload, digest(payload.encode()), "unknown",
+             canonical({"source_ids": [current_id, checked_id], "grants_authority": False})))
+        self.edit_db(directory, "INSERT INTO primitives VALUES (?,?,?,?,?,?,?)",
+            ("logical-1", "uncertain-step", canonical(proposed), "native-uuid-1", "unknown", canonical(receipt), None))
+        # This independently later menu supplies no ACK/effect for the input.
+        # All observations are synthetic, never native/game qualification.
+        later = observation(4, session="later-menu")
+        later.update(category="MAIN_MENU", scene=None, ui=None, in_game=False, actions=["QUIT"])
+        later["boundary"].update(kind="menu", id="later-menu-b1")
+        later_id = _identity(later)
+        frame = directory / "evidence/frames" / (later_id + ".png")
+        frame.write_bytes(png())
+        reference = EvidenceRef(later_id, later["session"], later["revision"], later["timestamp_ms"],
+            101.0, None, str(frame), digest(png()), "menu").to_dict()
+        index["retired_sessions"].append(index["session"])
+        index["session"] = later["session"]
+        index["entries"].append(dict(reference=reference, observation=later, initial_lag_seconds=0.0, retention="current"))
+        index_path.write_text(canonical(index))
+        payload = canonical(dict(schema="mission/11", kind="observe", request_id="later-observe",
+            mission_id=directory.name, epoch=0))
+        pin = self.edit_db(directory, "INSERT INTO requests VALUES (?,?,?,?,?)",
+            ("later-observe", payload, digest(payload.encode()), "completed",
+             canonical({"source_ids": [later_id], "grants_authority": False})))
+        return directory, current_id, later_id, receipt, record, pin
+
+    def test_authenticated_unresolved_publication_is_advisory_without_effect_inference(self):
+        directory, _, later_id, _, record, pin = self.unresolved_archive()
+        original = (directory / "mission.sqlite3").read_bytes()
+        library = self.library(pin)
+        self.assertEqual(library.records(), (record,))
+        self.assertEqual(library.request(directory.name, "request-1")["state"], "completed")
+        self.assertEqual(library.request(directory.name, "uncertain-step")["state"], "unknown")
+        self.assertEqual(library.request(directory.name, "later-observe")["result"]["source_ids"], [later_id])
+        self.assertFalse(library.source(directory.name, later_id)[0]["grants_authority"])
+        self.assertEqual((directory / "mission.sqlite3").read_bytes(), original)
+
+    def test_unresolved_request_cannot_qualify_a_historical_procedure_episode(self):
+        directory, _, _, _, record, pin = self.unresolved_archive()
+        library = self.library(pin)
+        episode = dict(record["support"][0], request_ids=["uncertain-step"])
+        with self.assertRaisesRegex(ContractError, "unresolved"):
+            library.validate_episode(episode)
+
+    def test_unresolved_needs_publication_integrity_and_live_primitive_refuses(self):
         directory, identity, _, _ = self.archive()
         self.skill_request(directory, identity)
         for state, effect in (("prepared", None), ("published", None), ("unknown", None), ("unknown", "{}")):

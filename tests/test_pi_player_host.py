@@ -7,6 +7,10 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
+# This bounds the whole expanding subprocess suite, not a gameplay latency goal.
+# CI's original 90s watchdog truncated valid later cases; host deadlines have
+# separate controlled-clock assertions and must not depend on Python startup.
+CONFORMANCE_TIMEOUT_SECONDS = 180
 
 
 class PiPlayerHostTests(unittest.TestCase):
@@ -17,11 +21,11 @@ class PiPlayerHostTests(unittest.TestCase):
         environment = {**os.environ, "ENACTIVE_TEST_PYTHON": sys.executable}
         try:
             result = subprocess.run(["node", "--test", *map(str, tests)], cwd=package,
-                env=environment, capture_output=True, text=True, timeout=90)
+                env=environment, capture_output=True, text=True, timeout=CONFORMANCE_TIMEOUT_SECONDS)
         except subprocess.TimeoutExpired as error:
             def decoded(value):
                 return value.decode(errors="replace") if isinstance(value, bytes) else value or ""
-            self.fail("Pi conformance exceeded 90 seconds. Complete partial TAP:\n"
+            self.fail(f"Pi conformance exceeded {CONFORMANCE_TIMEOUT_SECONDS} seconds. Complete partial TAP:\n"
                 + decoded(error.output) + "\nstderr:\n" + decoded(error.stderr))
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 

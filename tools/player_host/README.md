@@ -152,6 +152,9 @@ that host's own pending/uncertain handoff ends this host. Only the actual MCP re
 current `player-view/5` and `mission/11`, settled delivered accepted completion,
 matching issuance/operation, original actor/mission and an issued post-Pause source.
 Successor-role/Work selections must match this host's original handoff intent.
+The as-of snapshot can still name that exact completed handoff as its active
+operation while the writer finishes publication; null or that same ID is accepted,
+never a different or missing operation.
 Collection is armed only by its actual handoff response or original-collection
 identity after an uncertain handoff call, and must name that same mission/operation.
 MCP preserves the assigned collection identity on unfinished/uncertain responses even

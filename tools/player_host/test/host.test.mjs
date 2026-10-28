@@ -625,8 +625,32 @@ test('both HTTP attempts share the original request timer',async t=>{
   assert.deepEqual(events.filter(e=>e.type==='response-complete').map(e=>e.request_id),['request-1','request-2']);
 });
 test('host deadline also covers provider retry backoff',async t=>{
-  const {result,payloads}=await scenario(t,[rateLimit(undefined,{'retry-after-ms':'4000'}),reply()],{timeoutSeconds:2});
+  // Startup under CI load may exceed the host's work window. Reach the
+  // actual eligible backoff first, then advance only the controlled clock.
+  t.mock.timers.enable({apis:['setTimeout']});
+  const controller=new AbortController();
+  let eligible=false, abortReason;
+  const {result,payloads,events}=await scenario(t,[rateLimit(undefined,{'retry-after-ms':'4000'}),reply()],{
+    timeoutSeconds:2,fixtureStartupDelay:1.6,signal:controller.signal,
+    expectedAbort:'host-timeout',advanceCleanupTimers:()=>t.mock.timers.tick(1000),
+    onEvent:e=>{if(e.type==='provider-retry'&&e.stage==='eligible')eligible=true;
+      if(e.type==='abort')abortReason=e.reason;},
+    synchronize:async()=>{
+      try {
+        const until=Date.now()+10000;
+        while(!eligible&&Date.now()<until)await realDelay(20);
+        assert.ok(eligible,'fixture must enter actual retry backoff before its deadline tick');
+        t.mock.timers.tick(2001);
+        assert.equal(abortReason,'host-timeout');
+      } finally {
+        if(!eligible)controller.abort();
+        t.mock.timers.tick(10000);
+      }
+    },
+  });
   assert.equal(result.reason,'host-timeout');assert.equal(payloads.length,1);
+  assert.equal(result.requests,1);
+  assert.equal(events.filter(e=>e.type==='provider-retry'&&e.stage==='started').length,0);
 });
 test('a partial provider stream is never retried and cannot dispatch its tool',async t=>{
   const first='data: '+JSON.stringify({choices:[{index:0,delta:{role:'assistant',tool_calls:[{index:0,id:'partial',type:'function',function:{name:'mutate',arguments:'{"mode":"ok"}'}}]},finish_reason:null}]})+'\n\n';
@@ -660,6 +684,116 @@ test('rendered marker literals survive production MCP presentation and actual Pi
 
 const handoffArgs = {snapshot_id:'selected-snapshot',intent:{successor_role:'player',unfinished_work_ids:[]}};
 const handoffTools = ['mutate','enactive_handoff','enactive_result'];
+// Reuse registered lifecycle, HTTP/SQLite/archive and production MCP presentation.
+// Only the native process/UI are synthetic; no retained campaign data is required.
+const productionHandoffFixture = `
+import sys
+import threading
+from unittest.mock import patch
+import anyio
+from mcp.server.stdio import stdio_server
+from harness.mission_client import MissionClient
+from harness.player_mcp import make_server
+from harness.player_tools import PlayerTools
+from harness.server import Server
+from tests.test_mission_handoff import MissionHandoffTests
+
+case = MissionHandoffTests()
+release = threading.Event()
+case.setUp()
+try:
+    case.create()
+    runtime = case.runtime
+    with patch("harness.mission_runtime.MissionRuntime", return_value=runtime):
+        http = Server(case.controller, 0)
+    thread = threading.Thread(target=http.serve_forever, kwargs={"poll_interval": .01}, daemon=True)
+    thread.start()
+    case.addCleanup(http.server_close)
+    case.addCleanup(thread.join, 2)
+    case.addCleanup(http.shutdown)
+    player = PlayerTools(MissionClient(case.controller.root))
+    cache = runtime._cache_operation
+    def cache_before_cleanup(operation):
+        cache(operation)
+        if operation.get("request", {}).get("kind") == "handoff" and operation.get("state") == "completed":
+            if not release.wait(5):
+                raise AssertionError("MCP envelope did not release completed handoff writer")
+    runtime._cache_operation = cache_before_cleanup
+    if sys.argv[1] == "collection":
+        submit = player.client.submit
+        def pending_submit(request, **options):
+            return submit(request, wait_seconds=0)
+        player.client.submit = pending_submit
+    call = player.call
+    def capture_before_cleanup(name, arguments, **options):
+        value, image = call(name, arguments, **options)
+        operation = (value.get("response") or {}).get("operation") or {}
+        if operation.get("kind") == "handoff" and operation.get("state") == "completed":
+            mission = value["next_snapshot"]["mission"]
+            assert mission["active_operation"] == operation["request_id"]
+            if sys.argv[1] == "other":
+                mission["active_operation"] = "another-operation"
+            elif sys.argv[1] == "missing":
+                del mission["active_operation"]
+            elif sys.argv[1] == "malformed":
+                mission["active_operation"] = {"request_id": operation["request_id"]}
+            release.set()
+        return value, image
+    player.call = capture_before_cleanup
+    async def serve():
+        server = make_server(player)
+        async with stdio_server() as (read, write):
+            await server.run(read, write, server.create_initialization_options())
+    anyio.run(serve)
+finally:
+    release.set()
+    case.doCleanups()
+`;
+
+for (const mode of ['direct','collection','other','missing','malformed']) {
+  test(`production MCP handoff envelope before writer cleanup: ${mode}`,async()=>{
+    const root=fileURLToPath(new URL('../../../',import.meta.url));
+    const payloads=[],events=[];
+    const receipt=()=>JSON.parse(events.filter(e=>e.type==='tool-result').at(-1).result.content.find(p=>p.type==='text').text);
+    const accepted=['direct','collection'].includes(mode);
+    const result=await runHost({configuration:route(),mcpConfig:{command:resolve(python),
+      args:['-c',productionHandoffFixture,mode],cwd:root,enabled:true,
+      enabled_tools:['enactive_snapshot','enactive_handoff','enactive_result'],
+      startup_timeout_sec:10,tool_timeout_sec:5},
+      context:'Offline real-component handoff fixture',prompt:'Handoff the current mission.',
+      model:model.id,effort:'off',timeoutSeconds:20,env:{OFFLINE_TEST_KEY:'fixture-key'},
+      fetch:async(_url,init)=>{
+        payloads.push(JSON.parse(init.body));
+        if(payloads.length===1)return reply(null,[['enactive_snapshot',{}]]);
+        if(payloads.length===2)return reply(null,[['enactive_handoff',{snapshot_id:receipt().snapshot_id,
+          intent:{checkpoint_sources:[null],successor_role:'player',unfinished_work_ids:[]}}],['enactive_snapshot',{}]]);
+        if(payloads.length===3 && mode==='collection') {
+          const pending=events.find(e=>e.type==='tool-result'&&e.tool==='enactive_handoff');
+          const value=JSON.parse(pending.result.content.find(p=>p.type==='text').text);
+          assert.equal(value.settled,false);
+          return reply(null,[['enactive_result',value.original_collection.arguments],['enactive_snapshot',{}]]);
+        }
+        return reply('unexpected provider continuation');
+      },onEvent:e=>events.push(e)});
+    assert.deepEqual(result,{ok:accepted,reason:accepted?'handoff':'invalid-handoff-receipt',
+      requests:mode==='collection'?3:2,finalText:''});
+    assert.equal(payloads.length,mode==='collection'?3:2,'recognized handoff must end provider requests');
+    assert.deepEqual(events.filter(e=>e.type==='tool-start').map(e=>e.tool),mode==='collection'
+      ? ['enactive_snapshot','enactive_handoff','enactive_snapshot','enactive_result']
+      : ['enactive_snapshot','enactive_handoff']);
+    const value=JSON.parse(events.filter(e=>e.type==='tool-result'&&['enactive_handoff','enactive_result'].includes(e.tool))
+      .at(-1).result.content.find(p=>p.type==='text').text);
+    assert.equal(value.response.operation.state,'completed');
+    if(accepted) {
+      assert.equal(value.next_snapshot.mission.active_operation,value.response.operation.result.handoff_id);
+      assert.deepEqual(events.filter(e=>e.type==='tool-refused').map(e=>[e.tool,e.reason,e.dispatched]),
+        [['enactive_snapshot','handoff',false]]);
+    }
+    const pid=events.find(e=>e.type==='mcp-connected').child_pid;
+    assert.throws(()=>process.kill(pid,0),{code:'ESRCH'});
+  });
+}
+
 test('completed handoff fences later batch inputs and ends even after an earlier ordinary tool',async t=>{
   const {result,payloads,calls,events}=await scenario(t,[reply('not a final gameplay report',[
     ['mutate',{mode:'ok',index:1}],['enactive_handoff',handoffArgs],['mutate',{mode:'ok',index:2}]

@@ -257,7 +257,8 @@ class CampaignMemory:
                 if set(entry["supersedes"]) != retired:
                     raise MemoryRequestRefusal("Correction supersedes must exactly match durable retired_ids")
                 if any(identity not in claims or claims[identity]["scope"] != entry["scope"] for identity in retired):
-                    raise MemoryRequestRefusal("Correction requires existing claims in its exact scope")
+                    raise MemoryRequestRefusal("Correction requires existing claims in its exact scope. "
+                        "For grounding in another scope, author a fresh Claim instead.")
             elif entry["supersedes"]:
                 raise MemoryRequestRefusal("Retirement requires an explicit durable correct request/reason")
             self._validate_claim(entry, claims, retired=retired)

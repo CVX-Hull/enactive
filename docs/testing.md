@@ -55,6 +55,12 @@ for fast structural checks plus focused behavioral and failure cases. Follow the
 flow across changed producer/consumer boundaries, rather than selecting only the
 module with the edited line. A local focused pass supports its named scope.
 
+When a real failure exposes a fixture assumption, reproduce the producer's actual
+terminal state through the next call before repairing the consumer. In particular,
+a cached rejected ACK must remain rejected until explicit Observe; publishing an
+early ready sample hides the recovery boundary. Preserve both the failing native
+case and the regression; the fixture does not replace native qualification.
+
 The executable selection source is [tools/ci.py](../tools/ci.py):
 `ROOT_DOCUMENTS`, `COMPONENT_PATHS`, `COMPONENT_TESTS` and `SMOKE_TESTS` define the
 closed sets. [tools/check.py](../tools/check.py) executes them;
