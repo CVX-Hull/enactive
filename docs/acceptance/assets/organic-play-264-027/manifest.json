@@ -1,0 +1,328 @@
+{
+  "schema": "organic-play-evidence/1",
+  "date": "2026-10-28",
+  "scope": "Selected historical gameplay evidence only; no live authority or universal routine support. Full private traces/ledgers/frozen admissions remain project-local.",
+  "configuration": {
+    "pi": "1.4.0",
+    "route": 2,
+    "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017:zRTkTPfs",
+    "effort": "medium",
+    "native_sha256": "71e51f5301e873e6832eb50c7456f29b5e40e9c7f2e7a38d241e36873c778597"
+  },
+  "cases": [
+    {
+      "mission_id": "organic-264-019",
+      "source_commit": "7a5ccaef9f302048c14ba17f6cfe0e2204ffc264",
+      "actual_provider_attempts": 34,
+      "original_pins": {
+        "ledger_sha256": "ac4db0f85620ba0ce4c7ae0c5802a3667796951ea0b02b48bfce11c6600e55b1",
+        "index_sha256": "968e69b321e79626726ec3c31367a15b8c7ade5ce030287ff2fdd43ff39fdcf2"
+      },
+      "trace_sha256_by_host": {
+        "original": "fae41738aa6e74dd4a11755c5dd85511f2a818a906c30233d84c001175366e7b",
+        "successor": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "mission_id": "organic-264-020",
+      "source_commit": "cfd28d231beb9241bddf2d13bd509bd078d73b88",
+      "actual_provider_attempts": 74,
+      "original_pins": {
+        "ledger_sha256": "ba99974e052b3c45726305f56929e1576a5a4747156ddd5cc9bde9c27302ea5f",
+        "index_sha256": "7ed3588d426f6889b4e03aece87821dbd3bcb9a4322513f884c97105b28144c0"
+      },
+      "trace_sha256_by_host": {
+        "original": "8e9d0e2ddba249c6ae529397887eba426381863296eab9d3e63fafecaaaf35ad",
+        "successor": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "mission_id": "organic-264-021",
+      "source_commit": "c4f5387ac929c73e49602724e15917d544aed09a",
+      "actual_provider_attempts": 113,
+      "original_pins": {
+        "ledger_sha256": "0d0dbd40e2694c1157d475aae73fae3ce3c99f041da1b42452a92733c7e0a6d2",
+        "index_sha256": "4beaf1b6e48532b625f3e832bdade7e5e7e47215f588fcee33a65b35545536a1"
+      },
+      "trace_sha256_by_host": {
+        "original": "5791aca6d32632a4fce0acaad97540e5e9399e5efb190a18d8ae23d8b3dee440",
+        "successor": "e5d91b8cba5317296e441b37451ebb68cd9019e818ccfe7eb903aafdc01a07dc"
+      }
+    },
+    {
+      "mission_id": "organic-264-022",
+      "source_commit": "2931f3a6b466e098a6b9d463319b4a3c6204820c",
+      "actual_provider_attempts": 21,
+      "original_pins": {
+        "ledger_sha256": "f4a0b79c67c069c42b36d9c2eca461a15e07ba77a6519a7dc00ed31391991aef",
+        "index_sha256": "824c56ea14dd60d3c3adbd5f8093be6701ee8835cbe34856f77c771b9b699d4e"
+      },
+      "trace_sha256_by_host": {
+        "original": "481bf003f023289916699cdc915c054d9ed99e7dae2eb0d3fa26187e6202d688",
+        "successor": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "mission_id": "organic-264-023",
+      "source_commit": "a6bafc1d1c34293ac942e2da31b9a9efe20be024",
+      "actual_provider_attempts": 52,
+      "original_pins": {
+        "ledger_sha256": "e965fd5cdc8662f4cc0f9188f642d2aa40f7c95354b9ac0c410958a188dceed5",
+        "index_sha256": "93c2954fdd3c27765c9577aff9a99083477640d949b42f6d419db4b5dca60b29"
+      },
+      "trace_sha256_by_host": {
+        "original": "958e508b9ee47b33b97ba7affefc465b21edf9b487f4c17f51387e1d5fd481d1",
+        "successor": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "mission_id": "organic-264-024",
+      "source_commit": "c7362609022700d8a0df23a85519be524c399252",
+      "actual_provider_attempts": 0,
+      "original_pins": {
+        "ledger_sha256": "db208499fc428fb411d64293d9a4ceb1066ed15c1919bfec5af09794da4da8a7"
+      },
+      "trace_sha256_by_host": {}
+    },
+    {
+      "mission_id": "organic-264-025",
+      "source_commit": "c7362609022700d8a0df23a85519be524c399252",
+      "actual_provider_attempts": 84,
+      "original_pins": {
+        "ledger_sha256": "239bd1edfa914011d8011a30100cbadf1e22cbd555e7b2ac9ab995477d340773",
+        "index_sha256": "a17556d26f5bca24a0b77b3e6e93ad2e079139f2261cbf601bb14c09d5da3ce6"
+      },
+      "trace_sha256_by_host": {
+        "original": "ce0f959bee9d9ad3188462353acb1a67c1d529cc0f8ce6229a7c539845f62c38",
+        "successor": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "mission_id": "organic-264-026",
+      "source_commit": "be5d9ae438729a271a4428c4ff9b27d4b495ee2f",
+      "actual_provider_attempts": 158,
+      "original_pins": {
+        "ledger_sha256": "1a6e9abab9a835828786ef79e948f495767e8bf546376bcff17f10e8ef02795d",
+        "index_sha256": "01715a3e1cbafb4f8fb11656d35515ece7130a232721c1e7850095893ff9f107"
+      },
+      "trace_sha256_by_host": {
+        "original": "b448aab688b61e57eaba491ae24fb2a448e36ef1074cf9aa5966394b50a4da29",
+        "successor": "691caebe4b3bfb7be447dca701fab7c229135d4eede10bbf46067b2486875cf6"
+      }
+    },
+    {
+      "mission_id": "organic-264-027",
+      "source_commit": "be5d9ae438729a271a4428c4ff9b27d4b495ee2f",
+      "actual_provider_attempts": 128,
+      "original_pins": {
+        "ledger_sha256": "134e956e530c6862d170671273f03d4b4771e800e4c71d0d9b201f8ffa4c6a36",
+        "index_sha256": "9d6ce5d730b2e5e961f5ec676e15bd68953ae1573896a7985f161d0e0b34da15"
+      },
+      "trace_sha256_by_host": {
+        "original": "3197e32ca32f9161509668a9c7b685d2d35fe8850c424e0724b2581f89664fbe",
+        "successor": "3276bf7abc35bd2189437583cc66be4c589d9b5ffc03d66c329944813fb04927"
+      }
+    },
+    {
+      "mission_id": "organic-264-028",
+      "source_commit": "3f68253ea2748b5e9ad8cf92a4cfeb89ebfc2b89",
+      "actual_provider_attempts": 26,
+      "original_pins": {
+        "ledger_sha256": "1a8a28a9efdb3a39810062f8c5a3574715d8374059e874cb580e5e408e1c1655",
+        "index_sha256": "1df759212d2b47bdd55287001b30bd84c49bc13420b0e64e82cf84d66f847c76"
+      },
+      "trace_sha256_by_host": {
+        "original": "f7b64c23fc303e76a892cd6d92cd4bdf79c5343ba515e4227b4231d68e42fd4e",
+        "successor": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "mission_id": "organic-264-029",
+      "source_commit": "d53e6c5238f6db1cfd13c7e9692712abaef53318",
+      "actual_provider_attempts": 37,
+      "original_pins": {
+        "ledger_sha256": "1417915dc8f01392daf1cb31302cbe34778329ec40392c869dd25950cc1facca",
+        "index_sha256": "a773a2819165603dde17e9cc343498ed2017d9a90ef710144908c8a357b493db"
+      },
+      "trace_sha256_by_host": {
+        "original": "c5214f6dd1efb8fb48ea41442217c089129332e8062b7ebadad8243a7f0e0e43"
+      }
+    }
+  ],
+  "selected_mission": "organic-264-027",
+  "images": [
+    {
+      "path": "original-effect.png",
+      "original_source_id": "6bdd125cfb33d7cd58a99391e0089da652161463b512ed6b755d53fda6b588c5",
+      "png_sha256": "67af2204dce48519800cbd4d346069f746645b8e9d80ccf6cf7a9b348fadaf96",
+      "native_capture_epoch_ms": 1793208284835
+    },
+    {
+      "path": "remaining-opportunity.png",
+      "original_source_id": "a99a1945f173642c514da04ebf32f5b9adf8eb7337bd61832ed45635c7031152",
+      "png_sha256": "8b18b41a252c19e5957c55ffdc09cb714f227fa2129d4832f2b9a92a88944d0b",
+      "native_capture_epoch_ms": 1793208489822
+    },
+    {
+      "path": "fresh-entry.png",
+      "original_source_id": "14cc03ebe354545f7715b8d956d1324488c76b08859e3c627be84f60e6e17163",
+      "png_sha256": "9a77be7745417bb1177a2197dcb72841f736d3558cec6d394aaad9ab281cb9a7",
+      "native_capture_epoch_ms": 1793209067883
+    },
+    {
+      "path": "fresh-effect.png",
+      "original_source_id": "d697da150b2872d3adc7eb6b5962eb879f0772cdf07b4e89a16fdcca748f492f",
+      "png_sha256": "fe0c6ec6dfcbdccbc73f347c1951462bd4210805f5d7d7c90fc533587e83c7a1",
+      "native_capture_epoch_ms": 1793209106079
+    },
+    {
+      "path": "fresh-inventory.png",
+      "original_source_id": "b2843e672d3269431ed59d526b29efbba4942cb96274ef517df81f0c4379e5d2",
+      "png_sha256": "53f963daee9871c25be509b7808de1c64c6f6ac24de6890346bf90feb8ffeae0",
+      "native_capture_epoch_ms": 1793209142790
+    },
+    {
+      "path": "saved-menu.png",
+      "original_source_id": "6da2af8e6397f8cd4660f6cf5fd830f5f5253ef5201714928c1dd6be215bee73",
+      "png_sha256": "39f8bbf03528c6461c0bfe8c204f4d6f7cee56b9312210d0a72e3589c5926800",
+      "native_capture_epoch_ms": 1793209646072
+    }
+  ],
+  "programs": [
+    {
+      "path": "parent.js",
+      "revision_id": "revision-4d1cbf0618d4b8bb79dd42f8e7fe29f0a3fc23f7331bbd5968f646d43efc6fa2",
+      "family": "procedure-4d1cbf0618d4b8bb79dd42f8e7fe29f0a3fc23f7331bbd5968f646d43efc6fa2",
+      "source_sha256": "f11766a8eb6beaaf41407f61cf28feb16fb9f7fda316218dc68c9c800e756c9e"
+    },
+    {
+      "path": "correction.js",
+      "revision_id": "revision-07acb3ec6fec479a997ca1aa9990a1cee7f3fc6289822ed74ff92becb60c2385",
+      "family": "procedure-4d1cbf0618d4b8bb79dd42f8e7fe29f0a3fc23f7331bbd5968f646d43efc6fa2",
+      "source_sha256": "97e7a8082443678f23d2866dcd580f4ac07168363cd9b6c34e3b6f959fc6f8a2"
+    }
+  ],
+  "key_operations": {
+    "parent_execution": "op-4e4ec37b00c440518b1719eb66c2541c",
+    "original_correction": "op-697b7f8302b24e90ae2634f5194ea7b6",
+    "handoff": "op-3c766d3af59e4ce5b2fff71e9603066b",
+    "claim": "op-12a98fb33dc44d0c8b0fb352cc158541",
+    "readmit": "op-c4d65287e69e437fb1dc27049893e83d",
+    "fresh_correction": "op-87c0b43ca4e24198ba422f71ac67a984",
+    "effect_observe": "op-f75b8137cd194a7ba7bf8c0ab07fbf9c",
+    "inventory": "op-d23464a7ee9040f5969c5c316ac7dd9a",
+    "save": "op-e51aa0256bbc4604834df5f0360b360b",
+    "saved_checkpoint": "op-50062698f14f4bc7b1cf7ba906dd84d5",
+    "owned_exit": "op-24c3e3503d7e4004acef9ea7f28876ed",
+    "finish": "op-f2be66d11f974907903b891d1bc12f6f"
+  },
+  "timing": {
+    "mission": "organic-264-027",
+    "scope": "Retained verification witnesses, not earliest effects, physical paint, model attention or useful-p95 cohort.",
+    "roots": [
+      {
+        "request_id": "op-3c766d3af59e4ce5b2fff71e9603066b",
+        "admitted_epoch_s": 1793208578.056382,
+        "kind": "handoff"
+      },
+      {
+        "request_id": "op-87c0b43ca4e24198ba422f71ac67a984",
+        "admitted_epoch_s": 1793209067.804677,
+        "kind": "skill"
+      },
+      {
+        "request_id": "op-f75b8137cd194a7ba7bf8c0ab07fbf9c",
+        "admitted_epoch_s": 1793209106.054455,
+        "kind": "observe"
+      },
+      {
+        "request_id": "op-d23464a7ee9040f5969c5c316ac7dd9a",
+        "admitted_epoch_s": 1793209142.388271,
+        "kind": "skill"
+      },
+      {
+        "request_id": "op-f2be66d11f974907903b891d1bc12f6f",
+        "admitted_epoch_s": 1793209745.244354,
+        "kind": "lifecycle"
+      }
+    ],
+    "captures": [
+      {
+        "source_id": "a99a1945f173642c514da04ebf32f5b9adf8eb7337bd61832ed45635c7031152",
+        "native_capture_epoch_ms": 1793208489822,
+        "observer_matches": [
+          {
+            "native_capture_epoch_ms": 1793208489822,
+            "status_sequence": 35888,
+            "dom_replaced_epoch_ms": 1793208490109,
+            "outcome": "dom_replaced"
+          }
+        ]
+      },
+      {
+        "source_id": "14cc03ebe354545f7715b8d956d1324488c76b08859e3c627be84f60e6e17163",
+        "native_capture_epoch_ms": 1793209067883,
+        "observer_matches": [
+          {
+            "native_capture_epoch_ms": 1793209067883,
+            "status_sequence": 37307,
+            "dom_replaced_epoch_ms": 1793209067978,
+            "outcome": "dom_replaced"
+          }
+        ]
+      },
+      {
+        "source_id": "d697da150b2872d3adc7eb6b5962eb879f0772cdf07b4e89a16fdcca748f492f",
+        "native_capture_epoch_ms": 1793209106079,
+        "observer_matches": [
+          {
+            "native_capture_epoch_ms": 1793209106079,
+            "status_sequence": 37454,
+            "dom_replaced_epoch_ms": 1793209106160,
+            "outcome": "dom_replaced"
+          }
+        ]
+      },
+      {
+        "source_id": "b2843e672d3269431ed59d526b29efbba4942cb96274ef517df81f0c4379e5d2",
+        "native_capture_epoch_ms": 1793209142790,
+        "observer_matches": [
+          {
+            "native_capture_epoch_ms": 1793209142790,
+            "status_sequence": 37596,
+            "dom_replaced_epoch_ms": 1793209143014,
+            "outcome": "dom_replaced"
+          }
+        ]
+      }
+    ],
+    "observer_status_coverage": "Early25381..33572, handoff28264..36455, final33238..41429 overlap; frames dropped0. Final export later than planned15minute cadence, but actual sequence overlap retains selected coverage."
+  },
+  "technical_recovery": {
+    "mission_id": "organic-264-029",
+    "rejected_request": "op-8bbc1f9f6b944c3f97084abef4c17321",
+    "rejected_primitive": "control-f69c4bbf05dc68ea1fcc425b16c10e22742140ebad7cf0ae0ebf5a2a221c46bd-1",
+    "native_rejection": "b5fe6480-31c1-4543-8d39-86968e6888c2",
+    "explicit_observe": "op-657a23422cc34e51b3a3ab9b6ac11cfc",
+    "fresh_source": "3c395d2659de62895b1e0a6ce599bc10ae64f1f1e1244da29c653141bba0c4bb",
+    "new_wait": "op-7da1d2dd99b6461d89e03a422a752771",
+    "before_turn": 5212946,
+    "after_turn": 5212947,
+    "saved_checkpoint": "op-1aaa186c46a040a9a73b9dae1e873f57",
+    "normal_exit": "op-e97c6c4acbac454498eb74d6e83ec7c0",
+    "finish": "op-9155e31d2eda437480372702267f7aa9"
+  },
+  "accounting": {
+    "cumulative_actual_attempts": 1494,
+    "cumulative_known_configured_estimate_usd": "7.783639460000",
+    "cumulative_consumed_reservation_usd": "325.2305920",
+    "reservation_ceiling_usd": "450",
+    "invoices": "unknown",
+    "scope": "Cumulative bank including earlier iterations, not only019\u2013029. Earlier missing usage remains unknown."
+  },
+  "closed_case_windows": {
+    "cases": "019\u2013029",
+    "custodian_elapsed_seconds": 12900.127980709076,
+    "scope": "Includes setup/teardown and zero-inference024; not labor or accepted gameplay duration. Inactive gaps excluded."
+  }
+}

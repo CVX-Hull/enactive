@@ -23,16 +23,13 @@ The [generic gameplay host](components/player-interface.md) is mandatory and use
 pinned Pi core/MCP libraries with explicit tools, context, provider route and
 timestamped events. The campaign driver has one execution path; choosing a model
 is a separate decision. Engineering Codex owns development and verification.
-Current host evidence includes offline request/process control and basic
-image/tool continuation with one explicit DeepInfra configuration. Its first
-bounded native pilot failed before useful ordinary play and normal ending;
-broad gameplay quality and speed remain unqualified. A later
-[bounded breadth assessment](acceptance/2026-10-25-program-breadth.md#009-program-assisted-useful-lighting-and-normal-ending)
-combines player-authored conditional item selection, same-root ordinary completion
-of useful lighting, and normal Save/owned exit/Finish. The
-[pilot report](acceptance/2026-10-25-pi-configuration-pilot.md) separates model errors
-from a runtime recovery defect. That failed model/configuration does not cancel
-the required host migration.
+Current evidence includes bounded
+[organic learning and fresh corrected-program application](acceptance/2026-10-28-organic-play.md)
+with useful food acquisition and normal Save/owned exit/Finish. Broad model quality,
+apparent useful cadence and independent seven-day survival remain unqualified.
+The earlier [configuration pilot](acceptance/2026-10-25-pi-configuration-pilot.md)
+retains its failures; a failed model configuration does not cancel the required
+host migration.
 
 Development prioritizes authentic useful gameplay as the main behavioral feedback
 loop. Players pursue coherent objectives; learning and reuse must emerge from
@@ -43,21 +40,15 @@ and total engineering burden guide decisions. The
 [workflow](workflows/development.md#gameplay-as-the-primary-feedback-loop) owns the
 decision rules and the distinction between estimates, invoices and reservations.
 
-Bounded independent play has demonstrated supplies/travel, procedure revision/reuse
-and limited supported advice adoption. Complete independent seven-day survival,
-normal lifecycle and useful apparent cadence remain unaccepted. The
-[evidence index](work.md) links decisive results and failures; GitHub owns current
-execution and remaining actions. Source repairs do not retrospectively qualify
-failed runs. Later [fast-player012](acceptance/2026-10-25-program-breadth.md#corrected-routine-and-fresh-player-follow-through012--27-october-2026)
-stores a same-family correction and completes registered fresh retrieval/normal
-ending, but establishes no executable application; that capability remains incomplete.
-[Current imported-lineage follow-through](acceptance/2026-10-27-imported-correction-follow-through.md)
-retains setup-deadline, target-manufacture, player-qualification and provider-timeout
-failures. A later fresh current-lineage case authored and ran a parent, stored a
-substantive correction and issued a handoff, then continued original-host calls
-that invalidated succession. The host now settles after a coherent completed
-handoff receipt; this source repair does not qualify a new native outcome. Useful
-corrected-program application remains unaccepted.
+Bounded independent play has demonstrated supplies/travel, current procedure
+revision and useful application of an exact correction by a registered fresh
+successor. The [latest evidence](acceptance/2026-10-28-organic-play.md) verifies
+three additional rations from that successor's generated selection/confirmation.
+Its routine also selects packaging; broader applicability, final quantity/Work
+reconciliation and useful cadence remain open. The [evidence index](work.md) links
+other decisive results and retained failures; GitHub owns current execution.
+Source repairs never retrospectively qualify failed runs. This remains short of
+an accepted independent seven-day campaign.
 
 The [registered lifecycle](components/mission-execution.md#lifecycle-and-change-review)
 can keep an initial post-Load menu provisional. Explicit bounded dismissal must
@@ -105,7 +96,7 @@ and independent campaign remain separate acceptance questions.
 | Graphical play and user control | Actual native Tiles frames and browser spectator; Pause/takeover qualifications are scoped in the [architecture](architecture.md#action-and-recovery-views) and dated reports. |
 | Useful skill composition | [Independent mission024](acceptance/2026-10-21-independent-supply-shelter.md) combines supplies/care, purposeful navigation/replanning, shelter/rest, memory correction, successor continuity and normal lifecycle. This is a bounded mission. |
 | Organic ordinary interaction | [Learning006](acceptance/2026-10-22-discovery-learning-sixth-attempt.md) and [local-refusal001](acceptance/2026-10-22-native-local-refusal.md) exercise ordinary discovery/refusal/cancellation. Recent [Luna013](acceptance/2026-10-23-luna-responsiveness-thirteenth-attempt.md) independently loads/adopts identity, approaches a locker, picks up a ration and ends normally. Wider game-family behavior and full independent continuation remain unqualified. |
-| Procedure memory and background advice | [Learning009](acceptance/2026-10-23-discovery-learning-ninth-attempt.md) demonstrates independent executable authorship/reuse/revision, actual clean-successor application and useful play during claimed advice. Scope is short shelter movement; combined readiness fails cadence. No causal learning benefit is established. |
+| Procedure memory and background advice | [Organic027](acceptance/2026-10-28-organic-play.md) verifies current parent/correction and exact fresh executable food acquisition with normal ending. Its packaging selection and quantity/Work limits remain. [Learning009](acceptance/2026-10-23-discovery-learning-ninth-attempt.md) retains earlier short movement/advice evidence. Broader generalization, causal learning benefit and useful cadence remain unqualified. |
 | Save, reload and ending | [Capture001](acceptance/2026-10-22-native-capture-preconditions.md) qualifies ordinary input and normal same-character save/reload/ending on the rebuilt boundary; actual PNG drift remains unexercised there. [Fresh008](acceptance/2026-10-22-independent-seven-day-eighth-attempt.md) retains the motivating failure. [Native001](acceptance/2026-10-22-native-save-refresh.md) also qualifies one unit-geometry click; non-unit/wider mouse remains unqualified. |
 | Seven-day survival | The [first campaign](acceptance/2026-10-19-seven-day-survival.md) completed under supervision. The fresh independent outcome remains unaccepted; [#145](https://github.com/CVX-Hull/enactive/issues/145) owns follow-through. |
 | Watchable stopped history | The [local-refusal001 report](acceptance/2026-10-22-native-local-refusal.md) records actual STOPPED/HISTORY/DISCONNECTED presentation, no current mission decision and a timeout diagnostic explicitly labelled historical. |
@@ -117,14 +108,11 @@ semantic judgment from mechanical SDK identities, staging, original collection
 and progressive detail. The player should decide intent, inspect relevant evidence
 and evaluate outcomes; software handles canonical metadata and provenance.
 
-The [useful-bootstrap trials](acceptance/2026-10-24-useful-bootstrap-trials.md)
-failed before fresh character creation. Their local settlement clocks and one
-independent menu-only normal ending do not qualify useful play. Those early failures
-do not establish a memory-architecture conclusion. Later independent Sol/low
-assessments demonstrate scoped program revision, successor memory application and
-useful play during advice. Whole-player cadence and a coherent normal ending still
-need qualification before another full campaign; GitHub owns the next selected
-configuration and finite assessment.
+Earlier [useful-bootstrap failures](acceptance/2026-10-24-useful-bootstrap-trials.md)
+do not establish a memory-architecture conclusion. The latest organic case now
+combines useful corrected-executable fresh succession with normal ending;
+whole-player cadence remains unqualified before another full campaign. GitHub owns
+the next selected configuration and finite assessment.
 
 The [executable-routine substrate](components/memory-learning.md) lets
 the player author observation-conditioned JavaScript procedures over ordinary
