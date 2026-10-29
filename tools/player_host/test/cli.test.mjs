@@ -71,11 +71,11 @@ for(const name of ['OPENAI_LOG','OPENAI_CUSTOM_HEADERS','OPENAI_ORG_ID','OPENAI_
 
 test('CLI completed handoff exits zero with empty final text and no extra HTTP request',async t=>{
   let requests=0;
-  const args={snapshot_id:'selected-snapshot',intent:{successor_role:'player',unfinished_work_ids:[]}};
+  const args={ids:[],summary:'Retain current context'};
   const run=await cli(t,(_req,res)=>{
     requests++;res.writeHead(200,{'content-type':'text/event-stream'});
-    res.end('data: '+JSON.stringify({id:'fixture',model:'fixture-backend',choices:[{index:0,delta:{role:'assistant',tool_calls:[{index:0,id:'handoff-call',type:'function',function:{name:'enactive_handoff',arguments:JSON.stringify(args)}}]},finish_reason:'tool_calls'}]})+'\n\ndata: [DONE]\n\n');
-  },{},['enactive_handoff']);
+    res.end('data: '+JSON.stringify({id:'fixture',model:'fixture-backend',choices:[{index:0,delta:{role:'assistant',tool_calls:[{index:0,id:'handoff-call',type:'function',function:{name:'player_handoff',arguments:JSON.stringify(args)}}]},finish_reason:'tool_calls'}]})+'\n\ndata: [DONE]\n\n');
+  },{},['player_handoff']);
   const [code]=await run.finished;
   assert.equal(code,0);assert.equal(requests,1);
   assert.equal(run.read().events.at(-1).reason,'handoff');

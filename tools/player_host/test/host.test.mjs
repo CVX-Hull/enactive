@@ -6,7 +6,7 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { McpClient } from '@earendil-works/pi-mcp';
-import { runHost, validateConfiguration, validateMcpConfiguration, projectImageContext, INPUT_LIMIT_BYTES } from '../host.mjs';
+import { runHost, validateConfiguration, validateMcpConfiguration, projectImageContext, projectToolResultForTelemetry, INPUT_LIMIT_BYTES } from '../host.mjs';
 
 const realSetTimeout = globalThis.setTimeout;
 const realDelay = ms => new Promise(resolve=>realSetTimeout(resolve,ms));
@@ -30,9 +30,10 @@ async function scenario(t, sequence, overrides = {}) {
   const dir = await mkdtemp(join(tmpdir(),'pi-host-test-'));
   t.after(()=>rm(dir,{recursive:true,force:true}));
   const log = join(dir,'calls.jsonl'), pid = join(dir,'pid');
-  const payloads = [], events = [];
+  const payloads = [], bodies = [], events = [];
   let index = 0;
   const fetch = async (_url, init) => {
+    bodies.push(init.body);
     payloads.push(JSON.parse(init.body));
     const item = sequence[index++];
     return typeof item === 'function' ? item(init) : item;
@@ -68,7 +69,18 @@ async function scenario(t, sequence, overrides = {}) {
   let calls=[]; try { calls=(await readFile(log,'utf8')).trim().split('\n').filter(Boolean).map(JSON.parse); } catch {}
   const childPid = Number(await readFile(pid,'utf8'));
   assert.throws(()=>process.kill(childPid,0), {code:'ESRCH'}, 'owned MCP child must exit before settlement');
-  return {result,payloads,events,calls};
+  assertRequestMetadata(events, bodies);
+  return {result,payloads,bodies,events,calls};
+}
+function assertRequestMetadata(events, bodies) {
+  const starts=events.filter(event=>event.type==='request-start');
+  assert.equal(starts.length,bodies.length);
+  for(const [index,event] of starts.entries()) {
+    assert.equal(event.payload_sha256,createHash('sha256').update(bodies[index]).digest('hex'));
+    assert.equal(event.payload_bytes,Buffer.byteLength(bodies[index]));
+    assert.equal(event.message_count,JSON.parse(bodies[index]).messages.length);
+    for(const key of ['payload','messages','prompt','history','reasoning','reasoning_content']) assert.equal(Object.hasOwn(event,key),false);
+  }
 }
 test('route is closed, graphical, finite and model/effort exact', ()=>{
   assert.doesNotThrow(()=>validateConfiguration(route(),model.id,'off'));
@@ -186,7 +198,7 @@ test('projection omits individual historical images and bounds provenance previe
   assert.deepEqual(messages[1].content.slice(1),images);
 });
 
-test('actual serializer caps newest history images while retaining text, reasoning, pairs and original traces',async t=>{
+test('actual serializer retains projected history while telemetry omits reasoning and image bytes',async t=>{
   const configuration=route();configuration.max_context_images=2;
   const reasoning='Full historical reasoning is retained.';
   const {result,payloads,events,calls}=await scenario(t,[
@@ -216,9 +228,10 @@ test('actual serializer caps newest history images while retaining text, reasoni
   assert.deepEqual(projections[3].omissions.map(item=>item.tool_call_id),['old-0','old-1']);
   const originalResults=events.filter(event=>event.type==='tool-result' && event.tool==='observe');
   assert.equal(originalResults.length,4);
-  assert.ok(originalResults.every(event=>event.result.content.some(part=>part.type==='image' && part.data===png)));
+  assert.ok(originalResults.every(event=>event.result.content.some(part=>part.type==='image_reference' && part.bytes===Buffer.from(png,'base64').length)));
   assert.ok(originalResults.every(event=>!JSON.stringify(event).includes('Historical pixels omitted')));
-  assert.deepEqual(events.filter(event=>event.type==='request-start').map(event=>event.payload),payloads);
+  assert.ok(!JSON.stringify(events).includes(reasoning));
+  assert.ok(!JSON.stringify(events).includes(png));
   assert.equal(events.find(event=>event.type==='host-start').max_context_images,2);
 });
 
@@ -252,12 +265,14 @@ for (const fail of [false,true]) test(`actual provider payload preserves full te
   assert.equal(text.split('original_collection').length,2, 'structured content must not duplicate text');
   assert.equal(events.find(e=>e.type==='tool-result').result.isError,fail);
   assert.equal(events.filter(e=>e.type==='request-start').length,2);
-  assert.deepEqual(events.filter(e=>e.type==='request-start').map(e=>e.payload),payloads,
-    'retained request JSON must match actual provider bodies, including schemas, history and images');
+  assert.ok(!JSON.stringify(events).includes(png));
+  const image=events.find(e=>e.type==='tool-result').result.content.find(part=>part.type==='image_reference');
+  assert.deepEqual(image,{type:'image_reference',media_type:'image/png',bytes:Buffer.from(png,'base64').length,
+    sha256:createHash('sha256').update(Buffer.from(png,'base64')).digest('hex'),image_index:0});
   assert.ok(events.every(e=>typeof e.monotonic_ms==='number' && typeof e.wall_time==='string'));
   assert.ok(!JSON.stringify(events).includes('fixture-key'));
   assert.equal(events.find(event=>event.type==='response-backend').backend_model,'fixture-backend');
-  const {payload,...secondRequest}=events.filter(event=>event.type==='request-start')[1];
+  const secondRequest=events.filter(event=>event.type==='request-start')[1];
   t.diagnostic(JSON.stringify({sample:'offline-synthetic-SSE+official-MCP',requests:result.requests,host_ms:events.at(-1).monotonic_ms,second_request_content:secondRequest}));
 });
 test('coerced arguments are refused with zero dispatch, then deliberate correction succeeds',async t=>{
@@ -267,15 +282,44 @@ test('coerced arguments are refused with zero dispatch, then deliberate correcti
   assert.ok(JSON.stringify(payloads[1]).includes('MCP input not sent'));
   assert.equal(events.filter(event=>event.type==='tool-refused').length,1);
 });
-test('request trace retains actual forwarded assistant reasoning without transport secrets',async t=>{
-  const reasoning='Retained synthetic reasoning before an observation.';
-  const {result,payloads,events}=await scenario(t,[reply(null,[['observe',{fail:false}]],true,reasoning),reply()]);
+test('request metadata hashes exact serialized bodies without retaining forwarded private reasoning or secrets',async t=>{
+  const reasoning='Private synthetic reasoning before an observation.';
+  const {result,payloads,events}=await scenario(t,[reply('Visible plan',[['observe',{fail:false}]],true,reasoning),reply()]);
   assert.equal(result.ok,true);
   const trace=events.filter(e=>e.type==='request-start');
-  assert.deepEqual(trace.map(e=>e.payload),payloads);
-  assert.equal(trace[1].payload.messages.find(m=>m.role==='assistant').reasoning_content,reasoning);
-  assert.ok(!JSON.stringify(trace).includes('fixture-key'));
-  assert.ok(!JSON.stringify(trace).includes('UNRELATED_HOST_SECRET'));
+  assert.equal(payloads[1].messages.find(m=>m.role==='assistant').reasoning_content,reasoning);
+  assert.ok(JSON.stringify(payloads[1]).includes(png));
+  assert.equal(events.find(e=>e.type==='host-start').telemetry_version,2);
+  assert.deepEqual(events.filter(e=>e.type==='assistant-text').map(e=>[e.text,e.omitted_bytes]),[['Visible plan',0],['finished',0]]);
+  for(const secret of [reasoning,png,'fixture-key','UNRELATED_HOST_SECRET','Frozen player guide','Offline mission']) {
+    assert.ok(!JSON.stringify(events).includes(secret));
+  }
+  assert.ok(trace.every(e=>e.text_bytes>0&&e.payload_bytes>0));
+});
+test('tool telemetry projection preserves text, structured data and canonical MCP objects',()=>{
+  const result={content:[{type:'text',text:'actual game JSON'},
+    {type:'image',mimeType:'image/png',data:png},{type:'image',mimeType:'image/png',data:png}],
+    structuredContent:{actual:'structured game JSON'},isError:true};
+  const original=structuredClone(result);
+  const freeze=value=>{if(value&&typeof value==='object'){Object.values(value).forEach(freeze);Object.freeze(value);}};
+  freeze(result);
+  const projected=projectToolResultForTelemetry(result);
+  assert.deepEqual(result,original);
+  assert.deepEqual(projected.content[0],original.content[0]);
+  assert.deepEqual(projected.structuredContent,original.structuredContent);
+  assert.equal(projected.isError,true);
+  assert.deepEqual(projected.content.slice(1).map(part=>part.image_index),[0,1]);
+  assert.ok(!JSON.stringify(projected).includes(png));
+});
+test('assistant narration is bounded by UTF8 bytes and excludes thinking parts',async t=>{
+  const visible='a'.repeat(8191)+'思'.repeat(5);
+  const {result,events}=await scenario(t,[reply(visible,[],true,'private-thinking-sentinel')]);
+  assert.equal(result.finalText,visible);
+  const narration=events.find(e=>e.type==='assistant-text');
+  assert.equal(narration.text,'a'.repeat(8191));
+  assert.equal(narration.omitted_bytes,15);
+  assert.ok(Buffer.byteLength(narration.text)<=8192);
+  assert.ok(!JSON.stringify(events).includes('private-thinking-sentinel'));
 });
 test('optional null normalization is refused without dispatch',async t=>{
   const {result,calls,events}=await scenario(t,[reply(null,[['mutate',{mode:'ok',index:null}]]),reply()]);
@@ -300,25 +344,21 @@ test('request maximum is finite and exits unsuccessful if continuation needed',a
   assert.equal(result.ok,false); assert.equal(result.reason,'request-limit'); assert.equal(payloads.length,1);
   assert.equal(events.find(event=>event.type==='abort').response_progress.scope,'last-http-attempt');
 });
-test('actual memory schema refusal gives stable precise feedback, explicit correction dispatches, MCP errors stay intact',async t=>{
-  const entry={schema:'campaign-memory/6',record_type:'Work',id:'fixture-work',intent:'Retain a partial fixture task',
-    scope:{mission_id:'fixture',session:'fixture-session',coordinate_epoch:0},stage:'x'.repeat(244),
-    predecessor_work_id:null,progress:null,available:[{subject:'small cardboard box',quantity:1,unit:'items',coverage_id:'visible-subset'}],
-    committed:[],predicted_output:[],observed_output:[],unresolved_effects:[],sources:['fixture-source'],
-    next_verification:'Inspect the next retained observation',status:'active'};
+test('fixture union schema refusal gives stable precise feedback, explicit correction dispatches, MCP errors stay intact',async t=>{
+  const entry={stage:'x'.repeat(244),available:[{subject:'small cardboard box'}]};
   const bad={snapshot_id:'fixture-snapshot',intent:{entry_type:'work',entry}};
   const fixed=structuredClone(bad);fixed.intent.entry.stage='partial';
   fixed.intent.entry.available[0].subject='small_cardboard_box';
   const mcpError=structuredClone(fixed);mcpError.intent.entry.stage='mcp-error';
   const configuration=route();configuration.max_requests=6;
   const {result,calls,payloads,events}=await scenario(t,[
-    reply(null,[['enactive_remember',bad]],true,undefined,'bad'),
-    reply(null,[['enactive_remember',fixed]],true,undefined,'fixed'),
+    reply(null,[['fixture_remember',bad]],true,undefined,'bad'),
+    reply(null,[['fixture_remember',fixed]],true,undefined,'fixed'),
     reply(null,[['observe',{}]],true,undefined,'later'),
-    reply(null,[['enactive_remember',mcpError]],true,undefined,'mcp-error'),reply()
-  ],{configuration,enabledTools:['enactive_remember','observe']});
+    reply(null,[['fixture_remember',mcpError]],true,undefined,'mcp-error'),reply()
+  ],{configuration,enabledTools:['fixture_remember','observe']});
   assert.equal(result.ok,true);
-  assert.deepEqual(calls.filter(c=>c.tool==='enactive_remember').map(c=>c.intent),[fixed.intent,mcpError.intent]);
+  assert.deepEqual(calls.filter(c=>c.tool==='fixture_remember').map(c=>c.intent),[fixed.intent,mcpError.intent]);
   const first=payloads[1].messages.find(m=>m.role==='tool'&&m.tool_call_id==='bad-0').content;
   assert.match(first,/entry.stage: must not have more than 128/);
   assert.match(first,/entry.available.0.subject: must match pattern/);
@@ -487,35 +527,36 @@ test('frozen MCP config rejects disabled and malformed fields', ()=>{
   }
 });
 
-test('real production MCP discovery forwards exact current nested schemas only', async ()=>{
+const root=fileURLToPath(new URL('../../../',import.meta.url));
+const productionRoot=process.env.ENACTIVE_TEST_PRODUCTION_ROOT ?? root;
+function productionMcp(enabled_tools) {
+  return {command:resolve(python),args:[join(productionRoot,'tests/player_service_fixture.py'),'--stdio'],
+    cwd:productionRoot,enabled:true,enabled_tools,startup_timeout_sec:5,tool_timeout_sec:2};
+}
+test('real production MCP discovery forwards all exact current actor-only tool schemas', async ()=>{
   const { execFile } = await import('node:child_process');
   const { promisify } = await import('node:util');
-  const root=fileURLToPath(new URL('../../../',import.meta.url));
-  const {stdout}=await promisify(execFile)(python,['-c','import json; from harness.player_tools import tool_specs; print(json.dumps({s.name:{"schema":s.schema,"description":s.description} for s in tool_specs()}))'],{cwd:root,maxBuffer:INPUT_LIMIT_BYTES});
-  const expected=JSON.parse(stdout), payloads=[], events=[];
-  // The current deciding profile excludes lead admission and the advisory role.
-  const chosen=Object.keys(expected).filter(name=>name!=='enactive_start'&&!name.startsWith('enactive_reflect_'));
-  assert.equal(chosen.length,16);
-  const context=await readFile(join(root,'docs/player-guide.md'),'utf8');
-  const result=await runHost({configuration:route(),mcpConfig:{command:resolve(python),args:['-m','harness.player_mcp'],cwd:root,enabled:true,enabled_tools:chosen,startup_timeout_sec:5,tool_timeout_sec:1},context,prompt:'Do not call tools.',model:model.id,effort:'off',timeoutSeconds:10,env:{OFFLINE_TEST_KEY:'fixture-key'},fetch:async(_url,init)=>{payloads.push(JSON.parse(init.body));return reply();},onEvent:e=>events.push(e)});
+  const {stdout}=await promisify(execFile)(python,['-c','import json; from harness.player_tools import tool_specs; print(json.dumps({name:{"schema":schema,"description":description} for name,(description,schema) in tool_specs().items()}))'],{cwd:productionRoot,maxBuffer:INPUT_LIMIT_BYTES});
+  const expected=JSON.parse(stdout), payloads=[], bodies=[], events=[];
+  const chosen=Object.keys(expected);
+  assert.equal(chosen.length,14);
+  const result=await runHost({configuration:route(),mcpConfig:productionMcp(chosen),
+    context:'Frozen current player guide',prompt:'Do not call tools.',model:model.id,effort:'off',
+    timeoutSeconds:10,env:{OFFLINE_TEST_KEY:'fixture-key'},
+    fetch:async(_url,init)=>{bodies.push(init.body);payloads.push(JSON.parse(init.body));return reply();},onEvent:e=>events.push(e)});
   assert.equal(result.ok,true);
+  assertRequestMetadata(events,bodies);
   assert.deepEqual(payloads[0].tools.map(tool=>tool.function.name),chosen);
   for(const tool of payloads[0].tools) {
     assert.deepEqual(tool.function.parameters,expected[tool.function.name].schema);
     assert.equal(tool.function.description,expected[tool.function.name].description);
+    for(const key of ['actor_id','session','token']) assert.equal(Object.hasOwn(tool.function.parameters.properties,key),false);
   }
-  const skill=payloads[0].tools.find(tool=>tool.function.name==='enactive_skill').function;
-  const published=JSON.parse(skill.description.split('\nProgram result schema: ')[1].split('\n')[0]);
-  assert.deepEqual(published.required,['status','state','input','reason']);
-  assert.equal(JSON.stringify(payloads[0]).split('Program result schema: ').length-1,1);
-  const direct=skill.parameters.properties.intent.anyOf.find(branch=>branch.properties.skill_kind.const==='direct');
-  const directClick=direct.properties.goal.properties.input.anyOf.find(branch=>branch.properties.type.const==='click');
-  assert.ok(directClick.required.includes('geometry'));
-  const programClick=published.then.properties.input.anyOf.find(branch=>branch.properties.type.const==='click');
-  assert.ok(!programClick.required.includes('geometry'));
-  assert.equal(programClick.properties.geometry,undefined);
-  assert.ok(payloads[0].messages[0].content.startsWith(context));
-  assert.ok(payloads[0].messages[0].content.includes('Software assigns request IDs'));
+  const handoff=payloads[0].tools.find(tool=>tool.function.name==='player_handoff').function;
+  assert.deepEqual(handoff.parameters.required,['ids','summary']);
+  assert.ok(chosen.includes('computer_result')&&chosen.includes('player_result'));
+  assert.ok(chosen.every(name=>!name.startsWith('enactive_')));
+  assert.ok(payloads[0].messages[0].content.includes('Only basic computer control is authoritative'));
   assert.throws(()=>process.kill(events.find(e=>e.type==='mcp-connected').child_pid,0),{code:'ESRCH'});
 });
 
@@ -624,7 +665,7 @@ test('eligible 429 consumes a separate attempt with identical context and one to
   assert.ok(note(payloads[2]).includes('including this request: 2.'));
   const starts=events.filter(e=>e.type==='request-start');
   assert.deepEqual(starts.map(e=>e.request_id),['request-1','request-2','request-3']);
-  assert.deepEqual(starts.map(e=>e.payload),payloads);
+  assert.equal(starts[0].payload_sha256,starts[1].payload_sha256);
   assert.deepEqual(events.filter(e=>e.type==='response-headers').map(e=>e.status),[429,200,200]);
   const completed=events.filter(e=>e.type==='response-complete');
   assert.deepEqual(completed.map(e=>e.request_id),starts.map(e=>e.request_id));
@@ -784,213 +825,142 @@ test('a partial provider stream is never retried and cannot dispatch its tool',a
   assert.equal(result.reason,'provider-error');assert.equal(payloads.length,1);assert.equal(calls.length,0);
 });
 
-test('rendered marker literals survive production MCP presentation and actual Pi serialization',async()=>{
-  const root=fileURLToPath(new URL('../../../',import.meta.url));
-  const payloads=[],events=[];
-  const responses=[reply(null,[['enactive_snapshot',{}]]),reply()];
-  const result=await runHost({configuration:route(),mcpConfig:{command:resolve(python),
-    args:['-m','tests.test_player_tools','--stdio-fixture'],cwd:root,enabled:true,
-    enabled_tools:['enactive_snapshot'],startup_timeout_sec:5,tool_timeout_sec:2},
-    context:'Offline marker presentation fixture',prompt:'Read one snapshot.',model:model.id,
+test('production MCP preserves actual source JSON and PNG through Pi while event images are references',async()=>{
+  const payloads=[],bodies=[],events=[];
+  const result=await runHost({configuration:route(),mcpConfig:productionMcp(['computer_observe','player_source']),
+    context:'Offline current pixel fixture',prompt:'Read actual source pixels.',model:model.id,
     effort:'off',timeoutSeconds:10,env:{OFFLINE_TEST_KEY:'fixture-key'},
-    fetch:async(_url,init)=>{payloads.push(JSON.parse(init.body));return responses.shift();},
-    onEvent:e=>events.push(e)});
-  assert.equal(result.ok,true);assert.equal(payloads.length,2);
-  const tool=payloads[1].messages.find(message=>message.role==='tool');
-  const snapshot=JSON.parse(tool.content);
-  assert.deepEqual(snapshot.source.observation.ui.rows.map(row=>row.rendered_marker),['-','+',null]);
-  assert.deepEqual(snapshot.source.observation.ui.rows.map(row=>row.text),['item','item','item']);
-  assert.equal(snapshot.source.observation.ui.selected,'row-0');
-  assert.equal(events.filter(event=>event.type==='tool-start').length,1);
-  const pid=events.find(event=>event.type==='mcp-connected').child_pid;
-  assert.throws(()=>process.kill(pid,0),{code:'ESRCH'});
+    fetch:async(_url,init)=>{
+      bodies.push(init.body);payloads.push(JSON.parse(init.body));
+      if(payloads.length===1)return reply(null,[['computer_observe',{}]]);
+      if(payloads.length===2) {
+        const operation=JSON.parse(events.find(e=>e.type==='tool-result').result.content[0].text);
+        return reply(null,[['player_source',{source_id:operation.source.source_id}]],true,undefined,'read');
+      }
+      return reply();
+    },onEvent:e=>events.push(e)});
+  assert.equal(result.ok,true);assert.equal(payloads.length,3);
+  assertRequestMetadata(events,bodies);
+  const original=JSON.parse(events.find(e=>e.type==='tool-result').result.content[0].text);
+  assert.equal(original.schema,'computer-operation/1');assert.equal(original.status,'completed');
+  assert.equal(original.source.schema,'computer-source/1');
+  assert.equal(original.source.width,4);assert.equal(original.source.height,4);
+  const images=payloads[2].messages.flatMap(message=>Array.isArray(message.content)?message.content:[])
+    .filter(part=>part.type==='image_url');
+  assert.equal(images.length,2);
+  assert.equal(images[0].image_url.url,images[1].image_url.url);
+  const pngBytes=Buffer.from(images[0].image_url.url.split(',')[1],'base64');
+  assert.equal(createHash('sha256').update(pngBytes).digest('hex'),original.source.sha256);
+  const references=events.filter(e=>e.type==='tool-result').flatMap(e=>e.result.content)
+    .filter(part=>part.type==='image_reference');
+  assert.equal(references.length,2);
+  assert.ok(references.every(part=>part.bytes===pngBytes.length&&part.sha256===original.source.sha256));
+  assert.ok(!JSON.stringify(events).includes(pngBytes.toString('base64')));
+  assert.throws(()=>process.kill(events.find(e=>e.type==='mcp-connected').child_pid,0),{code:'ESRCH'});
+});
+test('production MCP sealed handoff settles after earlier ordinary tool without followup inference or dispatch',async()=>{
+  const payloads=[],bodies=[],events=[];
+  const result=await runHost({configuration:route(),mcpConfig:productionMcp(['computer_observe','player_handoff']),
+    context:'Offline current actor handoff fixture',prompt:'Retain unfinished context and hand off.',
+    model:model.id,effort:'off',timeoutSeconds:10,env:{OFFLINE_TEST_KEY:'fixture-key'},
+    fetch:async(_url,init)=>{
+      bodies.push(init.body);payloads.push(JSON.parse(init.body));
+      return reply(null,[['computer_observe',{}],['player_handoff',{ids:[],summary:'synthetic unfinished work'}],['computer_observe',{}]]);
+    },onEvent:e=>events.push(e)});
+  assert.deepEqual(result,{ok:true,reason:'handoff',requests:1,finalText:''});
+  assertRequestMetadata(events,bodies);
+  assert.deepEqual(events.filter(e=>e.type==='tool-start').map(e=>e.tool),['computer_observe','player_handoff']);
+  const value=JSON.parse(events.find(e=>e.type==='tool-result'&&e.tool==='player_handoff').result.content[0].text);
+  assert.equal(value.schema,'computer-operation/1');assert.equal(value.status,'sealed');
+  assert.equal(value.handoff.schema,'player-handoff/1');assert.equal(value.handoff.grants_authority,false);
+  const event=events.find(e=>e.type==='handoff');
+  assert.equal(event.handoff_id,value.operation_id);assert.equal(event.session,value.session);
+  assert.equal(event.actor_id,value.actor_id);assert.equal(event.context_id,value.handoff.context_id);
+  assert.equal(event.context_sha256,value.handoff.context_sha256);assert.equal(event.grants_authority,false);
+  assert.deepEqual(events.filter(e=>e.type==='tool-refused').map(e=>[e.tool,e.reason,e.dispatched]),[['computer_observe','handoff',false]]);
+  assert.throws(()=>process.kill(events.find(e=>e.type==='mcp-connected').child_pid,0),{code:'ESRCH'});
 });
 
-const handoffArgs = {snapshot_id:'selected-snapshot',intent:{successor_role:'player',unfinished_work_ids:[]}};
-const handoffTools = ['mutate','enactive_handoff','enactive_result'];
-// Reuse registered lifecycle, HTTP/SQLite/archive and production MCP presentation.
-// Only the native process/UI are synthetic; no retained campaign data is required.
-const productionHandoffFixture = `
-import sys
-import threading
-from unittest.mock import patch
-import anyio
-from mcp.server.stdio import stdio_server
-from harness.mission_client import MissionClient
-from harness.player_mcp import make_server
-from harness.player_tools import PlayerTools
-from harness.server import Server
-from tests.test_mission_handoff import MissionHandoffTests
-
-case = MissionHandoffTests()
-release = threading.Event()
-case.setUp()
-try:
-    case.create()
-    runtime = case.runtime
-    with patch("harness.mission_runtime.MissionRuntime", return_value=runtime):
-        http = Server(case.controller, 0)
-    thread = threading.Thread(target=http.serve_forever, kwargs={"poll_interval": .01}, daemon=True)
-    thread.start()
-    case.addCleanup(http.server_close)
-    case.addCleanup(thread.join, 2)
-    case.addCleanup(http.shutdown)
-    player = PlayerTools(MissionClient(case.controller.root))
-    cache = runtime._cache_operation
-    def cache_before_cleanup(operation):
-        cache(operation)
-        if operation.get("request", {}).get("kind") == "handoff" and operation.get("state") == "completed":
-            if not release.wait(5):
-                raise AssertionError("MCP envelope did not release completed handoff writer")
-    runtime._cache_operation = cache_before_cleanup
-    if sys.argv[1] == "collection":
-        submit = player.client.submit
-        def pending_submit(request, **options):
-            return submit(request, wait_seconds=0)
-        player.client.submit = pending_submit
-    call = player.call
-    def capture_before_cleanup(name, arguments, **options):
-        value, image = call(name, arguments, **options)
-        operation = (value.get("response") or {}).get("operation") or {}
-        if operation.get("kind") == "handoff" and operation.get("state") == "completed":
-            mission = value["next_snapshot"]["mission"]
-            assert mission["active_operation"] == operation["request_id"]
-            if sys.argv[1] == "other":
-                mission["active_operation"] = "another-operation"
-            elif sys.argv[1] == "missing":
-                del mission["active_operation"]
-            elif sys.argv[1] == "malformed":
-                mission["active_operation"] = {"request_id": operation["request_id"]}
-            release.set()
-        return value, image
-    player.call = capture_before_cleanup
-    async def serve():
-        server = make_server(player)
-        async with stdio_server() as (read, write):
-            await server.run(read, write, server.create_initialization_options())
-    anyio.run(serve)
-finally:
-    release.set()
-    case.doCleanups()
-`;
-
-for (const mode of ['direct','collection','other','missing','malformed']) {
-  test(`production MCP handoff envelope before writer cleanup: ${mode}`,async()=>{
-    const root=fileURLToPath(new URL('../../../',import.meta.url));
-    const payloads=[],events=[];
-    const receipt=()=>JSON.parse(events.filter(e=>e.type==='tool-result').at(-1).result.content.find(p=>p.type==='text').text);
-    const accepted=['direct','collection'].includes(mode);
-    const result=await runHost({configuration:route(),mcpConfig:{command:resolve(python),
-      args:['-c',productionHandoffFixture,mode],cwd:root,enabled:true,
-      enabled_tools:['enactive_snapshot','enactive_handoff','enactive_result'],
-      startup_timeout_sec:10,tool_timeout_sec:5},
-      context:'Offline real-component handoff fixture',prompt:'Handoff the current mission.',
-      model:model.id,effort:'off',timeoutSeconds:20,env:{OFFLINE_TEST_KEY:'fixture-key'},
-      fetch:async(_url,init)=>{
-        payloads.push(JSON.parse(init.body));
-        if(payloads.length===1)return reply(null,[['enactive_snapshot',{}]]);
-        if(payloads.length===2)return reply(null,[['enactive_handoff',{snapshot_id:receipt().snapshot_id,
-          intent:{checkpoint_sources:[null],successor_role:'player',unfinished_work_ids:[]}}],['enactive_snapshot',{}]]);
-        if(payloads.length===3 && mode==='collection') {
-          const pending=events.find(e=>e.type==='tool-result'&&e.tool==='enactive_handoff');
-          const value=JSON.parse(pending.result.content.find(p=>p.type==='text').text);
-          assert.equal(value.settled,false);
-          return reply(null,[['enactive_result',value.original_collection.arguments],['enactive_snapshot',{}]]);
-        }
-        return reply('unexpected provider continuation');
-      },onEvent:e=>events.push(e)});
-    assert.deepEqual(result,{ok:accepted,reason:accepted?'handoff':'invalid-handoff-receipt',
-      requests:mode==='collection'?3:2,finalText:''});
-    assert.equal(payloads.length,mode==='collection'?3:2,'recognized handoff must end provider requests');
-    assert.deepEqual(events.filter(e=>e.type==='tool-start').map(e=>e.tool),mode==='collection'
-      ? ['enactive_snapshot','enactive_handoff','enactive_snapshot','enactive_result']
-      : ['enactive_snapshot','enactive_handoff']);
-    const value=JSON.parse(events.filter(e=>e.type==='tool-result'&&['enactive_handoff','enactive_result'].includes(e.tool))
-      .at(-1).result.content.find(p=>p.type==='text').text);
-    assert.equal(value.response.operation.state,'completed');
-    if(accepted) {
-      assert.equal(value.next_snapshot.mission.active_operation,value.response.operation.result.handoff_id);
-      assert.deepEqual(events.filter(e=>e.type==='tool-refused').map(e=>[e.tool,e.reason,e.dispatched]),
-        [['enactive_snapshot','handoff',false]]);
-    }
-    const pid=events.find(e=>e.type==='mcp-connected').child_pid;
-    assert.throws(()=>process.kill(pid,0),{code:'ESRCH'});
-  });
-}
+const handoffArgs = {ids:[],summary:'Retain current context'};
+const handoffTools = ['mutate','player_handoff','computer_result'];
+const handoffId = '1'.repeat(32);
+const sessionId = '2'.repeat(32);
+const actorId = '3'.repeat(32);
+const collectArgs = {operation_id:handoffId};
 
 test('completed handoff fences later batch inputs and ends even after an earlier ordinary tool',async t=>{
   const {result,payloads,calls,events}=await scenario(t,[reply('not a final gameplay report',[
-    ['mutate',{mode:'ok',index:1}],['enactive_handoff',handoffArgs],['mutate',{mode:'ok',index:2}]
+    ['mutate',{mode:'ok',index:1}],['player_handoff',handoffArgs],['mutate',{mode:'ok',index:2}]
   ])],{enabledTools:handoffTools});
   assert.deepEqual(result,{ok:true,reason:'handoff',requests:1,finalText:''});
   assert.equal(payloads.length,1);
   assert.deepEqual(calls.filter(c=>c.tool==='mutate').map(c=>[c.phase,c.index]),[['start',1],['end',1]]);
   assert.equal(events.filter(e=>e.type==='handoff').length,1);
-  const receipt=events.find(e=>e.type==='tool-result'&&e.tool==='enactive_handoff').result;
-  assert.equal(JSON.parse(receipt.content[0].text).response.operation.result.handoff_id,'issued-handoff');
+  const receipt=events.find(e=>e.type==='tool-result'&&e.tool==='player_handoff').result;
+  assert.equal(JSON.parse(receipt.content[0].text).handoff.operation_id,handoffId);
   assert.deepEqual(events.filter(e=>e.type==='tool-refused').map(e=>[e.tool,e.reason,e.dispatched]),[['mutate','handoff',false]]);
 });
 test('direct handoff settles without another model turn',async t=>{
-  const {result,calls}=await scenario(t,[reply(null,[['enactive_handoff',handoffArgs]])],{enabledTools:handoffTools});
+  const {result,calls}=await scenario(t,[reply(null,[['player_handoff',handoffArgs]])],{enabledTools:handoffTools});
   assert.equal(result.reason,'handoff');assert.equal(result.ok,true);assert.equal(result.requests,1);
-  assert.deepEqual(calls.map(c=>c.tool),['enactive_handoff']);
+  assert.deepEqual(calls.map(c=>c.tool),['player_handoff']);
 });
 test('only this host pending or uncertain handoff can settle through collection',async t=>{
-  for(const mode of ['pending','uncertain','transport-uncertain','transport-no-snapshot']) await t.test(mode,async sub=>{
+  for(const mode of ['pending','transport-uncertain']) await t.test(mode,async sub=>{
     const {result,calls}=await scenario(sub,[
-      reply(null,[['enactive_handoff',{...handoffArgs,mode}]]),
-      reply(null,[['enactive_result',{mission_id:'mission',operation_id:'issued-handoff',mode:'newer'}]])
+      reply(null,[['player_handoff',{...handoffArgs,mode}]]),
+      reply(null,[['computer_result',collectArgs]])
     ],{enabledTools:handoffTools});
     assert.equal(result.reason,'handoff');assert.equal(result.ok,true);assert.equal(result.requests,2);
-    assert.deepEqual(calls.map(c=>c.tool),['enactive_handoff','enactive_result']);
+    assert.deepEqual(calls.map(c=>c.tool),['player_handoff','computer_result']);
   });
 });
 test('a fresh successor can inspect issuance without ending its host',async t=>{
   const {result,events}=await scenario(t,[
-    reply(null,[['enactive_result',{mission_id:'mission',operation_id:'issued-handoff'}]]),reply()
+    reply(null,[['computer_result',collectArgs]]),reply()
   ],{enabledTools:handoffTools});
   assert.equal(result.reason,'completed');assert.equal(result.requests,2);
   assert.equal(events.filter(e=>e.type==='handoff').length,0);
 });
 test('proven nonadmission cannot arm settlement of another issuance',async t=>{
-  const {result,events}=await scenario(t,[reply(null,[['enactive_handoff',{...handoffArgs,mode:'not-admitted'}]]),
-    reply(null,[['enactive_result',{mission_id:'mission',operation_id:'issued-handoff'}]]),reply()],{enabledTools:handoffTools});
+  const {result,events}=await scenario(t,[reply(null,[['player_handoff',{...handoffArgs,mode:'not-admitted'}]]),
+    reply(null,[['computer_result',collectArgs]]),reply()],{enabledTools:handoffTools});
   assert.equal(result.reason,'completed');assert.equal(result.requests,3);
   assert.equal(events.filter(e=>e.type==='handoff').length,0);
 });
 test('ordinary plain-text collection errors preserve explicit correction',async t=>{
   const {result}=await scenario(t,[
-    reply(null,[['enactive_handoff',{...handoffArgs,mode:'pending'}]]),
-    reply(null,[['enactive_result',{mission_id:'mission',operation_id:'issued-handoff',mode:'plain-error'}]]),
-    reply(null,[['enactive_result',{mission_id:'mission',operation_id:'issued-handoff'}]])
+    reply(null,[['player_handoff',{...handoffArgs,mode:'pending'}]]),
+    reply(null,[['computer_result',{...collectArgs,mode:'plain-error'}]]),
+    reply(null,[['computer_result',collectArgs]])
   ],{enabledTools:handoffTools});
   assert.equal(result.reason,'handoff');assert.equal(result.requests,3);
 });
 test('refused and pending handoffs allow a new explicit model decision',async t=>{
-  for(const mode of ['refused','pending']) await t.test(mode,async sub=>{
-    const {result,events}=await scenario(sub,[reply(null,[['enactive_handoff',{...handoffArgs,mode}]]),reply()],{enabledTools:handoffTools});
+  for(const mode of ['refused','pending','error']) await t.test(mode,async sub=>{
+    const {result,events}=await scenario(sub,[reply(null,[['player_handoff',{...handoffArgs,mode}]]),reply()],{enabledTools:handoffTools});
     assert.equal(result.reason,'completed');assert.equal(result.requests,2);
     assert.equal(events.filter(e=>e.type==='handoff').length,0);
   });
 });
 test('incoherent claimed handoffs stop before another input or provider request',async t=>{
-  for(const mode of ['foreign','old','source','actor','operation','error','malformed']) await t.test(mode,async sub=>{
-    const {result,calls,payloads}=await scenario(sub,[reply(null,[['enactive_handoff',{...handoffArgs,mode}],['mutate',{mode:'ok'}]])],{enabledTools:handoffTools});
+  for(const mode of ['foreign','old','legacy','context','actor','operation','session','authority','sealed-wall','malformed']) await t.test(mode,async sub=>{
+    const {result,calls,payloads}=await scenario(sub,[reply(null,[['player_handoff',{...handoffArgs,mode}],['mutate',{mode:'ok'}]])],{enabledTools:handoffTools});
     assert.equal(result.ok,false);assert.equal(result.reason,'invalid-handoff-receipt');
-    assert.equal(payloads.length,1);assert.deepEqual(calls.map(c=>c.tool),['enactive_handoff']);
+    assert.equal(payloads.length,1);assert.deepEqual(calls.map(c=>c.tool),['player_handoff']);
   });
 });
 test('reading a different operation cannot settle this host pending handoff',async t=>{
-  for(const args of [{mission_id:'foreign',operation_id:'issued-handoff'},{mission_id:'mission',operation_id:'other-operation'}]) await t.test(args.operation_id+args.mission_id,async sub=>{
-    const {result,events}=await scenario(sub,[reply(null,[['enactive_handoff',{...handoffArgs,mode:'pending'}]]),
-      reply(null,[['enactive_result',args]]),reply()],{enabledTools:handoffTools});
+  for(const args of [{operation_id:'4'.repeat(32)},{operation_id:'unrelated'}]) await t.test(args.operation_id,async sub=>{
+    const {result,events}=await scenario(sub,[reply(null,[['player_handoff',{...handoffArgs,mode:'pending'}]]),
+      reply(null,[['computer_result',args]]),reply()],{enabledTools:handoffTools});
     assert.equal(result.ok,true);assert.equal(result.reason,'completed');assert.equal(result.requests,3);
     assert.equal(events.filter(e=>e.type==='handoff').length,0);
   });
 });
 test('cancellation dominates an otherwise coherent handoff',async t=>{
   const controller=new AbortController();
-  const {result,events}=await scenario(t,[reply(null,[['enactive_handoff',handoffArgs]])],{
+  const {result,events}=await scenario(t,[reply(null,[['player_handoff',handoffArgs]])],{
     enabledTools:handoffTools,signal:controller.signal,onEvent:e=>{if(e.type==='handoff')controller.abort();}});
   assert.equal(events.filter(e=>e.type==='handoff').length,1);
   assert.equal(result.ok,false);assert.equal(result.reason,'cancelled');assert.equal(result.finalText,'');
@@ -999,7 +969,40 @@ test('owned cleanup failure dominates handoff settlement',async t=>{
   const original=McpClient.prototype.close;
   McpClient.prototype.close=async function(){await original.call(this);throw new Error('fixture cleanup failure');};
   try {
-    const {result}=await scenario(t,[reply(null,[['enactive_handoff',handoffArgs]])],{enabledTools:handoffTools});
+    const {result}=await scenario(t,[reply(null,[['player_handoff',handoffArgs]])],{enabledTools:handoffTools});
     assert.equal(result.ok,false);assert.equal(result.reason,'mcp-cleanup-failed');assert.equal(result.finalText,'');
   } finally {McpClient.prototype.close=original;}
+});
+
+test('handoff event contains only immutable actor context bindings and no authority',async t=>{
+  const {events}=await scenario(t,[reply(null,[['player_handoff',handoffArgs]])],{enabledTools:handoffTools});
+  const {type,wall_time,monotonic_ms,request_id,tool_call_id,...event}=events.find(e=>e.type==='handoff');
+  assert.deepEqual(event,{session:sessionId,actor_id:actorId,handoff_id:handoffId,
+    context_id:'4'.repeat(32),context_sha256:'5'.repeat(64),grants_authority:false});
+});
+test('matching original collection rejects different session actor or nested operation bindings',async t=>{
+  for(const mode of ['session','actor','operation','foreign','old','legacy']) await t.test(mode,async sub=>{
+    const {result,calls,payloads}=await scenario(sub,[
+      reply(null,[['player_handoff',{mode:'pending'}]]),
+      reply(null,[['computer_result',{...collectArgs,mode}],['mutate',{mode:'ok'}]])
+    ],{enabledTools:handoffTools});
+    assert.equal(result.reason,'invalid-handoff-receipt');assert.equal(payloads.length,2);
+    assert.deepEqual(calls.map(c=>c.tool),['player_handoff','computer_result']);
+  });
+});
+test('one pending original handoff cannot be replaced by another direct receipt',async t=>{
+  const {result,calls,payloads}=await scenario(t,[reply(null,[['player_handoff',{mode:'pending'}]]),
+    reply(null,[['player_handoff',{mode:'another-pending'}],['mutate',{mode:'ok'}]])],{enabledTools:handoffTools});
+  assert.equal(result.reason,'invalid-handoff-receipt');assert.equal(payloads.length,2);
+  assert.deepEqual(calls.map(c=>c.tool),['player_handoff','player_handoff']);
+});
+test('isError handoff cannot establish a pending origin even when it carries a sealed receipt',async t=>{
+  const {result,events}=await scenario(t,[reply(null,[['player_handoff',{mode:'error'}]]),
+    reply(null,[['computer_result',collectArgs]]),reply()],{enabledTools:handoffTools});
+  assert.equal(result.reason,'completed');assert.equal(result.requests,3);
+  assert.equal(events.filter(e=>e.type==='handoff').length,0);
+});
+test('first actual MCP text owns the handoff receipt even when extra text follows',async t=>{
+  const {result}=await scenario(t,[reply(null,[['player_handoff',{mode:'extra-text'}]])],{enabledTools:handoffTools});
+  assert.equal(result.reason,'handoff');assert.equal(result.requests,1);
 });

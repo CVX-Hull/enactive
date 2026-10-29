@@ -19,8 +19,6 @@ import asyncio
 from mcp.server.mcpserver import MCPServer
 from mcp.types import CallToolResult, ImageContent, TextContent
 from pydantic import WithJsonSchema
-sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-from harness.player_tools import tool_specs
 server = MCPServer("offline-player-fixture", instructions="Use only the admitted fixture tools.")
 PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j1ioAAAAASUVORK5CYII="
 
@@ -54,72 +52,91 @@ async def integer(value: int) -> int:
     return value
 
 
-MEMORY_INTENT = next(spec.schema["properties"]["intent"] for spec in tool_specs()
-    if spec.name == "enactive_remember")
+# Isolated union-schema feedback fixture; production tool schemas are discovered
+# through the separate composition integration lane.
+MEMORY_INTENT = {"anyOf": [
+    {"type": "object", "required": ["entry_type", "entry"], "properties": {
+        "entry_type": {"const": "work"},
+        "entry": {"type": "object", "properties": {
+            "stage": {"type": "string", "maxLength": 128},
+            "available": {"type": "array", "items": {"type": "object", "properties": {
+                "subject": {"type": "string", "pattern": "^[a-z_]+$"}}}}}}}},
+    {"type": "object", "required": ["entry_type", "entry"], "properties": {
+        "entry_type": {"const": "fact"}, "entry": {"type": "object", "required": ["value"],
+            "properties": {"value": {"type": "string"}}}}}
+]}
 
 
 @server.tool()
-async def enactive_remember(snapshot_id: str, intent: Annotated[dict, WithJsonSchema(MEMORY_INTENT)]) -> CallToolResult:
-    record(dict(tool="enactive_remember", snapshot_id=snapshot_id, intent=intent))
+async def fixture_remember(snapshot_id: str, intent: Annotated[dict, WithJsonSchema(MEMORY_INTENT)]) -> CallToolResult:
+    record(dict(tool="fixture_remember", snapshot_id=snapshot_id, intent=intent))
     fail = intent["entry"].get("stage") == "mcp-error"
     return CallToolResult(content=[TextContent(type="text", text=(
-        'Validation failed for tool "enactive_remember":\nfixture MCP refusal' if fail else "retained fixture"))], isError=fail)
+        'Validation failed for tool "fixture_remember":\nfixture MCP refusal' if fail else "retained fixture"))], isError=fail)
+
+
+OPERATION = "1" * 32
+SESSION = "2" * 32
+ACTOR = "3" * 32
 
 
 def handoff_receipt(mode):
-    issued = dict(schema="mission/11", record_type="Handoff", grants_authority=False,
-        handoff_id="issued-handoff", mission_id="mission", original_player_id="original",
-        post_pause_source_id="paused-source", successor_role="player", unfinished_work_ids=[])
-    mission = dict(mission_id="mission", actor_id="original", player_id="original",
-        phase="handoff", pause_cause="internal_handoff", lease_owner=None, active_operation=None,
-        progress_operation_id="issued-handoff", current_source=dict(observation_id="paused-source"))
-    value = dict(presentation_schema="player-view/5", transport="delivered", settled=True,
-        operation_id="issued-handoff", next_snapshot=dict(mission=mission),
-        response=dict(status="accepted", operation=dict(kind="handoff", state="completed",
-            request_id="issued-handoff", result=issued)))
+    issued = dict(schema="player-handoff/1", operation_id=OPERATION, session=SESSION,
+        actor_id=ACTOR, context_id="4" * 32, context_sha256="5" * 64,
+        sealed_wall=123456.0, grants_authority=False)
+    value = dict(schema="computer-operation/1", operation_id=OPERATION,
+        session=SESSION, actor_id=ACTOR, kind="handoff", status="sealed",
+        created_wall=123450.0, deadline_monotonic=123456.0, receipts=[], source=None,
+        remaining=dict(seconds=10), reason=None, handoff=issued)
     if mode == "refused":
-        return dict(error="Correct this draft", submission="not_submitted")
-    if mode == "pending":
-        value["settled"] = False
-        value["response"]["operation"]["state"] = "running"
-    if mode in ("transport-uncertain", "transport-no-snapshot"):
-        value.update(transport="uncertain", settled=False, response=None,
-            reason="Submission response unavailable; collect the original operation",
-            original_collection=dict(tool="enactive_result", arguments=dict(
-                mission_id="mission", operation_id="issued-handoff")))
-        if mode == "transport-no-snapshot":
-            value.pop("next_snapshot")
-            value["snapshot_error"] = "Current context unavailable"
+        return dict(schema="computer-operation/1", operation_id=OPERATION,
+            session=SESSION, actor_id=ACTOR, kind="handoff", status="refused", handoff=None)
+    if mode in ("pending", "another-pending"):
+        value.update(status="pending", handoff=None)
+        if mode == "another-pending":
+            value["operation_id"] = "6" * 32
+    if mode == "transport-uncertain":
+        return dict(schema="player-transport/1", operation_id=OPERATION,
+            session=SESSION, actor_id=ACTOR, kind="handoff", status="unknown",
+            reason="Submission response unavailable; collect the original operation")
     if mode == "not-admitted":
-        value.update(submission="not_admitted", response=None)
+        return dict(error="Correct this draft; no submission")
     if mode == "foreign":
-        issued["mission_id"] = "foreign"
+        issued["session"] = "6" * 32
     if mode == "old":
-        issued["schema"] = "mission/10"
-    if mode == "source":
-        issued["post_pause_source_id"] = None
-    if mode == "newer":
-        mission["current_source"]["observation_id"] = "newer-read-only-source"
+        issued["schema"] = "player-handoff/0"
+    if mode == "legacy":
+        return dict(presentation_schema="player-view/5", operation_id=OPERATION,
+            response=dict(operation=dict(kind="handoff", state="completed",
+                result=dict(schema="mission/11", grants_authority=False))))
+    if mode == "context":
+        issued["context_sha256"] = "invalid"
     if mode == "actor":
-        mission["actor_id"] = "other-actor"
+        value["actor_id"] = "6" * 32
     if mode == "operation":
-        value["operation_id"] = "other-operation"
-    if mode == "uncertain":
-        return dict(error="Presentation failed after staging", original_collection=dict(
-            tool="enactive_result", arguments=dict(mission_id="mission", operation_id="issued-handoff")))
+        value["operation_id"] = "6" * 32
+    if mode == "session":
+        value["session"] = "6" * 32
+    if mode == "authority":
+        issued["grants_authority"] = True
+    if mode == "sealed-wall":
+        issued["sealed_wall"] = 0
     return value
 
 
 @server.tool()
-async def enactive_handoff(snapshot_id: str, intent: dict, mode: str = "complete") -> CallToolResult:
-    record(dict(tool="enactive_handoff", mode=mode))
+async def player_handoff(ids: list[str] | None = None, summary: str = "", mode: str = "complete") -> CallToolResult:
+    record(dict(tool="player_handoff", mode=mode))
     value = handoff_receipt(mode)
-    return CallToolResult(content=[TextContent(type="text", text="{" if mode == "malformed" else json.dumps(value))], isError=mode in ("error", "uncertain"))
+    content = [TextContent(type="text", text="{" if mode == "malformed" else json.dumps(value))]
+    if mode == "extra-text":
+        content.append(TextContent(type="text", text="Supplemental player-visible context"))
+    return CallToolResult(content=content, isError=mode in ("error", "not-admitted"))
 
 
 @server.tool()
-async def enactive_result(mission_id: str, operation_id: str, mode: str = "complete") -> CallToolResult:
-    record(dict(tool="enactive_result", mode=mode))
+async def computer_result(operation_id: str, mode: str = "complete") -> CallToolResult:
+    record(dict(tool="computer_result", mode=mode))
     return CallToolResult(content=[TextContent(type="text", text="Formatting failed" if mode == "plain-error"
         else json.dumps(handoff_receipt(mode)))], isError=mode == "plain-error")
 

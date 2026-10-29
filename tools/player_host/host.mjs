@@ -92,7 +92,7 @@ export function validateConfiguration(configuration, selectedModel, effort) {
   return configuration;
 }
 
-/** Request-only projection. Canonical messages and original tool traces stay intact. */
+/** Request-only projection. Canonical messages stay intact; telemetry separately projects image references. */
 export function projectImageContext(messages, maxImages) {
   const projected = structuredClone(messages);
   const latestBatch = messages.findLastIndex(message => message.role === 'assistant'
@@ -150,7 +150,28 @@ function payloadSize(payload) {
       textParts++; textBytes += Buffer.byteLength(call.function?.arguments ?? '');
     }
   }
-  return {text_parts:textParts, text_bytes:textBytes, image_parts:imageParts, image_bytes:imageBytes, payload_bytes:Buffer.byteLength(JSON.stringify(payload))};
+  return {text_parts:textParts, text_bytes:textBytes, image_parts:imageParts, image_bytes:imageBytes, message_count:payload.messages?.length ?? 0};
+}
+
+/** Evidence projection only. Pi receives the unchanged actual MCP result. */
+export function projectToolResultForTelemetry(result) {
+  let imageIndex = 0;
+  const projected = structuredClone(result);
+  if (Array.isArray(projected.content)) projected.content = projected.content.map(part => {
+    if (part.type !== 'image') return part;
+    const bytes = Buffer.from(part.data, 'base64');
+    return {type:'image_reference', media_type:part.mimeType, bytes:bytes.length,
+      sha256:createHash('sha256').update(bytes).digest('hex'), image_index:imageIndex++};
+  });
+  return projected;
+}
+
+function assistantNarration(content) {
+  const bytes = Buffer.from((content ?? []).filter(part => part.type === 'text').map(part => part.text).join('\n'));
+  let end = Math.min(bytes.length, 8192);
+  // Keep the narration valid UTF-8 when a code point crosses the byte cap.
+  while (end < bytes.length && (bytes[end] & 0xc0) === 0x80) end--;
+  return {text:bytes.subarray(0, end).toString('utf8'), omitted_bytes:bytes.length - end};
 }
 
 // Inspect only a bounded refusal, never assistant output. Reader cancellation
@@ -230,62 +251,50 @@ function retryableRefusal(body) {
   return isRetryableAssistantError({stopReason:'error', errorMessage:details});
 }
 
-// This is a host-settlement hint from the actual MCP response, not successor
-// authority. campaign_player still validates the full canonical issuance and
-// fresh runtime/custody state before assigning another actor.
+// This actual MCP receipt ends this host only. The driver independently checks
+// canonical issuance/context and actual host/MCP quiescence before succession.
 function inspectHandoff(name, args, result, pending) {
-  if (!['enactive_handoff', 'enactive_result'].includes(name)) return {};
-  const direct = name === 'enactive_handoff';
-  // A successor may deliberately read its assigned issuance before Claim. Only
-  // collection of a handoff originated by THIS host can settle this host.
-  if (!direct && (!pending || args.mission_id !== pending.mission_id
-      || args.operation_id !== pending.operation_id)) return {};
-  const blocks = result.content?.filter(part => part.type === 'text') ?? [];
+  if (!['player_handoff', 'computer_result'].includes(name)) return {};
+  const direct = name === 'player_handoff';
+  // Reading an unrelated or earlier actor's issuance never arms settlement.
+  if (!direct && (!pending || args.operation_id !== pending.operation_id)) return {};
+  // A local rejection/no-submit result provides no origin, even when it carries
+  // plausible-looking IDs. Preserve explicit model correction/collection.
+  if (result.isError === true) return {};
   let value;
   try {
-    if (blocks.length !== 1) throw new Error('Not one envelope');
-    value = JSON.parse(blocks[0].text);
+    value = JSON.parse(result.content?.find(part => part.type === 'text')?.text);
   } catch {
-    // Ordinary MCP errors can be plain text. Without claimed completion they
-    // retain their existing model-visible correction/collection behavior.
-    if (direct && result.isError !== true) throw new HostError('invalid-handoff-receipt');
+    throw new HostError('invalid-handoff-receipt');
+  }
+  const id = value => typeof value === 'string' && /^[a-f0-9]{32}$/.test(value);
+  const valid = condition => requireThat(condition, 'invalid-handoff-receipt');
+  valid(object(value) && id(value.operation_id) && id(value.session) && id(value.actor_id)
+    && value.kind === 'handoff');
+  const origin = {operation_id:value.operation_id, session:value.session, actor_id:value.actor_id};
+  if (pending) valid(isDeepStrictEqual(origin, pending));
+  if (direct && value.schema === 'player-transport/1') {
+    valid(value.status === 'unknown' && typeof value.reason === 'string');
+    return {pending:origin};
+  }
+  valid(value.schema === 'computer-operation/1');
+  if (['pending', 'unknown'].includes(value.status)) {
+    valid(value.handoff === null);
+    return {pending:origin};
+  }
+  if (value.status === 'refused') {
+    valid(value.handoff === null);
     return {};
   }
-  const operation = value?.response?.operation;
-  let origin = pending;
-  if (direct && !['not_submitted', 'not_admitted'].includes(value?.submission)) {
-    const collection = value?.original_collection;
-    const identity = collection?.tool === 'enactive_result' ? collection.arguments
-      : operation?.kind === 'handoff' || value?.transport === 'uncertain' && value.settled === false
-        ? {mission_id:value.next_snapshot?.mission?.mission_id, operation_id:value.operation_id} : undefined;
-    if (text(identity?.mission_id) && text(identity?.operation_id)) {
-      origin = {...identity, intent:structuredClone(args.intent)};
-    }
-  }
-  if (operation?.state !== 'completed'
-      || (!direct && operation.kind !== 'handoff' && operation.result?.record_type !== 'Handoff')) return {pending:origin};
-  const issued = operation.result, mission = value.next_snapshot?.mission;
-  requireThat(result.isError !== true && value.presentation_schema === 'player-view/5'
-    && value.transport === 'delivered' && value.settled === true && value.response.status === 'accepted'
-    && operation.kind === 'handoff'
-    && issued?.schema === 'mission/11' && issued.record_type === 'Handoff' && issued.grants_authority === false
-    && text(issued.handoff_id) && text(issued.mission_id) && text(issued.original_player_id)
-    && text(issued.post_pause_source_id) && value.operation_id === issued.handoff_id
-    && operation.request_id === issued.handoff_id
-    && origin?.mission_id === issued.mission_id && origin.operation_id === issued.handoff_id
-    && origin.intent?.successor_role === issued.successor_role
-    && isDeepStrictEqual(origin.intent?.unfinished_work_ids, issued.unfinished_work_ids)
-    && mission?.mission_id === issued.mission_id && mission.actor_id === issued.original_player_id
-    && mission.player_id === issued.original_player_id && mission.phase === 'handoff'
-    && mission.pause_cause === 'internal_handoff' && mission.lease_owner === null
-    // The completed result can be presented before its own writer clears the
-    // active slot. A different operation (or an absent field) is incoherent.
-    && (mission.active_operation === null || mission.active_operation === issued.handoff_id)
-    && mission.progress_operation_id === issued.handoff_id,
-  'invalid-handoff-receipt');
-  // A later read-only Observe may be current; the issued post-Pause checkpoint
-  // remains fixed and the driver validates its actual native binding separately.
-  return {pending:origin, completed:{mission_id:issued.mission_id, handoff_id:issued.handoff_id}};
+  const issued = value.handoff;
+  valid(value.status === 'sealed' && object(issued)
+    && issued.schema === 'player-handoff/1' && issued.grants_authority === false
+    && issued.operation_id === origin.operation_id && issued.session === origin.session
+    && issued.actor_id === origin.actor_id && id(issued.context_id)
+    && typeof issued.context_sha256 === 'string' && /^[a-f0-9]{64}$/.test(issued.context_sha256)
+    && positive(issued.sealed_wall));
+  return {pending:origin, completed:{session:origin.session, actor_id:origin.actor_id,
+    handoff_id:origin.operation_id, context_id:issued.context_id, context_sha256:issued.context_sha256}};
 }
 
 /** Run one finite host. fetch injection exercises the actual Pi serializer in tests. */
@@ -352,7 +361,7 @@ export async function runHost(options) {
     const mcp = validateMcpConfiguration(options.mcpConfig);
     requireThat(typeof options.prompt === 'string' && typeof options.context === 'string', 'invalid-input');
     bounded(options.prompt); bounded(options.context);
-    emit('host-start', {telemetry_version:1, schema:configuration.schema, requested_service_tier:configuration.service_tier, model:configuration.model.id, provider:configuration.model.provider, api:configuration.model.api, effort:options.effort, max_output_tokens:configuration.model.maxTokens, context_window:configuration.model.contextWindow, thinking_level_map:{...configuration.model.thinkingLevelMap}, reasoning_format:configuration.model.compat?.thinkingFormat ?? null, provider_routing:configuration.model.compat?.openRouterRouting ? structuredClone(configuration.model.compat.openRouterRouting) : null, max_requests:configuration.max_requests, max_context_images:configuration.max_context_images, unsupported_features:['compaction', 'session-restore', 'model-fallback', 'reconnect', 'replay', 'ambient-tools', 'resource-discovery'], missing_endpoints:['model-attention', 'server-inference-start', 'physical-paint'], cleanup_budget_ms:cleanupBudget});
+    emit('host-start', {telemetry_version:2, schema:configuration.schema, requested_service_tier:configuration.service_tier, model:configuration.model.id, provider:configuration.model.provider, api:configuration.model.api, effort:options.effort, max_output_tokens:configuration.model.maxTokens, context_window:configuration.model.contextWindow, thinking_level_map:{...configuration.model.thinkingLevelMap}, reasoning_format:configuration.model.compat?.thinkingFormat ?? null, provider_routing:configuration.model.compat?.openRouterRouting ? structuredClone(configuration.model.compat.openRouterRouting) : null, max_requests:configuration.max_requests, max_context_images:configuration.max_context_images, unsupported_features:['compaction', 'session-restore', 'model-fallback', 'reconnect', 'replay', 'ambient-tools', 'resource-discovery'], missing_endpoints:['model-attention', 'server-inference-start', 'physical-paint'], cleanup_budget_ms:cleanupBudget});
     if (fatal) throw new HostError(fatal);
     requireThat(!AMBIENT_PROVIDER_SETTINGS.some(name => Object.hasOwn(process.env, name)), 'ambient-provider-configuration');
     // The MCP subprocess gets only locale and executable lookup, never provider
@@ -379,7 +388,7 @@ export async function runHost(options) {
         try { result = await client.callTool(name, args, {signal, timeoutMs:mcp.tool_timeout_sec * 1000}); }
         catch { stop('mcp-call-failed'); throw new HostError(fatal); }
         if (fatal) throw new HostError(fatal);
-        emit('tool-result', {request_id:requestId, tool_call_id:toolCallId, tool:name, result});
+        emit('tool-result', {request_id:requestId, tool_call_id:toolCallId, tool:name, result:projectToolResultForTelemetry(result)});
         try {
           const transition = inspectHandoff(name, args, result, pendingHandoff);
           if (transition.pending) pendingHandoff = transition.pending;
@@ -463,7 +472,8 @@ export async function runHost(options) {
             const fetchEntered = performance.now();
             requireThat(typeof init?.body === 'string', 'invalid-provider-payload');
             const payload = JSON.parse(init.body);
-            const sizes = payloadSize(payload);
+            const sizes = {...payloadSize(payload), payload_bytes:Buffer.byteLength(init.body),
+              payload_sha256:createHash('sha256').update(init.body).digest('hex')};
             const inspectionMs = performance.now() - fetchEntered;
             const attemptId = requestId = `request-${++requests}`;
             const attemptProgress = responseProgress = {request_id:attemptId, body_bytes:0, body_chunks:0,
@@ -474,7 +484,7 @@ export async function runHost(options) {
             if (previousRequestId) emit('provider-retry', {stage:'started', request_id:attemptId, previous_request_id:previousRequestId});
             emit('request-start', {request_id:attemptId, logical_request_id:logicalRequestId, model:model.id, provider:model.provider,
               sdk_after_payload_ms:attempts === 1 && payloadReadyAt !== undefined ? fetchEntered - payloadReadyAt : null,
-              host_inspection_ms:inspectionMs, ...sizes, payload});
+              host_inspection_ms:inspectionMs, ...sizes});
             let response;
             emit('request-fetch-start', {request_id:attemptId});
             try { response = await actualFetch(url, init); }
@@ -571,6 +581,8 @@ export async function runHost(options) {
       if (event.type === 'message_end' && event.message.role === 'assistant') {
         clearTimeout(requestTimer);
         const message = event.message;
+        const narration = assistantNarration(message.content);
+        if (narration.text || narration.omitted_bytes) emit('assistant-text', {request_id:requestId, ...narration});
         if (requestInFlight) emit('response-complete', {request_id:requestId, model:message.model, provider:message.provider, stop_reason:message.stopReason, usage_available:requestUsageAvailable, usage:requestUsageAvailable ? message.usage : null, cost_source:requestUsageAvailable ? (message.usage?.cost?.totalFromProvider === true ? 'provider' : 'configured-rates') : null, response_progress:progressSnapshot()});
         requestInFlight = false;
         if (['error', 'aborted', 'length', 'deferred'].includes(message.stopReason) && !fatal) stop(message.stopReason === 'error' ? 'provider-error' : `provider-${message.stopReason}`);
