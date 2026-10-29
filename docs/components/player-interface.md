@@ -247,6 +247,10 @@ credential. The custodian forwards only that selected credential to the driver;
 MCP/controller do not receive it. Source conformance is separate from actual
 endpoint vision/tool quality and useful gameplay speed. Exact configuration lives
 in the [host procedure](../operations/player-host.md) and [host contract](../../tools/player_host/README.md).
+The [endpoint gameplay comparison](../acceptance/2026-10-28-endpoint-gameplay.md)
+demonstrates bounded BaseTen/Fireworks use and normal endings; shallow progress,
+failed navigation routines and inaccurate player summaries leave whole-player
+quality and apparent cadence unqualified.
 
 ## Assurance and evidence
 

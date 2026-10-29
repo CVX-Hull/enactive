@@ -237,8 +237,9 @@ when `frame_ok`, not a renewed publication time. Offline subtraction requires th
 same host/wall clock and scrutiny of clock adjustments; negative cross-clock
 differences are retained rather than silently clamped. Failed, superseded, stale
 or disconnected frames do not establish current presentation. The paused no-game
-browser probe verifies v2 status anchors only; actual paired native/browser
-correlation remains to be measured during fresh play. Animation callbacks do not
+browser probe verifies v2 status anchors only; bounded exact native/browser joins
+are recorded in the [endpoint gameplay comparison](acceptance/2026-10-28-endpoint-gameplay.md#apparent-latency-and-diagnostic-decomposition).
+Animation callbacks do not
 establish screen paint, and these records do not isolate model inference.
 
 The timing disclosure offers standard Download timing and **Show export JSON**
@@ -302,6 +303,12 @@ files fills the observed diagnostic gap without another store, service or
 dependency. Lead owns these thin projections; replace them when maintained tools
 supply equivalent joins. CLI help records finite resource limits. New fields
 cannot retrospectively fill older endpoint or logging-overhead gaps.
+The subsequent [endpoint gameplay comparison](acceptance/2026-10-28-endpoint-gameplay.md)
+exercises these diagnostics on live play and retains partial gains, failed
+programs, correction chains, missing DOM witnesses and the invalid screen setup.
+Provider generation metadata can corroborate routing, usage and service timing;
+its clocks are not additive with client spans and `num_fetches` does not attest
+upstream inference-attempt counts.
 
 ## Caller contract
 

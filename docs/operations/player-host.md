@@ -27,8 +27,9 @@ arbitrary descendants or aliases are unsupported. Prepare these run-local files:
   `model`, `api_key_env`, `max_requests`, `request_timeout_seconds`, required
   `service_tier` (`default` or `priority`) and required
   positive integer `max_context_images`. Freeze the selected provider's verified
-  image-part bound (30 for the tested DeepInfra route); this is not a universal
-  limit. Historical version1/2 files are not accepted or rewritten. Freeze verified
+  image-history allowance (30 for the tested DeepInfra and OpenRouter routes);
+  this does not establish a universal provider limit. Historical version1/2/3
+  files are not accepted or rewritten. Freeze verified
   tier support/prices, including any surcharge in configured costs and the
   conservative request reservation; requested priority is distinct from the
   optional applied-tier stream echo. See the route contract below. The current

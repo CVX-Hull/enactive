@@ -1,0 +1,234 @@
+{
+  "scope": "Selected original native PNGs and derived diagnostic distributions; no gameplay acceptance or billing claim",
+  "source_commit": "3d532af83873f529b9808fc0b1d1fbac4e5de18c",
+  "native_binary_sha256": "71e51f5301e873e6832eb50c7456f29b5e40e9c7f2e7a38d241e36873c778597",
+  "assets": [
+    {
+      "case": "endpoint-280-002",
+      "source_id": "ca5c565d1c703a5871dfcb10267676e1d48dc55d9b15eec0cc8cf65f34e6cbcd",
+      "asset": "ordinary-outdoor-effect.png",
+      "png_sha256": "72c02c5c6a4eab6db187e655def9bc860089d2cc5aeafc80eab734cf499dd031",
+      "native_capture_epoch_ms": 1793234544389,
+      "dom_replaced_epoch_ms": 1793234544549,
+      "capture_to_dom_ms": 160
+    },
+    {
+      "case": "endpoint-280-003",
+      "source_id": "a02af655d95803f34b2266a6cf3101c5dd4e887f20a3718d6a8306786e72352e",
+      "asset": "partial-container-effect.png",
+      "png_sha256": "b5dbb692527e146a54c778c314d59aefd09e3a8293349da32e6541b94995a656",
+      "native_capture_epoch_ms": 1793235318736,
+      "dom_replaced_epoch_ms": 1793235318943,
+      "capture_to_dom_ms": 207
+    }
+  ],
+  "cases": [
+    {
+      "mission": "endpoint-280-001",
+      "trace_sha256": "24d2dae2fb508ea26c3084427a3f8f945d5abf232a2c210236d63ab77a013a46",
+      "trace_bytes": 35443228,
+      "route": {
+        "api": "openai-completions",
+        "context_window": 1048576,
+        "effort": "medium",
+        "max_context_images": 30,
+        "max_output_tokens": 16384,
+        "model": "deepseek/deepseek-v4.1-flash-1017",
+        "provider": "openrouter",
+        "provider_routing": {
+          "allow_fallbacks": false,
+          "only": [
+            "baseten"
+          ],
+          "order": [
+            "baseten"
+          ],
+          "require_parameters": true
+        },
+        "reasoning_format": "openrouter",
+        "requested_service_tier": "default",
+        "schema": "pi-player-host/4",
+        "telemetry_version": 1,
+        "thinking_level_map": {
+          "medium": "medium"
+        }
+      },
+      "host_ms": 181330.988708,
+      "responses": {
+        "max": 17401.493917000014,
+        "n": 28,
+        "p50": 4093.896166500006,
+        "p95": 13691.307415999996,
+        "sum": 160073.38758200002
+      },
+      "request_share": 0.8827690662392439,
+      "output_per_post_body_second": {
+        "max": 308.02235384190016,
+        "n": 28,
+        "p50": 246.5036943129408,
+        "p95": 301.91674681431755,
+        "sum": 6943.953930505411
+      },
+      "event_output": {
+        "backpressure_signals": 0,
+        "bytes": 35442865,
+        "callback_ms": 60.43762599991298,
+        "enqueue_ms": 34.473247999968024,
+        "events": 280,
+        "json_ms": 23.15867000005626,
+        "max_callback_ms": 3.817750000001979
+      },
+      "capture_to_dom_ms": {
+        "max": 783,
+        "n": 13,
+        "p50": 164,
+        "p95": 783,
+        "sum": 3187
+      },
+      "unmatched_source_rows": 22,
+      "accounting": {
+        "actual_attempts": 28,
+        "consumed_reservation_usd": "9.3585408",
+        "known_configured_estimate_usd": "0.0914408479999999973"
+      }
+    },
+    {
+      "mission": "endpoint-280-002",
+      "trace_sha256": "d9f3822cd76f2fef0fa45b757943c99e5b958288dfab56e095a94783f5124d5f",
+      "trace_bytes": 194362655,
+      "route": {
+        "api": "openai-completions",
+        "context_window": 1048576,
+        "effort": "medium",
+        "max_context_images": 30,
+        "max_output_tokens": 16384,
+        "model": "deepseek/deepseek-v4.1-flash-1017",
+        "provider": "openrouter",
+        "provider_routing": {
+          "allow_fallbacks": false,
+          "only": [
+            "fireworks/us"
+          ],
+          "order": [
+            "fireworks/us"
+          ],
+          "require_parameters": true
+        },
+        "reasoning_format": "openrouter",
+        "requested_service_tier": "default",
+        "schema": "pi-player-host/4",
+        "telemetry_version": 1,
+        "thinking_level_map": {
+          "medium": "medium"
+        }
+      },
+      "host_ms": 450452.367792,
+      "responses": {
+        "max": 32794.22475000002,
+        "n": 63,
+        "p50": 4572.414374999993,
+        "p95": 10290.285667000018,
+        "sum": 368172.1040020002
+      },
+      "request_share": 0.8173385918841626,
+      "output_per_post_body_second": {
+        "max": 404.7492832979754,
+        "n": 63,
+        "p50": 230.65997382564635,
+        "p95": 335.7164396031846,
+        "sum": 15583.551762558605
+      },
+      "event_output": {
+        "backpressure_signals": 0,
+        "bytes": 194362289,
+        "callback_ms": 234.88395400033863,
+        "enqueue_ms": 110.00399099996451,
+        "events": 630,
+        "json_ms": 112.71504600026813,
+        "max_callback_ms": 7.542583000002196
+      },
+      "capture_to_dom_ms": {
+        "max": 550,
+        "n": 113,
+        "p50": 120,
+        "p95": 285,
+        "sum": 15047
+      },
+      "unmatched_source_rows": 121,
+      "accounting": {
+        "actual_attempts": 63,
+        "consumed_reservation_usd": "31.5850752",
+        "known_configured_estimate_usd": "1.0738769940000000541"
+      }
+    },
+    {
+      "mission": "endpoint-280-003",
+      "trace_sha256": "90601dc3bcc441ea68fa598fb8b85caf913ce544253218b32dd9ee7e9740c5fd",
+      "trace_bytes": 216641532,
+      "route": {
+        "api": "openai-completions",
+        "context_window": 1048576,
+        "effort": "medium",
+        "max_context_images": 30,
+        "max_output_tokens": 16384,
+        "model": "deepseek/deepseek-v4.1-flash-1017",
+        "provider": "openrouter",
+        "provider_routing": {
+          "allow_fallbacks": false,
+          "only": [
+            "baseten"
+          ],
+          "order": [
+            "baseten"
+          ],
+          "require_parameters": true
+        },
+        "reasoning_format": "openrouter",
+        "requested_service_tier": "default",
+        "schema": "pi-player-host/4",
+        "telemetry_version": 1,
+        "thinking_level_map": {
+          "medium": "medium"
+        }
+      },
+      "host_ms": 450550.514583,
+      "responses": {
+        "max": 30427.930499999988,
+        "n": 58,
+        "p50": 5658.581271000003,
+        "p95": 16178.563332999998,
+        "sum": 388290.8419189999
+      },
+      "request_share": 0.8618142236023778,
+      "output_per_post_body_second": {
+        "max": 641.5135181163503,
+        "n": 58,
+        "p50": 248.61672377409494,
+        "p95": 323.22238613101837,
+        "sum": 15278.3403144501
+      },
+      "event_output": {
+        "backpressure_signals": 0,
+        "bytes": 216641166,
+        "callback_ms": 236.20828700050453,
+        "enqueue_ms": 112.76833200010084,
+        "events": 578,
+        "json_ms": 110.16394199981721,
+        "max_callback_ms": 7.817250000021886
+      },
+      "capture_to_dom_ms": {
+        "max": 2614,
+        "n": 54,
+        "p50": 143.0,
+        "p95": 315,
+        "sum": 10305
+      },
+      "unmatched_source_rows": 41,
+      "accounting": {
+        "actual_attempts": 58,
+        "consumed_reservation_usd": "19.3855488",
+        "known_configured_estimate_usd": "0.5554903759999999766"
+      }
+    }
+  ]
+}

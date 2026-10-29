@@ -427,8 +427,11 @@ takeover and browser Pause remain. Game options stay project-local; semantic
 exact-image checks and the separate direct-input drift policy still apply.
 The fixed wrapper also exports `SDL_MAC_BACKGROUND_APP=1` and
 `SDL_WINDOW_NO_ACTIVATION_WHEN_SHOWN=1` only to its child. These existing SDL2
-hints prevent startup from activating the application/window; the game remains
-windowed and observable. Deliberate native focus/keyboard takeover still revokes
+hints request reduced startup activation; the game remains windowed and observable.
+They do not guarantee macOS window ordering: a real launch has covered the spectator.
+After the owned window appears, return the browser to the front once if needed.
+Do not repeatedly steal focus or disable takeover to keep it there. Deliberate
+native keyboard/pointer takeover still revokes
 harness authority. [SDL macOS background hint](https://wiki.libsdl.org/SDL2/SDL_HINT_MAC_BACKGROUND_APP)
 and [window-show hint](https://wiki.libsdl.org/SDL2/SDL_HINT_WINDOW_NO_ACTIVATION_WHEN_SHOWN)
 own library semantics; actual host focus preservation needs a real launch check.
