@@ -44,7 +44,11 @@ def check(path, *, via_shell=False):
                 max_frames=32, max_bytes=1073741824))
             # Bind is earlier than the first present. Retain known no-capture
             # refusals and explicitly choose a later observation, without input.
-            time.sleep(.3)
+            startup = time.monotonic() + 10
+            while not (path / 'bridge/state.json').exists():
+                if child.poll() is not None or time.monotonic() >= startup:
+                    raise RuntimeError('Fixture did not establish its target within startup allowance')
+                time.sleep(.02)
             client = ComputerClient(path)
             for attempt in range(3):
                 value, png = client.execute(observe=True)
