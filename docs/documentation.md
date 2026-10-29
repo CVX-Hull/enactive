@@ -1,179 +1,89 @@
 ---
 owner: maintainer
-review_trigger: Reader needs, artifact authority, architecture hierarchy or document lifecycle changes
+review_trigger: Responsibility, supported behavior, interfaces or qualification change
 status: active
 ---
 
 # Documentation: understand, decide, implement, verify
 
-Start with the [overview](overview.md), then zoom into the part you want to
-challenge. This page defines the information organization required by
-[S-DOCS](standards/documentation.md#s-docs-useful-maintained-documentation); it is not a work
-tracker. The lead maintains this organization with component maintainers.
+Start with the [overview](overview.md), then the responsibility you need to
+challenge. [S-DOCS](standards/documentation.md#s-docs-useful-maintained-documentation)
+owns documentation requirements. The lead maintains navigation with component
+maintainers. Deciding players use the [compact guide](player-guide.md), frozen
+assignment and actual tool schema; routine play does not require engineering history.
 
-Deciding players take the shorter path: the [player guide](player-guide.md), their
-frozen mission and current selected tool schema. Engineering history, proposals
-and acceptance inventories are outside routine player context. Contributors use
-the responsibility map below; the [protocol navigation](protocol.md#contract-navigation)
-leads directly to exact interfaces when needed.
+![Current review hierarchy from purpose through contract and implementation.](diagrams/architecture-review.svg)
 
-![Purpose and standards constrain system/component design; exact contracts/code produce scoped evidence.](diagrams/architecture-review.svg)
-
-This current diagram answers “Where do I start reviewing a change?” Arrows show
-constraints or drill-down, not separate processes or approvals at every level.
-[Editable source](diagrams/architecture-review.mmd). The table below is its text equivalent.
+This current logical diagram answers “Where should review begin?” Arrows show
+constraint or drill-down; boxes are document roles, not separate processes or
+approval stages. [Editable source](diagrams/architecture-review.mmd).
 
 ## Read at the level of your question
 
-| Your question | Authoritative starting point | Next level |
+| Question | Start | Follow when needed |
 | --- | --- | --- |
-| Why build this; what must remain true? | [Charter](charter.md): purpose, constraints, principles | [Engineering](engineering.md): mandatory standards and policies |
-| What does it do, and what remains unproven? | [Overview](overview.md): capabilities and limits | [Architecture](architecture.md): responsibilities and relationships |
-| How does this part work? | The component view linked from architecture | Exact [protocol](protocol.md), schemas and linked source/tests |
-| What change should we make, and why? | A scoped GitHub Issue; brief/ADR where consequential | Affected parent/component views, alternatives, contracts and acceptance |
-| How do I operate it? | [Setup](setup.md), [runbook](runbook.md), [walkthrough](walkthrough.md) | Exact CLI/tool reference; [player guide](player-guide.md) for deciding players |
-| What is next, blocked or being delivered? | [GitHub Project](https://github.com/users/CVX-Hull/projects/2) and linked Issues | Implementation PR and actual verification results |
-| What do the tests cover, and which should run? | [Testing guide](testing.md): layer responsibilities and selection | Shared CI manifest and relevant assertions |
-| What could go wrong, and what supports the guarantee? | [Responsibility assurance](architecture.md#responsibility-assurance): system-level review navigation | Component assurance, exact contract, existing control and representative evidence/gap |
-| What evidence supports the claim? | [Work evidence index](work.md), dated acceptance report or CI receipt | Original retained artifacts under their declared scope |
+| Purpose and constraints | [Charter](charter.md) | [Engineering standards](engineering.md) |
+| Product capability and limits | [Overview](overview.md) | [Architecture](architecture.md) |
+| Ownership, state and failures | A component linked from architecture | [Current exact contract](contracts/computer-control.md), code and assertions |
+| Operate a finite run | [Setup](setup.md), [runbook](runbook.md) | [Campaign procedure](operations/campaign-run.md) |
+| Change scope and acceptance | GitHub Issue/PR | Affected parent/component, contract and [review policy](workflows/review.md) |
+| Evidence and remaining work | [Work](work.md) / public Project | Dated original report and artifacts |
+| Checks and their limits | [Testing](testing.md) | Shared [CI selection](../tools/ci.py) and actual assertions |
 
-Each architecture view explains a boundary from the outside before exposing its
-internals. Describe purpose and user consequence, responsibilities and owned
-state, interfaces/dependencies, important flows, failure/recovery, limitations and
-links to child views/contract/code/tests. A diagram should answer a named question;
-its host page explains arrows and distinguishes logical blocks from processes.
-Decompose recursively where complexity or risk warrants it. A small leaf may need
-only a section, docstring or schema; do not create an empty page for every class.
-Cross-cutting concerns can span branches. This is a review hierarchy, not a demand
-to finish all design before feedback or to mirror directories mechanically.
+Architecture starts outside a responsibility, then explains owned state,
+interfaces, important flows, failures and limits. Decompose only where a concrete
+reader task or boundary benefits; no universal file-size quota applies.
 
 ## Repository boundaries
 
-| Location | Responsibility and limit |
+| Location | Responsibility |
 | --- | --- |
-| `harness/` and `schemas/` | Current writer, control, evidence/memory and contracts. Shared memory/time ports and explicit CDDA projections are described in architecture; actual game-family qualification remains open. |
-| `native/` | The small CDDA integration and its upstream provenance. Shared learning/orchestration does not belong in game patches. |
-| `tools/` | Maintained engineering/check/launch/study entry points, including the generic Pi host. Reuse these rather than growing a private source framework in run directories. |
-| `web/` | Passive spectator presentation; it owns no gameplay authority. |
-| `tests/` | Behavioral/component assertions and explicit doubles, mapped by the testing guide. Actual game outcomes are a separate evidence lane. |
-| Current `docs/` pages and `components/` | Purpose and responsibility explanation; root indices route to exact `contracts/`, mandatory `standards/`, decision `workflows/` and task `operations/`. Schemas/source retain their declared interface scope. |
-| `docs/acceptance/`, `changes/`, `decisions/` | Dated evidence and rationale with explicit status; they supply context, not current work or input permission. |
-| Ignored `.runtime/` | Owned run data, frozen inputs and original raw evidence. It is not a second maintained source tree or tracker; a fresh checkout does not contain it. |
-
-Keep these ownership boundaries when reorganizing. A large historical corpus or
-long file alone does not justify a rename or framework. First repair navigation,
-stale authority and duplicate summaries. Split a contract/module when a concrete
-reader or implementation boundary benefits; migrate every caller/link together
-and preserve original evidence. Git retains earlier structure. No second index,
-documentation service or source-history database is required.
-
-The [protocol](protocol.md), [engineering](engineering.md),
-[project workflow](project-management.md) and [runbook](runbook.md) are routing
-indices. Their existing headings remain useful bookmarks; task-sized current
-bodies live in `contracts/`, `standards/`, `workflows/` and `operations/`.
-Use direct links to the relevant body when citing a rule. The engineering index
-retains the standard IDs and principle/control mappings consumed by governance;
-the protocol index retains the current version and migration declaration.
-These are metadata homes, not copies of the leaf requirements.
-
-Decompose by a concrete reader task, authority boundary or cohesive change surface.
-Split a mixed contract again when a reader cannot review the needed task without
-reading unrelated interfaces. Keep the original requirements, update relative
-links and current consumers together, and retain historical bookmarks as routing
-anchors. A renamed large file or an index above an unchanged large body does not
-resolve mixed responsibilities. No file-size quota, new registry or second current
-home is needed. Generated control maps are lookup references; they are not a
-required linear reading path. Reader-task review under S-DOCS/C-USABILITY checks
-discoverability and reviewability; file counts and valid links do not establish
-comprehension.
+| `harness/computer/` | Mechanical packets, socket, writer, store, target custody and SDL adapter; no game/player semantics. |
+| `harness/player/` | Pure fallible knowledge, image views, bounded programs and context; no process/provider/native authority. |
+| `harness/application.py` and transport adapters | Compose the two ports and expose explicit current tools. |
+| `tools/` | Maintained setup/check/build/campaign entry points and generic Pi host. |
+| `native/` | Upstream provenance and preparation inputs, not a semantic control backend. |
+| `web/` | Passive spectator and independent user Pause. |
+| `tests/` | Scoped behavioral assertions/doubles and compiled fixtures; actual outcomes are separate evidence. |
+| `docs/components/`, `contracts/`, `standards/`, `workflows/`, `operations/` | Explanation, exact rules, mandatory qualities, decisions and supported tasks. |
+| `docs/acceptance/`, `changes/`, `decisions/` | Dated evidence/rationale under explicit status, not live commands or permission. |
+| Ignored `.runtime/` | Frozen inputs, owned stores/saves and raw evidence; no private maintained source framework. |
 
 ### Follow a concrete reader task
 
-| Task | Reader route and consequence |
+| Task | Current route and consequence |
 | --- | --- |
-| Find a rule and its owner | [Engineering index](engineering.md) → the named [standard body](standards/documentation.md), whose frontmatter identifies its owner/review trigger; the index owns the principle/control mapping. Follow linked subtopics only for the affected part of the rule. |
-| Implement Load and adopt identity | [Launch/admission](contracts/mission-admission.md#owned-launch-and-initial-load-admission) → [Load transitions and initial menu dismissal](contracts/lifecycle-create-load.md) → [source preconditions](contracts/lifecycle-preconditions.md) → [identity adoption](contracts/lifecycle-preconditions.md#normal-identity-adoption-and-historical-proof). [Diagnostic readmission](contracts/lifecycle-create-load.md#lifecycle-diagnostic-observation-and-readmission) handles the paused phase; reopening restores no authority. |
-| Collect an uncertain request | [Transport and original result collection](contracts/player-transport.md) → [unknown-delivery reconciliation](contracts/delivery-reconciliation.md), with [certified nonadmission](contracts/player-transport.md#certified-request-admission-refusal) as a distinct correction path. Preserve the original identity and uncertainty. |
-| Replace a deciding player | [Handoff issuance](contracts/handoff-issuance.md) → [successor context, Claim and readmission](contracts/handoff-issuance.md#successor-context-claim-and-readmission); the [host activation procedure](operations/player-host.md) operates the actual host. Issuance alone does not activate a successor. |
-| Operate the host | [Typed mission procedure](operations/mission-requests.md) → [bounded host activation](operations/player-host.md); use [mission ownership](operations/mission-ownership.md) and [Pause/timeout recovery](operations/pause-timeout.md) for the relevant fault. |
-| Distinguish development from acceptance | [Development checkpoint table](workflows/development.md) → [minimum checks/escalation](workflows/development.md#minimum-checks-and-escalation) → [protected CI profiles](workflows/ci-profiles.md). A finite development run and a formal outcome claim have different evidence requirements. |
+| Send basic control | [Player guide](player-guide.md) → [tool schemas](../harness/player_tools.py) → [computer operations](contracts/computer-control.md#computer-operations-and-custody). No game-phase/identity admission. |
+| Collect uncertain input | [Tool procedure](operations/mission-requests.md) → exact original `computer_result` / `player_result`. Input remains stopped; no replay. |
+| Replace an actor | [Host procedure](operations/player-host.md) → [custody contract](contracts/computer-control.md#computer-operations-and-custody). Canonical context and actual quiescence precede successor capability. |
+| Save/load/exit | [Player guide](player-guide.md#current-registered-cdda-lifecycle) → actual visible ordinary controls. The player judges game state; the harness certifies no save. |
+| Select validation | [Testing](testing.md) → [development policy](workflows/development.md) and [CI profiles](workflows/ci-profiles.md). Native/gameplay evidence stays separate. |
 
 ## One authoritative home per kind of fact
 
-| Artifact role | Owns | Does not own |
-| --- | --- | --- |
-| Charter | Product intent, constraints and principles | Current implementation or work stage |
-| Engineering / project-management policy | Required properties; workflow decision and trigger rules | Duplicate wire contracts or run history |
-| Architecture / component explanation | Current responsibilities, state ownership, relationships, responsibility-level assurance, rationale links and known gaps | Per-attempt chronology, a complete risk database or a second schema definition |
-| Protocol / schema / generated reference | Exact current interfaces and invariants in their stated scope | Product direction or evidence that a run passed |
-| Proposed design brief | Change scope, alternatives, selected design, questions and acceptance | Implemented support until incorporated into current contracts |
-| ADR / historical brief | Decision context, alternatives and consequences at the stated date | Live implementation, task status or remaining-action queue |
-| Research | Primary evidence, reading scope, uncertainty and transfer judgment | Mandatory requirements without an adopted standard/design |
-| Procedure / tutorial | Supported steps for an operating task / learning task | Duplicate architecture or historical checkpoint narrative |
-| Control registry → generated map | Mechanism, owner, trigger, evidence, failure response and coverage limits | Repeated standard text or chronological incident inventory |
-| Native test metadata | Registered concern families and executable test membership | Semantic completeness, CI routing, native/campaign qualification or another control registry |
-| Dated acceptance/audit report | Candidate, observations, checks, costs, limits and finding dispositions | Current authority, future permission or live issue fields |
-| GitHub Issue / Project / PR | Outcome and acceptance / stage and sequencing / implementation and review evidence | A second durable architecture reference |
+Charter owns purpose; engineering/standards own mandatory rules;
+architecture/components own current responsibilities and assurance limits;
+[computer-control](contracts/computer-control.md) owns exact current ports;
+schemas/source own their declared executable interface; operations own tasks.
+GitHub owns live work, proposals own unadopted scope, ADRs own dated rationale,
+and acceptance reports own original observations. The control registry/map owns
+control lifecycle, not a second contract or work tracker.
 
-Summaries may state a scoped conclusion and link evidence. They must not require
-synchronized copies of changing fields or exact contracts. Current architecture
-must be understandable without reading old proposals. Git owns previous source
-versions; historical records preserve original observations, including failures.
-An iteration's core, optional scope, appetite and decision belong in its existing
-Issue, with stage/sequence in the Project. Link component designs and consolidated
-evidence; do not add a local iteration backlog, a document per task or a report per
-attempt. [Work scales](workflows/work-items.md#work-items-and-flow) distinguish the
-iteration from commits, feedback checkpoints and finite runtime attempts.
+The other `contracts/` pages are superseded bookmarks for the native7/mission11
+system. They retain original-source links and headings for historical references;
+current readers follow their explicit replacement. Do not treat historical
+contracts or old executable artifacts as another supported backend.
 
 ## Lifecycle and maintenance
 
-Use the existing frontmatter contract: `active` for maintained current guidance,
-`proposed` for an unadopted design, `historical` for a dated record and `superseded`
-for replaced guidance with an explicit replacement. Status describes the artifact,
-not whether the associated product outcome succeeded. An accepted source design
-may coexist with an unaccepted full outcome in GitHub.
+Use `active`, `proposed`, `historical` or `superseded` stewardship metadata according
+to artifact authority. Superseded guidance names a repository-relative replacement.
+A timestamp or parser pass does not establish truth. Keep original failures intact.
 
-Before adopting a design, incorporate its current behavior into the architecture,
-component view and exact contracts; transfer remaining actions to Issues. Then
-retain its brief as dated rationale. Partially adopted proposals must state their
-remaining proposal scope and link the implemented contract. Dated files in
-`acceptance/` are historical records even if their observations remain useful.
-Do not rewrite a past failure after a repair.
-
-On a responsibility/interface change, update the affected view and its parent
-map in the same change, then linked contracts, schemas, callers, tests and operating
-guides as applicable. On an outcome claim, update the overview's capability/limit
-and link the dated evidence. A new attempt alone needs no overview paragraph.
-Update current bodies instead of appending another checkpoint. Remove redundant
-summaries and retire obsolete guidance through Git.
-
-Keep the component assurance view aligned when its invariant, contract, control,
-representative assertion or evidence boundary changes. Link the actual assertion
-and its limitations; native pytest metadata owns executable family membership.
-Do not copy a full test inventory or all historical results into architecture.
-An unexercised lane is an explicit gap, with existing owned work where known; an
-inventory count or fresh link cannot turn it into qualified behavior.
-
-The existing [controls](controls.md) enforce metadata, current local fragments and responsibility-index reachability, generated-map
-freshness, diagram rendering and selected dependency/protocol relationships.
-C-REVIEW checks authority, coherence and changed-boundary diagrams; C-USABILITY
-checks whether a reader can answer the intended question; C-MAINTENANCE reviews
-drift and control cost at its existing triggers. Passing a parser or a date check
-cannot prove meaning or maintainability. Repeated navigation failures, stale
-copies, escaped defects or excessive review effort trigger repair or simplification
-in the existing Issue, not a new tracker or semantic-checking framework.
-
-
-Current fragment checks use the existing Markdown parser plus the pinned
-GitHub slugger, including duplicate headings and explicit anchors. Historical
-prose retains its original fragments; historical pages cannot supply a current
-navigation route. Reader-task review still checks positional prose references,
-semantic destinations, one canonical rule home and task granularity. These are
-judgment tasks, not claims established by a valid heading or reachable file.
-
-
-GitHub's [generated-file attributes](https://docs.github.com/en/repositories/working-with-files/managing-files/customizing-how-changed-files-appear-on-github)
-collapse generated SVG/control-map text in review by default. Review their
-maintained Mermaid/registry sources and actual rendered views; generated outputs
-remain tracked and expandable, with the same rendering/freshness checks. This
-reduces encoded font/reference noise without creating another review service.
+Update parent/component/contract/callers/storage/operations together when behavior
+changes. Incorporate adopted design into current pages, transfer remaining work
+to GitHub and retain briefs as rationale. Preserve useful bookmarks while routing
+them to the current rule. No extra backlog, registry or source-history database is
+needed. C-USABILITY follows a real reader task; C-REVIEW compares claims with source;
+C-MAINTENANCE checks drift at existing triggers. Valid paths/anchors/render receipts
+support these judgments but cannot replace them.

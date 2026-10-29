@@ -1,13 +1,15 @@
 ---
-title: Current finite campaign custody and exceptional shutdown
+title: Current finite campaign custody and cleanup
 ---
 flowchart TB
-  accTitle: The custodian delegates host and native cleanup to their actual owners
-  accDescr: One maintained custodian reads frozen data and owns exact controller and driver child handles. The driver owns the Pi hosts. The controller contains one mission writer, which owns a NativeProcess child. On cancellation, failure or deadline, the custodian stops the driver with bounded nested cleanup time, requests exceptional Stop and closes its controller. Only the settled writer may exceptionally terminate its retained native handle after authority revocation. A boot-bound shutdown receipt reports closure or unknown; neither exceptional cleanup nor process absence proves normal ending or game acceptance. No process scan, PID adoption or process group signalling is used.
-  F["Frozen run data<br/>finite limits and source"] --> C["Maintained campaign custodian"]
-  C -->|"Retained Popen"| D["Campaign driver<br/>owns Pi host cleanup"]
-  C -->|"Retained Popen"| S["Controller process<br/>writer and NativeProcess"]
-  D --> P["Original Pi host<br/>at most one fresh successor"]
-  S -->|"Retained Popen<br/>exceptional close after revocation<br/>and writer settlement"| N["Owned native game child"]
-  X["Cancellation, failure or deadline"] -->|"Quiesce driver; then Stop and close controller"| C
-  S -. "Matching boot receipt<br/>closed or unknown" .-> C
+  accTitle: Current finite campaign custody and cleanup
+  accDescr: Actual process ownership. One campaign custodian owns the exact native target group and computer runtime and delegates Pi and MCP group cleanup to the driver. Native inherits the shared lock for its lifetime. Cancellation permanently stops input and closes only owned groups. Normal exit before forced signals, process absence and save claims are distinct.
+F["Frozen campaign-run/2<br/>Exact source, route, target and limits"] --> C["Campaign custodian<br/>One finite admission"]
+  C -->|"Exact native handle and inherited lock/socket"| N["Owned native process group<br/>Windowed target and SDL adapter"]
+  C --> R["Computer runtime and loopback server<br/>One writer and original store"]
+  C --> D["Campaign driver<br/>Aggregate original attempts and host time"]
+  D -->|"Exact owned host/MCP groups"| P["Original Pi actor<br/>At most one verified successor"]
+  X["Pause, cancellation, deadline or failure"] -->|"Permanent stop then owned cleanup"| C
+  D -->|"Host quiescence and attempt receipts"| C
+  N -->|"Exit sampled before forced signals<br/>Absence reported separately"| C
+  C --> E["campaign-receipt/2<br/>No game acceptance or save certification"]

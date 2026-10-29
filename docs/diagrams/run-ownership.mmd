@@ -1,18 +1,15 @@
 ---
-title: Current controller ownership and takeover
+title: Current actor custody and permanent stop
 ---
-flowchart TD
-  accTitle: One mission operation owns input until revoked
-  accDescr: A trusted caller acquires a process-local capability only with fresh evidence eligible for its operation and empty queues. Navigation requires normal play; interaction and lifecycle can use supported menus. Each action or key rechecks the exact lease, host Pause and native takeover generations, and intended session/revision/boundary. Competing external input is rejected. Controller reads remain available; HTTP routes a nonterminal mission Observe through typed ingress and blocks raw recovery/input. Status and Pause remain available. Pause and recovery revoke ownership, and native takeover, transport failures and shutdown invalidate it. Resume does not reacquire. Native commit cannot be undone. The trusted runtime must separately admit the operation and lifecycle continuation; controller capability alone is not autonomous play.
-  Caller[Trusted in-process caller] -->|Explicit acquire| Gate{Fresh eligible boundary<br/>Empty writers and queues}
-  Gate -->|Pass| Lease[Exact MissionLease object<br/>Mission, actor, epoch and generations]
-  Gate -->|Fail| Reject[Reject without input]
-  Lease -->|One action or permitted key| Check{Live operation and generations<br/>Matching intended boundary}
-  Check -->|Pass| Native[Native token, boundary and<br/>takeover check at commit]
-  Check -->|Fail| Reject
-  External[External key, action, walk, resume] -->|While owned| Reject
-  Operator[Pause, recovery or owner release] -->|Revoke before return| Revoke[No input owner]
-  Invalidate[Native takeover, transport failures, shutdown] -->|Invalidate| Revoke
-  Revoke -->|Reconcile or restart as needed<br/>Then deliberately bound Resume| Manual[Resumed transport permission<br/>No restored lease]
-  Read["Controller reads and status"] -->|"HTTP mission Observe is typed"| View["Evidence and descriptive status"]
-  Native --> Limit[Committed input cannot be undone]
+flowchart TB
+  accTitle: Current actor custody and permanent stop
+  accDescr: One custodian owns original resources and exact target handles. Current bearer capability permits basic input. Handoff snapshots context and seals the actor. A successor requires canonical issuance and actual old host and MCP group quiescence under original limits. Pause and unknown input permanently stop succession.
+C["One custodian<br/>Exact target and original limits"] --> A["Active actor capability"]
+  A -->|"Basic input"| W["One serialized mechanical writer"]
+  A -->|"Handoff with no pending uncertainty"| H["Persist canonical context<br/>Seal actor"]
+  H --> R["Old actor reads and original collection only"]
+  H --> Q{"Canonical issuance and context<br/>Actual host and MCP quiescence?"}
+  Q -->|"Yes, original resources remain"| N["Fresh successor capability"]
+  Q -->|"No"| S["Stop without succession"]
+  U["User Pause, uncertainty or failed closure"] -->|"Permanent fence"| S
+  W -->|"Exact receipts and actual pixels"| A

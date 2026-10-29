@@ -1,36 +1,25 @@
 ---
-title: Current action flow — delivery and current evidence are separate
+title: Current basic input and original collection
 ---
 sequenceDiagram
-  accTitle: Physical or semantic input through one writer
-  accDescr: The player chooses an intent and informing source. The writer and controller capture actual dispatch evidence. Physical input permits visual drift under unchanged custody; semantic shortcuts retain their equivalence checks. Native commit validates the actual receiver and authority. A correlated ACK settles delivery once as historical evidence, never objective success or current authority. A separate current snapshot can support the next decision. If it is absent or aged after direct input, the player must explicitly Observe before another input. Original scope and costs remain. Unknown delivery freezes input and is never blindly replayed.
-  participant P as Designated player
-  participant C as Writer and controller
-  participant B as Native bridge
-  participant G as Game engine
-  P->>C: Intent, informing source and limits
-  C->>B: Observe actual dispatch boundary
-  B-->>C: Fresh preflight capture and custody
-  Note over P,C: Physical input permits drift<br/>Semantic shortcuts check<br/>source equivalence
-  C->>B: Input, actual frame, identity and expiry
-  Note over B: Check live receiver, custody and revocation
-  B->>G: Normal engine or widget input
-  Note over C,G: A later Pause cannot undo committed input
-  alt Correlated terminal ACK
-    G-->>B: Rendered result or prompt
-    B-->>C: ACK and its historical after-frame
-    C->>C: Settle known delivery once<br/>Read independent current snapshot
-    alt Fresh eligible current capture
-      C-->>P: Result, ACK source and actual current source
-    else Absent or aged current after direct input
-      C-->>P: Partial result, explicit Observe needed
-      P->>C: Observe under the original owned scope
-      C->>B: Capture fresh visible evidence
-      B-->>C: Fresh current capture
-      C-->>P: New binding or local macro closure
-    end
-    Note over P,C: Interpret effects from evidence<br/>Delivery is not success<br/>No automatic key or retargeting<br/>Original limits remain
-  else Deadline or unresolved delivery
-    C-->>P: Outcome unknown, input frozen
-    Note over C,G: Collect and reconcile, never replay blindly
+  accTitle: Current basic input and original collection
+  accDescr: The client assigns an original ID before HTTP submission. One writer validates the complete basic sequence and reserves original capacities. The adapter hands SDL events to the game and captures actual pixels. Delivery is not game success. Unknown or partial input permanently stops further input; collection preserves original IDs without replay. Pause bypasses the writer.
+  participant P as Player and client
+  participant C as Mechanical custodian
+  participant N as SDL adapter
+  participant G as Windowed game
+  P->>C: Original ID and basic actions
+  C->>C: Validate sequence and reserve original capacities
+  C->>N: Original native IDs and expiry
+  Note over C,N: Keys and text have no image or game-phase gate<br/>Pointer binds issued-source geometry
+  N->>G: Bounded SDL event handoff
+  G-->>N: Actual presented pixels
+  N-->>C: Exact receipt and capture
+  C-->>P: Original result, source and remaining resources
+  Note over P,G: Delivered is not consumed or successful
+  alt Partial or unknown input
+    C->>C: Permanently stop new input
+    P->>C: Collect original ID
+    C-->>P: Available original receipts, never replay
   end
+  Note over C,N: Independent user Pause latches before writer waits

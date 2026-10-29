@@ -1,166 +1,71 @@
 ---
 owner: harness maintainer
-review_trigger: Mission ownership, phases, root limits, lifecycle, handoff or execution feedback change
+review_trigger: Responsibility, supported behavior, interfaces or qualification change
 status: active
 ---
 
-# Mission execution: one writer, several bounded responsibilities
+<a id="mission-execution-one-writer-several-bounded-responsibilities"></a>
 
-Parent: [system architecture](../architecture.md). This view answers: “Who owns
-the next action and how does feedback change the plan?” The player chooses actions;
-MissionRuntime is the sole mission writer. It composes existing phase handlers,
-controller, evidence, memory and ledger. Logical blocks here share a process;
-separate modules are not separate authorities.
+# Execution: one mechanical writer and optional player services
 
-![Intent and feedback through the current single writer.](../diagrams/action.svg)
-
-The sequence shows actual dispatch and evidence flow, including unknown delivery.
-[Editable diagram](../diagrams/action.mmd). An ACK proves delivery within its scope;
-the player still interprets the effect. A menu is a valid returned outcome.
+The old MissionRuntime and semantic lifecycle are retired. Execution now composes
+one [ComputerRuntime](../../harness/computer/runtime.py) with optional player
+services through [Application](../../harness/application.py). The
+[current contract](../contracts/computer-control.md) owns exact interfaces and
+[architecture](../architecture.md) owns system relationships.
 
 ## Internal responsibility and state map
 
-| Block | Owned responsibility/state | Source and deeper contract |
-| --- | --- | --- |
-| MissionRuntime | One queue/worker, admission, handles, active lease and phase composition, cached status; owned launch, exit phase and Finish | [runtime](../../harness/mission_runtime.py); [mission lifecycle](../contracts/mission-admission.md#integrated-mission-lifecycle) |
-| Registered lifecycle | Create/load, visible identity/adoption, normal Save and associated private phase | [lifecycle](../../harness/mission_lifecycle.py); [preconditions](../contracts/lifecycle-preconditions.md#lifecycle-action-preconditions) |
-| Registered activity | Owned long activity and exact interruption/answer/resume composition | [activity](../../harness/mission_activity.py); [item/activity composition](../contracts/item-inspection.md#activity-polling-interruption-and-resumption) |
-| Registered recovery | Original uncertain dispatch custody and typed effect reconciliation; no replay | [recovery](../../harness/mission_recovery.py); [operator recovery](../contracts/operator-recovery.md#explicit-operator-recovery) |
-| Registered handoff | Quiescent player replacement, source/Work packet and epoch transition | [handoff](../../harness/mission_handoff.py); [replacement](../contracts/handoff-issuance.md#quiescent-player-replacement) |
-| Skills/program evaluator | One ordinary proposal from current visible feedback; no controller/process capability | [gameplay package](../../harness/gameplay/); [program_input](../../harness/gameplay/program_input.py) |
-| MissionLedger | Durable request/primitive/effect/memory records and original cumulative accounting | [ledger](../../harness/gameplay/mission_ledger.py); [memory/evidence view](memory-learning.md) |
-| ObservedMap | Runtime-owned process-local lossy route-candidate cache, separate from evidence and memory Claims | [navigation](../../harness/gameplay/navigation.py); [evidence contract](../contracts/gameplay-evidence.md#passive-gameplay-records-and-evidence) |
+| Responsibility | Authority and retained state |
+| --- | --- |
+| Mechanical writer | Validates complete basic sequences, reserves original resources before publication, serializes dispatch and retains exact operation/native IDs. |
+| Composition | Serializes playing-service calls, checks actor authority again after waiting, lazily registers explicitly referenced images and retains service request IDs. |
+| Local program coordinator | Sends program proposals through the same computer callback; retains child IDs before effects and passes the original deadline. |
+| Context/handoff | Writes canonical immutable knowledge snapshot before sealing; snapshot is data, not a capability. |
+| Campaign custodian/driver | Own exact native and host handles, validate old-host quiescence and mint a successor only under original limits. |
 
-Admission is not Resume. A request must satisfy the current actor/epoch, custody,
-source and original local/whole limits before dispatch. Durable intent precedes
-publication. A private phase is not reconstructed from JSON/history on restart.
-The exact controller object lease, not a serialized actor label, authorizes input.
-
-ObservedMap keeps the current/cardinal footprint and evicts older candidate
-coordinates using observed revisions. Forgotten routes become unavailable until
-reobserved; eviction does not erase retained sources or memory. Every dispatched
-step still checks current movement eligibility. This cache is not a persistent
-world model or another navigation executor.
+The loopback server/MCP adapter are transports, not additional writers. HTTP
+submissions carry client-assigned IDs. Duplicate collection never redispatches.
+Mechanical operation states are pending/completed/refused/partial/unknown/sealed;
+none is a game-phase or task-success predicate.
 
 ## Programs, feedback and organic discovery
 
-Ordinary keys/text/clicks are the foundation; semantic navigation/item/activity
-skills are optional shortcuts. The existing writer obtains feedback after each
-primitive. A player-authored pinned JavaScript routine can branch on structured
-visible data and propose inputs without an LLM call per step. It has no host I/O
-or separate execution authority. Its current view excludes PNG pixels and unseen
-map/inventory; missing facts require yield or player interpretation.
-
-Local refusal with positively healthy custody preserves the scope for a new
-explicit decision; actual integrity/authority loss or uncertain delivery stops it.
-Observe can retain changed visible evidence under its declared observation bounds;
-it does not replenish spent execution roots or prove task success. Exact behavior
-is in [binding errors](../contracts/request-binding.md#skill-request-binding-errors), not a menu
-whitelist in this explanation. Repeated SDK calls must not silently mint a new
-parent allowance. Generic autonomous strategy/inference overlap is not yet qualified.
-
-A known native refusal also consumes an operation rotation even though it
-commits no input. The writer retains its rejected receipt, then reuses the
-existing custody/evidence/global-capacity proof before marking read-only Observe
-needed. The next input remains a new player choice. Unknown delivery and actual
-faults still stop. Stable predicate labels in the existing operation reason make
-prompt failures diagnosable without another log or authority store. This small
-ordered check remains with the writer: splitting four predicates into a new
-service would add coordination without changing ownership. Reconsider extraction
-when a demonstrated independent responsibility requires it, under
-[#191](https://github.com/CVX-Hull/enactive/issues/191).
+The player interprets actual images and authors optional JavaScript procedures.
+`ProgramRunner` consumes a real capture per step, evaluates a bounded proposal and
+uses the same basic control port. Returned images can feed the next step directly.
+No game-semantic eligibility handler or structured engine fact is injected.
+Helper failure/yield leaves direct input usable if mechanical custody is healthy;
+unknown/partial input stops further input. [Memory/program component](memory-learning.md).
 
 ## Local feedback cost
 
-Evidence capacity queries reuse an exact canonical metadata byte length, invalidated
-on serialized state changes and refreshed after successful atomic persistence.
-They still scan actual files with standard `os.scandir`; selected-source integrity,
-freshness/custody, reservations, atomic writes and fsync retain their contracts.
-This is a derived scalar, not cached authority or a second evidence store.
-The [offline measurement](../acceptance/2026-10-24-execution-first-offline.md)
-separates retained-scale dispatch improvement from unqualified graphical cadence.
-
-Each original admitted semantic work item now has a machine-only settlement event
-in the existing controller journal. It brackets durable admission and ends after
-the writer's post-commit/finally publication and handle cleanup. Row state, writer
-finalization and mission phase are distinct; a completed Finish report can coexist
-with a withheld terminal transition. Cached result reads do not create another
-sample, and program primitives retain their existing separate lane.
-
-The event carries existing operation/boot/source identities and labelled process
-monotonic clocks with a wall-anchor sampling bracket. It does not infer model
-time, useful effect or physical display, nor enter default model/recent UI context.
-Missing/censored telemetry stays explicit; failure of this new append alone cannot
-rewrite a committed result or pause healthy play. Required domain persistence
-faults retain their existing behavior. [Evaluation](../evaluation.md#request-settlement-clocks)
-defines interpretation and limits.
+Program CPU/state/heap/time and child-operation budgets are bounded independently
+of Pi requests. A local program does not make an inference call each step.
+Configured reservations, actual HTTP attempts and invoices stay distinct. Useful
+whole-player cadence and causal learning benefit require authentic outcomes,
+not loop speed or packet timings.
 
 ## Lifecycle and change review
 
-Start cannot adopt an unrelated running game. First normal identity/adoption
-establishes eligible game-time/map/memory lineage. Normal reload requires this
-mission's own verified saved checkpoint and chronological continuity; historical
-sources never restore consent. Handoff requires settled operations, paused custody,
-required Work and the actual predecessor's exit before a new host is activated.
-Source-read declarations are audit statements, not proof of model attention.
+The harness has no create/load/save/menu/identity/Finish commands. These are
+player-selected ordinary controls and player-owned claims. Native exit zero is
+sampled before forced cleanup and reported separately from save/success.
+Actor handoff requires no game-phase, source-checkpoint or identity condition.
+It requires no outstanding/uncertain input or permanent Pause, a canonical
+snapshot/issuance and actual old host/MCP quiescence before successor capability.
 
-Lifecycle checkpoints follow the separately validated current capture; an ACK
-remains immutable delivery evidence even when a newer capture arrives. Different
-current evidence ends the batch for a new player decision. Confirmation-stage
-consent survives only equivalent evidence, and an identity inspection retains its
-exact completed ACK proof separately from the current checkpoint. Diagnostic
-transitions still require their existing reconciliation and readmission.
-
-The bounded initial-Load menu branch retains the same owners. When the first
-owned in-game receiver is a menu, its reconciled transition remains provisional;
-explicit readmission permits only registered menu dismissal under the original
-root. Actual returned dismissal lineage must reach the earliest normal source
-before identity inspection/adoption. Live guards, ledger commit/reopen checks and
-the pure lifecycle projection authenticate this chain together. Interrupted
-menu-only history retains evidence and costs, with unavailable game time and no
-restored phase or authority. Creation, continuity reload and normal Save retain
-their existing paths; this is not general cleanup of unadopted sessions. Reusing
-RegisteredLifecycle and one ledger helper avoids a second writer, store or
-validator service. The [protocol](../contracts/lifecycle-create-load.md)
-owns the precise initial-history, custody and dismissal restrictions.
-
-An unsuitable identity selection preserves only a positively healthy create/load
-phase. The ledger authenticates selected authored Claims and frontier influences
-against their admitted payloads before interpreting applicability. Live and
-historical checks reuse one CDDA scope/support/frontier classifier. The receiver authenticates established phase transition/inspection/saved proofs
-before any selection refusal, verifies phase/influencing source bytes and native-fact
-projections, then rechecks custody, lease, capacity and the
-original limits. Only the typed semantic refusal retains the PhaseReceipt; trusted
-history, receipt and candidate-timeline faults retire phase/lease. Paired
-[initial Load regressions](../../tests/test_mission_initial_load.py) cover explicit
-healthy correction and the same mistake with corrupted pixels, missing primitives
-or altered authored payload/subjects. These SQLite/archive fixtures resolve source
-classification; they do not relabel the [failed Pi pilot](../acceptance/2026-10-25-pi-configuration-pilot.md)
-or establish new native qualification.
-
-Review a change from the owner/phase and flow down to shared limits, publication,
-receipt/reopen readers and tests. Shared memory contracts/provenance ports and CDDA scene/time projection now have
-separate owners. The runtime and ledger retain centralized phase orchestration
-and accounting/proof validation: moving their remaining private state access into
-facades would add interfaces without removing that coupling. This is an explicit
-scoped choice, not a size-based claim that no further decomposition can help.
-Reassess at a demonstrated change boundary, retaining one writer/store and migrating
-all consumers after scoped design review.
+Changes across computer/player/custodian ports migrate callers, stores and
+operations together; unsupported old formats reject before effects. No memory or
+handoff record restores authority after restart. [Migration](../operations/migration.md).
 
 ## Assurance and evidence
 
-These selected risks follow the writer's responsibilities, rather than listing
-every phase test. [C-RUNTIME](../controls.md#c-runtime--live-authority-and-input-guards-runtime)
-is the admission/accounting mechanism; [C-PORTABLE](../controls.md#c-portable--portable-regression-lane-automatic)
-executes its fixture regressions.
+[Runtime](../../tests/test_computer_runtime.py), [application](../../tests/test_player_application.py),
+[program](../../tests/test_player_programs.py), [MCP](../../tests/test_player_mcp.py)
+and [campaign](../../tests/test_campaign_run.py) assertions cover distinct custody,
+composition, proposal, transport and cleanup boundaries. Check actual assertions
+against the changed invariant; fixtures do not qualify real game usefulness or
+save/reload/ending. Production real-game acceptance remains open.
 
-| User consequence | Invariant and contract | Mechanism, representative assertion and limit |
-| --- | --- | --- |
-| A recent status view hides spent inputs or uncertain effects | Original cumulative charges and unknowns survive reopening. [Mission lifecycle](../contracts/mission-status.md). | MissionLedger counters: [ledger tests](../../tests/test_mission_ledger.py) `test_measured_counts_use_cumulative_rows_and_preserve_unknowns_across_reopen` asserts counts beyond recent history, preserved unknowns and isolated returned copies. Real SQLite/filesystem evidence does not prove native input or useful effect. |
-| A crash resumes an unfinished phase with fresh authority | Reopen preserves history and charge, pauses the mission and restores no private phase/lease. [Ownership](../contracts/controller-ownership.md#controller-run-ownership) and [lifecycle](../contracts/lifecycle-preconditions.md#normal-identity-adoption-and-historical-proof). | Ledger crash transition: [ledger tests](../../tests/test_mission_ledger.py) `test_phase_crash_preserves_unknown_cost_and_does_not_restore_authority` asserts paused/unknown state, retained costs, no authority and refused activation. Together these two cases form `assurance_execution`; simulated reopening does not exercise a native crash. |
-| Successful phase bookkeeping is mistaken for a successful campaign or ending | Save/reload, identity continuity and succession need their actual proofs; ACK and task success remain distinct. [Lifecycle preconditions](../contracts/lifecycle-preconditions.md#lifecycle-action-preconditions) and [handoff](../contracts/handoff-issuance.md#quiescent-player-replacement). | Registered composition: [handoff tests](../../tests/test_mission_handoff.py) `test_quiescent_bound_context_claim_and_separately_charged_resume` asserts no lease after Claim and a separately charged readmission, using a fake bridge. [C-NATIVE](../controls.md#c-native--native-build-and-real-game-acceptance-manual)'s [capture qualification](../acceptance/2026-10-22-native-capture-preconditions.md) demonstrates scoped same-character Save/reload/ending; [useful-play readiness](../acceptance/2026-10-25-useful-play-readiness.md) retains an incomplete ending. Neither qualifies independent seven days. |
-
-Focused runtime/lifecycle/handoff/activity/recovery tests add boundary cases;
-source tests, compiled components, actual native qualification and campaign
-outcomes remain separate lanes. [#136](https://github.com/CVX-Hull/enactive/issues/136)
-and [#145](https://github.com/CVX-Hull/enactive/issues/145) own the full outcome.
+<!-- Retained bookmarks for the coordinated contract migration. -->

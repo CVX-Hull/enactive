@@ -1,357 +1,98 @@
 ---
 owner: lead
-review_trigger: Player tools, lifecycle phases or deciding-player context changes
+review_trigger: Responsibility, supported behavior, interfaces or qualification change
 status: active
 ---
 
 # Deciding player's working guide
 
-Use this page, the frozen mission brief and current selected tool descriptions as
-the initial working set. This is interface guidance, not a tactical plan. The
-[protocol](contracts/mission-admission.md#integrated-mission-lifecycle) owns the contract; inspect a
-specific section only when needed. Engineering/source archaeology belongs outside
-the deciding hot path. Do not recursively search `.runtime`, prior host traces,
-saves or the engine to learn how to call tools. They are not a player knowledge
-base. A missing usable contract is an ergonomics defect to report, rather than a
-reason to read the entire repository during every game.
-
-A filesystem sandbox label does not establish which admitted service tools work.
-Use actual tool results and the frozen role: a read-only local filesystem can
-coexist with authorized MCP gameplay and memory effects. Never bypass an actual
-denial or stop solely because a successful tool ran from a read-only host.
+Read this guide, your frozen assignment and the actual current tool schema.
+You own every game interpretation, tactic, save/load choice and outcome claim.
+Use actual images; the harness supplies no game phase, item, turn, inventory,
+identity or success predicate. Do not search engineering history to reconstruct
+routine context. Your explicit memory/context tools are optional aids.
 
 ## Calls and returned evidence
 
-- After admission, first call `enactive_snapshot` in this player context and use
-  its nonempty returned `snapshot_id`. Its `mission.scenario` supplies the exact
-  admitted mode, world and character for lifecycle calls; do not guess them or
-  search source files if a brief omits them. A passive pre-admission check supplies no
-  launch handle. Without an owned child, then use source-free
-  `enactive_lifecycle(operation=launch, scope=new_root, source_id=null)` with that
-  handle and valid finite limits. Select create/load from its returned menu.
-  On a clean disconnected source-free admission, Observe returns launch guidance
-  without a capture; it does not prepare or create the child. Existing diagnostic
-  observations and pending reconciliation retain their separate paths.
-  Source-free means no informing image is required; it does not mean an empty
-  snapshot handle is accepted. Keep this entry point in initial player context.
-  The admitted scenario is a setup target, not an observed world/character fact.
-  An absent fresh name does not establish that creation is unsupported. Ground
-  screen claims in the actual view and explore ordinary alternatives before
-  declaring a capability gap; never select a different identity as a substitute.
-- `enactive_snapshot` gives a descriptive snapshot handle and the selected source
-  image. Select those exact handles for a new intent. Software supplies mission,
-  epoch, source bindings and stable child lineage. A snapshot never Resumes.
-- Default `player-view/5` keeps current decision state and advertises `detail_sections`.
-  Use `enactive_detail(snapshot_id, section)` for the complete exact as-of mission, configuration,
-  metrics, receipt, progress, native or source metadata when needed. It never refreshes or
-  grants authority. Use `enactive_source` when you need the actual retained image.
-  Historical source/context replies omit technical binding hashes; images, source
-  IDs and semantic evidence remain. Exact detail describes its selected snapshot,
-  not an arbitrary historical source. Software retains the full machine evidence.
-  Software verifies hashes and binds requests; do not reconstruct omitted audit data.
-  The producer retains metadata for up to 128 distinct source reads. If metadata
-  is unavailable, explicitly reread the exact selected image; do not substitute
-  another source. Snapshot, procedure-packet and read-advice caches each retain 32 entries.
-  Default snapshots are explicitly read-only. A proof receipt's grants_authority=false
-  does not mean adoption failed or ordinary execution is refused: use the actual
-  operation result, next_needed_decision and active phase. The writer checks inputs.
-  Routine results omit repeated objectives/clocks, advisory ID inventories, technical
-  receipt bindings and the general normal-play action vocabulary. Exactly shared
-  native fields live in the returned source view; differences, capture timestamps,
-  menus, scenes and uncertainty stay. Full hidden fields remain in exact detail.
-  An explicit `image_presentation` note can say that implicit pixels are unchanged
-  in this player context; use snapshot/source for an actual redisplay when needed.
-  This is not a source-read declaration or proof that an action succeeded.
-- `enactive_skill` chooses intent and finite limits. Use a supported semantic goal
-  when useful, ordinary `direct` keys/text/clicks for unfamiliar ordinary gameplay.
-  Ordinary `direct` inputs use `perception=null`; visible-control interpretations
-  belong to menu/edit/item controls. Inspect the returned image/effect; a delivered
-  input is not task success.
-  If clearing a nonempty interpreted field leaves identical pixels, the edit stops
-  before replacement text. Reassess the returned image before choosing another input.
-  Semantic name editing replaces the whole field with the complete admitted
-  identity; it is not partial text entry. If an optional skill cannot represent
-  the target, choose ordinary bounded input from current visible evidence.
-- When input is unfinished, use the returned `next_call` to collect the original
-  operation. A busy refusal's collection target is the actual writer owner, not
-  the new rejected invocation. An in-progress image can show a text prefix; it
-  is not the completed text or a cue to confirm. After collection, inspect and
-  explicitly select current evidence. An obsolete selection can be refused
-  without destroying healthy custody; no key is retargeted or replayed for you.
-- An explicit `submission=not_admitted` resolves a receiver-certified refusal.
-  Inspect its reason/current context and choose a new corrected decision; software
-  assigns the identity. Do not collect or repeat that refused invocation. Generic
-  errors or uncertain delivery still require the original collection path.
-- An eligible Procedure/3 can contain `program={language:javascript/1, source:...}`
-  or null for advice. In `enactive_remember` choose the content, evidence,
-  counterexamples/status and `parent=null` for a new family or an explicit
-  qualified parent already revealed by `enactive_context` or a completed accepted
-  Procedure write result, including explicit original-result collection. The envelope is
-  `intent={entry_type:"procedure", entry:<semantic procedure body>}` (structure
-  only; the current schema defines the complete body). `entry_type` is alongside
-  `entry`, never inside it. Keep only Procedure fields in that body; an unrelated
-  Claim-branch schema error does not require adding Claim fields to a Procedure.
-  Omit schema/record/IDs,
-  mission/family/revision number and environment: software derives these from the
-  assigned operation, selected cached parent and frozen snapshot. The process-local
-  parent cache holds32 records; restart or eviction needs an explicit context read
-  or collection of the original completed write result. Ordinary selective context
-  is bounded to32KiB;128KiB is only for an actually issued complete handoff. Inspect
-  omissions and choose retrieval explicitly. Cached parents grant no authority or
-  current-head guarantee. For background candidates, read
-  `enactive_advice(snapshot_id,proposal_index=null)` for compact recent candidates,
-  then optionally select a returned original proposal index for full detail.
-  Choose `enactive_remember` with `intent={entry_type:procedure_candidate,
-  proposal_index:...,candidate_index:...}` and the same snapshot to adopt one
-  original candidate. Software copies its canonical body; you choose applicability
-  and later use. Indexes never follow newer snapshots; unavailable handles need an
-  explicit reread. Advice can be wrong or stale. Canonical records are returned with their new IDs;
-  no manual hashes or full record reconstruction are required. A `program` skill
-  starts a new root, explicitly selects that
-  revision and supplies initial `goal.state`, intent, expected outcome and interrupt
-  consent with `perception=null`. JavaScript `step(view,state)` returns exactly
-  `{status,state,input,reason}`: act proposes ordinary key/text/click, yield/done
-  require null input. Omit click geometry; software binds it from the current view.
-  The `enactive_skill` description publishes the complete program result JSON
-  Schema from the evaluator, including each input object's required fields.
-  Use that program shape, rather than copying a direct skill's click geometry.
-  Make the goal explicit: highlighting a row without invoking it differs from
-  invoking it and returning for effect inspection. Neither program termination
-  nor a highlighted target establishes a useful effect.
-  The same writer applies original finite limits, records sources/actions/results
-  and stops on unknown delivery. Done is program termination, not verified success.
-  View `program-view/2` contains current category/actions/in_game/ui/scene/frame_geometry
-  and boundary kind/input_receiver. It contains no pixels; null UI/scene means
-  unavailable. For supplied UI, `rows` contains current
-  `{id,text,enabled,hotkey,rendered_marker}` records. `rendered_marker` is a literal
-  visible marker or null (unknown), separate from label and focus. Current CDDA
-  multiselect rows can show `-`, `+` or `#`; interpret their meaning for that UI,
-  yield when required evidence is unavailable, and verify any eventual effect.
-  `ui.selected` is a focused row ID string or null. Locate that ID in the
-  current rows to obtain a position; its spelling is not an item identity or
-  numeric position. Semantic `perception.selected` instead uses the interpreted
-  row's numeric position. UI coverage includes only rendered rows.
-  A physical key is one printable ASCII character or exactly `ENTER`, `ESC`,
-  `UP`, `DOWN`, `LEFT`, `RIGHT`, `TAB`, `BACKSPACE`, `SPACE`, `PAGEUP`, `PAGEDOWN`,
-  with a `modifiers` array drawn from `CTRL`, `ALT`, `SHIFT`. Exposed semantic
-  action names do not expand that physical-key contract.
-  Use ordinary image-informed exploration where the routine lacks
-  evidence. Existing prompt children remain ordinary/semantic controls; do not
-  replace their root with a new program. Code/state bounds and engine faults are
-  described in the [execution contract](changes/061-player-program-execution.md).
-  The summary is returned automatically; read exact continuation only when needed
-  through `enactive_detail(next_snapshot.snapshot_id, progress)`.
-- MCP assigns each new request ID and waits up to15 seconds for its original
-  result; do not supply `request_id` or `wait_seconds`. A positively new preparation refusal explicitly
-  marked `submission=not_submitted` has no original operation to collect. Follow
-  its supported next step or correct the selected arguments under original limits.
-  An open, idle prompt can require explicit Observe before a new root: inspect
-  the returned phase or `macro_closure`. If `prompt_phase` remains open, use a
-  supported `scope=prompt` child under that original root. Observe does not promise
-  closure; a program still requires `new_root` and cannot replace the prompt root.
-  Whole-mission remaining capacity is not the local root's remaining allowance. Errors
-  during staging, dispatch or presentation retain uncertain collection unless an
-  actually validated `not_admitted` refusal is preserved. A new invocation is a new
-  intent, never a retry. Pending/uncertain results require `enactive_result` with
-  the returned original ID. If an error includes `original_collection`, use those
-  exact collection arguments when dispatch is uncertain. Validation can fail
-  before staging, so collection may be unavailable; the error itself proves
-  neither delivery nor nondelivery. After producer restart, collect a retained
-  original ID; an actual active-operation ID can help, but settled operations
-  disappear from that status field. If the identity is lost, quiesce rather than
-  recreate or replay the action. Advisory next waits up to40 seconds without model
-  polling; it preserves the original deterministic job claim and deadline.
-- A malformed argument is not evidence that the required capability is absent.
-  Consult the selected tool's current schema and correct the argument when the
-  result establishes a local pre-staging refusal. Obtain a snapshot if no valid
-  handle was selected. Keep this separate from uncertain dispatch, which requires
-  original collection rather than a corrected or repeated action.
-- Read the description/schema of the **one tool needed**, rather than printing
-  every declaration. Some hosts reduce nested argument schemas to `unknown`; this
-  is not a usable field contract. If the frozen brief supplies focused interface
-  references, read only the needed tool/skill or memory variant. These are exported
-  from the current SDK schema, not example tactics or request JSON files. Do not
-  guess payload fields, dump all declarations or search implementation code.
-  Prefer the returned `next_snapshot` when it is sufficient; another snapshot is
-  an explicit read, not a mandatory step after every settled operation. A detail
-  read uses the chosen snapshot as-is; it does not refresh an older selection.
-  For skills/non-Launch lifecycle, `source_id=null` selects only the exact source
-  already returned in that cached snapshot. An explicit returned source ID selects
-  that retained read instead. Launch stays source-free; no newer source is fetched.
-  If the snapshot has no source, null cannot select one. Diagnostic Observe can
-  return `result.source_ids` while current source remains absent; read the chosen
-  exact image with `enactive_source`, then explicitly select its ID. A diagnostic
-  capture is not current input authority or proof that reconciliation succeeded.
-  If a lifecycle call refuses a stale binding with no input,
-  use the returned current snapshot for a separate new decision. No automatic
-  retarget, replay or allowance renewal occurs.
-  Keep returned text, typed image parts and `isError`; do not
-  print image data as text or opaque tool objects. Keep simple returned IDs.
-  When forwarding through an orchestration tool, forward content blocks once;
-  `text(JSON.stringify(result))` prints the whole transport envelope and can
-  bury decision data or print image bytes. The MCP producer returns one JSON text
-  block and any typed image, without a duplicate `structuredContent` value.
-  The frozen host may explicitly mark older image parts as omitted from the current
-  request to fit its image allowance. Such a marker is neither pixels nor source-read
-  proof. Text/source IDs remain; deliberately reread an exact source with
-  `enactive_source` when its pixels are needed. This grants no renewed input authority.
-  The latest tool-call result group is protected; an oversized group stops the host.
-- A pending/unknown result requires `enactive_result` for its original operation.
-  Never invent a fresh ID to replay it. Same-actor tool calls serialize. A local
-  refusal can permit a new decision only within the returned documented scope.
-  A known native rejection is not an uncertain delivery or successful game effect.
-  Activity `poll` requires the selected source checkpoint to be `activity_poll`.
-  After a poll returns a menu/`awaiting_control`, inspect that view and choose the
-  next ordinary decision under its published phase and original limits. Polling
-  that menu again is a local preparation refusal, not a way to continue an activity.
-  This check does not refresh a source, grant control or renew the root.
-  If healthy owned scope remains, explicitly Observe and choose a new action under
-  the original limits; do not replay the rejected request or assume an editor changed.
-- `enactive_context` retrieves bounded memory; `enactive_source` retrieves an exact
-  retained image. `enactive_remember`/`correct` retain fallible supported knowledge
-  and Work. Work's `stage` is a short label of at most128 characters; quantity
-  `subject` and `coverage_id` are identifiers, not phrases with spaces. Count only
-  the declared subject within supported coverage; overlapping groupings and
-  unverified quantities do not become observed totals. Pi can give focused
-  diagnostics for the explicitly selected memory type after a schema refusal;
-  correcting those fields does not establish truth or task success.
-  Software records procedure/action/result attribution; no per-key
-  narrative or usage report is required. HistoricalProcedure is advisory lineage;
-  its old code cannot execute. Explicitly retrieve its qualified head and support,
-  then author a current revision with that exact parent and current evidence.
-  Software preserves the family/revision; you judge applicability and correction.
-  Historical images never establish a current input checkpoint or world fact.
-- For a Claim, choose its meaning, value, coverage, status, grounding and support
-  groups; use the current focused Claim schema. Software supplies the record/ID,
-  interpretation kind, native order and real host assertion time. Identity keys
-  select world/character; software supplies the reserved unit/coverage fields.
-  Identity state is the interpreted exact name; other details belong in text.
-  Source grounding can select the cached snapshot image with `source_id=null`.
-  A null coordinate epoch uses only a matching published `coordinate_scope`;
-  before adoption use the actual epoch from the returned `provisional_scope`.
-  Never guess zero. Each support group's `primary` explicitly cites that chosen
-  image; additional source/claim premises stay explicit. Unobserved grounding has
-  no native order or image citations. Correction chooses retired IDs/reason;
-  software supplies matching supersedes. Returned Claim IDs identify the records
-  you can select later; do not calculate hashes or timestamps yourself. Cite the
-  image or premises that actually establish the claim, rather than automatically
-  citing the latest image. Accepted storage is not semantic support or truth.
-  All cited sources share the Claim's grounding session. An owned pre-load world
-  Claim keeps its menu session; character identity uses its inspected session.
+| Tool | Use and consequence |
+| --- | --- |
+| `computer_observe` | Capture actual target PNG and mechanical source metadata. Identical pixels are valid. |
+| `computer_input` | Submit 1..32 basic key/text/click/wait actions. It returns original receipts and a capture when available. |
+| `computer_result` | Collect an original mechanical operation ID; never repeats input. |
+| `computer_stop` | Permanently stop further automation. It does not save, quit or permit another actor. |
+| `player_source` | Read exact retained PNG by source ID, including explicitly remembered prior-session evidence. |
+| `player_memory_append/read/query/context` | Store or retrieve fallible claims, Work, decisions, procedures, corrections and candidate advice with sources/support. |
+| `player_program_save/read/run` | Retain immutable JavaScript lineage and run a selected bounded local program through the same basic-control port. |
+| `player_result` | Collect an original memory/program authoring or program-run request after lost transport. |
+| `player_handoff` | Seal this actor with bounded immutable knowledge and unfinished-work summary. Original limits remain. |
 
-Owned exit also accepts ordinary keys/text/clicks as lifecycle-scoped children.
-Inspect the current menu and choose input; no exact quit-question transcription is
-required. A known returned input can need another decision without having an
-unknown delivery. Returning to the owned main menu pauses/cancels this exit attempt;
-a separate exit root is needed to try again within the original mission allowance.
-Normal process exit and final Finish still require the returned registered proofs.
-Finish requires empty `identity_claim_ids` and no active phase. If the post-exit
-snapshot has no source, explicitly read the retained final exit source with
-`enactive_source` and select its returned ID for the separate Finish root.
-Do not substitute identity Claims or infer Finish from process exit.
+The schema is authoritative for closed arguments. Keys use printable ASCII or
+`ENTER ESC UP DOWN LEFT RIGHT TAB BACKSPACE SPACE PAGEUP PAGEDOWN HOME END DELETE`,
+with explicit `CTRL ALT SHIFT` modifiers. Text contains 1..31 UTF-8 bytes without
+controls. Each wait is at most 2 seconds; combined waits/operation are at most
+15 seconds and cannot exceed the run deadline.
 
-A fresh successor completes **Claim → readmit → gameplay input** in that order.
-Reading all sources after a refused Claim does not complete it. Correct an explicit
-packet/declaration refusal and submit Claim again while its original issuance is
-live, then link readmission to the successful Claim. A skill/lifecycle input before
-readmission is an authority failure that revokes the handoff; later corrected
-arguments cannot restore it. Other authority/Pause/uncertainty failures retain
-their stop rules.
+Example basic actions (inside `computer_input.actions`):
+
+```json
+[{"type":"key","key":"ESC","modifiers":[]},{"type":"wait","seconds":0.2}]
+```
+
+Clicks require `source_id` actually returned to you and original full-image
+coordinates, not coordinates in a crop/thumbnail. The tool schema uses
+`{"type":"click","x":100,"y":100,"button":"left"}`; the runtime binds geometry
+from that issued source. Inspect the image and choose the target yourself.
+Keys/text need no source, image-age/equality or game-phase condition.
+
+Delivered means SDL event handoff, not application consumption or useful effect.
+Inspect what happened. On partial/unknown delivery, retain the original ID and
+collect it; new input stays stopped. Never replay an uncertain action or try to
+restore authority by changing memory, source, actor or session.
+
+## Optional knowledge and local programs
+
+Memory is your assertion, not engine truth. Link source IDs and support records;
+state quantities, uncertainty and remaining Work explicitly. Corrections retain
+and supersede prior assertions without erasing them. Current sources are remembered
+lazily when explicitly referenced by a memory append or program save. A source
+reference proves availability, not that you read it. Context reports omissions;
+read missing detail or pixels when needed.
+
+A program defines `step(view,state)` and returns
+`{status:"act"|"yield"|"done",state,actions,reason}`. `act` proposes the same basic
+actions; other statuses use `actions:null`. `program-view/3` includes actual source
+metadata, your optional interpretation, original remaining resources and a
+player-selected crop/nearest-neighbour RGB view no larger than 96×96. Flat RGB
+values are in `image.rgb`; geometry, crop, sampling and omissions are explicit.
+Map clicks back to full-image pixels. The full PNG is separately readable.
+
+Programs run at most 64 steps/20 seconds under the original computer limits,
+with V8 CPU/state/heap bounds and no host I/O. Each step consumes an actual capture;
+the runner retains original child operation/source IDs. Helper failure/yield can
+return to basic input while mechanical custody is healthy. It never proves success,
+replays input or renews resources.
 
 ## Current registered CDDA lifecycle
 
-This adapter has specialized creation/identity/save proofs. Owned create/load/save
-menus accept ordinary keys/text/clicks, including unfamiliar receivers. A shortcut
-that bypasses the committed creation route cannot prove fresh character creation.
-These CDDA stages are not a universal menu taxonomy; native qualification of the
-new lifecycle fallback remains pending.
-
-For this CDDA Create/Load proof, ground the world Claim in a retained menu from
-the same owned setup root **before its first normal-play boundary** that visibly
-shows the world name. Ground the character Claim in the separate identity
-inspection. A character screen or an admitted target string alone does not prove
-the world. If the selected world source is unsuitable but ownership/history are
-healthy, use the refusal feedback and submit a new explicit selection under the
-original phase. Correction requires the old Claim's exact scope; when the proper
-grounding belongs to another session, author a fresh Claim instead of changing
-scope through correction. Choose and interpret the actual evidence yourself.
-
-| Current situation | Interface operation and verification |
-| --- | --- |
-| Admitted, no owned child | First `enactive_snapshot`; then `enactive_lifecycle` with its handle, `scope=new_root`, `operation=launch`, no source. Launch sends no creation intent and establishes no character identity. |
-| Owned paused main menu | Begin a `new_root`: `operation=create` for a fresh admission, or `operation=load` for an explicit initial-load admission. Use that root's `scope=lifecycle` for children. Entire setup shares its original limits. |
-| Creating a world/character | Menu/editor skills interpret the current visible screen. World/character editors must match the admission. A quick start that generates another identity does not satisfy the named scenario. |
-| Ready to commit the supported world form or final character description | A separate same-root `enactive_lifecycle` create call commits the stage. Inspect the resulting question; a menu key is not a substitute for this registered transition. |
-| Confirmation or unfamiliar setup dialog | Use a same-root interpreted menu skill when applicable, or `direct` input to try/cancel through the visible interface. Inspect the actual response. Successful creation still needs the committed character route; a delivered key or familiar question alone proves no transition. |
-| Published lifecycle input has an uncertain/unexpected outcome | Explicit Observe can retain actual diagnostic evidence under its original private dispatch custody. For an expected create/load/save transition, use `enactive_lifecycle` again with the same operation, `scope=lifecycle` and original root `phase_id`; do not use ordinary `enactive_reconcile`. The ACK stays unknown. A wrong-tool refusal preserves only a positively healthy expected transition and its original limits. Diagnostic-only evidence has no executable phase or adoption/reconciliation authority. Normal cleanup of an unadopted/wrong-identity session remains unsupported; do not fabricate proof or replay input. |
-| Initial Load first reaches an in-game menu | Explicitly Observe, then reconcile through the same Load root. The menu remains provisional. A separate same-root Load call readmits only menu dismissal: an applicable `menu` skill with label `Cancel`, outcome `dismissed` and a source-bound `dismissal` interpretation. Arbitrary physical/menu inputs and identity adoption are unavailable here. Only an actually returned dismissal reaching normal play enables the usual identity workflow. Unknown dismissal stops; do not replay it or treat it as another Load transition. |
-| Reconciled transition, paused provisional normal character | Continue with `enactive_lifecycle`, `scope=lifecycle`, unchanged `operation=create` or `load`; this separate call readmits the provisional session. Do not use `enactive_readmit`, which is for ordinary recovery/handoff. Then inspect `purpose=character_identity`, read the actual character screen, retain truthful world/character Claims, dismiss it and separately adopt through the same lifecycle operation with those Claim IDs. Adoption, not launch or Observe, starts ordinary input authority. |
-| Adoption refused with a retained PhaseReceipt | Use that actual phase under its original root and limits. If the identity screen is still open, explicitly dismiss it; then select both grounded world and character Claim IDs and submit a new adoption request. A blocked result sends no correction input for you; the original limits and exact current source still apply. |
-| Normal ending | New `save` lifecycle root with null Work and empty identity IDs; confirm ordinarily and reconcile/checkpoint through the same Save phase. After completion choose a new owned `exit` root. After recorded normal exit choose `finish` as a separate `new_root`, never a child of exit; report the actual outcome. Returning to the same normal session cancels Save without a checkpoint claim. Later reload requires this mission's own saved checkpoint. Initial Load instead establishes new identity/accounting; old authority/world facts are not imported. |
-| Abandoning menu-only setup | Return organically to the same owned main menu. A new `exit` request can revoke settled setup without input; then explicitly Observe and use a new finite normal-exit root. A fresh Observe and this zero-input MAIN_MENU abort remain available after local setup expiry under healthy custody and global limits; they cannot renew expired inputs or cancel another form. This does not clean up an unadopted normal session. |
-
-The returned lifecycle summary reports `direct_interrupt_allowed=false`: its
-ordinary children cannot interrupt an activity. Choose that explicit false value
-for a direct child; a rejected true value does not mean ordinary input is absent.
-Owned paused-menu exit itself charges Resume plus Quit, at least2primitives before
-any confirmation. Its known insufficient immediate allowance refuses before input;
-a menu-only setup abort is a separate zero-input operation.
-
-Create/load limits cover the complete original lifecycle: opening menus, transition,
-identity inspection, Claims, dismissal and adoption. Choose a prospective finite
-allowance from the coupled forecast for that whole operation, not just the first
-menu. Child calls cannot enlarge or renew the original root. If it expires,
-quiesce; a new child or Claim cannot repair expired input authority.
-
-Let software form wire records. Choose the goal, selected evidence, interpretation,
-target or answer, and finite limits. Do not supply navigation `goal.scope` or an
-activity `interrupt_request_id`; software binds them from the selected matching
-snapshot/source. An activity start chooses `step=start`, operation, target,
-game_seconds and interrupt_allowed. Its prompt/activity children choose only
-`step=poll`, `interrupt` or `resume`, or `step=answer_interrupt` with an explicit
-`answer=YES` or `NO`. Software reads the selected original root and copies its
-stable semantics; do not repeat those fields or supply null answer/owner fields.
-Keep choosing explicit outer scope, evidence and finite limits. Missing context
-requires an explicit read/new decision, never
-guessing IDs, epochs or silently selecting newer evidence. The lifecycle summary's
-remaining wall/primitives are software-derived as-of values; use them to choose
-timely closure, not as a renewed allowance. Do not write request
-JSON files or reconstruct wire headers. The lifecycle tool's operation is reused
-for stage commit/reconciliation/readmission/adoption; consult the returned phase
-receipt, not just the operation name. A tool error that gives no usable next step
-is a defect, not authority to guess or bypass it.
-
-For an explicit handoff, choose `checkpoint_sources=[null]` to retain the exact
-selected snapshot observation, or select previously read source IDs. These are
-observations, never Claim or Work IDs. Software binds the canonical checkpoint
-identities; you still choose relevant evidence, the complete unfinished Work set
-and successor role. A clean successor reads its issued context and required source
-images, then explicitly Claims/readmits. No handoff renews resources or authority.
+There is no registered semantic lifecycle in the harness. Use visible ordinary
+controls to create/load, dismiss menus, play, save and exit. Decide what the screen
+means and whether the same character resumed. Save-to-menu and application exit
+are distinct. Preserve ending capacity for both, then report evidence/uncertainty.
+The harness's normal-exit receipt cannot certify a save or objective.
 
 ## Resources, stopping and context
 
-Use the frozen coupled forecast and stop rule. Current normal Save/exit still
-consume **pre-reserve** input/wall/frame capacity: the declared cleanup reserve is
-not an extra spendable normal-ending allowance. Begin ending early enough for
-every remaining step. Children, Observe and handoff cannot reset original limits.
+Custodian seconds/input/request/frame/byte capacities are mechanical resources.
+Pi HTTP attempts and host seconds are separately labelled. A remaining counter
+is not new permission or a quality metric. Preserve the frozen ending reserve.
 
-Distinguish the brief's qualification criteria from its development stop rules.
-In a prospectively declared development run, missing a latency target or useful
-sample cohort rejects qualification but need not end useful play. Continue only
-if that brief permits it and the original resources/ending forecast still fit;
-never silently extend a run or turn filler actions into latency samples.
+If another actor is allowed and fresh context helps, call `player_handoff` with
+selected record roots and a concise unfinished-task summary. It seals you; later
+reads/original collection do not permit input or another handoff. The driver must
+verify your actual host/MCP quiescence and canonical context before a successor.
+No save, menu or identity condition is required for this actor-only transfer.
+User Pause or uncertain input cannot become handoff-resumable.
 
-Keep the current objective, task/Work, source, unresolved effects, active phase,
-remaining capacity and relevant memory/procedure invalidators in working context.
-Retrieve older detail for a reason. Do not wait for optional advice to continue
-justified play. User Pause/takeover and real authority/delivery faults retain their
-stopping behavior. `enactive_stop` pauses control; it does not close the owned
-game or complete normal Finish. If a required capability is absent, settle handles, retain the
-failure and permanently quiesce under the brief; never ask the user/lead to supply
-a gameplay key or repair memory. The lead assesses closed evidence independently.
-
-This guide's maintenance check is a focused comparison with current tool schemas,
-phase receipts and lifecycle implementation whenever its review trigger fires.
-[The runbook](operations/mission-requests.md#typed-mission-requests-and-the-player) owns detailed recovery
-and operator procedure. Tests and native evidence qualify their actual scope;
-this guide does not establish a new capability.
+Use a terminal report to distinguish observed effects, player claims, failures and
+unknowns. Do not treat tool delivery, memory, process absence or host exit as game
+acceptance. The user can independently Pause at any point.

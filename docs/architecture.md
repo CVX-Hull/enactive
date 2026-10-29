@@ -1,221 +1,146 @@
 ---
 owner: maintainer
-review_trigger: Responsibility, authority, state ownership, supported behavior or deployment changes
+review_trigger: Responsibility, supported behavior, interfaces or qualification change
 status: active
 ---
 
 # Current architecture
 
-Enactive separates the player who decides, the software that executes and records,
-the game that determines outcomes, and the user who retains control. This is the
-system map. Component views explain internals; [protocol](protocol.md) and schemas
-own exact contracts. [Overview](overview.md) owns capabilities and limits.
-Dated reports preserve observations, not current architecture instructions.
+Enactive separates mechanical computer custody from player-owned interpretation.
+The [overview](overview.md) owns capabilities and limits; the
+[computer-control contract](contracts/computer-control.md) owns exact fields,
+versions and failure behavior. Historical native7/mission11 contracts are replaced.
 
 ## Scope and responsibilities
 
-![Current deciding player, memory, mission writer, native game and spectator.](diagrams/player.svg)
+![Current logical player and computer responsibilities.](diagrams/player.svg)
 
-This current logical view answers “Who decides, who executes, and who can stop it?”
-Boxes are responsibilities, not mandatory separate model tiers or processes.
-Solid arrows carry decisions/evidence; dotted arrows carry fallible background
-advice. [Editable source](diagrams/player.mmd).
+This current diagram answers “Who decides and who can stop input?” Boxes identify
+logical responsibilities; arrows identify requests, results or user control.
+[Editable source](diagrams/player.mmd). Its text equivalent is below.
 
-| Responsibility | What it owns | Zoom into the component |
+| Responsibility | Owned state and authority | Component |
 | --- | --- | --- |
-| User / engineering lead | Product constraints / design, admission, integration and verification | [Charter](charter.md), [workflow](project-management.md); no routine lead tactics or curation |
-| Deciding player and ingress | Generic Pi host with explicit model/context/tools; player owns plans, visible interpretation and intent, software composes canonical requests and bounded context | [Player interface](components/player-interface.md) |
-| Mission execution | One writer/queue, original scope and accounting, phases, feedback and lifecycle | [Mission execution](components/mission-execution.md) |
-| Evidence, memory and learning | Retained sources, fallible claims/Work/procedures and asynchronous proposals | [Memory and learning](components/memory-learning.md) |
-| Controller and native integration | Exact input custody, receiver/deadline fences, visible captures, Pause and takeover | [Native control](components/native-control.md) |
-| Spectator and host operations | Actual frames, passive status/cost projections, isolated setup and retention | [Observer and operations](components/observer-operations.md) |
-
-Component pages identify internals, owned state, interfaces, failure paths, source
-and tests. Descend where the decision needs it; [documentation](documentation.md)
-explains the review hierarchy. Logical decomposition does not claim the large
-source modules have been split.
+| Deciding player / generic Pi | Goals, visual interpretation, game choices and fallible claims; explicit provider/context/tools | [Player interface](components/player-interface.md) |
+| Optional player services | Knowledge, corrections, source provenance, program lineage and bounded context; no custody | [Memory and learning](components/memory-learning.md) |
+| Composition service | Connects player proposals to the computer port; retains service requests and context snapshots | [Execution](components/mission-execution.md) |
+| Computer custodian | Exact child/socket/lock handles, serialized operations, original resources and actor capabilities | [Native control](components/native-control.md) |
+| Observer / operator | Passive mechanical status, actual images, separately labelled player claims and independent permanent Pause | [Observer operations](components/observer-operations.md) |
+| Game | Consumes ordinary SDL input and determines outcomes | Windowed prepared CDDA; no semantic engine bridge |
 
 ## Runtime and state
 
-One local Mac game/controller is the validated deployment. The project-local
-stdio MCP process adapts local HTTP ingress; it is not another executor.
-Server/CLI assemble MissionRuntime, which serializes mission mutations and uses
-the controller. The native bridge runs inside CDDA and commits normal engine/UI
-input on its game thread. A separately assigned adviser may compute during play,
-without input authority. Role rules are procedural, not OS isolation.
+`tools/campaign_run.py` is the sole finite custodian. It validates a fresh frozen
+`campaign-run/2` package and reserves exclusion before launch. `OwnedTarget` keeps
+exact subprocess handles and passes an inherited shared-lock descriptor and a
+nonblocking Unix socket to the SDL adapter. Native retains the shared lock for
+its lifetime, including after the custodian loses its own reference.
 
-SQLite owns canonical domain records; retained files own indexed source/frame
-evidence; caches hold bounded derived views. Controller leases and private phases
-exist only in their owning process. Historical records, actor names and JSON
-cannot reconstruct authority. Use configured DB/OS/library contracts, adding only
-demonstrated domain guards rather than another persistence/recovery framework.
+The computer receive thread decodes bounded packets without writing files or
+SQLite. The serialized runtime records intent and capacities before publication;
+the custodian publishes PNGs/SQLite outside the native event loop. DB/publication
+failure permanently stops input; restart cannot reconstruct custody from history.
+The source modules are [launch](../harness/computer/launch.py),
+[channel](../harness/computer/channel.py), [runtime](../harness/computer/runtime.py)
+and [store](../harness/computer/store.py).
+
+The loopback [HTTP server](../harness/server.py) exposes passive spectator reads,
+independent Pause and authenticated per-actor tools. The [application](../harness/application.py)
+composes the computer port with optional player memory/program services. A
+project-local stdio MCP adapter owns no writer, native child or provider key.
+Pi owns model calls; the campaign driver owns exact host/MCP group cleanup.
+
+Fresh session stores live under `.runtime/computer-sessions/`. A selected
+`player-memory/1` store may span fresh native-child sessions. Old runtime formats
+remain inert history; no current reader imports executable old libraries.
 
 ## Action and recovery views
 
 ### What happens when the agent acts?
 
-The player chooses intent, informing evidence and finite scope. One writer
-retains intent before publication, dispatches under current controller/native
-fences, records the actual result and returns evidence. Ordinary input is
-foundational; semantic skills and player-authored bounded programs are optional
-aids. Delivered input is not proof of objective success.
-[Execution flow and internals](components/mission-execution.md).
+The client assigns an operation ID before HTTP submission. The custodian validates
+the entire basic sequence, reserves original resources and serializes dispatch.
+The adapter reports exact delivery and captures actual presented pixels. Keys and
+text have no image-age, equality or game-phase predicate. Pointer actions bind
+mechanical geometry and a source actually issued to that actor. Delivered input
+is not game success. [Action source](diagrams/action.mmd).
 
 ### How do I recover control?
 
-Pause stops subsequent remote dispatch and native input latches takeover.
-Neither undoes committed input nor guarantees activity interruption. Unknown
-delivery stays charged and unreplayed; supported collection/reconciliation retain
-uncertainty. Restart restores history, never a lease.
-[Control view](components/native-control.md), [runbook](runbook.md),
-[exact recovery contract](contracts/operator-recovery.md#explicit-operator-recovery).
+Pause sets the permanent stop event before executor/DB work and sends through a
+separate bounded path; failure to send closes the write side to signal EOF.
+Real native input takes precedence and fences automation. Partial or unknown
+input remains charged and unreplayed; collect the original result. There is no
+Resume/rearm or phase-based recovery. Native manual interaction can still recover
+the application. [Pause procedure](operations/pause-timeout.md).
 
 ## Observation and deployment boundaries
 
-Actual rendered frames and explicitly visible metadata inform play, without hidden
-state or save reading. The loopback spectator is not qualified for public exposure.
-Launch stays windowed with explicit project userdir; new dependencies, caches,
-builds and outputs stay local or in recorded owned temporary builds. Background
-launch is a child-process hint, not proof OS focus cannot change.
-[Operational boundaries](components/observer-operations.md).
+The supported deployment is a local Mac with a prepared windowed CDDA app and
+project userdir. Captures contain the actual default-renderer presentation and
+original geometry/time; repeated pixels remain valid. The native adapter sends
+bounded image bytes over its inherited socket. File publication is outside its
+callbacks; this does not promise resistance to upstream save I/O, PNG CPU or
+arbitrary OS hangs. The original publication-stall cause remains unknown.
 
 ## Game-family portability
 
-The [charter](charter.md) requires applicability across CDDA-class games. Current
-qualification is CDDA on this Mac, not a delivered universal plugin interface.
-
-The owner-selected [computer-control direction](decisions/006-computer-control-boundary.md)
-requires the harness to expose only basic computer observation/control. Game
-meaning and optional helpers belong entirely to the playing system. The table
-and coupling inventory below describe **current implementation**, which has not
-yet made that coordinated cutover; they are not approval to extend semantic
-input gates. A game menu or failed player routine should not itself revoke input
-custody in the target design.
-The [bounded SDL proof](acceptance/2026-10-29-basic-computer-control.md) implements
-that boundary only in `experiments/computer_control/`, with a
-[reviewed production handoff](changes/070-computer-control-proof.md#reviewed-production-handoff).
-It is not a supported alternate backend. Raw delivery and organic scouting are
-scoped evidence; actual CDDA pointer usability, production migration and wider
-game support remain open.
-
-| Shared design responsibility | Game integration responsibility |
-| --- | --- |
-| Planning, ordinary exploration and interpretation | Visible observation and ordinary input in the actual engine/UI |
-| Source-linked memory, revisable procedures and asynchronous advice | Game/version/configuration applicability and optional observed semantics |
-| One writer, finite costs, uncertainty and request/result correlation | Supported receiver, custody and timing attestations |
-| Campaign/evidence review and spectator presentation | Game-specific identity, persistence and outcome evidence |
-
-Shared memory consumes passive repository/source ports. The mission adapter owns
-request admission/provenance; the CDDA adapter projects literal scene facts and
-validates world/character interpretation. Shared time arithmetic consumes explicit
-projected seconds and authenticated adjacent endpoints. CDDA's adapter owns turn
-conversion, same-turn reload continuity and retained reference integrity.
-
-Menu categories, inventory/count provenance, coordinates and Save/identity
-transitions remain integration concepts in native classification, MissionRuntime,
-mission contracts/ledger, lifecycle proofs and preparation. `gameplay/2` EvidenceRef
-and `cdda-visible/1` remain the current CDDA binding's formats; these are not a
-universal observation schema. The source separation preserves current persisted
-representations and adds neither another executor nor a speculative game framework.
-[Memory and source ports](components/memory-learning.md#internal-responsibilities)
-and [time projection](contracts/gameplay-evidence.md#binding-projections) identify
-the concrete interfaces. Independently shaped fixtures exercise the seam; actual
-portability still needs another real integration under
-[#191](https://github.com/CVX-Hull/enactive/issues/191).
-A seven-day CDDA result would not prove family-wide support.
+The computer package imports no game interpretation. Shared player claims,
+programs and context consume only the computer port and explicit player data.
+CDDA-specific preparation stays outside that package. This separation is a source
+boundary; actual portability to a second game remains unqualified.
 
 ## Separate recovery and memory boundaries
 
-Recovery retains original dispatch custody and reconciles effects. Memory retains
-fallible historical assertions and procedure candidates. Neither authorizes input.
-Reflection does not introduce a required critic pause; the player adopts advice
-and the lead stays outside routine curation. Software binds procedure metadata,
-exposes compact snapshot-indexed candidates and submits explicitly selected
-originals. Finite horizon/age allocation and optional software idle waiting keep
-routine learner bookkeeping off the deciding path. These source capabilities do
-not establish graphical cadence or useful learning; the
-[offline execution experiment](acceptance/2026-10-24-execution-first-offline.md)
-keeps those evidence lanes separate.
-[Memory/learning flow](components/memory-learning.md), [native control](components/native-control.md).
+Remembered sources/claims and old process IDs never restore custody. Player
+corrections retain prior records and contradictions. Program failures/yields leave
+basic input available if mechanical custody is healthy. Mechanical Pause or
+uncertainty cannot become a resumable handoff.
 
 ## Bounded planning without execution authority
 
-The injected planner port and TaskMemory/waypoint libraries are passive study
-components. They return candidates and own no controller lease or live task/planner
-endpoint in MissionRuntime. No concrete planner provider is connected to that
-service. They are not a generic autonomous campaign executor.
-[Exact passive contract](contracts/injected-planner.md#bounded-injected-planner).
-
-## Passive skill verification
-
-The offline movement verifier proposes an input and consumes correlated feedback;
-the caller owns dispatch. It shares the pure policy with controller walk. Current
-missions also compose skills through their writer.
-[Passive contract](contracts/movement-skills.md#passive-bounded-movement-skills) and
-[diagram](diagrams/skill.svg) distinguish proposal/verification from live authority.
-
-## Passive task supervision
-
-The waypoint supervisor combines passive planning, memory and movement for one
-waypoint/return study. It owns no input capability and cannot silently become the
-live player. [Contract](contracts/movement-skills.md#passive-waypoint-supervision) and
-[diagram](diagrams/supervisor.svg) retain that scope.
+Local JavaScript sees an explicit image view and optional player interpretation.
+It proposes the same basic controls; the coordinator alone submits them under
+original deadlines/capacities. Candidate advice and applicability are fallible
+player data. No semantic supervisor or planner is required for ordinary control.
 
 ## Run ownership and operator takeover
 
-One exact in-process controller capability belongs to MissionRuntime. Competing
-ordinary writers reject; cached status and Pause remain available. Internal
-rotation cannot erase user Pause.
-[Ownership view](components/native-control.md) leads to the
-[exact contract](contracts/controller-ownership.md#controller-run-ownership).
+Handoff persists a canonical bounded context, then seals the actor. A sealed token
+can collect originals and read retained knowledge, but cannot capture anew or
+mutate. Only the driver, after canonical issuance/context verification and actual
+old host/MCP group quiescence, can mint a successor under original limits. It
+requires no save, menu or identity check. [Run procedure](operations/campaign-run.md).
 
 ## Coordinated change
 
-Apply [S-MIGRATION](standards/migration.md#s-migration-one-current-contract-coordinated-migration):
-one current contract; coordinate producers, consumers, state, fixtures and guidance.
-No compatibility shim or downgrade. Distinct version numbers describe distinct
-contracts; [protocol](protocol.md) owns the current reference. Historical artifacts
-remain evidence, not supported runtime input.
+One current set is `computer-wire/1`, request/target/receipt `/2`,
+`computer-session/1`, `computer-operation/1`, `computer-source/1`,
+`player-memory/1`, `player-record/1`, `player-program/1`, `program-view/3`,
+`player-handoff/1` and `campaign-run/2`. The exact contract owns the complete set.
+[Migration](operations/migration.md) rejects old stores before effects and preserves
+artifacts/saves as history. Rollback closes writers and selects a coherent earlier
+source/data deployment; mixed readers and replay are unsupported.
 
 ## Change boundaries and verification
 
 ### Responsibility assurance
 
-Use this map to ask what could go wrong, which responsibility must prevent or
-expose it, and what evidence is worth inspecting. Each component's assurance view
-links current invariants/contracts, existing controls and representative evidence
-with its limits. It is a review path, not a complete risk inventory or a statement
-that every possible failure has been tested.
-
-| Consequence to challenge | Responsible view and evidence path |
+| Changed boundary | Evidence to inspect and limit |
 | --- | --- |
-| The player acts on the wrong source, or uncertain input is replayed | [Player interface](components/player-interface.md#assurance-and-evidence): selected intent, context and original collection |
-| Costs or consent are renewed, or history becomes live authority | [Mission execution](components/mission-execution.md#assurance-and-evidence): one writer, original accounting, phase and lifecycle ownership |
-| Pause/takeover fails to fence input, or a capture is mistaken for eligibility | [Native control](components/native-control.md#assurance-and-evidence): host/receiver fences and separate native qualification |
-| Unsupported memory or learned procedures become trusted facts or another executor | [Memory/learning](components/memory-learning.md#assurance-and-evidence): support, bounded programs and advisory lineage |
-| A historical frame/receipt looks current, or host/build evidence overstates an outcome | [Observer/operations](components/observer-operations.md#assurance-and-evidence): passive projections, owned resources and outcome limits |
-| Incorrect guidance or a passing source check is treated as acceptance | [Engineering assurance](testing.md#engineering-assurance): structural checks, semantic review and exact protected publication |
+| Packet/input/custody | Strict schema, socket/backpressure, writer/deadline and uncertainty assertions; [native control](components/native-control.md#assurance-and-evidence) adds compiled behavior. |
+| Memory/program/context | Pure player and composition assertions for provenance, helper fault isolation and original child IDs; [memory](components/memory-learning.md#assurance-and-evidence). |
+| Host/driver | Actual Pi/MCP fixtures, origin-bound handoff, attempt accounting and exact group quiescence; [player interface](components/player-interface.md#assurance-and-evidence). |
+| Spectator/operation | Actual images, mechanical versus claim labels and independent Pause; [observer](components/observer-operations.md#assurance-and-evidence). |
 
-The [testing guide](testing.md#responsibility-assurance) explains native test
-metadata and focused selection. Component maintainers own these associations with
-the lead under C-REVIEW/C-MAINTENANCE; exact rules remain in their contracts and
-assertions. Compiled fixtures, actual native behavior, campaigns and manual review
-are different evidence lanes. Follow their stated scope rather than treating a
-pytest group as proof of the whole responsibility.
+The [testing guide](testing.md) selects lanes. Current production real-game
+qualification remains open. Source checks and historical play cannot qualify the
+new route, pointer usability, useful cadence, normal save/reload/exit or survival.
 
-Scope work from the affected system responsibility down to components, contracts,
-state/callers, code, tests and procedures. Review the highest changed boundary
-before committing its implementation. An unchanged parent needs a link and impact
-statement, not recursive approvals. Select checks from consequence and uncertainty
-under the [assurance tiers](workflows/review.md#risk-based-assurance).
+<!-- Retained bookmarks for the coordinated contract migration. -->
+<a id="passive-skill-verification"></a>
+<a id="passive-task-supervision"></a>
 
-Import Linter checks declared dependency directions; protocol/document checks catch
-selected drift. They do not prove semantic truth. Source tests, native builds,
-real gameplay and protected publication are separate lanes. Changed native support
-needs relevant matching native evidence; document reorganization does not
-requalify a game. [Control map](controls.md).
-
-Consequential rationale remains in the [native platform](decisions/001-native-platform.md)
-and [local contract](decisions/002-local-contract.md) ADRs. Prior briefs and reports
-remain history; live outcomes and remaining work belong in
-[GitHub](https://github.com/users/CVX-Hull/projects/2).
+Earlier semantic lifecycle and tool bookmarks now route to the current
+computer-control boundary described on this page; the [protocol](protocol.md)
+links the replacement contract and historical references.

@@ -1,24 +1,13 @@
 ---
-title: Proposed player-owned memory and gameplay
+title: Current optional player knowledge and programs
 ---
-sequenceDiagram
-  accTitle: Proposed player-owned gameplay connects durable evidence and semantic skills without granting memory execution authority
-  accDescr: A scoped memory packet informs one player. The player requests a semantic skill, which executes bounded primitives through the current controller and native gate. Observations and unknown effects are retained for state and work revision. At the end or an unexpected outcome the player assesses and replans. User Pause blocks further dispatch. Optional curators propose lessons, while reusable library changes have separate tests and review. Participants are logical responsibilities, not required separate processes or models.
-  participant M as Evidence and<br/>campaign views
-  participant P as One player
-  participant S as Skill executor
-  participant G as Current gate
-  participant C as Windowed CDDA
-  M->>P: Bounded state / work / source packet
-  P->>S: Semantic goal and stop conditions
-  loop Bounded skill with fresh checks per primitive
-    S->>G: Proposed primitive
-    G->>C: Input only with current authority
-    C-->>G: Visible result
-    G-->>M: Retain evidence / unknown disposition
-    G-->>S: Actual result for progress or stop
-  end
-  S-->>P: Completion / partial / unknown and evidence
-  P->>M: Revise scoped understanding and pending work
-  Note over G,C: User Pause blocks further dispatch,<br/>committed effects cannot be undone
-  Note over M,P: Optional curator proposes lessons,<br/>reusable library changes need separate tests/review
+flowchart TB
+  accTitle: Current optional player knowledge and programs
+  accDescr: Player claims and selected source pixels support decisions, not authority. Explicit append or program save lazily remembers referenced images. Corrections preserve history. Bounded programs propose the same basic controls. Context is immutable data for handoff; actual quiescence and canonical issuance are separate custody checks.
+E["Actual computer PNG and provenance"] --> P["Player interprets evidence"]
+  P -->|"Explicit supported append"| M["player-memory/1<br/>Fallible claims, Work and corrections"]
+  P -->|"Save immutable program and lineage"| R["Bounded local program<br/>Selected image view and interpretation"]
+  R -->|"Basic proposals"| C["Same computer port<br/>Original limits and custody"]
+  M -->|"Whole-record bounded context<br/>Explicit omissions"| P
+  M --> H["Immutable handoff knowledge<br/>Grants no authority"]
+  C -->|"Original result and actual pixels"| E
