@@ -91,6 +91,12 @@ and coupling inventory below describe **current implementation**, which has not
 yet made that coordinated cutover; they are not approval to extend semantic
 input gates. A game menu or failed player routine should not itself revoke input
 custody in the target design.
+The [bounded SDL proof](acceptance/2026-10-29-basic-computer-control.md) implements
+that boundary only in `experiments/computer_control/`, with a
+[reviewed production handoff](changes/070-computer-control-proof.md#reviewed-production-handoff).
+It is not a supported alternate backend. Raw delivery and organic scouting are
+scoped evidence; actual CDDA pointer usability, production migration and wider
+game support remain open.
 
 | Shared design responsibility | Game integration responsibility |
 | --- | --- |

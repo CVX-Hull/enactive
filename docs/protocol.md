@@ -8,6 +8,11 @@ status: active
 
 Protocol version: 7.
 
+The isolated [computer-control proof](changes/070-computer-control-proof.md)
+has its own exact experimental shapes and no product-CLI route. Its
+[evidence](acceptance/2026-10-29-basic-computer-control.md) does not change the
+current versions below; #176 must replace all current producers/readers together.
+
 This index routes to exact current contracts supporting [architecture](architecture.md).
 Use the component views for understanding before this exact reference:
 [player tools](components/player-interface.md), [mission phases](components/mission-execution.md),

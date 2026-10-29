@@ -20,6 +20,8 @@ non-unit pointer transforms or another game. The build manifest retains the Git
 checkpoint, dirty status, source/output hashes and actual compiler arguments.
 The offscreen case keeps a smaller texture selected during input, while captures
 remain full default output. Its renderer replacement must never regain custody.
+Retain selected native/library bytes by hash before overwriting build outputs;
+frozen manifests reference exact artifacts, not whatever a build cache later holds.
 
 A real development run requires a fresh project-local directory containing the
 frozen `computer-proof/1` manifest and its exact route, MCP, player context/prompt
@@ -43,3 +45,7 @@ The proof deliberately lacks the production mission ledger, programs/memory
 succession and full spectator controls. #176 must integrate or retire every current
 caller and remove this experiment as part of one supported contract. Historical
 native7/mission11 evidence does not become authority for this candidate.
+Actual CDDA clicking remains unqualified: delivery occurred without visible effect
+under the inspected disabled-mouse configuration. Do not add a game-specific
+override. Normal application input configuration and useful widget effects belong
+to the next coordinated preparation/playing-system qualification.

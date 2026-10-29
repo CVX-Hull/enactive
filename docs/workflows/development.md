@@ -39,6 +39,11 @@ parent, counterexample, task or need to satisfy a learning demonstration. Preser
 the selected acceptance requirements when they do not occur naturally: report
 incomplete, learn from the trajectory and shape the next development continuation.
 
+Keep task constraints and measurement rules distinct in the frozen brief. For
+example, excluding starting inventory from new gains must not accidentally forbid
+acquiring supplies. Review the player's interpretation against the original brief
+and retain unintended constraints alongside model mistakes and incomplete outcomes.
+
 Choose the next development run to resolve an important observed failure or
 assumption about useful play. Offline fixtures isolate that failure and protect
 the changed boundary; they cannot establish model judgment, organic behavior,
