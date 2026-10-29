@@ -6,6 +6,26 @@ status: proposed
 
 # Production computer control and player-owned semantics (#176)
 
+## Final ending route after BaseTen refusal
+
+Organic006 reached deliberate Save-and-quit and a separate normal native exit.
+Its fresh-child verification organic007 visibly loaded the saved time/inventory,
+then reached Save-and-quit again, but shared-pool HTTP429 at request21 and its
+allowed retry22 prevented final application exit. Forced cleanup remains a failure.
+The original retry bound stays unchanged; a successful short episode did not
+establish sustained endpoint availability.
+
+For one fresh bounded ending continuation, select OpenRouter **DeepInfra regular
+`deepinfra/fp8`**, the same model snapshot/medium effort, exact full-tag routing,
+required parameters and no fallback. Current [public endpoint metadata](https://openrouter.ai/api/v1/models/deepseek/deepseek-v4.1-flash-1017/endpoints),
+checked October29 after the failure, lists tools/reasoning, implicit caching,
+1,048,576 context and 131,072 completion capacity. Advertised rates are $0.098 input,
+$0.294 output and $0.00294 cached input per million tokens; reserve cache writes
+at input rate. Latency/throughput fields are null and advertised uptime does not
+establish availability for this request. This is an explicit backend disposition
+for the remaining ending, not an inference-speed ranking or automatic fallback.
+Retain BaseTen's genuine useful play and normal ending alongside its failures.
+
 The selected iteration and estimates live in [#176](https://github.com/CVX-Hull/enactive/issues/176):
 16–24 active engineering/experiment hours, Low confidence, 24-hour appetite.
 [#287](https://github.com/CVX-Hull/enactive/issues/287) owns mechanical integration;
