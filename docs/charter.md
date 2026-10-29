@@ -42,6 +42,14 @@ delay and the complete configuration still meets the declared cadence. Capabilit
 alone does not justify stalls. Numerical budgets belong in the prospective
 evaluation, with loading and long activities separately visible and bounded.
 
+Selected architecture constraint: the harness exposes only basic computer
+observation/control and mechanical custody, delivery, cancellation and resource
+limits. The entire playing system owns game semantics, including menus,
+inventory, activities, identity, save/load, progress and loops. A game-specific
+classification cannot be a prerequisite for basic input. [ADR006](decisions/006-computer-control-boundary.md)
+records the migration and limits; this direction is not a claim that the current
+runtime already implements it.
+
 Current assumptions: one game/controller and one designated deciding player;
 the active player owns planning and ordinary interpretation, with a separately
 assigned advisory actor for reflection. The engineering lead owns the project,
@@ -116,7 +124,7 @@ consequence; preserve failures and strengthen acceptance once the behavior compo
 Prefer interaction, search, learning and feedback mechanisms that remain useful
 as tasks and interfaces change. Following the [Bitter Lesson cross-check](research.md#generality-and-the-bitter-lesson),
 engineer the substrate for discovery; do not make our catalogue of game knowledge
-the boundary of what the player can try. Domain shortcuts are replaceable aids
+the boundary of what the player can try. Domain shortcuts belong in the playing system as replaceable aids
 with explicit scope and demonstrated value. The player must be able to reconsider
 them using current observations and ordinary interface actions.
 

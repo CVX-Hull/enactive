@@ -17,6 +17,10 @@ section below; routine contributors and players need not read this whole referen
 Authority rules are [S-PROTOCOL](standards/protocol.md#s-protocol-command-and-observation-authority).
 Current source is native7/mission11/ledger13/archive6, with procedure/3,
 campaign-memory/6, reflection/3 and program-view/2; gameplay/2 is unchanged.
+[ADR006](decisions/006-computer-control-boundary.md) selects a future basic
+computer-control boundary with game semantics in the playing system. The current
+versions and contracts below remain implemented until their coordinated migration;
+this index must not be read as the target architecture already being delivered.
 Matching native7 marker qualification is a separate required lane from the
 historical native6 ordinary-input/normal-lifecycle evidence in
 [capture001](acceptance/2026-10-22-native-capture-preconditions.md). That old run
