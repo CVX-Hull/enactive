@@ -37,6 +37,13 @@ Freeze the player guide/current schema, meaningful task, original limits and end
 reserve in context/prompt. Do not put mutable engineering source or hidden game
 facts into player context.
 
+A prior player's terminal report may be included as clearly bounded **fallible
+historical data**, preserving its mistakes and uncertainty. It is not operator
+instructions or current evidence. Old source/operation references gain no
+readability, memory registration or input authority from inclusion in the packet;
+current observations and actual tool availability govern the new player. This
+does not replace canonical actor handoff or import a memory record.
+
 The validator rejects unsupported/partial/used packages and selected old player
 stores before native effects. It does not create a new allocation or discover a
 credential. Preserve the frozen package and exact binary bytes before rebuilding.
@@ -130,6 +137,12 @@ exclusion for its own lifetime. `ready.json` gives the loopback viewer URL. The
 driver creates exclusive per-actor inputs/host traces and original resource notes.
 It verifies canonical handoff/context plus actual host/MCP group quiescence before
 a successor, without changing original limits. [Host details](player-host.md).
+
+Use a fresh or fully reloaded spectator page for each new admission. An old page
+can retain the closed admission's local Pause label while polling a new session;
+reload was verified as the immediate mitigation. The [owned observer follow-up](https://github.com/CVX-Hull/enactive/issues/143#issuecomment-6508431710)
+retains that presentation gap. Reloading a page does not resume a stopped admission
+or grant input authority.
 
 SIGINT/SIGTERM or browser Pause permanently fence input. Finalization closes the
 channel and exact owned groups, with bounded signals if necessary. It never scans
