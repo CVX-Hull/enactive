@@ -41,10 +41,12 @@ __attribute__((constructor)) void inheritChannel() noexcept {
     int lock=descriptor(getenv("ENACTIVE_COMPUTER_LOCK_FD"));
     int channel=descriptor(getenv("ENACTIVE_COMPUTER_FD"));
     // Close-on-exec applies even when a malformed launch refuses automation.
+    bool contained=true;
     for(int fd : {lock,channel}) if(fd>=3) {
-        int flags=fcntl(fd,F_GETFD); if(flags<0 || fcntl(fd,F_SETFD,flags|FD_CLOEXEC)!=0) return;
+        int flags=fcntl(fd,F_GETFD);
+        if(flags<0 || fcntl(fd,F_SETFD,flags|FD_CLOEXEC)!=0) contained=false;
     }
-    if(lock<3 || channel<3 || lock==channel || !path || !token || strlen(token)!=32 ||
+    if(!contained || lock<3 || channel<3 || lock==channel || !path || !token || strlen(token)!=32 ||
             strspn(token,"0123456789abcdef")!=32 || getenv("ENACTIVE_COMPUTER_DIR") || getenv("CDDA_HARNESS_DIR")) return;
     struct stat held={}, named={};
     if(fstat(lock,&held)!=0 || lstat(path,&named)!=0 || !S_ISREG(held.st_mode) ||

@@ -268,18 +268,44 @@ def partial_control_checks(options):
 def channel_checks(options):
     partial_control_checks(options)
     case = options.output / 'backpressure'
-    with fixture(options, case, noise=True, lifetime=4000) as (peer, child):
-        peer.observe()
+    with fixture(options, case, noise=True, lifetime=12000) as (peer, child):
+        first, initial_png = peer.observe()
+        # Drain the first capture's passive state before witnessing the next
+        # receipt header with MSG_PEEK. The image stays entirely unread below.
+        while not peer.target or peer.target['latest_frame'] != first['frame']:
+            peer.packet()
         original = peer.request('observe', fragmented=True)
-        # Fixed random fixture pixels encode well beyond the 4KiB send buffer.
-        time.sleep(.15)
+        witness = {}
+
+        def pending_image():
+            if not select.select([peer.channel], [], [], 0)[0]:
+                return False
+            data = peer.channel.recv(protocol.MAX_HEADER_BYTES + 4, socket.MSG_PEEK)
+            assert data, 'Fixture channel closed before pending image witness'
+            if len(data) < 4:
+                return False
+            size = struct.unpack('!I', data[:4])[0]
+            assert 1 <= size <= protocol.MAX_HEADER_BYTES
+            if len(data) < 4 + size:
+                return False
+            header = protocol.wire_header(protocol.decode_json(data[4:4 + size]))
+            assert header['kind'] == 'receipt' and header['value']['id'] == original, header
+            assert header['payload_bytes'] > 262144, 'Image did not exceed the constrained send buffer'
+            witness.update(header)
+            return True
+
+        wait_for(pending_image)
         pause_wall = int(time.time() * 1000)
         pause = peer.request('pause', fragmented=True)
-        before = len([r for r in records(case / 'events.jsonl') if 'heartbeat' in r])
-        time.sleep(.35)
-        after = len([r for r in records(case / 'events.jsonl') if 'heartbeat' in r])
-        assert after > before and child.poll() is None, 'Backpressure blocked the application'
+        before = max((r.get('heartbeat', 0) for r in records(case / 'events.jsonl')), default=0)
+        # No socket receive/collection occurs until an actual later loop witness.
+        # This is a finite liveness check, not a cadence/performance threshold.
+        wait_for(lambda: max((r.get('heartbeat', 0) for r in records(case / 'events.jsonl')), default=0) > before)
+        after = max((r.get('heartbeat', 0) for r in records(case / 'events.jsonl')), default=0)
+        assert child.poll() is None, 'Fixture ended before pending image collection'
         result, png = peer.collect(original)
+        assert result == witness['value'] and len(png) == witness['payload_bytes'], 'Pending receipt/image changed'
+        assert hashlib.sha256(png).digest() == hashlib.sha256(initial_png).digest(), 'Pending image bytes changed'
         assert result['disposition'] == 'delivered' and len(png) > 262144, 'Did not exercise partial image send'
         assert result['frame']['presented_ms'] <= pause_wall, 'Pending frame timestamp was renewed'
         ack, _ = peer.collect(pause)
@@ -287,7 +313,9 @@ def channel_checks(options):
         refused, _ = peer.execute(key('RIGHT'))
         assert refused['disposition'] == 'rejected' and refused['emitted_events'] == 0
         assert not any(r.get('key') == 1073741903 for r in records(case / 'events.jsonl'))
-        (case / 'check.json').write_text(json.dumps(dict(original=result, pause=ack, refused=refused), indent=2) + '\n')
+        (case / 'check.json').write_text(json.dumps(dict(original=result, pause=ack, refused=refused,
+            heartbeat_before=before, heartbeat_after=after, payload_bytes=len(png),
+            payload_sha256=hashlib.sha256(png).hexdigest()), indent=2) + '\n')
     case = options.output / 'half-close'
     with fixture(options, case, lifetime=2500) as (peer, child):
         peer.observe()
@@ -298,12 +326,13 @@ def channel_checks(options):
         time.sleep(.3)
         assert child.poll() is None and any('heartbeat' in r for r in records(case / 'events.jsonl'))
     case = options.output / 'peer-close'
-    with fixture(options, case, noise=True, lifetime=2000) as (peer, child):
+    with fixture(options, case, noise=True, lifetime=12000) as (peer, child):
         peer.observe()
         peer.request('observe')
         peer.channel.close()
-        time.sleep(.4)
-        assert child.poll() is None and any('heartbeat' in r for r in records(case / 'events.jsonl'))
+        before = max((r.get('heartbeat', 0) for r in records(case / 'events.jsonl')), default=0)
+        wait_for(lambda: max((r.get('heartbeat', 0) for r in records(case / 'events.jsonl')), default=0) > before)
+        assert child.poll() is None, 'Fixture ended before peer-close loop witness'
     case = options.output / 'duplicate'
     with fixture(options, case, lifetime=2500) as (peer, child):
         peer.observe()

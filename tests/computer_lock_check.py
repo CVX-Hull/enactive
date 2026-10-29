@@ -70,6 +70,8 @@ def invalid(options, mode):
         else:
             raise AssertionError(mode)
         command = [str(options.fixture), str(case / 'events.jsonl'), '--hidden', '--exit-after-ms', '1400']
+        if mode == 'closed':
+            command.extend(['--check-fd', str(native.fileno())])
         script = case / 'launch.sh'
         script.write_text('export DYLD_INSERT_LIBRARIES="$ENACTIVE_COMPUTER_LIBRARY"\nexec ' + shlex.join(command) + '\n')
         with (case / 'console.log').open('x') as log:
