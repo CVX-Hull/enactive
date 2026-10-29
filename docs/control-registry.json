@@ -38,7 +38,6 @@
         "P-UNCERTAINTY"
       ],
       "controls": [
-        "C-PROTOCOL",
         "C-RUNTIME",
         "C-PORTABLE",
         "C-NATIVE"
@@ -136,7 +135,6 @@
         "P-UNCERTAINTY"
       ],
       "controls": [
-        "C-PROTOCOL",
         "C-PORTABLE",
         "C-GOVERNANCE",
         "C-REVIEW",
@@ -167,12 +165,11 @@
       "name": "Portable regression lane",
       "mode": "automatic",
       "scope": "Portable source, adapter, SDK, record/persistence and viewer regressions using synthetic/real-component fixtures. Native engine behavior and actual player outcomes are separate lanes.",
-      "mechanism": "The existing tools/check.py runner executes syntax, selected Ruff, Import Linter, document metadata/local links, governance/protocol agreement and whitespace. Local --fast stops there with calendar-only warnings. Strict full/editorial/movement/viewer/main-smoke profiles also render diagrams and enforce current-date governance. Full collects existing unittest cases through pinned pytest with four pytest-xdist processes, built-in work stealing and 20 slowest durations; component profiles run explicit consumer/boundary tests grouped by file; main-smoke runs fixed selected cases serially. Every behavioral profile runs the Node viewer suite; editorial omits behavioral/viewer tests. tools/ci.py owns the shared explicit scope/test manifest and chooses from complete native Git diffs and existing GitHub PR/run/job facts under docs/project-management.md#protected-ci-profiles; unknown/nonregular eligibility selects full. docs/testing.md maps responsibilities, useful overlap and duplication review. Worker/check failures propagate without restart, ignored failures or cached green results. Focused development tests remain selected by the lead. Portable fixtures do not qualify gameplay or browser layout. Native pytest strict marker registration rejects undeclared metadata; the representative assurance groups in docs/testing.md support navigation/focused development, not production profile routing or semantic-coverage claims.",
+      "mechanism": "The existing tools/check.py runner executes syntax, selected Ruff, Import Linter, document metadata/local links, governance structure and whitespace. Local --fast stops there with calendar-only warnings. Strict full/editorial/viewer/main-smoke profiles also render diagrams and enforce current-date governance. Full collects existing unittest cases through pinned pytest with four pytest-xdist processes, built-in work stealing and 20 slowest durations; component profiles run explicit consumer/boundary tests grouped by file; main-smoke runs fixed selected cases serially. Every behavioral profile runs the Node viewer suite; editorial omits behavioral/viewer tests. tools/ci.py owns the shared explicit scope/test manifest and chooses from complete native Git diffs and existing GitHub PR/run/job facts under docs/project-management.md#protected-ci-profiles; unknown/nonregular eligibility selects full. docs/testing.md maps responsibilities, useful overlap and duplication review. Worker/check failures propagate without restart, ignored failures or cached green results. Focused development tests remain selected by the lead. Portable fixtures do not qualify gameplay or browser layout. Native pytest strict marker registration rejects undeclared metadata; the representative assurance groups in docs/testing.md support navigation/focused development, not production profile routing or semantic-coverage claims.",
       "owner": "maintainer",
       "trigger": "Fast structural checks on each configured local commit; focused tests on affected behavior; appropriate strict profile at coherent integration/formal acceptance and main-targeting PR/main CI events; broad source changes require full regression before merge",
       "evidence": [
         "tools/check.py",
-        "tests/test_controller.py",
         "tests/test_server.py",
         "tests/test_setup.py",
         "tests/test_viewer.cjs",
@@ -182,19 +179,12 @@
         "requirements-dev.lock",
         "tests/test_devtools.py",
         "docs/acceptance/2026-10-17-public-workflow.md",
-        "tests/test_gameplay_contracts.py",
-        "tests/test_gameplay_evidence.py",
         "tests/test_cli.py",
-        "tests/test_gameplay_memory.py",
-        "tests/test_evaluation.py",
         "tools/evaluate.py",
         "docs/acceptance/2026-10-17-public-recovery-evaluation.md",
-        "tests/test_gameplay_planner.py",
         "docs/acceptance/2026-10-17-native-recovery-planner.md",
         "docs/acceptance/2026-10-17-bounded-skills.md",
         "docs/acceptance/2026-10-17-passive-supervisor.md",
-        "tests/test_gameplay_supervisor.py",
-        "tests/test_gameplay_skills.py",
         "docs/acceptance/2026-10-18-integrated-player.md",
         "docs/acceptance/2026-10-18-enactive-migration.md",
         "docs/acceptance/2026-10-18-seven-day-readiness.md",
@@ -203,38 +193,18 @@
         "docs/acceptance/2026-10-20-native-character-lifecycle.md",
         "docs/acceptance/2026-10-20-native-lifecycle-qualified.md",
         "docs/acceptance/2026-10-20-independent-mission-first-attempt.md",
-        "tests/test_mission_confirmation_validation.py",
-        "tests/test_mission_campaign_budget.py",
         "docs/acceptance/2026-10-20-confirmation-correction.md",
-        "tests/test_mission_client.py",
-        "tests/test_player_tools.py",
-        "tests/test_player_tools_lifecycle.py",
         "docs/changes/051-structured-player-tools.md",
         "docs/changes/054-development-first-delivery.md",
-        "tests/test_mission_request_bindings.py",
-        "tests/test_navigation.py",
-        "tests/test_mission_runtime.py",
         "docs/acceptance/2026-10-22-independent-seven-day-third-attempt.md",
-        "harness/player_view.py",
-        "tests/test_player_view.py",
-        "harness/gameplay/creation_provenance.py",
-        "tests/test_creation_provenance.py",
-        "tests/test_mission_lifecycle_ordinary.py",
         "docs/acceptance/2026-10-23-luna-responsiveness-third-attempt.md",
         "docs/acceptance/2026-10-23-luna-responsiveness-fifth-attempt.md",
         "docs/acceptance/2026-10-23-luna-responsiveness-sixth-attempt.md",
-        "tests/test_player_claims.py",
         "docs/changes/060-responsive-player.md",
-        "tests/test_player_invocations.py",
         "tests/test_policy_program.py",
-        "tests/test_program_execution.py",
         "docs/changes/061-player-program-execution.md",
-        "tests/test_player_procedures.py",
-        "tests/test_player_validation.py",
         "docs/changes/062-player-decision-context.md",
         "docs/acceptance/2026-10-24-independent-seven-day-eighteenth-attempt.md",
-        "tests/test_mission_ledger.py",
-        "tests/test_campaign_memory.py",
         "docs/acceptance/2026-10-24-independent-seven-day-nineteenth-attempt.md",
         "docs/acceptance/2026-10-24-independent-seven-day-twenty-second-attempt.md",
         "docs/acceptance/2026-10-24-independent-seven-day-twenty-third-attempt.md",
@@ -243,11 +213,21 @@
         "tools/ci.py",
         "tests/test_ci.py",
         "docs/changes/065-proportional-ci.md",
-        "docs/testing.md"
+        "docs/testing.md",
+        "tests/test_computer_protocol.py",
+        "tests/test_computer_runtime.py",
+        "tests/test_computer_channel.py",
+        "tests/test_computer_launch.py",
+        "tests/test_player_application.py",
+        "tests/test_player_memory.py",
+        "tests/test_player_context.py",
+        "tests/test_player_programs.py",
+        "tests/test_observer_analysis.py",
+        "docs/acceptance/2026-10-29-computer-control-development.md"
       ],
       "failure_response": "Preserve failure output, fix the cause and rerun before claiming portable acceptance.",
-      "limitations": "Fast mode omits behavioral tests, viewer regressions and rendered diagrams. Editorial omits runtime/viewer tests; movement/viewer cover explicit consumers and boundary smoke rather than full regression or browser layout; main-smoke does not rerun full regression and depends on qualifying linked PR coverage. Reduced scopes are not full portable passes. Focused selection and prose truth require judgment. Synthetic fixtures do not execute CDDA or prove host schema/image loading, review-free gameplay, fresh context, cross-game support or useful cadence. Link checks omit anchors, external availability and raw HTML; Ruff is a selected diagnostic set, not full typing/formatting. Missing tools or denied loopback/browser access fail the affected lane. A started/cancelled check is not a pass.",
-      "enforcement": "Opt-in project-local pre-commit hook runs --fast. The always-present Actions controller selects a strict profile for PRs explicitly targeting main and pushes to main; no workflow path filters or ignored failures. Logs/Actions summary state profile/reason and qualifying PR coverage for main-smoke. Covered documentation and explicit movement/viewer boundaries receive their declared strict scopes; cross-cutting, validation and unknown PR changes receive full. Changed validation machinery/context also forces full on main. GitHub concurrency cancels superseded PR runs only. Main retains strict Actions-app15368 controller requirement under ruleset25346774. Hooks remain bypassable. Hosted activation evidence must be recorded in the issue/PR after actual execution; this definition is not a hosted pass.",
+      "limitations": "Fast mode omits behavioral tests, viewer regressions and rendered diagrams. Editorial omits runtime/viewer tests; viewer covers explicit consumers and boundary smoke rather than full regression or browser layout; main-smoke does not rerun full regression and depends on qualifying linked PR coverage. Reduced scopes are not full portable passes. Focused selection and prose truth require judgment. Synthetic fixtures do not execute CDDA or prove host schema/image loading, review-free gameplay, fresh context, cross-game support or useful cadence. Link checks validate current Markdown fragments, but omit historical-origin fragment targets, external availability and raw HTML; Ruff is a selected diagnostic set, not full typing/formatting. Missing tools or denied loopback/browser access fail the affected lane. A started/cancelled check is not a pass.",
+      "enforcement": "Opt-in project-local pre-commit hook runs --fast. The always-present Actions controller selects a strict profile for PRs explicitly targeting main and pushes to main; no workflow path filters or ignored failures. Logs/Actions summary state profile/reason and qualifying PR coverage for main-smoke. Covered documentation and explicit viewer boundaries receive their declared strict scopes; cross-cutting, validation and unknown PR changes receive full. Changed validation machinery/context also forces full on main. GitHub concurrency cancels superseded PR runs only. Main retains strict Actions-app15368 controller requirement under ruleset25346774. Hooks remain bypassable. Hosted activation evidence must be recorded in the issue/PR after actual execution; this definition is not a hosted pass.",
       "status": "active",
       "rationale": null,
       "replacement": null,
@@ -283,67 +263,22 @@
       "id": "C-RUNTIME",
       "name": "Live authority and input guards",
       "mode": "runtime",
-      "scope": "Single-controller mission dispatch and admission, original typed operation accounting, HTTP trust boundary, historical memory observer and spectator input freshness.",
-      "mechanism": "One current typed mission contract and one authenticated writer use exact controller leases, immutable sources, original root/child/mission limits and durable intent/result accounting. Captured samples retain their as-of identity and original clocks across healthy newer views under unchanged custody; semantic applicability is separately proved. Ordinary healthy non-equivalence refuses input and requires a distinct decision/Observe lineage; future clocks, revision contradictions and immutable-source changes remain faults. Native independently checks receiver, session, revision, boundary, custody, Pause/takeover, pending control and original clocks/deadline. Retained native-issued captures preserve their original timestamp and complete normalized observation metadata; non-image-conditioned input may survive incidental rendering churn without retargeting or renewing freshness. Clicks and image-conditioned input retain applicable exact-image/geometry checks. Registered normal Save start and provisional identity readmission use native-state equivalence; setup, confirmation, actual identity-screen and recovery retain their stronger policies. Owned creation/save/load, committed transition/effect proof, first-normal identity, separate charged readmission and canonical identity adoption remain mandatory. Unknown delivery is never replayed or rewritten: bounded diagnostic collection and explicit effect reconciliation retain original receipts, costs and uncertainty. Ordinary known-unpublished capture refusal preserves only qualified read-only custody until explicit Observe and new intent; fatal ownership, processing/storage, global budget and historical-integrity faults still stop. Original navigation/activity/menu/editor/item scopes, quantities and deadlines survive continuation, with no automatic prompt confirmation or new allowance. Quiescent handoff/claim retains actor history and unfinished Work; history, memory, advice and packets grant no input authority. Normal Finish requires exact owned exits and coherent objective Work, writes an immutable report and sends no native input. The spectator distinguishes live custody and unresolved effects from historical frames, memory, results and process samples. The protocol owns detailed predicates and supported limits; portable tests and dated native reports provide separate evidence. The generic host settles its own coherent completed handoff before further dispatch/inference. MCP retains the assigned collection identity through unfinished/uncertain responses; the driver independently validates live succession. Neither mechanism reconstructs authority. Only typed identity-selection refusals retain healthy adoption; authenticated payload/history faults retire authority. Settled-writer exceptional native cleanup uses its retained child handle after input revocation and records unknown custody separately from normal exit.",
+      "scope": "Sole mechanical computer writer, original operation/resource custody, immutable images, bounded permanent Stop and actor-only succession; optional player services remain fallible.",
+      "mechanism": "One current socket/SQLite contract, authenticated actor ingress, complete preflight and retained original IDs/ACK uncertainty. No game-phase or image-equality eligibility for keys. Pointer geometry and source bytes are checked mechanically. Pause bypasses player/executor/store waits. Current sealed actors may cancel; retired actors cannot stop successors. Quiescence requires actual owned host/MCP absence under original limits. Player knowledge/programs cannot grant authority; local refusal leaves basic input available.",
       "owner": "controller and viewer maintainer",
       "trigger": "every relevant request, observation and image decode",
       "evidence": [
-        "harness/controller.py",
         "harness/server.py",
         "web/app.js",
-        "tests/test_controller.py",
         "tests/test_server.py",
         "tests/test_viewer.cjs",
         "docs/protocol.md",
-        "native/cdda_harness.cpp",
-        "harness/gameplay/evidence.py",
-        "harness/mission_runtime.py",
-        "tests/test_mission_runtime.py",
-        "tests/test_mission_http.py",
-        "harness/gameplay/timeline.py",
-        "tests/test_gameplay_timeline.py",
-        "harness/native_process.py",
-        "tests/test_native_process.py",
-        "tests/test_mission_launch.py",
-        "tests/test_mission_exit.py",
-        "tests/test_exit_retirement.py",
-        "harness/mission_lifecycle.py",
-        "harness/gameplay/lifecycle.py",
-        "tests/test_lifecycle.py",
-        "tests/test_mission_creation.py",
-        "tests/test_mission_finish.py",
-        "harness/gameplay/interactions.py",
-        "tests/test_gameplay_interactions.py",
-        "tests/test_mission_items.py",
-        "tests/test_mission_activities.py",
-        "tests/test_mission_activity_control.py",
-        "tests/test_mission_activity_recovery.py",
-        "harness/mission_recovery.py",
-        "tests/test_mission_delivery_evidence.py",
-        "tests/test_mission_recovery_collection.py",
-        "tests/test_mission_effects.py",
-        "tests/test_mission_confirmation_validation.py",
-        "tests/test_mission_campaign_budget.py",
-        "tests/test_mission_request_bindings.py",
-        "harness/gameplay/mission_requests.py",
-        "tests/test_mission_request_producer.py",
-        "tests/test_mission_request_producer_integration.py",
-        "harness/gameplay/semantic_controls.py",
-        "tests/test_semantic_controls.py",
-        "harness/mission_client.py",
         "harness/player_tools.py",
         "harness/player_mcp.py",
-        "tests/test_player_tools_lifecycle.py",
         "docs/changes/051-structured-player-tools.md",
         "docs/changes/053-operation-entry-refresh.md",
-        "tests/test_controller_semantic_capture_refusal.py",
-        "tests/test_mission_semantic_capture_refusal.py",
         "docs/changes/058-capture-provenance-action-preconditions.md",
-        "tests/test_native_capture.py",
-        "tests/test_native_receiver.py",
-        "tests/test_mission_capture_custody.py",
         "docs/changes/059-observation-custody-and-applicability.md",
-        "tests/test_player_invocations.py",
         "docs/acceptance/2026-10-27-gameplay-workflow-audit.md",
         "docs/acceptance/2026-10-27-imported-correction-follow-through.md",
         "docs/acceptance/2026-10-27-rendered-markers.md",
@@ -351,34 +286,44 @@
         "docs/acceptance/2026-10-21-independent-supply-shelter.md",
         "tools/player_host/host.mjs",
         "tools/player_host/test/host.test.mjs",
-        "tests/test_player_mcp.py",
-        "tests/test_mission_initial_load.py",
-        "tests/test_mission_shutdown.py",
         "tools/campaign_run.py",
-        "tests/test_campaign_run.py"
+        "tests/test_campaign_run.py",
+        "harness/computer/runtime.py",
+        "harness/computer/channel.py",
+        "harness/computer/store.py",
+        "harness/computer/launch.py",
+        "harness/application.py",
+        "harness/player/memory.py",
+        "tests/test_computer_runtime.py",
+        "tests/test_player_application.py",
+        "docs/contracts/computer-control.md",
+        "docs/acceptance/2026-10-29-computer-control-development.md",
+        "docs/acceptance/2026-10-29-computer-control.md"
       ],
-      "failure_response": "Reject or freeze further dispatch; expose error and reconcile by observation before explicit resume.",
-      "limitations": "Source controls and synthetic fixtures do not establish native effects or unattended survival. Learning006 qualifies bounded discovery, procedure refinement/reuse, actual successor application and normal lifecycle; disclosed technical assistance and no causal-learning claim remain. Failed fresh008 qualifies neither a day nor a normal ending: four native rejections and persistent Save pixel drift ended exceptionally. Capture001 qualifies ordinary input and normal lifecycle on the subsequent matching build; actual persistentpixel drift and the retainedcapture commit race remain unexercised there. Pause cannot undo committed input or cancel an activity; stalls may delay revocation. Visible review-free tool calls do not establish hidden host telemetry, attention, inference latency or causal benefit. Wider mouse/geometry, selected activity/recovery interactions and game-family portability remain specifically scoped gaps; authoritative details are in the protocol and dated reports.",
+      "failure_response": "Reject or permanently freeze further dispatch as applicable; collect original results, preserve uncertainty and perform owned cleanup. Any later play requires a fresh admission, never restored authority.",
+      "limitations": "Runtime fixtures establish their stated boundaries, not useful game effects, save success, real-human takeover or general portability. No restart authority revival. Unknown original delivery remains unknown even when a later ACK is collected.",
       "enforcement": "Implemented at runtime; regression execution is C-PORTABLE. Source references alone establish no behavioral pass.",
       "status": "active",
       "rationale": null,
       "replacement": null,
       "last_exercise": {
-        "date": "2026-10-27",
-        "outcome": "Scoped source/reader/tooling exercise; native and gameplay qualification remain separate.",
-        "scope": "Paired healthy correction/corrupt-history cases and controlled-child shutdown strengthen source boundaries. Real native closure, useful successor application and apparent cadence remain separate unqualified outcomes.",
+        "date": "2026-10-29",
+        "outcome": "Current mechanical custody, original limits/uncertainty and actor succession exercised through fixtures and actual play.",
+        "scope": "Native socket/Pause/lock cases, production SQLite/V8 pipeline, authentic basic control and clean host succession; final exit ACK remains unknown while independent normal process exit is proved.",
         "evidence": [
-          "docs/acceptance/2026-10-27-audit-resolution.md"
+          "docs/acceptance/2026-10-29-computer-control.md",
+          "docs/acceptance/2026-10-29-computer-control-development.md"
         ]
       },
       "maintenance_review": {
-        "date": "2026-10-27",
+        "date": "2026-10-29",
         "effectiveness": "partially_effective",
-        "findings": "Paired healthy correction/corrupt-history cases and controlled-child shutdown strengthen source boundaries. Real native closure, useful successor application and apparent cadence remain separate unqualified outcomes.",
-        "cost": "Existing project-local tools and targeted fixtures/reviews reused; one coherent protected regression candidate. No total human/model labor, sustained usability or causal productivity measurement.",
-        "follow_up": "@CVX-Hull: Use the maintained finite custodian for fresh runs; qualify affected native/product outcomes in their existing Issues, preserving failed runs and original limits.",
+        "findings": "Current callbacks/fixtures preserve original collection and permanent Stop. Integration review caught a helper setup fault that wrongly stopped healthy basic input; terminal helper results repair it. Game meaning and success remain outside authority.",
+        "cost": "Existing fixtures, pinned tools and bounded independent reviews reused. Detailed labor/coordination cost was not fully measured; no recurring service or per-action review introduced.",
+        "follow_up": "@CVX-Hull owns remaining qualifications in #164/#177/#145/#191/#284; #176 and its linked PR own exact protected delivery receipts. Existing next-review date is not extended.",
         "evidence": [
-          "docs/acceptance/2026-10-27-audit-resolution.md"
+          "docs/acceptance/2026-10-29-computer-control.md",
+          "docs/acceptance/2026-10-29-computer-control-development.md"
         ]
       },
       "next_review": "2027-01-15"
@@ -438,38 +383,34 @@
         "docs/acceptance/2026-10-23-luna-responsiveness-fifth-attempt.md",
         "docs/acceptance/2026-10-23-luna-responsiveness-sixth-attempt.md",
         "docs/acceptance/2026-10-23-discovery-learning-ninth-attempt.md",
-        "docs/changes/062-player-decision-context.md"
+        "docs/changes/062-player-decision-context.md",
+        "docs/acceptance/2026-10-29-computer-control-development.md",
+        "docs/acceptance/2026-10-29-computer-control.md"
       ],
       "failure_response": "Retain failed/unknown probes, block the affected claim and repair or document the supported limit.",
-      "limitations": "Host/scenario-specific manual qualification; this map launches no native regression runner and proves no current live process. Independent024 supplies/rest, actual fresh successor and normal lifecycle are qualified within its bounded development scope. Earlier001-023failures remain failures. Primary/successor actual tool traces show no visible routine review events; hidden host telemetry, mental attention and causal memory benefit remain unmeasured. General survival, future hosts and unexercised native interactions are unqualified. Source tests do not substitute for actual native evidence. Luna005/006/007 remain failed diagnostics. Rebuilt690fe96 accepts006 modifier inputs, but editor semantics and routine cadence remain unqualified.007 reaches an in-game image through initial Load, then wrong-domain reconciliation fails before identity/normal ending; this does not prove genuine lifecycle custody loss. Responsiveness008 verifies initial Load/current identity and own normal Save, then fails literal owned-exit input; no useful routine cohort, higher-level supply/travel or speed/campaign acceptance.",
+      "limitations": "Bounded macOS SDL/CDDA evidence on recorded source/native/routes, not a live process monitor. Current actual key/text/pointer, useful stock, conditional scouting, knowledge/succession and Save/reload/normal ending do not qualify safe navigation, useful cadence, causal learning, survival, non-unit geometry/resize, Unicode/IME, actual-human takeover or another game. Historical semantic-system results retain their original scope in dated reports. Unknown original input remains unknown even when independent process evidence establishes a normal exit.",
       "enforcement": "Required by S-PROTOCOL/S-DELIVERY and release review; manual, outside the portable gate. Permission readiness before ordinary campaign input also requires S-OPS's [live permission preflight](operator-permissions.md#preflight-for-every-campaign) from the actual designated player and exact entry point. Retain enabled project-layer evidence, rule decisions and live results separately. Repeated per-action review fails permission readiness even if every request is approved; resolve it before ordinary play. This is a manual activation check; prefix matching does not prove runtime loading.",
       "status": "active",
       "rationale": null,
       "replacement": null,
       "last_exercise": {
-        "date": "2026-10-24",
-        "outcome": "Diagnostic002 on source 7cf7444/signed96e58 qualifies scoped ASCII overflow response, visible correction/cancellation and normal menu-only exit/Finish stopped. Failed001 bootstrap and failed021 native crash remain retained.",
-        "scope": "48 charged primitives (47 returned/one unknown ACK separately effect-resolved), 23 requests, 116 verified PNGs/2,129,035 bytes. Same-session MENU return, zero-input setup revocation, explicit Observe/new exit root, OwnedNormalExit0/Finish stopped, all owned processes closed and 191 saves unchanged. Whole32byte value inferred from sequence/visible suffix; Unicode and full campaign unqualified.",
+        "date": "2026-10-29",
+        "outcome": "Actual compiled mechanical adapter and authentic production play establish bounded functional outcomes.",
+        "scope": "Current matching native inputs, real key/text/pointer effects, useful food, RGB programs/correction/succession, deliberate Save/new-child reload and final normal exit. Failed admissions and forced cleanup remain failures.",
         "evidence": [
-          "docs/acceptance/2026-10-24-native-text-overflow.md",
-          "docs/acceptance/2026-10-24-independent-seven-day-twenty-first-attempt.md"
+          "docs/acceptance/2026-10-29-computer-control.md",
+          "docs/acceptance/2026-10-29-computer-control-development.md"
         ]
       },
       "maintenance_review": {
-        "date": "2026-10-24",
+        "date": "2026-10-29",
         "effectiveness": "partially_effective",
-        "findings": "Actual021 stack diagnosis establishes an upstream callback buffer invariant violation inside a crash modal, not a capture attempt or healthy process merely waiting. Rebuilt ImGui DeleteChars correction preserves byte limits and ordinary input, with an independent real ASCII boundary/normal-ending assessment. Unknown ACK remains separate from actual exit proof. Byte cutoff can split UTF-8; previous capture/mouse/activity qualifications remain scoped in their reports.",
-        "cost": "Pinned two-job build27.831s/install0, 29setup tests1.311s and one182.010s diagnostic host; earlier63.718s zero-input bootstrap failure retained. No global setup, hidden-state read, disabled assertion or engineered menu guard.",
-        "follow_up": "@CVX-Hull owns live follow-up through [#176](https://github.com/CVX-Hull/enactive/issues/176); the Issue owns acceptance, allocation and stage. This scoped maintenance assessment does not close product outcomes or renew evidence.",
+        "findings": "Removing semantic/native file publication coupling permits ordinary play without menu handlers. Real play exposed quantity, darkness, confirmation and provider blindspots. Source fixtures do not qualify those effects; independent full-image review corrected model claims.",
+        "cost": "Existing fixtures, pinned tools and bounded independent reviews reused. Detailed labor/coordination cost was not fully measured; no recurring service or per-action review introduced.",
+        "follow_up": "@CVX-Hull owns remaining qualifications in #164/#177/#145/#191/#284; #176 and its linked PR own exact protected delivery receipts. Existing next-review date is not extended.",
         "evidence": [
-          "docs/acceptance/2026-10-22-native-capture-preconditions.md",
-          "docs/acceptance/2026-10-22-independent-seven-day-eighth-attempt.md",
-          "docs/changes/058-capture-provenance-action-preconditions.md",
-          "docs/acceptance/2026-10-23-luna-responsiveness-sixth-attempt.md",
-          "docs/acceptance/2026-10-23-luna-responsiveness-seventh-attempt.md",
-          "docs/acceptance/2026-10-23-luna-responsiveness-eighth-attempt.md",
-          "docs/acceptance/2026-10-24-independent-seven-day-twenty-first-attempt.md",
-          "docs/acceptance/2026-10-24-native-text-overflow.md"
+          "docs/acceptance/2026-10-29-computer-control.md",
+          "docs/acceptance/2026-10-29-computer-control-development.md"
         ]
       },
       "next_review": "2027-01-15"
@@ -499,7 +440,9 @@
         "docs/acceptance/2026-10-27-imported-correction-follow-through.md",
         "docs/acceptance/2026-10-19-seven-day-survival.md",
         "docs/documentation.md",
-        "tests/test_document_links.py"
+        "tests/test_document_links.py",
+        "docs/acceptance/2026-10-29-computer-control.md",
+        "docs/acceptance/2026-10-29-computer-control-development.md"
       ],
       "failure_response": "Correct misleading flows or guidance and retain consequential limits before milestone acceptance.",
       "limitations": "Human judgment; no automated usability score or user study is claimed. Document links do not prove comprehension. The whole player configuration remains unqualified for apparent responsiveness: no representative 20-useful-decision cohort or complete ready-to-visible p95 exists. Dated reports retain earlier Luna, default-context, compaction, mechanical-binding and functional-learning failures and qualifications. Component timings, cached-token counters, elapsed game time and successful catalog loading are not latency acceptance. Wider game-family behavior, actual fresh-successor application on the repaired boundary and complete lifecycle/campaign outcomes remain separate.",
@@ -508,21 +451,23 @@
       "rationale": null,
       "replacement": null,
       "last_exercise": {
-        "date": "2026-10-27",
-        "outcome": "Scoped source/reader/tooling exercise; native and gameplay qualification remain separate.",
-        "scope": "Reader-task review traced rules, Load/adoption, collection, handoff, host operation and development/acceptance across focused canonical bodies. Positional links and historical-route leakage were repaired; no formal usability study or cadence qualification is claimed.",
+        "date": "2026-10-29",
+        "outcome": "Current reader routes, ordinary-width spectator and selected rendered diagrams inspected; real player mistakes retained.",
+        "scope": "Overview to component/contract/procedure/evidence navigation, actual pixels and mechanical facts, conditional scouting and Save/Exit flow. No real-user study or useful-cadence cohort.",
         "evidence": [
-          "docs/acceptance/2026-10-27-audit-resolution.md"
+          "docs/acceptance/2026-10-29-computer-control.md",
+          "docs/acceptance/2026-10-29-computer-control-development.md"
         ]
       },
       "maintenance_review": {
-        "date": "2026-10-27",
+        "date": "2026-10-29",
         "effectiveness": "partially_effective",
-        "findings": "Reader-task review traced rules, Load/adoption, collection, handoff, host operation and development/acceptance across focused canonical bodies. Positional links and historical-route leakage were repaired; no formal usability study or cadence qualification is claimed.",
-        "cost": "Existing project-local tools and targeted fixtures/reviews reused; one coherent protected regression candidate. No total human/model labor, sustained usability or causal productivity measurement.",
-        "follow_up": "@CVX-Hull: Repeat the concrete reader task when responsibilities, contracts or operations change; continue actual useful-cadence evidence under #164.",
+        "findings": "Compact guide/current schema support organic play; repeated wall waits and menu misinterpretations show context and judgment limits. Clarified wall-time wait without introducing semantic control gates. Historical attempts remain separate from current instructions.",
+        "cost": "Existing fixtures, pinned tools and bounded independent reviews reused. Detailed labor/coordination cost was not fully measured; no recurring service or per-action review introduced.",
+        "follow_up": "@CVX-Hull owns remaining qualifications in #164/#177/#145/#191/#284; #176 and its linked PR own exact protected delivery receipts. Existing next-review date is not extended.",
         "evidence": [
-          "docs/acceptance/2026-10-27-audit-resolution.md"
+          "docs/acceptance/2026-10-29-computer-control.md",
+          "docs/acceptance/2026-10-29-computer-control-development.md"
         ]
       },
       "next_review": "2027-01-15"
@@ -531,8 +476,8 @@
       "id": "C-BOUNDARY",
       "name": "Architectural dependency contracts",
       "mode": "automatic",
-      "scope": "Declared controller and server dependency boundaries, including indirect imports through harness modules. All passive gameplay modules, including supervision, must not import controller, HTTP, CLI or process/build tooling. Shared movement policy cannot depend on consumers, clock, filesystem or transport.",
-      "mechanism": "Import Linter enforces the dependency contracts in pyproject.toml for controller/server, player ingress, pure movement and shared memory/time. Negative import fixtures exercise direct and indirect forbidden dependencies. Shared memory/time depends on passive data ports; Import Linter rejects mission/CDDA/store implementation imports even indirectly. Existing controller/server/player/movement isolation remains.",
+      "scope": "Mechanical computer authority, optional player logic, actor adapters and HTTP composition.",
+      "mechanism": "Four current Import Linter contracts prohibit computer dependencies on player/adapter semantics, player custody/network dependencies, adapter executor instantiation and server CLI/tooling imports. Actual temporary-source negative tests exercise direct and indirect violations; shared data/control ports remain legal.",
       "owner": "harness maintainer",
       "trigger": "common command; architecture changes require rule review",
       "evidence": [
@@ -543,9 +488,11 @@
         "docs/decisions/003-development-controls.md",
         "docs/acceptance/2026-10-17-bounded-skills.md",
         "docs/acceptance/2026-10-17-passive-supervisor.md",
-        "harness/gameplay/memory_ports.py",
-        "harness/gameplay/source_contracts.py",
-        "tests/test_memory_ports.py"
+        "harness/computer/ports.py",
+        "harness/computer/protocol.py",
+        "harness/player/programs.py",
+        "docs/acceptance/2026-10-29-computer-control-development.md",
+        "docs/acceptance/2026-10-29-computer-control.md"
       ],
       "failure_response": "Remove reversed dependency or review the boundary and checker together before accepting changed architecture.",
       "limitations": "Static import graph with configured external roots. Dynamic imports, external-package internals, undeclared libraries and semantic C++ isolation remain review concerns; this is not comprehensive module layering.",
@@ -554,21 +501,23 @@
       "rationale": null,
       "replacement": null,
       "last_exercise": {
-        "date": "2026-10-27",
-        "outcome": "Scoped source/reader/tooling exercise; native and gameplay qualification remain separate.",
-        "scope": "The demonstrated memory/time seam is enforced by a negative indirect-import fixture. Schema comparison and independently shaped fixtures preserve the existing data contract; another game integration remains unqualified.",
+        "date": "2026-10-29",
+        "outcome": "Four current Import Linter contracts pass; temporary-source negative cases exercised in the full77cd124 profile.",
+        "scope": "Computer/player/adapters/server dependency boundaries, shared ports and current production callers. Source import constraints do not prove semantic correctness or portability.",
         "evidence": [
-          "docs/acceptance/2026-10-27-audit-resolution.md"
+          "docs/acceptance/2026-10-29-computer-control.md",
+          "docs/acceptance/2026-10-29-computer-control-development.md"
         ]
       },
       "maintenance_review": {
-        "date": "2026-10-27",
+        "date": "2026-10-29",
         "effectiveness": "partially_effective",
-        "findings": "The demonstrated memory/time seam is enforced by a negative indirect-import fixture. Schema comparison and independently shaped fixtures preserve the existing data contract; another game integration remains unqualified.",
-        "cost": "Existing project-local tools and targeted fixtures/reviews reused; one coherent protected regression candidate. No total human/model labor, sustained usability or causal productivity measurement.",
-        "follow_up": "@CVX-Hull: Revisit this seam at the next actual binding or a recurring integration change; do not add a speculative framework.",
+        "findings": "Replaced obsolete semantic dependency contracts with four current ownership rules. Independent seam review and actual player/control composition supplement syntax/import assertions.",
+        "cost": "Existing fixtures, pinned tools and bounded independent reviews reused. Detailed labor/coordination cost was not fully measured; no recurring service or per-action review introduced.",
+        "follow_up": "@CVX-Hull owns remaining qualifications in #164/#177/#145/#191/#284; #176 and its linked PR own exact protected delivery receipts. Existing next-review date is not extended.",
         "evidence": [
-          "docs/acceptance/2026-10-27-audit-resolution.md"
+          "docs/acceptance/2026-10-29-computer-control.md",
+          "docs/acceptance/2026-10-29-computer-control-development.md"
         ]
       },
       "next_review": "2027-01-15"
@@ -595,7 +544,6 @@
         "docs/changes/060-responsive-player.md",
         "docs/research-responsive-gameplay.md",
         "docs/player-guide.md",
-        "tests/test_player_invocations.py",
         "docs/changes/061-player-program-execution.md",
         "docs/changes/062-player-decision-context.md",
         "tools/campaign_player.py",
@@ -607,7 +555,9 @@
         "docs/testing.md",
         "docs/acceptance/2026-10-27-gameplay-workflow-audit.md",
         "docs/acceptance/2026-10-24-audit-remediation.md",
-        "docs/acceptance/2026-10-27-audit-resolution.md"
+        "docs/acceptance/2026-10-27-audit-resolution.md",
+        "docs/acceptance/2026-10-29-computer-control-development.md",
+        "docs/acceptance/2026-10-29-computer-control.md"
       ],
       "failure_response": "Reshape or split an unfit core before commitment; resolve material findings or record scoped owner/reason/revisit exception without waiving user constraints or required evidence; after two unsuccessful worker repairs lead takes back the work.",
       "limitations": "Review selection, reasoning quality, semantic authority/duplication, realistic fixtures and complete finding reconciliation require judgment. Static checks cannot prove them. Same-account agent review is not GitHub human approval or OS isolation. No review establishes unexercised native behavior, unrestricted portability, model attention, useful latency or causal learning benefit. This is no per-action gameplay approval or mandatory review committee.",
@@ -616,21 +566,23 @@
       "rationale": null,
       "replacement": null,
       "last_exercise": {
-        "date": "2026-10-27",
-        "outcome": "Scoped source/reader/tooling exercise; native and gameplay qualification remain separate.",
-        "scope": "Independent design/source/reader reviews caught classification, schema, navigation and custodian producer-consumer gaps before publication. All source fixes are integrated in one candidate; synthetic fixtures do not establish native or campaign acceptance.",
+        "date": "2026-10-29",
+        "outcome": "Independent port, native, source, documentation, integration and full-image outcome reviews produced repaired findings.",
+        "scope": "Bounded disjoint worker ownership; lead adjudication; actual uncertainty, helpers, handoff, source migration and composite gameplay outcomes. Seventeen focused repair tests independently rerun.",
         "evidence": [
-          "docs/acceptance/2026-10-27-audit-resolution.md"
+          "docs/acceptance/2026-10-29-computer-control.md",
+          "docs/acceptance/2026-10-29-computer-control-development.md"
         ]
       },
       "maintenance_review": {
-        "date": "2026-10-27",
+        "date": "2026-10-29",
         "effectiveness": "partially_effective",
-        "findings": "Independent design/source/reader reviews caught classification, schema, navigation and custodian producer-consumer gaps before publication. All source fixes are integrated in one candidate; synthetic fixtures do not establish native or campaign acceptance.",
-        "cost": "Existing project-local tools and targeted fixtures/reviews reused; one coherent protected regression candidate. No total human/model labor, sustained usability or causal productivity measurement.",
-        "follow_up": "@CVX-Hull: Challenge actual code/data ownership and complete caller migration at integration; original #264 gameplay outcome remains unaccepted.",
+        "findings": "Reviews caught descriptor containment, custody/DB cancellation, helper setup and stale documentation. Real gameplay caught wrong quantity/Save/darkness interpretations. No per-action approval, review queue or causal defect-rate claim.",
+        "cost": "Existing fixtures, pinned tools and bounded independent reviews reused. Detailed labor/coordination cost was not fully measured; no recurring service or per-action review introduced.",
+        "follow_up": "@CVX-Hull owns remaining qualifications in #164/#177/#145/#191/#284; #176 and its linked PR own exact protected delivery receipts. Existing next-review date is not extended.",
         "evidence": [
-          "docs/acceptance/2026-10-27-audit-resolution.md"
+          "docs/acceptance/2026-10-29-computer-control.md",
+          "docs/acceptance/2026-10-29-computer-control-development.md"
         ]
       },
       "next_review": "2027-01-15"
@@ -640,7 +592,7 @@
       "name": "Registry, evidence schema and map validation",
       "mode": "automatic",
       "scope": "Standard mappings, control lifecycle/maintenance, document stewardship, local references, curated manifest metadata and generated map.",
-      "mechanism": "Existing jsonschema and python-frontmatter validate lifecycle records, references, active-only mappings and current protocol/source agreement; the generator detects map drift. Every strict profile and standalone governance enforce current-date due checks. Fast development checkpoints visibly warn for calendar expiry only, for every control. --as-of forecasts strictly; no mode renews records. Current Markdown links additionally validate implicit GitHub heading IDs using the existing Markdown parser plus pinned github-slugger, explicit anchors and current responsibility-index reachability. Historical prose is not a current navigation path.",
+      "mechanism": "Existing jsonschema and python-frontmatter validate lifecycle records, references, active-only mappings; the generator detects map drift. Every strict profile and standalone governance enforce current-date due checks. Fast development checkpoints visibly warn for calendar expiry only, for every control. --as-of forecasts strictly; no mode renews records. Current Markdown links additionally validate implicit GitHub heading IDs using the existing Markdown parser plus pinned github-slugger, explicit anchors and current responsibility-index reachability. Historical prose is not a current navigation path.",
       "owner": "maintainer",
       "trigger": "common command; regenerate map after registry change",
       "evidence": [
@@ -661,8 +613,8 @@
         "docs/documentation.md"
       ],
       "failure_response": "Fix missing/unknown mappings, unsafe references or metadata; regenerate stale map with --write and inspect the result.",
-      "limitations": "Structure, recorded dates and local file existence are checked, not prose truth, artifact hashes outside diagram receipts, media availability, actual review/execution, owner performance or historical lifecycle authorization. Due checks run only when invoked; fragment targets are not validated.",
-      "enforcement": "Structural, reference, chronology, ownership, protocol and map errors fail in every profile and fast mode. Calendar-only expiry warns in --fast and fails every strict profile; negative tests exercise both. Development mode cannot write or forecast.",
+      "limitations": "Structure, recorded dates and local file existence are checked, not prose truth, artifact hashes outside diagram receipts, media availability, actual review/execution, owner performance or historical lifecycle authorization. Due checks run only when invoked. Current Markdown fragment targets are checked by the document lane; historical-origin fragments and external availability are not checked.",
+      "enforcement": "Structural, reference, chronology, ownership and map errors fail in every profile and fast mode. Calendar-only expiry warns in --fast and fails every strict profile; negative tests exercise both. Development mode cannot write or forecast.",
       "status": "active",
       "rationale": null,
       "replacement": null,
@@ -695,22 +647,15 @@
       "owner": "bridge and controller maintainer",
       "trigger": "common command; any protocol representation change requires checker review",
       "evidence": [
-        "tools/governance.py",
-        "tests/test_governance.py",
-        "native/cdda_harness.cpp",
-        "harness/controller.py",
-        "harness/server.py",
-        "docs/protocol.md",
-        "harness/__main__.py",
-        "tests/test_cli.py",
-        "web/app.js"
+        "docs/changes/071-computer-control-cutover.md",
+        "docs/acceptance/2026-10-17-recovery-memory.md"
       ],
       "failure_response": "Resolve version drift; for a refactor/version change review and update checker plus contract, then run required native acceptance.",
       "limitations": "Narrow source drift detector, not a robust C++ parser or protocol conformance proof. Refactored representations fail for review; matching literals cannot prove runtime behavior.",
       "enforcement": "Common command fails on version drift or unrecognized source form; each representation has a negative fixture.",
-      "status": "active",
-      "rationale": null,
-      "replacement": null,
+      "status": "retired",
+      "rationale": "Retired with #176: native7 literal-count/AST source matching no longer fits the sole mechanical contract. Current strict rejection and cross-component behavior belong to existing C-PORTABLE and C-NATIVE, plus migration/source review; no replacement parser is added.",
+      "replacement": "C-PORTABLE",
       "last_exercise": {
         "date": "2026-10-17",
         "outcome": "Passed within recorded scope after preserved repairs; limitations retained.",
@@ -748,7 +693,9 @@
         "docs/setup.md",
         "docs/environment.md",
         "docs/acceptance/2026-10-27-audit-resolution.md",
-        "package.json"
+        "package.json",
+        "docs/acceptance/2026-10-29-computer-control.md",
+        "docs/acceptance/2026-10-29-computer-control-development.md"
       ],
       "failure_response": "Stop failed stage, preserve diagnostics and retry only after identifying the corrupt input or owned workspace.",
       "limitations": "Portable fixtures do not perform fresh downloads, native compilation/signing or install. Existing-host recipe is historical; broader hosts remain unverified.",
@@ -757,21 +704,23 @@
       "rationale": null,
       "replacement": null,
       "last_exercise": {
-        "date": "2026-10-27",
-        "outcome": "Scoped source/reader/tooling exercise; native and gameplay qualification remain separate.",
-        "scope": "The project-local GitHub slugger fills a concrete anchor gap. A narrow CLI KaTeX override removes the reported advisory using Mermaid's already-resolved patched version; npm reports zero advisories. No global install or lifecycle script. Other-host/native setup qualification is unchanged.",
+        "date": "2026-10-29",
+        "outcome": "Fresh pinned upstream game and sole mechanical adapter built; project-local wrapper/install used in actual play.",
+        "scope": "Only upstream deployment-target build patch remains, no semantic engine hooks. Native dirty build provenance retained and exact three inputs match committed source. Saves were not edited/restored.",
         "evidence": [
-          "docs/acceptance/2026-10-27-audit-resolution.md"
+          "docs/acceptance/2026-10-29-computer-control.md",
+          "docs/acceptance/2026-10-29-computer-control-development.md"
         ]
       },
       "maintenance_review": {
-        "date": "2026-10-27",
+        "date": "2026-10-29",
         "effectiveness": "partially_effective",
-        "findings": "The project-local GitHub slugger fills a concrete anchor gap. A narrow CLI KaTeX override removes the reported advisory using Mermaid's already-resolved patched version; npm reports zero advisories. No global install or lifecycle script. Other-host/native setup qualification is unchanged.",
-        "cost": "Existing project-local tools and targeted fixtures/reviews reused; one coherent protected regression candidate. No total human/model labor, sustained usability or causal productivity measurement.",
-        "follow_up": "@CVX-Hull: Remove the narrow override when the selected published CLI admits the patched dependency; maintain project-local pins and verify renderer changes.",
+        "findings": "Project-local packages and owned temporary build preserve source/native provenance. One browser export was relocated from Downloads; one command omitted project-cache environment, so global cache use cannot be excluded. No global package/profile modification is claimed.",
+        "cost": "Existing fixtures, pinned tools and bounded independent reviews reused. Detailed labor/coordination cost was not fully measured; no recurring service or per-action review introduced.",
+        "follow_up": "@CVX-Hull owns remaining qualifications in #164/#177/#145/#191/#284; #176 and its linked PR own exact protected delivery receipts. Existing next-review date is not extended.",
         "evidence": [
-          "docs/acceptance/2026-10-27-audit-resolution.md"
+          "docs/acceptance/2026-10-29-computer-control.md",
+          "docs/acceptance/2026-10-29-computer-control-development.md"
         ]
       },
       "next_review": "2027-01-15"
@@ -845,7 +794,8 @@
         "docs/acceptance/2026-10-27-gameplay-workflow-audit.md",
         "docs/acceptance/2026-10-24-audit-remediation.md",
         "tools/campaign_run.py",
-        "docs/acceptance/2026-10-27-audit-resolution.md"
+        "docs/acceptance/2026-10-27-audit-resolution.md",
+        "docs/acceptance/2026-10-29-computer-control-development.md"
       ],
       "failure_response": "Record the owner and action in the existing Issue, repair guidance and preserve failures. Retire saves only through owned archive/hash verification and applicable authorization in the runbook; cleanup is not normal game completion.",
       "limitations": "Review quality and event-trigger detection remain manual. No background scheduler, automatic drift measurement or deletion job; passing date checks proves only that recorded dates are not overdue, not that review occurred.",

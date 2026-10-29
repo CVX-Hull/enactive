@@ -12,7 +12,7 @@ The tested probe program follows a represented non-travel UI workflow across
 reordered rows, yields on missing/disabled/ambiguous required representation,
 and retains ordinary fallback under the original root and limits. These are
 properties of that tested policy, not automatic semantic checks on learned code.
-The [new probe](../../tests/test_program_ui_execution.py) found no production
+The [new probe](https://github.com/CVX-Hull/enactive/blob/433ed973afe312d03f777d8b102a0cba528af746/tests/test_program_ui_execution.py) found no production
 executor gap. It uses real JavaScript, MissionRuntime and its writer with the
 existing synthetic transport and trusted-admission fixture. It is **source-contract
 evidence only**. The separate native cases below supply actual learning and a
@@ -43,8 +43,8 @@ with unexecuted program drafts, failed revision and marking-representation limit
 
 The probe uses one explicitly selected eligible Procedure/3 revision and a
 program-owned root (`phase_id=null`). It reuses
-[ProgramInputSkill](../../harness/gameplay/program_input.py), Program-view/1 and
-the existing [bounded JavaScript evaluator](../../harness/gameplay/policy_program.py).
+[ProgramInputSkill](https://github.com/CVX-Hull/enactive/blob/433ed973afe312d03f777d8b102a0cba528af746/harness/gameplay/program_input.py), Program-view/1 and
+the existing [bounded JavaScript evaluator](https://github.com/CVX-Hull/enactive/blob/433ed973afe312d03f777d8b102a0cba528af746/harness/gameplay/policy_program.py).
 No new executor, registry, schema, dependency or production behavior was added.
 The inherited fixture assumes already-proven identity for temporary core tests;
 it neither exercises nor bypasses production admission in a real game.

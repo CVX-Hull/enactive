@@ -1,107 +1,152 @@
 ---
 owner: harness maintainer
-review_trigger: Finite run admission, frozen inputs, controller/host custody or exceptional cleanup changes
+review_trigger: Responsibility, supported behavior, interfaces or qualification change
 status: active
 ---
 
 # One finite campaign run
 
-Use `tools.campaign_run` for a fresh finite development run that needs controller
-lifetime and admission as well as the [player driver](player-host.md). The
-custodian reuses that maintained driver; it chooses no tactics, interpretations,
-normal-ending inputs or successor decisions. Do not copy a Python supervisor into
-an ignored run directory. Original frozen scripts remain historical evidence.
-
-Before preparing a run, select its useful objective, finite scope and resources
-in the existing Issue under the [development checkpoint policy](../workflows/development.md).
-Use an inspected, clean committed source with passing exact-source fast/focused
-checks. These declarations do not replace the protected profile and independent
-outcome review required for formal acceptance. No extra full PR/main gate is
-required solely to start development play. A new run never reopens an old mission,
-actor, allocation or uncertain admission.
+One [campaign custodian](../../tools/campaign_run.py) owns fresh mechanical target,
+store/server lifetime and final cleanup. The [driver](../../tools/campaign_player.py)
+owns generic-Pi host/MCP groups and at most one successor. The
+[package validator](../../tools/campaign_package.py) is authoritative for the closed
+`campaign-run/2` admission. No game-phase/identity admission or semantic mission
+service remains.
 
 ## Frozen data
 
-Prepare `.runtime/campaigns/<mission_id>/frozen/` and `preparation/` in the current
-checkout. The frozen directory contains only `manifest.json` and these six inputs:
+Select one fresh canonical project-local directory under `.runtime/computer-sessions/`.
+Its manifest binds the exact clean source commit and SHA256 of all five driver
+inputs: `route.json`, `mcp-template.json`, `context.txt`, `prompt.txt`, `target.json`.
+It also freezes native executable/adapter bytes, bounded initial target files,
+shared-lock path, explicit `player-memory/1` store, existing Node path, effort,
+loopback port, original wall/host/aggregate-host seconds, one/two-host limit,
+aggregate HTTP-attempt bound, computer input/request/frame/byte capacities and
+cumulative conservative accounting. Source/directory mismatch refuses before launch.
 
-- `admission.json`: the current MissionAdmission, including this source/model,
-  original mission limits and cleanup reserve.
-- `player-pi-configuration.json` and `player-host-configuration.json`: the current
-  Pi/provider route and maintained MCP entry with explicit tools and timeouts.
-- `pi-player-context.txt`, `original-player-prompt.txt` and
-  `successor-player-brief.txt`: actual context for the original and any permitted
-  fresh successor. The custodian does not edit them or append a new deadline.
+`target.json` has explicit argv/cwd/environment; its first executable and selected
+working directory are absolute. Keep the prepared wrapper/windowed project userdir
+and normal input configuration. The target receives only the permitted environment
+and inherited mechanical descriptors, not provider credentials.
 
-The closed `campaign-run/1` manifest has these fields:
+`route.json` uses current `pi-player-host/4` with text/image input and explicit
+provider/effort/price/image-history metadata. The selected route is OpenRouter /
+an explicitly pinned provider / DeepSeek Flash1017 medium, default service tier, no fallback.
+`mcp-template.json` must equal the current generated profile with `@ACTOR_CONFIG@`.
+Freeze the player guide/current schema, meaningful task, original limits and ending
+reserve in context/prompt. Do not put mutable engineering source or hidden game
+facts into player context.
 
-| Field | Required value |
-| --- | --- |
-| `schema`, `mission_id`, `source_commit` | `campaign-run/1`, this fresh mission ID and the exact clean Git checkpoint matching admission |
-| `max_hosts`, `effort` | Integer 1 or 2; effort accepted by the current Pi configuration |
-| `begin_normal_ending_seconds`, `complete_normal_ending_before_seconds` | Positive finite prospective offsets with begin before completion; completion preserves the original admission cleanup reserve and a finite 60-second shutdown allowance |
-| `files` | Exact SHA256 map of the six filenames above, without executable programs or other inputs |
-| `validation` | `fast` and `focused` objects, each declaring `source_commit` and `passed:true`; retain actual check evidence under its existing scope |
-| `provider` | Request and conservative reservation fields below; these are resource guards, not useful-latency acceptance |
+The validator rejects unsupported/partial/used packages and selected old player
+stores before native effects. It does not create a new allocation or discover a
+credential. Preserve the frozen package and exact binary bytes before rebuilding.
 
-Provider fields are `prior_requests`, `new_requests_max`, `total_requests_max`,
-`prior_reservation_usd`, `per_request_reservation_usd`, `total_reservation_usd` and
-`reservation_limit_usd`. Counts are nonnegative integers; new requests equal the
-Pi route's per-host ceiling times `max_hosts`, and total equals prior plus new.
-Monetary fields are finite nonnegative decimal strings, with a positive per-request
-reservation; total equals prior reservation plus per-request times new requests
-and must fit the selected ceiling. Reservation remains distinct from configured
-usage estimates, actual invoices and unknown usage.
+### Construct a package
 
-The maintained preflight validates both Pi and MCP configurations before admission.
-Node is selected by trusted launcher configuration, never frozen data. Keep the
-MCP command on this interpreter's `-m harness.player_mcp` with this checkout as cwd.
-The caller supplies the frozen route's validated `api_key_env` securely in its
-environment (for example `DEEPINFRA_API_KEY` or `OPENROUTER_API_KEY`); the custodian
-performs no Keychain/profile discovery. `PATH` and `LANG` cannot be credential names.
-It captures only the selected credential before admission, forwards only that value
-to the owned driver, and redacts it from structured custodian output. Other provider
-credentials are not inherited. Never place a key in the controller, argv or frozen files. Console output is suppressed;
-use the maintained structured driver evidence and fixed custodian receipts.
+This is an engineering preparation step, outside the deciding player's tools.
+Create the five inputs above first. `target.json` is closed:
+`{"argv":["ABSOLUTE_PREPARED_WRAPPER"],"cwd":"ABSOLUTE_PROJECT_ROOT","env":{}}`.
+Normal wrapper preparation supplies the windowed project userdir. Optional target
+environment names are only PATH, LANG, SDL_AUDIODRIVER, SDL_VIDEODRIVER,
+DYLD_LIBRARY_PATH and DYLD_FRAMEWORK_PATH; never include credentials. The
+[host reference](../../tools/player_host/README.md) specifies the complete route
+shape, supported reasoning/routing fields and their limits.
+
+Generate the exact current MCP template without an actor capability:
+
+```sh
+.venv/bin/python -m tools.configure_player_tools --template --output .runtime/computer-sessions/SELECTED_FRESH_PACKAGE/mcp-template.json
+```
+
+The closed `manifest.json` shape is below. Replace uppercase path/identity/hash
+placeholders and the example allocations with the prospectively selected values;
+the example is not an admission. All artifact paths are canonical absolute
+project-local regular files, never symlinks. Obtain the exact source with
+`git rev-parse HEAD` after an inspected clean checkpoint. Calculate SHA256 from
+the actual bytes, for example `shasum -a 256 SELECTED_FILE`; preserve those bytes.
+
+```json
+{
+  "schema": "campaign-run/2",
+  "session": "NEW_32_LOWERCASE_HEX_ID",
+  "source_commit": "EXACT_40_HEX_CLEAN_HEAD",
+  "files": {
+    "route.json": "SHA256", "mcp-template.json": "SHA256",
+    "context.txt": "SHA256", "prompt.txt": "SHA256", "target.json": "SHA256"
+  },
+  "initial_files": {"ABSOLUTE_PREPARED_WRAPPER": "SHA256", "ABSOLUTE_OPTIONS_FILE": "SHA256"},
+  "native": {"path": "ABSOLUTE_INSTALLED_GAME_BINARY", "sha256": "SHA256"},
+  "library": {"path": "ABSOLUTE_QUALIFIED_BRIDGE", "sha256": "SHA256"},
+  "shared_lock": "ABSOLUTE_PROJECT_ROOT/.runtime/bridge/game.lock",
+  "player_store": "ABSOLUTE_SELECTED_CURRENT_PLAYER_SQLITE",
+  "node": "ABSOLUTE_EXISTING_NODE_EXECUTABLE",
+  "effort": "medium", "port": 8766,
+  "wall_seconds": 9000, "host_seconds": 3600, "total_host_seconds": 7200,
+  "max_hosts": 2, "max_http_attempts": 360,
+  "limits": {"max_inputs": 6000, "max_requests": 10000, "max_frames": 1500, "max_bytes": 2147483648},
+  "accounting": {
+    "prior_attempts": 0, "prior_reserved_usd": 0,
+    "ceiling_usd": 0, "prospective_reserved_usd": 0
+  }
+}
+```
+
+Use the actual cumulative accounting rather than the zero placeholders. With
+default tier, worst-case per attempt is
+`(contextWindow × max(input, cacheRead, cacheWrite) + maxTokens × output) / 1e6`
+using the frozen route's configured dollar rates. Prospective cumulative
+reservation is prior consumed reservation plus that amount times
+`max_http_attempts`; it must fit the standing ceiling exactly as frozen. Unknown
+trace accounting charges its original allocation; known unused allowance retires.
+
+Limits: five input files each ≤1MiB; 1–16 initial files; port1024–65535;
+wall60–86400s, host/aggregate-host30–86400s, one/two hosts and1–10000 HTTP attempts.
+Host seconds ≤aggregate-host seconds <wall seconds minus30s cleanup. Each positive
+computer capacity is ≤2^40. The route's per-host request maximum cannot exceed the
+campaign aggregate. The selected directory must have no prior started marker,
+session DB, native-process receipt, actors or contexts. An existing selected player
+store must be current; it never restores computer custody. The maintained
+validator is authoritative and rejects changed bytes/unsupported fields before
+effects. Do not remove markers to reuse a failed package.
+
+The current CDDA launch binding requires the canonical absolute
+`.runtime/bridge/game.lock`, shared with install/preparation and the project
+userdir. A different project-local lock is rejected. This is preparation coupling
+outside the game-independent computer runtime; a future game binding must define
+its own coherent preparation/launch exclusion rather than bypass this one.
 
 ## Start and close
 
+From the exact clean source checkpoint, with the selected credential injected only
+through its explicit environment name:
+
 ```sh
-.venv/bin/python -m tools.campaign_run --root "$PWD" --mission-id FRESH_MISSION_ID
+.venv/bin/python -m tools.campaign_run --run "$PWD/.runtime/computer-sessions/SELECTED_FRESH_PACKAGE"
 ```
 
-The custodian exclusively reserves its output names and refuses prior mission,
-admission intent or driver evidence. A collision is not permission to retry with
-those identities. Source and frozen-data checks happen before admission. Startup
-has a finite 30-second allowance; the actual admission anchor and prospective
-ending/cleanup times go in `custodian-clock.json`. All actor time is deducted from
-the original remaining ending allowance. The clock receipt does not renew limits
-or rewrite context; the player still owns normal ending within its frozen brief.
+The custodian takes shared exclusion and writes `started.json` before native/DB
+creation. Native inherits the exact shared-lock descriptor/socket, retaining
+exclusion for its own lifetime. `ready.json` gives the loopback viewer URL. The
+driver creates exclusive per-actor inputs/host traces and original resource notes.
+It verifies canonical handoff/context plus actual host/MCP group quiescence before
+a successor, without changing original limits. [Host details](player-host.md).
 
-After exactly one acknowledged admission, the driver runs the original and at
-most one clean successor through its existing handoff/current-custody checks.
-Uncertain admission is collected/reconciled under its original identity outside
-this fresh-run launcher; it is never replayed. Run output is evidence, not an
-acceptance decision or a resume switch.
+SIGINT/SIGTERM or browser Pause permanently fence input. Finalization closes the
+channel and exact owned groups, with bounded signals if necessary. It never scans
+for or adopts unrelated processes. Normal native exit zero is sampled before
+forced cleanup. Save-to-menu, player save/success claims, native exit and absence
+are separate evidence.
 
-On cancellation, failure or the ending deadline, the custodian first gives its
-exact driver handle time to settle nested hosts, then requests exceptional Stop
-when needed and closes its exact controller child. Only the settled mission
-writer closes a retained native handle under the
-[exceptional shutdown contract](../contracts/lifecycle-exit.md#exceptional-writer-shutdown).
-Controller and driver launch in separate OS sessions so terminal cancellation
-reaches the custodian first. It still signals only each retained child handle;
-there is no production process-group signalling or PID adoption. Controlled
-terminal-style fixtures check child-written cleanup evidence and settlement order.
-This can terminate an unsaved owned game. Missing/lost controller or native custody,
-unsettled writers/hosts and absent matching shutdown receipts remain unknown;
-no PID scan, process adoption, group signal or replay repairs them. Cleanup does
-not establish normal Save/exit, useful play or acceptance. Preserve all original
-failure and unknown fields when performing later disposition.
+`receipt.json` (`campaign-receipt/2`) reports driver disposition, host quiescence,
+native absence, input revocation, cleanup and original accounting. Configured
+estimates and conservative reservations are not invoices. Unknown trace accounting
+charges the allocated attempts. `host_completed_unassessed` means only successful
+host completion; missing normal native exit becomes an incomplete outcome.
+No receipt alone accepts gameplay. Preserve failures and unrun lanes.
 
-`custodian-receipt.json` records owned child exits, acknowledged admission,
-terminal/incomplete outcome, deciding-host quiescence and the boot-bound native
-cleanup receipt. Source tests use controlled children and offline configuration
-checks; their pass does not qualify real native cleanup or the complete campaign.
+Never reopen the selected package, delete markers to retry, replay uncertain input
+or resume after user Pause. Use a fresh coherent admission after owned cleanup.
+The [production report](../acceptance/2026-10-29-computer-control.md) retains scoped
+actual outcomes; each new admission still needs its own evidence and closeout.
 
 [Operations index](../runbook.md).

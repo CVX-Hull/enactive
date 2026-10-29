@@ -1,14 +1,14 @@
-flowchart TD
-  accTitle: Request admission, correction and original collection
-  accDescr: The player selects intent. Software stages the request. A certified no-admission refusal permits a new explicit decision. Admitted or uncertain work retains original collection. Machine timing is separate evidence.
-  P[Player chooses intent and evidence] --> S[SDK retains immutable request]
-  S --> W[One mission writer]
-  W -->|Typed and request-bound refusal| N[Known not admitted]
-  N -->|Inspect reason and current context| P
-  W -->|Durable operation| C[Collect original result]
-  S -->|Lost or unproved response| U[Uncertain original delivery]
-  U --> C
-  C --> E[Inspect visible effect and choose next goal]
-  E --> P
-  W -. After writer finalization .-> J[Existing machine timing journal]
-  J -. Offline evidence only .-> A[Service clocks and missing samples]
+---
+title: Current original request collection
+---
+flowchart TB
+  accTitle: Current original request collection
+  accDescr: The client assigns the request ID before sending. Complete local refusal proves no submission only when established. Admitted or uncertain work retains original collection without replay. Partial or unknown physical delivery permanently stops new input. Read results never renew custody.
+P["Player chooses basic control or player service"] --> I["Client assigns original operation ID"]
+  I --> W["One current authenticated ingress"]
+  W -->|"Verified no submission"| R["Inspect refusal<br/>New explicit corrected choice allowed"]
+  R --> P
+  W -->|"Admitted or uncertain"| C["Collect exact original computer_result<br/>or player_result"]
+  I -->|"Lost response"| C
+  C -->|"Original receipts and sources"| E["Interpret actual effect<br/>No replay or success inference"]
+  C -->|"Partial or unknown input"| S["Permanent input stop"]

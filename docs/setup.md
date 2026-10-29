@@ -1,46 +1,33 @@
 ---
 owner: maintainer
-review_trigger: Toolchain, dependency pins, setup stages or checks change
+review_trigger: Responsibility, supported behavior, interfaces or qualification change
 status: active
 ---
 
 # Local setup and checks
 
-The controller's I/O uses Python's standard library. Gameplay records/evidence
-require the pinned `jsonschema` package. Player-authored executable routines use
-hash-pinned MiniRacer0.14.1/V8 in this same environment; no Node process or global
-runtime installation is required to execute them. The optional project-local structured
-player tool process uses the official MCP Python SDK; it does not instantiate a
-controller or game. Runtime requirements are in [requirements.in](../requirements.in)
-and the shared hashed [lock](../requirements-dev.lock).
-Use Python 3.12 or newer and an
-existing Node.js 22.19+ runtime for JavaScript, Pi host and diagram checks. Native builds require
-macOS, existing Xcode command-line tools (`clang++`, `make`, `hdiutil`, `ditto`,
-`otool`, `install_name_tool`, `codesign`), and enough disk space for roughly 1 GB
-of unpacked game source plus several GB of compiler output. Setup never installs
-global packages or launches CDDA.
-
-Run from the repository root. No flags prints read-only status:
+Run from the repository root. Keep dependencies, apps, saves, caches and evidence
+project-local. Setup does not install global packages or launch a game. Use an
+existing Python 3.12+ and Node.js 22.19+ runtime; the checked configuration uses
+Python 3.14/macOS and hosted portable CI uses Python 3.14/Node22. Other hosts need
+separate qualification. Native preparation requires macOS/Xcode command-line tools.
 
 ```sh
 python3 tools/setup.py
 python3 tools/setup.py --help
 python3 tools/setup.py --venv
-# Install pinned development controls as described below, then:
-.venv/bin/python tools/check.py
 ```
 
-The optional `.venv/` starts without pip or third-party packages and uses the
-interpreter that creates it; setup does not download Python. Existing environments
-are preserved. Running the mission service and development checks requires the
-pinned packages below. See the [environment ledger](environment.md)
-for this Mac's existing toolchain and installation history.
+No flags prints read-only status. The optional `.venv` uses the selected existing
+interpreter. [Requirements](../requirements.in) and the hashed
+[development lock](../requirements-dev.lock) pin runtime/check dependencies,
+including MCP, MiniRacer/V8 and Pillow image decoding.
 
 ## Install development controls locally
 
 ### Choose an explicit Git identity
 
-Configure identity in this checkout before creating or pushing commits:
+Configure only this checkout with your intended public identity:
 
 ```sh
 git config --local user.useConfigOnly true
@@ -50,441 +37,152 @@ git var GIT_AUTHOR_IDENT
 git var GIT_COMMITTER_IDENT
 ```
 
-Use the contributor's intended public identity, not an inferred operating-system
-account name or machine-local email. The maintainer uses `CVX-Hull` and its GitHub
-provided noreply address. Inspect all new commit messages, including co-author
-trailers, before pushing; correct author fields alone do not sanitize a message.
-`git log --format=fuller origin/main..HEAD` is a local preflight, not proof that
-arbitrary file contents or other remote refs are private. These are repository-local
-settings; they do not configure other repositories. C-REVIEW owns this manual check.
+Never infer a public identity from the Mac account. Inspect author/committer and
+full messages, including co-author trailers, before publication.
 
 ### Install pinned packages
 
-Use an existing `uv` executable with an explicit project cache and interpreter:
+With an existing `uv` executable:
 
 ```sh
 UV_CACHE_DIR="$PWD/.cache/uv" UV_PYTHON_DOWNLOADS=never uv pip install --no-config --default-index https://pypi.org/simple --python .venv/bin/python --require-hashes -r requirements-dev.lock
 ```
 
-If uv is unavailable, use the standard library's local pip bootstrap:
+Or bootstrap pip inside the local environment:
 
 ```sh
 .venv/bin/python -m ensurepip
 .venv/bin/python -m pip --isolated install --index-url https://pypi.org/simple --cache-dir "$PWD/.cache/pip" --require-hashes -r requirements-dev.lock
 ```
 
-Neither route installs global packages. Dependency installation needs network
-access; running checks afterward is offline. Use the project interpreter explicitly.
-Missing tools fail checks with a setup instruction; checks never install or upgrade
-anything automatically. [Tool selection](decisions/003-development-controls.md)
-explains reuse, scope and limitations. Direct requirements and all transitive
-versions/hashes are in [requirements-dev.in](../requirements-dev.in) and
-[requirements-dev.lock](../requirements-dev.lock).
-
-The optional [verification pilots](testing.md#responsibility-assurance) use
-a separate environment so testmon's pytest plugin cannot alter normal checks:
-
-```sh
-UV_CACHE_DIR="$PWD/.cache/uv" UV_PYTHON_DOWNLOADS=never uv venv --python .venv/bin/python .runtime/tooling/verification-pilots-venv
-UV_CACHE_DIR="$PWD/.cache/uv" UV_PYTHON_DOWNLOADS=never uv pip install --no-config --default-index https://pypi.org/simple --python .runtime/tooling/verification-pilots-venv/bin/python --require-hashes -r requirements-pilots.lock
-```
-
-[requirements-pilots.in](../requirements-pilots.in) includes the development lock
-and pins only the optional measurement additions. Recompile its hashed lock after
-changing the development lock; do not install it into the ordinary `.venv`.
-Outputs belong under `.runtime/`; no live game or saved world is part of a pilot.
-
-For deliberate upgrades, review tool changelogs and regenerate the lock with the
-same project cache, then install and run the full lane including negative fixtures:
-
-```sh
-UV_CACHE_DIR="$PWD/.cache/uv" UV_PYTHON_DOWNLOADS=never uv pip compile --upgrade --no-config --default-index https://pypi.org/simple --python .venv/bin/python --generate-hashes --output-file requirements-dev.lock requirements-dev.in
-```
-
-The current resolution/install was verified on Python 3.14/macOS. Hosted CI uses
-Python 3.14 and Node 22 on Ubuntu 24.04; its first run exposed a Chrome sandbox
-startup failure, repaired and verified in [public workflow acceptance](acceptance/2026-10-17-public-workflow.md).
-Required checks must pass before integration. Other interpreter/host combinations
-require their own validation before a support claim.
+Installation needs network; checks never install dependencies. The optional
+verification-pilot runner and memory-study tools are retired. Do not reconstruct
+their old environments as current setup.
 
 ### Install the generic gameplay host
 
-The mandatory [gameplay host package](../tools/player_host/package.json) pins Pi agent-core,
-AI and MCP to 1.4.0 with transitive integrity in its own npm lock. It does not use
-the coding-agent application's shell/file tools, personal configuration or resource
-discovery. Install only inside this project, without package lifecycle scripts:
+The mandatory [Pi host](../tools/player_host/README.md) uses its own pinned npm lock:
 
 ```sh
 npm --userconfig /dev/null --cache "$PWD/.cache/npm" --prefix tools/player_host ci --ignore-scripts --no-audit --no-fund
-.venv/bin/python -m pytest -q tests/test_pi_player_host.py tests/test_campaign_player.py
 ```
 
-The conformance suite uses actual Pi/MCP code with synthetic provider responses;
-it calls no inference provider and launches no game. It includes current production
-MCP discovery and owned test-child cleanup. These checks are in the full portable
-lane; the hosted workflow installs the same lock. The
-[host brief](changes/069-controllable-player-host.md) explains reuse and limits.
-No credential is needed for these checks. A later authorized live configuration
-must supply its explicitly named environment key through the operator's credential
-manager without recording the value. The host does not discover Keychain items,
-load global credentials or infer another application's subscription entitlement.
-The installed OpenAI-compatible client also reads `OPENAI_LOG`,
-`OPENAI_CUSTOM_HEADERS`, `OPENAI_ORG_ID` and `OPENAI_PROJECT_ID` from its process
-environment. The Pi host refuses those ambient configuration values rather than
-silently applying them. Clear them only for the dedicated child invocation if
-needed; do not change the operator's global profile or print their values.
+It loads explicit frozen provider/MCP/context files, not coding-agent settings,
+shell/file tools, personal sessions or global credentials. The selected finite
+route is OpenRouter / explicitly pinned provider / DeepSeek Flash1017 at medium effort.
+The [recorded endpoint dispositions](acceptance/2026-10-29-computer-control.md#failures-and-endpoint-disposition)
+follow actual shared-pool failures, not automatic fallback. Freeze
+its actual endpoint tag, supported parameters, image allowance and configured
+prices before each allocation. No route/model fallback is supported. A selected
+route is not gameplay qualification or invoice evidence.
 
-Every campaign player uses this generic host. Basic live image/tool/history
-compatibility is scoped in the [failed configuration pilot](acceptance/2026-10-25-pi-configuration-pilot.md);
-useful native play, whole-player speed and normal lifecycle remain unqualified
-for that configuration. Mandatory host activation and any fresh finite qualification
-are tracked under [#240](https://github.com/CVX-Hull/enactive/issues/240), independently
-of model selection and campaign readiness. Frozen preparation and
-supported lifecycle are in the [runbook](operations/player-host.md#bounded-player-host-activation).
-
-The current source uses native7/mission11/ledger13/archive6 with procedure/3,
-campaign-memory/6 and reflection/3; gameplay/2 is unchanged. Build and qualify the
-matching native7 binary before new native support claims. Historical native5/native6
-learning and lifecycle results do not qualify this candidate. See
-[coordinated migration](operations/migration.md#coordinated-migration) before using existing
-runtime state; old libraries are not current-contract inputs.
+Supply only the configured credential environment variable to the dedicated host;
+never write its value to files/argv/logs. MCP/native children receive no provider
+secret. The host rejects ambient OpenAI SDK logging/header/org/project overrides;
+clear those only for the dedicated invocation, without changing global profiles.
 
 ## Configure the structured player tools
 
-The generic player reads its explicit frozen MCP table directly. For the
-engineering Codex tools, inspect then write only this trusted checkout's MCP table:
+Inspect the current schemas without creating a runtime:
 
 ```sh
-.venv/bin/python -m tools.configure_player_tools
-.venv/bin/python -m tools.configure_player_tools --write
-codex mcp get enactive_player --json
+.venv/bin/python -m tools.configure_player_tools --describe
 ```
 
-The helper derives the explicit tool allow list from the current adapter. It adds
-only `mcp_servers.enactive_player` to project `.codex/config.toml`, preserves other
-settings, refuses a conflicting existing table and changes no global configuration.
-The generated file contains machine-local absolute launch paths and is Git-ignored;
-the portable recipe and its tests are tracked. It sets the supported per-server
-approval mode to `approve`; it does not change the shell sandbox, a global approval
-default, network policy or managed requirements. Re-run read-only after a move or
-tool change and deliberately review a conflicting old table rather than retaining
-two configurations.
-
-The current generated catalogue has21 named tools, including exact cached-snapshot detail and advisory
-claim/source/submit/original-result collection and passive advice. Complete context,
-reflection-job and advice replies have explicit output limits to preserve bounded
-records. Direct input is an intent on `enactive_skill`, not a new input tool;
-Observe macro closure likewise uses `enactive_observe`. These project settings
-do not prove the running host loaded the current schemas/help or grant authority.
-The current [MCP implementation](../harness/player_mcp.py) generates request IDs
-and collection waits; its model
-arguments reject caller-supplied `request_id`/`wait_seconds`. Focused help exports
-this same current model schema. The imperative Python SDK's explicit-ID surface
-serves engineering and duplicate collection, not a compatibility mode for MCP.
-Both SDK and MCP intents omit navigation `goal.scope` and activity
-`goal.interrupt_request_id`: the existing composer binds them from the selected
-matching snapshot/source. MCP 6.1.0 activity starts supply step=start, operation,
-target, game_seconds and interrupt_allowed without answer/owner. Activity children
-supply only step=poll/interrupt/resume, or step=answer_interrupt with answer=YES/NO.
-The SDK collects the selected canonical original root before staging and derives
-stable fields; old copied child fields refuse. Outer scope, source and finite
-limits remain explicit. Canonical mission/11 records retain all generated fields;
-the wire version and native protocol are unchanged. Re-export focused help and
-start fresh producer hosts together; a running host's old catalog is not current
-and must not continue authoring gameplay. No old-shape compatibility path exists.
-
-Handoff authoring uses `checkpoint_sources`: null selects the exact cached
-snapshot source, and explicit IDs require a prior source read. Software supplies
-canonical checkpoint IDs; old authoring fields refuse. Re-export focused help and
-load a fresh producer after this schema change.
-
-To export a finite adviser-only profile without writing active configuration, use
-`.venv/bin/python -m tools.configure_player_tools --advisory-idle-seconds 3600`.
-Choose the frozen finite window from the planned mission's wall allowance; the
-adapter also caps it at the original mission deadline. Freeze this exported JSON
-for the adviser host, preserving its configured tool filters/timeout. It enables
-only reflection next/submit/source/result; the default player profile stays60s.
-Software waits through empty polls; a non-idle claim/refusal/unknown/closed result
-still returns immediately. This export is not installation, host launch or actual
-profile qualification. Re-export current selected schema cards from the implementation;
-old full-canonical candidate authoring and mission/proposal-ID advice calls reject.
-
-For a dedicated CLI player, a frozen run profile may narrow `enabled_tools` to the
-admitted role's needs and mark its essential server `required=true`, using the
-[official MCP options](https://learn.chatgpt.com/docs/extend/mcp#other-configuration-options).
-This is a per-invocation configuration of the same server, not another schema or
-permission path. A no-adviser player need not receive lead-only Start or adviser
-claim/submit/source/result tools. Preserve needed player recovery, memory, lifecycle
-and result tools, existing approval settings and current payload contracts. Verify
-the actual profile before admission; reduced catalogue size is not responsiveness
-qualification. Keep the project-wide engineering table and global settings intact.
-
-Leave model context-window/automatic-compaction settings at maintained host defaults
-unless an evidence-backed run profile needs an override. [Learning009](acceptance/2026-10-23-discovery-learning-ninth-attempt.md#responsiveness-and-context)
-forced compaction at128,000tokens despite a reported475,000-token window, with
-long stalls at both compaction events. The next profile removes that override;
-it does not disable compaction, assert a different model capacity or change global
-settings. Record actual event times, usage scope and useful-progress latency;
-compare whole configurations rather than treating defaults as qualification.
-
-If the host declaration replaces nested goals or memory entries with `unknown`,
-export only the needed current schema with the existing helper:
+The campaign driver creates each actor's current `player-adapter/1` and MCP
+configuration. For a separately selected actor configuration, the generator uses
+explicit project-local paths and refuses to overwrite the output:
 
 ```sh
-.venv/bin/python -m tools.configure_player_tools --describe enactive_skill --variant direct
-.venv/bin/python -m tools.configure_player_tools --describe enactive_remember --variant claim
+.venv/bin/python -m tools.configure_player_tools --actor-config /absolute/project/actor.json --output /absolute/project/mcp.json
 ```
 
-`--describe` is read-only and mutually exclusive with `--write`. `--variant`
-selects one current `skill_kind` or `entry_type`; unknown selectors refuse.
-The output preserves the actual schema and needed shared definitions; selected
-non-control skills omit the unused control-perception union. The lead can freeze
-these focused interface references with a mission, advertise exact paths in its
-brief and let the player read a selected variant when needed. They are help, not
-request files, retained memory, permission or gameplay authority. No host schema
-repair or independent sufficiency is established by exporting them. Do not inject
-the whole catalogue by default or maintain handwritten copies of field contracts.
-
-The [official MCP setup](https://learn.chatgpt.com/docs/extend/mcp) documents
-project configuration and host loading. Confirm the active chat has loaded the
-server/tool catalogue after the supported reload/restart. A separate CLI diagnostic
-or SDK handshake proves neither active loading nor absence of review. The
-forwarded tool names and result content must support readiness; an agent's prose
-report is not enough. A new child can still inherit an older catalogue. Compare
-the loaded names with the current generated list before admission rather than
-asking a model to certify a count or changing permissions to fix stale loading.
-The actual designated player must exercise the [permission preflight](operator-permissions.md#preflight-for-every-campaign)
-without human or automatic approval review before a deciding campaign. The SDK
-stdio test proves message/image integration only. No game starts during setup.
+The old trust-table `--write` and mission-client configuration are unsupported.
+[Player tools](../harness/player_tools.py) own tool arguments; the
+[player guide](player-guide.md) explains use.
 
 ## Install and maintain visual documentation tools
-
-From this repository root, using the existing Node.js 22.13+ and npm:
 
 ```sh
 npm --userconfig /dev/null --cache "$PWD/.cache/npm" ci --ignore-scripts --no-audit --no-fund
 .venv/bin/python tools/diagrams.py --install-browser
-```
-
-`package-lock.json` pins packages/integrity; the pinned Puppeteer version selects
-Chrome 155.0.8059.79. `.puppeteerrc.cjs` keeps browser downloads and temporary profiles
-under `.cache/`. Package install scripts are disabled; the second command is the
-explicit browser download through the local Puppeteer CLI. The wrapper clears
-ambient Puppeteer overrides for both installation and rendering, and rejects
-symlinks that send outputs, receipts or caches outside the checkout before writing.
-The local macOS recipe needs no global npm packages, system browser changes, OS
-package installation or background service. Keep runtime caches local;
-checks never fetch dependencies. Headless rendering may need permission in a
-restricted execution sandbox. A denied launch is a failed check, not a passed render.
-
-On the disposable GitHub Ubuntu runner only, the workflow installs a path-specific
-AppArmor profile allowing the downloaded Chrome to create its sandbox namespaces.
-Chrome sandboxing stays enabled; no global user-namespace sysctl is changed. This
-follows [Chromium's scoped profile guidance](https://chromium.googlesource.com/chromium/src/+/main/docs/security/apparmor-userns-restrictions.md).
-The runner is discarded after the job. This is not a local setup instruction or
-permission to modify the operator's host.
-
-```sh
-# Change .mmd sources or render config, then regenerate and inspect the SVGs:
 .venv/bin/python tools/diagrams.py --write
-# Read-only with respect to tracked files: checks hashes and renders into .cache
 .venv/bin/python tools/diagrams.py
-# Forecast maintenance without modifying records:
-.venv/bin/python tools/governance.py --as-of 2027-01-16
 ```
 
-The forecast deliberately fails if the chosen date is after a control's due date;
-it does not replace today's common check. Review the control and record evidence
-before updating its due date. The generated maintenance table is in [controls](controls.md#maintenance).
-
-For a deliberate renderer upgrade, edit exact direct versions in `package.json`,
-run the same local npm command with `install` instead of `ci`, review lock changes
-and upstream notices, install the selected browser, regenerate/inspect diagrams,
-and run the common lane including real-renderer rejection. Avoid global installs
-or an unpinned `npx` fallback. Other hosts must be verified before support claims.
-See [ADR 004](decisions/004-documentation-controls.md) for costs and limits.
+The npm lock pins the renderer; the explicit browser install keeps downloads and
+profiles under `.cache`. Render/inspect changed diagrams at ordinary window width.
+A denied browser launch is a failed check. Do not use global installs or an
+unpinned `npx` fallback. [Visual requirements](standards/documentation.md#visual-explanations)
+separate parse/render evidence from semantic and independent visual review.
 
 ## Explicit native stages
+
+Prepare the project-local CDDA application and pinned upstream source separately
+from the mechanical SDL adapter:
 
 ```sh
 .venv/bin/python tools/setup.py --download
 .venv/bin/python tools/setup.py --extract
 .venv/bin/python tools/setup.py --app
 .venv/bin/python tools/setup.py --build --jobs 6
-# Quit the game normally before installing a completed build.
 .venv/bin/python tools/setup.py --install
 ```
 
-Stages can be combined, and run in the order above. `--venv` runs after download
-and before extraction. Each stage is opt-in: extraction does not download,
-building does not install, and installing does not launch. `--app` refuses to
-replace any existing `.runtime/Cataclysm.app`; skip it if the official project
-app is already present. `--install` refuses while a CDDA Tiles process is running.
-It delegates to [prepare_game.py](../tools/prepare_game.py), which installs the
-binary, signs it locally, preserves the original binary, writes the launch
-wrapper, and forces the project user directory and windowed options. Launch
-the prepared app bundle through the [runbook](operations/start-observe.md#start-and-observe), which
-executes that wrapper; do not launch an unprepared stock app. Normal game
-saves remain managed through CDDA's UI.
+Stages are opt-in; install only after the owned game exits. Existing app/build
+outputs are preserved/refused rather than silently replaced. The
+[upstream manifest](../native/upstream.json) owns source/app checksums.
+Extraction records a uniquely owned temporary build and manifest because the
+upstream build does not reliably support paths with spaces. Preserve existing
+binary bytes and build receipts before rebuilding; remove only a verified owned
+workspace for a fresh extraction.
 
-The game source and official macOS app URLs and SHA-256 values come from
-[native/upstream.json](../native/upstream.json). Downloads are cached in
-`.runtime/downloads/`, verified before reuse or extraction, and atomically
-published only after checksum verification. A corrupt cache is an error; remove
-only the named corrupt file before downloading again. An interrupted download
-may leave a uniquely named `.part` file; it is never treated as a verified input.
-The app image is mounted read-only at a unique temporary mount point, copied
-with `ditto`, and detached in a cleanup block, including copy failures. No other
-mounted image is detached.
+The [preparation tool](../tools/prepare_game.py) creates a fixed wrapper and explicit
+project userdir with `FULLSCREEN=no` and normal `ENABLE_MOUSE=true`. The computer
+layer does not know or override game input settings. Never launch fullscreen or
+an unprepared stock app. The wrapper preserves the inherited lock/socket and
+restores the selected library path across macOS shell launch.
 
-FreeType 2.14.3 source provides only local headers; the official app supplies its
-matching bundled runtime. The pinned source is
-[freetype-2.14.3.tar.xz](https://download.savannah.gnu.org/releases/freetype/freetype-2.14.3.tar.xz),
-SHA-256 `36bc4f1cc413335368ee656c42afca65c5a3987e8768cc28cf11ba775e785a5f`.
-No pkgconf or Homebrew installation is needed. A generated local `pkg-config`
-wrapper accepts only the pinned Makefile's `--cflags freetype2` and `--libs
-freetype2` queries and fails on others.
+Build the sole current adapter with the prepared local frameworks and a fresh
+project-local output directory:
 
-`--extract` creates a unique `/tmp/cdda-player-build-*` workspace because the
-upstream Makefile does not reliably support paths with spaces. The project
-`.runtime/build-manifest.json` records the exact directory, source and header
-checksums, build command, state, and completed binary checksum. An ownership
-marker binds the workspace to this checkout. Extraction rejects path traversal,
-escaping links, special files, and existing destinations. No current
-`/tmp/cdda-source` or running app is changed by setup extraction/building.
+```sh
+.venv/bin/python tools/build_computer.py --resources "$PWD/.runtime/Cataclysm.app/Contents/Resources" --output "$PWD/.runtime/computer-builds/SELECTED_FRESH_BUILD"
+```
 
-The native recipe uses the official app's SDL2 frameworks through a path without
-spaces, local FreeType headers, and the bundled FreeType dylib. It retains the
-observed successful flags: `NATIVE=osx CLANG=1 TILES=1 SOUND=1 RELEASE=1 LOCALIZE=0
-FRAMEWORK=1 OPTLEVEL=-O1 RELEASE_FLAGS=-Wno-error=missing-noreturn`. The pinned
-patch raises upstream's deployment target to macOS 13 for current libc++.
-Only that upstream missing-noreturn diagnostic is downgraded. The recipe builds
-the host architecture, not a new universal binary. The manifest records a build
-as complete only after `make` succeeds and the resulting binary is hashed.
-
-Use a fresh extraction after changing build/compiler flags; do not reuse old
-precompiled headers. For a clean retry, preserve any needed evidence, read the
-manifest's exact workspace path and ownership marker, remove only that owned
-workspace and `.runtime/build-manifest.json`, then run `--extract` again. Source
-is not retained across system cleanup of `/tmp`; re-extract if it disappears.
-Setup does not delete previous research/build trees or clean global caches.
-
-The local-header recipe passed a full native rebuild in a fresh workspace on
-2026-10-17, followed by installation, two normal save/reloads, text entry, travel,
-and a hostile-creature interruption. This validates this Mac's toolchain, not
-all macOS versions. Unit checks alone do not establish native build or gameplay
-success. Exact acceptance is tracked in
-[MVP acceptance](acceptance/2026-10-17-mvp.md).
+This builds `bridge.dylib` and the native fixture, retaining commands/source/output
+hashes in `build.json`. It is not a gameplay pass. The old semantic native patch
+and experimental computer backend are retired. Launch only through the frozen
+[current campaign custodian](operations/campaign-run.md).
 
 ## Common checks and local hook
 
 ```sh
+.venv/bin/python tools/check.py --fast
 .venv/bin/python tools/check.py
 ```
 
-The default command is full, equivalent to `--profile full`. Explicit strict
-profiles are available for the [delivery policy](workflows/ci-profiles.md#protected-ci-profiles):
+`--fast` is a checkpoint check; run relevant focused tests before development
+play. The default is full portable regression. Protected profiles and selection
+are owned by [CI policy](workflows/ci-profiles.md#protected-ci-profiles), with exact
+membership in [tools/ci.py](../tools/ci.py). [Testing](testing.md) explains scope.
+Checks do not compile the adapter or qualify actual game behavior.
 
-```sh
-.venv/bin/python tools/check.py --profile editorial
-.venv/bin/python tools/check.py --profile main-smoke
-```
-
-Every strict profile runs current-date governance, dependency-boundary and
-protocol-version checks described in the [control map](controls.md). To update the
-generated map
-after changing its registry, run `.venv/bin/python tools/governance.py --write`; the normal
-check fails on stale generated output. It also validates document YAML metadata,
-control lifecycle/references/review dates and diagram receipts, and renders all
-Mermaid sources with the local browser. Neither metadata nor rendering establishes
-semantic truth or native compatibility. SVG byte equality across hosts is not
-required: the receipt checks source/config/tool-lock and output identity, while
-rendering verifies the local renderer can process the current source.
-
-This compiles Python syntax in memory, runs selected Ruff correctness diagnostics,
-checks Import Linter dependency contracts, checks browser JavaScript syntax with
-Node.js, validates required documents and local Markdown file/image targets using
-markdown-it-py, and checks staged/unstaged Git diff whitespace. Full additionally
-runs existing unittest cases through pinned pytest/pytest-xdist, including real
-loopback HTTP tests, using four processes with work stealing and reporting the 20
-slowest durations. Every behavioral profile also runs delayed-image viewer
-regressions. Editorial omits behavioral/viewer tests; movement/viewer run explicit
-consumer/boundary targets; main-smoke runs its fixed targets serially. The shared
-selection is in `tools/ci.py`; [testing](testing.md) explains responsibilities and
-limits. Reduced profiles explicitly report that full regression was not run. Commands
-print elapsed times in the existing logs. It fails if Node.js is unavailable, a
-link is broken, or a selected check fails. Fragment anchors, raw HTML links and external web availability are not checked. HTTP
-tests require permission to bind loopback; a sandbox denial is a failed check,
-not permission to skip those tests.
-
-The prepared keyboard-driven game uses CDDA's `ENABLE_MOUSE=false` in its
-project userdir, alongside `FULLSCREEN=no`. Owned launch rejects missing, duplicate
-or enabled mouse options. This prevents native menu hover from silently changing
-selection between captures. Harness-local synthetic pointer handling permits
-ordinary engine/widget clicks while suppressing physical hover/polling; deliberate
-physical button-down/wheel still triggers takeover before filtering. Keyboard
-takeover and browser Pause remain. Game options stay project-local; semantic
-exact-image checks and the separate direct-input drift policy still apply.
-The fixed wrapper also exports `SDL_MAC_BACKGROUND_APP=1` and
-`SDL_WINDOW_NO_ACTIVATION_WHEN_SHOWN=1` only to its child. These existing SDL2
-hints request reduced startup activation; the game remains windowed and observable.
-They do not guarantee macOS window ordering: a real launch has covered the spectator.
-After the owned window appears, return the browser to the front once if needed.
-Do not repeatedly steal focus or disable takeover to keep it there. Deliberate
-native keyboard/pointer takeover still revokes
-harness authority. [SDL macOS background hint](https://wiki.libsdl.org/SDL2/SDL_HINT_MAC_BACKGROUND_APP)
-and [window-show hint](https://wiki.libsdl.org/SDL2/SDL_HINT_WINDOW_NO_ACTIVATION_WHEN_SHOWN)
-own library semantics; actual host focus preservation needs a real launch check.
-
-For fast development checkpoints, `.githooks/pre-commit` runs
-`.venv/bin/python tools/check.py --fast`: syntax/lint, import contracts, JS syntax,
-document structure/links, governance and whitespace, without behavioral tests or
-browser-based diagram rendering. Run relevant focused tests separately.
-[Development-first delivery](workflows/development.md#development-first-delivery) owns
-when the appropriate profile and independent review gate formal acceptance.
-
-[The portable CI job](../.github/workflows/check.yml) runs `python tools/ci.py` on
-PRs targeting main and pushes to main. The adapter selects and reports a strict
-profile under the [delivery policy](workflows/ci-profiles.md#protected-ci-profiles).
-It cancels superseded PR runs, without cancelling running main checks, and avoids
-duplicate feature-branch push/PR jobs. The always-present required `controller`
-job has no path filters. CI validates the selected portable lane on Linux; it
-makes no native compilation or real-game claim. The hook is opt-in and setup does not change Git configuration.
-To enable it for this repository, run:
-
-```sh
-git config --local core.hooksPath .githooks
-```
-
-The hook checks the current working tree; review staged paths and diff before
-committing, especially when partially staging changes. It is convenience
-enforcement, not a security boundary. Native and graphical acceptance remain
-separate, as specified in [engineering.md](engineering.md).
+The optional `.githooks/pre-commit` runs the fast lane when explicitly enabled
+with `git config --local core.hooksPath .githooks`. It checks the working tree;
+inspect staged paths/diff separately before committing. Do not treat a partial
+working-tree check as evidence about a different staged candidate.
 
 ## Build metadata migration
 
-The active `.runtime/build-manifest.json` requires exact integer `schema_version: 1`.
-Setup rejects unversioned, old or future manifests without rewriting them. Fresh
-`--extract` writes the current format; preserve an existing manifest/build before
-recreating it. A one-time verified offline conversion follows the
-[runbook](operations/migration.md#coordinated-migration). There is no automatic legacy reader.
+Setup build manifests and current campaign/session stores have separate versions.
+Unsupported versions refuse without rewriting. Preserve old artifacts and choose
+fresh explicit outputs; [migration](operations/migration.md) owns data treatment.
 
 ## Evidence and releases
 
-Before a release/checkpoint, inspect the staged diff and candidate scope, run the
-common lane against that candidate, and record exact commit/tree identity, tools,
-results and unexecuted lanes in a dated acceptance report. If partially staging,
-check an isolated export of the staged candidate rather than treating a working-tree
-hook as proof. Native changes additionally follow the [native acceptance lane](operations/native-acceptance.md#native-acceptance-lane).
-Commit the source before native acceptance. Use that Git commit/tree and subsequent
-`git diff`/PR identities for source provenance; do not duplicate Git with per-source
-checksum inventories. If relevant source changes, checkpoint again and repeat the
-affected lane. Preserve the old failed evidence. Hash external inputs, binaries,
-screenshots and logs under the runbook's retention policy.
-The public repository requires a PR and the Actions-bound `controller` check on
-main, with resolved conversations and no configured bypass. These rules do not
-prove native gameplay; verify their current configuration at publication. See
-[project management](project-management.md) for the single-maintainer review limit.
-
-Current [standards](engineering.md) define release scope; [operations](runbook.md)
-own evidence retention and recovery. No release tag or publication is automatic.
+Commit and inspect a coherent checkpoint before native/gameplay qualification.
+Record exact source/tree, external inputs, binaries, configuration, limits,
+outcomes and unrun lanes. Independent review and the appropriate protected CI
+profile precede formal acceptance/merge; broad source changes require full
+regression. No setup command authorizes paid calls, publication or another run.

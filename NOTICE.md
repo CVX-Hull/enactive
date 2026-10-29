@@ -93,6 +93,15 @@ This repository does not vendor or relicense the wheel. Review and preserve the
 upstream V8/component notices before distributing a bundled binary. Runtime selection, limits
 and rejected alternatives are in [the execution brief](docs/changes/061-player-program-execution.md).
 
+## Player image decoding
+
+Pillow 13.0.0 decodes bounded player-selected PNG views. Its package metadata
+identifies MIT-CMU; its installed `licenses/LICENSE` also retains notices for
+bundled image libraries. Exact artifacts/hashes are in the development lock.
+Metadata and the installed notice were inspected on 2026-10-29; this is not a
+complete bundled-library license audit. Preserve that upstream notice when
+redistributing the wheel. No image codec source is vendored here.
+
 ## Test runner
 
 pytest, pytest-xdist, execnet, pluggy and iniconfig use MIT licenses. Packaging
@@ -101,12 +110,10 @@ lock; their original notices remain with the project-local installed packages.
 The maintained runner replaces serial unittest discovery without changing the
 unittest assertions; [testing](docs/testing.md) describes selection and limits.
 
-The optional assurance/impact pilot uses pytest-testmon 2.2.0 (MIT) and
-Coverage.py 7.17.0 (Apache-2.0). Versions and artifact hashes are separate in
-[requirements-pilots.lock](requirements-pilots.lock); installed metadata was
-reviewed on 2026-10-25. These packages are neither vendored nor installed by
-normal CI. Their original notices remain in the separate project-local pilot
-environment. Pilot measurements do not qualify production test selection.
+The retired assurance/impact pilot used pytest-testmon 2.2.0 (MIT) and
+Coverage.py 7.17.0 (Apache-2.0). Its pinned requirements and executable readers
+remain in [the historical source](https://github.com/CVX-Hull/enactive/tree/433ed973afe312d03f777d8b102a0cba528af746/tools).
+Those optional packages are not current dependencies or CI selection.
 
 ## Documentation assets and tools
 

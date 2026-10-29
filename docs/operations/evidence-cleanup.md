@@ -20,8 +20,9 @@ reviewed equivalent evidence or explicitly selected for removal; if removed,
 record availability as removed in the evidence index. Keep unresolved-incident
 journals until resolved. Routine unreferenced journals/frames can be pruned after
 30 days, only with sessions stopped and after checking references/ownership.
-This initial policy is manual; no scheduled deletion is installed. Native frame
-rotation within a live process remains the game's existing bounded behavior.
+This initial policy is manual; no scheduled deletion is installed. Current captured
+PNGs are immutable custodian-owned sources charged to the original frame/byte
+capacities. Do not rotate or delete them during a live session.
 
 Never delete saves as routine cleanup. For user-directed stale-world cleanup,
 stop the owned game/controller first, identify closed test/failed worlds and
@@ -44,7 +45,7 @@ canonical runtime owner and needed local evidence available throughout cleanup.
 For a lost temporary build, re-extract using setup. For an unreadable archive,
 remove only the named corrupt cache entry after preserving diagnostics.
 
-Fresh source checkouts contain acceptance metadata but not local demo media.
+Fresh source checkouts contain selected public evidence, not complete private run media.
 Maintainers must distinguish unavailable evidence from a newly failed probe.
 
 [Operations index](../runbook.md).

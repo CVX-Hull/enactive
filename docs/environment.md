@@ -20,10 +20,11 @@ this is not a process dashboard or attempt log.
 | `.runtime/Cataclysm.app`, `.runtime/downloads/`, `.runtime/toolchain/` | Prepared Tiles app, pinned downloads and local tooling. Use the wrapper with explicit project userdir and windowed mode. |
 | `.runtime/build-manifest.json` and its owned temporary workspace | Current build provenance, exact source/configuration and ownership marker. The recorded workspace may be outside the checkout because upstream Make does not reliably accept spaces. Verify the marker before removal; do not infer ownership from a path prefix. |
 | `.runtime/user/` | Project configuration and saves. Preserve accepted checkpoints; archive/member-hash verify stale failed/technical worlds before removing active copies. No save editing or restoration to manufacture success. |
-| `.runtime/missions/`, `.runtime/campaigns/` | Private ledgers, frames, host traces, frozen admissions and evidence. Closing a host or removing an active world does not erase a failure or qualify a donor. |
+| `.runtime/computer-sessions/`, `.runtime/player-stores/`, `.runtime/computer-build-*/` | Current frozen admissions, immutable PNGs, original ledgers/host traces, explicit player memory and owned native build receipts. Closed stores never restore authority. |
+| `.runtime/missions/`, `.runtime/campaigns/` | Historical semantic-system evidence, not current runnable admissions or supported data readers. Closing a host or removing a world does not erase a failure. |
 | `.runtime/save-retirement/` and per-campaign `closed-evidence/` | Existing archives and adjacent manifests own exact member hashes and restoration instructions. Restoration still requires a new admission and ordinary Load. |
 | `.runtime/research/` | Owned experiments, including the executable-policy spike environment. Retain required evidence; remove superseded local tooling only after preservation. |
-| `.runtime/tooling/verification-pilots-venv/`, `.runtime/iterations/verification-pilots/` | Optional locked testmon environment and isolated source/map experiments. [Setup](setup.md) owns installation; [testing](testing.md#responsibility-assurance) owns use and limitations. Preserve result receipts before retiring generated copies; no real saves are included. |
+| `.runtime/tooling/verification-pilots-venv/`, `.runtime/iterations/verification-pilots/` | Historical testmon/source-map experiments; their executables and current installation route are retired. Preserve original result receipts before removing owned generated copies; no real saves are included. |
 | `tools/player_host/node_modules/`, `.runtime/pi-host235/` | Locked mandatory generic-host dependencies and historical offline conformance/probe receipts; npm cache stays in project `.cache/npm`. No model/API credential belongs in these directories. [Host setup](setup.md#install-the-generic-gameplay-host) owns install and support limits. |
 | `.codex/`, repository-local Git configuration/hooks | Reviewed project tool/permission configuration and public identity. [Operator permissions](operator-permissions.md) separates rule matching, host activation and gameplay authority. |
 
@@ -34,6 +35,13 @@ profile edits, unrelated process termination or global service configuration.
 A manifest describes a recorded artifact; inspect live state before cleanup.
 
 ## Historical environment exceptions
+
+The [cutover development record](acceptance/2026-10-29-computer-control-development.md)
+retains an accidental browser export to Downloads, subsequently moved into the
+project, and one dependency command whose global cache use cannot be excluded.
+No global package/profile change or cleanup of unowned caches is claimed. The
+current owned source-build manifest and adjacent native build receipts retain
+their exact dirty/clean source provenance; matching input hashes do not rewrite it.
 
 Initial feasibility, before isolation steering, launched the stock game into
 `~/Library/Application Support/Cataclysm/`. Its fresh configuration contained no

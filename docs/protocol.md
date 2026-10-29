@@ -1,150 +1,93 @@
 ---
 owner: maintainer
-review_trigger: Native bridge, controller, input, observation or skill change
+review_trigger: Responsibility, supported behavior, interfaces or qualification change
 status: active
 ---
 
-# Bridge and guarded-play contract
+<a id="bridge-and-guarded-play-contract"></a>
 
-Protocol version: 7.
+# Computer control and player contract
 
-The isolated [computer-control proof](changes/070-computer-control-proof.md)
-has its own exact experimental shapes and no product-CLI route. Its
-[evidence](acceptance/2026-10-29-basic-computer-control.md) does not change the
-current versions below; #176 must replace all current producers/readers together.
-
-This index routes to exact current contracts supporting [architecture](architecture.md).
-Use the component views for understanding before this exact reference:
-[player tools](components/player-interface.md), [mission phases](components/mission-execution.md),
-[memory/advice](components/memory-learning.md), [native control](components/native-control.md)
-and [observer/operations](components/observer-operations.md). Select the relevant
-section below; routine contributors and players need not read this whole reference.
-Authority rules are [S-PROTOCOL](standards/protocol.md#s-protocol-command-and-observation-authority).
-Current source is native7/mission11/ledger13/archive6, with procedure/3,
-campaign-memory/6, reflection/3 and program-view/2; gameplay/2 is unchanged.
-[ADR006](decisions/006-computer-control-boundary.md) selects a future basic
-computer-control boundary with game semantics in the playing system. The current
-versions and contracts below remain implemented until their coordinated migration;
-this index must not be read as the target architecture already being delivered.
-Matching native7 marker qualification is a separate required lane from the
-historical native6 ordinary-input/normal-lifecycle evidence in
-[capture001](acceptance/2026-10-22-native-capture-preconditions.md). That old run
-has capture-name churn but no checked PNG drift; it does not qualify this new
-marker boundary. Persistent pixel drift and the retained-capture commit race
-remain source-tested, not natively exercised.
-[Learning006](acceptance/2026-10-22-discovery-learning-sixth-attempt.md)
-and [native001](acceptance/2026-10-22-native-save-refresh.md) provide bounded
-graphical qualification; wider input/geometry and the full independent campaign
-retain their explicit limits. Dated native5 and earlier results retain their exact
-scopes. Portable checks do not prove native engine behavior.
-
-Unsupported versions and alternate response shapes are rejected. Startup validates
-stored admissions, claimed requests and any response before restoring uncertainty;
-it never converts old records. A dispatched response without its current-format
-input identity blocks startup instead of fabricating a synthetic request. An offline
-migration must preserve uncertainty and cannot grant authority or replay inputs.
-See [coordinated migration](operations/migration.md#coordinated-migration).
-
-Mission/11 and ledger13 migrate all current producers, callers and persisted readers
-together. Earlier mission versions, ledger7 and its old untyped effect shape reject
-without conversion. Retain old mission artifacts and saves as evidence; only a
-separately admitted current mission can start anew. Migration never resets input
-costs, renews a stopped attempt or restores execution authority.
+The sole current exact contract is [Computer control and player ports](contracts/computer-control.md).
+It replaces native7/mission11, semantic gameplay commands, phase/identity admission,
+legacy snapshots and old executable-memory import. Unsupported versions refuse;
+there is no compatibility backend. [ADR006](decisions/006-computer-control-boundary.md)
+explains the decision, and [migration](operations/migration.md) explains state treatment.
 
 ## Contract navigation
 
-Choose the interface needed for the reader task:
-
-| Task | Current contract |
+| Reader task | Current authority |
 | --- | --- |
-| Implement initial Load and adopt identity | [Launch](contracts/mission-admission.md#owned-launch-and-initial-load-admission), [transitions and menu dismissal](contracts/lifecycle-create-load.md), [adoption](contracts/lifecycle-preconditions.md#normal-identity-adoption-and-historical-proof) |
-| Collect an uncertain request | [Player transport](contracts/player-transport.md), [delivery reconciliation](contracts/delivery-reconciliation.md) |
-| Replace a player | [Handoff issuance](contracts/handoff-issuance.md), [successor Claim/readmission](contracts/handoff-issuance.md#successor-context-claim-and-readmission) |
-| Choose ordinary input and inspect its outcome | [Input applicability](contracts/ordinary-input.md), [delivery](contracts/ordinary-delivery.md), [prompt observation](contracts/operation-observation.md) |
-| Recover explicit operator control | [Recovery](contracts/operator-recovery.md) |
+| Native packets, images, Pause and backpressure | [Native channel](contracts/computer-control.md#native-channel), [protocol code](../harness/computer/protocol.py) |
+| Operations, actor custody, original collection and handoff | [Computer operations and custody](contracts/computer-control.md#computer-operations-and-custody), [runtime](../harness/computer/runtime.py) |
+| Claims, sources, programs and bounded context | [Player knowledge and executable proposals](contracts/computer-control.md#player-knowledge-and-executable-proposals), [player package](../harness/player/) |
+| Tool arguments | [Current tool descriptions/schemas](../harness/player_tools.py); `.venv/bin/python -m tools.configure_player_tools --describe` |
+| Finite package and cleanup | [Campaign procedure](operations/campaign-run.md), [package validator](../tools/campaign_package.py) |
 
 ## Controller run ownership
 
-- [Controller run ownership](contracts/controller-ownership.md).
+The mechanical custodian owns one writer, exact native handles and original
+resource limits. Per-actor bearer capabilities authorize input; memory, process
+IDs and retained JSON cannot recreate them. Independent user Pause permanently
+stops the run. Partial/unknown input stays charged and is never replayed.
 
 ## Integrated mission lifecycle
 
-- [Player Claims and source grounding](contracts/player-claims.md).
-- [Player transport and original result collection](contracts/player-transport.md).
-- [Player snapshots, detail and image presentation](contracts/player-snapshots.md).
-- [Integrated mission lifecycle](contracts/mission-admission.md).
-- [Operation entry refresh and ordinary prompt observation](contracts/operation-observation.md).
-- [Owned normal exit and menu cleanup](contracts/lifecycle-exit.md).
-- [Creation, Load transitions and initial menu dismissal](contracts/lifecycle-create-load.md).
-- [Lifecycle action preconditions](contracts/lifecycle-preconditions.md).
-- [Skill request binding errors](contracts/request-binding.md).
-- [Selected item, inspection and activity composition](contracts/item-inspection.md).
-- [Quiescent player replacement](contracts/handoff-issuance.md).
-- [Mission CLI, observation deadline and admission gate](contracts/mission-status.md#mission-cli-observation-deadline-and-admission-gate).
-- [Unknown delivery collection and reconciliation](contracts/delivery-reconciliation.md).
-
-### Lifecycle action preconditions
-
-Read [Lifecycle action preconditions](contracts/lifecycle-preconditions.md#lifecycle-action-preconditions).
-
-### Skill request binding errors
-
-Read [Skill request binding errors](contracts/request-binding.md#skill-request-binding-errors).
-
-### Selected item, inspection and activity composition
-
-Read [Selected item, inspection and activity composition](contracts/item-inspection.md#selected-item-inspection-and-activity-composition).
+There is no harness game lifecycle. The player interprets all menus, creates or
+loads a character, chooses Save and quits through ordinary controls. The harness
+reports delivery and normal native exit before forced cleanup separately; it
+never certifies a save or game success. Actor handoff is only custody/context
+transfer, with no game-phase or identity requirement.
 
 ### Quiescent player replacement
 
-Read [Quiescent player replacement](contracts/handoff-issuance.md#quiescent-player-replacement).
+The player selects context roots and summary with `player_handoff`. Canonical
+issuance seals its actor. The Pi host settles only its direct originating handoff
+or exact original collection; the driver verifies context digest and actual
+old host/MCP group quiescence before a successor. Original limits persist.
 
 ## Transport and state
 
-- [Certified request admission refusal](contracts/player-transport.md#certified-request-admission-refusal).
-- [Ordinary discovery and procedure data](contracts/procedure-programs.md).
-- [Ordinary direct input and source applicability](contracts/ordinary-input.md).
-- [Ordinary delivery receipts and observation continuation](contracts/ordinary-delivery.md).
-- [Historical procedure and advisory import](contracts/historical-import.md).
-- [Asynchronous reflection and advice](contracts/advisory-reflection.md).
-- [Native commands, visible observations and boundaries](contracts/native-observations.md).
+Native uses inherited nonblocking socket framing. HTTP binds `127.0.0.1`, accepts
+bounded JSON and exact actor capabilities, and rejects cross-origin access.
+The client gives each submission its ID before sending. `computer_result` and
+`player_result` collect originals without effects; transport uncertainty proves
+neither delivery nor nondelivery. MCP cancellation requests independent permanent
+Pause before abandoning the await.
 
-### Certified request admission refusal
-
-Read [Certified request admission refusal](contracts/player-transport.md#certified-request-admission-refusal).
-
-### Ordinary discovery and procedure data
-
-Read [Ordinary discovery and procedure data](contracts/procedure-programs.md#ordinary-discovery-and-procedure-data).
-
-## Explicit operator recovery
-
-- [Explicit operator recovery](contracts/operator-recovery.md).
+Current storage is fresh `computer-session/1` plus explicitly selected
+`player-memory/1`. Immutable sources retain original PNG bytes and digest.
+[Current data treatment](contracts/computer-control.md#responsibilities-and-current-data)
+and [migration](operations/migration.md) own versions and historical-state handling.
 
 ## Designated campaign operator
 
-- [Designated campaign operator](contracts/mission-admission.md#designated-campaign-operator).
+One designated generic-Pi player owns routine gameplay interpretation and choices.
+The lead owns source, frozen admission, review and verification. Explorers and
+reviewers send no game input. Advisers and programs are optional fallible aids;
+the current route has no asynchronous semantic worker or hidden game-state feed.
 
-## Closed-loop play and observations
+## Historical contract navigation
 
-- [Closed-loop play and observations](contracts/gameplay-evidence.md#closed-loop-play-and-observations).
+The remaining pages in `contracts/` are superseded bookmarks for the earlier
+native7/mission11 system. Each links its original accepted source and the current
+replacement. They are not runnable current instructions or authority to import
+old data. Historical acceptance reports retain their original tested scope.
 
-## Passive gameplay records and evidence
+<!-- Retained bookmarks for the coordinated contract migration. -->
+<a id="lifecycle-action-preconditions"></a>
+<a id="skill-request-binding-errors"></a>
+<a id="selected-item-inspection-and-activity-composition"></a>
+<a id="certified-request-admission-refusal"></a>
+<a id="ordinary-discovery-and-procedure-data"></a>
+<a id="explicit-operator-recovery"></a>
+<a id="closed-loop-play-and-observations"></a>
+<a id="passive-gameplay-records-and-evidence"></a>
+<a id="passive-task-memory"></a>
+<a id="bounded-injected-planner"></a>
+<a id="passive-bounded-movement-skills"></a>
+<a id="passive-waypoint-supervision"></a>
 
-- [Passive gameplay records and evidence](contracts/gameplay-evidence.md).
-
-## Passive task memory
-
-- [Passive task memory](contracts/injected-planner.md#passive-task-memory).
-
-## Bounded injected planner
-
-- [Bounded injected planner](contracts/injected-planner.md).
-
-## Passive bounded movement skills
-
-- [Passive bounded movement skills](contracts/movement-skills.md).
-
-## Passive waypoint supervision
-
-- [Passive waypoint supervision](contracts/movement-skills.md#passive-waypoint-supervision).
+Earlier semantic lifecycle and tool bookmarks now route to the current
+computer-control boundary described above. The remaining contract pages retain
+their historical source links.

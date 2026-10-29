@@ -1,10 +1,17 @@
 ---
 owner: lead
 review_trigger: Executable learning design, relevant new evidence, or a learning/responsiveness claim
-status: active
+status: historical
+date: 2026-10-29
+scope: Pre-cutover background archived on this date; not current executable policy or new research qualification
 ---
 
 # Player-authored executable policies
+
+This is retained pre-cutover design/research evidence. Its old executable routes and
+semantic authority are retired. The [current computer/player contract](contracts/computer-control.md) owns implemented behavior;
+this page supplies background, not current operating instructions.
+
 
 Research cutoff: **2026-10-23**. This is a research synthesis and proposed
 direction, not an implemented execution contract or a passing gameplay result.

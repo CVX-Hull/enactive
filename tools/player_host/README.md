@@ -100,9 +100,10 @@ metric. It does not enter canonical agent history, accumulate old notes or chang
 the stable system/tool prefix. The hard cap, deadlines and frozen ending reserves
 still apply; seeing a counter does not establish that a player will honor them.
 
-Original agent messages and complete MCP `tool-result` trace entries retain the
-pixels. `request-start.payload` records the actual projected provider body; context
-projection events expose the count and omissions. This is a declared image-history
+Live agent messages retain the pixels needed by the provider. Original source
+images stay in the mechanical/player stores. Telemetry stores image references
+and the exact `request-start.payload_sha256`, sizes and counts, never the raw
+projected body or private reasoning. Context projection events expose omissions. This is a declared image-history
 window, without text summarization, automatic compaction, replay or permission
 renewal. Qualification must include actual continuation and apparent effects;
 reducing images alone is not a latency pass.
@@ -172,14 +173,16 @@ quota/billing limits, malformed or unrecognized errors stay terminal. A provider
 `x-should-retry:false` also suppresses recovery. The second429, other HTTP statuses,
 transport failures and partial-stream failures are terminal. The provider stream's
 own retries remain disabled, so there is no nested retry loop or assistant-turn
-restart. Error text is neither traced nor sent back as model context.
+restart. Error text is neither traced nor sent back as model context. Bounded diagnostic
+identifiers include OpenRouter metadata error_type, provider_code and limit_source
+when present; raw metadata, remedy text and provider bodies are excluded.
 
 `max_requests` counts each actual provider HTTP fetch attempt, including the retry.
 The host checks and charges immediately before fetching; a refused extra attempt
 has no fabricated request/completion. Both attempts send the same serialized
 context under one original request timer, combined abort signal and host deadline.
 Classification, backoff and response reading consume that timer. Pi rejects a
-provider-requested retry delay over5seconds; its bounded default backoff applies
+provider-requested retry delay over60seconds (the pinned helper's maintained default); its bounded default backoff applies
 when no valid delay is supplied. Cancellation interrupts backoff and bounded error
 reading. The first eligible refusal records unknown usage, without a zero-price
 assumption; another attempt requires spare capacity before any backoff.
@@ -203,34 +206,30 @@ remaining calls and inference. The bounded provider-only429 recovery above never
 retries a tool/gameplay submission or grants reconnect, replay, fallback,
 automatic compaction or session restoration.
 
-A coherent completed handoff response from `enactive_handoff` or collection of
-that host's own pending/uncertain handoff ends this host. Only the actual MCP receipt is inspected:
-current `player-view/5` and `mission/11`, settled delivered accepted completion,
-matching issuance/operation, original actor/mission and an issued post-Pause source.
-Successor-role/Work selections must match this host's original handoff intent.
-The as-of snapshot can still name that exact completed handoff as its active
-operation while the writer finishes publication; null or that same ID is accepted,
-never a different or missing operation.
-Collection is armed only by its actual handoff response or original-collection
-identity after an uncertain handoff call, and must name that same mission/operation.
-MCP preserves the assigned collection identity on unfinished/uncertain responses even
-when their immediate snapshot is unavailable; the host does not guess the mission.
-A fresh successor's read of its assigned issuance does not settle its host. A
-newer read-only Observe can be current while the issued checkpoint stays fixed;
-the driver checks the actual checkpoint/native binding separately.
-Claimed but incoherent completion is fatal; draft refusals, unfinished results
-and ordinary collection errors leave explicit correction/collection available. Model prose and other tools are
-not settlement evidence.
+A sealed `computer-operation/1` response from `player_handoff`, or collection
+through `computer_result` of this host's one pending original handoff, ends this
+host. The first actual MCP text must bind matching 32-character hex operation/session/actor
+IDs and a current `player-handoff/1` issuance with matching IDs, a 32-character hex context ID,
+64-character hex context digest, positive finite sealing time and `grants_authority:false`.
+There are no game-phase, menu, identity or source-checkpoint requirements.
+Only this host's direct response can establish an origin; collection must request
+that exact operation and return its original session/actor. A direct
+`player-transport/1` unknown receipt establishes only the pending origin.
+Unrelated reads and reads without an origin never settle the host. Local MCP
+`isError` refusals establish no origin and preserve explicit correction. Invalid
+successful direct receipts and incoherent original collection latch a fatal stop.
+Unsupported old mission/player-view receipts are rejected.
 
-The host latches the receipt, refuses every later call in that sequential batch
+The host latches the issuance, refuses every later call in that sequential batch
 before dispatch, and uses Pi's maintained `finishTurn` hook to end before another
-provider request, including batches with ordinary tools before handoff. Original
-MCP results remain intact in the trace. Settlement has reason `handoff`, can end
-with assistant `toolUse`, and writes empty final text (a newline in the reserved
-CLI file). Fatal cancellation, deadlines, transport and cleanup failures still
-win. This ends the original host; it grants no successor authority or native
-cleanup. The driver still validates the complete canonical issuance and fresh
-runtime/custody/actor/source/Pause/budget state before assigning a fresh successor.
+provider request, including batches with ordinary tools before handoff. The
+`handoff` event carries session/actor, operation as `handoff_id`, context ID/digest
+and `grants_authority:false`. Settlement has reason `handoff`, can end with assistant
+`toolUse`, and writes empty final text (a newline in the reserved CLI file).
+Fatal cancellation, deadlines, transport and cleanup failures still win. The
+host closes its owned MCP child. The driver independently validates canonical
+issuance/context and actual old host/MCP process-group quiescence before minting
+a successor under original limits; host settlement grants no authority.
 
 The host reserves at most one second (one quarter of short runs) from its total
 budget for cleanup. Stdio closure uses at most 500 ms each for stdin grace and
@@ -238,24 +237,34 @@ post-SIGTERM wait. The provider request count and timeouts are finite. Setup and
 cleanup share the host budget; SIGINT/SIGTERM use the same abort/closure path.
 
 Events carry UTC `wall_time`, host-relative `monotonic_ms`, request IDs and tool
-call IDs where applicable. `request-start` reports message text parts/UTF-8 bytes,
-image parts/decoded bytes and complete serialized payload bytes. Text counts
-include tool-call argument strings; schema bytes are included in payload bytes.
-Its `payload` field retains the complete JSON body at each actual HTTP fetch for the
-provider, including schemas, context, images and forwarded reasoning/tool history.
-These private run traces contain model context; headers and API keys are excluded.
-Unforwarded assistant content and failed final text are not retained. Body
-serialization and disk writes add cost, which must remain in live measurements;
-the earlier metadata-only fixture measurement does not qualify that overhead.
+call IDs where applicable. Telemetry version 2 retains request text/UTF8 counts,
+image/decoded-byte counts, message count, complete serialized payload byte count,
+model/provider and logical request ID. `request-start.payload_sha256` hashes the
+**exact** serialized Fetch `init.body`. No raw request payload, prompt, history,
+private reasoning or image bytes are retained in events. The actual provider
+request remains unchanged, including SDK-required forwarded reasoning and images,
+stable prefix and Pi serialization.
+
+`tool-result` retains actual text, structured game JSON and `isError`, replacing
+each image content block with `{type:"image_reference",media_type,bytes,sha256,
+image_index}`. Indexes count images within that result. This evidence-only
+projection does not mutate canonical MCP/Pi objects or the result delivered to
+the agent. Original tool text and raw PNG evidence are retained separately by
+their owners; event image references avoid duplicate base64 histories.
+`assistant-text` at assistant `message_end` records ordinary visible text parts
+only, at most 8192 UTF-8 bytes per message, with explicit `omitted_bytes`. Thinking
+parts are excluded. Final report file ownership stays with the runner. Headers,
+API keys, private provider errors and private reasoning are excluded.
+
 `response-first-chunk` is the first raw HTTP response-body chunk, including an
 error body, before Pi parses it. `response-backend` reports the backend model ID
 from parsed provider chunks. `response-complete` reports the Pi model/provider,
 terminal stop reason and available usage. Missing provider usage is `usage:null`
 with `usage_available:false`; a reported complete input/output count enables
 normalized usage, with `cost_source` distinguishing provider totals from configured
-rate estimates. HTTP refusal status is retained before SDK rejection. Full `tool-result` events retain
-operation/source joins. `tool-refused`, `abort` and `settled` retain refusal and
-failure outcomes. An eligible429 attempt has a transport-derived
+rate estimates. HTTP refusal status is retained before SDK rejection. `tool-result`
+text and structured data retain operation/source joins, with image references in
+place of bytes. `tool-refused`, `abort` and `settled` retain refusal and failure outcomes. An eligible429 attempt has a transport-derived
 `response-complete` with `http_status:429`, error stop reason and unknown usage;
 the final attempt is completed by the SDK assistant message. Backoff aborts and
 excessive-delay refusals do not duplicate that first receipt. `provider-retry`
@@ -289,7 +298,7 @@ progress never renews a timer, retries a partial response, changes provider
 context or authorizes tool input. Its observation overhead belongs in subsequent
 live measurements.
 
-Telemetry version1 adds first/last/max consecutive gaps for body chunks, parsed
+Telemetry version 2 preserves first/last/max consecutive gaps for body chunks, parsed
 provider events and nonempty reasoning/content/tool-argument fragments. Missing
 first/last values stay null; max gaps exclude silence after the last fragment.
 `provider-payload-ready`, `request-fetch-start`, projection/inspection timings

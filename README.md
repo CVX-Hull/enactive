@@ -1,59 +1,41 @@
 ---
 owner: maintainer
-review_trigger: Product scope, entry points or setup changes
+review_trigger: Responsibility, supported behavior, interfaces or qualification change
 status: active
 ---
 
 # Enactive
 
-A local harness for real **Cataclysm: Dark Days Ahead** with a normal graphical
-game window and browser spectator console. A designated model in the generic
-Pi gameplay host chooses goals and interprets
-screens; the harness supplies ordinary physical input, optional semantic skills,
-retained observations and bounded movement.
-Designs must apply across **CDDA-class survival/roguelike games**; CDDA is the first
-implemented target, and other games are not yet qualified. Game-specific bindings
-must remain separate from shared player, memory and learning responsibilities.
-The native integration has a matching local build in the isolated project app;
-graphical evidence is scoped to its tested boundaries. [Architecture](docs/architecture.md) separates
-implemented contracts from the remaining integration limits.
-General survival planning requires an admitted player with an explicit frozen
-model/provider configuration. An unattended survival
-service is not implemented.
+A local system for an agent to play **CDDA-class survival/roguelike games** while
+you watch and retain control. Cataclysm: Dark Days Ahead is the first integration;
+other games are not qualified. The mandatory generic Pi host interprets actual
+images and chooses basic key, text, pointer and wait actions. The harness owns
+mechanical delivery, original limits, one writer, independent Pause and cleanup.
+The player owns game meaning, goals, memory, programs and outcome claims.
 
-**Start with the [project overview](docs/overview.md)** for what works, limitations,
-the system picture, current direction and decisions. It links to progressively
-deeper design and evidence so you can review the big picture without reading code.
+Start with the [overview](docs/overview.md) for capabilities and limits, then the
+[architecture](docs/architecture.md) and [current contract](docs/contracts/computer-control.md).
+The [production cutover evidence](docs/acceptance/2026-10-29-computer-control.md)
+demonstrates useful play, conditional local programs, memory/correction, fresh
+succession, Save/new-child reload and a separate normal exit. Its failures and
+limits remain explicit. Independent seven-day survival and useful whole-player
+cadence remain unaccepted; GitHub owns protected delivery state.
 
 ## Use and contribute
 
-- [Set up locally](docs/setup.md): pinned inputs, isolated build and common checks.
-- [Run, pause and recover](docs/runbook.md): commands, takeover, uncertainty and cleanup.
-- [Evidence index](docs/work.md): decisive results and links to the authoritative tracker.
-- [Public Project](https://github.com/users/CVX-Hull/projects/2) and
-  [Issues](https://github.com/CVX-Hull/enactive/issues): authoritative work status.
-- [Contributing](CONTRIBUTING.md) and [project workflow](docs/project-management.md).
-- [Charter](docs/charter.md): purpose, constraints, principles and quality priorities.
-- [Architecture](docs/architecture.md): current responsibilities and authority.
-- [Documentation map](docs/documentation.md): artifact roles and the path from project design to code.
-- [Engineering standards](docs/engineering.md) and [control map](docs/controls.md).
-- [Research](docs/research.md), [environment history](docs/environment.md),
-  [third-party provenance](NOTICE.md).
+- [Player guide](docs/player-guide.md): compact working context and tools.
+- [Setup](docs/setup.md) and [runbook](docs/runbook.md): local preparation, frozen runs, Pause and cleanup.
+- [Work and evidence](docs/work.md): scoped results and remaining qualification.
+- [Public Project](https://github.com/users/CVX-Hull/projects/2) and [Issues](https://github.com/CVX-Hull/enactive/issues): live work authority.
+- [Contributing](CONTRIBUTING.md), [engineering](docs/engineering.md), [documentation map](docs/documentation.md) and [controls](docs/controls.md).
+- [Charter](docs/charter.md), [research](docs/research.md), [environment history](docs/environment.md) and [third-party provenance](NOTICE.md).
 
-The [seven-day functional campaign](docs/acceptance/2026-10-19-seven-day-survival.md)
-reached168h02m54s alive with needs maintained, ordinary water treatment/rest,
-midpoint save/restart/player handoff and final normal shutdown. It is a supervised
-development trajectory, with failures and uncertain acknowledgments retained.
-One unchanged actual endpoint image accompanies that report.
+The game is windowed and project-local. Pause permanently prevents further
+remote input in that run; committed input and game activities may continue.
+The browser is a passive spectator with an independent Pause control.
 
-The [2026-10-17 demonstration](docs/acceptance/2026-10-17-mvp.md) covered supplies,
-item use, exploration, save/reload and a visible-zombie interruption. Dated evidence
-is not live process status or a guarantee of every game state. Pause prevents
-further remote dispatch; an existing native activity may need native interruption.
-
-Git contains small [acceptance provenance](docs/acceptance/2026-10-17-mvp-manifest.json).
-Large evidence collections, video and journals remain local under ignored `.runtime/` and
-are unavailable in a fresh source checkout. The public repository contains source
-and small review artifacts; no global package installation or scheduled background
-agent is needed. Original work is [MIT licensed](LICENSE); CDDA-derived code and
-third-party assets retain the terms in [NOTICE](NOTICE.md).
+Dated [acceptance reports](docs/acceptance/) retain failures and their original
+scope. Large private evidence, saves and run packages stay in ignored `.runtime/`;
+a fresh checkout does not include them. Source repairs never retroactively qualify
+a failed run. Original work is [MIT licensed](LICENSE); upstream terms remain in
+[NOTICE](NOTICE.md).

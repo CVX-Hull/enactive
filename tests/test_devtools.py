@@ -23,22 +23,14 @@ class DevToolTests(unittest.TestCase):
         shutil.copyfile(ROOT / "pyproject.toml", self.root / "pyproject.toml")
         (self.root / "harness").mkdir()
         self.write("__init__.py", "")
-        self.write("controller.py", "import json\n")
-        self.write("movement.py", "import typing\n")
-        self.write("server.py", "from . import controller\nimport http.server\n")
-        self.write("__main__.py", "from . import controller, server\n")
-        self.write("mission_runtime.py", "")
-        self.write("native_process.py", "")
-        self.write("mission_client.py", "import urllib.request\n")
-        self.write("player_tools.py", "from . import mission_client\n")
-        self.write("player_mcp.py", "from . import player_tools\n")
-        (self.root / "harness/gameplay").mkdir()
-        self.write("gameplay/__init__.py", "")
-        self.write("gameplay/evidence.py", "import json\n")
-        for module in ("campaign_memory", "memory_contracts", "memory_ports", "source_contracts", "timeline",
-                       "mission_contracts", "mission_ledger", "mission_memory", "procedure_library", "procedure_archive",
-                       "cdda_identity", "cdda_memory", "cdda_timeline"):
-            self.write(f"gameplay/{module}.py", "")
+        for package in ("computer", "player"):
+            (self.root / "harness" / package).mkdir()
+            self.write(f"{package}/__init__.py", "")
+        for module in ("computer/protocol", "computer/ports", "computer/runtime", "computer/channel", "computer/store", "computer/launch", "player/memory", "application", "player_client", "player_tools", "player_mcp", "server", "__main__"):
+            self.write(module+".py", "")
+        self.write("application.py", "from .computer import runtime\nfrom .player import memory\n")
+        self.write("server.py", "import http.server\nfrom .computer import protocol\n")
+        self.write("__main__.py", "from . import server\n")
 
     def write(self, filename, source):
         (self.root / "harness" / filename).write_text(source)
@@ -61,61 +53,34 @@ class DevToolTests(unittest.TestCase):
     def test_composition_root_and_http_adapter_are_allowed(self):
         result = self.lint_imports()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIn("6 kept, 0 broken", result.stdout)
+        self.assertIn("4 kept, 0 broken", result.stdout)
 
-    def test_player_adapters_cannot_import_an_executor_directly_or_indirectly(self):
-        for source in ("mission_client", "player_tools", "player_mcp"):
-            for target in ("controller", "server", "mission_runtime", "native_process", "__main__"):
-                with self.subTest(source=source, target=target):
-                    self.write(source + ".py", f"from . import {target}\n")
-                    try:
-                        self.assert_broken(self.lint_imports(), "harness." + source, "harness." + target)
-                    finally:
-                        self.write(source + ".py", "")
-        self.write("mission_client.py", "from . import helper\n")
-        self.write("helper.py", "from . import mission_runtime\n")
-        self.assert_broken(self.lint_imports(), "harness.mission_client", "harness.helper")
+    def test_player_adapters_cannot_acquire_executor_directly_or_indirectly(self):
+        for source in ("player_client", "player_tools", "player_mcp"):
+            self.write(source+".py", "from .computer import runtime\n")
+            self.assert_broken(self.lint_imports(), "harness."+source, "harness.computer.runtime")
+            self.write(source+".py", "")
+        self.write("player_client.py", "from . import helper\n")
+        self.write("helper.py", "from .computer import launch\n")
+        self.assert_broken(self.lint_imports(), "harness.player_client", "harness.helper")
 
-    def test_shared_memory_cannot_acquire_mission_binding_indirectly(self):
-        self.write("gameplay/campaign_memory.py", "from . import helper\n")
-        self.write("gameplay/helper.py", "from . import mission_ledger\n")
-        self.assert_broken(self.lint_imports(), "harness.gameplay.campaign_memory", "harness.gameplay.mission_ledger")
+    def test_player_logic_cannot_acquire_custody_or_network(self):
+        for module in ("harness.computer.runtime", "harness.computer.store", "subprocess", "socket", "tools"):
+            self.write("player/memory.py", f"import {module}\n")
+            self.assert_broken(self.lint_imports(), "harness.player")
 
-    def test_movement_policy_cannot_acquire_io_or_gameplay_dependencies(self):
-        for module in ("harness.controller", "harness.gameplay.evidence", "time", "pathlib", "os"):
-            with self.subTest(module=module):
-                self.write("movement.py", f"import {module}\n")
-                self.assert_broken(self.lint_imports(), "harness.movement")
-
-    def test_gameplay_evidence_cannot_dispatch_or_launch_tools(self):
-        for module in ("harness.controller", "harness.server", "harness.__main__",
-                       "http.client", "urllib.request", "socket", "subprocess", "tools"):
-            with self.subTest(module=module):
-                self.write("gameplay/evidence.py", f"import {module}\n")
-                self.assert_broken(self.lint_imports(), "harness.gameplay")
-
-    def test_direct_controller_dependencies_are_forbidden(self):
-        for module in ("harness.server", "harness.__main__", "http.client", "urllib.request",
-                       "socket", "tools", "subprocess", "argparse"):
-            with self.subTest(module=module):
-                self.write("controller.py", f"import {module}\n")
-                self.assert_broken(self.lint_imports(), "harness.controller", module.split(".")[0])
-
-    def test_indirect_controller_dependencies_are_forbidden(self):
-        self.write("controller.py", "from . import helper\n")
-        for module in ("harness.server", "http.client", "tools"):
-            with self.subTest(module=module):
-                self.write("helper.py", f"import {module}\n")
-                self.assert_broken(self.lint_imports(), "harness.controller", "harness.helper")
+    def test_computer_cannot_acquire_semantics_or_adapters(self):
+        for module in ("harness.player.memory", "harness.application", "harness.player_client", "harness.server", "tools"):
+            self.write("computer/runtime.py", f"import {module}\n")
+            self.assert_broken(self.lint_imports(), "harness.computer")
 
     def test_server_cannot_depend_on_cli_or_tooling(self):
         for module in ("harness.__main__", "tools"):
-            with self.subTest(module=module):
-                self.write("server.py", f"import {module}\n")
-                self.assert_broken(self.lint_imports(), "harness.server")
+            self.write("server.py", f"import {module}\n")
+            self.assert_broken(self.lint_imports(), "harness.server")
 
     def test_ruff_configuration_detects_undefined_name(self):
-        self.write("controller.py", "def value():\n    return unknown_value\n")
+        self.write("computer/runtime.py", "def value():\n    return unknown_value\n")
         result = subprocess.run(
             [sys.executable, "-m", "ruff", "check", "--config", "pyproject.toml",
              "--no-cache", "harness"], cwd=self.root, capture_output=True, text=True, timeout=30)
@@ -156,19 +121,9 @@ class DevToolTests(unittest.TestCase):
         return result, executed, output.getvalue()
 
     def test_profiles_keep_exact_test_scope_and_strict_common_checks(self):
-        smoke_cases = [
-            "tests/test_gameplay_contracts.py", "tests/test_gameplay_evidence.py",
-            "tests/test_mission_request_producer.py",
-            "tests/test_mission_ledger.py::LedgerTests::test_measured_counts_use_cumulative_rows_and_preserve_unknowns_across_reopen",
-            "tests/test_mission_ledger.py::LedgerTests::test_read_only_or_unadmitted_request_cannot_become_input",
-            "tests/test_mission_ledger.py::LedgerTests::test_terminal_mission_cannot_restart_or_overwrite_result",
-            "tests/test_mission_http.py::MissionHTTPTests::test_semantic_navigation_context_memory_and_single_ingress",
-        ]
-        components = {
-            "movement": ["tests/test_movement.py", "tests/test_controller.py", "tests/test_navigation.py",
-                         "tests/test_gameplay_skills.py", "tests/test_gameplay_supervisor.py", *smoke_cases],
-            "viewer": ["tests/test_server.py", *smoke_cases],
-        }
+        smoke_cases = ["tests/test_computer_protocol.py", "tests/test_computer_runtime.py",
+                       "tests/test_player_application.py", "tests/test_server.py"]
+        components = {"viewer": ["tests/test_cli.py", *smoke_cases]}
         for arguments, profile in ((["--fast"], "fast"), ([], "full"),
                 *((["--profile", name], name) for name in ("full", "editorial", "main-smoke", *components))):
             with self.subTest(arguments=arguments):
@@ -191,7 +146,7 @@ class DevToolTests(unittest.TestCase):
                 self.assertEqual(governance_commands, [[sys.executable, "tools/governance.py"] +
                                                        (["--development"] if profile == "fast" else [])])
                 self.assertIn([sys.executable, "-m", "ruff", "check", "--config", "pyproject.toml",
-                               "harness", "tools", "tests", "experiments"], executed)
+                               "harness", "tools", "tests"], executed)
                 self.assertIn([str(Path(sys.executable).parent / "lint-imports"), "--config",
                                "pyproject.toml", "--no-cache", "--no-logo"], executed)
                 self.assertIn(["/fixture/node", "--check", "--input-type=module"], executed)
@@ -213,7 +168,7 @@ class DevToolTests(unittest.TestCase):
             commands.assert_not_called()
 
     def test_selected_command_failures_propagate_without_success_report(self):
-        for profile in ("full", "editorial", "main-smoke", "movement", "viewer"):
+        for profile in ("full", "editorial", "main-smoke", "viewer"):
             _, expected, _ = self.checker_commands(["--profile", profile])
             for command in expected:
                 with self.subTest(profile=profile, command=command):
@@ -237,9 +192,9 @@ class DevToolTests(unittest.TestCase):
         self.assertIn("Command elapsed: 2.50s", output.getvalue())
 
     def test_all_profiles_reject_invalid_python_before_reporting_success(self):
-        self.write("controller.py", "def broken(:\n")
+        self.write("computer/runtime.py", "def broken(:\n")
         for arguments in (["--fast"], [], ["--profile", "editorial"], ["--profile", "main-smoke"],
-                          ["--profile", "movement"], ["--profile", "viewer"]):
+                          ["--profile", "viewer"]):
             output = io.StringIO()
             with self.subTest(arguments=arguments), patch.object(check, "ROOT", self.root), \
                     patch.object(check, "run") as commands, redirect_stdout(output), self.assertRaises(SyntaxError):
@@ -249,7 +204,7 @@ class DevToolTests(unittest.TestCase):
 
     def test_all_profiles_reject_broken_document_links_before_reporting_success(self):
         for arguments in (["--fast"], [], ["--profile", "editorial"], ["--profile", "main-smoke"],
-                          ["--profile", "movement"], ["--profile", "viewer"]):
+                          ["--profile", "viewer"]):
             output = io.StringIO()
             with self.subTest(arguments=arguments), patch.object(check, "ROOT", self.root), \
                     patch.object(check, "check_documents", return_value=["Broken local link"]), \

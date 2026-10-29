@@ -1,24 +1,11 @@
 ---
-title: Current operator recovery — engine confirmation and retained uncertainty
+title: Current native manual recovery after permanent stop
 ---
 flowchart TB
-  accTitle: Current operator recovery for native CDDA
-  accDescr: The public spectator, CLI and Python operator interfaces first pause new gameplay. A request at a supported activity poll opens the engine confirmation, which the operator answers against its exact frame. A raw debug prompt can instead receive one explicitly requested Space. Unsupported or uncertain outcomes retain native fallback. Every path requires observation and reconciliation, and only normal play or a supported menu permits explicit resume. No path automatically resumes gameplay or proves task success.
-  P["Operator pauses\nRevoke new gameplay"]
-  A["Request activity interruption\nAt supported engine poll"]
-  Q["CDDA confirmation\nOperator answers exact prompt"]
-  D["Visible debug prompt\nOperator requests one Space"]
-  U["Unsupported or unknown\nKeep paused; native fallback"]
-  O["Observe and reconcile\nPreserve original action outcome"]
-  R["Normal play or supported menu\nOperator may explicitly resume"]
-  P -->|Activity still running| A
-  A -->|Engine asks| Q
-  A -->|No eligible boundary or deadline| U
-  P -->|Specific error frame| D
-  Q -->|YES or NO delivered| O
-  D -->|Dismissal delivered| O
-  Q -->|Uncertain result| U
-  D -->|Uncertain result| U
-  U -->|Native recovery when needed| O
-  O -->|Still blocked or unresolved| U
-  O -->|Fresh eligible boundary| R
+  accTitle: Current native manual recovery after permanent stop
+  accDescr: The harness supplies no activity, menu or debug recovery handler. Pause permanently stops automation but cannot undo events or cancel every game activity. The user may recover the application with native controls; this intervention and its uncertainty remain recorded.
+P["Independent permanent Pause"] --> S["No further automation<br/>Original receipts retained"]
+  S --> N["Operator uses ordinary native controls<br/>Interpret and interrupt if needed"]
+  N --> V["Observe actual effects<br/>Record intervention and uncertainty"]
+  V --> E["Save or exit if appropriate<br/>No harness success or save certification"]
+  E --> C["Exact owned cleanup and absence evidence"]

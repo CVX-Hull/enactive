@@ -1,10 +1,17 @@
 ---
 owner: lead
-status: proposed
+status: historical
+date: 2026-10-29
+scope: Pre-cutover background archived on this date; not current executable policy or new research qualification
 review_trigger: Before memory or learning implementation; new relevant evidence, model or observer changes, false-memory incidents; active research review under issue 26
 ---
 
 # Gameplay memory and learning from experience
+
+This is retained pre-cutover design/research evidence. Its old executable routes and
+semantic authority are retired. The [current computer/player contract](contracts/computer-control.md) owns implemented behavior;
+this page supplies background, not current operating instructions.
+
 
 Research cutoff: **2026-10-18**. This is an evidence review and discussion proposal,
 not an implemented contract or a commitment to training. The current
@@ -40,7 +47,7 @@ silently expand its scope or change the live GitHub priorities.
 
 ## What exists, and what is missing
 
-The implemented [TaskMemory](../harness/gameplay/memory.py) is passive, bounded,
+The implemented [TaskMemory](https://github.com/CVX-Hull/enactive/blob/433ed973afe312d03f777d8b102a0cba528af746/harness/gameplay/memory.py) is passive, bounded,
 in-process and scoped to one immutable task and EvidenceStore. It distinguishes
 source facts, interpretations, hypotheses, plans, procedure references and action
 outcomes. Source disputes invalidate dependent records; snapshots are explicitly

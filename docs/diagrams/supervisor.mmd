@@ -1,9 +1,9 @@
 ---
-title: Passive supervision — decisions, feedback and stops
+title: Historical supervisor design - superseded
 ---
 flowchart TD
-  accTitle: How a waypoint task plans, verifies and stops
-  accDescr: One explicit task retains its original route and budgets. An injected planner supplies a bound candidate. The supervisor offers one passive intent and waits for a correlated result. Verified outbound completion requires fresh return planning. Pause invalidates the epoch; unknown effects remain unresolved. The runtime adapter owns the actual controller lease and native receipt mapping.
+  accTitle: Historical design - How a waypoint task plans, verifies and stops
+  accDescr: Historical diagram retained for earlier reports and proposals. The current production replacement is the basic computer and player contract; these semantic components are not current runtime instructions. One explicit task retains its original route and budgets. An injected planner supplies a bound candidate. The supervisor offers one passive intent and waits for a correlated result. Verified outbound completion requires fresh return planning. Pause invalidates the epoch; unknown effects remain unresolved. The runtime adapter owns the actual controller lease and native receipt mapping.
   T[Explicit task and retained original evidence] --> P[Plan remaining leg]
   P -->|Exact current candidate| S[Check route, evidence and budgets]
   S -->|One passive intent| I[Wait for correlated result]

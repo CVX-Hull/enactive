@@ -1,0 +1,734 @@
+{
+  "scope": "Selected original production cutover evidence; no authority, source history service or game verdict. Private complete packages remain project-local.",
+  "native": {
+    "upstream_commit": "7b2efa5cea38e4d4d97dd0e63b28b9148623da59",
+    "game_sha256": "0a5649cfb19e7d36d08580f7c88defb2a7c48c94f7b1d2368c051e7ca4e866b8",
+    "adapter_sha256": "77313b1e82aa0b7d4e4b2fe536f77d605c5f2efe76494f2250fe4e2f8b4978df",
+    "build_source_commit": "851e16d3182cbf91ac412eaa5b7292d9560ec51c",
+    "build_source_dirty": true,
+    "build_inputs_match_current": true,
+    "build_inputs": {
+      "tools/build_computer.py": "2e703ce93e70eea36cb00db04e90c41c5de4ab0b742744bddbae2c9aa613031b",
+      "harness/computer/native/bridge.mm": "ee28b88f579273fe10ef35dcf728bbb7fc7a9395185404ee7ff10841570b524b",
+      "harness/computer/native/fixture.cpp": "61a0caefe6ea87c4484f3bd0b6d34be95abc38e7abfa2a5d5aabf4d134fbf394"
+    }
+  },
+  "cases": [
+    {
+      "case": "cutover176-organic001",
+      "session": "64494fd164bf46f6a54d53c2fbff7bf3",
+      "source_commit": "77cd12458ce70d0847e0e18a4ab70db18f357f5f",
+      "manifest_sha256": "1288ba381de22e5c060dedd1d2ccc8edc1bc62582e317e96a753bcd1a6e92209",
+      "receipt_sha256": "37c3a53653af8d4d40dcb7727c1812d17bd9f8116a39d0b7e26f77a692797aad",
+      "route_sha256": "354061e34679cdbad87c035d254babee0bcb1c5446dd9c16aa6ba55fb66afe9c",
+      "provider_route": {
+        "only": [
+          "fireworks/us"
+        ],
+        "order": [
+          "fireworks/us"
+        ],
+        "allow_fallbacks": false,
+        "require_parameters": true
+      },
+      "attempts_charged": 1,
+      "configured_estimate_usd": 0,
+      "missing_usage_attempts": 1,
+      "elapsed_seconds": 3.7165980404242873,
+      "custodian_outcome": "incomplete",
+      "normal_native_exit_zero": false,
+      "all_owned_groups_absent": true,
+      "host_traces": [
+        {
+          "actor": "001",
+          "sha256": "54cee1eb3257e30766abe9f67adf89ec8737fca17a81e50424702dedf9ce71ca",
+          "bytes": 5082
+        }
+      ]
+    },
+    {
+      "case": "cutover176-organic002",
+      "session": "1118041fad0645029982efa99526d889",
+      "source_commit": "40ce7e89d618004c13f068c4d4221b894fbdb152",
+      "manifest_sha256": "b0a83f85b52045b9e6f59535b53cb6976824dd94fb98318f12435f30107ff4a7",
+      "receipt_sha256": "060c9d46785dd802a97f3f5146cd6e4b2da320850670eac9bde6fa5325f9d547",
+      "route_sha256": "354061e34679cdbad87c035d254babee0bcb1c5446dd9c16aa6ba55fb66afe9c",
+      "provider_route": {
+        "only": [
+          "fireworks/us"
+        ],
+        "order": [
+          "fireworks/us"
+        ],
+        "allow_fallbacks": false,
+        "require_parameters": true
+      },
+      "attempts_charged": 7,
+      "configured_estimate_usd": 0.007790562000000001,
+      "missing_usage_attempts": 1,
+      "elapsed_seconds": 24.101609165780246,
+      "custodian_outcome": "incomplete",
+      "normal_native_exit_zero": false,
+      "all_owned_groups_absent": true,
+      "host_traces": [
+        {
+          "actor": "001",
+          "sha256": "8eabc8fc304eda3c1ea1eecbbe54019195190d627568a5d3df0824d7a11caa07",
+          "bytes": 36552
+        }
+      ]
+    },
+    {
+      "case": "cutover176-organic003",
+      "session": "5926faf878824f48ba2aa7db31f2935b",
+      "source_commit": "b1e4a87f5216b095e7a2334f5120e93c44ef787b",
+      "manifest_sha256": "2780da6ef08fcb777218c6f24d5c6d10cef6e4179d9dbd73e21de051878e1695",
+      "receipt_sha256": "c68d9704c6f905e55da4c8449abdffb5a198d02f4439a4d36fe63ad8f83d7e73",
+      "route_sha256": "354061e34679cdbad87c035d254babee0bcb1c5446dd9c16aa6ba55fb66afe9c",
+      "provider_route": {
+        "only": [
+          "fireworks/us"
+        ],
+        "order": [
+          "fireworks/us"
+        ],
+        "allow_fallbacks": false,
+        "require_parameters": true
+      },
+      "attempts_charged": 15,
+      "configured_estimate_usd": 0.021447882,
+      "missing_usage_attempts": 3,
+      "elapsed_seconds": 72.17901104129851,
+      "custodian_outcome": "incomplete",
+      "normal_native_exit_zero": false,
+      "all_owned_groups_absent": true,
+      "host_traces": [
+        {
+          "actor": "001",
+          "sha256": "d76bc6ab6e87876ffb7974d9c0631c96e756db6b60d12e4cd8482d7d99a68e25",
+          "bytes": 76076
+        }
+      ]
+    },
+    {
+      "case": "cutover176-organic004",
+      "session": "7a9409573808457490c192392843f710",
+      "source_commit": "3341d0ccf2fcbe2c82aace29b174511ccaa823d3",
+      "manifest_sha256": "4c08972b24c37f5943dac8ea0a85de1cf2c2b9201c4e84e831b5da9ea781a0cb",
+      "receipt_sha256": "79f93afbdb6b54cda7ec3ea24d437401788fd25b7c41e2a449c7ea815587da6b",
+      "route_sha256": "e0ecb77f59a7e63778e57d66a2f161b933399b3f292b5a4d3919d8c8be1b398a",
+      "provider_route": {
+        "only": [
+          "baseten"
+        ],
+        "order": [
+          "baseten"
+        ],
+        "allow_fallbacks": false,
+        "require_parameters": true
+      },
+      "attempts_charged": 57,
+      "configured_estimate_usd": 0.454427496,
+      "missing_usage_attempts": 1,
+      "elapsed_seconds": 610.6335311252624,
+      "custodian_outcome": "incomplete",
+      "normal_native_exit_zero": false,
+      "all_owned_groups_absent": true,
+      "host_traces": [
+        {
+          "actor": "001",
+          "sha256": "574f140d552b5d6bc866d4f9a8b14f152b4df08bd0b55533ebcc15f7cb78bf21",
+          "bytes": 388562
+        }
+      ]
+    },
+    {
+      "case": "cutover176-organic005",
+      "session": "8a4e7b800525400485720fa1f7c3303d",
+      "source_commit": "846ac056c2a0eec5ca3e19a3959278f6deac0a2f",
+      "manifest_sha256": "abd0647018d96de571a3b1079ff8f709e3a55a538a4411187e3e8be1e7d00338",
+      "receipt_sha256": "831ebbc7cbfe3cc08362b80c00e4f1c61535146c419cee80f3b0f56c7b76e4cc",
+      "route_sha256": "e0ecb77f59a7e63778e57d66a2f161b933399b3f292b5a4d3919d8c8be1b398a",
+      "provider_route": {
+        "only": [
+          "baseten"
+        ],
+        "order": [
+          "baseten"
+        ],
+        "allow_fallbacks": false,
+        "require_parameters": true
+      },
+      "attempts_charged": 103,
+      "configured_estimate_usd": 1.05652366,
+      "missing_usage_attempts": 1,
+      "elapsed_seconds": 1079.548843415454,
+      "custodian_outcome": "incomplete",
+      "normal_native_exit_zero": false,
+      "all_owned_groups_absent": true,
+      "host_traces": [
+        {
+          "actor": "001",
+          "sha256": "f9211efe59d5656fd30e668870eb59f605e8725301fedeeda94f07fb440398fe",
+          "bytes": 322680
+        },
+        {
+          "actor": "002",
+          "sha256": "2ef1e492b986c9a2b0f13914224f40fa323c00a843f3a8a47907e119c76fc0ca",
+          "bytes": 437828
+        }
+      ]
+    },
+    {
+      "case": "cutover176-organic006",
+      "session": "328a5342d9e2441580a6a53efbe30a2f",
+      "source_commit": "1c669f1f3d04b0e0e118bfa5b6f51546343972cd",
+      "manifest_sha256": "de850312db5ca63d38dcdc1de04e829cc77100b530b5d186698cdb4f4747c8f0",
+      "receipt_sha256": "2d6cfd4f8cf48e6f78935558a610e596fe39f5aaec53dda99c40446ffb7f12bf",
+      "route_sha256": "e2e56708357adbd50ed53fc307ecc76db02ba063d4ae08335af4ed7819d9d53a",
+      "provider_route": {
+        "only": [
+          "baseten"
+        ],
+        "order": [
+          "baseten"
+        ],
+        "allow_fallbacks": false,
+        "require_parameters": true
+      },
+      "attempts_charged": 20,
+      "configured_estimate_usd": 0.034181952,
+      "missing_usage_attempts": 0,
+      "elapsed_seconds": 82.12255695927888,
+      "custodian_outcome": "host_completed_unassessed",
+      "normal_native_exit_zero": true,
+      "all_owned_groups_absent": true,
+      "host_traces": [
+        {
+          "actor": "001",
+          "sha256": "3356eb3f289c9bbd1769184c41445ee16687e41fa980b2226e493d75c2a476f9",
+          "bytes": 115090
+        }
+      ]
+    },
+    {
+      "case": "cutover176-organic007",
+      "session": "a32f37298a3c4f27833380a603cca1e6",
+      "source_commit": "e443151219361c6399bdeaaca333690b8adf3011",
+      "manifest_sha256": "a93dc753b062573ab64d3932f46899e571498f06a942c9a5b5f018e4a17370a7",
+      "receipt_sha256": "3408b0851306d10da88564fda62a01ed4762dfc9e95f7db60770d456a6ed895e",
+      "route_sha256": "3f64cfbd24a6ddd809c1aa6269836c4f4354f96c6b6ab17a76399bf120afc540",
+      "provider_route": {
+        "only": [
+          "baseten"
+        ],
+        "order": [
+          "baseten"
+        ],
+        "allow_fallbacks": false,
+        "require_parameters": true
+      },
+      "attempts_charged": 22,
+      "configured_estimate_usd": 0.016395207999999998,
+      "missing_usage_attempts": 3,
+      "elapsed_seconds": 60.73166275024414,
+      "custodian_outcome": "incomplete",
+      "normal_native_exit_zero": false,
+      "all_owned_groups_absent": true,
+      "host_traces": [
+        {
+          "actor": "001",
+          "sha256": "48cb4c1dfd04436a7d50861916db1108780fce80902da310d129fb49f6ba7eed",
+          "bytes": 117535
+        }
+      ]
+    },
+    {
+      "case": "cutover176-organic008",
+      "session": "295685a195474064820b7784afb3f4b2",
+      "source_commit": "7f496cb01af278a4b20cd344f9cf92db23b918ae",
+      "manifest_sha256": "eedccbfaf736f5202cebfda25b722e4ce1b4bd1731e98497106ca5af2c55e945",
+      "receipt_sha256": "68b432e3a43fabfb9e5f347f38e0737a60361431f74269130b3132e90661dfc1",
+      "route_sha256": "6a7f29b2ed7384d5f9531b5a3289dcc0b32753cbfbc449e2d882273dd6c185fe",
+      "provider_route": {
+        "only": [
+          "deepinfra/fp8"
+        ],
+        "order": [
+          "deepinfra/fp8"
+        ],
+        "allow_fallbacks": false,
+        "require_parameters": true
+      },
+      "attempts_charged": 17,
+      "configured_estimate_usd": 0.00795927776,
+      "missing_usage_attempts": 0,
+      "elapsed_seconds": 144.3012096658349,
+      "custodian_outcome": "host_completed_unassessed",
+      "normal_native_exit_zero": true,
+      "all_owned_groups_absent": true,
+      "host_traces": [
+        {
+          "actor": "001",
+          "sha256": "b0655120e52a13591c6a50b28cbd88fa0f28320bb37ef8f17fe517b3aae0c33f",
+          "bytes": 102166
+        }
+      ]
+    }
+  ],
+  "selected_pngs": [
+    {
+      "file": "handed-off-food.png",
+      "case": "cutover176-organic005",
+      "source_id": "8a4e7b800525400485720fa1f7c3303d-2588",
+      "bytes": 81689,
+      "sha256": "854b05d4ec3f36702ba8b9494f58178d8d0ffb3d5c6a69527ad3d1d854bf9c86"
+    },
+    {
+      "file": "program-darkness-limit.png",
+      "case": "cutover176-organic005",
+      "source_id": "8a4e7b800525400485720fa1f7c3303d-2818",
+      "bytes": 122910,
+      "sha256": "921ccd258c21256e2170d04619835fded4c59d3d25c8484f7dda6ca981e340dc"
+    },
+    {
+      "file": "fresh-child-alex.png",
+      "case": "cutover176-organic007",
+      "source_id": "a32f37298a3c4f27833380a603cca1e6-220",
+      "bytes": 130073,
+      "sha256": "8d6b9eb68bb4e3d5d8bf49cf371c81b05eb8f3bc4fd7a244a0ebe3d30370f596"
+    },
+    {
+      "file": "final-save-to-menu.png",
+      "case": "cutover176-organic008",
+      "source_id": "295685a195474064820b7784afb3f4b2-1158",
+      "bytes": 33571,
+      "sha256": "15c4d0d5c4b770d3fae11ef7d07f4ae5b78ed1b4e99684f066e927ea7957ed99"
+    }
+  ],
+  "organic005": {
+    "host_scope": "Diagnostic host intervals and reported tokens; not server inference, attention, useful-goal latency or readiness",
+    "actors": [
+      {
+        "actor": "1",
+        "timing_ms": {
+          "first_body": {
+            "max": 5246.199584000045,
+            "n": 45,
+            "p50": 2672.056666999997,
+            "p95": 4973.323917000031,
+            "sum": 115555.42583400001
+          },
+          "first_content": {
+            "max": 30338.265,
+            "n": 44,
+            "p50": 5198.785749500004,
+            "p95": 17520.655542000022,
+            "sum": 311640.96525400004
+          },
+          "first_reasoning": {
+            "max": 5246.276417000045,
+            "n": 44,
+            "p50": 2672.1582915000035,
+            "p95": 4973.471292000031,
+            "sum": 114256.46195900018
+          },
+          "first_tool_argument": {
+            "max": 34065.02733299999,
+            "n": 45,
+            "p50": 7155.980708999996,
+            "p95": 17908.882625000027,
+            "sum": 365079.545501
+          },
+          "headers": {
+            "max": 5245.794916999992,
+            "n": 45,
+            "p50": 2671.6842920000054,
+            "p95": 4972.669875000021,
+            "sum": 115372.7988760001
+          },
+          "host_inspection": {
+            "max": 9.086624999996275,
+            "n": 45,
+            "p50": 4.6389170000038575,
+            "p95": 8.506667000008747,
+            "sum": 193.5508310000984
+          },
+          "max_body_gap": {
+            "max": 550.9736249999842,
+            "n": 45,
+            "p50": 361.6123750000006,
+            "p95": 520.1560409999802,
+            "sum": 15419.092876999846
+          },
+          "max_semantic_gap": {
+            "max": 5227.78033400001,
+            "n": 45,
+            "p50": 361.58929200000057,
+            "p95": 4097.502500000002,
+            "sum": 41454.65604099991
+          },
+          "sdk_after_payload": {
+            "max": 18.49687500001164,
+            "n": 45,
+            "p50": 7.711584000004223,
+            "p95": 17.880582999961916,
+            "sum": 360.4635439999756
+          }
+        },
+        "usage": {
+          "cacheRead": {
+            "max": 99840,
+            "n": 45,
+            "p50": 34304,
+            "p95": 89600,
+            "sum": 1765376
+          },
+          "cacheWrite": {
+            "max": 0,
+            "n": 45,
+            "p50": 0,
+            "p95": 0,
+            "sum": 0
+          },
+          "input": {
+            "max": 90037,
+            "n": 45,
+            "p50": 3685,
+            "p95": 89194,
+            "sum": 517226
+          },
+          "output": {
+            "max": 5902,
+            "n": 45,
+            "p50": 955,
+            "p95": 2789,
+            "sum": 51184
+          },
+          "reasoning": {
+            "max": 5057,
+            "n": 45,
+            "p50": 475,
+            "p95": 2671,
+            "sum": 38022
+          }
+        },
+        "context": {
+          "input_images": {
+            "max": 34,
+            "n": 45,
+            "p50": 21,
+            "p95": 34,
+            "sum": 836
+          },
+          "omitted_images": {
+            "max": 4,
+            "n": 45,
+            "p50": 0,
+            "p95": 4,
+            "sum": 18
+          },
+          "projection_ms": {
+            "max": 2.8148330000112765,
+            "n": 45,
+            "p50": 1.002875000005588,
+            "p95": 2.4047910000081174,
+            "sum": 44.068955999835055
+          },
+          "retained_images": {
+            "max": 30,
+            "n": 45,
+            "p50": 21,
+            "p95": 30,
+            "sum": 818
+          }
+        },
+        "event_output": {
+          "backpressure_signals": 0,
+          "bytes": 322322,
+          "callback_ms": 18.48917300002995,
+          "enqueue_ms": 15.672708999714871,
+          "events": 499,
+          "json_ms": 2.042876000677637,
+          "max_callback_ms": 0.30600000000004
+        }
+      },
+      {
+        "actor": "2",
+        "timing_ms": {
+          "first_body": {
+            "max": 10717.639000000025,
+            "n": 58,
+            "p50": 4089.304999999993,
+            "p95": 7032.356333000003,
+            "sum": 215159.68796200037
+          },
+          "first_content": {
+            "max": 39778.34154200001,
+            "n": 57,
+            "p50": 8884.282624999993,
+            "p95": 25390.709417000005,
+            "sum": 629862.9974200001
+          },
+          "first_reasoning": {
+            "max": 13208.517500000016,
+            "n": 57,
+            "p50": 4124.445166999998,
+            "p95": 7032.4243750000605,
+            "sum": 216605.42550300024
+          },
+          "first_tool_argument": {
+            "max": 40084.140292000026,
+            "n": 57,
+            "p50": 9625.067124999943,
+            "p95": 25822.78566699999,
+            "sum": 659073.497421
+          },
+          "headers": {
+            "max": 10299.459541000018,
+            "n": 58,
+            "p50": 4077.210020999977,
+            "p95": 7032.043125000084,
+            "sum": 213789.99687500022
+          },
+          "host_inspection": {
+            "max": 6.824625000008382,
+            "n": 58,
+            "p50": 5.324957999982871,
+            "p95": 6.770207999972627,
+            "sum": 256.81979099991946
+          },
+          "max_body_gap": {
+            "max": 614.0227500000037,
+            "n": 58,
+            "p50": 301.6008955000434,
+            "p95": 563.3676670000423,
+            "sum": 18403.89504500022
+          },
+          "max_semantic_gap": {
+            "max": 1907.2134170000209,
+            "n": 58,
+            "p50": 301.63385400001425,
+            "p95": 614.0712500000373,
+            "sum": 21001.65725400018
+          },
+          "sdk_after_payload": {
+            "max": 13.714042000006884,
+            "n": 58,
+            "p50": 10.022312500019325,
+            "p95": 12.542625000001863,
+            "sum": 473.39412400016636
+          }
+        },
+        "usage": {
+          "cacheRead": {
+            "max": 100608,
+            "n": 57,
+            "p50": 56320,
+            "p95": 86784,
+            "sum": 3125504
+          },
+          "cacheWrite": {
+            "max": 0,
+            "n": 57,
+            "p50": 0,
+            "p95": 0,
+            "sum": 0
+          },
+          "input": {
+            "max": 95122,
+            "n": 57,
+            "p50": 13003,
+            "p95": 92401,
+            "sum": 2313791
+          },
+          "output": {
+            "max": 7242,
+            "n": 57,
+            "p50": 1195,
+            "p95": 4279,
+            "sum": 92968
+          },
+          "reasoning": {
+            "max": 7139,
+            "n": 57,
+            "p50": 999,
+            "p95": 4085,
+            "sum": 84233
+          }
+        },
+        "context": {
+          "input_images": {
+            "max": 57,
+            "n": 58,
+            "p50": 28.5,
+            "p95": 55,
+            "sum": 1656
+          },
+          "omitted_images": {
+            "max": 27,
+            "n": 58,
+            "p50": 0.0,
+            "p95": 25,
+            "sum": 378
+          },
+          "projection_ms": {
+            "max": 3.1870420000050217,
+            "n": 58,
+            "p50": 1.2240415000123903,
+            "p95": 3.154166999971494,
+            "sum": 82.83612699991079
+          },
+          "retained_images": {
+            "max": 30,
+            "n": 58,
+            "p50": 28.5,
+            "p95": 30,
+            "sum": 1278
+          }
+        },
+        "event_output": {
+          "backpressure_signals": 0,
+          "bytes": 437459,
+          "callback_ms": 31.631286000895727,
+          "enqueue_ms": 27.729288000447838,
+          "events": 641,
+          "json_ms": 2.827797999624096,
+          "max_callback_ms": 0.5227080000040587
+        }
+      }
+    ],
+    "control_scope": "Original mechanical operation/native timing and separate later collections; no game effect, Save, goal quality or useful apparent latency verdict",
+    "native_timing_ms": {
+      "intent_to_receipt": {
+        "max": 369.18399948626757,
+        "n": 390,
+        "p50": 25.078709237277508,
+        "p95": 351.19570791721344,
+        "sum": 42907.234764657915
+      },
+      "intent_to_send": {
+        "max": 1.2114578858017921,
+        "n": 390,
+        "p50": 0.07445830851793289,
+        "p95": 0.187041237950325,
+        "sum": 37.77339030057192
+      },
+      "send": {
+        "max": 0.08029118180274963,
+        "n": 390,
+        "p50": 0.0160830095410347,
+        "p95": 0.04129204899072647,
+        "sum": 7.371188141405582
+      },
+      "send_to_receipt": {
+        "max": 369.0945403650403,
+        "n": 390,
+        "p50": 25.01889644190669,
+        "p95": 351.1448325589299,
+        "sum": 42869.46137435734
+      }
+    }
+  },
+  "selected_generation_metadata": {
+    "retrieved_utc": "2026-10-29T18:00:03.403296+00:00",
+    "read_only_gets": 5,
+    "samples": [
+      {
+        "case": "cutover176-organic005",
+        "actor": "001",
+        "request_id": "request-45",
+        "metadata": {
+          "provider_name": "BaseTen",
+          "model": "deepseek/deepseek-v4.1-flash-20261017",
+          "service_tier": null,
+          "latency": 3080,
+          "generation_time": 10371,
+          "native_tokens_prompt": 106051,
+          "native_tokens_cached": 99840,
+          "native_tokens_completion": 1590,
+          "native_tokens_reasoning": 583,
+          "num_fetches": null,
+          "finish_reason": "tool_calls",
+          "streamed": true
+        }
+      },
+      {
+        "case": "cutover176-organic005",
+        "actor": "002",
+        "request_id": "request-57",
+        "metadata": {
+          "provider_name": "BaseTen",
+          "model": "deepseek/deepseek-v4.1-flash-20261017",
+          "service_tier": null,
+          "latency": 4215,
+          "generation_time": 14598,
+          "native_tokens_prompt": 167691,
+          "native_tokens_cached": 77568,
+          "native_tokens_completion": 2274,
+          "native_tokens_reasoning": 2120,
+          "num_fetches": null,
+          "finish_reason": "tool_calls",
+          "streamed": true
+        }
+      },
+      {
+        "case": "cutover176-organic006",
+        "actor": "001",
+        "request_id": "request-20",
+        "metadata": {
+          "provider_name": "BaseTen",
+          "model": "deepseek/deepseek-v4.1-flash-20261017",
+          "service_tier": null,
+          "latency": 1681,
+          "generation_time": 6348,
+          "native_tokens_prompt": 29454,
+          "native_tokens_cached": 24576,
+          "native_tokens_completion": 977,
+          "native_tokens_reasoning": 27,
+          "num_fetches": null,
+          "finish_reason": "stop",
+          "streamed": true
+        }
+      },
+      {
+        "case": "cutover176-organic007",
+        "actor": "001",
+        "request_id": "request-20",
+        "metadata": {
+          "provider_name": "BaseTen",
+          "model": "deepseek/deepseek-v4.1-flash-20261017",
+          "service_tier": null,
+          "latency": 1724,
+          "generation_time": 2805,
+          "native_tokens_prompt": 25780,
+          "native_tokens_cached": 23296,
+          "native_tokens_completion": 250,
+          "native_tokens_reasoning": 135,
+          "num_fetches": null,
+          "finish_reason": "tool_calls",
+          "streamed": true
+        }
+      },
+      {
+        "case": "cutover176-organic008",
+        "actor": "001",
+        "request_id": "request-17",
+        "metadata": {
+          "provider_name": "DeepInfra",
+          "model": "deepseek/deepseek-v4.1-flash-20261017",
+          "service_tier": "default",
+          "latency": 1085,
+          "generation_time": 21260,
+          "native_tokens_prompt": 24786,
+          "native_tokens_cached": 24320,
+          "native_tokens_completion": 1914,
+          "native_tokens_reasoning": 1049,
+          "num_fetches": null,
+          "finish_reason": "stop",
+          "streamed": true
+        }
+      }
+    ]
+  }
+}

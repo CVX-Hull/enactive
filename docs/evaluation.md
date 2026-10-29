@@ -1,384 +1,86 @@
 ---
-owner: maintainer
-review_trigger: Evaluation schema, caller, scenario protocol or accounting changes
+owner: lead
+review_trigger: Telemetry, source/store readers, clocks or outcome assessment changes
 status: active
 ---
 
 # Record and review gameplay measurements
 
-The passive recorder measures explicitly supplied observations; it does not run
-the game, call a model or judge success. Future planner/skill adapters must record
-their actual calls and outcomes. Closed Codex host traces now supply scoped
-response-token and tool-call/gap evidence; isolated inference, hidden approval
-telemetry and full event-to-useful-effect latency remain unavailable where not
-explicitly instrumented. An empty call list does not establish zero total cost.
-
-The [passive supervisor](contracts/movement-skills.md#passive-waypoint-supervision) exposes bounded
-action/decision events and the original planner port's accounting snapshot. Merge
-one snapshot at the chosen cutoff, then record its events once in elapsed-time
-order. The caller and independent assessor still supply manifest, final outcome,
-usefulness and harm judgments. Fixture events must remain labeled synthetic;
-an eligible intent never proves native dispatch or model effectiveness.
-
-The [round brief](changes/007-recovery-evaluation-monitoring.md#waypoint-experiment-protocol)
-owns the predeclared waypoint families, development/held-out split, repeats,
-budgets and pilot decision thresholds for #24. No live model comparison is claimed
-by this tooling. Change that protocol before collecting affected outcomes, with a
-recorded reason; do not tune thresholds after seeing results.
+Measure whole apparent useful-goal latency and behavior through real organic play.
+Provider speed, tool delivery and DOM timing explain portions of the path; none
+certifies useful progress. Freeze goals/configuration/resources before each finite
+attempt, retain failures, and have an independent assessor review actual images
+and original operation/source references. Starting inventory is not acquisition;
+menu Save is not application exit; a local routine's done is not game success.
 
 ## Pi host events
 
-The mandatory [generic Pi host](components/player-interface.md) writes JSONL into the
-driver's existing `driver-<role>.jsonl`. Each event has `wall_time` and
-`monotonic_ms`; request and tool IDs correlate host phases, while complete tool
-results retain the existing mission operation/source references. The host does
-not create another mission ledger or treat a JSON-RPC ID as durable operation
-identity. Missing clock joins remain unknown.
+Current `pi-player-host/4` uses telemetry version2, one JSONL trace per actor at
+`actors/NNN/host.jsonl`. Original request/tool IDs, wall and monotonic timestamps
+correlate request construction, fetch, headers, first body, completed response,
+provider refusal, tools and settlement. Exact payload SHA256/byte and image counts
+replace persisted request bodies. Image telemetry stores digest/size references;
+bounded ordinary assistant narration remains available. Private reasoning and
+base64 history are excluded from telemetry without altering the actual model input.
 
-| Event | Observation and limit |
-| --- | --- |
-| `host-start`, `mcp-connected` | Frozen route/effort, unsupported features, missing endpoints and owned MCP PID; not actual provider/model competence or game authority. |
-| `context-image-projection` | Frozen image allowance, input/protected/retained/omitted counts and bounded omission provenance before serialization. Historical omission is explicit, not a reread or authority. Original MCP evidence stays complete. An oversized current group blocks before the next provider request; this event grants no inference, attention or latency credit. |
-| `request-start` | Constructed provider payload sizes, text/image counts, host request identity and the complete JSON request body in `payload`, including schemas and forwarded assistant/tool history and images. Begins at the selected SDK request boundary, not the user's decision or server inference. |
-| `response-headers`, `response-first-chunk` | HTTP status and first received response-body chunk observed locally; either can precede useful content and neither timestamp isolates queue/inference time. |
-| `response-service-tier` | Known applied-tier value echoed in a parsed provider stream event, once per value per HTTP attempt. Missing/unsupported values remain unknown; compare with `host-start.requested_service_tier`. This is serving metadata, not authority, billing proof or useful-latency evidence. |
-| `response-backend` | Model identifier reported by a parsed provider event; an absent or alias-only identifier does not establish an immutable backend version. |
-| `response-complete` | Completed SDK response's stop reason and returned usage/model metadata; successful response receipt is not successful gameplay. Missing input/output counts mean `usage_available:false`, `usage:null` and unknown cost. Reported counts enable normalized usage; `cost_source` distinguishes provider totals from configured-rate estimates. |
-| `tool-start`, `tool-result` | Actual MCP call arguments and complete returned text/image/error envelope; retain original collection on uncertainty. This is tool service/transport evidence, not native effect or physical display. |
-| `tool-refused` | A zero-dispatch argument-normalization refusal; the model may make an explicit corrected call, without software repairing its original selection. |
-| `abort`, `settled` | Host stop reason, request count and cleanup disposition. `native_cleanup_claimed:false` remains explicit; prompt resolution or an event alone does not qualify normal game ending. |
-
-The raw provider headers, keys and arbitrary provider error text are not retained.
-Request bodies contain the actual frozen context, visible images and forwarded
-reasoning history; keep these traces private with the run evidence. Unforwarded
-intermediate assistant content and failed final text are not retained. Complete
-body retention adds serialization and disk cost; earlier fixture-only event-sink
-measurements do not establish its overhead. Include this cost in live timings.
-There is no automatic compaction in this core host; its absence is disclosed at
-startup rather than measured as a hidden model service. Finite request/host bounds
-and context/provider errors stop without retry or fallback. The explicit frozen
-image-history window preserves current result groups, all text/tool pairing and
-private originals; it declares older omitted pixels rather than silently pruning
-evidence. Actual projected request bodies and projection counts remain inspectable.
-Offline synthetic
-SSE/MCP probes exercise the real SDK and serialization but perform no inference
-or gameplay. Their elapsed/instrumentation measurements are fixture-only costs.
-Live useful-effect/cadence criteria and all-role costs remain unchanged below;
-[#164](https://github.com/CVX-Hull/enactive/issues/164) owns future configuration
-selection through a separately scoped prospective experiment. The closed #236
-pilot retains its actual negative result; mandatory host delivery belongs to
-[#240](https://github.com/CVX-Hull/enactive/issues/240), independently of model selection.
+Returned usage/cache/backend/service-tier metadata remains labelled by source.
+Missing usage is unknown, not zero or an invoice. Every HTTP attempt, including an
+eligible bounded 429 retry, consumes the original allowance. Stable frozen system
+context is reused across actors; variable role, resource and handoff data stays
+explicit in prompts. The host's decision-time budget is distinct from the native
+custodian horizon. Request serialization and context projection have their own
+measured costs; local headers/first bytes do not isolate provider queue or inference.
 
 ## Latency budgets for interactive play
 
-The [responsive-player brief](changes/060-responsive-player.md) records the latest
-closed-host diagnosis, proposed initial numerical targets and configuration
-admission experiment. [S-UX](standards/experience.md#s-ux-understandable-and-controllable-experience)
-requires prospective cadence/quality criteria for new responsiveness claims;
-the slow current arrangement is not qualified. New requirements do not rewrite
-a frozen deciding run's acceptance. A functional run can remain useful evidence
-while failing to qualify responsiveness.
-
-Freeze both the qualification decision and development stopping policy. An
-uninstrumented interval or fewer than the required useful decisions establishes
-no percentile pass; a measured miss rejects the configuration. Neither alone
-requires an otherwise eligible, finite development run to end. Continue only
-within the original coupled forecast, ending deadline and authority/delivery
-constraints under the [development workflow](workflows/development.md#minimum-checks-and-escalation).
-Retain acquisition, repair, slow intervals and failures in total costs. Do not
-relax the numerical targets, retrospectively alter a frozen brief or call a
-seven-day functional result a responsive service without the required evidence.
-
-Native input, skill execution, observer presentation and player reasoning have
-separate clocks. A timeout is a ceiling, not a fixed delay: return immediately
-when the matching acknowledgement arrives. Use one higher-level player decision
-for a bounded semantic skill; the controller observes and guards its primitives
-without a model or approval round trip per key. Retrieve memory at meaningful
-planning/correction/handoff boundaries, not automatically for every primitive.
-
-Qualification 004's 31 returned primitives had a 62.33 ms median, 91.30 ms nearest-rank
-p95 and 95.37 ms maximum **retained preflight-to-ACK interval**. This includes host
-callback/persistence, native input/frame and transport; it is not pure engine or
-end-to-end player latency. Its world-selection ready ACK arrived 7.272 seconds after
-journaled admission, outside the default 5-second wait. The matching acknowledgement
-remains historical; an explicit 15-second setting was chosen prospectively for later
-attempts, within the existing controller limit. Neither changing a ceiling nor
-fast ordinary samples resolves an old unknown or measures all loading cases.
-
-[Qualification006](acceptance/2026-10-20-native-character-lifecycle.md) broadens the
-sample: 66 ordinary returned inputs, excluding world entry, had 120.96 ms median,
-242.11 ms nearest-rank p95 and 508.84 ms maximum. All 67 returns had 242.78 ms p95;
-world entry took 7580.40 ms. UI categories and sample sizes differ from 004, so this
-is not a controlled regression or speedup comparison. No movement was delivered.
-One 15-primitive name batch reached its last receipt in 1.886 seconds, and eight
-inventory arrows in 2.779 seconds from admission. Those are **last-receipt proxies**,
-not settled-result timestamps; model/tool/approval and actual browser decode
-latency remain unknown. Three session/exit ACK timeouts are separate from those
-successful intervals. Whole engineering wall time includes investigation and
-cannot be used as player or engine throughput.
-
-[Qualification007](acceptance/2026-10-20-native-lifecycle-qualified.md) has106returned
-inputs: median101.72ms, nearest-rank p95337.46ms, maximum6716.55ms. Excluding the
-preselected world-entry input leaves105: median100.50ms, p95336.68ms and
-maximum856.24ms. Its four movement steps span156.61–191.63ms (median182.00ms,
-nearest-rank p95=maximum); this is too small a sample for a general claim. A
-known two-step return reached its last receipt767.54ms after admission, a20key
-world-name batch2173ms, and eight inventory-focus arrows4293ms. Those are
-last-receipt proxies; an interpreted-result terminal timestamp is unavailable.
-Six unknown ACKs remain separate, with effects reconciled. Whole1941.5second
-engineering wall time includes unmeasured planning/tool work and is not throughput.
-The broader ordinary p95 exceeds the proposed250ms target. Profile the tails and
-model/tool/display boundaries before choosing faster models or adding infrastructure.
-
-[Native008](acceptance/2026-10-20-confirmation-correction.md) adds 64 returned
-setup/menu/identity intervals: median 77.91 ms, nearest-rank p95 141.60 ms and
-maximum 6393.12 ms, with three unknown ACKs retained separately. This is another
-scope/sample, not a controlled improvement over007. Its 517.49-second deliberate
-qualification does not measure normal-play throughput, model or browser latency.
-
-| Proposed next-campaign target | Measurement / limit |
-| --- | --- |
-| Ordinary movement/menu input p95 ≤250 ms | Original retained preflight-to-terminal ACK intervals; report sample count, rejected/unknown inputs and tails separately |
-| Newly available frame displayed within 500 ms during active play | Native frame/capture to successful browser decode; the active poll now schedules 250 ms after the preceding status response, idle/disconnected 1000 ms. Cadence alone does not prove the target |
-| Small semantic batches complete within a few seconds | Whole request admission to settled outcome; report primitive count and model/approval/tool overhead separately. A 20-key edit's native intervals target ≤5 seconds |
-| Player makes goal/outcome decisions, rather than decisions per key | Compare actual decision boundaries and skill requests; requests are not automatically model-call counts |
-| Loading and long activities have separate finite budgets | Record visible readiness/progress and actual stop/unknowns; do not apply the 250 ms input target or treat a 15-second wait as a universal load guarantee |
-
-These remain proposed component targets, not passing badges or requirements for
-optional model tiers, telemetry frameworks or paid providers. Configuration
-admission also needs useful-progress/stall and quality criteria frozen before its
-experiment. The existing native journals/ledger/archive, closed host traces and
-viewer provide the starting evidence; isolated model time, hidden approval delay
-and complete tool-to-visible-effect cost remain unmeasured where not correlated. #143 owns
-observer latency, #154 integrated timing evidence and #156 prospective setup;
-#145 uses actual mission results before a full campaign. Existing S-UX/S-EVIDENCE
-and native acceptance enforce honest evidence; common tests do not enforce wall
-percentiles. Revisit targets after representative navigation/items/activities and
-fresh-context player measurements, retaining both tails and failures. Reuse CDDA
-travel/activities where qualified before adding an execution framework.
-
-[Fresh019's closed program trace](acceptance/2026-10-24-independent-seven-day-nineteenth-attempt.md#cost-and-responsiveness-evidence)
-separates selected-capture-to-root admission (median7.742s, eight roots) from
-within-program returned-normal capture intervals (median520.5ms,42pairs) and V8
-execution (median0.880ms,58evaluations). These are selected same-host proxies,
-not isolated inference, useful-task/display latency or a causal comparison.
-Measure whether player-authored routines amortize decision gaps across useful
-outcomes while retaining organic surprise/correction, not merely fast evaluation.
-
-The next bounded measurement should correlate existing request/dispatch IDs across
-admission, bridge publication, terminal receipt, semantic settlement, status
-response and successful image decode. Use monotonic intervals within each process;
-browser/server clocks need explicit correlation before subtraction. The controller's
-15 ms receipt polling and viewer's active 250 ms post-response poll are hypotheses
-to profile, not explanations for all delay. Prioritize removing per-key player/tool
-round trips and unnecessary captures or repeated retrieval. Keep per-primitive
-outcome/authority checks; batch decisions rather than blindly batching input.
-Do not add a broker, telemetry service or new model tier without an observed gap.
+Prefer a useful image-conditioned local program when it improves the task, while
+preserving ordinary input fallback. Do not optimize call counts at the cost of
+behavior or hide long reasoning/tool/approval gaps behind token throughput. Report
+model/route/effort, context and image sizes, cache observations, retries, source
+coverage and uncertainty alongside actual useful milestones and elapsed time.
+[#164](https://github.com/CVX-Hull/enactive/issues/164) owns broader cadence
+qualification; this diagnostic tooling cannot accept it automatically.
 
 ### Request settlement clocks
 
-The existing controller journal records `mission_request_settled` with a
-`mission-timing/1` outcome for each original admitted semantic work item, and for
-an explicitly certified no-admission refusal. Cached collection and passive reads
-add no duplicate settlement. The row carries mission/request/epoch/controller-boot
-identity, original ledger admission wall time, process-monotonic receipt/admission/
-settlement endpoints, observed row state, writer-finalization status, mission
-phase, censoring and available source reference. No request body/image is copied.
-
-Receipt is runtime work-handle creation; admission clocks bracket `begin_request`;
-settlement ends after that invocation's post-commit lifecycle/reflection work and
-per-work finally publication/handle cleanup, before timing append overhead. Atomic
-handoff/claim/Observe and Finish share this hook. A completed request row is not
-proof of terminal mission success: Finish may retain its report while withholding
-terminal persistence. Unknown/canceled/failed outcomes retain their actual state;
-missing events do not imply zero cost or no admission.
-
-`request_timing_summary` in the existing passive evaluation module projects the
-same-boot runtime, queue, admission and post-admission service intervals. Supply
-expected durable request IDs to expose absent endpoints. Duplicate settlements
-are censored; missing/invalid clocks and observed wall regression remain explicit.
-Wall correspondence is otherwise unassessed. The wall anchor is bracketed by two
-monotonic samples; do not subtract unrelated process/host clocks or assume a
-constant wall offset. Source/frame joins still need their exact retained records.
-
-These machine-only events are excluded from recent status/UI and default player
-context. The existing journal writer is reused, with no per-primitive event,
-second store or timing service. A timing-only append failure is logged as a
-missing sample without changing the committed operation; required domain
-persistence failures retain their guards. Measure append overhead separately.
-This addition does not retrospectively fill Fresh024's missing endpoints, identify
-model inference, establish physical paint or qualify useful whole-player cadence.
-
-For the next assessment, freeze the useful-decision cohort before play under the
-linked responsiveness criteria. Members are independently meaningful, source-backed
-goal/outcome choices in familiar normal play; keys, procedure invocations and
-program termination are not automatically members. A correction chain retains
-the original decision's start and all repair costs through verified useful effect.
-Loading, long activities and novel deliberation have separately declared finite
-cohorts; none disappears from whole-run accounting. Missing endpoints or too few
-evaluable useful decisions cannot produce a percentile pass. Do not manufacture
-extra decisions by splitting a journey or replaying filler actions.
-
-Use an actual sufficient-evidence receipt as the start where available. Otherwise
-a matched selected capture may provide a conservative earlier start only under
-the explicitly checked same-host clock/identity assumptions; label that proxy and
-its uncertainty. A matched successful browser decode is a declared display proxy,
-not physical paint. New service clocks separate software work from arrival gaps;
-they do not turn those gaps into inference measurements. Source/operation/frame
-joins are automatic; the independent assessor judges usefulness from retained
-intent/effects, without asking the player for per-key annotations or curating play.
-
-The current local spectator snapshot/export is `observer-timing/3`; historical v1/v2 captures
-remain evidence, without a compatibility reader. It retains raw browser epoch
-anchors for status start/response and DOM replacement, plus the native capture
-timestamp and existing frame/status identities. Durations still use browser
-`performance.now()`. Native `state.timestamp_ms` describes the retained capture
-when `frame_ok`, not a renewed publication time. Offline subtraction requires the
-same host/wall clock and scrutiny of clock adjustments; negative cross-clock
-differences are retained rather than silently clamped. Failed, superseded, stale
-or disconnected frames do not establish current presentation. The paused no-game
-browser probe verifies v2 status anchors only; bounded exact native/browser joins
-are recorded in the [endpoint gameplay comparison](acceptance/2026-10-28-endpoint-gameplay.md#apparent-latency-and-diagnostic-decomposition).
-Animation callbacks do not
-establish screen paint, and these records do not isolate model inference.
-
-The timing disclosure offers standard Download timing and **Show export JSON**
-over the same complete bounded page history, including overflow and failures.
-The latter writes one fixed, visible DOM snapshot for human or browser-automation
-collection. Live polling does not rewrite that export; click again to refresh it.
-This avoids requiring a browser download-event API. It adds no endpoint, store,
-sampling protocol or gameplay action, and neither export surface qualifies speed.
-Collect after the measured interval and before reload/closure; retain actual
-status/frame counts and missingness rather than treating a status-only probe as
-native/gameplay display evidence.
-
-Campaign length is another profiling axis. Current ingestion scans retained peers,
-capacity accounting walks frame files and archive save serializes the manifest.
-Navigation rechecks accumulated source files/hashes. Profile those stages against
-archive and route-source counts before replacing storage or introducing a cache.
-Required loss/correction/integrity and current-authority checks must remain;
-reuse the existing SQLite/journal if evidence establishes a storage gap. #154
-owns this follow-up without adding a new framework gate to the current mission.
+The mechanical store retains original intent/send/receipt wall and monotonic
+timestamps. A later collection has the original ID and source receipt time; it
+cannot renew freshness or overwrite an original unknown terminal disposition.
+Cross-clock joins require coherent wall clocks. Never subtract unrelated monotonic
+epochs or label network first-body time as first useful model decision.
 
 ## Retained host and browser analysis
 
-Use the existing read-only evaluator for repeatable diagnostics:
+These commands are offline and read-only, writing summaries to stdout:
 
 ```sh
-.venv/bin/python -m tools.evaluate host-summary .runtime/campaigns --format markdown
-.venv/bin/python -m tools.evaluate host-summary path/to/driver-original.jsonl
-.venv/bin/python -m tools.evaluate witness-summary .runtime/missions/MISSION path/to/observer-export.json
+.venv/bin/python -m tools.evaluate host-summary .runtime/computer-sessions/SELECTED
+.venv/bin/python -m tools.evaluate control-summary .runtime/computer-sessions/SELECTED
+.venv/bin/python -m tools.evaluate witness-summary .runtime/computer-sessions/SELECTED observer-export.json
 ```
 
-Directory discovery selects known `driver-*.jsonl`, `*-active.jsonl` and
-`evidence/host-traces/*.jsonl` locations, including immediate child campaigns.
-Other trace locations require explicit file paths. JSON output retains compact
-per-request diagnostics and declared frozen source/model configuration. Empty,
-unsupported and invalid files remain in coverage; invalid input returns exit1
-after reporting coverage. Unsupported formats are inventoried, not converted or
-claimed analyzed. SHA256 duplicate-content groups are exposed, never pooled as
-independent experiments. Missing historical fields stay unknown.
-
-Host analysis separates response, tool and observed canceled intervals, reported
-usage coverage, reasoning as a subset of output, stream progress and local overhead.
-Only SDK `stop`/`toolUse` responses enter the uncensored response distribution;
-that is transport completion, not useful success. Missing endpoints or overlapping
-request/tool spans suppress the host-time share. Output divided by time after the
-first body chunk is an empirical streaming proxy, not pure decoder throughput.
-Failed work, correction costs and whole-host elapsed time remain visible.
-
-Witness analysis accepts the current evidence index and `observer-timing/3` only.
-It joins exact public frame identities and capture epochs, deduplicates overlapping
-exports, retains missing witnesses and signed invalid clock intervals, and reports
-export drops. It checks metadata coherence, not image bytes, source applicability,
-physical paint or player attention. An earlier negative interval cannot be hidden
-by selecting a later positive witness. Inspect same-host wall-clock assumptions
-and retained images separately before a useful-effect claim. Goal membership and
-usefulness still need the frozen cohort and independent outcome assessment above.
-
-The [October28 analysis](acceptance/2026-10-28-latency-diagnostics.md) records corpus
-coverage, current endpoint research and its concrete consequences. Extending
-`tools.evaluate`, the existing JSON validation hooks, Pi callbacks and retained
-files fills the observed diagnostic gap without another store, service or
-dependency. Lead owns these thin projections; replace them when maintained tools
-supply equivalent joins. CLI help records finite resource limits. New fields
-cannot retrospectively fill older endpoint or logging-overhead gaps.
-The subsequent [endpoint gameplay comparison](acceptance/2026-10-28-endpoint-gameplay.md)
-exercises these diagnostics on live play and retains partial gains, failed
-programs, correction chains, missing DOM witnesses and the invalid screen setup.
-Provider generation metadata can corroborate routing, usage and service timing;
-its clocks are not additive with client spans and `num_fetches` does not attest
-upstream inference-attempt counts.
+The selected actor traces and current `campaign-run/2` / `campaign-receipt/2`
+sidecars supply scoped provenance. The control reader opens a current
+`computer-session/1` SQLite snapshot read-only, bounded by table/byte/path limits;
+it neither migrates data nor reconstructs authority. `observer-timing/4` exports
+join exact session/source/capture/presentation IDs. Duplicate exports do not create
+new witnesses. DOM replacement is neither physical paint nor model attention;
+missing/invalid clocks and unmatched sources remain explicit. No runtime-wide
+recursive history scan or legacy executable reader is supported.
 
 ## Caller contract
 
-Use `RunRecorder(manifest)`, `record(event)`, `finish(outcome)` and `write(path)`
-from [evaluation.py](../harness/gameplay/evaluation.py). Its `run_schema()` returns
-the exact JSON Schema; module documentation describes payloads. Validation adds
-sequence, missingness, provenance and identity checks beyond the schema. There is
-one current artifact format, `evaluation/1`; unsupported formats reject.
-
-Capture admission monotonic time before planning or dispatch. Event `elapsed_ms`
-is completion time minus admission, with a duration ending at that time. Finish
-with the actual final elapsed time, including post-event waits/timeouts. Native
-game turns are signed identities; turn consumption requires same-session endpoints.
-Retain real `EvidenceRef` objects from the evidence store for native start/final
-observations. Structural validation cannot verify frame bytes or prove a judgment.
-
-Record one action event per primitive attempt, including rejected and uncertain
-attempts; use a unique action ID and explicit dispatch state. Expand bounded walks
-from their observed primitive records. Preserve partial verified progress even
-when a run fails. First useful action requires known dispatch and an independently
-explained judgment; delivery alone is insufficient, and useful nonmovement inputs
-may have zero displacement. Missing measurements need a reason, never a fabricated
-zero. Record failed model calls and their actual usage/cost; cached input is a
-subset of input tokens. No private reasoning transcript belongs in these records.
-
-Configuration identity identifies the whole declared condition, including possible
-models and routing policy. Change it when that configuration changes. Summaries
-group by declared family/split/lane/condition/source/native/model/configuration/
-protocol identity. Session and realized call subsets are provenance: reloads and
-pre-call failures stay in their cohort. Actual role/model/configuration usage is
-also reported within the cohort. Do not infer that a shared label proves identical
-configuration; retain the configuration and assessment evidence with each run.
-
-`finish` seals the recorder; writes create a new file exclusively. Failed validation
-does not discard prior accepted records. Bounds are 4096 events, 8 MiB per run,
-4096 characters per string and 64 evidence references per list. These are evidence
-bounds, not enforcement of the declared gameplay budget: the supervisor must stop
-execution, and the recorder must retain any observed overrun.
+Use original operation IDs and immutable source references from the current
+[contract](contracts/computer-control.md). Player claims, Work, corrections and
+program results remain fallible evidence. Independently establish useful effects,
+quantity changes, handoff application, save/reload identity and normal ending from
+actual behavior and owned-process receipts. Unknown delivery and separately
+resolved visible effects must both remain in the account.
 
 ## Offline review
 
-The [waypoint execution-readiness decision](changes/014-waypoint-readiness.md#execution-readiness-decision)
-distinguishes the implemented bounded skill path from missing matched-arm execution,
-runtime recorder export and trial/model measurement preparation. Condition names
-in this schema do not establish executable experimental arms.
-
-From the project root, using project-local files:
-
-```sh
-.venv/bin/python -m tools.evaluate validate .runtime/evidence/run.json
-.venv/bin/python -m tools.evaluate summary .runtime/evidence/run.json
-```
-
-Both commands accept multiple paths, reject any malformed/duplicate run rather
-than skip it, and print JSON without changing evidence. CLI input is bounded to
-64 MiB and 4096 files. Summaries retain unknown and budget-censored runs; report
-known subtotals and missing counts, outcome coverage, progress, interventions,
-harms, elapsed time, calls and median/nearest-rank p95 durations. Read coverage and
-sample size before comparing totals. Synthetic fixtures test accounting only.
-
-Maintain the schema, callers, tests and this guide together. On a format change,
-preserve historical evidence and migrate active consumers as one coordinated
-change; no fallback reader. Revisit missing instrumentation and independent outcome
-labeling before #24/#44 trials and after any false-success or accounting incident.
-
-The spectator timing view keeps the latest 32 samples on screen. Its standard JSON
-download includes up to 8,192 samples per stage retained in that open page and explicit
-overflow counts; earlier sessions on the same page are included. Save the download
-in the run evidence directory before closing/reloading the tab, then filter by the
-frozen mission's actual native sessions and time interval. A successful download
-proves export, not complete coverage: inspect overflow, page lifetime, clock
-continuity and exact useful-effect matching before a latency claim. No telemetry
-is submitted to the controller and no physical-paint measurement is added.
+Current fixture suites establish their stated source/SDK/socket/SQLite/V8 bounds,
+not organic gameplay. Earlier waypoint/mission evaluation formats and commands are
+retired; their original readers and reports remain in
+[Git history](https://github.com/CVX-Hull/enactive/blob/433ed973afe312d03f777d8b102a0cba528af746/docs/evaluation.md).
+A successful later repair cannot relabel a failed attempt or renew its allocation.

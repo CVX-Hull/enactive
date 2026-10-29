@@ -194,7 +194,7 @@ disjoint output directories and immutable inputs. Suite wall times include
 generation/scoring/accounting/compression and CPU contention; they are not
 candidate latency measurements. Cross-platform SQLite/Python byte identity is
 unverified. Failures must stay failures; do not edit a report to match a digest.
-The [selection recipe](../../tools/select_memory_study_results.py) records the
+The [selection recipe](https://github.com/CVX-Hull/enactive/blob/433ed973afe312d03f777d8b102a0cba528af746/tools/select_memory_study_results.py) records the
 public illustrative projection; complete reports retain all conditions.
 
 Retain raw reports, manifests, earlier attempts and primary-source corpus locally

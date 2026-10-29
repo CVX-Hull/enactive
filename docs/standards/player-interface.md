@@ -19,11 +19,11 @@ discover an empty work queue. Measure context sufficiency by actual continuation
 and migrate changed caller/persisted contracts under S-MIGRATION. These are design
 and qualification obligations, not claims that present tooling satisfies them.
 Apply progressive revelation: small current decision context first, selected
-tool/phase guidance and focused memory/evidence next, technical detail by exact
+tool guidance and focused memory/evidence next, technical detail by exact
 retained reference when needed. A detail read must not silently change the target
 snapshot or grant authority. For each model task, identify the interpretation or
 choice it supplies and when it can change a decision. Automate deterministic
-verification/accounting and known-failure classification; invoke reflection for
+verification/accounting and known-failure classification; let the player select optional reflection for
 justified novelty, recurrence or consequence. Escalation needs an unresolved
 question and expected decision benefit, not merely any mismatch. C-REVIEW checks
 this responsibility split at consequential changes, without per-action review or

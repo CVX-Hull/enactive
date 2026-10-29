@@ -7,8 +7,8 @@ status: active
 # S-ARCH Explicit architectural boundaries
 
 Describe responsibilities, owners, inputs/outputs, state/concurrency, authority,
-failure/recovery and acceptance for each consequential boundary. Keep controller
-logic independent of HTTP and build tooling. Explain consequential alternatives,
+failure/recovery and acceptance for each consequential boundary. Keep computer authority independent of player semantics,
+HTTP and build tooling. Explain consequential alternatives,
 maintenance cost and reversal triggers in a brief/ADR. Review boundary changes
 before implementation; keep current architecture synchronized afterward.
 Maintain a reviewable hierarchy: project context/responsibilities → affected

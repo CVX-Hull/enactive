@@ -1,372 +1,197 @@
-"""Run one frozen campaign player and at most one issued fresh successor.
-
-This host driver reads status and collects an existing handoff. Only the players
-may request mission actions, interpret retained context, claim or readmit.
-"""
+"""Finite generic-Pi actors over one live mechanical custodian."""
 from __future__ import annotations
 
-import argparse
-from contextlib import ExitStack
+from datetime import datetime
+import hashlib
 import json
-import math
+import os
 from pathlib import Path
 import re
-import signal
 import subprocess
+import threading
 import time
-from typing import TextIO
-import uuid
 
-from harness.gameplay.mission_contracts import validate_handoff_result
-from harness.mission_client import MissionClient, MissionClientError
-
-
-TERMINAL = frozenset(("completed", "failed", "stopped"))
-_CONFIG_KEYS = frozenset(("command", "args", "cwd", "enabled", "required", "enabled_tools",
-    "default_tools_approval_mode", "startup_timeout_sec", "tool_timeout_sec", "tools"))
-_LIMITS = ("wall_seconds", "inputs", "game_seconds", "frames", "frame_bytes", "primitive_mappings")
+from harness.computer.launch import close_group
+from harness.computer.protocol import ControlError,canonical,read_json
+from tools.configure_player_tools import ROOT,configuration
 
 
-class DriverError(ValueError):
-    """A fixed, credential-free reason to stop without mission actions."""
+def write_new(path: Path,value,*,text=False) -> None:
+    with path.open('x') as stream:
+        stream.write(value if text else canonical(value)+'\n')
+    path.chmod(0o600)
 
 
-def _remaining(deadline: float) -> float:
-    remaining = deadline - time.monotonic()
-    if remaining <= 0:
-        raise DriverError("Driver deadline exhausted")
-    return remaining
+class HostEvents:
+    """Incremental JSONL; a partial final line never becomes an uncharged request."""
+    def __init__(self,path: Path,allowance: int):
+        self.stream=path.open('rb');self.buffer=b'';self.allowance=allowance
+        self.requests=set();self.settled=None;self.handoff=None;self.last_response_wall=None
+        self.usage={};self.error=None;self.started=False
+
+    def read(self) -> bool:
+        chunk=self.stream.read(1048576)
+        if not chunk:return False
+        self.buffer+=chunk
+        if len(self.buffer)>32*1048576:raise ControlError('Host event line exceeds original telemetry bound')
+        lines=self.buffer.split(b'\n');self.buffer=lines.pop()
+        for line in lines:
+            if not line:continue
+            value=json.loads(line)
+            kind=value.get('type')
+            if kind=='host-start':
+                if self.started or value.get('telemetry_version')!=2:raise ControlError('Unsupported/repeated current host trace')
+                self.started=True
+            elif kind=='request-start':
+                match=re.fullmatch(r'request-([1-9][0-9]*)',value.get('request_id',''))
+                if not self.started or not match:raise ControlError('Host request lacks current origin')
+                identity=int(match.group(1))
+                if identity in self.requests or identity>self.allowance:raise ControlError('Host request accounting differs')
+                self.requests.add(identity)
+            elif kind=='response-complete':
+                try:self.last_response_wall=datetime.fromisoformat(value['wall_time'].replace('Z','+00:00')).timestamp()
+                except (KeyError,ValueError,TypeError):pass
+                if value.get('usage_available') is True:self.usage[value['request_id']]=value['usage']
+            elif kind=='handoff':
+                if self.handoff is not None:raise ControlError('Repeated host handoff settlement')
+                self.handoff=value
+            elif kind=='settled':
+                if self.settled is not None:raise ControlError('Repeated host terminal event')
+                self.settled=value
+        return True
+
+    def finish(self) -> dict:
+        while self.read():pass
+        valid=(not self.buffer and self.started and self.settled is not None
+               and self.requests==set(range(1,len(self.requests)+1))
+               and self.settled.get('requests')==len(self.requests))
+        # Uncertain trace accounting reserves the entire original host allocation.
+        return dict(observed_attempts=len(self.requests),attempts_charged=len(self.requests) if valid else self.allowance,
+            accounting_complete=valid,settled=self.settled,handoff=self.handoff,
+            configured_estimate_usd=sum(v.get('cost',{}).get('total',0) for v in self.usage.values()),
+            usage_available_attempts=len(self.usage),missing_usage_attempts=len(self.requests)-len(self.usage))
+
+    def close(self):self.stream.close()
 
 
-class _DeadlineClient(MissionClient):
-    """Keep the SDK's existing transport inside the shared host deadline."""
-
-    def __init__(self, root: Path, deadline: float):
-        super().__init__(root)
-        self.deadline = deadline
-
-    def _fetch(self, path: str, *, timeout: float = 6.0, **kwargs) -> bytes:
-        return super()._fetch(path, timeout=min(timeout, _remaining(self.deadline)), **kwargs)
-
-
-def _write(stream: TextIO, value: dict | list) -> None:
-    json.dump(value, stream, indent=2, ensure_ascii=False, allow_nan=False)
-    stream.write("\n")
-    stream.flush()
+def _handoff_context(application,actor,event):
+    if event['actor_id']!=actor['actor_id'] or event['session']!=application.runtime.session:
+        raise ControlError('Host handoff names a different actor/session')
+    result=application.runtime.store.operation(event['handoff_id'],actor['actor_id'])
+    issuance=result['handoff']
+    if (result['kind']!='handoff' or result['status']!='sealed' or not isinstance(issuance,dict)
+            or issuance['context_id']!=event['context_id'] or issuance['context_sha256']!=event['context_sha256']):
+        raise ControlError('Host hint does not match canonical handoff issuance')
+    path=application.context_directory/(issuance['context_id']+'.json')
+    data=path.read_bytes()
+    if hashlib.sha256(data).hexdigest()!=issuance['context_sha256']:
+        raise ControlError('Frozen handoff context changed')
+    return data.decode('utf-8')
 
 
-def _read(path: Path) -> str:
-    with path.open() as stream:
-        value = stream.read(1_048_577)
-    if len(value.encode()) > 1_048_576:
-        raise DriverError("Frozen input exceeds its byte limit")
-    return value
-
-
-def _argv(root: Path, run: Path, role: str, *, model: str, effort: str,
-          timeout_seconds: float, node: str = "node") -> list[str]:
-    if not math.isfinite(timeout_seconds) or timeout_seconds <= 0:
-        raise DriverError("Player host requires a finite remaining deadline")
-    frozen = run / "frozen"
-    return [node, str(root / "tools" / "player_host" / "run.mjs"),
-        "--config", str(frozen / "player-pi-configuration.json"),
-        "--mcp-config", str(frozen / "player-host-configuration.json"),
-        "--context", str(frozen / "pi-player-context.txt"),
-        "--model", model, "--effort", effort,
-        "--timeout-seconds", str(timeout_seconds),
-        "-o", str(run / f"driver-{role}-final.txt")]
-
-
-def _stop_host(process: subprocess.Popen, receipt: dict) -> None:
-    # The exact Popen handle is our custody boundary. Never signal a process
-    # group, search descendants or imply that stopping this host cleans native.
-    for name, action in (("SIGINT", lambda: process.send_signal(signal.SIGINT)),
-                         ("SIGTERM", process.terminate), ("SIGKILL", process.kill)):
-        if process.poll() is not None:
-            return
+def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
+              stopped: threading.Event,deadline: float) -> dict:
+    actors=directory/'actors';actors.mkdir(mode=0o700)
+    total_attempts=0;host_seconds_used=0.;records=[];context=None
+    outcome='incomplete';reason='Original actor allowance exhausted'
+    for index in range(1,profile['max_hosts']+1):
+        seconds=min(profile['host_seconds'],profile['total_host_seconds']-host_seconds_used,deadline-time.monotonic()-30)
+        allowance=min(route['max_requests'],profile['max_http_attempts']-total_attempts)
+        if stopped.is_set() or seconds<=30 or allowance<1:
+            reason='Original host/campaign resources or cancellation prevent another actor';break
+        target=actors/f'{index:03d}'
+        child=None;events=None
+        record=dict(index=index,actor_id=None,allocated_seconds=seconds,allocated_attempts=allowance)
+        started=time.monotonic();ending_at=None
         try:
-            action()
-            receipt["signals"].append(name)
-        except ProcessLookupError:
-            pass
-        try:
-            process.wait(timeout=2)
-            return
-        except subprocess.TimeoutExpired:
-            continue
-    receipt["host_exit_unresolved"] = process.poll() is None
-
-
-def _host(role: str, args: list[str], prompt: str, root: Path,
-          streams: dict[str, TextIO], deadline: float) -> dict:
-    _remaining(deadline)
-    prefix = f"driver-{role}"
-    streams[prefix + "-prompt.txt"].write(prompt)
-    streams[prefix + "-prompt.txt"].flush()
-    _write(streams[prefix + "-argv.json"], args)
-    receipt = dict(start=time.time(), end=None, returncode=None, timed_out=False,
-        interrupted=False, signals=[], native_cleanup_claimed=False)
-    process = None
-    try:
-        _remaining(deadline)
-        process = subprocess.Popen(args, cwd=root, stdin=subprocess.PIPE,
-            stdout=streams[prefix + ".jsonl"], stderr=streams[prefix + ".stderr"], text=True)
-        _write(streams[prefix + "-process.json"], dict(pid=process.pid,
-            start=receipt["start"], argv=args))
-        process.communicate(prompt, timeout=_remaining(deadline))
-    except subprocess.TimeoutExpired:
-        receipt["timed_out"] = True
-        _stop_host(process, receipt)
-    except KeyboardInterrupt:
-        receipt["interrupted"] = True
-        if process is not None:
-            _stop_host(process, receipt)
-    except (OSError, DriverError) as error:
-        receipt["error_type"] = type(error).__name__
-        if process is not None:
-            _stop_host(process, receipt)
-    finally:
-        if process is not None:
-            receipt["returncode"] = process.poll()
-            if process.stdin is not None:
-                process.stdin.close()
-        receipt["end"] = time.time()
-        _write(streams[prefix + "-receipt.json"], receipt)
-    return receipt
-
-
-def _status(client: MissionClient, mission_id: str, deadline: float) -> dict:
-    _remaining(deadline)
-    snapshot = client.status()
-    _remaining(deadline)
-    value = snapshot.get("mission")
-    if not isinstance(value, dict) or value.get("mission_id") != mission_id:
-        raise DriverError("Cached status does not identify the requested mission")
-    return snapshot
-
-
-def _quiescent(mission: dict) -> None:
-    if ("active_operation" not in mission or mission["active_operation"] is not None
-            or mission.get("unresolved_effects") != []):
-        raise DriverError("Mission is not quiescent or effects remain unresolved")
-
-
-def _launch_guard(snapshot: dict, issued: dict | None = None) -> None:
-    mission = snapshot["mission"]
-    bootstrap = issued is None and mission.get("phase") == "admitted" and mission.get("pause_cause") == "internal_bootstrap"
-    if (type(snapshot.get("frozen")) is not bool or snapshot["frozen"] and not bootstrap
-            or bootstrap and snapshot.get("operator_pause_generation") != 0
-            or "pending" not in snapshot or snapshot["pending"] is not None
-            or "control_pending" not in snapshot or snapshot["control_pending"] is not None
-            or type(snapshot.get("operator_pause_generation")) is not int
-            or snapshot["operator_pause_generation"] < 0):
-        raise DriverError("Controller is frozen, pending or lacks its Pause binding")
-    native = snapshot.get("state")
-    # A new controller's bootstrap may retain historical state.json. It is not
-    # adopted authority; the player's lifecycle receiver owns custody checks.
-    if not bootstrap and native is not None and (not isinstance(native, dict) or native.get("pause_origin") in ("human", "fault")):
-        raise DriverError("Native Pause or fault prevents player launch")
-    if issued is not None:
-        if (not isinstance(native, dict) or native.get("paused") is not True
-                or snapshot.get("operator_pause_generation") != issued["operator_pause_generation"]
-                or snapshot.get("pause_generation") != issued["pause_generation"]
-                or any(native.get(key) != issued[key] for key in
-                    ("session", "revision", "takeover_generation", "pause_origin"))
-                or not isinstance(native.get("boundary"), dict)
-                or native["boundary"].get("id") != issued["boundary_id"]):
-            raise DriverError("Current controller/native Pause binding differs from issuance")
-
-
-def _budget(status: dict, *, allow_unmeasured_game: bool = False) -> None:
-    remaining = status.get("remaining_limits", {})
-    if not isinstance(remaining, dict) or status.get("clock_valid") is not True or any(
-            not (allow_unmeasured_game and key == "game_seconds" and key in remaining and remaining[key] is None)
-            and (type(remaining.get(key)) not in (int, float)
-                or not math.isfinite(remaining[key]) or remaining[key] <= 0) for key in _LIMITS):
-        raise DriverError("Mission clock or original remaining budget is invalid")
-
-
-def _handoff_status(status: dict) -> dict:
-    if status.get("phase") != "handoff" or status.get("pause_cause") != "internal_handoff":
-        raise DriverError("Mission is not in an internal handoff")
-    _budget(status)
-    try:
-        issued = validate_handoff_result(status.get("progress"))
-    except (ValueError, TypeError):
-        raise DriverError("Canonical progress is not a valid handoff issuance") from None
-    if (issued["mission_id"] != status["mission_id"] or issued["epoch"] != status.get("epoch")
-            or issued["original_player_id"] != status.get("actor_id")
-            or status.get("player_id") != status.get("actor_id")
-            or issued["pause_origin"] in ("human", "fault")):
-        raise DriverError("Handoff issuance does not match the current original actor and epoch")
-    return issued
-
-
-def _issuance(client: MissionClient, issued: dict, deadline: float) -> dict:
-    _remaining(deadline)
-    envelope = client.collect(issued["mission_id"], issued["handoff_id"], wait_seconds=0)
-    _remaining(deadline)
-    response = envelope.get("response") or {}
-    if not isinstance(response, dict):
-        raise DriverError("Collected handoff response is invalid")
-    operation = response.get("operation") or {}
-    if not isinstance(operation, dict):
-        raise DriverError("Collected handoff operation is invalid")
-    request = operation.get("request") or {}
-    if not isinstance(request, dict):
-        raise DriverError("Collected handoff request is invalid")
-    try:
-        result = validate_handoff_result(operation.get("result"))
-    except (ValueError, TypeError):
-        raise DriverError("Collected result is not a valid handoff issuance") from None
-    if (envelope.get("transport") != "delivered" or envelope.get("settled") is not True
-            or envelope.get("operation_id") != issued["handoff_id"]
-            or response.get("status") != "accepted" or operation.get("state") != "completed"
-            or request.get("kind") != "handoff" or request.get("mission_id") != issued["mission_id"]
-            or request.get("request_id") != issued["handoff_id"]
-            or request.get("epoch") != issued["epoch"] - 1
-            or request.get("successor_role") != issued["successor_role"]
-            or request.get("checkpoint_ids") != issued["checkpoint_ids"]
-            or request.get("unfinished_work_ids") != issued["unfinished_work_ids"] or result != issued):
-        raise DriverError("Collected handoff is uncertain or contradicts canonical issuance")
-    return result
-
-
-def run_campaign(*, root: Path, run_dir: Path, mission_id: str, model: str,
-                 effort: str, timeout_seconds: float, node: str = "node", max_hosts: int = 2) -> dict:
-    """Run frozen hosts; return observed terminal phase or an incomplete report."""
-    if type(max_hosts) is not int or max_hosts not in (1, 2):
-        raise DriverError("max_hosts must be the integer 1 or 2")
-    if not math.isfinite(timeout_seconds) or timeout_seconds <= 0:
-        raise DriverError("timeout_seconds must be positive and finite")
-    deadline = time.monotonic() + timeout_seconds
-    root, run = root.resolve(strict=True), run_dir.resolve(strict=True)
-    if (re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}", mission_id) is None
-            or not root.is_dir() or not run.is_dir()
-            or run != root / ".runtime" / "campaigns" / mission_id):
-        raise DriverError("run-dir must be the existing root/.runtime/campaigns/<mission_id>")
-    preparation = run / "preparation"
-    if not preparation.is_dir():
-        raise DriverError("Run preparation directory does not exist")
-    frozen = run / "frozen"
-    configuration = json.loads(_read(frozen / "player-host-configuration.json"))
-    if not isinstance(configuration, dict) or configuration.keys() - _CONFIG_KEYS:
-        raise DriverError("Frozen configuration must contain only known player MCP settings")
-    # The Pi core has no file tools: its explicit context is loaded by the
-    # host, never reconstructed from file paths by a deciding player. Preflight
-    # every required frozen input before reserving evidence or launching a host.
-    _read(frozen / "player-pi-configuration.json")
-    _read(frozen / "pi-player-context.txt")
-    context_location = "Frozen player context and current MCP schemas are supplied by the host.\n\n"
-    original_prompt = context_location + _read(frozen / "original-player-prompt.txt")
-    successor_brief = context_location + _read(frozen / "successor-player-brief.txt")
-    paths = {"driver-report.json": preparation / "driver-report.json",
-        "driver-initial-status.json": preparation / "driver-initial-status.json",
-        "driver-handoff-issuance.json": preparation / "driver-handoff-issuance.json",
-        "driver-successor-assignment.json": preparation / "driver-successor-assignment.json",
-        "driver-successor-admission-status.json": preparation / "driver-successor-admission-status.json"}
-    for role in ("original", "successor"):
-        for suffix in ("-prompt.txt", "-argv.json", "-process.json", "-receipt.json", ".stderr", "-status.json"):
-            name = f"driver-{role}{suffix}"
-            paths[name] = preparation / name
-        for suffix in (".jsonl", "-final.txt"):
-            name = f"driver-{role}{suffix}"
-            paths[name] = run / name
-    # Reserve every name with exclusive creation before starting either host.
-    # A collision leaves existing evidence intact; a partial reservation remains
-    # a visible failed attempt, never permission to retry with the same names.
-    with ExitStack() as stack:
-        streams = {name: stack.enter_context(path.open("x")) for name, path in paths.items()}
-        report = dict(mission_id=mission_id, outcome="incomplete", phase=None, exit_code=1,
-            hosts=[], native_cleanup_claimed=False, acceptance_claimed=False)
-        try:
-            client = _DeadlineClient(root, deadline)
-            initial_snapshot = _status(client, mission_id, deadline)
-            _write(streams["driver-initial-status.json"], initial_snapshot)
-            initial = initial_snapshot["mission"]
-            report["phase"] = initial.get("phase")
-            _quiescent(initial)
-            _launch_guard(initial_snapshot)
-            if (initial.get("phase") not in ("admitted", "active")
-                    or initial.get("pause_cause") not in ("internal_bootstrap", "internal_lifecycle",
-                        "internal_recovery", "internal_handoff")
-                    or not isinstance(initial.get("actor_id"), str)
-                    or not initial["actor_id"] or initial.get("player_id") != initial["actor_id"]):
-                raise DriverError("Original player requires an admitted or active unpaused mission")
-            _budget(initial, allow_unmeasured_game=initial["phase"] == "admitted")
-            prompt = original_prompt
-            for role in ("original", "successor"):
-                args = _argv(root, run, role, model=model, effort=effort,
-                    node=node, timeout_seconds=_remaining(deadline))
-                receipt = _host(role, args, prompt, root, streams, deadline)
-                report["hosts"].append(dict(role=role, **receipt))
-                if receipt["returncode"] != 0 or receipt["timed_out"] or receipt["interrupted"] or "error_type" in receipt:
-                    raise DriverError("Player host did not exit normally with code zero")
-                snapshot = _status(client, mission_id, deadline)
-                _write(streams[f"driver-{role}-status.json"], snapshot)
-                status = snapshot["mission"]
-                report["phase"] = status.get("phase")
-                _quiescent(status)
-                if status.get("phase") in TERMINAL:
-                    report.update(outcome="terminal", exit_code=0)
-                    break
-                if max_hosts == 1:
-                    raise DriverError("Original host left a nonterminal mission; no successor is permitted")
-                if role == "successor":
-                    raise DriverError("Successor left a nonterminal mission; no further host is permitted")
-                canonical = _handoff_status(status)
-                _launch_guard(snapshot, canonical)
-                issued = _issuance(client, canonical, deadline)
-                if issued["original_player_id"] != initial["actor_id"]:
-                    raise DriverError("Handoff original actor differs from initial assignment")
-                _write(streams["driver-handoff-issuance.json"], issued)
-                current_snapshot = _status(client, mission_id, deadline)
-                _write(streams["driver-successor-admission-status.json"], current_snapshot)
-                current = current_snapshot["mission"]
-                report["phase"] = current.get("phase")
-                _quiescent(current)
-                _launch_guard(current_snapshot, issued)
-                if _handoff_status(current) != issued:
-                    raise DriverError("Handoff changed before successor launch")
-                successor_id = "successor-" + uuid.uuid4().hex
-                if successor_id == issued["original_player_id"]:
-                    raise DriverError("Generated successor identity equals the original actor")
-                assignment = dict(mission_id=mission_id, actor_id=successor_id,
-                    actor_role=issued["successor_role"], handoff_id=issued["handoff_id"],
-                    epoch=issued["epoch"], issuance_path=str(paths["driver-handoff-issuance.json"]))
-                _write(streams["driver-successor-assignment.json"], assignment)
-                prompt = successor_brief + "\n\nMechanical player assignment:\n" + json.dumps(assignment, indent=2) + "\n"
-                _remaining(deadline)
-        except (DriverError, MissionClientError) as error:
-            report["reason"] = str(error)
-        except (OSError, ValueError, TypeError, KeyError) as error:
-            # Never print transport discovery, credentials or arbitrary bodies.
-            report["reason"] = "Driver evidence unavailable or invalid"
-            report["error_type"] = type(error).__name__
+            actor=application.runtime.add_actor()
+            target.mkdir(mode=0o700)
+            record['actor_id']=actor['actor_id']
+            actor_file=target/'actor.json'
+            write_new(actor_file,dict(schema='player-adapter/1',base_url=f"http://127.0.0.1:{profile['port']}",
+                                     session=profile['session'],**actor))
+            selected_route=dict(route,max_requests=allowance)
+            write_new(target/'route.json',selected_route)
+            write_new(target/'mcp.json',configuration(str(actor_file)))
+            # Identical frozen system context across actors maximizes stable prefix
+            # reuse. Actor/resource/knowledge changes belong in the explicit prompt.
+            write_new(target/'context.txt',(directory/'context.txt').read_text(),text=True)
+            role=(f'Actor {index}/{profile["max_hosts"]}. Original host allowance {seconds:.3f} seconds and {allowance} HTTP attempts; '
+                  f'original campaign attempts remaining {profile["max_http_attempts"]-total_attempts}. '
+                  'The host supplies current decision-time/attempt snapshots; custodian time is separate. ')
+            if index<profile['max_hosts']:
+                role+='Transfer useful unfinished work through player_handoff when a fresh context helps; retain a meaningful task and ending capacity for your successor. '
+            else:
+                role+='You are the final actor in this admission. Preserve ending capacity and finish with normal Save plus separate application exit. '
+            prompt=(directory/'prompt.txt').read_text()+'\n\nSoftware actor/resource note: '+role
+            if context is not None:prompt+='\n\nOriginal sealed player handoff context (fallible knowledge, no authority):\n'+context
+            write_new(target/'prompt.txt',prompt,text=True)
+            write_new(target/'player-final.txt','',text=True)
+            write_new(target/'frozen.json',dict(schema='player-host-inputs/1',actor_id=actor['actor_id'],session=profile['session'],
+                files={name:hashlib.sha256((target/name).read_bytes()).hexdigest() for name in ('actor.json','route.json','mcp.json','context.txt','prompt.txt')}))
+            arguments=[profile['node'],str(ROOT/'tools/player_host/run.mjs'),'--config',str(target/'route.json'),
+                '--mcp-config',str(target/'mcp.json'),'--context',str(target/'context.txt'),'--model',route['model']['id'],
+                '--effort',profile['effort'],'--timeout-seconds',str(seconds),'-o',str(target/'player-final.txt')]
+            environment=dict(PATH=os.environ.get('PATH','/usr/bin:/bin'),LANG='en_US.UTF-8',**{route['api_key_env']:secret})
+            with (target/'host.jsonl').open('x') as output,(target/'host-stderr.log').open('x') as errors,(target/'prompt.txt').open() as prompt_input:
+                child=subprocess.Popen(arguments,cwd=ROOT,env=environment,stdin=prompt_input,stdout=output,stderr=errors,start_new_session=True)
+                write_new(target/'host-process.json',dict(pid=child.pid,pgid=child.pid,argv=arguments))
+                events=HostEvents(target/'host.jsonl',allowance)
+                while child.poll() is None:
+                    events.read()
+                    now=time.monotonic()
+                    application.host=dict(index=index,model=route['model']['id'],provider=route['model']['name'],
+                        requests_total=total_attempts+len(events.requests),max_requests_total=profile['max_http_attempts'],
+                        host_seconds_remaining=max(0.,started+seconds-now),latest_response_wall=events.last_response_wall)
+                    if stopped.is_set() or now>=min(deadline-30,started+seconds):
+                        application.runtime.stop('Original host deadline/operator cancellation');reason='Original host deadline/cancellation';break
+                    code=application.runtime.process.poll()
+                    if code is not None or application.runtime.channel.stopped.is_set():
+                        if ending_at is None:ending_at=now+(45 if code is not None else 30)
+                        if now>=ending_at:reason='Original final-report grace exhausted';break
+                    time.sleep(.1)
+            cleanup=close_group(child)
+            record['cleanup']=cleanup
+            record.update(events.finish())
+            if not record['accounting_complete'] or not cleanup['process_absent'] or not cleanup['group_absent']:
+                raise ControlError('Host accounting or exact process-group quiescence is unresolved')
+            settled=record['settled']
+            if child.returncode!=0 or settled.get('ok') is not True:
+                reason='Deciding host ended unsuccessfully';break
+            if settled.get('reason')=='handoff':
+                if record['handoff'] is None:raise ControlError('Host settled without its originating handoff')
+                context=_handoff_context(application,actor,record['handoff'])
+                application.runtime.confirm_quiescent(actor['actor_id'],record['handoff']['handoff_id'],host_quiescent=True)
+                if index==profile['max_hosts']:
+                    reason='Final actor handed off beyond original actor allowance';break
+                continue
+            if settled.get('reason')=='completed':
+                outcome='host_completed_unassessed';reason='Terminal player report; gameplay/normal exit assessed separately';break
+            reason='Unknown host terminal disposition';break
+        except Exception as exc:
+            application.runtime.stop('Actor orchestration failed; no successor')
+            reason=f'{type(exc).__name__}: {str(exc)[:500]}'
+            record['orchestration_error']=reason
         finally:
-            _write(streams["driver-report.json"], report)
-        return report
-
-
-def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--root", type=Path, required=True)
-    parser.add_argument("--run-dir", type=Path, required=True)
-    parser.add_argument("--mission-id", required=True)
-    parser.add_argument("--model", required=True)
-    parser.add_argument("--effort", required=True)
-    parser.add_argument("--timeout-seconds", type=float, required=True)
-    parser.add_argument("--node", default="node")
-    parser.add_argument("--max-hosts", type=int, choices=(1, 2), default=2)
-    args = parser.parse_args()
-    try:
-        report = run_campaign(**vars(args))
-    except (OSError, ValueError, TypeError):
-        report = dict(outcome="incomplete", exit_code=1,
-            reason="Driver setup refused; frozen inputs or exclusive output names unavailable")
-    print(json.dumps(report, allow_nan=False))
-    raise SystemExit(report["exit_code"])
-
-
-if __name__ == "__main__":
-    main()
+            if 'cleanup' not in record:
+                try:
+                    record['cleanup']=close_group(child) if child is not None else dict(process_absent=True,group_absent=True)
+                except Exception as exc:
+                    record['cleanup']=dict(process_absent=False,group_absent=False,error=type(exc).__name__)
+            if events is not None:
+                try:
+                    record.update(events.finish())
+                except Exception as exc:
+                    record.update(accounting_complete=False,attempts_charged=allowance,trace_error=type(exc).__name__)
+                finally:events.close()
+            else:record.update(accounting_complete=False,attempts_charged=allowance if child else 0)
+            record['elapsed_seconds']=time.monotonic()-started
+            total_attempts+=record['attempts_charged'];host_seconds_used+=record['elapsed_seconds']
+            records.append(record)
+            try:write_new(target/'driver-receipt.json',record)
+            except (OSError,ValueError) as exc:record['receipt_error']=type(exc).__name__
+        if record.get('orchestration_error'):break
+    return dict(schema='player-driver/2',outcome=outcome,reason=reason,actors=records,
+                attempts_charged=total_attempts,host_seconds_used=host_seconds_used,
+                configured_estimate_usd=sum(r.get('configured_estimate_usd',0) for r in records),
+                missing_usage_attempts=sum(r.get('missing_usage_attempts',r['attempts_charged']) for r in records))

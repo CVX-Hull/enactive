@@ -1,24 +1,13 @@
 ---
-title: Current recovery — restore knowledge before control
+title: Current permanent stop and original collection
 ---
-stateDiagram-v2
-  accTitle: Current operator recovery workflow
-  accDescr: Startup, an uncertain transport outcome or any stopped walk requires reconciliation. A retained walk observation is evidence, not current authority. After a fresh eligible observation, remote dispatch stays paused until explicit resume succeeds. Pause or native input disables further dispatch. A pending request can still time out while paused. Pause does not cancel an already-running game activity; native interruption may be necessary. No recovery path automatically replays an action.
-  direction TB
-  state "Reconciliation required" as Frozen
-  state "Remote dispatch paused" as Paused
-  state "Remote dispatch enabled" as Enabled
-  [*] --> Frozen: Controller starts or restarts
-  Frozen --> Paused: Eligible observe succeeds after any pending deadline
-  Paused --> Enabled: Explicit resume accepted with current authority
-  Enabled --> Paused: Pause or native takeover
-  Enabled --> Frozen: Dispatch outcome unknown or walk stopped
-  Paused --> Frozen: Pending input times out or transport fails
-  note right of Frozen
-    Observe and interpret current state.
-    Never replay uncertain input.
-  end note
-  note right of Paused
-    Existing activity can continue.
-    Use native interruption if needed.
-  end note
+flowchart TB
+  accTitle: Current permanent stop and original collection
+  accDescr: There is no Resume or phase-based recovery. User Pause, native takeover or uncertain input permanently fences automation. Original results remain collectable without replay. Native manual recovery and exact owned cleanup do not restore authority or certify a save.
+A["Active mechanical custody"] -->|"User Pause or native takeover"| S["Permanent input stop"]
+  A -->|"Partial or unknown input"| S
+  S -->|"Read exact original ID"| C["Collect receipts and retain uncertainty<br/>Never replay or renew limits"]
+  S -->|"Operator chooses"| N["Ordinary native recovery<br/>Save or quit through visible controls"]
+  C --> E["Exact owned cleanup<br/>Normal exit distinct from forced signals"]
+  N --> E
+  E -->|"Separate explicit admission only"| F["Fresh coherent session<br/>No authority restored from history"]

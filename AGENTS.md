@@ -19,15 +19,15 @@ for delegation: the lead owns design/integration/verification; parallel workers 
 separate worktrees and disjoint ownership; one integrator and shared-runtime owner;
 named agent_type; clean-context workers/reviewers; bounded briefs.
 For gameplay, the lead may explicitly designate one general-purpose campaign
-operator under the protocol's bounded actor/handoff procedure. The waypoint
-planner remains candidate-only; explorers/reviewers never send game inputs.
+operator under the current generic Pi host's bounded actor/handoff procedure.
+Explorers/reviewers never send game inputs.
 
 - User instructions take precedence. Global skills are optional references;
   do not import ceremony without a concrete project need.
 - Apply the charter's CDDA-class portability constraint and P-GENERALITY.
   The selected harness boundary is basic computer observation/control only;
   game semantics belong in the playing system. Follow [ADR006](docs/decisions/006-computer-control-boundary.md)
-  for the coordinated cutover; current semantic contracts are not yet migrated.
+  for the coordinated cutover and the current computer-control contract.
   Keep shared player/memory/learning/orchestration separate from game bindings;
   document existing coupling rather than claiming unqualified portability.
 - Follow S-MIGRATION: one current contract; migrate every caller and persisted format

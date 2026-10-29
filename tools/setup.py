@@ -18,6 +18,12 @@ import urllib.request
 import venv
 
 ROOT = Path(__file__).resolve().parents[1]
+if __package__ in (None, ""):
+    sys.path.insert(0, str(ROOT))
+
+from harness.prepared_app import game_lock
+from tools.patch_game import validate_source
+
 FREETYPE_URL = "https://download.savannah.gnu.org/releases/freetype/freetype-2.14.3.tar.xz"
 FREETYPE_SHA256 = "36bc4f1cc413335368ee656c42afca65c5a3987e8768cc28cf11ba775e785a5f"
 
@@ -99,8 +105,8 @@ def write_manifest(path: Path, value: dict) -> None:
 
 def load_manifest(path: Path, pin: dict) -> dict:
     value = json.loads(path.read_text())
-    if type(value) is not dict or type(value.get("schema_version")) is not int or value["schema_version"] != 1:
-        raise ValueError("Unsupported build manifest format; migrate offline or preserve it and use a fresh --extract")
+    if type(value) is not dict or type(value.get("schema_version")) is not int or value["schema_version"] != 2:
+        raise ValueError("Unsupported build manifest format; preserve it and use a fresh --extract")
     workspace = Path(value["workspace"])
     if (not workspace.is_absolute() or any(c.isspace() for c in str(workspace))
             or not workspace.name.startswith("cdda-player-build-")):
@@ -119,6 +125,11 @@ def load_manifest(path: Path, pin: dict) -> dict:
 
 
 def install_app(image: Path, runtime: Path) -> None:
+    with game_lock(runtime):
+        _install_app_locked(image, runtime)
+
+
+def _install_app_locked(image: Path, runtime: Path) -> None:
     target = runtime / "Cataclysm.app"
     if target.exists():
         raise ValueError(f"App already exists: {target}; refusing to replace a possibly running app")
@@ -228,7 +239,7 @@ def main(argv: list[str] | None = None) -> int:
             verify(path, checksum)
         workspace = Path(tempfile.mkdtemp(prefix="cdda-player-build-", dir="/tmp")).resolve()
         (workspace / ".cdda-player-owner").write_text(str(ROOT))
-        value = {"schema_version": 1, "workspace": str(workspace), "source_sha256": pin["source_sha256"],
+        value = {"schema_version": 2, "workspace": str(workspace), "source_sha256": pin["source_sha256"],
                  "freetype_sha256": FREETYPE_SHA256, "state": "extracting"}
         write_manifest(manifest, value)
         source = extract_archive(archives[0][1], workspace / "game")
@@ -241,6 +252,7 @@ def main(argv: list[str] | None = None) -> int:
         install_app(archives[1][1], runtime)
     if args.build:
         value = load_manifest(manifest, pin)
+        validate_source(Path(value["source"]), pin)
         prepare_build(value, runtime)
         subprocess.run([sys.executable, str(ROOT / "tools/patch_game.py"), value["source"]], check=True)
         command = build_command(value, args.jobs)
@@ -253,11 +265,8 @@ def main(argv: list[str] | None = None) -> int:
         value.update(state="built", binary_sha256=sha256(binary))
         write_manifest(manifest, value)
     if args.install:
-        processes = subprocess.check_output(["ps", "-axo", "comm="], text=True)
-        if any(line.strip().endswith("/cataclysm-tiles") or line.strip() == "cataclysm-tiles"
-               for line in processes.splitlines()):
-            raise ValueError("CDDA is running; quit normally before --install")
         value = load_manifest(manifest, pin)
+        validate_source(Path(value["source"]), pin)
         if value["state"] != "built":
             raise ValueError("No completed build recorded; run --build first")
         binary = Path(value["source"]) / "cataclysm-tiles"

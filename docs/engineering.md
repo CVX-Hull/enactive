@@ -39,7 +39,7 @@ Principles: P-AUTHORITY, P-TRUTH, P-UNCERTAINTY.
 
 - [S-PROTOCOL Command and observation authority](standards/protocol.md).
 
-Controls: C-PROTOCOL, C-RUNTIME, C-PORTABLE, C-NATIVE.
+Controls: C-RUNTIME, C-PORTABLE, C-NATIVE.
 
 ## S-CODE Maintainable implementation
 
@@ -99,7 +99,7 @@ Principles: P-CHANGE, P-KNOWLEDGE, P-UNCERTAINTY.
 
 - [S-MIGRATION One current contract, coordinated migration](standards/migration.md).
 
-Controls: C-PROTOCOL, C-PORTABLE, C-GOVERNANCE, C-REVIEW, C-RELEASE, C-MAINTENANCE.
+Controls: C-PORTABLE, C-GOVERNANCE, C-REVIEW, C-RELEASE, C-MAINTENANCE.
 
 ## S-EVIDENCE Claims with scoped evidence
 

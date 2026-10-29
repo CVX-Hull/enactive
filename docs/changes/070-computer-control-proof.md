@@ -147,9 +147,9 @@ precede Done. Historical paused3177329 source is preserved for reuse/retirement.
 The following map is the reviewed #181 handoff. It is a target plan for #176,
 not a declaration that those current contracts have migrated. The live Issue owns
 subsequent scope and estimates. Exact implemented proof shapes/tools live in
-[protocol.py](../../experiments/computer_control/protocol.py) and
-[mcp.py](../../experiments/computer_control/mcp.py); the
-[experiment usage guide](../../experiments/computer_control/README.md) owns build/run
+[protocol.py](https://github.com/CVX-Hull/enactive/blob/433ed973afe312d03f777d8b102a0cba528af746/experiments/computer_control/protocol.py) and
+[mcp.py](https://github.com/CVX-Hull/enactive/blob/433ed973afe312d03f777d8b102a0cba528af746/experiments/computer_control/mcp.py); the
+[experiment usage guide](https://github.com/CVX-Hull/enactive/blob/433ed973afe312d03f777d8b102a0cba528af746/experiments/computer_control/README.md) owns build/run
 instructions, and the
 [closed evidence](../acceptance/2026-10-29-basic-computer-control.md) retains all limits.
 

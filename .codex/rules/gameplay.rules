@@ -1,36 +1,24 @@
-# Owner: lead. Review on CLI entry-point, permission or authority changes.
-# User-authorized ordinary Enactive play only, from this trusted checkout.
-# Prefix rules permit execution outside the sandbox; they do not confine files,
-# pin source bytes or create a per-agent sandbox. Never use with an unreviewed
-# checkout. Keep source frozen during admitted play. Managed restrictions win.
-# Campaign capture wrappers, arbitrary Python and shell wrappers remain outside
-# this stable CLI allowance; review necessary wrappers once during setup.
+# Owner: lead. Review on CLI, permission or authority changes.
+# Trusted inspected source only; source remains frozen during gameplay.
+# Prefix allowances are host permission, not custody, filesystem confinement,
+# provider spending authority, package admission or proof of active rule loading.
 prefix_rule(
-    pattern = [".venv/bin/python", "-m", "harness", [
-        "status", "observe", "pause", "resume", "goal", "key", "action", "walk",
-        "request_interrupt", "answer_interrupt", "continue_debug_once",
-        "mission-request",
-    ]],
+    pattern = [".venv/bin/python", "-m", "harness", ["status", "pause", "run"]],
     decision = "allow",
-    justification = "Ordinary authenticated loopback Enactive commands under an admitted campaign; native authority and campaign accounting still apply.",
+    justification = "Current local status/independent Pause or explicitly frozen finite generic-Pi campaign under standing gameplay authorization.",
     match = [
         ".venv/bin/python -m harness status",
-        ".venv/bin/python -m harness pause",
-        ".venv/bin/python -m harness mission-request --request .runtime/mission-requests/request.json",
-        ".venv/bin/python -m harness key ESC --expect example:1",
-        ".venv/bin/python -m harness walk east --steps 1 --expect example:2",
+        ".venv/bin/python -m harness pause --url http://127.0.0.1:8766",
+        ".venv/bin/python -m harness run --run .runtime/computer-sessions/selected",
     ],
     not_match = [
         ".venv/bin/python -c print(1)",
         ".venv/bin/python tools/setup.py --install",
         ".venv/bin/python -m harness serve --port 8766",
-        ".venv/bin/python -m another_module status",
+        ".venv/bin/python -m harness mission-request --request old.json",
+        ".venv/bin/python -m harness key ESC",
+        ".venv/bin/python -m harness resume",
         "python -m harness status",
-        ".venv/bin/python -m harness gameplay-request --request old.json",
-        ".venv/bin/python -m harness gameplay-start --distance 1",
-        ".venv/bin/python -m harness gameplay-plan --task old",
-        ".venv/bin/python -m harness gameplay-continue --task old",
-        ".venv/bin/python -m harness gameplay-abandon --task old",
         "gh pr merge 1",
     ],
 )

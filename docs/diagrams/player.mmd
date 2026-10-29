@@ -1,24 +1,19 @@
 ---
-title: One player, retained memory and ordinary or semantic input
+title: Current player and mechanical computer custody
 ---
-flowchart TD
-  accTitle: Player decisions, historical memory and one mission writer
-  accDescr: The user sets objectives and can Pause independently. The lead freezes admission and source, reviews evidence and verifies acceptance without ordinary gameplay rescue or routine memory curation. One designated player plans, interprets visible evidence and chooses physical input or optional semantic skills. The adapter uses the existing ingress, not another executor. Source-linked memory and asynchronous advisory proposals support decisions but grant no authority. One MissionRuntime writer retains original limits and exact custody; direct physical input permits visual drift while semantic shortcuts retain equivalence checks. Historical ACK delivery stays separate from actual current evidence.
-  User["You: objective and boundaries"] --> Lead["Lead: admission and engineering<br/>Review and final verification"]
-  Lead -->|"One finite assignment"| Player["Designated player<br/>Plan, explore, remember, verify"]
-  Memory["Source-linked campaign memory<br/>Claims, Work, advice and executable routines<br/>Historical, never input authority"] --> Player
-  Player -->|"Choose intent, source and limits"| Tools["Structured player tools<br/>Physical input or semantic shortcuts<br/>Official MCP SDK; no executor"]
-  Tools -->|"Existing authenticated ingress"| Runtime["One MissionRuntime writer<br/>Original root and child limits"]
-  Runtime -->|"Pinned player routine and current visible data"| Program["Bounded JavaScript step<br/>Branches and local calculations<br/>No host I/O or input capability"]
-  Program -->|"Ordinary proposal or yield; no task-success proof"| Runtime
-  Runtime --> Controller["Controller and native fences<br/>Exact lease, custody and deadlines<br/>Actual dispatch evidence"]
-  Controller --> Game["Real windowed CDDA"]
-  Game --> Evidence["Visible frames and receipts<br/>Historical ACK and separate current<br/>Actual effects and uncertainty"]
-  Evidence --> Tools
-  Tools -->|"Result, image and uncertainty"| Player
-  Runtime --> Memory
-  Runtime -.->|"Automatic trajectory feedback"| Adviser["Asynchronous adviser<br/>Revisable proposals with sources<br/>No input authority"]
-  Adviser -.->|"Advice; play continues while pending"| Runtime
-  Evidence --> Viewer["Observer: objective and progress<br/>Current versus historical context<br/>Unknown costs stay unknown"]
-  Runtime --> Viewer
-  User -->|"Pause stops new dispatch"| Controller
+flowchart TB
+  accTitle: Current player and mechanical computer custody
+  accDescr: Logical responsibilities, not separate required models. The player interprets images and chooses basic controls. Optional player knowledge and programs are fallible. One custodian sends basic input to the windowed game and retains original receipts and images. Independent user Pause permanently stops input. No memory or game claim grants custody.
+U["User<br/>Objective and independent Pause"] --> P["Designated generic Pi player<br/>Interpret pixels and choose actions"]
+  M["Optional player knowledge<br/>Claims, Work, corrections and context"] -->|"Fallible evidence"| P
+  P -->|"Basic input or explicit program run"| A["Composition and MCP tools"]
+  A -->|"Same computer port"| C["One mechanical custodian<br/>Original limits and actor capabilities"]
+  A --> R["Bounded local program<br/>Actual image view and optional interpretation"]
+  R -->|"Basic proposals only"| C
+  C -->|"SDL events over inherited socket"| G["Windowed game<br/>Determines outcomes"]
+  G -->|"Actual pixels and delivery receipts"| C
+  C -->|"Original sources, results and uncertainty"| A
+  A --> P
+  P -->|"Explicit supported assertions"| M
+  C --> V["Passive spectator<br/>Mechanical status and labelled player claims"]
+  U -->|"Permanent stop, independent of writer"| C

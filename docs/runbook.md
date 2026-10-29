@@ -1,62 +1,74 @@
 ---
 owner: maintainer
-review_trigger: Launch, control, recovery, recording or storage changes
+review_trigger: Responsibility, supported behavior, interfaces or qualification change
 status: active
 ---
 
 # Operate, recover and retain evidence
 
-Supported scope: one prepared local macOS game.
-For fresh installation use [setup](setup.md); use [overview](overview.md) for limits.
-
-Use the [finite campaign custodian](operations/campaign-run.md) when a fresh run
-needs maintained controller lifetime and admission as well as the player driver.
+Use the [current computer/player contract](contracts/computer-control.md),
+[setup](setup.md) and a fresh frozen finite run. Old semantic mission commands,
+Resume, identity adoption and recovery phases are unsupported.
 
 ## When a mission owns execution
 
-- [When a mission owns execution](operations/mission-ownership.md).
+[Custody](operations/mission-ownership.md): one mechanical writer and per-actor
+capabilities; no other input producer or authority reconstructed from history.
 
 ## Permissions and player ownership
 
-- [Permissions and player ownership](operations/mission-ownership.md#permissions-and-player-ownership).
+[Player ownership](operations/mission-ownership.md#permissions-and-player-ownership):
+the player interprets the game; the lead owns admission/source/review.
 
 ## Start and observe
 
-- [Start and observe](operations/start-observe.md).
+[Start/observe](operations/start-observe.md): prepared windowed target, explicit
+project userdir, fresh package and actual spectator images.
 
 ## Pause, timeout and recovery
 
-- [Pause, timeout and recovery](operations/pause-timeout.md).
+[Pause/timeout](operations/pause-timeout.md): independent permanent stop, exact
+original collection and owned cleanup; no rearm or uncertain-input replay.
 
 ## Operator recovery
 
-- [Operator recovery](operations/pause-timeout.md#operator-recovery).
+[Manual recovery](operations/pause-timeout.md#operator-recovery): use the native
+application when needed; Pause cannot undo delivered events or game activities.
 
 ## Native acceptance lane
 
-- [Native acceptance lane](operations/native-acceptance.md).
+[Acceptance procedure](operations/native-acceptance.md): compiled mechanics and
+actual-game outcomes are separately recorded. The [production report](acceptance/2026-10-29-computer-control.md)
+owns scoped actual outcomes and remaining qualification gaps.
 
 ## Evidence retention and cleanup
 
-- [Evidence retention and cleanup](operations/evidence-cleanup.md).
+[Evidence retention](operations/evidence-cleanup.md#evidence-retention-and-cleanup)
+owns retention policy. Use current custodian/driver receipts for exact owned
+process cleanup; old runtime commands in historical artifacts are not executable
+instructions. Preserve failed chains and original binaries/configuration.
 
 ## Coordinated migration
 
-- [Coordinated migration](operations/migration.md).
+[Migration](operations/migration.md): reject old formats before effects, retain
+inert history, select fresh stores and roll back only as a coherent deployment.
 
 ## Passive skill acceptance
 
-- [Passive skill acceptance](operations/native-acceptance.md#passive-skill-acceptance).
+The old semantic movement/planner interfaces are retired. Player programs propose
+basic controls and need their own actual-use evidence; see [native acceptance](operations/native-acceptance.md#passive-skill-acceptance).
 
 ## Designated campaign operator
 
-- [Designated campaign operator](operations/mission-ownership.md#designated-campaign-operator).
+[Assignment](operations/mission-ownership.md#designated-campaign-operator): one
+explicitly designated generic-Pi player owns routine choices, with actor-only handoff.
 
 ## Typed mission requests and the player
 
-- [Typed mission requests and the player](operations/mission-requests.md).
-- [Bounded player host activation](operations/player-host.md).
+[Current tool procedure](operations/mission-requests.md) replaces typed semantic
+mission requests. [Finite run](operations/campaign-run.md) owns launch/closeout.
 
 ### Bounded player host activation
 
-Read [Bounded player host activation](operations/player-host.md#bounded-player-host-activation).
+[Host activation](operations/player-host.md#bounded-player-host-activation) uses
+frozen explicit Pi/MCP/context/route inputs; no coding-agent or resumed-host fallback.

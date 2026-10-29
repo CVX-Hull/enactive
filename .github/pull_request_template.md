@@ -31,7 +31,7 @@ Fast checkpoint: .venv/bin/python tools/check.py --fast plus applicable focused 
 Full portable command: .venv/bin/python tools/check.py (or --profile full).
 Record the actual protected CI profile and linked run under
 docs/workflows/ci-profiles.md#protected-ci-profiles. Broad source changes need full
-regression before merge. Editorial omits runtime/viewer tests; movement/viewer run explicit component and boundary tests; main-smoke runs selected
+regression before merge. Editorial omits runtime/viewer tests; viewer runs explicit component and boundary tests; main-smoke runs selected
 regressions and viewer tests and links qualifying PR coverage, never a full-main claim.
 Reuse existing valid exact-candidate evidence without a duplicate local full run.
 Label development evidence versus formal acceptance; link consolidated run findings.

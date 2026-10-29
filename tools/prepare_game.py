@@ -11,10 +11,15 @@ ROOT = Path(__file__).resolve().parents[1]
 if __package__ in (None, ""):
     sys.path.insert(0, str(ROOT))
 
-from harness.prepared_app import wrapper_source
+from harness.prepared_app import game_lock, wrapper_source
 
 
 def prepare(binary: Path) -> None:
+    with game_lock(ROOT / ".runtime"):
+        _prepare_locked(binary)
+
+
+def _prepare_locked(binary: Path) -> None:
     app = ROOT / ".runtime" / "Cataclysm.app"
     resources = app / "Contents" / "Resources"
     if not resources.is_dir():
@@ -24,7 +29,7 @@ def prepare(binary: Path) -> None:
     config.mkdir(parents=True, exist_ok=True)
     options_path = config / "options.json"
     options = json.loads(options_path.read_text()) if options_path.exists() else []
-    values = {"FULLSCREEN": "no", "ENABLE_MOUSE": "false", "TERMINAL_X": "120", "TERMINAL_Y": "40",
+    values = {"FULLSCREEN": "no", "ENABLE_MOUSE": "true", "TERMINAL_X": "120", "TERMINAL_Y": "40",
               "TURN_DURATION": "0.0", "USE_LANG": "en"}
     for name, value in values.items():
         existing = next((item for item in options if item["name"] == name), None)
@@ -33,10 +38,6 @@ def prepare(binary: Path) -> None:
         else:
             existing["value"] = value
     options_path.write_text(json.dumps(options, indent=2) + "\n")
-    bridge = ROOT / ".runtime" / "bridge"
-    bridge.mkdir(exist_ok=True, mode=0o700)
-    bridge.chmod(0o700)
-    (bridge / "pause").touch()
     logs = ROOT / ".runtime" / "logs"
     logs.mkdir(exist_ok=True)
     target = resources / "cataclysm-tiles"
