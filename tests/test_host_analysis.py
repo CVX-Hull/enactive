@@ -4,9 +4,8 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from harness.gameplay.contracts import ContractError
+from harness.computer.protocol import ControlError
 from tools.host_analysis import analyze_trace, discover, host_summary
-from tools.observer_analysis import identity, witness_summary
 
 
 class HostAnalysisTests(unittest.TestCase):
@@ -21,6 +20,8 @@ class HostAnalysisTests(unittest.TestCase):
         return p
 
     def event(self, kind, at, **fields):
+        if kind == "host-start":
+            fields = {"schema": "pi-player-host/4", "telemetry_version": 2, **fields}
         return dict(type=kind, monotonic_ms=at, **fields)
 
     def test_retries_censoring_and_reasoning_are_not_success_or_extra_tokens(self):
@@ -46,10 +47,10 @@ class HostAnalysisTests(unittest.TestCase):
         self.assertEqual(row["timing_ms"]["first_reasoning"]["n"], 0)
         self.assertEqual(row["pending_tools"], 0)
 
-    def test_directory_patterns_read_adviser_once_but_explicit_duplicates_refuse(self):
-        path = self.trace([self.event("host-start", 0)], "driver-adviser-active.jsonl")
+    def test_actor_directory_selects_current_trace_and_explicit_duplicates_refuse(self):
+        path = self.trace([self.event("host-start", 0)], "host.jsonl")
         self.assertEqual(discover([self.root]), [path.resolve()])
-        with self.assertRaises(ContractError):
+        with self.assertRaises(ControlError):
             discover([self.root, path])
 
     def test_clock_regression_censors_all_durations(self):
@@ -78,14 +79,13 @@ class HostAnalysisTests(unittest.TestCase):
         report = host_summary([empty, unknown, bad])
         self.assertEqual(report["coverage"], dict(empty=1, unsupported_format=1, invalid=1))
         self.assertFalse(report["complete"])
-        with self.assertRaises(ContractError):
+        with self.assertRaises(ControlError):
             discover([empty, empty])
 
-    def test_early_abort_is_retained_and_future_telemetry_is_not_interpreted(self):
+    def test_unversioned_early_abort_and_future_telemetry_are_not_interpreted(self):
         e = self.event
         row = analyze_trace(self.trace([e("abort", 0, reason="cancelled"), e("settled", 1, reason="cancelled", ok=False)]))
-        self.assertEqual(row["coverage"], "runner_only")
-        self.assertEqual(row["terminal"]["reason"], "cancelled")
+        self.assertEqual(row["coverage"], "unsupported_format")
         row = analyze_trace(self.trace([e("host-start", 0, telemetry_version=999)]))
         self.assertEqual(row["coverage"], "unsupported_version")
 
@@ -129,33 +129,66 @@ class HostAnalysisTests(unittest.TestCase):
         path = self.trace([e("host-start", 0), e("request-start", 1, request_id="r"), e("request-start", 2, request_id="r")])
         self.assertEqual(host_summary([path])["coverage"], dict(invalid=1))
 
-    def test_exact_witness_join_deduplicates_exports_and_keeps_misses(self):
-        state = dict(protocol=7, session="s", revision=2, frame="f", timestamp_ms=100, frame_ok=True,
-            boundary=dict(kind="normal_play", id="b", control_generation=1, recovery_operations=[]),
-            takeover_generation=0, pause_origin="host", frame_geometry={"output_width": 10})
-        evidence = self.root / "evidence.json"
-        evidence.write_text(json.dumps(dict(store_version=6, entries=[dict(reference=dict(observation_id="source", session="s", revision=2, timestamp_ms=100), observation=state),
-            dict(reference=dict(observation_id="missing", session="other", revision=2, timestamp_ms=100), observation={**state, "session": "other"})])))
-        frame = dict(frame_identity=json.dumps(identity(state)), native_capture_epoch_ms=100,
-            dom_replaced_epoch_ms=120, outcome="dom_replaced")
-        observer = self.root / "observer.json"
-        observer.write_text(json.dumps(dict(schema="observer-timing/3", dropped=dict(frames=3), frames=[frame, frame])))
-        report = witness_summary([evidence, observer, observer])
-        self.assertEqual(report["unique_frame_capture_to_dom_ms"]["n"], 1)
-        self.assertEqual(report["unique_frame_capture_to_dom_ms"]["sum"], 20)
-        self.assertEqual(report["missing_source_matches"], 1)
-        self.assertEqual(report["exports"][0]["dropped"]["frames"], 3)
-        self.assertIn("not physical paint", report["scope"])
-        negative = {**frame, "dom_replaced_epoch_ms": 90}
-        observer.write_text(json.dumps(dict(schema="observer-timing/3", frames=[negative, frame])))
-        invalid = witness_summary([evidence, observer])
-        self.assertEqual(invalid["source_rows"][0]["capture_to_dom_ms"], -10)
-        self.assertEqual(invalid["source_rows"][0]["missing_reason"], "invalid_cross_clock_interval")
-        self.assertEqual(invalid["unique_frame_capture_to_dom_ms"]["n"], 0)
-        # Same basename/revision without matching geometry never acquires a witness.
-        frame["frame_identity"] = json.dumps(identity({**state, "frame_geometry": {"output_width": 20}}))
-        observer.write_text(json.dumps(dict(schema="observer-timing/3", frames=[frame])))
-        self.assertEqual(witness_summary([evidence, observer])["missing_source_matches"], 2)
-        observer.write_text(json.dumps(dict(schema="observer-timing/3", frames=[42])))
-        with self.assertRaises(ContractError):
-            witness_summary([evidence, observer])
+    def test_only_exact_current_host_version_is_interpreted(self):
+        for fields in ({}, {"schema": "pi-player-host/3", "telemetry_version": 2},
+                       {"schema": "pi-player-host/4", "telemetry_version": 1},
+                       {"schema": "pi-player-host/4", "telemetry_version": True}):
+            row = analyze_trace(self.trace([dict(type="host-start", monotonic_ms=0, **fields)]))
+            self.assertEqual(row["coverage"], "unsupported_version")
+            self.assertNotIn("requests", row)
+
+    def test_progress_times_remain_relative_to_original_fetch_and_payload_is_omitted(self):
+        e = self.event
+        progress = dict(first_reasoning_delta_ms=25, first_content_delta_ms=40,
+                        first_tool_argument_delta_ms=45, max_body_chunk_gap_ms=8,
+                        reasoning_bytes=100, reasoning="PRIVATE_REASONING", content="data:image/png;base64,PRIVATE")
+        row = analyze_trace(self.trace([e("host-start", 0), e("request-start", 10, request_id="r"),
+            e("request-fetch-start", 20, request_id="r"),
+            e("response-complete", 50, request_id="r", stop_reason="stop", response_progress=progress),
+            e("settled", 60, event_output=dict(events=4, bytes=100, reasoning="PRIVATE_REASONING"))]))
+        self.assertEqual(row["timing_ms"]["first_reasoning"]["p50"], 5)
+        self.assertEqual(row["timing_ms"]["first_content"]["p50"], 20)
+        self.assertEqual(row["timing_ms"]["max_body_gap"]["p50"], 8)
+        self.assertEqual(row["requests"][0]["progress"]["reasoning_bytes"], 100)
+        self.assertNotIn("PRIVATE", json.dumps(row))
+        self.assertEqual(row["unknown_usage_requests"], 1)
+        self.assertEqual(row["usage"]["cacheRead"]["n"], 0)
+
+    def test_campaign_discovery_is_explicit_and_never_reads_neighboring_campaigns(self):
+        actor = self.root / "actors/001"
+        actor.mkdir(parents=True)
+        selected = actor / "host.jsonl"
+        selected.write_text(json.dumps(self.event("host-start", 0)) + "\n")
+        other = self.root / "other-campaign"
+        other.mkdir()
+        (other / "host.jsonl").write_text("unrelated")
+        self.assertEqual(discover([self.root]), [selected.resolve()])
+
+    def test_missing_fetch_does_not_invent_ttft_origin(self):
+        e = self.event
+        row = analyze_trace(self.trace([e("host-start", 0), e("request-start", 10, request_id="r"),
+            e("response-first-chunk", 30, request_id="r"),
+            e("response-complete", 50, request_id="r", stop_reason="stop", response_progress=dict(first_content_delta_ms=40)),
+            e("settled", 60)]))
+        self.assertEqual(row["timing_ms"]["first_body"]["n"], 0)
+        self.assertEqual(row["timing_ms"]["first_content"]["n"], 0)
+        self.assertEqual(row["completed_response_ms"]["p50"], 40)
+
+    def test_current_campaign_disposition_is_not_goal_success(self):
+        actor = self.root / "actors/001"
+        actor.mkdir(parents=True)
+        path = actor / "host.jsonl"
+        path.write_text(json.dumps(self.event("host-start", 0)) + "\n")
+        (self.root / "manifest.json").write_text(json.dumps(dict(schema="campaign-run/2", source_commit="abc")))
+        receipt = dict(schema="campaign-receipt/2", outcome="host_completed_unassessed",
+            normal_save_claimed_by_harness=False, driver=dict(schema="player-driver/2", attempts_charged=1))
+        (self.root / "receipt.json").write_text(json.dumps(receipt))
+        row = analyze_trace(path)["campaign_evidence"]
+        self.assertEqual(row["receipt.json"]["outcome"], "host_completed_unassessed")
+        self.assertFalse(row["receipt.json"]["normal_save_claimed_by_harness"])
+        self.assertEqual(row["receipt.json"]["driver"]["attempts_charged"], 1)
+        receipt["driver"]["schema"] = "player-driver/1"
+        (self.root / "receipt.json").write_text(json.dumps(receipt))
+        row = analyze_trace(path)["campaign_evidence"]
+        self.assertEqual(row["metadata_coverage"]["receipt.json"], "unsupported_driver_version")
+        self.assertNotIn("driver", row["receipt.json"])
