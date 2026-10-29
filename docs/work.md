@@ -32,10 +32,18 @@ medium package pins its provider. The [recorded endpoint dispositions](acceptanc
 retain Fireworks/BaseTen failures and the explicit DeepInfra ending continuation,
 not a quality ranking.
 
+The compact [player guide](player-guide.md#play-from-observed-effects) now emphasizes
+observed effects, quantity/container scope and confirmation focus. The
+[player-context study](acceptance/2026-10-29-player-context.md) retains its authentic
+baseline, useful care/food progression, fresh-child quantity reconciliation and
+unsuccessful continuations. #280 owns its source-delivery receipts; the study does
+not qualify parent cadence, learning or survival.
+
 ## Decisive evidence
 
 | Evidence | Scope and limitation |
 | --- | --- |
+| [Player context through actual play](acceptance/2026-10-29-player-context.md) | Fire clearance, new food actually used, saved-state continuity and a corrected water claim; remaining quantity/search/control errors and failed trade/rest are retained. |
 | [Production computer control](acceptance/2026-10-29-computer-control.md) | Composite authentic useful play/program/knowledge/succession and Save/reload/normal ending; failed admissions remain failed. |
 | [Basic computer-control proof](acceptance/2026-10-29-basic-computer-control.md) | Earlier isolated raw delivery/scouting evidence and failures; not production acceptance or CDDA pointer qualification. |
 | [Organic corrected-program play](acceptance/2026-10-28-organic-play.md) | Useful exact correction by a fresh successor on the earlier semantic system, with normal ending and packaging/quantity limits. |
