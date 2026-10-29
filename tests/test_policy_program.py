@@ -6,14 +6,14 @@ import sys
 import time
 import unittest
 
-from harness.gameplay.policy_program import PolicyProgram, PolicyProgramError
+from harness.player.policy_program import PolicyProgram, PolicyProgramError
 
 
 def policy(expression):
     return f"function step(view, state) {{ return {expression}; }}"
 
 
-YIELD = "{status:'yield', state, input:null, reason:'unfamiliar view'}"
+YIELD = "{status:'yield', state, actions:null, reason:'unfamiliar view'}"
 
 
 class PolicyProgramTests(unittest.TestCase):
@@ -23,11 +23,11 @@ class PolicyProgramTests(unittest.TestCase):
         function step(view, state) {
           calls++;
           if (view.kind !== 'choices')
-            return {status:'yield', state, input:null, reason:'unfamiliar view'};
+            return {status:'yield', state, actions:null, reason:'unfamiliar view'};
           const row = view.rows.find(row => row.label === state.target);
-          if (!row) return {status:'yield', state, input:null, reason:'target absent'};
+          if (!row) return {status:'yield', state, actions:null, reason:'target absent'};
           return {status:'act', state:{...state, calls}, reason:'visible target',
-                  input:{type:'click', button:'left', x:row.x, y:row.y}};
+                  actions:[{type:'click', button:'left', x:row.x, y:row.y}]};
         }
         """
         state = {'target': 'odd unfamiliar item'}
@@ -39,37 +39,37 @@ class PolicyProgramTests(unittest.TestCase):
                     rows.reverse()
                 view = {'kind': 'choices', 'rows': rows}
                 result = program.step(view, state)
-                self.assertEqual(result['input'], {'type': 'click', 'button': 'left',
-                                                  'x': 100 + i, 'y': 50 + i})
+                self.assertEqual(result['actions'], [{'type': 'click', 'button': 'left',
+                                                     'x': 100 + i, 'y': 50 + i}])
                 state = result['state']
                 self.assertEqual(state['calls'], i + 1)
             self.assertEqual(program.step({'kind': 'unknown'}, state)['status'], 'yield')
             self.assertEqual(program.step({'kind': 'choices', 'rows': []}, state)['reason'],
                              'target absent')
 
-    def test_ordinary_inputs_and_done_are_data(self):
-        inputs = [{'type': 'key', 'key': 'ENTER', 'modifiers': []},
+    def test_ordinary_actions_and_done_are_data(self):
+        actions = [{'type': 'key', 'key': 'ENTER', 'modifiers': []},
                   {'type': 'key', 'key': 'x', 'modifiers': ['CTRL', 'SHIFT']},
-                  {'type': 'text', 'text': 'a' * 24},
+                  {'type': 'text', 'text': 'a' * 31},
                   {'type': 'click', 'button': 'right', 'x': 16383, 'y': 0}]
-        for value in inputs:
+        for value in actions:
             with self.subTest(value=value), PolicyProgram(policy(
-                    "{status:'act', state, reason:'try', input:view.input}")) as program:
-                self.assertEqual(program.step({'input': value}, {})['input'], value)
-        with PolicyProgram(policy("{status:'done', state, reason:'terminated', input:null}")) as program:
+                    "{status:'act', state, reason:'try', actions:[view.actions]}")) as program:
+                self.assertEqual(program.step({'actions': value}, {})['actions'], [value])
+        with PolicyProgram(policy("{status:'done', state, reason:'terminated', actions:null}")) as program:
             self.assertEqual(program.step({}, {})['status'], 'done')
 
-    def test_input_schema_rejects_missing_modifiers_geometry_and_invalid_values(self):
+    def test_actions_schema_rejects_missing_modifiers_geometry_and_invalid_values(self):
         invalid = [{'type': 'key', 'key': 'x'},
                    {'type': 'key', 'key': 'x', 'modifiers': ['CTRL', 'CTRL']},
-                   {'type': 'text', 'text': 'a' * 25},
+                   {'type': 'text', 'text': 'a' * 32},
                    {'type': 'click', 'button': 'left', 'x': 0, 'y': 1, 'geometry': {}},
                    {'type': 'click', 'button': 'left', 'x': -1, 'y': 1},
                    {'type': 'click', 'button': 'left', 'x': True, 'y': 1}]
         for value in invalid:
             with self.subTest(value=value), PolicyProgram(policy(
-                    "{status:'act', state, reason:'try', input:view.input}")) as program:
-                self.assert_faulted(program, {'input': value}, {})
+                    "{status:'act', state, reason:'try', actions:[view.actions]}")) as program:
+                self.assert_faulted(program, {'actions': value}, {})
 
     def assert_faulted(self, program, view=None, state=None, **kwargs):
         with self.assertRaises(PolicyProgramError):
@@ -85,14 +85,14 @@ class PolicyProgramTests(unittest.TestCase):
             with self.subTest(source=source), self.assertRaises(PolicyProgramError):
                 PolicyProgram(source)
 
-    def test_json_numeric_domain_rejects_loss_before_policy_can_choose_input(self):
+    def test_json_numeric_domain_rejects_loss_before_policy_can_choose_actions(self):
         for value in (2**53, 2**53 + 1, -(2**53 + 1), 10**400, float(2**53)):
             with self.subTest(value=str(value)[:24]), PolicyProgram(policy(YIELD)) as program:
                 self.assert_faulted(program, state={'n':value})
-        with PolicyProgram(policy("{status:'yield',state,input:null,reason:'finite binary64'}")) as program:
+        with PolicyProgram(policy("{status:'yield',state,actions:null,reason:'finite binary64'}")) as program:
             self.assertEqual(program.step({}, {'n':2**53-1,'fraction':.25})['state'],
                              {'n':2**53-1,'fraction':.25})
-        with PolicyProgram(policy("{status:'yield',state:{n:1e100},input:null,reason:'unsafe integer'}")) as program:
+        with PolicyProgram(policy("{status:'yield',state:{n:1e100},actions:null,reason:'unsafe integer'}")) as program:
             self.assert_faulted(program)
 
     def test_huge_timeout_is_a_normal_fault_and_closes_instance(self):
@@ -108,16 +108,16 @@ class PolicyProgramTests(unittest.TestCase):
 
     def test_json_validation_before_stringify(self):
         invalid = ['undefined', '() => 1', 'Symbol()', '1n', 'Promise.resolve({})',
-                   "{status:'yield', state:{n:NaN}, input:null, reason:'bad'}",
-                   "{status:'yield', state:{n:Infinity}, input:null, reason:'bad'}",
-                   "{status:'yield', state:{n:undefined}, input:null, reason:'bad'}",
-                   "{status:'yield', state:{n:() => 1}, input:null, reason:'bad'}",
-                   "{status:'yield', state:{n:Symbol()}, input:null, reason:'bad'}",
-                   "{status:'yield', state:{n:1n}, input:null, reason:'bad'}",
-                   "{status:'yield', state:{n:new Date()}, input:null, reason:'bad'}",
-                   "{status:'yield', state:{n:[,1]}, input:null, reason:'bad'}",
-                   "{status:'yield', state:{get n(){throw Error('getter ran')}}, input:null, reason:'bad'}",
-                   "{status:'yield', state:{[Symbol()]:1}, input:null, reason:'bad'}"]
+                   "{status:'yield', state:{n:NaN}, actions:null, reason:'bad'}",
+                   "{status:'yield', state:{n:Infinity}, actions:null, reason:'bad'}",
+                   "{status:'yield', state:{n:undefined}, actions:null, reason:'bad'}",
+                   "{status:'yield', state:{n:() => 1}, actions:null, reason:'bad'}",
+                   "{status:'yield', state:{n:Symbol()}, actions:null, reason:'bad'}",
+                   "{status:'yield', state:{n:1n}, actions:null, reason:'bad'}",
+                   "{status:'yield', state:{n:new Date()}, actions:null, reason:'bad'}",
+                   "{status:'yield', state:{n:[,1]}, actions:null, reason:'bad'}",
+                   "{status:'yield', state:{get n(){throw Error('getter ran')}}, actions:null, reason:'bad'}",
+                   "{status:'yield', state:{[Symbol()]:1}, actions:null, reason:'bad'}"]
         for expression in invalid:
             with self.subTest(expression=expression), PolicyProgram(policy(expression)) as program:
                 self.assert_faulted(program)
@@ -125,22 +125,22 @@ class PolicyProgramTests(unittest.TestCase):
             self.assert_faulted(program)
 
     def test_result_schema_and_utf8_bounds(self):
-        invalid = ["{status:'success', state:{}, input:null, reason:'wrong status'}",
-                   "{status:'yield', state:{}, input:null, reason:''}",
-                   "{status:'yield', state:{}, input:null, reason:'x'.repeat(1025)}",
-                   "{status:'yield', state:[], input:null, reason:'wrong state'}",
-                   "{status:'yield', state:{}, input:{type:'text',text:'x'}, reason:'wrong input'}",
-                   "{status:'act', state:{}, input:null, reason:'missing input'}",
-                   "{status:'yield', state:{}, reason:'missing input'}",
-                   "{status:'yield', state:{}, input:null, reason:'extra field', extra:1}",
-                   "{status:'yield', state:{x:'x'.repeat(16384)}, input:null, reason:'large state'}",
-                   "{status:'yield', state:{x:'界'.repeat(12000)}, input:null, reason:'large result'}",
-                   "{status:'yield', state:{}, input:null, reason:'\\ud800'}"]
+        invalid = ["{status:'success', state:{}, actions:null, reason:'wrong status'}",
+                   "{status:'yield', state:{}, actions:null, reason:''}",
+                   "{status:'yield', state:{}, actions:null, reason:'x'.repeat(1025)}",
+                   "{status:'yield', state:[], actions:null, reason:'wrong state'}",
+                   "{status:'yield', state:{}, actions:{type:'text',text:'x'}, reason:'wrong actions'}",
+                   "{status:'act', state:{}, actions:null, reason:'missing actions'}",
+                   "{status:'yield', state:{}, reason:'missing actions'}",
+                   "{status:'yield', state:{}, actions:null, reason:'extra field', extra:1}",
+                   "{status:'yield', state:{x:'x'.repeat(16384)}, actions:null, reason:'large state'}",
+                   "{status:'yield', state:{x:'界'.repeat(12000)}, actions:null, reason:'large result'}",
+                   "{status:'yield', state:{}, actions:null, reason:'\\ud800'}"]
         for expression in invalid:
             with self.subTest(expression=expression), PolicyProgram(policy(expression)) as program:
                 self.assert_faulted(program)
 
-    def test_host_input_and_source_bounds(self):
+    def test_host_actions_and_source_bounds(self):
         for source in (None, 1, ' ' * (32768 + 1), '//界' * 11000, '\ud800'):
             with self.subTest(source_type=type(source)), self.assertRaises(PolicyProgramError):
                 PolicyProgram(source)
@@ -169,13 +169,13 @@ class PolicyProgramTests(unittest.TestCase):
         Object.prototype.toJSON = () => 'forged';
         Array.prototype.toJSON = () => 'forged';
         function step(view, state) {
-          return {status:'yield', state:{n:view.n, a:[1,2]}, input:null, reason:'original'};
+          return {status:'yield', state:{n:view.n, a:[1,2]}, actions:null, reason:'original'};
         }
         """
         with PolicyProgram(source) as program:
             self.assertEqual(program.step({'n': 17}, {})['state'], {'n': 17, 'a': [1, 2]})
         with PolicyProgram("Number.isFinite=()=>true;" + policy(
-                "{status:'yield',state:{n:NaN},input:null,reason:'bad'}")) as program:
+                "{status:'yield',state:{n:NaN},actions:null,reason:'bad'}")) as program:
             self.assert_faulted(program)
 
     def test_delayed_schedulers_and_host_capabilities_are_unreachable(self):
@@ -184,7 +184,7 @@ class PolicyProgramTests(unittest.TestCase):
                  'SharedArrayBuffer', 'Worker', 'fetch', 'require', 'process',
                  'read', 'load', 'std', 'os', 'XMLHttpRequest', 'WebSocket']
         source = policy("{status:'yield', state:{types:view.names.map(n => typeof globalThis[n]),"
-                        "waitAsync:typeof Atomics.waitAsync}, input:null, reason:'capabilities'}")
+                        "waitAsync:typeof Atomics.waitAsync}, actions:null, reason:'capabilities'}")
         with PolicyProgram(source) as program:
             result = program.step({'names': names}, {})['state']
             self.assertEqual(result['types'], ['undefined'] * len(names))
@@ -195,7 +195,7 @@ class PolicyProgramTests(unittest.TestCase):
         let n = 0;
         function step(view, state) {
           if (view.schedule) Promise.resolve().then(() => { n++; });
-          return {status:'yield', state:{n}, input:null, reason:'microtask count'};
+          return {status:'yield', state:{n}, actions:null, reason:'microtask count'};
         }
         """
         with PolicyProgram(source) as program:
@@ -209,7 +209,7 @@ class PolicyProgramTests(unittest.TestCase):
         function step() {
           const again = () => Promise.resolve().then(again);
           again();
-          return {status:'yield', state:{}, input:null, reason:'runaway microtasks'};
+          return {status:'yield', state:{}, actions:null, reason:'runaway microtasks'};
         }
         """
         with PolicyProgram(source) as program:
@@ -219,7 +219,7 @@ class PolicyProgramTests(unittest.TestCase):
         source = """
         function step() {
           const value = new Proxy({}, {ownKeys(){while(true){}}});
-          return {status:'yield', state:{value}, input:null, reason:'validation loop'};
+          return {status:'yield', state:{value}, actions:null, reason:'validation loop'};
         }
         """
         with PolicyProgram(source) as program:
@@ -237,8 +237,8 @@ class PolicyProgramTests(unittest.TestCase):
 
     def test_success_and_fault_lifetimes_leave_stderr_clean(self):
         script = """
-from harness.gameplay.policy_program import PolicyProgram, PolicyProgramError
-for code in ["function step(v,s){return {status:'yield',state:s,input:null,reason:'ok'}}",
+from harness.player.policy_program import PolicyProgram, PolicyProgramError
+for code in ["function step(v,s){return {status:'yield',state:s,actions:null,reason:'ok'}}",
              "function step(){while(true){}}", "while(true){}",
              "function step(){const a=[];while(true){a.push(new Array(100000).fill(1))}}"]:
     try:
@@ -254,6 +254,22 @@ print('closed')
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout.strip(), 'closed')
         self.assertEqual(result.stderr, '')
+
+
+class BasicActionBoundsTests(unittest.TestCase):
+    def test_public_sequence_and_wait_bounds_are_evaluated_before_dispatch(self):
+        code = policy("{status:'act', state, actions:view.actions, reason:'proposal'}")
+        key = {'type': 'key', 'key': 'x', 'modifiers': []}
+        with PolicyProgram(code) as p:
+            self.assertEqual(p.step({'actions': [key] * 32}, {})['actions'], [key] * 32)
+        for actions in ([], [key] * 33, [{'type': 'wait', 'seconds': 2}] * 8,
+                        [{'type': 'wait', 'seconds': True}], [{'type': 'wait', 'seconds': 2.01}],
+                        [{'type': 'click', 'button': 'left', 'x': 1.5, 'y': 0}]):
+            with self.subTest(actions=actions), PolicyProgram(code) as p:
+                with self.assertRaises(PolicyProgramError):
+                    p.step({'actions': actions}, {})
+        with PolicyProgram(code) as p:
+            self.assertEqual(p.step({'actions': [{'type': 'wait', 'seconds': 2}]}, {})['status'], 'act')
 
 
 if __name__ == '__main__':
