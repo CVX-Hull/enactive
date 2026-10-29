@@ -1,7 +1,8 @@
 # Isolated computer-control proof
 
-This is #181's bounded development candidate, governed by
-[the change brief](../../docs/changes/070-computer-control-proof.md) and
+This temporary integration served #181 and now supports #176's initial checkpoint.
+Use [the current cutover brief](../../docs/changes/071-computer-control-cutover.md),
+[the retained proof/map](../../docs/changes/070-computer-control-proof.md) and
 [ADR006](../../docs/decisions/006-computer-control-boundary.md). It is not the
 product CLI or a second supported backend. All game meaning belongs to the player.
 
