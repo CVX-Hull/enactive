@@ -156,7 +156,7 @@ def request_tool_specs() -> tuple[ToolSpec, ...]:
             "Program clicks omit geometry. Source/result are bounded to32KiB, view256KiB and state16KiB; "
             "finite plain JSON and ordinary input validation still apply. Shape validity grants no input authority or useful-effect proof.", skill),
         ToolSpec("enactive_lifecycle", "Explicit registered launch/create/save/exit/load/finish. First obtain enactive_snapshot. With no owned child, launch using scope=new_root and source_id=null; then begin create/load with scope=new_root from its returned menu. For other operations, source_id=null selects that exact cached snapshot source. Continue an existing lifecycle phase with scope=lifecycle and the same operation, including transition reconciliation, identity readmission and adoption. Lifecycle direct children require interrupt_allowed=false. Owned paused-menu exit charges Resume plus Quit (at least2 primitives before any confirmation); a separate menu-only setup abort sends no input. No implicit save or restart.", lifecycle),
-        ToolSpec("enactive_observe", "Request one typed native observation using the chosen snapshot epoch. A healthy ordinary prompt may advance or record local macro_closure without task success or renewed mission allowance; explicitly choose any next root from fresh evidence. Does not Resume or reconcile unknown delivery. After known direct input with absent/aged current evidence, explicit Observe can refresh its read-only scope across the exact authenticated operation rotation; input requires the fresh binding. It never restores failed custody or renews limits.", _object(common)),
+        ToolSpec("enactive_observe", "Before first owned launch, a disconnected source-free admission can return launch guidance without a native capture. Otherwise request one typed native observation using the chosen snapshot epoch. A healthy ordinary prompt may advance or record local macro_closure without task success or renewed mission allowance; explicitly choose any next root from fresh evidence. Does not Resume or reconcile unknown delivery. After known direct input with absent/aged current evidence, explicit Observe can refresh its read-only scope across the exact authenticated operation rotation; input requires the fresh binding. It never restores failed custody or renews limits.", _object(common)),
     ]
     # Authoring projections bind metadata; canonical ledger contracts and
     # explicit semantic/evidence choices remain unchanged.
@@ -172,6 +172,9 @@ def request_tool_specs() -> tuple[ToolSpec, ...]:
         specs.append(ToolSpec("enactive_" + kind,
             "Write explicit evidence-linked memory through the existing ledger. "
             "Set intent.entry_type alongside intent.entry, never inside entry. The selected entry contains only that memory type's fields. "
+            "For Work, stage is a short label (at most 128 characters); subject and coverage_id are stable identifier labels, "
+            "not phrases with spaces. Quantities count only the stated subject within the supported coverage; "
+            "do not add overlapping counts or turn an unverified quantity into an observed result. "
             "For Claims choose key, value, text, coverage, status, grounding and support groups. "
             "Identity keys choose world/character; software supplies the existing name unit/coverage, interpretation kind, schema/record type, Claim ID, scope/native observation order and host receipt time. "
             "Source grounding source_id=null selects the exact cached snapshot source; explicit IDs require a prior source read. "
@@ -202,7 +205,7 @@ def request_tool_specs() -> tuple[ToolSpec, ...]:
             _object({**common, "intent": _without(request_schema(kind), *headers, "kind")})))
     claim = _without(request_schema("claim"), *headers, "kind", "pause_generation", "takeover_generation",
         "expected_session", "expected_revision", "expected_boundary_id", "expected_pause_origin")
-    specs.append(ToolSpec("enactive_claim", "Claim a selected issued handoff using explicit packet IDs and truthful source-read declarations. Bindings come from that exact retained issuance.",
+    specs.append(ToolSpec("enactive_claim", "Claim a selected issued handoff using explicit packet IDs and truthful source-read declarations. Bindings come from that exact retained issuance. Source reads alone do not complete Claim. After a correctable evidence refusal, correct and resubmit Claim while that issuance remains live, then separately enactive_readmit with the successful Claim ID. Gameplay input before readmission causes an authority stop and revokes the handoff.",
         _object({**common, "intent": claim})))
     readmit = []
     for mode in ("handoff", "recovery"):

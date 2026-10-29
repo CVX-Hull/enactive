@@ -24,7 +24,14 @@ conversion. Admission and original deadlines/costs persist in the ledger; parsed
 JSON and status contain no executable lease.
 
 Start records source-free admission and sends no native request; explicit Observe
-remains passive. Even already-unpaused normal play does not prove the named world/character, receive a lease or seed the mission's game-time
+remains passive. Before first owned launch, an admitted mission with no current
+source or owned/restored child returns that same bootstrap guidance when native
+is disconnected, controller pending slots are empty, and only the initial
+reconciliation diagnostic (or no error) is present. No capture is published and
+no source, phase transition or authority is created. Connected unowned views,
+pending reconciliation and other native/transport faults keep their existing
+observation paths. Actual Launch still checks live Pause, custody and empty
+slots/inboxes independently. Even already-unpaused normal play does not prove the named world/character, receive a lease or seed the mission's game-time
 anchor. Registered creation/load must establish those facts after owned launch.
 Registered creation/save/load and provisional character inspection now compose in
 source tests through the real controller, ledger and evidence archive. Quiescent

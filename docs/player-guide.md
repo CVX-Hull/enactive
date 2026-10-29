@@ -29,6 +29,9 @@ denial or stop solely because a successful tool ran from a read-only host.
   launch handle. Without an owned child, then use source-free
   `enactive_lifecycle(operation=launch, scope=new_root, source_id=null)` with that
   handle and valid finite limits. Select create/load from its returned menu.
+  On a clean disconnected source-free admission, Observe returns launch guidance
+  without a capture; it does not prepare or create the child. Existing diagnostic
+  observations and pending reconciliation retain their separate paths.
   Source-free means no informing image is required; it does not mean an empty
   snapshot handle is accepted. Keep this entry point in initial player context.
   The admitted scenario is a setup target, not an observed world/character fact.
@@ -143,7 +146,9 @@ denial or stop solely because a successful tool ran from a read-only host.
   marked `submission=not_submitted` has no original operation to collect. Follow
   its supported next step or correct the selected arguments under original limits.
   An open, idle prompt can require explicit Observe before a new root: inspect
-  the returned phase or `macro_closure`, then choose the next bounded input.
+  the returned phase or `macro_closure`. If `prompt_phase` remains open, use a
+  supported `scope=prompt` child under that original root. Observe does not promise
+  closure; a program still requires `new_root` and cannot replace the prompt root.
   Whole-mission remaining capacity is not the local root's remaining allowance. Errors
   during staging, dispatch or presentation retain uncertain collection unless an
   actually validated `not_admitted` refusal is preserved. A new invocation is a new
@@ -204,7 +209,13 @@ denial or stop solely because a successful tool ran from a read-only host.
   the original limits; do not replay the rejected request or assume an editor changed.
 - `enactive_context` retrieves bounded memory; `enactive_source` retrieves an exact
   retained image. `enactive_remember`/`correct` retain fallible supported knowledge
-  and Work. Software records procedure/action/result attribution; no per-key
+  and Work. Work's `stage` is a short label of at most128 characters; quantity
+  `subject` and `coverage_id` are identifiers, not phrases with spaces. Count only
+  the declared subject within supported coverage; overlapping groupings and
+  unverified quantities do not become observed totals. Pi can give focused
+  diagnostics for the explicitly selected memory type after a schema refusal;
+  correcting those fields does not establish truth or task success.
+  Software records procedure/action/result attribution; no per-key
   narrative or usage report is required. HistoricalProcedure is advisory lineage;
   its old code cannot execute. Explicitly retrieve its qualified head and support,
   then author a current revision with that exact parent and current evidence.
@@ -238,6 +249,14 @@ Finish requires empty `identity_claim_ids` and no active phase. If the post-exit
 snapshot has no source, explicitly read the retained final exit source with
 `enactive_source` and select its returned ID for the separate Finish root.
 Do not substitute identity Claims or infer Finish from process exit.
+
+A fresh successor completes **Claim → readmit → gameplay input** in that order.
+Reading all sources after a refused Claim does not complete it. Correct an explicit
+packet/declaration refusal and submit Claim again while its original issuance is
+live, then link readmission to the successful Claim. A skill/lifecycle input before
+readmission is an authority failure that revokes the handoff; later corrected
+arguments cannot restore it. Other authority/Pause/uncertainty failures retain
+their stop rules.
 
 ## Current registered CDDA lifecycle
 

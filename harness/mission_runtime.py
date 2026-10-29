@@ -20,7 +20,7 @@ from uuid import UUID
 
 from .gameplay.mission_memory import MissionMemory
 from .gameplay.cdda_memory import capture_native
-from .controller import Controller, ControlError, MissionInputRefusal, MissionLease, validate_state
+from .controller import Controller, ControlError, MissionInputRefusal, MissionLease, STARTUP_RECONCILIATION_PROMPT, validate_state
 from .native_process import NativeProcess
 from .mission_lifecycle import LifecycleRequestRefusal, NormalPhase, RegisteredLifecycle
 from .mission_handoff import HandoffEvidenceError, HandoffPhase, RegisteredHandoff
@@ -1138,6 +1138,17 @@ class MissionRuntime:
             return self._poll_activity(work)[1]
         if phase is not None:
             return self._observe_prompt(work, phase)
+        if (self._native is None and self._owned_launch is None and not self._lost_process_custody
+                and self._current is None and self._ledger.snapshot(now=self._wall())["phase"] == "admitted"):
+            native = self.controller.status()
+            if (native["connection"] == "disconnected" and native["pending"] is None
+                    and native["control_pending"] is None
+                    and native["error"] in ("", STARTUP_RECONCILIATION_PROMPT)
+                    and not (native["state"] or {}).get("error")):
+                # Match source-free admission instead of stranding an Observe
+                # slot without a renderer. Existing faults, connected unowned
+                # views and pending reconciliation keep their ordinary path.
+                return self._bootstrap(work)
         self._capacity()
         state, received = self._observe_native(work)
         normals = [r for r in self._store.historical_references if r.boundary_kind == "normal_play"]
@@ -3250,6 +3261,12 @@ class MissionRuntime:
             disposition, result = "blocked", {"reason": f"{type(exc).__name__}: {exc}"[:1024], "grants_authority": False}
             result["source_ids"] = [] if self._current is None else [self._current.observation_id]
             self._diagnostic = result["reason"]
+            if data["kind"] == "claim" and isinstance(exc, HandoffEvidenceError):
+                result["next_step"] = (
+                    "Claim did not complete. Source reads do not complete Claim. If the original handoff is still live, "
+                    "correct the indicated packet/read declarations and submit a new enactive_claim; after it completes, "
+                    "use enactive_readmit linked to that successful Claim. Gameplay skills/lifecycle require readmission. "
+                    "An authority failure before readmission revokes the handoff; these diagnostics grant no authority.")
             if (not isinstance(exc, (HandoffEvidenceError, RecoveryEvidenceError))
                     or isinstance(exc, (OSError, LedgerError))):
                 self._stop_after_failure(result["reason"])

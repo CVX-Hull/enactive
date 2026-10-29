@@ -10,7 +10,7 @@ import unittest
 from unittest.mock import Mock, patch
 import warnings
 
-from harness.controller import Controller
+from harness.controller import Controller, STARTUP_RECONCILIATION_PROMPT, atomic_json
 from harness.mission_runtime import MissionRuntime
 from harness.native_process import NativeProcess
 from tests.test_mission_contracts import admission
@@ -196,6 +196,95 @@ class MissionLaunchTests(unittest.TestCase):
         second = self.launch(identity="second-launch")
         self.assertEqual(second["state"], "blocked")
         self.process.launch.assert_called_once()
+
+    def bootstrap_observe_then_launch(self, *, stale_state=False):
+        if stale_state:
+            old = copy.deepcopy(self.bridge.value)
+            old.update(status="dispatched", timestamp_ms=int(time.time() * 1000) - 60_000,
+                frame_ok=False, frame="", frame_geometry=None)
+            atomic_json(self.controller.bridge / "state.json", old)
+        self.start()
+        native = self.controller.status()
+        self.assertEqual(native["connection"], "disconnected")
+        self.assertEqual(native["error"], STARTUP_RECONCILIATION_PROMPT)
+        before = self.runtime.status()
+        with patch.object(self.controller, "observe_mission", wraps=self.controller.observe_mission) as capture:
+            self.runtime.command(dict(schema="mission/11", kind="observe", request_id="before-launch",
+                mission_id=self.a.mission_id, epoch=before["epoch"]))
+            observed = self.settled("before-launch")
+            self.assertEqual(observed["state"], "completed", observed)
+            self.assertTrue(observed["result"]["lifecycle_needed"])
+            self.assertEqual(observed["result"]["source_ids"], [])
+            self.assertIn("owned launch", observed["result"]["reason"])
+            capture.assert_not_called()
+            self.assertEqual(self.bridge.requests, [])
+            self.assertIsNone(self.controller.pending)
+            self.assertIsNone(self.controller.control_pending)
+            for name in ("request.json", "claimed.json", "control.json", "control-claimed.json"):
+                self.assertFalse((self.controller.bridge / name).exists())
+            after = self.runtime.status()
+            for field in ("phase", "epoch", "spent_inputs", "current_source"):
+                self.assertEqual(after[field], before[field])
+            self.assertIsNone(self.controller._mission_lease)
+            self.assertEqual(self.runtime._store.historical_references, ())
+            launched = self.launch()
+            self.assertEqual(launched["state"], "completed", launched)
+            self.assertTrue(launched["result"]["native_ready"])
+            capture.assert_called()
+            calls = capture.call_count
+            self.runtime.command(dict(schema="mission/11", kind="observe", request_id="after-launch",
+                mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"]))
+            self.assertEqual(self.settled("after-launch")["state"], "completed")
+            self.assertGreater(capture.call_count, calls, "owned-child Observe must still capture")
+
+    def test_disconnected_bootstrap_observe_preserves_source_free_launch(self):
+        self.bootstrap_observe_then_launch()
+
+    def test_stale_dispatched_bootstrap_observe_preserves_source_free_launch(self):
+        self.bootstrap_observe_then_launch(stale_state=True)
+
+    def test_connected_unowned_observe_keeps_its_passive_capture_path(self):
+        self.assertEqual(self.controller.execute("observe")["status"], "ready")
+        self.start()
+        self.assertEqual(self.controller.status()["connection"], "fresh")
+        with patch.object(self.controller, "observe_mission", wraps=self.controller.observe_mission) as capture:
+            self.runtime.command(dict(schema="mission/11", kind="observe", request_id="external-view",
+                mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"]))
+            result = self.settled("external-view")
+            self.assertEqual(result["state"], "completed", result)
+            self.assertTrue(result["result"]["source_ids"])
+            capture.assert_called_once()
+        self.assertIsNone(self.controller._mission_lease)
+        self.factory.assert_not_called()
+
+    def test_pending_observe_reconciliation_is_not_replaced_by_bootstrap(self):
+        self.start()
+        self.bridge.behavior = lambda bridge, request: False
+        self.assertEqual(self.controller.execute("observe", timeout=.1)["status"], "timeout")
+        self.assertIsNotNone(self.controller.pending)
+        original = copy.deepcopy(self.controller.unknown_outcomes)
+        self.bridge.behavior = None
+        with patch.object(self.controller, "observe_mission", wraps=self.controller.observe_mission) as capture:
+            self.runtime.command(dict(schema="mission/11", kind="observe", request_id="pending-observe",
+                mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"]))
+            result = self.settled("pending-observe")
+            self.assertEqual(result["state"], "completed", result)
+            self.assertTrue(result["result"]["source_ids"])
+            capture.assert_called_once()
+        self.assertIsNone(self.controller.pending)
+        self.assertEqual(self.controller.unknown_outcomes, original)
+        self.assertIsNone(self.controller._mission_lease)
+
+    def test_other_bootstrap_transport_fault_retains_actual_observation_path(self):
+        self.start()
+        self.controller.transport_error = "Specific fixture transport fault"
+        with patch.object(self.controller, "observe_mission", wraps=self.controller.observe_mission) as capture:
+            self.runtime.command(dict(schema="mission/11", kind="observe", request_id="fault-observe",
+                mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"]))
+            result = self.settled("fault-observe")
+            self.assertEqual(result["state"], "completed", result)
+            self.assertNotIn("admitted", result["result"])
+            capture.assert_called_once()
 
     def test_launch_cannot_use_a_source_claim_or_work_to_adopt_a_running_game(self):
         self.start()

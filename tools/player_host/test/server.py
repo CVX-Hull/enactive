@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import sys
 import time
+from typing import Annotated
 
 # MCP 2.x deliberately diverts fd1 away from its wire. Keep an owned duplicate
 # solely to inject invalid bytes in the transport-error negative fixture.
@@ -17,6 +18,9 @@ if len(sys.argv) > 3:
 import asyncio
 from mcp.server.mcpserver import MCPServer
 from mcp.types import CallToolResult, ImageContent, TextContent
+from pydantic import WithJsonSchema
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from harness.player_tools import tool_specs
 server = MCPServer("offline-player-fixture", instructions="Use only the admitted fixture tools.")
 PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j1ioAAAAASUVORK5CYII="
 
@@ -48,6 +52,18 @@ async def mutate(mode: str, index: int = 0) -> str:
 async def integer(value: int) -> int:
     record({"tool": "integer", "value": value})
     return value
+
+
+MEMORY_INTENT = next(spec.schema["properties"]["intent"] for spec in tool_specs()
+    if spec.name == "enactive_remember")
+
+
+@server.tool()
+async def enactive_remember(snapshot_id: str, intent: Annotated[dict, WithJsonSchema(MEMORY_INTENT)]) -> CallToolResult:
+    record(dict(tool="enactive_remember", snapshot_id=snapshot_id, intent=intent))
+    fail = intent["entry"].get("stage") == "mcp-error"
+    return CallToolResult(content=[TextContent(type="text", text=(
+        'Validation failed for tool "enactive_remember":\nfixture MCP refusal' if fail else "retained fixture"))], isError=fail)
 
 
 def handoff_receipt(mode):

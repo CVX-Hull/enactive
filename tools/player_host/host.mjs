@@ -5,6 +5,7 @@ import { Type, AssistantMessageEventStream, isRetryableAssistantError } from '@e
 import { stream } from '@earendil-works/pi-ai/api/openai-completions';
 import { retryProviderRequest } from '@earendil-works/pi-ai/utils/provider-retry';
 import { McpClient, StdioTransport, toLlmContent } from '@earendil-works/pi-mcp';
+import { createValidationFeedback } from './validation-feedback.mjs';
 
 export const INPUT_LIMIT_BYTES = 1_048_576;
 // openai@7.19.0 client.mjs reads these despite Pi's scoped env option.
@@ -36,12 +37,13 @@ function bounded(value) {
 /** One frozen route, without credential values, ambient discovery or effort clamping. */
 export function validateConfiguration(configuration, selectedModel, effort) {
   bounded(configuration);
-  closed(configuration, ['schema', 'model', 'api_key_env', 'max_requests', 'max_context_images', 'request_timeout_seconds']);
-  requireThat(configuration.schema === 'pi-player-host/2');
+  closed(configuration, ['schema', 'model', 'api_key_env', 'max_requests', 'max_context_images', 'request_timeout_seconds', 'service_tier']);
+  requireThat(configuration.schema === 'pi-player-host/4');
   requireThat(/^[A-Za-z_][A-Za-z0-9_]*$/.test(configuration.api_key_env ?? '') && !AMBIENT_PROVIDER_SETTINGS.includes(configuration.api_key_env));
   requireThat(Number.isSafeInteger(configuration.max_requests) && configuration.max_requests > 0);
   requireThat(Number.isSafeInteger(configuration.max_context_images) && configuration.max_context_images > 0);
   requireThat(finiteMilliseconds(configuration.request_timeout_seconds));
+  requireThat(['default', 'priority'].includes(configuration.service_tier));
   const model = configuration.model;
   closed(model, ['id', 'name', 'api', 'provider', 'baseUrl', 'input', 'reasoning', 'thinkingLevelMap', 'cost', 'contextWindow', 'maxTokens', 'compat', 'type']);
   requireThat(model.api === 'openai-completions' && model.id === selectedModel && text(model.id) && text(model.name) && text(model.provider));
@@ -54,6 +56,18 @@ export function validateConfiguration(configuration, selectedModel, effort) {
   let url;
   try { url = new URL(model.baseUrl); } catch { throw new HostError('invalid-configuration'); }
   requireThat(['https:', 'http:'].includes(url.protocol) && !url.username && !url.password && !url.search && !url.hash);
+  const openRouter = model.provider === 'openrouter';
+  requireThat(openRouter || url.hostname !== 'openrouter.ai');
+  if (openRouter) {
+    requireThat(url.origin === 'https://openrouter.ai' && url.pathname.replace(/\/$/, '') === '/api/v1');
+    requireThat(configuration.service_tier === 'default');
+    const routing = model.compat?.openRouterRouting;
+    closed(routing, ['only', 'order', 'allow_fallbacks', 'require_parameters']);
+    requireThat(routing.allow_fallbacks === false && routing.require_parameters === true
+      && Array.isArray(routing.only) && routing.only.length === 1
+      && typeof routing.only[0] === 'string' && /^[a-z0-9][a-z0-9_./-]{0,127}$/.test(routing.only[0])
+      && Array.isArray(routing.order) && routing.order.length === 1 && routing.order[0] === routing.only[0]);
+  } else requireThat(model.compat?.openRouterRouting === undefined);
   requireThat(levels.includes(effort), 'unsupported-effort');
   requireThat(model.reasoning || effort === 'off', 'unsupported-effort');
   if (model.thinkingLevelMap !== undefined) {
@@ -62,15 +76,16 @@ export function validateConfiguration(configuration, selectedModel, effort) {
   }
   if (model.reasoning) {
     requireThat(object(model.thinkingLevelMap) && Object.hasOwn(model.thinkingLevelMap, effort) && model.thinkingLevelMap[effort] !== null, 'unsupported-effort');
-    requireThat(model.compat?.supportsReasoningEffort === true && model.compat.thinkingFormat === 'openai', 'unsupported-effort');
+    requireThat(model.compat?.supportsReasoningEffort === true && model.compat.thinkingFormat === (openRouter ? 'openrouter' : 'openai'), 'unsupported-effort');
   }
-  // The pilot admits the ordinary OpenAI reasoning-effort format only. Additional
-  // Pi formats require conformance evidence before expanding this closed reader.
+  // Pi owns the direct OpenAI and OpenRouter serializers; other formats require
+  // conformance evidence before expanding this closed reader.
   if (model.compat !== undefined) {
-    closed(model.compat, ['supportsDeveloperRole', 'supportsStore', 'supportsUsageInStreaming', 'supportsReasoningEffort', 'supportsStrictMode', 'maxTokensField', 'requiresToolResultName', 'requiresAssistantAfterToolResult', 'requiresThinkingAsText', 'requiresMistralToolIds', 'thinkingFormat']);
+    closed(model.compat, ['supportsDeveloperRole', 'supportsStore', 'supportsUsageInStreaming', 'supportsReasoningEffort', 'supportsStrictMode', 'maxTokensField', 'requiresToolResultName', 'requiresAssistantAfterToolResult', 'requiresThinkingAsText', 'requiresMistralToolIds', 'thinkingFormat', 'openRouterRouting']);
     for (const [key, value] of Object.entries(model.compat)) {
       if (key === 'maxTokensField') requireThat(['max_tokens', 'max_completion_tokens'].includes(value));
-      else if (key === 'thinkingFormat') requireThat(value === 'openai');
+      else if (key === 'thinkingFormat') requireThat(value === (openRouter ? 'openrouter' : 'openai'));
+      else if (key === 'openRouterRouting') continue; // Closed policy checked above; Pi owns serialization.
       else requireThat(typeof value === 'boolean');
     }
   }
@@ -167,6 +182,29 @@ async function refusalBody(response, signal) {
   }
 }
 
+// Bounded timing summaries, not a token log or provider-internal clock.
+const progressGroups = ['body_chunk', 'provider_event', 'field_delta', 'reasoning_delta', 'content_delta', 'tool_argument_delta'];
+function progressTimes() {
+  return Object.fromEntries(progressGroups.flatMap(name =>
+    [[`first_${name}_ms`, null], [`last_${name}_ms`, null], [`max_${name}_gap_ms`, 0]]));
+}
+function markProgress(progress, name, at) {
+  const previous = progress[`last_${name}_ms`];
+  if (progress[`first_${name}_ms`] === null) progress[`first_${name}_ms`] = at;
+  if (previous !== null) progress[`max_${name}_gap_ms`] = Math.max(progress[`max_${name}_gap_ms`], at - previous);
+  progress[`last_${name}_ms`] = at;
+}
+function diagnosticId(value, secret) {
+  return typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9_.:/ -]{0,159}$/.test(value)
+    && !value.includes(secret) ? value : null;
+}
+function refusalDiagnostic(body, secret) {
+  try {
+    const error = JSON.parse(body)?.error;
+    return {error_type:diagnosticId(error?.type, secret), error_code:diagnosticId(error?.code, secret)};
+  } catch { return {error_type:null, error_code:null}; }
+}
+
 function retryableRefusal(body) {
   const error = JSON.parse(body)?.error;
   if (!object(error)) return false;
@@ -240,7 +278,19 @@ function inspectHandoff(name, args, result, pending) {
 /** Run one finite host. fetch injection exercises the actual Pi serializer in tests. */
 export async function runHost(options) {
   const started = performance.now();
-  const emit = (type, fields = {}) => options.onEvent?.({type, wall_time:new Date().toISOString(), monotonic_ms:performance.now() - started, ...fields});
+  const outputStats = {events:0, callback_ms:0, max_callback_ms:0, json_ms:null, enqueue_ms:null, bytes:null, backpressure_signals:null};
+  const emit = (type, fields = {}) => {
+    const event = {type, wall_time:new Date().toISOString(), monotonic_ms:performance.now() - started, ...fields};
+    const before = performance.now(), sink = options.onEvent?.(event);
+    const elapsed = performance.now() - before;
+    outputStats.events++; outputStats.callback_ms += elapsed;
+    outputStats.max_callback_ms = Math.max(outputStats.max_callback_ms, elapsed);
+    // The maintained CLI supplies synchronous JSON/enqueue measurements. Other
+    // event consumers need not implement a sink contract; drain/disk time is unknown.
+    if (object(sink)) for (const key of ['json_ms', 'enqueue_ms', 'bytes', 'backpressure_signals']) {
+      if (typeof sink[key] === 'number' && Number.isFinite(sink[key]) && sink[key] >= 0) outputStats[key] = (outputStats[key] ?? 0) + sink[key];
+    }
+  };
   let agent, client, transport, fatal, closing = false, requests = 0, requestId, requestTimer, requestInFlight = false, requestUsageAvailable = false;
   let workTimer, deadlineTimer;
   let responseProgress, handoff, pendingHandoff;
@@ -289,7 +339,7 @@ export async function runHost(options) {
     const mcp = validateMcpConfiguration(options.mcpConfig);
     requireThat(typeof options.prompt === 'string' && typeof options.context === 'string', 'invalid-input');
     bounded(options.prompt); bounded(options.context);
-    emit('host-start', {schema:configuration.schema, model:configuration.model.id, provider:configuration.model.provider, api:configuration.model.api, effort:options.effort, max_requests:configuration.max_requests, max_context_images:configuration.max_context_images, unsupported_features:['compaction', 'session-restore', 'model-fallback', 'reconnect', 'replay', 'ambient-tools', 'resource-discovery'], missing_endpoints:['model-attention', 'server-inference-start', 'physical-paint'], cleanup_budget_ms:cleanupBudget});
+    emit('host-start', {telemetry_version:1, schema:configuration.schema, requested_service_tier:configuration.service_tier, model:configuration.model.id, provider:configuration.model.provider, api:configuration.model.api, effort:options.effort, max_output_tokens:configuration.model.maxTokens, context_window:configuration.model.contextWindow, thinking_level_map:{...configuration.model.thinkingLevelMap}, reasoning_format:configuration.model.compat?.thinkingFormat ?? null, provider_routing:configuration.model.compat?.openRouterRouting ? structuredClone(configuration.model.compat.openRouterRouting) : null, max_requests:configuration.max_requests, max_context_images:configuration.max_context_images, unsupported_features:['compaction', 'session-restore', 'model-fallback', 'reconnect', 'replay', 'ambient-tools', 'resource-discovery'], missing_endpoints:['model-attention', 'server-inference-start', 'physical-paint'], cleanup_budget_ms:cleanupBudget});
     if (fatal) throw new HostError(fatal);
     requireThat(!AMBIENT_PROVIDER_SETTINGS.some(name => Object.hasOwn(process.env, name)), 'ambient-provider-configuration');
     // The MCP subprocess gets only locale and executable lookup, never provider
@@ -333,6 +383,8 @@ export async function runHost(options) {
         return {content, details:undefined, isError:result.isError === true};
       }};
     });
+    const validationFeedback = createValidationFeedback(tools, diagnostic =>
+      emit('tool-validation-feedback', {request_id:`request-${requests + 1}`, ...diagnostic}));
     agent = new Agent({
       initialState:{systemPrompt:options.context + (client.instructions ? '\n\nMCP server instructions:\n' + client.instructions : ''), model:configuration.model, thinkingLevel:options.effort, tools},
       toolExecution:'sequential',
@@ -341,8 +393,11 @@ export async function runHost(options) {
         // Pi requires this hook never to throw/reject. Latch a terminal stop and
         // return safe canonical context; streamFn checks it before charging/fetch.
         try {
-          const projection = projectImageContext(messages, configuration.max_context_images);
-          emit('context-image-projection', {request_id:`request-${requests + 1}`, ...projection.summary});
+          // Memoize against canonical SDK objects before image projection clones
+          // them. Earlier diagnostic text remains stable in subsequent prefixes.
+          const projectionStarted = performance.now();
+          const projection = projectImageContext(validationFeedback(messages), configuration.max_context_images);
+          emit('context-image-projection', {request_id:`request-${requests + 1}`, projection_ms:performance.now() - projectionStarted, ...projection.summary});
           if (projection.summary.blocked) stop('context-image-limit');
           // Request-only bookkeeping follows history, preserving the stable
           // system/tool prefix and canonical messages. Retries reuse this snapshot.
@@ -380,7 +435,9 @@ export async function runHost(options) {
           requestUsageAvailable = false;
           requestTimer = setTimeout(() => stop('request-timeout'), Math.min(configuration.request_timeout_seconds * 1000, totalMs));
           const requestSignal = AbortSignal.any([streamOptions.signal, stopped.signal].filter(Boolean));
-          const backendModels = new Set();
+          const backendModels = new Set(), observedServiceTiers = new Set();
+          const streamStarted = performance.now(), logicalRequestId = `request-${requests + 1}`;
+          let payloadReadyAt;
           const actualFetch = options.fetch ?? globalThis.fetch;
           let attempts = 0, previousRequestId;
           const observedFetch = (url, init) => retryProviderRequest(async () => {
@@ -390,36 +447,43 @@ export async function runHost(options) {
               stop('request-limit');
               throw new HostError(fatal);
             }
+            const fetchEntered = performance.now();
             requireThat(typeof init?.body === 'string', 'invalid-provider-payload');
             const payload = JSON.parse(init.body);
+            const sizes = payloadSize(payload);
+            const inspectionMs = performance.now() - fetchEntered;
             const attemptId = requestId = `request-${++requests}`;
             const attemptProgress = responseProgress = {request_id:attemptId, body_bytes:0, body_chunks:0,
               provider_events:0, content_bytes:0, reasoning_bytes:0,
-              tool_argument_bytes:0, last_body_chunk_ms:null, last_provider_event_ms:null,
-              last_field_delta_ms:null};
+              tool_argument_bytes:0, response_id:null, reported_provider:null, ...progressTimes()};
             requestInFlight = true;
             attempts++;
             if (previousRequestId) emit('provider-retry', {stage:'started', request_id:attemptId, previous_request_id:previousRequestId});
-            emit('request-start', {request_id:attemptId, model:model.id, provider:model.provider, ...payloadSize(payload), payload});
+            emit('request-start', {request_id:attemptId, logical_request_id:logicalRequestId, model:model.id, provider:model.provider,
+              sdk_after_payload_ms:attempts === 1 && payloadReadyAt !== undefined ? fetchEntered - payloadReadyAt : null,
+              host_inspection_ms:inspectionMs, ...sizes, payload});
             let response;
+            emit('request-fetch-start', {request_id:attemptId});
             try { response = await actualFetch(url, init); }
             catch { if (!fatal) stop('provider-error'); throw new HostError(fatal); }
             if (fatal || requestSignal.aborted) {
               void response.body?.cancel().catch(() => {});
               throw new HostError(fatal ?? 'provider-error');
             }
-            emit('response-headers', {request_id:attemptId, status:response.status});
+            emit('response-headers', {request_id:attemptId, status:response.status, provider_request_id:
+              diagnosticId(response.headers.get('x-request-id'), apiKey)});
             let first = false;
             const body = response.body?.pipeThrough(new TransformStream({transform(chunk, controller) {
               attemptProgress.body_bytes += chunk.byteLength;
               attemptProgress.body_chunks++;
-              attemptProgress.last_body_chunk_ms = performance.now() - started;
+              markProgress(attemptProgress, 'body_chunk', performance.now() - started);
               if (!first) { first = true; emit('response-first-chunk', {request_id:attemptId}); }
               controller.enqueue(chunk);
             }}));
             response = new Response(body ?? null, {status:response.status, statusText:response.statusText, headers:response.headers});
             if (response.status !== 429 || attempts !== 1 || response.headers.get('x-should-retry') === 'false') return response;
             const errorBody = await refusalBody(response, requestSignal);
+            emit('provider-refusal', {request_id:attemptId, status:429, ...refusalDiagnostic(errorBody, apiKey)});
             if (!retryableRefusal(errorBody)) return new Response(errorBody, {status:response.status, headers:response.headers});
             emit('response-complete', {request_id:attemptId, model:model.id, provider:model.provider, stop_reason:'error', http_status:429, usage_available:false, usage:null, cost_source:null, response_progress:progressSnapshot()});
             requestInFlight = false;
@@ -440,9 +504,19 @@ export async function runHost(options) {
           }, {maxRetries:1, maxRetryDelayMs:MAX_RETRY_DELAY_MS, signal:requestSignal});
           // The outer request timer includes classification, SDK backoff and
           // both HTTP attempts. Disable the provider stream's nested retries.
-          return stream(model, context, {...streamOptions, apiKey, fetch:observedFetch, env:{}, signal:requestSignal, maxRetries:0, cacheRetention:'short', maxTokens:model.maxTokens, timeoutMs:configuration.request_timeout_seconds * 1000, reasoningEffort:options.effort === 'off' ? undefined : options.effort, onProviderStreamEvent:chunk => {
+          return stream(model, context, {...streamOptions, apiKey, fetch:observedFetch, env:{}, signal:requestSignal, maxRetries:0, cacheRetention:'short', maxTokens:model.maxTokens, timeoutMs:configuration.request_timeout_seconds * 1000, reasoningEffort:options.effort === 'off' ? undefined : options.effort,
+            onPayload:payload => {
+              payloadReadyAt = performance.now();
+              emit('provider-payload-ready', {request_id:logicalRequestId, sdk_prepare_ms:payloadReadyAt - streamStarted});
+              return model.provider === 'openrouter' ? {...payload, service_tier:'default'}
+                : configuration.service_tier === 'priority' ? {...payload, service_tier:'priority'} : undefined;
+            },
+            onProviderStreamEvent:chunk => {
             responseProgress.provider_events++;
-            const eventAt = responseProgress.last_provider_event_ms = performance.now() - started;
+            const eventAt = performance.now() - started;
+            markProgress(responseProgress, 'provider_event', eventAt);
+            responseProgress.response_id ??= diagnosticId(chunk?.id, apiKey);
+            responseProgress.reported_provider ??= diagnosticId(chunk?.provider, apiKey);
             const delta = Array.isArray(chunk?.choices) ? chunk.choices[0]?.delta : undefined;
             const bytes = value => typeof value === 'string' ? Buffer.byteLength(value) : 0;
             const contentBytes = bytes(delta?.content);
@@ -453,7 +527,17 @@ export async function runHost(options) {
             responseProgress.content_bytes += contentBytes;
             responseProgress.reasoning_bytes += reasoningBytes;
             responseProgress.tool_argument_bytes += toolBytes;
-            if (contentBytes + reasoningBytes + toolBytes > 0) responseProgress.last_field_delta_ms = eventAt;
+            if (contentBytes + reasoningBytes + toolBytes > 0) markProgress(responseProgress, 'field_delta', eventAt);
+            if (contentBytes > 0) markProgress(responseProgress, 'content_delta', eventAt);
+            if (reasoningBytes > 0) markProgress(responseProgress, 'reasoning_delta', eventAt);
+            if (toolBytes > 0) markProgress(responseProgress, 'tool_argument_delta', eventAt);
+            // Optional provider echo only; missing/unrecognized values remain unknown.
+            // This does not change delivery, retries, configured prices or authority.
+            const tier = chunk?.service_tier;
+            if (['default', 'priority', 'flex'].includes(tier) && !observedServiceTiers.has(`${requestId}:${tier}`)) {
+              observedServiceTiers.add(`${requestId}:${tier}`);
+              emit('response-service-tier', {request_id:requestId, applied_service_tier:tier});
+            }
             const usage = chunk?.usage ?? chunk?.choices?.[0]?.usage;
             // Pi initializes absent usage to zero. Only publish normalized totals
             // when the provider actually reported both input and output counts.
@@ -492,6 +576,6 @@ export async function runHost(options) {
   const terminal = agent?.state.messages.findLast(message => message.role === 'assistant');
   const finalText = !fatal && !handoff ? (terminal?.content ?? []).filter(part => part.type === 'text').map(part => part.text).join('\n') : '';
   const result = {ok:!fatal, reason:fatal ?? (handoff ? 'handoff' : 'completed'), requests, finalText};
-  emit('settled', {ok:result.ok, reason:result.reason, requests, native_cleanup_claimed:false});
+  emit('settled', {ok:result.ok, reason:result.reason, requests, event_output:{...outputStats}, native_cleanup_claimed:false});
   return result;
 }

@@ -51,6 +51,14 @@ The producer refuses a premature skill from that selected paused snapshot before
 staging; it does not refresh evidence, Resume or establish current authority.
 The [lifecycle contract](../contracts/lifecycle-create-load.md) owns the sequence.
 
+Before first owned launch, a disconnected, empty source-free bootstrap Observe
+returns the existing launch guidance without publishing a native capture. The
+receiver distinguishes the controller's initial reconciliation diagnostic from
+other faults; connected unowned observations and pending recovery retain their
+paths. This prevents an absent renderer from stranding a pending capture while
+leaving all live Launch guards intact. The
+[admission contract](../contracts/mission-admission.md) owns the exact conditions.
+
 For an activity child, the player chooses only the step and any explicit YES/NO
 answer. Before staging, player tools collect the exact original request selected
 by the published phase through the existing read-only result interface. The pure
@@ -97,8 +105,9 @@ and [operator contract](../contracts/mission-admission.md#designated-campaign-op
 
 For a selected active, idle prompt with no activity/lifecycle phase, a refused new
 root points to explicit Observe. Observe may close a locally exhausted ordinary
-macro; the player inspects its returned phase and chooses a continuation or a new
-bounded root. The composer neither performs that read nor promises closure. Whole
+macro; if the returned prompt remains open, supported prompt children retain that
+original root. A program requires a new root after actual phase closure. The
+composer neither performs that read nor promises closure. Whole
 mission capacity is not local root capacity. Pause, pending operations and other
 phases retain their distinct rules; the original root and all costs remain intact.
 
@@ -133,6 +142,19 @@ Memory authoring keeps its type selector at `intent.entry_type`, alongside
 software neither moves misplaced fields nor adds another memory type's fields
 to repair a draft. Pi can reject malformed arguments before MCP dispatch, so its
 union-schema diagnostics are not evidence of a missing gameplay capability.
+
+The pinned Pi1.4.0 host projects a positively identified SDK memory-validation
+refusal into diagnostics for the explicitly selected `intent.entry_type` branch.
+It uses the same SDK validator, keeps surrounding schema constraints and changes
+neither arguments nor normal validation/dispatch. Parser errors, executed MCP
+errors, unknown/ambiguous selectors and unpaired history keep their original
+path. The original SDK result and exact projection join remain in the existing
+host trace; canonical messages stay intact. Computed diagnostics are memoized
+against canonical call/result objects before image copying and remain stable in
+later request history. This is error presentation, not a source-read receipt,
+semantic validation or automatic repair. Recheck the discriminator and remove
+the helper when a Pi upgrade provides precise union diagnostics; the
+[host contract](../../tools/player_host/README.md) owns its pinned details.
 
 The existing `enactive_skill` description carries the evaluator-derived program
 result schema once in the selected tool loadout. A defensive data copy from
@@ -173,6 +195,12 @@ evidence, a source-read declaration, input authority or a latency/quality metric
 It helps the player assess its frozen reserves without changing the cap or
 qualifying actual ending behavior.
 
+The frozen serving tier is explicit in the current route: default leaves provider
+scheduling unchanged; priority uses Pi's payload hook. Requested tier and optional
+known provider stream echoes are separate diagnostics. Neither changes model,
+authority, retry eligibility or deadlines. Configure verified tier prices and
+conservative reservations; missing echoes and invoice costs remain unknown.
+
 Both original and successor start fresh, with explicit
 frozen context instead of file-reading tools. Removed Codex launch/resume/host
 selector options are rejected. The host keeps original MCP text/images complete
@@ -212,6 +240,17 @@ The mandatory host requirement stands independently of that model decision;
 historical Codex trajectories remain comparator evidence, not an execution option.
 [Preparation and limits](../operations/player-host.md#bounded-player-host-activation)
 and [measurement meaning](../evaluation.md#pi-host-events) own those details.
+
+The generic host supports an explicitly frozen OpenRouter route through the pinned
+Pi serializer, with one selected endpoint policy, no provider fallback and its own
+credential. The custodian forwards only that selected credential to the driver;
+MCP/controller do not receive it. Source conformance is separate from actual
+endpoint vision/tool quality and useful gameplay speed. Exact configuration lives
+in the [host procedure](../operations/player-host.md) and [host contract](../../tools/player_host/README.md).
+The [endpoint gameplay comparison](../acceptance/2026-10-28-endpoint-gameplay.md)
+demonstrates bounded BaseTen/Fireworks use and normal endings; shallow progress,
+failed navigation routines and inaccurate player summaries leave whole-player
+quality and apparent cadence unqualified.
 
 ## Assurance and evidence
 

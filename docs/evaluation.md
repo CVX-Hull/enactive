@@ -41,6 +41,7 @@ identity. Missing clock joins remain unknown.
 | `context-image-projection` | Frozen image allowance, input/protected/retained/omitted counts and bounded omission provenance before serialization. Historical omission is explicit, not a reread or authority. Original MCP evidence stays complete. An oversized current group blocks before the next provider request; this event grants no inference, attention or latency credit. |
 | `request-start` | Constructed provider payload sizes, text/image counts, host request identity and the complete JSON request body in `payload`, including schemas and forwarded assistant/tool history and images. Begins at the selected SDK request boundary, not the user's decision or server inference. |
 | `response-headers`, `response-first-chunk` | HTTP status and first received response-body chunk observed locally; either can precede useful content and neither timestamp isolates queue/inference time. |
+| `response-service-tier` | Known applied-tier value echoed in a parsed provider stream event, once per value per HTTP attempt. Missing/unsupported values remain unknown; compare with `host-start.requested_service_tier`. This is serving metadata, not authority, billing proof or useful-latency evidence. |
 | `response-backend` | Model identifier reported by a parsed provider event; an absent or alias-only identifier does not establish an immutable backend version. |
 | `response-complete` | Completed SDK response's stop reason and returned usage/model metadata; successful response receipt is not successful gameplay. Missing input/output counts mean `usage_available:false`, `usage:null` and unknown cost. Reported counts enable normalized usage; `cost_source` distinguishes provider totals from configured-rate estimates. |
 | `tool-start`, `tool-result` | Actual MCP call arguments and complete returned text/image/error envelope; retain original collection on uncertainty. This is tool service/transport evidence, not native effect or physical display. |
@@ -236,8 +237,9 @@ when `frame_ok`, not a renewed publication time. Offline subtraction requires th
 same host/wall clock and scrutiny of clock adjustments; negative cross-clock
 differences are retained rather than silently clamped. Failed, superseded, stale
 or disconnected frames do not establish current presentation. The paused no-game
-browser probe verifies v2 status anchors only; actual paired native/browser
-correlation remains to be measured during fresh play. Animation callbacks do not
+browser probe verifies v2 status anchors only; bounded exact native/browser joins
+are recorded in the [endpoint gameplay comparison](acceptance/2026-10-28-endpoint-gameplay.md#apparent-latency-and-diagnostic-decomposition).
+Animation callbacks do not
 establish screen paint, and these records do not isolate model inference.
 
 The timing disclosure offers standard Download timing and **Show export JSON**
@@ -257,6 +259,56 @@ archive and route-source counts before replacing storage or introducing a cache.
 Required loss/correction/integrity and current-authority checks must remain;
 reuse the existing SQLite/journal if evidence establishes a storage gap. #154
 owns this follow-up without adding a new framework gate to the current mission.
+
+## Retained host and browser analysis
+
+Use the existing read-only evaluator for repeatable diagnostics:
+
+```sh
+.venv/bin/python -m tools.evaluate host-summary .runtime/campaigns --format markdown
+.venv/bin/python -m tools.evaluate host-summary path/to/driver-original.jsonl
+.venv/bin/python -m tools.evaluate witness-summary .runtime/missions/MISSION path/to/observer-export.json
+```
+
+Directory discovery selects known `driver-*.jsonl`, `*-active.jsonl` and
+`evidence/host-traces/*.jsonl` locations, including immediate child campaigns.
+Other trace locations require explicit file paths. JSON output retains compact
+per-request diagnostics and declared frozen source/model configuration. Empty,
+unsupported and invalid files remain in coverage; invalid input returns exit1
+after reporting coverage. Unsupported formats are inventoried, not converted or
+claimed analyzed. SHA256 duplicate-content groups are exposed, never pooled as
+independent experiments. Missing historical fields stay unknown.
+
+Host analysis separates response, tool and observed canceled intervals, reported
+usage coverage, reasoning as a subset of output, stream progress and local overhead.
+Only SDK `stop`/`toolUse` responses enter the uncensored response distribution;
+that is transport completion, not useful success. Missing endpoints or overlapping
+request/tool spans suppress the host-time share. Output divided by time after the
+first body chunk is an empirical streaming proxy, not pure decoder throughput.
+Failed work, correction costs and whole-host elapsed time remain visible.
+
+Witness analysis accepts the current evidence index and `observer-timing/3` only.
+It joins exact public frame identities and capture epochs, deduplicates overlapping
+exports, retains missing witnesses and signed invalid clock intervals, and reports
+export drops. It checks metadata coherence, not image bytes, source applicability,
+physical paint or player attention. An earlier negative interval cannot be hidden
+by selecting a later positive witness. Inspect same-host wall-clock assumptions
+and retained images separately before a useful-effect claim. Goal membership and
+usefulness still need the frozen cohort and independent outcome assessment above.
+
+The [October28 analysis](acceptance/2026-10-28-latency-diagnostics.md) records corpus
+coverage, current endpoint research and its concrete consequences. Extending
+`tools.evaluate`, the existing JSON validation hooks, Pi callbacks and retained
+files fills the observed diagnostic gap without another store, service or
+dependency. Lead owns these thin projections; replace them when maintained tools
+supply equivalent joins. CLI help records finite resource limits. New fields
+cannot retrospectively fill older endpoint or logging-overhead gaps.
+The subsequent [endpoint gameplay comparison](acceptance/2026-10-28-endpoint-gameplay.md)
+exercises these diagnostics on live play and retains partial gains, failed
+programs, correction chains, missing DOM witnesses and the invalid screen setup.
+Provider generation metadata can corroborate routing, usage and service timing;
+its clocks are not additive with client spans and `num_fetches` does not attest
+upstream inference-attempt counts.
 
 ## Caller contract
 

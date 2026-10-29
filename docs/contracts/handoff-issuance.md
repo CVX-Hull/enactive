@@ -81,6 +81,19 @@ authentication or proof that an actual fresh agent read an image. The real conte
 replacement and source inspection require campaign/transcript evidence. A correctable
 packet omission/version error sends no input and leaves the original handoff eligible
 for another explicit request within unchanged limits. Other authority failures stop.
+A correctable Claim evidence refusal also returns a conditional next-step reminder:
+source reads do not complete Claim; correct and resubmit it while the original
+issuance remains live, then separately readmit. Ordinary gameplay execution before
+readmission fails the lease check and revokes the handoff. A later corrected
+Claim cannot restore it. The reminder changes no eligibility, source check,
+consumption, deadline or authority-stop behavior.
+
+Declaration mismatches report missing/extra totals and bounded whole-ID previews,
+with omitted counts before those previews. Current-source extras are compared with
+all permitted issued sources, not only mandatory support; procedure support still
+requires exact equality. A preview is not a complete requirements list or a read
+receipt. Source loss/version/authority failures retain their separate diagnostics
+and checks; no declaration or diagnostic substitutes for actual image inspection.
 
 `readmit` is a separate executable request linked to the exact completed claim and
 issuance, with one primitive and finite wall/game limits. Its deadline is the minimum

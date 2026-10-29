@@ -35,6 +35,15 @@ class HandoffEvidenceError(EvidenceError):
     """Correctable representation/claim failure before any input or epoch change."""
 
 
+def _declaration_diagnostic(message: str, missing: set[str], extra: set[str], *, preview: int = 3) -> str:
+    # IDs are bounded ASCII. Three current IDs or one qualified pair per group
+    # fit runtime's 1024-character reason including its exception prefix. Put
+    # omission counts first and never publish a partial ID as a repair target.
+    return (f"{message} missing={len(missing)} (omitted={max(0, len(missing) - preview)}); "
+        f"extra={len(extra)} (omitted={max(0, len(extra) - preview)}); "
+        f"missing_preview={sorted(missing)[:preview]}; extra_preview={sorted(extra)[:preview]}")
+
+
 class RegisteredHandoff:
     def __init__(self, runtime: MissionRuntime):
         self.runtime = runtime
@@ -269,13 +278,20 @@ class RegisteredHandoff:
                     elif entry["status"] != "unknown":
                         raise HandoffEvidenceError("Lost Work source requires an explicit unknown context disposition")
         if not set(data["read_source_ids"]) <= allowed or not needed <= set(data["read_source_ids"]):
-            raise HandoffEvidenceError("Claim read declarations must cover checkpoints/retained Work support and refer to issued sources")
+            raise HandoffEvidenceError(_declaration_diagnostic(
+                "Claim read declarations must cover checkpoints/retained Work support and refer to issued sources.",
+                needed - set(data["read_source_ids"]), set(data["read_source_ids"]) - allowed))
         for identity in data["read_source_ids"]:
             retained(identity)
         required_procedures = {tuple(sorted(source.items())) for packet in packets for source in packet["procedure_sources"]}
         declared_procedures = {tuple(sorted(source.items())) for source in data["read_procedure_sources"]}
         if declared_procedures != required_procedures:
-            raise HandoffEvidenceError("Claim must declare exact complete procedure support from issued packets")
+            def qualified(sources: set[tuple]) -> set[str]:
+                return {dict(source)["mission_id"] + "/" + dict(source)["source_id"] for source in sources}
+            raise HandoffEvidenceError(_declaration_diagnostic(
+                "Claim must declare exact complete procedure support from issued packets.",
+                qualified(required_procedures - declared_procedures),
+                qualified(declared_procedures - required_procedures), preview=1))
         if len(data["read_source_ids"]) + len(declared_procedures) > MAX_HANDOFF_SOURCES:
             raise HandoffEvidenceError("Claim aggregate current/historical source bound exceeded")
         for source in data["read_procedure_sources"]:

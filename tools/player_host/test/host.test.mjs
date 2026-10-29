@@ -14,7 +14,7 @@ const python = process.env.ENACTIVE_TEST_PYTHON;
 const fixture = fileURLToPath(new URL('server.py', import.meta.url));
 const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j1ioAAAAASUVORK5CYII=';
 const model = { id: 'fixture-model', name: 'Offline fixture', api: 'openai-completions', provider: 'fixture', baseUrl: 'https://fixture.invalid/v1', reasoning: false, input: ['text', 'image'], cost: {input:0, output:0, cacheRead:0, cacheWrite:0}, contextWindow: 100000, maxTokens: 1024, compat: { supportsDeveloperRole:false, supportsStore:false, supportsUsageInStreaming:true } };
-const route = () => ({schema:'pi-player-host/2', model:structuredClone(model), api_key_env:'OFFLINE_TEST_KEY', max_requests:4, max_context_images:4, request_timeout_seconds:2});
+const route = () => ({schema:'pi-player-host/4',service_tier:'default', model:structuredClone(model), api_key_env:'OFFLINE_TEST_KEY', max_requests:4, max_context_images:4, request_timeout_seconds:2});
 function reply(content = 'finished', calls = [], withUsage = true, reasoning, callPrefix = 'call') {
   const delta = {role:'assistant', ...(content === null ? {} : {content}), ...(reasoning ? {reasoning_content:reasoning} : {}), ...(calls.length ? {tool_calls:calls.map(([name,args],index)=>({index,id:`${callPrefix}-${index}`,type:'function',function:{name,arguments:JSON.stringify(args)}}))} : {})};
   const chunks = [{id:'fixture-response',model:'fixture-backend',choices:[{index:0,delta,finish_reason:null}]},
@@ -78,11 +78,68 @@ test('route is closed, graphical, finite and model/effort exact', ()=>{
   assert.throws(()=>validateConfiguration(route(),'other','off'));
   assert.throws(()=>validateConfiguration(route(),model.id,'low'));
   assert.throws(()=>validateConfiguration({...route(),schema:'pi-player-host/1'},model.id,'off'));
+  assert.throws(()=>validateConfiguration({...route(),schema:'pi-player-host/2'},model.id,'off'));
+  assert.throws(()=>validateConfiguration({...route(),schema:'pi-player-host/3'},model.id,'off'));
+  for (const service_tier of [undefined,null,true,1,'flex','auto','',{},[]]) {
+    assert.throws(()=>validateConfiguration({...route(),service_tier},model.id,'off'));
+  }
+  assert.doesNotThrow(()=>validateConfiguration({...route(),service_tier:'priority'},model.id,'off'));
   for (const value of [undefined,0,-1,1.5,true,'2',NaN,Infinity,Number.MAX_SAFE_INTEGER+1]) {
     assert.throws(()=>validateConfiguration({...route(),max_context_images:value},model.id,'off'));
   }
   const missing=route();delete missing.max_context_images;
   assert.throws(()=>validateConfiguration(missing,model.id,'off'));
+});
+
+test('OpenRouter uses maintained routing and reasoning serializers with explicit standard tier on every attempt',async t=>{
+  const configuration=route();
+  configuration.model={...configuration.model,provider:'openrouter',baseUrl:'https://openrouter.ai/api/v1',reasoning:true,
+    thinkingLevelMap:{medium:'medium'},compat:{...configuration.model.compat,supportsReasoningEffort:true,
+      thinkingFormat:'openrouter',openRouterRouting:{only:['fireworks/us'],order:['fireworks/us'],allow_fallbacks:false,require_parameters:true}}};
+  assert.doesNotThrow(()=>validateConfiguration(configuration,model.id,'medium'));
+  for (const baseUrl of ['http://openrouter.ai/api/v1','https://other.invalid/api/v1','https://openrouter.ai/v1']) {
+    assert.throws(()=>validateConfiguration({...configuration,model:{...configuration.model,baseUrl}},model.id,'medium'));
+  }
+  for(const change of [{allow_fallbacks:true},{require_parameters:false},{only:['fireworks/us','baseten']},
+      {order:['baseten']},{only:[99],order:[99]},{unknown:true}]) {
+    const invalid=structuredClone(configuration);Object.assign(invalid.model.compat.openRouterRouting,change);
+    assert.throws(()=>validateConfiguration(invalid,model.id,'medium'));
+  }
+  const priority={...configuration,service_tier:'priority'};
+  assert.throws(()=>validateConfiguration(priority,model.id,'medium'));
+  const missing=structuredClone(configuration);delete missing.model.compat.openRouterRouting;
+  assert.throws(()=>validateConfiguration(missing,model.id,'medium'));
+  const result=await scenario(t,[rateLimit(),reply()],{configuration,effort:'medium'});
+  assert.equal(result.result.ok,true);assert.equal(result.payloads.length,2);
+  for(const payload of result.payloads) {
+    assert.deepEqual(payload.provider,configuration.model.compat.openRouterRouting);
+    assert.deepEqual(payload.reasoning,{effort:'medium'});
+    assert.equal(payload.reasoning_effort,undefined);assert.equal(payload.service_tier,'default');
+  }
+  assert.deepEqual(result.payloads[0],result.payloads[1]);
+  assert.deepEqual(result.events.find(e=>e.type==='host-start').provider_routing,configuration.model.compat.openRouterRouting);
+});
+
+test('frozen serving tier uses the SDK payload hook and reports only observed stream echoes',async t=>{
+  const withTier=tier=>new Response([
+    {model:'fixture-backend',service_tier:tier,choices:[{index:0,delta:{role:'assistant',content:'done'},finish_reason:null}]},
+    {model:'fixture-backend',service_tier:tier,choices:[{index:0,delta:{},finish_reason:'stop'}]},
+  ].map(chunk=>'data: '+JSON.stringify(chunk)+'\n\n').join('')+'data: [DONE]\n\n',{headers:{'content-type':'text/event-stream'}});
+  const ordinary=await scenario(t,[withTier('default')]);
+  assert.equal(ordinary.result.ok,true);
+  assert.equal(Object.hasOwn(ordinary.payloads[0],'service_tier'),false);
+  assert.equal(ordinary.events.find(e=>e.type==='host-start').requested_service_tier,'default');
+  for(const echo of ['priority','default',undefined,'fixture-key private tier']) {
+    const configuration={...route(),service_tier:'priority'};
+    const actual=await scenario(t,[withTier(echo)],{configuration});
+    assert.equal(actual.result.ok,true);
+    assert.deepEqual(actual.payloads[0],{...ordinary.payloads[0],service_tier:'priority'});
+    assert.equal(actual.events.find(e=>e.type==='host-start').requested_service_tier,'priority');
+    const tiers=actual.events.filter(e=>e.type==='response-service-tier');
+    assert.deepEqual(tiers.map(e=>[e.request_id,e.applied_service_tier]),['priority','default'].includes(echo)?[['request-1',echo]]:[]);
+    assert.equal(actual.payloads.length,1,'missing or fallback echo cannot retry inference');
+    assert.ok(!JSON.stringify(actual.events).includes('fixture-key private tier'));
+  }
 });
 
 test('image projection copies canonical messages and protects the entire latest tool batch',()=>{
@@ -243,6 +300,40 @@ test('request maximum is finite and exits unsuccessful if continuation needed',a
   assert.equal(result.ok,false); assert.equal(result.reason,'request-limit'); assert.equal(payloads.length,1);
   assert.equal(events.find(event=>event.type==='abort').response_progress.scope,'last-http-attempt');
 });
+test('actual memory schema refusal gives stable precise feedback, explicit correction dispatches, MCP errors stay intact',async t=>{
+  const entry={schema:'campaign-memory/6',record_type:'Work',id:'fixture-work',intent:'Retain a partial fixture task',
+    scope:{mission_id:'fixture',session:'fixture-session',coordinate_epoch:0},stage:'x'.repeat(244),
+    predecessor_work_id:null,progress:null,available:[{subject:'small cardboard box',quantity:1,unit:'items',coverage_id:'visible-subset'}],
+    committed:[],predicted_output:[],observed_output:[],unresolved_effects:[],sources:['fixture-source'],
+    next_verification:'Inspect the next retained observation',status:'active'};
+  const bad={snapshot_id:'fixture-snapshot',intent:{entry_type:'work',entry}};
+  const fixed=structuredClone(bad);fixed.intent.entry.stage='partial';
+  fixed.intent.entry.available[0].subject='small_cardboard_box';
+  const mcpError=structuredClone(fixed);mcpError.intent.entry.stage='mcp-error';
+  const configuration=route();configuration.max_requests=6;
+  const {result,calls,payloads,events}=await scenario(t,[
+    reply(null,[['enactive_remember',bad]],true,undefined,'bad'),
+    reply(null,[['enactive_remember',fixed]],true,undefined,'fixed'),
+    reply(null,[['observe',{}]],true,undefined,'later'),
+    reply(null,[['enactive_remember',mcpError]],true,undefined,'mcp-error'),reply()
+  ],{configuration,enabledTools:['enactive_remember','observe']});
+  assert.equal(result.ok,true);
+  assert.deepEqual(calls.filter(c=>c.tool==='enactive_remember').map(c=>c.intent),[fixed.intent,mcpError.intent]);
+  const first=payloads[1].messages.find(m=>m.role==='tool'&&m.tool_call_id==='bad-0').content;
+  assert.match(first,/entry.stage: must not have more than 128/);
+  assert.match(first,/entry.available.0.subject: must match pattern/);
+  assert.ok(!first.includes('intent.entry.value'));
+  for(const payload of payloads.slice(2)) {
+    assert.equal(payload.messages.find(m=>m.role==='tool'&&m.tool_call_id==='bad-0').content,first);
+  }
+  const diagnostics=events.filter(e=>e.type==='tool-validation-feedback');assert.equal(diagnostics.length,1);
+  assert.match(diagnostics[0].original_result.content[0].text,/intent.entry.value/);
+  assert.equal(diagnostics[0].projected_text,first);
+  const actualMcpError=payloads[4].messages.find(m=>m.role==='tool'&&m.tool_call_id==='mcp-error-0').content;
+  assert.match(actualMcpError,/MCP isError: true/);assert.match(actualMcpError,/fixture MCP refusal/);
+  assert.deepEqual(payloads[0].tools,payloads[4].tools,'the actual full schema remains stable');
+});
+
 test('provider errors are nonzero without leaking exception or key',async t=>{
   const {result,events}=await scenario(t,[()=>{throw new Error('fixture-key private upstream details');}]);
   assert.equal(result.ok,false); assert.equal(result.reason,'provider-error');
@@ -270,6 +361,15 @@ test('response diagnostics count UTF8 fragments and reset for each actual reques
   assert.ok(a.last_field_delta_ms<=a.last_provider_event_ms);
   assert.ok(a.last_body_chunk_ms<=completed[0].monotonic_ms);
   assert.equal(a.scope,'current-http-attempt');
+  assert.equal(a.first_reasoning_delta_ms,a.first_provider_event_ms);
+  assert.equal(a.first_content_delta_ms,a.first_provider_event_ms);
+  assert.equal(a.first_tool_argument_delta_ms,a.first_provider_event_ms);
+  assert.equal(b.first_reasoning_delta_ms,null);
+  assert.equal(a.response_id,'fixture-response');
+  assert.ok(events.find(e=>e.type==='provider-payload-ready').sdk_prepare_ms>=0);
+  assert.ok(events.find(e=>e.type==='request-start').host_inspection_ms>=0);
+  assert.ok(events.find(e=>e.type==='request-fetch-start').monotonic_ms>=events.find(e=>e.type==='request-start').monotonic_ms);
+  assert.equal(events.at(-1).event_output.json_ms,null);
   assert.ok(!JSON.stringify(a).includes('思'));
 });
 test('partial field output and later heartbeat retain diagnostics without renewing the deadline',async t=>{
@@ -299,6 +399,10 @@ test('partial field output and later heartbeat retain diagnostics without renewi
   assert.equal(result.reason,'request-timeout');assert.equal(payloads.length,1);assert.equal(calls.length,0);
   const progress=events.find(event=>event.type==='abort').response_progress;
   assert.equal(progress.scope,'current-http-attempt');assert.equal(progress.request_id,'request-1');
+  assert.ok(progress.first_tool_argument_delta_ms!==null);
+  assert.ok(progress.first_content_delta_ms!==null);
+  assert.ok(progress.last_body_chunk_ms>progress.last_field_delta_ms);
+  assert.ok(progress.max_body_chunk_gap_ms>0);
   assert.equal(progress.body_bytes,Buffer.byteLength(first+heartbeat));assert.equal(progress.body_chunks,2);
   assert.equal(progress.provider_events,1);assert.equal(progress.content_bytes,Buffer.byteLength(content));
   assert.equal(progress.tool_argument_bytes,Buffer.byteLength(argumentsText));
@@ -466,6 +570,22 @@ test('HTTP refusal status is retained before SDK rejection without raw error or 
   const completed=events.find(event=>event.type==='response-complete');
   assert.equal(completed.usage_available,false);assert.equal(completed.usage,null);
   assert.ok(!JSON.stringify({result,events}).includes('fixture-key'));
+});
+
+test('inspected refusal and provider identities retain bounded IDs without raw text or credentials',async t=>{
+  const {result,events}=await scenario(t,[rateLimit({type:'invalid_request_error',code:'engine_overloaded',message:'fixture-key private detail'})]);
+  assert.equal(result.reason,'provider-error');assert.equal(result.requests,1);
+  const refusal=events.find(e=>e.type==='provider-refusal');
+  assert.equal(refusal.error_type,'invalid_request_error');assert.equal(refusal.error_code,'engine_overloaded');
+  assert.ok(!JSON.stringify(events).includes('fixture-key'));
+  const bad=new Response('data: '+JSON.stringify({id:'fixture-key',provider:'fixture-key',choices:[{index:0,delta:{content:'ok'},finish_reason:'stop'}]})+'\n\ndata: [DONE]\n\n',
+    {headers:{'content-type':'text/event-stream','x-request-id':'fixture-key'}});
+  const observed=await scenario(t,[bad]);
+  assert.equal(observed.result.ok,true);
+  assert.equal(observed.events.find(e=>e.type==='response-headers').provider_request_id,null);
+  const progress=observed.events.find(e=>e.type==='response-complete').response_progress;
+  assert.equal(progress.response_id,null);assert.equal(progress.reported_provider,null);
+  assert.ok(!JSON.stringify(observed.events).includes('fixture-key'));
 });
 
 test('request budget is fresh request-only bookkeeping after unchanged history',async t=>{

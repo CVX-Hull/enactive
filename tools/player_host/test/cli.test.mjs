@@ -17,7 +17,7 @@ async function cli(t, handle, extraEnv = {}, enabledTools = ['observe']) {
   const server=createServer(handle); server.listen(0,'127.0.0.1'); await once(server,'listening');
   t.after(()=>{server.closeAllConnections();server.close();});
   const model={id:'fixture',name:'fixture',api:'openai-completions',provider:'fixture',baseUrl:`http://127.0.0.1:${server.address().port}/v1`,input:['text','image'],reasoning:false,cost:{input:0,output:0,cacheRead:0,cacheWrite:0},contextWindow:10000,maxTokens:100};
-  const route={schema:'pi-player-host/2',model,api_key_env:'CLI_FIXTURE_KEY',max_requests:1,max_context_images:4,request_timeout_seconds:5};
+  const route={schema:'pi-player-host/4',service_tier:'default',model,api_key_env:'CLI_FIXTURE_KEY',max_requests:1,max_context_images:4,request_timeout_seconds:5};
   const mcp={command:resolve(python),args:[fixture,join(dir,'log'),join(dir,'pid')],cwd:dir,enabled:true,required:true,enabled_tools:enabledTools,startup_timeout_sec:3,tool_timeout_sec:1};
   const paths={route:join(dir,'route.json'),mcp:join(dir,'mcp.json'),context:join(dir,'context.txt'),final:join(dir,'final.txt')};
   await Promise.all([writeFile(paths.route,JSON.stringify(route)),writeFile(paths.mcp,JSON.stringify(mcp)),writeFile(paths.context,'Frozen player guide'),writeFile(paths.final,'reserved')]);
@@ -54,6 +54,9 @@ test('CLI writes the driver-reserved final path only after terminal success',asy
   const run=await cli(t,(_req,res)=>{res.writeHead(200,{'content-type':'text/event-stream'});res.end('data: '+JSON.stringify({id:'fixture',model:'fixture-backend',choices:[{index:0,delta:{role:'assistant',content:'final answer'},finish_reason:'stop'}]})+'\n\ndata: [DONE]\n\n');});
   const [code]=await run.finished;
   assert.equal(code,0);assert.equal(await readFile(run.paths.final,'utf8'),'final answer\n');
+  const sink=run.read().events.at(-1).event_output;
+  assert.ok(sink.events>0&&sink.bytes>0);
+  assert.ok(sink.json_ms>=0&&sink.enqueue_ms>=0);
 });
 
 for(const name of ['OPENAI_LOG','OPENAI_CUSTOM_HEADERS','OPENAI_ORG_ID','OPENAI_PROJECT_ID']) test(`CLI refuses ambient SDK ${name} without inference or secret output`, async t=>{

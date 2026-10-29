@@ -1,10 +1,16 @@
 #!/usr/bin/env python3
-"""Offline evaluation/1 validation/summary. Reads evidence; writes JSON to stdout.
+"""Offline evidence analysis. Reads evidence; writes summaries to stdout.
 
 Use ``python -m tools.evaluate validate run.json [run2.json ...]`` or
 ``python -m tools.evaluate summary run.json [run2.json ...]``. No trace is skipped
 on error, and no evidence files are created or overwritten. Each input is bounded
 at 8 MiB; an invocation is bounded to 64 MiB and 4096 paths.
+
+``host-summary`` streams selected Pi JSONL files or known campaign directories;
+``--format markdown`` produces a compact table. Limits: 64 MiB per line, two
+million events and 200000 requests per trace, 4096 files / 8 GiB selected bytes.
+``witness-summary`` joins a mission evidence index with 1–32 observer-timing/3
+exports (64 MiB per metadata file). These are diagnostics, not gameplay verdicts.
 """
 from __future__ import annotations
 
@@ -22,9 +28,24 @@ MAX_INPUT_BYTES = 64 * 1024 * 1024
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("validate", "summary"))
+    parser.add_argument("command", choices=("validate", "summary", "host-summary", "witness-summary"))
     parser.add_argument("paths", type=Path, nargs="+")
+    parser.add_argument("--format", choices=("json", "markdown"), default="json")
     arguments = parser.parse_args(argv)
+    if arguments.command in ("host-summary", "witness-summary"):
+        from tools.host_analysis import host_summary, markdown
+        from tools.observer_analysis import witness_summary
+        try:
+            if arguments.format == "markdown" and arguments.command != "host-summary":
+                raise ContractError("Markdown output is supported for host-summary only")
+            result = (host_summary if arguments.command == "host-summary" else witness_summary)(arguments.paths)
+            print(markdown(result) if arguments.format == "markdown" else json.dumps(result, allow_nan=False, sort_keys=True))
+            return 0 if result.get("complete", True) else 1
+        except (ContractError, OSError, ValueError) as exc:
+            print(f"Trace analysis failed: {exc}", file=sys.stderr)
+            return 1
+    if arguments.format != "json":
+        parser.error("Existing evaluation records use JSON output")
     if len(arguments.paths) > MAX_RUNS:
         parser.error("At most 4096 run paths are supported")
     runs = []

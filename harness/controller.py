@@ -27,6 +27,7 @@ from harness.gameplay.native_receipts import matches_rejected_ack
 
 MAX_REQUEST = 4096
 MAX_WAIT = 15.0
+STARTUP_RECONCILIATION_PROMPT = "Observe to reconcile, then explicitly resume"
 MAX_HISTORICAL_INCIDENTS = 256
 # The list is also carried in startup/status evidence. Leave room below the
 # existing 1 MiB client envelope for that duplication and normal status fields.
@@ -254,7 +255,7 @@ class Controller:
         self.events: list[dict[str, Any]] = []
         self.last_result: dict[str, Any] | None = None
         self.latency_ms: int | None = None
-        self.transport_error = "Observe to reconcile, then explicitly resume"
+        self.transport_error = STARTUP_RECONCILIATION_PROMPT
         self.pending: dict[str, Any] | None = None
         self.control_pending: dict[str, Any] | None = None
         self.control_unknown_outcomes: list[dict[str, Any]] = []

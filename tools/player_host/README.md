@@ -50,9 +50,9 @@ below, no fatal failure latch, successful owned MCP closure, and a successful
 final-file write. `runHost(options)` is the
 programmatic seam; tests inject `fetch` there. No fake-provider CLI is exposed.
 
-The closed route has exactly `schema: "pi-player-host/2"`, `model`,
-`api_key_env`, `max_requests`, `request_timeout_seconds` and the required positive
-integer `max_context_images`. Version1 and missing/invalid limits are rejected;
+The closed route has exactly `schema: "pi-player-host/4"`, `model`,
+`api_key_env`, `max_requests`, `request_timeout_seconds`, `service_tier` and the required positive
+integer `max_context_images`. Versions1/2/3 and missing/invalid fields are rejected;
 closed historical configurations are evidence, not runnable current inputs.
 `model` contains Pi's
 explicit `id`, `name`, `api: "openai-completions"`, `provider`, `baseUrl`,
@@ -62,6 +62,21 @@ explicit `id`, `name`, `api: "openai-completions"`, `provider`, `baseUrl`,
 query strings and fragments, arbitrary headers, other APIs and unknown fields
 are refused. Model metadata and costs are configuration, not verified provider
 capabilities or billing evidence.
+
+Freeze `service_tier` as `default` or `priority`. Direct-provider default leaves the API field
+unset; priority adds only `service_tier: "priority"` through Pi's maintained
+`onPayload` hook. Verify support and pricing for the exact provider/model before
+selection. For the tested DeepInfra route, requested priority uses all configured
+rates and conservative per-attempt reservations at1.5× standard. This is a
+conservative configured estimate, separate from provider-reported estimates,
+actual applied-tier prices and invoices. DeepInfra may serve an unsupported
+priority request at the default tier. There is no tier/model fallback or retry
+triggered by the echo. `host-start.requested_service_tier` records selection;
+`response-service-tier` records a parsed stream echo only for known
+`default`/`priority`/`flex` values, once per value per HTTP attempt. Missing echo
+remains unknown. Nonstream provider probes do not establish stream-echo support;
+serving tier, cache counts and request spans do not qualify useful apparent latency.
+See [DeepInfra's current contract](https://docs.deepinfra.com/chat/overview#service-tier).
 
 Freeze the actual provider's image-part allowance explicitly; the host imposes no
 universal provider limit. Pi's maintained `transformContext` hook keeps the newest
@@ -92,12 +107,36 @@ window, without text summarization, automatic compaction, replay or permission
 renewal. Qualification must include actual continuation and apparent effects;
 reducing images alone is not a latency pass.
 
+Pi1.4.0's full `anyOf` validation can describe an unrelated memory type when a
+selected Work body is invalid. `validation-feedback.mjs` supplies a request-only
+diagnostic using the same `validateToolArguments`, narrowing only the existing
+`intent.entry_type` alternatives and retaining surrounding constraints. It never
+changes arguments, tool schemas, normal SDK validation, execution or collection.
+It requires a unique completed call/result batch, `isError`, absent `durationMs`,
+one text part with the exact SDK validation header, a known unambiguous branch,
+and no parser `argumentsError`. In pinned Pi, executed calls always carry a
+duration, including zero and exceptions. Parser/blocked errors have other headers;
+MCP errors keep their original path. If the narrowed check passes, the original
+refusal stays. No independent validator, successful-call revalidation or SDK fork
+is introduced.
+
+Canonical history stays unchanged. The existing trace's
+`tool-validation-feedback` event retains the original SDK result, exact call ID
+and projected text before forwarding. A weak memo of canonical call/result
+objects avoids repeating diagnostic work and keeps earlier feedback stable in
+later request prefixes; batch pairing is checked anew. This happens before image
+projection clones messages. These diagnostics prove neither semantic truth nor
+gameplay success and grant no input authority. Recheck these SDK assumptions on
+upgrade and retire the helper when upstream supplies precise union feedback.
+
 For nonreasoning models effort must be `off`. For reasoning models the selected
 Pi effort (`off`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`) must have a
 non-null explicit `thinkingLevelMap` entry, with
-`compat.supportsReasoningEffort: true` and `compat.thinkingFormat: "openai"`.
+`compat.supportsReasoningEffort: true` and `compat.thinkingFormat: "openai"`
+for direct routes or `"openrouter"` for OpenRouter.
 Direct Pi streaming sends the declared mapping without its simple-stream effort
-clamping. Other reasoning formats need conformance evidence before support.
+clamping. OpenRouter uses its maintained nested reasoning serializer as described
+below. Other reasoning formats need conformance evidence before support.
 
 Credentials come only from the explicitly named environment variable, resolved
 when preparing a provider call. The runner refuses `OPENAI_LOG`,
@@ -108,6 +147,23 @@ Clear them only in the dedicated host child's environment; the package never
 mutates the parent environment or a profile. No key values, headers or raw
 provider exceptions are emitted. Pi cache retention is explicitly `short`, preserving the maintained default
 while preventing an ambient `PI_CACHE_RETENTION` override.
+
+
+For `model.provider: "openrouter"`, require a closed
+`model.compat.openRouterRouting` object with exactly `only: ["FULL_TAG"]`,
+`order: ["FULL_TAG"]`, `allow_fallbacks: false` and `require_parameters: true`.
+Pi1.4.0 owns its provider-policy and nested reasoning serialization; no arbitrary
+payload/header injection is admitted. Direct routes reject this policy. OpenRouter
+requires configured `service_tier: "default"` and sends that value explicitly to
+exclude workspace tier defaults and priority pool admission. That does not prove
+applied tier or performance. Refresh advertised full tags before each finite
+freeze; base/prefix tags can match variants/regions and are not immutable endpoint
+identities. Actual provider metadata and failures remain evidence, without automatic
+fallback or a claim that Baseten's base tag identifies its FAST benchmark variant.
+`host-start.provider_routing` and `reasoning_format` retain configured policy;
+parsed stream IDs/provider names and optional generation metadata establish only
+what the service actually reports. See [routing](https://openrouter.ai/docs/guides/routing/provider-selection)
+and [tier semantics](https://openrouter.ai/docs/guides/features/service-tiers).
 
 One inference request may recover from one eligible HTTP429 before assistant
 output, using Pi's maintained abortable provider-retry helper. Its classifier reads
@@ -232,3 +288,24 @@ does not establish absence of backend generation or explain a timeout. Recording
 progress never renews a timer, retries a partial response, changes provider
 context or authorizes tool input. Its observation overhead belongs in subsequent
 live measurements.
+
+Telemetry version1 adds first/last/max consecutive gaps for body chunks, parsed
+provider events and nonempty reasoning/content/tool-argument fragments. Missing
+first/last values stay null; max gaps exclude silence after the last fragment.
+`provider-payload-ready`, `request-fetch-start`, projection/inspection timings
+and the CLI's `settled.event_output` separate some local preparation and logging
+costs from Fetch intervals. Output measurements cover synchronous callback,
+serialization and enqueue time, bytes and backpressure signals **before** the
+settled event; they do not measure disk durability or async drain. Library callers
+without sink instrumentation retain null sink measurements. Observing overhead
+still adds work and must be measured during subsequent play.
+
+`host-start` records the configured output cap, context window and effort mapping;
+these are transmitted configuration, not backend effort attestation. Sanitized
+bounded response/provider IDs and `x-request-id` permit later correlation when
+reported. `provider-refusal` records only type/code from the first429 body that
+the existing recovery path already inspects; header-suppressed, later, malformed
+or other-status errors retain unknown codes. No error message, extra body/header
+logging, extra fetch, retry, timer renewal or dispatch is added. Use the existing
+[offline evaluator](../../docs/evaluation.md#retained-host-and-browser-analysis)
+to analyze traces; future telemetry versions are not silently interpreted.

@@ -56,8 +56,7 @@ def _json(path: Path) -> dict:
     return json_object(_read(path))
 
 
-def _redacted(value: dict) -> dict:
-    secret = os.environ.get("DEEPINFRA_API_KEY")
+def _redacted(value: dict, *, secret: str | None) -> dict:
     def clean(item):
         if isinstance(item, str):
             return item.replace(secret, "[REDACTED]") if secret else item
@@ -69,8 +68,8 @@ def _redacted(value: dict) -> dict:
     return clean(value)
 
 
-def _write(stream, value: dict) -> None:
-    json.dump(_redacted(value), stream, indent=2, allow_nan=False)
+def _write(stream, value: dict, *, secret: str | None) -> None:
+    json.dump(_redacted(value, secret=secret), stream, indent=2, allow_nan=False)
     stream.write("\n")
     stream.flush()
 
@@ -95,7 +94,7 @@ def _source(root: Path, expected: str) -> None:
         raise RunError("Run requires the exact clean committed checkpoint")
 
 
-def _preflight(root: Path, mission_id: str, *, node: str = "node") -> tuple[Path, dict, dict]:
+def _preflight(root: Path, mission_id: str, *, node: str = "node") -> tuple[Path, dict, dict, str]:
     if re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}", mission_id) is None:
         raise RunError("Invalid mission identity")
     if not isinstance(node, str) or not node:
@@ -146,7 +145,9 @@ def _preflight(root: Path, mission_id: str, *, node: str = "node") -> tuple[Path
     effort = profile.get("effort")
     if not isinstance(effort, str) or not effort:
         raise RunError("Expected a frozen player effort string")
-    if (route.get("api_key_env") != "DEEPINFRA_API_KEY"
+    if (not isinstance(route.get("api_key_env"), str)
+            or re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", route["api_key_env"]) is None
+            or route["api_key_env"] in ("PATH", "LANG")
             or type(route.get("model")) is not dict
             or route["model"].get("id") != current.configuration.model):
         raise RunError("Frozen route differs from the admission or credential route")
@@ -212,7 +213,7 @@ def _preflight(root: Path, mission_id: str, *, node: str = "node") -> tuple[Path
         driver_paths += [run / f"driver-{role}{suffix}" for suffix in (".jsonl", "-final.txt")]
     if any(os.path.lexists(path) for path in driver_paths):
         raise RunError("Prior driver evidence exists; no replay")
-    return run, profile, admission
+    return run, profile, admission, route["api_key_env"]
 
 
 def _stop_child(child: subprocess.Popen, *, deadline: float, first_wait: float) -> dict:
@@ -275,8 +276,9 @@ def run_campaign(*, root: Path, mission_id: str, port: int = 8766, node: str = "
     root = root.resolve(strict=True)
     if type(port) is not int or not 1 <= port <= 65535:
         raise RunError("Invalid controller port")
-    run, profile, admission = _preflight(root, mission_id, node=node)
-    if not os.environ.get("DEEPINFRA_API_KEY"):
+    run, profile, admission, key_env = _preflight(root, mission_id, node=node)
+    secret = os.environ.get(key_env)
+    if not secret:
         raise RunError("Supplied provider credential is unavailable; no admission")
     with ExitStack() as stack:
         # Exclusive creation fences retries even after setup/refusal/partial output.
@@ -340,19 +342,19 @@ def run_campaign(*, root: Path, mission_id: str, port: int = 8766, node: str = "
                 "begin_normal_ending_timestamp": wall + profile["begin_normal_ending_seconds"],
                 "complete_normal_ending_before_timestamp": wall + profile["complete_normal_ending_before_seconds"],
                 "custodian_cleanup_before_timestamp": wall + profile["complete_normal_ending_before_seconds"] + SHUTDOWN_SECONDS}
-            _write(streams["custodian-clock.json"], clocks)
+            _write(streams["custodian-clock.json"], clocks, secret=secret)
             player = PlayerTools(client)
             arguments, collection = player.model_arguments("enactive_start", {"admission": admission})
-            _write(streams["custodian-start.json"], {"arguments": arguments, "collection": collection})
+            _write(streams["custodian-start.json"], {"arguments": arguments, "collection": collection}, secret=secret)
             result, _ = player.call("enactive_start", arguments, present_image=False)
-            _write(streams["custodian-admission.json"], result)
+            _write(streams["custodian-admission.json"], result, secret=secret)
             admitted = _admitted(result, arguments["request_id"], mission_id)
             if not admitted:
                 raise RunError("Original admission acknowledgement is refused or uncertain; never replay")
             remaining = ending_deadline - time.monotonic()
             if interrupted or remaining <= 0 or controller.poll() is not None:
                 raise RunError("Original campaign deadline or custody exhausted before driver launch")
-            driver_env = {**_clean_env(), "DEEPINFRA_API_KEY": os.environ["DEEPINFRA_API_KEY"]}
+            driver_env = {**_clean_env(), key_env: secret}
             driver = launch("driver", [sys.executable, "-m", "tools.campaign_player", "--root", str(root),
                 "--run-dir", str(run), "--mission-id", mission_id, "--model", admission["configuration"]["model"],
                 "--effort", profile["effort"], "--max-hosts", str(profile["max_hosts"]),
@@ -365,7 +367,7 @@ def run_campaign(*, root: Path, mission_id: str, port: int = 8766, node: str = "
             if driver.returncode != 0:
                 raise RunError("Campaign driver failed")
             final = client.status()
-            _write(streams["custodian-final-status.json"], final)
+            _write(streams["custodian-final-status.json"], final, secret=secret)
             mission = final.get("mission") or {}
             if mission.get("mission_id") != mission_id or mission.get("phase") not in TERMINAL:
                 raise RunError("Driver left no observed terminal mission")
@@ -390,7 +392,7 @@ def run_campaign(*, root: Path, mission_id: str, port: int = 8766, node: str = "
                                 "reason": "Exceptional custodian cancellation/failure/deadline; no normal ending claimed"}})
                         result, _ = player.call("enactive_stop", arguments, present_image=False)
                         _write(streams["custodian-stop.json"], {"arguments": arguments,
-                            "collection": collection, "result": result})
+                            "collection": collection, "result": result}, secret=secret)
                         receipt["exceptional_stop"] = True
                 except Exception as exc:
                     receipt["stop_error_type"] = type(exc).__name__
@@ -422,8 +424,8 @@ def run_campaign(*, root: Path, mission_id: str, port: int = 8766, node: str = "
             receipt["native_cleanup_unknown"] = not receipt["native_absence_verified"]
             receipt["admission_acknowledged"] = admitted
             receipt["ended_timestamp"] = time.time()
-            _write(streams["custodian-receipt.json"], receipt)
-        return _redacted(receipt)
+            _write(streams["custodian-receipt.json"], receipt, secret=secret)
+        return _redacted(receipt, secret=secret)
 
 
 def main() -> None:
@@ -437,7 +439,7 @@ def main() -> None:
     except (OSError, ValueError, TypeError, subprocess.SubprocessError):
         receipt = {"outcome": "incomplete", "reason": "Frozen run setup refused; no retry or admission implied",
             "native_absence_verified": False, "acceptance_claimed": False}
-    print(json.dumps(_redacted(receipt), allow_nan=False))
+    print(json.dumps(receipt, allow_nan=False))
     raise SystemExit(0 if receipt["outcome"] == "terminal" and receipt["native_absence_verified"]
         and receipt.get("deciding_hosts_quiescent") is True else 1)
 

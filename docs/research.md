@@ -41,6 +41,14 @@ maintenance question rather than expanding bibliography for its own sake.
 
 ## Embodied control / VLA
 
+The [October28 serving and retained-latency analysis](acceptance/2026-10-28-latency-diagnostics.md#current-endpoint-evidence)
+checks the exact selected model against current endpoint measurements and routing,
+cache and effort contracts. It combines this with retained host/outcome evidence;
+fast token benchmarks shortlist candidates but cannot qualify useful gameplay.
+The [follow-through comparison](acceptance/2026-10-28-endpoint-gameplay.md) tests
+fixed OpenRouter endpoints through actual play, distinguishes cache/stream clocks
+from useful effects, and exposes routine and outcome-accounting failures.
+
 The [October26 context, prompt and ergonomics review](research-context-engineering.md)
 examines the user's fast, less flagship model direction against current primary
 small-model/tool studies, memory/compaction counterexamples, provider contracts
