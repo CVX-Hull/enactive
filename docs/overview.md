@@ -55,6 +55,11 @@ the harness a basic computer-control substrate and places all game semantics in
 the playing system. Current menu/activity/identity authority remains coupled to
 CDDA; the cutover and another real game are not delivered. Faster serving and
 handler repairs do not establish that generality.
+An isolated [computer-control proof](acceptance/2026-10-29-basic-computer-control.md)
+now retains raw SDL delivery, failed scouting and a brief fresh scouting/save-to-menu
+episode. It does not qualify CDDA clicking or replace the current product contract;
+the [reviewed cutover map](changes/070-computer-control-proof.md#reviewed-production-handoff)
+hands the coordinated migration to #176.
 
 The [registered lifecycle](components/mission-execution.md#lifecycle-and-change-review)
 can keep an initial post-Load menu provisional. Explicit bounded dismissal must

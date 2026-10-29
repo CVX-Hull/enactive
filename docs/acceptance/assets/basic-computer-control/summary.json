@@ -1,0 +1,123 @@
+{
+  "scope": "Bounded enabler evidence summary; original frozen packages and traces retained privately, not a new runtime format",
+  "cases": [
+    {
+      "case": "case001",
+      "private_family": ".runtime/computer-control-181-20261029/case001",
+      "source_commit": "cda679b019b89ab0d77e8bc3167ba5671467b325",
+      "native_sha256": "71e51f5301e873e6832eb50c7456f29b5e40e9c7f2e7a38d241e36873c778597",
+      "library_sha256": "bb0d9e66616894497af5463e3d7f28972232ecb28e315fb5f2fc773292747dae",
+      "frozen_file_sha256": {
+        "route.json": "5bcd797555d1e5319c740a563f89f299eda23dc78c83eaf0fa0236313af58863",
+        "mcp.json": "911a8da41618ddb67ecaf1e2708cd8238214fdafa225d450bab19855de020d14",
+        "context.txt": "fe358e1137d9251ae700d8467dd468f950254f426c7bb92b473fcf316daf63b0",
+        "prompt.txt": "baf6d9de06c456150e3b2023bb54ed78503239b4f813c67d6fc99815232eeb66",
+        "launch.sh": "9d43d29ac923ad6186f70a4b0e4cf61c65f6c15c3ba54052e4b7162777173bd9"
+      },
+      "original_manifest_sha256": "a34f9be832a093850817c63640ec06f45674198308cbaf961d7d041306253482",
+      "http_attempts": 73,
+      "configured_cost": 1.489915764,
+      "action_counts": {
+        "key": 498,
+        "wait": 8,
+        "click": 1,
+        "text": 1
+      },
+      "tool_operations": 72,
+      "frames": 71,
+      "frame_bytes": 10621577,
+      "receipt": {
+        "session": "57cf6820e98e402aa0724b149058361f",
+        "outcome": "host_completed",
+        "input_authority_revoked": true,
+        "native_absence_verified": true,
+        "deciding_host_quiescent": true,
+        "signals": [],
+        "target_established_wall": 1793248690.226929,
+        "host_returncode": 0,
+        "host": {
+          "pid": 9997,
+          "returncode": 0,
+          "signals": [],
+          "exit_unresolved": false
+        },
+        "native": {
+          "pid": 9993,
+          "returncode": 0,
+          "signals": [
+            "SIGTERM"
+          ],
+          "exit_unresolved": false
+        },
+        "normal_native_exit_zero": false,
+        "ended_wall": 1793249141.853378,
+        "elapsed_seconds": 451.85155516676605
+      },
+      "observer": {
+        "samples": 68,
+        "p50_ms": 175.5,
+        "p95_ms": 302,
+        "max_ms": 4383
+      }
+    },
+    {
+      "case": "case002",
+      "private_family": ".runtime/computer-control-181-20261029/case002",
+      "source_commit": "f1c0c6a78a16211c3c191c6f9ff7e3ad0236f78a",
+      "native_sha256": "71e51f5301e873e6832eb50c7456f29b5e40e9c7f2e7a38d241e36873c778597",
+      "library_sha256": "507cc7df7b1659f892791dc753035a47371f799dd61d46caa3af0d6d89496767",
+      "frozen_file_sha256": {
+        "route.json": "354061e34679cdbad87c035d254babee0bcb1c5446dd9c16aa6ba55fb66afe9c",
+        "mcp.json": "1b9328f67ea2aa335f1386ade0c907cb4c9f1b0bcc231cae47716d4581d1a03c",
+        "context.txt": "45e37625b5ac1bf0996e51f8eaaa6d72aafcc15a5032de6185934eaba5e39b6a",
+        "prompt.txt": "242aa0be1d3b66f133146aa532eb8308003102338c3404bed686ac98c99befb6",
+        "launch.sh": "9d43d29ac923ad6186f70a4b0e4cf61c65f6c15c3ba54052e4b7162777173bd9"
+      },
+      "original_manifest_sha256": "dbdb1d412235a8a1de98b3c134dc5add6ce5c6921109c8d341c54ba45044c2d2",
+      "http_attempts": 81,
+      "configured_cost": 1.172239038,
+      "action_counts": {
+        "key": 195,
+        "wait": 98,
+        "click": 1,
+        "text": 5
+      },
+      "tool_operations": 80,
+      "frames": 78,
+      "frame_bytes": 6473685,
+      "receipt": {
+        "session": "cab89494427f4c8a81472fbd6da0d63f",
+        "outcome": "host_completed",
+        "input_authority_revoked": true,
+        "native_absence_verified": true,
+        "deciding_host_quiescent": true,
+        "signals": [],
+        "target_established_wall": 1793249460.506117,
+        "host_returncode": 0,
+        "host": {
+          "pid": 15480,
+          "returncode": 0,
+          "signals": [],
+          "exit_unresolved": false
+        },
+        "native": {
+          "pid": 15479,
+          "returncode": 0,
+          "signals": [
+            "SIGTERM"
+          ],
+          "exit_unresolved": false
+        },
+        "normal_native_exit_zero": false,
+        "ended_wall": 1793249894.077985,
+        "elapsed_seconds": 433.78050020802766
+      },
+      "observer": {
+        "samples": 76,
+        "p50_ms": 354.0,
+        "p95_ms": 2263,
+        "max_ms": 6538
+      }
+    }
+  ]
+}

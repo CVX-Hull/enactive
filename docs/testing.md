@@ -41,6 +41,13 @@ against [evaluation criteria](evaluation.md). A source test, compiled component,
 full native build and real gameplay are separate evidence lanes. Preserve failed
 runs and unexercised branches; passing another lane cannot relabel them.
 
+The isolated [computer-control enabler](acceptance/2026-10-29-basic-computer-control.md)
+adds [portable transport/MCP negatives](../tests/test_computer_control.py) and a
+separate [actual SDL fixture](../experiments/computer_control/native_check.py).
+Syntax/Ruff and full portable collection include `experiments/`; Mac native
+compilation, offscreen pointer/target-loss checks and organic play remain separate
+lanes. These do not qualify the unchanged native7 product or broader game support.
+
 Development gameplay is the primary feedback loop for player behavior and useful
 system composition. The table identifies what offline checks can establish; it
 does not make comprehensive offline qualification a prerequisite to discovering

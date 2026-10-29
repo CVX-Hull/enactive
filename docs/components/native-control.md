@@ -6,6 +6,14 @@ status: active
 
 # Native control and visible observation
 
+This page describes the current native7 product. The isolated
+[basic-control enabler](../acceptance/2026-10-29-basic-computer-control.md) uses only
+SDL pixels/events and mechanical custody, with all game meaning in the player.
+Its [cutover map](../changes/070-computer-control-proof.md#reviewed-production-handoff)
+does not yet migrate this component. Pointer delivery and actual application
+effects remain separate; the legacy disabled-mouse configuration is part of the
+next preparation migration, not a reason to restore a semantic mouse override.
+
 Parent: [system architecture](../architecture.md). This view answers: “What makes
 an input eligible, and how can the user stop it?” The controller serializes
 dispatch; the CDDA integration validates its receiver/custody at commit and the

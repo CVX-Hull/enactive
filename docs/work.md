@@ -31,6 +31,10 @@ places all game semantics in the playing system. [#191](https://github.com/CVX-H
 owns portability and the [cutover program #284](https://github.com/CVX-Hull/enactive/issues/284)
 owns its bounded proof and coordinated migration. Current native7/mission11 has
 not made that cutover; earlier semantic-handler evidence remains scoped history.
+The [#181 enabler evidence](acceptance/2026-10-29-basic-computer-control.md) and
+[reviewed migration map](changes/070-computer-control-proof.md#reviewed-production-handoff)
+now provide the source-linked handoff; raw delivery does not qualify actual CDDA
+pointer effects or complete the product migration.
 
 The generic gameplay host is mandatory under
 [#240](https://github.com/CVX-Hull/enactive/issues/240), independently of provider/model
