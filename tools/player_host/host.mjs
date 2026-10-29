@@ -205,6 +205,19 @@ function refusalDiagnostic(body, secret) {
   } catch { return {error_type:null, error_code:null}; }
 }
 
+// Preserve the server's retry instruction without logging arbitrary headers or
+// refusal text. The maintained SDK owns delay selection and enforcement.
+function retryDiagnostic(headers) {
+  const milliseconds = Number.parseFloat(headers.get('retry-after-ms'));
+  const after = headers.get('retry-after');
+  const seconds = Number.parseFloat(after);
+  const delay = Number.isFinite(milliseconds) ? milliseconds
+    : Number.isFinite(seconds) ? seconds * 1000
+      : after === null ? NaN : Date.parse(after) - Date.now();
+  return {requested_retry_delay_ms:Number.isFinite(delay) && Math.abs(delay) <= Number.MAX_SAFE_INTEGER ? delay : null,
+    retry_suppressed:headers.get('x-should-retry') === 'false', max_retry_delay_ms:MAX_RETRY_DELAY_MS};
+}
+
 function retryableRefusal(body) {
   const error = JSON.parse(body)?.error;
   if (!object(error)) return false;
@@ -471,7 +484,8 @@ export async function runHost(options) {
               throw new HostError(fatal ?? 'provider-error');
             }
             emit('response-headers', {request_id:attemptId, status:response.status, provider_request_id:
-              diagnosticId(response.headers.get('x-request-id'), apiKey)});
+              diagnosticId(response.headers.get('x-request-id'), apiKey),
+              ...(response.status === 429 ? retryDiagnostic(response.headers) : {})});
             let first = false;
             const body = response.body?.pipeThrough(new TransformStream({transform(chunk, controller) {
               attemptProgress.body_bytes += chunk.byteLength;

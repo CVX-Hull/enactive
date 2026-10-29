@@ -148,3 +148,6 @@ Read [Ordinary discovery and procedure data](contracts/procedure-programs.md#ord
 ## Passive waypoint supervision
 
 - [Passive waypoint supervision](contracts/movement-skills.md#passive-waypoint-supervision).
+
+The [proposed computer-control replacement](contracts/computer-control.md) is the
+reviewed #176 implementation target; it does not add a second supported runtime.

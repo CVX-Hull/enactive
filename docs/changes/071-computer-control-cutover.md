@@ -63,8 +63,9 @@ capability iteration, not a separately accepted proof-only iteration.
 
 ## Production responsibility and port proposal
 
-Final field/version definitions are frozen after the input checkpoint and before
-worker assignment, with independent boundary review. The agreed responsibilities are:
+The [reviewed two-sided ports](../contracts/computer-control.md) freeze fields,
+versions, callbacks and data treatment after the initial input checkpoint and
+before worker assignment. The responsibilities are:
 
 | Responsibility | Proposed implementation and permitted data |
 | --- | --- |

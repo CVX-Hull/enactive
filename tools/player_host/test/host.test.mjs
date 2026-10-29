@@ -672,6 +672,10 @@ test('retry suppression header and excessive server delay do not send another at
     const {result,payloads,events}=await scenario(sub,[rateLimit(undefined,headers),reply()]);
     assert.equal(result.reason,'provider-error');assert.equal(result.requests,1);assert.equal(payloads.length,1);
     assert.equal(events.filter(e=>e.type==='response-complete').length,1);
+    const observed=events.find(e=>e.type==='response-headers');
+    assert.equal(observed.requested_retry_delay_ms,headers['retry-after-ms'] === '6000' ? 6000 : 0);
+    assert.equal(observed.retry_suppressed,headers['x-should-retry'] === 'false');
+    assert.equal(observed.max_retry_delay_ms,5000);
   });
 });
 test('malformed and oversized refusal bodies cannot authorize a retry',async t=>{

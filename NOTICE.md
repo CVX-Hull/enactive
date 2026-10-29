@@ -93,6 +93,15 @@ This repository does not vendor or relicense the wheel. Review and preserve the
 upstream V8/component notices before distributing a bundled binary. Runtime selection, limits
 and rejected alternatives are in [the execution brief](docs/changes/061-player-program-execution.md).
 
+## Player image decoding
+
+Pillow 13.0.0 decodes bounded player-selected PNG views. Its package metadata
+identifies MIT-CMU; its installed `licenses/LICENSE` also retains notices for
+bundled image libraries. Exact artifacts/hashes are in the development lock.
+Metadata and the installed notice were inspected on 2026-10-29; this is not a
+complete bundled-library license audit. Preserve that upstream notice when
+redistributing the wheel. No image codec source is vendored here.
+
 ## Test runner
 
 pytest, pytest-xdist, execnet, pluggy and iniconfig use MIT licenses. Packaging

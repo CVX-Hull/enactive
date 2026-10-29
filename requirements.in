@@ -3,3 +3,5 @@ jsonschema==4.26.0
 mcp==2.3.0
 # Bounded JavaScript evaluation for player-authored policy artifacts.
 mini-racer==0.14.1
+# Decode player-selected image views; no game-specific perception in control.
+Pillow==13.0.0
