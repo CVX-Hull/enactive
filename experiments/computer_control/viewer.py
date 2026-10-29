@@ -1,6 +1,7 @@
 """Passive candidate pixels and an explicit operator stop; no gameplay semantics."""
 from __future__ import annotations
 
+from pathlib import Path
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import threading
@@ -10,7 +11,7 @@ from urllib.parse import parse_qs, urlsplit
 from .protocol import read_json
 
 
-def serve(run, port=8766):
+def serve(run: Path, port: int = 8766) -> tuple[ThreadingHTTPServer, threading.Thread]:
     config = read_json(run / 'control.json')
     session = config['session']
     class Handler(BaseHTTPRequestHandler):

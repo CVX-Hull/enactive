@@ -1,6 +1,8 @@
 """Build the one isolated SDL candidate using already prepared frameworks."""
 from __future__ import annotations
 
+from typing import Any
+
 import argparse
 import hashlib
 import json
@@ -11,7 +13,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def build(output):
+def build(output: Path) -> dict[str, Any]:
     if sys.platform != 'darwin':
         raise RuntimeError('This candidate is qualified only on the current Mac')
     output = output.resolve()

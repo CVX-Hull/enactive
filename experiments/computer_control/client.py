@@ -1,6 +1,9 @@
 """Single bounded writer for the isolated mechanical candidate."""
 from __future__ import annotations
 
+from typing import Any
+
+from collections.abc import Callable
 import copy
 import fcntl
 import hashlib
@@ -19,7 +22,7 @@ class OperationExpired(ControlError):
     """Known local truncation, distinct from uncertain published input."""
 
 
-def atomic(path, value):
+def atomic(path: Path, value: object) -> None:
     temporary = path.with_name(path.name + '.tmp-' + uuid.uuid4().hex)
     with temporary.open('x') as stream:
         stream.write(canonical(value) + '\n')
@@ -27,7 +30,7 @@ def atomic(path, value):
 
 
 class ComputerClient:
-    def __init__(self, run: Path, *, clock=time.monotonic, wall=time.time):
+    def __init__(self, run: Path, *, clock: Callable[[], float] = time.monotonic, wall: Callable[[], float] = time.time) -> None:
         self.run = run.resolve(strict=True)
         self.config = read_json(self.run / 'control.json')
         closed(self.config, {'schema', 'session', 'pid', 'deadline_monotonic', 'max_inputs', 'max_requests', 'max_frames', 'max_bytes'})
@@ -56,13 +59,12 @@ class ComputerClient:
         self.stopped = threading.Event()
         self.inputs = self.requests = self.frames = self.bytes = 0
         self.captures = {}
-        self.previous_clock = self.clock()
 
-    def close(self):
+    def close(self) -> None:
         self.stop('Writer closed; no rearm')
         self.lock.close()
 
-    def stop(self, reason):
+    def stop(self, reason: str) -> dict[str, Any]:
         try:
             (self.directory / 'pause').touch()
         finally:
@@ -74,10 +76,10 @@ class ComputerClient:
         with (self.run / 'client.jsonl').open('a') as stream:
             stream.write(canonical(dict(type=kind, monotonic=self.clock(), wall_time=self.wall(), **value)) + '\n')
 
-    def target(self):
+    def target(self) -> dict[str, Any]:
         return state(read_json(self.directory / 'state.json'), session=self.session, pid=self.pid)
 
-    def remaining(self):
+    def remaining(self) -> dict[str, int | float]:
         return dict(seconds=max(0, self.deadline - self.clock()),
                     inputs=max(0, self.config['max_inputs'] - self.inputs),
                     requests=max(0, self.config['max_requests'] - self.requests),
@@ -86,10 +88,6 @@ class ComputerClient:
 
     def _guard(self, *, input_needed=False):
         now = self.clock()
-        if now < self.previous_clock:
-            self.stop('Monotonic clock regressed')
-            raise ControlError('Monotonic clock regressed')
-        self.previous_clock = now
         if now >= self.deadline:
             self.stop('Original deadline exhausted')
             raise ControlError('Original deadline exhausted')
@@ -173,7 +171,7 @@ class ComputerClient:
         return dict(schema='computer-transport/1', id=identity, session=self.session,
                     disposition='unknown', emitted_events=None, reason='No terminal receipt; emitted count unknown', frame=None)
 
-    def result(self, operation_id):
+    def result(self, operation_id: str) -> tuple[dict[str, Any], bytes | None]:
         if not isinstance(operation_id, str) or re.fullmatch('[0-9a-f]{32}', operation_id) is None:
             raise ControlError('Invalid original operation ID')
         path = self.run / 'operations' / (operation_id + '.json')
@@ -202,7 +200,7 @@ class ComputerClient:
             self._guard(input_needed=True)
             time.sleep(min(.02, end - self.clock()))
 
-    def execute(self, actions=None, *, capture_id=None, observe=False):
+    def execute(self, actions: object = None, *, capture_id: int | None = None, observe: bool = False) -> tuple[dict[str, Any], bytes | None]:
         # Validate the entire sequence before its first effect.
         if observe:
             prepared = []

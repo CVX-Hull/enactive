@@ -1,6 +1,9 @@
 """Small mechanical protocol; no game observations, goals or eligibility rules."""
 from __future__ import annotations
 
+from typing import Any
+
+from collections.abc import Iterable
 import json
 import math
 from pathlib import Path
@@ -15,11 +18,11 @@ class ControlError(ValueError):
     pass
 
 
-def canonical(value):
+def canonical(value: object) -> str:
     return json.dumps(value, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
 
 
-def read_json(path: Path, maximum=65536):
+def read_json(path: Path, maximum: int = 65536) -> Any:
     if path.is_symlink() or not path.is_file() or path.stat().st_size > maximum:
         raise ControlError("Missing or invalid bounded regular artifact")
     def pairs(items):
@@ -33,17 +36,17 @@ def read_json(path: Path, maximum=65536):
                       parse_constant=lambda value: (_ for _ in ()).throw(ControlError("Nonfinite JSON")))
 
 
-def closed(value, keys):
+def closed(value: object, keys: Iterable[str]) -> None:
     if type(value) is not dict or set(value) != set(keys):
         raise ControlError("Invalid mechanical object fields")
 
 
-def integer(value, low, high):
+def integer(value: object, low: int, high: int) -> None:
     if type(value) is not int or not low <= value <= high:
         raise ControlError("Integer outside mechanical bound")
 
 
-def geometry(value):
+def geometry(value: object) -> dict[str, Any]:
     closed(value, GEOMETRY_KEYS)
     for field in GEOMETRY_KEYS - {"viewport"}:
         integer(value[field], 1, 16384)
@@ -57,7 +60,7 @@ def geometry(value):
     return value
 
 
-def validate_input(value):
+def validate_input(value: object) -> dict[str, Any]:
     if type(value) is not dict:
         raise ControlError("Input must be an object")
     kind = value.get("type")
@@ -87,7 +90,7 @@ def validate_input(value):
     return value
 
 
-def frame(value):
+def frame(value: object) -> dict[str, Any]:
     closed(value, {"name", "capture_id", "presented_ms", *GEOMETRY_KEYS})
     if not isinstance(value["name"], str) or re.fullmatch(r"frame-[1-9][0-9]*\.png", value["name"]) is None:
         raise ControlError("Invalid frame basename")
@@ -97,7 +100,7 @@ def frame(value):
     return value
 
 
-def state(value, *, session, pid):
+def state(value: object, *, session: str, pid: int) -> dict[str, Any]:
     closed(value, {"schema", "session", "pid", "window_id", "paused", "takeover_generation", "latest_frame", "error"})
     if value["schema"] != "computer-target/1" or value["session"] != session or value["pid"] != pid:
         raise ControlError("Target/session identity differs")
@@ -110,7 +113,7 @@ def state(value, *, session, pid):
     return value
 
 
-def receipt(value, *, identity, session):
+def receipt(value: object, *, identity: str, session: str) -> dict[str, Any]:
     closed(value, {"schema", "id", "session", "disposition", "emitted_events", "reason", "frame"})
     if value["schema"] != "computer-receipt/1" or value["id"] != identity or value["session"] != session:
         raise ControlError("Receipt identity differs")
@@ -126,7 +129,7 @@ def receipt(value, *, identity, session):
     return value
 
 
-def finite_seconds(value, maximum):
+def finite_seconds(value: object, maximum: float) -> int | float:
     if type(value) not in (int, float) or not math.isfinite(value) or not 0 <= value <= maximum:
         raise ControlError("Invalid bounded wait")
     return value

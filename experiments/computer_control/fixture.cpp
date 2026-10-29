@@ -15,23 +15,33 @@ static std::string quoted(const char *value) {
     return out+'"';
 }
 int main(int argc,char **argv) {
-    if(argc!=2 && !(argc==3 && strcmp(argv[2],"--hidden")==0)) { fprintf(stderr,"usage: fixture EVENT_LOG.jsonl [--hidden]\n"); return 2; }
+    if(argc<2) { fprintf(stderr,"usage: fixture EVENT_LOG.jsonl [--hidden] [--offscreen]\n"); return 2; }
+    bool hidden=false,offscreen=false;
+    for(int i=2;i<argc;++i) { if(strcmp(argv[i],"--hidden")==0) hidden=true; else if(strcmp(argv[i],"--offscreen")==0) offscreen=true; else return 2; }
     FILE *log=fopen(argv[1],"wx"); if(!log) { perror("event log"); return 2; }
     if(SDL_Init(SDL_INIT_VIDEO|SDL_INIT_EVENTS)!=0) { fprintf(stderr,"SDL_Init: %s\n",SDL_GetError()); fclose(log); return 1; }
-    SDL_Window *window=SDL_CreateWindow("Mechanical SDL fixture",SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,640,400,SDL_WINDOW_RESIZABLE|SDL_WINDOW_ALLOW_HIGHDPI|(argc==3?SDL_WINDOW_HIDDEN:0));
+    SDL_Window *window=SDL_CreateWindow("Mechanical SDL fixture",SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,640,400,SDL_WINDOW_RESIZABLE|SDL_WINDOW_ALLOW_HIGHDPI|(hidden?SDL_WINDOW_HIDDEN:0));
     SDL_Renderer *renderer=window?SDL_CreateRenderer(window,-1,SDL_RENDERER_SOFTWARE):nullptr;
     if(!renderer) { fprintf(stderr,"SDL fixture: %s\n",SDL_GetError()); if(window) SDL_DestroyWindow(window); SDL_Quit(); fclose(log); return 1; }
+    SDL_Texture *target=offscreen?SDL_CreateTexture(renderer,SDL_PIXELFORMAT_RGBA8888,SDL_TEXTUREACCESS_TARGET,123,77):nullptr;
+    if(offscreen && !target) { fprintf(stderr,"SDL texture: %s\n",SDL_GetError()); return 1; }
     SDL_StartTextInput(); bool running=true; unsigned count=0,drain=0; int markerX=100,markerY=100; Uint8 red=40,green=100,blue=180; std::string text;
     while(running) {
         ++drain; SDL_Event e;
         while(SDL_PollEvent(&e)) {
             ++count; int mx=0,my=0,gx=0,gy=0; Uint32 buttons=SDL_GetMouseState(&mx,&my), globalButtons=SDL_GetGlobalMouseState(&gx,&gy); SDL_Keymod mods=SDL_GetModState();
-            fprintf(log,"{\"event\":%u,\"drain\":%u,\"type\":%u,\"mouse\":[%d,%d],\"buttons\":%u,\"global_mouse\":[%d,%d],\"global_buttons\":%u,\"modifiers\":%u",count,drain,e.type,mx,my,buttons,gx,gy,globalButtons,(unsigned)mods);
+            fprintf(log,"{\"event\":%u,\"drain\":%u,\"type\":%u,\"mouse\":[%d,%d],\"buttons\":%u,\"global_mouse\":[%d,%d],\"global_buttons\":%u,\"modifiers\":%u,\"offscreen\":%s",count,drain,e.type,mx,my,buttons,gx,gy,globalButtons,(unsigned)mods,SDL_GetRenderTarget(renderer)?"true":"false");
             if(e.type==SDL_KEYDOWN || e.type==SDL_KEYUP) {
                 fprintf(log,",\"key\":%d,\"key_modifiers\":%u,\"repeat\":%u",e.key.keysym.sym,e.key.keysym.mod,e.key.repeat);
                 if(e.type==SDL_KEYDOWN) { red=(Uint8)(red+37); if(e.key.keysym.sym==SDLK_ESCAPE) running=false; if(e.key.keysym.sym==SDLK_LEFT) markerX-=10; if(e.key.keysym.sym==SDLK_RIGHT) markerX+=10; if(e.key.keysym.sym==SDLK_UP) markerY-=10; if(e.key.keysym.sym==SDLK_DOWN) markerY+=10;
                     // Independent application behavior for mechanical tests only.
                     if(e.key.keysym.sym==SDLK_r) SDL_SetWindowSize(window,800,500);
+                    if(e.key.keysym.sym==SDLK_d) {
+                        if(target) { SDL_DestroyTexture(target); target=nullptr; }
+                        SDL_DestroyRenderer(renderer); renderer=SDL_CreateRenderer(window,-1,SDL_RENDERER_SOFTWARE);
+                        if(!renderer) { fprintf(stderr,"SDL replacement renderer: %s\n",SDL_GetError()); return 1; }
+                        if(offscreen) target=SDL_CreateTexture(renderer,SDL_PIXELFORMAT_RGBA8888,SDL_TEXTUREACCESS_TARGET,123,77);
+                    }
                     if(e.key.keysym.sym==SDLK_t) {
                         SDL_Event human={}; human.type=SDL_KEYDOWN; human.key.windowID=SDL_GetWindowID(window);
                         human.key.keysym.sym=SDLK_F1; SDL_PushEvent(&human);
@@ -51,11 +61,12 @@ int main(int argc,char **argv) {
         // Window title provides human-readable text feedback without a font dependency.
         std::string title="Mechanical SDL fixture | events="+std::to_string(count)+" | text="+text;
         SDL_SetWindowTitle(window,title.c_str());
+        SDL_SetRenderTarget(renderer,nullptr);
         SDL_SetRenderDrawColor(renderer,red,green,blue,255); SDL_RenderClear(renderer);
         SDL_SetRenderDrawColor(renderer,255,255,255,255); SDL_Rect marker={markerX-8,markerY-8,16,16}; SDL_RenderFillRect(renderer,&marker);
         // Text bytes have a visible, deterministic stripe representation in pixels.
         int x=12; for(unsigned char c:text) { SDL_SetRenderDrawColor(renderer,c,(Uint8)(255-c),220,255); SDL_Rect bar={x,12,5,8+(c%40)}; SDL_RenderFillRect(renderer,&bar); x+=7; if(x>600) break; }
-        SDL_RenderPresent(renderer); SDL_Delay(16);
+        SDL_RenderPresent(renderer); if(target) SDL_SetRenderTarget(renderer,target); SDL_Delay(16);
     }
-    SDL_StopTextInput(); SDL_DestroyRenderer(renderer); SDL_DestroyWindow(window); SDL_Quit(); fclose(log); return 0;
+    SDL_StopTextInput(); if(target) SDL_DestroyTexture(target); SDL_DestroyRenderer(renderer); SDL_DestroyWindow(window); SDL_Quit(); fclose(log); return 0;
 }

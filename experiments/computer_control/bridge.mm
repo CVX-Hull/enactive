@@ -85,6 +85,7 @@ struct Bridge {
     SDL_Renderer *renderer=nullptr; SDL_Window *window=nullptr; Uint32 windowID=0;
     uint64_t generation=0, captureID=0; long long presented=0;
     NSDictionary *currentGeometry=nil, *latestFrame=nil, *request=nil;
+    int windowPixelsW=0, windowPixelsH=0;
     std::vector<Uint8> pixels; std::vector<SDL_Event> stages; size_t next=0; unsigned emitted=0;
     std::vector<SDL_Keycode> held; Uint32 buttons=0; SDL_Keymod modifiers=KMOD_NONE; int mouseX=0,mouseY=0;
     NSString *failure=nil;
@@ -138,7 +139,18 @@ struct Bridge {
         NSDictionary *g=measure(); size_t size=(size_t)[g[@"width"] intValue]*[g[@"height"] intValue]*4;
         std::vector<Uint8> buffer(size);
         require(SDL_RenderReadPixels(r,nullptr,SDL_PIXELFORMAT_RGBA32,buffer.data(),[g[@"width"] intValue]*4)==0,"Renderer readback failed");
+        SDL_GetWindowSizeInPixels(window,&windowPixelsW,&windowPixelsH);
+        require(windowPixelsW>0 && windowPixelsH>0,"Window pixel geometry unavailable");
         pixels.swap(buffer); currentGeometry=g; ++captureID; presented=nowMS(); if(!paused) error=@"";
+    }
+    void pointerGeometry(id g) {
+        require(currentGeometry && [g isEqual:currentGeometry],"Pointer geometry changed");
+        int ww=0,wh=0,pw=0,ph=0; SDL_GetWindowSize(window,&ww,&wh); SDL_GetWindowSizeInPixels(window,&pw,&ph);
+        require(ww==[g[@"window_width"] intValue] && wh==[g[@"window_height"] intValue] &&
+                pw==windowPixelsW && ph==windowPixelsH,"Pointer window geometry changed");
+        // SDL's active-target output/viewport/scale describe an offscreen texture,
+        // not pointer mapping. Never switch the application's target to inspect it.
+        if(SDL_GetRenderTarget(renderer)==nullptr) require([g isEqual:measure()],"Pointer geometry changed");
     }
     NSDictionary *saveFrame() {
         require(captureID>0 && !pixels.empty() && currentGeometry,"No presented capture");
@@ -201,7 +213,7 @@ struct Bridge {
         } else if([type isEqual:@"click"]) {
             require(closed(in,@[@"type",@"x",@"y",@"button",@"geometry"]) && geometry(in[@"geometry"]),"Invalid click fields");
             id g=in[@"geometry"]; require(number(in[@"x"],0,[g[@"width"] intValue]-1) && number(in[@"y"],0,[g[@"height"] intValue]-1) && [@[@"left",@"right"] containsObject:in[@"button"]],"Invalid click values");
-            require(currentGeometry && [g isEqual:currentGeometry] && [g isEqual:measure()],"Pointer geometry changed");
+            pointerGeometry(g);
             int x=(int)((long long)[in[@"x"] intValue]*[g[@"window_width"] intValue]/[g[@"width"] intValue]);
             int y=(int)((long long)[in[@"y"] intValue]*[g[@"window_height"] intValue]/[g[@"height"] intValue]);
             SDL_Event e={}; e.type=SDL_MOUSEMOTION; e.motion.windowID=windowID; e.motion.x=x; e.motion.y=y; stages.push_back(e);
@@ -268,7 +280,7 @@ struct Bridge {
             if(failure && next<stages.size()) cleanup();
             if(next<stages.size()) {
                 if([request[@"input"][@"type"] isEqual:@"click"] && !failure) {
-                    require([request[@"input"][@"geometry"] isEqual:measure()],"Pointer geometry changed during dispatch");
+                    pointerGeometry(request[@"input"][@"geometry"]);
                 }
                 SDL_Event e=stages[next++]; require(emitted<8,"Event bound exceeded");
                 e.common.timestamp=SDL_GetTicks(); ownership(e); ++emitted; *out=e; yieldEmpty=true; return 1;

@@ -39,7 +39,7 @@ SPECS = {
 }
 
 
-def make_server(client):
+def make_server(client: ComputerClient) -> Server:
     async def list_tools(context, params):
         return types.ListToolsResult(tools=[types.Tool(name=name, description=description, input_schema=schema)
             for name, (description, schema) in SPECS.items()])
@@ -80,7 +80,7 @@ def make_server(client):
     return server
 
 
-async def run(path):
+async def run(path: Path) -> None:
     client = ComputerClient(path)
     def stop(signum, frame):
         client.stop('MCP signal cancellation')

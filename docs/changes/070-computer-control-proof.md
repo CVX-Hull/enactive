@@ -59,6 +59,14 @@ normal SDL handling. Keys/text have no image-equivalence prerequisite. Pointer
 output coordinates map to the matching window geometry; changed mapping refuses
 before input, with no silent rescale to another capture. Non-default logical-size
 transforms remain unsupported until actually tested.
+The first real episode exposed a polling-time offscreen texture: SDL's current
+renderer queries then describe the texture, so they cannot validate window clicks.
+Capture remains default-target-only. Pointer dispatch compares the complete last
+presented geometry plus independent window-size/pixel-size witnesses; when the
+default target is selected it also checks current default geometry. It never
+switches the application's render target. A smaller offscreen fixture reproduces
+that boundary, preserving stale-click refusal after resize and no retarget after
+renderer destruction. This is a mechanical SDL distinction, not a game handler.
 
 `computer-receipt/1` records the exact ID/session, delivered/rejected/partial/unknown,
 emitted event count, reason and optional captured frame. Delivered means SDL events
@@ -141,5 +149,8 @@ precede Done. Historical paused3177329 source is preserved for reuse/retirement.
 [SDL2 event polling](https://wiki.libsdl.org/SDL2/SDL_PollEvent),
 [renderer capture](https://wiki.libsdl.org/SDL2/SDL_RenderReadPixels) and
 [event posting/device-state distinction](https://wiki.libsdl.org/SDL2/SDL_PushEvent).
+The installed SDL2.30.11 [renderer implementation](https://github.com/libsdl-org/SDL/blob/release-2.30.11/src/render/SDL_render.c)
+and [window pixel-size API](https://wiki.libsdl.org/SDL2/SDL_GetWindowSizeInPixels)
+explain the offscreen/default geometry distinction found during actual play.
 These API contracts do not attest the current target's signing, actual permission
 availability, input parity or useful gameplay; native probes own those claims.

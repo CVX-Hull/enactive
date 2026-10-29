@@ -1,6 +1,8 @@
 """Custodian for one frozen #181 candidate proof, outside the product runtime."""
 from __future__ import annotations
 
+from typing import Any
+
 import argparse
 import hashlib
 import fcntl
@@ -19,11 +21,11 @@ from .viewer import serve
 from harness.prepared_app import wrapper_source
 
 
-def digest(path):
+def digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def prepared_launch():
+def prepared_launch() -> str:
     source = wrapper_source(ROOT)
     exports = [line for line in source.splitlines() if line.startswith('export CDDA_HARNESS_DIR=')]
     if len(exports) != 1:
@@ -34,7 +36,7 @@ def prepared_launch():
         'export DYLD_INSERT_LIBRARIES="$ENACTIVE_COMPUTER_LIBRARY"\nexec ./cataclysm-tiles', 1)
 
 
-def preflight(run):
+def preflight(run: Path) -> tuple[dict[str, Any], dict[str, Any]]:
     run = run.resolve(strict=True)
     if run.is_symlink() or ROOT not in run.parents:
         raise ControlError('Proof must be project-local')
@@ -76,7 +78,7 @@ def preflight(run):
     return profile, route
 
 
-def stop_child(child, grace, *, native=False):
+def stop_child(child: subprocess.Popen, grace: float, *, native: bool = False) -> dict[str, Any]:
     signals = []
     plan = ((signal.SIGTERM, grace), (signal.SIGKILL, 2)) if native else ((signal.SIGINT, grace), (signal.SIGTERM, 3), (signal.SIGKILL, 2))
     for sig, wait in plan:
@@ -93,7 +95,7 @@ def stop_child(child, grace, *, native=False):
     return dict(pid=child.pid, returncode=child.poll(), signals=signals, exit_unresolved=child.poll() is None)
 
 
-def run_proof(run):
+def run_proof(run: Path) -> dict[str, Any]:
     profile, route = preflight(run)
     secret = os.environ.get('OPENROUTER_API_KEY')
     if not secret:

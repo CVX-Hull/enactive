@@ -11,12 +11,15 @@ From the repository root, with the already prepared project-local SDL frameworks
 .venv/bin/python -m experiments.computer_control.build
 .venv/bin/python -m unittest tests.test_computer_control tests.test_devtools
 .venv/bin/python -m experiments.computer_control.native_check --output .runtime/NEW-fixture --via-shell
+.venv/bin/python -m experiments.computer_control.native_check --output .runtime/NEW-loss-fixture --via-shell --offscreen --terminal target-loss
 ```
 
 The native check launches an independent hidden SDL fixture, not CDDA or an LLM.
 Its unit-scale resize and simulated takeover cannot qualify real-human input,
 non-unit pointer transforms or another game. The build manifest retains the Git
 checkpoint, dirty status, source/output hashes and actual compiler arguments.
+The offscreen case keeps a smaller texture selected during input, while captures
+remain full default output. Its renderer replacement must never regain custody.
 
 A real development run requires a fresh project-local directory containing the
 frozen `computer-proof/1` manifest and its exact route, MCP, player context/prompt
