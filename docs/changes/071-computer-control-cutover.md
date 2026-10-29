@@ -116,3 +116,14 @@ The lock repair uses the documented [macOS flock lifetime](https://developer.app
 and [Python's explicit descriptor inheritance](https://docs.python.org/3.14/library/subprocess.html).
 Do not explicitly unlock a forked reference; close owned references and qualify
 the actual shell/native integration separately from portable launch fakes.
+
+## Control reuse at the cutover
+
+Retire C-PROTOCOL's native7 literal-count/AST parser with its removed producers.
+It blocked the new viewer's source checkpoint on two obsolete spellings; retaining
+its representation parser would add another maintenance authority rather than test
+the new behavior. Existing C-PORTABLE strict ingress/version/uncertainty tests and
+C-NATIVE actual compiled interoperability remain, with independent migration review
+and required native/gameplay qualification. Structural governance keeps metadata,
+references and map checks; it no longer claims protocol conformance from literals.
+Retain the parser's historical exercise records without relabelling them current.

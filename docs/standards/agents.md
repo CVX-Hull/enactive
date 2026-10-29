@@ -36,9 +36,9 @@ development attempts do not require a new readiness reviewer or per-action criti
 Distinguish implemented, tested, observed and unknown. Revisit fast-moving agent evidence at controller redesign and release
 when older than 90 days; dated findings do not prove current-model performance.
 
-For a changed native boundary, compare the synthetic category/action/row/transition
-fixture with the pinned producer and retained visible frames. Invented UI labels
-must not arm lifecycle authority. Keep small synthetic fixtures, but state their
+For a changed native boundary, compare the independent SDL event/image fixture with the pinned
+producer and retained visible frames. Game labels and semantic interpretations
+must never arm mechanical authority. Keep small synthetic fixtures, but state their
 limits and preserve actual failures that reveal missing assumptions. C-REVIEW
 records this comparison; C-PORTABLE exercises the regression and C-NATIVE verifies
 the claimed behavior. No passing mock substitutes for native acceptance, and no
@@ -46,15 +46,16 @@ new custom fixture-validation framework is required.
 
 ## Delegated campaign operation
 
-For real gameplay, a general-purpose sub-agent may be the one designated campaign
-operator under [the explicit operator contract](../contracts/mission-admission.md#designated-campaign-operator).
-The lead retains design/admission, lifecycle implementation/custody, escalation and verification; source
-work stops during a frozen native probe. The operator owns only its bounded input
-and evidence paths and requests registered normal lifecycle; it has no source,
-save-editing, publication or arbitrary process-launch role.
-Do not assign input to a read-only explorer/reviewer or silently promote the
-waypoint candidate-only planner. Pause, terminal tool calls and explicit quiescent
-handoff precede lead inspection or actor replacement. Agent identity strings are
-audit fields, not security capabilities; shared inherited permissions remain.
+The mandatory generic Pi host is the deciding gameplay actor. A designated
+operator may prepare/launch the frozen finite package under
+[the current custody contract](../contracts/computer-control.md#computer-operations-and-custody).
+The lead retains design/admission, process custody, escalation and verification;
+source work stops while a deciding actor or real native game is live. The actor
+owns interpretation, tactics, menus, save/load and success claims using the selected
+basic tools and optional fallible player services. It has no source, save-editing,
+publication or arbitrary process-launch role. Read-only explorers/reviewers never
+send game input. Sealing is followed by actual host/MCP group quiescence before
+successor custody; cancellation or unknown delivery cannot become a resumable
+handoff. Audit identity strings and player knowledge grant no capability.
 
 [Standards index](../engineering.md).

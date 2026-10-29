@@ -218,8 +218,8 @@ class ProfileTests(unittest.TestCase):
             with self.subTest(name=name): self.assertFalse(ci.editorial(name))
 
     def test_component_complete_comparisons_run_selected_scope_on_pr_and_main(self):
-        for path, profile in (("harness/movement.py", "movement"), ("web/style.css", "viewer"),
-                              ("web/app.js", "viewer"), ("tests/test_movement.py", "movement")):
+        for path, profile in (("web/style.css", "viewer"),
+                              ("web/app.js", "viewer")):
             self.git("reset", "--hard", self.main)
             self.write(path, "Changed")
             self.write("docs/architecture.md", "Current explanation")

@@ -1,10 +1,17 @@
 ---
 owner: lead
 review_trigger: Player roles, background memory/procedure updates, latency, evidence or adaptation policy changes
-status: proposed
+status: historical
+date: 2026-10-29
+scope: Pre-cutover background archived on this date; not current executable policy or new research qualification
 ---
 
 # Active play and asynchronous reflection
+
+This is retained pre-cutover design/research evidence. Its old executable routes and
+semantic authority are retired. The [current computer/player contract](../contracts/computer-control.md) owns implemented behavior;
+this page supplies background, not current operating instructions.
+
 
 The player should act, learn and correct itself without the engineering lead
 becoming its slow reasoning path. Use one active player and an advisory background
@@ -28,7 +35,7 @@ User Pause remains independent. [Diagram source](../diagrams/asynchronous-reflec
 | Existing basis | Keep / explicit change |
 | --- | --- |
 | [Tiered research](../research-tiered-gameplay.md#concrete-delegation-and-feedback-contract), especially its asynchronous-candidate rules | Retain one writer, current feedback and bounded skills. The older planning proposal initially waits; current reflection can overlap useful play. This does not establish generic continuous strategy/inference overlap. A procedure can outlive a frame, but input still needs current authority. |
-| [Current architecture](../architecture.md), [historical mission design](player-owned-mission.md) and [campaign memory source](../../harness/gameplay/campaign_memory.py) | Claims/Work/context, procedures, pinned historical libraries and bounded reflection compose through the existing writer/SQLite/evidence. [Learning009](../acceptance/2026-10-23-discovery-learning-ninth-attempt.md) demonstrates bounded learned reuse, successor application and useful play during claimed advice. Whole-player cadence, general advisory benefit and the full independent campaign remain unaccepted. |
+| [Current architecture](../architecture.md), [historical mission design](player-owned-mission.md) and [campaign memory source](https://github.com/CVX-Hull/enactive/blob/433ed973afe312d03f777d8b102a0cba528af746/harness/gameplay/campaign_memory.py) | Claims/Work/context, procedures, pinned historical libraries and bounded reflection compose through the existing writer/SQLite/evidence. [Learning009](../acceptance/2026-10-23-discovery-learning-ninth-attempt.md) demonstrates bounded learned reuse, successor application and useful play during claimed advice. Whole-player cadence, general advisory benefit and the full independent campaign remain unaccepted. |
 | [Organic discovery](organic-discovery.md) and [#176](https://github.com/CVX-Hull/enactive/issues/176) / [#177](https://github.com/CVX-Hull/enactive/issues/177) | Mixed interaction enables exploration; procedure data captures abstractions the player develops. Background reflection is one way to help, not a requirement that every procedure be authored by another model. |
 | [Memory architecture assessment](../research-memory-architecture.md) / [optional curator #146](https://github.com/CVX-Hull/enactive/issues/146) | Curation advises, has no input authority and must earn its cost. The proposed exchange belongs to the player system, not a standing lead/engineer review service. Curator benefit comparison remains separate from functional procedure learning. |
 | [Representation study](../research-memory-representations.md) and [memory review](../research-memory-learning.md) | Keep evidence/interpretation/procedure distinctions and source-linked retirement. Earlier offline reviewed-promotion defaults conflict with autonomous procedure-data evolution: migrate the affected policy/contracts prospectively before implementation. Existing no-online-promotion admissions are unchanged. Code, prompt-template, weight and substrate edits remain versioned engineering work. |

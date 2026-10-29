@@ -9,60 +9,28 @@ root_package = "harness"
 include_external_packages = true
 
 [[tool.importlinter.contracts]]
-name = "Controller remains independent of adapters and tooling"
+name = "Computer authority remains independent of player semantics and adapters"
 type = "forbidden"
-source_modules = ["harness.controller"]
-forbidden_modules = [
-    "harness.server", "harness.__main__", "http", "urllib", "socket",
-    "tools", "subprocess", "argparse",
-]
+source_modules = ["harness.computer"]
+forbidden_modules = ["harness.player", "harness.application", "harness.server", "harness.player_client", "harness.player_tools", "harness.player_mcp", "harness.__main__", "tools"]
 
 [[tool.importlinter.contracts]]
-name = "Server does not depend on CLI or build tooling"
+name = "Player logic uses data and control ports without acquiring executor custody"
+type = "forbidden"
+source_modules = ["harness.player"]
+forbidden_modules = ["harness.computer.runtime", "harness.computer.channel", "harness.computer.store", "harness.computer.launch", "harness.application", "harness.server", "harness.__main__", "http", "urllib", "socket", "subprocess", "tools"]
+
+[[tool.importlinter.contracts]]
+name = "Player adapters cannot instantiate the computer or server"
+type = "forbidden"
+source_modules = ["harness.player_client", "harness.player_tools", "harness.player_mcp"]
+forbidden_modules = ["harness.computer.runtime", "harness.computer.channel", "harness.computer.store", "harness.computer.launch", "harness.application", "harness.server", "harness.__main__", "tools"]
+
+[[tool.importlinter.contracts]]
+name = "HTTP server does not depend on CLI or build tooling"
 type = "forbidden"
 source_modules = ["harness.server"]
 forbidden_modules = ["harness.__main__", "tools"]
-
-[[tool.importlinter.contracts]]
-name = "Gameplay records and evidence cannot dispatch or launch tools"
-type = "forbidden"
-source_modules = ["harness.gameplay"]
-forbidden_modules = [
-    "harness.controller", "harness.server", "harness.__main__",
-    "http", "urllib", "socket", "subprocess", "tools",
-]
-
-[[tool.importlinter.contracts]]
-name = "Player tools use ingress and cannot instantiate an executor"
-type = "forbidden"
-source_modules = ["harness.mission_client", "harness.player_tools", "harness.player_mcp"]
-forbidden_modules = [
-    "harness.controller", "harness.server", "harness.mission_runtime",
-    "harness.native_process", "harness.__main__",
-]
-
-[[tool.importlinter.contracts]]
-name = "Movement policy remains pure and shared"
-type = "forbidden"
-source_modules = ["harness.movement"]
-forbidden_modules = [
-    "harness.controller", "harness.gameplay", "harness.server", "harness.__main__",
-    "http", "urllib", "socket", "subprocess", "tools", "time", "pathlib", "os",
-]
-
-[[tool.importlinter.contracts]]
-name = "Shared memory and time do not depend on mission or CDDA bindings"
-type = "forbidden"
-source_modules = [
-    "harness.gameplay.campaign_memory", "harness.gameplay.memory_contracts",
-    "harness.gameplay.memory_ports", "harness.gameplay.source_contracts", "harness.gameplay.timeline",
-]
-forbidden_modules = [
-    "harness.gameplay.mission_contracts", "harness.gameplay.mission_ledger",
-    "harness.gameplay.mission_memory", "harness.gameplay.evidence",
-    "harness.gameplay.procedure_library", "harness.gameplay.procedure_archive",
-    "harness.gameplay.cdda_identity", "harness.gameplay.cdda_memory", "harness.gameplay.cdda_timeline",
-]
 
 [tool.pytest.ini_options]
 addopts = "--strict-markers"

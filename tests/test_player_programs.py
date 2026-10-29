@@ -24,8 +24,9 @@ def test_program_lineage_and_immutable_support(tmp_path):
                     program(schema='procedure/3'), program(code='x' * 32769)):
             with pytest.raises(PlayerError):
                 repo.save('actor', bad)
-        with pytest.raises(PlayerError):
-            repo.save('actor', program(parent_id=root['id']))  # linear ancestry
+        sibling = repo.save('actor', program(parent_id=root['id']))
+        assert sibling['id'] != child['id']
+        assert repo.read(child['id'])['parent_id'] == repo.read(sibling['id'])['parent_id']
 
 
 def test_actual_image_crop_sampling_alpha_and_full_reference():

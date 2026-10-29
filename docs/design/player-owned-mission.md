@@ -420,7 +420,7 @@ The player chooses ordinary menu options; runtime owns process handles and recor
 them. Native session changes invalidate execution authority/maps until explicit
 fresh observation and supported identity/relocalization.
 
-The [source adapter](../../harness/native_process.py) launches the fixed prepared
+The [source adapter](https://github.com/CVX-Hull/enactive/blob/433ed973afe312d03f777d8b102a0cba528af746/harness/native_process.py) launches the fixed prepared
 wrapper directly when called: its final
 `exec` makes the owned process become CDDA. Preparation and validation share one
 root-bound script template, so a bundle copied from another checkout cannot use
@@ -605,8 +605,8 @@ delivery status. Current contracts and the later024outcome are linked above;
 these notes neither reopen closed gates nor qualify unexercised cases.
 
 The current source foundation defines strict `mission/8`/`campaign-memory/3` records in
-[mission_contracts.py](../../harness/gameplay/mission_contracts.py) and single-writer
-accounting in [mission_ledger.py](../../harness/gameplay/mission_ledger.py).
+[mission_contracts.py](https://github.com/CVX-Hull/enactive/blob/433ed973afe312d03f777d8b102a0cba528af746/harness/gameplay/mission_contracts.py) and single-writer
+accounting in [mission_ledger.py](https://github.com/CVX-Hull/enactive/blob/433ed973afe312d03f777d8b102a0cba528af746/harness/gameplay/mission_ledger.py).
 The ledger and records send no input; MissionRuntime composes the registered
 lifecycle and quiescent handoff adapter through the existing controller. The coordinated
 source contract is wire4; native compilation is separate from installation and
@@ -642,13 +642,13 @@ At that source checkpoint, native qualification and runtime integration were sti
 required; later scoped qualifications and024retain their own actual coverage.
 They do not make a fallible screenshot interpretation native-attested UI metadata.
 
-The passive [navigation skill](../../harness/gameplay/navigation.py) projects only
+The passive [navigation skill](https://github.com/CVX-Hull/enactive/blob/433ed973afe312d03f777d8b102a0cba528af746/harness/gameplay/navigation.py) projects only
 observed cardinal cells, retains route support and validates each settled step.
 Before its first proposal, one explicit typed source revalidation can connect an
 original planning view to a fresh equivalent checkpoint. The original budget
 anchor survives; any intervening promoted capture invalidates that attribution.
 Only the first refreshed intent carries the relation; the final outcome retains it.
-The passive [campaign memory](../../harness/gameplay/campaign_memory.py) reduces
+The passive [campaign memory](https://github.com/CVX-Hull/enactive/blob/433ed973afe312d03f777d8b102a0cba528af746/harness/gameplay/campaign_memory.py) reduces
 typed claims and work before retrieval. Old quantities never become current from
 receipt order; missing newest sources remain unknown. Work availability requires
 fresh scoped evidence, while retained output/progress remains historical. Neither
@@ -656,7 +656,7 @@ module is a player, dispatcher or proof of continuity, autonomy or learning bene
 
 ### Integrated runtime and admission gate
 
-The reviewed [mission runtime](../../harness/mission_runtime.py) now composes the
+The reviewed [mission runtime](https://github.com/CVX-Hull/enactive/blob/433ed973afe312d03f777d8b102a0cba528af746/harness/mission_runtime.py) now composes the
 existing controller, ledger, archive, memory and navigation behind one bounded
 writer. It is the sole live server runtime, using strict POST /api/mission and the
 mission-request CLI. The old waypoint runtime/API/CLI are removed; passive study
@@ -687,7 +687,7 @@ native input. The later [independent024 mission](../acceptance/2026-10-21-indepe
 exercises the complete bounded supplies/rest/memory/actual fresh-context and normal
 lifecycle outcome; earlier source/component evidence alone did not establish it.
 
-The [native-row menu policy](../../harness/gameplay/interaction.py) can propose a
+The [native-row menu policy](https://github.com/CVX-Hull/enactive/blob/433ed973afe312d03f777d8b102a0cba528af746/harness/gameplay/interaction.py) can propose a
 bounded sequence of actual `UILIST.UP`/`UILIST.DOWN` actions to an exact visible
 enabled label, followed by one CONFIRM. Focus checks follow the advanced native
 boundary and one attributed archive promotion. Confirmation returns partial with
@@ -755,7 +755,7 @@ field accepts a script, callable, shell command or arbitrary action sequence.
 The exact closed shapes live in the linked source contract rather than a second
 hand-maintained schema.
 
-The reviewed passive [control source](../../harness/gameplay/semantic_controls.py) supports image-menu focus,
+The reviewed passive [control source](https://github.com/CVX-Hull/enactive/blob/433ed973afe312d03f777d8b102a0cba528af746/harness/gameplay/semantic_controls.py) supports image-menu focus,
 direction/confirmation, edit, typed item selection and registered normal roots. Image focus permits at
 most8 unverified arrows with actual observations and unchanged scope/actions after
 each; it never auto-confirms or earns native verified-focus credit. Text entry

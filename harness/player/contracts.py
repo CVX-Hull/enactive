@@ -109,6 +109,14 @@ def program(value: object) -> dict:
     return result
 
 
+def record_schema() -> dict:
+    return json_object(_RECORD)
+
+
+def program_schema() -> dict:
+    return json_object(_PROGRAM)
+
+
 def policy_result(value: object) -> dict:
     result = json_object(value)
     validate_json(result, _object(dict(status=_enum('act', 'yield', 'done'), state={'type': 'object'},

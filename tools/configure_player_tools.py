@@ -1,127 +1,42 @@
-"""Prepare project MCP configuration or export focused current tool help."""
+"""Describe current tools or write an explicit per-actor Pi MCP configuration."""
 from __future__ import annotations
 
 import argparse
-from copy import deepcopy
 import json
-import math
-import os
 from pathlib import Path
-import tempfile
-import tomllib
+import sys
 
+ROOT=Path(__file__).resolve().parents[1]
+if __package__ in (None,''):
+    sys.path.insert(0,str(ROOT))
 from harness.player_tools import tool_specs
 
-ROOT = Path(__file__).resolve().parents[1]
-SERVER = "enactive_player"
+
+def configuration(actor_config: str, root: Path = ROOT) -> dict:
+    return dict(command=str(root/'.venv/bin/python'),args=['-m','harness.player_mcp','--actor-config',actor_config],
+        cwd=str(root),enabled=True,required=True,enabled_tools=list(tool_specs()),
+        startup_timeout_sec=15,tool_timeout_sec=30)
 
 
-def describe(name: str, variant: str | None = None) -> dict:
-    """Export one current SDK schema for focused, frozen player context."""
-    spec = next((spec for spec in tool_specs() if spec.name == name), None)
-    if spec is None:
-        raise ValueError("Unknown player tool")
-    schema = deepcopy(spec.schema)
-    if variant is not None:
-        intent = schema.get("properties", {}).get("intent", {})
-        branches = [branch for branch in intent.get("anyOf", [])
-            if any(branch.get("properties", {}).get(key, {}).get("const") == variant
-                for key in ("skill_kind", "entry_type"))]
-        if len(branches) != 1:
-            raise ValueError("Select one current skill_kind or entry_type variant")
-        schema["properties"]["intent"] = branches[0]
-        # The only shared definition is visible-control perception. A selected
-        # non-control skill requires null, so its focused card needs no union.
-        if name == "enactive_skill" and branches[0]["properties"]["perception"] == {"type": "null"}:
-            schema.pop("$defs")
-    return dict(name=spec.name, description=spec.description, input_schema=schema)
+def main():
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--describe',action='store_true')
+    parser.add_argument('--template',action='store_true',help='Write the frozen @ACTOR_CONFIG@ MCP template')
+    parser.add_argument('--actor-config',type=Path)
+    parser.add_argument('--output',type=Path)
+    args=parser.parse_args()
+    if args.describe:
+        if args.actor_config or args.output or args.template:parser.error('--describe takes no output/actor/template')
+        print(json.dumps([dict(name=n,description=d,input_schema=s) for n,(d,s) in tool_specs().items()],indent=2))
+        return
+    if args.output is None or (args.actor_config is None and not args.template) or (args.actor_config and args.template):
+        parser.error('Select fresh --output and either --actor-config or --template')
+    actor=None if args.template else args.actor_config.resolve(strict=True)
+    output=args.output.resolve()
+    if (actor is not None and not actor.is_relative_to(ROOT)) or not output.is_relative_to(ROOT):
+        parser.error('Generated current configurations must stay project-local')
+    output.parent.mkdir(parents=True,exist_ok=True)
+    with output.open('x') as stream:json.dump(configuration('@ACTOR_CONFIG@' if args.template else str(actor)),stream,indent=2);stream.write('\n')
 
 
-def configuration(root: Path, *, advisory_idle_seconds: float = 0) -> dict:
-    if (type(advisory_idle_seconds) not in (int, float) or not math.isfinite(advisory_idle_seconds)
-            or advisory_idle_seconds < 0):
-        raise ValueError("Advisory idle wait must be finite and nonnegative")
-    value = dict(command=str(root / ".venv" / "bin" / "python"),
-        args=["-m", "harness.player_mcp"], cwd=str(root),
-        enabled=True, enabled_tools=[spec.name for spec in tool_specs()],
-        default_tools_approval_mode="approve", startup_timeout_sec=10,
-        tool_timeout_sec=60,
-        tools={name: {"output_token_limit": 131072} for name in (
-            "enactive_context", "enactive_reflect_next", "enactive_advice")})
-    if advisory_idle_seconds:
-        value["args"] += ["--advisory-idle-seconds", str(advisory_idle_seconds)]
-        value["tool_timeout_sec"] = advisory_idle_seconds + 30
-        value["enabled_tools"] = ["enactive_reflect_next", "enactive_reflect_submit",
-            "enactive_reflect_source", "enactive_reflect_result"]
-        value["tools"] = {name: options for name, options in value["tools"].items() if name in value["enabled_tools"]}
-    return value
-
-
-def configure(root: Path, *, write=False) -> dict:
-    root = root.resolve()
-    directory, path = root / ".codex", root / ".codex" / "config.toml"
-    if directory.is_symlink() or path.is_symlink():
-        raise ValueError("Project Codex configuration must not be a symlink")
-    if path.exists() and (not path.is_file() or path.stat().st_size > 1_048_576):
-        raise ValueError("Project Codex configuration must be a bounded regular file")
-    before = path.read_bytes() if path.exists() else b""
-    parsed = tomllib.loads(before.decode())
-    expected = configuration(root)
-    current = parsed.get("mcp_servers", {}).get(SERVER)
-    if current is not None:
-        if current != expected:
-            raise ValueError("Existing Enactive MCP table differs; review it explicitly before changing setup")
-        return dict(path=str(path), changed=False, matches=True, active_host_verified=False)
-    if not write:
-        return dict(path=str(path), changed=False, matches=False, proposed=expected, active_host_verified=False)
-    lines = [f"\n[mcp_servers.{SERVER}]\n"]
-    for key, value in expected.items():
-        if key != "tools":
-            lines.append(key + " = " + json.dumps(value, ensure_ascii=False) + "\n")
-    for name, options in expected["tools"].items():
-        lines.extend([f"\n[mcp_servers.{SERVER}.tools.{name}]\n",
-                      "output_token_limit = " + str(options["output_token_limit"]) + "\n"])
-    value = before + "".join(lines).encode()
-    # Confirm TOML structure, including exact preservation of unrelated settings.
-    after = tomllib.loads(value.decode())
-    actual = after["mcp_servers"].pop(SERVER)
-    if not after["mcp_servers"] and "mcp_servers" not in parsed:
-        after.pop("mcp_servers")
-    if actual != expected or after != parsed:
-        raise ValueError("Proposed project configuration changes unrelated settings")
-    directory.mkdir(exist_ok=True)
-    descriptor, temporary = tempfile.mkstemp(prefix=".config-", dir=directory)
-    try:
-        with os.fdopen(descriptor, "wb") as stream:
-            stream.write(value)
-            stream.flush()
-            os.fsync(stream.fileno())
-        if (path.read_bytes() if path.exists() else b"") != before:
-            raise ValueError("Project configuration changed during setup")
-        os.replace(temporary, path)
-    finally:
-        Path(temporary).unlink(missing_ok=True)
-    return dict(path=str(path), changed=True, matches=True, active_host_verified=False)
-
-
-def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__)
-    mode = parser.add_mutually_exclusive_group()
-    mode.add_argument("--write", action="store_true", help="Add only the reviewed project MCP table")
-    mode.add_argument("--describe", metavar="TOOL", help="Print one current tool schema; change no configuration")
-    parser.add_argument("--variant", help="Select one skill_kind or entry_type for focused context")
-    parser.add_argument("--advisory-idle-seconds", type=float,
-                        help="Export a finite adviser-only frozen host profile; does not write active configuration")
-    args = parser.parse_args()
-    if args.variant and not args.describe:
-        parser.error("--variant requires --describe")
-    if args.advisory_idle_seconds is not None and (args.write or args.describe):
-        parser.error("Adviser profile export cannot write configuration or describe a tool")
-    value = (configuration(ROOT, advisory_idle_seconds=args.advisory_idle_seconds)
-        if args.advisory_idle_seconds is not None else
-        describe(args.describe, args.variant) if args.describe else configure(ROOT, write=args.write))
-    print(json.dumps(value, indent=2))
-
-
-if __name__ == "__main__":
-    main()
+if __name__=='__main__':main()

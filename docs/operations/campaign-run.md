@@ -41,6 +41,80 @@ The validator rejects unsupported/partial/used packages and selected old player
 stores before native effects. It does not create a new allocation or discover a
 credential. Preserve the frozen package and exact binary bytes before rebuilding.
 
+### Construct a package
+
+This is an engineering preparation step, outside the deciding player's tools.
+Create the five inputs above first. `target.json` is closed:
+`{"argv":["ABSOLUTE_PREPARED_WRAPPER"],"cwd":"ABSOLUTE_PROJECT_ROOT","env":{}}`.
+Normal wrapper preparation supplies the windowed project userdir. Optional target
+environment names are only PATH, LANG, SDL_AUDIODRIVER, SDL_VIDEODRIVER,
+DYLD_LIBRARY_PATH and DYLD_FRAMEWORK_PATH; never include credentials. The
+[host reference](../../tools/player_host/README.md) specifies the complete route
+shape, supported reasoning/routing fields and their limits.
+
+Generate the exact current MCP template without an actor capability:
+
+```sh
+.venv/bin/python -m tools.configure_player_tools --template --output .runtime/computer-sessions/SELECTED_FRESH_PACKAGE/mcp-template.json
+```
+
+The closed `manifest.json` shape is below. Replace uppercase path/identity/hash
+placeholders and the example allocations with the prospectively selected values;
+the example is not an admission. All artifact paths are canonical absolute
+project-local regular files, never symlinks. Obtain the exact source with
+`git rev-parse HEAD` after an inspected clean checkpoint. Calculate SHA256 from
+the actual bytes, for example `shasum -a 256 SELECTED_FILE`; preserve those bytes.
+
+```json
+{
+  "schema": "campaign-run/2",
+  "session": "NEW_32_LOWERCASE_HEX_ID",
+  "source_commit": "EXACT_40_HEX_CLEAN_HEAD",
+  "files": {
+    "route.json": "SHA256", "mcp-template.json": "SHA256",
+    "context.txt": "SHA256", "prompt.txt": "SHA256", "target.json": "SHA256"
+  },
+  "initial_files": {"ABSOLUTE_PREPARED_WRAPPER": "SHA256", "ABSOLUTE_OPTIONS_FILE": "SHA256"},
+  "native": {"path": "ABSOLUTE_INSTALLED_GAME_BINARY", "sha256": "SHA256"},
+  "library": {"path": "ABSOLUTE_QUALIFIED_BRIDGE", "sha256": "SHA256"},
+  "shared_lock": "ABSOLUTE_PROJECT_ROOT/.runtime/bridge/game.lock",
+  "player_store": "ABSOLUTE_SELECTED_CURRENT_PLAYER_SQLITE",
+  "node": "ABSOLUTE_EXISTING_NODE_EXECUTABLE",
+  "effort": "medium", "port": 8766,
+  "wall_seconds": 9000, "host_seconds": 3600, "total_host_seconds": 7200,
+  "max_hosts": 2, "max_http_attempts": 360,
+  "limits": {"max_inputs": 6000, "max_requests": 10000, "max_frames": 1500, "max_bytes": 2147483648},
+  "accounting": {
+    "prior_attempts": 0, "prior_reserved_usd": 0,
+    "ceiling_usd": 0, "prospective_reserved_usd": 0
+  }
+}
+```
+
+Use the actual cumulative accounting rather than the zero placeholders. With
+default tier, worst-case per attempt is
+`(contextWindow × max(input, cacheRead, cacheWrite) + maxTokens × output) / 1e6`
+using the frozen route's configured dollar rates. Prospective cumulative
+reservation is prior consumed reservation plus that amount times
+`max_http_attempts`; it must fit the standing ceiling exactly as frozen. Unknown
+trace accounting charges its original allocation; known unused allowance retires.
+
+Limits: five input files each ≤1MiB; 1–16 initial files; port1024–65535;
+wall60–86400s, host/aggregate-host30–86400s, one/two hosts and1–10000 HTTP attempts.
+Host seconds ≤aggregate-host seconds <wall seconds minus30s cleanup. Each positive
+computer capacity is ≤2^40. The route's per-host request maximum cannot exceed the
+campaign aggregate. The selected directory must have no prior started marker,
+session DB, native-process receipt, actors or contexts. An existing selected player
+store must be current; it never restores computer custody. The maintained
+validator is authoritative and rejects changed bytes/unsupported fields before
+effects. Do not remove markers to reuse a failed package.
+
+The current CDDA launch binding requires the canonical absolute
+`.runtime/bridge/game.lock`, shared with install/preparation and the project
+userdir. A different project-local lock is rejected. This is preparation coupling
+outside the game-independent computer runtime; a future game binding must define
+its own coherent preparation/launch exclusion rather than bypass this one.
+
 ## Start and close
 
 From the exact clean source checkpoint, with the selected credential injected only

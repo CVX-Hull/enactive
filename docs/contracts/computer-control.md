@@ -1,15 +1,15 @@
 ---
 owner: lead
 review_trigger: Mechanical wire, operation/source, custody or player port changes
-status: proposed
+status: active
 ---
 
 # Computer control and player ports
 
-This is the reviewed target contract for [#176](https://github.com/CVX-Hull/enactive/issues/176),
-not a deployed second backend. The [cutover brief](../changes/071-computer-control-cutover.md)
+This is the current source contract for [#176](https://github.com/CVX-Hull/enactive/issues/176),
+with one production backend. The [cutover brief](../changes/071-computer-control-cutover.md)
 owns sequencing; [ADR006](../decisions/006-computer-control-boundary.md) owns the boundary.
-The current product stays native7/mission11 until the coordinated cutover.
+Native7/mission11 and the prototype are retired executable routes; their evidence remains historical. Product acceptance of this cutover is still pending.
 
 ## Responsibilities and current data
 
@@ -43,7 +43,7 @@ At startup, validate the exact inherited shared-lock descriptor/file identity an
 socket type; retain the locked reference for the native lifetime. Set both FDs
 close-on-exec before application main, the socket nonblocking and `SO_NOSIGPIPE`.
 Never `LOCK_UN` a shared inherited reference. The parent closes its child socket
-copy after spawn. The host/MCP inherits neither native FD nor provider credential.
+copy after spawn. The host/MCP inherits no native FD. Only the Pi host receives its selected provider credential; MCP and the game do not.
 After startup, no bridge filesystem checks, environment polling or file writes
 occur in SDL callbacks. EOF/protocol failure permanently fences automation.
 
@@ -141,14 +141,16 @@ input, mutate memory, run a program or create another handoff.
 The host accepts only its direct handoff or collection of its own pending original
 handoff. The driver verifies canonical issuance/context digest and actual old host/
 MCP process-group quiescence before minting a successor under **original** limits.
-Unexpected closure/cancellation after sealing still permanently pauses; later
+The current sealed actor retains only independent cancellation, never new input. Retired actors cannot stop successors. Store I/O never holds the cancellation lock; a final stopped/stage check precedes quiescence. Unexpected closure/cancellation after sealing still permanently pauses; later
 collection cannot restore succession. No game phase or identity requirement.
 
 ## Player knowledge and executable proposals
 
 The pure player package has no process/provider/server/runtime imports. Its typed
-control callback is `observe(actor_id)->(operation,png|None)` and
-`input(actor_id,actions,*,source_id)->(operation,png|None)`. `ProgramRunner` belongs
+control callback is `observe(actor_id,*,deadline_monotonic=None)->(operation,png|None)`
+and `input(actor_id,actions,*,source_id=None,deadline_monotonic=None)->(operation,png|None)`.
+A supplied deadline can only shrink the original run/15-second operation horizon;
+the runner passes its one original deadline to every callback. `ProgramRunner` belongs
 in `harness/player/programs.py`; only the coordinator submits its proposals through
 the same computer port. A helper failure/yield leaves basic input available unless
 mechanical custody itself stopped.
@@ -165,7 +167,8 @@ Advice is candidate-only. No old campaign-memory or executable import readers.
 `player-program/1`: closed `schema,code,parent_id,reason,source_ids,record_ids,
 applicability`; code≤32KiB UTF-8, reason≤2048, references≤16. Store assigns immutable
 program ID/SHA/actor/time; parent must exist. Preserve source/record support and
-linear ancestry. Applicability is fallible data, not native eligibility.
+one-parent ancestry. Sibling revisions may coexist as fallible alternatives;
+the store chooses no winner. Applicability is fallible data, not native eligibility.
 
 Composition lazily registers exact referenced images on explicit memory append or
 program save, before that transaction. Current sources come from the computer
@@ -191,6 +194,27 @@ same basic public controls for act and null otherwise. Evaluation never dispatch
 `ProgramRunner` consumes an actual capture each step (including a preceding input's
 returned capture), runs≤64steps/20s under original control limits and retains every
 original operation/source. No replay or success inference; faults/unknown stop that run.
+
+## Composed operations and telemetry
+
+All public mutation IDs share one namespace across computer and player services.
+Persist player service intent before authoring/execution and child computer IDs
+before each callback. A duplicate collects its original result or refuses; it
+cannot cross from a program-run ID into a new basic input. `player_result` reads
+original authoring/program results and child operation references without execution.
+Earlier session references remain knowledge only, with no restored input authority.
+Compact program results keep source/operation IDs, decisions, state hashes and final
+state, with explicit omissions; full original receipts/images remain separately readable.
+
+Native intent/send/receipt timestamps retain their original wall/monotonic values.
+Late collection never renews a source's `received_wall`. Host telemetry version2
+records payload hashes/counts, image references and bounded ordinary assistant text;
+it excludes private reasoning and base64 history while preserving the actual model
+payload. Stable frozen system context is reused across actors; changing role,
+resources and handoff knowledge are explicit prompt data. Host decision-time and
+custodian horizons stay distinct. Analysis is read-only and current-format only.
+Observer `observer-timing/4` joins exact session/source/capture to DOM replacement,
+with missing/invalid clocks labelled; it does not measure paint or useful progress.
 
 ## Reuse and qualification limits
 

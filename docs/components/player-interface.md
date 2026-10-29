@@ -58,7 +58,7 @@ cannot become resumable handoff. At most two hosts are permitted by `campaign-ru
 
 ## Assurance and evidence
 
-[Pi host](../../tests/test_pi_player_host.py), [MCP](../../tests/test_player_mcp.py),
+[Pi host](../../tests/test_pi_player_host.py), [MCP](../../tests/test_pi_player_host.py),
 [driver](../../tests/test_campaign_player.py) and [custodian](../../tests/test_campaign_run.py)
 fixtures exercise real maintained libraries with synthetic provider/owned children.
 They add configuration, image, settlement, accounting and cleanup evidence without

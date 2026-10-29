@@ -20,6 +20,10 @@ class ControlError(ValueError):
     pass
 
 
+class NoDispatch(ControlError):
+    """Verified local refusal before publishing this request's input bytes."""
+
+
 def canonical(value: object) -> str:
     return json.dumps(value, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
 

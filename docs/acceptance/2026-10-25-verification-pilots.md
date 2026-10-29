@@ -40,7 +40,7 @@ whole-repository semantic coverage or complete assurance case.
 
 ## Experiment and independent faults
 
-The [versioned recipe](../../tools/testing_pilots.py) froze clean Git commits into
+The [versioned recipe](https://github.com/CVX-Hull/enactive/blob/433ed973afe312d03f777d8b102a0cba528af746/tools/testing_pilots.py) froze clean Git commits into
 owned archived copies. Each fault used the same working path with pristine source,
 supplemental files, generated state and a closed SQLite map restored independently.
 Bytecode writes were disabled. Ordinary no-plugin execution first tested a frozen

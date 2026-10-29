@@ -1,10 +1,17 @@
 ---
 owner: lead
-status: proposed
+status: historical
+date: 2026-10-29
+scope: Pre-cutover background archived on this date; not current executable policy or new research qualification
 review_trigger: Player-owned mission design; new relevant memory evidence; observer, engine or model changes; false-memory incidents; issue 26 research review
 ---
 
 # Memory and gameplay architecture assessment
+
+This is retained pre-cutover design/research evidence. Its old executable routes and
+semantic authority are retired. The [current computer/player contract](contracts/computer-control.md) owns implemented behavior;
+this page supplies background, not current operating instructions.
+
 
 Assessed **2026-10-19, America/New_York**, against source `c58ee0a` and the first
 seven-day run. This is a research assessment and proposed direction, **not an
@@ -50,9 +57,9 @@ API. Use [current architecture](architecture.md) for migrated behavior.
 | Facts and authority | Extracted facts are position, turn and visible-creature count. A belief's `valid` checks retained support, not semantic truth. Current-input freshness is separate | Preserve exact guards; do not mistake an authentic screenshot or source-linked interpretation for a correct current-state claim |
 | Outcome monitoring | The general monitor is a proposed design; executable skills currently accept cardinal movement | Implement the first semantic families through the shared monitor/skill contract, not a second competing monitor |
 
-Code anchors: [baseline runtime start](https://github.com/CVX-Hull/enactive/blob/c58ee0a1a31c5ab072edf4397cc76b677a311364/harness/runtime.py), [supervisor packet construction](../harness/gameplay/supervisor.py),
-[task memory](../harness/gameplay/memory.py), [evidence validation/facts](../harness/gameplay/evidence.py),
-[skill registry](../harness/gameplay/skills.py). Relevant functions are `_start`,
+Code anchors: [baseline runtime start](https://github.com/CVX-Hull/enactive/blob/c58ee0a1a31c5ab072edf4397cc76b677a311364/harness/runtime.py), [supervisor packet construction](https://github.com/CVX-Hull/enactive/blob/433ed973afe312d03f777d8b102a0cba528af746/harness/gameplay/supervisor.py),
+[task memory](https://github.com/CVX-Hull/enactive/blob/433ed973afe312d03f777d8b102a0cba528af746/harness/gameplay/memory.py), [evidence validation/facts](https://github.com/CVX-Hull/enactive/blob/433ed973afe312d03f777d8b102a0cba528af746/harness/gameplay/evidence.py),
+[skill registry](https://github.com/CVX-Hull/enactive/blob/433ed973afe312d03f777d8b102a0cba528af746/harness/gameplay/skills.py). Relevant functions are `_start`,
 `_submit_or_verify`, `TaskMemory.refresh`, `_validate_observation` and `EvidenceStore.historical_facts`;
 source navigation must use actual names when these change. The current
 [operator contract](contracts/mission-admission.md#designated-campaign-operator),

@@ -1,10 +1,17 @@
 ---
 owner: lead
 review_trigger: Ordinary input schema, native keyboard/mouse handling, phases or evidence migration changes
-status: proposed
+status: historical
+date: 2026-10-29
+scope: Pre-cutover background archived on this date; not current executable policy or new research qualification
 ---
 
 # Mixed skills and ordinary interaction
+
+This is retained pre-cutover design/research evidence. Its old executable routes and
+semantic authority are retired. The [current computer/player contract](../contracts/computer-control.md) owns implemented behavior;
+this page supplies background, not current operating instructions.
+
 
 The player should use skills for efficient familiar work and ordinary keys, text
 or deliberate clicks for discovery. Both go through the same mission writer;
@@ -63,7 +70,7 @@ selected these decisions from the actual002 failure and independent controller/
 receiver reviews. The research crosswalk preserves their evidence basis and limits;
 source review and a matching build do not qualify real graphical behavior.
 The [ordinary-input protocol](../protocol.md#ordinary-discovery-and-procedure-data)
-and [schemas](../../harness/gameplay/mission_contracts.py) own exact current shapes.
+and [schemas](https://github.com/CVX-Hull/enactive/blob/433ed973afe312d03f777d8b102a0cba528af746/harness/gameplay/mission_contracts.py) own exact current shapes.
 
 **Physical-event drift policy.** A direct request means the explicitly selected
 key, scalar or coordinate, not an inferred semantic target. It may reach a changed
@@ -342,12 +349,12 @@ preference, not a ban on player exploration. The player should ask to activate a
 visible control; software can resolve an ordinary hotkey, navigation/confirmation
 or click without asking the model to calculate every pixel or motion/down/up.
 
-There is already a partial foundation. The [native exporter](../../native/cdda_harness.cpp)
+There is already a partial foundation. The [native exporter](https://github.com/CVX-Hull/enactive/blob/433ed973afe312d03f777d8b102a0cba528af746/native/cdda_harness.cpp)
 publishes at most32 rendered rows with presentation-local ID, text, enabled state,
-displayed hotkey when available and selection. [MenuSkill](../../harness/gameplay/interaction.py)
+displayed hotkey when available and selection. [MenuSkill](https://github.com/CVX-Hull/enactive/blob/433ed973afe312d03f777d8b102a0cba528af746/harness/gameplay/interaction.py)
 can target a unique enabled displayed label through bounded registered navigation
-and confirmation. The [item policy](../../harness/gameplay/interactions.py) and
-[interpreted controls](../../harness/gameplay/semantic_controls.py) cover additional
+and confirmation. The [item policy](https://github.com/CVX-Hull/enactive/blob/433ed973afe312d03f777d8b102a0cba528af746/harness/gameplay/interactions.py) and
+[interpreted controls](https://github.com/CVX-Hull/enactive/blob/433ed973afe312d03f777d8b102a0cba528af746/harness/gameplay/semantic_controls.py) cover additional
 limited selections/editors. These shortcuts require no new hit boxes. They do not
 provide a general widget tree: row rectangles/roles are absent, filter/count
 attestation is incomplete, and IDs are not stable item identities.
@@ -515,8 +522,8 @@ prove learning efficacy or complete the independent seven-day outcome.
 
 The October21 isolated native5 brief was the first implementation checkpoint.
 Its exact-frame direct-input requirement is superseded by native6's physical-event
-drift policy above. Current [native source](../../native/cdda_harness.cpp),
-[input schemas](../../harness/gameplay/native_input.py) and
+drift policy above. Current [native source](https://github.com/CVX-Hull/enactive/blob/433ed973afe312d03f777d8b102a0cba528af746/native/cdda_harness.cpp),
+[input schemas](https://github.com/CVX-Hull/enactive/blob/433ed973afe312d03f777d8b102a0cba528af746/harness/gameplay/native_input.py) and
 [protocol](../protocol.md#transport-and-state) own the executable contract; no
 historical worker brief activates a runtime or establishes graphical qualification.
 

@@ -62,7 +62,7 @@ handoff record restores authority after restart. [Migration](../operations/migra
 ## Assurance and evidence
 
 [Runtime](../../tests/test_computer_runtime.py), [application](../../tests/test_player_application.py),
-[program](../../tests/test_player_programs.py), [MCP](../../tests/test_player_mcp.py)
+[program](../../tests/test_player_programs.py), [MCP](../../tests/test_pi_player_host.py)
 and [campaign](../../tests/test_campaign_run.py) assertions cover distinct custody,
 composition, proposal, transport and cleanup boundaries. Check actual assertions
 against the changed invariant; fixtures do not qualify real game usefulness or

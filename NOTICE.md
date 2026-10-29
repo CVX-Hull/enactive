@@ -110,12 +110,10 @@ lock; their original notices remain with the project-local installed packages.
 The maintained runner replaces serial unittest discovery without changing the
 unittest assertions; [testing](docs/testing.md) describes selection and limits.
 
-The optional assurance/impact pilot uses pytest-testmon 2.2.0 (MIT) and
-Coverage.py 7.17.0 (Apache-2.0). Versions and artifact hashes are separate in
-[requirements-pilots.lock](requirements-pilots.lock); installed metadata was
-reviewed on 2026-10-25. These packages are neither vendored nor installed by
-normal CI. Their original notices remain in the separate project-local pilot
-environment. Pilot measurements do not qualify production test selection.
+The retired assurance/impact pilot used pytest-testmon 2.2.0 (MIT) and
+Coverage.py 7.17.0 (Apache-2.0). Its pinned requirements and executable readers
+remain in [the historical source](https://github.com/CVX-Hull/enactive/tree/433ed973afe312d03f777d8b102a0cba528af746/tools).
+Those optional packages are not current dependencies or CI selection.
 
 ## Documentation assets and tools
 

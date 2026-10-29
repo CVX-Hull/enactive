@@ -9,6 +9,7 @@ import uuid
 from typing import Any
 
 from harness.computer.ports import ComputerPort
+from harness.computer.protocol import NoDispatch
 from .contracts import PlayerError, bounded_integer, canonical, identity, json_object, program
 from .images import program_view
 from .memory import Memory
@@ -19,12 +20,17 @@ class ProgramRepository:
     def __init__(self, memory: Memory) -> None:
         self.memory = memory
 
-    def save(self, actor_id: str, value: dict) -> dict:
+    def save(self, actor_id: str, value: dict, *, request_id: str | None = None) -> dict:
         identity(actor_id)
         value = program(value)
-        stored = dict(value, id=uuid.uuid4().hex, actor_id=actor_id, created_wall=time.time(),
+        stored = dict(value, id=request_id or uuid.uuid4().hex, actor_id=actor_id, created_wall=time.time(),
                       sha256=hashlib.sha256(value['code'].encode('utf-8')).hexdigest())
         with self.memory._transaction():
+            if self.memory._db.execute('SELECT 1 FROM programs WHERE id=?',(stored['id'],)).fetchone():
+                original = self.read(stored['id'])
+                if original['actor_id'] != actor_id or {k:v for k,v in original.items() if k not in {'id','actor_id','created_wall','sha256'}} != value:
+                    raise PlayerError('Original program request identity conflicts')
+                return original
             self.memory._references('sources', value['source_ids'])
             self.memory._references('records', value['record_ids'])
             self.memory._references('programs', [value['parent_id']] if value['parent_id'] else [])
@@ -114,11 +120,13 @@ class ProgramRunner:
                         status = operation.get('status', 'fault')
                         reason = operation.get('reason') or 'Computer operation did not complete'
                         break
+        except NoDispatch as exc:
+            status,reason='refused',str(exc)[:1024]
         except Exception as exc:
             # A port exception during input cannot be relabelled an undelivered
             # helper fault. The mechanical owner alone resolves its uncertainty.
             status = 'unknown' if in_port and port_kind == 'input' else 'fault'
-            reason = f'{type(exc).__name__}: {exc}'
+            reason = f'{type(exc).__name__}: {str(exc)[:1024]}'
         return dict(schema='player-program-run/1', program_id=program_id, status=status, reason=reason,
                     steps=steps, operations=operations, final_state=state,
                     elapsed_seconds=monotonic() - started)

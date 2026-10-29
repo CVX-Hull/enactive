@@ -103,7 +103,7 @@ revokes authority, retains unknown and pauses. The pinned upstream world picker
 returns a selection, `main_menu::new_character_tab` calls `g->setup()`, then
 `avatar::create` enters the points menu. These support F1's hypothesis, not its
 actual timing. See current [CLI](../../harness/__main__.py),
-[controller](../../harness/controller.py) and [native bridge](../../native/cdda_harness.cpp).
+[controller](https://github.com/CVX-Hull/enactive/blob/433ed973afe312d03f777d8b102a0cba528af746/harness/controller.py) and [native bridge](https://github.com/CVX-Hull/enactive/blob/433ed973afe312d03f777d8b102a0cba528af746/native/cdda_harness.cpp).
 `tools/setup.py` hashes the build output; [preparation](../../tools/prepare_game.py)
 changes dependency links and signs the installed copy. No source modification or
 synthetic passing replacement was used to explain this failure.

@@ -141,11 +141,17 @@ test('frozen serving tier uses the SDK payload hook and reports only observed st
   assert.equal(ordinary.result.ok,true);
   assert.equal(Object.hasOwn(ordinary.payloads[0],'service_tier'),false);
   assert.equal(ordinary.events.find(e=>e.type==='host-start').requested_service_tier,'default');
+  const comparable=payload=>JSON.parse(JSON.stringify(payload).replace(
+    /Host decision time remaining at this snapshot: ([0-9]+\.[0-9]{3}) seconds\./g,
+    (_match,seconds)=>{
+      assert.ok(Number(seconds)>0 && Number(seconds)<=10,'actual original host decision horizon');
+      return 'Host decision time remaining at this snapshot: <measured> seconds.';
+    }));
   for(const echo of ['priority','default',undefined,'fixture-key private tier']) {
     const configuration={...route(),service_tier:'priority'};
     const actual=await scenario(t,[withTier(echo)],{configuration});
     assert.equal(actual.result.ok,true);
-    assert.deepEqual(actual.payloads[0],{...ordinary.payloads[0],service_tier:'priority'});
+    assert.deepEqual(comparable(actual.payloads[0]),{...comparable(ordinary.payloads[0]),service_tier:'priority'});
     assert.equal(actual.events.find(e=>e.type==='host-start').requested_service_tier,'priority');
     const tiers=actual.events.filter(e=>e.type==='response-service-tier');
     assert.deepEqual(tiers.map(e=>[e.request_id,e.applied_service_tier]),['priority','default'].includes(echo)?[['request-1',echo]]:[]);
@@ -639,6 +645,7 @@ test('request budget is fresh request-only bookkeeping after unchanged history',
     assert.equal(notes.length,1,'prior bookkeeping must not accumulate into canonical history');
     assert.equal(payload.messages.at(-1),notes[0]);assert.equal(notes[0].role,'user');
     assert.ok(text(notes[0]).includes(`charged before this request: ${index}/4.`));
+    assert.match(text(notes[0]),/Host decision time remaining at this snapshot: \d+\.\d{3} seconds/);
     assert.ok(text(notes[0]).includes(`including this request: ${4-index}.`));
     assert.ok(text(notes[0]).includes('not a human task, gameplay evidence, source-read proof, authority or a latency/quality metric'));
     assert.deepEqual(payload.messages[0],payloads[0].messages[0]);

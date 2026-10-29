@@ -24,7 +24,7 @@ outside it. The current adapter targets macOS SDL; a second game is unqualified.
 The native adapter validates the exact inherited shared-lock descriptor/file
 identity and retains its reference for the native lifetime. Descriptor closure,
 not `LOCK_UN`, releases an owned reference. Native sets inherited descriptors
-close-on-exec. The host/MCP receives neither native descriptors nor provider keys.
+close-on-exec. The host/MCP receives no native descriptors; only the provider host receives its selected key, while MCP/native receive none.
 
 Native callbacks perform bounded nonblocking socket work and never publish files
 or SQLite. The custodian publishes image bytes/records outside the game thread.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Portable controller checks; native compilation/gameplay are separate acceptance."""
+"""Portable computer/player checks; native compilation/gameplay are separate acceptance."""
 from __future__ import annotations
 
 import argparse
@@ -166,12 +166,12 @@ def _check(argv: list[str] | None = None) -> int:
     import_linter = Path(sys.executable).parent / "lint-imports"
     if not import_linter.is_file():
         raise ValueError(f"Import Linter is missing beside {sys.executable}; use the project .venv with requirements-dev.lock installed (see docs/setup.md)")
-    for directory in ("harness", "tools", "tests", "experiments"):
+    for directory in ("harness", "tools", "tests"):
         for path in sorted((ROOT / directory).rglob("*.py")):
             compile(path.read_bytes(), str(path), "exec")
     print("Python syntax: passed", flush=True)
     run([sys.executable, "-m", "ruff", "check", "--config", "pyproject.toml",
-         "harness", "tools", "tests", "experiments"])
+         "harness", "tools", "tests"])
     run([str(import_linter), "--config", "pyproject.toml", "--no-cache", "--no-logo"])
     node = shutil.which("node")
     if node is None:

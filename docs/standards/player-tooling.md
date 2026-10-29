@@ -6,35 +6,36 @@ status: active
 
 # Structured player tooling and host context
 
-For gameplay requests, use the structured player tools over the current typed
-ingress. The adapter derives opaque source/session/revision/boundary fields from
-one explicitly chosen returned snapshot/source using the pure canonical producer.
-Choose intent, finite limits, scope and support IDs explicitly. MCP request IDs
-and transport collection waits belong to software, using the existing staged
-request and original-result path. A new invocation is not a retry; retain and
-collect the original identity through uncertainty, including producer errors.
-Do not substitute JSON-RPC correlation for durable operation identity or infer a
-new source/budget from this automation. Specialized memory,
-handoff and recovery use their same current receiver schemas. Request retention,
-serialization, bounded result collection and actual-image presentation belong to
-software; routine player-authored files/private scripts are not the operating path.
-Repeated opaque-ID copying and actor activation bookkeeping are evidence for thin
-software binding through the existing SDK/cache/host lifecycle. Preserve explicit
-evidence selection and verify the actual old host has exited before activating a
-fresh deciding successor. Software cannot infer tactics, memory adoption, successful
-outcomes, new resources or permission from the automation. Focused negative tests
-and actual handoff evidence enforce this boundary; no new per-action review applies.
-Consume the standard MCP result envelope: retain and surface text, images and
-`isError` before inspecting optional `structuredContent`. Never discard an error
-by assuming a success-only payload. Tool errors alone do not prove nondelivery;
-collect the original operation when delivery is uncertain. Reuse the official SDK
-and existing ingress tests rather than creating another result protocol.
-Never carry individual fields across a focus change or replay an uncertain action.
-The protocol's binding checks and portable/native evidence enforce consistency;
-review still checks that the chosen source supports the player's interpretation.
-Choose meaningful bounded targets, interactions and activities when visible
-evidence supports them. Per-primitive checks belong in software; one model request
-per arrow is not evidence that higher-level skill composition improved play.
+For gameplay, use the mandatory generic Pi host's explicit current structured
+tools. The adapter assigns an original durable operation ID before submission;
+software owns serialization, exact image presentation, bounded collection and
+deterministic accounting. Actor capabilities and native custody remain outside
+model arguments. The player selects intent, basic controls, optional program and
+source/knowledge references. Software must not infer a game phase, tactic,
+identity, success, resource gain or permission from that selection.
+
+Consume the standard MCP result envelope: retain and surface text, actual images
+and `isError`, then inspect optional structured content. An error alone does not
+prove nondelivery. Retain and collect the original operation when submission is
+uncertain; never issue a new input as a transport retry. No JSON-RPC ID, old image,
+knowledge row or source reference becomes a new authority/resource allowance.
+Across composed services, the same public mutation ID cannot dispatch twice.
+
+Memory/programs/context are optional fallible player services. Source exposure,
+explicit read, selection, proposal, delivered input and observed useful effect are
+different evidence. A player-written program receives actual image data plus
+explicit interpretation and proposes the same basic controls; local yield or
+caller refusal leaves ordinary fallback available. Ordinary playing must not
+require source archaeology, private scripts, opaque bookkeeping or one model call
+per arrow. Reuse the maintained SDK and current schema rather than maintaining a
+second result/binding protocol. No per-action review or lead tactic is introduced.
+
+Handoff seals the actor and retains canonical context, without a game-state gate.
+Only the direct originating issuance or exact original collection may settle it.
+The driver verifies actual old host/MCP group absence before a fresh actor receives
+custody. Unknown delivery, cancellation or unexpected closure cannot become a
+resumable handoff or a failed-run resource renewal. Focused negatives and actual
+organic successor use qualify different parts of this boundary.
 
 Use the maintained host/model defaults for context capacity and compaction unless
 an explicit measured need justifies an override. Freeze any override with the run;

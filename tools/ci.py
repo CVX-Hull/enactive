@@ -47,23 +47,17 @@ class Plan:
 # The checker inspects these root documents and every Markdown file in docs/.
 ROOT_DOCUMENTS = {"README.md", "AGENTS.md", "NOTICE.md", "CONTRIBUTING.md", "SECURITY.md"}
 SMOKE_TESTS = (
-    "tests/test_gameplay_contracts.py",
-    "tests/test_gameplay_evidence.py",
-    "tests/test_mission_request_producer.py",
-    "tests/test_mission_ledger.py::LedgerTests::test_measured_counts_use_cumulative_rows_and_preserve_unknowns_across_reopen",
-    "tests/test_mission_ledger.py::LedgerTests::test_read_only_or_unadmitted_request_cannot_become_input",
-    "tests/test_mission_ledger.py::LedgerTests::test_terminal_mission_cannot_restart_or_overwrite_result",
-    "tests/test_mission_http.py::MissionHTTPTests::test_semantic_navigation_context_memory_and_single_ingress",
+    "tests/test_computer_protocol.py",
+    "tests/test_computer_runtime.py",
+    "tests/test_player_application.py",
+    "tests/test_server.py",
 )
 # Explicit demonstrated boundaries, not inferred dependency-impact analysis.
 COMPONENT_PATHS = {
-    "movement": {"harness/movement.py", "tests/test_movement.py"},
     "viewer": {"web/app.js", "web/index.html", "web/style.css", "tests/test_viewer.cjs"},
 }
 COMPONENT_TESTS = {
-    "movement": ("tests/test_movement.py", "tests/test_controller.py", "tests/test_navigation.py",
-                 "tests/test_gameplay_skills.py", "tests/test_gameplay_supervisor.py", *SMOKE_TESTS),
-    "viewer": ("tests/test_server.py", *SMOKE_TESTS),
+    "viewer": ("tests/test_cli.py", *SMOKE_TESTS),
 }
 
 

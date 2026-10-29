@@ -5,12 +5,16 @@ from pathlib import Path
 import shlex
 
 
+def game_lock_path(runtime: Path) -> Path:
+    return runtime / 'bridge' / 'game.lock'
+
+
 @contextmanager
 def game_lock(runtime: Path):
     """Exclude owned game sessions while changing their installed app or settings."""
-    bridge = runtime / "bridge"
-    bridge.mkdir(parents=True, exist_ok=True, mode=0o700)
-    with (bridge / "game.lock").open("a+") as lock:
+    path=game_lock_path(runtime)
+    path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    with path.open("a+") as lock:
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as error:

@@ -3,96 +3,61 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="controller-token" content="__CONTROLLER_TOKEN__">
-  <title>CDDA · Local spectator</title>
+  <title>Enactive · Local spectator</title>
   <link rel="stylesheet" href="/style.css">
   <script src="/app.js" defer></script>
 </head>
 <body>
-  <header class="topbar">
-    <a class="brand" href="/" aria-label="CDDA spectator home"><span class="brand-mark">C</span><span>CATACLYSM<span class="brand-sub">LOCAL SPECTATOR</span></span></a>
-    <div class="connection"><span id="connection-dot" class="dot"></span><span id="connection">Connecting</span><span class="separator">/</span><span id="age">No observation</span></div>
-    <div class="controls"><button id="observe" class="quiet">Observe</button><button id="resume" class="quiet">Resume</button><button id="pause" class="pause">Ⅱ Pause control</button></div>
+  <header>
+    <div><span class="eyebrow">ENACTIVE / LOCAL SPECTATOR</span><h1>Watch the native window</h1></div>
+    <div class="stop-control"><button id="pause" type="button">Pause automation permanently</button><p id="stop-state" role="status">Pause state unknown.</p></div>
   </header>
   <main>
-    <section class="stage" aria-label="Native game view">
-      <div class="stage-heading"><div><span class="eyebrow">THE WORLD, AS SEEN BY THE PLAYER</span><h1>Game view <span id="control-state" class="badge">WAITING FOR STATUS</span></h1></div><span id="category" class="mono">—</span></div>
-      <section class="recorded-objective" aria-labelledby="recorded-objective-heading">
-        <h2 id="recorded-objective-heading" class="eyebrow">Recorded objective</h2>
-        <p id="recorded-objective-text" tabindex="0">No objective recorded.</p>
-      </section>
-      <div id="frame-shell" class="frame-shell stale">
-        <img id="frame" alt="Actual frame captured by the native CDDA Tiles renderer" hidden>
-        <div id="frame-placeholder" class="placeholder"><span class="placeholder-mark">◇</span><strong>Waiting for the game</strong><span>Start CDDA with the project bridge enabled,<br>then observe an input boundary.</span></div>
-        <span id="frame-note" class="frame-note">NO NATIVE FRAME</span>
-      </div>
-      <div class="stage-footer"><span><span class="dot small"></span> ORIGINAL TILES RENDERER</span><span id="latency">Controller response —</span><span id="position">Player position —</span></div>
-      <div id="error" class="error" role="alert" hidden></div>
-      <details class="evidence"><summary>Local observer timing · last 32 samples per stage</summary><p id="observer-timing-note">Browser monotonic intervals cover status response, image fetch/decode and DOM replacement. Native capture and browser timestamps support offline comparisons when they share the same computer and wall clock; wall-clock changes can invalidate comparisons. An animation callback is a presentation opportunity, not proof of screen paint. Failed, superseded and stale frames do not establish fresh presentation. These records alone do not measure end-to-end player latency. The view shows the latest 32 samples per stage. Download and Show export JSON retain up to 8,192 per stage while this page is open and report any overflow; they include earlier sessions on this page. Show export JSON prepares a fixed snapshot; click again to refresh it. Closing or reloading the page discards this local history.</p><button id="download-observer-measurements" type="button">Download timing</button><button id="show-observer-export" type="button">Show export JSON</button><pre id="observer-export" hidden tabindex="0" aria-label="Prepared observer timing export"></pre><pre id="observer-measurements" tabindex="0">No local samples yet.</pre></details>
-      <details class="evidence"><summary>Control and observation details</summary><p>One input at a time. A ready response means the engine returned to input. Check the scene to verify the intended result.</p><p>After a controller reconnect, this page refreshes its local credentials. Only an explicit Pause rejected before admission may retry once with changed credentials; other operations are never automatically repeated.</p><p>Native keyboard input pauses remote control. A pause cannot undo an input already dispatched.</p></details>
+    <section class="stage" aria-labelledby="view-heading">
+      <div class="stage-heading"><h2 id="view-heading">Actual captured pixels</h2><span id="connection" role="status">Connecting…</span></div>
+      <p id="status-error" class="error" role="alert" hidden></p>
+      <p id="pause-error" class="error" role="alert" hidden></p>
+      <div class="frame-shell"><img id="frame" alt="Original PNG captured from the native window" hidden><p id="frame-note" role="status">No captured source available.</p></div>
+      <p id="source-age">No displayed source.</p>
+      <details><summary>Original source and geometry</summary><p id="source-details">No displayed source.</p></details>
+      <p class="hint">The image fits this page; source metadata describes the full original PNG. Polling reads retained status and pixels; it does not capture a new frame. An old image has an age, not an inferred game meaning.</p>
+      <details>
+        <summary>Local observer timing</summary>
+        <p>Download retains the latest 2,000 source attempts on this page, with an explicit omitted-row count. Original presented time and receipt time use the source's clock. Browser timestamps mark status observation, completed decode and DOM replacement only. DOM replacement does not prove physical screen paint or model attention. Wall-clock differences or changes can invalidate comparisons. These measurements do not establish useful gameplay success. Reloading discards this local history; no trace is uploaded.</p>
+        <button id="download-observer-measurements" type="button">Download timing</button>
+        <p id="timing-summary">No source attempts recorded.</p>
+      </details>
     </section>
     <aside>
-      <section class="panel mission-panel" aria-labelledby="mission-heading">
-        <div class="panel-heading"><span id="mission-heading" class="eyebrow">PLAYER MISSION</span><span id="mission-state" class="badge">NO MISSION</span></div>
-        <p id="mission-summary" tabindex="0">No mission objective recorded.</p>
-        <dl class="mission-facts" aria-live="polite">
-          <dt>Player</dt><dd id="mission-player">No player admitted</dd>
-          <dt>Deciding host</dt><dd id="mission-host">Host evidence unreported · current liveness unknown</dd>
-          <dt>Assigned successor</dt><dd id="mission-successor-host">Successor assignment unreported · mission actor adoption unknown · current liveness unknown</dd>
-          <dt>Mission</dt><dd id="mission-identity">No mission identity</dd>
-          <dt>Input lease</dt><dd id="mission-owner">Input lease unknown; waiting for status</dd>
-          <dt>Live operation</dt><dd id="mission-operation">No active operation</dd>
-          <dt>Activity</dt><dd id="mission-activity">No private activity checkpoint reported</dd>
-          <dt>Lifecycle</dt><dd id="mission-lifecycle">No lifecycle checkpoint reported</dd>
-          <dt>Progress</dt><dd id="mission-progress">No mission progress</dd>
-          <dt>Next decision</dt><dd id="mission-next">Waiting for an explicitly admitted player mission</dd>
-          <dt>Pause / reason</dt><dd id="mission-reason">No mission admitted</dd>
-          <dt>Freshness</dt><dd id="mission-freshness">No mission evidence</dd>
-          <dt>Effects snapshot</dt><dd id="mission-unresolved">Unknown unresolved effects; waiting for status</dd>
+      <section aria-labelledby="control-heading">
+        <h2 id="control-heading">Control and mechanical facts</h2>
+        <dl>
+          <dt>Session</dt><dd id="session">Unknown</dd>
+          <dt>Actors and recorded stages</dt><dd id="ownership">Unknown</dd>
+          <dt>Native target</dt><dd id="target">Unknown</dd>
+          <dt>Last operation</dt><dd id="operation">Unreported</dd>
+          <dt>Native process exit</dt><dd id="native-exit">Unreported</dd>
         </dl>
-        <p id="mission-control-note" class="hint">Observer only: missions are admitted outside this viewer.</p>
-        <p class="hint">Pause prevents future remote input; it cannot undo a committed input or cancel an activity.</p>
-        <details open><summary>Memory context · claims, work and sources</summary><p id="mission-memory-summary" class="hint">No journaled context preview available.</p><p class="hint">Historical, query-specific preview, bounded to 32 KiB by the service. Claims and work retain their statuses, source IDs, omissions and dispositions. It grants no current authority.</p><div id="mission-memory-readable" hidden>
-          <p id="mission-omissions" class="hint"></p>
-          <h3>Claims and corrections</h3><ul id="mission-claims" class="memory-list"></ul>
-          <h3>Historical Work and recorded next verification</h3><ul id="mission-work" class="memory-list"></ul>
-          <h3>Advisory procedures and revisions</h3><p class="hint">Scoped player-authored data; current applicability and game outcomes still need verification.</p><ul id="mission-procedures" class="memory-list"></ul>
-          <details><summary>Sources and status dispositions</summary><ul id="mission-sources" class="memory-list"></ul><h3>Dispositions</h3><ul id="mission-dispositions" class="memory-list"></ul></details>
-          <details><summary>Requested reobservations</summary><ul id="mission-reobservations" class="memory-list"></ul></details>
-        </div><details><summary>Raw historical context JSON</summary><pre id="mission-memory" tabindex="0">No memory claims, work or source dispositions available.</pre></details></details>
-        <details><summary>Process, control and source details</summary><dl class="mission-facts">
-          <dt>Last report</dt><dd id="mission-last-report">No result phase reported</dd>
-          <dt>Process</dt><dd id="mission-process">No usable process sample · current liveness unknown</dd>
-          <dt>Exit evidence</dt><dd id="mission-exit">No verified normal exit proof reported</dd>
-          <dt>Source</dt><dd id="mission-source">No current mission source</dd>
-        </dl></details>
-        <details><summary>Progress, evidence and last receipt</summary><pre id="mission-evidence" tabindex="0">No retained mission evidence.</pre></details>
-        <details><summary>Limits and player configuration</summary><pre id="mission-budgets" tabindex="0">No mission limits reported.</pre></details>
-        <details><summary>Measured usage, unknown costs and archive</summary><p id="mission-counts" class="hint">Cumulative request and admission counts unavailable.</p><p id="mission-usage" class="hint">Model calls, tokens, quota, time, external cost and interventions: unknown.</p><pre id="mission-archive" tabindex="0">No archive usage reported.</pre></details>
-        <details><summary>Last mission Observe request</summary><p class="hint">Observe is asynchronous. Admission is not readiness or proof of an effect. Status polling never retries, resumes or sends gameplay input.</p><pre id="mission-result" tabindex="0">No mission Observe request sent.</pre></details>
+        <p class="hint">This page is a spectator and never grants input authority. Use the native window for human takeover. Pause prevents future automation; it cannot undo a delivered input or cancel an already running activity. A request for Pause and native confirmation are separate facts. There is no Resume here.</p>
+        <p class="hint">Delivery is an event handoff, not proof of application consumption or useful success. A native exit code of 0 does not certify a Save.</p>
       </section>
-      <section class="panel recovery-panel" aria-labelledby="recovery-heading">
-        <div class="panel-heading"><span id="recovery-heading" class="eyebrow">OPERATOR RECOVERY</span><span class="tiny">STAYS PAUSED</span></div>
-        <p id="recovery-state" class="hint" role="status">Observe to inspect recovery eligibility.</p>
-        <div class="recovery-buttons">
-          <button id="recovery-interrupt" type="button" hidden disabled>Request interrupt</button>
-          <button id="recovery-yes" type="button" hidden disabled>Yes · interrupt activity</button>
-          <button id="recovery-no" type="button" hidden disabled>No · keep activity</button>
-          <button id="recovery-debug" type="button" hidden disabled>Continue debug once</button>
-        </div>
-        <p class="hint">Pause prevents future remote input; it cannot undo a committed input or cancel an activity. Recovery reports prompt opening or input delivery, never proof of cancellation or repair. Inspect the new frame. No automatic answer, retry or Resume.</p>
-        <p id="gameplay-pending" class="hint">Gameplay: no live request</p>
-        <p id="recovery-pending" class="hint">Recovery: no live request</p>
-        <details><summary>Gameplay pending and unknown evidence</summary><pre id="gameplay-evidence">No evidence yet.</pre></details>
-        <details><summary>Recovery result, pending and unknown evidence</summary><pre id="recovery-result">No recovery sent.</pre><pre id="recovery-evidence">No evidence yet.</pre></details>
+      <section aria-labelledby="resources-heading">
+        <h2 id="resources-heading">Original remaining resources</h2>
+        <dl><dt>Custodian time remaining</dt><dd id="custodian-remaining">Unreported</dd><dt>Control capacities remaining</dt><dd id="resource-remaining">Unreported</dd></dl>
+        <p class="hint">Reported original limits; browser reads do not renew them.</p>
       </section>
-      <section class="panel timeline-panel"><div class="panel-heading"><span class="eyebrow">SESSION TIMELINE</span><span id="event-count" class="tiny">0 EVENTS</span></div><ol id="timeline"><li class="empty">Your observations and inputs appear here.</li></ol><div class="journal"><span class="dot small"></span><span id="journal">Local journal</span></div></section>
-      <details class="advanced"><summary>Advanced controls &amp; details</summary>
-      <section class="panel action-panel"><div class="panel-heading"><span class="eyebrow">SINGLE INPUT</span><span id="revision" class="tiny mono">REV —</span></div><form id="action-form"><label for="action">Registered native action</label><div class="input-row"><select id="action"><option value="">Observe to load actions</option></select><button type="submit" class="send">Send</button></div></form><form id="key-form"><label for="key">Key / named navigation key</label><div class="input-row"><input id="key" placeholder="e.g. i, ENTER, ESC" autocomplete="off" maxlength="10"><button type="submit" class="send">Send</button></div></form><details><summary>Guarded cardinal walk · up to 8 tiles</summary><form id="walk-form"><div class="input-row"><select id="direction" aria-label="Direction"><option value="north">North</option><option value="east">East</option><option value="south">South</option><option value="west">West</option></select><input id="steps" type="number" min="1" max="8" value="1" aria-label="Steps"><button type="submit" class="send">Walk</button></div><p class="hint">Stops on any visible creature, unknown terrain, furniture, changed context or unexpected movement. After a stop: Observe, interpret the fresh image, then Resume and decide again. No automatic damage guard.</p></form></details><p id="authority" class="hint">Inputs use the displayed observation’s session and revision.</p></section>
-      <section class="panel result-panel"><div class="panel-heading"><span class="eyebrow">LAST RESULT</span><span id="result-status" class="tiny">—</span></div><pre id="last-result">No command sent.</pre></section>
-      </details>
+      <section aria-labelledby="host-heading">
+        <h2 id="host-heading">Player host diagnostics</h2>
+        <dl><dt>Host time remaining</dt><dd id="host-remaining">Unreported</dd><dt>Host HTTP attempts</dt><dd id="host-requests">Unreported</dd><dt>Configuration / last response</dt><dd id="host-details">Unreported</dd></dl>
+        <p class="hint">Host time and HTTP attempt budget are separate from custodian resources. Model, provider and response timestamps are diagnostics, not game progress or proof of current host liveness.</p>
+      </section>
+      <section aria-labelledby="claims-heading">
+        <h2 id="claims-heading">Player assertions</h2>
+        <p class="hint">Fallible player-authored claims, work and interpretations. These do not certify game outcomes, Save, control ownership or authority.</p>
+        <ul id="player-claims"><li>No player assertions reported.</li></ul>
+      </section>
     </aside>
   </main>
-  <footer class="page-footer"><span>CDDA PLAYER <span class="muted">/</span> PRIVATE LOOPBACK SESSION</span><span>Native game authority · No hidden map state</span></footer>
+  <footer>Private loopback spectator · Captured pixels and mechanical facts · Game interpretation belongs to the player</footer>
 </body>
 </html>

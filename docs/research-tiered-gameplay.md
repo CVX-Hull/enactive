@@ -1,10 +1,17 @@
 ---
 owner: lead
-status: proposed
+status: historical
+date: 2026-10-29
+scope: Pre-cutover background archived on this date; not current executable policy or new research qualification
 review_trigger: Before gameplay architecture or model selection; weekly recency scan during active design and after relevant model or paper releases
 ---
 
 # Tiered gameplay: research and proposed design
+
+This is retained pre-cutover design/research evidence. Its old executable routes and
+semantic authority are retired. The [current computer/player contract](contracts/computer-control.md) owns implemented behavior;
+this page supplies background, not current operating instructions.
+
 
 The [outcome-monitoring evidence review](research-outcome-monitoring.md) extends
 this proposal with learned monitors, declarative expectations and information-aware
@@ -276,7 +283,7 @@ text; it does not call a model. There is no autonomous planner service. Structur
 scene data covers relative position, turn, visible creatures and clear adjacent
 terrain/furniture; inventory, traps and damage are not structured guarantees.
 Pause does not cancel an in-progress engine activity. These limits are verified
-against [controller](../harness/controller.py), [bridge](../native/cdda_harness.cpp)
+against [controller](https://github.com/CVX-Hull/enactive/blob/433ed973afe312d03f777d8b102a0cba528af746/harness/controller.py), [bridge](https://github.com/CVX-Hull/enactive/blob/433ed973afe312d03f777d8b102a0cba528af746/native/cdda_harness.cpp)
 and the current [protocol](protocol.md), not inferred from robotics papers.
 
 | Proposed requirement | Enforcement / acceptance |

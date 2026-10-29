@@ -1,10 +1,17 @@
 ---
 owner: lead
-status: active
+status: historical
+date: 2026-10-29
+scope: Pre-cutover background archived on this date; not current executable policy or new research qualification
 review_trigger: Pinned engine input, activity, debug prompt, bridge protocol or recovery control changes
 ---
 
 # Native interruption and error-screen design
+
+This is retained pre-cutover design/research evidence. Its old executable routes and
+semantic authority are retired. The [current computer/player contract](../contracts/computer-control.md) owns implemented behavior;
+this page supplies background, not current operating instructions.
+
 
 Investigation for [#6](https://github.com/CVX-Hull/enactive/issues/6), based on
 CDDA 0.I-1 commit `7b2efa5cea38e4d4d97dd0e63b28b9148623da59` and harness base
@@ -29,7 +36,7 @@ patched-file hashes are in [upstream.json](../../native/upstream.json).
 | [`player_activity.cpp`](https://github.com/CleverRaven/Cataclysm-DDA/blob/7b2efa5cea38e4d4d97dd0e63b28b9148623da59/src/player_activity.cpp), `is_interruptible_with_kb`, `canceled`; [`character.cpp`](https://github.com/CleverRaven/Cataclysm-DDA/blob/7b2efa5cea38e4d4d97dd0e63b28b9148623da59/src/character.cpp), `cancel_activity` | Interruptibility is policy plus instance flags. Cancellation invokes actor cleanup and backlog/hauling/sound changes. Calling `cancel_activity` indiscriminately would skip the ordinary input policy and is rejected. |
 | [`output.cpp`](https://github.com/CleverRaven/Cataclysm-DDA/blob/7b2efa5cea38e4d4d97dd0e63b28b9148623da59/src/output.cpp), `query_yn`; [`keybindings.json`](https://github.com/CleverRaven/Cataclysm-DDA/blob/7b2efa5cea38e4d4d97dd0e63b28b9148623da59/data/raw/keybindings.json) | Confirmation uses `YESNO` with `YES`/`NO`. Bindings are resolved from the active engine context, not assumed from a fixed y/n layout. A generic YESNO prompt alone does not identify an interruption confirmation. |
 | [`debug.cpp`](https://github.com/CleverRaven/Cataclysm-DDA/blob/7b2efa5cea38e4d4d97dd0e63b28b9148623da59/src/debug.cpp), `debug_error_prompt` | Redraws the actual error and calls raw `get_input_event`, outside its own `input_context`. Space continues; I suppresses future instances; C copies in tiles. Some errors are buffered before UI initialization. No general crash recovery follows from this path. |
-| [patch_game.py](../../tools/patch_game.py), [bridge](../../native/cdda_harness.cpp) | At investigation base `806c0ba`, scope was a boolean set/cleared around input waits. `poll` refuses unscoped calls and pending requests; a nested raw debug call might inherit an outer scope. The trace does not prove that such nesting occurs at runtime. That baseline metadata could not distinguish ordinary play from activity polling. Native-v3 uses the explicit RAII boundary model below; see the current protocol and fresh foundation acceptance. |
+| [patch_game.py](../../tools/patch_game.py), [bridge](https://github.com/CVX-Hull/enactive/blob/433ed973afe312d03f777d8b102a0cba528af746/native/cdda_harness.cpp) | At investigation base `806c0ba`, scope was a boolean set/cleared around input waits. `poll` refuses unscoped calls and pending requests; a nested raw debug call might inherit an outer scope. The trace does not prove that such nesting occurs at runtime. That baseline metadata could not distinguish ordinary play from activity polling. Native-v3 uses the explicit RAII boundary model below; see the current protocol and fresh foundation acceptance. |
 
 The historical [raw vehicle error](../acceptance/2026-10-17-mvp.md#real-game-acceptance-2026-10-17)
 froze remote progress and needed native Space. It motivates this work but was not

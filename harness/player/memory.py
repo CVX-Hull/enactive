@@ -14,9 +14,10 @@ from .contracts import PlayerError, bounded_integer, canonical, identity, json_o
 
 
 class Memory:
+    """Composition serializes use; HTTP calls may arrive on different threads."""
     def __init__(self, path: str | Path, max_source_bytes: int = 268435456) -> None:
         self.max_source_bytes = bounded_integer(max_source_bytes, 0, 268435456)
-        self._db = sqlite3.connect(path, timeout=1)
+        self._db = sqlite3.connect(path, timeout=1, check_same_thread=False)
         try:
             self._db.execute('PRAGMA foreign_keys=ON')
             tables = {r[0] for r in self._db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
@@ -27,7 +28,7 @@ class Memory:
                     self._db.execute("INSERT INTO metadata VALUES ('player-memory/1')")
                     self._db.execute('CREATE TABLE sources (id TEXT PRIMARY KEY, metadata TEXT NOT NULL, png BLOB)')
                     self._db.execute('''CREATE TABLE programs (id TEXT PRIMARY KEY, document TEXT NOT NULL,
-                        parent_id TEXT UNIQUE REFERENCES programs(id))''')
+                        parent_id TEXT REFERENCES programs(id))''')
                     self._db.execute('''CREATE TABLE records (id TEXT PRIMARY KEY, document TEXT NOT NULL,
                         kind TEXT NOT NULL, supersedes TEXT REFERENCES records(id), program_id TEXT REFERENCES programs(id))''')
                     for table, owner, target in (
@@ -36,9 +37,11 @@ class Memory:
                         self._db.execute(f'''CREATE TABLE {table} (owner TEXT NOT NULL REFERENCES {owner}(id),
                             target TEXT NOT NULL REFERENCES {target}(id), PRIMARY KEY(owner,target))''')
                     self._db.execute('CREATE INDEX corrections ON records(supersedes)')
+                    self._db.execute('''CREATE TABLE service_operations(id TEXT PRIMARY KEY,actor TEXT NOT NULL,
+                        tool TEXT NOT NULL,args TEXT NOT NULL,progress TEXT NOT NULL,result TEXT)''')
                     self._db.execute('PRAGMA user_version=1')
             elif version != 1 or tables != {'metadata', 'sources', 'programs', 'records', 'record_sources',
-                                            'record_supports', 'program_sources', 'program_records'}:
+                                            'record_supports', 'program_sources', 'program_records', 'service_operations'}:
                 raise PlayerError('Unsupported player store; select a fresh player-memory/1 store')
             if self._db.execute('SELECT schema FROM metadata').fetchall() != [('player-memory/1',)]:
                 raise PlayerError('Unsupported player store version')
@@ -101,11 +104,17 @@ class Memory:
             if self._db.execute(f'SELECT 1 FROM {table} WHERE id=?', (ref,)).fetchone() is None:
                 raise PlayerError(f'Missing {table} reference: {ref}')
 
-    def append(self, actor_id: str, value: dict) -> dict:
+    def append(self, actor_id: str, value: dict, *, request_id: str | None = None) -> dict:
         identity(actor_id)
         value = record(value)
-        stored = dict(value, id=uuid.uuid4().hex, actor_id=actor_id, created_wall=time.time())
+        stored = dict(value, id=request_id or uuid.uuid4().hex, actor_id=actor_id, created_wall=time.time())
         with self._transaction():
+            prior = self._db.execute('SELECT 1 FROM records WHERE id=?',(stored['id'],)).fetchone()
+            if prior:
+                original = self.read(stored['id'])
+                if original['actor_id'] != actor_id or {k:v for k,v in original.items() if k not in {'id','actor_id','created_wall'}} != value:
+                    raise PlayerError('Original memory request identity conflicts')
+                return original
             self._references('sources', value['sources'])
             self._references('records', value['supports'] + ([value['supersedes']] if value['supersedes'] else []))
             self._references('programs', [value['program_id']] if value['program_id'] else [])
@@ -168,3 +177,48 @@ class Memory:
     def context(self, ids: list[str], max_bytes: int = 65536) -> dict:
         from .context import build_context
         return build_context(self, ids, max_bytes=max_bytes)
+
+    def begin_service(self, request_id: str, actor_id: str, tool: str, args: dict) -> bool:
+        """Original player mutation correlation, never a control recovery log."""
+        with self._transaction():
+            prior = self._db.execute('SELECT actor,tool,args FROM service_operations WHERE id=?',(request_id,)).fetchone()
+            if prior:
+                if prior != (actor_id,tool,canonical(args)):
+                    raise PlayerError('Original player-service identity conflicts')
+                return False
+            self._db.execute('INSERT INTO service_operations VALUES(?,?,?,?,?,NULL)',
+                             (request_id,actor_id,tool,canonical(args),canonical({'steps':[]})))
+            return True
+
+    def service_step(self, request_id: str, step: dict) -> None:
+        with self._transaction():
+            row = self._db.execute('SELECT progress FROM service_operations WHERE id=?',(request_id,)).fetchone()
+            if row is None:
+                raise PlayerError('Unknown original player run')
+            progress = json_object(row[0])
+            if len(progress['steps']) >= 130:
+                raise PlayerError('Original player-run step capacity exceeded')
+            progress['steps'].append(json_object(step))
+            self._db.execute('UPDATE service_operations SET progress=? WHERE id=?',(canonical(progress),request_id))
+
+    def finish_service(self, request_id: str, result: dict) -> None:
+        with self._transaction():
+            if self._db.execute('UPDATE service_operations SET result=? WHERE id=? AND result IS NULL',
+                                (canonical(result),request_id)).rowcount != 1:
+                raise PlayerError('Original player-service result cannot be replaced')
+
+    def service_result(self, request_id: str, actor_id: str | None = None) -> dict:
+        row = self._db.execute('SELECT tool,progress,result,actor FROM service_operations WHERE id=? '
+                               'AND (? IS NULL OR actor=?)',(request_id,actor_id,actor_id)).fetchone()
+        if row is None:
+            raise PlayerError('Unknown original player-service operation')
+        result = json_object(row[2]) if row[2] is not None else None
+        # A committed record/program has its preassigned request ID even if its
+        # HTTP response was lost. Collection reads it; it never reruns authoring.
+        if result is None and row[0] in ('player_memory_append','player_program_save'):
+            table = 'records' if row[0] == 'player_memory_append' else 'programs'
+            if self._db.execute(f'SELECT 1 FROM {table} WHERE id=?',(request_id,)).fetchone():
+                result = self._document(table,request_id)
+        return dict(schema='player-service-result/1',operation_id=request_id,actor_id=row[3],kind=row[0],
+                    status='completed' if result is not None else 'pending',value=result,
+                    progress=json_object(row[1]),grants_authority=False)

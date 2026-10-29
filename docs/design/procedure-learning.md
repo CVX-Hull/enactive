@@ -1,10 +1,17 @@
 ---
 owner: lead
 review_trigger: Procedure representation, reflection exchange, adaptation policy or source transfer changes
-status: proposed
+status: historical
+date: 2026-10-29
+scope: Pre-cutover background archived on this date; not current executable policy or new research qualification
 ---
 
 # Procedure memory and the advisory exchange
+
+This is retained pre-cutover design/research evidence. Its old executable routes and
+semantic authority are retired. The [current computer/player contract](../contracts/computer-control.md) owns implemented behavior;
+this page supplies background, not current operating instructions.
+
 
 This records the selected implementation boundary for #177/#178 within
 [delivery057](../changes/057-discovery-learning-campaign.md). It extends the
@@ -117,7 +124,7 @@ both verify original bytes and neither refreshes native state or authority.
 ## Bounded asynchronous work
 
 Current job/proposal/command records use `reflection/3`; the closed schemas in
-[reflection.py](../../harness/gameplay/reflection.py) own their exact shapes.
+[reflection.py](https://github.com/CVX-Hull/enactive/blob/433ed973afe312d03f777d8b102a0cba528af746/harness/gameplay/reflection.py) own their exact shapes.
 A job keeps its exact current request/result trajectory, request cutoff, accepted-memory version, at most8 qualified images
 and16 procedures, with explicit request/source/procedure omissions. Bounds remain
 at most64 jobs,2 pending bodies (including a callback in flight),32 requests and
@@ -211,7 +218,7 @@ ownership and unknown no-replay remain immediate, independently of evolving advi
 Use explicit finite limits, not an unbounded learner. Exact per-record/API shapes,
 numeric bounds, scheduling/claim semantics and cross-ledger validation tests must
 be frozen in the implementation brief before affected worker dispatch. The
-[mission and memory schemas](../../harness/gameplay/mission_contracts.py) and
+[mission and memory schemas](https://github.com/CVX-Hull/enactive/blob/433ed973afe312d03f777d8b102a0cba528af746/harness/gameplay/mission_contracts.py) and
 [ordinary-input protocol](../protocol.md#ordinary-discovery-and-procedure-data)
 own the current coordinated contracts. Delivery057's first October21 checkpoint
 used campaign-memory/4 with native5/mission9/ledger11/archive4, procedure/1 and
@@ -246,7 +253,7 @@ counterexamples and retire superseded assumptions instead of rewriting history.
 ## Pure procedure interface and exchange bounds
 
 The October21 reviewed pure-module interface is implemented in
-[procedures.py](../../harness/gameplay/procedures.py). Its current closed
+[procedures.py](https://github.com/CVX-Hull/enactive/blob/433ed973afe312d03f777d8b102a0cba528af746/harness/gameplay/procedures.py). Its current closed
 `procedure/3` schema owns exact fields and bounds; the initial procedure/1 contract
 is historical. The pure module imports strict schema/canonical helpers and has no
 ledger/controller/runtime/network execution role.

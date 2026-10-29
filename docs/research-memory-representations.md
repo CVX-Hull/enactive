@@ -1,10 +1,17 @@
 ---
 owner: lead
-status: proposed
+status: historical
+date: 2026-10-29
+scope: Pre-cutover background archived on this date; not current executable policy or new research qualification
 review_trigger: Study protocol, source evidence, observed memory failure or representation decision changes
 ---
 
 # Ways to represent memory and improvement
+
+This is retained pre-cutover design/research evidence. Its old executable routes and
+semantic authority are retired. The [current computer/player contract](contracts/computer-control.md) owns implemented behavior;
+this page supplies background, not current operating instructions.
+
 
 This study asks **which distinctions the player must preserve to make a better
 decision later**. A bigger memory, a graph and a confidence number are not answers

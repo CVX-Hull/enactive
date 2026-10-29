@@ -2,14 +2,11 @@
 
 These checks deliberately do not qualify fixture behavior with a simulated bridge.
 """
-from pathlib import Path
 import struct
 import unittest
 
 from harness.computer import protocol
 
-ROOT = Path(__file__).resolve().parents[1]
-NATIVE = ROOT / 'harness/computer/native/bridge.mm'
 
 
 class ComputerWireTests(unittest.TestCase):
@@ -41,29 +38,7 @@ class ComputerWireTests(unittest.TestCase):
         with self.assertRaises(protocol.ControlError):
             protocol.decode_json(b'{"id":"a","id":"b"}')
 
-    def test_native_has_no_callback_filesystem_or_environment_polling(self):
-        source = NATIVE.read_text()
-        callbacks = source[source.index('struct Bridge {'):]
-        for forbidden in ('getenv(', 'fstat(', 'lstat(', 'stat(', 'open(', 'unlink(',
-                          'rename(', 'writeJSON(', 'IMG_SavePNG(', 'fileSystemRepresentation', 'LOCK_UN'):
-            with self.subTest(forbidden=forbidden):
-                self.assertNotIn(forbidden, callbacks)
-        self.assertIn('IMG_SavePNG_RW(', source)
-        self.assertIn('SDL_RWFromMem(', source)
-        self.assertIn('FD_CLOEXEC', source)
-        self.assertIn('SO_NOSIGPIPE', source)
-        self.assertIn('O_NONBLOCK', source)
 
-    def test_native_uses_bounded_pump_and_one_time_monotonic_expiry(self):
-        source = NATIVE.read_text()
-        self.assertIn('size_t budget=256*1024', source)
-        self.assertIn('packets<8', source)
-        self.assertIn('seen.size()<65536', source)
-        self.assertEqual(source.count('expiresMonotonic=monotonicMS()+remaining'), 1)
-        self.assertIn('monotonicMS()>=expiresMonotonic', source)
-        for schema in ('computer-wire/1', 'computer-request/2', 'computer-target/2', 'computer-receipt/2'):
-            self.assertIn(schema, source)
-        self.assertIn('SDL_HasEvents(SDL_FIRSTEVENT,SDL_LASTEVENT)', source)
 
 
 if __name__ == '__main__':

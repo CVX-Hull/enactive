@@ -353,6 +353,7 @@ export async function runHost(options) {
     const totalMs = options.timeoutSeconds * 1000;
     requireThat(Number.isFinite(totalMs) && totalMs <= 2_147_483_647, 'invalid-host-timeout');
     const cleanupBudget = Math.min(1000, totalMs / 4);
+    const workDeadline = started + totalMs - cleanupBudget;
     workTimer = setTimeout(() => stop('host-timeout'), totalMs - cleanupBudget);
     deadlineTimer = setTimeout(() => stop('host-timeout'), totalMs);
     options.signal?.addEventListener('abort', cancellation, {once:true});
@@ -427,6 +428,7 @@ export async function runHost(options) {
             'Host resource status (software-generated at context construction):\n' +
             `Actual provider HTTP attempts charged before this request: ${requests}/${configuration.max_requests}.\n` +
             `Remaining allowance including this request: ${configuration.max_requests - requests}.\n` +
+            `Host decision time remaining at this snapshot: ${Math.max(0,(workDeadline-performance.now())/1000).toFixed(3)} seconds. Custodian time is a separate horizon.\n` +
             'An eligible retry can consume another attempt before the next status update. ' +
             'This is resource bookkeeping, not a human task, gameplay evidence, source-read proof, authority or a latency/quality metric.'}]}];
         } catch {

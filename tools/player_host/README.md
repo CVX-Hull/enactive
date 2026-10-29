@@ -100,9 +100,10 @@ metric. It does not enter canonical agent history, accumulate old notes or chang
 the stable system/tool prefix. The hard cap, deadlines and frozen ending reserves
 still apply; seeing a counter does not establish that a player will honor them.
 
-Original agent messages and complete MCP `tool-result` trace entries retain the
-pixels. `request-start.payload` records the actual projected provider body; context
-projection events expose the count and omissions. This is a declared image-history
+Live agent messages retain the pixels needed by the provider. Original source
+images stay in the mechanical/player stores. Telemetry stores image references
+and the exact `request-start.payload_sha256`, sizes and counts, never the raw
+projected body or private reasoning. Context projection events expose omissions. This is a declared image-history
 window, without text summarization, automatic compaction, replay or permission
 renewal. Qualification must include actual continuation and apparent effects;
 reducing images alone is not a latency pass.

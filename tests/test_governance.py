@@ -30,13 +30,11 @@ class GovernanceTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.registry = json.loads((ROOT / "docs/control-registry.json").read_text())
-        # The checker reads these source forms and schemas; evidence needs only
+        # The checker reads these documents and schemas; evidence needs only
         # its referenced file, not the surrounding repository or media assets.
         names = {
             "docs/charter.md", "docs/engineering.md", "docs/protocol.md",
             "schemas/control-registry.schema.json", "schemas/acceptance-manifest.schema.json",
-            "native/cdda_harness.cpp", "harness/controller.py", "harness/server.py",
-            "harness/__main__.py", "harness/gameplay/evidence.py", "web/app.js",
         }
         for control in self.registry["controls"]:
             for record in (control, control["last_exercise"], control["maintenance_review"]):
@@ -226,13 +224,14 @@ class GovernanceTests(unittest.TestCase):
                     self.assertTrue(warnings)
                     self.assertTrue(all("overdue" in warning for warning in warnings))
 
-    def test_development_reports_warnings_alongside_protocol_failure(self):
-        self.replace("docs/protocol.md", "Protocol version: 7.", "Protocol version: 1.")
+    def test_development_reports_warnings_alongside_mapping_failure(self):
+        self.replace("docs/engineering.md", "Controls: C-PORTABLE, C-RUNTIME, C-NATIVE, C-USABILITY.",
+                     "Controls: C-PORTABLE, C-RUNTIME, C-NATIVE.")
         result, _, errors = self.run_cli(["--development"])
         self.assertEqual(result, 1)
         self.assertIn("Governance warning:", errors)
         self.assertIn("Governance failed:", errors)
-        self.assertIn("protocol drift", errors)
+        self.assertIn("S-UX", errors)
 
     def test_development_still_rejects_stale_map_without_rewriting(self):
         map_path = self.root / "docs/controls.md"
@@ -306,33 +305,7 @@ class GovernanceTests(unittest.TestCase):
         self.assertIn("stale", "\n".join(governance.check_generated(self.root, self.registry)))
         self.assertEqual(path.read_text(), "obsolete map\n")
 
-    def test_protocol_drift_at_each_representation_is_detected(self):
-        self.assertEqual(governance.check_protocol(self.root), [])
-        changes = [
-            ("native/cdda_harness.cpp", 'out.member( "protocol", 7 )', 'out.member( "protocol", 1 )'),
-            ("native/cdda_harness.cpp", 'integer_member( request, "protocol" ) != 7 )', 'integer_member( request, "protocol" ) != 1 )'),
-            ("harness/controller.py", '"protocol": 7', '"protocol": 1'),
-            ("harness/controller.py", '"protocol": 7', '"protocol": "1"'),
-            ("harness/controller.py", 'value["protocol"] != 7', 'value["protocol"] != 1'),
-            ("harness/server.py", '"protocol": 7', '"protocol": 1'),
-            ("harness/__main__.py", 'config["protocol"] != 7', 'config["protocol"] != 1'),
-            ("harness/controller.py", 'request["protocol"] != 7', 'request["protocol"] != 1'),
-            ("web/app.js", 'displayed.protocol !== 7', 'displayed.protocol !== 1'),
-            ("native/cdda_harness.cpp", r'\"protocol\":7', r'\"protocol\":2'),
-            ("native/cdda_harness.cpp", 'integer_member( request, "protocol" ) != 7 ||', 'integer_member( request, "protocol" ) != 2 ||'),
-            ("harness/gameplay/evidence.py", '"protocol": {"type": "integer", "const": 7}', '"protocol": {"type": "integer", "const": 2}'),
-            ("docs/protocol.md", 'Protocol version: 7.', 'Protocol version: 1.'),
-        ]
-        for name, before, after in changes:
-            with self.subTest(name=name, before=before):
-                self.replace(name, before, after)
-                self.assertTrue(governance.check_protocol(self.root))
-                self.replace(name, after, before)
 
-    def test_protocol_refactor_requires_checker_review(self):
-        self.replace("native/cdda_harness.cpp", 'out.member( "protocol", 7 )',
-                     'out.member( "protocol", CURRENT_PROTOCOL )')
-        self.assertIn("representation", "\n".join(governance.check_protocol(self.root)))
 
     def test_manifest_does_not_require_local_media(self):
         # The fixture deliberately has no .runtime tree; this is a fresh-clone contract.

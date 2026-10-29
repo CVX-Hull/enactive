@@ -6,27 +6,31 @@ status: active
 
 # S-PROTOCOL Command and observation authority
 
-Preserve the [protocol](../protocol.md): single writer, explicit session/revision,
-unique identity, expiry, bounded inputs, observation provenance and no blind
-retry of uncertain side effects. Game thread owns game state. Producer and
-consumer versions must agree. A new version or native input change requires
-real-game reconciliation/takeover probes; a mock cannot satisfy that lane.
-Distinguish immutable capture provenance, original freshness/custody and the
-preconditions of the chosen action. Require pixel equality where the decision is
-image-conditioned; incidental rendering changes are not themselves a semantic
-state change. Verify this boundary with real changed images, negative custody/
-clock cases and a coherent lifecycle, not a screen mask or repeated retry loop.
+Preserve the [current protocol](../contracts/computer-control.md): one mechanical
+writer, exact target/session/actor custody, original unique operation IDs and
+finite expiry/resources, immutable capture provenance, bounded basic input and no
+blind retry of uncertain effects. Producer and consumer versions migrate together.
+The game owns application state; the player owns interpretation and all game
+semantics. No menu, item, identity, activity, game-time, success, loop or learned
+predicate may authorize or veto basic input.
 
-Preserve the scope of a failure across input and observation entry points.
-Healthy local game-time exhaustion returns partial work with original effects
-and costs; it must not become a mission-wide ownership failure through a shared
-exception base. Global budget, custody, clock and integrity failures still win.
-Plain observation of an ordinary owned activity uses its own finite capture
-allowance within the original mission/ending budget. An expired execution root
-stays exhausted; it cannot grant input, renew itself or prevent healthy bounded
-observation and explicit closure. Typed polls and inputs retain their root limits.
-C-PORTABLE pairs local exhaustion with simultaneous global/fatal cases;
-C-REVIEW checks that test expectations enforce the authoritative contract.
+Keys and text have no image-age or equality eligibility rule. Pointer input binds
+mechanical geometry to a source actually issued to that actor, verifying original
+bytes and coordinates. Source availability is not proof of interpretation or
+application effect. Qualify changed image/input mechanics with negative geometry,
+custody, integrity and clock cases plus relevant real-game evidence; synthetic
+interoperability does not qualify another game, real-human takeover or Unicode.
+
+Validate complete basic sequences before effects. Retain each original intent and
+ACK before the next input. Partial/unknown delivery, exhausted original authority
+or integrity failure permanently fences new dispatch; original result collection
+never replays input or renews deadlines. A positively identified prepublication
+caller refusal is distinct and leaves healthy ordinary controls available.
+Optional player helpers remain fallible and bypassable under the same primitives.
+Pause/cancellation bypass player, executor and storage waits. A current sealed
+actor can still cancel; retired capabilities cannot stop a successor. Actual owned
+host/MCP group quiescence and final cancellation checks precede new custody under
+original run resources. No stored knowledge or process ID reconstructs authority.
 
 Distinguish transport collection ceilings, original execution/resource deadlines
 and useful-response targets. Freeze supported transport configuration against the

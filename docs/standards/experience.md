@@ -8,7 +8,7 @@ status: active
 
 The operator must see control ownership, pause state, observation freshness and
 uncertain outcomes. Pause's limit on an already-started native activity must be
-visible in user guidance. Do not authorize an action from an old image decode.
+visible in user guidance. Do not let an observer decode create input authority; pointer sources bind geometry, while keys have no image-age/equality gate.
 Verify ordinary and stale/paused/error paths, not just a successful screenshot.
 Qualify apparent responsiveness for the complete player configuration, including
 host context, model work, tools, execution and display. Freeze numerical useful-
@@ -24,7 +24,7 @@ Tool duration, cached-token share and engine ACK speed alone do not establish
 responsive play. [Evaluation](../evaluation.md#latency-budgets-for-interactive-play)
 owns measurement definitions; C-USABILITY is manual, not an automated latency gate.
 Give deciding players a bounded, maintained interface working set, separate from
-engineering instructions and the evidence archive. Use existing role/mission tool
+engineering instructions and the evidence archive. Use existing role/actor tool
 filters to exclude irrelevant schemas; keep required capabilities and authority
 checks separate, and verify the actual frozen profile's sufficiency before play. Routine play must not require
 source-code archaeology, bulk declaration dumps or recursive runtime searches.
@@ -39,7 +39,7 @@ actual player at natural first use; this adds no per-action review gate.
 Treat repeated interface investigation as a tool/context defect; measure actual
 forwarded text and image parts before choosing a remedy. The
 [player guide](../player-guide.md) is the current entry point, not a tactical script
-or a claim of new capabilities. C-REVIEW compares it with tool/phase contracts when
+or a claim of new capabilities. C-REVIEW compares it with current tool contracts when
 those change; C-USABILITY verifies actual independent continuation and cadence.
 
 [Standards index](../engineering.md).
