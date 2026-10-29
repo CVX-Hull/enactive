@@ -72,4 +72,5 @@ Tests and reports preserve original operation/source IDs, deadlines, capacities,
 partial delivery and unknowns. Do not replay uncertain input or reopen a used
 package. Host HTTP attempts, configured estimates, conservative reservations and
 invoices are distinct. Monotonic elapsed time, original capture time and read
-time are distinct. Current production real-game acceptance remains open.
+time are distinct. [Production outcomes](acceptance/2026-10-29-computer-control.md)
+retain actual play and its limits separately from source and protected CI receipts.

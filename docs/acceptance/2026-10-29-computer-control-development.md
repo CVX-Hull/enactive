@@ -278,3 +278,9 @@ including original fault collection, duplicate-ID no replay, later basic input,
 uncertain input and independent Pause. Documentation also removes obsolete explicit
 resume, Movement-profile and live frame-rotation guidance. These repairs do not
 alter prior run outcomes.
+
+One documentation worker bypassed its checkpoint hook after misinterpreting a
+brief limiting tests. The lead corrected that decision and ran the normal
+integrated hook/checks before admitting its source. Future briefs distinguish
+limits on expensive manual checks from the mandatory fast checkpoint hook;
+`--no-verify` remains prohibited, not an accepted workflow exception.

@@ -7,7 +7,8 @@ status: active
 # Native acceptance lane
 
 Native compilation, synthetic fixtures and actual CDDA outcomes are separate
-lanes. Current production real-game acceptance has not occurred. Before a new
+lanes. The [production report](../acceptance/2026-10-29-computer-control.md) records
+scoped actual outcomes and remaining gaps. Before a new
 native/control/usability claim, use a coherent committed checkpoint, frozen
 project-local windowed target and original resources; retain failures.
 

@@ -63,5 +63,6 @@ cannot become resumable handoff. At most two hosts are permitted by `campaign-ru
 fixtures exercise real maintained libraries with synthetic provider/owned children.
 They add configuration, image, settlement, accounting and cleanup evidence without
 paid inference or game launch. [Actual prior host reports](../work.md#decisive-evidence)
-retain failures on earlier source. Production real-game qualification, useful
-cadence, model quality and independent campaign completion remain open.
+retain failures on earlier source. The [production report](../acceptance/2026-10-29-computer-control.md)
+adds bounded actual use, succession and normal lifecycle evidence. Useful cadence,
+general model quality and independent campaign completion remain open.

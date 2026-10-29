@@ -52,8 +52,9 @@ An oversized protected current image group stops before inference.
 
 A terminal host report is `host_completed_unassessed`, not game acceptance. The
 custodian separately samples normal native exit before forced cleanup and reports
-owned absence/authority revocation. The player owns save/success claims. Actual
-production useful play, current program/memory/handoff, normal save/reload/exit and
-whole-player cadence remain unqualified until new scoped evidence exists.
+owned absence/authority revocation. The player owns save/success claims. The
+[production report](../acceptance/2026-10-29-computer-control.md) records bounded
+useful play, program/knowledge/succession and Save/reload/normal ending evidence.
+Whole-player cadence, causal learning and independent survival remain unqualified.
 
 [Operations index](../runbook.md).

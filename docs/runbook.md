@@ -38,8 +38,8 @@ application when needed; Pause cannot undo delivered events or game activities.
 ## Native acceptance lane
 
 [Acceptance procedure](operations/native-acceptance.md): compiled mechanics and
-actual-game outcomes are separately recorded. Current production qualification
-remains open.
+actual-game outcomes are separately recorded. The [production report](acceptance/2026-10-29-computer-control.md)
+owns scoped actual outcomes and remaining qualification gaps.
 
 ## Evidence retention and cleanup
 

@@ -43,5 +43,6 @@ verify absence stays unknown. No unrelated process scan/adoption is supported.
 The [testing guide](../testing.md) routes viewer logic, loopback/composition,
 package/driver and compiled-native tests. Actual browser/native visual inspection
 is separate from parser/hash checks. [Operations](../runbook.md) route launch,
-Pause and cleanup. Current production real-game acceptance remains open; older
+Pause and cleanup. The [production report](../acceptance/2026-10-29-computer-control.md)
+owns actual play and retained browser timing limits; older
 STOPPED/HISTORY or semantic-viewer reports are scoped historical evidence.

@@ -146,6 +146,7 @@ No receipt alone accepts gameplay. Preserve failures and unrun lanes.
 
 Never reopen the selected package, delete markers to retry, replay uncertain input
 or resume after user Pause. Use a fresh coherent admission after owned cleanup.
-Production real-game acceptance of this route remains open.
+The [production report](../acceptance/2026-10-29-computer-control.md) retains scoped
+actual outcomes; each new admission still needs its own evidence and closeout.
 
 [Operations index](../runbook.md).

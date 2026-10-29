@@ -66,6 +66,7 @@ handoff record restores authority after restart. [Migration](../operations/migra
 and [campaign](../../tests/test_campaign_run.py) assertions cover distinct custody,
 composition, proposal, transport and cleanup boundaries. Check actual assertions
 against the changed invariant; fixtures do not qualify real game usefulness or
-save/reload/ending. Production real-game acceptance remains open.
+save/reload/ending. The [production report](../acceptance/2026-10-29-computer-control.md)
+owns those actual outcomes and their limits.
 
 <!-- Retained bookmarks for the coordinated contract migration. -->

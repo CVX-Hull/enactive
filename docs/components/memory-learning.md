@@ -70,5 +70,7 @@ and [composition](../../tests/test_player_application.py) tests cover provenance
 bounds, context closure/omissions, actual image inputs, faults and original-child
 collection. They do not establish learning efficacy. The
 [older organic case](../acceptance/2026-10-28-organic-play.md) is scoped to its earlier
-source; actual use/correction/handoff on this production boundary remains unqualified.
+source. The [production report](../acceptance/2026-10-29-computer-control.md) records
+actual conditional scouting, correction and fresh successor application, with
+failed safety claims and no causal learning-benefit qualification.
 No asynchronous learner service is part of the current route.

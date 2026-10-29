@@ -31,6 +31,7 @@ Keep the native game windowed. The prepared SDL startup hints request reduced
 activation but do not guarantee window order. If needed, return the spectator to
 the front once; never disable native takeover or repeatedly steal focus.
 [Pause/timeout](pause-timeout.md) and [ownership](mission-ownership.md) cover stops.
-Current production real-game acceptance remains open.
+The [production report](../acceptance/2026-10-29-computer-control.md) retains actual
+play and the limits of browser timing evidence.
 
 [Operations index](../runbook.md).

@@ -45,7 +45,7 @@ canonical runtime owner and needed local evidence available throughout cleanup.
 For a lost temporary build, re-extract using setup. For an unreadable archive,
 remove only the named corrupt cache entry after preserving diagnostics.
 
-Fresh source checkouts contain acceptance metadata but not local demo media.
+Fresh source checkouts contain selected public evidence, not complete private run media.
 Maintainers must distinguish unavailable evidence from a newly failed probe.
 
 [Operations index](../runbook.md).

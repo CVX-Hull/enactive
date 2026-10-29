@@ -1,10 +1,17 @@
 ---
 owner: lead
 review_trigger: Production control/player ports, ownership, persisted formats or cutover scope change
-status: proposed
+status: historical
+date: 2026-10-29
+scope: Implemented production cutover brief and retained finite endpoint dispositions
 ---
 
 # Production computer control and player-owned semantics (#176)
+
+Implemented responsibilities and exact rules now live in the [current contract](../contracts/computer-control.md)
+and [architecture](../architecture.md). The [production outcome report](../acceptance/2026-10-29-computer-control.md)
+owns composite evidence and limits; #176 and its linked PR own delivery state.
+This brief retains the selected scope and decisions, not live work instructions.
 
 ## Final ending route after BaseTen refusal
 

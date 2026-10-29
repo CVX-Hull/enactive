@@ -63,6 +63,6 @@ assert ingress, original expiry/capacity, packet backpressure, stop and uncertai
 behavior. Portable doubles cannot replace these or actual CDDA qualification.
 
 The [native procedure](../operations/native-acceptance.md) owns actual control,
-useful play, save/new-child reload and normal exit evidence. Production real-game
-acceptance remains open. Geometry/resize, Unicode/IME, actual-human takeover and
+useful play, save/new-child reload and normal exit evidence. The [production report](../acceptance/2026-10-29-computer-control.md)
+retains scoped actual outcomes. Geometry/resize, Unicode/IME, actual-human takeover and
 second-game qualification remain explicit limits.

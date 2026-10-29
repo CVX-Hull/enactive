@@ -21,20 +21,22 @@ optional player-owned memory/program/context and actor-only handoff.
 playing-system responsibilities. [ADR006](decisions/006-computer-control-boundary.md)
 and the [cutover brief](changes/071-computer-control-cutover.md) retain rationale.
 
-Integrated acceptance of this production cutover remains pending. The
-[development evidence](acceptance/2026-10-29-computer-control-development.md) retains
-actual pointer/text effects, useful stock, image-conditioned scouting, correction
-and fresh succession, alongside provider and player failures. Deliberate
-save/new-child reload, independently assessed normal ending, consolidated review
-and protected PR/main checks remain acceptance work.
+The [production evidence](acceptance/2026-10-29-computer-control.md) consolidates
+actual pointer/text effects, useful stock, image-conditioned scouting, correction,
+fresh succession, deliberate Save/new-child reload and final normal ending.
+The [development record](acceptance/2026-10-29-computer-control-development.md)
+preserves intermediate failures. Protected PR/main receipts and live delivery state
+belong in #176 and its linked PR; this page does not duplicate the tracker.
 The generic Pi host is mandatory; each finite OpenRouter / DeepSeek Flash1017
-medium package pins its provider. The [explicit BaseTen exception](changes/071-computer-control-cutover.md#explicit-endpoint-disposition-after-shared-pool-failures)
-records the current selection, not a quality claim.
+medium package pins its provider. The [recorded endpoint dispositions](acceptance/2026-10-29-computer-control.md#failures-and-endpoint-disposition)
+retain Fireworks/BaseTen failures and the explicit DeepInfra ending continuation,
+not a quality ranking.
 
 ## Decisive evidence
 
 | Evidence | Scope and limitation |
 | --- | --- |
+| [Production computer control](acceptance/2026-10-29-computer-control.md) | Composite authentic useful play/program/knowledge/succession and Save/reload/normal ending; failed admissions remain failed. |
 | [Basic computer-control proof](acceptance/2026-10-29-basic-computer-control.md) | Earlier isolated raw delivery/scouting evidence and failures; not production acceptance or CDDA pointer qualification. |
 | [Organic corrected-program play](acceptance/2026-10-28-organic-play.md) | Useful exact correction by a fresh successor on the earlier semantic system, with normal ending and packaging/quantity limits. |
 | [Endpoint comparison](acceptance/2026-10-28-endpoint-gameplay.md) | Faster serving and normal endings coexist with shallow progress and failed routines; useful cadence remains unqualified. |

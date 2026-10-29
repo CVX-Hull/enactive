@@ -45,9 +45,9 @@ The [architecture](architecture.md) explains ownership, the
 
 | Boundary | Current scope and limit |
 | --- | --- |
-| Mechanical control | Production source implements actual images, basic input, original IDs, independent permanent Pause and owned cleanup. Real-game acceptance of this cutover has not occurred. |
-| Player services | Optional typed claims/Work/corrections, image provenance, bounded JavaScript programs and immutable handoff context are implemented. Their usefulness must be assessed in authentic play. |
-| Actor replacement | A sealed actor and actual host/MCP quiescence can admit one fresh successor under original limits. No game menu, save or identity condition grants authority. |
+| Mechanical control | Actual CDDA key/text/pointer effects, useful stock, deliberate Save/new-child reload and separate normal exit are documented in the [production evidence](acceptance/2026-10-29-computer-control.md). Original uncertain exit ACKs remain unknown. |
+| Player services | Actual image-conditioned scouting, failed/revised programs, source-backed correction and successor application are demonstrated. This is functional utility, not a safe-navigation or learning-benefit guarantee. |
+| Actor replacement | Actual old host/MCP quiescence and immutable context preceded a fresh successor under original limits. No game menu, save or identity condition grants authority. |
 | Earlier CDDA play | [Organic corrected-program play](acceptance/2026-10-28-organic-play.md), [endpoint comparison](acceptance/2026-10-28-endpoint-gameplay.md) and [computer proof](acceptance/2026-10-29-basic-computer-control.md) retain their tested source/route and failures. They do not qualify this production boundary. |
 | Remaining outcomes | Useful apparent cadence, causal learning benefit, independent seven-day survival, second-game control, broader geometry, Unicode/IME and actual-human takeover qualification remain open. |
 

@@ -133,9 +133,10 @@ source/data deployment; mixed readers and replay are unsupported.
 | Host/driver | Actual Pi/MCP fixtures, origin-bound handoff, attempt accounting and exact group quiescence; [player interface](components/player-interface.md#assurance-and-evidence). |
 | Spectator/operation | Actual images, mechanical versus claim labels and independent Pause; [observer](components/observer-operations.md#assurance-and-evidence). |
 
-The [testing guide](testing.md) selects lanes. Current production real-game
-qualification remains open. Source checks and historical play cannot qualify the
-new route, pointer usability, useful cadence, normal save/reload/exit or survival.
+The [testing guide](testing.md) selects lanes. [Production outcome evidence](acceptance/2026-10-29-computer-control.md)
+covers actual basic input, useful stock, conditional scouting, succession and
+Save/new-child reload/normal ending. Source fixtures alone cannot qualify those
+effects; useful cadence, general safe navigation and survival remain separate.
 
 <!-- Retained bookmarks for the coordinated contract migration. -->
 <a id="passive-skill-verification"></a>
