@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 import select
 import shlex
+import signal
 import socket
 import struct
 import subprocess
@@ -52,11 +53,14 @@ class Peer:
         self.results = []
         self.target = None
 
-    def request(self, kind, value=None, *, fragmented=False, identity=None):
+    def request_packet(self, kind, value=None, *, identity=None):
         identity = identity or uuid.uuid4().hex
         value = dict(schema=protocol.SCHEMA, id=identity, session=self.session,
                      kind=kind, expires_ms=int(time.time() * 1000) + 4000, input=value)
-        packet = protocol.encode_packet('request', value)
+        return identity, protocol.encode_packet('request', value)
+
+    def request(self, kind, value=None, *, fragmented=False, identity=None):
+        identity, packet = self.request_packet(kind, value, identity=identity)
         if fragmented:
             for position in range(0, len(packet), 3):
                 self.channel.sendall(packet[position:position + 3])
@@ -216,7 +220,53 @@ def mechanics(options, *, offscreen, terminal):
         (case / 'check.json').write_text(json.dumps(dict(results=peer.results, stopped=peer.target), indent=2) + '\n')
 
 
+def partial_control_checks(options):
+    """Fence before the first stage; this does not qualify mid-held-key timing."""
+    for prefix in ('length', 'json'):
+        for completion in ('pause', 'eof'):
+            case = options.output / ('partial-' + prefix + '-' + completion)
+            with fixture(options, case, lifetime=3500) as (peer, child):
+                peer.observe()
+                # Stop exactly this owned independent fixture, confirm the stop,
+                # and place both packets before the next native callback. This
+                # avoids assuming a sleep can catch a particular event stage.
+                try:
+                    os.kill(child.pid, signal.SIGSTOP)
+                    pid, status = os.waitpid(child.pid, os.WUNTRACED)
+                    assert pid == child.pid and os.WIFSTOPPED(status), 'Fixture stop was not confirmed'
+                    baseline = max((r.get('heartbeat', 0) for r in records(case / 'events.jsonl')), default=0)
+                    original, command = peer.request_packet('input', key('a', ['CTRL']))
+                    pause, packet = peer.request_packet('pause')
+                    split = 2 if prefix == 'length' else len(packet) - 1
+                    peer.channel.sendall(command + packet[:split])
+                finally:
+                    # Resume even when setup/assertion fails: fixture cleanup must
+                    # be able to terminate/reap the exact child without a stop.
+                    if child.poll() is None:
+                        os.kill(child.pid, signal.SIGCONT)
+                wait_for(lambda: max((r.get('heartbeat', 0) for r in records(case / 'events.jsonl')), default=0) >= baseline + 30)
+                entries = records(case / 'events.jsonl')
+                assert not any(r['type'] in (768, 769, 771) for r in entries), 'Partial control packet permitted command events'
+                assert child.poll() is None, 'Partial control packet blocked normal fixture execution'
+                if completion == 'pause':
+                    peer.channel.sendall(packet[split:])
+                else:
+                    peer.channel.shutdown(socket.SHUT_WR)
+                result, _ = peer.collect(original)
+                assert result['disposition'] == 'rejected' and result['emitted_events'] == 0, result
+                if completion == 'pause':
+                    ack, _ = peer.collect(pause)
+                    assert ack['disposition'] == 'delivered', ack
+                while not peer.target or not peer.target['paused']:
+                    peer.packet()
+                assert not any(r['type'] in (768, 769, 771) for r in records(case / 'events.jsonl'))
+                (case / 'check.json').write_text(json.dumps(dict(results=peer.results,
+                    stopped=peer.target, prefix=prefix, completion=completion,
+                    scope='Partial control bytes fence before first command stage; not mid-held-key timing'), indent=2) + '\n')
+
+
 def channel_checks(options):
+    partial_control_checks(options)
     case = options.output / 'backpressure'
     with fixture(options, case, noise=True, lifetime=4000) as (peer, child):
         peer.observe()

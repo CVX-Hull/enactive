@@ -174,7 +174,10 @@ struct Bridge {
         while(budget && packets<8 && !channelFailed) {
             Uint8 buffer[16384]; size_t size=std::min({budget,rxNeed-rx.size(),sizeof buffer});
             ssize_t n=recv(channel,buffer,size,0);
-            if(n<0 && (errno==EAGAIN || errno==EWOULDBLOCK)) { receiveDrained=true; return; }
+            if(n<0 && (errno==EAGAIN || errno==EWOULDBLOCK)) {
+                // An empty kernel queue does not resolve a partial control packet.
+                receiveDrained=rx.empty(); return;
+            }
             if(n<0 && errno==EINTR) { --budget; continue; }
             if(n<=0) { channelFault(n==0?@"Native channel EOF":@"Native channel receive failed"); return; }
             budget-=(size_t)n; rx.insert(rx.end(),buffer,buffer+n);
