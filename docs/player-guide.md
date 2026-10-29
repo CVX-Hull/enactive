@@ -12,6 +12,30 @@ Use actual images; the harness supplies no game phase, item, turn, inventory,
 identity or success predicate. Do not search engineering history to reconstruct
 routine context. Your explicit memory/context tools are optional aids.
 
+## Play from observed effects
+
+Keep intention, UI selection/preview, and an established game effect distinct.
+The returned screen is evidence to interpret, not a confirmation of your intent.
+A completed computer operation reports a mechanical result; it does not certify
+that the game accepted a choice or completed your task.
+
+When later work depends on an earlier effect, use the available view to check that
+dependency. If it contradicts your assumption, revise the active task state before
+continuing dependent work. A highlighted selection, projected quantity or canceled
+transaction is not a completed change. Keep a quantity's scope explicit: nearby,
+selected and carried stock are different claims. Prior narration and memory remain
+fallible when current evidence disagrees. Judge the current screen and focus from
+the returned view; inputs that made sense before a UI transition may mean something
+else afterward. Resolve the current choice and focused response before accepting
+a prompt.
+
+Verification should answer a concrete unresolved question. Existing returned
+pixels may suffice; do not add an observation, memory write or narration after
+every key. Batch predictable controls when useful, and reconsider dependent steps
+when their intermediate assumptions become unclear. An unverified game effect is
+different from transport status unknown: it is your interpretation, not a new
+harness stop rule or permission to replay uncertain input.
+
 ## Calls and returned evidence
 
 | Tool | Use and consequence |
@@ -48,7 +72,7 @@ from that issued source. Inspect the image and choose the target yourself.
 Keys/text need no source, image-age/equality or game-phase condition.
 
 Delivered means SDL event handoff, not application consumption or useful effect.
-Inspect what happened. On partial/unknown delivery, retain the original ID and
+On partial/unknown delivery, retain the original ID and
 collect it; new input stays stopped. Never replay an uncertain action or try to
 restore authority by changing memory, source, actor or session.
 
