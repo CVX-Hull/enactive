@@ -13,7 +13,7 @@ export const INPUT_LIMIT_BYTES = 1_048_576;
 const AMBIENT_PROVIDER_SETTINGS = ['OPENAI_LOG', 'OPENAI_CUSTOM_HEADERS', 'OPENAI_ORG_ID', 'OPENAI_PROJECT_ID'];
 const MCP_LIMIT_BYTES = 32 * 1_048_576;
 const PROVIDER_ERROR_LIMIT_BYTES = 16_384;
-const MAX_RETRY_DELAY_MS = 5000;
+const MAX_RETRY_DELAY_MS = 25000;
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const positive = value => typeof value === 'number' && Number.isFinite(value) && value > 0;
 const text = value => typeof value === 'string' && value.length > 0;
@@ -222,8 +222,11 @@ function diagnosticId(value, secret) {
 function refusalDiagnostic(body, secret) {
   try {
     const error = JSON.parse(body)?.error;
-    return {error_type:diagnosticId(error?.type, secret), error_code:diagnosticId(error?.code, secret)};
-  } catch { return {error_type:null, error_code:null}; }
+    return {error_type:diagnosticId(error?.metadata?.error_type ?? error?.type, secret),
+      error_code:diagnosticId(error?.code, secret),
+      provider_error_code:diagnosticId(error?.metadata?.provider_code, secret),
+      limit_source:diagnosticId(error?.metadata?.limit_source, secret)};
+  } catch { return {error_type:null, error_code:null, provider_error_code:null, limit_source:null}; }
 }
 
 // Preserve the server's retry instruction without logging arbitrary headers or
@@ -242,8 +245,9 @@ function retryDiagnostic(headers) {
 function retryableRefusal(body) {
   const error = JSON.parse(body)?.error;
   if (!object(error)) return false;
-  const kind = [error.type, error.code].filter(text).join(' ');
-  const details = [error.type, error.code, error.message].filter(text).join(' ');
+  const kind = [error.type, error.code, error.metadata?.error_type, error.metadata?.provider_code,
+    error.metadata?.limit_source].filter(text).join(' ');
+  const details = [kind, error.message].filter(text).join(' ');
   // Pi's positive classifier is deliberately broad. Explicit non-transient
   // kinds must win even when their message also mentions a rate limit or 429.
   if (/(?:auth|api[_ -]?key|permission|invalid|malformed|context|quota|billing|budget|payment|credit)/i.test(kind)

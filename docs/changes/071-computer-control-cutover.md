@@ -127,3 +127,32 @@ C-NATIVE actual compiled interoperability remain, with independent migration rev
 and required native/gameplay qualification. Structural governance keeps metadata,
 references and map checks; it no longer claims protocol conformance from literals.
 Retain the parser's historical exercise records without relabelling them current.
+
+## Closed first production attempt and bounded provider adjustment
+
+The coherent source checkpoint77cd124 passed strict full portable validation
+(213tests/327subtests), separately from native fixtures and organic acceptance.
+Production `cutover176-organic001` used the installed unpatched game and qualified
+bridge but failed on its first HTTP429 before any gameplay tool input. The actual
+response requested20s; the frozen host permitted at most5s, so no retry was sent.
+All deciding-host/native groups closed; native SIGTERM zero was forced cleanup,
+not normal ending. Its one attempt and unknown usage remain charged, with
+$693.010432 consumed conservative cumulative reservation across2376 attempts.
+
+The lead's finite rescope retains the selected endpoint and production/gameplay
+core: admit at most one eligible provider-only429 retry with a server delay≤25s
+under the same original request/host timers and HTTP ceiling. Every attempt counts,
+the serialized request is identical, and cancellation or insufficient resources
+prevents another fetch. Longer delay, second429, quota/auth/validation, other status,
+transport or partial-stream errors stay terminal. No automatic actor/native restart,
+tool replay, endpoint fallback or original-run renewal is introduced. Use a fresh
+prospectively frozen package after reviewed source and owned closeout.
+
+[OpenRouter's current errors contract](https://openrouter.ai/docs/api_reference/errors-and-debugging)
+says to honor Retry-After and locates normalized provider error types in metadata.
+[Its limits contract](https://openrouter.ai/docs/api_reference/limits) distinguishes
+rate, key/budget and credit sources. Checked2026-10-29. Record only bounded diagnostic
+identifiers, not raw provider text or financial/account details. The closed attempt
+did not retain those fields, so its precise limiting source remains unknown; later
+diagnostics cannot retroactively identify it. This correction follows the observed
+20s delay, not a claim that the provider is now qualified.

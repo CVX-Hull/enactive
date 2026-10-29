@@ -173,14 +173,16 @@ quota/billing limits, malformed or unrecognized errors stay terminal. A provider
 `x-should-retry:false` also suppresses recovery. The second429, other HTTP statuses,
 transport failures and partial-stream failures are terminal. The provider stream's
 own retries remain disabled, so there is no nested retry loop or assistant-turn
-restart. Error text is neither traced nor sent back as model context.
+restart. Error text is neither traced nor sent back as model context. Bounded diagnostic
+identifiers include OpenRouter metadata error_type, provider_code and limit_source
+when present; raw metadata, remedy text and provider bodies are excluded.
 
 `max_requests` counts each actual provider HTTP fetch attempt, including the retry.
 The host checks and charges immediately before fetching; a refused extra attempt
 has no fabricated request/completion. Both attempts send the same serialized
 context under one original request timer, combined abort signal and host deadline.
 Classification, backoff and response reading consume that timer. Pi rejects a
-provider-requested retry delay over5seconds; its bounded default backoff applies
+provider-requested retry delay over25seconds; its bounded default backoff applies
 when no valid delay is supplied. Cancellation interrupts backoff and bounded error
 reading. The first eligible refusal records unknown usage, without a zero-price
 assumption; another attempt requires spare capacity before any backoff.

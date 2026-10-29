@@ -224,6 +224,7 @@ def analyze_trace(path: Path) -> dict:
                     row["http_status"] = event.get("status")
                 elif kind == "provider-refusal":
                     row["error_type"], row["error_code"] = event.get("error_type"), event.get("error_code")
+                    row["limit_source"], row["provider_error_code"] = event.get("limit_source"), event.get("provider_error_code")
                 elif kind == "response-complete":
                     row["stop_reason"] = event.get("stop_reason")
                     row["usage"] = event.get("usage") if event.get("usage_available") is True else None

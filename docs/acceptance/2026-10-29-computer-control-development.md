@@ -95,3 +95,32 @@ does not measure physical paint, attention or useful-goal latency. Full protecte
 PR/main, current-game useful play, actual actor replacement, same-character
 Save/new-child reload, normal ending and browser layout review remain pending at
 this development checkpoint.
+
+## First clean production admission
+
+Source `77cd12458ce70d0847e0e18a4ab70db18f357f5f` passed the unmodified checkpoint
+hook and strict full host profile:213tests,327subtests and the viewer lane. Earlier
+full attempts failed: one ran with sandbox defaults that denied loopback/browser/
+process-group access and exposed an obsolete governance fixture; the next host
+route found a dynamic time-note assertion and signal-zero presence behavior. These
+were repaired, without weakening original process absence or timeout requirements.
+The sequence diagram's clipped decorative heading was removed while retaining its
+accessible title. Four representative current diagrams received visual inspection.
+
+The fresh installed game SHA256 was
+`0a5649cfb19e7d36d08580f7c88defb2a7c48c94f7b1d2368c051e7ca4e866b8`. Native
+build inputs and output hashes still matched the qualified second build exactly.
+Preparation and current launch now require the same canonical shared lock.
+
+`cutover176-organic001` froze up to2hosts/360attempts with prospective reservation
+$872.9952256 within the standing$1200 ceiling. Its first actual request returned
+HTTP429 and requested20000ms retry, exceeding that source's5000ms cap. It stopped
+without game-tool input in3.716598s: one charged attempt, unknown usage, all host
+and native groups absent, native SIGTERM zero **not** a normal ending. Remaining
+359attempts retired. Conservative cumulative reservation is$693.010432 across2376
+attempts; known configured estimates remain$21.159546798 with unknowns separate.
+No useful effect, current-game pointer/input or Save/reload is accepted by this run.
+
+[The bounded next decision](../changes/071-computer-control-cutover.md#closed-first-production-attempt-and-bounded-provider-adjustment)
+records the evidence-driven provider-only delay adjustment and unchanged scope.
+The original failed trace is not relabelled or reopened.

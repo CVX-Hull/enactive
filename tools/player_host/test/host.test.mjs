@@ -700,6 +700,8 @@ test('quota, authorization and malformed 429 errors remain terminal despite retr
   for (const error of [
     {code:'insufficient_quota',message:'Rate limited'},
     {type:'quota_exceeded',message:'Rate limited'},
+    {code:429,message:'Rate limited',metadata:{error_type:'quota_exceeded'}},
+    {code:429,message:'Rate limit exceeded',metadata:{limit_source:'openrouter_credits'}},
     {type:'authentication_error',code:'invalid_api_key',message:'Rate limit exceeded'},
     {type:'auth_error',message:'Rate limit exceeded'},
     {type:'invalid_request_error',code:'invalid_parameter',message:'HTTP 429'},
@@ -716,14 +718,14 @@ test('quota, authorization and malformed 429 errors remain terminal despite retr
   });
 });
 test('retry suppression header and excessive server delay do not send another attempt',async t=>{
-  for (const headers of [{'x-should-retry':'false'},{'retry-after-ms':'6000'}]) await t.test(JSON.stringify(headers),async sub=>{
+  for (const headers of [{'x-should-retry':'false'},{'retry-after-ms':'26000'}]) await t.test(JSON.stringify(headers),async sub=>{
     const {result,payloads,events}=await scenario(sub,[rateLimit(undefined,headers),reply()]);
     assert.equal(result.reason,'provider-error');assert.equal(result.requests,1);assert.equal(payloads.length,1);
     assert.equal(events.filter(e=>e.type==='response-complete').length,1);
     const observed=events.find(e=>e.type==='response-headers');
-    assert.equal(observed.requested_retry_delay_ms,headers['retry-after-ms'] === '6000' ? 6000 : 0);
+    assert.equal(observed.requested_retry_delay_ms,headers['retry-after-ms'] === '26000' ? 26000 : 0);
     assert.equal(observed.retry_suppressed,headers['x-should-retry'] === 'false');
-    assert.equal(observed.max_retry_delay_ms,5000);
+    assert.equal(observed.max_retry_delay_ms,25000);
   });
 });
 test('malformed and oversized refusal bodies cannot authorize a retry',async t=>{
@@ -732,13 +734,40 @@ test('malformed and oversized refusal bodies cannot authorize a retry',async t=>
     assert.equal(result.reason,'provider-error');assert.equal(result.requests,1);assert.equal(payloads.length,1);
   });
 });
+test('observed twenty-second server delay is honored once under original timers',async t=>{
+  t.mock.timers.enable({apis:['setTimeout']});
+  const configuration=route();configuration.request_timeout_seconds=30;
+  let eligible=false,second=false;
+  const waitFor=async predicate=>{
+    const until=Date.now()+5000;
+    while(!predicate()&&Date.now()<until)await realDelay(10);
+    assert.ok(predicate(),'actual fixture stage must precede controlled clock advance');
+  };
+  const {result,payloads,events}=await scenario(t,[rateLimit({code:429,message:'Rate limit exceeded',
+    metadata:{error_type:'rate_limit_exceeded',provider_code:'rate_limited',limit_source:'upstream_provider_shared_pool',
+      raw:'fixture-key private body must never be logged'}},{'retry-after-ms':'20000'}),()=>{second=true;return reply();}],{
+    configuration,timeoutSeconds:60,
+    onEvent:e=>{if(e.type==='provider-retry')eligible=true;},
+    synchronize:async()=>{
+      await waitFor(()=>eligible);t.mock.timers.tick(19999);await realDelay(20);
+      assert.equal(second,false,'never retry before the requested delay');
+      t.mock.timers.tick(1);await waitFor(()=>second);
+    },
+  });
+  assert.equal(result.ok,true);assert.equal(result.requests,2);
+  assert.equal(payloads.length,2);assert.deepEqual(payloads[0],payloads[1]);
+  const refusal=events.find(e=>e.type==='provider-refusal');
+  assert.equal(refusal.error_type,'rate_limit_exceeded');assert.equal(refusal.provider_error_code,'rate_limited');
+  assert.equal(refusal.limit_source,'upstream_provider_shared_pool');
+  assert.ok(!JSON.stringify(events).includes('private body'));
+});
 test('request timeout and cancellation interrupt backoff without a second attempt',async t=>{
   for (const cancel of [false,true]) await t.test(String(cancel),async sub=>{
     const configuration=route();configuration.request_timeout_seconds=.1;
     const controller=new AbortController();
     const {result,payloads,events}=await scenario(sub,[()=>{
       if(cancel) setTimeout(()=>controller.abort(),20);
-      return rateLimit(undefined,{'retry-after-ms':'1000'});
+      return rateLimit(undefined,{'retry-after-ms':'20000'});
     },reply()],{configuration,signal:controller.signal});
     assert.equal(result.reason,cancel?'cancelled':'request-timeout');
     const progress=events.find(event=>event.type==='abort').response_progress;
