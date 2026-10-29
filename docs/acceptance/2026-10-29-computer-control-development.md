@@ -124,3 +124,18 @@ No useful effect, current-game pointer/input or Save/reload is accepted by this 
 [The bounded next decision](../changes/071-computer-control-cutover.md#closed-first-production-attempt-and-bounded-provider-adjustment)
 records the evidence-driven provider-only delay adjustment and unchanged scope.
 The original failed trace is not relabelled or reopened.
+
+`cutover176-organic002` at40ce7e89d618004c13f068c4d4221b894fbdb152 reached actual
+player tools and visible Alex gameplay, then failed on HTTP request7: upstream
+shared-pool429 requested29000ms, over that source's25000ms cap. Elapsed24.101609s;
+all host/native groups closed, native SIGTERM zero was forced cleanup. Seven
+attempts charged,353unused retired, configured estimate$0.007790562 and one
+missing-usage attempt. Cumulative conservative reservation$696.5198848 across2383
+attempts; known configured estimates$21.167337360, historical unknowns separate.
+Useful effects, programs/memory/handoff and Save/normal ending remain unaccepted
+pending independent image assessment. The passive viewer displayed real pixels
+and mechanical facts at ordinary browser width; no game input was sent by the lead.
+
+The25s choice overfitted the first20s response; the next correction adopts the
+pinned SDK helper's existing60s maximum under unchanged original timers/one retry.
+This explicit rescope does not relabel either failure or qualify cadence.

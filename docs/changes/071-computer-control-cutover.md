@@ -140,7 +140,7 @@ not normal ending. Its one attempt and unknown usage remain charged, with
 $693.010432 consumed conservative cumulative reservation across2376 attempts.
 
 The lead's finite rescope retains the selected endpoint and production/gameplay
-core: admit at most one eligible provider-only429 retry with a server delay≤25s
+core: admit at most one eligible provider-only429 retry with a server delay≤60s (the pinned SDK helper's maintained default)
 under the same original request/host timers and HTTP ceiling. Every attempt counts,
 the serialized request is identical, and cancellation or insufficient resources
 prevents another fetch. Longer delay, second429, quota/auth/validation, other status,
@@ -156,3 +156,13 @@ identifiers, not raw provider text or financial/account details. The closed atte
 did not retain those fields, so its precise limiting source remains unknown; later
 diagnostics cannot retroactively identify it. This correction follows the observed
 20s delay, not a claim that the provider is now qualified.
+
+The first bounded adjustment to25s was too narrowly fitted to a single response.
+Production organic002 at40ce7e8 reached actual gameplay but failed after7HTTP
+attempts when the shared upstream pool requested29s. It had24.101609s elapsed,
+no accepted useful objective, Save or normal exit, and all owned groups closed.
+The next correction adopts the helper's existing60s default rather than continuing
+per-header retuning. Original request240s/host/campaign deadlines and one retry
+still bound the wait; this is development continuity, not cadence qualification.
+No further delay-cap escalation is planned; a persistent failure requires a
+recorded backend disposition rather than repeated source tuning.

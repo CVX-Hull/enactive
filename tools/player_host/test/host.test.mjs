@@ -718,14 +718,14 @@ test('quota, authorization and malformed 429 errors remain terminal despite retr
   });
 });
 test('retry suppression header and excessive server delay do not send another attempt',async t=>{
-  for (const headers of [{'x-should-retry':'false'},{'retry-after-ms':'26000'}]) await t.test(JSON.stringify(headers),async sub=>{
+  for (const headers of [{'x-should-retry':'false'},{'retry-after-ms':'61000'}]) await t.test(JSON.stringify(headers),async sub=>{
     const {result,payloads,events}=await scenario(sub,[rateLimit(undefined,headers),reply()]);
     assert.equal(result.reason,'provider-error');assert.equal(result.requests,1);assert.equal(payloads.length,1);
     assert.equal(events.filter(e=>e.type==='response-complete').length,1);
     const observed=events.find(e=>e.type==='response-headers');
-    assert.equal(observed.requested_retry_delay_ms,headers['retry-after-ms'] === '26000' ? 26000 : 0);
+    assert.equal(observed.requested_retry_delay_ms,headers['retry-after-ms'] === '61000' ? 61000 : 0);
     assert.equal(observed.retry_suppressed,headers['x-should-retry'] === 'false');
-    assert.equal(observed.max_retry_delay_ms,25000);
+    assert.equal(observed.max_retry_delay_ms,60000);
   });
 });
 test('malformed and oversized refusal bodies cannot authorize a retry',async t=>{

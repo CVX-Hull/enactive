@@ -13,7 +13,9 @@ export const INPUT_LIMIT_BYTES = 1_048_576;
 const AMBIENT_PROVIDER_SETTINGS = ['OPENAI_LOG', 'OPENAI_CUSTOM_HEADERS', 'OPENAI_ORG_ID', 'OPENAI_PROJECT_ID'];
 const MCP_LIMIT_BYTES = 32 * 1_048_576;
 const PROVIDER_ERROR_LIMIT_BYTES = 16_384;
-const MAX_RETRY_DELAY_MS = 25000;
+// Adopt the pinned SDK helper's maintained default; original request/host
+// deadlines and one retry remain the outer bounds.
+const MAX_RETRY_DELAY_MS = 60000;
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const positive = value => typeof value === 'number' && Number.isFinite(value) && value > 0;
 const text = value => typeof value === 'string' && value.length > 0;

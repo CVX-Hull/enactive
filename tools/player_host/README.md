@@ -182,7 +182,7 @@ The host checks and charges immediately before fetching; a refused extra attempt
 has no fabricated request/completion. Both attempts send the same serialized
 context under one original request timer, combined abort signal and host deadline.
 Classification, backoff and response reading consume that timer. Pi rejects a
-provider-requested retry delay over25seconds; its bounded default backoff applies
+provider-requested retry delay over60seconds (the pinned helper's maintained default); its bounded default backoff applies
 when no valid delay is supplied. Cancellation interrupts backoff and bounded error
 reading. The first eligible refusal records unknown usage, without a zero-price
 assumption; another attempt requires spare capacity before any backoff.
