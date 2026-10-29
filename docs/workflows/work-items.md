@@ -45,7 +45,8 @@ or accelerator iterations resolve a named decision or enable a specified later
 outcome, with evidence and a stop/revisit condition. A negative investigation may
 complete its declared research goal; it cannot satisfy failed feature acceptance.
 Use a bounded investigation when uncertainty prevents shaping a credible core;
-discovery can continue alongside independent understood delivery work.
+discovery may share the selected iteration with understood delivery work within
+its WIP limits.
 
 Choose an effort appetite and a reviewable horizon that include integration,
 rework, review and the scarce validation lane. If the core cannot fit, rescope or
@@ -63,15 +64,24 @@ under C-REVIEW, retaining the [two-writer/shared-runtime limits](../standards/ag
 | Backlog | Candidate with a problem and intended outcome; no execution commitment |
 | Ready | Scope, owner, interfaces/dependencies, acceptance and required validation lanes are clear; needed decisions resolved |
 | In progress | Development, targeted checks and real development runs against the brief; record start date |
-| Review | Cohesive diff and executed checks available; independent review appropriate to risk is requested |
-| Validation | Review findings resolved; exact candidate undergoes formal portable/native/graphical acceptance |
+| Review | Exact cohesive candidate and executed checks are available; a named independent review is requested and has capacity |
+| Validation | Review findings resolved; exact candidate has a specific next formal acceptance action and allocated capacity/resources |
 | Done | Lead verifies acceptance, evidence and documentation; record finish date and close as completed |
 
-Blocked is a flag plus reason, owner and next action/revisit condition; keep the
-current Status so the stalled stage remains visible. Use issue dependencies for
-blocked-by relationships. A failed check stays recorded. Rework returns to the
-appropriate stage with a reason. Closed duplicates/cancellations record disposition
-and any replacement, remain outside Done and are excluded from delivery counts.
+Aggregate outcomes use the `outcome` label and remain Backlog while their children
+carry execution. They do not inherit a child's stage and are excluded from the
+execution view and leaf WIP count. Direction shows these open outcomes separately;
+Backlog shows unselected delivery work. A parent's checklist is not another job.
+
+Blocked current work keeps its stage, reason, accountable owner and next action
+only while its allocation is retained. Explicitly parking or pausing work releases
+that slot: return it to Backlog, record the prior stage and resumption trigger in
+the issue, and preserve its original Started/history. Do not restart the cycle-time
+clock or present decommitment as completion. Unexercised acceptance debt without
+an allocated candidate/action is Backlog, not indefinite Validation. A failed
+check stays recorded; active rework returns to its actual stage with a reason.
+Closed duplicates/cancellations record disposition and any replacement, remain
+outside Done and are excluded from delivery counts.
 Do not use automatic close/merge-to-Done rules: a merge can precede validation.
 Before merging a PR whose issue completion depends on post-merge validation,
 inspect `gh pr view <number> --json closingIssuesReferences` and require an empty
@@ -117,10 +127,24 @@ reviewers receive fresh context. The lead alone integrates and serializes the
 game, saves, bridge, ports, builds, dependency environments and caches. Workers
 do not run native demonstrations. Source isolation does not isolate shared runtime.
 
+Keep one selected delivery iteration, at most two allocated implementation leaves
+within it, and one coherent formal validation candidate. Review/Validation consume
+that capacity; adding agents does not create another integration/runtime lane.
+At each selection, meaningful discussion, integration or resumption checkpoint,
+inspect the **complete live Project**, reconcile every In progress/Review/Validation
+item against its actual next action and allocation, and record counts plus the
+dispositions in the owning Issue/PR. Park, cancel/supersede or finish stale work
+before pulling another delivery outcome. A saved policy or field update alone is
+not evidence that this reconciliation occurred. Existing C-REVIEW owns this check;
+no parallel tracker or periodic approval ceremony is required.
+
 Pull new work only when implementation, review and validation capacity exist.
-Work counts as in progress from In progress until Done or explicit cancellation,
-including Review, Validation and blocked time. Clear growing queues before starting more implementation; reduce concurrency if review or integration cannot keep up. Do not
-increase the initial worker limit without measured evidence and a standards change.
+Allocated WIP includes In progress, Review, Validation and retained blocked work.
+Elapsed delivery/cycle history still includes paused, queued and blocked time after
+first start; parking removes the current allocation, not the historical delay.
+Clear growing queues before starting more implementation; reduce concurrency if
+review or integration cannot keep up. Do not increase the initial worker limit
+without measured evidence and a standards change.
 After two unsuccessful repair attempts, or drift beyond owned paths, the worker
 stops and hands evidence to the lead, who takes the work back and replans.
 

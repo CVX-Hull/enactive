@@ -84,6 +84,14 @@ launch is a child-process hint, not proof OS focus cannot change.
 The [charter](charter.md) requires applicability across CDDA-class games. Current
 qualification is CDDA on this Mac, not a delivered universal plugin interface.
 
+The owner-selected [computer-control direction](decisions/006-computer-control-boundary.md)
+requires the harness to expose only basic computer observation/control. Game
+meaning and optional helpers belong entirely to the playing system. The table
+and coupling inventory below describe **current implementation**, which has not
+yet made that coordinated cutover; they are not approval to extend semantic
+input gates. A game menu or failed player routine should not itself revoke input
+custody in the target design.
+
 | Shared design responsibility | Game integration responsibility |
 | --- | --- |
 | Planning, ordinary exploration and interpretation | Visible observation and ordinary input in the actual engine/UI |

@@ -50,6 +50,12 @@ other decisive results and retained failures; GitHub owns current execution.
 Source repairs never retrospectively qualify failed runs. This remains short of
 an accepted independent seven-day campaign.
 
+The selected [next architecture](decisions/006-computer-control-boundary.md) makes
+the harness a basic computer-control substrate and places all game semantics in
+the playing system. Current menu/activity/identity authority remains coupled to
+CDDA; the cutover and another real game are not delivered. Faster serving and
+handler repairs do not establish that generality.
+
 The [registered lifecycle](components/mission-execution.md#lifecycle-and-change-review)
 can keep an initial post-Load menu provisional. Explicit bounded dismissal must
 reach actual normal play before identity inspection/adoption; a menu or reconciled

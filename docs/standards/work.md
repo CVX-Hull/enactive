@@ -30,7 +30,12 @@ The existing Issue/PR is sufficient for a contained change; a consequential chan
 links its brief. This impact record is not a second plan or clause-by-clause matrix.
 Issues own scope, acceptance, accountable owner, blockers and exceptions; Project
 Status owns execution stage: Backlog, Ready, In progress, Review, Validation, Done.
-Blocked work retains its stage and records the condition, owner and next action.
+Blocked work retains its stage only while its execution allocation is retained;
+explicitly parked work returns to Backlog with prior stage, owner and resumption
+trigger, preserving original dates/history. Aggregate outcomes do not inherit
+child execution stages. Apply the [live WIP reconciliation](../workflows/work-items.md#ready-brief-and-execution-capacity)
+at selection/discussion/integration/resumption checkpoints; Review and Validation
+require an exact candidate, next action and capacity, not merely outstanding debt.
 Deferred work needs a reason and revisit trigger. Cancelled or duplicate issues
 are closed as not planned and excluded from accepted delivery counts.
 At meaningful discussion, research, review and delivery checkpoints, reconcile
