@@ -25,9 +25,9 @@ save/load and outcome claims. Optional helpers remain fallible and bypassable.
 
 Use [ADR006](../decisions/006-computer-control-boundary.md) and the
 [reviewed caller/storage/deletion map](070-computer-control-proof.md#reviewed-production-handoff).
-Current native7/mission11 is still the supported product until this coordinated
-replacement lands. Reuse the one #181 SDL candidate rather than build another
-backend or ship the experiment beside production.
+The integrated branch has replaced native7/mission11 and removed its executable
+callers; accepted main remains the earlier deployment until this coordinated
+replacement lands. The #181 SDL candidate has become the production adapter.
 
 ## First checkpoint: actual input before broad migration
 

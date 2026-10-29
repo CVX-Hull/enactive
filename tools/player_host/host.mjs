@@ -225,7 +225,7 @@ function refusalDiagnostic(body, secret) {
   try {
     const error = JSON.parse(body)?.error;
     return {error_type:diagnosticId(error?.metadata?.error_type ?? error?.type, secret),
-      error_code:diagnosticId(error?.code, secret),
+      error_code:diagnosticId(Number.isSafeInteger(error?.code) ? String(error.code) : error?.code, secret),
       provider_error_code:diagnosticId(error?.metadata?.provider_code, secret),
       limit_source:diagnosticId(error?.metadata?.limit_source, secret)};
   } catch { return {error_type:null, error_code:null, provider_error_code:null, limit_source:null}; }
@@ -513,9 +513,12 @@ export async function runHost(options) {
               controller.enqueue(chunk);
             }}));
             response = new Response(body ?? null, {status:response.status, statusText:response.statusText, headers:response.headers});
-            if (response.status !== 429 || attempts !== 1 || response.headers.get('x-should-retry') === 'false') return response;
+            if (response.status < 400) return response;
             const errorBody = await refusalBody(response, requestSignal);
-            emit('provider-refusal', {request_id:attemptId, status:429, ...refusalDiagnostic(errorBody, apiKey)});
+            emit('provider-refusal', {request_id:attemptId, status:response.status, ...refusalDiagnostic(errorBody, apiKey)});
+            if (response.status !== 429 || attempts !== 1 || response.headers.get('x-should-retry') === 'false') {
+              return new Response(errorBody, {status:response.status, headers:response.headers});
+            }
             if (!retryableRefusal(errorBody)) return new Response(errorBody, {status:response.status, headers:response.headers});
             emit('response-complete', {request_id:attemptId, model:model.id, provider:model.provider, stop_reason:'error', http_status:429, usage_available:false, usage:null, cost_source:null, response_progress:progressSnapshot()});
             requestInFlight = false;

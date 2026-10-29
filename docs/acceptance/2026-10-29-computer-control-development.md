@@ -199,3 +199,52 @@ and relocation record. Future unconfigured browser downloads are avoided. A prio
 dependency compile also omitted the project-cache environment once; global cache
 use cannot be excluded. Subsequent install used explicit project caches; no global
 install/profile change or unowned-cache cleanup is claimed.
+
+
+## Organic005 and the four-hour checkpoint
+
+Source846ac056c2a0eec5ca3e19a3959278f6deac0a2f ran1079.548843s with103HTTP
+attempts. Actor1 completed a clean canonical handoff after45attempts; its host/MCP
+closed before actor2 began. Actor2 ended on request58 with HTTP400. The trace
+retains status and281response bytes but no normalized refusal identifiers for
+that status, so the validation cause is unknown. No retry or fallback followed.
+All owned groups closed; nativeSIGTERMzero was forced cleanup, not normal exit.
+257unused attempts retired. Cumulative conservative reservation$757.5175168 across
+2558attempts; known configured estimates$22.699736398, one new missing usage and
+historical unknowns separate. Reservations are not invoices.
+
+Independent actor1 review inspected all46full images. A fresh child visibly loaded
+Alex and retained the earlier lantern/four empty batteries/radio at8.7lb. Those are
+starting possessions in this run. Loaded clock08:01:40 differs from the prior last
+08:01:42, so exact final time/position persistence is unproved. Actual pickup546
+logs five small-box/protein-ration pickups and FEMA pamphlet, weight11.2lb; this is
+new food stock, not verified servings/calories or consumption. Later nearby-ground
+boxes and a pocket-fit refusal do not establish carried aggregate quantities.
+
+A real program first failed before input on omitted key modifiers. Revision2
+consumed actual cropped96x90RGB, selected brightness/signature branches and sent
+10child inputs in4.026s, producing six north/two east displacement and nine game
+seconds. It ended at its limit rather than done; its gradual-darkness guard failed.
+Revision3 changed that guard and was handed off unrun by actor1. This is useful
+image-conditioned scouting with an actual failure/revision, not safety, causal
+learning benefit or useful-cadence qualification. A correction supersedes the
+prior unsupported deadlock decision; responsiveness of a new process does not
+prove the earlier process was never stalled. Actor2 application and final effects
+remain under independent assessment. No deliberate Save or normal native ending
+is accepted from this incomplete run.
+
+The roughly four-hour checkpoint establishes current key/text/pointer effects,
+real useful stock, image-conditioned local execution, source-backed correction,
+and actual clean actor succession. The mechanical boundary needs no game-phase
+or menu eligibility. Integrated ending and successor utility remain acceptance
+gaps; full protected PR/actual-main and consolidated review are still pending.
+The24-hour appetite and original integrated outcome remain. The next bounded
+continuation prioritizes visible retained state, unfinished useful work and normal
+Save plus separate exit. Reuse unchanged native evidence; do not repeat broad
+regression per admission or relabel HTTP400 as a diagnosed context error.
+
+The host diagnostic repair reuses its existing bounded/cancellable refusal reader
+for every HTTPerror, preserving only normalized allowlisted identifiers and safe
+numeric error codes. Raw text remains excluded; only the original eligible429
+can retry. The first focused invocation omitted ENACTIVE_TEST_PYTHON and failed
+before fixture execution; the correctly configured focused run passed34tests.

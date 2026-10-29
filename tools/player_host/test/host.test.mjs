@@ -618,6 +618,17 @@ test('HTTP refusal status is retained before SDK rejection without raw error or 
   assert.equal(completed.usage_available,false);assert.equal(completed.usage,null);
   assert.ok(!JSON.stringify({result,events}).includes('fixture-key'));
 });
+test('nonretryable HTTP400 retains bounded normalized identifiers and never retries or logs raw detail',async t=>{
+  const {result,events,payloads}=await scenario(t,[new Response(JSON.stringify({error:{code:400,
+    message:'fixture-key private validation detail',metadata:{error_type:'invalid_request_error',
+      provider_code:'invalid_parameter',limit_source:'fixture-key'}}}),{status:400})]);
+  assert.equal(result.reason,'provider-error');assert.equal(result.requests,1);assert.equal(payloads.length,1);
+  const refusal=events.find(e=>e.type==='provider-refusal');
+  assert.equal(refusal.status,400);assert.equal(refusal.error_code,'400');
+  assert.equal(refusal.error_type,'invalid_request_error');assert.equal(refusal.provider_error_code,'invalid_parameter');
+  assert.equal(refusal.limit_source,null);assert.ok(!JSON.stringify({result,events}).includes('fixture-key'));
+  assert.equal(events.some(e=>e.type==='provider-retry'),false);
+});
 
 test('inspected refusal and provider identities retain bounded IDs without raw text or credentials',async t=>{
   const {result,events}=await scenario(t,[rateLimit({type:'invalid_request_error',code:'engine_overloaded',message:'fixture-key private detail'})]);
