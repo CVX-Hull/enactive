@@ -191,7 +191,7 @@ class DevToolTests(unittest.TestCase):
                 self.assertEqual(governance_commands, [[sys.executable, "tools/governance.py"] +
                                                        (["--development"] if profile == "fast" else [])])
                 self.assertIn([sys.executable, "-m", "ruff", "check", "--config", "pyproject.toml",
-                               "harness", "tools", "tests"], executed)
+                               "harness", "tools", "tests", "experiments"], executed)
                 self.assertIn([str(Path(sys.executable).parent / "lint-imports"), "--config",
                                "pyproject.toml", "--no-cache", "--no-logo"], executed)
                 self.assertIn(["/fixture/node", "--check", "--input-type=module"], executed)

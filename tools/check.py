@@ -166,12 +166,12 @@ def _check(argv: list[str] | None = None) -> int:
     import_linter = Path(sys.executable).parent / "lint-imports"
     if not import_linter.is_file():
         raise ValueError(f"Import Linter is missing beside {sys.executable}; use the project .venv with requirements-dev.lock installed (see docs/setup.md)")
-    for directory in ("harness", "tools", "tests"):
+    for directory in ("harness", "tools", "tests", "experiments"):
         for path in sorted((ROOT / directory).rglob("*.py")):
             compile(path.read_bytes(), str(path), "exec")
     print("Python syntax: passed", flush=True)
     run([sys.executable, "-m", "ruff", "check", "--config", "pyproject.toml",
-         "harness", "tools", "tests"])
+         "harness", "tools", "tests", "experiments"])
     run([str(import_linter), "--config", "pyproject.toml", "--no-cache", "--no-logo"])
     node = shutil.which("node")
     if node is None:

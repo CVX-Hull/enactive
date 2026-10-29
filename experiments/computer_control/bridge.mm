@@ -179,7 +179,19 @@ struct Bridge {
             if([mods containsObject:@"SHIFT"]) selected.push_back({SDLK_LSHIFT,KMOD_LSHIFT});
             SDL_Keymod m=KMOD_NONE;
             for(auto item:selected) { m=(SDL_Keymod)(m|item.second); stages.push_back(key(item.first,true,m)); }
-            stages.push_back(key(code,true,m)); stages.push_back(key(code,false,m));
+            stages.push_back(key(code,true,m));
+            // SDL emits text in addition to a printable key while text input is
+            // active. This is framework state, not a game/menu classification.
+            if([in[@"key"] length]==1 && SDL_IsTextInputActive() &&
+                    !(m & (KMOD_CTRL|KMOD_ALT))) {
+                SDL_Event text={}; text.type=SDL_TEXTINPUT; text.text.windowID=windowID;
+                NSString *value=in[@"key"];
+                if(m & KMOD_SHIFT) value=[value uppercaseString];
+                NSData *utf8=[value dataUsingEncoding:NSUTF8StringEncoding];
+                require(utf8.length>0 && utf8.length<=31,"Key text outside bound");
+                memcpy(text.text.text,utf8.bytes,utf8.length); stages.push_back(text);
+            }
+            stages.push_back(key(code,false,m));
             for(auto it=selected.rbegin();it!=selected.rend();++it) { m=(SDL_Keymod)(m&~it->second); stages.push_back(key(it->first,false,m)); }
         } else if([type isEqual:@"text"]) {
             require(closed(in,@[@"type",@"text"]) && string(in[@"text"]),"Invalid text fields"); NSString *text=in[@"text"]; NSData *utf8=[text dataUsingEncoding:NSUTF8StringEncoding];

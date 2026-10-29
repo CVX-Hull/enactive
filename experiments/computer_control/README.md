@@ -1,0 +1,42 @@
+# Isolated computer-control proof
+
+This is #181's bounded development candidate, governed by
+[the change brief](../../docs/changes/070-computer-control-proof.md) and
+[ADR006](../../docs/decisions/006-computer-control-boundary.md). It is not the
+product CLI or a second supported backend. All game meaning belongs to the player.
+
+From the repository root, with the already prepared project-local SDL frameworks:
+
+```sh
+.venv/bin/python -m experiments.computer_control.build
+.venv/bin/python -m unittest tests.test_computer_control tests.test_devtools
+.venv/bin/python -m experiments.computer_control.native_check --output .runtime/NEW-fixture --via-shell
+```
+
+The native check launches an independent hidden SDL fixture, not CDDA or an LLM.
+Its unit-scale resize and simulated takeover cannot qualify real-human input,
+non-unit pointer transforms or another game. The build manifest retains the Git
+checkpoint, dirty status, source/output hashes and actual compiler arguments.
+
+A real development run requires a fresh project-local directory containing the
+frozen `computer-proof/1` manifest and its exact route, MCP, player context/prompt
+and derived launch script. The custodian refuses dirty or different source and
+changed files/binaries; it never reopens a started directory. It owns the exact
+child and existing game lock. Supply only the selected provider credential to
+the custodian's environment, then invoke:
+
+```sh
+.venv/bin/python -m experiments.computer_control.run --run .runtime/NEW-proof
+```
+
+The four player tools expose actual pixels, basic input, original-result collection
+and permanent stop. The passive localhost viewer can end dispatch independently.
+Receipts describe delivery, never game success. Cancellation, takeover or uncertain
+delivery cannot be repaired by replay/rearm. A new run needs a new frozen package
+after the old actor and owned process are closed. Retain failures and normal-exit
+versus forced-cleanup distinctions. No provider key reaches the game or MCP child.
+
+The proof deliberately lacks the production mission ledger, programs/memory
+succession and full spectator controls. #176 must integrate or retire every current
+caller and remove this experiment as part of one supported contract. Historical
+native7/mission11 evidence does not become authority for this candidate.
