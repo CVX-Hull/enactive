@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import fcntl
 import json
 import os
 import shlex
@@ -22,12 +23,24 @@ def check(path: Path, *, via_shell: bool = False, offscreen: bool = False, termi
     (path / 'operations').mkdir()
     resources = ROOT / '.runtime/Cataclysm.app/Contents/Resources'
     session = uuid.uuid4().hex
+    lock_path = path / 'user.lock'
+    parent_lock = lock_path.open('a')
+    fcntl.flock(parent_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    def exclusion_held(expected):
+        with lock_path.open('a') as candidate:
+            try:
+                fcntl.flock(candidate, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                assert expected, 'Shared exclusion survived owned child exit'
+            else:
+                assert not expected, 'Shared exclusion lost while child lives'
     env = dict(PATH=os.environ['PATH'], LANG='en_US.UTF-8',
         DYLD_FRAMEWORK_PATH=str(resources), DYLD_LIBRARY_PATH=str(resources),
         DYLD_INSERT_LIBRARIES=str(ROOT / '.runtime/computer-control-build/bridge.dylib'),
         ENACTIVE_COMPUTER_DIR=str(path / 'bridge'), ENACTIVE_COMPUTER_SESSION=session,
+        ENACTIVE_COMPUTER_LOCK_FD=str(parent_lock.fileno()), ENACTIVE_COMPUTER_LOCK_FILE=str(lock_path),
         SDL_MAC_BACKGROUND_APP='1', SDL_WINDOW_NO_ACTIVATION_WHEN_SHOWN='1')
-    command = [str(ROOT / '.runtime/computer-control-build/fixture'), str(path / 'events.jsonl'), '--hidden']
+    command = [str(ROOT / '.runtime/computer-control-build/fixture'), str(path / 'events.jsonl'), '--hidden', '--check-fd', str(parent_lock.fileno())]
     if offscreen:
         command.append('--offscreen')
     if via_shell:
@@ -40,7 +53,8 @@ def check(path: Path, *, via_shell: bool = False, offscreen: bool = False, termi
     client = None
     results = []
     with (path / 'console.log').open('w') as log:
-        child = subprocess.Popen(command, env=env, stdout=log, stderr=log, start_new_session=True)
+        child = subprocess.Popen(command, env=env, stdout=log, stderr=log, start_new_session=True,
+            pass_fds=(parent_lock.fileno(),))
         try:
             atomic(path / 'control.json', dict(schema='computer-run/1', session=session, pid=child.pid,
                 deadline_monotonic=time.monotonic() + 60, max_inputs=32, max_requests=32,
@@ -53,6 +67,8 @@ def check(path: Path, *, via_shell: bool = False, offscreen: bool = False, termi
                     raise RuntimeError('Fixture did not establish its target within startup allowance')
                 time.sleep(.02)
             client = ComputerClient(path)
+            parent_lock.close()
+            exclusion_held(True)
             for attempt in range(3):
                 value, png = client.execute(observe=True)
                 results.append(value)
@@ -87,6 +103,7 @@ def check(path: Path, *, via_shell: bool = False, offscreen: bool = False, termi
             results.append(value)
             print(terminal, value['status'], value.get('target'), flush=True)
             assert value['target']['paused'] and value['status'] == 'unknown', value
+            exclusion_held(True)
             if terminal == 'target-loss':
                 assert value['target']['takeover_generation'] == 0
                 assert 'target' in value['target']['error'].lower() or 'renderer' in value['target']['error'].lower()
@@ -131,14 +148,20 @@ def check(path: Path, *, via_shell: bool = False, offscreen: bool = False, termi
             if offscreen:
                 assert all(r['offscreen'] for r in clicks), clicks
             assert initial['width'] == 640 and initial['window_width'] == 640
-            atomic(path / 'check.json', dict(passed=True, scope='Actual SDL fixture; hidden window, unit geometry; synthetic unowned events, not real-human/game qualification',
-                results=results, event_count=len(records), via_shell=via_shell, offscreen=offscreen, terminal=terminal))
+            report = dict(passed=True, scope='Actual SDL fixture; hidden window, unit geometry; synthetic unowned events, not real-human/game qualification',
+                results=results, event_count=len(records), via_shell=via_shell, offscreen=offscreen, terminal=terminal,
+                exclusion_retained_after_parent_close=True)
         finally:
-            if client is not None:
-                client.close()
-            child.terminate()
-            child.wait(timeout=5)
-            print('owned fixture closed', child.returncode, flush=True)
+            try:
+                if client is not None:
+                    client.close()
+            finally:
+                child.terminate()
+                child.wait(timeout=5)
+                parent_lock.close()
+                exclusion_held(False)
+                print('owned fixture closed', child.returncode, flush=True)
+    atomic(path / 'check.json', report)
 
 
 if __name__ == '__main__':

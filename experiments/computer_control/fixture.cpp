@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <fcntl.h>
 #include <string>
 
 static std::string quoted(const char *value) {
@@ -16,15 +17,17 @@ static std::string quoted(const char *value) {
 }
 int main(int argc,char **argv) {
     if(argc<2) { fprintf(stderr,"usage: fixture EVENT_LOG.jsonl [--hidden] [--offscreen]\n"); return 2; }
-    bool hidden=false,offscreen=false;
-    for(int i=2;i<argc;++i) { if(strcmp(argv[i],"--hidden")==0) hidden=true; else if(strcmp(argv[i],"--offscreen")==0) offscreen=true; else return 2; }
+    bool hidden=false,offscreen=false; int checkFD=-1;
+    for(int i=2;i<argc;++i) { if(strcmp(argv[i],"--hidden")==0) hidden=true; else if(strcmp(argv[i],"--offscreen")==0) offscreen=true; else if(strcmp(argv[i],"--check-fd")==0 && i+1<argc) checkFD=atoi(argv[++i]); else return 2; }
     FILE *log=fopen(argv[1],"wx"); if(!log) { perror("event log"); return 2; }
+    if(checkFD>=0) { int flags=fcntl(checkFD,F_GETFD); if(flags<0 || !(flags&FD_CLOEXEC)) { fprintf(stderr,"Inherited FD lacks close-on-exec before SDL startup\n"); fclose(log); return 3; } }
     if(SDL_Init(SDL_INIT_VIDEO|SDL_INIT_EVENTS)!=0) { fprintf(stderr,"SDL_Init: %s\n",SDL_GetError()); fclose(log); return 1; }
     SDL_Window *window=SDL_CreateWindow("Mechanical SDL fixture",SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,640,400,SDL_WINDOW_RESIZABLE|SDL_WINDOW_ALLOW_HIGHDPI|(hidden?SDL_WINDOW_HIDDEN:0));
     SDL_Renderer *renderer=window?SDL_CreateRenderer(window,-1,SDL_RENDERER_SOFTWARE):nullptr;
     if(!renderer) { fprintf(stderr,"SDL fixture: %s\n",SDL_GetError()); if(window) SDL_DestroyWindow(window); SDL_Quit(); fclose(log); return 1; }
     SDL_Texture *target=offscreen?SDL_CreateTexture(renderer,SDL_PIXELFORMAT_RGBA8888,SDL_TEXTUREACCESS_TARGET,123,77):nullptr;
     if(offscreen && !target) { fprintf(stderr,"SDL texture: %s\n",SDL_GetError()); return 1; }
+    fprintf(log,"{\"type\":0,\"fixture_ready\":true,\"pre_sdl_cloexec_checked\":%s}\n",checkFD>=0?"true":"false"); fflush(log);
     SDL_StartTextInput(); bool running=true; unsigned count=0,drain=0; int markerX=100,markerY=100; Uint8 red=40,green=100,blue=180; std::string text;
     while(running) {
         ++drain; SDL_Event e;

@@ -41,7 +41,7 @@ def preflight(run: Path) -> tuple[dict[str, Any], dict[str, Any]]:
     if run.is_symlink() or ROOT not in run.parents:
         raise ControlError('Proof must be project-local')
     profile = read_json(run / 'manifest.json')
-    if profile['schema'] != 'computer-proof/1':
+    if profile['schema'] != 'computer-proof/2':
         raise ControlError('Unsupported proof manifest')
     if not isinstance(profile['session'], str) or re.fullmatch('[0-9a-f]{32}', profile['session']) is None:
         raise ControlError('Invalid fresh session')
@@ -58,6 +58,14 @@ def preflight(run: Path) -> tuple[dict[str, Any], dict[str, Any]]:
     for name, sha in profile['files'].items():
         if digest(run / name) != sha:
             raise ControlError('Frozen input changed')
+    initial = profile['initial_files']
+    if type(initial) is not dict or not 1 <= len(initial) <= 16:
+        raise ControlError('Freeze bounded initial target configuration files')
+    for name, sha in initial.items():
+        path = Path(name)
+        if (not path.is_absolute() or path != path.resolve() or ROOT not in path.parents or not path.is_file() or path.is_symlink()
+                or not isinstance(sha, str) or re.fullmatch('[0-9a-f]{64}', sha) is None or digest(path) != sha):
+            raise ControlError('Initial target configuration changed')
     if (run / 'launch.sh').read_text() != prepared_launch():
         raise ControlError('Frozen wrapper is not the isolated prepared launch')
     for name in ('native', 'library'):
@@ -104,7 +112,8 @@ def run_proof(run: Path) -> dict[str, Any]:
     session = profile['session']
     start = time.monotonic()
     deadline = start + profile['wall_seconds']
-    runtime_lock = (ROOT / '.runtime/bridge/game.lock').open('a')
+    lock_path = ROOT / '.runtime/bridge/game.lock'
+    runtime_lock = lock_path.open('a')
     fcntl.flock(runtime_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     run.joinpath('bridge').mkdir(mode=0o700)
     run.joinpath('operations').mkdir(mode=0o700)
@@ -121,11 +130,13 @@ def run_proof(run: Path) -> dict[str, Any]:
                   native_absence_verified=False, deciding_host_quiescent=False, signals=interrupted)
     try:
         game_env = dict(clean, ENACTIVE_COMPUTER_LIBRARY=profile['library']['path'],
-            ENACTIVE_COMPUTER_DIR=str(run / 'bridge'), ENACTIVE_COMPUTER_SESSION=session)
+            ENACTIVE_COMPUTER_DIR=str(run / 'bridge'), ENACTIVE_COMPUTER_SESSION=session,
+            ENACTIVE_COMPUTER_LOCK_FD=str(runtime_lock.fileno()), ENACTIVE_COMPUTER_LOCK_FILE=str(lock_path))
         # The frozen derived prepared wrapper explicitly unsets the old bridge.
         with (run / 'game-console.log').open('x') as game_log:
             game = subprocess.Popen(['/bin/sh', str(run / 'launch.sh')], cwd=ROOT, env=game_env,
-                stdin=subprocess.DEVNULL, stdout=game_log, stderr=game_log, start_new_session=True)
+                stdin=subprocess.DEVNULL, stdout=game_log, stderr=game_log, start_new_session=True,
+                pass_fds=(runtime_lock.fileno(),))
         atomic(run / 'control.json', dict(schema='computer-run/1', session=session, pid=game.pid,
             deadline_monotonic=deadline, **profile['limits']))
         launch_deadline = min(deadline, start + 60)

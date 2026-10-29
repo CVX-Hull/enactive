@@ -9,6 +9,8 @@
 #include <algorithm>
 #include <cerrno>
 #include <cmath>
+#include <climits>
+#include <cstdlib>
 #include <cstring>
 #include <cstdint>
 #include <mutex>
@@ -21,6 +23,24 @@
 struct InterposeEntry { const void *substitute; const void *original; };
 
 namespace {
+struct SharedExclusion { int fd=-1; dev_t device=0; ino_t inode=0; };
+SharedExclusion &exclusion() { static SharedExclusion value; return value; }
+// Run before application main, not lazily at its first SDL callback. The parent
+// already holds this exact open-file-description lock. Close references only:
+// LOCK_UN on a forked reference would also unlock the parent's shared lock.
+__attribute__((constructor)) void inheritExclusion() noexcept {
+    const char *value=getenv("ENACTIVE_COMPUTER_LOCK_FD"), *path=getenv("ENACTIVE_COMPUTER_LOCK_FILE");
+    if(!value || !path || !*value) return;
+    char *end=nullptr; errno=0; long fd=strtol(value,&end,10);
+    if(errno || !end || *end || fd<3 || fd>INT_MAX) return;
+    struct stat held={}, named={};
+    if(fstat((int)fd,&held)!=0 || lstat(path,&named)!=0 || !S_ISREG(held.st_mode) ||
+            !S_ISREG(named.st_mode) || held.st_uid!=getuid() || named.st_uid!=getuid() ||
+            held.st_dev!=named.st_dev || held.st_ino!=named.st_ino) return;
+    int flags=fcntl((int)fd,F_GETFD);
+    if(flags<0 || flock((int)fd,LOCK_EX|LOCK_NB)!=0 || fcntl((int)fd,F_SETFD,flags|FD_CLOEXEC)!=0) return;
+    exclusion().fd=(int)fd; exclusion().device=held.st_dev; exclusion().inode=held.st_ino;
+}
 constexpr size_t MaxFrame = 64 * 1024 * 1024;
 constexpr long long MaxInteger = 9007199254740991LL;
 struct Fault : std::runtime_error { using std::runtime_error::runtime_error; };
@@ -98,6 +118,7 @@ struct Bridge {
         if(initialized) return; initialized=true;
         const char *path=getenv("ENACTIVE_COMPUTER_DIR"), *token=getenv("ENACTIVE_COMPUTER_SESSION");
         if(!path || !token || !*token || getenv("CDDA_HARNESS_DIR")) return;
+        require(exclusion().fd>=3,"Valid inherited shared exclusion required");
         dir=[NSString stringWithUTF8String:path]; session=[NSString stringWithUTF8String:token];
         require(dir && session && session.length<=128,"Invalid native environment");
         struct stat st; require(lstat(path,&st)==0 && S_ISDIR(st.st_mode) && (st.st_mode&0777)==0700 && st.st_uid==getuid(),"IPC directory must be owned0700");
@@ -113,6 +134,9 @@ struct Bridge {
     }
     void fence() {
         bool wasPaused=paused;
+        struct stat held={};
+        if(exclusion().fd<3 || fstat(exclusion().fd,&held)!=0 || held.st_dev!=exclusion().device ||
+                held.st_ino!=exclusion().inode) pause(@"Shared target exclusion lost");
         if(exists(join(dir,@"pause"))) pause(@"External Pause");
         const char *token=getenv("ENACTIVE_COMPUTER_SESSION");
         if(!token || ![session isEqualToString:[NSString stringWithUTF8String:token]] || getenv("CDDA_HARNESS_DIR")) pause(@"Session environment changed");

@@ -262,8 +262,14 @@ class ComputerControlTests(unittest.TestCase):
         game, host = Child(111, None), Child(222, 0)
         def launch(*args, **kwargs):
             if not (case / 'bridge/state.json').exists():
+                self.assertEqual(len(kwargs['pass_fds']), 1)
+                self.assertEqual(kwargs['env']['ENACTIVE_COMPUTER_LOCK_FD'], str(kwargs['pass_fds'][0]))
+                self.assertEqual(kwargs['env']['ENACTIVE_COMPUTER_LOCK_FILE'], str(self.run / '.runtime/bridge/game.lock'))
+                self.assertNotIn('OPENROUTER_API_KEY', kwargs['env'])
                 atomic(case / 'bridge/state.json', self.target | dict(pid=111))
                 return game
+            self.assertNotIn('pass_fds', kwargs)
+            self.assertNotIn('ENACTIVE_COMPUTER_LOCK_FD', kwargs['env'])
             return host
         original_touch, original_atomic = Path.touch, custodian.atomic
         def fail_pause(path, *args, **kwargs):
@@ -285,6 +291,17 @@ class ComputerControlTests(unittest.TestCase):
         self.assertTrue(result['input_authority_revoked'])
         self.assertEqual(game.returncode, 0)
         self.assertEqual(len(game.signals), 1)
+
+    def test_old_launch_profile_rejected_before_any_process_or_source_access(self):
+        case = self.run / 'old-profile'
+        case.mkdir()
+        atomic(case / 'manifest.json', dict(schema='computer-proof/1'))
+        with patch.object(custodian, 'ROOT', self.run.resolve()), patch.object(custodian.subprocess, 'Popen') as launch, \
+                patch.object(custodian.subprocess, 'check_output') as source:
+            with self.assertRaisesRegex(ControlError, 'Unsupported proof manifest'):
+                custodian.preflight(case)
+        launch.assert_not_called()
+        source.assert_not_called()
 
     def test_correctable_local_mcp_argument_refusal_preserves_basic_control(self):
         async def exercise():

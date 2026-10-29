@@ -12,6 +12,7 @@ From the repository root, with the already prepared project-local SDL frameworks
 .venv/bin/python -m unittest tests.test_computer_control tests.test_devtools
 .venv/bin/python -m experiments.computer_control.native_check --output .runtime/NEW-fixture --via-shell
 .venv/bin/python -m experiments.computer_control.native_check --output .runtime/NEW-loss-fixture --via-shell --offscreen --terminal target-loss
+.venv/bin/python -m experiments.computer_control.native_lock_check --output .runtime/NEW-invalid-lock-fixtures
 ```
 
 The native check launches an independent hidden SDL fixture, not CDDA or an LLM.
@@ -24,10 +25,15 @@ Retain selected native/library bytes by hash before overwriting build outputs;
 frozen manifests reference exact artifacts, not whatever a build cache later holds.
 
 A real development run requires a fresh project-local directory containing the
-frozen `computer-proof/1` manifest and its exact route, MCP, player context/prompt
+frozen `computer-proof/2` manifest and its exact route, MCP, player context/prompt
 and derived launch script. The custodian refuses dirty or different source and
 changed files/binaries; it never reopens a started directory. It owns the exact
-child and existing game lock. Supply only the selected provider credential to
+child and existing game lock.
+Initial target configuration files are pinned in `initial_files` and checked before
+launch; a source commit alone does not freeze application-owned configuration.
+The owned native child retains the exact inherited
+shared lock after its parent's copy closes, with close-on-exec set at library startup.
+Old proof/1 launch profiles are rejected. Supply only the selected provider credential to
 the custodian's environment, then invoke:
 
 ```sh
