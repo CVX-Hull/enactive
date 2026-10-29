@@ -21,11 +21,15 @@ optional player-owned memory/program/context and actor-only handoff.
 playing-system responsibilities. [ADR006](decisions/006-computer-control-boundary.md)
 and the [cutover brief](changes/071-computer-control-cutover.md) retain rationale.
 
-Real-game acceptance of this production cutover has not happened. Current source
-and fixtures do not qualify pointer usability, authentic useful play,
-save/new-child reload, normal exit, memory/program benefit or fresh succession.
-The generic Pi host is mandatory; OpenRouter / Fireworks US / DeepSeek Flash1017
-medium is the selected finite route, not a quality claim.
+Integrated acceptance of this production cutover remains pending. The
+[development evidence](acceptance/2026-10-29-computer-control-development.md) retains
+actual pointer/text effects, useful stock, image-conditioned scouting, correction
+and fresh succession, alongside provider and player failures. Deliberate
+save/new-child reload, independently assessed normal ending, consolidated review
+and protected PR/main checks remain acceptance work.
+The generic Pi host is mandatory; each finite OpenRouter / DeepSeek Flash1017
+medium package pins its provider. The [explicit BaseTen exception](changes/071-computer-control-cutover.md#explicit-endpoint-disposition-after-shared-pool-failures)
+records the current selection, not a quality claim.
 
 ## Decisive evidence
 

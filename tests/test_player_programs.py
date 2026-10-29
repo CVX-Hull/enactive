@@ -105,8 +105,9 @@ def test_yield_fault_unknown_and_original_time_leave_no_helper_authority(tmp_pat
             run = ProgramRunner(repo, port).run(p['id'], 'a', {}, {}, {'crop': None, 'size': [1, 1]}, max_seconds=20)
         assert run['status'] == 'limit' and len(port.calls) == 1
         for kwargs in ({'max_steps': 65}, {'max_seconds': 21}, {'max_seconds': float('nan')}):
-            with pytest.raises(PlayerError):
-                ProgramRunner(repo, Port()).run(p['id'], 'a', {}, {}, {'crop': None, 'size': [1, 1]}, **kwargs)
+            port = Port()
+            result = ProgramRunner(repo, port).run(p['id'], 'a', {}, {}, {'crop': None, 'size': [1, 1]}, **kwargs)
+            assert result['status'] == 'fault' and port.calls == []
 
 
 def test_runner_retains_uncertain_input_without_replay(tmp_path):

@@ -248,3 +248,33 @@ for every HTTPerror, preserving only normalized allowlisted identifiers and safe
 numeric error codes. Raw text remains excluded; only the original eligible429
 can retry. The first focused invocation omitted ENACTIVE_TEST_PYTHON and failed
 before fixture execution; the correctly configured focused run passed34tests.
+
+
+### Successor assessment and integrated helper repair
+
+Independent review of all 60 actor-2 PNGs and original joins confirms five carried
+boxed rations at source2588, followed by four at6497 after one was deliberately
+left on the ground. Revision3 ran as5253b10db2f243dc8dc32d312f4ce5bb, moved four
+tiles north in1.855s and yielded on its actual RGB threshold. The last view2818
+already says very dark: conditional scouting and fallback are demonstrated, but
+preventing entry into darkness is not. Actual correction/source reads and useful
+program reuse establish functional handoff application, not causal learning benefit.
+
+A matchbook action visibly lights fire at4983 and consumes one match (20 to19).
+Final6502 recovers the original bottle with two clean water still frozen. No new
+water, thawing, drinking, food consumption, useful illumination or warmth gain is
+proved. A case-sensitive fire-entry confirmation intercepted several later keys;
+Escape closed it. No visible HP loss/pain was found. A claim that fire burned out
+is unsupported; the final frame still displays flame. All253native receipts were
+delivered. Actor2 wrote no new knowledge/program records before its HTTP400 ending.
+
+Final integration review found a separate helper-isolation defect: an unknown
+program ID could persist service intent then escape setup validation, causing the
+HTTP adapter to classify it as uncertain and permanently stop healthy basic input,
+despite zero native calls. The runner now retains initialization faults as terminal
+helper results under their original IDs. Actual input uncertainty still stops.
+Seventeen focused SQLite/V8/HTTP/client tests and an independent rerun passed,
+including original fault collection, duplicate-ID no replay, later basic input,
+uncertain input and independent Pause. Documentation also removes obsolete explicit
+resume, Movement-profile and live frame-rotation guidance. These repairs do not
+alter prior run outcomes.

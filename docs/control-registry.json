@@ -226,7 +226,7 @@
         "docs/acceptance/2026-10-29-computer-control-development.md"
       ],
       "failure_response": "Preserve failure output, fix the cause and rerun before claiming portable acceptance.",
-      "limitations": "Fast mode omits behavioral tests, viewer regressions and rendered diagrams. Editorial omits runtime/viewer tests; movement/viewer cover explicit consumers and boundary smoke rather than full regression or browser layout; main-smoke does not rerun full regression and depends on qualifying linked PR coverage. Reduced scopes are not full portable passes. Focused selection and prose truth require judgment. Synthetic fixtures do not execute CDDA or prove host schema/image loading, review-free gameplay, fresh context, cross-game support or useful cadence. Link checks omit anchors, external availability and raw HTML; Ruff is a selected diagnostic set, not full typing/formatting. Missing tools or denied loopback/browser access fail the affected lane. A started/cancelled check is not a pass.",
+      "limitations": "Fast mode omits behavioral tests, viewer regressions and rendered diagrams. Editorial omits runtime/viewer tests; viewer covers explicit consumers and boundary smoke rather than full regression or browser layout; main-smoke does not rerun full regression and depends on qualifying linked PR coverage. Reduced scopes are not full portable passes. Focused selection and prose truth require judgment. Synthetic fixtures do not execute CDDA or prove host schema/image loading, review-free gameplay, fresh context, cross-game support or useful cadence. Link checks validate current Markdown fragments, but omit historical-origin fragment targets, external availability and raw HTML; Ruff is a selected diagnostic set, not full typing/formatting. Missing tools or denied loopback/browser access fail the affected lane. A started/cancelled check is not a pass.",
       "enforcement": "Opt-in project-local pre-commit hook runs --fast. The always-present Actions controller selects a strict profile for PRs explicitly targeting main and pushes to main; no workflow path filters or ignored failures. Logs/Actions summary state profile/reason and qualifying PR coverage for main-smoke. Covered documentation and explicit viewer boundaries receive their declared strict scopes; cross-cutting, validation and unknown PR changes receive full. Changed validation machinery/context also forces full on main. GitHub concurrency cancels superseded PR runs only. Main retains strict Actions-app15368 controller requirement under ruleset25346774. Hooks remain bypassable. Hosted activation evidence must be recorded in the issue/PR after actual execution; this definition is not a hosted pass.",
       "status": "active",
       "rationale": null,
@@ -299,7 +299,7 @@
         "docs/contracts/computer-control.md",
         "docs/acceptance/2026-10-29-computer-control-development.md"
       ],
-      "failure_response": "Reject or freeze further dispatch; expose error and reconcile by observation before explicit resume.",
+      "failure_response": "Reject or permanently freeze further dispatch as applicable; collect original results, preserve uncertainty and perform owned cleanup. Any later play requires a fresh admission, never restored authority.",
       "limitations": "Runtime fixtures establish their stated boundaries, not useful game effects, save success, real-human takeover or general portability. No restart authority revival. Unknown original delivery remains unknown even when a later ACK is collected.",
       "enforcement": "Implemented at runtime; regression execution is C-PORTABLE. Source references alone establish no behavioral pass.",
       "status": "active",
@@ -605,7 +605,7 @@
         "docs/documentation.md"
       ],
       "failure_response": "Fix missing/unknown mappings, unsafe references or metadata; regenerate stale map with --write and inspect the result.",
-      "limitations": "Structure, recorded dates and local file existence are checked, not prose truth, artifact hashes outside diagram receipts, media availability, actual review/execution, owner performance or historical lifecycle authorization. Due checks run only when invoked; fragment targets are not validated.",
+      "limitations": "Structure, recorded dates and local file existence are checked, not prose truth, artifact hashes outside diagram receipts, media availability, actual review/execution, owner performance or historical lifecycle authorization. Due checks run only when invoked. Current Markdown fragment targets are checked by the document lane; historical-origin fragments and external availability are not checked.",
       "enforcement": "Structural, reference, chronology, ownership and map errors fail in every profile and fast mode. Calendar-only expiry warns in --fast and fails every strict profile; negative tests exercise both. Development mode cannot write or forecast.",
       "status": "active",
       "rationale": null,

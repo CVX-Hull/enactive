@@ -30,9 +30,8 @@ and diagram rendering. It is not a hosted profile.
 | --- | --- | --- |
 | Full (also the default local command) | Complete pytest collection of existing unittest cases, four xdist processes with work stealing and 20 slowest durations, plus viewer regressions | Full portable regression; native build/gameplay remain separate |
 | Editorial | No runtime tests or viewer regressions | Strict document/structural validation only |
-| Movement | Explicit policy and all four direct consumer suites, plus fixed boundary smoke and viewer regressions | Contained movement-policy regression; full regression was not run |
 | Viewer | Server and fixed boundary smoke, plus production viewer logic with a synthetic DOM | Contained viewer/boundary regression; no browser layout or full regression claim |
-| Main-smoke | Fixed gameplay/evidence/request, ledger and HTTP cases, plus viewer regressions; serial pytest | Bounded smoke on main with linked qualifying full PR coverage; full regression was not rerun on main |
+| Main-smoke | Fixed computer protocol/runtime, player composition and HTTP cases, plus viewer regressions; serial pytest | Bounded smoke on main with linked qualifying full PR coverage; full regression was not rerun on main |
 
 The [testing guide](../testing.md) maps test responsibilities, overlap and upkeep.
 `tools/ci.py` owns the exact source allowlists and test targets; the checker consumes
@@ -57,11 +56,10 @@ C-REVIEW still checks changed guidance against contracts/source and selects any
 needed native/player evidence; running unchanged Python code cannot establish that
 new instructions are effective.
 
-A regular diff confined to the explicit movement or viewer allowlist, optionally
-with eligible documents, runs that component profile on both PR and main. Movement
-includes controller, navigation, skills and supervisor consumers; viewer includes
-server/boundary smoke and the Node viewer suite. Changes to both components,
-additional source/test helpers, state/persistence/authority, native code, schemas,
+A regular diff confined to the explicit viewer allowlist, optionally
+with eligible documents, runs that component profile on both PR and main. Viewer
+includes CLI, computer protocol/runtime, player composition and HTTP boundary smoke
+and the Node viewer suite. Additional source/test helpers, state/persistence/authority, native code, schemas,
 dependencies, validation machinery or unknown paths require full PR regression.
 Do not infer transitive impact or use manual labels to widen an allowlist. Extending
 a boundary requires reviewed consumer coverage and measured benefit. Browser layout

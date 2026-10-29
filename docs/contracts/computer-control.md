@@ -157,6 +157,11 @@ in `harness/player/programs.py`; only the coordinator submits its proposals thro
 the same computer port. A helper failure/yield leaves basic input available unless
 mechanical custody itself stopped.
 
+Predispatch program lookup/argument faults produce a terminal collectable helper
+result under the original run ID, with no computer operation. They do not revoke
+healthy basic input. An exception during computer input remains uncertain and
+permanently stops further input; collecting a helper result cannot rearm custody.
+
 `player-record/1`: closed `schema,kind,text,data,sources,supports,supersedes,
 applicability,program_id`; kinds claim/work/decision/procedure/correction/advice.
 Text≤8192; data object≤16KiB; source/support lists≤16; supersedes/program may be null.

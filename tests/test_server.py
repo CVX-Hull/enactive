@@ -63,6 +63,27 @@ def test_operator_pause_does_not_wait_for_player_service_lock(service):
         assert time.monotonic()-started<1 and channel.stopped.is_set()
 
 
+@pytest.mark.parametrize('invalid', [{}, {'max_seconds':0}, {'initial_state':[]}])
+def test_program_predispatch_fault_is_terminal_collectable_and_preserves_basic_control(service,invalid):
+    app,channel,actor,port,client=service
+    arguments=dict(program_id=uuid.uuid4().hex,initial_state={},interpretation={},
+                   selection=dict(crop=None,size=[4,4]))
+    arguments.update(invalid)
+    before=len(channel.calls)
+    result,_,error=client.call('player_program_run',arguments)
+    assert not error and result['status']=='fault'
+    assert len(channel.calls)==before and not channel.stopped.is_set()
+    collected,_,error=client.call('player_result',dict(operation_id=result['run_id']))
+    assert not error and collected['status']=='completed' and collected['value']==result
+    assert collected['progress']['steps']==[] and collected['collected_operations']==[]
+    status,repeated=post(port,'/api/tool',dict(operation_id=result['run_id'],tool='player_program_run',
+                                            arguments=arguments),actor['token'])
+    assert status==200 and repeated['value']==result
+    assert len(channel.calls)==before
+    after,_,error=client.call('computer_input',dict(actions=[key()]))
+    assert not error and after['status']=='completed' and not channel.stopped.is_set()
+
+
 def test_sealed_actor_can_collect_but_cannot_stop_successor(service):
     app,channel,actor,port,client=service
     result,_,error=client.call('player_handoff',dict(ids=[],summary='Fixture unfinished task'))

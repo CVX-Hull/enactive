@@ -59,22 +59,26 @@ class ProgramRunner:
     def run(self, program_id: str, actor_id: str, initial_state: dict,
             interpretation: dict, selection: dict, max_steps: int = 16,
             max_seconds: float = 10) -> dict[str, Any]:
-        bounded_integer(max_steps, 1, 64)
-        identity(actor_id)
-        if type(max_seconds) not in (int, float) or not 0 < max_seconds <= 20 or not math.isfinite(max_seconds):
-            raise PlayerError('Program duration must be finite within (0,20] seconds')
-        state = json_object(initial_state)
-        interpretation = json_object(interpretation)
-        selection = json_object(selection)
         started = monotonic()
-        deadline = started + max_seconds
-        saved = self.repository.read(program_id)
+        state = {}
         operations, steps = [], []
         status, reason = 'limit', 'Original program time or step limit reached'
         operation, png = None, None
         in_port = False
         port_kind = None
         try:
+            # Predispatch lookup/validation faults are helper outcomes too.
+            # Retain a terminal result under the original service identity;
+            # they cannot imply uncertain computer delivery or revoke custody.
+            bounded_integer(max_steps, 1, 64)
+            identity(actor_id)
+            if type(max_seconds) not in (int, float) or not 0 < max_seconds <= 20 or not math.isfinite(max_seconds):
+                raise PlayerError('Program duration must be finite within (0,20] seconds')
+            state = json_object(initial_state)
+            interpretation = json_object(interpretation)
+            selection = json_object(selection)
+            deadline = started + max_seconds
+            saved = self.repository.read(program_id)
             with PolicyProgram(saved['code']) as policy:
                 for _ in range(max_steps):
                     if monotonic() >= deadline:
