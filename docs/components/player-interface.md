@@ -241,6 +241,13 @@ historical Codex trajectories remain comparator evidence, not an execution optio
 [Preparation and limits](../operations/player-host.md#bounded-player-host-activation)
 and [measurement meaning](../evaluation.md#pi-host-events) own those details.
 
+The generic host supports an explicitly frozen OpenRouter route through the pinned
+Pi serializer, with one selected endpoint policy, no provider fallback and its own
+credential. The custodian forwards only that selected credential to the driver;
+MCP/controller do not receive it. Source conformance is separate from actual
+endpoint vision/tool quality and useful gameplay speed. Exact configuration lives
+in the [host procedure](../operations/player-host.md) and [host contract](../../tools/player_host/README.md).
+
 ## Assurance and evidence
 
 Review mechanical vs semantic responsibilities first, then ingress/staging failure

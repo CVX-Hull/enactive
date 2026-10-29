@@ -166,14 +166,14 @@ def analyze_trace(path: Path) -> dict:
             if number(at):
                 previous = at
             if kind == "host-start":
-                if event.get("schema") not in (None, "pi-player-host/1", "pi-player-host/2", "pi-player-host/3") or event.get("telemetry_version") not in (None, 1):
+                if event.get("schema") not in (None, "pi-player-host/1", "pi-player-host/2", "pi-player-host/3", "pi-player-host/4") or event.get("telemetry_version") not in (None, 1):
                     return {"path": str(path), "coverage": "unsupported_version", "file_bytes": path.stat().st_size}
                 host_count += 1
                 if host_count > 1:
                     raise ContractError(f"Multiple hosts in one trace; split at original host boundaries: {path}")
                 start = at
                 config = {key: event.get(key) for key in ("schema", "model", "provider", "api", "effort",
-                    "requested_service_tier", "max_context_images", "max_output_tokens", "context_window", "thinking_level_map", "telemetry_version")}
+                    "requested_service_tier", "max_context_images", "max_output_tokens", "context_window", "thinking_level_map", "reasoning_format", "provider_routing", "telemetry_version")}
             elif kind == "context-image-projection":
                 context.append({key: event.get(key) for key in ("projection_ms", "input_images", "omitted_images", "retained_images")})
             elif kind == "request-start":

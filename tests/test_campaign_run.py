@@ -32,7 +32,7 @@ class CampaignRunTests(unittest.TestCase):
         value = admission()
         self.admission = replace(value, configuration=replace(value.configuration, model="fixture-model")).to_dict()
         inputs = {"admission.json": self.admission, "player-pi-configuration.json": {
-            "schema": "pi-player-host/3", "service_tier": "default", "model": {"id": "fixture-model", "name": "Offline fixture",
+            "schema": "pi-player-host/4", "service_tier": "default", "model": {"id": "fixture-model", "name": "Offline fixture",
                 "api": "openai-completions", "provider": "fixture", "baseUrl": "https://fixture.invalid/v1",
                 "reasoning": False, "input": ["text", "image"],
                 "cost": {"input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0},
@@ -164,7 +164,7 @@ class CampaignRunTests(unittest.TestCase):
         output = io.StringIO()
         with patch.dict(os.environ, {"DEEPINFRA_API_KEY": 'fixture-"escaped-secret'}):
             value = {"arbitrary": {"error": 'echo fixture-"escaped-secret'}}
-            run._write(output, value)
+            run._write(output, value, secret=os.environ["DEEPINFRA_API_KEY"])
             self.assertEqual(json.loads(output.getvalue()), {"arbitrary": {"error": "echo [REDACTED]"}})
 
     def test_preflight_requires_current_data_and_exact_source_declarations(self):
@@ -340,6 +340,33 @@ class CampaignRunTests(unittest.TestCase):
             run.run_campaign(root=self.root, mission_id="mission-test")
         for path in (self.run / "preparation").iterdir():
             self.assertNotIn(b"fixture-private-value", path.read_bytes())
+
+    def test_selected_openrouter_credential_is_driver_only_without_forwarding_other_key(self):
+        route_path = self.frozen / "player-pi-configuration.json"
+        route = json.loads(route_path.read_text())
+        route["api_key_env"] = "OPENROUTER_API_KEY"
+        route_path.write_text(json.dumps(route))
+        self.freeze()
+        with patch.dict(os.environ, {"OPENROUTER_API_KEY": "fixture-router-private"}):
+            receipt, launches = self.exercise()
+        self.assertEqual(receipt["outcome"], "terminal")
+        self.assertNotIn("OPENROUTER_API_KEY", launches[0][2])
+        self.assertEqual(launches[1][2]["OPENROUTER_API_KEY"], "fixture-router-private")
+        self.assertNotIn("DEEPINFRA_API_KEY", launches[1][2])
+        for path in (self.run / "preparation").iterdir():
+            self.assertNotIn(b"fixture-router-private", path.read_bytes())
+
+    def test_missing_selected_credential_refuses_before_any_child_or_admission(self):
+        route_path = self.frozen / "player-pi-configuration.json"
+        route = json.loads(route_path.read_text())
+        route["api_key_env"] = "ABSENT_FIXTURE_API_KEY"
+        route_path.write_text(json.dumps(route))
+        self.freeze()
+        with patch.object(run.subprocess, "Popen") as popen, patch.object(run, "PlayerTools") as player:
+            with self.assertRaisesRegex(run.RunError, "credential"):
+                run.run_campaign(root=self.root, mission_id="mission-test")
+            popen.assert_not_called()
+            player.assert_not_called()
 
     @unittest.skipUnless(os.name == "posix", "Terminal process-group cancellation requires POSIX")
     def test_terminal_sigint_settles_isolated_driver_then_controller(self):

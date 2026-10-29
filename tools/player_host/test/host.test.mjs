@@ -14,7 +14,7 @@ const python = process.env.ENACTIVE_TEST_PYTHON;
 const fixture = fileURLToPath(new URL('server.py', import.meta.url));
 const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j1ioAAAAASUVORK5CYII=';
 const model = { id: 'fixture-model', name: 'Offline fixture', api: 'openai-completions', provider: 'fixture', baseUrl: 'https://fixture.invalid/v1', reasoning: false, input: ['text', 'image'], cost: {input:0, output:0, cacheRead:0, cacheWrite:0}, contextWindow: 100000, maxTokens: 1024, compat: { supportsDeveloperRole:false, supportsStore:false, supportsUsageInStreaming:true } };
-const route = () => ({schema:'pi-player-host/3',service_tier:'default', model:structuredClone(model), api_key_env:'OFFLINE_TEST_KEY', max_requests:4, max_context_images:4, request_timeout_seconds:2});
+const route = () => ({schema:'pi-player-host/4',service_tier:'default', model:structuredClone(model), api_key_env:'OFFLINE_TEST_KEY', max_requests:4, max_context_images:4, request_timeout_seconds:2});
 function reply(content = 'finished', calls = [], withUsage = true, reasoning, callPrefix = 'call') {
   const delta = {role:'assistant', ...(content === null ? {} : {content}), ...(reasoning ? {reasoning_content:reasoning} : {}), ...(calls.length ? {tool_calls:calls.map(([name,args],index)=>({index,id:`${callPrefix}-${index}`,type:'function',function:{name,arguments:JSON.stringify(args)}}))} : {})};
   const chunks = [{id:'fixture-response',model:'fixture-backend',choices:[{index:0,delta,finish_reason:null}]},
@@ -79,6 +79,7 @@ test('route is closed, graphical, finite and model/effort exact', ()=>{
   assert.throws(()=>validateConfiguration(route(),model.id,'low'));
   assert.throws(()=>validateConfiguration({...route(),schema:'pi-player-host/1'},model.id,'off'));
   assert.throws(()=>validateConfiguration({...route(),schema:'pi-player-host/2'},model.id,'off'));
+  assert.throws(()=>validateConfiguration({...route(),schema:'pi-player-host/3'},model.id,'off'));
   for (const service_tier of [undefined,null,true,1,'flex','auto','',{},[]]) {
     assert.throws(()=>validateConfiguration({...route(),service_tier},model.id,'off'));
   }
@@ -88,6 +89,35 @@ test('route is closed, graphical, finite and model/effort exact', ()=>{
   }
   const missing=route();delete missing.max_context_images;
   assert.throws(()=>validateConfiguration(missing,model.id,'off'));
+});
+
+test('OpenRouter uses maintained routing and reasoning serializers with explicit standard tier on every attempt',async t=>{
+  const configuration=route();
+  configuration.model={...configuration.model,provider:'openrouter',baseUrl:'https://openrouter.ai/api/v1',reasoning:true,
+    thinkingLevelMap:{medium:'medium'},compat:{...configuration.model.compat,supportsReasoningEffort:true,
+      thinkingFormat:'openrouter',openRouterRouting:{only:['fireworks/us'],order:['fireworks/us'],allow_fallbacks:false,require_parameters:true}}};
+  assert.doesNotThrow(()=>validateConfiguration(configuration,model.id,'medium'));
+  for (const baseUrl of ['http://openrouter.ai/api/v1','https://other.invalid/api/v1','https://openrouter.ai/v1']) {
+    assert.throws(()=>validateConfiguration({...configuration,model:{...configuration.model,baseUrl}},model.id,'medium'));
+  }
+  for(const change of [{allow_fallbacks:true},{require_parameters:false},{only:['fireworks/us','baseten']},
+      {order:['baseten']},{only:[99],order:[99]},{unknown:true}]) {
+    const invalid=structuredClone(configuration);Object.assign(invalid.model.compat.openRouterRouting,change);
+    assert.throws(()=>validateConfiguration(invalid,model.id,'medium'));
+  }
+  const priority={...configuration,service_tier:'priority'};
+  assert.throws(()=>validateConfiguration(priority,model.id,'medium'));
+  const missing=structuredClone(configuration);delete missing.model.compat.openRouterRouting;
+  assert.throws(()=>validateConfiguration(missing,model.id,'medium'));
+  const result=await scenario(t,[rateLimit(),reply()],{configuration,effort:'medium'});
+  assert.equal(result.result.ok,true);assert.equal(result.payloads.length,2);
+  for(const payload of result.payloads) {
+    assert.deepEqual(payload.provider,configuration.model.compat.openRouterRouting);
+    assert.deepEqual(payload.reasoning,{effort:'medium'});
+    assert.equal(payload.reasoning_effort,undefined);assert.equal(payload.service_tier,'default');
+  }
+  assert.deepEqual(result.payloads[0],result.payloads[1]);
+  assert.deepEqual(result.events.find(e=>e.type==='host-start').provider_routing,configuration.model.compat.openRouterRouting);
 });
 
 test('frozen serving tier uses the SDK payload hook and reports only observed stream echoes',async t=>{

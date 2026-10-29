@@ -56,9 +56,12 @@ usage estimates, actual invoices and unknown usage.
 The maintained preflight validates both Pi and MCP configurations before admission.
 Node is selected by trusted launcher configuration, never frozen data. Keep the
 MCP command on this interpreter's `-m harness.player_mcp` with this checkout as cwd.
-The caller supplies `DEEPINFRA_API_KEY` securely in its environment; the custodian
-performs no Keychain/profile discovery. It forwards that value only to the owned
-driver, never the controller, argv or frozen files. Console output is suppressed;
+The caller supplies the frozen route's validated `api_key_env` securely in its
+environment (for example `DEEPINFRA_API_KEY` or `OPENROUTER_API_KEY`); the custodian
+performs no Keychain/profile discovery. `PATH` and `LANG` cannot be credential names.
+It captures only the selected credential before admission, forwards only that value
+to the owned driver, and redacts it from structured custodian output. Other provider
+credentials are not inherited. Never place a key in the controller, argv or frozen files. Console output is suppressed;
 use the maintained structured driver evidence and fixed custodian receipts.
 
 ## Start and close

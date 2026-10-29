@@ -23,7 +23,7 @@ arbitrary descendants or aliases are unsupported. Prepare these run-local files:
 - `frozen/pi-player-context.txt`: the actual frozen guide/context content supplied
   to both fresh hosts. The player has no shell or file-reading tools; paths to
   undeclared files are not supplied context.
-- `frozen/player-pi-configuration.json`: closed `pi-player-host/3` route with
+- `frozen/player-pi-configuration.json`: closed `pi-player-host/4` route with
   `model`, `api_key_env`, `max_requests`, `request_timeout_seconds`, required
   `service_tier` (`default` or `priority`) and required
   positive integer `max_context_images`. Freeze the selected provider's verified
@@ -65,6 +65,13 @@ mission is reported incomplete before handoff collection or successor assignment
 The per-host route request cap times this host-count bound must fit the total
 approved provider allowance, including prior calls and failures; a prompt alone
 is not a global request cap.
+
+OpenRouter routes freeze one advertised full endpoint tag through Pi's maintained
+`compat.openRouterRouting`, disable fallback, require parameter support and send an
+explicit default service tier. Its nested reasoning format is separate from direct
+OpenAI effort serialization. See the [closed host route](../../tools/player_host/README.md)
+for policy, tag-matching limits and metadata provenance. Historical route versions
+are evidence and reject as executable input.
 
 Supply only the selected credential-environment name in configuration; inject
 its value securely into the dedicated process for an authorized live request.

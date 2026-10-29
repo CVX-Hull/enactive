@@ -50,9 +50,9 @@ below, no fatal failure latch, successful owned MCP closure, and a successful
 final-file write. `runHost(options)` is the
 programmatic seam; tests inject `fetch` there. No fake-provider CLI is exposed.
 
-The closed route has exactly `schema: "pi-player-host/3"`, `model`,
+The closed route has exactly `schema: "pi-player-host/4"`, `model`,
 `api_key_env`, `max_requests`, `request_timeout_seconds`, `service_tier` and the required positive
-integer `max_context_images`. Versions1/2 and missing/invalid fields are rejected;
+integer `max_context_images`. Versions1/2/3 and missing/invalid fields are rejected;
 closed historical configurations are evidence, not runnable current inputs.
 `model` contains Pi's
 explicit `id`, `name`, `api: "openai-completions"`, `provider`, `baseUrl`,
@@ -63,7 +63,7 @@ query strings and fragments, arbitrary headers, other APIs and unknown fields
 are refused. Model metadata and costs are configuration, not verified provider
 capabilities or billing evidence.
 
-Freeze `service_tier` as `default` or `priority`. Default leaves the API field
+Freeze `service_tier` as `default` or `priority`. Direct-provider default leaves the API field
 unset; priority adds only `service_tier: "priority"` through Pi's maintained
 `onPayload` hook. Verify support and pricing for the exact provider/model before
 selection. For the tested DeepInfra route, requested priority uses all configured
@@ -132,9 +132,11 @@ upgrade and retire the helper when upstream supplies precise union feedback.
 For nonreasoning models effort must be `off`. For reasoning models the selected
 Pi effort (`off`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`) must have a
 non-null explicit `thinkingLevelMap` entry, with
-`compat.supportsReasoningEffort: true` and `compat.thinkingFormat: "openai"`.
+`compat.supportsReasoningEffort: true` and `compat.thinkingFormat: "openai"`
+for direct routes or `"openrouter"` for OpenRouter.
 Direct Pi streaming sends the declared mapping without its simple-stream effort
-clamping. Other reasoning formats need conformance evidence before support.
+clamping. OpenRouter uses its maintained nested reasoning serializer as described
+below. Other reasoning formats need conformance evidence before support.
 
 Credentials come only from the explicitly named environment variable, resolved
 when preparing a provider call. The runner refuses `OPENAI_LOG`,
@@ -145,6 +147,23 @@ Clear them only in the dedicated host child's environment; the package never
 mutates the parent environment or a profile. No key values, headers or raw
 provider exceptions are emitted. Pi cache retention is explicitly `short`, preserving the maintained default
 while preventing an ambient `PI_CACHE_RETENTION` override.
+
+
+For `model.provider: "openrouter"`, require a closed
+`model.compat.openRouterRouting` object with exactly `only: ["FULL_TAG"]`,
+`order: ["FULL_TAG"]`, `allow_fallbacks: false` and `require_parameters: true`.
+Pi1.4.0 owns its provider-policy and nested reasoning serialization; no arbitrary
+payload/header injection is admitted. Direct routes reject this policy. OpenRouter
+requires configured `service_tier: "default"` and sends that value explicitly to
+exclude workspace tier defaults and priority pool admission. That does not prove
+applied tier or performance. Refresh advertised full tags before each finite
+freeze; base/prefix tags can match variants/regions and are not immutable endpoint
+identities. Actual provider metadata and failures remain evidence, without automatic
+fallback or a claim that Baseten's base tag identifies its FAST benchmark variant.
+`host-start.provider_routing` and `reasoning_format` retain configured policy;
+parsed stream IDs/provider names and optional generation metadata establish only
+what the service actually reports. See [routing](https://openrouter.ai/docs/guides/routing/provider-selection)
+and [tier semantics](https://openrouter.ai/docs/guides/features/service-tiers).
 
 One inference request may recover from one eligible HTTP429 before assistant
 output, using Pi's maintained abortable provider-retry helper. Its classifier reads

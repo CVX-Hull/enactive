@@ -38,7 +38,7 @@ function bounded(value) {
 export function validateConfiguration(configuration, selectedModel, effort) {
   bounded(configuration);
   closed(configuration, ['schema', 'model', 'api_key_env', 'max_requests', 'max_context_images', 'request_timeout_seconds', 'service_tier']);
-  requireThat(configuration.schema === 'pi-player-host/3');
+  requireThat(configuration.schema === 'pi-player-host/4');
   requireThat(/^[A-Za-z_][A-Za-z0-9_]*$/.test(configuration.api_key_env ?? '') && !AMBIENT_PROVIDER_SETTINGS.includes(configuration.api_key_env));
   requireThat(Number.isSafeInteger(configuration.max_requests) && configuration.max_requests > 0);
   requireThat(Number.isSafeInteger(configuration.max_context_images) && configuration.max_context_images > 0);
@@ -56,6 +56,18 @@ export function validateConfiguration(configuration, selectedModel, effort) {
   let url;
   try { url = new URL(model.baseUrl); } catch { throw new HostError('invalid-configuration'); }
   requireThat(['https:', 'http:'].includes(url.protocol) && !url.username && !url.password && !url.search && !url.hash);
+  const openRouter = model.provider === 'openrouter';
+  requireThat(openRouter || url.hostname !== 'openrouter.ai');
+  if (openRouter) {
+    requireThat(url.origin === 'https://openrouter.ai' && url.pathname.replace(/\/$/, '') === '/api/v1');
+    requireThat(configuration.service_tier === 'default');
+    const routing = model.compat?.openRouterRouting;
+    closed(routing, ['only', 'order', 'allow_fallbacks', 'require_parameters']);
+    requireThat(routing.allow_fallbacks === false && routing.require_parameters === true
+      && Array.isArray(routing.only) && routing.only.length === 1
+      && typeof routing.only[0] === 'string' && /^[a-z0-9][a-z0-9_./-]{0,127}$/.test(routing.only[0])
+      && Array.isArray(routing.order) && routing.order.length === 1 && routing.order[0] === routing.only[0]);
+  } else requireThat(model.compat?.openRouterRouting === undefined);
   requireThat(levels.includes(effort), 'unsupported-effort');
   requireThat(model.reasoning || effort === 'off', 'unsupported-effort');
   if (model.thinkingLevelMap !== undefined) {
@@ -64,15 +76,16 @@ export function validateConfiguration(configuration, selectedModel, effort) {
   }
   if (model.reasoning) {
     requireThat(object(model.thinkingLevelMap) && Object.hasOwn(model.thinkingLevelMap, effort) && model.thinkingLevelMap[effort] !== null, 'unsupported-effort');
-    requireThat(model.compat?.supportsReasoningEffort === true && model.compat.thinkingFormat === 'openai', 'unsupported-effort');
+    requireThat(model.compat?.supportsReasoningEffort === true && model.compat.thinkingFormat === (openRouter ? 'openrouter' : 'openai'), 'unsupported-effort');
   }
-  // The pilot admits the ordinary OpenAI reasoning-effort format only. Additional
-  // Pi formats require conformance evidence before expanding this closed reader.
+  // Pi owns the direct OpenAI and OpenRouter serializers; other formats require
+  // conformance evidence before expanding this closed reader.
   if (model.compat !== undefined) {
-    closed(model.compat, ['supportsDeveloperRole', 'supportsStore', 'supportsUsageInStreaming', 'supportsReasoningEffort', 'supportsStrictMode', 'maxTokensField', 'requiresToolResultName', 'requiresAssistantAfterToolResult', 'requiresThinkingAsText', 'requiresMistralToolIds', 'thinkingFormat']);
+    closed(model.compat, ['supportsDeveloperRole', 'supportsStore', 'supportsUsageInStreaming', 'supportsReasoningEffort', 'supportsStrictMode', 'maxTokensField', 'requiresToolResultName', 'requiresAssistantAfterToolResult', 'requiresThinkingAsText', 'requiresMistralToolIds', 'thinkingFormat', 'openRouterRouting']);
     for (const [key, value] of Object.entries(model.compat)) {
       if (key === 'maxTokensField') requireThat(['max_tokens', 'max_completion_tokens'].includes(value));
-      else if (key === 'thinkingFormat') requireThat(value === 'openai');
+      else if (key === 'thinkingFormat') requireThat(value === (openRouter ? 'openrouter' : 'openai'));
+      else if (key === 'openRouterRouting') continue; // Closed policy checked above; Pi owns serialization.
       else requireThat(typeof value === 'boolean');
     }
   }
@@ -326,7 +339,7 @@ export async function runHost(options) {
     const mcp = validateMcpConfiguration(options.mcpConfig);
     requireThat(typeof options.prompt === 'string' && typeof options.context === 'string', 'invalid-input');
     bounded(options.prompt); bounded(options.context);
-    emit('host-start', {telemetry_version:1, schema:configuration.schema, requested_service_tier:configuration.service_tier, model:configuration.model.id, provider:configuration.model.provider, api:configuration.model.api, effort:options.effort, max_output_tokens:configuration.model.maxTokens, context_window:configuration.model.contextWindow, thinking_level_map:{...configuration.model.thinkingLevelMap}, max_requests:configuration.max_requests, max_context_images:configuration.max_context_images, unsupported_features:['compaction', 'session-restore', 'model-fallback', 'reconnect', 'replay', 'ambient-tools', 'resource-discovery'], missing_endpoints:['model-attention', 'server-inference-start', 'physical-paint'], cleanup_budget_ms:cleanupBudget});
+    emit('host-start', {telemetry_version:1, schema:configuration.schema, requested_service_tier:configuration.service_tier, model:configuration.model.id, provider:configuration.model.provider, api:configuration.model.api, effort:options.effort, max_output_tokens:configuration.model.maxTokens, context_window:configuration.model.contextWindow, thinking_level_map:{...configuration.model.thinkingLevelMap}, reasoning_format:configuration.model.compat?.thinkingFormat ?? null, provider_routing:configuration.model.compat?.openRouterRouting ? structuredClone(configuration.model.compat.openRouterRouting) : null, max_requests:configuration.max_requests, max_context_images:configuration.max_context_images, unsupported_features:['compaction', 'session-restore', 'model-fallback', 'reconnect', 'replay', 'ambient-tools', 'resource-discovery'], missing_endpoints:['model-attention', 'server-inference-start', 'physical-paint'], cleanup_budget_ms:cleanupBudget});
     if (fatal) throw new HostError(fatal);
     requireThat(!AMBIENT_PROVIDER_SETTINGS.some(name => Object.hasOwn(process.env, name)), 'ambient-provider-configuration');
     // The MCP subprocess gets only locale and executable lookup, never provider
@@ -495,7 +508,8 @@ export async function runHost(options) {
             onPayload:payload => {
               payloadReadyAt = performance.now();
               emit('provider-payload-ready', {request_id:logicalRequestId, sdk_prepare_ms:payloadReadyAt - streamStarted});
-              return configuration.service_tier === 'priority' ? {...payload, service_tier:'priority'} : undefined;
+              return model.provider === 'openrouter' ? {...payload, service_tier:'default'}
+                : configuration.service_tier === 'priority' ? {...payload, service_tier:'priority'} : undefined;
             },
             onProviderStreamEvent:chunk => {
             responseProgress.provider_events++;
