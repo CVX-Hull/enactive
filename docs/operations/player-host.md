@@ -11,7 +11,7 @@ campaign execution path. Install its locked project-local dependencies through
 [setup](../setup.md#install-the-generic-gameplay-host). Activate it only through
 the [finite campaign custodian](campaign-run.md), not an old mission-driver CLI.
 
-The selected finite configuration is OpenRouter / Fireworks US / DeepSeek
+The selected finite configuration is OpenRouter / explicitly pinned provider / DeepSeek
 Flash1017 medium. Freeze its verified full endpoint tag and supported parameters
 in `route.json`; use no fallback. The current campaign accepts the explicit default
 service tier. Configuration metadata/prices are not invoice, quality or latency

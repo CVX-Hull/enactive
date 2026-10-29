@@ -166,3 +166,29 @@ per-header retuning. Original request240s/host/campaign deadlines and one retry
 still bound the wait; this is development continuity, not cadence qualification.
 No further delay-cap escalation is planned; a persistent failure requires a
 recorded backend disposition rather than repeated source tuning.
+
+## Explicit endpoint disposition after shared-pool failures
+
+Organic003 atb1e4a87 recovered request2's429 after5s, then request14 and its
+allowed retry15 both returned429 from the shared upstream pool. After72.179011s,
+15attempts were charged; all owned groups closed with forcedSIGTERMzero. Independent
+full-image review establishes Alex identity, inventory, eight game seconds of
+movement and a visible food-location discovery, not acquired rations, programs,
+memory/handoff, Save or normal exit. The stable60s helper bound remains unchanged.
+
+This is the concrete backend exception contemplated above: the next finite package
+selects **BaseTen regular (`baseten`) through OpenRouter**, the same model snapshot
+and medium effort, with one exact full-tag route, required parameters and fallback
+disabled. It is an explicit admission change, never automatic route substitution.
+Current [public endpoint metadata](https://openrouter.ai/api/v1/models/deepseek/deepseek-v4.1-flash-1017/endpoints),
+checked2026-10-29, lists text/image modality,1,048,576context,262,144completion
+capacity, tools/reasoning support and implicit caching. Advertised token rates are
+$0.30input/$1.20output/$0.007cached-input per million; configure cache-write at
+input rate for conservative reservation. Latency/throughput fields are null, so
+this snapshot supplies no current speed ranking or capacity guarantee.
+
+[Prior real endpoint episodes](../acceptance/2026-10-28-endpoint-gameplay.md) provide
+actual BaseTen continuation evidence, but changed scenes/source/history prevent
+causal speed/quality ranking. Choose the next route for a finite useful-play trial,
+not a new endpoint contest or cost-minimization goal. Keep all Fireworks failures
+and original reservations. No further delay-cap escalation is planned.

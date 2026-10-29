@@ -31,7 +31,7 @@ and inherited mechanical descriptors, not provider credentials.
 
 `route.json` uses current `pi-player-host/4` with text/image input and explicit
 provider/effort/price/image-history metadata. The selected route is OpenRouter /
-Fireworks US / DeepSeek Flash1017 medium, default service tier, no fallback.
+an explicitly pinned provider / DeepSeek Flash1017 medium, default service tier, no fallback.
 `mcp-template.json` must equal the current generated profile with `@ACTOR_CONFIG@`.
 Freeze the player guide/current schema, meaningful task, original limits and ending
 reserve in context/prompt. Do not put mutable engineering source or hidden game

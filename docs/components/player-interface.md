@@ -24,7 +24,7 @@ and [host package reference](../../tools/player_host/README.md) own wire/configu
 
 The host loads no coding-agent shell/file tools, personal configuration, resource
 discovery or resumed session. No coding-agent fallback is supported. Selected
-OpenRouter / Fireworks US / DeepSeek Flash1017 medium is frozen per finite run;
+OpenRouter / explicitly pinned provider / DeepSeek Flash1017 medium is frozen per finite run;
 route selection and host conformance are separate from model/gameplay qualification.
 
 ## Context and failure boundaries

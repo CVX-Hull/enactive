@@ -139,3 +139,19 @@ and mechanical facts at ordinary browser width; no game input was sent by the le
 The25s choice overfitted the first20s response; the next correction adopts the
 pinned SDK helper's existing60s maximum under unchanged original timers/one retry.
 This explicit rescope does not relabel either failure or qualify cadence.
+
+`cutover176-organic003` atb1e4a87f5216b095e7a2334f5120e93c44ef787b demonstrates
+actual Alex identity via look-around source286, starting inventory197, three tiles
+east after four RIGHT deliveries and five north (eight total game seconds), visible
+food-location discovery292 and failed pickup382. Independent review checked all12
+full PNGs/SQLite/frozen inputs and corrected movement/quantity assumptions. The
+log's21small cardboard boxes is not21newly acquired rations. No pointer/text,
+program/memory/correction/handoff, Save or ordinary exit occurred.
+
+An eligible5s retry at request2 recovered at3; request14's5s retry15 also returned
+shared-pool429 and ended the host. Elapsed72.179011s;15attempts charged,345unused
+retired, configured estimate$0.021447882 with3missing usages. Cumulative conservative
+reservation$704.0401408 across2398attempts; known configured estimates$21.188785242
+with historical unknowns separate. All groups absent; nativeSIGTERMzero remains
+forced cleanup. The explicit BaseTen continuation decision is in the linked brief;
+none of these failures accepts the integrated useful-survival/lifecycle outcome.

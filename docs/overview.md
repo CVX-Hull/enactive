@@ -33,7 +33,7 @@ effects. The user can Pause independently. Memory contains fallible player claim
 and never grants custody. [Editable source](diagrams/player.mmd).
 
 The [generic Pi host](components/player-interface.md) is mandatory. The selected
-finite configuration is OpenRouter / Fireworks US / DeepSeek Flash1017 at medium
+finite configuration is OpenRouter / explicitly pinned provider / DeepSeek Flash1017 at medium
 effort. Its exact route, metadata, context and limits are frozen per run; this
 selection is not a claim of model quality or provider performance.
 
