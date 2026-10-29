@@ -155,3 +155,47 @@ reservation$704.0401408 across2398attempts; known configured estimates$21.188785
 with historical unknowns separate. All groups absent; nativeSIGTERMzero remains
 forced cleanup. The explicit BaseTen continuation decision is in the linked brief;
 none of these failures accepts the integrated useful-survival/lifecycle outcome.
+
+## Organic004: useful stock and a stalled interpretation
+
+Source3341d0ccf2fcbe2c82aace29b174511ccaa823d3 with explicit BaseTen regular ran
+610.633531s/57HTTP attempts. No provider refusal occurred. Operator Pause ended
+repeated wall-time waiting; it initially reported native confirmation unreported,
+and later input/observe calls were fenced. HostSIGINT/nativeSIGTERM closed all
+groups; nativezero is forced cleanup, not normal exit.303unused attempts retired.
+Conservative cumulative reservation$723.091456 across2455attempts; known configured
+estimates$21.643212738 with one new missing usage and historical unknowns separate.
+
+Independent review inspected all48full PNGs, frozen hashes, SQLite/native receipts
+and current player-memory joins. Alex identity and starting inventory6.5lb were
+observed. A pickup preview8.7lb was canceled withEscape, then Enter confirmations
+actually acquired one electric lantern, four light batteries (logged1+3) and one
+two-way radio; source1444 confirms carried inventory8.7lb. Lantern0/58kJ and
+batteries0/16kJ are empty. This is genuine new stock with potential utility, not
+working light/radio, food or additional water. HUD6.4lb and inventory6.5lb are
+different display contexts, not an assumed gain.
+
+Click8feb7203d68d428e8d1c5eca194b5729 at(300,364) fromsource583 opens cupboard
+pickup697. Textc275d5366be642da83e97b4660806188 entersbatt at1444; Enter
+d2ed6dcfde0c4bb49c4cbcd9bfafc6d4 filters inventory tofour batteries at1445.
+Arrow batches in LookAround moved its cursor, not Alex. Later movement advanced
+the game42seconds to08:01:42. The acquisition reattempt corrected an assumption
+through inspection, but no correction record or program was authored.
+
+Two Work records and one decision retain sources/support; no supersedes/program
+link exists. The first Work's approximate08:02 overstates pickup time08:01:21, and
+its source704 shows the canceled preview rather than successful acquisition. Ten
+fresh captures1668–3098 retain byte-identical PNG over220.445s with advancing
+capture IDs/presentation times. All152native receipts are delivered, including
+SPACE. These facts do not establish active saving, completed saving, blocked main
+loop or deadlock. The player's hang claims exceed the evidence. No handoff, Save
+command, normal exit or fresh-child continuity is accepted.
+
+One actual browser timing export retained17exact source/DOM witnesses, median1.299s
+and maximum3.003s;9source matches were missing at the snapshot. This is DOM time,
+not paint, attention or useful-goal latency. Browser Download created that exact
+owned export in Downloads by default; it was moved into the project with its hash
+and relocation record. Future unconfigured browser downloads are avoided. A prior
+dependency compile also omitted the project-cache environment once; global cache
+use cannot be excluded. Subsequent install used explicit project caches; no global
+install/profile change or unowned-cache cleanup is claimed.

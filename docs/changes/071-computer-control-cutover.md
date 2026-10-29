@@ -192,3 +192,30 @@ actual BaseTen continuation evidence, but changed scenes/source/history prevent
 causal speed/quality ranking. Choose the next route for a finite useful-play trial,
 not a new endpoint contest or cost-minimization goal. Keep all Fireworks failures
 and original reservations. No further delay-cap escalation is planned.
+
+## Organic004 context lesson and continuation
+
+The explicit BaseTen run completed57attempts without provider refusal and exposed
+a player blindspot instead. Independent full-image review confirms actual lantern,
+four empty light batteries and radio pickup, working pointer/text effects and
+source-backed memory. It does not accept usable lighting, a program, correction
+lineage, handoff, Save/reload or normal exit. The player repeatedly waited wall time
+on an unchanged blue save-message frame; the lead stopped the finite attempt after
+several minutes without useful progression. All owned groups closed.
+
+Clarify the existing mechanical `wait`: it delays wall time and sends no game input,
+not an in-game wait command or proof of settlement. No control behavior, argument,
+game-phase detector, message parser, loop predicate or authority condition changes.
+The next frozen playing assignment may carry source-grounded game knowledge and
+fallible prior records. The pinned [README](https://github.com/CleverRaven/Cataclysm-DDA/blob/7b2efa5cea38e4d4d97dd0e63b28b9148623da59/README.md)
+describes turn-based play; inspected [quicksave source](https://github.com/CleverRaven/Cataclysm-DDA/blob/7b2efa5cea38e4d4d97dd0e63b28b9148623da59/src/game.cpp#L13479)
+adds an ordinary log message as well as a temporary popup. Its exact inspected
+game.cpp hash matches the upstream pin. A retained log line is not proof of active
+saving or deadlock; this static fact does not certify that the old attempt saved.
+
+Continue through a fresh visible same-character load, reconcile the actual retained
+state and prior unsupported claims, use an image-conditioned player program for
+real work, and deliberately test meaningful fresh-actor continuity before normal
+Save plus separate application exit. Keep the original failed/stopped chain.
+This is a revised finite gameplay assignment under the same implementation core,
+not a manufactured bad routine or new semantic harness behavior.

@@ -109,7 +109,9 @@ Public input is1..32 key/text/click/wait actions. Keys are printable ASCII or th
 named keys in the [shared schema](../../harness/computer/protocol.py); modifiers
 are explicit. Text is1..31UTF-8 bytes without controls. Waits are0..2s each and
 at most15s combined; one operation is at most15s and never exceeds the run deadline.
-Clicks use a source actually returned to that actor; keys/text need no source.
+Wait delays the caller in wall time without sending an SDL input event; it is
+not an application command or settlement guarantee. Clicks use a source actually
+returned to that actor; keys/text need no source.
 Validate the complete sequence before its first effect. Partial/unknown delivery
 permanently stops new input; collection retains the original IDs, never repeats it.
 

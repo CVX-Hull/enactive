@@ -30,7 +30,10 @@ The schema is authoritative for closed arguments. Keys use printable ASCII or
 `ENTER ESC UP DOWN LEFT RIGHT TAB BACKSPACE SPACE PAGEUP PAGEDOWN HOME END DELETE`,
 with explicit `CTRL ALT SHIFT` modifiers. Text contains 1..31 UTF-8 bytes without
 controls. Each wait is at most 2 seconds; combined waits/operation are at most
-15 seconds and cannot exceed the run deadline.
+15 seconds and cannot exceed the run deadline. `wait` delays **wall time** and
+sends no game input. It is not the application’s own wait action and does not
+certify that a message, animation or save finished. The application decides what
+changes during that time; choose any in-game wait/probe through ordinary input.
 
 Example basic actions (inside `computer_input.actions`):
 
