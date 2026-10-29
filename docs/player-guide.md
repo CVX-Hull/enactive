@@ -23,7 +23,9 @@ When later work depends on an earlier effect, use the available view to check th
 dependency. If it contradicts your assumption, revise the active task state before
 continuing dependent work. A highlighted selection, projected quantity or canceled
 transaction is not a completed change. Keep a quantity's scope explicit: nearby,
-selected and carried stock are different claims. Prior narration and memory remain
+selected and carried stock are different claims. A container or equipment change
+can also move its contents; update those dependencies before relying on or
+reporting retained stock. Prior narration and memory remain
 fallible when current evidence disagrees. Judge the current screen and focus from
 the returned view; inputs that made sense before a UI transition may mean something
 else afterward. Resolve the current choice and focused response before accepting
