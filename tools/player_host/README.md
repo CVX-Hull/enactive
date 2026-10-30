@@ -166,7 +166,7 @@ parsed stream IDs/provider names and optional generation metadata establish only
 what the service actually reports. See [routing](https://openrouter.ai/docs/guides/routing/provider-selection)
 and [tier semantics](https://openrouter.ai/docs/guides/features/service-tiers).
 
-One inference request may recover from one eligible HTTP429 before assistant
+One inference request may recover from one eligible HTTP 429 before assistant
 output, using Pi's maintained abortable provider-retry helper. Its classifier reads
 at most16KiB of a JSON error object; explicit authorization/invalid-request kinds,
 quota/billing limits, malformed or unrecognized errors stay terminal. A provider
@@ -312,9 +312,12 @@ still adds work and must be measured during subsequent play.
 `host-start` records the configured output cap, context window and effort mapping;
 these are transmitted configuration, not backend effort attestation. Sanitized
 bounded response/provider IDs and `x-request-id` permit later correlation when
-reported. `provider-refusal` records only type/code from the first429 body that
-the existing recovery path already inspects; header-suppressed, later, malformed
-or other-status errors retain unknown codes. No error message, extra body/header
-logging, extra fetch, retry, timer renewal or dispatch is added. Use the existing
+reported. After bounded reading of an HTTP error response, `provider-refusal`
+records its status and allowlisted error type/code, provider code and server-reported
+`limit_source` when available, including non-429 refusals and a second HTTP 429.
+Missing, malformed or unsafe identifiers remain null; a body-read failure can
+prevent the event. Raw error messages/bodies and credentials are not logged.
+This observation adds no fetch, retry, timer renewal or dispatch; only the first
+eligible HTTP 429 can authorize the one retry described above. Use the existing
 [offline evaluator](../../docs/evaluation.md#retained-host-and-browser-analysis)
 to analyze traces; future telemetry versions are not silently interpreted.
