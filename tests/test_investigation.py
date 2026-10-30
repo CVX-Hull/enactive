@@ -251,6 +251,30 @@ class InvestigationTests(unittest.TestCase):
             self.assertIsNone(source['png_base64'])
             self.assertTrue(source['unavailable_reason'])
 
+    def test_successor_collection_keeps_original_program_owner_and_children(self):
+        projection = json.loads(self.events[6]['result']['content'][0]['text'])
+        self.receipt['driver']['actors'][0]['actor_id'] = 'actor-successor'
+        self.put_receipt()
+        self.events[5]['tool'] = 'player_result'
+        self.events[6]['result']['content'][0]['text'] = json.dumps(dict(
+            schema='player-service-result/1', actor_id=self.actor, value=projection))
+        self.write_trace()
+        rows = export_selection(self.selection)['cases'][0]['events']
+        program = next(e for e in rows if e['kind'] == 'program')
+        tool = next(e for e in rows if e['kind'] == 'tool')
+        self.assertEqual(program['actor_id'], self.actor)
+        self.assertIn('operation:op1', program['links'])
+        self.assertEqual(tool['actor_id'], 'actor-successor')
+
+    def test_explicit_source_retrieval_keeps_original_image_link(self):
+        self.events[5]['tool'] = 'player_source'
+        self.events[6]['result']['content'][0]['text'] = json.dumps(dict(
+            schema='player-source-read/1', source=self.metadata))
+        self.write_trace()
+        tool = next(e for e in export_selection(self.selection)['cases'][0]['events'] if e['kind'] == 'tool')
+        self.assertEqual(tool['source_id'], self.source_id)
+        self.assertIn('source:' + self.source_id, tool['links'])
+
     def test_duplicate_case_source_and_unknown_assessment_fields_reject(self):
         for change in (dict(source_ids=[self.source_id] * 2),
                 dict(assessments=[dict(label='Review', text='claim', attribution='reviewer', reference='docs/report.md',

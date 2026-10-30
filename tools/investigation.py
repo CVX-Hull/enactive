@@ -16,7 +16,7 @@ import tempfile
 
 from PIL import Image
 
-from harness.computer.protocol import ControlError, closed, decode_json, read_json
+from harness.computer.protocol import ControlError, closed, decode_json, read_json, source as source_metadata
 from harness.observer import tool_value
 from tools.control_analysis import analyze_session, read_sources
 from tools.host_analysis import MAX_LINE_BYTES, analyze_trace, delta, discover, number
@@ -356,16 +356,23 @@ def host_events(path, actor_id, session, analysis, notes):
         elif kind == 'tool-result':
             identity, start_original, start = tools.pop((original.get('request_id'), original.get('tool_call_id')))
             value = tool_value(original)
+            program_actor = actor_id
             if value.get('schema') == 'player-service-result/1' and isinstance(value.get('value'), dict):
                 # Current original-result collection can retain a program projection.
                 # Select the same public projection, never progress args or state.
                 if value['value'].get('schema') == 'player-program-run/1':
+                    program_actor = public(value.get('actor_id'), notes)
                     value = value['value']
-            known = value.get('schema') in ('computer-operation/1', 'player-program-run/1', 'player-service-result/1')
+            known = value.get('schema') in ('computer-operation/1', 'player-program-run/1', 'player-service-result/1', 'player-source-read/1')
             operation = public(value.get('operation_id'), notes) if known else None
             source_id = None
             if known and isinstance(value.get('source'), dict):
-                source_id = public(value['source'].get('source_id'), notes)
+                candidate = value['source']
+                # Retain original source metadata only after current validation;
+                # remembered prior-session source IDs remain explicit, not current pixels.
+                if value.get('schema') == 'player-source-read/1':
+                    candidate = source_metadata(candidate)
+                source_id = public(candidate.get('source_id'), notes)
             run_id = public(value.get('run_id'), notes) if value.get('schema') == 'player-program-run/1' else None
             program = public(value.get('program_id'), notes) if run_id else None
             links = [request_ids[request]] if request in request_ids else []
@@ -391,10 +398,10 @@ def host_events(path, actor_id, session, analysis, notes):
                     if not isinstance(child, dict):
                         raise ControlError('Invalid original program operation reference')
                     child_id = public(child.get('operation_id'), notes)
-                    if child_id and child.get('actor_id') == actor_id and child.get('session') == session:
+                    if child_id and child.get('actor_id') == program_actor and child.get('session') == session:
                         related.append('operation:' + child_id)
                 elapsed = value.get('elapsed_seconds')
-                yield event('program:' + run_id, 'program', 'Original program execution', actor_id=actor_id,
+                yield event('program:' + run_id, 'program', 'Original program execution', actor_id=program_actor,
                     request_id=request, tool_call_id=tool, program_id=program, run_id=run_id,
                     links=list(dict.fromkeys(related))[:64], end_wall_ms=stamp,
                     elapsed_ms=elapsed * 1000 if number(elapsed) else None,

@@ -89,6 +89,19 @@ async function rejectEdit(edit, pattern) {
   await assert.rejects(validateText(JSON.stringify(stringCapture), webcrypto), /nonnegative/);
   let parsed = await validateText(JSON.stringify(images), webcrypto);
   assert.equal(parsed.cases[0].sources[0].bytes.byteLength, png.length);
+  // A valid large ancillary PNG chunk exercises the full permitted base64 path.
+  // Use the platform CRC implementation, not a test PNG decoder.
+  const {crc32} = require('node:zlib');
+  const payload = Buffer.concat([Buffer.from('Comment\0'), Buffer.alloc(6 * 1024 * 1024, 65)]);
+  const chunk = Buffer.alloc(payload.length + 12); chunk.writeUInt32BE(payload.length);
+  chunk.write('tEXt', 4); payload.copy(chunk, 8);
+  chunk.writeUInt32BE(crc32(chunk.subarray(4, -4)), chunk.length - 4);
+  const largePng = Buffer.concat([png.subarray(0, 33), chunk, png.subarray(33)]);
+  const largeImage = clone(images);
+  largeImage.cases[0].sources[0].png_base64 = largePng.toString('base64');
+  largeImage.cases[0].sources[0].sha256 = Buffer.from(await webcrypto.subtle.digest('SHA-256', largePng)).toString('hex');
+  const largeModel = await validateText(JSON.stringify(largeImage), webcrypto);
+  assert.equal(largeModel.cases[0].sources[0].bytes.byteLength, largePng.length, 'Valid multi-MiB base64 does not exhaust the regexp stack');
   images.cases[0].sources[0].sha256 = '0'.repeat(64);
   parsed = await validateText(JSON.stringify(images), webcrypto);
   assert.match(parsed.cases[0].sources[0].unavailable_reason, /digest/);

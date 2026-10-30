@@ -86,7 +86,10 @@ async function source(v, p, cryptoAPI) {
   if (typeof v.png_base64 !== 'string') fail(p, 'png_base64 must be string or null');
   function unavailable(reason) { out.unavailable_reason = reason; return out; }
   if (!out.width || !out.height || out.width * out.height * 4 > LIMITS.pixels) return unavailable('Image unavailable: exceeds 64 MiB RGBA pixel budget or missing geometry.');
-  if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(v.png_base64)) return unavailable('Image unavailable: malformed base64.');
+  const encoded = v.png_base64, padding = encoded.endsWith('==') ? 2 : encoded.endsWith('=') ? 1 : 0;
+  // A repeated-group regexp can exhaust V8's stack on valid multi-MiB PNGs.
+  const alphabet = encoded.slice(0, encoded.length - padding);
+  if (encoded.length % 4 || /[^A-Za-z0-9+/]/.test(alphabet)) return unavailable('Image unavailable: malformed base64.');
   const binary = atob(v.png_base64);
   const bytes = Uint8Array.from(binary, character => character.charCodeAt(0));
   if (bytes.length < 33 || ![137,80,78,71,13,10,26,10,0,0,0,13,73,72,68,82].every((x, i) => bytes[i] === x)) return unavailable('Image unavailable: malformed PNG header.');
