@@ -17,6 +17,7 @@ Pause is an independent permanent stop. [Architecture](../architecture.md) and
 | --- | --- |
 | [Server](../../harness/server.py) | Selected `127.0.0.1` host/origin checks, bounded JSON, passive status/source routes and independent Pause. |
 | [Web viewer](../../web/) | Actual source presentation, mechanical versus player-claim labels, host/resource status and Pause feedback. |
+| [Activity projection](../../harness/observer.py) | Disposable bounded host tail and read-only computer-record snapshot; explicit original links and coverage, no custody or second journal. |
 | [Custodian](../../tools/campaign_run.py) | Frozen admission validation, exact native target, store/server lifetime and final cleanup/accounting receipt. |
 | [Preparation](../../tools/prepare_game.py) | Project-local windowed options, normal mouse input, wrapper/userdir and shared exclusion before changes. |
 | [Build](../../tools/build_computer.py) | Current mechanical SDL adapter/fixture plus source/output provenance; no gameplay claim. |
@@ -24,8 +25,18 @@ Pause is an independent permanent stop. [Architecture](../architecture.md) and
 ## Projection and failure semantics
 
 `GET /api/status` is passive `computer-status/1`; `/api/source/ID` serves current
-session PNGs. Browser reads do not select a player store or create observations.
-`POST /api/pause` accepts `{}` and bypasses actor/executor/DB waits. Authenticated
+session PNGs with retained identity/digest verification. A failed spectator image
+read reports unavailable without calling actor-side source-failure fencing;
+canonical actor/capture/input integrity behavior is unchanged. Browser reads do
+not select a player store or create observations.
+`GET /api/activity` is the bounded `observer-activity/1` projection described in
+the [contract](../contracts/computer-control.md#passive-spectator-projections).
+It uses the existing driver's trace consumer and a separate read-only SQLite
+snapshot, never the player executor or a model request. Projection gaps cannot
+renew or revoke custody. Original host trace/accounting remains authoritative.
+`POST /api/pause` accepts `{}` and bypasses actor/executor/DB waits. Its
+`computer-pause/1` response identifies the actual receiving session and original
+stop facts; the request works without prior status or an activity response. Authenticated
 actor tools use `/api/tool`; source reads use `/api/player-source`. No CORS/public
 exposure, semantic recovery controls or browser-issued actor handoff exists.
 

@@ -40,3 +40,42 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .8rem; }
 footer { border-top: 1px solid #344543; }
 @media (max-width: 900px) { main { grid-template-columns: 1fr; } header { align-items: start; flex-direction: column; gap: 1rem; } }
 @media (max-width: 500px) { header, main, footer { padding: 1rem; } aside section, .stage { padding: .85rem; } }
+/* Two tasks share a persistent, session-scoped emergency control. */
+.control-bar { position: sticky; top: 0; z-index: 5; background: #111819; max-width: none; padding: 1rem max(1.25rem, calc((100vw - 1536px) / 2)); gap: 1.5rem; box-shadow: 0 4px 16px #0004; }
+.control-bar h1 { font-size: 1.35rem; }
+.current-state { flex: 1; min-width: 12rem; }
+.current-state p { margin: .15rem 0; }
+#current-session { font-weight: 650; overflow-wrap: anywhere; }
+#control-freshness, #connection { font-size: .78rem; color: #b8c9c3; }
+.stop-control { flex: 0 1 25rem; }
+.stop-control button { width: 100%; }
+.observer-messages, .view-tabs, .timeline-panel { max-width: 1600px; margin: auto; padding: 0 2rem; }
+.view-tabs { display: flex; gap: .35rem; padding-top: 1.1rem; border-bottom: 1px solid #344543; }
+.view-tabs button { border-radius: .4rem .4rem 0 0; border-bottom: 3px solid transparent; background: transparent; padding: .65rem 1.5rem; }
+.view-tabs [aria-selected="true"] { border-bottom-color: #a7d6c1; background: #243735; font-weight: 700; }
+#latest-statement { font-size: 1rem; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 20rem; overflow-y: auto; }
+#recent-activity { white-space: pre-line; }
+.diagnostics { border: 1px solid #344543; border-radius: .6rem; padding: 1rem; margin: 0; }
+.diagnostics section { border: 0; padding: 1rem 0 0; background: transparent; }
+.timeline-panel { padding-top: 1.5rem; padding-bottom: 1.5rem; }
+.timeline-toolbar { display: flex; justify-content: space-between; align-items: start; gap: 1rem; }
+.timeline-toolbar h2 { margin-bottom: .3rem; }
+.timeline-toolbar p { margin: 0; }
+.timeline-layout { display: grid; grid-template-columns: minmax(15rem, 1fr) minmax(0, 1.7fr); gap: 1.5rem; align-items: start; }
+.timeline-list-panel, .inspection { background: #172122; border: 1px solid #344543; border-radius: .6rem; padding: 1.2rem; min-width: 0; }
+.timeline-list-panel label { display: block; font-size: .85rem; margin-bottom: .3rem; }
+select { background: #243735; color: #eef4f0; font: inherit; border: 1px solid #6d9184; border-radius: .3rem; width: 100%; padding: .5rem; }
+#activity-list { max-height: 65vh; overflow: auto; padding: 0; list-style: none; margin: .8rem 0 0; }
+#activity-list li { margin: 0 0 .4rem; }
+#activity-list button { text-align: left; width: 100%; padding: .65rem .8rem; background: #1d2c2b; border-color: #344543; }
+#activity-list button[aria-pressed="true"] { border-left: 4px solid #bce5d0; background: #304943; }
+.entry-meta { display: block; font-size: .75rem; color: #b8c9c3; margin-top: .25rem; }
+#entry-text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 1.05rem; }
+#entry-summary, #inspection-scope, #timeline-scope, #activity-coverage { overflow-wrap: anywhere; }
+#inspection-frame { width: 100%; height: auto; image-rendering: pixelated; }
+#inspection-frame-note { padding: .8rem; text-align: center; color: #d4c9a8; }
+.inspection .frame-shell { margin-top: 1rem; }
+.evidence-link { padding: .2rem .5rem; margin: .2rem; font-size: .85rem; }
+[role="tabpanel"]:focus-visible, #latest-statement:focus-visible, select:focus-visible { outline: 3px solid #a7d6c1; outline-offset: 3px; }
+@media (max-width: 1000px) { .control-bar { flex-direction: row; flex-wrap: wrap; gap: .75rem; } .control-bar > div:first-child { flex-basis: 100%; } .stop-control { max-width: none; } .timeline-layout { grid-template-columns: minmax(14rem, 1fr) minmax(0, 1.3fr); } }
+@media (max-width: 700px) { .timeline-layout { grid-template-columns: 1fr; } .control-bar > div:first-child { display: none; } .control-bar { padding: .65rem 1rem; } .current-state, .stop-control { flex-basis: 100%; } .observer-messages, .view-tabs, .timeline-panel { padding-left: 1rem; padding-right: 1rem; } #activity-list { max-height: 40vh; } }

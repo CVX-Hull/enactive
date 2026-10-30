@@ -8,15 +8,16 @@
   <script src="/app.js" defer></script>
 </head>
 <body>
-  <header>
-    <div><span class="eyebrow">ENACTIVE / LOCAL SPECTATOR</span><h1>Watch the native window</h1></div>
-    <div class="stop-control"><button id="pause" type="button">Pause automation permanently</button><p id="stop-state" role="status">Pause state unknown.</p></div>
+  <header class="control-bar">
+    <div><span class="eyebrow">ENACTIVE / LOCAL SPECTATOR</span><h1>Watch the player</h1></div>
+    <div class="current-state"><span class="eyebrow">CURRENT CONTROL TARGET</span><p id="current-session">Session unknown</p><p id="connection" role="status">Connecting…</p><p id="control-freshness">No status received; liveness unknown.</p></div><div class="stop-control"><button id="pause" type="button">Pause automation permanently</button><p id="stop-state" role="status">Pause state unknown.</p></div>
   </header>
-  <main>
+  <div class="observer-messages"><p id="status-error" class="error" role="alert" hidden></p><p id="pause-error" class="error" role="alert" hidden></p></div>
+  <nav class="view-tabs" role="tablist" aria-label="Observer views"><button id="tab-watch" role="tab" aria-selected="true" aria-controls="watch" tabindex="0">Watch</button><button id="tab-timeline" role="tab" aria-selected="false" aria-controls="timeline" tabindex="-1">Timeline</button></nav>
+  <main id="watch" role="tabpanel" aria-labelledby="tab-watch" tabindex="0">
     <section class="stage" aria-labelledby="view-heading">
-      <div class="stage-heading"><h2 id="view-heading">Actual captured pixels</h2><span id="connection" role="status">Connecting…</span></div>
-      <p id="status-error" class="error" role="alert" hidden></p>
-      <p id="pause-error" class="error" role="alert" hidden></p>
+      <div class="stage-heading"><h2 id="view-heading">Actual captured pixels</h2><span class="eyebrow">PASSIVE OBSERVER</span></div>
+
       <div class="frame-shell"><img id="frame" alt="Original PNG captured from the native window" hidden><p id="frame-note" role="status">No captured source available.</p></div>
       <p id="source-age">No displayed source.</p>
       <details><summary>Original source and geometry</summary><p id="source-details">No displayed source.</p></details>
@@ -29,6 +30,9 @@
       </details>
     </section>
     <aside>
+      <section aria-labelledby="statement-heading"><span class="eyebrow">PUBLIC PLAYER STATEMENT · FALLIBLE</span><h2 id="statement-heading">What the player said</h2><p class="hint">Long statements scroll within this panel. Original evidence and limits are available in Timeline.</p><p id="latest-statement" tabindex="0" role="region" aria-label="Public player statement">No public statement available.</p><p id="statement-meta" class="hint">Missing narration does not establish inactivity.</p></section>
+      <section><h2>Recent activity</h2><p id="activity-summary">Activity not yet received.</p><p id="recent-activity">No activity available.</p><button id="open-timeline" type="button">Inspect Timeline</button></section>
+      <details class="diagnostics"><summary>Mechanical facts, budgets and player assertions</summary>
       <section aria-labelledby="control-heading">
         <h2 id="control-heading">Control and mechanical facts</h2>
         <dl>
@@ -56,8 +60,16 @@
         <p class="hint">Fallible player-authored claims, work and interpretations. These do not certify game outcomes, Save, control ownership or authority.</p>
         <ul id="player-claims"><li>No player assertions reported.</li></ul>
       </section>
+      </details>
     </aside>
   </main>
+  <section id="timeline" class="timeline-panel" role="tabpanel" aria-labelledby="tab-timeline" tabindex="0" hidden>
+    <div class="timeline-toolbar"><div><h2>Recent Timeline</h2><p id="timeline-scope">Current session; waiting for activity.</p></div><button id="follow-latest" type="button">Follow latest</button></div>
+    <p id="stop-history" class="hint">No previous-session Pause evidence retained.</p><p id="new-items" role="status">Following latest.</p><p id="activity-error" class="error" hidden></p><p id="activity-coverage" class="hint">Coverage unknown.</p><details><summary>Original coverage and omission counts</summary><pre id="coverage-details">No coverage received.</pre></details>
+    <div class="timeline-layout"><div class="timeline-list-panel"><label for="timeline-session">Recorded session</label><select id="timeline-session"><option value="current">Current session</option><option value="previous">Previous session (unavailable)</option></select><ol id="activity-list" aria-label="Recorded activity"></ol><p id="timeline-empty">No recorded activity available.</p></div>
+    <article class="inspection" aria-labelledby="inspection-heading"><h2 id="inspection-heading">Select an entry</h2><p id="inspection-scope">Inspection does not stop automation or replay input.</p><p id="entry-summary">Choose recorded activity to inspect its original evidence.</p><p id="entry-text"></p><div id="entry-links"></div><details><summary>Original identifiers, clocks and dispositions</summary><pre id="entry-details">No entry selected.</pre></details><div class="frame-shell"><img id="inspection-frame" alt="Retained source explicitly linked to the selected entry" hidden><p id="inspection-frame-note">No source selected.</p></div><p id="inspection-source" class="hint"></p></article></div>
+    <p class="hint">Latest 200 entries per session; at most the current and one previous session are retained on this page. Previous-session pixels are unavailable from a replacement server. Reload discards client history. Original traces may retain evidence outside this view. Cross-process wall-clock ordering is approximate; nearby events do not establish causation.</p>
+  </section>
   <footer>Private loopback spectator · Captured pixels and mechanical facts · Game interpretation belongs to the player</footer>
 </body>
 </html>

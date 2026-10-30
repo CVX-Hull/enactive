@@ -56,11 +56,15 @@ def serve(application, port: int) -> tuple[LocalServer, threading.Thread]:
                     raise ControlError('Query/fragment routes are unsupported')
                 if path.path == '/api/status':
                     self.json_reply(200, application.status())
+                elif path.path == '/api/activity':
+                    self.json_reply(200, application.activity_view.snapshot())
                 elif path.path.startswith('/api/source/'):
                     identity = unquote(path.path.removeprefix('/api/source/'))
                     # Public spectator reads only this mechanical session, not
                     # the selected player's historical knowledge store.
-                    _, png = application.runtime.source(identity)
+                    # The spectator verifies retained bytes without invoking
+                    # actor-side source-failure fencing or issuing a source.
+                    _, png = application.runtime.store.read_source(identity)
                     self.reply(200, png, 'image/png', immutable=True)
                 elif path.path in ('/','/app.js','/style.css'):
                     name = {'/':'index.html','/app.js':'app.js','/style.css':'style.css'}[path.path]
@@ -83,7 +87,9 @@ def serve(application, port: int) -> tuple[LocalServer, threading.Thread]:
                 value = decode_json(self.rfile.read(length),1048576)
                 if self.path == '/api/pause':
                     closed(value,set())
-                    self.json_reply(200, application.runtime.stop('Operator Pause'))
+                    stopped = application.runtime.stop('Operator Pause')
+                    self.json_reply(200, dict(schema='computer-pause/1',
+                        session=application.runtime.session, stop=stopped))
                     return
                 authorization = self.headers.get('Authorization','')
                 if not authorization.startswith('Bearer '):

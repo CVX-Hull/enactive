@@ -24,10 +24,11 @@ def write_new(path: Path,value,*,text=False) -> None:
 
 class HostEvents:
     """Incremental JSONL; a partial final line never becomes an uncharged request."""
-    def __init__(self,path: Path,allowance: int):
+    def __init__(self,path: Path,allowance: int,observer=None):
         self.stream=path.open('rb');self.buffer=b'';self.allowance=allowance
         self.requests=set();self.settled=None;self.handoff=None;self.last_response_wall=None
         self.usage={};self.error=None;self.started=False
+        self.observer=observer;self.ordinal=0
 
     def read(self) -> bool:
         chunk=self.stream.read(1048576)
@@ -38,6 +39,7 @@ class HostEvents:
         for line in lines:
             if not line:continue
             value=json.loads(line)
+            self.ordinal+=1
             kind=value.get('type')
             if kind=='host-start':
                 if self.started or value.get('telemetry_version')!=2:raise ControlError('Unsupported/repeated current host trace')
@@ -58,6 +60,8 @@ class HostEvents:
             elif kind=='settled':
                 if self.settled is not None:raise ControlError('Repeated host terminal event')
                 self.settled=value
+            if self.observer is not None:
+                self.observer(self.ordinal,value)
         return True
 
     def finish(self) -> dict:
@@ -136,7 +140,8 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
             with (target/'host.jsonl').open('x') as output,(target/'host-stderr.log').open('x') as errors,(target/'prompt.txt').open() as prompt_input:
                 child=subprocess.Popen(arguments,cwd=ROOT,env=environment,stdin=prompt_input,stdout=output,stderr=errors,start_new_session=True)
                 write_new(target/'host-process.json',dict(pid=child.pid,pgid=child.pid,argv=arguments))
-                events=HostEvents(target/'host.jsonl',allowance)
+                events=HostEvents(target/'host.jsonl',allowance,
+                    observer=lambda ordinal,event:application.activity_view.host_event(actor['actor_id'],ordinal,event))
                 while child.poll() is None:
                     events.read()
                     now=time.monotonic()
