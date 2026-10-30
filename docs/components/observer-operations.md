@@ -56,6 +56,10 @@ images can fit the panel or retain original pixel size in a keyboard-scrollable
 viewport; this presentation never requests a capture or changes control. Transport
 feedback is rendered from session-scoped errors and current monotone stop facts,
 so later confirmation cannot leave an earlier uncertainty alert unchanged.
+One last identified Pause receiver with monotone stop facts preserves evidence outside the
+current/previous view. It is explicitly separate from the current target; a receipt
+alone cannot establish which opaque session is newer. Later matching status can
+use that retained confirmation; reordered receipts cannot erase it or replace current diagnostics.
 
 ## Assurance and evidence
 

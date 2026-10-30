@@ -267,6 +267,11 @@ then returns `computer-pause/1` with `session` and original `stop` facts. It nev
 waits for activity, executor/application/database locks or prior status. A delayed
 request can stop a replacement custodian; this emergency meaning is explicit.
 Attribute confirmation to the response's actual session, not a stale page/click.
+The page retains one last identified Pause receiver and its monotone stop facts
+separately from bounded activity history. A receiver outside the current/previous view is named explicitly,
+without inferring chronological freshness from its opaque ID or replacing current
+diagnostics. Its retained stop facts merge with later matching status/receipts;
+reordered unconfirmed evidence cannot erase received confirmation.
 Unsupported/lost responses leave confirmation unknown. Same-session stop facts are
 monotone; an earlier status cannot undo a later stop. Old/unidentified requests
 cannot disable a deliberate fresh-session stop. No automatic retry, Resume or

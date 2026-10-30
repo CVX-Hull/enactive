@@ -388,8 +388,61 @@ const text = id => {
   assert.match(text('inspection-heading'),/unavailable/);
   assert.equal(element('inspection-frame').hidden,true);
 
+  // A delayed POST may reach a third receiver after an intervening status.
+  // Its ID alone cannot establish freshness, but its confirmation must survive.
+  await poll(status(null,{session:'third-receiver-click',stop:{}}));
+  element('pause').listeners.click();
+  const thirdReceiverPause=request('/api/pause');
+  await poll(status(null,{session:'intervening-status',stop:{}}));
+  element('pause').listeners.click();
+  const secondThirdReceiverPause=request('/api/pause');
+  await reply(thirdReceiverPause,{schema:'computer-pause/1',session:'unseen-receiver',stop:{stop_requested:true,native_pause_confirmed:true}});
+  assert.equal(run('currentSession'),'intervening-status','An opaque receiver cannot replace current status after a session change');
+  assert.doesNotMatch(text('stop-state'),/native Pause confirmed/);
+  assert.equal(element('pause').disabled,true,'Current intent stays pending independently of another receiver confirmation');
+  assert.equal(element('pause-receiver').hidden,false);
+  assert.match(text('pause-receiver'),/unseen-receiver.*native Pause confirmed by received evidence.*not the current control target/);
+  assert.equal(run('stopStates.has("unseen-receiver")'),false,'Unseen receiver is one bounded record, not another session history');
+  await reply(secondThirdReceiverPause,{schema:'computer-pause/1',session:'unseen-receiver',stop:{stop_requested:false,native_pause_confirmed:false}});
+  assert.equal(run('currentSession'),'unseen-receiver','The later current-scope intent identifies its actual receiver');
+  assert.equal(element('pause').disabled,true,'Reordered same-receiver receipts preserve native confirmation');
+  assert.match(text('stop-state'),/native Pause confirmed/);
+  await poll(status(null,{session:'unseen-receiver',stop:{stop_requested:false,native_pause_confirmed:false}}));
+  assert.match(text('stop-state'),/native Pause confirmed/,'Matching later status uses the retained receipt monotonically');
+  assert.equal(element('pause-receiver').hidden,true,'Current confirmation is rendered in the current control bar');
+
+  await poll(status(null,{session:'status-only-click',stop:{}}));
+  element('pause').listeners.click();
+  const statusOnlyPause=request('/api/pause');
+  await poll(status(null,{session:'status-only-between',stop:{}}));
+  await reply(statusOnlyPause,{schema:'computer-pause/1',session:'status-only-receiver',stop:{stop_requested:true,native_pause_confirmed:true}});
+  assert.equal(run('currentSession'),'status-only-between');
+  assert.equal(element('pause').disabled,false,'An unseen receiver receipt leaves the current emergency control available');
+  await poll(status(null,{session:'status-only-receiver',stop:{stop_requested:false,native_pause_confirmed:false}}));
+  assert.match(text('stop-state'),/native Pause confirmed/,'Status alone can identify and merge the retained receiver');
+
+  // The same signals can belong to an older unseen receiver. Preserve current
+  // confirmation and transport diagnostics instead of guessing chronological order.
+  await poll(status(null,{session:'older-receiver-click',stop:{}}));
+  element('pause').listeners.click();
+  const unseenOlderPause=request('/api/pause');
+  await poll(status(null,{session:'receipt-current',stop:{}}));
+  element('pause').listeners.click();
+  const receiptCurrentPause=request('/api/pause');
+  await poll(status(null,{session:'receipt-current',stop:{stop_requested:true,native_pause_confirmed:true}}));
+  receiptCurrentPause.reject(new Error('Current receipt lost')); await tick();
+  const receiptCurrentFeedback=text('pause-error');
+  await reply(unseenOlderPause,{schema:'computer-pause/1',session:'older-unseen-receiver',stop:{stop_requested:true,native_pause_confirmed:false}});
+  assert.equal(run('currentSession'),'receipt-current');
+  assert.match(text('stop-state'),/native Pause confirmed/);
+  assert.equal(text('pause-error'),receiptCurrentFeedback);
+  assert.match(text('pause-receiver'),/older-unseen-receiver.*retained evidence has no native Pause confirmation/);
+  assert.equal(run('lastPauseReceiver.session'),'older-unseen-receiver','Only the last identified receiver is retained');
+  assert.ok(run('stopStates.size')<=3,'Current/previous plus initial unknown state remain bounded');
+
   // Isolated page: Pause identifies the actual receiver before any status.
   // The already-pending initial GET from an unknown older receiver is fenced.
+  for (const match of html.matchAll(/id="([^"]+)"/g)) elements.set(match[1],node(match[1]));
   const freshContext = vm.createContext({...context});
   vm.runInContext(fs.readFileSync(path.join(__dirname, '../web/app.js'), 'utf8'), freshContext);
   const unknownOldStatus = request('/api/status');

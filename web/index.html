@@ -10,7 +10,7 @@
 <body>
   <header class="control-bar">
     <div><span class="eyebrow">ENACTIVE / LOCAL SPECTATOR</span><h1>Watch the player</h1></div>
-    <div class="current-state"><span class="eyebrow">CURRENT CONTROL TARGET</span><p id="current-session">Session unknown</p><p id="connection" role="status">Connecting…</p><p id="control-freshness">No status received; liveness unknown.</p></div><div class="stop-control"><button id="pause" type="button">Pause automation permanently</button><p id="stop-state" role="status">Pause state unknown.</p></div>
+    <div class="current-state"><span class="eyebrow">CURRENT CONTROL TARGET</span><p id="current-session">Session unknown</p><p id="connection" role="status">Connecting…</p><p id="control-freshness">No status received; liveness unknown.</p></div><div class="stop-control"><button id="pause" type="button">Pause automation permanently</button><p id="stop-state" role="status">Pause state unknown.</p><p id="pause-receiver" class="hint" hidden></p></div>
   </header>
   <div class="observer-messages"><p id="status-error" class="error" role="alert" hidden></p><p id="pause-error" class="error" role="alert" hidden></p></div>
   <nav class="view-tabs" role="tablist" aria-label="Observer views"><button id="tab-watch" role="tab" aria-selected="true" aria-controls="watch" tabindex="0">Watch</button><button id="tab-timeline" role="tab" aria-selected="false" aria-controls="timeline" tabindex="-1">Timeline</button></nav>

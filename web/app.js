@@ -15,6 +15,7 @@ const retiredSessions = new Set();
 const stopStates = new Map();
 const pauseIntents = new Set();
 let pauseFeedback = null;
+let lastPauseReceiver = null;
 let displayed = null;
 let candidate = null;
 let sourceGeneration = 0;
@@ -85,6 +86,10 @@ function mergeStop(session, stop) {
   state.requested ||= stop?.stop_requested === true;
   state.confirmed ||= stop?.native_pause_confirmed === true;
   if (stop?.reason) state.reason = stop.reason;
+  if (lastPauseReceiver?.session === session) {
+    lastPauseReceiver.stop.stop_requested ||= state.requested;
+    lastPauseReceiver.stop.native_pause_confirmed ||= state.confirmed;
+  }
 }
 function renderStop() {
   const state = stopState();
@@ -104,6 +109,9 @@ function renderStop() {
   show('pause-error', feedback ? feedback.unidentified ?
     `Unidentified earlier Pause response unavailable: ${feedback.reason}. Its receiving target is unknown; ${state.confirmed ? confirmation : 'current-session facts above are unchanged.'}` :
     `Pause response unavailable: ${feedback.reason}. ${confirmation}` : '');
+  const outsideHistory = lastPauseReceiver && lastPauseReceiver.session !== currentSession && lastPauseReceiver.session !== previousSession;
+  $('pause-receiver').hidden = !outsideHistory;
+  show('pause-receiver', outsideHistory ? `Last identified Pause receiver · session ${lastPauseReceiver.session}: ${lastPauseReceiver.stop.native_pause_confirmed ? 'native Pause confirmed by received evidence' : 'retained evidence has no native Pause confirmation'}. This receiver is outside the current/previous session view; it is not the current control target.` : '');
   const old = stopStates.get(previousSession);
   show('stop-history', previousSession && (old?.requested || old?.confirmed) ? `Historical Pause · session ${previousSession}: ${old.confirmed ? 'native Pause confirmed' : 'Pause requested; native confirmation unknown'}. This is not the current control target.` : 'No previous-session Pause evidence retained.');
 }
@@ -115,6 +123,7 @@ function adoptSession(session) {
   currentSession = session;
   sessionGeneration += 1;
   for (const key of stopStates.keys()) if (key !== currentSession && key !== previousSession && key !== null) stopStates.delete(key);
+  if (lastPauseReceiver?.session === session) mergeStop(session, lastPauseReceiver.stop);
   for (const key of activitySnapshots.keys()) if (key !== currentSession && key !== previousSession) activitySnapshots.delete(key);
   latest = null;
   statusReceivedAt = null;
@@ -164,6 +173,15 @@ async function requestPause() {
     if (result.schema !== 'computer-pause/1' || typeof result.session !== 'string' || !result.session || !result.stop) {
       throw new Error('Unsupported or unidentified Pause response');
     }
+    // A receipt can identify a third, previously unseen receiver. Its opaque ID
+    // cannot establish that it is newer than current status. Keep one receiver,
+    // disclose the receiver, and merge its facts if status later identifies it.
+    const retained = lastPauseReceiver?.session === result.session ? lastPauseReceiver.stop : null;
+    const known = stopStates.get(result.session);
+    lastPauseReceiver = {session: result.session, stop: {
+      stop_requested: result.stop.stop_requested === true || retained?.stop_requested === true || known?.requested === true,
+      native_pause_confirmed: result.stop.native_pause_confirmed === true || retained?.native_pause_confirmed === true || known?.confirmed === true,
+      reason: typeof result.stop.reason === 'string' ? result.stop.reason.slice(0, 600) : null}};
     // The receiver identifies the target. A late old receipt is history, while a
     // replacement receiver can identify itself before the next status arrives.
     if (!currentSession || (currentSession === intent.scope && !retiredSessions.has(result.session))) adoptSession(result.session);
