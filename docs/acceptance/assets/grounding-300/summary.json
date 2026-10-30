@@ -1,0 +1,727 @@
+{
+  "schema": "grounding-300-evidence/1",
+  "scope": "One research-informed context prototype assessed and rejected; no retained readiness, causal prompt/provider, cadence, learning or portability qualification",
+  "decision": "Remove unqualified candidate from current guide; preserve original prototype and negative/positive evidence",
+  "candidate_source_commit": "85aa04518373d9ebb979f45b4108441062c43bac",
+  "candidate_guide_sha256": "a851a02a735209b91d0ebe1b178ca796d3187ab04aaa0d7dab4bdc938b365883",
+  "restored_guide_sha256": "14ac97fe329d919dfb73f2b8b903bc5dd4b28696678dc0f64b624d0d42446702",
+  "historical_context_supplement": "## Keep spatial task state in a reference frame\n\nWhen position or focus matters to a task, keep a small fallible working state:\n`actor/identity support | inspection focus | actor-to-landmark relation@source(s) |\nlast established effect | unresolved`. Existing Work/claim tools can retain it\nwhen useful; no new record, narration or observation is required after every key.\nUse actual returned sources for your state; the worked example below is an\nannotated historical illustration, not your current observations or a procedure.\n\nExample: across two gameplay images, the apparent actor stays at the screen center,\nbut the same fixed doorway shifts down by one tile. With unchanged view scale and\norientation, the actor is one tile higher **relative to that doorway**; fixed screen\nposition alone does not establish no travel. A later inspection cursor moves and\nthe camera pans, while the actor-to-doorway relation stays fixed: that changes the\ninspection target, not the actor's location. This does not supply world coordinates.\nIf actor/landmark identity, landmark stability or view transformation is unclear,\nkeep the relation/effect undetermined. An attempted direction is not evidence of\nmovement. Revise the working relation when the next relevant view contradicts it,\nthen reconsider dependent work; retain the source and remaining uncertainty.\n",
+  "availability": "Only this bounded summary and listed unchanged PNGs are published. Full original model answers, protocols, corpus/labels, traces, saved game and research extraction corpus remain ignored project-local evidence and are unavailable in a fresh checkout. No raw requests, private reasoning or credentials are published. Historical supplement is evidence, not current player instructions.",
+  "frozen_artifact_sha256": {
+    "corpus.json": "11f00b4b179bdd9e43c05988ee36ca4893dc53cffe98e74bfd7ac73c00ee874a",
+    "discovery-labels.json": "43ffab20b75263ff58a9104c19ff8f1fe73a4208233ba6024ed95376be72e8fa",
+    "assessment-labels.json": "a8cde3d13f4e239c629d6211ebc509174b9165171ae3a77c069da23b60265752",
+    "candidate-frozen.json": "719008d36145fa8f830a73e473fc33fc0c592d7a238321e36756164a5b65da0e",
+    "assessment-exposure.json": "666a2757a6c35fd62cf84326d9acfdaef611c82aaeb1a5fde92aa3a487fbe89d",
+    "diagnostic-protocol.md": "bac1150e5bba492bc50b2984a5067fd557144516c9b5208896e9dff2daa08724",
+    "research-adjudication.md": "75ae2c8a91396901ad73c7ec19ca4985b4beea0968aa2a19ad44966b451b923e",
+    "candidate-discovery001/freeze.json": "b6bb47f33c6bff1dc7d0f18915d271f2d2e575af41a1cb1e4f03c749bc70f852",
+    "assessment001/freeze.json": "0cdab010ba32f733ad3315213b57965d0d7b16900ba6f82b90b74bb9a966197f",
+    "play001-protocol.md": "bc603ffacaff2511b5ca96007c17d06abc313b2f2b2f5f3736f9997fe78a9f3f",
+    "play001-admission.json": "f39544ed4eaf55e450747a07ffd429910dbe9beedea979f314e04640c643a4a6",
+    "play001-provider-endpoints.json": "e3fef6a17f196ae25a25c482a258e64a800364cd167efafbe8229dec7dc9ef96"
+  },
+  "assessment_exposure": "H sources/questions fixed before discovery; candidate frozen before H images/labels opened, labels before H queries, no H tuning. Earlier human #298 reports and same-episode source overlap limit independence; not novel-task generalization.",
+  "retained_diagnostics": {
+    "original": 16,
+    "candidate_discovery": 8,
+    "candidate_assessment": 8,
+    "total_http_attempts": 32,
+    "nonempty_public_stop_answers": 31,
+    "empty_error": {
+      "set": "discovery001",
+      "job": "D3-current-r2",
+      "status": 200,
+      "elapsed_ms": 130436.296459,
+      "exact_sdk_cause": "not retained; not established timeout/429"
+    },
+    "conditions": "current final image+literal preceding input vs original short image/action sequence; no labels/player narration; same14tool schemas with tool_choice none and no dispatch",
+    "decisive_findings": [
+      "D4 sequence denies686→871 avatar movement both before and after candidate; candidate illustration itself was discovered from this example",
+      "H2 sequence separates cursor/avatar and recognizes southward movement but overstates one tile as roughly two",
+      "H3 sequence recognizes changed landmark-relative position; no matched old-guide H baseline, therefore not demonstrated candidate correction",
+      "H1 sequence invents identity conflict despite explicit You(ParkerWest)",
+      "Current-only missing-baseline uncertainty and local-search scope mostly preserved; clinically directed QA is not organic attention/calibration",
+      "H2 sequence/H3 current exceed220word instruction"
+    ]
+  },
+  "stages": [
+    {
+      "name": "provider-refresh001",
+      "accounting_sha256": "74aab931116eb0d732330daa7c6068d6084e9b0e7cc1b19cf70b89de04aa1c7a",
+      "facts": {
+        "attempts_charged": 0,
+        "cumulative_attempts": 3698,
+        "cumulative_conservative_reservation_usd": "972.727517184",
+        "configured_estimate_known_usd": "0",
+        "missing_usage_attempts": 0
+      }
+    },
+    {
+      "name": "provider-refresh002",
+      "accounting_sha256": "ee70a47489ec432d1b426bef0f4907da5f43ec28dce7186852d2e74ec1910699",
+      "facts": {
+        "configured_estimate_known_usd": "0.00318005199999999993",
+        "missing_usage_attempts": 0,
+        "cumulative_attempts": 3704,
+        "cumulative_conservative_reservation_usd": "975.234269184"
+      }
+    },
+    {
+      "name": "discovery001",
+      "accounting_sha256": "9266793532201407c456845469920c4f5c7f9b368de06e0c6d45cfa488da5aa0",
+      "facts": {
+        "attempts_charged": 16,
+        "public_nonempty_completed": 15,
+        "configured_estimate_known_usd": "0.1064458980000000066",
+        "missing_usage_attempts": 1,
+        "cumulative_attempts": 3720,
+        "cumulative_conservative_reservation_usd": "983.255875584",
+        "tool_dispatch": false,
+        "trace_sha256": "e0991063baca641372246326530f9b81a4dfa8ff50d3b984ca66fdd4e534243a",
+        "closed": {
+          "returncode": 0,
+          "ended_wall": 1793368245.654284,
+          "elapsed_seconds": 503.48983001708984,
+          "process_absent": true
+        }
+      }
+    },
+    {
+      "name": "candidate-discovery001",
+      "accounting_sha256": "17ee9f7e0b5443479635c4ebd0ae4cb0a8f13776c203d984c2fca7cba93e5680",
+      "facts": {
+        "attempts_charged": 8,
+        "public_nonempty_completed": 8,
+        "configured_estimate_known_usd": "0.054020844000000004",
+        "missing_usage_attempts": 0,
+        "cumulative_attempts": 3728,
+        "cumulative_conservative_reservation_usd": "987.266678784",
+        "trace_sha256": "9813105dd3a327ae6b4a072e3ab2e190003e5012bbfc8666343681394578eb24",
+        "closed": {
+          "returncode": 0,
+          "ended_wall": 1793369770.318368,
+          "elapsed_seconds": 176.89942812919617,
+          "process_absent": true
+        },
+        "tool_dispatch": false
+      }
+    },
+    {
+      "name": "assessment001",
+      "accounting_sha256": "49ba9a9af0d309212c380adb6eb77a9687f82a24c59f50bfcbd1199375bec412",
+      "facts": {
+        "attempts_charged": 8,
+        "public_nonempty_completed": 8,
+        "configured_estimate_known_usd": "0.0526854780000000056",
+        "missing_usage_attempts": 0,
+        "cumulative_attempts": 3736,
+        "cumulative_conservative_reservation_usd": "991.277481984",
+        "trace_sha256": "003639bbeb3eaecef3ccd3421cbe42cee8d7debeb664d380f3af57a0facc6a1a",
+        "closed": {
+          "returncode": 0,
+          "ended_wall": 1793370083.417108,
+          "elapsed_seconds": 188.39319705963135,
+          "process_absent": true
+        },
+        "tool_dispatch": false
+      }
+    }
+  ],
+  "gameplay": {
+    "case": "grounding300-play001",
+    "session": "43be4158ec0a486fa92feaf22718b19e",
+    "actor": "f46eb41c56264fc6a0f22841ca2f9c77",
+    "manifest_sha256": "46b45df3380b8640f83e590aa47a525eab3982bed4e15c934fd996670b00f722",
+    "context_sha256": "94bec1ac2a46bf31b1291fe479b2324488c7ca08ba7f107488ca0908144935dd",
+    "prompt_sha256": "48379f88dafaff2e8955ec2bee7028f617ac6cb27c0a241b6f9c83c8fcce3f19",
+    "route_sha256": "0a4674ebdbada96b5900bab7a320994b86ed1e7f8f9d5c6b5321ae7d45d03edd",
+    "mcp_template_sha256": "e3cccc002cc971ffbf270b979131c6902f1975df8d4f6d055ee8d30defa86a60",
+    "receipt_sha256": "90995deb415d4cb973a52eaa22963bb117950d02984f7f37089943ed0167f46a",
+    "host_trace_sha256": "33b9c1bc579b6c79526c002497ab339a07ccb33e2708f08a00270a8cb7407d2a",
+    "native": "0a5649cfb19e7d36d08580f7c88defb2a7c48c94f7b1d2368c051e7ca4e866b8",
+    "adapter": "77313b1e82aa0b7d4e4b2fe536f77d605c5f2efe76494f2250fe4e2f8b4978df",
+    "source_commit": "85aa04518373d9ebb979f45b4108441062c43bac",
+    "started_wall": 1793370137.464107,
+    "elapsed_seconds": 767.0998341673985,
+    "host_seconds": 765.99471708294,
+    "attempts": 112,
+    "limits": {
+      "host_seconds": 2400,
+      "custodian_seconds": 3000,
+      "max_http_attempts": 180,
+      "max_hosts": 1,
+      "ending_reserve": "at least300host seconds AND25attempts; begin when either threshold reached"
+    },
+    "mechanical_limits": {
+      "max_inputs": 12000,
+      "max_requests": 20000,
+      "max_frames": 2500,
+      "max_bytes": 3221225472
+    },
+    "accounting": {
+      "attempts_charged": 112,
+      "cumulative_attempts": 3848,
+      "consumed_conservative_reservation_usd": 56.1512448,
+      "cumulative_conservative_reservation_usd": 1047.428726784,
+      "allocated_max_attempts": 180,
+      "unused_allocation_retired": 68,
+      "configured_estimate_usd": 2.174105286,
+      "missing_usage_attempts": 0,
+      "reservation_is_not_invoice": true
+    },
+    "outcome": "Transient food pickup and return; no retained supply/use/needs gain; voluntary ending before original reserves reached",
+    "useful_gain_endpoint": {
+      "status": "censored/no successful retained-gain event",
+      "last_world_source": "43be4158ec0a486fa92feaf22718b19e-6742",
+      "last_world_elapsed_seconds": 732.549371,
+      "closed_campaign_seconds": 767.0998341673985
+    },
+    "pickup_to_return_seconds": 5.791894,
+    "milestones": [
+      {
+        "source_id": "43be4158ec0a486fa92feaf22718b19e-192",
+        "label": "Initial six murky water and existing gear; not a new gain",
+        "campaign_elapsed_seconds": 19.091320037841797
+      },
+      {
+        "source_id": "43be4158ec0a486fa92feaf22718b19e-6637",
+        "label": "Same visible carried stock; no new retained food or treated water",
+        "campaign_elapsed_seconds": 710.3177349567413
+      },
+      {
+        "source_id": "43be4158ec0a486fa92feaf22718b19e-6692",
+        "label": "Avatar still on wooden interior floor despite outside/path assertion",
+        "campaign_elapsed_seconds": 725.744637966156
+      },
+      {
+        "source_id": "43be4158ec0a486fa92feaf22718b19e-5775",
+        "label": "Actual wrapper/four-pecorino pickup and theft confrontation",
+        "campaign_elapsed_seconds": 624.6201388835907
+      },
+      {
+        "source_id": "43be4158ec0a486fa92feaf22718b19e-5778",
+        "label": "Wrapper returned to surrounding area; carried inventory back at12.5lb/1.82L",
+        "campaign_elapsed_seconds": 630.4120330810547
+      },
+      {
+        "source_id": "43be4158ec0a486fa92feaf22718b19e-3",
+        "label": "Parker West initial list value01:11:23",
+        "campaign_elapsed_seconds": 4.426618814468384
+      },
+      {
+        "source_id": "43be4158ec0a486fa92feaf22718b19e-6788",
+        "label": "Actual title return after final Save-and-Quit",
+        "campaign_elapsed_seconds": 739.4700601100922
+      },
+      {
+        "source_id": "43be4158ec0a486fa92feaf22718b19e-6789",
+        "label": "Updated list01:23:28; no subsequent freshLoad",
+        "campaign_elapsed_seconds": 746.0272388458252
+      },
+      {
+        "source_id": "43be4158ec0a486fa92feaf22718b19e-6959",
+        "label": "Separate application Quit confirmation before original unknown EOF input",
+        "campaign_elapsed_seconds": 757.64786195755
+      },
+      {
+        "source_id": "43be4158ec0a486fa92feaf22718b19e-1653",
+        "label": "Actual approach to item-bearing storage",
+        "campaign_elapsed_seconds": 191.10894107818604
+      }
+    ],
+    "transport": {
+      "operation_statuses": {
+        "completed": 110,
+        "unknown": 1
+      },
+      "native_dispositions": {
+        "delivered": 516,
+        "transport_unknown": 1
+      },
+      "final_quit_operation_id": "de617475a2364cee81c13048965279a2",
+      "final_quit_ack": "unknown / native channel EOF; no replay",
+      "normal_native_exit_zero": true,
+      "native_signals": [],
+      "host_quiescent": true,
+      "native_absent": true,
+      "input_revoked": true
+    },
+    "ending": "Visible title and updated01:11:23→01:23:28 list; player misreported digits. No fresh Load after this Save; broader persistence unknown.",
+    "telemetry": {
+      "completed_response_ms": {
+        "max": 17050.895499999984,
+        "n": 112,
+        "p50": 6129.624229000008,
+        "p95": 11760.042625000002,
+        "sum": 710874.0747890003
+      },
+      "timing_ms": {
+        "first_body": {
+          "max": 6909.666124999989,
+          "n": 112,
+          "p50": 3086.1628124999697,
+          "p95": 4845.719583999948,
+          "sum": 331184.07975000015
+        },
+        "first_content": {
+          "max": 16036.285459000035,
+          "n": 51,
+          "p50": 5720.254916999955,
+          "p95": 12345.618458000012,
+          "sum": 314995.1119600002
+        },
+        "first_reasoning": {
+          "max": 6909.7802499999525,
+          "n": 111,
+          "p50": 3090.258374999976,
+          "p95": 4846.060583999963,
+          "sum": 330402.4448270004
+        },
+        "first_tool_argument": {
+          "max": 16491.51354200003,
+          "n": 111,
+          "p50": 5793.17633300001,
+          "p95": 11271.548583000025,
+          "sum": 670041.365707
+        },
+        "headers": {
+          "max": 6909.10149999999,
+          "n": 112,
+          "p50": 3084.0146664999775,
+          "p95": 4843.8251669999445,
+          "sum": 330922.079039
+        },
+        "host_inspection": {
+          "max": 7.058374999993248,
+          "n": 112,
+          "p50": 5.1723540000093635,
+          "p95": 6.032625000021653,
+          "sum": 533.589461000125
+        },
+        "max_body_gap": {
+          "max": 462.51358400000026,
+          "n": 112,
+          "p50": 207.48104199999943,
+          "p95": 377.38720899999316,
+          "sum": 25532.514212000162
+        },
+        "max_semantic_gap": {
+          "max": 1900.3205420000013,
+          "n": 112,
+          "p50": 207.53229150001425,
+          "p95": 377.4406250000029,
+          "sum": 28276.807499000737
+        },
+        "sdk_after_payload": {
+          "max": 13.54216599999927,
+          "n": 112,
+          "p50": 10.080604000017047,
+          "p95": 12.036458999995375,
+          "sum": 1021.5749579997118
+        }
+      },
+      "tool_ms": {
+        "max": 2709.0641669999986,
+        "n": 111,
+        "p50": 414.92083399998955,
+        "p95": 600.5859159999527,
+        "sum": 52440.51183399987
+      },
+      "observed_request_ms": 710874.0747890003,
+      "observed_tool_ms": 52440.51183399987,
+      "request_tool_overlap_ms": 0,
+      "request_share": 0.9282411099625271,
+      "host_ms": 765829.122584,
+      "censored_requests": 0,
+      "unknown_usage_requests": 0,
+      "usage": {
+        "cacheRead": {
+          "max": 173676,
+          "n": 112,
+          "p50": 44252.0,
+          "p95": 114486,
+          "sum": 5818754
+        },
+        "cacheWrite": {
+          "max": 0,
+          "n": 112,
+          "p50": 0.0,
+          "p95": 0,
+          "sum": 0
+        },
+        "input": {
+          "max": 57934,
+          "n": 112,
+          "p50": 54003.5,
+          "p95": 57537,
+          "sum": 4451278
+        },
+        "output": {
+          "max": 1998,
+          "n": 112,
+          "p50": 516.0,
+          "p95": 1218,
+          "sum": 65923
+        },
+        "reasoning": {
+          "max": 1744,
+          "n": 112,
+          "p50": 353.0,
+          "p95": 1065,
+          "sum": 49514
+        }
+      },
+      "reported_output_per_post_body_second": {
+        "max": 388.0526375655547,
+        "n": 112,
+        "p50": 184.90802190526148,
+        "p95": 276.65227084309606,
+        "sum": 21584.61092182891
+      },
+      "context": {
+        "input_images": {
+          "max": 110,
+          "n": 112,
+          "p50": 55.5,
+          "p95": 106,
+          "sum": 6215
+        },
+        "omitted_images": {
+          "max": 80,
+          "n": 112,
+          "p50": 25.5,
+          "p95": 76,
+          "sum": 3320
+        },
+        "projection_ms": {
+          "max": 7.6614999999292195,
+          "n": 112,
+          "p50": 3.3702084999531507,
+          "p95": 6.7307090000249445,
+          "sum": 387.14858499987486
+        },
+        "retained_images": {
+          "max": 30,
+          "n": 112,
+          "p50": 30.0,
+          "p95": 30,
+          "sum": 2895
+        }
+      },
+      "event_output": {
+        "backpressure_signals": 0,
+        "bytes": 881355,
+        "callback_ms": 48.772456998989014,
+        "enqueue_ms": 43.03593499915618,
+        "events": 1171,
+        "json_ms": 4.278377001869018,
+        "max_callback_ms": 4.195625000022119
+      }
+    },
+    "reported_backend": "Fireworks in all112 completed response_progress records; requested routing onlyfireworks/us, no fallback",
+    "telemetry_scope": "Same-host request/tool intervals and reported tokens. Not server inference, model attention, physical paint, useful-gain latency or causal provider/prompt benefit. No new browser witness export retained."
+  },
+  "iteration_accounting": {
+    "new_http_attempts": 150,
+    "prior_cumulative_attempts": 3698,
+    "actual_cumulative_attempts": 3848,
+    "prior_conservative_usd": "972.727517184",
+    "actual_cumulative_conservative_usd": "1047.428726784",
+    "ceiling_usd": "1200",
+    "known_configured_estimate_usd": "2.390437558",
+    "missing_usage_attempts": 1,
+    "not_invoice": true,
+    "remaining_conditional_admissions": "Not launched; unused conditional plans retired, no renewed allowance"
+  },
+  "sources": [
+    {
+      "file": "discovery-before.png",
+      "source_id": "12351ffbac834281b17fe2492ab1436d-686",
+      "sha256": "f97599819f5de68aa17d5fb821f99769f53a952bdc2e1fa2184acbcde188f0ab",
+      "bytes": 137044,
+      "label": "Normal view before actual upward movement",
+      "operation_id": "4096191fa5a84ce6b359679dc609a3b5",
+      "source_received_wall": 1793364446.88257,
+      "host_tool_result_wall": "2026-10-30T12:47:26.885Z",
+      "request_id": "request-21"
+    },
+    {
+      "file": "discovery-after.png",
+      "source_id": "12351ffbac834281b17fe2492ab1436d-871",
+      "sha256": "c6562faf28e286f200a2fffe1e979979423a651a340db6e890d1d8c6a4685bba",
+      "bytes": 138581,
+      "label": "Actual avatar one tile higher relative to doorway; screen-centered pose does not imply no travel",
+      "operation_id": "c19832b6f0774577b1c36b515a74e55d",
+      "source_received_wall": 1793364474.9790342,
+      "host_tool_result_wall": "2026-10-30T12:47:54.981Z",
+      "request_id": "request-22"
+    },
+    {
+      "file": "discovery-inspection.png",
+      "source_id": "12351ffbac834281b17fe2492ab1436d-920",
+      "sha256": "5903dfc816b8a6e68aed99501330c6ffdb5c059285f8d30417059a934bb2888d",
+      "bytes": 133567,
+      "label": "Later inspection cursor/camera movement; different from preceding avatar travel",
+      "operation_id": "e552f1ee296c456aa776d2540f106434",
+      "source_received_wall": 1793364482.4530041,
+      "host_tool_result_wall": "2026-10-30T12:48:02.455Z",
+      "request_id": "request-23"
+    },
+    {
+      "file": "assessment-before.png",
+      "source_id": "12351ffbac834281b17fe2492ab1436d-5546",
+      "sha256": "4e3b70d01bf7d707974aefdf142c5d66b8409b10969e62c4b803c0d6427f4ad6",
+      "bytes": 131036,
+      "label": "Before one-tile downward endpoint displacement",
+      "operation_id": "d54edf2ff04f4cd1a429aaed148cd5d8",
+      "source_received_wall": 1793365092.243453,
+      "host_tool_result_wall": "2026-10-30T12:58:12.246Z",
+      "request_id": "request-64"
+    },
+    {
+      "file": "assessment-after.png",
+      "source_id": "12351ffbac834281b17fe2492ab1436d-5670",
+      "sha256": "f70e299d5de08e514bd9ae69b2d37faa40e2ac96033425e41cf7447187555758",
+      "bytes": 126786,
+      "label": "After one-tile downward displacement; two input keys do not establish two travelled tiles",
+      "operation_id": "83ffae26ac144d3fbef22a1d1c2a3453",
+      "source_received_wall": 1793365118.476311,
+      "host_tool_result_wall": "2026-10-30T12:58:38.479Z",
+      "request_id": "request-66"
+    },
+    {
+      "file": "initial-inventory.png",
+      "source_id": "43be4158ec0a486fa92feaf22718b19e-192",
+      "sha256": "601b3157df023de8cfcd520102b64b85de64087f84ee454aae879a63d60169a8",
+      "bytes": 85788,
+      "label": "Initial six murky water and existing gear; not a new gain",
+      "operation_id": "900e9575053a495792794e0db524fe43",
+      "source_received_wall": 1793370156.555427,
+      "host_tool_result_wall": "2026-10-30T14:22:36.558Z",
+      "request_id": "request-7"
+    },
+    {
+      "file": "final-inventory.png",
+      "source_id": "43be4158ec0a486fa92feaf22718b19e-6637",
+      "sha256": "48a1ed49f8520fae1c2ae3c82bf60249f698e9d1ddd4862d18b991ddc3f80911",
+      "bytes": 71679,
+      "label": "Same visible carried stock; no new retained food or treated water",
+      "operation_id": "a552d1709b5f4d778d1946381cc5009c",
+      "source_received_wall": 1793370847.781842,
+      "host_tool_result_wall": "2026-10-30T14:34:07.784Z",
+      "request_id": "request-103"
+    },
+    {
+      "file": "false-outside.png",
+      "source_id": "43be4158ec0a486fa92feaf22718b19e-6692",
+      "sha256": "96e7d751b7b2ceaff7db03d05520c2f16a5465a2a9dae7ea8ea856693dc21cf0",
+      "bytes": 126533,
+      "label": "Avatar still on wooden interior floor despite outside/path assertion",
+      "operation_id": "a545fe9d7a0045c283ac743770982d19",
+      "source_received_wall": 1793370863.208745,
+      "host_tool_result_wall": "2026-10-30T14:34:23.211Z",
+      "request_id": "request-105"
+    },
+    {
+      "file": "pickup.png",
+      "source_id": "43be4158ec0a486fa92feaf22718b19e-5775",
+      "sha256": "ee87a2858590b8cfb9e7eea9e4b93af756d51677bb33d0bb205bf1fb69a40d0c",
+      "bytes": 16773,
+      "label": "Actual wrapper/four-pecorino pickup and theft confrontation",
+      "operation_id": "d868ff9ec6a24eeeabeae92e1fcf3c1a",
+      "source_received_wall": 1793370762.084246,
+      "host_tool_result_wall": "2026-10-30T14:32:42.086Z",
+      "request_id": "request-93"
+    },
+    {
+      "file": "return.png",
+      "source_id": "43be4158ec0a486fa92feaf22718b19e-5778",
+      "sha256": "85208c66cb154f29d2fd8e49eebd13f85e6777d307107a9173e422ae1456fc9a",
+      "bytes": 19351,
+      "label": "Wrapper returned to surrounding area; carried inventory back at12.5lb/1.82L",
+      "operation_id": "5e6d2cd9099a41feab7b0f2143439508",
+      "source_received_wall": 1793370767.87614,
+      "host_tool_result_wall": "2026-10-30T14:32:47.878Z",
+      "request_id": "request-94"
+    },
+    {
+      "file": "initial-load-list.png",
+      "source_id": "43be4158ec0a486fa92feaf22718b19e-3",
+      "sha256": "1007ecfb319617c8070602f14a5860edee222d4036ca45f649d1d900da773c77",
+      "bytes": 33199,
+      "label": "Parker West initial list value01:11:23",
+      "operation_id": "358e3434fef04616a924b0d1123937f2",
+      "source_received_wall": 1793370141.8907259,
+      "host_tool_result_wall": "2026-10-30T14:22:21.893Z",
+      "request_id": "request-2"
+    },
+    {
+      "file": "saved-title.png",
+      "source_id": "43be4158ec0a486fa92feaf22718b19e-6788",
+      "sha256": "1a9ec9e91bfe8789343538b588e8a236ee7a9540dc554cc3a90289dd5c3b535a",
+      "bytes": 33710,
+      "label": "Actual title return after final Save-and-Quit",
+      "operation_id": "6ee7beeb9e8e476c94c2608dd919f422",
+      "source_received_wall": 1793370876.9341671,
+      "host_tool_result_wall": "2026-10-30T14:34:36.936Z",
+      "request_id": "request-107"
+    },
+    {
+      "file": "updated-load-list.png",
+      "source_id": "43be4158ec0a486fa92feaf22718b19e-6789",
+      "sha256": "698f05b1ef662aa8f17df64dddc278d253a117f5325b365472abd46ad8e7ae00",
+      "bytes": 33129,
+      "label": "Updated list01:23:28; no subsequent freshLoad",
+      "operation_id": "2df4c839c8354d429c350e05f6f1357e",
+      "source_received_wall": 1793370883.491346,
+      "host_tool_result_wall": "2026-10-30T14:34:43.494Z",
+      "request_id": "request-108"
+    },
+    {
+      "file": "quit-prompt.png",
+      "source_id": "43be4158ec0a486fa92feaf22718b19e-6959",
+      "sha256": "7593c973c72639dbbf4a60c095bd06150f2c49abc7e4a395e1f995eae96f6a37",
+      "bytes": 33560,
+      "label": "Separate application Quit confirmation before original unknown EOF input",
+      "operation_id": "f18c05a6ac5644869dd27505da465966",
+      "source_received_wall": 1793370895.111969,
+      "host_tool_result_wall": "2026-10-30T14:34:55.114Z",
+      "request_id": "request-110"
+    },
+    {
+      "file": "storage-approach.png",
+      "source_id": "43be4158ec0a486fa92feaf22718b19e-1653",
+      "sha256": "2341958d0df529f6d1bcfe10545a02fe9dd698d7f4609fcd46b1fbba9287ffed",
+      "bytes": 146364,
+      "label": "Actual approach to item-bearing storage",
+      "operation_id": "286d465361b64570ad2ae5d90a9e012f",
+      "source_received_wall": 1793370328.573048,
+      "host_tool_result_wall": "2026-10-30T14:25:28.576Z",
+      "request_id": "request-36"
+    },
+    {
+      "file": "assessment-movement.png",
+      "source_id": "12351ffbac834281b17fe2492ab1436d-5936",
+      "sha256": "d3314d4ea36033101c852c88135260d6797474d17df9d0c894814f744e6d7259",
+      "bytes": 125178,
+      "label": "Reserved H3 endpoint supports changed actor-to-room relation",
+      "operation_id": "7c01590a202243938161a9cfdc53787b",
+      "source_received_wall": 1793365157.613908,
+      "host_tool_result_wall": "2026-10-30T12:59:17.616Z",
+      "request_id": "request-68"
+    }
+  ],
+  "sources_bytes": 1392278,
+  "pricing": {
+    "currency_unit": "USD per million normalized SDK tokens; input excludes cacheRead/cacheWrite; reasoning is already included in output and never added twice",
+    "rates": {
+      "fireworks/us": {
+        "input": 0.45,
+        "output": 1.8,
+        "cacheRead": 0.009,
+        "cacheWrite": 0.45
+      },
+      "baseten": {
+        "input": 0.3,
+        "output": 1.2,
+        "cacheRead": 0.007,
+        "cacheWrite": 0.3
+      }
+    },
+    "context_window_tokens": 1048576,
+    "max_output_tokens": 16384,
+    "service_tier": "default",
+    "conservative_per_attempt_usd": {
+      "fireworks/us": "0.5013504",
+      "baseten": "0.3342336"
+    },
+    "reservation_formula": "(contextWindow*max(input,cacheRead,cacheWrite)+maxTokens*output)/1000000; charged once per actual HTTP attempt, including missing usage",
+    "configured_estimate_formula": "(input*inputRate+output*outputRate+cacheRead*cacheReadRate+cacheWrite*cacheWriteRate)/1000000; provider-reported usage at configured rates, not invoice",
+    "charged_mix": {
+      "fireworks/us": 147,
+      "baseten": 3
+    },
+    "known_usage_aggregates": [
+      {
+        "stage": "provider-refresh002",
+        "route": "baseten",
+        "usage_available_attempts": 3,
+        "tokens": {
+          "input": 5525,
+          "output": 309,
+          "cacheRead": 10240,
+          "cacheWrite": 0,
+          "reasoning": 242
+        },
+        "configured_estimate_usd": "0.00209998"
+      },
+      {
+        "stage": "provider-refresh002",
+        "route": "fireworks/us",
+        "usage_available_attempts": 3,
+        "tokens": {
+          "input": 1164,
+          "output": 280,
+          "cacheRead": 5808,
+          "cacheWrite": 0,
+          "reasoning": 205
+        },
+        "configured_estimate_usd": "0.001080072"
+      },
+      {
+        "stage": "discovery001",
+        "route": "fireworks/us",
+        "usage_available_attempts": 15,
+        "tokens": {
+          "input": 12021,
+          "output": 55980,
+          "cacheRead": 30272,
+          "cacheWrite": 0,
+          "reasoning": 51576
+        },
+        "configured_estimate_usd": "0.106445898"
+      },
+      {
+        "stage": "candidate-discovery001",
+        "route": "fireworks/us",
+        "usage_available_attempts": 8,
+        "tokens": {
+          "input": 10748,
+          "output": 27256,
+          "cacheRead": 13716,
+          "cacheWrite": 0,
+          "reasoning": 25041
+        },
+        "configured_estimate_usd": "0.054020844"
+      },
+      {
+        "stage": "assessment001",
+        "route": "fireworks/us",
+        "usage_available_attempts": 8,
+        "tokens": {
+          "input": 8859,
+          "output": 26977,
+          "cacheRead": 15592,
+          "cacheWrite": 0,
+          "reasoning": 24487
+        },
+        "configured_estimate_usd": "0.052685478"
+      },
+      {
+        "stage": "grounding300-play001",
+        "route": "fireworks/us",
+        "usage_available_attempts": 112,
+        "tokens": {
+          "input": 4451278,
+          "output": 65923,
+          "cacheRead": 5818754,
+          "cacheWrite": 0,
+          "reasoning": 49514
+        },
+        "configured_estimate_usd": "2.174105286"
+      }
+    ],
+    "missing_usage": "One discovery001 D3-current-r2 error attempt charged conservatively, not included in known configured usage sum"
+  }
+}
