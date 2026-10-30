@@ -201,6 +201,9 @@ const text = id => {
   assert.match(text('stop-state'), /requested.*not.*confirmed/i);
   await poll(status(null, {stop: {stop_requested: true, native_pause_confirmed: true, reason: 'user Pause'}}));
   assert.match(text('stop-state'), /native.*confirmed/i);
+  assert.match(text('pause-error'), /already confirmed for this session/);
+  assert.doesNotMatch(text('pause-error'), /remain unknown|new emergency intent/,
+    'Confirmation arriving after response loss refreshes feedback from current facts');
 
   // The finite network watchdog releases the polling lock and preserves honest uncertainty.
   run('void refresh()');
@@ -245,7 +248,8 @@ const text = id => {
   assert.equal(element('pause').disabled, false, 'Old pending Pause cannot disable the fresh session');
   await reply(oldPause, {schema:'computer-pause/1',session:'session-two',stop:{stop_requested:true,native_pause_confirmed:true}});
   assert.equal(element('pause').disabled, false);
-  assert.match(text('pause-error'), /historical session session-two/);
+  assert.match(text('stop-history'), /Historical Pause.*session-two.*native Pause confirmed/);
+  assert.equal(element('pause-error').hidden, true, 'Old success is history, not a current-session error');
   element('pause').listeners.click();
   const replacementPause = request('/api/pause');
   run('void refresh()');
@@ -277,8 +281,23 @@ const text = id => {
   assert.match(text('stop-state'), /native Pause confirmed/);
   assert.equal(element('pause').disabled, true);
 
+  await poll(status(null, {session:'old-success-pending',stop:{}}));
+  element('pause').listeners.click();
+  const delayedOldSuccess = request('/api/pause');
+  await poll(status(null, {session:'confirmed-after-old-success',stop:{}}));
+  element('pause').listeners.click();
+  const lostCurrentResponse = request('/api/pause');
+  await poll(status(null, {session:'confirmed-after-old-success',stop:{stop_requested:true,native_pause_confirmed:true}}));
+  lostCurrentResponse.reject(new Error('Current response unavailable'));
+  await tick();
+  const currentFeedback = text('pause-error');
+  await reply(delayedOldSuccess,{schema:'computer-pause/1',session:'old-success-pending',stop:{stop_requested:true,native_pause_confirmed:true}});
+  assert.equal(text('pause-error'),currentFeedback,'Old success cannot replace a current diagnostic');
+  assert.match(text('stop-history'),/old-success-pending.*native Pause confirmed/);
+  assert.match(text('stop-state'),/native Pause confirmed/);
+
   await poll(status(null, {session:'session-five',stop:{}}));
-  assert.match(text('stop-history'),/Historical Pause.*confirmed-current-session.*native Pause confirmed/);
+  assert.match(text('stop-history'),/Historical Pause.*confirmed-after-old-success.*native Pause confirmed/);
   const activity = (entries, overrides={}) => ({schema:'observer-activity/1',session:'session-five',revision:1,entries,latest_statement:null,omitted_entries:0,coverage:{host:'available',computer:'available'},...overrides});
   const event = (id, overrides={}) => ({id,session:'session-five',producer:'host',actor_id:'actor-a',kind:'assistant-text',request_id:'same-local-request',text:'<img src=x onerror=boom> literal statement',created_wall:epoch/1000,omitted_bytes:7,display_omitted_bytes:3,...overrides});
   async function activityPoll(snapshot) { run('void refreshActivity()'); await reply(request('/api/activity'), snapshot); }
@@ -350,6 +369,18 @@ const text = id => {
   assert.match(text('latest-statement'),/No public statement/,'A wrong-session statement cannot be presented as current');
   assert.match(text('activity-coverage'),/unavailable:OSError/);
   assert.match(text('activity-summary'),/5 further omitted/);
+  run('void refreshActivity()');
+  await reply(request('/api/activity'),activity(sevenEntries,{session:'session-seven',omitted_entries:null,coverage:{host:'available',computer:'unavailable:OSError',computer_operations:null}}));
+  assert.match(text('activity-summary'),/omissions unknown/);
+
+  const requestsBeforeZoom=requests.length;
+  element('watch-size').listeners.click();
+  assert.equal(element('watch-size')['aria-pressed'],'true');
+  assert.match(element('watch-frame-shell').className,/actual-pixels/);
+  element('inspection-size').listeners.click();
+  assert.match(element('inspection-frame-shell').className,/actual-pixels/);
+  assert.equal(requests.length,requestsBeforeZoom,'Pixel-size presentation creates no source or control request');
+  assert.match(run('observerMeasurementSnapshot().scope'),/hidden Watch/);
   run('void refreshActivity()'); request('/api/activity').reject(new Error('projection offline')); await tick();
   assert.match(text('activity-error'),/projection offline.*current activity unknown/);
   assert.equal(element('activity-list').children.length,200,'Outage retains labelled evidence');

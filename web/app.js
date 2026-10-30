@@ -14,6 +14,7 @@ let sessionGeneration = 0;
 const retiredSessions = new Set();
 const stopStates = new Map();
 const pauseIntents = new Set();
+let pauseFeedback = null;
 let displayed = null;
 let candidate = null;
 let sourceGeneration = 0;
@@ -53,7 +54,7 @@ function retainTiming(row) {
 function observerMeasurementSnapshot() {
   return {schema: 'observer-timing/4', retention_limit: TIMING_LIMIT, omitted_rows: omittedRows,
     clock: 'Source presented_ms and browser timestamps are epoch milliseconds; source received_wall is epoch seconds. Shared wall clock is assumed, not verified.',
-    scope: 'Status observation, image decode completion and DOM replacement only; not physical paint, model attention or useful success.',
+    scope: 'Status observation, image decode completion and DOM replacement (including a hidden Watch panel) only; not visibility, physical paint, model attention or useful success.',
     rows: timingRows.map(row => ({...row}))};
 }
 $('download-observer-measurements').addEventListener('click', () => {
@@ -65,6 +66,16 @@ $('download-observer-measurements').addEventListener('click', () => {
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 0);
 });
+for (const name of ['watch', 'inspection']) {
+  const button = $(`${name}-size`);
+  let originalSize = false;
+  button.addEventListener('click', () => {
+    originalSize = !originalSize;
+    $(`${name}-frame-shell`).className = `frame-shell${originalSize ? ' actual-pixels' : ''}`;
+    button.setAttribute('aria-pressed', String(originalSize));
+    button.textContent = originalSize ? 'Fit image to panel' : 'Show original pixel size';
+  });
+}
 function stopState(session = currentSession) {
   if (!stopStates.has(session)) stopStates.set(session, {requested: false, confirmed: false, reason: ''});
   return stopStates.get(session);
@@ -86,6 +97,13 @@ function renderStop() {
   // A lost response is not proof of nondelivery. Another deliberate click is a
   // new emergency intent; it is never an automatic retry of input.
   $('pause').disabled = pending || state.confirmed;
+  const feedback = pauseFeedback?.scope === currentSession ? pauseFeedback : null;
+  $('pause-error').hidden = !feedback;
+  const confirmation = state.confirmed ? 'Native Pause is already confirmed for this session by received evidence.' :
+    'Delivery and native confirmation remain unknown until reported. A deliberate new click sends a new emergency intent.';
+  show('pause-error', feedback ? feedback.unidentified ?
+    `Unidentified earlier Pause response unavailable: ${feedback.reason}. Its receiving target is unknown; ${state.confirmed ? confirmation : 'current-session facts above are unchanged.'}` :
+    `Pause response unavailable: ${feedback.reason}. ${confirmation}` : '');
   const old = stopStates.get(previousSession);
   show('stop-history', previousSession && (old?.requested || old?.confirmed) ? `Historical Pause · session ${previousSession}: ${old.confirmed ? 'native Pause confirmed' : 'Pause requested; native confirmation unknown'}. This is not the current control target.` : 'No previous-session Pause evidence retained.');
 }
@@ -102,6 +120,7 @@ function adoptSession(session) {
   statusReceivedAt = null;
   statusError = '';
   activityError = '';
+  pauseFeedback = null;
   show('pause-error', ''); $('pause-error').hidden = true;
   renderFacts({session});
   if (!following && timelineSession !== currentSession && timelineSession !== previousSession) {
@@ -136,8 +155,7 @@ async function requestPause() {
   if ($('pause').disabled) return;
   const intent = {scope: currentSession};
   pauseIntents.add(intent);
-  show('pause-error', '');
-  $('pause-error').hidden = true;
+  pauseFeedback = null;
   renderStop();
   const controller = new AbortController();
   try {
@@ -150,20 +168,14 @@ async function requestPause() {
     // replacement receiver can identify itself before the next status arrives.
     if (!currentSession || (currentSession === intent.scope && !retiredSessions.has(result.session))) adoptSession(result.session);
     if (result.session === currentSession || result.session === previousSession) mergeStop(result.session, result.stop);
-    if (result.session !== currentSession) {
-      show('pause-error', `Pause response belongs to historical session ${result.session}; current-session confirmation remains unknown.`);
-      $('pause-error').hidden = false;
-    }
+    // Old receipts update labelled history only; they cannot replace a current
+    // diagnostic or describe known current confirmation as unknown.
   } catch (error) {
     if (intent.scope === currentSession) stopState().requested = true;
     if (intent.scope === currentSession) {
-      const confirmation = stopState().confirmed ? 'Native Pause is already confirmed for this session by received evidence.' :
-        'Delivery and native confirmation remain unknown until reported. A deliberate new click sends a new emergency intent.';
-      show('pause-error', `Pause response unavailable: ${error.message}. ${confirmation}`);
-      $('pause-error').hidden = false;
+      pauseFeedback = {scope: currentSession, reason: error.message, unidentified: false};
     } else if (intent.scope === null && !stopState().confirmed) {
-      show('pause-error', `Unidentified earlier Pause response unavailable: ${error.message}. Its receiving target is unknown; current-session facts above are unchanged.`);
-      $('pause-error').hidden = false;
+      pauseFeedback = {scope: currentSession, reason: error.message, unidentified: true};
     } // A historical request failure cannot overwrite current-session feedback.
   } finally {
     pauseIntents.delete(intent);
@@ -342,7 +354,13 @@ let inspectionURL = null;
 let activeView = 'watch';
 let deepLink = null;
 const entryKey = entry => JSON.stringify([entry.session, entry.producer, entry.actor_id ?? null, entry.id]);
-const entryTitle = entry => `${value(entry.kind)}${entry.tool ? ` · ${entry.tool}` : ''}${entry.status ? ` · ${entry.status}` : ''}`;
+const eventLabels = {'assistant-text': 'Player statement', 'request-start': 'Model request started',
+  'response-complete': 'Model response received', 'tool-start': 'Tool requested', 'tool-result': 'Tool result',
+  input: 'Computer input', observe: 'Observation', handoff: 'Actor handoff',
+  'host-start': 'Player host started', settled: 'Player host ended', abort: 'Host interrupted',
+  'provider-retry': 'Provider retry'};
+const entryTitle = entry => `${eventLabels[entry.kind] || value(entry.kind)}${entry.tool ? ` · ${entry.tool}` : ''}${entry.status ? ` · ${entry.status}` : ''}`;
+const omittedSummary = snapshot => Number.isFinite(snapshot.omitted_entries) ? `${snapshot.omitted_entries} omitted by server` : 'earlier omissions unknown (incomplete coverage)';
 function activateView(view, updateLink = true) {
   activeView = view;
   for (const name of ['watch', 'timeline']) {
@@ -380,11 +398,11 @@ function renderActivity(snapshot) {
   const statement = snapshot.latest_statement;
   show('latest-statement', statement?.text ? statement.text : 'No public statement available for this session.');
   show('statement-meta', statement ? `Fallible public statement · actor ${value(statement.actor_id)} · request ${value(statement.request_id)} · original wall ${wallTime(statement.created_wall)} · ${value(statement.omitted_bytes)} original bytes omitted; ${value(statement.display_omitted_bytes)} further display bytes omitted. Historical/terminal labels are recorded claims, not liveness.` : 'Missing or empty narration does not establish inactivity.');
-  show('activity-summary', `${snapshot.entries.length} retained entries · ${value(snapshot.omitted_entries)} omitted by server${snapshot.clientOmitted ? ` · ${snapshot.clientOmitted} further omitted on this page` : ''}.`);
+  show('activity-summary', `${snapshot.entries.length} retained entries · ${omittedSummary(snapshot)}${snapshot.clientOmitted ? ` · ${snapshot.clientOmitted} further omitted on this page` : ''}.`);
   show('recent-activity', snapshot.entries.slice(-3).map(entryTitle).join('\n') || 'No use observed in available coverage; missing coverage is unknown.');
 }
 function renderCoverage(snapshot) {
-  show('activity-coverage', snapshot ? `Host: ${value(snapshot.coverage?.host)} · computer records: ${value(snapshot.coverage?.computer)} · ${value(snapshot.omitted_entries)} earlier entries omitted. Cross-process ordering is approximate.` : 'Coverage unknown; no current-session activity received.');
+  show('activity-coverage', snapshot ? `Host: ${value(snapshot.coverage?.host)} · computer records: ${value(snapshot.coverage?.computer)} · ${omittedSummary(snapshot)}. Cross-process ordering is approximate.` : 'Coverage unknown; no current-session activity received.');
   show('coverage-details', snapshot ? JSON.stringify({coverage: snapshot.coverage, omitted_entries: snapshot.omitted_entries,
     omitted_fields: snapshot.omitted_fields, omitted_text_bytes: snapshot.omitted_text_bytes,
     further_client_entries_omitted: snapshot.clientOmitted || 0}, null, 2) : 'No coverage received.');

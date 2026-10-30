@@ -112,7 +112,10 @@ def test_missing_computer_projection_is_an_observer_gap_not_stop(service):
     app, channel, actor, port, client = service
     with patch.object(app.activity_view, '_computer_rows', side_effect=OSError('fixture missing DB')):
         status, body = get(port, '/api/activity')
-    assert status == 200 and json.loads(body)['coverage']['computer'] == 'unavailable:OSError'
+    data = json.loads(body)
+    assert status == 200 and data['coverage']['computer'] == 'unavailable:OSError'
+    assert data['coverage']['computer_operations'] is None
+    assert data['omitted_entries'] is None
     assert not channel.stopped.is_set()
 
 

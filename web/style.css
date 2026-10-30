@@ -75,6 +75,11 @@ select { background: #243735; color: #eef4f0; font: inherit; border: 1px solid #
 #inspection-frame { width: 100%; height: auto; image-rendering: pixelated; }
 #inspection-frame-note { padding: .8rem; text-align: center; color: #d4c9a8; }
 .inspection .frame-shell { margin-top: 1rem; }
+.frame-shell { overflow: auto; align-items: stretch; }
+.frame-shell.actual-pixels { display: block; }
+.frame-shell.actual-pixels img { width: auto !important; max-width: none; }
+#watch-size, #inspection-size { margin: .5rem 0; font-size: .85rem; }
+.frame-shell:focus-visible { outline: 3px solid #a7d6c1; outline-offset: 3px; }
 .evidence-link { padding: .2rem .5rem; margin: .2rem; font-size: .85rem; }
 [role="tabpanel"]:focus-visible, #latest-statement:focus-visible, select:focus-visible { outline: 3px solid #a7d6c1; outline-offset: 3px; }
 @media (max-width: 1000px) { .control-bar { flex-direction: row; flex-wrap: wrap; gap: .75rem; } .control-bar > div:first-child { flex-basis: 100%; } .stop-control { max-width: none; } .timeline-layout { grid-template-columns: minmax(14rem, 1fr) minmax(0, 1.3fr); } }

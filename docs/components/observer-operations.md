@@ -49,6 +49,14 @@ The finite custodian retains exact owned process/group handles and distinguishes
 normal native exit before forced cleanup from exceptional termination. Failure to
 verify absence stays unknown. No unrelated process scan/adoption is supported.
 
+Watch and Timeline share the current control bar. Selecting an event freezes its
+recorded inspection while activity continues; Follow latest returns to the current
+tail. Prior-session pixels are not fetched from a replacement server. Source
+images can fit the panel or retain original pixel size in a keyboard-scrollable
+viewport; this presentation never requests a capture or changes control. Transport
+feedback is rendered from session-scoped errors and current monotone stop facts,
+so later confirmation cannot leave an earlier uncertainty alert unchanged.
+
 ## Assurance and evidence
 
 The [testing guide](../testing.md) routes viewer logic, loopback/composition,

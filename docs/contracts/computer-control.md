@@ -223,7 +223,8 @@ payload. Stable frozen system context is reused across actors; changing role,
 resources and handoff knowledge are explicit prompt data. Host decision-time and
 custodian horizons stay distinct. Analysis is read-only and current-format only.
 Observer `observer-timing/4` joins exact session/source/capture to DOM replacement,
-with missing/invalid clocks labelled; it does not measure paint or useful progress.
+including replacement while Watch is hidden, with missing/invalid clocks labelled;
+it does not establish visibility, paint or useful progress.
 
 ## Passive spectator projections
 
@@ -254,7 +255,9 @@ it precedes the current tail. An absent statement does not prove silence outside
 the retained coverage or model attention.
 
 Coverage reports projected host events/errors, computer operation count and each
-producer's availability. A failed read/parse is a labelled gap, not measured zero,
+producer's availability. Unavailable computer counts and incomplete total omission
+counts are `null`, not zero. Retained-field/text omission counts cover only the
+projected entries, not unknown missing producer data. A failed read/parse is a labelled gap, not measured zero,
 game failure or renewed authority. Computer reads use a separate read-only SQLite
 transaction with finite busy/query bounds. A disposable host cache reuses the
 driver's original trace consumer; no second durable event log is maintained.

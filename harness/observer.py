@@ -178,7 +178,7 @@ class ActivityView:
             rows = copy.deepcopy(list(self.rows))
             statement = copy.deepcopy(self.latest_statement)
             count, host_coverage, host_errors = self.host_count, self.host_coverage, self.host_errors
-        computer_count, computer_coverage = 0, 'available'
+        computer_count, computer_coverage = None, 'available'
         computer = []
         try:
             computer, computer_count = self._computer_rows()
@@ -203,7 +203,8 @@ class ActivityView:
                 host_events=count, host_projection_errors=host_errors, computer_operations=computer_count,
                 clock='Original host monotonic clocks are actor-local; cross-process wall order is approximate.'))
         while True:
-            result['omitted_entries'] = max(0, count + computer_count - len(rows))
+            result['omitted_entries'] = (max(0, count + computer_count - len(rows))
+                if computer_count is not None and not host_errors else None)
             result['omitted_fields'] = sum(len(row.get('omitted_fields', [])) for row in rows)
             result['omitted_text_bytes'] = sum(row.get('omitted_text_bytes', 0)
                 + row.get('display_omitted_bytes', 0) for row in rows)
