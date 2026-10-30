@@ -1,9 +1,11 @@
-"""One-shot, allowlisted closed-case evidence export; no custody or collector."""
+"""Allowlisted finite evidence projection and closed-case export; no custody."""
 from __future__ import annotations
 
 import base64
+from collections import Counter
 from datetime import datetime
 import hashlib
+import heapq
 import html
 import io
 import json
@@ -435,17 +437,6 @@ def export_case(selected, selection_parent):
     control = analyze_session(directory)
     if receipt.get('session') != control['session']:
         raise ControlError('Closed receipt session differs from computer store')
-    notes = ['Only allowlisted public evidence is exported; raw arguments, prompts, private reasoning and paths are omitted.',
-        'Wall clocks provide approximate shared ordering; actor monotonic clocks are never subtracted across actors.',
-        'Accounting estimates and conservative reservations are not invoices.']
-    retained, event_candidates, invalid_clocks = [], 0, 0
-    def add(row):
-        nonlocal event_candidates, invalid_clocks
-        event_candidates += 1
-        if row['start_wall_ms'] is None and row['elapsed_ms'] is None:
-            invalid_clocks += 1
-        if len(retained) < MAX_EVENTS:
-            retained.append(row)
     driver = receipt.get('driver')
     if driver is not None and (not isinstance(driver, dict) or driver.get('schema') != 'player-driver/2'):
         raise ControlError('Unsupported closed campaign driver version')
@@ -454,24 +445,59 @@ def export_case(selected, selection_parent):
     for actor in sequence(driver.get('actors', []), 2):
         if not isinstance(actor, dict) or type(actor.get('index')) is not int:
             raise ControlError('Invalid original campaign actor identity')
-        actors[f"{actor['index']:03d}"] = public(actor.get('actor_id'), notes)
+        actors[f"{actor['index']:03d}"] = actor.get('actor_id')
+    accounting = receipt.get('accounting') or {}
+    if not isinstance(accounting, dict):
+        raise ControlError('Invalid original campaign accounting')
+    return project_case(selected, selection_parent, directory, control, actors,
+        receipt.get('source_commit'), dict(attempts=driver.get('attempts_charged'),
+            host_seconds=driver.get('host_seconds_used'), configured_estimate_usd=driver.get('configured_estimate_usd'),
+            missing_usage_attempts=driver.get('missing_usage_attempts'),
+            conservative_reservation_usd=accounting.get('consumed_conservative_reservation_usd')))
+
+
+def project_case(selected, selection_parent, directory, control, actors, source_commit, accounting,
+        *, traces=None, analyses=None, recent_per_kind=None, notes=None, image_directory=None):
+    """Project one validated finite evidence set; callers own selection and closure."""
+    notes = list(notes or [])
+    for value in ('Only allowlisted public evidence is exported; raw arguments, prompts, private reasoning and paths are omitted.',
+            'Wall clocks provide approximate shared ordering; actor monotonic clocks are never subtracted across actors.',
+            'Accounting estimates and conservative reservations are not invoices.'):
+        note(notes, value)
+    retained, event_candidates, invalid_clocks = [], 0, 0
+    candidates = Counter()
+    recent = {}
+    def add(row, producer_order=None):
+        nonlocal event_candidates, invalid_clocks
+        event_candidates += 1
+        candidates[row['kind']] += 1
+        if row['start_wall_ms'] is None and row['elapsed_ms'] is None:
+            invalid_clocks += 1
+        if recent_per_kind is not None:
+            rows = recent.setdefault(row['kind'], [])
+            heapq.heappush(rows, (producer_order or (0, event_candidates), event_candidates, row))
+            if len(rows) > recent_per_kind:
+                heapq.heappop(rows)
+        elif len(retained) < MAX_EVENTS:
+            retained.append(row)
     configuration = []
-    try:
-        traces = discover([directory])
-    except ControlError:
-        if (directory / 'actors').exists() or (directory / 'host.jsonl').exists():
-            raise
-        traces = []
-        note(notes, 'No selected host trace is available.')
+    if traces is None:
+        try:
+            traces = discover([directory])
+        except ControlError:
+            if (directory / 'actors').exists() or (directory / 'host.jsonl').exists():
+                raise
+            traces = []
+            note(notes, 'No selected host trace is available.')
     if len(traces) > 2:
         raise ControlError('Current campaign supports at most two actor hosts')
     seen_programs = set()
-    for path in traces:
-        analysis = analyze_trace(path)
+    for trace_index, path in enumerate(traces):
+        analysis = analyses[path] if analyses is not None else analyze_trace(path)
         if analysis['coverage'] != 'pi_host':
             note(notes, 'Selected host trace has unsupported or missing current telemetry; host rows unavailable.')
             continue
-        actor_id = actors.get(path.parent.name)
+        actor_id = public(actors.get(path.parent.name), notes)
         if actor_id is None:
             note(notes, 'Original actor ID is not recorded for a selected host directory.')
         config = analysis['configuration']
@@ -483,12 +509,17 @@ def export_case(selected, selection_parent):
                 provider_only=routing.get('only'), provider_order=routing.get('order'), allow_fallbacks=routing.get('allow_fallbacks')))
         if not analysis['clock_valid']:
             note(notes, 'Invalid host monotonic clock: original host spans and timing metrics are unavailable.')
+        host_ordinal = 0
         for row in host_events(path, actor_id, control['session'], analysis, notes):
+            if row['id'].startswith('host:'):
+                host_ordinal = int(row['id'].rsplit(':', 1)[1])
             if row['kind'] == 'program':
                 if row['run_id'] in seen_programs:
                     continue
                 seen_programs.add(row['run_id'])
-            add(row)
+            # Incomplete host spans are yielded at EOF; retain by their actual
+            # original start ordinal instead of mistaking that yield for recency.
+            add(row, (trace_index, host_ordinal))
     operations = {row['operation_id']: row for row in control['operations']}
     for row in operations.values():
         add(event('operation:' + row['operation_id'], 'operation', 'Computer ' + row['kind'],
@@ -543,9 +574,17 @@ def export_case(selected, selection_parent):
     selected_sources = sequence(selected.get('source_ids', []), 16)
     if len(set(text(value, nullable=False) for value in selected_sources)) != len(selected_sources):
         raise ControlError('Duplicate selected source ID')
-    sources = [source_entry(directory, identity, originals.get(identity)) for identity in selected_sources]
+    sources = [source_entry(image_directory or directory, identity, originals.get(identity)) for identity in selected_sources]
     if any(value['png_base64'] is None for value in sources):
         note(notes, 'Some explicitly selected original images are unavailable; no substitute pixels are exported.')
+    if recent_per_kind is not None:
+        for kind in ('request', 'tool', 'program', 'operation', 'native', 'source', 'statement', 'observer'):
+            rows = [item[2] for item in sorted(recent.get(kind, ()))]
+            retained.extend(rows)
+            cutoff = rows[0]['id'] if rows else 'none'
+            note(notes, f'{kind}: candidates={candidates[kind]} retained={len(rows)} omitted={candidates[kind] - len(rows)}; first retained original={cutoff}; latest by producer order, unknown clocks remain null.')
+        # Stable ties/unknowns preserve producer order; no synthetic time values enter rows.
+        retained.sort(key=lambda row: (row['start_wall_ms'] is None, row['start_wall_ms'] or 0))
     omitted_events = event_candidates - len(retained)
     if omitted_events:
         note(notes, f'{omitted_events} complete event rows omitted by the selected export event bound.')
@@ -554,19 +593,14 @@ def export_case(selected, selection_parent):
         note(notes, 'Some explicit event links target omitted or unavailable original rows; dangling links are retained.')
     if invalid_clocks:
         note(notes, 'Missing or invalid event clock measurements remain null; no zero duration is substituted.')
-    accounting = receipt.get('accounting') or {}
-    if not isinstance(accounting, dict):
-        raise ControlError('Invalid original campaign accounting')
     result = dict(id=selected['id'], title=selected['title'], session=control['session'],
-        source_commit=public(receipt.get('source_commit'), notes), configuration=configuration,
+        source_commit=public(source_commit, notes), configuration=configuration,
         coverage=dict(event_candidates=event_candidates, event_retained=len(retained), event_omitted=omitted_events,
             source_candidates=len(originals) + sum(identity not in originals for identity in selected_sources),
             source_retained=len(sources), source_omitted=len(originals) - sum(identity in originals for identity in selected_sources),
             observer_status=observer_status, invalid_clocks=invalid_clocks, notes=notes),
         events=retained, sources=sources, assessments=selected.get('assessments', []),
-        accounting=dict(attempts=driver.get('attempts_charged'), host_seconds=driver.get('host_seconds_used'),
-            configured_estimate_usd=driver.get('configured_estimate_usd'), missing_usage_attempts=driver.get('missing_usage_attempts'),
-            conservative_reservation_usd=accounting.get('consumed_conservative_reservation_usd')))
+        accounting=accounting)
     return result
 
 
