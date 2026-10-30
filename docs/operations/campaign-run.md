@@ -50,6 +50,15 @@ credential. Preserve the frozen package and exact binary bytes before rebuilding
 
 ### Construct a package
 
+Select providers fastest first using the latest relevant speed and eligibility
+evidence. Earlier refusals remain historical observations, not exclusion rules;
+check the faster candidate again before falling back. A shallow same-payload probe
+can inform admission, but does not establish useful gameplay latency or quality.
+Include current cache/context conditions and tail/failure behavior when known.
+Price or an earlier completed ending does not justify preferring a slower route.
+Freeze one explicitly selected route per finite admission, with no hidden fallback;
+changed routing requires a fresh package and actual cumulative accounting.
+
 This is an engineering preparation step, outside the deciding player's tools.
 Create the five inputs above first. `target.json` is closed:
 `{"argv":["ABSOLUTE_PREPARED_WRAPPER"],"cwd":"ABSOLUTE_PROJECT_ROOT","env":{}}`.
@@ -138,11 +147,19 @@ driver creates exclusive per-actor inputs/host traces and original resource note
 It verifies canonical handoff/context plus actual host/MCP group quiescence before
 a successor, without changing original limits. [Host details](player-host.md).
 
-Use a fresh or fully reloaded spectator page for each new admission. An old page
-can retain the closed admission's local Pause label while polling a new session;
-reload was verified as the immediate mitigation. The [owned observer follow-up](https://github.com/CVX-Hull/enactive/issues/143#issuecomment-6508431710)
-retains that presentation gap. Reloading a page does not resume a stopped admission
-or grant input authority.
+The spectator scopes status, activity, source and permanent-Pause facts to their
+actual sessions. A fresh admission establishes a new current target while a
+previous selection remains labelled recorded evidence; it is never Resume.
+Reload discards client-retained history and does not grant input authority. The
+[observer component](../components/observer-operations.md) owns current behavior;
+the [Watch/Timeline report](../acceptance/2026-10-29-spectator-watch-timeline.md)
+retains actual same-page admission/Pause evidence and its limits.
+
+During live play, keep elapsed/receipt checks short enough to meet the selected
+operator stop window. Delegate extended review when it competes with runtime
+ownership. Record a missed window or late closeout observation as a deviation;
+a planned browser Pause is not evidence that the click occurred. No additional
+monitoring service or per-action approval is required.
 
 SIGINT/SIGTERM or browser Pause permanently fence input. Finalization closes the
 channel and exact owned groups, with bounded signals if necessary. It never scans

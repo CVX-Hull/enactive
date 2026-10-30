@@ -1,0 +1,240 @@
+{
+  "schema": "investigation-295-evidence/1",
+  "scope": "Selected gameplay and spectator evidence; no cadence/provider superiority or human-usability qualification",
+  "original_private_location": ".runtime/computer-sessions/investigation295-*",
+  "private_availability": "Retained project-local; complete traces and saves unavailable in fresh checkout",
+  "cases": [
+    {
+      "id": "investigation295-play001",
+      "session": "ea0cd1a5f23f46a5b683f266eed5f06b",
+      "source_commit": "c6831143a459b3c56989bc88f27881ff051d91c2",
+      "manifest_sha256": "e684802edda405a8a9f1285dd29999bc2dc6058bb42d55d3ff4a81e3e7048df0",
+      "receipt_sha256": "413059fd7cca70e342d8fba452578f7b835a5ebf01c8a40058d3aeac1a41c981",
+      "host_trace_sha256": "b51c1a9186cf8b43333a8c975a9c6af4fd820b243abbfe585daf8f6c99b3f954",
+      "route_provider": [
+        "deepinfra/fp8"
+      ],
+      "actual_elapsed_seconds": 305.1638347078115,
+      "attempts": 24,
+      "outcome": "incomplete_normal_native_exit",
+      "normal_native_exit_zero": false,
+      "deciding_hosts_quiescent": true,
+      "native_absence_verified": true,
+      "input_authority_revoked": true,
+      "accounting": {
+        "attempts_charged": 24,
+        "cumulative_attempts": 3336,
+        "consumed_conservative_reservation_usd": 2.581856256,
+        "cumulative_conservative_reservation_usd": 850.732253184,
+        "allocated_max_attempts": 240,
+        "unused_allocation_retired": 216,
+        "configured_estimate_usd": 0.0113224692,
+        "missing_usage_attempts": 0,
+        "reservation_is_not_invoice": true
+      },
+      "completed_response_ms": {
+        "max": 39406.04616700002,
+        "n": 24,
+        "p50": 9293.148833500001,
+        "p95": 30640.914541999984,
+        "sum": 279121.900042
+      },
+      "limits": {
+        "max_hosts": 1,
+        "max_http_attempts": 240,
+        "host_seconds": 1800,
+        "total_host_seconds": 1800,
+        "wall_seconds": 2400
+      },
+      "native_sha256": "0a5649cfb19e7d36d08580f7c88defb2a7c48c94f7b1d2368c051e7ca4e866b8",
+      "adapter_sha256": "77313b1e82aa0b7d4e4b2fe536f77d605c5f2efe76494f2250fe4e2f8b4978df"
+    },
+    {
+      "id": "investigation295-play002",
+      "session": "367561296459453f817794725173dc54",
+      "source_commit": "43a35ccb0ecbf2110e66758db70ee504f7d58327",
+      "manifest_sha256": "58c32614c290c53a37992a7785e11ef9ed43a03d35bc0ce5b93437569af998f7",
+      "receipt_sha256": "305208ff6c991ffaa35822ed34d6fcb14ee9475cea71b368d7f49855eb9cc42d",
+      "host_trace_sha256": "f6ed96694c04e58503fd22ef62943204b83f14c6ffba6af40000599defa85c37",
+      "route_provider": [
+        "baseten"
+      ],
+      "actual_elapsed_seconds": 955.6024066666141,
+      "attempts": 117,
+      "outcome": "incomplete",
+      "normal_native_exit_zero": false,
+      "deciding_hosts_quiescent": true,
+      "native_absence_verified": true,
+      "input_authority_revoked": true,
+      "accounting": {
+        "attempts_charged": 117,
+        "cumulative_attempts": 3459,
+        "consumed_conservative_reservation_usd": 39.1053312,
+        "cumulative_conservative_reservation_usd": 892.344336384,
+        "allocated_max_attempts": 240,
+        "unused_allocation_retired": 123,
+        "configured_estimate_usd": 1.829313748,
+        "missing_usage_attempts": 1,
+        "reservation_is_not_invoice": true
+      },
+      "completed_response_ms": {
+        "max": 15844.755042000092,
+        "n": 116,
+        "p50": 7279.899228999973,
+        "p95": 12835.298999999999,
+        "sum": 849382.5910400001
+      },
+      "limits": {
+        "max_hosts": 1,
+        "max_http_attempts": 240,
+        "host_seconds": 1800,
+        "total_host_seconds": 1800,
+        "wall_seconds": 2400
+      },
+      "native_sha256": "0a5649cfb19e7d36d08580f7c88defb2a7c48c94f7b1d2368c051e7ca4e866b8",
+      "adapter_sha256": "77313b1e82aa0b7d4e4b2fe536f77d605c5f2efe76494f2250fe4e2f8b4978df"
+    },
+    {
+      "id": "investigation295-ending001",
+      "session": "a91fb651b5d24e6b9847c6c7b3403be9",
+      "source_commit": "0b0b2eda1b0783909f36740bb0ca1ae7fb1dce0d",
+      "manifest_sha256": "f635c98b462efe6383c021b7edc8d94fffd53d1f3187cb9dc18b2cfdc917e5bf",
+      "receipt_sha256": "ce3f802ad67552313511eb98bc444ab917166bfe21fe25ddb695deb8d498293f",
+      "host_trace_sha256": "c2d1a370bc1c1a5d364a68df0da02ca26776d712c10e60ded45c70cbf17562b1",
+      "route_provider": [
+        "baseten"
+      ],
+      "actual_elapsed_seconds": 164.00967408437282,
+      "attempts": 33,
+      "outcome": "host_completed_unassessed",
+      "normal_native_exit_zero": true,
+      "deciding_hosts_quiescent": true,
+      "native_absence_verified": true,
+      "input_authority_revoked": true,
+      "accounting": {
+        "attempts_charged": 33,
+        "cumulative_attempts": 3492,
+        "consumed_conservative_reservation_usd": 11.0297088,
+        "cumulative_conservative_reservation_usd": 903.374045184,
+        "allocated_max_attempts": 80,
+        "unused_allocation_retired": 47,
+        "configured_estimate_usd": 0.041196124,
+        "missing_usage_attempts": 0,
+        "reservation_is_not_invoice": true
+      },
+      "completed_response_ms": {
+        "max": 7978.372374999992,
+        "n": 33,
+        "p50": 4290.880999999994,
+        "p95": 7128.47933300001,
+        "sum": 130697.138874
+      },
+      "limits": {
+        "max_hosts": 1,
+        "max_http_attempts": 80,
+        "host_seconds": 900,
+        "total_host_seconds": 900,
+        "wall_seconds": 1200
+      },
+      "native_sha256": "0a5649cfb19e7d36d08580f7c88defb2a7c48c94f7b1d2368c051e7ca4e866b8",
+      "adapter_sha256": "77313b1e82aa0b7d4e4b2fe536f77d605c5f2efe76494f2250fe4e2f8b4978df"
+    }
+  ],
+  "assets": {
+    "analysis-automatic.png": {
+      "bytes": 139681,
+      "sha256": "31a7b594aeb3ef3eb1fedcf963a35ae123fe78eaf7d74dff29d0737d3d8d2d5e"
+    },
+    "analysis-pause.png": {
+      "bytes": 148742,
+      "sha256": "270ca7b258e3970a4b237dfca60e35b07e4baceab95a1478430d961b861729ec"
+    },
+    "analysis-import-failed.png": {
+      "bytes": 138712,
+      "sha256": "00c6928cb3a80653ab1887f988a0728cc6926eb025e2a210519f618ea008c49b"
+    },
+    "new-water.png": {
+      "bytes": 234150,
+      "sha256": "845b88de8af79cf1efc9c51483369923224c02c30669c2ebdba66bf6a00650b7"
+    },
+    "persisted-water.png": {
+      "bytes": 104996,
+      "sha256": "fc578f59c8a1f92e123c4943380e7211181421d9e0df542b6b7a76ebfe58c7cb"
+    },
+    "saved-load-list.png": {
+      "bytes": 33228,
+      "sha256": "d8b5e65dee449c118a07fff45a12ea25368ed37ec0a026d83b5e8c677f908e71"
+    }
+  },
+  "public_archive": {
+    "url": "https://github.com/user-attachments/files/34165841/enactive-295-selected-investigation.zip",
+    "comment": "https://github.com/CVX-Hull/enactive/issues/295#issuecomment-6515374811",
+    "bytes": 3671283,
+    "sha256": "dcc3bcc233475fabea3714c4e774b28b2bd2cb14a3c3b7824f0c86a77d0f9677",
+    "readback_sha256": "dcc3bcc233475fabea3714c4e774b28b2bd2cb14a3c3b7824f0c86a77d0f9677",
+    "contents": {
+      "schema": "selected-evidence-publication/1",
+      "reader_source_commit": "0b0b2eda1b0783909f36740bb0ca1ae7fb1dce0d",
+      "files": {
+        "final-bundle.json": {
+          "bytes": 3923955,
+          "sha256": "542c1540a2495a284f0dbaea529490ebf4646e1d4099bf60f603179dc9d62bca"
+        },
+        "final-reader.html": {
+          "bytes": 4140851,
+          "sha256": "41dc2e8f4a778cef589ad797cdb396a7027f3ad2810609a34c2a2cf0c4ef80b5"
+        }
+      },
+      "cases": [
+        {
+          "id": "observer293-watch002",
+          "session": "1663b10573a04b44a3a26c6acd12590e",
+          "source_commit": "b9b41b23db7de29a5c9b398e844ed98d35020837",
+          "events": 765,
+          "images": 3
+        },
+        {
+          "id": "observer293-watch003",
+          "session": "af8b98ca547e421d9742f54416c4f16f",
+          "source_commit": "b9b41b23db7de29a5c9b398e844ed98d35020837",
+          "events": 559,
+          "images": 3
+        },
+        {
+          "id": "observer293-watch004",
+          "session": "6469c88394204c178406ae13ae696052",
+          "source_commit": "b9b41b23db7de29a5c9b398e844ed98d35020837",
+          "events": 148,
+          "images": 2
+        },
+        {
+          "id": "cutover176-organic005",
+          "session": "8a4e7b800525400485720fa1f7c3303d",
+          "source_commit": "846ac056c2a0eec5ca3e19a3959278f6deac0a2f",
+          "events": 1018,
+          "images": 5
+        }
+      ]
+    }
+  },
+  "provider_screen": {
+    "requests": 6,
+    "baseten_valid": 3,
+    "fireworks_valid": 2,
+    "fireworks_http429": 1,
+    "baseten_success_median_ms": 879.138,
+    "fireworks_success_median_ms": 1201.164,
+    "configured_estimate_usd": "0.003547804",
+    "missing_usage": 1,
+    "game_input_dispatched": false
+  },
+  "iteration_accounting": {
+    "new_attempts": 180,
+    "configured_known_estimate_usd": "1.8853801452",
+    "missing_usage_attempts": 2,
+    "final_cumulative_attempts": 3492,
+    "final_conservative_reservation_usd": "903.374045184",
+    "ceiling_usd": "1200",
+    "reservation_is_not_invoice": true
+  }
+}

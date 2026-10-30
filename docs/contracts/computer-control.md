@@ -279,6 +279,13 @@ authority renewal follows. Actor/native stop interfaces remain unchanged.
 
 ## Reuse and qualification limits
 
+The [recorded investigation artifact](observer-investigation.md) defines a separate
+bounded passive artifact for attached current-session snapshots and selected closed
+cases. Its GET/POST observational projection has no actor/native effects. Local import and the
+recorded-only HTML share a renderer. Imported IDs/data grant no actor authority,
+replace no current status/source, and cannot block independent Pause. No archive,
+collector or semantic control API is added to these runtime ports.
+
 Socketpair/SQLite/HTTP/MCP/Pi are maintained facilities. Thin framing and custody
 integration cover the demonstrated native-publication/one-writer gap; no framework.
 Pillow is a pinned project-local maintained codec for Python image views, replacing

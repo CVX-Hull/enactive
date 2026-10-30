@@ -20,6 +20,8 @@ experimental proof commands or launch an unprepared/fullscreen application.
 Use Watch for current pixels and fallible public statements. In Timeline, select
 recorded activity to inspect its explicit request/operation/source links; inspection
 stays frozen while play continues. Follow latest returns to the current tail.
+Search/filter applies only to retained rows. Collapsible groups use explicit
+actor/request or operation references; nearby coverage discloses omissions.
 Compare the recorded session with the persistent current control target: Pause
 stops the custodian receiving it even during historical inspection. A fresh
 admission after permanent Pause is separate custody, not Resume. Only one previous
@@ -27,6 +29,31 @@ activity snapshot is retained; reload discards client history. See the
 [observer component](../components/observer-operations.md) for coverage and failure
 limits. Local timing downloads measure DOM replacement, not physical paint or
 useful progress, and should be retained project-locally with the selected evidence.
+
+Open **Analysis** to attach the current session automatically. Its as-of snapshot
+stays stable while you investigate; **Refresh current session** reads a fresh bounded
+snapshot of existing records. Coverage names producer cutoffs, omissions and unknown
+live accounting. A failed refresh retains the previous recorded evidence. A new
+serving target updates the control bar but does not overwrite inspection; explicitly
+attach it when ready. Snapshot work cannot capture pixels or change custody/Pause.
+
+For optional closed-case investigation, create a private `investigation-selection/1` JSON
+with 1–4 explicit case directories, selected original source IDs, optional timing
+exports and existing attributed assessments. Its exact shape and limits are in
+the [artifact contract](../contracts/observer-investigation.md). Export once:
+
+```sh
+.venv/bin/python -m tools.evaluate investigation-export selection.json --output investigation.json --html investigation.html
+```
+
+Outputs must be fresh paths. Import the JSON through **Analysis → Import recorded
+bundle**, select a case and whole case/interval, then follow exact record links to
+original images. Coverage explains unavailable bytes and omitted fields; a missing
+image is never replaced with latest pixels. Assessments are fallible attributed
+interpretation, separate from measurements and player claims. The current control
+bar still targets the live custodian while you inspect recorded evidence.
+Open the optional HTML for the same reader without a live session; it is recorded
+evidence only and cannot Pause, replay or resume input. File import remains local.
 
 The custodian reserves `started.json` before DB/native creation, owns one native
 process group and passes the exact inherited lock/socket. A partial/used package

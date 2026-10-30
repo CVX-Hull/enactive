@@ -84,3 +84,15 @@ select { background: #243735; color: #eef4f0; font: inherit; border: 1px solid #
 [role="tabpanel"]:focus-visible, #latest-statement:focus-visible, select:focus-visible { outline: 3px solid #a7d6c1; outline-offset: 3px; }
 @media (max-width: 1000px) { .control-bar { flex-direction: row; flex-wrap: wrap; gap: .75rem; } .control-bar > div:first-child { flex-basis: 100%; } .stop-control { max-width: none; } .timeline-layout { grid-template-columns: minmax(14rem, 1fr) minmax(0, 1.3fr); } }
 @media (max-width: 700px) { .timeline-layout { grid-template-columns: 1fr; } .control-bar > div:first-child { display: none; } .control-bar { padding: .65rem 1rem; } .current-state, .stop-control { flex-basis: 100%; } .observer-messages, .view-tabs, .timeline-panel { padding-left: 1rem; padding-right: 1rem; } #activity-list { max-height: 40vh; } }
+.control-bar { padding-top: .7rem; padding-bottom: .7rem; }
+.control-provenance { margin-top: .25rem; padding-top: 0; border: 0; font-size: .8rem; }
+#current-session-full { overflow-wrap: anywhere; user-select: all; }
+.analysis-panel { max-width: 1600px; margin: auto; padding: 1.5rem 2rem; }
+.timeline-list-panel input[type="search"] { width: 100%; color: #eef4f0; background: #172122; border: 1px solid #6d9184; border-radius: .3rem; padding: .5rem; font: inherit; }
+.timeline-list-panel label { margin-top: .7rem; }
+.timeline-list-panel .group-choice { display: flex; align-items: center; gap: .5rem; }
+#activity-list details { margin: .35rem 0; padding: .5rem; }
+#activity-list details button { display: block; margin-top: .35rem; }
+#activity-list summary { overflow-wrap: anywhere; font-size: .85rem; }
+input:focus-visible { outline: 3px solid #a7d6c1; outline-offset: 3px; }
+@media (max-width: 700px) { .analysis-panel { padding: 1rem; } .view-tabs button { padding: .6rem 1rem; } }

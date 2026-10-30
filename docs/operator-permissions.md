@@ -14,6 +14,14 @@ request those permissions again for each basic action or clean actor succession.
 The selected frozen package still owns finite scope, ceilings, route and actual
 resources; prior approval does not create input custody or resume a stopped run.
 
+The owner also authorized bounded endpoint tests using selected retained gameplay
+images with the current player guide and tool declarations. Freeze destinations,
+context and original finite allowances before testing; dispatch no game tools in
+an eligibility probe and count refusals/missing usage. This is scoped gameplay
+evaluation, not permission to export unrelated engineering or personal data.
+Actual tool-policy rejections still require resolution; retain the refusal and
+the owner's specific authorization rather than disguising a test as live play.
+
 ## Finite gameplay budget delegation
 
 The lead may select finite gameplay allocations within the standing approved

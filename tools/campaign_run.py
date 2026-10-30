@@ -21,6 +21,7 @@ from harness.player.memory import Memory
 from harness.server import serve
 from tools.campaign_package import preflight
 from tools.campaign_player import run_hosts,write_new
+from tools.investigation_live import LiveInvestigationView
 
 
 def run_campaign(directory: Path) -> dict:
@@ -30,7 +31,7 @@ def run_campaign(directory: Path) -> dict:
     if not secret:raise ValueError('Selected provider credential is unavailable; supply only its explicit environment variable')
     started=time.monotonic();deadline=started+profile['wall_seconds']
     owner=OwnedTarget(directory,profile['session'],target,Path(profile['library']['path']),Path(profile['shared_lock']),deadline)
-    runtime=memory=server=server_thread=None
+    runtime=memory=server=server_thread=investigation_view=None
     stopped=threading.Event();driver=None
     report=dict(schema='campaign-receipt/2',session=profile['session'],source_commit=profile['source_commit'],
                 started_wall=time.time(),outcome='incomplete',normal_save_claimed_by_harness=False,
@@ -53,6 +54,8 @@ def run_campaign(directory: Path) -> dict:
         owner.wait_target()
         if stopped.is_set():raise ValueError('Cancelled before actor admission')
         application=Application(runtime,memory,directory/'contexts')
+        investigation_view=LiveInvestigationView(directory,profile)
+        application.investigation_view=investigation_view
         server,server_thread=serve(application,profile['port'])
         write_new(directory/'ready.json',dict(schema='computer-ready/1',session=profile['session'],pid=owner.process.pid,
             viewer_url=f"http://127.0.0.1:{profile['port']}/",ready_wall=time.time()))
@@ -77,6 +80,7 @@ def run_campaign(directory: Path) -> dict:
         if server is not None:
             attempt('server_shutdown',server.shutdown);attempt('server_close',server.server_close)
             attempt('server_join',lambda:server_thread.join(2))
+        if investigation_view is not None:attempt('investigation_close',investigation_view.close)
         if runtime is not None:attempt('store_close',runtime.store.close)
         if memory is not None:attempt('player_store_close',memory.close)
         if driver is None:
