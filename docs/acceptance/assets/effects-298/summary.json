@@ -1,0 +1,831 @@
+{
+  "schema": "effects-298-evidence/1",
+  "scope": "Finite negative gameplay diagnosis; no readiness, cadence, learning, provider superiority or causal context-benefit qualification",
+  "source_commit": "4f7d8d2f001c878ab4eb045e5f04e677e4a13319",
+  "decision": "No change adopted; baseline and prospective unchanged assessment both lack retained supply/needs improvement",
+  "private_availability": "Complete original traces, source histories, frozen protocols, inputs and saves retained project-local under ignored runtime paths; unavailable in fresh checkout. Only listed PNGs and this summary are published.",
+  "guide_sha256": "14ac97fe329d919dfb73f2b8b903bc5dd4b28696678dc0f64b624d0d42446702",
+  "protocols": {
+    "evaluation-protocol.md": "35356bd8f0f0b553b5e73984728143a8911f00e23bc62d93372f8a102d7dd46b",
+    "assessment001-protocol.md": "70b051c7ae69e1622660c80909f0cdcc41310c1c849353c341e69e927c5d7d7e"
+  },
+  "cases": [
+    {
+      "id": "effects298-baseline001",
+      "session": "9c312f362db74a7da8ca0e784f4e9b02",
+      "actor_id": "a80f9f5b78194a7f93796570a7ef8fcd",
+      "manifest_sha256": "5b0ce49b1b09315c095f82441d50a4e6130b2981bd842e6836a9f876887d9d3f",
+      "receipt_sha256": "ec6099262c0fc346465243d6a05082d0a3e20eca2a39021f77055d28f7a3e195",
+      "host_trace_sha256": "965cd28e7e5f8725ef8b3e20add02cc94318c857159b47115d8c32dbef71f823",
+      "frozen_input_sha256": {
+        "route.json": "f4724837ef2c216582fc0285addc1cde554e54432a6e77423b6e21c76fa7ca2c",
+        "mcp-template.json": "e3cccc002cc971ffbf270b979131c6902f1975df8d4f6d055ee8d30defa86a60",
+        "context.txt": "10330d2509124b030414fd91df5c3b35bd3b26a333d5918ab283c921296cd4d4",
+        "prompt.txt": "48379f88dafaff2e8955ec2bee7028f617ac6cb27c0a241b6f9c83c8fcce3f19",
+        "target.json": "3c01178426e9d5d10a36229fc7c63f550f561fe6946818aaabad667c259d3b4f"
+      },
+      "native_sha256": "0a5649cfb19e7d36d08580f7c88defb2a7c48c94f7b1d2368c051e7ca4e866b8",
+      "adapter_sha256": "77313b1e82aa0b7d4e4b2fe536f77d605c5f2efe76494f2250fe4e2f8b4978df",
+      "initial_wrapper_options_sha256": {
+        "Cataclysm.sh": "43c5c0ceb9c6c992cc58ebc0a0092c86af5448ddbc90b389cc52f4fd9d466352",
+        "options.json": "132c5f3d4fd9cbcb9903bd6f547a8c9d654d7b5ff36c5d37be9db296f3d076d0"
+      },
+      "configuration": {
+        "api": "openai-completions",
+        "context_window": 1048576,
+        "effort": "medium",
+        "max_context_images": 30,
+        "max_output_tokens": 16384,
+        "model": "deepseek/deepseek-v4.1-flash-1017",
+        "provider": "openrouter",
+        "provider_routing": {
+          "allow_fallbacks": false,
+          "only": [
+            "baseten"
+          ],
+          "order": [
+            "baseten"
+          ],
+          "require_parameters": true
+        },
+        "reasoning_format": "openrouter",
+        "requested_service_tier": "default",
+        "schema": "pi-player-host/4",
+        "telemetry_version": 2,
+        "thinking_level_map": {
+          "medium": "medium"
+        }
+      },
+      "allocation": {
+        "max_hosts": 1,
+        "max_http_attempts": 240,
+        "host_seconds": 2400,
+        "total_host_seconds": 2400,
+        "wall_seconds": 3000,
+        "limits": {
+          "max_inputs": 12000,
+          "max_requests": 20000,
+          "max_frames": 2500,
+          "max_bytes": 3221225472
+        }
+      },
+      "actual_campaign_elapsed_seconds": 1285.9369128327817,
+      "host_seconds": 1284.7422885829583,
+      "accounting": {
+        "attempts_charged": 96,
+        "cumulative_attempts": 3594,
+        "consumed_conservative_reservation_usd": 32.0864256,
+        "cumulative_conservative_reservation_usd": 937.967222784,
+        "allocated_max_attempts": 240,
+        "unused_allocation_retired": 144,
+        "configured_estimate_usd": 1.844415236,
+        "missing_usage_attempts": 0,
+        "reservation_is_not_invoice": true
+      },
+      "mechanical_outcome": "host_completed_unassessed",
+      "normal_native_exit_zero": true,
+      "native_signals": [],
+      "normal_host_exit_zero": true,
+      "deciding_hosts_quiescent": true,
+      "native_absence_verified": true,
+      "input_authority_revoked": true,
+      "normal_save_claimed_by_harness": false,
+      "source_pngs_verified": 93,
+      "tool_counts": {
+        "computer_observe": 1,
+        "computer_input": 93,
+        "computer_result": 1
+      },
+      "explicit_wall_waits": {
+        "n": 3,
+        "seconds": 6
+      },
+      "completed_response_ms": {
+        "max": 35978.58687500004,
+        "n": 96,
+        "p50": 11785.325354,
+        "p95": 24702.37395899999,
+        "sum": 1230608.496083999
+      },
+      "tool_interval_ms": {
+        "max": 2556.413749999999,
+        "n": 95,
+        "p50": 453.7742089999374,
+        "p95": 752.7562499999767,
+        "sum": 51073.29837499976
+      },
+      "host_timing_ms": {
+        "first_body": {
+          "max": 8678.464625000022,
+          "n": 96,
+          "p50": 5029.649500000058,
+          "p95": 6473.604291999945,
+          "sum": 435927.28374900075
+        },
+        "first_content": {
+          "max": 35442.79162500007,
+          "n": 91,
+          "p50": 10985.571624999982,
+          "p95": 24311.62845800002,
+          "sum": 1106082.387291
+        },
+        "first_reasoning": {
+          "max": 8678.68191600003,
+          "n": 93,
+          "p50": 5045.146958000027,
+          "p95": 6473.650249999948,
+          "sum": 431826.158783001
+        },
+        "first_tool_argument": {
+          "max": 35946.877624999965,
+          "n": 95,
+          "p50": 11812.099083000037,
+          "p95": 24665.33158300002,
+          "sum": 1219484.8838730003
+        },
+        "headers": {
+          "max": 8662.595791,
+          "n": 96,
+          "p50": 5003.769625000015,
+          "p95": 6473.338916999986,
+          "sum": 434877.57916600065
+        },
+        "host_inspection": {
+          "max": 13.622833000030369,
+          "n": 96,
+          "p50": 7.743416500044987,
+          "p95": 9.007958000001963,
+          "sum": 668.8284609992184
+        },
+        "max_body_gap": {
+          "max": 584.3749170000665,
+          "n": 96,
+          "p50": 374.367083500023,
+          "p95": 516.0094169999938,
+          "sum": 34692.64253899964
+        },
+        "max_semantic_gap": {
+          "max": 1051.3177920000162,
+          "n": 96,
+          "p50": 382.36922849997063,
+          "p95": 845.6297500000801,
+          "sum": 42651.01862600042
+        },
+        "sdk_after_payload": {
+          "max": 19.48025000002235,
+          "n": 96,
+          "p50": 14.086499999975786,
+          "p95": 15.897499999962747,
+          "sum": 1201.8427889992572
+        }
+      },
+      "reported_tokens": {
+        "cacheRead": {
+          "max": 230144,
+          "n": 96,
+          "p50": 45184.0,
+          "p95": 125440,
+          "sum": 4994048
+        },
+        "cacheWrite": {
+          "max": 0,
+          "n": 96,
+          "p50": 0.0,
+          "p95": 0,
+          "sum": 0
+        },
+        "input": {
+          "max": 134638,
+          "n": 96,
+          "p50": 70947.5,
+          "p95": 103476,
+          "sum": 5526555
+        },
+        "output": {
+          "max": 4437,
+          "n": 96,
+          "p50": 1156.0,
+          "p95": 3100,
+          "sum": 126242
+        },
+        "reasoning": {
+          "max": 4329,
+          "n": 96,
+          "p50": 1002.0,
+          "p95": 3008,
+          "sum": 111698
+        }
+      },
+      "context": {
+        "input_images": {
+          "max": 93,
+          "n": 96,
+          "p50": 47.5,
+          "p95": 91,
+          "sum": 4557
+        },
+        "omitted_images": {
+          "max": 63,
+          "n": 96,
+          "p50": 17.5,
+          "p95": 61,
+          "sum": 2142
+        },
+        "projection_ms": {
+          "max": 13.127917000092566,
+          "n": 96,
+          "p50": 4.06960399998934,
+          "p95": 8.577708000084385,
+          "sum": 379.3649139999409
+        },
+        "retained_images": {
+          "max": 30,
+          "n": 96,
+          "p50": 30.0,
+          "p95": 30,
+          "sum": 2415
+        }
+      },
+      "maximum_protected_images": 1,
+      "blocked_projections": 0,
+      "control": {
+        "operation_statuses": {
+          "completed": 93,
+          "unknown": 1
+        },
+        "original_native_dispositions": {
+          "delivered": 523,
+          "transport_unknown": 1
+        },
+        "timing_ms": {
+          "intent_to_receipt": {
+            "max": 489.6997921168804,
+            "n": 523,
+            "p50": 25.7045840844512,
+            "p95": 366.8362917378545,
+            "sum": 44240.49559701234
+          },
+          "intent_to_send": {
+            "max": 0.321708619594574,
+            "n": 524,
+            "p50": 0.07800012826919556,
+            "p95": 0.16341730952262878,
+            "sum": 45.88801693171263
+          },
+          "send": {
+            "max": 0.1484174281358719,
+            "n": 524,
+            "p50": 0.020563136786222458,
+            "p95": 0.03679189831018448,
+            "sum": 11.864656582474709
+          },
+          "send_to_receipt": {
+            "max": 489.5118325948715,
+            "n": 523,
+            "p50": 25.5453335121274,
+            "p95": 366.754624992609,
+            "sum": 44194.66520473361
+          }
+        }
+      },
+      "observer": {
+        "missing_source_matches": 5,
+        "unmatched_presentations": 0,
+        "unique_source_presented_to_dom_ms": {
+          "max": 6593,
+          "n": 88,
+          "p50": 828.0,
+          "p95": 1321,
+          "sum": 80215
+        },
+        "unique_source_received_to_dom_ms": {
+          "max": 6142.146728515625,
+          "n": 88,
+          "p50": 454.22802734375,
+          "p95": 953.673095703125,
+          "sum": 48206.828369140625
+        }
+      },
+      "observer_note": "First five sources have no exact DOM witness; page attached after start.",
+      "source_anchors": [
+        {
+          "source_id": "9c312f362db74a7da8ca0e784f4e9b02-1807",
+          "meaning": "Inactive vending-machine discovery",
+          "source_sha256": "41d48665d7a6a34cfb6c272dfa8c98470eab901b3f9095b909e01524ba1792ee",
+          "received_wall": 1793363033.599376,
+          "campaign_elapsed_seconds": 330.390527009964
+        },
+        {
+          "source_id": "9c312f362db74a7da8ca0e784f4e9b02-5706",
+          "meaning": "Opened door reveals new room; item types unverified",
+          "source_sha256": "6029a9886974009da51c9719821ebdeb9b72fec2a64ea73b1efbef49bfd3bb9a",
+          "received_wall": 1793363652.940326,
+          "campaign_elapsed_seconds": 949.731477022171
+        },
+        {
+          "source_id": "9c312f362db74a7da8ca0e784f4e9b02-8575",
+          "meaning": "Actual title and changed Parker save listing",
+          "source_sha256": "7a94f9f5a94f10b2b94b49dc9e0cbe66848d5f9c78743a7c16c7a09c2998c5ed",
+          "received_wall": 1793363947.00871,
+          "campaign_elapsed_seconds": 1243.7998609542847
+        }
+      ]
+    },
+    {
+      "id": "effects298-assessment001",
+      "session": "12351ffbac834281b17fe2492ab1436d",
+      "actor_id": "cf648eae114f41c2b29143b7377a20e5",
+      "manifest_sha256": "d5b60bc0f45fed35a71744dafd0e2f9655c1b17be02656cc6d50edc9869b911b",
+      "receipt_sha256": "bd85c0765c62a1ea247dce75dc7893397f005a88a31995083393d01324c25feb",
+      "host_trace_sha256": "0fe9f7081565b4f3fbb02b409fe8a43fd14af0559d3b444f18e1b8f5591426f9",
+      "frozen_input_sha256": {
+        "route.json": "f4724837ef2c216582fc0285addc1cde554e54432a6e77423b6e21c76fa7ca2c",
+        "mcp-template.json": "e3cccc002cc971ffbf270b979131c6902f1975df8d4f6d055ee8d30defa86a60",
+        "context.txt": "11377b43efcf75cf911dc6dd6c8c8e556084c1147c83936a161972a16dd87f9f",
+        "prompt.txt": "48379f88dafaff2e8955ec2bee7028f617ac6cb27c0a241b6f9c83c8fcce3f19",
+        "target.json": "3c01178426e9d5d10a36229fc7c63f550f561fe6946818aaabad667c259d3b4f"
+      },
+      "native_sha256": "0a5649cfb19e7d36d08580f7c88defb2a7c48c94f7b1d2368c051e7ca4e866b8",
+      "adapter_sha256": "77313b1e82aa0b7d4e4b2fe536f77d605c5f2efe76494f2250fe4e2f8b4978df",
+      "initial_wrapper_options_sha256": {
+        "Cataclysm.sh": "43c5c0ceb9c6c992cc58ebc0a0092c86af5448ddbc90b389cc52f4fd9d466352",
+        "options.json": "132c5f3d4fd9cbcb9903bd6f547a8c9d654d7b5ff36c5d37be9db296f3d076d0"
+      },
+      "configuration": {
+        "api": "openai-completions",
+        "context_window": 1048576,
+        "effort": "medium",
+        "max_context_images": 30,
+        "max_output_tokens": 16384,
+        "model": "deepseek/deepseek-v4.1-flash-1017",
+        "provider": "openrouter",
+        "provider_routing": {
+          "allow_fallbacks": false,
+          "only": [
+            "baseten"
+          ],
+          "order": [
+            "baseten"
+          ],
+          "require_parameters": true
+        },
+        "reasoning_format": "openrouter",
+        "requested_service_tier": "default",
+        "schema": "pi-player-host/4",
+        "telemetry_version": 2,
+        "thinking_level_map": {
+          "medium": "medium"
+        }
+      },
+      "allocation": {
+        "max_hosts": 1,
+        "max_http_attempts": 240,
+        "host_seconds": 2400,
+        "total_host_seconds": 2400,
+        "wall_seconds": 3000,
+        "limits": {
+          "max_inputs": 12000,
+          "max_requests": 20000,
+          "max_frames": 2500,
+          "max_bytes": 3221225472
+        }
+      },
+      "actual_campaign_elapsed_seconds": 1404.6399311255664,
+      "host_seconds": 1404.1150174159557,
+      "accounting": {
+        "attempts_charged": 104,
+        "cumulative_attempts": 3698,
+        "consumed_conservative_reservation_usd": 34.7602944,
+        "cumulative_conservative_reservation_usd": 972.727517184,
+        "allocated_max_attempts": 240,
+        "unused_allocation_retired": 136,
+        "configured_estimate_usd": 1.926403572,
+        "missing_usage_attempts": 0,
+        "reservation_is_not_invoice": true
+      },
+      "mechanical_outcome": "host_completed_unassessed",
+      "normal_native_exit_zero": true,
+      "native_signals": [],
+      "normal_host_exit_zero": true,
+      "deciding_hosts_quiescent": true,
+      "native_absence_verified": true,
+      "input_authority_revoked": true,
+      "normal_save_claimed_by_harness": false,
+      "source_pngs_verified": 101,
+      "tool_counts": {
+        "computer_observe": 1,
+        "computer_input": 101,
+        "computer_result": 1
+      },
+      "explicit_wall_waits": {
+        "n": 3,
+        "seconds": 6
+      },
+      "completed_response_ms": {
+        "max": 34293.64904200006,
+        "n": 104,
+        "p50": 11787.511958500007,
+        "p95": 27547.028292000003,
+        "sum": 1353110.62842
+      },
+      "tool_interval_ms": {
+        "max": 2411.0692499999986,
+        "n": 103,
+        "p50": 411.6498330000004,
+        "p95": 529.9921660000691,
+        "sum": 48437.335546999755
+      },
+      "host_timing_ms": {
+        "first_body": {
+          "max": 9936.442834000103,
+          "n": 104,
+          "p50": 4191.676124499994,
+          "p95": 7938.193791000056,
+          "sum": 458421.9217940003
+        },
+        "first_content": {
+          "max": 33741.964084000094,
+          "n": 104,
+          "p50": 11209.566770999998,
+          "p95": 26371.188749999972,
+          "sum": 1283566.9711250009
+        },
+        "first_reasoning": {
+          "max": 9936.481499999994,
+          "n": 101,
+          "p50": 4192.6162919999915,
+          "p95": 7938.251916000037,
+          "sum": 455356.91941800044
+        },
+        "first_tool_argument": {
+          "max": 34243.82349999994,
+          "n": 103,
+          "p50": 11925.048583999975,
+          "p95": 27514.73216700001,
+          "sum": 1340075.170128001
+        },
+        "headers": {
+          "max": 9936.20479200012,
+          "n": 104,
+          "p50": 4191.231728999992,
+          "p95": 7937.853041000082,
+          "sum": 457414.3157950002
+        },
+        "host_inspection": {
+          "max": 9.034833000041544,
+          "n": 104,
+          "p50": 5.332667000038782,
+          "p95": 7.181499999947846,
+          "sum": 532.2117880007779
+        },
+        "max_body_gap": {
+          "max": 880.9429169998039,
+          "n": 104,
+          "p50": 370.834500500001,
+          "p95": 580.9851250001229,
+          "sum": 39098.24091899923
+        },
+        "max_semantic_gap": {
+          "max": 1115.1926250001416,
+          "n": 104,
+          "p50": 371.29924999998184,
+          "p95": 663.2481669998961,
+          "sum": 42406.0437069995
+        },
+        "sdk_after_payload": {
+          "max": 21.693582999985665,
+          "n": 104,
+          "p50": 10.201083499996457,
+          "p95": 13.786457999842241,
+          "sum": 1013.827749999297
+        }
+      },
+      "reported_tokens": {
+        "cacheRead": {
+          "max": 227840,
+          "n": 104,
+          "p50": 46976.0,
+          "p95": 140288,
+          "sum": 6064896
+        },
+        "cacheWrite": {
+          "max": 0,
+          "n": 104,
+          "p50": 0.0,
+          "p95": 0,
+          "sum": 0
+        },
+        "input": {
+          "max": 90357,
+          "n": 104,
+          "p50": 75398.0,
+          "p95": 88104,
+          "sum": 5739711
+        },
+        "output": {
+          "max": 4161,
+          "n": 104,
+          "p50": 1163.0,
+          "p95": 3431,
+          "sum": 135030
+        },
+        "reasoning": {
+          "max": 4048,
+          "n": 104,
+          "p50": 1028.0,
+          "p95": 3280,
+          "sum": 120999
+        }
+      },
+      "context": {
+        "input_images": {
+          "max": 101,
+          "n": 104,
+          "p50": 51.5,
+          "p95": 98,
+          "sum": 5353
+        },
+        "omitted_images": {
+          "max": 71,
+          "n": 104,
+          "p50": 21.5,
+          "p95": 68,
+          "sum": 2698
+        },
+        "projection_ms": {
+          "max": 14.709125000052154,
+          "n": 104,
+          "p50": 3.23962449998362,
+          "p95": 7.072750000050291,
+          "sum": 338.4741189992955
+        },
+        "retained_images": {
+          "max": 30,
+          "n": 104,
+          "p50": 30.0,
+          "p95": 30,
+          "sum": 2655
+        }
+      },
+      "maximum_protected_images": 1,
+      "blocked_projections": 0,
+      "control": {
+        "operation_statuses": {
+          "completed": 101,
+          "unknown": 1
+        },
+        "original_native_dispositions": {
+          "delivered": 399,
+          "transport_unknown": 1
+        },
+        "timing_ms": {
+          "intent_to_receipt": {
+            "max": 402.2826673462987,
+            "n": 399,
+            "p50": 26.63429267704487,
+            "p95": 347.9529172182083,
+            "sum": 41556.734806858
+          },
+          "intent_to_send": {
+            "max": 1.012708991765976,
+            "n": 400,
+            "p50": 0.08056266233325005,
+            "p95": 0.19175000488758087,
+            "sum": 40.100899524986744
+          },
+          "send": {
+            "max": 0.13870932161808014,
+            "n": 400,
+            "p50": 0.018875114619731903,
+            "p95": 0.04579126834869385,
+            "sum": 8.881253190338612
+          },
+          "send_to_receipt": {
+            "max": 401.8598757684231,
+            "n": 399,
+            "p50": 26.480916887521744,
+            "p95": 347.88420889526606,
+            "sum": 41516.7128238827
+          }
+        }
+      },
+      "observer": {
+        "missing_source_matches": 0,
+        "unmatched_presentations": 88,
+        "unique_source_presented_to_dom_ms": {
+          "max": 2144,
+          "n": 101,
+          "p50": 764,
+          "p95": 1260,
+          "sum": 82637
+        },
+        "unique_source_received_to_dom_ms": {
+          "max": 1000.43115234375,
+          "n": 101,
+          "p50": 442.22607421875,
+          "p95": 888.56005859375,
+          "sum": 47246.468994140625
+        }
+      },
+      "observer_note": "Assessment export also contains 88 earlier baseline presentations; unmatched to this session does not mean missing assessment coverage.",
+      "source_anchors": [
+        {
+          "source_id": "12351ffbac834281b17fe2492ab1436d-1263",
+          "meaning": "Overmap orientation",
+          "source_sha256": "cede875475eb6a40875d4b5b0513e6e412f74abe94883a675b5b87d8da99a4da",
+          "received_wall": 1793364554.3576808,
+          "campaign_elapsed_seconds": 236.79777884483337
+        },
+        {
+          "source_id": "12351ffbac834281b17fe2492ab1436d-2152",
+          "meaning": "Adjacent food opportunity; no gain",
+          "source_sha256": "efdf7e00426e32f0393c2f2efa18afdaf681b38d248e1c15bfb3cceca515fbbc",
+          "received_wall": 1793364702.398104,
+          "campaign_elapsed_seconds": 384.8382019996643
+        },
+        {
+          "source_id": "12351ffbac834281b17fe2492ab1436d-2792",
+          "meaning": "Temporary pickup and confrontation",
+          "source_sha256": "1d41dd340dcc19d2d3e2386b219657f59b84e11bc94563762ec115c36492b713",
+          "received_wall": 1793364764.458821,
+          "campaign_elapsed_seconds": 446.8989191055298
+        },
+        {
+          "source_id": "12351ffbac834281b17fe2492ab1436d-2793",
+          "meaning": "Food returned; no retained gain",
+          "source_sha256": "44763fa564354dbb6114eaa47fa0c0d86f69f4d9a3a432829cfc62cdd2ab5db5",
+          "received_wall": 1793364771.72944,
+          "campaign_elapsed_seconds": 454.16953802108765
+        },
+        {
+          "source_id": "12351ffbac834281b17fe2492ab1436d-3346",
+          "meaning": "Refused further transfer after ownership warning",
+          "source_sha256": "24ca244bc9ee516d8958648ff6e21ade9ba908ec7cc935bef054a577fd88d4a6",
+          "received_wall": 1793364884.123967,
+          "campaign_elapsed_seconds": 566.5640649795532
+        },
+        {
+          "source_id": "12351ffbac834281b17fe2492ab1436d-5299",
+          "meaning": "Explicit avatar-position anchor",
+          "source_sha256": "2ee2aa0ee511cb3311551cdceddf7490a1f3415cf12208a0f8fa7795f6faad08",
+          "received_wall": 1793365042.465736,
+          "campaign_elapsed_seconds": 724.9058339595795
+        },
+        {
+          "source_id": "12351ffbac834281b17fe2492ab1436d-10720",
+          "meaning": "Actual title after Save-and-quit",
+          "source_sha256": "4ce84bd2be1f6e14c4d351673bea6f30440708c44f8cf22604b92a2ddc1b6e4b",
+          "received_wall": 1793365679.807821,
+          "campaign_elapsed_seconds": 1362.2479190826416
+        }
+      ]
+    }
+  ],
+  "selected_assets": [
+    {
+      "path": "baseline-position.png",
+      "case": "effects298-baseline001",
+      "source_id": "9c312f362db74a7da8ca0e784f4e9b02-3230",
+      "sha256": "850a6f9be1e9a7ca72b35fcf218b44c134646fbc792cf03261d5ccfc1fede95c",
+      "bytes": 150408,
+      "original_bytes_unchanged": true
+    },
+    {
+      "path": "baseline-new-room.png",
+      "case": "effects298-baseline001",
+      "source_id": "9c312f362db74a7da8ca0e784f4e9b02-5706",
+      "sha256": "6029a9886974009da51c9719821ebdeb9b72fec2a64ea73b1efbef49bfd3bb9a",
+      "bytes": 162225,
+      "original_bytes_unchanged": true
+    },
+    {
+      "path": "baseline-saved-list.png",
+      "case": "effects298-baseline001",
+      "source_id": "9c312f362db74a7da8ca0e784f4e9b02-8575",
+      "sha256": "7a94f9f5a94f10b2b94b49dc9e0cbe66848d5f9c78743a7c16c7a09c2998c5ed",
+      "bytes": 33065,
+      "original_bytes_unchanged": true
+    },
+    {
+      "path": "assessment-loaded-scene.png",
+      "case": "effects298-assessment001",
+      "source_id": "12351ffbac834281b17fe2492ab1436d-181",
+      "sha256": "f92fccf35ba6f3b772d50786dc27c8900bf12d46314fb7a6005de0e2c46ac8ba",
+      "bytes": 144547,
+      "original_bytes_unchanged": true
+    },
+    {
+      "path": "assessment-selected-owner.png",
+      "case": "effects298-assessment001",
+      "source_id": "12351ffbac834281b17fe2492ab1436d-225",
+      "sha256": "a70b2b14ec2cc85ea5ccfdea1bd1705b26d5a82deac60f0e7ef53fd577315e12",
+      "bytes": 135054,
+      "original_bytes_unchanged": true
+    },
+    {
+      "path": "assessment-pickup.png",
+      "case": "effects298-assessment001",
+      "source_id": "12351ffbac834281b17fe2492ab1436d-2792",
+      "sha256": "1d41dd340dcc19d2d3e2386b219657f59b84e11bc94563762ec115c36492b713",
+      "bytes": 16420,
+      "original_bytes_unchanged": true
+    },
+    {
+      "path": "assessment-return.png",
+      "case": "effects298-assessment001",
+      "source_id": "12351ffbac834281b17fe2492ab1436d-2793",
+      "sha256": "44763fa564354dbb6114eaa47fa0c0d86f69f4d9a3a432829cfc62cdd2ab5db5",
+      "bytes": 17378,
+      "original_bytes_unchanged": true
+    },
+    {
+      "path": "assessment-title.png",
+      "case": "effects298-assessment001",
+      "source_id": "12351ffbac834281b17fe2492ab1436d-10720",
+      "sha256": "4ce84bd2be1f6e14c4d351673bea6f30440708c44f8cf22604b92a2ddc1b6e4b",
+      "bytes": 33589,
+      "original_bytes_unchanged": true
+    }
+  ],
+  "provider_screen": {
+    "attempts": 6,
+    "purpose": "Same retained-image/current-guide/14-tool forced observe eligibility check; no game-tool dispatch",
+    "successful_valid_calls": {
+      "baseten": 3,
+      "fireworks/us": 3
+    },
+    "success_median_ms": {
+      "baseten": 1280.954125,
+      "fireworks/us": 1523.85475
+    },
+    "selected": "baseten",
+    "limits": "Three samples each; cache/token conditions differ; not organic-gameplay or causal provider ranking",
+    "accounting": {
+      "schema": "provider-refresh-closeout/1",
+      "source_commit": "4f7d8d2f001c878ab4eb045e5f04e677e4a13319",
+      "routes": [
+        {
+          "route": "baseten",
+          "attempts": 3,
+          "successes": 3,
+          "successful_response_ms": [
+            1766.8713329999998,
+            1280.9541250000002,
+            1198.237416
+          ],
+          "median_ms": 1280.9541250000002,
+          "cache_uncontrolled": true,
+          "status_codes": [
+            200,
+            200,
+            200
+          ]
+        },
+        {
+          "route": "fireworks/us",
+          "attempts": 3,
+          "successes": 3,
+          "successful_response_ms": [
+            1052.478041,
+            2061.422125,
+            1523.8547500000004
+          ],
+          "median_ms": 1523.8547500000004,
+          "cache_uncontrolled": true,
+          "status_codes": [
+            200,
+            200,
+            200
+          ]
+        }
+      ],
+      "attempts": 6,
+      "missing_usage_attempts": 0,
+      "configured_estimate_known_usd": "0.00330545200000000014",
+      "cumulative_attempts": 3498,
+      "cumulative_conservative_reservation_usd": "905.880797184",
+      "selection": "baseten",
+      "decision": "Both routes eligible in this small fresh same-payload check. BaseTen had faster successful median; use for next real gameplay. Cache warmth, token accounting and sample size prevent causal serving/gameplay ranking. No DeepInfra calls or tools dispatched.",
+      "events_sha256": "4e3f38632adc785d024fb2b26b4454fe295ed4efd80122cedea298f3c9523dca"
+    },
+    "retained_artifact_sha256": {
+      "accounting.json": "f274f9a0327168583f70cfae9d710e2f901232b71d1800b16f76077e355167b7",
+      "closed.json": "5d357dffea69c421adbccfde1a799d8cb2af48fe3e52caaa77e34ed0268c3621",
+      "events.jsonl": "4e3f38632adc785d024fb2b26b4454fe295ed4efd80122cedea298f3c9523dca",
+      "freeze.json": "d12a647f3c0c6a773fd865143661e32650b1f4dafd943e71e421f411357da228",
+      "package.json": "b1dac422056faa970c8a61020a5fa7d49ea082d8ec6ed64d98152cb618909a6b",
+      "screen.mjs.txt": "54908ea6bcd2c16b516d2455ed9639a7c69dac80a640bd3b445bcac82f3485fd"
+    }
+  },
+  "totals": {
+    "new_http_attempts": 206,
+    "known_configured_estimate_usd": "3.77412426000000000014",
+    "missing_usage_attempts": 0,
+    "native_campaign_seconds": 2690.576843958348,
+    "unused_native_attempt_allocations_retired": 280,
+    "cumulative_attempts": 3698,
+    "cumulative_conservative_reservation_usd": "972.727517184",
+    "authorized_cumulative_ceiling_usd": "1200",
+    "reservation_is_not_invoice": true
+  }
+}
