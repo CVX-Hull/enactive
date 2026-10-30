@@ -9,7 +9,7 @@
   function mount(root, options = {}) {
     const doc = root.ownerDocument || document;
     const prefix = `investigation-${++nextMount}`;
-    let destroyed = false, worker = null, workerBlob = null, watchdog = null, generation = 0;
+    let destroyed = false, worker = null, workerBlob = null, pending = null, generation = 0;
     let model = null, caseIndex = 0, selectedId = null, page = 0, pageToken = 0, interval = null;
     let imageGeneration = 0, decoding = null, displayed = null, wantedImage = null;
     root.classList.add('investigation-reader');
@@ -37,7 +37,7 @@
       el('h2', 'Investigate an interval'), el('p', 'Original records, public statements and attributed assessments. Imported evidence never controls the current player.', 'ir-muted'));
     const file = el('input'); file.type = 'file'; file.accept = '.json,application/json';
     file.addEventListener('change', () => { if (file.files[0]) loadFile(file.files[0]); });
-    const cancel = button('Cancel import', () => { stopWorker(); status('Import cancelled. Select a recorded bundle to continue.'); cancel.disabled = true; });
+    const cancel = button('Cancel import', () => { stopPending(); status('Replacement cancelled. Previously loaded evidence remains recorded.'); cancel.disabled = true; });
     cancel.disabled = true;
     const state = el('p', 'Select a closed-case investigation JSON bundle (up to 16 MiB).', 'ir-status');
     state.setAttribute('role', 'status'); state.setAttribute('aria-live', 'polite');
@@ -99,41 +99,76 @@
     root.replaceChildren(heading, importBar, state, content);
     function newOption(text, value) { const option = el('option', text); option.value = value; return option; }
     function currentCase() { return model.cases[caseIndex]; }
+    function stopPending() {
+      ++generation;
+      if (!pending) return;
+      pending.worker.terminate(); global.clearTimeout(pending.timer);
+      if (pending.blob) global.URL.revokeObjectURL(pending.blob);
+      pending.settle(false);
+      pending = null;
+    }
     function stopWorker() {
-      ++generation; ++pageToken;
+      stopPending(); ++pageToken;
       if (worker) worker.terminate(); worker = null;
-      if (watchdog !== null) global.clearTimeout(watchdog); watchdog = null;
       if (workerBlob) global.URL.revokeObjectURL(workerBlob); workerBlob = null;
     }
-    function loadFile(selectedFile) { return load({file: selectedFile}); }
+    function loadFile(selectedFile) { options.onImport?.(); return load({file: selectedFile}); }
     function load(payload) {
-      if (destroyed) return;
-      stopWorker(); clearImage(); model = null; content.hidden = true; cancel.disabled = false;
-      status('Validating recorded evidence in a dedicated worker…');
+      if (destroyed) return Promise.resolve(false);
+      let settle;
+      const completion = new Promise(resolve => { settle = resolve; });
+      stopPending(); cancel.disabled = false;
+      status('Validating replacement evidence in a dedicated worker… Previously loaded evidence stays recorded until validation succeeds.');
       const version = generation;
+      let job = null;
+      function failed(message) {
+        if (destroyed || version !== generation) return;
+        stopPending(); cancel.disabled = true;
+        status(`Replacement unavailable: ${message}. Previously loaded evidence remains recorded.`, true);
+        settle(false);
+      }
       try {
         let url = options.workerURL;
+        let blob = null;
         if (typeof options.workerSource === 'string') {
-          workerBlob = global.URL.createObjectURL(new Blob([options.workerSource], {type: 'text/javascript'})); url = workerBlob;
+          blob = global.URL.createObjectURL(new Blob([options.workerSource], {type: 'text/javascript'})); url = blob;
         }
         if (!url) throw new Error('A workerURL or workerSource is required.');
-        worker = new global.Worker(url);
-        const importing = worker;
+        let importing;
+        try { importing = new global.Worker(url); }
+        catch (error) { if (blob) global.URL.revokeObjectURL(blob); throw error; }
+        job = {worker: importing, blob, timer: null, settle}; pending = job;
         importing.onmessage = ({data}) => {
-          if (destroyed || version !== generation || importing !== worker) return;
+          if (destroyed || version !== generation || pending !== job) return;
           if (data.type === 'loaded') {
-            global.clearTimeout(watchdog); watchdog = null; cancel.disabled = true;
+            if (data.snapshot && options.acceptSnapshot && !options.acceptSnapshot(data.snapshot.session)) {
+              failed('serving session changed before snapshot validation'); return;
+            }
+            global.clearTimeout(job.timer); pending = null; cancel.disabled = true;
+            if (worker) worker.terminate();
+            if (workerBlob) global.URL.revokeObjectURL(workerBlob);
+            worker = importing; workerBlob = job.blob; ++pageToken;
+            worker.onmessage = ({data: pageData}) => {
+              if (destroyed || worker !== importing) return;
+              if (pageData.type === 'page' && pageData.token === pageToken) renderRows(pageData);
+              else if (pageData.type === 'error') status('Recorded paging unavailable. Existing fields remain inspectable.', true);
+            };
+            worker.onerror = () => { if (!destroyed && worker === importing) status('Recorded paging unavailable. Existing fields remain inspectable.', true); };
+            clearImage();
             model = data.model; caseIndex = 0; selectedId = null; page = 0; interval = null;
             scope.replaceChildren(...model.cases.map((c, i) => newOption(c.title || c.id, String(i)))); scope.value = '0';
             content.hidden = false; status(`Loaded ${model.cases.length} recorded case(s). Integrity checks establish internal consistency, not trusted authorship.`);
             renderCase();
-          } else if (data.type === 'page' && data.token === pageToken) renderRows(data);
-          else if (data.type === 'error') { stopWorker(); clearImage(); content.hidden = true; cancel.disabled = true; status(`Recorded evidence unavailable: ${data.message}`, true); }
+            options.onLoaded?.({kind: payload.file ? 'file' : payload.snapshot ? 'snapshot' : 'text',
+              snapshot: data.snapshot ?? null, sessions: model.cases.map(c => c.session)});
+            settle(true);
+          } else if (data.type === 'error') failed(data.message);
         };
-        importing.onerror = () => { if (version === generation) { stopWorker(); cancel.disabled = true; status('Recorded evidence unavailable: worker failed.', true); } };
-        watchdog = global.setTimeout(() => { if (version === generation) { stopWorker(); cancel.disabled = true; status('Recorded evidence unavailable: import exceeded 30 seconds.', true); } }, 30000);
+        importing.onerror = () => failed('worker failed');
+        job.timer = global.setTimeout(() => failed('import exceeded 30 seconds'), 30000);
         importing.postMessage({type: 'load', ...payload});
-      } catch (error) { stopWorker(); cancel.disabled = true; status(`Recorded evidence unavailable: ${error.message}`, true); }
+      } catch (error) { failed(error.message); }
+      return completion;
     }
     function setIntervalFields() {
       const bounds = model.indexes[caseIndex].bounds;
@@ -331,7 +366,11 @@
       clearImage(); root.replaceChildren(); root.classList.remove('investigation-reader');
     }
     if (options.initialText !== undefined) load({text: options.initialText});
-    return {loadFile, destroy};
+    return {loadFile, loadText: text => load({text}), loadSnapshot: (text, expectedSession) => load({text, snapshot: true, expectedSession}),
+      cancelPending() {
+        const loading = pending !== null; stopPending(); cancel.disabled = true;
+        if (loading) status('Replacement cancelled. Previously loaded evidence remains recorded.');
+      }, destroy};
   }
   global.EnactiveInvestigation = Object.freeze({mount});
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -50,6 +50,15 @@ credential. Preserve the frozen package and exact binary bytes before rebuilding
 
 ### Construct a package
 
+Select providers fastest first using the latest relevant speed and eligibility
+evidence. Earlier refusals remain historical observations, not exclusion rules;
+check the faster candidate again before falling back. A shallow same-payload probe
+can inform admission, but does not establish useful gameplay latency or quality.
+Include current cache/context conditions and tail/failure behavior when known.
+Price or an earlier completed ending does not justify preferring a slower route.
+Freeze one explicitly selected route per finite admission, with no hidden fallback;
+changed routing requires a fresh package and actual cumulative accounting.
+
 This is an engineering preparation step, outside the deciding player's tools.
 Create the five inputs above first. `target.json` is closed:
 `{"argv":["ABSOLUTE_PREPARED_WRAPPER"],"cwd":"ABSOLUTE_PROJECT_ROOT","env":{}}`.

@@ -6,7 +6,8 @@ status: active
 
 # Recorded investigation artifact
 
-The passive observer owns `observer-investigation/1`. Its producer, shared worker,
+The passive observer owns `observer-investigation/1`. A bundle records selected
+evidence at a cutoff; it does not imply the campaign has ended. Its producer, shared worker,
 reader, tests and documentation ship together.
 Unknown versions/fields reject. Native/player formats remain current and unchanged.
 
@@ -75,7 +76,7 @@ allowlisted data is copied field by field. No private reasoning, prompts/raw
 arguments, secrets or unrestricted paths. Actor configuration is selected, not
 an arbitrary dictionary echo. Selected review notes are fallible attributed data.
 
-The whole encoded JSON is at most 16 MiB, with at most 16 selected PNG entries
+The whole encoded bundle JSON is at most 16 MiB, with at most 16 selected PNG entries
 across all cases, and at most 50 rendered event rows/page. Before browser decode,
 verify the static PNG header geometry/digest and reject multi-frame images or
 images above 64 MiB RGBA pixels.
@@ -84,6 +85,53 @@ decoded budget; a one-image inspector fits this bound. Cancellation/selection
 change releases owned URLs; an 8-second decode watchdog reports unavailable while
 retaining the reservation until the platform promise settles. Missing/oversized/malformed images stay
 unavailable. No full image history is loaded into the DOM.
+
+## Attached current-session snapshot
+
+The custodian injects a tools-owned `LiveInvestigationView` into the application.
+The loopback server delegates without importing engineering tools. No actor,
+application executor or writer lock is acquired. This is an observation of
+existing records, never a new game capture, program run or custody operation.
+
+`GET /api/investigation` has no body/query. It starts at most one initial job and
+then returns its stable state. `POST /api/investigation` with exactly `{}` requests
+a fresh snapshot, coalescing with an active job. Both retain Host/Origin checks;
+no actor capability or path is accepted. The closed response is
+`observer-investigation-snapshot/1`: `schema`, actual `session`, `state`
+(`loading`, `ready`, `unavailable`), nullable `snapshot_wall_ms`, nullable `bundle`
+and nullable bounded generic `error`. HTTP202 means loading,200 ready,503 unavailable.
+Only ready has the same strict one-case `observer-investigation/1` bundle and a
+completion wall time; it must match the envelope/session requested by the page.
+The bundle remains <=16MiB; the envelope adds at most4096 bytes. Large JSON
+parsing/verification stays in the browser worker. Missing/error data never becomes
+an empty-success claim or a current-control update.
+
+One credential-free project Python child gets at most8 seconds including cleanup.
+The parent bounds stdout while reading and owns its temporary directory, cancellation
+and exact child reaping before store teardown. Read-only SQLite backup establishes
+a coherent current-format DB snapshot under existing table/byte limits. Only actor
+001/002 trace paths are selected, each <=16MiB; both analyzer/projection passes read
+the same immutable newline-complete captured byte prefix. Original frozen actor
+hash manifests supply identity; actor bearer configuration, prompts and saves are
+not read by the adapter. Producer cutoffs are separately labelled, not simultaneous.
+Temporary copies are removed after the job; there is no collector or second journal.
+
+Live projection retains <=250 latest complete rows of each kind, <=2000 total,
+with per-kind omissions and original producer order/approximate wall ordering.
+It selects the latest <=3 exact original PNGs from that DB snapshot; earlier source
+references remain explicitly unavailable. Live accounting is unknown unless actually
+measured, pending endpoints stay censored and no closed receipt/driver is fabricated.
+Selected closed-case CLI exports retain their distinct genuine-closure guard.
+
+Analysis attaches once when first opened without evidence. Explicit refresh stages
+a replacement worker while the last validated model, paging worker, image, interval
+and selection remain usable; adopt only after successful validation. At most one
+active and one pending worker exist. Supersession/cancellation terminates only the
+candidate. A file choice owns inspection intent and supersedes pending live work.
+Loaded evidence remains recorded through new activity/session turnover until explicit
+attachment/import; the current target bar changes independently. Network work is
+bounded to12seconds; worker validation retains its30second limit. Errors leave the
+previous evidence visibly recorded. Offline HTML still has no network/live controls.
 
 The [observer component](../components/observer-operations.md) owns navigation and
 failure behavior; [evaluation](../evaluation.md#investigate-a-selected-interval) owns

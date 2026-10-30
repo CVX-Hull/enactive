@@ -183,6 +183,19 @@ async function validateText(text, cryptoAPI = globalThis.crypto) {
   unique(cases, 'id', 'cases');
   return {schema: root.schema, cases, indexes: cases.map(indexCase)};
 }
+async function validateSnapshotText(text, expectedSession, cryptoAPI = globalThis.crypto) {
+  if (typeof text !== 'string' || text.length > LIMITS.encodedBytes + 4096 ||
+      new TextEncoder().encode(text).byteLength > LIMITS.encodedBytes + 4096) fail('snapshot', 'exceeds bounded envelope');
+  let envelope;
+  try { envelope = JSON.parse(text); } catch (_) { fail('snapshot', 'invalid JSON'); }
+  object(envelope, ['schema', 'session', 'state', 'snapshot_wall_ms', 'bundle', 'error'], 'snapshot');
+  if (envelope.schema !== 'observer-investigation-snapshot/1' || envelope.state !== 'ready' || envelope.error !== null ||
+      typeof expectedSession !== 'string' || envelope.session !== expectedSession) fail('snapshot', 'unsupported or changed session');
+  number(envelope.snapshot_wall_ms, 'snapshot.snapshot_wall_ms', false);
+  const model = await validateText(JSON.stringify(envelope.bundle), cryptoAPI);
+  if (model.cases.length !== 1 || model.cases[0].session !== envelope.session) fail('snapshot', 'bundle session differs');
+  return {model, snapshot: {session: envelope.session, wall_ms: envelope.snapshot_wall_ms}};
+}
 function selectPage(events, {page = 0, kind = '', query = '', start = null, end = null} = {}) {
   const needle = query.toLowerCase();
   const filtered = events.filter(e => (!kind || e.kind === kind) && (!needle ||
@@ -216,15 +229,17 @@ function intervalSummary(events, bounds, start = null, end = null) {
     overlap_ms: Math.max(0, requests + tools - covered), uncovered_ms: Math.max(0, b - a - covered),
     no_full_wall_span: selected.filter(e => !eventRange(e) || eventRange(e).point).length};
 }
-if (typeof module !== 'undefined' && module.exports) module.exports = {validateText, selectPage, intervalSummary, LIMITS};
+if (typeof module !== 'undefined' && module.exports) module.exports = {validateText, validateSnapshotText, selectPage, intervalSummary, LIMITS};
 if (typeof self !== 'undefined' && typeof self.postMessage === 'function') {
   let model = null;
   self.onmessage = async ({data}) => {
     try {
       if (data.type === 'load') {
         if (data.file && data.file.size > LIMITS.encodedBytes) fail('bundle', 'exceeds 16 MiB encoded JSON');
-        model = await validateText(data.file ? await data.file.text() : data.text);
-        self.postMessage({type: 'loaded', model});
+        const text = data.file ? await data.file.text() : data.text;
+        const validated = data.snapshot ? await validateSnapshotText(text, data.expectedSession) : {model: await validateText(text)};
+        model = validated.model;
+        self.postMessage({type: 'loaded', ...validated});
       } else if (data.type === 'page' && model) {
         const c = model.cases[data.caseIndex];
         if (!c) fail('page', 'unknown case');

@@ -197,6 +197,7 @@ def _check(argv: list[str] | None = None) -> int:
              "--max-worker-restart=0", "--durations=20", *targets])
         run([node, "tests/test_viewer.cjs"])
         run([node, "tests/test_investigation.cjs"])
+        run([node, "tests/test_investigation_session.cjs"])
     run(["git", "diff", "--check"])
     run(["git", "diff", "--cached", "--check"])
     if args.fast:

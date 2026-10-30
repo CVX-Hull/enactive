@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict');
-const {validateText, selectPage, intervalSummary, LIMITS} = require('../web/investigation-worker.js');
+const {validateText, validateSnapshotText, selectPage, intervalSummary, LIMITS} = require('../web/investigation-worker.js');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const {webcrypto} = require('node:crypto');
@@ -25,6 +25,12 @@ async function rejectEdit(edit, pattern) {
 (async () => {
   const model = await validateText(JSON.stringify(bundle()), webcrypto);
   assert.equal(model.cases[0].events[0].text, '<script>hostile</script>');
+  const snapshot = {schema: 'observer-investigation-snapshot/1', session: 's', state: 'ready',
+    snapshot_wall_ms: 2000, bundle: bundle(), error: null};
+  assert.equal((await validateSnapshotText(JSON.stringify(snapshot), 's', webcrypto)).model.cases[0].session, 's');
+  await assert.rejects(validateSnapshotText(JSON.stringify(snapshot), 'new-session', webcrypto), /changed session/);
+  await assert.rejects(validateSnapshotText(JSON.stringify({...snapshot, arbitrary_path: 'private'}), 's', webcrypto), /unknown/);
+  await assert.rejects(validateSnapshotText(JSON.stringify({...snapshot, bundle: {...bundle(), cases: []}}), 's', webcrypto), /1–4/);
   await assert.rejects(validateText('{', webcrypto), /JSON/);
   await assert.rejects(validateText(' '.repeat(LIMITS.encodedBytes + 1), webcrypto), /16 MiB/);
   await rejectEdit(b => b.schema = 'observer-investigation/2', /schema/);
@@ -205,9 +211,14 @@ async function readerChecks(model) {
   assert.ok(lastPageToken > pageRequest.token);
   api.loadFile({size: 10});
   const timedOut = workers.at(-1);
+  assert.equal(active.terminated, false, 'Validated evidence keeps its paging worker while a candidate loads');
+  const selectedBeforeFailure = descendants(root).find(n => n.dataset.eventId === 'e1');
   [...timers.values()][0].callback();
   assert.equal(timedOut.terminated, true);
   assert.match(root.textContent, /30 seconds/);
+  assert.equal(descendants(root).find(n => n.dataset.eventId === 'e1'), selectedBeforeFailure,
+    'Failed replacement preserves the actual selected DOM/inspection rather than reconstructing it');
+  assert.equal(descendants(root).find(n => n.className === 'ir-content').hidden, false);
   api.loadFile({size: 10});
   const cancelled = workers.at(-1);
   descendants(root).find(n => n.tag === 'button' && n.textContent === 'Cancel import').listeners.click();

@@ -30,7 +30,14 @@ activity snapshot is retained; reload discards client history. See the
 limits. Local timing downloads measure DOM replacement, not physical paint or
 useful progress, and should be retained project-locally with the selected evidence.
 
-For closed-case investigation, create a private `investigation-selection/1` JSON
+Open **Analysis** to attach the current session automatically. Its as-of snapshot
+stays stable while you investigate; **Refresh current session** reads a fresh bounded
+snapshot of existing records. Coverage names producer cutoffs, omissions and unknown
+live accounting. A failed refresh retains the previous recorded evidence. A new
+serving target updates the control bar but does not overwrite inspection; explicitly
+attach it when ready. Snapshot work cannot capture pixels or change custody/Pause.
+
+For optional closed-case investigation, create a private `investigation-selection/1` JSON
 with 1–4 explicit case directories, selected original source IDs, optional timing
 exports and existing attributed assessments. Its exact shape and limits are in
 the [artifact contract](../contracts/observer-investigation.md). Export once:

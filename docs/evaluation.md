@@ -72,6 +72,9 @@ recursive history scan or legacy executable reader is supported.
 
 The [local investigation procedure](operations/start-observe.md) turns explicitly
 selected closed current cases into a bounded [artifact](contracts/observer-investigation.md).
+Analysis also attaches an on-demand current-session snapshot, labelled by its
+separate producer cutoffs, per-kind retention and unknown live totals. Refresh
+does not manufacture a closure receipt, new observation or automatic outcome.
 The shared live/offline reader exposes interval lanes, exact rows, source pixels,
 usage fields and existing attributed assessments. It does not collect new evidence
 or turn public statements into verified outcomes. Whole-case coverage and omitted

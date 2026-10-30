@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="/style.css">
   <link rel="stylesheet" href="/investigation.css">
   <script src="/investigation.js" defer></script>
+  <script src="/investigation-session.js" defer></script>
   <script src="/app.js" defer></script>
 </head>
 <body>
@@ -73,7 +74,7 @@
     <article class="inspection" aria-labelledby="inspection-heading"><h2 id="inspection-heading">Select an entry</h2><p id="inspection-scope">Inspection does not stop automation or replay input.</p><p id="inspection-coverage" class="hint">Selected evidence coverage unknown.</p><p id="entry-summary">Choose recorded activity to inspect its original evidence.</p><p id="entry-text"></p><div id="entry-links"></div><details><summary>Original identifiers, clocks and dispositions</summary><pre id="entry-details">No entry selected.</pre></details><button id="inspection-size" type="button" aria-pressed="false">Show original pixel size</button><div class="frame-shell" id="inspection-frame-shell" tabindex="0" role="region" aria-label="Recorded image viewport"><img id="inspection-frame" alt="Retained source explicitly linked to the selected entry" hidden><p id="inspection-frame-note">No source selected.</p></div><p id="inspection-source" class="hint"></p></article></div>
     <p class="hint">Latest 200 entries per session; at most the current and one previous session are retained on this page. Previous-session pixels are unavailable from a replacement server. Reload discards client history. Original traces may retain evidence outside this view. Cross-process wall-clock ordering is approximate; nearby events do not establish causation.</p>
   </section>
-  <section id="analysis" class="analysis-panel" role="tabpanel" aria-labelledby="tab-analysis" tabindex="0" hidden><h2>Recorded investigation</h2><p class="hint">Choose an exported investigation of closed cases. Import and inspection stay local to this page; current-target Pause above remains independent.</p><div id="investigation-root"></div></section>
+  <section id="analysis" class="analysis-panel" role="tabpanel" aria-labelledby="tab-analysis" tabindex="0" hidden><div class="timeline-toolbar"><div><h2>Investigate this session</h2><p id="investigation-session-status" class="hint" role="status">Open Analysis to attach the current session. A snapshot stays stable while you inspect it.</p></div><button id="investigation-refresh" type="button">Refresh current session</button></div><p class="hint">Current-target Pause above stays independent. A refresh reads existing evidence; it does not capture new game pixels. Opening an older recorded bundle below is optional.</p><div id="investigation-root"></div></section>
   <footer>Private loopback spectator · Captured pixels and mechanical facts · Game interpretation belongs to the player</footer>
 </body>
 </html>

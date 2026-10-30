@@ -8,6 +8,7 @@ let statusError = '';
 let statusBusy = false;
 let pollTimer = null;
 let currentSession = null;
+let investigationSession = null;
 let previousSession = null;
 let statusReceivedAt = null;
 let sessionGeneration = 0;
@@ -156,6 +157,7 @@ function adoptSession(session) {
   renderFrameNote('No source received for the current session.');
   show('current-session', shortIdentity(session));
   show('current-session-full', session);
+  investigationSession?.sessionChanged(session);
   show('control-freshness', 'Current-session status not yet received; liveness unknown.');
   show('latest-statement', 'No public statement available for this session.');
   show('statement-meta', 'Missing narration does not establish inactivity.');
@@ -396,6 +398,7 @@ function activateView(view, updateLink = true) {
     $(name).hidden = !active;
   }
   if (updateLink) updateLocation();
+  if (view === 'analysis') investigationSession?.activate();
 }
 for (const name of VIEWS) {
   const tab = $(`tab-${name}`);
@@ -666,11 +669,13 @@ if (typeof location !== 'undefined' && typeof URLSearchParams !== 'undefined') {
     following = false; timelineSession = deepLink.session; resolveDeepLink();
   }
 }
-// Recorded investigation has no reference to actor/status/control state. Failure
-// to load its optional static renderer cannot prevent the live Pause handler.
+// Session attachment reads only the current identity; the shared reader has no
+// actor capability. Missing assets cannot prevent the independent Pause handler.
 try {
-  if (typeof EnactiveInvestigation === 'undefined') throw new Error('Investigation reader asset unavailable');
-  EnactiveInvestigation.mount($('investigation-root'), {workerURL: '/investigation-worker.js'});
+  if (typeof EnactiveInvestigationSession === 'undefined') throw new Error('Investigation reader asset unavailable');
+  investigationSession = EnactiveInvestigationSession.mount($('investigation-root'), {
+    status: $('investigation-session-status'), refreshButton: $('investigation-refresh'), getSession: () => currentSession});
+  if (activeView === 'analysis') investigationSession.activate();
 } catch (error) {
   $('investigation-root').textContent = `Recorded investigation unavailable: ${error.message}. Current-target Pause remains independent.`;
 }

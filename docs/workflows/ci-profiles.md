@@ -28,10 +28,10 @@ and diagram rendering. It is not a hosted profile.
 
 | Profile | Additional executed checks | Supported claim |
 | --- | --- | --- |
-| Full (also the default local command) | Complete pytest collection of existing unittest cases, four xdist processes with work stealing and 20 slowest durations, plus viewer regressions | Full portable regression; native build/gameplay remain separate |
+| Full (also the default local command) | Complete pytest collection of existing unittest cases, four xdist processes with work stealing and 20 slowest durations, plus viewer/investigation regressions | Full portable regression; native build/gameplay remain separate |
 | Editorial | No runtime tests or viewer regressions | Strict document/structural validation only |
 | Viewer | Server and fixed boundary smoke, plus production viewer logic with a synthetic DOM | Contained viewer/boundary regression; no browser layout or full regression claim |
-| Main-smoke | Fixed computer protocol/runtime, player composition and HTTP cases, plus viewer regressions; serial pytest | Bounded smoke on main with linked qualifying full PR coverage; full regression was not rerun on main |
+| Main-smoke | Fixed computer protocol/runtime, player composition and HTTP cases, plus viewer/investigation regressions; serial pytest | Bounded smoke on main with linked qualifying full PR coverage; full regression was not rerun on main |
 
 The [testing guide](../testing.md) maps test responsibilities, overlap and upkeep.
 `tools/ci.py` owns the exact source allowlists and test targets; the checker consumes

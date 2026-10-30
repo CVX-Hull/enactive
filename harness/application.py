@@ -70,6 +70,9 @@ class Application:
         self.host: dict[str, Any] | None = None
         self.claims: list[dict[str, Any]] = []
         self.activity_view = ActivityView(runtime.session, runtime.store.path)
+        # The custodian may inject a bounded passive snapshot adapter. Actor
+        # services and the independent Pause path never await this work.
+        self.investigation_view = None
 
     def status(self) -> dict[str, Any]:
         return dict(self.runtime.status(), host=copy.deepcopy(self.host), player_claims=copy.deepcopy(self.claims))

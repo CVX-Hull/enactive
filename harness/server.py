@@ -58,6 +58,9 @@ def serve(application, port: int) -> tuple[LocalServer, threading.Thread]:
                     self.json_reply(200, application.status())
                 elif path.path == '/api/activity':
                     self.json_reply(200, application.activity_view.snapshot())
+                elif path.path == '/api/investigation':
+                    result=investigation()
+                    self.json_reply({'ready':200,'loading':202}.get(result['state'],503),result)
                 elif path.path.startswith('/api/source/'):
                     identity = unquote(path.path.removeprefix('/api/source/'))
                     # Public spectator reads only this mechanical session, not
@@ -66,7 +69,7 @@ def serve(application, port: int) -> tuple[LocalServer, threading.Thread]:
                     # actor-side source-failure fencing or issuing a source.
                     _, png = application.runtime.store.read_source(identity)
                     self.reply(200, png, 'image/png', immutable=True)
-                elif path.path in ('/', '/app.js', '/style.css', '/investigation.js', '/investigation-worker.js', '/investigation.css'):
+                elif path.path in ('/', '/app.js', '/style.css', '/investigation.js', '/investigation-worker.js', '/investigation-session.js', '/investigation.css'):
                     name = 'index.html' if path.path == '/' else path.path[1:]
                     media = 'text/html; charset=utf-8' if name.endswith('.html') else 'text/css; charset=utf-8' if name.endswith('.css') else 'text/javascript; charset=utf-8'
                     self.reply(200, (ROOT/'web'/name).read_bytes(), media)
@@ -90,6 +93,11 @@ def serve(application, port: int) -> tuple[LocalServer, threading.Thread]:
                     stopped = application.runtime.stop('Operator Pause')
                     self.json_reply(200, dict(schema='computer-pause/1',
                         session=application.runtime.session, stop=stopped))
+                    return
+                if self.path == '/api/investigation':
+                    closed(value,set())
+                    result=investigation(refresh=True)
+                    self.json_reply({'ready':200,'loading':202}.get(result['state'],503),result)
                     return
                 authorization = self.headers.get('Authorization','')
                 if not authorization.startswith('Bearer '):
@@ -133,6 +141,13 @@ def serve(application, port: int) -> tuple[LocalServer, threading.Thread]:
                          operation_id=identity,submission=submission))
             except (OSError,ValueError):
                 pass
+
+    def investigation(*,refresh=False):
+        view=application.investigation_view
+        if view is None:
+            return dict(schema='observer-investigation-snapshot/1',session=application.runtime.session,
+                state='unavailable',snapshot_wall_ms=None,bundle=None,error='This serving session has no investigation adapter.')
+        return view.snapshot(refresh=refresh)
 
     server = LocalServer(('127.0.0.1',port),Handler)
     thread = threading.Thread(target=server.serve_forever,name='computer-http',daemon=True)

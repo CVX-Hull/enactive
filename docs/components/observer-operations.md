@@ -15,10 +15,11 @@ Pause is an independent permanent stop. [Architecture](../architecture.md) and
 
 | Part | Owns |
 | --- | --- |
-| [Server](../../harness/server.py) | Selected `127.0.0.1` host/origin checks, bounded JSON, passive status/source routes and independent Pause. |
+| [Server](../../harness/server.py) | Selected `127.0.0.1` host/origin checks, bounded JSON, passive status/source/activity/investigation routes and independent Pause. |
 | [Web viewer](../../web/) | Actual source presentation, mechanical versus player-claim labels, host/resource status and Pause feedback. |
 | [Activity projection](../../harness/observer.py) | Disposable bounded host tail and read-only computer-record snapshot; explicit original links and coverage, no custody or second journal. |
 | [Investigation export](../../tools/investigation.py) / [shared reader](../../web/investigation.js) | One-shot selected closed-case bundle; local import and recorded-only HTML use the same bounded passive renderer. |
+| [Live snapshot adapter](../../tools/investigation_live.py) / [session attachment](../../web/investigation-session.js) | On-demand current-session evidence snapshot through a finite isolated read, staged validation and explicit refresh; no collector or actor authority. |
 | [Custodian](../../tools/campaign_run.py) | Frozen admission validation, exact native target, store/server lifetime and final cleanup/accounting receipt. |
 | [Preparation](../../tools/prepare_game.py) | Project-local windowed options, normal mouse input, wrapper/userdir and shared exclusion before changes. |
 | [Build](../../tools/build_computer.py) | Current mechanical SDL adapter/fixture plus source/output provenance; no gameplay claim. |
@@ -62,14 +63,19 @@ current/previous view. It is explicitly separate from the current target; a rece
 alone cannot establish which opaque session is newer. Later matching status can
 use that retained confirmation; reordered receipts cannot erase it or replace current diagnostics.
 
-## Assurance and evidence
+## Investigation flow
 
 Timeline can filter retained text/kinds and collapse explicit actor/request or
 operation groups. It keeps selected evidence when it falls outside a filter;
 filters cannot recover omitted history. Group spans use approximate recorded wall
 time, not an inferred model state or causal trace.
 
-Analysis imports a selected local `observer-investigation/1` bundle. Validation,
+Analysis automatically attaches an as-of snapshot of the serving session when
+first opened. Refresh reads existing records through the injected finite adapter;
+it never captures game pixels. Inspection stays frozen through activity and session
+turnover until explicit attachment/import. Its timestamp and per-producer coverage
+explain which current evidence is available. Older selected local bundles remain optional.
+Validation,
 indexing and PNG hashing run in a terminable worker with finite limits from the
 [artifact contract](../contracts/observer-investigation.md). The same renderer
 ships in a recorded-only HTML export with no network or current-target controls.
@@ -84,6 +90,8 @@ they do not isolate inference, prove idle time or judge useful progress. Program
 dispositions/child IDs survive, while absent bodies, raw diagnostics and preparation
 links remain explicit gaps. No collector, automatic diagnosis, annotation store or
 game semantics is added.
+
+## Assurance and evidence
 
 The [testing guide](../testing.md) routes viewer logic, loopback/composition,
 package/driver and compiled-native tests. Actual browser/native visual inspection
