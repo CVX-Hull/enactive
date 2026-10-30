@@ -66,6 +66,7 @@ use that retained confirmation; reordered receipts cannot erase it or replace cu
 The [testing guide](../testing.md) routes viewer logic, loopback/composition,
 package/driver and compiled-native tests. Actual browser/native visual inspection
 is separate from parser/hash checks. [Operations](../runbook.md) route launch,
-Pause and cleanup. The [production report](../acceptance/2026-10-29-computer-control.md)
-owns actual play and retained browser timing limits; older
+Pause and cleanup. The [Watch/Timeline report](../acceptance/2026-10-29-spectator-watch-timeline.md)
+owns linked investigation, actual same-page Pause/admission evidence and its limits.
+The [production report](../acceptance/2026-10-29-computer-control.md) retains earlier native/player qualification; older
 STOPPED/HISTORY or semantic-viewer reports are scoped historical evidence.

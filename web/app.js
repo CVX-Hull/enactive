@@ -138,10 +138,10 @@ function adoptSession(session) {
     if (inspectionURL) URL.revokeObjectURL(inspectionURL);
     inspectionURL = null; $('inspection-frame').hidden = true;
     show('inspection-heading', 'Linked evidence unavailable');
-    show('entry-summary', 'The inspected session is older than the one previous session retained on this page.');
+    show('entry-summary', 'The inspected session is outside the current and one previous session retained on this page.');
     show('inspection-scope', `Recorded evidence unavailable; current control target is ${session}.`);
-    show('entry-text', ''); show('entry-details', 'Entry evicted from client history.'); $('entry-links').replaceChildren();
-    show('inspection-frame-note', 'Pixels unavailable: inspected session evicted.');
+    show('entry-text', ''); show('entry-details', 'Entry not retained in client history.'); $('entry-links').replaceChildren();
+    show('inspection-frame-note', 'Pixels unavailable: inspected session not retained.');
     show('inspection-source', '');
   }
   ++sourceGeneration;
@@ -428,10 +428,13 @@ function renderCoverage(snapshot) {
 function renderTimeline() {
   const requestedSession = following ? currentSession : timelineSession;
   const snapshot = activitySnapshots.get(requestedSession);
-  $('timeline-session').value = requestedSession === previousSession && requestedSession ? 'previous' : 'current';
+  const outsideHistory = requestedSession !== currentSession && requestedSession !== previousSession;
+  const unavailableOption = $('timeline-session').children[2];
+  if (unavailableOption) unavailableOption.hidden = !outsideHistory;
+  $('timeline-session').value = outsideHistory ? 'unavailable' : requestedSession === previousSession && requestedSession ? 'previous' : 'current';
   const previousOption = $('timeline-session').children[1];
   if (previousOption) { previousOption.disabled = !previousSession; previousOption.textContent = previousSession ? `Previous · ${previousSession}` : 'Previous session (unavailable)'; }
-  show('timeline-scope', `${requestedSession || 'Unknown session'}${requestedSession && requestedSession !== currentSession ? ' · historical client snapshot' : ' · current session'}${following ? ' · following latest' : ' · inspection frozen'}`);
+  show('timeline-scope', `${requestedSession || 'Unknown session'}${outsideHistory ? ' · inspection unavailable (outside retained history)' : requestedSession && requestedSession !== currentSession ? ' · historical client snapshot' : ' · current session'}${following ? ' · following latest' : ' · inspection frozen'}`);
   show('activity-error', activityError ? `Activity unavailable: ${activityError}. Last received activity retained; current activity unknown.` : '');
   $('activity-error').hidden = !activityError;
   renderCoverage(snapshot);

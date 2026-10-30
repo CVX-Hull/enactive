@@ -359,9 +359,11 @@ const text = id => {
   // response that was already in flight. Missing coverage remains explicit.
   run('void refreshActivity()'); const staleActivity=request('/api/activity');
   await poll(status(null,{session:'session-seven',stop:{}}));
+  assert.equal(element('timeline-session').value,'unavailable','Evicted inspection cannot be labelled as the current session');
   await reply(staleActivity,activity([a]));
   assert.match(text('activity-summary'),/not yet received/);
   element('follow-latest').listeners.click();
+  assert.equal(element('timeline-session').value,'current','Follow latest leaves the unavailable inspection');
   const sevenEntries=Array.from({length:205},(_,index)=>event(`seven-${index}`,{session:'session-seven'}));
   await reply(request('/api/activity'),activity(sevenEntries,{session:'session-seven',latest_statement:a,coverage:{host:'unavailable:OSError',computer:'available'}}));
   assert.equal(run('activitySnapshots.get(currentSession).entries.length'),200);

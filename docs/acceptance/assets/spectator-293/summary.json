@@ -1,0 +1,172 @@
+{
+  "scope": "Historical curated #293 evidence; original private packages and exact protected delivery receipts remain separately authoritative. Browser images are actual b9b41b2 gameplay witnesses, not the later synthetic receiver fixture.",
+  "cases": [
+    {
+      "case": "watch001",
+      "session": "982653c1a8044f49bf4a5e6430290424",
+      "source_commit": "ec8a01a5b95e49abb637ed32510c6ae7de010d56",
+      "private_package": ".runtime/computer-sessions/observer293-watch001",
+      "receipt_sha256": "c70dd533fbefc6e69dc7a1f6f60d58d86012a1b028ae3b9dec36cba5ca9167b8",
+      "outcome": "incomplete",
+      "elapsed_seconds": 2671.3212148752064,
+      "normal_native_exit_zero": true,
+      "deciding_hosts_quiescent": true,
+      "native_absence_verified": true,
+      "input_authority_revoked": true,
+      "accounting": {
+        "attempts_charged": 146,
+        "cumulative_attempts": 3152,
+        "consumed_conservative_reservation_usd": 15.706292224,
+        "cumulative_conservative_reservation_usd": 830.938021888,
+        "allocated_max_attempts": 240,
+        "unused_allocation_retired": 94,
+        "configured_estimate_usd": 0.62112563464,
+        "missing_usage_attempts": 1,
+        "reservation_is_not_invoice": true
+      }
+    },
+    {
+      "case": "watch002",
+      "session": "1663b10573a04b44a3a26c6acd12590e",
+      "source_commit": "b9b41b23db7de29a5c9b398e844ed98d35020837",
+      "private_package": ".runtime/computer-sessions/observer293-watch002",
+      "receipt_sha256": "82dc07b2087d6df6c50d6de6afe8c0c052b4dcdba5b9cd149665fbd43f4d7124",
+      "outcome": "host_completed_unassessed",
+      "elapsed_seconds": 1549.92078129109,
+      "normal_native_exit_zero": true,
+      "deciding_hosts_quiescent": true,
+      "native_absence_verified": true,
+      "input_authority_revoked": true,
+      "accounting": {
+        "attempts_charged": 88,
+        "cumulative_attempts": 3240,
+        "consumed_conservative_reservation_usd": 9.466806272,
+        "cumulative_conservative_reservation_usd": 840.40482816,
+        "allocated_max_attempts": 240,
+        "unused_allocation_retired": 152,
+        "configured_estimate_usd": 0.299216344,
+        "missing_usage_attempts": 0,
+        "reservation_is_not_invoice": true
+      }
+    },
+    {
+      "case": "watch003",
+      "session": "af8b98ca547e421d9742f54416c4f16f",
+      "source_commit": "b9b41b23db7de29a5c9b398e844ed98d35020837",
+      "private_package": ".runtime/computer-sessions/observer293-watch003",
+      "receipt_sha256": "8093be2fb1ea6f4e93870d84a877734d32a12ec19891dc337e748017e2314bae",
+      "outcome": "incomplete_normal_native_exit",
+      "elapsed_seconds": 709.3006532918662,
+      "normal_native_exit_zero": false,
+      "deciding_hosts_quiescent": true,
+      "native_absence_verified": true,
+      "input_authority_revoked": true,
+      "accounting": {
+        "attempts_charged": 54,
+        "cumulative_attempts": 3294,
+        "consumed_conservative_reservation_usd": 5.809176576,
+        "cumulative_conservative_reservation_usd": 846.214004736,
+        "allocated_max_attempts": 240,
+        "unused_allocation_retired": 186,
+        "configured_estimate_usd": 0.13813177616,
+        "missing_usage_attempts": 0,
+        "reservation_is_not_invoice": true
+      }
+    },
+    {
+      "case": "watch004",
+      "session": "6469c88394204c178406ae13ae696052",
+      "source_commit": "b9b41b23db7de29a5c9b398e844ed98d35020837",
+      "private_package": ".runtime/computer-sessions/observer293-watch004",
+      "receipt_sha256": "9bdc827c25263a75ab5a40ca91a65ac4f3cd4d0bb65ad04e6d9401d641780eef",
+      "outcome": "host_completed_unassessed",
+      "elapsed_seconds": 192.0620049573481,
+      "normal_native_exit_zero": true,
+      "deciding_hosts_quiescent": true,
+      "native_absence_verified": true,
+      "input_authority_revoked": true,
+      "accounting": {
+        "attempts_charged": 18,
+        "cumulative_attempts": 3312,
+        "consumed_conservative_reservation_usd": 1.936392192,
+        "cumulative_conservative_reservation_usd": 848.150396928,
+        "allocated_max_attempts": 120,
+        "unused_allocation_retired": 102,
+        "configured_estimate_usd": 0.0075837927199999995,
+        "missing_usage_attempts": 0,
+        "reservation_is_not_invoice": true
+      }
+    }
+  ],
+  "native_source_metadata": {
+    "starting-stock.png": {
+      "schema": "computer-source/1",
+      "source_id": "1663b10573a04b44a3a26c6acd12590e-1037",
+      "session": "1663b10573a04b44a3a26c6acd12590e",
+      "capture_id": 1037,
+      "sha256": "227af45e1141ab1262139eb1355330ebb4dc43244ad1d6e8efc71711b2e1359a",
+      "media_type": "image/png",
+      "presented_ms": 1793323831224,
+      "received_wall": 1793323831.5662432,
+      "window_width": 960,
+      "height": 640,
+      "window_height": 640,
+      "viewport": [
+        0,
+        0,
+        960,
+        640
+      ],
+      "width": 960
+    },
+    "final-save-to-title.png": {
+      "schema": "computer-source/1",
+      "source_id": "6469c88394204c178406ae13ae696052-1482",
+      "session": "6469c88394204c178406ae13ae696052",
+      "capture_id": 1482,
+      "sha256": "678bf64c1d0c642f4e0014ed70d2ebd00f8c326c765e7bf64e3aadd3e27eb889",
+      "media_type": "image/png",
+      "presented_ms": 1793326178783,
+      "received_wall": 1793326179.105547,
+      "height": 640,
+      "window_width": 960,
+      "viewport": [
+        0,
+        0,
+        960,
+        640
+      ],
+      "window_height": 640,
+      "width": 960
+    }
+  },
+  "assets": {
+    "route-inspection.jpg": {
+      "sha256": "3e33b1a2db4f61a27f4c8cc0f29f7d306e3858af9f8a7bce2ce4cfe63ee21706",
+      "bytes": 259663
+    },
+    "pause-history.jpg": {
+      "sha256": "ad584d29e1b705c7b1f89da807ec86dd95a78c410e4bb2de1c857a1394cd18b9",
+      "bytes": 187319
+    },
+    "fresh-after-pause.jpg": {
+      "sha256": "3528ea870f31e4d46d4d6675afc48bc6bf66c6ffdca1ec89c4c3f6a395497c20",
+      "bytes": 134096
+    },
+    "starting-stock.png": {
+      "sha256": "227af45e1141ab1262139eb1355330ebb4dc43244ad1d6e8efc71711b2e1359a",
+      "bytes": 110750
+    },
+    "final-save-to-title.png": {
+      "sha256": "678bf64c1d0c642f4e0014ed70d2ebd00f8c326c765e7bf64e3aadd3e27eb889",
+      "bytes": 33767
+    }
+  },
+  "browser_export": {
+    "schema": "observer-timing/4",
+    "rows": 148,
+    "omitted_rows": 0,
+    "private_path": ".runtime/iteration293/browser-timing-bcd.json",
+    "sha256": "12115dad2e8eecdf032aac6cad83fa1a926624c7b1a99a76e6c3c6bce1697c38"
+  }
+}

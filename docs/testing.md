@@ -20,7 +20,7 @@ own mandatory checks. This page explains selection, not a passing-run inventory.
 | Player knowledge and programs | [Memory](../tests/test_player_memory.py), [programs](../tests/test_player_programs.py) | Pure provenance, image views, bounded evaluation/context and proposals; no usefulness claim. |
 | Generic host and orchestration | [Pi](../tests/test_pi_player_host.py), [driver](../tests/test_campaign_player.py), [custodian](../tests/test_campaign_run.py) | Actual Pi/MCP with synthetic provider/owned children; no paid inference or game quality claim. |
 | Compiled adapter | [Native check](../tests/computer_native_check.py), [lock check](../tests/computer_lock_check.py) | Actual SDL/socket/inherited-lock behavior in a fixture; separate from CDDA usability. |
-| Spectator | Viewer tests selected by [CI](../tools/ci.py) | Browser state/images/Pause presentation; no engine-outcome proof. |
+| Spectator | [Passive projection](../tests/test_observer_activity.py), [HTTP boundary](../tests/test_server.py), [viewer races](../tests/test_viewer.cjs) | Verified passive reads, coverage, links and session/Pause behavior under explicit doubles; rendered browser/native evidence remains separate. |
 | Real game | [Native acceptance](operations/native-acceptance.md) | Actual visible input effects, authentic useful work, save/new-child reload and separate normal exit on frozen source. |
 
 ## Select checks from the changed responsibility

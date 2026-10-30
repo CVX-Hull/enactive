@@ -25,7 +25,7 @@ logical responsibilities; arrows identify requests, results or user control.
 | Optional player services | Knowledge, corrections, source provenance, program lineage and bounded context; no custody | [Memory and learning](components/memory-learning.md) |
 | Composition service | Connects player proposals to the computer port; retains service requests and context snapshots | [Execution](components/mission-execution.md) |
 | Computer custodian | Exact child/socket/lock handles, serialized operations, original resources and actor capabilities | [Native control](components/native-control.md) |
-| Observer / operator | Passive mechanical status, actual images, separately labelled player claims and independent permanent Pause | [Observer operations](components/observer-operations.md) |
+| Observer / operator | Passive status/images, bounded linked recent activity, labelled player claims and independent permanent Pause | [Observer operations](components/observer-operations.md) |
 | Game | Consumes ordinary SDL input and determines outcomes | Windowed prepared CDDA; no semantic engine bridge |
 
 ## Runtime and state
@@ -38,14 +38,19 @@ its lifetime, including after the custodian loses its own reference.
 
 The computer receive thread decodes bounded packets without writing files or
 SQLite. The serialized runtime records intent and capacities before publication;
-the custodian publishes PNGs/SQLite outside the native event loop. DB/publication
-failure permanently stops input; restart cannot reconstruct custody from history.
+the custodian publishes PNGs/SQLite outside the native event loop. Failure at the
+authoritative computer-store/source boundary permanently stops input;
+restart cannot reconstruct custody from history. Passive observer read failures
+instead report unavailable evidence and cannot change custody.
 The source modules are [launch](../harness/computer/launch.py),
 [channel](../harness/computer/channel.py), [runtime](../harness/computer/runtime.py)
 and [store](../harness/computer/store.py).
 
 The loopback [HTTP server](../harness/server.py) exposes passive spectator reads,
-independent Pause and authenticated per-actor tools. The [application](../harness/application.py)
+independent Pause and authenticated per-actor tools. The bounded
+[activity projection](../harness/observer.py) reuses original host events and a
+separate read-only computer snapshot; it owns no executor or durable journal.
+The [application](../harness/application.py)
 composes the computer port with optional player memory/program services. A
 project-local stdio MCP adapter owns no writer, native child or provider key.
 Pi owns model calls; the campaign driver owns exact host/MCP group cleanup.

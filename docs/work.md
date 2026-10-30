@@ -43,6 +43,7 @@ not qualify parent cadence, learning or survival.
 
 | Evidence | Scope and limitation |
 | --- | --- |
+| [Watch and recent Timeline](acceptance/2026-10-29-spectator-watch-timeline.md) | Linked investigation and real same-page normal/Pause/fresh-admission control; failed beliefs, source-specific coverage and timing limits remain. |
 | [Player context through actual play](acceptance/2026-10-29-player-context.md) | Fire clearance, new food actually used, saved-state continuity and a corrected water claim; remaining quantity/search/control errors and failed trade/rest are retained. |
 | [Production computer control](acceptance/2026-10-29-computer-control.md) | Composite authentic useful play/program/knowledge/succession and Save/reload/normal ending; failed admissions remain failed. |
 | [Basic computer-control proof](acceptance/2026-10-29-basic-computer-control.md) | Earlier isolated raw delivery/scouting evidence and failures; not production acceptance or CDDA pointer qualification. |
