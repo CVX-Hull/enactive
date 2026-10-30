@@ -43,6 +43,7 @@ not qualify parent cadence, learning or survival.
 
 | Evidence | Scope and limitation |
 | --- | --- |
+| [Current and recorded investigation](acceptance/2026-10-30-spectator-investigation.md) | Automatic as-of Analysis, linked original intervals/program preparation, real Pause and separate persisted-water/normal-ending evidence; provider failure, player confirmation errors and usability limits remain. |
 | [Watch and recent Timeline](acceptance/2026-10-29-spectator-watch-timeline.md) | Linked investigation and real same-page normal/Pause/fresh-admission control; failed beliefs, source-specific coverage and timing limits remain. |
 | [Player context through actual play](acceptance/2026-10-29-player-context.md) | Fire clearance, new food actually used, saved-state continuity and a corrected water claim; remaining quantity/search/control errors and failed trade/rest are retained. |
 | [Production computer control](acceptance/2026-10-29-computer-control.md) | Composite authentic useful play/program/knowledge/succession and Save/reload/normal ending; failed admissions remain failed. |

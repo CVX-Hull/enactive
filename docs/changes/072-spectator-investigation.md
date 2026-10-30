@@ -1,12 +1,18 @@
 ---
 owner: lead
 review_trigger: Investigation evidence boundary, shared reader or delivery scope changes
-status: proposed
+status: historical
+date: 2026-10-30
+scope: Implemented investigation design and owner-directed live attachment amendment
 ---
 
 # Investigate current and recorded gameplay intervals
 
 ## Outcome and impact
+
+The [consolidated evidence](../acceptance/2026-10-30-spectator-investigation.md)
+retains actual outcomes, failures and assessed limits. Current interfaces live in
+the component/contracts below; this brief preserves the design decisions.
 
 [#295](https://github.com/CVX-Hull/enactive/issues/295) selects a bounded reader
 that explains a gameplay slowdown and exposes the original evidence without raw
