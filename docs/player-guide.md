@@ -38,26 +38,6 @@ when their intermediate assumptions become unclear. An unverified game effect is
 different from transport status unknown: it is your interpretation, not a new
 harness stop rule or permission to replay uncertain input.
 
-## Keep spatial task state in a reference frame
-
-When position or focus matters to a task, keep a small fallible working state:
-`actor/identity support | inspection focus | actor-to-landmark relation@source(s) |
-last established effect | unresolved`. Existing Work/claim tools can retain it
-when useful; no new record, narration or observation is required after every key.
-Use actual returned sources for your state; the worked example below is an
-annotated historical illustration, not your current observations or a procedure.
-
-Example: across two gameplay images, the apparent actor stays at the screen center,
-but the same fixed doorway shifts down by one tile. With unchanged view scale and
-orientation, the actor is one tile higher **relative to that doorway**; fixed screen
-position alone does not establish no travel. A later inspection cursor moves and
-the camera pans, while the actor-to-doorway relation stays fixed: that changes the
-inspection target, not the actor's location. This does not supply world coordinates.
-If actor/landmark identity, landmark stability or view transformation is unclear,
-keep the relation/effect undetermined. An attempted direction is not evidence of
-movement. Revise the working relation when the next relevant view contradicts it,
-then reconsider dependent work; retain the source and remaining uncertainty.
-
 ## Calls and returned evidence
 
 | Tool | Use and consequence |

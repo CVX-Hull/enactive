@@ -22,14 +22,19 @@ travelling despite landmark-relative movement. Other answers misidentified a
 figure or missed an explicit player-tile cue. Clinically directed questions mostly
 preserved local-search limits; that does not establish organic calibration.
 
-The proposed first experiment is a compact **player-owned spatial-state frame and
+The first experiment tested a compact **player-owned spatial-state frame and
 worked transition example** using the existing guide/context mechanism. Separate
 inspection focus, actor identity support, landmark-relative position, established
 effect and remaining uncertainty. A historical example demonstrates how display
 position can stay fixed while landmark-relative position changes. It supplies no
 current-world facts or prescribed action. Existing Work records remain optional;
 no per-key narration, automatic state inference, critic or input gate is added.
-This is our engineering hypothesis, not a reproduction of a paper's method.
+This was our engineering hypothesis, not a reproduction of a paper's method.
+The [retained assessment and organic play](acceptance/2026-10-30-spatial-grounding.md)
+did not establish the proposed repair: the original frame error persisted, reserved
+answers overstated displacement, and live play again made false outside claims.
+The candidate was rejected and removed from current guidance. Research justified
+testing a hypothesis; it did not predict its success.
 
 The previously proposed optional crop/magnification API remains **unimplemented
 and deferred**. It may be useful for a demonstrably unreadable detail, but the
@@ -87,7 +92,7 @@ different assumptions. No quantitative confidence calibration is inferred here.
 
 | Approach | Evidence / fit | #300 disposition |
 | --- | --- | --- |
-| Explicit actor/focus/landmark/effect state and one worked reference-frame example | Directly targets the repeated local error; related spatial work supports investigating reference/entity distinctions. Benefit on this frozen player remains unknown. | Prototype once through existing context; preserve source/unknowns and test untouched examples plus real play. |
+| Explicit actor/focus/landmark/effect state and one worked reference-frame example | Directly targets the repeated local error; related spatial work supported investigating reference/entity distinctions. Local assessment and live play did not establish benefit. | Tested once and rejected; current guide restored. Exact candidate/failures retained in the linked report. |
 | Optional crop/magnification | Plausible for small visible detail; may lose relationships, select the wrong region and add inference. No direct evidence it repairs the observed transition error. | Defer before implementation; revisit only with a concrete legibility question. |
 | Automatic grid, segmentation, tracking or camera/pose model | May expose different cues, but introduces representations/dependencies and often trained or external semantics. | No current demonstrated need; no semantic detector in computer authority. |
 | Larger history, mandatory summaries, self-critic or map service | Existing context research and current spatial papers contain mixed/negative results; each adds latency or distortion risk. | Not a default remedy. Existing source/memory/program facilities already cover optional access. |
