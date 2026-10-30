@@ -198,7 +198,8 @@ async function validateSnapshotText(text, expectedSession, cryptoAPI = globalThi
   index.snapshotWallMs = envelope.snapshot_wall_ms;
   if (index.bounds) {
     index.recordedBounds = [...index.bounds];
-    index.snapshotClockConflict = envelope.snapshot_wall_ms < index.bounds[1];
+    index.snapshotClockConflict = model.cases[0].events.some(e =>
+      [e.start_wall_ms, e.end_wall_ms].some(t => t !== null && t > envelope.snapshot_wall_ms));
     if (index.snapshotClockConflict) index.snapshotAxisWarning = 'Snapshot completion conflicts with retained wall bounds; the axis was not extended.';
     if (!index.snapshotClockConflict) index.bounds[1] = envelope.snapshot_wall_ms;
   } else index.snapshotAxisWarning = 'No retained wall origin is available. Snapshot completion alone cannot define an elapsed interval.';

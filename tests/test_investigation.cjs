@@ -35,6 +35,12 @@ async function rejectEdit(edit, pattern) {
   const conflicting = await validateSnapshotText(JSON.stringify({...snapshot, snapshot_wall_ms: 900}), 's', webcrypto);
   assert.equal(conflicting.model.indexes[0].snapshotClockConflict, true);
   assert.deepEqual(conflicting.model.indexes[0].bounds, [1000, 2000]);
+  const futurePending = clone(snapshot);
+  futurePending.bundle.cases[0].events.push(event('future-pending', {start_wall_ms: 7000, end_wall_ms: null, elapsed_ms: null}));
+  futurePending.bundle.cases[0].coverage.event_candidates = futurePending.bundle.cases[0].coverage.event_retained = 2;
+  const pendingConflict = await validateSnapshotText(JSON.stringify(futurePending), 's', webcrypto);
+  assert.equal(pendingConflict.model.indexes[0].snapshotClockConflict, true, 'Unplotted censored endpoints still constrain clock consistency');
+  assert.deepEqual(pendingConflict.model.indexes[0].bounds, [1000, 2000]);
   const clocklessSnapshot = clone(snapshot); clocklessSnapshot.bundle.cases[0].events[0].clock = null;
   const noOrigin = await validateSnapshotText(JSON.stringify(clocklessSnapshot), 's', webcrypto);
   assert.equal(noOrigin.model.indexes[0].bounds, null);
