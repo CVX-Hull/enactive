@@ -96,6 +96,13 @@ and treat every loaded/pending bundle as inspection intent rather than guessing
 from selectedId. Automatic first attachment is followed by explicit Refresh; polling
 and admission turnover cannot replace loaded evidence. File choice supersedes live
 fetch intent. Clock cutoffs, omitted lanes/images and unknown live totals stay visible.
+Live evidence later showed spare capacity going unused and a censored tail absent
+from the default axis. The bounded refinement retains every row when the2000-row
+case fits, then redistributes spare lane capacity under pressure; the derived live
+axis includes an explicitly unmeasured tail without changing original endpoints.
+Available version IDs also link preparation/read records without exporting code,
+and failed optional import is reflected in both shell and reader feedback.
+
 One new finite main admission after the owner-directed stop is a new allocation,
 not revival of its retired allowance; the separate normal-ending lane remains.
 

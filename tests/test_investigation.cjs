@@ -28,6 +28,17 @@ async function rejectEdit(edit, pattern) {
   const snapshot = {schema: 'observer-investigation-snapshot/1', session: 's', state: 'ready',
     snapshot_wall_ms: 2000, bundle: bundle(), error: null};
   assert.equal((await validateSnapshotText(JSON.stringify(snapshot), 's', webcrypto)).model.cases[0].session, 's');
+  const tailed = await validateSnapshotText(JSON.stringify({...snapshot, snapshot_wall_ms: 3000}), 's', webcrypto);
+  assert.deepEqual(tailed.model.indexes[0].bounds, [1000, 3000]);
+  assert.equal(tailed.model.cases[0].events[0].end_wall_ms, 2000, 'Context axis extension never invents a request endpoint');
+  assert.equal(intervalSummary(tailed.model.cases[0].events, tailed.model.indexes[0].bounds).uncovered_ms, 1000);
+  const conflicting = await validateSnapshotText(JSON.stringify({...snapshot, snapshot_wall_ms: 900}), 's', webcrypto);
+  assert.equal(conflicting.model.indexes[0].snapshotClockConflict, true);
+  assert.deepEqual(conflicting.model.indexes[0].bounds, [1000, 2000]);
+  const clocklessSnapshot = clone(snapshot); clocklessSnapshot.bundle.cases[0].events[0].clock = null;
+  const noOrigin = await validateSnapshotText(JSON.stringify(clocklessSnapshot), 's', webcrypto);
+  assert.equal(noOrigin.model.indexes[0].bounds, null);
+  assert.match(noOrigin.model.indexes[0].snapshotAxisWarning, /No retained wall origin/);
   await assert.rejects(validateSnapshotText(JSON.stringify(snapshot), 'new-session', webcrypto), /changed session/);
   await assert.rejects(validateSnapshotText(JSON.stringify({...snapshot, arbitrary_path: 'private'}), 's', webcrypto), /unknown/);
   await assert.rejects(validateSnapshotText(JSON.stringify({...snapshot, bundle: {...bundle(), cases: []}}), 's', webcrypto), /1–4/);
@@ -135,6 +146,8 @@ async function readerChecks(model) {
   model = clone(model);
   model.cases[0].events.push(event('native-child', {kind: 'native', label: 'Native receipt',
     disposition: 'completed', links: ['e1']}));
+  model.cases[0].events[0].program_id = 'version-one';
+  model.cases[0].events.push(event('saved-version', {kind: 'tool', label: 'player_program_save', program_id: 'version-one'}));
   model.cases[0].assessments.push({label: 'Reviewed note', text: 'Fallible assessment',
     attribution: 'reviewer', reference: 'retained report', evidence_ids: ['e1']});
   const workers = [], timers = new Map(), urls = new Set(), revoked = [], images = [];
@@ -189,6 +202,8 @@ async function readerChecks(model) {
   const row = descendants(root).find(n => n.dataset.eventId === 'e1');
   assert.ok(row); row.listeners.click();
   assert.ok(root.textContent.includes('<script>hostile</script>'), 'hostile public text stays literal');
+  assert.match(root.textContent, /Same program version: authoring \/ read records/);
+  assert.ok(descendants(root).some(n => n.tag === 'button' && n.textContent === 'player_program_save · saved-version'));
   const reverseLink = descendants(root).find(n => n.tag === 'button' && n.textContent === 'Native receipt · native-child');
   assert.ok(reverseLink, 'A child can navigate to a native record that explicitly references it');
   reverseLink.listeners.click();

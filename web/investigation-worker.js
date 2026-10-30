@@ -194,6 +194,14 @@ async function validateSnapshotText(text, expectedSession, cryptoAPI = globalThi
   number(envelope.snapshot_wall_ms, 'snapshot.snapshot_wall_ms', false);
   const model = await validateText(JSON.stringify(envelope.bundle), cryptoAPI);
   if (model.cases.length !== 1 || model.cases[0].session !== envelope.session) fail('snapshot', 'bundle session differs');
+  const index = model.indexes[0];
+  index.snapshotWallMs = envelope.snapshot_wall_ms;
+  if (index.bounds) {
+    index.recordedBounds = [...index.bounds];
+    index.snapshotClockConflict = envelope.snapshot_wall_ms < index.bounds[1];
+    if (index.snapshotClockConflict) index.snapshotAxisWarning = 'Snapshot completion conflicts with retained wall bounds; the axis was not extended.';
+    if (!index.snapshotClockConflict) index.bounds[1] = envelope.snapshot_wall_ms;
+  } else index.snapshotAxisWarning = 'No retained wall origin is available. Snapshot completion alone cannot define an elapsed interval.';
   return {model, snapshot: {session: envelope.session, wall_ms: envelope.snapshot_wall_ms}};
 }
 function selectPage(events, {page = 0, kind = '', query = '', start = null, end = null} = {}) {

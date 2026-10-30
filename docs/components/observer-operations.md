@@ -87,8 +87,10 @@ attributed assessments. Reverse references follow existing IDs; shared run IDs a
 grouping evidence only. Timestamp points are distinct from measured spans. Interval
 summaries union recorded request/tool wall spans and expose overlap/uncovered time;
 they do not isolate inference, prove idle time or judge useful progress. Program
-dispositions/child IDs survive, while absent bodies, raw diagnostics and preparation
-links remain explicit gaps. No collector, automatic diagnosis, annotation store or
+dispositions/child IDs and available version-level authoring/read IDs survive;
+program bodies/raw diagnostics and missing preparation costs remain explicit gaps.
+The live axis includes an explicitly unmeasured tail to snapshot completion, while
+original event endpoints/unions remain unchanged. No collector, automatic diagnosis, annotation store or
 game semantics is added.
 
 ## Assurance and evidence

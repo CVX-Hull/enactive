@@ -275,6 +275,18 @@ class InvestigationTests(unittest.TestCase):
         self.assertEqual(tool['source_id'], self.source_id)
         self.assertIn('source:' + self.source_id, tool['links'])
 
+    def test_program_authoring_id_is_available_without_code_or_service_as_computer_link(self):
+        self.events[5]['tool'] = 'player_result'
+        self.events[6]['result']['content'][0]['text'] = json.dumps(dict(
+            schema='player-service-result/1', operation_id='authoring-request', value=dict(
+                schema='player-program/1', id='version1', code='PRIVATE_CODE', actor_id=self.actor)))
+        self.write_trace()
+        tool = next(e for e in export_selection(self.selection)['cases'][0]['events'] if e['kind'] == 'tool')
+        self.assertEqual(tool['program_id'], 'version1')
+        self.assertIsNone(tool['operation_id'])
+        self.assertNotIn('operation:authoring-request', tool['links'])
+        self.assertNotIn('PRIVATE_CODE', json.dumps(tool))
+
     def test_duplicate_case_source_and_unknown_assessment_fields_reject(self):
         for change in (dict(source_ids=[self.source_id] * 2),
                 dict(assessments=[dict(label='Review', text='claim', attribution='reviewer', reference='docs/report.md',

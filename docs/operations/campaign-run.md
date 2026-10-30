@@ -155,6 +155,12 @@ Reload discards client-retained history and does not grant input authority. The
 the [Watch/Timeline report](../acceptance/2026-10-29-spectator-watch-timeline.md)
 retains actual same-page admission/Pause evidence and its limits.
 
+During live play, keep elapsed/receipt checks short enough to meet the selected
+operator stop window. Delegate extended review when it competes with runtime
+ownership. Record a missed window or late closeout observation as a deviation;
+a planned browser Pause is not evidence that the click occurred. No additional
+monitoring service or per-action approval is required.
+
 SIGINT/SIGTERM or browser Pause permanently fence input. Finalization closes the
 channel and exact owned groups, with bounded signals if necessary. It never scans
 for or adopts unrelated processes. Normal native exit zero is sampled before

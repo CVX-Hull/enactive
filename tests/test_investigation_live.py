@@ -88,29 +88,39 @@ def test_single_immutable_prefix_censors_pending_and_discloses_partial_tail(case
     assert any('incomplete' in note for note in result['coverage']['notes'])
 
 
-def test_live_retains_latest_250_each_kind_including_native_sources(case, tmp_path):
+def test_busy_lane_borrows_unused_capacity_without_losing_quiet_lanes(case, tmp_path):
     case.events = [case.events[0]]
     for i in range(2200):
         case.events.append(dict(type='assistant-text', text=f'statement-{i}', monotonic_ms=i + 1))
     case.write_trace()
     result = capture(case, tmp_path)['cases'][0]
     statements = [e for e in result['events'] if e['kind'] == 'statement']
-    assert len(statements) == 250
-    assert [e['text'] for e in statements] == [f'statement-{i}' for i in range(1950, 2200)]
+    assert len(result['events']) == 2000
+    assert len(statements) == 1997
+    assert [e['text'] for e in statements] == [f'statement-{i}' for i in range(203, 2200)]
     assert {'operation', 'native', 'source'} <= {e['kind'] for e in result['events']}
     assert result['coverage']['event_candidates'] > 2000
-    assert any('statement: candidates=2200 retained=250 omitted=1950' in note for note in result['coverage']['notes'])
+    assert result['coverage']['event_omitted'] == 203
+
+
+def test_every_candidate_survives_when_whole_case_fits(case, tmp_path):
+    case.events = [case.events[0]] + [dict(type='assistant-text', text=f'statement-{i}', monotonic_ms=i + 1)
+        for i in range(400)]
+    case.write_trace()
+    result = capture(case, tmp_path)['cases'][0]
+    assert len(result['events']) == result['coverage']['event_candidates'] == 403
+    assert result['coverage']['event_omitted'] == 0
 
 
 def test_recent_request_cutoff_uses_original_start_order_not_pending_emission(case, tmp_path):
     case.events = [case.events[0], dict(type='request-start', request_id='old-pending', monotonic_ms=1)]
-    for i in range(260):
+    for i in range(2010):
         case.events.extend([dict(type='request-start', request_id=f'request-{i}', monotonic_ms=2 + i * 2),
             dict(type='response-complete', request_id=f'request-{i}', monotonic_ms=3 + i * 2, stop_reason='stop')])
     case.write_trace()
     rows = capture(case, tmp_path)['cases'][0]['events']
     requests = [e['request_id'] for e in rows if e['kind'] == 'request']
-    assert requests == [f'request-{i}' for i in range(10, 260)]
+    assert requests == [f'request-{i}' for i in range(13, 2010)]
 
 
 @pytest.mark.parametrize('fault', ['version', 'session', 'actor_session', 'manifest', 'budget'])

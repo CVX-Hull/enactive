@@ -85,7 +85,10 @@ overlapping spans or calling uncovered time idle. Same-domain original durations
 remain separate from the approximate shared wall axis; result/presentation points
 do not imply zero execution time. Kind/text filters narrow exact rows, not timing
 accounting. Program local elapsed time excludes authoring/retrieval/repair unless
-separate retained records establish those costs. Missing program/error/authoring
+separate retained records establish those costs. Same-version links expose available
+authoring/read/collection spans without treating a later collection as original preparation. A live snapshot's
+added axis tail is unmeasured time, including snapshot preparation, not an inferred
+ongoing request or idle/inference duration. Missing program/error/authoring
 detail limits diagnosis even when child native/source references are available.
 
 Use the evidence to choose a concrete next gameplay experiment, explicit no-change

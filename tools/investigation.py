@@ -362,11 +362,12 @@ def host_events(path, actor_id, session, analysis, notes):
             if value.get('schema') == 'player-service-result/1' and isinstance(value.get('value'), dict):
                 # Current original-result collection can retain a program projection.
                 # Select the same public projection, never progress args or state.
-                if value['value'].get('schema') == 'player-program-run/1':
-                    program_actor = public(value.get('actor_id'), notes)
+                if value['value'].get('schema') in ('player-program-run/1', 'player-program/1'):
+                    if value['value']['schema'] == 'player-program-run/1':
+                        program_actor = public(value.get('actor_id'), notes)
                     value = value['value']
-            known = value.get('schema') in ('computer-operation/1', 'player-program-run/1', 'player-service-result/1', 'player-source-read/1')
-            operation = public(value.get('operation_id'), notes) if known else None
+            known = value.get('schema') in ('computer-operation/1', 'player-program-run/1', 'player-program/1', 'player-service-result/1', 'player-source-read/1')
+            operation = public(value.get('operation_id'), notes) if value.get('schema') == 'computer-operation/1' else None
             source_id = None
             if known and isinstance(value.get('source'), dict):
                 candidate = value['source']
@@ -376,7 +377,8 @@ def host_events(path, actor_id, session, analysis, notes):
                     candidate = source_metadata(candidate)
                 source_id = public(candidate.get('source_id'), notes)
             run_id = public(value.get('run_id'), notes) if value.get('schema') == 'player-program-run/1' else None
-            program = public(value.get('program_id'), notes) if run_id else None
+            program = public(value.get('program_id'), notes) if run_id else (
+                public(value.get('id'), notes) if value.get('schema') == 'player-program/1' else None)
             links = [request_ids[request]] if request in request_ids else []
             if operation:
                 links.append('operation:' + operation)
@@ -408,7 +410,7 @@ def host_events(path, actor_id, session, analysis, notes):
                     links=list(dict.fromkeys(related))[:64], end_wall_ms=stamp,
                     elapsed_ms=elapsed * 1000 if number(elapsed) else None,
                     disposition=public(value.get('status'), notes, 1000),
-                    clock='Original program elapsed_seconds; start wall timestamp is not recorded.')
+                    clock='Host program-result/collection receipt point; original elapsed_seconds remains separate. Execution wall start/end are not recorded.')
                 if len(set(related)) > 64:
                     note(notes, 'Program child links beyond 64 omitted; original child IDs remain in operation rows.')
     for rid, (identity, start) in starts.items():
@@ -457,7 +459,7 @@ def export_case(selected, selection_parent):
 
 
 def project_case(selected, selection_parent, directory, control, actors, source_commit, accounting,
-        *, traces=None, analyses=None, recent_per_kind=None, notes=None, image_directory=None):
+        *, traces=None, analyses=None, recent_share=None, notes=None, image_directory=None):
     """Project one validated finite evidence set; callers own selection and closure."""
     notes = list(notes or [])
     for value in ('Only allowlisted public evidence is exported; raw arguments, prompts, private reasoning and paths are omitted.',
@@ -473,10 +475,12 @@ def project_case(selected, selection_parent, directory, control, actors, source_
         candidates[row['kind']] += 1
         if row['start_wall_ms'] is None and row['elapsed_ms'] is None:
             invalid_clocks += 1
-        if recent_per_kind is not None:
+        if recent_share is not None:
             rows = recent.setdefault(row['kind'], [])
             heapq.heappush(rows, (producer_order or (0, event_candidates), event_candidates, row))
-            if len(rows) > recent_per_kind:
+            # Keep a bounded candidate reserve so quiet lanes can lend unused
+            # capacity without discarding records when the whole case fits.
+            if len(rows) > MAX_EVENTS:
                 heapq.heappop(rows)
         elif len(retained) < MAX_EVENTS:
             retained.append(row)
@@ -577,14 +581,27 @@ def project_case(selected, selection_parent, directory, control, actors, source_
     sources = [source_entry(image_directory or directory, identity, originals.get(identity)) for identity in selected_sources]
     if any(value['png_base64'] is None for value in sources):
         note(notes, 'Some explicitly selected original images are unavailable; no substitute pixels are exported.')
-    if recent_per_kind is not None:
+    if recent_share is not None:
+        share = min(recent_share, MAX_EVENTS // max(1, len(recent)))
+        allowance = {kind: min(share, len(rows)) for kind, rows in recent.items()}
+        spare = MAX_EVENTS - sum(allowance.values())
+        while spare > 0:
+            grew = False
+            for kind, rows in recent.items():
+                if spare and allowance[kind] < len(rows):
+                    allowance[kind] += 1; spare -= 1; grew = True
+            if not grew:
+                break
         for kind in ('request', 'tool', 'program', 'operation', 'native', 'source', 'statement', 'observer'):
-            rows = [item[2] for item in sorted(recent.get(kind, ()))]
+            count = allowance.get(kind, 0)
+            rows = [item[2] for item in sorted(recent.get(kind, ()))[-count:]] if count else []
             retained.extend(rows)
             cutoff = rows[0]['id'] if rows else 'none'
             note(notes, f'{kind}: candidates={candidates[kind]} retained={len(rows)} omitted={candidates[kind] - len(rows)}; first retained original={cutoff}; latest by producer order, unknown clocks remain null.')
         # Stable ties/unknowns preserve producer order; no synthetic time values enter rows.
-        retained.sort(key=lambda row: (row['start_wall_ms'] is None, row['start_wall_ms'] or 0))
+        def recorded_wall(row):
+            return row['start_wall_ms'] if row['start_wall_ms'] is not None else row['end_wall_ms']
+        retained.sort(key=lambda row: (recorded_wall(row) is None, recorded_wall(row) or 0))
     omitted_events = event_candidates - len(retained)
     if omitted_events:
         note(notes, f'{omitted_events} complete event rows omitted by the selected export event bound.')

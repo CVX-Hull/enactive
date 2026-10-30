@@ -51,6 +51,8 @@ const tick = () => new Promise(setImmediate);
   assert.equal(candidates.length, 0, 'A late server response cannot replace deliberate file import');
   assert.equal(status.textContent, importedStatus);
   options.onLoaded({kind: 'file'});
+  options.onLoadFailed({kind: 'file'}); assert.match(status.textContent, /import failed/);
+  options.onLoadFailed({kind: 'file', cancelled: true}); assert.match(status.textContent, /import cancelled/);
   session = 'current-three'; api.sessionChanged(session); assert.equal(requests.length, 0);
   button.listeners.click(); const oversized = await reply(200, '{}', 16 * 1024 * 1024 + 4097);
   assert.equal(oversized.wasRead(), false, 'Reject oversized HTTP framing before reading a large body');

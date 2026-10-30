@@ -37,7 +37,11 @@
       el('h2', 'Investigate an interval'), el('p', 'Original records, public statements and attributed assessments. Imported evidence never controls the current player.', 'ir-muted'));
     const file = el('input'); file.type = 'file'; file.accept = '.json,application/json';
     file.addEventListener('change', () => { if (file.files[0]) loadFile(file.files[0]); });
-    const cancel = button('Cancel import', () => { stopPending(); status('Replacement cancelled. Previously loaded evidence remains recorded.'); cancel.disabled = true; });
+    const cancel = button('Cancel import', () => {
+      const kind = pending?.kind; stopPending();
+      status('Replacement cancelled. Previously loaded evidence remains recorded.'); cancel.disabled = true;
+      if (kind) options.onLoadFailed?.({kind, cancelled: true});
+    });
     cancel.disabled = true;
     const state = el('p', 'Select a closed-case investigation JSON bundle (up to 16 MiB).', 'ir-status');
     state.setAttribute('role', 'status'); state.setAttribute('aria-live', 'polite');
@@ -125,6 +129,7 @@
         if (destroyed || version !== generation) return;
         stopPending(); cancel.disabled = true;
         status(`Replacement unavailable: ${message}. Previously loaded evidence remains recorded.`, true);
+        options.onLoadFailed?.({kind: payload.file ? 'file' : 'snapshot'});
         settle(false);
       }
       try {
@@ -137,7 +142,7 @@
         let importing;
         try { importing = new global.Worker(url); }
         catch (error) { if (blob) global.URL.revokeObjectURL(blob); throw error; }
-        job = {worker: importing, blob, timer: null, settle}; pending = job;
+        job = {worker: importing, blob, timer: null, settle, kind: payload.file ? 'file' : 'snapshot'}; pending = job;
         importing.onmessage = ({data}) => {
           if (destroyed || version !== generation || pending !== job) return;
           if (data.type === 'loaded') {
@@ -174,7 +179,7 @@
       const bounds = model.indexes[caseIndex].bounds;
       from.value = '0'; to.value = bounds ? String((bounds[1] - bounds[0]) / 1000) : '';
       from.max = to.max = to.value; from.disabled = to.disabled = apply.disabled = !bounds;
-      intervalState.textContent = 'Whole recorded case. Missing or invalid clocks remain available in the exact rows.';
+      intervalState.textContent = 'Whole retained evidence span; this is not a measurement of the full campaign lifetime. Missing or invalid clocks remain available in the exact rows.';
     }
     function renderCase() {
       const c = currentCase(), index = model.indexes[caseIndex];
@@ -261,6 +266,16 @@
         for (const child of runChildren.slice(0, 50)) relationships.append(linkButton(child.id));
         if (runChildren.length > 50) relationships.append(el('p', `${runChildren.length - 50} further same-run records: filter exact rows by the run ID.`, 'ir-muted'));
       }
+      if (e.program_id !== null) {
+        const versions = currentCase().events.filter(other => other.id !== id && other.program_id === e.program_id &&
+          other.run_id === null && !e.links.includes(other.id) && !incoming.some(reference => reference.id === other.id));
+        if (versions.length) {
+          relationships.append(el('h4', 'Same program version: authoring / read records'),
+            el('p', 'Inspect recorded tool/model spans for available authoring, read or collection cost. Collection is not original authoring; missing preparation remains unknown. Shared version IDs do not merge executions or establish a benefit.', 'ir-muted'));
+          for (const other of versions.slice(0, 50)) relationships.append(linkButton(other.id));
+          if (versions.length > 50) relationships.append(el('p', 'Further same-version records remain searchable by the original program ID.', 'ir-muted'));
+        }
+      }
       inspect.append(relationships, details('All retained record fields and metrics', json(e)));
       renderChart();
       if (moveFocus) { inspectHeading.tabIndex = -1; inspectHeading.focus(); }
@@ -274,6 +289,9 @@
       const c = currentCase(), index = model.indexes[caseIndex], bounds = interval || index.bounds;
       chart.replaceChildren();
       chartNote.textContent = 'Approximate shared wall axis: dots are recorded timestamps; bars are recorded wall spans. Actor epochs are not subtracted. Overlap and links do not establish causality. Exact rows retain original same-domain durations.';
+      if (index.snapshotWallMs !== undefined) chartNote.textContent += index.snapshotAxisWarning ?
+        ` ${index.snapshotAxisWarning}` :
+        ` Axis extends to snapshot completion; ${((index.snapshotWallMs - index.recordedBounds[1]) / 1000).toFixed(3)}s after the last plotted record is unmeasured, including snapshot preparation. No request endpoint or idle/inference duration is inferred.`;
       if (!bounds) { chart.append(el('p', 'No valid wall spans were recorded. Inspect original rows and clock coverage below.', 'ir-muted')); return; }
       const ns = 'http://www.w3.org/2000/svg';
       function svgNode(tag, attributes, text) {

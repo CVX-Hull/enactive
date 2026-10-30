@@ -45,6 +45,9 @@ event IDs, never inferred causality. Dangling omitted links remain disclosed.
 `run_id` retains the original program issuance separately from its program version;
 `native_id` retains the original native exchange separately from its operation.
 Group program executions by the actual run ID, never by program version alone.
+Original program-document IDs on authoring/read/collection tools allow separate
+same-version navigation without exporting code or confusing a service request ID
+with a computer operation. Collection time is not original authoring time.
 Known creation/presentation/statement/result instants render as timestamp points,
 not zero-duration work; incomplete request intervals remain unplotted. Wall times
 support an approximate shared-axis view; `elapsed_ms` retains original
@@ -80,8 +83,8 @@ The whole encoded bundle JSON is at most 16 MiB, with at most 16 selected PNG en
 across all cases, and at most 50 rendered event rows/page. Before browser decode,
 verify the static PNG header geometry/digest and reject multi-frame images or
 images above 64 MiB RGBA pixels.
-Keep at most two visible image decodes concurrently within a combined 64 MiB
-decoded budget; a one-image inspector fits this bound. Cancellation/selection
+Keep at most two visible imported-image decodes concurrently within a combined
+64 MiB reader budget; a one-image inspector fits this bound. Cancellation/selection
 change releases owned URLs; an 8-second decode watchdog reports unavailable while
 retaining the reservation until the platform promise settles. Missing/oversized/malformed images stay
 unavailable. No full image history is loaded into the DOM.
@@ -116,8 +119,11 @@ hash manifests supply identity; actor bearer configuration, prompts and saves ar
 not read by the adapter. Producer cutoffs are separately labelled, not simultaneous.
 Temporary copies are removed after the job; there is no collector or second journal.
 
-Live projection retains <=250 latest complete rows of each kind, <=2000 total,
-with per-kind omissions and original producer order/approximate wall ordering.
+Live projection retains all candidates when they fit the 2000-row bound. Under
+pressure it reserves recent coverage across kinds and redistributes unused lane
+capacity deterministically, selecting by original producer order rather than
+cross-clock ranking. Intermediate candidate queues are bounded to 2000/kind;
+output remains <=2000 total, with exact per-kind omissions and approximate wall ordering.
 It selects the latest <=3 exact original PNGs from that DB snapshot; earlier source
 references remain explicitly unavailable. Live accounting is unknown unless actually
 measured, pending endpoints stay censored and no closed receipt/driver is fabricated.
@@ -132,6 +138,10 @@ Loaded evidence remains recorded through new activity/session turnover until exp
 attachment/import; the current target bar changes independently. Network work is
 bounded to12seconds; worker validation retains its30second limit. Errors leave the
 previous evidence visibly recorded. Offline HTML still has no network/live controls.
+The live axis extends to known snapshot completion while preserving original event
+bounds and null endpoints. Added tail time is explicitly unmeasured, including
+snapshot preparation; it is never inference, request duration or idle time.
+Conflicting wall bounds produce a warning rather than an invented extension.
 
 The [observer component](../components/observer-operations.md) owns navigation and
 failure behavior; [evaluation](../evaluation.md#investigate-a-selected-interval) owns

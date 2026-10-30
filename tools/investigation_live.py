@@ -107,7 +107,7 @@ def snapshot_bundle(directory: Path, profile: dict, snapshot_directory: Path, de
         source_ids=[row['source_id'] for row in originals[-3:]])
     case = project_case(selected, snapshot_directory, snapshot_directory, control, actors,
         manifest.get('source_commit'), dict.fromkeys(ACCOUNTING_KEYS), traces=traces, analyses=analyses,
-        recent_per_kind=250, notes=notes, image_directory=directory)
+        recent_share=250, notes=notes, image_directory=directory)
     bundle = validate_bundle(dict(schema='observer-investigation/1', cases=[case]))
     check_deadline(deadline)
     return bundle

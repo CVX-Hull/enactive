@@ -13,6 +13,9 @@
         cancel(); intent = true; mode = 'recorded';
         status.textContent = 'Opening optional recorded evidence. Current-target control remains separate.';
       },
+      onLoadFailed(data) {
+        if (data.kind === 'file') status.textContent = `Recorded import ${data.cancelled ? 'cancelled' : 'failed'}; the previous snapshot remains inspectable. Current-target control remains separate.`;
+      },
       onLoaded(data) {
         evidence = true;
         if (data.kind === 'snapshot') {
