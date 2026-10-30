@@ -3,6 +3,8 @@
   'use strict';
   const KINDS = ['request', 'tool', 'program', 'operation', 'native', 'source', 'statement', 'observer'];
   const PIXEL_BUDGET = 64 * 1024 * 1024;
+  const short = value => value === null ? 'unavailable' : value.length > 28 ? `${value.slice(0, 12)}…${value.slice(-6)}` : value;
+  const duration = ms => ms === null ? 'unavailable' : ms >= 1000 ? `${(ms / 1000).toFixed(3)}s` : `${ms.toFixed(3)}ms`;
   let nextMount = 0;
   function mount(root, options = {}) {
     const doc = root.ownerDocument || document;
@@ -24,7 +26,9 @@
     function field(label, input, suffix) {
       input.id = `${prefix}-${suffix}`;
       const wrap = el('label', undefined, 'ir-field'); wrap.htmlFor = input.id;
-      return append(wrap, el('span', label), input);
+      const title = el('span', label); title.id = `${input.id}-label`;
+      input.setAttribute('aria-labelledby', title.id);
+      return append(wrap, title, input);
     }
     function details(title, body) { return append(el('details'), el('summary', title), body); }
     function json(value) { return el('pre', JSON.stringify(value, null, 2)); }
@@ -44,8 +48,10 @@
     const scopeFact = el('p', '', 'ir-muted');
     const scopeBar = append(el('div', undefined, 'ir-scope'), field('Recorded case', scope, 'scope'), scopeFact);
     const summary = el('div', undefined, 'ir-summary');
+    const assessmentSummary = el('section', undefined, 'ir-assessment-summary');
     const chart = el('div', undefined, 'ir-chart');
     const chartNote = el('p', '', 'ir-muted');
+    const timingSummary = el('p', '', 'ir-timing');
     const from = el('input'); from.type = 'number'; from.step = 'any'; from.min = '0';
     const to = el('input'); to.type = 'number'; to.step = 'any'; to.min = '0';
     const intervalState = el('p', '', 'ir-muted'); intervalState.setAttribute('role', 'status');
@@ -57,7 +63,7 @@
         intervalState.textContent = 'Enter finite start/end seconds inside the case, with end at or after start.'; return;
       }
       interval = [bounds[0] + a * 1000, bounds[0] + b * 1000]; page = 0;
-      intervalState.textContent = `Selected ${a}–${b} seconds. Rows without a valid wall span are excluded from this interval.`;
+      intervalState.textContent = `Selected ${a}–${b} seconds. Rows without a valid recorded timestamp or span are excluded; original fields remain available in the whole case.`;
       renderChart(); requestPage();
     });
     const clearIntervalButton = button('Whole case', () => { interval = null; page = 0; setIntervalFields(); renderChart(); requestPage(); });
@@ -88,7 +94,7 @@
       el('h4', 'Original image'), field('Exact source ID', sourceSelect, 'source'),
       field('Actual pixels (scroll image)', actual, 'actual'), frameNote, frame, sourceFacts);
     const caseDetails = el('div', undefined, 'ir-case-details');
-    append(content, scopeBar, summary, chartNote, chart, intervalBar, intervalState,
+    append(content, scopeBar, assessmentSummary, summary, chartNote, chart, intervalBar, intervalState, timingSummary,
       append(el('div', undefined, 'ir-layout'), records, inspector), caseDetails);
     root.replaceChildren(heading, importBar, state, content);
     function newOption(text, value) { const option = el('option', text); option.value = value; return option; }
@@ -137,15 +143,20 @@
     }
     function renderCase() {
       const c = currentCase(), index = model.indexes[caseIndex];
-      scopeFact.textContent = `${c.id} · session ${c.session ?? 'unavailable'} · source ${c.source_commit ?? 'unavailable'}`;
+      const assessment = c.assessments[0];
+      assessmentSummary.replaceChildren(...(assessment ? [el('h3', assessment.label),
+        el('p', `Attributed interpretation · ${assessment.attribution ?? 'unavailable'}`, 'ir-muted'),
+        el('p', assessment.text, 'ir-retained-text'), el('p', assessment.reference ?? 'Reference unavailable', 'ir-muted')] :
+        [el('p', 'No reviewed outcome/interpretation selected in this bundle. Recorded completion is not gameplay success.', 'ir-muted')]));
+      scopeFact.textContent = `Recorded session ${short(c.session)} · source ${c.source_commit?.slice(0, 8) ?? 'unavailable'} · full provenance below`;
       summary.replaceChildren(el('span', `${c.events.length} retained records`), el('span', `${c.sources.length} selected image entries`),
-        el('span', `${index.unplottedIds.length} unplotted clocks`), el('span', `${index.danglingLinks} unavailable linked records`));
+        el('span', `${index.unplottedIds.length} records without plotted time`), el('span', `${index.danglingLinks} unavailable linked records`));
       setIntervalFields(); renderChart();
       sourceSelect.replaceChildren(newOption('Select original source', ''), ...c.sources.map(s => newOption(s.source_id, s.source_id)));
       sourceSelect.value = ''; clearImage(); sourceFacts.replaceChildren(); frameNote.textContent = 'Select an original source. Unselected source IDs have no bytes in this bundle.';
       inspect.replaceChildren(el('p', 'Select a record to inspect its original fields and explicit links.', 'ir-muted'));
       caseDetails.replaceChildren(details('Coverage and original omissions', json(c.coverage)),
-        details('Actor configuration (recorded)', json(c.configuration)),
+        details('Original case / actor provenance', json({id: c.id, session: c.session, source_commit: c.source_commit, configuration: c.configuration})),
         details('Usage and cost details — estimates / reservations, not an invoice', json(c.accounting)));
       const notes = el('div');
       for (const a of c.assessments) {
@@ -165,11 +176,14 @@
     }
     function renderRows(data) {
       page = data.page;
+      const t = data.timing;
+      const seconds = n => `${(n / 1000).toFixed(3)}s`;
+      timingSummary.textContent = t ? `Selected wall interval ${seconds(t.elapsed_ms)} · request union ${seconds(t.request_wall_union_ms)} · tool union ${seconds(t.tool_wall_union_ms)} · overlap ${seconds(t.overlap_ms)} · uncovered by those spans ${seconds(t.uncovered_ms)}. ${t.no_full_wall_span} request/tool records lack a full wall span in this case. Kind/text filters affect exact rows only. These are observed wall intervals, not server inference, idle time or useful-goal latency.` : 'No bounded timing summary available. Missing clocks remain unknown.';
       rows.replaceChildren(...data.rows.map(e => {
         const item = el('li');
-        const choose = button(`${e.label || e.kind} · ${e.id}`, () => selectEvent(e.id), 'ir-row');
+        const choose = button(`${e.label || e.kind} · ${short(e.id)}`, () => selectEvent(e.id), 'ir-row');
         choose.dataset.eventId = e.id; choose.setAttribute('aria-pressed', String(e.id === selectedId));
-        append(choose, el('span', `${e.kind} · actor ${e.actor_id ?? 'unavailable'} · original elapsed ${e.elapsed_ms === null ? 'unavailable' : `${e.elapsed_ms} ms`}`, 'ir-row-meta'));
+        append(choose, el('span', `${e.kind} · ${e.disposition ?? 'disposition unknown'} · actor ${short(e.actor_id)} · original elapsed ${duration(e.elapsed_ms)}`, 'ir-row-meta'));
         return append(item, choose);
       }));
       if (!data.rows.length) rows.append(el('li', 'No records match this selection.', 'ir-muted'));
@@ -177,25 +191,35 @@
       previous.disabled = page === 0; next.disabled = page + 1 >= data.pages;
     }
     function linkButton(id) {
-      const exists = currentCase().events.some(e => e.id === id);
-      const node = button(exists ? id : `${id} (omitted / unavailable)`, () => selectEvent(id), 'ir-link'); node.disabled = !exists; return node;
+      const target = currentCase().events.find(e => e.id === id);
+      const node = button(target ? `${target.label || target.kind} · ${short(id)}` : `${short(id)} (omitted / unavailable)`, () => selectEvent(id, true), 'ir-link'); node.disabled = !target; return node;
     }
-    function selectEvent(id) {
+    function selectEvent(id, navigate = false) {
       const e = currentCase().events.find(entry => entry.id === id);
       if (!e) return;
-      const moveFocus = inspect.contains(doc.activeElement);
+      const moveFocus = navigate || inspect.contains(doc.activeElement);
       selectedId = id;
       for (const row of rows.querySelectorAll('[data-event-id]')) row.setAttribute('aria-pressed', String(row.dataset.eventId === id));
       inspect.replaceChildren(el('h4', e.label || e.kind), el('p', e.text || 'No public text recorded.', 'ir-retained-text'),
+        el('p', `Recorded disposition: ${e.disposition ?? 'unavailable'}. A recorded completion is not a gameplay success verdict.`, 'ir-muted'),
         el('p', `Original omitted bytes: ${e.original_omitted_bytes ?? 'unknown'} · Additional export truncation: ${e.text_omitted_chars} characters`, 'ir-muted'),
         el('p', `Clock: ${e.clock ?? 'missing'} · wall start: ${e.start_wall_ms ?? 'missing'} · wall end: ${e.end_wall_ms ?? 'missing'} · original elapsed: ${e.elapsed_ms ?? 'missing'} ms`, 'ir-muted'));
-      const clockState = model.indexes[caseIndex].plottableIds.includes(e.id) ? 'Plotted approximate wall span; original same-domain duration remains separate.' :
+      const clockState = model.indexes[caseIndex].pointIds.includes(e.id) ? 'Recorded timestamp only: a point, not a measured zero-duration execution.' :
+        model.indexes[caseIndex].plottableIds.includes(e.id) ? 'Plotted approximate wall span; original same-domain duration remains separate.' :
         'Unplotted: clock domain or wall bounds missing / invalid. No zero-duration replacement.';
       inspect.append(el('p', clockState, 'ir-muted'));
+      if (e.kind === 'program') inspect.append(el('p', 'This export retains the program result identity, disposition, elapsed time and explicit child IDs. Program body, raw error details and authoring arguments are not included; preparation or repair is independently inspectable only where retained public records establish it.', 'ir-muted'));
       const relationships = append(el('div', undefined, 'ir-links'), el('h4', 'Explicit related records'));
       if (!e.links.length) relationships.append(el('p', 'No explicit related event IDs recorded.', 'ir-muted'));
       for (const link of e.links) relationships.append(linkButton(link));
-      const runChildren = e.run_id === null ? [] : currentCase().events.filter(other => other.run_id === e.run_id && other.id !== e.id);
+      const incoming = currentCase().events.filter(other => other.id !== id && other.links.includes(id));
+      if (incoming.length) {
+        relationships.append(el('h4', 'Records explicitly referencing this record'),
+          el('p', 'Reverse navigation follows retained IDs. Reference direction does not establish causality.', 'ir-muted'));
+        for (const other of incoming.slice(0, 50)) relationships.append(linkButton(other.id));
+        if (incoming.length > 50) relationships.append(el('p', `${incoming.length - 50} further references: search exact rows by this record ID.`, 'ir-muted'));
+      }
+      const runChildren = e.run_id === null ? [] : currentCase().events.filter(other => other.run_id === e.run_id && other.id !== e.id && !e.links.includes(other.id) && !incoming.some(reference => reference.id === other.id));
       if (e.run_id !== null) {
         relationships.append(el('p', `Original program run: ${e.run_id}. Shared run ID is grouping evidence; links do not infer causality.`, 'ir-muted'));
         // At most 50 controls; the full run remains searchable in exact rows.
@@ -203,6 +227,7 @@
         if (runChildren.length > 50) relationships.append(el('p', `${runChildren.length - 50} further same-run records: filter exact rows by the run ID.`, 'ir-muted'));
       }
       inspect.append(relationships, details('All retained record fields and metrics', json(e)));
+      renderChart();
       if (moveFocus) { inspectHeading.tabIndex = -1; inspectHeading.focus(); }
       if (e.source_id !== null) {
         const source = currentCase().sources.find(s => s.source_id === e.source_id);
@@ -211,9 +236,9 @@
       } else { sourceSelect.value = ''; showSource(''); }
     }
     function renderChart() {
-      const c = currentCase(), index = model.indexes[caseIndex], bounds = index.bounds;
+      const c = currentCase(), index = model.indexes[caseIndex], bounds = interval || index.bounds;
       chart.replaceChildren();
-      chartNote.textContent = 'Approximate shared wall axis. Each span retains its original clock domain; actor epochs are not subtracted. Overlap and links do not establish causality. Same-domain elapsed values appear in exact records.';
+      chartNote.textContent = 'Approximate shared wall axis: dots are recorded timestamps; bars are recorded wall spans. Actor epochs are not subtracted. Overlap and links do not establish causality. Exact rows retain original same-domain durations.';
       if (!bounds) { chart.append(el('p', 'No valid wall spans were recorded. Inspect original rows and clock coverage below.', 'ir-muted')); return; }
       const ns = 'http://www.w3.org/2000/svg';
       function svgNode(tag, attributes, text) {
@@ -221,26 +246,40 @@
         for (const [key, value] of Object.entries(attributes)) node.setAttribute(key, String(value));
         if (text !== undefined) node.textContent = text; return node;
       }
-      const plottedIds = new Set(index.plottableIds);
-      const lanes = KINDS.filter(k => c.events.some(e => e.kind === k && plottedIds.has(e.id)));
+      const plotted = c.events.filter(e => index.ranges[e.id] && index.ranges[e.id].start <= bounds[1] && index.ranges[e.id].end >= bounds[0]);
+      const lanes = KINDS.filter(k => plotted.some(e => e.kind === k));
       const height = 45 + lanes.length * 34;
-      const svg = svgNode('svg', {viewBox: `0 0 1000 ${height}`, role: 'img', 'aria-label': 'Recorded original event spans by kind on an approximate wall clock axis'});
+      const style = global.getComputedStyle?.(chart);
+      const padding = style ? parseFloat(style.paddingLeft) + parseFloat(style.paddingRight) : 0;
+      const width = Math.max(180, (chart.clientWidth || 1000) - padding);
+      const left = width < 500 ? 76 : 100, right = width - 20;
+      const svg = svgNode('svg', {viewBox: `0 0 ${width} ${height}`, role: 'img', 'aria-label': 'Recorded original event spans and timestamp points by kind. Keyboard and exact-value alternatives are in Exact records.'});
       const extent = Math.max(1, bounds[1] - bounds[0]);
-      const x = value => 100 + (value - bounds[0]) / extent * 880;
-      svg.append(svgNode('text', {x: 100, y: 16}, (Math.abs(bounds[0]) <= 8640000000000000 ? new Date(bounds[0]).toISOString() : `wall ms ${bounds[0]}`)),
-        svgNode('text', {x: 980, y: 16, 'text-anchor': 'end'}, `${((bounds[1] - bounds[0]) / 1000).toFixed(3)} s`));
-      if (interval) svg.append(svgNode('rect', {x: x(interval[0]), y: 24, width: Math.max(1, x(interval[1]) - x(interval[0])), height: height - 26, class: 'ir-selection'}));
+      const x = value => left + (value - bounds[0]) / extent * (right - left);
+      const origin = index.bounds[0];
+      const ticks = width < 500 ? [0, 1] : [0, 1 / 3, 2 / 3, 1];
+      for (const fraction of ticks) {
+        const at = bounds[0] + fraction * (bounds[1] - bounds[0]);
+        svg.append(svgNode('text', {x: x(at), y: 16, 'text-anchor': fraction === 0 ? 'start' : fraction === 1 ? 'end' : 'middle'}, `${((at - origin) / 1000).toFixed(1)}s`));
+      }
+      chartNote.textContent += ` Offset 0 = ${Math.abs(origin) <= 8640000000000000 ? new Date(origin).toISOString() : `wall ms ${origin}`}.`;
       for (const [i, lane] of lanes.entries()) {
         const y = 33 + i * 34;
-        svg.append(svgNode('text', {x: 3, y: y + 13}, lane), svgNode('line', {x1: 100, x2: 980, y1: y + 20, y2: y + 20, class: 'ir-axis'}));
-        for (const e of c.events.filter(e => e.kind === lane && plottedIds.has(e.id))) {
-          const rect = svgNode('rect', {x: x(e.start_wall_ms), y, width: Math.max(2, x(e.end_wall_ms) - x(e.start_wall_ms)), height: 18, rx: 2, class: `ir-span ir-span-${lane}`});
-          rect.append(svgNode('title', {}, `${e.id} · ${e.label} · ${e.clock} · original elapsed ${e.elapsed_ms ?? 'unavailable'} ms`));
+        svg.append(svgNode('text', {x: 3, y: y + 13}, lane), svgNode('line', {x1: left, x2: right, y1: y + 20, y2: y + 20, class: 'ir-axis'}));
+        for (const e of plotted.filter(e => e.kind === lane)) {
+          const range = index.ranges[e.id], start = Math.max(bounds[0], range.start), end = Math.min(bounds[1], range.end);
+          const rect = range.point ? svgNode('circle', {cx: x(start), cy: y + 9, r: 3}) :
+            svgNode('rect', {x: x(start), y, width: Math.min(right - x(start), Math.max(1, x(end) - x(start))), height: 18, rx: 2});
+          rect.setAttribute('class', `ir-span ir-span-${lane}${selectedId === e.id ? ' ir-selected' : ''}`);
+          rect.setAttribute('aria-hidden', 'true');
+          rect.append(svgNode('title', {}, `${e.id} · ${e.label} · ${range.point ? 'timestamp only' : 'wall span; may be clipped'} · ${e.clock} · original elapsed ${e.elapsed_ms ?? 'unavailable'} ms`));
           rect.addEventListener('click', () => selectEvent(e.id)); svg.append(rect);
         }
       }
       chart.append(svg);
     }
+    const chartResize = typeof global.ResizeObserver === 'function' ? new global.ResizeObserver(() => { if (model && !destroyed) renderChart(); }) : null;
+    chartResize?.observe(chart);
     function releaseImage(job) {
       if (!job || job.released) return;
       job.released = true; job.image.removeAttribute('src'); global.URL.revokeObjectURL(job.url);
@@ -266,7 +305,12 @@
       if (s.width * s.height * 4 > PIXEL_BUDGET) { frameNote.textContent = 'Image unavailable: decoded pixel budget exceeded.'; return; }
       const image = new global.Image(); image.alt = `Original recorded source ${s.source_id}`;
       const url = global.URL.createObjectURL(new Blob([s.bytes], {type: 'image/png'}));
-      const job = {image, url, released: false}; decoding = job;
+      const job = {image, url, released: false, timer: null}; decoding = job;
+      job.timer = global.setTimeout(() => {
+        if (decoding !== job) return;
+        releaseImage(job);
+        if (!destroyed && (version === imageGeneration || wantedImage)) frameNote.textContent = 'Image unavailable: decode exceeded 8 seconds. Its pixel reservation remains held until the platform decode settles; other recorded evidence and current Pause remain available.';
+      }, 8000);
       image.src = url;
       image.decode().then(() => {
         if (destroyed || version !== imageGeneration || job.released) return;
@@ -276,12 +320,15 @@
       }).catch(() => {
         if (!destroyed && version === imageGeneration) frameNote.textContent = `Original source ${s.source_id} unavailable: PNG decode failed.`;
       }).finally(() => {
+        global.clearTimeout(job.timer);
         if (displayed !== job) releaseImage(job);
         decoding = null; pumpImage();
       });
     }
     function destroy() {
-      if (destroyed) return; destroyed = true; stopWorker(); clearImage(); root.replaceChildren(); root.classList.remove('investigation-reader');
+      if (destroyed) return; destroyed = true; chartResize?.disconnect(); stopWorker();
+      if (decoding) global.clearTimeout(decoding.timer);
+      clearImage(); root.replaceChildren(); root.classList.remove('investigation-reader');
     }
     if (options.initialText !== undefined) load({text: options.initialText});
     return {loadFile, destroy};

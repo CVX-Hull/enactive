@@ -138,11 +138,13 @@ driver creates exclusive per-actor inputs/host traces and original resource note
 It verifies canonical handoff/context plus actual host/MCP group quiescence before
 a successor, without changing original limits. [Host details](player-host.md).
 
-Use a fresh or fully reloaded spectator page for each new admission. An old page
-can retain the closed admission's local Pause label while polling a new session;
-reload was verified as the immediate mitigation. The [owned observer follow-up](https://github.com/CVX-Hull/enactive/issues/143#issuecomment-6508431710)
-retains that presentation gap. Reloading a page does not resume a stopped admission
-or grant input authority.
+The spectator scopes status, activity, source and permanent-Pause facts to their
+actual sessions. A fresh admission establishes a new current target while a
+previous selection remains labelled recorded evidence; it is never Resume.
+Reload discards client-retained history and does not grant input authority. The
+[observer component](../components/observer-operations.md) owns current behavior;
+the [Watch/Timeline report](../acceptance/2026-10-29-spectator-watch-timeline.md)
+retains actual same-page admission/Pause evidence and its limits.
 
 SIGINT/SIGTERM or browser Pause permanently fence input. Finalization closes the
 channel and exact owned groups, with bounded signals if necessary. It never scans

@@ -92,19 +92,42 @@ async function source(v, p, cryptoAPI) {
   if (bytes.length < 33 || ![137,80,78,71,13,10,26,10,0,0,0,13,73,72,68,82].every((x, i) => bytes[i] === x)) return unavailable('Image unavailable: malformed PNG header.');
   const header = new DataView(bytes.buffer);
   if (header.getUint32(16) !== out.width || header.getUint32(20) !== out.height) return unavailable('Image unavailable: PNG geometry differs from recorded geometry.');
+  // Multi-frame PNGs require more than the declared single-image pixel budget.
+  // Inspect only bounded chunk framing; the browser still owns PNG decoding.
+  for (let cursor = 8; cursor + 12 <= bytes.length;) {
+    const length = header.getUint32(cursor);
+    if (length > bytes.length - cursor - 12) return unavailable('Image unavailable: truncated PNG chunk.');
+    if (bytes[cursor + 4] === 97 && bytes[cursor + 5] === 99 && bytes[cursor + 6] === 84 && bytes[cursor + 7] === 76) {
+      if (length !== 8 || header.getUint32(cursor + 8) !== 1) return unavailable('Image unavailable: animated PNG is not a static original capture.');
+    }
+    cursor += length + 12;
+  }
   const digest = Array.from(new Uint8Array(await cryptoAPI.subtle.digest('SHA-256', bytes)), x => x.toString(16).padStart(2, '0')).join('');
   if (digest !== out.sha256) return unavailable('Image unavailable: SHA-256 digest mismatch.');
   if (out.unavailable_reason) return out;
   out.bytes = bytes;
   return out;
 }
-function plottable(e) {
-  return e.clock !== null && e.clock !== '' && e.start_wall_ms !== null && e.end_wall_ms !== null && e.end_wall_ms >= e.start_wall_ms;
+function eventRange(e) {
+  if (!e.clock) return null;
+  if (e.start_wall_ms !== null && e.end_wall_ms !== null) {
+    return e.end_wall_ms >= e.start_wall_ms ? {start: e.start_wall_ms, end: e.end_wall_ms, point: false} : null;
+  }
+  // Known timestamps are instants, never invented zero-duration executions or
+  // completed censored requests. Their original elapsed measurement stays null.
+  if (['source', 'statement', 'operation', 'observer', 'program'].includes(e.kind)) {
+    const at = e.start_wall_ms ?? e.end_wall_ms;
+    if (at !== null) return {start: at, end: at, point: true};
+  }
+  return null;
 }
+function plottable(e) { return eventRange(e) !== null; }
 function indexCase(c) {
   const plotted = c.events.filter(plottable);
   const ids = new Set(c.events.map(e => e.id));
-  return {bounds: plotted.length ? [Math.min(...plotted.map(e => e.start_wall_ms)), Math.max(...plotted.map(e => e.end_wall_ms))] : null,
+  return {bounds: plotted.length ? [Math.min(...plotted.map(e => eventRange(e).start)), Math.max(...plotted.map(e => eventRange(e).end))] : null,
+    ranges: Object.fromEntries(plotted.map(e => [e.id, eventRange(e)])),
+    pointIds: plotted.filter(e => eventRange(e).point).map(e => e.id),
     plottableIds: plotted.map(e => e.id), unplottedIds: c.events.filter(e => !plottable(e)).map(e => e.id),
     danglingLinks: c.events.reduce((sum, e) => sum + e.links.filter(id => !ids.has(id)).length, 0)};
 }
@@ -146,7 +169,12 @@ async function validateText(text, cryptoAPI = globalThis.crypto) {
     const accountingFields = ['attempts', 'host_seconds', 'configured_estimate_usd', 'missing_usage_attempts', 'conservative_reservation_usd'];
     object(v.accounting, accountingFields, `${p}.accounting`);
     c.accounting = {};
-    for (const field of accountingFields) c.accounting[field] = number(v.accounting[field], `${p}.accounting.${field}`);
+    for (const field of accountingFields) c.accounting[field] = number(v.accounting[field], `${p}.accounting.${field}`, true,
+      ['attempts', 'missing_usage_attempts'].includes(field));
+    if (c.coverage.event_retained !== c.events.length || c.coverage.event_candidates !== c.events.length + c.coverage.event_omitted ||
+        c.coverage.source_retained !== c.sources.length || c.coverage.source_candidates !== c.sources.length + c.coverage.source_omitted) {
+      fail(p, 'inconsistent coverage counts');
+    }
     cases.push(c);
   }
   unique(cases, 'id', 'cases');
@@ -156,12 +184,36 @@ function selectPage(events, {page = 0, kind = '', query = '', start = null, end 
   const needle = query.toLowerCase();
   const filtered = events.filter(e => (!kind || e.kind === kind) && (!needle ||
     [e.id, e.label, e.text, e.actor_id, e.request_id, e.run_id, e.program_id, e.operation_id, e.native_id, e.source_id].some(v => v && v.toLowerCase().includes(needle))) &&
-    (start === null || end === null || (plottable(e) && e.start_wall_ms <= end && e.end_wall_ms >= start)));
+    (start === null || end === null || (eventRange(e) && eventRange(e).start <= end && eventRange(e).end >= start)));
   const pages = Math.max(1, Math.ceil(filtered.length / LIMITS.page));
   const selected = Math.max(0, Math.min(Number.isSafeInteger(page) ? page : 0, pages - 1));
   return {rows: filtered.slice(selected * LIMITS.page, (selected + 1) * LIMITS.page), total: filtered.length, page: selected, pages};
 }
-if (typeof module !== 'undefined' && module.exports) module.exports = {validateText, selectPage, LIMITS};
+function intervalSummary(events, bounds, start = null, end = null) {
+  if (!bounds) return null;
+  const a = start ?? bounds[0], b = end ?? bounds[1];
+  if (!Number.isFinite(a) || !Number.isFinite(b) || b < a) return null;
+  const selected = events.filter(e => ['request', 'tool'].includes(e.kind));
+  function spans(kind) {
+    return selected.filter(e => e.kind === kind && eventRange(e) && !eventRange(e).point)
+      .map(e => [Math.max(a, e.start_wall_ms), Math.min(b, e.end_wall_ms)])
+      .filter(([s, t]) => t >= s);
+  }
+  function union(rows) {
+    let total = 0, last = null;
+    for (const [s, t] of rows.sort((x, y) => x[0] - y[0])) {
+      if (last === null || s > last[1]) { if (last) total += last[1] - last[0]; last = [s, t]; }
+      else last[1] = Math.max(last[1], t);
+    }
+    return total + (last ? last[1] - last[0] : 0);
+  }
+  const request = spans('request'), tool = spans('tool');
+  const requests = union(request), tools = union(tool), covered = union([...request, ...tool]);
+  return {elapsed_ms: b - a, request_wall_union_ms: requests, tool_wall_union_ms: tools,
+    overlap_ms: Math.max(0, requests + tools - covered), uncovered_ms: Math.max(0, b - a - covered),
+    no_full_wall_span: selected.filter(e => !eventRange(e) || eventRange(e).point).length};
+}
+if (typeof module !== 'undefined' && module.exports) module.exports = {validateText, selectPage, intervalSummary, LIMITS};
 if (typeof self !== 'undefined' && typeof self.postMessage === 'function') {
   let model = null;
   self.onmessage = async ({data}) => {
@@ -173,7 +225,8 @@ if (typeof self !== 'undefined' && typeof self.postMessage === 'function') {
       } else if (data.type === 'page' && model) {
         const c = model.cases[data.caseIndex];
         if (!c) fail('page', 'unknown case');
-        self.postMessage({type: 'page', token: data.token, ...selectPage(c.events, data.filters)});
+        self.postMessage({type: 'page', token: data.token, ...selectPage(c.events, data.filters),
+          timing: intervalSummary(c.events, model.indexes[data.caseIndex].bounds, data.filters?.start, data.filters?.end)});
       }
     } catch (error) { self.postMessage({type: 'error', message: error.message}); }
   };

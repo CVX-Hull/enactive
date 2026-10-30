@@ -68,6 +68,27 @@ new witnesses. DOM replacement is neither physical paint nor model attention;
 missing/invalid clocks and unmatched sources remain explicit. No runtime-wide
 recursive history scan or legacy executable reader is supported.
 
+## Investigate a selected interval
+
+The [local investigation procedure](operations/start-observe.md) turns explicitly
+selected closed current cases into a bounded [artifact](contracts/observer-investigation.md).
+The shared live/offline reader exposes interval lanes, exact rows, source pixels,
+usage fields and existing attributed assessments. It does not collect new evidence
+or turn public statements into verified outcomes. Whole-case coverage and omitted
+fields remain visible beside a selected interval.
+
+Compare request/tool wall unions, overlap and uncovered intervals without adding
+overlapping spans or calling uncovered time idle. Same-domain original durations
+remain separate from the approximate shared wall axis; result/presentation points
+do not imply zero execution time. Kind/text filters narrow exact rows, not timing
+accounting. Program local elapsed time excludes authoring/retrieval/repair unless
+separate retained records establish those costs. Missing program/error/authoring
+detail limits diagnosis even when child native/source references are available.
+
+Use the evidence to choose a concrete next gameplay experiment, explicit no-change
+or missing-data decision. A plausible chart pattern is a hypothesis, not an
+automatic causal diagnosis or acceptance of #164's useful-goal cadence.
+
 ## Caller contract
 
 Use original operation IDs and immutable source references from the current

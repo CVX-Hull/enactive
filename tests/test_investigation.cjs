@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict');
-const {validateText, selectPage, LIMITS} = require('../web/investigation-worker.js');
+const {validateText, selectPage, intervalSummary, LIMITS} = require('../web/investigation-worker.js');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const {webcrypto} = require('node:crypto');
@@ -39,6 +39,8 @@ async function rejectEdit(edit, pattern) {
   await rejectEdit(b => b.cases = Array.from({length: 5}, (_, i) => ({...clone(b.cases[0]), id: String(i)})), /1–4/);
   await rejectEdit(b => delete b.cases[0].events[0].run_id, /missing/);
   await rejectEdit(b => b.cases[0].events[0].metrics.first_content_ms = '1', /nonnegative/);
+  await rejectEdit(b => b.cases[0].accounting.attempts = 0.5, /integer/);
+  await rejectEdit(b => b.cases[0].coverage.event_omitted = 1, /coverage counts/);
   const unicode = bundle(); unicode.cases[0].events[0].text = '😀'.repeat(4000);
   await validateText(JSON.stringify(unicode), webcrypto);
   const config = {actor_id: 'a', model: null, provider: null, api: null, effort: null,
@@ -49,11 +51,25 @@ async function rejectEdit(edit, pattern) {
   const clocks = bundle();
   clocks.cases[0].events = [event('missing', {start_wall_ms: null}), event('inverted', {end_wall_ms: 1}),
     event('clockless', {clock: null}), event('omitted', {original_omitted_bytes: 27, text_omitted_chars: 3, links: ['absent']})];
+  clocks.cases[0].coverage.event_candidates = clocks.cases[0].coverage.event_retained = 4;
   const checked = await validateText(JSON.stringify(clocks), webcrypto);
   assert.deepEqual(checked.indexes[0].unplottedIds, ['missing', 'inverted', 'clockless']);
   assert.equal(checked.cases[0].events[3].original_omitted_bytes, 27);
   assert.equal(checked.indexes[0].danglingLinks, 1);
   assert.deepEqual(checked.indexes[0].bounds, [1000, 2000]);
+  const points = bundle();
+  points.cases[0].events = [event('frame', {kind: 'source', end_wall_ms: null, elapsed_ms: null}),
+    event('program-result', {kind: 'program', start_wall_ms: null}), event('censored-request', {end_wall_ms: null})];
+  points.cases[0].coverage.event_candidates = points.cases[0].coverage.event_retained = 3;
+  const pointModel = await validateText(JSON.stringify(points), webcrypto);
+  assert.deepEqual(pointModel.indexes[0].pointIds, ['frame', 'program-result']);
+  assert.deepEqual(pointModel.indexes[0].unplottedIds, ['censored-request']);
+  assert.equal(pointModel.cases[0].events[0].elapsed_ms, null, 'A timestamp point never invents zero-duration work');
+  assert.equal(selectPage(pointModel.cases[0].events, {start: 999, end: 1001}).rows[0].id, 'frame');
+  const timing = intervalSummary([event('r', {start_wall_ms: 1000, end_wall_ms: 2000}),
+    event('t', {kind: 'tool', start_wall_ms: 1500, end_wall_ms: 2500}), event('missing', {end_wall_ms: null})], [0, 3000]);
+  assert.deepEqual(timing, {elapsed_ms: 3000, request_wall_union_ms: 1000, tool_wall_union_ms: 1000,
+    overlap_ms: 500, uncovered_ms: 1500, no_full_wall_span: 1});
   const many = Array.from({length: 121}, (_, i) => event(`e${i}`, {kind: i % 2 ? 'request' : 'source'}));
   assert.equal(selectPage(many, {page: 1}).rows[0].id, 'e50');
   assert.equal(selectPage(many, {page: 2}).rows.length, 21);
@@ -66,6 +82,7 @@ async function rejectEdit(edit, pattern) {
   const images = bundle();
   images.cases[0].sources = [{source_id: 'image1', capture_id: 1, presented_ms: null, received_wall_ms: 2000,
     sha256: sha, width: 1, height: 1, png_base64: png.toString('base64'), unavailable_reason: null}];
+  images.cases[0].coverage.source_candidates = images.cases[0].coverage.source_retained = 1;
   const extraImages = clone(images); extraImages.cases[0].sources = Array.from({length: 17}, (_, i) => ({...clone(images.cases[0].sources[0]), source_id: String(i)}));
   await assert.rejects(validateText(JSON.stringify(extraImages), webcrypto), /16 PNG/);
   const stringCapture = clone(images); stringCapture.cases[0].sources[0].capture_id = '1';
@@ -84,12 +101,23 @@ async function rejectEdit(edit, pattern) {
   images.cases[0].sources[0].png_base64 = 'bad';
   parsed = await validateText(JSON.stringify(images), webcrypto);
   assert.match(parsed.cases[0].sources[0].unavailable_reason, /base64/);
+  const animation = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACGFjVEwAAAACAAAAAPONk3AAAAAaZmNUTAAAAAAAAAABAAAAAQAAAAAAAAAAAAEAZAAAGDbW+gAAAA1JREFUeJxj+M/A8B8ABQAB/4mZPR0AAAAaZmNUTAAAAAEAAAABAAAAAQAAAAAAAAAAAAEAZAAAg0U8LgAAABFmZEFUAAAAAnicY2Bg+P8fAAMCAf/1e6XXAAAAAElFTkSuQmCC', 'base64');
+  images.cases[0].sources[0].png_base64 = animation.toString('base64');
+  images.cases[0].sources[0].sha256 = Buffer.from(await webcrypto.subtle.digest('SHA-256', animation)).toString('hex');
+  parsed = await validateText(JSON.stringify(images), webcrypto);
+  assert.equal(parsed.cases[0].sources[0].bytes, null);
+  assert.match(parsed.cases[0].sources[0].unavailable_reason, /animated PNG/);
   await workerChecks();
   await readerChecks(model);
   console.log('Investigation worker validation, original evidence, clock limits, image bounds, pagination and reader cancellation passed.');
 })().catch(error => { console.error(error); process.exitCode = 1; });
 
 async function readerChecks(model) {
+  model = clone(model);
+  model.cases[0].events.push(event('native-child', {kind: 'native', label: 'Native receipt',
+    disposition: 'completed', links: ['e1']}));
+  model.cases[0].assessments.push({label: 'Reviewed note', text: 'Fallible assessment',
+    attribution: 'reviewer', reference: 'retained report', evidence_ids: ['e1']});
   const workers = [], timers = new Map(), urls = new Set(), revoked = [], images = [];
   let timerId = 0;
   class Node {
@@ -142,6 +170,19 @@ async function readerChecks(model) {
   const row = descendants(root).find(n => n.dataset.eventId === 'e1');
   assert.ok(row); row.listeners.click();
   assert.ok(root.textContent.includes('<script>hostile</script>'), 'hostile public text stays literal');
+  const reverseLink = descendants(root).find(n => n.tag === 'button' && n.textContent === 'Native receipt · native-child');
+  assert.ok(reverseLink, 'A child can navigate to a native record that explicitly references it');
+  reverseLink.listeners.click();
+  assert.match(root.textContent, /Recorded disposition: completed/);
+  assert.equal(doc.activeElement.textContent, 'Original evidence');
+  const assessment = descendants(root).find(n => n.tag === 'article');
+  const assessmentLink = descendants(assessment).find(n => n.tag === 'button');
+  doc.activeElement = assessmentLink;
+  assessmentLink.listeners.click();
+  assert.equal(doc.activeElement.textContent, 'Original evidence', 'Assessment links bring the destination into view through focus');
+  const sourceInput = descendants(root).find(n => n.tag === 'select' && n.id.endsWith('-source'));
+  const sourceLabel = descendants(root).find(n => n.id === sourceInput.attributes['aria-labelledby']);
+  assert.equal(sourceLabel.textContent, 'Exact source ID', 'The selected option does not become part of the field label');
   const search = descendants(root).find(n => n.type === 'search');
   search.value = 'request1'; search.listeners.input();
   assert.equal(active.messages.at(-1).filters.query, 'request1');
@@ -170,6 +211,10 @@ async function readerChecks(model) {
   sourceSelect.value = 'one'; sourceSelect.listeners.change(); assert.equal(images.length, 1);
   sourceSelect.value = 'two'; sourceSelect.listeners.change();
   assert.equal(images.length, 1, 'do not start another decode before the cancelled decode settles');
+  const decodeTimer = [...timers.values()].find(value => value.delay === 8000);
+  assert.ok(decodeTimer); decodeTimer.callback();
+  assert.match(root.textContent, /decode exceeded 8 seconds/);
+  assert.equal(images.length, 1, 'Timeout never starts another image over a still-reserved decoder');
   images[0].reject(new Error('cancelled'));
   await new Promise(setImmediate); assert.equal(images.length, 2);
   images[1].resolve(); await new Promise(setImmediate);

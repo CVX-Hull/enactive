@@ -236,6 +236,12 @@ const text = id => {
   assert.equal(run('activeView'), 'watch', 'Arrow navigation does not trigger a perceptibly loaded view');
   element('tab-timeline').listeners.keydown(key('Enter'));
   assert.equal(run('activeView'), 'timeline');
+  element('tab-timeline').listeners.keydown(key('ArrowRight'));
+  assert.equal(context.document.activeElement, element('tab-analysis'));
+  assert.equal(run('activeView'), 'timeline');
+  element('tab-analysis').listeners.keydown(key('Enter'));
+  assert.equal(run('activeView'), 'analysis');
+  assert.match(text('investigation-root'), /reader asset unavailable.*Pause remains independent/, 'Missing Analysis assets do not prevent independent control');
 
   // A historical Pause response cannot confirm a new admission. An actual new
   // receiver can identify itself before its status, and stop evidence is monotone.
@@ -327,6 +333,29 @@ const text = id => {
   element('activity-list').children[2].children[0].listeners.click();
   assert.match(text('entry-details'), /original_dispositions.*|original_dispositions/s);
   assert.match(text('entry-details'), /additional_collection_dispositions/);
+  assert.match(text('inspection-coverage'), /host available.*0 omitted/);
+  element('timeline-filter').value = '<img';
+  element('timeline-filter').listeners.input();
+  assert.equal(element('activity-list').children.length, 1, 'Literal retained narration is searchable without HTML interpretation');
+  assert.equal(run('selectedEntry.id'), c.id, 'Filtering does not replace the selected original evidence');
+  assert.match(text('timeline-results'), /outside these filters/);
+  element('timeline-filter').value = '';
+  element('timeline-filter').listeners.input();
+  element('timeline-group').checked = true;
+  element('timeline-group').listeners.change();
+  assert.equal(element('activity-list').children.length, 2, 'Identical request IDs from separate actors remain separate groups');
+  assert.match(text('activity-list'), /2 matching rows.*recorded wall span/);
+  const grouped = element('activity-list').children[0].children[0];
+  grouped.children[1].listeners.click();
+  assert.equal(run('selectedEntry.id'), a.id, 'Grouped rows still select exact original entries');
+  assert.equal(grouped.children[1]['aria-pressed'], 'true');
+  element('timeline-group').checked = false;
+  element('timeline-kind').value = 'tools';
+  element('timeline-kind').listeners.change();
+  assert.equal(element('activity-list').children.length, 1);
+  assert.match(text('activity-list'), /Tool result/);
+  element('timeline-kind').value = 'all';
+  element('timeline-kind').listeners.change();
 
   // Inspection image completion never substitutes an old selection, updates
   // Watch measurements or supplies previous-session pixels from a new server.

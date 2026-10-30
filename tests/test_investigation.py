@@ -15,10 +15,18 @@ from PIL import Image
 
 from harness.computer.protocol import ControlError
 from tools.evaluate import main
-from tools.investigation import export_selection, html_document, validate_bundle, write_export
+from tools.investigation import export_selection, html_document, png_check, validate_bundle, write_export
 
 
 class InvestigationTests(unittest.TestCase):
+    def test_multiframe_png_cannot_bypass_single_image_pixel_budget(self):
+        stream = io.BytesIO()
+        Image.new('RGBA', (1, 1), 'red').save(stream, format='PNG', save_all=True,
+            append_images=[Image.new('RGBA', (1, 1), 'blue')], duration=10, loop=0)
+        png = stream.getvalue()
+        with self.assertRaises(ControlError):
+            png_check(png, 1, 1, hashlib.sha256(png).hexdigest())
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)

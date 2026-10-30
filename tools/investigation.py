@@ -97,6 +97,8 @@ def png_check(png, width, height, digest):
         with Image.open(io.BytesIO(png)) as image:
             if image.format != 'PNG' or image.size != actual:
                 raise ControlError('Malformed original PNG geometry')
+            if getattr(image, 'n_frames', 1) != 1:
+                raise ControlError('Animated PNG is not a static original capture')
             image.verify()
     except (OSError, ValueError, SyntaxError, Image.DecompressionBombError) as exc:
         raise ControlError('Malformed original PNG') from exc
@@ -530,7 +532,7 @@ def export_case(selected, selection_parent):
                 elapsed_ms=None if invalid else row['presented_to_dom_ms'], disposition=row['missing_reason'] or 'displayed',
                 links=['source:' + row['source_id']],
                 clock='Native/browser wall clocks assumed shared; DOM replacement is not physical paint.'))
-        note(notes, f"{report['missing_source_matches']} retained sources lack a valid exact DOM witness; {report['unmatched_presentations']} selected presentations have no exact source match.")
+        note(notes, f"{report['missing_source_matches']} retained sources lack a valid exact DOM witness; {report['unmatched_presentations']} selected presentations are unmatched against this session/database (exports may also contain other sessions).")
     selected_sources = sequence(selected.get('source_ids', []), 16)
     if len(set(text(value, nullable=False) for value in selected_sources)) != len(selected_sources):
         raise ControlError('Duplicate selected source ID')
@@ -598,7 +600,7 @@ initialText:{script_literal(encoded_bundle(bundle).decode('utf-8'))}}});'''
     return ('<!doctype html><html lang="en"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width,initial-scale=1">'
         f'<meta http-equiv="Content-Security-Policy" content="{html.escape(policy, quote=True)}">'
-        '<title>Recorded investigation</title></head><body><main id="investigation"></main>'
+        '<title>Recorded investigation</title></head><body class="recorded-investigation-document"><main id="investigation"></main>'
         f'<script nonce="{nonce}">{code}</script></body></html>\n')
 
 

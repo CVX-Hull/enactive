@@ -196,6 +196,7 @@ def _check(argv: list[str] | None = None) -> int:
         run([sys.executable, "-m", "pytest", "-q", "-n", workers, "--dist", "worksteal" if args.profile == "full" else "loadfile",
              "--max-worker-restart=0", "--durations=20", *targets])
         run([node, "tests/test_viewer.cjs"])
+        run([node, "tests/test_investigation.cjs"])
     run(["git", "diff", "--check"])
     run(["git", "diff", "--cached", "--check"])
     if args.fast:

@@ -23,6 +23,10 @@ const timingRows = [];
 let omittedRows = 0;
 const show = (id, value) => { if ($(id).textContent !== value) $(id).textContent = value; };
 const value = item => item === null || item === undefined ? 'unreported' : String(item);
+const shortIdentity = item => {
+  const text = value(item);
+  return text.length > 22 ? `${text.slice(0, 12)}…${text.slice(-6)}` : text;
+};
 const wallTime = seconds => {
   if (!Number.isFinite(seconds)) return 'unreported';
   const date = new Date(seconds * 1000);
@@ -141,6 +145,7 @@ function adoptSession(session) {
     show('entry-summary', 'The inspected session is outside the current and one previous session retained on this page.');
     show('inspection-scope', `Recorded evidence unavailable; current control target is ${session}.`);
     show('entry-text', ''); show('entry-details', 'Entry not retained in client history.'); $('entry-links').replaceChildren();
+    show('inspection-coverage', 'Selected evidence unavailable outside retained history.');
     show('inspection-frame-note', 'Pixels unavailable: inspected session not retained.');
     show('inspection-source', '');
   }
@@ -149,7 +154,8 @@ function adoptSession(session) {
   candidate = null;
   clearDisplayed();
   renderFrameNote('No source received for the current session.');
-  show('current-session', session);
+  show('current-session', shortIdentity(session));
+  show('current-session-full', session);
   show('control-freshness', 'Current-session status not yet received; liveness unknown.');
   show('latest-statement', 'No public statement available for this session.');
   show('statement-meta', 'Missing narration does not establish inactivity.');
@@ -371,6 +377,8 @@ let inspectionController = null;
 let inspectionURL = null;
 let activeView = 'watch';
 let deepLink = null;
+let visibleEntries = [];
+const VIEWS = ['watch', 'timeline', 'analysis'];
 const entryKey = entry => JSON.stringify([entry.session, entry.producer, entry.actor_id ?? null, entry.id]);
 const eventLabels = {'assistant-text': 'Player statement', 'request-start': 'Model request started',
   'response-complete': 'Model response received', 'tool-start': 'Tool requested', 'tool-result': 'Tool result',
@@ -381,7 +389,7 @@ const entryTitle = entry => `${eventLabels[entry.kind] || value(entry.kind)}${en
 const omittedSummary = snapshot => Number.isFinite(snapshot.omitted_entries) ? `${snapshot.omitted_entries} omitted by server` : 'earlier omissions unknown (incomplete coverage)';
 function activateView(view, updateLink = true) {
   activeView = view;
-  for (const name of ['watch', 'timeline']) {
+  for (const name of VIEWS) {
     const active = name === view;
     $(`tab-${name}`).setAttribute('aria-selected', String(active));
     $(`tab-${name}`).tabIndex = active ? 0 : -1;
@@ -389,7 +397,7 @@ function activateView(view, updateLink = true) {
   }
   if (updateLink) updateLocation();
 }
-for (const name of ['watch', 'timeline']) {
+for (const name of VIEWS) {
   const tab = $(`tab-${name}`);
   tab.addEventListener('click', () => activateView(name));
   tab.addEventListener('keydown', event => {
@@ -398,7 +406,8 @@ for (const name of ['watch', 'timeline']) {
     event.preventDefault();
     if (event.key === 'Enter' || event.key === ' ') activateView(name);
     else {
-      const target = event.key === 'Home' ? 'watch' : event.key === 'End' ? 'timeline' : name === 'watch' ? 'timeline' : 'watch';
+      const target = event.key === 'Home' ? VIEWS[0] : event.key === 'End' ? VIEWS[VIEWS.length - 1] :
+        VIEWS[(VIEWS.indexOf(name) + (event.key === 'ArrowRight' ? 1 : VIEWS.length - 1)) % VIEWS.length];
       $(`tab-${name}`).tabIndex = -1;
       $(`tab-${target}`).tabIndex = 0;
       $(`tab-${target}`).focus();
@@ -453,8 +462,20 @@ function renderEntryList() {
   const scroll = list.scrollTop;
   // During inspection this function is never called by polling, preserving the
   // same focused DOM row, selection and scroll instead of rebuilding it.
-  list.replaceChildren(...listedEntries.map(entry => {
-    const row = document.createElement('li');
+  const query = ($('timeline-filter').value || '').slice(0, 200).toLocaleLowerCase();
+  const kind = $('timeline-kind').value || 'all';
+  visibleEntries = listedEntries.filter(entry => {
+    const matchesKind = kind === 'all' || kind === 'statements' && entry.kind === 'assistant-text' ||
+      kind === 'model' && ['request-start', 'response-complete'].includes(entry.kind) ||
+      kind === 'tools' && ['tool-start', 'tool-result'].includes(entry.kind) ||
+      kind === 'computer' && entry.producer === 'computer';
+    return matchesKind && (!query || ['id', 'kind', 'actor_id', 'request_id', 'tool_call_id', 'operation_id', 'program_id', 'status', 'reason', 'text']
+      .some(field => typeof entry[field] === 'string' && entry[field].toLocaleLowerCase().includes(query)));
+  });
+  renderTimelineResults();
+  const buttons = new Map();
+  const entryGroups = new Map();
+  const makeButton = entry => {
     const button = document.createElement('button');
     button.type = 'button';
     button.textContent = entryTitle(entry);
@@ -465,20 +486,60 @@ function renderEntryList() {
     button.append(meta);
     button.addEventListener('focus', () => { if (following) { following = false; timelineSession = entry.session; renderTimeline(); } });
     button.addEventListener('click', () => selectEntry(entry, button));
-    row.append(button);
+    buttons.set(entryKey(entry), button);
+    return button;
+  };
+  const groups = new Map();
+  for (const entry of visibleEntries) {
+    const key = $('timeline-group').checked && entry.request_id ? JSON.stringify(['request', entry.session, entry.actor_id, entry.request_id]) :
+      $('timeline-group').checked && entry.operation_id ? JSON.stringify(['operation', entry.session, entry.actor_id, entry.operation_id]) : entryKey(entry);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(entry);
+  }
+  list.replaceChildren(...[...groups.values()].map(entries => {
+    const row = document.createElement('li');
+    if (entries.length === 1) row.append(makeButton(entries[0]));
+    else {
+      const group = document.createElement('details');
+      const label = document.createElement('summary');
+      const times = entries.map(entry => entry.created_wall).filter(Number.isFinite);
+      const elapsed = times.length > 1 ? ` · ${(Math.max(...times) - Math.min(...times)).toFixed(3)}s recorded wall span` : ' · duration unknown';
+      label.textContent = `${shortIdentity(entries[0].actor_id)} · ${entries[0].request_id || shortIdentity(entries[0].operation_id)} · ${entries.length} matching rows${elapsed}`;
+      group.append(label, ...entries.map(makeButton));
+      group.open = entries.some(entry => selectedEntry && entryKey(entry) === entryKey(selectedEntry));
+      for (const entry of entries) entryGroups.set(entryKey(entry), group);
+      group.addEventListener('toggle', () => { if (following) { following = false; timelineSession = currentSession; renderTimeline(); } });
+      row.append(group);
+    }
     return row;
   }));
+  timelineButtons = buttons;
+  timelineGroups = entryGroups;
   list.scrollTop = scroll;
-  $('timeline-empty').hidden = listedEntries.length > 0;
+  $('timeline-empty').hidden = visibleEntries.length > 0;
+}
+let timelineButtons = new Map();
+let timelineGroups = new Map();
+function renderTimelineResults() {
+  const filteredSelection = selectedEntry && !visibleEntries.some(entry => entryKey(entry) === entryKey(selectedEntry));
+  show('timeline-results', `${visibleEntries.length} of ${listedEntries.length} retained rows match. Search covers retained rows only; omitted history is not searched.${filteredSelection ? ' Selected evidence is outside these filters.' : ''}`);
+}
+for (const [id, event] of [['timeline-filter', 'input'], ['timeline-kind', 'change'], ['timeline-group', 'change']]) {
+  $(id).addEventListener(event, () => renderEntryList());
 }
 function renderInspectionScope(entry) {
   show('inspection-scope', `Recorded session ${entry.session}${entry.session !== currentSession ? ' · historical' : ''} · original wall ${wallTime(entry.created_wall)}. Current control target is ${currentSession || 'unknown'}.`);
+  const snapshot = activitySnapshots.get(entry.session);
+  show('inspection-coverage', snapshot ? `Selected session coverage: host ${value(snapshot.coverage?.host)}; computer ${value(snapshot.coverage?.computer)}; ${omittedSummary(snapshot)}. Related evidence may be missing.` : 'Selected session evidence unavailable outside retained history.');
 }
 function selectEntry(entry, button = null) {
   following = false;
   timelineSession = entry.session;
   selectedEntry = entry;
-  for (const [index, row] of [...$('activity-list').children].entries()) row.children[0]?.setAttribute('aria-pressed', String(entryKey(listedEntries[index]) === entryKey(entry)));
+  const selectedGroup = timelineGroups.get(entryKey(entry));
+  if (selectedGroup) selectedGroup.open = true;
+  renderTimelineResults();
+  for (const [key, row] of timelineButtons) row.setAttribute('aria-pressed', String(key === entryKey(entry)));
   show('inspection-heading', entryTitle(entry));
   renderInspectionScope(entry);
   show('entry-summary', `${value(entry.producer)} · actor ${value(entry.actor_id)}${entry.reason ? ` · ${entry.reason}` : ''}`);
@@ -550,6 +611,7 @@ $('follow-latest').addEventListener('click', () => {
   show('inspection-heading', 'Select an entry'); show('inspection-scope', 'Inspection does not stop automation or replay input.');
   show('entry-summary', 'Choose recorded activity to inspect its original evidence.'); show('entry-text', '');
   show('entry-details', 'No entry selected.'); $('entry-links').replaceChildren();
+  show('inspection-coverage', 'Select evidence to see its retained coverage.');
   show('inspection-frame-note', 'No source selected.'); show('inspection-source', '');
   renderTimeline(); updateLocation(); void refreshActivity();
 });
@@ -565,6 +627,7 @@ function resolveDeepLink() {
   const entry = snapshot?.entries.find(item => item.id === deepLink.event && (!deepLink.producer || item.producer === deepLink.producer) && (!deepLink.actor || item.actor_id === deepLink.actor));
   if (entry) { deepLink = null; selectEntry(entry); return; }
   show('inspection-heading', 'Linked evidence unavailable');
+  show('inspection-coverage', 'Linked evidence is not retained; coverage is unavailable.');
   show('entry-summary', `Session ${deepLink.session} · entry ${deepLink.event} is not retained on this page. Reload, eviction or server replacement may have removed it.`);
   show('inspection-frame-note', 'Pixels unavailable; no unrelated latest source substituted.');
 }
@@ -597,11 +660,19 @@ async function refreshActivity() {
 }
 if (typeof location !== 'undefined' && typeof URLSearchParams !== 'undefined') {
   const params = new URLSearchParams(location.hash.slice(1));
-  if (params.get('view') === 'timeline') activateView('timeline', false);
+  if (VIEWS.includes(params.get('view'))) activateView(params.get('view'), false);
   if (params.has('session') && params.has('event')) {
     deepLink = {session: params.get('session'), event: params.get('event'), producer: params.get('producer'), actor: params.get('actor')};
     following = false; timelineSession = deepLink.session; resolveDeepLink();
   }
+}
+// Recorded investigation has no reference to actor/status/control state. Failure
+// to load its optional static renderer cannot prevent the live Pause handler.
+try {
+  if (typeof EnactiveInvestigation === 'undefined') throw new Error('Investigation reader asset unavailable');
+  EnactiveInvestigation.mount($('investigation-root'), {workerURL: '/investigation-worker.js'});
+} catch (error) {
+  $('investigation-root').textContent = `Recorded investigation unavailable: ${error.message}. Current-target Pause remains independent.`;
 }
 void refresh();
 void refreshActivity();

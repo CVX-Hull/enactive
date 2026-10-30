@@ -41,7 +41,7 @@ def serve(application, port: int) -> tuple[LocalServer, threading.Thread]:
             self.send_header('Content-Length', str(len(data)))
             self.send_header('Cache-Control', 'private,max-age=31536000,immutable' if immutable else 'no-store')
             self.send_header('X-Content-Type-Options', 'nosniff')
-            self.send_header('Content-Security-Policy', "default-src 'self'; img-src 'self' blob:; style-src 'self'; script-src 'self'; connect-src 'self'")
+            self.send_header('Content-Security-Policy', "default-src 'self'; img-src 'self' blob:; style-src 'self'; script-src 'self'; worker-src 'self'; connect-src 'self'")
             self.end_headers()
             self.wfile.write(data)
 
@@ -66,9 +66,9 @@ def serve(application, port: int) -> tuple[LocalServer, threading.Thread]:
                     # actor-side source-failure fencing or issuing a source.
                     _, png = application.runtime.store.read_source(identity)
                     self.reply(200, png, 'image/png', immutable=True)
-                elif path.path in ('/','/app.js','/style.css'):
-                    name = {'/':'index.html','/app.js':'app.js','/style.css':'style.css'}[path.path]
-                    media = {'index.html':'text/html; charset=utf-8','app.js':'text/javascript; charset=utf-8','style.css':'text/css; charset=utf-8'}[name]
+                elif path.path in ('/', '/app.js', '/style.css', '/investigation.js', '/investigation-worker.js', '/investigation.css'):
+                    name = 'index.html' if path.path == '/' else path.path[1:]
+                    media = 'text/html; charset=utf-8' if name.endswith('.html') else 'text/css; charset=utf-8' if name.endswith('.css') else 'text/javascript; charset=utf-8'
                     self.reply(200, (ROOT/'web'/name).read_bytes(), media)
                 else:
                     self.json_reply(404, dict(error='Unknown current route'))

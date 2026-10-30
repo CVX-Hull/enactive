@@ -64,6 +64,29 @@ def test_operator_pause_does_not_wait_for_player_service_lock(service):
         assert time.monotonic()-started<1 and channel.stopped.is_set()
 
 
+def test_investigation_assets_are_explicit_passive_routes(service):
+    app,channel,actor,port,client=service
+    before=len(channel.calls)
+    for name,media in [('investigation.js','text/javascript'),('investigation-worker.js','text/javascript'),
+                       ('investigation.css','text/css')]:
+        connection=HTTPConnection('127.0.0.1',port,timeout=3)
+        try:
+            connection.request('GET','/'+name)
+            reply=connection.getresponse()
+            assert reply.status==200 and reply.read()
+            assert reply.getheader('Content-Type').startswith(media)
+            assert "worker-src 'self'" in reply.getheader('Content-Security-Policy')
+        finally:connection.close()
+    connection=HTTPConnection('127.0.0.1',port,timeout=3)
+    try:
+        connection.request('GET','/investigation-export/private.json')
+        reply=connection.getresponse()
+        assert reply.status==404
+        reply.read()
+    finally:connection.close()
+    assert len(channel.calls)==before and not channel.stopped.is_set()
+
+
 @pytest.mark.parametrize('invalid', [{}, {'max_seconds':0}, {'initial_state':[]}])
 def test_program_predispatch_fault_is_terminal_collectable_and_preserves_basic_control(service,invalid):
     app,channel,actor,port,client=service

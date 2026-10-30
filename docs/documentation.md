@@ -70,7 +70,8 @@ GitHub owns live work, proposals own unadopted scope, ADRs own dated rationale,
 and acceptance reports own original observations. The control registry/map owns
 control lifecycle, not a second contract or work tracker.
 
-The other `contracts/` pages are superseded bookmarks for the native7/mission11
+The [recorded investigation contract](contracts/observer-investigation.md) owns the
+current bounded passive artifact. Other historical `contracts/` pages are superseded bookmarks for the native7/mission11
 system. They retain original-source links and headings for historical references;
 current readers follow their explicit replacement. Do not treat historical
 contracts or old executable artifacts as another supported backend.
