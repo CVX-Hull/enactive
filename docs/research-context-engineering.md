@@ -13,6 +13,11 @@ This review informs [#251](https://github.com/CVX-Hull/enactive/issues/251) unde
 context policy, select a new serving model or qualify gameplay responsiveness.
 The mandatory generic Pi host and existing execution authority remain unchanged.
 
+The [30 October spatial-grounding follow-up](research-spatial-grounding.md) separates
+visual detail, camera/reference-frame reasoning and propagated task state using
+new primary research and actual gameplay errors. It owns the later focused candidate
+judgment; the source-bound measurements below retain their original date/scope.
+
 ## Conclusion and limits
 
 Treat context as part of the player interface: give the model the information
