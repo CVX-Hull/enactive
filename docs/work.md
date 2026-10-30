@@ -43,6 +43,7 @@ not qualify parent cadence, learning or survival.
 
 | Evidence | Scope and limitation |
 | --- | --- |
+| [Visual-player qualification](acceptance/2026-10-30-visual-player.md) | Qwen/Wafer served substantive play and fresh Load with normal endings, but retained spatial/confirmation errors and no readiness gain; candidate rejected, earlier provider failures preserved. |
 | [Spatial grounding and context rejection](acceptance/2026-10-30-spatial-grounding.md) | Primary-literature-informed candidate failed retained frame assessment and organic play; no retained readiness gain, guide restored, original failures/normal ending preserved. |
 | [Observed effects and useful continuation](acceptance/2026-10-30-observed-effects.md) | Prospective unchanged-guide baseline/assessment: limited exploration and corrections, no retained readiness gain; no repair adopted; the later spatial study tests and rejects one candidate. |
 | [Current and recorded investigation](acceptance/2026-10-30-spectator-investigation.md) | Automatic as-of Analysis, linked original intervals/program preparation, real Pause and separate persisted-water/normal-ending evidence; provider failure, player confirmation errors and usability limits remain. |
