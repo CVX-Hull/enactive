@@ -37,6 +37,11 @@ finite configuration is OpenRouter / explicitly pinned provider / DeepSeek Flash
 effort. Its exact route, metadata, context and limits are frozen per run; this
 selection is not a claim of model quality or provider performance.
 
+The [visual-player investigation](acceptance/2026-10-30-visual-player.md) rejected
+adoption of Qwen3.8-27B/Wafer after stable actual play and fresh Load still produced
+no retained readiness gain. Its earlier provider failures and visual-grounding
+errors remain evidence; successful serving does not qualify useful cadence.
+
 The [architecture](architecture.md) explains ownership, the
 [player guide](player-guide.md) supplies compact working context, and the
 [computer-control contract](contracts/computer-control.md) owns exact interfaces.

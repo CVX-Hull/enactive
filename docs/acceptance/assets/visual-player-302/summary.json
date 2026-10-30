@@ -1,0 +1,1246 @@
+{
+  "schema": "visual-player-302-evidence/1",
+  "status": "assessed rejection",
+  "guide_sha256": "14ac97fe329d919dfb73f2b8b903bc5dd4b28696678dc0f64b624d0d42446702",
+  "tool_schemas": 14,
+  "harness": "unchanged mandatory generic Pi and basic computer control; all game interpretation is player-owned",
+  "native_sha256": "0a5649cfb19e7d36d08580f7c88defb2a7c48c94f7b1d2368c051e7ca4e866b8",
+  "adapter_sha256": "77313b1e82aa0b7d4e4b2fe536f77d605c5f2efe76494f2250fe4e2f8b4978df",
+  "selected_candidate": {
+    "model": "qwen/qwen3.8-27b",
+    "route": "wafer/fp8",
+    "quantization": "fp8",
+    "effort": "medium",
+    "service_tier": "default",
+    "context_window": 262144,
+    "max_output_tokens": 16384,
+    "max_context_images": 30,
+    "configured_rates_usd_per_million": {
+      "input": 0.06,
+      "output": 2.3,
+      "cacheRead": 0.059,
+      "cacheWrite": 0.06
+    },
+    "per_attempt_conservative_usd": "0.05341184",
+    "provider_routing": {
+      "only": [
+        "wafer/fp8"
+      ],
+      "order": [
+        "wafer/fp8"
+      ],
+      "allow_fallbacks": false,
+      "require_parameters": true
+    },
+    "host_seconds_per_case": 2400,
+    "custodian_seconds_per_case": 3000,
+    "case_attempt_caps": {
+      "003": 140,
+      "004": 110
+    },
+    "mechanical_caps": {
+      "inputs": 12000,
+      "requests": 20000,
+      "frames": 2500,
+      "frame_bytes": 3221225472
+    },
+    "ending_reserve": "preserve both 300 host seconds and 25 attempts; start ending when either threshold is reached"
+  },
+  "initial_conformance": {
+    "http_attempts": 12,
+    "known_usage": 10,
+    "missing_usage": 2,
+    "tool_schemas": 14,
+    "tool_dispatch": false,
+    "execution": "standalone pinned Pi SDK normalization/serialization, not full deciding-host CLI/MCP",
+    "representative_history": "162 public statements/observation-input-result receipts,257625textbytes and30originalPNGimages; no private reasoning, rawarguments or code bodies reconstructed",
+    "repeated_long_payload_hashes_match": true,
+    "results": [
+      {
+        "route": "modelrun/fp4",
+        "model": "qwen/qwen3.8-27b",
+        "phase": "small",
+        "status": 200,
+        "stop_reason": "toolUse",
+        "elapsed_ms": 1642.521959,
+        "tool_call_validity": [
+          true
+        ],
+        "usage_available": true,
+        "usage": {
+          "input": 5656,
+          "output": 89,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "reasoning": 81,
+          "totalTokens": 5745,
+          "cost": {
+            "input": 0.0011312000000000002,
+            "output": 0.00022250000000000001,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "total": 0.0013537000000000002
+          }
+        }
+      },
+      {
+        "route": "dekallm",
+        "model": "qwen/qwen3.8-27b",
+        "phase": "small",
+        "status": 200,
+        "stop_reason": "toolUse",
+        "elapsed_ms": 3103.01825,
+        "tool_call_validity": [
+          true
+        ],
+        "usage_available": true,
+        "usage": {
+          "input": 2614,
+          "output": 133,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "reasoning": 112,
+          "totalTokens": 2747,
+          "cost": {
+            "input": 0.00010456,
+            "output": 0.0003325,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "total": 0.00043706
+          }
+        }
+      },
+      {
+        "route": "fireworks/us",
+        "model": "deepseek/deepseek-v4.1-flash-1017",
+        "phase": "small",
+        "status": 200,
+        "stop_reason": "toolUse",
+        "elapsed_ms": 1758.316917,
+        "tool_call_validity": [
+          true
+        ],
+        "usage_available": true,
+        "usage": {
+          "input": 2382,
+          "output": 140,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "reasoning": 115,
+          "totalTokens": 2522,
+          "cost": {
+            "input": 0.0010719,
+            "output": 0.000252,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "total": 0.0013239
+          }
+        }
+      },
+      {
+        "route": "modelrun/fp4",
+        "model": "qwen/qwen3.8-27b",
+        "phase": "long",
+        "status": 400,
+        "stop_reason": "error",
+        "elapsed_ms": 631.150208,
+        "tool_call_validity": [],
+        "usage_available": false,
+        "usage": null
+      },
+      {
+        "route": "dekallm",
+        "model": "qwen/qwen3.8-27b",
+        "phase": "long",
+        "status": 200,
+        "stop_reason": "toolUse",
+        "elapsed_ms": 18845.449833,
+        "tool_call_validity": [
+          true
+        ],
+        "usage_available": true,
+        "usage": {
+          "input": 136496,
+          "output": 213,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "reasoning": 197,
+          "totalTokens": 136709,
+          "cost": {
+            "input": 0.0054598400000000005,
+            "output": 0.0005325000000000001,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "total": 0.0059923400000000005
+          }
+        }
+      },
+      {
+        "route": "fireworks/us",
+        "model": "deepseek/deepseek-v4.1-flash-1017",
+        "phase": "long",
+        "status": 200,
+        "stop_reason": "toolUse",
+        "elapsed_ms": 5715.374041000003,
+        "tool_call_validity": [
+          true
+        ],
+        "usage_available": true,
+        "usage": {
+          "input": 101217,
+          "output": 151,
+          "cacheRead": 1802,
+          "cacheWrite": 0,
+          "reasoning": 126,
+          "totalTokens": 103170,
+          "cost": {
+            "input": 0.04554765,
+            "output": 0.0002718,
+            "cacheRead": 1.6218e-05,
+            "cacheWrite": 0,
+            "total": 0.045835668
+          }
+        }
+      },
+      {
+        "route": "modelrun/fp4",
+        "model": "qwen/qwen3.8-27b",
+        "phase": "long-repeat",
+        "status": 400,
+        "stop_reason": "error",
+        "elapsed_ms": 616.9021249999969,
+        "tool_call_validity": [],
+        "usage_available": false,
+        "usage": null
+      },
+      {
+        "route": "dekallm",
+        "model": "qwen/qwen3.8-27b",
+        "phase": "long-repeat",
+        "status": 200,
+        "stop_reason": "toolUse",
+        "elapsed_ms": 6113.110999999997,
+        "tool_call_validity": [
+          true
+        ],
+        "usage_available": true,
+        "usage": {
+          "input": 51,
+          "output": 259,
+          "cacheRead": 136445,
+          "cacheWrite": 0,
+          "reasoning": 243,
+          "totalTokens": 136755,
+          "cost": {
+            "input": 2.04e-06,
+            "output": 0.0006475000000000001,
+            "cacheRead": 0.0027289000000000002,
+            "cacheWrite": 0,
+            "total": 0.0033784400000000003
+          }
+        }
+      },
+      {
+        "route": "fireworks/us",
+        "model": "deepseek/deepseek-v4.1-flash-1017",
+        "phase": "long-repeat",
+        "status": 200,
+        "stop_reason": "toolUse",
+        "elapsed_ms": 2549.510540999996,
+        "tool_call_validity": [
+          true
+        ],
+        "usage_available": true,
+        "usage": {
+          "input": 387,
+          "output": 242,
+          "cacheRead": 102632,
+          "cacheWrite": 0,
+          "reasoning": 186,
+          "totalTokens": 103261,
+          "cost": {
+            "input": 0.00017415,
+            "output": 0.0004356,
+            "cacheRead": 0.000923688,
+            "cacheWrite": 0,
+            "total": 0.001533438
+          }
+        }
+      },
+      {
+        "route": "modelrun/fp4",
+        "model": "qwen/qwen3.8-27b",
+        "phase": "tool-result",
+        "status": 200,
+        "stop_reason": "toolUse",
+        "elapsed_ms": 873.6824169999963,
+        "tool_call_validity": [
+          true
+        ],
+        "usage_available": true,
+        "usage": {
+          "input": 2243,
+          "output": 116,
+          "cacheRead": 4096,
+          "cacheWrite": 0,
+          "reasoning": 108,
+          "totalTokens": 6455,
+          "cost": {
+            "input": 0.00044860000000000006,
+            "output": 0.00029,
+            "cacheRead": 0.00036864,
+            "cacheWrite": 0,
+            "total": 0.00110724
+          }
+        }
+      },
+      {
+        "route": "dekallm",
+        "model": "qwen/qwen3.8-27b",
+        "phase": "tool-result",
+        "status": 200,
+        "stop_reason": "toolUse",
+        "elapsed_ms": 2552.848125000004,
+        "tool_call_validity": [
+          true
+        ],
+        "usage_available": true,
+        "usage": {
+          "input": 3297,
+          "output": 280,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "reasoning": 261,
+          "totalTokens": 3577,
+          "cost": {
+            "input": 0.00013188,
+            "output": 0.0007000000000000001,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "total": 0.0008318800000000001
+          }
+        }
+      },
+      {
+        "route": "fireworks/us",
+        "model": "deepseek/deepseek-v4.1-flash-1017",
+        "phase": "tool-result",
+        "status": 200,
+        "stop_reason": "toolUse",
+        "elapsed_ms": 1537.4237090000024,
+        "tool_call_validity": [
+          true
+        ],
+        "usage_available": true,
+        "usage": {
+          "input": 1089,
+          "output": 182,
+          "cacheRead": 1800,
+          "cacheWrite": 0,
+          "reasoning": 157,
+          "totalTokens": 3071,
+          "cost": {
+            "input": 0.00049005,
+            "output": 0.00032760000000000005,
+            "cacheRead": 1.62e-05,
+            "cacheWrite": 0,
+            "total": 0.00083385
+          }
+        }
+      }
+    ]
+  },
+  "initial_diagnostics": {
+    "discovery_http": 16,
+    "reserved_http": 8,
+    "known_usage": 23,
+    "missing_usage": 1,
+    "tool_dispatch": false,
+    "execution": "standalone Pi SDK with explicit package16/8attempt bounds; configuration metadata validator does not create a deciding host",
+    "design_freeze_sha256": "36c9d5dec9b1de675f5ee797671a5e13e0ce12565f364c51244e258a76f9fdd9",
+    "discovery": {
+      "D4_visual_both": "Deny supported one-tile north displacement",
+      "D4_text_both": "Recover one-tile north from neutral positions",
+      "Qwen_visual_defects": [
+        "D1 omits supported avatar identification despite explicit You",
+        "D2 chooses upper NPC as avatar",
+        "D3 incorrect avatar location"
+      ],
+      "word_cap": "all4Qwentext andbothD4visual exceed220whitespacewords"
+    },
+    "reserved": {
+      "H1": "Qwen selectsupperNPC despiteexplicitYou; currentidentifiesself",
+      "H2": "Qwen recognizesmovement, omitsdirection; currentdeniesactualsouth",
+      "H3": "bothrecognizelandmarkrelativemovement butomitdirections; currentNPCcontinuitydoubtunsupported",
+      "H4": "Qwenrecognizesseparatetable-selection/single-tileUnseen; currentmissescursor/viewportscopeerror",
+      "word_cap": "bothH4 exceed220; QwenH2 countconventionborderline"
+    },
+    "limits": [
+      "previouslyexposedD/Hfrom300",
+      "overlappingsources/episodes",
+      "onesamplepercell",
+      "textcontrolsuppliesperceptionfactsofflineonly",
+      "D3duplicatehashesdisclosed",
+      "nocausalmodelattention/perceptionmechanism/backboneclaim",
+      "noungroundedmissinganswersfilled"
+    ]
+  },
+  "rescope_screen": {
+    "accounting": {
+      "actual_http_attempts": 10,
+      "unused_retired": 2,
+      "known_usage_count": 9,
+      "missing_usage_count": 1,
+      "known_configured_estimate_usd": "0.0168267000000000010",
+      "actual_added_conservative_usd": "0.55836672",
+      "actual_cumulative_attempts": 3904,
+      "actual_cumulative_reserved_usd": "1057.719844864",
+      "ceiling_usd": "1200",
+      "not_invoice": true
+    },
+    "results": [
+      {
+        "phase": "modelrun-long",
+        "route": "modelrun/fp4",
+        "status": 400,
+        "elapsed_ms": 1501.077125,
+        "stop_reason": "error",
+        "tool_call_validity": [],
+        "usage_available": false,
+        "error_type": null,
+        "error_code": "400",
+        "provider_error_code": null,
+        "limit_source": null
+      },
+      {
+        "phase": "deka-independent-1",
+        "route": "dekallm",
+        "status": 200,
+        "elapsed_ms": 3740.50125,
+        "stop_reason": "toolUse",
+        "tool_call_validity": [
+          true
+        ],
+        "usage_available": true,
+        "error_type": null,
+        "error_code": null,
+        "provider_error_code": null,
+        "limit_source": null
+      },
+      {
+        "phase": "deka-independent-2",
+        "route": "dekallm",
+        "status": 200,
+        "elapsed_ms": 2914.7415410000003,
+        "stop_reason": "toolUse",
+        "tool_call_validity": [
+          true
+        ],
+        "usage_available": true,
+        "error_type": null,
+        "error_code": null,
+        "provider_error_code": null,
+        "limit_source": null
+      },
+      {
+        "phase": "deka-independent-3",
+        "route": "dekallm",
+        "status": 200,
+        "elapsed_ms": 2620.9419160000016,
+        "stop_reason": "toolUse",
+        "tool_call_validity": [
+          true
+        ],
+        "usage_available": true,
+        "error_type": null,
+        "error_code": null,
+        "provider_error_code": null,
+        "limit_source": null
+      },
+      {
+        "phase": "deka-independent-4",
+        "route": "dekallm",
+        "status": 200,
+        "elapsed_ms": 2619.6883749999997,
+        "stop_reason": "toolUse",
+        "tool_call_validity": [
+          true
+        ],
+        "usage_available": true,
+        "error_type": null,
+        "error_code": null,
+        "provider_error_code": null,
+        "limit_source": null
+      },
+      {
+        "phase": "deka-growing-1",
+        "route": "dekallm",
+        "status": 200,
+        "elapsed_ms": 4112.051625,
+        "stop_reason": "toolUse",
+        "tool_call_validity": [
+          true
+        ],
+        "usage_available": true,
+        "error_type": null,
+        "error_code": null,
+        "provider_error_code": null,
+        "limit_source": null
+      },
+      {
+        "phase": "deka-growing-2",
+        "route": "dekallm",
+        "status": 200,
+        "elapsed_ms": 2621.7792920000065,
+        "stop_reason": "toolUse",
+        "tool_call_validity": [
+          true
+        ],
+        "usage_available": true,
+        "error_type": null,
+        "error_code": null,
+        "provider_error_code": null,
+        "limit_source": null
+      },
+      {
+        "phase": "deka-growing-3",
+        "route": "dekallm",
+        "status": 200,
+        "elapsed_ms": 3511.6801669999986,
+        "stop_reason": "toolUse",
+        "tool_call_validity": [
+          true
+        ],
+        "usage_available": true,
+        "error_type": null,
+        "error_code": null,
+        "provider_error_code": null,
+        "limit_source": null
+      },
+      {
+        "phase": "deka-growing-4",
+        "route": "dekallm",
+        "status": 200,
+        "elapsed_ms": 3024.0850409999985,
+        "stop_reason": "toolUse",
+        "tool_call_validity": [
+          true
+        ],
+        "usage_available": true,
+        "error_type": null,
+        "error_code": null,
+        "provider_error_code": null,
+        "limit_source": null
+      },
+      {
+        "phase": "wafer-long",
+        "route": "wafer/fp8",
+        "status": 200,
+        "elapsed_ms": 17885.955291,
+        "stop_reason": "toolUse",
+        "tool_call_validity": [
+          true
+        ],
+        "usage_available": true,
+        "error_type": null,
+        "error_code": null,
+        "provider_error_code": null,
+        "limit_source": null
+      }
+    ],
+    "deka_arms": "four independent exact requests and four SDK-growing tool-result-history requests; 20 seconds between arms",
+    "conditional_recovery": "one identical-payload retry per arm after eligible preoutput429; 15-second probe wait or longer valid hint <=60, original240-second signal",
+    "recovery_exercised": false,
+    "limits": [
+      "No game dispatch",
+      "No quota-window/root-cause proof",
+      "Earlier failures retained, not permanent bans",
+      "One Wafer long request does not prove fastest gameplay or full growing-history conformance"
+    ]
+  },
+  "wafer_visual_assessment": {
+    "attempts": 8,
+    "known_usage": 8,
+    "missing_usage": 0,
+    "tool_dispatch": false,
+    "questions_and_labels_unchanged": true,
+    "previously_exposed_overlapping_sources": true,
+    "findings": {
+      "D1": "normal-to-Look/no displacement correct; unnecessary first-frame identity uncertainty",
+      "D2": "upper NPC mistaken for avatar despite explicit You; no travel correctly recognized",
+      "D3": "duplicate/no-change recognized; unsupported assumption about l movement key",
+      "D4": "wrong actor and denial of supported one-tile north travel; Look/single-tile scope recognized",
+      "H1": "upper NPC mistaken for avatar despite You; historical items treated as visible stock",
+      "H2": "actual doorway displacement recognized, direction omitted; single-tile unknown preserved",
+      "H3": "movement recognized without direction; sidebar glyph and red-staircase claims unsupported",
+      "H4": "selection/Unseen recognized; panned avatar mislocated and unchanged landmark relation missed"
+    },
+    "whitespace_word_counts": {
+      "D1": 193,
+      "D2": 232,
+      "D3": 197,
+      "D4": 213,
+      "H1": 218,
+      "H2": 232,
+      "H3": 219,
+      "H4": 239
+    },
+    "word_cap": 220,
+    "H3_lexical_count": 222,
+    "limits": "one response per cell, old sources, complete model/provider/quantization configurations, no causal provider/backbone or general superiority claim"
+  },
+  "native_cases": [
+    {
+      "case": "visual302-play001",
+      "session": "ee628d823d134434aee6b0653d77bddb",
+      "actor": "dbee8aba95bb4563824b9760211f7a22",
+      "source_commit": "a6ff0988efa724771e939e7aaa044135d70375c8",
+      "manifest_sha256": "93c61859398adb560917ed8266fd6c23fe689e4bbb8c806faaed20a5fc1e813f",
+      "host_trace_sha256": "1d1f1c2a263643f2133c69bbe7bbef62266e3c327c7769173b499467782b55d5",
+      "source": {
+        "source_id": "ee628d823d134434aee6b0653d77bddb-4",
+        "sha256": "e4f555c79ac6b8f23cf3042ce1f2bc42a395dea6aac2870a4e95d73120cc9114",
+        "relative_asset": "initial-play001-last.png",
+        "png_chunks": [
+          "IHDR",
+          "IDAT",
+          "IEND"
+        ],
+        "bytes": 33655
+      },
+      "host_seconds": 20.75572970788926,
+      "campaign_seconds": 22.87228754069656,
+      "http_statuses": [
+        200,
+        200,
+        200,
+        429,
+        429
+      ],
+      "tool_operations": 3,
+      "retry_same_payload_sha256": "f92feb6b3fad41d87bb36a30e64bafa32c631dca4c1b2d08004299bd2ccf3d16",
+      "refusal_limit_source": "upstream_provider_shared_pool",
+      "accounting": {
+        "attempts_charged": 5,
+        "cumulative_attempts": 3889,
+        "consumed_conservative_reservation_usd": 0.2572288,
+        "cumulative_conservative_reservation_usd": 1056.904249344,
+        "allocated_max_attempts": 140,
+        "unused_allocation_retired": 135,
+        "configured_estimate_usd": 0.0035944400000000004,
+        "missing_usage_attempts": 2,
+        "reservation_is_not_invoice": true
+      },
+      "cleanup": {
+        "native_sigterm": true,
+        "normal_native_exit_zero": false,
+        "host_mcp_native_groups_absent": true,
+        "input_authority_revoked": true
+      },
+      "observability": {
+        "request_spans_ms": 18606.391749,
+        "tool_spans_ms": 1039.3371670000001,
+        "request_tool_overlap_ms": 0,
+        "max_retained_images": 3,
+        "omitted_images": 0,
+        "max_live_check_gap_seconds": 28.85704803466797,
+        "known_cache_read_tokens": 0
+      },
+      "useful_effect": {
+        "observed": false,
+        "latency": "censored at failed admission",
+        "world_play": "no returned world view; case002 may have initiated Load",
+        "new_save_reload_normal_quit": "not observed"
+      }
+    },
+    {
+      "case": "visual302-play002",
+      "session": "d54cebb79e5844b19288fd6bfb08f758",
+      "actor": "1c917fc065d642cfa45e97f1ca74e8d4",
+      "source_commit": "a6ff0988efa724771e939e7aaa044135d70375c8",
+      "manifest_sha256": "824679429824b323305db4e064daf8aafc974b0df510242c05c031260978d1a9",
+      "host_trace_sha256": "5cd33b4451179b26a0f116101006c920d2b679e2689d6c4cd8ec383725289a9e",
+      "source": {
+        "source_id": "d54cebb79e5844b19288fd6bfb08f758-6",
+        "sha256": "76e2e5678306abc284f3694e5fbdf6ca9144bb88238cdf33795f3ae3e9586b34",
+        "relative_asset": "initial-play002-last.png",
+        "png_chunks": [
+          "IHDR",
+          "IDAT",
+          "IEND"
+        ],
+        "bytes": 33826
+      },
+      "host_seconds": 13.466941500082612,
+      "campaign_seconds": 15.20615308266133,
+      "http_statuses": [
+        200,
+        200,
+        200,
+        429,
+        429
+      ],
+      "tool_operations": 3,
+      "retry_same_payload_sha256": "d2cb42d67c3a1feb3d2a797378558884189c9bf50aa83f57da379047de0981e6",
+      "refusal_limit_source": "upstream_provider_shared_pool",
+      "accounting": {
+        "attempts_charged": 5,
+        "cumulative_attempts": 3894,
+        "consumed_conservative_reservation_usd": 0.2572288,
+        "cumulative_conservative_reservation_usd": 1057.161478144,
+        "allocated_max_attempts": 140,
+        "unused_allocation_retired": 135,
+        "configured_estimate_usd": 0.00273348,
+        "missing_usage_attempts": 2,
+        "reservation_is_not_invoice": true
+      },
+      "cleanup": {
+        "native_sigterm": true,
+        "normal_native_exit_zero": false,
+        "host_mcp_native_groups_absent": true,
+        "input_authority_revoked": true
+      },
+      "observability": {
+        "request_spans_ms": 11409.280874,
+        "tool_spans_ms": 1072.849750999999,
+        "request_tool_overlap_ms": 0,
+        "max_retained_images": 3,
+        "omitted_images": 0,
+        "max_live_check_gap_seconds": 24.67771601676941,
+        "known_cache_read_tokens": 128
+      },
+      "useful_effect": {
+        "observed": false,
+        "latency": "censored at failed admission",
+        "world_play": "no returned world view; case002 may have initiated Load",
+        "new_save_reload_normal_quit": "not observed"
+      }
+    },
+    {
+      "case": "visual302-play003",
+      "session": "59a133119ced45f984b8066ef42d670f",
+      "source_commit": "68966c3bb49d057e46cac096acdfa8887e189c73",
+      "manifest_sha256": "114aaaba1e9e029f8533469c5c17959960c3eaed87c2bfa25a56de69b748ba7b",
+      "host_trace_sha256": "2e6e619695df025625a1c885f7ade85cc0fa8151ec2e8c5be51182665d55cc26",
+      "receipt_sha256": "11786cb776f4a0a426f433e8889ec3c303142cc9598a503453d64ce1419c23e0",
+      "host_seconds": 994.1429532496259,
+      "campaign_seconds": 995.1161698754877,
+      "http_attempts": 88,
+      "http_status_counts": {
+        "200": 88
+      },
+      "accounting": {
+        "attempts_charged": 88,
+        "cumulative_attempts": 3992,
+        "consumed_conservative_reservation_usd": 4.70024192,
+        "cumulative_conservative_reservation_usd": 1062.420086784,
+        "allocated_max_attempts": 140,
+        "unused_allocation_retired": 52,
+        "configured_estimate_usd": 0.464634408,
+        "missing_usage_attempts": 0,
+        "reservation_is_not_invoice": true
+      },
+      "selected_sources": [
+        {
+          "source_id": "59a133119ced45f984b8066ef42d670f-5659",
+          "request_id": "request-76",
+          "available_seconds_from_campaign_start": 851.0001790523529,
+          "sha256": "1a9efb3884888e9953ba38020ae55d3800c90b8d61ee3e5044a223bccb8668c8",
+          "asset": "pickup-selection-preview.png",
+          "bytes": 48364,
+          "png_chunks": [
+            "IHDR",
+            "IDAT",
+            "IEND"
+          ]
+        },
+        {
+          "source_id": "59a133119ced45f984b8066ef42d670f-6521",
+          "request_id": "request-84",
+          "available_seconds_from_campaign_start": 957.0599901676178,
+          "sha256": "c4f0784600e65b3924b46b3f0cfec7a1c5b49f413c3ef12bba5776d7d9c34702",
+          "asset": "first-save-title.png",
+          "bytes": 33822,
+          "png_chunks": [
+            "IHDR",
+            "IDAT",
+            "IEND"
+          ]
+        }
+      ],
+      "cleanup": {
+        "normal_native_exit_zero": true,
+        "forced_signals": [],
+        "host_mcp_native_groups_absent": true,
+        "input_authority_revoked": true
+      },
+      "unknown_operations": [
+        {
+          "operation_id": "ce8e48a3fb0d43d89fdc2096ce3a381d",
+          "request_id": "request-85"
+        },
+        {
+          "operation_id": "ce8e48a3fb0d43d89fdc2096ce3a381d",
+          "request_id": "request-86"
+        }
+      ],
+      "unknown_input_replayed": false,
+      "telemetry": {
+        "completed_response_ms": {
+          "max": 29790.658624999982,
+          "n": 88,
+          "p50": 10484.538542000024,
+          "p95": 17027.720124999993,
+          "sum": 932288.3613370004
+        },
+        "tool_ms": {
+          "max": 2446.2504590000026,
+          "n": 87,
+          "p50": 394.0438749999739,
+          "p95": 2376.1429580000113,
+          "sum": 59940.83196000024
+        },
+        "timing_ms": {
+          "first_body": {
+            "max": 10617.914665999997,
+            "n": 88,
+            "p50": 7276.83722950003,
+            "p95": 8708.865083999932,
+            "sum": 516604.3832050001
+          },
+          "first_content": {
+            "max": 28793.114917,
+            "n": 88,
+            "p50": 9665.065792000038,
+            "p95": 15962.538540999987,
+            "sum": 837470.2712549999
+          },
+          "first_reasoning": {
+            "max": 17275.145749999967,
+            "n": 88,
+            "p50": 7276.950166500028,
+            "p95": 8708.95291699993,
+            "sum": 523273.1407959999
+          },
+          "first_tool_argument": {
+            "max": 29498.175541999983,
+            "n": 87,
+            "p50": 10212.344000000041,
+            "p95": 16735.959957999992,
+            "sum": 898882.2362939998
+          },
+          "headers": {
+            "max": 10201.158915999986,
+            "n": 88,
+            "p50": 7276.262624999974,
+            "p95": 8707.666041999939,
+            "sum": 515928.63962599984
+          },
+          "host_inspection": {
+            "max": 25.49204100004863,
+            "n": 88,
+            "p50": 4.8997494999930495,
+            "p95": 6.755375000007916,
+            "sum": 378.4271269998549
+          },
+          "max_body_gap": {
+            "max": 608.1867080000011,
+            "n": 88,
+            "p50": 409.23037499995553,
+            "p95": 541.6587500000023,
+            "sum": 35008.47183599994
+          },
+          "max_semantic_gap": {
+            "max": 2496.4577500000014,
+            "n": 88,
+            "p50": 426.28591700000834,
+            "p95": 1140.443041999999,
+            "sum": 48497.22032699929
+          },
+          "sdk_after_payload": {
+            "max": 14.398665999993682,
+            "n": 88,
+            "p50": 7.90643750000163,
+            "p95": 12.079334000009112,
+            "sum": 612.0112490001668
+          }
+        },
+        "usage": {
+          "cacheRead": {
+            "max": 119296,
+            "n": 88,
+            "p50": 31264.0,
+            "p95": 65024,
+            "sum": 2989312
+          },
+          "cacheWrite": {
+            "max": 0,
+            "n": 88,
+            "p50": 0.0,
+            "p95": 0,
+            "sum": 0
+          },
+          "input": {
+            "max": 55612,
+            "n": 88,
+            "p50": 50787.0,
+            "p95": 52848,
+            "sum": 3001715
+          },
+          "output": {
+            "max": 2412,
+            "n": 88,
+            "p50": 426.5,
+            "p95": 1089,
+            "sum": 47027
+          },
+          "reasoning": {
+            "max": 2262,
+            "n": 88,
+            "p50": 288.5,
+            "p95": 925,
+            "sum": 33412
+          }
+        },
+        "context": {
+          "input_images": {
+            "max": 84,
+            "n": 88,
+            "p50": 43.5,
+            "p95": 83,
+            "sum": 3822
+          },
+          "omitted_images": {
+            "max": 54,
+            "n": 88,
+            "p50": 13.5,
+            "p95": 53,
+            "sum": 1647
+          },
+          "projection_ms": {
+            "max": 8.609791000024416,
+            "n": 88,
+            "p50": 1.42025000002468,
+            "p95": 4.660249999957159,
+            "sum": 172.88899900017293
+          },
+          "retained_images": {
+            "max": 30,
+            "n": 88,
+            "p50": 30.0,
+            "p95": 30,
+            "sum": 2175
+          }
+        },
+        "host_ms": 993899.908583,
+        "observed_request_ms": 932288.3613370004,
+        "observed_tool_ms": 59940.83196000024,
+        "request_tool_overlap_ms": 0,
+        "censored_requests": 0,
+        "unknown_usage_requests": 0
+      },
+      "live_monitoring": {
+        "frozen_max_gap_seconds": 45,
+        "checks": 41,
+        "max_gap_seconds": 46.21874523162842,
+        "gaps_over_frozen_limit_seconds": [
+          45.02172088623047,
+          46.21874523162842
+        ],
+        "fully_conformant": false
+      },
+      "terminal_report_words": 190,
+      "terminal_report_word_cap": 100,
+      "useful_readiness_gain": false,
+      "successful_gain_latency_seconds": null,
+      "gain_latency_status": "censored at voluntary closeout; no completed retained readiness gain",
+      "save_title_observed": true,
+      "fresh_load_after_this_save": true,
+      "fresh_load_evidence_case": "visual302-play004"
+    },
+    {
+      "case": "visual302-play004",
+      "session": "e81ce70e2e1f42faab2f863cf95a1fa9",
+      "source_commit": "68966c3bb49d057e46cac096acdfa8887e189c73",
+      "manifest_sha256": "9c886a5344f98a046bd798ad70c24c5dfb3f6bb34077aa3308559b4a44034d1a",
+      "host_trace_sha256": "18f436911836169fcc65726db1123b7003ff474ab077f8f21db26d5c18e1157a",
+      "receipt_sha256": "f0a587c8caaf95932de432e2a1b4129dab67fed89fc4a3a0e201b2d97ad339f6",
+      "host_seconds": 864.7494986243546,
+      "campaign_seconds": 865.1105932071805,
+      "http_attempts": 74,
+      "http_status_counts": {
+        "200": 74
+      },
+      "accounting": {
+        "attempts_charged": 74,
+        "cumulative_attempts": 4074,
+        "consumed_conservative_reservation_usd": 3.95247616,
+        "cumulative_conservative_reservation_usd": 1066.799857664,
+        "allocated_max_attempts": 110,
+        "unused_allocation_retired": 36,
+        "configured_estimate_usd": 0.392035476,
+        "missing_usage_attempts": 0,
+        "reservation_is_not_invoice": true
+      },
+      "selected_sources": [
+        {
+          "source_id": "e81ce70e2e1f42faab2f863cf95a1fa9-256",
+          "request_id": "request-7",
+          "available_seconds_from_campaign_start": 28.087843894958496,
+          "sha256": "0a7a856ab149644786a7cecaf9d58320065afb134cce00560771de745915b862",
+          "asset": "fresh-load-inventory.png",
+          "bytes": 80819,
+          "png_chunks": [
+            "IHDR",
+            "IDAT",
+            "IEND"
+          ]
+        },
+        {
+          "source_id": "e81ce70e2e1f42faab2f863cf95a1fa9-6030",
+          "request_id": "request-67",
+          "available_seconds_from_campaign_start": 773.786859035492,
+          "sha256": "7205bc433b4403b6fc8b87a314babcaf66675ae3882cd9e495bd752585b546ba",
+          "asset": "continuation-last-world.png",
+          "bytes": 161082,
+          "png_chunks": [
+            "IHDR",
+            "IDAT",
+            "IEND"
+          ]
+        },
+        {
+          "source_id": "e81ce70e2e1f42faab2f863cf95a1fa9-6540",
+          "request_id": "request-70",
+          "available_seconds_from_campaign_start": 819.1907019615173,
+          "sha256": "1e327056313324a57dbf05ae9b81f5c4cff04512f00e266c7ca561c770ca6552",
+          "asset": "continuation-save-title.png",
+          "bytes": 33669,
+          "png_chunks": [
+            "IHDR",
+            "IDAT",
+            "IEND"
+          ]
+        }
+      ],
+      "cleanup": {
+        "normal_native_exit_zero": true,
+        "forced_signals": [],
+        "host_mcp_native_groups_absent": true,
+        "input_authority_revoked": true
+      },
+      "unknown_operations": [
+        {
+          "operation_id": "e0e4b1a1060e486fbbdfadb5d146a3f4",
+          "request_id": "request-72"
+        }
+      ],
+      "unknown_input_replayed": false,
+      "telemetry": {
+        "completed_response_ms": {
+          "max": 22958.33704200003,
+          "n": 74,
+          "p50": 11792.729125500045,
+          "p95": 19519.826082999993,
+          "sum": 810633.5511639996
+        },
+        "tool_ms": {
+          "max": 2503.9939579999773,
+          "n": 73,
+          "p50": 526.0658749999711,
+          "p95": 2390.3216669999983,
+          "sum": 52257.378584999584
+        },
+        "timing_ms": {
+          "first_body": {
+            "max": 10743.833458999987,
+            "n": 74,
+            "p50": 7583.751103999981,
+            "p95": 10592.806125000003,
+            "sum": 466869.2617940001
+          },
+          "first_content": {
+            "max": 21809.39962499996,
+            "n": 74,
+            "p50": 11002.799145499972,
+            "p95": 18484.009667000035,
+            "sum": 736537.0085009997
+          },
+          "first_reasoning": {
+            "max": 10743.964583999943,
+            "n": 74,
+            "p50": 7583.820624999993,
+            "p95": 10592.996667,
+            "sum": 466877.924002
+          },
+          "first_tool_argument": {
+            "max": 22957.548958999978,
+            "n": 73,
+            "p50": 11769.590874999994,
+            "p95": 19464.05125000002,
+            "sum": 797851.9477070002
+          },
+          "headers": {
+            "max": 10458.786833999911,
+            "n": 74,
+            "p50": 7581.743437499987,
+            "p95": 10345.470542000025,
+            "sum": 465076.93591699994
+          },
+          "host_inspection": {
+            "max": 8.879040999920107,
+            "n": 74,
+            "p50": 5.668875000003027,
+            "p95": 6.8570830000098795,
+            "sum": 355.37008299957404
+          },
+          "max_body_gap": {
+            "max": 556.3036250000005,
+            "n": 74,
+            "p50": 407.09912449999683,
+            "p95": 500.99170899996534,
+            "sum": 28015.09666600008
+          },
+          "max_semantic_gap": {
+            "max": 3157.8881249999977,
+            "n": 74,
+            "p50": 681.0107085000418,
+            "p95": 2095.8030410000356,
+            "sum": 56900.890245000286
+          },
+          "sdk_after_payload": {
+            "max": 20.068750000093132,
+            "n": 74,
+            "p50": 10.784916500007967,
+            "p95": 13.358499999972992,
+            "sum": 667.1879990007662
+          }
+        },
+        "usage": {
+          "cacheRead": {
+            "max": 125376,
+            "n": 74,
+            "p50": 28736.0,
+            "p95": 58368,
+            "sum": 2209024
+          },
+          "cacheWrite": {
+            "max": 0,
+            "n": 74,
+            "p50": 0.0,
+            "p95": 0,
+            "sum": 0
+          },
+          "input": {
+            "max": 68393,
+            "n": 74,
+            "p50": 58067.0,
+            "p95": 67639,
+            "sum": 2818571
+          },
+          "output": {
+            "max": 1893,
+            "n": 74,
+            "p50": 496.0,
+            "p95": 1231,
+            "sum": 40256
+          },
+          "reasoning": {
+            "max": 1671,
+            "n": 74,
+            "p50": 327.0,
+            "p95": 1094,
+            "sum": 29138
+          }
+        },
+        "context": {
+          "input_images": {
+            "max": 71,
+            "n": 74,
+            "p50": 36.5,
+            "p95": 70,
+            "sum": 2698
+          },
+          "omitted_images": {
+            "max": 41,
+            "n": 74,
+            "p50": 6.5,
+            "p95": 40,
+            "sum": 943
+          },
+          "projection_ms": {
+            "max": 8.759667000034824,
+            "n": 74,
+            "p50": 1.7669375000259606,
+            "p95": 5.084374999976717,
+            "sum": 158.2171230003176
+          },
+          "retained_images": {
+            "max": 30,
+            "n": 74,
+            "p50": 30.0,
+            "p95": 30,
+            "sum": 1755
+          }
+        },
+        "host_ms": 864589.4054170001,
+        "observed_request_ms": 810633.5511639996,
+        "observed_tool_ms": 52257.378584999584,
+        "request_tool_overlap_ms": 0,
+        "censored_requests": 0,
+        "unknown_usage_requests": 0
+      },
+      "live_monitoring": {
+        "frozen_max_gap_seconds": 45,
+        "checks": 63,
+        "max_gap_seconds": 105.97724080085754,
+        "gaps_over_frozen_limit_seconds": [
+          105.97724080085754
+        ],
+        "fully_conformant": false
+      },
+      "terminal_report_words": 138,
+      "terminal_report_word_cap": 100,
+      "useful_readiness_gain": false,
+      "successful_gain_latency_seconds": null,
+      "gain_latency_status": "censored at voluntary closeout; no completed retained readiness gain",
+      "save_title_observed": true,
+      "fresh_load_after_this_save": false,
+      "fresh_load_evidence_case": null
+    }
+  ],
+  "accounting": {
+    "baseline_attempts": 3848,
+    "baseline_conservative_usd": "1047.428726784",
+    "combined_iteration_cap": 356,
+    "new_attempts": 226,
+    "populations": {
+      "route_screening": 22,
+      "retained_diagnostics": 32,
+      "native": 172
+    },
+    "known_usage_attempts": 218,
+    "missing_usage_attempts": 8,
+    "known_configured_estimate_usd": "1.0985605420000000128",
+    "actual_cumulative_attempts": 4074,
+    "actual_cumulative_conservative_usd": "1066.799857664",
+    "ceiling_usd": "1200",
+    "unused_combined_capacity_retired": 130,
+    "invoice_available": false,
+    "paid_deepinfra_requests": 0,
+    "extra_ending_admission": false
+  },
+  "decision": {
+    "candidate_adopted": false,
+    "deployed_selection": "DeepSeek Flash1017 medium via explicitly pinned fast provider",
+    "reason": "stable Wafer serving and fresh saved-state continuation coexist with decisive visual errors and no retained readiness gain",
+    "unfulfilled": [
+      "independent useful acquisition/use/needs gain",
+      "useful gain continuation",
+      "acceptable apparent useful cadence"
+    ],
+    "next_uncertainty": "how an eligible visual-player configuration can ground actors/landmarks and commit ordinary UI effects during useful play; no prompt repair or new challenger selected"
+  },
+  "retention": "Only allowlisted summaries and exact native PNGs are published. Original packages, answers, traces, protocols, labels and saves remain ignored project-local evidence, potentially unavailable in a fresh checkout. No private reasoning, raw request/argument/code bodies, credentials or local paths are included.",
+  "delivery_receipts": "GitHub issue302 owns protected PR and actual-main evidence; assessment does not imply those checks passed"
+}
