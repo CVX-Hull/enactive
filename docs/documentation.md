@@ -40,7 +40,7 @@ reader task or boundary benefits; no universal file-size quota applies.
 | --- | --- |
 | `harness/computer/` | Mechanical packets, socket, writer, store, target custody and SDL adapter; no game/player semantics. |
 | `harness/player/` | Pure fallible knowledge, image views, bounded programs and context; no process/provider/native authority. |
-| `harness/application.py` and transport adapters | Compose the two ports and expose explicit current tools. |
+| `harness/application.py`, `harness/observer.py` and transport adapters | Compose current ports/tools and bounded passive evidence views without granting observer authority. |
 | `tools/` | Maintained setup/check/build/campaign entry points and generic Pi host. |
 | `native/` | Upstream provenance and preparation inputs, not a semantic control backend. |
 | `web/` | Passive spectator and independent user Pause. |
@@ -57,6 +57,7 @@ reader task or boundary benefits; no universal file-size quota applies.
 | Collect uncertain input | [Tool procedure](operations/mission-requests.md) → exact original `computer_result` / `player_result`. Input remains stopped; no replay. |
 | Replace an actor | [Host procedure](operations/player-host.md) → [custody contract](contracts/computer-control.md#computer-operations-and-custody). Canonical context and actual quiescence precede successor capability. |
 | Save/load/exit | [Player guide](player-guide.md#current-registered-cdda-lifecycle) → actual visible ordinary controls. The player judges game state; the harness certifies no save. |
+| Investigate observed play | [Start/observe](operations/start-observe.md) → [observer component](components/observer-operations.md) → [passive projection contract](contracts/computer-control.md#passive-spectator-projections). Recorded inspection and current control target remain distinct. |
 | Select validation | [Testing](testing.md) → [development policy](workflows/development.md) and [CI profiles](workflows/ci-profiles.md). Native/gameplay evidence stays separate. |
 
 ## One authoritative home per kind of fact

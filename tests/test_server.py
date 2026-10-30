@@ -59,7 +59,8 @@ def test_operator_pause_does_not_wait_for_player_service_lock(service):
     with app.serial:
         started=time.monotonic()
         status,value=post(port,'/api/pause',{})
-        assert status==200 and value['stop_requested']
+        assert status==200 and value['schema']=='computer-pause/1'
+        assert value['session']==app.runtime.session and value['stop']['stop_requested']
         assert time.monotonic()-started<1 and channel.stopped.is_set()
 
 

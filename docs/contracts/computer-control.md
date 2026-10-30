@@ -223,7 +223,59 @@ payload. Stable frozen system context is reused across actors; changing role,
 resources and handoff knowledge are explicit prompt data. Host decision-time and
 custodian horizons stay distinct. Analysis is read-only and current-format only.
 Observer `observer-timing/4` joins exact session/source/capture to DOM replacement,
-with missing/invalid clocks labelled; it does not measure paint or useful progress.
+including replacement while Watch is hidden, with missing/invalid clocks labelled;
+it does not establish visibility, paint or useful progress.
+
+## Passive spectator projections
+
+`GET /api/status` remains `computer-status/1`. `GET /api/source/ID` verifies and
+serves this session's original retained PNG. A public read failure is unavailable
+observer evidence, not a stop request; actor-side source integrity, input validation
+and capture/publication fencing remain unchanged. The spectator creates no source
+issuance, observation, operation, player record or capability.
+
+`GET /api/activity` has no body/query and returns `observer-activity/1`: actual
+`session`, session-local snapshot `revision`, `entries`, `latest_statement`,
+`omitted_entries` and `coverage`. At most200 complete entries and256KiB of encoded
+JSON (including newline) survive. Host entries retain original actor/trace ordinal,
+kind, available request/tool-call/operation/program IDs, original wall time and
+actor-local monotonic milliseconds. Computer entries retain original operation ID,
+actor, kind, creation wall time, status, bounded reason, exact source metadata and
+separate original/additional-collection disposition lists (at most64 per list,
+with an explicit omitted flag). Identity joins require actual recorded references;
+cross-process wall ordering is approximate, not causal evidence.
+
+Host projection allowlists lifecycle/request/response, public assistant text,
+tool names/dispositions, handoff and retry events. It excludes raw tool arguments,
+request bodies, private reasoning and credentials. IDs are at most256 UTF-8 bytes;
+ordinary status/reason text is bounded. Narration retains at most8192 UTF-8 bytes,
+original `omitted_bytes` and separate `display_omitted_bytes`; omitted original text
+is not recoverable. Bounded latest narration remains separately readable even if
+it precedes the current tail. An absent statement does not prove silence outside
+the retained coverage or model attention.
+
+Coverage reports projected host events/errors, computer operation count and each
+producer's availability. Unavailable computer counts and incomplete total omission
+counts are `null`, not zero. Retained-field/text omission counts cover only the
+projected entries, not unknown missing producer data. A failed read/parse is a labelled gap, not measured zero,
+game failure or renewed authority. Computer reads use a separate read-only SQLite
+transaction with finite busy/query bounds. A disposable host cache reuses the
+driver's original trace consumer; no second durable event log is maintained.
+
+`POST /api/pause` with `{}` unconditionally stops its actual receiving custodian,
+then returns `computer-pause/1` with `session` and original `stop` facts. It never
+waits for activity, executor/application/database locks or prior status. A delayed
+request can stop a replacement custodian; this emergency meaning is explicit.
+Attribute confirmation to the response's actual session, not a stale page/click.
+The page retains one last identified Pause receiver and its monotone stop facts
+separately from bounded activity history. A receiver outside the current/previous view is named explicitly,
+without inferring chronological freshness from its opaque ID or replacing current
+diagnostics. Its retained stop facts merge with later matching status/receipts;
+reordered unconfirmed evidence cannot erase received confirmation.
+Unsupported/lost responses leave confirmation unknown. Same-session stop facts are
+monotone; an earlier status cannot undo a later stop. Old/unidentified requests
+cannot disable a deliberate fresh-session stop. No automatic retry, Resume or
+authority renewal follows. Actor/native stop interfaces remain unchanged.
 
 ## Reuse and qualification limits
 

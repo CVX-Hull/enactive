@@ -17,6 +17,17 @@ experimental proof commands or launch an unprepared/fullscreen application.
 4. Launch only that selected package through `tools/campaign_run.py --run`.
 5. Read its `ready.json` for the selected loopback viewer URL. Inspect actual images and status, including original remaining resources and uncertainty.
 
+Use Watch for current pixels and fallible public statements. In Timeline, select
+recorded activity to inspect its explicit request/operation/source links; inspection
+stays frozen while play continues. Follow latest returns to the current tail.
+Compare the recorded session with the persistent current control target: Pause
+stops the custodian receiving it even during historical inspection. A fresh
+admission after permanent Pause is separate custody, not Resume. Only one previous
+activity snapshot is retained; reload discards client history. See the
+[observer component](../components/observer-operations.md) for coverage and failure
+limits. Local timing downloads measure DOM replacement, not physical paint or
+useful progress, and should be retained project-locally with the selected evidence.
+
 The custodian reserves `started.json` before DB/native creation, owns one native
 process group and passes the exact inherited lock/socket. A partial/used package
 refuses; select a new package rather than delete markers or scan old inboxes.
