@@ -11,7 +11,7 @@ from urllib.request import Request,urlopen
 def main(argv=None):
     parser=argparse.ArgumentParser(description=__doc__)
     actions=parser.add_subparsers(dest='command',required=True)
-    run=actions.add_parser('run',help='One frozen current campaign through generic Pi')
+    run=actions.add_parser('run',help='One frozen current campaign through the selected player host')
     run.add_argument('--run',type=Path,required=True)
     for name in ('status','pause'):
         command=actions.add_parser(name)

@@ -40,7 +40,7 @@ function bounded(value) {
 export function validateConfiguration(configuration, selectedModel, effort) {
   bounded(configuration);
   closed(configuration, ['schema', 'model', 'api_key_env', 'max_requests', 'max_context_images', 'request_timeout_seconds', 'service_tier']);
-  requireThat(configuration.schema === 'pi-player-host/4');
+  requireThat(configuration.schema === 'player-host/1');
   requireThat(/^[A-Za-z_][A-Za-z0-9_]*$/.test(configuration.api_key_env ?? '') && !AMBIENT_PROVIDER_SETTINGS.includes(configuration.api_key_env));
   requireThat(Number.isSafeInteger(configuration.max_requests) && configuration.max_requests > 0);
   requireThat(Number.isSafeInteger(configuration.max_context_images) && configuration.max_context_images > 0);

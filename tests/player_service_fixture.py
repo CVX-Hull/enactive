@@ -1,6 +1,6 @@
 """Current real HTTP/MCP composition over a receiver double; no game or API.
 
-Used by the Pi host's synthetic provider tests. It cannot qualify native delivery,
+Used by the player-host adapter's synthetic provider tests. It cannot qualify native delivery,
 actor succession across a live game, or gameplay outcomes.
 """
 from pathlib import Path

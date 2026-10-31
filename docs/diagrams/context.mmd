@@ -4,7 +4,7 @@ title: Current computer and player context
 flowchart TB
   accTitle: Current computer and player context
   accDescr: Logical boundaries. A designated player interprets actual images and submits basic controls through one custodian. The SDL adapter uses an inherited socket, not file IPC. The user watches actual images and can independently Pause or use the native window. Claims never certify effects.
-U["User<br/>Direction and control"] -->|"Finite objective"| P["Generic Pi player<br/>Interpret and decide"]
+U["User<br/>Direction and control"] -->|"Finite objective"| P["Player in selected host<br/>Interpret and decide"]
   P -->|"Basic controls"| C["Mechanical custodian"]
   C -->|"Actual images and exact receipts"| P
   C -->|"Inherited socket and SDL adapter"| G["Windowed game"]

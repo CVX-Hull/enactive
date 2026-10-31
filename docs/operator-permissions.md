@@ -6,8 +6,8 @@ review_trigger: Launcher, provider delegation, permission or actor-custody chang
 
 # Gameplay permissions and player ownership
 
-Routine admitted gameplay uses the mandatory generic Pi host and its explicit
-current MCP actor configuration. The user has authorized gameplay API spending,
+Routine admitted gameplay uses the player host frozen by the package (currently
+the Pi adapter) and its explicit current MCP actor configuration. The user has authorized gameplay API spending,
 player-visible screenshots/observations/mission-context export to the selected
 provider, and applicable source/evidence/tracker publication to GitHub. Do not
 request those permissions again for each basic action or clean actor succession.
@@ -40,13 +40,15 @@ explains frozen admission. Old semantic/mission commands are removed. Setup,
 Keychain retrieval, source/GitHub operations and arbitrary shell code retain their
 own tool policies; do not hide them behind an allowed command.
 
-[Project-local rules](../.codex/rules/gameplay.rules) provide narrow stable CLI
-allowances outside the sandbox. They do not confine filesystem access, pin source,
-load provider keys, prove active-chat policy loading or grant a per-agent sandbox.
-Use the inspected trusted checkout and freeze source during play. Managed or more
-restrictive policies still win. Test changed rules with the maintained Codex policy
-checker and harmless matching/nonmatching examples, without a custom policy parser.
-No global trust/profile change is part of this cutover.
+Project-local coding-agent allowances provide narrow stable CLI allowances for the
+same three prefixes in each supported host: [Codex rules](../.codex/rules/gameplay.rules)
+and [Claude Code settings](../.claude/settings.json). They do not confine filesystem
+access, pin source, load provider keys, prove active-chat policy loading or grant a
+per-agent sandbox. Use the inspected trusted checkout and freeze source during play.
+Managed or more restrictive policies still win. Test changed allowances with each
+host's maintained checker or headless attempt and the harmless matching/nonmatching
+examples, without a custom policy parser; [coding-agent hosts](operations/coding-agents.md)
+gives the commands. No global trust/profile change is part of this setup.
 
 ### Verified loading and retired recorder allowance
 

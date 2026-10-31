@@ -5,7 +5,7 @@
 prefix_rule(
     pattern = [".venv/bin/python", "-m", "harness", ["status", "pause", "run"]],
     decision = "allow",
-    justification = "Current local status/independent Pause or explicitly frozen finite generic-Pi campaign under standing gameplay authorization.",
+    justification = "Current local status/independent Pause or explicitly frozen finite player-host campaign under standing gameplay authorization.",
     match = [
         ".venv/bin/python -m harness status",
         ".venv/bin/python -m harness pause --url http://127.0.0.1:8766",

@@ -41,7 +41,7 @@ unknown/partial input stops further input. [Memory/program component](memory-lea
 ## Local feedback cost
 
 Program CPU/state/heap/time and child-operation budgets are bounded independently
-of Pi requests. A local program does not make an inference call each step.
+of player host requests. A local program does not make an inference call each step.
 Configured reservations, actual HTTP attempts and invoices stay distinct. Useful
 whole-player cadence and causal learning benefit require authentic outcomes,
 not loop speed or packet timings.
@@ -62,7 +62,7 @@ handoff record restores authority after restart. [Migration](../operations/migra
 ## Assurance and evidence
 
 [Runtime](../../tests/test_computer_runtime.py), [application](../../tests/test_player_application.py),
-[program](../../tests/test_player_programs.py), [MCP](../../tests/test_pi_player_host.py)
+[program](../../tests/test_player_programs.py), [MCP](../../tests/test_player_host_adapter.py)
 and [campaign](../../tests/test_campaign_run.py) assertions cover distinct custody,
 composition, proposal, transport and cleanup boundaries. Check actual assertions
 against the changed invariant; fixtures do not qualify real game usefulness or

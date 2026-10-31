@@ -52,7 +52,7 @@ from useful effects, and exposes routine and outcome-accounting failures.
 The [October26 context, prompt and ergonomics review](research-context-engineering.md)
 examines the user's fast, less flagship model direction against current primary
 small-model/tool studies, memory/compaction counterexamples, provider contracts
-and actual Pi context growth. It prioritizes sufficient current context,
+and actual player host context growth. It prioritizes sufficient current context,
 examples and mechanical authoring ergonomics with recoverable evidence; neither
 more context nor fewer tokens guarantees useful apparent speed. The existing
 Issues own selected experiments, scope and unchanged readiness criteria.

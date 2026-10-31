@@ -41,7 +41,7 @@ reader task or boundary benefits; no universal file-size quota applies.
 | `harness/computer/` | Mechanical packets, socket, writer, store, target custody and SDL adapter; no game/player semantics. |
 | `harness/player/` | Pure fallible knowledge, image views, bounded programs and context; no process/provider/native authority. |
 | `harness/application.py`, `harness/observer.py` and transport adapters | Compose current ports/tools and bounded passive evidence views without granting observer authority. |
-| `tools/` | Maintained setup/check/build/campaign entry points and generic Pi host. |
+| `tools/` | Maintained setup/check/build/campaign entry points and the current player host adapter. |
 | `native/` | Upstream provenance and preparation inputs, not a semantic control backend. |
 | `web/` | Passive spectator and independent user Pause. |
 | `tests/` | Scoped behavioral assertions/doubles and compiled fixtures; actual outcomes are separate evidence. |

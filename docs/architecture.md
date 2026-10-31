@@ -21,7 +21,7 @@ logical responsibilities; arrows identify requests, results or user control.
 
 | Responsibility | Owned state and authority | Component |
 | --- | --- | --- |
-| Deciding player / generic Pi | Goals, visual interpretation, game choices and fallible claims; explicit provider/context/tools | [Player interface](components/player-interface.md) |
+| Deciding player / player host | Goals, visual interpretation, game choices and fallible claims; explicit provider/context/tools | [Player interface](components/player-interface.md) |
 | Optional player services | Knowledge, corrections, source provenance, program lineage and bounded context; no custody | [Memory and learning](components/memory-learning.md) |
 | Composition service | Connects player proposals to the computer port; retains service requests and context snapshots | [Execution](components/mission-execution.md) |
 | Computer custodian | Exact child/socket/lock handles, serialized operations, original resources and actor capabilities | [Native control](components/native-control.md) |
@@ -31,7 +31,7 @@ logical responsibilities; arrows identify requests, results or user control.
 ## Runtime and state
 
 `tools/campaign_run.py` is the sole finite custodian. It validates a fresh frozen
-`campaign-run/2` package and reserves exclusion before launch. `OwnedTarget` keeps
+`campaign-run/3` package and reserves exclusion before launch. `OwnedTarget` keeps
 exact subprocess handles and passes an inherited shared-lock descriptor and a
 nonblocking Unix socket to the SDL adapter. Native retains the shared lock for
 its lifetime, including after the custodian loses its own reference.
@@ -53,7 +53,8 @@ separate read-only computer snapshot; it owns no executor or durable journal.
 The [application](../harness/application.py)
 composes the computer port with optional player memory/program services. A
 project-local stdio MCP adapter owns no writer, native child or provider key.
-Pi owns model calls; the campaign driver owns exact host/MCP group cleanup.
+The selected [player host](contracts/player-host.md) owns model calls; the campaign
+driver owns exact host/MCP group cleanup.
 
 Fresh session stores live under `.runtime/computer-sessions/`. A selected
 `player-memory/1` store may span fresh native-child sessions. Old runtime formats
@@ -122,7 +123,7 @@ requires no save, menu or identity check. [Run procedure](operations/campaign-ru
 One current set is `computer-wire/1`, request/target/receipt `/2`,
 `computer-session/1`, `computer-operation/1`, `computer-source/1`,
 `player-memory/1`, `player-record/1`, `player-program/1`, `program-view/3`,
-`player-handoff/1` and `campaign-run/2`. The exact contract owns the complete set.
+`player-handoff/1`, `player-host/1` and `campaign-run/3`. The exact contracts own the complete set.
 [Migration](operations/migration.md) rejects old stores before effects and preserves
 artifacts/saves as history. Rollback closes writers and selects a coherent earlier
 source/data deployment; mixed readers and replay are unsupported.
@@ -135,7 +136,7 @@ source/data deployment; mixed readers and replay are unsupported.
 | --- | --- |
 | Packet/input/custody | Strict schema, socket/backpressure, writer/deadline and uncertainty assertions; [native control](components/native-control.md#assurance-and-evidence) adds compiled behavior. |
 | Memory/program/context | Pure player and composition assertions for provenance, helper fault isolation and original child IDs; [memory](components/memory-learning.md#assurance-and-evidence). |
-| Host/driver | Actual Pi/MCP fixtures, origin-bound handoff, attempt accounting and exact group quiescence; [player interface](components/player-interface.md#assurance-and-evidence). |
+| Host/driver | Contract conformance and actual adapter/MCP fixtures, origin-bound handoff, attempt accounting and exact group quiescence; [player interface](components/player-interface.md#assurance-and-evidence). |
 | Spectator/operation | Actual images, mechanical versus claim labels and independent Pause; [observer](components/observer-operations.md#assurance-and-evidence). |
 
 The [testing guide](testing.md) selects lanes. [Production outcome evidence](acceptance/2026-10-29-computer-control.md)

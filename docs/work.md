@@ -27,7 +27,8 @@ fresh succession, deliberate Save/new-child reload and final normal ending.
 The [development record](acceptance/2026-10-29-computer-control-development.md)
 preserves intermediate failures. Protected PR/main receipts and live delivery state
 belong in #176 and its linked PR; this page does not duplicate the tracker.
-The generic Pi host is mandatory; each finite OpenRouter / DeepSeek Flash1017
+Each finite package freezes one player host adapter under the
+[player host contract](contracts/player-host.md); each OpenRouter / DeepSeek Flash1017
 medium package pins its provider. The [recorded endpoint dispositions](acceptance/2026-10-29-computer-control.md#failures-and-endpoint-disposition)
 retain Fireworks/BaseTen failures and the explicit DeepInfra ending continuation,
 not a quality ranking.

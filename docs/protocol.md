@@ -42,9 +42,11 @@ transfer, with no game-phase or identity requirement.
 ### Quiescent player replacement
 
 The player selects context roots and summary with `player_handoff`. Canonical
-issuance seals its actor. The Pi host settles only its direct originating handoff
+issuance seals its actor. The player host settles only its direct originating handoff
 or exact original collection; the driver verifies context digest and actual
 old host/MCP group quiescence before a successor. Original limits persist.
+The [player host contract](contracts/player-host.md) owns the substitutable
+`player-host/1` invocation, telemetry, settlement and isolation rules.
 
 ## Transport and state
 
@@ -62,7 +64,7 @@ and [migration](operations/migration.md) own versions and historical-state handl
 
 ## Designated campaign operator
 
-One designated generic-Pi player owns routine gameplay interpretation and choices.
+One designated player, run by the selected player host, owns routine gameplay interpretation and choices.
 The lead owns source, frozen admission, review and verification. Explorers and
 reviewers send no game input. Advisers and programs are optional fallible aids;
 the current route has no asynchronous semantic worker or hidden game-state feed.

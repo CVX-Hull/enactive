@@ -112,7 +112,7 @@ The harness's normal-exit receipt cannot certify a save or objective.
 ## Resources, stopping and context
 
 Custodian seconds/input/request/frame/byte capacities are mechanical resources.
-Pi HTTP attempts and host seconds are separately labelled. A remaining counter
+Player host HTTP attempts and host seconds are separately labelled. A remaining counter
 is not new permission or a quality metric. Preserve the frozen ending reserve.
 
 If another actor is allowed and fresh context helps, call `player_handoff` with

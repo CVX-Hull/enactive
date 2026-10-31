@@ -25,8 +25,8 @@ this is not a process dashboard or attempt log.
 | `.runtime/save-retirement/` and per-campaign `closed-evidence/` | Existing archives and adjacent manifests own exact member hashes and restoration instructions. Restoration still requires a new admission and ordinary Load. |
 | `.runtime/research/` | Owned experiments, including the executable-policy spike environment. Retain required evidence; remove superseded local tooling only after preservation. |
 | `.runtime/tooling/verification-pilots-venv/`, `.runtime/iterations/verification-pilots/` | Historical testmon/source-map experiments; their executables and current installation route are retired. Preserve original result receipts before removing owned generated copies; no real saves are included. |
-| `tools/player_host/node_modules/`, `.runtime/pi-host235/` | Locked mandatory generic-host dependencies and historical offline conformance/probe receipts; npm cache stays in project `.cache/npm`. No model/API credential belongs in these directories. [Host setup](setup.md#install-the-generic-gameplay-host) owns install and support limits. |
-| `.codex/`, repository-local Git configuration/hooks | Reviewed project tool/permission configuration and public identity. [Operator permissions](operator-permissions.md) separates rule matching, host activation and gameplay authority. |
+| `tools/player_host/node_modules/`, `.runtime/pi-host235/` | Locked dependencies of the current player host adapter and historical offline conformance/probe receipts; npm cache stays in project `.cache/npm`. No model/API credential belongs in these directories. [Host setup](setup.md#install-the-generic-gameplay-host) owns install and support limits. |
+| `.codex/`, `.claude/`, `CLAUDE.md`, repository-local Git configuration/hooks | Reviewed project coding-agent tool/permission configuration and public identity. Generated `.codex/config.toml`, `.mcp.json` and `.claude/settings.local.json` are machine-local and ignored. [Operator permissions](operator-permissions.md) separates rule matching, host activation and gameplay authority; [coding-agent hosts](operations/coding-agents.md) maps each host. |
 
 Existing Python, Node, Xcode/Clang, uv and ffmpeg may be reused without modifying
 their installations. New dependencies/caches/outputs remain project-local or in
@@ -56,8 +56,8 @@ The initial build used existing read-only Homebrew FreeType; the replacement
 recipe uses local headers and the official app's bundled runtime. The historical
 verification checked no remaining global pkgconf/pkg-config or Homebrew runtime
 dependency. These are dated facts, not a fresh machine audit or a claim that no
-external change ever occurred. Exact-project Codex trust setup is separately
-recorded in [operator permissions](operator-permissions.md).
+external change ever occurred. Per-user coding-agent trust and approval steps are
+recorded in [coding-agent hosts](operations/coding-agents.md#per-user-activation).
 
 ## Evidence navigation
 

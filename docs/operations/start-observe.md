@@ -8,12 +8,12 @@ status: active
 
 Use a prepared windowed project target and a fresh explicit package. The sole
 current launch command is the [finite campaign custodian](campaign-run.md), which
-validates `campaign-run/2` before effects. Do not invoke old controller, mission or
+validates `campaign-run/3` before effects. Do not invoke old controller, mission or
 experimental proof commands or launch an unprepared/fullscreen application.
 
 1. Finish [local setup](../setup.md), retain native/app/adapter bytes and source provenance.
 2. Select normal project-local CDDA input options before freezing; mouse is enabled and fullscreen disabled. The primitive layer does not override settings.
-3. Freeze the exact clean source, native/adapter/initial-config hashes, target argv/cwd/environment, Pi route/context/prompt and original limits in a fresh `.runtime/computer-sessions/` package.
+3. Freeze the exact clean source, native/adapter/initial-config hashes, target argv/cwd/environment, player host argv, route/context/prompt and original limits in a fresh `.runtime/computer-sessions/` package.
 4. Launch only that selected package through `tools/campaign_run.py --run`.
 5. Read its `ready.json` for the selected loopback viewer URL. Inspect actual images and status, including original remaining resources and uncertainty.
 

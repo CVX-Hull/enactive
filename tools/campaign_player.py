@@ -1,4 +1,4 @@
-"""Finite generic-Pi actors over one live mechanical custodian."""
+"""Finite actors of the selected player host over one live mechanical custodian."""
 from __future__ import annotations
 
 from datetime import datetime
@@ -42,7 +42,8 @@ class HostEvents:
             self.ordinal+=1
             kind=value.get('type')
             if kind=='host-start':
-                if self.started or value.get('telemetry_version')!=2:raise ControlError('Unsupported/repeated current host trace')
+                if (self.started or value.get('telemetry_version')!=2
+                        or value.get('schema')!='player-host/1'):raise ControlError('Unsupported/repeated current host trace')
                 self.started=True
             elif kind=='request-start':
                 match=re.fullmatch(r'request-([1-9][0-9]*)',value.get('request_id',''))
@@ -133,7 +134,7 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
             write_new(target/'player-final.txt','',text=True)
             write_new(target/'frozen.json',dict(schema='player-host-inputs/1',actor_id=actor['actor_id'],session=profile['session'],
                 files={name:hashlib.sha256((target/name).read_bytes()).hexdigest() for name in ('actor.json','route.json','mcp.json','context.txt','prompt.txt')}))
-            arguments=[profile['node'],str(ROOT/'tools/player_host/run.mjs'),'--config',str(target/'route.json'),
+            arguments=[*profile['host']['argv'],'run','--config',str(target/'route.json'),
                 '--mcp-config',str(target/'mcp.json'),'--context',str(target/'context.txt'),'--model',route['model']['id'],
                 '--effort',profile['effort'],'--timeout-seconds',str(seconds),'-o',str(target/'player-final.txt')]
             environment=dict(PATH=os.environ.get('PATH','/usr/bin:/bin'),LANG='en_US.UTF-8',**{route['api_key_env']:secret})

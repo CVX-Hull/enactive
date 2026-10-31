@@ -476,8 +476,8 @@
       "id": "C-BOUNDARY",
       "name": "Architectural dependency contracts",
       "mode": "automatic",
-      "scope": "Mechanical computer authority, optional player logic, actor adapters and HTTP composition.",
-      "mechanism": "Four current Import Linter contracts prohibit computer dependencies on player/adapter semantics, player custody/network dependencies, adapter executor instantiation and server CLI/tooling imports. Actual temporary-source negative tests exercise direct and indirect violations; shared data/control ports remain legal.",
+      "scope": "Mechanical computer authority, optional player logic, actor adapters, HTTP composition, the substitutable player host boundary and host-neutral current design/tooling.",
+      "mechanism": "Four current Import Linter contracts prohibit computer dependencies on player/adapter semantics, player custody/network dependencies, adapter executor instantiation and server CLI/tooling imports. Actual temporary-source negative tests exercise direct and indirect violations; shared data/control ports remain legal. The player-host/1 conformance suite drives each listed adapter only through contract argv, files, environment, telemetry and exit status. A host-neutrality regression fails when current documents, harness or tooling outside the adapter, setup and operator pages name a specific player host or coding agent.",
       "owner": "harness maintainer",
       "trigger": "common command; architecture changes require rule review",
       "evidence": [
@@ -492,19 +492,23 @@
         "harness/computer/protocol.py",
         "harness/player/programs.py",
         "docs/acceptance/2026-10-29-computer-control-development.md",
-        "docs/acceptance/2026-10-29-computer-control.md"
+        "docs/acceptance/2026-10-29-computer-control.md",
+        "docs/contracts/player-host.md",
+        "tests/test_player_host_contract.py",
+        "tests/test_host_neutrality.py"
       ],
-      "failure_response": "Remove reversed dependency or review the boundary and checker together before accepting changed architecture.",
-      "limitations": "Static import graph with configured external roots. Dynamic imports, external-package internals, undeclared libraries and semantic C++ isolation remain review concerns; this is not comprehensive module layering.",
+      "failure_response": "Remove reversed dependency or review the boundary and checker together before accepting changed architecture. Move host-specific detail to the adapter, setup or operator page, or change the contract and every adapter together.",
+      "limitations": "Static import graph with configured external roots. Dynamic imports, external-package internals, undeclared libraries and semantic C++ isolation remain review concerns; this is not comprehensive module layering. Contract conformance uses a scripted provider and MCP double and qualifies no model, provider or gameplay; only one adapter is listed. The name regression is lexical and cannot detect host-specific behavior described generically.",
       "enforcement": "Common command runs the real lint-imports executable and propagates failure; temporary source fixtures exercise allowed composition and direct/indirect forbidden imports.",
       "status": "active",
       "rationale": null,
       "replacement": null,
       "last_exercise": {
-        "date": "2026-10-29",
-        "outcome": "Four current Import Linter contracts pass; temporary-source negative cases exercised in the full77cd124 profile.",
-        "scope": "Computer/player/adapters/server dependency boundaries, shared ports and current production callers. Source import constraints do not prove semantic correctness or portability.",
+        "date": "2026-10-31",
+        "outcome": "Four current Import Linter contracts, the player-host/1 conformance suite on the current adapter and the host-neutrality regression pass in the full 1cae70f profile; an offline native driver preflight ran through the contract.",
+        "scope": "Computer/player/adapters/server dependency boundaries, the player host boundary with one listed adapter, and lexical host naming in current pages and tooling. Source import constraints and scripted-provider conformance do not prove semantic correctness, portability or gameplay.",
         "evidence": [
+          "docs/acceptance/2026-10-31-host-neutral-player.md",
           "docs/acceptance/2026-10-29-computer-control.md",
           "docs/acceptance/2026-10-29-computer-control-development.md"
         ]
@@ -692,6 +696,10 @@
         "tests/test_setup.py",
         "docs/setup.md",
         "docs/environment.md",
+        "docs/operations/coding-agents.md",
+        "tools/configure_player_tools.py",
+        "tests/test_coding_agent_config.py",
+        "docs/acceptance/2026-10-31-host-neutral-player.md",
         "docs/acceptance/2026-10-27-audit-resolution.md",
         "package.json",
         "docs/acceptance/2026-10-29-computer-control.md",

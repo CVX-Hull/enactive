@@ -11,5 +11,8 @@ __pycache__/
 .DS_Store
 dist/
 *.egg-info/
-# Generated machine-local MCP launch paths; portable recipe is tracked.
+# Generated machine-local coding-agent MCP launch paths; the generator is tracked.
 .codex/config.toml
+.mcp.json
+.claude/settings.local.json
+.claude/worktrees/

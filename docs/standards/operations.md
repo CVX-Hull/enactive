@@ -21,8 +21,9 @@ guardrail-review round trips. Configure the supported project-scoped execution
 path during setup. Verify the selected host's effective configuration and a
 harmless live call through the actual designated player's configured tool entry
 point. Reuse unchanged verified setup as the operator procedure permits; recheck
-changed host/tool/permission boundaries. Codex project trust/rule loading applies
-only when the engineering launcher uses that mechanism; the Pi player loads no
+changed host/tool/permission boundaries. Coding-agent project trust, rule and
+permission loading applies only to the lead's coding agent through the
+[supported host setup](../operations/coding-agents.md); the player host loads no
 coding-agent configuration. A rule match alone does not establish usable access.
 Resolve recurring reviews in setup; do not normalize
 them as the gameplay loop. Preserve native freshness, single-executor and Pause
