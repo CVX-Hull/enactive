@@ -14,7 +14,7 @@ from tools.campaign_player import HostEvents,run_hosts
 
 def test_original_attempts_and_partial_trace_reservation(tmp_path):
     path=tmp_path/'host.jsonl'
-    rows=[dict(type='host-start',telemetry_version=2,schema='player-host/1'),
+    rows=[dict(type='host-start',telemetry_version=2,schema='player-host/2'),
           dict(type='request-start',request_id='request-1'),
           dict(type='request-start',request_id='request-2'),
           dict(type='settled',requests=2,ok=False)]
@@ -56,7 +56,7 @@ flags = dict(zip(rest[::2], rest[1::2]))
 assert mode == 'run' and sorted(flags) == ['--config', '--context', '--effort', '--mcp-config', '--model', '--timeout-seconds', '-o'], sys.argv
 assert sorted(os.environ) >= ['FIXTURE_KEY', 'LANG', 'PATH'] and os.environ['FIXTURE_KEY'] == 'fixture-secret'
 assert sys.stdin.read().startswith('Frozen mission')
-for event in (dict(type='host-start', telemetry_version=2, schema='player-host/1'),
+for event in (dict(type='host-start', telemetry_version=2, schema='player-host/2'),
               dict(type='request-start', request_id='request-1'),
               dict(type='settled', ok=True, reason='completed', requests=1)):
     print(json.dumps(event), flush=True)

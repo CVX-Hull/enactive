@@ -6,7 +6,7 @@ status: active
 
 # Player host contract
 
-`player-host/1` is the one current boundary between the [campaign driver](../../tools/campaign_player.py)
+`player-host/2` is the one current boundary between the [campaign driver](../../tools/campaign_player.py)
 and the program that hosts a deciding player. The host turns frozen context, a
 frozen provider route and the actor's MCP table into model calls and sequential
 player tool calls. The driver owns actor minting, original limits, process-group
@@ -47,16 +47,20 @@ when the final `settled` event has `ok: true`.
 
 ## Route envelope
 
-The frozen route is one closed JSON object with `schema: "player-host/1"`,
+The frozen route is one closed JSON object with `schema: "player-host/2"`,
 `model`, `api_key_env`, `max_requests`, `max_context_images`,
-`request_timeout_seconds` and `service_tier`. The driver and package validator
+`context_image_block`, `request_timeout_seconds` and `service_tier`.
+`max_context_images` is the hard peak of pixel images in one request.
+`context_image_block` (1 to that peak) is the count-only block in which the oldest
+historical images beyond the peak are replaced by markers; block 1 replaces exactly
+the overflow. The driver and package validator
 read only: `model.id`, `model.name`, `model.cost.{input,output,cacheRead,cacheWrite}`
 (dollars per million tokens), `model.contextWindow`, `model.maxTokens`,
 `api_key_env`, `max_requests` and `service_tier`. The adapter owns every other
 closed `model` field and rejects routes it cannot serve without fallback. The
 driver lowers `max_requests` to the actor's remaining original allowance before
-launch. Routes carrying any other schema, including earlier adapter-named route
-schemas, are rejected; their packages are inert history. One logical inference
+launch. Routes carrying any other schema, including `player-host/1` and earlier
+adapter-named route schemas, are rejected; their packages and traces are inert history. One logical inference
 request uses at most two charged attempts, each counted against `max_requests`;
 the adapter's host reference defines which transient refusal classes are retried.
 
@@ -68,7 +72,7 @@ kinds. Required semantics:
 
 | Event | Contract |
 | --- | --- |
-| `host-start` | Exactly once and first in any run that admits its arguments and inputs, with `telemetry_version: 2` and `schema: "player-host/1"`; the driver rejects any other schema. |
+| `host-start` | Exactly once and first in any run that admits its arguments and inputs, with `telemetry_version: 2` and `schema: "player-host/2"`; the driver rejects any other schema. |
 | `request-start` | One per provider HTTP attempt, including failed and provider-only retries, with `request_id` `request-N` contiguous from 1 and never above `max_requests`. |
 | `response-complete` | Per completed attempt; `usage_available` is boolean and, when true, `usage.cost.total` carries the configured or provider estimate. Missing usage stays unknown. |
 | `handoff` | At most once, with `actor_id`, `session`, `handoff_id`, `context_id`, `context_sha256` and `grants_authority: false`. |

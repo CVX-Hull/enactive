@@ -21,7 +21,7 @@ class HostAnalysisTests(unittest.TestCase):
 
     def event(self, kind, at, **fields):
         if kind == "host-start":
-            fields = {"schema": "player-host/1", "telemetry_version": 2, **fields}
+            fields = {"schema": "player-host/2", "telemetry_version": 2, **fields}
         return dict(type=kind, monotonic_ms=at, **fields)
 
     def test_retries_censoring_and_reasoning_are_not_success_or_extra_tokens(self):
@@ -131,12 +131,18 @@ class HostAnalysisTests(unittest.TestCase):
 
     def test_only_exact_current_host_version_is_interpreted(self):
         for fields in ({}, {"schema": "pi-player-host/4", "telemetry_version": 2},
-                       {"schema": "player-host/2", "telemetry_version": 2},
-                       {"schema": "player-host/1", "telemetry_version": 1},
-                       {"schema": "player-host/1", "telemetry_version": True}):
+                       {"schema": "player-host/1", "telemetry_version": 2},
+                       {"schema": "player-host/3", "telemetry_version": 2},
+                       {"schema": "player-host/2", "telemetry_version": 1},
+                       {"schema": "player-host/2", "telemetry_version": True}):
             row = analyze_trace(self.trace([dict(type="host-start", monotonic_ms=0, **fields)]))
             self.assertEqual(row["coverage"], "unsupported_version")
             self.assertNotIn("requests", row)
+
+    def test_image_policy_counts_are_captured_with_the_configuration(self):
+        e = self.event
+        row = analyze_trace(self.trace([e("host-start", 0, max_context_images=39, context_image_block=10)]))
+        self.assertEqual((row["configuration"]["max_context_images"], row["configuration"]["context_image_block"]), (39, 10))
 
     def test_progress_times_remain_relative_to_original_fetch_and_payload_is_omitted(self):
         e = self.event

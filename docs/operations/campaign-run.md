@@ -29,8 +29,9 @@ working directory are absolute. Keep the prepared wrapper/windowed project userd
 and normal input configuration. The target receives only the permitted environment
 and inherited mechanical descriptors, not provider credentials.
 
-`route.json` uses current `player-host/1` with text/image input and explicit
-provider/effort/price/image-history metadata. The selected route is OpenRouter /
+`route.json` uses current `player-host/2` with text/image input and explicit
+provider/effort/price metadata and image peak and block, chosen against the
+provider's image limit. The selected route is OpenRouter /
 an explicitly pinned provider / DeepSeek Flash1017 medium, default service tier, no fallback.
 `mcp-template.json` must equal the current generated profile with `@ACTOR_CONFIG@`.
 Freeze the player guide/current schema, meaningful task, original limits and ending

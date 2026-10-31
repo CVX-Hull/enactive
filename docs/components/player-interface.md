@@ -38,7 +38,8 @@ interpretation, never engine facts. The provider image-history window retains al
 text/IDs, marks omitted older pixels and protects the current result group; an
 oversized protected group stops. Source availability does not prove the actor read it.
 
-Current provider route is closed `player-host/1`, with explicit image allowance,
+Current provider route is closed `player-host/2`, with an explicit image peak and
+count-only eviction block,
 cost/capacity/effort metadata and default service tier for the current campaign.
 OpenRouter uses exact selected full-tag routing, no fallback and required parameter
 support. Credentials are injected only into the provider host; MCP/native children
@@ -61,7 +62,7 @@ cannot become resumable handoff. At most two hosts are permitted by `campaign-ru
 ## Assurance and evidence
 
 The [host contract suite](../../tests/test_player_host_contract.py) drives each listed
-adapter only through `player-host/1`. [Adapter](../../tests/test_player_host_adapter.py),
+adapter only through `player-host/2`. [Adapter](../../tests/test_player_host_adapter.py),
 [driver](../../tests/test_campaign_player.py) and [custodian](../../tests/test_campaign_run.py)
 fixtures exercise real maintained libraries with synthetic provider/owned children.
 They add configuration, image, settlement, accounting and cleanup evidence without
