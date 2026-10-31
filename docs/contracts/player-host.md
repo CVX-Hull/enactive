@@ -66,15 +66,19 @@ kinds. Required semantics:
 
 | Event | Contract |
 | --- | --- |
-| `host-start` | Exactly once and first, with `telemetry_version: 2` and `schema: "player-host/1"`. |
+| `host-start` | Exactly once and first in any run that admits its arguments and inputs, with `telemetry_version: 2` and `schema: "player-host/1"`; the driver rejects any other schema. |
 | `request-start` | One per provider HTTP attempt, including failed and provider-only retries, with `request_id` `request-N` contiguous from 1 and never above `max_requests`. |
 | `response-complete` | Per completed attempt; `usage_available` is boolean and, when true, `usage.cost.total` carries the configured or provider estimate. Missing usage stays unknown. |
 | `handoff` | At most once, with `actor_id`, `session`, `handoff_id`, `context_id`, `context_sha256` and `grants_authority: false`. |
 | `settled` | Exactly once and last, with `ok`, `reason` and `requests` equal to the number of `request-start` events. |
 
-A partial final line, missing `settled`, repeated terminal events or
-non-contiguous requests make accounting incomplete; the driver then charges the
-whole original allocation. Telemetry carries bounded visible narration and
+Two failure shapes are permitted and always unsuccessful. A host that refuses its
+mode, arguments or inputs before starting emits only one `settled` with `ok: false`
+and no `host-start`. A host that fails after settling (for example while writing
+`FINAL`) may append a second `settled` with `ok: false` and exits nonzero.
+A partial final line, missing `host-start` or `settled`, repeated terminal events
+or non-contiguous requests make accounting incomplete; the driver then charges the
+whole original allocation and admits no successor. Telemetry carries bounded visible narration and
 mechanical references, never credentials, private reasoning or raw provider
 request/image histories.
 

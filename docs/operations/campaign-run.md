@@ -116,7 +116,8 @@ reservation is prior consumed reservation plus that amount times
 trace accounting charges its original allocation; known unused allowance retires.
 
 Limits: five input files each ≤1MiB; 1–16 initial files; host argv of 1–8 entries,
-the first an absolute regular file and the rest canonical project-local files, with
+the first an absolute regular file and the rest canonical project-local files tracked
+by the clean source commit (ignored `.runtime`, `.worktrees` or dependency files refuse), with
 the frozen adapter's `validate` mode accepting the route and MCP template; port1024–65535;
 wall60–86400s, host/aggregate-host30–86400s, one/two hosts and1–10000 HTTP attempts.
 Host seconds ≤aggregate-host seconds <wall seconds minus30s cleanup. Each positive

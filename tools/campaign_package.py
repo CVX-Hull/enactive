@@ -58,6 +58,11 @@ def preflight(directory: Path) -> tuple[dict,dict,dict]:
     current=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()
     if profile['source_commit']!=current or subprocess.check_output(['git','status','--porcelain'],cwd=ROOT):
         raise ControlError('Campaign requires its exact inspected clean source checkpoint')
+    # Clean status omits ignored files; tracked plus clean binds adapter bytes to the commit.
+    adapter={str(Path(entry).relative_to(ROOT)) for entry in profile['host']['argv'][1:]}
+    tracked=subprocess.check_output(['git','ls-files','-z','--',*sorted(adapter)],cwd=ROOT).split(b'\0') if adapter else []
+    if adapter-{name.decode() for name in tracked if name}:
+        raise ControlError('Player host adapter files must be tracked by the clean source commit')
     if set(profile['files'])!=FILES:raise ControlError('Freeze every selected driver input')
     for name,sha in profile['files'].items():
         path=local_file(str(directory/name))
@@ -86,14 +91,12 @@ def preflight(directory: Path) -> tuple[dict,dict,dict]:
     if not profile['host_seconds']<=profile['total_host_seconds']<profile['wall_seconds']-30:
         raise ControlError('Original host and cleanup horizons do not fit')
     route=read_json(directory/'route.json',1048576)
+    if type(route) is not dict or route.get('schema')!='player-host/1':
+        raise ControlError('Unsupported player host route; old routes are inert history')
     if route.get('service_tier')!='default':raise ControlError('This campaign allocation supports only the selected default serving tier')
     if route['max_requests']>profile['max_http_attempts']:raise ControlError('Per-host attempts exceed original campaign allowance')
     template=read_json(directory/'mcp-template.json',1048576)
     if template!=configuration('@ACTOR_CONFIG@'):raise ControlError('Only the current explicit actor MCP profile is supported')
-    subprocess.run([*profile['host']['argv'],'validate','--config',str(directory/'route.json'),
-        '--mcp-config',str(directory/'mcp-template.json'),'--model',route['model']['id'],'--effort',profile['effort']],cwd=ROOT,check=True,
-        stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=10,
-        env=dict(PATH=os.environ.get('PATH','/usr/bin:/bin'),LANG='en_US.UTF-8'))
     target=read_json(directory/'target.json',1048576)
     closed(target,{'argv','cwd','env'})
     if (type(target['argv']) is not list or not 1<=len(target['argv'])<=32
@@ -105,6 +108,12 @@ def preflight(directory: Path) -> tuple[dict,dict,dict]:
     for key,value in target['env'].items():
         if (key not in {'PATH','LANG','SDL_AUDIODRIVER','SDL_VIDEODRIVER','DYLD_LIBRARY_PATH','DYLD_FRAMEWORK_PATH'}
                 or not isinstance(value,str) or len(value)>8192):raise ControlError('Target environment contains unsupported or credential settings')
+    # Static refusals precede any adapter code; accounting below relies on the
+    # adapter having accepted the route's closed model shape.
+    subprocess.run([*profile['host']['argv'],'validate','--config',str(directory/'route.json'),
+        '--mcp-config',str(directory/'mcp-template.json'),'--model',route['model']['id'],'--effort',profile['effort']],cwd=ROOT,check=True,
+        stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=10,
+        env=dict(PATH=os.environ.get('PATH','/usr/bin:/bin'),LANG='en_US.UTF-8'))
     budget=profile['accounting']
     closed(budget,{'prior_attempts','prior_reserved_usd','ceiling_usd','prospective_reserved_usd'})
     integer(budget['prior_attempts'],0,10**9)

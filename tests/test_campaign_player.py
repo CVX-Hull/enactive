@@ -6,12 +6,15 @@ import time
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
+import pytest
+
+from harness.computer.protocol import ControlError
 from tools.campaign_player import HostEvents,run_hosts
 
 
 def test_original_attempts_and_partial_trace_reservation(tmp_path):
     path=tmp_path/'host.jsonl'
-    rows=[dict(type='host-start',telemetry_version=2),
+    rows=[dict(type='host-start',telemetry_version=2,schema='player-host/1'),
           dict(type='request-start',request_id='request-1'),
           dict(type='request-start',request_id='request-2'),
           dict(type='settled',requests=2,ok=False)]
@@ -22,6 +25,16 @@ def test_original_attempts_and_partial_trace_reservation(tmp_path):
         with path.open('a') as stream:stream.write('{"partial":')
         result=events.finish()
         assert not result['accounting_complete'] and result['attempts_charged']==10
+    finally:events.close()
+
+
+@pytest.mark.parametrize('schema',['pi-player-host/4',None])
+def test_trace_from_another_host_contract_is_refused(tmp_path,schema):
+    path=tmp_path/'host.jsonl'
+    path.write_text(json.dumps(dict(type='host-start',telemetry_version=2,schema=schema))+'\n')
+    events=HostEvents(path,10)
+    try:
+        with pytest.raises(ControlError,match='Unsupported'):events.finish()
     finally:events.close()
 
 

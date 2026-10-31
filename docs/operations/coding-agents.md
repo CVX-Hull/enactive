@@ -61,7 +61,9 @@ A coding agent may attach the player MCP adapter only for engineering inspection
 an explicitly issued `player-adapter/1` actor: a fixture service, or an actor the
 lead deliberately issued under the current custody procedure. It is not a deciding
 host, and any input sent through it is a game input under the designation rules.
-Generate the entry from source; the tool list is always the current
+Unlike a player host's MCP child, which receives only `PATH` and `LANG`, a lead-side
+server inherits the coding agent's environment; do not attach it in a shell that
+holds a provider credential. Generate the entry from source; the tool list is always the current
 [`tool_specs`](../../harness/player_tools.py):
 
 ```sh

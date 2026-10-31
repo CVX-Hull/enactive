@@ -775,7 +775,7 @@
         ],
         "effectiveness": "partially_effective",
         "findings": "Exact runtime hashes, unchanged native binary, scoped portable and real native lanes recorded; immutable official Node24 action identities verified. Hosted candidate/main checks, warning resolution and active rules require separate publication readback; no new enforcement probe or human approval claimed. Round014 ad-hoc source hashes are retained history; current standard now requires a Git checkpoint before future native acceptance, avoiding parallel source inventories. User-directed development-first checkpoints retain protected formal acceptance while avoiding full local+duplicate hosted checks before every short attempt. A passing exact hosted full suite can satisfy portable qualification; no redundant local rerun is required solely for ceremony.",
-        "cost": "Existing project-local tooling; one worker, read-only source sweeps and independent reviews, lead integration and one serialized native session. Failed repairs and first planner timeout retained; coding-agent usage and sustained review cost unmeasured.",
+        "cost": "Existing project-local tooling; one worker, read-only source sweeps and independent reviews, lead integration and one serialized native session. Failed repairs and first planner timeout retained; Codex usage and sustained review cost unmeasured.",
         "follow_up": "@CVX-Hull owns live follow-up through [#75](https://github.com/CVX-Hull/enactive/issues/75); the Issue owns acceptance, allocation and stage. This scoped maintenance assessment does not close product outcomes or renew evidence."
       },
       "next_review": "2027-01-15"

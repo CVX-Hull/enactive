@@ -8,6 +8,7 @@ provider, latency or gameplay outcome.
 """
 from __future__ import annotations
 
+from dataclasses import dataclass
 import json
 import os
 from pathlib import Path
@@ -18,6 +19,7 @@ import sys
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from typing import Callable
 
 import pytest
 
@@ -29,25 +31,50 @@ MCP_DOUBLE = ROOT / "tests" / "fixtures" / "player_host_mcp.py"
 CREDENTIAL_ENV = "FIXTURE_PROVIDER_KEY"
 CREDENTIAL = "contract-credential-4f1c9a7e"
 ALLOWANCE = 4
-# Each entry is the adapter argv prefix; the suite appends only a mode and flags.
-ADAPTERS = [[shutil.which("node") or "node", str(ROOT / "tools" / "player_host" / "run.mjs")]]
+@dataclass(frozen=True)
+class Adapter:
+    """One listed adapter. The suite appends only a mode and contract flags to
+    `argv`. The adapter owns its closed route `model`; `model(base_url)` serves the
+    reference OpenAI-compatible provider double below. An adapter for another wire
+    format supplies its own provider double through the same steps before listing."""
+    name: str
+    argv: list[str]
+    model: Callable[[str], dict]
+    missing: Callable[[], str | None]
 
 
-def missing_prerequisite(argv: list[str]) -> str | None:
+def node_package_missing(argv: list[str]) -> str | None:
     if shutil.which(argv[0]) is None and not Path(argv[0]).is_file():
         return f"adapter executable {argv[0]} is unavailable"
     package = Path(argv[-1]).parent
-    if (package / "package.json").is_file() and not (package / "node_modules").is_dir():
+    if not (package / "node_modules").is_dir():
         return f"{package}/node_modules is not installed"
     return None
 
 
-@pytest.fixture(params=ADAPTERS, ids=lambda argv: Path(argv[-1]).parent.name)
-def adapter(request) -> list[str]:
-    reason = missing_prerequisite(request.param)
+CURRENT_ARGV = [shutil.which("node") or "node", str(ROOT / "tools" / "player_host" / "run.mjs")]
+ADAPTERS = [Adapter(
+    name="player_host",
+    argv=CURRENT_ARGV,
+    model=lambda base_url: dict(id="fixture", name="fixture", api="openai-completions", provider="fixture",
+                                baseUrl=base_url, input=["text", "image"], reasoning=False,
+                                cost=dict(input=0, output=0, cacheRead=0, cacheWrite=0), contextWindow=10000, maxTokens=100),
+    missing=lambda: node_package_missing(CURRENT_ARGV),
+)]
+
+
+@pytest.fixture(params=ADAPTERS, ids=lambda adapter: adapter.name)
+def adapter(request) -> Adapter:
+    reason = request.param.missing()
     if reason:
         pytest.skip(reason)
     return request.param
+
+
+def route(adapter: Adapter, base_url: str, *, schema="player-host/1", max_requests=ALLOWANCE) -> dict:
+    """The contract envelope around the adapter-owned model."""
+    return dict(schema=schema, service_tier="default", api_key_env=CREDENTIAL_ENV, max_requests=max_requests,
+                max_context_images=4, request_timeout_seconds=10, model=adapter.model(base_url))
 
 
 # ---------------------------------------------------------------- reference provider
@@ -141,20 +168,12 @@ class Hosted:
         self.adapter, self.directory, self.provider, self.effort = adapter, directory, provider, effort
         self.paths = {name: directory / name for name in ("route.json", "mcp.json", "context.txt", "prompt.txt", "final.txt",
                                                           "host.jsonl", "host-stderr.log", "mcp-log", "mcp-pid")}
-        self.paths["route.json"].write_text(json.dumps(self.route(provider.base_url)))
+        self.paths["route.json"].write_text(json.dumps(route(adapter, provider.base_url)))
         self.paths["mcp.json"].write_text(json.dumps(self.mcp(enabled_tools)))
         self.paths["context.txt"].write_text("Frozen player guide")
         self.paths["prompt.txt"].write_text("Offline mission")
         self.paths["final.txt"].write_text("reserved")
         self.process: subprocess.Popen | None = None
-
-    @staticmethod
-    def route(base_url: str, *, schema="player-host/1", max_requests=ALLOWANCE) -> dict:
-        return dict(schema=schema, service_tier="default", api_key_env=CREDENTIAL_ENV, max_requests=max_requests,
-                    max_context_images=4, request_timeout_seconds=10,
-                    model=dict(id="fixture", name="fixture", api="openai-completions", provider="fixture", baseUrl=base_url,
-                               input=["text", "image"], reasoning=False,
-                               cost=dict(input=0, output=0, cacheRead=0, cacheWrite=0), contextWindow=10000, maxTokens=100))
 
     def mcp(self, enabled_tools) -> dict:
         return dict(command=sys.executable, args=[str(MCP_DOUBLE), str(self.paths["mcp-log"]), str(self.paths["mcp-pid"])],
@@ -171,7 +190,7 @@ class Hosted:
         environment = dict(PATH=os.environ.get("PATH", "/usr/bin:/bin"), LANG="en_US.UTF-8", **{CREDENTIAL_ENV: CREDENTIAL})
         with self.paths["host.jsonl"].open("x") as output, self.paths["host-stderr.log"].open("x") as errors, \
                 self.paths["prompt.txt"].open() as prompt:
-            self.process = subprocess.Popen([*self.adapter, *arguments], cwd=ROOT, env=environment, stdin=prompt,
+            self.process = subprocess.Popen([*self.adapter.argv, *arguments], cwd=ROOT, env=environment, stdin=prompt,
                                             stdout=output, stderr=errors, start_new_session=True)
         return self
 
@@ -237,17 +256,18 @@ def process_gone(pid: int, seconds: float = 5) -> bool:
 
 def run_mode(adapter, arguments, **kwargs) -> subprocess.CompletedProcess:
     environment = dict(PATH=os.environ.get("PATH", "/usr/bin:/bin"), LANG="en_US.UTF-8")
-    return subprocess.run([*adapter, *arguments], cwd=ROOT, env=environment, stdin=subprocess.DEVNULL,
+    return subprocess.run([*adapter.argv, *arguments], cwd=ROOT, env=environment, stdin=subprocess.DEVNULL,
                           capture_output=True, text=True, timeout=30, **kwargs)
 
 
 # ---------------------------------------------------------------- validate mode
 
 @pytest.fixture
-def validation_files(tmp_path):
-    def write(*, route=None, mcp=None) -> list[str]:
+def validation_files(adapter, tmp_path):
+    # Port 9 (discard) is never contacted: validation is offline and credential-free.
+    def write(*, envelope=None, mcp=None) -> list[str]:
         paths = (tmp_path / "route.json", tmp_path / "mcp.json")
-        template = Hosted.route("http://127.0.0.1:9/v1") if route is None else route
+        template = route(adapter, "http://127.0.0.1:9/v1") if envelope is None else envelope
         table = dict(command=sys.executable, args=[str(MCP_DOUBLE), "log", "pid"], cwd=str(tmp_path), enabled=True,
                      required=True, enabled_tools=["observe"], startup_timeout_sec=15, tool_timeout_sec=5) if mcp is None else mcp
         paths[0].write_text(json.dumps(template))
@@ -263,7 +283,7 @@ def test_validate_accepts_reference_route_and_mcp_table_silently(adapter, valida
 
 def test_validate_rejects_old_route_schema(adapter, validation_files):
     for schema in ("pi-player-host/4", "player-host/0", "player-host/2"):
-        result = run_mode(adapter, ["validate", *validation_files(route=Hosted.route("http://127.0.0.1:9/v1", schema=schema))])
+        result = run_mode(adapter, ["validate", *validation_files(envelope=route(adapter, "http://127.0.0.1:9/v1", schema=schema))])
         assert result.returncode != 0, schema
 
 
@@ -290,9 +310,19 @@ def test_run_with_invalid_arguments_settles_unsuccessfully(adapter, host_factory
         "repeated": ["run", *flags, "--effort", "off"],
         "no-mode": flags,
     }[case]
-    assert hosted.start(arguments).wait() == 1
-    settled = hosted.settled()
-    assert settled["ok"] is False
+    assert hosted.start(arguments).wait() != 0
+    # Refusal shape: one unsuccessful settlement, no host-start, so accounting is incomplete.
+    assert [event["type"] for event in hosted.events()] == ["settled"]
+    assert hosted.settled()["ok"] is False
+    assert hosted.accounted()["accounting_complete"] is False
+    assert hosted.provider.requests == [] and hosted.final() == "reserved"
+
+
+def test_oversized_input_is_refused_before_any_provider_request(adapter, host_factory):
+    hosted = host_factory([text_response("must never be requested")])
+    hosted.paths["context.txt"].write_bytes(b"x" * (1024 * 1024 + 1))
+    assert hosted.start().wait() != 0
+    assert hosted.settled()["ok"] is False
     assert hosted.provider.requests == [] and hosted.final() == "reserved"
 
 
@@ -301,9 +331,10 @@ def test_completed_run_reports_final_text_and_accountable_telemetry(adapter, hos
     assert hosted.start().wait() == 0
     assert hosted.final().strip() == "The mission report."
     events = hosted.events()
-    assert events[0]["type"] == "host-start"
+    kinds = [event["type"] for event in events]
+    assert kinds[0] == "host-start" and kinds.count("host-start") == 1
     assert events[0]["schema"] == "player-host/1" and events[0]["telemetry_version"] == 2
-    assert [event["type"] for event in events].count("settled") == 1
+    assert kinds[-1] == "settled" and kinds.count("settled") == 1
     accounting = hosted.accounted()
     assert accounting["accounting_complete"] is True
     assert accounting["attempts_charged"] == len(hosted.provider.requests) == 1
@@ -335,7 +366,7 @@ def test_handoff_settles_once_leaves_final_unchanged_and_closes_the_mcp_child(ad
 def test_credential_reaches_neither_output_nor_the_mcp_child(adapter, host_factory):
     detail = dict(error=dict(message=f"rejected credential {CREDENTIAL}", type="forbidden"))
     hosted = host_factory([http_response(403, detail)])
-    assert hosted.start().wait() == 1
+    assert hosted.start().wait() != 0
     settled = hosted.settled()
     assert settled["ok"] is False
     assert hosted.provider.requests, "the refusal must have been provoked by a real provider request"
@@ -367,7 +398,7 @@ def test_sigterm_cancels_closes_the_mcp_child_and_leaves_no_process_group(adapte
 def test_deadline_settles_unsuccessfully_within_the_original_allowance(adapter, host_factory):
     hosted = host_factory([HANG])
     started = time.monotonic()
-    assert hosted.start(timeout_seconds="5").wait(30) == 1
+    assert hosted.start(timeout_seconds="5").wait(30) != 0
     assert time.monotonic() - started < 25
     settled = hosted.settled()
     assert settled["ok"] is False and settled["reason"] != "completed"

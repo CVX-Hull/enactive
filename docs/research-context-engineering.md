@@ -193,7 +193,7 @@ permission to send arbitrary internal reasoning to another provider.
 ## Proposed context design to test
 
 This is a proposed presentation, not a new protocol or implemented architecture.
-Use existing player host hooks, player projections, snapshot/detail handles, memory and
+Use the selected adapter's existing hooks where it provides them, player projections, snapshot/detail handles, memory and
 evidence storage. Do not add another planner, executor, context database or
 mandatory model tier merely to resemble a paper.
 
