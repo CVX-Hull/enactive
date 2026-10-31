@@ -1,0 +1,156 @@
+{
+ "schema": "capable-player-304-summary/1",
+ "status": "rejected",
+ "decision": "Reject adoption of Gemini 3.8 Flash; DeepSeek Flash1017 remains deployed; Haiku 5.5 and MiniMax M3.1 Flash unqualified (not played)",
+ "guide_sha256": "2bc7c17ec6fd37e128c9bb9712e6d1022a10eddba416dd30427a32508bf35803",
+ "native_sha256": "0a5649cfb19e7d36d08580f7c88defb2a7c48c94f7b1d2368c051e7ca4e866b8",
+ "adapter_sha256": "77313b1e82aa0b7d4e4b2fe536f77d605c5f2efe76494f2250fe4e2f8b4978df",
+ "conformance": {
+  "conform001": {
+   "actual_http_attempts": 9,
+   "unused_retired": 3,
+   "known_usage_count": 9,
+   "missing_usage_count": 0,
+   "provider_reported_actual_cost_usd": "0.267232915",
+   "consumed_conservative_reservation_usd": "7.7862504",
+   "actual_cumulative_attempts": 4083,
+   "actual_cumulative_reserved_usd": "1074.586108064",
+   "reservation_is_cap_not_spend": true,
+   "ceiling_usd": "2600"
+  },
+  "conform002": {
+   "actual_http_attempts": 3,
+   "provider_reported_actual_cost_usd": "0.24846825",
+   "consumed_conservative_reservation_usd": "5.087232",
+   "actual_cumulative_attempts": 4214,
+   "actual_cumulative_reserved_usd": "1286.761311264"
+  }
+ },
+ "visual_check": {
+  "accounting": {
+   "actual_http_attempts": 12,
+   "unused_retired": 0,
+   "known_usage_count": 12,
+   "missing_usage_count": 0,
+   "provider_reported_actual_cost_usd": "0.0582815160",
+   "consumed_conservative_reservation_usd": "10.3816672",
+   "actual_cumulative_attempts": 4095,
+   "actual_cumulative_reserved_usd": "1084.967775264",
+   "reservation_is_cap_not_spend": true,
+   "ceiling_usd": "2600"
+  },
+  "selection": {
+   "selected_first": "google/gemini-3.8-flash",
+   "alternate": "anthropic/claude-haiku-5.5",
+   "not_selected": "minimax/minimax-m3.1-flash",
+   "basis": "Lead scoring against frozen labels: Gemini captured every decisive fact in D2/D4/P1/P2 with no decisive contradiction and stayed within 220 words; Haiku denied supported D4 avatar travel (the same decisive miss as DeepSeek/Qwen) and exceeded 220 words in all four; MiniMax misidentified the D4 avatar, attributed a historical door message to UP, and treated the P1 selection preview as changed carried load. Published priors: Google recommends Gemini 3.8 Flash for computer use; Haiku 5.5 reports OSWorld 2.1 subset 72.4%. Conformance: all three passed; Gemini slowest (short 3.5 s, long 7.4 s, continuation 6.4 s) but within the same range.",
+   "limits": "One answer per cell; D2/D4 previously exposed to other models; P1/P2 share one world. Not a comparable game score or model-superiority claim. Actual play decides adoption.",
+   "independent_scoring": {
+    "reviewer": "clean-context agent reviewer (not human), labels and answers only",
+    "ranking": [
+     "google/gemini-3.8-flash",
+     "anthropic/claude-haiku-5.5",
+     "minimax/minimax-m3.1-flash"
+    ],
+    "gemini": "all decisive facts in D4 and P1; within 220 words on all four; small overclaims (NPC adjacency/position, unseen P2 clock after i, D2 \"no physical world interactions\", missed D2 camera pan)",
+    "haiku": "most careful about unknowns, no traps; under-claims decisive D4 northward step and P1 cancellation; over 220 words on all four",
+    "minimax": "invented shelf items and weights, wrong clock, historical log lines read as new events, inconsistent avatar identity; over 220 words on all four",
+    "agreement": "matches the lead ranking and the selection"
+   }
+  }
+ },
+ "native_cases": [
+  {
+   "case": "capable304-play001",
+   "session": "db286b8e3973d4c587670b97356dc8c1",
+   "source_commit": "72a8e05c6a0c3998b372cb9232c7c10c5a2623ca",
+   "route": "google-ai-studio",
+   "manifest_sha256": "775bde9bd34665f030ecf1cf1a18b5d89abd9231ece6adea587f56d23fc36b2a",
+   "host_trace_sha256": "1f540db57fff43cf3ccf2000fd6f834bb8131be9db4431475cea33785d5d1bfd",
+   "outcome": "incomplete",
+   "settled": "provider-error",
+   "elapsed_seconds": 572.474,
+   "normal_native_exit_zero": false,
+   "native_absence_verified": true,
+   "input_authority_revoked": true,
+   "accounting": {
+    "attempts_charged": 80,
+    "cumulative_attempts": 4175,
+    "consumed_conservative_reservation_usd": 135.65952,
+    "cumulative_conservative_reservation_usd": 1220.627295264,
+    "allocated_max_attempts": 140,
+    "unused_allocation_retired": 60,
+    "configured_estimate_usd": 7.2983676,
+    "missing_usage_attempts": 1,
+    "reservation_is_not_invoice": true
+   }
+  },
+  {
+   "case": "capable304-play002",
+   "session": "27b1f72365e7316a6c2d642b06233dd7",
+   "source_commit": "40f83e984a4c2c1e5a5ee54d4a868e1a1813b9f5",
+   "route": "google-ai-studio",
+   "manifest_sha256": "7f742950d8d89b3804e6cd731e3cd1a884371de08b9ffbb4e7513f3ff5062264",
+   "host_trace_sha256": "724edd4b7eb1cd4797454bd4ba5d47b78719aec0b7467613b2c9d3f287de217c",
+   "outcome": "incomplete",
+   "settled": "provider-error",
+   "elapsed_seconds": 213.983,
+   "normal_native_exit_zero": false,
+   "native_absence_verified": true,
+   "input_authority_revoked": true,
+   "accounting": {
+    "attempts_charged": 36,
+    "cumulative_attempts": 4211,
+    "consumed_conservative_reservation_usd": 61.046784,
+    "cumulative_conservative_reservation_usd": 1281.674079264,
+    "allocated_max_attempts": 140,
+    "unused_allocation_retired": 104,
+    "configured_estimate_usd": 0.83904915,
+    "missing_usage_attempts": 1,
+    "reservation_is_not_invoice": true
+   }
+  },
+  {
+   "case": "capable304-play003",
+   "session": "b50ba320b0936742befd75668a609584",
+   "source_commit": "40f83e984a4c2c1e5a5ee54d4a868e1a1813b9f5",
+   "route": "google-vertex/global",
+   "manifest_sha256": "ed2fcf3c9d8696338f8093521a8867ac58165f915590dd8f8c5476aa22953548",
+   "host_trace_sha256": "b7e5d03b037ce0b0da5db017f9e7d6a903eb778c757fe92f82d0c9a004c8e732",
+   "outcome": "host_completed_unassessed",
+   "settled": "completed",
+   "elapsed_seconds": 1070.932,
+   "normal_native_exit_zero": true,
+   "native_absence_verified": true,
+   "input_authority_revoked": true,
+   "accounting": {
+    "attempts_charged": 88,
+    "cumulative_attempts": 4302,
+    "consumed_conservative_reservation_usd": 149.225472,
+    "cumulative_conservative_reservation_usd": 1435.986783264,
+    "allocated_max_attempts": 110,
+    "unused_allocation_retired": 22,
+    "configured_estimate_usd": 6.42207885,
+    "missing_usage_attempts": 0,
+    "reservation_is_not_invoice": true
+   }
+  }
+ ],
+ "published_frames": {
+  "play001-left-storage-room.png": "f6b141a72eccbe9cba5db4c977d422a627bfa33d43516a7a10ce0f289a0cf2ef",
+  "play003-supplies-preview.png": "940470bd935d1d311d6b71d031ff18c981f9dfda866b80e29f8f89c9a6f0b1ec",
+  "play003-save-title.png": "76f217cb35bc9a5e30fcb56046a477775cbb058dca4569953aae9ce34ffaeb01"
+ },
+ "accounting": {
+  "iteration_attempts": 228,
+  "attempt_cap": 414,
+  "retired": 186,
+  "actual_cost_usd": "about 7.64 (OpenRouter account usage delta)",
+  "cumulative_attempts": 4302,
+  "cumulative_conservative_reservation_usd": "1435.986783264",
+  "reservation_is_cap_not_spend": true,
+  "ceiling_usd": "2600"
+ },
+ "monitoring": "read-only 15 s checks; max gap 15.03 s; no 45 s deviations",
+ "retention": "Only allowlisted summaries and three original PNGs are published. Packages, answers, labels, traces and saves remain ignored project-local evidence. No private reasoning, raw request bodies, credentials or local paths are included."
+}

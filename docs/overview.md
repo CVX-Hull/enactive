@@ -42,6 +42,11 @@ The [visual-player investigation](acceptance/2026-10-30-visual-player.md) reject
 adoption of Qwen3.8-27B/Wafer after stable actual play and fresh Load still produced
 no retained readiness gain. Its earlier provider failures and visual-grounding
 errors remain evidence; successful serving does not qualify useful cadence.
+The [capable-player qualification](acceptance/2026-10-31-capable-player.md) likewise
+rejected Gemini 3.8 Flash. It led a fixed visual check, then grounded the avatar
+and UI, explored new areas and completed a normal Save/Quit ending, but made no
+retained readiness gain and overstated its own outcome. Two of its three admissions
+were cut off by provider failures that the host cannot yet survive ([#308](https://github.com/CVX-Hull/enactive/issues/308)).
 
 The [architecture](architecture.md) explains ownership, the
 [player guide](player-guide.md) supplies compact working context, and the

@@ -14,7 +14,20 @@ configuration can play. Original packages, answers, labels, traces and saves rem
 ignored project-local evidence under `.runtime/iteration304/` and
 `.runtime/computer-sessions/capable304-*`, and may be unavailable in a fresh checkout.
 
-**Decision: pending.** Gameplay is incomplete; see [the blocked admission](#first-admission-cut-off-by-provider-credit).
+**Decision: reject adoption of Gemini 3.8 Flash.**
+- It led the fixed visual check.
+- In play it grounded the avatar and UI, explored areas earlier players never reached,
+  and completed one normal Save/Quit ending.
+- It made no retained survival-readiness gain, and its terminal report overstated
+  the outcome.
+- DeepSeek Flash1017 remains the deployed selection, which this decision does not
+  qualify either. Haiku 5.5 and MiniMax M3.1 Flash remain unqualified: they were
+  never played, not rejected.
+- Provider failures ended two of the three admissions before any ending. Making
+  admissions survive such failures is [#308](https://github.com/CVX-Hull/enactive/issues/308).
+
+The [evidence summary](assets/capable-player-304/summary.json) binds configurations,
+hashes, receipts and accounting.
 
 ## Conformance under player-host/1
 
@@ -80,29 +93,105 @@ An independent rescoring from labels and answers gave the same ranking. These ar
 one-response cells on four fixed frame sets, not a comparable game score. Gemini
 became the first gameplay configuration, with Haiku as the alternate.
 
-## First admission cut off by provider credit
+## Organic gameplay
 
-`capable304-play001` used Gemini 3.8 Flash, the unchanged guide and 14 tools, a
-30-image history and source `72a8e05`. Its allocation was one host, 140 attempts,
-2400 host / 3000 custodian seconds and #304's ending reserve. The only history
-supplied was the case 004 terminal report, marked as fallible.
+Every admission used Gemini 3.8 Flash, the unchanged guide and all 14 tools, a
+30-image history, and one host with 2400 host / 3000 custodian seconds. #304's ending
+reserve of 300 host seconds and 25 attempts applied throughout. Each player received
+only the case 004 terminal report, marked as fallible history; the first two runs
+produced no report to pass on. The sole player chose Load, tactics and menus. No lead
+tactics, state hints, save reads or prompt changes were used.
 
-[Assessment pending.]
+Lead checks ran as a read-only loop every 15 seconds. The largest gap across all three
+runs was 15.03 seconds, so the 45-second limit was never missed.
 
-Request 80, at 570 seconds, was refused before inference with HTTP 402,
-`limit_source: openrouter_in_flight_budget`:
-- The account showed $825 credits against $822.63 usage. The key's own limit was not
-  reached ($29.06 of $250 monthly).
-- The host stopped. The custodian revoked custody and terminated native with SIGTERM.
-- Owned host, MCP and native groups were verified absent. There was no Save and no
-  normal exit.
-- Useful-gain latency is censored by an external account refusal. This is not a
-  capability or serving failure.
-- The balance was unchanged about 8 minutes later, although the owner has auto top-up
-  enabled.
+Clean-context agent reviewers assessed each completed run from the original frames and
+traces (agent review, not human review).
 
-Only 22% of prompt tokens were read from cache. The 30-image projection drops the oldest
-image every turn, so the prefix changes. That cost and latency question belongs to #164.
+| Case | Route / source | Attempts / seconds | Ending |
+| --- | --- | --- | --- |
+| play001 | `google-ai-studio` / `72a8e05` | 80 of 140 / 572 | HTTP 402 `openrouter_in_flight_budget` at request 80; SIGTERM, no Save |
+| play002 | `google-ai-studio` / `40f83e9` | 36 of 140 / 214 | HTTP 503 at request 36, terminal by host policy; SIGTERM, no Save |
+| play003 | `google-vertex/global` / `40f83e9` | 88 of 110 / 1071 | Player Save to title, then Quit; native exit 0 without a signal |
+
+### What the player did
+
+**Grounding was sound.**
+- In play001 and play003 the player opened Look on its own tile and read "You (Parker West)".
+- It closed Look before moving, picked dialogue options that matched the listed choices,
+  and read a locked metal door as impassable after "nothing that can be opened".
+
+**It reached areas earlier players never reached.** play001 left the storage room within
+about 25 calls, though case 004 never found its exit.
+
+![The player has left the storage room it started in.](assets/capable-player-304/play001-left-storage-room.png)
+
+**It accepted a quest but made no retained gain.**
+- In play001 it accepted an NPC fetch quest, and play003 reached a new food-storage room.
+- Carried weight stayed at 12.5/81.6 lb in every run. Inventory stayed at the starting
+  pocket knife, clothing and six murky water.
+- It saw pecorino on the floor and did not take it. It only previewed the
+  Free-Merchants-owned shelf stock.
+- It did not treat the water and tried no trade or job alternative. An earlier
+  "Caught you stealing" warning makes leaving owned stock defensible. It does not make
+  the run useful.
+
+![Shelf stock was viewed but nothing was taken.](assets/capable-player-304/play003-supplies-preview.png)
+
+**It wasted many attempts.**
+- Three blind multi-key batches in play001, and about 13 key presses in play003, ran into
+  walls. Identical frame hashes confirm two of the play003 no-op batches.
+- About 12 play003 attempts went to repeated overmap and keybinding-filter attempts to
+  view missions, which produced nothing.
+
+**It recovered partially.** It used Look to find a door after the wall bumps, backed off
+the locked door, and rerouted out of a dead-end locker alcove.
+
+**play003 ended with discipline.** It began ending at request 83 with 27 attempts and
+about 1400 host seconds of reserve left. The Save-to-title and separate "Really quit?"
+frames match the receipt's normal exit. The original Quit acknowledgment remains
+unknown (native channel EOF), as in #302.
+
+![Save to title, followed by a separate Quit prompt.](assets/capable-player-304/play003-save-title.png)
+
+**The play003 report was inflated.** It fit in 85 words, but claimed "Failures: None"
+and that it "resolved prior room obstruction". The assignment asked for useful survival
+work, and this run started outside that room and resolved no obstruction. A configuration
+whose report cannot be trusted to assess itself is a serious adoption risk. No later Load
+verified play003's saved state, because no admission remained.
+
+Useful-gain latency is censored in all three runs: two by external provider failures,
+one at voluntary closeout. It is not zero.
+
+### Serving, cost and telemetry
+
+| Same-host diagnostic | play001 | play002 | play003 |
+| --- | ---: | ---: | ---: |
+| Completed response p50 / p95, seconds | 6.72 / 9.62 (79) | 4.84 / 7.43 (35) | 6.48 / 38.51 (88) |
+| Tool p50 / p95, seconds | 0.415 / 0.540 | 0.387 / 0.546 | 0.395 / 0.576 |
+| Uncached / cached prompt tokens | 4662445 / 1313884 | 398024 / 1092421 | 3882234 / 2603669 |
+| Output (reasoning) tokens | 14349 (10145) | 10420 (8822) | 27757 (23419) |
+
+Other findings:
+- **402 in flight.** The play001 refusal arrived while the account still had about $2.37.
+  The balance was unchanged eight minutes later despite the owner's auto top-up, and the
+  owner then added credit manually.
+- **503 is terminal.** The play002 503 ended the admission because the host retries only
+  an eligible pre-output 429.
+- **Vertex was slower and uncached.** A three-request conformance of `google-vertex/global`
+  (the last 3 of #304's 12 conformance attempts) passed, but took 10.9 seconds on the long
+  request and 29.0 on the continuation, with no cache reuse. play003's p95 of 38.51 seconds
+  is consistent with that.
+- **Image window breaks caching.** The 30-image projection drops the oldest image every
+  turn, which changes the prompt prefix. Cache reuse was 22% in play001. That cost and
+  latency question belongs to #164.
+- **Untraced tool call.** In play003, request 73 streamed 89 bytes of tool-call arguments
+  and stopped with `toolUse`, yet no tool started. This matches the documented zero-dispatch
+  SDK argument refusal, which the host does not trace as a tool event. The next request
+  proceeded normally. The trace gap is noted in #308.
+
+No cadence, learning or survival claim follows. This is whole-configuration qualification,
+not #24's matched model comparison.
 
 ## Accounting
 
@@ -111,6 +200,12 @@ check (see [campaign run](../operations/campaign-run.md)).
 
 | Lane | Attempts | Actual cost |
 | --- | ---: | ---: |
-| Conformance | 9 | $0.267 provider-reported |
+| Conformance (AI Studio, Vertex) | 9 + 3 | $0.267 + $0.248 provider-reported |
 | Visual check | 12 | $0.058 provider-reported |
-| capable304-play001 | 80 | about $3.46 (key daily usage); the configured estimate at list price was $7.30 |
+| play001 / play002 / play003 | 80 / 36 / 88 | about $3.46 / $0.31 / $3.29 from account usage |
+| **Iteration** | **228 of 414** | **about $7.64** (OpenRouter account usage delta) |
+
+The configured estimates at Gemini's undiscounted list price were $7.30, $0.84 and $6.42.
+One attempt has missing usage in each of play001 and play002. Cumulative accounting moved
+from 4074 attempts and a $1066.80 reservation to 4302 attempts and a $1435.99 reservation,
+within the $2600 ceiling. The 186 unused attempts retire.
