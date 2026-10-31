@@ -23,8 +23,11 @@ ignored project-local evidence under `.runtime/iteration304/` and
 - DeepSeek Flash1017 remains the deployed selection, which this decision does not
   qualify either. Haiku 5.5 and MiniMax M3.1 Flash remain unqualified: they were
   never played, not rejected.
-- Provider failures ended two of the three admissions before any ending. Making
-  admissions survive such failures is [#308](https://github.com/CVX-Hull/enactive/issues/308).
+- Two of the three admissions ended before any ending: one on an exhausted provider
+  account (HTTP 402, an operator failure with no balance check before admission) and
+  one on a transient HTTP 503. Retrying transient failures is
+  [#308](https://github.com/CVX-Hull/enactive/issues/308); checking account funding
+  before admission is [#310](https://github.com/CVX-Hull/enactive/issues/310).
 
 The [evidence summary](assets/capable-player-304/summary.json) binds configurations,
 hashes, receipts and accounting.
@@ -51,8 +54,8 @@ No game tool executed. A local SSE double first exercised the probe offline, inc
 the 429-retry path. It caught one probe bug: Pi returns provider failures instead of
 throwing, so the retry was unreachable. That was fixed before any paid call.
 
-All 9 paid requests succeeded on the first attempt; 3 of the 12 allowed attempts retired
-unused. The serialized payloads verified the pinned route, `allow_fallbacks: false`,
+All 9 paid requests succeeded on the first attempt. The 3 remaining conformance attempts
+were held and later used to conform the Vertex endpoint. The serialized payloads verified the pinned route, `allow_fallbacks: false`,
 `require_parameters: true`, `reasoning.effort: medium`, default tier, 14 tools and
 16384 maximum output. Every continuation forwarded the assistant's `reasoning_details`
 and matched tool-call IDs. Haiku requests carried Anthropic cache-control breakpoints.
@@ -105,8 +108,17 @@ tactics, state hints, save reads or prompt changes were used.
 Lead checks ran as a read-only loop every 15 seconds. The largest gap across all three
 runs was 15.03 seconds, so the 45-second limit was never missed.
 
-Clean-context agent reviewers assessed each completed run from the original frames and
-traces (agent review, not human review).
+Clean-context agent reviewers assessed play001 and play003 from the original frames and
+traces (agent review, not human review). play002 ended after 36 attempts and was not
+separately assessed.
+
+**Deviation from #304's admission rules.** #304 reserves its final admission for a
+promising configuration's named continuation question, and points to the frozen alternate
+(Haiku) after a concrete failure. Here Gemini received all three admissions; the third used
+a newly conformed Vertex endpoint and named no continuation question. The lead's rationale:
+both earlier stops were external (account credit, then a provider 503), so Gemini had no
+completed run to judge. The cost of that choice is that the alternate's admission was used
+up, so **the rejection rests on one model** and Haiku received no gameplay evidence.
 
 | Case | Route / source | Attempts / seconds | Ending |
 | --- | --- | --- | --- |
@@ -132,8 +144,9 @@ about 25 calls, though case 004 never found its exit.
   pocket knife, clothing and six murky water.
 - It saw pecorino on the floor and did not take it. It only previewed the
   Free-Merchants-owned shelf stock.
-- It did not treat the water and tried no trade or job alternative. An earlier
-  "Caught you stealing" warning makes leaving owned stock defensible. It does not make
+- It did not treat the water and tried no trade or job alternative. play003's message-log view
+  (frame 1949) shows an older entry, from before #304's runs, in which a pecorino pickup drew
+  Tiera's "Caught you stealing… Drop it." That makes leaving owned stock defensible. It does not make
   the run useful.
 
 ![Shelf stock was viewed but nothing was taken.](assets/capable-player-304/play003-supplies-preview.png)
@@ -152,7 +165,7 @@ about 1400 host seconds of reserve left. The Save-to-title and separate "Really 
 frames match the receipt's normal exit. The original Quit acknowledgment remains
 unknown (native channel EOF), as in #302.
 
-![Save to title, followed by a separate Quit prompt.](assets/capable-player-304/play003-save-title.png)
+![Title screen after Save-and-quit; the separate Quit prompt follows in frame 8020.](assets/capable-player-304/play003-save-title.png)
 
 **The play003 report was inflated.** It fit in 85 words, but claimed "Failures: None"
 and that it "resolved prior room obstruction". The assignment asked for useful survival
@@ -167,8 +180,8 @@ one at voluntary closeout. It is not zero.
 
 | Same-host diagnostic | play001 | play002 | play003 |
 | --- | ---: | ---: | ---: |
-| Completed response p50 / p95, seconds | 6.72 / 9.62 (79) | 4.84 / 7.43 (35) | 6.48 / 38.51 (88) |
-| Tool p50 / p95, seconds | 0.415 / 0.540 | 0.387 / 0.546 | 0.395 / 0.576 |
+| Completed response p50 / p95, seconds | 6.72 / 10.38 (79) | 4.84 / 7.74 (35) | 6.47 / 38.51 (88) |
+| Tool p50 / p95, seconds | 0.415 / 0.544 | 0.387 / 0.582 | 0.396 / 0.576 |
 | Uncached / cached prompt tokens | 4662445 / 1313884 | 398024 / 1092421 | 3882234 / 2603669 |
 | Output (reasoning) tokens | 14349 (10145) | 10420 (8822) | 27757 (23419) |
 
@@ -178,10 +191,11 @@ Other findings:
   owner then added credit manually.
 - **503 is terminal.** The play002 503 ended the admission because the host retries only
   an eligible pre-output 429.
-- **Vertex was slower and uncached.** A three-request conformance of `google-vertex/global`
-  (the last 3 of #304's 12 conformance attempts) passed, but took 10.9 seconds on the long
-  request and 29.0 on the continuation, with no cache reuse. play003's p95 of 38.51 seconds
-  is consistent with that.
+- **Vertex conformance.** The three-request conformance of `google-vertex/global` (the last
+  3 of #304's 12 conformance attempts) passed, taking 10.9 seconds on the long request and
+  29.0 on the continuation, with no cache reuse in that one sample. Part of the 29 seconds is
+  generation length: 2753 output tokens (2440 reasoning) against 84 on AI Studio. In play003
+  on Vertex, 80 of 88 requests read from cache and 40% of prompt tokens were cached.
 - **Image window breaks caching.** The 30-image projection drops the oldest image every
   turn, which changes the prompt prefix. Cache reuse was 22% in play001. That cost and
   latency question belongs to #164.
@@ -202,10 +216,13 @@ check (see [campaign run](../operations/campaign-run.md)).
 | --- | ---: | ---: |
 | Conformance (AI Studio, Vertex) | 9 + 3 | $0.267 + $0.248 provider-reported |
 | Visual check | 12 | $0.058 provider-reported |
-| play001 / play002 / play003 | 80 / 36 / 88 | about $3.46 / $0.31 / $3.29 from account usage |
+| play001 / play002 / play003 | 80 / 36 / 88 | about $3.46 (key daily usage) / $0.31 / $3.29 (account usage deltas) |
 | **Iteration** | **228 of 414** | **about $7.64** (OpenRouter account usage delta) |
 
-The configured estimates at Gemini's undiscounted list price were $7.30, $0.84 and $6.42.
+The host traces carry only configured-rate costs, so gameplay cost came from OpenRouter
+usage readings instead. The account is shared beyond this project ($29.06 of about $819 was
+this key's), so the deltas may include unrelated spend. The configured estimates at Gemini's
+undiscounted list price were $7.30, $0.84 and $6.42.
 One attempt has missing usage in each of play001 and play002. Cumulative accounting moved
 from 4074 attempts and a $1066.80 reservation to 4302 attempts and a $1435.99 reservation,
 within the $2600 ceiling. The 186 unused attempts retire.

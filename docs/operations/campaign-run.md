@@ -120,7 +120,8 @@ every past attempt as if it filled the whole context window and output limit, so
 it overstates actual cost by more than an order of magnitude: on 31 October 2026
 it stood at $1066.80 while the owner reported about $30–40 actually billed.
 Report actual cost first, from provider-reported usage, with missing usage
-counted separately. Present the reservation only as the cap check it is.
+counted separately. Host traces carry only configured-rate costs, so for live play use
+provider usage or account readings, and state when the account is shared. Present the reservation only as the cap check it is.
 
 Limits: five input files each ≤1MiB; 1–16 initial files; host argv of 1–8 entries,
 the first an absolute regular file and the rest canonical project-local files tracked

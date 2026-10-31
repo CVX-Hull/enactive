@@ -8,7 +8,7 @@
  "conformance": {
   "conform001": {
    "actual_http_attempts": 9,
-   "unused_retired": 3,
+   "unused_retired": 0,
    "known_usage_count": 9,
    "missing_usage_count": 0,
    "provider_reported_actual_cost_usd": "0.267232915",
@@ -16,7 +16,8 @@
    "actual_cumulative_attempts": 4083,
    "actual_cumulative_reserved_usd": "1074.586108064",
    "reservation_is_cap_not_spend": true,
-   "ceiling_usd": "2600"
+   "ceiling_usd": "2600",
+   "note": "3 attempts held after conform001 and used by conform002 (Vertex)"
   },
   "conform002": {
    "actual_http_attempts": 3,
@@ -149,8 +150,15 @@
   "cumulative_attempts": 4302,
   "cumulative_conservative_reservation_usd": "1435.986783264",
   "reservation_is_cap_not_spend": true,
-  "ceiling_usd": "2600"
+  "ceiling_usd": "2600",
+  "actual_cost_note": "Host traces carry configured-rate costs only; gameplay cost from OpenRouter key/account usage readings; account shared beyond this project, so deltas may include unrelated spend."
  },
  "monitoring": "read-only 15 s checks; max gap 15.03 s; no 45 s deviations",
- "retention": "Only allowlisted summaries and three original PNGs are published. Packages, answers, labels, traces and saves remain ignored project-local evidence. No private reasoning, raw request bodies, credentials or local paths are included."
+ "retention": "Only allowlisted summaries and three original PNGs are published. Packages, answers, labels, traces and saves remain ignored project-local evidence. No private reasoning, raw request bodies, credentials or local paths are included.",
+ "assessments": {
+  "play001": "independent clean-context agent assessment retained",
+  "play002": "not separately assessed (36 attempts, ended on HTTP 503)",
+  "play003": "independent clean-context agent assessment retained"
+ },
+ "deviation": "All three admissions went to Gemini (third on google-vertex/global) after two external stops; the frozen alternate (Haiku) received no gameplay, so the rejection rests on one model."
 }
