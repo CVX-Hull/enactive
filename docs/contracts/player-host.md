@@ -109,4 +109,6 @@ argument refusal, completed and handoff settlement, telemetry accounting through
 the driver's own reader, credential isolation, cancellation with MCP-child closure
 and deadline expiry. An adapter for another provider wire format supplies an
 equivalent provider double. Passing the suite is interface evidence only: it does
-not qualify a model, provider, latency or gameplay outcome.
+not qualify a model, provider, latency or gameplay outcome. The
+[adoption record](../acceptance/2026-10-31-host-neutral-player.md) retains the first
+conformance run and an offline native driver preflight through this contract.

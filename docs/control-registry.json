@@ -504,10 +504,11 @@
       "rationale": null,
       "replacement": null,
       "last_exercise": {
-        "date": "2026-10-29",
-        "outcome": "Four current Import Linter contracts pass; temporary-source negative cases exercised in the full77cd124 profile.",
-        "scope": "Computer/player/adapters/server dependency boundaries, shared ports and current production callers. Source import constraints do not prove semantic correctness or portability.",
+        "date": "2026-10-31",
+        "outcome": "Four current Import Linter contracts, the player-host/1 conformance suite on the current adapter and the host-neutrality regression pass in the full 1cae70f profile; an offline native driver preflight ran through the contract.",
+        "scope": "Computer/player/adapters/server dependency boundaries, the player host boundary with one listed adapter, and lexical host naming in current pages and tooling. Source import constraints and scripted-provider conformance do not prove semantic correctness, portability or gameplay.",
         "evidence": [
+          "docs/acceptance/2026-10-31-host-neutral-player.md",
           "docs/acceptance/2026-10-29-computer-control.md",
           "docs/acceptance/2026-10-29-computer-control-development.md"
         ]
@@ -698,6 +699,7 @@
         "docs/operations/coding-agents.md",
         "tools/configure_player_tools.py",
         "tests/test_coding_agent_config.py",
+        "docs/acceptance/2026-10-31-host-neutral-player.md",
         "docs/acceptance/2026-10-27-audit-resolution.md",
         "package.json",
         "docs/acceptance/2026-10-29-computer-control.md",

@@ -46,7 +46,7 @@ full checks remain strict. Event triggers can require earlier review.
 | C-RUNTIME | active | 2026-10-29 | 2026-10-29 | partially_effective | 2027-01-15 |
 | C-NATIVE | active | 2026-10-29 | 2026-10-29 | partially_effective | 2027-01-15 |
 | C-USABILITY | active | 2026-10-29 | 2026-10-29 | partially_effective | 2027-01-15 |
-| C-BOUNDARY | active | 2026-10-29 | 2026-10-29 | partially_effective | 2027-01-15 |
+| C-BOUNDARY | active | 2026-10-31 | 2026-10-29 | partially_effective | 2027-01-15 |
 | C-REVIEW | active | 2026-10-29 | 2026-10-29 | partially_effective | 2027-01-15 |
 | C-GOVERNANCE | active | 2026-10-27 | 2026-10-27 | partially_effective | 2027-01-15 |
 | C-PROTOCOL | retired | 2026-10-17 | 2026-10-17 | effective | 2027-01-15 |
@@ -175,9 +175,9 @@ Coverage gap: Static import graph with configured external roots. Dynamic import
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
-Last exercise: 2026-10-29. Outcome: Four current Import Linter contracts pass; temporary-source negative cases exercised in the full77cd124 profile.
-Scope: Computer/player/adapters/server dependency boundaries, shared ports and current production callers. Source import constraints do not prove semantic correctness or portability.
-Exercise evidence: [docs/acceptance/2026-10-29-computer-control.md](../docs/acceptance/2026-10-29-computer-control.md), [docs/acceptance/2026-10-29-computer-control-development.md](../docs/acceptance/2026-10-29-computer-control-development.md).
+Last exercise: 2026-10-31. Outcome: Four current Import Linter contracts, the player-host/1 conformance suite on the current adapter and the host-neutrality regression pass in the full 1cae70f profile; an offline native driver preflight ran through the contract.
+Scope: Computer/player/adapters/server dependency boundaries, the player host boundary with one listed adapter, and lexical host naming in current pages and tooling. Source import constraints and scripted-provider conformance do not prove semantic correctness, portability or gameplay.
+Exercise evidence: [docs/acceptance/2026-10-31-host-neutral-player.md](../docs/acceptance/2026-10-31-host-neutral-player.md), [docs/acceptance/2026-10-29-computer-control.md](../docs/acceptance/2026-10-29-computer-control.md), [docs/acceptance/2026-10-29-computer-control-development.md](../docs/acceptance/2026-10-29-computer-control-development.md).
 
 Maintenance review: 2026-10-29. Effectiveness: partially_effective.
 Findings: Replaced obsolete semantic dependency contracts with four current ownership rules. Independent seam review and actual player/control composition supplement syntax/import assertions.
@@ -273,7 +273,7 @@ Owner: build maintainer. Trigger: each requested setup stage and dependency/comp
 Enforcement: Implemented stage guards plus portable setup regressions; native reproducibility requires C-NATIVE and manual provenance review.
 Failure response: Stop failed stage, preserve diagnostics and retry only after identifying the corrupt input or owned workspace.
 
-Evidence / implementation: [tools/setup.py](../tools/setup.py), [tools/prepare_game.py](../tools/prepare_game.py), [tools/patch_game.py](../tools/patch_game.py), [native/upstream.json](../native/upstream.json), [tests/test_setup.py](../tests/test_setup.py), [docs/setup.md](../docs/setup.md), [docs/environment.md](../docs/environment.md), [docs/operations/coding-agents.md](../docs/operations/coding-agents.md), [tools/configure_player_tools.py](../tools/configure_player_tools.py), [tests/test_coding_agent_config.py](../tests/test_coding_agent_config.py), [docs/acceptance/2026-10-27-audit-resolution.md](../docs/acceptance/2026-10-27-audit-resolution.md), [package.json](../package.json), [docs/acceptance/2026-10-29-computer-control.md](../docs/acceptance/2026-10-29-computer-control.md), [docs/acceptance/2026-10-29-computer-control-development.md](../docs/acceptance/2026-10-29-computer-control-development.md).
+Evidence / implementation: [tools/setup.py](../tools/setup.py), [tools/prepare_game.py](../tools/prepare_game.py), [tools/patch_game.py](../tools/patch_game.py), [native/upstream.json](../native/upstream.json), [tests/test_setup.py](../tests/test_setup.py), [docs/setup.md](../docs/setup.md), [docs/environment.md](../docs/environment.md), [docs/operations/coding-agents.md](../docs/operations/coding-agents.md), [tools/configure_player_tools.py](../tools/configure_player_tools.py), [tests/test_coding_agent_config.py](../tests/test_coding_agent_config.py), [docs/acceptance/2026-10-31-host-neutral-player.md](../docs/acceptance/2026-10-31-host-neutral-player.md), [docs/acceptance/2026-10-27-audit-resolution.md](../docs/acceptance/2026-10-27-audit-resolution.md), [package.json](../package.json), [docs/acceptance/2026-10-29-computer-control.md](../docs/acceptance/2026-10-29-computer-control.md), [docs/acceptance/2026-10-29-computer-control-development.md](../docs/acceptance/2026-10-29-computer-control-development.md).
 
 Coverage gap: Portable fixtures do not perform fresh downloads, native compilation/signing or install. Existing-host recipe is historical; broader hosts remain unverified.
 
