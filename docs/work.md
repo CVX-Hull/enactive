@@ -44,6 +44,7 @@ not qualify parent cadence, learning or survival.
 
 | Evidence | Scope and limitation |
 | --- | --- |
+| [Capable-player qualification](acceptance/2026-10-31-capable-player.md) | Three models conformed under `player-host/1`; Gemini led a fixed visual check, then grounded and navigated with one normal ending but no readiness gain and an inflated report; rejected. An account-credit 402 and a provider 503 ended two admissions. |
 | [Visual-player qualification](acceptance/2026-10-30-visual-player.md) | Qwen/Wafer served substantive play and fresh Load with normal endings, but retained spatial/confirmation errors and no readiness gain; candidate rejected, earlier provider failures preserved. |
 | [Spatial grounding and context rejection](acceptance/2026-10-30-spatial-grounding.md) | Primary-literature-informed candidate failed retained frame assessment and organic play; no retained readiness gain, guide restored, original failures/normal ending preserved. |
 | [Observed effects and useful continuation](acceptance/2026-10-30-observed-effects.md) | Prospective unchanged-guide baseline/assessment: limited exploration and corrections, no retained readiness gain; no repair adopted; the later spatial study tests and rejects one candidate. |
