@@ -57,7 +57,7 @@ def snapshot_bundle(directory: Path, profile: dict, snapshot_directory: Path, de
     directory, snapshot_directory = Path(directory), Path(snapshot_directory)
     check_deadline(deadline)
     manifest = read_json(directory / 'manifest.json', 1024 * 1024)
-    if (not isinstance(manifest, dict) or manifest.get('schema') != 'campaign-run/2'
+    if (not isinstance(manifest, dict) or manifest.get('schema') != 'campaign-run/3'
             or manifest.get('session') != profile['session']
             or manifest.get('source_commit') != profile['source_commit']):
         raise ControlError('Selected current manifest identity differs')

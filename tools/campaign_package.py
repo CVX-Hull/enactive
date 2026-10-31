@@ -14,7 +14,7 @@ from tools.configure_player_tools import ROOT,configuration
 
 FILES={'route.json','mcp-template.json','context.txt','prompt.txt','target.json'}
 FIELDS={'schema','session','source_commit','files','initial_files','native','library','shared_lock','player_store',
-        'node','effort','port','wall_seconds','host_seconds','total_host_seconds','max_hosts','max_http_attempts','limits','accounting'}
+        'host','effort','port','wall_seconds','host_seconds','total_host_seconds','max_hosts','max_http_attempts','limits','accounting'}
 
 
 def digest(path: Path) -> str:
@@ -30,13 +30,29 @@ def local_file(value: str) -> Path:
     return path
 
 
+def host_argv(host) -> list[str]:
+    """Validate the closed `player-host/1` adapter selection and return its argv."""
+    closed(host,{'argv'})
+    argv=host['argv']
+    if (type(argv) is not list or not 1<=len(argv)<=8
+            or any(type(a) is not str or not a or len(a)>8192 for a in argv)):
+        raise ControlError('Select explicit bounded player host argv')
+    executable=Path(argv[0])
+    if not executable.is_absolute() or not executable.is_file():
+        raise ControlError('Player host argv[0] must be an absolute existing regular file')
+    for entry in argv[1:]:local_file(entry)
+    return argv
+
+
 def preflight(directory: Path) -> tuple[dict,dict,dict]:
     directory=directory.resolve(strict=True)
     if not directory.is_relative_to(ROOT/'.runtime/computer-sessions') or directory.is_symlink():
         raise ControlError('Select a fresh explicit project-local computer session package')
     profile=read_json(directory/'manifest.json',1048576)
+    if type(profile) is not dict or profile.get('schema')!='campaign-run/3':
+        raise ControlError('Unsupported campaign package; old admissions are inert history')
     closed(profile,FIELDS)
-    if profile['schema']!='campaign-run/2':raise ControlError('Unsupported campaign package; old admissions are inert history')
+    host_argv(profile['host'])
     if not isinstance(profile['session'],str) or re.fullmatch('[0-9a-f]{32}',profile['session']) is None:
         raise ControlError('Invalid fresh mechanical session')
     current=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()
@@ -74,9 +90,8 @@ def preflight(directory: Path) -> tuple[dict,dict,dict]:
     if route['max_requests']>profile['max_http_attempts']:raise ControlError('Per-host attempts exceed original campaign allowance')
     template=read_json(directory/'mcp-template.json',1048576)
     if template!=configuration('@ACTOR_CONFIG@'):raise ControlError('Only the current explicit actor MCP profile is supported')
-    validator="import{readFileSync as r}from'node:fs';import{validateConfiguration as v,validateMcpConfiguration as m}from'./tools/player_host/host.mjs';let j=p=>JSON.parse(r(p,'utf8'));v(j(process.argv[1]),process.argv[3],process.argv[4]);m(j(process.argv[2]));"
-    subprocess.run([profile['node'],'--input-type=module','-e',validator,str(directory/'route.json'),
-        str(directory/'mcp-template.json'),route['model']['id'],profile['effort']],cwd=ROOT,check=True,
+    subprocess.run([*profile['host']['argv'],'validate','--config',str(directory/'route.json'),
+        '--mcp-config',str(directory/'mcp-template.json'),'--model',route['model']['id'],'--effort',profile['effort']],cwd=ROOT,check=True,
         stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=10,
         env=dict(PATH=os.environ.get('PATH','/usr/bin:/bin'),LANG='en_US.UTF-8'))
     target=read_json(directory/'target.json',1048576)

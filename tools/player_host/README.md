@@ -1,14 +1,17 @@
 # Bounded Pi player host
 
-This private package is the mandatory generic campaign-player host. The
-[current component](../../docs/components/player-interface.md) owns its contract;
+This private package is the Pi-based adapter that implements the host-neutral
+[player-host contract](../../docs/contracts/player-host.md) (`player-host/1`);
+the campaign driver selects it only through the package's frozen `host.argv`.
+The [current component](../../docs/components/player-interface.md) owns the player interface;
 [`069-controllable-player-host.md`](../../docs/changes/069-controllable-player-host.md)
 retains the original offline adoption decision.
 It uses Pi agent-core, AI serialization and MCP 1.4.0 directly. It loads no coding
 agent application, personal settings, sessions, shell/file tools or resources.
 Host maintenance belongs to the engineering lead.
-The campaign driver always invokes this runner with frozen provider/MCP/context
-inputs; no coding-agent launch or resumed-host fallback is supported. Host choice
+The campaign driver invokes the frozen `host.argv` followed by a mode word with
+frozen provider/MCP/context inputs; no coding-agent launch or resumed-host fallback
+is supported. Host choice
 is independent of whether a particular model passes gameplay qualification.
 Separately admitted gameplay advisers/reflectors use this same core with their
 own explicit context, tool profile and budget; the campaign driver does not
@@ -23,18 +26,31 @@ ENACTIVE_TEST_PYTHON=/absolute/project/.venv/bin/python npm test
 
 Node >=22.19.0 and the repository's Python environment with MCP 2.x are required.
 The tests invoke actual Pi provider serialization against synthetic SSE and local
-HTTP fixtures, and official Python MCP servers, including current production
-schema discovery. They make no inference calls and start no game. Reported sample
+HTTP fixtures, and official Python MCP servers (the shared double is
+`tests/fixtures/player_host_mcp.py`), including current production
+schema discovery. The adapter-agnostic contract suite
+(`tests/test_player_host_contract.py`) drives this runner only through its argv,
+files, environment and exit status; `tests/test_player_host_adapter.py` runs these
+Node tests from pytest. They make no inference calls and start no game. Reported sample
 timings include fixture process startup and cleanup; they do not measure model
 latency, gameplay competence or a hardware-independent performance threshold.
 The in-flight tool-deadline case uses a controlled Node timeout clock only after
 observing actual fixture tool start; startup/signal cases and outer watchdogs
 retain real time, and all cases retain actual child-closure assertions.
 
-The driver invokes:
+The runner requires a leading mode word. `validate` checks the route and MCP
+table offline and exits zero only if both are accepted, writing nothing to stdout:
 
 ```sh
-node tools/player_host/run.mjs \
+node tools/player_host/run.mjs validate \
+  --config FROZEN/route.json --mcp-config FROZEN/mcp-template.json \
+  --model MODEL --effort EFFORT
+```
+
+`run` hosts one actor. The driver invokes:
+
+```sh
+node tools/player_host/run.mjs run \
   --config FROZEN/player-pi-configuration.json \
   --mcp-config FROZEN/player-host-configuration.json \
   --context FROZEN/pi-player-context.txt \
@@ -44,15 +60,17 @@ node tools/player_host/run.mjs \
 
 Each frozen file and stdin is limited to 1 MiB. Files must be regular files.
 The driver exclusively reserves the final path; the runner writes that existing
-path only after successful terminal completion. JSONL events go to stdout.
+path only after a successful `completed` settlement and leaves it unchanged after a
+handoff or any failure. JSONL events go to stdout. A missing or unknown mode, or a
+missing, repeated or unknown flag, settles `invalid-arguments` and exits one.
 Exit zero requires terminal assistant `stop` or the completed-handoff settlement
 below, no fatal failure latch, successful owned MCP closure, and a successful
 final-file write. `runHost(options)` is the
 programmatic seam; tests inject `fetch` there. No fake-provider CLI is exposed.
 
-The closed route has exactly `schema: "pi-player-host/4"`, `model`,
+The closed route has exactly `schema: "player-host/1"`, `model`,
 `api_key_env`, `max_requests`, `request_timeout_seconds`, `service_tier` and the required positive
-integer `max_context_images`. Versions1/2/3 and missing/invalid fields are rejected;
+integer `max_context_images`. `pi-player-host/1` through `/4` and missing/invalid fields are rejected;
 closed historical configurations are evidence, not runnable current inputs.
 `model` contains Pi's
 explicit `id`, `name`, `api: "openai-completions"`, `provider`, `baseUrl`,

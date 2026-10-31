@@ -1,4 +1,4 @@
-"""Run the locked Pi/MCP conformance lane without provider inference or a game."""
+"""Run the player-host adapter's own SDK and MCP unit lane without provider inference or a game."""
 import os
 from pathlib import Path
 import subprocess
@@ -13,11 +13,11 @@ ROOT = Path(__file__).resolve().parents[1]
 CONFORMANCE_TIMEOUT_SECONDS = 180
 
 
-class PiPlayerHostTests(unittest.TestCase):
-    def test_real_sdk_and_subprocess_conformance(self):
+class PlayerHostAdapterTests(unittest.TestCase):
+    def test_adapter_sdk_and_subprocess_units(self):
         package = ROOT / "tools" / "player_host"
         tests = sorted((package / "test").glob("*.test.mjs"))
-        self.assertTrue(tests, "Pi host conformance tests are required")
+        self.assertTrue(tests, "Player-host adapter tests are required")
         environment = {**os.environ, "ENACTIVE_TEST_PYTHON": sys.executable}
         try:
             result = subprocess.run(["node", "--test", *map(str, tests)], cwd=package,
@@ -25,7 +25,7 @@ class PiPlayerHostTests(unittest.TestCase):
         except subprocess.TimeoutExpired as error:
             def decoded(value):
                 return value.decode(errors="replace") if isinstance(value, bytes) else value or ""
-            self.fail(f"Pi conformance exceeded {CONFORMANCE_TIMEOUT_SECONDS} seconds. Complete partial TAP:\n"
+            self.fail(f"Player-host adapter tests exceeded {CONFORMANCE_TIMEOUT_SECONDS} seconds. Complete partial TAP:\n"
                 + decoded(error.output) + "\nstderr:\n" + decoded(error.stderr))
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 

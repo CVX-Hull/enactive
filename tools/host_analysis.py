@@ -1,4 +1,4 @@
-"""Read-only Pi event analysis; historical omissions remain unknown, not zero."""
+"""Read-only player-host event analysis; historical omissions remain unknown, not zero."""
 from __future__ import annotations
 
 from collections import Counter
@@ -110,7 +110,7 @@ def campaign_evidence(path: Path) -> dict:
     root = path.parent.parent.parent if path.parent.parent.name == "actors" else path.parent
     result = {"metadata_coverage": {}}
     fields = {
-        "manifest.json": ("campaign-run/2", ("session", "source_commit")),
+        "manifest.json": ("campaign-run/3", ("session", "source_commit")),
         "receipt.json": ("campaign-receipt/2", ("session", "source_commit", "outcome",
             "normal_save_claimed_by_harness", "native_absence_verified", "normal_native_exit_zero",
             "deciding_hosts_quiescent", "input_authority_revoked")),
@@ -194,7 +194,7 @@ def analyze_trace(path: Path) -> dict:
             if number(at):
                 previous = at
             if kind == "host-start":
-                if event.get("schema") != "pi-player-host/4" or type(event.get("telemetry_version")) is not int or event["telemetry_version"] != 2:
+                if event.get("schema") != "player-host/1" or type(event.get("telemetry_version")) is not int or event["telemetry_version"] != 2:
                     return {"path": str(path), "coverage": "unsupported_version", "file_bytes": path.stat().st_size}
                 host_count += 1
                 if host_count > 1:
@@ -303,7 +303,7 @@ def analyze_trace(path: Path) -> dict:
     observed_requests = union_ms(requests_intervals) if clock_valid else None
     observed_tools = union_ms(tool_intervals) if clock_valid else None
     overlaps = overlap_ms(requests_intervals, tool_intervals) if clock_valid else None
-    return {"path": str(path), "coverage": "pi_host",
+    return {"path": str(path), "coverage": "player_host",
         "file_bytes": path.stat().st_size, "sha256": digest.hexdigest(), "parsed_bytes": parsed_bytes, "configuration": config,
         "clock_valid": clock_valid, "terminal": None if terminal is None else
             {key: terminal.get(key) for key in ("ok", "reason", "requests")},
@@ -331,7 +331,7 @@ def host_summary(paths: list[Path]) -> dict:
             reports.append(analyze_trace(path))
         except (ControlError, OSError, ValueError, UnicodeError, RecursionError) as exc:
             reports.append({"path": str(path), "coverage": "invalid", "error": str(exc)})
-    return {"complete": all(r["coverage"] == "pi_host" for r in reports),"schema": "host-analysis/1", "scope": "Diagnostic host intervals and reported tokens; not server inference, attention, useful-goal latency or readiness",
+    return {"complete": all(r["coverage"] == "player_host" for r in reports),"schema": "host-analysis/1", "scope": "Diagnostic host intervals and reported tokens; not server inference, attention, useful-goal latency or readiness",
         "units": "milliseconds unless named otherwise; p95 is nearest rank; reasoning is a subset of output, not added to it",
         "coverage": dict(Counter(r["coverage"] for r in reports)),
         "duplicate_content": [[r["path"] for r in reports if r.get("sha256") == sha]

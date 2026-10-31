@@ -1,4 +1,4 @@
-"""One frozen gameplay admission with a sole mechanical custodian and generic Pi."""
+"""One frozen gameplay admission with a sole mechanical custodian and the selected player host."""
 from __future__ import annotations
 
 import argparse

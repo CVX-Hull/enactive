@@ -71,7 +71,7 @@ class InvestigationTests(unittest.TestCase):
             db.execute('INSERT INTO native_intents VALUES(?,?,?,?,?)', ('native1', 'op1', json.dumps(receipt),
                 self.source_id, json.dumps(dict(intent_wall=1, intent_monotonic=5,
                     receipt_received_wall=1.1, receipt_received_monotonic=5.1))))
-        self.events = [dict(type='host-start', schema='pi-player-host/4', telemetry_version=2,
+        self.events = [dict(type='host-start', schema='player-host/1', telemetry_version=2,
             monotonic_ms=0, wall_time='1970-01-01T00:00:01Z', model='fixture', provider='fixture',
             provider_routing=dict(only=['selected'], order=['selected'], allow_fallbacks=False,
                 token='PRIVATE_TOKEN'), prompt='PRIVATE_PROMPT'),

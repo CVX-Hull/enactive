@@ -19,7 +19,7 @@ from tools import investigation_live as live
 def case():
     fixture = closed_fixture.InvestigationTests()
     fixture.setUp()
-    fixture.profile = dict(schema='campaign-run/2', session=fixture.session, source_commit='f' * 40)
+    fixture.profile = dict(schema='campaign-run/3', session=fixture.session, source_commit='f' * 40)
     (fixture.case / 'manifest.json').write_text(json.dumps(fixture.profile))
     (fixture.case / 'actors/001/frozen.json').write_text(json.dumps(dict(
         schema='player-host-inputs/1', session=fixture.session, actor_id=fixture.actor,

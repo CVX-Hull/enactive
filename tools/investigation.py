@@ -498,7 +498,7 @@ def project_case(selected, selection_parent, directory, control, actors, source_
     seen_programs = set()
     for trace_index, path in enumerate(traces):
         analysis = analyses[path] if analyses is not None else analyze_trace(path)
-        if analysis['coverage'] != 'pi_host':
+        if analysis['coverage'] != 'player_host':
             note(notes, 'Selected host trace has unsupported or missing current telemetry; host rows unavailable.')
             continue
         actor_id = public(actors.get(path.parent.name), notes)

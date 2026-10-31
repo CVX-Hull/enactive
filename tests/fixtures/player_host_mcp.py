@@ -1,4 +1,6 @@
-"""Offline boundary fixture using the maintained Python MCP server."""
+"""Offline MCP double for player-host/1 tests, using the maintained Python MCP server.
+
+Shared by the adapter node tests and the adapter-agnostic contract suite."""
 import json
 import os
 from pathlib import Path
@@ -12,6 +14,8 @@ CORRUPTION_FD = os.dup(1)
 LOG = Path(sys.argv[1])
 PID = Path(sys.argv[2])
 PID.write_text(str(os.getpid()))
+# Environment inventory for the contract suite's credential-isolation case.
+PID.with_name(PID.name + '.env').write_text(json.dumps(dict(os.environ)))
 if len(sys.argv) > 3:
     time.sleep(float(sys.argv[3]))
 # Publish owned process identity before third-party startup can consume a deadline.
