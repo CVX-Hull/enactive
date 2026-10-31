@@ -11,7 +11,7 @@ and the program that hosts a deciding player. The host turns frozen context, a
 frozen provider route and the actor's MCP table into model calls and sequential
 player tool calls. The driver owns actor minting, original limits, process-group
 closure, handoff verification and succession. Any adapter that satisfies this page
-and passes the conformance suite (`tests/test_player_host_contract.py`) is
+and passes the [conformance suite](../../tests/test_player_host_contract.py) is
 substitutable; no driver, packager or gameplay page depends on a particular
 adapter. The [current adapter reference](../../tools/player_host/README.md) owns
 its provider serializers, closed route `model` fields and limits.
@@ -102,7 +102,7 @@ Host attempts and seconds are separate from custodian mechanical resources.
 
 ## Conformance
 
-The contract suite (`tests/test_player_host_contract.py`) drives each listed
+The [contract suite](../../tests/test_player_host_contract.py) drives each listed
 adapter only through this page's argv, files, environment, stdout and exit status,
 with a scripted reference provider and an MCP double. It covers validation,
 argument refusal, completed and handoff settlement, telemetry accounting through
