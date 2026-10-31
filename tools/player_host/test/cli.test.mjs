@@ -17,7 +17,7 @@ async function cli(t, handle, extraEnv = {}, enabledTools = ['observe']) {
   const server=createServer(handle); server.listen(0,'127.0.0.1'); await once(server,'listening');
   t.after(()=>{server.closeAllConnections();server.close();});
   const model={id:'fixture',name:'fixture',api:'openai-completions',provider:'fixture',baseUrl:`http://127.0.0.1:${server.address().port}/v1`,input:['text','image'],reasoning:false,cost:{input:0,output:0,cacheRead:0,cacheWrite:0},contextWindow:10000,maxTokens:100};
-  const route={schema:'player-host/1',service_tier:'default',model,api_key_env:'CLI_FIXTURE_KEY',max_requests:1,max_context_images:4,request_timeout_seconds:5};
+  const route={schema:'player-host/2',service_tier:'default',model,api_key_env:'CLI_FIXTURE_KEY',max_requests:1,max_context_images:4,context_image_block:1,request_timeout_seconds:5};
   const mcp={command:resolve(python),args:[fixture,join(dir,'log'),join(dir,'pid')],cwd:dir,enabled:true,required:true,enabled_tools:enabledTools,startup_timeout_sec:3,tool_timeout_sec:1};
   const paths={route:join(dir,'route.json'),mcp:join(dir,'mcp.json'),context:join(dir,'context.txt'),final:join(dir,'final.txt')};
   await Promise.all([writeFile(paths.route,JSON.stringify(route)),writeFile(paths.mcp,JSON.stringify(mcp)),writeFile(paths.context,'Frozen player guide'),writeFile(paths.final,'reserved')]);
@@ -95,7 +95,7 @@ async function validateFiles(t, mutate = ()=>{}) {
   const dir=await mkdtemp(join(tmpdir(),'pi-host-validate-'));
   t.after(()=>rm(dir,{recursive:true,force:true}));
   const model={id:'fixture',name:'fixture',api:'openai-completions',provider:'fixture',baseUrl:'http://127.0.0.1:1/v1',input:['text','image'],reasoning:false,cost:{input:0,output:0,cacheRead:0,cacheWrite:0},contextWindow:10000,maxTokens:100};
-  const route={schema:'player-host/1',service_tier:'default',model,api_key_env:'CLI_FIXTURE_KEY',max_requests:1,max_context_images:4,request_timeout_seconds:5};
+  const route={schema:'player-host/2',service_tier:'default',model,api_key_env:'CLI_FIXTURE_KEY',max_requests:1,max_context_images:4,context_image_block:1,request_timeout_seconds:5};
   const mcp={command:resolve(python),args:[fixture],cwd:dir,enabled:true,required:true,enabled_tools:['observe'],startup_timeout_sec:3,tool_timeout_sec:1};
   mutate(route,mcp);
   const paths={route:join(dir,'route.json'),mcp:join(dir,'mcp.json')};

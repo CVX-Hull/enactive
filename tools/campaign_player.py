@@ -43,7 +43,7 @@ class HostEvents:
             kind=value.get('type')
             if kind=='host-start':
                 if (self.started or value.get('telemetry_version')!=2
-                        or value.get('schema')!='player-host/1'):raise ControlError('Unsupported/repeated current host trace')
+                        or value.get('schema')!='player-host/2'):raise ControlError('Unsupported/repeated current host trace')
                 self.started=True
             elif kind=='request-start':
                 match=re.fullmatch(r'request-([1-9][0-9]*)',value.get('request_id',''))
