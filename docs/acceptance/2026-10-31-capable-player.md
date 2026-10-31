@@ -111,8 +111,13 @@ runs was 15.03 seconds, so the 45-second limit was never missed.
 Clean-context agent reviewers assessed play001 and play003 from the original frames and
 traces (agent review, not human review). Both reports arrived before the adoption
 decision. The retained play003 note is a later transcription of that report, written
-after the branch review asked for it. play002 ended after 36 attempts and was not
-separately assessed.
+after the branch review asked for it. play002 was assessed separately after the
+decision had merged. It confirms the pattern, so the decision stands:
+- The Look reading of its own tile was correct, and it recovered cleanly from an
+  Actions-menu misstep.
+- Weight stayed at 12.5 lb throughout, with no gain.
+- It probably pressed `g` on a stale pecorino log line.
+- It ended in dialogue on the 503, with no Save and no report.
 
 **Deviation from #304's admission rules.** #304 reserves its final admission for a
 promising configuration's named continuation question, and points to the frozen alternate

@@ -157,7 +157,7 @@
  "retention": "Only allowlisted summaries and three original PNGs are published. Packages, answers, labels, traces and saves remain ignored project-local evidence. No private reasoning, raw request bodies, credentials or local paths are included.",
  "assessments": {
   "play001": "independent clean-context agent assessment retained",
-  "play002": "not separately assessed (36 attempts, ended on HTTP 503)",
+  "play002": "independent clean-context agent assessment retained, made after the decision merged; no retained gain; ended on HTTP 503 without Save",
   "play003": "independent clean-context agent assessment retained"
  },
  "deviation": "All three admissions went to Gemini (third on google-vertex/global) after two external stops; the frozen alternate (Haiku) received no gameplay, so the rejection rests on one model."
