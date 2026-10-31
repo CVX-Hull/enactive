@@ -56,7 +56,9 @@ read only: `model.id`, `model.name`, `model.cost.{input,output,cacheRead,cacheWr
 closed `model` field and rejects routes it cannot serve without fallback. The
 driver lowers `max_requests` to the actor's remaining original allowance before
 launch. Routes carrying any other schema, including earlier adapter-named route
-schemas, are rejected; their packages are inert history.
+schemas, are rejected; their packages are inert history. One logical inference
+request uses at most two charged attempts, each counted against `max_requests`;
+the adapter's host reference defines which transient refusal classes are retried.
 
 ## Telemetry
 

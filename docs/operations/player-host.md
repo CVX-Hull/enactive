@@ -48,8 +48,10 @@ never restore authority.
 
 Host JSONL retains bounded visible narration and mechanical request/result
 references, not private reasoning or raw request/image histories. Missing usage
-stays unknown. Attempts include failures and permitted provider-only retries;
-unknown accounting charges the allocated bound. Context projection marks older
+stays unknown. Attempts include failures and permitted provider-only retries: one
+shared retry per logical request for 429, 502/503/504, a pre-header fetch rejection
+or OpenRouter's transient in-flight 402, as the host reference defines. Allocate
+attempts with that retry in mind; unknown accounting charges the allocated bound. Context projection marks older
 omitted pixels and preserves text/IDs; no automatic tool reread or replay occurs.
 An oversized protected current image group stops before inference.
 

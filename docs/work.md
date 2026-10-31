@@ -31,7 +31,10 @@ Each finite package freezes one player host adapter under the
 [player host contract](contracts/player-host.md); each OpenRouter / DeepSeek Flash1017
 medium package pins its provider. The [recorded endpoint dispositions](acceptance/2026-10-29-computer-control.md#failures-and-endpoint-disposition)
 retain Fireworks/BaseTen failures and the explicit DeepInfra ending continuation,
-not a quality ranking.
+not a quality ranking. Since [#308](https://github.com/CVX-Hull/enactive/issues/308),
+the current player host retries one transient provider failure per logical request (429,
+502/503/504, a pre-header fetch rejection or OpenRouter's in-flight 402), proven by
+offline fixtures only; no live 5xx has yet exercised it.
 
 The compact [player guide](player-guide.md#play-from-observed-effects) now emphasizes
 observed effects, quantity/container scope and confirmation focus. The
