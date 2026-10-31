@@ -43,7 +43,10 @@ compact [guide](../player-guide.md), finite objective and current tool schema.
 Keep routine engineering history/source searches outside its context. Preserve
 ending capacity and, if permitted, meaningful unfinished work for a fresh successor.
 Do not inject lead tactics or curate memory to manufacture a successful outcome.
-Record interventions, failures and unknowns. [Campaign procedure](campaign-run.md).
+The player must be self-sufficient, because the project will generalize beyond
+this game (owner, 31 October 2026). No lead tactical nudge or game-specific hint
+enters any run: not mid-run, not in the frozen context, and not as a labelled
+diagnostic arm. Record interventions, failures and unknowns. [Campaign procedure](campaign-run.md).
 
 [Operations index](../runbook.md).
 

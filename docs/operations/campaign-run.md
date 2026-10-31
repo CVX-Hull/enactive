@@ -33,6 +33,8 @@ and inherited mechanical descriptors, not provider credentials.
 provider/effort/price metadata and image peak and block, chosen against the
 provider's image limit. The selected route is OpenRouter /
 an explicitly pinned provider / DeepSeek Flash1017 medium, default service tier, no fallback.
+Diagnostic or qualification packages may freeze another conformed route; their
+record names it, and it confers no selection.
 `mcp-template.json` must equal the current generated profile with `@ACTOR_CONFIG@`.
 Freeze the player guide/current schema, meaningful task, original limits and ending
 reserve in context/prompt. Do not put mutable engineering source or hidden game
