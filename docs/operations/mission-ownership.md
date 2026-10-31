@@ -37,7 +37,8 @@ advice or stored context can bypass mechanical input custody.
 
 ## Designated campaign operator
 
-The generic Pi host is mandatory. Give one explicitly designated player the
+The package freezes one player host adapter under the
+[player host contract](../contracts/player-host.md). Give one explicitly designated player the
 compact [guide](../player-guide.md), finite objective and current tool schema.
 Keep routine engineering history/source searches outside its context. Preserve
 ending capacity and, if permitted, meaningful unfinished work for a fresh successor.

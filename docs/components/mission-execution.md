@@ -41,7 +41,7 @@ unknown/partial input stops further input. [Memory/program component](memory-lea
 ## Local feedback cost
 
 Program CPU/state/heap/time and child-operation budgets are bounded independently
-of Pi requests. A local program does not make an inference call each step.
+of player host requests. A local program does not make an inference call each step.
 Configured reservations, actual HTTP attempts and invoices stay distinct. Useful
 whole-player cadence and causal learning benefit require authentic outcomes,
 not loop speed or packet timings.

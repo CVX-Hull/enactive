@@ -13,9 +13,9 @@ attempt, retain failures, and have an independent assessor review actual images
 and original operation/source references. Starting inventory is not acquisition;
 menu Save is not application exit; a local routine's done is not game success.
 
-## Pi host events
+## Player host events
 
-Current `pi-player-host/4` uses telemetry version2, one JSONL trace per actor at
+Current [`player-host/1`](contracts/player-host.md) uses telemetry version2, one JSONL trace per actor at
 `actors/NNN/host.jsonl`. Original request/tool IDs, wall and monotonic timestamps
 correlate request construction, fetch, headers, first body, completed response,
 provider refusal, tools and settlement. Exact payload SHA256/byte and image counts

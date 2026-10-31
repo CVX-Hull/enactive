@@ -8,8 +8,8 @@ status: active
 
 A local system for an agent to play **CDDA-class survival/roguelike games** while
 you watch and retain control. Cataclysm: Dark Days Ahead is the first integration;
-other games are not qualified. The mandatory generic Pi host interprets actual
-images and chooses basic key, text, pointer and wait actions. The harness owns
+other games are not qualified. A deciding player, run by a substitutable player
+host, interprets actual images and chooses basic key, text, pointer and wait actions. The harness owns
 mechanical delivery, original limits, one writer, independent Pause and cleanup.
 The player owns game meaning, goals, memory, programs and outcome claims.
 

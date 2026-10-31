@@ -11,7 +11,7 @@ less flagship gameplay models effective through better context and interfaces.
 This review informs [#251](https://github.com/CVX-Hull/enactive/issues/251) under
 [#164](https://github.com/CVX-Hull/enactive/issues/164). It does not implement a
 context policy, select a new serving model or qualify gameplay responsiveness.
-The mandatory generic Pi host and existing execution authority remain unchanged.
+The selected player host and existing execution authority remain unchanged.
 
 The [30 October spatial-grounding follow-up](research-spatial-grounding.md) separates
 visual detail, camera/reference-frame reasoning and propagated task state using
@@ -193,7 +193,7 @@ permission to send arbitrary internal reasoning to another provider.
 ## Proposed context design to test
 
 This is a proposed presentation, not a new protocol or implemented architecture.
-Use existing Pi hooks, player projections, snapshot/detail handles, memory and
+Use existing player host hooks, player projections, snapshot/detail handles, memory and
 evidence storage. Do not add another planner, executor, context database or
 mandatory model tier merely to resemble a paper.
 

@@ -61,7 +61,8 @@ their old environments as current setup.
 
 ### Install the generic gameplay host
 
-The mandatory [Pi host](../tools/player_host/README.md) uses its own pinned npm lock:
+The current player host adapter, [Pi](../tools/player_host/README.md), implements the
+[player host contract](contracts/player-host.md) and uses its own pinned npm lock:
 
 ```sh
 npm --userconfig /dev/null --cache "$PWD/.cache/npm" --prefix tools/player_host ci --ignore-scripts --no-audit --no-fund

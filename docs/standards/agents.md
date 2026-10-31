@@ -8,7 +8,10 @@ status: active
 
 The lead owns design, briefs, adjudication, escalation, integration and final
 verification. Explorers are read-only; workers own bounded named paths; reviewers
-read fresh context. Always specify agent_type; workers/reviewers use fork_turns=none.
+read fresh context. Always name the role when delegating; workers and reviewers
+start from a clean context without the lead's conversation. These roles are
+host-neutral: [coding-agent hosts](../operations/coding-agents.md) maps them to
+each supported host's delegation mechanism.
 Parallelize reads. Up to two implementation workers may write concurrently in
 separate project-local worktrees with non-overlapping named ownership and agreed
 interfaces. Each checkout has one writer. The lead alone integrates into the main
@@ -46,7 +49,9 @@ new custom fixture-validation framework is required.
 
 ## Delegated campaign operation
 
-The mandatory generic Pi host is the deciding gameplay actor. A designated
+The player host frozen by the package runs the deciding gameplay actor under the
+[player host contract](../contracts/player-host.md). The lead's coding agent is never
+a deciding-host fallback. A designated
 operator may prepare/launch the frozen finite package under
 [the current custody contract](../contracts/computer-control.md#computer-operations-and-custody).
 The lead retains design/admission, process custody, escalation and verification;

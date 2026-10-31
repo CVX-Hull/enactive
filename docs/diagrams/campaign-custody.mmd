@@ -3,12 +3,12 @@ title: Current finite campaign custody and cleanup
 ---
 flowchart TB
   accTitle: Current finite campaign custody and cleanup
-  accDescr: Actual process ownership. One campaign custodian owns the exact native target group and computer runtime and delegates Pi and MCP group cleanup to the driver. Native inherits the shared lock for its lifetime. Cancellation permanently stops input and closes only owned groups. Normal exit before forced signals, process absence and save claims are distinct.
+  accDescr: Actual process ownership. One campaign custodian owns the exact native target group and computer runtime and delegates player host and MCP group cleanup to the driver. Native inherits the shared lock for its lifetime. Cancellation permanently stops input and closes only owned groups. Normal exit before forced signals, process absence and save claims are distinct.
 F["Frozen campaign-run/2<br/>Exact source, route, target and limits"] --> C["Campaign custodian<br/>One finite admission"]
   C -->|"Exact native handle and inherited lock/socket"| N["Owned native process group<br/>Windowed target and SDL adapter"]
   C --> R["Computer runtime and loopback server<br/>One writer and original store"]
   C --> D["Campaign driver<br/>Aggregate original attempts and host time"]
-  D -->|"Exact owned host/MCP groups"| P["Original Pi actor<br/>At most one verified successor"]
+  D -->|"Exact owned host/MCP groups"| P["Original host actor<br/>At most one verified successor"]
   X["Pause, cancellation, deadline or failure"] -->|"Permanent stop then owned cleanup"| C
   D -->|"Host quiescence and attempt receipts"| C
   N -->|"Exit sampled before forced signals<br/>Absence reported separately"| C

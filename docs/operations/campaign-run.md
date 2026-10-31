@@ -8,9 +8,9 @@ status: active
 
 One [campaign custodian](../../tools/campaign_run.py) owns fresh mechanical target,
 store/server lifetime and final cleanup. The [driver](../../tools/campaign_player.py)
-owns generic-Pi host/MCP groups and at most one successor. The
-[package validator](../../tools/campaign_package.py) is authoritative for the closed
-`campaign-run/2` admission. No game-phase/identity admission or semantic mission
+owns the frozen [player host](../contracts/player-host.md)/MCP groups and at most one
+successor. The [package validator](../../tools/campaign_package.py) is authoritative
+for the closed `campaign-run/3` admission. No game-phase/identity admission or semantic mission
 service remains.
 
 ## Frozen data
@@ -19,7 +19,7 @@ Select one fresh canonical project-local directory under `.runtime/computer-sess
 Its manifest binds the exact clean source commit and SHA256 of all five driver
 inputs: `route.json`, `mcp-template.json`, `context.txt`, `prompt.txt`, `target.json`.
 It also freezes native executable/adapter bytes, bounded initial target files,
-shared-lock path, explicit `player-memory/1` store, existing Node path, effort,
+shared-lock path, explicit `player-memory/1` store, player host argv, effort,
 loopback port, original wall/host/aggregate-host seconds, one/two-host limit,
 aggregate HTTP-attempt bound, computer input/request/frame/byte capacities and
 cumulative conservative accounting. Source/directory mismatch refuses before launch.
@@ -29,7 +29,7 @@ working directory are absolute. Keep the prepared wrapper/windowed project userd
 and normal input configuration. The target receives only the permitted environment
 and inherited mechanical descriptors, not provider credentials.
 
-`route.json` uses current `pi-player-host/4` with text/image input and explicit
+`route.json` uses current `player-host/1` with text/image input and explicit
 provider/effort/price/image-history metadata. The selected route is OpenRouter /
 an explicitly pinned provider / DeepSeek Flash1017 medium, default service tier, no fallback.
 `mcp-template.json` must equal the current generated profile with `@ACTOR_CONFIG@`.
@@ -83,7 +83,7 @@ the actual bytes, for example `shasum -a 256 SELECTED_FILE`; preserve those byte
 
 ```json
 {
-  "schema": "campaign-run/2",
+  "schema": "campaign-run/3",
   "session": "NEW_32_LOWERCASE_HEX_ID",
   "source_commit": "EXACT_40_HEX_CLEAN_HEAD",
   "files": {
@@ -95,7 +95,7 @@ the actual bytes, for example `shasum -a 256 SELECTED_FILE`; preserve those byte
   "library": {"path": "ABSOLUTE_QUALIFIED_BRIDGE", "sha256": "SHA256"},
   "shared_lock": "ABSOLUTE_PROJECT_ROOT/.runtime/bridge/game.lock",
   "player_store": "ABSOLUTE_SELECTED_CURRENT_PLAYER_SQLITE",
-  "node": "ABSOLUTE_EXISTING_NODE_EXECUTABLE",
+  "host": {"argv": ["ABSOLUTE_EXISTING_NODE_EXECUTABLE", "ABSOLUTE_PROJECT_ROOT/tools/player_host/run.mjs"]},
   "effort": "medium", "port": 8766,
   "wall_seconds": 9000, "host_seconds": 3600, "total_host_seconds": 7200,
   "max_hosts": 2, "max_http_attempts": 360,
@@ -115,7 +115,9 @@ reservation is prior consumed reservation plus that amount times
 `max_http_attempts`; it must fit the standing ceiling exactly as frozen. Unknown
 trace accounting charges its original allocation; known unused allowance retires.
 
-Limits: five input files each ≤1MiB; 1–16 initial files; port1024–65535;
+Limits: five input files each ≤1MiB; 1–16 initial files; host argv of 1–8 entries,
+the first an absolute regular file and the rest canonical project-local files, with
+the frozen adapter's `validate` mode accepting the route and MCP template; port1024–65535;
 wall60–86400s, host/aggregate-host30–86400s, one/two hosts and1–10000 HTTP attempts.
 Host seconds ≤aggregate-host seconds <wall seconds minus30s cleanup. Each positive
 computer capacity is ≤2^40. The route's per-host request maximum cannot exceed the

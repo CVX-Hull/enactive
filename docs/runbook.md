@@ -61,7 +61,7 @@ basic controls and need their own actual-use evidence; see [native acceptance](o
 ## Designated campaign operator
 
 [Assignment](operations/mission-ownership.md#designated-campaign-operator): one
-explicitly designated generic-Pi player owns routine choices, with actor-only handoff.
+explicitly designated player, run by the frozen player host, owns routine choices, with actor-only handoff.
 
 ## Typed mission requests and the player
 
@@ -71,4 +71,11 @@ mission requests. [Finite run](operations/campaign-run.md) owns launch/closeout.
 ### Bounded player host activation
 
 [Host activation](operations/player-host.md#bounded-player-host-activation) uses
-frozen explicit Pi/MCP/context/route inputs; no coding-agent or resumed-host fallback.
+frozen explicit host-adapter/MCP/context/route inputs under the
+[player host contract](contracts/player-host.md); no coding-agent or resumed-host fallback.
+
+### Coding-agent hosts
+
+[Coding-agent hosts](operations/coding-agents.md) maps instructions, delegation
+roles, gameplay command allowances and the optional player MCP entry for each
+supported lead-side coding agent.

@@ -17,9 +17,11 @@ Read [architecture](docs/architecture.md), [protocol](docs/protocol.md) and
 [current work](docs/work.md) before changing relevant boundaries. Follow S-AGENT
 for delegation: the lead owns design/integration/verification; parallel workers use
 separate worktrees and disjoint ownership; one integrator and shared-runtime owner;
-named agent_type; clean-context workers/reviewers; bounded briefs.
+named role; clean-context workers/reviewers; bounded briefs. These instructions
+are host-neutral; [coding-agent hosts](docs/operations/coding-agents.md) maps
+roles, tools and permissions for each supported coding agent.
 For gameplay, the lead may explicitly designate one general-purpose campaign
-operator under the current generic Pi host's bounded actor/handoff procedure.
+operator under the frozen player host's bounded actor/handoff procedure.
 Explorers/reviewers never send game inputs.
 
 - User instructions take precedence. Global skills are optional references;

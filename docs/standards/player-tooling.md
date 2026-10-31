@@ -6,8 +6,8 @@ status: active
 
 # Structured player tooling and host context
 
-For gameplay, use the mandatory generic Pi host's explicit current structured
-tools. The adapter assigns an original durable operation ID before submission;
+For gameplay, use the selected player host's explicit current structured
+tools under the [player host contract](../contracts/player-host.md). The adapter assigns an original durable operation ID before submission;
 software owns serialization, exact image presentation, bounded collection and
 deterministic accounting. Actor capabilities and native custody remain outside
 model arguments. The player selects intent, basic controls, optional program and

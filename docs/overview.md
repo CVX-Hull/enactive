@@ -32,7 +32,8 @@ custodian serializes basic actions through the SDL adapter; the game determines
 effects. The user can Pause independently. Memory contains fallible player claims
 and never grants custody. [Editable source](diagrams/player.mmd).
 
-The [generic Pi host](components/player-interface.md) is mandatory. The selected
+Each finite run freezes one [player host](components/player-interface.md) adapter
+behind the substitutable [`player-host/1` contract](contracts/player-host.md). The selected
 finite configuration is OpenRouter / explicitly pinned provider / DeepSeek Flash1017 at medium
 effort. Its exact route, metadata, context and limits are frozen per run; this
 selection is not a claim of model quality or provider performance.

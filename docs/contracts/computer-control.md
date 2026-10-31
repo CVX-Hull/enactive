@@ -45,7 +45,7 @@ At startup, validate the exact inherited shared-lock descriptor/file identity an
 socket type; retain the locked reference for the native lifetime. Set both FDs
 close-on-exec before application main, the socket nonblocking and `SO_NOSIGPIPE`.
 Never `LOCK_UN` a shared inherited reference. The parent closes its child socket
-copy after spawn. The host/MCP inherits no native FD. Only the Pi host receives its selected provider credential; MCP and the game do not.
+copy after spawn. The host/MCP inherits no native FD. Only the player host receives its selected provider credential; MCP and the game do not.
 After startup, no bridge filesystem checks, environment polling or file writes
 occur in SDL callbacks. EOF/protocol failure permanently fences automation.
 
@@ -286,7 +286,7 @@ recorded-only HTML share a renderer. Imported IDs/data grant no actor authority,
 replace no current status/source, and cannot block independent Pause. No archive,
 collector or semantic control API is added to these runtime ports.
 
-Socketpair/SQLite/HTTP/MCP/Pi are maintained facilities. Thin framing and custody
+Socketpair/SQLite/HTTP/MCP and the player host adapter are maintained facilities. Thin framing and custody
 integration cover the demonstrated native-publication/one-writer gap; no framework.
 Pillow is a pinned project-local maintained codec for Python image views, replacing
 an otherwise unnecessary PNG parser. The lead owns this integration; reconsider on

@@ -6,11 +6,13 @@ status: active
 
 # Player interface: judgment in, bounded evidence out
 
-One designated player uses the mandatory generic Pi host, current MCP tools and
-explicit frozen context/provider route. The player interprets actual pixels and
-owns plans, tactics, knowledge and success claims. The [player guide](../player-guide.md)
-is the compact working document. [Exact current contract](../contracts/computer-control.md)
-and [host package reference](../../tools/player_host/README.md) own wire/configuration details.
+One designated player runs in the player host adapter frozen by its package, with
+current MCP tools and explicit frozen context/provider route. The player interprets
+actual pixels and owns plans, tactics, knowledge and success claims. The
+[player guide](../player-guide.md) is the compact working document. The
+[computer-control contract](../contracts/computer-control.md) owns player ports; the
+[player host contract](../contracts/player-host.md) owns the substitutable host boundary;
+the [current adapter reference](../../tools/player_host/README.md) owns its provider details.
 
 ## Internal responsibilities
 
@@ -19,7 +21,7 @@ and [host package reference](../../tools/player_host/README.md) own wire/configu
 | [Tool schema](../../harness/player_tools.py) | Basic observe/input/result/stop and optional source/memory/program/context/handoff tools; no semantic gameplay API. |
 | [Player client](../../harness/player_client.py) | Per-actor explicit `player-adapter/1`, ID assigned before submission, exact source retrieval and uncertainty; no native/process/provider ownership. |
 | [MCP adapter](../../harness/player_mcp.py) | Official SDK transport and actual image blocks; cancellation requests independent permanent stop. |
-| [Pi host](../../tools/player_host/host.mjs) | Explicit model/context/MCP table, finite provider requests and host deadline, sequential tools and origin-bound handoff settlement. |
+| [Player host](../contracts/player-host.md) | Any conforming adapter: explicit model/context/MCP table, finite provider requests and host deadline, sequential tools and origin-bound handoff settlement. |
 | [Campaign driver](../../tools/campaign_player.py) | Exact host/MCP process groups, aggregate original attempt/time limits, canonical handoff/context and verified quiescence before successor. |
 
 The host loads no coding-agent shell/file tools, personal configuration, resource
@@ -36,7 +38,7 @@ interpretation, never engine facts. The provider image-history window retains al
 text/IDs, marks omitted older pixels and protects the current result group; an
 oversized protected group stops. Source availability does not prove the actor read it.
 
-Current provider route is closed `pi-player-host/4`, with explicit image allowance,
+Current provider route is closed `player-host/1`, with explicit image allowance,
 cost/capacity/effort metadata and default service tier for the current campaign.
 OpenRouter uses exact selected full-tag routing, no fallback and required parameter
 support. Credentials are injected only into the provider host; MCP/native children
@@ -50,11 +52,11 @@ provider request/image histories. Original source images remain with their owner
 Host attempt/time counters are separate from custodian mechanical resources.
 
 `player_handoff` seals this actor with canonical immutable context. Only its direct
-originating issuance or exact original collection settles Pi handoff. After the
+originating issuance or exact original collection settles host handoff. After the
 host closes its owned MCP child, the driver checks actual old process-group
 quiescence and context digest before minting a successor under original limits.
 No menu/save/identity check is required. User Pause, uncertainty or failed closure
-cannot become resumable handoff. At most two hosts are permitted by `campaign-run/2`.
+cannot become resumable handoff. At most two hosts are permitted by `campaign-run/3`.
 
 ## Assurance and evidence
 

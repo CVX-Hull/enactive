@@ -6,10 +6,13 @@ status: active
 
 # Bounded player host activation
 
-The mandatory [generic Pi host](../../tools/player_host/README.md) is the sole
-campaign execution path. Install its locked project-local dependencies through
-[setup](../setup.md#install-the-generic-gameplay-host). Activate it only through
-the [finite campaign custodian](campaign-run.md), not an old mission-driver CLI.
+A deciding player runs only in the player host adapter frozen by its package, under
+the [player host contract](../contracts/player-host.md). The current adapter is the
+[Pi host](../../tools/player_host/README.md); install its locked project-local
+dependencies through [setup](../setup.md#install-the-generic-gameplay-host). Activate a
+host only through the [finite campaign custodian](campaign-run.md), not an old
+mission-driver CLI. Freeze the Pi adapter as
+`"host": {"argv": ["ABSOLUTE_EXISTING_NODE_EXECUTABLE", "ABSOLUTE_PROJECT_ROOT/tools/player_host/run.mjs"]}`.
 
 The selected finite configuration is OpenRouter / explicitly pinned provider / DeepSeek
 Flash1017 medium. Freeze its verified full endpoint tag and supported parameters
@@ -17,7 +20,7 @@ in `route.json`; use no fallback. The current campaign accepts the explicit defa
 service tier. Configuration metadata/prices are not invoice, quality or latency
 attestation. New live calls remain bounded by the prospective allocation.
 
-The package freezes `route.json` (`pi-player-host/4`), `mcp-template.json`,
+The package freezes `route.json` (`player-host/1`), `mcp-template.json`,
 `context.txt`, `prompt.txt` and `target.json`. The route declares explicit model
 text/image capabilities, context/output capacities, effort mapping, costs, request
 timeout, request cap, credential environment name and image-history allowance.
@@ -27,7 +30,7 @@ Old route/mission/player-view configurations reject as executable inputs.
 The driver creates each actor's `player-adapter/1`, explicit MCP table, fixed
 context, resource/knowledge prompt and file hashes. Pi loads no coding-agent
 shell/file tools, personal settings, resource discovery or resumed history.
-Both original and successor start fresh; at most two hosts fit `campaign-run/2`.
+Both original and successor start fresh; at most two hosts fit `campaign-run/3`.
 No model, transport, host or coding-agent fallback is supported.
 
 Inject only the selected credential environment variable into the provider child.

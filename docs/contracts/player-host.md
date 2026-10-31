@@ -55,7 +55,8 @@ read only: `model.id`, `model.name`, `model.cost.{input,output,cacheRead,cacheWr
 `api_key_env`, `max_requests` and `service_tier`. The adapter owns every other
 closed `model` field and rejects routes it cannot serve without fallback. The
 driver lowers `max_requests` to the actor's remaining original allowance before
-launch. Routes carrying any other schema, including `pi-player-host/4`, are rejected.
+launch. Routes carrying any other schema, including earlier adapter-named route
+schemas, are rejected; their packages are inert history.
 
 ## Telemetry
 
