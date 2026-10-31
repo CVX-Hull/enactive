@@ -105,8 +105,9 @@ limit (DeepInfra, for example, rejects more than 30). Pi's maintained
 all text, reasoning, tool calls/results and IDs. Eviction is count-only, in whole
 blocks of `context_image_block`. When `n` images exceed the peak, the oldest
 `ceil((n − peak) / block) × block` become markers, never reaching into the protected
-batch below. Retained pixels therefore cycle between `peak − block + 1` and the
-peak, and the serialized prefix stays byte-stable between evictions, which lets
+batch below, so a large protected batch can leave fewer. Otherwise retained pixels
+cycle between `peak − block + 1` and the peak, and the serialized prefix stays
+byte-stable between evictions, which lets
 provider prefix caches reuse it. Block 1 omits exactly the overflow, the earlier
 rolling policy. Choose the counts per route against the provider's image limit.
 Pi's session-affinity header is not sent: OpenRouter ignores sticky routing when a

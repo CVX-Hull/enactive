@@ -40,10 +40,16 @@ Since [#313](https://github.com/CVX-Hull/enactive/issues/313), routes are `playe
 and evict historical screenshots in whole count-only blocks, so the prompt prefix stays
 cacheable between evictions. A zero-spend replay of #304's traces predicts that a peak
 of 39 with block 10 cuts input cost 2.5–3.9× against the rolling 30-image policy
-(block 1). A bounded live check on Gemini/Vertex with retained frames ($0.41 actual)
-passed its frozen criterion: observed cache reads were 0.90× the prediction, and
-calls 12–20 served 68% from cache under blocks against 0% rolling. That proves the
-mechanism only. Play behaviour with up to 39 frames, residency at game pace and other
+(block 1). A bounded live check on Gemini/Vertex with retained frames cost $0.41
+actual (whole account delta on a shared account). Before running, the lead raised
+the output cap from the Ready decision's 1024 to 2048 tokens and replaced its cost
+rule with a prediction-fidelity and mechanism rule. That was a deviation, recorded
+afterwards on #313 rather than settled beforehand. Under the frozen replacement rule
+the check passed: observed cache reads were 0.90× the prediction, and calls 12–20
+served 68% from cache under blocks against 0% rolling. Under the Ready rule (blocked
+input cost per call ≤ 0.5× rolling) it **failed narrowly** at 0.52× over calls 2–20,
+while passing at 0.44× over calls 12–20. Three frames per call evicts every ~3.3
+calls rather than every 10, so the check proves the mechanism only. Play behaviour with up to 39 frames, residency at game pace and other
 providers remain unmeasured; the next qualification play compares against the
 30-image baseline.
 

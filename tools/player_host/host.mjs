@@ -103,6 +103,7 @@ export function validateConfiguration(configuration, selectedModel, effort) {
  * blocks, so the serialized prefix stays byte-stable between evictions. Block 1 omits
  * exactly the overflow. */
 export function projectImageContext(messages, maxImages, block) {
+  requireThat(Number.isSafeInteger(block) && block > 0 && block <= maxImages);
   const projected = structuredClone(messages);
   const latestBatch = messages.findLastIndex(message => message.role === 'assistant'
     && message.content.some(part => part.type === 'toolCall'));

@@ -245,12 +245,13 @@ test('block 1 is byte-identical to omitting exactly the overflow',()=>{
 });
 test('consecutive requests within a block share a byte-identical serialized prefix',()=>{
   const serial=n=>projectImageContext(imageHistory(n,3),39,10).messages.map(message=>JSON.stringify(message));
+  // Three images per turn under 39/10: whole blocks go only at 42, 51 and 60 images.
+  const stable=[];
   for (let n=14; n<=20; n++) {
     const previous=serial(n-1), current=serial(n);
-    const evicted=projectImageContext(imageHistory(n,3),39,10).summary.omitted_images!==projectImageContext(imageHistory(n-1,3),39,10).summary.omitted_images;
-    // Without a new eviction, every earlier message is unchanged; an eviction changes the oldest retained ones.
-    assert.equal(JSON.stringify(current.slice(0,previous.length))===JSON.stringify(previous),!evicted,`n=${n}`);
+    stable.push(JSON.stringify(current.slice(0,previous.length))===JSON.stringify(previous));
   }
+  assert.deepEqual(stable,[false,true,true,false,true,true,false]);
 });
 test('a whole block never reaches into the protected latest batch',()=>{
   // 3 historical images plus a protected batch of 38 under max 39, block 10: overflow 2 rounds to 10, capped at 3.
