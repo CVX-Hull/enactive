@@ -16,6 +16,8 @@ const PROVIDER_ERROR_LIMIT_BYTES = 16_384;
 // Adopt the pinned SDK helper's maintained default; original request/host
 // deadlines and one retry remain the outer bounds.
 const MAX_RETRY_DELAY_MS = 60000;
+// Upstream gateway failures are eligible by status alone; 500 and other codes stay terminal.
+const SERVER_RETRY_STATUSES = [502, 503, 504];
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const positive = value => typeof value === 'number' && Number.isFinite(value) && value > 0;
 const text = value => typeof value === 'string' && value.length > 0;
@@ -227,19 +229,21 @@ function refusalDiagnostic(body, secret) {
     return {error_type:diagnosticId(error?.metadata?.error_type ?? error?.type, secret),
       error_code:diagnosticId(Number.isSafeInteger(error?.code) ? String(error.code) : error?.code, secret),
       provider_error_code:diagnosticId(error?.metadata?.provider_code, secret),
-      limit_source:diagnosticId(error?.metadata?.limit_source, secret)};
-  } catch { return {error_type:null, error_code:null, provider_error_code:null, limit_source:null}; }
+      limit_source:diagnosticId(error?.metadata?.limit_source, secret),
+      reason:diagnosticId(error?.metadata?.reason, secret)};
+  } catch { return {error_type:null, error_code:null, provider_error_code:null, limit_source:null, reason:null}; }
 }
 
 // Preserve the server's retry instruction without logging arbitrary headers or
 // refusal text. The maintained SDK owns delay selection and enforcement.
+// Seconds or an HTTP date, read as the pinned retry helper reads Retry-After.
+function retryAfterMs(after) {
+  const seconds = Number.parseFloat(after);
+  return Number.isFinite(seconds) ? seconds * 1000 : !after ? NaN : Date.parse(after) - Date.now();
+}
 function retryDiagnostic(headers) {
   const milliseconds = Number.parseFloat(headers.get('retry-after-ms'));
-  const after = headers.get('retry-after');
-  const seconds = Number.parseFloat(after);
-  const delay = Number.isFinite(milliseconds) ? milliseconds
-    : Number.isFinite(seconds) ? seconds * 1000
-      : after === null ? NaN : Date.parse(after) - Date.now();
+  const delay = Number.isFinite(milliseconds) ? milliseconds : retryAfterMs(headers.get('retry-after'));
   return {requested_retry_delay_ms:Number.isFinite(delay) && Math.abs(delay) <= Number.MAX_SAFE_INTEGER ? delay : null,
     retry_suppressed:headers.get('x-should-retry') === 'false', max_retry_delay_ms:MAX_RETRY_DELAY_MS};
 }
@@ -255,6 +259,15 @@ function retryableRefusal(body) {
   if (/(?:auth|api[_ -]?key|permission|invalid|malformed|context|quota|billing|budget|payment|credit)/i.test(kind)
       || /(?:authenticat|authorizat|api[_ -]?key|permission|invalid[_ -]?(?:request|parameter)|malformed|context[_ -]?(?:length|window)|quota|billing|budget|payment|credit)/i.test(details)) return false;
   return isRetryableAssistantError({stopReason:'error', errorMessage:details});
+}
+
+// OpenRouter's documented transient in-flight hold, a narrow exception to the
+// budget/credit exclusion above. Every other 402, including credits, is terminal.
+function inFlightBudgetRefusal(body) {
+  try {
+    const metadata = JSON.parse(body)?.error?.metadata;
+    return metadata?.limit_source === 'openrouter_in_flight_budget' && metadata?.reason === 'in_flight_budget_exhausted';
+  } catch { return false; }
 }
 
 // This actual MCP receipt ends this host only. The driver independently checks
@@ -470,6 +483,26 @@ export async function runHost(options) {
           let payloadReadyAt;
           const actualFetch = options.fetch ?? globalThis.fetch;
           let attempts = 0, previousRequestId;
+          // End an eligible first attempt and hand its server delay to the SDK
+          // helper. Status is omitted so only the host's declared classes decide.
+          const retry = (attemptId, retryClass, status, headers) => {
+            emit('response-complete', {request_id:attemptId, model:model.id, provider:model.provider, stop_reason:'error', http_status:status, usage_available:false, usage:null, cost_source:null, response_progress:progressSnapshot()});
+            requestInFlight = false;
+            if (requests >= configuration.max_requests) {
+              stop('request-limit');
+              throw new HostError(fatal);
+            }
+            previousRequestId = attemptId;
+            emit('provider-retry', {stage:'eligible', request_id:attemptId, retry_class:retryClass, max_retry_delay_ms:MAX_RETRY_DELAY_MS});
+            const error = new Error(`provider-${retryClass}`);
+            error.status = undefined;
+            error.headers = new Headers();
+            for (const name of ['retry-after-ms', 'retry-after']) {
+              const value = headers?.get(name);
+              if (value != null) error.headers.set(name, value);
+            }
+            throw error;
+          };
           const observedFetch = (url, init) => retryProviderRequest(async () => {
             requestSignal.throwIfAborted();
             if (fatal) throw new HostError(fatal);
@@ -496,14 +529,20 @@ export async function runHost(options) {
             let response;
             emit('request-fetch-start', {request_id:attemptId});
             try { response = await actualFetch(url, init); }
-            catch { if (!fatal) stop('provider-error'); throw new HostError(fatal); }
+            catch {
+              // A rejected fetch has no response headers. Timeout and abort latch first.
+              if (!fatal && !requestSignal.aborted && attempts === 1) retry(attemptId, 'pre-header-rejection', null, null);
+              if (!fatal) stop('provider-error');
+              throw new HostError(fatal);
+            }
             if (fatal || requestSignal.aborted) {
               void response.body?.cancel().catch(() => {});
               throw new HostError(fatal ?? 'provider-error');
             }
+            const server = SERVER_RETRY_STATUSES.includes(response.status);
             emit('response-headers', {request_id:attemptId, status:response.status, provider_request_id:
               diagnosticId(response.headers.get('x-request-id'), apiKey),
-              ...(response.status === 429 ? retryDiagnostic(response.headers) : {})});
+              ...(server || [402, 429].includes(response.status) ? retryDiagnostic(response.headers) : {})});
             let first = false;
             const body = response.body?.pipeThrough(new TransformStream({transform(chunk, controller) {
               attemptProgress.body_bytes += chunk.byteLength;
@@ -514,28 +553,20 @@ export async function runHost(options) {
             }}));
             response = new Response(body ?? null, {status:response.status, statusText:response.statusText, headers:response.headers});
             if (response.status < 400) return response;
-            const errorBody = await refusalBody(response, requestSignal);
-            emit('provider-refusal', {request_id:attemptId, status:response.status, ...refusalDiagnostic(errorBody, apiKey)});
-            if (response.status !== 429 || attempts !== 1 || response.headers.get('x-should-retry') === 'false') {
-              return new Response(errorBody, {status:response.status, headers:response.headers});
+            let errorBody = null;
+            // A declared 5xx stays eligible by status when its refusal body is
+            // unreadable; 402 and 429 need their bounded body classifiers.
+            try { errorBody = await refusalBody(response, requestSignal); }
+            catch (error) { if (!server || fatal || requestSignal.aborted) throw error; }
+            emit('provider-refusal', {request_id:attemptId, status:response.status, body_read:errorBody !== null, ...refusalDiagnostic(errorBody ?? '', apiKey)});
+            // One shared retry per logical request, whatever the first class was.
+            if (attempts === 1 && response.headers.get('x-should-retry') !== 'false') {
+              if (server) retry(attemptId, 'server-error', response.status, response.headers);
+              if (response.status === 429 && retryableRefusal(errorBody)) retry(attemptId, 'rate-limit', 429, response.headers);
+              if (response.status === 402 && Number.isFinite(retryAfterMs(response.headers.get('retry-after'))) && inFlightBudgetRefusal(errorBody)) retry(attemptId, 'in-flight-budget', 402, response.headers);
             }
-            if (!retryableRefusal(errorBody)) return new Response(errorBody, {status:response.status, headers:response.headers});
-            emit('response-complete', {request_id:attemptId, model:model.id, provider:model.provider, stop_reason:'error', http_status:429, usage_available:false, usage:null, cost_source:null, response_progress:progressSnapshot()});
-            requestInFlight = false;
-            if (requests >= configuration.max_requests) {
-              stop('request-limit');
-              throw new HostError(fatal);
-            }
-            previousRequestId = attemptId;
-            emit('provider-retry', {stage:'eligible', request_id:attemptId, max_retry_delay_ms:MAX_RETRY_DELAY_MS});
-            const error = new Error('provider-rate-limit');
-            error.status = 429;
-            error.headers = new Headers();
-            for (const name of ['retry-after-ms', 'retry-after']) {
-              const value = response.headers.get(name);
-              if (value !== null) error.headers.set(name, value);
-            }
-            throw error;
+            if (errorBody === null) throw new HostError('provider-error');
+            return new Response(errorBody, {status:response.status, headers:response.headers});
           }, {maxRetries:1, maxRetryDelayMs:MAX_RETRY_DELAY_MS, signal:requestSignal});
           // The outer request timer includes classification, SDK backoff and
           // both HTTP attempts. Disable the provider stream's nested retries.

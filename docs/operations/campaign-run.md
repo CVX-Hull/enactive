@@ -124,6 +124,13 @@ counted separately. When host traces carry only configured-rate costs (as on #30
 OpenRouter routes), use provider usage or account readings, and state when the account
 is shared. Present the reservation only as the cap check it is.
 
+Before paid play, the lead reads the provider account balance and confirms that
+the auto top-up threshold stays above the realistic actual cost of the planned
+runs. OpenRouter sizes its in-flight hold from the current balance, so a low
+account produces repeated in-flight 402s that one host retry may not outlast
+(#304's play001 ended this way), and an exhausted one returns terminal credit
+refusals.
+
 Limits: five input files each ≤1MiB; 1–16 initial files; host argv of 1–8 entries,
 the first an absolute regular file and the rest canonical project-local files tracked
 by the clean source commit (ignored `.runtime`, `.worktrees` or dependency files refuse), with

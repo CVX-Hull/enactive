@@ -184,16 +184,36 @@ parsed stream IDs/provider names and optional generation metadata establish only
 what the service actually reports. See [routing](https://openrouter.ai/docs/guides/routing/provider-selection)
 and [tier semantics](https://openrouter.ai/docs/guides/features/service-tiers).
 
-One inference request may recover from one eligible HTTP 429 before assistant
-output, using Pi's maintained abortable provider-retry helper. Its classifier reads
-at most16KiB of a JSON error object; explicit authorization/invalid-request kinds,
-quota/billing limits, malformed or unrecognized errors stay terminal. A provider
-`x-should-retry:false` also suppresses recovery. The second429, other HTTP statuses,
-transport failures and partial-stream failures are terminal. The provider stream's
-own retries remain disabled, so there is no nested retry loop or assistant-turn
-restart. Error text is neither traced nor sent back as model context. Bounded diagnostic
-identifiers include OpenRouter metadata error_type, provider_code and limit_source
-when present; raw metadata, remedy text and provider bodies are excluded.
+One inference request may recover once from one eligible transient failure before
+assistant output, using Pi's maintained abortable provider-retry helper. The host
+alone decides eligibility; its synthesized retry error carries no status, so Pi's
+broader classifier (which also admits 408, 409 and 500) never widens the set. The
+declared classes, recorded as `provider-retry.retry_class`, are:
+
+- `server-error`: HTTP 502, 503 or 504, by status alone. HTML or non-JSON bodies
+  are eligible, as is a refusal body that fails or exceeds16KiB while being read.
+- `pre-header-rejection`: a rejected fetch with no response headers. A request
+  timeout, cancellation or host deadline latches first and is never retried.
+- `rate-limit`: HTTP 429 whose classifier reads at most16KiB of a JSON error
+  object; explicit authorization/invalid-request kinds, quota/billing/budget/credit
+  limits, malformed or unrecognized errors stay terminal.
+- `in-flight-budget`: HTTP 402 only when its metadata has both
+  `limit_source:openrouter_in_flight_budget` and `reason:in_flight_budget_exhausted`
+  (OpenRouter's documented [transient hold](https://openrouter.ai/docs/api-reference/limits))
+  and its `Retry-After` header parses as seconds or an HTTP date. Every other 402,
+  including `openrouter_credits`, a missing or mismatched source or reason, or a
+  missing, empty or unparseable `Retry-After`, is terminal.
+
+The retry is shared: whatever the first class, a second failure of any kind is
+terminal, so a logical request has at most two charged attempts. A provider
+`x-should-retry:false` suppresses recovery for every class. HTTP 500, 408, 409 and
+other statuses, failures after `<400` headers (inside Pi's stream) and partial-stream
+failures are terminal. The provider stream's own retries remain disabled, so there
+is no nested retry loop or assistant-turn restart. Error text is neither traced nor
+sent back as model context. Bounded diagnostic identifiers include OpenRouter
+metadata error_type, provider_code, limit_source and reason when present; raw
+metadata, remedy text and provider bodies are excluded. Packages frozen before this
+retry set keep their recorded single-429 behavior as history.
 
 `max_requests` counts each actual provider HTTP fetch attempt, including the retry.
 The host checks and charges immediately before fetching; a refused extra attempt
@@ -220,7 +240,7 @@ gets one explicit `MCP isError: true` text marker because the provider serialize
 otherwise drops error metadata. A known error can lead to deliberate collection
 or correction. A transport/client error, rejected call, timeout or cancellation
 latches the first fatal reason, aborts the agent, closes the child and suppresses
-remaining calls and inference. The bounded provider-only429 recovery above never
+remaining calls and inference. The bounded provider-only recovery above never
 retries a tool/gameplay submission or grants reconnect, replay, fallback,
 automatic compaction or session restoration.
 
@@ -282,12 +302,12 @@ with `usage_available:false`; a reported complete input/output count enables
 normalized usage, with `cost_source` distinguishing provider totals from configured
 rate estimates. HTTP refusal status is retained before SDK rejection. `tool-result`
 text and structured data retain operation/source joins, with image references in
-place of bytes. `tool-refused`, `abort` and `settled` retain refusal and failure outcomes. An eligible429 attempt has a transport-derived
-`response-complete` with `http_status:429`, error stop reason and unknown usage;
-the final attempt is completed by the SDK assistant message. Backoff aborts and
-excessive-delay refusals do not duplicate that first receipt. `provider-retry`
-marks eligibility with the configured delay ceiling, then a second-attempt start
-with the preceding request ID; monotonic intervals expose actual waiting without
+place of bytes. `tool-refused`, `abort` and `settled` retain refusal and failure outcomes. An eligible first attempt has a transport-derived
+`response-complete` with its `http_status` (null for a pre-header rejection), error
+stop reason and unknown usage; the final attempt is completed by the SDK assistant
+message. Backoff aborts and excessive-delay refusals do not duplicate that first
+receipt. `provider-retry` marks eligibility with its `retry_class` and the
+configured delay ceiling, then a second-attempt start with the preceding request ID; monotonic intervals expose actual waiting without
 inventing the SDK's planned delay. Internal blocked provider attempts create no
 fabricated response-completion receipt. Model attention, provider inference start and
 physical paint timestamps are unavailable and declared at `host-start`.
@@ -296,7 +316,7 @@ physical paint timestamps are unavailable and declared at `host-start`.
 metadata for the last charged HTTP attempt, or null before any attempt. Its
 `request_id` and `scope` distinguish the current attempt from a completed attempt
 retained during tool work, backoff or a request-limit refusal. Counters reset at
-each actual fetch, including a429retry; later traffic cannot mutate an emitted
+each actual fetch, including a retry; later traffic cannot mutate an emitted
 snapshot. `body_bytes`/`body_chunks` count Fetch response-body data observed by the
 existing stream transform, not compressed wire bytes or physical network arrival.
 `provider_events` counts parsed OpenAI provider events; raw SSE heartbeats can
@@ -331,11 +351,14 @@ still adds work and must be measured during subsequent play.
 these are transmitted configuration, not backend effort attestation. Sanitized
 bounded response/provider IDs and `x-request-id` permit later correlation when
 reported. After bounded reading of an HTTP error response, `provider-refusal`
-records its status and allowlisted error type/code, provider code and server-reported
-`limit_source` when available, including non-429 refusals and a second HTTP 429.
-Missing, malformed or unsafe identifiers remain null; a body-read failure can
-prevent the event. Raw error messages/bodies and credentials are not logged.
-This observation adds no fetch, retry, timer renewal or dispatch; only the first
-eligible HTTP 429 can authorize the one retry described above. Use the existing
+records its status, `body_read`, and allowlisted error type/code, provider code and
+server-reported `limit_source` and `reason` when available, including terminal
+refusals and second attempts. Missing, malformed or unsafe identifiers remain null.
+A body-read failure prevents the event except for a 502/503/504, which records
+`body_read:false` and null identifiers. `response-headers` adds the server's
+requested delay and suppression for 402, 429, 502, 503 and 504. Raw error
+messages/bodies and credentials are not logged. This observation adds no fetch,
+retry, timer renewal or dispatch; only an eligible first attempt can authorize the
+one retry described above. Use the existing
 [offline evaluator](../../docs/evaluation.md#retained-host-and-browser-analysis)
 to analyze traces; future telemetry versions are not silently interpreted.
