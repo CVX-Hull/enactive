@@ -20,10 +20,13 @@ in `route.json`; use no fallback. The current campaign accepts the explicit defa
 service tier. Configuration metadata/prices are not invoice, quality or latency
 attestation. New live calls remain bounded by the prospective allocation.
 
-The package freezes `route.json` (`player-host/1`), `mcp-template.json`,
+The package freezes `route.json` (`player-host/2`), `mcp-template.json`,
 `context.txt`, `prompt.txt` and `target.json`. The route declares explicit model
 text/image capabilities, context/output capacities, effort mapping, costs, request
-timeout, request cap, credential environment name and image-history allowance.
+timeout, request cap, credential environment name, image peak and eviction block.
+Keep the peak within the provider's image limit (30 on DeepInfra). Block 1 keeps the
+earlier rolling policy; a larger block, such as 39/10, keeps the prompt prefix
+cacheable between evictions.
 The [host reference](../../tools/player_host/README.md) owns exact closed fields.
 Old route/mission/player-view configurations reject as executable inputs.
 

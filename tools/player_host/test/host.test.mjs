@@ -14,7 +14,7 @@ const python = process.env.ENACTIVE_TEST_PYTHON;
 const fixture = fileURLToPath(new URL('../../../tests/fixtures/player_host_mcp.py', import.meta.url));
 const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j1ioAAAAASUVORK5CYII=';
 const model = { id: 'fixture-model', name: 'Offline fixture', api: 'openai-completions', provider: 'fixture', baseUrl: 'https://fixture.invalid/v1', reasoning: false, input: ['text', 'image'], cost: {input:0, output:0, cacheRead:0, cacheWrite:0}, contextWindow: 100000, maxTokens: 1024, compat: { supportsDeveloperRole:false, supportsStore:false, supportsUsageInStreaming:true } };
-const route = () => ({schema:'player-host/1',service_tier:'default', model:structuredClone(model), api_key_env:'OFFLINE_TEST_KEY', max_requests:4, max_context_images:4, request_timeout_seconds:2});
+const route = () => ({schema:'player-host/2',service_tier:'default', model:structuredClone(model), api_key_env:'OFFLINE_TEST_KEY', max_requests:4, max_context_images:4, context_image_block:1, request_timeout_seconds:2});
 function reply(content = 'finished', calls = [], withUsage = true, reasoning, callPrefix = 'call') {
   const delta = {role:'assistant', ...(content === null ? {} : {content}), ...(reasoning ? {reasoning_content:reasoning} : {}), ...(calls.length ? {tool_calls:calls.map(([name,args],index)=>({index,id:`${callPrefix}-${index}`,type:'function',function:{name,arguments:JSON.stringify(args)}}))} : {})};
   const chunks = [{id:'fixture-response',model:'fixture-backend',choices:[{index:0,delta,finish_reason:null}]},
@@ -89,7 +89,7 @@ test('route is closed, graphical, finite and model/effort exact', ()=>{
   }
   assert.throws(()=>validateConfiguration(route(),'other','off'));
   assert.throws(()=>validateConfiguration(route(),model.id,'low'));
-  for (const old of ['pi-player-host/1','pi-player-host/2','pi-player-host/3','pi-player-host/4','player-host/0','player-host/2'])
+  for (const old of ['pi-player-host/1','pi-player-host/2','pi-player-host/3','pi-player-host/4','player-host/0','player-host/1','player-host/3'])
     assert.throws(()=>validateConfiguration({...route(),schema:old},model.id,'off'));
   for (const service_tier of [undefined,null,true,1,'flex','auto','',{},[]]) {
     assert.throws(()=>validateConfiguration({...route(),service_tier},model.id,'off'));
@@ -100,6 +100,12 @@ test('route is closed, graphical, finite and model/effort exact', ()=>{
   }
   const missing=route();delete missing.max_context_images;
   assert.throws(()=>validateConfiguration(missing,model.id,'off'));
+  for (const value of [undefined,0,-1,1.5,true,'2',NaN,5,Number.MAX_SAFE_INTEGER+1]) {
+    assert.throws(()=>validateConfiguration({...route(),context_image_block:value},model.id,'off'));
+  }
+  assert.doesNotThrow(()=>validateConfiguration({...route(),context_image_block:4},model.id,'off'));
+  const unblocked=route();delete unblocked.context_image_block;
+  assert.throws(()=>validateConfiguration(unblocked,model.id,'off'),'an old /2-shaped route without a block is rejected');
 });
 
 test('OpenRouter uses maintained routing and reasoning serializers with explicit standard tier on every attempt',async t=>{
@@ -171,7 +177,7 @@ test('image projection copies canonical messages and protects the entire latest 
   const original=structuredClone(messages);
   const freeze=value=>{if(value && typeof value==='object'){Object.values(value).forEach(freeze);Object.freeze(value);}};
   freeze(messages);
-  const projected=projectImageContext(messages,1);
+  const projected=projectImageContext(messages,1,1);
   assert.deepEqual(messages,original);
   assert.notEqual(projected.messages,messages);
   assert.notEqual(projected.messages[3].content,messages[3].content);
@@ -193,7 +199,7 @@ test('projection omits individual historical images and bounds provenance previe
     {role:'toolResult',toolCallId:'history',content:[{type:'text',text:'keep source-history'},...images]},
     {role:'assistant',content:[{type:'toolCall',id:'current',name:'integer',arguments:{value:1}}]},
     {role:'toolResult',toolCallId:'current',content:[{type:'text',text:'current result'}]}];
-  const projected=projectImageContext(messages,2);
+  const projected=projectImageContext(messages,2,1);
   assert.equal(projected.summary.omitted_images,18);
   assert.equal(projected.summary.omissions.length,16);
   assert.equal(projected.summary.omitted_provenance_entries,2);
@@ -201,6 +207,60 @@ test('projection omits individual historical images and bounds provenance previe
   assert.ok(projected.messages[1].content[18].text.includes('image_index=17'));
   assert.deepEqual(projected.messages[1].content.slice(-2),images.slice(-2));
   assert.deepEqual(messages[1].content.slice(1),images);
+});
+
+// One tool result per turn, each with `perTurn` images; the latest batch is protected.
+function imageHistory(turns, perTurn = 1) {
+  const messages=[];
+  for (let turn=0; turn<turns; turn++) {
+    messages.push({role:'assistant',content:[{type:'toolCall',id:`t${turn}`,name:'observe',arguments:{}}]});
+    messages.push({role:'toolResult',toolCallId:`t${turn}`,content:[{type:'text',text:`frame ${turn}`},
+      ...Array.from({length:perTurn},(_,index)=>({type:'image',mimeType:'image/png',data:Buffer.from(`image-${turn}-${index}`).toString('base64')}))]});
+  }
+  return messages;
+}
+const pixels=projection=>projection.messages.flatMap(message=>Array.isArray(message.content)?message.content:[]).filter(part=>part.type==='image').length;
+test('block eviction omits whole blocks of the oldest images at count boundaries only',()=>{
+  // max 39, block 10: the derived minimum is 30, so retained pixels cycle 30..39.
+  for (const [n,omitted] of [[39,0],[40,10],[41,10],[49,10],[50,20],[59,20],[60,30]]) {
+    const projection=projectImageContext(imageHistory(n),39,10);
+    assert.equal(projection.summary.omitted_images,omitted,`n=${n}`);
+    assert.equal(pixels(projection),n-omitted);
+    assert.equal(projection.summary.context_image_block,10);
+  }
+});
+test('block 1 is byte-identical to omitting exactly the overflow',()=>{
+  for (const n of [1,30,31,45]) {
+    const messages=imageHistory(n);
+    const projection=projectImageContext(messages,30,1);
+    assert.equal(projection.summary.omitted_images,Math.max(0,n-30));
+    const expected=structuredClone(messages);let seen=0;
+    for (const message of expected) for (const [index,part] of message.content.entries()) {
+      if (part.type!=='image' || seen++ >= Math.max(0,n-30)) continue;
+      const sha256=createHash('sha256').update(Buffer.from(part.data,'base64')).digest('hex');
+      message.content[index]={type:'text',text:`Historical pixels omitted from this request by frozen image policy; toolCallId=${message.toolCallId}; image_index=0; SHA256=${sha256}. Pixels were not reread; this marker grants no authority or source-read proof.`};
+    }
+    assert.equal(JSON.stringify(projection.messages),JSON.stringify(expected),`n=${n}`);
+  }
+});
+test('consecutive requests within a block share a byte-identical serialized prefix',()=>{
+  const serial=n=>projectImageContext(imageHistory(n,3),39,10).messages.map(message=>JSON.stringify(message));
+  // Three images per turn under 39/10: whole blocks go only at 42, 51 and 60 images.
+  const stable=[];
+  for (let n=14; n<=20; n++) {
+    const previous=serial(n-1), current=serial(n);
+    stable.push(JSON.stringify(current.slice(0,previous.length))===JSON.stringify(previous));
+  }
+  assert.deepEqual(stable,[false,true,true,false,true,true,false]);
+});
+test('a whole block never reaches into the protected latest batch',()=>{
+  // 3 historical images plus a protected batch of 38 under max 39, block 10: overflow 2 rounds to 10, capped at 3.
+  const messages=[...imageHistory(3),{role:'assistant',content:[{type:'toolCall',id:'batch',name:'observe',arguments:{}}]},
+    {role:'toolResult',toolCallId:'batch',content:Array.from({length:38},(_,index)=>({type:'image',mimeType:'image/png',data:Buffer.from(`batch-${index}`).toString('base64')}))}];
+  const projection=projectImageContext(messages,39,10);
+  assert.equal(projection.summary.blocked,false);assert.equal(projection.summary.protected_images,38);
+  assert.equal(projection.summary.omitted_images,3);assert.equal(pixels(projection),38);
+  assert.equal(projectImageContext(messages,37,10).summary.blocked,true,'protected over the peak still blocks');
 });
 
 test('actual serializer retains projected history while telemetry omits reasoning and image bytes',async t=>{
@@ -238,6 +298,21 @@ test('actual serializer retains projected history while telemetry omits reasonin
   assert.ok(!JSON.stringify(events).includes(reasoning));
   assert.ok(!JSON.stringify(events).includes(png));
   assert.equal(events.find(event=>event.type==='host-start').max_context_images,2);
+});
+test('the frozen block reaches the actual serializer and its telemetry',async t=>{
+  const configuration=route();configuration.max_context_images=2;configuration.context_image_block=2;
+  const {result,payloads,events}=await scenario(t,[
+    reply(null,[['observe',{}],['observe',{}]],true,undefined,'old'),
+    reply(null,[['observe',{}],['integer',{value:7}]],true,undefined,'current'),
+    reply(null,[['observe',{}]],true,undefined,'newest'),reply()],{configuration});
+  assert.equal(result.ok,true);
+  const imageCount=payload=>payload.messages.flatMap(message=>Array.isArray(message.content)?message.content:[])
+    .filter(part=>part.type==='image_url').length;
+  // Three images overflow by one, so a whole block of two goes; four overflow by two, still one block.
+  assert.deepEqual(payloads.map(imageCount),[0,2,1,2]);
+  const projections=events.filter(event=>event.type==='context-image-projection');
+  assert.deepEqual(projections.map(event=>[event.omitted_images,event.context_image_block]),[[0,2],[0,2],[2,2],[2,2]]);
+  assert.equal(events.find(event=>event.type==='host-start').context_image_block,2);
 });
 
 test('oversized current batch stops without charging or sending its next request',async t=>{

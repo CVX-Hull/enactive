@@ -73,7 +73,7 @@ shell/file tools, personal sessions or global credentials. The selected finite
 route is OpenRouter / explicitly pinned provider / DeepSeek Flash1017 at medium effort.
 The [recorded endpoint dispositions](acceptance/2026-10-29-computer-control.md#failures-and-endpoint-disposition)
 follow actual shared-pool failures, not automatic fallback. Freeze
-its actual endpoint tag, supported parameters, image allowance and configured
+its actual endpoint tag, supported parameters, image peak and eviction block and configured
 prices before each allocation. No route/model fallback is supported. A selected
 route is not gameplay qualification or invoice evidence.
 

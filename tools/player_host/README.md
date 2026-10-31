@@ -1,7 +1,7 @@
 # Bounded Pi player host
 
 This private package is the Pi-based adapter that implements the host-neutral
-[player-host contract](../../docs/contracts/player-host.md) (`player-host/1`);
+[player-host contract](../../docs/contracts/player-host.md) (`player-host/2`);
 the campaign driver selects it only through the package's frozen `host.argv`.
 The [current component](../../docs/components/player-interface.md) owns the player interface;
 [`069-controllable-player-host.md`](../../docs/changes/069-controllable-player-host.md)
@@ -68,10 +68,12 @@ below, no fatal failure latch, successful owned MCP closure, and a successful
 final-file write. `runHost(options)` is the
 programmatic seam; tests inject `fetch` there. No fake-provider CLI is exposed.
 
-The closed route has exactly `schema: "player-host/1"`, `model`,
-`api_key_env`, `max_requests`, `request_timeout_seconds`, `service_tier` and the required positive
-integer `max_context_images`. `pi-player-host/1` through `/4` and missing/invalid fields are rejected;
-closed historical configurations are evidence, not runnable current inputs.
+The closed route has exactly `schema: "player-host/2"`, `model`,
+`api_key_env`, `max_requests`, `request_timeout_seconds`, `service_tier`, the required positive
+integer `max_context_images` and the required integer `context_image_block`
+(1 ≤ block ≤ `max_context_images`). `pi-player-host/1` through `/4`, `player-host/1` and
+missing/invalid fields are rejected; closed historical configurations and traces are
+evidence, not runnable current inputs.
 `model` contains Pi's
 explicit `id`, `name`, `api: "openai-completions"`, `provider`, `baseUrl`,
 `reasoning`, `input`, `cost`, `contextWindow` and `maxTokens`; optional `type`,
@@ -96,10 +98,20 @@ remains unknown. Nonstream provider probes do not establish stream-echo support;
 serving tier, cache counts and request spans do not qualify useful apparent latency.
 See [DeepInfra's current contract](https://docs.deepinfra.com/chat/overview#service-tier).
 
-Freeze the actual provider's image-part allowance explicitly; the host imposes no
-universal provider limit. Pi's maintained `transformContext` hook keeps the newest
-historical images within that allowance while preserving all text, reasoning,
-tool calls/results and IDs. The entire latest assistant tool-call batch is protected,
+Freeze the actual provider's image-part allowance explicitly as `max_context_images`,
+the hard peak of pixel images per request; the host imposes no universal provider
+limit (DeepInfra, for example, rejects more than 30). Pi's maintained
+`transformContext` hook keeps historical images within that peak while preserving
+all text, reasoning, tool calls/results and IDs. Eviction is count-only, in whole
+blocks of `context_image_block`. When `n` images exceed the peak, the oldest
+`ceil((n − peak) / block) × block` become markers, never reaching into the protected
+batch below, so a large protected batch can leave fewer. Otherwise retained pixels
+cycle between `peak − block + 1` and the peak, and the serialized prefix stays
+byte-stable between evictions, which lets
+provider prefix caches reuse it. Block 1 omits exactly the overflow, the earlier
+rolling policy. Choose the counts per route against the provider's image limit.
+Pi's session-affinity header is not sent: OpenRouter ignores sticky routing when a
+manual `provider.order` is pinned, as every OpenRouter route here is. The entire latest assistant tool-call batch is protected,
 including when its final result contains only text. If that group alone exceeds
 the allowance, the host stops before another provider request or request charge.
 Historical omitted image parts become explicit text markers with original message/
@@ -347,7 +359,9 @@ settled event; they do not measure disk durability or async drain. Library calle
 without sink instrumentation retain null sink measurements. Observing overhead
 still adds work and must be measured during subsequent play.
 
-`host-start` records the configured output cap, context window and effort mapping;
+`host-start` records the configured output cap, context window, effort mapping and
+image policy (`max_context_images`, `context_image_block`, also repeated on each
+`context-image-projection`);
 these are transmitted configuration, not backend effort attestation. Sanitized
 bounded response/provider IDs and `x-request-id` permit later correlation when
 reported. After bounded reading of an HTTP error response, `provider-refusal`

@@ -18,7 +18,7 @@ def package(root):
     directory=root/'.runtime/computer-sessions/selected';directory.mkdir(parents=True)
     for name in ('native','library','options','interpreter','adapter'):(root/name).write_bytes(name.encode())
     values={
-        'route.json':dict(schema='player-host/1',service_tier='default',max_requests=10,model=dict(id='fixture',
+        'route.json':dict(schema='player-host/2',service_tier='default',max_requests=10,model=dict(id='fixture',
             contextWindow=1000,maxTokens=100,cost=dict(input=.45,cacheRead=.45,cacheWrite=.45,output=1.8))),
         'mcp-template.json':configuration('@ACTOR_CONFIG@'),
         'context.txt':'Frozen context','prompt.txt':'Frozen mission',

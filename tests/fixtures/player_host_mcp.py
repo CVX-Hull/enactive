@@ -1,4 +1,4 @@
-"""Offline MCP double for player-host/1 tests, using the maintained Python MCP server.
+"""Offline MCP double for player-host/2 tests, using the maintained Python MCP server.
 
 Shared by the adapter node tests and the adapter-agnostic contract suite."""
 import json

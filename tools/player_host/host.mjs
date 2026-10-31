@@ -41,11 +41,13 @@ function bounded(value) {
 /** One frozen route, without credential values, ambient discovery or effort clamping. */
 export function validateConfiguration(configuration, selectedModel, effort) {
   bounded(configuration);
-  closed(configuration, ['schema', 'model', 'api_key_env', 'max_requests', 'max_context_images', 'request_timeout_seconds', 'service_tier']);
-  requireThat(configuration.schema === 'player-host/1');
+  closed(configuration, ['schema', 'model', 'api_key_env', 'max_requests', 'max_context_images', 'context_image_block', 'request_timeout_seconds', 'service_tier']);
+  requireThat(configuration.schema === 'player-host/2');
   requireThat(/^[A-Za-z_][A-Za-z0-9_]*$/.test(configuration.api_key_env ?? '') && !AMBIENT_PROVIDER_SETTINGS.includes(configuration.api_key_env));
   requireThat(Number.isSafeInteger(configuration.max_requests) && configuration.max_requests > 0);
   requireThat(Number.isSafeInteger(configuration.max_context_images) && configuration.max_context_images > 0);
+  requireThat(Number.isSafeInteger(configuration.context_image_block) && configuration.context_image_block > 0
+    && configuration.context_image_block <= configuration.max_context_images);
   requireThat(finiteMilliseconds(configuration.request_timeout_seconds));
   requireThat(['default', 'priority'].includes(configuration.service_tier));
   const model = configuration.model;
@@ -96,8 +98,12 @@ export function validateConfiguration(configuration, selectedModel, effort) {
   return configuration;
 }
 
-/** Request-only projection. Canonical messages stay intact; telemetry separately projects image references. */
-export function projectImageContext(messages, maxImages) {
+/** Request-only projection. Canonical messages stay intact; telemetry separately projects image references.
+ * Count-only block eviction: beyond maxImages, the oldest images are omitted in whole
+ * blocks, so the serialized prefix stays byte-stable between evictions. Block 1 omits
+ * exactly the overflow. */
+export function projectImageContext(messages, maxImages, block) {
+  requireThat(Number.isSafeInteger(block) && block > 0 && block <= maxImages);
   const projected = structuredClone(messages);
   const latestBatch = messages.findLastIndex(message => message.role === 'assistant'
     && message.content.some(part => part.type === 'toolCall'));
@@ -112,7 +118,9 @@ export function projectImageContext(messages, maxImages) {
   }
   const protectedImages = latestBatch < 0 ? 0 : images.filter(image => image.messageIndex >= latestBatch).length;
   const blocked = protectedImages > maxImages;
-  const omitted = blocked ? [] : images.slice(0, Math.max(0, images.length - maxImages));
+  const overflow = Math.max(0, images.length - maxImages);
+  // The protected latest batch is never omitted, even when a whole block would reach it.
+  const omitted = blocked ? [] : images.slice(0, Math.min(Math.ceil(overflow / block) * block, images.length - protectedImages));
   const omissions = [];
   for (const image of omitted) {
     const sha256 = createHash('sha256').update(Buffer.from(image.part.data, 'base64')).digest('hex');
@@ -121,7 +129,7 @@ export function projectImageContext(messages, maxImages) {
       text:`Historical pixels omitted from this request by frozen image policy; toolCallId=${image.toolCallId}; image_index=${image.imageIndex}; SHA256=${sha256}. Pixels were not reread; this marker grants no authority or source-read proof.`};
     if (omissions.length < 16) omissions.push(provenance);
   }
-  return {messages:projected, summary:{max_context_images:maxImages, input_images:images.length,
+  return {messages:projected, summary:{max_context_images:maxImages, context_image_block:block, input_images:images.length,
     protected_images:protectedImages, retained_images:images.length - omitted.length,
     omitted_images:omitted.length, blocked, omissions, omitted_provenance_entries:omitted.length - omissions.length}};
 }
@@ -381,7 +389,7 @@ export async function runHost(options) {
     const mcp = validateMcpConfiguration(options.mcpConfig);
     requireThat(typeof options.prompt === 'string' && typeof options.context === 'string', 'invalid-input');
     bounded(options.prompt); bounded(options.context);
-    emit('host-start', {telemetry_version:2, schema:configuration.schema, requested_service_tier:configuration.service_tier, model:configuration.model.id, provider:configuration.model.provider, api:configuration.model.api, effort:options.effort, max_output_tokens:configuration.model.maxTokens, context_window:configuration.model.contextWindow, thinking_level_map:{...configuration.model.thinkingLevelMap}, reasoning_format:configuration.model.compat?.thinkingFormat ?? null, provider_routing:configuration.model.compat?.openRouterRouting ? structuredClone(configuration.model.compat.openRouterRouting) : null, max_requests:configuration.max_requests, max_context_images:configuration.max_context_images, unsupported_features:['compaction', 'session-restore', 'model-fallback', 'reconnect', 'replay', 'ambient-tools', 'resource-discovery'], missing_endpoints:['model-attention', 'server-inference-start', 'physical-paint'], cleanup_budget_ms:cleanupBudget});
+    emit('host-start', {telemetry_version:2, schema:configuration.schema, requested_service_tier:configuration.service_tier, model:configuration.model.id, provider:configuration.model.provider, api:configuration.model.api, effort:options.effort, max_output_tokens:configuration.model.maxTokens, context_window:configuration.model.contextWindow, thinking_level_map:{...configuration.model.thinkingLevelMap}, reasoning_format:configuration.model.compat?.thinkingFormat ?? null, provider_routing:configuration.model.compat?.openRouterRouting ? structuredClone(configuration.model.compat.openRouterRouting) : null, max_requests:configuration.max_requests, max_context_images:configuration.max_context_images, context_image_block:configuration.context_image_block, unsupported_features:['compaction', 'session-restore', 'model-fallback', 'reconnect', 'replay', 'ambient-tools', 'resource-discovery'], missing_endpoints:['model-attention', 'server-inference-start', 'physical-paint'], cleanup_budget_ms:cleanupBudget});
     if (fatal) throw new HostError(fatal);
     requireThat(!AMBIENT_PROVIDER_SETTINGS.some(name => Object.hasOwn(process.env, name)), 'ambient-provider-configuration');
     // The MCP subprocess gets only locale and executable lookup, never provider
@@ -438,7 +446,7 @@ export async function runHost(options) {
           // Memoize against canonical SDK objects before image projection clones
           // them. Earlier diagnostic text remains stable in subsequent prefixes.
           const projectionStarted = performance.now();
-          const projection = projectImageContext(validationFeedback(messages), configuration.max_context_images);
+          const projection = projectImageContext(validationFeedback(messages), configuration.max_context_images, configuration.context_image_block);
           emit('context-image-projection', {request_id:`request-${requests + 1}`, projection_ms:performance.now() - projectionStarted, ...projection.summary});
           if (projection.summary.blocked) stop('context-image-limit');
           // Request-only bookkeeping follows history, preserving the stable
