@@ -282,7 +282,7 @@ def test_validate_accepts_reference_route_and_mcp_table_silently(adapter, valida
 
 
 def test_validate_rejects_old_route_schema(adapter, validation_files):
-    for schema in ("pi-player-host/4", "player-host/0", "player-host/2"):
+    for schema in ("pi-player-host/4", "player-host/0", "player-host/1", "player-host/3"):
         result = run_mode(adapter, ["validate", *validation_files(envelope=route(adapter, "http://127.0.0.1:9/v1", schema=schema))])
         assert result.returncode != 0, schema
 

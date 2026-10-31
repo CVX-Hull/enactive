@@ -36,6 +36,17 @@ the current player host retries one transient provider failure per logical reque
 502/503/504, a pre-header fetch rejection or OpenRouter's in-flight 402), proven by
 offline fixtures only; no live 5xx has yet exercised it.
 
+Since [#313](https://github.com/CVX-Hull/enactive/issues/313), routes are `player-host/2`
+and evict historical screenshots in whole count-only blocks, so the prompt prefix stays
+cacheable between evictions. A zero-spend replay of #304's traces predicts that a peak
+of 39 with block 10 cuts input cost 2.5–3.9× against the rolling 30-image policy
+(block 1). A bounded live check on Gemini/Vertex with retained frames ($0.41 actual)
+passed its frozen criterion: observed cache reads were 0.90× the prediction, and
+calls 12–20 served 68% from cache under blocks against 0% rolling. That proves the
+mechanism only. Play behaviour with up to 39 frames, residency at game pace and other
+providers remain unmeasured; the next qualification play compares against the
+30-image baseline.
+
 The compact [player guide](player-guide.md#play-from-observed-effects) now emphasizes
 observed effects, quantity/container scope and confirmation focus. The
 [player-context study](acceptance/2026-10-29-player-context.md) retains its authentic
