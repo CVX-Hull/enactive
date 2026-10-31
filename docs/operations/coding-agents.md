@@ -44,14 +44,16 @@ gameplay authority.
 | Host | Tracked file | Loads when |
 | --- | --- | --- |
 | Codex | [`.codex/rules/gameplay.rules`](../../.codex/rules/gameplay.rules) | The user trusts the exact checkout. |
-| Claude Code | [`.claude/settings.json`](../../.claude/settings.json) | Always, as project settings. |
+| Claude Code | [`.claude/settings.json`](../../.claude/settings.json) | The user trusts the workspace, or passes `--settings .claude/settings.json`. |
 
 Change both files together and check both against the rule file's inline
 `match`/`not_match` examples. Codex: `codex execpolicy check --rules .codex/rules/gameplay.rules -- COMMAND…`
 (pass the command as separate tokens). Claude Code: a headless
-`claude -p --output-format json` attempt of each example from the checkout; a
-non-matching command must appear in `permission_denials`. Never widen one host
-to match a mistake in the other.
+`claude -p --output-format json --permission-mode default --settings .claude/settings.json`
+attempt of each example from the checkout; a non-matching command must appear in
+`permission_denials`. Pin the default permission mode: a user-selected automatic
+mode may approve more than the project allowance, which is the user's choice, not
+project policy. Never widen one host to match a mistake in the other.
 
 ## Player MCP entry
 
@@ -75,10 +77,14 @@ generator refuses to overwrite an existing file or leave the checkout.
 
 These steps are each user's own and are not tracked or automated here:
 
-- Codex loads project rules and `.codex/config.toml` only for a trusted checkout.
-  Trust the exact path in the user's own Codex configuration, or pass a
-  per-invocation `-c` override; the project never edits it.
-- Claude Code asks once before starting a project `.mcp.json` server. Approve it,
-  or pass `--mcp-config .mcp.json` for one invocation.
+- Codex loads project rules and `.codex/config.toml` only for a checkout trusted in
+  the user's own Codex configuration; a nested clone does not inherit its parent's
+  trust, and a `-c projects…trust_level` override does not enable project files.
+  For one untrusted invocation, pass the generated entry as an inline override
+  (`-c 'mcp_servers.enactive_player={…}'`). The project never edits user configuration.
+- Claude Code reads `CLAUDE.md` without trust, but applies project
+  `.claude/settings.json` permissions only after the user accepts the workspace
+  trust dialog. It asks once before starting a project `.mcp.json` server. For one
+  invocation, pass `--settings .claude/settings.json` and `--mcp-config .mcp.json`.
 
 [Operations index](../runbook.md).
