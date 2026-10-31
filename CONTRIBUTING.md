@@ -76,8 +76,10 @@ logs and screenshots; do not upload saves by default.
 
 Consequential changes need independent review with fresh context under the
 engineering standards. Record who or what reviewed which candidate, material
-findings and their disposition. An agent review is not human approval. Maintainers
-verify the final candidate and its evidence before accepting the change.
+findings and their disposition. An agent review is not human approval. The lead
+verifies the final candidate and its evidence before merging; under the owner's
+[standing delegation](docs/operator-permissions.md#engineering-decision-and-merge-delegation),
+non-exceptional changes do not wait for maintainer approval.
 
 ## Licensing and security
 

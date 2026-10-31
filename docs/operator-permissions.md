@@ -31,6 +31,33 @@ allocation before admission. Reservation is not an invoice. A failed actor canno
 automatically renew resources. User Pause remains permanent for that admission.
 Changes outside the user's authorized scope still require the applicable decision.
 
+## Engineering decision and merge delegation
+
+The owner is not a routine gate. The lead carries ordinary engineering work through
+to merge: design within the charter, delegation, commits, branches, pull requests
+and merging. Merge once the [formal acceptance checkpoint](workflows/development.md)
+holds: the exact candidate's protected `controller` profile passed (full regression
+for broad source changes), independent review findings are dispositioned and any
+required native or gameplay evidence is recorded. Agent review stays evidence, not
+human approval; say so in the pull request rather than waiting for one.
+
+Escalate to the owner only for exceptional situations:
+
+- Irreversible or destructive actions beyond normal history: force-push or deletion
+  on `main`, rewriting published history, or deleting retained evidence, saves or
+  user data.
+- Changes to repository protection, access, secrets or credentials, or new external
+  accounts and services.
+- Spending or data export beyond the standing authorizations on this page.
+- A suspected vulnerability, or a licensing or legal question.
+- A change to the charter's purpose, to this delegation or to other owner-held authority.
+- A failed required check or unresolved review disagreement that could only proceed
+  by being waived rather than fixed.
+
+Escalate once with the decision, options and a recommendation, and continue other
+independent work meanwhile. A host or tool permission refusal is respected, not
+worked around: report the exact action so the owner can adjust their own settings.
+
 ## Command permissions
 
 Engineering process/network permission, mechanical input custody and player
