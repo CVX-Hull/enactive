@@ -119,8 +119,10 @@ Record concrete findings and follow-up owners, not automatic date renewal.
 
 GitHub fields and views aid visibility; they do not enforce semantic readiness,
 WIP or acceptance. Main currently requires a PR and the observed Actions `controller` check with
-strict freshness; force-push/deletion and actor bypass are disabled. Required
-human approvals are zero; unavailable independent human review remains an explicit gap.
+strict freshness and resolved review threads; merges are squash-only and
+force-push/deletion and actor bypass are disabled. Repository auto-merge is enabled
+(2026-10-31); it merges only when those rules pass. Required human approvals are
+zero; unavailable independent human review remains an explicit gap.
 Inspect the active rules and rerun relevant probes after configuration changes. Agent
 review is evidence for lead adjudication, never a fabricated human approval.
 
