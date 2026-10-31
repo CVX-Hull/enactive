@@ -115,6 +115,13 @@ reservation is prior consumed reservation plus that amount times
 `max_http_attempts`; it must fit the standing ceiling exactly as frozen. Unknown
 trace accounting charges its original allocation; known unused allowance retires.
 
+The cumulative reservation is a worst-case admission bound, not spend. It charges
+every past attempt as if it filled the whole context window and output limit, so
+it overstates actual cost by more than an order of magnitude: on 31 October 2026
+it stood at $1066.80 while the owner reported about $30–40 actually billed.
+Report actual cost first, from provider-reported usage, with missing usage
+counted separately. Present the reservation only as the cap check it is.
+
 Limits: five input files each ≤1MiB; 1–16 initial files; host argv of 1–8 entries,
 the first an absolute regular file and the rest canonical project-local files tracked
 by the clean source commit (ignored `.runtime`, `.worktrees` or dependency files refuse), with
