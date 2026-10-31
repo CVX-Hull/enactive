@@ -22,7 +22,7 @@ It also freezes native executable/adapter bytes, bounded initial target files,
 shared-lock path, explicit `player-memory/1` store, player host argv, effort,
 loopback port, original wall/host/aggregate-host seconds, one/two-host limit,
 aggregate HTTP-attempt bound, computer input/request/frame/byte capacities and
-cumulative conservative accounting. Source/directory mismatch refuses before launch.
+cumulative cap accounting. Source/directory mismatch refuses before launch.
 
 `target.json` has explicit argv/cwd/environment; its first executable and selected
 working directory are absolute. Keep the prepared wrapper/windowed project userdir
@@ -111,16 +111,42 @@ Use the actual cumulative accounting rather than the zero placeholders. With
 default tier, worst-case per attempt is
 `(contextWindow × max(input, cacheRead, cacheWrite) + maxTokens × output) / 1e6`
 using the frozen route's configured dollar rates. Prospective cumulative
-reservation is prior consumed reservation plus that amount times
-`max_http_attempts`; it must fit the standing ceiling exactly as frozen. Unknown
-trace accounting charges its original allocation; known unused allowance retires.
+reservation is the prior baseline plus that amount times `max_http_attempts`; it
+must fit the standing ceiling exactly as frozen.
 
-The cumulative reservation is a worst-case admission bound, not spend. It charges
-every past attempt as if it filled the whole context window and output limit, so
-it overstates actual cost by more than an order of magnitude: on 31 October 2026
-it stood at $1066.80 while the owner reported about $30–40 actually billed.
-Report actual cost first, from provider-reported usage, with missing usage
-counted separately. When host traces carry only configured-rate costs (as on #304's
+`prior_reserved_usd` is the **actual spend to date** (owner decision, 31 October
+2026), not the sum of past worst-case reservations. The next package's baseline is
+this baseline plus each settled run's actual cost, taken as follows:
+- Provider usage or an account reading, using the upper end of any range.
+- On a shared account, the whole account delta over the run, never apportioned
+  downward.
+- An attempt missing provider usage counts at its worst case, unless an account
+  reading over the run covers it.
+- A run whose cost neither a trace nor the account isolates counts at its original
+  allocation.
+
+Only the package being admitted reserves its own attempts at the worst case.
+Record the baseline's sources with each package.
+
+The first baseline under this rule is $47.64. It is about $30–40 billed on this
+project's provider accounts when the old cumulative reservation stood at $1066.80
+(owner reading, upper end), plus #304's $7.64, its account and key usage readings
+over conformance, the visual check and play. If the owner's reading postdates part
+of #304, the sum double-counts, which errs high.
+
+A custodian report's `cumulative_conservative_reservation_usd` is the baseline plus
+the run's charged attempts at the worst case; it is never the next baseline. The
+field names are unchanged and no format migration applies, because the validator
+and custodian only add a lead-supplied baseline to the package's own worst case. The
+basis changed: receipts before this rule (through #304) record a cumulative
+worst-case baseline, and later ones an actual-cost baseline. Do not compare the two
+across that boundary.
+
+The worst-case figure stays a bound on one package, not spend: it charges every
+attempt as if it filled the whole context window and output limit, which
+overstated actual cost by more than an order of magnitude, about $1066.80 against
+$30–40 billed. Report actual cost first, from provider-reported usage, with missing
+usage counted separately. When host traces carry only configured-rate costs (as on #304's
 OpenRouter routes), use provider usage or account readings, and state when the account
 is shared. Present the reservation only as the cap check it is.
 
