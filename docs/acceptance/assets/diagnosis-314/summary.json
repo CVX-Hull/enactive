@@ -1,0 +1,52 @@
+{
+ "schema": "diagnosis-314-summary/1",
+ "status": "diagnostic",
+ "question": "Why do grounded players make no retained gain?",
+ "capability_claim": false,
+ "source_commit": "c698347d72e5e40afe48145f63df3e8515206afd",
+ "native_sha256": "0a5649cfb19e7d36d08580f7c88defb2a7c48c94f7b1d2368c051e7ca4e866b8",
+ "library_sha256": "77313b1e82aa0b7d4e4b2fe536f77d605c5f2efe76494f2250fe4e2f8b4978df",
+ "image_policy": {"schema": "player-host/2", "max_context_images": 30, "context_image_block": 1},
+ "frozen_state": {
+  "userdir_files": 527,
+  "userdir_manifest_sha256": "c2df2c66e857c78df589220164b9f20ab165182491c49d81a1d0d5511a4df374",
+  "player_store_sha256_prefix": "cd6f875879c8",
+  "restored_and_verified_before_every_run": true,
+  "post_run_state_retained": true
+ },
+ "owner_decisions": ["actual-spend cap baseline (#316)", "arm D dropped: no lead nudge, player self-sufficient", "escalation limit $1000 actual", "auto top-up covers runs"],
+ "runs": [
+  {"run": "A1", "arm": "A", "model": "google/gemini-3.8-flash", "endpoint": "google-vertex/global", "session": "afb5dfdfb4271d456183dfe3e56394b8",
+   "manifest_sha256": "d7cbb22f281fe2358e32b220314742da8686e2adf72813f5ce543716fbc48db3", "host_trace_sha256": "d2b1f4ef8c5e712d4a33297f765de18271f85e0f835d1412abb0733f9b089a6d",
+   "attempts": 75, "allocated": 100, "elapsed_seconds": 523.1, "ending": "normal Save to title; final Quit input unknown (native EOF)", "actual_usd": "2.3223",
+   "m1": "censored at attempt 72", "m2": {"no_change": 2, "counted": 69}, "m3": {"supported": 7, "contradicted": 1, "unsupported": 3, "hedged": 1}},
+  {"run": "H", "arm": "H", "model": "anthropic/claude-haiku-5.5", "endpoint": "google-vertex/europe", "session": "89b9c202939e82db332592402e364c95",
+   "manifest_sha256": "4b85c5b0d0d8f53520738bc00b1c2ef7aa0d994e1ad6cb5e8e1188edb3a08f3a", "host_trace_sha256": "b76889af7f10f7b56feb2d0b7c2152da2946d537282c71af96b095ad94371857",
+   "attempts": 23, "allocated": 100, "elapsed_seconds": 112.1, "ending": "player chose Save/Quit after about 15 attempts; final Quit input unknown", "actual_usd": "0.0673",
+   "m1": "censored at attempt 18", "m2": {"no_change": 0, "counted": 16}, "m3": {"supported": 12, "contradicted": 0, "unsupported": 4, "hedged": 2}},
+  {"run": "A2", "arm": "A", "model": "google/gemini-3.8-flash", "endpoint": "google-vertex/global", "session": "926676f36f9370667989d39ca4c84a30",
+   "manifest_sha256": "a92f4888547ad0c7056d563c96e2eff316f208b7afb70cdb73d023fe32a681da", "host_trace_sha256": "f5dbb332af4a82b2125babe849728cae7cff59358ed518dd91f71feb00c7c283",
+   "attempts": 77, "allocated": 100, "elapsed_seconds": 533.4, "ending": "normal Save to title; final Quit input unknown", "actual_usd": "2.7972",
+   "m1": "censored at attempt 74", "m2": {"no_change": 6, "counted": 71}, "m3": {"supported": 7, "contradicted": 1, "unsupported": 4, "hedged": 1}},
+  {"run": "C", "arm": "C", "model": "google/gemini-3.8-flash", "endpoint": "google-vertex/global", "session": "f8d6dc75c86a22b6fb86ec047c48c882",
+   "manifest_sha256": "2f4c59deb691d209c45e903b16c939f87fa90832a4cc47a33b6b95d928e0bd61", "host_trace_sha256": "26ea9bb05a7c1f32db5f3be874ccf86c24186211dc4a9163987bcc1565cdd39f",
+   "attempts": 95, "allocated": 300, "elapsed_seconds": 674.7, "ending": "player chose Save/Quit at attempt 92; 205 attempts unused; final Quit input unknown", "actual_usd": "3.4337",
+   "m1": "censored at attempt 92", "m2": {"no_change": 10, "counted": 89}, "m3": {"supported": 9, "contradicted": 0, "unsupported": 4, "hedged": 1}}
+ ],
+ "audit": {"auditors_per_run": 2, "third_auditor_runs": ["A1", "H", "C"], "m1_agreement": "unanimous, all censored at the last captured attempt", "m3_rule": "only frames count as support; input-log corroboration is named but unsupported",
+           "m2_key_items_no_change": {"A1": "2/183", "H": "0/26", "A2": "20/228", "C": "27/265"},
+           "multi_key_operations_5_plus": {"A1": "13/73", "H": "1/19", "A2": "15/75", "C": "22/93"},
+           "c_first_100_view": "moot: C ended at 95",
+           "m3_confound": "Gemini reports follow the included play003 report's wording; H's unsupported units were accurate statements about its unknown final input",
+           "a1_tiebreak_caveat": "'Failures: None' is contradicted on an action-level reading, unsupported if read as run-level faults only"},
+ "endings": {"at_frozen_reserve": ["A1", "A2"], "by_player_choice_early": ["H", "C"]},
+ "interpretation": "Consistent with budget and model not being the bottleneck (n=1 each); goal selection versus control not separated (no arm D); shared save-state and predecessor-report confounds.",
+ "monitoring": "read-only 15 s checks; max gap 15.01 s in every run",
+ "accounting": {"iteration_actual_usd": "8.6205", "iteration_attempts": 270, "allocated_attempts": 600, "provider_failures": 0, "retries": 0,
+                "basis": "whole OpenRouter account deltas on a shared account, each run counted to the next reading (upper bound)"},
+ "published_frames": {
+  "a1-stealing-prompt.png": "2d69ef9b939eb7040fa46234ffdb2b7869498d2a10b3a90507dc6d3a0be5ad02",
+  "c-active-mission-log.png": "de00ced6cafdc31c923f9e2fe8a08e4bf65f3e80d7173b1fdff02607b534250d"
+ },
+ "retention": "Only allowlisted summaries and two original PNGs are published. Packages, traces, frames, audit bundles, saves and retained post-run state stay ignored project-local evidence under .runtime/iteration314/ and .runtime/computer-sessions/diag314-*."
+}

@@ -64,6 +64,7 @@ not qualify parent cadence, learning or survival.
 
 | Evidence | Scope and limitation |
 | --- | --- |
+| [Grounded no-gain diagnosis](acceptance/2026-10-31-grounded-no-gain-diagnosis.md) | Diagnostic only, with blind audit, restored state and $8.62 actual. Gemini ×3 (one run with a 300-attempt budget) and Haiku ×1 all made no retained change from one shared save. C ended by choice at 95/300, consistent with budget not being the bottleneck; H matched A, consistent with the pattern not being model-specific (n = 1 each). Goal selection versus control was not separated: no nudge arm, per the owner. Gemini reports overstated, but they followed the included predecessor report as a template. |
 | [Capable-player qualification](acceptance/2026-10-31-capable-player.md) | Three models conformed under `player-host/1`; Gemini led a fixed visual check, then grounded and navigated with one normal ending but no readiness gain and an inflated report; rejected. An account-credit 402 and a provider 503 ended two admissions. |
 | [Visual-player qualification](acceptance/2026-10-30-visual-player.md) | Qwen/Wafer served substantive play and fresh Load with normal endings, but retained spatial/confirmation errors and no readiness gain; candidate rejected, earlier provider failures preserved. |
 | [Spatial grounding and context rejection](acceptance/2026-10-30-spatial-grounding.md) | Primary-literature-informed candidate failed retained frame assessment and organic play; no retained readiness gain, guide restored, original failures/normal ending preserved. |

@@ -49,6 +49,13 @@ retained readiness gain and overstated its own outcome. A provider in-flight bud
 provider 503 cut off two of its three admissions. The host now retries one such
 transient failure ([#308](https://github.com/CVX-Hull/enactive/issues/308)), and
 the lead reads the account balance before paid play ([#310](https://github.com/CVX-Hull/enactive/issues/310)).
+The [grounded no-gain diagnosis](acceptance/2026-10-31-grounded-no-gain-diagnosis.md)
+then ran Gemini and Haiku from one restored save under blind audit. No run made a retained
+change. A player given 300 attempts stopped by its own choice at 95, and Haiku matched
+Gemini. That is consistent with neither budget nor model choice being the lever (n = 1
+each). Goal selection versus control stays unseparated, and the shared save and the
+included predecessor report confound the runs. The player must stay self-sufficient: no
+lead hints in any run.
 
 The [architecture](architecture.md) explains ownership, the
 [player guide](player-guide.md) supplies compact working context, and the
