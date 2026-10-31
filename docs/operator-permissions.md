@@ -38,8 +38,11 @@ to merge: design within the charter, delegation, commits, branches, pull request
 and merging. Merge once the [formal acceptance checkpoint](workflows/development.md)
 holds: the exact candidate's protected `controller` profile passed (full regression
 for broad source changes), independent review findings are dispositioned and any
-required native or gameplay evidence is recorded. Agent review stays evidence, not
-human approval; say so in the pull request rather than waiting for one.
+required native or gameplay evidence is recorded. When only the required check is
+still running, queue auto-merge pinned to the validated head (`gh pr merge --auto
+--squash --match-head-commit SHA`); main protection then merges it only if that
+check passes. Agent review stays evidence, not human approval; say so in the pull
+request rather than waiting for one.
 
 Escalate to the owner only for exceptional situations:
 
