@@ -109,7 +109,9 @@ Lead checks ran as a read-only loop every 15 seconds. The largest gap across all
 runs was 15.03 seconds, so the 45-second limit was never missed.
 
 Clean-context agent reviewers assessed play001 and play003 from the original frames and
-traces (agent review, not human review). play002 ended after 36 attempts and was not
+traces (agent review, not human review). Both reports arrived before the adoption
+decision. The retained play003 note is a later transcription of that report, written
+after the branch review asked for it. play002 ended after 36 attempts and was not
 separately assessed.
 
 **Deviation from #304's admission rules.** #304 reserves its final admission for a
