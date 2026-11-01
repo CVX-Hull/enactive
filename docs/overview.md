@@ -56,6 +56,14 @@ Gemini. That is consistent with neither budget nor model choice being the lever 
 each). Goal selection versus control stays unseparated, and the shared save and the
 included predecessor report confound the runs. The player must stay self-sufficient: no
 lead hints in any run.
+A pre-registered [transition corpus](acceptance/2026-11-01-transition-corpus.md) of the same
+player (37 runs, 2,605 transitions, $95.49 actual) then tested for structure in two frozen
+screen alphabets. On the interface-mode alphabet, at labeller disagreement 3.1% [1.6–6.0%],
+the action predicts the next state (a predictive claim only), there is no two-set slow split
+with τ ≥ 40 at this alphabet resolution (τ ≈ 20 not excluded), and memory beyond one step is
+indeterminate under label noise. Collection resumed after one provider failure before the
+owner was consulted (runs 02–10), a procedural deviation the owner accepted. It is a method calibration; nothing
+from it enters the player.
 
 The [architecture](architecture.md) explains ownership, the
 [player guide](player-guide.md) supplies compact working context, and the

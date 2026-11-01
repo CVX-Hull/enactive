@@ -1,0 +1,22 @@
+---
+title: Observed A1 interface-mode transitions (#320, descriptive)
+---
+flowchart LR
+  accTitle: Observed transitions between A1 interface modes in the #320 corpus
+  accDescr: Descriptive counts from 2,605 transitions labelled by L1, not a claim. Each box gives the mode, its frame count and the share of its outgoing transitions that stay in the same mode. Arrows show every between-mode transition seen at least 40 times, with its count. The standard map view is the hub. Players open menus and dialogue from it and return to it. Menus lead into dialogue, and the examine and overmap views return to the map view.
+  H["standard_hud_exploration\n1,195 frames · stays 71%"]
+  M["action_prompt_menu\n306 frames · stays 44%"]
+  DW["dialogue_window\n466 frames · stays 70%"]
+  X["examine_inspection_mode\n212 frames · stays 67%"]
+  O["overmap_view\n166 frames · stays 65%"]
+  ML["meta_and_loader\n240 frames · stays 82%"]
+  SC["system_configuration\n57 frames · stays 54%"]
+  H -- 155 --> M
+  M -- 92 --> DW
+  M -- 40 --> H
+  DW -- 130 --> H
+  H -- 69 --> X
+  X -- 58 --> H
+  H -- 53 --> O
+  O -- 57 --> H
+  H -- 43 --> DW

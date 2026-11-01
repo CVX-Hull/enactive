@@ -1,0 +1,26 @@
+---
+title: Transition corpus method and readability gate (#320)
+---
+flowchart TB
+  accTitle: How the #320 transition corpus became readable results
+  accDescr: Thirty-seven complete runs of the unchanged #314 arm-A player, each restored to the same frozen state, produced 2,642 frames and 2,605 transitions. One labeller labelled every frame with two frozen alphabets; a second labeller labelled a fixed 10 percent sample, and their disagreement d gates what may be read as a claim. The frozen analysis computed the H1, H2 and H3 rules. On A1, d was 3.1 percent, so H1 is indeterminate, H2 is a predictive claim and the H3 negative is a claim only against two-set slow modes with a timescale of 40 steps or more. On A2, H1 and H2 are descriptive and only an H3 positive could have been read; the H3 negative is uninformative.
+  S["Frozen #314 state\nrestored and verified before every run"]
+  P["Unchanged arm-A player\n38 runs: 37 complete, 1 provider failure excluded"]
+  F["2,642 frames · 2,605 transitions\nactions = the input that produced each frame"]
+  L1["L1 labels every frame\nA1 interface mode (7) · A2 location type (5)"]
+  L2["L2 labels a fixed 10% sample\nchosen by identifiers only"]
+  D["Disagreement d\nA1 3.1% [1.6, 6.0] · A2 9.2% [6.3, 13.4]"]
+  AN["Frozen analysis\nH1 memory · H2 action · H3 slow modes"]
+  G{"Readable as a claim?\nA1: H1 needs d ≤ 1.9%\nH2 and H3 negative need d ≤ 3.8%\nA2: H1, H2 descriptive; H3 positive only"}
+  R1["A1\nH1 indeterminate · H2 predictive claim\nH3 negative against τ ≥ 40"]
+  R2["A2\nH1, H2 descriptive · H3 uninformative"]
+  S --> P --> F
+  F --> L1
+  F --> L2
+  L1 --> D
+  L2 --> D
+  L1 --> AN
+  AN --> G
+  D --> G
+  G --> R1
+  G --> R2
