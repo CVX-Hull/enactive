@@ -251,6 +251,13 @@ class InvestigationTests(unittest.TestCase):
             self.assertIsNone(source['png_base64'])
             self.assertTrue(source['unavailable_reason'])
 
+    def test_a_player_driver_4_receipt_is_unsupported(self):
+        for old in ('player-driver/4', 'player-driver/1'):
+            self.receipt['driver']['schema'] = old
+            self.put_receipt()
+            with self.assertRaisesRegex(ControlError, 'Unsupported closed campaign driver version'):
+                export_selection(self.selection)
+
     def test_successor_collection_keeps_original_program_owner_and_children(self):
         projection = json.loads(self.events[6]['result']['content'][0]['text'])
         self.receipt['driver']['actors'][0]['actor_id'] = 'actor-successor'

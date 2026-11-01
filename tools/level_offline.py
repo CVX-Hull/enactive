@@ -96,7 +96,7 @@ def projection_check(recorded: dict) -> dict:
 
 def simulate(recorded: dict, pool: list[float], *, k: int, s: int, fractions: tuple[float, ...], requests_per_pass: int,
              allowance: int, rng: random.Random) -> dict:
-    """Replay the wake rules over one recorded timeline under level interface v2 (#340).
+    """Replay the wake rules over one recorded timeline under level interface v3 (#340, #341).
 
     The driver pushes the log projection at launch, so a pass binds its position when it
     starts (`read = now`), and its commit or abstain lands after its last response with no

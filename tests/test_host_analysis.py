@@ -131,6 +131,7 @@ class HostAnalysisTests(unittest.TestCase):
 
     def test_only_exact_current_host_version_is_interpreted(self):
         for fields in ({}, {"schema": "pi-player-host/5", "telemetry_version": 2},
+                       {"schema": "player-host/4", "telemetry_version": 2},
                        {"schema": "player-host/1", "telemetry_version": 2},
                        {"schema": "player-host/2", "telemetry_version": 2},
                        {"schema": "player-host/3", "telemetry_version": 2},
@@ -195,8 +196,9 @@ class HostAnalysisTests(unittest.TestCase):
         self.assertEqual(row["receipt.json"]["outcome"], "host_completed_unassessed")
         self.assertFalse(row["receipt.json"]["normal_save_claimed_by_harness"])
         self.assertEqual(row["receipt.json"]["driver"]["attempts_charged"], 1)
-        receipt["driver"]["schema"] = "player-driver/1"
-        (self.root / "receipt.json").write_text(json.dumps(receipt))
-        row = analyze_trace(path)["campaign_evidence"]
-        self.assertEqual(row["metadata_coverage"]["receipt.json"], "unsupported_driver_version")
-        self.assertNotIn("driver", row["receipt.json"])
+        for old in ("player-driver/4", "player-driver/1"):
+            receipt["driver"]["schema"] = old
+            (self.root / "receipt.json").write_text(json.dumps(receipt))
+            row = analyze_trace(path)["campaign_evidence"]
+            self.assertEqual(row["metadata_coverage"]["receipt.json"], "unsupported_driver_version")
+            self.assertNotIn("driver", row["receipt.json"])

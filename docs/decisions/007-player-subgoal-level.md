@@ -247,7 +247,7 @@ The custodian's per-class allowlist enforces this profile as well as the host's
   record, labelled fallible, with its sources and its age in inputs, seconds and
   sessions. The actor may ignore it.
 - **Its prompt** is frozen, versioned and game-agnostic
-  ([appendix](#appendix-subgoal-role-v2)), and reviewed against the no-nudge rule.
+  ([appendix](#appendix-subgoal-role-v3)), and reviewed against the no-nudge rule.
   It steers toward the mission's objective using the same frozen guide and brief
   the actor has, so it adds no lead content. Software triggers stay mechanical; the
   level's semantic judgement belongs to the player system (ADR006).

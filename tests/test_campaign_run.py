@@ -115,7 +115,7 @@ def test_invalid_selected_package_never_launches_or_opens_store(tmp_path,fault):
     if fault=='old_node':
         profile['schema']='campaign-run/2';profile['node']=profile.pop('host')['argv'][0]
     if fault=='old_route':
-        path=directory/'route.json';route=json.loads(path.read_text());route['schema']='pi-player-host/5'
+        path=directory/'route.json';route=json.loads(path.read_text());route['schema']='player-host/4'
         path.write_text(json.dumps(route));profile['files']['route.json']=hashlib.sha256(path.read_bytes()).hexdigest()
     if fault=='partial':(directory/'started.json').write_text('{}')
     if fault=='changed':(directory/'prompt.txt').write_text('different')
