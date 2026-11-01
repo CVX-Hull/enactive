@@ -33,6 +33,8 @@ class HostEvents:
         self.observer=observer;self.ordinal=0
         # A level pass's own commit, discard and abstain outcomes.
         self.level=[]
+        # Terminal calls whose transport was lost: the pass ended, and the driver reconciles each identity afterwards.
+        self.uncertain=[]
 
     def read(self) -> bool:
         chunk=self.stream.read(1048576)
@@ -52,6 +54,8 @@ class HostEvents:
             elif kind in ('level-commit','level-discard','level-abstain'):
                 if len(self.level)<256:self.level.append({k:value.get(k) for k in
                     ('type','action','reason_code','reason','position','inputs_since','staleness_inputs','record_ids','kept')})
+            elif kind=='level-uncertain':
+                if len(self.uncertain)<16:self.uncertain.append({k:value.get(k) for k in ('tool','identity','request_id')})
             elif kind=='request-start':
                 match=re.fullmatch(r'request-([1-9][0-9]*)',value.get('request_id',''))
                 if not self.started or not match:raise ControlError('Host request lacks current origin')
@@ -80,7 +84,7 @@ class HostEvents:
         # Uncertain trace accounting reserves the entire original host allocation.
         return dict(observed_attempts=len(self.requests),attempts_charged=len(self.requests) if valid else self.allowance,
             accounting_complete=valid,settled=self.settled,handoff=self.handoff,level_events=self.level,
-            configured_estimate_usd=sum(v.get('cost',{}).get('total',0) for v in self.usage.values()),
+            level_uncertain=list(self.uncertain),configured_estimate_usd=sum(v.get('cost',{}).get('total',0) for v in self.usage.values()),
             usage_available_attempts=len(self.usage),missing_usage_attempts=len(self.requests)-len(self.usage))
 
     def close(self):self.stream.close()
@@ -244,10 +248,30 @@ class LevelPasses:
             record.update(accounting_complete=False,attempts_charged=record['allocated_attempts'],trace_error=type(exc).__name__)
         finally:
             if events is not None:events.close()
+        # The pass is over, so a lost terminal call can no longer change the store: settle what it did.
+        record['level_uncertain']=[self.reconcile(e) for e in record.get('level_uncertain',[])]
         record['ended_wall']=time.time()
         self.charged+=record['attempts_charged'];self.passes.append(record)
         try:write_new(self.target/f"{record['index']:03d}"/'driver-receipt.json',record)
         except (OSError,ValueError) as exc:record['receipt_error']=type(exc).__name__
+
+    def reconcile(self,event: dict) -> dict:
+        """What a terminal call whose response was lost did, read from the store's `service_operations` row.
+
+        `committed` when the row exists (it commits in the same transaction as the call's records), else `absent`.
+        A discard writes no row, so a discarded call and one that never arrived are both `absent`: neither changed
+        the store or the current subgoal. The identity is reported unchanged and never replayed.
+        """
+        identity=event.get('identity')
+        outcome=dict(event,outcome='unreconciled')
+        if not isinstance(identity,str):return outcome
+        with self.application.serial:
+            row=self.application.memory._db.execute('SELECT actor,tool,result FROM service_operations WHERE id=?',(identity,)).fetchone()
+        if row is None:return dict(outcome,outcome='absent',action=None,record_ids=[])
+        if row[0]!=self.reader_id or row[1]!=event.get('tool') or row[2] is None:return outcome
+        result=json.loads(row[2])
+        return dict(outcome,outcome=result.get('status'),action=result.get('action'),
+                    record_ids=[r['id'] for r in result.get('records',[])])
 
     def quiescent(self) -> bool:
         """Every pass's exact process group was confirmed absent; a successor needs this."""
@@ -263,12 +287,16 @@ class LevelPasses:
         # A terminal call refused on the last allowed request is its own outcome, distinct from request-limit.
         refused=[p for p in failed if (p.get('settled') or {}).get('reason')=='level-final-refusal']
         codes={code:sum(e.get('reason_code')==code for _,e in abstains) for code in ABSTAIN_CODES}
+        # Terminal calls whose transport was lost, by what the store shows they did (see `reconcile`).
+        uncertain=[e for p in self.passes for e in p.get('level_uncertain',[])]
         return dict(reader_id=self.reader_id,mode=self.level['mode'],allocated_attempts=self.allowance,
                     attempts_charged=self.charged,passes=self.passes,failure=self.failure,quiescent=self.quiescent(),
                     commits=len(commits),keeps=sum(e['action']=='keep' for e in commits),
                     replaces=sum(e['action']=='replace' for e in commits),closes=sum(e['action']=='close' for e in commits),
                     discards=len(discards),abstains=len(abstains),abstain_codes=codes,
                     start_abstains=sum(reason=='start' for reason,_ in abstains),failed_passes=len(failed),final_refusals=len(refused),
+                    uncertain_terminals=len(uncertain),uncertain_committed=sum(e['outcome']=='committed' for e in uncertain),
+                    uncertain_absent=sum(e['outcome']=='absent' for e in uncertain),
                     configured_estimate_usd=sum(p.get('configured_estimate_usd',0) for p in self.passes),
                     missing_usage_attempts=sum(p.get('missing_usage_attempts',p['attempts_charged']) for p in self.passes))
 
@@ -402,6 +430,7 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
                 level_attempts_charged=sum(levels_of(r).get('attempts_charged',0) for r in records),
                 level_failed_passes=sum(levels_of(r).get('failed_passes',0) for r in records),
                 level_final_refusals=sum(levels_of(r).get('final_refusals',0) for r in records),
+                level_uncertain_terminals=sum(levels_of(r).get('uncertain_terminals',0) for r in records),
                 configured_estimate_usd=sum(r.get('configured_estimate_usd',0)+levels_of(r).get('configured_estimate_usd',0) for r in records),
                 missing_usage_attempts=sum(r.get('missing_usage_attempts',r['attempts_charged'])
                                            +levels_of(r).get('missing_usage_attempts',0) for r in records))

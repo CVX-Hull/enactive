@@ -1,5 +1,6 @@
 """Original host-attempt accounting and known prelaunch failures."""
 import json
+import re
 import sys
 import threading
 import time
@@ -134,9 +135,23 @@ else:
         value = client.call('player_level_abstain', dict(reason_code='no_change_needed', reason='Scripted abstain', sources=[]))[0]
         emit('level-abstain', reason_code=value['reason_code'], reason=value['reason'])
     else:
+        if LEVEL_MODE in ('lost', 'lost-absent'):
+            # The response is lost; in 'lost' the service had already committed the call, in 'lost-absent' it never arrived.
+            deliver = client._post
+            def lost(path, value, **flags):
+                if LEVEL_MODE == 'lost':
+                    deliver(path, value, **flags)
+                raise TimeoutError('response lost')
+            client._post = lost
         value = client.call('player_level_replace', dict(text='Scripted subgoal', expected_observations=[], status='open',
             confidence=.5, sources=[], previous_outcome='revised' if current else 'none',
             previous_reason='scripted' if current else ''))[0]
+        if value['schema'] == 'player-transport/1':
+            assert value['collect_with'] is None and value['status'] == 'unknown'
+            emit('level-uncertain', request_id=f'request-{requests}', tool_call_id='call-0', tool='player_level_replace',
+                 identity=value['operation_id'])
+            emit('settled', ok=False, reason='level-uncertain', requests=requests)
+            sys.exit(1)
         emit('level-commit' if value['status'] == 'committed' else 'level-discard', action=value['action'], reason=value['reason'],
              position=value['position'], inputs_since=value['inputs_since'], staleness_inputs=value['staleness_inputs'],
              record_ids=[r['id'] for r in value['records']], kept=value['kept'])
@@ -380,3 +395,60 @@ def test_the_receipt_counts_failed_passes_and_start_abstains():
     assert (receipt['commits'],receipt['abstains'],receipt['start_abstains'],receipt['failed_passes'])==(3,2,1,3)
     assert (receipt['keeps'],receipt['replaces'],receipt['closes'],receipt['discards'],receipt['final_refusals'])==(1,1,1,1,1)
     assert receipt['abstain_codes']==dict(insufficient_evidence=0,transient_screen_state=0,no_change_needed=1,other=1)
+
+
+@pytest.mark.parametrize('mode,committed',[('lost',True),('lost-absent',False)])
+def test_a_lost_terminal_call_ends_the_pass_and_the_driver_reconciles_its_identity(level_campaign,mode,committed):
+    result=level_campaign.run(level_mode=mode)
+    receipt=result['actors'][0]['level']
+    assert result['outcome']=='host_completed_unassessed', result
+    first=receipt['passes'][0]
+    assert first['settled']['reason']=='level-uncertain' and first['settled']['ok'] is False
+    (event,)=first['level_uncertain']
+    assert event['tool']=='player_level_replace' and re.fullmatch('[0-9a-f]{32}',event['identity'])
+    row=level_campaign.app.memory._db.execute('SELECT 1 FROM service_operations WHERE id=?',(event['identity'],)).fetchone()
+    assert (row is not None)==committed and event['outcome']==('committed' if committed else 'absent')
+    if committed:
+        stored=[r[0] for r in level_campaign.app.memory._db.execute('SELECT id FROM records')]
+        assert event['action']=='replace' and event['record_ids'] and set(event['record_ids'])<=set(stored)
+    else:
+        assert event['record_ids']==[] and level_campaign.app.memory.current('work')==[]
+    # It is counted, charged, and kept apart from commits and the other refusals; no pass outcome was reported.
+    assert receipt['uncertain_terminals']==sum(len(p['level_uncertain']) for p in receipt['passes'])>=1
+    assert receipt['uncertain_committed']==(receipt['uncertain_terminals'] if committed else 0)
+    assert receipt['uncertain_absent']==(0 if committed else receipt['uncertain_terminals'])
+    assert receipt['commits']==0 and receipt['failed_passes']>=1 and receipt['final_refusals']==0
+    assert result['level_uncertain_terminals']==receipt['uncertain_terminals'] and first['accounting_complete']
+
+
+def test_the_trace_reader_collects_level_uncertain_events(tmp_path):
+    path=tmp_path/'host.jsonl'
+    rows=[dict(type='host-start',telemetry_version=2,schema='player-host/5'),
+          dict(type='request-start',request_id='request-1'),
+          dict(type='level-uncertain',request_id='request-1',tool_call_id='c',tool='player_level_close',identity='f'*32),
+          dict(type='settled',requests=1,ok=False,reason='level-uncertain')]
+    path.write_text(''.join(json.dumps(row)+'\n' for row in rows))
+    events=HostEvents(path,10)
+    try:
+        assert events.finish()['level_uncertain']==[dict(tool='player_level_close',identity='f'*32,request_id='request-1')]
+    finally:events.close()
+
+
+def test_reconciliation_reads_only_the_readers_own_row_for_that_tool(tmp_path):
+    from tools.campaign_player import LevelPasses
+    stub,app,actor,reader,step,poll,(runtime,memory)=level_stub(tmp_path)
+    try:
+        stub.reader_id=reader['actor_id'];stub.reconcile=lambda event:LevelPasses.reconcile(stub,event)
+        step()
+        app.log_read(reader['actor_id'],0,50)
+        replace=dict(text='S',expected_observations=[],status='open',confidence=.5,sources=[],previous_outcome='none',previous_reason='')
+        done=app.call(reader['token'],'player_level_replace',replace,'a'*32)[0]
+        reconcile=lambda **event:LevelPasses.reconcile(stub,event)
+        assert reconcile(tool='player_level_replace',identity='a'*32)['outcome']=='committed'
+        assert reconcile(tool='player_level_replace',identity='a'*32)['record_ids']==[r['id'] for r in done['records']]
+        # Another tool, an unknown identity and a missing identity are never reported as that commit.
+        assert reconcile(tool='player_level_close',identity='a'*32)['outcome']=='unreconciled'
+        assert reconcile(tool='player_level_replace',identity='b'*32)['outcome']=='absent'
+        assert reconcile(tool='player_level_replace',identity=None)['outcome']=='unreconciled'
+    finally:
+        runtime.close();memory.close()

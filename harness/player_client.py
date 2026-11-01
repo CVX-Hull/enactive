@@ -11,6 +11,7 @@ from urllib.request import Request, urlopen
 import uuid
 
 from .computer.protocol import ControlError, canonical, closed, decode_json, read_json
+from .player.contracts import LEVEL_TERMINAL_TOOLS
 
 IMAGE_LIMIT = 16 * 1024 * 1024
 EFFECT_TOOLS = {'computer_observe','computer_input','player_program_run','player_handoff'}
@@ -94,10 +95,13 @@ class PlayerClient:
         except (OSError,ValueError) as exc:
             if name in EFFECT_TOOLS:
                 self.stop('Uncertain actor HTTP operation; original collection only')
+            # A reader's terminal call has no collecting tool (its profile holds no player_result), so the host ends
+            # the pass and the driver reconciles the identity from the store: collect_with is null.
+            collect_with=('computer_result' if name in ('computer_observe','computer_input','player_handoff')
+                          else None if name in LEVEL_TERMINAL_TOOLS else 'player_result')
             value=dict(schema='player-transport/1',operation_id=identity,session=self.config['session'],
                 actor_id=self.config['actor_id'],kind=kind,status='unknown',reason=str(exc)[:600],
-                collect_with='computer_result' if name in ('computer_observe','computer_input','player_handoff') else 'player_result',
-                input_replayed=False)
+                collect_with=collect_with,input_replayed=False)
             self._handoff(name,args,value)
             return value,None,False
         self._handoff(name,args,value)

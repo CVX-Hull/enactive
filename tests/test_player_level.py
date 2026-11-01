@@ -14,6 +14,7 @@ from harness.computer.protocol import ControlError
 from harness.player.contracts import PlayerError
 from harness.player.memory import Memory
 from harness.player_client import PlayerClient
+from harness.player_tools import PROFILES
 from harness.server import serve
 from test_computer_runtime import key, make_runtime
 from test_server import post
@@ -744,3 +745,29 @@ def test_reader_minting_refuses_a_current_level_record_of_another_contract(tmp_p
         assert app.add_reader(actor['actor_id'], staleness_inputs=S)['actor_id']
     finally:
         runtime.close(); memory.close()
+
+
+@pytest.mark.parametrize('tool,args,collect_with', [
+    (REPLACE, replace(), None), (KEEP, keep(), None), (CLOSE, close(), None),
+    (ABSTAIN, dict(reason_code='other', reason='r', sources=[]), None), ('player_log_read', dict(after=0, limit=1), 'player_result')])
+def test_a_readers_lost_terminal_call_is_unknown_with_no_collecting_tool(level, tmp_path, tool, args, collect_with):
+    app, channel, actor, reader = level
+    server, thread = serve(app, 0)
+    try:
+        config = tmp_path / 'reader.json'
+        config.write_text(json.dumps(dict(schema='player-adapter/1', base_url=f'http://127.0.0.1:{server.server_port}',
+                                          session=app.runtime.session, **reader)))
+        client = PlayerClient(config)
+        delivered = client._post
+
+        def lost(path, value, **options):
+            delivered(path, value, **options)
+            raise TimeoutError('response lost')
+        client._post = lost
+        value, _, error = client.call(tool, args)
+        assert value['schema'] == 'player-transport/1' and value['status'] == 'unknown' and not error
+        assert value['collect_with'] == collect_with
+        assert 'player_result' not in PROFILES['reader'] and value['input_replayed'] is False
+        client.close()
+    finally:
+        server.shutdown(); server.server_close(); thread.join(2)
