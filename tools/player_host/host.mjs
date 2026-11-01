@@ -812,6 +812,13 @@ export async function runHost(options) {
         const message = event.message;
         const narration = assistantNarration(message.content);
         if (narration.text || narration.omitted_bytes) emit('assistant-text', {request_id:requestId, ...narration});
+        // Every terminal call the model made, so a refusal that never reached tool-start (unparseable arguments, a
+        // validation refusal, a host refusal) can be told from a dispatched call.
+        if (configuration.role === 'level') for (const part of message.content ?? []) {
+          if (part.type === 'toolCall' && LEVEL_TERMINAL_TOOLS.includes(part.name)) {
+            emit('level-terminal-call', {request_id:requestId, tool_call_id:part.id, tool:part.name, arguments_error:Object.hasOwn(part, 'argumentsError')});
+          }
+        }
         if (requestInFlight) emit('response-complete', {request_id:requestId, model:message.model, provider:message.provider, stop_reason:message.stopReason, usage_available:requestUsageAvailable, usage:requestUsageAvailable ? message.usage : null, cost_source:requestUsageAvailable ? (message.usage?.cost?.totalFromProvider === true ? 'provider' : 'configured-rates') : null, response_progress:progressSnapshot()});
         requestInFlight = false;
         if (['error', 'aborted', 'length', 'deferred'].includes(message.stopReason) && !fatal) stop(message.stopReason === 'error' ? 'provider-error' : `provider-${message.stopReason}`);

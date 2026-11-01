@@ -9,6 +9,7 @@ import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import shutil
+import subprocess
 import threading
 import time
 
@@ -26,6 +27,13 @@ SESSION = 'c' * 32
 RECORDED_ACTOR = 'a1' * 16
 KEY = 'probe-secret-credential'
 pytestmark = pytest.mark.skipif(shutil.which('node') is None, reason='Node.js is required for the level host')
+THRESHOLDS = dict(schema='level-probe-thresholds/1', valid_terminal_rate_at_least=0.9, repeated_identical_refusal_at_most=1)
+
+
+@pytest.fixture(autouse=True)
+def clean_checkout(monkeypatch):
+    """Probes refuse a dirty checkout; the working tree under test is not the subject here."""
+    monkeypatch.setattr(level_probe, 'git_state', lambda root=None: ('d' * 40, False))
 
 
 def png() -> bytes:
@@ -58,6 +66,7 @@ def recorded(tmp_path):
                           source=metadata, remaining={}, reason='ok', handoff=None))
     store.close()
     (session / 'prompt.txt').write_text('Mission: survive and report.')
+    (session / 'receipt.json').write_text(json.dumps(dict(schema='campaign-receipt/2', session=SESSION)))
     (session / 'manifest.json').write_text(json.dumps(dict(level=dict(mode='shadow', inputs_per_pass=3, staleness_inputs=10,
         budget_fractions=[.5], intent_tail_bytes=1024, max_http_attempts=60, pass_max_requests=4, pass_seconds=60))))
     actor_directory = session / 'actors/001'
@@ -68,25 +77,32 @@ def recorded(tmp_path):
         directory.mkdir()
         (directory / 'context.txt').write_text('Frozen guide for the probe.')
         (directory / 'driver-receipt.json').write_text(json.dumps(dict(index=index, reason='inputs', log_entries=entries,
-            actor_inputs=entries - 1, allocated_seconds=60, level_events=[])))
+            actor_inputs=entries - 1, allocated_seconds=60, allocated_attempts=4, started_wall=2000. + index, level_events=[])))
     return session
 
 
-def route_file(tmp_path, port, *, cost=0.0, extra=None):
+def route_file(tmp_path, port, *, cost=1.0, extra=None, schema='player-host/5'):
     model = dict(id='fixture-model', name='Fixture', api='openai-completions', provider='fixture',
                  baseUrl=f'http://127.0.0.1:{port}/v1', reasoning=False, input=['text', 'image'],
                  cost=dict(input=cost, output=cost, cacheRead=0, cacheWrite=0), contextWindow=100000, maxTokens=1024,
                  compat=dict(supportsDeveloperRole=False, supportsStore=False, supportsUsageInStreaming=True))
     path = tmp_path / 'route.json'
-    path.write_text(json.dumps(dict(schema='player-host/4', model=model, api_key_env='PROBE_FIXTURE_KEY', max_requests=4,
-                                    request_timeout_seconds=20, max_context_images=8, service_tier='default', **(extra or {}))))
+    path.write_text(json.dumps(dict(schema=schema, model=model, api_key_env='PROBE_FIXTURE_KEY', max_requests=4,
+                                    request_timeout_seconds=20, max_context_images=8, context_image_block=1, service_tier='default', **(extra or {}))))
     return path
+
+
+class Raw:
+    """Tool-call arguments sent exactly as written, so a malformed document can be scripted."""
+    def __init__(self, text):
+        self.text = text
 
 
 class Provider:
     """A scripted OpenAI-compatible chat-completions endpoint: `policy(number, payload)` returns the tool call(s)."""
-    def __init__(self, policy, tokens=11, delay=0.):
+    def __init__(self, policy, tokens=11, delay=0., usage=True):
         self.policy, self.tokens, self.payloads, self.lock = policy, tokens, [], threading.Lock()
+        self.usage = usage
         provider = self
 
         class Handler(BaseHTTPRequestHandler):
@@ -100,12 +116,20 @@ class Provider:
                     number = len(provider.payloads)
                 calls = provider.policy(number, payload)
                 time.sleep(delay)
+                if calls is None:
+                    body = b'{"error":{"message":"scripted failure","code":400}}'
+                    self.send_response(400)
+                    self.send_header('content-type', 'application/json')
+                    self.send_header('content-length', str(len(body)))
+                    self.end_headers()
+                    self.wfile.write(body)
+                    return
                 delta = dict(role='assistant', tool_calls=[dict(index=i, id=f'call-{number}-{i}', type='function',
-                             function=dict(name=name, arguments=json.dumps(args))) for i, (name, args) in enumerate(calls)])
+                             function=dict(name=name, arguments=args.text if isinstance(args, Raw) else json.dumps(args))) for i, (name, args) in enumerate(calls)])
                 chunks = [dict(id='r', model='fixture-backend', choices=[dict(index=0, delta=delta, finish_reason=None)]),
                           dict(id='r', model='fixture-backend', choices=[dict(index=0, delta={}, finish_reason='tool_calls')],
-                               usage=dict(prompt_tokens=provider.tokens, completion_tokens=provider.tokens,
-                                          total_tokens=2 * provider.tokens))]
+                               **(dict(usage=dict(prompt_tokens=provider.tokens, completion_tokens=provider.tokens,
+                                                  total_tokens=2 * provider.tokens)) if provider.usage else {}))]
                 body = ''.join('data: ' + json.dumps(c) + '\n\n' for c in chunks) + 'data: [DONE]\n\n'
                 self.send_response(200)
                 self.send_header('content-type', 'text/event-stream')
@@ -151,8 +175,10 @@ def provider():
 
 def run(tmp_path, recorded, provider, *, name='probe', samples=2, max_usd=10., route=None, **kwargs):
     root = tmp_path / 'probes'
+    thresholds = tmp_path / 'thresholds.json'
+    thresholds.write_text(json.dumps(THRESHOLDS))
     report = probe([recorded], route or route_file(tmp_path, provider.port), samples=samples, max_usd=max_usd, name=name,
-                   secret=KEY, host_argv=HOST, effort='off', probe_root=root, **kwargs)
+                   secret=KEY, host_argv=HOST, effort='off', probe_root=root, thresholds_path=thresholds, **kwargs)
     return report, root / name
 
 
@@ -197,8 +223,8 @@ def test_probe_replays_every_pass_through_the_real_host_and_labels_its_output(tm
     assert pooled['samples'] == 4 and pooled['valid_terminal_calls'] == 4 and pooled['valid_terminal_rate'] == 1
     assert pooled['outcomes'] == {'replace': 4} and pooled['refusals_by_field'] == {}
     assert pooled['level_final_refusal'] == 0 and pooled['request_limit'] == 0
-    assert pooled['requests_used']['total'] == 8 and pooled['configured_cost_usd'] == 0
-    assert report['thresholds']['valid_terminal_rate_met'] is True and report['thresholds']['no_repeated_identical_refusal'] is True
+    assert pooled['requests_used']['total'] == 8 and 0 < pooled['configured_cost_usd'] < 0.01
+    assert report['thresholds']['valid_terminal_rate_met'] is True and report['thresholds']['repeated_identical_refusal_met'] is True
     assert sorted(report['passes']) == ['recorded/actor001/pass001', 'recorded/actor001/pass002']
     assert report['interface']['host'] == 'player-host/5' and report['interface']['role_prompt'] == 'subgoal-v3.txt'
     # The pass saw the production pushed input of the replay, the frozen role prompt and the real v3 tools.
@@ -222,7 +248,7 @@ def test_probe_never_writes_the_credential_or_outside_the_probes_directory(tmp_p
     for name in ('../escape', 'a/../../escape', '.', ''):
         with pytest.raises((ValueError, FileExistsError)):
             probe([recorded], route_file(tmp_path, 1), samples=1, max_usd=1., name=name, secret=KEY, host_argv=HOST,
-                  probe_root=tmp_path / 'probes')
+                  probe_root=tmp_path / 'probes', thresholds_path=tmp_path / 'thresholds.json')
     assert not (tmp_path / 'escape').exists()
 
 
@@ -238,7 +264,7 @@ def test_refusals_by_field_final_refusal_and_repeated_identical_refusals_are_rep
     assert pooled['level_final_refusal'] == 1 and pooled['request_limit'] == 0
     assert pooled['refusals_by_field'] == {'player_level_replace.previous_outcome': 3}
     assert pooled['max_repeated_identical_refusal'] == 3
-    assert report['thresholds']['valid_terminal_rate_met'] is False and report['thresholds']['no_repeated_identical_refusal'] is False
+    assert report['thresholds']['valid_terminal_rate_met'] is False and report['thresholds']['repeated_identical_refusal_met'] is False
     assert pooled['requests_used']['total'] == 3
 
 
@@ -255,42 +281,219 @@ def test_the_state_error_then_repair_and_abstain_codes_are_counted(tmp_path, rec
     assert pooled['refusals_by_field'] == {'player_level_keep.custodian': 1}
 
 
-def test_the_spend_cap_is_required_positive_and_stops_the_run_before_it_is_exceeded(tmp_path, recorded, provider):
+def test_the_spend_cap_is_required_and_positive(tmp_path, recorded):
     with pytest.raises(SystemExit):
-        level_probe.main(['--session', str(recorded), '--route', str(tmp_path / 'route.json'), '--name', 'x'])
+        level_probe.main(['--session', str(recorded), '--route', str(tmp_path / 'route.json'), '--name', 'x',
+                          '--thresholds', str(tmp_path / 't.json')])
     for bad in (0, -1):
         with pytest.raises(ValueError, match='max-usd'):
             probe([recorded], tmp_path / 'route.json', samples=1, max_usd=bad, name='x', secret=KEY, host_argv=HOST,
-                  probe_root=tmp_path / 'probes')
-    # Each request costs 22 tokens at 50000 USD per million: $1.10 per request, two requests a sample.
+                  probe_root=tmp_path / 'probes', thresholds_path=tmp_path / 't.json')
+    assert not (tmp_path / 'probes').exists()
+
+
+def test_the_cap_is_hard_up_front_so_a_sample_never_has_more_requests_than_the_cap_covers(tmp_path, recorded, provider):
+    # Each request costs 22 tokens at 50000 USD per million: $1.10. The bound for a request is $1.20.
     fake = provider(clean_policy)
     route = route_file(tmp_path, fake.port, cost=50000.)
-    report, out = run(tmp_path, recorded, fake, samples=3, max_usd=5., route=route, name='capped')
+    report, _ = run(tmp_path, recorded, fake, samples=3, max_usd=5., route=route, name='capped', max_request_usd=1.2, passes={1})
     spend = report['spend']
-    assert spend['stopped_by_spend_guard'] is True and spend['configured_cost_usd'] <= 5.
-    assert spend['samples_run'] < spend['samples_planned'] and spend['samples_run'] >= 1
-    # A cap below the first sample's projection runs nothing at all.
+    assert spend['stopped_by_spend_guard'] is True and spend['charged_usd'] <= 5. and spend['configured_cost_usd'] <= 5.
+    # $5 covers four requests at the bound; the first sample uses two, so the second may use only two, the third none.
+    assert [s['allowance'] for s in report['samples']] == [dict(recorded=4, used=4), dict(recorded=4, used=2)]
+    assert spend['samples_run'] == 2 and all(s['requests'] <= s['allowance']['used'] for s in report['samples'])
+    assert not any(s['stopped_by_spend_guard'] for s in report['samples'])
+    # A cap below one request's bound runs nothing at all.
     nothing, _ = run(tmp_path, recorded, provider(clean_policy), samples=1, max_usd=.01, name='tiny')
     assert nothing['spend']['samples_run'] == 0 and nothing['spend']['stopped_by_spend_guard'] is True
-    # The cap is a ceiling on the host too: a single sample is cut off before a request that would pass it.
+
+
+def test_the_in_flight_kill_is_only_a_backstop_for_a_request_dearer_than_the_bound(tmp_path, recorded, provider):
     slow = provider(lambda n, p: [('player_log_read', dict(after=0, limit=5))], delay=.4)
     cut, _ = run(tmp_path, recorded, slow, samples=1, max_usd=3., route=route_file(tmp_path, slow.port, cost=50000.),
-                 name='cut', sample_estimate_usd=0., max_requests=6, passes={1})
-    assert cut['samples'][0]['stopped_by_spend_guard'] is True and cut['spend']['configured_cost_usd'] <= 3.
-    assert cut['samples'][0]['requests'] < 6 and cut['pooled']['outcomes'] == {'no-terminal-call': 1}
+                 name='cut', max_request_usd=.1, max_requests=6, passes={1})
+    assert cut['samples'][0]['stopped_by_spend_guard'] is True and cut['samples'][0]['requests'] < 6
+    assert cut['pooled']['outcomes'] == {'no-terminal-call': 1}
 
 
-def test_the_conformance_package_route_is_normalized_to_the_current_level_host(tmp_path):
+def test_requests_without_reported_usage_are_charged_at_the_per_request_bound(tmp_path, recorded, provider):
+    fake = provider(clean_policy, usage=False)
+    # The recorded allowance is 4 and the sample estimate $0.12, so a request is charged $0.03.
+    report, _ = run(tmp_path, recorded, fake, samples=1, passes={1})
+    spend = report['spend']
+    assert spend['configured_cost_usd'] == 0 and spend['missing_usage_attempts'] == 2
+    assert spend['charged_usd'] == pytest.approx(.06) and report['samples'][0]['charged_usd'] == pytest.approx(.06)
+    # The charge, not the zero reported cost, is what the cap counts: $0.07 covers two requests of one sample only.
+    capped, _ = run(tmp_path, recorded, provider(clean_policy, usage=False), samples=3, max_usd=.07, name='no-usage-cap', passes={1})
+    assert capped['spend']['samples_run'] == 1 and capped['spend']['stopped_by_spend_guard'] is True
+    assert capped['spend']['charged_usd'] <= .07
+    # An explicit per-request bound replaces the estimate-derived one.
+    explicit, _ = run(tmp_path, recorded, provider(clean_policy, usage=False), samples=1, name='explicit', max_request_usd=.5, passes={1})
+    assert explicit['spend']['charged_usd'] == pytest.approx(1.)
+
+
+def test_a_route_with_no_configured_cost_is_refused_before_anything_is_written(tmp_path, recorded, provider):
+    with pytest.raises(ValueError, match='all zero'):
+        run(tmp_path, recorded, provider(clean_policy), route=route_file(tmp_path, 9, cost=0.))
+    assert not (tmp_path / 'probes' / 'probe').exists()
+
+
+@pytest.mark.parametrize('schema', ['player-host/4', 'player-host/1', 'player-host/6', None])
+def test_a_route_that_is_not_player_host_5_is_rejected_without_normalization(tmp_path, recorded, provider, schema):
+    path = route_file(tmp_path, 9, schema=schema)
+    with pytest.raises(ValueError, match='must be player-host/5'):
+        load_route(path, 4, None)
+    with pytest.raises(ValueError, match='must be player-host/5'):
+        run(tmp_path, recorded, provider(clean_policy), route=path)
+    assert not (tmp_path / 'probes' / 'probe').exists()
+    route = json.loads(path.read_text())
+    package = tmp_path / 'package.json'
+    package.write_text(json.dumps(dict(schema='finite-provider-conformance/1', routes=[dict(tag='one', model='fixture-model',
+                                                                                            configuration=route)])))
+    with pytest.raises(ValueError, match='must be player-host/5'):
+        load_route(package, 4, None)
+
+
+def test_the_conformance_package_supplies_its_player_host_5_route_unchanged_except_the_level_fields(tmp_path):
     route = json.loads(route_file(tmp_path, 9).read_text())
     package = tmp_path / 'package.json'
     package.write_text(json.dumps(dict(schema='finite-provider-conformance/1', routes=[
-        dict(tag='one', model='fixture-model', configuration={k: v for k, v in route.items() if k != 'schema'}
-             | dict(schema='player-host/1'))])))
-    normalized = load_route(package, 5, None)
-    assert normalized['schema'] == 'player-host/5' and normalized['role'] == 'level' and normalized['max_requests'] == 5
-    assert normalized['intent_tail_bytes'] is None and normalized['context_image_block'] == 1
+        dict(tag='one', model='fixture-model', configuration=dict(route, role='actor', intent_tail_bytes=1024))])))
+    selected = load_route(package, 5, None)
+    assert selected == dict(route, role='level', intent_tail_bytes=None, max_requests=5)
     with pytest.raises(ValueError, match='exactly one'):
         load_route(package, 5, 'missing')
+    # Nothing is defaulted: a route without a required field reaches the host as it is.
+    del route['context_image_block']
+    plain = tmp_path / 'plain.json'
+    plain.write_text(json.dumps(route))
+    assert 'context_image_block' not in load_route(plain, 5, None)
+
+
+def test_thresholds_are_a_required_closed_file_and_are_recorded_with_the_report_inputs(tmp_path, recorded, provider):
+    with pytest.raises(SystemExit):
+        level_probe.main(['--session', str(recorded), '--route', str(tmp_path / 'r.json'), '--name', 'x', '--max-usd', '1'])
+    thresholds = tmp_path / 'strict.json'
+    for bad in (dict(THRESHOLDS, extra=1), dict(THRESHOLDS, schema='level-probe-thresholds/0'),
+                {k: v for k, v in THRESHOLDS.items() if k != 'valid_terminal_rate_at_least'},
+                dict(THRESHOLDS, valid_terminal_rate_at_least=0), dict(THRESHOLDS, repeated_identical_refusal_at_most=0)):
+        thresholds.write_text(json.dumps(bad))
+        with pytest.raises(ValueError, match='hreshold|must be'):
+            level_probe.load_thresholds(thresholds)
+    fake = provider(clean_policy)
+    report, out = run(tmp_path, recorded, fake, samples=1, max_requests=3)
+    strict = report['thresholds']
+    assert strict['definition'] == THRESHOLDS and strict['file_sha256'] == hashlib.sha256((tmp_path / 'thresholds.json').read_bytes()).hexdigest()
+    assert report['source'] == dict(commit='d' * 40, clean=True)
+    assert report['route']['file_sha256'] == hashlib.sha256((tmp_path / 'route.json').read_bytes()).hexdigest()
+    (item,) = report['inputs']['sessions']
+    assert item == dict(session='recorded', manifest_sha256=hashlib.sha256((recorded / 'manifest.json').read_bytes()).hexdigest(),
+                        receipt_sha256=hashlib.sha256((recorded / 'receipt.json').read_bytes()).hexdigest())
+    assert report['interface']['role_sha256'] and any('No staleness or discard' in limit for limit in report['limits'])
+    assert any('pending' in limit for limit in report['limits'])
+    # The allowance is the recorded pass's own; an override is recorded, never silent.
+    assert {tuple(s['allowance'].items()) for s in report['samples']} == {(('recorded', 4), ('used', 3))}
+    # A different threshold file changes the verdict, not the measurement.
+    lenient = tmp_path / 'lenient.json'
+    lenient.write_text(json.dumps(dict(THRESHOLDS, valid_terminal_rate_at_least=1.0)))
+    again = probe([recorded], tmp_path / 'route.json', samples=1, max_usd=10., name='again', secret=KEY, host_argv=HOST,
+                  effort='off', probe_root=tmp_path / 'probes', thresholds_path=lenient)
+    assert again['thresholds']['definition']['valid_terminal_rate_at_least'] == 1.0
+
+
+def test_a_dirty_checkout_is_refused_before_anything_is_written_and_git_state_reads_the_repository(tmp_path, recorded, provider, monkeypatch):
+    monkeypatch.setattr(level_probe, 'git_state', lambda root=None: ('e' * 40, True))
+    with pytest.raises(ValueError, match='clean commit'):
+        run(tmp_path, recorded, provider(clean_policy))
+    assert not (tmp_path / 'probes').exists()
+    repo = tmp_path / 'repo'
+    repo.mkdir()
+    git = lambda *a: subprocess.run(['git', '-c', 'user.name=t', '-c', 'user.email=t@example.invalid', *a], cwd=repo,
+                                    check=True, capture_output=True, text=True).stdout.strip()
+    git('init', '-q')
+    (repo / 'a.txt').write_text('one')
+    git('add', 'a.txt')
+    git('commit', '-q', '-m', 'one')
+    monkeypatch.undo()
+    commit, dirty = level_probe.git_state(repo)
+    assert commit == git('rev-parse', 'HEAD') and dirty is False
+    (repo / 'untracked.txt').write_text('x')
+    assert level_probe.git_state(repo)[1] is False
+    (repo / 'a.txt').write_text('two')
+    assert level_probe.git_state(repo)[1] is True
+
+
+def write_receipt(recorded, index, events, **change):
+    path = recorded / 'actors/001/level' / f'{index:03d}' / 'driver-receipt.json'
+    value = json.loads(path.read_text())
+    path.write_text(json.dumps(dict(value, level_events=events, **change)))
+
+
+def commit_event(action):
+    return dict(type='level-commit', action=action)
+
+
+@pytest.mark.parametrize('earlier,fidelity', [
+    ([], 'exact'), ([dict(type='level-abstain')], 'exact'), ([commit_event('keep')], 'exact'),
+    ([dict(type='level-discard', action='replace')], 'exact'),
+    ([commit_event('replace')], 'memory-reset'), ([commit_event('close')], 'memory-reset')])
+def test_state_fidelity_is_whether_the_replay_memory_matches_the_recording_at_the_pass_start(tmp_path, recorded, provider, earlier, fidelity):
+    write_receipt(recorded, 1, earlier)
+    first, second = recorded_passes(recorded)
+    assert first['prior_level_commits'] == 0 and second['prior_level_commits'] == (fidelity == 'memory-reset')
+    report, _ = run(tmp_path, recorded, provider(clean_policy), samples=1)
+    by_pass = {s['pass_index']: s for s in report['samples']}
+    # The first pass is always exact: its own commits come after it started.
+    assert by_pass[1]['state_fidelity'] == 'exact' and by_pass[2]['state_fidelity'] == fidelity
+
+
+def test_state_fidelity_also_reads_level_work_in_the_recorded_player_store_created_before_the_pass(tmp_path, recorded, provider):
+    from harness.player.memory import Memory
+    store = tmp_path / 'recorded-player.sqlite3'
+    memory = Memory(store)
+    memory.append(RECORDED_ACTOR, dict(schema='player-record/1', kind='work', text='Earlier', data=dict(level='subgoal'),
+                                       sources=[], supports=[], supersedes=None, applicability=None, program_id=None))
+    memory.append(RECORDED_ACTOR, dict(schema='player-record/1', kind='work', text='Other work', data={}, sources=[],
+                                       supports=[], supersedes=None, applicability=None, program_id=None))
+    memory.close()
+    manifest = json.loads((recorded / 'manifest.json').read_text())
+    (recorded / 'manifest.json').write_text(json.dumps(dict(manifest, player_store=str(store))))
+    write_receipt(recorded, 2, [], started_wall=time.time() + 100)
+    first, second = recorded_passes(recorded)
+    assert (first['prior_stored_rows'], second['prior_stored_rows'], second['prior_level_commits']) == (0, 1, 0)
+    report, _ = run(tmp_path, recorded, provider(clean_policy), samples=1)
+    assert {s['pass_index']: s['state_fidelity'] for s in report['samples']} == {1: 'exact', 2: 'memory-reset'}
+
+
+def test_terminal_calls_the_host_refused_or_could_not_parse_are_counted_and_repeat_identically(tmp_path, recorded, provider):
+    coerced = dict(REPLACE, confidence='0.5')
+    report, _ = run(tmp_path, recorded, provider(lambda n, p: [('player_level_replace', coerced)]), samples=1, max_requests=3, passes={1})
+    pooled = report['pooled']
+    assert pooled['refusals_by_field'] == {'player_level_replace.tool-refused:tool-arguments-changed': 3}
+    assert pooled['max_repeated_identical_refusal'] == 3 and pooled['level_final_refusal'] == 1
+    assert report['thresholds']['repeated_identical_refusal_met'] is False
+    malformed = provider(lambda n, p: [('player_level_abstain', Raw('{"reason_code":"other",'))])
+    report, _ = run(tmp_path, recorded, malformed, samples=1, max_requests=3, passes={1}, name='malformed')
+    pooled = report['pooled']
+    assert pooled['refusals_by_field'] == {'player_level_abstain.arguments_error': 3}
+    assert pooled['max_repeated_identical_refusal'] == 3 and pooled['valid_terminal_calls'] == 0
+
+
+def test_reserved_requests_report_refused_non_terminal_calls_and_provider_errors_on_them(tmp_path, recorded, provider):
+    def policy(number, payload):
+        return [('player_log_read', dict(after=0, limit=5))] if number == 1 else [('player_level_abstain', dict(reason_code='other', reason='r', sources=[]))]
+    report, _ = run(tmp_path, recorded, provider(policy), samples=1, max_requests=2, passes={1})
+    pooled = report['pooled']
+    assert pooled['reserved_non_terminal_calls'] == 1 and pooled['valid_terminal_calls'] == 1
+    assert pooled['provider_error_on_reserved_request'] == 0
+    # The second of three requests is reserved: a provider failure there is its own count; on the first request it is not.
+    def fail_second(number, payload):
+        return None if number == 2 else [('player_log_read', dict(after=0, limit=5))]
+    report, _ = run(tmp_path, recorded, provider(fail_second), samples=1, max_requests=3, passes={1}, name='reserved-error')
+    assert report['pooled']['provider_error_on_reserved_request'] == 1
+    assert report['samples'][0]['settled_reason'] == 'provider-error'
+    report, _ = run(tmp_path, recorded, provider(lambda n, p: None), samples=1, max_requests=4, passes={1}, name='first-error')
+    assert report['samples'][0]['settled_reason'] == 'provider-error' and report['pooled']['provider_error_on_reserved_request'] == 0
 
 
 def test_the_credential_comes_only_from_the_keychain_item(monkeypatch):

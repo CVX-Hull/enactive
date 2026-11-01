@@ -717,7 +717,7 @@ test('a rejected terminal call does not end the pass, and a later call after the
     reply(null,[blankAbstain]),
     reply(null,[replaceCall,abstainCall])]);
   assert.equal(result.ok,true);assert.equal(payloads.length,3);
-  assert.deepEqual(events.filter(e=>e.type.startsWith('level-')&&e.type!=='level-pass'&&e.type!=='level-reserved-request').map(e=>e.type),['level-commit']);
+  assert.deepEqual(events.filter(e=>e.type.startsWith('level-')&&e.type!=='level-pass'&&e.type!=='level-reserved-request'&&e.type!=='level-terminal-call').map(e=>e.type),['level-commit']);
   const refused=events.find(e=>e.type==='tool-refused');
   assert.deepEqual([refused.tool,refused.reason,refused.dispatched],['player_level_abstain','level-ended',false]);
 });
@@ -816,6 +816,20 @@ test('a non-terminal call on a reserved request is refused without dispatch, wit
   assert.ok(message.endsWith('Fix the call and resend it; abstaining is not the remedy for a fixable call.'),message);
   // The refusal does not end the pass: the next request's terminal call does.
   assert.equal(events.some(e=>e.type==='level-abstain'),true);
+});
+
+test('every terminal call is traced, with unparseable arguments flagged and no tool-start', async t=>{
+  const raw=(name,args)=>new Response([{id:'r',model:'fixture-backend',choices:[{index:0,delta:{role:'assistant',tool_calls:[{index:0,id:'raw-0',type:'function',function:{name,arguments:args}}]},finish_reason:null}]},
+    {id:'r',model:'fixture-backend',choices:[{index:0,delta:{},finish_reason:'tool_calls'}],usage:{prompt_tokens:11,completion_tokens:5,total_tokens:16}}]
+    .map(chunk=>'data: '+JSON.stringify(chunk)+'\n\n').join('')+'data: [DONE]\n\n',{headers:{'content-type':'text/event-stream'}});
+  const {result,events,calls}=await levelScenario(t,[raw('player_level_abstain','{"reason_code":"other",'),reply(null,[readCall,blankAbstain,abstainCall],true,undefined,'ok')]);
+  assert.equal(result.ok,true);
+  const traced=events.filter(e=>e.type==='level-terminal-call').map(e=>[e.request_id,e.tool_call_id,e.tool,e.arguments_error]);
+  assert.deepEqual(traced,[['request-1','raw-0','player_level_abstain',true],['request-2','ok-1','player_level_abstain',false],['request-2','ok-2','player_level_abstain',false]]);
+  const started=events.filter(e=>e.type==='tool-start').map(e=>e.tool_call_id);
+  assert.equal(started.includes('raw-0'),false);
+  // The blank abstain was dispatched (the custodian rejects it); the unparseable one never was.
+  assert.deepEqual(calls.map(c=>c.tool),['player_log_read','player_level_abstain','player_level_abstain']);
 });
 
 test('a terminal call whose arguments the SDK changed is refused naming the field, with the fix line', async t=>{
