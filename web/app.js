@@ -429,7 +429,7 @@ function updateLocation() {
 function renderActivity(snapshot) {
   const statement = snapshot.latest_statement;
   show('latest-statement', statement?.text ? statement.text : 'No public statement available for this session.');
-  show('statement-meta', statement ? `Fallible public statement · actor ${value(statement.actor_id)} · request ${value(statement.request_id)} · original wall ${wallTime(statement.created_wall)} · ${measured(statement.omitted_bytes, 'original bytes')} omitted; ${measured(statement.display_omitted_bytes, 'further display bytes')} omitted. No captured frame is linked to a statement, so its claims are unverified until checked against the pixels. Historical/terminal labels are recorded claims, not liveness.` : 'Missing or empty narration does not establish inactivity.');
+  show('statement-meta', statement ? `Fallible public statement · actor ${value(statement.actor_id)} · request ${value(statement.request_id)} · original wall ${wallTime(statement.created_wall)} · original bytes omitted: ${value(statement.omitted_bytes)}; further display bytes omitted: ${value(statement.display_omitted_bytes)}. No captured frame is linked to a statement, so its claims are unverified until checked against the pixels. Historical/terminal labels are recorded claims, not liveness.` : 'Missing or empty narration does not establish inactivity.');
   show('activity-summary', `${snapshot.entries.length} retained entries · ${omittedSummary(snapshot)}${snapshot.clientOmitted ? ` · ${snapshot.clientOmitted} further omitted on this page` : ''}.`);
   show('recent-activity', snapshot.entries.slice(-3).map(entryTitle).join('\n') || 'No use observed in available coverage; missing coverage is unknown.');
   show('frame-change', frameChange(snapshot.entries));
@@ -442,7 +442,7 @@ function frameChange(entries) {
   const index = computer.findLastIndex(entry => entry.kind === 'input');
   if (index < 0) return 'No recorded input capture to compare yet.';
   const latest = computer[index];
-  if (typeof latest.source?.sha256 !== 'string') return `The latest input (${shortIdentity(latest.operation_id)}) has no recorded capture yet.`;
+  if (typeof latest.source?.sha256 !== 'string') return `The latest input (${shortIdentity(latest.operation_id)}) has no recorded capture.`;
   const before = computer.slice(0, index).findLast(entry => typeof entry.source?.sha256 === 'string');
   if (!before) return 'The latest input has no earlier retained capture to compare.';
   return before.source.sha256 === latest.source.sha256
@@ -459,23 +459,33 @@ function renderSinceLastLook() {
   const visible = typeof document.visibilityState !== 'string' || document.visibilityState === 'visible';
   if (!away || !visible) { $('since-last-look').hidden = true; $('mark-seen').hidden = true; return; }
   const omitted = away.omissions ? '; older ones may have been omitted' : '';
-  show('since-last-look', away.changed ? `The control target changed while this page was hidden${away.arrived ? `; ${away.arrived} retained entries arrived before that` : ''}. Earlier activity is in Timeline.` :
+  show('since-last-look', away.changed ? `The control target changed while this page was hidden${away.arrived ? `; ${away.arrived} retained entries arrived in the earlier session before that` : ''}. Earlier activity is in Timeline.` :
     `${away.arrived} retained ${away.arrived === 1 ? 'entry' : 'entries'} arrived while this page was hidden${omitted}.`);
   $('since-last-look').hidden = false; $('mark-seen').hidden = false;
 }
-if (typeof document.addEventListener === 'function') document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') {
-    if (latestActivity && !hiddenFrom) hiddenFrom = {session: latestActivity.session, keys: new Set(latestActivity.entries.map(entryKey))};
-  } else if (hiddenFrom) {
-    // The count is fixed when the reader returns; arrivals while visible are not "hidden" ones.
-    away ??= {arrived: 0, changed: false, omissions: false};
-    if (!latestActivity || latestActivity.session !== hiddenFrom.session) away.changed = true;
+// Hidden tabs throttle timers, so the count is fixed from a fresh poll accepted after the
+// reader returns, never from the last poll made while hidden.
+let returning = null;
+function settleReturn() {
+  if (!returning) return;
+  away ??= {arrived: 0, changed: false, omissions: false};
+  if (!away.changed) {
+    if (currentSession !== returning.session || latestActivity?.session !== returning.session) away.changed = true;
     else {
-      away.arrived += latestActivity.entries.filter(entry => !hiddenFrom.keys.has(entryKey(entry))).length;
+      away.arrived += latestActivity.entries.filter(entry => !returning.keys.has(entryKey(entry))).length;
       // Unknown omission counts are not zero.
       away.omissions ||= Boolean(latestActivity.clientOmitted) || latestActivity.omitted_entries !== 0;
     }
-    hiddenFrom = null;
+  }
+  returning = null;
+  renderSinceLastLook();
+}
+if (typeof document.addEventListener === 'function') document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    if (latestActivity && !hiddenFrom && !returning) hiddenFrom = {session: latestActivity.session, keys: new Set(latestActivity.entries.map(entryKey))};
+  } else if (hiddenFrom) {
+    returning = hiddenFrom; hiddenFrom = null;
+    void refreshActivity();
   }
   renderSinceLastLook();
 });
@@ -704,7 +714,7 @@ async function refreshActivity() {
     } else activitySnapshots.set(snapshot.session, snapshot);
     activityError = '';
     latestActivity = snapshot; // The newest poll, even while Timeline inspection is frozen.
-    renderActivity(snapshot); renderTimeline(); resolveDeepLink();
+    renderActivity(snapshot); renderTimeline(); resolveDeepLink(); settleReturn();
   } catch (error) {
     if (generation === sessionGeneration) { activityError = error.message; renderTimeline(); show('activity-summary', `Activity unavailable: ${error.message}. Last snapshot retained; current activity unknown.`); }
   } finally {

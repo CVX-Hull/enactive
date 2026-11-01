@@ -313,7 +313,7 @@ const text = id => {
   const b = event('host:actor-b:1',{actor_id:'actor-b',kind:'request-start',text:null});
   await activityPoll(activity([a,b],{latest_statement:a,omitted_entries:6}));
   assert.match(text('latest-statement'), /<img src=x onerror=boom>/, 'Narration remains literal untrusted text');
-  assert.match(text('statement-meta'), /7 original bytes omitted; 3 further/);
+  assert.match(text('statement-meta'), /original bytes omitted: 7; further display bytes omitted: 3/);
   assert.match(text('statement-meta'), /No captured frame is linked to a statement.*unverified/, 'A statement is labelled unverified, never confirmed');
   assert.match(text('activity-summary'), /6 omitted/);
 
@@ -334,7 +334,7 @@ const text = id => {
   assert.match(text('frame-change'), /no earlier retained capture/, 'Only the latest input is compared, never a later observation');
   const pending = capture('op-9', 'input', 'x', {status: 'pending', source: undefined});
   await activityPoll(activity([capture('op-1', 'observe', 'a'), capture('op-8', 'input', 'b'), pending]));
-  assert.match(text('frame-change'), /latest input \(op-9\) has no recorded capture yet/, 'A pending input is the latest, never an older one');
+  assert.match(text('frame-change'), /latest input \(op-9\) has no recorded capture\./, 'A pending input is the latest, never an older one');
   const hostSource = {...capture('op-h', 'input', 'a'), producer: 'host', kind: 'tool-result'};
   await activityPoll(activity([capture('op-1', 'observe', 'a'), hostSource, capture('op-2', 'input', 'b')]));
   assert.match(text('frame-change'), /PNG differs/, 'Host tool results are not computer captures');
@@ -342,19 +342,21 @@ const text = id => {
   // "Since you last looked": arrivals during hidden intervals, fixed on return, cleared only by the reader.
   const documentListeners = context.document.listeners;
   const visibility = state => { context.document.visibilityState = state; documentListeners.visibilitychange(); };
+  // Returning starts a fresh poll; the count is fixed from that poll, not the last hidden one.
+  async function returnWith(snapshot) { visibility('visible'); await reply(request('/api/activity'), snapshot); }
   assert.equal(typeof documentListeners.visibilitychange, 'function');
   await activityPoll(activity([capture('op-4', 'input', 'c'), capture('op-5', 'observe', 'c')]));
   visibility('hidden');
-  await activityPoll(activity([capture('op-4', 'input', 'c'), capture('op-5', 'observe', 'c'), capture('op-6', 'input', 'd'), capture('op-7', 'input', 'e')]));
-  visibility('visible');
+  await activityPoll(activity([capture('op-4', 'input', 'c'), capture('op-5', 'observe', 'c'), capture('op-6', 'input', 'd')]));
+  // op-7 arrived after the last throttled hidden poll; the return poll still counts it.
+  await returnWith(activity([capture('op-4', 'input', 'c'), capture('op-5', 'observe', 'c'), capture('op-6', 'input', 'd'), capture('op-7', 'input', 'e')]));
   assert.equal(element('since-last-look').hidden, false);
   assert.match(text('since-last-look'), /^2 retained entries arrived while this page was hidden\.$/);
   epoch += 600000; await activityPoll(activity([capture('op-6', 'input', 'd'), capture('op-7', 'input', 'e'), capture('op-10', 'input', 'f')]));
   assert.match(text('since-last-look'), /^2 retained entries/, 'Arrivals while visible, time and polling never change the count');
   visibility('hidden');
   assert.equal(element('since-last-look').hidden, true, 'The notice is not shown while the page is hidden');
-  await activityPoll(activity([capture('op-10', 'input', 'f'), capture('op-11', 'input', 'g')], {omitted_entries: null}));
-  visibility('visible');
+  await returnWith(activity([capture('op-10', 'input', 'f'), capture('op-11', 'input', 'g')], {omitted_entries: null}));
   assert.match(text('since-last-look'), /^3 retained entries.*older ones may have been omitted/, 'Hidden intervals add up; unknown omissions are not zero');
   element('mark-seen').listeners.click();
   assert.equal(element('since-last-look').hidden, true); assert.equal(element('mark-seen').hidden, true);
@@ -362,10 +364,20 @@ const text = id => {
   // Frozen Timeline inspection never feeds a stale snapshot into the hidden count.
   run('following = false; timelineSession = currentSession');
   visibility('hidden');
-  await activityPoll(activity([capture('op-11', 'input', 'g'), capture('op-12', 'input', 'h')]));
-  visibility('visible');
+  await returnWith(activity([capture('op-11', 'input', 'g'), capture('op-12', 'input', 'h')]));
   assert.match(text('since-last-look'), /^1 retained entry arrived/);
   element('mark-seen').listeners.click(); run('following = true');
+  // A control target adopted while hidden is reported as a change, before its activity arrives.
+  visibility('hidden');
+  run('currentSession = "session-six"');
+  visibility('visible');
+  const changedPoll = request('/api/activity');
+  run('currentSession = "session-five"');
+  await reply(changedPoll, activity([capture('op-12', 'input', 'h'), capture('op-13', 'input', 'i')], {session: 'session-six'}));
+  run('currentSession = "session-six"; settleReturn()');
+  assert.match(text('since-last-look'), /control target changed while this page was hidden/);
+  run('currentSession = "session-five"');
+  element('mark-seen').listeners.click();
   await activityPoll(activity([a,b],{latest_statement:a,omitted_entries:6}));
   const row = element('activity-list').children[0].children[0];
   element('activity-list').scrollTop = 80;
