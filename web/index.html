@@ -24,6 +24,7 @@
       <button id="watch-size" type="button" aria-pressed="false">Show original pixel size</button>
       <div class="frame-shell" id="watch-frame-shell" tabindex="0" role="region" aria-label="Captured image viewport"><img id="frame" alt="Original PNG captured from the native window" hidden><p id="frame-note" role="status">No captured source available.</p></div>
       <p id="source-age">No displayed source.</p>
+      <p id="frame-change" class="hint">No recorded input capture to compare yet.</p>
       <details><summary>Original source and geometry</summary><p id="source-details">No displayed source.</p></details>
       <p class="hint">The image fits this page; source metadata describes the full original PNG. Polling reads retained status and pixels; it does not capture a new frame. An old image has an age, not an inferred game meaning.</p>
       <details>
@@ -35,7 +36,7 @@
     </section>
     <aside>
       <section aria-labelledby="statement-heading"><span class="eyebrow">PUBLIC PLAYER STATEMENT · FALLIBLE</span><h2 id="statement-heading">What the player said</h2><p class="hint">Long statements scroll within this panel. Original evidence and limits are available in Timeline.</p><p id="latest-statement" tabindex="0" role="region" aria-label="Public player statement">No public statement available.</p><p id="statement-meta" class="hint">Missing narration does not establish inactivity.</p></section>
-      <section><h2>Recent activity</h2><p id="activity-summary">Activity not yet received.</p><p id="recent-activity">No activity available.</p><button id="open-timeline" type="button">Inspect Timeline</button></section>
+      <section><h2>Recent activity</h2><p id="since-last-look" role="status" hidden></p><button id="mark-seen" type="button" hidden>Mark as seen</button><p id="activity-summary">Activity not yet received.</p><p id="recent-activity">No activity available.</p><button id="open-timeline" type="button">Inspect Timeline</button></section>
       <details class="diagnostics"><summary>Mechanical facts, budgets and player assertions</summary>
       <section aria-labelledby="control-heading">
         <h2 id="control-heading">Control and mechanical facts</h2>
