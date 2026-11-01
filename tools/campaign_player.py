@@ -30,7 +30,7 @@ class HostEvents:
         self.requests=set();self.settled=None;self.handoff=None;self.last_response_wall=None
         self.usage={};self.error=None;self.started=False
         self.observer=observer;self.ordinal=0
-        # A level pass's own commit and discard outcomes.
+        # A level pass's own commit, discard and abstain outcomes.
         self.level=[]
 
     def read(self) -> bool:
@@ -46,11 +46,11 @@ class HostEvents:
             kind=value.get('type')
             if kind=='host-start':
                 if (self.started or value.get('telemetry_version')!=2
-                        or value.get('schema')!='player-host/3'):raise ControlError('Unsupported/repeated current host trace')
+                        or value.get('schema')!='player-host/4'):raise ControlError('Unsupported/repeated current host trace')
                 self.started=True
-            elif kind in ('level-commit','level-discard'):
+            elif kind in ('level-commit','level-discard','level-abstain'):
                 if len(self.level)<256:self.level.append({k:value.get(k) for k in
-                    ('type','reason','position','inputs_since','staleness_inputs','record_ids','kept')})
+                    ('type','action','reason','position','inputs_since','staleness_inputs','record_ids','kept')})
             elif kind=='request-start':
                 match=re.fullmatch(r'request-([1-9][0-9]*)',value.get('request_id',''))
                 if not self.started or not match:raise ControlError('Host request lacks current origin')
@@ -118,6 +118,8 @@ class LevelPasses:
                                        session=profile['session'],**reader))
         self.schedule=LevelSchedule(level['inputs_per_pass'],tuple(level['budget_fractions']),actor_allowance)
         self.passes=[];self.charged=0;self.current=None;self.failure=None
+        # The last log position shown to a pass by software; the next pass's push starts after it.
+        self.shown_through=0
 
     def remaining(self) -> int:
         return self.allowance-self.charged
@@ -142,12 +144,14 @@ class LevelPasses:
                 or actor_deadline-now<30+self.level['pass_seconds']/4):return
         with self.application.serial:
             entries,inputs=self.application.runtime.store.actor_counts(self.actor_id)
-            open_records=len(self.application.memory.current('work'))
+            open_records=len(self.application.level_subgoals())
         reason=self.schedule.due(entries=entries,inputs=inputs,attempts=len(actor_events.requests),open_records=open_records)
         if reason is not None:self.launch(reason,entries,inputs,min(self.level['pass_seconds'],actor_deadline-now-30))
 
     def launch(self,reason: str,entries: int,inputs: int,seconds: float) -> None:
         index=len(self.passes)+1
+        # The pass's input is pushed: the read below sets the reader's bound to exactly what is shown.
+        pushed=self._push()
         target=self.target/f'{index:03d}';target.mkdir(mode=0o700)
         allowance=min(self.level['pass_max_requests'],self.remaining())
         record=dict(index=index,reason=reason,log_entries=entries,actor_inputs=inputs,allocated_attempts=allowance,
@@ -158,7 +162,8 @@ class LevelPasses:
         # Mechanical wake facts only; the frozen role prompt and the actor's own mission brief
         # carry everything else, so the level adds no lead content.
         prompt=((self.directory/'level-role.txt').read_text()+'\n\nMission brief (the same the acting player has):\n'
-                +(self.directory/'prompt.txt').read_text()+'\n\nSoftware level pass note: '
+                +(self.directory/'prompt.txt').read_text()+'\n\n'
+                +pushed+'\n\nSoftware level pass note: '
                 +f'wake reason {reason}; the served actor log now has {entries} entries ({inputs} inputs); '
                 +f'pass allowance {allowance} HTTP attempts and {seconds:.0f} seconds.')
         write_new(target/'prompt.txt',prompt,text=True)
@@ -173,6 +178,29 @@ class LevelPasses:
         self.current=(child,None,record,time.monotonic()+seconds)
         write_new(target/'host-process.json',dict(pid=child.pid,pgid=child.pid,argv=arguments))
         self.current=(child,HostEvents(target/'host.jsonl',allowance),record,self.current[3])
+
+    def _push(self) -> str:
+        """The pass's input text: the served log since the previous pass (at most the latest 50 entries) and the current subgoal."""
+        with self.application.serial:
+            total=self.application.runtime.store.actor_counts(self.actor_id)[0]
+            after=max(self.shown_through,total-50)
+            log=self.application.log_read(self.reader_id,after,50)
+            subgoals=self.application.level_subgoals()
+            intent=self.application.intent(self.actor_id) if subgoals else None
+        omitted=after-self.shown_through
+        entries=log['entries']
+        if entries:self.shown_through=entries[-1]['position']
+        lines=[json.dumps(e,separators=(',',':'),ensure_ascii=False) for e in entries]
+        text=('Served player log since your last pass, oldest first, one entry per line with its position'
+              +(f' ({omitted} earlier entries since then are not shown; read them with player_log_read)' if omitted else '')
+              +':\n'+('\n'.join(lines) if lines else '(no new entries)'))
+        if intent is None:
+            return text+'\n\nCurrent subgoal: none.'
+        record,age=intent['record'],intent['age']
+        shown=dict(record_id=record['record_id'],text=record['text'],expected_observations=record['expected_observations'],
+                   status=record['status'],confidence=record['confidence'],sources=record['sources'],
+                   position=subgoals[-1]['data']['position'],inputs_since_commit=age['inputs_since_commit'])
+        return text+'\n\nCurrent subgoal:\n'+json.dumps(shown,separators=(',',':'),ensure_ascii=False)
 
     def finish(self) -> None:
         """Close the pass's exact process group, then charge it; incomplete accounting charges its whole allocation."""
@@ -203,8 +231,9 @@ class LevelPasses:
     def receipt(self) -> dict:
         commits=[e for p in self.passes for e in p.get('level_events',[]) if e['type']=='level-commit']
         discards=[e for p in self.passes for e in p.get('level_events',[]) if e['type']=='level-discard']
+        abstains=[e for p in self.passes for e in p.get('level_events',[]) if e['type']=='level-abstain']
         return dict(reader_id=self.reader_id,mode=self.level['mode'],allocated_attempts=self.allowance,
-                    attempts_charged=self.charged,passes=self.passes,failure=self.failure,quiescent=self.quiescent(),commits=len(commits),discards=len(discards),
+                    attempts_charged=self.charged,passes=self.passes,failure=self.failure,quiescent=self.quiescent(),commits=len(commits),discards=len(discards),abstains=len(abstains),
                     configured_estimate_usd=sum(p.get('configured_estimate_usd',0) for p in self.passes),
                     missing_usage_attempts=sum(p.get('missing_usage_attempts',p['attempts_charged']) for p in self.passes))
 
@@ -333,7 +362,7 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
         if record.get('orchestration_error'):break
     # attempts_charged includes every actor's level passes; each record keeps its own split.
     levels_of=lambda r:r.get('level') or {}
-    return dict(schema='player-driver/3',outcome=outcome,reason=reason,actors=records,
+    return dict(schema='player-driver/4',outcome=outcome,reason=reason,actors=records,
                 attempts_charged=total_attempts,host_seconds_used=host_seconds_used,
                 level_attempts_charged=sum(levels_of(r).get('attempts_charged',0) for r in records),
                 configured_estimate_usd=sum(r.get('configured_estimate_usd',0)+levels_of(r).get('configured_estimate_usd',0) for r in records),

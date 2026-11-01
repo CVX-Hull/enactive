@@ -40,7 +40,7 @@ memory tools or program save). `level` is null, the zero-level-host configuratio
 `budget_fractions` (at most 8 increasing values in (0,1)), `intent_tail_bytes`
 (64–4096), `max_http_attempts` (the level's share per actor), `pass_max_requests`
 and `pass_seconds`. A level requires `narrowed` and freezes a sixth input,
-`level-role.txt`, byte-identical to the [frozen role prompt v1](../../tools/player_roles/subgoal-v1.txt).
+`level-role.txt`, byte-identical to the [frozen role prompt v2](../../tools/player_roles/subgoal-v2.txt).
 The route stays the actor role; its `intent_tail_bytes` equals the level's bound
 in live mode and is null in shadow mode, where the level commits but the actor never
 sees intent.
@@ -50,21 +50,30 @@ Each actor-and-level pair is partitioned before launch: the level gets
 from what is left, so their sum stays within the campaign cap. The driver mints one
 reader per actor after the actor and, once the actor host makes its first request (after
 its tool discovery and checks), consults the [wake rules](../../tools/level_schedule.py) between passes: a start pass
-only to revalidate open Work records, then every K actor inputs or a crossed budget
+only to revalidate an open level subgoal, then every K actor inputs or a crossed budget
 fraction, never on an empty delta and never more than one pass at a time. Each pass
 is a finite `role: level` host under `actors/NNN/level/PPP/`, with the reader MCP
-profile, the frozen context, and a prompt of the role text, the actor's mission brief
-and mechanical wake facts. A pass ends at its allowance or `pass_seconds`, and is
+profile, the frozen context, and a prompt of the role text, the actor's mission brief,
+the pushed input and mechanical wake facts. The pushed input is the served log since
+the previous pass's projection (the latest 50 entries, with the omitted count stated)
+and the current level subgoal with its position and inputs since commit; the driver
+reads it through the reader's own `player_log_read` path under the application lock, so
+the reader's bound is exactly what is shown (the level may read more, which extends the
+bound). A failure of that read is a level failure. A pass ends on its first
+`player_level_commit` that commits or discards, or on a valid `player_level_abstain`
+(see the [host contract](../contracts/player-host.md#roles-and-the-intent-tail)); one
+that ends otherwise is counted as a failed pass with its settled reason, for example
+`level-no-proposal`. It also ends at its allowance or `pass_seconds`, and is
 closed on its actor's stop, Pause or handoff; no successor is minted unless every pass's
 exact process group is confirmed absent. Its attempts are charged like an actor's; an
 unaccounted pass is charged its whole allocation. A level failure (a malformed trace, a
 launch or store error) charges that pass, disables further passes and is recorded, but
 never stops or gates its actor. A reader the custodian refuses to mint (for example, with
-more than 15 current Work records) fails closed before that actor launches; a disabled
+more than one current level subgoal) fails closed before that actor launches; a disabled
 level keeps its unused reservation until the next actor's split. The
 custodian appends per-call lock wait and hold times to `call-timing.jsonl`.
 
-`route.json` uses current `player-host/3` (role `actor`) with text/image input and explicit
+`route.json` uses current `player-host/4` (role `actor`) with text/image input and explicit
 provider/effort/price metadata and image peak and block, chosen against the
 provider's image limit. The selected route is OpenRouter /
 an explicitly pinned provider / DeepSeek Flash1017 medium, default service tier, no fallback.
@@ -257,6 +266,10 @@ estimates and conservative reservations are not invoices. Unknown trace accounti
 charges the allocated attempts. `host_completed_unassessed` means only successful
 host completion; missing normal native exit becomes an incomplete outcome.
 No receipt alone accepts gameplay. Preserve failures and unrun lanes.
+The `player-driver/4` disposition embedded in it reports, per actor, the level's
+`commits`, `discards` and `abstains` and every pass's settled reason; `/4` added the
+abstain count and the events' `action`, and earlier driver schemas are rejected by the
+readers.
 
 Never reopen the selected package, delete markers to retry, replay uncertain input
 or resume after user Pause. Use a fresh coherent admission after owned cleanup.

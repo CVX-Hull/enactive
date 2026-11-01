@@ -33,7 +33,7 @@ effects. The user can Pause independently. Memory contains fallible player claim
 and never grants custody. [Editable source](diagrams/player.mmd).
 
 Each finite run freezes one [player host](components/player-interface.md) adapter
-behind the substitutable [`player-host/3` contract](contracts/player-host.md). The selected
+behind the substitutable [`player-host/4` contract](contracts/player-host.md). The selected
 finite configuration is OpenRouter / explicitly pinned provider / DeepSeek Flash1017 at medium
 effort. Its exact route, metadata, context and limits are frozen per run; this
 selection is not a claim of model quality or provider performance.

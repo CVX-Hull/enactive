@@ -1,4 +1,4 @@
-"""Offline MCP double for player-host/3 tests (player-handoff/2 issuances), using the maintained Python MCP server.
+"""Offline MCP double for player-host/4 tests (player-handoff/2 issuances), using the maintained Python MCP server.
 
 Shared by the adapter node tests and the adapter-agnostic contract suite."""
 import json
@@ -149,13 +149,26 @@ async def player_log_read(after: int, limit: int) -> CallToolResult:
 
 @server.tool()
 async def player_level_commit(proposal: dict) -> CallToolResult:
-    """A proposal with a subgoal commits; one without is discarded as stale."""
+    """A replace commits, a keep or close is discarded as stale, and any other action is a rejected (isError) proposal."""
     record(dict(tool="player_level_commit"))
-    committed = proposal.get("subgoal") is not None
-    value = dict(schema="player-level-commit/1", status="committed" if committed else "discarded",
+    action = proposal.get("action")
+    if action not in ("keep", "replace", "close"):
+        return CallToolResult(content=[TextContent(type="text", text="Invalid player data: action")], isError=True)
+    committed = action == "replace"
+    value = dict(schema="player-level-commit/2", status="committed" if committed else "discarded", action=action,
         reason=None if committed else "Served actor moved at least S inputs past the read", position=3,
         inputs_since=1 if committed else 11, staleness_inputs=10,
         records=[dict(id="7" * 32)] if committed else [], kept=[])
+    return CallToolResult(content=[TextContent(type="text", text=json.dumps(value))])
+
+
+@server.tool()
+async def player_level_abstain(reason: str) -> CallToolResult:
+    """A non-blank reason abstains; a blank one is a rejected (isError) call."""
+    record(dict(tool="player_level_abstain"))
+    if not reason.strip():
+        return CallToolResult(content=[TextContent(type="text", text="Invalid player data: reason")], isError=True)
+    value = dict(schema="player-level-abstain/1", status="abstained", reason=reason)
     return CallToolResult(content=[TextContent(type="text", text=json.dumps(value))])
 
 

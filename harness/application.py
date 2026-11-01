@@ -12,7 +12,7 @@ import uuid
 
 from .computer.protocol import ControlError, canonical, closed
 from .computer.runtime import ComputerRuntime
-from .player.contracts import PlayerError, bounded_integer, level_proposal
+from .player.contracts import LEVEL_SHAPES, PlayerError, bounded_integer, level_abstain, level_proposal
 from .player.contracts import canonical as player_canonical
 from .player.memory import Memory
 from .player.programs import ProgramRepository, ProgramRunner
@@ -21,6 +21,8 @@ from .observer import ActivityView
 
 READ_TOOLS = {'computer_result', 'player_source', 'player_memory_read', 'player_memory_query',
               'player_memory_context', 'player_program_read', 'player_result', 'player_log_read', 'player_intent'}
+# The reader's pass-ending calls: its only writes (a commit writes memory; an abstain writes nothing).
+LEVEL_END_TOOLS = ('player_level_commit', 'player_level_abstain')
 
 
 class _ProgramControl:
@@ -96,13 +98,12 @@ class Application:
         if type(staleness_inputs) is not int or not 1 <= staleness_inputs <= 1000:
             raise ControlError('Staleness bound must be 1..1000 actor inputs')
         with self.serial:
-            # A level serves an actor that writes no memory, so only the level's own commits
-            # (at most one current subgoal) can add current Work records after minting.
+            # A level serves an actor that writes no memory, so only the level's own commits can
+            # change the current subgoal after minting; more than one is a store no pass could resolve.
             if self.profiles.get(actor_id) != frozenset(PROFILES['narrowed']):
                 raise ControlError('A reader serves only a narrowed-profile actor')
-            # A commit must decide every current Work record, and one holds at most 15 decisions.
-            if len(self.memory.current('work')) > 15:
-                raise ControlError('More than 15 current Work records; the level could never commit')
+            if len(self.level_subgoals()) > 1:
+                raise ControlError('More than one current level subgoal; the level could never commit')
             reader = self.runtime.add_reader(actor_id)
             self.profiles[reader['actor_id']] = frozenset(PROFILES['reader'])
             self.readers[reader['actor_id']] = dict(serves=actor_id, staleness_inputs=staleness_inputs, bound=None)
@@ -125,9 +126,13 @@ class Application:
         return dict(schema='player-log/1', session=self.runtime.session, actor_id=actor, after=after,
                     entries=entries, handoff=stage != 'active', grants_authority=False)
 
+    def level_subgoals(self) -> list[dict[str, Any]]:
+        """The current Work records the level manages; at most one by construction. Other Work is out of its scope."""
+        return [r for r in self.memory.current('work') if r['data'].get('level') == 'subgoal']
+
     def intent(self, actor_id: str) -> dict[str, Any]:
         """The latest committed subgoal for an actor's request-only tail; fallible data, never authority."""
-        level = [r for r in self.memory.current('work') if r['data'].get('level') == 'subgoal']
+        level = self.level_subgoals()
         value = dict(schema='player-intent/1', session=self.runtime.session, actor_id=actor_id, record=None,
                      age=None, grants_authority=False)
         if not level:
@@ -153,14 +158,27 @@ class Application:
             if prior[:3] != (reader_id, 'player_level_commit', player_canonical(args)) or prior[3] is None:
                 raise PlayerError('Original level-commit identity conflicts')
             return self.memory.service_result(identity, reader_id)['value']
-        proposal = level_proposal(args['proposal'])
-        current = {r['id']: r for r in self.memory.current('work')}
-        decided = [d['record_id'] for d in proposal['records']]
+        subgoals = self.level_subgoals()
+        current = subgoals[-1]['id'] if subgoals else None
         # Fixable proposal errors are tool errors and keep the bound for a resubmission.
-        if set(decided) != current.keys():
-            raise PlayerError('Decide keep, revise or close for exactly every current Work record')
-        cited = list(dict.fromkeys([*(proposal['subgoal'] or {}).get('sources', []),
-                                    *(s for d in proposal['records'] for s in d['sources'])]))
+        try:
+            proposal = level_proposal(args['proposal'])
+        except PlayerError as exc:
+            raise PlayerError(f'{exc}. {LEVEL_SHAPES}. Current subgoal: {current or "none"}') from exc
+        action = proposal['action']
+        # What the level says about the current subgoal: the proposal itself, or a replacement's `previous`.
+        assessment = proposal.get('previous') if action == 'replace' else proposal
+        # Keep and close name the current subgoal; replace names it as `previous`, or null when there is none.
+        if (assessment or {}).get('record_id') != current:
+            if current is None:
+                message = ('There is no current subgoal (none): use replace with previous null; '
+                           'keep, close and a previous record need a current subgoal')
+            else:
+                message = (f'There is a current subgoal {current}: use keep or close with record_id {current}, '
+                           f'or replace with previous.record_id {current} and its outcome')
+            raise PlayerError(message)
+        cited = list(dict.fromkeys([*(proposal.get('subgoal') or {}).get('sources', []),
+                                    *(assessment or {}).get('sources', [])]))
         missing = [s for s in cited if not self.runtime.store.has_source(s) and not self._has_player_source(s)]
         if missing:
             raise PlayerError(f'Cited sources are unavailable: {", ".join(missing[:4])}')
@@ -184,31 +202,35 @@ class Application:
                   else None)
         if reason is not None:
             # A discard is returned to the level's host trace and never written to either store.
-            return dict(schema='player-level-commit/1', status='discarded', reason=reason, **position,
-                        records=[], kept=[])
+            return dict(schema='player-level-commit/2', status='discarded', action=action, reason=reason,
+                        **position, records=[], kept=[])
         values, ids = [], self.memory.batch_ids(identity, 16)
         common = dict(level='subgoal', proposal_schema=proposal['schema'], actor_id=actor,
                       session=self.runtime.session, position=bound)
-        subgoal = proposal['subgoal']
-        if subgoal is not None:
+        if action == 'replace':
+            subgoal = proposal['subgoal']
             values.append(dict(schema='player-record/1', kind='work', text=subgoal['text'],
                 data=dict(common, expected_observations=subgoal['expected_observations'],
                           status=subgoal['status'], confidence=subgoal['confidence']),
                 sources=subgoal['sources'], supports=[], supersedes=None, applicability=None, program_id=None))
-        for decision in proposal['records']:
-            if decision['decision'] == 'keep':
-                continue
-            outcome = 'revised' if decision['decision'] == 'revise' else decision['outcome']
-            values.append(dict(schema='player-record/1', kind='correction', text=decision['reason'],
-                data=dict(common, outcome=outcome), sources=decision['sources'],
-                supports=[ids[0]] if decision['decision'] == 'revise' else [],
-                supersedes=decision['record_id'], applicability=None, program_id=None))
-        result = dict(schema='player-level-commit/1', status='committed', reason=None, **position,
-                      kept=[d['record_id'] for d in proposal['records'] if d['decision'] == 'keep'])
+        # A close or a replacement's previous outcome supersedes the subgoal; a revision supports its successor.
+        if assessment is not None and action != 'keep':
+            values.append(dict(schema='player-record/1', kind='correction', text=assessment['reason'],
+                data=dict(common, outcome=assessment['outcome']), sources=assessment['sources'],
+                supports=[ids[0]] if assessment['outcome'] == 'revised' else [],
+                supersedes=current, applicability=None, program_id=None))
+        result = dict(schema='player-level-commit/2', status='committed', action=action, reason=None, **position,
+                      kept=[current] if action == 'keep' else [])
         records = self.memory.append_many(reader_id, values, request_id=identity,
                                           service=('player_level_commit', args, result), sources=blobs)
         self.claims = self.memory.query(limit=5)
         return dict(result, records=records)
+
+    def level_abstain(self, reader_id: str, args: dict[str, Any]) -> dict[str, Any]:
+        """End a pass with no proposal: nothing is written and, like a commit attempt, it clears the bound."""
+        reason = level_abstain(args)
+        self.readers[reader_id]['bound'] = None
+        return dict(schema='player-level-abstain/1', status='abstained', reason=reason)
 
     def status(self) -> dict[str, Any]:
         return dict(self.runtime.status(), host=copy.deepcopy(self.host), player_claims=copy.deepcopy(self.claims))
@@ -268,7 +290,7 @@ class Application:
                     pass
 
     def call(self, token: str, name: str, args: dict[str, Any], identity: str) -> tuple[dict[str, Any], bytes | None]:
-        write = dict(write=name not in READ_TOOLS, level_commit=name == 'player_level_commit')
+        write = dict(write=name not in READ_TOOLS, level_end=name in LEVEL_END_TOOLS)
         actor = self.runtime.authorize(token, **write)
         if name not in self.profiles.get(actor, ()):
             raise ControlError('Tool is outside this capability class')
@@ -374,6 +396,8 @@ class Application:
             if name == 'player_level_commit':
                 closed(args, {'proposal'})
                 return self.level_commit(actor, args, identity), None
+            if name == 'player_level_abstain':
+                return self.level_abstain(actor, args), None
             if name == 'player_handoff':
                 closed(args, set())
                 context_id, sha = self.snapshot(actor)

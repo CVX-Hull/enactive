@@ -18,6 +18,14 @@ implemented.
 - **The slice is what decides.** If the slice does not improve on arm B, the
   direction is revisited.
 
+**Amended 1 November 2026 ([#340](https://github.com/CVX-Hull/enactive/issues/340)).**
+The level interface is v2, approved by the owner ("Approve all") on
+[#329](https://github.com/CVX-Hull/enactive/issues/329#issuecomment-6561551205) after
+shadow showed 35 of 53 passes ending in a written proposal with no
+`player_level_commit` call. A pass now ends on a commit or an abstain; the proposal is
+`player-level-proposal/2`; the pass input is pushed; the role prompt is v2; and
+`player-host/3` becomes `/4`. The sections below state the amended design.
+
 This is draft 4.
 - **Draft 1** had the real-time player write its own memory. That conflicted with
   the owner's later direction and P1.
@@ -106,10 +114,10 @@ The custodian's per-class allowlist enforces this profile as well as the host's
 
 - **Capability.** A new **reader** class in computer control, enforced by a
   per-class tool allowlist in `Application.call`, not only by `_guard`:
-  - **Reader:** the read tools plus `player_log_read` and `player_level_commit`,
-    and nothing else. In particular it has no observe (which captures frames and
+  - **Reader:** the read tools plus `player_log_read`, `player_level_commit` and
+    `player_level_abstain`, and nothing else. In particular it has no observe (which captures frames and
     spends budget), no input, no stop, and no direct memory or program writes.
-  - **Actor:** refused `player_level_commit`.
+  - **Actor:** refused `player_level_commit` and `player_level_abstain`.
   - **Storage:** a reader has an `actors` row with a new `reader` stage, because
     issued sources reference actors. That stage is excluded from `add_actor`'s
     "every prior actor quiescent" test and from the `max_actors` count, so a live
@@ -125,38 +133,72 @@ The custodian's per-class allowlist enforces this profile as well as the host's
   - It includes no observer view and no lead telemetry.
   - The actor's own text output, which is player output, is excluded as a v1
     choice. Including it needs a separate decision.
-- **Pass.** On waking, the level reads the log delta and the needed sources, then
-  returns a **structured proposal**:
-  - the subgoal;
-  - the expected observations;
-  - evidence sources;
-  - the status;
-  - a keep, revise or close decision for each current Work record;
-  - its confidence.
+- **Pass.** On waking, software pushes the level its input, and the level ends the
+  pass with exactly one tool call.
+  - **Pushed input.** The pass prompt carries the served actor's log since the
+    previous pass's projection (the latest 50 entries, oldest first with positions,
+    and the omitted count if more are new) and the current level subgoal, if any:
+    its ID, text, expected observations, status, confidence, sources, position and
+    inputs since commit. The driver obtains the entries through the reader's own
+    `player_log_read` path under `Application.serial`, so the position binding below
+    is exactly what the prompt shows. The level may read more of the log, which
+    extends the binding, and any cited frame. A failure of the push is a level
+    failure and never reaches the actor.
+  - **Forced tool calls.** The level host sends `tool_choice: required` on every
+    request, so the model cannot end in prose. The level's text is discarded and
+    shown to no one; only the two calls below count.
+  - **What ends a pass.** The pass ends after a `player_level_commit` that software
+    commits or discards, or after a valid `player_level_abstain(reason)`. A commit
+    rejected as a fixable tool error does not end it, and the model may correct it. A
+    pass that ends any other way (for example a text-only terminal response) is a
+    failed pass with the reason `level-no-proposal`, recorded and counted.
+  - **The proposal** is `player-level-proposal/2`. The level manages only its own
+    subgoal: the current Work records with `data.level == "subgoal"`, at most one by
+    construction. Other Work is out of its scope and untouched. A proposal is
+    exactly one of three closed shapes, discriminated by `action`:
+    - **keep:** `{record_id, reason, sources}` writes no record;
+    - **replace:** `{subgoal, previous}` writes the new Work record. `subgoal` is the
+      text, the expected observations, the status (`open` or `blocked`), the
+      confidence and the sources. `previous` is null, or the replaced subgoal's
+      `{record_id, outcome, reason, sources}` with outcome `achieved`, `failed`,
+      `abandoned` or `revised`, and it writes a superseding correction (a `revised`
+      one supports the new Work);
+    - **close:** `{record_id, outcome, reason, sources}` with outcome `achieved`,
+      `failed` or `abandoned` writes the correction only.
+
+    `keep` and `close` need a current subgoal and name it. `replace` has `previous`
+    exactly when one exists and names it. A violation is a fixable tool error that
+    names the valid shapes and the current record ID (or "none") and keeps the bound.
+    A keep alongside a new subgoal cannot be expressed.
+  - **Abstain.** `player_level_abstain(reason)` ends the pass without a proposal when
+    the evidence supports none of keeping, replacing or closing. Nothing is written,
+    the reader's bound is cleared as a commit attempt clears it, and the host trace
+    records a `level-abstain` event. Abstentions are counted with their reasons.
 - **Software-mediated commit (P5).** The level calls
   `player_level_commit(proposal)`.
   - **The position is software-bound.** The custodian takes the pass's position from
-    the highest log position its own `player_log_read` calls returned in that pass.
-    The model never supplies it.
+    the highest log position its own `player_log_read` calls returned in that pass,
+    which includes the pushed read. The model never supplies it.
   - **Commit conditions.** Software commits only if the actor has moved fewer than S
     inputs past that position, and no actor handoff or session boundary has
     occurred since.
   - **Atomicity.** The commit runs under `Application.serial`, so no input or
-    handoff can interleave. The Work record and any superseding corrections are
+    handoff can interleave. The Work record and any superseding correction are
     appended in one transaction, which needs a multi-record `Memory` append. That
     is an API change, not a format change.
   - **Discards.** A proposal that fails the check is discarded and logged in the
-    level's host trace, never in the store.
+    level's host trace, never in the store. A discard ends the pass, as a commit does.
 - **Waking.** It wakes when the log has advanced K inputs, at actor start, and at
   fixed budget fractions. At most one pass is in flight. It never runs on an empty
   delta ([player-interface standard](../standards/player-interface.md)).
-- **Revalidation.** At each actor start, the first pass must keep, revise or close
-  every open record, so no record stays "current" indefinitely across sessions.
+- **Revalidation.** At each actor start, the first pass is given the open subgoal and
+  must keep, replace or close it (or abstain), so no subgoal stays "current"
+  indefinitely across sessions.
 - **Publication.** The actor's request-only tail shows the latest committed Work
   record, labelled fallible, with its sources and its age in inputs, seconds and
   sessions. The actor may ignore it.
 - **Its prompt** is frozen, versioned and game-agnostic
-  ([appendix](#appendix-subgoal-role-v1)), and reviewed against the no-nudge rule.
+  ([appendix](#appendix-subgoal-role-v2)), and reviewed against the no-nudge rule.
   It steers toward the mission's objective using the same frozen guide and brief
   the actor has, so it adds no lead content. Software triggers stay mechanical; the
   level's semantic judgement belongs to the player system (ADR006).
@@ -184,7 +226,7 @@ component:
 |---|---|---|---|
 | Capability | Reader | Reader | Reader |
 | Input projection | The actor's log delta | Committed Work outcomes since its last pass, plus software statistics | The player store's records and sources, read at session start |
-| Proposal | One current subgoal; keep, revise or close for each record | Active aspirations, with their grounded progress variable and status | Claims with evidence, corrections, candidate programs |
+| Proposal | One current subgoal: keep, replace or close it | Active aspirations, with their grounded progress variable and status | Claims with evidence, corrections, candidate programs |
 | Software commit | Staleness in actor inputs (S), at a position bound from the level's own reads; no handoff since | Staleness in Work records committed since the level's own read, bound by the custodian; no session boundary since | Schema, sources and supersession checks; nothing committed as authority |
 | Published to | The actor's intent tail | The subgoal level's input (the objective it serves) | The subgoal level's input: candidate programs and claims it may cite. Committed claims are a store the levels read, not a publication |
 | Wakes | K actor inputs, start, budget fractions | A subgoal closes or fails, or a session starts | Session start, or a record-count threshold |
@@ -271,18 +313,19 @@ Both are existing `player-record/1` kinds.
 
 ## Cost, latency and coupling
 
-- **Requests per pass.** A pass is about r ≈ 4 provider requests: read the log,
-  read sources, propose and commit, then the closing turn. At #298's response
-  median of about 12 s, that is about 48 s per pass. The p95 is about 25 s per
-  request.
+- **Requests per pass.** With the pushed input and a forced ending call, a pass is
+  about r ≈ 2–3 provider requests: optionally read more of the log or a source, then
+  commit or abstain. There is no read-the-log opening turn and no closing turn
+  (v1 was about 4). At #298's response median of about 12 s, that is about 24–36 s
+  per pass. The p95 is about 25 s per request.
 - **How far the actor moves meanwhile.** The actor makes about one input per
-  request, so it advances about 4 inputs during a median pass and about 6–8 during
+  request, so it advances about 2–3 inputs during a median pass and about 4–6 during
   a p95 pass.
 - **Coupling (P12).** S must exceed the p95 inputs per pass, for example S = 10.
   "At most one pass in flight" prevents overlap. K, S and pass latency are set
   together, and are checked in the shadow stage.
 - **Overhead.** At K = 10, a 100-attempt actor allowance (#314's) gives about 7–8
-  passes, about 30 level requests or roughly 40%, plus start and budget passes.
+  passes, about 15–23 level requests or roughly 20–30%, plus start and budget passes.
   The pass, commit and discard rates are measured.
 - **Accounting.** There is one level host per actor. Each actor-and-level pair gets
   partitioned allowances before launch, and the sum over pairs stays within the
@@ -361,7 +404,8 @@ with that migration:
   - **Primary:** blind-audit retained change, with power of at least 0.8 for a
     stated effect by simulation. #314's metric was censored in every run, so run
     length is sized to it.
-  - **Mechanism:** passes, commits and discards; intent age; subgoals opened,
+  - **Mechanism:** passes, commits, discards, abstentions (with their reasons) and
+    failed passes; intent age; subgoals opened,
     revised and closed.
   - **Intent accuracy:** a blind audit of committed intent against the log, plus
     the actor's follow rate when the intent is wrong. This covers the More Memory,
@@ -384,11 +428,16 @@ with that migration:
     `reader` actor stage, and `computer-session/1` to `/2`
     (`harness/computer/runtime.py`, `store.py`, `harness/application.py`,
     [contract](../contracts/computer-control.md)).
-  - **Player tools:** `player_log_read`, `player_level_commit`, the actor's narrowed
+  - **Player tools:** `player_log_read`, `player_level_commit`, `player_level_abstain`,
+    `player-level-proposal/2` and `player-level-commit/2`, the actor's narrowed
     profile, `player-handoff/1` to `/2`, and the multi-record `Memory` append
     (`harness/player_tools.py`, `harness/player_mcp`, `harness/player/memory.py`).
-  - **`player-host/2` becomes `player-host/3`:** roles, tool profiles, intent tail,
-    and the `level-pass`, `level-commit` and `level-discard` events.
+  - **`player-host/2` becomes `player-host/3`, and `/3` becomes `/4` (#340):** roles,
+    tool profiles, intent tail, and the `level-pass`, `level-commit`, `level-discard`
+    and `level-abstain` events; a level pass sends `tool_choice: required`, ends on a
+    commit, discard or abstain and otherwise settles `level-no-proposal`. The
+    `player-driver` disposition (`/3` to `/4`) gains the abstain count and each event's
+    `action`. `campaign-run/4` keeps its shape and freezes `subgoal-v2` by digest.
   - **`campaign-run/3` becomes `campaign-run/4`:** one level host, partitioned
     allowances and its lifecycle (`tools/campaign_package.py`, `campaign_run.py`,
     `campaign_player.py`, `investigation_live.py`).
@@ -416,7 +465,7 @@ with that migration:
 
 | Reused | Added | Not revived |
 |---|---|---|
-| The `player-memory/1` store, records, supersession and query; sources; the request-only tail; MCP tool profiles; capture hashes | The reader class; `player_log_read`; `player_level_commit`; level scheduling and lifecycle; partitioned allowances; level events | A new framework; the superseded advisory-reflection and injected-planner contracts; semantic dispatch |
+| The `player-memory/1` store, records, supersession and query; sources; the request-only tail; MCP tool profiles; capture hashes | The reader class; `player_log_read`; `player_level_commit`; `player_level_abstain`; level scheduling and lifecycle; partitioned allowances; level events | A new framework; the superseded advisory-reflection and injected-planner contracts; semantic dispatch |
 
 ## Deferred
 
@@ -432,19 +481,24 @@ Each item is tracked, with its owner source and revisit trigger, in
 - the measurement programme;
 - reconciliation of #136, #164, #177, #178 and #42 after acceptance.
 
-## Appendix: subgoal role v1
+## Appendix: subgoal role v2
 
-The verbatim text is frozen, and a change makes a new version:
+The verbatim text is frozen, and a change makes a new version. Version 1 is removed:
 
 > Role (software-defined; not instructions from the lead). You are the player's
 > subgoal level. You cannot send input; the acting player decides everything it does.
-> You receive the same guide and mission brief the acting player has, the recent
-> play log (its inputs and the frames that resulted), and the player's current Work
-> records. Propose one current subgoal that advances the mission's objective, the
-> observations that would show it is working, and its status, based on cited log
-> sources and with uncertainty marked. For each current Work record, say whether to
-> keep, revise or close it, with evidence. Your proposal is committed only if still
-> timely, and is shown to the acting player as fallible context.
+> You receive the same guide and mission brief the acting player has; its
+> instructions about sending input, saving, handing off and final reports are for the
+> acting player, not for you. Software supplies the served player's log since your
+> last pass (its inputs and the frames that resulted, as source ids) and its current
+> subgoal, if any; you may read more of the log and any cited frame. Then end the pass
+> with exactly one tool call. Call player_level_commit to keep the current subgoal,
+> close it, or replace it with one subgoal that advances the mission's objective,
+> with the observations that would show it is working, its status, cited sources and
+> marked uncertainty, and the outcome of the subgoal it replaces. Call
+> player_level_abstain if the evidence supports none of these. Only these calls
+> count: your text is discarded and shown to no one. A commit is accepted only if
+> still timely, and is then shown to the acting player as fallible context.
 
 The actor-side label is also fixed:
 

@@ -1,4 +1,4 @@
-"""Adapter-agnostic conformance for `player-host/3` (docs/contracts/player-host.md).
+"""Adapter-agnostic conformance for `player-host/4` (docs/contracts/player-host.md).
 
 Each listed adapter is driven only through the contract surface: argv modes,
 files, environment, stdin, stdout JSONL, stderr and exit status. A scripted
@@ -71,7 +71,7 @@ def adapter(request) -> Adapter:
     return request.param
 
 
-def route(adapter: Adapter, base_url: str, *, schema="player-host/3", max_requests=ALLOWANCE) -> dict:
+def route(adapter: Adapter, base_url: str, *, schema="player-host/4", max_requests=ALLOWANCE) -> dict:
     """The contract envelope around the adapter-owned model."""
     return dict(schema=schema, role="actor", intent_tail_bytes=None, service_tier="default", api_key_env=CREDENTIAL_ENV, max_requests=max_requests,
                 max_context_images=4, context_image_block=1, request_timeout_seconds=10, model=adapter.model(base_url))
@@ -282,7 +282,7 @@ def test_validate_accepts_reference_route_and_mcp_table_silently(adapter, valida
 
 
 def test_validate_rejects_old_route_schema(adapter, validation_files):
-    for schema in ("pi-player-host/4", "player-host/0", "player-host/1", "player-host/2", "player-host/4"):
+    for schema in ("pi-player-host/4", "player-host/0", "player-host/1", "player-host/2", "player-host/3", "player-host/5"):
         result = run_mode(adapter, ["validate", *validation_files(envelope=route(adapter, "http://127.0.0.1:9/v1", schema=schema))])
         assert result.returncode != 0, schema
 
@@ -333,7 +333,7 @@ def test_completed_run_reports_final_text_and_accountable_telemetry(adapter, hos
     events = hosted.events()
     kinds = [event["type"] for event in events]
     assert kinds[0] == "host-start" and kinds.count("host-start") == 1
-    assert events[0]["schema"] == "player-host/3" and events[0]["telemetry_version"] == 2
+    assert events[0]["schema"] == "player-host/4" and events[0]["telemetry_version"] == 2
     assert kinds[-1] == "settled" and kinds.count("settled") == 1
     accounting = hosted.accounted()
     assert accounting["accounting_complete"] is True

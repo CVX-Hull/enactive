@@ -79,15 +79,15 @@ class ComputerRuntime:
                                           serves=serves)
         return dict(actor_id=identity, token=token)
 
-    def authorize(self, token: str, *, write: bool = False, level_commit: bool = False) -> str:
-        """`level_commit` is the only write a reader may hold, and an actor may never hold it."""
+    def authorize(self, token: str, *, write: bool = False, level_end: bool = False) -> str:
+        """`level_end` (a level commit or abstain) is the only write a reader may hold, and an actor may never hold it."""
         if not isinstance(token, str) or len(token) > 256:
             raise ControlError('Actor capability unavailable')
         digest = hashlib.sha256(token.encode()).hexdigest()
         with self._custody:
             for identity, actor in self._actors.items():
                 if hmac.compare_digest(digest, actor['token_hash']):
-                    if write and actor['stage'] != ('reader' if level_commit else 'active'):
+                    if write and actor['stage'] != ('reader' if level_end else 'active'):
                         raise ControlError('This capability holds no such write; original collection/read only')
                     return identity
         raise ControlError('Unknown ephemeral actor capability')

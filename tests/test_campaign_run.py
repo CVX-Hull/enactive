@@ -23,7 +23,7 @@ def package(root,level=None,route_requests=10):
     for name in ('native','library','options','interpreter','adapter'):(root/name).write_bytes(name.encode())
     tail=level['intent_tail_bytes'] if level and level['mode']=='live' else None
     values={
-        'route.json':dict(schema='player-host/3',role='actor',intent_tail_bytes=tail,service_tier='default',
+        'route.json':dict(schema='player-host/4',role='actor',intent_tail_bytes=tail,service_tier='default',
             max_requests=route_requests,model=dict(id='fixture',
             contextWindow=1000,maxTokens=100,cost=dict(input=.45,cacheRead=.45,cacheWrite=.45,output=1.8))),
         'mcp-template.json':configuration('@ACTOR_CONFIG@',profile='narrowed' if level else 'flat'),

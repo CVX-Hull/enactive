@@ -20,7 +20,7 @@ in `route.json`; use no fallback. The current campaign accepts the explicit defa
 service tier. Configuration metadata/prices are not invoice, quality or latency
 attestation. New live calls remain bounded by the prospective allocation.
 
-The package freezes `route.json` (`player-host/3`, actor role), `mcp-template.json`,
+The package freezes `route.json` (`player-host/4`, actor role), `mcp-template.json`,
 `context.txt`, `prompt.txt` and `target.json`. The route declares explicit model
 text/image capabilities, context/output capacities, effort mapping, costs, request
 timeout, request cap, credential environment name, image peak and eviction block.

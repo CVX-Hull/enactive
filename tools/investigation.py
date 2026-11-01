@@ -440,7 +440,7 @@ def export_case(selected, selection_parent):
     if receipt.get('session') != control['session']:
         raise ControlError('Closed receipt session differs from computer store')
     driver = receipt.get('driver')
-    if driver is not None and (not isinstance(driver, dict) or driver.get('schema') != 'player-driver/3'):
+    if driver is not None and (not isinstance(driver, dict) or driver.get('schema') != 'player-driver/4'):
         raise ControlError('Unsupported closed campaign driver version')
     driver = driver or {}
     actors = {}

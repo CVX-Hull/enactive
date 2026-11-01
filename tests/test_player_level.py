@@ -46,12 +46,23 @@ def subgoal(text='Reach the visible door', sources=()):
                 confidence=.4, sources=list(sources))
 
 
-def proposal(new=None, records=()):
-    return dict(proposal=dict(schema='player-level-proposal/1', subgoal=new, records=list(records)))
+SCHEMA = 'player-level-proposal/2'
 
 
-def decision(record_id, choice, outcome=None):
-    return dict(record_id=record_id, decision=choice, outcome=outcome, reason='Cited log entries', sources=[])
+def keep(record_id, reason='Cited log entries'):
+    return dict(proposal=dict(schema=SCHEMA, action='keep', record_id=record_id, reason=reason, sources=[]))
+
+
+def close(record_id, outcome='achieved', reason='Cited log entries'):
+    return dict(proposal=dict(schema=SCHEMA, action='close', record_id=record_id, outcome=outcome, reason=reason, sources=[]))
+
+
+def previous(record_id, outcome='revised', sources=()):
+    return dict(record_id=record_id, outcome=outcome, reason='Cited log entries', sources=list(sources))
+
+
+def replace(new=None, prior=None):
+    return dict(proposal=dict(schema=SCHEMA, action='replace', subgoal=new or subgoal(), previous=prior))
 
 
 def read_all(app, reader, after=0):
@@ -106,7 +117,8 @@ def test_actors_are_refused_the_level_tools(tmp_path, profile):
     app = Application(runtime, memory, tmp_path / 'contexts')
     try:
         actor = app.add_actor(profile)
-        for name, args in (('player_log_read', dict(after=0, limit=1)), ('player_level_commit', proposal(subgoal()))):
+        for name, args in (('player_log_read', dict(after=0, limit=1)), ('player_level_commit', replace()),
+                           ('player_level_abstain', dict(reason='none'))):
             with pytest.raises(ControlError, match='capability'):
                 call(app, actor, name, args)
         assert store_rows(app) == (0, 0)
@@ -188,11 +200,11 @@ def test_commit_binds_the_custodian_position_and_writes_one_work_record(level):
     observed = call(app, actor, 'computer_observe', {})
     call(app, actor, 'computer_input', dict(actions=[key()]))
     read_all(app, reader)
-    committed = call(app, reader, 'player_level_commit', proposal(subgoal(sources=[observed['source']['source_id']])))
+    committed = call(app, reader, 'player_level_commit', replace(subgoal(sources=[observed['source']['source_id']])))
     assert committed['status'] == 'committed' and committed['position'] == 2 and committed['inputs_since'] == 0
     (work,) = committed['records']
     assert work['kind'] == 'work' and work['actor_id'] == reader['actor_id'] and work['text'] == 'Reach the visible door'
-    assert work['data'] == dict(level='subgoal', proposal_schema='player-level-proposal/1', actor_id=actor['actor_id'],
+    assert work['data'] == dict(level='subgoal', proposal_schema=SCHEMA, actor_id=actor['actor_id'],
         session=app.runtime.session, position=2, expected_observations=['The door tile is adjacent'],
         status='open', confidence=.4)
     assert app.memory.read_source(observed['source']['source_id'])[1] == channel.png
@@ -203,12 +215,12 @@ def test_model_supplied_position_is_refused(level):
     app, channel, actor, reader = level
     read_all(app, reader)
     for change in (dict(position=7), dict(inputs_since=0)):
-        value = proposal(subgoal())
+        value = replace()
         value['proposal'].update(change)
         with pytest.raises(PlayerError):
             call(app, reader, 'player_level_commit', value)
     with pytest.raises(ControlError):
-        call(app, reader, 'player_level_commit', dict(proposal(subgoal()), position=7))
+        call(app, reader, 'player_level_commit', dict(replace(), position=7))
     assert store_rows(app) == (0, 0)
 
 
@@ -219,20 +231,20 @@ def test_commit_after_s_inputs_is_discarded_and_written_nowhere(level):
     for _ in range(S - 1):
         call(app, actor, 'computer_input', dict(actions=[key()]))
     call(app, actor, 'computer_observe', {})
-    assert call(app, reader, 'player_level_commit', proposal(subgoal()))['status'] == 'committed'
+    assert call(app, reader, 'player_level_commit', replace())['status'] == 'committed'
     read_all(app, reader)
     for _ in range(S):
         call(app, actor, 'computer_input', dict(actions=[key()]))
     before = store_rows(app)
-    discarded = call(app, reader, 'player_level_commit', proposal(subgoal('Later'), [
-        decision(app.memory.current('work')[0]['id'], 'revise')]))
-    assert discarded == dict(schema='player-level-commit/1', status='discarded',
+    current = app.memory.current('work')[0]['id']
+    discarded = call(app, reader, 'player_level_commit', replace(subgoal('Later'), previous(current)))
+    assert discarded == dict(schema='player-level-commit/2', status='discarded', action='replace',
         reason='Served actor moved at least S inputs past the read', position=S + 1, inputs_since=S,
         staleness_inputs=S, records=[], kept=[])
     assert store_rows(app) == before
     # The discard ended the pass: without a new read nothing binds.
-    assert call(app, reader, 'player_level_commit', proposal(subgoal('Later'), [
-        decision(app.memory.current('work')[0]['id'], 'revise')]))['reason'] == 'No log read bound a position in this pass'
+    assert call(app, reader, 'player_level_commit', replace(subgoal('Later'), previous(current)))[
+        'reason'] == 'No log read bound a position in this pass'
 
 
 def test_commit_after_handoff_is_discarded(level):
@@ -240,7 +252,7 @@ def test_commit_after_handoff_is_discarded(level):
     call(app, actor, 'computer_input', dict(actions=[key()]))
     read_all(app, reader)
     call(app, actor, 'player_handoff', {})
-    result = call(app, reader, 'player_level_commit', proposal(subgoal()))
+    result = call(app, reader, 'player_level_commit', replace())
     assert result['status'] == 'discarded' and result['reason'] == 'Served actor handed off since the read'
     assert store_rows(app) == (0, 0)
 
@@ -249,47 +261,131 @@ def test_empty_delta_binds_nothing(level):
     app, channel, actor, reader = level
     call(app, actor, 'computer_input', dict(actions=[key()]))
     assert read_all(app, reader, after=1)['entries'] == []
-    result = call(app, reader, 'player_level_commit', proposal(subgoal()))
+    result = call(app, reader, 'player_level_commit', replace())
     assert result['status'] == 'discarded' and result['position'] is None
     assert store_rows(app) == (0, 0)
 
 
-def test_every_current_work_record_needs_a_decision_and_a_fixable_error_keeps_the_pass(level):
+def commit_first(app, actor, reader):
+    call(app, actor, 'computer_input', dict(actions=[key()]))
+    read_all(app, reader)
+    return call(app, reader, 'player_level_commit', replace())['records'][0]
+
+
+def test_replace_without_a_current_subgoal_writes_one_work_record_and_no_correction(level):
     app, channel, actor, reader = level
     call(app, actor, 'computer_input', dict(actions=[key()]))
     read_all(app, reader)
-    first = call(app, reader, 'player_level_commit', proposal(subgoal()))['records'][0]
+    committed = call(app, reader, 'player_level_commit', replace())
+    assert committed['action'] == 'replace' and committed['kept'] == [] and len(committed['records']) == 1
+    assert committed['records'][0]['kind'] == 'work'
+
+
+def test_replace_with_previous_writes_work_and_a_superseding_correction(level):
+    app, channel, actor, reader = level
+    first = commit_first(app, actor, reader)
     call(app, actor, 'computer_input', dict(actions=[key()]))
     read_all(app, reader)
-    with pytest.raises(PlayerError, match='exactly every current Work record'):
-        call(app, reader, 'player_level_commit', proposal(subgoal('Next')))
-    for bad in ([decision(first['id'], 'keep')], [decision(first['id'], 'close')],
-                [decision(first['id'], 'revise', 'achieved')], [decision(first['id'], 'close', 'achieved')] * 2):
-        with pytest.raises(PlayerError):
-            call(app, reader, 'player_level_commit', proposal(subgoal('Next'), bad))
-    with pytest.raises(PlayerError):
-        call(app, reader, 'player_level_commit', proposal(None, []))
-    revised = call(app, reader, 'player_level_commit', proposal(subgoal('Next'), [decision(first['id'], 'revise')]))
+    revised = call(app, reader, 'player_level_commit', replace(subgoal('Next'), previous(first['id'])))
     work, correction = revised['records']
     assert revised['status'] == 'committed' and revised['position'] == 2
     assert correction['kind'] == 'correction' and correction['supersedes'] == first['id']
     assert correction['supports'] == [work['id']] and correction['data']['outcome'] == 'revised'
     assert [r['id'] for r in app.memory.current('work')] == [work['id']]
+    read_all(app, reader)
+    ended = call(app, reader, 'player_level_commit', replace(subgoal('Last'), previous(work['id'], 'failed')))
+    assert ended['records'][1]['supports'] == [] and ended['records'][1]['data']['outcome'] == 'failed'
+    assert [r['text'] for r in app.memory.current('work')] == ['Last']
 
 
 def test_keep_writes_nothing_and_close_records_its_outcome(level):
     app, channel, actor, reader = level
-    call(app, actor, 'computer_input', dict(actions=[key()]))
-    read_all(app, reader)
-    work = call(app, reader, 'player_level_commit', proposal(subgoal()))['records'][0]
+    work = commit_first(app, actor, reader)
     read_all(app, reader)
     before = store_rows(app)
-    kept = call(app, reader, 'player_level_commit', proposal(None, [decision(work['id'], 'keep')]))
-    assert kept['status'] == 'committed' and kept['records'] == [] and kept['kept'] == [work['id']]
+    kept = call(app, reader, 'player_level_commit', keep(work['id']))
+    assert kept['status'] == 'committed' and kept['action'] == 'keep' and kept['records'] == [] and kept['kept'] == [work['id']]
     assert store_rows(app)[0] == before[0]
     read_all(app, reader)
-    closed = call(app, reader, 'player_level_commit', proposal(None, [decision(work['id'], 'close', 'achieved')]))
+    closed = call(app, reader, 'player_level_commit', close(work['id']))
+    assert closed['action'] == 'close' and len(closed['records']) == 1
     assert closed['records'][0]['data']['outcome'] == 'achieved' and app.memory.current('work') == []
+    read_all(app, reader)
+    assert call(app, reader, 'player_level_commit', replace())['status'] == 'committed'
+
+
+def test_wrong_state_errors_name_the_valid_shapes_and_the_current_id_and_keep_the_pass(level):
+    app, channel, actor, reader = level
+    call(app, actor, 'computer_input', dict(actions=[key()]))
+    read_all(app, reader)
+    none_message = 'no current subgoal \\(none\\): use replace with previous null'
+    for wrong in (keep('absent'), close('absent'), replace(prior=previous('absent'))):
+        with pytest.raises(PlayerError, match=none_message):
+            call(app, reader, 'player_level_commit', wrong)
+    first = call(app, reader, 'player_level_commit', replace())['records'][0]
+    call(app, actor, 'computer_input', dict(actions=[key()]))
+    read_all(app, reader)
+    current = first['id']
+    message = (f'current subgoal {current}: use keep or close with record_id {current}, '
+               f'or replace with previous.record_id {current} and its outcome')
+    before = store_rows(app)
+    for wrong in (replace(subgoal('Next')), keep('other'), close('other'), replace(prior=previous('other'))):
+        with pytest.raises(PlayerError, match=message):
+            call(app, reader, 'player_level_commit', wrong)
+    assert store_rows(app) == before
+    # The fixable errors kept the bound, so the corrected proposal commits without a new read.
+    assert call(app, reader, 'player_level_commit', keep(current))['status'] == 'committed'
+
+
+@pytest.mark.parametrize('change', [
+    dict(action='close'), dict(action='keep', subgoal=subgoal()), dict(action='other'), dict(action=None), dict(schema='player-level-proposal/1'),
+    dict(extra=1), dict(outcome='revised')])
+def test_malformed_proposals_are_tool_errors_that_name_the_shapes_and_current_id(level, change):
+    app, channel, actor, reader = level
+    work = commit_first(app, actor, reader)
+    call(app, actor, 'computer_input', dict(actions=[key()]))
+    read_all(app, reader)
+    value = keep(work['id'])
+    value['proposal'].update(change)
+    with pytest.raises(PlayerError, match=f'Valid shapes: keep.*close.*replace.*Current subgoal: {work["id"]}'):
+        call(app, reader, 'player_level_commit', value)
+    assert call(app, reader, 'player_level_commit', keep(work['id']))['status'] == 'committed'
+
+
+@pytest.mark.parametrize('bad', [
+    close('x', 'revised'), close('x', 'achieved', reason=''), close('x', 'achieved', reason='r' * 1025),
+    replace(subgoal(), dict(previous('x'), outcome='done')), replace(dict(subgoal(), status='closed')),
+    replace(dict(subgoal(), text='t' * 2049)), replace(dict(subgoal(), expected_observations=['o'] * 9)),
+    replace(dict(subgoal(), expected_observations=['o' * 513])), replace(dict(subgoal(), sources=['s'] * 17)),
+    replace(dict(subgoal(), confidence=1.5))])
+def test_proposal_bounds_and_closed_enums_hold(level, bad):
+    app, channel, actor, reader = level
+    read_all(app, reader)
+    with pytest.raises(PlayerError):
+        call(app, reader, 'player_level_commit', bad)
+    assert store_rows(app) == (0, 0)
+
+
+def test_abstain_writes_nothing_and_clears_the_bound(level):
+    app, channel, actor, reader = level
+    call(app, actor, 'computer_input', dict(actions=[key()]))
+    read_all(app, reader)
+    assert app.readers[reader['actor_id']]['bound'] == 1
+    result = call(app, reader, 'player_level_abstain', dict(reason='The log shows nothing to act on'))
+    assert result == dict(schema='player-level-abstain/1', status='abstained', reason='The log shows nothing to act on')
+    assert store_rows(app) == (0, 0) and app.readers[reader['actor_id']]['bound'] is None
+    # Like a commit attempt, it ended the pass: without a new read nothing binds.
+    assert call(app, reader, 'player_level_commit', replace())['reason'] == 'No log read bound a position in this pass'
+
+
+@pytest.mark.parametrize('args', [{}, dict(reason=''), dict(reason='  '), dict(reason='r' * 1025), dict(reason=3),
+                                  dict(reason='ok', extra=1)])
+def test_abstain_needs_one_bounded_reason(level, args):
+    app, channel, actor, reader = level
+    read_all(app, reader)
+    with pytest.raises((PlayerError, ControlError)):
+        call(app, reader, 'player_level_abstain', args)
+    assert app.readers[reader['actor_id']]['bound'] == 0
 
 
 def test_retained_commit_identity_collects_without_recommitting(level):
@@ -297,17 +393,17 @@ def test_retained_commit_identity_collects_without_recommitting(level):
     call(app, actor, 'computer_input', dict(actions=[key()]))
     read_all(app, reader)
     identity = request_id()
-    first = call(app, reader, 'player_level_commit', proposal(subgoal()), identity)
-    again = call(app, reader, 'player_level_commit', proposal(subgoal()), identity)
+    first = call(app, reader, 'player_level_commit', replace(), identity)
+    again = call(app, reader, 'player_level_commit', replace(), identity)
     assert again == first and len(app.memory.current('work')) == 1
     collected = call(app, reader, 'player_result', dict(operation_id=identity))
     assert collected['status'] == 'completed' and collected['value'] == first
     with pytest.raises(PlayerError):
-        call(app, reader, 'player_level_commit', proposal(subgoal('Different')), identity)
+        call(app, reader, 'player_level_commit', replace(subgoal('Different')), identity)
     # A keep-only commit writes no record but is still collectable as its original result.
     read_all(app, reader)
     kept_id = request_id()
-    kept = call(app, reader, 'player_level_commit', proposal(None, [decision(first['records'][0]['id'], 'keep')]), kept_id)
+    kept = call(app, reader, 'player_level_commit', keep(first['records'][0]['id']), kept_id)
     assert call(app, reader, 'player_result', dict(operation_id=kept_id))['value'] == kept
 
 
@@ -315,17 +411,15 @@ def test_unavailable_cited_source_writes_nothing_and_keeps_the_pass(level):
     app, channel, actor, reader = level
     first = call(app, actor, 'computer_input', dict(actions=[key()]))
     read_all(app, reader)
-    work = call(app, reader, 'player_level_commit', proposal(subgoal()))['records'][0]
+    work = call(app, reader, 'player_level_commit', replace())['records'][0]
     read_all(app, reader)
     before = store_rows(app), source_rows(app)
     valid = first['source']['source_id']
     with pytest.raises(PlayerError, match='unavailable: missing'):
-        call(app, reader, 'player_level_commit', proposal(subgoal('Next', sources=[valid, 'missing']),
-                                                          [decision(work['id'], 'revise')]))
+        call(app, reader, 'player_level_commit', replace(subgoal('Next', sources=[valid, 'missing']), previous(work['id'])))
     assert (store_rows(app), source_rows(app)) == before
     assert [r['id'] for r in app.memory.current('work')] == [work['id']]
-    corrected = call(app, reader, 'player_level_commit', proposal(subgoal('Next', sources=[valid]),
-                                                                  [decision(work['id'], 'revise')]))
+    corrected = call(app, reader, 'player_level_commit', replace(subgoal('Next', sources=[valid]), previous(work['id'])))
     assert corrected['status'] == 'committed' and source_rows(app) == before[1] + 1
 
 
@@ -340,10 +434,10 @@ def test_source_capacity_failure_writes_nothing_and_keeps_the_pass(level):
     app.memory.max_source_bytes = len(channel.png)
     before = store_rows(app), source_rows(app)
     with pytest.raises(PlayerError, match='capacity'):
-        call(app, reader, 'player_level_commit', proposal(subgoal(sources=[first['source']['source_id'], second])))
+        call(app, reader, 'player_level_commit', replace(subgoal(sources=[first['source']['source_id'], second])))
     assert (store_rows(app), source_rows(app)) == before
     # The failure kept the pass, so a corrected resubmission commits without a new read.
-    assert call(app, reader, 'player_level_commit', proposal(subgoal(sources=[second])))['status'] == 'committed'
+    assert call(app, reader, 'player_level_commit', replace(subgoal(sources=[second])))['status'] == 'committed'
 
 
 def test_commit_after_pause_or_deadline_is_discarded(level):
@@ -351,7 +445,7 @@ def test_commit_after_pause_or_deadline_is_discarded(level):
     call(app, actor, 'computer_input', dict(actions=[key()]))
     read_all(app, reader)
     app.runtime.stop('Operator Pause')
-    result = call(app, reader, 'player_level_commit', proposal(subgoal()))
+    result = call(app, reader, 'player_level_commit', replace())
     assert result['status'] == 'discarded' and result['reason'] == 'Run stopped or fenced since the read'
     assert store_rows(app) == (0, 0)
 
@@ -361,28 +455,28 @@ def test_deadline_fences_a_commit(level):
     call(app, actor, 'computer_input', dict(actions=[key()]))
     read_all(app, reader)
     app.runtime.deadline = 0.
-    assert call(app, reader, 'player_level_commit', proposal(subgoal()))['reason'] == 'Run stopped or fenced since the read'
+    assert call(app, reader, 'player_level_commit', replace())['reason'] == 'Run stopped or fenced since the read'
 
 
 def test_actor_start_pass_revalidates_before_any_input(level):
     app, channel, actor, reader = level
     assert read_all(app, reader)['entries'] == []
-    committed = call(app, reader, 'player_level_commit', proposal(subgoal()))
+    committed = call(app, reader, 'player_level_commit', replace())
     assert committed['status'] == 'committed' and committed['position'] == 0 and committed['inputs_since'] == 0
 
 
 def test_runtime_write_authorization_separates_reader_and_actor_writes(level):
     app, channel, actor, reader = level
     runtime = app.runtime
-    assert runtime.authorize(reader['token'], write=True, level_commit=True) == reader['actor_id']
+    assert runtime.authorize(reader['token'], write=True, level_end=True) == reader['actor_id']
     with pytest.raises(ControlError, match='no such write'):
         runtime.authorize(reader['token'], write=True)
     with pytest.raises(ControlError, match='no such write'):
-        runtime.authorize(actor['token'], write=True, level_commit=True)
+        runtime.authorize(actor['token'], write=True, level_end=True)
     assert runtime.authorize(actor['token'], write=True) == actor['actor_id']
 
 
-def test_reader_minting_refuses_a_store_no_commit_could_cover(tmp_path):
+def test_reader_minting_refuses_more_than_one_current_level_subgoal_and_ignores_other_work(tmp_path):
     runtime, channel, _ = make_runtime(tmp_path, mint=False)
     memory = Memory(tmp_path / 'player.sqlite3')
     app = Application(runtime, memory, tmp_path / 'contexts')
@@ -393,13 +487,33 @@ def test_reader_minting_refuses_a_store_no_commit_could_cover(tmp_path):
         sealed = call(app, flat, 'player_handoff', {})
         runtime.confirm_quiescent(flat['actor_id'], sealed['operation_id'], host_quiescent=True)
         actor = app.add_actor('narrowed')
+
+        def work(index, level=False):
+            memory.append(actor['actor_id'], dict(schema='player-record/1', kind='work', text=f'work {index}',
+                data=dict(level='subgoal') if level else {}, sources=[], supports=[], supersedes=None,
+                applicability=None, program_id=None))
         for index in range(16):
-            memory.append(actor['actor_id'], dict(schema='player-record/1', kind='work', text=f'work {index}', data={},
-                sources=[], supports=[], supersedes=None, applicability=None, program_id=None))
-        with pytest.raises(ControlError, match='More than 15'):
+            work(index)
+        work('one', level=True)
+        work('two', level=True)
+        # Other current Work is out of the level's scope; two level subgoals are not resolvable.
+        with pytest.raises(ControlError, match='More than one current level subgoal'):
             app.add_reader(actor['actor_id'], staleness_inputs=S)
+        memory.append(actor['actor_id'], dict(schema='player-record/1', kind='correction', text='ended',
+            data={}, sources=[], supports=[], supersedes=memory.current('work')[-1]['id'], applicability=None, program_id=None))
+        assert app.add_reader(actor['actor_id'], staleness_inputs=S)['actor_id']
     finally:
         runtime.close(); memory.close()
+
+
+def test_other_current_work_is_untouched_by_a_level_commit(level):
+    app, channel, actor, reader = level
+    other = app.memory.append(actor['actor_id'], dict(schema='player-record/1', kind='work', text='not the level\'s',
+        data={}, sources=[], supports=[], supersedes=None, applicability=None, program_id=None))
+    first = commit_first(app, actor, reader)
+    read_all(app, reader)
+    assert call(app, reader, 'player_level_commit', close(first['id']))['status'] == 'committed'
+    assert [r['id'] for r in app.memory.current('work')] == [other['id']]
 
 
 def test_intent_reports_the_latest_level_subgoal_and_its_age(level):
@@ -408,7 +522,7 @@ def test_intent_reports_the_latest_level_subgoal_and_its_age(level):
     assert call(app, actor, 'player_intent', {})['schema'] == 'player-intent/1'
     call(app, actor, 'computer_input', dict(actions=[key()]))
     read_all(app, reader)
-    call(app, reader, 'player_level_commit', proposal(subgoal()))
+    call(app, reader, 'player_level_commit', replace())
     call(app, actor, 'computer_input', dict(actions=[key()]))
     intent = call(app, actor, 'player_intent', {})
     assert intent['record']['text'] == 'Reach the visible door' and intent['grants_authority'] is False
@@ -437,8 +551,10 @@ def test_reader_mcp_adapter_reads_and_commits_over_http(level, tmp_path):
         call(app, actor, 'computer_input', dict(actions=[key()]))
         log, _, error = client.call('player_log_read', dict(after=0, limit=10))
         assert not error and log['entries'][0]['position'] == 1
-        committed, _, error = client.call('player_level_commit', proposal(subgoal()))
+        committed, _, error = client.call('player_level_commit', replace())
         assert not error and committed['status'] == 'committed'
+        abstained, _, error = client.call('player_level_abstain', dict(reason='Nothing changed'))
+        assert not error and abstained['status'] == 'abstained'
         refused, _, error = client.call('computer_input', dict(actions=[key()]))
         assert error and len(channel.calls) == 2
         client.close()

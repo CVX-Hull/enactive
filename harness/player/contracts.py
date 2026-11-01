@@ -94,35 +94,49 @@ _PROGRAM = _object(dict(schema={'const': 'player-program/1'}, code=_text(32768),
 _SUBGOAL = _object(dict(text=_text(2048), expected_observations=dict(type='array', items=_text(512), maxItems=8),
                         status=_enum('open', 'blocked'), confidence=dict(type='number', minimum=0, maximum=1),
                         sources=_REFS))
-_DECISION = _object(dict(record_id=_text(128), decision=_enum('keep', 'revise', 'close'),
-                         outcome={'anyOf': [_enum('achieved', 'failed', 'abandoned'), {'type': 'null'}]},
+_CLOSE_OUTCOMES = ('achieved', 'failed', 'abandoned')
+# The level manages only its own subgoal; every proposal is exactly one of three closed shapes.
+_KEEP = _object(dict(schema={'const': 'player-level-proposal/2'}, action={'const': 'keep'}, record_id=_text(128),
+                     reason=_text(1024), sources=_REFS))
+_PREVIOUS = _object(dict(record_id=_text(128), outcome=_enum(*_CLOSE_OUTCOMES, 'revised'),
                          reason=_text(1024), sources=_REFS))
-# One Work record plus at most fifteen superseding corrections fits one 16-record append.
-_LEVEL_PROPOSAL = _object(dict(schema={'const': 'player-level-proposal/1'}, subgoal={'anyOf': [_SUBGOAL, {'type': 'null'}]},
-                               records=dict(type='array', items=_DECISION, maxItems=15)))
+_REPLACE = _object(dict(schema={'const': 'player-level-proposal/2'}, action={'const': 'replace'}, subgoal=_SUBGOAL,
+                        previous={'anyOf': [_PREVIOUS, {'type': 'null'}]}))
+_CLOSE = _object(dict(schema={'const': 'player-level-proposal/2'}, action={'const': 'close'}, record_id=_text(128),
+                      outcome=_enum(*_CLOSE_OUTCOMES), reason=_text(1024), sources=_REFS))
+_SHAPES = dict(keep=_KEEP, replace=_REPLACE, close=_CLOSE)
+_LEVEL_PROPOSAL = {'anyOf': list(_SHAPES.values())}
+LEVEL_SHAPES = ('Valid shapes: keep {record_id, reason, sources}; close {record_id, outcome: achieved|failed|abandoned, '
+                'reason, sources}; replace {subgoal, previous: null | {record_id, outcome: achieved|failed|abandoned|revised, '
+                'reason, sources}}')
+_ABSTAIN = _object(dict(reason=_text(1024)))
 
 
 def level_proposal(value: object) -> dict:
     """The subgoal level's versioned commit proposal; the custodian binds its position."""
     result = json_object(value)
-    validate_json(result, _LEVEL_PROPOSAL)
-    decisions = result['records']
-    if len({d['record_id'] for d in decisions}) != len(decisions):
-        raise PlayerError('Each current Work record takes one decision')
-    for d in decisions:
-        if (d['outcome'] is None) != (d['decision'] != 'close'):
-            raise PlayerError('Only a close names an outcome, and every close names one')
-    keeps = sum(d['decision'] == 'keep' for d in decisions)
-    if result['subgoal'] is None:
-        if not decisions or any(d['decision'] == 'revise' for d in decisions) or keeps > 1:
-            raise PlayerError('Without a new subgoal, keep at most one record, close the rest and revise none')
-    elif keeps:
-        raise PlayerError('A new subgoal replaces every current record; revise or close them instead of keeping')
+    action = result.get('action')
+    if type(action) is not str or action not in _SHAPES:
+        raise PlayerError('A proposal action must be keep, close or replace')
+    validate_json(result, _SHAPES[action])
     return result
 
 
 def level_proposal_schema() -> dict:
     return json_object(_LEVEL_PROPOSAL)
+
+
+def level_abstain(value: object) -> str:
+    """The reason a level pass ends without a proposal; nothing is written."""
+    result = json_object(value)
+    validate_json(result, _ABSTAIN)
+    if not result['reason'].strip():
+        raise PlayerError('An abstain reason must not be blank')
+    return result['reason']
+
+
+def level_abstain_schema() -> dict:
+    return json_object(_ABSTAIN)
 
 
 def record(value: object) -> dict:

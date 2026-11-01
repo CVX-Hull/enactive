@@ -15,7 +15,7 @@ menu Save is not application exit; a local routine's done is not game success.
 
 ## Player host events
 
-Current [`player-host/3`](contracts/player-host.md) uses telemetry version2 (retained
+Current [`player-host/4`](contracts/player-host.md) uses telemetry version2 (retained
 `player-host/1` traces report `unsupported_version`; their summaries stay in the
 acceptance records), one JSONL trace per actor at
 `actors/NNN/host.jsonl`. Original request/tool IDs, wall and monotonic timestamps

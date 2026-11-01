@@ -42,7 +42,7 @@ function bounded(value) {
 export function validateConfiguration(configuration, selectedModel, effort) {
   bounded(configuration);
   closed(configuration, ['schema', 'role', 'intent_tail_bytes', 'model', 'api_key_env', 'max_requests', 'max_context_images', 'context_image_block', 'request_timeout_seconds', 'service_tier']);
-  requireThat(configuration.schema === 'player-host/3');
+  requireThat(configuration.schema === 'player-host/4');
   // An actor may carry the subgoal level's request-only intent tail; a level never does.
   requireThat(['actor', 'level'].includes(configuration.role));
   requireThat(configuration.intent_tail_bytes === null || (configuration.role === 'actor'
@@ -316,16 +316,26 @@ export function formatIntentTail(value, maxBytes) {
   return {text:`${INTENT_LABEL}\n${bounded.text}${omitted}`, surfaced_bytes:Buffer.byteLength(bounded.text), omitted_bytes:bounded.omitted_bytes};
 }
 
+function levelResult(result) {
+  if (result.isError === true) return null;
+  try { return JSON.parse(result.content?.find(part => part.type === 'text')?.text); } catch { return null; }
+}
+
 /** Level telemetry from one `player_level_commit` result; local tool errors are not passes. */
 export function levelCommitEvent(result) {
-  if (result.isError === true) return null;
-  let value;
-  try { value = JSON.parse(result.content?.find(part => part.type === 'text')?.text); } catch { return null; }
-  if (!object(value) || value.schema !== 'player-level-commit/1' || !['committed', 'discarded'].includes(value.status)) return null;
-  return {type:value.status === 'committed' ? 'level-commit' : 'level-discard', reason:value.reason,
+  const value = levelResult(result);
+  if (!object(value) || value.schema !== 'player-level-commit/2' || !['committed', 'discarded'].includes(value.status)) return null;
+  return {type:value.status === 'committed' ? 'level-commit' : 'level-discard', action:value.action, reason:value.reason,
     position:value.position, inputs_since:value.inputs_since, staleness_inputs:value.staleness_inputs,
     record_ids:Array.isArray(value.records) ? value.records.map(r => r?.id).filter(text) : [],
     kept:Array.isArray(value.kept) ? value.kept.filter(text) : []};
+}
+
+/** Level telemetry from one valid `player_level_abstain` result; it ends the pass with nothing written. */
+export function levelAbstainEvent(result) {
+  const value = levelResult(result);
+  if (!object(value) || value.schema !== 'player-level-abstain/1' || value.status !== 'abstained' || !text(value.reason)) return null;
+  return {type:'level-abstain', reason:value.reason};
 }
 
 // This actual MCP receipt ends this host only. The driver independently checks
@@ -392,7 +402,7 @@ export async function runHost(options) {
   };
   let agent, client, transport, fatal, closing = false, requests = 0, requestId, requestTimer, requestInFlight = false, requestUsageAvailable = false;
   let workTimer, deadlineTimer;
-  let responseProgress, handoff, pendingHandoff;
+  let responseProgress, handoff, pendingHandoff, levelEnded = false;
   const progressSnapshot = () => responseProgress ? {...responseProgress,
     scope:requestInFlight ? 'current-http-attempt' : 'last-http-attempt'} : null;
   const stopped = new AbortController();
@@ -459,7 +469,7 @@ export async function runHost(options) {
     requireThat(!mcp.enabled_tools.some(name => HOST_INTERNAL_TOOLS.includes(name)), 'host-internal-tool-enabled');
     if (configuration.intent_tail_bytes !== null) requireThat(names.has('player_intent'), 'missing-required-tools');
     if (configuration.role === 'level') {
-      requireThat(['player_log_read', 'player_level_commit'].every(name => mcp.enabled_tools.includes(name)), 'missing-required-tools');
+      requireThat(['player_log_read', 'player_level_commit', 'player_level_abstain'].every(name => mcp.enabled_tools.includes(name)), 'missing-required-tools');
       emit('level-pass', {});
     }
     const tools = mcp.enabled_tools.map(name => {
@@ -473,9 +483,14 @@ export async function runHost(options) {
         catch { stop('mcp-call-failed'); throw new HostError(fatal); }
         if (fatal) throw new HostError(fatal);
         emit('tool-result', {request_id:requestId, tool_call_id:toolCallId, tool:name, result:projectToolResultForTelemetry(result)});
-        if (configuration.role === 'level' && name === 'player_level_commit') {
-          const level = levelCommitEvent(result);
-          if (level) { const {type, ...fields} = level; emit(type, {request_id:requestId, tool_call_id:toolCallId, ...fields}); }
+        if (configuration.role === 'level' && ['player_level_commit', 'player_level_abstain'].includes(name)) {
+          // A commit that becomes a commit or discard, or a valid abstain, ends the pass; a rejected commit does not.
+          const level = name === 'player_level_commit' ? levelCommitEvent(result) : levelAbstainEvent(result);
+          if (level) {
+            const {type, ...fields} = level;
+            emit(type, {request_id:requestId, tool_call_id:toolCallId, ...fields});
+            levelEnded = true;
+          }
         }
         try {
           const transition = inspectHandoff(name, args, result, pendingHandoff);
@@ -548,14 +563,19 @@ export async function runHost(options) {
           emit('tool-refused', {request_id:requestId, tool_call_id:toolCall.id, tool:toolCall.name, reason:'handoff', dispatched:false});
           return {block:true, reason:'Host ended after completed handoff; no further tool dispatch.', terminate:true};
         }
+        if (levelEnded) {
+          emit('tool-refused', {request_id:requestId, tool_call_id:toolCall.id, tool:toolCall.name, reason:'level-ended', dispatched:false});
+          return {block:true, reason:'The level pass ended with its commit or abstain; no further tool dispatch.', terminate:true};
+        }
         if (!isDeepStrictEqual(toolCall.arguments, args)) {
           emit('tool-refused', {request_id:requestId, tool_call_id:toolCall.id, tool:toolCall.name, reason:'tool-arguments-changed', dispatched:false});
           return {block:true, reason:'MCP input not sent: SDK changed arguments; explicitly correct the call.'};
         }
       },
       // Pi's per-result terminate hint requires every result in the batch to
-      // terminate. finishTurn also handles ordinary tools preceding a handoff.
-      finishTurn:() => handoff ? {action:'end'} : undefined,
+      // terminate. finishTurn also handles ordinary tools preceding a handoff
+      // or a level pass's ending commit or abstain.
+      finishTurn:() => handoff || levelEnded ? {action:'end'} : undefined,
       streamFn:(model, context, streamOptions) => {
         if (fatal) return failureStream(model, fatal);
         if (requests >= configuration.max_requests) { stop('request-limit'); return failureStream(model, fatal); }
@@ -657,7 +677,8 @@ export async function runHost(options) {
           }, {maxRetries:1, maxRetryDelayMs:MAX_RETRY_DELAY_MS, signal:requestSignal});
           // The outer request timer includes classification, SDK backoff and
           // both HTTP attempts. Disable the provider stream's nested retries.
-          return stream(model, context, {...streamOptions, apiKey, fetch:observedFetch, env:{}, signal:requestSignal, maxRetries:0, cacheRetention:'short', maxTokens:model.maxTokens, timeoutMs:configuration.request_timeout_seconds * 1000, reasoningEffort:options.effort === 'off' ? undefined : options.effort,
+          // A level pass must end in a commit or abstain call, so its provider is required to call a tool.
+          return stream(model, context, {...streamOptions, ...(configuration.role === 'level' ? {toolChoice:'required'} : {}), apiKey, fetch:observedFetch, env:{}, signal:requestSignal, maxRetries:0, cacheRetention:'short', maxTokens:model.maxTokens, timeoutMs:configuration.request_timeout_seconds * 1000, reasoningEffort:options.effort === 'off' ? undefined : options.effort,
             onPayload:payload => {
               payloadReadyAt = performance.now();
               emit('provider-payload-ready', {request_id:logicalRequestId, sdk_prepare_ms:payloadReadyAt - streamStarted});
@@ -719,7 +740,8 @@ export async function runHost(options) {
     });
     await agent.prompt(options.prompt);
     const terminal = agent.state.messages.findLast(message => message.role === 'assistant');
-    if (!fatal && terminal?.stopReason !== 'stop' && !(handoff && terminal?.stopReason === 'toolUse')) stop('incomplete-terminal-response');
+    if (!fatal && configuration.role === 'level' && !levelEnded) stop('level-no-proposal');
+    else if (!fatal && terminal?.stopReason !== 'stop' && !((handoff || levelEnded) && terminal?.stopReason === 'toolUse')) stop('incomplete-terminal-response');
   } catch (error) {
     if (!fatal) stop(error instanceof HostError ? error.reason : 'host-failed');
   } finally {
