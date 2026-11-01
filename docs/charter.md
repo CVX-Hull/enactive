@@ -138,6 +138,19 @@ for player adaptation, not an engineer-authored handler for every variation.
 This is a design preference and evaluation obligation, not a claim of universal
 learning or permission to remove provenance, user control or finite limits.
 
+As we apply Sutton's lesson, it concerns capability: what the player can do
+should grow with search, learning and computation. We do not apply it to
+evidence. Classical methods (statistics, measurement, causal identification,
+control theory) verify claims, bound error and decide evaluations. They may
+also supply structure inside the player when one game-independent procedure
+fits it to each game from player-visible experience. Agents and learning
+propose, search and iterate; classical checks with stated assumptions judge
+claims about the result. Avoid the worst of both: hand-tuned pipelines that cap
+what the player can try, and claims that nothing independent checks. A
+classical component inside the player gives way when a general method matches
+or beats it on the same pre-registered evaluation, including the declared
+cadence and cost.
+
 ## P-KNOWLEDGE Maintain trustworthy knowledge and evidence
 
 Facts have one authoritative home. Current guidance, proposals, historical
