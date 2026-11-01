@@ -367,6 +367,15 @@ const text = id => {
   await returnWith(activity([capture('op-11', 'input', 'g'), capture('op-12', 'input', 'h')]));
   assert.match(text('since-last-look'), /^1 retained entry arrived/);
   element('mark-seen').listeners.click(); run('following = true');
+  // Hidden again before the return poll lands: that interval's later arrivals still count.
+  visibility('hidden'); visibility('visible');
+  const lateReturn = request('/api/activity');
+  visibility('hidden');
+  await reply(lateReturn, activity([capture('op-12', 'input', 'h'), capture('op-13', 'input', 'i')]));
+  await activityPoll(activity([capture('op-12', 'input', 'h'), capture('op-13', 'input', 'i'), capture('op-14', 'input', 'j')]));
+  await returnWith(activity([capture('op-12', 'input', 'h'), capture('op-13', 'input', 'i'), capture('op-14', 'input', 'j')]));
+  assert.match(text('since-last-look'), /^2 retained entries arrived/, 'Both hidden intervals count, including the one that began before the return poll landed');
+  element('mark-seen').listeners.click();
   // A control target adopted while hidden is reported as a change, before its activity arrives.
   visibility('hidden');
   run('currentSession = "session-six"');

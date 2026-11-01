@@ -478,6 +478,8 @@ function settleReturn() {
     }
   }
   returning = null;
+  // Hidden again before the return poll landed: the rest of this hidden interval counts too.
+  if (document.visibilityState === 'hidden' && latestActivity) hiddenFrom = {session: latestActivity.session, keys: new Set(latestActivity.entries.map(entryKey))};
   renderSinceLastLook();
 }
 if (typeof document.addEventListener === 'function') document.addEventListener('visibilitychange', () => {
