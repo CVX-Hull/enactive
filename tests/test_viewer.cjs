@@ -326,26 +326,46 @@ const text = id => {
   await activityPoll(activity([capture('op-0', 'input', 'a')]));
   assert.match(text('frame-change'), /no earlier retained capture/);
   await activityPoll(activity([capture('op-1', 'observe', 'a'), capture('op-2', 'input', 'a')]));
-  assert.match(text('frame-change'), /Frame unchanged since the previous input.*valid capture, not a failure/);
+  assert.match(text('frame-change'), /Frame unchanged.*identical \(SHA-256\) to the previous retained capture.*valid capture, not a failure/);
   assert.doesNotMatch(text('frame-change'), /fail(ed)? to|stuck|blocked/i, 'Identical pixels never become a failure claim');
   await activityPoll(activity([capture('op-1', 'observe', 'a'), capture('op-2', 'input', 'a'), capture('op-3', 'input', 'b')]));
-  assert.match(text('frame-change'), /differs.*does not establish useful progress/);
+  assert.match(text('frame-change'), /PNG differs.*does not establish useful progress/);
   await activityPoll(activity([capture('op-4', 'input', 'c'), capture('op-5', 'observe', 'c')]));
   assert.match(text('frame-change'), /no earlier retained capture/, 'Only the latest input is compared, never a later observation');
+  const pending = capture('op-9', 'input', 'x', {status: 'pending', source: undefined});
+  await activityPoll(activity([capture('op-1', 'observe', 'a'), capture('op-8', 'input', 'b'), pending]));
+  assert.match(text('frame-change'), /latest input \(op-9\) has no recorded capture yet/, 'A pending input is the latest, never an older one');
+  const hostSource = {...capture('op-h', 'input', 'a'), producer: 'host', kind: 'tool-result'};
+  await activityPoll(activity([capture('op-1', 'observe', 'a'), hostSource, capture('op-2', 'input', 'b')]));
+  assert.match(text('frame-change'), /PNG differs/, 'Host tool results are not computer captures');
 
-  // "Since you last looked": counted while hidden, cleared only by the reader.
+  // "Since you last looked": arrivals during hidden intervals, fixed on return, cleared only by the reader.
   const documentListeners = context.document.listeners;
+  const visibility = state => { context.document.visibilityState = state; documentListeners.visibilitychange(); };
   assert.equal(typeof documentListeners.visibilitychange, 'function');
-  context.document.visibilityState = 'hidden'; documentListeners.visibilitychange();
-  assert.equal(element('since-last-look').hidden, true, 'Nothing is shown while the page is hidden');
+  await activityPoll(activity([capture('op-4', 'input', 'c'), capture('op-5', 'observe', 'c')]));
+  visibility('hidden');
   await activityPoll(activity([capture('op-4', 'input', 'c'), capture('op-5', 'observe', 'c'), capture('op-6', 'input', 'd'), capture('op-7', 'input', 'e')]));
-  context.document.visibilityState = 'visible'; documentListeners.visibilitychange();
+  visibility('visible');
   assert.equal(element('since-last-look').hidden, false);
   assert.match(text('since-last-look'), /^2 retained entries arrived while this page was hidden\.$/);
-  epoch += 600000; await activityPoll(activity([capture('op-6', 'input', 'd'), capture('op-7', 'input', 'e')]));
-  assert.match(text('since-last-look'), /2 retained entries/, 'Time and polling never clear the mark');
+  epoch += 600000; await activityPoll(activity([capture('op-6', 'input', 'd'), capture('op-7', 'input', 'e'), capture('op-10', 'input', 'f')]));
+  assert.match(text('since-last-look'), /^2 retained entries/, 'Arrivals while visible, time and polling never change the count');
+  visibility('hidden');
+  assert.equal(element('since-last-look').hidden, true, 'The notice is not shown while the page is hidden');
+  await activityPoll(activity([capture('op-10', 'input', 'f'), capture('op-11', 'input', 'g')], {omitted_entries: null}));
+  visibility('visible');
+  assert.match(text('since-last-look'), /^3 retained entries.*older ones may have been omitted/, 'Hidden intervals add up; unknown omissions are not zero');
   element('mark-seen').listeners.click();
   assert.equal(element('since-last-look').hidden, true); assert.equal(element('mark-seen').hidden, true);
+  assert.equal(context.document.activeElement, element('open-timeline'), 'Focus moves on, not to the page body');
+  // Frozen Timeline inspection never feeds a stale snapshot into the hidden count.
+  run('following = false; timelineSession = currentSession');
+  visibility('hidden');
+  await activityPoll(activity([capture('op-11', 'input', 'g'), capture('op-12', 'input', 'h')]));
+  visibility('visible');
+  assert.match(text('since-last-look'), /^1 retained entry arrived/);
+  element('mark-seen').listeners.click(); run('following = true');
   await activityPoll(activity([a,b],{latest_statement:a,omitted_entries:6}));
   const row = element('activity-list').children[0].children[0];
   element('activity-list').scrollTop = 80;
@@ -530,10 +550,11 @@ const text = id => {
   // they are not browser layout, paint or screen-reader evidence.
   const css = fs.readFileSync(path.join(__dirname, '../web/style.css'), 'utf8');
   const tag = id => html.match(new RegExp(`<[^>]*id="${id}"[^>]*>`))?.[0] || '';
-  for (const id of ['connection', 'stop-state', 'frame-note', 'frame-change', 'since-last-look', 'new-items', 'investigation-session-status'])
+  for (const id of ['connection', 'stop-state', 'frame-note', 'since-last-look', 'new-items', 'investigation-session-status'])
     assert.match(tag(id), /role="status"/, `${id} announces changes as a status message`);
   for (const id of ['status-error', 'pause-error']) assert.match(tag(id), /role="alert"/, `${id} is an alert`);
-  assert.match(tag('recent-activity'), /role="log"/, 'Recent activity is an append-only log region');
+  // Regions rewritten on every poll would re-announce everything; they are not live regions.
+  for (const id of ['recent-activity', 'frame-change']) assert.doesNotMatch(tag(id), /role="(?:log|status)"|aria-live/, `${id} is not a live region`);
   assert.ok(html.indexOf('id="pause"') < html.indexOf('role="tablist"'), 'Pause is reachable before any view tab or panel');
   assert.equal(html.match(/<button[^>]*>/)[0].includes('id="pause"'), true, 'Pause is the first button on the page');
   assert.match(html, /<button id="pause"[^>]*>Pause automation permanently<\/button>/, 'Pause names its permanent effect');
