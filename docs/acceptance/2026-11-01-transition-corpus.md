@@ -90,8 +90,8 @@ manifest: [summary.json](assets/corpus-320/summary.json).
 
 - **Run 01 failed.** The provider returned HTTP 200 and then no events for about 134 s, then
   an error. Under the incomplete-run stop rule, collection stopped and the run was excluded,
-  retained and never analysed. One minute later the lead resumed with run 02, recording its
-  reading on #320 first (see the deviation below).
+  retained and never analysed. The lead resumed with run 02 84 s later, posting the lead's
+  reading on #320 before run 02 launched (see the deviation below).
 - **The driver ran three times:** run 01 (stopped on the failure), runs 02–07 (one batch),
   and runs 08–38 (stopped on the target). There were no player-ended runs.
 - **Three captures appear at two adjacent positions** (`corpus320-10|1054`,
@@ -181,7 +181,7 @@ Proposed next steps are on #319; they are proposals, not pre-registered readings
   conservative only when the labellers err independently.
 - **Run length.** H3's power was simulated only at τ = 20, 40 and 60 with runs of about 70
   transitions; power at double noise was lower at τ = 60 (0.84) than at τ = 40 (0.91), so it
-  need not rise with τ. Splits slower than the runs themselves cannot be seen.
+  need not rise with τ. Splits slower than the runs themselves are not resolved within runs.
 - **Pre-registered alternatives remain.** Between-run policy differences, so any H1 positive
   would be pooled structure only; policy confounding of H2; and render lag under machine load
   (load average about 90 at freeze).
@@ -192,11 +192,13 @@ Proposed next steps are on #319; they are proposals, not pre-registered readings
 - **Deviation: resuming after run 01 without consulting the owner.** The incomplete-run stop
   rule fired and stopped collection, as designed. The protocol does not say whether
   collection may restart after such a stop, but it does say that when a deviation is needed,
-  "collection stops and the owner is consulted". At 01:57 UTC, one minute after the stop, the
-  lead resumed with run 02 on the lead's own reading ("a stop for lead review"), posted on
-  #320 before resuming with a self-imposed escalation on a second such failure. The owner was
-  not consulted first. Runs 02–07 ran before the owner's decision "Finish #320" (03:26 UTC),
-  which continued collection under v3 unchanged. For overnight running the owner then set
+  "collection stops and the owner is consulted". The stop came at 01:56:07 UTC. The lead
+  restarted the driver on the lead's own reading ("a stop for lead review"), with a
+  self-imposed escalation on a second such failure; that reading was posted on #320 before
+  run 02 launched at 01:57:31. The owner was not consulted first. After runs 02–07 the lead
+  started the driver again at 02:58 for runs 08 onward, still without consulting the owner.
+  Runs 02–09 had completed and run 10 was in progress when the owner's decision "Finish #320",
+  which continued collection under v3 unchanged, was recorded on #320 at 03:26:45 UTC. For overnight running the owner then set
   "Stop and wait": any incomplete run stops collection for an owner decision. No frozen input,
   rule, threshold or guard changed, and no further incomplete run occurred. This is recorded
   as a procedural deviation for the owner to classify. The checkpoints on #320 that said
