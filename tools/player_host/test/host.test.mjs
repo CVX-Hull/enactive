@@ -15,7 +15,7 @@ const python = process.env.ENACTIVE_TEST_PYTHON;
 const fixture = fileURLToPath(new URL('../../../tests/fixtures/player_host_mcp.py', import.meta.url));
 const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j1ioAAAAASUVORK5CYII=';
 const model = { id: 'fixture-model', name: 'Offline fixture', api: 'openai-completions', provider: 'fixture', baseUrl: 'https://fixture.invalid/v1', reasoning: false, input: ['text', 'image'], cost: {input:0, output:0, cacheRead:0, cacheWrite:0}, contextWindow: 100000, maxTokens: 1024, compat: { supportsDeveloperRole:false, supportsStore:false, supportsUsageInStreaming:true } };
-const route = () => ({schema:'player-host/4',role:'actor',intent_tail_bytes:null,service_tier:'default', model:structuredClone(model), api_key_env:'OFFLINE_TEST_KEY', max_requests:4, max_context_images:4, context_image_block:1, request_timeout_seconds:2});
+const route = () => ({schema:'player-host/5',role:'actor',intent_tail_bytes:null,service_tier:'default', model:structuredClone(model), api_key_env:'OFFLINE_TEST_KEY', max_requests:4, max_context_images:4, context_image_block:1, request_timeout_seconds:2});
 function reply(content = 'finished', calls = [], withUsage = true, reasoning, callPrefix = 'call') {
   const delta = {role:'assistant', ...(content === null ? {} : {content}), ...(reasoning ? {reasoning_content:reasoning} : {}), ...(calls.length ? {tool_calls:calls.map(([name,args],index)=>({index,id:`${callPrefix}-${index}`,type:'function',function:{name,arguments:JSON.stringify(args)}}))} : {})};
   const chunks = [{id:'fixture-response',model:'fixture-backend',choices:[{index:0,delta,finish_reason:null}]},
@@ -91,7 +91,7 @@ test('route is closed, graphical, finite and model/effort exact', ()=>{
   }
   assert.throws(()=>validateConfiguration(route(),'other','off'));
   assert.throws(()=>validateConfiguration(route(),model.id,'low'));
-  for (const old of ['pi-player-host/1','pi-player-host/2','pi-player-host/3','pi-player-host/4','player-host/0','player-host/1','player-host/2','player-host/3','player-host/5'])
+  for (const old of ['pi-player-host/1','pi-player-host/2','pi-player-host/3','pi-player-host/5','player-host/0','player-host/1','player-host/2','player-host/3','player-host/4','player-host/6'])
     assert.throws(()=>validateConfiguration({...route(),schema:old},model.id,'off'));
   for (const change of [{role:undefined},{role:'lead'},{intent_tail_bytes:undefined},{intent_tail_bytes:63},
     {intent_tail_bytes:4097},{intent_tail_bytes:1.5},{role:'level',intent_tail_bytes:1024}])
@@ -431,34 +431,15 @@ test('request maximum is finite and exits unsuccessful if continuation needed',a
   assert.equal(result.ok,false); assert.equal(result.reason,'request-limit'); assert.equal(payloads.length,1);
   assert.equal(events.find(event=>event.type==='abort').response_progress.scope,'last-http-attempt');
 });
-test('fixture union schema refusal gives stable precise feedback, explicit correction dispatches, MCP errors stay intact',async t=>{
-  const entry={stage:'x'.repeat(244),available:[{subject:'small cardboard box'}]};
-  const bad={snapshot_id:'fixture-snapshot',intent:{entry_type:'work',entry}};
-  const fixed=structuredClone(bad);fixed.intent.entry.stage='partial';
-  fixed.intent.entry.available[0].subject='small_cardboard_box';
-  const mcpError=structuredClone(fixed);mcpError.intent.entry.stage='mcp-error';
-  const configuration=route();configuration.max_requests=6;
-  const {result,calls,payloads,events}=await scenario(t,[
-    reply(null,[['fixture_remember',bad]],true,undefined,'bad'),
-    reply(null,[['fixture_remember',fixed]],true,undefined,'fixed'),
-    reply(null,[['observe',{}]],true,undefined,'later'),
-    reply(null,[['fixture_remember',mcpError]],true,undefined,'mcp-error'),reply()
-  ],{configuration,enabledTools:['fixture_remember','observe']});
+test('an actor keeps the SDK validation refusal text unchanged; only a level gets field feedback',async t=>{
+  const bad={snapshot_id:'fixture-snapshot',intent:{entry_type:'work',entry:{stage:'x'.repeat(244),available:[{subject:'small cardboard box'}]}}};
+  const {result,payloads,events}=await scenario(t,[reply(null,[['fixture_remember',bad]],true,undefined,'bad'),reply()],
+    {configuration:{...route(),max_requests:3},enabledTools:['fixture_remember']});
   assert.equal(result.ok,true);
-  assert.deepEqual(calls.filter(c=>c.tool==='fixture_remember').map(c=>c.intent),[fixed.intent,mcpError.intent]);
-  const first=payloads[1].messages.find(m=>m.role==='tool'&&m.tool_call_id==='bad-0').content;
-  assert.match(first,/entry.stage: must not have more than 128/);
-  assert.match(first,/entry.available.0.subject: must match pattern/);
-  assert.ok(!first.includes('intent.entry.value'));
-  for(const payload of payloads.slice(2)) {
-    assert.equal(payload.messages.find(m=>m.role==='tool'&&m.tool_call_id==='bad-0').content,first);
-  }
-  const diagnostics=events.filter(e=>e.type==='tool-validation-feedback');assert.equal(diagnostics.length,1);
-  assert.match(diagnostics[0].original_result.content[0].text,/intent.entry.value/);
-  assert.equal(diagnostics[0].projected_text,first);
-  const actualMcpError=payloads[4].messages.find(m=>m.role==='tool'&&m.tool_call_id==='mcp-error-0').content;
-  assert.match(actualMcpError,/MCP isError: true/);assert.match(actualMcpError,/fixture MCP refusal/);
-  assert.deepEqual(payloads[0].tools,payloads[4].tools,'the actual full schema remains stable');
+  const text=payloads[1].messages.find(m=>m.role==='tool'&&m.tool_call_id==='bad-0').content;
+  assert.match(text,/^Validation failed for tool "fixture_remember":/);
+  assert.ok(!text.includes('Valid example call')&&!text.includes('abstaining'));
+  assert.equal(events.filter(e=>e.type==='tool-validation-feedback').length,0);
 });
 
 test('provider errors are nonzero without leaking exception or key',async t=>{
@@ -683,22 +664,29 @@ test('intent tail formatting is bounded, labelled and honest about failure and a
   assert.equal(boundedText('ééé',3).text,'é');
 });
 
-const levelTools=['player_log_read','player_level_commit','player_level_abstain'];
+const terminalTools=['player_level_keep','player_level_replace','player_level_close','player_level_abstain'];
+const levelTools=['player_log_read',...terminalTools];
 const levelRoute={...route(),role:'level'};
-const proposal=(action,extra={})=>({proposal:{schema:'player-level-proposal/2',action,...extra}});
-const replacement=proposal('replace',{subgoal:{text:'x',expected_observations:[],status:'open',confidence:0.5,sources:[]},previous:null});
-const levelScenario=(t,sequence)=>scenario(t,sequence,{configuration:levelRoute,enabledTools:levelTools});
+const keepCall=['player_level_keep',{reason:'Still valid',sources:[]}];
+const replaceCall=['player_level_replace',{text:'x',expected_observations:[],status:'open',confidence:0.5,sources:[],previous_outcome:'none',previous_reason:''}];
+const closeCall=['player_level_close',{outcome:'achieved',reason:'Done',sources:[]}];
+const abstainCall=['player_level_abstain',{reason_code:'other',reason:'Nothing to act on',sources:[]}];
+const rejectedReplace=['player_level_replace',{...replaceCall[1],previous_outcome:'bogus'}];
+const blankAbstain=['player_level_abstain',{...abstainCall[1],reason:' '}];
+const readCall=['player_log_read',{after:0,limit:5}];
+const levelScenario=(t,sequence,max_requests=route().max_requests)=>
+  scenario(t,sequence,{configuration:{...levelRoute,max_requests},enabledTools:levelTools});
+const toolNames=payload=>payload.tools.map(tool=>tool.function.name);
 
 test('a level pass requires a tool call on every request and an actor does not', async t=>{
-  const level=await levelScenario(t,[reply(null,[['player_level_abstain',{reason:'Nothing to act on'}]])]);
+  const level=await levelScenario(t,[reply(null,[abstainCall])]);
   assert.equal(level.payloads[0].tool_choice,'required');
   const actor=await scenario(t,[reply()]);
   assert.equal(Object.hasOwn(actor.payloads[0],'tool_choice'),false);
 });
 
-test('a level pass ends on a commit and emits one level-pass and level-commit', async t=>{
-  const {result,events,payloads}=await levelScenario(t,[
-    reply(null,[['player_log_read',{after:0,limit:5}],['player_level_commit',replacement]])]);
+test('a level pass ends on a replace and emits one level-pass and level-commit', async t=>{
+  const {result,events,payloads}=await levelScenario(t,[reply(null,[readCall,replaceCall])]);
   assert.equal(result.ok,true);assert.equal(result.reason,'completed');assert.equal(payloads.length,1);
   assert.equal(events.filter(e=>e.type==='level-pass').length,1);
   const [commit]=events.filter(e=>e.type==='level-commit');
@@ -706,74 +694,116 @@ test('a level pass ends on a commit and emits one level-pass and level-commit', 
   assert.equal(events.some(e=>e.type==='intent-tail'||e.type==='level-abstain'),false);
 });
 
-test('a level pass ends on a discard', async t=>{
-  const {result,events,payloads}=await levelScenario(t,[reply(null,[['player_level_commit',proposal('keep',{record_id:'r',reason:'x',sources:[]})]])]);
-  assert.equal(result.ok,true);assert.equal(payloads.length,1);
-  const [discard]=events.filter(e=>e.type==='level-discard');
-  assert.deepEqual([discard.action,discard.inputs_since],['keep',11]);
-});
+for (const [name,call,action] of [['keep',keepCall,'keep'],['close',closeCall,'close']]) {
+  test(`a level pass ends on a discarded ${name}`, async t=>{
+    const {result,events,payloads}=await levelScenario(t,[reply(null,[call])]);
+    assert.equal(result.ok,true);assert.equal(payloads.length,1);
+    const [discard]=events.filter(e=>e.type==='level-discard');
+    assert.deepEqual([discard.action,discard.inputs_since],[action,11]);
+  });
+}
 
-test('a level pass ends on a valid abstain and emits level-abstain with its reason', async t=>{
-  const {result,events,payloads}=await levelScenario(t,[reply(null,[['player_level_abstain',{reason:'Nothing to act on'}]])]);
+test('a level pass ends on a valid abstain and emits level-abstain with its code and reason', async t=>{
+  const {result,events,payloads}=await levelScenario(t,[reply(null,[abstainCall])]);
   assert.equal(result.ok,true);assert.equal(payloads.length,1);
   const [abstain]=events.filter(e=>e.type==='level-abstain');
-  assert.deepEqual([abstain.reason,abstain.request_id,typeof abstain.tool_call_id],['Nothing to act on','request-1','string']);
+  assert.deepEqual([abstain.reason_code,abstain.reason,abstain.request_id,typeof abstain.tool_call_id],['other','Nothing to act on','request-1','string']);
   assert.equal(events.some(e=>e.type==='level-commit'||e.type==='level-discard'),false);
 });
 
-test('a rejected commit or abstain does not end the pass, and a later call after the ending one is refused', async t=>{
+test('a rejected terminal call does not end the pass, and a later call after the ending one is refused', async t=>{
   const {result,events,payloads}=await levelScenario(t,[
-    reply(null,[['player_level_commit',proposal('bogus')]]),
-    reply(null,[['player_level_abstain',{reason:' '}]]),
-    reply(null,[['player_level_commit',replacement],['player_level_abstain',{reason:'too late'}]])]);
+    reply(null,[rejectedReplace]),
+    reply(null,[blankAbstain]),
+    reply(null,[replaceCall,abstainCall])]);
   assert.equal(result.ok,true);assert.equal(payloads.length,3);
-  assert.deepEqual(events.filter(e=>e.type.startsWith('level-')&&e.type!=='level-pass').map(e=>e.type),['level-commit']);
+  assert.deepEqual(events.filter(e=>e.type.startsWith('level-')&&e.type!=='level-pass'&&e.type!=='level-reserved-request').map(e=>e.type),['level-commit']);
   const refused=events.find(e=>e.type==='tool-refused');
   assert.deepEqual([refused.tool,refused.reason,refused.dispatched],['player_level_abstain','level-ended',false]);
 });
 
-test('a level pass that ends without a commit or abstain fails as level-no-proposal', async t=>{
-  for (const sequence of [[reply('I propose a subgoal')],[reply(null,[['player_log_read',{after:0,limit:5}]]),reply('Committed.')]]) {
+test('a level pass that ends without a terminal call fails as level-no-proposal', async t=>{
+  for (const sequence of [[reply('I propose a subgoal')],[reply(null,[readCall]),reply('Committed.')]]) {
     const {result,events}=await levelScenario(t,sequence);
     assert.equal(result.ok,false);assert.equal(result.reason,'level-no-proposal');
     assert.equal(events.find(e=>e.type==='abort').reason,'level-no-proposal');
   }
-  const rejected=await levelScenario(t,[reply(null,[['player_level_commit',proposal('bogus')]]),reply('Sorry.')]);
+  const rejected=await levelScenario(t,[reply(null,[rejectedReplace]),reply('Sorry.')]);
   assert.equal(rejected.result.reason,'level-no-proposal');
 });
 
 test('a failure latched in a level pass keeps its own reason rather than level-no-proposal', async t=>{
-  const limited=await scenario(t,[reply(null,[['player_log_read',{after:0,limit:5}]]),reply(null,[['player_level_abstain',{reason:'late'}]])],
-    {configuration:{...levelRoute,max_requests:1},enabledTools:levelTools});
+  const limited=await levelScenario(t,[reply(null,[readCall]),reply(null,[abstainCall])],1);
   assert.equal(limited.result.ok,false);assert.equal(limited.result.reason,'request-limit');
   const timeout=await scenario(t,[init=>new Promise((_,reject)=>init.signal.addEventListener('abort',()=>reject(new Error('aborted')),{once:true}))],{configuration:{...levelRoute,request_timeout_seconds:.05},enabledTools:levelTools});
   assert.equal(timeout.result.ok,false);assert.notEqual(timeout.result.reason,'level-no-proposal');
   assert.equal(timeout.result.reason,'request-timeout');
 });
 
-test('a malformed level proposal against the production reader schema gets the selected action and the valid shapes', async ()=>{
-  const subgoal={text:'x',expected_observations:[],status:'open',confidence:0.5,sources:[]};
-  const bad=[
-    [{schema:'player-level-proposal/2',action:'keep',record_id:'r',sources:[]},'Selected proposal.action="keep".',/reason/],
-    [{schema:'player-level-proposal/2',action:'close',record_id:'r',outcome:'revised',reason:'x',sources:[]},'Selected proposal.action="close".',/outcome/],
-    [{schema:'player-level-proposal/2',action:'replace',subgoal},'Selected proposal.action="replace".',/previous/],
-    [{schema:'player-level-proposal/1',action:'keep',record_id:'r',reason:'x',sources:[]},'Selected proposal.action="keep".',/schema/],
-    [{schema:'player-level-proposal/2',action:'revise',record_id:'r'},'proposal.action must be one of "keep", "replace", "close" (got "revise")',/^/]];
+test('the last two requests of a level pass offer only the terminal tools and say so', async t=>{
+  const {result,events,payloads}=await levelScenario(t,[
+    reply(null,[readCall]),reply(null,[readCall]),reply(null,[rejectedReplace]),reply(null,[replaceCall])],4);
+  assert.equal(result.ok,true);assert.equal(payloads.length,4);
+  assert.deepEqual(toolNames(payloads[0]),levelTools);
+  assert.deepEqual(toolNames(payloads[1]),levelTools);
+  assert.deepEqual(toolNames(payloads[2]),terminalTools);
+  assert.deepEqual(toolNames(payloads[3]),terminalTools);
+  for (const payload of payloads) assert.equal(payload.tool_choice,'required');
+  const status=payload=>JSON.stringify(payload.messages.at(-1));
+  assert.ok(!status(payloads[1]).includes('offers only the pass-ending tools'));
+  assert.ok(status(payloads[2]).includes('Remaining allowance including this request: 2.')&&status(payloads[2]).includes('offers only the pass-ending tools'));
+  assert.deepEqual(events.filter(e=>e.type==='level-reserved-request').map(e=>e.request_id),['request-3','request-4']);
+});
+
+test('an actor is never restricted to terminal tools, and a pass of two requests or fewer is terminal-only', async t=>{
+  const actor=await scenario(t,[reply(null,[['observe',{}]]),reply(null,[['observe',{}]]),reply()],{configuration:{...route(),max_requests:3}});
+  assert.ok(actor.payloads.every(payload=>toolNames(payload).length===3));
+  assert.equal(actor.events.some(e=>e.type==='level-reserved-request'),false);
+  const short=await levelScenario(t,[reply(null,[replaceCall])],2);
+  assert.deepEqual(toolNames(short.payloads[0]),terminalTools);
+});
+
+test('a terminal call refused on the last allowed request settles as level-final-refusal, not request-limit', async t=>{
+  const {result,events,payloads}=await levelScenario(t,[reply(null,[readCall]),reply(null,[blankAbstain]),reply(null,[rejectedReplace])],3);
+  assert.equal(payloads.length,3);assert.equal(result.ok,false);assert.equal(result.reason,'level-final-refusal');
+  assert.equal(events.find(e=>e.type==='abort').reason,'level-final-refusal');
+  assert.equal(events.at(-1).reason,'level-final-refusal');
+  // A refused terminal call with budget left is repaired by the next request instead.
+  const repaired=await levelScenario(t,[reply(null,[readCall]),reply(null,[blankAbstain]),reply(null,[abstainCall])],3);
+  assert.equal(repaired.result.ok,true);
+  // The last request used by an ordinary tool is still a request-limit.
+  const limited=await levelScenario(t,[reply(null,[readCall]),reply(null,[readCall]),reply(null,[readCall])],3);
+  assert.equal(limited.result.reason,'request-limit');
+});
+
+test('production level schemas: a refused call names each field, the rule, the allowed values, a received value and an example', async ()=>{
+  const bad={text:'t'.repeat(3000),expected_observations:'one',status:'open',confidence:3,record_id:'r1',
+    previous_outcome:'done',previous_reason:''};
   const payloads=[], events=[];
-  const sequence=bad.map(([proposal],index)=>reply(null,[['player_level_commit',{proposal}]],true,undefined,`bad${index}`));
+  const sequence=[reply(null,[['player_level_replace',bad]],true,undefined,'bad'),reply(null,[['player_level_abstain',{reason_code:'other'}]],true,undefined,'bad2'),reply()];
   const result=await runHost({configuration:{...levelRoute,max_requests:8},mcpConfig:productionMcp(levelTools),
     context:'Frozen current player guide',prompt:'Level pass.',model:model.id,effort:'off',timeoutSeconds:20,env:{OFFLINE_TEST_KEY:'fixture-key'},
     fetch:async(_url,init)=>{payloads.push(JSON.parse(init.body));return sequence[payloads.length-1] ?? reply();},onEvent:e=>events.push(e)});
-  // Nothing was valid, so no call reached the custodian and the pass ends without a proposal.
-  assert.equal(result.reason,'level-no-proposal');assert.equal(payloads.length,bad.length+1);
-  assert.equal(events.filter(e=>e.type==='tool-start').length,0);
-  const shapes='Valid proposal.action shapes: keep {schema, action, record_id, reason, sources}; replace {schema, action, subgoal, previous}; close {schema, action, record_id, outcome, reason, sources}.';
-  for (const [index,[,selected,detail]] of bad.entries()) {
-    const text=payloads.at(-1).messages.find(m=>m.role==='tool'&&m.tool_call_id===`bad${index}-0`).content;
-    assert.ok(text.includes(selected),text);assert.match(text,detail);assert.ok(text.includes(shapes),text);
-    assert.ok(!/schema is false/.test(text),text);
-  }
-  assert.equal(events.filter(e=>e.type==='tool-validation-feedback').length,bad.length);
+  // Nothing was valid, so no call reached the custodian and the pass ends without a terminal call.
+  assert.equal(result.reason,'level-no-proposal');assert.equal(events.filter(e=>e.type==='tool-start').length,0);
+  const first=payloads.at(-1).messages.find(m=>m.role==='tool'&&m.tool_call_id==='bad-0').content;
+  assert.match(first,/^Validation failed for tool "player_level_replace":/);
+  assert.ok(first.includes('- previous_outcome: must be one of "none", "achieved", "failed", "abandoned", "revised"; received "done"'),first);
+  assert.match(first,/- confidence: .*maximum 1.*received 3/);
+  assert.match(first,/- expected_observations: .*received "one"/);
+  assert.match(first,/- sources: required property is missing/);
+  assert.ok(first.includes('unknown properties "record_id" are not allowed'),first);
+  const received=/- text: .*received (".*)/.exec(first)[1];
+  assert.ok(received.length<200&&received.includes('more characters'),'received values are truncated to 120 characters');
+  assert.ok(first.includes('Valid example call: player_level_replace {"text":"<text>"'),first);
+  assert.ok(first.includes('"previous_outcome":"none","previous_reason":""'),first);
+  assert.ok(first.endsWith('Fix the call and resend it; abstaining is not the remedy for a fixable call.'),first);
+  assert.ok(!first.includes('schema is false'));
+  const second=payloads.at(-1).messages.find(m=>m.role==='tool'&&m.tool_call_id==='bad2-0').content;
+  assert.ok(second.includes('- reason: required property is missing')&&second.includes('- sources: required property is missing'),second);
+  assert.ok(second.includes('Valid example call: player_level_abstain {"reason_code":"insufficient_evidence","reason":"<reason>","sources":[]}'),second);
+  assert.equal(events.filter(e=>e.type==='tool-validation-feedback').length,2);
+  assert.ok(payloads[0].tools.every(tool=>!JSON.stringify(tool.function.parameters).includes('"const"')));
 });
 
 test('a level-role host without the level tools fails before any provider request', async t=>{
@@ -794,24 +824,31 @@ for (const [name,intentFixture] of [['a failed read','error'],['an unexpected sh
 
 test('level commit telemetry distinguishes commits, discards and local tool errors', ()=>{
   const result=value=>({content:[{type:'text',text:JSON.stringify(value)}]});
-  const committed=levelCommitEvent(result({schema:'player-level-commit/2',status:'committed',action:'replace',reason:null,position:4,
+  const committed=levelCommitEvent(result({schema:'player-level-commit/3',status:'committed',action:'replace',reason:null,position:4,
     inputs_since:1,staleness_inputs:10,records:[{id:'w1'}],kept:[]}));
   assert.deepEqual(committed,{type:'level-commit',action:'replace',reason:null,position:4,inputs_since:1,staleness_inputs:10,record_ids:['w1'],kept:[]});
-  assert.equal(levelCommitEvent(result({schema:'player-level-commit/2',status:'discarded',action:'keep',reason:'stale',position:4,
+  for (const action of ['keep','close'])
+    assert.equal(levelCommitEvent(result({schema:'player-level-commit/3',status:'committed',action,reason:null,position:4,
+      inputs_since:1,staleness_inputs:10,records:[],kept:[]})).action,action);
+  assert.equal(levelCommitEvent(result({schema:'player-level-commit/3',status:'discarded',action:'keep',reason:'stale',position:4,
     inputs_since:12,staleness_inputs:10,records:[],kept:[]})).type,'level-discard');
-  assert.equal(levelCommitEvent({...result({schema:'player-level-commit/2',status:'committed'}),isError:true}),null);
+  assert.equal(levelCommitEvent({...result({schema:'player-level-commit/3',status:'committed',action:'keep'}),isError:true}),null);
   assert.equal(levelCommitEvent({content:[{type:'text',text:'{'}]}),null);
   assert.equal(levelCommitEvent(result({schema:'player-error/1'})),null);
-  assert.equal(levelCommitEvent(result({schema:'player-level-commit/1',status:'committed'})),null);
+  for (const old of ['player-level-commit/1','player-level-commit/2'])
+    assert.equal(levelCommitEvent(result({schema:old,status:'committed',action:'keep'})),null);
+  assert.equal(levelCommitEvent(result({schema:'player-level-commit/3',status:'committed',action:'bogus'})),null);
 });
 
-test('level abstain telemetry needs a valid abstain result and never a local tool error', ()=>{
+test('level abstain telemetry needs a valid abstain result with its reason code and never a local tool error', ()=>{
   const result=value=>({content:[{type:'text',text:JSON.stringify(value)}]});
-  const ok={schema:'player-level-abstain/1',status:'abstained',reason:'No evidence'};
-  assert.deepEqual(levelAbstainEvent(result(ok)),{type:'level-abstain',reason:'No evidence'});
+  const ok={schema:'player-level-abstain/2',status:'abstained',reason_code:'no_change_needed',reason:'No evidence'};
+  assert.deepEqual(levelAbstainEvent(result(ok)),{type:'level-abstain',reason_code:'no_change_needed',reason:'No evidence'});
   assert.equal(levelAbstainEvent({...result(ok),isError:true}),null);
   assert.equal(levelAbstainEvent(result({...ok,reason:''})),null);
-  assert.equal(levelAbstainEvent(result({...ok,schema:'player-level-abstain/0'})),null);
+  assert.equal(levelAbstainEvent(result({...ok,reason_code:undefined})),null);
+  for (const old of ['player-level-abstain/0','player-level-abstain/1'])
+    assert.equal(levelAbstainEvent(result({...ok,schema:old})),null);
   assert.equal(levelAbstainEvent({content:[{type:'text',text:'{'}]}),null);
 });
 

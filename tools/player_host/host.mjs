@@ -8,6 +8,9 @@ import { McpClient, StdioTransport, toLlmContent } from '@earendil-works/pi-mcp'
 import { createValidationFeedback } from './validation-feedback.mjs';
 
 export const INPUT_LIMIT_BYTES = 1_048_576;
+// A level pass ends with exactly one of these calls. On its last LEVEL_RESERVED_REQUESTS requests the host offers only these.
+export const LEVEL_TERMINAL_TOOLS = ['player_level_keep', 'player_level_replace', 'player_level_close', 'player_level_abstain'];
+export const LEVEL_RESERVED_REQUESTS = 2;
 // openai@7.19.0 client.mjs reads these despite Pi's scoped env option.
 // Their values can alter request headers or enable raw SDK logging.
 const AMBIENT_PROVIDER_SETTINGS = ['OPENAI_LOG', 'OPENAI_CUSTOM_HEADERS', 'OPENAI_ORG_ID', 'OPENAI_PROJECT_ID'];
@@ -42,7 +45,7 @@ function bounded(value) {
 export function validateConfiguration(configuration, selectedModel, effort) {
   bounded(configuration);
   closed(configuration, ['schema', 'role', 'intent_tail_bytes', 'model', 'api_key_env', 'max_requests', 'max_context_images', 'context_image_block', 'request_timeout_seconds', 'service_tier']);
-  requireThat(configuration.schema === 'player-host/4');
+  requireThat(configuration.schema === 'player-host/5');
   // An actor may carry the subgoal level's request-only intent tail; a level never does.
   requireThat(['actor', 'level'].includes(configuration.role));
   requireThat(configuration.intent_tail_bytes === null || (configuration.role === 'actor'
@@ -321,10 +324,11 @@ function levelResult(result) {
   try { return JSON.parse(result.content?.find(part => part.type === 'text')?.text); } catch { return null; }
 }
 
-/** Level telemetry from one `player_level_commit` result; local tool errors are not passes. */
+/** Level telemetry from one keep, replace or close result; local tool errors are not passes. */
 export function levelCommitEvent(result) {
   const value = levelResult(result);
-  if (!object(value) || value.schema !== 'player-level-commit/2' || !['committed', 'discarded'].includes(value.status)) return null;
+  if (!object(value) || value.schema !== 'player-level-commit/3' || !['committed', 'discarded'].includes(value.status)
+      || !['keep', 'replace', 'close'].includes(value.action)) return null;
   return {type:value.status === 'committed' ? 'level-commit' : 'level-discard', action:value.action, reason:value.reason,
     position:value.position, inputs_since:value.inputs_since, staleness_inputs:value.staleness_inputs,
     record_ids:Array.isArray(value.records) ? value.records.map(r => r?.id).filter(text) : [],
@@ -334,8 +338,35 @@ export function levelCommitEvent(result) {
 /** Level telemetry from one valid `player_level_abstain` result; it ends the pass with nothing written. */
 export function levelAbstainEvent(result) {
   const value = levelResult(result);
-  if (!object(value) || value.schema !== 'player-level-abstain/1' || value.status !== 'abstained' || !text(value.reason)) return null;
-  return {type:'level-abstain', reason:value.reason};
+  if (!object(value) || value.schema !== 'player-level-abstain/2' || value.status !== 'abstained'
+      || !text(value.reason_code) || !text(value.reason)) return null;
+  return {type:'level-abstain', reason_code:value.reason_code, reason:value.reason};
+}
+
+/** Pi 1.4.0 declares a request's tools in the transcript: system messages carry `toolsAdded`/`toolsRemoved` declarations. */
+export function declaredTools(messages) {
+  const tools = new Map();
+  for (const message of messages.filter(entry => entry.role === 'system')) {
+    for (const tool of message.toolsRemoved ?? []) tools.delete(tool.name);
+    for (const tool of message.toolsAdded ?? []) tools.set(tool.name, tool);
+  }
+  return [...tools.values()];
+}
+
+/** The transcript with only the named tools declared, for one request; the executable tool set and history are unchanged. */
+export function restrictTools(messages, names) {
+  return messages.map(message => message.role === 'system' && message.toolsAdded
+    ? {...message, toolsAdded:message.toolsAdded.filter(tool => names.includes(tool.name))} : message);
+}
+
+/** True when the latest assistant turn called a terminal tool and every terminal call in it was refused (an error result). */
+export function refusedTerminalCall(messages) {
+  const index = messages.findLastIndex(message => message.role === 'assistant');
+  if (index < 0) return false;
+  const terminal = (messages[index].content ?? []).filter(part => part.type === 'toolCall' && LEVEL_TERMINAL_TOOLS.includes(part.name));
+  const results = messages.slice(index + 1).filter(message => message.role === 'toolResult');
+  return terminal.length > 0 && terminal.every(call =>
+    results.some(message => message.toolCallId === call.id && message.isError === true));
 }
 
 // This actual MCP receipt ends this host only. The driver independently checks
@@ -469,7 +500,7 @@ export async function runHost(options) {
     requireThat(!mcp.enabled_tools.some(name => HOST_INTERNAL_TOOLS.includes(name)), 'host-internal-tool-enabled');
     if (configuration.intent_tail_bytes !== null) requireThat(names.has('player_intent'), 'missing-required-tools');
     if (configuration.role === 'level') {
-      requireThat(['player_log_read', 'player_level_commit', 'player_level_abstain'].every(name => mcp.enabled_tools.includes(name)), 'missing-required-tools');
+      requireThat(['player_log_read', ...LEVEL_TERMINAL_TOOLS].every(name => mcp.enabled_tools.includes(name)), 'missing-required-tools');
       emit('level-pass', {});
     }
     const tools = mcp.enabled_tools.map(name => {
@@ -483,9 +514,9 @@ export async function runHost(options) {
         catch { stop('mcp-call-failed'); throw new HostError(fatal); }
         if (fatal) throw new HostError(fatal);
         emit('tool-result', {request_id:requestId, tool_call_id:toolCallId, tool:name, result:projectToolResultForTelemetry(result)});
-        if (configuration.role === 'level' && ['player_level_commit', 'player_level_abstain'].includes(name)) {
-          // A commit that becomes a commit or discard, or a valid abstain, ends the pass; a rejected commit does not.
-          const level = name === 'player_level_commit' ? levelCommitEvent(result) : levelAbstainEvent(result);
+        if (configuration.role === 'level' && LEVEL_TERMINAL_TOOLS.includes(name)) {
+          // A keep, replace or close that becomes a commit or discard, or a valid abstain, ends the pass; a rejected call does not.
+          const level = name === 'player_level_abstain' ? levelAbstainEvent(result) : levelCommitEvent(result);
           if (level) {
             const {type, ...fields} = level;
             emit(type, {request_id:requestId, tool_call_id:toolCallId, ...fields});
@@ -508,8 +539,10 @@ export async function runHost(options) {
         return {content, details:undefined, isError:result.isError === true};
       }};
     });
+    // A level's refusals name each failing field, its rule, the allowed values and a valid example call.
     const validationFeedback = createValidationFeedback(tools, diagnostic =>
-      emit('tool-validation-feedback', {request_id:`request-${requests + 1}`, ...diagnostic}));
+      emit('tool-validation-feedback', {request_id:`request-${requests + 1}`, ...diagnostic}),
+      configuration.role === 'level' ? {names:['player_log_read', ...LEVEL_TERMINAL_TOOLS], terminal:LEVEL_TERMINAL_TOOLS} : {});
     agent = new Agent({
       initialState:{systemPrompt:options.context + (client.instructions ? '\n\nMCP server instructions:\n' + client.instructions : ''), model:configuration.model, thinkingLevel:options.effort, tools},
       toolExecution:'sequential',
@@ -549,6 +582,8 @@ export async function runHost(options) {
             'Host resource status (software-generated at context construction):\n' +
             `Actual provider HTTP attempts charged before this request: ${requests}/${configuration.max_requests}.\n` +
             `Remaining allowance including this request: ${configuration.max_requests - requests}.\n` +
+            (configuration.role === 'level' && configuration.max_requests - requests <= LEVEL_RESERVED_REQUESTS
+              ? 'This request offers only the pass-ending tools; end the pass with exactly one of them.\n' : '') +
             `Host decision time remaining at this snapshot: ${Math.max(0,(workDeadline-performance.now())/1000).toFixed(3)} seconds. Custodian time is a separate horizon.\n` +
             'An eligible retry can consume another attempt before the next status update. ' +
             'This is resource bookkeeping, not a human task, gameplay evidence, source-read proof, authority or a latency/quality metric.' + intent}]}];
@@ -565,7 +600,7 @@ export async function runHost(options) {
         }
         if (levelEnded) {
           emit('tool-refused', {request_id:requestId, tool_call_id:toolCall.id, tool:toolCall.name, reason:'level-ended', dispatched:false});
-          return {block:true, reason:'The level pass ended with its commit or abstain; no further tool dispatch.', terminate:true};
+          return {block:true, reason:'The level pass ended with its terminal call; no further tool dispatch.', terminate:true};
         }
         if (!isDeepStrictEqual(toolCall.arguments, args)) {
           emit('tool-refused', {request_id:requestId, tool_call_id:toolCall.id, tool:toolCall.name, reason:'tool-arguments-changed', dispatched:false});
@@ -574,11 +609,21 @@ export async function runHost(options) {
       },
       // Pi's per-result terminate hint requires every result in the batch to
       // terminate. finishTurn also handles ordinary tools preceding a handoff
-      // or a level pass's ending commit or abstain.
+      // or a level pass's ending keep, replace, close or abstain.
       finishTurn:() => handoff || levelEnded ? {action:'end'} : undefined,
       streamFn:(model, context, streamOptions) => {
         if (fatal) return failureStream(model, fatal);
-        if (requests >= configuration.max_requests) { stop('request-limit'); return failureStream(model, fatal); }
+        if (requests >= configuration.max_requests) {
+          // A refused terminal call on the last allowed request left no budget to correct it: its own settled reason.
+          stop(configuration.role === 'level' && refusedTerminalCall(context.messages) ? 'level-final-refusal' : 'request-limit');
+          return failureStream(model, fatal);
+        }
+        // The last LEVEL_RESERVED_REQUESTS requests of a pass offer only the terminal tools, so a refused call can be repaired.
+        if (configuration.role === 'level' && configuration.max_requests - requests <= LEVEL_RESERVED_REQUESTS) {
+          context = {...context, messages:restrictTools(context.messages, LEVEL_TERMINAL_TOOLS)};
+          emit('level-reserved-request', {request_id:`request-${requests + 1}`,
+            offered_tools:declaredTools(context.messages).map(tool => tool.name)});
+        }
         const apiKey = (options.env ?? process.env)[configuration.api_key_env];
         if (!text(apiKey)) { stop('missing-api-key'); return failureStream(model, fatal); }
         try {
@@ -677,7 +722,7 @@ export async function runHost(options) {
           }, {maxRetries:1, maxRetryDelayMs:MAX_RETRY_DELAY_MS, signal:requestSignal});
           // The outer request timer includes classification, SDK backoff and
           // both HTTP attempts. Disable the provider stream's nested retries.
-          // A level pass must end in a commit or abstain call, so its provider is required to call a tool.
+          // A level pass must end in a terminal call, so its provider is required to call a tool.
           return stream(model, context, {...streamOptions, ...(configuration.role === 'level' ? {toolChoice:'required'} : {}), apiKey, fetch:observedFetch, env:{}, signal:requestSignal, maxRetries:0, cacheRetention:'short', maxTokens:model.maxTokens, timeoutMs:configuration.request_timeout_seconds * 1000, reasoningEffort:options.effort === 'off' ? undefined : options.effort,
             onPayload:payload => {
               payloadReadyAt = performance.now();

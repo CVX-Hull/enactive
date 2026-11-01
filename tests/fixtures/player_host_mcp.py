@@ -1,4 +1,4 @@
-"""Offline MCP double for player-host/4 tests (player-handoff/2 issuances), using the maintained Python MCP server.
+"""Offline MCP double for player-host/5 tests (player-handoff/2 issuances), using the maintained Python MCP server.
 
 Shared by the adapter node tests and the adapter-agnostic contract suite."""
 import json
@@ -147,29 +147,55 @@ async def player_log_read(after: int, limit: int) -> CallToolResult:
     return CallToolResult(content=[TextContent(type="text", text=json.dumps(value))])
 
 
-@server.tool()
-async def player_level_commit(proposal: dict) -> CallToolResult:
-    """A replace commits, a keep or close is discarded as stale, and any other action is a rejected (isError) proposal."""
-    record(dict(tool="player_level_commit"))
-    action = proposal.get("action")
-    if action not in ("keep", "replace", "close"):
-        return CallToolResult(content=[TextContent(type="text", text="Invalid player data: action")], isError=True)
-    committed = action == "replace"
-    value = dict(schema="player-level-commit/2", status="committed" if committed else "discarded", action=action,
+def level_receipt(action, committed):
+    return dict(schema="player-level-commit/3", status="committed" if committed else "discarded", action=action,
         reason=None if committed else "Served actor moved at least S inputs past the read", position=3,
         inputs_since=1 if committed else 11, staleness_inputs=10,
         records=[dict(id="7" * 32)] if committed else [], kept=[])
+
+
+def receipt_result(value):
     return CallToolResult(content=[TextContent(type="text", text=json.dumps(value))])
+
+
+def rejected(message):
+    return CallToolResult(content=[TextContent(type="text", text=message)], isError=True)
 
 
 @server.tool()
-async def player_level_abstain(reason: str) -> CallToolResult:
+async def player_level_keep(reason: str, sources: list[str]) -> CallToolResult:
+    """A keep is discarded as stale; a blank reason is a rejected (isError) call."""
+    record(dict(tool="player_level_keep"))
+    if not reason.strip():
+        return rejected("Invalid player data: reason")
+    return receipt_result(level_receipt("keep", False))
+
+
+@server.tool()
+async def player_level_replace(text: str, expected_observations: list[str], status: str, confidence: float,
+                               sources: list[str], previous_outcome: str, previous_reason: str) -> CallToolResult:
+    """A replace commits; previous_outcome "bogus" is a rejected (isError) call."""
+    record(dict(tool="player_level_replace"))
+    if previous_outcome == "bogus":
+        return rejected("There is no current subgoal. previous_outcome must be \"none\"")
+    return receipt_result(level_receipt("replace", True))
+
+
+@server.tool()
+async def player_level_close(outcome: str, reason: str, sources: list[str]) -> CallToolResult:
+    """A close is discarded as stale."""
+    record(dict(tool="player_level_close"))
+    return receipt_result(level_receipt("close", False))
+
+
+@server.tool()
+async def player_level_abstain(reason_code: str, reason: str, sources: list[str]) -> CallToolResult:
     """A non-blank reason abstains; a blank one is a rejected (isError) call."""
     record(dict(tool="player_level_abstain"))
     if not reason.strip():
-        return CallToolResult(content=[TextContent(type="text", text="Invalid player data: reason")], isError=True)
-    value = dict(schema="player-level-abstain/1", status="abstained", reason=reason)
-    return CallToolResult(content=[TextContent(type="text", text=json.dumps(value))])
+        return rejected("Invalid player data: reason")
+    value = dict(schema="player-level-abstain/2", status="abstained", reason_code=reason_code, reason=reason)
+    return receipt_result(value)
 
 
 @server.tool()
