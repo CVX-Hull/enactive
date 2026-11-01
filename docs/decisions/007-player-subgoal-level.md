@@ -318,6 +318,10 @@ Each of these is amended only on acceptance, together with the change:
 
 ## Deferred
 
+Each item is tracked, with its owner source and revisit trigger, in
+[#325](https://github.com/CVX-Hull/enactive/issues/325):
+- the strategic / aspiration level ("the highest level may supply aspirations"),
+  which would supply the objective the subgoal level works toward;
 - the retrospective level, including program authoring;
 - P2 event abstraction and P4 escalation beyond the mechanical wake rules;
 - exploration objectives (competence progress and coverage, from the objectives
