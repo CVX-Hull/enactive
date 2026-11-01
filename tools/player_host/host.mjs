@@ -5,7 +5,7 @@ import { Type, AssistantMessageEventStream, isRetryableAssistantError } from '@e
 import { stream } from '@earendil-works/pi-ai/api/openai-completions';
 import { retryProviderRequest } from '@earendil-works/pi-ai/utils/provider-retry';
 import { McpClient, StdioTransport, toLlmContent } from '@earendil-works/pi-mcp';
-import { createValidationFeedback } from './validation-feedback.mjs';
+import { createValidationFeedback, FIX_LINE } from './validation-feedback.mjs';
 
 export const INPUT_LIMIT_BYTES = 1_048_576;
 // A level pass ends with exactly one of these calls. On its last LEVEL_RESERVED_REQUESTS requests the host offers only these.
@@ -335,6 +335,14 @@ export function levelCommitEvent(result) {
     kept:Array.isArray(value.kept) ? value.kept.filter(text) : []};
 }
 
+/** A terminal tool's `player-transport/1` unknown receipt: the adapter lost the response and, for a reader, offers no collection.
+ * Whether the call committed is known only to the store, so the pass ends and the driver reconciles `identity`. */
+export function levelUncertainEvent(result) {
+  const value = levelResult(result);
+  if (!object(value) || value.schema !== 'player-transport/1' || value.status !== 'unknown') return null;
+  return {type:'level-uncertain', identity:text(value.operation_id) ? value.operation_id : null};
+}
+
 /** Level telemetry from one valid `player_level_abstain` result; it ends the pass with nothing written. */
 export function levelAbstainEvent(result) {
   const value = levelResult(result);
@@ -357,6 +365,14 @@ export function declaredTools(messages) {
 export function restrictTools(messages, names) {
   return messages.map(message => message.role === 'system' && message.toolsAdded
     ? {...message, toolsAdded:message.toolsAdded.filter(tool => names.includes(tool.name))} : message);
+}
+
+/** Dotted paths where `after` differs from `before` (first four), for a refusal that names what the SDK changed. */
+export function changedFields(before, after, prefix = '') {
+  if (isDeepStrictEqual(before, after)) return [];
+  if (!object(before) || !object(after)) return [prefix || 'arguments'];
+  const keys = [...new Set([...Object.keys(before), ...Object.keys(after)])];
+  return keys.flatMap(key => changedFields(before[key], after[key], prefix ? `${prefix}.${key}` : key)).slice(0, 4);
 }
 
 /** True when the latest assistant turn called a terminal tool and every terminal call in it was refused (an error result). */
@@ -433,7 +449,9 @@ export async function runHost(options) {
   };
   let agent, client, transport, fatal, closing = false, requests = 0, requestId, requestTimer, requestInFlight = false, requestUsageAvailable = false;
   let workTimer, deadlineTimer;
-  let responseProgress, handoff, pendingHandoff, levelEnded = false;
+  let responseProgress, handoff, pendingHandoff, levelEnded = false, levelUncertain = false;
+  // Logical requests: one per streamFn call, whatever its provider retries; `reserved` is the current one's.
+  let logicalRequests = 0, reserved = false;
   const progressSnapshot = () => responseProgress ? {...responseProgress,
     scope:requestInFlight ? 'current-http-attempt' : 'last-http-attempt'} : null;
   const stopped = new AbortController();
@@ -516,11 +534,14 @@ export async function runHost(options) {
         emit('tool-result', {request_id:requestId, tool_call_id:toolCallId, tool:name, result:projectToolResultForTelemetry(result)});
         if (configuration.role === 'level' && LEVEL_TERMINAL_TOOLS.includes(name)) {
           // A keep, replace or close that becomes a commit or discard, or a valid abstain, ends the pass; a rejected call does not.
-          const level = name === 'player_level_abstain' ? levelAbstainEvent(result) : levelCommitEvent(result);
+          // So does a lost transport: the reader cannot collect, so the pass ends and the driver reconciles the identity.
+          const uncertain = levelUncertainEvent(result);
+          const level = uncertain ?? (name === 'player_level_abstain' ? levelAbstainEvent(result) : levelCommitEvent(result));
           if (level) {
             const {type, ...fields} = level;
-            emit(type, {request_id:requestId, tool_call_id:toolCallId, ...fields});
+            emit(type, {request_id:requestId, tool_call_id:toolCallId, ...(uncertain ? {tool:name} : {}), ...fields});
             levelEnded = true;
+            levelUncertain ||= uncertain !== null;
           }
         }
         try {
@@ -582,8 +603,8 @@ export async function runHost(options) {
             'Host resource status (software-generated at context construction):\n' +
             `Actual provider HTTP attempts charged before this request: ${requests}/${configuration.max_requests}.\n` +
             `Remaining allowance including this request: ${configuration.max_requests - requests}.\n` +
-            (configuration.role === 'level' && configuration.max_requests - requests <= LEVEL_RESERVED_REQUESTS
-              ? 'This request offers only the pass-ending tools; end the pass with exactly one of them.\n' : '') +
+            (configuration.role === 'level' && configuration.max_requests - logicalRequests <= LEVEL_RESERVED_REQUESTS
+              ?'This request offers only the pass-ending tools; end the pass with exactly one of them.\n' : '') +
             `Host decision time remaining at this snapshot: ${Math.max(0,(workDeadline-performance.now())/1000).toFixed(3)} seconds. Custodian time is a separate horizon.\n` +
             'An eligible retry can consume another attempt before the next status update. ' +
             'This is resource bookkeeping, not a human task, gameplay evidence, source-read proof, authority or a latency/quality metric.' + intent}]}];
@@ -602,9 +623,18 @@ export async function runHost(options) {
           emit('tool-refused', {request_id:requestId, tool_call_id:toolCall.id, tool:toolCall.name, reason:'level-ended', dispatched:false});
           return {block:true, reason:'The level pass ended with its terminal call; no further tool dispatch.', terminate:true};
         }
+        // A reserved request offers only the terminal tools. A model can still name another tool, which is executable
+        // but refused here, so the reservation holds and the refusal says which tools to call.
+        if (configuration.role === 'level' && reserved && !LEVEL_TERMINAL_TOOLS.includes(toolCall.name)) {
+          emit('tool-refused', {request_id:requestId, tool_call_id:toolCall.id, tool:toolCall.name, reason:'level-reserved', dispatched:false});
+          return {block:true, reason:`${toolCall.name} is not offered on this request and was not run: only ${LEVEL_TERMINAL_TOOLS.join(', ')} are available. `
+            + `Call exactly one of them.\n${FIX_LINE}`};
+        }
         if (!isDeepStrictEqual(toolCall.arguments, args)) {
           emit('tool-refused', {request_id:requestId, tool_call_id:toolCall.id, tool:toolCall.name, reason:'tool-arguments-changed', dispatched:false});
-          return {block:true, reason:'MCP input not sent: SDK changed arguments; explicitly correct the call.'};
+          const fields = changedFields(toolCall.arguments, args).join(', ');
+          return {block:true, reason:`MCP input not sent: the SDK changed the arguments of ${toolCall.name} (field ${fields}); resend the call with ${fields} given exactly as the schema requires, without nulls or coerced values.`
+            + (configuration.role === 'level' && LEVEL_TERMINAL_TOOLS.includes(toolCall.name) ? `\n${FIX_LINE}` : '')};
         }
       },
       // Pi's per-result terminate hint requires every result in the batch to
@@ -618,10 +648,13 @@ export async function runHost(options) {
           stop(configuration.role === 'level' && refusedTerminalCall(context.messages) ? 'level-final-refusal' : 'request-limit');
           return failureStream(model, fatal);
         }
-        // The last LEVEL_RESERVED_REQUESTS requests of a pass offer only the terminal tools, so a refused call can be repaired.
-        if (configuration.role === 'level' && configuration.max_requests - requests <= LEVEL_RESERVED_REQUESTS) {
+        // The last LEVEL_RESERVED_REQUESTS logical requests of a pass offer only the terminal tools, so a refused call can
+        // be repaired. A provider retry resends its logical request's declarations and never moves the window.
+        reserved = configuration.role === 'level' && configuration.max_requests - logicalRequests <= LEVEL_RESERVED_REQUESTS;
+        logicalRequests++;
+        if (reserved) {
           context = {...context, messages:restrictTools(context.messages, LEVEL_TERMINAL_TOOLS)};
-          emit('level-reserved-request', {request_id:`request-${requests + 1}`,
+          emit('level-reserved-request', {request_id:`request-${requests + 1}`, logical_request_id:`request-${logicalRequests}`,
             offered_tools:declaredTools(context.messages).map(tool => tool.name)});
         }
         const apiKey = (options.env ?? process.env)[configuration.api_key_env];
@@ -785,7 +818,8 @@ export async function runHost(options) {
     });
     await agent.prompt(options.prompt);
     const terminal = agent.state.messages.findLast(message => message.role === 'assistant');
-    if (!fatal && configuration.role === 'level' && !levelEnded) stop('level-no-proposal');
+    if (!fatal && configuration.role === 'level' && levelUncertain) stop('level-uncertain');
+    else if (!fatal && configuration.role === 'level' && !levelEnded) stop('level-no-proposal');
     else if (!fatal && terminal?.stopReason !== 'stop' && !((handoff || levelEnded) && terminal?.stopReason === 'toolUse')) stop('incomplete-terminal-response');
   } catch (error) {
     if (!fatal) stop(error instanceof HostError ? error.reason : 'host-failed');

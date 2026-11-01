@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { McpClient } from '@earendil-works/pi-mcp';
 import { runHost, validateConfiguration, validateMcpConfiguration, projectImageContext, projectToolResultForTelemetry, INPUT_LIMIT_BYTES,
-  INTENT_LABEL, boundedText, formatIntentTail, levelCommitEvent, levelAbstainEvent } from '../host.mjs';
+  INTENT_LABEL, boundedText, formatIntentTail, levelCommitEvent, levelAbstainEvent, changedFields } from '../host.mjs';
 
 const realSetTimeout = globalThis.setTimeout;
 const realDelay = ms => new Promise(resolve=>realSetTimeout(resolve,ms));
@@ -774,6 +774,59 @@ test('a terminal call refused on the last allowed request settles as level-final
   // The last request used by an ordinary tool is still a request-limit.
   const limited=await levelScenario(t,[reply(null,[readCall]),reply(null,[readCall]),reply(null,[readCall])],3);
   assert.equal(limited.result.reason,'request-limit');
+});
+
+test('a terminal call whose transport is lost ends the pass as level-uncertain, with its identity and no further dispatch', async t=>{
+  const lost=['player_level_close',{outcome:'achieved',reason:'lost transport',sources:[]}];
+  const {result,events,payloads,calls}=await levelScenario(t,[reply(null,[readCall,lost,abstainCall]),reply(null,[abstainCall])]);
+  assert.equal(result.ok,false);assert.equal(result.reason,'level-uncertain');assert.equal(payloads.length,1);
+  const [uncertain]=events.filter(e=>e.type==='level-uncertain');
+  assert.deepEqual([uncertain.tool,uncertain.identity,uncertain.request_id,typeof uncertain.tool_call_id],['player_level_close','1'.repeat(32),'request-1','string']);
+  assert.equal(events.some(e=>['level-commit','level-discard','level-abstain'].includes(e.type)),false);
+  const refused=events.find(e=>e.type==='tool-refused');
+  assert.deepEqual([refused.tool,refused.reason,refused.dispatched],['player_level_abstain','level-ended',false]);
+  assert.equal(events.find(e=>e.type==='abort').reason,'level-uncertain');
+  assert.equal(events.at(-1).reason,'level-uncertain');
+  assert.deepEqual(calls.map(c=>c.tool),['player_log_read','player_level_close']);
+});
+
+test('reserved requests are logical requests: a provider retry neither moves the window nor changes its declarations', async t=>{
+  // Logical request 1 is retried once (two attempts); logical request 3 is the first of the last two.
+  const shifted=await levelScenario(t,[serverError(502),reply(null,[readCall]),reply(null,[readCall]),reply(null,[rejectedReplace])],4);
+  assert.equal(shifted.result.reason,'level-final-refusal');assert.equal(shifted.payloads.length,4);
+  assert.deepEqual(shifted.payloads.map(toolNames),[levelTools,levelTools,levelTools,terminalTools]);
+  assert.deepEqual(shifted.events.filter(e=>e.type==='level-reserved-request').map(e=>[e.logical_request_id,e.request_id]),[['request-3','request-4']]);
+  // A retry of a reserved logical request resends the same terminal-only declarations.
+  const retried=await levelScenario(t,[reply(null,[readCall]),serverError(502),reply(null,[abstainCall])],3);
+  assert.equal(retried.result.ok,true);assert.equal(retried.payloads.length,3);
+  assert.deepEqual(retried.payloads.map(toolNames),[levelTools,terminalTools,terminalTools]);
+  assert.deepEqual(retried.events.filter(e=>e.type==='level-reserved-request').map(e=>e.logical_request_id),['request-2']);
+  assert.equal(JSON.stringify(retried.payloads[1].tools),JSON.stringify(retried.payloads[2].tools));
+  assert.ok(JSON.stringify(retried.payloads[2].messages.at(-1)).includes('offers only the pass-ending tools'));
+});
+
+test('a non-terminal call on a reserved request is refused without dispatch, with the tools to call and the fix line', async t=>{
+  const {result,events,payloads,calls}=await levelScenario(t,[reply(null,[readCall],true,undefined,'read'),reply(null,[abstainCall])],2);
+  assert.equal(result.ok,true);assert.equal(payloads.length,2);
+  assert.deepEqual(calls.map(c=>c.tool),['player_level_abstain']);
+  const [refused]=events.filter(e=>e.type==='tool-refused');
+  assert.deepEqual([refused.tool,refused.reason,refused.dispatched],['player_log_read','level-reserved',false]);
+  const message=payloads[1].messages.find(m=>m.role==='tool'&&m.tool_call_id==='read-0').content;
+  assert.ok(message.includes('player_log_read is not offered on this request and was not run')&&message.includes(terminalTools.join(', ')),message);
+  assert.ok(message.endsWith('Fix the call and resend it; abstaining is not the remedy for a fixable call.'),message);
+  // The refusal does not end the pass: the next request's terminal call does.
+  assert.equal(events.some(e=>e.type==='level-abstain'),true);
+});
+
+test('a terminal call whose arguments the SDK changed is refused naming the field, with the fix line', async t=>{
+  const coerced=['player_level_replace',{...replaceCall[1],confidence:'0.5'}];
+  const {result,calls,payloads,events}=await levelScenario(t,[reply(null,[coerced],true,undefined,'c'),reply(null,[replaceCall])]);
+  assert.equal(result.ok,true);assert.deepEqual(calls.map(c=>c.tool),['player_level_replace']);
+  assert.equal(events.find(e=>e.type==='tool-refused').reason,'tool-arguments-changed');
+  const message=payloads[1].messages.find(m=>m.role==='tool'&&m.tool_call_id==='c-0').content;
+  assert.ok(message.includes('MCP input not sent')&&message.includes('player_level_replace')&&message.includes('field confidence'),message);
+  assert.ok(message.endsWith('Fix the call and resend it; abstaining is not the remedy for a fixable call.'),message);
+  assert.deepEqual(changedFields({a:1,b:{c:[1],d:2}},{a:1,b:{c:[2],d:3}}),['b.c','b.d']);
 });
 
 test('production level schemas: a refused call names each field, the rule, the allowed values, a received value and an example', async ()=>{

@@ -183,8 +183,11 @@ async def player_level_replace(text: str, expected_observations: list[str], stat
 
 @server.tool()
 async def player_level_close(outcome: str, reason: str, sources: list[str]) -> CallToolResult:
-    """A close is discarded as stale."""
+    """A close is discarded as stale; the reason "lost transport" is the adapter's unknown receipt, with no collection."""
     record(dict(tool="player_level_close"))
+    if reason == "lost transport":
+        return receipt_result(dict(schema="player-transport/1", operation_id=OPERATION, session=SESSION, actor_id=ACTOR,
+            kind="player_level_close", status="unknown", reason="timed out", collect_with=None, input_replayed=False))
     return receipt_result(level_receipt("close", False))
 
 
