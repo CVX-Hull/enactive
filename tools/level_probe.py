@@ -20,8 +20,8 @@ Spend. `--max-usd` is required and is a hard cap on the *charged* cost, enforced
 model cost is all zero is refused (it could not measure spend). Every request is charged at its reported configured
 cost, and every request without reported usage at a per-request bound: `--max-request-usd` when given, else
 `--sample-estimate-usd` divided by the pass allowance. Before a sample launches, its host allowance is set to
-`min(pass allowance, floor(remaining USD / bound))` and the sample is skipped when that is below one, so the cap
-holds whenever the bound holds. Killing a running host when its charge would pass the remaining cap is only a
+`min(pass allowance, floor(remaining USD / max(bound, dearest request cost seen so far)))` and the sample is skipped
+when that is below one, so the cap holds whenever no request is dearer than that. Killing a running host when its charge would pass the remaining cap is only a
 backstop for a request that cost more than the bound.
 
 Inputs. The route must already be `player-host/5` (a conformance package's selected route included); nothing is
@@ -72,7 +72,9 @@ LIMITS = (
     'or abstains and a staleness-bound discard cannot occur.',
     'Operations pending when a pass started are replayed as finished: the recording\'s final state of each is used.',
     'Memory is not replayed: the replay store starts empty, so a pass recorded after a level commit sees no current '
-    'subgoal. A sample\'s state_fidelity says whether its recorded pass had a level commit before it.',
+    'subgoal. A sample\'s state_fidelity says whether its recorded pass had a level commit or stored level row before it '
+    '(`memory-reset`), had none (`exact`), or cannot be known because the recorded player store is missing or unreadable '
+    '(`unknown`).',
     'The allowance is each recorded pass\'s own when its receipt names one, else the manifest\'s; a sample\'s allowance '
     'record shows any reduction by the spend cap or override by --max-requests.',
     'Provider behavior at the replay moment, not the recorded run\'s: sampling differs and no outcome is play evidence.',
@@ -116,15 +118,21 @@ def git_state(root: Path = ROOT) -> tuple[str, bool]:
 
 # --- the recorded passes -------------------------------------------------------------------------------------
 
-def stored_level_rows(store: Path | None, before_wall: float | None) -> int:
-    """Level Work rows in a recorded player store created before `before_wall` (read-only); 0 when it is not readable."""
+def stored_level_rows(store: Path | None, before_wall: float | None) -> int | None:
+    """Level Work rows in a recorded player store created before `before_wall` (read-only).
+
+    None when that cannot be known: no store, no start time, or a store that is missing or unreadable.
+    """
     if store is None or before_wall is None or not store.is_file():
-        return 0
-    database = sqlite3.connect(f'file:{store}?mode=ro&immutable=1', uri=True)
+        return None
     try:
-        documents = [json.loads(row[0]) for row in database.execute("SELECT document FROM records WHERE kind='work'")]
-    finally:
-        database.close()
+        database = sqlite3.connect(f'file:{store}?mode=ro&immutable=1', uri=True)
+        try:
+            documents = [json.loads(row[0]) for row in database.execute("SELECT document FROM records WHERE kind='work'")]
+        finally:
+            database.close()
+    except (sqlite3.Error, ValueError):
+        return None
     return sum(d.get('data', {}).get('level') == 'subgoal' and d.get('created_wall', before_wall) < before_wall for d in documents)
 
 
@@ -133,7 +141,8 @@ def recorded_passes(session: Path) -> list[dict]:
 
     `prior_level_commits` counts the recorded run's level commits that wrote memory (a replace or a close, never a
     discard or a keep) in earlier passes' traces, and `prior_stored_rows` the level Work rows its player store held
-    from before the pass started; either makes the replay's empty memory differ from the recording.
+    from before the pass started (None when the store is missing or unreadable); either count makes the replay's empty
+    memory differ from the recording, and None with no commit leaves the fidelity `unknown`.
     """
     session = session.resolve(strict=True)
     database = sqlite3.connect(f'file:{session / "session.sqlite3"}?mode=ro&immutable=1', uri=True)
@@ -278,6 +287,7 @@ def classify(directory: Path, events: HostEvents, child_returncode: int | None) 
         elif kind == 'tool-refused':
             refused[event.get('tool_call_id')] = event
         elif kind == 'level-reserved-request':
+            # `logical_request_id` is the logical count (`request-K`) in both events, so a retried request matches itself.
             reserved.add(event.get('logical_request_id'))
         elif kind == 'request-start':
             last_logical = event.get('logical_request_id')
@@ -362,10 +372,12 @@ def run_sample(recorded: dict, sample: int, work: Path, out: Path, route: dict, 
         missing = accounting['missing_usage_attempts']
         record.update(pass_index=recorded['index'], sample=sample, session=recorded['session'].name,
                       actor=recorded['actor_directory'].name, missing_usage_attempts=missing,
+                      dearest_request_usd=max([v.get('cost', {}).get('total', 0) for v in events.usage.values()], default=0),
                       charged_usd=record['configured_cost_usd'] + missing * bound_usd,
                       stopped_by_spend_guard=stopped_by_guard, cleanup_absent=cleanup['process_absent'] and cleanup['group_absent'],
                       # Whether the replay's empty memory matches the recording at the pass start.
-                      state_fidelity='exact' if not (recorded['prior_level_commits'] or recorded['prior_stored_rows']) else 'memory-reset',
+                      state_fidelity=('memory-reset' if recorded['prior_level_commits'] or recorded['prior_stored_rows']
+                                      else 'unknown' if recorded['prior_stored_rows'] is None else 'exact'),
                       state_basis=dict(prior_level_commits=recorded['prior_level_commits'],
                                        prior_stored_rows=recorded['prior_stored_rows']),
                       allowance=dict(recorded=recorded['recorded_allowance'], used=route['max_requests']))
@@ -450,7 +462,7 @@ def probe(sessions: list[Path], route_path: Path, *, samples: int, max_usd: floa
     out.mkdir()
     work = out / 'work'
     work.mkdir()
-    records, spent, stopped = [], 0.0, False
+    records, spent, stopped, dearest = [], 0.0, False, 0.0
     try:
         for recorded in selected:
             level = manifest[recorded['session']]['level']
@@ -459,8 +471,9 @@ def probe(sessions: list[Path], route_path: Path, *, samples: int, max_usd: floa
             bound = max_request_usd if max_request_usd is not None else sample_estimate_usd / allowance
             context = (recorded['directory'] / 'context.txt').read_text()
             for sample in range(1, samples + 1):
-                # The cap is hard up front: no more requests than the remaining spend covers at the bound.
-                affordable = int((max_usd - spent) // bound)
+                # The cap is hard up front: no more requests than the remaining spend covers at the bound, or at the
+                # dearest request seen so far when that is dearer.
+                affordable = int((max_usd - spent) // max(bound, dearest))
                 if affordable < 1:
                     stopped = True
                     break
@@ -469,6 +482,7 @@ def probe(sessions: list[Path], route_path: Path, *, samples: int, max_usd: floa
                                     max_usd - spent, bound, level['staleness_inputs'])
                 records.append(record)
                 spent += record['charged_usd']
+                dearest = max(dearest, record['dearest_request_usd'])
                 if record['stopped_by_spend_guard']:
                     stopped = True
                     break

@@ -67,7 +67,12 @@ def recorded(tmp_path):
     store.close()
     (session / 'prompt.txt').write_text('Mission: survive and report.')
     (session / 'receipt.json').write_text(json.dumps(dict(schema='campaign-receipt/2', session=SESSION)))
-    (session / 'manifest.json').write_text(json.dumps(dict(level=dict(mode='shadow', inputs_per_pass=3, staleness_inputs=10,
+    # The recorded run's player store, empty: the replay's empty memory matches it.
+    from harness.player.memory import Memory
+    player_store = tmp_path / 'recorded-player.sqlite3'
+    Memory(player_store).close()
+    (session / 'manifest.json').write_text(json.dumps(dict(player_store=str(player_store),
+        level=dict(mode='shadow', inputs_per_pass=3, staleness_inputs=10,
         budget_fractions=[.5], intent_tail_bytes=1024, max_http_attempts=60, pass_max_requests=4, pass_seconds=60))))
     actor_directory = session / 'actors/001'
     (actor_directory / 'level').mkdir(parents=True)
@@ -116,6 +121,16 @@ class Provider:
                     number = len(provider.payloads)
                 calls = provider.policy(number, payload)
                 time.sleep(delay)
+                if isinstance(calls, int):
+                    # A retryable upstream error (the host retries it once without delay).
+                    body = b'{"error":{"message":"upstream unavailable","code":502}}'
+                    self.send_response(calls)
+                    self.send_header('content-type', 'application/json')
+                    self.send_header('retry-after-ms', '0')
+                    self.send_header('content-length', str(len(body)))
+                    self.end_headers()
+                    self.wfile.write(body)
+                    return
                 if calls is None:
                     body = b'{"error":{"message":"scripted failure","code":400}}'
                     self.send_response(400)
@@ -450,7 +465,7 @@ def test_state_fidelity_is_whether_the_replay_memory_matches_the_recording_at_th
 def test_state_fidelity_also_reads_level_work_in_the_recorded_player_store_created_before_the_pass(tmp_path, recorded, provider):
     from harness.player.memory import Memory
     store = tmp_path / 'recorded-player.sqlite3'
-    memory = Memory(store)
+    memory = Memory(store)  # the fixture's empty store, reopened
     memory.append(RECORDED_ACTOR, dict(schema='player-record/1', kind='work', text='Earlier', data=dict(level='subgoal'),
                                        sources=[], supports=[], supersedes=None, applicability=None, program_id=None))
     memory.append(RECORDED_ACTOR, dict(schema='player-record/1', kind='work', text='Other work', data={}, sources=[],
@@ -463,6 +478,37 @@ def test_state_fidelity_also_reads_level_work_in_the_recorded_player_store_creat
     assert (first['prior_stored_rows'], second['prior_stored_rows'], second['prior_level_commits']) == (0, 1, 0)
     report, _ = run(tmp_path, recorded, provider(clean_policy), samples=1)
     assert {s['pass_index']: s['state_fidelity'] for s in report['samples']} == {1: 'exact', 2: 'memory-reset'}
+
+
+@pytest.mark.parametrize('damage', ['missing', 'unreadable', 'no-store'])
+def test_state_fidelity_is_unknown_when_the_recorded_player_store_is_missing_or_unreadable(tmp_path, recorded, provider, damage):
+    store = tmp_path / 'recorded-player.sqlite3'
+    manifest = json.loads((recorded / 'manifest.json').read_text())
+    if damage == 'missing':
+        store.unlink()
+    elif damage == 'unreadable':
+        store.write_bytes(b'not a database' * 100)
+    else:
+        manifest.pop('player_store')
+        (recorded / 'manifest.json').write_text(json.dumps(manifest))
+    first, second = recorded_passes(recorded)
+    assert first['prior_stored_rows'] is None and second['prior_stored_rows'] is None
+    # A recorded level commit still proves the memory differs, whatever the store.
+    write_receipt(recorded, 1, [commit_event('replace')])
+    report, _ = run(tmp_path, recorded, provider(clean_policy), samples=1)
+    assert {s['pass_index']: s['state_fidelity'] for s in report['samples']} == {1: 'unknown', 2: 'memory-reset'}
+    assert report['pooled']['state_fidelity'] == {'unknown': 1, 'memory-reset': 1}
+
+
+def test_the_cap_divides_by_the_dearest_request_seen_when_it_exceeds_the_bound(tmp_path, recorded, provider):
+    # A request costs $1.10 against a $0.50 bound. $5 covers four requests at the bound for the first sample (which
+    # uses two, $2.20); the remaining $2.80 covers two at the dearest request, not five at the bound.
+    fake = provider(clean_policy)
+    route = route_file(tmp_path, fake.port, cost=50000.)
+    report, _ = run(tmp_path, recorded, fake, samples=3, max_usd=5., route=route, name='dearest', max_request_usd=.5, passes={1})
+    assert [s['allowance'] for s in report['samples']] == [dict(recorded=4, used=4), dict(recorded=4, used=2)]
+    assert [s['dearest_request_usd'] for s in report['samples']] == [pytest.approx(1.1)] * 2
+    assert report['spend']['samples_run'] == 2 and report['spend']['charged_usd'] <= 5.
 
 
 def test_terminal_calls_the_host_refused_or_could_not_parse_are_counted_and_repeat_identically(tmp_path, recorded, provider):
@@ -494,6 +540,17 @@ def test_reserved_requests_report_refused_non_terminal_calls_and_provider_errors
     assert report['samples'][0]['settled_reason'] == 'provider-error'
     report, _ = run(tmp_path, recorded, provider(lambda n, p: None), samples=1, max_requests=4, passes={1}, name='first-error')
     assert report['samples'][0]['settled_reason'] == 'provider-error' and report['pooled']['provider_error_on_reserved_request'] == 0
+
+
+def test_a_provider_error_after_a_retry_is_counted_on_its_reserved_logical_request(tmp_path, recorded, provider):
+    def policy(number, payload):
+        # Attempt 1 is retried (logical request 1); attempt 2 reads; attempt 3 is logical request 2, in the reserved
+        # window because only two attempts remain, and fails for good.
+        return {1: 502, 2: [('player_log_read', dict(after=0, limit=5))]}.get(number)
+    report, _ = run(tmp_path, recorded, provider(policy), samples=1, max_requests=4, passes={1})
+    sample = report['samples'][0]
+    assert sample['settled_reason'] == 'provider-error' and sample['requests'] == 3
+    assert report['pooled']['provider_error_on_reserved_request'] == 1
 
 
 def test_the_credential_comes_only_from_the_keychain_item(monkeypatch):
