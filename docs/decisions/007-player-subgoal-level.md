@@ -12,13 +12,17 @@ scope: Proposed direction for a multi-level player (an acting real-time player a
 is implemented, and no current contract relies on it
 ([authority](../standards/authority.md)).
 
-This is draft 3.
+This is draft 4.
 - **Draft 1** had the real-time player write its own memory. That conflicted with
   the owner's later direction and P1.
 - **Draft 2** followed the owner's newest-first reconciliation on
   [#319](https://github.com/CVX-Hull/enactive/issues/319), but an architecture
   review found six places where it did not match the code.
 - **Draft 3** fixes those six places.
+- **Draft 4** designs in the levels above the subgoal level as architecture: a
+  strategic/aspiration level and a retrospective level, with one recursive
+  pattern. The owner asked: "What about layers above the reader layer per our
+  discussions?" The first slice is unchanged: the actor plus the subgoal level.
 
 ## Problem
 
@@ -72,7 +76,8 @@ The recommendations, and the reconciliation that produced them, are on #319.
 | 1 | Software (host and custodian) | Feedback, accounting and budgets, on every request; commits proposals | Captures, receipts, budgets | Host status text; the session log; committed records | Nothing semantic |
 | 2 | **Actor** (LLM, the deciding player) | Perceives and acts, every turn | Current frames, its frozen guide and mission brief, and the **published intent** | Nothing in memory | Every input. It is the sole input sender and the sole decider |
 | 3 | **Subgoal level** (LLM, its own role) | Maintains one current subgoal toward the mission's objective, at the scale of tens of inputs | The same frozen guide and mission brief, the **player log projection**, sources, and current Work records | **Proposals only**; software commits them | Which subgoal to propose. It sends no input, gates nothing, and writes nothing directly |
-| 4 | Retrospective level | Consolidation across sessions | — | — | Deferred |
+| 4 | **Strategic / aspiration level** (LLM reader role; [later slice](#upper-levels-architecture-later-slices)) | Chooses which aspirations to pursue within viability, and when one is good enough. Works across episodes and sessions | The guide and mission brief, committed Work outcomes, and its own aspiration records, plus competence and viability statistics that software computes from committed records | Aspiration proposals; software commits them | Which aspiration the subgoal level serves. It sends no input |
+| 5 | **Retrospective level** (LLM reader role; [later slice](#upper-levels-architecture-later-slices)) | Consolidates episodes into claims and procedures, with false-memory protection (P8). Works across sessions | Session logs, committed records and programs | Claim, correction and program proposals; software commits them | Which consolidations to propose. Adoption is never automatic: claims stay fallible, and programs run only when the actor chooses to |
 
 **The actor's tool profile** is explicit:
 - `computer_*` and `computer_result`;
@@ -153,6 +158,96 @@ The custodian's per-class allowlist enforces this profile as well as the host's
   Gemini 3.8 Flash, #314's and #320's reference route, for comparability. The
   deployed selection is DeepSeek Flash1017; switching routes is a separate
   decision. Each role has its own counted allowance.
+
+## Upper levels (architecture; later slices)
+
+These levels are designed here so the architecture is whole. The first slice builds
+only what the subgoal level needs, and later levels may revise the shared mechanism
+under S-MIGRATION. Each upper level gets its own shaped child, pre-registration and
+owner decisions before any build. Their sources and revisit triggers are tracked in
+[#325](https://github.com/CVX-Hull/enactive/issues/325).
+
+**Where the levels run.** Every level runs as a reader inside a live session, the
+only place a reader capability exists. Each upper level uses the same model and
+route first (#25).
+
+**One recursive pattern (P11).** Every level above the actor is the same kind of
+component:
+
+| Part | Subgoal level (first slice) | Strategic / aspiration level | Retrospective level |
+|---|---|---|---|
+| Capability | Reader | Reader | Reader |
+| Input projection | The actor's log delta | Committed Work outcomes since its last pass, plus software statistics | The player store's records and sources, read at session start |
+| Proposal | One current subgoal; keep, revise or close for each record | Active aspirations, with their grounded progress variable and status | Claims with evidence, corrections, candidate programs |
+| Software commit | Staleness in actor inputs (S), at a position bound from the level's own reads; no handoff since | Staleness in Work records committed since the level's own read, bound by the custodian; no session boundary since | Schema, sources and supersession checks; nothing committed as authority |
+| Published to | The actor's intent tail | The subgoal level's input (the objective it serves) | The subgoal level's input: candidate programs and claims it may cite. Committed claims are a store the levels read, not a publication |
+| Wakes | K actor inputs, start, budget fractions | A subgoal closes or fails, or a session starts | Session start, or a record-count threshold |
+
+**How intent and programs reach the actor.**
+- **Each level publishes only to the level below it (P3).** The actor sees only the
+  subgoal intent.
+- **Programs.** Retrospective-authored programs reach the actor only when the
+  subgoal intent cites their IDs. The actor's program tools read and run by ID, and
+  it learns IDs only from the intent.
+- **Viability.** A viability concern reaches the actor only through a revised
+  subgoal; direct escalation (P4) is deferred.
+- **Earlier sessions.** Reading earlier sessions' operation logs, which live in
+  separate session stores, is a boundary decision for the retrospective level's
+  slice.
+
+**The strategic / aspiration level follows the objectives research** (the
+*Aspiration and goal selection objectives 2* report, `5f25bd42…`; lead reading,
+not adopted). Its structure is a cascade:
+1. **Viability as a constraint.** It is stated in grounded, player-visible
+   variables, with a credible bound computed by software from committed outcomes.
+2. **Aspirations from above.** The owner's example is "max out a skill". Each one
+   needs a grounded progress variable that passes a measurement check.
+3. **Goal choice by absolute competence progress,** computed by software from
+   attempt and success counts, with a uniform exploration floor.
+4. **A satisficing stop** at level M with confidence 1 − δ.
+
+The division of labour:
+- **The LLM** proposes candidate aspirations and their variables. Each variable is
+  drawn from a game-agnostic menu of variable *types* (Boolean event, ordinal level,
+  bounded numeric), never from a lead-authored list of aspirations.
+- **Classical computation** ranks and stops (P-GENERALITY's balance).
+- **M, δ, slack and priority order** are owner-supplied preferences, frozen per run
+  in the profile. No validated rule exists for fitting them.
+
+The level works inside the frozen mission brief and does not replace it. Aspirations
+the owner supplies enter only through that brief.
+
+Two choices are left to that level's slice:
+- how an aspiration enters goal selection: as a weight w(m), as the progress
+  variable, or as a constraint;
+- reuse by hindsight relabelling into a cell archive, the report's fifth structure.
+
+**The retrospective level** takes over program authoring, which was removed from
+the actor. It proposes claims and procedures with sources, uncertainty and
+supersession. Its risk is persistent self-written error (More Memory, Worse Agents),
+so its slice must measure claim accuracy and propagation before anything it writes
+is resurfaced.
+
+**Entry conditions:**
+- **Strategic level:** the first slice shows the subgoal level opening, holding and
+  closing subgoals, with intent accuracy above its pre-registered floor.
+- **Retrospective level:** enough committed records across sessions exist to
+  consolidate (a threshold set in its pre-registration).
+
+**Record kinds.** Aspirations use `decision` records, and claims use `claim`
+records, so there is no record-format change.
+- **The typed fields are the commit-proposal contract.** Each level's
+  `player_level_commit` proposal schema is versioned; the commit tool validates it
+  and writes it into `data`.
+- **A level discriminator in `data`** separates level-written records from other
+  writers' records of the same kind (arm B, older stores).
+- **Links.** Work records link to their aspiration through `supports`.
+- **Statistics read the store directly.** Software competence and viability
+  statistics read the store over those validated fields, including closed outcomes
+  in superseding corrections. They do not rely on `query`'s 50-record, unsuperseded
+  default.
+- **Later format change.** If records later need typed fields of their own,
+  `player-record/2` is that slice's decision.
 
 ## Memory across sessions
 
@@ -320,9 +415,8 @@ Each of these is amended only on acceptance, together with the change:
 
 Each item is tracked, with its owner source and revisit trigger, in
 [#325](https://github.com/CVX-Hull/enactive/issues/325):
-- the strategic / aspiration level ("the highest level may supply aspirations"),
-  which would supply the objective the subgoal level works toward;
-- the retrospective level, including program authoring;
+- **building** the strategic / aspiration and retrospective levels, which are
+  designed above; each needs its own slice;
 - P2 event abstraction and P4 escalation beyond the mechanical wake rules;
 - exploration objectives (competence progress and coverage, from the objectives
   research);
