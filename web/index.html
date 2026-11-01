@@ -12,21 +12,18 @@
 </head>
 <body>
   <header class="control-bar">
-    <div><span class="eyebrow">ENACTIVE</span><h1>Spectator</h1></div>
-    <div class="current-state"><span class="eyebrow">CURRENT CONTROL TARGET</span><p id="current-session">Session unknown</p><p id="connection" role="status">Connecting…</p><p id="control-freshness">No status received; liveness unknown.</p><details class="control-provenance"><summary>Full current session</summary><p id="current-session-full">Session unknown</p></details></div><div class="stop-control"><button id="pause" type="button">Pause automation permanently</button><p id="stop-state" role="status">Pause state unknown.</p><p id="pause-receiver" class="hint" hidden></p></div>
+    <div class="brand"><span class="mark" aria-hidden="true"></span><div><span class="eyebrow">Enactive</span><h1>Spectator</h1></div></div>
+    <div class="current-state"><div class="chips"><span class="chip status-chip" id="connection" role="status" data-state="pending">Connecting…</span><span class="chip"><span class="chip-label">Control target</span> <span class="mono" id="current-session">Session unknown</span></span></div><p id="control-freshness" class="hint">No status received; liveness unknown.</p><details class="control-provenance"><summary>Full current session</summary><p id="current-session-full">Session unknown</p></details></div><div class="stop-control"><button id="pause" type="button">Pause automation permanently</button><p id="stop-state" role="status">Pause state unknown.</p><p id="pause-receiver" class="hint" hidden></p></div>
   </header>
   <div class="observer-messages"><p id="status-error" class="error" role="alert" hidden></p><p id="pause-error" class="error" role="alert" hidden></p></div>
   <nav class="view-tabs" role="tablist" aria-label="Observer views"><button id="tab-watch" role="tab" aria-selected="true" aria-controls="watch" tabindex="0">Watch</button><button id="tab-timeline" role="tab" aria-selected="false" aria-controls="timeline" tabindex="-1">Timeline</button><button id="tab-analysis" role="tab" aria-selected="false" aria-controls="analysis" tabindex="-1">Analysis</button></nav>
   <main id="watch" role="tabpanel" aria-labelledby="tab-watch" tabindex="0">
     <section class="stage" aria-labelledby="view-heading">
-      <div class="stage-heading"><h2 id="view-heading">Actual captured pixels</h2><span class="eyebrow">PASSIVE OBSERVER</span></div>
-
-      <button id="watch-size" type="button" aria-pressed="false">Show original pixel size</button>
+      <div class="stage-heading"><h2 id="view-heading">Captured screen <span class="badge passive">Passive view</span></h2><button id="watch-size" class="ghost" type="button" aria-pressed="false">Show original pixel size</button></div>
       <div class="frame-shell" id="watch-frame-shell" tabindex="0" role="region" aria-label="Captured image viewport"><img id="frame" alt="Original PNG captured from the native window" hidden><p id="frame-note" role="status">No captured source available.</p></div>
-      <p id="source-age">No displayed source.</p>
-      <p id="frame-change" class="hint">No recorded input capture to compare yet.</p>
+      <div class="frame-facts"><p id="source-age" class="age">No displayed source.</p><p id="frame-change" class="fact">No recorded input capture to compare yet.</p></div>
+      <details class="explain"><summary>What this view shows</summary><p class="hint">The actual pixels the player received, fitted to this page; source metadata describes the full original PNG. Polling reads retained status and pixels; it never captures a new frame. An old image has an age, not an inferred game meaning. Ages compare the source's wall clock with this browser's; a negative value means the clocks differ.</p></details>
       <details><summary>Original source and geometry</summary><p id="source-details">No displayed source.</p></details>
-      <p class="hint">The image fits this page; source metadata describes the full original PNG. Polling reads retained status and pixels; it does not capture a new frame. An old image has an age, not an inferred game meaning.</p>
       <details>
         <summary>Local observer timing</summary>
         <p>Download retains the latest 2,000 source attempts on this page, with an explicit omitted-row count. Original presented time and receipt time use the source's clock. Browser timestamps mark status observation, completed decode and DOM replacement only, including updates while Watch is hidden. DOM replacement does not establish visibility, physical screen paint or model attention. Wall-clock differences or changes can invalidate comparisons. These measurements do not establish useful gameplay success. Reloading discards this local history; no trace is uploaded.</p>
@@ -35,8 +32,8 @@
       </details>
     </section>
     <aside>
-      <section aria-labelledby="statement-heading"><span class="eyebrow">PUBLIC PLAYER STATEMENT · FALLIBLE</span><h2 id="statement-heading">What the player said</h2><p class="hint">Long statements scroll within this panel. Original evidence and limits are available in Timeline.</p><p id="latest-statement" tabindex="0" role="region" aria-label="Public player statement">No public statement available.</p><p id="statement-meta" class="hint">Missing narration does not establish inactivity.</p></section>
-      <section><h2>Recent activity</h2><p id="since-last-look" role="status" hidden></p><button id="mark-seen" type="button" hidden>Mark as seen</button><p id="activity-summary">Activity not yet received.</p><p id="recent-activity">No activity available.</p><button id="open-timeline" type="button">Inspect Timeline</button></section>
+      <section class="statement" aria-labelledby="statement-heading"><div class="card-heading"><h2 id="statement-heading">What the player said</h2><span class="badge">Fallible claim</span></div><p id="latest-statement" tabindex="0" role="region" aria-label="Public player statement">No public statement available.</p><p id="statement-meta" class="hint">Missing narration does not establish inactivity.</p><details class="explain"><summary>About this statement</summary><p class="hint">Long statements scroll within this panel. Original evidence and limits are available in Timeline.</p></details></section>
+      <section aria-labelledby="activity-heading"><h2 id="activity-heading">Recent activity</h2><div class="since" ><p id="since-last-look" role="status" hidden></p><button id="mark-seen" class="ghost" type="button" hidden>Mark as seen</button></div><ul id="recent-activity" class="feed" role="list"><li class="empty">No activity available.</li></ul><p id="activity-summary" class="hint">Activity not yet received.</p><button id="open-timeline" class="ghost" type="button">Inspect Timeline</button></section>
       <details class="diagnostics"><summary>Mechanical facts, budgets and player assertions</summary>
       <section aria-labelledby="control-heading">
         <h2 id="control-heading">Control and mechanical facts</h2>

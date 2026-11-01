@@ -35,6 +35,11 @@ const wallTime = seconds => {
   const date = new Date(seconds * 1000);
   return Number.isFinite(date.valueOf()) ? date.toISOString().replace('T', ' ').replace('Z', ' UTC') : 'invalid clock';
 };
+const clockTime = seconds => {
+  const full = wallTime(seconds);
+  if (/UTC$/.test(full)) return `${full.slice(11, 19)} UTC`;
+  return full === 'unreported' ? 'time unreported' : full;
+};
 
 // One finite watchdog covers HTTP, body consumption and image decode. An aborted
 // or superseded request cannot later replace a source's metadata or pixels.
@@ -164,7 +169,7 @@ function adoptSession(session) {
   show('latest-statement', 'No public statement available for this session.');
   show('statement-meta', 'Missing narration does not establish inactivity.');
   show('activity-summary', 'Current-session activity not yet received.');
-  show('recent-activity', 'No current-session activity available.');
+  renderRecentActivity([], 'No current-session activity available.');
   if (selectedEntry) { renderInspectionScope(selectedEntry); void loadInspectionSource(selectedEntry); }
   renderStop();
   renderTimeline();
@@ -261,7 +266,8 @@ function renderFrameNote(message) {
   const source = displayed.source;
   const age = (Date.now() - source.presented_ms) / 1000;
   const receiptAge = Date.now() / 1000 - source.received_wall;
-  show('source-age', `Presented ${age.toFixed(1)} seconds ago · received ${receiptAge.toFixed(1)} seconds ago (wall-clock comparisons; negative values indicate clock differences).`);
+  // The full clock caveat lives in "What this view shows"; a negative age states it inline.
+  show('source-age', `Presented ${age.toFixed(1)} s ago · received ${receiptAge.toFixed(1)} s ago${age < 0 || receiptAge < 0 ? ' · negative: the clocks differ' : ''}`);
   show('source-details', `Session: ${source.session}\nSource: ${source.source_id}\nCapture: ${source.capture_id}\nSHA-256: ${source.sha256}\nOriginal presented_ms: ${source.presented_ms}\nOriginal received_wall: ${source.received_wall}\nPNG: ${source.width} × ${source.height} · native window: ${source.window_width} × ${source.window_height}\nViewport: [${source.viewport.join(', ')}]`);
 }
 function clearDisplayed() {
@@ -346,6 +352,7 @@ async function refresh() {
     $('status-error').hidden = true;
     show('status-error', '');
     show('connection', 'Status received · liveness not certified');
+    $('connection').setAttribute('data-state', 'ok');
     show('control-freshness', `Last status received ${new Date(observedAt).toISOString()}; recorded ACTIVE/PID is not proof of liveness.`);
     renderFacts(status);
     const key = sourceKey(status.latest_source);
@@ -355,6 +362,7 @@ async function refresh() {
     if (generation !== sessionGeneration) return;
     statusError = error.message;
     show('connection', 'Status unavailable · last snapshot retained');
+    $('connection').setAttribute('data-state', 'error');
     show('control-freshness', statusReceivedAt === null ? 'No current-session status received; liveness unknown.' : `Last status received ${new Date(statusReceivedAt).toISOString()}; current state unknown.`);
     show('status-error', `Status unavailable: ${error.message}. Mechanical facts below are the last received snapshot; current ownership and state are unknown.`);
     $('status-error').hidden = false;
@@ -431,8 +439,25 @@ function renderActivity(snapshot) {
   show('latest-statement', statement?.text ? statement.text : 'No public statement available for this session.');
   show('statement-meta', statement ? `Fallible public statement · actor ${value(statement.actor_id)} · request ${value(statement.request_id)} · original wall ${wallTime(statement.created_wall)} · original bytes omitted: ${value(statement.omitted_bytes)}; further display bytes omitted: ${value(statement.display_omitted_bytes)}. No captured frame is linked to a statement, so its claims are unverified until checked against the pixels. Historical/terminal labels are recorded claims, not liveness.` : 'Missing or empty narration does not establish inactivity.');
   show('activity-summary', `${snapshot.entries.length} retained entries · ${omittedSummary(snapshot)}${snapshot.clientOmitted ? ` · ${snapshot.clientOmitted} further omitted on this page` : ''}.`);
-  show('recent-activity', snapshot.entries.slice(-3).map(entryTitle).join('\n') || 'No use observed in available coverage; missing coverage is unknown.');
+  renderRecentActivity(snapshot.entries.slice(-3).reverse(), 'No use observed in available coverage; missing coverage is unknown.');
   show('frame-change', frameChange(snapshot.entries));
+}
+// The Watch feed: newest first, each with its wall-clock age, or one explicit empty row.
+function renderRecentActivity(entries, emptyText) {
+  const rows = entries.map(entry => {
+    const row = document.createElement('li');
+    const title = document.createElement('span');
+    title.textContent = entryTitle(entry);
+    const when = document.createElement('span');
+    when.className = 'when';
+    // The recorded clock time, not a relative age: it cannot go stale during an
+    // outage and needs no browser-clock comparison.
+    when.textContent = clockTime(entry.created_wall);
+    row.append(title, when);
+    return row;
+  });
+  if (!rows.length) { const empty = document.createElement('li'); empty.className = 'empty'; empty.textContent = emptyText; rows.push(empty); }
+  $('recent-activity').replaceChildren(...rows);
 }
 // A neutral recorded fact against over-trust: the latest input's capture against
 // the previous retained capture. It reads hashes only and infers no failure,
