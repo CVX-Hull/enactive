@@ -10,14 +10,16 @@ One [campaign custodian](../../tools/campaign_run.py) owns fresh mechanical targ
 store/server lifetime and final cleanup. The [driver](../../tools/campaign_player.py)
 owns the frozen [player host](../contracts/player-host.md)/MCP groups and at most one
 successor. The [package validator](../../tools/campaign_package.py) is authoritative
-for the closed `campaign-run/3` admission. No game-phase/identity admission or semantic mission
-service remains.
+for the closed `campaign-run/4` admission. No game-phase/identity admission or semantic mission
+service remains. With a subgoal level ([ADR-007](../decisions/007-player-subgoal-level.md)
+candidate), the driver also owns one level per actor, as described below.
 
 ## Frozen data
 
 Select one fresh canonical project-local directory under `.runtime/computer-sessions/`.
 Its manifest binds the exact clean source commit and SHA256 of all five driver
-inputs: `route.json`, `mcp-template.json`, `context.txt`, `prompt.txt`, `target.json`.
+inputs: `route.json`, `mcp-template.json`, `context.txt`, `prompt.txt`, `target.json`
+(six with a level, adding `level-role.txt`). It also freezes the actor profile and the level.
 It also freezes native executable/adapter bytes, bounded initial target files,
 shared-lock path, explicit `player-memory/1` store, player host argv, effort,
 loopback port, original wall/host/aggregate-host seconds, one/two-host limit,
@@ -29,13 +31,41 @@ working directory are absolute. Keep the prepared wrapper/windowed project userd
 and normal input configuration. The target receives only the permitted environment
 and inherited mechanical descriptors, not provider credentials.
 
-`route.json` uses current `player-host/2` with text/image input and explicit
+### Actor profile and the subgoal level
+
+`actor_profile` is `flat` (basic control, memory and programs) or `narrowed` (no
+memory tools or program save). `level` is null, the zero-level-host configuration
+(flat, arm B and the fourth arm), or a closed object:
+`mode` (`shadow` or `live`), `inputs_per_pass` (K), `staleness_inputs` (S),
+`budget_fractions` (at most 8 increasing values in (0,1)), `intent_tail_bytes`
+(64–4096), `max_http_attempts` (the level's share per actor), `pass_max_requests`
+and `pass_seconds`. A level requires `narrowed` and freezes a sixth input,
+`level-role.txt`, byte-identical to the [frozen role prompt v1](../../tools/player_roles/subgoal-v1.txt).
+The route stays the actor role; its `intent_tail_bytes` equals the level's bound
+in live mode and is null in shadow mode, where the level commits but the actor never
+sees intent.
+
+Each actor-and-level pair is partitioned before launch: the level gets
+`min(max_http_attempts, campaign remainder)` and the actor the route's allowance
+from what is left, so their sum stays within the campaign cap. The driver mints one
+reader per actor after the actor and, once the actor host reports `mcp-connected`,
+consults the [wake rules](../../tools/level_schedule.py) between passes: a start pass
+only to revalidate open Work records, then every K actor inputs or a crossed budget
+fraction, never on an empty delta and never more than one pass at a time. Each pass
+is a finite `role: level` host under `actors/NNN/level/PPP/`, with the reader MCP
+profile, the frozen context, and a prompt of the role text, the actor's mission brief
+and mechanical wake facts. A pass ends at its allowance or `pass_seconds`, and is
+closed on its actor's stop, Pause or handoff before any successor. Its attempts are
+charged like an actor's; an unaccounted pass is charged its whole allocation. The
+custodian appends per-call lock wait and hold times to `call-timing.jsonl`.
+
+`route.json` uses current `player-host/3` (role `actor`) with text/image input and explicit
 provider/effort/price metadata and image peak and block, chosen against the
 provider's image limit. The selected route is OpenRouter /
 an explicitly pinned provider / DeepSeek Flash1017 medium, default service tier, no fallback.
 Diagnostic or qualification packages may freeze another conformed route; their
 record names it, and it confers no selection.
-`mcp-template.json` must equal the current generated profile with `@ACTOR_CONFIG@`.
+`mcp-template.json` must equal the current generated profile for `actor_profile` with `@ACTOR_CONFIG@`.
 Freeze the player guide/current schema, meaningful task, original limits and ending
 reserve in context/prompt. Do not put mutable engineering source or hidden game
 facts into player context.
@@ -74,7 +104,7 @@ shape, supported reasoning/routing fields and their limits.
 Generate the exact current MCP template without an actor capability:
 
 ```sh
-.venv/bin/python -m tools.configure_player_tools --template --output .runtime/computer-sessions/SELECTED_FRESH_PACKAGE/mcp-template.json
+.venv/bin/python -m tools.configure_player_tools --template --profile SELECTED_ACTOR_PROFILE --output .runtime/computer-sessions/SELECTED_FRESH_PACKAGE/mcp-template.json
 ```
 
 The closed `manifest.json` shape is below. Replace uppercase path/identity/hash
@@ -86,7 +116,7 @@ the actual bytes, for example `shasum -a 256 SELECTED_FILE`; preserve those byte
 
 ```json
 {
-  "schema": "campaign-run/3",
+  "schema": "campaign-run/4",
   "session": "NEW_32_LOWERCASE_HEX_ID",
   "source_commit": "EXACT_40_HEX_CLEAN_HEAD",
   "files": {
@@ -102,6 +132,7 @@ the actual bytes, for example `shasum -a 256 SELECTED_FILE`; preserve those byte
   "effort": "medium", "port": 8766,
   "wall_seconds": 9000, "host_seconds": 3600, "total_host_seconds": 7200,
   "max_hosts": 2, "max_http_attempts": 360,
+  "actor_profile": "flat", "level": null,
   "limits": {"max_inputs": 6000, "max_requests": 10000, "max_frames": 1500, "max_bytes": 2147483648},
   "accounting": {
     "prior_attempts": 0, "prior_reserved_usd": 0,

@@ -15,7 +15,7 @@ menu Save is not application exit; a local routine's done is not game success.
 
 ## Player host events
 
-Current [`player-host/2`](contracts/player-host.md) uses telemetry version2 (retained
+Current [`player-host/3`](contracts/player-host.md) uses telemetry version2 (retained
 `player-host/1` traces report `unsupported_version`; their summaries stay in the
 acceptance records), one JSONL trace per actor at
 `actors/NNN/host.jsonl`. Original request/tool IDs, wall and monotonic timestamps
@@ -61,7 +61,7 @@ These commands are offline and read-only, writing summaries to stdout:
 .venv/bin/python -m tools.evaluate witness-summary .runtime/computer-sessions/SELECTED observer-export.json
 ```
 
-The selected actor traces and current `campaign-run/3` / `campaign-receipt/2`
+The selected actor traces and current `campaign-run/4` / `campaign-receipt/2`
 sidecars supply scoped provenance. The control reader opens a current
 `computer-session/2` SQLite snapshot read-only, bounded by table/byte/path limits;
 it neither migrates data nor reconstructs authority. `observer-timing/4` exports

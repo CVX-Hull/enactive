@@ -31,7 +31,7 @@ logical responsibilities; arrows identify requests, results or user control.
 ## Runtime and state
 
 `tools/campaign_run.py` is the sole finite custodian. It validates a fresh frozen
-`campaign-run/3` package and reserves exclusion before launch. `OwnedTarget` keeps
+`campaign-run/4` package and reserves exclusion before launch. `OwnedTarget` keeps
 exact subprocess handles and passes an inherited shared-lock descriptor and a
 nonblocking Unix socket to the SDL adapter. Native retains the shared lock for
 its lifetime, including after the custodian loses its own reference.
@@ -123,7 +123,7 @@ requires no save, menu or identity check. [Run procedure](operations/campaign-ru
 One current set is `computer-wire/1`, request/target/receipt `/2`,
 `computer-session/2`, `computer-operation/1`, `computer-source/1`,
 `player-memory/1`, `player-record/1`, `player-program/1`, `program-view/3`,
-`player-handoff/2`, `player-host/2` and `campaign-run/3`. The exact contracts own the complete set.
+`player-handoff/2`, `player-host/3` and `campaign-run/4`. The exact contracts own the complete set.
 [Migration](operations/migration.md) rejects old stores before effects and preserves
 artifacts/saves as history. Rollback closes writers and selects a coherent earlier
 source/data deployment; mixed readers and replay are unsupported.

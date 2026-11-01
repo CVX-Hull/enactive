@@ -14,7 +14,27 @@ from tools.configure_player_tools import ROOT,configuration
 
 FILES={'route.json','mcp-template.json','context.txt','prompt.txt','target.json'}
 FIELDS={'schema','session','source_commit','files','initial_files','native','library','shared_lock','player_store',
-        'host','effort','port','wall_seconds','host_seconds','total_host_seconds','max_hosts','max_http_attempts','limits','accounting'}
+        'host','effort','port','wall_seconds','host_seconds','total_host_seconds','max_hosts','max_http_attempts','limits','accounting',
+        'actor_profile','level'}
+LEVEL_FIELDS={'mode','inputs_per_pass','staleness_inputs','budget_fractions','intent_tail_bytes',
+              'max_http_attempts','pass_max_requests','pass_seconds'}
+# The frozen, versioned subgoal role prompt (ADR-007 appendix); a change makes a new version.
+LEVEL_ROLE=ROOT/'tools/player_roles/subgoal-v1.txt'
+
+
+def level_profile(level,actor_profile:str):
+    """Validate the optional subgoal level; null is the zero-level-host configuration."""
+    if level is None:return None
+    closed(level,LEVEL_FIELDS)
+    if actor_profile!='narrowed':raise ControlError('A subgoal level serves only a narrowed-profile actor')
+    if level['mode'] not in ('shadow','live'):raise ControlError('Level mode is shadow or live')
+    for name,low,high in (('inputs_per_pass',1,1000),('staleness_inputs',1,1000),('intent_tail_bytes',64,4096),
+                         ('max_http_attempts',1,10000),('pass_max_requests',1,64),('pass_seconds',30,3600)):
+        integer(level[name],low,high)
+    fractions=level['budget_fractions']
+    if (type(fractions) is not list or len(fractions)>8 or any(type(f) is not float or not 0<f<1 for f in fractions)
+            or fractions!=sorted(set(fractions))):raise ControlError('Budget fractions are at most 8 increasing values in (0,1)')
+    return level
 
 
 def digest(path: Path) -> str:
@@ -31,7 +51,7 @@ def local_file(value: str) -> Path:
 
 
 def host_argv(host) -> list[str]:
-    """Validate the closed `player-host/2` adapter selection and return its argv."""
+    """Validate the closed `player-host/3` adapter selection and return its argv."""
     closed(host,{'argv'})
     argv=host['argv']
     if (type(argv) is not list or not 1<=len(argv)<=8
@@ -49,10 +69,12 @@ def preflight(directory: Path) -> tuple[dict,dict,dict]:
     if not directory.is_relative_to(ROOT/'.runtime/computer-sessions') or directory.is_symlink():
         raise ControlError('Select a fresh explicit project-local computer session package')
     profile=read_json(directory/'manifest.json',1048576)
-    if type(profile) is not dict or profile.get('schema')!='campaign-run/3':
+    if type(profile) is not dict or profile.get('schema')!='campaign-run/4':
         raise ControlError('Unsupported campaign package; old admissions are inert history')
     closed(profile,FIELDS)
     host_argv(profile['host'])
+    if profile['actor_profile'] not in ('flat','narrowed'):raise ControlError('Actor profile is flat or narrowed')
+    level=level_profile(profile['level'],profile['actor_profile'])
     if not isinstance(profile['session'],str) or re.fullmatch('[0-9a-f]{32}',profile['session']) is None:
         raise ControlError('Invalid fresh mechanical session')
     current=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()
@@ -63,7 +85,10 @@ def preflight(directory: Path) -> tuple[dict,dict,dict]:
     tracked=subprocess.check_output(['git','ls-files','-z','--',*sorted(adapter)],cwd=ROOT).split(b'\0') if adapter else []
     if adapter-{name.decode() for name in tracked if name}:
         raise ControlError('Player host adapter files must be tracked by the clean source commit')
-    if set(profile['files'])!=FILES:raise ControlError('Freeze every selected driver input')
+    if set(profile['files'])!=FILES|({'level-role.txt'} if level else set()):
+        raise ControlError('Freeze every selected driver input')
+    if level and digest(directory/'level-role.txt')!=digest(LEVEL_ROLE):
+        raise ControlError('The level role prompt must be the frozen current version')
     for name,sha in profile['files'].items():
         path=local_file(str(directory/name))
         if path.stat().st_size>1048576 or digest(path)!=sha:raise ControlError('Frozen driver input differs')
@@ -91,12 +116,18 @@ def preflight(directory: Path) -> tuple[dict,dict,dict]:
     if not profile['host_seconds']<=profile['total_host_seconds']<profile['wall_seconds']-30:
         raise ControlError('Original host and cleanup horizons do not fit')
     route=read_json(directory/'route.json',1048576)
-    if type(route) is not dict or route.get('schema')!='player-host/2':
+    if type(route) is not dict or route.get('schema')!='player-host/3':
         raise ControlError('Unsupported player host route; old routes are inert history')
     if route.get('service_tier')!='default':raise ControlError('This campaign allocation supports only the selected default serving tier')
-    if route['max_requests']>profile['max_http_attempts']:raise ControlError('Per-host attempts exceed original campaign allowance')
+    # Only a live level publishes intent; shadow mode measures it without influencing play.
+    tail=level['intent_tail_bytes'] if level and level['mode']=='live' else None
+    if route.get('role')!='actor' or route.get('intent_tail_bytes',0)!=tail:
+        raise ControlError('The frozen route must be the actor role with the level mode\'s intent tail')
+    # Each actor-and-level pair is partitioned before launch within the campaign cap.
+    if route['max_requests']+(level['max_http_attempts'] if level else 0)>profile['max_http_attempts']:
+        raise ControlError('Per-host attempts exceed original campaign allowance')
     template=read_json(directory/'mcp-template.json',1048576)
-    if template!=configuration('@ACTOR_CONFIG@',profile='flat'):raise ControlError('Only the current explicit actor MCP profile is supported')
+    if template!=configuration('@ACTOR_CONFIG@',profile=profile['actor_profile']):raise ControlError('Only the current explicit actor MCP profile is supported')
     target=read_json(directory/'target.json',1048576)
     closed(target,{'argv','cwd','env'})
     if (type(target['argv']) is not list or not 1<=len(target['argv'])<=32

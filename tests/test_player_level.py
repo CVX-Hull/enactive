@@ -402,6 +402,30 @@ def test_reader_minting_refuses_a_store_no_commit_could_cover(tmp_path):
         runtime.close(); memory.close()
 
 
+def test_intent_reports_the_latest_level_subgoal_and_its_age(level):
+    app, channel, actor, reader = level
+    assert app.intent(actor['actor_id'])['record'] is None
+    assert call(app, actor, 'player_intent', {})['schema'] == 'player-intent/1'
+    call(app, actor, 'computer_input', dict(actions=[key()]))
+    read_all(app, reader)
+    call(app, reader, 'player_level_commit', proposal(subgoal()))
+    call(app, actor, 'computer_input', dict(actions=[key()]))
+    intent = call(app, actor, 'player_intent', {})
+    assert intent['record']['text'] == 'Reach the visible door' and intent['grants_authority'] is False
+    assert intent['age']['inputs_since_commit'] == 1 and intent['age']['inputs_by_this_actor'] == 2
+    assert intent['age']['same_actor'] is True and intent['age']['same_session'] is True
+
+
+def test_call_timing_records_lock_wait_and_never_breaks_a_call(level):
+    app, channel, actor, reader = level
+    rows = []
+    app.timing = rows.append
+    call(app, actor, 'computer_observe', {})
+    assert rows[0]['tool'] == 'computer_observe' and rows[0]['wait_ms'] >= 0 and rows[0]['held_ms'] >= 0
+    app.timing = lambda row: 1 / 0
+    assert call(app, actor, 'computer_observe', {})['status'] == 'completed'
+
+
 def test_reader_mcp_adapter_reads_and_commits_over_http(level, tmp_path):
     app, channel, actor, reader = level
     server, thread = serve(app, 0)

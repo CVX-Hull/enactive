@@ -1,7 +1,7 @@
 # Bounded Pi player host
 
 This private package is the Pi-based adapter that implements the host-neutral
-[player-host contract](../../docs/contracts/player-host.md) (`player-host/2`);
+[player-host contract](../../docs/contracts/player-host.md) (`player-host/3`);
 the campaign driver selects it only through the package's frozen `host.argv`.
 The [current component](../../docs/components/player-interface.md) owns the player interface;
 [`069-controllable-player-host.md`](../../docs/changes/069-controllable-player-host.md)
@@ -68,11 +68,15 @@ below, no fatal failure latch, successful owned MCP closure, and a successful
 final-file write. `runHost(options)` is the
 programmatic seam; tests inject `fetch` there. No fake-provider CLI is exposed.
 
-The closed route has exactly `schema: "player-host/2"`, `model`,
+The closed route has exactly `schema: "player-host/3"`, `role` (`actor` or `level`),
+`intent_tail_bytes` (null, or 64–4096 for an actor), `model`,
 `api_key_env`, `max_requests`, `request_timeout_seconds`, `service_tier`, the required positive
 integer `max_context_images` and the required integer `context_image_block`
-(1 ≤ block ≤ `max_context_images`). `pi-player-host/1` through `/4`, `player-host/1` and
-missing/invalid fields are rejected; closed historical configurations and traces are
+(1 ≤ block ≤ `max_context_images`). `pi-player-host/1` through `/4`, `player-host/1`, `/2` and
+missing/invalid fields are rejected. An actor tail calls the host-internal `player_intent`
+tool before each request, which must be discovered and never enabled for the model; a
+level host emits `level-pass`, `level-commit` and `level-discard` (see the
+[contract](../../docs/contracts/player-host.md#roles-and-the-intent-tail)); closed historical configurations and traces are
 evidence, not runnable current inputs.
 `model` contains Pi's
 explicit `id`, `name`, `api: "openai-completions"`, `provider`, `baseUrl`,

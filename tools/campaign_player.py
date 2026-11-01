@@ -14,6 +14,7 @@ import time
 from harness.computer.launch import close_group
 from harness.computer.protocol import ControlError,canonical,read_json
 from tools.configure_player_tools import ROOT,configuration
+from tools.level_schedule import LevelSchedule
 
 
 def write_new(path: Path,value,*,text=False) -> None:
@@ -29,6 +30,8 @@ class HostEvents:
         self.requests=set();self.settled=None;self.handoff=None;self.last_response_wall=None
         self.usage={};self.error=None;self.started=False
         self.observer=observer;self.ordinal=0
+        # Readiness gates a level's first pass; level events are a pass's own outcomes.
+        self.ready=False;self.level=[]
 
     def read(self) -> bool:
         chunk=self.stream.read(1048576)
@@ -43,8 +46,13 @@ class HostEvents:
             kind=value.get('type')
             if kind=='host-start':
                 if (self.started or value.get('telemetry_version')!=2
-                        or value.get('schema')!='player-host/2'):raise ControlError('Unsupported/repeated current host trace')
+                        or value.get('schema')!='player-host/3'):raise ControlError('Unsupported/repeated current host trace')
                 self.started=True
+            elif kind=='mcp-connected':
+                self.ready=True
+            elif kind in ('level-commit','level-discard'):
+                if len(self.level)<256:self.level.append({k:value.get(k) for k in
+                    ('type','reason','position','inputs_since','staleness_inputs','record_ids','kept')})
             elif kind=='request-start':
                 match=re.fullmatch(r'request-([1-9][0-9]*)',value.get('request_id',''))
                 if not self.started or not match:raise ControlError('Host request lacks current origin')
@@ -72,7 +80,7 @@ class HostEvents:
                and self.settled.get('requests')==len(self.requests))
         # Uncertain trace accounting reserves the entire original host allocation.
         return dict(observed_attempts=len(self.requests),attempts_charged=len(self.requests) if valid else self.allowance,
-            accounting_complete=valid,settled=self.settled,handoff=self.handoff,
+            accounting_complete=valid,settled=self.settled,handoff=self.handoff,level_events=self.level,
             configured_estimate_usd=sum(v.get('cost',{}).get('total',0) for v in self.usage.values()),
             usage_available_attempts=len(self.usage),missing_usage_attempts=len(self.requests)-len(self.usage))
 
@@ -97,6 +105,90 @@ def _handoff_context(application,actor,event):
         raise ControlError('Frozen handoff context is not current mechanical identity')
 
 
+class LevelPasses:
+    """One actor's subgoal level: a reader plus finite level-role host passes, at most one in flight."""
+    def __init__(self,target: Path,directory: Path,application,actor: dict,level: dict,route: dict,
+                 profile: dict,secret: str,allowance: int,actor_allowance: int):
+        self.target,self.directory,self.application,self.level=target,directory,application,level
+        self.route,self.profile,self.secret,self.allowance=route,profile,secret,allowance
+        self.actor_id=actor['actor_id']
+        target.mkdir(mode=0o700)
+        reader=application.add_reader(self.actor_id,staleness_inputs=level['staleness_inputs'])
+        self.reader_id=reader['actor_id']
+        self.reader_file=target/'reader.json'
+        write_new(self.reader_file,dict(schema='player-adapter/1',base_url=f"http://127.0.0.1:{profile['port']}",
+                                       session=profile['session'],**reader))
+        self.schedule=LevelSchedule(level['inputs_per_pass'],tuple(level['budget_fractions']),actor_allowance)
+        self.passes=[];self.charged=0;self.current=None
+
+    def remaining(self) -> int:
+        return self.allowance-self.charged
+
+    def poll(self,actor_events: 'HostEvents',stopped: bool,actor_deadline: float) -> None:
+        now=time.monotonic()
+        if self.current is not None:
+            child,events,record,ends=self.current
+            events.read()
+            if child.poll() is not None or stopped or now>=ends:self.finish()
+            return
+        if stopped or not actor_events.ready or self.remaining()<1 or actor_deadline-now<30:return
+        with self.application.serial:
+            entries,inputs=self.application.runtime.store.actor_counts(self.actor_id)
+            open_records=len(self.application.memory.current('work'))
+        reason=self.schedule.due(entries=entries,inputs=inputs,attempts=len(actor_events.requests),open_records=open_records)
+        if reason is not None:self.launch(reason,entries,inputs,min(self.level['pass_seconds'],actor_deadline-now-30))
+
+    def launch(self,reason: str,entries: int,inputs: int,seconds: float) -> None:
+        index=len(self.passes)+1
+        target=self.target/f'{index:03d}';target.mkdir(mode=0o700)
+        allowance=min(self.level['pass_max_requests'],self.remaining())
+        record=dict(index=index,reason=reason,log_entries=entries,actor_inputs=inputs,allocated_attempts=allowance,
+                    allocated_seconds=seconds,started_wall=time.time())
+        write_new(target/'route.json',dict(self.route,role='level',intent_tail_bytes=None,max_requests=allowance))
+        write_new(target/'mcp.json',configuration(str(self.reader_file),profile='reader'))
+        write_new(target/'context.txt',(self.directory/'context.txt').read_text(),text=True)
+        # Mechanical wake facts only; the frozen role prompt and the actor's own mission brief
+        # carry everything else, so the level adds no lead content.
+        prompt=((self.directory/'level-role.txt').read_text()+'\n\nMission brief (the same the acting player has):\n'
+                +(self.directory/'prompt.txt').read_text()+'\n\nSoftware level pass note: '
+                +f'wake reason {reason}; the served actor log now has {entries} entries ({inputs} inputs); '
+                +f'pass allowance {allowance} HTTP attempts and {seconds:.0f} seconds.')
+        write_new(target/'prompt.txt',prompt,text=True)
+        write_new(target/'player-final.txt','',text=True)
+        arguments=[*self.profile['host']['argv'],'run','--config',str(target/'route.json'),
+            '--mcp-config',str(target/'mcp.json'),'--context',str(target/'context.txt'),'--model',self.route['model']['id'],
+            '--effort',self.profile['effort'],'--timeout-seconds',str(seconds),'-o',str(target/'player-final.txt')]
+        environment=dict(PATH=os.environ.get('PATH','/usr/bin:/bin'),LANG='en_US.UTF-8',**{self.route['api_key_env']:self.secret})
+        with (target/'host.jsonl').open('x') as output,(target/'host-stderr.log').open('x') as errors,(target/'prompt.txt').open() as prompt_input:
+            child=subprocess.Popen(arguments,cwd=ROOT,env=environment,stdin=prompt_input,stdout=output,stderr=errors,start_new_session=True)
+        write_new(target/'host-process.json',dict(pid=child.pid,pgid=child.pid,argv=arguments))
+        self.current=(child,HostEvents(target/'host.jsonl',allowance),record,time.monotonic()+seconds)
+
+    def finish(self) -> None:
+        """Close the pass's exact process group, then charge it; incomplete accounting charges its whole allocation."""
+        if self.current is None:return
+        child,events,record,_=self.current
+        self.current=None
+        try:
+            record['cleanup']=close_group(child)
+            record.update(events.finish())
+        except Exception as exc:
+            record.update(accounting_complete=False,attempts_charged=record['allocated_attempts'],trace_error=type(exc).__name__)
+        finally:
+            events.close()
+        record['ended_wall']=time.time()
+        self.charged+=record['attempts_charged'];self.passes.append(record)
+        write_new(self.target/f"{record['index']:03d}"/'driver-receipt.json',record)
+
+    def receipt(self) -> dict:
+        commits=[e for p in self.passes for e in p.get('level_events',[]) if e['type']=='level-commit']
+        discards=[e for p in self.passes for e in p.get('level_events',[]) if e['type']=='level-discard']
+        return dict(reader_id=self.reader_id,mode=self.level['mode'],allocated_attempts=self.allowance,
+                    attempts_charged=self.charged,passes=self.passes,commits=len(commits),discards=len(discards),
+                    configured_estimate_usd=sum(p.get('configured_estimate_usd',0) for p in self.passes),
+                    missing_usage_attempts=sum(p.get('missing_usage_attempts',p['attempts_charged']) for p in self.passes))
+
+
 def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
               stopped: threading.Event,deadline: float) -> dict:
     actors=directory/'actors';actors.mkdir(mode=0o700)
@@ -104,15 +196,18 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
     outcome='incomplete';reason='Original actor allowance exhausted'
     for index in range(1,profile['max_hosts']+1):
         seconds=min(profile['host_seconds'],profile['total_host_seconds']-host_seconds_used,deadline-time.monotonic()-30)
-        allowance=min(route['max_requests'],profile['max_http_attempts']-total_attempts)
-        if stopped.is_set() or seconds<=30 or allowance<1:
+        # The actor-and-level pair is partitioned before launch; their sum stays within the campaign cap.
+        level=profile['level']
+        level_allowance=min(level['max_http_attempts'],profile['max_http_attempts']-total_attempts) if level else 0
+        allowance=min(route['max_requests'],profile['max_http_attempts']-total_attempts-level_allowance)
+        if stopped.is_set() or seconds<=30 or allowance<1 or (level and level_allowance<1):
             reason='Original host/campaign resources or cancellation prevent another actor';break
         target=actors/f'{index:03d}'
-        child=None;events=None
+        child=None;events=None;levels=None
         record=dict(index=index,actor_id=None,allocated_seconds=seconds,allocated_attempts=allowance)
         started=time.monotonic();ending_at=None
         try:
-            actor=application.add_actor('flat')
+            actor=application.add_actor(profile['actor_profile'])
             target.mkdir(mode=0o700)
             record['actor_id']=actor['actor_id']
             actor_file=target/'actor.json'
@@ -120,7 +215,7 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
                                      session=profile['session'],**actor))
             selected_route=dict(route,max_requests=allowance)
             write_new(target/'route.json',selected_route)
-            write_new(target/'mcp.json',configuration(str(actor_file),profile='flat'))
+            write_new(target/'mcp.json',configuration(str(actor_file),profile=profile['actor_profile']))
             # Identical frozen system context across actors maximizes stable prefix
             # reuse. Actor/resource/knowledge changes belong in the explicit prompt.
             write_new(target/'context.txt',(directory/'context.txt').read_text(),text=True)
@@ -140,6 +235,10 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
                 '--mcp-config',str(target/'mcp.json'),'--context',str(target/'context.txt'),'--model',route['model']['id'],
                 '--effort',profile['effort'],'--timeout-seconds',str(seconds),'-o',str(target/'player-final.txt')]
             environment=dict(PATH=os.environ.get('PATH','/usr/bin:/bin'),LANG='en_US.UTF-8',**{route['api_key_env']:secret})
+            if level:
+                levels=LevelPasses(target/'level',directory,application,actor,level,route,profile,secret,
+                                   level_allowance,allowance)
+                record['reader_id']=levels.reader_id
             with (target/'host.jsonl').open('x') as output,(target/'host-stderr.log').open('x') as errors,(target/'prompt.txt').open() as prompt_input:
                 child=subprocess.Popen(arguments,cwd=ROOT,env=environment,stdin=prompt_input,stdout=output,stderr=errors,start_new_session=True)
                 write_new(target/'host-process.json',dict(pid=child.pid,pgid=child.pid,argv=arguments))
@@ -147,6 +246,9 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
                     observer=lambda ordinal,event:application.activity_view.host_event(actor['actor_id'],ordinal,event))
                 while child.poll() is None:
                     events.read()
+                    if levels is not None:
+                        levels.poll(events,stopped.is_set() or application.runtime.channel.stopped.is_set(),
+                                    min(deadline,started+seconds))
                     now=time.monotonic()
                     application.host=dict(index=index,model=route['model']['id'],provider=route['model']['name'],
                         requests_total=total_attempts+len(events.requests),max_requests_total=profile['max_http_attempts'],
@@ -158,6 +260,8 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
                         if ending_at is None:ending_at=now+(45 if code is not None else 30)
                         if now>=ending_at:reason='Original final-report grace exhausted';break
                     time.sleep(.1)
+            # A level host stops on its actor's stop, Pause or handoff, before any successor.
+            if levels is not None:levels.finish()
             cleanup=close_group(child)
             record['cleanup']=cleanup
             record.update(events.finish())
@@ -193,13 +297,24 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
                     record.update(accounting_complete=False,attempts_charged=allowance,trace_error=type(exc).__name__)
                 finally:events.close()
             else:record.update(accounting_complete=False,attempts_charged=allowance if child else 0)
+            if levels is not None:
+                try:levels.finish()
+                except Exception as exc:record['level_error']=type(exc).__name__
+                record['level']=levels.receipt()
+                # A pass still unaccounted for after closure is charged its whole allocation.
+                level_charged=levels.charged+(0 if levels.current is None else levels.current[2]['allocated_attempts'])
+                total_attempts+=level_charged
             record['elapsed_seconds']=time.monotonic()-started
             total_attempts+=record['attempts_charged'];host_seconds_used+=record['elapsed_seconds']
             records.append(record)
             try:write_new(target/'driver-receipt.json',record)
             except (OSError,ValueError) as exc:record['receipt_error']=type(exc).__name__
         if record.get('orchestration_error'):break
-    return dict(schema='player-driver/2',outcome=outcome,reason=reason,actors=records,
+    # attempts_charged includes every actor's level passes; each record keeps its own split.
+    levels_of=lambda r:r.get('level') or {}
+    return dict(schema='player-driver/3',outcome=outcome,reason=reason,actors=records,
                 attempts_charged=total_attempts,host_seconds_used=host_seconds_used,
-                configured_estimate_usd=sum(r.get('configured_estimate_usd',0) for r in records),
-                missing_usage_attempts=sum(r.get('missing_usage_attempts',r['attempts_charged']) for r in records))
+                level_attempts_charged=sum(levels_of(r).get('attempts_charged',0) for r in records),
+                configured_estimate_usd=sum(r.get('configured_estimate_usd',0)+levels_of(r).get('configured_estimate_usd',0) for r in records),
+                missing_usage_attempts=sum(r.get('missing_usage_attempts',r['attempts_charged'])
+                                           +levels_of(r).get('missing_usage_attempts',0) for r in records))

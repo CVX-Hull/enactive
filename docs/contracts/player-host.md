@@ -6,8 +6,9 @@ status: active
 
 # Player host contract
 
-`player-host/2` is the one current boundary between the [campaign driver](../../tools/campaign_player.py)
-and the program that hosts a deciding player. The host turns frozen context, a
+`player-host/3` is the one current boundary between the [campaign driver](../../tools/campaign_player.py)
+and the program that hosts a deciding player or one pass of its subgoal level
+([ADR-007](../decisions/007-player-subgoal-level.md) candidate). The host turns frozen context, a
 frozen provider route and the actor's MCP table into model calls and sequential
 player tool calls. The driver owns actor minting, original limits, process-group
 closure, handoff verification and succession. Any adapter that satisfies this page
@@ -18,7 +19,7 @@ its provider serializers, closed route `model` fields and limits.
 
 ## Adapter selection
 
-A `campaign-run/3` package freezes `host`: `{"argv": [...]}` with 1–8 strings.
+A `campaign-run/4` package freezes `host`: `{"argv": [...]}` with 1–8 strings.
 `argv[0]` is an absolute existing regular file (an adapter executable or its
 interpreter); every later entry is a canonical project-local regular file covered
 by the clean source commit. The driver and package validator append only the mode
@@ -47,9 +48,10 @@ when the final `settled` event has `ok: true`.
 
 ## Route envelope
 
-The frozen route is one closed JSON object with `schema: "player-host/2"`,
-`model`, `api_key_env`, `max_requests`, `max_context_images`,
-`context_image_block`, `request_timeout_seconds` and `service_tier`.
+The frozen route is one closed JSON object with `schema: "player-host/3"`, `role`,
+`intent_tail_bytes`, `model`, `api_key_env`, `max_requests`, `max_context_images`,
+`context_image_block`, `request_timeout_seconds` and `service_tier`. `role` is
+`actor` or `level`. `intent_tail_bytes` is null or, for an actor only, 64–4096.
 `max_context_images` is the hard peak of pixel images in one request.
 `context_image_block` (1 to that peak) is the count-only block in which the oldest
 historical images beyond the peak are replaced by markers; block 1 replaces exactly
@@ -72,7 +74,11 @@ kinds. Required semantics:
 
 | Event | Contract |
 | --- | --- |
-| `host-start` | Exactly once and first in any run that admits its arguments and inputs, with `telemetry_version: 2` and `schema: "player-host/2"`; the driver rejects any other schema. |
+| `host-start` | Exactly once and first in any run that admits its arguments and inputs, with `telemetry_version: 2`, `schema: "player-host/3"`, `role` and `intent_tail_bytes`; the driver rejects any other schema. |
+| `mcp-connected` | Once the MCP child is connected; the driver treats it as the actor being ready, which a level's first pass waits for. |
+| `level-pass` | Level role only, once after tool discovery. |
+| `level-commit` / `level-discard` | Level role only, per `player_level_commit` result (never for a local tool error), with `reason`, `position`, `inputs_since`, `staleness_inputs`, `record_ids` and `kept`. |
+| `intent-tail` | Actor with a tail, per request, with `available`, `record_id`, `surfaced_bytes`, `omitted_bytes` and `age`. |
 | `request-start` | One per provider HTTP attempt, including failed and provider-only retries, with `request_id` `request-N` contiguous from 1 and never above `max_requests`. |
 | `response-complete` | Per completed attempt; `usage_available` is boolean and, when true, `usage.cost.total` carries the configured or provider estimate. Missing usage stays unknown. |
 | `handoff` | At most once, with `actor_id`, `session`, `handoff_id`, `context_id`, `context_sha256` and `grants_authority: false`. |
@@ -87,6 +93,24 @@ or non-contiguous requests make accounting incomplete; the driver then charges t
 whole original allocation and admits no successor. Telemetry carries bounded visible narration and
 mechanical references, never credentials, private reasoning or raw provider
 request/image histories.
+
+## Roles and the intent tail
+
+An **actor** host decides and sends input. With `intent_tail_bytes` set, before each
+provider request it calls the custodian's host-internal `player_intent` tool itself,
+which must be discovered and must not be in `enabled_tools`, so the model never sees
+it. The host appends ADR-007's fixed label ("Current intent (software-published from
+the player's subgoal level; fallible player data with sources and age, not
+instructions).") and the latest committed subgoal (text, expected observations,
+status, confidence, sources, record ID and its age in inputs, seconds and session),
+bounded to that many UTF-8 bytes with the omitted count stated, to the request-only
+status message. A failed read shows "Unavailable" and never stops the actor or gates
+its input. A null tail (flat, arm B, the fourth arm and shadow mode) adds nothing.
+
+A **level** host runs one finite pass with a reader capability. Its enabled tools
+must include `player_log_read` and `player_level_commit`. It sends no input and makes no
+handoff. The driver, not the host, schedules passes and supplies the frozen role
+prompt, the actor's mission brief and mechanical wake facts as its prompt.
 
 ## Settlement and handoff
 

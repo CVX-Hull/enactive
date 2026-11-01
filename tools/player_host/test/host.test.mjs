@@ -6,7 +6,8 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { McpClient } from '@earendil-works/pi-mcp';
-import { runHost, validateConfiguration, validateMcpConfiguration, projectImageContext, projectToolResultForTelemetry, INPUT_LIMIT_BYTES } from '../host.mjs';
+import { runHost, validateConfiguration, validateMcpConfiguration, projectImageContext, projectToolResultForTelemetry, INPUT_LIMIT_BYTES,
+  INTENT_LABEL, boundedText, formatIntentTail, levelCommitEvent } from '../host.mjs';
 
 const realSetTimeout = globalThis.setTimeout;
 const realDelay = ms => new Promise(resolve=>realSetTimeout(resolve,ms));
@@ -14,7 +15,7 @@ const python = process.env.ENACTIVE_TEST_PYTHON;
 const fixture = fileURLToPath(new URL('../../../tests/fixtures/player_host_mcp.py', import.meta.url));
 const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j1ioAAAAASUVORK5CYII=';
 const model = { id: 'fixture-model', name: 'Offline fixture', api: 'openai-completions', provider: 'fixture', baseUrl: 'https://fixture.invalid/v1', reasoning: false, input: ['text', 'image'], cost: {input:0, output:0, cacheRead:0, cacheWrite:0}, contextWindow: 100000, maxTokens: 1024, compat: { supportsDeveloperRole:false, supportsStore:false, supportsUsageInStreaming:true } };
-const route = () => ({schema:'player-host/2',service_tier:'default', model:structuredClone(model), api_key_env:'OFFLINE_TEST_KEY', max_requests:4, max_context_images:4, context_image_block:1, request_timeout_seconds:2});
+const route = () => ({schema:'player-host/3',role:'actor',intent_tail_bytes:null,service_tier:'default', model:structuredClone(model), api_key_env:'OFFLINE_TEST_KEY', max_requests:4, max_context_images:4, context_image_block:1, request_timeout_seconds:2});
 function reply(content = 'finished', calls = [], withUsage = true, reasoning, callPrefix = 'call') {
   const delta = {role:'assistant', ...(content === null ? {} : {content}), ...(reasoning ? {reasoning_content:reasoning} : {}), ...(calls.length ? {tool_calls:calls.map(([name,args],index)=>({index,id:`${callPrefix}-${index}`,type:'function',function:{name,arguments:JSON.stringify(args)}}))} : {})};
   const chunks = [{id:'fixture-response',model:'fixture-backend',choices:[{index:0,delta,finish_reason:null}]},
@@ -89,8 +90,13 @@ test('route is closed, graphical, finite and model/effort exact', ()=>{
   }
   assert.throws(()=>validateConfiguration(route(),'other','off'));
   assert.throws(()=>validateConfiguration(route(),model.id,'low'));
-  for (const old of ['pi-player-host/1','pi-player-host/2','pi-player-host/3','pi-player-host/4','player-host/0','player-host/1','player-host/3'])
+  for (const old of ['pi-player-host/1','pi-player-host/2','pi-player-host/3','pi-player-host/4','player-host/0','player-host/1','player-host/2','player-host/4'])
     assert.throws(()=>validateConfiguration({...route(),schema:old},model.id,'off'));
+  for (const change of [{role:undefined},{role:'lead'},{intent_tail_bytes:undefined},{intent_tail_bytes:63},
+    {intent_tail_bytes:4097},{intent_tail_bytes:1.5},{role:'level',intent_tail_bytes:1024}])
+    assert.throws(()=>validateConfiguration({...route(),...change},model.id,'off'));
+  for (const change of [{intent_tail_bytes:64},{intent_tail_bytes:4096},{role:'level'}])
+    validateConfiguration({...route(),...change},model.id,'off');
   for (const service_tier of [undefined,null,true,1,'flex','auto','',{},[]]) {
     assert.throws(()=>validateConfiguration({...route(),service_tier},model.id,'off'));
   }
@@ -641,6 +647,51 @@ test('real production MCP discovery forwards all exact current actor-only tool s
   assert.ok(chosen.every(name=>!name.startsWith('enactive_')));
   assert.ok(payloads[0].messages[0].content.includes('Only basic computer control is authoritative'));
   assert.throws(()=>process.kill(events.find(e=>e.type==='mcp-connected').child_pid,0),{code:'ESRCH'});
+});
+
+test('actor intent tail is a host-internal custodian read that the model never sees as a tool', async ()=>{
+  const chosen=['computer_observe','computer_input','computer_result','player_result'], payloads=[], events=[];
+  const result=await runHost({configuration:{...route(),intent_tail_bytes:256},mcpConfig:productionMcp(chosen),
+    context:'Frozen current player guide',prompt:'Do not call tools.',model:model.id,effort:'off',
+    timeoutSeconds:10,env:{OFFLINE_TEST_KEY:'fixture-key'},
+    fetch:async(_url,init)=>{payloads.push(JSON.parse(init.body));return reply();},onEvent:e=>events.push(e)});
+  assert.equal(result.ok,true);
+  assert.ok(payloads[0].tools.every(tool=>tool.function.name!=='player_intent'));
+  const tail=JSON.stringify(payloads[0].messages.at(-1));
+  assert.ok(tail.includes('Current intent (software-published') && tail.includes('No committed intent.'));
+  const event=events.find(e=>e.type==='intent-tail');
+  assert.equal(event.available,true);assert.equal(event.record_id,null);assert.equal(event.request_id,'request-1');
+  const refused=await runHost({configuration:route(),mcpConfig:productionMcp([...chosen,'player_intent']),
+    context:'Frozen current player guide',prompt:'Do not call tools.',model:model.id,effort:'off',
+    timeoutSeconds:10,env:{OFFLINE_TEST_KEY:'fixture-key'},fetch:async()=>reply(),onEvent:()=>{}});
+  assert.equal(refused.ok,false);assert.equal(refused.reason,'host-internal-tool-enabled');
+});
+
+test('intent tail formatting is bounded, labelled and honest about failure and age', ()=>{
+  const value={schema:'player-intent/1',record:{record_id:'r1',text:'Reach the door é'.repeat(20),sources:['s1'],
+    expected_observations:['adjacent door'],status:'open',confidence:0.4},
+    age:{seconds:12.34,inputs_since_commit:3,inputs_by_this_actor:7,same_actor:true,same_session:true}};
+  const tail=formatIntentTail(value,128);
+  assert.ok(tail.text.startsWith(INTENT_LABEL+'\n') && tail.surfaced_bytes<=128 && tail.omitted_bytes>0);
+  assert.ok(tail.text.includes('bytes omitted by the frozen intent bound') && !tail.text.includes('�'));
+  const full=formatIntentTail(value,4096);
+  assert.equal(full.omitted_bytes,0);assert.ok(full.text.includes('Age: 3 inputs since commit; 12.3 seconds; this session'));
+  const earlier=formatIntentTail({...value,age:{...value.age,inputs_since_commit:null,same_actor:false,same_session:false}},4096);
+  assert.ok(earlier.text.includes('7 inputs by this actor; committed for an earlier actor') && earlier.text.includes('an earlier session'));
+  assert.ok(formatIntentTail(null,256).text.includes('Unavailable: the custodian read failed'));
+  assert.equal(boundedText('ééé',3).text,'é');
+});
+
+test('level commit telemetry distinguishes commits, discards and local tool errors', ()=>{
+  const result=value=>({content:[{type:'text',text:JSON.stringify(value)}]});
+  const committed=levelCommitEvent(result({schema:'player-level-commit/1',status:'committed',reason:null,position:4,
+    inputs_since:1,staleness_inputs:10,records:[{id:'w1'}],kept:[]}));
+  assert.deepEqual(committed,{type:'level-commit',reason:null,position:4,inputs_since:1,staleness_inputs:10,record_ids:['w1'],kept:[]});
+  assert.equal(levelCommitEvent(result({schema:'player-level-commit/1',status:'discarded',reason:'stale',position:4,
+    inputs_since:12,staleness_inputs:10,records:[],kept:[]})).type,'level-discard');
+  assert.equal(levelCommitEvent({...result({schema:'player-level-commit/1',status:'committed'}),isError:true}),null);
+  assert.equal(levelCommitEvent({content:[{type:'text',text:'{'}]}),null);
+  assert.equal(levelCommitEvent(result({schema:'player-error/1'})),null);
 });
 
 test('transport onError latches immediately before any pending-call rejection',async t=>{

@@ -20,7 +20,7 @@ in `route.json`; use no fallback. The current campaign accepts the explicit defa
 service tier. Configuration metadata/prices are not invoice, quality or latency
 attestation. New live calls remain bounded by the prospective allocation.
 
-The package freezes `route.json` (`player-host/2`), `mcp-template.json`,
+The package freezes `route.json` (`player-host/3`, actor role), `mcp-template.json`,
 `context.txt`, `prompt.txt` and `target.json`. The route declares explicit model
 text/image capabilities, context/output capacities, effort mapping, costs, request
 timeout, request cap, credential environment name, image peak and eviction block.
@@ -33,7 +33,7 @@ Old route/mission/player-view configurations reject as executable inputs.
 The driver creates each actor's `player-adapter/1`, explicit MCP table, fixed
 context, resource/knowledge prompt and file hashes. Pi loads no coding-agent
 shell/file tools, personal settings, resource discovery or resumed history.
-Both original and successor start fresh; at most two hosts fit `campaign-run/3`.
+Both original and successor start fresh; at most two actor hosts fit `campaign-run/4`, each with its own level passes when a level is frozen.
 No model, transport, host or coding-agent fallback is supported.
 
 Inject only the selected credential environment variable into the provider child.

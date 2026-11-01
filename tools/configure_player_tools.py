@@ -44,6 +44,8 @@ def main():
     parser.add_argument('--template',action='store_true',help='Write the frozen @ACTOR_CONFIG@ MCP template')
     parser.add_argument('--coding-agent-format',choices=FORMATS,help='Write a lead-side coding-agent entry for an explicit actor')
     parser.add_argument('--actor-config',type=Path)
+    parser.add_argument('--profile',choices=('flat','narrowed'),default='flat',
+                        help="The actor's tool profile; must match the package's actor_profile")
     parser.add_argument('--output',type=Path)
     args=parser.parse_args()
     if args.describe:
@@ -64,7 +66,7 @@ def main():
         if args.coding_agent_format:
             stream.write(coding_agent_configuration(str(actor),args.coding_agent_format))
         else:
-            json.dump(configuration('@ACTOR_CONFIG@' if args.template else str(actor),profile='flat'),stream,indent=2);stream.write('\n')
+            json.dump(configuration('@ACTOR_CONFIG@' if args.template else str(actor),profile=args.profile),stream,indent=2);stream.write('\n')
 
 
 if __name__=='__main__':main()

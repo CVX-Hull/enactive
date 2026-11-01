@@ -31,7 +31,7 @@ def run_campaign(directory: Path) -> dict:
     if not secret:raise ValueError('Selected provider credential is unavailable; supply only its explicit environment variable')
     started=time.monotonic();deadline=started+profile['wall_seconds']
     owner=OwnedTarget(directory,profile['session'],target,Path(profile['library']['path']),Path(profile['shared_lock']),deadline)
-    runtime=memory=server=server_thread=investigation_view=None
+    runtime=memory=server=server_thread=investigation_view=timing=None
     stopped=threading.Event();driver=None
     report=dict(schema='campaign-receipt/2',session=profile['session'],source_commit=profile['source_commit'],
                 started_wall=time.time(),outcome='incomplete',normal_save_claimed_by_harness=False,
@@ -54,6 +54,8 @@ def run_campaign(directory: Path) -> dict:
         owner.wait_target()
         if stopped.is_set():raise ValueError('Cancelled before actor admission')
         application=Application(runtime,memory,directory/'contexts')
+        timing=(directory/'call-timing.jsonl').open('x',buffering=1)
+        application.timing=lambda row:timing.write(json.dumps(row)+'\n')
         investigation_view=LiveInvestigationView(directory,profile)
         application.investigation_view=investigation_view
         server,server_thread=serve(application,profile['port'])
@@ -81,6 +83,7 @@ def run_campaign(directory: Path) -> dict:
             attempt('server_shutdown',server.shutdown);attempt('server_close',server.server_close)
             attempt('server_join',lambda:server_thread.join(2))
         if investigation_view is not None:attempt('investigation_close',investigation_view.close)
+        if timing is not None:attempt('timing_close',timing.close)
         if runtime is not None:attempt('store_close',runtime.store.close)
         if memory is not None:attempt('player_store_close',memory.close)
         if driver is None:

@@ -82,6 +82,12 @@ class SessionStore:
                 source_id=result['source']['source_id'] if result and result.get('source') else None))
         return entries
 
+    def actor_counts(self, actor_id: str) -> tuple[int, int]:
+        """The served actor's log length and its input operations, for mechanical wake rules."""
+        with self.lock:
+            return self.connection.execute("SELECT COUNT(*),COALESCE(SUM(kind='input'),0) FROM operations WHERE actor=?",
+                                           (actor_id,)).fetchone()
+
     def inputs_after(self, actor_id: str, position: int) -> int:
         with self.lock:
             return self.connection.execute('SELECT COUNT(*) FROM (SELECT kind FROM operations WHERE actor=? '

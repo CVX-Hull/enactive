@@ -110,7 +110,7 @@ def campaign_evidence(path: Path) -> dict:
     root = path.parent.parent.parent if path.parent.parent.name == "actors" else path.parent
     result = {"metadata_coverage": {}}
     fields = {
-        "manifest.json": ("campaign-run/3", ("session", "source_commit")),
+        "manifest.json": ("campaign-run/4", ("session", "source_commit")),
         "receipt.json": ("campaign-receipt/2", ("session", "source_commit", "outcome",
             "normal_save_claimed_by_harness", "native_absence_verified", "normal_native_exit_zero",
             "deciding_hosts_quiescent", "input_authority_revoked")),
@@ -128,7 +128,7 @@ def campaign_evidence(path: Path) -> dict:
                     coverage = "recorded"
                     if relative == "receipt.json" and value.get("driver") is not None:
                         driver = value["driver"]
-                        if not isinstance(driver, dict) or driver.get("schema") != "player-driver/2":
+                        if not isinstance(driver, dict) or driver.get("schema") != "player-driver/3":
                             coverage = "unsupported_driver_version"
                         else:
                             result[relative]["driver"] = {key: driver.get(key) for key in
@@ -194,7 +194,7 @@ def analyze_trace(path: Path) -> dict:
             if number(at):
                 previous = at
             if kind == "host-start":
-                if event.get("schema") != "player-host/2" or type(event.get("telemetry_version")) is not int or event["telemetry_version"] != 2:
+                if event.get("schema") != "player-host/3" or type(event.get("telemetry_version")) is not int or event["telemetry_version"] != 2:
                     return {"path": str(path), "coverage": "unsupported_version", "file_bytes": path.stat().st_size}
                 host_count += 1
                 if host_count > 1:

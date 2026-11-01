@@ -38,7 +38,7 @@ class InvestigationTests(unittest.TestCase):
         self.actor = 'actor-original'
         self.receipt = dict(schema='campaign-receipt/2', session=self.session, source_commit='abc123',
             deciding_hosts_quiescent=True, native_absence_verified=True, input_authority_revoked=True,
-            driver=dict(schema='player-driver/2', actors=[dict(index=1, actor_id=self.actor)],
+            driver=dict(schema='player-driver/3', actors=[dict(index=1, actor_id=self.actor)],
                 attempts_charged=1, host_seconds_used=2, configured_estimate_usd=.1, missing_usage_attempts=0),
             accounting=dict(consumed_conservative_reservation_usd=.2), outcome='failed')
         self.put_receipt()
@@ -71,7 +71,7 @@ class InvestigationTests(unittest.TestCase):
             db.execute('INSERT INTO native_intents VALUES(?,?,?,?,?)', ('native1', 'op1', json.dumps(receipt),
                 self.source_id, json.dumps(dict(intent_wall=1, intent_monotonic=5,
                     receipt_received_wall=1.1, receipt_received_monotonic=5.1))))
-        self.events = [dict(type='host-start', schema='player-host/2', telemetry_version=2,
+        self.events = [dict(type='host-start', schema='player-host/3', telemetry_version=2,
             monotonic_ms=0, wall_time='1970-01-01T00:00:01Z', model='fixture', provider='fixture',
             provider_routing=dict(only=['selected'], order=['selected'], allow_fallbacks=False,
                 token='PRIVATE_TOKEN'), prompt='PRIVATE_PROMPT'),

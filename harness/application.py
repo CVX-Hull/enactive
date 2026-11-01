@@ -1,6 +1,7 @@
 """Composition of mechanical control and optional, fallible player services."""
 from __future__ import annotations
 
+from contextlib import contextmanager
 import copy
 import hashlib
 from pathlib import Path
@@ -73,6 +74,8 @@ class Application:
         # each host's enabled tools; a capability minted elsewhere has no tools.
         self.profiles: dict[str, frozenset[str]] = {}
         self.readers: dict[str, dict[str, Any]] = {}
+        # Optional sink for per-call lock wait/hold, the level's measured cost to the actor.
+        self.timing = None
         self.host: dict[str, Any] | None = None
         self.claims: list[dict[str, Any]] = []
         self.activity_view = ActivityView(runtime.session, runtime.store.path)
@@ -250,12 +253,27 @@ class Application:
             stream.write(data)
         return identity, hashlib.sha256(data).hexdigest()
 
+    @contextmanager
+    def _timed(self, actor: str, name: str, queued: float):
+        """Record one call's wait for and hold of the serial lock; timing never affects the call."""
+        acquired = time.monotonic()
+        try:
+            yield
+        finally:
+            if self.timing is not None:
+                try:
+                    self.timing(dict(schema='custodian-call-timing/1', wall=time.time(), actor_id=actor, tool=name,
+                                     wait_ms=(acquired - queued) * 1000, held_ms=(time.monotonic() - acquired) * 1000))
+                except Exception:
+                    pass
+
     def call(self, token: str, name: str, args: dict[str, Any], identity: str) -> tuple[dict[str, Any], bytes | None]:
         write = dict(write=name not in READ_TOOLS, level_commit=name == 'player_level_commit')
         actor = self.runtime.authorize(token, **write)
         if name not in self.profiles.get(actor, ()):
             raise ControlError('Tool is outside this capability class')
-        with self.serial:
+        queued = time.monotonic()
+        with self.serial, self._timed(actor, name, queued):
             # A handoff may have sealed the actor while this call queued.
             self.runtime.authorize(token, **write)
             if name not in READ_TOOLS:
