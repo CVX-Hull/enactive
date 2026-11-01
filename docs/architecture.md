@@ -123,7 +123,7 @@ requires no save, menu or identity check. [Run procedure](operations/campaign-ru
 One current set is `computer-wire/1`, request/target/receipt `/2`,
 `computer-session/2`, `computer-operation/1`, `computer-source/1`,
 `player-memory/1`, `player-record/1`, `player-program/1`, `program-view/3`,
-`player-handoff/2`, `player-host/4` and `campaign-run/4`. The exact contracts own the complete set.
+`player-handoff/2`, `player-host/5` and `campaign-run/4`. The exact contracts own the complete set.
 [Migration](operations/migration.md) rejects old stores before effects and preserves
 artifacts/saves as history. Rollback closes writers and selects a coherent earlier
 source/data deployment; mixed readers and replay are unsupported.

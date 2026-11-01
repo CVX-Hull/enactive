@@ -22,9 +22,33 @@ implemented.
 The level interface is v2, approved by the owner ("Approve all") on
 [#329](https://github.com/CVX-Hull/enactive/issues/329#issuecomment-6561551205) after
 shadow showed 35 of 53 passes ending in a written proposal with no
-`player_level_commit` call. A pass now ends on a commit or an abstain; the proposal is
-`player-level-proposal/2`; the pass input is pushed; the role prompt is v2; and
-`player-host/3` becomes `/4`. The sections below state the amended design.
+commit call. A pass then ended on a commit or an abstain, with a versioned union
+proposal; the pass input became pushed; the role prompt became v2; and `player-host/3`
+became `/4`. The #341 amendment below replaces the union with flat tools; the pushed
+input and the commit-or-abstain ending stand.
+
+**Amended 1 November 2026 ([#341](https://github.com/CVX-Hull/enactive/issues/341)).**
+The level interface is v3, approved by the owner ("A + B + C") on
+[#329](https://github.com/CVX-Hull/enactive/issues/329#issuecomment-6563083931) after
+shadow-2 refused every v2 commit: the model had to repeat a version constant inside a
+`const`-tagged union that the OpenRouter-to-Gemini route apparently did not show it, and
+the refusal never named the expected value.
+- **Three flat terminal tools replace `player_level_commit`:** `player_level_keep`,
+  `player_level_replace` and `player_level_close`, beside `player_level_abstain` with a
+  closed reason code. The model supplies no record id and no version; software resolves the
+  one current subgoal and stamps the contract version. Model-facing schemas use only the
+  portable keyword set.
+- **The reader profile shrinks** to `player_log_read`, `player_source` and the four
+  terminal tools, since the pushed input already carries the current subgoal and the count
+  of level records in player memory.
+- **The last two requests of a pass offer only the terminal tools,** and a terminal call
+  refused on the last allowed request settles as `level-final-refusal`.
+- **Refusals name the failing field, the rule, the allowed values and a valid example
+  call,** and say that abstaining is not the remedy for a fixable call.
+- **Pre-spend checks:** a zero-token contract test of the production request, and a
+  labelled engineering probe that replays recorded pass contexts.
+- The role prompt is `subgoal-v3`; `player-host/4` becomes `/5` and `player-driver/4`
+  becomes `/5`. The sections below state the amended design.
 
 This is draft 4.
 - **Draft 1** had the real-time player write its own memory. That conflicted with
@@ -114,10 +138,12 @@ The custodian's per-class allowlist enforces this profile as well as the host's
 
 - **Capability.** A new **reader** class in computer control, enforced by a
   per-class tool allowlist in `Application.call`, not only by `_guard`:
-  - **Reader:** the read tools plus `player_log_read`, `player_level_commit` and
-    `player_level_abstain`, and nothing else. In particular it has no observe (which captures frames and
-    spends budget), no input, no stop, and no direct memory or program writes.
-  - **Actor:** refused `player_level_commit` and `player_level_abstain`.
+  - **Reader:** exactly `player_log_read`, `player_source` and the four terminal tools
+    `player_level_keep`, `player_level_replace`, `player_level_close` and
+    `player_level_abstain`, and nothing else. In particular it has no observe (which
+    captures frames and spends budget), no input, no stop, no memory or program tool
+    and no result tool: the pushed input carries the current subgoal.
+  - **Actor:** refused all four terminal tools and `player_log_read`.
   - **Storage:** a reader has an `actors` row with a new `reader` stage, because
     issued sources reference actors. That stage is excluded from `add_actor`'s
     "every prior actor quiescent" test and from the `max_actors` count, so a live
@@ -146,36 +172,58 @@ The custodian's per-class allowlist enforces this profile as well as the host's
     failure and never reaches the actor.
   - **Forced tool calls.** The level host sends `tool_choice: required` on every
     request, so the model cannot end in prose. The level's text is discarded and
-    shown to no one; only the two calls below count.
-  - **What ends a pass.** The pass ends after a `player_level_commit` that software
-    commits or discards, or after a valid `player_level_abstain(reason)`. A commit
-    rejected as a fixable tool error does not end it, and the model may correct it. A
-    pass that ends any other way (for example a text-only terminal response) is a
-    failed pass with the reason `level-no-proposal`, recorded and counted.
-  - **The proposal** is `player-level-proposal/2`. The level manages only its own
-    subgoal: the current Work records with `data.level == "subgoal"`, at most one by
-    construction. Other Work is out of its scope and untouched. A proposal is
-    exactly one of three closed shapes, discriminated by `action`:
-    - **keep:** `{record_id, reason, sources}` writes no record;
-    - **replace:** `{subgoal, previous}` writes the new Work record. `subgoal` is the
-      text, the expected observations, the status (`open` or `blocked`), the
-      confidence and the sources. `previous` is null, or the replaced subgoal's
-      `{record_id, outcome, reason, sources}` with outcome `achieved`, `failed`,
-      `abandoned` or `revised`, and it writes a superseding correction (a `revised`
-      one supports the new Work);
-    - **close:** `{record_id, outcome, reason, sources}` with outcome `achieved`,
-      `failed` or `abandoned` writes the correction only.
+    shown to no one; only the four terminal calls below count.
+  - **Reserved terminal requests.** On every request with two or fewer requests
+    remaining, including that request, the host declares only the four terminal tools
+    (it restricts the request's tool declarations; the history and the executable tool set
+    are unchanged) and says so in the request's resource status. This reserves a repair
+    slot for a refused call. A terminal call refused on the last allowed request settles
+    as `level-final-refusal`, a counted outcome distinct from `request-limit`.
+  - **What ends a pass.** The pass ends after a `player_level_keep`,
+    `player_level_replace` or `player_level_close` that software commits or discards, or
+    after a valid `player_level_abstain`. A call rejected as a fixable tool error does
+    not end it, and the model may correct it. A pass that ends any other way (for
+    example a text-only terminal response) is a failed pass with the reason
+    `level-no-proposal`, recorded and counted.
+  - **The tools.** The level manages only its own subgoal: the current Work records with
+    `data.level == "subgoal"`, at most one by construction. Other Work is out of its scope
+    and untouched. Each tool is one flat object, every property required:
+    - **`player_level_keep(reason, sources)`:** writes no record; the receipt says kept
+      and gives the current id;
+    - **`player_level_replace(text, expected_observations, status, confidence, sources,
+      previous_outcome, previous_reason)`:** writes the new Work record. `status` is
+      `open` or `blocked`. `previous_outcome` is `none`, `achieved`, `failed`, `abandoned`
+      or `revised`, and is `none` exactly when there is no current subgoal; otherwise it
+      also writes a superseding correction (a `revised` one supports the new Work). Its
+      `sources` are the replace's sources;
+    - **`player_level_close(outcome, reason, sources)`:** `outcome` is `achieved`,
+      `failed` or `abandoned`; it needs a current subgoal and writes the correction only.
 
-    `keep` and `close` need a current subgoal and name it. `replace` has `previous`
-    exactly when one exists and names it. A violation is a fixable tool error that
-    names the valid shapes and the current record ID (or "none") and keeps the bound.
-    A keep alongside a new subgoal cannot be expressed.
-  - **Abstain.** `player_level_abstain(reason)` ends the pass without a proposal when
-    the evidence supports none of keeping, replacing or closing. Nothing is written,
-    the reader's bound is cleared as a commit attempt clears it, and the host trace
-    records a `level-abstain` event. Abstentions are counted with their reasons.
-- **Software-mediated commit (P5).** The level calls
-  `player_level_commit(proposal)`.
+    Software resolves the current subgoal, so the model supplies no record id and no
+    version, and stamps the contract version into the stored record data and the
+    `player-level-commit/3` receipt. A wrong-state call (keep or close with nothing
+    current, a `none` previous outcome over a current subgoal or another one with none) is a
+    fixable tool error that names the current subgoal state and the valid tool for it and
+    keeps the bound. A keep alongside a new subgoal cannot be expressed.
+  - **Portable schemas.** The model-facing schemas use `type` on every node, string
+    enums, all inlined, and plain objects; no `const`, `oneOf`, `anyOf`, `$ref`,
+    `uniqueItems` or nested objects beyond arrays of strings. The research behind this
+    ([LLM tool interface design](https://github.com/CVX-Hull/enactive/issues/329#issuecomment-6563083931))
+    found that the schema a Gemini route shows may not be the one the host validates, so
+    host validation is the only enforcement and nothing may depend on the model seeing a
+    constant. Refusals come from the host: each failing field's path, rule, allowed
+    values or limits, the received value truncated to 120 characters and a minimal valid
+    example call, then the line "Fix the call and resend it; abstaining is not the remedy
+    for a fixable call."
+  - **Abstain.** `player_level_abstain(reason_code, reason, sources)` ends the pass
+    without a change when the evidence supports none of keeping, replacing or closing.
+    `reason_code` is `insufficient_evidence`, `transient_screen_state`,
+    `no_change_needed` or `other`; `sources` may be empty. Nothing is written, the
+    reader's bound is cleared as a terminal call clears it, and the host trace records a
+    `level-abstain` event carrying the code (`player-level-abstain/2`). Abstentions are
+    counted by code.
+- **Software-mediated commit (P5).** The level calls `player_level_keep`,
+  `player_level_replace` or `player_level_close`.
   - **The position is software-bound.** The custodian takes the pass's position from
     the highest log position its own `player_log_read` calls returned in that pass,
     which includes the pushed read. The model never supplies it.
@@ -285,9 +333,9 @@ is resurfaced.
 
 **Record kinds.** Aspirations use `decision` records, and claims use `claim`
 records, so there is no record-format change.
-- **The typed fields are the commit-proposal contract.** Each level's
-  `player_level_commit` proposal schema is versioned; the commit tool validates it
-  and writes it into `data`.
+- **The typed fields are the terminal-tool contract.** The flat `player_level_replace`
+  arguments are the typed fields; the custodian validates them, stamps the contract
+  version (`player-level/3`) and writes them into `data`.
 - **A level discriminator in `data`** separates level-written records from other
   writers' records of the same kind (arm B, older stores).
 - **Links.** Work records link to their aspiration through `supports`.
@@ -429,16 +477,20 @@ with that migration:
     `reader` actor stage, and `computer-session/1` to `/2`
     (`harness/computer/runtime.py`, `store.py`, `harness/application.py`,
     [contract](../contracts/computer-control.md)).
-  - **Player tools:** `player_log_read`, `player_level_commit`, `player_level_abstain`,
-    `player-level-proposal/2` and `player-level-commit/2`, the actor's narrowed
+  - **Player tools:** `player_log_read`, `player_level_keep`, `player_level_replace`,
+    `player_level_close`, `player_level_abstain`, `player-level-commit/3` and
+    `player-level-abstain/2` (#341), the actor's narrowed
     profile, `player-handoff/1` to `/2`, and the multi-record `Memory` append
     (`harness/player_tools.py`, `harness/player_mcp`, `harness/player/memory.py`).
-  - **`player-host/2` becomes `player-host/3`, and `/3` becomes `/4` (#340):** roles,
-    tool profiles, intent tail, and the `level-pass`, `level-commit`, `level-discard`
-    and `level-abstain` events; a level pass sends `tool_choice: required`, ends on a
-    commit, discard or abstain and otherwise settles `level-no-proposal`. The
-    `player-driver` disposition (`/3` to `/4`) gains the abstain count and each event's
-    `action`. `campaign-run/4` keeps its shape and freezes `subgoal-v2` by digest.
+  - **`player-host/2` becomes `player-host/3`, `/3` becomes `/4` (#340) and `/4` becomes
+    `/5` (#341):** roles, tool profiles, intent tail, and the `level-pass`,
+    `level-commit`, `level-discard`, `level-abstain` and `level-reserved-request` events;
+    a level pass sends `tool_choice: required`, offers only the terminal tools on its last
+    two requests, ends on a commit, discard or abstain, and otherwise settles
+    `level-no-proposal` (or `level-final-refusal` when a terminal call is refused on the last
+    allowed request). The `player-driver` disposition (`/3` to `/4` to `/5`) counts keeps,
+    replaces, closes, discards, abstains by reason code, failed passes and final refusals.
+    `campaign-run/4` keeps its shape and freezes `subgoal-v3` by digest.
   - **`campaign-run/3` becomes `campaign-run/4`:** one level host, partitioned
     allowances and its lifecycle (`tools/campaign_package.py`, `campaign_run.py`,
     `campaign_player.py`, `investigation_live.py`).
@@ -466,7 +518,7 @@ with that migration:
 
 | Reused | Added | Not revived |
 |---|---|---|
-| The `player-memory/1` store, records, supersession and query; sources; the request-only tail; MCP tool profiles; capture hashes | The reader class; `player_log_read`; `player_level_commit`; `player_level_abstain`; level scheduling and lifecycle; partitioned allowances; level events | A new framework; the superseded advisory-reflection and injected-planner contracts; semantic dispatch |
+| The `player-memory/1` store, records, supersession and query; sources; the request-only tail; MCP tool profiles; capture hashes | The reader class; `player_log_read`; `player_level_keep`, `_replace` and `_close`; `player_level_abstain`; level scheduling and lifecycle; partitioned allowances; level events | A new framework; the superseded advisory-reflection and injected-planner contracts; semantic dispatch |
 
 ## Deferred
 
@@ -482,9 +534,10 @@ Each item is tracked, with its owner source and revisit trigger, in
 - the measurement programme;
 - reconciliation of #136, #164, #177, #178 and #42 after acceptance.
 
-## Appendix: subgoal role v2
+## Appendix: subgoal role v3
 
-The verbatim text is frozen, and a change makes a new version. Version 1 is removed:
+The verbatim text is frozen, and a change makes a new version. Versions 1 and 2 are
+removed; v3 changes only the sentence that names the tools:
 
 > Role (software-defined; not instructions from the lead). You are the player's
 > subgoal level. You cannot send input; the acting player decides everything it does.
@@ -492,13 +545,14 @@ The verbatim text is frozen, and a change makes a new version. Version 1 is remo
 > addressed to the acting player are not for you. Software supplies the served player's log since your
 > last pass (its inputs and the frames that resulted, as source ids) and its current
 > subgoal, if any; you may read more of the log and any cited frame. Then end the pass
-> with exactly one tool call. Call player_level_commit to keep the current subgoal,
-> close it, or replace it with one subgoal that advances the mission's objective,
-> with the observations that would show it is working, its status, cited sources and
-> marked uncertainty, and the outcome of the subgoal it replaces. Call
-> player_level_abstain if the evidence supports none of these. Only these calls
-> count: your text is discarded and shown to no one. A commit is accepted only if
-> still timely, and is then shown to the acting player as fallible context.
+> with exactly one tool call. Call player_level_keep, player_level_close or
+> player_level_replace: keep the current subgoal, close it, or replace it with one
+> subgoal that advances the mission's objective, with the observations that would show
+> it is working, its status, cited sources and marked uncertainty, and the outcome of
+> the subgoal it replaces. Call player_level_abstain if the evidence supports none of
+> these. Only these calls count: your text is discarded and shown to no one. A commit is
+> accepted only if still timely, and is then shown to the acting player as fallible
+> context.
 
 The actor-side label is also fixed:
 

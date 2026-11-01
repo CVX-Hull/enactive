@@ -6,7 +6,7 @@ status: active
 
 # Player host contract
 
-`player-host/4` is the one current boundary between the [campaign driver](../../tools/campaign_player.py)
+`player-host/5` is the one current boundary between the [campaign driver](../../tools/campaign_player.py)
 and the program that hosts a deciding player or one pass of its subgoal level
 ([ADR-007](../decisions/007-player-subgoal-level.md) candidate). The host turns frozen context, a
 frozen provider route and the actor's MCP table into model calls and sequential
@@ -48,7 +48,7 @@ when the final `settled` event has `ok: true`.
 
 ## Route envelope
 
-The frozen route is one closed JSON object with `schema: "player-host/4"`, `role`,
+The frozen route is one closed JSON object with `schema: "player-host/5"`, `role`,
 `intent_tail_bytes`, `model`, `api_key_env`, `max_requests`, `max_context_images`,
 `context_image_block`, `request_timeout_seconds` and `service_tier`. `role` is
 `actor` or `level`. `intent_tail_bytes` is null or, for an actor only, 64–4096.
@@ -74,11 +74,12 @@ kinds. Required semantics:
 
 | Event | Contract |
 | --- | --- |
-| `host-start` | Exactly once and first in any run that admits its arguments and inputs, with `telemetry_version: 2`, `schema: "player-host/4"`, `role` and `intent_tail_bytes`; the driver rejects any other schema. |
+| `host-start` | Exactly once and first in any run that admits its arguments and inputs, with `telemetry_version: 2`, `schema: "player-host/5"`, `role` and `intent_tail_bytes`; the driver rejects any other schema. |
 | `mcp-connected` | Once the MCP child is connected, before tool discovery. A level's first pass waits for the actor's first `request-start` instead, which follows the tool checks. |
 | `level-pass` | Level role only, once after tool discovery. |
-| `level-commit` / `level-discard` | Level role only, per `player_level_commit` result (never for a local tool error, so a rejected commit emits neither), with `action`, `reason`, `position`, `inputs_since`, `staleness_inputs`, `record_ids` and `kept`. Either one ends the pass. |
-| `level-abstain` | Level role only, per valid `player_level_abstain` result (never for a local tool error), with `request_id`, `tool_call_id` and `reason`. It ends the pass. |
+| `level-commit` / `level-discard` | Level role only, per `player-level-commit/3` result of `player_level_keep`, `player_level_replace` or `player_level_close` (never for a local tool error, so a rejected call emits neither), with `action` (`keep`, `replace` or `close`), `reason`, `position`, `inputs_since`, `staleness_inputs`, `record_ids` and `kept`. Either one ends the pass. |
+| `level-abstain` | Level role only, per valid `player-level-abstain/2` result of `player_level_abstain` (never for a local tool error), with `request_id`, `tool_call_id`, `reason_code` and `reason`. It ends the pass. |
+| `level-reserved-request` | Level role only, once per request that offers only the terminal tools, with `request_id` and `offered_tools`. |
 | `intent-tail` | Actor with a tail, per request, with `available`, `record_id`, `surfaced_bytes`, `omitted_bytes` and `age`. |
 | `request-start` | One per provider HTTP attempt, including failed and provider-only retries, with `request_id` `request-N` contiguous from 1 and never above `max_requests`. |
 | `response-complete` | Per completed attempt; `usage_available` is boolean and, when true, `usage.cost.total` carries the configured or provider estimate. Missing usage stays unknown. |
@@ -110,22 +111,44 @@ and not counted in `surfaced_bytes`. A failed read or an unexpectedly shaped val
 "Unavailable" and never stops the actor or gates its input. A null tail (flat, arm B, the fourth arm and shadow mode) adds nothing.
 
 A **level** host runs one finite pass with a reader capability. Its enabled tools
-must include `player_log_read`, `player_level_commit` and `player_level_abstain`. It
+must include `player_log_read` and the four terminal tools `player_level_keep`,
+`player_level_replace`, `player_level_close` and `player_level_abstain`. It
 sends no input and makes no handoff. The driver, not the host, schedules passes and
 supplies the frozen role prompt, the actor's mission brief, the pushed served-player
 log since the previous pass, the current subgoal and mechanical wake facts as its prompt.
 
-**A level pass ends on a commit or an abstain.** Every provider request of a level
+**A level pass ends on a terminal call.** Every provider request of a level
 host carries `tool_choice: "required"` (an actor's does not), so the model cannot end
 in prose. The pass ends, with no further tool dispatch (later calls in the same batch
 are refused with `tool-refused` reason `level-ended`) and settles `completed`, after
-either a `player_level_commit` result that becomes a commit or discard (`level-commit`
-or `level-discard`) or a valid `player_level_abstain` result (`level-abstain`). A
-rejected commit or abstain (a tool error) does not end the pass; the model may
-correct it within the pass allowance. A level pass that ends any other way without
-such a result, for example a text-only terminal response, settles `ok: false` with
-reason `level-no-proposal`; a failure that was already latched (a provider error, the
-request limit or the deadline) keeps its own reason. The level's text is never read.
+either a `player_level_keep`, `player_level_replace` or `player_level_close` result that
+becomes a commit or discard (`level-commit` or `level-discard`) or a valid
+`player_level_abstain` result (`level-abstain`). A rejected terminal call (a tool error)
+does not end the pass; the model may correct it within the pass allowance. A level pass
+that ends any other way without such a result, for example a text-only terminal
+response, settles `ok: false` with reason `level-no-proposal`; a failure that was already
+latched (a provider error, the request limit or the deadline) keeps its own reason. The
+level's text is never read.
+
+**Reserved terminal requests.** On every request with two or fewer requests remaining
+(including that request) a level host declares only the four terminal tools: Pi 1.4.0
+declares a request's tools through the transcript's system-message `toolsAdded`
+entries, which the host restricts for that request while the history and the executable
+tool set stay unchanged. Each such request emits `level-reserved-request` with
+`request_id` and `offered_tools`, and its resource status says that only the pass-ending
+tools are offered. A pass of two requests or fewer is terminal-only throughout. A
+terminal call refused (a validation or custodian error) on the last allowed request
+leaves no budget to repair it and settles `ok: false` with reason `level-final-refusal`,
+distinct from `request-limit` (the limit reached after an ordinary tool or a provider
+retry).
+
+**Refusal text.** A level host's validation refusals of `player_log_read` and the terminal
+tools name each failing field path, the rule, the allowed values or limits from the
+tool's schema and the received value truncated to 120 characters, then a minimal valid
+example call for that tool; a terminal tool's refusal ends with "Fix the call and resend
+it; abstaining is not the remedy for a fixable call." The `tool-validation-feedback`
+event retains the original SDK result, the call ID and the projected text. An actor's
+refusals are the SDK's own text.
 
 ## Settlement and handoff
 

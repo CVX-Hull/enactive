@@ -151,7 +151,7 @@ input, mutate memory, run a program or create another handoff.
 reader per actor), is minted only while that actor is active, and never sends input,
 observes, stops or seals. The composition's per-class allowlist refuses every tool
 outside the `reader` profile; the runtime's write authorization admits a reader only
-for `player_level_commit` and `player_level_abstain` (and never admits an actor for either); `_guard` refuses its
+for `player_level_keep`, `player_level_replace`, `player_level_close` and `player_level_abstain` (and never admits an actor for any); `_guard` refuses its
 observe, input and seal; `/api/actor-stop` refuses it. A retained-source integrity
 failure found during a reader's read still fences the run, as for any reader of that
 storage. A reader serves only a `narrowed` actor, which writes no memory, and minting
@@ -167,7 +167,11 @@ are the custodian's allowlist as well as each host's `enabled_tools`:
 - `flat`: basic control, sources, memory append/read/query/context, program
   save/read/run, `player_result` and `player_handoff`;
 - `narrowed`: the same without memory tools or program save;
-- `reader`: the read tools plus `player_log_read`, `player_level_commit` and `player_level_abstain`.
+- `reader`: exactly `player_log_read`, `player_source` and the four terminal tools
+  `player_level_keep`, `player_level_replace`, `player_level_close` and
+  `player_level_abstain`. It has no memory, program, result or `computer_result` tool: the
+  pushed pass input carries the current subgoal. The actor profiles refuse all five level
+  tools.
 
 There is one input writer, the active actor. A level-arm actor writes no memory; the
 level's software commit path is then the only memory writer.
@@ -224,52 +228,62 @@ result `source_id`; a pending operation has status `pending` and no source. If t
 served actor is not active, entries are empty and `handoff` is true. There is no
 observer view, lead telemetry or actor text output.
 
-`player_level_commit(proposal)` validates a closed `player-level-proposal/2`, exactly one
-of three shapes discriminated by `action`. The level manages only its own subgoal: the
-current Work records with `data.level == "subgoal"`, at most one by construction.
-- `{schema, action:"keep", record_id, reason≤1024, sources≤16}` writes no record;
-- `{schema, action:"replace", subgoal, previous}`, where `subgoal` is `{text≤2048,
-  expected_observations≤8×512, status:open|blocked, confidence 0..1, sources≤16}` and
-  `previous` is null or `{record_id, outcome:achieved|failed|abandoned|revised,
-  reason≤1024, sources≤16}`, writes the Work record plus a superseding correction for
-  `previous` (a `revised` outcome makes the correction support the new Work);
-- `{schema, action:"close", record_id, outcome:achieved|failed|abandoned, reason≤1024,
-  sources≤16}` writes the correction only.
+The level manages only its own subgoal: the current Work records with
+`data.level == "subgoal"`, at most one by construction. Software resolves it, so the
+model supplies neither a record id nor a version. Each terminal tool is one flat object of
+the portable schema keywords (`type` on every node, string enums, no `const`, `anyOf`,
+`oneOf`, `$ref` or nested objects); every property is required, and the server-side
+validator is closed (`additionalProperties: false`) without any model dependence on it.
+- `player_level_keep(reason≤1024, sources≤16)` writes no record; the receipt says kept and
+  gives the current id;
+- `player_level_replace(text≤2048, expected_observations≤8×512, status:open|blocked,
+  confidence 0..1, sources≤16, previous_outcome:none|achieved|failed|abandoned|revised,
+  previous_reason≤1024)` writes the Work record, plus a superseding correction for the
+  current subgoal when there is one (a `revised` outcome makes the correction support the
+  new Work); `sources` are the replace's sources for both records. `previous_outcome` is
+  `none` exactly when there is no current subgoal, and `previous_reason` is empty only
+  with `none`;
+- `player_level_close(outcome:achieved|failed|abandoned, reason≤1024, sources≤16)` needs a
+  current subgoal and writes the correction only.
 
-`keep` and `close` need a current subgoal and name it as `record_id`; `replace` needs
-`previous` exactly when a current subgoal exists and names it as `previous.record_id`.
-A violation, like a schema, unavailable-source or source-capacity error, is a tool
-error that names the valid shapes and the current record id (or "none") and keeps the
+A wrong-state call (keep or close with no current subgoal; a replace whose
+`previous_outcome` is `none` while a subgoal is current, or is not `none` while none is
+current, or lacks its `previous_reason`) is a tool error that names the current subgoal
+state (its id, status and leading text, or "no current subgoal") and the valid tool for it.
+A schema, unavailable-source or source-capacity error is likewise a tool error. All keep the
 bound for a corrected resubmission; cited source bytes are read and verified before the
 check. The position is never model-supplied: the custodian binds the highest `position`
 its reader's own log reads returned since its last timeliness check (the driver's
 pushed pass input is such a read); a read from position 0 of an empty log binds 0, so
 an actor-start pass can revalidate an open subgoal. Otherwise the timeliness check ends
-the pass. Commit only if no bound is missing, the run is not stopped, fenced or past its
-deadline (a user Pause or takeover changes the game without custodian input), the
+the pass. The call commits only if no bound is missing, the run is not stopped, fenced or
+past its deadline (a user Pause or takeover changes the game without custodian input), the
 served actor is still active, and it moved fewer than S `input` operations past the
 bound (S fixed per reader at minting); a reader's store is one live session, so no
-session boundary can intervene. Otherwise return `player-level-commit/2`
+session boundary can intervene. Otherwise return `player-level-commit/3`
 `status:"discarded"` with the `action`, reason, bound position and inputs since; a
-discard writes nothing to either store.
+discard writes nothing to either store. The three tools share these timeliness,
+staleness and discard rules.
 
-A commit appends, under `Application.serial` and in one `Memory.append_many`
-transaction, the exact bytes of the sources cited by a replace or close (idempotent
-immutable copies; a keep writes no record, so it registers no frame and only checks its
-citations are available), a new Work
-record for a replacement, one superseding correction for a close or a replacement's
-`previous` (its outcome), and the service row with its final result; keep writes no
-record. The receipt is `{schema:"player-level-commit/2", status, action, reason,
-position, inputs_since, staleness_inputs, kept, records}`. Every record's `data` carries
-`level:"subgoal"`, the proposal schema, served actor, session and bound position; the
-record actor is the reader. A repeated request identity, or `player_result`, returns
+A committed replace or close appends, under `Application.serial` and in one
+`Memory.append_many` transaction, the exact bytes of its cited sources (idempotent
+immutable copies; a keep registers no frame and only checks its citations are available),
+a new Work record for a replace, one superseding correction for a close or a replace over a
+current subgoal, and the service row (named for the tool) with its final result. The
+receipt is one schema, `player-level-commit/3` `{schema, status, action:keep|replace|close,
+reason, position, inputs_since, staleness_inputs, kept, records}`; a keep gives the current
+id in `kept`. Every record's `data` carries `level:"subgoal"`, the software-stamped
+`level_contract: "player-level/3"`, served actor, session and bound position; the record
+actor is the reader. A repeated request identity with the same tool and arguments returns
 that retained result without recommitting. `player-memory/1` and `player-record/1` are
 unchanged.
 
-`player_level_abstain(reason)` (non-blank text, at most 1024 characters) ends a pass
-without a proposal: it writes nothing to memory, clears the reader's bound as a commit
-attempt does, and returns `player-level-abstain/1` `{status:"abstained", reason}`. The
-actor and flat profiles refuse it.
+`player_level_abstain(reason_code, reason≤1024, sources≤16)` ends a pass without a change.
+`reason_code` is `insufficient_evidence`, `transient_screen_state`, `no_change_needed` or
+`other`; `sources` may be empty and, if cited, must be available. It writes nothing to
+memory, clears the reader's bound as a terminal call does, and returns
+`player-level-abstain/2` `{status:"abstained", reason_code, reason}`. The actor and flat
+profiles refuse it.
 
 Context selects≤32 roots, follows bounded support/correction/program ancestry and
 returns whole records, source references and explicit omissions within≤64KiB.

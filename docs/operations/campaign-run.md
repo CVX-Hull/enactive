@@ -53,19 +53,23 @@ its tool discovery and checks), consults the [wake rules](../../tools/level_sche
 only to revalidate an open level subgoal, then every K actor inputs or a crossed budget
 fraction, never on an empty delta and never more than one pass at a time. Each pass
 is a finite `role: level` host under `actors/NNN/level/PPP/`, with the reader MCP
-profile, the frozen context, and a prompt of the role text, the actor's mission brief,
+profile (`player_log_read`, `player_source` and the four terminal tools only), the frozen context, and a prompt of the role text, the actor's mission brief,
 the pushed input and mechanical wake facts. The pushed input is the served log since
 the previous pass's projection (the latest 50 entries, with the omitted count stated)
-and the current level subgoal with its position and inputs since commit; the driver
+and the current level subgoal with its position and inputs since commit (or the line
+`Current subgoal: none`), then `Level records in player memory: N` (the Work records the
+level has written, superseded history included); the driver
 reads it through the reader's own `player_log_read` path under the application lock, so
 the reader's bound is exactly what is shown (the level may read more, which extends the
 bound). The reader's bound is cleared first, so one left by an earlier pass cannot
 carry over, and the wake decision and the push see the same log count. A non-start
 pass whose push is empty is not launched. A failure of that read is a level failure. A pass ends on its first
-`player_level_commit` that commits or discards, or on a valid `player_level_abstain`
+`player_level_keep`, `player_level_replace` or `player_level_close` that commits or
+discards, or on a valid `player_level_abstain`
 (see the [host contract](../contracts/player-host.md#roles-and-the-intent-tail)); one
 that ends otherwise is counted as a failed pass with its settled reason, for example
-`level-no-proposal`. It also ends at its allowance or `pass_seconds`, and is
+`level-no-proposal`, or `level-final-refusal` when a terminal call was refused on the
+pass's last allowed request. Its last two requests offer only the terminal tools. It also ends at its allowance or `pass_seconds`, and is
 closed on its actor's stop, Pause or handoff; no successor is minted unless every pass's
 exact process group is confirmed absent. Its attempts are charged like an actor's; an
 unaccounted pass is charged its whole allocation. A level failure (a malformed trace, a
@@ -75,7 +79,7 @@ more than one current level subgoal) fails closed before that actor launches; a 
 level keeps its unused reservation until the next actor's split. The
 custodian appends per-call lock wait and hold times to `call-timing.jsonl`.
 
-`route.json` uses current `player-host/4` (role `actor`) with text/image input and explicit
+`route.json` uses current `player-host/5` (role `actor`) with text/image input and explicit
 provider/effort/price metadata and image peak and block, chosen against the
 provider's image limit. The selected route is OpenRouter /
 an explicitly pinned provider / DeepSeek Flash1017 medium, default service tier, no fallback.
@@ -268,11 +272,13 @@ estimates and conservative reservations are not invoices. Unknown trace accounti
 charges the allocated attempts. `host_completed_unassessed` means only successful
 host completion; missing normal native exit becomes an incomplete outcome.
 No receipt alone accepts gameplay. Preserve failures and unrun lanes.
-The `player-driver/4` disposition embedded in it reports, per actor, the level's
-`commits`, `discards`, `abstains` (with `start_abstains` counted separately) and
-`failed_passes` (unsettled or `ok: false`), and every pass's settled reason; `/4` added the
-abstain count and the events' `action`, and earlier driver schemas are rejected by the
-readers.
+The `player-driver/5` disposition embedded in it reports, per actor, the level's
+`commits` (with `keeps`, `replaces` and `closes`), `discards`, `abstains` (with
+`abstain_codes` by reason code and `start_abstains` counted separately),
+`failed_passes` (unsettled or `ok: false`) and `final_refusals`, and every pass's settled
+reason; the driver total adds `level_failed_passes` and `level_final_refusals`. `/4` added
+the abstain count and the events' `action`; `/5` added the per-tool and per-code counts and
+the final refusals. Earlier driver schemas are rejected by the readers.
 
 Never reopen the selected package, delete markers to retry, replay uncertain input
 or resume after user Pause. Use a fresh coherent admission after owned cleanup.

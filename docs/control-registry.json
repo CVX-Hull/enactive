@@ -477,7 +477,7 @@
       "name": "Architectural dependency contracts",
       "mode": "automatic",
       "scope": "Mechanical computer authority, optional player logic, actor adapters, HTTP composition, the substitutable player host boundary and host-neutral current design/tooling.",
-      "mechanism": "Four current Import Linter contracts prohibit computer dependencies on player/adapter semantics, player custody/network dependencies, adapter executor instantiation and server CLI/tooling imports. Actual temporary-source negative tests exercise direct and indirect violations; shared data/control ports remain legal. The player-host/4 conformance suite drives each listed adapter only through contract argv, files, environment, telemetry and exit status. A host-neutrality regression fails when current documents, harness or tooling outside the adapter, setup and operator pages name a specific player host or coding agent.",
+      "mechanism": "Four current Import Linter contracts prohibit computer dependencies on player/adapter semantics, player custody/network dependencies, adapter executor instantiation and server CLI/tooling imports. Actual temporary-source negative tests exercise direct and indirect violations; shared data/control ports remain legal. The player-host/5 conformance suite drives each listed adapter only through contract argv, files, environment, telemetry and exit status. A host-neutrality regression fails when current documents, harness or tooling outside the adapter, setup and operator pages name a specific player host or coding agent.",
       "owner": "harness maintainer",
       "trigger": "common command; architecture changes require rule review",
       "evidence": [
