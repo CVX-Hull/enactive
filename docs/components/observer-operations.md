@@ -70,6 +70,11 @@ fixed at each return and taken from the newest poll even while Timeline inspecti
 frozen. It is cleared only when the reader marks them seen, never by time, polling or
 arrivals while visible. An unknown omission count keeps the "older ones may have been
 omitted" caveat. An unknown quantity is shown as "unreported" and never gains a unit.
+Watch leads with the captured screen; each qualifier sits in a disclosure beside the
+fact it qualifies rather than being dropped. Recent activity lists the newest three
+entries first with their wall-clock age, unclamped so a clock difference stays
+visible. The control bar stays pinned above about 700 px and scrolls with the page
+on phones, where Pause remains first in reading order.
 The viewer suite checks the status and alert roles; that wholly rewritten regions are
 not live regions; that Pause is the first and only Pause-labelled button; reserved
 image space; visible focus; and the narrow layout. These are static checks of the

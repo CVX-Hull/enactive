@@ -171,6 +171,7 @@ const text = id => {
   run('void refresh()');
   request('/api/status').reject(new Error('offline')); await tick();
   assert.match(text('connection'), /unavailable/i);
+  assert.equal(element('connection')['data-state'], 'error', 'The status dot follows the outage');
   assert.match(text('status-error'), /offline/);
   assert.match(text('frame-note'), /retained.*status unavailable/i);
   assert.equal(requests.length, 0);
@@ -316,6 +317,14 @@ const text = id => {
   assert.match(text('statement-meta'), /original bytes omitted: 7; further display bytes omitted: 3/);
   assert.match(text('statement-meta'), /No captured frame is linked to a statement.*unverified/, 'A statement is labelled unverified, never confirmed');
   assert.match(text('activity-summary'), /6 omitted/);
+  const feed = element('recent-activity').children;
+  assert.equal(feed.length, 2);
+  assert.match(text('recent-activity'), /^\s*Model request started/, 'The feed lists the newest entry first');
+  assert.equal(feed[0].children[1].textContent, '0 s ago');
+  await activityPoll(activity([b], {entries: [{...b, created_wall: epoch / 1000 + 4}]}));
+  assert.equal(element('recent-activity').children[0].children[1].textContent, '-4 s ago', 'A clock difference stays visible, never clamped to zero');
+  await activityPoll(activity([]));
+  assert.match(text('recent-activity'), /No use observed.*missing coverage is unknown/);
 
   // Neutral recorded fact: identical captures around the latest input, by SHA-256 only.
   const capture = (id, kind, sha, overrides = {}) => ({id: `computer:${id}`, session: 'session-five', producer: 'computer',
