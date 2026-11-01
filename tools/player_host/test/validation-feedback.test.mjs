@@ -72,7 +72,7 @@ test('parser, executed, unknown and ambiguous history keep their original errors
   assert.notEqual(project([assistant(bad),message])[1].content[0].text,message.content[0].text);
 });
 
-test('missing or ambiguous discriminator and a passing narrowed check preserve full SDK refusal',async()=>{
+test('missing discriminator names the valid values; ambiguous one and a passing narrowed check preserve full SDK refusal',async()=>{
   // A discriminator that names no branch gets the valid values instead of any branch's errors.
   for (const [intent,got] of [[{entry:{stage:'long'}},'nothing'],[{entry_type:'unknown',entry:{stage:'long'}},'"unknown"']]) {
     const c={...call(),arguments:{intent}};const {tool,message}=await refusal(c);

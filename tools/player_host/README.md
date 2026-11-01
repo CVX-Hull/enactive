@@ -153,7 +153,8 @@ selected value names and retaining surrounding constraints. A value that names n
 branch gets the valid values instead, and both texts end with the branches' required keys. It never
 changes arguments, tool schemas, normal SDK validation, execution or collection.
 It requires a unique completed call/result batch, `isError`, absent `durationMs`,
-one text part with the exact SDK validation header, a known unambiguous branch,
+one text part with the exact SDK validation header, an unambiguous discriminator
+(a missing or unknown value gets the valid values instead of a branch),
 and no parser `argumentsError`. In pinned Pi, executed calls always carry a
 duration, including zero and exceptions. Parser/blocked errors have other headers;
 MCP errors keep their original path. If the narrowed check passes, the original
