@@ -30,8 +30,10 @@ class SessionStore:
                 frames INTEGER NOT NULL DEFAULT 0, bytes INTEGER NOT NULL DEFAULT 0);
             INSERT INTO resources(id) VALUES(1);
             CREATE TABLE actors(id TEXT PRIMARY KEY,token_hash TEXT NOT NULL UNIQUE,
-                stage TEXT NOT NULL CHECK(stage IN ('active','sealed','quiescent')));
+                stage TEXT NOT NULL CHECK(stage IN ('active','sealed','quiescent','reader')),
+                serves TEXT REFERENCES actors(id),CHECK((stage='reader')=(serves IS NOT NULL)));
             CREATE UNIQUE INDEX sole_active_actor ON actors(stage) WHERE stage='active';
+            CREATE UNIQUE INDEX one_reader_per_actor ON actors(serves) WHERE serves IS NOT NULL;
             CREATE TABLE operations(id TEXT PRIMARY KEY,actor TEXT NOT NULL REFERENCES actors(id),
                 kind TEXT NOT NULL CHECK(kind IN ('input','observe','handoff')),
                 created_wall REAL NOT NULL,deadline REAL NOT NULL,input_json TEXT NOT NULL,
@@ -43,11 +45,11 @@ class SessionStore:
                 source TEXT NOT NULL REFERENCES sources(id),PRIMARY KEY(actor,source));
             CREATE TABLE collections(native_id TEXT PRIMARY KEY REFERENCES native_intents(id),
                 receipt TEXT NOT NULL,source TEXT REFERENCES sources(id));
-            PRAGMA user_version=1;
+            PRAGMA user_version=2;
         ''')
         with self.connection:
             self.connection.executemany('INSERT INTO metadata VALUES(?,?)', [
-                ('schema', canonical('computer-session/1')), ('session', canonical(session)),
+                ('schema', canonical('computer-session/2')), ('session', canonical(session)),
                 ('limits', canonical(limits)), ('deadline_monotonic', canonical(deadline))])
         (directory / 'sources').mkdir(mode=0o700)
         self.limits = limits.copy()
@@ -61,9 +63,29 @@ class SessionStore:
             row = self.connection.execute('SELECT inputs,requests,frames,bytes FROM resources WHERE id=1').fetchone()
             return dict(zip(('inputs', 'requests', 'frames', 'frame_bytes'), row, strict=True))
 
-    def add_actor(self, identity: str, token_hash: str) -> None:
+    def add_actor(self, identity: str, token_hash: str, serves: str | None = None) -> None:
         with self.lock, self.connection:
-            self.connection.execute('INSERT INTO actors VALUES(?,?,?)', (identity, token_hash, 'active'))
+            self.connection.execute('INSERT INTO actors VALUES(?,?,?,?)',
+                                    (identity, token_hash, 'active' if serves is None else 'reader', serves))
+
+    def actor_log(self, actor_id: str, after: int, limit: int) -> list[dict[str, Any]]:
+        """The served actor's operations in store order; positions are 1-based per actor."""
+        with self.lock:
+            rows = self.connection.execute('SELECT id,kind,input_json,final_json FROM operations WHERE actor=? '
+                'ORDER BY rowid LIMIT ? OFFSET ?', (actor_id, limit, after)).fetchall()
+        entries = []
+        for position, (identity, kind, actions, final) in enumerate(rows, after + 1):
+            result = decode_json(final, 262144) if final is not None else None
+            entries.append(dict(position=position, operation_id=identity, kind=kind,
+                actions=decode_json(actions) if kind == 'input' else None,
+                status=result['status'] if result else 'pending',
+                source_id=result['source']['source_id'] if result and result.get('source') else None))
+        return entries
+
+    def inputs_after(self, actor_id: str, position: int) -> int:
+        with self.lock:
+            return self.connection.execute('SELECT COUNT(*) FROM (SELECT kind FROM operations WHERE actor=? '
+                'ORDER BY rowid LIMIT -1 OFFSET ?) WHERE kind=?', (actor_id, position, 'input')).fetchone()[0]
 
     def actor_stage(self, identity: str) -> str | None:
         with self.lock:

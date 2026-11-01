@@ -618,7 +618,7 @@ function productionMcp(enabled_tools) {
 test('real production MCP discovery forwards all exact current actor-only tool schemas', async ()=>{
   const { execFile } = await import('node:child_process');
   const { promisify } = await import('node:util');
-  const {stdout}=await promisify(execFile)(python,['-c','import json; from harness.player_tools import tool_specs; print(json.dumps({name:{"schema":schema,"description":description} for name,(description,schema) in tool_specs().items()}))'],{cwd:productionRoot,maxBuffer:INPUT_LIMIT_BYTES});
+  const {stdout}=await promisify(execFile)(python,['-c','import json; from harness.player_tools import PROFILES, tool_specs; specs=tool_specs(); print(json.dumps({name:{"schema":specs[name][1],"description":specs[name][0]} for name in PROFILES["flat"]}))'],{cwd:productionRoot,maxBuffer:INPUT_LIMIT_BYTES});
   const expected=JSON.parse(stdout), payloads=[], bodies=[], events=[];
   const chosen=Object.keys(expected);
   assert.equal(chosen.length,14);
@@ -635,7 +635,8 @@ test('real production MCP discovery forwards all exact current actor-only tool s
     for(const key of ['actor_id','session','token']) assert.equal(Object.hasOwn(tool.function.parameters.properties,key),false);
   }
   const handoff=payloads[0].tools.find(tool=>tool.function.name==='player_handoff').function;
-  assert.deepEqual(handoff.parameters.required,['ids','summary']);
+  assert.deepEqual(handoff.parameters.required,[]);
+  assert.deepEqual(Object.keys(handoff.parameters.properties),[]);
   assert.ok(chosen.includes('computer_result')&&chosen.includes('player_result'));
   assert.ok(chosen.every(name=>!name.startsWith('enactive_')));
   assert.ok(payloads[0].messages[0].content.includes('Only basic computer control is authoritative'));
@@ -1086,14 +1087,14 @@ test('production MCP sealed handoff settles after earlier ordinary tool without 
     model:model.id,effort:'off',timeoutSeconds:10,env:{OFFLINE_TEST_KEY:'fixture-key'},
     fetch:async(_url,init)=>{
       bodies.push(init.body);payloads.push(JSON.parse(init.body));
-      return reply(null,[['computer_observe',{}],['player_handoff',{ids:[],summary:'synthetic unfinished work'}],['computer_observe',{}]]);
+      return reply(null,[['computer_observe',{}],['player_handoff',{}],['computer_observe',{}]]);
     },onEvent:e=>events.push(e)});
   assert.deepEqual(result,{ok:true,reason:'handoff',requests:1,finalText:''});
   assertRequestMetadata(events,bodies);
   assert.deepEqual(events.filter(e=>e.type==='tool-start').map(e=>e.tool),['computer_observe','player_handoff']);
   const value=JSON.parse(events.find(e=>e.type==='tool-result'&&e.tool==='player_handoff').result.content[0].text);
   assert.equal(value.schema,'computer-operation/1');assert.equal(value.status,'sealed');
-  assert.equal(value.handoff.schema,'player-handoff/1');assert.equal(value.handoff.grants_authority,false);
+  assert.equal(value.handoff.schema,'player-handoff/2');assert.equal(value.handoff.grants_authority,false);
   const event=events.find(e=>e.type==='handoff');
   assert.equal(event.handoff_id,value.operation_id);assert.equal(event.session,value.session);
   assert.equal(event.actor_id,value.actor_id);assert.equal(event.context_id,value.handoff.context_id);
@@ -1102,7 +1103,7 @@ test('production MCP sealed handoff settles after earlier ordinary tool without 
   assert.throws(()=>process.kill(events.find(e=>e.type==='mcp-connected').child_pid,0),{code:'ESRCH'});
 });
 
-const handoffArgs = {ids:[],summary:'Retain current context'};
+const handoffArgs = {};
 const handoffTools = ['mutate','player_handoff','computer_result'];
 const handoffId = '1'.repeat(32);
 const sessionId = '2'.repeat(32);

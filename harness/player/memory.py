@@ -111,18 +111,64 @@ class Memory:
         with self._transaction():
             prior = self._db.execute('SELECT 1 FROM records WHERE id=?',(stored['id'],)).fetchone()
             if prior:
-                original = self.read(stored['id'])
-                if original['actor_id'] != actor_id or {k:v for k,v in original.items() if k not in {'id','actor_id','created_wall'}} != value:
-                    raise PlayerError('Original memory request identity conflicts')
-                return original
-            self._references('sources', value['sources'])
-            self._references('records', value['supports'] + ([value['supersedes']] if value['supersedes'] else []))
-            self._references('programs', [value['program_id']] if value['program_id'] else [])
-            self._db.execute('INSERT INTO records VALUES (?,?,?,?,?)',
-                             (stored['id'], canonical(stored), value['kind'], value['supersedes'], value['program_id']))
-            for table, field in (('record_sources', 'sources'), ('record_supports', 'supports')):
-                self._db.executemany(f'INSERT INTO {table} VALUES (?,?)', [(stored['id'], ref) for ref in value[field]])
+                return self._original(stored['id'], actor_id, value)
+            self._insert(stored)
         return stored
+
+    @staticmethod
+    def batch_ids(request_id: str, count: int) -> list[str]:
+        """Record IDs of one multi-record request, derived so lost responses stay collectible."""
+        return [hashlib.sha256(f'{request_id}:{index}'.encode()).hexdigest()[:32] for index in range(count)]
+
+    def append_many(self, actor_id: str, values: list[dict], *, request_id: str,
+                    service: tuple[str, dict, dict] | None = None) -> list[dict]:
+        """Append 0..16 records in one transaction; a later record may reference an earlier one.
+
+        `service` is `(tool, args, result)`: its correlation row and final result, with
+        `records` filled in, commit in the same transaction, so no pending window exists.
+        """
+        identity(actor_id)
+        identity(request_id)
+        if type(values) is not list or len(values) > 16 or not values and service is None:
+            raise PlayerError('A multi-record append holds 1..16 records, or 0 with its service result')
+        values = [record(value) for value in values]
+        now = time.time()
+        stored = [dict(value, id=item, actor_id=actor_id, created_wall=now)
+                  for value, item in zip(values, self.batch_ids(request_id, len(values)), strict=True)]
+        with self._transaction():
+            if stored and self._db.execute('SELECT 1 FROM records WHERE id=?', (stored[0]['id'],)).fetchone():
+                return [self._original(item['id'], actor_id, value) for item, value in zip(stored, values, strict=True)]
+            for item in stored:
+                self._insert(item)
+            if service is not None:
+                tool, args, result = service
+                self._db.execute('INSERT INTO service_operations VALUES(?,?,?,?,?,?)', (request_id, actor_id, tool,
+                    canonical(args), canonical({'steps': []}), canonical(dict(result, records=stored))))
+        return stored
+
+    def _original(self, item_id: str, actor_id: str, value: dict) -> dict:
+        original = self.read(item_id)
+        if original['actor_id'] != actor_id or {k:v for k,v in original.items() if k not in {'id','actor_id','created_wall'}} != value:
+            raise PlayerError('Original memory request identity conflicts')
+        return original
+
+    def _insert(self, stored: dict) -> None:
+        self._references('sources', stored['sources'])
+        self._references('records', stored['supports'] + ([stored['supersedes']] if stored['supersedes'] else []))
+        self._references('programs', [stored['program_id']] if stored['program_id'] else [])
+        self._db.execute('INSERT INTO records VALUES (?,?,?,?,?)',
+                         (stored['id'], canonical(stored), stored['kind'], stored['supersedes'], stored['program_id']))
+        for table, field in (('record_sources', 'sources'), ('record_supports', 'supports')):
+            self._db.executemany(f'INSERT INTO {table} VALUES (?,?)', [(stored['id'], ref) for ref in stored[field]])
+
+    def current(self, kind: str) -> list[dict]:
+        """Every unsuperseded record of one kind, oldest first, without query's 50-record default."""
+        try:
+            rows = self._db.execute('''SELECT id FROM records r WHERE kind=?
+                AND NOT EXISTS (SELECT 1 FROM records c WHERE c.supersedes=r.id) ORDER BY r.rowid''', (kind,)).fetchall()
+            return [self.read(row[0]) for row in rows]
+        except sqlite3.Error as exc:
+            raise PlayerError(f'Cannot query player memory: {exc}') from exc
 
     def query(self, kind: str | None = None, limit: int = 50, include_superseded: bool = False) -> list[dict]:
         bounded_integer(limit, 1, 50)

@@ -39,14 +39,14 @@ def test_trace_from_another_host_contract_is_refused(tmp_path,schema):
 
 
 def test_known_prelaunch_failure_has_zero_attempts_and_no_successor(tmp_path):
-    application=SimpleNamespace(runtime=SimpleNamespace(add_actor=Mock(side_effect=OSError('fixture store refusal')),stop=Mock()))
+    application=SimpleNamespace(add_actor=Mock(side_effect=OSError('fixture store refusal')),runtime=SimpleNamespace(stop=Mock()))
     profile=dict(max_hosts=2,host_seconds=100,total_host_seconds=200,max_http_attempts=30)
     with patch('tools.campaign_player.subprocess.Popen') as launch:
         result=run_hosts(tmp_path,profile,dict(max_requests=20),application,'fixture-secret',threading.Event(),time.monotonic()+300)
     assert result['outcome']=='incomplete' and result['attempts_charged']==0
     assert result['actors'][0]['cleanup']==dict(process_absent=True,group_absent=True)
     assert 'OSError' in result['reason'] and not launch.called
-    assert application.runtime.add_actor.call_count==1
+    assert application.add_actor.call_args_list==[(('flat',),{})]
 
 
 FAKE_HOST = """
@@ -68,7 +68,8 @@ def test_driver_launches_the_selected_host_argv_in_run_mode(tmp_path):
     adapter=tmp_path/'adapter.py';adapter.write_text(FAKE_HOST)
     (tmp_path/'context.txt').write_text('Frozen context');(tmp_path/'prompt.txt').write_text('Frozen mission')
     application=SimpleNamespace(
-        runtime=SimpleNamespace(add_actor=Mock(return_value=dict(actor_id='a'*32,token='t')),stop=Mock(),
+        add_actor=Mock(return_value=dict(actor_id='a'*32,token='t')),
+        runtime=SimpleNamespace(stop=Mock(),
             process=SimpleNamespace(poll=lambda:None),channel=SimpleNamespace(stopped=threading.Event()),session='s'*32),
         activity_view=SimpleNamespace(host_event=Mock()),host=None)
     profile=dict(max_hosts=1,host_seconds=100,total_host_seconds=200,max_http_attempts=30,effort='off',port=8766,

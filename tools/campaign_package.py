@@ -96,7 +96,7 @@ def preflight(directory: Path) -> tuple[dict,dict,dict]:
     if route.get('service_tier')!='default':raise ControlError('This campaign allocation supports only the selected default serving tier')
     if route['max_requests']>profile['max_http_attempts']:raise ControlError('Per-host attempts exceed original campaign allowance')
     template=read_json(directory/'mcp-template.json',1048576)
-    if template!=configuration('@ACTOR_CONFIG@'):raise ControlError('Only the current explicit actor MCP profile is supported')
+    if template!=configuration('@ACTOR_CONFIG@',profile='flat'):raise ControlError('Only the current explicit actor MCP profile is supported')
     target=read_json(directory/'target.json',1048576)
     closed(target,{'argv','cwd','env'})
     if (type(target['argv']) is not list or not 1<=len(target['argv'])<=32

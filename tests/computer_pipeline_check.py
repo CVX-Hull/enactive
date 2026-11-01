@@ -28,7 +28,7 @@ def check(options):
         runtime=ComputerRuntime(options.output,session,channel,owner.process,owner.deadline,
             dict(max_inputs=30,max_requests=60,max_frames=60,max_bytes=2**31))
         memory=Memory(options.output/'player.sqlite3')
-        app=Application(runtime,memory,options.output/'contexts');actor=runtime.add_actor()
+        app=Application(runtime,memory,options.output/'contexts');actor=app.add_actor('flat')
         owner.wait_target();exclusion(owner.shared_lock,True)
         def call(tool,args):return app.call(actor['token'],tool,args,uuid.uuid4().hex)[0]
         end=time.monotonic()+3

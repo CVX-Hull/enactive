@@ -75,12 +75,13 @@ class Channel:
         self.stop('closed')
 
 
-def make_runtime(tmp_path, **limits):
+def make_runtime(tmp_path, *, mint=True, **limits):
+    """mint=False leaves minting to a composition that registers the actor's tool profile."""
     channel = Channel()
     values = dict(max_inputs=20, max_requests=30, max_frames=40, max_bytes=2**30)
     values.update(limits)
     runtime = ComputerRuntime(tmp_path, 'a'*32, channel, Process(), time.monotonic()+60, values)
-    actor = runtime.add_actor()
+    actor = runtime.add_actor() if mint else None
     return runtime, channel, actor
 
 

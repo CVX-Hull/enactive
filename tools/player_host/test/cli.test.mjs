@@ -71,7 +71,7 @@ for(const name of ['OPENAI_LOG','OPENAI_CUSTOM_HEADERS','OPENAI_ORG_ID','OPENAI_
 
 test('CLI completed handoff exits zero, leaves the reserved final path unchanged and sends no extra HTTP request',async t=>{
   let requests=0;
-  const args={ids:[],summary:'Retain current context'};
+  const args={};
   const run=await cli(t,(_req,res)=>{
     requests++;res.writeHead(200,{'content-type':'text/event-stream'});
     res.end('data: '+JSON.stringify({id:'fixture',model:'fixture-backend',choices:[{index:0,delta:{role:'assistant',tool_calls:[{index:0,id:'handoff-call',type:'function',function:{name:'player_handoff',arguments:JSON.stringify(args)}}]},finish_reason:'tool_calls'}]})+'\n\ndata: [DONE]\n\n');

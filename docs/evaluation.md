@@ -63,7 +63,7 @@ These commands are offline and read-only, writing summaries to stdout:
 
 The selected actor traces and current `campaign-run/3` / `campaign-receipt/2`
 sidecars supply scoped provenance. The control reader opens a current
-`computer-session/1` SQLite snapshot read-only, bounded by table/byte/path limits;
+`computer-session/2` SQLite snapshot read-only, bounded by table/byte/path limits;
 it neither migrates data nor reconstructs authority. `observer-timing/4` exports
 join exact session/source/capture/presentation IDs. Duplicate exports do not create
 new witnesses. DOM replacement is neither physical paint nor model attention;

@@ -57,7 +57,7 @@ The client gives each submission its ID before sending. `computer_result` and
 neither delivery nor nondelivery. MCP cancellation requests independent permanent
 Pause before abandoning the await.
 
-Current storage is fresh `computer-session/1` plus explicitly selected
+Current storage is fresh `computer-session/2` plus explicitly selected
 `player-memory/1`. Immutable sources retain original PNG bytes and digest.
 [Current data treatment](contracts/computer-control.md#responsibilities-and-current-data)
 and [migration](operations/migration.md) own versions and historical-state handling.

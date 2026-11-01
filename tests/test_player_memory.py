@@ -89,3 +89,43 @@ def test_source_integrity_and_caller_copy_isolation(tmp_path):
         memory._db.commit()
         with pytest.raises(PlayerError):
             memory.read_source(metadata['source_id'])
+
+
+def test_multi_record_append_is_one_transaction_with_derived_ids(tmp_path):
+    with Memory(tmp_path / 'player.sqlite3') as memory:
+        prior = memory.append('b' * 32, record('work'))
+        request = 'c' * 32
+        first, second = Memory.batch_ids(request, 2)
+        batch = [record('work', text='replacement'),
+                 record('correction', supersedes=prior['id'], supports=[first])]
+        stored = memory.append_many('d' * 32, batch, request_id=request)
+        assert [r['id'] for r in stored] == [first, second]
+        assert [r['id'] for r in memory.current('work')] == [first]
+        assert memory.append_many('d' * 32, batch, request_id=request) == stored
+        with pytest.raises(PlayerError, match='conflicts'):
+            memory.append_many('e' * 32, batch, request_id=request)
+        # A failing later record rolls back the earlier one in the same batch.
+        with pytest.raises(PlayerError, match='Missing records reference'):
+            memory.append_many('d' * 32, [record('work', text='orphan'), record('correction', supersedes='missing')],
+                               request_id='f' * 32)
+        assert memory._db.execute('SELECT COUNT(*) FROM records').fetchone()[0] == 3
+        for count in (0, 17):
+            with pytest.raises(PlayerError):
+                memory.append_many('d' * 32, [record()] * count, request_id='0' * 32)
+
+
+def test_service_row_and_records_commit_in_one_transaction(tmp_path):
+    with Memory(tmp_path / 'player.sqlite3') as memory:
+        request = '1' * 32
+        service = ('player_level_commit', dict(proposal={}), dict(status='committed'))
+        stored = memory.append_many('d' * 32, [record('work')], request_id=request, service=service)
+        collected = memory.service_result(request, 'd' * 32)
+        assert collected['status'] == 'completed' and collected['value'] == dict(status='committed', records=stored)
+        assert memory.append_many('d' * 32, [], request_id='2' * 32, service=service) == []
+        assert memory.service_result('2' * 32)['value'] == dict(status='committed', records=[])
+        with pytest.raises(PlayerError, match='Missing records reference'):
+            memory.append_many('d' * 32, [record('correction', supersedes='missing')], request_id='3' * 32,
+                               service=service)
+        with pytest.raises(PlayerError, match='Unknown original'):
+            memory.service_result('3' * 32)
+        assert memory._db.execute('SELECT COUNT(*) FROM records').fetchone()[0] == 1

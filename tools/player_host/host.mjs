@@ -315,7 +315,7 @@ function inspectHandoff(name, args, result, pending) {
   }
   const issued = value.handoff;
   valid(value.status === 'sealed' && object(issued)
-    && issued.schema === 'player-handoff/1' && issued.grants_authority === false
+    && issued.schema === 'player-handoff/2' && issued.grants_authority === false
     && issued.operation_id === origin.operation_id && issued.session === origin.session
     && issued.actor_id === origin.actor_id && id(issued.context_id)
     && typeof issued.context_sha256 === 'string' && /^[a-f0-9]{64}$/.test(issued.context_sha256)

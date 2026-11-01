@@ -71,7 +71,7 @@ class PlayerClient:
         issued=value.get('handoff')
         if (value.get('schema') == 'computer-operation/1' and value.get('kind') == 'handoff'
                 and value.get('status') == 'sealed' and isinstance(issued,dict)
-                and issued.get('schema') == 'player-handoff/1'
+                and issued.get('schema') == 'player-handoff/2'
                 and value.get('operation_id') == original == issued.get('operation_id')
                 and value.get('session') == self.config['session'] == issued.get('session')
                 and value.get('actor_id') == self.config['actor_id'] == issued.get('actor_id')

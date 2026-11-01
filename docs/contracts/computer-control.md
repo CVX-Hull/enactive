@@ -23,7 +23,7 @@ connects them; player assertions never grant input custody or certify a save.
 All game-specific preparation stays outside the computer package.
 
 Start a fresh explicit session under `.runtime/computer-sessions/`, with a new
-`computer-session/1` SQLite store and exclusive launch marker **before** DB/native
+`computer-session/2` SQLite store and exclusive launch marker **before** DB/native
 creation. A selected partial directory refuses even without a DB. Never scan or
 drain old inboxes or unrelated retained sessions. Existing native7/mission11/DB13,
 proof profiles and executable old player formats are unsupported. Preserve their
@@ -137,11 +137,37 @@ plus independent user Pause. The writer validates active custody immediately bef
 effects. Memory/progress/identity are never capability tokens.
 
 Handoff seals the actor only with no outstanding/uncertain input or permanent
-Pause. Persist a canonical immutable context snapshot before sealing. The operation
-binds `handoff:{schema:"player-handoff/1",operation_id,session,actor_id,context_id,
+Pause. `player_handoff` takes no arguments. Before sealing, persist a canonical
+immutable `player-handoff-context/2` packet holding only mechanical identity
+(`schema,context_id,session,actor_id,created_wall,grants_authority:false`); it carries
+no actor-written summary and no knowledge snapshot. The operation
+binds `handoff:{schema:"player-handoff/2",operation_id,session,actor_id,context_id,
 context_sha256,sealed_wall,grants_authority:false}`. A sealed token permits original
 result, retained-source and player/context reads only. It cannot observe anew,
 input, mutate memory, run a program or create another handoff.
+
+**Capability classes.** `computer-session/2` actors have stage `active`, `sealed`,
+`quiescent` or `reader`. A **reader** serves exactly one actor (`serves`; at most one
+reader per actor), is minted only while that actor is active, and never sends input,
+observes, stops or seals. The composition's per-class allowlist refuses every tool
+outside the `reader` profile; the runtime's write authorization admits a reader only
+for `player_level_commit` (and never admits an actor for it); `_guard` refuses its
+observe, input and seal; `/api/actor-stop` refuses it. A retained-source integrity
+failure found during a reader's read still fences the run, as for any reader of that
+storage. Minting refuses while more than 15 Work records are current, since one commit
+holds at most 15 decisions.
+Readers are excluded from `max_actors` and from the "every prior actor quiescent"
+succession test, so a live reader never blocks a successor. The composition registers
+each capability's profile when it mints it (`flat` or `narrowed` actors, `reader`); a
+capability minted without a profile has no tools. [Profiles](../../harness/player_tools.py)
+are the custodian's allowlist as well as each host's `enabled_tools`:
+- `flat`: basic control, sources, memory append/read/query/context, program
+  save/read/run, `player_result` and `player_handoff`;
+- `narrowed`: the same without memory tools or program save;
+- `reader`: the read tools plus `player_log_read` and `player_level_commit`.
+
+There is one input writer, the active actor. A level-arm actor writes no memory; the
+level's software commit path is then the only memory writer.
 The host accepts only its direct handoff or collection of its own pending original
 handoff. The driver verifies canonical issuance/context digest and actual old host/
 MCP process-group quiescence before minting a successor under **original** limits.
@@ -185,6 +211,42 @@ port; prior-session sources from the explicitly selected player store. The bound
 256MiB PNG BLOB store keeps durable provenance independent of old input authority.
 Do not copy every Observe. Capacity/registration failure reports cannot-remember
 and leaves basic input available. Verify SHA on image read; no silent eviction.
+
+**Log projection and level commit** ([ADR-007](../decisions/007-player-subgoal-level.md)
+candidate). `player_log_read(after,limit)` (limit 1..50) returns `player-log/1`:
+`schema,session,actor_id,after,entries,handoff,grants_authority:false`. Entries are the
+served actor's `operations` rows in store order, each with a 1-based per-actor
+`position`, `operation_id`, `kind`, input `actions` (null otherwise), `status` and the
+result `source_id`; a pending operation has status `pending` and no source. If the
+served actor is not active, entries are empty and `handoff` is true. There is no
+observer view, lead telemetry or actor text output.
+
+`player_level_commit(proposal)` validates a closed `player-level-proposal/1`:
+`schema,subgoal,records`. `subgoal` is null or `{text≤2048,expected_observations≤8×512,
+status:open|blocked,confidence 0..1,sources≤16}`; `records` holds ≤15 decisions
+`{record_id,decision:keep|revise|close,outcome,reason≤1024,sources≤16}`. The
+outcome is `achieved`, `failed` or `abandoned` exactly for a close. The decisions name
+exactly every current Work record. A new subgoal revises or closes every one of them; without one, at most one is kept, the rest are closed and none is revised. The
+position is never model-supplied: the custodian binds the highest `position` its
+reader's own log reads returned since its last timeliness check; a read from position 0
+of an empty log binds 0, so an actor-start pass can revalidate open records. A schema,
+coverage or unavailable-source error is a tool error and keeps the bound for a corrected
+resubmission. Otherwise the timeliness check ends the pass. Commit only if no bound is
+missing, the run is not stopped, fenced or past its deadline (a user Pause or takeover
+changes the game without custodian input), the served actor is still active, and it
+moved fewer than S `input` operations past the bound (S fixed per reader at minting); a
+reader's store is one live session, so no session boundary can intervene. Otherwise
+return `player-level-commit/1` `status:"discarded"` with the reason, bound position
+and inputs since; a discard writes nothing to either store.
+
+A commit registers its cited sources (idempotent immutable copies), then appends, under
+`Application.serial` and in one `Memory.append_many` transaction, a new Work record for
+a new subgoal, one superseding correction per revise (outcome `revised`, supporting the
+new record) or close (its outcome), and the service row with its final result; keep
+writes no record. Every record's `data` carries `level:"subgoal"`, the proposal schema,
+served actor, session and bound position; the record actor is the reader. A repeated
+request identity, or `player_result`, returns that retained result without recommitting.
+`player-memory/1` and `player-record/1` are unchanged.
 
 Context selects≤32 roots, follows bounded support/correction/program ancestry and
 returns whole records, source references and explicit omissions within≤64KiB.

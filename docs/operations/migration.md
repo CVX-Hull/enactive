@@ -17,7 +17,7 @@ Before changing a deployment:
 1. Close writers and verify exact owned native/host/MCP cleanup. Never migrate under a live actor/game.
 2. Preserve original saves, SQLite/JSON/PNG, configuration, source checkpoint and binary bytes as inert evidence. Keep failed/abandoned chains intact.
 3. Select current coherent source, current adapter/native bytes and normal project-local input settings. Freeze a fresh explicit `campaign-run/3` package under `.runtime/computer-sessions/`.
-4. Use a fresh `computer-session/1` store and launch marker. A selected partial directory refuses even with no DB; do not delete markers to rearm it.
+4. Use a fresh `computer-session/2` store and launch marker. A selected partial directory refuses even with no DB; do not delete markers to rearm it.
 5. Explicitly select a `player-memory/1` store. It can span fresh native-child sessions, but old campaign-memory/procedure/advisory formats are not current executable inputs. Unsupported selected stores reject before native launch.
 6. Requalify the affected native/gameplay boundary. Old test/demo results remain bound to their earlier source and cannot qualify the replacement.
 

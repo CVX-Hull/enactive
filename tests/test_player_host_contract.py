@@ -345,7 +345,7 @@ def test_completed_run_reports_final_text_and_accountable_telemetry(adapter, hos
 
 
 def test_handoff_settles_once_leaves_final_unchanged_and_closes_the_mcp_child(adapter, host_factory):
-    hosted = host_factory([tool_response("player_handoff", dict(ids=[], summary="Retain current context")),
+    hosted = host_factory([tool_response("player_handoff", {}),
                            text_response("must never be requested")], enabled_tools=("player_handoff",))
     assert hosted.start().wait() == 0
     handoffs = [event for event in hosted.events() if event["type"] == "handoff"]

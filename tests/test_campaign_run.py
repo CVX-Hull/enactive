@@ -20,7 +20,7 @@ def package(root):
     values={
         'route.json':dict(schema='player-host/2',service_tier='default',max_requests=10,model=dict(id='fixture',
             contextWindow=1000,maxTokens=100,cost=dict(input=.45,cacheRead=.45,cacheWrite=.45,output=1.8))),
-        'mcp-template.json':configuration('@ACTOR_CONFIG@'),
+        'mcp-template.json':configuration('@ACTOR_CONFIG@',profile='flat'),
         'context.txt':'Frozen context','prompt.txt':'Frozen mission',
         'target.json':dict(argv=[str(root/'native')],cwd=str(root),env={}),
     }

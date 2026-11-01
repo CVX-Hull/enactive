@@ -52,7 +52,8 @@ request/result references. It excludes private reasoning, credentials and raw
 provider request/image histories. Original source images remain with their owner.
 Host attempt/time counters are separate from custodian mechanical resources.
 
-`player_handoff` seals this actor with canonical immutable context. Only its direct
+`player_handoff` (no arguments) seals this actor with a canonical `player-handoff-context/2`
+packet of mechanical identity only. Only its direct
 originating issuance or exact original collection settles host handoff. After the
 host closes its owned MCP child, the driver checks actual old process-group
 quiescence and context digest before minting a successor under original limits.

@@ -7,7 +7,7 @@ import tomllib
 
 import pytest
 
-from harness.player_tools import tool_specs
+from harness.player_tools import PROFILES, tool_specs
 from tools.configure_player_tools import FORMATS,ROOT,SERVER,coding_agent_configuration
 
 
@@ -21,7 +21,8 @@ def test_json_entry_launches_current_adapter_for_explicit_actor(tmp_path):
 def test_toml_entry_enables_exactly_current_tool_schema(tmp_path):
     value=tomllib.loads(coding_agent_configuration('/project/actor.json','mcp-servers-toml',tmp_path))
     entry=value['mcp_servers'][SERVER]
-    assert entry['enabled_tools']==list(tool_specs()) and entry['enabled'] is True
+    assert entry['enabled_tools']==list(PROFILES['flat']) and entry['enabled'] is True
+    assert set(PROFILES['flat'])<=set(tool_specs())
     assert entry['cwd']==str(tmp_path) and entry['command']==str(tmp_path/'.venv/bin/python')
     assert entry['args'][-1]=='/project/actor.json'
 

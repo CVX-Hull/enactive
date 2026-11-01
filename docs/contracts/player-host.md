@@ -92,7 +92,7 @@ request/image histories.
 
 `settled.reason` is `completed` for a terminal player report, `handoff` after a
 handoff, or an adapter failure reason with `ok: false`. The host settles `handoff`
-only for a direct sealed `player-handoff/1` issuance returned by `player_handoff`,
+only for a direct sealed `player-handoff/2` issuance returned by `player_handoff`,
 or exact collection through `computer_result` of its own pending original handoff,
 naming its own actor and session. After a handoff it dispatches no further tool
 call and closes its MCP child before exiting. The driver independently verifies the

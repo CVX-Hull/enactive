@@ -128,7 +128,7 @@ def test_invalid_or_changed_input_is_unavailable(case, tmp_path, fault):
     if fault in ('version', 'session'):
         with sqlite3.connect(case.case / 'session.sqlite3') as db:
             if fault == 'version':
-                db.execute('PRAGMA user_version=2')
+                db.execute('PRAGMA user_version=1')
             else:
                 db.execute("UPDATE metadata SET value=? WHERE key='session'", (json.dumps('b' * 32),))
     if fault == 'actor_session':

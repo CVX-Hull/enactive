@@ -91,13 +91,16 @@ def _handoff_context(application,actor,event):
     data=path.read_bytes()
     if hashlib.sha256(data).hexdigest()!=issuance['context_sha256']:
         raise ControlError('Frozen handoff context changed')
-    return data.decode('utf-8')
+    packet=json.loads(data)
+    if (packet.get('schema')!='player-handoff-context/2' or packet.get('context_id')!=issuance['context_id']
+            or packet.get('actor_id')!=actor['actor_id'] or packet.get('grants_authority') is not False):
+        raise ControlError('Frozen handoff context is not current mechanical identity')
 
 
 def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
               stopped: threading.Event,deadline: float) -> dict:
     actors=directory/'actors';actors.mkdir(mode=0o700)
-    total_attempts=0;host_seconds_used=0.;records=[];context=None
+    total_attempts=0;host_seconds_used=0.;records=[]
     outcome='incomplete';reason='Original actor allowance exhausted'
     for index in range(1,profile['max_hosts']+1):
         seconds=min(profile['host_seconds'],profile['total_host_seconds']-host_seconds_used,deadline-time.monotonic()-30)
@@ -109,7 +112,7 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
         record=dict(index=index,actor_id=None,allocated_seconds=seconds,allocated_attempts=allowance)
         started=time.monotonic();ending_at=None
         try:
-            actor=application.runtime.add_actor()
+            actor=application.add_actor('flat')
             target.mkdir(mode=0o700)
             record['actor_id']=actor['actor_id']
             actor_file=target/'actor.json'
@@ -117,7 +120,7 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
                                      session=profile['session'],**actor))
             selected_route=dict(route,max_requests=allowance)
             write_new(target/'route.json',selected_route)
-            write_new(target/'mcp.json',configuration(str(actor_file)))
+            write_new(target/'mcp.json',configuration(str(actor_file),profile='flat'))
             # Identical frozen system context across actors maximizes stable prefix
             # reuse. Actor/resource/knowledge changes belong in the explicit prompt.
             write_new(target/'context.txt',(directory/'context.txt').read_text(),text=True)
@@ -125,11 +128,10 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
                   f'original campaign attempts remaining {profile["max_http_attempts"]-total_attempts}. '
                   'The host supplies current decision-time/attempt snapshots; custodian time is separate. ')
             if index<profile['max_hosts']:
-                role+='Transfer useful unfinished work through player_handoff when a fresh context helps; retain a meaningful task and ending capacity for your successor. '
+                role+='player_handoff seals this actor for a successor with a fresh context; it carries no summary or knowledge snapshot. Retain ending capacity for your successor. '
             else:
                 role+='You are the final actor in this admission. Preserve ending capacity and finish with normal Save plus separate application exit. '
             prompt=(directory/'prompt.txt').read_text()+'\n\nSoftware actor/resource note: '+role
-            if context is not None:prompt+='\n\nOriginal sealed player handoff context (fallible knowledge, no authority):\n'+context
             write_new(target/'prompt.txt',prompt,text=True)
             write_new(target/'player-final.txt','',text=True)
             write_new(target/'frozen.json',dict(schema='player-host-inputs/1',actor_id=actor['actor_id'],session=profile['session'],
@@ -166,7 +168,7 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
                 reason='Deciding host ended unsuccessfully';break
             if settled.get('reason')=='handoff':
                 if record['handoff'] is None:raise ControlError('Host settled without its originating handoff')
-                context=_handoff_context(application,actor,record['handoff'])
+                _handoff_context(application,actor,record['handoff'])
                 application.runtime.confirm_quiescent(actor['actor_id'],record['handoff']['handoff_id'],host_quiescent=True)
                 if index==profile['max_hosts']:
                     reason='Final actor handed off beyond original actor allowance';break

@@ -52,14 +52,14 @@ class InvestigationTests(unittest.TestCase):
         (self.case / 'sources').mkdir()
         (self.case / 'sources' / (self.source_id + '.png')).write_bytes(self.png)
         with sqlite3.connect(self.case / 'session.sqlite3') as db:
-            db.executescript('''PRAGMA user_version=1;
+            db.executescript('''PRAGMA user_version=2;
                 CREATE TABLE metadata(key TEXT PRIMARY KEY,value TEXT NOT NULL);
                 CREATE TABLE sources(id TEXT PRIMARY KEY,metadata TEXT NOT NULL,bytes INTEGER NOT NULL);
                 CREATE TABLE operations(id TEXT PRIMARY KEY,actor TEXT,kind TEXT,created_wall REAL,
                     deadline REAL,input_json TEXT,final_json TEXT);
                 CREATE TABLE native_intents(id TEXT PRIMARY KEY,operation TEXT,receipt TEXT,source TEXT,timing TEXT);
                 CREATE TABLE collections(native_id TEXT PRIMARY KEY,receipt TEXT,source TEXT);''')
-            db.executemany('INSERT INTO metadata VALUES(?,?)', [('schema', json.dumps('computer-session/1')),
+            db.executemany('INSERT INTO metadata VALUES(?,?)', [('schema', json.dumps('computer-session/2')),
                 ('session', json.dumps(self.session))])
             db.execute('INSERT INTO sources VALUES(?,?,?)', (self.source_id, json.dumps(self.metadata), len(self.png)))
             final = dict(schema='computer-operation/1', operation_id='op1', actor_id=self.actor,

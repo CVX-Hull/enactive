@@ -11,13 +11,15 @@ import uuid
 
 from .computer.protocol import ControlError, canonical, closed
 from .computer.runtime import ComputerRuntime
-from .player.contracts import PlayerError
+from .player.contracts import PlayerError, bounded_integer, level_proposal
+from .player.contracts import canonical as player_canonical
 from .player.memory import Memory
 from .player.programs import ProgramRepository, ProgramRunner
+from .player_tools import PROFILES
 from .observer import ActivityView
 
 READ_TOOLS = {'computer_result', 'player_source', 'player_memory_read', 'player_memory_query',
-              'player_memory_context', 'player_program_read', 'player_result'}
+              'player_memory_context', 'player_program_read', 'player_result', 'player_log_read'}
 
 
 class _ProgramControl:
@@ -67,12 +69,117 @@ class Application:
         self.context_directory = context_directory
         context_directory.mkdir(mode=0o700)
         self.serial = threading.RLock()
+        # The custodian's per-capability allowlist, enforced here as well as by
+        # each host's enabled tools; a capability minted elsewhere has no tools.
+        self.profiles: dict[str, frozenset[str]] = {}
+        self.readers: dict[str, dict[str, Any]] = {}
         self.host: dict[str, Any] | None = None
         self.claims: list[dict[str, Any]] = []
         self.activity_view = ActivityView(runtime.session, runtime.store.path)
         # The custodian may inject a bounded passive snapshot adapter. Actor
         # services and the independent Pause path never await this work.
         self.investigation_view = None
+
+    def add_actor(self, profile: str) -> dict[str, str]:
+        if profile not in ('flat', 'narrowed'):
+            raise ControlError('Unknown actor tool profile')
+        with self.serial:
+            actor = self.runtime.add_actor()
+            self.profiles[actor['actor_id']] = frozenset(PROFILES[profile])
+            return actor
+
+    def add_reader(self, actor_id: str, *, staleness_inputs: int) -> dict[str, str]:
+        """Mint the subgoal level's reader for one active actor; S bounds a commit's staleness."""
+        if type(staleness_inputs) is not int or not 1 <= staleness_inputs <= 1000:
+            raise ControlError('Staleness bound must be 1..1000 actor inputs')
+        with self.serial:
+            # A commit must decide every current Work record, and one holds at most 15 decisions.
+            if len(self.memory.current('work')) > 15:
+                raise ControlError('More than 15 current Work records; the level could never commit')
+            reader = self.runtime.add_reader(actor_id)
+            self.profiles[reader['actor_id']] = frozenset(PROFILES['reader'])
+            self.readers[reader['actor_id']] = dict(serves=actor_id, staleness_inputs=staleness_inputs, bound=None)
+            return reader
+
+    def log_read(self, reader_id: str, after: int, limit: int) -> dict[str, Any]:
+        state = self.readers[reader_id]
+        bounded_integer(after, 0, 1 << 40)
+        bounded_integer(limit, 1, 50)
+        actor = state['serves']
+        stage = self.runtime.actor_stage(actor)
+        # No active served actor means a handoff: no entries, so nothing can bind a commit.
+        entries = self.runtime.store.actor_log(actor, after, limit) if stage == 'active' else []
+        if entries:
+            state['bound'] = max(state['bound'] or 0, entries[-1]['position'])
+        elif after == 0 and stage == 'active' and state['bound'] is None:
+            # Reading an empty log from its start has seen all of it, so an actor-start
+            # pass can revalidate open records before the actor's first input.
+            state['bound'] = 0
+        return dict(schema='player-log/1', session=self.runtime.session, actor_id=actor, after=after,
+                    entries=entries, handoff=stage != 'active', grants_authority=False)
+
+    def level_commit(self, reader_id: str, args: dict[str, Any], identity: str) -> dict[str, Any]:
+        state = self.readers[reader_id]
+        prior = self.memory._db.execute('SELECT actor,tool,args,result FROM service_operations WHERE id=?',
+                                        (identity,)).fetchone()
+        if prior:
+            # A retained identity collects its original commit; it never re-binds or recommits.
+            if prior[:3] != (reader_id, 'player_level_commit', player_canonical(args)) or prior[3] is None:
+                raise PlayerError('Original level-commit identity conflicts')
+            return self.memory.service_result(identity, reader_id)['value']
+        proposal = level_proposal(args['proposal'])
+        current = {r['id']: r for r in self.memory.current('work')}
+        decided = [d['record_id'] for d in proposal['records']]
+        # Fixable proposal errors are tool errors and keep the bound for a resubmission.
+        if set(decided) != current.keys():
+            raise PlayerError('Decide keep, revise or close for exactly every current Work record')
+        cited = list(dict.fromkeys([*(proposal['subgoal'] or {}).get('sources', []),
+                                    *(s for d in proposal['records'] for s in d['sources'])]))
+        missing = [s for s in cited if not self.runtime.store.has_source(s) and not self._has_player_source(s)]
+        if missing:
+            raise PlayerError(f'Cited sources are unavailable: {", ".join(missing[:4])}')
+        actor, bound = state['serves'], state['bound']
+        # A timeliness check ends the pass, committed or discarded: the next one must read again.
+        state['bound'] = None
+        moved = self.runtime.store.inputs_after(actor, bound) if bound is not None else None
+        position = dict(position=bound, inputs_since=moved, staleness_inputs=state['staleness_inputs'])
+        channel = self.runtime.channel
+        reason = ('No log read bound a position in this pass' if bound is None
+                  # A user Pause or takeover changes the game without custodian input.
+                  else 'Run stopped or fenced since the read' if channel.stopped.is_set() or channel.fault is not None
+                  or time.monotonic() >= self.runtime.deadline
+                  else 'Served actor handed off since the read' if self.runtime.actor_stage(actor) != 'active'
+                  else 'Served actor moved at least S inputs past the read' if moved >= state['staleness_inputs']
+                  else None)
+        if reason is not None:
+            # A discard is returned to the level's host trace and never written to either store.
+            return dict(schema='player-level-commit/1', status='discarded', reason=reason, **position,
+                        records=[], kept=[])
+        values, ids = [], self.memory.batch_ids(identity, 16)
+        common = dict(level='subgoal', proposal_schema=proposal['schema'], actor_id=actor,
+                      session=self.runtime.session, position=bound)
+        subgoal = proposal['subgoal']
+        if subgoal is not None:
+            values.append(dict(schema='player-record/1', kind='work', text=subgoal['text'],
+                data=dict(common, expected_observations=subgoal['expected_observations'],
+                          status=subgoal['status'], confidence=subgoal['confidence']),
+                sources=subgoal['sources'], supports=[], supersedes=None, applicability=None, program_id=None))
+        for decision in proposal['records']:
+            if decision['decision'] == 'keep':
+                continue
+            outcome = 'revised' if decision['decision'] == 'revise' else decision['outcome']
+            values.append(dict(schema='player-record/1', kind='correction', text=decision['reason'],
+                data=dict(common, outcome=outcome), sources=decision['sources'],
+                supports=[ids[0]] if decision['decision'] == 'revise' else [],
+                supersedes=decision['record_id'], applicability=None, program_id=None))
+        # Registration copies immutable source bytes, idempotently; the commit is one transaction.
+        self._register(cited)
+        result = dict(schema='player-level-commit/1', status='committed', reason=None, **position,
+                      kept=[d['record_id'] for d in proposal['records'] if d['decision'] == 'keep'])
+        records = self.memory.append_many(reader_id, values, request_id=identity,
+                                          service=('player_level_commit', args, result))
+        self.claims = self.memory.query(limit=5)
+        return dict(result, records=records)
 
     def status(self) -> dict[str, Any]:
         return dict(self.runtime.status(), host=copy.deepcopy(self.host), player_claims=copy.deepcopy(self.claims))
@@ -106,24 +213,25 @@ class Application:
                 self.runtime.store.issue_source(actor_id, identity)
             return value, png
 
-    def snapshot(self, actor_id: str, roots: list[str], summary: str) -> tuple[str, str]:
-        if not isinstance(summary, str) or len(summary) > 8192:
-            raise PlayerError('Handoff summary must be within8192 characters')
-        context = self.memory.context(roots, max_bytes=65536)
+    def snapshot(self, actor_id: str) -> tuple[str, str]:
+        # Mechanical identity only: no actor-written summary and no knowledge
+        # snapshot. Continuity comes from committed player records.
         identity = uuid.uuid4().hex
-        packet = dict(schema='player-handoff-context/1', context_id=identity, session=self.runtime.session,
-                      actor_id=actor_id, summary=summary, knowledge=context, created_wall=time.time(),
-                      grants_authority=False)
+        packet = dict(schema='player-handoff-context/2', context_id=identity, session=self.runtime.session,
+                      actor_id=actor_id, created_wall=time.time(), grants_authority=False)
         data = (canonical(packet) + '\n').encode('utf-8')
         with (self.context_directory / (identity + '.json')).open('xb') as stream:
             stream.write(data)
         return identity, hashlib.sha256(data).hexdigest()
 
     def call(self, token: str, name: str, args: dict[str, Any], identity: str) -> tuple[dict[str, Any], bytes | None]:
-        actor = self.runtime.authorize(token, write=name not in READ_TOOLS)
+        write = dict(write=name not in READ_TOOLS, level_commit=name == 'player_level_commit')
+        actor = self.runtime.authorize(token, **write)
+        if name not in self.profiles.get(actor, ()):
+            raise ControlError('Tool is outside this capability class')
         with self.serial:
             # A handoff may have sealed the actor while this call queued.
-            self.runtime.authorize(token, write=name not in READ_TOOLS)
+            self.runtime.authorize(token, **write)
             if name not in READ_TOOLS:
                 # A public HTTP identity has one owner across the composed
                 # services. A program's child IDs do not free its parent ID for
@@ -213,8 +321,14 @@ class Application:
                     else:
                         collected.append(dict(**step,status='not_submitted_to_computer'))
                 return dict(result,collected_operations=collected),None
+            if name == 'player_log_read':
+                closed(args, {'after','limit'})
+                return self.log_read(actor, args['after'], args['limit']), None
+            if name == 'player_level_commit':
+                closed(args, {'proposal'})
+                return self.level_commit(actor, args, identity), None
             if name == 'player_handoff':
-                closed(args, {'ids','summary'})
-                context_id, sha = self.snapshot(actor, args['ids'], args['summary'])
+                closed(args, set())
+                context_id, sha = self.snapshot(actor)
                 return self.runtime.seal_actor(actor, identity, context_id, sha), None
             raise ControlError('Unknown current tool')

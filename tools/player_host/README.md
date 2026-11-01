@@ -259,7 +259,7 @@ automatic compaction or session restoration.
 A sealed `computer-operation/1` response from `player_handoff`, or collection
 through `computer_result` of this host's one pending original handoff, ends this
 host. The first actual MCP text must bind matching 32-character hex operation/session/actor
-IDs and a current `player-handoff/1` issuance with matching IDs, a 32-character hex context ID,
+IDs and a current `player-handoff/2` issuance with matching IDs, a 32-character hex context ID,
 64-character hex context digest, positive finite sealing time and `grants_authority:false`.
 There are no game-phase, menu, identity or source-checkpoint requirements.
 Only this host's direct response can establish an origin; collection must request

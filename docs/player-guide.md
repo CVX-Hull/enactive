@@ -50,7 +50,7 @@ harness stop rule or permission to replay uncertain input.
 | `player_memory_append/read/query/context` | Store or retrieve fallible claims, Work, decisions, procedures, corrections and candidate advice with sources/support. |
 | `player_program_save/read/run` | Retain immutable JavaScript lineage and run a selected bounded local program through the same basic-control port. |
 | `player_result` | Collect an original memory/program authoring or program-run request after lost transport. |
-| `player_handoff` | Seal this actor with bounded immutable knowledge and unfinished-work summary. Original limits remain. |
+| `player_handoff` | Seal this actor; it takes no arguments and carries no summary or knowledge snapshot. Original limits remain. |
 
 The schema is authoritative for closed arguments. Keys use printable ASCII or
 `ENTER ESC UP DOWN LEFT RIGHT TAB BACKSPACE SPACE PAGEUP PAGEDOWN HOME END DELETE`,
@@ -115,10 +115,11 @@ Custodian seconds/input/request/frame/byte capacities are mechanical resources.
 Player host HTTP attempts and host seconds are separately labelled. A remaining counter
 is not new permission or a quality metric. Preserve the frozen ending reserve.
 
-If another actor is allowed and fresh context helps, call `player_handoff` with
-selected record roots and a concise unfinished-task summary. It seals you; later
+If another actor is allowed and fresh context helps, call `player_handoff`. It
+seals you and passes no summary or knowledge; a successor starts from the frozen
+inputs and the player's committed records. Later
 reads/original collection do not permit input or another handoff. The driver must
-verify your actual host/MCP quiescence and canonical context before a successor.
+verify your actual host/MCP quiescence and canonical issuance before a successor.
 No save, menu or identity condition is required for this actor-only transfer.
 User Pause or uncertain input cannot become handoff-resumable.
 

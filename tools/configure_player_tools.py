@@ -9,7 +9,7 @@ import sys
 ROOT=Path(__file__).resolve().parents[1]
 if __package__ in (None,''):
     sys.path.insert(0,str(ROOT))
-from harness.player_tools import tool_specs
+from harness.player_tools import PROFILES, tool_specs
 
 SERVER='enactive_player'
 # Coding-agent configuration shapes, named by file format rather than product.
@@ -17,15 +17,16 @@ SERVER='enactive_player'
 FORMATS=('mcp-servers-json','mcp-servers-toml')
 
 
-def configuration(actor_config: str, root: Path = ROOT) -> dict:
+def configuration(actor_config: str, root: Path = ROOT, *, profile: str) -> dict:
+    """One capability class's MCP entry; the custodian enforces the same tool allowlist."""
     return dict(command=str(root/'.venv/bin/python'),args=['-m','harness.player_mcp','--actor-config',actor_config],
-        cwd=str(root),enabled=True,required=True,enabled_tools=list(tool_specs()),
+        cwd=str(root),enabled=True,required=True,enabled_tools=list(PROFILES[profile]),
         startup_timeout_sec=15,tool_timeout_sec=30)
 
 
 def coding_agent_configuration(actor_config: str, form: str, root: Path = ROOT) -> str:
-    """One generated lead-side server entry; tool names and paths derive from source."""
-    server=configuration(actor_config,root)
+    """One generated lead-side server entry for a flat-profile actor; names and paths derive from source."""
+    server=configuration(actor_config,root,profile='flat')
     if form=='mcp-servers-json':
         # This shape has no working-directory field; the module path is explicit instead.
         entry=dict(type='stdio',command=server['command'],args=server['args'],env=dict(PYTHONPATH=server['cwd']))
@@ -63,7 +64,7 @@ def main():
         if args.coding_agent_format:
             stream.write(coding_agent_configuration(str(actor),args.coding_agent_format))
         else:
-            json.dump(configuration('@ACTOR_CONFIG@' if args.template else str(actor)),stream,indent=2);stream.write('\n')
+            json.dump(configuration('@ACTOR_CONFIG@' if args.template else str(actor),profile='flat'),stream,indent=2);stream.write('\n')
 
 
 if __name__=='__main__':main()

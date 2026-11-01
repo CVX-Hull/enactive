@@ -1,4 +1,4 @@
-"""Offline MCP double for player-host/2 tests, using the maintained Python MCP server.
+"""Offline MCP double for player-host/2 tests (player-handoff/2 issuances), using the maintained Python MCP server.
 
 Shared by the adapter node tests and the adapter-agnostic contract suite."""
 import json
@@ -85,7 +85,7 @@ ACTOR = "3" * 32
 
 
 def handoff_receipt(mode):
-    issued = dict(schema="player-handoff/1", operation_id=OPERATION, session=SESSION,
+    issued = dict(schema="player-handoff/2", operation_id=OPERATION, session=SESSION,
         actor_id=ACTOR, context_id="4" * 32, context_sha256="5" * 64,
         sealed_wall=123456.0, grants_authority=False)
     value = dict(schema="computer-operation/1", operation_id=OPERATION,
@@ -129,7 +129,7 @@ def handoff_receipt(mode):
 
 
 @server.tool()
-async def player_handoff(ids: list[str] | None = None, summary: str = "", mode: str = "complete") -> CallToolResult:
+async def player_handoff(mode: str = "complete") -> CallToolResult:
     record(dict(tool="player_handoff", mode=mode))
     value = handoff_receipt(mode)
     content = [TextContent(type="text", text="{" if mode == "malformed" else json.dumps(value))]
