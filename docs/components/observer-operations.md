@@ -70,6 +70,17 @@ fixed at each return and taken from the newest poll even while Timeline inspecti
 frozen. It is cleared only when the reader marks them seen, never by time, polling or
 arrivals while visible. An unknown omission count keeps the "older ones may have been
 omitted" caveat. An unknown quantity is shown as "unreported" and never gains a unit.
+Watch leads with the captured screen. Facts that qualify what is on screen stay
+visible at every width: the frame note (retained or new pixels), the last-status
+freshness line, the statement's unverified/omission line, and an inline clock note
+on any negative age. Only longer explanations collapse into disclosures beside
+what they explain. Recent activity lists the newest three entries first with
+their recorded UTC clock time, which neither goes stale during an outage nor
+depends on the browser clock. The control bar stays pinned above about 700 px; in
+narrower windows it scrolls with the page so it does not cover the image, and Pause
+stays the first button. The viewer suite statically rejects any `display: none` or
+`visibility: hidden` rule naming those elements or their container classes, and any
+closed disclosure around them; it cannot detect hiding by geometry.
 The viewer suite checks the status and alert roles; that wholly rewritten regions are
 not live regions; that Pause is the first and only Pause-labelled button; reserved
 image space; visible focus; and the narrow layout. These are static checks of the
