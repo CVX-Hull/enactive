@@ -1,10 +1,21 @@
 ---
 owner: lead
 review_trigger: Outcome claims, observation capabilities, model routing or calibration changes
-status: proposed
+status: historical
+date: 2026-11-01
+scope: Unimplemented monitor proposal for the retired waypoint harness; rationale only
 ---
 
-# Outcome monitoring beyond movement
+# Historical proposal — outcome monitoring beyond movement
+
+**Historical, never implemented.** This proposal was written for the
+waypoint/skills harness that #289 retired; its `SkillDescriptor`, controller and
+waypoint references describe no current runtime. It is kept as rationale for
+#42–#44. Its open questions now belong to
+[ADR-007](../decisions/007-player-subgoal-level.md)'s levels: event abstraction
+and escalation beyond mechanical wake rules are parked as #325 A4, and #43 maps
+to the subgoal level. A replacement design is written when A4 or #42 is shaped.
+The original text follows unchanged.
 
 **Proposed design, not implemented capability.** This resolves #41 and supplies
 future handoffs for #42–#44. The accepted [waypoint design](gameplay.md) remains
