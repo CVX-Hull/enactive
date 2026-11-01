@@ -80,7 +80,7 @@ aside > section, .stage, .diagnostics { background: var(--surface); border: 1px 
 .frame-shell.actual-pixels img { width: auto !important; max-width: none; image-rendering: pixelated; }
 #frame-note, #inspection-frame-note { margin: 0; padding: var(--s2) var(--s3); font-size: .82rem; text-align: center; color: var(--faint); }
 /* Under a displayed image the note becomes a caption; it is never hidden, because it says whether the pixels are retained. */
-.frame-shell img:not([hidden]) + p { text-align: left; font-size: .76rem; padding: var(--s1) var(--s2); background: #0a0f0f; }
+.frame-shell img:not([hidden]) + #frame-note, .frame-shell img:not([hidden]) + #inspection-frame-note { text-align: left; font-size: .76rem; padding: var(--s1) var(--s2); background: #0a0f0f; }
 .frame-facts { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--s1) var(--s4); padding: var(--s2) var(--s1) 0; }
 .frame-facts p { margin: 0; font-size: .82rem; }
 .age { color: var(--muted); }
@@ -153,7 +153,7 @@ footer { max-width: 1440px; margin: auto; padding: var(--s4) var(--s5) var(--s6)
   .stop-control { flex: 0 1 15rem; }
   #pause { padding: .45rem .7rem; }
 }
-/* On phones the bar would cover too much of the screen, so it scrolls with the page; visual order follows DOM order. */
+/* In narrow windows the bar would cover too much of the image, so it scrolls with the page; visual order follows DOM order. */
 @media (max-width: 700px) {
   .control-bar { position: static; flex-wrap: wrap; }
   .current-state, .stop-control { flex-basis: 100%; }

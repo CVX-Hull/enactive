@@ -602,8 +602,11 @@ const text = id => {
   assert.match(css, /@media \(max-width: 500px\)/, 'A narrow-width layout exists');
   // Qualifiers may be restyled but never hidden by the stylesheet, at any width.
   const hidingSelectors = [...css.matchAll(/([^{}]+)\{[^}]*(?:display:\s*none|visibility:\s*hidden)/g)].map(match => match[1]);
-  for (const id of ['frame-note', 'control-freshness', 'statement-meta', 'source-age', 'frame-change', 'activity-summary', 'stop-state', 'connection'])
-    assert.ok(!hidingSelectors.some(selector => selector.includes(`#${id}`)), `No stylesheet rule hides #${id}`);
+  // Matches the qualifiers' ids and the classes they or their containers carry; a
+  // static check, so it cannot see hiding by geometry (zero height, clipping).
+  for (const name of ['#frame-note', '#control-freshness', '#statement-meta', '#source-age', '#frame-change', '#activity-summary', '#stop-state', '#connection',
+    '.frame-facts', '.current-state', '.statement', '.hint', '.age', '.fact', '.status-chip'])
+    assert.ok(!hidingSelectors.some(selector => new RegExp(`${name.replace('.', '\\.')}(?![\\w-])`).test(selector)), `No stylesheet rule hides ${name}`);
   assert.doesNotMatch(css, /:has\(/, 'No state-dependent selector can hide a qualifier');
   for (const id of ['statement-meta', 'control-freshness', 'frame-change', 'source-age'])
     assert.ok(!/<details[^>]*>(?:(?!<\/details>).)*$/s.test(html.slice(0, html.indexOf(`id="${id}"`))), `#${id} is visible, not inside a closed disclosure`);
