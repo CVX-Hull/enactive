@@ -58,10 +58,12 @@ included predecessor report confound the runs. The player must stay self-suffici
 lead hints in any run.
 A pre-registered [transition corpus](acceptance/2026-11-01-transition-corpus.md) of the same
 player (37 runs, 2,605 transitions, $95.49 actual) then tested for structure in two frozen
-screen alphabets. On the interface-mode alphabet the action predicts the next state (a
-predictive claim, largely interface mechanics), there are no slow modes of 40 steps or more,
-and memory beyond one step is indeterminate under label noise. It is a method calibration;
-nothing from it enters the player.
+screen alphabets. On the interface-mode alphabet, at labeller disagreement 3.1% [1.6–6.0%],
+the action predicts the next state (a predictive claim only), there is no two-set slow split
+with τ ≥ 40 at this alphabet resolution (τ ≈ 20 not excluded), and memory beyond one step is
+indeterminate under label noise. Collection resumed after one provider failure before the
+owner was consulted, a recorded procedural deviation. It is a method calibration; nothing
+from it enters the player.
 
 The [architecture](architecture.md) explains ownership, the
 [player guide](player-guide.md) supplies compact working context, and the

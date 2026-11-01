@@ -27,7 +27,7 @@
     "docs/diagrams/skill.mmd": "1b8f1491f0930eadbd0494f24b1b0a52ff586e08a5aa4b4f5ed3c3502cc75822",
     "docs/diagrams/supervisor.mmd": "c2e111a8bd52e0295fcd457f8d20c431de3aefeb2396c47962b5a38d8d872e89",
     "docs/diagrams/tiered-gameplay.mmd": "213b4301edc6c852c661cf8b29fc75d73c4510b0632170287555afc9ad336cb5",
-    "docs/diagrams/transition-corpus.mmd": "28fc78b51f14532e1831f4c8c9ad54d0ad2d00c0cbfc8c92da03d5748d474d8e"
+    "docs/diagrams/transition-corpus.mmd": "083ea685cc77a62648490d2b890e861b6a6a6458533d9e7f3289203ab42a335b"
   },
   "outputs": {
     "docs/diagrams/action.svg": "92d422728cebeb211c11b476ac597f2c51d8a460e21497c9402dad7f3a89dfb1",
@@ -50,6 +50,6 @@
     "docs/diagrams/skill.svg": "3b2e76f92e6156731d6b6ef9d1b79a76e6b2ba73e6ae1dd3f7db1ecca0ab26b4",
     "docs/diagrams/supervisor.svg": "2c2ddcb2c68fcf2b0f55ab43f2872f2fc5544eccc2eafb8344311e01a52328e2",
     "docs/diagrams/tiered-gameplay.svg": "1cfb76e65e9bd1faba24558a6714c47abfda978152212085d3908140d88c4bbb",
-    "docs/diagrams/transition-corpus.svg": "3f67b03e030b97e29359e8c4ccbc05649e03f3c236d58bea1a44af2df5984bb6"
+    "docs/diagrams/transition-corpus.svg": "b85b1aeb11f6d672651e65721e55e2eea1ca352db8f1352d096ddb7f3c863cbf"
   }
 }
