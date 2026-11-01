@@ -14,7 +14,7 @@ from tools.campaign_player import HostEvents,run_hosts
 
 def test_original_attempts_and_partial_trace_reservation(tmp_path):
     path=tmp_path/'host.jsonl'
-    rows=[dict(type='host-start',telemetry_version=2,schema='player-host/4'),
+    rows=[dict(type='host-start',telemetry_version=2,schema='player-host/5'),
           dict(type='request-start',request_id='request-1'),
           dict(type='request-start',request_id='request-2'),
           dict(type='settled',requests=2,ok=False)]
@@ -28,7 +28,7 @@ def test_original_attempts_and_partial_trace_reservation(tmp_path):
     finally:events.close()
 
 
-@pytest.mark.parametrize('schema',['pi-player-host/4','player-host/3',None])
+@pytest.mark.parametrize('schema',['pi-player-host/5','player-host/4',None])
 def test_trace_from_another_host_contract_is_refused(tmp_path,schema):
     path=tmp_path/'host.jsonl'
     path.write_text(json.dumps(dict(type='host-start',telemetry_version=2,schema=schema))+'\n')
@@ -56,7 +56,7 @@ flags = dict(zip(rest[::2], rest[1::2]))
 assert mode == 'run' and sorted(flags) == ['--config', '--context', '--effort', '--mcp-config', '--model', '--timeout-seconds', '-o'], sys.argv
 assert sorted(os.environ) >= ['FIXTURE_KEY', 'LANG', 'PATH'] and os.environ['FIXTURE_KEY'] == 'fixture-secret'
 assert sys.stdin.read().startswith('Frozen mission')
-for event in (dict(type='host-start', telemetry_version=2, schema='player-host/4'),
+for event in (dict(type='host-start', telemetry_version=2, schema='player-host/5'),
               dict(type='request-start', request_id='request-1'),
               dict(type='settled', ok=True, reason='completed', requests=1)):
     print(json.dumps(event), flush=True)
@@ -101,7 +101,7 @@ def request():
     global requests
     requests += 1
     emit('request-start', request_id=f'request-{requests}')
-emit('host-start', telemetry_version=2, schema='player-host/4', role=route['role'])
+emit('host-start', telemetry_version=2, schema='player-host/5', role=route['role'])
 emit('mcp-connected')
 if route['role'] == 'actor':
     assert route['intent_tail_bytes'] == 1024
@@ -128,16 +128,15 @@ else:
     emit('level-pass')
     request()
     request()
-    current = [r for r in client.call('player_memory_query', dict(kind='work'))[0]['records']
-               if r['data'].get('level') == 'subgoal']
+    # The pushed prompt states the current subgoal, so the reader needs no memory tool to choose its call.
+    current = 'Current subgoal: none' not in sys.stdin.read()
     if LEVEL_MODE == 'abstain':
-        value = client.call('player_level_abstain', dict(reason='Scripted abstain'))[0]
-        emit('level-abstain', reason=value['reason'])
+        value = client.call('player_level_abstain', dict(reason_code='no_change_needed', reason='Scripted abstain', sources=[]))[0]
+        emit('level-abstain', reason_code=value['reason_code'], reason=value['reason'])
     else:
-        proposal = dict(schema='player-level-proposal/2', action='replace', subgoal=dict(text='Scripted subgoal',
-            expected_observations=[], status='open', confidence=.5, sources=[]),
-            previous=dict(record_id=current[0]['id'], outcome='revised', reason='scripted', sources=[]) if current else None)
-        value = client.call('player_level_commit', dict(proposal=proposal))[0]
+        value = client.call('player_level_replace', dict(text='Scripted subgoal', expected_observations=[], status='open',
+            confidence=.5, sources=[], previous_outcome='revised' if current else 'none',
+            previous_reason='scripted' if current else ''))[0]
         emit('level-commit' if value['status'] == 'committed' else 'level-discard', action=value['action'], reason=value['reason'],
              position=value['position'], inputs_since=value['inputs_since'], staleness_inputs=value['staleness_inputs'],
              record_ids=[r['id'] for r in value['records']], kept=value['kept'])
@@ -171,7 +170,7 @@ def level_campaign(tmp_path):
         profile=dict(max_hosts=max_hosts,host_seconds=60,total_host_seconds=120,max_http_attempts=cap,effort='off',
                      port=server.server_port,session=runtime.session,host=dict(argv=[sys.executable,str(adapter)]),
                      actor_profile='narrowed',level=level)
-        route=dict(schema='player-host/4',role='actor',intent_tail_bytes=1024,max_requests=10,api_key_env='FIXTURE_KEY',
+        route=dict(schema='player-host/5',role='actor',intent_tail_bytes=1024,max_requests=10,api_key_env='FIXTURE_KEY',
                    model=dict(id='fixture',name='fixture'))
         return run_hosts(tmp_path,profile,route,app,'fixture-secret',threading.Event(),time.monotonic()+300)
     try:
@@ -198,14 +197,14 @@ def test_level_passes_wake_on_inputs_and_commit(level_campaign):
     assert prompt.startswith('Frozen role\n\nMission brief') and 'wake reason inputs' in prompt
     # The pushed projection (not a level read) set the bound: the commit's position is the last entry shown.
     shown=[json.loads(line) for line in prompt.splitlines() if line.startswith('{"position"')]
-    assert shown and shown[0]['position']==1 and 'Current subgoal: none.' in prompt
+    assert shown and shown[0]['position']==1 and 'Current subgoal: none\nLevel records in player memory: 0' in prompt
     assert first['level_events'][0]['position']==shown[-1]['position'] and first['level_events'][0]['action']=='replace'
     if len(receipt['passes'])>1:
         later=(level_campaign.root/'actors/001/level/002/prompt.txt').read_text()
         assert '"text":"Scripted subgoal"' in later and 'Current subgoal:\n{"record_id"' in later
         assert json.loads([l for l in later.splitlines() if l.startswith('{"position"')][0])['position']==shown[-1]['position']+1
     assert json.loads((level_campaign.root/'actors/001/level/001/route.json').read_text())['role']=='level'
-    assert json.loads((level_campaign.root/'actors/001/level/001/mcp.json').read_text())['enabled_tools'][-2:]==['player_level_commit','player_level_abstain']
+    assert json.loads((level_campaign.root/'actors/001/level/001/mcp.json').read_text())['enabled_tools']==['player_log_read','player_source','player_level_keep','player_level_replace','player_level_close','player_level_abstain']
     intent=level_campaign.app.intent(actor['actor_id'])
     assert intent['record']['text']=='Scripted subgoal' and intent['age']['same_actor'] is True
     assert len(level_campaign.app.memory.current('work'))==1 and not level_campaign.channel.stopped.is_set()
@@ -218,6 +217,8 @@ def test_an_abstaining_level_is_counted_and_writes_nothing(level_campaign):
     assert receipt['abstains']>=1 and receipt['commits']==0 and receipt['discards']==0 and receipt['failure'] is None
     assert [e['type'] for e in receipt['passes'][0]['level_events']]==['level-abstain']
     assert receipt['passes'][0]['level_events'][0]['reason']=='Scripted abstain'
+    assert receipt['passes'][0]['level_events'][0]['reason_code']=='no_change_needed'
+    assert receipt['abstain_codes']['no_change_needed']==receipt['abstains'] and receipt['final_refusals']==0
     assert level_campaign.app.memory.current('work')==[]
 
 
@@ -277,21 +278,21 @@ def test_pushed_projection_binds_the_bound_shows_the_latest_fifty_and_the_curren
         bound=lambda:app.readers[reader['actor_id']]['bound']
         step=lambda:app.call(actor['token'],'computer_input',dict(actions=[key()]),'%032x'%time.monotonic_ns())
         # An empty log from its start binds 0, so a start pass can revalidate.
-        assert 'Current subgoal: none.' in push() and '(no new entries)' in push() and bound()==0
+        assert 'Current subgoal: none\nLevel records in player memory: 0' in push() and '(no new entries)' in push() and bound()==0
         for _ in range(60):step()
         text=push()
         lines=[json.loads(l) for l in text.splitlines() if l.startswith('{"position"')]
         assert [e['position'] for e in lines]==list(range(11,61)) and '(10 earlier entries since then are not shown' in text
         assert bound()==60 and passes.shown_through==60
-        committed=app.call(reader['token'],'player_level_commit',dict(proposal=dict(schema='player-level-proposal/2',action='replace',
-            subgoal=dict(text='Pushed subgoal',expected_observations=['a door'],status='open',confidence=.5,sources=[]),previous=None)),
-            'e'*32)[0]
+        committed=app.call(reader['token'],'player_level_replace',dict(text='Pushed subgoal',expected_observations=['a door'],
+            status='open',confidence=.5,sources=[],previous_outcome='none',previous_reason=''),'e'*32)[0]
         assert committed['status']=='committed' and committed['position']==60 and bound() is None
         step();step()
         text=push()
         assert [json.loads(l)['position'] for l in text.splitlines() if l.startswith('{"position"')]==[61,62]
         assert 'earlier entries' not in text and bound()==62
-        shown=json.loads(text.split('Current subgoal:\n')[1])
+        assert text.endswith('\nLevel records in player memory: 1')
+        shown=json.loads(text.split('Current subgoal:\n')[1].split('\nLevel records')[0])
         assert shown==dict(record_id=committed['records'][0]['id'],text='Pushed subgoal',expected_observations=['a door'],
                            status='open',confidence=.5,sources=[],same_actor=True,position=60,inputs_since_commit=2)
         # Nothing new: the push shows so, and nothing shown means nothing bound (a read's bound never carries over).
@@ -364,12 +365,18 @@ def test_a_non_start_pass_with_an_empty_push_is_not_launched_and_a_start_pass_is
 
 def test_the_receipt_counts_failed_passes_and_start_abstains():
     from tools.campaign_player import LevelPasses
-    event=lambda kind:dict(type=kind,action=None,reason='r')
-    passes=[dict(reason='start',settled=dict(ok=True),level_events=[event('level-abstain')],attempts_charged=2),
-            dict(reason='inputs',settled=dict(ok=True),level_events=[event('level-abstain')],attempts_charged=2),
+    event=lambda kind,action=None,code=None:dict(type=kind,action=action,reason_code=code,reason='r')
+    passes=[dict(reason='start',settled=dict(ok=True),level_events=[event('level-abstain',code='other')],attempts_charged=2),
+            dict(reason='inputs',settled=dict(ok=True),level_events=[event('level-abstain',code='no_change_needed')],attempts_charged=2),
             dict(reason='inputs',settled=dict(ok=False,reason='level-no-proposal'),level_events=[],attempts_charged=2),
             dict(reason='inputs',level_events=[],attempts_charged=2),
-            dict(reason='inputs',settled=dict(ok=True),level_events=[event('level-commit')],attempts_charged=2)]
+            dict(reason='inputs',settled=dict(ok=False,reason='level-final-refusal'),level_events=[],attempts_charged=3),
+            dict(reason='inputs',settled=dict(ok=True),level_events=[event('level-commit','replace')],attempts_charged=2),
+            dict(reason='inputs',settled=dict(ok=True),level_events=[event('level-commit','keep'),],attempts_charged=2),
+            dict(reason='inputs',settled=dict(ok=True),level_events=[event('level-commit','close')],attempts_charged=2),
+            dict(reason='inputs',settled=dict(ok=True),level_events=[event('level-discard','keep')],attempts_charged=2)]
     stub=SimpleNamespace(reader_id='r',level=dict(mode='shadow'),allowance=10,charged=10,passes=passes,failure=None,quiescent=lambda:True)
     receipt=LevelPasses.receipt(stub)
-    assert (receipt['commits'],receipt['abstains'],receipt['start_abstains'],receipt['failed_passes'])==(1,2,1,2)
+    assert (receipt['commits'],receipt['abstains'],receipt['start_abstains'],receipt['failed_passes'])==(3,2,1,3)
+    assert (receipt['keeps'],receipt['replaces'],receipt['closes'],receipt['discards'],receipt['final_refusals'])==(1,1,1,1,1)
+    assert receipt['abstain_codes']==dict(insufficient_evidence=0,transient_screen_state=0,no_change_needed=1,other=1)

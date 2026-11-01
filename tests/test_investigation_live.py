@@ -269,7 +269,7 @@ def test_campaign_injects_view_and_closes_after_server_before_stores(tmp_path):
     def serve(app, port):
         assert app.investigation_view is view
         return server, Mock()
-    driver = dict(schema='player-driver/4', actors=[], outcome='incomplete', attempts_charged=0,
+    driver = dict(schema='player-driver/5', actors=[], outcome='incomplete', attempts_charged=0,
         configured_estimate_usd=0, missing_usage_attempts=0)
     with patch.object(campaign_run, 'preflight', return_value=(profile, dict(api_key_env='OFFLINE_KEY'), {})), \
             patch.dict('os.environ', {'OFFLINE_KEY': 'PRIVATE_TOKEN'}), \

@@ -117,7 +117,7 @@ def test_multi_record_append_is_one_transaction_with_derived_ids(tmp_path):
 def test_service_row_and_records_commit_in_one_transaction(tmp_path):
     with Memory(tmp_path / 'player.sqlite3') as memory:
         request = '1' * 32
-        service = ('player_level_commit', dict(proposal={}), dict(status='committed'))
+        service = ('player_level_replace', dict(text='x'), dict(status='committed'))
         stored = memory.append_many('d' * 32, [record('work')], request_id=request, service=service)
         collected = memory.service_result(request, 'd' * 32)
         assert collected['status'] == 'completed' and collected['value'] == dict(status='committed', records=stored)

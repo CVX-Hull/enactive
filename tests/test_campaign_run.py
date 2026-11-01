@@ -23,7 +23,7 @@ def package(root,level=None,route_requests=10):
     for name in ('native','library','options','interpreter','adapter'):(root/name).write_bytes(name.encode())
     tail=level['intent_tail_bytes'] if level and level['mode']=='live' else None
     values={
-        'route.json':dict(schema='player-host/4',role='actor',intent_tail_bytes=tail,service_tier='default',
+        'route.json':dict(schema='player-host/5',role='actor',intent_tail_bytes=tail,service_tier='default',
             max_requests=route_requests,model=dict(id='fixture',
             contextWindow=1000,maxTokens=100,cost=dict(input=.45,cacheRead=.45,cacheWrite=.45,output=1.8))),
         'mcp-template.json':configuration('@ACTOR_CONFIG@',profile='narrowed' if level else 'flat'),
@@ -115,7 +115,7 @@ def test_invalid_selected_package_never_launches_or_opens_store(tmp_path,fault):
     if fault=='old_node':
         profile['schema']='campaign-run/2';profile['node']=profile.pop('host')['argv'][0]
     if fault=='old_route':
-        path=directory/'route.json';route=json.loads(path.read_text());route['schema']='pi-player-host/4'
+        path=directory/'route.json';route=json.loads(path.read_text());route['schema']='pi-player-host/5'
         path.write_text(json.dumps(route));profile['files']['route.json']=hashlib.sha256(path.read_bytes()).hexdigest()
     if fault=='partial':(directory/'started.json').write_text('{}')
     if fault=='changed':(directory/'prompt.txt').write_text('different')
