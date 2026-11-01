@@ -31,8 +31,15 @@ criteria with their hash before it runs. Run freezing and spend limits follow
 primary metric can detect the effect of interest and does not raise false
 positives across the conditions it compares. Record every deviation; a changed
 rule is a deviation, not a refinement. Research syntheses tag each source's read
-scope (full text, stated sections, abstract, secondary or snippet). Only primary
-text actually read supports a conclusion.
+scope (full text, stated sections, abstract, secondary or snippet) and its
+publication date, plus its revision date when that differs. Only primary text
+actually read supports a conclusion. A claim about current methods or results
+rests on a dated search of recent work, including work that cites the
+foundational sources used. The synthesis records the search date, and flags the
+claim when its newest supporting source was published or substantively revised
+more than 18 months before that date. Briefs for delegated research pose the
+questions and may name foundational sources, but not the current sources to rely
+on; the synthesis records each brief's questions and any sources it named.
 
 C-REVIEW checks the pre-registration before spending, and both paragraphs at the
 reporting checkpoint.
