@@ -59,7 +59,9 @@ the previous pass's projection (the latest 50 entries, with the omitted count st
 and the current level subgoal with its position and inputs since commit; the driver
 reads it through the reader's own `player_log_read` path under the application lock, so
 the reader's bound is exactly what is shown (the level may read more, which extends the
-bound). A failure of that read is a level failure. A pass ends on its first
+bound). The reader's bound is cleared first, so one left by an earlier pass cannot
+carry over, and the wake decision and the push see the same log count. A non-start
+pass whose push is empty is not launched. A failure of that read is a level failure. A pass ends on its first
 `player_level_commit` that commits or discards, or on a valid `player_level_abstain`
 (see the [host contract](../contracts/player-host.md#roles-and-the-intent-tail)); one
 that ends otherwise is counted as a failed pass with its settled reason, for example
@@ -267,7 +269,8 @@ charges the allocated attempts. `host_completed_unassessed` means only successfu
 host completion; missing normal native exit becomes an incomplete outcome.
 No receipt alone accepts gameplay. Preserve failures and unrun lanes.
 The `player-driver/4` disposition embedded in it reports, per actor, the level's
-`commits`, `discards` and `abstains` and every pass's settled reason; `/4` added the
+`commits`, `discards`, `abstains` (with `start_abstains` counted separately) and
+`failed_passes` (unsettled or `ok: false`), and every pass's settled reason; `/4` added the
 abstain count and the events' `action`, and earlier driver schemas are rejected by the
 readers.
 

@@ -388,6 +388,25 @@ def test_abstain_needs_one_bounded_reason(level, args):
     assert app.readers[reader['actor_id']]['bound'] == 0
 
 
+def test_keep_registers_no_frames_but_still_needs_its_citations_available(level):
+    app, channel, actor, reader = level
+    first = call(app, actor, 'computer_input', dict(actions=[key()]))
+    read_all(app, reader)
+    work = call(app, reader, 'player_level_commit', replace())['records'][0]
+    read_all(app, reader)
+    before = store_rows(app), source_rows(app)
+    cited = first['source']['source_id']
+    with pytest.raises(PlayerError, match='unavailable: missing'):
+        call(app, reader, 'player_level_commit', dict(proposal=dict(keep(work['id'])['proposal'], sources=[cited, 'missing'])))
+    kept = call(app, reader, 'player_level_commit', dict(proposal=dict(keep(work['id'])['proposal'], sources=[cited])))
+    assert kept['status'] == 'committed' and kept['records'] == []
+    # Only the service row is new: the cited frame was not copied into the player store.
+    assert (store_rows(app)[0], source_rows(app)) == (before[0][0], before[1])
+    read_all(app, reader)
+    closed = call(app, reader, 'player_level_commit', dict(proposal=dict(close(work['id'])['proposal'], sources=[cited])))
+    assert closed['status'] == 'committed' and source_rows(app) == before[1] + 1
+
+
 def test_retained_commit_identity_collects_without_recommitting(level):
     app, channel, actor, reader = level
     call(app, actor, 'computer_input', dict(actions=[key()]))

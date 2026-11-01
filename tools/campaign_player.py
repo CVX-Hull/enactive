@@ -142,16 +142,19 @@ class LevelPasses:
         # The actor's first request follows its tool discovery and checks, so it is ready.
         if (self.failure or stopped or not actor_events.requests or self.remaining()<1
                 or actor_deadline-now<30+self.level['pass_seconds']/4):return
+        # One lock hold: the wake decision and the pass's pushed input see the same log count.
         with self.application.serial:
             entries,inputs=self.application.runtime.store.actor_counts(self.actor_id)
             open_records=len(self.application.level_subgoals())
-        reason=self.schedule.due(entries=entries,inputs=inputs,attempts=len(actor_events.requests),open_records=open_records)
-        if reason is not None:self.launch(reason,entries,inputs,min(self.level['pass_seconds'],actor_deadline-now-30))
+            reason=self.schedule.due(entries=entries,inputs=inputs,attempts=len(actor_events.requests),open_records=open_records)
+            if reason is None:return
+            pushed,shown=self._push(entries)
+        # Only a start pass may be given an empty delta (it revalidates the open subgoal).
+        if shown or reason=='start':
+            self.launch(reason,entries,inputs,min(self.level['pass_seconds'],actor_deadline-now-30),pushed)
 
-    def launch(self,reason: str,entries: int,inputs: int,seconds: float) -> None:
+    def launch(self,reason: str,entries: int,inputs: int,seconds: float,pushed: str) -> None:
         index=len(self.passes)+1
-        # The pass's input is pushed: the read below sets the reader's bound to exactly what is shown.
-        pushed=self._push()
         target=self.target/f'{index:03d}';target.mkdir(mode=0o700)
         allowance=min(self.level['pass_max_requests'],self.remaining())
         record=dict(index=index,reason=reason,log_entries=entries,actor_inputs=inputs,allocated_attempts=allowance,
@@ -179,10 +182,15 @@ class LevelPasses:
         write_new(target/'host-process.json',dict(pid=child.pid,pgid=child.pid,argv=arguments))
         self.current=(child,HostEvents(target/'host.jsonl',allowance),record,self.current[3])
 
-    def _push(self) -> str:
-        """The pass's input text: the served log since the previous pass (at most the latest 50 entries) and the current subgoal."""
+    def _push(self,total: int) -> tuple[str,int]:
+        """The pass's input text and its shown entry count, for a log of `total` entries.
+
+        The served log since the previous pass (at most the latest 50 entries) and the current subgoal.
+        The reader's bound is cleared first, so it ends up exactly the last entry shown and a bound left by
+        an earlier pass (one that never reached a commit attempt) cannot carry over.
+        """
         with self.application.serial:
-            total=self.application.runtime.store.actor_counts(self.actor_id)[0]
+            self.application.reset_reader_bound(self.reader_id)
             after=max(self.shown_through,total-50)
             log=self.application.log_read(self.reader_id,after,50)
             subgoals=self.application.level_subgoals()
@@ -195,12 +203,15 @@ class LevelPasses:
               +(f' ({omitted} earlier entries since then are not shown; read them with player_log_read)' if omitted else '')
               +':\n'+('\n'.join(lines) if lines else '(no new entries)'))
         if intent is None:
-            return text+'\n\nCurrent subgoal: none.'
+            return text+'\n\nCurrent subgoal: none.',len(entries)
         record,age=intent['record'],intent['age']
         shown=dict(record_id=record['record_id'],text=record['text'],expected_observations=record['expected_observations'],
                    status=record['status'],confidence=record['confidence'],sources=record['sources'],
-                   position=subgoals[-1]['data']['position'],inputs_since_commit=age['inputs_since_commit'])
-        return text+'\n\nCurrent subgoal:\n'+json.dumps(shown,separators=(',',':'),ensure_ascii=False)
+                   same_actor=age['same_actor'],
+                   # Positions count per actor: another actor's is not a position in the served log.
+                   position=subgoals[-1]['data']['position'] if age['same_actor'] else None,
+                   inputs_since_commit=age['inputs_since_commit'])
+        return text+'\n\nCurrent subgoal:\n'+json.dumps(shown,separators=(',',':'),ensure_ascii=False),len(entries)
 
     def finish(self) -> None:
         """Close the pass's exact process group, then charge it; incomplete accounting charges its whole allocation."""
@@ -231,9 +242,12 @@ class LevelPasses:
     def receipt(self) -> dict:
         commits=[e for p in self.passes for e in p.get('level_events',[]) if e['type']=='level-commit']
         discards=[e for p in self.passes for e in p.get('level_events',[]) if e['type']=='level-discard']
-        abstains=[e for p in self.passes for e in p.get('level_events',[]) if e['type']=='level-abstain']
+        abstains=[(p['reason'],e) for p in self.passes for e in p.get('level_events',[]) if e['type']=='level-abstain']
+        # A pass that settled unsuccessfully or never settled (for example level-no-proposal or a stopped pass).
+        failed=[p for p in self.passes if (p.get('settled') or {}).get('ok') is not True]
         return dict(reader_id=self.reader_id,mode=self.level['mode'],allocated_attempts=self.allowance,
                     attempts_charged=self.charged,passes=self.passes,failure=self.failure,quiescent=self.quiescent(),commits=len(commits),discards=len(discards),abstains=len(abstains),
+                    start_abstains=sum(reason=='start' for reason,_ in abstains),failed_passes=len(failed),
                     configured_estimate_usd=sum(p.get('configured_estimate_usd',0) for p in self.passes),
                     missing_usage_attempts=sum(p.get('missing_usage_attempts',p['attempts_charged']) for p in self.passes))
 

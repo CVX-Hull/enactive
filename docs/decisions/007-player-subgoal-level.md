@@ -192,8 +192,9 @@ The custodian's per-class allowlist enforces this profile as well as the host's
   fixed budget fractions. At most one pass is in flight. It never runs on an empty
   delta ([player-interface standard](../standards/player-interface.md)).
 - **Revalidation.** At each actor start, the first pass is given the open subgoal and
-  must keep, replace or close it (or abstain), so no subgoal stays "current"
-  indefinitely across sessions.
+  may keep, replace or close it, or abstain. An abstaining start pass leaves the earlier
+  subgoal current, and its age in sessions still shows in the actor's intent tail, so
+  revalidation is offered, not enforced. Start-pass abstentions are counted separately.
 - **Publication.** The actor's request-only tail shows the latest committed Work
   record, labelled fallible, with its sources and its age in inputs, seconds and
   sessions. The actor may ignore it.
@@ -487,9 +488,8 @@ The verbatim text is frozen, and a change makes a new version. Version 1 is remo
 
 > Role (software-defined; not instructions from the lead). You are the player's
 > subgoal level. You cannot send input; the acting player decides everything it does.
-> You receive the same guide and mission brief the acting player has; its
-> instructions about sending input, saving, handing off and final reports are for the
-> acting player, not for you. Software supplies the served player's log since your
+> You receive the same guide and mission brief the acting player has; instructions
+> addressed to the acting player are not for you. Software supplies the served player's log since your
 > last pass (its inputs and the frames that resulted, as source ids) and its current
 > subgoal, if any; you may read more of the log and any cited frame. Then end the pass
 > with exactly one tool call. Call player_level_commit to keep the current subgoal,

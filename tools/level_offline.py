@@ -96,7 +96,13 @@ def projection_check(recorded: dict) -> dict:
 
 def simulate(recorded: dict, pool: list[float], *, k: int, s: int, fractions: tuple[float, ...], requests_per_pass: int,
              allowance: int, rng: random.Random) -> dict:
-    """Replay the wake rules over one recorded timeline; a pass reads after its first request and commits after r-1."""
+    """Replay the wake rules over one recorded timeline under level interface v2 (#340).
+
+    The driver pushes the log projection at launch, so a pass binds its position when it
+    starts (`read = now`), and its commit or abstain lands after its last response with no
+    closing turn (`commit = now + sum(latencies)`). `requests_per_pass` is the total request
+    count (about 2-3). No host-startup term is added: the recorded traces hold no level host.
+    """
     created = [r[3] for r in recorded['rows']]
     is_input = [r[2] == 'input' for r in recorded['rows']]
     input_walls = [w for w, i in zip(created, is_input) if i]
@@ -113,9 +119,8 @@ def simulate(recorded: dict, pool: list[float], *, k: int, s: int, fractions: tu
         if reason is None:
             continue
         latencies = [rng.choice(pool) for _ in range(requests_per_pass)]
-        read = now + latencies[0]
-        commit = now + sum(latencies[:-1])
-        busy_until = now + sum(latencies)
+        read = now
+        commit = busy_until = now + sum(latencies)
         if commit > input_walls[-1]:
             # The recording ends before this commit; its staleness is unobserved, not zero.
             censored += 1
@@ -140,7 +145,7 @@ def stage(runs: list[Path], *, k: int, s: int, fractions: tuple[float, ...], req
     """`latency_scale` multiplies recorded actor latencies, since level requests may write longer proposals."""
     recorded = [load(run) for run in runs]
     pool = [latency * latency_scale for r in recorded for latency in r['latencies']]
-    result = dict(schema='level-offline-stage/1', parameters=dict(k=k, s=s, fractions=list(fractions),
+    result = dict(schema='level-offline-stage/2', parameters=dict(k=k, s=s, fractions=list(fractions),
                   requests_per_pass=requests_per_pass, replicates=replicates, seed=seed, latency_scale=latency_scale),
                   latency_pool=dict(count=len(pool), median=statistics.median(pool), p95=quantile(pool, .95)),
                   runs=[])
@@ -174,7 +179,7 @@ def main() -> None:
     parser.add_argument('--k', type=int, default=10)
     parser.add_argument('--s', type=int, default=10)
     parser.add_argument('--fractions', type=float, nargs='*', default=[.25, .5, .75])
-    parser.add_argument('--requests-per-pass', type=int, default=4)
+    parser.add_argument('--requests-per-pass', type=int, default=3)
     parser.add_argument('--replicates', type=int, default=2000)
     parser.add_argument('--seed', type=int, default=329)
     parser.add_argument('--latency-scale', type=float, default=1.)

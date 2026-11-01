@@ -36,10 +36,19 @@ def test_recorded_operations_round_trip_through_the_current_projection(tmp_path)
 
 def test_staleness_follows_pass_latency_against_the_input_interval(tmp_path):
     recorded = load(recorded_run(tmp_path))
-    fast = simulate(recorded, [1.], k=5, s=3, fractions=(), requests_per_pass=4, allowance=30, rng=random.Random(1))
-    # Read after 1 s, commit after 3 s: a 2 s window holds at most one or two inputs, under S=3.
-    assert fast['passes'] > 0 and fast['commits'] == fast['passes'] and set(fast['moved']) <= {0, 1, 2}
-    slow = simulate(recorded, [4.], k=5, s=3, fractions=(), requests_per_pass=4, allowance=30, rng=random.Random(1))
-    # Read after 4 s, commit after 12 s: four inputs pass, at least S=3, so every observed pass is
+    fast = simulate(recorded, [1.], k=5, s=3, fractions=(), requests_per_pass=2, allowance=30, rng=random.Random(1))
+    # The bound is the push at launch and the commit lands after both responses (2 s): a 2 s window
+    # at a 2 s input interval holds at most one input, under S=3.
+    assert fast['passes'] > 0 and fast['commits'] == fast['passes'] and set(fast['moved']) <= {0, 1}
+    assert fast['level_requests'] == (fast['passes'] + fast['censored']) * 2
+    slow = simulate(recorded, [4.], k=5, s=3, fractions=(), requests_per_pass=2, allowance=30, rng=random.Random(1))
+    # Bound at launch, commit 8 s later: four inputs pass, at least S=3, so every observed pass is
     # discarded; a pass committing after the recording's last input is censored, not counted.
     assert slow['passes'] > 0 and slow['commits'] == 0 and min(slow['moved']) >= 3 and slow['censored'] >= 1
+
+
+def test_v2_timing_has_no_read_delay_and_no_closing_turn(tmp_path):
+    recorded = load(recorded_run(tmp_path, interval=10.))
+    # One 4 s response: the bound is the launch, so a 10 s input interval never lets an input in before the commit.
+    one = simulate(recorded, [4.], k=1, s=1, fractions=(), requests_per_pass=1, allowance=30, rng=random.Random(1))
+    assert one['passes'] > 0 and one['commits'] == one['passes'] and set(one['moved']) == {0}

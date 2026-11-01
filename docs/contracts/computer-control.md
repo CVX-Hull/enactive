@@ -254,7 +254,9 @@ session boundary can intervene. Otherwise return `player-level-commit/2`
 discard writes nothing to either store.
 
 A commit appends, under `Application.serial` and in one `Memory.append_many`
-transaction, its cited sources' exact bytes (idempotent immutable copies), a new Work
+transaction, the exact bytes of the sources cited by a replace or close (idempotent
+immutable copies; a keep writes no record, so it registers no frame and only checks its
+citations are available), a new Work
 record for a replacement, one superseding correction for a close or a replacement's
 `previous` (its outcome), and the service row with its final result; keep writes no
 record. The receipt is `{schema:"player-level-commit/2", status, action, reason,

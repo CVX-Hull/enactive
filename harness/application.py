@@ -184,7 +184,8 @@ class Application:
             raise PlayerError(f'Cited sources are unavailable: {", ".join(missing[:4])}')
         # Exact bytes are read (and integrity-checked) before the pass can end; they are
         # registered inside the commit transaction, never piecemeal.
-        blobs = [self.runtime.source(s) for s in cited if not self._has_player_source(s)]
+        # A keep writes no record, so it registers no frame bytes: it only checks its citations are available.
+        blobs = [] if action == 'keep' else [self.runtime.source(s) for s in cited if not self._has_player_source(s)]
         if sum(len(png) for _, png in blobs) > self.memory.source_bytes_left():
             raise PlayerError('Cannot remember: cited sources exceed player source capacity; no images evicted')
         actor, bound = state['serves'], state['bound']
@@ -225,6 +226,11 @@ class Application:
                                           service=('player_level_commit', args, result), sources=blobs)
         self.claims = self.memory.query(limit=5)
         return dict(result, records=records)
+
+    def reset_reader_bound(self, reader_id: str) -> None:
+        """Forget a reader's bound, so the next pass's own log read alone binds its position."""
+        with self.serial:
+            self.readers[reader_id]['bound'] = None
 
     def level_abstain(self, reader_id: str, args: dict[str, Any]) -> dict[str, Any]:
         """End a pass with no proposal: nothing is written and, like a commit attempt, it clears the bound."""

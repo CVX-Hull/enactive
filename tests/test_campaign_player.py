@@ -244,7 +244,9 @@ def test_a_start_pass_revalidates_open_records_before_inputs_wake(level_campaign
         data=dict(level='subgoal',actor_id='c'*32,session='z'*32,position=0,expected_observations=[],status='open',confidence=.5),sources=[],supports=[],supersedes=None,applicability=None,program_id=None))
     receipt=level_campaign.run()['actors'][0]['level']
     assert receipt['passes'][0]['reason']=='start' and receipt['commits']>=1
-    assert 'Earlier session subgoal' in (level_campaign.root/'actors/001/level/001/prompt.txt').read_text()
+    prompt=(level_campaign.root/'actors/001/level/001/prompt.txt').read_text()
+    # Another actor's position is not a position in the served log.
+    assert 'Earlier session subgoal' in prompt and '"same_actor":false,"position":null,"inputs_since_commit":null' in prompt
     assert [r['text'] for r in level_campaign.app.memory.current('work')]==['Scripted subgoal']
 
 
@@ -271,7 +273,7 @@ def test_pushed_projection_binds_the_bound_shows_the_latest_fifty_and_the_curren
         actor=app.add_actor('narrowed')
         reader=app.add_reader(actor['actor_id'],staleness_inputs=100)
         passes=SimpleNamespace(application=app,actor_id=actor['actor_id'],reader_id=reader['actor_id'],shown_through=0)
-        push=lambda:LevelPasses._push(passes)
+        push=lambda:LevelPasses._push(passes,app.runtime.store.actor_counts(actor['actor_id'])[0])[0]
         bound=lambda:app.readers[reader['actor_id']]['bound']
         step=lambda:app.call(actor['token'],'computer_input',dict(actions=[key()]),'%032x'%time.monotonic_ns())
         # An empty log from its start binds 0, so a start pass can revalidate.
@@ -281,8 +283,6 @@ def test_pushed_projection_binds_the_bound_shows_the_latest_fifty_and_the_curren
         lines=[json.loads(l) for l in text.splitlines() if l.startswith('{"position"')]
         assert [e['position'] for e in lines]==list(range(11,61)) and '(10 earlier entries since then are not shown' in text
         assert bound()==60 and passes.shown_through==60
-        # Nothing new: the push shows so and leaves the bound as read.
-        assert '(no new entries)' in push() and bound()==60
         committed=app.call(reader['token'],'player_level_commit',dict(proposal=dict(schema='player-level-proposal/2',action='replace',
             subgoal=dict(text='Pushed subgoal',expected_observations=['a door'],status='open',confidence=.5,sources=[]),previous=None)),
             'e'*32)[0]
@@ -293,6 +293,83 @@ def test_pushed_projection_binds_the_bound_shows_the_latest_fifty_and_the_curren
         assert 'earlier entries' not in text and bound()==62
         shown=json.loads(text.split('Current subgoal:\n')[1])
         assert shown==dict(record_id=committed['records'][0]['id'],text='Pushed subgoal',expected_observations=['a door'],
-                           status='open',confidence=.5,sources=[],position=60,inputs_since_commit=2)
+                           status='open',confidence=.5,sources=[],same_actor=True,position=60,inputs_since_commit=2)
+        # Nothing new: the push shows so, and nothing shown means nothing bound (a read's bound never carries over).
+        assert '(no new entries)' in push() and bound() is None
     finally:
         runtime.close();memory.close()
+
+
+def level_stub(tmp_path,*,started=True):
+    """A real application and the driver's own `_poll`/`_push`, with a scripted launch."""
+    from harness.application import Application
+    from harness.player.memory import Memory
+    from test_computer_runtime import key,make_runtime
+    from tools.campaign_player import LevelPasses
+    from tools.level_schedule import LevelSchedule
+    runtime,channel,_=make_runtime(tmp_path,mint=False,max_inputs=100,max_requests=100,max_frames=200)
+    memory=Memory(tmp_path/'player.sqlite3')
+    app=Application(runtime,memory,tmp_path/'contexts')
+    actor=app.add_actor('narrowed')
+    reader=app.add_reader(actor['actor_id'],staleness_inputs=100)
+    stub=SimpleNamespace(application=app,actor_id=actor['actor_id'],reader_id=reader['actor_id'],shown_through=0,
+        current=None,failure=None,remaining=lambda:5,level=dict(pass_seconds=30),launch=Mock(),
+        schedule=LevelSchedule(1,(),10,started=started))
+    stub._push=lambda total:LevelPasses._push(stub,total)
+    step=lambda:app.call(actor['token'],'computer_input',dict(actions=[key()]),'%032x'%time.monotonic_ns())
+    poll=lambda:LevelPasses._poll(stub,SimpleNamespace(requests={1},handoff=None),False,time.monotonic()+1000)
+    return stub,app,actor,reader,step,poll,(runtime,memory)
+
+
+def test_a_pass_inherits_no_bound_from_an_earlier_pass_that_never_committed(tmp_path):
+    stub,app,actor,reader,step,poll,(runtime,memory)=level_stub(tmp_path)
+    try:
+        step();step()
+        # An earlier pass read through position 2 and ended with neither a commit attempt nor an abstain.
+        app.log_read(reader['actor_id'],0,50)
+        assert app.readers[reader['actor_id']]['bound']==2
+        step()
+        poll()
+        # The launched pass is bound to exactly what it was shown: positions 3.. only, not the stale 2.
+        (call,)=stub.launch.call_args_list
+        assert call.args[0]=='inputs' and call.args[1:3]==(3,3) and '{"position":3,' in call.args[4]
+        assert app.readers[reader['actor_id']]['bound']==3
+    finally:
+        runtime.close();memory.close()
+
+
+def test_a_non_start_pass_with_an_empty_push_is_not_launched_and_a_start_pass_is(tmp_path):
+    stub,app,actor,reader,step,poll,(runtime,memory)=level_stub(tmp_path)
+    try:
+        step()
+        # A handoff before the push leaves no active actor, so the push is empty: no pass.
+        app.call(actor['token'],'player_handoff',{},'%032x'%time.monotonic_ns())
+        poll()
+        assert not stub.launch.called
+        assert app.readers[reader['actor_id']]['bound'] is None
+    finally:
+        runtime.close();memory.close()
+    (tmp_path/'start').mkdir()
+    start,app,actor,reader,step,poll,(runtime,memory)=level_stub(tmp_path/'start',started=False)
+    try:
+        app.memory.append('c'*32,dict(schema='player-record/1',kind='work',text='Open',data=dict(level='subgoal',actor_id='c'*32,
+            session='z'*32,position=0,expected_observations=[],status='open',confidence=.5),sources=[],supports=[],
+            supersedes=None,applicability=None,program_id=None))
+        poll()
+        (call,)=start.launch.call_args_list
+        assert call.args[0]=='start' and '(no new entries)' in call.args[4] and app.readers[reader['actor_id']]['bound']==0
+    finally:
+        runtime.close();memory.close()
+
+
+def test_the_receipt_counts_failed_passes_and_start_abstains():
+    from tools.campaign_player import LevelPasses
+    event=lambda kind:dict(type=kind,action=None,reason='r')
+    passes=[dict(reason='start',settled=dict(ok=True),level_events=[event('level-abstain')],attempts_charged=2),
+            dict(reason='inputs',settled=dict(ok=True),level_events=[event('level-abstain')],attempts_charged=2),
+            dict(reason='inputs',settled=dict(ok=False,reason='level-no-proposal'),level_events=[],attempts_charged=2),
+            dict(reason='inputs',level_events=[],attempts_charged=2),
+            dict(reason='inputs',settled=dict(ok=True),level_events=[event('level-commit')],attempts_charged=2)]
+    stub=SimpleNamespace(reader_id='r',level=dict(mode='shadow'),allowance=10,charged=10,passes=passes,failure=None,quiescent=lambda:True)
+    receipt=LevelPasses.receipt(stub)
+    assert (receipt['commits'],receipt['abstains'],receipt['start_abstains'],receipt['failed_passes'])==(1,2,1,2)
