@@ -406,8 +406,9 @@ def test_a_lost_terminal_call_ends_the_pass_and_the_driver_reconciles_its_identi
     assert first['settled']['reason']=='level-uncertain' and first['settled']['ok'] is False
     (event,)=first['level_uncertain']
     assert event['tool']=='player_level_replace' and re.fullmatch('[0-9a-f]{32}',event['identity'])
-    row=level_campaign.app.memory._db.execute('SELECT 1 FROM service_operations WHERE id=?',(event['identity'],)).fetchone()
-    assert (row is not None)==committed and event['outcome']==('committed' if committed else 'absent')
+    row=level_campaign.app.memory._db.execute('SELECT result FROM service_operations WHERE id=?',(event['identity'],)).fetchone()
+    # An absent call leaves only the tombstone finish wrote: a row with no result.
+    assert row is not None and (row[0] is not None)==committed and event['outcome']==('committed' if committed else 'absent')
     if committed:
         stored=[r[0] for r in level_campaign.app.memory._db.execute('SELECT id FROM records')]
         assert event['action']=='replace' and event['record_ids'] and set(event['record_ids'])<=set(stored)
@@ -432,6 +433,35 @@ def test_the_trace_reader_collects_level_uncertain_events(tmp_path):
     try:
         assert events.finish()['level_uncertain']==[dict(tool='player_level_close',identity='f'*32,request_id='request-1')]
     finally:events.close()
+
+
+def test_a_lost_call_arriving_after_the_pass_ended_is_refused_and_writes_nothing(tmp_path):
+    import subprocess
+    from harness.player.contracts import PlayerError
+    from tools.campaign_player import LevelPasses
+    stub,app,actor,reader,step,poll,(runtime,memory)=level_stub(tmp_path)
+    try:
+        stub.reconcile=lambda event,tombstoned=False:LevelPasses.reconcile(stub,event,tombstoned)
+        stub.charged=0;stub.passes=[];stub.target=tmp_path
+        (tmp_path/'001').mkdir()
+        step()
+        app.log_read(reader['actor_id'],0,50)
+        assert app.readers[reader['actor_id']]['bound'] is not None
+        child=subprocess.Popen([sys.executable,'-c','pass'],start_new_session=True);child.wait()
+        record=dict(index=1,allocated_attempts=1,level_uncertain=[dict(tool='player_level_replace',identity='c'*32,request_id='request-1')])
+        stub.current=(child,None,record,time.monotonic()+30)
+        LevelPasses.finish(stub)
+        (event,)=record['level_uncertain']
+        assert event['outcome']=='absent' and event['record_ids']==[]
+        assert app.readers[reader['actor_id']]['bound'] is None
+        replace=dict(text='S',expected_observations=[],status='open',confidence=.5,sources=[],previous_outcome='none',previous_reason='')
+        before=memory._db.execute('SELECT COUNT(*) FROM records').fetchone()[0]
+        with pytest.raises(PlayerError,match='Original level-commit identity conflicts'):
+            app.call(reader['token'],'player_level_replace',replace,'c'*32)
+        assert memory._db.execute('SELECT COUNT(*) FROM records').fetchone()[0]==before==0
+        assert memory._db.execute('SELECT result FROM service_operations WHERE id=?',('c'*32,)).fetchone()==(None,)
+    finally:
+        runtime.close();memory.close()
 
 
 def test_reconciliation_reads_only_the_readers_own_row_for_that_tool(tmp_path):

@@ -248,23 +248,32 @@ class LevelPasses:
             record.update(accounting_complete=False,attempts_charged=record['allocated_attempts'],trace_error=type(exc).__name__)
         finally:
             if events is not None:events.close()
-        # The pass is over, so a lost terminal call can no longer change the store: settle what it did.
-        record['level_uncertain']=[self.reconcile(e) for e in record.get('level_uncertain',[])]
+        # A lost terminal call can still be waiting on the application's serial lock in a handler thread. In one hold of
+        # that lock the bound is cleared and every identity with no row is tombstoned (a row with no result, which
+        # `level_call` refuses as an identity conflict), so a late arrival changes nothing; then each is reconciled.
+        with self.application.serial:
+            self.application.reset_reader_bound(self.reader_id)
+            uncertain=record.get('level_uncertain',[])
+            tombstoned={e['identity'] for e in uncertain if isinstance(e.get('identity'),str)
+                        and self.application.memory.tombstone_service(e['identity'],self.reader_id,str(e.get('tool')))}
+            record['level_uncertain']=[self.reconcile(e,e.get('identity') in tombstoned) for e in uncertain]
         record['ended_wall']=time.time()
         self.charged+=record['attempts_charged'];self.passes.append(record)
         try:write_new(self.target/f"{record['index']:03d}"/'driver-receipt.json',record)
         except (OSError,ValueError) as exc:record['receipt_error']=type(exc).__name__
 
-    def reconcile(self,event: dict) -> dict:
+    def reconcile(self,event: dict,tombstoned: bool=False) -> dict:
         """What a terminal call whose response was lost did, read from the store's `service_operations` row.
 
-        `committed` when the row exists (it commits in the same transaction as the call's records), else `absent`.
-        A discard writes no row, so a discarded call and one that never arrived are both `absent`: neither changed
-        the store or the current subgoal. The identity is reported unchanged and never replayed.
+        `committed` when a row with a result exists (it commits in the same transaction as the call's records).
+        `absent` when there is no row, or when `finish` tombstoned the identity because there was none: a discard
+        writes no row, so a discarded call and one that never arrived are both `absent`, and neither changed the
+        store or the current subgoal. The identity is reported unchanged and never replayed.
         """
         identity=event.get('identity')
         outcome=dict(event,outcome='unreconciled')
         if not isinstance(identity,str):return outcome
+        if tombstoned:return dict(outcome,outcome='absent',action=None,record_ids=[])
         with self.application.serial:
             row=self.application.memory._db.execute('SELECT actor,tool,result FROM service_operations WHERE id=?',(identity,)).fetchone()
         if row is None:return dict(outcome,outcome='absent',action=None,record_ids=[])

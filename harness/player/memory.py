@@ -253,6 +253,19 @@ class Memory:
                              (request_id,actor_id,tool,canonical(args),canonical({'steps':[]})))
             return True
 
+    def tombstone_service(self, request_id: str, actor_id: str, tool: str) -> bool:
+        """Close an identity that has no `service_operations` row: a row with no result, so a later call is refused.
+
+        True when this call wrote the row, False when the identity already has one (committed or begun). A level
+        terminal call that finds a row with no result refuses as an identity conflict and never commits.
+        """
+        with self._transaction():
+            if self._db.execute('SELECT 1 FROM service_operations WHERE id=?',(request_id,)).fetchone():
+                return False
+            self._db.execute('INSERT INTO service_operations VALUES(?,?,?,?,?,NULL)',
+                             (request_id,actor_id,tool,canonical({}),canonical({'steps':[]})))
+            return True
+
     def service_step(self, request_id: str, step: dict) -> None:
         with self._transaction():
             row = self._db.execute('SELECT progress FROM service_operations WHERE id=?',(request_id,)).fetchone()
