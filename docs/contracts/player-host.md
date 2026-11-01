@@ -131,10 +131,9 @@ latched (a provider error, the request limit or the deadline) keeps its own reas
 level's text is never read.
 
 **Reserved terminal requests.** On every request with two or fewer requests remaining
-(including that request) a level host declares only the four terminal tools: Pi 1.4.0
-declares a request's tools through the transcript's system-message `toolsAdded`
-entries, which the host restricts for that request while the history and the executable
-tool set stay unchanged. Each such request emits `level-reserved-request` with
+(including that request) a level host declares only the four terminal tools to the
+model, while the history and the executable tool set stay unchanged (the adapter's
+mechanism is in its README). Each such request emits `level-reserved-request` with
 `request_id` and `offered_tools`, and its resource status says that only the pass-ending
 tools are offered. A pass of two requests or fewer is terminal-only throughout. A
 terminal call refused (a validation or custodian error) on the last allowed request
