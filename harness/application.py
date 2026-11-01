@@ -13,8 +13,8 @@ import uuid
 
 from .computer.protocol import ControlError, canonical, closed
 from .computer.runtime import ComputerRuntime
-from .player.contracts import (LEVEL_ABSTAIN_SCHEMA, LEVEL_COMMIT_SCHEMA, LEVEL_CONTRACT, LEVEL_TERMINAL_TOOLS,
-                               PlayerError, bounded_integer, level_arguments)
+from .player.contracts import (LEVEL_ABSTAIN_SCHEMA, LEVEL_COMMIT_SCHEMA, LEVEL_CONTRACT, LEVEL_FIX_LINE,
+                               LEVEL_TERMINAL_TOOLS, PlayerError, bounded_integer, level_arguments)
 from .player.contracts import canonical as player_canonical
 from .player.memory import Memory
 from .player.programs import ProgramRepository, ProgramRunner
@@ -104,8 +104,14 @@ class Application:
             # change the current subgoal after minting; more than one is a store no pass could resolve.
             if self.profiles.get(actor_id) != frozenset(PROFILES['narrowed']):
                 raise ControlError('A reader serves only a narrowed-profile actor')
-            if len(self.level_subgoals()) > 1:
+            current = self.level_subgoals()
+            if len(current) > 1:
                 raise ControlError('More than one current level subgoal; the level could never commit')
+            # A record written under another level contract is not read, converted or superseded: S-MIGRATION.
+            stale = [r['id'] for r in current if r['data'].get('level_contract') != LEVEL_CONTRACT]
+            if stale:
+                raise ControlError(f'Unsupported level record contract (current level Work {", ".join(stale)} is not '
+                                   f'{LEVEL_CONTRACT}); migrate or start a fresh player store')
             reader = self.runtime.add_reader(actor_id)
             self.profiles[reader['actor_id']] = frozenset(PROFILES['reader'])
             self.readers[reader['actor_id']] = dict(serves=actor_id, staleness_inputs=staleness_inputs, bound=None)
@@ -165,18 +171,28 @@ class Application:
             state = 'There is no current subgoal.'
         if tool in ('player_level_keep', 'player_level_close') and not subgoals:
             return (f'{state} {tool} needs a current subgoal. Call player_level_replace with previous_outcome "none" '
-                    'and previous_reason "" to set one, or player_level_abstain.')
+                    f'and previous_reason "" to set one, or player_level_abstain.\n{LEVEL_FIX_LINE}')
         if tool == 'player_level_replace':
             outcome, reason = args['previous_outcome'], args['previous_reason']
             if outcome == 'none' and subgoals:
                 return (f'{state} previous_outcome "none" is only valid when there is no current subgoal. Set '
                         'previous_outcome to achieved, failed, abandoned or revised with a previous_reason, or call '
-                        'player_level_keep or player_level_close.')
+                        f'player_level_keep or player_level_close.\n{LEVEL_FIX_LINE}')
             if outcome != 'none' and not subgoals:
-                return f'{state} previous_outcome must be "none" (with previous_reason "") when there is nothing to replace.'
+                return (f'{state} previous_outcome must be "none" (with previous_reason "") when there is nothing to '
+                        f'replace.\n{LEVEL_FIX_LINE}')
             if outcome != 'none' and not reason.strip():
-                return f'{state} previous_reason must say why it was {outcome}; it may be empty only with previous_outcome "none".'
+                return (f'{state} previous_reason must say why it was {outcome}; it may be empty only with '
+                        f'previous_outcome "none".\n{LEVEL_FIX_LINE}')
         return None
+
+    def _check_citations(self, cited: list[str]) -> None:
+        """A terminal call's cited frames must exist; the refusal names the missing ids and the valid action."""
+        missing = [s for s in cited if not self.runtime.store.has_source(s) and not self._has_player_source(s)]
+        if missing:
+            shown = ', '.join(s[:64] for s in missing[:4]) + (f' and {len(missing) - 4} more' if len(missing) > 4 else '')
+            raise PlayerError(f'Cited sources are unavailable: {shown}. Cite only source ids that appeared in your '
+                              f'player_log_read results (the source_id of a log entry), or give sources as [].\n{LEVEL_FIX_LINE}')
 
     def level_call(self, reader_id: str, tool: str, args: dict[str, Any], identity: str) -> dict[str, Any]:
         """One keep, replace or close: the pass's single terminal call, timely-checked and then committed or discarded."""
@@ -200,15 +216,16 @@ class Application:
         outcome = args.get('previous_outcome', args.get('outcome'))
         corrected = current is not None and action != 'keep'
         cited = list(dict.fromkeys(args['sources']))
-        missing = [s for s in cited if not self.runtime.store.has_source(s) and not self._has_player_source(s)]
-        if missing:
-            raise PlayerError(f'Cited sources are unavailable: {", ".join(missing[:4])}')
+        self._check_citations(cited)
         # Exact bytes are read (and integrity-checked) before the pass can end; they are
         # registered inside the commit transaction, never piecemeal.
         # A keep writes no record, so it registers no frame bytes: it only checks its citations are available.
         blobs = [] if action == 'keep' else [self.runtime.source(s) for s in cited if not self._has_player_source(s)]
-        if sum(len(png) for _, png in blobs) > self.memory.source_bytes_left():
-            raise PlayerError('Cannot remember: cited sources exceed player source capacity; no images evicted')
+        needed, left = sum(len(png) for _, png in blobs), self.memory.source_bytes_left()
+        if needed > left:
+            raise PlayerError(f'Cannot remember: the {len(blobs)} cited frames not yet remembered total {needed} bytes, '
+                              f'but player memory has {left} bytes of source capacity left and evicts no images. Cite '
+                              f'fewer frames or give sources as [].\n{LEVEL_FIX_LINE}')
         actor, bound = state['serves'], state['bound']
         # A timeliness check ends the pass, committed or discarded: the next one must read again.
         state['bound'] = None
@@ -257,10 +274,7 @@ class Application:
     def level_abstain(self, reader_id: str, args: dict[str, Any]) -> dict[str, Any]:
         """End a pass with no change: nothing is written and, like a terminal call, it clears the bound."""
         args = level_arguments('player_level_abstain', args)
-        missing = [s for s in dict.fromkeys(args['sources'])
-                   if not self.runtime.store.has_source(s) and not self._has_player_source(s)]
-        if missing:
-            raise PlayerError(f'Cited sources are unavailable: {", ".join(missing[:4])}')
+        self._check_citations(list(dict.fromkeys(args['sources'])))
         self.readers[reader_id]['bound'] = None
         return dict(schema=LEVEL_ABSTAIN_SCHEMA, status='abstained', reason_code=args['reason_code'],
                     reason=args['reason'])

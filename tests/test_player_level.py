@@ -3,6 +3,7 @@
 Actual composition, SQLite and HTTP over a receiver double; no provider, game or level host.
 """
 import json
+from pathlib import Path
 from unittest.mock import patch
 import uuid
 
@@ -583,7 +584,7 @@ def test_reader_minting_refuses_more_than_one_current_level_subgoal_and_ignores_
 
         def work(index, level=False):
             memory.append(actor['actor_id'], dict(schema='player-record/1', kind='work', text=f'work {index}',
-                data=dict(level='subgoal') if level else {}, sources=[], supports=[], supersedes=None,
+                data=dict(level='subgoal', level_contract='player-level/3') if level else {}, sources=[], supports=[], supersedes=None,
                 applicability=None, program_id=None))
         for index in range(16):
             work(index)
@@ -683,3 +684,63 @@ def test_reader_mcp_adapter_reads_and_ends_a_pass_over_http(level, tmp_path):
         assert not channel.stopped.is_set()
     finally:
         server.shutdown(); server.server_close(); thread.join(2)
+
+
+def test_refusals_name_the_offenders_and_the_valid_action_and_end_with_the_fix_line(level):
+    from harness.player.contracts import LEVEL_FIX_LINE
+    app, channel, actor, reader = level
+    first = call(app, actor, 'computer_input', dict(actions=[key()]))
+    channel.capture = 2
+    second = call(app, actor, 'computer_observe', {})['source']['source_id']
+    read_all(app, reader)
+    refused = []
+
+    def refusal(tool, args):
+        with pytest.raises(PlayerError) as raised:
+            call(app, reader, tool, args)
+        refused.append(str(raised.value))
+        return str(raised.value)
+    wrong = refusal(KEEP, keep())
+    assert 'There is no current subgoal. player_level_keep needs a current subgoal.' in wrong
+    missing = refusal(REPLACE, replace(sources=['ghost-' + 'x' * 100, 'other']))
+    assert 'Cited sources are unavailable: ghost-' in missing and ', other.' in missing and 'player_log_read' in missing
+    assert 'unavailable' in refusal(ABSTAIN, dict(reason_code='other', reason='r', sources=['ghost']))
+    app.memory.max_source_bytes = len(channel.png)
+    capacity = refusal(REPLACE, replace(sources=[first['source']['source_id'], second]))
+    assert f'total {2 * len(channel.png)} bytes' in capacity and f'{len(channel.png)} bytes of source capacity left' in capacity
+    assert 'Cite fewer frames or give sources as []' in capacity
+    invalid = refusal(REPLACE, replace(text=' '))
+    assert 'text: must not be blank' in invalid
+    schema = refusal(REPLACE, dict(replace(), status='closed', confidence=3, sources=['s'] * 20, text='t' * 3000))
+    assert 'status' in schema
+    assert all(message.endswith(LEVEL_FIX_LINE) and len(message) <= 600 for message in refused), refused
+    # The line is the same text the host's validation refusals end with.
+    host = (Path(__file__).parents[1] / 'tools/player_host/validation-feedback.mjs').read_text()
+    assert f"FIX_LINE = '{LEVEL_FIX_LINE}'" in host
+
+
+def test_reader_minting_refuses_a_current_level_record_of_another_contract(tmp_path):
+    runtime, channel, _ = make_runtime(tmp_path, mint=False)
+    memory = Memory(tmp_path / 'player.sqlite3')
+    app = Application(runtime, memory, tmp_path / 'contexts')
+    try:
+        actor = app.add_actor('narrowed')
+
+        def level_work(text, **data):
+            return memory.append(actor['actor_id'], dict(schema='player-record/1', kind='work', text=text,
+                data=dict(level='subgoal', **data), sources=[], supports=[], supersedes=None, applicability=None,
+                program_id=None))
+        def end(record):
+            memory.append(actor['actor_id'], dict(schema='player-record/1', kind='correction', text='ended',
+                data={}, sources=[], supports=[], supersedes=record['id'], applicability=None, program_id=None))
+        for text, data in (('v2 record', dict(level_contract='player-level/2')), ('unversioned record', {})):
+            stale = level_work(text, **data)
+            with pytest.raises(ControlError, match='Unsupported level record contract.*migrate or start a fresh player store') as raised:
+                app.add_reader(actor['actor_id'], staleness_inputs=S)
+            assert stale['id'] in str(raised.value)
+            # Superseded history of another contract is not current and does not refuse.
+            end(stale)
+        level_work('current record', level_contract='player-level/3')
+        assert app.add_reader(actor['actor_id'], staleness_inputs=S)['actor_id']
+    finally:
+        runtime.close(); memory.close()

@@ -67,8 +67,9 @@ function describe(path, message, schema, args) {
 }
 
 /** Request-only diagnostics for the pinned SDK's validation refusals of the named tools.
- * `names` selects the tools covered; `terminal` the subset whose refusals also say a fixable call is not abstained. */
-export function createValidationFeedback(tools, report, {names = [], terminal = []} = {}) {
+ * `names` selects the tools covered; `terminal` the subset whose refusals also say a fixable call is not abstained;
+ * `notes` maps a tool to one line shown after its example, for what a minimal example cannot show. */
+export function createValidationFeedback(tools, report, {names = [], terminal = [], notes = {}} = {}) {
   const covered = new Map(tools.filter(tool => names.includes(tool.name)).map(tool => [tool.name, tool]));
   const cache = new WeakMap();
 
@@ -96,6 +97,7 @@ export function createValidationFeedback(tools, report, {names = [], terminal = 
       if (lines.length) {
         text = `${header.trimEnd()}\n${lines.join('\n')}\n`
           + `Valid example call: ${call.name} ${JSON.stringify(exampleValue(tool.parameters))}`
+          + (notes[call.name] ? `\n${notes[call.name]}` : '')
           + (terminal.includes(call.name) ? `\n${FIX_LINE}` : '');
       }
     } catch { text = null; }

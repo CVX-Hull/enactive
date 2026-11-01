@@ -851,6 +851,7 @@ test('production level schemas: a refused call names each field, the rule, the a
   assert.ok(first.includes('Valid example call: player_level_replace {"text":"<text>"'),first);
   assert.ok(first.includes('"previous_outcome":"none","previous_reason":""'),first);
   assert.ok(first.endsWith('Fix the call and resend it; abstaining is not the remedy for a fixable call.'),first);
+  assert.ok(first.includes('In this example previous_outcome is "none"')&&first.includes('valid only when there is no current subgoal'),first);
   assert.ok(!first.includes('schema is false'));
   const second=payloads.at(-1).messages.find(m=>m.role==='tool'&&m.tool_call_id==='bad2-0').content;
   assert.ok(second.includes('- reason: required property is missing')&&second.includes('- sources: required property is missing'),second);

@@ -242,7 +242,7 @@ def test_a_level_failure_disables_the_level_but_never_stops_its_actor(level_camp
 
 def test_a_start_pass_revalidates_open_records_before_inputs_wake(level_campaign):
     level_campaign.app.memory.append('c'*32,dict(schema='player-record/1',kind='work',text='Earlier session subgoal',
-        data=dict(level='subgoal',actor_id='c'*32,session='z'*32,position=0,expected_observations=[],status='open',confidence=.5),sources=[],supports=[],supersedes=None,applicability=None,program_id=None))
+        data=dict(level='subgoal',level_contract='player-level/3',actor_id='c'*32,session='z'*32,position=0,expected_observations=[],status='open',confidence=.5),sources=[],supports=[],supersedes=None,applicability=None,program_id=None))
     receipt=level_campaign.run()['actors'][0]['level']
     assert receipt['passes'][0]['reason']=='start' and receipt['commits']>=1
     prompt=(level_campaign.root/'actors/001/level/001/prompt.txt').read_text()
@@ -353,7 +353,7 @@ def test_a_non_start_pass_with_an_empty_push_is_not_launched_and_a_start_pass_is
     (tmp_path/'start').mkdir()
     start,app,actor,reader,step,poll,(runtime,memory)=level_stub(tmp_path/'start',started=False)
     try:
-        app.memory.append('c'*32,dict(schema='player-record/1',kind='work',text='Open',data=dict(level='subgoal',actor_id='c'*32,
+        app.memory.append('c'*32,dict(schema='player-record/1',kind='work',text='Open',data=dict(level='subgoal',level_contract='player-level/3',actor_id='c'*32,
             session='z'*32,position=0,expected_observations=[],status='open',confidence=.5),sources=[],supports=[],
             supersedes=None,applicability=None,program_id=None))
         poll()

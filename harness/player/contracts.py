@@ -102,6 +102,8 @@ CLOSE_OUTCOMES = ('achieved', 'failed', 'abandoned')
 PREVIOUS_OUTCOMES = ('none', *CLOSE_OUTCOMES, 'revised')
 ABSTAIN_CODES = ('insufficient_evidence', 'transient_screen_state', 'no_change_needed', 'other')
 LEVEL_TERMINAL_TOOLS = ('player_level_keep', 'player_level_replace', 'player_level_close', 'player_level_abstain')
+# Ends every refusal of a terminal call, whichever layer raised it; the host's validation refusals end with the same text.
+LEVEL_FIX_LINE = 'Fix the call and resend it; abstaining is not the remedy for a fixable call.'
 
 
 def _described(schema: dict, description: str) -> dict:
@@ -120,7 +122,8 @@ _LEVEL_REPLACE = _object(dict(
     confidence=_described(dict(type='number', minimum=0, maximum=1), 'Your confidence from 0 to 1.'),
     sources=_LEVEL_SOURCES,
     previous_outcome=_described(_enum(*PREVIOUS_OUTCOMES),
-        'What happened to the subgoal this replaces; none exactly when there is no current subgoal.'),
+        'What happened to the subgoal this replaces. none only when there is no current subgoal; otherwise '
+        'achieved, failed, abandoned or revised.'),
     previous_reason=_described(_text(1024, empty=True),
         'Why that outcome; empty only when previous_outcome is none.')))
 _LEVEL_CLOSE = _object(dict(
@@ -143,9 +146,11 @@ def level_arguments(tool: str, value: object) -> dict:
     result = json_object(value)
     errors = sorted(Draft202012Validator(_LEVEL_SCHEMAS[tool]).iter_errors(result), key=lambda e: list(e.absolute_path))
     if errors:
-        raise PlayerError(f'Invalid {tool} arguments - ' + '; '.join(_brief(e) for e in errors[:3]))
+        # The server bounds an error at 600 characters; the fix line must survive that bound.
+        raise PlayerError(f'Invalid {tool} arguments - ' + '; '.join(_brief(e) for e in errors[:3])[:440] + '\n' + LEVEL_FIX_LINE)
     if not result['reason' if 'reason' in result else 'text'].strip():
-        raise PlayerError(f'Invalid {tool} arguments - {"reason" if "reason" in result else "text"}: must not be blank')
+        raise PlayerError(f'Invalid {tool} arguments - {"reason" if "reason" in result else "text"}: must not be blank'
+                          '\n' + LEVEL_FIX_LINE)
     return result
 
 

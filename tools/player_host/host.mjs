@@ -563,7 +563,8 @@ export async function runHost(options) {
     // A level's refusals name each failing field, its rule, the allowed values and a valid example call.
     const validationFeedback = createValidationFeedback(tools, diagnostic =>
       emit('tool-validation-feedback', {request_id:`request-${requests + 1}`, ...diagnostic}),
-      configuration.role === 'level' ? {names:['player_log_read', ...LEVEL_TERMINAL_TOOLS], terminal:LEVEL_TERMINAL_TOOLS} : {});
+      configuration.role === 'level' ? {names:['player_log_read', ...LEVEL_TERMINAL_TOOLS], terminal:LEVEL_TERMINAL_TOOLS,
+        notes:{player_level_replace:'In this example previous_outcome is "none" with an empty previous_reason, which is valid only when there is no current subgoal; whenever there is one, set previous_outcome to achieved, failed, abandoned or revised and give previous_reason.'}} : {});
     agent = new Agent({
       initialState:{systemPrompt:options.context + (client.instructions ? '\n\nMCP server instructions:\n' + client.instructions : ''), model:configuration.model, thinkingLevel:options.effort, tools},
       toolExecution:'sequential',
