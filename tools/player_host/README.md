@@ -146,8 +146,11 @@ reducing images alone is not a latency pass.
 
 Pi1.4.0's full `anyOf` validation can describe an unrelated memory type when a
 selected Work body is invalid. `validation-feedback.mjs` supplies a request-only
-diagnostic using the same `validateToolArguments`, narrowing only the existing
-`intent.entry_type` alternatives and retaining surrounding constraints. It never
+diagnostic using the same `validateToolArguments`, narrowing any top-level argument
+that is a discriminated `anyOf` (each branch carries a string `const` on one common key,
+for example `intent.entry_type` or the level's `proposal.action`) to the branch the
+selected value names and retaining surrounding constraints. A value that names no
+branch gets the valid values instead, and both texts end with the branches' required keys. It never
 changes arguments, tool schemas, normal SDK validation, execution or collection.
 It requires a unique completed call/result batch, `isError`, absent `durationMs`,
 one text part with the exact SDK validation header, a known unambiguous branch,
@@ -158,8 +161,8 @@ refusal stays. No independent validator, successful-call revalidation or SDK for
 is introduced.
 
 Canonical history stays unchanged. The existing trace's
-`tool-validation-feedback` event retains the original SDK result, exact call ID
-and projected text before forwarding. A weak memo of canonical call/result
+`tool-validation-feedback` event retains the original SDK result, exact call ID,
+the `selected` property, key and value, and projected text before forwarding. A weak memo of canonical call/result
 objects avoids repeating diagnostic work and keeps earlier feedback stable in
 later request prefixes; batch pairing is checked anew. This happens before image
 projection clones messages. These diagnostics prove neither semantic truth nor

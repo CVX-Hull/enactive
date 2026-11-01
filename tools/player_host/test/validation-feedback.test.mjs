@@ -73,9 +73,14 @@ test('parser, executed, unknown and ambiguous history keep their original errors
 });
 
 test('missing or ambiguous discriminator and a passing narrowed check preserve full SDK refusal',async()=>{
-  for (const intent of [{entry:{stage:'long'}},{entry_type:'unknown',entry:{stage:'long'}}]) {
+  // A discriminator that names no branch gets the valid values instead of any branch's errors.
+  for (const [intent,got] of [[{entry:{stage:'long'}},'nothing'],[{entry_type:'unknown',entry:{stage:'long'}},'"unknown"']]) {
     const c={...call(),arguments:{intent}};const {tool,message}=await refusal(c);
-    const history=[assistant(c),message];assert.equal(createValidationFeedback([tool],()=>assert.fail())(history),history);
+    const events=[];const projected=createValidationFeedback([tool],e=>events.push(e))([assistant(c),message]);
+    const text=projected[1].content[0].text;
+    assert.ok(text.includes('intent.entry_type must be one of "claim", "work"')&&text.includes(`(got ${got})`));
+    assert.ok(text.includes('Valid intent.entry_type shapes: claim {entry_type, entry}; work {entry_type, entry}.'));
+    assert.ok(!text.includes('intent.entry.value'));assert.equal(events.length,1);
   }
   const duplicate=structuredClone(schema);duplicate.properties.intent.anyOf.push(duplicate.properties.intent.anyOf[1]);
   const c=call();const duplicated=await refusal(c,duplicate);const history=[assistant(c),duplicated.message];
@@ -97,4 +102,16 @@ test('selected diagnostics retain constraints surrounding the intent union',asyn
   const projected=createValidationFeedback([tool],()=>{})([assistant(c),message]);
   assert.match(projected[1].content[0].text,/intent: must not have more than 1 properties/);
   assert.deepEqual(tool.parameters,Type.Unsafe(constrained));
+});
+
+test('any discriminated union argument is narrowed, not only the memory intent',async()=>{
+  const parameters={type:'object',additionalProperties:false,required:['proposal'],properties:{proposal:{anyOf:[
+    {type:'object',additionalProperties:false,required:['action','record_id'],properties:{action:{const:'keep'},record_id:{type:'string',minLength:1}}},
+    {type:'object',additionalProperties:false,required:['action','outcome'],properties:{action:{const:'close'},outcome:{enum:['achieved','failed']}}}]}}};
+  const c={type:'toolCall',id:'p',name:'remember',arguments:{proposal:{action:'close',outcome:'revised'}}};
+  const {tool,message}=await refusal(c,parameters);assert.equal(message.isError,true);
+  const events=[];const text=createValidationFeedback([tool],e=>events.push(e))([assistant(c),message])[1].content[0].text;
+  assert.ok(text.startsWith('Selected proposal.action="close".\n')&&text.includes('proposal.outcome')&&!text.includes('record_id: '));
+  assert.ok(text.includes('Valid proposal.action shapes: keep {action, record_id}; close {action, outcome}.'));
+  assert.deepEqual(events[0].selected,{property:'proposal',key:'action',value:'close'});
 });

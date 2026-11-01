@@ -742,6 +742,40 @@ test('a level pass that ends without a commit or abstain fails as level-no-propo
   assert.equal(rejected.result.reason,'level-no-proposal');
 });
 
+test('a failure latched in a level pass keeps its own reason rather than level-no-proposal', async t=>{
+  const limited=await scenario(t,[reply(null,[['player_log_read',{after:0,limit:5}]]),reply(null,[['player_level_abstain',{reason:'late'}]])],
+    {configuration:{...levelRoute,max_requests:1},enabledTools:levelTools});
+  assert.equal(limited.result.ok,false);assert.equal(limited.result.reason,'request-limit');
+  const timeout=await scenario(t,[init=>new Promise((_,reject)=>init.signal.addEventListener('abort',()=>reject(new Error('aborted')),{once:true}))],{configuration:{...levelRoute,request_timeout_seconds:.05},enabledTools:levelTools});
+  assert.equal(timeout.result.ok,false);assert.notEqual(timeout.result.reason,'level-no-proposal');
+  assert.equal(timeout.result.reason,'request-timeout');
+});
+
+test('a malformed level proposal against the production reader schema gets the selected action and the valid shapes', async ()=>{
+  const subgoal={text:'x',expected_observations:[],status:'open',confidence:0.5,sources:[]};
+  const bad=[
+    [{schema:'player-level-proposal/2',action:'keep',record_id:'r',sources:[]},'Selected proposal.action="keep".',/reason/],
+    [{schema:'player-level-proposal/2',action:'close',record_id:'r',outcome:'revised',reason:'x',sources:[]},'Selected proposal.action="close".',/outcome/],
+    [{schema:'player-level-proposal/2',action:'replace',subgoal},'Selected proposal.action="replace".',/previous/],
+    [{schema:'player-level-proposal/1',action:'keep',record_id:'r',reason:'x',sources:[]},'Selected proposal.action="keep".',/schema/],
+    [{schema:'player-level-proposal/2',action:'revise',record_id:'r'},'proposal.action must be one of "keep", "replace", "close" (got "revise")',/^/]];
+  const payloads=[], events=[];
+  const sequence=bad.map(([proposal],index)=>reply(null,[['player_level_commit',{proposal}]],true,undefined,`bad${index}`));
+  const result=await runHost({configuration:{...levelRoute,max_requests:8},mcpConfig:productionMcp(levelTools),
+    context:'Frozen current player guide',prompt:'Level pass.',model:model.id,effort:'off',timeoutSeconds:20,env:{OFFLINE_TEST_KEY:'fixture-key'},
+    fetch:async(_url,init)=>{payloads.push(JSON.parse(init.body));return sequence[payloads.length-1] ?? reply();},onEvent:e=>events.push(e)});
+  // Nothing was valid, so no call reached the custodian and the pass ends without a proposal.
+  assert.equal(result.reason,'level-no-proposal');assert.equal(payloads.length,bad.length+1);
+  assert.equal(events.filter(e=>e.type==='tool-start').length,0);
+  const shapes='Valid proposal.action shapes: keep {schema, action, record_id, reason, sources}; replace {schema, action, subgoal, previous}; close {schema, action, record_id, outcome, reason, sources}.';
+  for (const [index,[,selected,detail]] of bad.entries()) {
+    const text=payloads.at(-1).messages.find(m=>m.role==='tool'&&m.tool_call_id===`bad${index}-0`).content;
+    assert.ok(text.includes(selected),text);assert.match(text,detail);assert.ok(text.includes(shapes),text);
+    assert.ok(!/schema is false/.test(text),text);
+  }
+  assert.equal(events.filter(e=>e.type==='tool-validation-feedback').length,bad.length);
+});
+
 test('a level-role host without the level tools fails before any provider request', async t=>{
   const {result,payloads}=await scenario(t,[reply()],{configuration:{...route(),role:'level'},enabledTools:['observe']});
   assert.equal(result.ok,false);assert.equal(result.reason,'missing-required-tools');assert.equal(payloads.length,0);
