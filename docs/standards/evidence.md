@@ -23,14 +23,18 @@ Verify an agent's numerical summary against those artifacts before publication;
 a plausible live summary is not a substitute. Record corrections without replacing
 the original evidence.
 
-A paid or consequential experiment is pre-registered before it runs: its frozen
-inputs, analysis, decision criteria and cost cap are recorded with their hash.
-Check by simulation that a primary metric has adequate power and controlled false
-positives, including across the conditions it compares (for example, alphabet
-sizes). Record every deviation; a changed rule is a deviation, not a refinement.
-A result that fails, or passes only through a flawed metric, is reported as such.
-Research syntheses tag each source's read scope (full text, abstract, secondary or
-snippet), and only full reads support a conclusion.
-C-REVIEW checks this at the reporting checkpoint.
+A hypothesis test or comparison whose result decides a claim, as distinct from
+ordinary development play, records its frozen inputs, analysis and decision
+criteria with their hash before it runs. Run freezing and spend limits follow
+[evidence cadence](../workflows/evidence-cadence.md) and the
+[campaign procedure](../operations/campaign-run.md). Check by simulation that its
+primary metric can detect the effect of interest and does not raise false
+positives across the conditions it compares. Record every deviation; a changed
+rule is a deviation, not a refinement. Research syntheses tag each source's read
+scope (full text, stated sections, abstract, secondary or snippet). Only primary
+text actually read supports a conclusion.
+
+C-REVIEW checks the pre-registration before spending, and both paragraphs at the
+reporting checkpoint.
 
 [Standards index](../engineering.md).
