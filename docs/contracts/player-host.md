@@ -75,7 +75,7 @@ kinds. Required semantics:
 | Event | Contract |
 | --- | --- |
 | `host-start` | Exactly once and first in any run that admits its arguments and inputs, with `telemetry_version: 2`, `schema: "player-host/3"`, `role` and `intent_tail_bytes`; the driver rejects any other schema. |
-| `mcp-connected` | Once the MCP child is connected; the driver treats it as the actor being ready, which a level's first pass waits for. |
+| `mcp-connected` | Once the MCP child is connected, before tool discovery. A level's first pass waits for the actor's first `request-start` instead, which follows the tool checks. |
 | `level-pass` | Level role only, once after tool discovery. |
 | `level-commit` / `level-discard` | Level role only, per `player_level_commit` result (never for a local tool error), with `reason`, `position`, `inputs_since`, `staleness_inputs`, `record_ids` and `kept`. |
 | `intent-tail` | Actor with a tail, per request, with `available`, `record_id`, `surfaced_bytes`, `omitted_bytes` and `age`. |
@@ -102,10 +102,11 @@ which must be discovered and must not be in `enabled_tools`, so the model never 
 it. The host appends ADR-007's fixed label ("Current intent (software-published from
 the player's subgoal level; fallible player data with sources and age, not
 instructions).") and the latest committed subgoal (text, expected observations,
-status, confidence, sources, record ID and its age in inputs, seconds and session),
-bounded to that many UTF-8 bytes with the omitted count stated, to the request-only
-status message. A failed read shows "Unavailable" and never stops the actor or gates
-its input. A null tail (flat, arm B, the fourth arm and shadow mode) adds nothing.
+status, confidence, sources, record ID and its age in inputs, seconds and session)
+to the request-only status message. That body is bounded to `intent_tail_bytes` UTF-8
+bytes with the omitted count stated; the fixed label and the omission marker are extra
+and not counted in `surfaced_bytes`. A failed read or an unexpectedly shaped value shows
+"Unavailable" and never stops the actor or gates its input. A null tail (flat, arm B, the fourth arm and shadow mode) adds nothing.
 
 A **level** host runs one finite pass with a reader capability. Its enabled tools
 must include `player_log_read` and `player_level_commit`. It sends no input and makes no

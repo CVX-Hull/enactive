@@ -139,6 +139,37 @@ async def player_handoff(mode: str = "complete") -> CallToolResult:
 
 
 @server.tool()
+async def player_log_read(after: int, limit: int) -> CallToolResult:
+    record(dict(tool="player_log_read", after=after, limit=limit))
+    value = dict(schema="player-log/1", session=SESSION, actor_id=ACTOR, after=after, entries=[dict(position=after + 1,
+        operation_id=OPERATION, kind="input", actions=[], status="completed", source_id=None)], handoff=False,
+        grants_authority=False)
+    return CallToolResult(content=[TextContent(type="text", text=json.dumps(value))])
+
+
+@server.tool()
+async def player_level_commit(proposal: dict) -> CallToolResult:
+    """A proposal with a subgoal commits; one without is discarded as stale."""
+    record(dict(tool="player_level_commit"))
+    committed = proposal.get("subgoal") is not None
+    value = dict(schema="player-level-commit/1", status="committed" if committed else "discarded",
+        reason=None if committed else "Served actor moved at least S inputs past the read", position=3,
+        inputs_since=1 if committed else 11, staleness_inputs=10,
+        records=[dict(id="7" * 32)] if committed else [], kept=[])
+    return CallToolResult(content=[TextContent(type="text", text=json.dumps(value))])
+
+
+@server.tool()
+async def player_intent() -> CallToolResult:
+    """Host-internal read; `intent.json` beside the call log selects its reply ("error" fails)."""
+    record(dict(tool="player_intent"))
+    selected = LOG.with_name("intent.json")
+    text = selected.read_text() if selected.exists() else json.dumps(dict(schema="player-intent/1", session=SESSION,
+        actor_id=ACTOR, record=None, age=None, grants_authority=False))
+    return CallToolResult(content=[TextContent(type="text", text=text)], isError=text == "error")
+
+
+@server.tool()
 async def computer_result(operation_id: str, mode: str = "complete") -> CallToolResult:
     record(dict(tool="computer_result", mode=mode))
     return CallToolResult(content=[TextContent(type="text", text="Formatting failed" if mode == "plain-error"

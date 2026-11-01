@@ -30,8 +30,8 @@ class HostEvents:
         self.requests=set();self.settled=None;self.handoff=None;self.last_response_wall=None
         self.usage={};self.error=None;self.started=False
         self.observer=observer;self.ordinal=0
-        # Readiness gates a level's first pass; level events are a pass's own outcomes.
-        self.ready=False;self.level=[]
+        # A level pass's own commit and discard outcomes.
+        self.level=[]
 
     def read(self) -> bool:
         chunk=self.stream.read(1048576)
@@ -48,8 +48,6 @@ class HostEvents:
                 if (self.started or value.get('telemetry_version')!=2
                         or value.get('schema')!='player-host/3'):raise ControlError('Unsupported/repeated current host trace')
                 self.started=True
-            elif kind=='mcp-connected':
-                self.ready=True
             elif kind in ('level-commit','level-discard'):
                 if len(self.level)<256:self.level.append({k:value.get(k) for k in
                     ('type','reason','position','inputs_since','staleness_inputs','record_ids','kept')})
@@ -119,19 +117,29 @@ class LevelPasses:
         write_new(self.reader_file,dict(schema='player-adapter/1',base_url=f"http://127.0.0.1:{profile['port']}",
                                        session=profile['session'],**reader))
         self.schedule=LevelSchedule(level['inputs_per_pass'],tuple(level['budget_fractions']),actor_allowance)
-        self.passes=[];self.charged=0;self.current=None
+        self.passes=[];self.charged=0;self.current=None;self.failure=None
 
     def remaining(self) -> int:
         return self.allowance-self.charged
 
     def poll(self,actor_events: 'HostEvents',stopped: bool,actor_deadline: float) -> None:
+        """A level failure disables further passes but never stops or gates its actor (ADR-007)."""
+        try:
+            self._poll(actor_events,stopped or actor_events.handoff is not None,actor_deadline)
+        except Exception as exc:
+            self.failure=f'{type(exc).__name__}: {str(exc)[:300]}'
+            self.finish()
+
+    def _poll(self,actor_events: 'HostEvents',stopped: bool,actor_deadline: float) -> None:
         now=time.monotonic()
         if self.current is not None:
             child,events,record,ends=self.current
             events.read()
             if child.poll() is not None or stopped or now>=ends:self.finish()
             return
-        if stopped or not actor_events.ready or self.remaining()<1 or actor_deadline-now<30:return
+        # The actor's first request follows its tool discovery and checks, so it is ready.
+        if (self.failure or stopped or not actor_events.requests or self.remaining()<1
+                or actor_deadline-now<30+self.level['pass_seconds']/4):return
         with self.application.serial:
             entries,inputs=self.application.runtime.store.actor_counts(self.actor_id)
             open_records=len(self.application.memory.current('work'))
@@ -161,8 +169,10 @@ class LevelPasses:
         environment=dict(PATH=os.environ.get('PATH','/usr/bin:/bin'),LANG='en_US.UTF-8',**{self.route['api_key_env']:self.secret})
         with (target/'host.jsonl').open('x') as output,(target/'host-stderr.log').open('x') as errors,(target/'prompt.txt').open() as prompt_input:
             child=subprocess.Popen(arguments,cwd=ROOT,env=environment,stdin=prompt_input,stdout=output,stderr=errors,start_new_session=True)
+        # Owned before anything else can fail, so a later error still closes and charges it.
+        self.current=(child,None,record,time.monotonic()+seconds)
         write_new(target/'host-process.json',dict(pid=child.pid,pgid=child.pid,argv=arguments))
-        self.current=(child,HostEvents(target/'host.jsonl',allowance),record,time.monotonic()+seconds)
+        self.current=(child,HostEvents(target/'host.jsonl',allowance),record,self.current[3])
 
     def finish(self) -> None:
         """Close the pass's exact process group, then charge it; incomplete accounting charges its whole allocation."""
@@ -171,20 +181,30 @@ class LevelPasses:
         self.current=None
         try:
             record['cleanup']=close_group(child)
+        except Exception as exc:
+            record['cleanup']=dict(process_absent=False,group_absent=False,error=type(exc).__name__)
+        try:
+            if events is None:raise ControlError('Pass trace reader never started')
             record.update(events.finish())
         except Exception as exc:
             record.update(accounting_complete=False,attempts_charged=record['allocated_attempts'],trace_error=type(exc).__name__)
         finally:
-            events.close()
+            if events is not None:events.close()
         record['ended_wall']=time.time()
         self.charged+=record['attempts_charged'];self.passes.append(record)
-        write_new(self.target/f"{record['index']:03d}"/'driver-receipt.json',record)
+        try:write_new(self.target/f"{record['index']:03d}"/'driver-receipt.json',record)
+        except (OSError,ValueError) as exc:record['receipt_error']=type(exc).__name__
+
+    def quiescent(self) -> bool:
+        """Every pass's exact process group was confirmed absent; a successor needs this."""
+        return self.current is None and all(p.get('cleanup',{}).get('process_absent') is True
+                                            and p['cleanup'].get('group_absent') is True for p in self.passes)
 
     def receipt(self) -> dict:
         commits=[e for p in self.passes for e in p.get('level_events',[]) if e['type']=='level-commit']
         discards=[e for p in self.passes for e in p.get('level_events',[]) if e['type']=='level-discard']
         return dict(reader_id=self.reader_id,mode=self.level['mode'],allocated_attempts=self.allowance,
-                    attempts_charged=self.charged,passes=self.passes,commits=len(commits),discards=len(discards),
+                    attempts_charged=self.charged,passes=self.passes,failure=self.failure,quiescent=self.quiescent(),commits=len(commits),discards=len(discards),
                     configured_estimate_usd=sum(p.get('configured_estimate_usd',0) for p in self.passes),
                     missing_usage_attempts=sum(p.get('missing_usage_attempts',p['attempts_charged']) for p in self.passes))
 
@@ -267,6 +287,8 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
             record.update(events.finish())
             if not record['accounting_complete'] or not cleanup['process_absent'] or not cleanup['group_absent']:
                 raise ControlError('Host accounting or exact process-group quiescence is unresolved')
+            if levels is not None and not levels.quiescent():
+                raise ControlError('A level pass process group is not confirmed absent; no successor')
             settled=record['settled']
             if child.returncode!=0 or settled.get('ok') is not True:
                 reason='Deciding host ended unsuccessfully';break
@@ -301,9 +323,8 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
                 try:levels.finish()
                 except Exception as exc:record['level_error']=type(exc).__name__
                 record['level']=levels.receipt()
-                # A pass still unaccounted for after closure is charged its whole allocation.
-                level_charged=levels.charged+(0 if levels.current is None else levels.current[2]['allocated_attempts'])
-                total_attempts+=level_charged
+                # finish() charged every pass, an unaccounted one at its whole allocation.
+                total_attempts+=levels.charged
             record['elapsed_seconds']=time.monotonic()-started
             total_attempts+=record['attempts_charged'];host_seconds_used+=record['elapsed_seconds']
             records.append(record)

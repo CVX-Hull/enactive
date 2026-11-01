@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -43,6 +43,7 @@ async function scenario(t, sequence, overrides = {}) {
   const options = {configuration:route(), mcpConfig, context:'Frozen player guide', prompt:'Offline mission', model:model.id, effort:'off', timeoutSeconds:10, env:{OFFLINE_TEST_KEY:'fixture-key', UNRELATED_HOST_SECRET:'must-not-inherit'}, fetch, ...overrides,
     onEvent:event=>{events.push(event);overrides.onEvent?.(event);}};
   if (overrides.fixtureStartupDelay !== undefined) mcpConfig.args.push(String(overrides.fixtureStartupDelay));
+  if (overrides.intentFixture !== undefined) await writeFile(join(dir,'intent.json'), overrides.intentFixture);
   if (overrides.enabledTools) mcpConfig.enabled_tools=overrides.enabledTools;
   if (overrides.fixtureToolTimeoutSeconds) mcpConfig.tool_timeout_sec=overrides.fixtureToolTimeoutSeconds;
   const running = runHost(options);
@@ -681,6 +682,36 @@ test('intent tail formatting is bounded, labelled and honest about failure and a
   assert.ok(formatIntentTail(null,256).text.includes('Unavailable: the custodian read failed'));
   assert.equal(boundedText('ééé',3).text,'é');
 });
+
+test('a level-role host emits one level-pass and a commit or discard per actual commit result', async t=>{
+  const proposal=subgoal=>({proposal:{schema:'player-level-proposal/1',subgoal,records:[]}});
+  const {result,events}=await scenario(t,[
+    reply(null,[['player_log_read',{after:0,limit:5}],['player_level_commit',proposal({text:'x',expected_observations:[],status:'open',confidence:0.5,sources:[]})]]),
+    reply(null,[['player_level_commit',proposal(null)]]),reply()],
+    {configuration:{...route(),role:'level'},enabledTools:['player_log_read','player_level_commit']});
+  assert.equal(result.ok,true);
+  assert.equal(events.filter(e=>e.type==='level-pass').length,1);
+  assert.deepEqual(events.filter(e=>e.type.startsWith('level-') && e.type!=='level-pass').map(e=>[e.type,e.inputs_since]),
+    [['level-commit',1],['level-discard',11]]);
+  assert.equal(events.find(e=>e.type==='level-commit').record_ids[0],'7'.repeat(32));
+  assert.equal(events.some(e=>e.type==='intent-tail'),false);
+});
+
+test('a level-role host without the level tools fails before any provider request', async t=>{
+  const {result,payloads}=await scenario(t,[reply()],{configuration:{...route(),role:'level'},enabledTools:['observe']});
+  assert.equal(result.ok,false);assert.equal(result.reason,'missing-required-tools');assert.equal(payloads.length,0);
+});
+
+for (const [name,intentFixture] of [['a failed read','error'],['an unexpected shape',
+    JSON.stringify({schema:'player-intent/1',record:{record_id:'r',text:'x',sources:'not-a-list'},age:{}})]]) {
+  test(`an intent tail after ${name} shows Unavailable and the actor continues`, async t=>{
+    const {result,payloads,events}=await scenario(t,[reply(null,[['observe',{}]]),reply()],
+      {configuration:{...route(),intent_tail_bytes:256},enabledTools:['observe'],intentFixture});
+    assert.equal(result.ok,true);assert.equal(payloads.length,2);
+    for (const payload of payloads) assert.ok(JSON.stringify(payload.messages.at(-1)).includes('Unavailable: the custodian read failed'));
+    assert.deepEqual(events.filter(e=>e.type==='intent-tail').map(e=>e.available),[false,false]);
+  });
+}
 
 test('level commit telemetry distinguishes commits, discards and local tool errors', ()=>{
   const result=value=>({content:[{type:'text',text:JSON.stringify(value)}]});

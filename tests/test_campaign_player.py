@@ -105,10 +105,24 @@ emit('host-start', telemetry_version=2, schema='player-host/3', role=route['role
 emit('mcp-connected')
 if route['role'] == 'actor':
     assert route['intent_tail_bytes'] == 1024
-    for _ in range(6):
+    for _ in range(ACTOR_STEPS):
         request()
         client.call('computer_input', dict(actions=[dict(type='key', key='x', modifiers=[])]))
         time.sleep(.4)
+    if HANDOFF and Path(flags['-o']).parent.name == '001':
+        request()
+        issued = client.call('player_handoff', {})[0]['handoff']
+        emit('handoff', actor_id=issued['actor_id'], session=issued['session'], handoff_id=issued['operation_id'],
+             context_id=issued['context_id'], context_sha256=issued['context_sha256'], grants_authority=False)
+        emit('settled', ok=True, reason='handoff', requests=requests)
+        sys.exit(0)
+elif LEVEL_MODE == 'sleep':
+    emit('level-pass')
+    request()
+    time.sleep(120)
+elif LEVEL_MODE == 'malformed':
+    print('not a telemetry line', flush=True)
+    time.sleep(120)
 else:
     emit('level-pass')
     request()
@@ -127,7 +141,9 @@ open(flags['-o'], 'w').write('report')
 """
 
 
-def test_level_passes_wake_on_inputs_commit_and_stop_with_their_actor(tmp_path):
+@pytest.fixture
+def level_campaign(tmp_path):
+    """Run the real driver with scripted actor and level hosts over the real composition."""
     from harness.application import Application
     from harness.player.memory import Memory
     from harness.server import serve
@@ -138,32 +154,82 @@ def test_level_passes_wake_on_inputs_commit_and_stop_with_their_actor(tmp_path):
     memory=Memory(tmp_path/'player.sqlite3')
     app=Application(runtime,memory,tmp_path/'contexts')
     server,thread=serve(app,0)
-    try:
-        adapter=tmp_path/'host.py';adapter.write_text(f'ROOT={str(ROOT)!r}\n'+SCRIPTED_HOST)
-        for name,text in (('context.txt','Frozen guide'),('prompt.txt','Frozen mission'),('level-role.txt','Frozen role')):
-            (tmp_path/name).write_text(text)
+    for name,text in (('context.txt','Frozen guide'),('prompt.txt','Frozen mission'),('level-role.txt','Frozen role')):
+        (tmp_path/name).write_text(text)
+
+    def run(*,level_mode='commit',actor_steps=6,handoff=False,max_hosts=1,cap=20):
+        adapter=tmp_path/'host.py'
+        adapter.write_text(f'ROOT={str(ROOT)!r}\nLEVEL_MODE={level_mode!r}\nACTOR_STEPS={actor_steps}\n'
+                           f'HANDOFF={handoff}\n'+SCRIPTED_HOST)
         level=dict(mode='live',inputs_per_pass=2,staleness_inputs=10,budget_fractions=[.5],intent_tail_bytes=1024,
                    max_http_attempts=6,pass_max_requests=2,pass_seconds=30)
-        profile=dict(max_hosts=1,host_seconds=60,total_host_seconds=120,max_http_attempts=20,effort='off',
+        profile=dict(max_hosts=max_hosts,host_seconds=60,total_host_seconds=120,max_http_attempts=cap,effort='off',
                      port=server.server_port,session=runtime.session,host=dict(argv=[sys.executable,str(adapter)]),
                      actor_profile='narrowed',level=level)
         route=dict(schema='player-host/3',role='actor',intent_tail_bytes=1024,max_requests=10,api_key_env='FIXTURE_KEY',
                    model=dict(id='fixture',name='fixture'))
-        result=run_hosts(tmp_path,profile,route,app,'fixture-secret',threading.Event(),time.monotonic()+300)
-        actor=result['actors'][0]
-        assert result['outcome']=='host_completed_unassessed', result
-        receipt=actor['level']
-        assert receipt['passes'] and receipt['passes'][0]['reason']=='inputs' and receipt['commits']>=1
-        assert all(p['accounting_complete'] and p['cleanup']['group_absent'] for p in receipt['passes'])
-        assert result['attempts_charged']==actor['attempts_charged']+receipt['attempts_charged']<=20
-        assert receipt['attempts_charged']<=level['max_http_attempts'] and actor['allocated_attempts']==10
-        # Each pass ran the frozen role and mission, with mechanical wake facts only.
-        prompt=(tmp_path/'actors/001/level/001/prompt.txt').read_text()
-        assert prompt.startswith('Frozen role\n\nMission brief') and 'wake reason inputs' in prompt
-        assert json.loads((tmp_path/'actors/001/level/001/route.json').read_text())['role']=='level'
-        assert json.loads((tmp_path/'actors/001/level/001/mcp.json').read_text())['enabled_tools'][-1]=='player_level_commit'
-        intent=app.intent(actor['actor_id'])
-        assert intent['record']['text']=='Scripted subgoal' and intent['age']['same_actor'] is True
-        assert len(app.memory.current('work'))==1 and not channel.stopped.is_set()
+        return run_hosts(tmp_path,profile,route,app,'fixture-secret',threading.Event(),time.monotonic()+300)
+    try:
+        yield SimpleNamespace(run=run,app=app,channel=channel,root=tmp_path)
     finally:
         server.shutdown();server.server_close();thread.join(2);runtime.close();memory.close()
+
+
+def charged_within_cap(result,cap):
+    levels=sum(a['level']['attempts_charged'] for a in result['actors'])
+    return result['attempts_charged']==sum(a['attempts_charged'] for a in result['actors'])+levels<=cap
+
+
+def test_level_passes_wake_on_inputs_and_commit(level_campaign):
+    result=level_campaign.run()
+    actor=result['actors'][0];receipt=actor['level']
+    assert result['outcome']=='host_completed_unassessed', result
+    first=receipt['passes'][0]
+    assert first['reason']=='inputs' and first['accounting_complete'] and receipt['commits']>=1
+    assert receipt['quiescent'] and receipt['failure'] is None and charged_within_cap(result,20)
+    assert receipt['attempts_charged']<=6 and actor['allocated_attempts']==10
+    # Each pass ran the frozen role and mission, with mechanical wake facts only.
+    prompt=(level_campaign.root/'actors/001/level/001/prompt.txt').read_text()
+    assert prompt.startswith('Frozen role\n\nMission brief') and 'wake reason inputs' in prompt
+    assert json.loads((level_campaign.root/'actors/001/level/001/route.json').read_text())['role']=='level'
+    assert json.loads((level_campaign.root/'actors/001/level/001/mcp.json').read_text())['enabled_tools'][-1]=='player_level_commit'
+    intent=level_campaign.app.intent(actor['actor_id'])
+    assert intent['record']['text']=='Scripted subgoal' and intent['age']['same_actor'] is True
+    assert len(level_campaign.app.memory.current('work'))==1 and not level_campaign.channel.stopped.is_set()
+
+
+def test_a_pass_still_running_stops_with_its_actor_and_is_charged_in_full(level_campaign):
+    result=level_campaign.run(level_mode='sleep',actor_steps=3)
+    receipt=result['actors'][0]['level']
+    assert result['outcome']=='host_completed_unassessed', result
+    (stopped,)=receipt['passes']
+    assert not stopped['accounting_complete'] and stopped['attempts_charged']==stopped['allocated_attempts']==2
+    assert stopped['cleanup']['process_absent'] and stopped['cleanup']['group_absent'] and receipt['quiescent']
+    assert receipt['commits']==0 and charged_within_cap(result,20)
+
+
+def test_a_level_failure_disables_the_level_but_never_stops_its_actor(level_campaign):
+    result=level_campaign.run(level_mode='malformed')
+    receipt=result['actors'][0]['level']
+    assert result['outcome']=='host_completed_unassessed', result
+    assert 'JSONDecodeError' in receipt['failure'] and len(receipt['passes'])==1 and receipt['quiescent']
+    assert receipt['passes'][0]['attempts_charged']==2 and not level_campaign.channel.stopped.is_set()
+
+
+def test_a_start_pass_revalidates_open_records_before_inputs_wake(level_campaign):
+    level_campaign.app.memory.append('c'*32,dict(schema='player-record/1',kind='work',text='Earlier session subgoal',
+        data={},sources=[],supports=[],supersedes=None,applicability=None,program_id=None))
+    receipt=level_campaign.run()['actors'][0]['level']
+    assert receipt['passes'][0]['reason']=='start' and receipt['commits']>=1
+    assert [r['text'] for r in level_campaign.app.memory.current('work')]==['Scripted subgoal']
+
+
+def test_each_successor_actor_gets_its_own_level_after_its_predecessors_passes_close(level_campaign):
+    result=level_campaign.run(handoff=True,max_hosts=2,cap=30)
+    first,second=result['actors']
+    assert result['outcome']=='host_completed_unassessed', result
+    assert first['settled']['reason']=='handoff' and first['level']['quiescent']
+    assert first['reader_id']!=second['reader_id'] and second['level']['passes']
+    assert all(p['started_wall']>=first['level']['passes'][-1]['ended_wall'] for p in second['level']['passes'])
+    assert second['allocated_attempts']==min(10,30-first['attempts_charged']-first['level']['attempts_charged']-6)
+    assert charged_within_cap(result,30)

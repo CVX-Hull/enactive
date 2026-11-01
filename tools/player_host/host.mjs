@@ -519,7 +519,10 @@ export async function runHost(options) {
               if (result.isError !== true && object(parsed) && parsed.schema === 'player-intent/1') value = parsed;
             } catch { value = null; }
             if (fatal) return messages;
-            const tail = formatIntentTail(value, configuration.intent_tail_bytes);
+            let tail;
+            // Record data is free-form player data: an unexpected shape shows "Unavailable", never a stop.
+            try { tail = formatIntentTail(value, configuration.intent_tail_bytes); }
+            catch { value = null; tail = formatIntentTail(null, configuration.intent_tail_bytes); }
             emit('intent-tail', {request_id:`request-${requests + 1}`, available:value !== null,
               record_id:value?.record?.record_id ?? null, surfaced_bytes:tail.surfaced_bytes,
               omitted_bytes:tail.omitted_bytes, age:value?.age ?? null});

@@ -107,7 +107,11 @@ def discover(paths: list[Path]) -> list[Path]:
 
 def campaign_evidence(path: Path) -> dict:
     """Current selected sidecars only; host completion is never goal acceptance."""
-    root = path.parent.parent.parent if path.parent.parent.name == "actors" else path.parent
+    # actors/NNN/host.jsonl, or a level pass's actors/NNN/level/PPP/host.jsonl.
+    if path.parent.parent.name == "level" and path.parent.parent.parent.parent.name == "actors":
+        root = path.parents[4]
+    else:
+        root = path.parent.parent.parent if path.parent.parent.name == "actors" else path.parent
     result = {"metadata_coverage": {}}
     fields = {
         "manifest.json": ("campaign-run/4", ("session", "source_commit")),

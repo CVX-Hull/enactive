@@ -48,15 +48,18 @@ sees intent.
 Each actor-and-level pair is partitioned before launch: the level gets
 `min(max_http_attempts, campaign remainder)` and the actor the route's allowance
 from what is left, so their sum stays within the campaign cap. The driver mints one
-reader per actor after the actor and, once the actor host reports `mcp-connected`,
-consults the [wake rules](../../tools/level_schedule.py) between passes: a start pass
+reader per actor after the actor and, once the actor host makes its first request (after
+its tool discovery and checks), consults the [wake rules](../../tools/level_schedule.py) between passes: a start pass
 only to revalidate open Work records, then every K actor inputs or a crossed budget
 fraction, never on an empty delta and never more than one pass at a time. Each pass
 is a finite `role: level` host under `actors/NNN/level/PPP/`, with the reader MCP
 profile, the frozen context, and a prompt of the role text, the actor's mission brief
 and mechanical wake facts. A pass ends at its allowance or `pass_seconds`, and is
-closed on its actor's stop, Pause or handoff before any successor. Its attempts are
-charged like an actor's; an unaccounted pass is charged its whole allocation. The
+closed on its actor's stop, Pause or handoff; no successor is minted unless every pass's
+exact process group is confirmed absent. Its attempts are charged like an actor's; an
+unaccounted pass is charged its whole allocation. A level failure (a malformed trace, a
+launch or store error) charges that pass, disables further passes and is recorded, but
+never stops or gates its actor. The
 custodian appends per-call lock wait and hold times to `call-timing.jsonl`.
 
 `route.json` uses current `player-host/3` (role `actor`) with text/image input and explicit
