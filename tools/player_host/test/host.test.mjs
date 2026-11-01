@@ -790,12 +790,19 @@ test('a terminal call whose transport is lost ends the pass as level-uncertain, 
   assert.deepEqual(calls.map(c=>c.tool),['player_log_read','player_level_close']);
 });
 
-test('reserved requests are logical requests: a provider retry neither moves the window nor changes its declarations', async t=>{
-  // Logical request 1 is retried once (two attempts); logical request 3 is the first of the last two.
+test('reserved requests are logical requests: a provider retry never changes its request\'s declarations, and attempts bring the window forward', async t=>{
+  // Logical request 1 is retried once (two attempts), so only two HTTP attempts remain when logical request 2 starts:
+  // the window opens by attempts there, and the terminal-only declarations still appear before the budget ends.
   const shifted=await levelScenario(t,[serverError(502),reply(null,[readCall]),reply(null,[readCall]),reply(null,[rejectedReplace])],4);
   assert.equal(shifted.result.reason,'level-final-refusal');assert.equal(shifted.payloads.length,4);
-  assert.deepEqual(shifted.payloads.map(toolNames),[levelTools,levelTools,levelTools,terminalTools]);
-  assert.deepEqual(shifted.events.filter(e=>e.type==='level-reserved-request').map(e=>[e.logical_request_id,e.request_id]),[['request-3','request-4']]);
+  assert.deepEqual(shifted.payloads.map(toolNames),[levelTools,levelTools,terminalTools,terminalTools]);
+  assert.deepEqual(shifted.events.filter(e=>e.type==='level-reserved-request').map(e=>[e.logical_request_id,e.request_id]),
+    [['request-2','request-3'],['request-3','request-4']]);
+  // One numbering: the logical count, shared by every attempt of a request, in request-start and level-reserved-request.
+  assert.deepEqual(shifted.events.filter(e=>e.type==='request-start').map(e=>[e.request_id,e.logical_request_id]),
+    [['request-1','request-1'],['request-2','request-1'],['request-3','request-2'],['request-4','request-3']]);
+  assert.ok(JSON.stringify(shifted.payloads[2].messages.at(-1)).includes('offers only the pass-ending tools'));
+  assert.equal(JSON.stringify(shifted.payloads[1].messages.at(-1)).includes('offers only the pass-ending tools'),false);
   // A retry of a reserved logical request resends the same terminal-only declarations.
   const retried=await levelScenario(t,[reply(null,[readCall]),serverError(502),reply(null,[abstainCall])],3);
   assert.equal(retried.result.ok,true);assert.equal(retried.payloads.length,3);

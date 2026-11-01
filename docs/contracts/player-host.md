@@ -83,7 +83,7 @@ kinds. Required semantics:
 | `level-terminal-call` | Level role only, per terminal tool call in an assistant message (at message end), with `request_id`, `tool_call_id`, `tool` and `arguments_error` (the arguments did not parse). A call with no matching `tool-start` was refused before dispatch. |
 | `level-reserved-request` | Level role only, once per logical request that offers only the terminal tools, with `request_id` (the logical request's first attempt), `logical_request_id` and `offered_tools`. |
 | `intent-tail` | Actor with a tail, per request, with `available`, `record_id`, `surfaced_bytes`, `omitted_bytes` and `age`. |
-| `request-start` | One per provider HTTP attempt, including failed and provider-only retries, with `request_id` `request-N` contiguous from 1 and never above `max_requests`. |
+| `request-start` | One per provider HTTP attempt, including failed and provider-only retries, with `request_id` `request-N` contiguous from 1 and never above `max_requests`, and `logical_request_id` `request-K` (the K-th inference request, shared by its retries). |
 | `response-complete` | Per completed attempt; `usage_available` is boolean and, when true, `usage.cost.total` carries the configured or provider estimate. Missing usage stays unknown. |
 | `handoff` | At most once, with `actor_id`, `session`, `handoff_id`, `context_id`, `context_sha256` and `grants_authority: false`. |
 | `settled` | Exactly once and last, with `ok`, `reason` and `requests` equal to the number of `request-start` events. |
@@ -136,19 +136,28 @@ level's text is never read.
 returns `player-transport/1` with `status: "unknown"` and `collect_with: null` (a reader
 has no collecting tool). The host emits `level-uncertain`, ends the pass with no further
 dispatch and settles `ok: false`, reason `level-uncertain`. Whether the call committed is
-known only to the player store; the driver reads the store's `service_operations` row for
-the identity after the pass (`committed` with its record ids, or `absent`: a discard
-writes no row, so a discarded call and one that never arrived are both `absent` and
-changed nothing) and counts it in the pass receipt. The identity is never replayed.
+known only to the player store, and the lost call may still be waiting on the
+application's serial lock in a handler thread. After the pass the driver therefore takes
+that lock once and, in the same hold, clears the reader's bound and writes a tombstone
+`service_operations` row (a row with no result) for every uncertain identity that has no
+row; a later arrival of that identity is refused as an identity conflict and writes
+nothing. It then reports each identity as `committed` with its record ids (a row with a
+result exists) or `absent` (it wrote the tombstone: a discard writes no row, so a
+discarded call and one that never arrived are both `absent` and changed nothing), and
+counts it in the pass receipt. The identity is never replayed.
 
 **Reserved terminal requests.** Requests are counted as logical requests, one per
-inference request whatever its provider retries (`logical_request_id`
-`request-K`). On every logical request with two or fewer remaining (`max_requests - K + 1 <= 2`,
-including that request) a level host declares only the four terminal tools to the
-model, while the history and the executable tool set stay unchanged (the adapter's
-mechanism is in its README). A provider retry resends its logical request's declarations
-and never moves the window; the HTTP attempt cap `max_requests` still bounds attempts, so
-retries can end the pass before the window is reached. Each such request emits
+inference request whatever its provider retries. `logical_request_id` is `request-K`
+for the K-th logical request, in both `request-start` (every attempt of the request
+carries the same value) and `level-reserved-request`; `request_id` is still the HTTP
+attempt number. A level host declares only the four terminal tools to the model on a
+logical request when, at its start, either the HTTP attempts left (`max_requests - R`,
+R the attempts already made) or the logical requests left (`max_requests - (K - 1)`)
+is two or fewer, so retries that spend the attempt budget bring the window forward
+instead of ending the pass before it. The history and the executable tool set stay
+unchanged (the adapter's mechanism is in its README). A provider retry resends its
+logical request's declarations; the HTTP attempt cap `max_requests` still bounds
+attempts. Each such request emits
 `level-reserved-request` with `request_id`, `logical_request_id` and `offered_tools`, and
 its resource status says that only the pass-ending tools are offered. A non-terminal
 tool call on such a request is executable but refused without dispatch (`tool-refused`,

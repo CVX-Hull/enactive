@@ -168,9 +168,10 @@ image projection clones messages. These diagnostics prove neither semantic truth
 success and grant no input authority. Recheck these SDK assumptions on upgrade.
 
 **Reserved terminal requests.** Pi 1.4.0 declares a request's tools through the transcript:
-the first system message carries `toolsAdded`. On a level pass's last two requests
-(counted in logical requests, one per `streamFn` call and so unmoved by provider retries:
-`max_requests - logicalRequests <= 2`) the host's `streamFn` restricts those declarations to the
+the first system message carries `toolsAdded`. On a logical request (one per `streamFn` call;
+`logical_request_id` is `request-K` for the K-th, shared by its retries) that starts with two or fewer
+HTTP attempts left or two or fewer logical requests left
+(`max_requests - requests <= 2 || max_requests - logicalRequests <= 2`, both read before the request is counted) the host's `streamFn` restricts those declarations to the
 four terminal tools for that request only, emits `level-reserved-request`, and the resource
 status says only the pass-ending tools are offered. Pi's OpenAI serializer has no
 `allowed_tools` option, and the route's Gemini conversion is undocumented, so the request

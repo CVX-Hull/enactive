@@ -496,6 +496,9 @@ export async function runHost(options) {
     if (options.signal?.aborted) stop('cancelled');
     const configuration = validateConfiguration(options.configuration, options.model, options.effort);
     const mcp = validateMcpConfiguration(options.mcpConfig);
+    // At the start of a logical request (before it is counted): two or fewer HTTP attempts or logical requests remain.
+    const reservedWindow = () => configuration.role === 'level'
+      && (configuration.max_requests - requests <= LEVEL_RESERVED_REQUESTS || configuration.max_requests - logicalRequests <= LEVEL_RESERVED_REQUESTS);
     requireThat(typeof options.prompt === 'string' && typeof options.context === 'string', 'invalid-input');
     bounded(options.prompt); bounded(options.context);
     emit('host-start', {telemetry_version:2, schema:configuration.schema, role:configuration.role, intent_tail_bytes:configuration.intent_tail_bytes, requested_service_tier:configuration.service_tier, model:configuration.model.id, provider:configuration.model.provider, api:configuration.model.api, effort:options.effort, max_output_tokens:configuration.model.maxTokens, context_window:configuration.model.contextWindow, thinking_level_map:{...configuration.model.thinkingLevelMap}, reasoning_format:configuration.model.compat?.thinkingFormat ?? null, provider_routing:configuration.model.compat?.openRouterRouting ? structuredClone(configuration.model.compat.openRouterRouting) : null, max_requests:configuration.max_requests, max_context_images:configuration.max_context_images, context_image_block:configuration.context_image_block, unsupported_features:['compaction', 'session-restore', 'model-fallback', 'reconnect', 'replay', 'ambient-tools', 'resource-discovery'], missing_endpoints:['model-attention', 'server-inference-start', 'physical-paint'], cleanup_budget_ms:cleanupBudget});
@@ -604,7 +607,7 @@ export async function runHost(options) {
             'Host resource status (software-generated at context construction):\n' +
             `Actual provider HTTP attempts charged before this request: ${requests}/${configuration.max_requests}.\n` +
             `Remaining allowance including this request: ${configuration.max_requests - requests}.\n` +
-            (configuration.role === 'level' && configuration.max_requests - logicalRequests <= LEVEL_RESERVED_REQUESTS
+            (reservedWindow()
               ?'This request offers only the pass-ending tools; end the pass with exactly one of them.\n' : '') +
             `Host decision time remaining at this snapshot: ${Math.max(0,(workDeadline-performance.now())/1000).toFixed(3)} seconds. Custodian time is a separate horizon.\n` +
             'An eligible retry can consume another attempt before the next status update. ' +
@@ -649,9 +652,10 @@ export async function runHost(options) {
           stop(configuration.role === 'level' && refusedTerminalCall(context.messages) ? 'level-final-refusal' : 'request-limit');
           return failureStream(model, fatal);
         }
-        // The last LEVEL_RESERVED_REQUESTS logical requests of a pass offer only the terminal tools, so a refused call can
-        // be repaired. A provider retry resends its logical request's declarations and never moves the window.
-        reserved = configuration.role === 'level' && configuration.max_requests - logicalRequests <= LEVEL_RESERVED_REQUESTS;
+        // A logical request that starts with LEVEL_RESERVED_REQUESTS or fewer HTTP attempts or logical requests left offers
+        // only the terminal tools, so a refused call can be repaired. A provider retry resends its logical request's
+        // declarations: the window is decided once, here.
+        reserved = reservedWindow();
         logicalRequests++;
         if (reserved) {
           context = {...context, messages:restrictTools(context.messages, LEVEL_TERMINAL_TOOLS)};
@@ -665,7 +669,7 @@ export async function runHost(options) {
           requestTimer = setTimeout(() => stop('request-timeout'), Math.min(configuration.request_timeout_seconds * 1000, totalMs));
           const requestSignal = AbortSignal.any([streamOptions.signal, stopped.signal].filter(Boolean));
           const backendModels = new Set(), observedServiceTiers = new Set();
-          const streamStarted = performance.now(), logicalRequestId = `request-${requests + 1}`;
+          const streamStarted = performance.now(), logicalRequestId = `request-${requests + 1}`, logicalNumber = `request-${logicalRequests}`;
           let payloadReadyAt;
           const actualFetch = options.fetch ?? globalThis.fetch;
           let attempts = 0, previousRequestId;
@@ -709,7 +713,7 @@ export async function runHost(options) {
             requestInFlight = true;
             attempts++;
             if (previousRequestId) emit('provider-retry', {stage:'started', request_id:attemptId, previous_request_id:previousRequestId});
-            emit('request-start', {request_id:attemptId, logical_request_id:logicalRequestId, model:model.id, provider:model.provider,
+            emit('request-start', {request_id:attemptId, logical_request_id:logicalNumber, model:model.id, provider:model.provider,
               sdk_after_payload_ms:attempts === 1 && payloadReadyAt !== undefined ? fetchEntered - payloadReadyAt : null,
               host_inspection_ms:inspectionMs, ...sizes});
             let response;
