@@ -24,6 +24,8 @@ const timingRows = [];
 let omittedRows = 0;
 const show = (id, value) => { if ($(id).textContent !== value) $(id).textContent = value; };
 const value = item => item === null || item === undefined ? 'unreported' : String(item);
+// An unknown quantity never gains a unit: "unreported", never "unreported seconds".
+const measured = (item, unit) => item === null || item === undefined ? 'unreported' : `${item} ${unit}`;
 const shortIdentity = item => {
   const text = value(item);
   return text.length > 22 ? `${text.slice(0, 12)}…${text.slice(-6)}` : text;
@@ -218,12 +220,12 @@ function renderFacts(status) {
   const operation = status.last_operation;
   show('operation', operation ? `${value(operation.kind)} ${value(operation.operation_id)} · ${value(operation.status)}${operation.reason ? ` · ${operation.reason}` : ''}` : 'No operation reported.');
   show('native-exit', status.native_returncode === null || status.native_returncode === undefined ? 'No exit code sampled.' : `Exit code ${status.native_returncode}; this is not proof of Save.`);
-  show('custodian-remaining', `${value(status.remaining?.custodian_seconds)} seconds`);
+  show('custodian-remaining', measured(status.remaining?.custodian_seconds, 'seconds'));
   const remaining = status.remaining;
   show('resource-remaining', `Inputs: ${value(remaining?.inputs)} · requests: ${value(remaining?.requests)} · frames: ${value(remaining?.frames)} · PNG bytes: ${value(remaining?.frame_bytes)}`);
   const host = status.host;
-  show('host-remaining', host ? `${value(host.host_seconds_remaining)} seconds` : 'No host report.');
-  show('host-requests', host ? `${value(host.requests_total)} used / ${value(host.max_requests_total)} maximum HTTP attempts` : 'No host HTTP budget reported.');
+  show('host-remaining', host ? measured(host.host_seconds_remaining, 'seconds') : 'No host report.');
+  show('host-requests', host ? `${measured(host.requests_total, 'used')} / ${measured(host.max_requests_total, 'maximum HTTP attempts')}` : 'No host HTTP budget reported.');
   show('host-details', host ? `Host ${value(host.index)} · ${value(host.model)} · ${value(host.provider)} · last response ${wallTime(host.latest_response_wall)}` : 'No configuration reported.');
   const claims = (status.player_claims || []).map(claim => {
     const row = document.createElement('li');
@@ -427,10 +429,69 @@ function updateLocation() {
 function renderActivity(snapshot) {
   const statement = snapshot.latest_statement;
   show('latest-statement', statement?.text ? statement.text : 'No public statement available for this session.');
-  show('statement-meta', statement ? `Fallible public statement · actor ${value(statement.actor_id)} · request ${value(statement.request_id)} · original wall ${wallTime(statement.created_wall)} · ${value(statement.omitted_bytes)} original bytes omitted; ${value(statement.display_omitted_bytes)} further display bytes omitted. Historical/terminal labels are recorded claims, not liveness.` : 'Missing or empty narration does not establish inactivity.');
+  show('statement-meta', statement ? `Fallible public statement · actor ${value(statement.actor_id)} · request ${value(statement.request_id)} · original wall ${wallTime(statement.created_wall)} · original bytes omitted: ${value(statement.omitted_bytes)}; further display bytes omitted: ${value(statement.display_omitted_bytes)}. No captured frame is linked to a statement, so its claims are unverified until checked against the pixels. Historical/terminal labels are recorded claims, not liveness.` : 'Missing or empty narration does not establish inactivity.');
   show('activity-summary', `${snapshot.entries.length} retained entries · ${omittedSummary(snapshot)}${snapshot.clientOmitted ? ` · ${snapshot.clientOmitted} further omitted on this page` : ''}.`);
   show('recent-activity', snapshot.entries.slice(-3).map(entryTitle).join('\n') || 'No use observed in available coverage; missing coverage is unknown.');
+  show('frame-change', frameChange(snapshot.entries));
 }
+// A neutral recorded fact against over-trust: the latest input's capture against
+// the previous retained capture. It reads hashes only and infers no failure,
+// success or game meaning; a differing hash shows only that the PNG differs.
+function frameChange(entries) {
+  const computer = entries.filter(entry => entry.producer === 'computer');
+  const index = computer.findLastIndex(entry => entry.kind === 'input');
+  if (index < 0) return 'No recorded input capture to compare yet.';
+  const latest = computer[index];
+  if (typeof latest.source?.sha256 !== 'string') return `The latest input (${shortIdentity(latest.operation_id)}) has no recorded capture.`;
+  const before = computer.slice(0, index).findLast(entry => typeof entry.source?.sha256 === 'string');
+  if (!before) return 'The latest input has no earlier retained capture to compare.';
+  return before.source.sha256 === latest.source.sha256
+    ? `Frame unchanged: ${shortIdentity(latest.operation_id)} returned an image identical (SHA-256) to the previous retained capture. A repeated image is a valid capture, not a failure.`
+    : `The latest input's PNG differs (SHA-256) from the previous retained capture. A changed image does not establish useful progress.`;
+}
+
+// "Since you last looked": entries that arrive during hidden intervals are added up
+// until the reader marks them seen. Time and polling never clear or change the count.
+let latestActivity = null;
+let hiddenFrom = null;
+let away = null;
+function renderSinceLastLook() {
+  const visible = typeof document.visibilityState !== 'string' || document.visibilityState === 'visible';
+  if (!away || !visible) { $('since-last-look').hidden = true; $('mark-seen').hidden = true; return; }
+  const omitted = away.omissions ? '; older ones may have been omitted' : '';
+  show('since-last-look', away.changed ? `The control target changed while this page was hidden${away.arrived ? `; ${away.arrived} retained entries arrived in the earlier session before that` : ''}. Earlier activity is in Timeline.` :
+    `${away.arrived} retained ${away.arrived === 1 ? 'entry' : 'entries'} arrived while this page was hidden${omitted}.`);
+  $('since-last-look').hidden = false; $('mark-seen').hidden = false;
+}
+// Hidden tabs throttle timers, so the count is fixed from a fresh poll accepted after the
+// reader returns, never from the last poll made while hidden.
+let returning = null;
+function settleReturn() {
+  if (!returning) return;
+  away ??= {arrived: 0, changed: false, omissions: false};
+  if (!away.changed) {
+    if (currentSession !== returning.session || latestActivity?.session !== returning.session) away.changed = true;
+    else {
+      away.arrived += latestActivity.entries.filter(entry => !returning.keys.has(entryKey(entry))).length;
+      // Unknown omission counts are not zero.
+      away.omissions ||= Boolean(latestActivity.clientOmitted) || latestActivity.omitted_entries !== 0;
+    }
+  }
+  returning = null;
+  // Hidden again before the return poll landed: the rest of this hidden interval counts too.
+  if (document.visibilityState === 'hidden' && latestActivity) hiddenFrom = {session: latestActivity.session, keys: new Set(latestActivity.entries.map(entryKey))};
+  renderSinceLastLook();
+}
+if (typeof document.addEventListener === 'function') document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    if (latestActivity && !hiddenFrom && !returning) hiddenFrom = {session: latestActivity.session, keys: new Set(latestActivity.entries.map(entryKey))};
+  } else if (hiddenFrom) {
+    returning = hiddenFrom; hiddenFrom = null;
+    void refreshActivity();
+  }
+  renderSinceLastLook();
+});
+$('mark-seen').addEventListener('click', () => { away = null; renderSinceLastLook(); $('open-timeline').focus(); });
 function renderCoverage(snapshot) {
   show('activity-coverage', snapshot ? `Host: ${value(snapshot.coverage?.host)} · computer records: ${value(snapshot.coverage?.computer)} · ${omittedSummary(snapshot)}. Cross-process ordering is approximate.` : 'Coverage unknown; no current-session activity received.');
   show('coverage-details', snapshot ? JSON.stringify({coverage: snapshot.coverage, omitted_entries: snapshot.omitted_entries,
@@ -654,7 +715,8 @@ async function refreshActivity() {
       retained.newItems = snapshot.entries.filter(entry => !oldKeys.has(entryKey(entry))).length;
     } else activitySnapshots.set(snapshot.session, snapshot);
     activityError = '';
-    renderActivity(snapshot); renderTimeline(); resolveDeepLink();
+    latestActivity = snapshot; // The newest poll, even while Timeline inspection is frozen.
+    renderActivity(snapshot); renderTimeline(); resolveDeepLink(); settleReturn();
   } catch (error) {
     if (generation === sessionGeneration) { activityError = error.message; renderTimeline(); show('activity-summary', `Activity unavailable: ${error.message}. Last snapshot retained; current activity unknown.`); }
   } finally {
