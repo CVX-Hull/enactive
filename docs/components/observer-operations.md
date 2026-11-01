@@ -58,6 +58,17 @@ images can fit the panel or retain original pixel size in a keyboard-scrollable
 viewport; this presentation never requests a capture or changes control. Transport
 feedback is rendered from session-scoped errors and current monotone stop facts,
 so later confirmation cannot leave an earlier uncertainty alert unchanged.
+Watch states two neutral recorded facts and makes no inference from either:
+- whether the latest input's capture is identical, by SHA-256, to the capture before
+  it ("a repeated image is a valid capture, not a failure");
+- that no frame is linked to a player statement, so its claims are unverified.
+
+Entries that arrived while the page was hidden are counted ("since you last looked")
+until the reader marks them seen; time and polling never clear that count. An unknown
+quantity is shown as "unreported" and never gains a unit. The viewer suite checks
+status, alert and log roles, Pause as the first and only Pause-labelled button,
+reserved image space, visible focus and the narrow layout. These are static checks of
+the HTML and CSS, not browser layout or screen-reader evidence.
 One last identified Pause receiver with monotone stop facts preserves evidence outside the
 current/previous view. It is explicitly separate from the current target; a receipt
 alone cannot establish which opaque session is newer. Later matching status can

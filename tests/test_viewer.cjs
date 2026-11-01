@@ -39,7 +39,9 @@ class DeferredImage {
 const context = vm.createContext({Blob, AbortController, Image: DeferredImage,
   Date: class extends Date { static now() { return epoch; } },
   URL: {createObjectURL(blob) { const id = `blob:${blobs.size}`; blobs.set(id, blob); return id; }, revokeObjectURL() {}},
-  document: {getElementById: element, createTextNode(text) { return {textContent: text}; }, createElement(tag) {
+  document: {getElementById: element, visibilityState: 'visible', listeners: {},
+    addEventListener(kind, callback) { this.listeners[kind] = callback; },
+    createTextNode(text) { return {textContent: text}; }, createElement(tag) {
     const result = node(tag);
     if (tag === 'a') result.click = () => downloads.push({url: result.href, name: result.download});
     return result;
@@ -312,7 +314,39 @@ const text = id => {
   await activityPoll(activity([a,b],{latest_statement:a,omitted_entries:6}));
   assert.match(text('latest-statement'), /<img src=x onerror=boom>/, 'Narration remains literal untrusted text');
   assert.match(text('statement-meta'), /7 original bytes omitted; 3 further/);
+  assert.match(text('statement-meta'), /No captured frame is linked to a statement.*unverified/, 'A statement is labelled unverified, never confirmed');
   assert.match(text('activity-summary'), /6 omitted/);
+
+  // Neutral recorded fact: identical captures around the latest input, by SHA-256 only.
+  const capture = (id, kind, sha, overrides = {}) => ({id: `computer:${id}`, session: 'session-five', producer: 'computer',
+    actor_id: 'actor-a', kind, operation_id: id, created_wall: epoch / 1000, status: 'completed',
+    source: source(1, {session: 'session-five', sha256: sha.repeat(64)}), ...overrides});
+  await activityPoll(activity([a, b]));
+  assert.match(text('frame-change'), /No recorded input capture/);
+  await activityPoll(activity([capture('op-0', 'input', 'a')]));
+  assert.match(text('frame-change'), /no earlier retained capture/);
+  await activityPoll(activity([capture('op-1', 'observe', 'a'), capture('op-2', 'input', 'a')]));
+  assert.match(text('frame-change'), /Frame unchanged since the previous input.*valid capture, not a failure/);
+  assert.doesNotMatch(text('frame-change'), /fail(ed)? to|stuck|blocked/i, 'Identical pixels never become a failure claim');
+  await activityPoll(activity([capture('op-1', 'observe', 'a'), capture('op-2', 'input', 'a'), capture('op-3', 'input', 'b')]));
+  assert.match(text('frame-change'), /differs.*does not establish useful progress/);
+  await activityPoll(activity([capture('op-4', 'input', 'c'), capture('op-5', 'observe', 'c')]));
+  assert.match(text('frame-change'), /no earlier retained capture/, 'Only the latest input is compared, never a later observation');
+
+  // "Since you last looked": counted while hidden, cleared only by the reader.
+  const documentListeners = context.document.listeners;
+  assert.equal(typeof documentListeners.visibilitychange, 'function');
+  context.document.visibilityState = 'hidden'; documentListeners.visibilitychange();
+  assert.equal(element('since-last-look').hidden, true, 'Nothing is shown while the page is hidden');
+  await activityPoll(activity([capture('op-4', 'input', 'c'), capture('op-5', 'observe', 'c'), capture('op-6', 'input', 'd'), capture('op-7', 'input', 'e')]));
+  context.document.visibilityState = 'visible'; documentListeners.visibilitychange();
+  assert.equal(element('since-last-look').hidden, false);
+  assert.match(text('since-last-look'), /^2 retained entries arrived while this page was hidden\.$/);
+  epoch += 600000; await activityPoll(activity([capture('op-6', 'input', 'd'), capture('op-7', 'input', 'e')]));
+  assert.match(text('since-last-look'), /2 retained entries/, 'Time and polling never clear the mark');
+  element('mark-seen').listeners.click();
+  assert.equal(element('since-last-look').hidden, true); assert.equal(element('mark-seen').hidden, true);
+  await activityPoll(activity([a,b],{latest_statement:a,omitted_entries:6}));
   const row = element('activity-list').children[0].children[0];
   element('activity-list').scrollTop = 80;
   row.focus(); row.listeners.click();
@@ -484,6 +518,31 @@ const text = id => {
   assert.equal(vm.runInContext('currentSession',freshContext),'actual-receiver');
   assert.match(text('stop-state'),/native Pause confirmed/);
   await reply(unknownActivity,activity([]));
+
+  // An unknown quantity never gains a unit.
+  vm.runInContext('void refresh()', freshContext);
+  await reply(request('/api/status'), status(null,{session:'actual-receiver',stop:{stop_requested:true,native_pause_confirmed:true},
+    remaining:{custodian_seconds:null}, host:{index:1,requests_total:null,max_requests_total:null,host_seconds_remaining:null}}));
+  for (const id of ['custodian-remaining', 'host-remaining']) assert.equal(text(id).trim(), 'unreported', `${id} gives an unknown no unit`);
+  assert.equal(text('host-requests').trim(), 'unreported / unreported');
+
+  // Static structure for accessibility and layout. These read the production HTML and CSS;
+  // they are not browser layout, paint or screen-reader evidence.
+  const css = fs.readFileSync(path.join(__dirname, '../web/style.css'), 'utf8');
+  const tag = id => html.match(new RegExp(`<[^>]*id="${id}"[^>]*>`))?.[0] || '';
+  for (const id of ['connection', 'stop-state', 'frame-note', 'frame-change', 'since-last-look', 'new-items', 'investigation-session-status'])
+    assert.match(tag(id), /role="status"/, `${id} announces changes as a status message`);
+  for (const id of ['status-error', 'pause-error']) assert.match(tag(id), /role="alert"/, `${id} is an alert`);
+  assert.match(tag('recent-activity'), /role="log"/, 'Recent activity is an append-only log region');
+  assert.ok(html.indexOf('id="pause"') < html.indexOf('role="tablist"'), 'Pause is reachable before any view tab or panel');
+  assert.equal(html.match(/<button[^>]*>/)[0].includes('id="pause"'), true, 'Pause is the first button on the page');
+  assert.match(html, /<button id="pause"[^>]*>Pause automation permanently<\/button>/, 'Pause names its permanent effect');
+  assert.equal((html.match(/>[^<]*\bPause\b[^<]*<\/button>/g) || []).length, 1, 'No second control is labelled Pause');
+  assert.match(css, /\.frame-shell \{[^}]*min-height:/, 'The image region reserves space, so arriving pixels do not shift layout');
+  assert.match(css, /button:focus-visible[^{]*\{[^}]*outline: 3px/, 'Focus stays visible');
+  assert.match(css, /@media \(max-width: 500px\)/, 'A narrow-width layout exists');
+  // Status is carried by text, never colour alone: every status region starts with text content.
+  for (const id of ['connection', 'stop-state', 'frame-change']) assert.match(html, new RegExp(`id="${id}"[^>]*>[A-Z][^<]+<`), `${id} has initial text`);
 
   console.log('Viewer passed: original source/decode joins; superseded and failed images; original budgets and labelled assertions; passive outage handling; independent permanent Pause; bounded polling and local observer-timing/4 export; session/Pause races; inert narration; frozen selection/focus; explicit gaps and bounded activity.');
 })().catch(error => { console.error(error); process.exitCode = 1; });

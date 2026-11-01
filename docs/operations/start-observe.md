@@ -17,7 +17,9 @@ experimental proof commands or launch an unprepared/fullscreen application.
 4. Launch only that selected package through `tools/campaign_run.py --run`.
 5. Read its `ready.json` for the selected loopback viewer URL. Inspect actual images and status, including original remaining resources and uncertainty.
 
-Use Watch for current pixels and fallible public statements. In Timeline, select
+Use Watch for current pixels and fallible public statements. After looking away,
+read its "arrived while this page was hidden" count, then mark it seen. An identical
+image after an input is a valid capture, not a failure. In Timeline, select
 recorded activity to inspect its explicit request/operation/source links; inspection
 stays frozen while play continues. Follow latest returns to the current tail.
 Search/filter applies only to retained rows. Collapsible groups use explicit
