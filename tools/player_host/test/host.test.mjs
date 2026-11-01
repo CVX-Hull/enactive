@@ -679,7 +679,7 @@ test('intent tail formatting is bounded, labelled and honest about failure and a
   assert.equal(full.omitted_bytes,0);assert.ok(full.text.includes('Age: 3 inputs since commit; 12.3 seconds; this session'));
   const earlier=formatIntentTail({...value,age:{...value.age,inputs_since_commit:null,same_actor:false,same_session:false}},4096);
   assert.ok(earlier.text.includes('7 inputs by this actor; committed for an earlier actor') && earlier.text.includes('an earlier session'));
-  assert.ok(formatIntentTail(null,256).text.includes('Unavailable: the custodian read failed'));
+  assert.ok(formatIntentTail(null,256).text.includes('Unavailable: the intent read failed or was malformed'));
   assert.equal(boundedText('ééé',3).text,'é');
 });
 
@@ -708,7 +708,7 @@ for (const [name,intentFixture] of [['a failed read','error'],['an unexpected sh
     const {result,payloads,events}=await scenario(t,[reply(null,[['observe',{}]]),reply()],
       {configuration:{...route(),intent_tail_bytes:256},enabledTools:['observe'],intentFixture});
     assert.equal(result.ok,true);assert.equal(payloads.length,2);
-    for (const payload of payloads) assert.ok(JSON.stringify(payload.messages.at(-1)).includes('Unavailable: the custodian read failed'));
+    for (const payload of payloads) assert.ok(JSON.stringify(payload.messages.at(-1)).includes('Unavailable: the intent read failed or was malformed'));
     assert.deepEqual(events.filter(e=>e.type==='intent-tail').map(e=>e.available),[false,false]);
   });
 }

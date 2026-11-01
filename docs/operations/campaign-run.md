@@ -59,7 +59,9 @@ closed on its actor's stop, Pause or handoff; no successor is minted unless ever
 exact process group is confirmed absent. Its attempts are charged like an actor's; an
 unaccounted pass is charged its whole allocation. A level failure (a malformed trace, a
 launch or store error) charges that pass, disables further passes and is recorded, but
-never stops or gates its actor. The
+never stops or gates its actor. A reader the custodian refuses to mint (for example, with
+more than 15 current Work records) fails closed before that actor launches; a disabled
+level keeps its unused reservation until the next actor's split. The
 custodian appends per-call lock wait and hold times to `call-timing.jsonl`.
 
 `route.json` uses current `player-host/3` (role `actor`) with text/image input and explicit

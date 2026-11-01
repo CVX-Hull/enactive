@@ -299,7 +299,7 @@ export function boundedText(value, maxBytes) {
 
 /** The request-only intent tail from one `player-intent/1` value; null means the read failed. */
 export function formatIntentTail(value, maxBytes) {
-  if (value === null) return {text:`${INTENT_LABEL}\nUnavailable: the custodian read failed; no intent is shown.`, surfaced_bytes:0, omitted_bytes:0};
+  if (value === null) return {text:`${INTENT_LABEL}\nUnavailable: the intent read failed or was malformed; no intent is shown.`, surfaced_bytes:0, omitted_bytes:0};
   if (value.record === null) return {text:`${INTENT_LABEL}\nNo committed intent.`, surfaced_bytes:0, omitted_bytes:0};
   const record = value.record, age = value.age;
   const inputs = age.inputs_since_commit === null
