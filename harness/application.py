@@ -19,7 +19,7 @@ from .player_tools import PROFILES
 from .observer import ActivityView
 
 READ_TOOLS = {'computer_result', 'player_source', 'player_memory_read', 'player_memory_query',
-              'player_memory_context', 'player_program_read', 'player_result', 'player_log_read'}
+              'player_memory_context', 'player_program_read', 'player_result', 'player_log_read', 'player_intent'}
 
 
 class _ProgramControl:
@@ -93,6 +93,10 @@ class Application:
         if type(staleness_inputs) is not int or not 1 <= staleness_inputs <= 1000:
             raise ControlError('Staleness bound must be 1..1000 actor inputs')
         with self.serial:
+            # A level serves an actor that writes no memory, so only the level's own commits
+            # (at most one current subgoal) can add current Work records after minting.
+            if self.profiles.get(actor_id) != frozenset(PROFILES['narrowed']):
+                raise ControlError('A reader serves only a narrowed-profile actor')
             # A commit must decide every current Work record, and one holds at most 15 decisions.
             if len(self.memory.current('work')) > 15:
                 raise ControlError('More than 15 current Work records; the level could never commit')
@@ -118,6 +122,25 @@ class Application:
         return dict(schema='player-log/1', session=self.runtime.session, actor_id=actor, after=after,
                     entries=entries, handoff=stage != 'active', grants_authority=False)
 
+    def intent(self, actor_id: str) -> dict[str, Any]:
+        """The latest committed subgoal for an actor's request-only tail; fallible data, never authority."""
+        level = [r for r in self.memory.current('work') if r['data'].get('level') == 'subgoal']
+        value = dict(schema='player-intent/1', session=self.runtime.session, actor_id=actor_id, record=None,
+                     age=None, grants_authority=False)
+        if not level:
+            return value
+        latest = level[-1]
+        data = latest['data']
+        same_actor = data.get('actor_id') == actor_id
+        value['record'] = dict(record_id=latest['id'], text=latest['text'], sources=latest['sources'],
+            **{k: data.get(k) for k in ('expected_observations', 'status', 'confidence')})
+        # Positions are per actor, so inputs since the commit are known only for the same actor.
+        value['age'] = dict(seconds=max(0., time.time() - latest['created_wall']),
+            inputs_since_commit=self.runtime.store.inputs_after(actor_id, data['position']) if same_actor else None,
+            inputs_by_this_actor=self.runtime.store.inputs_after(actor_id, 0),
+            same_actor=same_actor, same_session=data.get('session') == self.runtime.session)
+        return value
+
     def level_commit(self, reader_id: str, args: dict[str, Any], identity: str) -> dict[str, Any]:
         state = self.readers[reader_id]
         prior = self.memory._db.execute('SELECT actor,tool,args,result FROM service_operations WHERE id=?',
@@ -138,6 +161,11 @@ class Application:
         missing = [s for s in cited if not self.runtime.store.has_source(s) and not self._has_player_source(s)]
         if missing:
             raise PlayerError(f'Cited sources are unavailable: {", ".join(missing[:4])}')
+        # Exact bytes are read (and integrity-checked) before the pass can end; they are
+        # registered inside the commit transaction, never piecemeal.
+        blobs = [self.runtime.source(s) for s in cited if not self._has_player_source(s)]
+        if sum(len(png) for _, png in blobs) > self.memory.source_bytes_left():
+            raise PlayerError('Cannot remember: cited sources exceed player source capacity; no images evicted')
         actor, bound = state['serves'], state['bound']
         # A timeliness check ends the pass, committed or discarded: the next one must read again.
         state['bound'] = None
@@ -172,12 +200,10 @@ class Application:
                 data=dict(common, outcome=outcome), sources=decision['sources'],
                 supports=[ids[0]] if decision['decision'] == 'revise' else [],
                 supersedes=decision['record_id'], applicability=None, program_id=None))
-        # Registration copies immutable source bytes, idempotently; the commit is one transaction.
-        self._register(cited)
         result = dict(schema='player-level-commit/1', status='committed', reason=None, **position,
                       kept=[d['record_id'] for d in proposal['records'] if d['decision'] == 'keep'])
         records = self.memory.append_many(reader_id, values, request_id=identity,
-                                          service=('player_level_commit', args, result))
+                                          service=('player_level_commit', args, result), sources=blobs)
         self.claims = self.memory.query(limit=5)
         return dict(result, records=records)
 
@@ -321,6 +347,9 @@ class Application:
                     else:
                         collected.append(dict(**step,status='not_submitted_to_computer'))
                 return dict(result,collected_operations=collected),None
+            if name == 'player_intent':
+                closed(args, set())
+                return self.intent(actor), None
             if name == 'player_log_read':
                 closed(args, {'after','limit'})
                 return self.log_read(actor, args['after'], args['limit']), None

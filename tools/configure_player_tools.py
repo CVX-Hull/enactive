@@ -9,7 +9,7 @@ import sys
 ROOT=Path(__file__).resolve().parents[1]
 if __package__ in (None,''):
     sys.path.insert(0,str(ROOT))
-from harness.player_tools import PROFILES, tool_specs
+from harness.player_tools import HOST_TOOLS, PROFILES, tool_specs
 
 SERVER='enactive_player'
 # Coding-agent configuration shapes, named by file format rather than product.
@@ -18,9 +18,9 @@ FORMATS=('mcp-servers-json','mcp-servers-toml')
 
 
 def configuration(actor_config: str, root: Path = ROOT, *, profile: str) -> dict:
-    """One capability class's MCP entry; the custodian enforces the same tool allowlist."""
+    """One capability class's MCP entry; the custodian enforces the same allowlist plus host-internal tools."""
     return dict(command=str(root/'.venv/bin/python'),args=['-m','harness.player_mcp','--actor-config',actor_config],
-        cwd=str(root),enabled=True,required=True,enabled_tools=list(PROFILES[profile]),
+        cwd=str(root),enabled=True,required=True,enabled_tools=[t for t in PROFILES[profile] if t not in HOST_TOOLS],
         startup_timeout_sec=15,tool_timeout_sec=30)
 
 

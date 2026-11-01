@@ -128,4 +128,8 @@ def test_service_row_and_records_commit_in_one_transaction(tmp_path):
                                service=service)
         with pytest.raises(PlayerError, match='Unknown original'):
             memory.service_result('3' * 32)
+        # A failing service-row insert rolls back the records already inserted before it.
+        assert memory.begin_service('4' * 32, 'd' * 32, 'other_tool', {})
+        with pytest.raises(PlayerError, match='Cannot remember'):
+            memory.append_many('d' * 32, [record('work')], request_id='4' * 32, service=service)
         assert memory._db.execute('SELECT COUNT(*) FROM records').fetchone()[0] == 1

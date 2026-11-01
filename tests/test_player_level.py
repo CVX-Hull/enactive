@@ -139,12 +139,14 @@ def test_reader_serves_only_the_active_actor_once_and_never_blocks_succession(le
     app, channel, actor, reader = level
     with pytest.raises(ControlError, match='already has its reader'):
         app.add_reader(actor['actor_id'], staleness_inputs=S)
-    with pytest.raises(ControlError, match='only the active actor'):
+    with pytest.raises(ControlError, match='narrowed-profile'):
         app.add_reader(reader['actor_id'], staleness_inputs=S)
     with pytest.raises(ControlError, match='Staleness'):
         app.add_reader(actor['actor_id'], staleness_inputs=0)
     sealed = call(app, actor, 'player_handoff', {})
     assert sealed['handoff']['schema'] == 'player-handoff/2'
+    with pytest.raises(ControlError, match='only the active actor'):
+        app.add_reader(actor['actor_id'], staleness_inputs=S)
     app.runtime.confirm_quiescent(actor['actor_id'], sealed['operation_id'], host_quiescent=True)
     # max_actors is 2: the live reader neither counts nor blocks the successor.
     successor = app.add_actor('narrowed')
@@ -327,6 +329,23 @@ def test_unavailable_cited_source_writes_nothing_and_keeps_the_pass(level):
     assert corrected['status'] == 'committed' and source_rows(app) == before[1] + 1
 
 
+def test_source_capacity_failure_writes_nothing_and_keeps_the_pass(level):
+    app, channel, actor, reader = level
+    first = call(app, actor, 'computer_input', dict(actions=[key()]))
+    channel.capture = 2
+    second = call(app, actor, 'computer_observe', {})['source']['source_id']
+    assert second != first['source']['source_id']
+    read_all(app, reader)
+    # Room for one PNG only: the second cited source fails inside the commit transaction.
+    app.memory.max_source_bytes = len(channel.png)
+    before = store_rows(app), source_rows(app)
+    with pytest.raises(PlayerError, match='capacity'):
+        call(app, reader, 'player_level_commit', proposal(subgoal(sources=[first['source']['source_id'], second])))
+    assert (store_rows(app), source_rows(app)) == before
+    # The failure kept the pass, so a corrected resubmission commits without a new read.
+    assert call(app, reader, 'player_level_commit', proposal(subgoal(sources=[second])))['status'] == 'committed'
+
+
 def test_commit_after_pause_or_deadline_is_discarded(level):
     app, channel, actor, reader = level
     call(app, actor, 'computer_input', dict(actions=[key()]))
@@ -368,7 +387,12 @@ def test_reader_minting_refuses_a_store_no_commit_could_cover(tmp_path):
     memory = Memory(tmp_path / 'player.sqlite3')
     app = Application(runtime, memory, tmp_path / 'contexts')
     try:
-        actor = app.add_actor('flat')
+        flat = app.add_actor('flat')
+        with pytest.raises(ControlError, match='narrowed-profile'):
+            app.add_reader(flat['actor_id'], staleness_inputs=S)
+        sealed = call(app, flat, 'player_handoff', {})
+        runtime.confirm_quiescent(flat['actor_id'], sealed['operation_id'], host_quiescent=True)
+        actor = app.add_actor('narrowed')
         for index in range(16):
             memory.append(actor['actor_id'], dict(schema='player-record/1', kind='work', text=f'work {index}', data={},
                 sources=[], supports=[], supersedes=None, applicability=None, program_id=None))

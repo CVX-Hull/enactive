@@ -154,8 +154,9 @@ outside the `reader` profile; the runtime's write authorization admits a reader 
 for `player_level_commit` (and never admits an actor for it); `_guard` refuses its
 observe, input and seal; `/api/actor-stop` refuses it. A retained-source integrity
 failure found during a reader's read still fences the run, as for any reader of that
-storage. Minting refuses while more than 15 Work records are current, since one commit
-holds at most 15 decisions.
+storage. A reader serves only a `narrowed` actor, which writes no memory, and minting
+refuses while more than 15 Work records are current, since one commit holds at most 15
+decisions; afterwards only the level's own commits change the current set.
 Readers are excluded from `max_actors` and from the "every prior actor quiescent"
 succession test, so a live reader never blocks a successor. The composition registers
 each capability's profile when it mints it (`flat` or `narrowed` actors, `reader`); a
@@ -230,8 +231,8 @@ exactly every current Work record. A new subgoal revises or closes every one of 
 position is never model-supplied: the custodian binds the highest `position` its
 reader's own log reads returned since its last timeliness check; a read from position 0
 of an empty log binds 0, so an actor-start pass can revalidate open records. A schema,
-coverage or unavailable-source error is a tool error and keeps the bound for a corrected
-resubmission. Otherwise the timeliness check ends the pass. Commit only if no bound is
+coverage, unavailable-source or source-capacity error is a tool error and keeps the bound
+for a corrected resubmission; cited source bytes are read and verified before the check. Otherwise the timeliness check ends the pass. Commit only if no bound is
 missing, the run is not stopped, fenced or past its deadline (a user Pause or takeover
 changes the game without custodian input), the served actor is still active, and it
 moved fewer than S `input` operations past the bound (S fixed per reader at minting); a
@@ -239,9 +240,9 @@ reader's store is one live session, so no session boundary can intervene. Otherw
 return `player-level-commit/1` `status:"discarded"` with the reason, bound position
 and inputs since; a discard writes nothing to either store.
 
-A commit registers its cited sources (idempotent immutable copies), then appends, under
-`Application.serial` and in one `Memory.append_many` transaction, a new Work record for
-a new subgoal, one superseding correction per revise (outcome `revised`, supporting the
+A commit appends, under `Application.serial` and in one `Memory.append_many`
+transaction, its cited sources' exact bytes (idempotent immutable copies), a new Work
+record for a new subgoal, one superseding correction per revise (outcome `revised`, supporting the
 new record) or close (its outcome), and the service row with its final result; keep
 writes no record. Every record's `data` carries `level:"subgoal"`, the proposal schema,
 served actor, session and bound position; the record actor is the reader. A repeated

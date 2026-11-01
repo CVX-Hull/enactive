@@ -121,16 +121,19 @@ class Memory:
         return [hashlib.sha256(f'{request_id}:{index}'.encode()).hexdigest()[:32] for index in range(count)]
 
     def append_many(self, actor_id: str, values: list[dict], *, request_id: str,
-                    service: tuple[str, dict, dict] | None = None) -> list[dict]:
+                    service: tuple[str, dict, dict] | None = None,
+                    sources: list[tuple[dict, bytes]] = ()) -> list[dict]:
         """Append 0..16 records in one transaction; a later record may reference an earlier one.
 
         `service` is `(tool, args, result)`: its correlation row and final result, with
         `records` filled in, commit in the same transaction, so no pending window exists.
+        `sources` are exact `(metadata, png)` registrations made in that transaction too.
         """
         identity(actor_id)
         identity(request_id)
         if type(values) is not list or len(values) > 16 or not values and service is None:
             raise PlayerError('A multi-record append holds 1..16 records, or 0 with its service result')
+        sources = [(self._valid_source(metadata, png), png) for metadata, png in sources]
         values = [record(value) for value in values]
         now = time.time()
         stored = [dict(value, id=item, actor_id=actor_id, created_wall=now)
@@ -138,6 +141,8 @@ class Memory:
         with self._transaction():
             if stored and self._db.execute('SELECT 1 FROM records WHERE id=?', (stored[0]['id'],)).fetchone():
                 return [self._original(item['id'], actor_id, value) for item, value in zip(stored, values, strict=True)]
+            for metadata, png in sources:
+                self._insert_source(metadata, png)
             for item in stored:
                 self._insert(item)
             if service is not None:
@@ -185,6 +190,13 @@ class Memory:
             raise PlayerError(f'Cannot query player memory: {exc}') from exc
 
     def register_source(self, metadata: dict, png: bytes) -> dict:
+        metadata = self._valid_source(metadata, png)
+        with self._transaction():
+            self._insert_source(metadata, png)
+        return metadata
+
+    @staticmethod
+    def _valid_source(metadata: dict, png: bytes) -> dict:
         try:
             metadata = json_object(metadata)
             validate_source(metadata)
@@ -194,17 +206,22 @@ class Memory:
                 raise PlayerError('Source must contain PNG bytes')
         except (ValueError, TypeError, UnicodeError) as exc:
             raise PlayerError(f'Cannot remember source: {exc}') from exc
-        with self._transaction():
-            prior = self._db.execute('SELECT metadata,png FROM sources WHERE id=?', (metadata['source_id'],)).fetchone()
-            if prior is not None:
-                if prior != (canonical(metadata), png):
-                    raise PlayerError('Immutable source registration differs')
-                return metadata
-            used = self._db.execute('SELECT COALESCE(SUM(length(png)),0) FROM sources').fetchone()[0]
-            if used + len(png) > self.max_source_bytes:
-                raise PlayerError('Cannot remember: source capacity exceeded; no images evicted')
-            self._db.execute('INSERT INTO sources VALUES (?,?,?)', (metadata['source_id'], canonical(metadata), png))
         return metadata
+
+    def source_bytes_left(self) -> int:
+        used = self._db.execute('SELECT COALESCE(SUM(length(png)),0) FROM sources').fetchone()[0]
+        return max(0, self.max_source_bytes - used)
+
+    def _insert_source(self, metadata: dict, png: bytes) -> None:
+        prior = self._db.execute('SELECT metadata,png FROM sources WHERE id=?', (metadata['source_id'],)).fetchone()
+        if prior is not None:
+            if prior != (canonical(metadata), png):
+                raise PlayerError('Immutable source registration differs')
+            return
+        used = self._db.execute('SELECT COALESCE(SUM(length(png)),0) FROM sources').fetchone()[0]
+        if used + len(png) > self.max_source_bytes:
+            raise PlayerError('Cannot remember: source capacity exceeded; no images evicted')
+        self._db.execute('INSERT INTO sources VALUES (?,?,?)', (metadata['source_id'], canonical(metadata), png))
 
     def read_source(self, source_id: str) -> tuple[dict, bytes]:
         identity(source_id)

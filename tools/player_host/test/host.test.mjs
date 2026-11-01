@@ -618,7 +618,7 @@ function productionMcp(enabled_tools) {
 test('real production MCP discovery forwards all exact current actor-only tool schemas', async ()=>{
   const { execFile } = await import('node:child_process');
   const { promisify } = await import('node:util');
-  const {stdout}=await promisify(execFile)(python,['-c','import json; from harness.player_tools import PROFILES, tool_specs; specs=tool_specs(); print(json.dumps({name:{"schema":specs[name][1],"description":specs[name][0]} for name in PROFILES["flat"]}))'],{cwd:productionRoot,maxBuffer:INPUT_LIMIT_BYTES});
+  const {stdout}=await promisify(execFile)(python,['-c','import json; from harness.player_tools import HOST_TOOLS, PROFILES, tool_specs; specs=tool_specs(); print(json.dumps({name:{"schema":specs[name][1],"description":specs[name][0]} for name in PROFILES["flat"] if name not in HOST_TOOLS}))'],{cwd:productionRoot,maxBuffer:INPUT_LIMIT_BYTES});
   const expected=JSON.parse(stdout), payloads=[], bodies=[], events=[];
   const chosen=Object.keys(expected);
   assert.equal(chosen.length,14);
