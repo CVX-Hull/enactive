@@ -14,6 +14,7 @@
     "docs/diagrams/campaign-custody.mmd": "0106cf17a7c693b5c6418c230922d067d990f911c1adf928d14cccb2156a5081",
     "docs/diagrams/ci-validation.mmd": "60dbfe3b5b506ca86e03e2daf0ab15222336f89d85114b71dba83c18462e1e94",
     "docs/diagrams/context.mmd": "fd2d91774a45ed00ad7a8ecf11ec7b118bf23604fca77b587cd495ee7ac70ff1",
+    "docs/diagrams/corpus-a1-operator.mmd": "6fee5d344fe83ec1c9a5858afc03561e0fbdb1535300fea91f2d30460bdf2e2d",
     "docs/diagrams/memory-learning-loop.mmd": "c7e978d91ece476a4985db1aed5b7e5de2aebe05f483d0f7a6ae66af2850267a",
     "docs/diagrams/multirate-player.mmd": "56d53c61c23be17ad9bfb3dde6bf7c4122330631340385964abd63523256c6b8",
     "docs/diagrams/native-recovery.mmd": "252d6f504795b01ee851591ccf180bf240a43280df228bac4ae9a4f9638ada6d",
@@ -25,7 +26,8 @@
     "docs/diagrams/run-ownership.mmd": "c7cd80386019644d52b6bd96c1172e4458ea42efb848c2a32dc0ee990aa695e0",
     "docs/diagrams/skill.mmd": "1b8f1491f0930eadbd0494f24b1b0a52ff586e08a5aa4b4f5ed3c3502cc75822",
     "docs/diagrams/supervisor.mmd": "c2e111a8bd52e0295fcd457f8d20c431de3aefeb2396c47962b5a38d8d872e89",
-    "docs/diagrams/tiered-gameplay.mmd": "213b4301edc6c852c661cf8b29fc75d73c4510b0632170287555afc9ad336cb5"
+    "docs/diagrams/tiered-gameplay.mmd": "213b4301edc6c852c661cf8b29fc75d73c4510b0632170287555afc9ad336cb5",
+    "docs/diagrams/transition-corpus.mmd": "28fc78b51f14532e1831f4c8c9ad54d0ad2d00c0cbfc8c92da03d5748d474d8e"
   },
   "outputs": {
     "docs/diagrams/action.svg": "92d422728cebeb211c11b476ac597f2c51d8a460e21497c9402dad7f3a89dfb1",
@@ -35,6 +37,7 @@
     "docs/diagrams/campaign-custody.svg": "1aeca8809db648d180fedc978020ac3b3014ce173e60c2384c768d63a97def24",
     "docs/diagrams/ci-validation.svg": "0876d9b42c45e12f6c1ab7e24ae430c7e98ddb59c7325e56bbdd44a759de4a42",
     "docs/diagrams/context.svg": "19f571487893a9bc05e65113dfa3b7c34dca60950bffbca195c241c20daf11ac",
+    "docs/diagrams/corpus-a1-operator.svg": "aa26ba620c1ce8c6b6dcfefa4b0a9367429cc8c0f380b90daee50061c4bab88a",
     "docs/diagrams/memory-learning-loop.svg": "2cec3c8be5529ce2f9200475bea3bc70650a0d6c99e06638be8bd97796f419b0",
     "docs/diagrams/multirate-player.svg": "527791598869e35edad9475d2dc40e6b5cd09ac09b7e47069f97f184c5ffe8ca",
     "docs/diagrams/native-recovery.svg": "72319c050b3c5ce510173a95d56c775b2823962544e55e4765b087f569eadb61",
@@ -46,6 +49,7 @@
     "docs/diagrams/run-ownership.svg": "494171997b8306d448dbc4a3bef96ea671ed568406ad012fb1e9d59252d04665",
     "docs/diagrams/skill.svg": "3b2e76f92e6156731d6b6ef9d1b79a76e6b2ba73e6ae1dd3f7db1ecca0ab26b4",
     "docs/diagrams/supervisor.svg": "2c2ddcb2c68fcf2b0f55ab43f2872f2fc5544eccc2eafb8344311e01a52328e2",
-    "docs/diagrams/tiered-gameplay.svg": "1cfb76e65e9bd1faba24558a6714c47abfda978152212085d3908140d88c4bbb"
+    "docs/diagrams/tiered-gameplay.svg": "1cfb76e65e9bd1faba24558a6714c47abfda978152212085d3908140d88c4bbb",
+    "docs/diagrams/transition-corpus.svg": "3f67b03e030b97e29359e8c4ccbc05649e03f3c236d58bea1a44af2df5984bb6"
   }
 }
