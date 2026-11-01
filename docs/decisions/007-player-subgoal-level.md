@@ -1,16 +1,22 @@
 ---
 owner: lead
-review_trigger: Owner discussion of #319, first-slice results, or a change to the host, memory, campaign or computer-control contracts
-status: proposed
+review_trigger: First-slice results, or a change to the host, memory, campaign or computer-control contracts
+status: historical
 date: '2026-11-01'
-scope: Proposed direction for a multi-level player (an acting real-time player and a separate asynchronous subgoal level) and its first slice; not accepted, not implemented, and not relied upon by any current contract
+scope: Accepted direction for a multi-level player (an acting real-time player and a separate asynchronous subgoal level, with designed upper levels) and its first slice; not delivered runtime support
 ---
 
-# ADR 007 — An acting player with an asynchronous subgoal level (proposed)
+# ADR 007 — An acting player with an asynchronous subgoal level
 
-**Status: proposed for owner discussion.** This ADR is not accepted. Nothing in it
-is implemented, and no current contract relies on it
-([authority](../standards/authority.md)).
+**Status: accepted direction; not delivered.** The owner agreed draft 4 on 31
+October 2026 (evening EDT): "Agree, shape the slice" (recorded on
+[#319](https://github.com/CVX-Hull/enactive/issues/319)). Nothing in it is
+implemented.
+- **The current standards and contracts still govern the running system.**
+- **The supersession map is applied later.** The documents it lists are amended
+  when the first slice meets its adoption condition, together with that migration.
+- **The slice is what decides.** If the slice does not improve on arm B, the
+  direction is revisited.
 
 This is draft 4.
 - **Draft 1** had the real-time player write its own memory. That conflicted with
@@ -48,7 +54,7 @@ It does only the first.
 | R2 | "The whole player system is supposed to have reasoning and reflection and memory at multiple levels" | Levels are roles of the player system, not optional tools the actor might choose |
 | R3 | "We can have more LLM calls" | A level may be its own LLM role. #25's gate on *different model tiers* still holds |
 | R4 | "It has to be continuous learning and exploration or otherwise there would be combinatorial explosion" | Learning happens in persistent play. Frozen starts are evaluation probes |
-| R5 | "Let's discuss before we implement any designs" | This ADR proposes and implements nothing |
+| R5 | "Let's discuss before we implement any designs" | The design was discussed and agreed before any implementation ("Agree, shape the slice") |
 
 **Owner answers to draft 2's questions:** "Yes, use recommendations". That means:
 - adopted docs are amended on acceptance;
@@ -300,7 +306,8 @@ The parameters are game-independent. None is fitted to CDDA.
 
 ## Supersession map
 
-Each of these is amended only on acceptance, together with the change:
+Each of these is amended when the first slice meets its adoption condition, together
+with that migration:
 
 | Older position (date) | Where | Superseded by |
 |---|---|---|
@@ -321,7 +328,7 @@ Each of these is amended only on acceptance, together with the change:
   which was archived at the cutover, not rejected on its merits. Its one-writer rule
   is kept.
 
-## First slice (outline; shaped after discussion, not started)
+## First slice (outline; shaped in [#326](https://github.com/CVX-Hull/enactive/issues/326), not started)
 
 - **Question.** Does a separate subgoal level improve retained progress and mission
   commitment, compared with the flat player and with arm B (the flat player told to
