@@ -19,7 +19,7 @@ FIELDS={'schema','session','source_commit','files','initial_files','native','lib
 LEVEL_FIELDS={'mode','inputs_per_pass','staleness_inputs','budget_fractions','intent_tail_bytes',
               'max_http_attempts','pass_max_requests','pass_seconds'}
 # The frozen, versioned subgoal role prompt (ADR-007 appendix); a change makes a new version.
-LEVEL_ROLE=ROOT/'tools/player_roles/subgoal-v2.txt'
+LEVEL_ROLE=ROOT/'tools/player_roles/subgoal-v3.txt'
 
 
 def level_profile(level,actor_profile:str):
@@ -51,7 +51,7 @@ def local_file(value: str) -> Path:
 
 
 def host_argv(host) -> list[str]:
-    """Validate the closed `player-host/4` adapter selection and return its argv."""
+    """Validate the closed `player-host/5` adapter selection and return its argv."""
     closed(host,{'argv'})
     argv=host['argv']
     if (type(argv) is not list or not 1<=len(argv)<=8
@@ -116,7 +116,7 @@ def preflight(directory: Path) -> tuple[dict,dict,dict]:
     if not profile['host_seconds']<=profile['total_host_seconds']<profile['wall_seconds']-30:
         raise ControlError('Original host and cleanup horizons do not fit')
     route=read_json(directory/'route.json',1048576)
-    if type(route) is not dict or route.get('schema')!='player-host/4':
+    if type(route) is not dict or route.get('schema')!='player-host/5':
         raise ControlError('Unsupported player host route; old routes are inert history')
     if route.get('service_tier')!='default':raise ControlError('This campaign allocation supports only the selected default serving tier')
     # Only a live level publishes intent; shadow mode measures it without influencing play.

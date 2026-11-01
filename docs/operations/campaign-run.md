@@ -40,7 +40,7 @@ memory tools or program save). `level` is null, the zero-level-host configuratio
 `budget_fractions` (at most 8 increasing values in (0,1)), `intent_tail_bytes`
 (64–4096), `max_http_attempts` (the level's share per actor), `pass_max_requests`
 and `pass_seconds`. A level requires `narrowed` and freezes a sixth input,
-`level-role.txt`, byte-identical to the [frozen role prompt v2](../../tools/player_roles/subgoal-v2.txt).
+`level-role.txt`, byte-identical to the [frozen role prompt v3](../../tools/player_roles/subgoal-v3.txt).
 The route stays the actor role; its `intent_tail_bytes` equals the level's bound
 in live mode and is null in shadow mode, where the level commits but the actor never
 sees intent.

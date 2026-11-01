@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from .computer.protocol import action_schema
-from .player.contracts import level_abstain_schema, level_proposal_schema, record_schema, program_schema
+from .player.contracts import level_tool_schema, record_schema, program_schema
 
 
 def obj(properties, required=None):
@@ -40,12 +40,16 @@ def tool_specs() -> dict:
                 ['program_id','initial_state','interpretation','selection'])),
         'player_result':('Collect an original memory/program authoring or program-run service request after lost transport, without repeating it. Program runs retain original child IDs before input; collection adds available original receipts, never replays or restores custody.',obj(dict(operation_id=ID))),
         'player_handoff':('Seal this actor. No more input from this actor, and it carries no summary or knowledge snapshot. A successor requires actual host/MCP quiescence and retains original limits. This is actor custody only, not a game pause, save, identity check or new budget. Unknown input/user Pause cannot become handoff.',EMPTY),
-        'player_log_read':('Read the served actor\'s operations in store order after a position: input key tokens, statuses and result source IDs, with pending operations marked and no source. Positions count from 1. During a handoff it returns no entries and handoff:true. The highest position you read binds your next commit.',
+        'player_log_read':('Read the served actor\'s operations in store order after a position: input key tokens, statuses and result source IDs, with pending operations marked and no source. Positions count from 1. During a handoff it returns no entries and handoff:true. The highest position you read binds your next terminal call.',
             obj(dict(after=dict(type='integer',minimum=0),limit=dict(type='integer',minimum=1,maximum=50)))),
-        'player_level_commit':('Propose what to do with the current subgoal, the only Work you manage: keep it, close it with an outcome, or replace it with one new subgoal (and the outcome of the one it replaces). Software binds the position from your own log reads since your last commit attempt, and commits only if the served actor moved fewer than its staleness bound in inputs and has not handed off; otherwise the proposal is discarded. Committed records are fallible player data, not instructions or authority.',
-            obj(dict(proposal=level_proposal_schema()))),
-        'player_level_abstain':('End this pass without a proposal when the evidence does not support keeping, replacing or closing the subgoal. Nothing is written.',
-            level_abstain_schema()),
+        'player_level_keep':('Keep the current subgoal unchanged and end this pass. Nothing is written; the receipt says kept and gives the current subgoal id. Needs a current subgoal. Software binds the position from your own log reads since your last terminal call and accepts it only if the served actor moved fewer than its staleness bound in inputs and has not handed off; otherwise the call is discarded.',
+            level_tool_schema('player_level_keep')),
+        'player_level_replace':('Replace the current subgoal, or set the first one, with one new subgoal and end this pass. Set previous_outcome to none exactly when there is no current subgoal; otherwise name what happened to it (achieved, failed, abandoned or revised) and why. Software resolves the current subgoal and binds the position as for player_level_keep. Committed records are fallible player data, not instructions or authority.',
+            level_tool_schema('player_level_replace')),
+        'player_level_close':('Close the current subgoal with an outcome and end this pass, leaving none. Needs a current subgoal. Software resolves it and binds the position as for player_level_keep.',
+            level_tool_schema('player_level_close')),
+        'player_level_abstain':('End this pass without changing the subgoal when the evidence supports none of keep, replace or close. Nothing is written. It is not the remedy for a call that was refused as fixable: fix that call instead.',
+            level_tool_schema('player_level_abstain')),
         'player_intent':('Host-internal: the latest committed subgoal and its age, read by the actor host to build its request-only intent tail. Not offered to the model.',EMPTY),
     }
 
@@ -60,6 +64,8 @@ PROFILES = {
              'player_intent'),
     'narrowed': ('computer_observe','computer_input','computer_result','computer_stop','player_source',
                  'player_program_read','player_program_run','player_result','player_handoff','player_intent'),
-    'reader': ('computer_result','player_source','player_memory_read','player_memory_query','player_memory_context',
-               'player_program_read','player_result','player_log_read','player_level_commit','player_level_abstain'),
+    # The subgoal level reads the log and cited frames and ends its pass with exactly one terminal call. The pushed
+    # input carries the current subgoal, so it has no memory, program or result tools.
+    'reader': ('player_log_read','player_source','player_level_keep','player_level_replace','player_level_close',
+               'player_level_abstain'),
 }

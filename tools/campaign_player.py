@@ -13,6 +13,7 @@ import time
 
 from harness.computer.launch import close_group
 from harness.computer.protocol import ControlError,canonical,read_json
+from harness.player.contracts import ABSTAIN_CODES
 from tools.configure_player_tools import ROOT,configuration
 from tools.level_schedule import LevelSchedule
 
@@ -46,11 +47,11 @@ class HostEvents:
             kind=value.get('type')
             if kind=='host-start':
                 if (self.started or value.get('telemetry_version')!=2
-                        or value.get('schema')!='player-host/4'):raise ControlError('Unsupported/repeated current host trace')
+                        or value.get('schema')!='player-host/5'):raise ControlError('Unsupported/repeated current host trace')
                 self.started=True
             elif kind in ('level-commit','level-discard','level-abstain'):
                 if len(self.level)<256:self.level.append({k:value.get(k) for k in
-                    ('type','action','reason','position','inputs_since','staleness_inputs','record_ids','kept')})
+                    ('type','action','reason_code','reason','position','inputs_since','staleness_inputs','record_ids','kept')})
             elif kind=='request-start':
                 match=re.fullmatch(r'request-([1-9][0-9]*)',value.get('request_id',''))
                 if not self.started or not match:raise ControlError('Host request lacks current origin')
@@ -101,6 +102,51 @@ def _handoff_context(application,actor,event):
     if (packet.get('schema')!='player-handoff-context/2' or packet.get('context_id')!=issuance['context_id']
             or packet.get('actor_id')!=actor['actor_id'] or packet.get('grants_authority') is not False):
         raise ControlError('Frozen handoff context is not current mechanical identity')
+
+
+def push_text(application,reader_id: str,actor_id: str,shown_through: int,total: int) -> tuple[str,int,int]:
+    """A level pass's pushed input: its text, the entries shown and the new `shown_through` position.
+
+    The served log since the previous pass (at most the latest 50 entries), the current subgoal and how many
+    level records player memory holds, stated mechanically. The reader's bound is cleared first, so it ends up
+    exactly the last entry shown and a bound left by an earlier pass (one that never reached a terminal call)
+    cannot carry over. The replay probe builds its pass input through this same function.
+    """
+    with application.serial:
+        application.reset_reader_bound(reader_id)
+        after=max(shown_through,total-50)
+        log=application.log_read(reader_id,after,50)
+        subgoals=application.level_subgoals()
+        intent=application.intent(actor_id) if subgoals else None
+        records=application.level_record_count()
+    omitted=after-shown_through
+    entries=log['entries']
+    if entries:shown_through=entries[-1]['position']
+    lines=[json.dumps(e,separators=(',',':'),ensure_ascii=False) for e in entries]
+    text=('Served player log since your last pass, oldest first, one entry per line with its position'
+          +(f' ({omitted} earlier entries since then are not shown; read them with player_log_read)' if omitted else '')
+          +':\n'+('\n'.join(lines) if lines else '(no new entries)'))
+    if intent is None:
+        subgoal='Current subgoal: none'
+    else:
+        record,age=intent['record'],intent['age']
+        shown=dict(record_id=record['record_id'],text=record['text'],expected_observations=record['expected_observations'],
+                   status=record['status'],confidence=record['confidence'],sources=record['sources'],
+                   same_actor=age['same_actor'],
+                   # Positions count per actor: another actor's is not a position in the served log.
+                   position=subgoals[-1]['data']['position'] if age['same_actor'] else None,
+                   inputs_since_commit=age['inputs_since_commit'])
+        subgoal='Current subgoal:\n'+json.dumps(shown,separators=(',',':'),ensure_ascii=False)
+    return f'{text}\n\n{subgoal}\nLevel records in player memory: {records}',len(entries),shown_through
+
+
+def pass_prompt(role: str,brief: str,pushed: str,reason: str,entries: int,inputs: int,allowance: int,seconds: float) -> str:
+    """One level pass's whole prompt. Mechanical wake facts only: the frozen role prompt and the actor's own
+    mission brief carry everything else, so the level adds no lead content."""
+    return (role+'\n\nMission brief (the same the acting player has):\n'+brief+'\n\n'
+            +pushed+'\n\nSoftware level pass note: '
+            +f'wake reason {reason}; the served actor log now has {entries} entries ({inputs} inputs); '
+            +f'pass allowance {allowance} HTTP attempts and {seconds:.0f} seconds.')
 
 
 class LevelPasses:
@@ -162,13 +208,8 @@ class LevelPasses:
         write_new(target/'route.json',dict(self.route,role='level',intent_tail_bytes=None,max_requests=allowance))
         write_new(target/'mcp.json',configuration(str(self.reader_file),profile='reader'))
         write_new(target/'context.txt',(self.directory/'context.txt').read_text(),text=True)
-        # Mechanical wake facts only; the frozen role prompt and the actor's own mission brief
-        # carry everything else, so the level adds no lead content.
-        prompt=((self.directory/'level-role.txt').read_text()+'\n\nMission brief (the same the acting player has):\n'
-                +(self.directory/'prompt.txt').read_text()+'\n\n'
-                +pushed+'\n\nSoftware level pass note: '
-                +f'wake reason {reason}; the served actor log now has {entries} entries ({inputs} inputs); '
-                +f'pass allowance {allowance} HTTP attempts and {seconds:.0f} seconds.')
+        prompt=pass_prompt((self.directory/'level-role.txt').read_text(),(self.directory/'prompt.txt').read_text(),
+                           pushed,reason,entries,inputs,allowance,seconds)
         write_new(target/'prompt.txt',prompt,text=True)
         write_new(target/'player-final.txt','',text=True)
         arguments=[*self.profile['host']['argv'],'run','--config',str(target/'route.json'),
@@ -183,35 +224,9 @@ class LevelPasses:
         self.current=(child,HostEvents(target/'host.jsonl',allowance),record,self.current[3])
 
     def _push(self,total: int) -> tuple[str,int]:
-        """The pass's input text and its shown entry count, for a log of `total` entries.
-
-        The served log since the previous pass (at most the latest 50 entries) and the current subgoal.
-        The reader's bound is cleared first, so it ends up exactly the last entry shown and a bound left by
-        an earlier pass (one that never reached a commit attempt) cannot carry over.
-        """
-        with self.application.serial:
-            self.application.reset_reader_bound(self.reader_id)
-            after=max(self.shown_through,total-50)
-            log=self.application.log_read(self.reader_id,after,50)
-            subgoals=self.application.level_subgoals()
-            intent=self.application.intent(self.actor_id) if subgoals else None
-        omitted=after-self.shown_through
-        entries=log['entries']
-        if entries:self.shown_through=entries[-1]['position']
-        lines=[json.dumps(e,separators=(',',':'),ensure_ascii=False) for e in entries]
-        text=('Served player log since your last pass, oldest first, one entry per line with its position'
-              +(f' ({omitted} earlier entries since then are not shown; read them with player_log_read)' if omitted else '')
-              +':\n'+('\n'.join(lines) if lines else '(no new entries)'))
-        if intent is None:
-            return text+'\n\nCurrent subgoal: none.',len(entries)
-        record,age=intent['record'],intent['age']
-        shown=dict(record_id=record['record_id'],text=record['text'],expected_observations=record['expected_observations'],
-                   status=record['status'],confidence=record['confidence'],sources=record['sources'],
-                   same_actor=age['same_actor'],
-                   # Positions count per actor: another actor's is not a position in the served log.
-                   position=subgoals[-1]['data']['position'] if age['same_actor'] else None,
-                   inputs_since_commit=age['inputs_since_commit'])
-        return text+'\n\nCurrent subgoal:\n'+json.dumps(shown,separators=(',',':'),ensure_ascii=False),len(entries)
+        """The pass's input text and its shown entry count, for a log of `total` entries."""
+        text,shown,self.shown_through=push_text(self.application,self.reader_id,self.actor_id,self.shown_through,total)
+        return text,shown
 
     def finish(self) -> None:
         """Close the pass's exact process group, then charge it; incomplete accounting charges its whole allocation."""
@@ -245,9 +260,15 @@ class LevelPasses:
         abstains=[(p['reason'],e) for p in self.passes for e in p.get('level_events',[]) if e['type']=='level-abstain']
         # A pass that settled unsuccessfully or never settled (for example level-no-proposal or a stopped pass).
         failed=[p for p in self.passes if (p.get('settled') or {}).get('ok') is not True]
+        # A terminal call refused on the last allowed request is its own outcome, distinct from request-limit.
+        refused=[p for p in failed if (p.get('settled') or {}).get('reason')=='level-final-refusal']
+        codes={code:sum(e.get('reason_code')==code for _,e in abstains) for code in ABSTAIN_CODES}
         return dict(reader_id=self.reader_id,mode=self.level['mode'],allocated_attempts=self.allowance,
-                    attempts_charged=self.charged,passes=self.passes,failure=self.failure,quiescent=self.quiescent(),commits=len(commits),discards=len(discards),abstains=len(abstains),
-                    start_abstains=sum(reason=='start' for reason,_ in abstains),failed_passes=len(failed),
+                    attempts_charged=self.charged,passes=self.passes,failure=self.failure,quiescent=self.quiescent(),
+                    commits=len(commits),keeps=sum(e['action']=='keep' for e in commits),
+                    replaces=sum(e['action']=='replace' for e in commits),closes=sum(e['action']=='close' for e in commits),
+                    discards=len(discards),abstains=len(abstains),abstain_codes=codes,
+                    start_abstains=sum(reason=='start' for reason,_ in abstains),failed_passes=len(failed),final_refusals=len(refused),
                     configured_estimate_usd=sum(p.get('configured_estimate_usd',0) for p in self.passes),
                     missing_usage_attempts=sum(p.get('missing_usage_attempts',p['attempts_charged']) for p in self.passes))
 
@@ -376,9 +397,11 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
         if record.get('orchestration_error'):break
     # attempts_charged includes every actor's level passes; each record keeps its own split.
     levels_of=lambda r:r.get('level') or {}
-    return dict(schema='player-driver/4',outcome=outcome,reason=reason,actors=records,
+    return dict(schema='player-driver/5',outcome=outcome,reason=reason,actors=records,
                 attempts_charged=total_attempts,host_seconds_used=host_seconds_used,
                 level_attempts_charged=sum(levels_of(r).get('attempts_charged',0) for r in records),
+                level_failed_passes=sum(levels_of(r).get('failed_passes',0) for r in records),
+                level_final_refusals=sum(levels_of(r).get('final_refusals',0) for r in records),
                 configured_estimate_usd=sum(r.get('configured_estimate_usd',0)+levels_of(r).get('configured_estimate_usd',0) for r in records),
                 missing_usage_attempts=sum(r.get('missing_usage_attempts',r['attempts_charged'])
                                            +levels_of(r).get('missing_usage_attempts',0) for r in records))

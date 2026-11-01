@@ -91,52 +91,66 @@ _PROGRAM = _object(dict(schema={'const': 'player-program/1'}, code=_text(32768),
                         reason=_text(2048, empty=True), source_ids=_REFS, record_ids=_REFS, applicability=_APPLICABILITY))
 
 
-_SUBGOAL = _object(dict(text=_text(2048), expected_observations=dict(type='array', items=_text(512), maxItems=8),
-                        status=_enum('open', 'blocked'), confidence=dict(type='number', minimum=0, maximum=1),
-                        sources=_REFS))
-_CLOSE_OUTCOMES = ('achieved', 'failed', 'abandoned')
-# The level manages only its own subgoal; every proposal is exactly one of three closed shapes.
-_KEEP = _object(dict(schema={'const': 'player-level-proposal/2'}, action={'const': 'keep'}, record_id=_text(128),
-                     reason=_text(1024), sources=_REFS))
-_PREVIOUS = _object(dict(record_id=_text(128), outcome=_enum(*_CLOSE_OUTCOMES, 'revised'),
-                         reason=_text(1024), sources=_REFS))
-_REPLACE = _object(dict(schema={'const': 'player-level-proposal/2'}, action={'const': 'replace'}, subgoal=_SUBGOAL,
-                        previous={'anyOf': [_PREVIOUS, {'type': 'null'}]}))
-_CLOSE = _object(dict(schema={'const': 'player-level-proposal/2'}, action={'const': 'close'}, record_id=_text(128),
-                      outcome=_enum(*_CLOSE_OUTCOMES), reason=_text(1024), sources=_REFS))
-_SHAPES = dict(keep=_KEEP, replace=_REPLACE, close=_CLOSE)
-_LEVEL_PROPOSAL = {'anyOf': list(_SHAPES.values())}
-LEVEL_SHAPES = ('Valid shapes: keep {record_id, reason, sources}; close {record_id, outcome: achieved|failed|abandoned, '
-                'reason, sources}; replace {subgoal, previous: null | {record_id, outcome: achieved|failed|abandoned|revised, '
-                'reason, sources}}')
-_ABSTAIN = _object(dict(reason=_text(1024)))
+# The subgoal level's four terminal calls (interface v3). Each is one flat object using only the portable
+# schema keywords (type, enum, description, properties, required, items and the length/size/range bounds):
+# no const, anyOf, $ref, nested union or model-supplied constant. The model supplies neither a record id nor a
+# version; software resolves the one current level subgoal and stamps LEVEL_CONTRACT into what it stores.
+LEVEL_CONTRACT = 'player-level/3'
+LEVEL_COMMIT_SCHEMA = 'player-level-commit/3'
+LEVEL_ABSTAIN_SCHEMA = 'player-level-abstain/2'
+CLOSE_OUTCOMES = ('achieved', 'failed', 'abandoned')
+PREVIOUS_OUTCOMES = ('none', *CLOSE_OUTCOMES, 'revised')
+ABSTAIN_CODES = ('insufficient_evidence', 'transient_screen_state', 'no_change_needed', 'other')
+LEVEL_TERMINAL_TOOLS = ('player_level_keep', 'player_level_replace', 'player_level_close', 'player_level_abstain')
 
 
-def level_proposal(value: object) -> dict:
-    """The subgoal level's versioned commit proposal; the custodian binds its position."""
+def _described(schema: dict, description: str) -> dict:
+    return dict(schema, description=description)
+
+
+_LEVEL_SOURCES = _described(dict(type='array', items=_text(128), maxItems=16),
+                            'Ids of the log frames (source ids) that support this call; may be empty.')
+_LEVEL_KEEP = _object(dict(
+    reason=_described(_text(1024), 'Why the current subgoal still stands.'), sources=_LEVEL_SOURCES))
+_LEVEL_REPLACE = _object(dict(
+    text=_described(_text(2048), 'The new subgoal, one sentence that advances the mission objective.'),
+    expected_observations=_described(dict(type='array', items=_text(512), maxItems=8),
+                                     'Up to 8 observations that would show the subgoal is working.'),
+    status=_described(_enum('open', 'blocked'), 'open if it can be pursued now, blocked if something prevents it.'),
+    confidence=_described(dict(type='number', minimum=0, maximum=1), 'Your confidence from 0 to 1.'),
+    sources=_LEVEL_SOURCES,
+    previous_outcome=_described(_enum(*PREVIOUS_OUTCOMES),
+        'What happened to the subgoal this replaces; none exactly when there is no current subgoal.'),
+    previous_reason=_described(_text(1024, empty=True),
+        'Why that outcome; empty only when previous_outcome is none.')))
+_LEVEL_CLOSE = _object(dict(
+    outcome=_described(_enum(*CLOSE_OUTCOMES), 'How the current subgoal ended.'),
+    reason=_described(_text(1024), 'Why it ended that way.'), sources=_LEVEL_SOURCES))
+_LEVEL_ABSTAIN = _object(dict(
+    reason_code=_described(_enum(*ABSTAIN_CODES), 'The closed reason for ending the pass without a change.'),
+    reason=_described(_text(1024), 'One sentence of explanation.'), sources=_LEVEL_SOURCES))
+_LEVEL_SCHEMAS = dict(player_level_keep=_LEVEL_KEEP, player_level_replace=_LEVEL_REPLACE,
+                      player_level_close=_LEVEL_CLOSE, player_level_abstain=_LEVEL_ABSTAIN)
+
+
+def _brief(error: ValidationError) -> str:
+    path = '.'.join(str(part) for part in error.absolute_path) or 'arguments'
+    return f'{path}: {error.message}'[:240]
+
+
+def level_arguments(tool: str, value: object) -> dict:
+    """One terminal call's arguments, validated against its flat schema; the error names the field and rule."""
     result = json_object(value)
-    action = result.get('action')
-    if type(action) is not str or action not in _SHAPES:
-        raise PlayerError('A proposal action must be keep, close or replace')
-    validate_json(result, _SHAPES[action])
+    errors = sorted(Draft202012Validator(_LEVEL_SCHEMAS[tool]).iter_errors(result), key=lambda e: list(e.absolute_path))
+    if errors:
+        raise PlayerError(f'Invalid {tool} arguments - ' + '; '.join(_brief(e) for e in errors[:3]))
+    if not result['reason' if 'reason' in result else 'text'].strip():
+        raise PlayerError(f'Invalid {tool} arguments - {"reason" if "reason" in result else "text"}: must not be blank')
     return result
 
 
-def level_proposal_schema() -> dict:
-    return json_object(_LEVEL_PROPOSAL)
-
-
-def level_abstain(value: object) -> str:
-    """The reason a level pass ends without a proposal; nothing is written."""
-    result = json_object(value)
-    validate_json(result, _ABSTAIN)
-    if not result['reason'].strip():
-        raise PlayerError('An abstain reason must not be blank')
-    return result['reason']
-
-
-def level_abstain_schema() -> dict:
-    return json_object(_ABSTAIN)
+def level_tool_schema(tool: str) -> dict:
+    return json_object(_LEVEL_SCHEMAS[tool])
 
 
 def record(value: object) -> dict:
