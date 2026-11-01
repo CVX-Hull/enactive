@@ -79,7 +79,9 @@ kinds. Required semantics:
 | `level-pass` | Level role only, once after tool discovery. |
 | `level-commit` / `level-discard` | Level role only, per `player-level-commit/3` result of `player_level_keep`, `player_level_replace` or `player_level_close` (never for a local tool error, so a rejected call emits neither), with `action` (`keep`, `replace` or `close`), `reason`, `position`, `inputs_since`, `staleness_inputs`, `record_ids` and `kept`. Either one ends the pass. |
 | `level-abstain` | Level role only, per valid `player-level-abstain/2` result of `player_level_abstain` (never for a local tool error), with `request_id`, `tool_call_id`, `reason_code` and `reason`. It ends the pass. |
-| `level-reserved-request` | Level role only, once per request that offers only the terminal tools, with `request_id` and `offered_tools`. |
+| `level-uncertain` | Level role only, when a terminal tool's result is a `player-transport/1` unknown receipt (the adapter lost the response and, for a reader, offers no collecting tool), with `request_id`, `tool_call_id`, `tool` and `identity` (the receipt's operation id). It ends the pass, which settles `ok: false` with reason `level-uncertain`; the driver reconciles `identity` from the store afterwards. |
+| `level-terminal-call` | Level role only, per terminal tool call in an assistant message (at message end), with `request_id`, `tool_call_id`, `tool` and `arguments_error` (the arguments did not parse). A call with no matching `tool-start` was refused before dispatch. |
+| `level-reserved-request` | Level role only, once per logical request that offers only the terminal tools, with `request_id` (the logical request's first attempt), `logical_request_id` and `offered_tools`. |
 | `intent-tail` | Actor with a tail, per request, with `available`, `record_id`, `surfaced_bytes`, `omitted_bytes` and `age`. |
 | `request-start` | One per provider HTTP attempt, including failed and provider-only retries, with `request_id` `request-N` contiguous from 1 and never above `max_requests`. |
 | `response-complete` | Per completed attempt; `usage_available` is boolean and, when true, `usage.cost.total` carries the configured or provider estimate. Missing usage stays unknown. |
@@ -130,12 +132,28 @@ response, settles `ok: false` with reason `level-no-proposal`; a failure that wa
 latched (a provider error, the request limit or the deadline) keeps its own reason. The
 level's text is never read.
 
-**Reserved terminal requests.** On every request with two or fewer requests remaining
-(including that request) a level host declares only the four terminal tools to the
+**Lost transport on a terminal call.** A terminal tool whose response the adapter lost
+returns `player-transport/1` with `status: "unknown"` and `collect_with: null` (a reader
+has no collecting tool). The host emits `level-uncertain`, ends the pass with no further
+dispatch and settles `ok: false`, reason `level-uncertain`. Whether the call committed is
+known only to the player store; the driver reads the store's `service_operations` row for
+the identity after the pass (`committed` with its record ids, or `absent`: a discard
+writes no row, so a discarded call and one that never arrived are both `absent` and
+changed nothing) and counts it in the pass receipt. The identity is never replayed.
+
+**Reserved terminal requests.** Requests are counted as logical requests, one per
+inference request whatever its provider retries (`logical_request_id`
+`request-K`). On every logical request with two or fewer remaining (`max_requests - K + 1 <= 2`,
+including that request) a level host declares only the four terminal tools to the
 model, while the history and the executable tool set stay unchanged (the adapter's
-mechanism is in its README). Each such request emits `level-reserved-request` with
-`request_id` and `offered_tools`, and its resource status says that only the pass-ending
-tools are offered. A pass of two requests or fewer is terminal-only throughout. A
+mechanism is in its README). A provider retry resends its logical request's declarations
+and never moves the window; the HTTP attempt cap `max_requests` still bounds attempts, so
+retries can end the pass before the window is reached. Each such request emits
+`level-reserved-request` with `request_id`, `logical_request_id` and `offered_tools`, and
+its resource status says that only the pass-ending tools are offered. A non-terminal
+tool call on such a request is executable but refused without dispatch (`tool-refused`,
+reason `level-reserved`) with a message naming the four tools and ending in the fix line.
+A pass of two requests or fewer is terminal-only throughout. A
 terminal call refused (a validation or custodian error) on the last allowed request
 leaves no budget to repair it and settles `ok: false` with reason `level-final-refusal`,
 distinct from `request-limit` (the limit reached after an ordinary tool or a provider
@@ -146,8 +164,14 @@ tools name each failing field path, the rule, the allowed values or limits from 
 tool's schema and the received value truncated to 120 characters, then a minimal valid
 example call for that tool; a terminal tool's refusal ends with "Fix the call and resend
 it; abstaining is not the remedy for a fixable call." The `tool-validation-feedback`
-event retains the original SDK result, the call ID and the projected text. An actor's
-refusals are the SDK's own text.
+event retains the original SDK result, the call ID and the projected text. The
+`player_level_replace` example is followed by a line saying its `previous_outcome` of `none`
+is valid only when there is no current subgoal. A terminal call whose arguments the SDK
+changed (`tool-arguments-changed`) is refused naming the changed fields and ends with the
+same line, and so does every custodian refusal of a terminal call (wrong subgoal state,
+unavailable cited sources, source capacity, invalid arguments), which names the offending
+ids, sizes or limits and the valid action within the 600-character error bound. An
+actor's refusals are the SDK's own text.
 
 ## Settlement and handoff
 

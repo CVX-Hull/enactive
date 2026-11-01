@@ -169,12 +169,16 @@ success and grant no input authority. Recheck these SDK assumptions on upgrade.
 
 **Reserved terminal requests.** Pi 1.4.0 declares a request's tools through the transcript:
 the first system message carries `toolsAdded`. On a level pass's last two requests
-(`max_requests - requests <= 2`) the host's `streamFn` restricts those declarations to the
+(counted in logical requests, one per `streamFn` call and so unmoved by provider retries:
+`max_requests - logicalRequests <= 2`) the host's `streamFn` restricts those declarations to the
 four terminal tools for that request only, emits `level-reserved-request`, and the resource
 status says only the pass-ending tools are offered. Pi's OpenAI serializer has no
 `allowed_tools` option, and the route's Gemini conversion is undocumented, so the request
 body itself carries only the terminal tools. A terminal call refused on the last allowed
-request settles as `level-final-refusal`.
+request settles as `level-final-refusal`. `beforeToolCall` refuses a non-terminal call on a
+reserved request (`tool-refused`, reason `level-reserved`). A terminal tool's
+`player-transport/1` unknown receipt ends the pass as `level-uncertain`, and every terminal
+call is traced as `level-terminal-call`.
 
 For nonreasoning models effort must be `off`. For reasoning models the selected
 Pi effort (`off`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`) must have a

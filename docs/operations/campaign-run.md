@@ -69,7 +69,8 @@ discards, or on a valid `player_level_abstain`
 (see the [host contract](../contracts/player-host.md#roles-and-the-intent-tail)); one
 that ends otherwise is counted as a failed pass with its settled reason, for example
 `level-no-proposal`, or `level-final-refusal` when a terminal call was refused on the
-pass's last allowed request. Its last two requests offer only the terminal tools. It also ends at its allowance or `pass_seconds`, and is
+pass's last allowed request, or `level-uncertain` when a terminal call's response was lost
+(reconciled from the store afterwards). Its last two logical requests offer only the terminal tools. It also ends at its allowance or `pass_seconds`, and is
 closed on its actor's stop, Pause or handoff; no successor is minted unless every pass's
 exact process group is confirmed absent. Its attempts are charged like an actor's; an
 unaccounted pass is charged its whole allocation. A level failure (a malformed trace, a
@@ -276,7 +277,10 @@ The `player-driver/5` disposition embedded in it reports, per actor, the level's
 `commits` (with `keeps`, `replaces` and `closes`), `discards`, `abstains` (with
 `abstain_codes` by reason code and `start_abstains` counted separately),
 `failed_passes` (unsettled or `ok: false`) and `final_refusals`, and every pass's settled
-reason; the driver total adds `level_failed_passes` and `level_final_refusals`. `/4` added
+reason, plus `uncertain_terminals` (with `uncertain_committed` and `uncertain_absent`) for
+terminal calls whose response was lost, each pass recording the reconciled identity;
+the driver total adds `level_failed_passes`, `level_final_refusals` and
+`level_uncertain_terminals`. `/4` added
 the abstain count and the events' `action`; `/5` added the per-tool and per-code counts and
 the final refusals. Earlier driver schemas are rejected by the readers.
 

@@ -41,8 +41,11 @@ the refusal never named the expected value.
 - **The reader profile shrinks** to `player_log_read`, `player_source` and the four
   terminal tools, since the pushed input already carries the current subgoal and the count
   of level records in player memory.
-- **The last two requests of a pass offer only the terminal tools,** and a terminal call
-  refused on the last allowed request settles as `level-final-refusal`.
+- **The last two logical requests of a pass offer only the terminal tools** (a provider
+  retry reuses its request's declarations and does not move the window), a non-terminal
+  call on them is refused without dispatch, and a terminal call refused on the last
+  allowed request settles as `level-final-refusal`. A terminal call whose response the
+  adapter lost ends the pass as `level-uncertain`; the driver reconciles it from the store.
 - **Refusals name the failing field, the rule, the allowed values and a valid example
   call,** and say that abstaining is not the remedy for a fixable call.
 - **Pre-spend checks:** a zero-token contract test of the production request, and a
@@ -173,12 +176,20 @@ The custodian's per-class allowlist enforces this profile as well as the host's
   - **Forced tool calls.** The level host sends `tool_choice: required` on every
     request, so the model cannot end in prose. The level's text is discarded and
     shown to no one; only the four terminal calls below count.
-  - **Reserved terminal requests.** On every request with two or fewer requests
-    remaining, including that request, the host declares only the four terminal tools
+  - **Reserved terminal requests.** Requests count as logical requests (one per inference
+    request, however many HTTP attempts its retries use). On every logical request with
+    two or fewer remaining, including that request, the host declares only the four terminal tools
     (it restricts the request's tool declarations; the history and the executable tool set
     are unchanged) and says so in the request's resource status. This reserves a repair
     slot for a refused call. A terminal call refused on the last allowed request settles
-    as `level-final-refusal`, a counted outcome distinct from `request-limit`.
+    as `level-final-refusal`, a counted outcome distinct from `request-limit`. A
+    non-terminal call on a reserved request is refused without dispatch.
+  - **Lost transport and persisted records.** A reader terminal tool has no collecting
+    tool, so a `player-transport/1` unknown receipt on it ends the pass (`level-uncertain`);
+    the driver reads the store's `service_operations` row for the identity afterwards
+    (`committed` or `absent`; a discard writes no row) and counts it. Minting a reader
+    refuses a store whose current level Work lacks `data.level_contract == "player-level/3"`
+    (S-MIGRATION: migrate or start a fresh player store); nothing converts an older record.
   - **What ends a pass.** The pass ends after a `player_level_keep`,
     `player_level_replace` or `player_level_close` that software commits or discards, or
     after a valid `player_level_abstain`. A call rejected as a fixable tool error does
