@@ -62,7 +62,7 @@ screen alphabets. On the interface-mode alphabet, at labeller disagreement 3.1% 
 the action predicts the next state (a predictive claim only), there is no two-set slow split
 with τ ≥ 40 at this alphabet resolution (τ ≈ 20 not excluded), and memory beyond one step is
 indeterminate under label noise. Collection resumed after one provider failure before the
-owner was consulted (runs 02–10), a recorded procedural deviation. It is a method calibration; nothing
+owner was consulted (runs 02–10), a procedural deviation the owner accepted. It is a method calibration; nothing
 from it enters the player.
 
 The [architecture](architecture.md) explains ownership, the

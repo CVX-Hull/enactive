@@ -38,7 +38,7 @@ On the 5-symbol location alphabet A2 every result is descriptive or uninformativ
 pre-registered. The guards held: 37 complete runs, 2,605 transitions, κ 0.96 (A1) and 0.87
 (A2). **#320 spent $95.49 actual of its $120 cap.** One procedural deviation is recorded:
 collection resumed after run 01's failure on the lead's reading, before the owner was
-consulted (see [Deviations and failures](#deviations-and-failures)).
+consulted. The owner accepted it (see [Deviations and failures](#deviations-and-failures)).
 
 ![The #320 method: frozen state, unchanged player, two labellers, a disagreement gate and the frozen analysis.](../diagrams/transition-corpus.svg)
 
@@ -198,11 +198,13 @@ Proposed next steps are on #319; they are proposals, not pre-registered readings
   run 02 launched at 01:57:31. The owner was not consulted first. After runs 02–07 the lead
   started the driver again at 02:58 for runs 08 onward, still without consulting the owner.
   Runs 02–09 had completed and run 10 was in progress when the owner's decision "Finish #320",
-  which continued collection under v3 unchanged, was recorded on #320 at 03:26:45 UTC. For overnight running the owner then set
-  "Stop and wait": any incomplete run stops collection for an owner decision. No frozen input,
-  rule, threshold or guard changed, and no further incomplete run occurred. This is recorded
-  as a procedural deviation for the owner to classify. The checkpoints on #320 that said
-  "no deviations" are corrected there.
+  which continued collection under v3 unchanged, was recorded on #320 at 03:26:45 UTC. For
+  overnight running the owner then set "Stop and wait": any incomplete run stops collection
+  for an owner decision. No frozen input, rule, threshold or guard changed, and no further
+  incomplete run occurred. Excluding runs 02–10 would leave 28 runs and 1,974 transitions,
+  below the 2,000-transition guard. **Owner classification (1 November 2026): accepted** as
+  a procedural deviation ratified by "Finish #320"; the results stand on all 37 complete
+  runs. The checkpoints on #320 that said "no deviations" are corrected there.
 - **Failures:** run 01's provider error, above. No check gap exceeded 45 s; no restore, verify
   or build failed.
 
