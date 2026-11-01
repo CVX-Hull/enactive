@@ -11,6 +11,38 @@ Owner: lead. Evidence reviewed: 2026-10-17. Refresh at controller redesign or
 release if older than 90 days. Sources below distinguish observed findings from
 our engineering inferences; they are not a claim to exhaust the literature.
 
+## Research method for the player architecture
+
+Owner direction, 31 October 2026, from the
+[#319](https://github.com/CVX-Hull/enactive/issues/319) discussion. It applies to
+research on the player's levels, memory, objectives and models:
+
+- **Research, not engineering.** Work produces hypotheses with named alternatives and
+  discriminating tests, not a design to implement. No design is accepted or
+  implemented before discussion with the owner.
+- **Structure first, across fields.** State the required properties first, then look
+  for the fields and mathematics that have that structure, and translate them.
+  Breadth comes before depth, to avoid tunnel vision. Recent agent and LLM work
+  is one source among many, not the default; category theory was named only as an
+  analogy for this cross-field translation.
+- **Optimizable and connected.** A representation must support some form of
+  optimization. Isolated concepts with no connections cannot be optimized, so name
+  the signals that enable optimization, and the relationships between concepts
+  that let one signal serve several mechanisms.
+- **Self-directed objectives.** In games the objective is generally neither to
+  predict nor to explain. Objectives may be set by the player itself; viability is
+  a constraint, and aspirations are chosen preferences expressed in grounded
+  variables.
+- **Well-defined model calls.** An LLM call must have a defined role, for example a
+  measurement instrument under a grounding contract (declared symbols, scale type,
+  testable axioms, an error model) or a proposer of a finite menu that mathematics
+  scores. Model choice is per role, scored by that role's contract.
+- **Evidence discipline.** Pre-register paid tests; check a metric's power and its
+  false-positive control by simulation before freezing it; record deviations; and
+  report null results plainly. Tag every source's read scope. Only full reads
+  support conclusions. Make research digestible, with diagrams and worked
+  examples.
+
 ## Engineering
 
 The authoritative [engineering research synthesis](research-engineering.md) records
