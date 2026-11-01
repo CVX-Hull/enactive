@@ -79,7 +79,8 @@ aside > section, .stage, .diagnostics { background: var(--surface); border: 1px 
 .frame-shell.actual-pixels { display: block; }
 .frame-shell.actual-pixels img { width: auto !important; max-width: none; image-rendering: pixelated; }
 #frame-note, #inspection-frame-note { margin: 0; padding: var(--s2) var(--s3); font-size: .82rem; text-align: center; color: var(--faint); }
-.frame-shell:has(img:not([hidden])) #frame-note { display: none; }
+/* Under a displayed image the note becomes a caption; it is never hidden, because it says whether the pixels are retained. */
+.frame-shell img:not([hidden]) + p { text-align: left; font-size: .76rem; padding: var(--s1) var(--s2); background: #0a0f0f; }
 .frame-facts { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--s1) var(--s4); padding: var(--s2) var(--s1) 0; }
 .frame-facts p { margin: 0; font-size: .82rem; }
 .age { color: var(--muted); }
@@ -91,6 +92,8 @@ details[open] > summary { margin-bottom: var(--s1); }
 .explain { border-top: 0; margin-top: var(--s2); padding-top: 0; }
 .explain summary { color: var(--faint); }
 .explain .hint { margin: var(--s1) 0; }
+.badge.passive { color: var(--muted); border-color: var(--border-strong); margin-left: var(--s2); vertical-align: middle; font-weight: 500; }
+.chip-label { color: var(--faint); }
 .badge { font-size: .68rem; letter-spacing: .06em; text-transform: uppercase; color: var(--warn); border: 1px solid #6b5a33; border-radius: 999px; padding: .05rem .5rem; }
 #latest-statement { margin: 0; font-size: .98rem; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 18rem; overflow-y: auto; padding-left: var(--s3); border-left: 2px solid var(--border-strong); }
 .since { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); }
@@ -150,19 +153,17 @@ footer { max-width: 1440px; margin: auto; padding: var(--s4) var(--s5) var(--s6)
   .stop-control { flex: 0 1 15rem; }
   #pause { padding: .45rem .7rem; }
 }
-/* On phones the bar would cover too much of the screen, so it scrolls with the page; Pause stays first in reading order. */
+/* On phones the bar would cover too much of the screen, so it scrolls with the page; visual order follows DOM order. */
 @media (max-width: 700px) {
   .control-bar { position: static; flex-wrap: wrap; }
-  .current-state { order: 2; flex-basis: 100%; }
-  .stop-control { margin-left: auto; }
+  .current-state, .stop-control { flex-basis: 100%; }
   .timeline-layout { grid-template-columns: 1fr; }
   #activity-list { max-height: 40vh; }
   .control-bar, .observer-messages, .view-tabs, .timeline-panel, .analysis-panel { padding-left: var(--s4); padding-right: var(--s4); }
   main { padding: var(--s4); }
 }
 @media (max-width: 500px) {
-  .stop-control { flex-basis: 100%; margin-left: 0; }
-  #control-freshness, .control-provenance { display: none; }
+  .control-provenance { display: none; } /* The full session id stays in Diagnostics. */
   main { padding: var(--s3); gap: var(--s3); }
   aside > section, .stage { padding: var(--s3); }
   dl { grid-template-columns: 1fr; }

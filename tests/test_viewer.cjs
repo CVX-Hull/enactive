@@ -132,6 +132,10 @@ const text = id => {
   assert.match(text('source-details'), /10, 20, 780, 560/);
   assert.match(text('source-details'), new RegExp(String(one.presented_ms)));
   assert.match(text('source-details'), new RegExp(String(one.received_wall)));
+  assert.match(text('source-age'), /^Presented 0\.5 s ago · received 0\.2 s ago$/);
+  epoch -= 1000; run('renderFrameNote("Captured pixels decoded and placed in the DOM; physical paint unmeasured.")');
+  assert.match(text('source-age'), /-0\.5 s ago.*negative: the clocks differ/, 'A negative age carries its clock caveat inline');
+  epoch += 1000; run('renderFrameNote("Captured pixels decoded and placed in the DOM; physical paint unmeasured.")');
   const first = JSON.parse(run('JSON.stringify(observerMeasurementSnapshot().rows[0])'));
   assert.deepEqual(first, {session: one.session, source_id: one.source_id, capture_id: 1,
     presented_ms: one.presented_ms, observed_at_wall_ms: epoch - 30,
@@ -172,10 +176,12 @@ const text = id => {
   request('/api/status').reject(new Error('offline')); await tick();
   assert.match(text('connection'), /unavailable/i);
   assert.equal(element('connection')['data-state'], 'error', 'The status dot follows the outage');
+  assert.match(text('control-freshness'), /current state unknown/);
   assert.match(text('status-error'), /offline/);
   assert.match(text('frame-note'), /retained.*status unavailable/i);
   assert.equal(requests.length, 0);
   await poll(status(null));
+  assert.equal(element('connection')['data-state'], 'ok', 'The status dot recovers with status');
   assert.equal(element('frame').hidden, true);
   assert.match(text('frame-note'), /no.*source/i);
   await poll(status(null), false);
@@ -320,9 +326,9 @@ const text = id => {
   const feed = element('recent-activity').children;
   assert.equal(feed.length, 2);
   assert.match(text('recent-activity'), /^\s*Model request started/, 'The feed lists the newest entry first');
-  assert.equal(feed[0].children[1].textContent, '0 s ago');
-  await activityPoll(activity([b], {entries: [{...b, created_wall: epoch / 1000 + 4}]}));
-  assert.equal(element('recent-activity').children[0].children[1].textContent, '-4 s ago', 'A clock difference stays visible, never clamped to zero');
+  assert.equal(feed[0].children[1].textContent, new Date(epoch).toISOString().slice(11, 19) + ' UTC', 'Rows show the recorded clock time, which cannot go stale');
+  await activityPoll(activity([{...b, created_wall: null}]));
+  assert.equal(element('recent-activity').children[0].children[1].textContent, 'time unreported', 'A missing time never gains a unit');
   await activityPoll(activity([]));
   assert.match(text('recent-activity'), /No use observed.*missing coverage is unknown/);
 
@@ -472,6 +478,8 @@ const text = id => {
   // response that was already in flight. Missing coverage remains explicit.
   run('void refreshActivity()'); const staleActivity=request('/api/activity');
   await poll(status(null,{session:'session-seven',stop:{}}));
+  assert.equal(element('recent-activity').children.length, 1, 'A session change clears the previous feed');
+  assert.match(text('recent-activity'), /No current-session activity available/);
   assert.equal(element('timeline-session').value,'unavailable','Evicted inspection cannot be labelled as the current session');
   await reply(staleActivity,activity([a]));
   assert.match(text('activity-summary'),/not yet received/);
@@ -592,6 +600,13 @@ const text = id => {
   assert.match(css, /\.frame-shell \{[^}]*min-height:/, 'The image region reserves space, so arriving pixels do not shift layout');
   assert.match(css, /button:focus-visible[^{]*\{[^}]*outline: 3px/, 'Focus stays visible');
   assert.match(css, /@media \(max-width: 500px\)/, 'A narrow-width layout exists');
+  // Qualifiers may be restyled but never hidden by the stylesheet, at any width.
+  const hidingSelectors = [...css.matchAll(/([^{}]+)\{[^}]*(?:display:\s*none|visibility:\s*hidden)/g)].map(match => match[1]);
+  for (const id of ['frame-note', 'control-freshness', 'statement-meta', 'source-age', 'frame-change', 'activity-summary', 'stop-state', 'connection'])
+    assert.ok(!hidingSelectors.some(selector => selector.includes(`#${id}`)), `No stylesheet rule hides #${id}`);
+  assert.doesNotMatch(css, /:has\(/, 'No state-dependent selector can hide a qualifier');
+  for (const id of ['statement-meta', 'control-freshness', 'frame-change', 'source-age'])
+    assert.ok(!/<details[^>]*>(?:(?!<\/details>).)*$/s.test(html.slice(0, html.indexOf(`id="${id}"`))), `#${id} is visible, not inside a closed disclosure`);
   // Status is carried by text, never colour alone: every status region starts with text content.
   for (const id of ['connection', 'stop-state', 'frame-change']) assert.match(html, new RegExp(`id="${id}"[^>]*>[A-Z][^<]+<`), `${id} has initial text`);
 

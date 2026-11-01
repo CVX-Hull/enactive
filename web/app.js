@@ -35,6 +35,11 @@ const wallTime = seconds => {
   const date = new Date(seconds * 1000);
   return Number.isFinite(date.valueOf()) ? date.toISOString().replace('T', ' ').replace('Z', ' UTC') : 'invalid clock';
 };
+const clockTime = seconds => {
+  const full = wallTime(seconds);
+  if (/UTC$/.test(full)) return `${full.slice(11, 19)} UTC`;
+  return full === 'unreported' ? 'time unreported' : full;
+};
 
 // One finite watchdog covers HTTP, body consumption and image decode. An aborted
 // or superseded request cannot later replace a source's metadata or pixels.
@@ -261,8 +266,8 @@ function renderFrameNote(message) {
   const source = displayed.source;
   const age = (Date.now() - source.presented_ms) / 1000;
   const receiptAge = Date.now() / 1000 - source.received_wall;
-  // The clock caveat for these wall-clock ages lives in "What this view shows".
-  show('source-age', `Presented ${age.toFixed(1)} s ago · received ${receiptAge.toFixed(1)} s ago`);
+  // The full clock caveat lives in "What this view shows"; a negative age states it inline.
+  show('source-age', `Presented ${age.toFixed(1)} s ago · received ${receiptAge.toFixed(1)} s ago${age < 0 || receiptAge < 0 ? ' · negative: the clocks differ' : ''}`);
   show('source-details', `Session: ${source.session}\nSource: ${source.source_id}\nCapture: ${source.capture_id}\nSHA-256: ${source.sha256}\nOriginal presented_ms: ${source.presented_ms}\nOriginal received_wall: ${source.received_wall}\nPNG: ${source.width} × ${source.height} · native window: ${source.window_width} × ${source.window_height}\nViewport: [${source.viewport.join(', ')}]`);
 }
 function clearDisplayed() {
@@ -445,9 +450,9 @@ function renderRecentActivity(entries, emptyText) {
     title.textContent = entryTitle(entry);
     const when = document.createElement('span');
     when.className = 'when';
-    const age = Date.now() / 1000 - entry.created_wall;
-    // Unclamped like the frame ages: a negative value shows a clock difference rather than hiding it.
-    when.textContent = Number.isFinite(age) ? `${Math.round(age)} s ago` : 'time unreported';
+    // The recorded clock time, not a relative age: it cannot go stale during an
+    // outage and needs no browser-clock comparison.
+    when.textContent = clockTime(entry.created_wall);
     row.append(title, when);
     return row;
   });
