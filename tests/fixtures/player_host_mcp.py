@@ -1,4 +1,4 @@
-"""Offline MCP double for player-host/5 tests (player-handoff/2 issuances), using the maintained Python MCP server.
+"""Offline MCP double for player-host/6 tests (player-handoff/2 issuances), using the maintained Python MCP server.
 
 Shared by the adapter node tests and the adapter-agnostic contract suite."""
 import json
@@ -138,19 +138,26 @@ async def player_handoff(mode: str = "complete") -> CallToolResult:
     return CallToolResult(content=content, isError=mode in ("error", "not-admitted"))
 
 
+SUBGOAL = "8" * 32
+
+
 @server.tool()
-async def player_log_read(after: int, limit: int) -> CallToolResult:
-    record(dict(tool="player_log_read", after=after, limit=limit))
-    value = dict(schema="player-log/1", session=SESSION, actor_id=ACTOR, after=after, entries=[dict(position=after + 1,
-        operation_id=OPERATION, kind="input", actions=[], status="completed", source_id=None)], handoff=False,
-        grants_authority=False)
-    return CallToolResult(content=[TextContent(type="text", text=json.dumps(value))])
+async def player_source(source_id: str) -> CallToolResult:
+    """The retained frame of `source_id`; "missing" is a refused read and "no-image" returns text only."""
+    record(dict(tool="player_source", source_id=source_id))
+    if source_id == "missing":
+        return CallToolResult(content=[TextContent(type="text", text="Source unavailable")], isError=True)
+    meta = TextContent(type="text", text=json.dumps(dict(schema="player-source-read/1", source=dict(source_id=source_id))))
+    if source_id == "no-image":
+        return CallToolResult(content=[meta])
+    return CallToolResult(content=[meta, ImageContent(type="image", data=PNG, mimeType="image/png")])
 
 
 def level_receipt(action, committed):
-    return dict(schema="player-level-commit/3", status="committed" if committed else "discarded", action=action,
-        reason=None if committed else "Served actor moved at least S inputs past the read", position=3,
-        inputs_since=1 if committed else 11, staleness_inputs=10,
+    return dict(schema="player-level-commit/4", status="committed" if committed else "discarded", action=action,
+        reason=None if committed else "Served actor moved at least S inputs past the bound", position=3,
+        inputs_since=1 if committed else 11, staleness_inputs=10, subgoal_id=SUBGOAL,
+        derived=dict(observations=["seen", "not_yet"], stalled=False) if committed else None,
         records=[dict(id="7" * 32)] if committed else [], kept=[])
 
 
@@ -201,13 +208,42 @@ async def player_level_abstain(reason_code: str, reason: str, sources: list[str]
     return receipt_result(value)
 
 
+def episode_receipt(schema, settled):
+    return dict(schema=schema, status=settled, settled=settled, first_position=4, last_position=9, subgoal_id=SUBGOAL,
+        counted=settled == "recorded", closed=False, observations=["seen", "not_yet"] if settled == "recorded" else None,
+        stalled=False if settled == "recorded" else None, records=[dict(id="9" * 32)])
+
+
+@server.tool()
+async def player_episode_record(attempted: str, counterpart: str, observation_status: list[str], changed: str, residual: str,
+                                confidence: float, sources: list[str]) -> CallToolResult:
+    """A record settles the episode; a blank attempt is a rejected (isError) call and "lost transport" is the adapter's unknown receipt."""
+    record(dict(tool="player_episode_record"))
+    if attempted == "lost transport":
+        return receipt_result(dict(schema="player-transport/1", operation_id=OPERATION, session=SESSION, actor_id=ACTOR,
+            kind="player_episode_record", status="unknown", reason="timed out", collect_with=None, input_replayed=False))
+    if not attempted.strip():
+        return rejected("Invalid player_episode_record arguments - attempted: must not be blank")
+    return receipt_result(episode_receipt("player-episode-record/1", "recorded"))
+
+
+@server.tool()
+async def player_episode_abstain(reason_code: str, reason: str, sources: list[str]) -> CallToolResult:
+    """A non-blank reason abstains and settles the episode; a blank one is a rejected (isError) call."""
+    record(dict(tool="player_episode_abstain"))
+    if not reason.strip():
+        return rejected("Invalid player_episode_abstain arguments - reason: must not be blank")
+    return receipt_result(episode_receipt("player-episode-abstain/1", "abstained"))
+
+
 @server.tool()
 async def player_intent() -> CallToolResult:
     """Host-internal read; `intent.json` beside the call log selects its reply ("error" fails)."""
     record(dict(tool="player_intent"))
     selected = LOG.with_name("intent.json")
-    text = selected.read_text() if selected.exists() else json.dumps(dict(schema="player-intent/1", session=SESSION,
-        actor_id=ACTOR, record=None, age=None, grants_authority=False))
+    text = selected.read_text() if selected.exists() else json.dumps(dict(schema="player-intent/2", session=SESSION,
+        actor_id=ACTOR, audience="tail", pass_index=0, subgoal=None, age=None, recall=dict(basis="recent", items=[]),
+        grants_authority=False))
     return CallToolResult(content=[TextContent(type="text", text=text)], isError=text == "error")
 
 
