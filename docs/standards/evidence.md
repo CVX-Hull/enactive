@@ -46,11 +46,11 @@ remembered knowledge. Prior knowledge of the lead or of an agent is a hypothesis
 to verify, never evidence. Sources on LLM and agent methods are read critically:
 the synthesis records what each source measured, against which baseline,
 whether the comparison matched budget (compute, calls or tokens), and whether
-its idea restates earlier work from another field.
-Vendor-reported, synthetic, single-run or unreplicated results are flagged and
-do not alone justify a design decision. Briefs for delegated research pose the
-questions and may name foundational sources, but not the current sources to rely
-on; the synthesis records each brief's questions and any sources it named.
+its idea restates earlier work from another field. Vendor-reported, synthetic,
+single-run or unreplicated results are flagged and do not alone justify a
+design decision. Briefs for delegated research pose the questions and may name
+foundational sources, but not the current sources to rely on; the synthesis
+records each brief's questions and any sources it named.
 
 C-REVIEW checks the pre-registration before spending, and both paragraphs at the
 reporting checkpoint.

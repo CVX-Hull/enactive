@@ -161,8 +161,8 @@ competing ones while they predict differently. A representation states what is
 optimized and checked, not how the player searches or learns; classical
 components inside the player still meet the conditions above. Each LLM or agent
 call fills a defined role in a representation, meaning the part it proposes,
-evaluates or estimates and what checks its output, and is justified against it;
-it does not replace it.
+evaluates or estimates and what checks its output, and is justified against that
+representation; the call does not replace it.
 
 ## P-KNOWLEDGE Maintain trustworthy knowledge and evidence
 
