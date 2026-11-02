@@ -23,7 +23,7 @@ and are not reproduced by these tools. None calls a provider, sends a game input
 | [`tools/level_stage_analysis.py`](../../tools/level_stage_analysis.py) | The mechanical measures of a level stage from retained artifacts: pass and attempt classes, commit rate with a run-clustered bootstrap, receipt and store cross-checks, custody, refusal circuit breaker and clean-exit inclusion. Decision thresholds come from the stage's frozen criteria file. | The level and recorder lanes of `player-driver/6` and the `player-level/4` store records, named explicitly. |
 | [`tools/intent_audit.py`](../../tools/intent_audit.py) | Blind audit packets (session id replaced by an audit id, key held beside the audited directory) and the frozen label table, agreement and reading. It labels nothing itself. | Committed level `replace` records of the current contract. |
 | [`tools/sequence_lenses.py`](../../tools/sequence_lenses.py) | Memory depth by leave-one-run-out Witten-Bell log-loss, Lempel-Ziv repetition, recurrence and cross-recurrence, planted-replay power gates. | None; symbols, tokens and distance matrices in, numbers out. |
-| [`tools/evidence_stats.py`](../../tools/evidence_stats.py) | Nearest-rank quantiles, run-clustered percentile bootstrap, Cohen's kappa, Gwet's AC1, positive agreement. | None. |
+| [`tools/evidence_stats.py`](../../tools/evidence_stats.py) | Nearest-rank quantiles, run-clustered percentile bootstrap, Cohen's kappa, Gwet's AC1, positive agreement, one-sided Student-t bounds and p (`one_sided_t`), Wilson upper bound, Holm step-down. | None. |
 
 The [testing page](../testing.md) lists what each test file asserts and its limits.
 
