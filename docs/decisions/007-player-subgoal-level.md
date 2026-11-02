@@ -10,8 +10,9 @@ scope: Accepted direction for a multi-level player (an acting real-time player a
 
 **Status: accepted direction; not delivered.** The owner agreed draft 4 on 31
 October 2026 (evening EDT): "Agree, shape the slice" (recorded on
-[#319](https://github.com/CVX-Hull/enactive/issues/319)). Nothing in it is
-implemented.
+[#319](https://github.com/CVX-Hull/enactive/issues/319)). Nothing is on main.
+Interface v3 is built on the unmerged candidate branch, and level v4 is
+designed below.
 - **The current standards and contracts still govern the running system.**
 - **The supersession map is applied later.** The documents it lists are amended
   when the first slice meets its adoption condition, together with that migration.
@@ -66,9 +67,14 @@ recommendations and directions". The evidence is on
 [Level v4](#level-v4-the-episodic-outcome-level) changes what the level reads, what it is
 told and how subgoals end. It also designs the
 [recursive memory pattern](#recursive-memory-designed) and the
-[label-evolution role](#label-evolution-designed). The sections between here and level v4
-still describe interface v3 as built on the candidate. [#346](https://github.com/CVX-Hull/enactive/issues/346)
-builds v4 and folds it into them.
+[label-evolution role](#label-evolution-designed).
+
+**Current state.** Interface v3 is built and evidenced on `adr7-candidate`; nothing is on main.
+
+**Replacement.** The owner's direction is "good design instead of maintaining legacy code or
+approaches", and readers may be added as needed. So [#346](https://github.com/CVX-Hull/enactive/issues/346)
+replaces v3's mechanisms outright (S-MIGRATION), with no compatibility paths, and folds v4 into
+every section. Until then, every section outside the #344 blocks describes v3 as built.
 
 This is draft 4.
 - **Draft 1** had the real-time player write its own memory. That conflicted with
@@ -155,6 +161,10 @@ The custodian's per-class allowlist enforces this profile as well as the host's
 `enabled_tools`.
 
 ## The subgoal level
+
+*This section describes interface v3 as built on the candidate. [Level v4](#level-v4-the-episodic-outcome-level)
+replaces its pushed input, binding, waking, revalidation and publication, and removes
+`player_log_read`.*
 
 - **Capability.** A new **reader** class in computer control, enforced by a
   per-class tool allowlist in `Application.call`, not only by `_guard`:
@@ -298,99 +308,182 @@ restate it. In lens terms it was a stride-1 level: its view of the past was the 
   with what result was lost at each session boundary.
 
 **v4 keeps:**
-- the reader class and its custody;
-- the software-mediated commit, with the position bound and the staleness check S;
-- the four terminal tools and the portable schema rules;
+- one input writer, the actor;
+- one memory writer, the custodian's commit path;
+- the software-mediated commit and its staleness check S, with a new binding (item 4);
+- the four level terminal tools and the portable schema rules;
 - the forced tool calls and reserved terminal requests;
-- the narrowed actor profile and the actor's sole input authority;
-- the intent bound (about 1 KB).
+- the narrowed actor profile;
+- the intent bound of about 1 KB.
 
-**v4 changes five things:**
+**v4 changes five things.** All mechanical state below is computed by software, and the LLM
+roles only propose. The architecture review found 21 issues with the first draft of this
+section (`2d3d397`); this text resolves them.
 
-1. **Episode cutter.** Software in the playing system, the campaign driver, never in
+1. **Episode cutter.** Software in the playing system, the campaign driver, never
    `harness/computer`. It reads the session's captures as player-visible sources.
-   - **Distance:** each capture becomes a 32 × 20 greyscale box-pooled thumbnail. The distance
-     between consecutive captures is the mean absolute pixel difference divided by 255.
-   - **When an episode closes:**
-     - **on a screen change:** the distance reaches the calibrated threshold θ and the episode
-       has at least *m* inputs; or
-     - **at the cap:** when it reaches *C* inputs. *C* = K = 10, so the longest gap between
-       level wakes is unchanged.
-   - **Boundaries are frozen** once written and never recomputed.
-   - **These are the only triggers,** and both are mechanical. ADR006's computer-control
-     boundary and the no-game-semantics rule are kept.
-2. **Episode recorder,** a new reader role: one LLM pass per closed episode.
-   - **Pushed input:** the episode's log entries and source ids, its first and last frames, and
-     the current subgoal with its expected observations, in order.
-   - **Reader profile:** `player_source`, `player_episode_record` and `player_episode_abstain`.
+   - **Distance.** Each capture becomes a 32 × 20 greyscale box-pooled thumbnail. The distance d
+     of an input is the mean absolute pixel difference, divided by 255, between that input's
+     result capture and the previous input's result capture. An input with no result capture
+     yet (pending or unknown) has no distance and cannot close an episode.
+   - **Closure.**
+     - **On content:** an episode closes after input *i* when d(*i*) ≥ θ and the episode holds
+       at least *m* inputs. The input that crosses θ is the first input of the next episode, so
+       an episode ends on the last stable screen.
+     - **At the cap:** an episode closes when it holds C = K inputs.
+     - **Mechanically at session edges:** an episode also closes at a handoff, a stop or the
+       session's end, so the last partial episode is still recorded.
+   - **Frozen boundaries.** Boundaries are frozen once written and never recomputed.
+   - **No game semantics.** Every trigger is mechanical, and ADR006 and the no-game-semantics
+     rule hold. θ is fitted per game by one game-independent procedure from player-visible
+     captures (P-GENERALITY).
+2. **Episode recorder.** A second reader per actor, with its own role: one LLM pass per closed
+   episode.
+   - **Custody.**
+     - `computer-session/2` becomes `/3`: the `one_reader_per_actor` index becomes unique on
+       (served actor, role), and an `actors.reader_role` column holds `level` or `recorder`.
+     - Write authorization admits a recorder only for `player_episode_record`.
+     - Both readers keep the reader stage's exclusions from `add_actor` and `max_actors`.
+   - **Pushed input** (made by the driver under `Application.serial`):
+     - the episode's operations, as key tokens and positions;
+     - its first and last frames, as image parts with their source ids;
+     - the id, text and ordered expected observations of the subgoal current at the episode's
+       first input.
+   - **Reader profile:** `player_source`, `player_episode_record` and
+     `player_episode_abstain`.
    - **`player_episode_record(attempted, counterpart, observation_status, residual,
      confidence, sources)`:**
-     - `observation_status` is an array of `seen`, `not_yet` or `contradicted`, aligned with
-       the subgoal's expected observations; its length must match, or it is empty when there is
-       no subgoal;
-     - `counterpart` and `residual` may be empty strings;
-     - every field is required, and the schema is flat.
-   - **`player_episode_abstain(reason_code, reason, sources)`** uses v3's closed reason codes.
-   - **Storage:** software stores each record as a `claim` with `data.level == "episode"` and
-     `data.level_contract == "player-episode/1"`. It carries the episode's position range,
-     session and provenance. A later contradiction demotes a record by a correction; nothing
-     is deleted.
-   - **Format:** `player-record/1` and `player-memory/1` are unchanged.
-3. **Software closure and stall** for the current subgoal, counted only over episodes committed
-   after the subgoal.
-   - **Closure.** When every expected observation has a `seen` mark with sources, and none has a
-     later `contradicted` mark, software appends the closing correction: outcome `achieved`,
-     with the sources of the seen marks and `data.by == "software"`.
-   - **Contradiction.** A `contradicted` mark sets that observation's status. The next level
-     pass is told so and must replace, close or keep with a reason that cites it.
-   - **Stall.** After the stall test fires, the subgoal is **stalled**. A keep or an abstain is
-     then a fixable tool error that names `player_level_replace` and `player_level_close`.
-     - The default test is N consecutive committed episodes with no newly seen observation.
-     - #345 calibrates N, and may choose an anytime-valid e-process instead if it does better at
-       an equal false-alarm rate.
-   - **Contract:** this is `player-level/3` to `/4`. Level records carry the per-observation
-     status, the stalled flag and the software attribution. Minting a reader refuses a store
-     whose current level Work is not `/4`; migrate, or start a fresh store.
-4. **Subgoal level v4.** Its pushed input is closed episodes and software counts, never the
-   actor's raw log:
-   - the episode records committed since its last pass;
-   - the current subgoal, with each observation's status and the stalled flag;
-   - counts per subgoal: episodes, seen, contradicted, closures and failures;
-   - recalled earlier episodes (item 5).
-
-   Its reader profile is `player_source` and the four terminal tools; `player_log_read` is
-   dropped. The position bound is the end position of the newest episode in its input.
-
-   **Waking:**
-   - at actor start;
-   - after each episode record commits;
-   - at the budget fractions 25, 50 and 75%.
-
-   At most one recorder pass and one level pass are in flight, and a level pass follows its
-   episode's record.
-5. **Recall,** pushed into both the level input and the intent tail.
-   - **Candidates:** every stored episode record from earlier sessions and earlier in this one.
-   - **Score:** software computes BM25 relevance over the record's text fields, with the
-     current subgoal and its expected observations as the query. It multiplies that by
-     reliability (halved for a demoted record) and by 1.5 when the record carries a residual.
+     - `observation_status` is an array of `seen`, `not_yet` or `contradicted`. Its length must
+       equal the pushed subgoal's number of expected observations, or it is empty when there is
+       no subgoal.
+     - `counterpart` and `residual` may be empty strings.
+     - `confidence` is a number from 0 to 1.
+     - `sources` holds at most 4 ids from the episode.
+     - Every field is required, and the schema is flat.
+   - **`player_episode_abstain(reason_code, reason, sources)`** has its own codes:
+     `unreadable_frames`, `no_player_action` and `other`.
+   - **Storage.** The custodian stores a record as a `claim` with `data.level == "episode"`,
+     `data.level_contract == "player-episode/1"`, the episode's session, actor and position
+     range, and the pushed subgoal's id. The store copies only its cited frames (at most 4).
+     - **At store capacity** (256 MiB, no eviction), a failure to remember stops the lineage as
+       a recorded failure; nothing is evicted silently.
+     - **Recall integrity.** Recall and counts trust only claims whose `level_contract` is
+       `player-episode/1` and whose record actor is a recorder reader.
+     - **Format.** `player-record/1` and `player-memory/1` are unchanged.
+   - **Backlog.** Closed episodes wait in a FIFO queue. At most one recorder pass is in flight.
+     If more than 3 episodes are waiting, the oldest waiting episode settles as
+     `episode-dropped`; it is counted and treated as "no newly seen". Recorder abstains,
+     failures and drops all settle the episode.
+3. **Closure and stall, in the custodian.** Observation status and stall are **derived at read
+   time** from the store and are never stored on the Work record, which stays append-only.
+   - **What counts.** For the current subgoal *g*, the custodian reads its episode claims:
+     those committed after *g* whose pushed subgoal id is *g* and whose confidence is at least
+     the floor *c*. A claim whose subgoal id is not *g* is ignored, so marks are never
+     attributed to the wrong subgoal.
+   - **Status.** An observation is `seen` if some counted claim marks it seen and no later
+     counted claim marks it contradicted. It is `contradicted` if its latest counted mark is
+     contradicted. Otherwise it is `not_yet`.
+   - **Closure.**
+     - **When:** the episode record that makes every expected observation `seen`.
+     - **What is written:** the custodian appends the closing correction in the same
+       `append_many` transaction as that record, with the recorder reader as record actor. The
+       correction carries outcome `achieved`, `data.level == "subgoal"`,
+       `data.level_contract == "player-level/4"` and `data.by == "software"`. Its `supports`
+       are the counted claims' ids, and its sources are capped at 16.
+     - **Not vacuous:** `player-level/4` requires at least one expected observation on
+       replace, so closure is never vacuous.
+   - **Stall.**
+     - **When it fires:** *g* is **stalled** after N consecutive settled episodes since *g* with
+       nothing newly seen. An abstained, failed or dropped episode counts as nothing newly seen.
+     - **N:** given at reader minting, like S.
+     - **Refusals:** while *g* is stalled, `player_level_keep` and `player_level_abstain` are
+       fixable tool errors that name `player_level_replace` and `player_level_close`. This
+       applies to start passes too, so revalidation stays offered, not enforced, except for a
+       stalled subgoal.
+     - **Calibration:** #345 sets N, and may choose an anytime-valid e-process instead if it
+       does better at an equal false-alarm rate.
+   - **Contradiction.** While any observation of *g* is `contradicted`, a keep must cite, in
+     its `sources`, the source of a counted claim with that mark. Otherwise it is a fixable
+     tool error.
+   - **Races.** A level commit names the subgoal id it was pushed. The custodian refuses the
+     commit as stale (a discard) if the current subgoal differs, because a closure or a replace
+     happened meanwhile.
+   - **Contracts.** `player-level/3` becomes `/4` and `player-level-commit/3` becomes `/4`
+     (pushed subgoal id, derived status, closure). Minting a reader refuses a store whose
+     current level Work is not `/4`; migrate, or start a fresh store. The rules are documented
+     in the computer-control contract's level section.
+4. **Subgoal level v4.**
+   - **Pushed input:** closed episodes and software counts, never the actor's raw log:
+     - the episode records committed since its last pass;
+     - the current subgoal with its derived status, its stalled flag and its id;
+     - counts per subgoal: episodes, seen, contradicted, closures and failures;
+     - recalled episodes (item 5).
+   - **Reader profile:** `player_source` and the four terminal tools.
+   - **`player_log_read` and `player-log/1` are removed** (S-MIGRATION). The driver reads
+     operations in-process through the `Application`. The refusal text and the `player-host`
+     rule that names `player_log_read` change with them.
+   - **Binding.** The driver binds the pass's position under `Application.serial`, replacing
+     v3's reset-and-read. The bound is the largest end position among the served actor's
+     current-session episode records in the pushed input. Recalled earlier-session records
+     never bind. At actor start, with nothing recorded yet, the bound is 0. The custodian's
+     staleness check S applies from that bound.
+   - **Waking:**
+     - at actor start;
+     - after every episode settles: record, abstain, failure or drop;
+     - at the 25, 50 and 75% budget fractions, but only when something has settled since the
+       last pass. That keeps the empty-delta rule of the player-interface standard.
+   - **In flight:** at most one level pass. Wakes that arrive during a pass coalesce into one
+     pass over the newest records.
+   - **Coupling.** S must exceed the p95, in actor inputs, of a recorder pass plus queue wait
+     plus a level pass. #345 checks this on recorded latencies before any build. If it fails,
+     the question goes to the owner instead of being tuned around.
+5. **Recall and the intent tail.**
+   - **Candidates:** the trusted episode claims from earlier sessions and from this session.
+   - **Score:** BM25 relevance over the record's text fields, with the current subgoal's text
+     and expected observations as the query (k1 = 1.2, b = 0.75). The score is multiplied by
+     reliability, which is the recorder's confidence, and by 1.5 when the record has a
+     residual. There is no demotion in the first build.
+   - **No current subgoal:** recall shows the most recent records instead.
    - **The level sees** the top 10.
-   - **The intent tail shows:**
-     - the current subgoal, its expected observations with status, and its confidence;
-     - the top 3 recalled episodes, one line each;
-     - one exploration slot: an earlier-session episode never shown before, chosen uniformly by
-       a seeded draw.
+   - **The tail.** `player-intent/1` becomes `/2`, with a fixed allocation within the
+     unchanged bound of 1,024 bytes, labels included:
 
-     This all fits the existing byte bound, and omitted bytes are logged. This is a
-     prior-weighted selection under an information budget; the exploration floor guards
-     against selection that only confirms.
+     | Part | Budget |
+     |---|---|
+     | The intent label | as written |
+     | Subgoal text, truncated | ≤ 240 bytes |
+     | Its expected observations with status, truncated each | ≤ 240 bytes |
+     | Confidence, age and up to 2 source ids | ≤ 100 bytes |
+     | The recall label and recall lines | the rest |
 
-**What the owner's parameters become:**
-- K = 10 becomes the episode cap C, so the longest interval between wakes is unchanged.
-- S = 10, the 25/50/75% fractions and the about-1-KB intent bound are unchanged.
+     Recall holds the top 2 by score and 1 exploration line. The exploration line is an
+     earlier-session record outside the top 10, drawn uniformly with a seed fixed per pass,
+     from the session id and pass index. Each line is truncated to a fixed share.
 
-**Contracts** are listed under [Boundary impact](#boundary-impact). Role prompts are
-[`episode-v1` and `subgoal-v4`](#appendix-v4-role-prompts-drafts), both frozen at build after
-the no-nudge review.
+     Recall is therefore never cut first. Omitted bytes are logged per part. #345 checks on
+     recorded data that the recall lines survive at the bound; if they cannot, the question
+     goes to the owner.
+
+**Owner parameters:**
+- K = 10 becomes the episode cap C. It is still the longest run of inputs between wakes when
+  the recorder settles.
+- S = 10, the 25/50/75% fractions and the bound of about 1 KB keep their values. S's coverage
+  is checked as above.
+- **A new preference, the target mean episode length L̄, is proposed as 6 and set by the
+  owner.** Together with *m*, it now sets the cadence that K set before.
+
+**Cost.** Per mean episode of L̄ inputs, v4 runs one recorder pass (1–2 requests) and one level
+pass (2–3 requests). At L̄ = 6 that is about 0.5–0.8 level-side requests per actor input,
+roughly 2–3× v3's overhead. The shadow measures it against the cadence, and the probe's
+adoption condition weighs it.
+
+**Contracts** are listed under [Boundary impact](#boundary-impact). The role prompts are
+[`episode-v1` and `subgoal-v4`](#appendix-v4-role-prompts-drafts), frozen at build after the
+no-nudge review.
+
+**Scope of this amendment.** Every section other than this one, the #344 notes and the designed
+subsections below describes interface v3 as built on `adr7-candidate`. #346 folds v4 into
+them.
 
 ## Upper levels (architecture; later slices)
 
@@ -471,7 +564,10 @@ is resurfaced.
 records, so there is no record-format change.
 - **The typed fields are the terminal-tool contract.** The flat `player_level_replace`
   arguments are the typed fields; the custodian validates them, stamps the contract
-  version (`player-level/3`) and writes them into `data`.
+  version (`player-level/3`; `/4` under level v4) and writes them into `data`.
+- **Episode records** (level v4) are `claim` records with `data.level == "episode"`
+  (`player-episode/1`). The retrospective level consolidates those claims into further claims
+  and procedures.
 - **A level discriminator in `data`** separates level-written records from other
   writers' records of the same kind (arm B, older stores).
 - **Links.** Work records link to their aspiration through `supports`.
@@ -487,8 +583,13 @@ records, so there is no record-format change.
 The episode recorder's kernel applies to its own output. It reads closed units from below and
 writes one unit with an outcome and a residual. Applied again, it gives chapters over episodes,
 eras over chapters, and so on. **Compression recurses; decisions do not.** Deciders sit only at
-grains where a real choice exists: the subgoal level over episodes, and the strategic level over
-chapters.
+grains where a real choice exists:
+- the subgoal level reads episodes;
+- the strategic level, as designed above, reads committed Work outcomes and software
+  statistics. Once chapters exist, it reads those too. Which chapter-level inputs it uses is
+  that slice's decision.
+
+The retrospective level owns building chapters.
 
 **Rules:**
 - **When to merge, and where.** A capacity trigger says when; content says where. When a level
@@ -512,8 +613,14 @@ capacity; their own slice measures whether chapter recall helps beyond episode r
 
 Classical methods need stable discrete labels: transition and successor-representation models,
 change detection, competence-progress statistics per situation and goal, and revisit counts by
-entity. The label-evolution role grows them from experience. It runs between sessions only;
-nothing in play modifies itself.
+entity. Label evolution grows them from experience. It is an **offline analysis that the lead
+runs on recorded logs**, as evaluation work, not a player role inside a live session.
+- **Not self-modification.** A codebook it accepts becomes a new frozen recorder prompt and a new
+  record-contract version, reviewed against the no-nudge rule, migrated under S-MIGRATION and
+  admitted at a session boundary. So it is not runtime self-modification of prompts or the
+  guide.
+- **Later in-play role:** turning it into a player role inside sessions is the retrospective
+  level's slice. That includes its reading of earlier-session logs.
 
 **The loop:**
 1. **The labeller,** an LLM, applies a versioned codebook: a finite menu of definitions,
@@ -551,6 +658,9 @@ Both are existing `player-record/1` kinds.
 
 ## Cost, latency and coupling
 
+*This section states interface v3. For level v4's per-episode cost and the coupling rule
+"S > p95 of recorder pass, queue and level pass", see [Level v4](#level-v4-the-episodic-outcome-level).*
+
 - **Requests per pass.** With the pushed input and a forced ending call, a pass is
   about r ≈ 2–3 provider requests: optionally read more of the log or a source, then
   commit or abstain. There is no read-the-log opening turn and no closing turn
@@ -583,12 +693,17 @@ Both are existing `player-record/1` kinds.
 | Intent byte bound | Preference, traded against cost | Surfaced and omitted bytes are logged |
 | Role prompt version | Frozen artifact | Reviewed against the no-nudge rule. A change makes a new version |
 | Episode threshold θ (v4) | Calibration, fitted per game from player-visible captures | Quantile of consecutive thumbnail distances chosen so the mean episode length hits a target. Fitted on recorded runs ([#345](https://github.com/CVX-Hull/enactive/issues/345)), then frozen in the profile by value and fitting digest. Recalibrated when the game, resolution or theme changes |
-| Episode cap C and minimum length *m* (v4) | Preferences | C = K. *m* is set at #345 |
+| Target mean episode length L̄ (v4) | Preference, owner-set (proposed: 6). With *m*, it sets the cadence K used to set | Agreed with the owner alongside K and S. #345 fits θ to it |
+| Episode cap C and minimum length *m* (v4) | Preferences | C = K. #345 sets *m* (its registry uses 2) |
 | Stall test N, or e-process parameters (v4) | Calibration, with a false-alarm preference | Chosen in #345 by closure replay on recorded subgoals, at a stated false-alarm rate; then frozen |
-| Recall size (3 in the tail, 10 for the level), exploration slots (1) and the residual weight (1.5) (v4) | Preferences, traded against the byte bound | Surfaced and omitted bytes logged; the follow rate is measured |
+| Confidence floor *c* for counted episode marks (v4) | Preference | Set in #345 from cross-family agreement by confidence |
+| Recorder backlog bound (3) (v4) | Preference | Drops are counted |
+| Recall: 2 top lines plus 1 exploration line in the tail, 10 for the level, residual weight 1.5, the tail byte allocation (v4) | Preferences within the fixed bound | Omitted bytes logged per part. #345 checks that recall survives at the bound; the follow rate is measured |
 | BM25 parameters (v4) | Fixed standard values (k1 = 1.2, b = 0.75) | Not fitted |
 
-The parameters are game-independent. None is fitted to CDDA.
+**What is game-specific.** The procedures are game-independent. Only calibrations are fitted
+per game, each by one game-independent procedure from player-visible experience (P-GENERALITY).
+θ is such a calibration. Nothing is hand-set for CDDA.
 
 ## Supersession map
 
@@ -677,14 +792,27 @@ The v4 evidence, rescoped onto #329, is:
     cross-session part.
 
   The fourth arm (narrowed actor, no level) is decided with the owner at pre-registration.
-- **Primary metric:** retained change per session (M1, tightened beforehand to substantive,
-  player-caused changes), scored by blind auditors from two model families, with their agreement
-  reported. **Primary contrast:** arm × session index.
-- **Secondary metrics:** semantic revisits, meaning time spent at counterparts or places already
-  visited with no new outcome, labelled by an LLM and cross-checked across families; and the
-  within-run replay statistic that passed T3′'s power check.
-- **Manipulation check:** the intent tail must carry information the actor did not already hold,
-  with T1's marginal coverage above zero. Otherwise the run is void as a test of v4.
+- **Primary metric:** retained change per session. This is #314's M1, "the first retained change
+  in inventory, carried weight, worn or wielded items, a consumed item or a status indicator,
+  confirmed in a later frame". It is tightened beforehand to substantive changes caused by the
+  player: no first evidence only in the message log, and no status change driven by passing
+  time. It is scored by blind auditors from two model families, with their agreement reported.
+- **Adoption contrast:** v4 against arm B on the primary metric pooled over sessions, in the
+  pre-registered direction. The arm × session-index slope is the pre-specified learning test.
+- **Power:** a power simulation for both, set before spend under S-EVIDENCE. An underpowered null
+  is reported as underpowered.
+- **Secondary metrics:**
+  - semantic revisits, meaning time spent at counterparts or places already visited with no new
+    outcome. They are labelled by an LLM and cross-checked across families.
+  - the longest replayed stretch within a run. This is lens test T3′'s only statistic that passed
+    its planted-replay power check (#329).
+- **Carried over from v3:** the mechanism counts, intent accuracy, actor latency and lock wait
+  against the cadence, and cost by role.
+- **Audit of software's inputs.** A blind cross-family LLM audit checks the recorder's marks and
+  the precision of software closures and stalls, because software acts on those LLM marks.
+- **Manipulation check:** the intent tail must carry information the actor did not already hold.
+  The measure is lens test T1's marginal coverage: the share of tail items whose sources the
+  actor had not received. It must be above zero, or the run is void as a test of v4.
 - **No human labels** (owner, 1 November 2026).
 - **The adoption condition is unchanged.**
 
@@ -731,10 +859,30 @@ The v4 evidence, rescoped onto #329, is:
     - **`campaign-run/4` becomes `/5`:** the v4 profile (θ and its fitting digest, C, *m*, the
       stall test, the recall sizes) and the `episode-v1` and `subgoal-v4` prompts, frozen by
       digest.
-    - **Computer control:** the contract text gains the second reader profile in the per-class
-      allowlist. The `computer-session/2` storage is unchanged.
+    - **`computer-session/2` becomes `/3`:**
+      - a reader role column, with one reader per (served actor, role);
+      - the recorder's write authorization for `player_episode_record`;
+      - the custodian's v4 rules: the binding pushed by the driver, closure in the record's
+        transaction, stall refusals derived at read time, the contradiction citation rule, and
+        refusal of a stale subgoal id;
+
+      (`harness/computer/store.py`, `runtime.py`, `harness/application.py`,
+      [contract](../contracts/computer-control.md)).
+    - **`player-level-commit/3` becomes `/4`**, and `player-intent/1` becomes `/2` with its
+      fixed byte allocation. `player-level-abstain/2` is unchanged.
+    - **Removed:** `player_log_read` and `player-log/1`, and the host rule that a level host
+      includes `player_log_read`.
+    - **`campaign-run/5`** also carries the recorder's allowance, its partition and lifecycle,
+      and `episode_cap`, which replaces `inputs_per_pass` and must equal K.
     - `player-record/1` and `player-memory/1` stay unchanged: episodes are `claim` records with a
       level discriminator.
+    - **Callers v4 adds to the list below:**
+      - `tools/level_schedule.py`, `tools/level_offline.py`, `tools/level_probe.py` and
+        `tools/player_roles/`;
+      - `harness/player/contracts.py`, `harness/player_tools.py` and `harness/player_mcp`;
+      - `tests/test_player_level.py`, `tests/test_level_schedule.py` and
+        `tests/test_level_probe.py`;
+      - `docs/operations/campaign-run.md` and `docs/contracts/computer-control.md`.
 - **Callers that migrate together if adopted:**
   - **Host:** `tools/player_host/host.mjs`, `run.mjs`, `test/*.mjs` and
     `README.md`; `tools/host_analysis.py`.
@@ -811,9 +959,9 @@ new version.
 
 > Role (software-defined; not instructions from the lead). You are the player's episode
 > recorder. You cannot send input; the acting player decides everything it does. Software
-> supplies one closed episode of the acting player's log (its inputs and the frames that
-> resulted, as source ids) and the player's current subgoal with its expected observations,
-> if any; you may read any cited frame. End with exactly one tool call. Call
+> supplies one closed episode of the acting player's log (its inputs, its first and last
+> frames, and the source ids of the frames that resulted) and the player's current subgoal
+> with its expected observations, if any; you may read any cited frame. End with exactly one tool call. Call
 > player_episode_record to state what the player attempted, with what or whom, for each
 > expected observation whether this episode showed it (seen), did not show it (not_yet) or
 > showed the opposite (contradicted), and anything that happened that the subgoal did not
