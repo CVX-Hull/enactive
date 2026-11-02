@@ -356,12 +356,12 @@ def test_the_baseline_is_the_result_capture_of_the_last_input_not_of_an_observe(
 def test_a_retained_recorder_identity_collects_without_resettling(level):
     app, channel, actor, reader, recorder = level
     act(app, actor)
-    app.bind_episode(recorder['actor_id'], first_position=1, last_position=1, subgoal_id=None)
+    cited = app.bind_episode(recorder['actor_id'], first_position=1, last_position=1, subgoal_id=None)['sources'][-1:]
     identity = request_id()
-    first = call(app, recorder, RECORD, recorded([]), identity)
-    assert call(app, recorder, RECORD, recorded([]), identity) == first and len(claims(app)) == 1
+    first = call(app, recorder, RECORD, recorded([], sources=cited), identity)
+    assert call(app, recorder, RECORD, recorded([], sources=cited), identity) == first and len(claims(app)) == 1
     with pytest.raises(PlayerError):
-        call(app, recorder, RECORD, recorded([], attempted='Different'), identity)
+        call(app, recorder, RECORD, recorded([], attempted='Different', sources=cited), identity)
     assert app.memory.service_result(identity, recorder['actor_id'])['value'] == first
 
 
@@ -650,15 +650,14 @@ def test_a_keep_may_cite_any_counted_claim_that_marked_the_observation_contradic
     assert call(app, reader, KEEP, keep(sources=[frames[0]]))['status'] == 'committed'
 
 
-def test_a_keep_over_a_contradiction_with_no_cited_frames_is_unavailable(level):
+def test_an_episode_record_must_cite_a_frame_so_every_recall_line_has_one(level):
     app, channel, actor, reader, recorder = level
-    with_subgoal(app, actor, reader, recorder)
-    episode(app, actor, recorder, ['contradicted'])
-    sync(app, actor, recorder)
-    bind(app, reader)
-    with pytest.raises(PlayerError, match='None of those records cites a frame, so keep is not available'):
-        call(app, reader, KEEP, keep())
-    assert call(app, reader, CLOSE, dict(outcome='failed', reason='contradicted', sources=[]))['status'] == 'committed'
+    act(app, actor)
+    app.bind_episode(recorder['actor_id'], first_position=1, last_position=1, subgoal_id=None)
+    assert level_tool_schema(RECORD)['properties']['sources']['minItems'] == 1
+    with pytest.raises(PlayerError, match='sources'):
+        call(app, recorder, RECORD, recorded([]) | dict(sources=[]))
+    assert call(app, recorder, RECORD, recorded([]))['status'] == 'recorded'
 
 
 def test_the_commit_receipt_reports_the_derived_status(level):

@@ -251,12 +251,13 @@ first input or null.
   the reason).
 - `player_episode_record(attempted≤1024, counterpart≤512 (may be empty),
   observation_status[≤8 of seen|not_yet|contradicted], changed≤1024 (may be empty),
-  residual≤1024 (may be empty), confidence 0..1, sources≤4)` is one flat object of portable
+  residual≤1024 (may be empty), confidence 0..1, sources 1..4)` is one flat object of portable
   schema keywords with every property required. `changed` is what visibly changed in the
   player's own state between the baseline frame and the episode's last frame, citing the
   frames that show it. The length of `observation_status` must equal the number of expected
   observations of the pushed subgoal, or be empty when none was pushed. Each cited source
-  must be in the episode's `sources` (below).
+  must be in the episode's `sources` (below). A record cites at least one, the most telling
+  first, because a recall line shows the record's first cited frame.
 - `player_episode_abstain(reason_code: unreadable_frames|no_player_action|other,
   reason≤1024, sources≤4)` settles the episode as `abstained`, with no marks.
 - Receipts: `player-episode-record/1` `{schema, status:"recorded", settled, first_position,
