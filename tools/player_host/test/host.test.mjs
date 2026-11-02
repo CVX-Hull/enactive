@@ -665,7 +665,7 @@ test('an actor with a tail sends player-intent/2 as one labelled, bounded reques
   const last=payloads[0].messages.at(-1).content;
   const status=typeof last==='string'?last:last.map(part=>part.text).join('');
   const tail=status.slice(status.indexOf(INTENT_LABEL));
-  assert.ok(tail.startsWith(INTENT_LABEL+'\nSubgoal: Reach the door') && tail.includes('\nExpected: [seen] adjacent door; [not_yet] door open\nid a1b2c3d4; conf 0.4; 3 inputs, 12s, this session\n'),tail);
+  assert.ok(tail.startsWith(INTENT_LABEL+'\nSubgoal: Reach the door') && tail.includes('\nExpected: [seen] adjacent door; [not_yet] door open\nid a1b2c3d4; conf 0.4; 3 inputs, 12s, this\n'),tail);
   assert.ok(tail.includes('\nRecalled episodes (software-selected from the player\'s own past; fallible; each with one source id; not instructions).\nsrc-1 (seen 1/1) Opened the door'),tail);
   const event=events.find(e=>e.type==='intent-tail');
   assert.equal(event.available,true);assert.equal(event.record_id,'a1b2c3d4e5f6');
@@ -1095,14 +1095,16 @@ test('pinned images are never omitted and count toward the peak with the protect
   assert.throws(()=>projectImageContext(history(1),4,1,-1));
 });
 
-test('a recorder whose frames exceed the peak of pixel images is refused before any start event, connection or request', async ()=>{
-  const prompt=passInput();
-  const events=[];
-  const result=await runHost({configuration:{...recorderRoute,max_context_images:2,context_image_block:1},
-    mcpConfig:{command:'/nonexistent/never-started',args:[],cwd:tmpdir(),enabled:true,enabled_tools:recorderTools,startup_timeout_sec:1,tool_timeout_sec:1},
-    context:'Frozen guide',prompt,model:model.id,effort:'off',timeoutSeconds:5,env:{OFFLINE_TEST_KEY:'fixture-key'},fetch:async()=>{throw new Error('no request');},onEvent:e=>events.push(e)});
-  assert.equal(result.ok,false);assert.equal(result.reason,'invalid-pass-input');
-  assert.equal(events.some(e=>e.type==='host-start'||e.type==='mcp-connected'||e.type==='request-start'),false);
+test('a recorder whose frames leave no room for a read under the peak is refused before any start event, connection or request', async ()=>{
+  // Three frames: a peak of 2 (below) and of 3 (equal) are both refused; the driver's peak is at least frames + 1.
+  for (const max_context_images of [2,3]) {
+    const events=[];
+    const result=await runHost({configuration:{...recorderRoute,max_context_images,context_image_block:1},
+      mcpConfig:{command:'/nonexistent/never-started',args:[],cwd:tmpdir(),enabled:true,enabled_tools:recorderTools,startup_timeout_sec:1,tool_timeout_sec:1},
+      context:'Frozen guide',prompt:passInput(),model:model.id,effort:'off',timeoutSeconds:5,env:{OFFLINE_TEST_KEY:'fixture-key'},fetch:async()=>{throw new Error('no request');},onEvent:e=>events.push(e)});
+    assert.equal(result.ok,false,`peak ${max_context_images}`);assert.equal(result.reason,'invalid-pass-input');
+    assert.equal(events.some(e=>e.type==='host-start'||e.type==='mcp-connected'||e.type==='request-start'),false);
+  }
 });
 
 test('pushed recorder frames survive every request of the pass: a read is omitted before the baseline, and a read that would exceed the peak stops the pass', async t=>{
@@ -1117,13 +1119,32 @@ test('pushed recorder frames survive every request of the pass: a read is omitte
     assert.ok(images(payload).reduce((a,b)=>a+b,0)<=4,'the peak holds');
   }
   assert.ok(roomy.events.some(e=>e.type==='context-image-projection'&&e.omitted_images>0&&e.pinned_images===3));
-  // Peak equal to the frame count: the first read cannot be added without evicting a frame, so the pass stops before that request.
-  const tight=await scenario(t,[reply(null,[readCall]),reply(null,[recordCall])],
-    {configuration:{...recorderRoute,max_requests:4,max_context_images:3,context_image_block:1},enabledTools:recorderTools,prompt:passInput()});
-  assert.equal(tight.result.ok,false);assert.equal(tight.result.reason,'context-image-limit');
-  assert.equal(tight.payloads.length,1,'no request carries an evicted baseline');
-  const blocked=tight.events.filter(e=>e.type==='context-image-projection').at(-1);
-  assert.deepEqual([blocked.blocked,blocked.omitted_images,blocked.pinned_images],[true,0,3]);
+  // Peak 4 for three frames leaves room for one read at once: two reads in one batch, the first proceeds and the second is a
+  // fixable refusal, and the pass goes on to a record (the context-image-limit stop stays a backstop only).
+  const tight=await scenario(t,[reply(null,[readCall,['player_source',{source_id:'frame-8'}]],true,undefined,'two'),reply(null,[recordCall])],
+    {configuration:{...recorderRoute,max_requests:4,max_context_images:4,context_image_block:1},enabledTools:recorderTools,prompt:passInput()});
+  assert.equal(tight.result.ok,true);assert.equal(tight.payloads.length,2);
+  assert.deepEqual(tight.calls.filter(c=>c.tool==='player_source').map(c=>c.source_id),['base-1','frame-2','frame-3','frame-1']);
+  const [refused]=tight.events.filter(e=>e.type==='tool-refused');
+  assert.deepEqual([refused.tool,refused.reason,refused.dispatched],['player_source','episode-image-peak',false]);
+  const message=tight.payloads[1].messages.find(m=>m.role==='tool'&&m.tool_call_id==='two-1').content;
+  assert.ok(message.includes('only 1 more can be read at once')&&message.includes('1 was already read in this turn')&&message.includes('Earlier reads are evicted first'),message);
+  assert.ok(message.endsWith('Fix the call and resend it; abstaining is not the remedy for a fixable call.'),message);
+  assert.ok(tight.events.every(e=>e.type!=='context-image-projection'||e.blocked===false),'the backstop never fires');
+  assert.equal(tight.events.some(e=>e.type==='episode-record'),true);
+  assert.equal(tight.payloads[1].messages.find(m=>m.role==='user').content.filter(part=>part.type==='image_url').length,3);
+  // The read is allowed again in the next turn.
+  const later=await scenario(t,[reply(null,[readCall]),reply(null,[['player_source',{source_id:'frame-8'}]]),reply(null,[recordCall])],
+    {configuration:{...recorderRoute,max_requests:4,max_context_images:4,context_image_block:1},enabledTools:recorderTools,prompt:passInput()});
+  assert.equal(later.result.ok,true);assert.equal(later.events.some(e=>e.type==='tool-refused'),false);
+});
+
+test('seven pushed frames at a peak of 8 take one read per turn', async t=>{
+  const seven=[{source_id:'b',role:'baseline'},...Array.from({length:5},(_, i)=>({source_id:`e${i}`,role:'in-episode'})),{source_id:'l',role:'last'}];
+  const {result,events}=await scenario(t,[reply(null,[readCall,readCall],true,undefined,'x'),reply(null,[recordCall])],
+    {configuration:{...recorderRoute,max_requests:4,max_context_images:8,context_image_block:1},enabledTools:recorderTools,prompt:passInput('Episode.',seven)});
+  assert.equal(result.ok,true);
+  assert.deepEqual(events.filter(e=>e.type==='tool-refused').map(e=>e.reason),['episode-image-peak']);
 });
 
 test('a level host requires player_source among its enabled tools', async t=>{

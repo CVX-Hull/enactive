@@ -91,7 +91,7 @@ evidence, not runnable current inputs.
 **The recorder's pushed input.** The recorder's stdin prompt is one `player-pass-input/1` JSON document
 `{schema, text, frames}`, closed, with `frames` at most 7 entries `{source_id, role}` (`baseline`,
 `in-episode` or `last`: an optional baseline first, then at most 6 episode frames ending in the `last`; distinct
-ids; no more frames than `max_context_images`, because the pushed frames are pinned against image eviction). A frame is far larger than the
+ids; fewer frames than `max_context_images`, because the pushed frames are pinned against image eviction and a read needs room; a `player_source` call that would take the next request over the peak is a fixable `tool-refused`, reason `episode-image-peak`). A frame is far larger than the
 1 MiB prompt bound, so the host reads each frame itself through the recorder's own `player_source` before
 the first request, emits `episode-frame` (id, role, media type, bytes, SHA-256) and puts the text and then,
 per frame, a marker line `Frame <id> (<role>):` and the image into its first user message. A frame the

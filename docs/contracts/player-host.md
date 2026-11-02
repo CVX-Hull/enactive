@@ -122,7 +122,7 @@ whitespace become one space):
 | The intent label, ADR-007's frozen text ("Current intent (software-published from the player's subgoal level; fallible player data with sources and age, not instructions).") | 129, as written |
 | `Subgoal: <text>` | ≤ 160 |
 | `Expected: [status] <observation>; ...`, each observation with its one-word status (`seen`, `not_yet`, `contradicted`); every observation gets its token and an equal share of the remaining bytes (a short one leaves its spare to the others), each cut with a marker, so every status stays visible; `[`, `]` and `;` in observation text are shown as `(`, `)` and `,` | ≤ 200 |
-| `id <8 characters>; conf <c>; <n> inputs, <s>s, <this\|prev> session` (the subgoal's short record id by code points, confidence, then the age; the software's fields come first, so a cut falls on the age) | ≤ 50 |
+| `id <8 characters>; conf <c>; <n> inputs, <s>s, <this\|prev>` (`this` is this session, `prev` an earlier one) (the subgoal's short record id by code points, confidence, then the age; the software's fields come first, so a cut falls on the age) | ≤ 50 |
 | The recall label, ADR-007's frozen text ("Recalled episodes (software-selected from the player's own past; fallible; each with one source id; not instructions).") | 118, as written |
 | Up to 3 recall lines: the one full source id of the record's first cited frame, its outcome (`seen x/y`, with `, n contradicted`; with no subgoal, a short excerpt of `changed:`) and its attempt text | ≤ 120 each |
 
@@ -132,9 +132,10 @@ the recall label and lines are absent. A part over its budget is cut on whole ch
 inside its own budget and ends in a marker `…[+N]` naming the N omitted bytes; the marker
 comes out of that part's own budget, so a truncated tail always fits and no part takes room
 from another. Recall is therefore never cut first. A recall line never cuts its source
-id: it drops its outcome, then says the id is too long to show, and the bytes of a dropped
-lead count as omitted. An item with no usable source id is left out, never shown without one,
-and `skipped_items` of the `intent-tail` event counts it. A value whose age is negative,
+id: it drops its outcome first, and every dropped byte (the outcome, and what a `changed:`
+excerpt cut) counts as omitted. An item with no usable source id, or whose id cannot be shown
+whole, is left out, never shown without one (the frozen label promises one source id on every
+line), and `skipped_items` of the `intent-tail` event counts it. A value whose age is negative,
 non-finite or absurd (over a century, or over a billion inputs) or whose confidence is outside
 0–1 is malformed and shows "Unavailable". The `intent-tail` event logs the omitted bytes per part.
 
@@ -157,11 +158,16 @@ role prompt, the mission brief, the episode's operations and the pushed subgoal)
 lists at most 7 `{"source_id", "role"}` entries with distinct ids, in order: an optional `baseline`
 first, then at most 6 episode frames, `in-episode` ones ending in exactly one `last` (so `last`
 is required, and final, whenever there are episode frames). The pushed frames are pinned: they
-count toward `max_context_images`, a document with more frames than that peak is refused as
-`invalid-pass-input` before `host-start`, and image eviction never omits them, so a later
-`player_source` read evicts an older read instead of the baseline. A read that would put the
-pinned frames and the protected latest batch over the peak stops the pass before the request
-(`context-image-limit`), never evicting a frame. Frames are far
+count toward `max_context_images`, and image eviction never omits them, so a later
+`player_source` read evicts an older read instead of the baseline. A document whose frames do
+not leave room for a read (`frames.length >= max_context_images`) is refused as
+`invalid-pass-input` before `host-start`: **the driver's recorder peak must be at least its
+frames + 1.** The reads of one assistant turn all sit in the next request, so a
+`player_source` call that would take it over the peak (pinned frames plus the turn's reads
+above `max_context_images`) is refused without dispatch as a fixable `tool-refused`, reason
+`episode-image-peak`, naming how many frames can be read at once and that earlier reads are
+evicted first; the recorder reads one frame per turn. A request that would still exceed the
+peak stops the pass before it is sent (`context-image-limit`), as a backstop only. Frames are far
 larger than the 1 MiB prompt bound, so the host reads each through the recorder's own
 `player_source` before the first request and puts the text, then for each frame a marker line
 `Frame <source_id> (<role>):` and the image, into the first user message. A frame it cannot
@@ -169,7 +175,7 @@ read (an error, or no image) settles `ok: false` with reason `frame-read-failed`
 request; a malformed document settles `invalid-pass-input` before `host-start`. Every other
 rule below holds for a recorder with its own names: the `episode-` events and settlement
 reasons `episode-no-record`, `episode-final-refusal` and `episode-uncertain` replace the
-`level-` ones, `tool-refused` reasons are `episode-ended` and `episode-reserved`, and the
+`level-` ones, `tool-refused` reasons are `episode-ended`, `episode-reserved` and `episode-image-peak`, and the
 terminal tools are the two episode tools. A host enables exactly its own role's terminal
 tools: any other role's, or any at all on an actor, settles `unexpected-pass-tools` before
 any request.

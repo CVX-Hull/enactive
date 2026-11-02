@@ -392,28 +392,33 @@ function observationsLine(observations, budget) {
 }
 
 /** The outcome of a recalled episode: how many of its subgoal's expected observations it showed, or, with no subgoal, a
- * short excerpt of what visibly changed. */
+ * short excerpt of what visibly changed. `omitted_bytes` counts what the excerpt cut. */
 function outcomeOf(item) {
   const marks = item.observation_status;
-  if (marks.length === 0) return `changed: ${cutText(flat(item.changed), 32).text || 'nothing'}`;
+  if (marks.length === 0) {
+    const excerpt = cutText(flat(item.changed), 32);
+    return {text:`changed: ${excerpt.text || 'nothing'}`, omitted_bytes:excerpt.omitted_bytes};
+  }
   const contradicted = marks.filter(mark => mark === 'contradicted').length;
-  return `seen ${marks.filter(mark => mark === 'seen').length}/${marks.length}${contradicted ? `, ${contradicted} contradicted` : ''}`;
+  return {text:`seen ${marks.filter(mark => mark === 'seen').length}/${marks.length}${contradicted ? `, ${contradicted} contradicted` : ''}`, omitted_bytes:0};
 }
 
 /** A recall line: the one full source id of the record's first cited frame, its outcome, then its attempt text; null for an
- * item with no usable source id, which the tail leaves out. */
+ * item with no usable source id, or whose id cannot be shown whole, which the tail leaves out (the frozen label promises one
+ * source id on every line). Every dropped byte counts as omitted. */
 function recallLine(item) {
   const budget = TAIL_BUDGETS.recall_line;
   if (!text(item.first_source) || /[\p{C}\s]/u.test(item.first_source)) return null;
   const id = item.first_source, attempt = flat(item.attempted), size = Buffer.byteLength(attempt);
   // The attempt keeps at least four bytes of text beside the marker its real length needs (or all of it, when shorter).
   const need = Math.min(size, 6 + digits(size) + 4);
-  // A source id is never cut: fall back to the id alone, then to saying that it is too long to show. A dropped lead counts as omitted.
-  const leads = [[`${id} (${outcomeOf(item)}) `, 0], [`${id} `, Buffer.byteLength(`(${outcomeOf(item)}) `)],
-    ['(frame id too long to show) ', Buffer.byteLength(id) + 1]];
-  const [lead, dropped] = leads.find(([candidate]) => Buffer.byteLength(candidate) + need <= budget) ?? leads.at(-1);
-  const fitted = cutText(attempt, budget - Buffer.byteLength(lead));
-  return {text:(lead + fitted.text).trimEnd(), omitted_bytes:fitted.omitted_bytes + dropped};
+  // A source id is never cut: the outcome goes first, and an id that still leaves no room means the item is left out.
+  const outcome = outcomeOf(item), shown = `(${outcome.text}) `;
+  const leads = [[`${id} ${shown}`, outcome.omitted_bytes], [`${id} `, Buffer.byteLength(shown) + outcome.omitted_bytes]];
+  const chosen = leads.find(([candidate]) => Buffer.byteLength(candidate) + need <= budget);
+  if (chosen === undefined) return null;
+  const fitted = cutText(attempt, budget - Buffer.byteLength(chosen[0]));
+  return {text:(chosen[0] + fitted.text).trimEnd(), omitted_bytes:fitted.omitted_bytes + chosen[1]};
 }
 
 /** The request-only intent tail from one `player-intent/2` value; null means the read failed.
@@ -442,7 +447,7 @@ export function formatIntentTail(value, maxBytes = INTENT_TAIL_BYTES) {
     // The software's own fields come first, so a cut falls on the age.
     fit('metadata', `id ${[...flat(goal.record_id)].slice(0, 8).join('')}; conf ${goal.confidence.toFixed(1)}; `
       + `${age.inputs_since_commit === null ? 'earlier actor' : `${age.inputs_since_commit} inputs`}, ${Math.round(age.seconds)}s, `
-      + `${age.same_session ? 'this' : 'prev'} session`, TAIL_BUDGETS.metadata);
+      + `${age.same_session ? 'this' : 'prev'}`, TAIL_BUDGETS.metadata);
   }
   // An item with no usable source id is left out, and counted.
   const recall = value.recall.items.slice(0, RECALL_LINES).map(recallLine);
@@ -639,6 +644,8 @@ export async function runHost(options) {
   let agent, client, transport, fatal, closing = false, requests = 0, requestId, requestTimer, requestInFlight = false, requestUsageAvailable = false;
   let workTimer, deadlineTimer;
   let responseProgress, handoff, pendingHandoff, passEnded = false, passUncertain = false;
+  // Frame reads admitted in the current assistant batch: each adds one image to the next request.
+  let batchReads = 0;
   // Logical requests: one per streamFn call, whatever its provider retries; `reserved` is the current one's.
   let logicalRequests = 0, reserved = false;
   const progressSnapshot = () => responseProgress ? {...responseProgress,
@@ -694,8 +701,9 @@ export async function runHost(options) {
     bounded(options.prompt); bounded(options.context);
     // A recorder's prompt is its structured pushed input; it is refused before any connection or request.
     const passInput = configuration.role === 'recorder' ? parsePassInput(options.prompt) : null;
-    // The pushed frames stay in every request of the pass (they are pinned), so they must fit the peak of pixel images.
-    if (passInput) requireThat(passInput.frames.length <= configuration.max_context_images, 'invalid-pass-input');
+    // The pushed frames stay in every request of the pass (they are pinned), so they must leave room under the peak of pixel
+    // images for at least one read: the driver's recorder peak is at least its frames + 1.
+    if (passInput) requireThat(passInput.frames.length < configuration.max_context_images, 'invalid-pass-input');
     emit('host-start', {telemetry_version:2, schema:configuration.schema, role:configuration.role, intent_tail_bytes:configuration.intent_tail_bytes, requested_service_tier:configuration.service_tier, model:configuration.model.id, provider:configuration.model.provider, api:configuration.model.api, effort:options.effort, max_output_tokens:configuration.model.maxTokens, context_window:configuration.model.contextWindow, thinking_level_map:{...configuration.model.thinkingLevelMap}, reasoning_format:configuration.model.compat?.thinkingFormat ?? null, provider_routing:configuration.model.compat?.openRouterRouting ? structuredClone(configuration.model.compat.openRouterRouting) : null, max_requests:configuration.max_requests, max_context_images:configuration.max_context_images, context_image_block:configuration.context_image_block, unsupported_features:['compaction', 'session-restore', 'model-fallback', 'reconnect', 'replay', 'ambient-tools', 'resource-discovery'], missing_endpoints:['model-attention', 'server-inference-start', 'physical-paint'], cleanup_budget_ms:cleanupBudget});
     if (fatal) throw new HostError(fatal);
     requireThat(!AMBIENT_PROVIDER_SETTINGS.some(name => Object.hasOwn(process.env, name)), 'ambient-provider-configuration');
@@ -833,12 +841,25 @@ export async function runHost(options) {
           return {block:true, reason:`${toolCall.name} is not offered on this request and was not run: only ${pass.tools.join(', ')} are available. `
             + `Call exactly one of them.\n${FIX_LINE}`};
         }
+        // A recorder's pushed frames are pinned, so the frames it can read at once are what the peak leaves: a read that would
+        // take the next request over the peak is a fixable refusal (one read per turn), not the pass-stopping backstop.
+        if (passInput && toolCall.name === 'player_source') {
+          const room = configuration.max_context_images - passInput.frames.length - batchReads;
+          if (room < 1) {
+            emit('tool-refused', {request_id:requestId, tool_call_id:toolCall.id, tool:toolCall.name, reason:'episode-image-peak', dispatched:false});
+            const slots = configuration.max_context_images - passInput.frames.length;
+            return {block:true, reason:`player_source was not run: a request holds at most ${configuration.max_context_images} images and the ${passInput.frames.length} pushed frames stay in every one, `
+              + `so only ${slots} more can be read at once and ${batchReads} ${batchReads === 1 ? 'was' : 'were'} already read in this turn. `
+              + `Earlier reads are evicted first, so read one frame per turn: call player_source again in your next turn.\n${FIX_LINE}`};
+          }
+        }
         if (!isDeepStrictEqual(toolCall.arguments, args)) {
           emit('tool-refused', {request_id:requestId, tool_call_id:toolCall.id, tool:toolCall.name, reason:'tool-arguments-changed', dispatched:false});
           const fields = changedFields(toolCall.arguments, args).join(', ');
           return {block:true, reason:`MCP input not sent: the SDK changed the arguments of ${toolCall.name} (field ${fields}); resend the call with ${fields} given exactly as the schema requires, without nulls or coerced values.`
             + (pass?.tools.includes(toolCall.name) ? `\n${FIX_LINE}` : '')};
         }
+        if (passInput && toolCall.name === 'player_source') batchReads++;
       },
       // Pi's per-result terminate hint requires every result in the batch to
       // terminate. finishTurn also handles ordinary tools preceding a handoff
@@ -1012,6 +1033,7 @@ export async function runHost(options) {
     agent.subscribe(event => {
       if (event.type === 'message_end' && event.message.role === 'assistant') {
         clearTimeout(requestTimer);
+        batchReads = 0;
         const message = event.message;
         const narration = assistantNarration(message.content);
         if (narration.text || narration.omitted_bytes) emit('assistant-text', {request_id:requestId, ...narration});

@@ -42,7 +42,7 @@ test('an ordinary tail is labelled, shows the subgoal, its observations with sta
   assert.equal(p.label, INTENT_LABEL);
   assert.equal(p.subgoal, 'Subgoal: Reach the door');
   assert.equal(p.observations, 'Expected: [seen] adjacent door; [not_yet] door open');
-  assert.equal(p.metadata, 'id a1b2c3d4; conf 0.4; 3 inputs, 12s, this session');
+  assert.equal(p.metadata, 'id a1b2c3d4; conf 0.4; 3 inputs, 12s, this');
   assert.equal(p.recallLabel, RECALL_LABEL);
   assert.deepEqual(p.recall, Array(3).fill(`${sourceId} (seen 1/1) Opened the door`));
   assert.equal(tail.omitted_bytes, 0);
@@ -58,8 +58,8 @@ test('every part exactly at its limit is shown whole, and the whole tail is exac
   const subgoal = 'x'.repeat(TAIL_BUDGETS.subgoal - bytes('Subgoal: '));
   const prefix = 'Expected: [seen] ';
   const observation = 'y'.repeat(TAIL_BUDGETS.observations - bytes(prefix));
-  const base = 'id a1b2c3d4; conf 0.4; 3 inputs, 12s, this session';
-  const inputs = 3 + (TAIL_BUDGETS.metadata - bytes(base));
+  const base = 'id a1b2c3d4; conf 0.4; 3 inputs, 12s, this';
+  const inputs = 300000000; // nine digits take the 42-byte line of one digit to exactly 50 bytes
   const recall = Array.from({length: 3}, (_, index) => {
     const lead = `${sourceId} (seen 1/1) `;
     return item({attempted: String(index).repeat(TAIL_BUDGETS.recall_line - bytes(lead))});
@@ -77,10 +77,10 @@ test('every part exactly at its limit is shown whole, and the whole tail is exac
 test('every part one byte over its limit is cut inside its own budget, with a marker naming its omitted bytes', () => {
   const subgoal = 'x'.repeat(TAIL_BUDGETS.subgoal - bytes('Subgoal: ') + 1);
   const observation = 'y'.repeat(TAIL_BUDGETS.observations - bytes('Expected: [seen] ') + 1);
-  const base = 'id a1b2c3d4; conf 0.4; 3 inputs, 12s, this session';
+  const base = 'id a1b2c3d4; conf 0.4; 3 inputs, 12s, this';
   const recall = Array.from({length: 3}, () => item({attempted: 'z'.repeat(TAIL_BUDGETS.recall_line - bytes(`${sourceId} (seen 1/1) `) + 1)}));
   const tail = formatIntentTail(intent({goal: {text: subgoal, expected_observations: [{text: observation, status: 'seen'}]},
-    age: {inputs_since_commit: 12}, items: recall}));
+    age: {inputs_since_commit: 1000000000}, items: recall}));
   const p = parts(tail);
   const shown = [p.subgoal, p.observations, p.metadata, ...p.recall];
   const budgets = [160, 200, 50, 120, 120, 120];
@@ -165,9 +165,14 @@ test('a recall line never cuts its source id: it drops the outcome, then says th
   const dropped = parts(formatIntentTail(intent({items: [item({first_source: wide, attempted: 'Opened the door and walked a long way beyond it'})]}))).recall[0];
   assert.ok(dropped.startsWith(`${wide} `) && !dropped.includes('(seen'), dropped);
   assert.ok(bytes(dropped) <= 120);
+  // An id that cannot be shown whole leaves the item out (the frozen label promises one source id on every line), counted.
   const huge = 'h'.repeat(128);
-  const hidden = parts(formatIntentTail(intent({items: [item({first_source: huge, attempted: 'Opened the door'})]}))).recall[0];
-  assert.ok(hidden.startsWith('(frame id too long to show) ') && !hidden.includes('hhhh'), hidden);
+  const hidden = formatIntentTail(intent({items: [item({first_source: huge, attempted: 'Opened the door'}), item()]}));
+  assert.deepEqual(parts(hidden).recall, [`${sourceId} (seen 1/1) Opened the door`]);
+  assert.equal(hidden.skipped_items, 1);
+  assert.ok(!hidden.text.includes('hhhh') && !hidden.text.includes('too long'));
+  const alone = formatIntentTail(intent({items: [item({first_source: huge})]}));
+  assert.ok(!alone.text.includes(RECALL_LABEL) && alone.skipped_items === 1);
 });
 
 test('an item with no source id is left out and counted, never shown without one', () => {
@@ -187,13 +192,34 @@ test('a lead the line drops counts as omitted, and a huge attempt never collapse
   const part = tail.parts.find(entry => entry.part === 'recall-1');
   assert.ok(part.omitted_bytes >= bytes('(seen 1/1) '), 'the dropped outcome is counted');
   const huge = 'x'.repeat(5_000_000);
-  for (const first_source of [sourceId, wide, 'h'.repeat(128)]) {
+  for (const first_source of [sourceId, wide]) {
     const big = formatIntentTail(intent({items: [item({first_source, attempted: huge})]}));
     const line = parts(big).recall[0];
     assert.ok(bytes(line) <= 120 && line.length > 20 && big.tail_bytes <= 1024, line);
-    assert.ok(first_source.length < 128 ? line.startsWith(`${first_source} `) : line.startsWith('(frame id too long'), line);
+    assert.ok(line.startsWith(`${first_source} `), line);
     assert.ok(!big.text.includes('Unavailable'));
   }
+  assert.equal(formatIntentTail(intent({items: [item({first_source: 'h'.repeat(128), attempted: huge})]})).skipped_items, 1);
+});
+
+test('every dropped byte of a recall line is counted: the cut of a changed excerpt and a dropped outcome', () => {
+  const changed = 'c'.repeat(100);
+  const excerpt = formatIntentTail(intent({items: [item({observation_status: [], changed, attempted: 'A'})]}));
+  const line = parts(excerpt).recall[0];
+  const cut = /…\[\+(\d+)\]\) A$/.exec(line);
+  assert.ok(cut, line);
+  assert.equal(excerpt.parts.find(part => part.part === 'recall-1').omitted_bytes, Number(cut[1]), 'the excerpt cut is counted');
+  assert.equal(excerpt.omitted_bytes, Number(cut[1]));
+  // A dropped outcome counts its shown bytes plus what its excerpt had already cut.
+  const wide = 'w'.repeat(100);
+  const dropped = formatIntentTail(intent({items: [item({first_source: wide, observation_status: [], changed, attempted: 'Opened the door and walked a long way beyond it'})]}));
+  const droppedLine = parts(dropped).recall[0];
+  assert.ok(droppedLine.startsWith(`${wide} `) && !droppedLine.includes('changed:'), droppedLine);
+  const shown = fitPart(changed, 32);
+  const attemptCut = Number(/…\[\+(\d+)\]$/.exec(droppedLine)[1]);
+  const total = dropped.parts.find(part => part.part === 'recall-1').omitted_bytes;
+  assert.equal(total, attemptCut + bytes(`(changed: ${shown.text}) `) + shown.omitted_bytes);
+  assert.equal(dropped.omitted_bytes, total);
 });
 
 test('recall outcomes state the marks; with no subgoal they excerpt what visibly changed', () => {
@@ -221,7 +247,7 @@ test('the tail has fewer lines when there is no subgoal or no recall, and clamps
 test('the metadata states the age for an earlier actor or session and degrades inside its 50 bytes', () => {
   const metadata = age => parts(formatIntentTail(intent({age}))).metadata;
   // The software's own fields (id, confidence) come first: a cut falls on the age, never on them.
-  const earlier = metadata({inputs_since_commit: null, same_actor: false, same_session: false, seconds: 3600.4});
+  const earlier = metadata({inputs_since_commit: null, same_actor: false, same_session: false, seconds: 360000.4});
   assert.ok(earlier.startsWith('id a1b2c3d4; conf 0.4; earlier actor') && bytes(earlier) <= 50 && /…\[\+\d+\]$/.test(earlier), earlier);
   const long = metadata({inputs_since_commit: 123456, seconds: 987654, same_session: false});
   assert.ok(long.startsWith('id a1b2c3d4; conf 0.4; 123456') && bytes(long) <= 50 && /…\[\+\d+\]$/.test(long), long);
@@ -229,8 +255,12 @@ test('the metadata states the age for an earlier actor or session and degrades i
     const line = metadata(age);
     assert.ok(line.startsWith('id a1b2c3d4; conf 0.4; ') && bytes(line) <= 50, line);
   }
-  assert.equal(metadata({inputs_since_commit: 0, seconds: 0}), 'id a1b2c3d4; conf 0.4; 0 inputs, 0s, this session');
-  assert.equal(metadata({inputs_since_commit: 7, seconds: 4, same_session: false}), 'id a1b2c3d4; conf 0.4; 7 inputs, 4s, prev session');
+  assert.equal(metadata({inputs_since_commit: 0, seconds: 0}), 'id a1b2c3d4; conf 0.4; 0 inputs, 0s, this');
+  assert.equal(metadata({inputs_since_commit: 7, seconds: 4, same_session: false}), 'id a1b2c3d4; conf 0.4; 7 inputs, 4s, prev');
+  // Ordinary ages fit the whole line, with nothing cut.
+  assert.equal(metadata({inputs_since_commit: 57, seconds: 89.4}), 'id a1b2c3d4; conf 0.4; 57 inputs, 89s, this');
+  assert.equal(metadata({inputs_since_commit: 250, seconds: 1234.5, same_session: false}), 'id a1b2c3d4; conf 0.4; 250 inputs, 1235s, prev');
+  assert.equal(metadata({inputs_since_commit: null, seconds: 99, same_session: false}), 'id a1b2c3d4; conf 0.4; earlier actor, 99s, prev');
   // The id is the first 8 code points, not code units.
   const emoji = parts(formatIntentTail(intent({goal: {record_id: 'éééééééééé'}}))).metadata;
   assert.ok(emoji.startsWith(`id ${'é'.repeat(8)}; conf 0.4; `) && !emoji.includes('�'), emoji);
