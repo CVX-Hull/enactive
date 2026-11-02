@@ -52,5 +52,10 @@ The [testing page](../testing.md) lists what each test file asserts and its limi
 - A mechanical measure is not a gameplay verdict; it counts and classifies what the traces and stores retain.
 - The lens statistics are pure Python and O(n²) per run; the numpy implementations that produced earlier lens records
   remain in `.runtime` because numpy is not a project dependency.
+- [`tools/level_v4_probe.py`](../../tools/level_v4_probe.py) computes its own kappa, AC1 and run bootstrap for
+  its engineering probe (the bootstrap takes order statistics at different indices, and kappa is undefined where chance
+  agreement is certain); it does not use `evidence_stats`, so the two are not interchangeable until it is migrated.
+  The replay and host-launch helpers in [`tools/level_probe.py`](../../tools/level_probe.py) are replay machinery,
+  not retained-artifact analysis, and these tools do not use them.
 - The persistence measures of the #329 persistent stage and the recorder-reliability ladder (#345) depend on their
   stage's registries and on provider calls; they stay with their records until a stage registers them again.
