@@ -46,7 +46,7 @@ issuance seals its actor. The player host settles only its direct originating ha
 or exact original collection; the driver verifies context digest and actual
 old host/MCP group quiescence before a successor. Original limits persist.
 The [player host contract](contracts/player-host.md) owns the substitutable
-`player-host/2` invocation, telemetry, settlement and isolation rules.
+`player-host/5` invocation, roles, intent tail, telemetry, settlement and isolation rules.
 
 ## Transport and state
 
@@ -57,7 +57,7 @@ The client gives each submission its ID before sending. `computer_result` and
 neither delivery nor nondelivery. MCP cancellation requests independent permanent
 Pause before abandoning the await.
 
-Current storage is fresh `computer-session/1` plus explicitly selected
+Current storage is fresh `computer-session/3` plus explicitly selected
 `player-memory/1`. Immutable sources retain original PNG bytes and digest.
 [Current data treatment](contracts/computer-control.md#responsibilities-and-current-data)
 and [migration](operations/migration.md) own versions and historical-state handling.

@@ -38,7 +38,7 @@ class InvestigationTests(unittest.TestCase):
         self.actor = 'actor-original'
         self.receipt = dict(schema='campaign-receipt/2', session=self.session, source_commit='abc123',
             deciding_hosts_quiescent=True, native_absence_verified=True, input_authority_revoked=True,
-            driver=dict(schema='player-driver/2', actors=[dict(index=1, actor_id=self.actor)],
+            driver=dict(schema='player-driver/5', actors=[dict(index=1, actor_id=self.actor)],
                 attempts_charged=1, host_seconds_used=2, configured_estimate_usd=.1, missing_usage_attempts=0),
             accounting=dict(consumed_conservative_reservation_usd=.2), outcome='failed')
         self.put_receipt()
@@ -52,14 +52,14 @@ class InvestigationTests(unittest.TestCase):
         (self.case / 'sources').mkdir()
         (self.case / 'sources' / (self.source_id + '.png')).write_bytes(self.png)
         with sqlite3.connect(self.case / 'session.sqlite3') as db:
-            db.executescript('''PRAGMA user_version=1;
+            db.executescript('''PRAGMA user_version=3;
                 CREATE TABLE metadata(key TEXT PRIMARY KEY,value TEXT NOT NULL);
                 CREATE TABLE sources(id TEXT PRIMARY KEY,metadata TEXT NOT NULL,bytes INTEGER NOT NULL);
                 CREATE TABLE operations(id TEXT PRIMARY KEY,actor TEXT,kind TEXT,created_wall REAL,
                     deadline REAL,input_json TEXT,final_json TEXT);
                 CREATE TABLE native_intents(id TEXT PRIMARY KEY,operation TEXT,receipt TEXT,source TEXT,timing TEXT);
                 CREATE TABLE collections(native_id TEXT PRIMARY KEY,receipt TEXT,source TEXT);''')
-            db.executemany('INSERT INTO metadata VALUES(?,?)', [('schema', json.dumps('computer-session/1')),
+            db.executemany('INSERT INTO metadata VALUES(?,?)', [('schema', json.dumps('computer-session/3')),
                 ('session', json.dumps(self.session))])
             db.execute('INSERT INTO sources VALUES(?,?,?)', (self.source_id, json.dumps(self.metadata), len(self.png)))
             final = dict(schema='computer-operation/1', operation_id='op1', actor_id=self.actor,
@@ -71,7 +71,7 @@ class InvestigationTests(unittest.TestCase):
             db.execute('INSERT INTO native_intents VALUES(?,?,?,?,?)', ('native1', 'op1', json.dumps(receipt),
                 self.source_id, json.dumps(dict(intent_wall=1, intent_monotonic=5,
                     receipt_received_wall=1.1, receipt_received_monotonic=5.1))))
-        self.events = [dict(type='host-start', schema='player-host/2', telemetry_version=2,
+        self.events = [dict(type='host-start', schema='player-host/5', telemetry_version=2,
             monotonic_ms=0, wall_time='1970-01-01T00:00:01Z', model='fixture', provider='fixture',
             provider_routing=dict(only=['selected'], order=['selected'], allow_fallbacks=False,
                 token='PRIVATE_TOKEN'), prompt='PRIVATE_PROMPT'),
@@ -250,6 +250,13 @@ class InvestigationTests(unittest.TestCase):
             source = export_selection(self.selection)['cases'][0]['sources'][0]
             self.assertIsNone(source['png_base64'])
             self.assertTrue(source['unavailable_reason'])
+
+    def test_a_player_driver_4_receipt_is_unsupported(self):
+        for old in ('player-driver/4', 'player-driver/1'):
+            self.receipt['driver']['schema'] = old
+            self.put_receipt()
+            with self.assertRaisesRegex(ControlError, 'Unsupported closed campaign driver version'):
+                export_selection(self.selection)
 
     def test_successor_collection_keeps_original_program_owner_and_children(self):
         projection = json.loads(self.events[6]['result']['content'][0]['text'])

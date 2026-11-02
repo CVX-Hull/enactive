@@ -89,3 +89,102 @@ def test_source_integrity_and_caller_copy_isolation(tmp_path):
         memory._db.commit()
         with pytest.raises(PlayerError):
             memory.read_source(metadata['source_id'])
+
+
+def test_multi_record_append_is_one_transaction_with_derived_ids(tmp_path):
+    with Memory(tmp_path / 'player.sqlite3') as memory:
+        prior = memory.append('b' * 32, record('work'))
+        request = 'c' * 32
+        first, second = Memory.batch_ids(request, 2)
+        batch = [record('work', text='replacement'),
+                 record('correction', supersedes=prior['id'], supports=[first])]
+        stored = memory.append_many('d' * 32, batch, request_id=request)
+        assert [r['id'] for r in stored] == [first, second]
+        assert [r['id'] for r in memory.current('work')] == [first]
+        assert memory.append_many('d' * 32, batch, request_id=request) == stored
+        with pytest.raises(PlayerError, match='conflicts'):
+            memory.append_many('e' * 32, batch, request_id=request)
+        # A failing later record rolls back the earlier one in the same batch.
+        with pytest.raises(PlayerError, match='Missing records reference'):
+            memory.append_many('d' * 32, [record('work', text='orphan'), record('correction', supersedes='missing')],
+                               request_id='f' * 32)
+        assert memory._db.execute('SELECT COUNT(*) FROM records').fetchone()[0] == 3
+        for count in (0, 17):
+            with pytest.raises(PlayerError):
+                memory.append_many('d' * 32, [record()] * count, request_id='0' * 32)
+
+
+def test_service_row_and_records_commit_in_one_transaction(tmp_path):
+    with Memory(tmp_path / 'player.sqlite3') as memory:
+        request = '1' * 32
+        service = ('player_level_replace', dict(text='x'), dict(status='committed'))
+        stored = memory.append_many('d' * 32, [record('work')], request_id=request, service=service)
+        collected = memory.service_result(request, 'd' * 32)
+        assert collected['status'] == 'completed' and collected['value'] == dict(status='committed', records=stored)
+        assert memory.append_many('d' * 32, [], request_id='2' * 32, service=service) == []
+        assert memory.service_result('2' * 32)['value'] == dict(status='committed', records=[])
+        with pytest.raises(PlayerError, match='Missing records reference'):
+            memory.append_many('d' * 32, [record('correction', supersedes='missing')], request_id='3' * 32,
+                               service=service)
+        with pytest.raises(PlayerError, match='Unknown original'):
+            memory.service_result('3' * 32)
+        # A failing service-row insert rolls back the records already inserted before it.
+        assert memory.begin_service('4' * 32, 'd' * 32, 'other_tool', {})
+        with pytest.raises(PlayerError, match='Cannot remember'):
+            memory.append_many('d' * 32, [record('work')], request_id='4' * 32, service=service)
+        assert memory._db.execute('SELECT COUNT(*) FROM records').fetchone()[0] == 1
+
+
+def episode_claim(**changes):
+    data = dict(level='episode', level_contract='player-episode/1', settled='failed', writer='software',
+                session='s' * 32, actor_id='a' * 32, first_position=1, last_position=1, subgoal_id=None, reason='r')
+    return record('claim', data=data | changes)
+
+
+def test_the_general_append_paths_refuse_reserved_data_and_only_the_custodian_paths_admit_it(tmp_path):
+    from harness.player.contracts import RememberError
+    with Memory(tmp_path / 'player.sqlite3') as memory:
+        for data in (dict(level='episode'), dict(level='subgoal'), dict(writer='recorder'), dict(level_contract='x'),
+                     dict(by='software'), dict(level='episode', writer='software')):
+            with pytest.raises(PlayerError, match='reserves'):
+                memory.append('a' * 32, record(data=data))
+            with pytest.raises(PlayerError, match='reserves'):
+                memory.append_many('a' * 32, [record(data=data)], request_id='1' * 32)
+        assert memory._db.execute('SELECT COUNT(*) FROM records').fetchone()[0] == 0
+        # Other data stays admitted.
+        memory.append('a' * 32, record(data=dict(note='fine', by='me')))
+        with pytest.raises(PlayerError, match='reserves'):
+            memory.append('a' * 32, episode_claim())
+        (stored,) = memory.append_many('a' * 32, [episode_claim()], request_id='2' * 32, custodian=True)
+        assert [(row, r['id']) for row, r in memory.episode_claims()] == [(2, stored['id'])]
+        assert memory.rowid(stored['id']) == 2 and memory.revision() == 2
+        assert memory.episode_claims(after_row=2) == [] and len(memory.episode_claims(after_row=1)) == 1
+        assert [r['id'] for r in memory.level_records('claim', 'episode')] == [stored['id']]
+        assert memory.level_records('work', 'subgoal') == []
+        with pytest.raises(PlayerError, match='Unknown records identity'):
+            memory.rowid('missing')
+        assert issubclass(RememberError, PlayerError)
+
+
+def test_a_storage_fault_or_source_capacity_is_a_remember_error_and_a_refusal_is_not(tmp_path):
+    from harness.player.contracts import RememberError
+    with Memory(tmp_path / 'player.sqlite3', max_source_bytes=1) as memory:
+        metadata, png = capture()
+        with pytest.raises(RememberError, match='source capacity exceeded'):
+            memory.register_source(metadata, png)
+        with pytest.raises(PlayerError) as refused:
+            memory.append('a' * 32, record(supports=['missing']))
+        assert not isinstance(refused.value, RememberError)
+        memory._db.execute('PRAGMA query_only=ON')
+        with pytest.raises(RememberError, match='Cannot remember'):
+            memory.append('a' * 32, record())
+
+
+def test_revision_and_rowid_wrap_storage_errors_as_player_errors(tmp_path):
+    memory = Memory(tmp_path / 'player.sqlite3')
+    stored = memory.append('a' * 32, record())
+    assert memory.revision() == 1 and memory.rowid(stored['id']) == 1
+    memory._db.close()
+    for call in (memory.revision, lambda: memory.rowid(stored['id'])):
+        with pytest.raises(PlayerError, match='Cannot query player memory'):
+            call()

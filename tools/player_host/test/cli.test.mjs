@@ -17,7 +17,7 @@ async function cli(t, handle, extraEnv = {}, enabledTools = ['observe']) {
   const server=createServer(handle); server.listen(0,'127.0.0.1'); await once(server,'listening');
   t.after(()=>{server.closeAllConnections();server.close();});
   const model={id:'fixture',name:'fixture',api:'openai-completions',provider:'fixture',baseUrl:`http://127.0.0.1:${server.address().port}/v1`,input:['text','image'],reasoning:false,cost:{input:0,output:0,cacheRead:0,cacheWrite:0},contextWindow:10000,maxTokens:100};
-  const route={schema:'player-host/2',service_tier:'default',model,api_key_env:'CLI_FIXTURE_KEY',max_requests:1,max_context_images:4,context_image_block:1,request_timeout_seconds:5};
+  const route={schema:'player-host/5',role:'actor',intent_tail_bytes:null,service_tier:'default',model,api_key_env:'CLI_FIXTURE_KEY',max_requests:1,max_context_images:4,context_image_block:1,request_timeout_seconds:5};
   const mcp={command:resolve(python),args:[fixture,join(dir,'log'),join(dir,'pid')],cwd:dir,enabled:true,required:true,enabled_tools:enabledTools,startup_timeout_sec:3,tool_timeout_sec:1};
   const paths={route:join(dir,'route.json'),mcp:join(dir,'mcp.json'),context:join(dir,'context.txt'),final:join(dir,'final.txt')};
   await Promise.all([writeFile(paths.route,JSON.stringify(route)),writeFile(paths.mcp,JSON.stringify(mcp)),writeFile(paths.context,'Frozen player guide'),writeFile(paths.final,'reserved')]);
@@ -71,7 +71,7 @@ for(const name of ['OPENAI_LOG','OPENAI_CUSTOM_HEADERS','OPENAI_ORG_ID','OPENAI_
 
 test('CLI completed handoff exits zero, leaves the reserved final path unchanged and sends no extra HTTP request',async t=>{
   let requests=0;
-  const args={ids:[],summary:'Retain current context'};
+  const args={};
   const run=await cli(t,(_req,res)=>{
     requests++;res.writeHead(200,{'content-type':'text/event-stream'});
     res.end('data: '+JSON.stringify({id:'fixture',model:'fixture-backend',choices:[{index:0,delta:{role:'assistant',tool_calls:[{index:0,id:'handoff-call',type:'function',function:{name:'player_handoff',arguments:JSON.stringify(args)}}]},finish_reason:'tool_calls'}]})+'\n\ndata: [DONE]\n\n');
@@ -95,7 +95,7 @@ async function validateFiles(t, mutate = ()=>{}) {
   const dir=await mkdtemp(join(tmpdir(),'pi-host-validate-'));
   t.after(()=>rm(dir,{recursive:true,force:true}));
   const model={id:'fixture',name:'fixture',api:'openai-completions',provider:'fixture',baseUrl:'http://127.0.0.1:1/v1',input:['text','image'],reasoning:false,cost:{input:0,output:0,cacheRead:0,cacheWrite:0},contextWindow:10000,maxTokens:100};
-  const route={schema:'player-host/2',service_tier:'default',model,api_key_env:'CLI_FIXTURE_KEY',max_requests:1,max_context_images:4,context_image_block:1,request_timeout_seconds:5};
+  const route={schema:'player-host/5',role:'actor',intent_tail_bytes:null,service_tier:'default',model,api_key_env:'CLI_FIXTURE_KEY',max_requests:1,max_context_images:4,context_image_block:1,request_timeout_seconds:5};
   const mcp={command:resolve(python),args:[fixture],cwd:dir,enabled:true,required:true,enabled_tools:['observe'],startup_timeout_sec:3,tool_timeout_sec:1};
   mutate(route,mcp);
   const paths={route:join(dir,'route.json'),mcp:join(dir,'mcp.json')};
@@ -107,7 +107,7 @@ test('CLI validate accepts the route and MCP table silently without a credential
   assert.equal(result.code,0);assert.equal(result.stdout,'');
 });
 test('CLI validate refuses an old route schema, a disabled MCP table and repeated or missing flags',async t=>{
-  for (const mutate of [route=>{route.schema='pi-player-host/4';},(_route,mcp)=>{mcp.enabled=false;}]) {
+  for (const mutate of [route=>{route.schema='pi-player-host/5';},(_route,mcp)=>{mcp.enabled=false;}]) {
     const result=await modeRun(t,await validateFiles(t,mutate));
     assert.equal(result.code,1);assert.equal(result.stdout,'');
   }

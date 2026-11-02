@@ -1,7 +1,7 @@
 # Bounded Pi player host
 
 This private package is the Pi-based adapter that implements the host-neutral
-[player-host contract](../../docs/contracts/player-host.md) (`player-host/2`);
+[player-host contract](../../docs/contracts/player-host.md) (`player-host/5`);
 the campaign driver selects it only through the package's frozen `host.argv`.
 The [current component](../../docs/components/player-interface.md) owns the player interface;
 [`069-controllable-player-host.md`](../../docs/changes/069-controllable-player-host.md)
@@ -68,11 +68,19 @@ below, no fatal failure latch, successful owned MCP closure, and a successful
 final-file write. `runHost(options)` is the
 programmatic seam; tests inject `fetch` there. No fake-provider CLI is exposed.
 
-The closed route has exactly `schema: "player-host/2"`, `model`,
+The closed route has exactly `schema: "player-host/5"`, `role` (`actor` or `level`),
+`intent_tail_bytes` (null, or 64–4096 for an actor), `model`,
 `api_key_env`, `max_requests`, `request_timeout_seconds`, `service_tier`, the required positive
 integer `max_context_images` and the required integer `context_image_block`
-(1 ≤ block ≤ `max_context_images`). `pi-player-host/1` through `/4`, `player-host/1` and
-missing/invalid fields are rejected; closed historical configurations and traces are
+(1 ≤ block ≤ `max_context_images`). `pi-player-host/1` through `/5`, `player-host/1` through `/4` and
+missing/invalid fields are rejected. An actor tail calls the host-internal `player_intent`
+tool before each request, which must be discovered and never enabled for the model; a
+level host sends `tool_choice: "required"`, emits `level-pass`, `level-commit`,
+`level-discard`, `level-abstain` and `level-reserved-request`, offers only the four terminal
+tools on its last two requests, ends its pass on a keep, replace or close (commit or discard) or a
+valid abstain and otherwise settles `level-no-proposal`, or `level-final-refusal` for a
+terminal call refused on the last allowed request (see the
+[contract](../../docs/contracts/player-host.md#roles-and-the-intent-tail)); closed historical configurations and traces are
 evidence, not runnable current inputs.
 `model` contains Pi's
 explicit `id`, `name`, `api: "openai-completions"`, `provider`, `baseUrl`,
@@ -138,27 +146,40 @@ window, without text summarization, automatic compaction, replay or permission
 renewal. Qualification must include actual continuation and apparent effects;
 reducing images alone is not a latency pass.
 
-Pi1.4.0's full `anyOf` validation can describe an unrelated memory type when a
-selected Work body is invalid. `validation-feedback.mjs` supplies a request-only
-diagnostic using the same `validateToolArguments`, narrowing only the existing
-`intent.entry_type` alternatives and retaining surrounding constraints. It never
-changes arguments, tool schemas, normal SDK validation, execution or collection.
-It requires a unique completed call/result batch, `isError`, absent `durationMs`,
-one text part with the exact SDK validation header, a known unambiguous branch,
-and no parser `argumentsError`. In pinned Pi, executed calls always carry a
-duration, including zero and exceptions. Parser/blocked errors have other headers;
-MCP errors keep their original path. If the narrowed check passes, the original
-refusal stays. No independent validator, successful-call revalidation or SDK fork
-is introduced.
+Pi 1.4.0 refuses a malformed call with a terse list of failing paths. For a **level**
+host, `validation-feedback.mjs` supplies a request-only replacement for the refusal of
+`player_log_read` and the four terminal tools: one line per failing field with its path, the
+rule, the allowed values or limits read from the tool's schema and the received value
+truncated to 120 characters, then a minimal valid example call generated from that schema.
+A terminal tool's refusal ends with "Fix the call and resend it; abstaining is not the remedy
+for a fixable call." An actor's refusals are the SDK's own text. It never changes arguments,
+tool schemas, normal SDK validation, execution or collection, and it needs no validator of its
+own: it requires a unique completed call/result batch, `isError`, absent `durationMs`, one
+text part with the exact SDK validation header and no parser `argumentsError`. In pinned Pi,
+executed calls always carry a duration, including zero and exceptions. Parser/blocked errors
+have other headers; MCP errors keep their original path. If no field can be recovered, the
+original refusal stays.
 
-Canonical history stays unchanged. The existing trace's
-`tool-validation-feedback` event retains the original SDK result, exact call ID
-and projected text before forwarding. A weak memo of canonical call/result
-objects avoids repeating diagnostic work and keeps earlier feedback stable in
-later request prefixes; batch pairing is checked anew. This happens before image
-projection clones messages. These diagnostics prove neither semantic truth nor
-gameplay success and grant no input authority. Recheck these SDK assumptions on
-upgrade and retire the helper when upstream supplies precise union feedback.
+Canonical history stays unchanged. The trace's `tool-validation-feedback` event retains the
+original SDK result, exact call ID, the tool and the projected text before forwarding. A weak
+memo of canonical call/result objects avoids repeating diagnostic work and keeps earlier
+feedback stable in later request prefixes; batch pairing is checked anew. This happens before
+image projection clones messages. These diagnostics prove neither semantic truth nor gameplay
+success and grant no input authority. Recheck these SDK assumptions on upgrade.
+
+**Reserved terminal requests.** Pi 1.4.0 declares a request's tools through the transcript:
+the first system message carries `toolsAdded`. On a logical request (one per `streamFn` call;
+`logical_request_id` is `request-K` for the K-th, shared by its retries) that starts with two or fewer
+HTTP attempts left or two or fewer logical requests left
+(`max_requests - requests <= 2 || max_requests - logicalRequests <= 2`, both read before the request is counted) the host's `streamFn` restricts those declarations to the
+four terminal tools for that request only, emits `level-reserved-request`, and the resource
+status says only the pass-ending tools are offered. Pi's OpenAI serializer has no
+`allowed_tools` option, and the route's Gemini conversion is undocumented, so the request
+body itself carries only the terminal tools. A terminal call refused on the last allowed
+request settles as `level-final-refusal`. `beforeToolCall` refuses a non-terminal call on a
+reserved request (`tool-refused`, reason `level-reserved`). A terminal tool's
+`player-transport/1` unknown receipt ends the pass as `level-uncertain`, and every terminal
+call is traced as `level-terminal-call`.
 
 For nonreasoning models effort must be `off`. For reasoning models the selected
 Pi effort (`off`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`) must have a
@@ -259,7 +280,7 @@ automatic compaction or session restoration.
 A sealed `computer-operation/1` response from `player_handoff`, or collection
 through `computer_result` of this host's one pending original handoff, ends this
 host. The first actual MCP text must bind matching 32-character hex operation/session/actor
-IDs and a current `player-handoff/1` issuance with matching IDs, a 32-character hex context ID,
+IDs and a current `player-handoff/2` issuance with matching IDs, a 32-character hex context ID,
 64-character hex context digest, positive finite sealing time and `grants_authority:false`.
 There are no game-phase, menu, identity or source-checkpoint requirements.
 Only this host's direct response can establish an origin; collection must request

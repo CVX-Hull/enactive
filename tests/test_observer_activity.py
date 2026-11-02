@@ -144,7 +144,7 @@ def test_pause_is_independent_of_blocked_activity_read(service):
 
 def test_partial_host_lines_keep_original_accounting_and_single_projection(tmp_path):
     path = tmp_path / 'host.jsonl'
-    path.write_text(json.dumps(dict(type='host-start', telemetry_version=2, schema='player-host/2')) + '\n' + '{"type":"request-start"')
+    path.write_text(json.dumps(dict(type='host-start', telemetry_version=2, schema='player-host/5')) + '\n' + '{"type":"request-start"')
     received = []
     events = HostEvents(path, 10, observer=lambda ordinal, row: received.append((ordinal, row['type'])))
     try:

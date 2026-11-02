@@ -19,7 +19,7 @@ from tools import investigation_live as live
 def case():
     fixture = closed_fixture.InvestigationTests()
     fixture.setUp()
-    fixture.profile = dict(schema='campaign-run/3', session=fixture.session, source_commit='f' * 40)
+    fixture.profile = dict(schema='campaign-run/4', session=fixture.session, source_commit='f' * 40)
     (fixture.case / 'manifest.json').write_text(json.dumps(fixture.profile))
     (fixture.case / 'actors/001/frozen.json').write_text(json.dumps(dict(
         schema='player-host-inputs/1', session=fixture.session, actor_id=fixture.actor,
@@ -128,7 +128,7 @@ def test_invalid_or_changed_input_is_unavailable(case, tmp_path, fault):
     if fault in ('version', 'session'):
         with sqlite3.connect(case.case / 'session.sqlite3') as db:
             if fault == 'version':
-                db.execute('PRAGMA user_version=2')
+                db.execute('PRAGMA user_version=1')
             else:
                 db.execute("UPDATE metadata SET value=? WHERE key='session'", (json.dumps('b' * 32),))
     if fault == 'actor_session':
@@ -269,7 +269,7 @@ def test_campaign_injects_view_and_closes_after_server_before_stores(tmp_path):
     def serve(app, port):
         assert app.investigation_view is view
         return server, Mock()
-    driver = dict(schema='player-driver/2', actors=[], outcome='incomplete', attempts_charged=0,
+    driver = dict(schema='player-driver/5', actors=[], outcome='incomplete', attempts_charged=0,
         configured_estimate_usd=0, missing_usage_attempts=0)
     with patch.object(campaign_run, 'preflight', return_value=(profile, dict(api_key_env='OFFLINE_KEY'), {})), \
             patch.dict('os.environ', {'OFFLINE_KEY': 'PRIVATE_TOKEN'}), \

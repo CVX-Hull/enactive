@@ -19,6 +19,9 @@ from .protocol import ControlError, NoDispatch, GEOMETRY_KEYS, MAX_FRAME_BYTES, 
 from .store import SessionStore
 
 
+READER_ROLES = ('level', 'recorder')
+
+
 class OperationExpired(ControlError):
     pass
 
@@ -53,24 +56,50 @@ class ComputerRuntime:
         with self.serial:
             if self.channel.stopped.is_set() or time.monotonic() >= self.deadline:
                 raise ControlError('Stopped run cannot mint actor custody')
-            if len(self._actors) >= self.max_actors or any(v['stage'] != 'quiescent' for v in self._actors.values()):
+            # Readers never send input, so they neither block nor count toward succession.
+            actors = [v for v in self._actors.values() if v['stage'] != 'reader']
+            if len(actors) >= self.max_actors or any(v['stage'] != 'quiescent' for v in actors):
                 raise ControlError('Prior actor is not quiescent or original actor capacity exhausted')
-            identity, token = uuid.uuid4().hex, secrets.token_urlsafe(32)
-            digest = hashlib.sha256(token.encode()).hexdigest()
-            self.store.add_actor(identity, digest)
-            with self._custody:
-                self._actors[identity] = dict(token_hash=digest, stage='active')
-            return dict(actor_id=identity, token=token)
+            return self._mint(None)
 
-    def authorize(self, token: str, *, write: bool = False) -> str:
+    def add_reader(self, actor_id: str, role: str) -> dict[str, str]:
+        """A read-and-write capability of one role serving one active actor; no input, observe or stop.
+
+        The `level` role ends subgoal passes and the `recorder` role settles episodes. There is at most one
+        reader per (served actor, role).
+        """
+        if role not in READER_ROLES:
+            raise ControlError('Reader role must be level or recorder')
+        with self.serial:
+            if self.channel.stopped.is_set() or time.monotonic() >= self.deadline:
+                raise ControlError('Stopped run cannot mint reader custody')
+            if self.actor_stage(actor_id) != 'active':
+                raise ControlError('A reader serves only the active actor')
+            if any(v.get('serves') == actor_id and v.get('role') == role for v in self._actors.values()):
+                raise ControlError(f'This actor already has its {role} reader')
+            return self._mint(actor_id, role)
+
+    def _mint(self, serves: str | None, role: str | None = None) -> dict[str, str]:
+        identity, token = uuid.uuid4().hex, secrets.token_urlsafe(32)
+        digest = hashlib.sha256(token.encode()).hexdigest()
+        self.store.add_actor(identity, digest, serves, role)
+        with self._custody:
+            self._actors[identity] = dict(token_hash=digest, stage='active' if serves is None else 'reader',
+                                          serves=serves, role=role)
+        return dict(actor_id=identity, token=token)
+
+    def authorize(self, token: str, *, write: bool = False, reader_role: str | None = None) -> str:
+        """A write needs the active actor, or, with `reader_role` (a level terminal call or a recorder settle),
+        a reader of exactly that role: an actor never holds a reader write and a reader never holds an actor write."""
         if not isinstance(token, str) or len(token) > 256:
             raise ControlError('Actor capability unavailable')
         digest = hashlib.sha256(token.encode()).hexdigest()
         with self._custody:
             for identity, actor in self._actors.items():
                 if hmac.compare_digest(digest, actor['token_hash']):
-                    if write and actor['stage'] != 'active':
-                        raise ControlError('Actor sealed; original collection/read only')
+                    if write and (actor['stage'] != 'active' if reader_role is None
+                                  else actor['stage'] != 'reader' or actor['role'] != reader_role):
+                        raise ControlError('This capability holds no such write; original collection/read only')
                     return identity
         raise ControlError('Unknown ephemeral actor capability')
 
@@ -88,7 +117,8 @@ class ComputerRuntime:
 
     def status(self) -> dict[str, Any]:
         with self._custody:
-            actors = [dict(actor_id=k, stage=v['stage']) for k, v in self._actors.items()]
+            actors = [dict(actor_id=k, stage=v['stage'], serves=v['serves'], reader_role=v['role'])
+                      for k, v in self._actors.items()]
         return dict(schema='computer-status/1', session=self.session, target=self.channel.target(),
                     stop=self.channel.stop_status(), remaining=self.remaining(), actors=actors,
                     last_operation=copy.deepcopy(self._last), latest_source=copy.deepcopy(self._latest_source),
@@ -316,7 +346,7 @@ class ComputerRuntime:
             if self._last is not None and self._last['status'] in ('pending', 'partial', 'unknown'):
                 raise ControlError('Unsettled input cannot become a handoff')
             now = time.time()
-            issuance = dict(schema='player-handoff/1', operation_id=identity, session=self.session,
+            issuance = dict(schema='player-handoff/2', operation_id=identity, session=self.session,
                 actor_id=actor_id, context_id=context_id, context_sha256=context_sha256,
                 sealed_wall=now, grants_authority=False)
             result = dict(schema='computer-operation/1', operation_id=identity, session=self.session,

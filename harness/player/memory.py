@@ -10,7 +10,8 @@ import time
 import uuid
 
 from harness.computer.protocol import source as validate_source
-from .contracts import PlayerError, bounded_integer, canonical, identity, json_object, record
+from .contracts import (PlayerError, RememberError, bounded_integer, canonical, identity, json_object, record,
+                        refuse_custodian_data)
 
 
 class Memory:
@@ -56,7 +57,7 @@ class Memory:
                 self._db.execute('BEGIN IMMEDIATE')
                 yield
         except sqlite3.Error as exc:
-            raise PlayerError(f'Cannot remember: {exc}') from exc
+            raise RememberError(f'Cannot remember: {exc}') from exc
 
     def __enter__(self):
         return self
@@ -105,24 +106,123 @@ class Memory:
                 raise PlayerError(f'Missing {table} reference: {ref}')
 
     def append(self, actor_id: str, value: dict, *, request_id: str | None = None) -> dict:
+        """The general append path: it refuses records setting `data.level == "episode"` or `data.writer`."""
         identity(actor_id)
         value = record(value)
+        refuse_custodian_data(value)
         stored = dict(value, id=request_id or uuid.uuid4().hex, actor_id=actor_id, created_wall=time.time())
         with self._transaction():
             prior = self._db.execute('SELECT 1 FROM records WHERE id=?',(stored['id'],)).fetchone()
             if prior:
-                original = self.read(stored['id'])
-                if original['actor_id'] != actor_id or {k:v for k,v in original.items() if k not in {'id','actor_id','created_wall'}} != value:
-                    raise PlayerError('Original memory request identity conflicts')
-                return original
-            self._references('sources', value['sources'])
-            self._references('records', value['supports'] + ([value['supersedes']] if value['supersedes'] else []))
-            self._references('programs', [value['program_id']] if value['program_id'] else [])
-            self._db.execute('INSERT INTO records VALUES (?,?,?,?,?)',
-                             (stored['id'], canonical(stored), value['kind'], value['supersedes'], value['program_id']))
-            for table, field in (('record_sources', 'sources'), ('record_supports', 'supports')):
-                self._db.executemany(f'INSERT INTO {table} VALUES (?,?)', [(stored['id'], ref) for ref in value[field]])
+                return self._original(stored['id'], actor_id, value)
+            self._insert(stored)
         return stored
+
+    @staticmethod
+    def batch_ids(request_id: str, count: int) -> list[str]:
+        """Record IDs of one multi-record request, derived so lost responses stay collectible."""
+        return [hashlib.sha256(f'{request_id}:{index}'.encode()).hexdigest()[:32] for index in range(count)]
+
+    def append_many(self, actor_id: str, values: list[dict], *, request_id: str,
+                    service: tuple[str, dict, dict] | None = None,
+                    sources: list[tuple[dict, bytes]] = (), custodian: bool = False) -> list[dict]:
+        """Append 0..16 records in one transaction; a later record may reference an earlier one.
+
+        `service` is `(tool, args, result)`: its correlation row and final result, with
+        `records` filled in, commit in the same transaction, so no pending window exists.
+        `sources` are exact `(metadata, png)` registrations made in that transaction too.
+        `custodian` marks the custodian's own level-commit, closure and episode-settle paths, the only ones
+        that may write the reserved `data.level`, `data.level_contract`, `data.writer` and `data.by` "software";
+        every other caller is refused those, as `append` refuses them.
+        """
+        identity(actor_id)
+        identity(request_id)
+        if type(values) is not list or len(values) > 16 or not values and service is None:
+            raise PlayerError('A multi-record append holds 1..16 records, or 0 with its service result')
+        sources = [(self._valid_source(metadata, png), png) for metadata, png in sources]
+        values = [record(value) for value in values]
+        if not custodian:
+            for value in values:
+                refuse_custodian_data(value)
+        now = time.time()
+        stored = [dict(value, id=item, actor_id=actor_id, created_wall=now)
+                  for value, item in zip(values, self.batch_ids(request_id, len(values)), strict=True)]
+        with self._transaction():
+            if stored and self._db.execute('SELECT 1 FROM records WHERE id=?', (stored[0]['id'],)).fetchone():
+                return [self._original(item['id'], actor_id, value) for item, value in zip(stored, values, strict=True)]
+            for metadata, png in sources:
+                self._insert_source(metadata, png)
+            for item in stored:
+                self._insert(item)
+            if service is not None:
+                tool, args, result = service
+                self._db.execute('INSERT INTO service_operations VALUES(?,?,?,?,?,?)', (request_id, actor_id, tool,
+                    canonical(args), canonical({'steps': []}), canonical(dict(result, records=stored))))
+        return stored
+
+    def _original(self, item_id: str, actor_id: str, value: dict) -> dict:
+        original = self.read(item_id)
+        if original['actor_id'] != actor_id or {k:v for k,v in original.items() if k not in {'id','actor_id','created_wall'}} != value:
+            raise PlayerError('Original memory request identity conflicts')
+        return original
+
+    def _insert(self, stored: dict) -> None:
+        self._references('sources', stored['sources'])
+        self._references('records', stored['supports'] + ([stored['supersedes']] if stored['supersedes'] else []))
+        self._references('programs', [stored['program_id']] if stored['program_id'] else [])
+        self._db.execute('INSERT INTO records VALUES (?,?,?,?,?)',
+                         (stored['id'], canonical(stored), stored['kind'], stored['supersedes'], stored['program_id']))
+        for table, field in (('record_sources', 'sources'), ('record_supports', 'supports')):
+            self._db.executemany(f'INSERT INTO {table} VALUES (?,?)', [(stored['id'], ref) for ref in stored[field]])
+
+    def current(self, kind: str) -> list[dict]:
+        """Every unsuperseded record of one kind, oldest first, without query's 50-record default."""
+        try:
+            rows = self._db.execute('''SELECT id FROM records r WHERE kind=?
+                AND NOT EXISTS (SELECT 1 FROM records c WHERE c.supersedes=r.id) ORDER BY r.rowid''', (kind,)).fetchall()
+            return [self.read(row[0]) for row in rows]
+        except sqlite3.Error as exc:
+            raise PlayerError(f'Cannot query player memory: {exc}') from exc
+
+    def level_records(self, kind: str, level: str) -> list[dict]:
+        """Every record of one kind whose `data.level` is `level`, superseded history included, oldest first."""
+        try:
+            rows = self._db.execute("SELECT id FROM records WHERE kind=? AND json_extract(document,'$.data.level')=? "
+                                    "ORDER BY rowid", (kind, level)).fetchall()
+            return [self.read(row[0]) for row in rows]
+        except sqlite3.Error as exc:
+            raise PlayerError(f'Cannot query player memory: {exc}') from exc
+
+    def revision(self) -> int:
+        """The commit position of the newest record (0 when empty); records are only appended."""
+        try:
+            return self._db.execute('SELECT COALESCE(MAX(rowid),0) FROM records').fetchone()[0]
+        except sqlite3.Error as exc:
+            raise PlayerError(f'Cannot query player memory: {exc}') from exc
+
+    def rowid(self, record_id: str) -> int:
+        """A record's commit position, which orders records by when they were committed."""
+        try:
+            row = self._db.execute('SELECT rowid FROM records WHERE id=?', (identity(record_id),)).fetchone()
+        except sqlite3.Error as exc:
+            raise PlayerError(f'Cannot query player memory: {exc}') from exc
+        if row is None:
+            raise PlayerError(f'Unknown records identity: {record_id}')
+        return row[0]
+
+    def episode_claims(self, after_row: int = 0, up_to_row: int | None = None) -> list[tuple[int, dict]]:
+        """`(commit position, record)` of every claim carrying `data.level == "episode"` after a position, oldest first.
+
+        These are unfiltered by trust: whether one is a custodian-written episode is decided by
+        `harness.player.episodes.episode`, so a record from any writer is returned here and judged there.
+        """
+        try:
+            rows = self._db.execute("SELECT rowid,id FROM records WHERE kind='claim' AND rowid>? AND rowid<=? "
+                                    "AND json_extract(document,'$.data.level')='episode' ORDER BY rowid",
+                                    (after_row, self.revision() if up_to_row is None else up_to_row)).fetchall()
+            return [(row, self.read(item)) for row, item in rows]
+        except sqlite3.Error as exc:
+            raise PlayerError(f'Cannot query player memory: {exc}') from exc
 
     def query(self, kind: str | None = None, limit: int = 50, include_superseded: bool = False) -> list[dict]:
         bounded_integer(limit, 1, 50)
@@ -139,6 +239,13 @@ class Memory:
             raise PlayerError(f'Cannot query player memory: {exc}') from exc
 
     def register_source(self, metadata: dict, png: bytes) -> dict:
+        metadata = self._valid_source(metadata, png)
+        with self._transaction():
+            self._insert_source(metadata, png)
+        return metadata
+
+    @staticmethod
+    def _valid_source(metadata: dict, png: bytes) -> dict:
         try:
             metadata = json_object(metadata)
             validate_source(metadata)
@@ -148,17 +255,22 @@ class Memory:
                 raise PlayerError('Source must contain PNG bytes')
         except (ValueError, TypeError, UnicodeError) as exc:
             raise PlayerError(f'Cannot remember source: {exc}') from exc
-        with self._transaction():
-            prior = self._db.execute('SELECT metadata,png FROM sources WHERE id=?', (metadata['source_id'],)).fetchone()
-            if prior is not None:
-                if prior != (canonical(metadata), png):
-                    raise PlayerError('Immutable source registration differs')
-                return metadata
-            used = self._db.execute('SELECT COALESCE(SUM(length(png)),0) FROM sources').fetchone()[0]
-            if used + len(png) > self.max_source_bytes:
-                raise PlayerError('Cannot remember: source capacity exceeded; no images evicted')
-            self._db.execute('INSERT INTO sources VALUES (?,?,?)', (metadata['source_id'], canonical(metadata), png))
         return metadata
+
+    def source_bytes_left(self) -> int:
+        used = self._db.execute('SELECT COALESCE(SUM(length(png)),0) FROM sources').fetchone()[0]
+        return max(0, self.max_source_bytes - used)
+
+    def _insert_source(self, metadata: dict, png: bytes) -> None:
+        prior = self._db.execute('SELECT metadata,png FROM sources WHERE id=?', (metadata['source_id'],)).fetchone()
+        if prior is not None:
+            if prior != (canonical(metadata), png):
+                raise PlayerError('Immutable source registration differs')
+            return
+        used = self._db.execute('SELECT COALESCE(SUM(length(png)),0) FROM sources').fetchone()[0]
+        if used + len(png) > self.max_source_bytes:
+            raise RememberError('Cannot remember: source capacity exceeded; no images evicted')
+        self._db.execute('INSERT INTO sources VALUES (?,?,?)', (metadata['source_id'], canonical(metadata), png))
 
     def read_source(self, source_id: str) -> tuple[dict, bytes]:
         identity(source_id)
@@ -188,6 +300,19 @@ class Memory:
                 return False
             self._db.execute('INSERT INTO service_operations VALUES(?,?,?,?,?,NULL)',
                              (request_id,actor_id,tool,canonical(args),canonical({'steps':[]})))
+            return True
+
+    def tombstone_service(self, request_id: str, actor_id: str, tool: str) -> bool:
+        """Close an identity that has no `service_operations` row: a row with no result, so a later call is refused.
+
+        True when this call wrote the row, False when the identity already has one (committed or begun). A level
+        terminal call that finds a row with no result refuses as an identity conflict and never commits.
+        """
+        with self._transaction():
+            if self._db.execute('SELECT 1 FROM service_operations WHERE id=?',(request_id,)).fetchone():
+                return False
+            self._db.execute('INSERT INTO service_operations VALUES(?,?,?,?,?,NULL)',
+                             (request_id,actor_id,tool,canonical({}),canonical({'steps':[]})))
             return True
 
     def service_step(self, request_id: str, step: dict) -> None:

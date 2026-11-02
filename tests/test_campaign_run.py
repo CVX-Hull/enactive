@@ -14,19 +14,27 @@ from tools import campaign_run
 from tools.configure_player_tools import configuration
 
 
-def package(root):
+LEVEL=dict(mode='live',inputs_per_pass=10,staleness_inputs=10,budget_fractions=[.25,.5,.75],intent_tail_bytes=1024,
+           max_http_attempts=4,pass_max_requests=4,pass_seconds=120)
+
+
+def package(root,level=None,route_requests=10):
     directory=root/'.runtime/computer-sessions/selected';directory.mkdir(parents=True)
     for name in ('native','library','options','interpreter','adapter'):(root/name).write_bytes(name.encode())
+    tail=level['intent_tail_bytes'] if level and level['mode']=='live' else None
     values={
-        'route.json':dict(schema='player-host/2',service_tier='default',max_requests=10,model=dict(id='fixture',
+        'route.json':dict(schema='player-host/5',role='actor',intent_tail_bytes=tail,service_tier='default',
+            max_requests=route_requests,model=dict(id='fixture',
             contextWindow=1000,maxTokens=100,cost=dict(input=.45,cacheRead=.45,cacheWrite=.45,output=1.8))),
-        'mcp-template.json':configuration('@ACTOR_CONFIG@'),
+        'mcp-template.json':configuration('@ACTOR_CONFIG@',profile='narrowed' if level else 'flat'),
         'context.txt':'Frozen context','prompt.txt':'Frozen mission',
         'target.json':dict(argv=[str(root/'native')],cwd=str(root),env={}),
     }
+    if level:values['level-role.txt']=packages.LEVEL_ROLE.read_text()
     for name,value in values.items():(directory/name).write_text(value if isinstance(value,str) else json.dumps(value))
     artifact=lambda p:dict(path=str(p),sha256=hashlib.sha256(p.read_bytes()).hexdigest())
-    profile=dict(schema='campaign-run/3',session='a'*32,source_commit='f'*40,
+    profile=dict(schema='campaign-run/4',session='a'*32,source_commit='f'*40,
+        actor_profile='narrowed' if level else 'flat',level=level,
         files={name:artifact(directory/name)['sha256'] for name in values},
         initial_files={str(root/'options'):artifact(root/'options')['sha256']},
         native=artifact(root/'native'),library=artifact(root/'library'),shared_lock=str(root/'.runtime/bridge/game.lock'),
@@ -69,6 +77,36 @@ def test_only_selected_fresh_package_is_read(tmp_path):
     assert not (directory/'started.json').exists() and not (directory/'session.sqlite3').exists()
 
 
+@pytest.mark.parametrize('mode',['live','shadow'])
+def test_level_package_freezes_its_role_profile_and_partition(tmp_path,mode):
+    directory,profile=package(tmp_path,dict(LEVEL,mode=mode),route_requests=6)
+    assert validate(directory,tmp_path)[0]['level']['mode']==mode
+
+
+@pytest.mark.parametrize('fault,expected',[
+    ('flat_actor','narrowed-profile'),('role_text','frozen current version'),('missing_role','every selected driver input'),
+    ('shadow_tail','intent tail'),('live_without_tail','intent tail'),('over_cap','campaign allowance'),
+    ('fractions','Budget fractions'),('previous','inert history')])
+def test_invalid_level_package_never_launches(tmp_path,fault,expected):
+    directory,profile=package(tmp_path,dict(LEVEL),route_requests=6)
+    def refreeze(name,text):
+        (directory/name).write_text(text);profile['files'][name]=hashlib.sha256((directory/name).read_bytes()).hexdigest()
+    route=json.loads((directory/'route.json').read_text())
+    if fault=='flat_actor':profile['actor_profile']='flat'
+    if fault=='role_text':refreeze('level-role.txt','Pursue the nearest door.')
+    if fault=='missing_role':profile['files'].pop('level-role.txt')
+    if fault=='shadow_tail':profile['level']['mode']='shadow'
+    if fault=='live_without_tail':refreeze('route.json',json.dumps(dict(route,intent_tail_bytes=None)))
+    if fault=='over_cap':refreeze('route.json',json.dumps(dict(route,max_requests=7)))
+    if fault=='fractions':profile['level']['budget_fractions']=[.5,.25]
+    if fault=='previous':profile['schema']='campaign-run/3'
+    (directory/'manifest.json').write_text(json.dumps(profile))
+    with patch.object(packages,'ROOT',tmp_path),git(),patch.object(packages.subprocess,'run') as validator,\
+            pytest.raises(ControlError,match=expected):
+        packages.preflight(directory)
+    assert not validator.called
+
+
 @pytest.mark.parametrize('fault',['old','old_node','old_route','untracked_adapter','partial','changed','dirty',
                                   'credentials','different_lock'])
 def test_invalid_selected_package_never_launches_or_opens_store(tmp_path,fault):
@@ -77,7 +115,7 @@ def test_invalid_selected_package_never_launches_or_opens_store(tmp_path,fault):
     if fault=='old_node':
         profile['schema']='campaign-run/2';profile['node']=profile.pop('host')['argv'][0]
     if fault=='old_route':
-        path=directory/'route.json';route=json.loads(path.read_text());route['schema']='pi-player-host/4'
+        path=directory/'route.json';route=json.loads(path.read_text());route['schema']='player-host/4'
         path.write_text(json.dumps(route));profile['files']['route.json']=hashlib.sha256(path.read_bytes()).hexdigest()
     if fault=='partial':(directory/'started.json').write_text('{}')
     if fault=='changed':(directory/'prompt.txt').write_text('different')

@@ -5,9 +5,12 @@ import { Type, AssistantMessageEventStream, isRetryableAssistantError } from '@e
 import { stream } from '@earendil-works/pi-ai/api/openai-completions';
 import { retryProviderRequest } from '@earendil-works/pi-ai/utils/provider-retry';
 import { McpClient, StdioTransport, toLlmContent } from '@earendil-works/pi-mcp';
-import { createValidationFeedback } from './validation-feedback.mjs';
+import { createValidationFeedback, FIX_LINE } from './validation-feedback.mjs';
 
 export const INPUT_LIMIT_BYTES = 1_048_576;
+// A level pass ends with exactly one of these calls. On its last LEVEL_RESERVED_REQUESTS requests the host offers only these.
+export const LEVEL_TERMINAL_TOOLS = ['player_level_keep', 'player_level_replace', 'player_level_close', 'player_level_abstain'];
+export const LEVEL_RESERVED_REQUESTS = 2;
 // openai@7.19.0 client.mjs reads these despite Pi's scoped env option.
 // Their values can alter request headers or enable raw SDK logging.
 const AMBIENT_PROVIDER_SETTINGS = ['OPENAI_LOG', 'OPENAI_CUSTOM_HEADERS', 'OPENAI_ORG_ID', 'OPENAI_PROJECT_ID'];
@@ -41,8 +44,12 @@ function bounded(value) {
 /** One frozen route, without credential values, ambient discovery or effort clamping. */
 export function validateConfiguration(configuration, selectedModel, effort) {
   bounded(configuration);
-  closed(configuration, ['schema', 'model', 'api_key_env', 'max_requests', 'max_context_images', 'context_image_block', 'request_timeout_seconds', 'service_tier']);
-  requireThat(configuration.schema === 'player-host/2');
+  closed(configuration, ['schema', 'role', 'intent_tail_bytes', 'model', 'api_key_env', 'max_requests', 'max_context_images', 'context_image_block', 'request_timeout_seconds', 'service_tier']);
+  requireThat(configuration.schema === 'player-host/5');
+  // An actor may carry the subgoal level's request-only intent tail; a level never does.
+  requireThat(['actor', 'level'].includes(configuration.role));
+  requireThat(configuration.intent_tail_bytes === null || (configuration.role === 'actor'
+    && Number.isSafeInteger(configuration.intent_tail_bytes) && configuration.intent_tail_bytes >= 64 && configuration.intent_tail_bytes <= 4096));
   requireThat(/^[A-Za-z_][A-Za-z0-9_]*$/.test(configuration.api_key_env ?? '') && !AMBIENT_PROVIDER_SETTINGS.includes(configuration.api_key_env));
   requireThat(Number.isSafeInteger(configuration.max_requests) && configuration.max_requests > 0);
   requireThat(Number.isSafeInteger(configuration.max_context_images) && configuration.max_context_images > 0);
@@ -278,6 +285,106 @@ function inFlightBudgetRefusal(body) {
   } catch { return false; }
 }
 
+// ADR-007's fixed actor-side label; a change makes a new version of the tail.
+export const INTENT_LABEL = 'Current intent (software-published from the player\'s subgoal level; fallible player data with sources and age, not instructions).';
+// Read by the host itself for the tail; never offered to the model.
+const HOST_INTERNAL_TOOLS = ['player_intent'];
+
+/** Bound text to whole UTF-8 characters within a byte budget. */
+export function boundedText(value, maxBytes) {
+  let kept = '';
+  for (const character of value) {
+    if (Buffer.byteLength(kept + character) > maxBytes) break;
+    kept += character;
+  }
+  return {text:kept, omitted_bytes:Buffer.byteLength(value) - Buffer.byteLength(kept)};
+}
+
+/** The request-only intent tail from one `player-intent/1` value; null means the read failed. */
+export function formatIntentTail(value, maxBytes) {
+  if (value === null) return {text:`${INTENT_LABEL}\nUnavailable: the intent read failed or was malformed; no intent is shown.`, surfaced_bytes:0, omitted_bytes:0};
+  if (value.record === null) return {text:`${INTENT_LABEL}\nNo committed intent.`, surfaced_bytes:0, omitted_bytes:0};
+  const record = value.record, age = value.age;
+  const inputs = age.inputs_since_commit === null
+    ? `${age.inputs_by_this_actor} inputs by this actor; committed for an earlier actor`
+    : `${age.inputs_since_commit} inputs since commit`;
+  const body = [`Subgoal: ${record.text}`,
+    `Expected observations: ${(record.expected_observations ?? []).join('; ') || 'none stated'}`,
+    `Status: ${record.status}; confidence ${record.confidence}`,
+    `Sources: ${record.sources.join(', ') || 'none'}`,
+    `Age: ${inputs}; ${age.seconds.toFixed(1)} seconds; ${age.same_session ? 'this session' : 'an earlier session'}`,
+    `Record: ${record.record_id}`].join('\n');
+  const bounded = boundedText(body, maxBytes);
+  const omitted = bounded.omitted_bytes ? `\n[${bounded.omitted_bytes} bytes omitted by the frozen intent bound]` : '';
+  return {text:`${INTENT_LABEL}\n${bounded.text}${omitted}`, surfaced_bytes:Buffer.byteLength(bounded.text), omitted_bytes:bounded.omitted_bytes};
+}
+
+function levelResult(result) {
+  if (result.isError === true) return null;
+  try { return JSON.parse(result.content?.find(part => part.type === 'text')?.text); } catch { return null; }
+}
+
+/** Level telemetry from one keep, replace or close result; local tool errors are not passes. */
+export function levelCommitEvent(result) {
+  const value = levelResult(result);
+  if (!object(value) || value.schema !== 'player-level-commit/3' || !['committed', 'discarded'].includes(value.status)
+      || !['keep', 'replace', 'close'].includes(value.action)) return null;
+  return {type:value.status === 'committed' ? 'level-commit' : 'level-discard', action:value.action, reason:value.reason,
+    position:value.position, inputs_since:value.inputs_since, staleness_inputs:value.staleness_inputs,
+    record_ids:Array.isArray(value.records) ? value.records.map(r => r?.id).filter(text) : [],
+    kept:Array.isArray(value.kept) ? value.kept.filter(text) : []};
+}
+
+/** A terminal tool's `player-transport/1` unknown receipt: the adapter lost the response and, for a reader, offers no collection.
+ * Whether the call committed is known only to the store, so the pass ends and the driver reconciles `identity`. */
+export function levelUncertainEvent(result) {
+  const value = levelResult(result);
+  if (!object(value) || value.schema !== 'player-transport/1' || value.status !== 'unknown') return null;
+  return {type:'level-uncertain', identity:text(value.operation_id) ? value.operation_id : null};
+}
+
+/** Level telemetry from one valid `player_level_abstain` result; it ends the pass with nothing written. */
+export function levelAbstainEvent(result) {
+  const value = levelResult(result);
+  if (!object(value) || value.schema !== 'player-level-abstain/2' || value.status !== 'abstained'
+      || !text(value.reason_code) || !text(value.reason)) return null;
+  return {type:'level-abstain', reason_code:value.reason_code, reason:value.reason};
+}
+
+/** Pi 1.4.0 declares a request's tools in the transcript: system messages carry `toolsAdded`/`toolsRemoved` declarations. */
+export function declaredTools(messages) {
+  const tools = new Map();
+  for (const message of messages.filter(entry => entry.role === 'system')) {
+    for (const tool of message.toolsRemoved ?? []) tools.delete(tool.name);
+    for (const tool of message.toolsAdded ?? []) tools.set(tool.name, tool);
+  }
+  return [...tools.values()];
+}
+
+/** The transcript with only the named tools declared, for one request; the executable tool set and history are unchanged. */
+export function restrictTools(messages, names) {
+  return messages.map(message => message.role === 'system' && message.toolsAdded
+    ? {...message, toolsAdded:message.toolsAdded.filter(tool => names.includes(tool.name))} : message);
+}
+
+/** Dotted paths where `after` differs from `before` (first four), for a refusal that names what the SDK changed. */
+export function changedFields(before, after, prefix = '') {
+  if (isDeepStrictEqual(before, after)) return [];
+  if (!object(before) || !object(after)) return [prefix || 'arguments'];
+  const keys = [...new Set([...Object.keys(before), ...Object.keys(after)])];
+  return keys.flatMap(key => changedFields(before[key], after[key], prefix ? `${prefix}.${key}` : key)).slice(0, 4);
+}
+
+/** True when the latest assistant turn called a terminal tool and every terminal call in it was refused (an error result). */
+export function refusedTerminalCall(messages) {
+  const index = messages.findLastIndex(message => message.role === 'assistant');
+  if (index < 0) return false;
+  const terminal = (messages[index].content ?? []).filter(part => part.type === 'toolCall' && LEVEL_TERMINAL_TOOLS.includes(part.name));
+  const results = messages.slice(index + 1).filter(message => message.role === 'toolResult');
+  return terminal.length > 0 && terminal.every(call =>
+    results.some(message => message.toolCallId === call.id && message.isError === true));
+}
+
 // This actual MCP receipt ends this host only. The driver independently checks
 // canonical issuance/context and actual host/MCP quiescence before succession.
 function inspectHandoff(name, args, result, pending) {
@@ -315,7 +422,7 @@ function inspectHandoff(name, args, result, pending) {
   }
   const issued = value.handoff;
   valid(value.status === 'sealed' && object(issued)
-    && issued.schema === 'player-handoff/1' && issued.grants_authority === false
+    && issued.schema === 'player-handoff/2' && issued.grants_authority === false
     && issued.operation_id === origin.operation_id && issued.session === origin.session
     && issued.actor_id === origin.actor_id && id(issued.context_id)
     && typeof issued.context_sha256 === 'string' && /^[a-f0-9]{64}$/.test(issued.context_sha256)
@@ -342,7 +449,9 @@ export async function runHost(options) {
   };
   let agent, client, transport, fatal, closing = false, requests = 0, requestId, requestTimer, requestInFlight = false, requestUsageAvailable = false;
   let workTimer, deadlineTimer;
-  let responseProgress, handoff, pendingHandoff;
+  let responseProgress, handoff, pendingHandoff, levelEnded = false, levelUncertain = false;
+  // Logical requests: one per streamFn call, whatever its provider retries; `reserved` is the current one's.
+  let logicalRequests = 0, reserved = false;
   const progressSnapshot = () => responseProgress ? {...responseProgress,
     scope:requestInFlight ? 'current-http-attempt' : 'last-http-attempt'} : null;
   const stopped = new AbortController();
@@ -387,9 +496,12 @@ export async function runHost(options) {
     if (options.signal?.aborted) stop('cancelled');
     const configuration = validateConfiguration(options.configuration, options.model, options.effort);
     const mcp = validateMcpConfiguration(options.mcpConfig);
+    // At the start of a logical request (before it is counted): two or fewer HTTP attempts or logical requests remain.
+    const reservedWindow = () => configuration.role === 'level'
+      && (configuration.max_requests - requests <= LEVEL_RESERVED_REQUESTS || configuration.max_requests - logicalRequests <= LEVEL_RESERVED_REQUESTS);
     requireThat(typeof options.prompt === 'string' && typeof options.context === 'string', 'invalid-input');
     bounded(options.prompt); bounded(options.context);
-    emit('host-start', {telemetry_version:2, schema:configuration.schema, requested_service_tier:configuration.service_tier, model:configuration.model.id, provider:configuration.model.provider, api:configuration.model.api, effort:options.effort, max_output_tokens:configuration.model.maxTokens, context_window:configuration.model.contextWindow, thinking_level_map:{...configuration.model.thinkingLevelMap}, reasoning_format:configuration.model.compat?.thinkingFormat ?? null, provider_routing:configuration.model.compat?.openRouterRouting ? structuredClone(configuration.model.compat.openRouterRouting) : null, max_requests:configuration.max_requests, max_context_images:configuration.max_context_images, context_image_block:configuration.context_image_block, unsupported_features:['compaction', 'session-restore', 'model-fallback', 'reconnect', 'replay', 'ambient-tools', 'resource-discovery'], missing_endpoints:['model-attention', 'server-inference-start', 'physical-paint'], cleanup_budget_ms:cleanupBudget});
+    emit('host-start', {telemetry_version:2, schema:configuration.schema, role:configuration.role, intent_tail_bytes:configuration.intent_tail_bytes, requested_service_tier:configuration.service_tier, model:configuration.model.id, provider:configuration.model.provider, api:configuration.model.api, effort:options.effort, max_output_tokens:configuration.model.maxTokens, context_window:configuration.model.contextWindow, thinking_level_map:{...configuration.model.thinkingLevelMap}, reasoning_format:configuration.model.compat?.thinkingFormat ?? null, provider_routing:configuration.model.compat?.openRouterRouting ? structuredClone(configuration.model.compat.openRouterRouting) : null, max_requests:configuration.max_requests, max_context_images:configuration.max_context_images, context_image_block:configuration.context_image_block, unsupported_features:['compaction', 'session-restore', 'model-fallback', 'reconnect', 'replay', 'ambient-tools', 'resource-discovery'], missing_endpoints:['model-attention', 'server-inference-start', 'physical-paint'], cleanup_budget_ms:cleanupBudget});
     if (fatal) throw new HostError(fatal);
     requireThat(!AMBIENT_PROVIDER_SETTINGS.some(name => Object.hasOwn(process.env, name)), 'ambient-provider-configuration');
     // The MCP subprocess gets only locale and executable lookup, never provider
@@ -406,6 +518,12 @@ export async function runHost(options) {
     const discovered = await client.listTools({signal:stopped.signal, timeoutMs:mcp.startup_timeout_sec * 1000});
     const names = new Map(discovered.map(tool => [tool.name, tool]));
     requireThat(names.size === discovered.length && mcp.enabled_tools.every(name => names.has(name)), 'missing-required-tools');
+    requireThat(!mcp.enabled_tools.some(name => HOST_INTERNAL_TOOLS.includes(name)), 'host-internal-tool-enabled');
+    if (configuration.intent_tail_bytes !== null) requireThat(names.has('player_intent'), 'missing-required-tools');
+    if (configuration.role === 'level') {
+      requireThat(['player_log_read', ...LEVEL_TERMINAL_TOOLS].every(name => mcp.enabled_tools.includes(name)), 'missing-required-tools');
+      emit('level-pass', {});
+    }
     const tools = mcp.enabled_tools.map(name => {
       const schema = names.get(name);
       requireThat(object(schema.inputSchema), 'invalid-mcp-schema');
@@ -417,6 +535,18 @@ export async function runHost(options) {
         catch { stop('mcp-call-failed'); throw new HostError(fatal); }
         if (fatal) throw new HostError(fatal);
         emit('tool-result', {request_id:requestId, tool_call_id:toolCallId, tool:name, result:projectToolResultForTelemetry(result)});
+        if (configuration.role === 'level' && LEVEL_TERMINAL_TOOLS.includes(name)) {
+          // A keep, replace or close that becomes a commit or discard, or a valid abstain, ends the pass; a rejected call does not.
+          // So does a lost transport: the reader cannot collect, so the pass ends and the driver reconciles the identity.
+          const uncertain = levelUncertainEvent(result);
+          const level = uncertain ?? (name === 'player_level_abstain' ? levelAbstainEvent(result) : levelCommitEvent(result));
+          if (level) {
+            const {type, ...fields} = level;
+            emit(type, {request_id:requestId, tool_call_id:toolCallId, ...(uncertain ? {tool:name} : {}), ...fields});
+            levelEnded = true;
+            levelUncertain ||= uncertain !== null;
+          }
+        }
         try {
           const transition = inspectHandoff(name, args, result, pendingHandoff);
           if (transition.pending) pendingHandoff = transition.pending;
@@ -433,8 +563,11 @@ export async function runHost(options) {
         return {content, details:undefined, isError:result.isError === true};
       }};
     });
+    // A level's refusals name each failing field, its rule, the allowed values and a valid example call.
     const validationFeedback = createValidationFeedback(tools, diagnostic =>
-      emit('tool-validation-feedback', {request_id:`request-${requests + 1}`, ...diagnostic}));
+      emit('tool-validation-feedback', {request_id:`request-${requests + 1}`, ...diagnostic}),
+      configuration.role === 'level' ? {names:['player_log_read', ...LEVEL_TERMINAL_TOOLS], terminal:LEVEL_TERMINAL_TOOLS,
+        notes:{player_level_replace:'In this example previous_outcome is "none" with an empty previous_reason, which is valid only when there is no current subgoal; whenever there is one, set previous_outcome to achieved, failed, abandoned or revised and give previous_reason.'}} : {});
     agent = new Agent({
       initialState:{systemPrompt:options.context + (client.instructions ? '\n\nMCP server instructions:\n' + client.instructions : ''), model:configuration.model, thinkingLevel:options.effort, tools},
       toolExecution:'sequential',
@@ -449,15 +582,36 @@ export async function runHost(options) {
           const projection = projectImageContext(validationFeedback(messages), configuration.max_context_images, configuration.context_image_block);
           emit('context-image-projection', {request_id:`request-${requests + 1}`, projection_ms:performance.now() - projectionStarted, ...projection.summary});
           if (projection.summary.blocked) stop('context-image-limit');
+          let intent = '';
+          if (configuration.intent_tail_bytes !== null) {
+            // A failed read shows no intent and never stops the actor or gates its input.
+            let value = null;
+            try {
+              const result = await client.callTool('player_intent', {}, {signal:stopped.signal, timeoutMs:mcp.tool_timeout_sec * 1000});
+              const parsed = JSON.parse(result.content?.find(part => part.type === 'text')?.text);
+              if (result.isError !== true && object(parsed) && parsed.schema === 'player-intent/1') value = parsed;
+            } catch { value = null; }
+            if (fatal) return messages;
+            let tail;
+            // Record data is free-form player data: an unexpected shape shows "Unavailable", never a stop.
+            try { tail = formatIntentTail(value, configuration.intent_tail_bytes); }
+            catch { value = null; tail = formatIntentTail(null, configuration.intent_tail_bytes); }
+            emit('intent-tail', {request_id:`request-${requests + 1}`, available:value !== null,
+              record_id:value?.record?.record_id ?? null, surfaced_bytes:tail.surfaced_bytes,
+              omitted_bytes:tail.omitted_bytes, age:value?.age ?? null});
+            intent = '\n\n' + tail.text;
+          }
           // Request-only bookkeeping follows history, preserving the stable
           // system/tool prefix and canonical messages. Retries reuse this snapshot.
           return [...projection.messages, {role:'user', timestamp:Date.now(), content:[{type:'text', text:
             'Host resource status (software-generated at context construction):\n' +
             `Actual provider HTTP attempts charged before this request: ${requests}/${configuration.max_requests}.\n` +
             `Remaining allowance including this request: ${configuration.max_requests - requests}.\n` +
+            (reservedWindow()
+              ?'This request offers only the pass-ending tools; end the pass with exactly one of them.\n' : '') +
             `Host decision time remaining at this snapshot: ${Math.max(0,(workDeadline-performance.now())/1000).toFixed(3)} seconds. Custodian time is a separate horizon.\n` +
             'An eligible retry can consume another attempt before the next status update. ' +
-            'This is resource bookkeeping, not a human task, gameplay evidence, source-read proof, authority or a latency/quality metric.'}]}];
+            'This is resource bookkeeping, not a human task, gameplay evidence, source-read proof, authority or a latency/quality metric.' + intent}]}];
         } catch {
           stop('context-projection-failed');
           return messages;
@@ -469,17 +623,45 @@ export async function runHost(options) {
           emit('tool-refused', {request_id:requestId, tool_call_id:toolCall.id, tool:toolCall.name, reason:'handoff', dispatched:false});
           return {block:true, reason:'Host ended after completed handoff; no further tool dispatch.', terminate:true};
         }
+        if (levelEnded) {
+          emit('tool-refused', {request_id:requestId, tool_call_id:toolCall.id, tool:toolCall.name, reason:'level-ended', dispatched:false});
+          return {block:true, reason:'The level pass ended with its terminal call; no further tool dispatch.', terminate:true};
+        }
+        // A reserved request offers only the terminal tools. A model can still name another tool, which is executable
+        // but refused here, so the reservation holds and the refusal says which tools to call.
+        if (configuration.role === 'level' && reserved && !LEVEL_TERMINAL_TOOLS.includes(toolCall.name)) {
+          emit('tool-refused', {request_id:requestId, tool_call_id:toolCall.id, tool:toolCall.name, reason:'level-reserved', dispatched:false});
+          return {block:true, reason:`${toolCall.name} is not offered on this request and was not run: only ${LEVEL_TERMINAL_TOOLS.join(', ')} are available. `
+            + `Call exactly one of them.\n${FIX_LINE}`};
+        }
         if (!isDeepStrictEqual(toolCall.arguments, args)) {
           emit('tool-refused', {request_id:requestId, tool_call_id:toolCall.id, tool:toolCall.name, reason:'tool-arguments-changed', dispatched:false});
-          return {block:true, reason:'MCP input not sent: SDK changed arguments; explicitly correct the call.'};
+          const fields = changedFields(toolCall.arguments, args).join(', ');
+          return {block:true, reason:`MCP input not sent: the SDK changed the arguments of ${toolCall.name} (field ${fields}); resend the call with ${fields} given exactly as the schema requires, without nulls or coerced values.`
+            + (configuration.role === 'level' && LEVEL_TERMINAL_TOOLS.includes(toolCall.name) ? `\n${FIX_LINE}` : '')};
         }
       },
       // Pi's per-result terminate hint requires every result in the batch to
-      // terminate. finishTurn also handles ordinary tools preceding a handoff.
-      finishTurn:() => handoff ? {action:'end'} : undefined,
+      // terminate. finishTurn also handles ordinary tools preceding a handoff
+      // or a level pass's ending keep, replace, close or abstain.
+      finishTurn:() => handoff || levelEnded ? {action:'end'} : undefined,
       streamFn:(model, context, streamOptions) => {
         if (fatal) return failureStream(model, fatal);
-        if (requests >= configuration.max_requests) { stop('request-limit'); return failureStream(model, fatal); }
+        if (requests >= configuration.max_requests) {
+          // A refused terminal call on the last allowed request left no budget to correct it: its own settled reason.
+          stop(configuration.role === 'level' && refusedTerminalCall(context.messages) ? 'level-final-refusal' : 'request-limit');
+          return failureStream(model, fatal);
+        }
+        // A logical request that starts with LEVEL_RESERVED_REQUESTS or fewer HTTP attempts or logical requests left offers
+        // only the terminal tools, so a refused call can be repaired. A provider retry resends its logical request's
+        // declarations: the window is decided once, here.
+        reserved = reservedWindow();
+        logicalRequests++;
+        if (reserved) {
+          context = {...context, messages:restrictTools(context.messages, LEVEL_TERMINAL_TOOLS)};
+          emit('level-reserved-request', {request_id:`request-${requests + 1}`, logical_request_id:`request-${logicalRequests}`,
+            offered_tools:declaredTools(context.messages).map(tool => tool.name)});
+        }
         const apiKey = (options.env ?? process.env)[configuration.api_key_env];
         if (!text(apiKey)) { stop('missing-api-key'); return failureStream(model, fatal); }
         try {
@@ -487,7 +669,7 @@ export async function runHost(options) {
           requestTimer = setTimeout(() => stop('request-timeout'), Math.min(configuration.request_timeout_seconds * 1000, totalMs));
           const requestSignal = AbortSignal.any([streamOptions.signal, stopped.signal].filter(Boolean));
           const backendModels = new Set(), observedServiceTiers = new Set();
-          const streamStarted = performance.now(), logicalRequestId = `request-${requests + 1}`;
+          const streamStarted = performance.now(), logicalRequestId = `request-${requests + 1}`, logicalNumber = `request-${logicalRequests}`;
           let payloadReadyAt;
           const actualFetch = options.fetch ?? globalThis.fetch;
           let attempts = 0, previousRequestId;
@@ -531,7 +713,7 @@ export async function runHost(options) {
             requestInFlight = true;
             attempts++;
             if (previousRequestId) emit('provider-retry', {stage:'started', request_id:attemptId, previous_request_id:previousRequestId});
-            emit('request-start', {request_id:attemptId, logical_request_id:logicalRequestId, model:model.id, provider:model.provider,
+            emit('request-start', {request_id:attemptId, logical_request_id:logicalNumber, model:model.id, provider:model.provider,
               sdk_after_payload_ms:attempts === 1 && payloadReadyAt !== undefined ? fetchEntered - payloadReadyAt : null,
               host_inspection_ms:inspectionMs, ...sizes});
             let response;
@@ -578,7 +760,8 @@ export async function runHost(options) {
           }, {maxRetries:1, maxRetryDelayMs:MAX_RETRY_DELAY_MS, signal:requestSignal});
           // The outer request timer includes classification, SDK backoff and
           // both HTTP attempts. Disable the provider stream's nested retries.
-          return stream(model, context, {...streamOptions, apiKey, fetch:observedFetch, env:{}, signal:requestSignal, maxRetries:0, cacheRetention:'short', maxTokens:model.maxTokens, timeoutMs:configuration.request_timeout_seconds * 1000, reasoningEffort:options.effort === 'off' ? undefined : options.effort,
+          // A level pass must end in a terminal call, so its provider is required to call a tool.
+          return stream(model, context, {...streamOptions, ...(configuration.role === 'level' ? {toolChoice:'required'} : {}), apiKey, fetch:observedFetch, env:{}, signal:requestSignal, maxRetries:0, cacheRetention:'short', maxTokens:model.maxTokens, timeoutMs:configuration.request_timeout_seconds * 1000, reasoningEffort:options.effort === 'off' ? undefined : options.effort,
             onPayload:payload => {
               payloadReadyAt = performance.now();
               emit('provider-payload-ready', {request_id:logicalRequestId, sdk_prepare_ms:payloadReadyAt - streamStarted});
@@ -633,6 +816,13 @@ export async function runHost(options) {
         const message = event.message;
         const narration = assistantNarration(message.content);
         if (narration.text || narration.omitted_bytes) emit('assistant-text', {request_id:requestId, ...narration});
+        // Every terminal call the model made, so a refusal that never reached tool-start (unparseable arguments, a
+        // validation refusal, a host refusal) can be told from a dispatched call.
+        if (configuration.role === 'level') for (const part of message.content ?? []) {
+          if (part.type === 'toolCall' && LEVEL_TERMINAL_TOOLS.includes(part.name)) {
+            emit('level-terminal-call', {request_id:requestId, tool_call_id:part.id, tool:part.name, arguments_error:Object.hasOwn(part, 'argumentsError')});
+          }
+        }
         if (requestInFlight) emit('response-complete', {request_id:requestId, model:message.model, provider:message.provider, stop_reason:message.stopReason, usage_available:requestUsageAvailable, usage:requestUsageAvailable ? message.usage : null, cost_source:requestUsageAvailable ? (message.usage?.cost?.totalFromProvider === true ? 'provider' : 'configured-rates') : null, response_progress:progressSnapshot()});
         requestInFlight = false;
         if (['error', 'aborted', 'length', 'deferred'].includes(message.stopReason) && !fatal) stop(message.stopReason === 'error' ? 'provider-error' : `provider-${message.stopReason}`);
@@ -640,7 +830,9 @@ export async function runHost(options) {
     });
     await agent.prompt(options.prompt);
     const terminal = agent.state.messages.findLast(message => message.role === 'assistant');
-    if (!fatal && terminal?.stopReason !== 'stop' && !(handoff && terminal?.stopReason === 'toolUse')) stop('incomplete-terminal-response');
+    if (!fatal && configuration.role === 'level' && levelUncertain) stop('level-uncertain');
+    else if (!fatal && configuration.role === 'level' && !levelEnded) stop('level-no-proposal');
+    else if (!fatal && terminal?.stopReason !== 'stop' && !((handoff || levelEnded) && terminal?.stopReason === 'toolUse')) stop('incomplete-terminal-response');
   } catch (error) {
     if (!fatal) stop(error instanceof HostError ? error.reason : 'host-failed');
   } finally {

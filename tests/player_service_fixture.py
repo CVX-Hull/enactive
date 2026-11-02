@@ -33,7 +33,7 @@ def main():
         memory=Memory(directory/'player.sqlite3')
         application=Application(runtime,memory,directory/'contexts')
         server,thread=serve(application,0)
-        actor=runtime.add_actor()
+        actor=application.add_actor('flat')
         config=directory/'actor.json'
         config.write_text(json.dumps(dict(schema='player-adapter/1',base_url=f'http://127.0.0.1:{server.server_port}',
             session=runtime.session,**actor)))
