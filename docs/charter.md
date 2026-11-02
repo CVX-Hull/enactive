@@ -157,7 +157,8 @@ control problem), each with its objective, signals and invariants, drawn from
 whichever field fits, not only from LLM and agent work. No single
 representation is assumed true: we look for the ones that open new approaches,
 analyses or usable signals, as interdisciplinary breakthroughs do, and keep
-competing ones while they predict differently. A representation states what is
+alternatives while they suggest different approaches. Representations are
+design analyses, not parallel implementations. A representation states what is
 optimized and checked, not how the player searches or learns; classical
 components inside the player still meet the conditions above. Each LLM or agent
 call fills a defined role in a representation, meaning the part it proposes,
