@@ -10,16 +10,16 @@ One [campaign custodian](../../tools/campaign_run.py) owns fresh mechanical targ
 store/server lifetime and final cleanup. The [driver](../../tools/campaign_player.py)
 owns the frozen [player host](../contracts/player-host.md)/MCP groups and at most one
 successor. The [package validator](../../tools/campaign_package.py) is authoritative
-for the closed `campaign-run/4` admission. No game-phase/identity admission or semantic mission
+for the closed `campaign-run/5` admission. No game-phase/identity admission or semantic mission
 service remains. With a subgoal level ([ADR-007](../decisions/007-player-subgoal-level.md)
-candidate), the driver also owns one level per actor, as described below.
+candidate), the driver also owns one episode cutter, one episode recorder and one level per actor, as described below.
 
 ## Frozen data
 
 Select one fresh canonical project-local directory under `.runtime/computer-sessions/`.
 Its manifest binds the exact clean source commit and SHA256 of all five driver
 inputs: `route.json`, `mcp-template.json`, `context.txt`, `prompt.txt`, `target.json`
-(six with a level, adding `level-role.txt`). It also freezes the actor profile and the level.
+(seven with a level, adding `level-role.txt` and `episode-role.txt`). It also freezes the actor profile and the level.
 It also freezes native executable/adapter bytes, bounded initial target files,
 shared-lock path, explicit `player-memory/1` store, player host argv, effort,
 loopback port, original wall/host/aggregate-host seconds, one/two-host limit,
@@ -31,56 +31,81 @@ working directory are absolute. Keep the prepared wrapper/windowed project userd
 and normal input configuration. The target receives only the permitted environment
 and inherited mechanical descriptors, not provider credentials.
 
-### Actor profile and the subgoal level
+### Actor profile, the episode recorder and the subgoal level (level v4)
 
 `actor_profile` is `flat` (basic control, memory and programs) or `narrowed` (no
 memory tools or program save). `level` is null, the zero-level-host configuration
-(flat, arm B and the fourth arm), or a closed object:
-`mode` (`shadow` or `live`), `inputs_per_pass` (K), `staleness_inputs` (S),
-`budget_fractions` (at most 8 increasing values in (0,1)), `intent_tail_bytes`
-(64–4096), `max_http_attempts` (the level's share per actor), `pass_max_requests`
-and `pass_seconds`. A level requires `narrowed` and freezes a sixth input,
-`level-role.txt`, byte-identical to the [frozen role prompt v3](../../tools/player_roles/subgoal-v3.txt).
-The route stays the actor role; its `intent_tail_bytes` equals the level's bound
-in live mode and is null in shadow mode, where the level commits but the actor never
-sees intent.
+(flat, arm B and the fourth arm), or a closed object (a level requires `narrowed`):
 
-Each actor-and-level pair is partitioned before launch: the level gets
-`min(max_http_attempts, campaign remainder)` and the actor the route's allowance
-from what is left, so their sum stays within the campaign cap. The driver mints one
-reader per actor after the actor and, once the actor host makes its first request (after
-its tool discovery and checks), consults the [wake rules](../../tools/level_schedule.py) between passes: a start pass
-only to revalidate an open level subgoal, then every K actor inputs or a crossed budget
-fraction, never on an empty delta and never more than one pass at a time. Each pass
-is a finite `role: level` host under `actors/NNN/level/PPP/`, with the reader MCP
-profile (`player_log_read`, `player_source` and the four terminal tools only), the frozen context, and a prompt of the role text, the actor's mission brief,
-the pushed input and mechanical wake facts. The pushed input is the served log since
-the previous pass's projection (the latest 50 entries, with the omitted count stated)
-and the current level subgoal with its position and inputs since commit (or the line
-`Current subgoal: none`), then `Level records in player memory: N` (the Work records the
-level has written, superseded history included); the driver
-reads it through the reader's own `player_log_read` path under the application lock, so
-the reader's bound is exactly what is shown (the level may read more, which extends the
-bound). The reader's bound is cleared first, so one left by an earlier pass cannot
-carry over, and the wake decision and the push see the same log count. A non-start
-pass whose push is empty is not launched. A failure of that read is a level failure. A pass ends on its first
-`player_level_keep`, `player_level_replace` or `player_level_close` that commits or
-discards, or on a valid `player_level_abstain`
-(see the [host contract](../contracts/player-host.md#roles-and-the-intent-tail)); one
-that ends otherwise is counted as a failed pass with its settled reason, for example
-`level-no-proposal`, or `level-final-refusal` when a terminal call was refused on the
-pass's last allowed request, or `level-uncertain` when a terminal call's response was lost
-(reconciled from the store afterwards). Its last two logical requests offer only the terminal tools. It also ends at its allowance or `pass_seconds`, and is
-closed on its actor's stop, Pause or handoff; no successor is minted unless every pass's
-exact process group is confirmed absent. Its attempts are charged like an actor's; an
-unaccounted pass is charged its whole allocation. A level failure (a malformed trace, a
-launch or store error) charges that pass, disables further passes and is recorded, but
-never stops or gates its actor. A reader the custodian refuses to mint (for example, with
-more than one current level subgoal) fails closed before that actor launches; a disabled
-level keeps its unused reservation until the next actor's split. The
-custodian appends per-call lock wait and hold times to `call-timing.jsonl`.
+| Field | Meaning |
+|---|---|
+| `mode` | `shadow` or `live` |
+| `episode_cap` | The episode cap C, which must equal the owner's K (10) |
+| `min_episode_inputs` | m, the fewest inputs before a content cut |
+| `theta`, `theta_fitting_sha256` | The fitted episode threshold, by value, and the SHA256 of the fitting that produced it (#345's `calibration.json`) |
+| `stall_settles`, `confidence_floor` | N and c, given to both readers at minting |
+| `staleness_inputs` | S |
+| `budget_fractions`, `intent_tail_bytes` | at most 8 increasing values in (0,1); 64-4096 |
+| `recall` | `tail_top`, `tail_exploration`, `level_items`: must equal the custodian's 2, 1 and 10 |
+| `max_http_attempts`, `pass_max_requests`, `pass_seconds` | The level's share per actor and its pass bounds |
+| `recorder` | `max_http_attempts`, `pass_max_requests`, `pass_seconds` and `backlog` (3): the recorder's own allowance and bounds |
 
-`route.json` uses current `player-host/5` (role `actor`) with text/image input and explicit
+A level freezes two more inputs, `level-role.txt` and `episode-role.txt`, byte-identical to the
+[frozen role prompt `subgoal-v4`](../../tools/player_roles/subgoal-v4.txt) and
+[`episode-v1`](../../tools/player_roles/episode-v1.txt). The validator pins both digests
+(`FROZEN_ROLE_SHA256`), so a changed wording is a new version, not an edit. The route stays the actor
+role; its `intent_tail_bytes` equals the level's bound in live mode and is null in shadow mode, where the
+level commits but the actor never sees intent.
+
+Each actor, its level and its recorder are partitioned before launch: the level and then the recorder get
+`min(their max_http_attempts, campaign remainder)` and the actor the route's allowance from what is left, so
+their sum stays within the campaign cap. The driver mints two readers per actor (roles `level` and `recorder`)
+after the actor. Once the actor host makes its first request:
+
+- **Cutter.** The [episode cutter](../../tools/episode_cutter.py) reads the served actor's log in order from the
+  application and cuts it on player-visible captures only: 32 x 20 greyscale thumbnails, a mean-absolute distance
+  to the previous input that has a result capture, a close before the crossing input when d >= theta and the episode
+  holds m inputs, at C inputs, and mechanically at a session edge. An input whose result is still in flight waits;
+  one that is lost has no distance. Boundaries are frozen once written. The driver records the level subgoal id
+  current when an episode opens, because no custodian API gives it later, and the next episode always starts after
+  the furthest cut, never after the newest settle (episodes settle out of order when a drop precedes an earlier
+  in-flight record).
+- **Recorder.** Closed episodes wait in a FIFO backlog; one pass runs at a time, and when more than `backlog`
+  wait, the oldest waiting episode settles as `dropped`. A recorder pass is a finite `role: recorder` host under
+  `actors/NNN/recorder/PPP/` with the profile `player_source`, `player_episode_record`, `player_episode_abstain`.
+  Its input is the baseline frame (the result capture of the last input before the episode) and up to six of
+  the episode's own frames (always the last, then the largest thumbnail distance from the predecessor, in capture
+  order), each an image file in `frames/` marked with its source id and role, plus the operations as key tokens, and
+  the subgoal id, text and expected observations. A pass that ends without settling its episode (a failed pass, its
+  time, a stop) leaves the driver to settle it `failed` through the custodian; an exhausted recorder allowance or a
+  session that ends first settles what waits as `failed`. Every closed episode therefore ends with exactly one
+  settle claim, whatever its outcome.
+- **Level.** The [wake rules](../../tools/level_schedule.py) wake it at start (only to revalidate what earlier
+  sessions left), after every settle, and at a budget fraction only after a settle; wakes that arrive during a pass
+  coalesce into one pass over the newest records. At push, under the application lock, the driver binds the position
+  (the end of the newest settled episode this session, whatever its outcome, or 0) and the current subgoal id, and
+  reads the episodes settled since its last pass, the `player-intent/2` object for the `level` audience (the
+  subgoal with its derived status and stalled flag, and the top 10 recalled episodes) and the per-subgoal counts.
+  Each pass is a finite `role: level` host under `actors/NNN/level/PPP/` with the profile `player_source` and the four
+  terminal tools. A pass ends on its first `player_level_keep`, `player_level_replace` or `player_level_close` that
+  commits or discards, or on a valid `player_level_abstain`
+  (see the [host contract](../contracts/player-host.md#roles-and-the-intent-tail)); one that ends otherwise is a
+  failed pass with its settled reason, for example `level-no-proposal`, `level-final-refusal` or `level-uncertain`
+  (a lost terminal call, reconciled from the store).
+
+Both readers' passes are written as `input.json` (`player-pass-input/1`: the role, the frozen role prompt, the
+actor's brief for the level only, mechanical wake facts and the structured pushed input
+`player-level-push/1` or `player-episode-push/1`) and fed to the host on stdin; the host formats it. The level
+stops on its actor's stop, Pause or handoff. The open episode closes at that session edge, and the recorder then
+works through its backlog (bounded by `backlog + 1` passes of `pass_seconds` and the campaign deadline) unless the
+run is fenced; whatever remains settles as `failed`. No successor is minted unless every pass's exact process group
+is confirmed absent. Attempts are charged like an actor's; an unaccounted pass is charged its whole allocation.
+A failure of the cutter, recorder or level (a malformed trace, a launch or store error, a store that cannot remember)
+charges the pass, disables both readers for the rest of the session and is recorded, but never stops or gates the
+actor; episodes already cut still settle. A reader the custodian refuses to mint fails closed before that actor
+launches. The custodian appends per-call lock wait and hold times to `call-timing.jsonl`.
+
+`route.json` uses current `player-host/6` (role `actor`) with text/image input and explicit
 provider/effort/price metadata and image peak and block, chosen against the
 provider's image limit. The selected route is OpenRouter /
 an explicitly pinned provider / DeepSeek Flash1017 medium, default service tier, no fallback.
@@ -137,7 +162,7 @@ the actual bytes, for example `shasum -a 256 SELECTED_FILE`; preserve those byte
 
 ```json
 {
-  "schema": "campaign-run/4",
+  "schema": "campaign-run/5",
   "session": "NEW_32_LOWERCASE_HEX_ID",
   "source_commit": "EXACT_40_HEX_CLEAN_HEAD",
   "files": {
@@ -273,16 +298,14 @@ estimates and conservative reservations are not invoices. Unknown trace accounti
 charges the allocated attempts. `host_completed_unassessed` means only successful
 host completion; missing normal native exit becomes an incomplete outcome.
 No receipt alone accepts gameplay. Preserve failures and unrun lanes.
-The `player-driver/5` disposition embedded in it reports, per actor, the level's
-`commits` (with `keeps`, `replaces` and `closes`), `discards`, `abstains` (with
-`abstain_codes` by reason code and `start_abstains` counted separately),
-`failed_passes` (unsettled or `ok: false`) and `final_refusals`, and every pass's settled
-reason, plus `uncertain_terminals` (with `uncertain_committed` and `uncertain_absent`) for
-terminal calls whose response was lost, each pass recording the reconciled identity;
-the driver total adds `level_failed_passes`, `level_final_refusals` and
-`level_uncertain_terminals`. `/4` added
-the abstain count and the events' `action`; `/5` added the per-tool and per-code counts and
-the final refusals. Earlier driver schemas are rejected by the readers.
+The `player-driver/6` disposition embedded in it reports, per actor, a `level` object with the level lane
+(`commits` with `keeps`, `replaces` and `closes`, `discards`, `abstains` with `abstain_codes` and `start_abstains`,
+`failed_passes`, `final_refusals`, `uncertain_terminals` with their reconciliation, every pass's settled reason and
+bound), the recorder lane (`records`, `abstains` by code, `failed_passes`, `final_refusals`), `episodes` (the cuts by
+close reason, the settles by outcome read back from the store, the backlog's high-water mark) and `subgoals`
+(per-subgoal episodes, seen, contradicted, closures and failures). The driver total adds `level_attempts_charged`
+(level plus recorder), `level_failed_passes`, `level_final_refusals`, `level_uncertain_terminals` and `episodes_cut`.
+Earlier driver schemas are rejected by the readers.
 
 Never reopen the selected package, delete markers to retry, replay uncertain input
 or resume after user Pause. Use a fresh coherent admission after owned cleanup.

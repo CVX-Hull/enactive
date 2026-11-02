@@ -1,4 +1,5 @@
 """Selected-package admission checks occur before a DB or child exists."""
+import copy
 import hashlib
 import json
 import os
@@ -14,26 +15,36 @@ from tools import campaign_run
 from tools.configure_player_tools import configuration
 
 
-LEVEL=dict(mode='live',inputs_per_pass=10,staleness_inputs=10,budget_fractions=[.25,.5,.75],intent_tail_bytes=1024,
-           max_http_attempts=4,pass_max_requests=4,pass_seconds=120)
+# Level v4 (#345's development parameters): theta with the digest of its fitting, m = 2, C = K = 10, N = 3, c = 0.0.
+LEVEL=dict(mode='live',episode_cap=10,staleness_inputs=10,budget_fractions=[.25,.5,.75],intent_tail_bytes=1024,
+           max_http_attempts=2,pass_max_requests=2,pass_seconds=120,
+           theta=0.1251514705882353,theta_fitting_sha256='8a80f12b736b6d993fcf6c356a7686a03c85508779d52c376d2ce1394893c76b',
+           min_episode_inputs=2,stall_settles=3,confidence_floor=0.0,
+           recall=dict(tail_top=2,tail_exploration=1,level_items=10),
+           recorder=dict(max_http_attempts=2,pass_max_requests=2,pass_seconds=60,backlog=3))
+# The frozen role prompts' digests, pinned here independently of the validator that also pins them.
+FROZEN={'subgoal-v4.txt':'08c8558f659dacb1feb61c81b1286e91dca24e8808eab8e5d0b5e56cf53aaad8',
+        'episode-v1.txt':'a6c326069bd8fec86bf2c30bcbcf34e51e34f5d1371f5ac32f764b664869a910'}
 
 
 def package(root,level=None,route_requests=10):
+    level=copy.deepcopy(level)
     directory=root/'.runtime/computer-sessions/selected';directory.mkdir(parents=True)
     for name in ('native','library','options','interpreter','adapter'):(root/name).write_bytes(name.encode())
     tail=level['intent_tail_bytes'] if level and level['mode']=='live' else None
     values={
-        'route.json':dict(schema='player-host/5',role='actor',intent_tail_bytes=tail,service_tier='default',
+        'route.json':dict(schema='player-host/6',role='actor',intent_tail_bytes=tail,service_tier='default',
             max_requests=route_requests,model=dict(id='fixture',
             contextWindow=1000,maxTokens=100,cost=dict(input=.45,cacheRead=.45,cacheWrite=.45,output=1.8))),
         'mcp-template.json':configuration('@ACTOR_CONFIG@',profile='narrowed' if level else 'flat'),
         'context.txt':'Frozen context','prompt.txt':'Frozen mission',
         'target.json':dict(argv=[str(root/'native')],cwd=str(root),env={}),
     }
-    if level:values['level-role.txt']=packages.LEVEL_ROLE.read_text()
+    if level:
+        values['level-role.txt']=packages.LEVEL_ROLE.read_text();values['episode-role.txt']=packages.EPISODE_ROLE.read_text()
     for name,value in values.items():(directory/name).write_text(value if isinstance(value,str) else json.dumps(value))
     artifact=lambda p:dict(path=str(p),sha256=hashlib.sha256(p.read_bytes()).hexdigest())
-    profile=dict(schema='campaign-run/4',session='a'*32,source_commit='f'*40,
+    profile=dict(schema='campaign-run/5',session='a'*32,source_commit='f'*40,
         actor_profile='narrowed' if level else 'flat',level=level,
         files={name:artifact(directory/name)['sha256'] for name in values},
         initial_files={str(root/'options'):artifact(root/'options')['sha256']},
@@ -80,15 +91,42 @@ def test_only_selected_fresh_package_is_read(tmp_path):
 @pytest.mark.parametrize('mode',['live','shadow'])
 def test_level_package_freezes_its_role_profile_and_partition(tmp_path,mode):
     directory,profile=package(tmp_path,dict(LEVEL,mode=mode),route_requests=6)
-    assert validate(directory,tmp_path)[0]['level']['mode']==mode
+    frozen=validate(directory,tmp_path)[0]
+    assert frozen['level']['mode']==mode and frozen['schema']=='campaign-run/5'
+    # theta is frozen by value and by the digest of its fitting; the recorder has its own partition.
+    assert frozen['level']['theta']==0.1251514705882353 and len(frozen['level']['theta_fitting_sha256'])==64
+    assert frozen['level']['recorder']['max_http_attempts']==2
+
+
+def test_the_frozen_role_prompts_match_their_pinned_digests_and_the_adr_appendix():
+    for name,sha in FROZEN.items():
+        assert hashlib.sha256((packages.ROOT/'tools/player_roles'/name).read_bytes()).hexdigest()==sha
+        assert packages.FROZEN_ROLE_SHA256[name]==sha
+    # Verbatim: the ADR's blockquote, its wrapped lines joined with single spaces.
+    adr=(packages.ROOT/'docs/decisions/007-player-subgoal-level.md').read_text()
+    appendix=adr[adr.index('## Appendix: v4 role prompts'):]
+    for title,name in (('episode-v1','episode-v1.txt'),('subgoal-v4','subgoal-v4.txt')):
+        lines=appendix[appendix.index(f'**`{title}`:**'):].splitlines()[1:]
+        quote=[];
+        for line in lines:
+            if line.startswith('>'):quote.append(line[1:].strip())
+            elif quote:break
+        assert (packages.ROOT/'tools/player_roles'/name).read_text()==' '.join(quote)+'\n'
+    assert not (packages.ROOT/'tools/player_roles/subgoal-v3.txt').exists()
 
 
 @pytest.mark.parametrize('fault,expected',[
     ('flat_actor','narrowed-profile'),('role_text','frozen current version'),('missing_role','every selected driver input'),
     ('shadow_tail','intent tail'),('live_without_tail','intent tail'),('over_cap','campaign allowance'),
-    ('fractions','Budget fractions'),('previous','inert history')])
+    ('fractions','Budget fractions'),('previous','inert history'),
+    ('missing_episode_role','every selected driver input'),('episode_role_text','frozen current version'),
+    ('v3_role_text','frozen current version'),('cap_not_k','owner'),('m_over_cap','cannot exceed'),
+    ('theta_int','theta'),('theta_zero','theta'),('theta_without_digest','SHA256'),('floor_int','confidence floor'),
+    ('recall_sizes','recall sizes'),('recorder_backlog','Integer'),('recorder_over_cap','campaign allowance'),
+    ('old_field','Invalid mechanical'),('missing_recorder','Invalid mechanical')])
 def test_invalid_level_package_never_launches(tmp_path,fault,expected):
     directory,profile=package(tmp_path,dict(LEVEL),route_requests=6)
+    (tmp_path/'v3').write_text('Role (software-defined). You are the player\'s subgoal level; the log since your last pass is pushed.')
     def refreeze(name,text):
         (directory/name).write_text(text);profile['files'][name]=hashlib.sha256((directory/name).read_bytes()).hexdigest()
     route=json.loads((directory/'route.json').read_text())
@@ -99,7 +137,21 @@ def test_invalid_level_package_never_launches(tmp_path,fault,expected):
     if fault=='live_without_tail':refreeze('route.json',json.dumps(dict(route,intent_tail_bytes=None)))
     if fault=='over_cap':refreeze('route.json',json.dumps(dict(route,max_requests=7)))
     if fault=='fractions':profile['level']['budget_fractions']=[.5,.25]
-    if fault=='previous':profile['schema']='campaign-run/3'
+    if fault=='previous':profile['schema']='campaign-run/4'
+    if fault=='missing_episode_role':profile['files'].pop('episode-role.txt')
+    if fault=='episode_role_text':refreeze('episode-role.txt','Record whatever looks useful.')
+    if fault=='v3_role_text':refreeze('level-role.txt',(tmp_path/'v3').read_text())
+    if fault=='cap_not_k':profile['level']['episode_cap']=8
+    if fault=='m_over_cap':profile['level']['min_episode_inputs']=11
+    if fault=='theta_int':profile['level']['theta']=1
+    if fault=='theta_zero':profile['level']['theta']=0.0
+    if fault=='theta_without_digest':profile['level']['theta_fitting_sha256']='abc'
+    if fault=='floor_int':profile['level']['confidence_floor']=0
+    if fault=='recall_sizes':profile['level']['recall']=dict(tail_top=3,tail_exploration=1,level_items=10)
+    if fault=='recorder_backlog':profile['level']['recorder']['backlog']=0
+    if fault=='recorder_over_cap':profile['level']['recorder']['max_http_attempts']=3
+    if fault=='old_field':profile['level']['inputs_per_pass']=10
+    if fault=='missing_recorder':profile['level'].pop('recorder')
     (directory/'manifest.json').write_text(json.dumps(profile))
     with patch.object(packages,'ROOT',tmp_path),git(),patch.object(packages.subprocess,'run') as validator,\
             pytest.raises(ControlError,match=expected):
@@ -115,7 +167,7 @@ def test_invalid_selected_package_never_launches_or_opens_store(tmp_path,fault):
     if fault=='old_node':
         profile['schema']='campaign-run/2';profile['node']=profile.pop('host')['argv'][0]
     if fault=='old_route':
-        path=directory/'route.json';route=json.loads(path.read_text());route['schema']='player-host/4'
+        path=directory/'route.json';route=json.loads(path.read_text());route['schema']='player-host/5'
         path.write_text(json.dumps(route));profile['files']['route.json']=hashlib.sha256(path.read_bytes()).hexdigest()
     if fault=='partial':(directory/'started.json').write_text('{}')
     if fault=='changed':(directory/'prompt.txt').write_text('different')
