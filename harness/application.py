@@ -481,10 +481,9 @@ class Application:
         if set(cited) & set(allowed):
             return None
         index = derived['contradicting'][0]['index'] + 1
-        options = (f'Cite one of: {", ".join(s[:64] for s in allowed[:4])}.' if allowed else
-                   'None of those records cites a frame, so keep is not available.')
         return (f'The current subgoal {subgoal["id"]} has a contradicted expected observation (number {index}). A keep '
-                f'must cite a frame of a counted episode record that contradicts it. {options} Or call '
+                f'must cite a frame of a counted episode record that contradicts it. Cite one of: '
+                f'{", ".join(s[:64] for s in allowed[:4])}. Or call '
                 f'player_level_replace or player_level_close.\n{LEVEL_FIX_LINE}')
 
     def _check_citations(self, cited: list[str]) -> None:
