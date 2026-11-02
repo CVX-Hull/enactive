@@ -132,8 +132,17 @@ class EpisodeCutter:
         return closed
 
     def flush(self) -> Episode | None:
-        """Close the partial episode at a session edge (a handoff, a stop or the session's end), if any operation is open."""
-        return self._close('edge') if self._open is not None else None
+        """Close the partial episode at a session edge (a handoff, a stop or the session's end).
+
+        An open tail with no input (only observes, or the handoff itself) is not an episode: it is dropped, never
+        recorded, so it cannot add a settle to the stall count.
+        """
+        if self._open is None:
+            return None
+        if self._open['inputs'] == 0:
+            self._open = None
+            return None
+        return self._close('edge')
 
     def _close(self, reason: str) -> Episode:
         held, self._open = self._open, None

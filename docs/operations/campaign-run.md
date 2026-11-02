@@ -45,10 +45,10 @@ memory tools or program save). `level` is null, the zero-level-host configuratio
 | `theta`, `theta_fitting_sha256` | The fitted episode threshold, by value, and the SHA256 of the fitting that produced it (#345's `calibration.json`) |
 | `stall_settles`, `confidence_floor` | N and c, given to both readers at minting |
 | `staleness_inputs` | S |
-| `budget_fractions`, `intent_tail_bytes` | at most 8 increasing values in (0,1); 64-4096 |
+| `budget_fractions`, `intent_tail_bytes` | at most 8 increasing values in (0,1); the tail bound is exactly 1024 (the actor route carries null in shadow mode and 1024 in live mode) |
 | `recall` | `tail_top`, `tail_exploration`, `level_items`: must equal the custodian's 2, 1 and 10 |
 | `max_http_attempts`, `pass_max_requests`, `pass_seconds` | The level's share per actor and its pass bounds |
-| `recorder` | `max_http_attempts`, `pass_max_requests`, `pass_seconds` and `backlog` (3): the recorder's own allowance and bounds |
+| `recorder` | `max_http_attempts`, `pass_max_requests`, `pass_seconds` and `backlog`, which the ADR fixes at 3 (any other value is refused): the recorder's own allowance and bounds |
 
 A level freezes two more inputs, `level-role.txt` and `episode-role.txt`, byte-identical to the
 [frozen role prompt `subgoal-v4`](../../tools/player_roles/subgoal-v4.txt) and
@@ -75,9 +75,12 @@ after the actor. Once the actor host makes its first request:
   `actors/NNN/recorder/PPP/` with the profile `player_source`, `player_episode_record`, `player_episode_abstain`.
   Its input is the baseline frame (the result capture of the last input before the episode) and up to six of
   the episode's own frames (always the last, then the largest thumbnail distance from the predecessor, in capture
-  order), each an image file in `frames/` marked with its source id and role, plus the operations as key tokens, and
-  the subgoal id, text and expected observations. A pass that ends without settling its episode (a failed pass, its
-  time, a stop) leaves the driver to settle it `failed` through the custodian; an exhausted recorder allowance or a
+  order), each named by source id and role (no image file is written and none is inlined: the host reads each frame
+  through `player_source`), plus the operations as key tokens, and the subgoal id, text and expected observations.
+  The host pins those frames, so the route needs `max_context_images` of at least 8 (7 frames plus one read), and a
+  pass that stops on `context-image-limit` is an unsettled end like any other. A pass that ends without settling its episode (a failed pass, its
+  time, a stop) leaves the driver to settle it `failed` through the custodian. A pass the host settles not-ok after
+  its record or abstain event already left its settle in the store: it counts as committed and is never settled twice; an exhausted recorder allowance or a
   session that ends first settles what waits as `failed`. Every closed episode therefore ends with exactly one
   settle claim, whatever its outcome.
 - **Level.** The [wake rules](../../tools/level_schedule.py) wake it at start (only to revalidate what earlier
@@ -93,12 +96,15 @@ after the actor. Once the actor host makes its first request:
   failed pass with its settled reason, for example `level-no-proposal`, `level-final-refusal` or `level-uncertain`
   (a lost terminal call, reconciled from the store).
 
-Both readers' passes are written as `input.json` (`player-pass-input/1`: the role, the frozen role prompt, the
-actor's brief for the level only, mechanical wake facts and the structured pushed input
-`player-level-push/1` or `player-episode-push/1`) and fed to the host on stdin; the host formats it. The level
+The level's stdin is plain text (`input.txt`): the frozen role prompt, the actor's brief, the episodes settled since its
+last pass, the subgoal with its derived status and stalled flag, the counts and the recall, and mechanical wake facts.
+The recorder's is one closed JSON document (`input.json`, `player-pass-input/1`: `text` and `frames`); the host formats
+both. The level
 stops on its actor's stop, Pause or handoff. The open episode closes at that session edge, and the recorder then
 works through its backlog (bounded by `backlog + 1` passes of `pass_seconds` and the campaign deadline) unless the
-run is fenced; whatever remains settles as `failed`. No successor is minted unless every pass's exact process group
+run is fenced; whatever remains settles as `failed`. A tail with no input (only observes or the handoff) is not an
+episode and is not recorded. If the store could not remember, the lineage ends there as a recorded failure and no
+further actor is minted. No successor is minted unless every pass's exact process group
 is confirmed absent. Attempts are charged like an actor's; an unaccounted pass is charged its whole allocation.
 A failure of the cutter, recorder or level (a malformed trace, a launch or store error, a store that cannot remember)
 charges the pass, disables both readers for the rest of the session and is recorded, but never stops or gates the
