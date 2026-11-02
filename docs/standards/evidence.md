@@ -53,7 +53,7 @@ foundational sources, but not the current sources to rely on; the synthesis
 records each brief's questions and any sources it named.
 
 Claim-deciding experiments on the player (above), and every comparison or
-generalization claim, follow ordinary AI/ML research practice. A functional outcome
+generalization claim about the player, follow ordinary AI/ML research practice. A functional outcome
 of a single development run stays governed by evidence cadence.
 - **Separate development data from evaluation data.** Any data a design, prompt,
   threshold or code change was chosen, tuned or debugged on is development data. A
@@ -75,8 +75,8 @@ of a single development run stays governed by evidence cadence.
   - Report variance across repeats, including repeated LLM calls on the same input.
 - **Pin versions.** Record the model, route, prompt, code and data versions, so a
   result can be reproduced from its record.
-- **Report everything.** Report every analysis variant tried (each one is a
-  deviation from the pre-registration), including negative and null results.
+- **Report everything.** Report every analysis variant tried (each one beyond the
+  pre-registered analyses is a deviation), including negative and null results.
   Control multiplicity for claim-deciding tests.
 - **Generality needs held-out support.** A gain that appears only on the data that
   shaped it is not evidence, nor is a mechanism fitted to one example.
