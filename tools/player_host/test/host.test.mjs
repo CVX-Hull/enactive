@@ -1091,7 +1091,7 @@ test('production episode schemas: a refused call names each field, the rule, the
   assert.ok(first.includes('unknown properties "extra" are not allowed'),first);
   const received=/- attempted: .*received (".*)/.exec(first)[1];
   assert.ok(received.length<200&&received.includes('more characters'),'received values are truncated to 120 characters');
-  assert.ok(first.includes('Valid example call: player_episode_record {"attempted":"<attempted>","counterpart":"","observation_status":[],"changed":"","residual":"","confidence":0,"sources":[]}'),first);
+  assert.ok(first.includes('Valid example call: player_episode_record {"attempted":"<attempted>","counterpart":"","observation_status":[],"changed":"","residual":"","confidence":0,"sources":["<sources>"]}'),first);
   assert.ok(first.includes('In this example observation_status is empty, which is valid only when no subgoal was pushed'),first);
   assert.ok(first.endsWith('Fix the call and resend it; abstaining is not the remedy for a fixable call.'),first);
   const second=payloads.at(-1).messages.find(m=>m.role==='tool'&&m.tool_call_id==='bad2-0').content;

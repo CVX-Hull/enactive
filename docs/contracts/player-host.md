@@ -19,7 +19,7 @@ its provider serializers, closed route `model` fields and limits.
 
 ## Adapter selection
 
-A `campaign-run/4` package freezes `host`: `{"argv": [...]}` with 1–8 strings.
+A `campaign-run/5` package freezes `host`: `{"argv": [...]}` with 1–8 strings.
 `argv[0]` is an absolute existing regular file (an adapter executable or its
 interpreter); every later entry is a canonical project-local regular file covered
 by the clean source commit. The driver and package validator append only the mode

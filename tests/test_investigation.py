@@ -38,7 +38,7 @@ class InvestigationTests(unittest.TestCase):
         self.actor = 'actor-original'
         self.receipt = dict(schema='campaign-receipt/2', session=self.session, source_commit='abc123',
             deciding_hosts_quiescent=True, native_absence_verified=True, input_authority_revoked=True,
-            driver=dict(schema='player-driver/5', actors=[dict(index=1, actor_id=self.actor)],
+            driver=dict(schema='player-driver/6', actors=[dict(index=1, actor_id=self.actor)],
                 attempts_charged=1, host_seconds_used=2, configured_estimate_usd=.1, missing_usage_attempts=0),
             accounting=dict(consumed_conservative_reservation_usd=.2), outcome='failed')
         self.put_receipt()
