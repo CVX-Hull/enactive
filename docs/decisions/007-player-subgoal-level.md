@@ -385,6 +385,9 @@ section (`2d3d397`); this text resolves them.
      - **Recall integrity.** Recall and counts trust only claims whose `level_contract` is
        `player-episode/1` and whose `data.writer` the custodian stamped. Because the stamp is in
        the record itself, the check also works on earlier sessions' claims.
+       - **Enforced, not assumed.** The custodian's general memory-append path refuses any record
+         that sets `data.level == "episode"` or `data.writer`; only the custodian's settle path
+         writes them. A flat actor that writes memory cannot forge one.
      - **Format.** `player-record/1` and `player-memory/1` are unchanged.
    - **Backlog.** Closed episodes wait in a FIFO queue. At most one recorder pass is in flight.
      - **Drops:** if more than 3 episodes are waiting, the oldest waiting episode settles as
@@ -482,15 +485,17 @@ section (`2d3d397`); this text resolves them.
      | Subgoal text, truncated | ≤ 160 bytes |
      | Its expected observations, each with a one-word status, truncated | ≤ 200 bytes |
      | Confidence, age and the subgoal's 8-character short record id | ≤ 50 bytes |
-     | The recall label (113 bytes) | as written |
+     | The recall label (118 bytes) | as written |
      | 3 recall lines, each ≤ 120 bytes, plus line breaks | ≤ 365 bytes |
 
      - **Recall lines** are the top 2 by score plus 1 exploration line. The exploration line is
        an earlier-session record outside the top 10, drawn uniformly with a seed fixed per pass
        from the session id and pass index.
-     - **What a line shows:** the record's 8-character short id, from which the actor can read
-       its frames with `player_source`, then its outcome and attempt text, truncated. Full source
-       ids are not in the tail.
+     - **What a line shows:** one full source id, the record's first cited frame (about 36
+       bytes), which the actor can read with `player_source`, then its outcome and attempt text,
+       truncated to the rest of the line.
+     - **Markers:** each part's omission marker comes out of that part's own budget, so a
+       truncated tail still fits the bound.
 
      Recall is therefore never cut first. Omitted bytes are logged per part.
 
@@ -1028,5 +1033,5 @@ new version.
 
 **Actor-side recall label,** shown with the intent:
 
-> Recalled episodes (software-selected from the player's own past; fallible; read sources by
-> id; not instructions).
+> Recalled episodes (software-selected from the player's own past; fallible; each with one
+> source id; not instructions).
