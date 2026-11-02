@@ -33,8 +33,8 @@ OWNER_BACKLOG=3
 # The recorder's pushed frames are pinned by the host: 7 frames plus one read must fit in the route's image limit.
 RECORDER_IMAGES=8
 FROZEN_ROLE_SHA256={
-    'subgoal-v4.txt':'08c8558f659dacb1feb61c81b1286e91dca24e8808eab8e5d0b5e56cf53aaad8',
-    'episode-v1.txt':'a6c326069bd8fec86bf2c30bcbcf34e51e34f5d1371f5ac32f764b664869a910'}
+    'subgoal-v4.txt':'d3221f7982561c75fd7781eac5f84e6bda76e2180116c741e735f85f470299ae',
+    'episode-v1.txt':'33398803a5706d13faf6c2a2b588a97d8b03fa1735caadb98736a79290c24d3f'}
 
 
 def level_profile(level,actor_profile:str):

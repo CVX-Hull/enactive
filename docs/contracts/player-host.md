@@ -154,7 +154,7 @@ capability. Its enabled tools must include `player_episode_record` and
 `player_episode_abstain`, and `player_source` when frames are pushed. It sends no input
 and makes no handoff. Its prompt is one `player-pass-input/1` JSON document
 `{"schema", "text", "frames"}`, closed: `text` is the driver's non-empty pushed text (the frozen
-role prompt, the mission brief, the episode's operations and the pushed subgoal) and `frames`
+role prompt, the episode's operations and the pushed subgoal; no mission brief) and `frames`
 lists at most 7 `{"source_id", "role"}` entries with distinct ids, in order: an optional `baseline`
 first, then at most 6 episode frames, `in-episode` ones ending in exactly one `last` (so `last`
 is required, and final, whenever there are episode frames). The pushed frames are pinned: they
