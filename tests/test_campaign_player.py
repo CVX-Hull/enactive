@@ -309,10 +309,15 @@ def test_cut_episodes_are_recorded_and_the_level_runs_on_the_settles(level_campa
     # Level pass input: plain text with the frozen role, the actor's brief and the episodes settled since its last pass.
     one=(level_campaign.root/'actors/001/level/001/input.txt').read_text()
     assert one.startswith('Frozen level role\n\nMission brief (the same the acting player has):\nFrozen mission')
-    assert 'Episodes settled since your last pass' in one and 'reason settle' in one and 'Current subgoal (id, derived status of each expected observation, stalled flag): none' in one
+    # The first pass follows a settle; its wake reason may be the settle or a budget fraction reached after it (coalesced).
+    assert re.search(r'reason (settle|budget-0\.(25|5|75)), pass index 1, settled episodes [1-9]', one), one
+    assert 'Episodes settled since your last pass' in one and 'Current subgoal (id, derived status of each expected observation, stalled flag): none' in one
     bound=receipt['level']['passes'][0]['bound']
     assert bound['subgoal_id'] is None and f'"last_position":{bound["position"]}' in one and bound['position']>=1
     assert receipt['level']['commits']>=1 and [r['text'] for r in level_campaign.app.memory.current('work')]==['Scripted subgoal']
+    # The level shares the acting player's guide; the recorder, an observer, gets none.
+    assert (level_campaign.root/'actors/001/level/001/context.txt').read_text()=='Frozen guide'
+    assert (level_campaign.root/'actors/001/recorder/001/context.txt').read_text()==''
     assert json.loads((level_campaign.root/'actors/001/level/001/route.json').read_text())['role']=='level'
     assert json.loads((level_campaign.root/'actors/001/recorder/001/route.json').read_text())['role']=='recorder'
     assert json.loads((level_campaign.root/'actors/001/level/001/mcp.json').read_text())['enabled_tools']==[

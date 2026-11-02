@@ -268,7 +268,10 @@ class ReaderLane:
                       started_wall=time.time(), **meta)
         write_new(target / 'route.json', dict(self.route, role=self.role, intent_tail_bytes=None, max_requests=allowance))
         write_new(target / 'mcp.json', configuration(str(self.reader_file), profile=self.role))
-        write_new(target / 'context.txt', (self.directory / 'context.txt').read_text(), text=True)
+        # The level shares the acting player's guide (its prompt says actor-addressed text is not for it); the recorder is an
+        # observer and gets no guide (ADR-007, no-nudge review on #352), so its context is empty.
+        context = '' if self.role == 'recorder' else (self.directory / 'context.txt').read_text()
+        write_new(target / 'context.txt', context, text=True)
         name = 'input.txt' if isinstance(stdin, str) else 'input.json'
         write_new(target / name, stdin, text=isinstance(stdin, str))
         write_new(target / 'player-final.txt', '', text=True)

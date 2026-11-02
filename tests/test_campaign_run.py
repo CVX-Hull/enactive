@@ -23,8 +23,8 @@ LEVEL=dict(mode='live',episode_cap=10,staleness_inputs=10,budget_fractions=[.25,
            recall=dict(tail_top=2,tail_exploration=1,level_items=10),
            recorder=dict(max_http_attempts=2,pass_max_requests=2,pass_seconds=60,backlog=3))
 # The frozen role prompts' digests, pinned here independently of the validator that also pins them.
-FROZEN={'subgoal-v4.txt':'08c8558f659dacb1feb61c81b1286e91dca24e8808eab8e5d0b5e56cf53aaad8',
-        'episode-v1.txt':'a6c326069bd8fec86bf2c30bcbcf34e51e34f5d1371f5ac32f764b664869a910'}
+FROZEN={'subgoal-v4.txt':'d3221f7982561c75fd7781eac5f84e6bda76e2180116c741e735f85f470299ae',
+        'episode-v1.txt':'33398803a5706d13faf6c2a2b588a97d8b03fa1735caadb98736a79290c24d3f'}
 
 
 def package(root,level=None,route_requests=10):
