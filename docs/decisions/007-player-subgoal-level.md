@@ -748,7 +748,7 @@ on development data.
 | Name | Value | Kind and procedure | Source |
 |---|---|---|---|
 | Episode threshold θ | 0.1251514705882353 | Calibration, fitted per game from player-visible captures: the q = 0.86 quantile of consecutive thumbnail distances, chosen so the mean episode length hits the target (fitted mean 5.94 over 444 episodes of 37 runs, all development data). Frozen in the profile by value and by the fitting digest `8a80f12b736b6d993fcf6c356a7686a03c85508779d52c376d2ce1394893c76b` (`calibration.json`). Recalibrated when the game, resolution or theme changes | [#345](https://github.com/CVX-Hull/enactive/issues/345) |
-| Target mean episode length L̄ | 6 | Preference, half the cap. With *m*, it sets the cadence K set before; θ is fitted to it | #344; fixed in #345's registry |
+| Target mean episode length L̄ | 6 | Preference, half the cap. With *m*, it sets the cadence K set before; θ is fitted to it | Owner, #344; used as the fitting target in #345's registry |
 | Minimum episode length *m* | 2 | Preference; a content cut needs this many inputs | #345's registry |
 | Episode cap C and K | 10 | K is the owner's longest run of inputs between wakes and is now the cap. `episode_cap` must equal K (10); the package validator enforces it, and changing K is the owner's call | Owner; *decided at build* ([#350](https://github.com/CVX-Hull/enactive/issues/350)) |
 | Staleness S | 10 | Owner preference, constrained by S > p95 of recorder pass plus queue plus level pass. Measured p95: 5 actor inputs | Owner; #345 |
