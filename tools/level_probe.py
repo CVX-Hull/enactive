@@ -154,7 +154,10 @@ def recorded_passes(session: Path) -> list[dict]:
         session_id = json.loads(database.execute("SELECT value FROM metadata WHERE key='session'").fetchone()[0])
     finally:
         database.close()
-    store = (json.loads((session / 'manifest.json').read_text()).get('player_store'))
+    manifest = json.loads((session / 'manifest.json').read_text())
+    if manifest.get('schema') != 'campaign-run/5':
+        raise ValueError(f'{session.name}: the recorded session is {manifest.get("schema")!r}, not campaign-run/5; it is not converted')
+    store = manifest.get('player_store')
     passes, writes = [], 0
     for actor_directory in sorted((session / 'actors').glob('[0-9][0-9][0-9]')):
         actor = json.loads((actor_directory / 'actor.json').read_text())['actor_id']

@@ -28,6 +28,10 @@ OWNER_K=10
 # The frozen, versioned role prompts (ADR-007 appendix); a change makes a new version and a new digest here.
 LEVEL_ROLE=ROOT/'tools/player_roles/subgoal-v4.txt'
 EPISODE_ROLE=ROOT/'tools/player_roles/episode-v1.txt'
+# The recorder backlog bound is fixed by the ADR, not configurable.
+OWNER_BACKLOG=3
+# The recorder's pushed frames are pinned by the host: 7 frames plus one read must fit in the route's image limit.
+RECORDER_IMAGES=8
 FROZEN_ROLE_SHA256={
     'subgoal-v4.txt':'08c8558f659dacb1feb61c81b1286e91dca24e8808eab8e5d0b5e56cf53aaad8',
     'episode-v1.txt':'a6c326069bd8fec86bf2c30bcbcf34e51e34f5d1371f5ac32f764b664869a910'}
@@ -61,7 +65,7 @@ def level_profile(level,actor_profile:str):
         raise ControlError('The recall sizes differ from the custodian\'s (2 top and 1 exploration line in the tail, 10 for the level)')
     recorder=level['recorder']
     closed(recorder,RECORDER_FIELDS)
-    for name,low,high in (('max_http_attempts',1,10000),('pass_max_requests',1,64),('pass_seconds',30,3600),('backlog',1,16)):
+    for name,low,high in (('max_http_attempts',1,10000),('pass_max_requests',1,64),('pass_seconds',30,3600),('backlog',OWNER_BACKLOG,OWNER_BACKLOG)):
         integer(recorder[name],low,high)
     return level
 
@@ -150,6 +154,8 @@ def preflight(directory: Path) -> tuple[dict,dict,dict]:
     route=read_json(directory/'route.json',1048576)
     if type(route) is not dict or route.get('schema')!='player-host/6':
         raise ControlError('Unsupported player host route; old routes are inert history')
+    if level and (type(route.get('max_context_images')) is not int or route['max_context_images']<RECORDER_IMAGES):
+        raise ControlError(f'The recorder pins up to 7 frames and reads one more: the route needs max_context_images of at least {RECORDER_IMAGES}')
     if route.get('service_tier')!='default':raise ControlError('This campaign allocation supports only the selected default serving tier')
     # Only a live level publishes intent; shadow mode measures it without influencing play.
     tail=level['intent_tail_bytes'] if level and level['mode']=='live' else None

@@ -76,7 +76,7 @@ def recorded(tmp_path):
     from harness.player.memory import Memory
     player_store = tmp_path / 'recorded-player.sqlite3'
     Memory(player_store).close()
-    (session / 'manifest.json').write_text(json.dumps(dict(player_store=str(player_store),
+    (session / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/5', player_store=str(player_store),
         level=LEVEL)))
     actor_directory = session / 'actors/001'
     (actor_directory / 'level').mkdir(parents=True)
@@ -579,3 +579,11 @@ def test_the_credential_comes_only_from_the_keychain_item(monkeypatch):
     with pytest.raises(ValueError) as raised:
         level_probe.keychain_secret()
     assert KEY not in str(raised.value)
+
+
+@pytest.mark.parametrize('schema', ['campaign-run/4', 'campaign-run/3', None])
+def test_a_recorded_session_that_is_not_campaign_run_5_is_refused_not_converted(tmp_path, recorded, schema):
+    manifest = json.loads((recorded / 'manifest.json').read_text())
+    (recorded / 'manifest.json').write_text(json.dumps(dict(manifest, schema=schema)))
+    with pytest.raises(ValueError, match='not campaign-run/5'):
+        recorded_passes(recorded)

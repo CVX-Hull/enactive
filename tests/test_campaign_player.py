@@ -376,7 +376,7 @@ def test_each_successor_actor_gets_its_own_readers_after_the_last_episode_of_its
     assert first['settled']['reason']=='handoff' and first['level']['quiescent']
     assert (first['reader_id'],first['recorder_id']) != (second['reader_id'],second['recorder_id'])
     views=assert_every_operation_settled_exactly_once(level_campaign,result,0)
-    assert views[-1]['closed_by' if False else 'settled']=='recorded'
+    assert views[-1]['settled']=='recorded'
     # The predecessor's last episode (closed at the handoff edge) was recorded before the successor started.
     ended=max(p['ended_wall'] for p in first['level']['recorder']['passes'])
     assert views[-1]['last_position']==level_campaign.runtime.store.actor_counts(first['actor_id'])[0]
@@ -705,6 +705,59 @@ def test_a_failure_to_remember_stops_both_readers_and_settles_what_waits_but_the
     assert rig.launches==[]
 
 
+def test_a_pending_input_at_a_batch_boundary_waits_for_its_capture(rig):
+    store=rig.runtime.store
+    pending=lambda:store.begin(dict(operation_id='%032x'%time.monotonic_ns(),actor_id=rig.actor['actor_id'],kind='input',
+        created_wall=time.time(),deadline_monotonic=1e9),[dict(type='key',key='x',modifiers=[])],1)
+    # 199 resolved inputs and a 200th still in flight: the page is full, but the pending entry is the log's last.
+    system=rig.build()
+    system.cutter.cap=1000
+    rig.act(0,199)
+    pending()
+    system._ingest(final=False)
+    assert system.cutter.next_position==200
+    # 199 resolved inputs ending the log with the 200th entry pending is the same case one page later: 200 then a pending 201st.
+    rig.runtime.store.finish(dict(schema='computer-operation/1',operation_id=store.actor_log(rig.actor['actor_id'],199,1)[0]['operation_id'],
+        session=rig.runtime.session,actor_id=rig.actor['actor_id'],kind='input',status='completed',created_wall=time.time(),
+        deadline_monotonic=1e9,receipts=[],source=None,remaining={},reason='fixture',handoff=None))
+    pending()
+    system._ingest(final=False)
+    assert system.cutter.next_position==201
+    system.finish()
+
+
+def test_a_lane_that_cannot_close_is_recorded_and_the_other_lane_still_closes(rig):
+    system=rig.build()
+    force_cut(system,rig,1)
+    rig.poll(system)
+    (launch,)=rig.launches
+    def refuse(record):
+        raise OSError('fixture refusal')
+    system.recorder_lane.on_finish=refuse
+    system.level_lane.on_finish=refuse
+    system.finish()
+    assert 'OSError' in system.failure and system.quiescent()
+    assert launch.lane.passes and launch.lane.current is None
+    # The episode in flight still settles exactly once.
+    assert [s for *_,s in spans(rig.app,rig.actor)]==['failed']
+
+
+def test_a_stop_closes_the_open_episode_and_it_settles_even_when_the_recorder_never_runs(rig):
+    system=rig.build()
+    rig.act(0,3)
+    system.close_edge()
+    assert [(e.first_position,e.last_position,e.closed_by) for e in system.cuts]==[(1,3,'edge')]
+    system.finish()
+    assert spans(rig.app,rig.actor)==[(1,3,'failed')]
+
+
+def test_the_edge_tail_without_an_input_is_not_an_episode_and_adds_no_settle(rig):
+    system=rig.build()
+    system.close_edge()
+    system.finish()
+    assert system.cuts==[] and spans(rig.app,rig.actor)==[]
+
+
 def test_an_unreadable_capture_fails_the_readers_not_the_actor(rig,monkeypatch):
     system=rig.build()
     rig.act(100,2)
@@ -789,11 +842,92 @@ def test_the_receipt_counts_failed_passes_and_start_abstains(rig):
     recorder=system.recorder_lane
     recorder.passes[:]=[dict(settled=dict(ok=True),episode_events=[dict(type='episode-record')],attempts_charged=1),
                         dict(settled=dict(ok=True),episode_events=[dict(type='episode-abstain',reason_code='unreadable_frames')],attempts_charged=1),
-                        dict(settled=dict(ok=False,reason='level-final-refusal'),episode_events=[],attempts_charged=1)]
+                        dict(settled=dict(ok=False,reason='episode-final-refusal'),episode_events=[],attempts_charged=1),
+                        # The host's own string for the level is not the recorder's, and a pass that settled not-ok after
+                        # its record event already left its settle in the store: committed, not failed.
+                        dict(settled=dict(ok=False,reason='level-final-refusal'),episode_events=[],attempts_charged=1),
+                        dict(settled=dict(ok=False,reason='host-timeout'),episode_events=[dict(type='episode-record')],attempts_charged=1)]
     receipt=system.recorder_receipt()
-    assert (receipt['records'],receipt['abstains'],receipt['failed_passes'],receipt['final_refusals'])==(1,1,1,1)
+    assert (receipt['records'],receipt['abstains'],receipt['failed_passes'],receipt['final_refusals'])==(2,1,2,1)
     assert receipt['abstain_codes']==dict(unreadable_frames=1,no_player_action=0,other=0)
     system.finish()
+
+
+def test_the_start_wake_counts_only_earlier_sessions_recorded_episodes(rig):
+    from episode_support import put
+    from harness.player.episodes import claim_data
+    def claim(settled,**fields):
+        data=claim_data(session='z'*32,actor_id='c'*32,first_position=1,last_position=2,subgoal_id=None,settled=settled,**fields)
+        return dict(schema='player-record/1',kind='claim',text='x',data=data,sources=[],supports=[],supersedes=None,
+                    applicability=None,program_id=None)
+    put(rig.app.memory,'c'*32,claim('abstained',reason_code='other',reason='x'))
+    put(rig.app.memory,'c'*32,claim('failed',reason='x'))
+    system=rig.build()
+    # Abstained and failed settles carry nothing to revalidate or recall.
+    assert system._carried()==0
+    put(rig.app.memory,'c'*32,claim('recorded',attempted='Walked',counterpart='',observation_status=[],residual='',changed='',confidence=.5))
+    assert system._carried()==1
+    system.finish()
+
+
+def test_a_pass_that_settles_not_ok_after_its_record_is_committed_not_failed_and_never_settled_twice(rig):
+    system=rig.build()
+    force_cut(system,rig,1)
+    rig.poll(system)
+    (launch,)=rig.launches
+    class Late(Trace):
+        def finish(self):
+            return dict(Trace.finish(self),settled=dict(ok=False,reason='host-timeout'),
+                        episode_events=[dict(type='episode-record',settled='recorded',first_position=1,last_position=2)])
+    child,_,record,ends=launch.lane.current
+    launch.lane.current=(child,Late(),record,ends)
+    rig.settle_pass(launch)
+    rig.poll(system)
+    assert spans(rig.app,rig.actor)==[(1,2,'recorded')]
+    receipt=system.recorder_receipt()
+    assert receipt['records']==1 and receipt['failed_passes']==0
+    system.finish()
+    assert spans(rig.app,rig.actor)==[(1,2,'recorded')]
+
+
+@pytest.mark.parametrize('reason',['context-image-limit','frame-read-failed','invalid-pass-input','episode-no-record','episode-final-refusal'])
+def test_every_unsettled_recorder_end_settles_the_episode_failed_with_the_hosts_reason(rig,reason):
+    system=rig.build()
+    force_cut(system,rig,1)
+    rig.poll(system)
+    (launch,)=rig.launches
+    class Ended(Trace):
+        def finish(self):
+            return dict(Trace.finish(self),settled=dict(ok=False,reason=reason))
+    child,_,record,ends=launch.lane.current
+    launch.lane.current=(child,Ended(),record,ends)
+    launch.child.done=True
+    rig.poll(system)
+    (view,)=rig.app.settled_episodes(actor_id=rig.actor['actor_id'])
+    assert (view['settled'],view['writer'])==('failed','software') and reason in view['reason']
+    assert system.recorder_receipt()['failed_passes']==1
+    system.finish()
+
+
+def test_the_receipt_totals_the_recorders_uncertain_terminals_as_well(rig):
+    system=rig.build()
+    system.recorder_lane.passes[:]=[dict(settled=dict(ok=False,reason='episode-uncertain'),episode_events=[],attempts_charged=1,
+        episode_uncertain=[dict(tool='player_episode_record',identity='e'*32,outcome='absent')])]
+    system.level_lane.passes[:]=[dict(reason='settle',settled=dict(ok=False,reason='level-uncertain'),level_events=[],attempts_charged=1,
+        level_uncertain=[dict(tool='player_level_replace',identity='f'*32,outcome='committed')])]
+    receipt=system.receipt()
+    assert receipt['uncertain_terminals']==2 and receipt['recorder']['uncertain_absent']==1 and receipt['level']['uncertain_committed']==1
+    system.finish()
+
+
+def test_a_store_that_cannot_remember_ends_the_lineage_before_any_actor_is_minted(tmp_path):
+    from unittest.mock import Mock
+    application=SimpleNamespace(add_actor=Mock(),remember_failure='store full',runtime=SimpleNamespace(stop=Mock()))
+    level=level_profile()
+    profile=dict(max_hosts=2,host_seconds=100,total_host_seconds=200,max_http_attempts=60,actor_profile='narrowed',level=level)
+    result=run_hosts(tmp_path,profile,dict(max_requests=20),application,'fixture-secret',threading.Event(),time.monotonic()+300)
+    assert not application.add_actor.called and result['actors']==[] and result['outcome']=='incomplete'
+    assert 'lineage ends' in result['reason'] and 'store full' in result['reason']
 
 
 def test_the_trace_reader_collects_level_uncertain_and_episode_events(tmp_path):

@@ -34,7 +34,7 @@ def package(root,level=None,route_requests=10):
     tail=level['intent_tail_bytes'] if level and level['mode']=='live' else None
     values={
         'route.json':dict(schema='player-host/6',role='actor',intent_tail_bytes=tail,service_tier='default',
-            max_requests=route_requests,model=dict(id='fixture',
+            max_requests=route_requests,max_context_images=8,context_image_block=1,model=dict(id='fixture',
             contextWindow=1000,maxTokens=100,cost=dict(input=.45,cacheRead=.45,cacheWrite=.45,output=1.8))),
         'mcp-template.json':configuration('@ACTOR_CONFIG@',profile='narrowed' if level else 'flat'),
         'context.txt':'Frozen context','prompt.txt':'Frozen mission',
@@ -123,7 +123,7 @@ def test_the_frozen_role_prompts_match_their_pinned_digests_and_the_adr_appendix
     ('v3_role_text','frozen current version'),('cap_not_k','owner'),('m_over_cap','cannot exceed'),
     ('theta_int','theta'),('theta_zero','theta'),('theta_without_digest','SHA256'),('floor_int','confidence floor'),
     ('recall_sizes','recall sizes'),('recorder_backlog','Integer'),('recorder_over_cap','campaign allowance'),
-    ('old_field','Invalid mechanical'),('missing_recorder','Invalid mechanical'),('tail_not_1024','Integer')])
+    ('old_field','Invalid mechanical'),('missing_recorder','Invalid mechanical'),('tail_not_1024','Integer'),('backlog_not_three','Integer'),('few_images','max_context_images')])
 def test_invalid_level_package_never_launches(tmp_path,fault,expected):
     directory,profile=package(tmp_path,dict(LEVEL),route_requests=6)
     (tmp_path/'v3').write_text('Role (software-defined). You are the player\'s subgoal level; the log since your last pass is pushed.')
@@ -150,6 +150,8 @@ def test_invalid_level_package_never_launches(tmp_path,fault,expected):
     if fault=='recall_sizes':profile['level']['recall']=dict(tail_top=3,tail_exploration=1,level_items=10)
     if fault=='recorder_backlog':profile['level']['recorder']['backlog']=0
     if fault=='recorder_over_cap':profile['level']['recorder']['max_http_attempts']=3
+    if fault=='backlog_not_three':profile['level']['recorder']['backlog']=4
+    if fault=='few_images':refreeze('route.json',json.dumps(dict(route,max_context_images=7)))
     if fault=='tail_not_1024':profile['level']['intent_tail_bytes']=512
     if fault=='old_field':profile['level']['inputs_per_pass']=10
     if fault=='missing_recorder':profile['level'].pop('recorder')

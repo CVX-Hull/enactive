@@ -120,10 +120,14 @@ def test_session_edge_flush_closes_the_partial_episode_once_whatever_its_length(
     tail = log.cutter.flush()
     assert (tail.first_position, tail.last_position, tail.inputs, tail.closed_by) == (1, 1, 1, 'edge')
     assert log.cutter.flush() is None
-    # An episode of observes only is still closed, so it settles (the recorder may abstain).
+    # A tail with no input (only observes, or the handoff itself) is not an episode: it is dropped, not recorded.
     log = Log()
     log.add(None, kind='observe')
-    assert log.cutter.flush().inputs == 0
+    assert log.cutter.flush() is None and log.cutter.open_first is None and log.cutter.next_position == 2
+    log = Log(cap=2)
+    log.add(0); log.add(0)
+    log.add(None, kind='handoff')
+    assert [e.closed_by for e in log.closed] == ['cap'] and log.cutter.flush() is None
 
 
 def test_boundaries_are_frozen_once_returned_and_the_next_episode_starts_after_the_furthest_cut():

@@ -404,7 +404,8 @@ class LevelSystem:
                 current = self.application.level_subgoals()
                 subgoal = current[-1]['id'] if current else None
             for entry in entries:
-                if entry['status'] == 'pending' and entry is entries[-1] and len(entries) < 200 and not final:
+                if entry['status'] == 'pending' and not final and entry['position'] == store.actor_counts(self.actor_id)[0]:
+                    # The log's last entry, still in flight: it waits for its capture, whatever the batch boundary.
                     return
                 for episode in self.cutter.feed(entry, subgoal):
                     self._enqueue(episode)
@@ -545,7 +546,8 @@ class LevelSystem:
     def _carried(self) -> int:
         """What earlier sessions left for a start pass to revalidate: current level subgoals plus recalled episodes."""
         with self.application.serial:
-            earlier = [v for v in self.application.settled_episodes(actor_id=None) if v['session'] != self.session]
+            earlier = [v for v in self.application.settled_episodes(actor_id=None)
+                       if v['session'] != self.session and v['settled'] == 'recorded']
             return len(self.application.level_subgoals()) + len(earlier)
 
     def _launch_level(self, events: 'HostEvents', now: float, deadline: float) -> None:
@@ -587,11 +589,7 @@ class LevelSystem:
         try:
             if not self.failure:
                 self.level_lane.finish()
-                self._ingest(final=True)
-                tail = self.cutter.flush()
-                if tail is not None:
-                    self.edge_closed = True
-                    self._enqueue(tail)
+                self.close_edge()
                 limit = time.monotonic() + (self.backlog + 1) * self.recorder_lane.limits['pass_seconds']
                 while (self.queue or self.recorder_lane.busy) and not halted() and time.monotonic() < min(limit, deadline - 30):
                     self._poll(None, halted(), deadline, ending=True)
@@ -600,10 +598,22 @@ class LevelSystem:
             self.failure = f'{type(exc).__name__}: {str(exc)[:300]}'
         self.finish()
 
+    def close_edge(self) -> None:
+        """Close the open episode at a session edge (a handoff, a stop or the end): it joins the backlog for the recorder."""
+        self._ingest(final=True)
+        tail = self.cutter.flush()
+        if tail is not None:
+            self.edge_closed = True
+            self._enqueue(tail)
+
     def finish(self) -> None:
         """Close both lanes' passes and settle every episode still waiting as failed, so each settles exactly once."""
-        self.level_lane.finish()
-        self.recorder_lane.finish()
+        # A lane that cannot close is recorded and the next still closes: a lane failure never stops the actor.
+        for lane in (self.level_lane, self.recorder_lane):
+            try:
+                lane.finish()
+            except Exception as exc:
+                self.failure = self.failure or f'{type(exc).__name__}: {str(exc)[:300]}'
         failed = []
         if self.inflight is not None:
             # A pass that never started: its episode still settles exactly once.
@@ -654,14 +664,18 @@ class LevelSystem:
         lane = self.recorder_lane
         passes = lane.passes
         events = [e for p in passes for e in p.get('episode_events', [])]
-        failed = [p for p in passes if (p.get('settled') or {}).get('ok') is not True]
-        refused = [p for p in failed if (p.get('settled') or {}).get('reason') == 'level-final-refusal']
+        # A pass that settled not-ok after its record or abstain event already left its settle in the store: committed.
+        failed = [p for p in passes if (p.get('settled') or {}).get('ok') is not True and not p.get('episode_events')]
+        refused = [p for p in failed if (p.get('settled') or {}).get('reason') == 'episode-final-refusal']
+        uncertain = [e for p in passes for e in p.get('episode_uncertain', [])]
         codes = {code: sum(e['type'] == 'episode-abstain' and e.get('reason_code') == code for e in events)
                  for code in EPISODE_ABSTAIN_CODES}
         return dict(reader_id=lane.reader_id, allocated_attempts=lane.allowance, attempts_charged=lane.charged, passes=passes,
                     records=sum(e['type'] == 'episode-record' for e in events),
                     abstains=sum(e['type'] == 'episode-abstain' for e in events), abstain_codes=codes,
-                    failed_passes=len(failed), final_refusals=len(refused), **lane.usage())
+                    failed_passes=len(failed), final_refusals=len(refused), uncertain_terminals=len(uncertain),
+                    uncertain_committed=sum(e['outcome'] == 'committed' for e in uncertain),
+                    uncertain_absent=sum(e['outcome'] == 'absent' for e in uncertain), **lane.usage())
 
     def episodes_receipt(self) -> dict:
         """The cutter's closes and every episode's settle, read back from the store (the claims are the authority)."""
@@ -688,7 +702,7 @@ class LevelSystem:
                     level=level, recorder=recorder, episodes=self.episodes_receipt(), subgoals=subgoals,
                     failed_passes=level['failed_passes'] + recorder['failed_passes'],
                     final_refusals=level['final_refusals'] + recorder['final_refusals'],
-                    uncertain_terminals=level['uncertain_terminals'],
+                    uncertain_terminals=level['uncertain_terminals'] + recorder['uncertain_terminals'],
                     configured_estimate_usd=level['configured_estimate_usd'] + recorder['configured_estimate_usd'],
                     missing_usage_attempts=level['missing_usage_attempts'] + recorder['missing_usage_attempts'])
 
@@ -708,6 +722,9 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
         allowance=min(route['max_requests'],profile['max_http_attempts']-total_attempts-level_allowance-recorder_allowance)
         if stopped.is_set() or seconds<=30 or allowance<1 or (level and (level_allowance<1 or recorder_allowance<1)):
             reason='Original host/campaign resources or cancellation prevent another actor';break
+        if level and application.remember_failure is not None:
+            # The lineage ends here as a recorded failure; an actor that could not be served is never minted.
+            reason=f'The lineage ends: player memory could not remember ({application.remember_failure}); no further actor';break
         target=actors/f'{index:03d}'
         child=None;events=None;levels=None
         record=dict(index=index,actor_id=None,allocated_seconds=seconds,allocated_attempts=allowance)
@@ -807,6 +824,10 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
                 finally:events.close()
             else:record.update(accounting_complete=False,attempts_charged=allowance if child else 0)
             if levels is not None:
+                # An orchestration failure is a stop: the open episode closes at the edge, where that is safe.
+                if not levels.failure:
+                    try:levels.close_edge()
+                    except Exception as exc:levels.failure=f'{type(exc).__name__}: {str(exc)[:300]}'
                 try:levels.finish()
                 except Exception as exc:record['level_error']=type(exc).__name__
                 record['level']=levels.receipt()
