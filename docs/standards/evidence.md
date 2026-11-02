@@ -52,7 +52,28 @@ design decision. Briefs for delegated research pose the questions and may name
 foundational sources, but not the current sources to rely on; the synthesis
 records each brief's questions and any sources it named.
 
-C-REVIEW checks the pre-registration before spending, and both paragraphs at the
-reporting checkpoint.
+Experiments on the player follow ordinary AI/ML research practice:
+- **Separate development data from evaluation data.** Any data a design, prompt,
+  threshold or code change was chosen, tuned or debugged on is development data. A
+  claim rests only on data that was not used that way: a frozen holdout split by run
+  or lineage, or new runs. The record names the split.
+- **Compare against stated baselines and ablations.** Hold budget (calls, tokens,
+  cost and inputs) matched, or report it beside the outcome. Change one thing at a
+  time where the design allows.
+- **Treat the independent unit as n.** That is the run, lineage or session chain, not
+  the step or the frame. Report effect sizes with intervals from cluster-aware
+  resampling. A gate decides on an interval bound, not a point estimate. Report
+  variance across repeats, including replay variance of LLM components, instead of
+  single runs.
+- **Pin and record versions.** Pin and record the model, route, prompt, code and data
+  versions, so a result can be reproduced from its record.
+- **Report everything.** Report every analysis variant tried, including negative and
+  null results, and control multiplicity for claim-deciding tests.
+- **Prefer simple, general mechanisms** that a held-out check supports. A gain that
+  appears only on the data that shaped it is not evidence, and neither is fit to one
+  example.
+
+C-REVIEW checks the pre-registration before spending, and the paragraphs above at
+the reporting checkpoint.
 
 [Standards index](../engineering.md).
