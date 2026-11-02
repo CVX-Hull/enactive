@@ -52,7 +52,39 @@ design decision. Briefs for delegated research pose the questions and may name
 foundational sources, but not the current sources to rely on; the synthesis
 records each brief's questions and any sources it named.
 
-C-REVIEW checks the pre-registration before spending, and both paragraphs at the
+Claim-deciding experiments on the player (above), and every comparison or
+generalization claim about the player, follow ordinary AI/ML research practice.
+A functional outcome of a single development run stays governed by evidence
+cadence.
+- **Separate development data from evaluation data.** Any data a design, prompt,
+  threshold or code change was chosen, tuned or debugged on is development data. A
+  comparison or generalization claim rests only on data not used that way: a frozen
+  holdout split by run or lineage, or new runs.
+  - The record names the split.
+  - The claim's scope does not exceed the variation the holdout covers (start
+    states, policies, models).
+- **Compare against stated baselines and ablations.** Hold the budget (calls,
+  tokens, cost and game inputs) matched, or report it beside the outcome and state
+  that the comparison is not budget-matched. Change one thing at a time where the
+  design allows.
+- **Treat the independent unit as n.** The unit is the coarsest one that shares no
+  state: the run, or the lineage when runs share memory. It is never the step or
+  the frame.
+  - Report effect sizes with intervals from cluster-aware resampling.
+  - A gate decides on the conservative bound of a stated interval, or another
+    pre-registered uncertainty-aware criterion, never on a point estimate.
+  - Report variance across repeats, including repeated LLM calls on the same input.
+- **Pin versions.** Record the model, route, prompt, code and data versions, so a
+  result can be reproduced from its record.
+- **Report everything.** Report every analysis variant tried (each one beyond the
+  pre-registered analyses is a deviation), including negative and null results.
+  Control multiplicity for claim-deciding tests.
+- **Generality needs held-out support.** A gain that appears only on the data that
+  shaped it is not evidence, nor is a mechanism fitted to one example.
+
+The pre-registration of a claim-deciding experiment also records its evaluation
+split, its baselines and ablations, and its budget-matching plan. C-REVIEW checks
+the pre-registration before spending, and the paragraphs and list above at the
 reporting checkpoint.
 
 [Standards index](../engineering.md).
