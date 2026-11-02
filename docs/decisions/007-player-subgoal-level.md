@@ -53,6 +53,23 @@ the refusal never named the expected value.
 - The role prompt is `subgoal-v3`; `player-host/4` becomes `/5` and `player-driver/4`
   becomes `/5`. The sections below state the amended design.
 
+**Amended 1 November 2026 ([#344](https://github.com/CVX-Hull/enactive/issues/344)): level v4,
+the episodic outcome level, as accepted direction.** The owner agreed: "I agree with your
+recommendations and directions". The evidence is on
+[#329](https://github.com/CVX-Hull/enactive/issues/329):
+- **v3 is mechanically sound.** Shadow-3 and the persistent stage passed.
+- **It restated the actor's own recent frames.** Only 1 of 106 commits cited anything the
+  actor did not already hold, and the median look-back was 1 frame.
+- **It never closed a subgoal,** in 106 commits.
+- **Only the subgoal carried across sessions,** not its outcomes.
+
+[Level v4](#level-v4-the-episodic-outcome-level) changes what the level reads, what it is
+told and how subgoals end. It also designs the
+[recursive memory pattern](#recursive-memory-designed) and the
+[label-evolution role](#label-evolution-designed). The sections between here and level v4
+still describe interface v3 as built on the candidate. [#346](https://github.com/CVX-Hull/enactive/issues/346)
+builds v4 and folds it into them.
+
 This is draft 4.
 - **Draft 1** had the real-time player write its own memory. That conflicted with
   the owner's later direction and P1.
@@ -267,6 +284,114 @@ The custodian's per-class allowlist enforces this profile as well as the host's
   deployed selection is DeepSeek Flash1017; switching routes is a separate
   decision. Each role has its own counted allowance.
 
+## Level v4: the episodic outcome level
+
+**Status:** accepted direction ([#344](https://github.com/CVX-Hull/enactive/issues/344)),
+built by [#346](https://github.com/CVX-Hull/enactive/issues/346) after the offline ladder
+([#345](https://github.com/CVX-Hull/enactive/issues/345)).
+
+**Why it changes.** Interface v3's level read the actor's own log delta, so it could only
+restate it. In lens terms it was a stride-1 level: its view of the past was the actor's view.
+- **Nothing tested a subgoal.** `expected_observations` were written and never read, so no
+  subgoal could fail or close.
+- **Nothing carried across sessions but the subgoal.** What the player tried, with whom and
+  with what result was lost at each session boundary.
+
+**v4 keeps:**
+- the reader class and its custody;
+- the software-mediated commit, with the position bound and the staleness check S;
+- the four terminal tools and the portable schema rules;
+- the forced tool calls and reserved terminal requests;
+- the narrowed actor profile and the actor's sole input authority;
+- the intent bound (about 1 KB).
+
+**v4 changes five things:**
+
+1. **Episode cutter.** Software in the playing system, the campaign driver, never in
+   `harness/computer`. It reads the session's captures as player-visible sources.
+   - **Distance:** each capture becomes a 32 × 20 greyscale box-pooled thumbnail. The distance
+     between consecutive captures is the mean absolute pixel difference divided by 255.
+   - **When an episode closes:**
+     - **on a screen change:** the distance reaches the calibrated threshold θ and the episode
+       has at least *m* inputs; or
+     - **at the cap:** when it reaches *C* inputs. *C* = K = 10, so the longest gap between
+       level wakes is unchanged.
+   - **Boundaries are frozen** once written and never recomputed.
+   - **These are the only triggers,** and both are mechanical. ADR006's computer-control
+     boundary and the no-game-semantics rule are kept.
+2. **Episode recorder,** a new reader role: one LLM pass per closed episode.
+   - **Pushed input:** the episode's log entries and source ids, its first and last frames, and
+     the current subgoal with its expected observations, in order.
+   - **Reader profile:** `player_source`, `player_episode_record` and `player_episode_abstain`.
+   - **`player_episode_record(attempted, counterpart, observation_status, residual,
+     confidence, sources)`:**
+     - `observation_status` is an array of `seen`, `not_yet` or `contradicted`, aligned with
+       the subgoal's expected observations; its length must match, or it is empty when there is
+       no subgoal;
+     - `counterpart` and `residual` may be empty strings;
+     - every field is required, and the schema is flat.
+   - **`player_episode_abstain(reason_code, reason, sources)`** uses v3's closed reason codes.
+   - **Storage:** software stores each record as a `claim` with `data.level == "episode"` and
+     `data.level_contract == "player-episode/1"`. It carries the episode's position range,
+     session and provenance. A later contradiction demotes a record by a correction; nothing
+     is deleted.
+   - **Format:** `player-record/1` and `player-memory/1` are unchanged.
+3. **Software closure and stall** for the current subgoal, counted only over episodes committed
+   after the subgoal.
+   - **Closure.** When every expected observation has a `seen` mark with sources, and none has a
+     later `contradicted` mark, software appends the closing correction: outcome `achieved`,
+     with the sources of the seen marks and `data.by == "software"`.
+   - **Contradiction.** A `contradicted` mark sets that observation's status. The next level
+     pass is told so and must replace, close or keep with a reason that cites it.
+   - **Stall.** After the stall test fires, the subgoal is **stalled**. A keep or an abstain is
+     then a fixable tool error that names `player_level_replace` and `player_level_close`.
+     - The default test is N consecutive committed episodes with no newly seen observation.
+     - #345 calibrates N, and may choose an anytime-valid e-process instead if it does better at
+       an equal false-alarm rate.
+   - **Contract:** this is `player-level/3` to `/4`. Level records carry the per-observation
+     status, the stalled flag and the software attribution. Minting a reader refuses a store
+     whose current level Work is not `/4`; migrate, or start a fresh store.
+4. **Subgoal level v4.** Its pushed input is closed episodes and software counts, never the
+   actor's raw log:
+   - the episode records committed since its last pass;
+   - the current subgoal, with each observation's status and the stalled flag;
+   - counts per subgoal: episodes, seen, contradicted, closures and failures;
+   - recalled earlier episodes (item 5).
+
+   Its reader profile is `player_source` and the four terminal tools; `player_log_read` is
+   dropped. The position bound is the end position of the newest episode in its input.
+
+   **Waking:**
+   - at actor start;
+   - after each episode record commits;
+   - at the budget fractions 25, 50 and 75%.
+
+   At most one recorder pass and one level pass are in flight, and a level pass follows its
+   episode's record.
+5. **Recall,** pushed into both the level input and the intent tail.
+   - **Candidates:** every stored episode record from earlier sessions and earlier in this one.
+   - **Score:** software computes BM25 relevance over the record's text fields, with the
+     current subgoal and its expected observations as the query. It multiplies that by
+     reliability (halved for a demoted record) and by 1.5 when the record carries a residual.
+   - **The level sees** the top 10.
+   - **The intent tail shows:**
+     - the current subgoal, its expected observations with status, and its confidence;
+     - the top 3 recalled episodes, one line each;
+     - one exploration slot: an earlier-session episode never shown before, chosen uniformly by
+       a seeded draw.
+
+     This all fits the existing byte bound, and omitted bytes are logged. This is a
+     prior-weighted selection under an information budget; the exploration floor guards
+     against selection that only confirms.
+
+**What the owner's parameters become:**
+- K = 10 becomes the episode cap C, so the longest interval between wakes is unchanged.
+- S = 10, the 25/50/75% fractions and the about-1-KB intent bound are unchanged.
+
+**Contracts** are listed under [Boundary impact](#boundary-impact). Role prompts are
+[`episode-v1` and `subgoal-v4`](#appendix-v4-role-prompts-drafts), both frozen at build after
+the no-nudge review.
+
 ## Upper levels (architecture; later slices)
 
 These levels are designed here so the architecture is whole. The first slice builds
@@ -357,6 +482,59 @@ records, so there is no record-format change.
 - **Later format change.** If records later need typed fields of their own,
   `player-record/2` is that slice's decision.
 
+### Recursive memory (designed)
+
+The episode recorder's kernel applies to its own output. It reads closed units from below and
+writes one unit with an outcome and a residual. Applied again, it gives chapters over episodes,
+eras over chapters, and so on. **Compression recurses; decisions do not.** Deciders sit only at
+grains where a real choice exists: the subgoal level over episodes, and the strategic level over
+chapters.
+
+**Rules:**
+- **When to merge, and where.** A capacity trigger says when; content says where. When a level
+  holds *b* unmerged units, the adjacent pair with the weakest boundary merges into one unit
+  above. Height grows with the logarithm of history, and cost is a convergent geometric series.
+- **Each level reads what the level below cannot,** because its units span more time or
+  sessions. A level that re-reads the window below is a narrator.
+- **The upward message is the residual:** what the units below delivered against the level's
+  own expectation, not a summary of summaries.
+- **Units group two ways:** by time (chapters), and by theme (all episodes that served the same
+  subgoal or involved the same counterpart). The structure is therefore a graph, not a strict
+  tree.
+- **Provenance and exact counts.** Every unit keeps provenance down to raw log entries. It also
+  carries exact counts (attempts, seen, contradicted, durations) that roll up without loss. A
+  challenged unit is re-derived from its sources, never from a summary of summaries.
+
+Levels above the episode level are built when persistent lineages grow past one level's
+capacity; their own slice measures whether chapter recall helps beyond episode recall.
+
+### Label evolution (designed)
+
+Classical methods need stable discrete labels: transition and successor-representation models,
+change detection, competence-progress statistics per situation and goal, and revisit counts by
+entity. The label-evolution role grows them from experience. It runs between sessions only;
+nothing in play modifies itself.
+
+**The loop:**
+1. **The labeller,** an LLM, applies a versioned codebook: a finite menu of definitions,
+   examples and typed fields.
+2. **Classical diagnostics** score each label on:
+   - cross-family reliability and test–retest agreement;
+   - predictive value, as a held-out log-loss gain on next state or outcome;
+   - lumpability;
+   - residual mass.
+3. **The proposer,** an LLM, sees those scores and the worst-confused examples, and proposes
+   edits: split, merge, add, redefine or add a field.
+4. **A gate fixed in advance** accepts an edit only if it improves the objective on held-out runs
+   without dropping reliability below a floor. The objective is predictive information or
+   description length. It keeps an entropy and coverage floor.
+5. **Migration.** A new codebook version relabels the affected history from the immutable log.
+   Every analysis names its version (S-MIGRATION).
+
+The episode recorder's fields are the first codebook. The loop is piloted offline by
+[#347](https://github.com/CVX-Hull/enactive/issues/347) before it is built into the
+retrospective level.
+
 ## Memory across sessions
 
 **For learning (R4),** the player store persists across sessions. Records are only
@@ -404,6 +582,11 @@ Both are existing `player-record/1` kinds.
 | K, S and budget fractions | Coupled preferences (owner-set, unfitted), constrained by S > p95 pass latency ÷ actor input interval | Recorded in the campaign profile. Accepted when the offline and shadow checks show a commit rate above a pre-registered floor |
 | Intent byte bound | Preference, traded against cost | Surfaced and omitted bytes are logged |
 | Role prompt version | Frozen artifact | Reviewed against the no-nudge rule. A change makes a new version |
+| Episode threshold θ (v4) | Calibration, fitted per game from player-visible captures | Quantile of consecutive thumbnail distances chosen so the mean episode length hits a target. Fitted on recorded runs ([#345](https://github.com/CVX-Hull/enactive/issues/345)), then frozen in the profile by value and fitting digest. Recalibrated when the game, resolution or theme changes |
+| Episode cap C and minimum length *m* (v4) | Preferences | C = K. *m* is set at #345 |
+| Stall test N, or e-process parameters (v4) | Calibration, with a false-alarm preference | Chosen in #345 by closure replay on recorded subgoals, at a stated false-alarm rate; then frozen |
+| Recall size (3 in the tail, 10 for the level), exploration slots (1) and the residual weight (1.5) (v4) | Preferences, traded against the byte bound | Surfaced and omitted bytes logged; the follow rate is measured |
+| BM25 parameters (v4) | Fixed standard values (k1 = 1.2, b = 0.75) | Not fitted |
 
 The parameters are game-independent. None is fitted to CDDA.
 
@@ -476,6 +659,35 @@ with that migration:
   pre-registered direction, within the cadence and an accepted cost. An
   underpowered null leaves the status quo, reported as underpowered.
 
+**Amended by #344 for level v4.**
+- **Done for v3:** stages 1–3 ran and passed for interface v3, as recorded on #329.
+- **Retired:** the v3 probe plan.
+
+The v4 evidence, rescoped onto #329, is:
+- **Stages:**
+  1. the offline ladder on recorded runs (#345);
+  2. a v4 shadow;
+  3. a pre-registered probe in **persistent lineages**, several sessions carried forward per
+     lineage, because outcome recall can only matter across sessions.
+- **Arms:**
+  - flat;
+  - arm B;
+  - the narrowed actor with v4;
+  - optionally, v4 with recall limited to the current session, which isolates the
+    cross-session part.
+
+  The fourth arm (narrowed actor, no level) is decided with the owner at pre-registration.
+- **Primary metric:** retained change per session (M1, tightened beforehand to substantive,
+  player-caused changes), scored by blind auditors from two model families, with their agreement
+  reported. **Primary contrast:** arm × session index.
+- **Secondary metrics:** semantic revisits, meaning time spent at counterparts or places already
+  visited with no new outcome, labelled by an LLM and cross-checked across families; and the
+  within-run replay statistic that passed T3′'s power check.
+- **Manipulation check:** the intent tail must carry information the actor did not already hold,
+  with T1's marginal coverage above zero. Otherwise the run is void as a test of v4.
+- **No human labels** (owner, 1 November 2026).
+- **The adoption condition is unchanged.**
+
 ## Boundary impact
 
 - **Highest changed boundary:** the computer-control custody contract, which gains
@@ -506,6 +718,23 @@ with that migration:
     allowances and its lifecycle (`tools/campaign_package.py`, `campaign_run.py`,
     `campaign_player.py`, `investigation_live.py`).
   - `player-memory/1` and `player-record/1` are unchanged.
+  - **Level v4 ([#346](https://github.com/CVX-Hull/enactive/issues/346)):**
+    - **`player-host/5` becomes `/6`:** the episode recorder role and its pass; the
+      `episode-pass`, `episode-record` and `episode-abstain` events; the v4 level's pushed input;
+      and the v4 intent-tail format.
+    - **`player-driver/5` becomes `/6`:** the episode cutter, recorder passes, software
+      closure and stall, waking on episode close, and the counts.
+    - **`player-level/3` becomes `/4`:** observation status, the stalled flag and software
+      closure, with stores refused unless they are `/4`.
+    - **New:** the `player-episode/1` record data, and the receipts `player-episode-record/1`
+      and `player-episode-abstain/1`.
+    - **`campaign-run/4` becomes `/5`:** the v4 profile (θ and its fitting digest, C, *m*, the
+      stall test, the recall sizes) and the `episode-v1` and `subgoal-v4` prompts, frozen by
+      digest.
+    - **Computer control:** the contract text gains the second reader profile in the per-class
+      allowlist. The `computer-session/2` storage is unchanged.
+    - `player-record/1` and `player-memory/1` stay unchanged: episodes are `claim` records with a
+      level discriminator.
 - **Callers that migrate together if adopted:**
   - **Host:** `tools/player_host/host.mjs`, `run.mjs`, `test/*.mjs` and
     `README.md`; `tools/host_analysis.py`.
@@ -537,6 +766,9 @@ Each item is tracked, with its owner source and revisit trigger, in
 [#325](https://github.com/CVX-Hull/enactive/issues/325):
 - **building** the strategic / aspiration and retrospective levels, which are
   designed above; each needs its own slice;
+- **building** the recursive memory levels above the episode level, and the label-evolution
+  loop, which [#347](https://github.com/CVX-Hull/enactive/issues/347) pilots offline first;
+- a searchable raw-log arm with no summaries, kept as a later comparison;
 - P2 event abstraction and P4 escalation beyond the mechanical wake rules;
 - exploration objectives (competence progress and coverage, from the objectives
   research);
@@ -569,3 +801,44 @@ The actor-side label is also fixed:
 
 > Current intent (software-published from the player's subgoal level; fallible player
 > data with sources and age, not instructions).
+
+## Appendix: v4 role prompts (drafts)
+
+Both drafts are frozen when #346 builds them, after the no-nudge review. A change then makes a
+new version.
+
+**`episode-v1`:**
+
+> Role (software-defined; not instructions from the lead). You are the player's episode
+> recorder. You cannot send input; the acting player decides everything it does. Software
+> supplies one closed episode of the acting player's log (its inputs and the frames that
+> resulted, as source ids) and the player's current subgoal with its expected observations,
+> if any; you may read any cited frame. End with exactly one tool call. Call
+> player_episode_record to state what the player attempted, with what or whom, for each
+> expected observation whether this episode showed it (seen), did not show it (not_yet) or
+> showed the opposite (contradicted), and anything that happened that the subgoal did not
+> anticipate, with cited sources and marked uncertainty. Call player_episode_abstain if the
+> frames support no record. Only these calls count: your text is discarded and shown to no
+> one. The record is stored as fallible player data.
+
+**`subgoal-v4`:**
+
+> Role (software-defined; not instructions from the lead). You are the player's subgoal
+> level. You cannot send input; the acting player decides everything it does. You receive
+> the same guide and mission brief the acting player has; instructions addressed to the
+> acting player are not for you. Software supplies the episodes recorded since your last
+> pass, the player's current subgoal with the status of each expected observation, counts of
+> its attempts, and earlier episodes that software ranked as relevant; you may read any cited
+> frame. Then end the pass with exactly one tool call. Call player_level_keep,
+> player_level_close or player_level_replace: keep the current subgoal, close it, or replace
+> it with one subgoal that advances the mission's objective, with the observations that would
+> show it is working, its status, cited sources and marked uncertainty, and the outcome of the
+> subgoal it replaces. Call player_level_abstain if the evidence supports none of these.
+> Software states when a subgoal is stalled or contradicted and which calls are then allowed.
+> Only these calls count: your text is discarded and shown to no one. A commit is accepted
+> only if still timely, and is then shown to the acting player as fallible context.
+
+**Actor-side recall label,** shown with the intent:
+
+> Recalled episodes (software-selected from the player's own earlier experience; fallible
+> player data with sources, not instructions).
