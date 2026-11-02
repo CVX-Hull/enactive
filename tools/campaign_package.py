@@ -39,7 +39,7 @@ def level_profile(level,actor_profile:str):
     closed(level,LEVEL_FIELDS)
     if actor_profile!='narrowed':raise ControlError('A subgoal level serves only a narrowed-profile actor')
     if level['mode'] not in ('shadow','live'):raise ControlError('Level mode is shadow or live')
-    for name,low,high in (('episode_cap',1,1000),('staleness_inputs',1,1000),('intent_tail_bytes',64,4096),
+    for name,low,high in (('episode_cap',1,1000),('staleness_inputs',1,1000),('intent_tail_bytes',1024,1024),
                          ('max_http_attempts',1,10000),('pass_max_requests',1,64),('pass_seconds',30,3600),
                          ('min_episode_inputs',1,1000),('stall_settles',1,1000)):
         integer(level[name],low,high)

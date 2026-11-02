@@ -18,6 +18,7 @@ import pytest
 
 from harness.computer.store import SessionStore
 from tools import level_probe
+from tools.campaign_player import BRIEF_MARK
 from tools.level_probe import build_replay, load_route, probe, recorded_passes
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -87,13 +88,9 @@ def recorded(tmp_path):
         (directory / 'driver-receipt.json').write_text(json.dumps(dict(index=index, reason='settle', log_entries=entries,
             actor_inputs=entries - 1, allocated_seconds=60, allocated_attempts=4, started_wall=2000. + index, level_events=[],
             bound=dict(position=bound, subgoal_id=None))))
-        # The pass input the driver handed the recorded level host (`player-pass-input/1`).
-        (directory / 'input.json').write_text(json.dumps(dict(schema='player-pass-input/1', role='level',
-            role_prompt='An older role prompt', brief='Mission: survive and report.',
-            wake=dict(reason='settle', pass_index=index, allowance_requests=4, allowance_seconds=60),
-            pushed=dict(schema='player-level-push/1', bound=dict(position=bound, subgoal_id=None), episodes=[],
-                        intent=dict(schema='player-intent/2', subgoal=None, age=None, recall=dict(basis='recent', items=[])),
-                        counts=[]))))
+        # The pass input the driver handed the recorded level host: plain text led by the role prompt of the time.
+        (directory / 'input.txt').write_text('An older role prompt' + BRIEF_MARK + 'Mission: survive and report.'
+            + f'\n\nEpisodes settled since your last pass, oldest first, one per line:\n(none)\n\nPass {index}.')
     return session
 
 
@@ -212,7 +209,7 @@ def test_replay_is_a_fresh_store_of_the_pass_start_state_and_leaves_the_recordin
     before = hashlib.sha256((recorded / 'session.sqlite3').read_bytes()).hexdigest()
     first, second = recorded_passes(recorded)
     assert (first['entries'], second['entries'], first['bound'], second['bound']) == (3, 6, 0, 3)
-    assert first['document']['schema'] == 'player-pass-input/1' and first['document']['pushed']['bound']['position'] == 0
+    assert first['text'].startswith('An older role prompt' + BRIEF_MARK) and first['text'].endswith('Pass 1.')
     replay = build_replay(first, tmp_path / 'replay', LEVEL)
     try:
         app, reader, actor = replay['application'], replay['reader'], replay['actor']

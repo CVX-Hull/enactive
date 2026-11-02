@@ -123,7 +123,7 @@ def test_the_frozen_role_prompts_match_their_pinned_digests_and_the_adr_appendix
     ('v3_role_text','frozen current version'),('cap_not_k','owner'),('m_over_cap','cannot exceed'),
     ('theta_int','theta'),('theta_zero','theta'),('theta_without_digest','SHA256'),('floor_int','confidence floor'),
     ('recall_sizes','recall sizes'),('recorder_backlog','Integer'),('recorder_over_cap','campaign allowance'),
-    ('old_field','Invalid mechanical'),('missing_recorder','Invalid mechanical')])
+    ('old_field','Invalid mechanical'),('missing_recorder','Invalid mechanical'),('tail_not_1024','Integer')])
 def test_invalid_level_package_never_launches(tmp_path,fault,expected):
     directory,profile=package(tmp_path,dict(LEVEL),route_requests=6)
     (tmp_path/'v3').write_text('Role (software-defined). You are the player\'s subgoal level; the log since your last pass is pushed.')
@@ -150,6 +150,7 @@ def test_invalid_level_package_never_launches(tmp_path,fault,expected):
     if fault=='recall_sizes':profile['level']['recall']=dict(tail_top=3,tail_exploration=1,level_items=10)
     if fault=='recorder_backlog':profile['level']['recorder']['backlog']=0
     if fault=='recorder_over_cap':profile['level']['recorder']['max_http_attempts']=3
+    if fault=='tail_not_1024':profile['level']['intent_tail_bytes']=512
     if fault=='old_field':profile['level']['inputs_per_pass']=10
     if fault=='missing_recorder':profile['level'].pop('recorder')
     (directory/'manifest.json').write_text(json.dumps(profile))

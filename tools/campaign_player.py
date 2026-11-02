@@ -45,6 +45,8 @@ class HostEvents:
         self.episode=[]
         # Terminal calls whose transport was lost: the pass ended, and the driver reconciles each identity afterwards.
         self.uncertain=[]
+        # A recorder pass's terminal call whose transport was lost; the driver reconciles it from the store.
+        self.episode_uncertain=[]
 
     def read(self) -> bool:
         chunk=self.stream.read(1048576)
@@ -69,6 +71,8 @@ class HostEvents:
                 if len(self.episode)<256:self.episode.append({k:value.get(k) for k in
                     ('type','settled','first_position','last_position','subgoal_id','counted','closed','observations','stalled',
                      'reason_code','reason','record_ids')})
+            elif kind=='episode-uncertain':
+                if len(self.episode_uncertain)<16:self.episode_uncertain.append({k:value.get(k) for k in ('tool','identity','request_id')})
             elif kind=='level-uncertain':
                 if len(self.uncertain)<16:self.uncertain.append({k:value.get(k) for k in ('tool','identity','request_id')})
             elif kind=='request-start':
@@ -99,7 +103,7 @@ class HostEvents:
         # Uncertain trace accounting reserves the entire original host allocation.
         return dict(observed_attempts=len(self.requests),attempts_charged=len(self.requests) if valid else self.allowance,
             accounting_complete=valid,settled=self.settled,handoff=self.handoff,level_events=self.level,episode_events=self.episode,
-            level_uncertain=list(self.uncertain),configured_estimate_usd=sum(v.get('cost',{}).get('total',0) for v in self.usage.values()),
+            level_uncertain=list(self.uncertain),episode_uncertain=list(self.episode_uncertain),configured_estimate_usd=sum(v.get('cost',{}).get('total',0) for v in self.usage.values()),
             usage_available_attempts=len(self.usage),missing_usage_attempts=len(self.requests)-len(self.usage))
 
     def close(self):self.stream.close()
@@ -123,15 +127,53 @@ def _handoff_context(application,actor,event):
         raise ControlError('Frozen handoff context is not current mechanical identity')
 
 
-def pass_document(role: str, role_prompt: str, brief: str | None, wake: dict, pushed: dict) -> dict:
-    """One reader pass's whole input, handed to the host on stdin (`player-pass-input/1`).
+BRIEF_MARK = '\n\nMission brief (the same the acting player has):\n'
 
-    `role_prompt` is the frozen role text (`subgoal-v4` or `episode-v1`); `brief` is the actor's own mission brief for
-    the level and None for the recorder; `wake` states mechanical facts only; `pushed` is the structured pushed input
-    (`player-level-push/1` or `player-episode-push/1`), which the host formats from ADR-007. The driver adds no lead
-    content: the frozen role prompt and the actor's own brief carry everything else.
+
+def _lines(values: list) -> str:
+    return '\n'.join(json.dumps(v, separators=(',', ':'), ensure_ascii=False) for v in values) or '(none)'
+
+
+def wake_note(wake: dict) -> str:
+    """Mechanical wake facts only; the frozen role prompt and the actor's own brief carry everything else."""
+    return 'Software pass note: ' + ', '.join(f'{k.replace("_", " ")} {v}' for k, v in wake.items()) + '.'
+
+
+def level_text(role_prompt: str, brief: str, wake: dict, pushed: dict) -> str:
+    """A level pass's whole stdin, plain text (`player-host/6`): the frozen role, the actor's brief and the pushed input.
+
+    The pushed input is closed episodes and software counts, never the actor's raw log: the episode records since the
+    previous pass, the current subgoal with its derived status, stalled flag and id, the counts per subgoal and the
+    recalled episodes. The role prompt leads, so a replay can swap it for the current frozen version at `BRIEF_MARK`.
     """
-    return dict(schema=PASS_INPUT_SCHEMA, role=role, role_prompt=role_prompt, brief=brief, wake=wake, pushed=pushed)
+    intent = pushed['intent']
+    subgoal = 'none' if intent['subgoal'] is None else json.dumps(dict(intent['subgoal'], age=intent['age']),
+                                                                   separators=(',', ':'), ensure_ascii=False)
+    return (role_prompt + BRIEF_MARK + brief
+            + '\n\nEpisodes settled since your last pass, oldest first, one per line (positions are the served actor\'s):\n'
+            + _lines(pushed['episodes'])
+            + f'\n\nCurrent subgoal (id, derived status of each expected observation, stalled flag): {subgoal}'
+            + '\n\nCounts per subgoal, history included:\n' + _lines(pushed['counts'])
+            + f'\n\nRecalled episodes ({intent["recall"]["basis"]}), software-ranked, best first:\n' + _lines(intent['recall']['items'])
+            + '\n\n' + wake_note(wake))
+
+
+def recorder_document(role_prompt: str, wake: dict, pushed: dict) -> dict:
+    """A recorder pass's whole stdin, one closed JSON document (`player-pass-input/1`, `player-host/6`).
+
+    `text` is the frozen `episode-v1` role prompt, the episode's operations as key tokens and positions, and the id, text
+    and ordered expected observations of the subgoal pushed. `frames` names the baseline and the episode's own frames
+    (at most 7, in capture order, baseline first) by source id and role; no image is inlined, because the host fetches
+    each frame itself through `player_source`.
+    """
+    subgoal = pushed['subgoal']
+    text = (role_prompt + f'\n\nEpisode: positions {pushed["first_position"]} to {pushed["last_position"]} of the served log, '
+            f'{pushed["inputs"]} inputs, closed by {pushed["closed_by"]}. Operations, one per line:\n' + _lines(pushed['operations'])
+            + '\n\nSubgoal current when the episode began: '
+            + ('none' if subgoal is None else json.dumps(subgoal, separators=(',', ':'), ensure_ascii=False))
+            + '\n\nCitable source ids: ' + ', '.join(pushed['sources']) + '\n\n' + wake_note(wake))
+    return dict(schema=PASS_INPUT_SCHEMA, text=text,
+                frames=[dict(source_id=f['source_id'], role=f['frame_role']) for f in pushed['frames']])
 
 
 def level_push(application, level_id: str, actor_id: str, session: str, cursor: str | None) -> tuple[dict, str | None, dict]:
@@ -155,29 +197,23 @@ def level_push(application, level_id: str, actor_id: str, session: str, cursor: 
     return pushed, episodes[-1]['record_id'] if episodes else cursor, bind
 
 
-def episode_push(application, recorder_id: str, episode: Episode, directory: Path) -> dict:
-    """A recorder pass's pushed input for one closed episode; its frames are written under `directory`.
+def episode_push(application, recorder_id: str, episode: Episode) -> dict:
+    """A recorder pass's pushed input for one closed episode, bound under the application lock.
 
-    Binds the episode under the application lock. The frames are the baseline (the result capture of the last input
-    before the episode) and up to six of the episode's own frames (always the last, then the largest thumbnail
-    distance from the predecessor, in capture order), each an image file marked with its source id and role.
+    The frames are the baseline (the result capture of the last input before the episode) and up to six of the
+    episode's own frames (always the last, then the largest thumbnail distance from the predecessor, in capture
+    order), each marked with its source id and role (baseline, in-episode or last).
     """
     with application.serial:
         bound = application.bind_episode(recorder_id, first_position=episode.first_position,
                                          last_position=episode.last_position, subgoal_id=episode.subgoal_id)
-        wanted = [(bound['baseline_source'], 'baseline')] if bound['baseline_source'] else []
-        wanted += [(source, role) for _, source, role in pick_frames(episode)]
-        images = []
-        for source, role in wanted:
-            _, png = application.source(source)
-            images.append((source, role, png))
-    frames = []
-    directory.mkdir(parents=True, exist_ok=True)
-    for number, (source, role, png) in enumerate(images, 1):
-        path = directory / f'{number:02d}.png'
-        with path.open('xb') as stream:
-            stream.write(png)
-        frames.append(dict(source_id=source, frame_role=role, media_type='image/png', path=str(path), bytes=len(png)))
+    wanted = [(bound['baseline_source'], 'baseline')] if bound['baseline_source'] else []
+    wanted += [(source, role) for _, source, role in pick_frames(episode)]
+    frames, seen = [], set()
+    for source, role in wanted:
+        if source not in seen:
+            seen.add(source)
+            frames.append(dict(source_id=source, frame_role=role))
     operations = [dict(position=e['position'], operation_id=e['operation_id'], kind=e['kind'], status=e['status'],
                        source_id=e['source_id'], tokens=key_tokens(e['actions'])) for e in bound['operations']]
     return dict(schema=EPISODE_PUSH_SCHEMA, first_position=bound['first_position'], last_position=bound['last_position'],
@@ -225,15 +261,16 @@ class ReaderLane:
         """Give back a reservation whose pass will not run, leaving no empty directory behind."""
         shutil.rmtree(reservation['target'], ignore_errors=True)
 
-    def start(self, reservation: dict, document: dict, meta: dict) -> None:
-        """Write the pass's frozen inputs and launch its host with the document on stdin."""
+    def start(self, reservation: dict, stdin: dict | str, meta: dict) -> None:
+        """Write the pass's frozen inputs and launch its host with `stdin` (text for a level, a document for a recorder)."""
         target, allowance, seconds = reservation['target'], reservation['allowance'], reservation['seconds']
         record = dict(index=reservation['index'], role=self.role, allocated_attempts=allowance, allocated_seconds=seconds,
                       started_wall=time.time(), **meta)
         write_new(target / 'route.json', dict(self.route, role=self.role, intent_tail_bytes=None, max_requests=allowance))
         write_new(target / 'mcp.json', configuration(str(self.reader_file), profile=self.role))
         write_new(target / 'context.txt', (self.directory / 'context.txt').read_text(), text=True)
-        write_new(target / 'input.json', document)
+        name = 'input.txt' if isinstance(stdin, str) else 'input.json'
+        write_new(target / name, stdin, text=isinstance(stdin, str))
         write_new(target / 'player-final.txt', '', text=True)
         arguments = [*self.profile['host']['argv'], 'run', '--config', str(target / 'route.json'),
             '--mcp-config', str(target / 'mcp.json'), '--context', str(target / 'context.txt'), '--model', self.route['model']['id'],
@@ -241,7 +278,7 @@ class ReaderLane:
         environment = dict(PATH=os.environ.get('PATH', '/usr/bin:/bin'), LANG='en_US.UTF-8',
                            **{self.route['api_key_env']: self.secret})
         with (target / 'host.jsonl').open('x') as output, (target / 'host-stderr.log').open('x') as errors, \
-                (target / 'input.json').open() as pass_input:
+                (target / name).open() as pass_input:
             child = subprocess.Popen(arguments, cwd=ROOT, env=environment, stdin=pass_input, stdout=output, stderr=errors,
                                      start_new_session=True)
         # Owned before anything else can fail, so a later error still closes and charges it.
@@ -399,7 +436,14 @@ class LevelSystem:
 
     def _recorder_finished(self, record: dict) -> None:
         episode, self.inflight = self.inflight, None
-        if episode is None or self._settled(episode):
+        if episode is None:
+            return
+        # A lost terminal call is reconciled from the store: the episode's settle claim is what it did.
+        views = [v for v in self.application.settled_episodes(actor_id=self.actor_id, session=self.session)
+                 if v['first_position'] == episode.first_position]
+        record['episode_uncertain'] = [dict(e, outcome='committed' if views and views[0]['writer'] == 'recorder' else 'absent')
+                                       for e in record.get('episode_uncertain', [])]
+        if views:
             return
         ended = (record.get('settled') or {}).get('reason') or record.get('trace_error') or 'no settled event'
         self._settle(episode, 'failed', f'The recorder pass ended without settling the episode ({ended})')
@@ -480,7 +524,7 @@ class LevelSystem:
         episode = self.queue[0]
         reservation = lane.begin(now, deadline)
         try:
-            pushed = episode_push(self.application, self.recorder_id, episode, reservation['target'] / 'frames')
+            pushed = episode_push(self.application, self.recorder_id, episode)
         except PlayerError as exc:
             # The custodian refused to bind it (for example, it is already settled): it settles as failed, once.
             lane.abandon(reservation)
@@ -493,10 +537,10 @@ class LevelSystem:
         self.queue.popleft()
         self.inflight = episode
         wake = dict(reason='episode', pass_index=reservation['index'], allowance_requests=reservation['allowance'],
-                    allowance_seconds=reservation['seconds'], waiting=len(self.queue))
+                    allowance_seconds=int(reservation['seconds']), waiting=len(self.queue))
         meta = dict(first_position=episode.first_position, last_position=episode.last_position, inputs=episode.inputs,
                     closed_by=episode.closed_by, subgoal_id=episode.subgoal_id, frames=len(pushed['frames']))
-        lane.start(reservation, pass_document('recorder', lane.role_prompt, None, wake, pushed), meta)
+        lane.start(reservation, recorder_document(lane.role_prompt, wake, pushed), meta)
 
     def _carried(self) -> int:
         """What earlier sessions left for a start pass to revalidate: current level subgoals plus recalled episodes."""
@@ -526,10 +570,10 @@ class LevelSystem:
             self.level_cursor = cursor
             entries, inputs = self.application.runtime.store.actor_counts(self.actor_id)
         wake = dict(reason=reason, pass_index=reservation['index'], settled_episodes=self.settled_total,
-                    allowance_requests=reservation['allowance'], allowance_seconds=reservation['seconds'])
+                    allowance_requests=reservation['allowance'], allowance_seconds=int(reservation['seconds']))
         meta = dict(reason=reason, log_entries=entries, actor_inputs=inputs, bound=pushed['bound'],
                     episodes_pushed=len(pushed['episodes']))
-        lane.start(reservation, pass_document('level', lane.role_prompt, lane.brief, wake, pushed), meta)
+        lane.start(reservation, level_text(lane.role_prompt, lane.brief, wake, pushed), meta)
 
     # --- the end ---
 

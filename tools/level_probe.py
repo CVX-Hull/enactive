@@ -10,8 +10,8 @@ replay of that session's operations and sources as they stood when the pass star
    served through the normal player HTTP server on loopback, so the real level tools run against it (a terminal call
    writes only the replay's own temporary memory). The recorded bound is restored by settling the positions before
    it as one dropped episode, so the custodian's staleness check starts from the position the recorded pass saw;
-3. the pass's pushed input is the recorded pass's own `input.json` (`player-pass-input/1`), with the current frozen
-   role prompt and the recorded mission brief;
+3. the pass's pushed input is the recorded pass's own `input.txt` (plain text, as `player-host/6` takes it), with the
+   current frozen role prompt in place of the recorded one;
 4. the real level host (`player-host/6`, the frozen route, the current role prompt) runs the pass.
 
 The probe never touches a game or a live session, and every output is labelled `engineering-probe`: a measure of
@@ -59,7 +59,7 @@ from harness.computer.runtime import ComputerRuntime
 from harness.player.memory import Memory
 from harness.server import serve
 from tools.campaign_package import LEVEL_ROLE
-from tools.campaign_player import HostEvents, pass_document, write_new
+from tools.campaign_player import BRIEF_MARK, HostEvents, write_new
 from tools.configure_player_tools import configuration
 
 LABEL = 'engineering-probe'
@@ -164,7 +164,7 @@ def recorded_passes(session: Path) -> list[dict]:
             passes.append(dict(session=session, session_id=session_id, actor_id=actor, actor_directory=actor_directory,
                 directory=pass_directory, index=receipt['index'], reason=receipt['reason'], entries=receipt['log_entries'],
                 inputs=receipt['actor_inputs'], seconds=receipt['allocated_seconds'],
-                bound=receipt['bound']['position'], document=json.loads((pass_directory / 'input.json').read_text()),
+                bound=receipt['bound']['position'], text=(pass_directory / 'input.txt').read_text(),
                 recorded_allowance=receipt.get('allocated_attempts'), prior_level_commits=writes, prior_stored_rows=rows))
             writes += sum(e['type'] == 'level-commit' and e.get('action') in ('replace', 'close')
                           for e in receipt.get('level_events', []))
@@ -343,15 +343,12 @@ def run_sample(recorded: dict, sample: int, work: Path, out: Path, route: dict, 
         reader_file = directory / 'reader.json'
         write_new(reader_file, dict(schema='player-adapter/1', base_url=f'http://127.0.0.1:{server.server_port}',
                                     session=replay['runtime'].session, **replay['reader']))
-        brief = (recorded['session'] / 'prompt.txt').read_text()
-        # The model sees what the recorded pass was pushed, under the current frozen role prompt and the recorded brief.
-        recorded_document = recorded['document']
-        document = pass_document('level', role.strip(), brief, dict(recorded_document['wake'], allowance_requests=route['max_requests'],
-                                                                    allowance_seconds=recorded['seconds']), recorded_document['pushed'])
+        # The model sees what the recorded pass was pushed (its brief and episodes), under the current frozen role prompt.
+        text = role.strip() + recorded['text'][recorded['text'].index(BRIEF_MARK):]
         write_new(directory / 'route.json', route)
         write_new(directory / 'mcp.json', configuration(str(reader_file), profile='level'))
         write_new(directory / 'context.txt', context, text=True)
-        write_new(directory / 'input.json', document)
+        write_new(directory / 'input.txt', text, text=True)
         write_new(directory / 'player-final.txt', '', text=True)
         arguments = [*host_argv, 'run', '--config', str(directory / 'route.json'), '--mcp-config', str(directory / 'mcp.json'),
                      '--context', str(directory / 'context.txt'), '--model', route['model']['id'], '--effort', effort,
@@ -359,7 +356,7 @@ def run_sample(recorded: dict, sample: int, work: Path, out: Path, route: dict, 
         environment = dict(PATH=os.environ.get('PATH', '/usr/bin:/bin'), LANG='en_US.UTF-8', **{route['api_key_env']: secret})
         stopped_by_guard = False
         with (directory / 'host.jsonl').open('x') as output, (directory / 'host-stderr.log').open('x') as errors, \
-                (directory / 'input.json').open() as prompt_input:
+                (directory / 'input.txt').open() as prompt_input:
             child = subprocess.Popen(arguments, cwd=ROOT, env=environment, stdin=prompt_input, stdout=output, stderr=errors,
                                      start_new_session=True)
             events = HostEvents(directory / 'host.jsonl', route['max_requests'])
@@ -396,7 +393,7 @@ def run_sample(recorded: dict, sample: int, work: Path, out: Path, route: dict, 
                                            f'-pass{recorded["index"]:03d}-sample{sample:02d}')
         out_directory.mkdir(parents=True)
         shutil.copy(directory / 'host.jsonl', out_directory / 'host.jsonl')
-        shutil.copy(directory / 'input.json', out_directory / 'input.json')
+        shutil.copy(directory / 'input.txt', out_directory / 'input.txt')
         return record
     finally:
         if events is not None:

@@ -89,7 +89,7 @@ def test_driver_launches_the_selected_host_argv_in_run_mode(tmp_path):
 # --- Level v4: the whole driver over the real composition, with scripted hosts and no provider or game ---
 
 # A scripted host for all three roles over the real HTTP composition. A reader's pass input arrives as a
-# `player-pass-input/1` document on stdin; the actor's is its frozen prompt text.
+# JSON document (`player-pass-input/1`) on stdin for a recorder and plain text for a level; the actor's is its frozen prompt.
 SCRIPTED_HOST = """
 import json, sys, time
 from pathlib import Path
@@ -123,7 +123,9 @@ if route['role'] == 'actor':
         sys.exit(0)
 elif route['role'] == 'recorder':
     document = json.load(sys.stdin)
-    assert document['schema'] == 'player-pass-input/1' and document['role'] == 'recorder' and document['brief'] is None
+    assert document['schema'] == 'player-pass-input/1' and sorted(document) == ['frames', 'schema', 'text']
+    assert document['text'].startswith('Frozen episode role') and 'Frozen mission' not in document['text']
+    assert 1 <= len(document['frames']) <= 7 and all(sorted(f) == ['role', 'source_id'] for f in document['frames'])
     emit('episode-pass')
     request()
     if RECORDER_MODE == 'sleep':
@@ -131,16 +133,20 @@ elif route['role'] == 'recorder':
     if RECORDER_MODE == 'none':
         emit('settled', ok=False, reason='level-no-proposal', requests=requests)
         sys.exit(1)
-    subgoal = document['pushed']['subgoal']
+    marker = 'Subgoal current when the episode began: '
+    line = next(l for l in document['text'].splitlines() if l.startswith(marker))[len(marker):]
+    subgoal = None if line == 'none' else json.loads(line)
+    # The host fetches the frames itself; the script cites the last one.
+    cited = [document['frames'][-1]['source_id']]
     if RECORDER_MODE == 'abstain':
-        value = client.call('player_episode_abstain', dict(reason_code='no_player_action', reason='Scripted abstain', sources=[]))[0]
+        value = client.call('player_episode_abstain', dict(reason_code='no_player_action', reason='Scripted abstain', sources=cited))[0]
         emit('episode-abstain', reason_code='no_player_action', reason=value['reason'] if 'reason' in value else 'Scripted abstain',
              settled=value['settled'], first_position=value['first_position'], last_position=value['last_position'],
              subgoal_id=value['subgoal_id'])
     else:
         marks = ['not_yet'] * (len(subgoal['expected_observations']) if subgoal else 0)
         value = client.call('player_episode_record', dict(attempted='Scripted attempt', counterpart='', observation_status=marks,
-            residual='', changed='', confidence=.5, sources=[]))[0]
+            residual='', changed='', confidence=.5, sources=cited))[0]
         emit('episode-record', settled=value['settled'], first_position=value['first_position'],
              last_position=value['last_position'], subgoal_id=value['subgoal_id'], counted=value['counted'],
              closed=value['closed'], observations=value['observations'], stalled=value['stalled'],
@@ -154,12 +160,12 @@ elif LEVEL_MODE == 'malformed':
     print('not a telemetry line', flush=True)
     time.sleep(120)
 else:
-    document = json.load(sys.stdin)
-    assert document['schema'] == 'player-pass-input/1' and document['role'] == 'level' and document['brief'] == 'Frozen mission'
+    text = sys.stdin.read()
+    assert text.startswith('Frozen level role\\n\\nMission brief (the same the acting player has):\\nFrozen mission')
     emit('level-pass')
     request()
     request()
-    current = document['pushed']['intent']['subgoal'] is not None
+    current = 'Current subgoal (id, derived status of each expected observation, stalled flag): none' not in text
     if LEVEL_MODE == 'abstain':
         value = client.call('player_level_abstain', dict(reason_code='no_change_needed', reason='Scripted abstain', sources=[]))[0]
         emit('level-abstain', reason_code=value['reason_code'], reason=value['reason'])
@@ -285,24 +291,27 @@ def test_cut_episodes_are_recorded_and_the_level_runs_on_the_settles(level_campa
     # The session edge closed the last partial episode, and the recorder still recorded it after the actor ended.
     assert views[-1]['last_position']==level_campaign.runtime.store.actor_counts(actor['actor_id'])[0]
     assert charged_within_cap(result,40) and actor['allocated_attempts']==10
-    # Recorder pass input: the role prompt, no brief, operations as key tokens, a baseline and a last frame, files on disk.
+    # Recorder pass input: one closed JSON document with the role prompt, the operations as key tokens, and the frames by
+    # source id and role (no image inlined): a baseline first, the last frame last, at most seven, distinct.
     passes=receipt['recorder']['passes']
     later=json.loads((level_campaign.root/'actors/001/recorder/002/input.json').read_text())
-    assert later['schema']=='player-pass-input/1' and later['role_prompt']=='Frozen episode role' and later['brief'] is None
-    pushed=later['pushed']
-    assert pushed['schema']=='player-episode-push/1' and pushed['first_position']==passes[1]['first_position']
-    assert pushed['operations'][0]['tokens']==['key:x'] and pushed['operations'][0]['position']==pushed['first_position']
-    roles=[f['frame_role'] for f in pushed['frames']]
-    assert roles[0]=='baseline' and roles[-1]=='last' and set(roles[1:-1])<={'in-episode'} and len(roles)<=7
-    assert all(Path(f['path']).read_bytes()[:8]==b'\x89PNG\r\n\x1a\n' and f['source_id'] in pushed['sources'] for f in pushed['frames'])
-    first=json.loads((level_campaign.root/'actors/001/recorder/001/input.json').read_text())['pushed']
-    assert first['frames'][0]['frame_role']!='baseline' and first['first_position']==1
-    # Level pass input: the frozen role, the actor's brief, the bound and the settled episodes since its last pass.
-    one=json.loads((level_campaign.root/'actors/001/level/001/input.json').read_text())
-    assert one['role_prompt']=='Frozen level role' and one['brief']=='Frozen mission' and one['wake']['reason']=='settle'
-    assert one['pushed']['schema']=='player-level-push/1' and one['pushed']['intent']['subgoal'] is None
-    shown=one['pushed']['episodes']
-    assert shown and one['pushed']['bound']==dict(position=max(e['last_position'] for e in shown),subgoal_id=None)
+    assert later['schema']=='player-pass-input/1' and later['text'].startswith('Frozen episode role')
+    assert f'positions {passes[1]["first_position"]} to {passes[1]["last_position"]}' in later['text']
+    assert '"tokens":["key:x"]' in later['text'] and 'Subgoal current when the episode began:' in later['text']
+    roles=[f['role'] for f in later['frames']]
+    ids=[f['source_id'] for f in later['frames']]
+    assert roles[0]=='baseline' and roles[-1]=='last' and set(roles[1:-1])<={'in-episode'} and len(roles)<=7 and len(set(ids))==len(ids)
+    assert all(len(i)<=128 and not any(c.isspace() for c in i) and i in later['text'] for i in ids)
+    first=json.loads((level_campaign.root/'actors/001/recorder/001/input.json').read_text())
+    assert first['frames'][0]['role']!='baseline' and passes[0]['first_position']==1
+    # Every record cites at least one frame of its episode.
+    assert all(v['sources'] for v in views)
+    # Level pass input: plain text with the frozen role, the actor's brief and the episodes settled since its last pass.
+    one=(level_campaign.root/'actors/001/level/001/input.txt').read_text()
+    assert one.startswith('Frozen level role\n\nMission brief (the same the acting player has):\nFrozen mission')
+    assert 'Episodes settled since your last pass' in one and 'reason settle' in one and 'Current subgoal (id, derived status of each expected observation, stalled flag): none' in one
+    bound=receipt['level']['passes'][0]['bound']
+    assert bound['subgoal_id'] is None and f'"last_position":{bound["position"]}' in one and bound['position']>=1
     assert receipt['level']['commits']>=1 and [r['text'] for r in level_campaign.app.memory.current('work')]==['Scripted subgoal']
     assert json.loads((level_campaign.root/'actors/001/level/001/route.json').read_text())['role']=='level'
     assert json.loads((level_campaign.root/'actors/001/recorder/001/route.json').read_text())['role']=='recorder'
@@ -443,7 +452,16 @@ def rig(tmp_path,monkeypatch):
     for name,text in (('context.txt','Frozen guide'),('prompt.txt','Frozen mission'),('level-role.txt','Level role'),('episode-role.txt','Episode role')):
         (directory/name).write_text(text)
     launches=[]
-    def start(self,reservation,document,meta):
+    captured=[]
+    for name in ('level_text','recorder_document'):
+        real=getattr(player,name)
+        def wrap(*args,real=real,name=name):
+            pushed=args[-1];wake=args[-2]
+            captured.append(dict(pushed=pushed,wake=wake))
+            return real(*args)
+        monkeypatch.setattr(player,name,wrap)
+    def start(self,reservation,stdin,meta):
+        document=captured[-1]
         child=Child()
         record=dict(index=reservation['index'],role=self.role,allocated_attempts=reservation['allowance'],
                     allocated_seconds=reservation['seconds'],started_wall=time.time(),**meta)
@@ -472,7 +490,8 @@ def rig(tmp_path,monkeypatch):
         if record:
             expected=len(launch.document['pushed']['subgoal']['expected_observations']) if launch.document['pushed']['subgoal'] else 0
             app.call(state.token(launch.lane),'player_episode_record',dict(attempted='Scripted attempt',counterpart='',
-                observation_status=['not_yet']*expected,residual='',changed='',confidence=.5,sources=[]),'%032x'%time.monotonic_ns())
+                observation_status=['not_yet']*expected,residual='',changed='',confidence=.5,
+                sources=[launch.document['pushed']['frames'][-1]['source_id']]),'%032x'%time.monotonic_ns())
         launch.child.done=True
     state.settle_pass=settle_pass
     try:
@@ -785,12 +804,14 @@ def test_the_trace_reader_collects_level_uncertain_and_episode_events(tmp_path):
           dict(type='episode-record',settled='recorded',first_position=1,last_position=3,subgoal_id=None,counted=False,closed=False,
                observations=[],stalled=None,record_ids=['r']),
           dict(type='episode-abstain',settled='abstained',reason_code='other',reason='x',first_position=4,last_position=5),
+          dict(type='episode-uncertain',request_id='request-1',tool_call_id='d',tool='player_episode_record',identity='e'*32),
           dict(type='settled',requests=1,ok=False,reason='level-uncertain')]
     path.write_text(''.join(json.dumps(row)+'\n' for row in rows))
     events=HostEvents(path,10)
     try:
         finished=events.finish()
         assert finished['level_uncertain']==[dict(tool='player_level_close',identity='f'*32,request_id='request-1')]
+        assert finished['episode_uncertain']==[dict(tool='player_episode_record',identity='e'*32,request_id='request-1')]
         assert [e['type'] for e in finished['episode_events']]==['episode-record','episode-abstain']
         assert finished['episode_events'][0]['record_ids']==['r'] and finished['episode_events'][1]['reason_code']=='other'
     finally:events.close()
@@ -812,4 +833,31 @@ def test_a_late_recorder_call_after_its_pass_ended_is_refused_and_writes_nothing
                      'player_episode_record',dict(attempted='late',counterpart='',observation_status=[],residual='',changed='',
                                                   confidence=.5,sources=[]),'%032x'%time.monotonic_ns())
     assert rig.app.memory._db.execute('SELECT COUNT(*) FROM records').fetchone()[0]==before
+    system.finish()
+
+
+@pytest.mark.parametrize('call_landed',[True,False])
+def test_a_lost_recorder_call_is_reconciled_from_the_stored_settle(rig,call_landed):
+    system=rig.build()
+    force_cut(system,rig,1)
+    rig.poll(system)
+    (launch,)=rig.launches
+    lost=dict(tool='player_episode_record',identity='e'*32,request_id='request-1')
+    class Lost(Trace):
+        def finish(self):
+            return dict(Trace.finish(self),settled=dict(ok=False,reason='episode-uncertain'),episode_uncertain=[lost])
+    child,_,record,ends=launch.lane.current
+    launch.lane.current=(child,Lost(),record,ends)
+    if call_landed:
+        rig.settle_pass(launch)
+    else:
+        launch.child.done=True
+    rig.poll(system)
+    (event,)=launch.lane.passes[0]['episode_uncertain']
+    assert event['outcome']==('committed' if call_landed else 'absent')
+    (view,)=rig.app.settled_episodes(actor_id=rig.actor['actor_id'])
+    # A call that never arrived leaves the episode to the driver, which settles it failed; one that landed is the recorder's.
+    assert (view['settled'],view['writer'])==(('recorded','recorder') if call_landed else ('failed','software'))
+    if not call_landed:
+        assert 'episode-uncertain' in view['reason']
     system.finish()
