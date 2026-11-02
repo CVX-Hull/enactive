@@ -133,3 +133,47 @@ def test_service_row_and_records_commit_in_one_transaction(tmp_path):
         with pytest.raises(PlayerError, match='Cannot remember'):
             memory.append_many('d' * 32, [record('work')], request_id='4' * 32, service=service)
         assert memory._db.execute('SELECT COUNT(*) FROM records').fetchone()[0] == 1
+
+
+def episode_claim(**changes):
+    data = dict(level='episode', level_contract='player-episode/1', settled='failed', writer='software',
+                session='s' * 32, actor_id='a' * 32, first_position=1, last_position=1, subgoal_id=None, reason='r')
+    return record('claim', data=data | changes)
+
+
+def test_the_general_append_paths_refuse_episode_and_writer_data_and_only_the_settle_path_admits_it(tmp_path):
+    from harness.player.contracts import RememberError
+    with Memory(tmp_path / 'player.sqlite3') as memory:
+        for data in (dict(level='episode'), dict(writer='recorder'), dict(level='episode', writer='software')):
+            with pytest.raises(PlayerError, match='custodian settle path'):
+                memory.append('a' * 32, record(data=data))
+            with pytest.raises(PlayerError, match='custodian settle path'):
+                memory.append_many('a' * 32, [record(data=data)], request_id='1' * 32)
+        assert memory._db.execute('SELECT COUNT(*) FROM records').fetchone()[0] == 0
+        # Ordinary level and other data stay admitted.
+        memory.append('a' * 32, record(data=dict(level='subgoal', note='fine')))
+        with pytest.raises(PlayerError, match='custodian settle path'):
+            memory.append('a' * 32, episode_claim())
+        (stored,) = memory.append_many('a' * 32, [episode_claim()], request_id='2' * 32, settle=True)
+        assert [(row, r['id']) for row, r in memory.episode_claims()] == [(2, stored['id'])]
+        assert memory.rowid(stored['id']) == 2 and memory.revision() == 2
+        assert memory.episode_claims(after_row=2) == [] and len(memory.episode_claims(after_row=1)) == 1
+        assert [r['id'] for r in memory.level_records('claim', 'episode')] == [stored['id']]
+        assert memory.level_records('work', 'subgoal') == []
+        with pytest.raises(PlayerError, match='Unknown records identity'):
+            memory.rowid('missing')
+        assert issubclass(RememberError, PlayerError)
+
+
+def test_a_storage_fault_or_source_capacity_is_a_remember_error_and_a_refusal_is_not(tmp_path):
+    from harness.player.contracts import RememberError
+    with Memory(tmp_path / 'player.sqlite3', max_source_bytes=1) as memory:
+        metadata, png = capture()
+        with pytest.raises(RememberError, match='source capacity exceeded'):
+            memory.register_source(metadata, png)
+        with pytest.raises(PlayerError) as refused:
+            memory.append('a' * 32, record(supports=['missing']))
+        assert not isinstance(refused.value, RememberError)
+        memory._db.execute('PRAGMA query_only=ON')
+        with pytest.raises(RememberError, match='Cannot remember'):
+            memory.append('a' * 32, record())

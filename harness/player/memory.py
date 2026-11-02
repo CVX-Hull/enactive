@@ -10,7 +10,8 @@ import time
 import uuid
 
 from harness.computer.protocol import source as validate_source
-from .contracts import PlayerError, bounded_integer, canonical, identity, json_object, record
+from .contracts import (PlayerError, RememberError, bounded_integer, canonical, identity, json_object, record,
+                        refuse_custodian_data)
 
 
 class Memory:
@@ -56,7 +57,7 @@ class Memory:
                 self._db.execute('BEGIN IMMEDIATE')
                 yield
         except sqlite3.Error as exc:
-            raise PlayerError(f'Cannot remember: {exc}') from exc
+            raise RememberError(f'Cannot remember: {exc}') from exc
 
     def __enter__(self):
         return self
@@ -105,8 +106,10 @@ class Memory:
                 raise PlayerError(f'Missing {table} reference: {ref}')
 
     def append(self, actor_id: str, value: dict, *, request_id: str | None = None) -> dict:
+        """The general append path: it refuses records setting `data.level == "episode"` or `data.writer`."""
         identity(actor_id)
         value = record(value)
+        refuse_custodian_data(value)
         stored = dict(value, id=request_id or uuid.uuid4().hex, actor_id=actor_id, created_wall=time.time())
         with self._transaction():
             prior = self._db.execute('SELECT 1 FROM records WHERE id=?',(stored['id'],)).fetchone()
@@ -122,12 +125,14 @@ class Memory:
 
     def append_many(self, actor_id: str, values: list[dict], *, request_id: str,
                     service: tuple[str, dict, dict] | None = None,
-                    sources: list[tuple[dict, bytes]] = ()) -> list[dict]:
+                    sources: list[tuple[dict, bytes]] = (), settle: bool = False) -> list[dict]:
         """Append 0..16 records in one transaction; a later record may reference an earlier one.
 
         `service` is `(tool, args, result)`: its correlation row and final result, with
         `records` filled in, commit in the same transaction, so no pending window exists.
         `sources` are exact `(metadata, png)` registrations made in that transaction too.
+        `settle` is the custodian's episode settle path, the only one that may write `data.level == "episode"`
+        and `data.writer`; every other caller is refused those, as `append` refuses them.
         """
         identity(actor_id)
         identity(request_id)
@@ -135,6 +140,9 @@ class Memory:
             raise PlayerError('A multi-record append holds 1..16 records, or 0 with its service result')
         sources = [(self._valid_source(metadata, png), png) for metadata, png in sources]
         values = [record(value) for value in values]
+        for value in values:
+            if not settle or value['kind'] != 'claim':
+                refuse_custodian_data(value)
         now = time.time()
         stored = [dict(value, id=item, actor_id=actor_id, created_wall=now)
                   for value, item in zip(values, self.batch_ids(request_id, len(values)), strict=True)]
@@ -172,6 +180,40 @@ class Memory:
             rows = self._db.execute('''SELECT id FROM records r WHERE kind=?
                 AND NOT EXISTS (SELECT 1 FROM records c WHERE c.supersedes=r.id) ORDER BY r.rowid''', (kind,)).fetchall()
             return [self.read(row[0]) for row in rows]
+        except sqlite3.Error as exc:
+            raise PlayerError(f'Cannot query player memory: {exc}') from exc
+
+    def level_records(self, kind: str, level: str) -> list[dict]:
+        """Every record of one kind whose `data.level` is `level`, superseded history included, oldest first."""
+        try:
+            rows = self._db.execute("SELECT id FROM records WHERE kind=? AND json_extract(document,'$.data.level')=? "
+                                    "ORDER BY rowid", (kind, level)).fetchall()
+            return [self.read(row[0]) for row in rows]
+        except sqlite3.Error as exc:
+            raise PlayerError(f'Cannot query player memory: {exc}') from exc
+
+    def revision(self) -> int:
+        """The commit position of the newest record (0 when empty); records are only appended."""
+        return self._db.execute('SELECT COALESCE(MAX(rowid),0) FROM records').fetchone()[0]
+
+    def rowid(self, record_id: str) -> int:
+        """A record's commit position, which orders records by when they were committed."""
+        row = self._db.execute('SELECT rowid FROM records WHERE id=?', (identity(record_id),)).fetchone()
+        if row is None:
+            raise PlayerError(f'Unknown records identity: {record_id}')
+        return row[0]
+
+    def episode_claims(self, after_row: int = 0, up_to_row: int | None = None) -> list[tuple[int, dict]]:
+        """`(commit position, record)` of every claim carrying `data.level == "episode"` after a position, oldest first.
+
+        These are unfiltered by trust: whether one is a custodian-written episode is decided by
+        `harness.player.episodes.episode`, so a record from any writer is returned here and judged there.
+        """
+        try:
+            rows = self._db.execute("SELECT rowid,id FROM records WHERE kind='claim' AND rowid>? AND rowid<=? "
+                                    "AND json_extract(document,'$.data.level')='episode' ORDER BY rowid",
+                                    (after_row, self.revision() if up_to_row is None else up_to_row)).fetchall()
+            return [(row, self.read(item)) for row, item in rows]
         except sqlite3.Error as exc:
             raise PlayerError(f'Cannot query player memory: {exc}') from exc
 
@@ -220,7 +262,7 @@ class Memory:
             return
         used = self._db.execute('SELECT COALESCE(SUM(length(png)),0) FROM sources').fetchone()[0]
         if used + len(png) > self.max_source_bytes:
-            raise PlayerError('Cannot remember: source capacity exceeded; no images evicted')
+            raise RememberError('Cannot remember: source capacity exceeded; no images evicted')
         self._db.execute('INSERT INTO sources VALUES (?,?,?)', (metadata['source_id'], canonical(metadata), png))
 
     def read_source(self, source_id: str) -> tuple[dict, bytes]:

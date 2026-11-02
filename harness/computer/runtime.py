@@ -19,6 +19,9 @@ from .protocol import ControlError, NoDispatch, GEOMETRY_KEYS, MAX_FRAME_BYTES, 
 from .store import SessionStore
 
 
+READER_ROLES = ('level', 'recorder')
+
+
 class OperationExpired(ControlError):
     pass
 
@@ -59,35 +62,43 @@ class ComputerRuntime:
                 raise ControlError('Prior actor is not quiescent or original actor capacity exhausted')
             return self._mint(None)
 
-    def add_reader(self, actor_id: str) -> dict[str, str]:
-        """A read-and-commit capability serving one active actor; it has no input, observe or stop."""
+    def add_reader(self, actor_id: str, role: str) -> dict[str, str]:
+        """A read-and-write capability of one role serving one active actor; no input, observe or stop.
+
+        The `level` role ends subgoal passes and the `recorder` role settles episodes. There is at most one
+        reader per (served actor, role).
+        """
+        if role not in READER_ROLES:
+            raise ControlError('Reader role must be level or recorder')
         with self.serial:
             if self.channel.stopped.is_set() or time.monotonic() >= self.deadline:
                 raise ControlError('Stopped run cannot mint reader custody')
             if self.actor_stage(actor_id) != 'active':
                 raise ControlError('A reader serves only the active actor')
-            if any(v.get('serves') == actor_id for v in self._actors.values()):
-                raise ControlError('This actor already has its reader')
-            return self._mint(actor_id)
+            if any(v.get('serves') == actor_id and v.get('role') == role for v in self._actors.values()):
+                raise ControlError(f'This actor already has its {role} reader')
+            return self._mint(actor_id, role)
 
-    def _mint(self, serves: str | None) -> dict[str, str]:
+    def _mint(self, serves: str | None, role: str | None = None) -> dict[str, str]:
         identity, token = uuid.uuid4().hex, secrets.token_urlsafe(32)
         digest = hashlib.sha256(token.encode()).hexdigest()
-        self.store.add_actor(identity, digest, serves)
+        self.store.add_actor(identity, digest, serves, role)
         with self._custody:
             self._actors[identity] = dict(token_hash=digest, stage='active' if serves is None else 'reader',
-                                          serves=serves)
+                                          serves=serves, role=role)
         return dict(actor_id=identity, token=token)
 
-    def authorize(self, token: str, *, write: bool = False, level_end: bool = False) -> str:
-        """`level_end` (a level commit or abstain) is the only write a reader may hold, and an actor may never hold it."""
+    def authorize(self, token: str, *, write: bool = False, reader_role: str | None = None) -> str:
+        """A write needs the active actor, or, with `reader_role` (a level terminal call or a recorder settle),
+        a reader of exactly that role: an actor never holds a reader write and a reader never holds an actor write."""
         if not isinstance(token, str) or len(token) > 256:
             raise ControlError('Actor capability unavailable')
         digest = hashlib.sha256(token.encode()).hexdigest()
         with self._custody:
             for identity, actor in self._actors.items():
                 if hmac.compare_digest(digest, actor['token_hash']):
-                    if write and actor['stage'] != ('reader' if level_end else 'active'):
+                    if write and (actor['stage'] != 'active' if reader_role is None
+                                  else actor['stage'] != 'reader' or actor['role'] != reader_role):
                         raise ControlError('This capability holds no such write; original collection/read only')
                     return identity
         raise ControlError('Unknown ephemeral actor capability')
@@ -106,7 +117,8 @@ class ComputerRuntime:
 
     def status(self) -> dict[str, Any]:
         with self._custody:
-            actors = [dict(actor_id=k, stage=v['stage'], serves=v['serves']) for k, v in self._actors.items()]
+            actors = [dict(actor_id=k, stage=v['stage'], serves=v['serves'], reader_role=v['role'])
+                      for k, v in self._actors.items()]
         return dict(schema='computer-status/1', session=self.session, target=self.channel.target(),
                     stop=self.channel.stop_status(), remaining=self.remaining(), actors=actors,
                     last_operation=copy.deepcopy(self._last), latest_source=copy.deepcopy(self._latest_source),

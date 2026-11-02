@@ -31,9 +31,11 @@ class SessionStore:
             INSERT INTO resources(id) VALUES(1);
             CREATE TABLE actors(id TEXT PRIMARY KEY,token_hash TEXT NOT NULL UNIQUE,
                 stage TEXT NOT NULL CHECK(stage IN ('active','sealed','quiescent','reader')),
-                serves TEXT REFERENCES actors(id),CHECK((stage='reader')=(serves IS NOT NULL)));
+                serves TEXT REFERENCES actors(id),
+                reader_role TEXT CHECK(reader_role IN ('level','recorder')),
+                CHECK((stage='reader')=(serves IS NOT NULL) AND (stage='reader')=(reader_role IS NOT NULL)));
             CREATE UNIQUE INDEX sole_active_actor ON actors(stage) WHERE stage='active';
-            CREATE UNIQUE INDEX one_reader_per_actor ON actors(serves) WHERE serves IS NOT NULL;
+            CREATE UNIQUE INDEX one_reader_per_actor_role ON actors(serves,reader_role) WHERE serves IS NOT NULL;
             CREATE TABLE operations(id TEXT PRIMARY KEY,actor TEXT NOT NULL REFERENCES actors(id),
                 kind TEXT NOT NULL CHECK(kind IN ('input','observe','handoff')),
                 created_wall REAL NOT NULL,deadline REAL NOT NULL,input_json TEXT NOT NULL,
@@ -45,11 +47,11 @@ class SessionStore:
                 source TEXT NOT NULL REFERENCES sources(id),PRIMARY KEY(actor,source));
             CREATE TABLE collections(native_id TEXT PRIMARY KEY REFERENCES native_intents(id),
                 receipt TEXT NOT NULL,source TEXT REFERENCES sources(id));
-            PRAGMA user_version=2;
+            PRAGMA user_version=3;
         ''')
         with self.connection:
             self.connection.executemany('INSERT INTO metadata VALUES(?,?)', [
-                ('schema', canonical('computer-session/2')), ('session', canonical(session)),
+                ('schema', canonical('computer-session/3')),('session', canonical(session)),
                 ('limits', canonical(limits)), ('deadline_monotonic', canonical(deadline))])
         (directory / 'sources').mkdir(mode=0o700)
         self.limits = limits.copy()
@@ -63,13 +65,17 @@ class SessionStore:
             row = self.connection.execute('SELECT inputs,requests,frames,bytes FROM resources WHERE id=1').fetchone()
             return dict(zip(('inputs', 'requests', 'frames', 'frame_bytes'), row, strict=True))
 
-    def add_actor(self, identity: str, token_hash: str, serves: str | None = None) -> None:
+    def add_actor(self, identity: str, token_hash: str, serves: str | None = None, role: str | None = None) -> None:
+        """An actor, or a reader (`serves` and `role`, `level` or `recorder`); one reader per (served actor, role)."""
         with self.lock, self.connection:
-            self.connection.execute('INSERT INTO actors VALUES(?,?,?,?)',
-                                    (identity, token_hash, 'active' if serves is None else 'reader', serves))
+            self.connection.execute('INSERT INTO actors VALUES(?,?,?,?,?)',
+                                    (identity, token_hash, 'active' if serves is None else 'reader', serves, role))
 
     def actor_log(self, actor_id: str, after: int, limit: int) -> list[dict[str, Any]]:
-        """The served actor's operations in store order; positions are 1-based per actor."""
+        """The served actor's operations in store order; positions are 1-based per actor.
+
+        An in-process projection for the driver and the custodian; no tool serves it.
+        """
         with self.lock:
             rows = self.connection.execute('SELECT id,kind,input_json,final_json FROM operations WHERE actor=? '
                 'ORDER BY rowid LIMIT ? OFFSET ?', (actor_id, limit, after)).fetchall()
