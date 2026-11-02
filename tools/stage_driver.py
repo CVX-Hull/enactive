@@ -329,6 +329,9 @@ class StageDriver:
             carried = stage_runs[-1]
             if carried.get('complete') is not True:
                 return f"previous persistent session {carried['run']} is not complete; the owner decides"
+            if carried.get('persistent_continuation') is not True:
+                # A session kept only as evidence (for example complete but with a level that was not quiescent) is never carried.
+                return f"previous persistent session {carried['run']} is not a continuation state; the owner decides"
             if carried.get('persistent_retained') is None:
                 return f"previous persistent session {carried['run']} was not retained; the owner decides"
             if not self.ports.state_verify(carried['persistent_retained']):
@@ -373,7 +376,8 @@ class StageDriver:
                       max_check_gap_s=a.max_check_gap_s, outcome=a.outcome, failure=a.failure, quiescent=a.quiescent,
                       included_clean_exit=a.clean_exit, refusal_circuit_breaker=a.breaker['tripped'], status='closed')
         if self.persistent:
-            record.update(persistent_retain_rc=retain_rc, persistent_retained=retain_label if retain_rc is not None else None)
+            record.update(persistent_retain_rc=retain_rc, persistent_retained=retain_label if retain_rc is not None else None,
+                          persistent_continuation=retain_label == labels[0])
         if a.clean_exit:
             record['clean_exit_facts'] = a.clean_facts
         acc['cumulative_attempts'] += charged

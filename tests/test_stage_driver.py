@@ -387,9 +387,22 @@ def test_a_persistent_session_that_is_not_a_continuation_is_retained_as_evidence
     assert sd.load_accounting(path)['runs'][0]['persistent_retained'] == 'after-s1-01-evidence'
     # A complete session whose level was not quiescent is evidence too: it is never a state to carry.
     ports = Ports(assessments={1: Assessment(complete=True, max_check_gap_s=1.0, quiescent=False)})
-    driver, _ = persistent(_sub(tmp_path, 'b'), ports)
+    directory = _sub(tmp_path, 'b')
+    driver, path = persistent(directory, ports)
+    # The session passes the completeness rule, but its level was not quiescent: session 2 must never verify, build or launch.
+    assert driver.run(1, 1) == 4
+    # The one verify after session 1's is the exit's carried-state note, not a check before a second session.
+    assert ports.retained == ['after-s1-01-evidence'] and ports.verified == [None, 'after-s1-01-evidence']
+    assert [e['verified'] for e in log(directory) if e['event'] == 'carried-state-kept'] == [True]
+    assert reasons(directory)['reason'] == 'previous persistent session s1-01 is not a continuation state; the owner decides'
+    assert ports.calls.count(('build', 1)) == 1 and ('build', 2) not in ports.calls and ('launch', 2) not in ports.calls
+    record = sd.load_accounting(path)['runs'][0]
+    assert record['persistent_continuation'] is False and record['persistent_retained'] == 'after-s1-01-evidence'
+    # A continuation is recorded as one.
+    ports = Ports(assessments={n: good(n) for n in (1, 2, 3)})
+    driver, path = persistent(_sub(tmp_path, 'c'), ports)
     driver.run(1, 1)
-    assert ports.retained[0] == 'after-s1-01-evidence'
+    assert [r['persistent_continuation'] for r in sd.load_accounting(path)['runs']] == [True, True, True]
 
 
 # ---------------------------------------------------------------- exits

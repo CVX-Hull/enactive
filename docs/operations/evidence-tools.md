@@ -60,7 +60,8 @@ The [testing page](../testing.md) lists what each test file asserts and its limi
   clusters. The lens bootstrap of the earlier numpy records took its upper index as `int(.975·B)-1`; this tool takes
   `int(.975·B)` as `analyze_level` did, so a lens interval can differ from an old record by one order statistic.
 - [`tools/level_v4_probe.py`](../../tools/level_v4_probe.py) computes its own kappa, AC1 and run bootstrap. Its bootstrap
-  agrees with `cluster_bootstrap`; it differs in refusing an interval for fewer than two runs or when fewer than half
+  agrees with `cluster_bootstrap` only where the float index does not misround (at level .9 it floors the lower index to
+  99, where `evidence_stats` takes 100); it also differs in refusing an interval for fewer than two runs or when fewer than half
   the resamples are defined, and its kappa is None where chance agreement is certain (here it is 1.0 for identical single-category labels).
   It does not import `evidence_stats`; migrating it is a follow-up for its owner. The replay and host-launch helpers
   in [`tools/level_probe.py`](../../tools/level_probe.py) are replay machinery, not retained-artifact analysis, and these
