@@ -37,9 +37,13 @@ actually read supports a conclusion. A claim about current methods or results
 rests on a dated search of recent work, including work that cites the
 foundational sources used. The synthesis records the search date, and flags the
 claim when its newest supporting source was published or substantively revised
-more than 18 months before that date. Briefs for delegated research pose the
-questions and may name foundational sources, but not the current sources to rely
-on; the synthesis records each brief's questions and any sources it named.
+more than 18 months before that date. A claim about LLM models, systems, APIs,
+providers or results rests only on dated sources read for the task, because the
+field changes too fast for remembered knowledge (owner, 1 November 2026); prior
+knowledge of the lead or of an agent is a lead to verify, never evidence. Briefs
+for delegated research pose the questions and may name foundational sources, but
+not the current sources to rely on; the synthesis records each brief's questions
+and any sources it named.
 
 C-REVIEW checks the pre-registration before spending, and both paragraphs at the
 reporting checkpoint.
