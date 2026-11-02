@@ -151,6 +151,12 @@ classical component inside the player gives way when a general method matches
 or beats it on the same pre-registered evaluation, including the declared
 cadence and cost.
 
+State each player capability as an instance of an explicit structure: its
+objective, signals and invariants, drawn from whichever field fits it, not only
+from LLM and agent work. The structure is what lets the capability be optimized
+and analysed. LLM and agent calls fill defined roles inside it and are justified
+against it; they do not replace it.
+
 ## P-KNOWLEDGE Maintain trustworthy knowledge and evidence
 
 Facts have one authoritative home. Current guidance, proposals, historical
