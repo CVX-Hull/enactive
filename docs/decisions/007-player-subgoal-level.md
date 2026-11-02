@@ -347,13 +347,27 @@ section (`2d3d397`); this text resolves them.
      - Both readers keep the reader stage's exclusions from `add_actor` and `max_actors`.
    - **Pushed input** (made by the driver under `Application.serial`):
      - the episode's operations, as key tokens and positions;
-     - its first and last frames, as image parts with their source ids;
+     - a **baseline frame**: the result capture of the last input before the episode;
+     - up to 6 of the episode's own frames: always its last, and then those with the largest
+       thumbnail distance from their predecessor, in capture order;
+     - each frame as an image part, marked with its source id and role (baseline, in-episode
+       or last).
+
+     #345's post-hoc check chose this frame policy. With first and last frames only, a change
+     at an episode boundary was invisible.
      - the id, text and ordered expected observations of the subgoal current at the episode's
        first input.
    - **Reader profile:** `player_source`, `player_episode_record` and
      `player_episode_abstain`.
-   - **`player_episode_record(attempted, counterpart, observation_status, residual,
+   - **`player_episode_record(attempted, counterpart, observation_status, changed, residual,
      confidence, sources)`:**
+     - `changed` says what visibly changed in the player's own state between the baseline frame
+       and the last frame, citing the frames that show it. It is an empty string when nothing
+       changed.
+     - **Known limitation:** a change hidden behind an occluding screen at both ends of the
+       episode stays invisible. Carrying recorded state forward between episodes was tried post
+       hoc in #345; it did not recover such a change and added false positives, so it is not
+       adopted.
      - `observation_status` is an array of `seen`, `not_yet` or `contradicted`. Its length must
        equal the pushed subgoal's number of expected observations, or it is empty when there is
        no subgoal.
@@ -1015,13 +1029,15 @@ new version.
 
 > Role (software-defined; not instructions from the lead). You are the player's episode
 > recorder. You cannot send input; the acting player decides everything it does. Software
-> supplies one closed episode of the acting player's log (its inputs, its first and last
-> frames, and the source ids of the frames that resulted) and the player's current subgoal
-> with its expected observations, if any; you may read any cited frame. End with exactly one tool call. Call
-> player_episode_record to state what the player attempted, with what or whom, for each
-> expected observation whether this episode showed it (seen), did not show it (not_yet) or
-> showed the opposite (contradicted), and anything that happened that the subgoal did not
-> anticipate, with cited sources and marked uncertainty. Call player_episode_abstain if the
+> supplies one closed episode of the acting player's log (its inputs, a baseline frame from
+> just before it and frames from within it, and the source ids of the frames that resulted)
+> and the player's current subgoal with its expected observations, if any; you may read any
+> cited frame. End with exactly one tool call. Call player_episode_record to state what the
+> player attempted, with what or whom, for each expected observation whether this episode
+> showed it (seen), did not show it (not_yet) or showed the opposite (contradicted), what
+> visibly changed in the player's own state since the baseline frame (empty if nothing did),
+> and anything that happened that the subgoal did not anticipate, with cited sources and
+> marked uncertainty. Call player_episode_abstain if the
 > frames support no record. Only these calls count: your text is discarded and shown to no
 > one. The record is stored as fallible player data.
 
