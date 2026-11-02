@@ -962,6 +962,17 @@ Each item is tracked, with its owner source and revisit trigger, in
 - **building** the recursive memory levels above the episode level, and the label-evolution
   loop, which [#347](https://github.com/CVX-Hull/enactive/issues/347) pilots offline first;
 - a searchable raw-log arm with no summaries, kept as a later comparison;
+- **a smarter episode cutter** (owner, 1 November 2026: "can we do it in a smarter way? … fine
+  with starting with the current approach"). Candidates:
+  - a multi-signal change score (screen distance, a change in key-token pattern, the end of
+    identical captures, tool errors) under Bayesian online change-point detection;
+  - propose and verify: the mechanical score proposes, and the recorder confirms the boundary
+    at candidates only;
+  - boundaries driven by expectations: an episode closes when a mark flips;
+  - boundary models learned from evolved labels.
+
+  Each is compared offline against the mechanical cutter on recorded runs, using #345's
+  measures, before any replacement;
 - P2 event abstraction and P4 escalation beyond the mechanical wake rules;
 - exploration objectives (competence progress and coverage, from the objectives
   research);
