@@ -15,8 +15,8 @@ export const EPISODE_TERMINAL_TOOLS = ['player_episode_record', 'player_episode_
 export const LEVEL_RESERVED_REQUESTS = 2;
 // The pass roles. `prefix` names the role's events, tool-refusal reasons and settlement reasons.
 const PASS_ROLES = {
-  level: {prefix:'level', tools:LEVEL_TERMINAL_TOOLS, unended:'level-no-proposal'},
-  recorder: {prefix:'episode', tools:EPISODE_TERMINAL_TOOLS, unended:'episode-no-record'}};
+  level: {prefix:'level', tools:LEVEL_TERMINAL_TOOLS, reads:['player_source'], unended:'level-no-proposal'},
+  recorder: {prefix:'episode', tools:EPISODE_TERMINAL_TOOLS, reads:[], unended:'episode-no-record'}};
 // One line after a tool's example call, for what a minimal example cannot show.
 const TERMINAL_NOTES = {
   player_level_replace:'In this example previous_outcome is "none" with an empty previous_reason, which is valid only when there is no current subgoal; whenever there is one, set previous_outcome to achieved, failed, abandoned or revised and give previous_reason.',
@@ -122,9 +122,11 @@ export function validateConfiguration(configuration, selectedModel, effort) {
 /** Request-only projection. Canonical messages stay intact; telemetry separately projects image references.
  * Count-only block eviction: beyond maxImages, the oldest images are omitted in whole
  * blocks, so the serialized prefix stays byte-stable between evictions. Block 1 omits
- * exactly the overflow. */
-export function projectImageContext(messages, maxImages, block) {
+ * exactly the overflow. The first `pinned` images (a recorder's pushed frames, the oldest in the history) are never omitted,
+ * and count toward the peak with the protected latest batch: together they above maxImages block the request. */
+export function projectImageContext(messages, maxImages, block, pinned = 0) {
   requireThat(Number.isSafeInteger(block) && block > 0 && block <= maxImages);
+  requireThat(Number.isSafeInteger(pinned) && pinned >= 0);
   const projected = structuredClone(messages);
   const latestBatch = messages.findLastIndex(message => message.role === 'assistant'
     && message.content.some(part => part.type === 'toolCall'));
@@ -138,10 +140,12 @@ export function projectImageContext(messages, maxImages, block) {
     }
   }
   const protectedImages = latestBatch < 0 ? 0 : images.filter(image => image.messageIndex >= latestBatch).length;
-  const blocked = protectedImages > maxImages;
+  const pinnedImages = Math.min(pinned, images.length);
+  const blocked = protectedImages + pinnedImages > maxImages;
   const overflow = Math.max(0, images.length - maxImages);
-  // The protected latest batch is never omitted, even when a whole block would reach it.
-  const omitted = blocked ? [] : images.slice(0, Math.min(Math.ceil(overflow / block) * block, images.length - protectedImages));
+  // The pinned images and the protected latest batch are never omitted, even when a whole block would reach them.
+  const eligible = images.slice(pinnedImages, images.length - protectedImages);
+  const omitted = blocked ? [] : eligible.slice(0, Math.ceil(overflow / block) * block);
   const omissions = [];
   for (const image of omitted) {
     const sha256 = createHash('sha256').update(Buffer.from(image.part.data, 'base64')).digest('hex');
@@ -151,7 +155,7 @@ export function projectImageContext(messages, maxImages, block) {
     if (omissions.length < 16) omissions.push(provenance);
   }
   return {messages:projected, summary:{max_context_images:maxImages, context_image_block:block, input_images:images.length,
-    protected_images:protectedImages, retained_images:images.length - omitted.length,
+    protected_images:protectedImages, pinned_images:pinnedImages, retained_images:images.length - omitted.length,
     omitted_images:omitted.length, blocked, omissions, omitted_provenance_entries:omitted.length - omissions.length}};
 }
 
@@ -337,34 +341,84 @@ function intentShape(value) {
     const goal = value.subgoal;
     valid(object(goal) && text(goal.record_id) && typeof goal.text === 'string' && Array.isArray(goal.expected_observations)
       && goal.expected_observations.every(item => object(item) && typeof item.text === 'string' && (item.status === null || MARKS.includes(item.status)))
-      && Number.isFinite(goal.confidence));
-    valid(object(value.age) && typeof value.age.same_session === 'boolean' && Number.isFinite(value.age.seconds)
-      && (value.age.inputs_since_commit === null || Number.isSafeInteger(value.age.inputs_since_commit)));
+      && Number.isFinite(goal.confidence) && goal.confidence >= 0 && goal.confidence <= 1);
+    // An age is non-negative and bounded (a century of seconds, a billion inputs); anything else is a malformed read.
+    valid(object(value.age) && typeof value.age.same_session === 'boolean'
+      && Number.isFinite(value.age.seconds) && value.age.seconds >= 0 && value.age.seconds <= 3.2e9
+      && (value.age.inputs_since_commit === null || (Number.isSafeInteger(value.age.inputs_since_commit)
+        && value.age.inputs_since_commit >= 0 && value.age.inputs_since_commit <= 1e9)));
   }
   for (const item of value.recall.items) {
-    valid(object(item) && typeof item.attempted === 'string' && (item.first_source === null || typeof item.first_source === 'string')
+    valid(object(item) && typeof item.attempted === 'string' && typeof item.changed === 'string'
+      && (item.first_source === null || typeof item.first_source === 'string')
       && Array.isArray(item.observation_status) && item.observation_status.every(mark => MARKS.includes(mark)));
   }
 }
 
-/** The outcome of a recalled episode: how many of its subgoal's expected observations it showed. */
-function outcomeOf(marks) {
-  if (marks.length === 0) return 'no subgoal';
-  const contradicted = marks.filter(mark => mark === 'contradicted').length;
-  return `seen ${marks.filter(mark => mark === 'seen').length}/${marks.length}${contradicted ? `, ${contradicted} contradicted` : ''}`;
+/** Observation text on one line, with the characters the observations line uses for structure mapped to neutral ones, so
+ * player text cannot forge a `[status]` token or a `;` separator. */
+const observationText = value => flat(value).replace(/[[\];]/g, character => ({'[': '(', ']': ')', ';': ','})[character]);
+const digits = number => String(number).length;
+
+/** `text` cut to `budget` bytes: `fitPart` with its marker, or, when the budget cannot hold a marker, a bare `…` cut. */
+function cutText(value, budget) {
+  if (Buffer.byteLength(value) <= budget) return {text:value, omitted_bytes:0};
+  try { return fitPart(value, budget); } catch {
+    let kept = '';
+    for (const character of value) {
+      if (Buffer.byteLength(kept + character) > budget - 3) break;
+      kept += character;
+    }
+    const text = budget >= 3 ? kept + '…' : '';
+    return {text, omitted_bytes:Buffer.byteLength(value) - Buffer.byteLength(kept)};
+  }
 }
 
-// The least attempt text a recall line keeps beside its source id and outcome (a marker alone takes 8 bytes).
-const MIN_ATTEMPT_BYTES = 12;
-/** A recall line: the one full source id of the record's first cited frame, its outcome, then its attempt text. */
+/** The observations line: each observation gets its `[status] ` token and an equal share of the bytes left (a short one
+ * leaves its spare to the others), cut with a marker, so every status stays visible. */
+function observationsLine(observations, budget) {
+  const prefix = 'Expected: ';
+  if (observations.length === 0) return {text:`${prefix}none stated`, omitted_bytes:0};
+  const tokens = observations.map(item => item.status === null ? '' : `[${item.status}] `);
+  const texts = observations.map(item => observationText(item.text));
+  let remaining = budget - Buffer.byteLength(prefix) - 2 * (observations.length - 1) - tokens.reduce((total, token) => total + Buffer.byteLength(token), 0);
+  const allocation = [];
+  [...texts.keys()].sort((a, b) => Buffer.byteLength(texts[a]) - Buffer.byteLength(texts[b])).forEach((index, rank) => {
+    allocation[index] = Math.min(Buffer.byteLength(texts[index]), Math.max(0, Math.floor(remaining / (texts.length - rank))));
+    remaining -= allocation[index];
+  });
+  const cut = texts.map((value, index) => cutText(value, allocation[index]));
+  return {text:prefix + cut.map((part, index) => tokens[index] + part.text).join('; '), omitted_bytes:cut.reduce((total, part) => total + part.omitted_bytes, 0)};
+}
+
+/** The outcome of a recalled episode: how many of its subgoal's expected observations it showed, or, with no subgoal, a
+ * short excerpt of what visibly changed. `omitted_bytes` counts what the excerpt cut. */
+function outcomeOf(item) {
+  const marks = item.observation_status;
+  if (marks.length === 0) {
+    const excerpt = cutText(flat(item.changed), 32);
+    return {text:`changed: ${excerpt.text || 'nothing'}`, omitted_bytes:excerpt.omitted_bytes};
+  }
+  const contradicted = marks.filter(mark => mark === 'contradicted').length;
+  return {text:`seen ${marks.filter(mark => mark === 'seen').length}/${marks.length}${contradicted ? `, ${contradicted} contradicted` : ''}`, omitted_bytes:0};
+}
+
+/** A recall line: the one full source id of the record's first cited frame, its outcome, then its attempt text; null for an
+ * item with no usable source id, or whose id cannot be shown whole, which the tail leaves out (the frozen label promises one
+ * source id on every line). Every dropped byte counts as omitted. */
 function recallLine(item) {
   const budget = TAIL_BUDGETS.recall_line;
-  const id = text(item.first_source) && !/[\p{C}\s]/u.test(item.first_source) ? item.first_source : '(no frame cited)';
-  // A source id is never cut: fall back to the id alone, then to saying that it is too long to show.
-  const lead = [`${id} (${outcomeOf(item.observation_status)}) `, `${id} `, '(frame id too long to show) ']
-    .find(candidate => Buffer.byteLength(candidate) + MIN_ATTEMPT_BYTES <= budget);
-  const attempt = fitPart(flat(item.attempted), budget - Buffer.byteLength(lead));
-  return {text:(lead + attempt.text).trimEnd(), omitted_bytes:attempt.omitted_bytes};
+  if (!text(item.first_source) || /[\p{C}\s]/u.test(item.first_source)) return null;
+  const id = item.first_source, attempt = flat(item.attempted), size = Buffer.byteLength(attempt);
+  // The attempt keeps at least four bytes of text beside the marker its real length needs (or all of it, when shorter).
+  const need = Math.min(size, 6 + digits(size) + 4);
+  // A source id is never cut: the outcome goes first, and an id that still leaves no room means the item is left out.
+  const outcome = outcomeOf(item), shown = `(${outcome.text}) `;
+  const leads = [[`${id} ${shown}`, outcome.omitted_bytes], [`${id} `, Buffer.byteLength(shown) + outcome.omitted_bytes]];
+  const chosen = leads.find(([candidate]) => Buffer.byteLength(candidate) + need <= budget);
+  if (chosen === undefined) return null;
+  const fitted = cutText(attempt, budget - Buffer.byteLength(chosen[0]));
+  return {text:(chosen[0] + fitted.text).trimEnd(), omitted_bytes:fitted.omitted_bytes + chosen[1]};
 }
 
 /** The request-only intent tail from one `player-intent/2` value; null means the read failed.
@@ -377,7 +431,7 @@ export function formatIntentTail(value, maxBytes = INTENT_TAIL_BYTES) {
   requireThat(maxBytes === INTENT_TAIL_BYTES, 'invalid-intent-budget');
   if (value === null) {
     const unavailable = `${INTENT_LABEL}\nUnavailable: the intent read failed or was malformed; no intent is shown.`;
-    return {text:unavailable, tail_bytes:Buffer.byteLength(unavailable), surfaced_bytes:0, omitted_bytes:0, parts:[]};
+    return {text:unavailable, tail_bytes:Buffer.byteLength(unavailable), surfaced_bytes:0, omitted_bytes:0, skipped_items:0, parts:[]};
   }
   intentShape(value);
   const parts = [], lines = [INTENT_LABEL];
@@ -387,19 +441,25 @@ export function formatIntentTail(value, maxBytes = INTENT_TAIL_BYTES) {
   if (goal === null) add('subgoal', 'No committed intent.');
   else {
     fit('subgoal', `Subgoal: ${flat(goal.text)}`, TAIL_BUDGETS.subgoal);
-    fit('observations', 'Expected: ' + (goal.expected_observations.map(item => (item.status === null ? '' : `[${item.status}] `) + flat(item.text)).join('; ') || 'none stated'), TAIL_BUDGETS.observations);
-    fit('metadata', `${age.inputs_since_commit === null ? 'earlier actor' : `${age.inputs_since_commit} inputs`}, ${Math.round(Math.max(0, age.seconds))}s, `
-      + `${age.same_session ? 'this session' : 'earlier session'}; conf ${goal.confidence.toFixed(1)}; id ${flat(goal.record_id).slice(0, 8)}`, TAIL_BUDGETS.metadata);
+    const observations = observationsLine(goal.expected_observations, TAIL_BUDGETS.observations);
+    fit('observations', observations.text, TAIL_BUDGETS.observations);
+    parts.at(-1).omitted_bytes += observations.omitted_bytes;
+    // The software's own fields come first, so a cut falls on the age.
+    fit('metadata', `id ${[...flat(goal.record_id)].slice(0, 8).join('')}; conf ${goal.confidence.toFixed(1)}; `
+      + `${age.inputs_since_commit === null ? 'earlier actor' : `${age.inputs_since_commit} inputs`}, ${Math.round(age.seconds)}s, `
+      + `${age.same_session ? 'this' : 'prev'}`, TAIL_BUDGETS.metadata);
   }
-  const items = value.recall.items.slice(0, RECALL_LINES);
-  if (items.length) {
+  // An item with no usable source id is left out, and counted.
+  const recall = value.recall.items.slice(0, RECALL_LINES).map(recallLine);
+  const shown = recall.filter(line => line !== null);
+  if (shown.length) {
     lines.push(RECALL_LABEL);
-    items.forEach((item, index) => { const line = recallLine(item); add(`recall-${index + 1}`, line.text, line.omitted_bytes); });
+    shown.forEach((line, index) => add(`recall-${index + 1}`, line.text, line.omitted_bytes));
   }
   const tail = lines.join('\n');
   requireThat(Buffer.byteLength(tail) <= INTENT_TAIL_BYTES, 'invalid-intent-budget');
   return {text:tail, tail_bytes:Buffer.byteLength(tail), surfaced_bytes:parts.reduce((total, part) => total + part.bytes, 0),
-    omitted_bytes:parts.reduce((total, part) => total + part.omitted_bytes, 0), parts};
+    omitted_bytes:parts.reduce((total, part) => total + part.omitted_bytes, 0), skipped_items:recall.length - shown.length, parts};
 }
 
 function levelResult(result) {
@@ -467,7 +527,8 @@ function terminalEvent(name, result, args) {
 }
 
 /** The recorder's pushed input: a `player-pass-input/1` document on stdin, `{schema, text, frames}`. `frames` are the episode's
- * frames in order, each `{source_id, role}`: at most one baseline, at most one last, and at most MAX_FRAMES in all. The host
+ * frames in order, each `{source_id, role}`: an optional baseline first, then at most 6 episode frames, in-episode ones ending
+ * in exactly one `last` (so at most MAX_FRAMES in all, and `last` is required whenever there are any). The host
  * reads each frame itself through `player_source`, so no image crosses the bound on the prompt. */
 export function parsePassInput(prompt) {
   let value;
@@ -477,8 +538,10 @@ export function parsePassInput(prompt) {
     && Array.isArray(value.frames) && value.frames.length <= MAX_FRAMES);
   for (const frame of value.frames) valid(object(frame) && Object.keys(frame).length === 2 && text(frame.source_id)
     && frame.source_id.length <= 128 && !/[\p{C}\s]/u.test(frame.source_id) && FRAME_ROLES.includes(frame.role));
-  valid(new Set(value.frames.map(frame => frame.source_id)).size === value.frames.length
-    && ['baseline', 'last'].every(role => value.frames.filter(frame => frame.role === role).length <= 1));
+  valid(new Set(value.frames.map(frame => frame.source_id)).size === value.frames.length);
+  // The frame policy: an optional baseline first, then the episode's own frames (at most 6, in capture order) ending in its last.
+  const episode = value.frames[0]?.role === 'baseline' ? value.frames.slice(1) : value.frames;
+  valid(episode.length <= MAX_FRAMES - 1 && episode.every((frame, index) => frame.role === (index === episode.length - 1 ? 'last' : 'in-episode')));
   return value;
 }
 
@@ -581,6 +644,8 @@ export async function runHost(options) {
   let agent, client, transport, fatal, closing = false, requests = 0, requestId, requestTimer, requestInFlight = false, requestUsageAvailable = false;
   let workTimer, deadlineTimer;
   let responseProgress, handoff, pendingHandoff, passEnded = false, passUncertain = false;
+  // Frame reads admitted in the current assistant batch: each adds one image to the next request.
+  let batchReads = 0;
   // Logical requests: one per streamFn call, whatever its provider retries; `reserved` is the current one's.
   let logicalRequests = 0, reserved = false;
   const progressSnapshot = () => responseProgress ? {...responseProgress,
@@ -636,6 +701,9 @@ export async function runHost(options) {
     bounded(options.prompt); bounded(options.context);
     // A recorder's prompt is its structured pushed input; it is refused before any connection or request.
     const passInput = configuration.role === 'recorder' ? parsePassInput(options.prompt) : null;
+    // The pushed frames stay in every request of the pass (they are pinned), so they must leave room under the peak of pixel
+    // images for at least one read: the driver's recorder peak is at least its frames + 1.
+    if (passInput) requireThat(passInput.frames.length < configuration.max_context_images, 'invalid-pass-input');
     emit('host-start', {telemetry_version:2, schema:configuration.schema, role:configuration.role, intent_tail_bytes:configuration.intent_tail_bytes, requested_service_tier:configuration.service_tier, model:configuration.model.id, provider:configuration.model.provider, api:configuration.model.api, effort:options.effort, max_output_tokens:configuration.model.maxTokens, context_window:configuration.model.contextWindow, thinking_level_map:{...configuration.model.thinkingLevelMap}, reasoning_format:configuration.model.compat?.thinkingFormat ?? null, provider_routing:configuration.model.compat?.openRouterRouting ? structuredClone(configuration.model.compat.openRouterRouting) : null, max_requests:configuration.max_requests, max_context_images:configuration.max_context_images, context_image_block:configuration.context_image_block, unsupported_features:['compaction', 'session-restore', 'model-fallback', 'reconnect', 'replay', 'ambient-tools', 'resource-discovery'], missing_endpoints:['model-attention', 'server-inference-start', 'physical-paint'], cleanup_budget_ms:cleanupBudget});
     if (fatal) throw new HostError(fatal);
     requireThat(!AMBIENT_PROVIDER_SETTINGS.some(name => Object.hasOwn(process.env, name)), 'ambient-provider-configuration');
@@ -657,7 +725,7 @@ export async function runHost(options) {
     if (configuration.intent_tail_bytes !== null) requireThat(names.has('player_intent'), 'missing-required-tools');
     // Each role enables exactly its own terminal tools: a pass role all of them, and no other role any.
     const passTools = Object.values(PASS_ROLES).flatMap(role => role.tools);
-    requireThat((pass?.tools ?? []).every(name => mcp.enabled_tools.includes(name)), 'missing-required-tools');
+    requireThat([...(pass?.tools ?? []), ...(pass?.reads ?? [])].every(name => mcp.enabled_tools.includes(name)), 'missing-required-tools');
     requireThat(mcp.enabled_tools.every(name => !passTools.includes(name) || pass?.tools.includes(name)), 'unexpected-pass-tools');
     // Frames are read through the recorder's own `player_source`, which the host never offers beyond the frozen table.
     if (passInput?.frames.length) requireThat(mcp.enabled_tools.includes('player_source'), 'missing-required-tools');
@@ -717,7 +785,7 @@ export async function runHost(options) {
           // Memoize against canonical SDK objects before image projection clones
           // them. Earlier diagnostic text remains stable in subsequent prefixes.
           const projectionStarted = performance.now();
-          const projection = projectImageContext(validationFeedback(messages), configuration.max_context_images, configuration.context_image_block);
+          const projection = projectImageContext(validationFeedback(messages), configuration.max_context_images, configuration.context_image_block, passInput?.frames.length ?? 0);
           emit('context-image-projection', {request_id:`request-${requests + 1}`, projection_ms:performance.now() - projectionStarted, ...projection.summary});
           if (projection.summary.blocked) stop('context-image-limit');
           let intent = '';
@@ -737,7 +805,7 @@ export async function runHost(options) {
             // Per part: bytes surfaced and bytes omitted by the fixed allocation.
             emit('intent-tail', {request_id:`request-${requests + 1}`, available:value !== null,
               record_id:value?.subgoal?.record_id ?? null, tail_bytes:tail.tail_bytes, surfaced_bytes:tail.surfaced_bytes,
-              omitted_bytes:tail.omitted_bytes, parts:tail.parts, age:value?.age ?? null});
+              omitted_bytes:tail.omitted_bytes, skipped_items:tail.skipped_items, parts:tail.parts, age:value?.age ?? null});
             intent = '\n\n' + tail.text;
           }
           // Request-only bookkeeping follows history, preserving the stable
@@ -773,12 +841,25 @@ export async function runHost(options) {
           return {block:true, reason:`${toolCall.name} is not offered on this request and was not run: only ${pass.tools.join(', ')} are available. `
             + `Call exactly one of them.\n${FIX_LINE}`};
         }
+        // A recorder's pushed frames are pinned, so the frames it can read at once are what the peak leaves: a read that would
+        // take the next request over the peak is a fixable refusal (one read per turn), not the pass-stopping backstop.
+        if (passInput && toolCall.name === 'player_source') {
+          const room = configuration.max_context_images - passInput.frames.length - batchReads;
+          if (room < 1) {
+            emit('tool-refused', {request_id:requestId, tool_call_id:toolCall.id, tool:toolCall.name, reason:'episode-image-peak', dispatched:false});
+            const slots = configuration.max_context_images - passInput.frames.length;
+            return {block:true, reason:`player_source was not run: a request holds at most ${configuration.max_context_images} images and the ${passInput.frames.length} pushed frames stay in every one, `
+              + `so only ${slots} more can be read at once and ${batchReads} ${batchReads === 1 ? 'was' : 'were'} already read in this turn. `
+              + `Earlier reads are evicted first, so read one frame per turn: call player_source again in your next turn.\n${FIX_LINE}`};
+          }
+        }
         if (!isDeepStrictEqual(toolCall.arguments, args)) {
           emit('tool-refused', {request_id:requestId, tool_call_id:toolCall.id, tool:toolCall.name, reason:'tool-arguments-changed', dispatched:false});
           const fields = changedFields(toolCall.arguments, args).join(', ');
           return {block:true, reason:`MCP input not sent: the SDK changed the arguments of ${toolCall.name} (field ${fields}); resend the call with ${fields} given exactly as the schema requires, without nulls or coerced values.`
             + (pass?.tools.includes(toolCall.name) ? `\n${FIX_LINE}` : '')};
         }
+        if (passInput && toolCall.name === 'player_source') batchReads++;
       },
       // Pi's per-result terminate hint requires every result in the batch to
       // terminate. finishTurn also handles ordinary tools preceding a handoff
@@ -952,6 +1033,7 @@ export async function runHost(options) {
     agent.subscribe(event => {
       if (event.type === 'message_end' && event.message.role === 'assistant') {
         clearTimeout(requestTimer);
+        batchReads = 0;
         const message = event.message;
         const narration = assistantNarration(message.content);
         if (narration.text || narration.omitted_bytes) emit('assistant-text', {request_id:requestId, ...narration});
