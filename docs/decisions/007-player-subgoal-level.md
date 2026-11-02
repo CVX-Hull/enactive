@@ -324,8 +324,8 @@ section (`2d3d397`); this text resolves them.
    `harness/computer`. It reads the session's captures as player-visible sources.
    - **Distance.** Each capture becomes a 32 × 20 greyscale box-pooled thumbnail. The distance d
      of an input is the mean absolute pixel difference, divided by 255, between that input's
-     result capture and the previous input's result capture. An input with no result capture
-     yet (pending or unknown) has no distance and cannot close an episode.
+     result capture and the result capture of the previous input that has one. An input with
+     no result capture yet (pending or unknown) has no distance and cannot close an episode.
    - **Closure.**
      - **On content:** an episode closes after input *i* when d(*i*) ≥ θ and the episode holds
        at least *m* inputs. The input that crosses θ is the first input of the next episode, so
@@ -342,7 +342,8 @@ section (`2d3d397`); this text resolves them.
    - **Custody.**
      - `computer-session/2` becomes `/3`: the `one_reader_per_actor` index becomes unique on
        (served actor, role), and an `actors.reader_role` column holds `level` or `recorder`.
-     - Write authorization admits a recorder only for `player_episode_record`.
+     - Write authorization admits a recorder only for `player_episode_record` and
+       `player_episode_abstain`. Both are reader writes that settle the episode (item 3).
      - Both readers keep the reader stage's exclusions from `add_actor` and `max_actors`.
    - **Pushed input** (made by the driver under `Application.serial`):
      - the episode's operations, as key tokens and positions;
@@ -362,24 +363,43 @@ section (`2d3d397`); this text resolves them.
      - Every field is required, and the schema is flat.
    - **`player_episode_abstain(reason_code, reason, sources)`** has its own codes:
      `unreadable_frames`, `no_player_action` and `other`.
-   - **Storage.** The custodian stores a record as a `claim` with `data.level == "episode"`,
-     `data.level_contract == "player-episode/1"`, the episode's session, actor and position
-     range, and the pushed subgoal's id. The store copies only its cited frames (at most 4).
-     - **At store capacity** (256 MiB, no eviction), a failure to remember stops the lineage as
-       a recorded failure; nothing is evicted silently.
+   - **Storage: every episode settles into the store.** The custodian appends exactly one
+     `claim` per closed episode, with:
+     - `data.level == "episode"` and `data.level_contract == "player-episode/1"`;
+     - the episode's session, actor and position range, and the pushed subgoal's id;
+     - `data.settled`, with one of four values:
+       - `recorded`: the recorder's fields and marks;
+       - `abstained`: the code and reason, with no marks;
+       - `failed`: no marks;
+       - `dropped`: no marks;
+     - `data.writer`, which is `recorder` for a recorder call and `software` for a settle the
+       driver reports (a failed or dropped episode) through a custodian method under
+       `Application.serial`.
+
+     The store copies only cited frames: at most 4 per episode.
+     - **At store capacity** (256 MiB, no eviction):
+       - a failure to remember stops the recorder and the level for the rest of the session;
+       - **the actor continues**, because no level state gates input;
+       - the lineage ends at the next session boundary as a recorded failure;
+       - nothing is evicted silently.
      - **Recall integrity.** Recall and counts trust only claims whose `level_contract` is
-       `player-episode/1` and whose record actor is a recorder reader.
+       `player-episode/1` and whose `data.writer` the custodian stamped. Because the stamp is in
+       the record itself, the check also works on earlier sessions' claims.
      - **Format.** `player-record/1` and `player-memory/1` are unchanged.
    - **Backlog.** Closed episodes wait in a FIFO queue. At most one recorder pass is in flight.
-     If more than 3 episodes are waiting, the oldest waiting episode settles as
-     `episode-dropped`; it is counted and treated as "no newly seen". Recorder abstains,
-     failures and drops all settle the episode.
+     - **Drops:** if more than 3 episodes are waiting, the oldest waiting episode settles as
+       `dropped`.
+     - **Settling:** every closed episode ends with exactly one settle claim, whether recorded,
+       abstained, failed or dropped.
 3. **Closure and stall, in the custodian.** Observation status and stall are **derived at read
    time** from the store and are never stored on the Work record, which stays append-only.
-   - **What counts.** For the current subgoal *g*, the custodian reads its episode claims:
-     those committed after *g* whose pushed subgoal id is *g* and whose confidence is at least
-     the floor *c*. A claim whose subgoal id is not *g* is ignored, so marks are never
-     attributed to the wrong subgoal.
+   - **What counts.** For the current subgoal *g*, the custodian reads its trusted episode
+     claims: those committed after *g* whose pushed subgoal id is *g*.
+     - **Marks** count only from `recorded` claims with confidence at least the floor *c*.
+     - **Stall** counts every settled claim (item 2), so all of it is derivable from the store,
+       across sessions too.
+     - **Other subgoals.** A claim whose subgoal id is not *g* is ignored, so marks are never
+       attributed to the wrong subgoal.
    - **Status.** An observation is `seen` if some counted claim marks it seen and no later
      counted claim marks it contradicted. It is `contradicted` if its latest counted mark is
      contradicted. Otherwise it is `not_yet`.
@@ -393,8 +413,9 @@ section (`2d3d397`); this text resolves them.
      - **Not vacuous:** `player-level/4` requires at least one expected observation on
        replace, so closure is never vacuous.
    - **Stall.**
-     - **When it fires:** *g* is **stalled** after N consecutive settled episodes since *g* with
-       nothing newly seen. An abstained, failed or dropped episode counts as nothing newly seen.
+     - **When it fires:** *g* is **stalled** after N consecutive settle claims since *g* with
+       nothing newly seen. An `abstained`, `failed` or `dropped` settle counts as nothing newly
+       seen, and so does a `recorded` one below the floor.
      - **N:** given at reader minting, like S.
      - **Refusals:** while *g* is stalled, `player_level_keep` and `player_level_abstain` are
        fixable tool errors that name `player_level_replace` and `player_level_close`. This
@@ -405,9 +426,10 @@ section (`2d3d397`); this text resolves them.
    - **Contradiction.** While any observation of *g* is `contradicted`, a keep must cite, in
      its `sources`, the source of a counted claim with that mark. Otherwise it is a fixable
      tool error.
-   - **Races.** A level commit names the subgoal id it was pushed. The custodian refuses the
-     commit as stale (a discard) if the current subgoal differs, because a closure or a replace
-     happened meanwhile.
+   - **Races.** At push time the driver binds the current subgoal id, together with the
+     position, under `Application.serial`. The model never supplies a record id. The custodian
+     refuses the commit as stale (a discard) if the current subgoal then differs from the bound
+     one, because a closure or a replace happened meanwhile.
    - **Contracts.** `player-level/3` becomes `/4` and `player-level-commit/3` becomes `/4`
      (pushed subgoal id, derived status, closure). Minting a reader refuses a store whose
      current level Work is not `/4`; migrate, or start a fresh store. The rules are documented
@@ -423,10 +445,14 @@ section (`2d3d397`); this text resolves them.
      operations in-process through the `Application`. The refusal text and the `player-host`
      rule that names `player_log_read` change with them.
    - **Binding.** The driver binds the pass's position under `Application.serial`, replacing
-     v3's reset-and-read. The bound is the largest end position among the served actor's
-     current-session episode records in the pushed input. Recalled earlier-session records
-     never bind. At actor start, with nothing recorded yet, the bound is 0. The custodian's
-     staleness check S applies from that bound.
+     v3's reset-and-read.
+     - **The bound** is the end position of the served actor's newest settled episode in the
+       current session, whatever its outcome: record, abstain, failure or drop. So a pass woken
+       by a settle with no record still binds where it should.
+     - **Recalled earlier-session records** never bind.
+     - **At actor start,** before any episode has settled, the bound is 0.
+
+     The custodian's staleness check S applies from that bound.
    - **Waking:**
      - at actor start;
      - after every episode settles: record, abstain, failure or drop;
@@ -446,23 +472,31 @@ section (`2d3d397`); this text resolves them.
    - **No current subgoal:** recall shows the most recent records instead.
    - **The level sees** the top 10.
    - **The tail.** `player-intent/1` becomes `/2`, with a fixed allocation within the
-     unchanged bound of 1,024 bytes, labels included:
+     unchanged bound of 1,024 bytes.
+     - **Labels count.** The labels and omission markers now count toward the bound. They were
+       extra before, so this changes `player-host/6` (`formatIntentTail`) and its contract text.
 
      | Part | Budget |
      |---|---|
-     | The intent label | as written |
-     | Subgoal text, truncated | ≤ 240 bytes |
-     | Its expected observations with status, truncated each | ≤ 240 bytes |
-     | Confidence, age and up to 2 source ids | ≤ 100 bytes |
-     | The recall label and recall lines | the rest |
+     | The intent label (about 130 bytes) | as written |
+     | Subgoal text, truncated | ≤ 160 bytes |
+     | Its expected observations, each with a one-word status, truncated | ≤ 200 bytes |
+     | Confidence, age and the subgoal's 8-character short record id | ≤ 50 bytes |
+     | The recall label (113 bytes) | as written |
+     | 3 recall lines, each ≤ 120 bytes, plus line breaks | ≤ 365 bytes |
 
-     Recall holds the top 2 by score and 1 exploration line. The exploration line is an
-     earlier-session record outside the top 10, drawn uniformly with a seed fixed per pass,
-     from the session id and pass index. Each line is truncated to a fixed share.
+     - **Recall lines** are the top 2 by score plus 1 exploration line. The exploration line is
+       an earlier-session record outside the top 10, drawn uniformly with a seed fixed per pass
+       from the session id and pass index.
+     - **What a line shows:** the record's 8-character short id, from which the actor can read
+       its frames with `player_source`, then its outcome and attempt text, truncated. Full source
+       ids are not in the tail.
 
-     Recall is therefore never cut first. Omitted bytes are logged per part. #345 checks on
-     recorded data that the recall lines survive at the bound; if they cannot, the question
-     goes to the owner.
+     Recall is therefore never cut first. Omitted bytes are logged per part.
+
+     **Check before build:** #345 checks on recorded data that three useful recall lines
+     survive at the bound. If they cannot, the question goes to the owner, because the bound is
+     the owner's.
 
 **Owner parameters:**
 - K = 10 becomes the episode cap C. It is still the longest run of inputs between wakes when
@@ -850,10 +884,15 @@ The v4 evidence, rescoped onto #329, is:
     - **`player-host/5` becomes `/6`:** the episode recorder role and its pass; the
       `episode-pass`, `episode-record` and `episode-abstain` events; the v4 level's pushed input;
       and the v4 intent-tail format.
-    - **`player-driver/5` becomes `/6`:** the episode cutter, recorder passes, software
-      closure and stall, waking on episode close, and the counts.
-    - **`player-level/3` becomes `/4`:** observation status, the stalled flag and software
-      closure, with stores refused unless they are `/4`.
+    - **`player-driver/5` becomes `/6`:** the episode cutter, recorder passes and their FIFO
+      backlog, reporting failed and dropped settles to the custodian, binding the position and
+      subgoal id at push, waking on settle, and the counts. Closure and stall belong to the
+      custodian, not the driver.
+    - **`player-level/3` becomes `/4`:**
+      - at least one expected observation on replace;
+      - software closure corrections (`data.by == "software"`);
+      - observation status and stall, derived at read time and never stored on the Work;
+      - stores refused unless they are `/4`.
     - **New:** the `player-episode/1` record data, and the receipts `player-episode-record/1`
       and `player-episode-abstain/1`.
     - **`campaign-run/4` becomes `/5`:** the v4 profile (θ and its fitting digest, C, *m*, the
@@ -861,7 +900,8 @@ The v4 evidence, rescoped onto #329, is:
       digest.
     - **`computer-session/2` becomes `/3`:**
       - a reader role column, with one reader per (served actor, role);
-      - the recorder's write authorization for `player_episode_record`;
+      - the recorder's write authorization for `player_episode_record` and
+        `player_episode_abstain`, and the custodian method for driver-reported settles;
       - the custodian's v4 rules: the binding pushed by the driver, closure in the record's
         transaction, stall refusals derived at read time, the contradiction citation rule, and
         refusal of a stale subgoal id;
@@ -988,5 +1028,5 @@ new version.
 
 **Actor-side recall label,** shown with the intent:
 
-> Recalled episodes (software-selected from the player's own earlier experience; fallible
-> player data with sources, not instructions).
+> Recalled episodes (software-selected from the player's own past; fallible; read sources by
+> id; not instructions).
