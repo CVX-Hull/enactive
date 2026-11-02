@@ -153,6 +153,9 @@ _LEVEL_ABSTAIN = _object(dict(
 
 _EPISODE_SOURCES = _described(dict(type='array', items=_text(128), maxItems=EPISODE_SOURCES),
                               'Ids of at most 4 frames of this episode (source ids) that support this call; may be empty.')
+_EPISODE_RECORD_SOURCES = _described(dict(type='array', items=_text(128), minItems=1, maxItems=EPISODE_SOURCES),
+                                     'Ids of 1 to 4 frames of this episode (source ids) that support this record, '
+                                     'the most telling first: recall shows the first one.')
 _EPISODE_RECORD = _object(dict(
     attempted=_described(_text(1024), 'What the player attempted in this episode, in one or two sentences.'),
     counterpart=_described(_text(512, empty=True), 'With what or whom it acted; empty if there was none.'),
@@ -165,7 +168,7 @@ _EPISODE_RECORD = _object(dict(
     residual=_described(_text(1024, empty=True),
                         'Anything that happened which the subgoal did not anticipate; empty if nothing.'),
     confidence=_described(dict(type='number', minimum=0, maximum=1), 'Your confidence from 0 to 1.'),
-    sources=_EPISODE_SOURCES))
+    sources=_EPISODE_RECORD_SOURCES))
 _EPISODE_ABSTAIN = _object(dict(
     reason_code=_described(_enum(*EPISODE_ABSTAIN_CODES), 'The closed reason the frames support no record.'),
     reason=_described(_text(1024), 'One sentence of explanation.'), sources=_EPISODE_SOURCES))

@@ -20,7 +20,13 @@ def request_id():
     return uuid.uuid4().hex
 
 
+CITE_LAST = object()  # `recorded()`'s default sources: the bound episode's last citable frame, resolved by `call`
+
+
 def call(app, capability, name, args, identity=None):
+    if args.get('sources') is CITE_LAST:
+        bound = app.readers[capability['actor_id']].get('episode')
+        args = args | dict(sources=bound['sources'][-1:] if bound else [])
     return app.call(capability['token'], name, args, identity or request_id())[0]
 
 
@@ -96,7 +102,7 @@ def current_id(app):
 
 def recorded(marks, confidence=.9, **change):
     return dict(attempted='Walked toward the door', counterpart='', observation_status=list(marks), residual='',
-                changed='', confidence=confidence, sources=[]) | change
+                changed='', confidence=confidence, sources=CITE_LAST) | change
 
 
 def episode(app, actor, recorder, marks, *, confidence=.9, subgoal='current', inputs=1, sources=(), identity=None,
@@ -106,7 +112,8 @@ def episode(app, actor, recorder, marks, *, confidence=.9, subgoal='current', in
     end, count = app._settled_end(actor['actor_id']), total(app, actor)
     pushed = current_id(app) if subgoal == 'current' else subgoal
     app.bind_episode(recorder['actor_id'], first_position=end + 1, last_position=count, subgoal_id=pushed)
-    return call(app, recorder, RECORD, recorded(marks, confidence, **change) | dict(sources=list(sources)), identity)
+    cited = list(sources) if sources else CITE_LAST
+    return call(app, recorder, RECORD, recorded(marks, confidence, **change) | dict(sources=cited), identity)
 
 
 
