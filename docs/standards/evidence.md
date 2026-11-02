@@ -81,9 +81,9 @@ of a single development run stays governed by evidence cadence.
 - **Generality needs held-out support.** A gain that appears only on the data that
   shaped it is not evidence, nor is a mechanism fitted to one example.
 
-The pre-registration of a claim-deciding experiment also records its evaluation split,
-its baselines and ablations, and its budget-matching plan. C-REVIEW checks the
-pre-registration before spending, and the paragraphs and list above at the reporting
-checkpoint.
+The pre-registration of a claim-deciding experiment also records its evaluation
+split, its baselines and ablations, and its budget-matching plan. C-REVIEW checks
+the pre-registration before spending, and the paragraphs and list above at the
+reporting checkpoint.
 
 [Standards index](../engineering.md).
