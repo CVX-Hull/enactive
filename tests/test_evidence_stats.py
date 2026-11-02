@@ -4,8 +4,8 @@ import math
 
 import pytest
 
-from tools.evidence_stats import (beyond, cluster_bootstrap, cohen_kappa, gwet_ac1, percentile_rank, positive_agreement, quantile,
-                                  quantile_linear, ratio, summary)
+from tools.evidence_stats import (beyond, cluster_bootstrap, cohen_kappa, gwet_ac1, holm, one_sided_t, percentile_rank,
+                                  positive_agreement, quantile, quantile_linear, ratio, summary, t_quantile, t_sf, wilson_upper)
 
 
 def test_nearest_rank_quantile_is_the_value_at_floor_q_n():
@@ -115,3 +115,73 @@ def test_raters_must_label_the_same_items_from_the_closed_list():
     with pytest.raises(ValueError, match='same items'):
         positive_agreement(['x'], [], 'x')
     assert not math.isnan(cohen_kappa(['x', 'y'], ['y', 'x'], ('x', 'y')))
+
+
+# Student-t reference values: the published one-sided 95% critical values (df 1, 2, 5, 6, 14, 30) and the closed forms of
+# the t distribution at 1 and 2 degrees of freedom, which need no table.
+T95 = {1: 6.313752, 2: 2.919986, 5: 2.015048, 6: 1.943180, 14: 1.761310, 30: 1.697261}
+
+
+def test_t_survival_matches_closed_forms_and_the_normal_limit():
+    assert t_sf(0, 7) == pytest.approx(.5)
+    assert t_sf(1, 1) == pytest.approx(.25)                                    # df 1: .5 - atan(t) / pi
+    assert t_sf(1, 2) == pytest.approx(.5 - 1 / (2 * math.sqrt(3)))            # df 2: .5 - t / (2 sqrt(2 + t^2))
+    assert t_sf(-1, 2) == pytest.approx(.5 + 1 / (2 * math.sqrt(3)))
+    assert t_sf(1.6448536, 10 ** 6) == pytest.approx(.05, abs=1e-5)
+    assert t_sf(math.inf, 3) == 0.0 and t_sf(-math.inf, 3) == 1.0
+    with pytest.raises(ValueError):
+        t_sf(1, 0)
+
+
+@pytest.mark.parametrize('df, critical', sorted(T95.items()))
+def test_t_quantile_reproduces_the_published_critical_values(df, critical):
+    assert t_quantile(.95, df) == pytest.approx(critical, abs=2e-6)
+    assert t_sf(critical, df) == pytest.approx(.05, abs=1e-6)
+    assert t_quantile(.05, df) == pytest.approx(-critical, abs=2e-6)
+
+
+def test_one_sided_t_bounds_and_p_on_hand_computed_values():
+    # 1..7: mean 4, sample sd sqrt(28 / 6), se = sd / sqrt(7) = sqrt(4 / 6); t = 4 / se on 6 degrees of freedom.
+    result = one_sided_t([1, 2, 3, 4, 5, 6, 7])
+    se = math.sqrt(4 / 6)
+    assert (result['n'], result['df'], result['mean']) == (7, 6, 4)
+    assert result['sd'] == pytest.approx(math.sqrt(28 / 6)) and result['se'] == pytest.approx(se)
+    assert result['t'] == pytest.approx(4 / se)
+    assert result['lower'] == pytest.approx(4 - 1.943180 * se, abs=2e-6)
+    assert result['upper'] == pytest.approx(4 + 1.943180 * se, abs=2e-6)
+    assert result['p'] == pytest.approx(t_sf(4 / se, 6)) and result['p'] < .005
+    # A symmetric sample about zero: p is one half and the bounds are symmetric.
+    zero = one_sided_t([-2, -1, 0, 1, 2])
+    assert zero['mean'] == 0 and zero['p'] == pytest.approx(.5) and zero['lower'] == pytest.approx(-zero['upper'])
+    assert zero['upper'] == pytest.approx(2.131847 * math.sqrt(2.5) / math.sqrt(5), abs=2e-6)      # df 4 critical value
+    # A stricter level widens the bound.
+    assert one_sided_t([1, 2, 3], level=.99)['lower'] < one_sided_t([1, 2, 3])['lower']
+
+
+def test_one_sided_t_edge_cases_never_divide_by_zero():
+    assert one_sided_t([]) is None and one_sided_t([3.0]) is None
+    positive, negative, flat = one_sided_t([.5, .5, .5]), one_sided_t([-.5, -.5]), one_sided_t([0, 0, 0])
+    assert (positive['p'], positive['lower'], positive['upper'], positive['t']) == (0.0, .5, .5, math.inf)
+    assert (negative['p'], negative['upper']) == (1.0, -.5)
+    assert (flat['p'], flat['t']) == (1.0, 0.0)
+    with pytest.raises(ValueError):
+        one_sided_t([1, 2], level=.4)
+
+
+def test_wilson_upper_matches_hand_computed_bounds():
+    z2 = 1.959963984540054 ** 2
+    assert wilson_upper(0, 200) == pytest.approx(z2 / (200 + z2))              # k = 0: z^2 / (n + z^2)
+    assert wilson_upper(10, 200) == pytest.approx(.08958, abs=1e-4)
+    assert wilson_upper(200, 200) == pytest.approx(1.0)
+    assert wilson_upper(1, 40) == pytest.approx(0.1286, abs=1e-3)
+    for bad in ((-1, 5), (6, 5), (1, 0), (1.5, 5)):
+        with pytest.raises(ValueError):
+            wilson_upper(*bad)
+
+
+def test_holm_is_a_step_down_in_input_order():
+    assert holm([.01, .04, .03], .05) == [True, False, False]                  # .01 <= .05/3; then .03 > .05/2 stops
+    assert holm([.02, .001, .01], .05) == [True, True, True]                   # .001 <= .05/3, .01 <= .05/2, .02 <= .05
+    assert holm([.04], .05) == [True] and holm([.06], .05) == [False]
+    assert holm([.02, .02, .2], .05) == [False, False, False]                  # smallest .02 > .05/3 stops at once
+    assert holm([], .05) == []
