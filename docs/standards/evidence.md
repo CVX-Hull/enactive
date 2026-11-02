@@ -53,8 +53,9 @@ foundational sources, but not the current sources to rely on; the synthesis
 records each brief's questions and any sources it named.
 
 Claim-deciding experiments on the player (above), and every comparison or
-generalization claim about the player, follow ordinary AI/ML research practice. A functional outcome
-of a single development run stays governed by evidence cadence.
+generalization claim about the player, follow ordinary AI/ML research practice.
+A functional outcome of a single development run stays governed by evidence
+cadence.
 - **Separate development data from evaluation data.** Any data a design, prompt,
   threshold or code change was chosen, tuned or debugged on is development data. A
   comparison or generalization claim rests only on data not used that way: a frozen
