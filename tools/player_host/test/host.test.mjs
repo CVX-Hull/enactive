@@ -983,7 +983,7 @@ test('a recorder pass that ends without a terminal call fails as episode-no-reco
 });
 
 test('the last two requests of a recorder pass offer only the episode tools and say so; a non-terminal call there is refused', async t=>{
-  const {result,events,payloads,calls}=await recorderScenario(t,[reply(null,[readCall]),reply(null,[readCall]),reply(null,[readCall],true,undefined,'late'),reply(null,[recordCall])],4);
+  const {result,events,payloads,calls}=await recorderScenario(t,[reply(null,[readCall]),reply(null,[readCall]),reply(null,[readCall],true,undefined,'late'),reply(null,[recordCall])],{max_requests:4});
   assert.equal(result.ok,true);assert.equal(payloads.length,4);
   assert.deepEqual(payloads.map(toolNames),[recorderTools,recorderTools,episodeTools,episodeTools]);
   for (const payload of payloads) assert.equal(payload.tool_choice,'required');
@@ -1004,12 +1004,12 @@ test('the last two requests of a recorder pass offer only the episode tools and 
 });
 
 test('a recorder terminal call refused on the last allowed request settles as episode-final-refusal', async t=>{
-  const {result,events,payloads}=await recorderScenario(t,[reply(null,[readCall]),reply(null,[blankEpisodeAbstain]),reply(null,[rejectedRecord])],3);
+  const {result,events,payloads}=await recorderScenario(t,[reply(null,[readCall]),reply(null,[blankEpisodeAbstain]),reply(null,[rejectedRecord])],{max_requests:3});
   assert.equal(payloads.length,3);assert.equal(result.ok,false);assert.equal(result.reason,'episode-final-refusal');
   assert.equal(events.find(e=>e.type==='abort').reason,'episode-final-refusal');
-  const repaired=await recorderScenario(t,[reply(null,[readCall]),reply(null,[blankEpisodeAbstain]),reply(null,[episodeAbstain])],3);
+  const repaired=await recorderScenario(t,[reply(null,[readCall]),reply(null,[blankEpisodeAbstain]),reply(null,[episodeAbstain])],{max_requests:3});
   assert.equal(repaired.result.ok,true);
-  const limited=await recorderScenario(t,[reply(null,[readCall]),reply(null,[readCall]),reply(null,[readCall])],3);
+  const limited=await recorderScenario(t,[reply(null,[readCall]),reply(null,[readCall]),reply(null,[readCall])],{max_requests:3});
   assert.equal(limited.result.reason,'request-limit');
 });
 
@@ -1052,7 +1052,8 @@ test('a malformed recorder input is refused before any start event, connection o
     const result=await runHost({configuration:{...recorderRoute},mcpConfig:{command:'/nonexistent/never-started',args:[],cwd:tmpdir(),enabled:true,enabled_tools:recorderTools,startup_timeout_sec:1,tool_timeout_sec:1},
       context:'Frozen guide',prompt,model:model.id,effort:'off',timeoutSeconds:5,env:{OFFLINE_TEST_KEY:'fixture-key'},fetch:async()=>{throw new Error('no request');},onEvent:e=>events.push(e)});
     assert.equal(result.ok,false,prompt.slice(0,60));assert.equal(result.reason,'invalid-pass-input',prompt.slice(0,60));
-    assert.deepEqual(events.map(e=>e.type),['settled']);
+    assert.deepEqual(events.map(e=>e.type),['abort','settled']);
+    assert.equal(events.at(-1).reason,'invalid-pass-input');
   }
   // Seven frames (a baseline and six more) is the most the policy allows.
   const seven=[{source_id:'b',role:'baseline'},...Array.from({length:5},(_, i)=>({source_id:`e${i}`,role:'in-episode'})),{source_id:'l',role:'last'}];

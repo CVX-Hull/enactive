@@ -21,7 +21,7 @@ class HostAnalysisTests(unittest.TestCase):
 
     def event(self, kind, at, **fields):
         if kind == "host-start":
-            fields = {"schema": "player-host/5", "telemetry_version": 2, **fields}
+            fields = {"schema": "player-host/6", "telemetry_version": 2, **fields}
         return dict(type=kind, monotonic_ms=at, **fields)
 
     def test_retries_censoring_and_reasoning_are_not_success_or_extra_tokens(self):
@@ -131,12 +131,12 @@ class HostAnalysisTests(unittest.TestCase):
 
     def test_only_exact_current_host_version_is_interpreted(self):
         for fields in ({}, {"schema": "pi-player-host/5", "telemetry_version": 2},
-                       {"schema": "player-host/4", "telemetry_version": 2},
+                       {"schema": "player-host/4", "telemetry_version": 2}, {"schema": "player-host/5", "telemetry_version": 2},
                        {"schema": "player-host/1", "telemetry_version": 2},
                        {"schema": "player-host/2", "telemetry_version": 2},
                        {"schema": "player-host/3", "telemetry_version": 2},
-                       {"schema": "player-host/5", "telemetry_version": 1},
-                       {"schema": "player-host/5", "telemetry_version": True}):
+                       {"schema": "player-host/6", "telemetry_version": 1},
+                       {"schema": "player-host/6", "telemetry_version": True}):
             row = analyze_trace(self.trace([dict(type="host-start", monotonic_ms=0, **fields)]))
             self.assertEqual(row["coverage"], "unsupported_version")
             self.assertNotIn("requests", row)
@@ -183,20 +183,30 @@ class HostAnalysisTests(unittest.TestCase):
         self.assertEqual(row["timing_ms"]["first_content"]["n"], 0)
         self.assertEqual(row["completed_response_ms"]["p50"], 40)
 
+    def test_level_and_recorder_pass_traces_find_their_campaign_root(self):
+        (self.root / "manifest.json").write_text(json.dumps(dict(schema="campaign-run/5", source_commit="abc")))
+        for role in ("level", "recorder"):
+            directory = self.root / "actors/001" / role / "001"
+            directory.mkdir(parents=True)
+            path = directory / "host.jsonl"
+            path.write_text(json.dumps(self.event("host-start", 0)) + "\n")
+            row = analyze_trace(path)["campaign_evidence"]
+            self.assertEqual(row["manifest.json"]["source_commit"], "abc", role)
+
     def test_current_campaign_disposition_is_not_goal_success(self):
         actor = self.root / "actors/001"
         actor.mkdir(parents=True)
         path = actor / "host.jsonl"
         path.write_text(json.dumps(self.event("host-start", 0)) + "\n")
-        (self.root / "manifest.json").write_text(json.dumps(dict(schema="campaign-run/4", source_commit="abc")))
+        (self.root / "manifest.json").write_text(json.dumps(dict(schema="campaign-run/5", source_commit="abc")))
         receipt = dict(schema="campaign-receipt/2", outcome="host_completed_unassessed",
-            normal_save_claimed_by_harness=False, driver=dict(schema="player-driver/5", attempts_charged=1))
+            normal_save_claimed_by_harness=False, driver=dict(schema="player-driver/6", attempts_charged=1))
         (self.root / "receipt.json").write_text(json.dumps(receipt))
         row = analyze_trace(path)["campaign_evidence"]
         self.assertEqual(row["receipt.json"]["outcome"], "host_completed_unassessed")
         self.assertFalse(row["receipt.json"]["normal_save_claimed_by_harness"])
         self.assertEqual(row["receipt.json"]["driver"]["attempts_charged"], 1)
-        for old in ("player-driver/4", "player-driver/1"):
+        for old in ("player-driver/5", "player-driver/4", "player-driver/1"):
             receipt["driver"]["schema"] = old
             (self.root / "receipt.json").write_text(json.dumps(receipt))
             row = analyze_trace(path)["campaign_evidence"]

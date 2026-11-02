@@ -1,4 +1,4 @@
-// Zero-token contract test of the production level-role request (#341).
+// Zero-token contract test of the production level-role and recorder-role requests (#341, #351).
 //
 // It drives the real level host (runHost) against the real MCP adapter's tool list for the reader profile that
 // the campaign freezes, with an intercepting fetch instead of a provider, and inspects the serialized request
@@ -10,7 +10,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { runHost, LEVEL_TERMINAL_TOOLS, LEVEL_RESERVED_REQUESTS } from '../host.mjs';
+import { runHost, LEVEL_TERMINAL_TOOLS, EPISODE_TERMINAL_TOOLS, LEVEL_RESERVED_REQUESTS } from '../host.mjs';
 
 const python = process.env.ENACTIVE_TEST_PYTHON;
 const root = process.env.ENACTIVE_TEST_PRODUCTION_ROOT ?? fileURLToPath(new URL('../../../', import.meta.url));
@@ -29,9 +29,17 @@ const model = {id:'google/gemini-3.8-flash', name:'Gemini 3.8 Flash via google-v
     supportsStrictMode:false, maxTokensField:'max_tokens', thinkingFormat:'openrouter',
     openRouterRouting:{only:['google-vertex/global'], order:['google-vertex/global'], allow_fallbacks:false, require_parameters:true}}};
 const PASS_REQUESTS = 6;
-const levelRoute = {schema:'player-host/6', role:'level', intent_tail_bytes:null, service_tier:'default', model,
+const passRoute = role => ({schema:'player-host/6', role, intent_tail_bytes:null, service_tier:'default', model,
   api_key_env:'CONTRACT_TEST_KEY', max_requests:PASS_REQUESTS, max_context_images:30, context_image_block:1,
-  request_timeout_seconds:30};
+  request_timeout_seconds:30});
+// The two pass roles. `final` is the terminal call each pass ends with: the flat-profile custodian behind this MCP double
+// refuses it, so a pass uses its whole allowance. `ordinary` is the non-terminal call of the earlier requests.
+const ROLES = {
+  level: {profile:'level', terminal:LEVEL_TERMINAL_TOOLS, prompt:'Level pass.', ordinary:['player_source', {source_id:'frame-1'}],
+    final:['player_level_keep', {reason:'Still valid', sources:[]}], refusal:'level-final-refusal'},
+  recorder: {profile:'recorder', terminal:EPISODE_TERMINAL_TOOLS, ordinary:['player_source', {source_id:'frame-1'}],
+    prompt:JSON.stringify({schema:'player-pass-input/1', text:'Episode pass.', frames:[]}),
+    final:['player_episode_abstain', {reason_code:'other', reason:'Nothing to record', sources:[]}], refusal:'episode-final-refusal'}};
 
 const reply = (name, args) => {
   const chunks = [{id:'r', model:'fixture-backend', choices:[{index:0, delta:{role:'assistant',
@@ -49,45 +57,46 @@ function* nodes(schema, path = []) {
   if (schema.items) yield* nodes(schema.items, [...path, '[]']);
 }
 
-async function reader() {
+async function reader(profileName) {
   assert.ok(python, 'Set ENACTIVE_TEST_PYTHON to the project Python');
   const {stdout} = await promisify(execFile)(python, ['-c',
     'import json; from tools.configure_player_tools import configuration; from harness.player_tools import PROFILES; '
-    + 'print(json.dumps(dict(enabled=configuration("x", profile="reader")["enabled_tools"], profile=list(PROFILES["reader"]))))'],
+    + 'print(json.dumps(dict(enabled=configuration("x", profile="' + profileName + '")["enabled_tools"], profile=list(PROFILES["' + profileName + '"]))))'],
     {cwd: root});
   return JSON.parse(stdout);
 }
 
-async function productionLevelRequests() {
-  const {enabled, profile} = await reader();
-  assert.deepEqual(enabled, profile, 'the campaign freezes exactly the reader profile');
+async function productionPassRequests(role) {
+  const spec = ROLES[role];
+  const {enabled, profile} = await reader(spec.profile);
+  assert.deepEqual(enabled, profile, `the campaign freezes exactly the ${role} profile`);
   const bodies = [], events = [];
-  // Requests 1-4 read the log; 5 and 6 are the reserved terminal-only requests, whose calls the flat-profile
+  // Requests 1-4 are ordinary; 5 and 6 are the reserved terminal-only requests, whose calls the flat-profile
   // custodian behind this MCP double refuses, so the pass uses its whole allowance.
-  const sequence = [...Array(PASS_REQUESTS - LEVEL_RESERVED_REQUESTS).fill(['player_log_read', {after:0, limit:5}]),
-    ['player_level_keep', {reason:'Still valid', sources:[]}], ['player_level_keep', {reason:'Still valid', sources:[]}]];
-  const result = await runHost({configuration:levelRoute,
+  const sequence = [...Array(PASS_REQUESTS - LEVEL_RESERVED_REQUESTS).fill(spec.ordinary), spec.final, spec.final];
+  const result = await runHost({configuration:passRoute(role),
     mcpConfig:{command:resolve(python), args:[join(root, 'tests/player_service_fixture.py'), '--stdio'], cwd:root, enabled:true,
       enabled_tools:enabled, startup_timeout_sec:10, tool_timeout_sec:5},
-    context:'Frozen current player guide', prompt:'Level pass.', model:model.id, effort:'medium', timeoutSeconds:60,
+    context:'Frozen current player guide', prompt:spec.prompt, model:model.id, effort:'medium', timeoutSeconds:60,
     env:{CONTRACT_TEST_KEY:'contract-key'},
     fetch:async (_url, init) => { bodies.push(init.body); return reply(...sequence[bodies.length - 1]); },
     onEvent:event => events.push(event)});
   return {result, bodies, payloads:bodies.map(body => JSON.parse(body)), events, enabled};
 }
 
-test('the production level request is portable, forces a tool call and reserves the last two requests', {timeout:90_000}, async () => {
-  const {result, bodies, payloads, events, enabled} = await productionLevelRequests();
+for (const role of Object.keys(ROLES)) test(`the production ${role} request is portable, forces a tool call and reserves the last two requests`, {timeout:90_000}, async () => {
+  const {terminal: TERMINAL_TOOLS, refusal} = ROLES[role];
+  const {result, bodies, payloads, events, enabled} = await productionPassRequests(role);
   assert.equal(payloads.length, PASS_REQUESTS, 'every allowed request is sent');
   // A terminal call refused on the last allowed request is its own settled reason, never request-limit.
-  assert.equal(result.reason, 'level-final-refusal');
-  assert.equal(events.find(event => event.type === 'abort').reason, 'level-final-refusal');
+  assert.equal(result.reason, refusal);
+  assert.equal(events.find(event => event.type === 'abort').reason, refusal);
 
   for (const [index, payload] of payloads.entries()) {
     assert.equal(payload.tool_choice, 'required', `request ${index + 1} forces a tool call`);
     const offered = payload.tools.map(tool => tool.function.name);
     if (index < PASS_REQUESTS - LEVEL_RESERVED_REQUESTS) assert.deepEqual(offered, enabled, `request ${index + 1} offers the reader profile`);
-    else assert.deepEqual(offered, LEVEL_TERMINAL_TOOLS, `request ${index + 1} offers only the four terminal tools`);
+    else assert.deepEqual(offered, TERMINAL_TOOLS, `request ${index + 1} offers only the terminal tools`);
   }
 
   // The serialized tools, as the provider receives them.
@@ -110,7 +119,7 @@ test('the production level request is portable, forces a tool call and reserves 
     }
   }
 
-  for (const name of LEVEL_TERMINAL_TOOLS) {
+  for (const name of TERMINAL_TOOLS) {
     const {parameters} = serialized.find(tool => tool.function.name === name).function;
     const properties = Object.keys(parameters.properties);
     assert.ok(properties.length > 0, name);
@@ -121,6 +130,14 @@ test('the production level request is portable, forces a tool call and reserves 
 
   // The closed choices a model must be able to see are visible on the wire as plain string enums.
   const params = name => serialized.find(tool => tool.function.name === name).function.parameters.properties;
+  if (role === 'recorder') {
+    assert.deepEqual(params('player_episode_record').observation_status.items.enum, ['seen', 'not_yet', 'contradicted']);
+    assert.equal(params('player_episode_record').sources.maxItems, 4);
+    assert.deepEqual(params('player_episode_abstain').reason_code.enum, ['unreadable_frames', 'no_player_action', 'other']);
+    assert.ok(!wire.includes('player_level_') && !wire.includes('player_log_read'));
+    return;
+  }
+  assert.ok(!wire.includes('player_episode_') && !wire.includes('player_log_read'));
   assert.deepEqual(params('player_level_replace').previous_outcome.enum, ['none', 'achieved', 'failed', 'abandoned', 'revised']);
   assert.deepEqual(params('player_level_replace').status.enum, ['open', 'blocked']);
   assert.deepEqual(params('player_level_close').outcome.enum, ['achieved', 'failed', 'abandoned']);
@@ -129,8 +146,8 @@ test('the production level request is portable, forces a tool call and reserves 
   assert.ok(!wire.includes('player_level_commit'));
 });
 
-test('the reserved requests also tell the model that only the pass-ending tools are offered', {timeout:90_000}, async () => {
-  const {payloads} = await productionLevelRequests();
+for (const role of Object.keys(ROLES)) test(`the ${role} reserved requests also tell the model that only the pass-ending tools are offered`, {timeout:90_000}, async () => {
+  const {payloads} = await productionPassRequests(role);
   const status = payload => JSON.stringify(payload.messages.at(-1));
   for (const [index, payload] of payloads.entries()) {
     const reserved = index >= PASS_REQUESTS - LEVEL_RESERVED_REQUESTS;

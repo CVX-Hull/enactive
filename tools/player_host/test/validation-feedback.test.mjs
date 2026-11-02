@@ -101,3 +101,28 @@ test('a refusal with no recoverable field keeps its original text',async()=>{
   const original=[assistant(valid),message];
   assert.equal(createValidationFeedback([tool],()=>assert.fail(),covered)(original),original);
 });
+
+// The recorder's flat schema: an array of enum items, an optional-length string, a bounded number and a 4-item source list.
+const episodeSchema = {type:'object', additionalProperties:false,
+  required:['attempted', 'observation_status', 'changed', 'confidence', 'sources'], properties:{
+    attempted:{type:'string', minLength:1, maxLength:1024},
+    observation_status:{type:'array', items:{type:'string', enum:['seen', 'not_yet', 'contradicted']}, maxItems:8},
+    changed:{type:'string', minLength:0, maxLength:1024},
+    confidence:{type:'number', minimum:0, maximum:1},
+    sources:{type:'array', items:{type:'string', minLength:1, maxLength:128}, maxItems:4}}};
+
+test('a recorder refusal names the failing array item, the enum, the bound and the note, and ends with the fix line', async()=>{
+  const bad=call('bad', {attempted:'a', observation_status:['seen', 'maybe'], changed:'', confidence:2, sources:['1', '2', '3', '4', '5']});
+  const {tool,message}=await refusal(bad,episodeSchema);
+  const project=createValidationFeedback([tool],()=>{},{...covered,notes:{level_tool:'Note: empty observation_status is valid only without a subgoal.'}});
+  const text=project([assistant(bad),message])[1].content[0].text;
+  assert.ok(text.includes('must be one of "seen", "not_yet", "contradicted"; received "maybe"'),text);
+  assert.match(text,/- confidence: .*maximum 1\); received 2/);
+  assert.match(text,/- sources: .*maxItems 4\); received \["1","2","3","4","5"\]/);
+  assert.ok(text.includes('Valid example call: level_tool {"attempted":"<attempted>","observation_status":[],"changed":"","confidence":0,"sources":[]}\nNote: empty observation_status'),text);
+  assert.ok(text.endsWith(`\n${FIX_LINE}`));
+  const sparse=call('sparse', {attempted:'a'});
+  const gap=await refusal(sparse,episodeSchema);
+  const gaps=createValidationFeedback([gap.tool],()=>{},covered)([assistant(sparse),gap.message])[1].content[0].text;
+  for (const name of ['observation_status', 'changed', 'confidence', 'sources']) assert.ok(gaps.includes(`- ${name}: required property is missing`),gaps);
+});
