@@ -802,6 +802,65 @@ def test_the_recorder_input_has_a_baseline_and_at_most_six_own_frames_the_last_a
     system.finish()
 
 
+PARSE_PASS_INPUT='''
+import {parsePassInput} from %s;
+import {readFileSync} from 'node:fs';
+try { parsePassInput(readFileSync(0, 'utf8')); process.stdout.write('accepted'); }
+catch (error) { process.stdout.write('refused: ' + error.message); }
+'''
+
+
+def host_verdict(document):
+    """What the real recorder host's `parsePassInput` says of a pushed document: `accepted` or `refused: <why>`."""
+    import shutil
+    import subprocess
+    node=shutil.which('node')
+    if node is None:
+        pytest.skip('Node.js is required for the recorder host')
+    code=PARSE_PASS_INPUT%json.dumps((Path(__file__).resolve().parents[1]/'tools/player_host/host.mjs').as_uri())
+    done=subprocess.run([node,'--input-type=module','-e',code],input=json.dumps(document),capture_output=True,text=True)
+    assert done.returncode==0,done.stderr[-400:]
+    return done.stdout
+
+
+@pytest.mark.parametrize('repeat',['baseline','in-episode'])
+def test_a_repeated_last_source_id_stays_the_last_frame_and_the_host_accepts_the_input(rig,repeat):
+    import dataclasses
+    from tools import campaign_player as player
+    system=rig.build()
+    # Episode 1 (position 1) supplies the baseline; episode 2 is three inputs with three distinct captures, each a small
+    # step from the last so that only the cap closes it.
+    system.cutter.cap=1
+    rig.act(0,1)
+    system._ingest(final=False)
+    system.cutter.cap=3
+    for grey in (60,62,64):
+        rig.act(grey,1)
+    system._ingest(final=False)
+    first,second=list(system.cuts)
+    baseline=first.frames[-1][1]
+    (a,b,c)=second.frames
+    # The last capture is a repeat of an earlier source id (the capture an unchanged screen would reuse).
+    repeated=a[1] if repeat=='in-episode' else baseline
+    episode=dataclasses.replace(second,frames=(a,b,(c[0],repeated)))
+    pushed=player.episode_push(rig.app,system.recorder_id,episode)
+    roles=[(f['source_id'],f['frame_role']) for f in pushed['frames']]
+    assert roles[-1]==(repeated,'last') and [r for _,r in roles].count('last')==1
+    assert len({s for s,_ in roles})==len(roles)
+    # The earlier entry for the repeated id is gone: no baseline when the repeat was the baseline, no in-episode copy otherwise.
+    assert [r for s,r in roles if s==repeated]==['last']
+    assert (roles[0][1]=='baseline')==(repeat!='baseline')
+    document=player.recorder_document('Episode role',dict(reason='episode',pass_index=1,allowance_requests=2,allowance_seconds=60,waiting=0),pushed)
+    assert host_verdict(document)=='accepted'
+    # Without the repeat the same episode is accepted too, and a list with no `last` is what the host refuses.
+    plain=player.recorder_document('Episode role',dict(reason='episode',pass_index=1,allowance_requests=2,allowance_seconds=60,waiting=0),
+                                   player.episode_push(rig.app,system.recorder_id,second))
+    assert host_verdict(plain)=='accepted'
+    headless=dict(document,frames=[f for f in document['frames'] if f['role']!='last'])
+    assert host_verdict(headless).startswith('refused')
+    system.finish()
+
+
 def test_a_pass_binds_the_subgoal_current_when_its_episode_opened(rig):
     system=rig.build()
     rig.act(100,1)

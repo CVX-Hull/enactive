@@ -25,8 +25,13 @@ Stages (all inputs are recorded; no game, no live session):
    `context-image-projection` and `tool-result` events. A run whose trace lacks those events is excluded and reported.
 
 Statistics are run-cluster percentile bootstraps over the recorded run. Spend: `--max-usd` is required and is a hard cap
-on the charged cost, enforced up front across both stages as `tools/level_probe.py` does; the credential is read only from
-the Keychain and passed only in each host's environment. Nothing is written outside `.runtime/probes`.
+on the charged cost, enforced up front across both stages as `tools/level_probe.py` does: a pass is given its whole profile
+allowance or is skipped, and a skip makes the run incomplete. The credential is read only from the Keychain, only after
+every validation and every input has passed, and passed only in each host's environment. A pass that raises, or Ctrl-C,
+cancels the queued passes and still writes the report (`incomplete`) from the passes finished so far, with every pass's
+host trace kept. The report records the digests of the protocol, its amendment, the thresholds, each run's recorded level
+traces and each source capture read (checked against the recording's stored sha256; a mismatch refuses the run).
+Nothing is written outside `.runtime/probes`.
 """
 from __future__ import annotations
 
@@ -46,6 +51,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 from unittest import mock
@@ -328,10 +334,34 @@ def load_run(root: Path, name: str, session: str) -> dict:
                 brief=(directory / 'prompt.txt').read_text(), context=(directory / 'context.txt').read_text())
 
 
+def verify_sources(run: dict) -> dict:
+    """Read every result-capture PNG of a run and check it against the sha256 in the database metadata.
+
+    The captures are read again by the thumbnails and the replay stores; this is the check that what they read is what
+    the recording stored, and its digest goes in the report. A missing file, an unknown sha or a mismatch refuses the run.
+    Returns `dict(count, digest)`, the digest being that of the sorted `source_id sha256` lines.
+    """
+    lines = []
+    for source in sorted({s for s in run['sources'] if s}):
+        expected = json.loads(run['frames'][source]).get('sha256') if source in run['frames'] else None
+        if not isinstance(expected, str):
+            raise ValueError(f'{run["name"]}: source {source} has no sha256 in the database metadata')
+        actual = hashlib.sha256((run['directory'] / 'sources' / f'{source}.png').read_bytes()).hexdigest()
+        if actual != expected:
+            raise ValueError(f'{run["name"]}: source {source} differs from its recorded sha256')
+        lines.append(f'{source} {actual}')
+    return dict(count=len(lines), digest=hashlib.sha256('\n'.join(lines).encode()).hexdigest())
+
+
+def level_trace_paths(directory: Path) -> list[Path]:
+    """The recorded level-pass host traces of a run, oldest first: the files `level_commits` reads and the report hashes."""
+    return sorted((directory / 'actors/001/level').glob('[0-9][0-9][0-9]/host.jsonl'))
+
+
 def level_commits(run: dict) -> list[dict]:
     """The recorded level's subgoal replaces and closes with their wall times, from its pass traces, oldest first."""
     found = []
-    for trace in sorted((run['directory'] / 'actors/001/level').glob('[0-9][0-9][0-9]/host.jsonl')):
+    for trace in level_trace_paths(run['directory']):
         starts = {}
         for line in trace.read_text().splitlines():
             if not line.strip():
@@ -351,6 +381,11 @@ def actor_projection(run: dict) -> dict:
     An image is held at a request when a tool result before it carried it (`image_reference`) and the request's
     `context-image-projection` event did not omit that (tool call, image index). `exclusion` names why a run cannot
     serve the check; `mismatched` counts requests whose derived image counts differ from the event's own counts.
+
+    A request is `consistent` when the derived counts match the event's, the event pins no images (an actor pins none;
+    the recorded traces carry only `protected_images`, the latest tool batch, and an absent `pinned_images` is zero),
+    the omissions lie before the protected batch, and the listed omissions are the oldest images in order. The host lists
+    only the first 16 omissions, so a request with more has `partial_prefix`: only its first 16 omissions were checked.
     """
     images, requests, mismatched, seen_projection = {}, [], 0, False
     for line in (run['directory'] / 'actors/001/host.jsonl').read_text().splitlines():
@@ -371,11 +406,14 @@ def actor_projection(run: dict) -> dict:
             count = event.get('omitted_images', 0)
             listed = [(o.get('tool_call_id'), o.get('image_index')) for o in event.get('omissions', [])]
             held = order[count:]
+            pinned, protected = event.get('pinned_images', 0), event.get('protected_images')
             consistent = (len(order) == event.get('input_images') and len(held) == event.get('retained_images')
-                          and event.get('pinned_images', 0) == 0 and order[:len(listed)] == listed)
+                          and type(pinned) is int and pinned == 0
+                          and (protected is None or (type(protected) is int and 0 <= protected and count <= len(order) - protected))
+                          and order[:len(listed)] == listed)
             mismatched += not consistent
             requests.append(dict(request_id=event.get('request_id'), wall=iso(event['wall_time']),
-                                 held={images[key] for key in held}, consistent=consistent))
+                                 held={images[key] for key in held}, consistent=consistent, partial_prefix=count > len(listed)))
     exclusion = None
     if not seen_projection:
         exclusion = 'the actor trace has no context-image-projection events'
@@ -784,25 +822,32 @@ class Spend:
     """A hard cap on the charged cost across all passes and workers, enforced before a pass launches."""
     def __init__(self, max_usd: float):
         self.max_usd, self.spent, self.reserved, self.dearest, self.skipped = max_usd, 0., 0., 0., 0
+        self.unaccounted = 0.
         self.lock = threading.Lock()
 
     def reserve(self, allowance: int, bound: float) -> tuple[int, float]:
-        """The requests this pass may use, `min(allowance, floor(unreserved remainder / step))`, and its hold on the cap."""
+        """All of a pass's profile allowance, or nothing: `(allowance, allowance * step)` when the unreserved remainder
+        covers every request at `step`, else `(0, 0.)` and the pass is skipped. A truncated allowance is never launched,
+        since a pass given fewer requests than its profile allows is a different pass."""
         with self.lock:
             step = max(bound, self.dearest)
-            affordable = int((self.max_usd - self.spent - self.reserved) // step)
-            if affordable < 1:
+            if allowance < 1 or (self.max_usd - self.spent - self.unaccounted - self.reserved) // step < allowance:
                 self.skipped += 1
                 return 0, 0.
-            used = min(allowance, affordable)
-            self.reserved += used * step
-            return used, used * step
+            self.reserved += allowance * step
+            return allowance, allowance * step
 
     def release(self, hold: float, charged: float, dearest: float) -> None:
         with self.lock:
             self.reserved -= hold
             self.spent += charged
             self.dearest = max(self.dearest, dearest)
+
+    def forfeit(self, hold: float) -> None:
+        """A pass that faulted after launching: its charge is unknown, so its whole hold stays counted against the cap."""
+        with self.lock:
+            self.reserved -= hold
+            self.unaccounted += hold
 
 
 def lane_context(role: str, run: dict) -> str:
@@ -823,6 +868,7 @@ def reader_pass(*, role: str, application, reader: dict, session: str, route: di
     driver\'s own (`level_text` for a level, the closed `player-pass-input/1` document for a recorder).
     """
     kind = 'episode' if role == 'recorder' else 'level'
+    name = 'input.txt' if isinstance(stdin, str) else 'input.json'
     directory.mkdir(parents=True, exist_ok=True)
     server, thread = serve(application, 0)
     events = child = None
@@ -833,7 +879,6 @@ def reader_pass(*, role: str, application, reader: dict, session: str, route: di
         write_new(directory / 'route.json', selected)
         write_new(directory / 'mcp.json', configuration(str(reader_file), profile=role))
         write_new(directory / 'context.txt', context, text=True)
-        name = 'input.txt' if isinstance(stdin, str) else 'input.json'
         write_new(directory / name, stdin, text=isinstance(stdin, str))
         write_new(directory / 'player-final.txt', '', text=True)
         arguments = [*host_argv, 'run', '--config', str(directory / 'route.json'), '--mcp-config', str(directory / 'mcp.json'),
@@ -849,11 +894,14 @@ def reader_pass(*, role: str, application, reader: dict, session: str, route: di
                       charged_usd=record['configured_cost_usd'] + missing * bound, stopped_by_spend_guard=stopped,
                       cleanup_absent=cleanup['process_absent'] and cleanup['group_absent'], allowance=allowance,
                       uncertain=len(events.uncertain) + len(events.episode_uncertain))
-        out.mkdir(parents=True, exist_ok=True)
-        shutil.copy(directory / 'host.jsonl', out / f'{label}.host.jsonl')
-        shutil.copy(directory / name, out / f'{label}.{name}')
         return record
     finally:
+        # The trace is kept for every pass that started a host, a faulted one included: it is the evidence of what ran.
+        with contextlib.suppress(OSError):
+            out.mkdir(parents=True, exist_ok=True)
+            for source, kept in ((directory / 'host.jsonl', f'{label}.host.jsonl'), (directory / name, f'{label}.{name}')):
+                if source.is_file():
+                    shutil.copy(source, out / kept)
         if events is not None:
             events.close()
         if child is not None and child.poll() is None:
@@ -863,19 +911,35 @@ def reader_pass(*, role: str, application, reader: dict, session: str, route: di
         thread.join(2)
 
 
+def recorder_base(run: dict, ep: dict, family: str) -> dict:
+    return dict(role='recorder', run=run['name'], episode=ep['index'], family=family, kind=ep['kind'], group=ep['group'],
+                with_subgoal=bool(ep['subgoal']), expected=len(ep['subgoal']['expected_observations']) if ep['subgoal'] else 0)
+
+
+def level_base(prepared: dict) -> dict:
+    wake = prepared['wake']
+    return dict(role='level', run=wake['run'], wake=wake['index'], reason=wake['reason'], family='F1',
+                episodes_pushed=len(prepared['pushed']['episodes']), had_subgoal=prepared['pushed']['intent']['subgoal'] is not None)
+
+
+def not_run(base: dict, **extra) -> dict:
+    """A pass that did not run (skipped by the cap, cancelled after a fault, or faulted): excluded from the statistics."""
+    return dict(base, ran=False, valid=False, terminal=None, observation_status=None, max_repeat=0, **extra)
+
+
 def run_recorder(run: dict, ep: dict, family: str, route: dict, ctx: dict) -> dict:
     """One recorder pass of one episode on one family route: a fresh store, the real host, what it did and what it stored."""
     label = f'recorder-{family}-{run["name"]}-{ep["index"]:03d}'
     work = Path(tempfile.mkdtemp(prefix=f'{label}-', dir=ctx['work']))
     allowance, hold = ctx['spend'].reserve(ctx['profile']['recorder']['pass_max_requests'], ctx['bound'])
-    base = dict(role='recorder', run=run['name'], episode=ep['index'], family=family, kind=ep['kind'], group=ep['group'],
-                with_subgoal=bool(ep['subgoal']), expected=len(ep['subgoal']['expected_observations']) if ep['subgoal'] else 0)
+    base = recorder_base(run, ep, family)
     if allowance < 1:
         shutil.rmtree(work, ignore_errors=True)
-        return dict(base, ran=False, valid=False, terminal=None, observation_status=None, max_repeat=0)
-    state = None
+        return not_run(base, skipped='the spend cap does not cover the pass\'s full allowance')
+    state, launched = None, False
     try:
         state = recorder_state(run, ep, work / 'store', ctx['profile'], ctx['distances'][run['name']], ctx['episode_role'], allowance)
+        launched = True
         record = reader_pass(role='recorder', application=state['application'], reader=state['recorder'], session=run['session'],
             route=route, context=lane_context('recorder', run), stdin=state['document'], directory=work / 'host', out=ctx['out'] / 'samples',
             label=label, allowance=allowance, seconds=int(ctx['profile']['recorder']['pass_seconds']), effort=ctx['effort'],
@@ -897,7 +961,11 @@ def run_recorder(run: dict, ep: dict, family: str, route: dict, ctx: dict) -> di
         ctx['spend'].release(hold, record['charged_usd'], record['dearest_request_usd'])
         return result
     except BaseException:
-        ctx['spend'].release(hold, 0., 0.)
+        # A host that was launched may have charged an unknown amount: its whole hold stays against the cap.
+        if launched:
+            ctx['spend'].forfeit(hold)
+        else:
+            ctx['spend'].release(hold, 0., 0.)
         raise
     finally:
         if state is not None:
@@ -912,11 +980,12 @@ def run_level(prepared: dict, route: dict, ctx: dict) -> dict:
     label = f'level-F1-{wake["run"]}-{wake["index"]:03d}'
     work = Path(tempfile.mkdtemp(prefix=f'{label}-', dir=ctx['work']))
     allowance, hold = ctx['spend'].reserve(wake['allowance_requests'], ctx['bound'])
-    base = dict(role='level', run=wake['run'], wake=wake['index'], reason=wake['reason'], family='F1',
-                episodes_pushed=len(prepared['pushed']['episodes']), had_subgoal=prepared['pushed']['intent']['subgoal'] is not None)
+    base = level_base(prepared)
+    launched = False
     try:
         if allowance < 1:
-            return dict(base, ran=False, valid=False, max_repeat=0)
+            return not_run(base, skipped='the spend cap does not cover the pass\'s full allowance')
+        launched = True
         record = reader_pass(role='level', application=prepared['application'], reader=prepared['level'], session=prepared['session'],
             route=route, context=prepared['context'], stdin=prepared['text'], directory=work / 'host', out=ctx['out'] / 'samples',
             label=label, allowance=allowance, seconds=int(wake['allowance_seconds']), effort=ctx['effort'], host_argv=ctx['host_argv'],
@@ -931,7 +1000,10 @@ def run_level(prepared: dict, route: dict, ctx: dict) -> dict:
                     cleanup_absent=record['cleanup_absent'], uncertain_terminals=record['uncertain'], allowance=allowance)
     finally:
         if hold:
-            ctx['spend'].release(hold, 0., 0.)
+            if launched:
+                ctx['spend'].forfeit(hold)
+            else:
+                ctx['spend'].release(hold, 0., 0.)
         prepared['runtime'].close()
         shutil.rmtree(work, ignore_errors=True)
 
@@ -976,14 +1048,59 @@ def tail_items(run: str, entries: list[dict], shas: dict[str, str], node: str, d
     items, with_tail, unreadable = [], 0, 0
     for entry, tail in zip(entries, formatted, strict=True):
         unreadable += not tail['ok']
-        first_sources = {item['first_source'] for item in entry['intent']['recall']['items'] if item['first_source']}
+        recalled = entry['intent']['recall']['items']
+        first_sources = {item['first_source'] for item in recalled if item['first_source']}
         shown = [source for source in tail['shown'] if source in first_sources]
         with_tail += bool(shown) or tail['subgoal']
         held = entry['request']['held']
         marginal = sum(shas.get(source) not in held for source in shown)
+        # Which kind each shown item is, matched in recall order (the formatter shows the recall items in order).
+        pending, kinds = list(recalled), []
+        for source in shown:
+            at = next(i for i, item in enumerate(pending) if item['first_source'] == source)
+            kinds.append(bool(pending.pop(at)['exploration']))
+        marginal_kinds = [shas.get(source) not in held for source in shown]
         items.append(dict(run=run, request=entry['request']['request_id'], shown=len(shown), marginal=marginal,
-                          subgoal=tail['subgoal'], consistent=entry['request']['consistent']))
+                          subgoal=tail['subgoal'], consistent=entry['request']['consistent'],
+                          partial_prefix=entry['request'].get('partial_prefix', False),
+                          unknown_sha=sum(shas.get(source) is None for source in shown),
+                          ranked_shown=kinds.count(False), exploration_shown=kinds.count(True),
+                          ranked_marginal=sum(m for m, k in zip(marginal_kinds, kinds, strict=True) if not k),
+                          exploration_marginal=sum(m for m, k in zip(marginal_kinds, kinds, strict=True) if k)))
     return dict(items=items, requests=len(entries), requests_with_tail=with_tail, unreadable=unreadable)
+
+
+def reconstruction_counts(items: list[dict]) -> dict:
+    """Reported, never gating: how far the held-image reconstruction behind G6 can be trusted.
+
+    Counts requests (one item per request) whose reconstruction is inconsistent, requests with more than 16 omissions
+    (only the first 16 were checked against the listed prefix), and shown items whose source sha is unknown (such an
+    item counts as marginal in G6 as defined, since no held image can match it), with the shown items affected.
+    """
+    return dict(requests=len(items),
+                requests_inconsistent=sum(not i['consistent'] for i in items),
+                shown_items_in_inconsistent_requests=sum(i['shown'] for i in items if not i['consistent']),
+                requests_over_16_omissions=sum(bool(i.get('partial_prefix')) for i in items),
+                shown_items_unknown_sha=sum(i.get('unknown_sha', 0) for i in items),
+                requests_with_unknown_sha=sum(bool(i.get('unknown_sha', 0)) for i in items))
+
+
+def exploratory_breakdown(tails: list[dict], *, seed: int, resamples: int, level: float) -> dict:
+    """Marginal coverage for ranked recall items and for the exploration item, separately. Exploratory: no gate reads it.
+
+    The same run-cluster bootstrap as G6, once per kind; G6 itself pools both kinds as the protocol defines it.
+    """
+    boot = dict(seed=seed, resamples=resamples, level=level)
+    result = dict(note='Exploratory breakdown of G6\'s pooled share by item kind; it gates nothing and was not pre-registered.')
+    for kind in ('ranked', 'exploration'):
+        by_run = collections.defaultdict(lambda: [0, 0])
+        for item in tails:
+            by_run[item['run']][0] += item.get(f'{kind}_marginal', 0)
+            by_run[item['run']][1] += item.get(f'{kind}_shown', 0)
+        measured = bootstrap({run: tuple(parts) for run, parts in by_run.items()}, _ratio, **boot)
+        result[kind] = dict(shown=sum(parts[1] for parts in by_run.values()), marginal=sum(parts[0] for parts in by_run.values()),
+                            **measured)
+    return result
 
 
 # --- the probe ---------------------------------------------------------------------------------------------------
@@ -1003,15 +1120,18 @@ def build_lineages(names: list[str]) -> list[list[str]]:
     return ([shared] if shared else []) + groups
 
 
-def probe(*, ladder_dir: Path, runs_root: Path, protocol: Path, thresholds_path: Path, route_paths: dict[str, Path], profile_path: Path,
-          name: str, max_usd: float, secret: str | None, host_argv: list[str], runs: list[str] | None = None, no_subgoal: int = 33,
+def probe(*, ladder_dir: Path, runs_root: Path, protocol: Path, amendment: Path, thresholds_path: Path, route_paths: dict[str, Path],
+          profile_path: Path, name: str, max_usd: float, read_secret: Callable[[], str] | None, host_argv: list[str],
+          runs: list[str] | None = None, no_subgoal: int = 33,
           wake_count: int = 40, effort: str = 'medium', actor_allowance: int = 100, recorder_requests: int = 2, level_requests: int = 3,
           sample_estimate_usd: float = DEFAULT_SAMPLE_ESTIMATE_USD, max_request_usd: float | None = None, workers: int = 4,
           dry_run: bool = False, probe_root: Path = PROBE_ROOT, node: str | None = None) -> dict:
     """Run the three stages and write the labelled report under the probes directory.
 
     Everything that can refuse does so before anything is written or spent: the cap, the thresholds, a dirty checkout, the
-    routes\' schema and cost, the profile and the output location. `dry_run` builds every input (stores, bound episodes,
+    routes\' schema and cost, the profile, the recorded captures against their stored digests and the output location.
+    `read_secret` returns the credential and is called once, only after every one of these checks and every input has been
+    built, so a refused invocation never reads the Keychain. `dry_run` builds every input (stores, bound episodes,
     recorder documents, wake plans, level inputs, tails) and counts them, with no host, credential or spend.
     """
     thresholds = load_thresholds(thresholds_path)
@@ -1033,7 +1153,7 @@ def probe(*, ladder_dir: Path, runs_root: Path, protocol: Path, thresholds_path:
             raise ValueError(f'{role.name} differs from its frozen digest')
     ladder = load_ladder(ladder_dir)
     profile = validate_profile(profile_path, ladder['theta'])
-    if not dry_run and (secret is None or node is None):
+    if not dry_run and (read_secret is None or node is None):
         raise ValueError('A paid run needs the credential and Node.js')
     out = (probe_root / name).resolve()
     if not out.is_relative_to(probe_root.resolve()) or out == probe_root.resolve():
@@ -1044,32 +1164,40 @@ def probe(*, ladder_dir: Path, runs_root: Path, protocol: Path, thresholds_path:
     if unknown:
         raise ValueError(f'Runs the ladder does not hold: {unknown}')
     by_run = episodes_by_run(document)
+    amendment_sha = sha256_file(amendment)
+    loaded = {n: load_run(runs_root, n, document['sessions'][n]) for n in sorted(document['sessions'])}
+    verified = {n: verify_sources(loaded[n]) for n in names}
     probe_root.mkdir(parents=True, exist_ok=True)
     out.mkdir()
     work = out / 'work'
     work.mkdir()
     try:
         return _probe(dict(locals(), thresholds=thresholds, commit=commit, dirty=dirty, ladder=ladder, profile=profile, routes=routes,
-                           out=out, work=work, names=names, by_run=by_run, document=document))
+                           out=out, work=work, names=names, by_run=by_run, document=document, loaded=loaded, verified=verified,
+                           amendment_sha=amendment_sha))
     finally:
         shutil.rmtree(work, ignore_errors=True)
 
 
 def _probe(c: dict) -> dict:
     ladder, document, thresholds, profile = c['ladder'], c['document'], c['thresholds'], c['profile']
-    names, by_run, out, work, routes = c['names'], c['by_run'], c['out'], c['work'], c['routes']
+    names, by_run, out, work, routes, loaded = c['names'], c['by_run'], c['out'], c['work'], c['routes'], c['loaded']
     seed = thresholds['interval']['seed']
-    loaded = {n: load_run(c['runs_root'], n, document['sessions'][n]) for n in sorted(document['sessions'])}
+    boot = dict(seed=seed, resamples=thresholds['interval']['resamples'], level=thresholds['interval']['level'])
     pool = [latency for n in sorted(loaded) for latency in loaded[n]['latencies']]
     role_prompts = dict(level=LEVEL_ROLE.read_text().strip(), episode=EPISODE_ROLE.read_text().strip())
     records = ladder['records']
 
     # Inputs and the cut-difference count over the selected runs.
-    inputs = dict(protocol=sha256_file(c['protocol']), thresholds=sha256_file(c['thresholds_path']), profile=sha256_file(c['profile_path']),
+    inputs = dict(protocol=sha256_file(c['protocol']), amendment=c['amendment_sha'], thresholds=sha256_file(c['thresholds_path']),
+                  profile=sha256_file(c['profile_path']),
                   routes={f: sha256_file(p) for f, p in c['route_paths'].items()}, ladder=ladder['digests'],
                   role_prompts={r.name: sha256_file(r) for r in (LEVEL_ROLE, EPISODE_ROLE)},
                   runs={n: dict(loaded[n]['inputs'], prompt=hashlib.sha256(loaded[n]['brief'].encode()).hexdigest(),
-                                context=hashlib.sha256(loaded[n]['context'].encode()).hexdigest()) for n in names})
+                                context=hashlib.sha256(loaded[n]['context'].encode()).hexdigest(),
+                                level_traces={str(path.relative_to(loaded[n]['directory'])): sha256_file(path)
+                                              for path in level_trace_paths(loaded[n]['directory'])},
+                                source_pngs=c['verified'][n]) for n in names})
     cuts = {n: cut_differences(loaded[n], by_run[n], ladder) for n in names}
 
     # Stage 1 sample.
@@ -1140,13 +1268,13 @@ def _probe(c: dict) -> dict:
                   formatter_failures=sum(r['unreadable'] for r in tail_results),
                   requests_without_projection=sum(len(loaded[n]['request_walls']) - len(projections[n]['requests']) for n in projections
                                                   if n not in exclusions),
-                  projection_mismatches=sum(projections[n]['mismatched'] for n in projections if n not in exclusions),
+                  reconstruction=reconstruction_counts(tail_flat),
                   conversion_failures=conversion_failures)
 
     # Stage 1 and 2 inputs (the dry run builds and counts them; a paid run also runs the hosts).
     spend = Spend(c['max_usd'])
     bound = c['max_request_usd'] if c['max_request_usd'] is not None else c['sample_estimate_usd'] / profile['pass_max_requests']
-    ctx = dict(work=work, out=out, spend=spend, profile=profile, bound=bound, effort=c['effort'], host_argv=c['host_argv'], secret=c['secret'],
+    ctx = dict(work=work, out=out, spend=spend, profile=profile, bound=bound, effort=c['effort'], host_argv=c['host_argv'], secret=None,
                distances=distances, episode_role=role_prompts['episode'])
     stage2_inputs = []
 
@@ -1218,29 +1346,52 @@ def _probe(c: dict) -> dict:
                             routing=(r['model'].get('compat') or {}).get('openRouterRouting'), cost=r['model']['cost'],
                             max_context_images=r['max_context_images']) for f, r in routes.items()}),
         thresholds=dict(definition=thresholds, file_sha256=inputs['thresholds']), limits=list(LIMITS), counts=counts, cuts=cuts,
-        stage3=stage3, stage1_inputs=stage1_inputs, stage2_inputs=stage2_inputs)
+        stage3=stage3, stage1_inputs=stage1_inputs, stage2_inputs=stage2_inputs,
+        exploratory_not_gating=dict(marginal_coverage_by_item_kind=exploratory_breakdown(tail_flat, **boot)))
     if c['dry_run']:
         base.update(spend=dict(charged_usd=0., max_usd=c['max_usd']), status='dry-run')
         _write(out / 'report.json', base)
         return base
 
     # Paid: the level passes first (fewest, and each needs a live store), then the recorder in hash order, both families adjacent.
-    with concurrent.futures.ThreadPoolExecutor(max_workers=c['workers']) as pool_executor:
-        level_futures = [pool_executor.submit(run_level, prepared, routes['F1'], ctx) for prepared in stage2]
-        level_results = [f.result() for f in level_futures]
+    # Every exit, a fault and an interrupt included, writes the report from the passes finished so far.
+    level_jobs = [(level_base(prepared), run_level, (prepared, routes['F1'], ctx)) for prepared in stage2]
+    recorder_jobs = [(recorder_base(loaded[ep['run']], ep, family), run_recorder, (loaded[ep['run']], ep, family, routes[family], ctx))
+                     for ep in sample for family in ('F1', 'F2')]
+    level_results, recorder_results, state = [], [], dict(faults=[], interrupted=False, aborted=None, stopped=False)
+    try:
+        # The credential is read here and only here: every validation and every input above has already passed.
+        ctx['secret'] = c['read_secret']()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=c['workers']) as pool_executor:
+            run_jobs(pool_executor, level_jobs, level_results, state, lambda index: stage2[index]['runtime'].close())
+            for prepared in stage2:
+                prepared['lineage'].close()
+            run_jobs(pool_executor, recorder_jobs, recorder_results, state)
+    except BaseException as exc:
+        state['aborted'] = f'{type(exc).__name__}: {exc}'
+        raise
+    finally:
         for prepared in stage2:
+            prepared['runtime'].close()
             prepared['lineage'].close()
-        recorder_futures = [pool_executor.submit(run_recorder, loaded[ep['run']], ep, family, routes[family], ctx)
-                            for ep in sample for family in ('F1', 'F2')]
-        recorder_results = [f.result() for f in recorder_futures]
+        for jobs, results in ((level_jobs, level_results), (recorder_jobs, recorder_results)):
+            results.extend(not_run(base, cancelled='the run ended before the pass was reached') for base, _, _ in jobs[len(results):])
+        _write(out / 'report.json', paid_report(base, c, state, spend, level_results, recorder_results, tail_flat, names, thresholds))
+    return base
+
+
+def paid_report(base: dict, c: dict, state: dict, spend: Spend, level_results: list[dict], recorder_results: list[dict],
+                tail_flat: list[dict], names: list[str], thresholds: dict) -> dict:
+    """Complete `base` (updated in place and returned) with a paid run's statistics from the passes finished so far."""
     f1 = [r for r in recorder_results if r['family'] == 'F1']
     f2 = [r for r in recorder_results if r['family'] == 'F2']
-    # A pass the cap kept from launching is incomplete data, not an invalid pass: the statistics use the passes that ran.
+    # A pass the cap kept from launching, or that faulted, is incomplete data, not an invalid pass: the statistics use the
+    # passes that ran.
     statistics_ = evaluate(thresholds, [r for r in f1 if r['ran']], [r for r in f2 if r['ran']],
                            [r for r in level_results if r['ran']], tail_flat)
     ran = [r for r in [*recorder_results, *level_results] if r['ran']]
     incomplete = any(not r['ran'] for r in [*recorder_results, *level_results]) or any(r['stopped_by_spend_guard'] for r in ran) \
-        or spend.skipped > 0
+        or spend.skipped > 0 or bool(state['faults']) or state['interrupted'] or state['aborted'] is not None
 
     def summary(items: list[dict]) -> dict:
         return dict(passes=len(items), ran=sum(i['ran'] for i in items), valid=sum(i['valid'] for i in items),
@@ -1260,12 +1411,69 @@ def _probe(c: dict) -> dict:
         spend=dict(charged_usd=spend.spent, max_usd=c['max_usd'], skipped_passes=spend.skipped, passes_run=len(ran),
                    passes_planned=len(recorder_results) + len(level_results), dearest_request_usd=spend.dearest,
                    missing_usage_attempts=sum(r.get('missing_usage_attempts', 0) for r in ran),
-                   stopped_by_spend_guard=any(r['stopped_by_spend_guard'] for r in ran) or spend.skipped > 0),
+                   stopped_by_spend_guard=any(r['stopped_by_spend_guard'] for r in ran) or spend.skipped > 0,
+                   faulted_passes=len(state['faults']), unaccounted_usd_upper_bound=spend.unaccounted),
+        faults=state['faults'], interrupted=state['interrupted'], aborted=state['aborted'],
         gates=statistics_['gates'], family_two=statistics_['f2'],
         recorder=dict(F1=summary(f1), F2=summary(f2)), level=summary(level_results),
         per_run=per_run, passes=dict(recorder=recorder_results, level=level_results))
-    _write(out / 'report.json', base)
     return base
+
+
+def run_jobs(executor, jobs: list[tuple[dict, Callable, tuple]], results: list[dict], state: dict,
+             unlaunched: Callable[[int], None] | None = None) -> None:
+    """Submit `(base, function, arguments)` jobs and append one result per job, in order, to `results`.
+
+    A pass that raises is recorded as not run with its fault and the run is marked faulted: the queue is cancelled
+    (`shutdown(cancel_futures=True)`) so no queued pass launches, and passes already running finish and are kept. A
+    first Ctrl-C does the same; a second one propagates. Once the run has faulted or been interrupted, later calls
+    launch nothing and record their jobs as cancelled. `unlaunched(index)` is called for a job that never started.
+    A job whose future was cancelled (the queue is cancelled in the worker that faulted, as well as here) is recorded the
+    same way, and `stopped` is set at the first fault so a later phase does not start.
+    """
+    def stop_at_fault(future) -> None:
+        # Runs in the worker that finished the pass, so the queue is cancelled at once, not when its turn to be collected comes.
+        if not future.cancelled() and future.exception() is not None:
+            state['stopped'] = True
+            executor.shutdown(wait=False, cancel_futures=True)
+
+    futures = []
+    for _, function, arguments in jobs:
+        if state['stopped'] or state['interrupted']:
+            break
+        try:
+            future = executor.submit(function, *arguments)
+        except RuntimeError:  # the executor was shut down by a fault while the jobs were being submitted
+            break
+        future.add_done_callback(stop_at_fault)
+        futures.append(future)
+    for index, (base, _, _) in enumerate(jobs):
+        if index >= len(futures):
+            results.append(not_run(base, cancelled='the run faulted or was interrupted before this pass launched'))
+            if unlaunched is not None:
+                unlaunched(index)
+            continue
+        while True:
+            try:
+                results.append(futures[index].result())
+            except concurrent.futures.CancelledError:
+                results.append(not_run(base, cancelled='cancelled after an earlier fault or interrupt, before it launched'))
+                if unlaunched is not None:
+                    unlaunched(index)
+            except KeyboardInterrupt:
+                if state['interrupted']:
+                    raise
+                state['interrupted'] = True
+                state['stopped'] = True
+                executor.shutdown(wait=False, cancel_futures=True)
+                continue
+            except Exception as exc:
+                fault = f'{type(exc).__name__}: {exc}'
+                state['faults'].append(dict(base, fault=fault))
+                results.append(not_run(base, fault=fault))
+                state['stopped'] = True
+                executor.shutdown(wait=False, cancel_futures=True)
+            break
 
 
 def _write(path: Path, value: dict) -> None:
@@ -1279,6 +1487,7 @@ def main(argv=None) -> int:
     parser.add_argument('--ladder', type=Path, required=True, help="#345's ladder directory (episodes.json, records.jsonl)")
     parser.add_argument('--runs-root', type=Path, required=True, help='The directory of recorded computer sessions')
     parser.add_argument('--protocol', type=Path, required=True, help='The frozen protocol.md (hashed into the report)')
+    parser.add_argument('--amendment', type=Path, required=True, help='The frozen amendment-1.md (hashed into the report)')
     parser.add_argument('--thresholds', type=Path, required=True, help=f'The frozen {THRESHOLDS_SCHEMA} file')
     parser.add_argument('--route-f1', type=Path, required=True, help='The F1 (production) player-host/6 route')
     parser.add_argument('--route-f2', type=Path, required=True, help='The F2 player-host/6 route, the model block given explicitly')
@@ -1300,9 +1509,9 @@ def main(argv=None) -> int:
     if not args.host_node:
         parser.error('Node.js is required to run the hosts')
     report = probe(ladder_dir=args.ladder.resolve(), runs_root=args.runs_root.resolve(), protocol=args.protocol.resolve(),
-                   thresholds_path=args.thresholds.resolve(), route_paths={'F1': args.route_f1.resolve(), 'F2': args.route_f2.resolve()},
+                   amendment=args.amendment.resolve(), thresholds_path=args.thresholds.resolve(), route_paths={'F1': args.route_f1.resolve(), 'F2': args.route_f2.resolve()},
                    profile_path=args.profile.resolve(), name=args.name, max_usd=args.max_usd,
-                   secret=None if args.dry_run else keychain_secret(), host_argv=[args.host_node, str(ROOT / 'tools/player_host/run.mjs')],
+                   read_secret=None if args.dry_run else keychain_secret, host_argv=[args.host_node, str(ROOT / 'tools/player_host/run.mjs')],
                    runs=args.runs, no_subgoal=args.no_subgoal, wake_count=args.wakes, effort=args.effort, actor_allowance=args.actor_allowance,
                    sample_estimate_usd=args.sample_estimate_usd, max_request_usd=args.max_request_usd, workers=args.workers,
                    dry_run=args.dry_run, node=args.host_node)

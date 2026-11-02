@@ -202,15 +202,19 @@ def level_tool_schema(tool: str) -> dict:
     return json_object(_LEVEL_SCHEMAS[tool])
 
 
+def reserved_data(data: dict) -> list[str]:
+    """The names of the custodian's reserved `data` fields that `data` carries (`by` only when it is `"software"`)."""
+    return [k for k in ('level', 'level_contract', 'writer') if k in data] + (['by'] if data.get('by') == 'software' else [])
+
+
 def refuse_custodian_data(value: dict) -> None:
     """The general memory-append path never carries the custodian's reserved data.
 
     `data.level` (any value), `data.level_contract`, `data.writer` and `data.by == "software"` are stamped only
     by the custodian's level-commit, closure and episode-settle paths, so no actor can forge a level record,
-    an episode or a software closure.
+    an episode or a software closure. (`Memory` also refuses a general write that supports or supersedes such a record.)
     """
-    data = value.get('data', {})
-    reserved = [k for k in ('level', 'level_contract', 'writer') if k in data] + (['by'] if data.get('by') == 'software' else [])
+    reserved = reserved_data(value.get('data', {}))
     if reserved:
         raise PlayerError('The custodian reserves data.level, data.level_contract, data.writer and data.by "software" '
                           'for its commit and settle paths; this record sets ' + ', '.join(f'data.{k}' for k in reserved))

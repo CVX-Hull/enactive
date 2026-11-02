@@ -202,17 +202,23 @@ def episode_push(application, recorder_id: str, episode: Episode) -> dict:
 
     The frames are the baseline (the result capture of the last input before the episode) and up to six of the
     episode's own frames (always the last, then the largest thumbnail distance from the predecessor, in capture
-    order), each marked with its source id and role (baseline, in-episode or last).
+    order), each marked with its source id and role (baseline, in-episode or last). A source id appears once. A repeat of
+    an earlier entry is dropped, except that a repeat which is the `last` frame keeps its place as `last` and replaces the
+    earlier entry, so the list is always the host's `parsePassInput` shape: the baseline first, if any, then the
+    in-episode frames ending in exactly one `last`.
     """
     with application.serial:
         bound = application.bind_episode(recorder_id, first_position=episode.first_position,
                                          last_position=episode.last_position, subgoal_id=episode.subgoal_id)
     wanted = [(bound['baseline_source'], 'baseline')] if bound['baseline_source'] else []
     wanted += [(source, role) for _, source, role in pick_frames(episode)]
-    frames, seen = [], set()
+    frames = []
     for source, role in wanted:
-        if source not in seen:
-            seen.add(source)
+        earlier = next((frame for frame in frames if frame['source_id'] == source), None)
+        if earlier is None:
+            frames.append(dict(source_id=source, frame_role=role))
+        elif role == 'last':
+            frames.remove(earlier)
             frames.append(dict(source_id=source, frame_role=role))
     operations = [dict(position=e['position'], operation_id=e['operation_id'], kind=e['kind'], status=e['status'],
                        source_id=e['source_id'], tokens=key_tokens(e['actions'])) for e in bound['operations']]

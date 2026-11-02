@@ -747,6 +747,9 @@ class Application:
         with self.serial, self._timed(actor, name, queued):
             # A handoff may have sealed the actor while this call queued.
             self.runtime.authorize(token, **write)
+            # After a failure to remember, the recorder and the level refuse every tool, reads included; the actor goes on.
+            if actor in self.readers:
+                self._remember_ok()
             if name not in READ_TOOLS:
                 # A public HTTP identity has one owner across the composed
                 # services. A program's child IDs do not free its parent ID for

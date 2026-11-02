@@ -93,7 +93,7 @@ def build_run(root: Path, name: str, session: str, *, projection: bool = True) -
             held = min(k - 1, 4)
             omitted = k - 1 - held
             events.append(dict(type='context-image-projection', wall_time=stamp(wall), request_id=f'request-{k}', max_context_images=4,
-                               context_image_block=1, input_images=k - 1, protected_images=1, pinned_images=0, retained_images=held,
+                               context_image_block=1, input_images=k - 1, protected_images=min(1, k - 1), retained_images=held,
                                omitted_images=omitted, blocked=False,
                                omissions=[dict(tool_call_id=f'call-{i}', image_index=0, sha256='x') for i in range(1, min(omitted, 16) + 1)]))
         events.append(dict(type='request-start', wall_time=stamp(wall), request_id=f'request-{k}'))
@@ -136,6 +136,7 @@ def world(tmp_path):
     files = tmp_path / 'files'
     files.mkdir()
     (files / 'protocol.md').write_text('# protocol')
+    (files / 'amendment-1.md').write_text('# amendment')
     (files / 'thresholds.json').write_text(json.dumps(THRESHOLDS))
     (files / 'profile.json').write_text(json.dumps(PROFILE))
     return dict(root=root, runs=runs, ladder=build_ladder(tmp_path, runs), files=files, tmp=tmp_path)
@@ -152,8 +153,9 @@ def routes(world, port, cost=1.0):
 
 def run_probe(world, paths, name='probe', *, secret=KEY, dry_run=False, **kwargs):
     arguments = dict(ladder_dir=world['ladder'], runs_root=world['root'], protocol=world['files'] / 'protocol.md',
+                     amendment=world['files'] / 'amendment-1.md',
                      thresholds_path=world['files'] / 'thresholds.json', route_paths=paths, profile_path=world['files'] / 'profile.json',
-                     name=name, max_usd=5., secret=None if dry_run else secret, host_argv=HOST, no_subgoal=1, wake_count=3, effort='off',
+                     name=name, max_usd=5., read_secret=None if dry_run else (lambda: secret), host_argv=HOST, no_subgoal=1, wake_count=3, effort='off',
                      workers=2, dry_run=dry_run, probe_root=world['tmp'] / 'probes', node=shutil.which('node'))
     arguments.update(kwargs)
     return probe(**arguments)
@@ -307,10 +309,24 @@ def test_the_cap_is_a_hard_up_front_reservation_across_workers():
     # Nothing is left unreserved: a third pass is skipped, not started.
     assert spend.reserve(4, .125) == (0, 0.) and spend.skipped == 1
     spend.release(.5, .2, .25)
-    # The dearest request seen now sets the step: the $0.3 not spent or held covers one request at $0.25, not two at $0.125.
-    assert spend.reserve(100, .125) == (1, .25)
+    # The dearest request seen now sets the step: the $0.3 not spent or held covers one request at $0.25, but a pass is all or
+    # nothing, so a four-request pass is skipped rather than launched with the one request that fits.
+    assert spend.reserve(4, .125) == (0, 0.) and spend.skipped == 2
+    assert spend.reserve(1, .125) == (1, .25)
     nothing = Spend(.01)
     assert nothing.reserve(4, .02) == (0, 0.)
+
+
+def test_a_pass_is_reserved_in_full_or_skipped_and_never_truncated():
+    spend = Spend(1.)
+    # Three of four requests would fit ($0.75 of $1.00 at $0.25): the pass is skipped whole, nothing is held.
+    assert spend.reserve(5, .25) == (0, 0.) and spend.skipped == 1 and spend.reserved == 0.
+    assert spend.reserve(4, .25) == (4, 1.) and spend.reserved == 1.
+    assert spend.reserve(1, .25) == (0, 0.) and spend.skipped == 2
+    # A faulted pass's charge is unknown: its whole hold stays against the cap and is reported as an upper bound.
+    spend.forfeit(1.)
+    assert spend.reserved == 0. and spend.unaccounted == 1. and spend.spent == 0.
+    assert spend.reserve(1, .25) == (0, 0.)
 
 
 def test_a_cap_over_the_thresholds_or_not_positive_is_refused_before_anything_is_written(world):
@@ -371,12 +387,31 @@ def test_the_dry_run_resolves_every_input_and_counts_without_a_host_or_a_credent
     assert counts['stage1_passes_planned'] == 14 and counts['wake_points'] >= 2 and counts['stage2_sampled'] == 3
     assert counts['actor_requests'] == 26 and counts['actor_requests_with_tail'] > 0 and counts['cut_rule_reproduced_runs'] in (0, 1, 2)
     stage3 = report['stage3']
-    assert stage3['conversion_failures'] == [] and stage3['projection_mismatches'] == 0 and stage3['formatter_failures'] == 0
+    assert stage3['conversion_failures'] == [] and stage3['formatter_failures'] == 0
+    # The reconstruction report: nothing inconsistent in the fixture, every shown source has a stored sha, no request omits over 16.
+    reconstruction = stage3['reconstruction']
+    assert reconstruction['requests'] == 26 and reconstruction['requests_inconsistent'] == 0
+    assert reconstruction['shown_items_in_inconsistent_requests'] == 0 and reconstruction['requests_over_16_omissions'] == 0
+    assert reconstruction['shown_items_unknown_sha'] == 0 and reconstruction['requests_with_unknown_sha'] == 0
+    breakdown = report['exploratory_not_gating']['marginal_coverage_by_item_kind']
+    assert set(breakdown) == {'note', 'ranked', 'exploration'} and 'gates nothing' in breakdown['note']
+    assert breakdown['ranked']['shown'] + breakdown['exploration']['shown'] == stage3['shown_items']
+    assert breakdown['ranked']['marginal'] + breakdown['exploration']['marginal'] == stage3['marginal_items']
+    assert 'exploratory_not_gating' not in report.get('gates', {})
     assert stage3['shown_items'] > 0 and 0 < stage3['marginal_items'] <= stage3['shown_items']
     assert report['spend'] == dict(charged_usd=0., max_usd=5.)
     assert all(i['bytes'] < 1048576 and i['frames'] >= 1 for i in report['stage1_inputs'])
     assert report['inputs']['protocol'] == hashlib.sha256((world['files'] / 'protocol.md').read_bytes()).hexdigest()
+    assert report['inputs']['amendment'] == hashlib.sha256((world['files'] / 'amendment-1.md').read_bytes()).hexdigest()
     assert report['inputs']['thresholds'] == report['thresholds']['file_sha256']
+    # Each run's recorded level-pass traces and every source capture read are digested.
+    for name in world['runs']:
+        recorded = report['inputs']['runs'][name]
+        trace = world['root'] / name / 'actors/001/level/001/host.jsonl'
+        assert recorded['level_traces'] == {'actors/001/level/001/host.jsonl': hashlib.sha256(trace.read_bytes()).hexdigest()}
+        listing = '\n'.join(f'{world["runs"][name]}-{n} {hashlib.sha256(png(n)).hexdigest()}'
+                            for n in sorted(range(1, 14), key=lambda n: f'{world["runs"][name]}-{n}'))
+        assert recorded['source_pngs'] == dict(count=13, digest=hashlib.sha256(listing.encode()).hexdigest())
     assert report['interface']['role_prompts'] == {r.name: hashlib.sha256(r.read_bytes()).hexdigest() for r in (LEVEL_ROLE, EPISODE_ROLE)}
     assert all(report['interface']['role_prompts'][n] == FROZEN_ROLE_SHA256[n] for n in FROZEN_ROLE_SHA256)
     # A report is written once and a name is never reused.
@@ -439,13 +474,17 @@ def test_the_three_stages_run_the_real_hosts_and_the_credential_never_reaches_an
 
 def test_the_cap_stops_passes_up_front_and_the_report_is_incomplete_not_passed(world, provider_factory):
     fake = provider_factory(scripted)
-    # Each request costs $1.10 at 50000 USD per million tokens and the bound is $1.20: $3 covers two requests in all.
+    # Each request costs $1.10 at 50000 USD per million tokens and the bound is $1.20: $5.50 holds one four-request pass
+    # ($4.80) and, once it has charged one request, not another, so every other pass is skipped rather than truncated.
     paths = routes(world, fake.port, cost=50000.)
-    report = run_probe(world, paths, max_usd=3., max_request_usd=1.2, workers=1)
+    report = run_probe(world, paths, max_usd=5.5, max_request_usd=1.2, workers=1)
     assert report['status'] == 'incomplete' and report['passed'] is False
-    assert report['spend']['skipped_passes'] > 0 and report['spend']['charged_usd'] <= 3.
+    assert report['spend']['skipped_passes'] > 0 and report['spend']['charged_usd'] <= 5.5
     assert report['spend']['stopped_by_spend_guard'] is True
-    assert sum(p['requests'] for p in [*report['passes']['recorder'], *report['passes']['level']] if p['ran']) <= 2
+    ran = [p for p in [*report['passes']['recorder'], *report['passes']['level']] if p['ran']]
+    assert len(ran) == 1 and ran[0]['allowance'] == PROFILE['pass_max_requests'] == 4
+    skipped = [p for p in [*report['passes']['recorder'], *report['passes']['level']] if not p['ran']]
+    assert skipped and all('full allowance' in p['skipped'] for p in skipped)
     nothing = run_probe(world, routes(world, fake.port, cost=50000.), name='tiny', max_usd=.01, max_request_usd=.02)
     assert nothing['spend']['passes_run'] == 0 and nothing['status'] == 'incomplete'
 
@@ -458,11 +497,261 @@ def test_main_never_reads_the_keychain_in_a_dry_run(world, monkeypatch, capsys):
     # The command line writes under the project's probes directory (ignored by git); the test removes its own output.
     shutil.rmtree(probe_module.PROBE_ROOT / 'cli', ignore_errors=True)
     assert probe_module.main(['--ladder', str(world['ladder']), '--runs-root', str(world['root']), '--protocol', str(world['files'] / 'protocol.md'),
+                              '--amendment', str(world['files'] / 'amendment-1.md'),
                               '--thresholds', str(world['files'] / 'thresholds.json'), '--route-f1', str(paths['F1']),
                               '--route-f2', str(paths['F2']), '--profile', str(world['files'] / 'profile.json'), '--name', 'cli',
                               '--max-usd', '5', '--dry-run', '--no-subgoal', '1', '--wakes', '2']) == 0
     assert '"status": "dry-run"' in capsys.readouterr().out
     shutil.rmtree(probe_module.PROBE_ROOT / 'cli', ignore_errors=True)
+
+
+class Secret:
+    """A credential reader that records how often it was called."""
+    def __init__(self):
+        self.calls = 0
+
+    def __call__(self):
+        self.calls += 1
+        return KEY
+
+
+def test_the_credential_is_read_once_and_only_after_every_validation_has_passed(world, tmp_path):
+    spy = Secret()
+    paths = routes(world, 9)
+    cases = [
+        dict(max_usd=6.5),                                   # a cap over the thresholds
+        dict(max_request_usd=-1.),                           # no usable per-request bound
+        dict(runs=['nope']),                                 # a run the ladder does not hold
+    ]
+    for kwargs in cases:
+        with pytest.raises(ValueError):
+            run_probe(world, paths, read_secret=spy, **kwargs)
+    # A route over the image limit, a dirty checkout, a missing Node.js.
+    document = json.loads(paths['F2'].read_text())
+    paths['F2'].write_text(json.dumps(dict(document, max_context_images=7)))
+    with pytest.raises(ValueError, match='max_context_images'):
+        run_probe(world, paths, read_secret=spy)
+    paths['F2'].write_text(json.dumps(document))
+    with pytest.raises(ValueError, match='Node.js'):
+        run_probe(world, paths, read_secret=spy, node=None)
+    # A capture that differs from the sha256 the recording stored.
+    capture = world['root'] / 'fx-02' / 'sources' / f'{world["runs"]["fx-02"]}-5.png'
+    original = capture.read_bytes()
+    capture.write_bytes(png(99))
+    with pytest.raises(ValueError, match='differs from its recorded sha256'):
+        run_probe(world, paths, read_secret=spy)
+    capture.write_bytes(original)
+    assert spy.calls == 0 and not (world['tmp'] / 'probes').exists()
+    # A dry run never reads it either; a paid run that passes everything reads it exactly once, before any host.
+    run_probe(world, paths, dry_run=True)
+    assert spy.calls == 0
+
+
+def test_a_capture_missing_from_the_recording_refuses_before_anything_is_written(world):
+    paths = routes(world, 9)
+    capture = world['root'] / 'fx-01' / 'sources' / f'{world["runs"]["fx-01"]}-3.png'
+    capture.unlink()
+    with pytest.raises(FileNotFoundError):
+        run_probe(world, paths, dry_run=True)
+    assert not (world['tmp'] / 'probes').exists()
+
+
+def test_a_paid_run_reads_the_credential_once(world, provider_factory):
+    spy = Secret()
+    report = provider_world(world, provider_factory(scripted), read_secret=spy)
+    assert spy.calls == 1 and report['status'] == 'complete'
+
+
+def test_a_faulting_pass_cancels_the_queue_keeps_its_trace_and_still_writes_an_incomplete_report(world, provider_factory, monkeypatch):
+    fake = provider_factory(scripted)
+    real = probe_module.classify
+    seen = []
+
+    def fault_after_the_host_ran(directory, events, returncode, role='level'):
+        seen.append(role)
+        real(directory, events, returncode, role=role)
+        raise RuntimeError('injected fault')
+    monkeypatch.setattr(probe_module, 'classify', fault_after_the_host_ran)
+    report = run_probe(world, routes(world, fake.port), workers=1)
+    out = world['tmp'] / 'probes' / 'probe'
+    assert report['status'] == 'incomplete' and report['passed'] is False
+    # One pass launched and faulted; every queued pass, level and recorder, was cancelled and never reached the provider.
+    assert seen == ['level'] and len(fake.payloads) == 1
+    passes = [*report['passes']['level'], *report['passes']['recorder']]
+    assert len(passes) == 3 + 14 and not any(p['ran'] for p in passes)
+    faulted = [p for p in passes if p.get('fault')]
+    assert len(faulted) == 1 and 'RuntimeError: injected fault' in faulted[0]['fault']
+    assert sum('cancelled' in p for p in passes) == 16
+    assert report['faults'][0]['fault'] == faulted[0]['fault'] and report['spend']['faulted_passes'] == 1
+    assert report['spend']['unaccounted_usd_upper_bound'] > 0 and report['spend']['passes_run'] == 0
+    # The report on disk is the same document, and the faulted pass's host trace was copied into samples.
+    assert json.loads((out / 'report.json').read_text())['status'] == 'incomplete'
+    traces = sorted((out / 'samples').glob('*.host.jsonl'))
+    assert [t.name for t in traces] == [f'level-F1-{faulted[0]["run"]}-{faulted[0]["wake"]:03d}.host.jsonl']
+    assert traces[0].stat().st_size > 0 and not (out / 'work').exists()
+
+
+def test_an_exception_in_a_later_phase_leaves_the_finished_passes_in_the_report(world, provider_factory, monkeypatch):
+    fake = provider_factory(scripted)
+    real = probe_module.run_recorder
+    calls = []
+
+    def second_recorder_pass_raises(run, ep, family, route, ctx):
+        calls.append((run['name'], ep['index'], family))
+        if len(calls) == 2:
+            raise OSError('injected recorder fault')
+        return real(run, ep, family, route, ctx)
+    monkeypatch.setattr(probe_module, 'run_recorder', second_recorder_pass_raises)
+    report = run_probe(world, routes(world, fake.port), workers=1)
+    assert report['status'] == 'incomplete' and len(calls) == 2
+    assert report['level']['ran'] == 3 and report['recorder']['F1']['ran'] + report['recorder']['F2']['ran'] == 1
+    assert [f['fault'] for f in report['faults']] == ['OSError: injected recorder fault']
+    # The statistics use the passes that ran; the gates are computed, the run cannot pass.
+    assert set(report['gates']) == {'G1', 'G2', 'G3', 'G4', 'G5', 'G6'} and report['passed'] is False
+
+
+def test_run_jobs_cancels_the_queue_on_a_ctrl_c_and_keeps_what_finished():
+    import os
+    import signal
+    import threading
+    import time
+    release = threading.Event()
+    started = []
+
+    def first():
+        started.append('first')
+        time.sleep(.3)  # the main thread is by now waiting on this future
+        os.kill(os.getpid(), signal.SIGINT)
+        release.wait(5)
+        return dict(done=True, ran=True)
+
+    def never():
+        started.append('never')
+        return dict(done=True, ran=True)
+    results, state = [], dict(faults=[], interrupted=False, aborted=None, stopped=False)
+    unlaunched = []
+    jobs = [(dict(name='first'), first, ()), (dict(name='second'), never, ()), (dict(name='third'), never, ())]
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        threading.Timer(.8, release.set).start()
+        probe_module.run_jobs(executor, jobs, results, state, unlaunched.append)
+    assert state['interrupted'] and started == ['first']
+    assert results[0] == dict(done=True, ran=True)
+    assert [r['ran'] for r in results] == [True, False, False] and all('cancelled' in r for r in results[1:])
+    assert unlaunched == [1, 2]
+    # Once stopped, a later phase launches nothing at all.
+    later = []
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        probe_module.run_jobs(executor, jobs, later, state)
+    assert started == ['first'] and [r['ran'] for r in later] == [False] * 3
+
+
+def test_a_faulted_run_jobs_pass_is_recorded_not_run_and_stops_the_rest():
+    from concurrent.futures import ThreadPoolExecutor
+
+    def bad():
+        raise ValueError('boom')
+    ran = []
+
+    def good():
+        ran.append(1)
+        return dict(ran=True)
+    results, state = [], dict(faults=[], interrupted=False, aborted=None, stopped=False)
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        probe_module.run_jobs(executor, [(dict(name='a'), bad, ()), (dict(name='b'), good, ())], results, state)
+    assert results[0]['ran'] is False and results[0]['fault'] == 'ValueError: boom' and results[0]['name'] == 'a'
+    assert 'cancelled' in results[1] and ran == [] and state['stopped'] and len(state['faults']) == 1
+
+
+# --- the held-image reconstruction -----------------------------------------------------------------------------------
+
+def trace_run(tmp_path, images, projections):
+    """A directory holding an actor trace with `images` tool results and the given `context-image-projection` events."""
+    directory = tmp_path / 'trace-run'
+    (directory / 'actors' / '001').mkdir(parents=True)
+    events = []
+    for number in range(images):
+        events.append(dict(type='tool-result', tool_call_id=f'call-{number}', result=dict(content=[
+            dict(type='image_reference', sha256=f'{number:064x}', image_index=0)])))
+    for number, fields in enumerate(projections, 1):
+        events.append(dict(type='context-image-projection', wall_time=stamp(1000. + number), request_id=f'request-{number}', **fields))
+    (directory / 'actors' / '001' / 'host.jsonl').write_text('\n'.join(json.dumps(e) for e in events) + '\n')
+    return dict(directory=directory)
+
+
+def omissions(count):
+    return [dict(tool_call_id=f'call-{i}', image_index=0, sha256='x') for i in range(min(count, 16))]
+
+
+def test_the_reconstruction_reads_protected_and_pinned_fields_and_flags_a_partial_prefix(tmp_path):
+    # The recorded traces carry `protected_images` and no `pinned_images`: an absent pin is zero.
+    good = dict(input_images=6, protected_images=1, retained_images=4, omitted_images=2, omissions=omissions(2))
+    # Omissions that would reach the protected latest batch are impossible for the host, so they are inconsistent.
+    reaches = dict(input_images=3, protected_images=1, retained_images=0, omitted_images=3, omissions=omissions(3))
+    pinned = dict(good, pinned_images=1)
+    zero_pin = dict(good, pinned_images=0)
+    bad_type = dict(good, pinned_images='0')
+    wrong_count = dict(good, retained_images=5)
+    # More than 16 omissions: the host lists the first 16, so only a prefix of them could be checked.
+    many = dict(input_images=21, protected_images=1, retained_images=3, omitted_images=18, omissions=omissions(18))
+    exactly = dict(input_images=20, protected_images=1, retained_images=4, omitted_images=16, omissions=omissions(16))
+    only_many = actor_projection(trace_run(tmp_path / 'm', 21, [many]))['requests'][0]
+    assert only_many['consistent'] is True and only_many['partial_prefix'] is True
+    only_exactly = actor_projection(trace_run(tmp_path / 'e', 20, [exactly]))['requests'][0]
+    assert only_exactly['consistent'] is True and only_exactly['partial_prefix'] is False
+    one = lambda name, images, event: actor_projection(trace_run(tmp_path / name, images, [event]))['requests'][0]['consistent']
+    assert one('good', 6, good) and one('zero', 6, zero_pin) and one('absent', 6, {k: v for k, v in good.items() if k != 'protected_images'})
+    assert not one('reaches', 3, reaches) and not one('pinned', 6, pinned) and not one('type', 6, bad_type) and not one('count', 6, wrong_count)
+
+
+def test_the_reconstruction_report_counts_inconsistent_requests_partial_prefixes_and_unknown_shas():
+    items = [dict(run='a', shown=2, marginal=1, consistent=True, partial_prefix=False, unknown_sha=0),
+             dict(run='a', shown=3, marginal=3, consistent=False, partial_prefix=True, unknown_sha=2),
+             dict(run='b', shown=0, marginal=0, consistent=True, partial_prefix=True, unknown_sha=0),
+             dict(run='b', shown=1, marginal=1, consistent=True, partial_prefix=False, unknown_sha=1)]
+    assert probe_module.reconstruction_counts(items) == dict(
+        requests=4, requests_inconsistent=1, shown_items_in_inconsistent_requests=3, requests_over_16_omissions=2,
+        shown_items_unknown_sha=3, requests_with_unknown_sha=2)
+    # G6 is computed exactly as before from `shown` and `marginal`: an unknown sha still counts as marginal there.
+    result = gates_of(*healthy()[:3], items)
+    assert result['gates']['G6']['point'] == pytest.approx(5 / 6)
+
+
+def intent_item(source, *, exploration, attempted='did x'):
+    return dict(record_id='r' * 8, session='s', first_position=1, last_position=2, subgoal_id=None, attempted=attempted, counterpart='',
+                residual='', changed='something', observation_status=[], confidence=.5, sources=[source], first_source=source,
+                same_session=False, score=1., exploration=exploration)
+
+
+def test_the_tail_items_split_ranked_from_exploration_and_count_unknown_shas(tmp_path):
+    intent = dict(schema='player-intent/2', session='s', actor_id='a', audience='tail', pass_index=1, subgoal=None, age=None,
+                  recall=dict(basis='recent', items=[intent_item('src-top', exploration=False), intent_item('src-unknown', exploration=False),
+                                                     intent_item('src-explore', exploration=True)]), grants_authority=False)
+    held = {'sha-top'}
+    shas = {'src-top': 'sha-top', 'src-explore': 'sha-other'}
+    entry = dict(intent=intent, request=dict(request_id='request-1', held=held, consistent=True, partial_prefix=True))
+    result = probe_module.tail_items('run-x', [entry], shas, shutil.which('node'), tmp_path)
+    item = result['items'][0]
+    # The top item is held (not marginal); the item with no stored sha and the exploration item are marginal.
+    assert (item['shown'], item['marginal'], item['unknown_sha']) == (3, 2, 1)
+    assert (item['ranked_shown'], item['ranked_marginal'], item['exploration_shown'], item['exploration_marginal']) == (2, 1, 1, 1)
+    assert item['partial_prefix'] is True
+    split = probe_module.exploratory_breakdown(result['items'], seed=1, resamples=20, level=.95)
+    assert split['ranked']['shown'] == 2 and split['ranked']['marginal'] == 1 and split['ranked']['point'] == .5
+    assert split['exploration']['shown'] == 1 and split['exploration']['point'] == 1.
+
+
+def test_a_run_whose_trace_is_inconsistent_is_counted_in_the_dry_run_report(world):
+    trace = world['root'] / 'fx-02' / 'actors' / '001' / 'host.jsonl'
+    events = [json.loads(line) for line in trace.read_text().splitlines()]
+    projections = [e for e in events if e['type'] == 'context-image-projection']
+    projections[-1]['retained_images'] += 1
+    trace.write_text('\n'.join(json.dumps(e) for e in events) + '\n')
+    report = run_probe(world, routes(world, 9), dry_run=True)
+    reconstruction = report['stage3']['reconstruction']
+    assert reconstruction['requests_inconsistent'] == 1 and reconstruction['requests'] == 26
+    # The count is reported; G6 is not recomputed or gated on it (a dry run has no gates).
+    assert 'gates' not in report
 
 
 @pytest.fixture

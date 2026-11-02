@@ -709,6 +709,26 @@ def test_a_storage_failure_while_remembering_stops_the_readers_too(level):
     assert act(app, actor)['status'] == 'completed'
 
 
+def test_the_readers_refuse_player_source_and_every_other_read_after_a_failure_to_remember_but_the_actor_still_reads(level):
+    app, channel, actor, reader, recorder = level
+    first = act(app, actor)
+    source = first['source']['source_id']
+    sync(app, actor, recorder)
+    # Before the failure both readers can read the frame they are served.
+    for capability in (reader, recorder):
+        assert call(app, capability, 'player_source', dict(source_id=source))['source']['source_id'] == source
+    app.remember_failure = 'fixture: store full'
+    for capability in (reader, recorder):
+        for name, args in (('player_source', dict(source_id=source)), ('player_memory_query', dict()), ('player_intent', {})):
+            if name in PROFILES['level' if capability is reader else 'recorder']:
+                with pytest.raises(ControlError, match='stopped for this session'):
+                    call(app, capability, name, args)
+    assert 'player_source' in PROFILES['level'] and 'player_source' in PROFILES['recorder']
+    # The actor is not a reader: it still reads and acts.
+    assert call(app, actor, 'player_source', dict(source_id=source))['source']['source_id'] == source
+    assert act(app, actor)['status'] == 'completed'
+
+
 def test_a_settle_the_driver_reports_can_still_try_after_a_failure_to_remember(level):
     app, channel, actor, reader, recorder = level
     act(app, actor, 2)

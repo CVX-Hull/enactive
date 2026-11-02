@@ -11,7 +11,7 @@ import uuid
 
 from harness.computer.protocol import source as validate_source
 from .contracts import (PlayerError, RememberError, bounded_integer, canonical, identity, json_object, record,
-                        refuse_custodian_data)
+                        refuse_custodian_data, reserved_data)
 
 
 class Memory:
@@ -105,8 +105,24 @@ class Memory:
             if self._db.execute(f'SELECT 1 FROM {table} WHERE id=?', (ref,)).fetchone() is None:
                 raise PlayerError(f'Missing {table} reference: {ref}')
 
+    def _refuse_custodian_targets(self, value: dict) -> None:
+        """A general write never supports or supersedes a record that carries the custodian's reserved data.
+
+        Otherwise a plain correction could supersede the level's Work record, or a plain record could be made to
+        support a settled episode, without passing the custodian's commit and settle paths. A target that does not
+        exist is reported later, as a missing reference.
+        """
+        for ref in [*value['supports'], *([value['supersedes']] if value['supersedes'] else [])]:
+            if self._db.execute('SELECT 1 FROM records WHERE id=?', (ref,)).fetchone() is None:
+                continue
+            reserved = reserved_data(self.read(ref).get('data', {}))
+            if reserved:
+                raise PlayerError(f'The custodian reserves record {ref} (it carries '
+                                  + ', '.join(f'data.{k}' for k in reserved) + '); a general write cannot support or supersede it')
+
     def append(self, actor_id: str, value: dict, *, request_id: str | None = None) -> dict:
-        """The general append path: it refuses records setting `data.level == "episode"` or `data.writer`."""
+        """The general append path: it refuses records setting `data.level == "episode"` or `data.writer`, and a record
+        that supports or supersedes a record carrying the custodian's reserved data."""
         identity(actor_id)
         value = record(value)
         refuse_custodian_data(value)
@@ -115,6 +131,7 @@ class Memory:
             prior = self._db.execute('SELECT 1 FROM records WHERE id=?',(stored['id'],)).fetchone()
             if prior:
                 return self._original(stored['id'], actor_id, value)
+            self._refuse_custodian_targets(value)
             self._insert(stored)
         return stored
 
@@ -132,8 +149,8 @@ class Memory:
         `records` filled in, commit in the same transaction, so no pending window exists.
         `sources` are exact `(metadata, png)` registrations made in that transaction too.
         `custodian` marks the custodian's own level-commit, closure and episode-settle paths, the only ones
-        that may write the reserved `data.level`, `data.level_contract`, `data.writer` and `data.by` "software";
-        every other caller is refused those, as `append` refuses them.
+        that may write the reserved `data.level`, `data.level_contract`, `data.writer` and `data.by` "software", and
+        that may support or supersede a record carrying them; every other caller is refused both, as `append` refuses them.
         """
         identity(actor_id)
         identity(request_id)
@@ -150,6 +167,9 @@ class Memory:
         with self._transaction():
             if stored and self._db.execute('SELECT 1 FROM records WHERE id=?', (stored[0]['id'],)).fetchone():
                 return [self._original(item['id'], actor_id, value) for item, value in zip(stored, values, strict=True)]
+            if not custodian:
+                for value in values:
+                    self._refuse_custodian_targets(value)
             for metadata, png in sources:
                 self._insert_source(metadata, png)
             for item in stored:
