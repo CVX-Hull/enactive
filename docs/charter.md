@@ -151,15 +151,18 @@ classical component inside the player gives way when a general method matches
 or beats it on the same pre-registered evaluation, including the declared
 cadence and cost.
 
-State each capability we design for the player as an instance of an explicit
-mathematical structure (for example an optimization, estimation, decision or
-control problem): its objective, signals and invariants, drawn from whichever
-field fits it, not only from LLM and agent work. The structure is what lets the
-capability be optimized and analyzed. It states what is optimized and checked,
-not how the player searches or learns; classical components inside the player
-still meet the conditions above. Each LLM or agent call fills a defined role in
-the structure, meaning the part it proposes, evaluates or estimates and what
-checks its output, and is justified against it; it does not replace it.
+State each capability we design for the player through explicit mathematical
+representations (for example as an optimization, estimation, decision or
+control problem), each with its objective, signals and invariants, drawn from
+whichever field fits, not only from LLM and agent work. No single
+representation is assumed true: we look for the ones that open new approaches,
+analyses or usable signals, as interdisciplinary breakthroughs do, and keep
+competing ones while they predict differently. A representation states what is
+optimized and checked, not how the player searches or learns; classical
+components inside the player still meet the conditions above. Each LLM or agent
+call fills a defined role in a representation, meaning the part it proposes,
+evaluates or estimates and what checks its output, and is justified against it;
+it does not replace it.
 
 ## P-KNOWLEDGE Maintain trustworthy knowledge and evidence
 
