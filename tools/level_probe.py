@@ -205,6 +205,38 @@ class ReplayProcess:
         return None
 
 
+def add_operation(runtime: ComputerRuntime, actor_id: str, session: Path, frames: dict, row: tuple) -> None:
+    """Copy one recorded operation, and the frame it cites, into the replay store through the store API."""
+    identity, kind, created, deadline, actions, final = row
+    decoded = json.loads(actions)
+    runtime.store.begin(dict(operation_id=identity, actor_id=actor_id, kind=kind, created_wall=created,
+                             deadline_monotonic=deadline), decoded, sum(a['type'] != 'wait' for a in decoded or []))
+    if final is None:
+        return
+    result = dict(json.loads(final), actor_id=actor_id)
+    if result.get('source'):
+        identifier = result['source']['source_id']
+        png = (session / 'sources' / f'{identifier}.png').read_bytes()
+        runtime.store.put_source(json.loads(frames[identifier]), png, actor_id)
+    runtime.store.finish(result)
+
+
+def open_replay(directory: Path, session_id: str, session: Path, frames: dict, rows: list, memory: Memory | None = None):
+    """A fresh replay runtime and application with one narrowed actor holding `rows`; `memory` is shared when given.
+
+    Returns (runtime, memory, application, actor). `directory` must exist; the caller closes the runtime and, when it
+    created it, the memory.
+    """
+    limits = dict(max_inputs=10 ** 6, max_requests=10 ** 6, max_frames=10 ** 6, max_bytes=2 ** 40)
+    runtime = ComputerRuntime(directory, session_id, ReplayChannel(), ReplayProcess(), time.monotonic() + 36000, limits)
+    memory = Memory(directory / 'player.sqlite3') if memory is None else memory
+    application = Application(runtime, memory, directory / 'contexts')
+    actor = application.add_actor('narrowed')
+    for row in rows:
+        add_operation(runtime, actor['actor_id'], session, frames, row)
+    return runtime, memory, application, actor
+
+
 def build_replay(recorded: dict, directory: Path, level: dict) -> dict:
     """A fresh replay of one pass's session state: operations up to the pass start, the frames they cite, a reader."""
     session = recorded['session']
@@ -218,23 +250,7 @@ def build_replay(recorded: dict, directory: Path, level: dict) -> dict:
     if len(rows) != recorded['entries']:
         raise ValueError(f'{session.name}: the recording holds {len(rows)} operations, the pass saw {recorded["entries"]}')
     directory.mkdir(mode=0o700)
-    limits = dict(max_inputs=10 ** 6, max_requests=10 ** 6, max_frames=10 ** 6, max_bytes=2 ** 40)
-    runtime = ComputerRuntime(directory, recorded['session_id'], ReplayChannel(), ReplayProcess(), time.monotonic() + 36000, limits)
-    memory = Memory(directory / 'player.sqlite3')
-    application = Application(runtime, memory, directory / 'contexts')
-    actor = application.add_actor('narrowed')
-    for identity, kind, created, deadline, actions, final in rows:
-        decoded = json.loads(actions)
-        runtime.store.begin(dict(operation_id=identity, actor_id=actor['actor_id'], kind=kind, created_wall=created,
-                                 deadline_monotonic=deadline), decoded, sum(a['type'] != 'wait' for a in decoded or []))
-        if final is None:
-            continue
-        result = dict(json.loads(final), actor_id=actor['actor_id'])
-        if result.get('source'):
-            identifier = result['source']['source_id']
-            png = (session / 'sources' / f'{identifier}.png').read_bytes()
-            runtime.store.put_source(json.loads(frames[identifier]), png, actor['actor_id'])
-        runtime.store.finish(result)
+    runtime, memory, application, actor = open_replay(directory, recorded['session_id'], session, frames, rows)
     derived = dict(stall_settles=level['stall_settles'], confidence_floor=level['confidence_floor'])
     reader = application.add_reader(actor['actor_id'], 'level', staleness_inputs=level['staleness_inputs'], **derived)
     recorder = application.add_reader(actor['actor_id'], 'recorder', **derived)
@@ -273,8 +289,13 @@ def load_route(path: Path, max_requests: int, tag: str | None) -> dict:
 REFUSAL_FIELD = re.compile(r'^- ([A-Za-z0-9_.]+):', re.M)
 
 
-def classify(directory: Path, events: HostEvents, child_returncode: int | None) -> dict:
-    """What one finished sample did, from its own host trace."""
+def classify(directory: Path, events: HostEvents, child_returncode: int | None, role: str = 'level') -> dict:
+    """What one finished sample did, from its own host trace; `role` is `level` or `episode` (the recorder).
+
+    A recorder's refusals also count its non-terminal calls the host refused (`episode-image-peak` for a read over the
+    peak, or changed arguments), since a recorder reads frames; a level's count terminal calls only.
+    """
+    prefix = f'player_{role}_'
     refusals, texts = collections.Counter(), collections.Counter()
     calls, started, validated, refused, reserved, last_logical = {}, set(), set(), {}, set(), None
     reserved_non_terminal = 0
@@ -289,18 +310,18 @@ def classify(directory: Path, events: HostEvents, child_returncode: int | None) 
             for field in REFUSAL_FIELD.findall(event.get('projected_text', '')) or ['(unparsed)']:
                 refusals[f'{event["tool"]}.{field}'] += 1
             texts[hashlib.sha256(f'{event["tool"]}:{event.get("projected_text")}'.encode()).hexdigest()] += 1
-        elif kind == 'tool-result' and event.get('tool', '').startswith('player_level_') \
+        elif kind == 'tool-result' and event.get('tool', '').startswith(prefix) \
                 and (event.get('result') or {}).get('isError'):
             text = ''.join(p.get('text', '') for p in event['result'].get('content', []) if p.get('type') == 'text')
             refusals[f'{event["tool"]}.custodian'] += 1
             texts[hashlib.sha256(f'{event["tool"]}:{text}'.encode()).hexdigest()] += 1
         elif kind == 'tool-start':
             started.add(event.get('tool_call_id'))
-        elif kind == 'level-terminal-call':
+        elif kind == f'{role}-terminal-call':
             calls[event['tool_call_id']] = event
         elif kind == 'tool-refused':
             refused[event.get('tool_call_id')] = event
-        elif kind == 'level-reserved-request':
+        elif kind == f'{role}-reserved-request':
             # `logical_request_id` is the logical count (`request-K`) in both events, so a retried request matches itself.
             reserved.add(event.get('logical_request_id'))
         elif kind == 'request-start':
@@ -311,18 +332,26 @@ def classify(directory: Path, events: HostEvents, child_returncode: int | None) 
         if identifier in started or identifier in validated:
             continue
         reason = (refused.get(identifier) or {}).get('reason')
-        if reason in ('level-ended', 'handoff'):
+        if reason in (f'{role}-ended', 'handoff'):
             continue
         label = f'tool-refused:{reason}' if reason else 'arguments_error' if call.get('arguments_error') else 'undispatched'
         refusals[f'{call["tool"]}.{label}'] += 1
         texts[f'{call["tool"]}:{label}'] += 1
-    for event in refused.values():
-        reserved_non_terminal += event.get('reason') == 'level-reserved'
-    terminal = next((e for e in events.level if e['type'] in ('level-commit', 'level-discard', 'level-abstain')), None)
+    for identifier, event in refused.items():
+        reserved_non_terminal += event.get('reason') == f'{role}-reserved'
+        if (role == 'episode' and identifier not in calls
+                and event.get('reason') not in (f'{role}-ended', f'{role}-reserved', 'handoff')):
+            refusals[f'{event.get("tool")}.tool-refused:{event.get("reason")}'] += 1
+            texts[f'{event.get("tool")}:tool-refused:{event.get("reason")}'] += 1
+    if role == 'level':
+        terminal = next((e for e in events.level if e['type'] in ('level-commit', 'level-discard', 'level-abstain')), None)
+    else:
+        terminal = next((e for e in events.episode if e['type'] in ('episode-record', 'episode-abstain')), None)
     settled = events.settled or {}
     outcome = None
     if terminal is not None:
-        outcome = f'abstain:{terminal["reason_code"]}' if terminal['type'] == 'level-abstain' else terminal['action']
+        outcome = (f'abstain:{terminal["reason_code"]}' if terminal['type'] == f'{role}-abstain'
+                   else 'record' if role == 'episode' else terminal['action'])
     return dict(valid_terminal_call=terminal is not None, terminal=terminal and terminal['type'], outcome=outcome,
                 settled_reason=settled.get('reason'), settled_ok=settled.get('ok'), requests=len(events.requests),
                 # A provider failure on a request that offered only the terminal tools, counted apart from other settlements.
@@ -331,6 +360,41 @@ def classify(directory: Path, events: HostEvents, child_returncode: int | None) 
                 refusals=dict(refusals), repeated_identical_refusal=max(texts.values(), default=0),
                 configured_cost_usd=sum(v.get('cost', {}).get('total', 0) for v in events.usage.values()),
                 host_returncode=child_returncode)
+
+
+def watch_host(directory: Path, arguments: list[str], input_name: str, route: dict, secret: str, seconds: float,
+               remaining_usd: float, bound_usd: float) -> tuple[HostEvents, subprocess.Popen, bool]:
+    """Launch one reader host with `directory/input_name` on stdin and watch it to its end under the spend backstop.
+
+    The credential is passed only in the host's environment. The caller closes the events and the process group.
+    Returns the events, the process and whether the guard stopped it. The backstop counts started requests without
+    usage (the one in flight included) at the larger of the bound and the dearest request seen, so a request dearer
+    than the bound cannot go on unchecked; it applies only until the pass has ended with a terminal outcome.
+    """
+    environment = dict(PATH=os.environ.get('PATH', '/usr/bin:/bin'), LANG='en_US.UTF-8', **{route['api_key_env']: secret})
+    stopped_by_guard = False
+    with (directory / 'host.jsonl').open('x') as output, (directory / 'host-stderr.log').open('x') as errors, \
+            (directory / input_name).open() as pass_input:
+        child = subprocess.Popen(arguments, cwd=ROOT, env=environment, stdin=pass_input, stdout=output, stderr=errors,
+                                 start_new_session=True)
+        events = HostEvents(directory / 'host.jsonl', route['max_requests'])
+        deadline = time.monotonic() + seconds + 30
+        try:
+            while child.poll() is None:
+                events.read()
+                costs = [v.get('cost', {}).get('total', 0) for v in events.usage.values()]
+                step = max([bound_usd, *costs])
+                if not (events.level or events.episode) and sum(costs) + (len(events.requests) - len(costs)) * step > remaining_usd:
+                    stopped_by_guard = True
+                    break
+                if time.monotonic() >= deadline:
+                    break
+                time.sleep(.05)
+        except BaseException:
+            close_group(child)
+            events.close()
+            raise
+    return events, child, stopped_by_guard
 
 
 def run_sample(recorded: dict, sample: int, work: Path, out: Path, route: dict, context: str, role: str, effort: str,
@@ -356,26 +420,8 @@ def run_sample(recorded: dict, sample: int, work: Path, out: Path, route: dict, 
         arguments = [*host_argv, 'run', '--config', str(directory / 'route.json'), '--mcp-config', str(directory / 'mcp.json'),
                      '--context', str(directory / 'context.txt'), '--model', route['model']['id'], '--effort', effort,
                      '--timeout-seconds', str(recorded['seconds']), '-o', str(directory / 'player-final.txt')]
-        environment = dict(PATH=os.environ.get('PATH', '/usr/bin:/bin'), LANG='en_US.UTF-8', **{route['api_key_env']: secret})
-        stopped_by_guard = False
-        with (directory / 'host.jsonl').open('x') as output, (directory / 'host-stderr.log').open('x') as errors, \
-                (directory / 'input.txt').open() as prompt_input:
-            child = subprocess.Popen(arguments, cwd=ROOT, env=environment, stdin=prompt_input, stdout=output, stderr=errors,
-                                     start_new_session=True)
-            events = HostEvents(directory / 'host.jsonl', route['max_requests'])
-            deadline = time.monotonic() + recorded['seconds'] + 30
-            while child.poll() is None:
-                events.read()
-                costs = [v.get('cost', {}).get('total', 0) for v in events.usage.values()]
-                # Backstop only: started requests without usage (the one in flight included) count at the larger of the
-                # bound and the dearest request seen, so a request dearer than the bound cannot go on unchecked.
-                step = max([bound_usd, *costs])
-                if not events.level and sum(costs) + (len(events.requests) - len(costs)) * step > remaining_usd:
-                    stopped_by_guard = True
-                    break
-                if time.monotonic() >= deadline:
-                    break
-                time.sleep(.05)
+        events, child, stopped_by_guard = watch_host(directory, arguments, 'input.txt', route, secret, recorded['seconds'],
+                                                     remaining_usd, bound_usd)
         cleanup = close_group(child)
         accounting = events.finish()
         record = classify(directory, events, child.returncode)
