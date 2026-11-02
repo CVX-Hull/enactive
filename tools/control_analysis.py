@@ -44,10 +44,10 @@ def session_database(path: Path) -> Iterator[tuple[sqlite3.Connection, Path, str
         connection = sqlite3.connect(selected.as_uri() + '?mode=ro', uri=True, timeout=.25)
         connection.execute('PRAGMA query_only=ON')
         connection.execute('BEGIN')
-        if connection.execute('PRAGMA user_version').fetchone()[0] != 2:
+        if connection.execute('PRAGMA user_version').fetchone()[0] != 3:
             raise ControlError('Unsupported computer session database version')
         metadata = dict(connection.execute("SELECT key,value FROM metadata WHERE key IN ('schema','session')"))
-        if decode_json(metadata.get('schema', 'null')) != 'computer-session/2':
+        if decode_json(metadata.get('schema', 'null')) != 'computer-session/3':
             raise ControlError('Unsupported computer session schema')
         session = decode_json(metadata.get('session', 'null'))
         if not isinstance(session, str) or re.fullmatch('[0-9a-f]{32}', session) is None:

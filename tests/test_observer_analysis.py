@@ -27,14 +27,14 @@ class ComputerAnalysisTests(unittest.TestCase):
             viewport=[0, 0, 20, 10])
         self.database = self.root / "session.sqlite3"
         with sqlite3.connect(self.database) as db:
-            db.executescript('''PRAGMA user_version=2;
+            db.executescript('''PRAGMA user_version=3;
                 CREATE TABLE metadata(key TEXT PRIMARY KEY,value TEXT NOT NULL);
                 CREATE TABLE sources(id TEXT PRIMARY KEY,metadata TEXT NOT NULL,bytes INTEGER NOT NULL);
                 CREATE TABLE operations(id TEXT PRIMARY KEY,actor TEXT NOT NULL,kind TEXT NOT NULL,
                     created_wall REAL NOT NULL,deadline REAL NOT NULL,input_json TEXT NOT NULL,final_json TEXT);
                 CREATE TABLE native_intents(id TEXT PRIMARY KEY,operation TEXT NOT NULL,receipt TEXT,source TEXT,timing TEXT NOT NULL);
                 CREATE TABLE collections(native_id TEXT PRIMARY KEY,receipt TEXT NOT NULL,source TEXT);''')
-            db.executemany("INSERT INTO metadata VALUES(?,?)", [("schema", json.dumps("computer-session/2")), ("session", json.dumps(self.session))])
+            db.executemany("INSERT INTO metadata VALUES(?,?)", [("schema", json.dumps("computer-session/3")), ("session", json.dumps(self.session))])
             db.execute("INSERT INTO sources VALUES(?,?,?)", (self.source["source_id"], json.dumps(self.source), 120))
             final = dict(schema="computer-operation/1", operation_id="op", actor_id="actor", session=self.session,
                          kind="input", status="unknown", reason="PRIVATE")
@@ -97,7 +97,7 @@ class ComputerAnalysisTests(unittest.TestCase):
         with self.assertRaisesRegex(ControlError, "Unsupported"):
             read_sources(self.database)
         with sqlite3.connect(self.database) as db:
-            db.execute("UPDATE metadata SET value=? WHERE key='schema'", (json.dumps("computer-session/2"),))
+            db.execute("UPDATE metadata SET value=? WHERE key='schema'", (json.dumps("computer-session/3"),))
             db.execute("UPDATE sources SET metadata=?", (json.dumps({**self.source, "schema": "computer-source/0"}),))
         with self.assertRaises(ControlError):
             read_sources(self.database)
@@ -164,6 +164,17 @@ class ComputerAnalysisTests(unittest.TestCase):
             read_sources(self.database)
         with patch("tools.control_analysis.MAX_DATABASE_BYTES", 1), self.assertRaises(ControlError):
             control_summary([self.database])
+
+    def test_the_previous_session_version_and_schema_are_rejected(self):
+        with sqlite3.connect(self.database) as db:
+            db.execute("PRAGMA user_version=2")
+        with self.assertRaisesRegex(ControlError, "Unsupported computer session database version"):
+            read_sources(self.database)
+        with sqlite3.connect(self.database) as db:
+            db.execute("PRAGMA user_version=3")
+            db.execute("UPDATE metadata SET value=? WHERE key='schema'", (json.dumps("computer-session/2"),))
+        with self.assertRaisesRegex(ControlError, "Unsupported computer session schema"):
+            read_sources(self.database)
 
     def test_database_user_version_rejects_before_old_rows_are_read(self):
         with sqlite3.connect(self.database) as db:

@@ -125,14 +125,15 @@ class Memory:
 
     def append_many(self, actor_id: str, values: list[dict], *, request_id: str,
                     service: tuple[str, dict, dict] | None = None,
-                    sources: list[tuple[dict, bytes]] = (), settle: bool = False) -> list[dict]:
+                    sources: list[tuple[dict, bytes]] = (), custodian: bool = False) -> list[dict]:
         """Append 0..16 records in one transaction; a later record may reference an earlier one.
 
         `service` is `(tool, args, result)`: its correlation row and final result, with
         `records` filled in, commit in the same transaction, so no pending window exists.
         `sources` are exact `(metadata, png)` registrations made in that transaction too.
-        `settle` is the custodian's episode settle path, the only one that may write `data.level == "episode"`
-        and `data.writer`; every other caller is refused those, as `append` refuses them.
+        `custodian` marks the custodian's own level-commit, closure and episode-settle paths, the only ones
+        that may write the reserved `data.level`, `data.level_contract`, `data.writer` and `data.by` "software";
+        every other caller is refused those, as `append` refuses them.
         """
         identity(actor_id)
         identity(request_id)
@@ -140,8 +141,8 @@ class Memory:
             raise PlayerError('A multi-record append holds 1..16 records, or 0 with its service result')
         sources = [(self._valid_source(metadata, png), png) for metadata, png in sources]
         values = [record(value) for value in values]
-        for value in values:
-            if not settle or value['kind'] != 'claim':
+        if not custodian:
+            for value in values:
                 refuse_custodian_data(value)
         now = time.time()
         stored = [dict(value, id=item, actor_id=actor_id, created_wall=now)
@@ -194,11 +195,17 @@ class Memory:
 
     def revision(self) -> int:
         """The commit position of the newest record (0 when empty); records are only appended."""
-        return self._db.execute('SELECT COALESCE(MAX(rowid),0) FROM records').fetchone()[0]
+        try:
+            return self._db.execute('SELECT COALESCE(MAX(rowid),0) FROM records').fetchone()[0]
+        except sqlite3.Error as exc:
+            raise PlayerError(f'Cannot query player memory: {exc}') from exc
 
     def rowid(self, record_id: str) -> int:
         """A record's commit position, which orders records by when they were committed."""
-        row = self._db.execute('SELECT rowid FROM records WHERE id=?', (identity(record_id),)).fetchone()
+        try:
+            row = self._db.execute('SELECT rowid FROM records WHERE id=?', (identity(record_id),)).fetchone()
+        except sqlite3.Error as exc:
+            raise PlayerError(f'Cannot query player memory: {exc}') from exc
         if row is None:
             raise PlayerError(f'Unknown records identity: {record_id}')
         return row[0]

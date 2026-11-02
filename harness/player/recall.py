@@ -9,6 +9,7 @@ fixed per pass. Byte truncation of what is shown belongs to the host, not to thi
 """
 from __future__ import annotations
 
+from collections import Counter
 import hashlib
 import math
 import random
@@ -33,35 +34,48 @@ def query_text(subgoal: dict | None) -> str | None:
     return ' '.join([subgoal['text'], *(subgoal['data'].get('expected_observations') or [])])
 
 
-def bm25(query: str, documents: list[list[str]]) -> list[float]:
-    """BM25 of each document (a token list) against the query, with the non-negative Lucene IDF."""
+def prepare(episode: dict) -> tuple[Counter, int]:
+    """An episode's term counts and token length over its text fields: computed once, as episodes never change."""
+    words = tokens(' '.join(episode[f] for f in TEXT_FIELDS))
+    return Counter(words), len(words)
+
+
+def bm25_prepared(query: str, documents: list[tuple[Counter, int]]) -> list[float]:
+    """BM25 of each prepared document `(term counts, length)` against the query, with the non-negative Lucene IDF."""
     terms = set(tokens(query))
     count = len(documents)
     if not count:
         return []
-    average = sum(len(d) for d in documents) / count or 1.
-    frequency = {term: sum(term in d for d in documents) for term in terms}
+    average = sum(length for _, length in documents) / count or 1.
+    frequency = {term: sum(term in counts for counts, _ in documents) for term in terms}
     scores = []
-    for document in documents:
+    for counts, length in documents:
         score = 0.
         for term in terms:
-            tf = document.count(term)
+            tf = counts.get(term, 0)
             if tf:
                 idf = math.log(1 + (count - frequency[term] + .5) / (frequency[term] + .5))
-                score += idf * tf * (K1 + 1) / (tf + K1 * (1 - B + B * len(document) / average))
+                score += idf * tf * (K1 + 1) / (tf + K1 * (1 - B + B * length / average))
         scores.append(score)
     return scores
 
 
-def rank(candidates: list[dict], query: str | None) -> list[dict[str, Any]]:
-    """Candidates (trusted recorded episodes, oldest first) ordered best first as `dict(episode, score)`.
+def bm25(query: str, documents: list[list[str]]) -> list[float]:
+    """BM25 of each document (a token list) against the query."""
+    return bm25_prepared(query, [(Counter(d), len(d)) for d in documents])
+
+
+def rank(candidates: list[dict], query: str | None, prepared: list[tuple[Counter, int]] | None = None
+         ) -> list[dict[str, Any]]:
+    """Candidates (trusted recorded episodes, oldest first) ordered best first as `dict(episode, score, age)`.
 
     Ties go to the newer episode. With no query the order is recency alone and every score is None. `age` is the
-    candidate's index in commit order, which is stable as episodes are added.
+    candidate's index in commit order, which is stable as episodes are added. `prepared` optionally holds each
+    candidate's `prepare()` result, so a caller that caches them avoids re-tokenising; the ranking is identical.
     """
     if query is None:
         return [dict(episode=e, score=None, age=i) for i, e in reversed(list(enumerate(candidates)))]
-    relevance = bm25(query, [tokens(' '.join(e[f] for f in TEXT_FIELDS)) for e in candidates])
+    relevance = bm25_prepared(query, [prepare(e) for e in candidates] if prepared is None else prepared)
     scored = [dict(episode=e, score=r * e['confidence'] * (RESIDUAL_WEIGHT if e['residual'].strip() else 1.), age=i)
               for i, (e, r) in enumerate(zip(candidates, relevance, strict=True))]
     scored.sort(key=lambda item: (-item['score'], -item['age']))

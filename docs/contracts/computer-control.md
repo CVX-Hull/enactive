@@ -250,8 +250,8 @@ first input or null.
   most 4, copied into player memory in the same transaction; `text` is `attempted` (or
   the reason).
 - `player_episode_record(attempted≤1024, counterpart≤512 (may be empty),
-  observation_status[≤8 of seen|not_yet|contradicted], residual≤1024 (may be empty),
-  changed≤1024 (may be empty), confidence 0..1, sources≤4)` is one flat object of portable
+  observation_status[≤8 of seen|not_yet|contradicted], changed≤1024 (may be empty),
+  residual≤1024 (may be empty), confidence 0..1, sources≤4)` is one flat object of portable
   schema keywords with every property required. `changed` is what visibly changed in the
   player's own state between the baseline frame and the episode's last frame, citing the
   frames that show it. The length of `observation_status` must equal the number of expected
@@ -272,16 +272,19 @@ first input or null.
   returns what the driver pushes: the operations (key tokens, positions, statuses, result
   source ids), the subgoal's id, text and ordered expected observations, and `sources`, the
   frames the recorder may cite: the result frame of each operation in the range, led by the
-  baseline frame (the newest result frame before the range). It refuses a range outside
+  baseline frame (the result capture of the last `input`, not observe, before the range). It
+  refuses a range outside
   the log, one overlapping an already settled episode, and a subgoal id that is not a
   `player-level/4` level subgoal.
 - `Application.settle_episode(recorder, first_position, last_position, subgoal_id,
   settled, reason)` settles an episode the driver reports as `failed` or `dropped`, with
   `writer: "software"`, no marks and the recorder as record actor. An episode settles
   exactly once: any settle overlapping a settled range is refused.
-- The memory-append paths other than the custodian's settle path refuse any record whose
-  `data.level` is `"episode"` or that sets `data.writer` (`player_memory_append` and
-  `Memory.append`/`append_many`), so an actor cannot forge a settle. Recall and every count
+- The memory-append paths other than the custodian's own commit, closure and settle paths
+  refuse any record that sets the reserved `data.level` (any value), `data.level_contract`
+  or `data.writer`, or `data.by` equal to `"software"` (`player_memory_append` and
+  `Memory.append`/`append_many`), so an actor cannot forge a level record, a settle or a
+  software closure. Recall and every count
   trust only claims whose contract is `player-episode/1` and whose `writer` stamp matches
   how they settled, in any session.
 
@@ -328,16 +331,18 @@ state (its id, status and leading text, or "no current subgoal") and the valid t
 So are the v4 refusals: while the subgoal is **stalled**, `player_level_keep` and
 `player_level_abstain` are refused with an error naming `player_level_replace` and
 `player_level_close`; while an observation is **contradicted**, a keep must cite in its
-`sources` a frame of a counted claim that holds a contradicting latest mark, otherwise
-it is refused (naming the allowed frames, or saying keep is unavailable when none was
-cited). A schema, unavailable-source or other fixable error is likewise a tool error. All
+`sources` a frame of any counted claim (committed after the subgoal, for its id, at or
+above the floor) that marks a contradicted observation `contradicted`, not only the
+latest such claim; otherwise it is refused (naming the allowed frames, or saying keep is
+unavailable when none cited a frame). A schema, unavailable-source or other fixable error is likewise a tool error. All
 keep the bound for a corrected resubmission; cited source bytes are read and verified before
 the timeliness check.
 
 *Binding.* `Application.bind_level(level)` is called by the driver under
 `Application.serial` when a level pass is pushed, replacing any log read. It binds the
-pass's position to the `last_position` of the served actor's newest settled episode in
-this session, whatever its outcome (record, abstain, failure or drop), or 0 before any
+pass's position to the highest `last_position` over the served actor's settled episodes in
+this session (so a later episode dropped before an earlier one is recorded never moves it
+back), whatever their outcome (record, abstain, failure or drop), or 0 before any
 has settled; recalled earlier-session records never bind. It also binds the current
 subgoal id (or none). A served actor that is not active binds nothing. The model never
 supplies either. `Application.release_reader(reader)` forgets a binding at pass end.

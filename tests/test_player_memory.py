@@ -141,20 +141,21 @@ def episode_claim(**changes):
     return record('claim', data=data | changes)
 
 
-def test_the_general_append_paths_refuse_episode_and_writer_data_and_only_the_settle_path_admits_it(tmp_path):
+def test_the_general_append_paths_refuse_reserved_data_and_only_the_custodian_paths_admit_it(tmp_path):
     from harness.player.contracts import RememberError
     with Memory(tmp_path / 'player.sqlite3') as memory:
-        for data in (dict(level='episode'), dict(writer='recorder'), dict(level='episode', writer='software')):
-            with pytest.raises(PlayerError, match='custodian settle path'):
+        for data in (dict(level='episode'), dict(level='subgoal'), dict(writer='recorder'), dict(level_contract='x'),
+                     dict(by='software'), dict(level='episode', writer='software')):
+            with pytest.raises(PlayerError, match='reserves'):
                 memory.append('a' * 32, record(data=data))
-            with pytest.raises(PlayerError, match='custodian settle path'):
+            with pytest.raises(PlayerError, match='reserves'):
                 memory.append_many('a' * 32, [record(data=data)], request_id='1' * 32)
         assert memory._db.execute('SELECT COUNT(*) FROM records').fetchone()[0] == 0
-        # Ordinary level and other data stay admitted.
-        memory.append('a' * 32, record(data=dict(level='subgoal', note='fine')))
-        with pytest.raises(PlayerError, match='custodian settle path'):
+        # Other data stays admitted.
+        memory.append('a' * 32, record(data=dict(note='fine', by='me')))
+        with pytest.raises(PlayerError, match='reserves'):
             memory.append('a' * 32, episode_claim())
-        (stored,) = memory.append_many('a' * 32, [episode_claim()], request_id='2' * 32, settle=True)
+        (stored,) = memory.append_many('a' * 32, [episode_claim()], request_id='2' * 32, custodian=True)
         assert [(row, r['id']) for row, r in memory.episode_claims()] == [(2, stored['id'])]
         assert memory.rowid(stored['id']) == 2 and memory.revision() == 2
         assert memory.episode_claims(after_row=2) == [] and len(memory.episode_claims(after_row=1)) == 1
@@ -177,3 +178,13 @@ def test_a_storage_fault_or_source_capacity_is_a_remember_error_and_a_refusal_is
         memory._db.execute('PRAGMA query_only=ON')
         with pytest.raises(RememberError, match='Cannot remember'):
             memory.append('a' * 32, record())
+
+
+def test_revision_and_rowid_wrap_storage_errors_as_player_errors(tmp_path):
+    memory = Memory(tmp_path / 'player.sqlite3')
+    stored = memory.append('a' * 32, record())
+    assert memory.revision() == 1 and memory.rowid(stored['id']) == 1
+    memory._db.close()
+    for call in (memory.revision, lambda: memory.rowid(stored['id'])):
+        with pytest.raises(PlayerError, match='Cannot query player memory'):
+            call()

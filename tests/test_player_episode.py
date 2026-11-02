@@ -8,7 +8,7 @@ from unittest.mock import patch
 import pytest
 
 from episode_support import (ABSTAIN, C, CLOSE, EPISODE_ABSTAIN, KEEP, N, RECORD, REPLACE, S, act, bind, call,
-                             commit_first, current_id, episode, keep, mint, recorded, replace, request_id,
+                             commit_first, current_id, episode, keep, mint, put, recorded, replace, request_id,
                              store_rows, sync, total)
 from harness.application import Application
 from harness.computer.protocol import ControlError
@@ -195,8 +195,8 @@ def test_recorder_schemas_use_only_portable_keywords():
         schema = tool_specs()[tool][1]
         assert keywords(schema) <= allowed and schema['additionalProperties'] is False
         assert set(schema['required']) == set(schema['properties'])
-    assert list(tool_specs()[RECORD][1]['properties']) == ['attempted', 'counterpart', 'observation_status', 'residual',
-                                                           'changed', 'confidence', 'sources']
+    assert list(tool_specs()[RECORD][1]['properties']) == ['attempted', 'counterpart', 'observation_status', 'changed',
+                                                           'residual', 'confidence', 'sources']
 
 
 def test_a_recorder_call_needs_a_bound_episode_and_settles_it_exactly_once(level):
@@ -287,6 +287,72 @@ def test_software_settles_are_failed_or_dropped_claims_stamped_software(level):
     assert [v['settled'] for v in app.settled_episodes()] == ['failed', 'dropped']
 
 
+def test_a_later_episode_dropped_before_an_earlier_one_is_recorded_never_moves_the_bound_back(level):
+    app, channel, actor, reader, recorder = level
+    work = with_subgoal(app, actor, reader, recorder)
+    end = sync(app, actor, recorder)
+    act(app, actor, 4)
+    rid = recorder['actor_id']
+    # Episode A (end+1..end+2) is in flight in the recorder while episode B (end+3..end+4) is dropped.
+    app.bind_episode(rid, first_position=end + 1, last_position=end + 2, subgoal_id=work['id'])
+    app.settle_episode(rid, first_position=end + 3, last_position=end + 4, subgoal_id=work['id'], settled='dropped',
+                       reason='backlog')
+    assert bind(app, reader)['position'] == end + 4
+    receipt = call(app, recorder, RECORD, recorded(['not_yet']))
+    assert (receipt['first_position'], receipt['last_position']) == (end + 1, end + 2)
+    # The record committed after B, yet the bound is the highest end, not the newest settle's.
+    assert app._settled_end(actor['actor_id']) == end + 4
+    act(app, actor, 2)
+    assert bind(app, reader)['position'] == end + 4
+    committed = call(app, reader, REPLACE, replace('Next', outcome='revised', reason='x'))
+    # With the newest-settle bound (end+2), four inputs would have passed it: a spurious S discard.
+    assert committed['status'] == 'committed' and committed['position'] == end + 4 and committed['inputs_since'] == 2
+
+
+def test_intent_results_are_copies_that_cannot_change_derived_state(level):
+    app, channel, actor, reader, recorder = level
+    with_subgoal(app, actor, reader, recorder, observations=['a', 'b'])
+    cited = act(app, actor)['source']['source_id']
+    end = app._settled_end(actor['actor_id'])
+    app.bind_episode(recorder['actor_id'], first_position=end + 1, last_position=total(app, actor),
+                     subgoal_id=current_id(app))
+    call(app, recorder, RECORD, recorded(['seen', 'contradicted']) | dict(sources=[cited]))
+    first = app.intent(actor['actor_id'])
+    snapshot = app.intent(actor['actor_id'])
+    for item in first['recall']['items']:
+        item['sources'].append('forged')
+        item['observation_status'][0] = 'contradicted'
+        item['attempted'] = 'forged'
+    first['recall']['items'].clear()
+    first['subgoal']['expected_observations'][0]['status'] = 'not_yet'
+    first['subgoal']['counts']['episodes'] = 99
+    again = app.intent(actor['actor_id'])
+    assert again['recall'] == snapshot['recall'] and again['subgoal'] == snapshot['subgoal']
+    assert again['recall']['items'][0]['sources'] == [cited] and again['recall']['items'][0]['attempted'] != 'forged'
+    assert [v['sources'] for v in app._episodes() if v['settled'] == 'recorded'] == [[cited]]
+    derived = app._derived(actor['actor_id'], app.level_subgoals()[0])
+    assert [o['status'] for o in derived['observations']] == ['seen', 'contradicted']
+
+
+def test_the_baseline_is_the_result_capture_of_the_last_input_not_of_an_observe(level):
+    app, channel, actor, reader, recorder = level
+    first = act(app, actor)
+    channel.capture = 2
+    observed = call(app, actor, 'computer_observe', {})
+    channel.capture = 3
+    inside = act(app, actor)
+    ids = [r['source']['source_id'] for r in (first, observed, inside)]
+    assert len(set(ids)) == 3
+    # Positions: 1 input, 2 observe, 3 input. The episode is position 3 alone.
+    bound = app.bind_episode(recorder['actor_id'], first_position=3, last_position=3, subgoal_id=None)
+    assert bound['baseline_source'] == ids[0] and bound['sources'] == [ids[0], ids[2]]
+    assert ids[1] not in bound['sources']
+    with pytest.raises(PlayerError, match='not frames of this episode'):
+        call(app, recorder, RECORD, recorded([]) | dict(sources=[ids[1]]))
+    # With no input before the episode there is no baseline.
+    assert app.bind_episode(recorder['actor_id'], first_position=1, last_position=1, subgoal_id=None)['baseline_source'] is None
+
+
 def test_a_retained_recorder_identity_collects_without_resettling(level):
     app, channel, actor, reader, recorder = level
     act(app, actor)
@@ -301,8 +367,10 @@ def test_a_retained_recorder_identity_collects_without_resettling(level):
 
 # --- Trust: forged records ---
 
-FORGERIES = [dict(level='episode'), dict(writer='recorder'), dict(writer='software'), dict(level='episode', writer='x',
-             level_contract='player-episode/1', settled='recorded')]
+# The custodian's reserved data: data.level (any value), data.level_contract, data.writer, data.by == "software".
+FORGERIES = [dict(level='episode'), dict(level='subgoal'), dict(level='anything'), dict(writer='recorder'),
+             dict(writer='software'), dict(level_contract='player-level/4'), dict(level_contract='player-episode/1'),
+             dict(by='software'), dict(level='episode', writer='x', level_contract='player-episode/1', settled='recorded')]
 
 
 def forged(data):
@@ -313,18 +381,21 @@ def forged(data):
 @pytest.mark.parametrize('data', FORGERIES)
 def test_the_general_memory_path_refuses_episode_and_writer_data(level, data):
     app, channel, actor, reader, recorder = level
-    for kind in ('claim', 'work', 'correction', 'decision'):
-        value = dict(forged(data), kind=kind, supersedes=None)
-        if kind == 'correction':
-            continue
-        with pytest.raises(PlayerError, match='custodian settle path'):
+    for kind in ('claim', 'work', 'decision', 'advice'):
+        value = dict(forged(data), kind=kind)
+        with pytest.raises(PlayerError, match='reserves'):
             app.memory.append(actor['actor_id'], value)
-        with pytest.raises(PlayerError, match='custodian settle path'):
+        with pytest.raises(PlayerError, match='reserves'):
             app.memory.append_many(actor['actor_id'], [value], request_id=request_id())
-    # Not even the settle flag admits a non-claim carrying it.
-    with pytest.raises(PlayerError, match='custodian settle path'):
-        app.memory.append_many(actor['actor_id'], [dict(forged(data), kind='work')], request_id=request_id(), settle=True)
     assert store_rows(app) == (0, 0)
+    # Only the custodian's own paths (custodian=True) may store them.
+    assert put(app.memory, actor['actor_id'], forged(data))['data'] == data
+
+
+def test_by_other_than_software_and_unreserved_data_stay_admitted(level):
+    app, channel, actor, *_ = level
+    for data in (dict(by='me'), dict(note='level'), dict(levels=1), dict(writer_name='x')):
+        assert app.memory.append(actor['actor_id'], forged(data))['data'] == data
 
 
 def test_a_flat_actor_cannot_forge_an_episode_through_the_tool(tmp_path):
@@ -335,11 +406,12 @@ def test_a_flat_actor_cannot_forge_an_episode_through_the_tool(tmp_path):
         flat = app.add_actor('flat')
         for data in FORGERIES:
             identity = request_id()
-            with pytest.raises(PlayerError, match='custodian settle path'):
+            with pytest.raises(PlayerError, match='reserves'):
                 call(app, flat, 'player_memory_append', dict(record=forged(data)), identity)
             # Refused before any service row, so the identity is not left pending.
             assert memory._db.execute('SELECT COUNT(*) FROM service_operations WHERE id=?', (identity,)).fetchone()[0] == 0
-        assert call(app, flat, 'player_memory_append', dict(record=forged(dict(level='subgoal'))))['kind'] == 'claim'
+        assert memory._db.execute('SELECT COUNT(*) FROM records').fetchone()[0] == 0
+        assert call(app, flat, 'player_memory_append', dict(record=forged(dict(note='ok'))))['kind'] == 'claim'
         assert memory._db.execute('SELECT COUNT(*) FROM records').fetchone()[0] == 1
     finally:
         runtime.close(); memory.close()
@@ -548,6 +620,34 @@ def test_a_keep_while_contradicted_must_cite_a_counted_contradicting_claims_sour
             call(app, reader, KEEP, keep(sources=sources))
     assert store_rows(app) == before
     assert call(app, reader, KEEP, keep(sources=[cited]))['status'] == 'committed'
+
+
+def test_a_keep_may_cite_any_counted_claim_that_marked_the_observation_contradicted(level):
+    app, channel, actor, reader, recorder = level
+    with_subgoal(app, actor, reader, recorder, observations=['a', 'b'])
+    frames = []
+    for capture, marks in ((2, ['contradicted', 'not_yet']), (3, ['seen', 'not_yet']), (4, ['contradicted', 'not_yet'])):
+        channel.capture = capture
+        frames.append(act(app, actor)['source']['source_id'])
+        end = app._settled_end(actor['actor_id'])
+        app.bind_episode(recorder['actor_id'], first_position=end + 1, last_position=total(app, actor),
+                         subgoal_id=current_id(app))
+        call(app, recorder, RECORD, recorded(marks) | dict(sources=[frames[-1]]))
+    # A below-floor contradiction is not counted and unlocks nothing.
+    channel.capture = 5
+    frames.append(act(app, actor)['source']['source_id'])
+    end = app._settled_end(actor['actor_id'])
+    app.bind_episode(recorder['actor_id'], first_position=end + 1, last_position=total(app, actor), subgoal_id=current_id(app))
+    call(app, recorder, RECORD, recorded(['contradicted', 'not_yet'], confidence=C - .1) | dict(sources=[frames[3]]))
+    sync(app, actor, recorder)
+    contradicting = app._derived(actor['actor_id'], app.level_subgoals()[0])['contradicting']
+    assert [c['index'] for c in contradicting] == [0] and contradicting[0]['sources'] == [frames[0], frames[2]]
+    bind(app, reader)
+    for refused in ([], [frames[1]], [frames[3]]):
+        with pytest.raises(PlayerError, match='must cite a frame'):
+            call(app, reader, KEEP, keep(sources=refused))
+    # The latest contradicting claim's frame, or any earlier counted contradicting claim's, unlocks the keep.
+    assert call(app, reader, KEEP, keep(sources=[frames[0]]))['status'] == 'committed'
 
 
 def test_a_keep_over_a_contradiction_with_no_cited_frames_is_unavailable(level):

@@ -77,6 +77,7 @@ def derive(subgoal: dict, views: list[dict], *, stall_settles: int, floor: float
     texts = subgoal['data'].get('expected_observations') or []
     status = ['not_yet'] * len(texts)
     marker: list[dict | None] = [None] * len(texts)
+    contradicted_by: list[list[dict]] = [[] for _ in texts]
     settles = [view for view in views if view['subgoal_id'] == subgoal['id']]
     counts = dict(episodes=len(settles), recorded=0, abstained=0, failed=0, dropped=0, counted=0)
     counted: list[dict] = []
@@ -93,8 +94,12 @@ def derive(subgoal: dict, views: list[dict], *, stall_settles: int, floor: float
                     status[index], marker[index] = 'seen', view
                 elif mark == 'contradicted':
                     status[index], marker[index] = 'contradicted', view
+                    contradicted_by[index].append(view)
         streak = 0 if newly else streak + 1
-    contradicting = [dict(index=i, claim_id=marker[i]['record_id'], sources=marker[i]['sources'])
+    # For each observation now contradicted: every counted claim that marks it contradicted (not only the
+    # latest), since a keep may cite the source of any of them.
+    contradicting = [dict(index=i, claim_id=marker[i]['record_id'], claim_ids=[v['record_id'] for v in contradicted_by[i]],
+                          sources=list(dict.fromkeys(s for v in contradicted_by[i] for s in v['sources'])))
                      for i, s in enumerate(status) if s == 'contradicted']
     seen_by = [marker[i] for i, s in enumerate(status) if s == 'seen']
     return dict(observations=[dict(text=t, status=s) for t, s in zip(texts, status, strict=True)],

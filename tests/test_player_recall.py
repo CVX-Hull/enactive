@@ -2,13 +2,14 @@
 
 The ranking module is pure; the intent tests use the actual composition over the receiver double.
 """
+from collections import Counter
 import hashlib
 import math
 import random
 
 import pytest
 
-from episode_support import act, bind, call, commit_first, episode, mint, replace, request_id, sync
+from episode_support import act, bind, call, commit_first, episode, mint, put, replace, request_id, sync
 from harness.application import Application
 from harness.player import recall
 from harness.player.episodes import claim_data
@@ -155,7 +156,7 @@ def settle_earlier(app, memory_actor, index, attempted, *, session='z' * 32, con
                       observation_status=[], residual=residual, changed='', confidence=confidence)
     value = dict(schema='player-record/1', kind='claim', text=attempted, data=data, sources=[], supports=[],
                  supersedes=None, applicability=None, program_id=None)
-    return app.memory.append_many(reader, [value], request_id=request_id(), settle=True)[0]
+    return app.memory.append_many(reader, [value], request_id=request_id(), custodian=True)[0]
 
 
 def test_intent_v2_carries_the_subgoal_with_derived_status_stalled_flag_confidence_age_and_id(level):
@@ -235,7 +236,7 @@ def test_recall_ranks_earlier_session_records_against_the_current_subgoal(level)
 def test_recall_trusts_only_stamped_claims_not_other_records_with_episode_like_text(level):
     app, channel, actor, reader, recorder = level
     commit_first(app, actor, reader, recorder, text='Open the iron gate', observations=['The iron gate swings open'])
-    app.memory.append(actor['actor_id'], dict(schema='player-record/1', kind='claim', text='Pulled the iron gate',
+    put(app.memory, actor['actor_id'], dict(schema='player-record/1', kind='claim', text='Pulled the iron gate',
         data=dict(attempted='Pulled the iron gate', confidence=1., level_contract='player-episode/1'), sources=[],
         supports=[], supersedes=None, applicability=None, program_id=None))
     assert app.intent(actor['actor_id'])['recall']['items'] == []
@@ -259,6 +260,49 @@ def test_the_exploration_item_is_stable_within_a_pass_and_changes_with_the_pass_
     assert len(seen) > 5
 
 
+def test_the_cached_ranking_matches_an_uncached_one_and_is_reused_until_an_episode_settles(level):
+    from unittest.mock import patch
+    app, channel, actor, reader, recorder = level
+    commit_first(app, actor, reader, recorder, text='Open the iron gate', observations=['The iron gate swings open'])
+    for index in range(15):
+        settle_earlier(app, actor, index, f'Pulled the iron gate {index % 4} and the old door', confidence=.3 + index / 30,
+                       residual='rust' if index % 3 == 0 else '')
+    episode(app, actor, recorder, ['not_yet'], attempted='Kicked the iron gate')
+
+    def uncached():
+        candidates = [v for v in app._episodes() if v['settled'] == 'recorded']
+        return recall.rank(candidates, recall.query_text(app.level_subgoals()[0]))
+    cached = app._ranking(app.level_subgoals()[0])
+    assert [(r['episode']['record_id'], r['score'], r['age']) for r in cached] == [
+        (r['episode']['record_id'], r['score'], r['age']) for r in uncached()]
+    assert len(cached) == 16 and len(app._prepared) == 16
+    # Reused while nothing settles: no re-ranking and no re-tokenising.
+    with patch.object(recall, 'rank', wraps=recall.rank) as ranked, patch.object(recall, 'prepare', wraps=recall.prepare) as prepared:
+        first = app.intent(actor['actor_id'], audience='level')
+        again = app.intent(actor['actor_id'], audience='level')
+        assert first['recall'] == again['recall'] and first['subgoal'] == again['subgoal']
+        assert ranked.call_count == 0 and prepared.call_count == 0
+        # A new episode invalidates the ranking and tokenises only itself.
+        episode(app, actor, recorder, ['not_yet'], attempted='Pushed the iron gate again')
+        grown = app.intent(actor['actor_id'], audience='level')
+        assert ranked.call_count == 1 and prepared.call_count == 1 and len(app._prepared) == 17
+    assert [r['episode']['record_id'] for r in app._ranking(app.level_subgoals()[0])] == [
+        r['episode']['record_id'] for r in uncached()]
+    assert len(grown['recall']['items']) == 10
+    # The no-subgoal ranking is cached on its own key.
+    assert app._ranking(None)[0]['score'] is None
+
+
+def test_prepared_documents_give_the_same_bm25_scores_as_token_lists():
+    texts = ['door door key', 'key wall', 'floor floor floor floor', '']
+    lists = [recall.tokens(t) for t in texts]
+    prepared = [(Counter(t), len(t)) for t in lists]
+    assert recall.bm25_prepared('door key', prepared) == recall.bm25('door key', lists)
+    items = [candidate(i, t) for i, t in enumerate(texts)]
+    assert recall.prepare(items[0]) == (Counter(lists[0]), 3)
+    assert recall.rank(items, 'door key', [recall.prepare(i) for i in items]) == recall.rank(items, 'door key')
+
+
 def test_the_intent_audience_is_validated(level):
     app, channel, actor, reader, recorder = level
     with pytest.raises(ValueError, match='audience'):
@@ -271,7 +315,7 @@ def test_intent_without_any_reader_reports_no_derived_status(tmp_path):
     app = Application(runtime, memory, tmp_path / 'contexts')
     try:
         actor = app.add_actor('narrowed')
-        memory.append(actor['actor_id'], dict(schema='player-record/1', kind='work', text='A goal', data=dict(
+        put(memory, actor['actor_id'], dict(schema='player-record/1', kind='work', text='A goal', data=dict(
             level='subgoal', level_contract='player-level/4', position=0, session=runtime.session,
             actor_id=actor['actor_id'], expected_observations=['x'], status='open', confidence=.5), sources=[],
             supports=[], supersedes=None, applicability=None, program_id=None))

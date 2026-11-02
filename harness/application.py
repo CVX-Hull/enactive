@@ -101,6 +101,9 @@ class Application:
         self.remember_failure: str | None = None
         self._episode_views: list[dict[str, Any]] = []
         self._episode_scanned = 0
+        self._prepared: dict[str, Any] = {}
+        self._ranked: list[dict[str, Any]] = []
+        self._ranked_key: tuple | None = None
         # Optional sink for per-call lock wait/hold, the level's measured cost to the actor.
         self.timing = None
         self.host: dict[str, Any] | None = None
@@ -227,11 +230,13 @@ class Application:
         return derive(subgoal, views, **parameters)
 
     def _settled_end(self, actor_id: str) -> int:
-        """The end position of the served actor's newest settled episode in this session, whatever its outcome, else 0."""
-        for view in reversed(self._episodes()):
-            if view['actor_id'] == actor_id and view['session'] == self.runtime.session:
-                return view['last_position']
-        return 0
+        """The highest end position over the served actor's settled episodes in this session, whatever their outcome, else 0.
+
+        The maximum, not the newest by commit order: a later episode may be dropped before an earlier one is
+        recorded, and the bound must never move backwards.
+        """
+        return max((view['last_position'] for view in self._episodes()
+                    if view['actor_id'] == actor_id and view['session'] == self.runtime.session), default=0)
 
     def _overlapping(self, actor_id: str, first: int, last: int) -> dict[str, Any] | None:
         for view in self._episodes():
@@ -262,7 +267,9 @@ class Application:
     def release_reader(self, reader_id: str) -> None:
         """Forget a reader's binding at the end of its pass, so a late call from a finished host changes nothing."""
         with self.serial:
-            state = self.readers[reader_id]
+            state = self.readers.get(reader_id)
+            if state is None:
+                raise ControlError('Unknown reader')
             if state['role'] == 'level':
                 state.update(bound=None, subgoal_id=None)
             else:
@@ -289,8 +296,9 @@ class Application:
                 raise PlayerError('This episode overlaps one that already settled; every episode settles exactly once')
             subgoal = self._pushed_subgoal(subgoal_id)
             entries = self.runtime.store.actor_log(actor, first_position - 1, last_position - first_position + 1)
+            # The baseline is the result capture of the last input before the episode (an observe is not an input).
             baseline = next((e['source_id'] for e in reversed(self.runtime.store.actor_log(actor, 0, first_position - 1))
-                             if e['source_id']), None) if first_position > 1 else None
+                             if e['kind'] == 'input' and e['source_id']), None) if first_position > 1 else None
             sources = list(dict.fromkeys([*([baseline] if baseline else []), *(e['source_id'] for e in entries if e['source_id'])]))
             expected = subgoal['data']['expected_observations'] if subgoal else []
             state['episode'] = dict(first_position=first_position, last_position=last_position, subgoal_id=subgoal_id,
@@ -342,7 +350,7 @@ class Application:
             value = dict(schema='player-record/1', kind='claim', text=reason, data=data, sources=[], supports=[],
                          supersedes=None, applicability=None, program_id=None)
             with self._remembering():
-                (stored,) = self.memory.append_many(recorder_id, [value], request_id=identity, settle=True)
+                (stored,) = self.memory.append_many(recorder_id, [value], request_id=identity, custodian=True)
             if state['episode'] is not None and (state['episode']['first_position'], state['episode']['last_position']) \
                     == (first_position, last_position):
                 state['episode'] = None
@@ -387,8 +395,7 @@ class Application:
                 inputs_since_commit=self.runtime.store.inputs_after(actor_id, data['position']) if same_actor else None,
                 inputs_by_this_actor=self.runtime.store.inputs_after(actor_id, 0),
                 same_actor=same_actor, same_session=data.get('session') == self.runtime.session)
-        candidates = [v for v in self._episodes() if v['settled'] == 'recorded']
-        ranked = recall.rank(candidates, recall.query_text(latest))
+        ranked = self._ranking(latest)
         items = recall.select(ranked, audience=audience, session=self.runtime.session, pass_index=pass_index)
         value['recall'] = dict(basis='ranked' if latest is not None else 'recent', items=[
             dict({k: item['episode'][k] for k in ('record_id', 'session', 'first_position', 'last_position', 'subgoal_id',
@@ -397,7 +404,26 @@ class Application:
                  first_source=item['episode']['sources'][0] if item['episode']['sources'] else None,
                  same_session=item['episode']['session'] == self.runtime.session, score=item['score'],
                  exploration=item['exploration']) for item in items])
-        return value
+        # The cached views and rankings are shared state: a caller gets copies it may mutate.
+        return copy.deepcopy(value)
+
+    def _ranking(self, subgoal: dict | None) -> list[dict[str, Any]]:
+        """The recall ranking for the current subgoal, cached by (subgoal id, episodes scanned).
+
+        The views are append-only and immutable, and a subgoal's query never changes, so the cache is exact. Each
+        view's token counts are computed once.
+        """
+        views = self._episodes()
+        key = (subgoal['id'] if subgoal else None, len(views))
+        if self._ranked_key != key:
+            candidates = [v for v in views if v['settled'] == 'recorded']
+            for view in candidates:
+                if view['record_id'] not in self._prepared:
+                    self._prepared[view['record_id']] = recall.prepare(view)
+            self._ranked = recall.rank(candidates, recall.query_text(subgoal),
+                                       [self._prepared[v['record_id']] for v in candidates])
+            self._ranked_key = key
+        return self._ranked
 
     def subgoal_counts(self, actor_id: str) -> list[dict[str, Any]]:
         """Per level subgoal, history included: its episodes, seen and contradicted observations, closures and failures."""
@@ -555,7 +581,7 @@ class Application:
                       kept=[current] if action == 'keep' else [])
         with self._remembering():
             records = self.memory.append_many(reader_id, values, request_id=identity,
-                                              service=(tool, args, result), sources=blobs)
+                                              service=(tool, args, result), sources=blobs, custodian=True)
         self.claims = self.memory.query(limit=5)
         return dict(result, records=records)
 
@@ -647,7 +673,7 @@ class Application:
         with self._remembering():
             try:
                 records = self.memory.append_many(recorder_id, values, request_id=identity,
-                                                  service=(tool, args, result), sources=blobs, settle=True)
+                                                  service=(tool, args, result), sources=blobs, custodian=True)
             except BaseException:
                 state['episode'] = bound
                 raise

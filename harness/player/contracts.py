@@ -159,11 +159,11 @@ _EPISODE_RECORD = _object(dict(
     observation_status=_described(dict(type='array', items=_enum(*OBSERVATION_STATUSES), maxItems=8),
         'One entry per expected observation of the subgoal, in order: seen if this episode showed it, not_yet if '
         'it did not, contradicted if it showed the opposite. Empty only when the pushed input has no subgoal.'),
-    residual=_described(_text(1024, empty=True),
-                        'Anything that happened which the subgoal did not anticipate; empty if nothing.'),
     changed=_described(_text(1024, empty=True),
         'What visibly changed in the player\'s own state between the baseline frame and the last frame of this '
         'episode, citing the frames that show it; empty if nothing changed.'),
+    residual=_described(_text(1024, empty=True),
+                        'Anything that happened which the subgoal did not anticipate; empty if nothing.'),
     confidence=_described(dict(type='number', minimum=0, maximum=1), 'Your confidence from 0 to 1.'),
     sources=_EPISODE_SOURCES))
 _EPISODE_ABSTAIN = _object(dict(
@@ -200,11 +200,17 @@ def level_tool_schema(tool: str) -> dict:
 
 
 def refuse_custodian_data(value: dict) -> None:
-    """The general memory-append path never carries episode or writer data: only the settle path stamps them."""
+    """The general memory-append path never carries the custodian's reserved data.
+
+    `data.level` (any value), `data.level_contract`, `data.writer` and `data.by == "software"` are stamped only
+    by the custodian's level-commit, closure and episode-settle paths, so no actor can forge a level record,
+    an episode or a software closure.
+    """
     data = value.get('data', {})
-    if data.get('level') == 'episode' or 'writer' in data:
-        raise PlayerError('Episode and writer data are written only by the custodian settle path; '
-                          'this record sets data.level "episode" or data.writer')
+    reserved = [k for k in ('level', 'level_contract', 'writer') if k in data] + (['by'] if data.get('by') == 'software' else [])
+    if reserved:
+        raise PlayerError('The custodian reserves data.level, data.level_contract, data.writer and data.by "software" '
+                          'for its commit and settle paths; this record sets ' + ', '.join(f'data.{k}' for k in reserved))
 
 
 def record(value: object) -> dict:

@@ -9,7 +9,7 @@ from unittest.mock import patch
 import pytest
 
 from episode_support import (ABSTAIN, CLOSE, KEEP, RECORD, REPLACE, EPISODE_ABSTAIN, S, act, bind, call, close,
-                             commit_first, current_id, keep, mint, replace, request_id, source_rows, store_rows,
+                             commit_first, current_id, keep, mint, put, replace, request_id, source_rows, store_rows,
                              supersede, sync, total)
 from harness.application import Application
 from harness.computer.protocol import ControlError
@@ -166,6 +166,46 @@ def test_readers_serve_only_the_active_actor_and_never_block_succession(level):
     assert app.runtime.actor_stage(recorder['actor_id']) == 'reader'
     new_level, new_recorder = mint(app, successor)
     assert {new_level['actor_id'], new_recorder['actor_id']}.isdisjoint({reader['actor_id'], recorder['actor_id']})
+
+
+def test_releasing_an_unknown_reader_is_a_control_error_and_a_known_one_clears_its_binding(level):
+    app, channel, actor, reader, recorder = level
+    with pytest.raises(ControlError, match='Unknown reader'):
+        app.release_reader('f' * 32)
+    bind(app, reader)
+    act(app, actor)
+    app.bind_episode(recorder['actor_id'], first_position=1, last_position=1, subgoal_id=None)
+    app.release_reader(reader['actor_id'])
+    app.release_reader(recorder['actor_id'])
+    assert app.readers[reader['actor_id']]['bound'] is None and app.readers[recorder['actor_id']]['episode'] is None
+
+
+def test_a_recorders_lost_terminal_call_is_unknown_with_no_collecting_tool(level, tmp_path):
+    app, channel, actor, reader, recorder = level
+    server, thread = serve(app, 0)
+    try:
+        config = tmp_path / 'recorder.json'
+        config.write_text(json.dumps(dict(schema='player-adapter/1', base_url=f'http://127.0.0.1:{server.server_port}',
+                                          session=app.runtime.session, **recorder)))
+        for tool, args in ((RECORD, recorded_args()), (EPISODE_ABSTAIN, dict(reason_code='other', reason='r', sources=[]))):
+            client = PlayerClient(config)
+            delivered = client._post
+
+            def lost(path, value, delivered=delivered, **options):
+                delivered(path, value, **options)
+                raise TimeoutError('response lost')
+            client._post = lost
+            value, _, error = client.call(tool, args)
+            assert value['schema'] == 'player-transport/1' and value['status'] == 'unknown' and not error
+            assert value['collect_with'] is None and value['input_replayed'] is False
+            client.close()
+        assert 'player_result' not in PROFILES['recorder']
+    finally:
+        server.shutdown(); server.server_close(); thread.join(2)
+
+
+def recorded_args():
+    return dict(attempted='Walked', counterpart='', observation_status=[], changed='', residual='', confidence=.5, sources=[])
 
 
 def test_the_log_read_tool_and_its_schema_are_removed(level):
@@ -366,7 +406,7 @@ def test_stale_when_a_subgoal_appears_after_binding_with_none(level):
     sync(app, actor, recorder)
     bind(app, reader)
     # A subgoal appears (as if another commit ran) after the bind with none.
-    app.memory.append(actor['actor_id'], dict(schema='player-record/1', kind='work', text='other', data=dict(
+    put(app.memory, actor['actor_id'], dict(schema='player-record/1', kind='work', text='other', data=dict(
         level='subgoal', level_contract='player-level/4', expected_observations=['x']), sources=[], supports=[],
         supersedes=None, applicability=None, program_id=None))
     result = call(app, reader, REPLACE, supersede('Next'))
@@ -737,7 +777,7 @@ def test_reader_minting_refuses_more_than_one_current_level_subgoal_and_ignores_
         actor = app.add_actor('narrowed')
 
         def work(index, level=False):
-            memory.append(actor['actor_id'], dict(schema='player-record/1', kind='work', text=f'work {index}',
+            put(memory, actor['actor_id'], dict(schema='player-record/1', kind='work', text=f'work {index}',
                 data=dict(level='subgoal', level_contract='player-level/4') if level else {}, sources=[], supports=[],
                 supersedes=None, applicability=None, program_id=None))
         for index in range(16):
@@ -876,7 +916,7 @@ def test_reader_minting_refuses_a_current_level_record_of_another_contract(tmp_p
         actor = app.add_actor('narrowed')
 
         def level_work(text, **data):
-            return memory.append(actor['actor_id'], dict(schema='player-record/1', kind='work', text=text,
+            return put(memory, actor['actor_id'], dict(schema='player-record/1', kind='work', text=text,
                 data=dict(level='subgoal', **data), sources=[], supports=[], supersedes=None, applicability=None,
                 program_id=None))
 

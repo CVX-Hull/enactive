@@ -118,6 +118,14 @@ def commit_first(app, actor, reader, recorder, **change):
     return call(app, reader, REPLACE, replace(**change))['records'][0]
 
 
+def put(memory, actor_id, value):
+    """Store a record the way the custodian's own paths do (reserved level/episode data allowed); returns it.
+
+    The general append path refuses such data, so tests that need a prior or foreign level record use this.
+    """
+    return memory.append_many(actor_id, [value], request_id=request_id(), custodian=True)[0]
+
+
 def store_rows(app):
     return (app.memory._db.execute('SELECT COUNT(*) FROM records').fetchone()[0],
             app.memory._db.execute('SELECT COUNT(*) FROM service_operations').fetchone()[0])
