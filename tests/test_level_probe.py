@@ -18,7 +18,7 @@ import pytest
 
 from harness.computer.store import SessionStore
 from tools import level_probe
-from tools.campaign_player import push_text
+from tools.campaign_player import BRIEF_MARK
 from tools.level_probe import build_replay, load_route, probe, recorded_passes
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -27,6 +27,11 @@ SESSION = 'c' * 32
 RECORDED_ACTOR = 'a1' * 16
 KEY = 'probe-secret-credential'
 pytestmark = pytest.mark.skipif(shutil.which('node') is None, reason='Node.js is required for the level host')
+LEVEL = dict(mode='shadow', episode_cap=10, staleness_inputs=10, budget_fractions=[.5], intent_tail_bytes=1024,
+             max_http_attempts=60, pass_max_requests=4, pass_seconds=60, theta=0.1251514705882353,
+             theta_fitting_sha256='a' * 64, min_episode_inputs=2, stall_settles=3, confidence_floor=0.0,
+             recall=dict(tail_top=2, tail_exploration=1, level_items=10),
+             recorder=dict(max_http_attempts=60, pass_max_requests=2, pass_seconds=60, backlog=3))
 THRESHOLDS = dict(schema='level-probe-thresholds/1', valid_terminal_rate_at_least=0.9, repeated_identical_refusal_at_most=1)
 
 
@@ -72,21 +77,24 @@ def recorded(tmp_path):
     player_store = tmp_path / 'recorded-player.sqlite3'
     Memory(player_store).close()
     (session / 'manifest.json').write_text(json.dumps(dict(player_store=str(player_store),
-        level=dict(mode='shadow', inputs_per_pass=3, staleness_inputs=10,
-        budget_fractions=[.5], intent_tail_bytes=1024, max_http_attempts=60, pass_max_requests=4, pass_seconds=60))))
+        level=LEVEL)))
     actor_directory = session / 'actors/001'
     (actor_directory / 'level').mkdir(parents=True)
     (actor_directory / 'actor.json').write_text(json.dumps(dict(actor_id=RECORDED_ACTOR)))
-    for index, entries in ((1, 3), (2, 6)):
+    for index, entries, bound in ((1, 3, 0), (2, 6, 3)):
         directory = actor_directory / 'level' / f'{index:03d}'
         directory.mkdir()
         (directory / 'context.txt').write_text('Frozen guide for the probe.')
-        (directory / 'driver-receipt.json').write_text(json.dumps(dict(index=index, reason='inputs', log_entries=entries,
-            actor_inputs=entries - 1, allocated_seconds=60, allocated_attempts=4, started_wall=2000. + index, level_events=[])))
+        (directory / 'driver-receipt.json').write_text(json.dumps(dict(index=index, reason='settle', log_entries=entries,
+            actor_inputs=entries - 1, allocated_seconds=60, allocated_attempts=4, started_wall=2000. + index, level_events=[],
+            bound=dict(position=bound, subgoal_id=None))))
+        # The pass input the driver handed the recorded level host: plain text led by the role prompt of the time.
+        (directory / 'input.txt').write_text('An older role prompt' + BRIEF_MARK + 'Mission: survive and report.'
+            + f'\n\nEpisodes settled since your last pass, oldest first, one per line:\n(none)\n\nPass {index}.')
     return session
 
 
-def route_file(tmp_path, port, *, cost=1.0, extra=None, schema='player-host/5'):
+def route_file(tmp_path, port, *, cost=1.0, extra=None, schema='player-host/6'):
     model = dict(id='fixture-model', name='Fixture', api='openai-completions', provider='fixture',
                  baseUrl=f'http://127.0.0.1:{port}/v1', reasoning=False, input=['text', 'image'],
                  cost=dict(input=cost, output=cost, cacheRead=0, cacheWrite=0), contextWindow=100000, maxTokens=1024,
@@ -171,7 +179,7 @@ def turns(payload):
 
 def clean_policy(number, payload):
     if turns(payload) == 0:
-        return [('player_log_read', dict(after=0, limit=5))]
+        return [('player_source', dict(source_id=f'{SESSION}-1'))]
     return [('player_level_replace', REPLACE)]
 
 
@@ -200,29 +208,29 @@ def run(tmp_path, recorded, provider, *, name='probe', samples=2, max_usd=10., r
 def test_replay_is_a_fresh_store_of_the_pass_start_state_and_leaves_the_recording_untouched(tmp_path, recorded):
     before = hashlib.sha256((recorded / 'session.sqlite3').read_bytes()).hexdigest()
     first, second = recorded_passes(recorded)
-    assert (first['entries'], second['entries'], second['shown_through']) == (3, 6, 3)
-    replay = build_replay(first, tmp_path / 'replay', 10)
+    assert (first['entries'], second['entries'], first['bound'], second['bound']) == (3, 6, 0, 3)
+    assert first['text'].startswith('An older role prompt' + BRIEF_MARK) and first['text'].endswith('Pass 1.')
+    replay = build_replay(first, tmp_path / 'replay', LEVEL)
     try:
         app, reader, actor = replay['application'], replay['reader'], replay['actor']
         assert app.runtime.store.actor_counts(actor['actor_id']) == (3, 2)
-        text, shown, through = push_text(app, reader['actor_id'], actor['actor_id'], 0, 3)
-        assert (shown, through) == (3, 3) and 'Current subgoal: none\nLevel records in player memory: 0' in text
-        entries = [json.loads(line) for line in text.splitlines() if line.startswith('{"position"')]
+        assert replay['binding'] == dict(position=0, subgoal_id=None, pass_index=1, handoff=False)
         # The replay reads the recorded frames and writes only its own temporary memory.
-        value, image = app.source(entries[0]['source_id'], actor['actor_id'])
+        value, image = app.source(f'{SESSION}-1', actor['actor_id'])
         assert image == png() and value['source_id'] == f'{SESSION}-1'
         committed = app.call(reader['token'], 'player_level_replace', REPLACE, 'e' * 32)[0]
-        assert committed['status'] == 'committed' and committed['inputs_since'] == 0
+        assert committed['status'] == 'committed' and committed['inputs_since'] == 2
         assert app.runtime.channel.stopped.is_set() is False
     finally:
         replay['runtime'].close(); replay['memory'].close()
     assert hashlib.sha256((recorded / 'session.sqlite3').read_bytes()).hexdigest() == before
-    # The second pass is pushed only what the first showed it did not already see.
-    again = build_replay(second, tmp_path / 'replay2', 10)
+    # The second pass's recorded bound is restored by one settle of the positions before it, so staleness counts from it.
+    again = build_replay(second, tmp_path / 'replay2', LEVEL)
     try:
-        app, reader, actor = again['application'], again['reader'], again['actor']
-        text, shown, _ = push_text(app, reader['actor_id'], actor['actor_id'], 3, 6)
-        assert shown == 3 and [json.loads(l)['position'] for l in text.splitlines() if l.startswith('{"position"')] == [4, 5, 6]
+        app, actor = again['application'], again['actor']
+        assert again['binding']['position'] == 3
+        (settle,) = app.settled_episodes(actor_id=actor['actor_id'])
+        assert (settle['first_position'], settle['last_position'], settle['settled']) == (1, 3, 'dropped')
         assert app.level_record_count() == 0
     finally:
         again['runtime'].close(); again['memory'].close()
@@ -241,15 +249,15 @@ def test_probe_replays_every_pass_through_the_real_host_and_labels_its_output(tm
     assert pooled['requests_used']['total'] == 8 and 0 < pooled['configured_cost_usd'] < 0.01
     assert report['thresholds']['valid_terminal_rate_met'] is True and report['thresholds']['repeated_identical_refusal_met'] is True
     assert sorted(report['passes']) == ['recorded/actor001/pass001', 'recorded/actor001/pass002']
-    assert report['interface']['host'] == 'player-host/5' and report['interface']['role_prompt'] == 'subgoal-v3.txt'
-    # The pass saw the production pushed input of the replay, the frozen role prompt and the real v3 tools.
+    assert report['interface']['host'] == 'player-host/6' and report['interface']['role_prompt'] == 'subgoal-v4.txt'
+    # The pass saw the recorded pushed input, the current frozen role prompt and the real v4 level tools.
     first = fake.payloads[0]
     prompt = json.dumps(first['messages'])
-    assert 'Current subgoal: none\\nLevel records in player memory: 0' in prompt and 'Mission: survive and report.' in prompt
+    assert 'Mission: survive and report.' in prompt and 'An older role prompt' not in prompt
     assert 'Call player_level_keep, player_level_close or player_level_replace' in prompt
     assert first['tool_choice'] == 'required'
     assert [t['function']['name'] for t in first['tools']] == [
-        'player_log_read', 'player_source', 'player_level_keep', 'player_level_replace', 'player_level_close', 'player_level_abstain']
+        'player_source', 'player_level_keep', 'player_level_replace', 'player_level_close', 'player_level_abstain']
     assert len(list((out / 'samples').iterdir())) == 4 and all((p / 'host.jsonl').is_file() for p in (out / 'samples').iterdir())
 
 
@@ -324,7 +332,7 @@ def test_the_cap_is_hard_up_front_so_a_sample_never_has_more_requests_than_the_c
 
 
 def test_the_in_flight_kill_is_only_a_backstop_for_a_request_dearer_than_the_bound(tmp_path, recorded, provider):
-    slow = provider(lambda n, p: [('player_log_read', dict(after=0, limit=5))], delay=.4)
+    slow = provider(lambda n, p: [('player_source', dict(source_id=f'{SESSION}-1'))], delay=.4)
     cut, _ = run(tmp_path, recorded, slow, samples=1, max_usd=3., route=route_file(tmp_path, slow.port, cost=50000.),
                  name='cut', max_request_usd=.1, max_requests=6, passes={1})
     assert cut['samples'][0]['stopped_by_spend_guard'] is True and cut['samples'][0]['requests'] < 6
@@ -353,23 +361,23 @@ def test_a_route_with_no_configured_cost_is_refused_before_anything_is_written(t
     assert not (tmp_path / 'probes' / 'probe').exists()
 
 
-@pytest.mark.parametrize('schema', ['player-host/4', 'player-host/1', 'player-host/6', None])
-def test_a_route_that_is_not_player_host_5_is_rejected_without_normalization(tmp_path, recorded, provider, schema):
+@pytest.mark.parametrize('schema', ['player-host/4', 'player-host/1', 'player-host/5', None])
+def test_a_route_that_is_not_player_host_6_is_rejected_without_normalization(tmp_path, recorded, provider, schema):
     path = route_file(tmp_path, 9, schema=schema)
-    with pytest.raises(ValueError, match='must be player-host/5'):
+    with pytest.raises(ValueError, match='must be player-host/6'):
         load_route(path, 4, None)
-    with pytest.raises(ValueError, match='must be player-host/5'):
+    with pytest.raises(ValueError, match='must be player-host/6'):
         run(tmp_path, recorded, provider(clean_policy), route=path)
     assert not (tmp_path / 'probes' / 'probe').exists()
     route = json.loads(path.read_text())
     package = tmp_path / 'package.json'
     package.write_text(json.dumps(dict(schema='finite-provider-conformance/1', routes=[dict(tag='one', model='fixture-model',
                                                                                             configuration=route)])))
-    with pytest.raises(ValueError, match='must be player-host/5'):
+    with pytest.raises(ValueError, match='must be player-host/6'):
         load_route(package, 4, None)
 
 
-def test_the_conformance_package_supplies_its_player_host_5_route_unchanged_except_the_level_fields(tmp_path):
+def test_the_conformance_package_supplies_its_player_host_6_route_unchanged_except_the_level_fields(tmp_path):
     route = json.loads(route_file(tmp_path, 9).read_text())
     package = tmp_path / 'package.json'
     package.write_text(json.dumps(dict(schema='finite-provider-conformance/1', routes=[
@@ -466,8 +474,10 @@ def test_state_fidelity_also_reads_level_work_in_the_recorded_player_store_creat
     from harness.player.memory import Memory
     store = tmp_path / 'recorded-player.sqlite3'
     memory = Memory(store)  # the fixture's empty store, reopened
-    memory.append(RECORDED_ACTOR, dict(schema='player-record/1', kind='work', text='Earlier', data=dict(level='subgoal'),
-                                       sources=[], supports=[], supersedes=None, applicability=None, program_id=None))
+    # The general append path refuses level data; the custodian's own path wrote the recorded run's subgoal.
+    memory.append_many(RECORDED_ACTOR, [dict(schema='player-record/1', kind='work', text='Earlier', data=dict(level='subgoal'),
+                                             sources=[], supports=[], supersedes=None, applicability=None, program_id=None)],
+                       request_id='b' * 32, custodian=True)
     memory.append(RECORDED_ACTOR, dict(schema='player-record/1', kind='work', text='Other work', data={}, sources=[],
                                        supports=[], supersedes=None, applicability=None, program_id=None))
     memory.close()
@@ -527,14 +537,14 @@ def test_terminal_calls_the_host_refused_or_could_not_parse_are_counted_and_repe
 
 def test_reserved_requests_report_refused_non_terminal_calls_and_provider_errors_on_them(tmp_path, recorded, provider):
     def policy(number, payload):
-        return [('player_log_read', dict(after=0, limit=5))] if number == 1 else [('player_level_abstain', dict(reason_code='other', reason='r', sources=[]))]
+        return [('player_source', dict(source_id=f'{SESSION}-1'))] if number == 1 else [('player_level_abstain', dict(reason_code='other', reason='r', sources=[]))]
     report, _ = run(tmp_path, recorded, provider(policy), samples=1, max_requests=2, passes={1})
     pooled = report['pooled']
     assert pooled['reserved_non_terminal_calls'] == 1 and pooled['valid_terminal_calls'] == 1
     assert pooled['provider_error_on_reserved_request'] == 0
     # The second of three requests is reserved: a provider failure there is its own count; on the first request it is not.
     def fail_second(number, payload):
-        return None if number == 2 else [('player_log_read', dict(after=0, limit=5))]
+        return None if number == 2 else [('player_source', dict(source_id=f'{SESSION}-1'))]
     report, _ = run(tmp_path, recorded, provider(fail_second), samples=1, max_requests=3, passes={1}, name='reserved-error')
     assert report['pooled']['provider_error_on_reserved_request'] == 1
     assert report['samples'][0]['settled_reason'] == 'provider-error'
@@ -546,7 +556,7 @@ def test_a_provider_error_after_a_retry_is_counted_on_its_reserved_logical_reque
     def policy(number, payload):
         # Attempt 1 is retried (logical request 1); attempt 2 reads; attempt 3 is logical request 2, in the reserved
         # window because only two attempts remain, and fails for good.
-        return {1: 502, 2: [('player_log_read', dict(after=0, limit=5))]}.get(number)
+        return {1: 502, 2: [('player_source', dict(source_id=f'{SESSION}-1'))]}.get(number)
     report, _ = run(tmp_path, recorded, provider(policy), samples=1, max_requests=4, passes={1})
     sample = report['samples'][0]
     assert sample['settled_reason'] == 'provider-error' and sample['requests'] == 3

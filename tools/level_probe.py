@@ -4,13 +4,15 @@
 Each recorded pass of a recorded campaign session is replayed N times against a fresh, read-only
 replay of that session's operations and sources as they stood when the pass started:
 
-1. a new `computer-session/2` store receives the session's first `log_entries` operations and the frames
-   they cite, through the store API (as `tools/level_offline.py` does), with a stub channel that cannot play;
-2. a reader is minted through `Application` on that replay and served through the normal player HTTP server on
-   loopback, so the real level tools run against it (a terminal call writes only the replay's own temporary
-   memory);
-3. the pass's pushed prompt is built by the production `push_text` and `pass_prompt`;
-4. the real level host (`player-host/5`, the frozen route, the current role prompt) runs the pass.
+1. a new store receives the session's first `log_entries` operations and the frames they cite, through the
+   store API (as `tools/level_offline.py` does), with a stub channel that cannot play;
+2. a level reader (and a recorder reader, to restore the bound) is minted through `Application` on that replay and
+   served through the normal player HTTP server on loopback, so the real level tools run against it (a terminal call
+   writes only the replay's own temporary memory). The recorded bound is restored by settling the positions before
+   it as one dropped episode, so the custodian's staleness check starts from the position the recorded pass saw;
+3. the pass's pushed input is the recorded pass's own `input.txt` (plain text, as `player-host/6` takes it), with the
+   current frozen role prompt in place of the recorded one;
+4. the real level host (`player-host/6`, the frozen route, the current role prompt) runs the pass.
 
 The probe never touches a game or a live session, and every output is labelled `engineering-probe`: a measure of
 whether the interface can be called correctly on the route, never evidence about play. The provider credential
@@ -24,7 +26,7 @@ cost, and every request without reported usage at a per-request bound: `--max-re
 when that is below one, so the cap holds whenever no request is dearer than that. Killing a running host when its charge would pass the remaining cap is only a
 backstop for a request that cost more than the bound.
 
-Inputs. The route must already be `player-host/5` (a conformance package's selected route included); nothing is
+Inputs. The route must already be `player-host/6` (a conformance package's selected route included); nothing is
 normalized or defaulted. The thresholds come from the required `--thresholds` file. A paid run needs a clean
 checkout, and the report records the source commit and the digests of every input it read.
 """
@@ -57,7 +59,7 @@ from harness.computer.runtime import ComputerRuntime
 from harness.player.memory import Memory
 from harness.server import serve
 from tools.campaign_package import LEVEL_ROLE
-from tools.campaign_player import HostEvents, pass_prompt, push_text, write_new
+from tools.campaign_player import BRIEF_MARK, HostEvents, write_new
 from tools.configure_player_tools import configuration
 
 LABEL = 'engineering-probe'
@@ -70,6 +72,8 @@ THRESHOLDS_SCHEMA = 'level-probe-thresholds/1'
 LIMITS = (
     'No staleness or discard: the replay has no inputs after the pass starts, so a well-formed terminal call commits, keeps '
     'or abstains and a staleness-bound discard cannot occur.',
+    'Episodes are not replayed: the replay store holds one dropped settle for the positions before the recorded bound and no '
+    'episode record, so a stalled or contradicted subgoal and its refusals cannot occur. The recorder is not replayed.',
     'Operations pending when a pass started are replayed as finished: the recording\'s final state of each is used.',
     'Memory is not replayed: the replay store starts empty, so a pass recorded after a level commit sees no current '
     'subgoal. A sample\'s state_fidelity says whether its recorded pass had a level commit or stored level row before it '
@@ -154,18 +158,16 @@ def recorded_passes(session: Path) -> list[dict]:
     passes, writes = [], 0
     for actor_directory in sorted((session / 'actors').glob('[0-9][0-9][0-9]')):
         actor = json.loads((actor_directory / 'actor.json').read_text())['actor_id']
-        shown_through = 0
         for pass_directory in sorted((actor_directory / 'level').glob('[0-9][0-9][0-9]')):
             receipt = json.loads((pass_directory / 'driver-receipt.json').read_text())
             rows = stored_level_rows(Path(store) if store else None, receipt.get('started_wall'))
             passes.append(dict(session=session, session_id=session_id, actor_id=actor, actor_directory=actor_directory,
                 directory=pass_directory, index=receipt['index'], reason=receipt['reason'], entries=receipt['log_entries'],
-                inputs=receipt['actor_inputs'], seconds=receipt['allocated_seconds'], shown_through=shown_through,
+                inputs=receipt['actor_inputs'], seconds=receipt['allocated_seconds'],
+                bound=receipt['bound']['position'], text=(pass_directory / 'input.txt').read_text(),
                 recorded_allowance=receipt.get('allocated_attempts'), prior_level_commits=writes, prior_stored_rows=rows))
             writes += sum(e['type'] == 'level-commit' and e.get('action') in ('replace', 'close')
                           for e in receipt.get('level_events', []))
-            # The campaign's next push starts after the last entry this pass was shown.
-            shown_through = receipt['log_entries']
     return passes
 
 
@@ -200,7 +202,7 @@ class ReplayProcess:
         return None
 
 
-def build_replay(recorded: dict, directory: Path, staleness_inputs: int) -> dict:
+def build_replay(recorded: dict, directory: Path, level: dict) -> dict:
     """A fresh replay of one pass's session state: operations up to the pass start, the frames they cite, a reader."""
     session = recorded['session']
     source = sqlite3.connect(f'file:{session / "session.sqlite3"}?mode=ro&immutable=1', uri=True)
@@ -230,8 +232,17 @@ def build_replay(recorded: dict, directory: Path, staleness_inputs: int) -> dict
             png = (session / 'sources' / f'{identifier}.png').read_bytes()
             runtime.store.put_source(json.loads(frames[identifier]), png, actor['actor_id'])
         runtime.store.finish(result)
-    reader = application.add_reader(actor['actor_id'], staleness_inputs=staleness_inputs)
-    return dict(application=application, runtime=runtime, memory=memory, actor=actor, reader=reader)
+    derived = dict(stall_settles=level['stall_settles'], confidence_floor=level['confidence_floor'])
+    reader = application.add_reader(actor['actor_id'], 'level', staleness_inputs=level['staleness_inputs'], **derived)
+    recorder = application.add_reader(actor['actor_id'], 'recorder', **derived)
+    bound = recorded['bound']
+    if bound:
+        # The pass's bound is the end of the newest settled episode: restore it with one settle of the earlier positions.
+        application.settle_episode(recorder['actor_id'], first_position=1, last_position=bound, subgoal_id=None,
+                                   settled='dropped', reason='replay: the positions before the recorded bound')
+    binding = application.bind_level(reader['actor_id'])
+    return dict(application=application, runtime=runtime, memory=memory, actor=actor, reader=reader, recorder=recorder,
+                binding=binding)
 
 
 # --- one replayed sample -------------------------------------------------------------------------------------
@@ -239,7 +250,7 @@ def build_replay(recorded: dict, directory: Path, staleness_inputs: int) -> dict
 def load_route(path: Path, max_requests: int, tag: str | None) -> dict:
     """The frozen route as a level-pass route, exactly as the campaign driver derives it from its actor route.
 
-    The route (or a conformance package's selected route) must already be `player-host/5`: an older schema is
+    The route (or a conformance package's selected route) must already be `player-host/6`: an older schema is
     rejected, never normalized, and no field is defaulted. Only the role, the intent tail and the pass allowance are set.
     """
     value = json.loads(path.read_text())
@@ -248,8 +259,8 @@ def load_route(path: Path, max_requests: int, tag: str | None) -> dict:
         if len(routes) != 1:
             raise ValueError('Select exactly one conformance route with --route-tag')
         value = routes[0]['configuration']
-    if value.get('schema') != 'player-host/5':
-        raise ValueError(f'The route must be player-host/5, not {value.get("schema")!r}; it is not converted')
+    if value.get('schema') != 'player-host/6':
+        raise ValueError(f'The route must be player-host/6, not {value.get("schema")!r}; it is not converted')
     cost = value.get('model', {}).get('cost')
     if not isinstance(cost, dict) or not any(isinstance(v, (int, float)) and v > 0 for v in cost.values()):
         raise ValueError('The route\'s configured model cost is all zero or missing; the spend cap could not measure it')
@@ -320,27 +331,24 @@ def classify(directory: Path, events: HostEvents, child_returncode: int | None) 
 
 
 def run_sample(recorded: dict, sample: int, work: Path, out: Path, route: dict, context: str, role: str, effort: str,
-               host_argv: list[str], secret: str, remaining_usd: float, bound_usd: float, staleness_inputs: int) -> dict:
+               host_argv: list[str], secret: str, remaining_usd: float, bound_usd: float, level: dict) -> dict:
     """Replay one pass once. The route's `max_requests` was already set so the sample cannot pass `remaining_usd` at
     `bound_usd` per request; the host is killed only as a backstop if its charge would pass it anyway."""
     directory = Path(tempfile.mkdtemp(prefix=f'{recorded["index"]:03d}-{sample:02d}-', dir=work))
     replay = server = thread = child = events = None
     try:
-        replay = build_replay(recorded, directory / 'replay', staleness_inputs)
+        replay = build_replay(recorded, directory / 'replay', level)
         application = replay['application']
         server, thread = serve(application, 0)
         reader_file = directory / 'reader.json'
         write_new(reader_file, dict(schema='player-adapter/1', base_url=f'http://127.0.0.1:{server.server_port}',
                                     session=replay['runtime'].session, **replay['reader']))
-        pushed, _, _ = push_text(application, replay['reader']['actor_id'], replay['actor']['actor_id'],
-                                 recorded['shown_through'], recorded['entries'])
-        brief = (recorded['session'] / 'prompt.txt').read_text()
-        prompt = pass_prompt(role, brief, pushed, recorded['reason'], recorded['entries'], recorded['inputs'],
-                             route['max_requests'], recorded['seconds'])
+        # The model sees what the recorded pass was pushed (its brief and episodes), under the current frozen role prompt.
+        text = role.strip() + recorded['text'][recorded['text'].index(BRIEF_MARK):]
         write_new(directory / 'route.json', route)
-        write_new(directory / 'mcp.json', configuration(str(reader_file), profile='reader'))
+        write_new(directory / 'mcp.json', configuration(str(reader_file), profile='level'))
         write_new(directory / 'context.txt', context, text=True)
-        write_new(directory / 'prompt.txt', prompt, text=True)
+        write_new(directory / 'input.txt', text, text=True)
         write_new(directory / 'player-final.txt', '', text=True)
         arguments = [*host_argv, 'run', '--config', str(directory / 'route.json'), '--mcp-config', str(directory / 'mcp.json'),
                      '--context', str(directory / 'context.txt'), '--model', route['model']['id'], '--effort', effort,
@@ -348,7 +356,7 @@ def run_sample(recorded: dict, sample: int, work: Path, out: Path, route: dict, 
         environment = dict(PATH=os.environ.get('PATH', '/usr/bin:/bin'), LANG='en_US.UTF-8', **{route['api_key_env']: secret})
         stopped_by_guard = False
         with (directory / 'host.jsonl').open('x') as output, (directory / 'host-stderr.log').open('x') as errors, \
-                (directory / 'prompt.txt').open() as prompt_input:
+                (directory / 'input.txt').open() as prompt_input:
             child = subprocess.Popen(arguments, cwd=ROOT, env=environment, stdin=prompt_input, stdout=output, stderr=errors,
                                      start_new_session=True)
             events = HostEvents(directory / 'host.jsonl', route['max_requests'])
@@ -385,7 +393,7 @@ def run_sample(recorded: dict, sample: int, work: Path, out: Path, route: dict, 
                                            f'-pass{recorded["index"]:03d}-sample{sample:02d}')
         out_directory.mkdir(parents=True)
         shutil.copy(directory / 'host.jsonl', out_directory / 'host.jsonl')
-        shutil.copy(directory / 'prompt.txt', out_directory / 'prompt.txt')
+        shutil.copy(directory / 'input.txt', out_directory / 'input.txt')
         return record
     finally:
         if events is not None:
@@ -479,7 +487,7 @@ def probe(sessions: list[Path], route_path: Path, *, samples: int, max_usd: floa
                     break
                 route = load_route(route_path, min(allowance, affordable), route_tag)
                 record = run_sample(recorded, sample, work, out, route, context, role, effort, host_argv, secret,
-                                    max_usd - spent, bound, level['staleness_inputs'])
+                                    max_usd - spent, bound, level)
                 records.append(record)
                 spent += record['charged_usd']
                 dearest = max(dearest, record['dearest_request_usd'])
@@ -498,7 +506,7 @@ def probe(sessions: list[Path], route_path: Path, *, samples: int, max_usd: floa
     report = dict(schema='level-probe/1', label=LABEL, excluded_from_evidence=True,
         scope='Replays recorded level-pass contexts against a read-only replay of the recorded session. It measures whether '
               'the level interface can be called correctly on the route; it says nothing about play, intent quality or outcomes.',
-        interface=dict(host='player-host/5', role_prompt=LEVEL_ROLE.name, role_sha256=hashlib.sha256(role.encode()).hexdigest()),
+        interface=dict(host='player-host/6', role_prompt=LEVEL_ROLE.name, role_sha256=hashlib.sha256(role.encode()).hexdigest()),
         route=dict(model=route['model']['id'], provider=route['model']['provider'], effort=effort,
                    file_sha256=sha256_file(route_path)),
         source=dict(commit=commit, clean=True),

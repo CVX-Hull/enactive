@@ -1,45 +1,62 @@
-"""Mechanical wake rules for the subgoal level (ADR-007); pure counts, no store or game."""
+"""Mechanical wake rules for the subgoal level (ADR-007 level v4); pure counts, no store or game."""
 import pytest
 
 from tools.level_schedule import LevelSchedule
 
 
 def schedule(**changes):
-    return LevelSchedule(**{**dict(inputs_per_pass=10, budget_fractions=(.25, .5, .75), allowance=100), **changes})
+    return LevelSchedule(**{**dict(budget_fractions=(.25, .5, .75), allowance=100), **changes})
 
 
-def test_start_pass_runs_only_to_revalidate_open_records():
-    assert schedule().due(entries=0, inputs=0, attempts=0, open_records=1) == 'start'
+def test_start_wake_runs_only_to_revalidate_what_earlier_sessions_left():
+    assert schedule().due(settled=0, attempts=0, carried=1) == 'start'
     fresh = schedule()
-    assert fresh.due(entries=0, inputs=0, attempts=0, open_records=0) is None
-    # The start is considered once; later records wait for log entries.
-    assert fresh.due(entries=0, inputs=0, attempts=0, open_records=1) is None
+    assert fresh.due(settled=0, attempts=0, carried=0) is None
+    # The start is considered once; carried records wait for a settle afterwards.
+    assert fresh.due(settled=0, attempts=0, carried=1) is None
+    assert fresh.due(settled=1, attempts=1, carried=1) == 'settle'
 
 
-def test_inputs_wake_every_k_and_never_on_an_empty_delta():
+def test_every_settle_wakes_and_an_empty_delta_never_does():
     rules = schedule()
-    rules.due(entries=0, inputs=0, attempts=0, open_records=0)
-    assert rules.due(entries=9, inputs=9, attempts=9, open_records=0) is None
-    assert rules.due(entries=10, inputs=10, attempts=10, open_records=0) == 'inputs'
-    assert rules.due(entries=10, inputs=10, attempts=10, open_records=1) is None
-    assert rules.due(entries=19, inputs=19, attempts=19, open_records=1) is None
-    assert rules.due(entries=21, inputs=20, attempts=20, open_records=1) == 'inputs'
+    rules.due(settled=0, attempts=0, carried=0)
+    assert rules.due(settled=0, attempts=5, carried=0) is None
+    assert rules.due(settled=1, attempts=5, carried=0) == 'settle'
+    assert rules.due(settled=1, attempts=6, carried=0) is None
+    assert rules.due(settled=2, attempts=7, carried=0) == 'settle'
 
 
-def test_budget_fractions_fire_once_and_wait_for_new_entries():
-    rules = schedule(inputs_per_pass=1000)
-    rules.due(entries=0, inputs=0, attempts=0, open_records=0)
-    assert rules.due(entries=0, inputs=0, attempts=30, open_records=0) is None
-    assert rules.due(entries=1, inputs=1, attempts=30, open_records=0) == 'budget-0.25'
-    assert rules.due(entries=2, inputs=2, attempts=40, open_records=0) is None
+def test_wakes_that_arrive_during_a_pass_coalesce_into_one():
+    rules = schedule()
+    rules.due(settled=0, attempts=0, carried=0)
+    assert rules.due(settled=1, attempts=3, carried=0) == 'settle'
+    # Three more episodes settle while that pass runs; the driver does not ask. When it does, there is one wake.
+    assert rules.due(settled=4, attempts=9, carried=0) == 'settle'
+    assert rules.due(settled=4, attempts=9, carried=0) is None
+
+
+def test_budget_fractions_name_a_wake_only_after_a_settle_and_fire_once():
+    rules = schedule()
+    rules.due(settled=0, attempts=0, carried=0)
+    # The fraction is crossed but nothing has settled since the last pass: no wake.
+    assert rules.due(settled=0, attempts=30, carried=0) is None
+    assert rules.due(settled=1, attempts=30, carried=0) == 'budget-0.25'
+    assert rules.due(settled=2, attempts=40, carried=0) == 'settle'
     # One pass covers every fraction crossed since the last one.
-    assert rules.due(entries=3, inputs=3, attempts=80, open_records=0) == 'budget-0.75'
-    assert rules.due(entries=4, inputs=4, attempts=99, open_records=0) is None
+    assert rules.due(settled=3, attempts=80, carried=0) == 'budget-0.75'
+    assert rules.due(settled=4, attempts=99, carried=0) == 'settle'
 
 
-@pytest.mark.parametrize('changes', [dict(inputs_per_pass=0), dict(inputs_per_pass=1001), dict(allowance=0),
-    dict(budget_fractions=(.5, .25)), dict(budget_fractions=(0.0,)), dict(budget_fractions=(1.0,)),
-    dict(budget_fractions=(.5, .5)), dict(budget_fractions=tuple(i / 10 for i in range(1, 10)))])
+def test_a_wake_after_start_still_counts_settles_made_before_the_start_pass():
+    rules = schedule()
+    assert rules.due(settled=2, attempts=0, carried=1) == 'start'
+    assert rules.due(settled=2, attempts=0, carried=1) is None
+    assert rules.due(settled=3, attempts=0, carried=1) == 'settle'
+
+
+@pytest.mark.parametrize('changes', [dict(allowance=0), dict(budget_fractions=(.5, .25)), dict(budget_fractions=(0.0,)),
+    dict(budget_fractions=(1.0,)), dict(budget_fractions=(.5, .5)), dict(budget_fractions=(1, )),
+    dict(budget_fractions=tuple(i / 10 for i in range(1, 10)))])
 def test_invalid_parameters_are_refused(changes):
     with pytest.raises(ValueError):
         schedule(**changes)

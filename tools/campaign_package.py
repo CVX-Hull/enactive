@@ -9,6 +9,7 @@ import re
 import subprocess
 
 from harness.computer.protocol import ControlError,closed,integer,read_json
+from harness.player import recall
 from harness.prepared_app import game_lock_path
 from tools.configure_player_tools import ROOT,configuration
 
@@ -16,24 +17,52 @@ FILES={'route.json','mcp-template.json','context.txt','prompt.txt','target.json'
 FIELDS={'schema','session','source_commit','files','initial_files','native','library','shared_lock','player_store',
         'host','effort','port','wall_seconds','host_seconds','total_host_seconds','max_hosts','max_http_attempts','limits','accounting',
         'actor_profile','level'}
-LEVEL_FIELDS={'mode','inputs_per_pass','staleness_inputs','budget_fractions','intent_tail_bytes',
-              'max_http_attempts','pass_max_requests','pass_seconds'}
-# The frozen, versioned subgoal role prompt (ADR-007 appendix); a change makes a new version.
-LEVEL_ROLE=ROOT/'tools/player_roles/subgoal-v3.txt'
+# Level v4 (ADR-007): the level's own allowance, the episode cutter, the recorder and the derived-state parameters.
+LEVEL_FIELDS={'mode','episode_cap','staleness_inputs','budget_fractions','intent_tail_bytes',
+              'max_http_attempts','pass_max_requests','pass_seconds',
+              'theta','theta_fitting_sha256','min_episode_inputs','stall_settles','confidence_floor','recall','recorder'}
+RECORDER_FIELDS={'max_http_attempts','pass_max_requests','pass_seconds','backlog'}
+RECALL_FIELDS={'tail_top','tail_exploration','level_items'}
+# The owner's K: the longest run of inputs between wakes, which is also the episode cap C (ADR-007 owner parameters).
+OWNER_K=10
+# The frozen, versioned role prompts (ADR-007 appendix); a change makes a new version and a new digest here.
+LEVEL_ROLE=ROOT/'tools/player_roles/subgoal-v4.txt'
+EPISODE_ROLE=ROOT/'tools/player_roles/episode-v1.txt'
+FROZEN_ROLE_SHA256={
+    'subgoal-v4.txt':'08c8558f659dacb1feb61c81b1286e91dca24e8808eab8e5d0b5e56cf53aaad8',
+    'episode-v1.txt':'a6c326069bd8fec86bf2c30bcbcf34e51e34f5d1371f5ac32f764b664869a910'}
 
 
 def level_profile(level,actor_profile:str):
-    """Validate the optional subgoal level; null is the zero-level-host configuration."""
+    """Validate the optional subgoal level and episode recorder; null is the zero-level-host configuration."""
     if level is None:return None
     closed(level,LEVEL_FIELDS)
     if actor_profile!='narrowed':raise ControlError('A subgoal level serves only a narrowed-profile actor')
     if level['mode'] not in ('shadow','live'):raise ControlError('Level mode is shadow or live')
-    for name,low,high in (('inputs_per_pass',1,1000),('staleness_inputs',1,1000),('intent_tail_bytes',64,4096),
-                         ('max_http_attempts',1,10000),('pass_max_requests',1,64),('pass_seconds',30,3600)):
+    for name,low,high in (('episode_cap',1,1000),('staleness_inputs',1,1000),('intent_tail_bytes',1024,1024),
+                         ('max_http_attempts',1,10000),('pass_max_requests',1,64),('pass_seconds',30,3600),
+                         ('min_episode_inputs',1,1000),('stall_settles',1,1000)):
         integer(level[name],low,high)
+    if level['episode_cap']!=OWNER_K:raise ControlError(f'The episode cap C must equal the owner\'s K ({OWNER_K})')
+    if level['min_episode_inputs']>level['episode_cap']:raise ControlError('The minimum episode length m cannot exceed the cap C')
+    # theta is fitted per game from player-visible captures; it is frozen by value and by the digest of its fitting.
+    theta=level['theta']
+    if type(theta) is not float or not 0<theta<1:raise ControlError('The episode threshold theta is a float strictly between 0 and 1')
+    if not isinstance(level['theta_fitting_sha256'],str) or re.fullmatch('[0-9a-f]{64}',level['theta_fitting_sha256']) is None:
+        raise ControlError('Freeze theta with the SHA256 of its fitting')
+    floor=level['confidence_floor']
+    if type(floor) is not float or not 0<=floor<=1:raise ControlError('The confidence floor c is a float from 0 to 1')
     fractions=level['budget_fractions']
     if (type(fractions) is not list or len(fractions)>8 or any(type(f) is not float or not 0<f<1 for f in fractions)
             or fractions!=sorted(set(fractions))):raise ControlError('Budget fractions are at most 8 increasing values in (0,1)')
+    # The recall sizes are fixed by the custodian; the profile records them and refuses any other value.
+    closed(level['recall'],RECALL_FIELDS)
+    if level['recall']!=dict(tail_top=recall.TAIL_TOP_ITEMS,tail_exploration=1,level_items=recall.LEVEL_ITEMS):
+        raise ControlError('The recall sizes differ from the custodian\'s (2 top and 1 exploration line in the tail, 10 for the level)')
+    recorder=level['recorder']
+    closed(recorder,RECORDER_FIELDS)
+    for name,low,high in (('max_http_attempts',1,10000),('pass_max_requests',1,64),('pass_seconds',30,3600),('backlog',1,16)):
+        integer(recorder[name],low,high)
     return level
 
 
@@ -51,7 +80,7 @@ def local_file(value: str) -> Path:
 
 
 def host_argv(host) -> list[str]:
-    """Validate the closed `player-host/5` adapter selection and return its argv."""
+    """Validate the closed `player-host/6` adapter selection and return its argv."""
     closed(host,{'argv'})
     argv=host['argv']
     if (type(argv) is not list or not 1<=len(argv)<=8
@@ -69,7 +98,7 @@ def preflight(directory: Path) -> tuple[dict,dict,dict]:
     if not directory.is_relative_to(ROOT/'.runtime/computer-sessions') or directory.is_symlink():
         raise ControlError('Select a fresh explicit project-local computer session package')
     profile=read_json(directory/'manifest.json',1048576)
-    if type(profile) is not dict or profile.get('schema')!='campaign-run/4':
+    if type(profile) is not dict or profile.get('schema')!='campaign-run/5':
         raise ControlError('Unsupported campaign package; old admissions are inert history')
     closed(profile,FIELDS)
     host_argv(profile['host'])
@@ -85,10 +114,13 @@ def preflight(directory: Path) -> tuple[dict,dict,dict]:
     tracked=subprocess.check_output(['git','ls-files','-z','--',*sorted(adapter)],cwd=ROOT).split(b'\0') if adapter else []
     if adapter-{name.decode() for name in tracked if name}:
         raise ControlError('Player host adapter files must be tracked by the clean source commit')
-    if set(profile['files'])!=FILES|({'level-role.txt'} if level else set()):
+    if set(profile['files'])!=FILES|({'level-role.txt','episode-role.txt'} if level else set()):
         raise ControlError('Freeze every selected driver input')
-    if level and digest(directory/'level-role.txt')!=digest(LEVEL_ROLE):
-        raise ControlError('The level role prompt must be the frozen current version')
+    if level:
+        # Each role prompt is byte-identical to its frozen repository version, whose digest is pinned in this validator.
+        for name,frozen in (('level-role.txt',LEVEL_ROLE),('episode-role.txt',EPISODE_ROLE)):
+            if digest(frozen)!=FROZEN_ROLE_SHA256[frozen.name]:raise ControlError(f'{frozen.name} differs from its frozen digest; a change is a new version')
+            if digest(directory/name)!=digest(frozen):raise ControlError(f'The {name} prompt must be the frozen current version ({frozen.name})')
     for name,sha in profile['files'].items():
         path=local_file(str(directory/name))
         if path.stat().st_size>1048576 or digest(path)!=sha:raise ControlError('Frozen driver input differs')
@@ -116,15 +148,15 @@ def preflight(directory: Path) -> tuple[dict,dict,dict]:
     if not profile['host_seconds']<=profile['total_host_seconds']<profile['wall_seconds']-30:
         raise ControlError('Original host and cleanup horizons do not fit')
     route=read_json(directory/'route.json',1048576)
-    if type(route) is not dict or route.get('schema')!='player-host/5':
+    if type(route) is not dict or route.get('schema')!='player-host/6':
         raise ControlError('Unsupported player host route; old routes are inert history')
     if route.get('service_tier')!='default':raise ControlError('This campaign allocation supports only the selected default serving tier')
     # Only a live level publishes intent; shadow mode measures it without influencing play.
     tail=level['intent_tail_bytes'] if level and level['mode']=='live' else None
     if route.get('role')!='actor' or route.get('intent_tail_bytes',0)!=tail:
         raise ControlError('The frozen route must be the actor role with the level mode\'s intent tail')
-    # Each actor-and-level pair is partitioned before launch within the campaign cap.
-    if route['max_requests']+(level['max_http_attempts'] if level else 0)>profile['max_http_attempts']:
+    # Each actor, its level and its recorder are partitioned before launch within the campaign cap.
+    if route['max_requests']+((level['max_http_attempts']+level['recorder']['max_http_attempts']) if level else 0)>profile['max_http_attempts']:
         raise ControlError('Per-host attempts exceed original campaign allowance')
     template=read_json(directory/'mcp-template.json',1048576)
     if template!=configuration('@ACTOR_CONFIG@',profile=profile['actor_profile']):raise ControlError('Only the current explicit actor MCP profile is supported')

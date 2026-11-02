@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
-"""#329 stage 1: the subgoal level's offline fixtures on recorded traces ($0, no provider, no game).
+"""#329 stage 1: level v4's offline fixtures on recorded traces ($0, no provider, no game).
 
 Recorded runs are test inputs, not a supported format. Each run's operations are copied
-through the current store API into a fresh `computer-session/2` store, and the current
-log projection reads them back. The current wake rules then replay over the recorded
-timeline, with each pass's request latencies drawn from the runs' own recorded provider
-latencies, to estimate pass, commit and discard rates for given K, S and fractions. This
+through the current store API into a fresh store, and the current log projection reads them
+back. The production episode cutter then cuts the recorded timeline into episodes from the
+run's retained captures, and the recorder backlog and the level's wake rules replay over it,
+with each pass's request latencies drawn from the runs' own recorded provider latencies, to
+estimate backlog drops, commit and discard rates for given theta, m, C, S and backlog. This
 measures mechanism coupling only; it says nothing about intent quality or play.
 """
 from __future__ import annotations
 
 import argparse
-import bisect
 from datetime import datetime
 import hashlib
 import json
@@ -28,7 +28,7 @@ if __package__ in (None, ''):
 
 from harness.computer.protocol import canonical
 from harness.computer.store import SessionStore
-from tools.level_schedule import LevelSchedule
+from tools.episode_cutter import Episode, EpisodeCutter, thumbnail
 
 
 def wall(value: str) -> float:
@@ -54,7 +54,7 @@ def load(run: Path) -> dict:
     starts = {e['request_id']: wall(e['wall_time']) for e in events if e.get('type') == 'request-start'}
     ends = {e['request_id']: wall(e['wall_time']) for e in events if e.get('type') == 'response-complete'}
     latencies = [ends[r] - starts[r] for r in starts if r in ends]
-    return dict(run=run.name, rows=rows, request_walls=sorted(starts.values()), latencies=latencies,
+    return dict(run=run.name, run_directory=run, rows=rows, request_walls=sorted(starts.values()), latencies=latencies,
                 inputs=dict(database=sha256(run / 'session.sqlite3'), trace=sha256(run / 'actors/001/host.jsonl')))
 
 
@@ -94,43 +94,119 @@ def projection_check(recorded: dict) -> dict:
                 pending=sum(e['status'] == 'pending' for e in entries), max_page_bytes=max(page_bytes, default=0))
 
 
-def simulate(recorded: dict, pool: list[float], *, k: int, s: int, fractions: tuple[float, ...], requests_per_pass: int,
-             allowance: int, rng: random.Random) -> dict:
-    """Replay the wake rules over one recorded timeline under level interface v3 (#340, #341).
+def cut_run(recorded: dict, *, theta: float, m: int, cap: int) -> list[tuple[Episode, float]]:
+    """Cut a recorded run into episodes with the production cutter; each with the wall time it closed.
 
-    The driver pushes the log projection at launch, so a pass binds its position when it
-    starts (`read = now`), and its commit or abstain lands after its last response with no
-    closing turn (`commit = now + sum(latencies)`). `requests_per_pass` is the total request
-    count (about 2-3). No host-startup term is added: the recorded traces hold no level host.
+    The thumbnails come from the run's retained captures. A content cut closes when the crossing input's result
+    arrives, a cap cut at the capping input, and the session edge at the last operation.
     """
-    created = [r[3] for r in recorded['rows']]
-    is_input = [r[2] == 'input' for r in recorded['rows']]
-    input_walls = [w for w, i in zip(created, is_input) if i]
-    requests = recorded['request_walls']
-    ready = requests[0] if requests else created[0]
-    schedule = LevelSchedule(k, fractions, allowance)
-    busy_until, passes, moved, censored = ready, [], [], 0
-    for index, now in enumerate(created):
-        if now < busy_until:
-            continue
-        entries, inputs = index + 1, sum(is_input[:index + 1])
-        attempts = bisect.bisect_right(requests, now)
-        reason = schedule.due(entries=entries, inputs=inputs, attempts=attempts, open_records=0)
-        if reason is None:
-            continue
-        latencies = [rng.choice(pool) for _ in range(requests_per_pass)]
-        read = now
-        commit = busy_until = now + sum(latencies)
-        if commit > input_walls[-1]:
-            # The recording ends before this commit; its staleness is unobserved, not zero.
-            censored += 1
-            continue
-        bound = bisect.bisect_right(input_walls, read)
-        during = bisect.bisect_right(input_walls, commit) - bound
-        moved.append(during)
-        passes.append(during < s)
-    return dict(passes=len(passes), commits=sum(passes), discards=len(passes) - sum(passes), censored=censored,
-                moved=moved, level_requests=(len(passes) + censored) * requests_per_pass, actor_requests=len(requests))
+    sources = recorded['run_directory'] / 'sources'
+    thumbs: dict[str, bytes] = {}
+
+    def thumb(source_id: str) -> bytes:
+        if source_id not in thumbs:
+            thumbs[source_id] = thumbnail((sources / f'{source_id}.png').read_bytes())
+        return thumbs[source_id]
+    cutter = EpisodeCutter(theta, m, cap, thumb)
+    closed: list[tuple[Episode, float]] = []
+    for position, (_, _, kind, created, _, _, final) in enumerate(recorded['rows'], 1):
+        source = (json.loads(final).get('source') or {}).get('source_id') if final else None
+        closed += [(episode, created) for episode in cutter.feed(dict(position=position, kind=kind, source_id=source), None)]
+    tail = cutter.flush()
+    if tail is not None:
+        closed.append((tail, recorded['rows'][-1][3]))
+    return closed
+
+
+def simulate(recorded: dict, pool: list[float], *, theta: float, m: int, cap: int, s: int, backlog: int,
+             recorder_requests: int, level_requests: int, rng: random.Random,
+             episodes: list[tuple[Episode, float]] | None = None) -> dict:
+    """Replay level v4's mechanism over one recorded timeline: cutter, recorder queue and level wakes.
+
+    A closed episode joins the recorder's FIFO backlog; one recorder pass runs at a time and takes the sum of
+    `recorder_requests` latencies drawn from `pool`, and the oldest waiting episode settles as dropped when more than
+    `backlog` wait. Every settle wakes the level (coalescing while a pass runs; the budget fractions only name a wake
+    that a settle already caused, so they add none). A level pass binds the end of the newest settled episode when it
+    starts and commits after `level_requests` latencies; the commit lands when fewer than `s` actor inputs have moved
+    past that bound. No host-startup term is added: the recordings hold no recorder or level host.
+    """
+    rows = recorded['rows']
+    input_walls = [(position, r[3]) for position, r in enumerate(rows, 1) if r[2] == 'input']
+    cuts = cut_run(recorded, theta=theta, m=m, cap=cap) if episodes is None else episodes
+    end = input_walls[-1][1]
+
+    def moved_past(position: int, at: float) -> int:
+        return sum(p > position and w <= at for p, w in input_walls)
+
+    def draw(count: int) -> float:
+        return sum(rng.choice(pool) for _ in range(count))
+    queue: list[Episode] = []
+    recorder: tuple[float, Episode] | None = None
+    level: tuple[float, int] | None = None
+    recorder_passes = dropped = settled_end = level_passes = censored = 0
+    pending_wake = False
+    passes: list[bool] = []
+    moved: list[int] = []
+    timeline = sorted(((w, e) for e, w in cuts), key=lambda item: item[0])
+    index = 0
+
+    def start_recorder(now: float) -> None:
+        nonlocal recorder, recorder_passes
+        if recorder is None and queue:
+            recorder_passes += 1
+            recorder = (now + draw(recorder_requests), queue.pop(0))
+
+    def wake(now: float) -> None:
+        nonlocal pending_wake, level, level_passes
+        if level is not None:
+            pending_wake = True
+            return
+        pending_wake = False
+        level_passes += 1
+        level = (now + draw(level_requests), settled_end)
+
+    while True:
+        # The next event: a close, the recorder finishing or the level committing (a close sorts first on a tie).
+        upcoming = []
+        if index < len(timeline):
+            upcoming.append((timeline[index][0], 0))
+        if recorder is not None:
+            upcoming.append((recorder[0], 1))
+        if level is not None:
+            upcoming.append((level[0], 2))
+        if not upcoming:
+            break
+        now, which = min(upcoming)
+        if which == 0:
+            queue.append(timeline[index][1])
+            index += 1
+            while len(queue) > backlog:
+                settled_end = max(settled_end, queue.pop(0).last_position)
+                dropped += 1
+                wake(now)
+            start_recorder(now)
+        elif which == 1:
+            settled_end = max(settled_end, recorder[1].last_position)
+            recorder = None
+            wake(now)
+            start_recorder(now)
+        else:
+            commit, bound = level
+            level = None
+            if commit > end:
+                # The recording ends before this commit; its staleness is unobserved, not zero.
+                censored += 1
+            else:
+                during = moved_past(bound, commit)
+                moved.append(during)
+                passes.append(during < s)
+            if pending_wake:
+                wake(commit)
+    return dict(episodes=len(cuts), recorder_passes=recorder_passes, dropped=dropped,
+                dropped_share=dropped / len(cuts) if cuts else 0., passes=len(passes), commits=sum(passes),
+                discards=len(passes) - sum(passes), censored=censored, moved=moved,
+                level_requests=(len(passes) + censored) * level_requests, recorder_requests=recorder_passes * recorder_requests,
+                actor_requests=len(recorded['request_walls']))
 
 
 def quantile(values: list[float], q: float) -> float | None:
@@ -140,33 +216,37 @@ def quantile(values: list[float], q: float) -> float | None:
     return ordered[min(len(ordered) - 1, int(q * len(ordered)))]
 
 
-def stage(runs: list[Path], *, k: int, s: int, fractions: tuple[float, ...], requests_per_pass: int,
-          replicates: int, seed: int, latency_scale: float = 1.) -> dict:
-    """`latency_scale` multiplies recorded actor latencies, since level requests may write longer proposals."""
+def stage(runs: list[Path], *, theta: float, m: int, cap: int, s: int, backlog: int, recorder_requests: int,
+          level_requests: int, replicates: int, seed: int, latency_scale: float = 1.) -> dict:
+    """`latency_scale` multiplies recorded actor latencies, since reader requests may write longer proposals."""
     recorded = [load(run) for run in runs]
     pool = [latency * latency_scale for r in recorded for latency in r['latencies']]
-    result = dict(schema='level-offline-stage/2', parameters=dict(k=k, s=s, fractions=list(fractions),
-                  requests_per_pass=requests_per_pass, replicates=replicates, seed=seed, latency_scale=latency_scale),
+    result = dict(schema='level-offline-stage/3', parameters=dict(theta=theta, m=m, cap=cap, s=s, backlog=backlog,
+                  recorder_requests=recorder_requests, level_requests=level_requests, replicates=replicates, seed=seed,
+                  latency_scale=latency_scale),
                   latency_pool=dict(count=len(pool), median=statistics.median(pool), p95=quantile(pool, .95)),
                   runs=[])
     rng = random.Random(seed)
     for r in recorded:
-        allowance = max(1, len(r['request_walls']))
-        sims = [simulate(r, pool, k=k, s=s, fractions=fractions, requests_per_pass=requests_per_pass,
-                         allowance=allowance, rng=rng) for _ in range(replicates)]
+        cuts = cut_run(r, theta=theta, m=m, cap=cap)
+        sims = [simulate(r, pool, theta=theta, m=m, cap=cap, s=s, backlog=backlog, recorder_requests=recorder_requests,
+                         level_requests=level_requests, rng=rng, episodes=cuts) for _ in range(replicates)]
         rates = [x['commits'] / x['passes'] for x in sims if x['passes']]
-        moved = [m for x in sims for m in x['moved']]
+        moved = [v for x in sims for v in x['moved']]
         inputs = sum(row[2] == 'input' for row in r['rows'])
         span = r['rows'][-1][3] - r['rows'][0][3]
         result['runs'].append(dict(run=r['run'], inputs=r['inputs'], projection=projection_check(r),
-            actor_inputs=inputs, actor_requests=len(r['request_walls']),
+            actor_inputs=inputs, actor_requests=len(r['request_walls']), episodes=len(cuts),
+            mean_episode_inputs=statistics.fmean(e.inputs for e, _ in cuts) if cuts else None,
             input_interval_seconds=span / max(1, inputs - 1),
             passes_mean=statistics.fmean(x['passes'] for x in sims),
             censored_mean=statistics.fmean(x['censored'] for x in sims),
+            dropped_share=statistics.fmean(x['dropped_share'] for x in sims),
             commit_rate=dict(mean=statistics.fmean(rates) if rates else None, p05=quantile(rates, .05),
                              p95=quantile(rates, .95)),
             inputs_during_pass=dict(median=quantile(moved, .5), p95=quantile(moved, .95), max=max(moved, default=None)),
-            level_request_overhead=statistics.fmean(x['level_requests'] / max(1, x['actor_requests']) for x in sims)))
+            reader_request_overhead=statistics.fmean(
+                (x['level_requests'] + x['recorder_requests']) / max(1, x['actor_requests']) for x in sims)))
     commits = sum(x['commit_rate']['mean'] * x['passes_mean'] for x in result['runs'] if x['commit_rate']['mean'] is not None)
     total = sum(x['passes_mean'] for x in result['runs'])
     result['pooled_commit_rate'] = commits / total if total else None
@@ -176,10 +256,13 @@ def stage(runs: list[Path], *, k: int, s: int, fractions: tuple[float, ...], req
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--run', type=Path, action='append', required=True, help='A recorded single-actor run directory')
-    parser.add_argument('--k', type=int, default=10)
+    parser.add_argument('--theta', type=float, required=True, help="The fitted episode threshold (#345's calibration)")
+    parser.add_argument('--m', type=int, default=2)
+    parser.add_argument('--cap', type=int, default=10, help='The episode cap C, which equals K')
     parser.add_argument('--s', type=int, default=10)
-    parser.add_argument('--fractions', type=float, nargs='*', default=[.25, .5, .75])
-    parser.add_argument('--requests-per-pass', type=int, default=3)
+    parser.add_argument('--backlog', type=int, default=3)
+    parser.add_argument('--recorder-requests', type=int, default=2)
+    parser.add_argument('--level-requests', type=int, default=3)
     parser.add_argument('--replicates', type=int, default=2000)
     parser.add_argument('--seed', type=int, default=329)
     parser.add_argument('--latency-scale', type=float, default=1.)
@@ -188,7 +271,8 @@ def main() -> None:
     output = args.output.resolve()
     if not output.is_relative_to(ROOT / '.runtime'):
         parser.error('Write offline-stage outputs under the project .runtime directory')
-    value = stage(args.run, k=args.k, s=args.s, fractions=tuple(args.fractions), requests_per_pass=args.requests_per_pass,
+    value = stage(args.run, theta=args.theta, m=args.m, cap=args.cap, s=args.s, backlog=args.backlog,
+                  recorder_requests=args.recorder_requests, level_requests=args.level_requests,
                   replicates=args.replicates, seed=args.seed, latency_scale=args.latency_scale)
     output.parent.mkdir(parents=True, exist_ok=True)
     with output.open('x') as stream:
