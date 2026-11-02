@@ -258,7 +258,7 @@ class Application:
     def bind_level(self, level_id: str) -> dict[str, Any]:
         """Bind a level pass's position and subgoal, under `Application.serial`, replacing a log read.
 
-        The position is the end of the served actor's newest settled episode in this session, or 0 before any has
+        The position is the furthest end of the served actor's settled episodes in this session, or 0 before any has
         settled; recalled earlier-session records never bind. The subgoal is the current level subgoal's id, or
         None. A served actor that has handed off binds nothing, so the pass's commit is discarded.
         """

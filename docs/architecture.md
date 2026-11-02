@@ -56,6 +56,15 @@ project-local stdio MCP adapter owns no writer, native child or provider key.
 The selected [player host](contracts/player-host.md) owns model calls; the campaign
 driver owns exact host/MCP group cleanup.
 
+The *reader class* is a second capability class beside the actors: for each narrowed actor
+the application mints one `level` and one `recorder` reader, each with its own token and a
+fixed tool allowlist (reads, plus one pass-ending write that the custodian turns into a
+record). The driver runs them as concurrent finite hosts beside the actor, a level and a
+recorder per actor, each at most one pass in flight. They send no input and cannot stop the
+run, and after a failure to remember they refuse every tool while the actor continues. The
+contract is in [computer control](contracts/computer-control.md) and the decision in
+[ADR007](decisions/007-player-subgoal-level.md).
+
 Fresh session stores live under `.runtime/computer-sessions/`. A selected
 `player-memory/1` store may span fresh native-child sessions. Old runtime formats
 remain inert history; no current reader imports executable old libraries.

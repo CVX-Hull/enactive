@@ -256,7 +256,7 @@ def build_replay(recorded: dict, directory: Path, level: dict) -> dict:
     recorder = application.add_reader(actor['actor_id'], 'recorder', **derived)
     bound = recorded['bound']
     if bound:
-        # The pass's bound is the end of the newest settled episode: restore it with one settle of the earlier positions.
+        # The pass's bound is the furthest settled episode end: restore it with one settle of the earlier positions.
         application.settle_episode(recorder['actor_id'], first_position=1, last_position=bound, subgoal_id=None,
                                    settled='dropped', reason='replay: the positions before the recorded bound')
     binding = application.bind_level(reader['actor_id'])

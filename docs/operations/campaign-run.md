@@ -86,7 +86,7 @@ after the actor. Once the actor host makes its first request:
 - **Level.** The [wake rules](../../tools/level_schedule.py) wake it at start (only to revalidate what earlier
   sessions left), after every settle, and at a budget fraction only after a settle; wakes that arrive during a pass
   coalesce into one pass over the newest records. At push, under the application lock, the driver binds the position
-  (the end of the newest settled episode this session, whatever its outcome, or 0) and the current subgoal id, and
+  (the furthest end of any episode settled this session, whatever its outcome, or 0) and the current subgoal id, and
   reads the episodes settled since its last pass, the `player-intent/2` object for the `level` audience (the
   subgoal with its derived status and stalled flag, and the top 10 recalled episodes) and the per-subgoal counts.
   Each pass is a finite `role: level` host under `actors/NNN/level/PPP/` with the profile `player_source` and the four
@@ -110,6 +110,11 @@ A failure of the cutter, recorder or level (a malformed trace, a launch or store
 charges the pass, disables both readers for the rest of the session and is recorded, but never stops or gates the
 actor; episodes already cut still settle. A reader the custodian refuses to mint fails closed before that actor
 launches. The custodian appends per-call lock wait and hold times to `call-timing.jsonl`.
+
+**Operator rule: a failed store is not admitted again.** A player store that set `remember_failure` (reported in
+`/api/status`, and by the recorded failure above) is not used for another run until its capacity or fault is fixed:
+the source store holds 256 MiB and evicts nothing, so the next session on it would fail to remember again and end
+its lineage the same way. Free or replace the store first, or start a fresh one.
 
 `route.json` uses current `player-host/6` (role `actor`) with text/image input and explicit
 provider/effort/price metadata and image peak and block, chosen against the

@@ -242,8 +242,8 @@ derives from those claims. The roles propose; software counts.
 `level_contract: "player-episode/1"`, `settled` (`recorded`, `abstained`, `failed` or
 `dropped`), `writer` (`recorder` for the first two, `software` for the others), the
 `session`, served `actor_id`, `first_position` and `last_position` (1-based per-actor
-operation positions, inclusive) and `subgoal_id`, the level subgoal current at the episode's
-first input or null.
+operation positions, inclusive) and `subgoal_id`, the level subgoal current when the driver
+opened the episode, at the ingest of its first operation (read once per ingest batch), or null.
 - `recorded` adds `attempted`, `counterpart`, `observation_status`, `residual`, `changed`,
   `confidence`; `abstained` adds `reason_code` and `reason`; `failed` and `dropped` add
   `reason`. Only `recorded` carries marks. The claim's `sources` are the cited frames, at
@@ -400,7 +400,11 @@ exploration item: an earlier-session record outside the top 10 drawn uniformly w
 seed from the session id and the level's pass index (the number of `bind_level` calls).
 Byte truncation of what is shown belongs to the host. `Application.settled_episodes` and
 `subgoal_counts` give the driver the settled records and per-subgoal counts (episodes,
-seen, contradicted, closures, failures) for the level's pushed input.
+seen, contradicted, closures, failures) for the level's pushed input. `counts` holds one line
+per subgoal of the current level contract, superseded history included, so it grows with the
+lineage. `failures` counts failed episode settles (`settled: failed`), and `closures` counts
+software closures (the correction the custodian appends when a recorded episode makes every
+expected observation seen), not the level's own `close` calls.
 
 *Capacity.* If remembering fails (a storage fault, or cited frames that do not fit the
 256 MiB source store, which evicts nothing), `Application.remember_failure` is set and

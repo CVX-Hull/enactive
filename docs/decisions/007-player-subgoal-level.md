@@ -213,8 +213,11 @@ result captures as player-visible sources.
   cut, never after the newest settle, because episodes settle out of order (a drop can precede an
   earlier in-flight record).
   *Decided at build ([#350](https://github.com/CVX-Hull/enactive/issues/350)).*
-- **The subgoal.** The driver records the level subgoal current at each episode's first input,
-  when the episode opens, because no custodian API gives it later.
+- **The subgoal.** The driver records the level subgoal current when it opens each episode, at
+  the ingest of the episode's first operation, because no custodian API gives it later. It reads
+  the current subgoal once per ingest batch, so this is the subgoal as of that ingest, which can
+  be later than the operation itself: a level commit that lands between the operation and its
+  ingest is the one recorded.
   *Decided at build ([#350](https://github.com/CVX-Hull/enactive/issues/350), with a #349 review fix).*
 - **Frozen boundaries.** Boundaries are frozen once written and never recomputed.
 - **No game semantics.** Every trigger is mechanical, and ADR006 and the no-game-semantics rule
@@ -263,7 +266,10 @@ finite host with `role: recorder`.
     the first one, so a record that cites no frame is refused and the "(no frame cited)" case does
     not exist. *Decided at build ([#349](https://github.com/CVX-Hull/enactive/issues/349) and
     [#351](https://github.com/CVX-Hull/enactive/issues/351), `c7ada0c`).* An episode whose inputs
-    all lost their captures has no frames, so the recorder can only abstain.
+    all lost their captures has no frames of its own, but it may still have a baseline, so the
+    recorder can record it citing only the baseline. Such a record shows a frame from before the
+    episode, and recall would show that frame for the episode. Nothing makes the recorder abstain
+    here.
   - Every field is required, and the schema is flat.
 - **`player_episode_abstain(reason_code, reason, sources)`** has its own codes:
   `unreadable_frames`, `no_player_action` and `other`. `sources` may be empty.
@@ -476,8 +482,9 @@ The commit is software-mediated (P5). The level calls `player_level_keep`,
 - **In flight:** at most one level pass. Wakes that arrive during a pass coalesce into one pass
   over the newest records.
 - **Revalidation.** At actor start the first pass is given the open subgoal and may keep, replace
-  or close it, or abstain. An abstaining start pass leaves the earlier subgoal current, and its age
-  in sessions still shows in the actor's intent tail, so revalidation is offered, not enforced,
+  or close it, or abstain. An abstaining start pass leaves the earlier subgoal current, and the
+  actor's intent tail still shows whether it is from `this` session or the `prev` one, so
+  revalidation is offered, not enforced,
   except for a stalled subgoal. Start-pass abstentions are counted separately.
 
 ### Recall and the intent tail
@@ -494,8 +501,8 @@ The commit is software-mediated (P5). The level calls `player_level_keep`,
   under the serial lock took about 1 s at 5,000 episodes.
   *Decided at build ([#349](https://github.com/CVX-Hull/enactive/issues/349), review fix).*
 - **Publication.** The actor's request-only tail shows the latest committed Work record, labelled
-  fallible, with its sources and its age in inputs, seconds and sessions, and recalled episodes.
-  The actor may ignore it.
+  fallible, with its sources, its age in inputs and seconds and whether it is from `this` or the
+  `prev` session (not an age in sessions), and recalled episodes. The actor may ignore it.
 - **The tail.** `player-intent/2` has a fixed allocation of 1,024 bytes in all, labels included.
   *Decided at build ([#351](https://github.com/CVX-Hull/enactive/issues/351)):* `intent_tail_bytes`
   is null or exactly 1024, because the allocation is fixed.
@@ -736,7 +743,9 @@ Both are existing `player-record/1` kinds.
   actor, level and recorder gets partitioned allowances before launch, and the sum stays within
   the campaign cap. A level host starts after its actor is ready, and stops on that actor's stop,
   Pause or handoff. The recorder then works through its backlog, bounded in time, unless the run is
-  fenced. The successor actor gets a new level host and recorder, and its first level pass
+  fenced. That drain runs before a successor is minted, and it is bounded by
+  `(backlog+1)×pass_seconds` (the waiting episodes and the one in flight), so the actor's
+  successor waits for it and it counts against the host's elapsed time. The successor actor gets a new level host and recorder, and its first level pass
   revalidates what was carried over and sees the committed intent.
 - **Actor waits.** The actor's critical path adds only the bounded intent tail.
   Because MCP calls are serialized (`Application.serial`), the level can delay the

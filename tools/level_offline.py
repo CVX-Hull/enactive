@@ -126,7 +126,7 @@ def simulate(recorded: dict, pool: list[float], *, theta: float, m: int, cap: in
     A closed episode joins the recorder's FIFO backlog; one recorder pass runs at a time and takes the sum of
     `recorder_requests` latencies drawn from `pool`, and the oldest waiting episode settles as dropped when more than
     `backlog` wait. Every settle wakes the level (coalescing while a pass runs; the budget fractions only name a wake
-    that a settle already caused, so they add none). A level pass binds the end of the newest settled episode when it
+    that a settle already caused, so they add none). A level pass binds the furthest settled episode end when it
     starts and commits after `level_requests` latencies; the commit lands when fewer than `s` actor inputs have moved
     past that bound. No host-startup term is added: the recordings hold no recorder or level host.
     """
