@@ -29,7 +29,7 @@ const model = {id:'google/gemini-3.8-flash', name:'Gemini 3.8 Flash via google-v
     supportsStrictMode:false, maxTokensField:'max_tokens', thinkingFormat:'openrouter',
     openRouterRouting:{only:['google-vertex/global'], order:['google-vertex/global'], allow_fallbacks:false, require_parameters:true}}};
 const PASS_REQUESTS = 6;
-const levelRoute = {schema:'player-host/5', role:'level', intent_tail_bytes:null, service_tier:'default', model,
+const levelRoute = {schema:'player-host/6', role:'level', intent_tail_bytes:null, service_tier:'default', model,
   api_key_env:'CONTRACT_TEST_KEY', max_requests:PASS_REQUESTS, max_context_images:30, context_image_block:1,
   request_timeout_seconds:30};
 
