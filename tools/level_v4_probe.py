@@ -365,12 +365,17 @@ def actor_projection(run: dict) -> dict:
                     images[(event.get('tool_call_id'), part.get('image_index'))] = part['sha256']
         elif kind == 'context-image-projection':
             seen_projection = True
-            omitted = {(o.get('tool_call_id'), o.get('image_index')) for o in event.get('omissions', [])}
-            held = {key: sha for key, sha in images.items() if key not in omitted}
-            consistent = (len(images) == event.get('input_images') and len(held) == event.get('retained_images'))
+            # The host omits the oldest images first (an actor pins none) and lists only the first 16 omissions, so the
+            # held images are the images in order after the first `omitted_images`; the listed omissions check that order.
+            order = list(images)
+            count = event.get('omitted_images', 0)
+            listed = [(o.get('tool_call_id'), o.get('image_index')) for o in event.get('omissions', [])]
+            held = order[count:]
+            consistent = (len(order) == event.get('input_images') and len(held) == event.get('retained_images')
+                          and event.get('pinned_images', 0) == 0 and order[:len(listed)] == listed)
             mismatched += not consistent
-            requests.append(dict(request_id=event.get('request_id'), wall=iso(event['wall_time']), held=set(held.values()),
-                                 consistent=consistent))
+            requests.append(dict(request_id=event.get('request_id'), wall=iso(event['wall_time']),
+                                 held={images[key] for key in held}, consistent=consistent))
     exclusion = None
     if not seen_projection:
         exclusion = 'the actor trace has no context-image-projection events'
@@ -660,7 +665,7 @@ def replay(run: dict, plan: dict, episodes: list[dict], records: dict, lineage: 
     recorder_reader = application.add_reader(actor_id, 'recorder', **derived)
     by_index = {e['index']: e for e in episodes}
     timeline = list(plan['events'])
-    timeline += [(row[3], 1, 'op', position) for position, row in enumerate(rows, 1)]
+    timeline += [(row[2], 1, 'op', position) for position, row in enumerate(rows, 1)]
     for commit in level_commits(run):
         timeline.append((commit['wall'], 0, 'subgoal', commit))
     if projection is not None:
@@ -800,6 +805,15 @@ class Spend:
             self.dearest = max(self.dearest, dearest)
 
 
+def lane_context(role: str, run: dict) -> str:
+    """The `context.txt` a reader lane\'s host is given, by the driver\'s rule after the no-nudge review.
+
+    The level lane takes the run\'s frozen guide; the recorder lane\'s `context.txt` is empty (no player guide). This must
+    track `ReaderLane.start` in `tools/campaign_player.py`; the report records the rule applied.
+    """
+    return '' if role == 'recorder' else run['context']
+
+
 def reader_pass(*, role: str, application, reader: dict, session: str, route: dict, context: str, stdin: str | dict, directory: Path,
                 out: Path, label: str, allowance: int, seconds: int, effort: str, host_argv: list[str], secret: str, hold: float,
                 bound: float) -> dict:
@@ -863,7 +877,7 @@ def run_recorder(run: dict, ep: dict, family: str, route: dict, ctx: dict) -> di
     try:
         state = recorder_state(run, ep, work / 'store', ctx['profile'], ctx['distances'][run['name']], ctx['episode_role'], allowance)
         record = reader_pass(role='recorder', application=state['application'], reader=state['recorder'], session=run['session'],
-            route=route, context=run['context'], stdin=state['document'], directory=work / 'host', out=ctx['out'] / 'samples',
+            route=route, context=lane_context('recorder', run), stdin=state['document'], directory=work / 'host', out=ctx['out'] / 'samples',
             label=label, allowance=allowance, seconds=int(ctx['profile']['recorder']['pass_seconds']), effort=ctx['effort'],
             host_argv=ctx['host_argv'], secret=ctx['secret'], hold=hold, bound=ctx['bound'])
         views = [v for v in state['application'].settled_episodes(actor_id=state['actor']['actor_id'])
@@ -928,7 +942,7 @@ TAIL_FORMATTER = '''
 import {formatIntentTail, RECALL_LABEL} from %s;
 import {readFileSync} from 'node:fs';
 const out = [];
-for (const line of readFileSync(0, 'utf8').split('\\n')) {
+for (const line of readFileSync(process.argv[1], 'utf8').split('\\n')) {
   if (!line) continue;
   const value = JSON.parse(line);
   try {
@@ -942,21 +956,23 @@ process.stdout.write(JSON.stringify(out));
 '''
 
 
-def format_tails(intents: list[dict], node: str) -> list[dict]:
+def format_tails(intents: list[dict], node: str, directory: Path) -> list[dict]:
     """The real host formatter over each `player-intent/2` value: which recall source ids are shown, within 1,024 bytes."""
     if not intents:
         return []
     code = TAIL_FORMATTER % json.dumps((ROOT / 'tools/player_host/host.mjs').as_uri())
-    result = subprocess.run([node, '--input-type=module', '-e', code], input='\n'.join(json.dumps(i) for i in intents),
-                            capture_output=True, text=True, cwd=ROOT)
+    with tempfile.TemporaryDirectory(prefix='tails-', dir=directory) as temporary:
+        path = Path(temporary) / 'intents.jsonl'
+        path.write_text('\n'.join(json.dumps(i) for i in intents))
+        result = subprocess.run([node, '--input-type=module', '-e', code, str(path)], capture_output=True, text=True, cwd=ROOT)
     if result.returncode != 0:
         raise ValueError(f'The host tail formatter failed: {result.stderr[-600:]}')
     return json.loads(result.stdout)
 
 
-def tail_items(run: str, entries: list[dict], shas: dict[str, str], node: str) -> dict:
+def tail_items(run: str, entries: list[dict], shas: dict[str, str], node: str, directory: Path) -> dict:
     """Shown recall items and which are marginal, for one run's recorded requests with their intent values."""
-    formatted = format_tails([e['intent'] for e in entries], node)
+    formatted = format_tails([e['intent'] for e in entries], node, directory)
     items, with_tail, unreadable = [], 0, 0
     for entry, tail in zip(entries, formatted, strict=True):
         unreadable += not tail['ok']
@@ -1112,7 +1128,7 @@ def _probe(c: dict) -> dict:
                 entries: list = []
                 state = replay(loaded[n], plans[n], by_run[n], records, lineage, profile, tails=entries, projection=projections[n])
                 state['runtime'].close()
-                tail_results.append(tail_items(n, entries, shas, node) if node else dict(items=[], requests=len(entries),
+                tail_results.append(tail_items(n, entries, shas, node, work) if node else dict(items=[], requests=len(entries),
                                                                                          requests_with_tail=0, unreadable=0))
             conversion_failures += lineage.conversion_failures
         finally:
@@ -1149,7 +1165,7 @@ def _probe(c: dict) -> dict:
                     allowance_requests=wake['allowance_requests'], allowance_seconds=wake['allowance_seconds'])
         text = level_text(role_prompts['level'], loaded[n]['brief'], note, state['pushed'])
         return dict(wake=wake, text=text, pushed=state['pushed'], application=state['application'], runtime=state['runtime'],
-                    level=state['level'], session=loaded[n]['session'], context=loaded[n]['context'], lineage=lineage)
+                    level=state['level'], session=loaded[n]['session'], context=lane_context('level', loaded[n]), lineage=lineage)
 
     stage2 = []
     for wake in wake_sample:
