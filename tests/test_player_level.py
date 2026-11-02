@@ -809,9 +809,76 @@ def test_reader_minting_refuses_more_than_one_current_level_subgoal_and_ignores_
             app.add_reader(actor['actor_id'], 'level', staleness_inputs=S, **parameters)
         with pytest.raises(ControlError, match='More than one current level subgoal'):
             app.add_reader(actor['actor_id'], 'recorder', **parameters)
-        memory.append(actor['actor_id'], dict(schema='player-record/1', kind='correction', text='ended',
+        # The general path cannot end a level subgoal (see the reserved-target test); the custodian's path can.
+        put(memory, actor['actor_id'], dict(schema='player-record/1', kind='correction', text='ended',
             data={}, sources=[], supports=[], supersedes=memory.current('work')[-1]['id'], applicability=None, program_id=None))
         assert app.add_reader(actor['actor_id'], 'level', staleness_inputs=S, **parameters)['actor_id']
+    finally:
+        runtime.close(); memory.close()
+
+
+def test_the_general_write_paths_cannot_supersede_or_support_a_record_carrying_the_custodians_data(level):
+    app, channel, actor, reader, recorder = level
+    commit_first(app, actor, reader, recorder)
+    (work,) = app.level_subgoals()
+    plain = dict(schema='player-record/1', kind='work', text='plain', data={}, sources=[], supports=[], supersedes=None,
+                 applicability=None, program_id=None)
+    before = store_rows(app)
+    correction = dict(plain, kind='correction', text='ended it', supersedes=work['id'])
+    # `player_memory_append` is `Memory.append`; `append_many` is the batch path every non-custodian caller shares.
+    for general in (correction, dict(plain, supports=[work['id']])):
+        with pytest.raises(PlayerError, match='custodian reserves record'):
+            app.memory.append(actor['actor_id'], general)
+    with pytest.raises(PlayerError, match='custodian reserves record'):
+        app.memory.append_many(actor['actor_id'], [plain, dict(correction, supersedes=work['id'])], request_id=request_id())
+    # Nothing was written, and the level's Work is still the current subgoal.
+    assert store_rows(app) == before
+    assert [r['id'] for r in app.level_subgoals()] == [work['id']]
+    # Ordinary records still support and supersede each other, and a plain record may cite the level's record in `text` only.
+    first = app.memory.append(actor['actor_id'], plain)
+    second = app.memory.append(actor['actor_id'], dict(plain, kind='correction', supersedes=first['id'], supports=[first['id']]))
+    assert second['supersedes'] == first['id']
+    # The custodian's own path may still supersede its record.
+    put(app.memory, actor['actor_id'], dict(correction, data=dict(level='subgoal', level_contract='player-level/4', outcome='revised')))
+    assert app.level_subgoals() == []
+
+
+def test_older_contract_level_records_are_ignored_by_the_subgoal_reads_counts_and_the_mint_check(tmp_path):
+    runtime, channel, _ = make_runtime(tmp_path, mint=False)
+    memory = Memory(tmp_path / 'player.sqlite3')
+    app = Application(runtime, memory, tmp_path / 'contexts')
+    parameters = dict(stall_settles=3, confidence_floor=.5)
+    try:
+        actor = app.add_actor('narrowed')
+
+        def work(text, contract):
+            data = dict(level='subgoal', expected_observations=['a door'], status='open', confidence=.5)
+            if contract:
+                data['level_contract'] = contract
+            return put(memory, actor['actor_id'], dict(schema='player-record/1', kind='work', text=text, data=data, sources=[],
+                supports=[], supersedes=None, applicability=None, program_id=None))
+
+        def end(record, **data):
+            return put(memory, actor['actor_id'], dict(schema='player-record/1', kind='correction', text='ended',
+                data=dict(level='subgoal', **data), sources=[], supports=[], supersedes=record['id'], applicability=None,
+                program_id=None))
+        # Superseded older-contract history: not counted, not current, no refusal.
+        for index, contract in enumerate(('player-level/2', 'player-level/3', None)):
+            end(work(f'old {index}', contract), level_contract=contract or 'player-level/3', by='software')
+        assert app.level_record_count() == 0 and app.level_subgoals() == []
+        reader = app.add_reader(actor['actor_id'], 'level', staleness_inputs=S, **parameters)
+        assert reader['actor_id'] and app.subgoal_counts(actor['actor_id']) == []
+        current = work('now', 'player-level/4')
+        end_old = work('older and current', 'player-level/3')
+        # One current subgoal of the current contract is the level's; the older one is neither it nor a second one for the
+        # mint check's count, and it is refused as an unsupported store rather than adopted.
+        assert [r['id'] for r in app.level_subgoals()] == [current['id']] and app.level_record_count() == 1
+        assert [c['subgoal_id'] for c in app.subgoal_counts(actor['actor_id'])] == [current['id']]
+        with pytest.raises(ControlError, match='Unsupported level record contract'):
+            app.add_reader(actor['actor_id'], 'recorder', **parameters)
+        end(end_old, level_contract='player-level/3')
+        assert app.add_reader(actor['actor_id'], 'recorder', **parameters)['actor_id']
+        assert [c['subgoal_id'] for c in app.subgoal_counts(actor['actor_id'])] == [current['id']]
     finally:
         runtime.close(); memory.close()
 
@@ -941,7 +1008,7 @@ def test_reader_minting_refuses_a_current_level_record_of_another_contract(tmp_p
                 program_id=None))
 
         def end(record):
-            memory.append(actor['actor_id'], dict(schema='player-record/1', kind='correction', text='ended',
+            put(memory, actor['actor_id'], dict(schema='player-record/1', kind='correction', text='ended',
                 data={}, sources=[], supports=[], supersedes=record['id'], applicability=None, program_id=None))
         for text, data in (('v2 record', dict(level_contract='player-level/2')),
                            ('v3 record', dict(level_contract='player-level/3')), ('unversioned record', {})):

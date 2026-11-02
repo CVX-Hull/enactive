@@ -148,7 +148,10 @@ class Application:
             if len(current) > 1:
                 raise ControlError('More than one current level subgoal; the level could never commit')
             # A record written under another level contract is not read, converted or superseded: S-MIGRATION.
-            stale = [r['id'] for r in current if r['data'].get('level_contract') != LEVEL_CONTRACT]
+            # The count above and every level read consider only the current contract's records; a current record of
+            # another contract is still refused here, so an old store is never silently adopted.
+            stale = [r['id'] for r in self.memory.current('work')
+                     if r['data'].get('level') == 'subgoal' and r['data'].get('level_contract') != LEVEL_CONTRACT]
             if stale:
                 raise ControlError(f'Unsupported level record contract (current level Work {", ".join(stale)} is not '
                                    f'{LEVEL_CONTRACT}); migrate or start a fresh player store')
@@ -189,12 +192,19 @@ class Application:
             raise PlayerError(reason + ' The recorder and the level are stopped for this session.')
 
     def level_subgoals(self) -> list[dict[str, Any]]:
-        """The current Work records the level manages; at most one by construction. Other Work is out of its scope."""
-        return [r for r in self.memory.current('work') if r['data'].get('level') == 'subgoal']
+        """The current Work records the level manages; at most one by construction. Other Work is out of its scope, and
+        so is a level record of another contract (`data.level_contract` is not `LEVEL_CONTRACT`)."""
+        return [r for r in self.memory.current('work')
+                if r['data'].get('level') == 'subgoal' and r['data'].get('level_contract') == LEVEL_CONTRACT]
+
+    def _level_records(self, kind: str) -> list[dict[str, Any]]:
+        """Every level record of one kind under the current contract, superseded history included, oldest first."""
+        return [r for r in self.memory.level_records(kind, 'subgoal') if r['data'].get('level_contract') == LEVEL_CONTRACT]
 
     def level_record_count(self) -> int:
-        """Level-written Work records in player memory, superseded history included; the pushed input states it."""
-        return len(self.memory.level_records('work', 'subgoal'))
+        """Level-written Work records of the current contract in player memory, superseded history included; the pushed
+        input states it."""
+        return len(self._level_records('work'))
 
     # --- Episodes: trusted views, derived state, binding ---
 
@@ -431,10 +441,9 @@ class Application:
             parameters = self.derivation.get(actor_id)
             if parameters is None:
                 raise ControlError('This actor has no reader, so no stall test or confidence floor')
-            closures = {r['supersedes'] for r in self.memory.level_records('correction', 'subgoal')
-                        if r['data'].get('by') == 'software'}
+            closures = {r['supersedes'] for r in self._level_records('correction') if r['data'].get('by') == 'software'}
             counted = []
-            for work in self.memory.level_records('work', 'subgoal'):
+            for work in self._level_records('work'):
                 derived = self._derived(actor_id, work)
                 counts = derived['counts']
                 counted.append(dict(subgoal_id=work['id'], episodes=counts['episodes'], seen=counts['seen'],
