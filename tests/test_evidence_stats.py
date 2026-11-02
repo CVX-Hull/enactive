@@ -1,4 +1,5 @@
 """Shared evidence statistics: definitions fixed by hand-computed values, plus the rejected inputs."""
+from fractions import Fraction
 import math
 
 import pytest
@@ -41,14 +42,32 @@ def test_cluster_bootstrap_resamples_whole_clusters_and_is_reproducible():
     mean = lambda xs: sum(xs) / len(xs)
     values = [1.0, 2.0, 4.0, 8.0, 16.0, 3.0]
     assert cluster_bootstrap(values, mean, seed=1, resamples=300) != cluster_bootstrap(values, mean, seed=2, resamples=300)
-    assert 0 <= first[0] < .5 < first[1] <= 1
+    low, high = first['interval']
+    assert 0 <= low < .5 < high <= 1 and (first['clusters'], first['resamples'], first['defined_resamples']) == (10, 500, 500)
     # Identical clusters have no sampling variance.
-    assert cluster_bootstrap([dict(k=1, n=1)] * 4, statistic, seed=1, resamples=50) == [1.0, 1.0]
-    assert cluster_bootstrap([], statistic, seed=1, resamples=50) is None
-    assert cluster_bootstrap([1], lambda xs: None, seed=1, resamples=50) is None
+    assert cluster_bootstrap([dict(k=1, n=1)] * 4, statistic, seed=1, resamples=50)['interval'] == [1.0, 1.0]
+    # Fewer than two clusters have nothing to resample; a statistic that is never defined gives no interval but says so.
+    for few in ([], [1]):
+        assert cluster_bootstrap(few, mean, seed=1, resamples=50)['interval'] is None
+    undefined = cluster_bootstrap([1, 2], lambda xs: None, seed=1, resamples=50)
+    assert undefined['interval'] is None and undefined['defined_resamples'] == 0
+    half = iter(range(1000))
+    sometimes = cluster_bootstrap([1, 2], lambda xs: next(half) if next(half) % 2 else None, seed=1, resamples=40)
+    assert 0 < sometimes['defined_resamples'] < 40
     for bad in (dict(resamples=0), dict(resamples=1.5), dict(resamples=10, level=1.0)):
         with pytest.raises(ValueError):
             cluster_bootstrap(clusters, statistic, seed=1, **dict(dict(resamples=10), **bad))
+
+
+def test_interval_indices_are_exact_not_float_products():
+    # (1 - .9) / 2 is 0.04999999999999999 in floats, whose product with 2000 truncates to 99; the exact decimal gives 100.
+    assert int(((1 - .9) / 2) * 2000) == 99
+    counter = iter(range(2000))
+    boot = cluster_bootstrap([1, 2], lambda xs: next(counter), seed=1, resamples=2000, level=.9)
+    assert boot['interval'] == [100, 1900]
+    assert quantile(list(range(2000)), .95) == 1900 and quantile(list(range(2000)), Fraction(1, 20)) == 100
+    # Upper nearest-rank: the index is floor(q*n), unlike the lower rank ceil(q*n)-1 that host_analysis uses.
+    assert quantile([10, 20, 30, 40], .5) == 30 and quantile([10, 20, 30, 40], .25) == 20
 
 
 def test_percentile_rank_and_tail_tests():

@@ -40,7 +40,15 @@ in that reader's own terminal-tool service result, except the failed/dropped set
 (`harness.player.episodes.episode`); a reader service row for a non-terminal tool, or an unexcused tombstone, is a
 violation. A row with no result is excused only as the tombstone of a lost terminal call named in a pass record.
 
-Quantiles are nearest-rank; intervals are percentile bootstraps clustered by run (`tools.evidence_stats`).
+The refusal circuit breaker counts what the model saw refused (validation feedback, `tool-refused` except the pass
+already ended, custodian `isError` results). That is deliberately not `tools/level_probe.classify`, which also counts
+undispatched terminal calls and `arguments_error`; the breaker's definition is the frozen stop rule and is kept as is.
+Its threshold, the clean-exit grace and window, and which settled reasons are provider-side come from the criteria file
+(`breaker_refusals`, `final_report_grace_seconds`, `exit_window_seconds`, `provider_failure_reasons`); nothing is
+defaulted. `driver-receipt.json` is cross-checked against the record embedded in `receipt.json`.
+
+Quantiles are upper nearest-rank, floor(q*n) (`tools.evidence_stats`); intervals are percentile bootstraps clustered by
+run, with runs taken in name order and the number of defined resamples reported beside each interval.
 """
 from __future__ import annotations
 
@@ -67,7 +75,10 @@ from tools.evidence_stats import cluster_bootstrap, quantile, ratio, summary
 SCHEMA = 'level-stage-analysis/5'
 CRITERIA_SCHEMA = 'level-stage-criteria/1'
 CRITERIA_KEYS = ('min_decided', 'min_auditable_records', 'min_commit_rate', 'max_commit_inputs_since_p95',
-                 'bootstrap_seed', 'bootstrap_resamples')
+                 'bootstrap_seed', 'bootstrap_resamples', 'breaker_refusals', 'final_report_grace_seconds',
+                 'exit_window_seconds', 'provider_failure_reasons')
+# The settled reasons a stage may treat as provider-side; which of them it does is its frozen choice.
+PROVIDER_REASONS = ('provider-error', 'request-timeout')
 MANIFEST_SCHEMA, RECEIPT_SCHEMA, DRIVER_SCHEMA, HOST_SCHEMA, TELEMETRY_VERSION = (
     'campaign-run/5', 'campaign-receipt/2', 'player-driver/6', 'player-host/6', 2)
 # harness/application.py `level_call`: the only discard reason that is the run's end rather than the level's doing.
@@ -87,12 +98,8 @@ RECORDER_RECEIPT_FIELDS = ('records', 'abstains', 'abstain_codes', 'failed_passe
 # Refusal circuit breaker: a pass-ending role's terminal tools, its success events and its lost-call field.
 ROLES = dict(level=dict(tools=LEVEL_TERMINAL_TOOLS, uncertain='level_uncertain'),
              recorder=dict(tools=EPISODE_TOOLS, uncertain='episode_uncertain'))
-BREAKER_REFUSALS = 3
 # `tool-refused` reasons that are not a refused fixable call: the pass or the host had already ended.
 NOT_REFUSALS = ('level-ended', 'episode-ended', 'handoff')
-# tools/campaign_player.py `run_hosts`: `ending_at = now + 45` once the native process is seen gone.
-FINAL_REPORT_GRACE_SECONDS = 45
-EXIT_WINDOW_SECONDS = 10
 EOF_REASON = 'Native receive failed: Native channel EOF'
 SCALARS = ('commits', 'failures', 'censored', 'decided', 'passes', 'committed_passes', 'discarded_only_passes',
            'abstained_passes', 'censored_passes', 'failed_passes', 'uncertain_passes', 'provider_failed_passes',
@@ -195,7 +202,7 @@ def lane_passes(driver_record: dict, role: str) -> list[dict]:
     return (((driver_record.get('level') or {}).get(role) or {}).get('passes')) or []
 
 
-def circuit_breaker(path: Path, role: str = 'level', threshold: int = BREAKER_REFUSALS) -> dict:
+def circuit_breaker(path: Path, role: str, threshold: int) -> dict:
     """The stage driver's stop test for one run and role.
 
     A terminal tool trips when it has an identical refusal (same tool and field key) at least `threshold` times in the
@@ -221,8 +228,8 @@ def circuit_breaker(path: Path, role: str = 'level', threshold: int = BREAKER_RE
                 threshold=threshold, refusals={f'{t}|{f}': c for (t, f), c in sorted(refusals.items())}, tripped=bool(over))
 
 
-def clean_exit(path: Path, receipt: dict | None, level_quiescent: bool, *, grace_seconds: float = FINAL_REPORT_GRACE_SECONDS,
-               window_seconds: float = EXIT_WINDOW_SECONDS) -> tuple[bool, dict]:
+def clean_exit(path: Path, receipt: dict | None, level_quiescent: bool, *, grace_seconds: float,
+               window_seconds: float) -> tuple[bool, dict]:
     """(holds, facts): whether an `incomplete` run is a clean exit, treated as complete for inclusion.
 
     All must hold: the native process exited 0; the one deciding actor host settled `cancelled` with no orchestration
@@ -296,9 +303,9 @@ def pass_class(events: list[dict], ending: str | None, wall: float, allocated: f
     return 'failed', ending or 'unsettled'
 
 
-def provider_side(reason: str | None) -> bool:
-    """Only these two settled reasons are removed in `pass_success_excluding_provider_failures`."""
-    return reason in ('provider-error', 'request-timeout')
+def provider_side(reason: str | None, reasons) -> bool:
+    """Only the stage's frozen `provider_failure_reasons` are removed in `pass_success_excluding_provider_failures`."""
+    return reason in reasons
 
 
 def load_run(path: Path) -> tuple[dict, dict, dict, dict]:
@@ -444,6 +451,13 @@ def analyse_run(path: Path, store: Path | None = None) -> dict:
     if trace_uncertain != counted['uncertain_terminals']:
         mismatches.append(dict(source='trace', field='level-uncertain events', trace=trace_uncertain, driver=counted['uncertain_terminals']))
     mismatches += [dict(source='driver receipt', field=k, trace=v, receipt=level.get(k)) for k, v in counted.items() if level.get(k) != v]
+    # The per-actor file the driver wrote must be the record the campaign receipt embeds.
+    written = path / 'actors' / f"{actor['index']:03d}" / 'driver-receipt.json'
+    try:
+        if read_json(written, 1 << 26) != actor:
+            mismatches.append(dict(source='driver-receipt.json', field='record differs from the campaign receipt\'s embedded copy'))
+    except ControlError:
+        mismatches.append(dict(source='driver-receipt.json', field='missing, unreadable or too large'))
     recorder_summary = analyse_recorder(path, actor, recorder, mismatches)
     content = None
     if store is not None:
@@ -534,8 +548,8 @@ def is_censored(attempt: dict) -> bool:
     return attempt['type'] == 'level-discard' and attempt['reason'] in CENSORED
 
 
-def classify(result: dict) -> dict:
-    """Commit-attempt and pass classes for one analysed run."""
+def classify(result: dict, provider_reasons) -> dict:
+    """Commit-attempt and pass classes for one analysed run; `provider_reasons` is the stage's frozen set."""
     attempts, passes = result['commit_attempts'], result['passes']
     commits = sum(a['type'] == 'level-commit' for a in attempts)
     censored = sum(is_censored(a) for a in attempts)
@@ -548,7 +562,7 @@ def classify(result: dict) -> dict:
         commits=commits, failures=failures, censored=censored, decided=commits + failures, passes=len(passes),
         committed_passes=by['committed'], discarded_only_passes=by['discarded_only'], abstained_passes=by['abstained'],
         censored_passes=by['censored'], failed_passes=by['failed'], uncertain_passes=by['uncertain'],
-        provider_failed_passes=sum(provider_side(p['failure_reason']) for p in failed),
+        provider_failed_passes=sum(provider_side(p['failure_reason'], provider_reasons) for p in failed),
         abstains=sum(p['abstains'] for p in passes), start_abstains=sum(p['abstains'] for p in passes if p['reason'] == 'start'),
         commits_keep=actions['keep'], commits_replace=actions['replace'], commits_close=actions['close'],
         commits_other_action=commits - sum(actions[a] for a in ACTIONS),
@@ -569,17 +583,32 @@ def load_criteria(path: Path) -> dict:
         raise UnsupportedTrace(f'{path}: criteria schema {found!r}, expected {CRITERIA_SCHEMA!r}')
     if set(value) != {'schema', *CRITERIA_KEYS}:
         raise UnsupportedTrace(f'{path}: criteria keys {sorted(set(value) ^ {"schema", *CRITERIA_KEYS})} are missing or unknown')
-    if not all(type(value[k]) in (int, float) and not isinstance(value[k], bool) and value[k] >= 0 for k in CRITERIA_KEYS):
-        raise UnsupportedTrace(f'{path}: every criterion is a non-negative number')
-    if type(value['bootstrap_resamples']) is not int or value['bootstrap_resamples'] < 1 or type(value['bootstrap_seed']) is not int:
-        raise UnsupportedTrace(f'{path}: bootstrap_seed and bootstrap_resamples are integers, the latter at least 1')
+    reasons = value['provider_failure_reasons']
+    if not (isinstance(reasons, list) and len(set(reasons)) == len(reasons) and set(reasons) <= set(PROVIDER_REASONS)):
+        raise UnsupportedTrace(f'{path}: provider_failure_reasons is a list of distinct reasons from {list(PROVIDER_REASONS)}')
+    numbers = [k for k in CRITERIA_KEYS if k != 'provider_failure_reasons']
+    if not all(type(value[k]) in (int, float) and not isinstance(value[k], bool) and value[k] >= 0 for k in numbers):
+        raise UnsupportedTrace(f'{path}: every criterion except provider_failure_reasons is a non-negative number')
+    if any(type(value[k]) is not int for k in ('bootstrap_resamples', 'bootstrap_seed', 'breaker_refusals')) \
+            or value['bootstrap_resamples'] < 1 or value['breaker_refusals'] < 1:
+        raise UnsupportedTrace(f'{path}: bootstrap_seed, bootstrap_resamples and breaker_refusals are integers, the last two at least 1')
     return value
 
 
 def analyse(paths: list[Path], criteria: dict, store_template: str | None = None) -> dict:
     """The pooled analysis of the given runs (a run is a cluster)."""
-    runs = [analyse_run(Path(p), Path(store_template.format(run=Path(p).name)) if store_template else None) for p in paths]
-    classes = [classify(r) for r in runs]
+    # Name order fixes the cluster order, so a seed reproduces the same interval whatever order the runs were named in.
+    ordered = sorted(map(Path, paths), key=lambda p: p.name)
+    if len({p.name for p in ordered}) != len(ordered):
+        raise ValueError('Run directories must have distinct names')
+    runs = [analyse_run(p, Path(store_template.format(run=p.name)) if store_template else None) for p in ordered]
+    for path, run in zip(ordered, runs):
+        run['circuit_breaker'] = {role: circuit_breaker(path, role, criteria['breaker_refusals']) for role in ROLES}
+        receipt = read_json(path / 'receipt.json', 1 << 20)
+        run['clean_exit'] = None if receipt.get('outcome') != 'incomplete' else dict(zip(('holds', 'facts'), clean_exit(
+            path, receipt, run['level_quiescent'], grace_seconds=criteria['final_report_grace_seconds'],
+            window_seconds=criteria['exit_window_seconds'])))
+    classes = [classify(r, criteria['provider_failure_reasons']) for r in runs]
     seed, resamples = criteria['bootstrap_seed'], criteria['bootstrap_resamples']
     rated = lambda c: c['passes'] - c['censored_passes'] - c['uncertain_passes']
     measures = dict(commit_rate=(lambda c: c['commits'], lambda c: c['decided']),
@@ -593,7 +622,9 @@ def analyse(paths: list[Path], criteria: dict, store_template: str | None = None
     pooled = dict(runs=len(runs), **totals)
     for name, (numerator, denominator) in measures.items():
         pooled[name] = ratio(classes, numerator, denominator)
-        pooled[name + '_ci95'] = cluster_bootstrap(classes, lambda xs, n=numerator, d=denominator: ratio(xs, n, d), seed=seed, resamples=resamples)
+        boot = cluster_bootstrap(classes, lambda xs, n=numerator, d=denominator: ratio(xs, n, d), seed=seed, resamples=resamples)
+        pooled[name + '_ci95'] = boot['interval']
+        pooled[name + '_ci95_defined_resamples'] = boot['defined_resamples']
     pooled.update(
         commit_rate_lower_bound=ratio(classes, lambda c: c['commits'], lambda c: c['decided'] + c['uncertain_absent_commit_tool']),
         commits_by_action=dict(keep=totals['commits_keep'], replace=totals['commits_replace'], close=totals['commits_close'], other=totals['commits_other_action']),
@@ -643,7 +674,12 @@ def main(argv: list[str] | None = None) -> int:
     except UnsupportedTrace as error:
         print(f'unsupported: {error}', file=sys.stderr)
         return 2
-    except (ControlError, OSError, ValueError, KeyError, sqlite3.Error) as error:
+    except ControlError as error:
+        # The custodian's own version gates (for example the session database schema) say "Unsupported".
+        unsupported = str(error).startswith('Unsupported')
+        print(f"{'unsupported' if unsupported else 'Level stage analysis failed'}: {error}", file=sys.stderr)
+        return 2 if unsupported else 1
+    except (OSError, ValueError, KeyError, sqlite3.Error) as error:
         print(f'Level stage analysis failed: {error}', file=sys.stderr)
         return 1
     print(json.dumps(dict(pooled=value['pooled'], decision_inputs=value['decision_inputs'], notes=NOTES), indent=1))

@@ -5,13 +5,24 @@ import sqlite3
 
 import pytest
 
-from stage_support import (ACTOR, BASE, LEVEL_READER, RECORDER_READER, SESSION, PlayerStore, claim_record, correction_record, iso,
-                           level_pass, make_run, recorder_pass, work_record)
+from test_campaign_player import level_campaign, level_profile  # noqa: F401  (the real driver fixture, imported rather than mirrored)
+from stage_support import (ACTOR, BASE, LEVEL_READER, RECORDER_READER, SESSION, PlayerStore, claim_record, correction_record, edit_actor,
+                           iso, level_pass, make_run, recorder_pass, work_record)
 from tools import level_stage_analysis as lsa
 
 ROOT = Path(__file__).resolve().parents[1]
 CRITERIA = dict(schema='level-stage-criteria/1', min_decided=3, min_auditable_records=1, min_commit_rate=.6,
-                max_commit_inputs_since_p95=10, bootstrap_seed=7, bootstrap_resamples=200)
+                max_commit_inputs_since_p95=10, bootstrap_seed=7, bootstrap_resamples=200, breaker_refusals=3,
+                final_report_grace_seconds=45, exit_window_seconds=10, provider_failure_reasons=['provider-error', 'request-timeout'])
+
+
+def breaker(run, role='level'):
+    return lsa.circuit_breaker(run, role, CRITERIA['breaker_refusals'])
+
+
+def exits(run, quiescent=True):
+    return lsa.clean_exit(run, json.loads((run / 'receipt.json').read_text()), quiescent,
+                          grace_seconds=CRITERIA['final_report_grace_seconds'], window_seconds=CRITERIA['exit_window_seconds'])
 
 
 def criteria_file(tmp_path, **changes):
@@ -97,11 +108,19 @@ def test_the_receipt_check_lists_every_disagreement(tmp_path):
 
 def test_a_pass_whose_driver_events_differ_from_its_own_trace_is_listed(tmp_path):
     run = make_run(tmp_path, 'run-1', [level_pass(1, 'commit')])
-    receipt = json.loads((run / 'receipt.json').read_text())
-    receipt['driver']['actors'][0]['level']['level']['passes'][0]['level_events'] = []
-    (run / 'receipt.json').write_text(json.dumps(receipt))
+    edit_actor(run, lambda actor: actor['level']['level']['passes'][0].update(level_events=[]))
     mismatches = lsa.analyse_run(run)['receipt_mismatches']
     assert [m['source'] for m in mismatches] == ['pass level_events']
+
+
+def test_the_written_driver_receipt_must_equal_the_embedded_record(tmp_path):
+    run = make_run(tmp_path, 'run-1', [level_pass(1, 'commit')])
+    assert lsa.analyse_run(run)['receipt_mismatches'] == []
+    edit_actor(run, lambda actor: actor.update(attempts_charged=99), written=False)
+    assert [m['source'] for m in lsa.analyse_run(run)['receipt_mismatches']] == ['driver-receipt.json']
+    run = make_run(tmp_path, 'run-2', [level_pass(1, 'commit')])
+    (run / 'actors/001/driver-receipt.json').unlink()
+    assert [m['field'] for m in lsa.analyse_run(run)['receipt_mismatches']] == ['missing, unreadable or too large']
 
 
 def test_an_unreconciled_lost_call_makes_the_counts_inconsistent(tmp_path):
@@ -170,7 +189,10 @@ def test_two_actors_or_no_level_or_a_missing_lane_receipt_are_unsupported(tmp_pa
 
 
 @pytest.mark.parametrize('changes', [dict(schema='level-stage-criteria/0'), dict(extra=1), dict(min_decided=-1), dict(min_decided='20'),
-                                     dict(bootstrap_resamples=0), dict(bootstrap_seed=1.5)])
+                                     dict(bootstrap_resamples=0), dict(bootstrap_seed=1.5), dict(breaker_refusals=0), dict(breaker_refusals=2.5),
+                                     dict(final_report_grace_seconds=-1), dict(exit_window_seconds='10'),
+                                     dict(provider_failure_reasons=['host-crash']), dict(provider_failure_reasons='provider-error'),
+                                     dict(provider_failure_reasons=['provider-error', 'provider-error'])])
 def test_criteria_are_closed_typed_and_never_defaulted(tmp_path, changes):
     with pytest.raises(lsa.UnsupportedTrace):
         lsa.load_criteria(criteria_file(tmp_path, **changes))
@@ -275,26 +297,26 @@ def breaker_run(tmp_path, specs, rows_for=None, name='run-1'):
 
 def test_three_identical_refusals_without_a_success_trip_the_breaker(tmp_path):
     run = breaker_run(tmp_path, [level_pass(1, 'none', ending='level-final-refusal', ok=False)], {1: refusal_rows('player_level_replace', 3)})
-    result = lsa.circuit_breaker(run)
+    result = breaker(run)
     assert result['tripped'] is True and result['worst'] == dict(tool='player_level_replace', field='sources', count=3)
 
 
 def test_a_success_of_the_same_tool_or_fewer_refusals_do_not_trip_it(tmp_path):
     run = breaker_run(tmp_path, [level_pass(1, 'commit', action='replace'), level_pass(2, 'none', ending='level-no-proposal', ok=False)],
                       {2: refusal_rows('player_level_replace', 5)})
-    assert lsa.circuit_breaker(run)['tripped'] is False
+    assert breaker(run)['tripped'] is False
     run = breaker_run(tmp_path, [level_pass(1, 'none', ending='level-no-proposal', ok=False)],
                       {1: refusal_rows('player_level_replace', 2)}, name='few')
-    assert lsa.circuit_breaker(run)['tripped'] is False
+    assert breaker(run)['tripped'] is False
 
 
 def test_a_refusal_after_the_pass_ended_is_not_a_refusal(tmp_path):
     rows = [dict(type='tool-refused', tool='player_level_replace', reason=reason) for reason in ('level-ended', 'handoff', 'episode-ended')] * 2
     run = breaker_run(tmp_path, [level_pass(1, 'none', ending='level-no-proposal', ok=False)], {1: rows})
-    assert lsa.circuit_breaker(run)['refusals'] == {}
+    assert breaker(run)['refusals'] == {}
     rows = [dict(type='tool-refused', tool='player_level_replace', reason='level-reserved')] * 3
     run = breaker_run(tmp_path, [level_pass(1, 'none', ending='level-no-proposal', ok=False)], {1: rows}, name='reserved')
-    assert lsa.circuit_breaker(run)['worst']['field'] == 'refused:level-reserved'
+    assert breaker(run)['worst']['field'] == 'refused:level-reserved'
 
 
 def test_custodian_errors_name_their_failing_fields(tmp_path):
@@ -309,12 +331,12 @@ def test_the_breaker_reads_the_recorder_lane_and_credits_a_reconciled_lost_call(
     run = make_run(tmp_path, 'run-1', [], [recorder_pass(1, 'none', ending='episode-final-refusal', ok=False)])
     trace = run / 'actors/001/recorder/001/host.jsonl'
     trace.write_text(trace.read_text() + '\n'.join(json.dumps(r) for r in refusal_rows('player_episode_record', 3, 'observation_status')) + '\n')
-    assert lsa.circuit_breaker(run, 'recorder')['tripped'] is True
-    assert lsa.circuit_breaker(run, 'level')['tripped'] is False
+    assert breaker(run, 'recorder')['tripped'] is True
+    assert breaker(run, 'level')['tripped'] is False
     run = make_run(tmp_path, 'run-2', [], [recorder_pass(1, 'uncertain', outcome='committed')])
     trace = run / 'actors/001/recorder/001/host.jsonl'
     trace.write_text(trace.read_text() + '\n'.join(json.dumps(r) for r in refusal_rows('player_episode_record', 3, 'x')) + '\n')
-    assert lsa.circuit_breaker(run, 'recorder')['tripped'] is False
+    assert breaker(run, 'recorder')['tripped'] is False
 
 
 # ---------------------------------------------------------------- clean exit
@@ -339,15 +361,15 @@ def exit_run(tmp_path, *, last_status='completed', exit_after_send=4.0, extra_op
 
 def test_a_run_that_exits_just_after_its_last_input_is_a_clean_exit(tmp_path):
     run = exit_run(tmp_path)
-    holds, facts = lsa.clean_exit(run, json.loads((run / 'receipt.json').read_text()), True)
+    holds, facts = exits(run)
     assert holds is True and facts['exit_seconds_after_last_send'] == pytest.approx(4.0) and facts['input_operations'] == 6
 
 
 def test_the_last_input_may_be_unknown_only_with_the_native_eof(tmp_path):
     run = exit_run(tmp_path, last_status='unknown')
-    assert lsa.clean_exit(run, json.loads((run / 'receipt.json').read_text()), True)[0] is True
+    assert exits(run)[0] is True
     run = exit_run(tmp_path, last_status='refused', name='refused')
-    assert lsa.clean_exit(run, json.loads((run / 'receipt.json').read_text()), True)[1]['inputs_delivered_before_exit'] is False
+    assert exits(run)[1]['inputs_delivered_before_exit'] is False
 
 
 @pytest.mark.parametrize('changes', [dict(exit_after_send=30.0), dict(exit_after_send=-3.0), dict(extra_op=True),
@@ -355,9 +377,66 @@ def test_the_last_input_may_be_unknown_only_with_the_native_eof(tmp_path):
                                      dict(deciding_hosts_quiescent=False)])
 def test_any_broken_exit_fact_withholds_inclusion(tmp_path, changes):
     run = exit_run(tmp_path, **changes)
-    holds, facts = lsa.clean_exit(run, json.loads((run / 'receipt.json').read_text()), True)
+    holds, facts = exits(run)
     assert holds is False
-    assert lsa.clean_exit(run, json.loads((run / 'receipt.json').read_text()), False)[0] is False
+    assert exits(run, False)[0] is False
+
+
+# ---------------------------------------------------------------- stage choices come from the criteria
+
+def test_runs_are_taken_in_name_order_and_each_reports_its_breaker_and_exit(tmp_path):
+    first = make_run(tmp_path, 'b-run', mixed_level())
+    second = make_run(tmp_path, 'a-run', [level_pass(1, 'commit'), level_pass(2, 'discard')])
+    criteria = lsa.load_criteria(criteria_file(tmp_path))
+    forward, backward = lsa.analyse([first, second], criteria), lsa.analyse([second, first], criteria)
+    assert [r['run'] for r in forward['runs']] == ['a-run', 'b-run'] and forward['pooled'] == backward['pooled']
+    assert forward['pooled']['commit_rate_ci95_defined_resamples'] > 0
+    run = forward['runs'][0]
+    assert set(run['circuit_breaker']) == {'level', 'recorder'} and run['circuit_breaker']['level']['threshold'] == 3
+    assert run['clean_exit']['holds'] is False
+    other = tmp_path / 'again'
+    other.mkdir()
+    twin = make_run(other, 'a-run', [level_pass(1, 'commit')])
+    with pytest.raises(ValueError, match='distinct names'):
+        lsa.analyse([second, twin], criteria)
+
+
+def test_which_reasons_are_provider_side_is_the_stages_frozen_choice(tmp_path):
+    level = [level_pass(1, 'commit'), level_pass(2, 'none', ending='request-timeout', ok=False), level_pass(3, 'none', ending='provider-error', ok=False)]
+    run = make_run(tmp_path, 'run-1', level)
+    both = lsa.analyse([run], lsa.load_criteria(criteria_file(tmp_path)))['pooled']
+    none = lsa.analyse([run], lsa.load_criteria(criteria_file(tmp_path, provider_failure_reasons=[])))['pooled']
+    only = lsa.analyse([run], lsa.load_criteria(criteria_file(tmp_path, provider_failure_reasons=['request-timeout'])))['pooled']
+    assert (both['provider_failed_passes'], only['provider_failed_passes'], none['provider_failed_passes']) == (2, 1, 0)
+    assert both['pass_success_excluding_provider_failures'] == 1.0 and none['pass_success_excluding_provider_failures'] == pytest.approx(1 / 3)
+
+
+# ---------------------------------------------------------------- the real driver's receipt
+
+def test_the_real_driver_receipt_and_traces_are_read_without_a_disagreement(level_campaign, tmp_path):
+    """Drift guard: the receipt, pass traces and stores come from the real driver (tests/test_campaign_player.py's scripted
+    level campaign), not from this file's fixture builders."""
+    result = level_campaign.run()
+    root, session = level_campaign.root, level_campaign.runtime.session
+    run = root / 'real-run'
+    run.mkdir()
+    source, copy = sqlite3.connect(root / 'session' / 'session.sqlite3'), sqlite3.connect(run / 'session.sqlite3')
+    source.backup(copy)
+    source.close()
+    copy.close()
+    (run / 'actors').symlink_to(root / 'actors')
+    (run / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/5', session=session, level=level_profile())))
+    (run / 'receipt.json').write_text(json.dumps(dict(schema='campaign-receipt/2', session=session, outcome=result['outcome'], driver=result)))
+    value = lsa.analyse([run], lsa.load_criteria(criteria_file(tmp_path)), str(root / 'player.sqlite3'))
+    only = value['runs'][0]
+    assert only['receipt_mismatches'] == [] and value['decision_inputs']['counts_consistent'] is True
+    lane = result['actors'][0]['level']
+    assert value['pooled']['passes'] == len(lane['level']['passes']) >= 1 and only['trace_counts']['commits'] == lane['level']['commits'] >= 1
+    assert only['recorder']['trace_counts']['records'] == lane['recorder']['records'] >= 2
+    assert only['custody']['reader_non_level_writes'] == 0 and value['decision_inputs']['R4_custody_ok'] is True
+    assert only['content']['episode_claims_by_settle'] == {k: v for k, v in lane['episodes']['settled'].items() if v}
+    # Every committed replace of the scripted level wrote a current-contract Work record, so each is auditable.
+    assert value['pooled']['auditable_records'] == only['content']['committed_by_action'].get('replace', 0) >= 1
 
 
 # ---------------------------------------------------------------- command line
@@ -370,6 +449,16 @@ def test_the_command_records_its_inputs_and_refuses_to_overwrite(tmp_path, capsy
     assert value['criteria_sha256'] == lsa.sha256(criteria) and value['code_sha256'] == lsa.sha256(Path(lsa.__file__)) and value['criteria'] == CRITERIA
     assert lsa.main([str(output), str(run), '--criteria', str(criteria)]) == 1
     assert 'failed' in capsys.readouterr().err
+
+
+def test_the_commands_own_version_gates_exit_two_as_well(tmp_path, capsys):
+    run = make_run(tmp_path, 'old-session', [level_pass(1, 'commit')])
+    db = sqlite3.connect(run / 'session.sqlite3')
+    db.execute('PRAGMA user_version=2')
+    db.close()
+    output = tmp_path / 'out.json'
+    assert lsa.main([str(output), str(run), '--criteria', str(criteria_file(tmp_path))]) == 2
+    assert not output.exists() and 'unsupported' in capsys.readouterr().err
 
 
 def test_the_command_exits_two_for_an_unsupported_version_and_writes_nothing(tmp_path, capsys):

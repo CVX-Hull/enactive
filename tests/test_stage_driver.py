@@ -9,7 +9,8 @@ from tools.stage_driver import Assessment, StageDriver, StageError
 
 FROZEN = dict(stage='s1', item='#1', max_runs=3, base_runs=3, batch_size=3, per_run_worst_case_usd='10', stage_cap_usd='100',
               item_cap_usd='1000', campaign_attempts=50, load_gate=8, continuity=None, settle_seconds=60, max_check_gap_seconds=45,
-              max_infrastructure_failures=2)
+              max_infrastructure_failures=2, provider_failure_reasons=['provider-error', 'request-timeout'])
+REASONS = FROZEN['provider_failure_reasons']
 
 
 class Watcher:
@@ -55,6 +56,9 @@ class Ports:
         self.restored.append(label)
         return self.restore_ok
 
+    def retain_labels(self, name):
+        return (f'after-{name}', f'after-{name}-evidence')
+
     def state_retain(self, label):
         self.retained.append(label)
         return self.retain_rc
@@ -97,7 +101,7 @@ class Ports:
 
 def good(run=1, **changes):
     return Assessment(complete=True, outcome='host_completed_unassessed', quiescent=True, max_check_gap_s=20.0, attempts_charged=10,
-                      retain_label=f's1-{run:02d}-retained', **changes)
+                      **changes)
 
 
 def make(tmp_path, ports, **frozen):
@@ -181,7 +185,10 @@ def test_unsupported_accounting_and_frozen_registries_are_refused(tmp_path):
     good_frozen.write_text(json.dumps(FROZEN))
     assert sd.load_frozen(good_frozen)['stage'] == 's1'
     for changes in (dict(extra=1), dict(max_runs=-1), dict(stage_cap_usd=10), dict(continuity='sequential'), dict(base_runs=5),
-                    dict(continuity='persistent', max_runs=4), dict(batch_size=0)):
+                    dict(continuity='persistent', max_runs=4), dict(batch_size=0), dict(load_gate='8'), dict(load_gate=True),
+                    dict(load_gate=float('nan')), dict(max_check_gap_seconds=-1), dict(max_check_gap_seconds=None), dict(stage=''),
+                    dict(item=3), dict(provider_failure_reasons=['host-crash']), dict(provider_failure_reasons='provider-error'),
+                    dict(provider_failure_reasons=['provider-error', 'provider-error'])):
         path.write_text(json.dumps(dict(FROZEN, **changes)))
         with pytest.raises(StageError):
             sd.load_frozen(path)
@@ -273,7 +280,7 @@ def test_an_incomplete_run_stops_the_stage_but_is_retained_and_charged(tmp_path)
 ])
 def test_a_gap_a_layer_failure_or_a_tripped_breaker_stops_after_the_retained_run(tmp_path, changes, message):
     rc, reason, acc, _ = stop_after_first(tmp_path, Assessment(**dict(dict(complete=True, outcome='ok', max_check_gap_s=20.0, quiescent=True,
-                                                                              retain_label='x', attempts_charged=9), **changes)))
+                                                                              attempts_charged=9), **changes)))
     assert rc == 4 and message in reason and acc['runs'][0]['status'] == 'closed' and acc['runs'][0]['attempts'] == 9
 
 
@@ -294,8 +301,7 @@ def test_an_unknown_attempt_count_charges_the_whole_allocation(tmp_path):
 
 
 def incomplete(run, ending='request-timeout (stream with no provider events)'):
-    return Assessment(complete=False, outcome='incomplete', max_check_gap_s=10.0, provider_ending=ending, quiescent=True,
-                      retain_label=f's1-{run:02d}-evidence')
+    return Assessment(complete=False, outcome='incomplete', max_check_gap_s=10.0, provider_ending=ending, quiescent=True)
 
 
 def test_a_provider_side_failure_with_intact_custody_is_excluded_and_the_stage_continues(tmp_path):
@@ -336,12 +342,12 @@ def test_a_persistent_stage_verifies_the_carried_state_retains_each_session_and_
     ports = Ports(assessments={n: good(n) for n in (1, 2, 3)})
     driver, path = persistent(tmp_path, ports)
     assert driver.run(1, 1) == 0
-    assert ports.restored == [] and ports.retained == ['s1-01-retained', 's1-02-retained', 's1-03-retained']
+    assert ports.restored == [] and ports.retained == ['after-s1-01', 'after-s1-02', 'after-s1-03']
     # Session 1 verifies the frozen state; later sessions the previous session's retained copy; the exit keeps the live state.
     assert ports.verified == [None, 'after-s1-01', 'after-s1-02', 'after-s1-03']
     assert any(e['event'] == 'carried-state-kept' and e['retained'] == 'after-s1-03' for e in log(tmp_path))
     acc = sd.load_accounting(path)
-    assert [r['persistent_retained'] for r in acc['runs']] == ['s1-01-retained', 's1-02-retained', 's1-03-retained']
+    assert [r['persistent_retained'] for r in acc['runs']] == ['after-s1-01', 'after-s1-02', 'after-s1-03']
 
 
 def test_a_persistent_session_that_is_not_complete_breaks_continuity_even_for_a_provider_failure(tmp_path):
@@ -363,10 +369,27 @@ def test_a_failed_retention_or_a_changed_carried_state_stops_a_persistent_stage(
     assert ports.restored == []
 
 
-def test_a_persistent_binding_must_name_the_retained_label(tmp_path):
-    ports = Ports(assessments={1: Assessment(complete=True, max_check_gap_s=1.0)})
-    driver, _ = persistent(tmp_path, ports)
-    assert driver.run(1, 1) == 5 and 'retained-state label' in reasons(tmp_path)['reason']
+@pytest.mark.parametrize('labels', [None, ('only-one',), ('same', 'same'), ('after-x', ''), ['after-x', 'evidence-x'], ('after-x', 3)])
+def test_a_persistent_binding_must_name_its_retained_labels_before_anything_runs(tmp_path, labels):
+    ports = Ports(assessments={1: good(1)})
+    ports.retain_labels = lambda name: labels
+    driver, path = persistent(tmp_path, ports)
+    assert driver.run(1, 1) == 5 and 'two distinct retained-state labels' in reasons(tmp_path)['reason']
+    # Nothing was built, launched or recorded, and no state was touched beyond the opening check.
+    assert ('build', 1) not in ports.calls and ('launch', 1) not in ports.calls
+    assert sd.load_accounting(path)['runs'] == [] and ports.retained == [] and ports.restored == []
+
+
+def test_a_persistent_session_that_is_not_a_continuation_is_retained_as_evidence_only(tmp_path):
+    ports = Ports(assessments={1: Assessment(complete=False, outcome='incomplete', max_check_gap_s=1.0, quiescent=True)})
+    driver, path = persistent(tmp_path, ports)
+    assert driver.run(1, 1) == 4 and ports.retained == ['after-s1-01-evidence']
+    assert sd.load_accounting(path)['runs'][0]['persistent_retained'] == 'after-s1-01-evidence'
+    # A complete session whose level was not quiescent is evidence too: it is never a state to carry.
+    ports = Ports(assessments={1: Assessment(complete=True, max_check_gap_s=1.0, quiescent=False)})
+    driver, _ = persistent(_sub(tmp_path, 'b'), ports)
+    driver.run(1, 1)
+    assert ports.retained[0] == 'after-s1-01-evidence'
 
 
 # ---------------------------------------------------------------- exits
@@ -385,6 +408,23 @@ def test_an_exception_with_no_receipt_leaves_the_run_open_and_charged_and_settle
     # The next driver start refuses to go on under that record.
     again, _ = make(tmp_path, Ports())
     assert again.one_run(1).startswith('open run record')
+
+
+def test_a_run_whose_assessment_fails_after_its_receipt_is_charged_in_full_and_left_open(tmp_path):
+    ports = Ports()
+
+    def explode(name, receipt):
+        raise RuntimeError('assessment died')
+    ports.assess = explode
+    driver, path = make(tmp_path, ports)
+    assert driver.run(1, 1) == 5
+    record = sd.load_accounting(path)['runs'][0]
+    assert record['status'] == 'interrupted-unassessed' and record['attempts'] == 50
+    assert sd.load_accounting(path)['cumulative_attempts'] == 57
+    # It has a receipt, so the account is settled against it and its spend is counted; the record stays open for the owner.
+    assert record['actual_usd'] == '5.0000' and not [e for e in log(tmp_path) if e['event'] == 'left-open']
+    again, _ = make(tmp_path, Ports())
+    assert again.one_run(2).startswith('open run record')
 
 
 def test_a_stage_with_no_runs_exits_without_touching_state(tmp_path):
@@ -429,7 +469,9 @@ def test_an_infrastructure_failure_needs_every_custody_fact_and_one_timed_out_ac
     rows = [request(), dict(type='response-headers', request_id='request-1', status=503)]
     receipt = dict(outcome='incomplete', deciding_hosts_quiescent=True, native_absence_verified=True, input_authority_revoked=True,
                    driver=dict(actors=[dict(accounting_complete=True, settled=dict(reason='provider-error'))]))
-    assert sd.infrastructure_failure(receipt, True, True, rows) == 'provider-error (provider status)'
+    assert sd.infrastructure_failure(receipt, True, True, rows, REASONS) == 'provider-error (provider status)'
+    # Which settled reasons count is the stage's frozen choice.
+    assert sd.infrastructure_failure(receipt, True, True, rows, ['request-timeout']) is None
     broken = [(dict(receipt, outcome='complete'), True, True), (receipt, False, True), (receipt, True, False),
               (dict(receipt, native_absence_verified=False), True, True), (dict(receipt, input_authority_revoked=None), True, True),
               (dict(receipt, driver=dict(actors=[])), True, True),
@@ -437,7 +479,7 @@ def test_an_infrastructure_failure_needs_every_custody_fact_and_one_timed_out_ac
               (dict(receipt, driver=dict(actors=[dict(accounting_complete=False, settled=dict(reason='provider-error'))])), True, True),
               (dict(receipt, driver=dict(actors=[dict(accounting_complete=True, settled=dict(reason='completed'))])), True, True), (None, True, True)]
     for value, quiescent, present in broken:
-        assert sd.infrastructure_failure(value, quiescent, present, rows) is None
+        assert sd.infrastructure_failure(value, quiescent, present, rows, REASONS) is None
 
 
 def test_the_freeze_check_names_every_digest_that_differs():

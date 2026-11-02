@@ -13,10 +13,13 @@ software stamped) into `OUT_DIR/packets/<audit_id>/`:
   source of this session;
 - `context.txt` (the frozen context the player had) and `instructions.md`, both copied unchanged from the frozen files
   named on the command line, which are the auditors' only other input.
-Every occurrence of the session id, in any string or file name, becomes the audit id, and `prepare` refuses a context
-or instruction file that contains the session id (a frozen file is never edited to blind it). The key that maps audit
-ids back to runs and records is written to the sibling `OUT_DIR-private/`, which auditors are never given, together
-with the sha256 of every input and of this tool.
+Every occurrence of the audited session's id, in any string or file name, becomes the audit id. Any other session id
+becomes `other-session-N` (numbered by first appearance in the packet): the other audited sessions' ids, and the id
+inside any source id a persistent session cites from an earlier session. `prepare` refuses a context or instruction
+file that contains an audited session's id (a frozen file is never edited to blind it; it is copied byte for byte).
+It validates every input before it creates a directory, refuses an existing output directory, and refuses a store
+template that matches no retained store. The key that maps audit ids back to runs and records is written to the
+sibling `OUT_DIR-private/`, which auditors are never given, together with the sha256 of every input and of this tool.
 
 `summarize` reads `OUT_DIR-private/labels/<audit_id>.<auditor>.json` (auditors `a` and `b`, and `c` only where `a` and
 `b` derive different labels), each holding `premises` and `fit`, and derives each label by the frozen table:
@@ -39,8 +42,8 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+import re
 import secrets
-import shutil
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -81,15 +84,38 @@ def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def blind(value, hexid: str, audit: str):
-    """Replace the session id in every string of a JSON value (keys are fixed field names, not data)."""
-    if isinstance(value, str):
-        return value.replace(hexid, audit)
-    if isinstance(value, list):
-        return [blind(v, hexid, audit) for v in value]
-    if isinstance(value, dict):
-        return {k: blind(v, hexid, audit) for k, v in value.items()}
-    return value
+class Blinder:
+    """Consistent blinding of one packet: no session id survives, whichever session it names.
+
+    The audited session's id becomes the audit id. Any other session id, whether it is one of the audited sessions' or
+    only appears inside a source id (`<32 hex>-<capture>`, as a persistent session cites an earlier session's frame),
+    becomes `other-session-N`, numbered by first appearance in this packet, so two citations of the same earlier session
+    stay recognizably the same without naming it. Keys of a JSON value are fixed field names, not data.
+    """
+    SOURCE = re.compile(r'([0-9a-f]{32})-(\d+)')
+
+    def __init__(self, own: str, audit: str, known: set[str]) -> None:
+        self.names, self.known = {own: audit}, known
+
+    def name(self, hexid: str) -> str:
+        if hexid not in self.names:
+            self.names[hexid] = f'other-session-{len(self.names)}'
+        return self.names[hexid]
+
+    def text(self, value: str) -> str:
+        value = self.SOURCE.sub(lambda m: f'{self.name(m.group(1))}-{m.group(2)}', value)
+        for hexid in sorted(self.known):
+            value = value.replace(hexid, self.name(hexid))
+        return value
+
+    def __call__(self, value):
+        if isinstance(value, str):
+            return self.text(value)
+        if isinstance(value, list):
+            return [self(v) for v in value]
+        if isinstance(value, dict):
+            return {k: self(v) for k, v in value.items()}
+        return value
 
 
 def session_identity(path: Path) -> str:
@@ -134,20 +160,21 @@ def prepare(out: Path, sessions: list[Path], store_template: str, context: Path,
     """Write the blind packets and the private key; returns the number of packets."""
     if type(recent_frames) is not int or recent_frames < 1:
         raise ValueError('recent_frames is a positive integer')
-    texts = {name: path.read_text() for name, path in (('context', context), ('instructions', instructions))}
+    # Everything is read and checked before any directory exists, so a refusal leaves nothing behind.
+    frozen = {name: path.read_bytes() for name, path in (('context', context), ('instructions', instructions))}
     identities = {s: session_identity(s) for s in sessions}
     for session, hexid in identities.items():
-        for name, text in texts.items():
-            if hexid in text:
+        for name, data in frozen.items():
+            if hexid.encode() in data:
                 raise ValueError(f'The frozen {name} file contains the id of {session.name}; it is never edited to blind it')
-    out.mkdir(parents=False, exist_ok=False)
-    (out / 'packets').mkdir()
-    private(out).mkdir(parents=False, exist_ok=False)
-    (private(out) / 'labels').mkdir()
-    key = {}
+    if out.exists() or private(out).exists():
+        raise FileExistsError(f'{out} or {private(out)} already exists; an audit directory is never overwritten')
+    known = set(identities.values())
+    plans, missing, key = [], [], {}
     for session in sessions:
         store = Path(store_template.format(run=session.name))
         if not store.exists():
+            missing.append(session.name)
             continue
         hexid = identities[session]
         for commit in committed_replaces(store, hexid):
@@ -157,20 +184,34 @@ def prepare(out: Path, sessions: list[Path], store_template: str, context: Path,
             log = input_log(session, work['data']['actor_id'], work['data']['position'])
             frames = [e['frame'] for e in log if e['frame']]
             chosen = list(dict.fromkeys(frames[-recent_frames:] + [s for s in work['sources'] if s.startswith(hexid)]))
-            packet = out / 'packets' / audit
-            packet.mkdir()
+            images = {}
             for source in chosen:
-                shutil.copyfile(session / 'sources' / f'{source}.png', packet / f'{source.replace(hexid, audit)}.png')
+                image = session / 'sources' / f'{source}.png'
+                if not image.is_file():
+                    raise FileNotFoundError(f'Frame {source} of {session.name} is not retained: {image}')
+                images[source.replace(hexid, audit) + '.png'] = image.read_bytes()
             decisions = [dict(decision=d['data'].get('outcome'), reason=d['text']) for d in commit['decisions']]
             value = dict(schema=PACKET_SCHEMA, audit_id=audit, input_log=log, frames=chosen, cited_sources=work['sources'],
                          proposal=dict(subgoal=work['text'], expected_observations=work['data'].get('expected_observations'),
                                        status=work['data'].get('status'), confidence=work['data'].get('confidence'),
                                        decisions_in_same_commit=decisions))
-            (packet / 'packet.json').write_text(json.dumps(blind(value, hexid, audit), indent=1) + '\n')
-            (packet / 'context.txt').write_text(texts['context'])
-            (packet / 'instructions.md').write_text(texts['instructions'])
+            plans.append((audit, images, json.dumps(Blinder(hexid, audit, known)(value), indent=1) + '\n'))
+    if len(missing) == len(sessions):
+        raise ValueError(f'The store template {store_template!r} matches no retained store; looked for runs {missing}')
+    out.mkdir(parents=False, exist_ok=False)
+    (out / 'packets').mkdir()
+    private(out).mkdir(parents=False, exist_ok=False)
+    (private(out) / 'labels').mkdir()
+    for audit, images, packet_json in plans:
+        packet = out / 'packets' / audit
+        packet.mkdir()
+        for name, data in images.items():
+            (packet / name).write_bytes(data)
+        (packet / 'packet.json').write_text(packet_json)
+        (packet / 'context.txt').write_bytes(frozen['context'])
+        (packet / 'instructions.md').write_bytes(frozen['instructions'])
     inputs = dict(context_sha256=sha256(context), instructions_sha256=sha256(instructions), code_sha256=sha256(Path(__file__)),
-                  recent_frames=recent_frames, level_contract=LEVEL_CONTRACT, commit_tools=list(COMMIT_TOOLS))
+                  recent_frames=recent_frames, level_contract=LEVEL_CONTRACT, commit_tools=list(COMMIT_TOOLS), runs_without_store=missing)
     (private(out) / 'key.json').write_text(json.dumps(dict(inputs=inputs, packets=key), indent=1) + '\n')
     return len(key)
 
@@ -197,7 +238,8 @@ def derived_label(out: Path, audit: str, auditor: str) -> str:
 
 
 def summarize(out: Path, criteria: dict) -> dict:
-    audits = sorted(p.name for p in (out / 'packets').iterdir())
+    # A packet is a directory; a stray file or an editor's leftover in the folder is not one.
+    audits = sorted(p.name for p in (out / 'packets').iterdir() if p.is_dir())
     first, second, resolved = [], [], {}
     for audit in audits:
         a, b = derived_label(out, audit, 'a'), derived_label(out, audit, 'b')
@@ -238,13 +280,21 @@ def main(argv: list[str] | None = None) -> int:
                           recent_frames=arguments.recent_frames), 'packets')
         else:
             criteria = load_criteria(arguments.criteria)
-            value = dict(summarize(arguments.out, criteria), criteria_sha256=sha256(arguments.criteria), criteria=criteria)
-            (private(arguments.out) / 'summary.json').write_text(json.dumps(value, indent=1) + '\n')
+            value = dict(summarize(arguments.out, criteria), criteria_sha256=sha256(arguments.criteria), criteria=criteria,
+                         code_sha256=sha256(Path(__file__)))
+            # A summary is a result: it is written once and never replaced.
+            with (private(arguments.out) / 'summary.json').open('x') as stream:
+                stream.write(json.dumps(value, indent=1) + '\n')
             print(json.dumps({k: v for k, v in value.items() if k != 'resolved'}, indent=1))
     except UnsupportedTrace as error:
         print(f'unsupported: {error}', file=sys.stderr)
         return 2
-    except (ControlError, OSError, ValueError, KeyError) as error:
+    except ControlError as error:
+        # The custodian's own version gates (for example the session database schema) say "Unsupported".
+        unsupported = str(error).startswith('Unsupported')
+        print(f"{'unsupported' if unsupported else 'Intent audit failed'}: {error}", file=sys.stderr)
+        return 2 if unsupported else 1
+    except (OSError, ValueError, KeyError) as error:
         print(f'Intent audit failed: {error}', file=sys.stderr)
         return 1
     return 0

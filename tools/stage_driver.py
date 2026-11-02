@@ -20,12 +20,14 @@ Driver rules (each is a stop reason; the driver stops, never retries, and settle
   intact; a watcher failure, a check gap above `max_check_gap_seconds`, a layer failure or a tripped refusal breaker
   stops it after the run, which is retained and reported;
 - a persistent stage's session that is not complete stops the stage, since continuity cannot be repaired;
-- if the run has no receipt when the driver exits, it may still be live: its allocation is charged, its record is left
-  open as `interrupted-possibly-live` and nothing is settled or restored under it.
+- any record still `launched` when the driver exits (an exception came before it was assessed) is charged its whole
+  allocation and left open for the owner: `interrupted-possibly-live` when it has no receipt, which may still be live, so
+  nothing is settled or restored under it, else `interrupted-unassessed`. The next start refuses to go on under it.
 
 `ports` supplies (all synchronous): `read_account() -> {total_usage, total_credits}`; `reprice() -> changed prices`;
 `machine_load() -> float`; `state_verify(carried=None) -> bool`; `state_restore(label) -> bool`;
-`state_retain(label) -> int`; `build(run) -> bool`; `start_watcher(name) -> handle` with `wait(timeout) -> int` and
+`state_retain(label) -> int`; `retain_labels(name) -> (continuation_label, evidence_label)` (persistent stages only, asked
+before the run is built, so a binding that cannot name them stops the stage before any effect); `build(run) -> bool`; `start_watcher(name) -> handle` with `wait(timeout) -> int` and
 `terminate()`; `launch(run) -> int`; `receipt(name) -> dict | None`; `assess(name, receipt) -> Assessment`;
 `extension_needed(stage_runs) -> (needed, description)`; `excluded_custody(name) -> int | None`; `sleep(seconds)`;
 `clock() -> float`.
@@ -42,7 +44,10 @@ from typing import Callable, Sequence
 
 ACCOUNTING_SCHEMA = 'stage-accounting/1'
 FROZEN_KEYS = ('stage', 'item', 'max_runs', 'base_runs', 'batch_size', 'per_run_worst_case_usd', 'stage_cap_usd', 'item_cap_usd',
-               'campaign_attempts', 'load_gate', 'continuity', 'settle_seconds', 'max_check_gap_seconds', 'max_infrastructure_failures')
+               'campaign_attempts', 'load_gate', 'continuity', 'settle_seconds', 'max_check_gap_seconds', 'max_infrastructure_failures',
+               'provider_failure_reasons')
+# The settled reasons `infrastructure_failure` knows how to confirm from a host trace; a stage freezes which it excludes.
+PROVIDER_REASONS = ('provider-error', 'request-timeout')
 QUIET_WAIT_MINUTES = 30
 WATCHER_TIMEOUT_SECONDS = 60
 # Reasons that end a stage normally (exit 0); every other stop reason is exit 4, a price change 3, an exception 5.
@@ -71,7 +76,6 @@ class Assessment:
     breaker: dict = field(default_factory=lambda: dict(tripped=False))
     provider_ending: str | None = None
     attempts_charged: int | None = None
-    retain_label: str | None = None
 
 
 def load_frozen(path: Path) -> dict:
@@ -79,9 +83,18 @@ def load_frozen(path: Path) -> dict:
     value = json.loads(path.read_text())
     if not isinstance(value, dict) or set(value) != set(FROZEN_KEYS):
         raise StageError(f'{path}: frozen keys must be exactly {sorted(FROZEN_KEYS)}')
+    for key in ('stage', 'item'):
+        if type(value[key]) is not str or not value[key].strip():
+            raise StageError(f'{path}: {key} is a non-empty string')
     for key in ('max_runs', 'base_runs', 'batch_size', 'campaign_attempts', 'settle_seconds', 'max_infrastructure_failures'):
         if type(value[key]) is not int or value[key] < 0:
             raise StageError(f'{path}: {key} is a non-negative integer')
+    for key in ('load_gate', 'max_check_gap_seconds'):
+        if type(value[key]) not in (int, float) or not value[key] >= 0 or value[key] == float('inf'):
+            raise StageError(f'{path}: {key} is a finite non-negative number')
+    reasons = value['provider_failure_reasons']
+    if not (isinstance(reasons, list) and len(set(reasons)) == len(reasons) and set(reasons) <= set(PROVIDER_REASONS)):
+        raise StageError(f'{path}: provider_failure_reasons is a list of distinct reasons from {list(PROVIDER_REASONS)}')
     for key in ('per_run_worst_case_usd', 'stage_cap_usd', 'item_cap_usd'):
         if type(value[key]) is not str or Decimal(value[key]) < 0:
             raise StageError(f'{path}: {key} is a non-negative decimal string')
@@ -220,9 +233,11 @@ def provider_evidence(rows: Sequence[dict] | None, ending: str) -> str | None:
     return None
 
 
-def infrastructure_failure(receipt: dict | None, quiescent: bool, session_present: bool, trace_rows: Sequence[dict] | None) -> str | None:
-    """An excludable run: the deciding host ended on a provider-side failure shown in its own trace and every custody
-    and cleanup fact still holds. Any other incompleteness returns None, which stops the stage."""
+def infrastructure_failure(receipt: dict | None, quiescent: bool, session_present: bool, trace_rows: Sequence[dict] | None,
+                           reasons: Sequence[str]) -> str | None:
+    """An excludable run: the deciding host ended on one of the stage's frozen `provider_failure_reasons`, shown to be
+    provider-side in its own trace, and every custody and cleanup fact still holds. Any other incompleteness returns
+    None, which stops the stage."""
     if not receipt or receipt.get('outcome') != 'incomplete' or not quiescent or not session_present:
         return None
     if not all(receipt.get(f) is True for f in ('deciding_hosts_quiescent', 'native_absence_verified', 'input_authority_revoked')):
@@ -231,7 +246,7 @@ def infrastructure_failure(receipt: dict | None, quiescent: bool, session_presen
     if len(actors) != 1 or actors[0].get('orchestration_error') or actors[0].get('accounting_complete') is not True:
         return None
     reason = (actors[0].get('settled') or {}).get('reason') or ''
-    if reason not in ('request-timeout', 'provider-error'):
+    if reason not in reasons:
         return None
     evidence = provider_evidence(trace_rows, reason)
     return None if evidence is None else f'{reason} ({evidence})'
@@ -314,12 +329,20 @@ class StageDriver:
             carried = stage_runs[-1]
             if carried.get('complete') is not True:
                 return f"previous persistent session {carried['run']} is not complete; the owner decides"
-            if not self.ports.state_verify(f"after-{carried['run']}"):
+            if carried.get('persistent_retained') is None:
+                return f"previous persistent session {carried['run']} was not retained; the owner decides"
+            if not self.ports.state_verify(carried['persistent_retained']):
                 return f"carried state differs from the retained post-session copy of {carried['run']}"
         elif not self.ports.state_verify():
             previous = acc['runs'][-1]['run'] if acc['runs'] else 'pre-stage'
             if not self.ports.state_restore(f'after-{previous}') or not self.ports.state_verify():
                 return 'state restore/verify failed'
+        labels = None
+        if self.persistent:
+            # Asked before any effect: a binding that cannot name the retained-state labels stops the stage here.
+            labels = self.ports.retain_labels(name)
+            if not (isinstance(labels, tuple) and len(labels) == 2 and all(type(x) is str and x for x in labels) and labels[0] != labels[1]):
+                raise StageError('A persistent stage needs the binding to name two distinct retained-state labels per session')
         if not self.ports.build(run):
             return 'build failed'
         acc = load_accounting(self.accounting_path)
@@ -338,9 +361,9 @@ class StageDriver:
         a = self.ports.assess(name, receipt)
         # Persistent mode keeps this session's post-session state (a copy; the live state stays) once the native process is
         # verified absent; no receipt, or a native process not verified gone, means the state may still be changing.
-        if self.persistent and a.retain_label is None:
-            raise StageError('A persistent stage needs the binding to name each session\'s retained-state label')
-        retain_rc = (self.ports.state_retain(a.retain_label)
+        # Only a complete session with a quiescent level is a continuation state; any other is kept as evidence, never carried.
+        retain_label = None if labels is None else labels[0] if a.complete and a.quiescent else labels[1]
+        retain_rc = (self.ports.state_retain(retain_label)
                      if self.persistent and receipt is not None and receipt.get('native_absence_verified') is True else None)
         charged = a.attempts_charged if a.attempts_charged is not None else frozen['campaign_attempts']
         acc = load_accounting(self.accounting_path)
@@ -350,7 +373,7 @@ class StageDriver:
                       max_check_gap_s=a.max_check_gap_s, outcome=a.outcome, failure=a.failure, quiescent=a.quiescent,
                       included_clean_exit=a.clean_exit, refusal_circuit_breaker=a.breaker['tripped'], status='closed')
         if self.persistent:
-            record.update(persistent_retain_rc=retain_rc, persistent_retained=a.retain_label if retain_rc is not None else None)
+            record.update(persistent_retain_rc=retain_rc, persistent_retained=retain_label if retain_rc is not None else None)
         if a.clean_exit:
             record['clean_exit_facts'] = a.clean_facts
         acc['cumulative_attempts'] += charged
@@ -425,21 +448,27 @@ class StageDriver:
         """Cleanup on every exit path: settle, restore or keep the carried state, and record the exit."""
         acc = load_accounting(self.accounting_path)
         last = acc['runs'][-1] if acc['runs'] else None
+        # Any record still `launched` was never assessed (an exception came first): it is charged its whole allocation, so
+        # the attempt count stays an upper bound, and it stays open for the owner.
+        unclosed = [r for r in acc['runs'] if r.get('status') == 'launched']
+        for record in unclosed:
+            record['attempts'] = self.frozen['campaign_attempts']
+            record['status'] = ('interrupted-possibly-live' if self.ports.receipt(record['run']) is None
+                                else 'interrupted-unassessed')
+            acc['cumulative_attempts'] += record['attempts']
+        if unclosed:
+            save_accounting(self.accounting_path, acc)
         if last and self.ports.receipt(last['run']) is None:
             # The custodian runs in its own session and may still be playing: do not settle or restore under it.
-            if last.get('status') == 'launched':
-                last['attempts'] = self.frozen['campaign_attempts']
-                last['status'] = 'interrupted-possibly-live'
-                acc['cumulative_attempts'] += last['attempts']
-                save_accounting(self.accounting_path, acc)
             self.note(event='left-open', run=last['run'], reason='no receipt; run may still be live')
         else:
             if any('account_after' not in r for r in acc['runs']):
                 self.ports.sleep(self.frozen['settle_seconds'])
                 acc = self.settled(self.balance(f'settle-after-run-{run:02d}'))
             if last and self.persistent:
-                self.note(event='carried-state-kept', retained=f"after-{last['run']}",
-                          verified=self.ports.state_verify(f"after-{last['run']}"))
+                retained = last.get('persistent_retained')
+                self.note(event='carried-state-kept', retained=retained,
+                          verified=None if retained is None else self.ports.state_verify(retained))
             elif last and not self.ports.state_verify():
                 self.note(event='final-restore', retained=f"after-{last['run']}", restored=self.ports.state_restore(f"after-{last['run']}"))
         self.note(event='driver-exit', reason=reason, rc=rc, next_run=run, item_actual_usd=acc['item_actual_usd'],

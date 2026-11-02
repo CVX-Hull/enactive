@@ -103,14 +103,18 @@ def paired_gain(base: dict[str, tuple[float, int]], alternative: dict[str, tuple
         raise ValueError('Paired scores must cover the same runs and transitions')
     pairs = [(base[r][0] - alternative[r][0], base[r][1]) for r in sorted(base) if base[r][1]]
     statistic = lambda xs: sum(d for d, _ in xs) / sum(n for _, n in xs)
-    return dict(gain_bits=statistic(pairs), ci95=cluster_bootstrap(pairs, statistic, seed=seed, resamples=resamples))
+    boot = cluster_bootstrap(pairs, statistic, seed=seed, resamples=resamples)
+    return dict(gain_bits=statistic(pairs), ci95=boot['interval'], defined_resamples=boot['defined_resamples'], runs=boot['clusters'])
 
 
 def memory_depth(gains: Sequence[dict], tolerance: float) -> int:
     """Smallest k whose next order (gains[k] is order k -> k+1) has an interval lower bound at or below `tolerance`.
 
-    Returns len(gains) when every listed step still gains, i.e. the depth is at least that order.
+    Returns len(gains) when every listed step still gains, i.e. the depth is at least that order. A step with no
+    interval (fewer than two scored runs) cannot be judged and is an error, not a gain.
     """
+    if any(g['ci95'] is None for g in gains):
+        raise ValueError('A gain without an interval cannot decide the memory depth')
     return next((k for k, g in enumerate(gains) if g['ci95'][0] <= tolerance), len(gains))
 
 

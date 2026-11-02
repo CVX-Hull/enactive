@@ -6,26 +6,38 @@ silently depend on. The independent unit is the cluster (a run, or a lineage whe
 whole clusters, never steps or frames.
 
 Definitions (each is an executable statement of what a reported number means):
-- `quantile` is nearest-rank: the value at index floor(q*n) of the sorted list, so for n <= 20 the p95 is the maximum.
+- `quantile` is **upper nearest-rank, floor(q*n)**: the value at index floor(q*n) of the sorted list (clamped to the
+  last), so for n <= 20 the p95 is the maximum. The index is computed exactly from the decimal text of q, never from a
+  float product, so q = .95 and n = 2000 give 1900 and a 90% interval's lower index is 100, not 99. This is not
+  `tools/host_analysis.distribution`, which takes index ceil(q*n)-1 (the lower nearest-rank); the two differ by one
+  order statistic wherever q*n is an integer.
 - `quantile_linear` interpolates linearly between order statistics (the convention of `numpy.quantile`).
 - `cluster_bootstrap` is a percentile interval of `statistic` over resamples of whole clusters drawn with
-  replacement; a resample whose statistic is None is dropped.
+  replacement; a resample whose statistic is None is dropped. It reports how many resamples were defined, and gives
+  no interval for fewer than two clusters (a single cluster has no sampling variance to resample).
 - `cohen_kappa` is chance-corrected agreement for two raters over a closed category list; `gwet_ac1` is the
   prevalence-robust alternative (Gwet 2008); `positive_agreement` is 2a/(2a+b+c) for one category.
 """
 from __future__ import annotations
 
 from collections import Counter
+from fractions import Fraction
+import math
 import random
 from typing import Callable, Hashable, Sequence
 
 
-def quantile(values: Sequence[float], q: float) -> float | None:
-    """Nearest-rank quantile: the value at index floor(q*n) of the sorted list; None for no values."""
+def _exact(q) -> Fraction:
+    """q as the exact decimal it was written as (a float's shortest repr), or the Fraction it already is."""
+    return q if isinstance(q, Fraction) else Fraction(repr(float(q)))
+
+
+def quantile(values: Sequence[float], q: float | Fraction) -> float | None:
+    """Upper nearest-rank quantile: the value at index floor(q*n) of the sorted list, clamped; None for no values."""
     if not values:
         return None
     ordered = sorted(values)
-    return ordered[min(len(ordered) - 1, int(q * len(ordered)))]
+    return ordered[min(len(ordered) - 1, math.floor(_exact(q) * len(ordered)))]
 
 
 def quantile_linear(values: Sequence[float], q: float) -> float:
@@ -53,25 +65,29 @@ def ratio(clusters: Sequence[dict], numerator: Callable[[dict], float], denomina
 
 
 def cluster_bootstrap(clusters: Sequence, statistic: Callable[[Sequence], float | None], *, seed: int | str,
-                      resamples: int, level: float = .95) -> list[float] | None:
-    """Percentile interval [low, high] of `statistic` over `resamples` resamples of whole clusters.
+                      resamples: int, level: float = .95) -> dict:
+    """Percentile interval of `statistic` over `resamples` resamples of whole clusters.
 
-    `seed` seeds one `random.Random`, so the interval is reproducible from its record. None when there are no
-    clusters or no resample has a statistic.
+    Returns `dict(interval, clusters, resamples, defined_resamples)`. `interval` is [low, high], or None when there
+    are fewer than two clusters or no resample has a statistic; `defined_resamples` says how many resamples the
+    interval rests on, so a reader can judge a statistic that is often undefined. `seed` seeds one `random.Random`,
+    so the interval is reproducible from its record, and the caller fixes the cluster order (sort by name).
     """
     if not 0 < level < 1 or type(resamples) is not int or resamples < 1:
         raise ValueError('level must be in (0, 1) and resamples a positive integer')
-    if not clusters:
-        return None
+    result = dict(interval=None, clusters=len(clusters), resamples=resamples, defined_resamples=0)
+    if len(clusters) < 2:
+        return result
     rng, values = random.Random(seed), []
     for _ in range(resamples):
         value = statistic([rng.choice(clusters) for _ in clusters])
         if value is not None:
             values.append(value)
-    if not values:
-        return None
-    tail = (1 - level) / 2
-    return [quantile(values, tail), quantile(values, 1 - tail)]
+    result['defined_resamples'] = len(values)
+    if values:
+        tail = (1 - Fraction(repr(float(level)))) / 2
+        result['interval'] = [quantile(values, tail), quantile(values, 1 - tail)]
+    return result
 
 
 def percentile_rank(value: float, reference: Sequence[float]) -> float:

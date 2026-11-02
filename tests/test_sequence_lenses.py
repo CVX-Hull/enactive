@@ -50,6 +50,15 @@ def test_a_deterministic_cycle_is_predicted_by_order_one_but_not_order_zero():
     assert memory_depth([dict(ci95=[.2, .3])], tolerance=.05) == 1
 
 
+def test_a_gain_without_an_interval_cannot_decide_the_depth():
+    one = {'only': (4.0, 8)}
+    gain = paired_gain(one, {'only': (2.0, 8)}, seed=1, resamples=50)
+    assert gain['ci95'] is None and gain['runs'] == 1 and gain['gain_bits'] == pytest.approx(.25)
+    with pytest.raises(ValueError, match='without an interval'):
+        memory_depth([gain], .05)
+    assert paired_gain({'a': (4.0, 8), 'b': (4.0, 8)}, {'a': (2.0, 8), 'b': (2.0, 8)}, seed=1, resamples=50)['defined_resamples'] == 50
+
+
 def test_scores_are_reproducible_and_reject_unpaired_or_tiny_inputs():
     runs = {'a': [([0, 1, 0, 1], [0] * 4)], 'b': [([1, 0, 1, 0], [0] * 4)]}
     assert loro_bits(runs, 2, 1) == loro_bits(runs, 2, 1)

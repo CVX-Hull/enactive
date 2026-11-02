@@ -52,10 +52,24 @@ The [testing page](../testing.md) lists what each test file asserts and its limi
 - A mechanical measure is not a gameplay verdict; it counts and classifies what the traces and stores retain.
 - The lens statistics are pure Python and O(n²) per run; the numpy implementations that produced earlier lens records
   remain in `.runtime` because numpy is not a project dependency.
-- [`tools/level_v4_probe.py`](../../tools/level_v4_probe.py) computes its own kappa, AC1 and run bootstrap for
-  its engineering probe (the bootstrap takes order statistics at different indices, and kappa is undefined where chance
-  agreement is certain); it does not use `evidence_stats`, so the two are not interchangeable until it is migrated.
-  The replay and host-launch helpers in [`tools/level_probe.py`](../../tools/level_probe.py) are replay machinery,
-  not retained-artifact analysis, and these tools do not use them.
+- **Quantile convention.** Every quantile and bootstrap index is *upper nearest-rank*, floor(q·n), computed exactly from the
+  decimal q (a 90% interval over 2000 resamples takes indices 100 and 1900). `tools/host_analysis.py` reports
+  `ceil(q·n)-1`, which differs by one order statistic wherever q·n is an integer, and `tools/level_offline.py` keeps
+  its own quantile; they are not changed here.
+- **Bootstrap.** The interval is returned with the number of defined resamples and is absent for fewer than two
+  clusters. The lens bootstrap of the earlier numpy records took its upper index as `int(.975·B)-1`; this tool takes
+  `int(.975·B)` as `analyze_level` did, so a lens interval can differ from an old record by one order statistic.
+- [`tools/level_v4_probe.py`](../../tools/level_v4_probe.py) computes its own kappa, AC1 and run bootstrap. Its bootstrap
+  agrees with `cluster_bootstrap`; it differs in refusing an interval for fewer than two runs or when fewer than half
+  the resamples are defined, and its kappa is None where chance agreement is certain (here it is 1.0 for identical single-category labels).
+  It does not import `evidence_stats`; migrating it is a follow-up for its owner. The replay and host-launch helpers
+  in [`tools/level_probe.py`](../../tools/level_probe.py) are replay machinery, not retained-artifact analysis, and these
+  tools do not use them.
+- **Refusal definition.** The circuit breaker counts what the model saw refused (validation feedback, `tool-refused`
+  other than the pass already having ended, custodian errors). That is not `level_probe.classify`, which also counts
+  undispatched terminal calls and `arguments_error`. The breaker's definition is the frozen stop rule and is kept.
+- **Frozen values, not defaults.** The breaker threshold, the clean-exit grace and window, the provider-side reasons
+  and every driver constant a stage chose are required keys of the stage's criteria or frozen registry; a missing,
+  extra or mistyped key is refused.
 - The persistence measures of the #329 persistent stage and the recorder-reliability ladder (#345) depend on their
   stage's registries and on provider calls; they stay with their records until a stage registers them again.

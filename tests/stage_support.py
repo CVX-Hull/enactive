@@ -190,6 +190,19 @@ def make_run(root: Path, name: str, level=(), recorder=(), *, inputs: int = 6, e
     return run
 
 
+def edit_actor(run: Path, change, *, embedded=True, written=True) -> None:
+    """Apply `change(actor_record)` to the record in `receipt.json`, to `driver-receipt.json`, or both."""
+    if embedded:
+        receipt = json.loads((run / 'receipt.json').read_text())
+        change(receipt['driver']['actors'][0])
+        (run / 'receipt.json').write_text(json.dumps(receipt))
+    if written:
+        path = run / 'actors/001/driver-receipt.json'
+        actor = json.loads(path.read_text())
+        change(actor)
+        path.write_text(json.dumps(actor))
+
+
 def work_record(text='Reach the door', position=3, *, contract=LEVEL_CONTRACT, session=SESSION, actor=ACTOR, sources=()):
     return dict(schema='player-record/1', kind='work', text=text, data=dict(
         level='subgoal', level_contract=contract, actor_id=actor, session=session, position=position,
