@@ -60,7 +60,7 @@ Only a capture receipt carries PNG bytes, at most64MiB. Raw pixels are separatel
 bounded64MiB. Encode using installed SDL_image `IMG_SavePNG_RW` and bounded owned
 `SDL_RWFromMem` storage, which outlives encoding/transmission; no PNG implementation.
 
-Normal SDL shutdown can send a final `computer-terminal/1` record with
+Normal SDL shutdown or ordinary process exit can send a final `computer-terminal/1` record with
 `session`, `pid` and `takeover_generation`. The custodian accepts proof
 only for the owned process, with no later packet and clean EOF at a packet
 boundary. Missing proof remains unknown. Campaigns retain the proof and

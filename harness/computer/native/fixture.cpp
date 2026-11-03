@@ -18,9 +18,9 @@ static std::string quoted(const char *value) {
     return out+'"';
 }
 int main(int argc,char **argv) {
-    if(argc<2) { fprintf(stderr,"usage: fixture EVENT_LOG.jsonl [--hidden] [--offscreen]\n"); return 2; }
-    bool hidden=false,offscreen=false,noise=false; int checkSocket=-1; unsigned exitAfter=0; std::vector<int> checkFDs;
-    for(int i=2;i<argc;++i) { if(strcmp(argv[i],"--hidden")==0) hidden=true; else if(strcmp(argv[i],"--offscreen")==0) offscreen=true; else if(strcmp(argv[i],"--check-fd")==0 && i+1<argc) checkFDs.push_back(atoi(argv[++i])); else if(strcmp(argv[i],"--check-socket")==0 && i+1<argc) checkSocket=atoi(argv[++i]); else if(strcmp(argv[i],"--exit-after-ms")==0 && i+1<argc) exitAfter=(unsigned)atoi(argv[++i]); else if(strcmp(argv[i],"--noise")==0) noise=true; else return 2; }
+    if(argc<2) { fprintf(stderr,"usage: fixture EVENT_LOG.jsonl [--hidden] [--offscreen] [--exit-without-sdl-quit]\n"); return 2; }
+    bool hidden=false,offscreen=false,noise=false,exitWithoutQuit=false; int checkSocket=-1; unsigned exitAfter=0; std::vector<int> checkFDs;
+    for(int i=2;i<argc;++i) { if(strcmp(argv[i],"--hidden")==0) hidden=true; else if(strcmp(argv[i],"--offscreen")==0) offscreen=true; else if(strcmp(argv[i],"--check-fd")==0 && i+1<argc) checkFDs.push_back(atoi(argv[++i])); else if(strcmp(argv[i],"--check-socket")==0 && i+1<argc) checkSocket=atoi(argv[++i]); else if(strcmp(argv[i],"--exit-after-ms")==0 && i+1<argc) exitAfter=(unsigned)atoi(argv[++i]); else if(strcmp(argv[i],"--noise")==0) noise=true; else if(strcmp(argv[i],"--exit-without-sdl-quit")==0) exitWithoutQuit=true; else return 2; }
     FILE *log=fopen(argv[1],"wx"); if(!log) { perror("event log"); return 2; }
     for(int fd:checkFDs) { int flags=fcntl(fd,F_GETFD); if(flags<0 || !(flags&FD_CLOEXEC)) { fprintf(stderr,"Inherited FD lacks close-on-exec before SDL startup\n"); fclose(log); return 3; } }
     if(checkSocket>=0) {
@@ -87,5 +87,7 @@ int main(int argc,char **argv) {
         int x=12; for(unsigned char c:text) { SDL_SetRenderDrawColor(renderer,c,(Uint8)(255-c),220,255); SDL_Rect bar={x,12,5,8+(c%40)}; SDL_RenderFillRect(renderer,&bar); x+=7; if(x>600) break; }
         SDL_RenderPresent(renderer); if(target) SDL_SetRenderTarget(renderer,target); SDL_Delay(16);
     }
-    SDL_StopTextInput(); if(noiseTexture) SDL_DestroyTexture(noiseTexture); if(target) SDL_DestroyTexture(target); SDL_DestroyRenderer(renderer); SDL_DestroyWindow(window); SDL_Quit(); fclose(log); return 0;
+    SDL_StopTextInput(); if(noiseTexture) SDL_DestroyTexture(noiseTexture); if(target) SDL_DestroyTexture(target); SDL_DestroyRenderer(renderer); SDL_DestroyWindow(window);
+    if(exitWithoutQuit) { fclose(log); std::exit(0); }
+    SDL_Quit(); fclose(log); return 0;
 }

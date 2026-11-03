@@ -105,6 +105,7 @@ SDL_Keycode keycode(NSString *key) {
     require(string(key) && key.length==1 && [key characterAtIndex:0]>=32 && [key characterAtIndex:0]<=126,"Unsupported basic key");
     return (SDL_Keycode)[key characterAtIndex:0];
 }
+void finishAtExit() noexcept;
 struct Bridge {
     std::recursive_mutex mutex;
     bool initialized=false, enabled=false, sealed=false, paused=false, lost=false, yieldEmpty=false, pointer=false, human=false;
@@ -130,6 +131,9 @@ struct Bridge {
     void init() {
         if(initialized) return; initialized=true;
         if(inherited().socket<3 || inherited().lock<3) return;
+        // Bridge is already constructed; this runs before its static destructor.
+        // Ordinary process exit can bypass the SDL_Quit interposition.
+        require(std::atexit(finishAtExit)==0,"Cannot register native exit callback");
         channel=inherited().socket;
         session=[NSString stringWithUTF8String:inherited().session.c_str()]; enabled=true;
     }
@@ -463,6 +467,18 @@ template<class F> void guarded(F f) noexcept {
             catch(const std::exception &e) { containFault(message(e)); }
             catch(...) { containFault(@"Unknown native exception"); }
         } @catch(NSException *e) { containFault(e.reason?:@"Foundation exception"); }
+    }
+}
+void finishAtExit() noexcept {
+    @autoreleasepool {
+        // Missing proof fails closed. Never reacquire the lock to report a fault at exit.
+        @try {
+            try {
+                auto &b=bridge();
+                std::unique_lock<std::recursive_mutex> guard(b.mutex,std::try_to_lock);
+                if(guard.owns_lock()) b.quit();
+            } catch(...) {}
+        } @catch(NSException *) {}
     }
 }
 }
