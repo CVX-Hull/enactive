@@ -102,13 +102,13 @@ _PROGRAM = _object(dict(schema={'const': 'player-program/1'}, code=_text(32768),
 # only the portable schema keywords (type, enum, description, properties, required, items and the length/size/range
 # bounds): no const, anyOf, $ref, nested union or model-supplied constant. The model supplies neither a record id nor
 # a version; software resolves the one current level subgoal and stamps the contract versions into what it stores.
-LEVEL_CONTRACT = 'player-level/4'
-LEVEL_COMMIT_SCHEMA = 'player-level-commit/4'
-LEVEL_ABSTAIN_SCHEMA = 'player-level-abstain/2'
+LEVEL_CONTRACT = 'player-level/5'
+LEVEL_COMMIT_SCHEMA = 'player-level-commit/5'
+LEVEL_ABSTAIN_SCHEMA = 'player-level-abstain/3'
 EPISODE_CONTRACT = 'player-episode/1'
-EPISODE_RECORD_SCHEMA = 'player-episode-record/1'
-EPISODE_ABSTAIN_SCHEMA = 'player-episode-abstain/1'
-INTENT_SCHEMA = 'player-intent/2'
+EPISODE_RECORD_SCHEMA = 'player-episode-record/2'
+EPISODE_ABSTAIN_SCHEMA = 'player-episode-abstain/2'
+INTENT_SCHEMA = 'player-intent/3'
 CLOSE_OUTCOMES = ('achieved', 'failed', 'abandoned')
 PREVIOUS_OUTCOMES = ('none', *CLOSE_OUTCOMES, 'revised')
 ABSTAIN_CODES = ('insufficient_evidence', 'transient_screen_state', 'no_change_needed', 'other')

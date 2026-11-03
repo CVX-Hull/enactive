@@ -6,7 +6,7 @@ status: active
 
 # Player host contract
 
-`player-host/6` is the one current boundary between the [campaign driver](../../tools/campaign_player.py)
+`player-host/7` is the one current boundary between the [campaign driver](../../tools/campaign_player.py)
 and the program that hosts a deciding player, one pass of its subgoal level or one pass of its episode recorder
 ([ADR-007](../decisions/007-player-subgoal-level.md) candidate). The host turns frozen context, a
 frozen provider route and the actor's MCP table into model calls and sequential
@@ -19,7 +19,7 @@ its provider serializers, closed route `model` fields and limits.
 
 ## Adapter selection
 
-A `campaign-run/5` package freezes `host`: `{"argv": [...]}` with 1–8 strings.
+A `campaign-run/6` package freezes `host`: `{"argv": [...]}` with 1–8 strings.
 `argv[0]` is an absolute existing regular file (an adapter executable or its
 interpreter); every later entry is a canonical project-local regular file covered
 by the clean source commit. The driver and package validator append only the mode
@@ -48,7 +48,7 @@ when the final `settled` event has `ok: true`.
 
 ## Route envelope
 
-The frozen route is one closed JSON object with `schema: "player-host/6"`, `role`,
+The frozen route is one closed JSON object with `schema: "player-host/7"`, `role`,
 `intent_tail_bytes`, `model`, `api_key_env`, `max_requests`, `max_context_images`,
 `context_image_block`, `request_timeout_seconds` and `service_tier`. `role` is
 `actor`, `level` or `recorder`. `intent_tail_bytes` is null or, for an actor only, exactly 1024: the one fixed allocation of the intent tail (see below).
@@ -74,18 +74,18 @@ kinds. Required semantics:
 
 | Event | Contract |
 | --- | --- |
-| `host-start` | Exactly once and first in any run that admits its arguments and inputs, with `telemetry_version: 2`, `schema: "player-host/6"`, `role` and `intent_tail_bytes`; the driver rejects any other schema. |
+| `host-start` | Exactly once and first in any run that admits its arguments and inputs, with `telemetry_version: 2`, `schema: "player-host/7"`, `role` and `intent_tail_bytes`; the driver rejects any other schema. |
 | `mcp-connected` | Once the MCP child is connected, before tool discovery. A level's first pass waits for the actor's first `request-start` instead, which follows the tool checks. |
 | `level-pass` | Level role only, once after tool discovery. |
-| `level-commit` / `level-discard` | Level role only, per `player-level-commit/4` result of `player_level_keep`, `player_level_replace` or `player_level_close` (never for a local tool error, so a rejected call emits neither), with `action` (`keep`, `replace` or `close`), `reason`, `position`, `inputs_since`, `staleness_inputs`, `subgoal_id` (the subgoal bound at push, or null), `derived` (`{observations, stalled}` or null), `record_ids` and `kept`. Either one ends the pass. |
-| `level-abstain` | Level role only, per valid `player-level-abstain/2` result of `player_level_abstain` (never for a local tool error), with `request_id`, `tool_call_id`, `reason_code` and `reason`. It ends the pass. |
+| `level-commit` / `level-discard` | Level role only, per `player-level-commit/5` result of `player_level_keep`, `player_level_replace` or `player_level_close` (never for a local tool error, so a rejected call emits neither), with `action` (`keep`, `replace` or `close`), `reason`, `position`, `inputs_since`, `staleness_inputs`, `subgoal_id` (the subgoal bound at push, or null), `derived` (`{observations, stalled}` or null), `record_ids` and `kept`. Either one ends the pass. |
+| `level-abstain` | Level role only, per valid `player-level-abstain/3` result of `player_level_abstain` (never for a local tool error), with `request_id`, `tool_call_id`, `reason_code` and `reason`. It ends the pass. |
 | `level-uncertain` | Level role only, when a terminal tool's result is a `player-transport/1` unknown receipt (the adapter lost the response and, for a reader, offers no collecting tool), with `request_id`, `tool_call_id`, `tool` and `identity` (the receipt's operation id). It ends the pass, which settles `ok: false` with reason `level-uncertain`; the driver reconciles `identity` from the store afterwards. |
 | `level-terminal-call` | Level role only, per terminal tool call in an assistant message (at message end), with `request_id`, `tool_call_id`, `tool` and `arguments_error` (the arguments did not parse). A call with no matching `tool-start` was refused before dispatch. |
 | `level-reserved-request` | Level role only, once per logical request that offers only the terminal tools, with `request_id` (the logical request's first attempt), `logical_request_id` and `offered_tools`. |
 | `episode-pass` | Recorder role only, once after tool discovery, with `frames`: the pushed `{source_id, role}` manifest. |
 | `episode-frame` | Recorder role only, once per pushed frame the host read, before the first request, with `source_id`, `role`, `media_type`, `bytes` and `sha256`. |
-| `episode-record` | Recorder role only, per `player-episode-record/1` result with `status: "recorded"` of `player_episode_record` (never for a local tool error), with `request_id`, `tool_call_id`, `first_position`, `last_position`, `subgoal_id`, `counted`, `closed`, `observations`, `stalled` and `record_ids`. It ends the pass. |
-| `episode-abstain` | Recorder role only, per valid `player-episode-abstain/1` result of `player_episode_abstain`, with `request_id`, `tool_call_id`, `first_position`, `last_position`, `subgoal_id`, `record_ids` and the call's `reason_code` and `reason`. It ends the pass. |
+| `episode-record` | Recorder role only, per `player-episode-record/2` result with `status: "recorded"` of `player_episode_record` (never for a local tool error), with `request_id`, `tool_call_id`, `first_position`, `last_position`, `subgoal_id`, `counted`, `closed`, `observations`, `stalled` and `record_ids`. It ends the pass. |
+| `episode-abstain` | Recorder role only, per valid `player-episode-abstain/2` result of `player_episode_abstain`, with `request_id`, `tool_call_id`, `first_position`, `last_position`, `subgoal_id`, `record_ids` and the call's `reason_code` and `reason`. It ends the pass. |
 | `episode-uncertain` / `episode-terminal-call` / `episode-reserved-request` | Recorder role only; as `level-uncertain`, `level-terminal-call` and `level-reserved-request`, for the episode tools. |
 | `intent-tail` | Actor with a tail, per request, with `available`, `record_id` (the subgoal's), `tail_bytes` (the whole tail, at most 1024), `surfaced_bytes` and `omitted_bytes` (summed over the parts), `skipped_items` (recall items left out for want of a usable source id), `parts` (per part `{part, bytes, omitted_bytes}`) and `age`. |
 | `request-start` | One per provider HTTP attempt, including failed and provider-only retries, with `request_id` `request-N` contiguous from 1 and never above `max_requests`, and `logical_request_id` `request-K` (the K-th inference request, shared by its retries). |
@@ -108,7 +108,7 @@ request/image histories.
 An **actor** host decides and sends input. With `intent_tail_bytes` set, before each
 provider request it calls the custodian's host-internal `player_intent` tool itself,
 which must be discovered and must not be in `enabled_tools`, so the model never sees
-it. It accepts only a `player-intent/2` value for the `tail` audience, formats it into
+it. It accepts only a `player-intent/3` value for the `tail` audience, formats it into
 the request-only status message and nothing else. A failed read, another schema or audience,
 or an unexpectedly shaped value shows "Unavailable" and never stops the actor or gates its
 input. A null tail (flat, arm B, the fourth arm and shadow mode) adds nothing.

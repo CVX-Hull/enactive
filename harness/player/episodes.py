@@ -70,9 +70,9 @@ def derive(subgoal: dict, views: list[dict], *, stall_settles: int, floor: float
     `views` are `episode()` results, so already trusted. Only those whose pushed subgoal id is this subgoal's
     count; any other is ignored, so marks are
     never attributed to the wrong subgoal. Marks count only from `recorded` claims with confidence at least
-    `floor`. The stall counts every settled claim: the subgoal is stalled after `stall_settles` consecutive
-    settles with nothing newly seen, and an abstained, failed or dropped settle (or a recorded one below the
-    floor) is nothing newly seen.
+    `floor` and a correctly sized mark vector. Only these eligible observations affect the stall streak:
+    newly seen progress resets it, another eligible record increments it. Missing evidence (abstained,
+    failed, dropped, below-floor or incorrectly sized) is neutral, but stays in the operational counts.
     """
     texts = subgoal['data'].get('expected_observations') or []
     status = ['not_yet'] * len(texts)
@@ -85,7 +85,9 @@ def derive(subgoal: dict, views: list[dict], *, stall_settles: int, floor: float
     for view in settles:
         counts[view['settled']] += 1
         newly = False
-        if view['settled'] == 'recorded' and view['confidence'] >= floor and len(view['observation_status']) == len(texts):
+        eligible = (view['settled'] == 'recorded' and view['confidence'] >= floor
+                    and len(view['observation_status']) == len(texts))
+        if eligible:
             counts['counted'] += 1
             counted.append(view)
             for index, mark in enumerate(view['observation_status']):
@@ -95,7 +97,7 @@ def derive(subgoal: dict, views: list[dict], *, stall_settles: int, floor: float
                 elif mark == 'contradicted':
                     status[index], marker[index] = 'contradicted', view
                     contradicted_by[index].append(view)
-        streak = 0 if newly else streak + 1
+            streak = 0 if newly else streak + 1
     # For each observation now contradicted: every counted claim that marks it contradicted (not only the
     # latest), since a keep may cite the source of any of them.
     contradicting = [dict(index=i, claim_id=marker[i]['record_id'], claim_ids=[v['record_id'] for v in contradicted_by[i]],

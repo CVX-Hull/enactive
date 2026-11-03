@@ -11,8 +11,8 @@ before it runs ([S-EVIDENCE](../standards/evidence.md), [evidence cadence](../wo
 tools are the reusable part of that procedure. The stage's frozen registry, criteria, bindings and outputs are not: they
 stay under ignored `.runtime/` and are cited by hash, because a result must be reproducible from its record.
 
-All of them accept only the current contract versions (`campaign-run/5`, `campaign-receipt/2`, `player-driver/6`,
-`player-host/6` telemetry 2, `computer-session/3`, `player-memory/1`) and reject anything else with an
+All of them accept only the current contract versions (`campaign-run/6`, `campaign-receipt/2`, `player-driver/7`,
+`player-host/7` telemetry 2, `computer-session/3`, `player-memory/1`) and reject anything else with an
 `unsupported` error before they write a result. Nothing converts an older format
 ([S-MIGRATION](../standards/migration.md)); an earlier stage's retained records cite the script that made them by hash
 and are not reproduced by these tools. None calls a provider, sends a game input or needs the network.
@@ -20,7 +20,7 @@ and are not reproduced by these tools. None calls a provider, sends a game input
 | Tool | Does | Game or interface binding |
 | --- | --- | --- |
 | [`tools/stage_driver.py`](../../tools/stage_driver.py) | The serialized, stop-never-retry run loop of a stage: spend accounting that stays an upper bound, caps and balance, state restore or persistent carry, stop rules, provider-side exclusion and cleanup on every exit. Library; the stage supplies its `ports`. | None. Provider, state, build and launch are the stage binding's ports. |
-| [`tools/level_stage_analysis.py`](../../tools/level_stage_analysis.py) | The mechanical measures of a level stage from retained artifacts: pass and attempt classes, commit rate with a run-clustered bootstrap, receipt and store cross-checks, custody, refusal circuit breaker and clean-exit inclusion. Decision thresholds come from the stage's frozen criteria file. | The level and recorder lanes of `player-driver/6` and the `player-level/4` store records, named explicitly. |
+| [`tools/level_stage_analysis.py`](../../tools/level_stage_analysis.py) | The mechanical measures of a level stage from retained artifacts: pass and attempt classes, commit rate with a run-clustered bootstrap, receipt and store cross-checks, custody, refusal circuit breaker and clean-exit inclusion. Decision thresholds come from the stage's frozen criteria file. | The level and recorder lanes of `player-driver/7` and the `player-level/5` store records, named explicitly. |
 | [`tools/intent_audit.py`](../../tools/intent_audit.py) | Blind audit packets (session id replaced by an audit id, key held beside the audited directory) and the frozen label table, agreement and reading. It labels nothing itself. | Committed level `replace` records of the current contract. |
 | [`tools/sequence_lenses.py`](../../tools/sequence_lenses.py) | Memory depth by leave-one-run-out Witten-Bell log-loss, Lempel-Ziv repetition, recurrence and cross-recurrence, planted-replay power gates. | None; symbols, tokens and distance matrices in, numbers out. |
 | [`tools/evidence_stats.py`](../../tools/evidence_stats.py) | Nearest-rank quantiles, run-clustered percentile bootstrap, Cohen's kappa, Gwet's AC1, positive agreement, one-sided Student-t bounds and p (`one_sided_t`), Wilson upper bound, Holm step-down. | None. |
@@ -39,7 +39,7 @@ The [testing page](../testing.md) lists what each test file asserts and its limi
    inclusion rule and the stop rule. Only one deciding run is live at a time; the driver never retries.
 3. **Analyze the frozen runs.**
    `.venv/bin/python -m tools.level_stage_analysis OUTPUT.json SESSION_DIR... --criteria CRITERIA.json --store-template 'PATH/after-{run}/player.sqlite3'`
-   writes `level-stage-analysis/5` (it refuses to overwrite) with the criteria and tool digests beside the measures.
+   writes `level-stage-analysis/6` (it refuses to overwrite) with the criteria and tool digests beside the measures.
    Without `--store-template` custody and the auditable-record count are reported as undecided, never assumed.
 4. **Audit intent, if the stage calls for it.** `python -m tools.intent_audit prepare OUT SESSION_DIR... --store-template ... --context FILE --instructions FILE`,
    then launch the clean-context auditors on the packets only (the lead's procedure, not this tool), then
@@ -66,6 +66,10 @@ The [testing page](../testing.md) lists what each test file asserts and its limi
   It does not import `evidence_stats`; migrating it is a follow-up for its owner. The replay and host-launch helpers
   in [`tools/level_probe.py`](../../tools/level_probe.py) are replay machinery, not retained-artifact analysis, and these
   tools do not use them.
+  Its current report is `level-v4-probe/2`: planning polls every actor request and uses an advancing
+  replay application for fraction eligibility, shared with the driver's `fraction_skip` rule.
+  Skipped bindings are replayed and reported separately from sampled launched passes. The simulated
+  latency and historical input limitations still apply; it is not the real-timing diagnostic gate.
 - **Refusal definition.** The circuit breaker counts what the model saw refused (validation feedback, `tool-refused`
   other than the pass already having ended, custodian errors). That is not `level_probe.classify`, which also counts
   undispatched terminal calls and `arguments_error`. The breaker's definition is the frozen stop rule and is kept.

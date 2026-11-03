@@ -23,7 +23,7 @@ from tools.level_schedule import LevelSchedule
 
 # The pass input the driver hands a reader host on stdin, and its two pushed inputs (ADR-007 level v4).
 PASS_INPUT_SCHEMA='player-pass-input/1'
-LEVEL_PUSH_SCHEMA='player-level-push/1'
+LEVEL_PUSH_SCHEMA='player-level-push/2'
 EPISODE_PUSH_SCHEMA='player-episode-push/1'
 
 
@@ -61,7 +61,7 @@ class HostEvents:
             kind=value.get('type')
             if kind=='host-start':
                 if (self.started or value.get('telemetry_version')!=2
-                        or value.get('schema')!='player-host/6'):raise ControlError('Unsupported/repeated current host trace')
+                        or value.get('schema')!='player-host/7'):raise ControlError('Unsupported/repeated current host trace')
                 self.started=True
             elif kind in ('level-commit','level-discard','level-abstain'):
                 if len(self.level)<256:self.level.append({k:value.get(k) for k in
@@ -140,7 +140,7 @@ def wake_note(wake: dict) -> str:
 
 
 def level_text(role_prompt: str, brief: str, wake: dict, pushed: dict) -> str:
-    """A level pass's whole stdin, plain text (`player-host/6`): the frozen role, the actor's brief and the pushed input.
+    """A level pass's whole stdin, plain text (`player-host/7`): the frozen role, the actor's brief and the pushed input.
 
     The pushed input is closed episodes and software counts, never the actor's raw log: the episode records since the
     previous pass, the current subgoal with its derived status, stalled flag and id, the counts per subgoal and the
@@ -159,7 +159,7 @@ def level_text(role_prompt: str, brief: str, wake: dict, pushed: dict) -> str:
 
 
 def recorder_document(role_prompt: str, wake: dict, pushed: dict) -> dict:
-    """A recorder pass's whole stdin, one closed JSON document (`player-pass-input/1`, `player-host/6`).
+    """A recorder pass's whole stdin, one closed JSON document (`player-pass-input/1`, `player-host/7`).
 
     `text` is the frozen `episode-v1` role prompt, the episode's operations as key tokens and positions, and the id, text
     and ordered expected observations of the subgoal pushed. `frames` names the baseline and the episode's own frames
@@ -351,6 +351,18 @@ class ReaderLane:
                     missing_usage_attempts=sum(p.get('missing_usage_attempts', p['attempts_charged']) for p in self.passes))
 
 
+def fraction_skip(reason: str, pushed: dict, inputs_since: int, staleness_inputs: int) -> str | None:
+    """Fraction eligibility after a real bind; other wake reasons are unchanged."""
+    if not reason.startswith('budget-'):
+        return None
+    intent = pushed['intent']
+    if not (pushed['episodes'] or intent['subgoal'] or intent['recall']['items']):
+        return 'no meaningful context'
+    if inputs_since >= staleness_inputs:
+        return 'settled evidence bound already stale'
+    return None
+
+
 class LevelSystem:
     """One actor's episode cutter, episode recorder and subgoal level (ADR-007 level v4).
 
@@ -386,6 +398,7 @@ class LevelSystem:
         self.cuts: list[Episode] = []
         # The level's cursor over settled episodes (its last pushed record), and how many have settled in all.
         self.level_cursor: str | None = None
+        self.wake_skips: list[dict] = []
         self.seen_cursor: str | None = None
         self.settled_total = 0
         self.max_waiting = 0
@@ -577,6 +590,18 @@ class LevelSystem:
             if bind['handoff']:
                 # The served actor has already handed off: nothing to bind, so no pass.
                 return
+            # Fractions reconsider existing context without inventing a newer evidence position. A skipped
+            # binding consumes no lane allowance and preserves the pending delta for the next real pass.
+            if reason.startswith('budget-'):
+                moved = self.application.runtime.store.inputs_after(self.actor_id, bind['position'])
+                skip = fraction_skip(reason, pushed, moved, self.level['staleness_inputs'])
+                if skip is not None:
+                    self.application.release_reader(lane.reader_id)
+                    self.wake_skips.append(dict(reason=reason, skip=skip, position=bind['position'],
+                        binding_index=bind['pass_index'], inputs_since=moved,
+                        staleness_inputs=self.level['staleness_inputs'], actor_attempts=len(events.requests),
+                        settled_episodes=self.settled_total))
+                    return
             reservation = lane.begin(now, deadline)
             self.level_cursor = cursor
             entries, inputs = self.application.runtime.store.actor_counts(self.actor_id)
@@ -661,6 +686,7 @@ class LevelSystem:
         # Terminal calls whose transport was lost, by what the store shows they did (see `reconcile`).
         uncertain = [e for p in passes for e in p.get('level_uncertain', [])]
         return dict(reader_id=lane.reader_id, allocated_attempts=lane.allowance, attempts_charged=lane.charged, passes=passes,
+                    wake_skips=list(self.wake_skips),
                     commits=len(commits), keeps=sum(e['action'] == 'keep' for e in commits),
                     replaces=sum(e['action'] == 'replace' for e in commits), closes=sum(e['action'] == 'close' for e in commits),
                     discards=len(discards), abstains=len(abstains), abstain_codes=codes,
@@ -850,7 +876,7 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
         if record.get('orchestration_error'):break
     # attempts_charged includes every actor's level passes; each record keeps its own split.
     levels_of=lambda r:r.get('level') or {}
-    return dict(schema='player-driver/6',outcome=outcome,reason=reason,actors=records,
+    return dict(schema='player-driver/7',outcome=outcome,reason=reason,actors=records,
                 attempts_charged=total_attempts,host_seconds_used=host_seconds_used,
                 level_attempts_charged=sum(levels_of(r).get('attempts_charged',0) for r in records),
                 level_failed_passes=sum(levels_of(r).get('failed_passes',0) for r in records),

@@ -44,12 +44,12 @@ def prepared(tmp_path, frozen, **options):
 
 
 def test_prepare_writes_one_blind_packet_per_committed_replace_of_the_current_contract(tmp_path, frozen):
-    out, count, first, second = prepared(tmp_path, frozen, old_contract=True)
+    out, count, first, second = prepared(tmp_path, frozen)
     assert count == 2
     key = json.loads((audit.private(out) / 'key.json').read_text())
     assert sorted(v['record_id'] for v in key['packets'].values()) == sorted([first['id'], second[0]['id']])
     assert key['inputs'] == dict(context_sha256=audit.sha256(frozen[0]), instructions_sha256=audit.sha256(frozen[1]),
-                                 code_sha256=audit.sha256(Path(audit.__file__)), recent_frames=10, level_contract='player-level/4',
+                                 code_sha256=audit.sha256(Path(audit.__file__)), recent_frames=10, level_contract='player-level/5',
                                  commit_tools=['player_level_keep', 'player_level_replace', 'player_level_close'], runs_without_store=[])
     by_record = {v['record_id']: k for k, v in key['packets'].items()}
     packet = out / 'packets' / by_record[second[0]['id']]
@@ -59,6 +59,22 @@ def test_prepare_writes_one_blind_packet_per_committed_replace_of_the_current_co
     assert value['proposal']['decisions_in_same_commit'] == [dict(decision='achieved', reason='The door was found')]
     assert [e['position'] for e in value['input_log']] == list(range(1, 10))
     assert (packet / 'context.txt').read_text() == 'Frozen guide and assignment.' and (packet / 'instructions.md').read_text() == 'Answer two questions.'
+
+
+@pytest.mark.parametrize('old', ['record', 'receipt'])
+def test_prepare_refuses_mixed_old_level_contracts_before_writing_packets(tmp_path, frozen, old):
+    run = make_run(tmp_path, 'run-1', [level_pass(1, 'commit')], inputs=15)
+    store, _, _ = store_with_two_replaces(tmp_path, old_contract=old == 'record')
+    if old == 'receipt':
+        with sqlite3.connect(store) as db:
+            row, encoded = db.execute('SELECT rowid,result FROM service_operations WHERE result IS NOT NULL LIMIT 1').fetchone()
+            result = json.loads(encoded)
+            result['schema'] = 'player-level-commit/4'
+            db.execute('UPDATE service_operations SET result=? WHERE rowid=?', (json.dumps(result), row))
+    out = tmp_path / 'audit'
+    with pytest.raises(audit.UnsupportedTrace, match='unsupported'):
+        audit.prepare(out, [run], str(store), frozen[0], frozen[1])
+    assert not out.exists() and not audit.private(out).exists()
 
 
 def test_the_session_id_never_reaches_the_auditors(tmp_path, frozen):

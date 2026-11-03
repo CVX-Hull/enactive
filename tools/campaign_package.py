@@ -84,7 +84,7 @@ def local_file(value: str) -> Path:
 
 
 def host_argv(host) -> list[str]:
-    """Validate the closed `player-host/6` adapter selection and return its argv."""
+    """Validate the closed `player-host/7` adapter selection and return its argv."""
     closed(host,{'argv'})
     argv=host['argv']
     if (type(argv) is not list or not 1<=len(argv)<=8
@@ -102,7 +102,7 @@ def preflight(directory: Path) -> tuple[dict,dict,dict]:
     if not directory.is_relative_to(ROOT/'.runtime/computer-sessions') or directory.is_symlink():
         raise ControlError('Select a fresh explicit project-local computer session package')
     profile=read_json(directory/'manifest.json',1048576)
-    if type(profile) is not dict or profile.get('schema')!='campaign-run/5':
+    if type(profile) is not dict or profile.get('schema')!='campaign-run/6':
         raise ControlError('Unsupported campaign package; old admissions are inert history')
     closed(profile,FIELDS)
     host_argv(profile['host'])
@@ -152,7 +152,7 @@ def preflight(directory: Path) -> tuple[dict,dict,dict]:
     if not profile['host_seconds']<=profile['total_host_seconds']<profile['wall_seconds']-30:
         raise ControlError('Original host and cleanup horizons do not fit')
     route=read_json(directory/'route.json',1048576)
-    if type(route) is not dict or route.get('schema')!='player-host/6':
+    if type(route) is not dict or route.get('schema')!='player-host/7':
         raise ControlError('Unsupported player host route; old routes are inert history')
     if level and (type(route.get('max_context_images')) is not int or route['max_context_images']<RECORDER_IMAGES):
         raise ControlError(f'The recorder pins up to 7 frames and reads one more: the route needs max_context_images of at least {RECORDER_IMAGES}')

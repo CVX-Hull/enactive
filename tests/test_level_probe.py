@@ -76,7 +76,7 @@ def recorded(tmp_path):
     from harness.player.memory import Memory
     player_store = tmp_path / 'recorded-player.sqlite3'
     Memory(player_store).close()
-    (session / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/5', player_store=str(player_store),
+    (session / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/6', player_store=str(player_store),
         level=LEVEL)))
     actor_directory = session / 'actors/001'
     (actor_directory / 'level').mkdir(parents=True)
@@ -94,7 +94,7 @@ def recorded(tmp_path):
     return session
 
 
-def route_file(tmp_path, port, *, cost=1.0, extra=None, schema='player-host/6'):
+def route_file(tmp_path, port, *, cost=1.0, extra=None, schema='player-host/7'):
     model = dict(id='fixture-model', name='Fixture', api='openai-completions', provider='fixture',
                  baseUrl=f'http://127.0.0.1:{port}/v1', reasoning=False, input=['text', 'image'],
                  cost=dict(input=cost, output=cost, cacheRead=0, cacheWrite=0), contextWindow=100000, maxTokens=1024,
@@ -249,7 +249,7 @@ def test_probe_replays_every_pass_through_the_real_host_and_labels_its_output(tm
     assert pooled['requests_used']['total'] == 8 and 0 < pooled['configured_cost_usd'] < 0.01
     assert report['thresholds']['valid_terminal_rate_met'] is True and report['thresholds']['repeated_identical_refusal_met'] is True
     assert sorted(report['passes']) == ['recorded/actor001/pass001', 'recorded/actor001/pass002']
-    assert report['interface']['host'] == 'player-host/6' and report['interface']['role_prompt'] == 'subgoal-v4.txt'
+    assert report['interface']['host'] == 'player-host/7' and report['interface']['role_prompt'] == 'subgoal-v4.txt'
     # The pass saw the recorded pushed input, the current frozen role prompt and the real v4 level tools.
     first = fake.payloads[0]
     prompt = json.dumps(first['messages'])
@@ -364,16 +364,16 @@ def test_a_route_with_no_configured_cost_is_refused_before_anything_is_written(t
 @pytest.mark.parametrize('schema', ['player-host/4', 'player-host/1', 'player-host/5', None])
 def test_a_route_that_is_not_player_host_6_is_rejected_without_normalization(tmp_path, recorded, provider, schema):
     path = route_file(tmp_path, 9, schema=schema)
-    with pytest.raises(ValueError, match='must be player-host/6'):
+    with pytest.raises(ValueError, match='must be player-host/7'):
         load_route(path, 4, None)
-    with pytest.raises(ValueError, match='must be player-host/6'):
+    with pytest.raises(ValueError, match='must be player-host/7'):
         run(tmp_path, recorded, provider(clean_policy), route=path)
     assert not (tmp_path / 'probes' / 'probe').exists()
     route = json.loads(path.read_text())
     package = tmp_path / 'package.json'
     package.write_text(json.dumps(dict(schema='finite-provider-conformance/1', routes=[dict(tag='one', model='fixture-model',
                                                                                             configuration=route)])))
-    with pytest.raises(ValueError, match='must be player-host/6'):
+    with pytest.raises(ValueError, match='must be player-host/7'):
         load_route(package, 4, None)
 
 
@@ -585,5 +585,5 @@ def test_the_credential_comes_only_from_the_keychain_item(monkeypatch):
 def test_a_recorded_session_that_is_not_campaign_run_5_is_refused_not_converted(tmp_path, recorded, schema):
     manifest = json.loads((recorded / 'manifest.json').read_text())
     (recorded / 'manifest.json').write_text(json.dumps(dict(manifest, schema=schema)))
-    with pytest.raises(ValueError, match='not campaign-run/5'):
+    with pytest.raises(ValueError, match='not campaign-run/6'):
         recorded_passes(recorded)

@@ -151,6 +151,59 @@ def routes(world, port, cost=1.0):
     return {'F1': world['files'] / 'f1.json', 'F2': world['files'] / 'f2.json'}
 
 
+@pytest.mark.parametrize('context,inputs', [(False, 9), (True, 9), (True, 10)])
+def test_planner_polls_fractions_without_settles_and_replays_real_skip_eligibility(world, monkeypatch, context, inputs):
+    name, session = next(iter(world['runs'].items()))
+    run = probe_module.load_run(world['root'], name, session)
+    run['rows'] = run['rows'][:inputs + 1]
+    run['request_walls'] = [1020. + i for i in range(1, 14)]
+    commit = dict(wall=1000., action='replace', id='a' * 32, position=0,
+                  arguments=dict(text='Inspect the door', expected_observations=['door inspected'], confidence=.8))
+    monkeypatch.setattr(probe_module, 'level_commits', lambda _: [commit] if context else [])
+    planning = probe_module.Lineage(world['tmp'] / f'planning-{context}-{inputs}')
+    try:
+        plan = probe_module.plan_run(run, [], {}, pool=[.1], level=PROFILE, actor_allowance=13, lineage=planning,
+                                    seed=329, recorder_requests=2, level_requests=2)
+    finally:
+        planning.close()
+    expected = ['start', 'budget-0.25', 'budget-0.5', 'budget-0.75'] if context and inputs == 9 else ['start'] if context else []
+    assert [w['reason'] for w in plan['wakes']] == expected
+    assert len(plan['wake_skips']) == (0 if context and inputs == 9 else 3)
+    if plan['wake_skips']:
+        assert {s['skip'] for s in plan['wake_skips']} == {
+            'settled evidence bound already stale' if context else 'no meaningful context'}
+        assert {s['inputs_since'] for s in plan['wake_skips']} == {inputs}
+    static = probe_module.Lineage(world['tmp'] / f'static-{context}-{inputs}')
+    try:
+        replayed = probe_module.replay(run, plan, [], {}, static, PROFILE)
+        replayed['runtime'].close()
+    finally:
+        static.close()
+
+
+def test_planning_coalesces_equal_time_settle_operation_and_fraction_before_binding(world, monkeypatch):
+    name, session = next(iter(world['runs'].items()))
+    run = probe_module.load_run(world['root'], name, session)
+    run['request_walls'] = [1001.1, 1003., 1005., 1007.]
+    monkeypatch.setattr(probe_module, 'level_commits', lambda _: [])
+    episode = dict(run=name, index=0, kind='mid', closed_by='cap', start_pos=1, end_pos=1, n_inputs=0, subgoal=None)
+    profile = dict(PROFILE, budget_fractions=[.5])
+    planning = probe_module.Lineage(world['tmp'] / 'tie-planning')
+    try:
+        plan = probe_module.plan_run(run, [episode], {}, pool=[2.], level=profile, actor_allowance=4,
+                                    lineage=planning, seed=329, recorder_requests=1, level_requests=1)
+    finally:
+        planning.close()
+    assert plan['wake_skips'] == []
+    assert [(w['time'], w['reason']) for w in plan['wakes']] == [(1003., 'budget-0.5')]
+    static = probe_module.Lineage(world['tmp'] / 'tie-static')
+    try:
+        state = probe_module.replay(run, plan, [episode], {}, static, profile)
+        state['runtime'].close()
+    finally:
+        static.close()
+
+
 def run_probe(world, paths, name='probe', *, secret=KEY, dry_run=False, **kwargs):
     arguments = dict(ladder_dir=world['ladder'], runs_root=world['root'], protocol=world['files'] / 'protocol.md',
                      amendment=world['files'] / 'amendment-1.md',
@@ -431,7 +484,7 @@ def test_a_route_that_is_not_player_host_6_or_has_too_few_images_is_refused(worl
     paths = routes(world, 9)
     document = json.loads(paths['F2'].read_text())
     paths['F2'].write_text(json.dumps(dict(document, schema='player-host/5')))
-    with pytest.raises(ValueError, match='must be player-host/6'):
+    with pytest.raises(ValueError, match='must be player-host/7'):
         run_probe(world, paths)
     paths['F2'].write_text(json.dumps(dict(document, max_context_images=7)))
     with pytest.raises(ValueError, match='max_context_images'):
@@ -446,7 +499,7 @@ def provider_world(world, provider, **kwargs):
 def test_the_three_stages_run_the_real_hosts_and_the_credential_never_reaches_an_output(world, provider_factory):
     fake = provider_factory(scripted)
     report = provider_world(world, fake)
-    assert report['status'] == 'complete' and report['schema'] == 'level-v4-probe/1' and report['label'] == 'engineering-probe'
+    assert report['status'] == 'complete' and report['schema'] == 'level-v4-probe/2' and report['label'] == 'engineering-probe'
     recorder = report['recorder']
     assert recorder['F1']['passes'] == 7 and recorder['F1']['valid'] == 7 and recorder['F2']['valid'] == 7
     assert recorder['F1']['terminals'] == {'record': 7} and report['level']['passes'] == 3 and report['level']['valid'] == 3
@@ -724,7 +777,7 @@ def intent_item(source, *, exploration, attempted='did x'):
 
 
 def test_the_tail_items_split_ranked_from_exploration_and_count_unknown_shas(tmp_path):
-    intent = dict(schema='player-intent/2', session='s', actor_id='a', audience='tail', pass_index=1, subgoal=None, age=None,
+    intent = dict(schema='player-intent/3', session='s', actor_id='a', audience='tail', pass_index=1, subgoal=None, age=None,
                   recall=dict(basis='recent', items=[intent_item('src-top', exploration=False), intent_item('src-unknown', exploration=False),
                                                      intent_item('src-explore', exploration=True)]), grants_authority=False)
     held = {'sha-top'}

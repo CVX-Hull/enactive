@@ -16,7 +16,7 @@ const python = process.env.ENACTIVE_TEST_PYTHON;
 const fixture = fileURLToPath(new URL('../../../tests/fixtures/player_host_mcp.py', import.meta.url));
 const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j1ioAAAAASUVORK5CYII=';
 const model = { id: 'fixture-model', name: 'Offline fixture', api: 'openai-completions', provider: 'fixture', baseUrl: 'https://fixture.invalid/v1', reasoning: false, input: ['text', 'image'], cost: {input:0, output:0, cacheRead:0, cacheWrite:0}, contextWindow: 100000, maxTokens: 1024, compat: { supportsDeveloperRole:false, supportsStore:false, supportsUsageInStreaming:true } };
-const route = () => ({schema:'player-host/6',role:'actor',intent_tail_bytes:null,service_tier:'default', model:structuredClone(model), api_key_env:'OFFLINE_TEST_KEY', max_requests:4, max_context_images:4, context_image_block:1, request_timeout_seconds:2});
+const route = () => ({schema:'player-host/7',role:'actor',intent_tail_bytes:null,service_tier:'default', model:structuredClone(model), api_key_env:'OFFLINE_TEST_KEY', max_requests:4, max_context_images:4, context_image_block:1, request_timeout_seconds:2});
 function reply(content = 'finished', calls = [], withUsage = true, reasoning, callPrefix = 'call') {
   const delta = {role:'assistant', ...(content === null ? {} : {content}), ...(reasoning ? {reasoning_content:reasoning} : {}), ...(calls.length ? {tool_calls:calls.map(([name,args],index)=>({index,id:`${callPrefix}-${index}`,type:'function',function:{name,arguments:JSON.stringify(args)}}))} : {})};
   const chunks = [{id:'fixture-response',model:'fixture-backend',choices:[{index:0,delta,finish_reason:null}]},
@@ -92,7 +92,7 @@ test('route is closed, graphical, finite and model/effort exact', ()=>{
   }
   assert.throws(()=>validateConfiguration(route(),'other','off'));
   assert.throws(()=>validateConfiguration(route(),model.id,'low'));
-  for (const old of ['pi-player-host/1','pi-player-host/2','pi-player-host/3','pi-player-host/5','player-host/0','player-host/1','player-host/2','player-host/3','player-host/4','player-host/5','player-host/7'])
+  for (const old of ['pi-player-host/1','pi-player-host/2','pi-player-host/3','pi-player-host/5','player-host/0','player-host/1','player-host/2','player-host/3','player-host/4','player-host/5','player-host/6'])
     assert.throws(()=>validateConfiguration({...route(),schema:old},model.id,'off'));
   // The tail is one fixed allocation of INTENT_TAIL_BYTES: any other bound is refused, and only an actor carries one.
   for (const change of [{role:undefined},{role:'lead'},{intent_tail_bytes:undefined},{intent_tail_bytes:63},{intent_tail_bytes:64},
@@ -652,8 +652,8 @@ test('actor intent tail is a host-internal custodian read that the model never s
   assert.equal(refused.ok,false);assert.equal(refused.reason,'host-internal-tool-enabled');
 });
 
-test('an actor with a tail sends player-intent/2 as one labelled, bounded request-only tail and logs each part', async t=>{
-  const intent={schema:'player-intent/2',session:'2'.repeat(32),actor_id:'3'.repeat(32),audience:'tail',pass_index:2,
+test('an actor with a tail sends player-intent/3 as one labelled, bounded request-only tail and logs each part', async t=>{
+  const intent={schema:'player-intent/3',session:'2'.repeat(32),actor_id:'3'.repeat(32),audience:'tail',pass_index:2,
     subgoal:{record_id:'a1b2c3d4e5f6',text:'Reach the door é'.repeat(30),sources:[],status:'open',confidence:0.4,stalled:false,contradicted:false,counts:null,
       expected_observations:[{text:'adjacent door',status:'seen'},{text:'door open',status:'not_yet'}]},
     age:{seconds:12.34,inputs_since_commit:3,inputs_by_this_actor:7,same_actor:true,same_session:true},
@@ -931,7 +931,7 @@ test('a recorder pass forces a tool call, shows its frames as marked image parts
   assert.equal(result.ok,true);assert.equal(result.reason,'completed');assert.equal(payloads.length,1);
   assert.equal(payloads[0].tool_choice,'required');
   assert.deepEqual(toolNames(payloads[0]),recorderTools);
-  assert.equal(events[0].type,'host-start');assert.deepEqual([events[0].schema,events[0].role,events[0].intent_tail_bytes],['player-host/6','recorder',null]);
+  assert.equal(events[0].type,'host-start');assert.deepEqual([events[0].schema,events[0].role,events[0].intent_tail_bytes],['player-host/7','recorder',null]);
   // One pass event with the manifest, then one frame read per frame, before the first request.
   assert.deepEqual(events.filter(e=>e.type==='episode-pass').map(e=>e.frames),[episodeFrames]);
   const read=events.filter(e=>e.type==='episode-frame');
@@ -1194,7 +1194,7 @@ test('production episode schemas: a refused call names each field, the rule, the
 
 test('recorder telemetry needs a valid receipt of the matching tool and never a local tool error', ()=>{
   const result=value=>({content:[{type:'text',text:JSON.stringify(value)}]});
-  const receipt={schema:'player-episode-record/1',status:'recorded',settled:'recorded',first_position:4,last_position:9,subgoal_id:'s'.repeat(32),
+  const receipt={schema:'player-episode-record/2',status:'recorded',settled:'recorded',first_position:4,last_position:9,subgoal_id:'s'.repeat(32),
     counted:true,closed:true,observations:['seen'],stalled:false,records:[{id:'c1'},{id:'c2'}]};
   assert.deepEqual(episodeRecordEvent(result(receipt)),{type:'episode-record',first_position:4,last_position:9,subgoal_id:'s'.repeat(32),record_ids:['c1','c2'],
     counted:true,closed:true,observations:['seen'],stalled:false});
@@ -1203,22 +1203,22 @@ test('recorder telemetry needs a valid receipt of the matching tool and never a 
   assert.equal(episodeRecordEvent({...result(receipt),isError:true}),null);
   assert.equal(episodeRecordEvent(result({...receipt,schema:'player-episode-record/0'})),null);
   assert.equal(episodeRecordEvent(result({...receipt,settled:'abstained'})),null);
-  assert.equal(episodeRecordEvent(result({...receipt,schema:'player-episode-abstain/1',status:'abstained',settled:'abstained'})),null);
+  assert.equal(episodeRecordEvent(result({...receipt,schema:'player-episode-abstain/2',status:'abstained',settled:'abstained'})),null);
   assert.equal(episodeRecordEvent({content:[{type:'text',text:'{'}]}),null);
-  const abstained={schema:'player-episode-abstain/1',status:'abstained',settled:'abstained',first_position:4,last_position:9,subgoal_id:null,records:[{id:'c1'}]};
+  const abstained={schema:'player-episode-abstain/2',status:'abstained',settled:'abstained',first_position:4,last_position:9,subgoal_id:null,records:[{id:'c1'}]};
   const args={reason_code:'no_player_action',reason:'Nothing happened'};
   assert.deepEqual(episodeAbstainEvent(result(abstained),args),{type:'episode-abstain',first_position:4,last_position:9,subgoal_id:null,record_ids:['c1'],reason_code:'no_player_action',reason:'Nothing happened'});
   assert.equal(episodeAbstainEvent({...result(abstained),isError:true},args),null);
   assert.equal(episodeAbstainEvent(result(abstained),{...args,reason:''}),null);
   assert.equal(episodeAbstainEvent(result(abstained),undefined),null);
-  assert.equal(episodeAbstainEvent(result({...abstained,schema:'player-episode-record/1'}),args),null);
+  assert.equal(episodeAbstainEvent(result({...abstained,schema:'player-episode-record/2'}),args),null);
   const lost=result({schema:'player-transport/1',status:'unknown',operation_id:'1'.repeat(32)});
   assert.deepEqual(uncertainEvent(lost,'episode'),{type:'episode-uncertain',identity:'1'.repeat(32)});
   assert.deepEqual(uncertainEvent(lost,'level'),{type:'level-uncertain',identity:'1'.repeat(32)});
   assert.equal(uncertainEvent(result({schema:'player-transport/1',status:'known'}),'level'),null);
 });
 
-const intentBase={schema:'player-intent/2',session:'2'.repeat(32),actor_id:'3'.repeat(32),audience:'tail',pass_index:0,subgoal:null,age:null,
+const intentBase={schema:'player-intent/3',session:'2'.repeat(32),actor_id:'3'.repeat(32),audience:'tail',pass_index:0,subgoal:null,age:null,
   recall:{basis:'recent',items:[]},grants_authority:false};
 for (const [name,intentFixture] of [['a failed read','error'],
   ['the previous schema',JSON.stringify({...intentBase,schema:'player-intent/1'})],
@@ -1237,30 +1237,30 @@ for (const [name,intentFixture] of [['a failed read','error'],
 test('level commit telemetry distinguishes commits, discards and local tool errors', ()=>{
   const result=value=>({content:[{type:'text',text:JSON.stringify(value)}]});
   const derived={observations:['seen','not_yet'],stalled:false}, subgoal_id='s'.repeat(32);
-  const committed=levelCommitEvent(result({schema:'player-level-commit/4',status:'committed',action:'replace',reason:null,position:4,
+  const committed=levelCommitEvent(result({schema:'player-level-commit/5',status:'committed',action:'replace',reason:null,position:4,
     inputs_since:1,staleness_inputs:10,subgoal_id,derived,records:[{id:'w1'}],kept:[]}));
   assert.deepEqual(committed,{type:'level-commit',action:'replace',reason:null,position:4,inputs_since:1,staleness_inputs:10,subgoal_id,derived,record_ids:['w1'],kept:[]});
   for (const action of ['keep','close'])
-    assert.equal(levelCommitEvent(result({schema:'player-level-commit/4',status:'committed',action,reason:null,position:4,
+    assert.equal(levelCommitEvent(result({schema:'player-level-commit/5',status:'committed',action,reason:null,position:4,
       inputs_since:1,staleness_inputs:10,subgoal_id,derived:null,records:[],kept:[]})).action,action);
   // A first subgoal has no pushed subgoal and no derived state.
-  const first=levelCommitEvent(result({schema:'player-level-commit/4',status:'committed',action:'replace',reason:null,position:0,
+  const first=levelCommitEvent(result({schema:'player-level-commit/5',status:'committed',action:'replace',reason:null,position:0,
     inputs_since:0,staleness_inputs:10,subgoal_id:null,derived:null,records:[{id:'w1'}],kept:[]}));
   assert.deepEqual([first.subgoal_id,first.derived],[null,null]);
-  const discarded=levelCommitEvent(result({schema:'player-level-commit/4',status:'discarded',action:'keep',reason:'Current subgoal changed since the pass began',
+  const discarded=levelCommitEvent(result({schema:'player-level-commit/5',status:'discarded',action:'keep',reason:'Current subgoal changed since the pass began',
     position:4,inputs_since:12,staleness_inputs:10,subgoal_id,records:[],kept:[]}));
   assert.deepEqual([discarded.type,discarded.reason,discarded.subgoal_id,discarded.derived],['level-discard','Current subgoal changed since the pass began',subgoal_id,null]);
-  assert.equal(levelCommitEvent({...result({schema:'player-level-commit/4',status:'committed',action:'keep'}),isError:true}),null);
+  assert.equal(levelCommitEvent({...result({schema:'player-level-commit/5',status:'committed',action:'keep'}),isError:true}),null);
   assert.equal(levelCommitEvent({content:[{type:'text',text:'{'}]}),null);
   assert.equal(levelCommitEvent(result({schema:'player-error/1'})),null);
   for (const old of ['player-level-commit/1','player-level-commit/2','player-level-commit/3'])
     assert.equal(levelCommitEvent(result({schema:old,status:'committed',action:'keep'})),null);
-  assert.equal(levelCommitEvent(result({schema:'player-level-commit/4',status:'committed',action:'bogus'})),null);
+  assert.equal(levelCommitEvent(result({schema:'player-level-commit/5',status:'committed',action:'bogus'})),null);
 });
 
 test('level abstain telemetry needs a valid abstain result with its reason code and never a local tool error', ()=>{
   const result=value=>({content:[{type:'text',text:JSON.stringify(value)}]});
-  const ok={schema:'player-level-abstain/2',status:'abstained',reason_code:'no_change_needed',reason:'No evidence'};
+  const ok={schema:'player-level-abstain/3',status:'abstained',reason_code:'no_change_needed',reason:'No evidence'};
   assert.deepEqual(levelAbstainEvent(result(ok)),{type:'level-abstain',reason_code:'no_change_needed',reason:'No evidence'});
   assert.equal(levelAbstainEvent({...result(ok),isError:true}),null);
   assert.equal(levelAbstainEvent(result({...ok,reason:''})),null);

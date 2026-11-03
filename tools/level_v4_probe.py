@@ -13,8 +13,8 @@ Stages (all inputs are recorded; no game, no live session):
    `int(sha256(run|index), 16)` is smallest. For each, a fresh read-only replay store of the run's operations and frames
    up to the episode's end is built through the store API (as `tools/level_probe.py` does). The episode's subgoal is
    inserted through the custodian's append path, the episode is bound with `bind_episode` and pushed with the driver's own
-   `episode_push` and `recorder_document`, and the real recorder host (`player-host/6`, frozen `episode-v1`) runs once per
-   family route. F1 is the production route and F2 the second family, both given as explicit `player-host/6` files.
+   `episode_push` and `recorder_document`, and the real recorder host (`player-host/7`, frozen `episode-v1`) runs once per
+   family route. F1 is the production route and F2 the second family, both given as explicit `player-host/7` files.
 2. **Level.** The driver's offline replay (cutter closes, recorder backlog and the real `LevelSchedule` wakes) runs over
    every run with #345's R1 records, each turned into a trusted `player-episode/1` settle through the custodian's own
    `episode_call`. From all wake points, a sample chosen by the same hash rule gets the driver's real `level_push` and
@@ -70,14 +70,14 @@ from harness.player.contracts import PlayerError
 from harness.server import serve
 from tools import level_offline
 from tools.campaign_package import EPISODE_ROLE, FROZEN_ROLE_SHA256, LEVEL_ROLE, level_profile
-from tools.campaign_player import episode_push, level_push, level_text, recorder_document, write_new
+from tools.campaign_player import episode_push, fraction_skip, level_push, level_text, recorder_document, write_new
 from tools.configure_player_tools import configuration
 from tools.episode_cutter import Episode, distance, thumbnail
 from tools.level_probe import add_operation, classify, git_state, keychain_secret, load_route, open_replay, sha256_file, watch_host
 from tools.level_schedule import LevelSchedule
 
 LABEL = 'engineering-probe'
-SCHEMA = 'level-v4-probe/1'
+SCHEMA = 'level-v4-probe/2'
 THRESHOLDS_SCHEMA = 'level-v4-probe-thresholds/1'
 PROBE_ROOT = ROOT / '.runtime' / 'probes'
 DEFAULT_SAMPLE_ESTIMATE_USD = 0.12
@@ -510,14 +510,15 @@ def close_wall(run: dict, episode: dict) -> float:
 
 
 def plan_run(run: dict, episodes: list[dict], records: dict, *, pool: list[float], level: dict, actor_allowance: int,
-             carried: int, seed: int, recorder_requests: int, level_requests: int) -> dict:
+             lineage, seed: int, recorder_requests: int, level_requests: int) -> dict:
     """The driver's offline replay of cutter closes, recorder backlog and level wakes over one recorded timeline.
 
     Closed episodes join the recorder's FIFO backlog (the oldest settles `dropped` when more than the backlog wait); one
     recorder pass runs at a time and takes the sum of `recorder_requests` latencies drawn from `pool`, and an R1 record
     is its settle (an episode with no record settles `failed`). The real `LevelSchedule` decides the level's wakes, which
-    are polled at every event as the driver polls; a pass takes `level_requests` latencies and the level stops with its
-    actor. Allowances are charged as the driver charges lanes. Returns the ordered `events` and the `wakes`.
+    are polled at every event, including every actor request; a pass takes `level_requests` latencies and the level stops
+    with its actor. A live replay application supplies binding, derived state and fraction eligibility. Skips neither
+    advance the cursor nor spend allowance or sampled time. Returns the ordered `events`, `wakes` and `wake_skips`.
     """
     rng = random.Random(f'{seed}|plan|{run["name"]}')
     walls = sorted(run['request_walls'])
@@ -526,8 +527,11 @@ def plan_run(run: dict, episodes: list[dict], records: dict, *, pool: list[float
     closes = sorted(((close_wall(run, e), e['index'], e) for e in episodes), key=lambda item: item[:2])
     backlog, recorder_left, level_left = level['recorder']['backlog'], level['recorder']['max_http_attempts'], level['max_http_attempts']
     queue, recorder, busy_until, index, pass_index = [], None, None, 0, 0
-    settled_total, started = 0, False
-    events, wakes = [], []
+    settled_total, request_index, base_index = 0, 0, 0
+    events, wakes, skips = [], [], []
+    state = ReplayState(run, episodes, records, lineage, level)
+    base = state.base_events()
+    clock = None
 
     def draw(count: int) -> float:
         return sum(rng.choice(pool) for _ in range(count))
@@ -535,7 +539,9 @@ def plan_run(run: dict, episodes: list[dict], records: dict, *, pool: list[float
     def settle(now: float, episode: dict, kind: str, reason: str) -> None:
         nonlocal settled_total
         settled_total += 1
-        events.append((now, 3, 'settle', dict(episode=episode, outcome=kind, reason=reason)))
+        payload = dict(episode=episode, outcome=kind, reason=reason)
+        state.apply('settle', payload)
+        events.append((now, 3, 'settle', payload))
 
     def start_recorder(now: float) -> None:
         nonlocal recorder, recorder_left
@@ -546,53 +552,85 @@ def plan_run(run: dict, episodes: list[dict], records: dict, *, pool: list[float
             recorder_left -= recorder_requests
             recorder = (now + draw(recorder_requests), queue.pop(0))
 
-    while True:
-        upcoming = []
-        if index < len(closes):
-            upcoming.append((closes[index][0], 0))
-        if recorder is not None:
-            upcoming.append((recorder[0], 1))
-        if busy_until is not None:
-            upcoming.append((busy_until, 2))
-        if walls and not started:
-            upcoming.append((walls[0], 3))
-        if not upcoming:
-            break
-        now, which = min(upcoming)
-        if which == 0:
-            episode = closes[index][2]
-            index += 1
-            queue.append(episode)
-            while len(queue) > backlog:
-                settle(now, queue.pop(0), 'dropped', f'Recorder backlog: more than {backlog} closed episodes were waiting')
-            start_recorder(now)
-        elif which == 1:
-            episode = recorder[1]
-            recorder = None
-            if (episode['run'], episode['index']) in records:
-                settle(now, episode, 'recorded', 'R1 record')
-            else:
-                settle(now, episode, 'failed', 'The recorder pass ended without settling the episode (no R1 record)')
-            start_recorder(now)
-        elif which == 2:
-            busy_until = None
-        else:
-            started = True
-        # The driver polls between passes: a wake needs a free level, a started actor and an unspent allowance.
-        if busy_until is None and walls and now >= walls[0] and now < end and level_left >= 1:
-            attempts = bisect.bisect_right(walls, now)
-            reason = schedule.due(settled=settled_total, attempts=attempts, carried=0 if schedule.started else carried)
-            if reason is not None:
-                pass_index += 1
-                level_left -= level_requests
-                busy_until = now + draw(level_requests)
-                allowance = min(level['pass_max_requests'], level_left + level_requests)
-                wake = dict(run=run['name'], index=pass_index, time=now, reason=reason, settled_episodes=settled_total,
-                            allowance_requests=allowance, allowance_seconds=int(level['pass_seconds']))
-                wakes.append(wake)
-                events.append((now, 4, 'wake', wake))
+    try:
+        with simulated_clock() as clock:
+            clock.now = min([w for w, *_ in base] + walls + [end]) - 1.
+            state.ensure_carried()
+            while True:
+                upcoming = []
+                # Base mutations precede a settle at the same timestamp, matching static replay order.
+                if base_index < len(base):
+                    upcoming.append((base[base_index][0], -1))
+                if index < len(closes):
+                    upcoming.append((closes[index][0], 0))
+                if recorder is not None:
+                    upcoming.append((recorder[0], 1))
+                if busy_until is not None:
+                    upcoming.append((busy_until, 2))
+                if request_index < len(walls):
+                    upcoming.append((walls[request_index], 3))
+                if not upcoming:
+                    break
+                now, which = min(upcoming)
+                clock.now = now
+                if which == -1:
+                    _, _, kind, payload = base[base_index]
+                    base_index += 1
+                    state.apply(kind, payload)
+                elif which == 0:
+                    episode = closes[index][2]
+                    index += 1
+                    queue.append(episode)
+                    while len(queue) > backlog:
+                        settle(now, queue.pop(0), 'dropped', f'Recorder backlog: more than {backlog} closed episodes were waiting')
+                    start_recorder(now)
+                elif which == 1:
+                    episode = recorder[1]
+                    recorder = None
+                    if (episode['run'], episode['index']) in records:
+                        settle(now, episode, 'recorded', 'R1 record')
+                    else:
+                        settle(now, episode, 'failed', 'The recorder pass ended without settling the episode (no R1 record)')
+                    start_recorder(now)
+                elif which == 2:
+                    busy_until = None
+                else:
+                    request_index += 1
+                pending_times = ([base[base_index][0]] if base_index < len(base) else [])
+                pending_times += [closes[index][0]] if index < len(closes) else []
+                pending_times += [recorder[0]] if recorder is not None else []
+                pending_times += [busy_until] if busy_until is not None else []
+                pending_times += [walls[request_index]] if request_index < len(walls) else []
+                if now in pending_times:
+                    continue
+                if busy_until is None and walls and now >= walls[0] and now < end and level_left >= 1:
+                    attempts = bisect.bisect_right(walls, now)
+                    reason = schedule.due(settled=settled_total, attempts=attempts,
+                                          carried=0 if schedule.started else state.carried())
+                    if reason is not None:
+                        pushed, bind, skip, moved = state.bind(reason)
+                        if bind['handoff']:
+                            continue
+                        if skip is not None:
+                            item = dict(reason=reason, skip=skip, position=bind['position'], binding_index=bind['pass_index'],
+                                        inputs_since=moved, staleness_inputs=level['staleness_inputs'],
+                                        actor_attempts=attempts, settled_episodes=settled_total)
+                            skips.append(item)
+                            events.append((now, 4, 'skip', item))
+                            continue
+                        pass_index += 1
+                        allowance = min(level['pass_max_requests'], level_left)
+                        used = min(level_requests, allowance)
+                        level_left -= used
+                        busy_until = now + draw(used)
+                        wake = dict(run=run['name'], index=pass_index, time=now, reason=reason, settled_episodes=settled_total,
+                                    allowance_requests=allowance, allowance_seconds=int(level['pass_seconds']))
+                        wakes.append(wake)
+                        events.append((now, 4, 'wake', wake))
+    finally:
+        state.runtime.close()
     settles = collections.Counter(e[3]['outcome'] for e in events if e[2] == 'settle')
-    return dict(events=events, wakes=wakes, settles=dict(settles), end=end, closed=len(closes))
+    return dict(events=events, wakes=wakes, wake_skips=skips, settles=dict(settles), end=end, closed=len(closes))
 
 
 # --- the replay ------------------------------------------------------------------------------------------------
@@ -683,6 +721,81 @@ class Lineage:
         self.memory.close()
 
 
+class ReplayState:
+    """One advancing replay application, shared by offline planning and sampled static replay."""
+    def __init__(self, run: dict, episodes: list[dict], records: dict, lineage: Lineage, profile: dict):
+        lineage.sessions += 1
+        self.run, self.episodes, self.records, self.lineage, self.profile = run, episodes, records, lineage, profile
+        self.directory = lineage.directory / f'session-{lineage.sessions:02d}-{run["name"]}'
+        self.directory.mkdir()
+        self.rows = [(r[0], r[2], r[3], r[4], r[5], r[6]) for r in run['rows']]
+        self.runtime, _, self.application, self.actor = open_replay(
+            self.directory, run['session'], run['directory'], run['frames'], [], lineage.memory)
+        self.actor_id = self.actor['actor_id']
+        derived = dict(stall_settles=profile['stall_settles'], confidence_floor=profile['confidence_floor'])
+        self.level = self.application.add_reader(self.actor_id, 'level', staleness_inputs=profile['staleness_inputs'], **derived)
+        self.recorder = self.application.add_reader(self.actor_id, 'recorder', **derived)
+        self.cursor = None
+
+    def base_events(self) -> list:
+        events = [(row[2], 1, 'op', position) for position, row in enumerate(self.rows, 1)]
+        events += [(commit['wall'], 0, 'subgoal', commit) for commit in level_commits(self.run)]
+        return sorted(events, key=lambda item: item[:2])
+
+    def ensure(self, source: dict | None, position: int) -> str | None:
+        if source is None:
+            return None
+        if source['id'] not in self.lineage.mapping:
+            install_subgoal(self.application, self.level['actor_id'], self.actor_id, self.run['session'],
+                            subgoal_spec(source), self.lineage.mapping, position=source['commit_position'])
+        return self.lineage.mapping[source['id']]
+
+    def ensure_carried(self) -> None:
+        self.ensure(next((e['subgoal'] for e in self.episodes[:1]
+                          if e['subgoal'] and e['subgoal'].get('origin') == 'carried'), None), 0)
+
+    def carried(self) -> int:
+        earlier = [v for v in self.application.settled_episodes(actor_id=None)
+                   if v['session'] != self.run['session'] and v['settled'] == 'recorded']
+        return len(self.application.level_subgoals()) + len(earlier)
+
+    def apply(self, kind: str, payload) -> None:
+        if kind == 'op':
+            add_operation(self.runtime, self.actor_id, self.run['directory'], self.run['frames'], self.rows[payload - 1])
+        elif kind == 'subgoal':
+            if payload['action'] == 'replace':
+                spec = dict(id=payload['id'], text=payload['arguments'].get('text', ''),
+                            expected_observations=payload['arguments'].get('expected_observations') or [],
+                            confidence=payload['arguments'].get('confidence', .5), status=payload['arguments'].get('status', 'open'))
+                if spec['id'] and spec['text'].strip() and spec['expected_observations'] and spec['id'] not in self.lineage.mapping:
+                    install_subgoal(self.application, self.level['actor_id'], self.actor_id, self.run['session'], spec,
+                                    self.lineage.mapping, position=payload['position'] or 0)
+            elif payload['action'] == 'close':
+                close_subgoal(self.application, self.level['actor_id'], self.actor_id, self.run['session'],
+                              payload['id'] or 'close', position=payload['position'] or 0)
+        elif kind == 'settle':
+            ep = next(e for e in self.episodes if e['index'] == payload['episode']['index'])
+            subgoal = self.ensure(ep['subgoal'], ep['start_pos'])
+            settle_replayed(self.application, self.recorder['actor_id'], ep, subgoal, payload,
+                            self.records, self.lineage, self.run['name'])
+
+    def bind(self, reason: str):
+        with self.application.serial:
+            pushed, cursor, bind = level_push(self.application, self.level['actor_id'], self.actor_id,
+                                              self.run['session'], self.cursor)
+            moved = self.runtime.store.inputs_after(self.actor_id, bind['position'])
+            skip = fraction_skip(reason, pushed, moved, self.profile['staleness_inputs'])
+            if skip is not None:
+                self.application.release_reader(self.level['actor_id'])
+            elif not bind['handoff']:
+                self.cursor = cursor
+        return pushed, bind, skip, moved
+
+    def result(self, wake=None, pushed=None) -> dict:
+        return dict(runtime=self.runtime, application=self.application, actor=self.actor, level=self.level,
+                    recorder=self.recorder, wake=wake, pushed=pushed, directory=self.directory)
+
+
 def replay(run: dict, plan: dict, episodes: list[dict], records: dict, lineage: Lineage, profile: dict, *, stop_wake: int | None = None,
            tails: list | None = None, projection: dict | None = None) -> dict:
     """Replay one run's timeline into a fresh runtime over the lineage\'s memory, in recorded time order.
@@ -692,75 +805,39 @@ def replay(run: dict, plan: dict, episodes: list[dict], records: dict, lineage: 
     returns the live state and its pushed input; with `tails` each recorded actor request that has projection events
     appends its `intent(audience="tail")` value to the list. The caller closes the returned runtime.
     """
-    lineage.sessions += 1
-    directory = lineage.directory / f'session-{lineage.sessions:02d}-{run["name"]}'
-    directory.mkdir()
-    rows = [(r[0], r[2], r[3], r[4], r[5], r[6]) for r in run['rows']]
-    runtime, _, application, actor = open_replay(directory, run['session'], run['directory'], run['frames'], [], lineage.memory)
-    actor_id = actor['actor_id']
-    derived = dict(stall_settles=profile['stall_settles'], confidence_floor=profile['confidence_floor'])
-    level_reader = application.add_reader(actor_id, 'level', staleness_inputs=profile['staleness_inputs'], **derived)
-    recorder_reader = application.add_reader(actor_id, 'recorder', **derived)
-    by_index = {e['index']: e for e in episodes}
-    timeline = list(plan['events'])
-    timeline += [(row[2], 1, 'op', position) for position, row in enumerate(rows, 1)]
-    for commit in level_commits(run):
-        timeline.append((commit['wall'], 0, 'subgoal', commit))
+    state = ReplayState(run, episodes, records, lineage, profile)
+    timeline = list(plan['events']) + state.base_events()
     if projection is not None:
         timeline += [(r['wall'], 5, 'request', r) for r in projection['requests']]
     timeline.sort(key=lambda item: (item[0], item[1]))
-    cursor, mapping, state = None, lineage.mapping, dict(wake=None, pushed=None)
-
-    def ensure(spec_source: dict | None, position: int) -> str | None:
-        if spec_source is None:
-            return None
-        if spec_source['id'] not in mapping:
-            install_subgoal(application, level_reader['actor_id'], actor_id, run['session'], subgoal_spec(spec_source), mapping,
-                            position=spec_source['commit_position'])
-        return mapping[spec_source['id']]
-
-    with simulated_clock() as clock:
-        clock.now = (timeline[0][0] if timeline else 0.) - 1.
-        # A subgoal carried in from an earlier session is already in the lineage\'s memory; otherwise it is installed first.
-        carried = next((e['subgoal'] for e in episodes[:1] if e['subgoal'] and e['subgoal'].get('origin') == 'carried'), None)
-        ensure(carried, 0)
-        for when, _, kind, payload in timeline:
-            clock.now = when
-            if kind == 'op':
-                add_operation(runtime, actor_id, run['directory'], run['frames'], rows[payload - 1])
-            elif kind == 'subgoal':
-                if payload['action'] == 'replace':
-                    spec = dict(id=payload['id'], text=payload['arguments'].get('text', ''),
-                                expected_observations=payload['arguments'].get('expected_observations') or [],
-                                confidence=payload['arguments'].get('confidence', .5), status=payload['arguments'].get('status', 'open'))
-                    if spec['id'] and spec['text'].strip() and spec['expected_observations'] and spec['id'] not in mapping:
-                        install_subgoal(application, level_reader['actor_id'], actor_id, run['session'], spec, mapping,
-                                        position=payload['position'] or 0)
-                elif payload['action'] == 'close':
-                    close_subgoal(application, level_reader['actor_id'], actor_id, run['session'], payload['id'] or 'close',
-                                  position=payload['position'] or 0)
-            elif kind == 'settle':
-                ep = by_index[payload['episode']['index']]
-                subgoal = ensure(ep['subgoal'], ep['start_pos'])
-                settle_replayed(application, recorder_reader['actor_id'], ep, subgoal, payload, records, lineage, run['name'])
-            elif kind == 'wake':
-                wake = payload
-                with application.serial:
-                    pushed, cursor_next, bind = level_push(application, level_reader['actor_id'], actor_id, run['session'], cursor)
-                cursor = cursor_next
-                if bind['handoff']:
-                    raise ValueError('The replayed actor has handed off')
-                state.update(wake=wake, pushed=pushed)
-                if stop_wake == wake['index']:
-                    return dict(runtime=runtime, application=application, actor=actor, level=level_reader, recorder=recorder_reader,
-                                wake=wake, pushed=pushed, directory=directory)
-            elif kind == 'request' and tails is not None:
-                tails.append(dict(request=payload, intent=application.intent(actor_id, audience='tail')))
-    if stop_wake is not None:
-        runtime.close()
-        raise ValueError(f'{run["name"]}: the replay has no wake {stop_wake}')
-    return dict(runtime=runtime, application=application, actor=actor, level=level_reader, recorder=recorder_reader,
-                wake=state['wake'], pushed=state['pushed'], directory=directory)
+    last_wake = last_pushed = None
+    try:
+        with simulated_clock() as clock:
+            clock.now = (timeline[0][0] if timeline else 0.) - 1.
+            state.ensure_carried()
+            for when, _, kind, payload in timeline:
+                clock.now = when
+                if kind in ('wake', 'skip'):
+                    pushed, bind, skip, _ = state.bind(payload['reason'])
+                    if bind['handoff']:
+                        raise ValueError('The replayed actor has handed off')
+                    if (kind == 'skip') != (skip is not None):
+                        raise ValueError(f'{run["name"]}: planned fraction eligibility differs from replay')
+                    if kind == 'skip':
+                        continue
+                    last_wake, last_pushed = payload, pushed
+                    if stop_wake == payload['index']:
+                        return state.result(payload, pushed)
+                elif kind == 'request' and tails is not None:
+                    tails.append(dict(request=payload, intent=state.application.intent(state.actor_id, audience='tail')))
+                else:
+                    state.apply(kind, payload)
+        if stop_wake is not None:
+            raise ValueError(f'{run["name"]}: the replay has no wake {stop_wake}')
+        return state.result(last_wake, last_pushed)
+    except BaseException:
+        state.runtime.close()
+        raise
 
 
 def settle_replayed(application, recorder_id: str, ep: dict, subgoal: str | None, payload: dict, records: dict, lineage: Lineage,
@@ -1029,7 +1106,7 @@ process.stdout.write(JSON.stringify(out));
 
 
 def format_tails(intents: list[dict], node: str, directory: Path) -> list[dict]:
-    """The real host formatter over each `player-intent/2` value: which recall source ids are shown, within 1,024 bytes."""
+    """The real host formatter over each `player-intent/3` value: which recall source ids are shown, within 1,024 bytes."""
     if not intents:
         return []
     code = TAIL_FORMATTER % json.dumps((ROOT / 'tools/player_host/host.mjs').as_uri())
@@ -1207,14 +1284,15 @@ def _probe(c: dict) -> dict:
 
     # Stages 2 and 3: the plan over every selected run that has R1 records for each of its episodes.
     replayable = [n for n in names if all((n, e['index']) in records for e in by_run[n])]
-    plans, lineages, carried = {}, {}, {}
+    plans, lineages = {}, {}
     for group in build_lineages(replayable):
-        count, subgoal = 0, 0
-        for n in group:
-            plans[n] = plan_run(loaded[n], by_run[n], records, pool=pool, level=profile, actor_allowance=c['actor_allowance'],
-                                carried=count + subgoal, seed=seed, recorder_requests=c['recorder_requests'], level_requests=c['level_requests'])
-            count += plans[n]['settles'].get('recorded', 0)
-            subgoal = int(any(e['subgoal'] for e in by_run[n]))
+        planning = Lineage(work / 'planning' / '-'.join(group))
+        try:
+            for n in group:
+                plans[n] = plan_run(loaded[n], by_run[n], records, pool=pool, level=profile, actor_allowance=c['actor_allowance'],
+                                    lineage=planning, seed=seed, recorder_requests=c['recorder_requests'], level_requests=c['level_requests'])
+        finally:
+            planning.close()
     wakes = [w for n in replayable for w in plans[n]['wakes']]
     wake_sample = sample_wakes(wakes, c['wake_count'])
 
@@ -1329,6 +1407,7 @@ def _probe(c: dict) -> dict:
         stage1_with_subgoal=sum(1 for e in sample if e['subgoal']), stage1_without_subgoal=sum(1 for e in sample if not e['subgoal']),
         stage1_passes_planned=2 * len(sample), wake_points=len(wakes), stage2_sampled=len(wake_sample),
         wake_points_by_run={n: len(plans[n]['wakes']) for n in replayable},
+        fraction_wake_skips_by_run={n: plans[n]['wake_skips'] for n in replayable},
         actor_requests=stage3['requests'], actor_requests_with_tail=stage3['requests_with_tail'],
         cut_differences=sum(v['differ'] for v in cuts.values()), cut_episodes=sum(v['episodes'] for v in cuts.values()),
         cut_rule_reproduced_runs=sum(v['reproduces'] for v in cuts.values()))
@@ -1336,7 +1415,7 @@ def _probe(c: dict) -> dict:
         scope='Replays recorded #345 runs through the real recorder and level hosts (and the real intent() over replay stores) to '
               'check that the v4 interfaces can be called correctly on the route and whether the intent tail supplies images the '
               'actor lacked. It says nothing about recorder quality, intent quality, play or outcomes.',
-        interface=dict(host='player-host/6', role_prompts={r.name: sha256_file(r) for r in (LEVEL_ROLE, EPISODE_ROLE)},
+        interface=dict(host='player-host/7', role_prompts={r.name: sha256_file(r) for r in (LEVEL_ROLE, EPISODE_ROLE)},
                        profile=profile, intent_audience='tail'),
         source=dict(commit=c['commit'], clean=not c['dirty']),
         inputs=inputs, parameters=dict(max_usd=c['max_usd'], sample_estimate_usd=c['sample_estimate_usd'], max_request_usd=c['max_request_usd'],
@@ -1489,9 +1568,9 @@ def main(argv=None) -> int:
     parser.add_argument('--protocol', type=Path, required=True, help='The frozen protocol.md (hashed into the report)')
     parser.add_argument('--amendment', type=Path, required=True, help='The frozen amendment-1.md (hashed into the report)')
     parser.add_argument('--thresholds', type=Path, required=True, help=f'The frozen {THRESHOLDS_SCHEMA} file')
-    parser.add_argument('--route-f1', type=Path, required=True, help='The F1 (production) player-host/6 route')
-    parser.add_argument('--route-f2', type=Path, required=True, help='The F2 player-host/6 route, the model block given explicitly')
-    parser.add_argument('--profile', type=Path, required=True, help='The level block of a campaign-run/5 profile (pass allowances)')
+    parser.add_argument('--route-f1', type=Path, required=True, help='The F1 (production) player-host/7 route')
+    parser.add_argument('--route-f2', type=Path, required=True, help='The F2 player-host/7 route, the model block given explicitly')
+    parser.add_argument('--profile', type=Path, required=True, help='The level block of a campaign-run/6 profile (pass allowances)')
     parser.add_argument('--name', required=True, help='Output directory name under .runtime/probes')
     parser.add_argument('--max-usd', type=float, required=True, help='Hard spend cap on the charged cost, at most the thresholds\' max_usd')
     parser.add_argument('--dry-run', action='store_true', help='Build and count every input; no host, credential or spend')

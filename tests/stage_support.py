@@ -1,7 +1,7 @@
 """Synthetic retained runs of the current contracts for the evidence-tool tests: no provider, game or host.
 
-A run directory holds a real `computer-session/3` store (through `SessionStore`), the `campaign-run/5` manifest, the
-`campaign-receipt/2` receipt embedding a `player-driver/6` actor record, and per-pass `player-host/6` traces. The
+A run directory holds a real `computer-session/3` store (through `SessionStore`), the `campaign-run/6` manifest, the
+`campaign-receipt/2` receipt embedding a `player-driver/7` actor record, and per-pass `player-host/7` traces. The
 receipt counts are recomputed here from the pass specs the way `tools/campaign_player.py` does, so a fixture is
 consistent until a test breaks it on purpose. A player store (`player-memory/1`) is written through the real `Memory`.
 """
@@ -76,7 +76,7 @@ def _event(spec, wall):
     return None
 
 
-def write_pass(directory: Path, spec, schema='player-host/6', telemetry=2, extra_rows=()):
+def write_pass(directory: Path, spec, schema='player-host/7', telemetry=2, extra_rows=()):
     """Write one pass's trace and return its driver pass record."""
     directory.mkdir(parents=True)
     rows = [dict(type='host-start', schema=schema, telemetry_version=telemetry, wall_time=iso(spec['started']))]
@@ -166,13 +166,13 @@ def make_run(root: Path, name: str, level=(), recorder=(), *, inputs: int = 6, e
     run = root / name
     run.mkdir(parents=True)
     build_session(run, inputs)
-    manifest = dict(schema=(schema_overrides or {}).get('manifest', 'campaign-run/5'), session=SESSION, level=dict(staleness_inputs=10))
+    manifest = dict(schema=(schema_overrides or {}).get('manifest', 'campaign-run/6'), session=SESSION, level=dict(staleness_inputs=10))
     (run / 'manifest.json').write_text(json.dumps(manifest))
     actor_dir = run / 'actors' / '001'
     level_records = [write_pass(actor_dir / 'level' / f"{spec['index']:03d}", spec) for spec in level]
     recorder_records = [write_pass(actor_dir / 'recorder' / f"{spec['index']:03d}", spec) for spec in recorder]
     system = dict(reader_id=LEVEL_READER, recorder_id=RECORDER_READER, mode='shadow', allocated_attempts=120, attempts_charged=0, failure=failure,
-                  quiescent=quiescent, level=dict(level_receipt(level_records), **(level_overrides or {})),
+                  quiescent=quiescent, level=dict(level_receipt(level_records), wake_skips=[], **(level_overrides or {})),
                   recorder=dict(recorder_receipt(recorder_records), **(recorder_overrides or {})),
                   episodes=episodes if episodes is not None else dict(cut=0, closed_by={}, settled={}, max_waiting=0, backlog=3,
                                                                        waiting_unsettled=0, next_position=1, open_inputs=0),
@@ -180,7 +180,7 @@ def make_run(root: Path, name: str, level=(), recorder=(), *, inputs: int = 6, e
     actor = dict(index=1, actor_id=ACTOR, allocated_seconds=600, allocated_attempts=40, started_wall=BASE, attempts_charged=10,
                  accounting_complete=True, settled=settled or dict(ok=True, reason='cancelled', wall_time=iso(BASE + 500)),
                  cleanup=dict(process_absent=True, group_absent=True), level=system, configured_estimate_usd=.1, missing_usage_attempts=0)
-    driver = dict(schema=(schema_overrides or {}).get('driver', 'player-driver/6'), outcome=outcome, reason='fixture', actors=[actor],
+    driver = dict(schema=(schema_overrides or {}).get('driver', 'player-driver/7'), outcome=outcome, reason='fixture', actors=[actor],
                   attempts_charged=10)
     receipt = dict(schema=(schema_overrides or {}).get('receipt', 'campaign-receipt/2'), session=SESSION, outcome=outcome, driver=driver,
                    normal_native_exit_zero=True, deciding_hosts_quiescent=True, native_absence_verified=True, input_authority_revoked=True)
@@ -237,8 +237,10 @@ class PlayerStore:
         identity = f'{self.count + 9000:032x}'
         memory = Memory(self.path)
         try:
+            schema = {'player_level_abstain':'player-level-abstain/3', 'player_episode_record':'player-episode-record/2',
+                      'player_episode_abstain':'player-episode-abstain/2'}.get(tool, 'player-level-commit/5')
             return memory.append_many(writer or reader, records, request_id=identity,
-                                      service=(tool, {}, dict(schema='player-level-commit/4', status=result_status, action=action)),
+                                      service=(tool, {}, dict(schema=schema, status=result_status, action=action)),
                                       sources=list(sources), custodian=True)
         finally:
             memory.close()

@@ -1,4 +1,4 @@
-"""Offline MCP double for player-host/6 tests (player-handoff/2 issuances), using the maintained Python MCP server.
+"""Offline MCP double for player-host/7 tests (player-handoff/2 issuances), using the maintained Python MCP server.
 
 Shared by the adapter node tests and the adapter-agnostic contract suite."""
 import json
@@ -154,7 +154,7 @@ async def player_source(source_id: str) -> CallToolResult:
 
 
 def level_receipt(action, committed):
-    return dict(schema="player-level-commit/4", status="committed" if committed else "discarded", action=action,
+    return dict(schema="player-level-commit/5", status="committed" if committed else "discarded", action=action,
         reason=None if committed else "Served actor moved at least S inputs past the bound", position=3,
         inputs_since=1 if committed else 11, staleness_inputs=10, subgoal_id=SUBGOAL,
         derived=dict(observations=["seen", "not_yet"], stalled=False) if committed else None,
@@ -204,7 +204,7 @@ async def player_level_abstain(reason_code: str, reason: str, sources: list[str]
     record(dict(tool="player_level_abstain"))
     if not reason.strip():
         return rejected("Invalid player data: reason")
-    value = dict(schema="player-level-abstain/2", status="abstained", reason_code=reason_code, reason=reason)
+    value = dict(schema="player-level-abstain/3", status="abstained", reason_code=reason_code, reason=reason)
     return receipt_result(value)
 
 
@@ -224,7 +224,7 @@ async def player_episode_record(attempted: str, counterpart: str, observation_st
             kind="player_episode_record", status="unknown", reason="timed out", collect_with=None, input_replayed=False))
     if not attempted.strip():
         return rejected("Invalid player_episode_record arguments - attempted: must not be blank")
-    return receipt_result(episode_receipt("player-episode-record/1", "recorded"))
+    return receipt_result(episode_receipt("player-episode-record/2", "recorded"))
 
 
 @server.tool()
@@ -233,7 +233,7 @@ async def player_episode_abstain(reason_code: str, reason: str, sources: list[st
     record(dict(tool="player_episode_abstain"))
     if not reason.strip():
         return rejected("Invalid player_episode_abstain arguments - reason: must not be blank")
-    return receipt_result(episode_receipt("player-episode-abstain/1", "abstained"))
+    return receipt_result(episode_receipt("player-episode-abstain/2", "abstained"))
 
 
 @server.tool()
@@ -241,7 +241,7 @@ async def player_intent() -> CallToolResult:
     """Host-internal read; `intent.json` beside the call log selects its reply ("error" fails)."""
     record(dict(tool="player_intent"))
     selected = LOG.with_name("intent.json")
-    text = selected.read_text() if selected.exists() else json.dumps(dict(schema="player-intent/2", session=SESSION,
+    text = selected.read_text() if selected.exists() else json.dumps(dict(schema="player-intent/3", session=SESSION,
         actor_id=ACTOR, audience="tail", pass_index=0, subgoal=None, age=None, recall=dict(basis="recent", items=[]),
         grants_authority=False))
     return CallToolResult(content=[TextContent(type="text", text=text)], isError=text == "error")

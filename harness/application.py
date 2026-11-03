@@ -373,7 +373,7 @@ class Application:
         return next((s for s in self.readers.values() if s['role'] == 'level' and s['serves'] == actor_id), None)
 
     def intent(self, actor_id: str, *, audience: str = 'tail') -> dict[str, Any]:
-        """The current subgoal with its derived status, and software-ranked recall, for `player-intent/2`.
+        """The current subgoal with its derived status, and software-ranked recall, for `player-intent/3`.
 
         `audience` is `tail` (the actor's request-only tail: 2 top recall items plus 1 exploration item) or
         `level` (the level's pushed input: the top 10). Fallible data, never authority. Byte truncation of what

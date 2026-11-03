@@ -16,7 +16,7 @@ from tools.campaign_player import HostEvents,run_hosts
 
 def test_original_attempts_and_partial_trace_reservation(tmp_path):
     path=tmp_path/'host.jsonl'
-    rows=[dict(type='host-start',telemetry_version=2,schema='player-host/6'),
+    rows=[dict(type='host-start',telemetry_version=2,schema='player-host/7'),
           dict(type='request-start',request_id='request-1'),
           dict(type='request-start',request_id='request-2'),
           dict(type='settled',requests=2,ok=False)]
@@ -30,7 +30,7 @@ def test_original_attempts_and_partial_trace_reservation(tmp_path):
     finally:events.close()
 
 
-@pytest.mark.parametrize('schema',['pi-player-host/6','player-host/5',None])
+@pytest.mark.parametrize('schema',['pi-player-host/7','player-host/5',None])
 def test_trace_from_another_host_contract_is_refused(tmp_path,schema):
     path=tmp_path/'host.jsonl'
     path.write_text(json.dumps(dict(type='host-start',telemetry_version=2,schema=schema))+'\n')
@@ -58,7 +58,7 @@ flags = dict(zip(rest[::2], rest[1::2]))
 assert mode == 'run' and sorted(flags) == ['--config', '--context', '--effort', '--mcp-config', '--model', '--timeout-seconds', '-o'], sys.argv
 assert sorted(os.environ) >= ['FIXTURE_KEY', 'LANG', 'PATH'] and os.environ['FIXTURE_KEY'] == 'fixture-secret'
 assert sys.stdin.read().startswith('Frozen mission')
-for event in (dict(type='host-start', telemetry_version=2, schema='player-host/6'),
+for event in (dict(type='host-start', telemetry_version=2, schema='player-host/7'),
               dict(type='request-start', request_id='request-1'),
               dict(type='settled', ok=True, reason='completed', requests=1)):
     print(json.dumps(event), flush=True)
@@ -106,7 +106,7 @@ def request():
     global requests
     requests += 1
     emit('request-start', request_id=f'request-{requests}')
-emit('host-start', telemetry_version=2, schema='player-host/6', role=route['role'])
+emit('host-start', telemetry_version=2, schema='player-host/7', role=route['role'])
 emit('mcp-connected')
 if route['role'] == 'actor':
     assert route['intent_tail_bytes'] == 1024
@@ -246,7 +246,7 @@ def level_campaign(tmp_path):
         profile=dict(max_hosts=max_hosts,host_seconds=60,total_host_seconds=120,max_http_attempts=cap,effort='off',
                      port=server.server_port,session=runtime.session,host=dict(argv=[sys.executable,str(adapter)]),
                      actor_profile='narrowed',level=level or level_profile())
-        route=dict(schema='player-host/6',role='actor',intent_tail_bytes=1024,max_requests=10,api_key_env='FIXTURE_KEY',
+        route=dict(schema='player-host/7',role='actor',intent_tail_bytes=1024,max_requests=10,api_key_env='FIXTURE_KEY',
                    model=dict(id='fixture',name='fixture'))
         return run_hosts(tmp_path,profile,route,app,'fixture-secret',threading.Event(),time.monotonic()+300)
     try:
@@ -419,7 +419,7 @@ def test_a_lost_terminal_call_ends_the_pass_and_the_driver_reconciles_its_identi
 
 def test_the_driver_disposition_totals_and_version(level_campaign):
     result=level_campaign.run(level_mode='abstain')
-    assert result['schema']=='player-driver/6'
+    assert result['schema']=='player-driver/7'
     actor=result['actors'][0]['level']
     assert result['episodes_cut']==actor['episodes']['cut']>=2
     assert result['level_attempts_charged']==actor['attempts_charged']==actor['level']['attempts_charged']+actor['recorder']['attempts_charged']
@@ -633,18 +633,50 @@ def test_level_wakes_once_per_batch_of_settles_and_coalesces_during_a_pass(rig):
     system.finish()
 
 
-def test_the_budget_fraction_wakes_only_after_a_settle(rig):
+def test_a_fraction_without_context_is_skipped_once_then_a_settle_still_wakes(rig):
     system=rig.build(budget_fractions=[.5])
     rig.events.requests={n for n in range(1,40)}
     rig.act(100,2)
     system._ingest(final=False)
-    # 39 attempts of 50 crosses the half-way fraction, but nothing has settled: no level pass.
+    # The fraction is considered but has no meaningful context. It consumes no level reservation or cursor.
     rig.poll(system)
     assert [l for l in rig.launches if l.role=='level']==[]
+    assert system.level_lane.charged == 0 and system.level_cursor is None
+    assert len(system.wake_skips) == 1 and system.wake_skips[0]['skip'] == 'no meaningful context'
+    assert rig.app.readers[system.reader_id]['bound'] is None
+    rig.poll(system)
+    assert len(system.wake_skips) == 1
     settle_all_as_dropped(system,rig,1,2)
     rig.poll(system)
     (level,)=[l for l in rig.launches if l.role=='level']
-    assert level.document['wake']['reason']=='budget-0.5'
+    assert level.document['wake']['reason']=='settle'
+    system.finish()
+
+
+@pytest.mark.parametrize('moved,skipped', [(9, False), (10, True)])
+def test_fraction_revalidation_needs_no_new_settle_but_preserves_the_s_boundary(rig,moved,skipped):
+    from episode_support import put
+    put(rig.app.memory,'c'*32,dict(schema='player-record/1',kind='work',text='Earlier subgoal',data=dict(level='subgoal',
+        level_contract='player-level/5',actor_id='c'*32,session='z'*32,position=0,expected_observations=['visible effect'],
+        status='open',confidence=.5),sources=[],supports=[],supersedes=None,applicability=None,program_id=None))
+    system=rig.build(budget_fractions=[.5])
+    system.schedule.started=True  # The start consideration has already happened; test a periodic revalidation.
+    rig.act(100,moved)
+    rig.events.requests=set(range(1,40))
+    rig.poll(system)
+    levels=[l for l in rig.launches if l.role=='level']
+    assert len(levels)==(0 if skipped else 1)
+    if skipped:
+        assert system.wake_skips[0]['inputs_since']==10
+        assert system.wake_skips[0]['skip']=='settled evidence bound already stale'
+        assert system.level_cursor is None and system.level_lane.charged==0
+        assert rig.app.readers[system.reader_id]['bound'] is None
+        rig.poll(system)
+        assert len(system.wake_skips)==1 and system.level_receipt()['passes']==[]
+    else:
+        assert levels[0].document['wake']['reason']=='budget-0.5'
+        assert levels[0].document['pushed']['episodes']==[]
+        assert levels[0].meta['bound']['position']==0  # No invented freshness.
     system.finish()
 
 
@@ -675,7 +707,7 @@ def test_the_level_start_wake_needs_something_carried_and_may_run_on_an_empty_de
 def test_a_start_wake_revalidates_an_earlier_sessions_open_subgoal_on_an_empty_delta(rig):
     from episode_support import put
     put(rig.app.memory,'c'*32,dict(schema='player-record/1',kind='work',text='Earlier subgoal',data=dict(level='subgoal',
-        level_contract='player-level/4',actor_id='c'*32,session='z'*32,position=0,expected_observations=['a door'],status='open',
+        level_contract='player-level/5',actor_id='c'*32,session='z'*32,position=0,expected_observations=['a door'],status='open',
         confidence=.5),sources=[],supports=[],supersedes=None,applicability=None,program_id=None))
     again=rig.build()
     rig.poll(again)
@@ -868,7 +900,7 @@ def test_a_pass_binds_the_subgoal_current_when_its_episode_opened(rig):
     # A level commit lands while the episode is open: the episode keeps the subgoal it opened under.
     from episode_support import put
     work=put(rig.app.memory,system.level_lane.reader_id,dict(schema='player-record/1',kind='work',text='New',data=dict(level='subgoal',
-        level_contract='player-level/4',actor_id=rig.actor['actor_id'],session=rig.runtime.session,position=1,
+        level_contract='player-level/5',actor_id=rig.actor['actor_id'],session=rig.runtime.session,position=1,
         expected_observations=['a door'],status='open',confidence=.5),sources=[],supports=[],supersedes=None,applicability=None,program_id=None))
     system.cutter.cap=3
     rig.act(100,2)
@@ -996,7 +1028,7 @@ def test_a_store_that_cannot_remember_ends_the_lineage_before_any_actor_is_minte
 
 def test_the_trace_reader_collects_level_uncertain_and_episode_events(tmp_path):
     path=tmp_path/'host.jsonl'
-    rows=[dict(type='host-start',telemetry_version=2,schema='player-host/6'),
+    rows=[dict(type='host-start',telemetry_version=2,schema='player-host/7'),
           dict(type='request-start',request_id='request-1'),
           dict(type='level-uncertain',request_id='request-1',tool_call_id='c',tool='player_level_close',identity='f'*32),
           dict(type='episode-record',settled='recorded',first_position=1,last_position=3,subgoal_id=None,counted=False,closed=False,

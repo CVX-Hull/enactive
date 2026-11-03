@@ -28,6 +28,17 @@ candidate branch `adr7-candidate` (`0fbf77d`) by
 
 Each amendment says what changed and why. The sections below describe the current design only.
 
+- **Diagnostic amendment, 2 November 2026.** The owner
+  [agreed the recommendations on #326](https://github.com/CVX-Hull/enactive/issues/326#issuecomment-6592793140):
+  count distinct retained progress as the eventual adoption primary, keep learning secondary,
+  retain the narrowed/no-level ablation and defer E−; make software-only settles neutral for
+  stall, make fraction wakes independent, and remove the shared guide's inaccurate inventory.
+  Re-gate recorder agreement and ranked recall on fresh real-timing shadow evidence. The
+  diagnostic has a $20 additional cap inside #329's unchanged $250 envelope; it cannot support
+  an adoption claim. K, S, N, c, the fractions and the intent bound remain unchanged. Historical
+  failed gates and frozen artifacts remain evidence. The coordinated contract migration below
+  implements the amendment without compatibility paths; fresh diagnostic stores are required.
+
 - **Drafts 1–4, to 31 October 2026.** Draft 1 had the real-time player write its own memory,
   which conflicted with the owner's later direction and P1. Draft 2 followed the owner's
   newest-first reconciliation on #319, but an architecture review found six places where it
@@ -338,8 +349,8 @@ are never stored on the Work record, which stays append-only.
 - **What counts.** For the current subgoal *g*, the custodian reads its trusted episode claims:
   those committed after *g* whose pushed subgoal id is *g*.
   - **Marks** count only from `recorded` claims with confidence at least the floor *c*.
-  - **Stall** counts every settled claim, so all of it is derivable from the store, across
-    sessions too.
+  - **Stall** uses only recorded claims at or above *c* with one mark per expected observation,
+    across sessions too. Operational settle counts still count every settle.
   - **Other subgoals.** A claim whose subgoal id is not *g* is ignored, so marks are never
     attributed to the wrong subgoal.
 - **Status.** An observation is `seen` if its latest counted `seen` or `contradicted` mark is
@@ -349,14 +360,14 @@ are never stored on the Work record, which stays append-only.
   - **What is written:** the custodian appends the closing correction in the same
     `append_many` transaction as that record, with the recorder reader as record actor. The
     correction carries outcome `achieved`, `data.level == "subgoal"`,
-    `data.level_contract == "player-level/4"` and `data.by == "software"`. Its `supports` are the
+    `data.level_contract == "player-level/5"` and `data.by == "software"`. Its `supports` are the
     counted claims' ids, and its sources are capped at 16.
-  - **Not vacuous:** `player-level/4` requires at least one expected observation on replace, so
+  - **Not vacuous:** `player-level/5` requires at least one expected observation on replace, so
     closure is never vacuous.
 - **Stall.**
-  - **When it fires:** *g* is **stalled** after N consecutive settle claims since *g* with
-    nothing newly seen. An `abstained`, `failed` or `dropped` settle counts as nothing newly
-    seen, and so does a `recorded` one below the floor.
+  - **When it fires:** *g* is **stalled** after N consecutive eligible recorded claims since *g*
+    with nothing newly seen. Newly seen resets the streak. An `abstained`, `failed`, `dropped`,
+    below-floor or incorrectly sized claim neither advances nor resets it.
   - **N and c** are given at reader minting, like S.
   - **Refusals:** while *g* is stalled, `player_level_keep` and `player_level_abstain` are
     fixable tool errors that name `player_level_replace` and `player_level_close`. This applies
@@ -368,9 +379,9 @@ are never stored on the Work record, which stays append-only.
   [Binding and commit](#binding-and-commit)). The custodian refuses a commit as stale (a discard)
   if the current subgoal then differs from the bound one, because a closure or a replace
   happened meanwhile.
-- **Contracts.** `player-level/4` and `player-level-commit/4` carry the pushed subgoal id, the
+- **Contracts.** `player-level/5` and `player-level-commit/5` carry the pushed subgoal id, the
   derived status and the closure. Minting a reader refuses a store whose current level Work is
-  not `/4`: migrate, or start a fresh store. The rules are in the
+  not `/5`: migrate, or start a fresh store. The diagnostic uses fresh stores. The rules are in the
   [computer-control contract](../contracts/computer-control.md)'s level section.
 
 ### The subgoal level pass
@@ -420,7 +431,7 @@ are never stored on the Work record, which stays append-only.
     `abandoned`; it needs a current subgoal and writes the correction only.
 
   Software resolves the current subgoal, so the model supplies no record id and no version, and
-  stamps the contract version into the stored record data and the `player-level-commit/4`
+  stamps the contract version into the stored record data and the `player-level-commit/5`
   receipt. A wrong-state call (keep or close with nothing current, a `none` previous outcome over
   a current subgoal or another one with none) is a fixable tool error that names the current
   subgoal state and the valid tool for it and keeps the bound. A keep alongside a new subgoal
@@ -438,7 +449,7 @@ are never stored on the Work record, which stays append-only.
   when the evidence supports none of keeping, replacing or closing. `reason_code` is
   `insufficient_evidence`, `transient_screen_state`, `no_change_needed` or `other`; `sources` may
   be empty. Nothing is written, the reader's bound is cleared as a terminal call clears it, and
-  the host trace records a `level-abstain` event carrying the code (`player-level-abstain/2`).
+  the host trace records a `level-abstain` event carrying the code (`player-level-abstain/3`).
   Abstentions are counted by code. A stalled subgoal refuses it.
 
 ### Binding and commit
@@ -476,9 +487,13 @@ The commit is software-mediated (P5). The level calls `player_level_keep`,
     earlier-session `recorded` claim (an abstained, failed or dropped one does not count)
     *(decided at build, [#350](https://github.com/CVX-Hull/enactive/issues/350))*;
   - after every episode settles: record, abstain, failure or drop;
-  - at the 25, 50 and 75% budget fractions, but only when something has settled since the last
-    pass. That keeps the empty-delta rule of the
-    [player-interface standard](../standards/player-interface.md).
+  - independently at the 25, 50 and 75% budget fractions. Crossed fractions coalesce to the
+    latest and are consumed once. With no meaningful episode delta, subgoal or ranked recall,
+    or with an already stale settled bound (at least S input operations behind), the driver
+    releases the binding and records a `wake_skips` entry instead of launching. Skips spend no
+    host pass, preserve the episode cursor and do not count as successful revalidation. Binding
+    indices include skips; launched pass indices and pass denominators do not. A later settle
+    still wakes a real pass.
 - **In flight:** at most one level pass. Wakes that arrive during a pass coalesce into one pass
   over the newest records.
 - **Revalidation.** At actor start the first pass is given the open subgoal and may keep, replace
@@ -503,7 +518,7 @@ The commit is software-mediated (P5). The level calls `player_level_keep`,
 - **Publication.** The actor's request-only tail shows the latest committed Work record, labelled
   fallible, with its sources, its age in inputs and seconds and whether it is from `this` or the
   `prev` session (not an age in sessions), and recalled episodes. The actor may ignore it.
-- **The tail.** `player-intent/2` has a fixed allocation of 1,024 bytes in all, labels included.
+- **The tail.** `player-intent/3` has a fixed allocation of 1,024 bytes in all, labels included.
   *Decided at build ([#351](https://github.com/CVX-Hull/enactive/issues/351)):* `intent_tail_bytes`
   is null or exactly 1024, because the allocation is fixed.
 
@@ -537,7 +552,7 @@ The commit is software-mediated (P5). The level calls `player_level_keep`,
     with fewer than three candidates. The owner agreed on 2 November 2026 that the tail shows
     fewer lines then, and the allocation stands.
 
-  The host formats the tail from `player-intent/2`; the
+  The host formats the tail from `player-intent/3`; the
   [player-host contract](../contracts/player-host.md#roles-and-the-intent-tail) owns its exact
   rules.
 
@@ -574,7 +589,7 @@ component:
 | Proposal | One current subgoal: keep, replace or close it | Active aspirations, with their grounded progress variable and status | Claims with evidence, corrections, candidate programs |
 | Software commit | Staleness in actor inputs (S), at a position the driver binds at push; no handoff since | Staleness in Work records committed since the level's own read, bound by the custodian; no session boundary since | Schema, sources and supersession checks; nothing committed as authority |
 | Published to | The actor's intent tail | The subgoal level's input (the objective it serves) | The subgoal level's input: candidate programs and claims it may cite. Committed claims are a store the levels read, not a publication |
-| Wakes | Actor start (when something is carried over), each episode settle, budget fractions after a settle | A subgoal closes or fails, or a session starts | Session start, or a record-count threshold |
+| Wakes | Actor start (when something is carried over), each episode settle, independent budget fractions with explicit skips | A subgoal closes or fails, or a session starts | Session start, or a record-count threshold |
 
 **How intent and programs reach the actor.**
 - **Each level publishes only to the level below it (P3).** The actor sees only the
@@ -631,7 +646,7 @@ is resurfaced.
 records, so there is no record-format change.
 - **The typed fields are the terminal-tool contract.** The flat `player_level_replace`
   arguments are the typed fields; the custodian validates them, stamps the contract
-  version (`player-level/4`) and writes them into `data`.
+  version (`player-level/5`) and writes them into `data`.
 - **Episode records** are `claim` records with `data.level == "episode"`
   (`player-episode/1`). The retrospective level consolidates those claims into further claims
   and procedures.
@@ -764,9 +779,9 @@ on development data.
 | Minimum episode length *m* | 2 | Preference; a content cut needs this many inputs | #345's registry |
 | Episode cap C and K | 10 | K is the owner's longest run of inputs between wakes and is now the cap. `episode_cap` must equal K (10); the package validator enforces it, and changing K is the owner's call | Owner; *decided at build* ([#350](https://github.com/CVX-Hull/enactive/issues/350)) |
 | Staleness S | 10 | Owner preference, constrained by S > p95 of recorder pass plus queue plus level pass. Measured p95: 5 actor inputs | Owner; #345 |
-| Budget fractions | 25%, 50%, 75% | Owner preferences. A fraction wakes the level only after a settle | Owner |
+| Budget fractions | 25%, 50%, 75% | Owner preferences. Independent consideration with explicit empty/stale skips | Owner |
 | Stall test N | 3 | Calibration. N = 3 is the registered default, checked by closure replay of 21 recorded v3 subgoals: N = 3 closes 3 and stalls 8, and N = 2, 4 and 5 stall 9, 6 and 4 | #345 |
-| Confidence floor *c* | 0.0 | Preference set from cross-family agreement by confidence: κ is 0.673 at a floor of 0 (R1 Gemini 3.8 Flash against R2 Haiku 5.5, n = 431; the lower bound of its interval, 0.56, is below 0.6, so this is a pass on the point estimate) and 0.714 at 0.5 | #345 |
+| Confidence floor *c* | 0.0 | Historical κ 0.673 (431 marks), lower bound 0.56, does not establish a lower bound ≥0.6. The deployed R1-only filter at 0.5 or 0.7 retains the same 127 eligible episodes; the old joint-rater filtering result is not a remedy. Keep c fixed and re-gate on fresh independently audited shadow episodes; few lineages may be inconclusive | #329 |
 | Recorder backlog | 3 | Preference, pinned and enforced. Drops are counted | #344; *decided at build* (#350) |
 | Recorder frames | ≤ 7: a baseline plus ≤ 6 own | Fixed by the frame policy; the host pins them, and the route needs `max_context_images` ≥ 8 | #345 post-hoc check; #350, #351 |
 | Recall sizes | 2 top lines plus 1 exploration line in the tail; 10 for the level; residual weight 1.5 | Preferences within the fixed bound. The follow rate is measured | #344; #345 survival check |
@@ -811,7 +826,9 @@ Shaped in [#326](https://github.com/CVX-Hull/enactive/issues/326); the evidence 
   commitment, compared with the flat player and with arm B (the flat player told to
   keep a ledger)?
 - **Stages:**
-  1. the offline ladder on recorded runs (#345), which ran and passed its gates;
+  1. the offline ladder on recorded runs (#345), with the retained point-estimate agreement
+     decision and its lower-bound limitation; closure replay covers 21 committed v3/persistent
+     Work records. The earlier 43 count included v1 service starts and is not this population;
   2. a v4 shadow. The level runs and commits, but intent is not shown to the actor. This
      measures intent accuracy without any influence on play;
   3. a pre-registered probe in **persistent lineages**, several sessions carried forward per
@@ -821,26 +838,28 @@ Shaped in [#326](https://github.com/CVX-Hull/enactive/issues/326); the evidence 
   - **flat:** today's profile, with the memory tools and handoff summary;
   - **arm B:** today's profile plus the frozen ledger addendum; its ledger needs memory append;
   - **the narrowed actor with v4:** the narrowed actor profile, a level host and a recorder host;
-  - optionally, **v4 with recall limited to the current session,** which isolates the
-    cross-session part.
+  - **the narrowed actor without a level:** the clean ablation of tool removal.
+
+  E− (v4 with recall limited to the current session) is deferred pending budget and power.
 
   The v4 arm changes two things at once, removing the actor's memory tools and adding the level.
   The flat arm's #314 history (zero memory calls) suggests the removal costs little, but a fourth
-  arm (narrowed actor, no level) would separate the two effects. It is decided with the owner at
-  pre-registration.
+  arm (narrowed actor, no level) separates the two effects and is owner-agreed.
 - **Starts:**
   - #314's save;
   - a second start made once through the game's ordinary new-game flow with
     default options, by a recorded designated operator, then frozen and restored by
     hash per arm. No save is edited.
 - **Metrics, pre-registered (S-EVIDENCE):**
-  - **Primary: retained change per session.** This is #314's M1, "the first retained change in
-    inventory, carried weight, worn or wielded items, a consumed item or a status indicator,
-    confirmed in a later frame". It is tightened beforehand to substantive changes caused by the
-    player: no first evidence only in the message log, and no status change driven by passing
-    time. It is scored by blind auditors from two model families, with their agreement reported.
+  - **Primary: distinct retained progress per session.** Count independently audited substantive
+    player-caused changes confirmed in a later visible frame, excluding duplicate views of the
+    same change, message-log-only first evidence and time-driven status changes. Freeze the
+    rubric and power simulation before an adoption probe; denser counts do not guarantee power.
+    Blind auditors from two model families score it and report their agreement. The former
+    binary tightened-M1 primary failed the pre-spend power screen and is retired prospectively.
   - **Adoption contrast:** v4 against arm B on the primary metric pooled over sessions, in the
-    pre-registered direction. The arm × session-index slope is the pre-specified learning test.
+    pre-registered direction. The arm × session-index slope is a secondary learning test;
+    overall progress alone is not evidence of learning.
   - **Power:** a power simulation for both, set before spend under S-EVIDENCE, with power of at
     least 0.8 for a stated effect. #314's metric was censored in every run, so run length is sized
     to it. An underpowered null is reported as underpowered.
@@ -854,12 +873,23 @@ Shaped in [#326](https://github.com/CVX-Hull/enactive/issues/326); the evidence 
     - the longest replayed stretch within a run. This is lens test T3′'s only statistic that
       passed its planted-replay power check (#329);
     - actor latency and lock wait against the cadence, and cost by role.
-  - **Audit of software's inputs.** A blind cross-family LLM audit checks the recorder's marks and
-    the precision of software closures and stalls, because software acts on those LLM marks.
-  - **Manipulation check:** the intent tail must carry information the actor did not already
-    hold. The measure is lens test T1's marginal coverage: the share of tail items whose sources
-    the actor had not received. It must be above zero, or the run is void as a test of v4.
+  - **Audit of software's inputs.** A blind cross-family LLM audit checks fresh recorder marks,
+    omissions and class-wise agreement, and the support for software closures and stalls.
+    At fixed c=0 require the lineage-clustered κ lower bound ≥0.6; report an undefined or
+    insufficient bound as inconclusive, never tune c on these evaluation data.
+  - **Manipulation check:** use only ranked recalled items, excluding the always-present
+    earlier-session exploration line. Measure source marginal coverage relative to what the
+    actor had already received, with a prospectively fixed conservative lineage-clustered lower
+    bound strictly above zero. This measures information availability, not usefulness. Failure
+    or an undefined bound prevents treating the run as an efficacy test of v4.
   - **No human labels** (owner, 1 November 2026).
+- **Diagnostic shadow before probe shaping.** Freeze a finite real-timing stage, routes, cost
+  guard, audits, precision simulation and stop rules, with independent review and posted hashes
+  before spend. Its additional cap is $20 inside #329's envelope, including compatibility calls,
+  play, audits and uncertain charges. Measure useful fresh commits, age/S discards, fraction
+  wakes/skips, recorder reliability and ranked recall. It is diagnostic only: no efficacy,
+  adoption or causal-learning claim, no extension to manufacture a pass. If a meaningful
+  allocation cannot fit, stop before spend and report the constraint.
 - **Adoption condition.** Adopt only if the level improves on arm B in the
   pre-registered direction, within the cadence and an accepted cost. An
   underpowered null leaves the status quo, reported as underpowered.
@@ -877,23 +907,25 @@ Shaped in [#326](https://github.com/CVX-Hull/enactive/issues/326); the evidence 
   | Contract | What it covers |
   |---|---|
   | `computer-session/3` | The reader class, its two roles and the per-class tool allowlist; the `reader` stage and `reader_role` column; one reader per (served actor, role); the recorder's write authorization; the custodian method for driver-reported settles; the binding, closure, stall, contradiction and stale-subgoal rules; the reserved-data refusals (`harness/computer/store.py`, `runtime.py`, `harness/application.py`, [contract](../contracts/computer-control.md)) |
-  | `player-level/4`, `player-level-commit/4` | The level's Work and correction data, with at least one expected observation on replace and software closure (`data.by == "software"`); the commit receipt with the pushed subgoal id and the derived state. Stores that are not `/4` are refused. `player-level-abstain/2` is unchanged |
-  | `player-episode/1` | The episode claim's data. The receipts are `player-episode-record/1` and `player-episode-abstain/1` |
-  | `player-intent/2` | The intent object, with the fixed 1,024-byte allocation (labels count) |
+  | `player-level/5`, `player-level-commit/5` | Current Work/correction and derived state with eligible-only stall semantics; reader admission refuses current Work from older contracts. `player-level-abstain/3` shares this state. Diagnostic stores are fresh |
+  | `player-episode/1` | The episode claim's data. The receipts are `player-episode-record/2` and `player-episode-abstain/2` |
+  | `player-intent/3` | The intent object, with the fixed 1,024-byte allocation (labels count) |
   | `player-handoff/2` | The handoff without an actor-written summary or memory snapshot |
   | `player-pass-input/1` | The recorder's closed pass-input document |
-  | `player-host/6` | The roles actor, level and recorder; the `level-*` and `episode-*` events; the pinned recorder frames; the intent-tail format; `intent_tail_bytes` null or 1024; a level pass sends `tool_choice: required`, offers only the terminal tools on its last two requests and settles `level-no-proposal` or `level-final-refusal` otherwise |
-  | `player-driver/6` | The episode cutter, recorder passes and their FIFO backlog; reporting failed and dropped settles to the custodian; binding at push; waking on settle; the counts (keeps, replaces, closes, discards, abstains by reason code, failed passes and final refusals). Closure and stall belong to the custodian, not the driver |
-  | `campaign-run/5` | The level profile (θ and its fitting digest, C = K, *m*, N, *c*, S, the recall sizes, the recorder's allowance, partition, lifecycle and backlog) and the `episode-v1` and `subgoal-v4` prompts, frozen by digest. `episode_cap` replaces `inputs_per_pass` and must equal K |
+  | `player-host/7` | The roles actor, level and recorder; the `level-*` and `episode-*` events; the pinned recorder frames; the intent-tail format; `intent_tail_bytes` null or 1024; a level pass sends `tool_choice: required`, offers only the terminal tools on its last two requests and settles `level-no-proposal` or `level-final-refusal` otherwise |
+  | `player-driver/7` | The cutter, recorder FIFO and settle reporting; binding at push; independent fraction considerations and `wake_skips`; launched-pass counts exclude skips. Closure and stall belong to the custodian |
+  | `campaign-run/6` | The level profile (θ and its fitting digest, C = K, *m*, N, *c*, S, the recall sizes, the recorder's allowance, partition, lifecycle and backlog) and the `episode-v1` and `subgoal-v4` prompts, frozen by digest. `episode_cap` replaces `inputs_per_pass` and must equal K |
 
   `player-memory/1` and `player-record/1` are unchanged: episodes are `claim` records with a level
   discriminator. The host and driver rules live in the [player-host](../contracts/player-host.md)
   contract and the [campaign-run](../operations/campaign-run.md) procedure.
 
   The chain, for history only: `computer-session/1` to `/2` (reader class) to `/3` (roles);
-  `player-level/3` to `/4`; `player-level-commit/3` to `/4`; `player-intent/1` to `/2`;
-  `player-handoff/1` to `/2`; `player-host/2` to `/3` to `/4` (#340) to `/5` (#341) to `/6`;
-  `player-driver/3` to `/4` to `/5` to `/6`; `campaign-run/3` to `/4` to `/5`. `player_log_read`
+  `player-level/3` to `/4` to `/5`; `player-level-commit/3` to `/4` to `/5`;
+  `player-intent/1` to `/2` to `/3`; `player-level-abstain/2` to `/3`;
+  `player-episode-record/1` and `player-episode-abstain/1` to `/2` (raw episode data unchanged);
+  `player-handoff/1` to `/2`; `player-host/2` to `/3` to `/4` (#340) to `/5` (#341) to `/6` to `/7`;
+  `player-driver/3` to `/4` to `/5` to `/6` to `/7`; `campaign-run/3` to `/4` to `/5` to `/6`. `player_log_read`
   and `player-log/1` are removed, and so is the host rule that a level host includes
   `player_log_read`.
 - **Callers, migrated together on the candidate branch** (by #349, #350, #351 and the lead's

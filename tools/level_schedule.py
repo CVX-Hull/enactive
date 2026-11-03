@@ -4,7 +4,8 @@ The driver consults this between passes, so at most one pass is ever in flight. 
 
 * at actor start, to revalidate whatever earlier sessions left (an open subgoal or recalled episodes);
 * after every episode settles, whatever its outcome (recorded, abstained, failed or dropped);
-* at the budget fractions, but only when something has settled since the last pass (the empty-delta rule).
+* at each budget fraction, independently of settles. The driver records a skip instead of launching when
+  there is no meaningful context or its settled evidence bound is already stale.
 
 Wakes that arrive while a pass is in flight coalesce: the next `due` call after the pass sees every settle since the
 last launch and returns one reason, so one pass covers them all. The rules take counts, not a store, so they replay
@@ -36,20 +37,21 @@ class LevelSchedule:
 
         `settled` is the number of episodes the served actor has settled this session, `attempts` the actor host's
         charged provider attempts, and `carried` what earlier sessions left to revalidate (current subgoals plus
-        recalled episodes). The start wake may run on an empty delta; every other wake needs a settle the level has
-        not yet been given. A fraction crossed since the last pass names the wake, and one pass covers every
-        fraction crossed.
+        recalled episodes). Start and fraction revalidation may run without new settles. A fraction crossed
+        since the last poll names the wake, and one consideration covers every fraction crossed. Returning
+        a reason consumes it even if the driver skips it; a skipped binding is never a launched pass.
         """
         if not self.started:
             self.started = True
             if carried:
                 self.last_settled = settled
                 return 'start'
+        crossed = [f for f in self.budget_fractions if f not in self.fired and attempts >= f * self.allowance]
+        if crossed:
+            self.last_settled = settled
+            self.fired.update(crossed)
+            return f'budget-{crossed[-1]:g}'
         if settled <= self.last_settled:
             return None
         self.last_settled = settled
-        crossed = [f for f in self.budget_fractions if f not in self.fired and attempts >= f * self.allowance]
-        if crossed:
-            self.fired.update(crossed)
-            return f'budget-{crossed[-1]:g}'
         return 'settle'

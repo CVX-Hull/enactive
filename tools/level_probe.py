@@ -10,9 +10,9 @@ replay of that session's operations and sources as they stood when the pass star
    served through the normal player HTTP server on loopback, so the real level tools run against it (a terminal call
    writes only the replay's own temporary memory). The recorded bound is restored by settling the positions before
    it as one dropped episode, so the custodian's staleness check starts from the position the recorded pass saw;
-3. the pass's pushed input is the recorded pass's own `input.txt` (plain text, as `player-host/6` takes it), with the
+3. the pass's pushed input is the recorded pass's own `input.txt` (plain text, as `player-host/7` takes it), with the
    current frozen role prompt in place of the recorded one;
-4. the real level host (`player-host/6`, the frozen route, the current role prompt) runs the pass.
+4. the real level host (`player-host/7`, the frozen route, the current role prompt) runs the pass.
 
 The probe never touches a game or a live session, and every output is labelled `engineering-probe`: a measure of
 whether the interface can be called correctly on the route, never evidence about play. The provider credential
@@ -26,7 +26,7 @@ cost, and every request without reported usage at a per-request bound: `--max-re
 when that is below one, so the cap holds whenever no request is dearer than that. Killing a running host when its charge would pass the remaining cap is only a
 backstop for a request that cost more than the bound.
 
-Inputs. The route must already be `player-host/6` (a conformance package's selected route included); nothing is
+Inputs. The route must already be `player-host/7` (a conformance package's selected route included); nothing is
 normalized or defaulted. The thresholds come from the required `--thresholds` file. A paid run needs a clean
 checkout, and the report records the source commit and the digests of every input it read.
 """
@@ -155,8 +155,8 @@ def recorded_passes(session: Path) -> list[dict]:
     finally:
         database.close()
     manifest = json.loads((session / 'manifest.json').read_text())
-    if manifest.get('schema') != 'campaign-run/5':
-        raise ValueError(f'{session.name}: the recorded session is {manifest.get("schema")!r}, not campaign-run/5; it is not converted')
+    if manifest.get('schema') != 'campaign-run/6':
+        raise ValueError(f'{session.name}: the recorded session is {manifest.get("schema")!r}, not campaign-run/6; it is not converted')
     store = manifest.get('player_store')
     passes, writes = [], 0
     for actor_directory in sorted((session / 'actors').glob('[0-9][0-9][0-9]')):
@@ -269,7 +269,7 @@ def build_replay(recorded: dict, directory: Path, level: dict) -> dict:
 def load_route(path: Path, max_requests: int, tag: str | None) -> dict:
     """The frozen route as a level-pass route, exactly as the campaign driver derives it from its actor route.
 
-    The route (or a conformance package's selected route) must already be `player-host/6`: an older schema is
+    The route (or a conformance package's selected route) must already be `player-host/7`: an older schema is
     rejected, never normalized, and no field is defaulted. Only the role, the intent tail and the pass allowance are set.
     """
     value = json.loads(path.read_text())
@@ -278,8 +278,8 @@ def load_route(path: Path, max_requests: int, tag: str | None) -> dict:
         if len(routes) != 1:
             raise ValueError('Select exactly one conformance route with --route-tag')
         value = routes[0]['configuration']
-    if value.get('schema') != 'player-host/6':
-        raise ValueError(f'The route must be player-host/6, not {value.get("schema")!r}; it is not converted')
+    if value.get('schema') != 'player-host/7':
+        raise ValueError(f'The route must be player-host/7, not {value.get("schema")!r}; it is not converted')
     cost = value.get('model', {}).get('cost')
     if not isinstance(cost, dict) or not any(isinstance(v, (int, float)) and v > 0 for v in cost.values()):
         raise ValueError('The route\'s configured model cost is all zero or missing; the spend cap could not measure it')
@@ -555,7 +555,7 @@ def probe(sessions: list[Path], route_path: Path, *, samples: int, max_usd: floa
     report = dict(schema='level-probe/1', label=LABEL, excluded_from_evidence=True,
         scope='Replays recorded level-pass contexts against a read-only replay of the recorded session. It measures whether '
               'the level interface can be called correctly on the route; it says nothing about play, intent quality or outcomes.',
-        interface=dict(host='player-host/6', role_prompt=LEVEL_ROLE.name, role_sha256=hashlib.sha256(role.encode()).hexdigest()),
+        interface=dict(host='player-host/7', role_prompt=LEVEL_ROLE.name, role_sha256=hashlib.sha256(role.encode()).hexdigest()),
         route=dict(model=route['model']['id'], provider=route['model']['provider'], effort=effort,
                    file_sha256=sha256_file(route_path)),
         source=dict(commit=commit, clean=True),

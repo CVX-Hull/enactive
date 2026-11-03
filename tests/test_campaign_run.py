@@ -33,7 +33,7 @@ def package(root,level=None,route_requests=10):
     for name in ('native','library','options','interpreter','adapter'):(root/name).write_bytes(name.encode())
     tail=level['intent_tail_bytes'] if level and level['mode']=='live' else None
     values={
-        'route.json':dict(schema='player-host/6',role='actor',intent_tail_bytes=tail,service_tier='default',
+        'route.json':dict(schema='player-host/7',role='actor',intent_tail_bytes=tail,service_tier='default',
             max_requests=route_requests,max_context_images=8,context_image_block=1,model=dict(id='fixture',
             contextWindow=1000,maxTokens=100,cost=dict(input=.45,cacheRead=.45,cacheWrite=.45,output=1.8))),
         'mcp-template.json':configuration('@ACTOR_CONFIG@',profile='narrowed' if level else 'flat'),
@@ -44,7 +44,7 @@ def package(root,level=None,route_requests=10):
         values['level-role.txt']=packages.LEVEL_ROLE.read_text();values['episode-role.txt']=packages.EPISODE_ROLE.read_text()
     for name,value in values.items():(directory/name).write_text(value if isinstance(value,str) else json.dumps(value))
     artifact=lambda p:dict(path=str(p),sha256=hashlib.sha256(p.read_bytes()).hexdigest())
-    profile=dict(schema='campaign-run/5',session='a'*32,source_commit='f'*40,
+    profile=dict(schema='campaign-run/6',session='a'*32,source_commit='f'*40,
         actor_profile='narrowed' if level else 'flat',level=level,
         files={name:artifact(directory/name)['sha256'] for name in values},
         initial_files={str(root/'options'):artifact(root/'options')['sha256']},
@@ -92,7 +92,7 @@ def test_only_selected_fresh_package_is_read(tmp_path):
 def test_level_package_freezes_its_role_profile_and_partition(tmp_path,mode):
     directory,profile=package(tmp_path,dict(LEVEL,mode=mode),route_requests=6)
     frozen=validate(directory,tmp_path)[0]
-    assert frozen['level']['mode']==mode and frozen['schema']=='campaign-run/5'
+    assert frozen['level']['mode']==mode and frozen['schema']=='campaign-run/6'
     # theta is frozen by value and by the digest of its fitting; the recorder has its own partition.
     assert frozen['level']['theta']==0.1251514705882353 and len(frozen['level']['theta_fitting_sha256'])==64
     assert frozen['level']['recorder']['max_http_attempts']==2
@@ -137,7 +137,7 @@ def test_invalid_level_package_never_launches(tmp_path,fault,expected):
     if fault=='live_without_tail':refreeze('route.json',json.dumps(dict(route,intent_tail_bytes=None)))
     if fault=='over_cap':refreeze('route.json',json.dumps(dict(route,max_requests=7)))
     if fault=='fractions':profile['level']['budget_fractions']=[.5,.25]
-    if fault=='previous':profile['schema']='campaign-run/4'
+    if fault=='previous':profile['schema']='campaign-run/5'
     if fault=='missing_episode_role':profile['files'].pop('episode-role.txt')
     if fault=='episode_role_text':refreeze('episode-role.txt','Record whatever looks useful.')
     if fault=='v3_role_text':refreeze('level-role.txt',(tmp_path/'v3').read_text())

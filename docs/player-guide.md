@@ -10,7 +10,7 @@ Read this guide, your frozen assignment and the actual current tool schema.
 You own every game interpretation, tactic, save/load choice and outcome claim.
 Use actual images; the harness supplies no game phase, item, turn, inventory,
 identity or success predicate. Do not search engineering history to reconstruct
-routine context. Your explicit memory/context tools are optional aids.
+routine context. Your actual tool schema declares the capabilities available to your role.
 
 ## Play from observed effects
 
@@ -40,17 +40,9 @@ harness stop rule or permission to replay uncertain input.
 
 ## Calls and returned evidence
 
-| Tool | Use and consequence |
-| --- | --- |
-| `computer_observe` | Capture actual target PNG and mechanical source metadata. Identical pixels are valid. |
-| `computer_input` | Submit 1..32 basic key/text/click/wait actions. It returns original receipts and a capture when available. |
-| `computer_result` | Collect an original mechanical operation ID; never repeats input. |
-| `computer_stop` | Permanently stop further automation. It does not save, quit or permit another actor. |
-| `player_source` | Read exact retained PNG by source ID, including explicitly remembered prior-session evidence. |
-| `player_memory_append/read/query/context` | Store or retrieve fallible claims, Work, decisions, procedures, corrections and candidate advice with sources/support. |
-| `player_program_save/read/run` | Retain immutable JavaScript lineage and run a selected bounded local program through the same basic-control port. |
-| `player_result` | Collect an original memory/program authoring or program-run request after lost transport. |
-| `player_handoff` | Seal this actor; it takes no arguments and carries no summary or knowledge snapshot. Original limits remain. |
+Use the supplied tool descriptions for calls, arguments and availability. Different roles have different
+capabilities; this shared guide grants none. A delivered operation is a mechanical receipt, and an issued
+source refers to an actual retained image. A permanent stop does not certify a save or normal game exit.
 
 The schema is authoritative for closed arguments. Keys use printable ASCII or
 `ENTER ESC UP DOWN LEFT RIGHT TAB BACKSPACE SPACE PAGEUP PAGEDOWN HOME END DELETE`,
@@ -80,7 +72,7 @@ restore authority by changing memory, source, actor or session.
 
 ## Optional knowledge and local programs
 
-Memory is your assertion, not engine truth. Link source IDs and support records;
+Remembered information is a fallible assertion, not engine truth. Where authoring is available, link source IDs and support records;
 state quantities, uncertainty and remaining Work explicitly. Corrections retain
 and supersede prior assertions without erasing them. Current sources are remembered
 lazily when explicitly referenced by a memory append or program save. A source

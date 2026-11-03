@@ -10,7 +10,7 @@ One [campaign custodian](../../tools/campaign_run.py) owns fresh mechanical targ
 store/server lifetime and final cleanup. The [driver](../../tools/campaign_player.py)
 owns the frozen [player host](../contracts/player-host.md)/MCP groups and at most one
 successor. The [package validator](../../tools/campaign_package.py) is authoritative
-for the closed `campaign-run/5` admission. No game-phase/identity admission or semantic mission
+for the closed `campaign-run/6` admission. No game-phase/identity admission or semantic mission
 service remains. With a subgoal level ([ADR-007](../decisions/007-player-subgoal-level.md)
 candidate), the driver also owns one episode cutter, one episode recorder and one level per actor, as described below.
 
@@ -84,10 +84,10 @@ after the actor. Once the actor host makes its first request:
   session that ends first settles what waits as `failed`. Every closed episode therefore ends with exactly one
   settle claim, whatever its outcome.
 - **Level.** The [wake rules](../../tools/level_schedule.py) wake it at start (only to revalidate what earlier
-  sessions left), after every settle, and at a budget fraction only after a settle; wakes that arrive during a pass
+  sessions left), after every settle, and independently at the 25/50/75% budget fractions; wakes that arrive during a pass
   coalesce into one pass over the newest records. At push, under the application lock, the driver binds the position
   (the furthest end of any episode settled this session, whatever its outcome, or 0) and the current subgoal id, and
-  reads the episodes settled since its last pass, the `player-intent/2` object for the `level` audience (the
+  reads the episodes settled since its last pass, the `player-intent/3` object for the `level` audience (the
   subgoal with its derived status and stalled flag, and the top 10 recalled episodes) and the per-subgoal counts.
   Each pass is a finite `role: level` host under `actors/NNN/level/PPP/` with the profile `player_source` and the four
   terminal tools. A pass ends on its first `player_level_keep`, `player_level_replace` or `player_level_close` that
@@ -95,6 +95,15 @@ after the actor. Once the actor host makes its first request:
   (see the [host contract](../contracts/player-host.md#roles-and-the-intent-tail)); one that ends otherwise is a
   failed pass with its settled reason, for example `level-no-proposal`, `level-final-refusal` or `level-uncertain`
   (a lost terminal call, reconciled from the store).
+
+Each crossed fraction is consumed once; several crossed fractions coalesce to the latest. A fraction
+consideration with no episode delta, subgoal or ranked recall, or with at least S input operations
+already beyond its settled bound, releases its binding without launching a host. The driver records
+it in `wake_skips` (reason, skip, position, binding_index, inputs_since, staleness_inputs,
+actor_attempts, settled_episodes). It neither spends a pass nor advances the episode cursor. A skip
+is not successful revalidation; a later settle can still wake a real pass. The application's binding
+index includes skipped bindings, whereas the driver's pass index and pass denominators include only
+launched hosts. S counts input operations, including a multi-key operation as one operation.
 
 The level's stdin is plain text (`input.txt`): the frozen role prompt, the actor's brief, the episodes settled since its
 last pass, the subgoal with its derived status and stalled flag, the counts and the recall, and mechanical wake facts.
@@ -116,7 +125,7 @@ launches. The custodian appends per-call lock wait and hold times to `call-timin
 the source store holds 256 MiB and evicts nothing, so the next session on it would fail to remember again and end
 its lineage the same way. Free or replace the store first, or start a fresh one.
 
-`route.json` uses current `player-host/6` (role `actor`) with text/image input and explicit
+`route.json` uses current `player-host/7` (role `actor`) with text/image input and explicit
 provider/effort/price metadata and image peak and block, chosen against the
 provider's image limit. The selected route is OpenRouter /
 an explicitly pinned provider / DeepSeek Flash1017 medium, default service tier, no fallback.
@@ -173,7 +182,7 @@ the actual bytes, for example `shasum -a 256 SELECTED_FILE`; preserve those byte
 
 ```json
 {
-  "schema": "campaign-run/5",
+  "schema": "campaign-run/6",
   "session": "NEW_32_LOWERCASE_HEX_ID",
   "source_commit": "EXACT_40_HEX_CLEAN_HEAD",
   "files": {
@@ -309,7 +318,7 @@ estimates and conservative reservations are not invoices. Unknown trace accounti
 charges the allocated attempts. `host_completed_unassessed` means only successful
 host completion; missing normal native exit becomes an incomplete outcome.
 No receipt alone accepts gameplay. Preserve failures and unrun lanes.
-The `player-driver/6` disposition embedded in it reports, per actor, a `level` object with the level lane
+The `player-driver/7` disposition embedded in it reports, per actor, a `level` object with the level lane
 (`commits` with `keeps`, `replaces` and `closes`, `discards`, `abstains` with `abstain_codes` and `start_abstains`,
 `failed_passes`, `final_refusals`, `uncertain_terminals` with their reconciliation, every pass's settled reason and
 bound), the recorder lane (`records`, `abstains` by code, `failed_passes`, `final_refusals`), `episodes` (the cuts by

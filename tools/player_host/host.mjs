@@ -59,7 +59,7 @@ function bounded(value) {
 export function validateConfiguration(configuration, selectedModel, effort) {
   bounded(configuration);
   closed(configuration, ['schema', 'role', 'intent_tail_bytes', 'model', 'api_key_env', 'max_requests', 'max_context_images', 'context_image_block', 'request_timeout_seconds', 'service_tier']);
-  requireThat(configuration.schema === 'player-host/6');
+  requireThat(configuration.schema === 'player-host/7');
   // An actor may carry the intent tail, whose fixed allocation is the one bound of INTENT_TAIL_BYTES; a level or a recorder never does.
   requireThat(['actor', 'level', 'recorder'].includes(configuration.role));
   requireThat(configuration.intent_tail_bytes === null
@@ -336,7 +336,7 @@ export function fitPart(value, budget) {
 
 function intentShape(value) {
   const valid = condition => requireThat(condition, 'invalid-intent');
-  valid(object(value) && value.schema === 'player-intent/2' && value.audience === 'tail' && object(value.recall) && Array.isArray(value.recall.items));
+  valid(object(value) && value.schema === 'player-intent/3' && value.audience === 'tail' && object(value.recall) && Array.isArray(value.recall.items));
   if (value.subgoal !== null) {
     const goal = value.subgoal;
     valid(object(goal) && text(goal.record_id) && typeof goal.text === 'string' && Array.isArray(goal.expected_observations)
@@ -421,7 +421,7 @@ function recallLine(item) {
   return {text:(chosen[0] + fitted.text).trimEnd(), omitted_bytes:fitted.omitted_bytes + chosen[1]};
 }
 
-/** The request-only intent tail from one `player-intent/2` value; null means the read failed.
+/** The request-only intent tail from one `player-intent/3` value; null means the read failed.
  *
  * The allocation is fixed at INTENT_TAIL_BYTES: the intent label, then a subgoal line, an observations line and a metadata
  * line, then the recall label and up to RECALL_LINES lines, each part within TAIL_BUDGETS. A part over its budget is cut inside
@@ -472,7 +472,7 @@ const recordIds = value => Array.isArray(value.records) ? value.records.map(r =>
  * `subgoal_id` is the subgoal bound at push and `derived` its `{observations, stalled}` after the call (null with no subgoal). */
 export function levelCommitEvent(result) {
   const value = levelResult(result);
-  if (!object(value) || value.schema !== 'player-level-commit/4' || !['committed', 'discarded'].includes(value.status)
+  if (!object(value) || value.schema !== 'player-level-commit/5' || !['committed', 'discarded'].includes(value.status)
       || !['keep', 'replace', 'close'].includes(value.action)) return null;
   return {type:value.status === 'committed' ? 'level-commit' : 'level-discard', action:value.action, reason:value.reason,
     position:value.position, inputs_since:value.inputs_since, staleness_inputs:value.staleness_inputs,
@@ -492,7 +492,7 @@ export function uncertainEvent(result, prefix) {
 /** Level telemetry from one valid `player_level_abstain` result; it ends the pass with nothing written. */
 export function levelAbstainEvent(result) {
   const value = levelResult(result);
-  if (!object(value) || value.schema !== 'player-level-abstain/2' || value.status !== 'abstained'
+  if (!object(value) || value.schema !== 'player-level-abstain/3' || value.status !== 'abstained'
       || !text(value.reason_code) || !text(value.reason)) return null;
   return {type:'level-abstain', reason_code:value.reason_code, reason:value.reason};
 }
@@ -504,7 +504,7 @@ const episodeFields = value => ({first_position:value.first_position, last_posit
  * `observations` and `stalled` are the derived state after the record (null with no subgoal). */
 export function episodeRecordEvent(result) {
   const value = levelResult(result);
-  if (!object(value) || value.schema !== 'player-episode-record/1' || value.status !== 'recorded' || value.settled !== 'recorded') return null;
+  if (!object(value) || value.schema !== 'player-episode-record/2' || value.status !== 'recorded' || value.settled !== 'recorded') return null;
   return {type:'episode-record', ...episodeFields(value), counted:value.counted === true, closed:value.closed === true,
     observations:Array.isArray(value.observations) ? value.observations : null, stalled:typeof value.stalled === 'boolean' ? value.stalled : null};
 }
@@ -513,7 +513,7 @@ export function episodeRecordEvent(result) {
  * The code and reason are the call's own arguments, which the receipt does not repeat. */
 export function episodeAbstainEvent(result, args) {
   const value = levelResult(result);
-  if (!object(value) || value.schema !== 'player-episode-abstain/1' || value.status !== 'abstained' || value.settled !== 'abstained'
+  if (!object(value) || value.schema !== 'player-episode-abstain/2' || value.status !== 'abstained' || value.settled !== 'abstained'
       || !object(args) || !text(args.reason_code) || !text(args.reason)) return null;
   return {type:'episode-abstain', ...episodeFields(value), reason_code:args.reason_code, reason:args.reason};
 }
@@ -795,7 +795,7 @@ export async function runHost(options) {
             try {
               const result = await client.callTool('player_intent', {}, {signal:stopped.signal, timeoutMs:mcp.tool_timeout_sec * 1000});
               const parsed = JSON.parse(result.content?.find(part => part.type === 'text')?.text);
-              if (result.isError !== true && object(parsed) && parsed.schema === 'player-intent/2') value = parsed;
+              if (result.isError !== true && object(parsed) && parsed.schema === 'player-intent/3') value = parsed;
             } catch { value = null; }
             if (fatal) return messages;
             let tail;

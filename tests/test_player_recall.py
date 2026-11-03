@@ -1,4 +1,4 @@
-"""Recall ranking (BM25 x confidence x residual), exploration, trust and `player-intent/2`.
+"""Recall ranking (BM25 x confidence x residual), exploration, trust and `player-intent/3`.
 
 The ranking module is pure; the intent tests use the actual composition over the receiver double.
 """
@@ -161,7 +161,7 @@ def settle_earlier(app, memory_actor, index, attempted, *, session='z' * 32, con
 
 def test_intent_v2_carries_the_subgoal_with_derived_status_stalled_flag_confidence_age_and_id(level):
     app, channel, actor, reader, recorder = level
-    assert call(app, actor, 'player_intent', {})['schema'] == 'player-intent/2'
+    assert call(app, actor, 'player_intent', {})['schema'] == 'player-intent/3'
     empty = app.intent(actor['actor_id'])
     assert empty['subgoal'] is None and empty['age'] is None and empty['grants_authority'] is False
     assert empty['recall'] == dict(basis='recent', items=[]) and empty['audience'] == 'tail'
@@ -316,7 +316,7 @@ def test_intent_without_any_reader_reports_no_derived_status(tmp_path):
     try:
         actor = app.add_actor('narrowed')
         put(memory, actor['actor_id'], dict(schema='player-record/1', kind='work', text='A goal', data=dict(
-            level='subgoal', level_contract='player-level/4', position=0, session=runtime.session,
+            level='subgoal', level_contract='player-level/5', position=0, session=runtime.session,
             actor_id=actor['actor_id'], expected_observations=['x'], status='open', confidence=.5), sources=[],
             supports=[], supersedes=None, applicability=None, program_id=None))
         subgoal = app.intent(actor['actor_id'])['subgoal']

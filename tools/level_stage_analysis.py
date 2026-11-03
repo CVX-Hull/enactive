@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Mechanical analysis of a level-stage run set (`level-stage-analysis/5`): retained artifacts only, no provider, no game.
+"""Mechanical analysis of a level-stage run set (`level-stage-analysis/6`): retained artifacts only, no provider, no game.
 
     python -m tools.level_stage_analysis OUTPUT.json SESSION_DIR... --criteria CRITERIA.json [--store-template PATH]
 
 Reads, per included run, the retained artifacts of the current contracts and nothing else: `manifest.json`
-(`campaign-run/5`), `receipt.json` (`campaign-receipt/2` embedding `player-driver/6`), the one actor's
-`driver-receipt.json`, every level and recorder pass's `host.jsonl` (`player-host/6`, telemetry 2),
+(`campaign-run/6`), `receipt.json` (`campaign-receipt/2` embedding `player-driver/7`), the one actor's
+`driver-receipt.json`, every level and recorder pass's `host.jsonl` (`player-host/7`, telemetry 2),
 `call-timing.jsonl`, the session store (`computer-session/3`, read-only) and, when `--store-template` names it
 (a path containing `{run}`), the run's retained player store (`player-memory/1`). Any other version is rejected with an
 `unsupported` error and no output file. Retained runs of earlier interfaces are not converted; the frozen analyses that
@@ -67,12 +67,14 @@ if __package__ in (None, ''):
     sys.path.insert(0, str(ROOT))
 
 from harness.computer.protocol import ControlError, read_json
-from harness.player.contracts import ABSTAIN_CODES, EPISODE_ABSTAIN_CODES, EPISODE_TOOLS, LEVEL_CONTRACT, LEVEL_TERMINAL_TOOLS, SOFTWARE_SETTLES
+from harness.player.contracts import (ABSTAIN_CODES, EPISODE_ABSTAIN_CODES, EPISODE_TOOLS, LEVEL_CONTRACT,
+    LEVEL_TERMINAL_TOOLS, SOFTWARE_SETTLES, LEVEL_COMMIT_SCHEMA, LEVEL_ABSTAIN_SCHEMA,
+    EPISODE_RECORD_SCHEMA, EPISODE_ABSTAIN_SCHEMA, EPISODE_CONTRACT)
 from harness.player.episodes import episode as episode_claim
 from tools.control_analysis import session_database
 from tools.evidence_stats import cluster_bootstrap, quantile, ratio, summary
 
-SCHEMA = 'level-stage-analysis/5'
+SCHEMA = 'level-stage-analysis/6'
 CRITERIA_SCHEMA = 'level-stage-criteria/1'
 CRITERIA_KEYS = ('min_decided', 'min_auditable_records', 'min_commit_rate', 'max_commit_inputs_since_p95',
                  'bootstrap_seed', 'bootstrap_resamples', 'breaker_refusals', 'final_report_grace_seconds',
@@ -80,7 +82,7 @@ CRITERIA_KEYS = ('min_decided', 'min_auditable_records', 'min_commit_rate', 'max
 # The settled reasons a stage may treat as provider-side; which of them it does is its frozen choice.
 PROVIDER_REASONS = ('provider-error', 'request-timeout')
 MANIFEST_SCHEMA, RECEIPT_SCHEMA, DRIVER_SCHEMA, HOST_SCHEMA, TELEMETRY_VERSION = (
-    'campaign-run/5', 'campaign-receipt/2', 'player-driver/6', 'player-host/6', 2)
+    'campaign-run/6', 'campaign-receipt/2', 'player-driver/7', 'player-host/7', 2)
 # harness/application.py `level_call`: the only discard reason that is the run's end rather than the level's doing.
 CENSORED = ('Run stopped or fenced since the pass began',)
 ATTEMPTS = ('level-commit', 'level-discard')
@@ -92,7 +94,7 @@ ACTIONS = ('keep', 'replace', 'close')
 COMMIT_TOOLS = tuple(f'player_level_{a}' for a in ACTIONS)
 PASS_CLASSES = ('committed', 'discarded_only', 'abstained', 'censored', 'failed', 'uncertain')
 LEVEL_RECEIPT_FIELDS = ('commits', 'keeps', 'replaces', 'closes', 'discards', 'abstains', 'abstain_codes', 'start_abstains',
-                        'failed_passes', 'final_refusals', 'uncertain_terminals', 'uncertain_committed', 'uncertain_absent', 'passes')
+                        'failed_passes', 'final_refusals', 'uncertain_terminals', 'uncertain_committed', 'uncertain_absent', 'passes', 'wake_skips')
 RECORDER_RECEIPT_FIELDS = ('records', 'abstains', 'abstain_codes', 'failed_passes', 'final_refusals', 'uncertain_terminals',
                            'uncertain_committed', 'uncertain_absent', 'passes')
 # Refusal circuit breaker: a pass-ending role's terminal tools, its success events and its lost-call field.
@@ -198,7 +200,7 @@ def refusal_keys(rows: list[dict], tools=LEVEL_TERMINAL_TOOLS) -> list[tuple[str
 
 
 def lane_passes(driver_record: dict, role: str) -> list[dict]:
-    """The pass records of one lane in an actor's `player-driver/6` record (`level.<role>.passes`)."""
+    """The pass records of one lane in an actor's `player-driver/7` record (`level.<role>.passes`)."""
     return (((driver_record.get('level') or {}).get(role) or {}).get('passes')) or []
 
 
@@ -328,6 +330,14 @@ def load_run(path: Path) -> tuple[dict, dict, dict, dict]:
     if not (isinstance(level, dict) and isinstance(recorder, dict) and set(LEVEL_RECEIPT_FIELDS) <= set(level)
             and set(RECORDER_RECEIPT_FIELDS) <= set(recorder)):
         raise UnsupportedTrace(f'{path.name}: the actor record lacks the {DRIVER_SCHEMA} level and recorder receipts')
+    skip_keys = {'reason', 'skip', 'position', 'binding_index', 'inputs_since', 'staleness_inputs',
+                 'actor_attempts', 'settled_episodes'}
+    if (not isinstance(level['wake_skips'], list) or any(not isinstance(s, dict) or set(s) != skip_keys
+            or not isinstance(s['reason'], str) or not s['reason'].startswith('budget-')
+            or s['skip'] not in ('no meaningful context', 'settled evidence bound already stale')
+            or any(type(s[k]) is not int or s[k] < 0 for k in skip_keys - {'reason', 'skip'})
+            for s in level['wake_skips'])):
+        raise UnsupportedTrace(f'{path.name}: invalid {DRIVER_SCHEMA} wake_skips')
     return manifest, receipt, actor, system
 
 
@@ -348,6 +358,21 @@ def store_rows(store: Path):
         service = db.execute('SELECT actor,tool,result,id FROM service_operations ORDER BY rowid').fetchall()
     finally:
         db.close()
+    schemas = dict.fromkeys(COMMIT_TOOLS, LEVEL_COMMIT_SCHEMA) | {
+        'player_level_abstain': LEVEL_ABSTAIN_SCHEMA, 'player_episode_record': EPISODE_RECORD_SCHEMA,
+        'player_episode_abstain': EPISODE_ABSTAIN_SCHEMA}
+    for _, tool, encoded, _ in service:
+        if tool not in schemas or encoded is None:
+            continue
+        result = json.loads(encoded)
+        if not isinstance(result, dict) or result.get('schema') != schemas[tool]:
+            found = result.get('schema') if isinstance(result, dict) else None
+            raise UnsupportedTrace(f'{store}: unsupported {tool} receipt {found!r}; expected {schemas[tool]}')
+    for document in docs:
+        data = document.get('data', {})
+        wanted = {'subgoal': LEVEL_CONTRACT, 'episode': EPISODE_CONTRACT}.get(data.get('level'))
+        if wanted is not None and data.get('level_contract') != wanted:
+            raise UnsupportedTrace(f'{store}: unsupported stored {data["level"]} contract {data.get("level_contract")!r}; expected {wanted}')
     return docs, service
 
 
@@ -494,7 +519,7 @@ def analyse_run(path: Path, store: Path | None = None) -> dict:
         staleness_inputs=manifest['level'].get('staleness_inputs'), actor_attempts=actor.get('attempts_charged'),
         level_attempts=level.get('attempts_charged'), recorder_attempts=recorder.get('attempts_charged'), actor_inputs=len(inputs),
         actor_input_interval_seconds=(inputs[-1] - inputs[0]) / (len(inputs) - 1) if len(inputs) > 1 else None,
-        passes=passes, commit_attempts=[dict(type=e['type'], action=e.get('action'), inputs_since=e['inputs_since'], reason=e['reason'])
+        passes=passes, wake_skips=level['wake_skips'], commit_attempts=[dict(type=e['type'], action=e.get('action'), inputs_since=e['inputs_since'], reason=e['reason'])
                                         for e in attempts] + reconciled_commits,
         abstentions=abstentions, trace_counts=counted, receipt_counts={k: level.get(k) for k in LEVEL_RECEIPT_FIELDS if k != 'passes'},
         receipt_failed_passes_settled_not_ok=level.get('failed_passes'), receipt_mismatches=mismatches,
@@ -626,6 +651,8 @@ def analyse(paths: list[Path], criteria: dict, store_template: str | None = None
         pooled[name + '_ci95'] = boot['interval']
         pooled[name + '_ci95_defined_resamples'] = boot['defined_resamples']
     pooled.update(
+        fraction_wake_skips=dict(Counter(s['skip'] for r in runs for s in r['wake_skips'])),
+        fraction_passes=sum(p['reason'].startswith('budget-') for r in runs for p in r['passes']),
         commit_rate_lower_bound=ratio(classes, lambda c: c['commits'], lambda c: c['decided'] + c['uncertain_absent_commit_tool']),
         commits_by_action=dict(keep=totals['commits_keep'], replace=totals['commits_replace'], close=totals['commits_close'], other=totals['commits_other_action']),
         abstain_codes=dict(Counter(a['reason_code'] for r in runs for a in r['abstentions'])),

@@ -50,7 +50,7 @@ def test_a_record_settles_the_episode_with_one_claim_and_the_recorder_as_actor(l
         observation_status=['seen'], residual='A bell rang', changed='The door is open (see frame)', confidence=.8,
         sources=[cited]))
     (claim, closure) = receipt['records']
-    assert receipt['schema'] == 'player-episode-record/1' and receipt['status'] == 'recorded'
+    assert receipt['schema'] == 'player-episode-record/2' and receipt['status'] == 'recorded'
     assert (receipt['first_position'], receipt['last_position'], receipt['subgoal_id']) == (first, first + 1, work['id'])
     assert receipt['counted'] is True and receipt['closed'] is True and receipt['observations'] == ['seen']
     assert claim['kind'] == 'claim' and claim['actor_id'] == recorder['actor_id'] and claim['sources'] == [cited]
@@ -158,7 +158,7 @@ def test_abstain_settles_with_a_claim_that_has_no_marks(level):
     app.bind_episode(recorder['actor_id'], first_position=end + 1, last_position=end + 1, subgoal_id=work['id'])
     receipt = call(app, recorder, EPISODE_ABSTAIN, dict(reason_code='unreadable_frames', reason='Black frames', sources=[]))
     (claim,) = receipt['records']
-    assert receipt['schema'] == 'player-episode-abstain/1' and receipt['status'] == 'abstained'
+    assert receipt['schema'] == 'player-episode-abstain/2' and receipt['status'] == 'abstained'
     assert receipt['counted'] is False and receipt['closed'] is False
     assert claim['data'] == dict(level='episode', level_contract='player-episode/1', settled='abstained',
         writer='recorder', session=app.runtime.session, actor_id=actor['actor_id'], first_position=end + 1,
@@ -255,7 +255,7 @@ def test_bind_episode_refuses_bad_ranges_and_unknown_subgoals(level):
         app.bind_episode(rid, first_position=settled + 1, last_position=count, subgoal_id='nope')
     other = app.memory.append(actor['actor_id'], dict(schema='player-record/1', kind='work', text='x', data={},
         sources=[], supports=[], supersedes=None, applicability=None, program_id=None))
-    with pytest.raises(PlayerError, match='not a player-level/4 level subgoal'):
+    with pytest.raises(PlayerError, match='not a player-level/5 level subgoal'):
         app.bind_episode(rid, first_position=settled + 1, last_position=count, subgoal_id=other['id'])
     with pytest.raises(ControlError, match='Not a recorder reader'):
         app.bind_episode(reader['actor_id'], first_position=settled + 1, last_position=count, subgoal_id=None)
@@ -369,7 +369,7 @@ def test_a_retained_recorder_identity_collects_without_resettling(level):
 
 # The custodian's reserved data: data.level (any value), data.level_contract, data.writer, data.by == "software".
 FORGERIES = [dict(level='episode'), dict(level='subgoal'), dict(level='anything'), dict(writer='recorder'),
-             dict(writer='software'), dict(level_contract='player-level/4'), dict(level_contract='player-episode/1'),
+             dict(writer='software'), dict(level_contract='player-level/5'), dict(level_contract='player-episode/1'),
              dict(by='software'), dict(level='episode', writer='x', level_contract='player-episode/1', settled='recorded')]
 
 
@@ -521,13 +521,13 @@ def test_a_pass_stalls_after_n_settles_with_nothing_newly_seen_and_progress_rese
     for kind in ('failed', 'dropped'):
         settle_without_record(kind)
         assert not stalled()
-    # An abstained settle is the third settle with nothing newly seen: N consecutive settles stall it.
+    # Missing evidence never advances the semantic stall streak, even when there are N missing episodes.
     settle_without_record('abstained')
-    assert stalled() and app.intent(actor['actor_id'])['subgoal']['counts'] == dict(
+    assert not stalled() and app.intent(actor['actor_id'])['subgoal']['counts'] == dict(
         episodes=4, recorded=1, abstained=1, failed=1, dropped=1, counted=1, seen=1, contradicted=0)
     # A recorded settle below the floor marks nothing, so it neither resets the run nor counts as seen.
     episode(app, actor, recorder, ['seen', 'seen', 'not_yet'], confidence=C - .1)
-    assert stalled() and marks_of(app, actor) == ['seen', 'not_yet', 'not_yet']
+    assert not stalled() and marks_of(app, actor) == ['seen', 'not_yet', 'not_yet']
     # A counted mark of b is newly seen: the run restarts.
     episode(app, actor, recorder, ['not_yet', 'seen', 'not_yet'], confidence=C)
     assert not stalled()
@@ -537,6 +537,8 @@ def test_a_below_floor_record_does_not_end_a_run_before_it_stalls(level):
     app, channel, actor, reader, recorder = level
     with_subgoal(app, actor, reader, recorder, observations=['a', 'b'])
     episode(app, actor, recorder, ['seen', 'not_yet'])
+    for _ in range(N - 1):
+        episode(app, actor, recorder, ['not_yet', 'not_yet'])
     for settled in ('failed', 'dropped'):
         act(app, actor)
         end, count = app._settled_end(actor['actor_id']), total(app, actor)
@@ -544,6 +546,9 @@ def test_a_below_floor_record_does_not_end_a_run_before_it_stalls(level):
                            subgoal_id=current_id(app), settled=settled, reason='r')
     assert not app.intent(actor['actor_id'])['subgoal']['stalled']
     episode(app, actor, recorder, ['seen', 'seen'], confidence=C - .1)
+    assert not app.intent(actor['actor_id'])['subgoal']['stalled']
+    # Missing evidence neither advances nor resets the N-1 observed no-progress records.
+    episode(app, actor, recorder, ['not_yet', 'not_yet'])
     assert app.intent(actor['actor_id'])['subgoal']['stalled']
 
 
@@ -686,7 +691,7 @@ def test_closure_is_appended_in_the_records_transaction_with_the_recorder_as_act
     claim, closing = receipt['records']
     assert receipt['closed'] is True and receipt['observations'] == ['seen', 'seen']
     assert closing['kind'] == 'correction' and closing['supersedes'] == work['id'] and closing['actor_id'] == recorder['actor_id']
-    assert closing['data'] == dict(level='subgoal', level_contract='player-level/4', actor_id=actor['actor_id'],
+    assert closing['data'] == dict(level='subgoal', level_contract='player-level/5', actor_id=actor['actor_id'],
         session=app.runtime.session, position=end + 1, outcome='achieved', by='software')
     assert closing['supports'] == [first['records'][0]['id'], claim['id']]
     assert closing['sources'] == cited and app.level_subgoals() == []
@@ -805,15 +810,14 @@ def test_stall_and_status_derive_across_sessions_from_one_store(tmp_path):
         carried = app2.intent(actor2['actor_id'])['subgoal']
         assert carried['record_id'] == work['id'] and carried['counts']['episodes'] == 3
         assert [o['status'] for o in carried['expected_observations']] == ['seen', 'not_yet']
-        # One more non-progress settle in session b: the run since the last progress is now N across the sessions.
+        # A dropped episode in session b is neutral across sessions too; it does not manufacture a stall.
         act(app2, actor2)
         app2.settle_episode(recorder2['actor_id'], first_position=1, last_position=1, subgoal_id=work['id'],
                             settled='dropped', reason='backlog')
-        assert app2.intent(actor2['actor_id'])['subgoal']['stalled'] is True
-        assert app.intent(actor['actor_id'])['subgoal']['stalled'] is True
+        assert app2.intent(actor2['actor_id'])['subgoal']['stalled'] is False
+        assert app.intent(actor['actor_id'])['subgoal']['stalled'] is False
         bind(app2, reader2)
-        with pytest.raises(PlayerError, match='is stalled'):
-            call(app2, reader2, KEEP, keep())
+        assert call(app2, reader2, KEEP, keep())['status'] == 'committed'
         assert app2.intent(actor2['actor_id'])['age']['same_session'] is False
         # Session b's binding is its own episodes only; the earlier session's settles do not bind.
         assert app2.bind_level(reader2['actor_id'])['position'] == 1
@@ -863,9 +867,9 @@ def test_derive_is_a_pure_function_of_the_trusted_claims():
         return trusted_episode(dict(kind='claim', id='c', data=data, sources=[], created_wall=1.))
     result = derive(work, [view('recorded', ['seen', 'not_yet']), view('failed'), view('recorded', ['seen', 'seen'], subgoal='z'),
                            view('dropped')], stall_settles=2, floor=.5)
-    assert result['stalled'] is True and result['no_progress_settles'] == 2 and result['counts']['episodes'] == 3
+    assert result['stalled'] is False and result['no_progress_settles'] == 0 and result['counts']['episodes'] == 3
     assert [o['status'] for o in result['observations']] == ['seen', 'not_yet'] and result['all_seen'] is False
     assert derive(work, [], stall_settles=1, floor=.5)['stalled'] is False
-    # A mark array of the wrong length is a settle that counts as nothing.
+    # A malformed-size mark vector is missing evidence, not observed no-progress.
     short = derive(work, [view('recorded', ['seen'])], stall_settles=1, floor=.5)
-    assert short['stalled'] is True and short['counts']['counted'] == 0
+    assert short['stalled'] is False and short['counts']['counted'] == 0

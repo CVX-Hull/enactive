@@ -1,7 +1,7 @@
 # Bounded Pi player host
 
 This private package is the Pi-based adapter that implements the host-neutral
-[player-host contract](../../docs/contracts/player-host.md) (`player-host/6`);
+[player-host contract](../../docs/contracts/player-host.md) (`player-host/7`);
 the campaign driver selects it only through the package's frozen `host.argv`.
 The [current component](../../docs/components/player-interface.md) owns the player interface;
 [`069-controllable-player-host.md`](../../docs/changes/069-controllable-player-host.md)
@@ -68,14 +68,14 @@ below, no fatal failure latch, successful owned MCP closure, and a successful
 final-file write. `runHost(options)` is the
 programmatic seam; tests inject `fetch` there. No fake-provider CLI is exposed.
 
-The closed route has exactly `schema: "player-host/6"`, `role` (`actor`, `level` or `recorder`),
+The closed route has exactly `schema: "player-host/7"`, `role` (`actor`, `level` or `recorder`),
 `intent_tail_bytes` (null, or exactly 1024 for an actor), `model`,
 `api_key_env`, `max_requests`, `request_timeout_seconds`, `service_tier`, the required positive
 integer `max_context_images` and the required integer `context_image_block`
 (1 ≤ block ≤ `max_context_images`). `pi-player-host/1` through `/5`, `player-host/1` through `/5` and
 missing/invalid fields are rejected. An actor tail calls the host-internal `player_intent`
 tool before each request, which must be discovered and never enabled for the model, and formats
-`player-intent/2` into the fixed 1,024-byte allocation (see below); a
+`player-intent/3` into the fixed 1,024-byte allocation (see below); a
 level host sends `tool_choice: "required"`, emits `level-pass`, `level-commit`,
 `level-discard`, `level-abstain` and `level-reserved-request`, offers only the four terminal
 tools on its last two requests, ends its pass on a keep, replace or close (commit or discard) or a
@@ -98,7 +98,7 @@ per frame, a marker line `Frame <id> (<role>):` and the image into its first use
 host cannot read (an error, or no image) settles `frame-read-failed` before any request. A malformed
 document settles `invalid-pass-input` before `host-start`. A level host's prompt stays plain text.
 
-**The `player-intent/2` tail.** The tail is the intent label, a subgoal line (≤ 160 bytes), an
+**The `player-intent/3` tail.** The tail is the intent label, a subgoal line (≤ 160 bytes), an
 observations line with each observation's one-word status (≤ 200), a metadata line with age, confidence
 and the subgoal's 8-character id (≤ 50), then the recall label and up to three recall lines (≤ 120 each,
 each with one full source id, the outcome as `seen x/y`, and the attempt text). The labels (129 and 118

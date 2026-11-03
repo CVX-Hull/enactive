@@ -68,7 +68,7 @@ def test_a_consistent_run_is_classified_and_pooled(tmp_path):
     run = make_run(tmp_path, 'run-1', mixed_level(), [recorder_pass(1, 'record'), recorder_pass(2, 'abstain', code='unreadable_frames')])
     value = lsa.analyse([run], lsa.load_criteria(criteria_file(tmp_path)))
     pooled, decision = value['pooled'], value['decision_inputs']
-    assert value['schema'] == 'level-stage-analysis/5'
+    assert value['schema'] == 'level-stage-analysis/6'
     assert value['runs'][0]['receipt_mismatches'] == [] and decision['counts_consistent'] is True
     # Two trace commits and one lost call reconciled as committed; one non-censored discard is a decided failure.
     assert (pooled['commits'], pooled['failures'], pooled['censored'], pooled['decided']) == (3, 1, 1, 4)
@@ -95,6 +95,17 @@ def test_the_decision_inputs_follow_the_frozen_criteria_not_the_code(tmp_path):
     assert (base['E_decided_ok'], base['R1_commit_rate_ok'], base['R2_coupling_ok']) == (True, True, True)
     assert (strict['E_decided_ok'], strict['R1_commit_rate_ok'], strict['R2_coupling_ok'], strict['R2_vacuous']) == (False, False, False, False)
     assert strict['E_minimum_data'] is False
+
+
+def test_fraction_skips_are_reported_without_becoming_launched_passes(tmp_path):
+    run=make_run(tmp_path,'run-1',[level_pass(1,'commit',action='replace')])
+    skip=dict(reason='budget-0.5',skip='settled evidence bound already stale',position=0,binding_index=2,
+              inputs_since=10,staleness_inputs=10,actor_attempts=50,settled_episodes=0)
+    edit_actor(run,lambda actor:actor['level']['level']['wake_skips'].append(skip))
+    result=lsa.analyse([run],lsa.load_criteria(criteria_file(tmp_path)))
+    assert len(result['runs'][0]['passes'])==1 and result['runs'][0]['wake_skips']==[skip]
+    assert result['pooled']['passes']==1 and result['pooled']['fraction_passes']==0
+    assert result['pooled']['fraction_wake_skips']=={'settled evidence bound already stale':1}
 
 
 def test_the_receipt_check_lists_every_disagreement(tmp_path):
@@ -142,11 +153,11 @@ def test_an_unsupported_artifact_version_is_rejected(tmp_path, overrides, messag
         lsa.analyse_run(run)
 
 
-@pytest.mark.parametrize('schema,telemetry', [('player-host/5', 2), ('player-host/6', 1), ('pi-player-host/5', 2)])
+@pytest.mark.parametrize('schema,telemetry', [('player-host/5', 2), ('player-host/7', 1), ('pi-player-host/5', 2)])
 def test_an_unsupported_host_trace_is_rejected(tmp_path, schema, telemetry):
     run = make_run(tmp_path, 'run-1', [level_pass(1, 'commit')])
     trace = run / 'actors/001/level/001/host.jsonl'
-    trace.write_text(trace.read_text().replace('"player-host/6"', json.dumps(schema)).replace('"telemetry_version": 2', f'"telemetry_version": {telemetry}'))
+    trace.write_text(trace.read_text().replace('"player-host/7"', json.dumps(schema)).replace('"telemetry_version": 2', f'"telemetry_version": {telemetry}'))
     with pytest.raises(lsa.UnsupportedTrace, match='host trace'):
         lsa.analyse_run(run)
 
@@ -176,7 +187,7 @@ def test_two_actors_or_no_level_or_a_missing_lane_receipt_are_unsupported(tmp_pa
     with pytest.raises(lsa.UnsupportedTrace, match='exactly one'):
         lsa.analyse_run(run)
     run = make_run(tmp_path, 'nolevel', [level_pass(1, 'commit')])
-    (run / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/5', session=SESSION, level=None)))
+    (run / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/6', session=SESSION, level=None)))
     with pytest.raises(lsa.UnsupportedTrace, match='no level'):
         lsa.analyse_run(run)
     run = make_run(tmp_path, 'old', [level_pass(1, 'commit')])
@@ -279,6 +290,30 @@ def test_a_missing_or_unsupported_store_is_reported_not_trusted(tmp_path):
     db.close()
     with pytest.raises(lsa.UnsupportedTrace, match='player-memory/1'):
         lsa.analyse_run(run, stale)
+
+
+@pytest.mark.parametrize('tool,old', [('player_level_replace','player-level-commit/4'),
+                                     ('player_episode_record','player-episode-record/1')])
+def test_current_outer_run_refuses_a_prior_embedded_terminal_receipt(tmp_path,tool,old):
+    run = custody_run(tmp_path)
+    store = store_for(tmp_path)
+    with sqlite3.connect(store) as db:
+        identity, raw = db.execute('SELECT id,result FROM service_operations WHERE tool=? LIMIT 1',(tool,)).fetchone()
+        value=json.loads(raw); value['schema']=old
+        db.execute('UPDATE service_operations SET result=? WHERE id=?',(json.dumps(value),identity))
+    with pytest.raises(lsa.UnsupportedTrace, match='unsupported .* receipt'):
+        lsa.analyse_run(run,store)
+
+
+def test_current_outer_run_refuses_a_prior_stored_level_record(tmp_path):
+    run = custody_run(tmp_path)
+    store = store_for(tmp_path)
+    with sqlite3.connect(store) as db:
+        identity, raw = db.execute("SELECT id,document FROM records WHERE kind='work'").fetchone()
+        value=json.loads(raw); value['data']['level_contract']='player-level/4'
+        db.execute('UPDATE records SET document=? WHERE id=?',(json.dumps(value),identity))
+    with pytest.raises(lsa.UnsupportedTrace, match='unsupported stored subgoal contract'):
+        lsa.analyse_run(run,store)
 
 
 # ---------------------------------------------------------------- refusal circuit breaker
@@ -425,7 +460,7 @@ def test_the_real_driver_receipt_and_traces_are_read_without_a_disagreement(leve
     source.close()
     copy.close()
     (run / 'actors').symlink_to(root / 'actors')
-    (run / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/5', session=session, level=level_profile())))
+    (run / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/6', session=session, level=level_profile())))
     (run / 'receipt.json').write_text(json.dumps(dict(schema='campaign-receipt/2', session=session, outcome=result['outcome'], driver=result)))
     value = lsa.analyse([run], lsa.load_criteria(criteria_file(tmp_path)), str(root / 'player.sqlite3'))
     only = value['runs'][0]

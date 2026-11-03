@@ -35,12 +35,13 @@ def test_wakes_that_arrive_during_a_pass_coalesce_into_one():
     assert rules.due(settled=4, attempts=9, carried=0) is None
 
 
-def test_budget_fractions_name_a_wake_only_after_a_settle_and_fire_once():
+def test_budget_fractions_trigger_without_a_settle_and_fire_once():
     rules = schedule()
     rules.due(settled=0, attempts=0, carried=0)
-    # The fraction is crossed but nothing has settled since the last pass: no wake.
+    # A returned fraction is consumed even when the driver cannot use its evidence and records a skip.
+    assert rules.due(settled=0, attempts=30, carried=0) == 'budget-0.25'
     assert rules.due(settled=0, attempts=30, carried=0) is None
-    assert rules.due(settled=1, attempts=30, carried=0) == 'budget-0.25'
+    assert rules.due(settled=1, attempts=30, carried=0) == 'settle'
     assert rules.due(settled=2, attempts=40, carried=0) == 'settle'
     # One pass covers every fraction crossed since the last one.
     assert rules.due(settled=3, attempts=80, carried=0) == 'budget-0.75'
