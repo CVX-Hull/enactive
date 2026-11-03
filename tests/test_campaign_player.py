@@ -129,6 +129,14 @@ if route['role'] == 'actor':
         request()
         client.call('computer_input', dict(actions=[dict(type='key', key='x', modifiers=[])]))
         time.sleep(.3)
+    if HANDOFF:
+        # Exercise handoff with a completed level pass. Killing an in-flight
+        # reader here would instead test an unresolved monetary lease.
+        level_receipt = Path(flags['-o']).parent / 'level/001/driver-receipt.json'
+        deadline = time.monotonic() + 10
+        while not level_receipt.is_file() and time.monotonic() < deadline:
+            time.sleep(.05)
+        assert level_receipt.is_file(), 'The fixture level pass did not finish before handoff'
     if HANDOFF and Path(flags['-o']).parent.name == '001':
         request()
         issued = client.call('player_handoff', {})[0]['handoff']
@@ -153,7 +161,6 @@ elif route['role'] == 'recorder':
     subgoal = None if line == 'none' else json.loads(line)
     # Read the cited frame under the recorder's reader authority.
     cited = [document['frames'][-1]['source_id']]
-    client.call('player_source', dict(source_id=cited[0]))
     if RECORDER_MODE == 'abstain':
         value = client.call('player_episode_abstain', dict(reason_code='no_player_action', reason='Scripted abstain', sources=cited))[0]
         emit('episode-abstain', reason_code='no_player_action', reason=value['reason'] if 'reason' in value else 'Scripted abstain',
@@ -161,9 +168,13 @@ elif route['role'] == 'recorder':
              subgoal_id=value['subgoal_id'])
     else:
         marks = ['not_yet'] * (len(subgoal['expected_observations']) if subgoal else 0)
+        if marks:
+            source, image, error = client.call('player_source', dict(source_id=cited[0]))
+            assert not error and image is not None, source
         value = client.call('player_episode_record', dict(attempted='Scripted attempt', counterpart='', observation_status=marks,
             observation_source_first=cited * len(marks), observation_source_second=[''] * len(marks),
             residual='', changed='', confidence=.5, sources=cited))[0]
+        assert value['schema'] == 'player-episode-record/3', value
         emit('episode-record', settled=value['settled'], first_position=value['first_position'],
              last_position=value['last_position'], subgoal_id=value['subgoal_id'], counted=value['counted'],
              closed=value['closed'], observations=value['observations'], stalled=value['stalled'],
@@ -393,9 +404,12 @@ def test_a_level_failure_disables_both_readers_but_never_stops_its_actor_and_no_
 
 
 def test_each_successor_actor_gets_its_own_readers_after_the_last_episode_of_its_predecessor_is_recorded(level_campaign):
-    result=level_campaign.run(handoff=True,max_hosts=2,cap=60,actor_steps=7)
+    result=level_campaign.run(handoff=True,max_hosts=2,cap=60,actor_steps=7,level=level_profile(max_http_attempts=2))
+    if result['outcome']!='host_completed_unassessed' or len(result['actors'])!=2:
+        errors = {str(path.relative_to(level_campaign.root)): path.read_text()
+                  for path in sorted(level_campaign.root.glob('actors/**/host-stderr.log')) if path.stat().st_size}
+        pytest.fail(f'{result!r}\nHost errors: {errors!r}')
     first,second=result['actors']
-    assert result['outcome']=='host_completed_unassessed', result
     assert first['settled']['reason']=='handoff' and first['level']['quiescent']
     assert (first['reader_id'],first['recorder_id']) != (second['reader_id'],second['recorder_id'])
     views=assert_every_operation_settled_exactly_once(level_campaign,result,0)
