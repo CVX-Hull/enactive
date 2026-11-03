@@ -15,8 +15,8 @@ const realDelay = ms => new Promise(resolve=>realSetTimeout(resolve,ms));
 const python = process.env.ENACTIVE_TEST_PYTHON;
 const fixture = fileURLToPath(new URL('../../../tests/fixtures/player_host_mcp.py', import.meta.url));
 const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j1ioAAAAASUVORK5CYII=';
-const model = { id: 'fixture-model', name: 'Offline fixture', api: 'openai-completions', provider: 'fixture', baseUrl: 'https://fixture.invalid/v1', reasoning: false, input: ['text', 'image'], cost: {input:0, output:0, cacheRead:0, cacheWrite:0}, contextWindow: 100000, maxTokens: 1024, compat: { supportsDeveloperRole:false, supportsStore:false, supportsUsageInStreaming:true } };
-const route = () => ({schema:'player-host/7',role:'actor',intent_tail_bytes:null,service_tier:'default', model:structuredClone(model), api_key_env:'OFFLINE_TEST_KEY', max_requests:4, max_context_images:4, context_image_block:1, request_timeout_seconds:2});
+const model = { id: 'fixture-model', name: 'Offline fixture', api: 'openai-completions', provider: 'fixture', baseUrl: 'https://fixture.invalid/v1', reasoning: false, input: ['text', 'image'], cost: {input:'0', output:'0', cacheRead:'0', cacheWrite:'0'}, contextWindow: 100000, maxTokens: 1024, compat: { supportsDeveloperRole:false, supportsStore:false, supportsUsageInStreaming:true } };
+const route = () => ({schema:'player-host/8',role:'actor',intent_tail_bytes:null,service_tier:'default', model:structuredClone(model), api_key_env:'OFFLINE_TEST_KEY', max_requests:4, max_cost_nano_usd:'0', max_context_images:4, context_image_block:1, request_timeout_seconds:2});
 function reply(content = 'finished', calls = [], withUsage = true, reasoning, callPrefix = 'call') {
   const delta = {role:'assistant', ...(content === null ? {} : {content}), ...(reasoning ? {reasoning_content:reasoning} : {}), ...(calls.length ? {tool_calls:calls.map(([name,args],index)=>({index,id:`${callPrefix}-${index}`,type:'function',function:{name,arguments:JSON.stringify(args)}}))} : {})};
   const chunks = [{id:'fixture-response',model:'fixture-backend',choices:[{index:0,delta,finish_reason:null}]},
@@ -92,7 +92,7 @@ test('route is closed, graphical, finite and model/effort exact', ()=>{
   }
   assert.throws(()=>validateConfiguration(route(),'other','off'));
   assert.throws(()=>validateConfiguration(route(),model.id,'low'));
-  for (const old of ['pi-player-host/1','pi-player-host/2','pi-player-host/3','pi-player-host/5','player-host/0','player-host/1','player-host/2','player-host/3','player-host/4','player-host/5','player-host/6'])
+  for (const old of ['pi-player-host/1','pi-player-host/2','pi-player-host/3','pi-player-host/5','player-host/0','player-host/1','player-host/2','player-host/3','player-host/4','player-host/5','player-host/6','player-host/7'])
     assert.throws(()=>validateConfiguration({...route(),schema:old},model.id,'off'));
   // The tail is one fixed allocation of INTENT_TAIL_BYTES: any other bound is refused, and only an actor carries one.
   for (const change of [{role:undefined},{role:'lead'},{intent_tail_bytes:undefined},{intent_tail_bytes:63},{intent_tail_bytes:64},
@@ -433,6 +433,104 @@ test('request maximum is finite and exits unsuccessful if continuation needed',a
   const {result,payloads,events}=await scenario(t,[reply(null,[['observe',{}]]),reply()],{configuration});
   assert.equal(result.ok,false); assert.equal(result.reason,'request-limit'); assert.equal(payloads.length,1);
   assert.equal(events.find(event=>event.type==='abort').response_progress.scope,'last-http-attempt');
+});
+test('the monetary gate refuses before sending the first HTTP request',async t=>{
+  const configuration=route();
+  configuration.model.cost.input='1';
+  configuration.max_cost_nano_usd='99999999';
+  const {result,payloads,events}=await scenario(t,[],{configuration});
+  assert.equal(result.reason,'request-budget-limit');
+  assert.equal(payloads.length,0);
+  assert.equal(events.at(-1).money.charged_nano_usd,'0');
+});
+test('a rate just above a nanodollar boundary rounds upward before admission',async t=>{
+  const configuration=route();
+  configuration.model.cost.input='1.000000000000000000000000000000001';
+  configuration.max_cost_nano_usd='100099999';
+  const {result,payloads,events}=await scenario(t,[],{configuration});
+  assert.equal(result.reason,'request-budget-limit');
+  assert.equal(payloads.length,0);
+  assert.equal(events.at(-1).money.bound_nano_usd,'100100000');
+});
+test('a complete cheap response restores room for a second full reservation',async t=>{
+  const configuration=route();
+  configuration.model.cost.input='1';
+  configuration.max_cost_nano_usd='100011000';
+  const {result,payloads,events}=await scenario(t,[reply(null,[['observe',{}]]),reply()],{configuration});
+  assert.equal(result.ok,true);
+  assert.equal(payloads.length,2);
+  assert.equal(events.at(-1).money.charged_nano_usd,'22000');
+});
+test('an ambiguous retry burns its first reservation and cannot fetch again on the same lease',async t=>{
+  const configuration=route();
+  configuration.model.cost.input='1';
+  configuration.max_cost_nano_usd='100000000';
+  const {result,payloads,events}=await scenario(t,[rateLimit()],{configuration});
+  assert.equal(result.reason,'request-budget-limit');
+  assert.equal(payloads.length,1);
+  assert.equal(events.at(-1).money.charged_nano_usd,'100000000');
+});
+test('finish reason and usage at EOF without a terminal event keep the full reservation',async t=>{
+  const configuration=route();
+  configuration.model.cost.input='1';
+  configuration.max_cost_nano_usd='100011000';
+  const {result,payloads,events}=await scenario(t,[async ()=>{
+    const body=await reply(null,[['observe',{}]]).text();
+    return new Response(body.replace('data: [DONE]\n\n',''), {headers:{'content-type':'text/event-stream'}});
+  },reply()],{configuration});
+  assert.equal(result.reason,'request-budget-limit');
+  assert.equal(payloads.length,1);
+  assert.equal(events.at(-1).money.charged_nano_usd,'100000000');
+});
+for (const [name, alter] of [
+  ['mixed response IDs', body=>body.replace(/fixture-response(?=.*"usage")/, 'different-response')],
+  ['impossible cache counts', body=>body.replace('"prompt_tokens":11', '"prompt_tokens":11,"prompt_tokens_details":{"cached_tokens":12}')],
+  ['array-valued provider cost', body=>body.replace('"prompt_tokens":11', '"prompt_tokens":11,"cost":[0]')],
+]) {
+  test(`${name} keep the full reservation`, async t=>{
+    const configuration=route();
+    configuration.model.cost.input='1';
+    configuration.max_cost_nano_usd='100011000';
+    const {result,payloads,events}=await scenario(t,[async ()=>{
+      const body=await reply(null,[['observe',{}]]).text();
+      return new Response(alter(body), {headers:{'content-type':'text/event-stream'}});
+    },reply()],{configuration});
+    assert.equal(result.reason,'request-budget-limit');
+    assert.equal(payloads.length,1);
+    assert.equal(events.at(-1).money.charged_nano_usd,'100000000');
+  });
+}
+test('a provider redirect cannot resend a reserved request to another endpoint',async t=>{
+  const {result,payloads}=await scenario(t,[init=>{
+    assert.equal(init.redirect,'manual');
+    return new Response(null,{status:307,headers:{location:'https://unapproved.invalid/v1/chat/completions'}});
+  }]);
+  assert.equal(result.reason,'provider-redirect-refused');
+  assert.equal(payloads.length,1);
+});
+test('an over-bound provider bill stops even when token counts are missing',async t=>{
+  const configuration=route();
+  configuration.model.cost.input='1';
+  configuration.max_cost_nano_usd='300000000';
+  const {result,events,payloads}=await scenario(t,[async ()=>{
+    const body=await reply(null,[['observe',{}]]).text();
+    return new Response(body.replace('"prompt_tokens":11,"completion_tokens":5,"total_tokens":16','"cost":0.2'));
+  },reply()],{configuration});
+  assert.equal(result.reason,'request-cost-bound-violation');
+  assert.equal(payloads.length,1);
+  assert.equal(events.find(event=>event.type==='request-cost').observed_nano_usd,'200000000');
+});
+test('a single over-bound token counter stops when its partner is missing',async t=>{
+  const configuration=route();
+  configuration.model.cost.input='1';
+  configuration.max_cost_nano_usd='300000000';
+  const {result,events,payloads}=await scenario(t,[async ()=>{
+    const body=await reply(null,[['observe',{}]]).text();
+    return new Response(body.replace('"prompt_tokens":11,"completion_tokens":5,"total_tokens":16','"prompt_tokens":100001'));
+  },reply()],{configuration});
+  assert.equal(result.reason,'request-cost-bound-violation');
+  assert.equal(payloads.length,1);
+  assert.equal(events.find(event=>event.type==='request-cost').prompt_tokens,100001);
 });
 test('an actor keeps the SDK validation refusal text unchanged; only a level gets field feedback',async t=>{
   const bad={snapshot_id:'fixture-snapshot',intent:{entry_type:'work',entry:{stage:'x'.repeat(244),available:[{subject:'small cardboard box'}]}}};
@@ -931,7 +1029,7 @@ test('a recorder pass forces a tool call, shows its frames as marked image parts
   assert.equal(result.ok,true);assert.equal(result.reason,'completed');assert.equal(payloads.length,1);
   assert.equal(payloads[0].tool_choice,'required');
   assert.deepEqual(toolNames(payloads[0]),recorderTools);
-  assert.equal(events[0].type,'host-start');assert.deepEqual([events[0].schema,events[0].role,events[0].intent_tail_bytes],['player-host/7','recorder',null]);
+  assert.equal(events[0].type,'host-start');assert.deepEqual([events[0].schema,events[0].role,events[0].intent_tail_bytes],['player-host/8','recorder',null]);
   // One pass event with the manifest, then one frame read per frame, before the first request.
   assert.deepEqual(events.filter(e=>e.type==='episode-pass').map(e=>e.frames),[episodeFrames]);
   const read=events.filter(e=>e.type==='episode-frame');

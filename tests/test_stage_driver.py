@@ -7,7 +7,7 @@ import pytest
 from tools import stage_driver as sd
 from tools.stage_driver import Assessment, StageDriver, StageError
 
-FROZEN = dict(stage='s1', item='#1', max_runs=3, base_runs=3, batch_size=3, per_run_worst_case_usd='10', stage_cap_usd='100',
+FROZEN = dict(schema='stage-budget-registry/1', overhead_ceilings_usd={}, uncertainty_headroom_usd='0', stage='s1', item='#1', max_runs=3, base_runs=3, batch_size=3, per_run_worst_case_usd='10', stage_cap_usd='100',
               item_cap_usd='1000', campaign_attempts=50, load_gate=8, continuity=None, settle_seconds=60, max_check_gap_seconds=45,
               max_infrastructure_failures=2, provider_failure_reasons=['provider-error', 'request-timeout'])
 REASONS = FROZEN['provider_failure_reasons']
@@ -63,8 +63,9 @@ class Ports:
         self.retained.append(label)
         return self.retain_rc
 
-    def build(self, run):
+    def build(self, run, ceiling):
         self.calls.append(('build', run))
+        self.ceiling_nano = str(int(ceiling * 10**9))
         return self.build_ok
 
     def start_watcher(self, name):
@@ -75,7 +76,10 @@ class Ports:
         if self.explode_on_launch:
             raise RuntimeError('launcher died')
         self.usage += Decimal(self.spend.get(run, '5'))
-        self.receipts[f's1-{run:02d}'] = dict(native_absence_verified=True)
+        self.receipts[f's1-{run:02d}'] = dict(
+            schema='campaign-receipt/3', native_absence_verified=True,
+            deciding_hosts_quiescent=True, input_authority_revoked=True,
+            accounting=dict(money_complete=True, run_ceiling_nano_usd=self.ceiling_nano, charged_nano_usd='0'))
         return 0
 
     def receipt(self, name):
@@ -109,7 +113,8 @@ def make(tmp_path, ports, **frozen):
     directory.mkdir(exist_ok=True)
     path = tmp_path / 'accounting.json'
     if not path.exists():
-        sd.save_accounting(path, sd.new_accounting(spend_baseline_usd='50', item_actual_usd='50', cumulative_attempts=7, last_usage='100'))
+        sd.save_accounting(path, sd.new_accounting(spend_baseline_usd='50', item_actual_usd='50', prior_uncertainty_usd='0',
+                                                  cumulative_attempts=7, last_usage='100'))
     return StageDriver(directory, path, dict(FROZEN, **frozen), ports), path
 
 
@@ -128,8 +133,8 @@ def test_each_run_is_charged_the_account_delta_to_the_next_reading_and_caps_use_
     driver, path = make(tmp_path, ports)
     assert driver.run(1, 2) == 0
     acc = sd.load_accounting(path)
-    assert [r['actual_usd'] for r in acc['runs']] == ['6.5000', '3.2500', '4.0000']
-    assert Decimal(acc['item_actual_usd']) == Decimal('50') + Decimal('13.75') and acc['stage_actual_usd'] == {'s1': '13.7500'}
+    assert [r['actual_usd'] for r in acc['runs']] == ['6.5', '3.25', '4.00']
+    assert Decimal(acc['item_actual_usd']) == Decimal('50') + Decimal('13.75') and acc['stage_actual_usd'] == {'s1': '13.75'}
     assert acc['cumulative_attempts'] == 7 + 30 and all(r['status'] == 'closed' and r['complete'] for r in acc['runs'])
     assert reasons(tmp_path)['reason'] == 'run limit' and reasons(tmp_path)['rc'] == 0
     # The last run is settled by the closing reading, after the settle wait, not by a fourth launch.
@@ -140,10 +145,11 @@ def test_spend_between_readings_with_no_open_run_is_unattributed_but_counts(tmp_
     ports = Ports(spend={1: '1'})
     driver, path = make(tmp_path, ports, max_runs=1, base_runs=1)
     ports.usage += Decimal('2.5')           # spent before the first run, by other use of the account
-    driver.run(1, 1)
+    assert driver.run(1, 1) == 4
     acc = sd.load_accounting(path)
-    assert acc['unattributed'] == [dict(stage='s1', **{'from': '100'}, to='102.5', usd='2.5000')]
-    assert Decimal(acc['stage_actual_usd']['s1']) == Decimal('3.5')
+    assert acc['unattributed'] == [dict(stage='s1', **{'from': '100'}, to='102.5', usd='2.5')]
+    assert Decimal(acc['stage_actual_usd']['s1']) == Decimal('2.5')
+    assert ('launch', 1) not in ports.calls
 
 
 def test_a_cap_or_the_balance_stops_the_stage_before_the_next_run(tmp_path):
@@ -160,6 +166,49 @@ def test_a_cap_or_the_balance_stops_the_stage_before_the_next_run(tmp_path):
     assert driver.run(1, 2) == 4 and 'balance below one worst-case run' in reasons(_sub(tmp_path, 'c'))['reason']
 
 
+@pytest.mark.parametrize('credits', ['Infinity', 'NaN', '-1', 'unknown'])
+def test_invalid_credit_counter_refuses_before_launch(tmp_path, credits):
+    ports = Ports()
+    ports.read_account = lambda: dict(total_usage='100', total_credits=credits)
+    driver, path = make(tmp_path, ports)
+    assert driver.run(1, 1) == 5
+    assert 'Account counters must be finite nonnegative decimals' in reasons(tmp_path)['reason']
+    assert ports.calls == [] and sd.load_accounting(path)['runs'] == []
+
+
+def test_prior_uncertainty_reserves_item_capacity_without_counting_as_actual(tmp_path):
+    ports = Ports()
+    driver, path = make(tmp_path, ports, stage_cap_usd='30', item_cap_usd='80')
+    accounting = sd.load_accounting(path)
+    accounting['prior_uncertainty_usd'] = '0.000000001'
+    sd.save_accounting(path, accounting)
+    assert driver.run(1, 1) == 0
+    assert reasons(tmp_path)['reason'].startswith('item cap')
+    assert ports.calls == []
+    assert sd.load_accounting(path)['item_actual_usd'] == '50'
+
+
+def test_delayed_billing_cannot_reopen_assigned_capacity(tmp_path):
+    ports = Ports(spend={1: '0', 2: '0', 3: '0'})
+    driver, path = make(tmp_path, ports, per_run_worst_case_usd='8', stage_cap_usd='20',
+                        overhead_ceilings_usd={'audit': '2'}, uncertainty_headroom_usd='2')
+    assert driver.run(1, 1) == 0
+    runs = sd.load_accounting(path)['runs']
+    assert [r['assigned_ceiling_usd'] for r in runs] == ['8', '8']
+    assert all(Decimal(r['actual_usd']) == 0 for r in runs)
+    assert ('launch', 3) not in ports.calls
+    assert driver.one_run(1) == 'assignment already used: s1-01'
+    def audit(ceiling):
+        assert ceiling == 2
+        assert sd.load_accounting(path)['overhead'][0]['status'] == 'launched'
+        ports.usage += Decimal('1')
+        return dict(quiescent=True, accounting_complete=True, charged_nano_usd='1000000000')
+    driver.run_overhead('audit', audit)
+    assert sd.load_accounting(path)['overhead'][0]['status'] == 'closed'
+    with pytest.raises(StageError, match='already used'):
+        driver.run_overhead('audit', audit)
+
+
 def _sub(tmp_path, name):
     path = tmp_path / name
     path.mkdir(exist_ok=True)
@@ -170,7 +219,8 @@ def test_an_open_run_record_blocks_everything_and_is_never_settled_under(tmp_pat
     ports = Ports()
     driver, path = make(tmp_path, ports)
     acc = sd.load_accounting(path)
-    acc['runs'].append(dict(run='s1-01', stage='s1', account_before='100', status='launched', complete=False))
+    acc['runs'].append(dict(run='s1-01', stage='s1', assigned_ceiling_usd='10',
+                            account_before='100', status='launched', complete=False))
     sd.save_accounting(path, acc)
     assert driver.run(2, 1) == 4
     assert 'open run record' in reasons(tmp_path)['reason'] and ports.calls == [] and ports.restored == []
@@ -267,7 +317,7 @@ def stop_after_first(tmp_path, assessment, ports=None, **frozen):
 
 
 def test_an_incomplete_run_stops_the_stage_but_is_retained_and_charged(tmp_path):
-    rc, reason, acc, _ = stop_after_first(tmp_path, Assessment(complete=False, outcome='incomplete', max_check_gap_s=10.0))
+    rc, reason, acc, _ = stop_after_first(tmp_path, Assessment(complete=False, outcome='incomplete', max_check_gap_s=10.0, quiescent=True))
     assert rc == 4 and reason == 'run not complete (incomplete)'
     assert acc['runs'][0]['status'] == 'closed' and acc['runs'][0]['complete'] is False and acc['runs'][0]['attempts'] == 50
 
@@ -385,19 +435,17 @@ def test_a_persistent_session_that_is_not_a_continuation_is_retained_as_evidence
     driver, path = persistent(tmp_path, ports)
     assert driver.run(1, 1) == 4 and ports.retained == ['after-s1-01-evidence']
     assert sd.load_accounting(path)['runs'][0]['persistent_retained'] == 'after-s1-01-evidence'
-    # A complete session whose level was not quiescent is evidence too: it is never a state to carry.
+    # A session with unresolved custody stays open, with live state untouched.
     ports = Ports(assessments={1: Assessment(complete=True, max_check_gap_s=1.0, quiescent=False)})
     directory = _sub(tmp_path, 'b')
     driver, path = persistent(directory, ports)
     # The session passes the completeness rule, but its level was not quiescent: session 2 must never verify, build or launch.
     assert driver.run(1, 1) == 4
-    # The one verify after session 1's is the exit's carried-state note, not a check before a second session.
-    assert ports.retained == ['after-s1-01-evidence'] and ports.verified == [None, 'after-s1-01-evidence']
-    assert [e['verified'] for e in log(directory) if e['event'] == 'carried-state-kept'] == [True]
-    assert reasons(directory)['reason'] == 'previous persistent session s1-01 is not a continuation state; the owner decides'
+    assert ports.retained == [] and ports.verified == [None]
+    assert reasons(directory)['reason'] == 'campaign custody unverified (s1-01)'
     assert ports.calls.count(('build', 1)) == 1 and ('build', 2) not in ports.calls and ('launch', 2) not in ports.calls
     record = sd.load_accounting(path)['runs'][0]
-    assert record['persistent_continuation'] is False and record['persistent_retained'] == 'after-s1-01-evidence'
+    assert record['status'] == 'interrupted-unassessed'
     # A continuation is recorded as one.
     ports = Ports(assessments={n: good(n) for n in (1, 2, 3)})
     driver, path = persistent(_sub(tmp_path, 'c'), ports)
@@ -406,6 +454,24 @@ def test_a_persistent_session_that_is_not_a_continuation_is_retained_as_evidence
 
 
 # ---------------------------------------------------------------- exits
+
+def test_wrong_run_ceiling_stops_stage_before_carrying_state(tmp_path):
+    ports = Ports()
+    receipt = ports.receipt
+
+    def wrong_ceiling(name):
+        result = receipt(name)
+        result['accounting']['run_ceiling_nano_usd'] = '1'
+        return result
+
+    ports.receipt = wrong_ceiling
+    driver, path = make(tmp_path, ports, continuity='persistent')
+    assert driver.run(1, 1) == 4
+    assert [call for call in ports.calls if call[0] in ('build', 'launch')] == [('build', 1), ('launch', 1)]
+    assert ports.retained == [] and ports.restored == []
+    record = sd.load_accounting(path)['runs'][0]
+    assert record['status'] == 'interrupted-unassessed' and record['attempts'] == 50
+    assert 'monetary receipt unverified' in reasons(tmp_path)['reason']
 
 def test_an_exception_with_no_receipt_leaves_the_run_open_and_charged_and_settles_nothing(tmp_path):
     ports = Ports()
@@ -435,7 +501,7 @@ def test_a_run_whose_assessment_fails_after_its_receipt_is_charged_in_full_and_l
     assert record['status'] == 'interrupted-unassessed' and record['attempts'] == 50
     assert sd.load_accounting(path)['cumulative_attempts'] == 57
     # It has a receipt, so the account is settled against it and its spend is counted; the record stays open for the owner.
-    assert record['actual_usd'] == '5.0000' and not [e for e in log(tmp_path) if e['event'] == 'left-open']
+    assert Decimal(record['actual_usd']) == 5 and not [e for e in log(tmp_path) if e['event'] == 'left-open']
     again, _ = make(tmp_path, Ports())
     assert again.one_run(2).startswith('open run record')
 
@@ -509,5 +575,6 @@ def test_the_freeze_check_names_every_digest_that_differs():
 
 def test_accounting_is_published_atomically(tmp_path):
     path = tmp_path / 'accounting.json'
-    sd.save_accounting(path, sd.new_accounting(spend_baseline_usd='1', item_actual_usd='1', cumulative_attempts=0, last_usage=None))
-    assert not (tmp_path / 'accounting.json.tmp').exists() and sd.load_accounting(path)['schema'] == 'stage-accounting/1'
+    sd.save_accounting(path, sd.new_accounting(spend_baseline_usd='1', item_actual_usd='1', prior_uncertainty_usd='0',
+                                              cumulative_attempts=0, last_usage=None))
+    assert not (tmp_path / 'accounting.json.tmp').exists() and sd.load_accounting(path)['schema'] == 'stage-accounting/2'

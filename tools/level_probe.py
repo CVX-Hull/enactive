@@ -10,9 +10,9 @@ replay of that session's operations and sources as they stood when the pass star
    served through the normal player HTTP server on loopback, so the real level tools run against it (a terminal call
    writes only the replay's own temporary memory). The recorded bound is restored by settling the positions before
    it as one dropped episode, so the custodian's staleness check starts from the position the recorded pass saw;
-3. the pass's pushed input is the recorded pass's own `input.txt` (plain text, as `player-host/7` takes it), with the
+3. the pass's pushed input is the recorded pass's own `input.txt` (plain text, as `player-host/8` takes it), with the
    current frozen role prompt in place of the recorded one;
-4. the real level host (`player-host/7`, the frozen route, the current role prompt) runs the pass.
+4. the real level host (`player-host/8`, the frozen route, the current role prompt) runs the pass.
 
 The probe never touches a game or a live session, and every output is labelled `engineering-probe`: a measure of
 whether the interface can be called correctly on the route, never evidence about play. The provider credential
@@ -26,7 +26,7 @@ cost, and every request without reported usage at a per-request bound: `--max-re
 when that is below one, so the cap holds whenever no request is dearer than that. Killing a running host when its charge would pass the remaining cap is only a
 backstop for a request that cost more than the bound.
 
-Inputs. The route must already be `player-host/7` (a conformance package's selected route included); nothing is
+Inputs. The route must already be `player-host/8` (a conformance package's selected route included); nothing is
 normalized or defaulted. The thresholds come from the required `--thresholds` file. A paid run needs a clean
 checkout, and the report records the source commit and the digests of every input it read.
 """
@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import argparse
 import collections
+from decimal import Decimal
 import hashlib
 import json
 import os
@@ -58,7 +59,7 @@ from harness.computer.protocol import ControlError
 from harness.computer.runtime import ComputerRuntime
 from harness.player.memory import Memory
 from harness.server import serve
-from tools.campaign_package import LEVEL_ROLE
+from tools.campaign_package import LEVEL_ROLE, nano_usd, request_cost_bound
 from tools.campaign_player import BRIEF_MARK, HostEvents, write_new
 from tools.configure_player_tools import configuration
 
@@ -155,8 +156,8 @@ def recorded_passes(session: Path) -> list[dict]:
     finally:
         database.close()
     manifest = json.loads((session / 'manifest.json').read_text())
-    if manifest.get('schema') != 'campaign-run/6':
-        raise ValueError(f'{session.name}: the recorded session is {manifest.get("schema")!r}, not campaign-run/6; it is not converted')
+    if manifest.get('schema') != 'campaign-run/7':
+        raise ValueError(f'{session.name}: the recorded session is {manifest.get("schema")!r}, not campaign-run/7; it is not converted')
     store = manifest.get('player_store')
     passes, writes = [], 0
     for actor_directory in sorted((session / 'actors').glob('[0-9][0-9][0-9]')):
@@ -269,7 +270,7 @@ def build_replay(recorded: dict, directory: Path, level: dict) -> dict:
 def load_route(path: Path, max_requests: int, tag: str | None) -> dict:
     """The frozen route as a level-pass route, exactly as the campaign driver derives it from its actor route.
 
-    The route (or a conformance package's selected route) must already be `player-host/7`: an older schema is
+    The route (or a conformance package's selected route) must already be `player-host/8`: an older schema is
     rejected, never normalized, and no field is defaulted. Only the role, the intent tail and the pass allowance are set.
     """
     value = json.loads(path.read_text())
@@ -278,12 +279,17 @@ def load_route(path: Path, max_requests: int, tag: str | None) -> dict:
         if len(routes) != 1:
             raise ValueError('Select exactly one conformance route with --route-tag')
         value = routes[0]['configuration']
-    if value.get('schema') != 'player-host/7':
-        raise ValueError(f'The route must be player-host/7, not {value.get("schema")!r}; it is not converted')
-    cost = value.get('model', {}).get('cost')
-    if not isinstance(cost, dict) or not any(isinstance(v, (int, float)) and v > 0 for v in cost.values()):
+    if value.get('schema') != 'player-host/8':
+        raise ValueError(f'The route must be player-host/8, not {value.get("schema")!r}; it is not converted')
+    if request_cost_bound(value) == 0:
         raise ValueError('The route\'s configured model cost is all zero or missing; the spend cap could not measure it')
+    nano_usd(value.get('max_cost_nano_usd'))
     return dict(value, role='level', intent_tail_bytes=None, max_requests=max_requests)
+
+
+def lease_route(route: dict, ceiling_usd: Decimal | float) -> dict:
+    ceiling = int(Decimal(str(ceiling_usd)) * 10**9)
+    return dict(route, max_cost_nano_usd=str(min(ceiling, nano_usd(route['max_cost_nano_usd']))))
 
 
 REFUSAL_FIELD = re.compile(r'^- ([A-Za-z0-9_.]+):', re.M)
@@ -362,31 +368,19 @@ def classify(directory: Path, events: HostEvents, child_returncode: int | None, 
                 host_returncode=child_returncode)
 
 
-def watch_host(directory: Path, arguments: list[str], input_name: str, route: dict, secret: str, seconds: float,
-               remaining_usd: float, bound_usd: float) -> tuple[HostEvents, subprocess.Popen, bool]:
-    """Launch one reader host with `directory/input_name` on stdin and watch it to its end under the spend backstop.
-
-    The credential is passed only in the host's environment. The caller closes the events and the process group.
-    Returns the events, the process and whether the guard stopped it. The backstop counts started requests without
-    usage (the one in flight included) at the larger of the bound and the dearest request seen, so a request dearer
-    than the bound cannot go on unchecked; it applies only until the pass has ended with a terminal outcome.
-    """
+def watch_host(directory: Path, arguments: list[str], input_name: str, route: dict, secret: str,
+               seconds: float) -> tuple[HostEvents, subprocess.Popen]:
+    """Watch a budget-enforcing reader host through its original deadline."""
     environment = dict(PATH=os.environ.get('PATH', '/usr/bin:/bin'), LANG='en_US.UTF-8', **{route['api_key_env']: secret})
-    stopped_by_guard = False
     with (directory / 'host.jsonl').open('x') as output, (directory / 'host-stderr.log').open('x') as errors, \
             (directory / input_name).open() as pass_input:
         child = subprocess.Popen(arguments, cwd=ROOT, env=environment, stdin=pass_input, stdout=output, stderr=errors,
                                  start_new_session=True)
-        events = HostEvents(directory / 'host.jsonl', route['max_requests'])
+        events = HostEvents(directory / 'host.jsonl', route['max_requests'], route=route)
         deadline = time.monotonic() + seconds + 30
         try:
             while child.poll() is None:
                 events.read()
-                costs = [v.get('cost', {}).get('total', 0) for v in events.usage.values()]
-                step = max([bound_usd, *costs])
-                if not (events.level or events.episode) and sum(costs) + (len(events.requests) - len(costs)) * step > remaining_usd:
-                    stopped_by_guard = True
-                    break
                 if time.monotonic() >= deadline:
                     break
                 time.sleep(.05)
@@ -394,13 +388,12 @@ def watch_host(directory: Path, arguments: list[str], input_name: str, route: di
             close_group(child)
             events.close()
             raise
-    return events, child, stopped_by_guard
+    return events, child
 
 
 def run_sample(recorded: dict, sample: int, work: Path, out: Path, route: dict, context: str, role: str, effort: str,
-               host_argv: list[str], secret: str, remaining_usd: float, bound_usd: float, level: dict) -> dict:
-    """Replay one pass once. The route's `max_requests` was already set so the sample cannot pass `remaining_usd` at
-    `bound_usd` per request; the host is killed only as a backstop if its charge would pass it anyway."""
+               host_argv: list[str], secret: str, remaining_usd: Decimal, level: dict) -> dict:
+    """Replay one pass with a lease bounded by the remaining probe allocation."""
     directory = Path(tempfile.mkdtemp(prefix=f'{recorded["index"]:03d}-{sample:02d}-', dir=work))
     replay = server = thread = child = events = None
     try:
@@ -412,6 +405,7 @@ def run_sample(recorded: dict, sample: int, work: Path, out: Path, route: dict, 
                                     session=replay['runtime'].session, **replay['reader']))
         # The model sees what the recorded pass was pushed (its brief and episodes), under the current frozen role prompt.
         text = role.strip() + recorded['text'][recorded['text'].index(BRIEF_MARK):]
+        route = lease_route(route, remaining_usd)
         write_new(directory / 'route.json', route)
         write_new(directory / 'mcp.json', configuration(str(reader_file), profile='level'))
         write_new(directory / 'context.txt', context, text=True)
@@ -420,18 +414,19 @@ def run_sample(recorded: dict, sample: int, work: Path, out: Path, route: dict, 
         arguments = [*host_argv, 'run', '--config', str(directory / 'route.json'), '--mcp-config', str(directory / 'mcp.json'),
                      '--context', str(directory / 'context.txt'), '--model', route['model']['id'], '--effort', effort,
                      '--timeout-seconds', str(recorded['seconds']), '-o', str(directory / 'player-final.txt')]
-        events, child, stopped_by_guard = watch_host(directory, arguments, 'input.txt', route, secret, recorded['seconds'],
-                                                     remaining_usd, bound_usd)
+        events, child = watch_host(directory, arguments, 'input.txt', route, secret, recorded['seconds'])
         cleanup = close_group(child)
         accounting = events.finish()
         record = classify(directory, events, child.returncode)
         # Every request without reported usage is charged at the bound; none is free.
         missing = accounting['missing_usage_attempts']
+        charged = accounting['charged_nano_usd'] if cleanup['process_absent'] and cleanup['group_absent'] else route['max_cost_nano_usd']
         record.update(pass_index=recorded['index'], sample=sample, session=recorded['session'].name,
                       actor=recorded['actor_directory'].name, missing_usage_attempts=missing,
                       dearest_request_usd=max([v.get('cost', {}).get('total', 0) for v in events.usage.values()], default=0),
-                      charged_usd=record['configured_cost_usd'] + missing * bound_usd,
-                      stopped_by_spend_guard=stopped_by_guard, cleanup_absent=cleanup['process_absent'] and cleanup['group_absent'],
+                      charged_nano_usd=charged, charged_usd=nano_usd(charged) / 10**9,
+                      stopped_by_spend_guard=record['settled_reason'] == 'request-budget-limit',
+                      cleanup_absent=cleanup['process_absent'] and cleanup['group_absent'],
                       # Whether the replay's empty memory matches the recording at the pass start.
                       state_fidelity=('memory-reset' if recorded['prior_level_commits'] or recorded['prior_stored_rows']
                                       else 'unknown' if recorded['prior_stored_rows'] is None else 'exact'),
@@ -519,7 +514,8 @@ def probe(sessions: list[Path], route_path: Path, *, samples: int, max_usd: floa
     out.mkdir()
     work = out / 'work'
     work.mkdir()
-    records, spent, stopped, dearest = [], 0.0, False, 0.0
+    records, spent, stopped, dearest = [], Decimal(0), False, 0.0
+    ceiling = Decimal(str(max_usd))
     try:
         for recorded in selected:
             level = manifest[recorded['session']]['level']
@@ -530,15 +526,19 @@ def probe(sessions: list[Path], route_path: Path, *, samples: int, max_usd: floa
             for sample in range(1, samples + 1):
                 # The cap is hard up front: no more requests than the remaining spend covers at the bound, or at the
                 # dearest request seen so far when that is dearer.
-                affordable = int((max_usd - spent) // max(bound, dearest))
+                affordable = int((ceiling - spent) // Decimal(str(max(bound, dearest))))
                 if affordable < 1:
                     stopped = True
                     break
                 route = load_route(route_path, min(allowance, affordable), route_tag)
+                leased = lease_route(route, ceiling - spent)
+                if nano_usd(leased['max_cost_nano_usd']) < request_cost_bound(leased):
+                    stopped = True
+                    break
                 record = run_sample(recorded, sample, work, out, route, context, role, effort, host_argv, secret,
-                                    max_usd - spent, bound, level)
+                                    ceiling - spent, level)
                 records.append(record)
-                spent += record['charged_usd']
+                spent += Decimal(record['charged_nano_usd']) / 10**9
                 dearest = max(dearest, record['dearest_request_usd'])
                 if record['stopped_by_spend_guard']:
                     stopped = True
@@ -552,10 +552,10 @@ def probe(sessions: list[Path], route_path: Path, *, samples: int, max_usd: floa
         per_pass[f'{key[0]}/actor{key[1]}/pass{key[2]:03d}'] = summarize(
             [r for r in records if (r['session'], r['actor'], r['pass_index']) == key])
     pooled = summarize(records)
-    report = dict(schema='level-probe/1', label=LABEL, excluded_from_evidence=True,
+    report = dict(schema='level-probe/2', label=LABEL, excluded_from_evidence=True,
         scope='Replays recorded level-pass contexts against a read-only replay of the recorded session. It measures whether '
               'the level interface can be called correctly on the route; it says nothing about play, intent quality or outcomes.',
-        interface=dict(host='player-host/7', role_prompt=LEVEL_ROLE.name, role_sha256=hashlib.sha256(role.encode()).hexdigest()),
+        interface=dict(host='player-host/8', role_prompt=LEVEL_ROLE.name, role_sha256=hashlib.sha256(role.encode()).hexdigest()),
         route=dict(model=route['model']['id'], provider=route['model']['provider'], effort=effort,
                    file_sha256=sha256_file(route_path)),
         source=dict(commit=commit, clean=True),
@@ -563,7 +563,7 @@ def probe(sessions: list[Path], route_path: Path, *, samples: int, max_usd: floa
         parameters=dict(samples_per_pass=samples, max_usd=max_usd, sample_estimate_usd=sample_estimate_usd,
                         max_request_usd=max_request_usd, max_requests_override=max_requests,
                         passes_selected=len(selected), sessions=[s.name for s in sessions]),
-        spend=dict(charged_usd=spent, configured_cost_usd=pooled['configured_cost_usd'], max_usd=max_usd,
+        spend=dict(charged_usd=float(spent), configured_cost_usd=pooled['configured_cost_usd'], max_usd=max_usd,
                    missing_usage_attempts=pooled['missing_usage_attempts'], stopped_by_spend_guard=stopped,
                    samples_run=len(records), samples_planned=len(selected) * samples),
         thresholds=dict(definition=thresholds, file_sha256=sha256_file(thresholds_path),

@@ -13,15 +13,24 @@ import pytest
 from harness.computer.protocol import ControlError
 from tools.campaign_player import HostEvents,run_hosts
 
+MONEY_MODEL = dict(contextWindow=100, maxTokens=10, cost=dict(input='0', output='0', cacheRead='0', cacheWrite='0'))
+MONEY_ROUTE = dict(model=MONEY_MODEL, max_cost_nano_usd='0')
+MONEY_RECEIPT = dict(allocation_nano_usd='0', charged_nano_usd='0', bound_nano_usd='0', violation=False)
+MONEY_ACCOUNTING = dict(role_caps_nano_usd=dict(actor='0', level='0', recorder='0'))
+
 
 def test_original_attempts_and_partial_trace_reservation(tmp_path):
     path=tmp_path/'host.jsonl'
-    rows=[dict(type='host-start',telemetry_version=2,schema='player-host/7'),
+    rows=[dict(type='host-start',telemetry_version=2,schema='player-host/8'),
           dict(type='request-start',request_id='request-1'),
+          dict(type='request-fetch-start',request_id='request-1',reserved_nano_usd='0'),
+          dict(type='request-cost',request_id='request-1',charged_nano_usd='0',reconciled=True,violation=False),
           dict(type='request-start',request_id='request-2'),
-          dict(type='settled',requests=2,ok=False)]
+          dict(type='request-fetch-start',request_id='request-2',reserved_nano_usd='0'),
+          dict(type='request-cost',request_id='request-2',charged_nano_usd='0',reconciled=True,violation=False),
+          dict(type='settled',money=MONEY_RECEIPT,requests=2,ok=False)]
     path.write_text(''.join(json.dumps(row)+'\n' for row in rows))
-    events=HostEvents(path,10)
+    events=HostEvents(path,10,route=MONEY_ROUTE)
     try:
         assert events.finish()['attempts_charged']==2
         with path.open('a') as stream:stream.write('{"partial":')
@@ -30,11 +39,11 @@ def test_original_attempts_and_partial_trace_reservation(tmp_path):
     finally:events.close()
 
 
-@pytest.mark.parametrize('schema',['pi-player-host/7','player-host/5',None])
+@pytest.mark.parametrize('schema',['pi-player-host/8','player-host/5',None])
 def test_trace_from_another_host_contract_is_refused(tmp_path,schema):
     path=tmp_path/'host.jsonl'
     path.write_text(json.dumps(dict(type='host-start',telemetry_version=2,schema=schema))+'\n')
-    events=HostEvents(path,10)
+    events=HostEvents(path,10,route=MONEY_ROUTE)
     try:
         with pytest.raises(ControlError,match='Unsupported'):events.finish()
     finally:events.close()
@@ -42,9 +51,9 @@ def test_trace_from_another_host_contract_is_refused(tmp_path,schema):
 
 def test_known_prelaunch_failure_has_zero_attempts_and_no_successor(tmp_path):
     application=SimpleNamespace(add_actor=Mock(side_effect=OSError('fixture store refusal')),runtime=SimpleNamespace(stop=Mock()))
-    profile=dict(max_hosts=2,host_seconds=100,total_host_seconds=200,max_http_attempts=30,actor_profile='flat',level=None)
+    profile=dict(accounting=MONEY_ACCOUNTING,max_hosts=2,host_seconds=100,total_host_seconds=200,max_http_attempts=30,actor_profile='flat',level=None)
     with patch('tools.campaign_player.subprocess.Popen') as launch:
-        result=run_hosts(tmp_path,profile,dict(max_requests=20),application,'fixture-secret',threading.Event(),time.monotonic()+300)
+        result=run_hosts(tmp_path,profile,dict(MONEY_ROUTE,max_requests=20),application,'fixture-secret',threading.Event(),time.monotonic()+300)
     assert result['outcome']=='incomplete' and result['attempts_charged']==0
     assert result['actors'][0]['cleanup']==dict(process_absent=True,group_absent=True)
     assert 'OSError' in result['reason'] and not launch.called
@@ -58,9 +67,11 @@ flags = dict(zip(rest[::2], rest[1::2]))
 assert mode == 'run' and sorted(flags) == ['--config', '--context', '--effort', '--mcp-config', '--model', '--timeout-seconds', '-o'], sys.argv
 assert sorted(os.environ) >= ['FIXTURE_KEY', 'LANG', 'PATH'] and os.environ['FIXTURE_KEY'] == 'fixture-secret'
 assert sys.stdin.read().startswith('Frozen mission')
-for event in (dict(type='host-start', telemetry_version=2, schema='player-host/7'),
+for event in (dict(type='host-start', telemetry_version=2, schema='player-host/8'),
               dict(type='request-start', request_id='request-1'),
-              dict(type='settled', ok=True, reason='completed', requests=1)):
+              dict(type='request-fetch-start', request_id='request-1', reserved_nano_usd='0'),
+              dict(type='request-cost', request_id='request-1', charged_nano_usd='0', reconciled=True, violation=False),
+              dict(type='settled', money=dict(allocation_nano_usd='0', charged_nano_usd='0', bound_nano_usd='0', violation=False), ok=True, reason='completed', requests=1)):
     print(json.dumps(event), flush=True)
 open(flags['-o'], 'w').write('report\\n')
 """
@@ -74,9 +85,9 @@ def test_driver_launches_the_selected_host_argv_in_run_mode(tmp_path):
         runtime=SimpleNamespace(stop=Mock(),
             process=SimpleNamespace(poll=lambda:None),channel=SimpleNamespace(stopped=threading.Event()),session='s'*32),
         activity_view=SimpleNamespace(host_event=Mock()),host=None)
-    profile=dict(max_hosts=1,host_seconds=100,total_host_seconds=200,max_http_attempts=30,effort='off',port=8766,
+    profile=dict(accounting=MONEY_ACCOUNTING,max_hosts=1,host_seconds=100,total_host_seconds=200,max_http_attempts=30,effort='off',port=8766,
                  session='s'*32,host=dict(argv=[sys.executable,str(adapter)]),actor_profile='flat',level=None)
-    route=dict(max_requests=20,api_key_env='FIXTURE_KEY',model=dict(id='fixture',name='fixture'))
+    route=dict(MONEY_ROUTE,max_requests=20,api_key_env='FIXTURE_KEY',model=dict(MONEY_MODEL,id='fixture',name='fixture'))
     result=run_hosts(tmp_path,profile,route,application,'fixture-secret',threading.Event(),time.monotonic()+300)
     actor=result['actors'][0]
     assert result['outcome']=='host_completed_unassessed' and result['attempts_charged']==1, result
@@ -101,12 +112,16 @@ route = json.load(open(flags['--config']))
 client = PlayerClient(Path(json.load(open(flags['--mcp-config']))['args'][-1]))
 requests = 0
 def emit(kind, **fields):
+    if kind == 'settled':
+        fields['money'] = dict(allocation_nano_usd='0', charged_nano_usd='0', bound_nano_usd='0', violation=False)
     print(json.dumps(dict(type=kind, **fields)), flush=True)
 def request():
     global requests
     requests += 1
     emit('request-start', request_id=f'request-{requests}')
-emit('host-start', telemetry_version=2, schema='player-host/7', role=route['role'])
+    emit('request-fetch-start', request_id=f'request-{requests}', reserved_nano_usd='0')
+    emit('request-cost', request_id=f'request-{requests}', charged_nano_usd='0', reconciled=True, violation=False)
+emit('host-start', telemetry_version=2, schema='player-host/8', role=route['role'])
 emit('mcp-connected')
 if route['role'] == 'actor':
     assert route['intent_tail_bytes'] == 1024
@@ -243,11 +258,11 @@ def level_campaign(tmp_path):
         adapter=tmp_path/'host.py'
         adapter.write_text(f'ROOT={str(ROOT)!r}\nLEVEL_MODE={level_mode!r}\nRECORDER_MODE={recorder_mode!r}\n'
                            f'ACTOR_STEPS={actor_steps}\nHANDOFF={handoff}\n'+SCRIPTED_HOST)
-        profile=dict(max_hosts=max_hosts,host_seconds=60,total_host_seconds=120,max_http_attempts=cap,effort='off',
+        profile=dict(accounting=MONEY_ACCOUNTING,max_hosts=max_hosts,host_seconds=60,total_host_seconds=120,max_http_attempts=cap,effort='off',
                      port=server.server_port,session=runtime.session,host=dict(argv=[sys.executable,str(adapter)]),
                      actor_profile='narrowed',level=level or level_profile())
-        route=dict(schema='player-host/7',role='actor',intent_tail_bytes=1024,max_requests=10,api_key_env='FIXTURE_KEY',
-                   model=dict(id='fixture',name='fixture'))
+        route=dict(MONEY_ROUTE,schema='player-host/8',role='actor',intent_tail_bytes=1024,max_requests=10,api_key_env='FIXTURE_KEY',
+                   model=dict(MONEY_MODEL,id='fixture',name='fixture'))
         return run_hosts(tmp_path,profile,route,app,'fixture-secret',threading.Event(),time.monotonic()+300)
     try:
         yield SimpleNamespace(run=run,app=app,channel=channel,root=tmp_path,runtime=runtime)
@@ -354,7 +369,7 @@ def test_a_recorder_pass_still_running_is_closed_at_its_time_and_charged_in_full
     result=level_campaign.run(recorder_mode='sleep',level_mode='abstain',actor_steps=4,
                               level=level_profile(recorder=dict(pass_seconds=2)))
     receipt=result['actors'][0]['level']
-    assert result['outcome']=='host_completed_unassessed', result
+    assert result['outcome']=='incomplete' and not result['money_complete'], result
     first=receipt['recorder']['passes'][0]
     assert not first['accounting_complete'] and first['attempts_charged']==first['allocated_attempts']==2
     assert first['cleanup']['process_absent'] and first['cleanup']['group_absent'] and receipt['quiescent']
@@ -365,7 +380,7 @@ def test_a_recorder_pass_still_running_is_closed_at_its_time_and_charged_in_full
 def test_a_level_failure_disables_both_readers_but_never_stops_its_actor_and_no_episode_is_left_unsettled(level_campaign):
     result=level_campaign.run(level_mode='malformed')
     receipt=result['actors'][0]['level']
-    assert result['outcome']=='host_completed_unassessed', result
+    assert result['outcome']=='incomplete' and not result['money_complete'], result
     assert 'JSONDecodeError' in receipt['failure'] and receipt['quiescent'] and not level_campaign.channel.stopped.is_set()
     # Operations after the failure are never cut, but every episode that was cut settled, exactly once, in order.
     views=claims(level_campaign,0,result)
@@ -419,7 +434,7 @@ def test_a_lost_terminal_call_ends_the_pass_and_the_driver_reconciles_its_identi
 
 def test_the_driver_disposition_totals_and_version(level_campaign):
     result=level_campaign.run(level_mode='abstain')
-    assert result['schema']=='player-driver/7'
+    assert result['schema']=='player-driver/8'
     actor=result['actors'][0]['level']
     assert result['episodes_cut']==actor['episodes']['cut']>=2
     assert result['level_attempts_charged']==actor['attempts_charged']==actor['level']['attempts_charged']+actor['recorder']['attempts_charged']
@@ -436,7 +451,7 @@ class Child:
 class Trace:
     """A pass's trace as the driver reads it: nothing to read, one settled request on finish."""
     def read(self):return False
-    def finish(self):return dict(observed_attempts=1,attempts_charged=1,accounting_complete=True,settled=dict(ok=True,reason='completed'),
+    def finish(self):return dict(observed_attempts=1,attempts_charged=1,accounting_complete=True,charged_nano_usd='0',settled=dict(ok=True,reason='completed'),
                                  handoff=None,level_events=[],episode_events=[],level_uncertain=[],configured_estimate_usd=0,
                                  usage_available_attempts=0,missing_usage_attempts=1)
     def close(self):pass
@@ -469,7 +484,7 @@ def rig(tmp_path,monkeypatch):
         document=captured[-1]
         child=Child()
         record=dict(index=reservation['index'],role=self.role,allocated_attempts=reservation['allowance'],
-                    allocated_seconds=reservation['seconds'],started_wall=time.time(),**meta)
+                    allocated_seconds=reservation['seconds'],allocated_nano_usd='0',started_wall=time.time(),**meta)
         self.current=(child,Trace(),record,time.monotonic()+100)
         launches.append(SimpleNamespace(role=self.role,document=document,meta=meta,child=child,lane=self,reservation=reservation))
     monkeypatch.setattr(player.ReaderLane,'start',start)
@@ -477,8 +492,8 @@ def rig(tmp_path,monkeypatch):
     def build(**changes):
         level=level_profile(**changes)
         (tmp_path/'actor').mkdir(exist_ok=True)
-        profile=dict(port=1,session=runtime.session,host=dict(argv=['host']),effort='off')
-        system=player.LevelSystem(tmp_path/'actor',directory,app,actor,level,dict(model=dict(id='fixture'),api_key_env='K'),
+        profile=dict(accounting=MONEY_ACCOUNTING,port=1,session=runtime.session,host=dict(argv=['host']),effort='off')
+        system=player.LevelSystem(tmp_path/'actor',directory,app,actor,level,dict(MONEY_ROUTE,model=dict(MONEY_MODEL,id='fixture'),api_key_env='K'),
                                   profile,'secret',(20,20),50)
         return system
     state=SimpleNamespace(app=app,actor=actor,runtime=runtime,channel=channel,launches=launches,build=build,tmp=tmp_path,
@@ -1020,24 +1035,26 @@ def test_a_store_that_cannot_remember_ends_the_lineage_before_any_actor_is_minte
     from unittest.mock import Mock
     application=SimpleNamespace(add_actor=Mock(),remember_failure='store full',runtime=SimpleNamespace(stop=Mock()))
     level=level_profile()
-    profile=dict(max_hosts=2,host_seconds=100,total_host_seconds=200,max_http_attempts=60,actor_profile='narrowed',level=level)
-    result=run_hosts(tmp_path,profile,dict(max_requests=20),application,'fixture-secret',threading.Event(),time.monotonic()+300)
+    profile=dict(accounting=MONEY_ACCOUNTING,max_hosts=2,host_seconds=100,total_host_seconds=200,max_http_attempts=60,actor_profile='narrowed',level=level)
+    result=run_hosts(tmp_path,profile,dict(MONEY_ROUTE,max_requests=20),application,'fixture-secret',threading.Event(),time.monotonic()+300)
     assert not application.add_actor.called and result['actors']==[] and result['outcome']=='incomplete'
     assert 'lineage ends' in result['reason'] and 'store full' in result['reason']
 
 
 def test_the_trace_reader_collects_level_uncertain_and_episode_events(tmp_path):
     path=tmp_path/'host.jsonl'
-    rows=[dict(type='host-start',telemetry_version=2,schema='player-host/7'),
+    rows=[dict(type='host-start',telemetry_version=2,schema='player-host/8'),
           dict(type='request-start',request_id='request-1'),
+          dict(type='request-fetch-start',request_id='request-1',reserved_nano_usd='0'),
+          dict(type='request-cost',request_id='request-1',charged_nano_usd='0',reconciled=True,violation=False),
           dict(type='level-uncertain',request_id='request-1',tool_call_id='c',tool='player_level_close',identity='f'*32),
           dict(type='episode-record',settled='recorded',first_position=1,last_position=3,subgoal_id=None,counted=False,closed=False,
                observations=[],stalled=None,record_ids=['r']),
           dict(type='episode-abstain',settled='abstained',reason_code='other',reason='x',first_position=4,last_position=5),
           dict(type='episode-uncertain',request_id='request-1',tool_call_id='d',tool='player_episode_record',identity='e'*32),
-          dict(type='settled',requests=1,ok=False,reason='level-uncertain')]
+          dict(type='settled',money=MONEY_RECEIPT,requests=1,ok=False,reason='level-uncertain')]
     path.write_text(''.join(json.dumps(row)+'\n' for row in rows))
-    events=HostEvents(path,10)
+    events=HostEvents(path,10,route=MONEY_ROUTE)
     try:
         finished=events.finish()
         assert finished['level_uncertain']==[dict(tool='player_level_close',identity='f'*32,request_id='request-1')]

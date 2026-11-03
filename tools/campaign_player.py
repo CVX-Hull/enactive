@@ -17,6 +17,7 @@ from typing import Callable
 from harness.computer.launch import close_group
 from harness.computer.protocol import ControlError,canonical,read_json
 from harness.player.contracts import ABSTAIN_CODES,EPISODE_ABSTAIN_CODES,PlayerError
+from tools.campaign_package import nano_usd, request_cost_bound
 from tools.configure_player_tools import ROOT,configuration
 from tools.episode_cutter import CLOSED_BY,Episode,EpisodeCutter,key_tokens,pick_frames,thumbnail
 from tools.level_schedule import LevelSchedule
@@ -33,12 +34,21 @@ def write_new(path: Path,value,*,text=False) -> None:
     path.chmod(0o600)
 
 
+class RequestCostViolation(ControlError):
+    pass
+
+
 class HostEvents:
     """Incremental JSONL; a partial final line never becomes an uncharged request."""
-    def __init__(self,path: Path,allowance: int,observer=None):
+    def __init__(self,path: Path,allowance: int,*,route: dict,observer=None):
         self.stream=path.open('rb');self.buffer=b'';self.allowance=allowance
         self.requests=set();self.settled=None;self.handoff=None;self.last_response_wall=None
         self.usage={};self.error=None;self.started=False
+        self.money_allocation = nano_usd(route['max_cost_nano_usd'])
+        self.money_bound = request_cost_bound(route)
+        self.money_charged = 0
+        self.money_pending = None
+        self.money_requests = set()
         self.observer=observer;self.ordinal=0
         # A level pass's own commit, discard and abstain outcomes, and a recorder pass's record and abstain outcomes.
         self.level=[]
@@ -49,6 +59,15 @@ class HostEvents:
         self.episode_uncertain=[]
 
     def read(self) -> bool:
+        if self.error is not None:
+            raise self.error
+        try:
+            return self._read()
+        except Exception as exc:
+            self.error = exc
+            raise
+
+    def _read(self) -> bool:
         chunk=self.stream.read(1048576)
         if not chunk:return False
         self.buffer+=chunk
@@ -57,11 +76,13 @@ class HostEvents:
         for line in lines:
             if not line:continue
             value=json.loads(line)
+            if self.settled is not None:
+                raise ControlError('Host trace contains events after settlement')
             self.ordinal+=1
             kind=value.get('type')
             if kind=='host-start':
                 if (self.started or value.get('telemetry_version')!=2
-                        or value.get('schema')!='player-host/7'):raise ControlError('Unsupported/repeated current host trace')
+                        or value.get('schema')!='player-host/8'):raise ControlError('Unsupported/repeated current host trace')
                 self.started=True
             elif kind in ('level-commit','level-discard','level-abstain'):
                 if len(self.level)<256:self.level.append({k:value.get(k) for k in
@@ -81,6 +102,25 @@ class HostEvents:
                 identity=int(match.group(1))
                 if identity in self.requests or identity>self.allowance:raise ControlError('Host request accounting differs')
                 self.requests.add(identity)
+            elif kind == 'request-fetch-start':
+                identity = value.get('request_id')
+                if (identity != f'request-{len(self.requests)}' or identity in self.money_requests
+                        or self.money_pending is not None or not self.requests
+                        or nano_usd(value.get('reserved_nano_usd')) != self.money_bound
+                        or self.money_charged + self.money_bound > self.money_allocation):
+                    raise RequestCostViolation('Invalid provider request reservation')
+                self.money_pending = identity
+                self.money_requests.add(identity)
+            elif kind == 'request-cost':
+                if value.get('violation') is True:
+                    raise RequestCostViolation('Provider cost or usage exceeded its frozen bound')
+                amount = nano_usd(value.get('charged_nano_usd'))
+                if (self.money_pending is None or self.money_pending != value.get('request_id')
+                        or value.get('violation') is not False or type(value.get('reconciled')) is not bool
+                        or amount > self.money_bound or (not value['reconciled'] and amount != self.money_bound)):
+                    raise RequestCostViolation('Invalid provider charge settlement')
+                self.money_charged += amount
+                self.money_pending = None
             elif kind=='response-complete':
                 try:self.last_response_wall=datetime.fromisoformat(value['wall_time'].replace('Z','+00:00')).timestamp()
                 except (KeyError,ValueError,TypeError):pass
@@ -100,9 +140,13 @@ class HostEvents:
         valid=(not self.buffer and self.started and self.settled is not None
                and self.requests==set(range(1,len(self.requests)+1))
                and self.settled.get('requests')==len(self.requests))
+        valid = (valid and self.money_pending is None and len(self.money_requests) == len(self.requests)
+                 and self.settled.get('money') == dict(allocation_nano_usd=str(self.money_allocation),
+                    charged_nano_usd=str(self.money_charged), bound_nano_usd=str(self.money_bound), violation=False))
         # Uncertain trace accounting reserves the entire original host allocation.
         return dict(observed_attempts=len(self.requests),attempts_charged=len(self.requests) if valid else self.allowance,
-            accounting_complete=valid,settled=self.settled,handoff=self.handoff,level_events=self.level,episode_events=self.episode,
+            accounting_complete=valid, charged_nano_usd=str(self.money_charged if valid else self.money_allocation),
+            settled=self.settled,handoff=self.handoff,level_events=self.level,episode_events=self.episode,
             level_uncertain=list(self.uncertain),episode_uncertain=list(self.episode_uncertain),configured_estimate_usd=sum(v.get('cost',{}).get('total',0) for v in self.usage.values()),
             usage_available_attempts=len(self.usage),missing_usage_attempts=len(self.requests)-len(self.usage))
 
@@ -140,7 +184,7 @@ def wake_note(wake: dict) -> str:
 
 
 def level_text(role_prompt: str, brief: str, wake: dict, pushed: dict) -> str:
-    """A level pass's whole stdin, plain text (`player-host/7`): the frozen role, the actor's brief and the pushed input.
+    """A level pass's whole stdin, plain text (`player-host/8`): the frozen role, the actor's brief and the pushed input.
 
     The pushed input is closed episodes and software counts, never the actor's raw log: the episode records since the
     previous pass, the current subgoal with its derived status, stalled flag and id, the counts per subgoal and the
@@ -159,7 +203,7 @@ def level_text(role_prompt: str, brief: str, wake: dict, pushed: dict) -> str:
 
 
 def recorder_document(role_prompt: str, wake: dict, pushed: dict) -> dict:
-    """A recorder pass's whole stdin, one closed JSON document (`player-pass-input/1`, `player-host/7`).
+    """A recorder pass's whole stdin, one closed JSON document (`player-pass-input/1`, `player-host/8`).
 
     `text` is the frozen `episode-v1` role prompt, the episode's operations as key tokens and positions, and the id, text
     and ordered expected observations of the subgoal pushed. `frames` names the baseline and the episode's own frames
@@ -241,6 +285,9 @@ class ReaderLane:
                                          session=profile['session'], **reader))
         self.passes = []
         self.charged = 0
+        self.money_remaining = nano_usd(profile['accounting']['role_caps_nano_usd'][role])
+        self.money_bound = request_cost_bound(route)
+        self.money_failed = False
         self.current = None
         # Called in one hold of the application lock when a pass has ended and been charged: (record).
         self.on_finish = None
@@ -250,7 +297,7 @@ class ReaderLane:
         return self.current is not None
 
     def remaining(self) -> int:
-        return self.allowance - self.charged
+        return self.allowance - self.charged if not self.money_failed and self.money_remaining >= self.money_bound else 0
 
     def can_launch(self, now: float, deadline: float) -> bool:
         return self.current is None and self.remaining() >= 1 and deadline - now >= 30 + self.limits['pass_seconds'] / 4
@@ -271,8 +318,10 @@ class ReaderLane:
         """Write the pass's frozen inputs and launch its host with `stdin` (text for a level, a document for a recorder)."""
         target, allowance, seconds = reservation['target'], reservation['allowance'], reservation['seconds']
         record = dict(index=reservation['index'], role=self.role, allocated_attempts=allowance, allocated_seconds=seconds,
-                      started_wall=time.time(), **meta)
-        write_new(target / 'route.json', dict(self.route, role=self.role, intent_tail_bytes=None, max_requests=allowance))
+                      allocated_nano_usd=str(self.money_remaining), started_wall=time.time(), **meta)
+        selected = dict(self.route, role=self.role, intent_tail_bytes=None, max_requests=allowance,
+                        max_cost_nano_usd=str(self.money_remaining))
+        write_new(target / 'route.json', selected)
         write_new(target / 'mcp.json', configuration(str(self.reader_file), profile=self.role))
         # The level shares the acting player's guide (its prompt says actor-addressed text is not for it); the recorder is an
         # observer and gets no guide (ADR-007, no-nudge review on #352), so its context is empty.
@@ -293,7 +342,7 @@ class ReaderLane:
         # Owned before anything else can fail, so a later error still closes and charges it.
         self.current = (child, None, record, time.monotonic() + seconds)
         write_new(target / 'host-process.json', dict(pid=child.pid, pgid=child.pid, argv=arguments))
-        self.current = (child, HostEvents(target / 'host.jsonl', allowance), record, self.current[3])
+        self.current = (child, HostEvents(target / 'host.jsonl', allowance, route=selected), record, self.current[3])
 
     def advance(self, stop: bool) -> bool:
         """Read the pass's trace; close and charge it when its host exited, `stop` is set or its time is up."""
@@ -312,6 +361,7 @@ class ReaderLane:
             return
         child, events, record, _ = self.current
         self.current = None
+        violation = None
         try:
             record['cleanup'] = close_group(child)
         except Exception as exc:
@@ -322,6 +372,8 @@ class ReaderLane:
             record.update(events.finish())
         except Exception as exc:
             record.update(accounting_complete=False, attempts_charged=record['allocated_attempts'], trace_error=type(exc).__name__)
+            if isinstance(exc, RequestCostViolation):
+                violation = exc
         finally:
             if events is not None:
                 events.close()
@@ -334,12 +386,19 @@ class ReaderLane:
                     self.on_finish(record)
         finally:
             record['ended_wall'] = time.time()
+            if (not record.get('accounting_complete') or not record['cleanup'].get('process_absent')
+                    or not record['cleanup'].get('group_absent')):
+                record['charged_nano_usd'] = record['allocated_nano_usd']
+                self.money_failed = True
+            self.money_remaining -= nano_usd(record['charged_nano_usd'])
             self.charged += record['attempts_charged']
             self.passes.append(record)
             try:
                 write_new(self.target / f"{record['index']:03d}" / 'driver-receipt.json', record)
             except (OSError, ValueError) as exc:
                 record['receipt_error'] = type(exc).__name__
+            if violation is not None:
+                raise violation
 
     def quiescent(self) -> bool:
         """Every pass's exact process group was confirmed absent; a successor needs this."""
@@ -518,6 +577,8 @@ class LevelSystem:
 
     def _fail(self, exc: Exception) -> None:
         self.failure = f'{type(exc).__name__}: {str(exc)[:300]}'
+        if isinstance(exc, RequestCostViolation):
+            self.application.runtime.stop('Provider monetary accounting violated its bound')
         self.finish()
 
     def _poll(self, events: 'HostEvents | None', hard_stop: bool, deadline: float, *, ending: bool) -> None:
@@ -629,8 +690,9 @@ class LevelSystem:
                     self._poll(None, halted(), deadline, ending=True)
                     time.sleep(.1)
         except Exception as exc:
-            self.failure = f'{type(exc).__name__}: {str(exc)[:300]}'
-        self.finish()
+            self._fail(exc)
+        else:
+            self.finish()
 
     def close_edge(self) -> None:
         """Close the open episode at a session edge (a handoff, a stop or the end): it joins the backlog for the recorder."""
@@ -746,6 +808,9 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
               stopped: threading.Event,deadline: float) -> dict:
     actors=directory/'actors';actors.mkdir(mode=0o700)
     total_attempts=0;host_seconds_used=0.;records=[]
+    original_pools = profile['accounting']['role_caps_nano_usd']
+    remaining_pools = {role: nano_usd(cap) for role, cap in original_pools.items()}
+    bound = request_cost_bound(route)
     outcome='incomplete';reason='Original actor allowance exhausted'
     for index in range(1,profile['max_hosts']+1):
         seconds=min(profile['host_seconds'],profile['total_host_seconds']-host_seconds_used,deadline-time.monotonic()-30)
@@ -755,14 +820,17 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
         recorder_allowance=min(level['recorder']['max_http_attempts'],
                                profile['max_http_attempts']-total_attempts-level_allowance) if level else 0
         allowance=min(route['max_requests'],profile['max_http_attempts']-total_attempts-level_allowance-recorder_allowance)
-        if stopped.is_set() or seconds<=30 or allowance<1 or (level and (level_allowance<1 or recorder_allowance<1)):
+        if (stopped.is_set() or seconds<=30 or allowance<1 or (level and (level_allowance<1 or recorder_allowance<1))
+                or remaining_pools['actor'] < bound
+                or (level and any(remaining_pools[r] < bound for r in ('level', 'recorder')))):
             reason='Original host/campaign resources or cancellation prevent another actor';break
         if level and application.remember_failure is not None:
             # The lineage ends here as a recorded failure; an actor that could not be served is never minted.
             reason=f'The lineage ends: player memory could not remember ({application.remember_failure}); no further actor';break
         target=actors/f'{index:03d}'
         child=None;events=None;levels=None
-        record=dict(index=index,actor_id=None,allocated_seconds=seconds,allocated_attempts=allowance)
+        record=dict(index=index,actor_id=None,allocated_seconds=seconds,allocated_attempts=allowance,
+                    allocated_nano_usd=str(remaining_pools['actor']))
         started=time.monotonic();ending_at=None
         fenced=lambda:stopped.is_set() or application.runtime.channel.stopped.is_set()
         try:
@@ -772,7 +840,7 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
             actor_file=target/'actor.json'
             write_new(actor_file,dict(schema='player-adapter/1',base_url=f"http://127.0.0.1:{profile['port']}",
                                      session=profile['session'],**actor))
-            selected_route=dict(route,max_requests=allowance)
+            selected_route=dict(route,max_requests=allowance,max_cost_nano_usd=record['allocated_nano_usd'])
             write_new(target/'route.json',selected_route)
             write_new(target/'mcp.json',configuration(str(actor_file),profile=profile['actor_profile']))
             # Identical frozen system context across actors maximizes stable prefix
@@ -795,13 +863,15 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
                 '--effort',profile['effort'],'--timeout-seconds',str(seconds),'-o',str(target/'player-final.txt')]
             environment=dict(PATH=os.environ.get('PATH','/usr/bin:/bin'),LANG='en_US.UTF-8',**{route['api_key_env']:secret})
             if level:
-                levels=LevelSystem(target,directory,application,actor,level,route,profile,secret,
+                active_profile = dict(profile, accounting=dict(profile['accounting'],
+                    role_caps_nano_usd={role: str(cap) for role, cap in remaining_pools.items()}))
+                levels=LevelSystem(target,directory,application,actor,level,route,active_profile,secret,
                                    (level_allowance,recorder_allowance),allowance)
                 record['reader_id']=levels.reader_id;record['recorder_id']=levels.recorder_id
             with (target/'host.jsonl').open('x') as output,(target/'host-stderr.log').open('x') as errors,(target/'prompt.txt').open() as prompt_input:
                 child=subprocess.Popen(arguments,cwd=ROOT,env=environment,stdin=prompt_input,stdout=output,stderr=errors,start_new_session=True)
                 write_new(target/'host-process.json',dict(pid=child.pid,pgid=child.pid,argv=arguments))
-                events=HostEvents(target/'host.jsonl',allowance,
+                events=HostEvents(target/'host.jsonl',allowance,route=selected_route,
                     observer=lambda ordinal,event:application.activity_view.host_event(actor['actor_id'],ordinal,event))
                 while child.poll() is None:
                     events.read()
@@ -823,11 +893,15 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
             cleanup=close_group(child)
             record['cleanup']=cleanup
             record.update(events.finish())
-            if levels is not None:levels.drain(fenced,deadline)
             if not record['accounting_complete'] or not cleanup['process_absent'] or not cleanup['group_absent']:
                 raise ControlError('Host accounting or exact process-group quiescence is unresolved')
+            if levels is not None:levels.drain(fenced,deadline)
             if levels is not None and not levels.quiescent():
                 raise ControlError('A level or recorder pass process group is not confirmed absent; no successor')
+            if levels is not None and (levels.level_lane.money_failed or levels.recorder_lane.money_failed):
+                reason = 'A reader monetary lease could not be reconciled'
+                record['money_error'] = reason
+                break
             settled=record['settled']
             if child.returncode!=0 or settled.get('ok') is not True:
                 reason='Deciding host ended unsuccessfully';break
@@ -858,6 +932,12 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
                     record.update(accounting_complete=False,attempts_charged=allowance,trace_error=type(exc).__name__)
                 finally:events.close()
             else:record.update(accounting_complete=False,attempts_charged=allowance if child else 0)
+            if child is None:
+                record['charged_nano_usd'] = '0'
+            elif (not record.get('accounting_complete') or not record['cleanup'].get('process_absent')
+                    or not record['cleanup'].get('group_absent')):
+                record['charged_nano_usd'] = record['allocated_nano_usd']
+            remaining_pools['actor'] -= nano_usd(record['charged_nano_usd'])
             if levels is not None:
                 # An orchestration failure is a stop: the open episode closes at the edge, where that is safe.
                 if not levels.failure:
@@ -866,6 +946,8 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
                 try:levels.finish()
                 except Exception as exc:record['level_error']=type(exc).__name__
                 record['level']=levels.receipt()
+                remaining_pools['level'] = levels.level_lane.money_remaining
+                remaining_pools['recorder'] = levels.recorder_lane.money_remaining
                 # finish() charged every pass, an unaccounted one at its whole allocation.
                 total_attempts+=levels.charged
             record['elapsed_seconds']=time.monotonic()-started
@@ -876,7 +958,10 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
         if record.get('orchestration_error'):break
     # attempts_charged includes every actor's level passes; each record keeps its own split.
     levels_of=lambda r:r.get('level') or {}
-    return dict(schema='player-driver/7',outcome=outcome,reason=reason,actors=records,
+    return dict(schema='player-driver/8',outcome=outcome,reason=reason,actors=records,
+                charged_nano_usd=str(sum(nano_usd(original_pools[r]) - left for r, left in remaining_pools.items())),
+                money_complete=all(r.get('accounting_complete') and not r.get('orchestration_error')
+                                   and not r.get('level_error') and not r.get('money_error') for r in records),
                 attempts_charged=total_attempts,host_seconds_used=host_seconds_used,
                 level_attempts_charged=sum(levels_of(r).get('attempts_charged',0) for r in records),
                 level_failed_passes=sum(levels_of(r).get('failed_passes',0) for r in records),

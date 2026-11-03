@@ -37,6 +37,26 @@ FROZEN_ROLE_SHA256={
     'episode-v1.txt':'33398803a5706d13faf6c2a2b588a97d8b03fa1735caadb98736a79290c24d3f'}
 
 
+def nano_usd(value: str) -> int:
+    if not isinstance(value, str) or not re.fullmatch(r'0|[1-9][0-9]{0,17}', value):
+        raise ControlError('Expected a canonical integer nanodollar allocation')
+    return int(value)
+
+
+def request_cost_bound(route: dict) -> int:
+    model = route['model']
+    costs = model['cost']
+    closed(costs, {'input', 'output', 'cacheRead', 'cacheWrite'})
+    rates = {}
+    for key, value in costs.items():
+        if not isinstance(value, str) or len(value) > 64 or not re.fullmatch(r'(0|[1-9][0-9]*)(?:\.[0-9]+)?', value):
+            raise ControlError('Expected an exact decimal rate in USD per million tokens')
+        numerator, denominator = Decimal(value).as_integer_ratio()
+        rates[key] = (numerator * 1000 + denominator - 1) // denominator
+    return (model['contextWindow'] * max(rates[k] for k in ('input', 'cacheRead', 'cacheWrite'))
+            + model['maxTokens'] * rates['output'])
+
+
 def level_profile(level,actor_profile:str):
     """Validate the optional subgoal level and episode recorder; null is the zero-level-host configuration."""
     if level is None:return None
@@ -84,7 +104,7 @@ def local_file(value: str) -> Path:
 
 
 def host_argv(host) -> list[str]:
-    """Validate the closed `player-host/7` adapter selection and return its argv."""
+    """Validate the closed `player-host/8` adapter selection and return its argv."""
     closed(host,{'argv'})
     argv=host['argv']
     if (type(argv) is not list or not 1<=len(argv)<=8
@@ -102,7 +122,7 @@ def preflight(directory: Path) -> tuple[dict,dict,dict]:
     if not directory.is_relative_to(ROOT/'.runtime/computer-sessions') or directory.is_symlink():
         raise ControlError('Select a fresh explicit project-local computer session package')
     profile=read_json(directory/'manifest.json',1048576)
-    if type(profile) is not dict or profile.get('schema')!='campaign-run/6':
+    if type(profile) is not dict or profile.get('schema')!='campaign-run/7':
         raise ControlError('Unsupported campaign package; old admissions are inert history')
     closed(profile,FIELDS)
     host_argv(profile['host'])
@@ -152,7 +172,7 @@ def preflight(directory: Path) -> tuple[dict,dict,dict]:
     if not profile['host_seconds']<=profile['total_host_seconds']<profile['wall_seconds']-30:
         raise ControlError('Original host and cleanup horizons do not fit')
     route=read_json(directory/'route.json',1048576)
-    if type(route) is not dict or route.get('schema')!='player-host/7':
+    if type(route) is not dict or route.get('schema')!='player-host/8':
         raise ControlError('Unsupported player host route; old routes are inert history')
     if level and (type(route.get('max_context_images')) is not int or route['max_context_images']<RECORDER_IMAGES):
         raise ControlError(f'The recorder pins up to 7 frames and reads one more: the route needs max_context_images of at least {RECORDER_IMAGES}')
@@ -184,15 +204,15 @@ def preflight(directory: Path) -> tuple[dict,dict,dict]:
         stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=10,
         env=dict(PATH=os.environ.get('PATH','/usr/bin:/bin'),LANG='en_US.UTF-8'))
     budget=profile['accounting']
-    closed(budget,{'prior_attempts','prior_reserved_usd','ceiling_usd','prospective_reserved_usd'})
+    closed(budget,{'prior_attempts','run_ceiling_nano_usd','role_caps_nano_usd'})
     integer(budget['prior_attempts'],0,10**9)
-    for name in ('prior_reserved_usd','ceiling_usd','prospective_reserved_usd'):
-        amount=Decimal(str(budget[name]))
-        if not amount.is_finite() or amount<0:raise ControlError('Accounting amounts must be finite and nonnegative')
-    costs=route['model']['cost']
-    rate=max(Decimal(str(costs[k])) for k in ('input','cacheRead','cacheWrite'))
-    per=(Decimal(route['model']['contextWindow'])*rate+Decimal(route['model']['maxTokens'])*Decimal(str(costs['output'])))/Decimal(10**6)
-    prospective=Decimal(str(budget['prior_reserved_usd']))+per*profile['max_http_attempts']
-    if prospective!=Decimal(str(budget['prospective_reserved_usd'])) or prospective>Decimal(str(budget['ceiling_usd'])):
-        raise ControlError('Original conservative allocation does not fit selected cumulative ceiling')
+    caps = budget['role_caps_nano_usd']
+    closed(caps, {'actor', 'level', 'recorder'})
+    bound = request_cost_bound(route)
+    amounts = {role: nano_usd(cap) for role, cap in caps.items()}
+    if (route['max_cost_nano_usd'] != caps['actor']
+            or sum(amounts.values()) > nano_usd(budget['run_ceiling_nano_usd'])
+            or any(amount < bound for role, amount in amounts.items() if role == 'actor' or level)
+            or (not level and (amounts['level'] or amounts['recorder']))):
+        raise ControlError('Role dollar pools do not fit the run ceiling or first-attempt bound')
     return profile,route,target

@@ -38,6 +38,11 @@ Each amendment says what changed and why. The sections below describe the curren
   an adoption claim. K, S, N, c, the fractions and the intent bound remain unchanged. Historical
   failed gates and frozen artifacts remain evidence. The coordinated contract migration below
   implements the amendment without compatibility paths; fresh diagnostic stores are required.
+- **Request budget amendment.** Following the $20 diagnostic admission refusal, the owner
+  approved per-attempt monetary reservations, disjoint campaign role pools, and finite stage
+  ceilings that remain assigned through delayed billing. A hard monetary stop can end a host
+  before its remaining ending attempts are usable. The host and campaign contracts own the
+  monetary boundary. The shadow still needs its independently reviewed finite registry.
 
 - **Drafts 1–4, to 31 October 2026.** Draft 1 had the real-time player write its own memory,
   which conflicted with the owner's later direction and P1. Draft 2 followed the owner's
@@ -912,9 +917,10 @@ Shaped in [#326](https://github.com/CVX-Hull/enactive/issues/326); the evidence 
   | `player-intent/3` | The intent object, with the fixed 1,024-byte allocation (labels count) |
   | `player-handoff/2` | The handoff without an actor-written summary or memory snapshot |
   | `player-pass-input/1` | The recorder's closed pass-input document |
-  | `player-host/7` | The roles actor, level and recorder; the `level-*` and `episode-*` events; the pinned recorder frames; the intent-tail format; `intent_tail_bytes` null or 1024; a level pass sends `tool_choice: required`, offers only the terminal tools on its last two requests and settles `level-no-proposal` or `level-final-refusal` otherwise |
-  | `player-driver/7` | The cutter, recorder FIFO and settle reporting; binding at push; independent fraction considerations and `wake_skips`; launched-pass counts exclude skips. Closure and stall belong to the custodian |
-  | `campaign-run/6` | The level profile (θ and its fitting digest, C = K, *m*, N, *c*, S, the recall sizes, the recorder's allowance, partition, lifecycle and backlog) and the `episode-v1` and `subgoal-v4` prompts, frozen by digest. `episode_cap` replaces `inputs_per_pass` and must equal K |
+  | `player-host/8` | The actor, level and recorder roles, pinned recorder frames, and existing terminal and intent-tail rules. The route freezes exact decimal rates and the allocation. Each HTTP attempt reserves its bound before fetch and records the charge at settlement |
+  | `player-driver/8` | The cutter, recorder FIFO and settle reporting, binding at push, independent fraction wakes and `wake_skips`. The driver validates monetary traces and reconciles disjoint role leases after exact process-group absence. Closure and stall belong to the custodian |
+  | `campaign-run/7`, `campaign-receipt/3` | The frozen level profile and prompt digests, role pools and campaign ceiling, and verified or conservative fallback monetary charges. `episode_cap` must equal K |
+  | `stage-budget-registry/1`, `stage-accounting/2` | The finite run, overhead and uncertainty assignments. The stage checks receipts against their assigned ceilings and checks the account delta separately |
 
   `player-memory/1` and `player-record/1` are unchanged: episodes are `claim` records with a level
   discriminator. The host and driver rules live in the [player-host](../contracts/player-host.md)
@@ -924,8 +930,8 @@ Shaped in [#326](https://github.com/CVX-Hull/enactive/issues/326); the evidence 
   `player-level/3` to `/4` to `/5`; `player-level-commit/3` to `/4` to `/5`;
   `player-intent/1` to `/2` to `/3`; `player-level-abstain/2` to `/3`;
   `player-episode-record/1` and `player-episode-abstain/1` to `/2` (raw episode data unchanged);
-  `player-handoff/1` to `/2`; `player-host/2` to `/3` to `/4` (#340) to `/5` (#341) to `/6` to `/7`;
-  `player-driver/3` to `/4` to `/5` to `/6` to `/7`; `campaign-run/3` to `/4` to `/5` to `/6`. `player_log_read`
+  `player-handoff/1` to `/2`; `player-host/2` to `/3` to `/4` (#340) to `/5` (#341) to `/6` to `/7` to `/8`;
+  `player-driver/3` to `/4` to `/5` to `/6` to `/7` to `/8`; `campaign-run/3` to `/4` to `/5` to `/6` to `/7`. `player_log_read`
   and `player-log/1` are removed, and so is the host rule that a level host includes
   `player_log_read`.
 - **Callers, migrated together on the candidate branch** (by #349, #350, #351 and the lead's

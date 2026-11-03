@@ -27,23 +27,28 @@ Driver rules (each is a stop reason; the driver stops, never retries, and settle
 `ports` supplies (all synchronous): `read_account() -> {total_usage, total_credits}`; `reprice() -> changed prices`;
 `machine_load() -> float`; `state_verify(carried=None) -> bool`; `state_restore(label) -> bool`;
 `state_retain(label) -> int`; `retain_labels(name) -> (continuation_label, evidence_label)` (persistent stages only, asked
-before the run is built, so a binding that cannot name them stops the stage before any effect); `build(run) -> bool`; `start_watcher(name) -> handle` with `wait(timeout) -> int` and
+before the run is built, so a binding that cannot name them stops the stage before any effect);
+`build(run, ceiling_usd) -> bool`; `start_watcher(name) -> handle` with `wait(timeout) -> int` and
 `terminate()`; `launch(run) -> int`; `receipt(name) -> dict | None`; `assess(name, receipt) -> Assessment`;
 `extension_needed(stage_runs) -> (needed, description)`; `excluded_custody(name) -> int | None`; `sleep(seconds)`;
 `clock() -> float`.
 """
 from __future__ import annotations
 
+from contextlib import contextmanager
 from dataclasses import dataclass, field
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 import hashlib
 import json
 import os
+import fcntl
+import re
 from pathlib import Path
 from typing import Callable, Sequence
 
-ACCOUNTING_SCHEMA = 'stage-accounting/1'
-FROZEN_KEYS = ('stage', 'item', 'max_runs', 'base_runs', 'batch_size', 'per_run_worst_case_usd', 'stage_cap_usd', 'item_cap_usd',
+ACCOUNTING_SCHEMA = 'stage-accounting/2'
+FROZEN_KEYS = ('schema', 'stage', 'item', 'max_runs', 'base_runs', 'batch_size', 'per_run_worst_case_usd', 'stage_cap_usd', 'item_cap_usd',
+               'overhead_ceilings_usd', 'uncertainty_headroom_usd',
                'campaign_attempts', 'load_gate', 'continuity', 'settle_seconds', 'max_check_gap_seconds', 'max_infrastructure_failures',
                'provider_failure_reasons')
 # The settled reasons `infrastructure_failure` knows how to confirm from a host trace; a stage freezes which it excludes.
@@ -83,6 +88,8 @@ def load_frozen(path: Path) -> dict:
     value = json.loads(path.read_text())
     if not isinstance(value, dict) or set(value) != set(FROZEN_KEYS):
         raise StageError(f'{path}: frozen keys must be exactly {sorted(FROZEN_KEYS)}')
+    if value['schema'] != 'stage-budget-registry/1':
+        raise StageError(f'{path}: unsupported stage budget registry')
     for key in ('stage', 'item'):
         if type(value[key]) is not str or not value[key].strip():
             raise StageError(f'{path}: {key} is a non-empty string')
@@ -95,9 +102,17 @@ def load_frozen(path: Path) -> dict:
     reasons = value['provider_failure_reasons']
     if not (isinstance(reasons, list) and len(set(reasons)) == len(reasons) and set(reasons) <= set(PROVIDER_REASONS)):
         raise StageError(f'{path}: provider_failure_reasons is a list of distinct reasons from {list(PROVIDER_REASONS)}')
-    for key in ('per_run_worst_case_usd', 'stage_cap_usd', 'item_cap_usd'):
-        if type(value[key]) is not str or Decimal(value[key]) < 0:
+    overhead = value['overhead_ceilings_usd']
+    if not isinstance(overhead, dict) or any(not name or not isinstance(name, str) for name in overhead):
+        raise StageError(f'{path}: overhead assignments must be named')
+    for key, amount in [(k, value[k]) for k in ('per_run_worst_case_usd', 'stage_cap_usd', 'item_cap_usd',
+                       'uncertainty_headroom_usd')] + list(overhead.items()):
+        if type(amount) is not str or not Decimal(amount).is_finite() or Decimal(amount) < 0:
             raise StageError(f'{path}: {key} is a non-negative decimal string')
+    if (Decimal(value['per_run_worst_case_usd']) * value['max_runs']
+            + sum(map(Decimal, overhead.values())) + Decimal(value['uncertainty_headroom_usd'])
+            > Decimal(value['stage_cap_usd'])):
+        raise StageError(f'{path}: finite assignments exceed the stage cap')
     if value['continuity'] not in (None, 'persistent'):
         raise StageError(f'{path}: unknown continuity {value["continuity"]!r}')
     if value['continuity'] == 'persistent' and value['max_runs'] != value['base_runs']:
@@ -126,15 +141,21 @@ def verify_freeze(expected: dict[str, str], read: Callable[[str], bytes | None])
 
 # ---------------------------------------------------------------- accounting
 
-def new_accounting(*, spend_baseline_usd: str, item_actual_usd: str, cumulative_attempts: int, last_usage) -> dict:
+def new_accounting(*, spend_baseline_usd: str, item_actual_usd: str, prior_uncertainty_usd: str,
+                   cumulative_attempts: int, last_usage) -> dict:
     return dict(schema=ACCOUNTING_SCHEMA, actual_spend_baseline_usd=spend_baseline_usd, item_actual_usd=item_actual_usd,
-                cumulative_attempts=cumulative_attempts, stage_actual_usd={}, last_usage=last_usage, runs=[], unattributed=[])
+                prior_uncertainty_usd=prior_uncertainty_usd,
+                cumulative_attempts=cumulative_attempts, stage_actual_usd={}, last_usage=last_usage, runs=[],
+                overhead=[], unattributed=[])
 
 
 def load_accounting(path: Path) -> dict:
     value = json.loads(path.read_text())
     if not isinstance(value, dict) or value.get('schema') != ACCOUNTING_SCHEMA:
         raise StageError(f'{path}: accounting schema {value.get("schema") if isinstance(value, dict) else value!r}, expected {ACCOUNTING_SCHEMA!r}')
+    hold = value.get('prior_uncertainty_usd')
+    if not isinstance(hold, str) or not re.fullmatch(r'(0|[1-9][0-9]*)(?:\.[0-9]+)?', hold):
+        raise StageError(f'{path}: prior item uncertainty must be an explicit nonnegative decimal string')
     return value
 
 
@@ -158,14 +179,17 @@ def settle(acc: dict, reading: dict, stage: str) -> dict:
     no run but still counts against both caps, so the accounting stays an upper bound.
     """
     usage = Decimal(str(reading['total_usage']))
+    if not usage.is_finite() or usage < 0 or (acc.get('last_usage') is not None
+            and usage < Decimal(str(acc['last_usage']))):
+        raise StageError('Provider account usage counter is invalid or decreased')
     open_runs = [r for r in acc['runs'] if 'account_after' not in r]
     for run in open_runs:
-        delta = (usage - Decimal(str(run['account_before']))).quantize(Decimal('0.0001'))
+        delta = usage - Decimal(str(run['account_before']))
         run['account_after'] = reading['total_usage']
         run['actual_usd'] = str(delta)
         charge(acc, run['stage'], delta)
     if not open_runs and acc.get('last_usage') is not None:
-        gap = (usage - Decimal(str(acc['last_usage']))).quantize(Decimal('0.0001'))
+        gap = usage - Decimal(str(acc['last_usage']))
         if gap:
             acc['unattributed'].append(dict(stage=stage, **{'from': acc['last_usage']}, to=reading['total_usage'], usd=str(gap)))
             charge(acc, stage, gap)
@@ -173,14 +197,35 @@ def settle(acc: dict, reading: dict, stage: str) -> dict:
     return acc
 
 
-def cap_stop(acc: dict, frozen: dict, reading: dict) -> str | None:
+def account_remaining(reading: dict) -> Decimal:
+    try:
+        credits, usage = (Decimal(str(reading[key])) for key in ('total_credits', 'total_usage'))
+    except (KeyError, InvalidOperation):
+        raise StageError('Account counters must be finite nonnegative decimals') from None
+    if any(not value.is_finite() or value < 0 for value in (credits, usage)):
+        raise StageError('Account counters must be finite nonnegative decimals')
+    return credits - usage
+
+
+def cap_stop(acc: dict, frozen: dict, reading: dict, *, overhead: str | None = None) -> str | None:
     """The stop reason when one more worst-case run would pass a cap or the balance, else None."""
     worst, stage = Decimal(frozen['per_run_worst_case_usd']), frozen['stage']
-    if Decimal(acc['stage_actual_usd'].get(stage, '0')) + worst > Decimal(frozen['stage_cap_usd']):
+    spent_overhead = {r['name'] for r in acc['overhead'] if r['stage'] == stage}
+    reserved = frozen['overhead_ceilings_usd']
+    if overhead is not None:
+        worst = Decimal(reserved[overhead])
+    assigned = sum(Decimal(r['assigned_ceiling_usd']) for r in acc['runs'] + acc['overhead'] if r['stage'] == stage)
+    held = Decimal(frozen['uncertainty_headroom_usd']) + sum(
+        Decimal(cap) for name, cap in reserved.items() if name not in spent_overhead and name != overhead)
+    actual = Decimal(acc['stage_actual_usd'].get(stage, '0'))
+    if actual > assigned:
+        return f'unexplained account usage: observed {actual}, assigned {assigned}'
+    if max(assigned, actual) + worst + held > Decimal(frozen['stage_cap_usd']):
         return f"stage cap (stage actual {acc['stage_actual_usd'].get(stage, '0')})"
-    if Decimal(acc['item_actual_usd']) + worst > Decimal(frozen['item_cap_usd']):
+    if (Decimal(acc['item_actual_usd']) - actual + Decimal(acc['prior_uncertainty_usd'])
+            + Decimal(frozen['stage_cap_usd']) > Decimal(frozen['item_cap_usd'])):
         return f"item cap ({frozen['item']} actual {acc['item_actual_usd']})"
-    remaining = Decimal(str(reading['total_credits'])) - Decimal(str(reading['total_usage']))
+    remaining = account_remaining(reading)
     if remaining < worst:
         return f'balance below one worst-case run ({remaining} remaining); escalate for top-up'
     return None
@@ -272,6 +317,7 @@ class StageDriver:
     def balance(self, tag: str) -> dict:
         reading = dict(self.ports.read_account(), read_wall=self.ports.clock())
         (self.directory / 'balance' / f'{tag}.json').write_text(json.dumps(reading) + '\n')
+        account_remaining(reading)
         return reading
 
     def settled(self, reading: dict) -> dict:
@@ -301,9 +347,12 @@ class StageDriver:
             return 'run limit'
         acc = load_accounting(self.accounting_path)
         open_records = [r['run'] for r in acc['runs'] if r.get('status') != 'closed']
+        open_records += [r['name'] for r in acc['overhead'] if r.get('status') != 'closed']
         if open_records:
             # A run left open may still be live: never settle, restore or launch under it.
             return f'open run record {open_records}; the owner decides any recovery'
+        if any(r['run'] == name for r in acc['runs']):
+            return f'assignment already used: {name}'
         stage_runs = [r for r in acc['runs'] if r.get('stage') == stage]
         if run > frozen['base_runs'] and not self.persistent:
             needed, description = self.ports.extension_needed(stage_runs)
@@ -323,7 +372,7 @@ class StageDriver:
         stop = cap_stop(acc, frozen, before)
         if stop:
             return stop
-        remaining = Decimal(str(before['total_credits'])) - Decimal(str(before['total_usage']))
+        remaining = account_remaining(before)
         stage_runs = [r for r in acc['runs'] if r.get('stage') == stage]
         if self.persistent and stage_runs:
             carried = stage_runs[-1]
@@ -346,10 +395,12 @@ class StageDriver:
             labels = self.ports.retain_labels(name)
             if not (isinstance(labels, tuple) and len(labels) == 2 and all(type(x) is str and x for x in labels) and labels[0] != labels[1]):
                 raise StageError('A persistent stage needs the binding to name two distinct retained-state labels per session')
-        if not self.ports.build(run):
+        ceiling = Decimal(frozen['per_run_worst_case_usd'])
+        if not self.ports.build(run, ceiling):
             return 'build failed'
         acc = load_accounting(self.accounting_path)
         acc['runs'].append(dict(run=name, stage=stage, account_before=before['total_usage'], attempts=None, complete=False,
+                                assigned_ceiling_usd=frozen['per_run_worst_case_usd'],
                                 status='launched', load_at_start=load))
         save_accounting(self.accounting_path, acc)
         watcher = self.ports.start_watcher(name)
@@ -361,7 +412,20 @@ class StageDriver:
             watcher.terminate()
             watcher_rc = 'timeout'
         receipt = self.ports.receipt(name)
+        money = receipt.get('accounting') if isinstance(receipt, dict) else None
+        charged_nano = money.get('charged_nano_usd') if isinstance(money, dict) else None
+        ceiling_nano = str(int(ceiling * 10**9))
+        if (not isinstance(money, dict) or receipt.get('schema') != 'campaign-receipt/3'
+                or money.get('money_complete') is not True or money.get('run_ceiling_nano_usd') != ceiling_nano
+                or not isinstance(charged_nano, str) or not re.fullmatch(r'0|[1-9][0-9]{0,17}', charged_nano)
+                or int(charged_nano) > int(ceiling_nano)):
+            self.note(event='monetary-receipt-refused', run=name, expected_ceiling_nano_usd=ceiling_nano)
+            return f'campaign monetary receipt unverified ({name})'
         a = self.ports.assess(name, receipt)
+        custody = ('native_absence_verified', 'deciding_hosts_quiescent', 'input_authority_revoked')
+        if not a.quiescent or any(receipt.get(key) is not True for key in custody):
+            self.note(event='campaign-custody-unverified', run=name)
+            return f'campaign custody unverified ({name})'
         # Persistent mode keeps this session's post-session state (a copy; the live state stays) once the native process is
         # verified absent; no receipt, or a native process not verified gone, means the state may still be changing.
         # Only a complete session with a quiescent level is a continuation state; any other is kept as evidence, never carried.
@@ -373,6 +437,7 @@ class StageDriver:
         record = acc['runs'][-1]
         assert record['run'] == name
         record.update(attempts=charged, complete=a.complete, launcher_rc=launcher_rc, watcher_rc=watcher_rc,
+                      charged_nano_usd=charged_nano,
                       max_check_gap_s=a.max_check_gap_s, outcome=a.outcome, failure=a.failure, quiescent=a.quiescent,
                       included_clean_exit=a.clean_exit, refusal_circuit_breaker=a.breaker['tripped'], status='closed')
         if self.persistent:
@@ -423,8 +488,62 @@ class StageDriver:
 
     # --- the stage
 
+    @contextmanager
+    def _lock(self):
+        lock_path = self.accounting_path.with_suffix('.lock')
+        with lock_path.open('a') as lock:
+            try:
+                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                raise StageError('Another stage driver holds the accounting ledger') from None
+            yield
+
+    def run_overhead(self, name: str, action: Callable[[Decimal], dict]) -> dict:
+        """Assign one frozen audit/compatibility ceiling before invoking its guarded host."""
+        frozen = self.frozen
+        stage = frozen['stage']
+        with self._lock():
+            acc = load_accounting(self.accounting_path)
+            if (name not in frozen['overhead_ceilings_usd']
+                    or any(r['stage'] == stage and r['name'] == name for r in acc['overhead'])
+                    or any(r['status'] != 'closed' for r in acc['runs'] + acc['overhead'])):
+                raise StageError('Overhead assignment is unknown, already used or blocked by an open record')
+            if changed := self.ports.reprice():
+                raise StageError(f'Price changed before overhead: {changed}')
+            before = self.balance(f'overhead-{name}-before')
+            acc = self.settled(before)
+            if reason := cap_stop(acc, frozen, before, overhead=name):
+                raise StageError(reason)
+            ceiling = frozen['overhead_ceilings_usd'][name]
+            record = dict(name=name, stage=stage, assigned_ceiling_usd=ceiling, status='launched')
+            acc['overhead'].append(record)
+            save_accounting(self.accounting_path, acc)
+            result = action(Decimal(ceiling))
+            charged = result.get('charged_nano_usd') if isinstance(result, dict) else None
+            if (not isinstance(charged, str) or not re.fullmatch(r'0|[1-9][0-9]{0,17}', charged)
+                    or int(charged) > Decimal(ceiling) * 10**9 or result.get('quiescent') is not True
+                    or result.get('accounting_complete') is not True):
+                raise StageError('Overhead accounting or custody is unresolved')
+            record.update(status='closed', result=result)
+            save_accounting(self.accounting_path, acc)
+            self.ports.sleep(frozen['settle_seconds'])
+            settled = self.settled(self.balance(f'overhead-{name}-after'))
+            if self.unexplained_usage(settled):
+                raise StageError('Unexplained account usage after overhead')
+            return result
+
+    def unexplained_usage(self, acc: dict) -> bool:
+        stage = self.frozen['stage']
+        assigned = sum(Decimal(r['assigned_ceiling_usd'])
+                       for r in acc['runs'] + acc['overhead'] if r['stage'] == stage)
+        return Decimal(acc['stage_actual_usd'].get(stage, '0')) > assigned
+
     def run(self, first_run: int, batches: int) -> int:
         """Run up to `batches` batches from `first_run`; returns the exit code (0 normal stop, 3 price, 4 stop rule, 5 exception)."""
+        with self._lock():
+            return self._run_locked(first_run, batches)
+
+    def _run_locked(self, first_run: int, batches: int) -> int:
         frozen = self.frozen
         run, reason, rc = first_run, 'batches done', 0
         try:
@@ -445,10 +564,10 @@ class StageDriver:
         except BaseException as exc:  # stop, never retry; includes KeyboardInterrupt
             reason, rc = f'exception: {exc!r}', 5
         finally:
-            self.close(run, reason, rc)
+            rc = self.close(run, reason, rc)
         return rc
 
-    def close(self, run: int, reason: str, rc: int) -> None:
+    def close(self, run: int, reason: str, rc: int) -> int:
         """Cleanup on every exit path: settle, restore or keep the carried state, and record the exit."""
         acc = load_accounting(self.accounting_path)
         last = acc['runs'][-1] if acc['runs'] else None
@@ -468,12 +587,20 @@ class StageDriver:
         else:
             if any('account_after' not in r for r in acc['runs']):
                 self.ports.sleep(self.frozen['settle_seconds'])
-                acc = self.settled(self.balance(f'settle-after-run-{run:02d}'))
+                try:
+                    acc = self.settled(self.balance(f'settle-after-run-{run:02d}'))
+                except (StageError, OSError, ValueError) as exc:
+                    self.note(event='account-settlement-failed', preceding_reason=reason, failure=repr(exc))
+                    reason, rc = 'final account settlement failed', 4
             if last and self.persistent:
                 retained = last.get('persistent_retained')
                 self.note(event='carried-state-kept', retained=retained,
                           verified=None if retained is None else self.ports.state_verify(retained))
-            elif last and not self.ports.state_verify():
+            elif last and last.get('status') == 'closed' and not self.ports.state_verify():
                 self.note(event='final-restore', retained=f"after-{last['run']}", restored=self.ports.state_restore(f"after-{last['run']}"))
+        if self.unexplained_usage(acc):
+            self.note(event='unexplained-account-usage', preceding_reason=reason)
+            reason, rc = 'unexplained account usage above assigned ceilings', 4
         self.note(event='driver-exit', reason=reason, rc=rc, next_run=run, item_actual_usd=acc['item_actual_usd'],
                   stage_actual_usd=acc['stage_actual_usd'].get(self.frozen['stage']), runs=len(acc['runs']))
+        return rc

@@ -6,6 +6,7 @@ import { stream } from '@earendil-works/pi-ai/api/openai-completions';
 import { retryProviderRequest } from '@earendil-works/pi-ai/utils/provider-retry';
 import { McpClient, StdioTransport, toLlmContent } from '@earendil-works/pi-mcp';
 import { createValidationFeedback, FIX_LINE } from './validation-feedback.mjs';
+import { CompletionMarker, RequestBudget, frozenPrice } from './request-budget.mjs';
 
 export const INPUT_LIMIT_BYTES = 1_048_576;
 // A level pass ends with exactly one of these calls, and a recorder pass with exactly one of the episode calls. On its last
@@ -58,8 +59,8 @@ function bounded(value) {
 /** One frozen route, without credential values, ambient discovery or effort clamping. */
 export function validateConfiguration(configuration, selectedModel, effort) {
   bounded(configuration);
-  closed(configuration, ['schema', 'role', 'intent_tail_bytes', 'model', 'api_key_env', 'max_requests', 'max_context_images', 'context_image_block', 'request_timeout_seconds', 'service_tier']);
-  requireThat(configuration.schema === 'player-host/7');
+  closed(configuration, ['schema', 'role', 'intent_tail_bytes', 'model', 'api_key_env', 'max_requests', 'max_context_images', 'context_image_block', 'request_timeout_seconds', 'service_tier', 'max_cost_nano_usd']);
+  requireThat(configuration.schema === 'player-host/8');
   // An actor may carry the intent tail, whose fixed allocation is the one bound of INTENT_TAIL_BYTES; a level or a recorder never does.
   requireThat(['actor', 'level', 'recorder'].includes(configuration.role));
   requireThat(configuration.intent_tail_bytes === null
@@ -79,7 +80,7 @@ export function validateConfiguration(configuration, selectedModel, effort) {
   requireThat(Array.isArray(model.input) && model.input.includes('text') && model.input.includes('image') && model.input.every(item => ['text', 'image'].includes(item)));
   requireThat(Number.isSafeInteger(model.contextWindow) && model.contextWindow > 0 && Number.isSafeInteger(model.maxTokens) && model.maxTokens > 0 && model.maxTokens <= model.contextWindow);
   closed(model.cost, ['input', 'output', 'cacheRead', 'cacheWrite']);
-  requireThat(['input', 'output', 'cacheRead', 'cacheWrite'].every(key => typeof model.cost[key] === 'number' && Number.isFinite(model.cost[key]) && model.cost[key] >= 0));
+  requireThat(['input', 'output', 'cacheRead', 'cacheWrite'].every(key => frozenPrice(model.cost[key])));
   let url;
   try { url = new URL(model.baseUrl); } catch { throw new HostError('invalid-configuration'); }
   requireThat(['https:', 'http:'].includes(url.protocol) && !url.username && !url.password && !url.search && !url.hash);
@@ -116,6 +117,8 @@ export function validateConfiguration(configuration, selectedModel, effort) {
       else requireThat(typeof value === 'boolean');
     }
   }
+  try { new RequestBudget(configuration); }
+  catch { throw new HostError('invalid-configuration'); }
   return configuration;
 }
 
@@ -643,6 +646,13 @@ export async function runHost(options) {
   };
   let agent, client, transport, fatal, closing = false, requests = 0, requestId, requestTimer, requestInFlight = false, requestUsageAvailable = false;
   let workTimer, deadlineTimer;
+  let budget, completionMarker, responseIdentity, mixedIdentity;
+  const settleMoney = complete => {
+    const charge = budget?.settle(complete);
+    if (!charge) return;
+    emit('request-cost', {request_id:requestId, ...charge});
+    if (charge.violation) stop('request-cost-bound-violation');
+  };
   let responseProgress, handoff, pendingHandoff, passEnded = false, passUncertain = false;
   // Frame reads admitted in the current assistant batch: each adds one image to the next request.
   let batchReads = 0;
@@ -691,6 +701,7 @@ export async function runHost(options) {
     options.signal?.addEventListener('abort', cancellation, {once:true});
     if (options.signal?.aborted) stop('cancelled');
     const configuration = validateConfiguration(options.configuration, options.model, options.effort);
+    budget = new RequestBudget(configuration);
     const mcp = validateMcpConfiguration(options.mcpConfig);
     // A level or a recorder pass ends on one of its terminal tools; an actor has none.
     const pass = PASS_ROLES[configuration.role];
@@ -775,7 +786,9 @@ export async function runHost(options) {
       emit('tool-validation-feedback', {request_id:`request-${requests + 1}`, ...diagnostic}),
       pass ? {names:pass.tools, terminal:pass.tools, notes:TERMINAL_NOTES} : {});
     agent = new Agent({
-      initialState:{systemPrompt:options.context + (client.instructions ? '\n\nMCP server instructions:\n' + client.instructions : ''), model:configuration.model, thinkingLevel:options.effort, tools},
+      initialState:{systemPrompt:options.context + (client.instructions ? '\n\nMCP server instructions:\n' + client.instructions : ''), model:{
+        ...configuration.model, cost:Object.fromEntries(Object.entries(configuration.model.cost).map(([key, value]) => [key, Number(value)])),
+      }, thinkingLevel:options.effort, tools},
       toolExecution:'sequential',
       transformContext:async messages => {
         if (fatal) return messages;
@@ -814,6 +827,7 @@ export async function runHost(options) {
             'Host resource status (software-generated at context construction):\n' +
             `Actual provider HTTP attempts charged before this request: ${requests}/${configuration.max_requests}.\n` +
             `Remaining allowance including this request: ${configuration.max_requests - requests}.\n` +
+            `Remaining monetary allocation: ${budget.allocation - budget.charged} nanodollars. One HTTP attempt needs a reservation of ${budget.bound} nanodollars.\n` +
             (reservedWindow()
               ?'This request offers only the pass-ending tools; end the pass with exactly one of them.\n' : '') +
             `Host decision time remaining at this snapshot: ${Math.max(0,(workDeadline-performance.now())/1000).toFixed(3)} seconds. Custodian time is a separate horizon.\n` +
@@ -896,6 +910,7 @@ export async function runHost(options) {
           // End an eligible first attempt and hand its server delay to the SDK
           // helper. Status is omitted so only the host's declared classes decide.
           const retry = (attemptId, retryClass, status, headers) => {
+            settleMoney(false);
             emit('response-complete', {request_id:attemptId, model:model.id, provider:model.provider, stop_reason:'error', http_status:status, usage_available:false, usage:null, cost_source:null, response_progress:progressSnapshot()});
             requestInFlight = false;
             if (requests >= configuration.max_requests) {
@@ -926,7 +941,14 @@ export async function runHost(options) {
             const sizes = {...payloadSize(payload), payload_bytes:Buffer.byteLength(init.body),
               payload_sha256:createHash('sha256').update(init.body).digest('hex')};
             const inspectionMs = performance.now() - fetchEntered;
+            if (!budget.reserve()) {
+              emit('request-budget-denied', {charged_nano_usd:String(budget.charged), bound_nano_usd:String(budget.bound)});
+              stop('request-budget-limit');
+              throw new HostError(fatal);
+            }
             const attemptId = requestId = `request-${++requests}`;
+            responseIdentity = null;
+            mixedIdentity = false;
             const attemptProgress = responseProgress = {request_id:attemptId, body_bytes:0, body_chunks:0,
               provider_events:0, content_bytes:0, reasoning_bytes:0,
               tool_argument_bytes:0, response_id:null, reported_provider:null, ...progressTimes()};
@@ -937,8 +959,8 @@ export async function runHost(options) {
               sdk_after_payload_ms:attempts === 1 && payloadReadyAt !== undefined ? fetchEntered - payloadReadyAt : null,
               host_inspection_ms:inspectionMs, ...sizes});
             let response;
-            emit('request-fetch-start', {request_id:attemptId});
-            try { response = await actualFetch(url, init); }
+            emit('request-fetch-start', {request_id:attemptId, reserved_nano_usd:String(budget.bound)});
+            try { response = await actualFetch(url, {...init, redirect:'manual'}); }
             catch {
               // A rejected fetch has no response headers. Timeout and abort latch first.
               if (!fatal && !requestSignal.aborted && attempts === 1) retry(attemptId, 'pre-header-rejection', null, null);
@@ -949,12 +971,20 @@ export async function runHost(options) {
               void response.body?.cancel().catch(() => {});
               throw new HostError(fatal ?? 'provider-error');
             }
+            if (response.status >= 300 && response.status < 400) {
+              emit('response-headers', {request_id:attemptId, status:response.status});
+              void response.body?.cancel().catch(() => {});
+              stop('provider-redirect-refused');
+              throw new HostError(fatal);
+            }
             const server = SERVER_RETRY_STATUSES.includes(response.status);
             emit('response-headers', {request_id:attemptId, status:response.status, provider_request_id:
               diagnosticId(response.headers.get('x-request-id'), apiKey),
               ...(server || [402, 429].includes(response.status) ? retryDiagnostic(response.headers) : {})});
             let first = false;
+            const marker = completionMarker = new CompletionMarker();
             const body = response.body?.pipeThrough(new TransformStream({transform(chunk, controller) {
+              if (!marker.complete && response.ok) marker.push(chunk);
               attemptProgress.body_bytes += chunk.byteLength;
               attemptProgress.body_chunks++;
               markProgress(attemptProgress, 'body_chunk', performance.now() - started);
@@ -1008,14 +1038,21 @@ export async function runHost(options) {
             if (contentBytes > 0) markProgress(responseProgress, 'content_delta', eventAt);
             if (reasoningBytes > 0) markProgress(responseProgress, 'reasoning_delta', eventAt);
             if (toolBytes > 0) markProgress(responseProgress, 'tool_argument_delta', eventAt);
-            // Optional provider echo only; missing/unrecognized values remain unknown.
-            // This does not change delivery, retries, configured prices or authority.
+            // An absent or unrecognized tier remains unknown. The OpenRouter
+            // guard is priced for the frozen default tier.
             const tier = chunk?.service_tier;
             if (['default', 'priority', 'flex'].includes(tier) && !observedServiceTiers.has(`${requestId}:${tier}`)) {
               observedServiceTiers.add(`${requestId}:${tier}`);
               emit('response-service-tier', {request_id:requestId, applied_service_tier:tier});
             }
+            if (model.provider === 'openrouter' && ['priority', 'flex'].includes(tier)) budget.violation = true;
+            if (text(chunk?.id)) {
+              responseIdentity ??= chunk.id;
+              mixedIdentity ||= chunk.id !== responseIdentity;
+            }
             const usage = chunk?.usage ?? chunk?.choices?.[0]?.usage;
+            budget.observe(usage, responseIdentity !== null && chunk?.id === responseIdentity);
+            if (budget.violation) stop('request-cost-bound-violation');
             // Pi initializes absent usage to zero. Only publish normalized totals
             // when the provider actually reported both input and output counts.
             if (Number.isFinite(usage?.prompt_tokens) && Number.isFinite(usage?.completion_tokens)) requestUsageAvailable = true;
@@ -1044,7 +1081,10 @@ export async function runHost(options) {
             emit(`${pass.prefix}-terminal-call`, {request_id:requestId, tool_call_id:part.id, tool:part.name, arguments_error:Object.hasOwn(part, 'argumentsError')});
           }
         }
-        if (requestInFlight) emit('response-complete', {request_id:requestId, model:message.model, provider:message.provider, stop_reason:message.stopReason, usage_available:requestUsageAvailable, usage:requestUsageAvailable ? message.usage : null, cost_source:requestUsageAvailable ? (message.usage?.cost?.totalFromProvider === true ? 'provider' : 'configured-rates') : null, response_progress:progressSnapshot()});
+        if (requestInFlight) {
+          settleMoney(!fatal && !mixedIdentity && completionMarker?.complete && ['stop', 'toolUse', 'length'].includes(message.stopReason));
+          emit('response-complete', {request_id:requestId, model:message.model, provider:message.provider, stop_reason:message.stopReason, usage_available:requestUsageAvailable, usage:requestUsageAvailable ? message.usage : null, cost_source:requestUsageAvailable ? (message.usage?.cost?.totalFromProvider === true ? 'provider' : 'configured-rates') : null, response_progress:progressSnapshot()});
+        }
         requestInFlight = false;
         if (['error', 'aborted', 'length', 'deferred'].includes(message.stopReason) && !fatal) stop(message.stopReason === 'error' ? 'provider-error' : `provider-${message.stopReason}`);
       }
@@ -1082,9 +1122,13 @@ export async function runHost(options) {
     await close();
     clearTimeout(deadlineTimer);
   }
+  settleMoney(false);
   const terminal = agent?.state.messages.findLast(message => message.role === 'assistant');
   const finalText = !fatal && !handoff ? (terminal?.content ?? []).filter(part => part.type === 'text').map(part => part.text).join('\n') : '';
   const result = {ok:!fatal, reason:fatal ?? (handoff ? 'handoff' : 'completed'), requests, finalText};
-  emit('settled', {ok:result.ok, reason:result.reason, requests, event_output:{...outputStats}, native_cleanup_claimed:false});
+  emit('settled', {ok:result.ok, reason:result.reason, requests,
+    money:budget ? {allocation_nano_usd:String(budget.allocation), charged_nano_usd:String(budget.charged),
+      bound_nano_usd:String(budget.bound), violation:budget.violation} : null,
+    event_output:{...outputStats}, native_cleanup_claimed:false});
   return result;
 }

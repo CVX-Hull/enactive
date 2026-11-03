@@ -144,16 +144,26 @@ def test_pause_is_independent_of_blocked_activity_read(service):
 
 def test_partial_host_lines_keep_original_accounting_and_single_projection(tmp_path):
     path = tmp_path / 'host.jsonl'
-    path.write_text(json.dumps(dict(type='host-start', telemetry_version=2, schema='player-host/7')) + '\n' + '{"type":"request-start"')
+    path.write_text(json.dumps(dict(type='host-start', telemetry_version=2, schema='player-host/8')) + '\n' + '{"type":"request-start"')
     received = []
-    events = HostEvents(path, 10, observer=lambda ordinal, row: received.append((ordinal, row['type'])))
+    route = dict(max_cost_nano_usd='0', model=dict(contextWindow=100, maxTokens=10,
+                 cost=dict(input='0', output='0', cacheRead='0', cacheWrite='0')))
+    events = HostEvents(path, 10, route=route, observer=lambda ordinal, row: received.append((ordinal, row['type'])))
     try:
         assert events.read() and received == [(1, 'host-start')]
         assert events.finish()['attempts_charged'] == 10
         with path.open('a') as stream:
-            stream.write(',"request_id":"request-1"}\n' + json.dumps(dict(type='settled', requests=1)) + '\n')
+            stream.write(',"request_id":"request-1"}\n')
+            for event in (
+                dict(type='request-fetch-start', request_id='request-1', reserved_nano_usd='0'),
+                dict(type='request-cost', request_id='request-1', charged_nano_usd='0', reconciled=True, violation=False),
+                dict(type='settled', requests=1, money=dict(allocation_nano_usd='0', charged_nano_usd='0',
+                                                          bound_nano_usd='0', violation=False)),
+            ):
+                stream.write(json.dumps(event) + '\n')
         assert events.finish()['attempts_charged'] == 1
-        assert received == [(1, 'host-start'), (2, 'request-start'), (3, 'settled')]
+        assert received == [(1, 'host-start'), (2, 'request-start'), (3, 'request-fetch-start'),
+                            (4, 'request-cost'), (5, 'settled')]
     finally:
         events.close()
 

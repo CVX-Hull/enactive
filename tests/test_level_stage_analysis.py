@@ -68,7 +68,7 @@ def test_a_consistent_run_is_classified_and_pooled(tmp_path):
     run = make_run(tmp_path, 'run-1', mixed_level(), [recorder_pass(1, 'record'), recorder_pass(2, 'abstain', code='unreadable_frames')])
     value = lsa.analyse([run], lsa.load_criteria(criteria_file(tmp_path)))
     pooled, decision = value['pooled'], value['decision_inputs']
-    assert value['schema'] == 'level-stage-analysis/6'
+    assert value['schema'] == 'level-stage-analysis/7'
     assert value['runs'][0]['receipt_mismatches'] == [] and decision['counts_consistent'] is True
     # Two trace commits and one lost call reconciled as committed; one non-censored discard is a decided failure.
     assert (pooled['commits'], pooled['failures'], pooled['censored'], pooled['decided']) == (3, 1, 1, 4)
@@ -153,11 +153,11 @@ def test_an_unsupported_artifact_version_is_rejected(tmp_path, overrides, messag
         lsa.analyse_run(run)
 
 
-@pytest.mark.parametrize('schema,telemetry', [('player-host/5', 2), ('player-host/7', 1), ('pi-player-host/5', 2)])
+@pytest.mark.parametrize('schema,telemetry', [('player-host/5', 2), ('player-host/8', 1), ('pi-player-host/5', 2)])
 def test_an_unsupported_host_trace_is_rejected(tmp_path, schema, telemetry):
     run = make_run(tmp_path, 'run-1', [level_pass(1, 'commit')])
     trace = run / 'actors/001/level/001/host.jsonl'
-    trace.write_text(trace.read_text().replace('"player-host/7"', json.dumps(schema)).replace('"telemetry_version": 2', f'"telemetry_version": {telemetry}'))
+    trace.write_text(trace.read_text().replace('"player-host/8"', json.dumps(schema)).replace('"telemetry_version": 2', f'"telemetry_version": {telemetry}'))
     with pytest.raises(lsa.UnsupportedTrace, match='host trace'):
         lsa.analyse_run(run)
 
@@ -187,7 +187,7 @@ def test_two_actors_or_no_level_or_a_missing_lane_receipt_are_unsupported(tmp_pa
     with pytest.raises(lsa.UnsupportedTrace, match='exactly one'):
         lsa.analyse_run(run)
     run = make_run(tmp_path, 'nolevel', [level_pass(1, 'commit')])
-    (run / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/6', session=SESSION, level=None)))
+    (run / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/7', session=SESSION, level=None)))
     with pytest.raises(lsa.UnsupportedTrace, match='no level'):
         lsa.analyse_run(run)
     run = make_run(tmp_path, 'old', [level_pass(1, 'commit')])
@@ -460,8 +460,8 @@ def test_the_real_driver_receipt_and_traces_are_read_without_a_disagreement(leve
     source.close()
     copy.close()
     (run / 'actors').symlink_to(root / 'actors')
-    (run / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/6', session=session, level=level_profile())))
-    (run / 'receipt.json').write_text(json.dumps(dict(schema='campaign-receipt/2', session=session, outcome=result['outcome'], driver=result)))
+    (run / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/7', session=session, level=level_profile())))
+    (run / 'receipt.json').write_text(json.dumps(dict(schema='campaign-receipt/3', session=session, outcome=result['outcome'], driver=result)))
     value = lsa.analyse([run], lsa.load_criteria(criteria_file(tmp_path)), str(root / 'player.sqlite3'))
     only = value['runs'][0]
     assert only['receipt_mismatches'] == [] and value['decision_inputs']['counts_consistent'] is True

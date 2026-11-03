@@ -10,7 +10,7 @@ One [campaign custodian](../../tools/campaign_run.py) owns fresh mechanical targ
 store/server lifetime and final cleanup. The [driver](../../tools/campaign_player.py)
 owns the frozen [player host](../contracts/player-host.md)/MCP groups and at most one
 successor. The [package validator](../../tools/campaign_package.py) is authoritative
-for the closed `campaign-run/6` admission. No game-phase/identity admission or semantic mission
+for the closed `campaign-run/7` admission. No game-phase/identity admission or semantic mission
 service remains. With a subgoal level ([ADR-007](../decisions/007-player-subgoal-level.md)
 candidate), the driver also owns one episode cutter, one episode recorder and one level per actor, as described below.
 
@@ -125,7 +125,7 @@ launches. The custodian appends per-call lock wait and hold times to `call-timin
 the source store holds 256 MiB and evicts nothing, so the next session on it would fail to remember again and end
 its lineage the same way. Free or replace the store first, or start a fresh one.
 
-`route.json` uses current `player-host/7` (role `actor`) with text/image input and explicit
+`route.json` uses current `player-host/8` (role `actor`) with text/image input and explicit
 provider/effort/price metadata and image peak and block, chosen against the
 provider's image limit. The selected route is OpenRouter /
 an explicitly pinned provider / DeepSeek Flash1017 medium, default service tier, no fallback.
@@ -182,7 +182,7 @@ the actual bytes, for example `shasum -a 256 SELECTED_FILE`; preserve those byte
 
 ```json
 {
-  "schema": "campaign-run/6",
+  "schema": "campaign-run/7",
   "session": "NEW_32_LOWERCASE_HEX_ID",
   "source_commit": "EXACT_40_HEX_CLEAN_HEAD",
   "files": {
@@ -201,54 +201,25 @@ the actual bytes, for example `shasum -a 256 SELECTED_FILE`; preserve those byte
   "actor_profile": "flat", "level": null,
   "limits": {"max_inputs": 6000, "max_requests": 10000, "max_frames": 1500, "max_bytes": 2147483648},
   "accounting": {
-    "prior_attempts": 0, "prior_reserved_usd": 0,
-    "ceiling_usd": 0, "prospective_reserved_usd": 0
+    "prior_attempts": 0, "run_ceiling_nano_usd": "8000000000",
+    "role_caps_nano_usd": {"actor": "8000000000", "level": "0", "recorder": "0"}
   }
 }
 ```
 
-Use the actual cumulative accounting rather than the zero placeholders. With
-default tier, worst-case per attempt is
-`(contextWindow × max(input, cacheRead, cacheWrite) + maxTokens × output) / 1e6`
-using the frozen route's configured dollar rates. Prospective cumulative
-reservation is the prior baseline plus that amount times `max_http_attempts`; it
-must fit the standing ceiling exactly as frozen.
+Freeze a run ceiling and disjoint actor, level and recorder pools in integer
+nanodollars. The actor route's `max_cost_nano_usd` matches the actor pool.
+Active roles must each cover the first full-context reservation. An inactive
+role has a zero pool. The pools carry across handoffs within the campaign.
 
-`prior_reserved_usd` is the **actual spend to date** (owner decision, 31 October
-2026), not the sum of past worst-case reservations. The next package's baseline is
-this baseline plus each settled run's actual cost, taken as follows:
-- Provider usage or an account reading, using the upper end of any range.
-- On a shared account, the whole account delta over the run, never apportioned
-  downward.
-- An attempt missing provider usage counts at its worst case, unless an account
-  reading over the run covers it.
-- A run whose cost neither a trace nor the account isolates counts at its original
-  allocation.
-
-Only the package being admitted reserves its own attempts at the worst case.
-Record the baseline's sources with each package.
-
-The first baseline under this rule is $47.64. It is about $30–40 billed on this
-project's provider accounts when the old cumulative reservation stood at $1066.80
-(owner reading, upper end), plus #304's $7.64, its account and key usage readings
-over conformance, the visual check and play. If the owner's reading postdates part
-of #304, the sum double-counts, which errs high.
-
-A custodian report's `cumulative_conservative_reservation_usd` is the baseline plus
-the run's charged attempts at the worst case; it is never the next baseline. The
-field names are unchanged and no format migration applies, because the validator
-and custodian only add a lead-supplied baseline to the package's own worst case. The
-basis changed: receipts before this rule (through #304) record a cumulative
-worst-case baseline, and later ones an actual-cost baseline. Do not compare the two
-across that boundary.
-
-The worst-case figure stays a bound on one package, not spend: it charges every
-attempt as if it filled the whole context window and output limit, which
-overstated actual cost by more than an order of magnitude, about $1066.80 against
-$30–40 billed. Report actual cost first, from provider-reported usage, with missing
-usage counted separately. When host traces carry only configured-rate costs (as on #304's
-OpenRouter routes), use provider usage or account readings, and state when the account
-is shared. Present the reservation only as the cap check it is.
+The host reserves the physical input and output bound at the frozen upper
+prices before each HTTP attempt, including retries. Valid complete usage
+settles the reservation at its conservative charge. Missing usage retains
+the full per-attempt charge. Missing or inconsistent receipts charge the
+whole lease and prevent succession. Stage admission separately keeps assigned
+run ceilings and observed account spend. An assigned ceiling stays assigned
+through delayed billing and cheaper execution. Report provider spend and
+conservative charges separately.
 
 Before paid play, the lead reads the provider account balance and confirms that
 the auto top-up threshold stays above the realistic actual cost of the planned
@@ -312,13 +283,13 @@ for or adopts unrelated processes. Normal native exit zero is sampled before
 forced cleanup. Save-to-menu, player save/success claims, native exit and absence
 are separate evidence.
 
-`receipt.json` (`campaign-receipt/2`) reports driver disposition, host quiescence,
+`receipt.json` (`campaign-receipt/3`) reports driver disposition, host quiescence,
 native absence, input revocation, cleanup and original accounting. Configured
 estimates and conservative reservations are not invoices. Unknown trace accounting
-charges the allocated attempts. `host_completed_unassessed` means only successful
+charges the allocated attempts and the full monetary ceiling. `host_completed_unassessed` means only successful
 host completion; missing normal native exit becomes an incomplete outcome.
 No receipt alone accepts gameplay. Preserve failures and unrun lanes.
-The `player-driver/7` disposition embedded in it reports, per actor, a `level` object with the level lane
+The `player-driver/8` disposition embedded in it reports, per actor, a `level` object with the level lane
 (`commits` with `keeps`, `replaces` and `closes`, `discards`, `abstains` with `abstain_codes` and `start_abstains`,
 `failed_passes`, `final_refusals`, `uncertain_terminals` with their reconciliation, every pass's settled reason and
 bound), the recorder lane (`records`, `abstains` by code, `failed_passes`, `final_refusals`), `episodes` (the cuts by

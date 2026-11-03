@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Mechanical analysis of a level-stage run set (`level-stage-analysis/6`): retained artifacts only, no provider, no game.
+"""Mechanical analysis of a level-stage run set (`level-stage-analysis/7`): retained artifacts only, no provider, no game.
 
     python -m tools.level_stage_analysis OUTPUT.json SESSION_DIR... --criteria CRITERIA.json [--store-template PATH]
 
 Reads, per included run, the retained artifacts of the current contracts and nothing else: `manifest.json`
-(`campaign-run/6`), `receipt.json` (`campaign-receipt/2` embedding `player-driver/7`), the one actor's
-`driver-receipt.json`, every level and recorder pass's `host.jsonl` (`player-host/7`, telemetry 2),
+(`campaign-run/7`), `receipt.json` (`campaign-receipt/3` embedding `player-driver/8`), the one actor's
+`driver-receipt.json`, every level and recorder pass's `host.jsonl` (`player-host/8`, telemetry 2),
 `call-timing.jsonl`, the session store (`computer-session/3`, read-only) and, when `--store-template` names it
 (a path containing `{run}`), the run's retained player store (`player-memory/1`). Any other version is rejected with an
 `unsupported` error and no output file. Retained runs of earlier interfaces are not converted; the frozen analyses that
@@ -74,7 +74,7 @@ from harness.player.episodes import episode as episode_claim
 from tools.control_analysis import session_database
 from tools.evidence_stats import cluster_bootstrap, quantile, ratio, summary
 
-SCHEMA = 'level-stage-analysis/6'
+SCHEMA = 'level-stage-analysis/7'
 CRITERIA_SCHEMA = 'level-stage-criteria/1'
 CRITERIA_KEYS = ('min_decided', 'min_auditable_records', 'min_commit_rate', 'max_commit_inputs_since_p95',
                  'bootstrap_seed', 'bootstrap_resamples', 'breaker_refusals', 'final_report_grace_seconds',
@@ -82,7 +82,7 @@ CRITERIA_KEYS = ('min_decided', 'min_auditable_records', 'min_commit_rate', 'max
 # The settled reasons a stage may treat as provider-side; which of them it does is its frozen choice.
 PROVIDER_REASONS = ('provider-error', 'request-timeout')
 MANIFEST_SCHEMA, RECEIPT_SCHEMA, DRIVER_SCHEMA, HOST_SCHEMA, TELEMETRY_VERSION = (
-    'campaign-run/6', 'campaign-receipt/2', 'player-driver/7', 'player-host/7', 2)
+    'campaign-run/7', 'campaign-receipt/3', 'player-driver/8', 'player-host/8', 2)
 # harness/application.py `level_call`: the only discard reason that is the run's end rather than the level's doing.
 CENSORED = ('Run stopped or fenced since the pass began',)
 ATTEMPTS = ('level-commit', 'level-discard')
@@ -200,7 +200,7 @@ def refusal_keys(rows: list[dict], tools=LEVEL_TERMINAL_TOOLS) -> list[tuple[str
 
 
 def lane_passes(driver_record: dict, role: str) -> list[dict]:
-    """The pass records of one lane in an actor's `player-driver/7` record (`level.<role>.passes`)."""
+    """The pass records of one lane in an actor's `player-driver/8` record (`level.<role>.passes`)."""
     return (((driver_record.get('level') or {}).get(role) or {}).get('passes')) or []
 
 

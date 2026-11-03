@@ -15,6 +15,16 @@ from tools import campaign_run
 from tools.configure_player_tools import configuration
 
 
+def test_admission_rounds_exact_rates_above_a_nanodollar_boundary():
+    model = dict(contextWindow=100000, maxTokens=1024,
+                 cost=dict(input='1.000000000000000000000000000000001',
+                           output='0', cacheRead='0', cacheWrite='0'))
+    assert packages.request_cost_bound(dict(model=model)) == 100100000
+    model['cost']['input'] = 1.0
+    with pytest.raises(ControlError, match='exact decimal rate'):
+        packages.request_cost_bound(dict(model=model))
+
+
 # Level v4 (#345's development parameters): theta with the digest of its fitting, m = 2, C = K = 10, N = 3, c = 0.0.
 LEVEL=dict(mode='live',episode_cap=10,staleness_inputs=10,budget_fractions=[.25,.5,.75],intent_tail_bytes=1024,
            max_http_attempts=2,pass_max_requests=2,pass_seconds=120,
@@ -33,9 +43,9 @@ def package(root,level=None,route_requests=10):
     for name in ('native','library','options','interpreter','adapter'):(root/name).write_bytes(name.encode())
     tail=level['intent_tail_bytes'] if level and level['mode']=='live' else None
     values={
-        'route.json':dict(schema='player-host/7',role='actor',intent_tail_bytes=tail,service_tier='default',
-            max_requests=route_requests,max_context_images=8,context_image_block=1,model=dict(id='fixture',
-            contextWindow=1000,maxTokens=100,cost=dict(input=.45,cacheRead=.45,cacheWrite=.45,output=1.8))),
+        'route.json':dict(schema='player-host/8',role='actor',intent_tail_bytes=tail,service_tier='default',
+            max_requests=route_requests,max_cost_nano_usd='1000000',max_context_images=8,context_image_block=1,model=dict(id='fixture',
+            contextWindow=1000,maxTokens=100,cost=dict(input='0.45',cacheRead='0.45',cacheWrite='0.45',output='1.8'))),
         'mcp-template.json':configuration('@ACTOR_CONFIG@',profile='narrowed' if level else 'flat'),
         'context.txt':'Frozen context','prompt.txt':'Frozen mission',
         'target.json':dict(argv=[str(root/'native')],cwd=str(root),env={}),
@@ -44,7 +54,7 @@ def package(root,level=None,route_requests=10):
         values['level-role.txt']=packages.LEVEL_ROLE.read_text();values['episode-role.txt']=packages.EPISODE_ROLE.read_text()
     for name,value in values.items():(directory/name).write_text(value if isinstance(value,str) else json.dumps(value))
     artifact=lambda p:dict(path=str(p),sha256=hashlib.sha256(p.read_bytes()).hexdigest())
-    profile=dict(schema='campaign-run/6',session='a'*32,source_commit='f'*40,
+    profile=dict(schema='campaign-run/7',session='a'*32,source_commit='f'*40,
         actor_profile='narrowed' if level else 'flat',level=level,
         files={name:artifact(directory/name)['sha256'] for name in values},
         initial_files={str(root/'options'):artifact(root/'options')['sha256']},
@@ -52,7 +62,7 @@ def package(root,level=None,route_requests=10):
         player_store=str(root/'player.sqlite3'),host=dict(argv=[str(root/'interpreter'),str(root/'adapter')]),effort='off',port=8766,
         wall_seconds=300,host_seconds=100,total_host_seconds=200,max_hosts=2,max_http_attempts=10,
         limits=dict(max_inputs=100,max_requests=100,max_frames=100,max_bytes=1000000),
-        accounting=dict(prior_attempts=0,prior_reserved_usd=0,prospective_reserved_usd=.0063,ceiling_usd=1))
+        accounting=dict(prior_attempts=0,run_ceiling_nano_usd='3000000',role_caps_nano_usd=dict(actor='1000000',level='1000000' if level else '0',recorder='1000000' if level else '0')))
     (directory/'manifest.json').write_text(json.dumps(profile))
     return directory,profile
 
@@ -92,7 +102,7 @@ def test_only_selected_fresh_package_is_read(tmp_path):
 def test_level_package_freezes_its_role_profile_and_partition(tmp_path,mode):
     directory,profile=package(tmp_path,dict(LEVEL,mode=mode),route_requests=6)
     frozen=validate(directory,tmp_path)[0]
-    assert frozen['level']['mode']==mode and frozen['schema']=='campaign-run/6'
+    assert frozen['level']['mode']==mode and frozen['schema']=='campaign-run/7'
     # theta is frozen by value and by the digest of its fitting; the recorder has its own partition.
     assert frozen['level']['theta']==0.1251514705882353 and len(frozen['level']['theta_fitting_sha256'])==64
     assert frozen['level']['recorder']['max_http_attempts']==2
@@ -137,7 +147,7 @@ def test_invalid_level_package_never_launches(tmp_path,fault,expected):
     if fault=='live_without_tail':refreeze('route.json',json.dumps(dict(route,intent_tail_bytes=None)))
     if fault=='over_cap':refreeze('route.json',json.dumps(dict(route,max_requests=7)))
     if fault=='fractions':profile['level']['budget_fractions']=[.5,.25]
-    if fault=='previous':profile['schema']='campaign-run/5'
+    if fault=='previous':profile['schema']='campaign-run/6'
     if fault=='missing_episode_role':profile['files'].pop('episode-role.txt')
     if fault=='episode_role_text':refreeze('episode-role.txt','Record whatever looks useful.')
     if fault=='v3_role_text':refreeze('level-role.txt',(tmp_path/'v3').read_text())

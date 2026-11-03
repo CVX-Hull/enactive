@@ -142,8 +142,8 @@ def world(tmp_path):
     return dict(root=root, runs=runs, ladder=build_ladder(tmp_path, runs), files=files, tmp=tmp_path)
 
 
-def routes(world, port, cost=1.0):
-    first = Path(route_file(world['files'], port, cost=cost))
+def routes(world, port, cost=1.0, **limits):
+    first = Path(route_file(world['files'], port, cost=cost, **limits))
     document = json.loads(first.read_text())
     first.rename(world['files'] / 'f1.json')
     second = dict(document, model=dict(document['model'], id='fixture-model-2', name='Fixture 2'))
@@ -484,7 +484,7 @@ def test_a_route_that_is_not_player_host_6_or_has_too_few_images_is_refused(worl
     paths = routes(world, 9)
     document = json.loads(paths['F2'].read_text())
     paths['F2'].write_text(json.dumps(dict(document, schema='player-host/5')))
-    with pytest.raises(ValueError, match='must be player-host/7'):
+    with pytest.raises(ValueError, match='must be player-host/8'):
         run_probe(world, paths)
     paths['F2'].write_text(json.dumps(dict(document, max_context_images=7)))
     with pytest.raises(ValueError, match='max_context_images'):
@@ -499,7 +499,7 @@ def provider_world(world, provider, **kwargs):
 def test_the_three_stages_run_the_real_hosts_and_the_credential_never_reaches_an_output(world, provider_factory):
     fake = provider_factory(scripted)
     report = provider_world(world, fake)
-    assert report['status'] == 'complete' and report['schema'] == 'level-v4-probe/2' and report['label'] == 'engineering-probe'
+    assert report['status'] == 'complete' and report['schema'] == 'level-v4-probe/3' and report['label'] == 'engineering-probe'
     recorder = report['recorder']
     assert recorder['F1']['passes'] == 7 and recorder['F1']['valid'] == 7 and recorder['F2']['valid'] == 7
     assert recorder['F1']['terminals'] == {'record': 7} and report['level']['passes'] == 3 and report['level']['valid'] == 3
@@ -529,7 +529,7 @@ def test_the_cap_stops_passes_up_front_and_the_report_is_incomplete_not_passed(w
     fake = provider_factory(scripted)
     # Each request costs $1.10 at 50000 USD per million tokens and the bound is $1.20: $5.50 holds one four-request pass
     # ($4.80) and, once it has charged one request, not another, so every other pass is skipped rather than truncated.
-    paths = routes(world, fake.port, cost=50000.)
+    paths = routes(world, fake.port, cost=50000., context_window=13, max_tokens=11)
     report = run_probe(world, paths, max_usd=5.5, max_request_usd=1.2, workers=1)
     assert report['status'] == 'incomplete' and report['passed'] is False
     assert report['spend']['skipped_passes'] > 0 and report['spend']['charged_usd'] <= 5.5

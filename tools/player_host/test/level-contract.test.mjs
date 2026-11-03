@@ -23,14 +23,14 @@ const HARNESS_OWNED = ['schema', 'version', 'record_id', 'position', 'session', 
 // The route the campaign uses for a level pass: OpenRouter, a pinned upstream, medium effort.
 const model = {id:'google/gemini-3.8-flash', name:'Gemini 3.8 Flash via google-vertex/global', api:'openai-completions',
   provider:'openrouter', baseUrl:'https://openrouter.ai/api/v1', reasoning:true, input:['text', 'image'],
-  cost:{input:1.5, output:7.5, cacheRead:0.15, cacheWrite:0.0833333333}, contextWindow:1048576, maxTokens:16384,
+  cost:{input:'1.5', output:'7.5', cacheRead:'0.15', cacheWrite:'0.0833333333'}, contextWindow:1048576, maxTokens:16384,
   thinkingLevelMap:{medium:'medium'},
   compat:{supportsDeveloperRole:false, supportsStore:false, supportsUsageInStreaming:true, supportsReasoningEffort:true,
     supportsStrictMode:false, maxTokensField:'max_tokens', thinkingFormat:'openrouter',
     openRouterRouting:{only:['google-vertex/global'], order:['google-vertex/global'], allow_fallbacks:false, require_parameters:true}}};
 const PASS_REQUESTS = 6;
-const passRoute = role => ({schema:'player-host/7', role, intent_tail_bytes:null, service_tier:'default', model,
-  api_key_env:'CONTRACT_TEST_KEY', max_requests:PASS_REQUESTS, max_context_images:30, context_image_block:1,
+const passRoute = role => ({schema:'player-host/8', role, intent_tail_bytes:null, service_tier:'default', model,
+  api_key_env:'CONTRACT_TEST_KEY', max_requests:PASS_REQUESTS, max_cost_nano_usd:'20000000000', max_context_images:30, context_image_block:1,
   request_timeout_seconds:30});
 // The two pass roles. `final` is the terminal call each pass ends with: the flat-profile custodian behind this MCP double
 // refuses it, so a pass uses its whole allowance. `ordinary` is the non-terminal call of the earlier requests.

@@ -13,8 +13,8 @@ Stages (all inputs are recorded; no game, no live session):
    `int(sha256(run|index), 16)` is smallest. For each, a fresh read-only replay store of the run's operations and frames
    up to the episode's end is built through the store API (as `tools/level_probe.py` does). The episode's subgoal is
    inserted through the custodian's append path, the episode is bound with `bind_episode` and pushed with the driver's own
-   `episode_push` and `recorder_document`, and the real recorder host (`player-host/7`, frozen `episode-v1`) runs once per
-   family route. F1 is the production route and F2 the second family, both given as explicit `player-host/7` files.
+   `episode_push` and `recorder_document`, and the real recorder host (`player-host/8`, frozen `episode-v1`) runs once per
+   family route. F1 is the production route and F2 the second family, both given as explicit `player-host/8` files.
 2. **Level.** The driver's offline replay (cutter closes, recorder backlog and the real `LevelSchedule` wakes) runs over
    every run with #345's R1 records, each turned into a trusted `player-episode/1` settle through the custodian's own
    `episode_call`. From all wake points, a sample chosen by the same hash rule gets the driver's real `level_push` and
@@ -40,6 +40,7 @@ import bisect
 import collections
 import concurrent.futures
 import contextlib
+from decimal import Decimal
 import hashlib
 import json
 import math
@@ -73,11 +74,11 @@ from tools.campaign_package import EPISODE_ROLE, FROZEN_ROLE_SHA256, LEVEL_ROLE,
 from tools.campaign_player import episode_push, fraction_skip, level_push, level_text, recorder_document, write_new
 from tools.configure_player_tools import configuration
 from tools.episode_cutter import Episode, distance, thumbnail
-from tools.level_probe import add_operation, classify, git_state, keychain_secret, load_route, open_replay, sha256_file, watch_host
+from tools.level_probe import add_operation, classify, git_state, keychain_secret, lease_route, load_route, open_replay, sha256_file, watch_host
 from tools.level_schedule import LevelSchedule
 
 LABEL = 'engineering-probe'
-SCHEMA = 'level-v4-probe/2'
+SCHEMA = 'level-v4-probe/3'
 THRESHOLDS_SCHEMA = 'level-v4-probe-thresholds/1'
 PROBE_ROOT = ROOT / '.runtime' / 'probes'
 DEFAULT_SAMPLE_ESTIMATE_USD = 0.12
@@ -898,33 +899,33 @@ def recorder_state(run: dict, ep: dict, directory: Path, profile: dict, distance
 class Spend:
     """A hard cap on the charged cost across all passes and workers, enforced before a pass launches."""
     def __init__(self, max_usd: float):
-        self.max_usd, self.spent, self.reserved, self.dearest, self.skipped = max_usd, 0., 0., 0., 0
-        self.unaccounted = 0.
+        self.max_usd, self.spent, self.reserved, self.dearest, self.skipped = Decimal(str(max_usd)), Decimal(0), Decimal(0), Decimal(0), 0
+        self.unaccounted = Decimal(0)
         self.lock = threading.Lock()
 
-    def reserve(self, allowance: int, bound: float) -> tuple[int, float]:
+    def reserve(self, allowance: int, bound: float) -> tuple[int, Decimal]:
         """All of a pass's profile allowance, or nothing: `(allowance, allowance * step)` when the unreserved remainder
         covers every request at `step`, else `(0, 0.)` and the pass is skipped. A truncated allowance is never launched,
         since a pass given fewer requests than its profile allows is a different pass."""
         with self.lock:
-            step = max(bound, self.dearest)
+            step = max(Decimal(str(bound)), self.dearest)
             if allowance < 1 or (self.max_usd - self.spent - self.unaccounted - self.reserved) // step < allowance:
                 self.skipped += 1
-                return 0, 0.
+                return 0, Decimal(0)
             self.reserved += allowance * step
             return allowance, allowance * step
 
-    def release(self, hold: float, charged: float, dearest: float) -> None:
+    def release(self, hold: Decimal | float, charged: Decimal | float, dearest: float) -> None:
         with self.lock:
-            self.reserved -= hold
-            self.spent += charged
-            self.dearest = max(self.dearest, dearest)
+            self.reserved -= Decimal(str(hold))
+            self.spent += Decimal(str(charged))
+            self.dearest = max(self.dearest, Decimal(str(dearest)))
 
-    def forfeit(self, hold: float) -> None:
+    def forfeit(self, hold: Decimal | float) -> None:
         """A pass that faulted after launching: its charge is unknown, so its whole hold stays counted against the cap."""
         with self.lock:
-            self.reserved -= hold
-            self.unaccounted += hold
+            self.reserved -= Decimal(str(hold))
+            self.unaccounted += Decimal(str(hold))
 
 
 def lane_context(role: str, run: dict) -> str:
@@ -937,8 +938,7 @@ def lane_context(role: str, run: dict) -> str:
 
 
 def reader_pass(*, role: str, application, reader: dict, session: str, route: dict, context: str, stdin: str | dict, directory: Path,
-                out: Path, label: str, allowance: int, seconds: int, effort: str, host_argv: list[str], secret: str, hold: float,
-                bound: float) -> dict:
+                out: Path, label: str, allowance: int, seconds: int, effort: str, host_argv: list[str], secret: str, hold: Decimal) -> dict:
     """Run one reader host (`level` or `recorder`) against a live application and classify what it did.
 
     The application is served on loopback and the host reaches it through the real MCP adapter. The pushed input is the
@@ -952,7 +952,7 @@ def reader_pass(*, role: str, application, reader: dict, session: str, route: di
     try:
         reader_file = directory / 'reader.json'
         write_new(reader_file, dict(schema='player-adapter/1', base_url=f'http://127.0.0.1:{server.server_port}', session=session, **reader))
-        selected = dict(route, role=role, intent_tail_bytes=None, max_requests=allowance)
+        selected = lease_route(dict(route, role=role, intent_tail_bytes=None, max_requests=allowance), hold)
         write_new(directory / 'route.json', selected)
         write_new(directory / 'mcp.json', configuration(str(reader_file), profile=role))
         write_new(directory / 'context.txt', context, text=True)
@@ -961,14 +961,16 @@ def reader_pass(*, role: str, application, reader: dict, session: str, route: di
         arguments = [*host_argv, 'run', '--config', str(directory / 'route.json'), '--mcp-config', str(directory / 'mcp.json'),
                      '--context', str(directory / 'context.txt'), '--model', route['model']['id'], '--effort', effort,
                      '--timeout-seconds', str(seconds), '-o', str(directory / 'player-final.txt')]
-        events, child, stopped = watch_host(directory, arguments, name, selected, secret, seconds, hold, bound)
+        events, child = watch_host(directory, arguments, name, selected, secret, seconds)
         cleanup = close_group(child)
         accounting = events.finish()
         record = classify(directory, events, child.returncode, role=kind)
         missing = accounting['missing_usage_attempts']
         costs = [v.get('cost', {}).get('total', 0) for v in events.usage.values()]
+        charged = accounting['charged_nano_usd'] if cleanup['process_absent'] and cleanup['group_absent'] else selected['max_cost_nano_usd']
         record.update(label=label, missing_usage_attempts=missing, dearest_request_usd=max(costs, default=0),
-                      charged_usd=record['configured_cost_usd'] + missing * bound, stopped_by_spend_guard=stopped,
+                      charged_nano_usd=charged, charged_usd=int(charged) / 10**9,
+                      stopped_by_spend_guard=record['settled_reason'] == 'request-budget-limit',
                       cleanup_absent=cleanup['process_absent'] and cleanup['group_absent'], allowance=allowance,
                       uncertain=len(events.uncertain) + len(events.episode_uncertain))
         return record
@@ -1020,7 +1022,7 @@ def run_recorder(run: dict, ep: dict, family: str, route: dict, ctx: dict) -> di
         record = reader_pass(role='recorder', application=state['application'], reader=state['recorder'], session=run['session'],
             route=route, context=lane_context('recorder', run), stdin=state['document'], directory=work / 'host', out=ctx['out'] / 'samples',
             label=label, allowance=allowance, seconds=int(ctx['profile']['recorder']['pass_seconds']), effort=ctx['effort'],
-            host_argv=ctx['host_argv'], secret=ctx['secret'], hold=hold, bound=ctx['bound'])
+            host_argv=ctx['host_argv'], secret=ctx['secret'], hold=hold)
         views = [v for v in state['application'].settled_episodes(actor_id=state['actor']['actor_id'])
                  if v['first_position'] == ep['start_pos']]
         stored = views[0] if views else None
@@ -1035,7 +1037,7 @@ def run_recorder(run: dict, ep: dict, family: str, route: dict, ctx: dict) -> di
                       store=None if stored is None else dict(settled=stored['settled'], reason_code=stored.get('reason_code')),
                       observation_status=stored['observation_status'] if stored and stored['settled'] == 'recorded' else None,
                       confidence=stored.get('confidence') if stored else None)
-        ctx['spend'].release(hold, record['charged_usd'], record['dearest_request_usd'])
+        ctx['spend'].release(hold, Decimal(record['charged_nano_usd']) / 10**9, record['dearest_request_usd'])
         return result
     except BaseException:
         # A host that was launched may have charged an unknown amount: its whole hold stays against the cap.
@@ -1066,8 +1068,8 @@ def run_level(prepared: dict, route: dict, ctx: dict) -> dict:
         record = reader_pass(role='level', application=prepared['application'], reader=prepared['level'], session=prepared['session'],
             route=route, context=prepared['context'], stdin=prepared['text'], directory=work / 'host', out=ctx['out'] / 'samples',
             label=label, allowance=allowance, seconds=int(wake['allowance_seconds']), effort=ctx['effort'], host_argv=ctx['host_argv'],
-            secret=ctx['secret'], hold=hold, bound=ctx['bound'])
-        ctx['spend'].release(hold, record['charged_usd'], record['dearest_request_usd'])
+            secret=ctx['secret'], hold=hold)
+        ctx['spend'].release(hold, Decimal(record['charged_nano_usd']) / 10**9, record['dearest_request_usd'])
         hold = 0.
         return dict(base, ran=True, valid=record['terminal'] in ('level-commit', 'level-abstain') and not record['uncertain'],
                     terminal=record['terminal'], outcome=record['outcome'], settled_reason=record['settled_reason'],
@@ -1415,7 +1417,7 @@ def _probe(c: dict) -> dict:
         scope='Replays recorded #345 runs through the real recorder and level hosts (and the real intent() over replay stores) to '
               'check that the v4 interfaces can be called correctly on the route and whether the intent tail supplies images the '
               'actor lacked. It says nothing about recorder quality, intent quality, play or outcomes.',
-        interface=dict(host='player-host/7', role_prompts={r.name: sha256_file(r) for r in (LEVEL_ROLE, EPISODE_ROLE)},
+        interface=dict(host='player-host/8', role_prompts={r.name: sha256_file(r) for r in (LEVEL_ROLE, EPISODE_ROLE)},
                        profile=profile, intent_audience='tail'),
         source=dict(commit=c['commit'], clean=not c['dirty']),
         inputs=inputs, parameters=dict(max_usd=c['max_usd'], sample_estimate_usd=c['sample_estimate_usd'], max_request_usd=c['max_request_usd'],
@@ -1487,11 +1489,11 @@ def paid_report(base: dict, c: dict, state: dict, spend: Spend, level_results: l
                                     marginal=sum(i['marginal'] for i in tail_flat if i['run'] == n)))
     base.update(
         status='incomplete' if incomplete else 'complete', passed=bool(statistics_['all_passed'] and not incomplete),
-        spend=dict(charged_usd=spend.spent, max_usd=c['max_usd'], skipped_passes=spend.skipped, passes_run=len(ran),
-                   passes_planned=len(recorder_results) + len(level_results), dearest_request_usd=spend.dearest,
+        spend=dict(charged_usd=float(spend.spent), max_usd=c['max_usd'], skipped_passes=spend.skipped, passes_run=len(ran),
+                   passes_planned=len(recorder_results) + len(level_results), dearest_request_usd=float(spend.dearest),
                    missing_usage_attempts=sum(r.get('missing_usage_attempts', 0) for r in ran),
                    stopped_by_spend_guard=any(r['stopped_by_spend_guard'] for r in ran) or spend.skipped > 0,
-                   faulted_passes=len(state['faults']), unaccounted_usd_upper_bound=spend.unaccounted),
+                   faulted_passes=len(state['faults']), unaccounted_usd_upper_bound=float(spend.unaccounted)),
         faults=state['faults'], interrupted=state['interrupted'], aborted=state['aborted'],
         gates=statistics_['gates'], family_two=statistics_['f2'],
         recorder=dict(F1=summary(f1), F2=summary(f2)), level=summary(level_results),
@@ -1568,9 +1570,9 @@ def main(argv=None) -> int:
     parser.add_argument('--protocol', type=Path, required=True, help='The frozen protocol.md (hashed into the report)')
     parser.add_argument('--amendment', type=Path, required=True, help='The frozen amendment-1.md (hashed into the report)')
     parser.add_argument('--thresholds', type=Path, required=True, help=f'The frozen {THRESHOLDS_SCHEMA} file')
-    parser.add_argument('--route-f1', type=Path, required=True, help='The F1 (production) player-host/7 route')
-    parser.add_argument('--route-f2', type=Path, required=True, help='The F2 player-host/7 route, the model block given explicitly')
-    parser.add_argument('--profile', type=Path, required=True, help='The level block of a campaign-run/6 profile (pass allowances)')
+    parser.add_argument('--route-f1', type=Path, required=True, help='The F1 (production) player-host/8 route')
+    parser.add_argument('--route-f2', type=Path, required=True, help='The F2 player-host/8 route, the model block given explicitly')
+    parser.add_argument('--profile', type=Path, required=True, help='The level block of a campaign-run/7 profile (pass allowances)')
     parser.add_argument('--name', required=True, help='Output directory name under .runtime/probes')
     parser.add_argument('--max-usd', type=float, required=True, help='Hard spend cap on the charged cost, at most the thresholds\' max_usd')
     parser.add_argument('--dry-run', action='store_true', help='Build and count every input; no host, credential or spend')

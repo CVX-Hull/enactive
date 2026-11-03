@@ -6,7 +6,7 @@ status: active
 
 # Player host contract
 
-`player-host/7` is the one current boundary between the [campaign driver](../../tools/campaign_player.py)
+`player-host/8` is the one current boundary between the [campaign driver](../../tools/campaign_player.py)
 and the program that hosts a deciding player, one pass of its subgoal level or one pass of its episode recorder
 ([ADR-007](../decisions/007-player-subgoal-level.md) candidate). The host turns frozen context, a
 frozen provider route and the actor's MCP table into model calls and sequential
@@ -19,7 +19,7 @@ its provider serializers, closed route `model` fields and limits.
 
 ## Adapter selection
 
-A `campaign-run/6` package freezes `host`: `{"argv": [...]}` with 1–8 strings.
+A `campaign-run/7` package freezes `host`: `{"argv": [...]}` with 1–8 strings.
 `argv[0]` is an absolute existing regular file (an adapter executable or its
 interpreter); every later entry is a canonical project-local regular file covered
 by the clean source commit. The driver and package validator append only the mode
@@ -48,10 +48,24 @@ when the final `settled` event has `ok: true`.
 
 ## Route envelope
 
-The frozen route is one closed JSON object with `schema: "player-host/7"`, `role`,
+The frozen route is one closed JSON object with `schema: "player-host/8"`, `role`,
 `intent_tail_bytes`, `model`, `api_key_env`, `max_requests`, `max_context_images`,
-`context_image_block`, `request_timeout_seconds` and `service_tier`. `role` is
+`context_image_block`, `request_timeout_seconds`, `service_tier` and
+`max_cost_nano_usd`. The last field is a canonical decimal integer string for
+the host's monetary allocation. `role` is
 `actor`, `level` or `recorder`. `intent_tail_bytes` is null or, for an actor only, exactly 1024: the one fixed allocation of the intent tail (see below).
+
+Each actual HTTP attempt, including an eligible retry, reserves the full
+physical context and output cost before fetch. The route stores rates as plain
+decimal strings of at most 64 characters. Both admission and the host round
+these exact rates up to nanodollars per token. The SDK receives numeric rates
+for its telemetry. A framed terminal stream marker and validated provider counts settle
+at the upper input and output rates or the reported provider cost, whichever
+is greater. Uncertain usage consumes the full reservation. Exhaustion settles
+`request-budget-limit` before another fetch. A violated bound ends the host and
+retains the observed contradiction. The request's `request-fetch-start`
+records its reservation and `request-cost` records its charge and reconciliation
+status. The final `settled.money` reconciles those records to the allocated lease.
 `max_context_images` is the hard peak of pixel images in one request.
 `context_image_block` (1 to that peak) is the count-only block in which the oldest
 historical images beyond the peak are replaced by markers; block 1 replaces exactly
@@ -74,7 +88,7 @@ kinds. Required semantics:
 
 | Event | Contract |
 | --- | --- |
-| `host-start` | Exactly once and first in any run that admits its arguments and inputs, with `telemetry_version: 2`, `schema: "player-host/7"`, `role` and `intent_tail_bytes`; the driver rejects any other schema. |
+| `host-start` | Exactly once and first in any run that admits its arguments and inputs, with `telemetry_version: 2`, `schema: "player-host/8"`, `role` and `intent_tail_bytes`; the driver rejects any other schema. |
 | `mcp-connected` | Once the MCP child is connected, before tool discovery. A level's first pass waits for the actor's first `request-start` instead, which follows the tool checks. |
 | `level-pass` | Level role only, once after tool discovery. |
 | `level-commit` / `level-discard` | Level role only, per `player-level-commit/5` result of `player_level_keep`, `player_level_replace` or `player_level_close` (never for a local tool error, so a rejected call emits neither), with `action` (`keep`, `replace` or `close`), `reason`, `position`, `inputs_since`, `staleness_inputs`, `subgoal_id` (the subgoal bound at push, or null), `derived` (`{observations, stalled}` or null), `record_ids` and `kept`. Either one ends the pass. |

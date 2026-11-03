@@ -71,12 +71,12 @@ def recorded(tmp_path):
                           source=metadata, remaining={}, reason='ok', handoff=None))
     store.close()
     (session / 'prompt.txt').write_text('Mission: survive and report.')
-    (session / 'receipt.json').write_text(json.dumps(dict(schema='campaign-receipt/2', session=SESSION)))
+    (session / 'receipt.json').write_text(json.dumps(dict(schema='campaign-receipt/3', session=SESSION)))
     # The recorded run's player store, empty: the replay's empty memory matches it.
     from harness.player.memory import Memory
     player_store = tmp_path / 'recorded-player.sqlite3'
     Memory(player_store).close()
-    (session / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/6', player_store=str(player_store),
+    (session / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/7', player_store=str(player_store),
         level=LEVEL)))
     actor_directory = session / 'actors/001'
     (actor_directory / 'level').mkdir(parents=True)
@@ -94,13 +94,13 @@ def recorded(tmp_path):
     return session
 
 
-def route_file(tmp_path, port, *, cost=1.0, extra=None, schema='player-host/7'):
+def route_file(tmp_path, port, *, cost=1.0, extra=None, schema='player-host/8', context_window=100000, max_tokens=1024):
     model = dict(id='fixture-model', name='Fixture', api='openai-completions', provider='fixture',
                  baseUrl=f'http://127.0.0.1:{port}/v1', reasoning=False, input=['text', 'image'],
-                 cost=dict(input=cost, output=cost, cacheRead=0, cacheWrite=0), contextWindow=100000, maxTokens=1024,
+                 cost=dict(input=str(cost), output=str(cost), cacheRead='0', cacheWrite='0'), contextWindow=context_window, maxTokens=max_tokens,
                  compat=dict(supportsDeveloperRole=False, supportsStore=False, supportsUsageInStreaming=True))
     path = tmp_path / 'route.json'
-    path.write_text(json.dumps(dict(schema=schema, model=model, api_key_env='PROBE_FIXTURE_KEY', max_requests=4,
+    path.write_text(json.dumps(dict(schema=schema, model=model, api_key_env='PROBE_FIXTURE_KEY', max_requests=4, max_cost_nano_usd='10000000000',
                                     request_timeout_seconds=20, max_context_images=8, context_image_block=1, service_tier='default', **(extra or {}))))
     return path
 
@@ -249,7 +249,7 @@ def test_probe_replays_every_pass_through_the_real_host_and_labels_its_output(tm
     assert pooled['requests_used']['total'] == 8 and 0 < pooled['configured_cost_usd'] < 0.01
     assert report['thresholds']['valid_terminal_rate_met'] is True and report['thresholds']['repeated_identical_refusal_met'] is True
     assert sorted(report['passes']) == ['recorded/actor001/pass001', 'recorded/actor001/pass002']
-    assert report['interface']['host'] == 'player-host/7' and report['interface']['role_prompt'] == 'subgoal-v4.txt'
+    assert report['interface']['host'] == 'player-host/8' and report['interface']['role_prompt'] == 'subgoal-v4.txt'
     # The pass saw the recorded pushed input, the current frozen role prompt and the real v4 level tools.
     first = fake.payloads[0]
     prompt = json.dumps(first['messages'])
@@ -318,7 +318,7 @@ def test_the_spend_cap_is_required_and_positive(tmp_path, recorded):
 def test_the_cap_is_hard_up_front_so_a_sample_never_has_more_requests_than_the_cap_covers(tmp_path, recorded, provider):
     # Each request costs 22 tokens at 50000 USD per million: $1.10. The bound for a request is $1.20.
     fake = provider(clean_policy)
-    route = route_file(tmp_path, fake.port, cost=50000.)
+    route = route_file(tmp_path, fake.port, cost=50000., context_window=13, max_tokens=11)
     report, _ = run(tmp_path, recorded, fake, samples=3, max_usd=5., route=route, name='capped', max_request_usd=1.2, passes={1})
     spend = report['spend']
     assert spend['stopped_by_spend_guard'] is True and spend['charged_usd'] <= 5. and spend['configured_cost_usd'] <= 5.
@@ -331,28 +331,27 @@ def test_the_cap_is_hard_up_front_so_a_sample_never_has_more_requests_than_the_c
     assert nothing['spend']['samples_run'] == 0 and nothing['spend']['stopped_by_spend_guard'] is True
 
 
-def test_the_in_flight_kill_is_only_a_backstop_for_a_request_dearer_than_the_bound(tmp_path, recorded, provider):
+def test_an_estimate_cannot_admit_a_request_whose_physical_bound_exceeds_the_cap(tmp_path, recorded, provider):
     slow = provider(lambda n, p: [('player_source', dict(source_id=f'{SESSION}-1'))], delay=.4)
     cut, _ = run(tmp_path, recorded, slow, samples=1, max_usd=3., route=route_file(tmp_path, slow.port, cost=50000.),
                  name='cut', max_request_usd=.1, max_requests=6, passes={1})
-    assert cut['samples'][0]['stopped_by_spend_guard'] is True and cut['samples'][0]['requests'] < 6
-    assert cut['pooled']['outcomes'] == {'no-terminal-call': 1}
+    assert cut['spend']['stopped_by_spend_guard'] is True
+    assert cut['samples'] == [] and slow.payloads == []
 
 
 def test_requests_without_reported_usage_are_charged_at_the_per_request_bound(tmp_path, recorded, provider):
     fake = provider(clean_policy, usage=False)
-    # The recorded allowance is 4 and the sample estimate $0.12, so a request is charged $0.03.
+    # Each missing response retains the physical context/output reservation.
     report, _ = run(tmp_path, recorded, fake, samples=1, passes={1})
     spend = report['spend']
     assert spend['configured_cost_usd'] == 0 and spend['missing_usage_attempts'] == 2
-    assert spend['charged_usd'] == pytest.approx(.06) and report['samples'][0]['charged_usd'] == pytest.approx(.06)
-    # The charge, not the zero reported cost, is what the cap counts: $0.07 covers two requests of one sample only.
-    capped, _ = run(tmp_path, recorded, provider(clean_policy, usage=False), samples=3, max_usd=.07, name='no-usage-cap', passes={1})
+    assert spend['charged_usd'] == pytest.approx(.202048)
+    capped, _ = run(tmp_path, recorded, provider(clean_policy, usage=False), samples=3, max_usd=.25, name='no-usage-cap', passes={1})
     assert capped['spend']['samples_run'] == 1 and capped['spend']['stopped_by_spend_guard'] is True
-    assert capped['spend']['charged_usd'] <= .07
-    # An explicit per-request bound replaces the estimate-derived one.
+    assert capped['spend']['charged_usd'] <= .25
+    # A planning estimate does not replace the physical reservation.
     explicit, _ = run(tmp_path, recorded, provider(clean_policy, usage=False), samples=1, name='explicit', max_request_usd=.5, passes={1})
-    assert explicit['spend']['charged_usd'] == pytest.approx(1.)
+    assert explicit['spend']['charged_usd'] == pytest.approx(.202048)
 
 
 def test_a_route_with_no_configured_cost_is_refused_before_anything_is_written(tmp_path, recorded, provider):
@@ -364,16 +363,16 @@ def test_a_route_with_no_configured_cost_is_refused_before_anything_is_written(t
 @pytest.mark.parametrize('schema', ['player-host/4', 'player-host/1', 'player-host/5', None])
 def test_a_route_that_is_not_player_host_6_is_rejected_without_normalization(tmp_path, recorded, provider, schema):
     path = route_file(tmp_path, 9, schema=schema)
-    with pytest.raises(ValueError, match='must be player-host/7'):
+    with pytest.raises(ValueError, match='must be player-host/8'):
         load_route(path, 4, None)
-    with pytest.raises(ValueError, match='must be player-host/7'):
+    with pytest.raises(ValueError, match='must be player-host/8'):
         run(tmp_path, recorded, provider(clean_policy), route=path)
     assert not (tmp_path / 'probes' / 'probe').exists()
     route = json.loads(path.read_text())
     package = tmp_path / 'package.json'
     package.write_text(json.dumps(dict(schema='finite-provider-conformance/1', routes=[dict(tag='one', model='fixture-model',
                                                                                             configuration=route)])))
-    with pytest.raises(ValueError, match='must be player-host/7'):
+    with pytest.raises(ValueError, match='must be player-host/8'):
         load_route(package, 4, None)
 
 
@@ -514,7 +513,7 @@ def test_the_cap_divides_by_the_dearest_request_seen_when_it_exceeds_the_bound(t
     # A request costs $1.10 against a $0.50 bound. $5 covers four requests at the bound for the first sample (which
     # uses two, $2.20); the remaining $2.80 covers two at the dearest request, not five at the bound.
     fake = provider(clean_policy)
-    route = route_file(tmp_path, fake.port, cost=50000.)
+    route = route_file(tmp_path, fake.port, cost=50000., context_window=13, max_tokens=11)
     report, _ = run(tmp_path, recorded, fake, samples=3, max_usd=5., route=route, name='dearest', max_request_usd=.5, passes={1})
     assert [s['allowance'] for s in report['samples']] == [dict(recorded=4, used=4), dict(recorded=4, used=2)]
     assert [s['dearest_request_usd'] for s in report['samples']] == [pytest.approx(1.1)] * 2
@@ -585,5 +584,5 @@ def test_the_credential_comes_only_from_the_keychain_item(monkeypatch):
 def test_a_recorded_session_that_is_not_campaign_run_5_is_refused_not_converted(tmp_path, recorded, schema):
     manifest = json.loads((recorded / 'manifest.json').read_text())
     (recorded / 'manifest.json').write_text(json.dumps(dict(manifest, schema=schema)))
-    with pytest.raises(ValueError, match='not campaign-run/6'):
+    with pytest.raises(ValueError, match='not campaign-run/7'):
         recorded_passes(recorded)
