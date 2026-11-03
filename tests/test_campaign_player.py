@@ -100,7 +100,7 @@ def test_driver_launches_the_selected_host_argv_in_run_mode(tmp_path):
 # --- Level v4: the whole driver over the real composition, with scripted hosts and no provider or game ---
 
 # A scripted host for all three roles over the real HTTP composition. A reader's pass input arrives as a
-# JSON document (`player-pass-input/1`) on stdin for a recorder and plain text for a level; the actor's is its frozen prompt.
+# JSON document (`player-pass-input/2`) on stdin for a recorder and plain text for a level; the actor's is its frozen prompt.
 SCRIPTED_HOST = """
 import json, sys, time
 from pathlib import Path
@@ -138,7 +138,7 @@ if route['role'] == 'actor':
         sys.exit(0)
 elif route['role'] == 'recorder':
     document = json.load(sys.stdin)
-    assert document['schema'] == 'player-pass-input/1' and sorted(document) == ['frames', 'schema', 'text']
+    assert document['schema'] == 'player-pass-input/2' and sorted(document) == ['frames', 'schema', 'text']
     assert document['text'].startswith('Frozen episode role') and 'Frozen mission' not in document['text']
     assert 1 <= len(document['frames']) <= 7 and all(sorted(f) == ['role', 'source_id'] for f in document['frames'])
     emit('episode-pass')
@@ -151,8 +151,9 @@ elif route['role'] == 'recorder':
     marker = 'Subgoal current when the episode began: '
     line = next(l for l in document['text'].splitlines() if l.startswith(marker))[len(marker):]
     subgoal = None if line == 'none' else json.loads(line)
-    # The host fetches the frames itself; the script cites the last one.
+    # Read the cited frame under the recorder's reader authority.
     cited = [document['frames'][-1]['source_id']]
+    client.call('player_source', dict(source_id=cited[0]))
     if RECORDER_MODE == 'abstain':
         value = client.call('player_episode_abstain', dict(reason_code='no_player_action', reason='Scripted abstain', sources=cited))[0]
         emit('episode-abstain', reason_code='no_player_action', reason=value['reason'] if 'reason' in value else 'Scripted abstain',
@@ -161,6 +162,7 @@ elif route['role'] == 'recorder':
     else:
         marks = ['not_yet'] * (len(subgoal['expected_observations']) if subgoal else 0)
         value = client.call('player_episode_record', dict(attempted='Scripted attempt', counterpart='', observation_status=marks,
+            observation_source_first=cited * len(marks), observation_source_second=[''] * len(marks),
             residual='', changed='', confidence=.5, sources=cited))[0]
         emit('episode-record', settled=value['settled'], first_position=value['first_position'],
              last_position=value['last_position'], subgoal_id=value['subgoal_id'], counted=value['counted'],
@@ -194,6 +196,7 @@ else:
                 raise TimeoutError('response lost')
             client._post = lost
         value = client.call('player_level_replace', dict(text='Scripted subgoal', expected_observations=['A door is visible'],
+            observation_kinds=['state'], observation_windows=['final'], observation_evidence=['A visible door'],
             status='open', confidence=.5, sources=[], previous_outcome='revised' if current else 'none',
             previous_reason='scripted' if current else ''))[0]
         if value['schema'] == 'player-transport/1':
@@ -310,7 +313,7 @@ def test_cut_episodes_are_recorded_and_the_level_runs_on_the_settles(level_campa
     # source id and role (no image inlined): a baseline first, the last frame last, at most seven, distinct.
     passes=receipt['recorder']['passes']
     later=json.loads((level_campaign.root/'actors/001/recorder/002/input.json').read_text())
-    assert later['schema']=='player-pass-input/1' and later['text'].startswith('Frozen episode role')
+    assert later['schema']=='player-pass-input/2' and later['text'].startswith('Frozen episode role')
     assert f'positions {passes[1]["first_position"]} to {passes[1]["last_position"]}' in later['text']
     assert '"tokens":["key:x"]' in later['text'] and 'Subgoal current when the episode began:' in later['text']
     roles=[f['role'] for f in later['frames']]
@@ -509,9 +512,13 @@ def rig(tmp_path,monkeypatch):
         """Complete the stubbed recorder pass the way its host would: one call to the custodian, then the process exits."""
         if record:
             expected=len(launch.document['pushed']['subgoal']['expected_observations']) if launch.document['pushed']['subgoal'] else 0
+            source=launch.document['pushed']['frames'][-1]['source_id']
+            app.source(source, launch.lane.reader_id)
             app.call(state.token(launch.lane),'player_episode_record',dict(attempted='Scripted attempt',counterpart='',
-                observation_status=['not_yet']*expected,residual='',changed='',confidence=.5,
-                sources=[launch.document['pushed']['frames'][-1]['source_id']]),'%032x'%time.monotonic_ns())
+                observation_status=['not_yet']*expected,
+                observation_source_first=[source]*expected,
+                observation_source_second=['']*expected,residual='',changed='',confidence=.5,
+                sources=[source]),'%032x'%time.monotonic_ns())
         launch.child.done=True
     state.settle_pass=settle_pass
     try:
@@ -670,9 +677,9 @@ def test_a_fraction_without_context_is_skipped_once_then_a_settle_still_wakes(ri
 
 @pytest.mark.parametrize('moved,skipped', [(9, False), (10, True)])
 def test_fraction_revalidation_needs_no_new_settle_but_preserves_the_s_boundary(rig,moved,skipped):
-    from episode_support import put
+    from episode_support import put, stored_observations
     put(rig.app.memory,'c'*32,dict(schema='player-record/1',kind='work',text='Earlier subgoal',data=dict(level='subgoal',
-        level_contract='player-level/5',actor_id='c'*32,session='z'*32,position=0,expected_observations=['visible effect'],
+        level_contract='player-level/6',actor_id='c'*32,session='z'*32,position=0,expected_observations=stored_observations('visible effect'),
         status='open',confidence=.5),sources=[],supports=[],supersedes=None,applicability=None,program_id=None))
     system=rig.build(budget_fractions=[.5])
     system.schedule.started=True  # The start consideration has already happened; test a periodic revalidation.
@@ -720,9 +727,9 @@ def test_the_level_start_wake_needs_something_carried_and_may_run_on_an_empty_de
 
 
 def test_a_start_wake_revalidates_an_earlier_sessions_open_subgoal_on_an_empty_delta(rig):
-    from episode_support import put
+    from episode_support import put, stored_observations
     put(rig.app.memory,'c'*32,dict(schema='player-record/1',kind='work',text='Earlier subgoal',data=dict(level='subgoal',
-        level_contract='player-level/5',actor_id='c'*32,session='z'*32,position=0,expected_observations=['a door'],status='open',
+        level_contract='player-level/6',actor_id='c'*32,session='z'*32,position=0,expected_observations=stored_observations('a door'),status='open',
         confidence=.5),sources=[],supports=[],supersedes=None,applicability=None,program_id=None))
     again=rig.build()
     rig.poll(again)
@@ -913,10 +920,10 @@ def test_a_pass_binds_the_subgoal_current_when_its_episode_opened(rig):
     rig.act(100,1)
     system._ingest(final=False)
     # A level commit lands while the episode is open: the episode keeps the subgoal it opened under.
-    from episode_support import put
+    from episode_support import put, stored_observations
     work=put(rig.app.memory,system.level_lane.reader_id,dict(schema='player-record/1',kind='work',text='New',data=dict(level='subgoal',
-        level_contract='player-level/5',actor_id=rig.actor['actor_id'],session=rig.runtime.session,position=1,
-        expected_observations=['a door'],status='open',confidence=.5),sources=[],supports=[],supersedes=None,applicability=None,program_id=None))
+        level_contract='player-level/6',actor_id=rig.actor['actor_id'],session=rig.runtime.session,position=1,
+        expected_observations=stored_observations('a door'),status='open',confidence=.5),sources=[],supports=[],supersedes=None,applicability=None,program_id=None))
     system.cutter.cap=3
     rig.act(100,2)
     system._ingest(final=False)
@@ -967,16 +974,20 @@ def test_the_receipt_counts_failed_passes_and_start_abstains(rig):
 def test_the_start_wake_counts_only_earlier_sessions_recorded_episodes(rig):
     from episode_support import put
     from harness.player.episodes import claim_data
-    def claim(settled,**fields):
+    def claim(settled,*,sources=(),**fields):
         data=claim_data(session='z'*32,actor_id='c'*32,first_position=1,last_position=2,subgoal_id=None,settled=settled,**fields)
-        return dict(schema='player-record/1',kind='claim',text='x',data=data,sources=[],supports=[],supersedes=None,
+        return dict(schema='player-record/1',kind='claim',text='x',data=data,sources=list(sources),supports=[],supersedes=None,
                     applicability=None,program_id=None)
     put(rig.app.memory,'c'*32,claim('abstained',reason_code='other',reason='x'))
     put(rig.app.memory,'c'*32,claim('failed',reason='x'))
     system=rig.build()
     # Abstained and failed settles carry nothing to revalidate or recall.
     assert system._carried()==0
-    put(rig.app.memory,'c'*32,claim('recorded',attempted='Walked',counterpart='',observation_status=[],residual='',changed='',confidence=.5))
+    rig.act(100,1)
+    source=rig.runtime.store.actor_log(rig.actor['actor_id'],0,1)[0]['source_id']
+    record=claim('recorded',attempted='Walked',counterpart='',observation_marks=[],summary_sources=[source],
+                 sources=[source],residual='',changed='',confidence=.5)
+    rig.app.memory.append_many('c'*32,[record],request_id='3'*32,sources=[rig.app.source(source)],custodian=True)
     assert system._carried()==1
     system.finish()
 
@@ -1077,7 +1088,8 @@ def test_a_late_recorder_call_after_its_pass_ended_is_refused_and_writes_nothing
     before=rig.app.memory._db.execute('SELECT COUNT(*) FROM records').fetchone()[0]
     with pytest.raises(PlayerError,match='No episode is bound'):
         rig.app.call(rig.token(launch.lane),
-                     'player_episode_record',dict(attempted='late',counterpart='',observation_status=[],residual='',changed='',
+                     'player_episode_record',dict(attempted='late',counterpart='',observation_status=[],
+                        observation_source_first=[],observation_source_second=[],residual='',changed='',
                                                   confidence=.5,sources=[]),'%032x'%time.monotonic_ns())
     assert rig.app.memory._db.execute('SELECT COUNT(*) FROM records').fetchone()[0]==before
     system.finish()

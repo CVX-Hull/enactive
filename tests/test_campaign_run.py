@@ -33,8 +33,8 @@ LEVEL=dict(mode='live',episode_cap=10,staleness_inputs=10,budget_fractions=[.25,
            recall=dict(tail_top=2,tail_exploration=1,level_items=10),
            recorder=dict(max_http_attempts=2,pass_max_requests=2,pass_seconds=60,backlog=3))
 # The frozen role prompts' digests, pinned here independently of the validator that also pins them.
-FROZEN={'subgoal-v4.txt':'d3221f7982561c75fd7781eac5f84e6bda76e2180116c741e735f85f470299ae',
-        'episode-v1.txt':'33398803a5706d13faf6c2a2b588a97d8b03fa1735caadb98736a79290c24d3f'}
+FROZEN={'subgoal-v5.txt':'a675cfba894a2ca0eb925ffb9c31fe27dc7e95826a2dbda877404c5b004f9bf3',
+        'episode-v2.txt':'5079b28a7876a144a4d0fa085278e26fb4234355ca28d58306fa16859f02734e'}
 
 
 def package(root,level=None,route_requests=10):
@@ -112,16 +112,16 @@ def test_the_frozen_role_prompts_match_their_pinned_digests_and_the_adr_appendix
     for name,sha in FROZEN.items():
         assert hashlib.sha256((packages.ROOT/'tools/player_roles'/name).read_bytes()).hexdigest()==sha
         assert packages.FROZEN_ROLE_SHA256[name]==sha
-    # Verbatim: the ADR's blockquote, its wrapped lines joined with single spaces.
+    # Verbatim: preserve the current ADR blockquote's paragraph boundaries.
     adr=(packages.ROOT/'docs/decisions/007-player-subgoal-level.md').read_text()
-    appendix=adr[adr.index('## Appendix: v4 role prompts'):]
-    for title,name in (('episode-v1','episode-v1.txt'),('subgoal-v4','subgoal-v4.txt')):
+    appendix=adr[adr.index('## Appendix: current recorder reliability prompts'):]
+    for title,name in (('episode-v2','episode-v2.txt'),('subgoal-v5','subgoal-v5.txt')):
         lines=appendix[appendix.index(f'**`{title}`:**'):].splitlines()[1:]
         quote=[];
         for line in lines:
             if line.startswith('>'):quote.append(line[1:].strip())
             elif quote:break
-        assert (packages.ROOT/'tools/player_roles'/name).read_text()==' '.join(quote)+'\n'
+        assert (packages.ROOT/'tools/player_roles'/name).read_text()=='\n'.join(quote)+'\n'
     assert not (packages.ROOT/'tools/player_roles/subgoal-v3.txt').exists()
 
 

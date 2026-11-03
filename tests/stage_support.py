@@ -206,7 +206,8 @@ def edit_actor(run: Path, change, *, embedded=True, written=True) -> None:
 def work_record(text='Reach the door', position=3, *, contract=LEVEL_CONTRACT, session=SESSION, actor=ACTOR, sources=()):
     return dict(schema='player-record/1', kind='work', text=text, data=dict(
         level='subgoal', level_contract=contract, actor_id=actor, session=session, position=position,
-        expected_observations=['The door is adjacent'], status='open', confidence=.4),
+        expected_observations=[dict(predicate='The door is adjacent', kind='state', window='final',
+                                    evidence='The door is visible beside the actor')], status='open', confidence=.4),
         sources=list(sources), supports=[], supersedes=None, applicability=None, program_id=None)
 
 
@@ -218,12 +219,13 @@ def correction_record(text, supersedes, outcome='revised', position=3):
 
 def claim_record(settled, first=1, last=2):
     writer = dict(recorded='recorder', abstained='recorder', failed='software', dropped='software')[settled]
-    fields = (dict(observation_status=[], confidence=.5, attempted='moved', counterpart='', residual='', changed='') if settled == 'recorded'
+    sources = [source_metadata(first)['source_id']] if settled == 'recorded' else []
+    fields = (dict(observation_marks=[], summary_sources=sources, confidence=.5, attempted='moved', counterpart='', residual='', changed='') if settled == 'recorded'
               else dict(reason='fixture', **(dict(reason_code='other') if settled == 'abstained' else {})))
     return dict(schema='player-record/1', kind='claim', text='episode', data=dict(
         level='episode', level_contract=EPISODE_CONTRACT, settled=settled, writer=writer, session=SESSION, actor_id=ACTOR,
         first_position=first, last_position=last, subgoal_id=None, **fields),
-        sources=[], supports=[], supersedes=None, applicability=None, program_id=None)
+        sources=sources, supports=[], supersedes=None, applicability=None, program_id=None)
 
 
 class PlayerStore:
@@ -237,8 +239,8 @@ class PlayerStore:
         identity = f'{self.count + 9000:032x}'
         memory = Memory(self.path)
         try:
-            schema = {'player_level_abstain':'player-level-abstain/3', 'player_episode_record':'player-episode-record/2',
-                      'player_episode_abstain':'player-episode-abstain/2'}.get(tool, 'player-level-commit/5')
+            schema = {'player_level_abstain':'player-level-abstain/3', 'player_episode_record':'player-episode-record/3',
+                      'player_episode_abstain':'player-episode-abstain/3'}.get(tool, 'player-level-commit/6')
             return memory.append_many(writer or reader, records, request_id=identity,
                                       service=(tool, {}, dict(schema=schema, status=result_status, action=action)),
                                       sources=list(sources), custodian=True)

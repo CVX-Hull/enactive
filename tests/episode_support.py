@@ -24,9 +24,20 @@ CITE_LAST = object()  # `recorded()`'s default sources: the bound episode's last
 
 
 def call(app, capability, name, args, identity=None):
+    actor_id = capability['actor_id']
+    bound = app.readers.get(actor_id, {}).get('episode')
     if args.get('sources') is CITE_LAST:
-        bound = app.readers[capability['actor_id']].get('episode')
         args = args | dict(sources=bound['sources'][-1:] if bound else [])
+    if name == RECORD and args.get('observation_source_first') is CITE_LAST:
+        marks = args.get('observation_status', [])
+        during = bound['during'] if bound else []
+        source = next((item for item in args.get('sources', []) if item in during), during[-1] if during else '')
+        first = [source if mark != 'unassessable' else '' for mark in marks]
+        if source and any(first):
+            app.source(source, actor_id)
+        args = args | dict(observation_source_first=first)
+        if 'observation_source_second' in args:
+            args['observation_source_second'] = [''] * len(marks)
     return app.call(capability['token'], name, args, identity or request_id())[0]
 
 
@@ -38,9 +49,15 @@ def close(outcome='achieved', reason='Cited episodes', sources=()):
     return dict(outcome=outcome, reason=reason, sources=list(sources))
 
 
+def stored_observations(*predicates):
+    return [dict(predicate=text, kind='state', window='during', evidence=text) for text in predicates]
+
+
 def replace(text='Reach the visible door', sources=(), outcome='none', reason='', observations=None, **change):
     """A flat replace call; `outcome` and `reason` say what happened to the subgoal it replaces."""
-    return dict(text=text, expected_observations=['The door tile is adjacent'] if observations is None else observations,
+    predicates = ['The door tile is adjacent'] if observations is None else observations
+    return dict(text=text, expected_observations=predicates, observation_kinds=['state'] * len(predicates),
+                observation_windows=['during'] * len(predicates), observation_evidence=list(predicates),
                 status='open', confidence=.4, sources=list(sources), previous_outcome=outcome, previous_reason=reason,
                 **change)
 
@@ -102,6 +119,7 @@ def current_id(app):
 
 def recorded(marks, confidence=.9, **change):
     return dict(attempted='Walked toward the door', counterpart='', observation_status=list(marks), residual='',
+                observation_source_first=CITE_LAST, observation_source_second=[],
                 changed='', confidence=confidence, sources=CITE_LAST) | change
 
 

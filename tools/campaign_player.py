@@ -23,9 +23,9 @@ from tools.episode_cutter import CLOSED_BY,Episode,EpisodeCutter,key_tokens,pick
 from tools.level_schedule import LevelSchedule
 
 # The pass input the driver hands a reader host on stdin, and its two pushed inputs (ADR-007 level v4).
-PASS_INPUT_SCHEMA='player-pass-input/1'
-LEVEL_PUSH_SCHEMA='player-level-push/2'
-EPISODE_PUSH_SCHEMA='player-episode-push/1'
+PASS_INPUT_SCHEMA='player-pass-input/2'
+LEVEL_PUSH_SCHEMA='player-level-push/3'
+EPISODE_PUSH_SCHEMA='player-episode-push/2'
 
 
 def write_new(path: Path,value,*,text=False) -> None:
@@ -203,14 +203,18 @@ def level_text(role_prompt: str, brief: str, wake: dict, pushed: dict) -> str:
 
 
 def recorder_document(role_prompt: str, wake: dict, pushed: dict) -> dict:
-    """A recorder pass's whole stdin, one closed JSON document (`player-pass-input/1`, `player-host/8`).
+    """A recorder pass's whole stdin, one closed JSON document (`player-pass-input/2`, `player-host/8`).
 
-    `text` is the frozen `episode-v1` role prompt, the episode's operations as key tokens and positions, and the id, text
+    `text` is the frozen `episode-v2` role prompt, the episode's operations as key tokens and positions, and the id, text
     and ordered expected observations of the subgoal pushed. `frames` names the baseline and the episode's own frames
     (at most 7, in capture order, baseline first) by source id and role; no image is inlined, because the host fetches
     each frame itself through `player_source`.
     """
     subgoal = pushed['subgoal']
+    if subgoal is not None:
+        subgoal = dict(subgoal, expected_observations=[
+            dict(observation, number=number)
+            for number, observation in enumerate(subgoal['expected_observations'], 1)])
     text = (role_prompt + f'\n\nEpisode: positions {pushed["first_position"]} to {pushed["last_position"]} of the served log, '
             f'{pushed["inputs"]} inputs, closed by {pushed["closed_by"]}. Operations, one per line:\n' + _lines(pushed['operations'])
             + '\n\nSubgoal current when the episode began: '

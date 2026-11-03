@@ -10,7 +10,7 @@ import pytest
 
 from episode_support import (ABSTAIN, CLOSE, KEEP, RECORD, REPLACE, EPISODE_ABSTAIN, S, act, bind, call, close,
                              commit_first, current_id, keep, mint, put, replace, request_id, source_rows, store_rows,
-                             supersede, sync, total)
+                             stored_observations, supersede, sync, total)
 from harness.application import Application
 from harness.computer.protocol import ControlError
 from harness.player.contracts import PlayerError
@@ -205,7 +205,8 @@ def test_a_recorders_lost_terminal_call_is_unknown_with_no_collecting_tool(level
 
 
 def recorded_args():
-    return dict(attempted='Walked', counterpart='', observation_status=[], changed='', residual='', confidence=.5, sources=[])
+    return dict(attempted='Walked', counterpart='', observation_status=[], observation_source_first=[],
+                observation_source_second=[], changed='', residual='', confidence=.5, sources=[])
 
 
 def test_the_log_read_tool_and_its_schema_are_removed(level):
@@ -226,14 +227,14 @@ def test_commit_binds_the_end_of_the_newest_settled_episode_and_writes_one_work_
     sync(app, actor, recorder)
     assert bind(app, reader) == dict(position=2, subgoal_id=None, pass_index=1, handoff=False)
     committed = call(app, reader, REPLACE, replace(sources=[observed['source']['source_id']]))
-    assert committed['schema'] == 'player-level-commit/5'
+    assert committed['schema'] == 'player-level-commit/6'
     assert committed['status'] == 'committed' and committed['position'] == 2 and committed['inputs_since'] == 0
     assert committed['subgoal_id'] is None and committed['derived'] is None
     (work,) = committed['records']
     assert work['kind'] == 'work' and work['actor_id'] == reader['actor_id'] and work['text'] == 'Reach the visible door'
     # Software stamps the contract version; the model supplied none.
-    assert work['data'] == dict(level='subgoal', level_contract='player-level/5', actor_id=actor['actor_id'],
-        session=app.runtime.session, position=2, expected_observations=['The door tile is adjacent'],
+    assert work['data'] == dict(level='subgoal', level_contract='player-level/6', actor_id=actor['actor_id'],
+        session=app.runtime.session, position=2, expected_observations=stored_observations('The door tile is adjacent'),
         status='open', confidence=.4)
     assert app.memory.read_source(observed['source']['source_id'])[1] == channel.png
     assert [r['id'] for r in app.memory.current('work')] == [work['id']]
@@ -256,7 +257,7 @@ def test_replace_needs_at_least_one_expected_observation(level):
 def test_model_supplied_position_id_or_version_is_refused(level, tool, args):
     app, channel, actor, reader, recorder = level
     bind(app, reader)
-    for change in (dict(position=7), dict(inputs_since=0), dict(record_id='r'), dict(schema='player-level-commit/5'),
+    for change in (dict(position=7), dict(inputs_since=0), dict(record_id='r'), dict(schema='player-level-commit/6'),
                    dict(version=4), dict(subgoal_id='x')):
         with pytest.raises(PlayerError, match=next(iter(change))):
             call(app, reader, tool, dict(args, **change))
@@ -277,7 +278,7 @@ def test_commit_after_s_inputs_is_discarded_and_written_nowhere(level):
     act(app, actor, S)
     before = store_rows(app)
     discarded = call(app, reader, REPLACE, supersede('Later'))
-    assert discarded == dict(schema='player-level-commit/5', status='discarded', action='replace',
+    assert discarded == dict(schema='player-level-commit/6', status='discarded', action='replace',
         reason='Served actor moved at least S inputs past the bound', position=S + 1, inputs_since=S,
         staleness_inputs=S, subgoal_id=current_id(app), records=[], kept=[])
     assert store_rows(app) == before
@@ -407,7 +408,7 @@ def test_stale_when_a_subgoal_appears_after_binding_with_none(level):
     bind(app, reader)
     # A subgoal appears (as if another commit ran) after the bind with none.
     put(app.memory, actor['actor_id'], dict(schema='player-record/1', kind='work', text='other', data=dict(
-        level='subgoal', level_contract='player-level/5', expected_observations=['x']), sources=[], supports=[],
+        level='subgoal', level_contract='player-level/6', expected_observations=['x']), sources=[], supports=[],
         supersedes=None, applicability=None, program_id=None))
     result = call(app, reader, REPLACE, supersede('Next'))
     assert result['status'] == 'discarded' and result['reason'] == 'Current subgoal changed since the pass began'
@@ -434,7 +435,7 @@ def test_replace_with_a_previous_outcome_writes_work_and_a_superseding_correctio
     work, correction = revised['records']
     assert revised['status'] == 'committed' and revised['position'] == 2
     assert correction['kind'] == 'correction' and correction['supersedes'] == first['id']
-    assert correction['text'] == 'Cited episodes' and correction['data']['level_contract'] == 'player-level/5'
+    assert correction['text'] == 'Cited episodes' and correction['data']['level_contract'] == 'player-level/6'
     assert correction['supports'] == [work['id']] and correction['data']['outcome'] == 'revised'
     assert 'by' not in correction['data']
     assert [r['id'] for r in app.memory.current('work')] == [work['id']]
@@ -462,7 +463,7 @@ def test_keep_writes_nothing_gives_the_current_id_and_close_records_its_outcome(
     bind(app, reader)
     before = store_rows(app)
     kept = call(app, reader, KEEP, keep())
-    assert kept['schema'] == 'player-level-commit/5' and kept['subgoal_id'] == work['id']
+    assert kept['schema'] == 'player-level-commit/6' and kept['subgoal_id'] == work['id']
     assert kept['status'] == 'committed' and kept['action'] == 'keep' and kept['records'] == [] and kept['kept'] == [work['id']]
     assert kept['derived'] == dict(observations=['not_yet'], stalled=False)
     assert store_rows(app)[0] == before[0]
@@ -798,7 +799,7 @@ def test_reader_minting_refuses_more_than_one_current_level_subgoal_and_ignores_
 
         def work(index, level=False):
             put(memory, actor['actor_id'], dict(schema='player-record/1', kind='work', text=f'work {index}',
-                data=dict(level='subgoal', level_contract='player-level/5') if level else {}, sources=[], supports=[],
+                data=dict(level='subgoal', level_contract='player-level/6') if level else {}, sources=[], supports=[],
                 supersedes=None, applicability=None, program_id=None))
         for index in range(16):
             work(index)
@@ -839,7 +840,7 @@ def test_the_general_write_paths_cannot_supersede_or_support_a_record_carrying_t
     second = app.memory.append(actor['actor_id'], dict(plain, kind='correction', supersedes=first['id'], supports=[first['id']]))
     assert second['supersedes'] == first['id']
     # The custodian's own path may still supersede its record.
-    put(app.memory, actor['actor_id'], dict(correction, data=dict(level='subgoal', level_contract='player-level/5', outcome='revised')))
+    put(app.memory, actor['actor_id'], dict(correction, data=dict(level='subgoal', level_contract='player-level/6', outcome='revised')))
     assert app.level_subgoals() == []
 
 
@@ -852,7 +853,8 @@ def test_older_contract_level_records_are_ignored_by_the_subgoal_reads_counts_an
         actor = app.add_actor('narrowed')
 
         def work(text, contract):
-            data = dict(level='subgoal', expected_observations=['a door'], status='open', confidence=.5)
+            observations = stored_observations('a door') if contract == 'player-level/6' else ['a door']
+            data = dict(level='subgoal', expected_observations=observations, status='open', confidence=.5)
             if contract:
                 data['level_contract'] = contract
             return put(memory, actor['actor_id'], dict(schema='player-record/1', kind='work', text=text, data=data, sources=[],
@@ -862,23 +864,24 @@ def test_older_contract_level_records_are_ignored_by_the_subgoal_reads_counts_an
             return put(memory, actor['actor_id'], dict(schema='player-record/1', kind='correction', text='ended',
                 data=dict(level='subgoal', **data), sources=[], supports=[], supersedes=record['id'], applicability=None,
                 program_id=None))
-        # Superseded older-contract history: not counted, not current, no refusal.
+        # Superseded older-contract history is still incompatible with current admission.
         for index, contract in enumerate(('player-level/2', 'player-level/3', None)):
             end(work(f'old {index}', contract), level_contract=contract or 'player-level/3', by='software')
         assert app.level_record_count() == 0 and app.level_subgoals() == []
-        reader = app.add_reader(actor['actor_id'], 'level', staleness_inputs=S, **parameters)
-        assert reader['actor_id'] and app.subgoal_counts(actor['actor_id']) == []
-        current = work('now', 'player-level/5')
+        with pytest.raises(ControlError, match='Unsupported subgoal record contract'):
+            app.add_reader(actor['actor_id'], 'level', staleness_inputs=S, **parameters)
+        current = work('now', 'player-level/6')
         end_old = work('older and current', 'player-level/3')
         # One current subgoal of the current contract is the level's; the older one is neither it nor a second one for the
         # mint check's count, and it is refused as an unsupported store rather than adopted.
         assert [r['id'] for r in app.level_subgoals()] == [current['id']] and app.level_record_count() == 1
-        assert [c['subgoal_id'] for c in app.subgoal_counts(actor['actor_id'])] == [current['id']]
-        with pytest.raises(ControlError, match='Unsupported level record contract'):
+        assert app.intent(actor['actor_id'])['subgoal']['record_id'] == current['id']
+        with pytest.raises(ControlError, match='Unsupported subgoal record contract'):
             app.add_reader(actor['actor_id'], 'recorder', **parameters)
         end(end_old, level_contract='player-level/3')
-        assert app.add_reader(actor['actor_id'], 'recorder', **parameters)['actor_id']
-        assert [c['subgoal_id'] for c in app.subgoal_counts(actor['actor_id'])] == [current['id']]
+        with pytest.raises(ControlError, match='Unsupported subgoal record contract'):
+            app.add_reader(actor['actor_id'], 'recorder', **parameters)
+        assert app.intent(actor['actor_id'])['subgoal']['record_id'] == current['id']
     finally:
         runtime.close(); memory.close()
 
@@ -1015,13 +1018,12 @@ def test_reader_minting_refuses_a_current_level_record_of_another_contract(tmp_p
                            ('v4 record', dict(level_contract='player-level/4')), ('unversioned record', {})):
             stale = level_work(text, **data)
             for role, extra in (('level', dict(staleness_inputs=S)), ('recorder', {})):
-                with pytest.raises(ControlError, match='Unsupported level record contract.*migrate or start a fresh player store') as raised:
+                with pytest.raises(ControlError, match='Unsupported subgoal record contract; expected player-level/6'):
                     app.add_reader(actor['actor_id'], role, **parameters, **extra)
-                assert stale['id'] in str(raised.value) and 'player-level/5' in str(raised.value)
-            # Superseded history of another contract is not current and does not refuse.
             end(stale)
-        level_work('current record', level_contract='player-level/5')
-        assert app.add_reader(actor['actor_id'], 'level', staleness_inputs=S, **parameters)['actor_id']
+        level_work('current record', level_contract='player-level/6')
+        with pytest.raises(ControlError, match='Unsupported subgoal record contract'):
+            app.add_reader(actor['actor_id'], 'level', staleness_inputs=S, **parameters)
     finally:
         runtime.close(); memory.close()
 

@@ -31,7 +31,7 @@ def query_text(subgoal: dict | None) -> str | None:
     """The subgoal's text and its expected observations as one query, or None when there is no subgoal."""
     if subgoal is None:
         return None
-    return ' '.join([subgoal['text'], *(subgoal['data'].get('expected_observations') or [])])
+    return ' '.join([subgoal['text'], *(item['predicate'] for item in subgoal['data'].get('expected_observations', []))])
 
 
 def prepare(episode: dict) -> tuple[Counter, int]:

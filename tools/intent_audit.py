@@ -56,7 +56,7 @@ from tools.control_analysis import session_database
 from tools.evidence_stats import cohen_kappa
 from tools.level_stage_analysis import COMMIT_TOOLS, UnsupportedTrace, store_rows
 
-PACKET_SCHEMA = 'intent-audit-packet/1'
+PACKET_SCHEMA = 'intent-audit-packet/2'
 CRITERIA_SCHEMA = 'intent-audit-criteria/1'
 CRITERIA_KEYS = ('min_auditable', 'min_kappa', 'min_accuracy', 'max_unverifiable_share')
 LABELS = ('accurate', 'partly accurate', 'inaccurate', 'unverifiable')
@@ -242,6 +242,10 @@ def summarize(out: Path, criteria: dict) -> dict:
     audits = sorted(p.name for p in (out / 'packets').iterdir() if p.is_dir())
     first, second, resolved = [], [], {}
     for audit in audits:
+        path = out / 'packets' / audit / 'packet.json'
+        packet = json.loads(path.read_text())
+        if not isinstance(packet, dict) or packet.get('schema') != PACKET_SCHEMA or packet.get('audit_id') != audit:
+            raise UnsupportedTrace(f'{path}: expected {PACKET_SCHEMA} for audit {audit}')
         a, b = derived_label(out, audit, 'a'), derived_label(out, audit, 'b')
         first.append(a)
         second.append(b)

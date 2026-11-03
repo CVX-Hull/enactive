@@ -136,7 +136,7 @@ def test_service_row_and_records_commit_in_one_transaction(tmp_path):
 
 
 def episode_claim(**changes):
-    data = dict(level='episode', level_contract='player-episode/1', settled='failed', writer='software',
+    data = dict(level='episode', level_contract='player-episode/2', settled='failed', writer='software',
                 session='s' * 32, actor_id='a' * 32, first_position=1, last_position=1, subgoal_id=None, reason='r')
     return record('claim', data=data | changes)
 

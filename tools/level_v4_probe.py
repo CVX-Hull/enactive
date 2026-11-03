@@ -2,21 +2,21 @@
 """Engineering probe: the level v4 replay probe (#352), recorded runs through the real recorder and level hosts.
 
 An engineering probe of the integrated v4 candidate: whether the recorder and level interfaces can be called correctly
-on the production route, and whether the intent tail supplies anything the actor lacked. Every #345 episode is
-development data, so no result here is evidence about recorder quality or play; the report is labelled
+on the production route, and whether the intent tail supplies anything the actor lacked. This tool takes
+current-contract development data. Archived #345 inputs require their original version. The report is labelled
 `engineering-probe` and excluded from evidence. The frozen spec is `protocol.md` and the thresholds file beside it; this
 tool computes G1 to G6 exactly as they define them and records both digests.
 
 Stages (all inputs are recorded; no game, no live session):
 
-1. **Recorder, two families.** Every #345 episode with a subgoal plus the subgoal-free episodes whose
+1. **Recorder, two families.** Every replay episode with a subgoal plus the subgoal-free episodes whose
    `int(sha256(run|index), 16)` is smallest. For each, a fresh read-only replay store of the run's operations and frames
    up to the episode's end is built through the store API (as `tools/level_probe.py` does). The episode's subgoal is
    inserted through the custodian's append path, the episode is bound with `bind_episode` and pushed with the driver's own
-   `episode_push` and `recorder_document`, and the real recorder host (`player-host/8`, frozen `episode-v1`) runs once per
+   `episode_push` and `recorder_document`, and the real recorder host (`player-host/8`, frozen `episode-v2`) runs once per
    family route. F1 is the production route and F2 the second family, both given as explicit `player-host/8` files.
 2. **Level.** The driver's offline replay (cutter closes, recorder backlog and the real `LevelSchedule` wakes) runs over
-   every run with #345's R1 records, each turned into a trusted `player-episode/1` settle through the custodian's own
+   every run with current R1 records, each turned into a trusted `player-episode/2` settle through the custodian's own
    `episode_call`. From all wake points, a sample chosen by the same hash rule gets the driver's real `level_push` and
    `level_text` input and runs once through the real level host on F1.
 3. **Manipulation check ($0).** At each recorded actor request the real `intent()` gives the v4 tail over the replay store
@@ -65,7 +65,7 @@ from harness import application as application_module
 from harness.computer.launch import close_group
 from harness.computer.protocol import ControlError
 from harness.player import memory as memory_module
-from harness.player.contracts import LEVEL_CONTRACT
+from harness.player.contracts import LEVEL_COMMIT_SCHEMA, LEVEL_CONTRACT, MARK_COLUMNS, OBSERVATION_STATUSES, level_arguments, observation_rows
 from harness.player.memory import Memory
 from harness.player.contracts import PlayerError
 from harness.server import serve
@@ -78,11 +78,13 @@ from tools.level_probe import add_operation, classify, git_state, keychain_secre
 from tools.level_schedule import LevelSchedule
 
 LABEL = 'engineering-probe'
-SCHEMA = 'level-v4-probe/3'
+SCHEMA = 'level-v4-probe/4'
 THRESHOLDS_SCHEMA = 'level-v4-probe-thresholds/1'
 PROBE_ROOT = ROOT / '.runtime' / 'probes'
 DEFAULT_SAMPLE_ESTIMATE_USD = 0.12
-STATUSES = ('seen', 'not_yet', 'contradicted')
+STATUSES = OBSERVATION_STATUSES
+REPLAY_EPISODES_SCHEMA = 'level-replay-episodes/2'
+REPLAY_RECORD_SCHEMA = 'level-replay-record/2'
 # #345's persistent lineage: sessions that share one player memory in this order (each carries the last subgoal and recalls
 # the earlier sessions' recorded episodes). Every other run is its own lineage.
 LINEAGE = tuple(f'persistent329-{number:02d}' for number in range(1, 6))
@@ -93,18 +95,18 @@ THRESHOLD_KEYS = {'schema', 'unit', 'interval', 'recorder_valid_terminal_rate_lo
                   'cross_family_kappa_lower_at_least', 'marginal_coverage_lower_above', 'max_usd'}
 # What the probe cannot reproduce or had to decide, stated in every report.
 LIMITS = (
-    'Recorded runs are v3-era development data (campaign-run/3 and /4, player-host/2 to /5); they are test inputs, not a '
-    'supported format. Nothing here is evidence about recorder quality, intent quality or play.',
-    'Stage 1 uses #345\'s episode boundaries (including its scripted start and end episodes, shown to the recorder as closed '
+    'Recorded runs are development data. The replay ladder and level receipts must use the current contracts. '
+    'The report measures interface behavior on those inputs.',
+    'Stage 1 uses the replay ladder\'s episode boundaries (including scripted start and end episodes, shown to the recorder as closed '
     'by `edge`), not the driver cutter\'s; the number of episodes whose cut differs under the driver\'s capture-less-input '
     'distance rule is reported.',
     'Stage 1 replays one episode against a fresh store holding only the run\'s operations up to the episode end and the '
     'episode\'s subgoal: no earlier episodes, no recall, no other subgoals.',
-    'Stages 2 and 3 replay each run with #345\'s R1 records as settles, the recorded level commits as the subgoal timeline, '
+    'Stages 2 and 3 replay each run with current R1 records as settles, the recorded level commits as the subgoal timeline, '
     'and recorder and level pass durations drawn from the runs\' own recorded request latencies (seeded); only runs that '
     'have R1 records for every episode are replayed. Persistent runs share one memory in order, so later sessions recall '
     'the earlier ones; every other run is its own store.',
-    'The level commits the probe replays are the recorded v3-era ones; the replay\'s own level pass is read-only evidence '
+    'The level commits the probe replays are from the current receipt contract; the replay\'s own level pass is read-only evidence '
     'of interface correctness and its commit is not applied to later wake points.',
     'The tail audience is `tail` (the custodian\'s name for the actor\'s request-only tail); the protocol\'s `actor` is not '
     'a custodian audience.',
@@ -159,6 +161,8 @@ def agreement(pairs: list[tuple[str, str]], categories: tuple[str, ...] = STATUS
     n = len(pairs)
     if n == 0:
         return dict(n=0, agreement=None, kappa=None, ac1=None)
+    if any(left not in categories or right not in categories for left, right in pairs):
+        raise ValueError('Paired mark is outside the selected agreement categories')
     po = sum(a == b for a, b in pairs) / n
     first, second = collections.Counter(a for a, _ in pairs), collections.Counter(b for _, b in pairs)
     pe = sum(first[k] * second[k] for k in categories) / (n * n)
@@ -277,7 +281,13 @@ def evaluate(thresholds: dict, f1: list[dict], f2: list[dict], level: list[dict]
     pooled = collections.Counter()
     for table in tables.values():
         pooled.update(table)
-    gates['G5']['agreement'] = agreement([pair for pair, count in pooled.items() for _ in range(count)])
+    pairs = [pair for pair, count in pooled.items() for _ in range(count)]
+    assessable = [pair for pair in pairs if 'unassessable' not in pair]
+    gates['G5']['agreement'] = agreement(pairs)
+    gates['G5']['jointly_assessable_agreement'] = agreement(
+        assessable, tuple(status for status in STATUSES if status != 'unassessable'))
+    gates['G5']['jointly_assessable_pairs'] = len(assessable)
+    gates['G5']['confusion'] = {f'{left}|{right}': count for (left, right), count in sorted(pooled.items())}
     other = family_gates(f2)
     reported = dict(
         f2_g1=bootstrap(other['valid'], _ratio, **boot), f2_g2=bootstrap(other['records'], _ratio, **boot),
@@ -292,15 +302,31 @@ def iso(value: str) -> float:
 
 
 def load_ladder(directory: Path) -> dict:
-    """#345's episodes and R1 records (first calls only, retests excluded), with their digests."""
+    """Current replay episodes and R1 records. Archived three-way ladders require their original source."""
     episodes_path, records_path = directory / 'episodes.json', directory / 'records.jsonl'
     document = json.loads(episodes_path.read_text())
-    if document.get('schema') != 'ladder345-episodes/1':
-        raise ValueError(f'{episodes_path} is not ladder345-episodes/1')
+    if document.get('schema') != REPLAY_EPISODES_SCHEMA:
+        raise ValueError(f'{episodes_path} is not {REPLAY_EPISODES_SCHEMA}')
+    for entry in document['episodes']:
+        subgoal = entry['subgoal']
+        if subgoal is None:
+            continue
+        observations = subgoal['expected_observations']
+        if type(observations) is not list or any(
+                type(row) is not dict or set(row) != {'predicate', 'kind', 'window', 'evidence'} for row in observations):
+            raise ValueError('Replay contains a superseded expected-observation shape')
+        level_arguments('player_level_replace', dict(
+            text=subgoal['text'], expected_observations=[row['predicate'] for row in observations],
+            observation_kinds=[row['kind'] for row in observations], observation_windows=[row['window'] for row in observations],
+            observation_evidence=[row['evidence'] for row in observations], status=subgoal.get('status', 'open'),
+            confidence=subgoal['confidence'], sources=[], previous_outcome='none', previous_reason=''))
     records = {}
     for line in records_path.read_text().splitlines():
         value = json.loads(line)
+        if value.get('schema') != REPLAY_RECORD_SCHEMA:
+            raise ValueError(f'{records_path} contains a record outside {REPLAY_RECORD_SCHEMA}')
         if value['recorder'] == 'R1' and not value['retest'] and value['status'] == 'record' and value['final']:
+            level_arguments('player_episode_record', value['parsed'])
             records[(value['run'], value['episode'])] = value
     return dict(document=document, records=records, theta=document['theta'], m=document['m'], cap=document['cap'],
                 digests=dict(episodes=sha256_file(episodes_path), records=sha256_file(records_path)))
@@ -371,8 +397,14 @@ def level_commits(run: dict) -> list[dict]:
             if event.get('type') == 'tool-start' and str(event.get('tool', '')).startswith('player_level_'):
                 starts[event.get('tool_call_id')] = event.get('arguments') or {}
             elif event.get('type') == 'level-commit' and event.get('action') in ('replace', 'close'):
-                found.append(dict(wall=iso(event['wall_time']), action=event['action'], position=event.get('position'),
-                                  id=(event.get('record_ids') or [None])[0], arguments=starts.get(event.get('tool_call_id'), {})))
+                if event.get('receipt_schema') != LEVEL_COMMIT_SCHEMA:
+                    raise ValueError(f'{trace}: replay requires a {LEVEL_COMMIT_SCHEMA} receipt')
+                action = event['action']
+                arguments = starts.get(event.get('tool_call_id'), {})
+                if action == 'replace':
+                    arguments = level_arguments('player_level_replace', arguments)
+                found.append(dict(wall=iso(event['wall_time']), action=action, position=event.get('position'),
+                                  id=(event.get('record_ids') or [None])[0], arguments=arguments))
     return sorted(found, key=lambda e: e['wall'])
 
 
@@ -700,14 +732,6 @@ def subgoal_spec(episode_subgoal: dict) -> dict:
                 confidence=episode_subgoal['confidence'], status='open', position=episode_subgoal['commit_position'])
 
 
-def trusted_arguments(record: dict, sources: list[str]) -> dict:
-    """An R1 record as `player_episode_record` arguments (the recorder\'s `changed` field did not exist in #345)."""
-    parsed = record['parsed']
-    return dict(attempted=parsed['attempted'], counterpart=parsed.get('counterpart', ''), observation_status=list(parsed['observation_status']),
-                changed=parsed.get('changed', ''), residual=parsed.get('residual', ''), confidence=parsed['confidence'],
-                sources=[s for s in parsed.get('sources', []) if s in sources][:4])
-
-
 class Lineage:
     """One player memory shared by the sessions that carried it, with the recorded-to-replay subgoal id map."""
     def __init__(self, directory: Path):
@@ -740,7 +764,8 @@ class ReplayState:
 
     def base_events(self) -> list:
         events = [(row[2], 1, 'op', position) for position, row in enumerate(self.rows, 1)]
-        events += [(commit['wall'], 0, 'subgoal', commit) for commit in level_commits(self.run)]
+        commits = self.run['level_commits'] if 'level_commits' in self.run else level_commits(self.run)
+        events += [(commit['wall'], 0, 'subgoal', commit) for commit in commits]
         return sorted(events, key=lambda item: item[:2])
 
     def ensure(self, source: dict | None, position: int) -> str | None:
@@ -765,9 +790,9 @@ class ReplayState:
             add_operation(self.runtime, self.actor_id, self.run['directory'], self.run['frames'], self.rows[payload - 1])
         elif kind == 'subgoal':
             if payload['action'] == 'replace':
-                spec = dict(id=payload['id'], text=payload['arguments'].get('text', ''),
-                            expected_observations=payload['arguments'].get('expected_observations') or [],
-                            confidence=payload['arguments'].get('confidence', .5), status=payload['arguments'].get('status', 'open'))
+                arguments = level_arguments('player_level_replace', payload['arguments'])
+                spec = dict(id=payload['id'], text=arguments['text'], expected_observations=observation_rows(arguments),
+                            confidence=arguments['confidence'], status=arguments['status'])
                 if spec['id'] and spec['text'].strip() and spec['expected_observations'] and spec['id'] not in self.lineage.mapping:
                     install_subgoal(self.application, self.level['actor_id'], self.actor_id, self.run['session'], spec,
                                     self.lineage.mapping, position=payload['position'] or 0)
@@ -850,7 +875,12 @@ def settle_replayed(application, recorder_id: str, ep: dict, subgoal: str | None
         try:
             with application.serial:
                 bound = application.bind_episode(recorder_id, first_position=first, last_position=last, subgoal_id=subgoal)
-                application.episode_call(recorder_id, 'player_episode_record', trusted_arguments(record, bound['sources']),
+                arguments = level_arguments('player_episode_record', record['parsed'])
+                for name in MARK_COLUMNS[1:]:
+                    for source in arguments[name]:
+                        if source and source in bound['sources']:
+                            application.source(source, recorder_id)
+                application.episode_call(recorder_id, 'player_episode_record', arguments,
                                          digest32('v4probe-settle', run, str(ep['index'])))
             return
         except (PlayerError, ControlError, ValueError, KeyError) as exc:
@@ -942,7 +972,7 @@ def reader_pass(*, role: str, application, reader: dict, session: str, route: di
     """Run one reader host (`level` or `recorder`) against a live application and classify what it did.
 
     The application is served on loopback and the host reaches it through the real MCP adapter. The pushed input is the
-    driver\'s own (`level_text` for a level, the closed `player-pass-input/1` document for a recorder).
+    driver\'s own (`level_text` for a level, the closed `player-pass-input/2` document for a recorder).
     """
     kind = 'episode' if role == 'recorder' else 'level'
     name = 'input.txt' if isinstance(stdin, str) else 'input.json'
@@ -1108,7 +1138,7 @@ process.stdout.write(JSON.stringify(out));
 
 
 def format_tails(intents: list[dict], node: str, directory: Path) -> list[dict]:
-    """The real host formatter over each `player-intent/3` value: which recall source ids are shown, within 1,024 bytes."""
+    """The real host formatter over each `player-intent/4` value: which recall source ids are shown, within 1,024 bytes."""
     if not intents:
         return []
     code = TAIL_FORMATTER % json.dumps((ROOT / 'tools/player_host/host.mjs').as_uri())
@@ -1245,6 +1275,8 @@ def probe(*, ladder_dir: Path, runs_root: Path, protocol: Path, amendment: Path,
     by_run = episodes_by_run(document)
     amendment_sha = sha256_file(amendment)
     loaded = {n: load_run(runs_root, n, document['sessions'][n]) for n in sorted(document['sessions'])}
+    for run in loaded.values():
+        run['level_commits'] = level_commits(run)
     verified = {n: verify_sources(loaded[n]) for n in names}
     probe_root.mkdir(parents=True, exist_ok=True)
     out.mkdir()
@@ -1414,7 +1446,7 @@ def _probe(c: dict) -> dict:
         cut_differences=sum(v['differ'] for v in cuts.values()), cut_episodes=sum(v['episodes'] for v in cuts.values()),
         cut_rule_reproduced_runs=sum(v['reproduces'] for v in cuts.values()))
     base = dict(schema=SCHEMA, label=LABEL, excluded_from_evidence=True,
-        scope='Replays recorded #345 runs through the real recorder and level hosts (and the real intent() over replay stores) to '
+        scope='Replays current-contract runs through the real recorder and level hosts (and the real intent() over replay stores) to '
               'check that the v4 interfaces can be called correctly on the route and whether the intent tail supplies images the '
               'actor lacked. It says nothing about recorder quality, intent quality, play or outcomes.',
         interface=dict(host='player-host/8', role_prompts={r.name: sha256_file(r) for r in (LEVEL_ROLE, EPISODE_ROLE)},

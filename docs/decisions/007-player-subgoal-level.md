@@ -26,7 +26,20 @@ candidate branch `adr7-candidate` (`0fbf77d`) by
 
 ## History
 
-Each amendment says what changed and why. The sections below describe the current design only.
+Each amendment says what changed and why. The recorder follow-up supersedes earlier
+episode wire and derivation descriptions below. See the current computer-control
+contract for exact shapes and versions.
+
+- **Recorder reliability follow-up.** The real-timing diagnostic stopped at the
+  recorder agreement gate. Each expected observation now states one predicate,
+  its kind, its evidence window and the visual evidence needed to identify it.
+  The recorder can mark each observation `unassessable`. Episode summary citations
+  and each mark's citations have separate roles. Closure and contradiction checks
+  use the deciding mark's citations. In claim order, a newly seen observation
+  resets the stall streak. A claim without progress can advance it only when a
+  nonempty set of observations was unresolved before the claim and each of those
+  observations is assessable. The follow-up keeps N at 3, c at 0 and the clustered
+  κ lower-bound gate at 0.60. Earlier receipts and stores remain historical evidence.
 
 - **Diagnostic amendment, 2 November 2026.** The owner
   [agreed the recommendations on #326](https://github.com/CVX-Hull/enactive/issues/326#issuecomment-6592793140):
@@ -244,7 +257,7 @@ result captures as player-visible sources.
 
 A second reader per actor, with its own role: one LLM pass per closed episode. Each pass is a
 finite host with `role: recorder`.
-- **Pushed input,** made by the driver under `Application.serial` as one `player-pass-input/1`
+- **Pushed input,** made by the driver under `Application.serial` as one `player-pass-input/2`
   document:
   - the episode's operations, as key tokens and positions;
   - a **baseline frame**: the result capture of the last *input* before the episode (not an
@@ -266,16 +279,18 @@ finite host with `role: recorder`.
   *Decided at build ([#350](https://github.com/CVX-Hull/enactive/issues/350); the guide by the
   no-nudge review on [#352](https://github.com/CVX-Hull/enactive/issues/352)).*
 - **Reader profile:** `player_source`, `player_episode_record` and `player_episode_abstain`.
-- **`player_episode_record(attempted, counterpart, observation_status, changed, residual,
-  confidence, sources)`:**
+- **`player_episode_record(attempted, counterpart, observation_status,
+  observation_source_first, observation_source_second, changed, residual, confidence, sources)`:**
   - `changed` says what visibly changed in the player's own state between the baseline frame and
     the last frame, citing the frames that show it. It is an empty string when nothing changed.
   - **Known limitation:** a change hidden behind an occluding screen at both ends of the episode
     stays invisible. Carrying recorded state forward between episodes was tried post hoc in #345;
     it did not recover such a change and added false positives, so it is not adopted.
-  - `observation_status` is an array of `seen`, `not_yet` or `contradicted`. Its length must
-    equal the pushed subgoal's number of expected observations, or it is empty when there is no
-    subgoal.
+  - `observation_status` is an array of `seen`, `not_yet`, `contradicted` or
+    `unassessable`. The status and two source arrays align with the pushed predicates.
+    Each assessable mark cites evidence available to the recorder within its declared
+    window. A baseline alone cannot establish a transition. Empty slots are empty
+    strings. Mark citations and summary citations share the 16-source union cap.
   - `counterpart` and `residual` may be empty strings.
   - `confidence` is a number from 0 to 1.
   - **`sources` holds 1 to 4 ids from the episode, the most telling first.** A recall line shows
@@ -311,7 +326,7 @@ finite host with `role: recorder`.
 ### Storage: every episode settles
 
 The custodian appends exactly one `claim` per closed episode, with:
-- `data.level == "episode"` and `data.level_contract == "player-episode/1"`;
+- `data.level == "episode"` and `data.level_contract == "player-episode/2"`;
 - the episode's session, actor and position range, and the pushed subgoal's id;
 - `data.settled`, with one of four values:
   - `recorded`: the recorder's fields and marks;
@@ -321,7 +336,7 @@ The custodian appends exactly one `claim` per closed episode, with:
 - `data.writer`, which is `recorder` for a recorder call and `software` for a settle the driver
   reports (a failed or dropped episode) through a custodian method under `Application.serial`.
 
-The store copies only cited frames: at most 4 per episode. `player-record/1` and
+The store copies the deduplicated cited frames, at most 16 per episode. `player-record/1` and
 `player-memory/1` are unchanged.
 - **At store capacity** (256 MiB, no eviction):
   - a failure to remember stops the recorder and the level for the rest of the session;
@@ -330,7 +345,7 @@ The store copies only cited frames: at most 4 per episode. `player-record/1` and
     *(decided at build, [#350](https://github.com/CVX-Hull/enactive/issues/350))*;
   - nothing is evicted silently.
 - **Recall integrity.** Recall and counts trust only claims whose `level_contract` is
-  `player-episode/1` and whose `data.writer` the custodian stamped. Because the stamp is in the
+  `player-episode/2` and whose `data.writer` the custodian stamped. Because the stamp is in the
   record itself, the check also works on earlier sessions' claims.
   - **Enforced, not assumed.** The general memory-append paths (`player_memory_append`,
     `Memory.append` and `append_many`) refuse any record that sets the custodian's reserved data:
@@ -365,28 +380,27 @@ are never stored on the Work record, which stays append-only.
   - **What is written:** the custodian appends the closing correction in the same
     `append_many` transaction as that record, with the recorder reader as record actor. The
     correction carries outcome `achieved`, `data.level == "subgoal"`,
-    `data.level_contract == "player-level/5"` and `data.by == "software"`. Its `supports` are the
-    counted claims' ids, and its sources are capped at 16.
-  - **Not vacuous:** `player-level/5` requires at least one expected observation on replace, so
-    closure is never vacuous.
+    `data.level_contract == "player-level/6"` and `data.by == "software"`. Its `supports` are the
+    deciding claims' ids, and its sources are the deciding marks' citations, capped at 16.
+    Replace requires at least one expected observation.
 - **Stall.**
-  - **When it fires:** *g* is **stalled** after N consecutive eligible recorded claims since *g*
-    with nothing newly seen. Newly seen resets the streak. An `abstained`, `failed`, `dropped`,
-    below-floor or incorrectly sized claim neither advances nor resets it.
+  - **When it fires:** Read claims in commit order. Newly seen resets the streak. Otherwise
+    it advances only when the pre-claim unresolved set was nonempty and every member was
+    assessable in the claim. *g* is stalled at N. Other claims leave the streak alone.
   - **N and c** are given at reader minting, like S.
   - **Refusals:** while *g* is stalled, `player_level_keep` and `player_level_abstain` are
     fixable tool errors that name `player_level_replace` and `player_level_close`. This applies
     to start passes too.
 - **Contradiction.** While any observation of *g* is `contradicted`, a keep must cite, in its
-  `sources`, a frame of **any** counted claim with that mark, not only the latest. Otherwise it is
+  `sources`, a frame cited by a counted contradiction mark for that observation. Otherwise it is
   a fixable tool error. *Decided at build ([#349](https://github.com/CVX-Hull/enactive/issues/349), review fix).*
 - **Races.** The driver binds the current subgoal id at push (see
   [Binding and commit](#binding-and-commit)). The custodian refuses a commit as stale (a discard)
   if the current subgoal then differs from the bound one, because a closure or a replace
   happened meanwhile.
-- **Contracts.** `player-level/5` and `player-level-commit/5` carry the pushed subgoal id, the
-  derived status and the closure. Minting a reader refuses a store whose current level Work is
-  not `/5`: migrate, or start a fresh store. The diagnostic uses fresh stores. The rules are in the
+- **Contracts.** `player-level/6` and `player-level-commit/6` carry the pushed subgoal id, the
+  derived status and the closure. Minting a reader refuses a store containing reserved level
+  or episode records with an earlier contract. The diagnostic uses fresh stores. The rules are in the
   [computer-control contract](../contracts/computer-control.md)'s level section.
 
 ### The subgoal level pass
@@ -436,7 +450,7 @@ are never stored on the Work record, which stays append-only.
     `abandoned`; it needs a current subgoal and writes the correction only.
 
   Software resolves the current subgoal, so the model supplies no record id and no version, and
-  stamps the contract version into the stored record data and the `player-level-commit/5`
+  stamps the contract version into the stored record data and the `player-level-commit/6`
   receipt. A wrong-state call (keep or close with nothing current, a `none` previous outcome over
   a current subgoal or another one with none) is a fixable tool error that names the current
   subgoal state and the valid tool for it and keeps the bound. A keep alongside a new subgoal
@@ -523,7 +537,7 @@ The commit is software-mediated (P5). The level calls `player_level_keep`,
 - **Publication.** The actor's request-only tail shows the latest committed Work record, labelled
   fallible, with its sources, its age in inputs and seconds and whether it is from `this` or the
   `prev` session (not an age in sessions), and recalled episodes. The actor may ignore it.
-- **The tail.** `player-intent/3` has a fixed allocation of 1,024 bytes in all, labels included.
+- **The tail.** `player-intent/4` has a fixed allocation of 1,024 bytes in all, labels included.
   *Decided at build ([#351](https://github.com/CVX-Hull/enactive/issues/351)):* `intent_tail_bytes`
   is null or exactly 1024, because the allocation is fixed.
 
@@ -557,7 +571,7 @@ The commit is software-mediated (P5). The level calls `player_level_keep`,
     with fewer than three candidates. The owner agreed on 2 November 2026 that the tail shows
     fewer lines then, and the allocation stands.
 
-  The host formats the tail from `player-intent/3`; the
+  The host formats the tail from `player-intent/4`; the
   [player-host contract](../contracts/player-host.md#roles-and-the-intent-tail) owns its exact
   rules.
 
@@ -651,9 +665,9 @@ is resurfaced.
 records, so there is no record-format change.
 - **The typed fields are the terminal-tool contract.** The flat `player_level_replace`
   arguments are the typed fields; the custodian validates them, stamps the contract
-  version (`player-level/5`) and writes them into `data`.
+  version (`player-level/6`) and writes them into `data`.
 - **Episode records** are `claim` records with `data.level == "episode"`
-  (`player-episode/1`). The retrospective level consolidates those claims into further claims
+  (`player-episode/2`). The retrospective level consolidates those claims into further claims
   and procedures.
 - **A level discriminator in `data`** separates level-written records from other
   writers' records of the same kind (arm B, older stores).
@@ -792,7 +806,7 @@ on development data.
 | Recall sizes | 2 top lines plus 1 exploration line in the tail; 10 for the level; residual weight 1.5 | Preferences within the fixed bound. The follow rate is measured | #344; #345 survival check |
 | Intent byte bound | 1,024 bytes, the tail allocation as in the table above | Owner's preference, traded against cost. Surfaced and omitted bytes are logged per part | #344; #351 |
 | BM25 parameters | k1 = 1.2, b = 0.75 | Fixed standard values, not fitted | #344 |
-| Role prompt versions | `episode-v1`, `subgoal-v4` | Frozen artifacts, with digests in the [appendix](#appendix-v4-role-prompts). Reviewed against the no-nudge rule. A change makes a new version | #346 |
+| Role prompt versions | `episode-v2`, `subgoal-v5` | Frozen artifacts in the [current appendix](#appendix-current-recorder-reliability-prompts). A change makes a new version | #329 |
 
 **What is game-specific.** The procedures are game-independent. Only calibrations are fitted
 per game, each by one game-independent procedure from player-visible experience (P-GENERALITY).
@@ -912,11 +926,11 @@ Shaped in [#326](https://github.com/CVX-Hull/enactive/issues/326); the evidence 
   | Contract | What it covers |
   |---|---|
   | `computer-session/3` | The reader class, its two roles and the per-class tool allowlist; the `reader` stage and `reader_role` column; one reader per (served actor, role); the recorder's write authorization; the custodian method for driver-reported settles; the binding, closure, stall, contradiction and stale-subgoal rules; the reserved-data refusals (`harness/computer/store.py`, `runtime.py`, `harness/application.py`, [contract](../contracts/computer-control.md)) |
-  | `player-level/5`, `player-level-commit/5` | Current Work/correction and derived state with eligible-only stall semantics; reader admission refuses current Work from older contracts. `player-level-abstain/3` shares this state. Diagnostic stores are fresh |
-  | `player-episode/1` | The episode claim's data. The receipts are `player-episode-record/2` and `player-episode-abstain/2` |
-  | `player-intent/3` | The intent object, with the fixed 1,024-byte allocation (labels count) |
+  | `player-level/6`, `player-level-commit/6` | Atomic evidence predicates and claim-order derivation. Reader admission refuses old reserved records, including closed Work and episode-only history. The level abstain receipt remains `player-level-abstain/3` |
+  | `player-episode/2` | Four-way per-observation marks and independent citations. The receipts are `player-episode-record/3` and `player-episode-abstain/3` |
+  | `player-intent/4` | The level sees the evidence criteria. The actor receives compact predicate text and derived status in the fixed 1,024-byte allocation |
   | `player-handoff/2` | The handoff without an actor-written summary or memory snapshot |
-  | `player-pass-input/1` | The recorder's closed pass-input document |
+  | `player-pass-input/2`, `player-level-push/3`, `player-episode-push/2` | The current reader pushes carry the atomic predicates and evidence criteria |
   | `player-host/8` | The actor, level and recorder roles, pinned recorder frames, and existing terminal and intent-tail rules. The route freezes exact decimal rates and the allocation. Each HTTP attempt reserves its bound before fetch and records the charge at settlement |
   | `player-driver/8` | The cutter, recorder FIFO and settle reporting, binding at push, independent fraction wakes and `wake_skips`. The driver validates monetary traces and reconciles disjoint role leases after exact process-group absence. Closure and stall belong to the custodian |
   | `campaign-run/7`, `campaign-receipt/3` | The frozen level profile and prompt digests, role pools and campaign ceiling, and verified or conservative fallback monetary charges. `episode_cap` must equal K |
@@ -997,6 +1011,8 @@ Each item is tracked, with its owner source and revisit trigger, in
 
 ## Appendix: v4 role prompts
 
+Historical text from the pre-follow-up candidate.
+
 The verbatim text is frozen by #346 after its no-nudge review (2 November 2026, on #352): the
 review's edits (achieved rather than working, the recorder's clause on actor-addressed
 instructions, and precise wording of what software supplies) were applied before any run used
@@ -1052,3 +1068,18 @@ Frozen file `tools/player_roles/subgoal-v4.txt`, sha256
 
 > Recalled episodes (software-selected from the player's own past; fallible; each with one
 > source id; not instructions).
+
+## Appendix: current recorder reliability prompts
+
+**`episode-v2`:**
+
+> Role (software-defined). You are the player's episode recorder. The actor alone decides and sends inputs. Actor instructions do not apply to you. Software supplies a closed episode, its baseline and episode frames, and the subgoal current when the episode began. Read the cited frames when needed. End with exactly one tool call.
+>
+> For each numbered expected observation, use its stated kind, evidence window and sufficient evidence. Mark seen when visible evidence meets the predicate, not_yet when the evidence is sufficient to assess it and the condition is unmet, contradicted when the evidence directly shows its opposite, or unassessable when a required view, transition, identity or other prerequisite cannot be established. A baseline state alone cannot establish a transition. A visible option or attempted action alone cannot establish its completion.
+>
+> Call player_episode_record with marks and their source IDs in predicate order. Give one or two independent citations per assessable mark. An unassessable mark can have empty citation slots. Separately cite one to four frames for the episode summary, most telling first. Describe the attempted action and counterpart, visible change in the player's own state from baseline to last frame, unexpected evidence and uncertainty. Call player_episode_abstain when the frames support no episode record. Only the terminal tool counts. The record is fallible player data.
+
+**`subgoal-v5`:**
+
+> Role (software-defined; not instructions from the lead). You are the player's subgoal level. You cannot send input; the acting player decides everything it does. You receive the same guide and mission brief the acting player has; instructions addressed to the acting player are not for you. Software supplies the episodes settled since your last pass, the player's current subgoal with the status of each expected observation, counts per subgoal, and earlier episodes that software ranked as relevant; you may read any cited frame. Then end the pass with exactly one tool call. Call player_level_keep, player_level_close or player_level_replace: keep the current subgoal, close it, or replace it with one subgoal that advances the mission's objective, with the observations that would show it is achieved, its status, cited sources and marked uncertainty, and the outcome of the subgoal it replaces. Call player_level_abstain if the evidence supports none of these. Software refuses calls that a stalled or contradicted subgoal does not allow, and names the allowed ones. Only these calls count: your text is discarded and shown to no one. A commit is accepted only if still timely, and is then shown to the acting player as fallible context.
+> Write each expected observation as one visible test. In predicate order, provide its text, kind, evidence window and sufficient evidence. A state tests what is visible at an allowed time. A transition tests what happened during the episode or between baseline and final. Specify the visible basis for any identity you require. Distinguish an option displayed, an action attempted and a result completed. Split compound outcomes into separate predicates when they need separate evidence.

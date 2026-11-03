@@ -1,4 +1,4 @@
-// The player-intent/3 tail: its fixed 1,024-byte allocation, at the maxima, over them and with multibyte text.
+// The player-intent/4 tail: its fixed 1,024-byte allocation, at the maxima, over them and with multibyte text.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { INTENT_LABEL, RECALL_LABEL, INTENT_TAIL_BYTES, TAIL_BUDGETS, RECALL_LINES, fitPart, formatIntentTail } from '../host.mjs';
@@ -13,7 +13,7 @@ function item(overrides = {}) {
     same_session: true, score: 1, exploration: false, ...overrides};
 }
 function intent({goal = {}, age = {}, items = [item(), item(), item()]} = {}) {
-  return {schema: 'player-intent/3', session: SESSION, actor_id: '3'.repeat(32), audience: 'tail', pass_index: 1,
+  return {schema: 'player-intent/4', session: SESSION, actor_id: '3'.repeat(32), audience: 'tail', pass_index: 1,
     subgoal: {record_id: 'a1b2c3d4e5f6a7b8', text: 'Reach the door', sources: [], status: 'open', confidence: 0.4, stalled: false, contradicted: false, counts: null,
       expected_observations: [{text: 'adjacent door', status: 'seen'}, {text: 'door open', status: 'not_yet'}], ...goal},
     age: {seconds: 12.34, inputs_since_commit: 3, inputs_by_this_actor: 7, same_actor: true, same_session: true, ...age},

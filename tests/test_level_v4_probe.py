@@ -25,7 +25,9 @@ from test_level_probe import HOST, KEY, Provider, route_file
 ROOT = Path(__file__).resolve().parents[1]
 ACTOR = 'a1' * 16
 GUIDE = 'Frozen guide for the probe.'
-SUBGOAL = dict(id='a' * 32, text='Open the door', expected_observations=['door open'], confidence=.8, commit_position=3, origin='replace')
+SUBGOAL = dict(id='a' * 32, text='Open the door', expected_observations=[
+    dict(predicate='door open', kind='state', window='during', evidence='The door is visibly open')],
+    confidence=.8, commit_position=3, origin='replace')
 PROFILE = dict(mode='shadow', episode_cap=10, staleness_inputs=10, budget_fractions=[.25, .5, .75], intent_tail_bytes=1024,
                max_http_attempts=60, pass_max_requests=4, pass_seconds=60, theta=0.1251514705882353, theta_fitting_sha256='a' * 64,
                min_episode_inputs=2, stall_settles=3, confidence_floor=0.0, recall=dict(tail_top=2, tail_exploration=1, level_items=10),
@@ -100,8 +102,11 @@ def build_run(root: Path, name: str, session: str, *, projection: bool = True) -
         events.append(dict(type='response-complete', wall_time=stamp(wall + .4), request_id=f'request-{k}'))
     (actors / 'host.jsonl').write_text('\n'.join(json.dumps(e) for e in events) + '\n')
     commit = [dict(type='tool-start', tool='player_level_replace', tool_call_id='c1', arguments=dict(
-                  text=SUBGOAL['text'], expected_observations=SUBGOAL['expected_observations'], confidence=.8, status='open')),
-              dict(type='level-commit', wall_time=stamp(1003.2), tool_call_id='c1', action='replace', position=3, record_ids=['a' * 32])]
+                  text=SUBGOAL['text'], expected_observations=['door open'], observation_kinds=['state'],
+                  observation_windows=['during'], observation_evidence=['The door is visibly open'],
+                  confidence=.8, status='open', sources=[], previous_outcome='none', previous_reason='')),
+              dict(type='level-commit', receipt_schema='player-level-commit/6', wall_time=stamp(1003.2),
+                   tool_call_id='c1', action='replace', position=3, record_ids=['a' * 32])]
     (actors / 'level' / '001' / 'host.jsonl').write_text('\n'.join(json.dumps(e) for e in commit) + '\n')
 
 
@@ -116,13 +121,24 @@ def build_ladder(root: Path, runs: dict[str, str]) -> Path:
         for index, (kind, closed, first, last, inputs, subgoal) in enumerate(shape):
             episodes.append(dict(run=name, group='C', index=index, kind=kind, closed_by=closed, start_pos=first, end_pos=last,
                                  n_inputs=inputs, subgoal=subgoal))
-            records.append(dict(recorder='R1', retest=False, status='record', final=True, run=name, episode=index, parsed=dict(
-                kind='record', attempted='Pressed x', counterpart='', observation_status=['seen'] if subgoal else [],
-                residual='nothing else', confidence=.9, sources=[f'{session}-{first}'])))
-    (ladder / 'episodes.json').write_text(json.dumps(dict(schema='ladder345-episodes/1', theta=PROFILE['theta'], m=2, cap=10, n_start=1,
+            records.append(dict(schema='level-replay-record/2', recorder='R1', retest=False, status='record',
+                final=True, run=name, episode=index, parsed=dict(
+                attempted='Pressed x', counterpart='', observation_status=['seen'] if subgoal else [],
+                observation_source_first=[f'{session}-{first}'] if subgoal else [],
+                observation_source_second=[''] if subgoal else [],
+                changed='', residual='nothing else', confidence=.9, sources=[f'{session}-{first}'])))
+    (ladder / 'episodes.json').write_text(json.dumps(dict(schema='level-replay-episodes/2', theta=PROFILE['theta'], m=2, cap=10, n_start=1,
                                                           n_end=1, sessions=runs, episodes=episodes)))
     (ladder / 'records.jsonl').write_text('\n'.join(json.dumps(r) for r in records) + '\n')
     return ladder
+
+
+def test_current_replay_refuses_archived_episode_ladder_before_reading_records(tmp_path):
+    from tools.level_v4_probe import load_ladder
+
+    (tmp_path / 'episodes.json').write_text(json.dumps(dict(schema='ladder345-episodes/1')))
+    with pytest.raises(ValueError, match='level-replay-episodes/2'):
+        load_ladder(tmp_path)
 
 
 @pytest.fixture
@@ -158,7 +174,10 @@ def test_planner_polls_fractions_without_settles_and_replays_real_skip_eligibili
     run['rows'] = run['rows'][:inputs + 1]
     run['request_walls'] = [1020. + i for i in range(1, 14)]
     commit = dict(wall=1000., action='replace', id='a' * 32, position=0,
-                  arguments=dict(text='Inspect the door', expected_observations=['door inspected'], confidence=.8))
+                  arguments=dict(text='Inspect the door', expected_observations=['door inspected'],
+                                 observation_kinds=['state'], observation_windows=['during'],
+                                 observation_evidence=['The door inspection is visible'], confidence=.8,
+                                 status='open', sources=[], previous_outcome='revised', previous_reason='Refocus'))
     monkeypatch.setattr(probe_module, 'level_commits', lambda _: [commit] if context else [])
     planning = probe_module.Lineage(world['tmp'] / f'planning-{context}-{inputs}')
     try:
@@ -221,6 +240,8 @@ def scripted(number, payload):
         sources = re.search(r'Citable source ids: ([^\\"]+?)(?:\\n|\\")', text).group(1).split(', ')
         expected = 0 if 'Subgoal current when the episode began: none' in text else 1
         return [('player_episode_record', dict(attempted='Pressed x', counterpart='', observation_status=['seen'] * expected,
+                                               observation_source_first=sources[-1:] * expected,
+                                               observation_source_second=[''] * expected,
                                                changed='', residual='', confidence=.8, sources=sources[:1]))]
     return [('player_level_abstain', dict(reason_code='no_change_needed', reason='Nothing to change', sources=[]))]
 
@@ -251,7 +272,7 @@ def test_kappa_and_ac1_on_known_tables():
     value = agreement(pairs)
     assert value['n'] == 50 and value['agreement'] == pytest.approx(.7)
     # Gwet: pi = (.55, .45, 0), chance = (.55 * .45 * 2) / 2 = .2475, AC1 = (.7 - .2475) / (1 - .2475)
-    assert value['kappa'] == pytest.approx(.4) and value['ac1'] == pytest.approx((.7 - .2475) / (1 - .2475))
+    assert value['kappa'] == pytest.approx(.4) and value['ac1'] == pytest.approx((.7 - .165) / (1 - .165))
     # Chance agreement of 1 leaves kappa undefined, never zero or one by default.
     assert agreement([('seen', 'seen')] * 4)['kappa'] is None and agreement([])['kappa'] is None
 
@@ -499,7 +520,7 @@ def provider_world(world, provider, **kwargs):
 def test_the_three_stages_run_the_real_hosts_and_the_credential_never_reaches_an_output(world, provider_factory):
     fake = provider_factory(scripted)
     report = provider_world(world, fake)
-    assert report['status'] == 'complete' and report['schema'] == 'level-v4-probe/3' and report['label'] == 'engineering-probe'
+    assert report['status'] == 'complete' and report['schema'] == 'level-v4-probe/4' and report['label'] == 'engineering-probe'
     recorder = report['recorder']
     assert recorder['F1']['passes'] == 7 and recorder['F1']['valid'] == 7 and recorder['F2']['valid'] == 7
     assert recorder['F1']['terminals'] == {'record': 7} and report['level']['passes'] == 3 and report['level']['valid'] == 3
@@ -606,6 +627,37 @@ def test_a_capture_missing_from_the_recording_refuses_before_anything_is_written
     capture.unlink()
     with pytest.raises(FileNotFoundError):
         run_probe(world, paths, dry_run=True)
+    assert not (world['tmp'] / 'probes').exists()
+
+
+@pytest.mark.parametrize('archived_close', [False, True])
+def test_a_superseded_level_commit_refuses_before_credentials_or_output(world, archived_close):
+    trace, *_ = probe_module.level_trace_paths(world['root'] / 'fx-01')
+    events = [json.loads(line) for line in trace.read_text().splitlines()]
+    if archived_close:
+        commit = next(event for event in events if event['type'] == 'level-commit')
+        commit.update(action='close', receipt_schema='player-level-commit/5')
+    else:
+        replace_call = next(event for event in events if event.get('tool') == 'player_level_replace')
+        del replace_call['arguments']['observation_windows']
+    trace.write_text(''.join(json.dumps(event) + '\n' for event in events))
+    spy = Secret()
+    with pytest.raises(ValueError, match='player-level-commit/6' if archived_close else 'observation_windows'):
+        run_probe(world, routes(world, 9), read_secret=spy)
+    assert spy.calls == 0
+    assert not (world['tmp'] / 'probes').exists()
+
+
+def test_a_ladder_subgoal_with_too_many_predicates_refuses_before_credentials_or_output(world):
+    path = world['ladder'] / 'episodes.json'
+    document = json.loads(path.read_text())
+    subgoal = next(episode['subgoal'] for episode in document['episodes'] if episode['subgoal'])
+    subgoal['expected_observations'] *= 9
+    path.write_text(json.dumps(document))
+    spy = Secret()
+    with pytest.raises(ValueError, match='expected_observations'):
+        run_probe(world, routes(world, 9), read_secret=spy)
+    assert spy.calls == 0
     assert not (world['tmp'] / 'probes').exists()
 
 
@@ -777,7 +829,7 @@ def intent_item(source, *, exploration, attempted='did x'):
 
 
 def test_the_tail_items_split_ranked_from_exploration_and_count_unknown_shas(tmp_path):
-    intent = dict(schema='player-intent/3', session='s', actor_id='a', audience='tail', pass_index=1, subgoal=None, age=None,
+    intent = dict(schema='player-intent/4', session='s', actor_id='a', audience='tail', pass_index=1, subgoal=None, age=None,
                   recall=dict(basis='recent', items=[intent_item('src-top', exploration=False), intent_item('src-unknown', exploration=False),
                                                      intent_item('src-explore', exploration=True)]), grants_authority=False)
     held = {'sha-top'}

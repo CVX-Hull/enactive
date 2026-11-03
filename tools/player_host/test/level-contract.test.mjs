@@ -38,7 +38,7 @@ const ROLES = {
   level: {profile:'level', terminal:LEVEL_TERMINAL_TOOLS, prompt:'Level pass.', ordinary:['player_source', {source_id:'frame-1'}],
     final:['player_level_keep', {reason:'Still valid', sources:[]}], refusal:'level-final-refusal'},
   recorder: {profile:'recorder', terminal:EPISODE_TERMINAL_TOOLS, ordinary:['player_source', {source_id:'frame-1'}],
-    prompt:JSON.stringify({schema:'player-pass-input/1', text:'Episode pass.', frames:[]}),
+    prompt:JSON.stringify({schema:'player-pass-input/2', text:'Episode pass.', frames:[]}),
     final:['player_episode_abstain', {reason_code:'other', reason:'Nothing to record', sources:[]}], refusal:'episode-final-refusal'}};
 
 const reply = (name, args) => {
@@ -131,7 +131,10 @@ for (const role of Object.keys(ROLES)) test(`the production ${role} request is p
   // The closed choices a model must be able to see are visible on the wire as plain string enums.
   const params = name => serialized.find(tool => tool.function.name === name).function.parameters.properties;
   if (role === 'recorder') {
-    assert.deepEqual(params('player_episode_record').observation_status.items.enum, ['seen', 'not_yet', 'contradicted']);
+    assert.deepEqual(params('player_episode_record').observation_status.items.enum, ['seen', 'not_yet', 'contradicted', 'unassessable']);
+    for (const column of ['observation_source_first', 'observation_source_second']) {
+      assert.equal(params('player_episode_record')[column].maxItems, 8);
+    }
     assert.equal(params('player_episode_record').sources.maxItems, 4);
     assert.deepEqual(params('player_episode_abstain').reason_code.enum, ['unreadable_frames', 'no_player_action', 'other']);
     assert.ok(!wire.includes('player_level_') && !wire.includes('player_log_read'));
@@ -140,6 +143,8 @@ for (const role of Object.keys(ROLES)) test(`the production ${role} request is p
   assert.ok(!wire.includes('player_episode_') && !wire.includes('player_log_read'));
   assert.deepEqual(params('player_level_replace').previous_outcome.enum, ['none', 'achieved', 'failed', 'abandoned', 'revised']);
   assert.deepEqual(params('player_level_replace').status.enum, ['open', 'blocked']);
+  assert.deepEqual(params('player_level_replace').observation_kinds.items.enum, ['state', 'transition']);
+  assert.deepEqual(params('player_level_replace').observation_windows.items.enum, ['baseline', 'during', 'final', 'baseline_to_final']);
   assert.deepEqual(params('player_level_close').outcome.enum, ['achieved', 'failed', 'abandoned']);
   assert.deepEqual(params('player_level_abstain').reason_code.enum,
     ['insufficient_evidence', 'transient_screen_state', 'no_change_needed', 'other']);

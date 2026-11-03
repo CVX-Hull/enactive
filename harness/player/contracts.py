@@ -102,18 +102,22 @@ _PROGRAM = _object(dict(schema={'const': 'player-program/1'}, code=_text(32768),
 # only the portable schema keywords (type, enum, description, properties, required, items and the length/size/range
 # bounds): no const, anyOf, $ref, nested union or model-supplied constant. The model supplies neither a record id nor
 # a version; software resolves the one current level subgoal and stamps the contract versions into what it stores.
-LEVEL_CONTRACT = 'player-level/5'
-LEVEL_COMMIT_SCHEMA = 'player-level-commit/5'
+LEVEL_CONTRACT = 'player-level/6'
+LEVEL_COMMIT_SCHEMA = 'player-level-commit/6'
 LEVEL_ABSTAIN_SCHEMA = 'player-level-abstain/3'
-EPISODE_CONTRACT = 'player-episode/1'
-EPISODE_RECORD_SCHEMA = 'player-episode-record/2'
-EPISODE_ABSTAIN_SCHEMA = 'player-episode-abstain/2'
-INTENT_SCHEMA = 'player-intent/3'
+EPISODE_CONTRACT = 'player-episode/2'
+EPISODE_RECORD_SCHEMA = 'player-episode-record/3'
+EPISODE_ABSTAIN_SCHEMA = 'player-episode-abstain/3'
+INTENT_SCHEMA = 'player-intent/4'
 CLOSE_OUTCOMES = ('achieved', 'failed', 'abandoned')
 PREVIOUS_OUTCOMES = ('none', *CLOSE_OUTCOMES, 'revised')
 ABSTAIN_CODES = ('insufficient_evidence', 'transient_screen_state', 'no_change_needed', 'other')
 EPISODE_ABSTAIN_CODES = ('unreadable_frames', 'no_player_action', 'other')
-OBSERVATION_STATUSES = ('seen', 'not_yet', 'contradicted')
+OBSERVATION_STATUSES = ('seen', 'not_yet', 'contradicted', 'unassessable')
+OBSERVATION_KINDS = ('state', 'transition')
+OBSERVATION_WINDOWS = ('baseline', 'during', 'final', 'baseline_to_final')
+OBSERVATION_COLUMNS = ('expected_observations', 'observation_kinds', 'observation_windows', 'observation_evidence')
+MARK_COLUMNS = ('observation_status', 'observation_source_first', 'observation_source_second')
 # How an episode ended: the recorder writes recorded and abstained, the driver reports failed and dropped.
 SETTLE_WRITERS = dict(recorded='recorder', abstained='recorder', failed='software', dropped='software')
 SOFTWARE_SETTLES = ('failed', 'dropped')
@@ -135,7 +139,13 @@ _LEVEL_KEEP = _object(dict(
 _LEVEL_REPLACE = _object(dict(
     text=_described(_text(2048), 'The new subgoal, one sentence that advances the mission objective.'),
     expected_observations=_described(dict(type='array', items=_text(512), minItems=1, maxItems=8),
-                                     '1 to 8 observations that would show the subgoal is achieved.'),
+                                     '1 to 8 atomic visible predicates that would show the subgoal is achieved.'),
+    observation_kinds=_described(dict(type='array', items=_enum(*OBSERVATION_KINDS), minItems=1, maxItems=8),
+                                 'State or transition for each predicate, in the same order.'),
+    observation_windows=_described(dict(type='array', items=_enum(*OBSERVATION_WINDOWS), minItems=1, maxItems=8),
+                                   'The permitted window for each predicate, in the same order.'),
+    observation_evidence=_described(dict(type='array', items=_text(512), minItems=1, maxItems=8),
+                                    'Sufficient visible evidence for each predicate, including identity when required.'),
     status=_described(_enum('open', 'blocked'), 'open if it can be pursued now, blocked if something prevents it.'),
     confidence=_described(dict(type='number', minimum=0, maximum=1), 'Your confidence from 0 to 1.'),
     sources=_LEVEL_SOURCES,
@@ -160,8 +170,12 @@ _EPISODE_RECORD = _object(dict(
     attempted=_described(_text(1024), 'What the player attempted in this episode, in one or two sentences.'),
     counterpart=_described(_text(512, empty=True), 'With what or whom it acted; empty if there was none.'),
     observation_status=_described(dict(type='array', items=_enum(*OBSERVATION_STATUSES), maxItems=8),
-        'One entry per expected observation of the subgoal, in order: seen if this episode showed it, not_yet if '
-        'it did not, contradicted if it showed the opposite. Empty only when the pushed input has no subgoal.'),
+        'In predicate order: seen if supported, not_yet if assessable and unmet, contradicted for direct opposite '
+        'evidence, unassessable if the evidence cannot decide. Empty only with no pushed subgoal.'),
+    observation_source_first=_described(dict(type='array', items=_text(128, empty=True), maxItems=8),
+        'First source id for each mark, in the same order. Empty string only for an unassessable mark without a citation.'),
+    observation_source_second=_described(dict(type='array', items=_text(128, empty=True), maxItems=8),
+        'Second source id for each mark, or an empty string. Use the same mark order.'),
     changed=_described(_text(1024, empty=True),
         'What visibly changed in the player\'s own state between the baseline frame and the last frame of this '
         'episode, citing the frames that show it; empty if nothing changed.'),
@@ -195,11 +209,30 @@ def level_arguments(tool: str, value: object) -> dict:
     field = next(name for name in ('reason', 'text', 'attempted') if name in result)
     if not result[field].strip():
         raise PlayerError(f'Invalid {tool} arguments - {field}: must not be blank\n' + LEVEL_FIX_LINE)
+    columns = {'player_level_replace': OBSERVATION_COLUMNS, 'player_episode_record': MARK_COLUMNS}.get(tool)
+    if columns and any(len(result[name]) != len(result[columns[0]]) for name in columns[1:]):
+        raise PlayerError(f'Invalid {tool} arguments - {", ".join(columns)} must have equal lengths\n' + LEVEL_FIX_LINE)
+    if tool == 'player_level_replace':
+        for index, (predicate, kind, window, evidence) in enumerate(zip(*(result[name] for name in OBSERVATION_COLUMNS), strict=True)):
+            if not predicate.strip() or not evidence.strip() or (kind == 'transition' and window in ('baseline', 'final')):
+                raise PlayerError(f'Invalid observation at index {index}: nonblank predicate and evidence required, '
+                                  f'and transitions need during or baseline_to_final\n{LEVEL_FIX_LINE}')
+    if tool == 'player_episode_record':
+        for index, (mark, first, second) in enumerate(zip(*(result[name] for name in MARK_COLUMNS), strict=True)):
+            if (not first and (second or mark != 'unassessable')) or (second and first == second):
+                raise PlayerError(f'Invalid observation citations at index {index}: cite a first source for an assessable '
+                                  f'mark and use distinct source ids\n{LEVEL_FIX_LINE}')
     return result
 
 
 def level_tool_schema(tool: str) -> dict:
     return json_object(_LEVEL_SCHEMAS[tool])
+
+
+def observation_rows(arguments: dict) -> list[dict]:
+    """Name the four aligned columns of a validated level replacement."""
+    return [dict(zip(('predicate', 'kind', 'window', 'evidence'), row, strict=True))
+            for row in zip(*(arguments[name] for name in OBSERVATION_COLUMNS), strict=True)]
 
 
 def reserved_data(data: dict) -> list[str]:

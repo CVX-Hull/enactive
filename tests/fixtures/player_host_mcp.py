@@ -154,7 +154,7 @@ async def player_source(source_id: str) -> CallToolResult:
 
 
 def level_receipt(action, committed):
-    return dict(schema="player-level-commit/5", status="committed" if committed else "discarded", action=action,
+    return dict(schema="player-level-commit/6", status="committed" if committed else "discarded", action=action,
         reason=None if committed else "Served actor moved at least S inputs past the bound", position=3,
         inputs_since=1 if committed else 11, staleness_inputs=10, subgoal_id=SUBGOAL,
         derived=dict(observations=["seen", "not_yet"], stalled=False) if committed else None,
@@ -179,7 +179,8 @@ async def player_level_keep(reason: str, sources: list[str]) -> CallToolResult:
 
 
 @server.tool()
-async def player_level_replace(text: str, expected_observations: list[str], status: str, confidence: float,
+async def player_level_replace(text: str, expected_observations: list[str], observation_kinds: list[str],
+                               observation_windows: list[str], observation_evidence: list[str], status: str, confidence: float,
                                sources: list[str], previous_outcome: str, previous_reason: str) -> CallToolResult:
     """A replace commits; previous_outcome "bogus" is a rejected (isError) call."""
     record(dict(tool="player_level_replace"))
@@ -215,7 +216,8 @@ def episode_receipt(schema, settled):
 
 
 @server.tool()
-async def player_episode_record(attempted: str, counterpart: str, observation_status: list[str], changed: str, residual: str,
+async def player_episode_record(attempted: str, counterpart: str, observation_status: list[str],
+                                observation_source_first: list[str], observation_source_second: list[str], changed: str, residual: str,
                                 confidence: float, sources: list[str]) -> CallToolResult:
     """A record settles the episode; a blank attempt is a rejected (isError) call and "lost transport" is the adapter's unknown receipt."""
     record(dict(tool="player_episode_record"))
@@ -224,7 +226,7 @@ async def player_episode_record(attempted: str, counterpart: str, observation_st
             kind="player_episode_record", status="unknown", reason="timed out", collect_with=None, input_replayed=False))
     if not attempted.strip():
         return rejected("Invalid player_episode_record arguments - attempted: must not be blank")
-    return receipt_result(episode_receipt("player-episode-record/2", "recorded"))
+    return receipt_result(episode_receipt("player-episode-record/3", "recorded"))
 
 
 @server.tool()
@@ -233,7 +235,7 @@ async def player_episode_abstain(reason_code: str, reason: str, sources: list[st
     record(dict(tool="player_episode_abstain"))
     if not reason.strip():
         return rejected("Invalid player_episode_abstain arguments - reason: must not be blank")
-    return receipt_result(episode_receipt("player-episode-abstain/2", "abstained"))
+    return receipt_result(episode_receipt("player-episode-abstain/3", "abstained"))
 
 
 @server.tool()
@@ -241,7 +243,7 @@ async def player_intent() -> CallToolResult:
     """Host-internal read; `intent.json` beside the call log selects its reply ("error" fails)."""
     record(dict(tool="player_intent"))
     selected = LOG.with_name("intent.json")
-    text = selected.read_text() if selected.exists() else json.dumps(dict(schema="player-intent/3", session=SESSION,
+    text = selected.read_text() if selected.exists() else json.dumps(dict(schema="player-intent/4", session=SESSION,
         actor_id=ACTOR, audience="tail", pass_index=0, subgoal=None, age=None, recall=dict(basis="recent", items=[]),
         grants_authority=False))
     return CallToolResult(content=[TextContent(type="text", text=text)], isError=text == "error")

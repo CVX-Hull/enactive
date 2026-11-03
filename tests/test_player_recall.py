@@ -1,4 +1,4 @@
-"""Recall ranking (BM25 x confidence x residual), exploration, trust and `player-intent/3`.
+"""Recall ranking (BM25 x confidence x residual), exploration, trust and `player-intent/4`.
 
 The ranking module is pure; the intent tests use the actual composition over the receiver double.
 """
@@ -9,7 +9,7 @@ import random
 
 import pytest
 
-from episode_support import act, bind, call, commit_first, episode, mint, put, replace, request_id, sync
+from episode_support import act, bind, call, commit_first, episode, mint, put, replace, request_id, stored_observations, sync
 from harness.application import Application
 from harness.player import recall
 from harness.player.episodes import claim_data
@@ -91,7 +91,7 @@ def test_no_subgoal_means_the_most_recent_records_and_no_scores():
 
 
 def test_the_query_is_the_subgoal_text_and_its_expected_observations():
-    subgoal = dict(text='Open the door', data=dict(expected_observations=['The key turns', 'The hinge swings']))
+    subgoal = dict(text='Open the door', data=dict(expected_observations=stored_observations('The key turns', 'The hinge swings')))
     assert recall.query_text(subgoal) == 'Open the door The key turns The hinge swings'
     assert recall.query_text(None) is None
 
@@ -151,17 +151,20 @@ def settle_earlier(app, memory_actor, index, attempted, *, session='z' * 32, con
                    writer_settled='recorded'):
     """An earlier session's episode claim, written through the custodian settle path as a prior session would have."""
     reader = next(i for i, s in app.readers.items() if s['role'] == 'recorder')
+    existing = app.runtime.store.actor_log(memory_actor['actor_id'], 0, 1)
+    source = existing[0]['source_id'] if existing else act(app, memory_actor)['source']['source_id']
+    app.memory.register_source(*app.runtime.source(source))
     data = claim_data(session=session, actor_id='y' * 32, first_position=index + 1, last_position=index + 1,
                       subgoal_id=subgoal_id, settled='recorded', attempted=attempted, counterpart='',
-                      observation_status=[], residual=residual, changed='', confidence=confidence)
-    value = dict(schema='player-record/1', kind='claim', text=attempted, data=data, sources=[], supports=[],
+                      observation_marks=[], summary_sources=[source], residual=residual, changed='', confidence=confidence)
+    value = dict(schema='player-record/1', kind='claim', text=attempted, data=data, sources=[source], supports=[],
                  supersedes=None, applicability=None, program_id=None)
     return app.memory.append_many(reader, [value], request_id=request_id(), custodian=True)[0]
 
 
 def test_intent_v2_carries_the_subgoal_with_derived_status_stalled_flag_confidence_age_and_id(level):
     app, channel, actor, reader, recorder = level
-    assert call(app, actor, 'player_intent', {})['schema'] == 'player-intent/3'
+    assert call(app, actor, 'player_intent', {})['schema'] == 'player-intent/4'
     empty = app.intent(actor['actor_id'])
     assert empty['subgoal'] is None and empty['age'] is None and empty['grants_authority'] is False
     assert empty['recall'] == dict(basis='recent', items=[]) and empty['audience'] == 'tail'
@@ -237,7 +240,7 @@ def test_recall_trusts_only_stamped_claims_not_other_records_with_episode_like_t
     app, channel, actor, reader, recorder = level
     commit_first(app, actor, reader, recorder, text='Open the iron gate', observations=['The iron gate swings open'])
     put(app.memory, actor['actor_id'], dict(schema='player-record/1', kind='claim', text='Pulled the iron gate',
-        data=dict(attempted='Pulled the iron gate', confidence=1., level_contract='player-episode/1'), sources=[],
+        data=dict(attempted='Pulled the iron gate', confidence=1., level_contract='player-episode/2'), sources=[],
         supports=[], supersedes=None, applicability=None, program_id=None))
     assert app.intent(actor['actor_id'])['recall']['items'] == []
     settle_earlier(app, actor, 0, 'Pulled the iron gate')
@@ -316,8 +319,8 @@ def test_intent_without_any_reader_reports_no_derived_status(tmp_path):
     try:
         actor = app.add_actor('narrowed')
         put(memory, actor['actor_id'], dict(schema='player-record/1', kind='work', text='A goal', data=dict(
-            level='subgoal', level_contract='player-level/5', position=0, session=runtime.session,
-            actor_id=actor['actor_id'], expected_observations=['x'], status='open', confidence=.5), sources=[],
+            level='subgoal', level_contract='player-level/6', position=0, session=runtime.session,
+            actor_id=actor['actor_id'], expected_observations=stored_observations('x'), status='open', confidence=.5), sources=[],
             supports=[], supersedes=None, applicability=None, program_id=None))
         subgoal = app.intent(actor['actor_id'])['subgoal']
         assert subgoal['stalled'] is None and subgoal['contradicted'] is None

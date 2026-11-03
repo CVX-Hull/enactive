@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Mechanical analysis of a level-stage run set (`level-stage-analysis/7`): retained artifacts only, no provider, no game.
+"""Mechanical analysis of a level-stage run set (`level-stage-analysis/8`): retained artifacts only, no provider, no game.
 
     python -m tools.level_stage_analysis OUTPUT.json SESSION_DIR... --criteria CRITERIA.json [--store-template PATH]
 
@@ -74,7 +74,7 @@ from harness.player.episodes import episode as episode_claim
 from tools.control_analysis import session_database
 from tools.evidence_stats import cluster_bootstrap, quantile, ratio, summary
 
-SCHEMA = 'level-stage-analysis/7'
+SCHEMA = 'level-stage-analysis/8'
 CRITERIA_SCHEMA = 'level-stage-criteria/1'
 CRITERIA_KEYS = ('min_decided', 'min_auditable_records', 'min_commit_rate', 'max_commit_inputs_since_p95',
                  'bootstrap_seed', 'bootstrap_resamples', 'breaker_refusals', 'final_report_grace_seconds',

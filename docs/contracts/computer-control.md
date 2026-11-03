@@ -163,7 +163,7 @@ failure found during a reader's read still fences the run, as for any reader of 
 storage. A reader serves only a `narrowed` actor, which writes no memory, and minting
 either role refuses while more than one current Work record has `data.level == "subgoal"`
 (the level's own subgoals, at most one by construction) or while a current one is not
-`player-level/5`; other current Work is out of the level's scope and untouched.
+`player-level/6`; other current Work is out of the level's scope and untouched.
 Afterwards only the level's commits and the recorder's software closure change the
 current subgoal. Minting fixes, like the level's staleness bound S, the stall test N
 (`stall_settles`, 1..1000) and the confidence floor c (`confidence_floor`, 0..1); one
@@ -235,34 +235,38 @@ and leaves basic input available. Verify SHA on image read; no silent eviction.
 
 **Episodes, binding and the level commit** ([ADR-007](../decisions/007-player-subgoal-level.md),
 level v4). Every closed episode of the served actor settles into player memory as exactly
-one `claim` record (`player-episode/1`), and the level commits against state the custodian
+one `claim` record (`player-episode/2`), and the level commits against state the custodian
 derives from those claims. The roles propose; software counts.
 
 *Episode settles.* The claim's `data` carries `level: "episode"`,
-`level_contract: "player-episode/1"`, `settled` (`recorded`, `abstained`, `failed` or
+`level_contract: "player-episode/2"`, `settled` (`recorded`, `abstained`, `failed` or
 `dropped`), `writer` (`recorder` for the first two, `software` for the others), the
 `session`, served `actor_id`, `first_position` and `last_position` (1-based per-actor
 operation positions, inclusive) and `subgoal_id`, the level subgoal current when the driver
 opened the episode, at the ingest of its first operation (read once per ingest batch), or null.
-- `recorded` adds `attempted`, `counterpart`, `observation_status`, `residual`, `changed`,
+- `recorded` adds `attempted`, `counterpart`, `observation_marks`, `summary_sources`, `residual`, `changed`,
   `confidence`; `abstained` adds `reason_code` and `reason`; `failed` and `dropped` add
-  `reason`. Only `recorded` carries marks. The claim's `sources` are the cited frames, at
-  most 4, copied into player memory in the same transaction; `text` is `attempted` (or
+  `reason`. Only `recorded` carries marks. Each mark stores its status and its own sources.
+  The claim's `sources` are the deduplicated union of summary and mark citations, at
+  most 16, copied into player memory in the same transaction. `text` is `attempted` (or
   the reason).
 - `player_episode_record(attempted≤1024, counterpart≤512 (may be empty),
-  observation_status[≤8 of seen|not_yet|contradicted], changed≤1024 (may be empty),
+  observation_status[≤8 of seen|not_yet|contradicted|unassessable],
+  observation_source_first[≤8], observation_source_second[≤8], changed≤1024 (may be empty),
   residual≤1024 (may be empty), confidence 0..1, sources 1..4)` is one flat object of portable
   schema keywords with every property required. `changed` is what visibly changed in the
   player's own state between the baseline frame and the episode's last frame, citing the
-  frames that show it. The length of `observation_status` must equal the number of expected
-  observations of the pushed subgoal, or be empty when none was pushed. Each cited source
-  must be in the episode's `sources` (below). A record cites at least one, the most telling
-  first, because a recall line shows the record's first cited frame.
+  frames that show it. The three observation arrays must align with the expected
+  observations of the pushed subgoal, or be empty when none was pushed. An assessable
+  mark requires a first citation. A second citation, when present, is distinct. Empty
+  citation slots use empty strings. Mark citations must have been read by the recorder
+  and fall within the predicate's evidence window. Summary citations are episode sources
+  with the most telling frame first for recall.
 - `player_episode_abstain(reason_code: unreadable_frames|no_player_action|other,
   reason≤1024, sources≤4)` settles the episode as `abstained`, with no marks.
-- Receipts: `player-episode-record/2` `{schema, status:"recorded", settled, first_position,
+- Receipts: `player-episode-record/3` `{schema, status:"recorded", settled, first_position,
   last_position, subgoal_id, counted, closed, observations, stalled, records}` and
-  `player-episode-abstain/2` of the same shape with `status:"abstained"`. `counted` is
+  `player-episode-abstain/3` of the same shape with `status:"abstained"`. `counted` is
   whether the claim counts toward the current subgoal's marks; `closed` whether it closed
   it; `observations` and `stalled` are the derived state after the claim, null when the pushed
   subgoal is not the current one.
@@ -276,7 +280,7 @@ opened the episode, at the ingest of its first operation (read once per ingest b
   baseline frame (the result capture of the last `input`, not observe, before the range). It
   refuses a range outside
   the log, one overlapping an already settled episode, and a subgoal id that is not a
-  `player-level/5` level subgoal.
+  `player-level/6` level subgoal.
 - `Application.settle_episode(recorder, first_position, last_position, subgoal_id,
   settled, reason)` settles an episode the driver reports as `failed` or `dropped`, with
   `writer: "software"`, no marks and the recorder as record actor. An episode settles
@@ -286,7 +290,7 @@ opened the episode, at the ingest of its first operation (read once per ingest b
   or `data.writer`, or `data.by` equal to `"software"` (`player_memory_append` and
   `Memory.append`/`append_many`), so an actor cannot forge a level record, a settle or a
   software closure. Recall and every count
-  trust only claims whose contract is `player-episode/1` and whose `writer` stamp matches
+  trust only claims whose contract is `player-episode/2` and whose `writer` stamp matches
   how they settled, in any session.
 
 *Derived state (read time, never stored on the Work record).* For the current subgoal *g*
@@ -295,17 +299,19 @@ the custodian reads the trusted episode claims committed after *g* whose `subgoa
 - **Marks** count only from `recorded` claims with `confidence` at least the floor *c*. An
   observation is `seen` if its latest counted `seen`/`contradicted` mark is `seen`,
   `contradicted` if it is `contradicted`, else `not_yet`.
-- **Stall.** *g* is stalled after N consecutive eligible recorded claims since *g* with
-  nothing newly seen. Eligibility requires confidence at least *c* and exactly one mark per
-  expected observation. A newly seen observation resets the streak. An `abstained`, `failed`,
+- **Stall.** Process eligible claims in commit order. A newly seen observation resets
+  the streak even if some marks are unassessable. Otherwise the streak advances only
+  if the set of unresolved observations immediately before that claim was nonempty
+  and each of those observations received an assessable mark. *g* is stalled at N.
+  An `abstained`, `failed`,
   `dropped`, below-floor or incorrectly sized claim neither advances nor resets it. Operational
   settle counts still include every settle. N and *c* are fixed at reader minting.
 - **Closure.** The `recorded` claim that makes every expected observation `seen` appends,
   in the same `Memory.append_many` transaction, a `correction` superseding *g* with the
   recorder as record actor, `data.outcome: "achieved"`, `data.by: "software"`,
-  `data.level: "subgoal"`, `data.level_contract: "player-level/5"`, the counted claims' ids
-  in `supports` (those that last made each observation seen first, at most 16) and their
-  newest frames as `sources` (at most 16). Replace requires at least one expected
+  `data.level: "subgoal"`, `data.level_contract: "player-level/6"`, the counted claims' ids
+  in `supports` and the deciding marks' citations as `sources` (at most 16).
+  Replace requires at least one expected
   observation, so closure is never vacuous.
 - A start pass is refused keep and abstain for a stalled subgoal like any other pass.
 
@@ -317,11 +323,16 @@ the portable schema keywords (`type` on every node, string enums, no `const`, `a
 validator is closed (`additionalProperties: false`) without any model dependence on it.
 - `player_level_keep(reason≤1024, sources≤16)` writes no record; the receipt says kept and
   gives the current id;
-- `player_level_replace(text≤2048, expected_observations 1..8×512, status:open|blocked,
+- `player_level_replace(text≤2048, expected_observations 1..8×512,
+  observation_kinds, observation_windows, observation_evidence, status:open|blocked,
   confidence 0..1, sources≤16, previous_outcome:none|achieved|failed|abandoned|revised,
   previous_reason≤1024)` writes the Work record, plus a superseding correction for the
-  current subgoal when there is one (a `revised` outcome makes the correction support the
-  new Work); `sources` are the replace's sources for both records. `previous_outcome` is
+  current subgoal when there is one. The four observation arrays have equal lengths.
+  Each row stores a single predicate, kind (`state` or `transition`), window
+  (`baseline`, `during`, `final` or `baseline_to_final`) and a description of
+  sufficient visual evidence. A transition uses `during` or `baseline_to_final`.
+  A `revised` outcome makes the correction support the
+  new Work. `sources` are the replace's sources for both records. `previous_outcome` is
   `none` exactly when there is no current subgoal, and `previous_reason` is empty only
   with `none`;
 - `player_level_close(outcome:achieved|failed|abandoned, reason≤1024, sources≤16)` needs a
@@ -334,9 +345,9 @@ state (its id, status and leading text, or "no current subgoal") and the valid t
 So are the v4 refusals: while the subgoal is **stalled**, `player_level_keep` and
 `player_level_abstain` are refused with an error naming `player_level_replace` and
 `player_level_close`; while an observation is **contradicted**, a keep must cite in its
-`sources` a frame of any counted claim (committed after the subgoal, for its id, at or
-above the floor) that marks a contradicted observation `contradicted`, not only the
-latest such claim; otherwise it is refused (naming the allowed frames, or saying keep is
+`sources` a frame cited by a counted contradiction mark for that observation. Eligible
+claims were committed after the subgoal, for its id, at or above the floor.
+Otherwise the call is refused (naming the allowed frames, or saying keep is
 unavailable when none cited a frame). A schema, unavailable-source or other fixable error is likewise a tool error. All
 keep the bound for a corrected resubmission; cited source bytes are read and verified before
 the timeliness check.
@@ -357,7 +368,7 @@ the run is not stopped, fenced or past its deadline (a user Pause or takeover ch
 game without custodian input), the served actor is still active, and it moved fewer than S
 `input` operations past the bound (S fixed per level reader at minting); a reader's store
 is one live session, so no session boundary can intervene. Otherwise return
-`player-level-commit/5` `status:"discarded"` with the `action`, reason, bound position,
+`player-level-commit/6` `status:"discarded"` with the `action`, reason, bound position,
 inputs since and the pushed `subgoal_id`; a discard writes nothing to either store and
 ends the pass.
 
@@ -366,14 +377,15 @@ A committed replace or close appends, under `Application.serial` and in one
 immutable copies; a keep registers no frame and only checks its citations are available),
 a new Work record for a replace, one superseding correction for a close or a replace over a
 current subgoal, and the service row (named for the tool) with its final result. The
-receipt is one schema, `player-level-commit/5` `{schema, status, action:keep|replace|close,
+receipt is one schema, `player-level-commit/6` `{schema, status, action:keep|replace|close,
 reason, position, inputs_since, staleness_inputs, subgoal_id, derived, kept, records}`;
 `subgoal_id` is the id bound at push, `derived` the pushed subgoal's `{observations,
 stalled}` (null with no subgoal), and a keep gives the current id in `kept`. Every record's
-`data` carries `level:"subgoal"`, the software-stamped `level_contract: "player-level/5"`,
+`data` carries `level:"subgoal"`, the software-stamped `level_contract: "player-level/6"`,
 served actor, session and bound position; the record actor is the level reader. Minting a
-reader refuses a store whose current level Work is not `player-level/5`: migrate or start
-a fresh player store. A repeated request identity with the same tool and arguments
+reader refuses a store containing any reserved level or episode record with an older contract.
+Use a fresh store or complete the coordinated migration before minting a reader.
+A repeated request identity with the same tool and arguments
 returns that retained result without recommitting. `player-memory/1` and
 `player-record/1` are unchanged.
 
@@ -385,7 +397,7 @@ memory, clears the reader's bound as a terminal call does, and returns
 the subgoal is stalled. The actor and flat profiles refuse it.
 
 *Intent and recall.* `Application.intent(actor, audience)` (the host-internal
-`player_intent` tool, `tail`) returns `player-intent/3`: `{schema, session, actor_id,
+`player_intent` tool, `tail`) returns `player-intent/4`: `{schema, session, actor_id,
 audience, pass_index, subgoal, age, recall, grants_authority:false}`. `subgoal` holds
 `record_id`, text, sources, `status`, `confidence`, `expected_observations` as
 `{text, status:seen|not_yet|contradicted}`, `stalled`, `contradicted` and `counts`;

@@ -168,7 +168,9 @@ class Provider:
         self.server.shutdown(); self.server.server_close(); self.thread.join(2)
 
 
-REPLACE = dict(text='Open the door', expected_observations=['door open'], status='open', confidence=.5, sources=[],
+REPLACE = dict(text='Open the door', expected_observations=['door open'], observation_kinds=['state'],
+               observation_windows=['final'], observation_evidence=['A visible open door'],
+               status='open', confidence=.5, sources=[],
                previous_outcome='none', previous_reason='')
 
 
@@ -249,7 +251,7 @@ def test_probe_replays_every_pass_through_the_real_host_and_labels_its_output(tm
     assert pooled['requests_used']['total'] == 8 and 0 < pooled['configured_cost_usd'] < 0.01
     assert report['thresholds']['valid_terminal_rate_met'] is True and report['thresholds']['repeated_identical_refusal_met'] is True
     assert sorted(report['passes']) == ['recorded/actor001/pass001', 'recorded/actor001/pass002']
-    assert report['interface']['host'] == 'player-host/8' and report['interface']['role_prompt'] == 'subgoal-v4.txt'
+    assert report['interface']['host'] == 'player-host/8' and report['interface']['role_prompt'] == 'subgoal-v5.txt'
     # The pass saw the recorded pushed input, the current frozen role prompt and the real v4 level tools.
     first = fake.payloads[0]
     prompt = json.dumps(first['messages'])

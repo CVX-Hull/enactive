@@ -14,10 +14,11 @@ import uuid
 from .computer.protocol import ControlError, canonical, closed
 from .computer.runtime import ComputerRuntime
 from .player import recall
-from .player.contracts import (EPISODE_ABSTAIN_SCHEMA, EPISODE_RECORD_SCHEMA, EPISODE_TOOLS, INTENT_SCHEMA,
+from .player.contracts import (EPISODE_ABSTAIN_SCHEMA, EPISODE_CONTRACT, EPISODE_RECORD_SCHEMA, EPISODE_TOOLS, INTENT_SCHEMA,
                                LEVEL_ABSTAIN_SCHEMA, LEVEL_COMMIT_SCHEMA, LEVEL_CONTRACT, LEVEL_FIX_LINE,
-                               LEVEL_TERMINAL_TOOLS, SOFTWARE_SETTLES, PlayerError, RememberError, bounded_integer,
-                               level_arguments, refuse_custodian_data)
+                               LEVEL_TERMINAL_TOOLS, MARK_COLUMNS, SOFTWARE_SETTLES,
+                               PlayerError, RememberError, bounded_integer,
+                               level_arguments, observation_rows, refuse_custodian_data)
 from .player.contracts import canonical as player_canonical
 from .player.episodes import claim_data, closure_evidence, derive, episode
 from .player.memory import Memory
@@ -150,11 +151,12 @@ class Application:
             # A record written under another level contract is not read, converted or superseded: S-MIGRATION.
             # The count above and every level read consider only the current contract's records; a current record of
             # another contract is still refused here, so an old store is never silently adopted.
-            stale = [r['id'] for r in self.memory.current('work')
-                     if r['data'].get('level') == 'subgoal' and r['data'].get('level_contract') != LEVEL_CONTRACT]
-            if stale:
-                raise ControlError(f'Unsupported level record contract (current level Work {", ".join(stale)} is not '
-                                   f'{LEVEL_CONTRACT}); migrate or start a fresh player store')
+            for kind, level, contract in (('work', 'subgoal', LEVEL_CONTRACT),
+                                          ('correction', 'subgoal', LEVEL_CONTRACT),
+                                          ('claim', 'episode', EPISODE_CONTRACT)):
+                if any(record['data'].get('level_contract') != contract
+                       for record in self.memory.level_records(kind, level)):
+                    raise ControlError(f'Unsupported {level} record contract; expected {contract}. Select a fresh player store.')
             reader = self.runtime.add_reader(actor_id, role)
             self.derivation[actor_id] = parameters
             self.profiles[reader['actor_id']] = frozenset(PROFILES[role])
@@ -309,10 +311,12 @@ class Application:
             # The baseline is the result capture of the last input before the episode (an observe is not an input).
             baseline = next((e['source_id'] for e in reversed(self.runtime.store.actor_log(actor, 0, first_position - 1))
                              if e['kind'] == 'input' and e['source_id']), None) if first_position > 1 else None
-            sources = list(dict.fromkeys([*([baseline] if baseline else []), *(e['source_id'] for e in entries if e['source_id'])]))
+            during = [e['source_id'] for e in entries if e['source_id']]
+            sources = list(dict.fromkeys([*([baseline] if baseline else []), *during]))
             expected = subgoal['data']['expected_observations'] if subgoal else []
             state['episode'] = dict(first_position=first_position, last_position=last_position, subgoal_id=subgoal_id,
-                                    expected=len(expected), sources=sources)
+                                    expected=len(expected), observations=expected, sources=sources,
+                                    baseline=baseline, during=during)
             return dict(first_position=first_position, last_position=last_position, operations=entries,
                         baseline_source=baseline, sources=sources,
                         subgoal=None if subgoal is None else dict(record_id=subgoal['id'], text=subgoal['text'],
@@ -373,7 +377,7 @@ class Application:
         return next((s for s in self.readers.values() if s['role'] == 'level' and s['serves'] == actor_id), None)
 
     def intent(self, actor_id: str, *, audience: str = 'tail') -> dict[str, Any]:
-        """The current subgoal with its derived status, and software-ranked recall, for `player-intent/3`.
+        """The current subgoal with its derived status, and software-ranked recall, for `player-intent/4`.
 
         `audience` is `tail` (the actor's request-only tail: 2 top recall items plus 1 exploration item) or
         `level` (the level's pushed input: the top 10). Fallible data, never authority. Byte truncation of what
@@ -392,8 +396,11 @@ class Application:
         if latest is not None:
             data = latest['data']
             derived = self._derived(actor_id, latest)
-            observed = derived['observations'] if derived else [dict(text=t, status=None) for t in
+            observed = derived['observations'] if derived else [dict(text=t['predicate'], status=None) for t in
                                                                 data.get('expected_observations') or []]
+            if audience == 'level':
+                observed = [dict(predicate, status=state['status']) for predicate, state in
+                            zip(data['expected_observations'], observed, strict=True)]
             value['subgoal'] = dict(record_id=latest['id'], text=latest['text'], sources=latest['sources'],
                 status=data.get('status'), confidence=data.get('confidence'), expected_observations=observed,
                 stalled=derived['stalled'] if derived else None,
@@ -478,8 +485,8 @@ class Application:
         return None
 
     def _stalled_error(self, tool: str, subgoal: dict, derived: dict) -> str:
-        return (f'The current subgoal {subgoal["id"]} is stalled: its last {derived["no_progress_settles"]} settled '
-                f'episodes showed nothing newly seen. {tool} is not available while it is stalled; call '
+        return (f'The current subgoal {subgoal["id"]} is stalled: {derived["no_progress_settles"]} counted '
+                f'episodes assessed all unresolved observations without newly seeing one. {tool} is not available while it is stalled; call '
                 f'player_level_replace or player_level_close.\n{LEVEL_FIX_LINE}')
 
     def _contradiction_error(self, subgoal: dict, derived: dict, cited: list[str]) -> str | None:
@@ -573,7 +580,7 @@ class Application:
                       session=self.runtime.session, position=bound)
         if action == 'replace':
             values.append(dict(schema='player-record/1', kind='work', text=args['text'],
-                data=dict(common, expected_observations=args['expected_observations'],
+                data=dict(common, expected_observations=observation_rows(args),
                           status=args['status'], confidence=args['confidence']),
                 sources=cited, supports=[], supersedes=None, applicability=None, program_id=None))
         # A close or a replacement's previous outcome supersedes the subgoal; a revision supports its successor.
@@ -643,11 +650,29 @@ class Application:
             wanted = (f'{bound["expected"]} entries (one per expected observation of the pushed subgoal)'
                       if bound['expected'] else 'empty (no subgoal was pushed)')
             raise PlayerError(f'observation_status must be {wanted}, but has {len(args["observation_status"])}.\n{LEVEL_FIX_LINE}')
+        marks = []
+        if recorded:
+            during = bound['during']
+            windows = dict(baseline={bound['baseline']}, during=set(during),
+                           final=set(during[-1:]), baseline_to_final={bound['baseline'], *during[-1:]})
+            for index, (mark, first_source, second_source) in enumerate(zip(*(args[name] for name in MARK_COLUMNS), strict=True)):
+                sources = [source for source in (first_source, second_source) if source]
+                observation = bound['observations'][index]
+                allowed = windows[observation['window']]
+                if any(source not in allowed or not self.runtime.store.has_source(source, recorder_id) for source in sources):
+                    raise PlayerError(f'Observation {index}: cite frames available to this recorder within its evidence window.\n{LEVEL_FIX_LINE}')
+                if mark == 'seen' and observation['kind'] == 'transition' and sources == [bound['baseline']]:
+                    raise PlayerError(f'Observation {index}: a baseline frame alone cannot show a transition.\n{LEVEL_FIX_LINE}')
+                marks.append(dict(status=mark, sources=sources))
+        summary_sources = cited
+        cited = list(dict.fromkeys([*summary_sources, *(source for mark in marks for source in mark['sources'])]))
+        if len(cited) > 16:
+            raise PlayerError(f'Episode summary and marks together may cite at most 16 distinct sources.\n{LEVEL_FIX_LINE}')
         blobs = [self.runtime.source(s) for s in cited if not self._has_player_source(s)]
         self._cannot_remember_sources(blobs)
         ids = self.memory.batch_ids(identity, 2)
         fields = (dict(attempted=args['attempted'], counterpart=args['counterpart'],
-                       observation_status=args['observation_status'], residual=args['residual'],
+                       observation_marks=marks, summary_sources=summary_sources, residual=args['residual'],
                        changed=args['changed'], confidence=args['confidence'])
                   if recorded else dict(reason_code=args['reason_code'], reason=args['reason']))
         data = claim_data(session=self.runtime.session, actor_id=actor, first_position=first, last_position=last,

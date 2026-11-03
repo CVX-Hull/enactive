@@ -26,15 +26,15 @@ RECALL_FIELDS={'tail_top','tail_exploration','level_items'}
 # The owner's K: the longest run of inputs between wakes, which is also the episode cap C (ADR-007 owner parameters).
 OWNER_K=10
 # The frozen, versioned role prompts (ADR-007 appendix); a change makes a new version and a new digest here.
-LEVEL_ROLE=ROOT/'tools/player_roles/subgoal-v4.txt'
-EPISODE_ROLE=ROOT/'tools/player_roles/episode-v1.txt'
+LEVEL_ROLE=ROOT/'tools/player_roles/subgoal-v5.txt'
+EPISODE_ROLE=ROOT/'tools/player_roles/episode-v2.txt'
 # The recorder backlog bound is fixed by the ADR, not configurable.
 OWNER_BACKLOG=3
 # The recorder's pushed frames are pinned by the host: 7 frames plus one read must fit in the route's image limit.
 RECORDER_IMAGES=8
 FROZEN_ROLE_SHA256={
-    'subgoal-v4.txt':'d3221f7982561c75fd7781eac5f84e6bda76e2180116c741e735f85f470299ae',
-    'episode-v1.txt':'33398803a5706d13faf6c2a2b588a97d8b03fa1735caadb98736a79290c24d3f'}
+    'subgoal-v5.txt':'a675cfba894a2ca0eb925ffb9c31fe27dc7e95826a2dbda877404c5b004f9bf3',
+    'episode-v2.txt':'5079b28a7876a144a4d0fa085278e26fb4234355ca28d58306fa16859f02734e'}
 
 
 def nano_usd(value: str) -> int:

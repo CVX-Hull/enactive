@@ -51,8 +51,8 @@ memory tools or program save). `level` is null, the zero-level-host configuratio
 | `recorder` | `max_http_attempts`, `pass_max_requests`, `pass_seconds` and `backlog`, which the ADR fixes at 3 (any other value is refused): the recorder's own allowance and bounds |
 
 A level freezes two more inputs, `level-role.txt` and `episode-role.txt`, byte-identical to the
-[frozen role prompt `subgoal-v4`](../../tools/player_roles/subgoal-v4.txt) and
-[`episode-v1`](../../tools/player_roles/episode-v1.txt). The validator pins both digests
+[frozen role prompt `subgoal-v5`](../../tools/player_roles/subgoal-v5.txt) and
+[`episode-v2`](../../tools/player_roles/episode-v2.txt). The validator pins both digests
 (`FROZEN_ROLE_SHA256`), so a changed wording is a new version, not an edit. The route stays the actor
 role; its `intent_tail_bytes` equals the level's bound in live mode and is null in shadow mode, where the
 level commits but the actor never sees intent.
@@ -87,7 +87,7 @@ after the actor. Once the actor host makes its first request:
   sessions left), after every settle, and independently at the 25/50/75% budget fractions; wakes that arrive during a pass
   coalesce into one pass over the newest records. At push, under the application lock, the driver binds the position
   (the furthest end of any episode settled this session, whatever its outcome, or 0) and the current subgoal id, and
-  reads the episodes settled since its last pass, the `player-intent/3` object for the `level` audience (the
+  reads the episodes settled since its last pass, the `player-intent/4` object for the `level` audience (the
   subgoal with its derived status and stalled flag, and the top 10 recalled episodes) and the per-subgoal counts.
   Each pass is a finite `role: level` host under `actors/NNN/level/PPP/` with the profile `player_source` and the four
   terminal tools. A pass ends on its first `player_level_keep`, `player_level_replace` or `player_level_close` that
@@ -107,7 +107,7 @@ launched hosts. S counts input operations, including a multi-key operation as on
 
 The level's stdin is plain text (`input.txt`): the frozen role prompt, the actor's brief, the episodes settled since its
 last pass, the subgoal with its derived status and stalled flag, the counts and the recall, and mechanical wake facts.
-The recorder's is one closed JSON document (`input.json`, `player-pass-input/1`: `text` and `frames`); the host formats
+The recorder's is one closed JSON document (`input.json`, `player-pass-input/2`: `text` and `frames`); the host formats
 both. The level
 stops on its actor's stop, Pause or handoff. The open episode closes at that session edge, and the recorder then
 works through its backlog (bounded by `backlog + 1` passes of `pass_seconds` and the campaign deadline) unless the

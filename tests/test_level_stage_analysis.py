@@ -7,7 +7,7 @@ import pytest
 
 from test_campaign_player import level_campaign, level_profile  # noqa: F401  (the real driver fixture, imported rather than mirrored)
 from stage_support import (ACTOR, BASE, LEVEL_READER, RECORDER_READER, SESSION, PlayerStore, claim_record, correction_record, edit_actor,
-                           iso, level_pass, make_run, recorder_pass, work_record)
+                           iso, level_pass, make_run, png, recorder_pass, source_metadata, work_record)
 from tools import level_stage_analysis as lsa
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -68,7 +68,7 @@ def test_a_consistent_run_is_classified_and_pooled(tmp_path):
     run = make_run(tmp_path, 'run-1', mixed_level(), [recorder_pass(1, 'record'), recorder_pass(2, 'abstain', code='unreadable_frames')])
     value = lsa.analyse([run], lsa.load_criteria(criteria_file(tmp_path)))
     pooled, decision = value['pooled'], value['decision_inputs']
-    assert value['schema'] == 'level-stage-analysis/7'
+    assert value['schema'] == 'level-stage-analysis/8'
     assert value['runs'][0]['receipt_mismatches'] == [] and decision['counts_consistent'] is True
     # Two trace commits and one lost call reconciled as committed; one non-censored discard is a decided failure.
     assert (pooled['commits'], pooled['failures'], pooled['censored'], pooled['decided']) == (3, 1, 1, 4)
@@ -220,7 +220,8 @@ def store_for(tmp_path, *, name='player', stray=False, software=True, tombstone=
     (work,) = store.commit(LEVEL_READER, 'player_level_replace', 'replace', [work_record()])
     store.commit(LEVEL_READER, 'player_level_keep', 'keep', [])
     if claims is None:
-        store.commit(RECORDER_READER, 'player_episode_record', 'record', [claim_record('recorded')], writer=RECORDER_READER)
+        store.commit(RECORDER_READER, 'player_episode_record', 'record', [claim_record('recorded')],
+                     writer=RECORDER_READER, sources=[(source_metadata(1), png())])
     if software:
         store.software(RECORDER_READER, [claim_record('failed', 3, 3)])
     if stray:

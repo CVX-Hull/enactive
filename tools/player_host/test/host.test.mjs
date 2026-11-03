@@ -750,8 +750,8 @@ test('actor intent tail is a host-internal custodian read that the model never s
   assert.equal(refused.ok,false);assert.equal(refused.reason,'host-internal-tool-enabled');
 });
 
-test('an actor with a tail sends player-intent/3 as one labelled, bounded request-only tail and logs each part', async t=>{
-  const intent={schema:'player-intent/3',session:'2'.repeat(32),actor_id:'3'.repeat(32),audience:'tail',pass_index:2,
+test('an actor with a tail sends player-intent/4 as one labelled, bounded request-only tail and logs each part', async t=>{
+  const intent={schema:'player-intent/4',session:'2'.repeat(32),actor_id:'3'.repeat(32),audience:'tail',pass_index:2,
     subgoal:{record_id:'a1b2c3d4e5f6',text:'Reach the door é'.repeat(30),sources:[],status:'open',confidence:0.4,stalled:false,contradicted:false,counts:null,
       expected_observations:[{text:'adjacent door',status:'seen'},{text:'door open',status:'not_yet'}]},
     age:{seconds:12.34,inputs_since_commit:3,inputs_by_this_actor:7,same_actor:true,same_session:true},
@@ -776,7 +776,7 @@ const terminalTools=['player_level_keep','player_level_replace','player_level_cl
 const levelTools=['player_source',...terminalTools];
 const levelRoute={...route(),role:'level'};
 const keepCall=['player_level_keep',{reason:'Still valid',sources:[]}];
-const replaceCall=['player_level_replace',{text:'x',expected_observations:[],status:'open',confidence:0.5,sources:[],previous_outcome:'none',previous_reason:''}];
+const replaceCall=['player_level_replace',{text:'x',expected_observations:[],observation_kinds:[],observation_windows:[],observation_evidence:[],status:'open',confidence:0.5,sources:[],previous_outcome:'none',previous_reason:''}];
 const closeCall=['player_level_close',{outcome:'achieved',reason:'Done',sources:[]}];
 const abstainCall=['player_level_abstain',{reason_code:'other',reason:'Nothing to act on',sources:[]}];
 const rejectedReplace=['player_level_replace',{...replaceCall[1],previous_outcome:'bogus'}];
@@ -1007,7 +1007,7 @@ test('each role enables exactly its own pass tools: a foreign or surplus termina
     ['actor with a level tool',route(),['observe','player_level_abstain']],
     ['actor with a recorder tool',route(),['observe','player_episode_abstain']]];
   for (const [name,configuration,enabledTools] of cases) {
-    const {result,payloads}=await scenario(t,[reply(null,[abstainCall])],{configuration,enabledTools,prompt:configuration.role==='recorder'?JSON.stringify({schema:'player-pass-input/1',text:'x',frames:[]}):'Offline mission'});
+    const {result,payloads}=await scenario(t,[reply(null,[abstainCall])],{configuration,enabledTools,prompt:configuration.role==='recorder'?JSON.stringify({schema:'player-pass-input/2',text:'x',frames:[]}):'Offline mission'});
     assert.equal(result.reason,'unexpected-pass-tools',name);assert.equal(payloads.length,0,name);
   }
 });
@@ -1015,14 +1015,24 @@ test('each role enables exactly its own pass tools: a foreign or surplus termina
 const episodeTools=['player_episode_record','player_episode_abstain'];
 const recorderTools=['player_source',...episodeTools];
 const recorderRoute={...route(),role:'recorder'};
-const recordCall=['player_episode_record',{attempted:'Walked to the door',counterpart:'',observation_status:['seen','not_yet'],changed:'',residual:'',confidence:0.8,sources:['frame-3']}];
+const recordCall=['player_episode_record',{attempted:'Walked to the door',counterpart:'',observation_status:['seen','not_yet'],observation_source_first:['frame-3','frame-3'],observation_source_second:['',''],changed:'',residual:'',confidence:0.8,sources:['frame-3']}];
 const episodeAbstain=['player_episode_abstain',{reason_code:'unreadable_frames',reason:'The frames are blank',sources:[]}];
 const rejectedRecord=['player_episode_record',{...recordCall[1],attempted:' '}];
 const blankEpisodeAbstain=['player_episode_abstain',{...episodeAbstain[1],reason:' '}];
 const episodeFrames=[{source_id:'base-1',role:'baseline'},{source_id:'frame-2',role:'in-episode'},{source_id:'frame-3',role:'last'}];
-const passInput=(text='Episode 4-9. Subgoal: reach the door.',frames=episodeFrames)=>JSON.stringify({schema:'player-pass-input/1',text,frames});
+const passInput=(text='Episode 4-9. Subgoal: reach the door.',frames=episodeFrames)=>JSON.stringify({schema:'player-pass-input/2',text,frames});
 const recorderScenario=(t,sequence,{max_requests=route().max_requests,frames=episodeFrames,text}={})=>
   scenario(t,sequence,{configuration:{...recorderRoute,max_requests},enabledTools:recorderTools,prompt:passInput(text,frames)});
+
+test('the recorder host refuses unaligned mark columns before dispatch and accepts a corrected call', async t=>{
+  const unaligned=[recordCall[0],{...recordCall[1],observation_source_second:['']}];
+  const {result,events,calls}=await recorderScenario(t,[reply(null,[unaligned]),reply(null,[recordCall])]);
+  assert.equal(result.ok,true);
+  const refused=events.filter(e=>e.type==='tool-refused'&&e.reason==='observation-columns-unaligned');
+  assert.equal(refused.length,1);
+  assert.equal(refused[0].dispatched,false);
+  assert.equal(calls.filter(c=>c.tool===recordCall[0]).length,1);
+});
 
 test('a recorder pass forces a tool call, shows its frames as marked image parts and ends on a record', async t=>{
   const {result,events,payloads,calls}=await recorderScenario(t,[reply(null,[readCall,recordCall])]);
@@ -1135,7 +1145,7 @@ test('every recorder terminal call is traced, with unparseable arguments flagged
 });
 
 test('a malformed recorder input is refused before any start event, connection or request', async ()=>{
-  const ok={schema:'player-pass-input/1',text:'Episode.',frames:[{source_id:'f1',role:'baseline'}]};
+  const ok={schema:'player-pass-input/2',text:'Episode.',frames:[{source_id:'f1',role:'baseline'}]};
   const many=Array.from({length:8},(_, i)=>({source_id:`f${i}`,role:'in-episode'}));
   const bad=['Offline mission','{','[]','null',JSON.stringify({...ok,schema:'player-pass-input/0'}),JSON.stringify({...ok,extra:1}),
     JSON.stringify({schema:ok.schema,text:ok.text}),JSON.stringify({...ok,text:''}),JSON.stringify({...ok,text:3}),JSON.stringify({...ok,frames:'none'}),
@@ -1159,7 +1169,7 @@ test('a malformed recorder input is refused before any start event, connection o
 });
 
 test('the frame policy: an optional baseline first, at most six episode frames, and a last that ends any episode frames', ()=>{
-  const parse=frames=>parsePassInput(JSON.stringify({schema:'player-pass-input/1',text:'Episode.',frames}));
+  const parse=frames=>parsePassInput(JSON.stringify({schema:'player-pass-input/2',text:'Episode.',frames}));
   const f=(source_id,role)=>({source_id,role});
   const inEpisode=count=>Array.from({length:count},(_, i)=>f(`e${i}`,'in-episode'));
   // Allowed: nothing, a lone baseline, a lone last, a baseline and a last, up to a baseline and six episode frames.
@@ -1274,15 +1284,15 @@ test('production episode schemas: a refused call names each field, the rule, the
   assert.deepEqual(toolNames(payloads[0]),recorderTools);
   const first=payloads.at(-1).messages.find(m=>m.role==='tool'&&m.tool_call_id==='bad-0').content;
   assert.match(first,/^Validation failed for tool "player_episode_record":/);
-  assert.ok(first.includes('must be one of "seen", "not_yet", "contradicted"; received "maybe"'),first);
+  assert.ok(first.includes('must be one of "seen", "not_yet", "contradicted", "unassessable"; received "maybe"'),first);
   assert.match(first,/- confidence: .*maximum 1.*received 3/);
   assert.match(first,/- sources: .*maxItems 4/);
   assert.match(first,/- residual: required property is missing/);
   assert.ok(first.includes('unknown properties "extra" are not allowed'),first);
   const received=/- attempted: .*received (".*)/.exec(first)[1];
   assert.ok(received.length<200&&received.includes('more characters'),'received values are truncated to 120 characters');
-  assert.ok(first.includes('Valid example call: player_episode_record {"attempted":"<attempted>","counterpart":"","observation_status":[],"changed":"","residual":"","confidence":0,"sources":["<sources>"]}'),first);
-  assert.ok(first.includes('In this example observation_status is empty, which is valid only when no subgoal was pushed'),first);
+  assert.ok(first.includes('Valid example call: player_episode_record {"attempted":"<attempted>","counterpart":"","observation_status":[],"observation_source_first":[],"observation_source_second":[],"changed":"","residual":"","confidence":0,"sources":["<sources>"]}'),first);
+  assert.ok(first.includes('With no subgoal, leave the three mark columns empty.'),first);
   assert.ok(first.endsWith('Fix the call and resend it; abstaining is not the remedy for a fixable call.'),first);
   const second=payloads.at(-1).messages.find(m=>m.role==='tool'&&m.tool_call_id==='bad2-0').content;
   assert.ok(second.includes('must be one of "unreadable_frames", "no_player_action", "other"; received "tired"'),second);
@@ -1292,7 +1302,7 @@ test('production episode schemas: a refused call names each field, the rule, the
 
 test('recorder telemetry needs a valid receipt of the matching tool and never a local tool error', ()=>{
   const result=value=>({content:[{type:'text',text:JSON.stringify(value)}]});
-  const receipt={schema:'player-episode-record/2',status:'recorded',settled:'recorded',first_position:4,last_position:9,subgoal_id:'s'.repeat(32),
+  const receipt={schema:'player-episode-record/3',status:'recorded',settled:'recorded',first_position:4,last_position:9,subgoal_id:'s'.repeat(32),
     counted:true,closed:true,observations:['seen'],stalled:false,records:[{id:'c1'},{id:'c2'}]};
   assert.deepEqual(episodeRecordEvent(result(receipt)),{type:'episode-record',first_position:4,last_position:9,subgoal_id:'s'.repeat(32),record_ids:['c1','c2'],
     counted:true,closed:true,observations:['seen'],stalled:false});
@@ -1301,22 +1311,22 @@ test('recorder telemetry needs a valid receipt of the matching tool and never a 
   assert.equal(episodeRecordEvent({...result(receipt),isError:true}),null);
   assert.equal(episodeRecordEvent(result({...receipt,schema:'player-episode-record/0'})),null);
   assert.equal(episodeRecordEvent(result({...receipt,settled:'abstained'})),null);
-  assert.equal(episodeRecordEvent(result({...receipt,schema:'player-episode-abstain/2',status:'abstained',settled:'abstained'})),null);
+  assert.equal(episodeRecordEvent(result({...receipt,schema:'player-episode-abstain/3',status:'abstained',settled:'abstained'})),null);
   assert.equal(episodeRecordEvent({content:[{type:'text',text:'{'}]}),null);
-  const abstained={schema:'player-episode-abstain/2',status:'abstained',settled:'abstained',first_position:4,last_position:9,subgoal_id:null,records:[{id:'c1'}]};
+  const abstained={schema:'player-episode-abstain/3',status:'abstained',settled:'abstained',first_position:4,last_position:9,subgoal_id:null,records:[{id:'c1'}]};
   const args={reason_code:'no_player_action',reason:'Nothing happened'};
   assert.deepEqual(episodeAbstainEvent(result(abstained),args),{type:'episode-abstain',first_position:4,last_position:9,subgoal_id:null,record_ids:['c1'],reason_code:'no_player_action',reason:'Nothing happened'});
   assert.equal(episodeAbstainEvent({...result(abstained),isError:true},args),null);
   assert.equal(episodeAbstainEvent(result(abstained),{...args,reason:''}),null);
   assert.equal(episodeAbstainEvent(result(abstained),undefined),null);
-  assert.equal(episodeAbstainEvent(result({...abstained,schema:'player-episode-record/2'}),args),null);
+  assert.equal(episodeAbstainEvent(result({...abstained,schema:'player-episode-record/3'}),args),null);
   const lost=result({schema:'player-transport/1',status:'unknown',operation_id:'1'.repeat(32)});
   assert.deepEqual(uncertainEvent(lost,'episode'),{type:'episode-uncertain',identity:'1'.repeat(32)});
   assert.deepEqual(uncertainEvent(lost,'level'),{type:'level-uncertain',identity:'1'.repeat(32)});
   assert.equal(uncertainEvent(result({schema:'player-transport/1',status:'known'}),'level'),null);
 });
 
-const intentBase={schema:'player-intent/3',session:'2'.repeat(32),actor_id:'3'.repeat(32),audience:'tail',pass_index:0,subgoal:null,age:null,
+const intentBase={schema:'player-intent/4',session:'2'.repeat(32),actor_id:'3'.repeat(32),audience:'tail',pass_index:0,subgoal:null,age:null,
   recall:{basis:'recent',items:[]},grants_authority:false};
 for (const [name,intentFixture] of [['a failed read','error'],
   ['the previous schema',JSON.stringify({...intentBase,schema:'player-intent/1'})],
@@ -1335,25 +1345,25 @@ for (const [name,intentFixture] of [['a failed read','error'],
 test('level commit telemetry distinguishes commits, discards and local tool errors', ()=>{
   const result=value=>({content:[{type:'text',text:JSON.stringify(value)}]});
   const derived={observations:['seen','not_yet'],stalled:false}, subgoal_id='s'.repeat(32);
-  const committed=levelCommitEvent(result({schema:'player-level-commit/5',status:'committed',action:'replace',reason:null,position:4,
+  const committed=levelCommitEvent(result({schema:'player-level-commit/6',status:'committed',action:'replace',reason:null,position:4,
     inputs_since:1,staleness_inputs:10,subgoal_id,derived,records:[{id:'w1'}],kept:[]}));
-  assert.deepEqual(committed,{type:'level-commit',action:'replace',reason:null,position:4,inputs_since:1,staleness_inputs:10,subgoal_id,derived,record_ids:['w1'],kept:[]});
+  assert.deepEqual(committed,{type:'level-commit',receipt_schema:'player-level-commit/6',action:'replace',reason:null,position:4,inputs_since:1,staleness_inputs:10,subgoal_id,derived,record_ids:['w1'],kept:[]});
   for (const action of ['keep','close'])
-    assert.equal(levelCommitEvent(result({schema:'player-level-commit/5',status:'committed',action,reason:null,position:4,
+    assert.equal(levelCommitEvent(result({schema:'player-level-commit/6',status:'committed',action,reason:null,position:4,
       inputs_since:1,staleness_inputs:10,subgoal_id,derived:null,records:[],kept:[]})).action,action);
   // A first subgoal has no pushed subgoal and no derived state.
-  const first=levelCommitEvent(result({schema:'player-level-commit/5',status:'committed',action:'replace',reason:null,position:0,
+  const first=levelCommitEvent(result({schema:'player-level-commit/6',status:'committed',action:'replace',reason:null,position:0,
     inputs_since:0,staleness_inputs:10,subgoal_id:null,derived:null,records:[{id:'w1'}],kept:[]}));
   assert.deepEqual([first.subgoal_id,first.derived],[null,null]);
-  const discarded=levelCommitEvent(result({schema:'player-level-commit/5',status:'discarded',action:'keep',reason:'Current subgoal changed since the pass began',
+  const discarded=levelCommitEvent(result({schema:'player-level-commit/6',status:'discarded',action:'keep',reason:'Current subgoal changed since the pass began',
     position:4,inputs_since:12,staleness_inputs:10,subgoal_id,records:[],kept:[]}));
   assert.deepEqual([discarded.type,discarded.reason,discarded.subgoal_id,discarded.derived],['level-discard','Current subgoal changed since the pass began',subgoal_id,null]);
-  assert.equal(levelCommitEvent({...result({schema:'player-level-commit/5',status:'committed',action:'keep'}),isError:true}),null);
+  assert.equal(levelCommitEvent({...result({schema:'player-level-commit/6',status:'committed',action:'keep'}),isError:true}),null);
   assert.equal(levelCommitEvent({content:[{type:'text',text:'{'}]}),null);
   assert.equal(levelCommitEvent(result({schema:'player-error/1'})),null);
   for (const old of ['player-level-commit/1','player-level-commit/2','player-level-commit/3'])
     assert.equal(levelCommitEvent(result({schema:old,status:'committed',action:'keep'})),null);
-  assert.equal(levelCommitEvent(result({schema:'player-level-commit/5',status:'committed',action:'bogus'})),null);
+  assert.equal(levelCommitEvent(result({schema:'player-level-commit/6',status:'committed',action:'bogus'})),null);
 });
 
 test('level abstain telemetry needs a valid abstain result with its reason code and never a local tool error', ()=>{

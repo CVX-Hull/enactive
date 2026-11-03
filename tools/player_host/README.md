@@ -75,7 +75,7 @@ integer `max_context_images` and the required integer `context_image_block`
 (1 ≤ block ≤ `max_context_images`). `pi-player-host/1` through `/5`, `player-host/1` through `/5` and
 missing/invalid fields are rejected. An actor tail calls the host-internal `player_intent`
 tool before each request, which must be discovered and never enabled for the model, and formats
-`player-intent/3` into the fixed 1,024-byte allocation (see below); a
+`player-intent/4` into the fixed 1,024-byte allocation (see below); a
 level host sends `tool_choice: "required"`, emits `level-pass`, `level-commit`,
 `level-discard`, `level-abstain` and `level-reserved-request`, offers only the four terminal
 tools on its last two requests, ends its pass on a keep, replace or close (commit or discard) or a
@@ -88,7 +88,7 @@ does the same with the two episode tools, under the `episode-` prefix (`episode-
 `episode-uncertain`; refusals `episode-ended` and `episode-reserved`). Closed historical configurations and traces are
 evidence, not runnable current inputs.
 
-**The recorder's pushed input.** The recorder's stdin prompt is one `player-pass-input/1` JSON document
+**The recorder's pushed input.** The recorder's stdin prompt is one `player-pass-input/2` JSON document
 `{schema, text, frames}`, closed, with `frames` at most 7 entries `{source_id, role}` (`baseline`,
 `in-episode` or `last`: an optional baseline first, then at most 6 episode frames ending in the `last`; distinct
 ids; fewer frames than `max_context_images`, because the pushed frames are pinned against image eviction and a read needs room; a `player_source` call that would take the next request over the peak is a fixable `tool-refused`, reason `episode-image-peak`). A frame is far larger than the
@@ -98,7 +98,7 @@ per frame, a marker line `Frame <id> (<role>):` and the image into its first use
 host cannot read (an error, or no image) settles `frame-read-failed` before any request. A malformed
 document settles `invalid-pass-input` before `host-start`. A level host's prompt stays plain text.
 
-**The `player-intent/3` tail.** The tail is the intent label, a subgoal line (≤ 160 bytes), an
+**The `player-intent/4` tail.** The tail is the intent label, a subgoal line (≤ 160 bytes), an
 observations line with each observation's one-word status (≤ 200), a metadata line with age, confidence
 and the subgoal's 8-character id (≤ 50), then the recall label and up to three recall lines (≤ 120 each,
 each with one full source id, the outcome as `seen x/y`, and the attempt text). The labels (129 and 118

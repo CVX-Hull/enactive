@@ -49,12 +49,12 @@ def test_prepare_writes_one_blind_packet_per_committed_replace_of_the_current_co
     key = json.loads((audit.private(out) / 'key.json').read_text())
     assert sorted(v['record_id'] for v in key['packets'].values()) == sorted([first['id'], second[0]['id']])
     assert key['inputs'] == dict(context_sha256=audit.sha256(frozen[0]), instructions_sha256=audit.sha256(frozen[1]),
-                                 code_sha256=audit.sha256(Path(audit.__file__)), recent_frames=10, level_contract='player-level/5',
+                                 code_sha256=audit.sha256(Path(audit.__file__)), recent_frames=10, level_contract='player-level/6',
                                  commit_tools=['player_level_keep', 'player_level_replace', 'player_level_close'], runs_without_store=[])
     by_record = {v['record_id']: k for k, v in key['packets'].items()}
     packet = out / 'packets' / by_record[second[0]['id']]
     value = json.loads((packet / 'packet.json').read_text())
-    assert value['schema'] == 'intent-audit-packet/1' and value['audit_id'] == by_record[second[0]['id']]
+    assert value['schema'] == 'intent-audit-packet/2' and value['audit_id'] == by_record[second[0]['id']]
     assert value['proposal']['subgoal'] == 'Open the door'
     assert value['proposal']['decisions_in_same_commit'] == [dict(decision='achieved', reason='The door was found')]
     assert [e['position'] for e in value['input_log']] == list(range(1, 10))
@@ -233,10 +233,19 @@ def labelled(tmp_path, answers):
     (out / 'packets').mkdir(parents=True)
     (audit.private(out) / 'labels').mkdir(parents=True)
     for identity, by_auditor in answers.items():
-        (out / 'packets' / identity).mkdir()
+        packet = out / 'packets' / identity
+        packet.mkdir()
+        write(packet / 'packet.json', json.dumps(dict(schema=audit.PACKET_SCHEMA, audit_id=identity)))
         for who, (premises, fit) in by_auditor.items():
             (audit.private(out) / 'labels' / f'{identity}.{who}.json').write_text(json.dumps(dict(premises=premises, fit=fit)))
     return out
+
+
+def test_summarize_refuses_archived_packets_before_reading_labels(tmp_path):
+    out = labelled(tmp_path, {'p1': {}})
+    write(out / 'packets/p1/packet.json', json.dumps(dict(schema='intent-audit-packet/1', audit_id='p1')))
+    with pytest.raises(audit.UnsupportedTrace, match='intent-audit-packet/2'):
+        audit.summarize(out, CRITERIA)
 
 
 GOOD, PARTLY, BAD, NONE = ('shown', 'plausible'), ('shown', 'unclear'), ('shown', 'implausible'), ('undecidable', 'unclear')

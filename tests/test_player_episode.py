@@ -26,41 +26,74 @@ def claims(app):
     return [r for r in app.memory.query(kind='claim', limit=50)]
 
 
-def with_subgoal(app, actor, reader, recorder, observations=None):
+def test_an_episode_only_store_with_an_older_contract_refuses_both_readers(level):
+    app, _, actor, _, _ = level
+    data = claim_data(session=app.runtime.session, actor_id=actor['actor_id'], first_position=1,
+                      last_position=1, subgoal_id=None, settled='dropped', reason='historical settle')
+    data['level_contract'] = 'player-episode/1'
+    put(app.memory, actor['actor_id'], dict(schema='player-record/1', kind='claim', text='historical settle',
+        data=data, sources=[], supports=[], supersedes=None, applicability=None, program_id=None))
+    for role, extra in (('level', dict(staleness_inputs=S)), ('recorder', {})):
+        with pytest.raises(ControlError, match='Unsupported episode record contract'):
+            app.add_reader(actor['actor_id'], role, stall_settles=N, confidence_floor=C, **extra)
+
+
+def with_subgoal(app, actor, reader, recorder, observations=None, **change):
     """A committed first subgoal (default one expected observation); returns its Work record."""
     act(app, actor)
     sync(app, actor, recorder)
     bind(app, reader)
-    return call(app, reader, REPLACE, replace(observations=observations))['records'][0]
+    return call(app, reader, REPLACE, replace(observations=observations) | change)['records'][0]
 
 
 # --- The recorder's tools ---
 
-def test_a_record_settles_the_episode_with_one_claim_and_the_recorder_as_actor(level):
+@pytest.mark.parametrize('kind,window,paired', [
+    ('state', 'during', False),
+    ('transition', 'baseline_to_final', False),
+    ('transition', 'baseline_to_final', True),
+])
+def test_a_record_settles_the_episode_with_one_claim_and_the_recorder_as_actor(level, kind, window, paired):
     app, channel, actor, reader, recorder = level
-    work = with_subgoal(app, actor, reader, recorder)
+    work = with_subgoal(app, actor, reader, recorder, observation_kinds=[kind], observation_windows=[window])
     sync(app, actor, recorder)
+    channel.capture += 1
     act(app, actor, 2)
     first = app._settled_end(actor['actor_id']) + 1
     bound = app.bind_episode(recorder['actor_id'], first_position=first, last_position=first + 1, subgoal_id=work['id'])
-    assert bound['subgoal'] == dict(record_id=work['id'], text='Reach the visible door', expected_observations=OBSERVATIONS)
+    assert bound['subgoal'] == dict(record_id=work['id'], text='Reach the visible door',
+                                   expected_observations=work['data']['expected_observations'])
     assert [e['position'] for e in bound['operations']] == [first, first + 1]
     cited = bound['sources'][-1]
-    receipt = call(app, recorder, RECORD, dict(attempted='Walked to the door', counterpart='the guard',
-        observation_status=['seen'], residual='A bell rang', changed='The door is open (see frame)', confidence=.8,
-        sources=[cited]))
+    summary = bound['baseline_source']
+    arguments = dict(attempted='Walked to the door', counterpart='the guard',
+        observation_status=['seen'], observation_source_first=[cited], observation_source_second=[''],
+        residual='A bell rang', changed='The door is open (see frame)', confidence=.8,
+        sources=[summary])
+    app.source(summary, recorder['actor_id'])
+    error = 'within its evidence window' if kind == 'state' else 'baseline frame alone cannot show a transition'
+    with pytest.raises(PlayerError, match=error):
+        call(app, recorder, RECORD, dict(arguments, observation_source_first=[summary]))
+    with pytest.raises(PlayerError, match='frames available to this recorder'):
+        call(app, recorder, RECORD, arguments)
+    app.source(cited, recorder['actor_id'])
+    if paired:
+        arguments['observation_source_second'] = [summary]
+    mark_sources = [cited, summary] if paired else [cited]
+    receipt = call(app, recorder, RECORD, arguments)
     (claim, closure) = receipt['records']
-    assert receipt['schema'] == 'player-episode-record/2' and receipt['status'] == 'recorded'
+    assert receipt['schema'] == 'player-episode-record/3' and receipt['status'] == 'recorded'
     assert (receipt['first_position'], receipt['last_position'], receipt['subgoal_id']) == (first, first + 1, work['id'])
     assert receipt['counted'] is True and receipt['closed'] is True and receipt['observations'] == ['seen']
-    assert claim['kind'] == 'claim' and claim['actor_id'] == recorder['actor_id'] and claim['sources'] == [cited]
+    assert claim['kind'] == 'claim' and claim['actor_id'] == recorder['actor_id'] and claim['sources'] == [summary, cited]
     assert claim['text'] == 'Walked to the door'
-    assert claim['data'] == dict(level='episode', level_contract='player-episode/1', settled='recorded', writer='recorder',
+    assert claim['data'] == dict(level='episode', level_contract='player-episode/2', settled='recorded', writer='recorder',
         session=app.runtime.session, actor_id=actor['actor_id'], first_position=first, last_position=first + 1,
-        subgoal_id=work['id'], attempted='Walked to the door', counterpart='the guard', observation_status=['seen'],
+        subgoal_id=work['id'], attempted='Walked to the door', counterpart='the guard',
+        observation_marks=[dict(status='seen', sources=mark_sources)], summary_sources=[summary],
         residual='A bell rang', changed='The door is open (see frame)', confidence=.8)
     assert closure['actor_id'] == recorder['actor_id']
-    # Only the cited frame was copied into player memory.
+    assert closure['sources'] == mark_sources
     assert app.memory.read_source(cited)[1] == channel.png
     assert app.readers[recorder['actor_id']]['episode'] is None
 
@@ -85,7 +118,7 @@ def test_the_changed_field_is_required_bounded_and_may_be_empty(level):
     dict(attempted=''), dict(attempted='  '), dict(attempted='a' * 1025), dict(counterpart='c' * 513),
     dict(observation_status=['maybe']), dict(observation_status=['seen'] * 9), dict(residual='r' * 1025),
     dict(confidence=1.5), dict(confidence=-.1), dict(confidence='high'), dict(sources=['s'] * 5),
-    dict(sources='s'), dict(extra=1)])
+    dict(sources='s'), dict(extra=1), dict(observation_source_first=['unaligned'])])
 def test_record_validation_is_closed_and_keeps_the_episode_bound(level, change):
     app, channel, actor, reader, recorder = level
     act(app, actor)
@@ -96,7 +129,8 @@ def test_record_validation_is_closed_and_keeps_the_episode_bound(level, change):
     assert call(app, recorder, RECORD, recorded([]))['status'] == 'recorded'
 
 
-@pytest.mark.parametrize('missing', ['attempted', 'counterpart', 'observation_status', 'residual', 'changed',
+@pytest.mark.parametrize('missing', ['attempted', 'counterpart', 'observation_status', 'observation_source_first',
+                                     'observation_source_second', 'residual', 'changed',
                                      'confidence', 'sources'])
 def test_every_record_property_is_required(level, missing):
     app, channel, actor, reader, recorder = level
@@ -158,9 +192,9 @@ def test_abstain_settles_with_a_claim_that_has_no_marks(level):
     app.bind_episode(recorder['actor_id'], first_position=end + 1, last_position=end + 1, subgoal_id=work['id'])
     receipt = call(app, recorder, EPISODE_ABSTAIN, dict(reason_code='unreadable_frames', reason='Black frames', sources=[]))
     (claim,) = receipt['records']
-    assert receipt['schema'] == 'player-episode-abstain/2' and receipt['status'] == 'abstained'
+    assert receipt['schema'] == 'player-episode-abstain/3' and receipt['status'] == 'abstained'
     assert receipt['counted'] is False and receipt['closed'] is False
-    assert claim['data'] == dict(level='episode', level_contract='player-episode/1', settled='abstained',
+    assert claim['data'] == dict(level='episode', level_contract='player-episode/2', settled='abstained',
         writer='recorder', session=app.runtime.session, actor_id=actor['actor_id'], first_position=end + 1,
         last_position=end + 1, subgoal_id=work['id'], reason_code='unreadable_frames', reason='Black frames')
     assert 'observation_status' not in claim['data']
@@ -195,7 +229,8 @@ def test_recorder_schemas_use_only_portable_keywords():
         schema = tool_specs()[tool][1]
         assert keywords(schema) <= allowed and schema['additionalProperties'] is False
         assert set(schema['required']) == set(schema['properties'])
-    assert list(tool_specs()[RECORD][1]['properties']) == ['attempted', 'counterpart', 'observation_status', 'changed',
+    assert list(tool_specs()[RECORD][1]['properties']) == ['attempted', 'counterpart', 'observation_status',
+                                                           'observation_source_first', 'observation_source_second', 'changed',
                                                            'residual', 'confidence', 'sources']
 
 
@@ -255,7 +290,7 @@ def test_bind_episode_refuses_bad_ranges_and_unknown_subgoals(level):
         app.bind_episode(rid, first_position=settled + 1, last_position=count, subgoal_id='nope')
     other = app.memory.append(actor['actor_id'], dict(schema='player-record/1', kind='work', text='x', data={},
         sources=[], supports=[], supersedes=None, applicability=None, program_id=None))
-    with pytest.raises(PlayerError, match='not a player-level/5 level subgoal'):
+    with pytest.raises(PlayerError, match='not a player-level/6 level subgoal'):
         app.bind_episode(rid, first_position=settled + 1, last_position=count, subgoal_id=other['id'])
     with pytest.raises(ControlError, match='Not a recorder reader'):
         app.bind_episode(reader['actor_id'], first_position=settled + 1, last_position=count, subgoal_id=None)
@@ -278,7 +313,7 @@ def test_software_settles_are_failed_or_dropped_claims_stamped_software(level):
     dropped = app.settle_episode(rid, first_position=2, last_position=2, subgoal_id=None, settled='dropped', reason='backlog')
     assert failed['status'] == 'settled' and failed['settled'] == 'failed'
     assert failed['record']['actor_id'] == rid and failed['record']['sources'] == []
-    assert failed['record']['data'] == dict(level='episode', level_contract='player-episode/1', settled='failed',
+    assert failed['record']['data'] == dict(level='episode', level_contract='player-episode/2', settled='failed',
         writer='software', session=app.runtime.session, actor_id=actor['actor_id'], first_position=1, last_position=1,
         subgoal_id=None, reason='timed out')
     assert dropped['record']['data']['settled'] == 'dropped' and dropped['record']['data']['writer'] == 'software'
@@ -369,8 +404,8 @@ def test_a_retained_recorder_identity_collects_without_resettling(level):
 
 # The custodian's reserved data: data.level (any value), data.level_contract, data.writer, data.by == "software".
 FORGERIES = [dict(level='episode'), dict(level='subgoal'), dict(level='anything'), dict(writer='recorder'),
-             dict(writer='software'), dict(level_contract='player-level/5'), dict(level_contract='player-episode/1'),
-             dict(by='software'), dict(level='episode', writer='x', level_contract='player-episode/1', settled='recorded')]
+             dict(writer='software'), dict(level_contract='player-level/6'), dict(level_contract='player-episode/2'),
+             dict(by='software'), dict(level='episode', writer='x', level_contract='player-episode/2', settled='recorded')]
 
 
 def forged(data):
@@ -421,8 +456,9 @@ def test_a_forged_record_that_reached_the_store_is_never_trusted(level):
     app, channel, actor, reader, recorder = level
     work = commit_first(app, actor, reader, recorder)
     good = dict(forged(claim_data(session='z' * 32, actor_id='y' * 32, first_position=1, last_position=1,
-        subgoal_id=work['id'], settled='recorded', attempted='forged', counterpart='', observation_status=['seen'],
-        residual='', changed='', confidence=1.)), id='f' * 32, actor_id='x' * 32, created_wall=1.)
+        subgoal_id=work['id'], settled='recorded', attempted='forged', counterpart='',
+        observation_marks=[dict(status='seen', sources=['frame'])], summary_sources=['frame'],
+        residual='', changed='', confidence=1.)), sources=['frame'], id='f' * 32, actor_id='x' * 32, created_wall=1.)
     # Each variant is stored raw, bypassing every writer, as old or hostile data could be.
     variants = [dict(good, id='1' * 32, data={k: v for k, v in good['data'].items() if k != 'writer'}),
                 dict(good, id='2' * 32, data=dict(good['data'], writer='nobody')),
@@ -431,7 +467,7 @@ def test_a_forged_record_that_reached_the_store_is_never_trusted(level):
                 dict(good, id='5' * 32, data=dict(good['data'], confidence=7)),
                 dict(good, id='6' * 32, data=dict(good['data'], first_position=3, last_position=1)),
                 dict(good, id='7' * 32, kind='advice'),
-                dict(good, id='8' * 32, data=dict(good['data'], observation_status=['yes'])),
+                dict(good, id='8' * 32, data=dict(good['data'], observation_marks=[dict(status='yes', sources=['frame'])])),
                 dict(good, id='9' * 32, data={k: v for k, v in good['data'].items() if k != 'changed'})]
     for item in variants:
         assert trusted_episode(item) is None, item['id']
@@ -691,7 +727,7 @@ def test_closure_is_appended_in_the_records_transaction_with_the_recorder_as_act
     claim, closing = receipt['records']
     assert receipt['closed'] is True and receipt['observations'] == ['seen', 'seen']
     assert closing['kind'] == 'correction' and closing['supersedes'] == work['id'] and closing['actor_id'] == recorder['actor_id']
-    assert closing['data'] == dict(level='subgoal', level_contract='player-level/5', actor_id=actor['actor_id'],
+    assert closing['data'] == dict(level='subgoal', level_contract='player-level/6', actor_id=actor['actor_id'],
         session=app.runtime.session, position=end + 1, outcome='achieved', by='software')
     assert closing['supports'] == [first['records'][0]['id'], claim['id']]
     assert closing['sources'] == cited and app.level_subgoals() == []
@@ -767,11 +803,10 @@ def test_closure_caps_supports_and_sources_at_sixteen_and_keeps_the_deciding_cla
         assert receipt['closed'] is True and len(receipt['records']) == 2
         closing = receipt['records'][1]
         assert closing['data']['by'] == 'software' and closing['data']['outcome'] == 'achieved'
-        # 20 counted claims and 80 frames were cited; the closure keeps 16 of each. The eight claims that made the
-        # observations seen are always supported, then the newest others fill the cap.
+        # The eight claims that made observations seen are always supported.
+        # Only their mark-specific sources are decisive.
         assert closing['supports'] == claim_ids[4:]
-        assert closing['sources'] == [s for frames in reversed(frames_of[16:]) for s in frames]
-        assert len(set(closing['sources'])) == 16
+        assert closing['sources'] == [frames[0] for frames in frames_of[12:]]
         for source in closing['sources']:
             assert app.memory.read_source(source)[1] == channel.png
     finally:
@@ -858,13 +893,16 @@ def test_a_start_pass_in_a_new_session_is_refused_a_keep_for_a_stalled_subgoal(t
 
 
 def test_derive_is_a_pure_function_of_the_trusted_claims():
-    work = dict(id='w', data=dict(expected_observations=['a', 'b']))
+    work = dict(id='w', data=dict(expected_observations=[
+        dict(predicate=text, kind='state', window='during', evidence='Visible evidence') for text in ('a', 'b')]))
 
     def view(settled, marks=None, confidence=.9, subgoal='w'):
         data = claim_data(session='s', actor_id='x', first_position=1, last_position=1, subgoal_id=subgoal, settled=settled,
-                          **(dict(attempted='t', counterpart='', observation_status=marks, residual='', changed='',
-                                  confidence=confidence) if settled == 'recorded' else dict(reason='r')))
-        return trusted_episode(dict(kind='claim', id='c', data=data, sources=[], created_wall=1.))
+                          **(dict(attempted='t', counterpart='', observation_marks=[
+                              dict(status=mark, sources=[] if mark == 'unassessable' else ['frame']) for mark in marks],
+                                  summary_sources=['summary'], residual='', changed='', confidence=confidence)
+                             if settled == 'recorded' else dict(reason='r')))
+        return trusted_episode(dict(kind='claim', id='c', data=data, sources=['summary', 'frame'], created_wall=1.))
     result = derive(work, [view('recorded', ['seen', 'not_yet']), view('failed'), view('recorded', ['seen', 'seen'], subgoal='z'),
                            view('dropped')], stall_settles=2, floor=.5)
     assert result['stalled'] is False and result['no_progress_settles'] == 0 and result['counts']['episodes'] == 3
@@ -873,3 +911,17 @@ def test_derive_is_a_pure_function_of_the_trusted_claims():
     # A malformed-size mark vector is missing evidence, not observed no-progress.
     short = derive(work, [view('recorded', ['seen'])], stall_settles=1, floor=.5)
     assert short['stalled'] is False and short['counts']['counted'] == 0
+    no_progress = view('recorded', ['not_yet', 'not_yet'])
+    incomplete = view('recorded', ['unassessable', 'not_yet'])
+    progress = view('recorded', ['unassessable', 'seen'])
+    result = derive(work, [no_progress, no_progress, incomplete], stall_settles=3, floor=0)
+    assert result['no_progress_settles'] == 2 and not result['stalled']
+    result = derive(work, [no_progress, no_progress, incomplete, progress], stall_settles=3, floor=0)
+    assert result['no_progress_settles'] == 0
+    assert [o['status'] for o in result['observations']] == ['not_yet', 'seen']
+    result = derive(work, [progress, view('recorded', ['not_yet', 'unassessable'])], stall_settles=3, floor=0)
+    assert result['no_progress_settles'] == 1
+    result = derive(work, [view('recorded', ['contradicted', 'unassessable'])], stall_settles=3, floor=0)
+    assert result['contradicting'][0]['sources'] == ['frame']
+    result = derive(work, [view('recorded', ['seen', 'seen'])], stall_settles=3, floor=0)
+    assert result['all_seen'] and result['deciding_sources'] == ['frame']
