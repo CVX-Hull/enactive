@@ -71,6 +71,7 @@ def run_campaign(directory: Path) -> dict:
             try:return function()
             except BaseException as exc:
                 report[name+'_error']=type(exc).__name__;return None
+        operator_pause = attempt('operator_pause_seal', server.seal_operator_pause) if server is not None else None
         if runtime is not None:attempt('pause',lambda:runtime.stop('Custodian closeout; no rearm'))
         cleanup=attempt('native_cleanup',owner.close)
         if cleanup is not None:
@@ -106,6 +107,11 @@ def run_campaign(directory: Path) -> dict:
             reservation_is_not_invoice=True)
         attempt('receipt',lambda:write_new(directory/'receipt.json',report))
         for sig,handler in previous.items():attempt('signal_restore',lambda sig=sig,handler=handler:signal.signal(sig,handler))
+        if owner.channel is not None:
+            proof = attempt('native_terminal', lambda: owner.channel.terminal_evidence())
+            attempt('stop_evidence', lambda: write_new(directory/'stop-evidence.json', dict(
+                schema='campaign-stop-evidence/1', session=profile['session'], operator_pause=operator_pause,
+                signal_cancelled=stopped.is_set() or bool(report.get('signal_restore_error')), native_terminal=proof)))
     return report
 
 

@@ -835,7 +835,7 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
         child=None;events=None;levels=None
         record=dict(index=index,actor_id=None,allocated_seconds=seconds,allocated_attempts=allowance,
                     allocated_nano_usd=str(remaining_pools['actor']))
-        started=time.monotonic();ending_at=None
+        started=time.monotonic();ending_at=None;native_grace=False
         fenced=lambda:stopped.is_set() or application.runtime.channel.stopped.is_set()
         try:
             actor=application.add_actor(profile['actor_profile'])
@@ -889,7 +889,12 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
                         application.runtime.stop('Original host deadline/operator cancellation');reason='Original host deadline/cancellation';break
                     code=application.runtime.process.poll()
                     if code is not None or application.runtime.channel.stopped.is_set():
-                        if ending_at is None:ending_at=now+(45 if code is not None else 30)
+                        native_ending = code is not None or getattr(application.runtime.channel, 'native_exiting', False)
+                        if native_ending and not native_grace:
+                            ending_at=now+45
+                            native_grace=True
+                        elif ending_at is None:
+                            ending_at=now+30
                         if now>=ending_at:reason='Original final-report grace exhausted';break
                     time.sleep(.1)
             # The level stops on its actor's stop, Pause or handoff, before any successor. The open episode closes at this

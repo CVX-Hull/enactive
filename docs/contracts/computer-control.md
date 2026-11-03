@@ -55,10 +55,19 @@ Current launch rejects `ENACTIVE_COMPUTER_DIR` and `CDDA_HARNESS_DIR`.
 
 A packet is four big-endian header-length bytes, UTF-8 JSON header, then raw image
 bytes. Header length is 1..65536; closed header:
-`{schema:"computer-wire/1",kind:"request"|"state"|"receipt",value:object,payload_bytes:int}`.
+`{schema:"computer-wire/2",kind:"request"|"state"|"receipt"|"terminal",value:object,payload_bytes:int}`.
 Only a capture receipt carries PNG bytes, at most64MiB. Raw pixels are separately
 bounded64MiB. Encode using installed SDL_image `IMG_SavePNG_RW` and bounded owned
 `SDL_RWFromMem` storage, which outlives encoding/transmission; no PNG implementation.
+
+Normal SDL shutdown can send a final `computer-terminal/1` record with
+`session`, `pid` and `takeover_generation`. The custodian accepts proof
+only for the owned process, with no later packet and clean EOF at a packet
+boundary. Missing proof remains unknown. Campaigns retain the proof and
+the browser Pause and signal cancellation flags in `stop-evidence.json`
+under `campaign-stop-evidence/1`. Admission to a later feasibility start
+requires the matching session, zero takeover generation and clear operator
+stop flags.
 
 Use one outgoing packet, one deferred Pause receipt and a dirty-state flag.
 Coalesce only unsent passive state. Preserve partial read/write offsets and exact

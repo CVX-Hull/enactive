@@ -7,6 +7,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <fcntl.h>
+#include <poll.h>
 #include <unistd.h>
 #include <algorithm>
 #include <cerrno>
@@ -106,7 +107,7 @@ SDL_Keycode keycode(NSString *key) {
 }
 struct Bridge {
     std::recursive_mutex mutex;
-    bool initialized=false, enabled=false, paused=false, lost=false, yieldEmpty=false, pointer=false, human=false;
+    bool initialized=false, enabled=false, sealed=false, paused=false, lost=false, yieldEmpty=false, pointer=false, human=false;
     int channel=-1; NSString *session=nil, *error=@"";
     bool channelFailed=false, sendFailed=false, receiveDrained=false, dirty=true, terminalTx=false, cleaning=false;
     std::vector<Uint8> tx, rx; size_t txOffset=0, rxNeed=4;
@@ -138,7 +139,7 @@ struct Bridge {
     }
     void packet(NSString *kind, NSDictionary *value, std::vector<Uint8> png={}) {
         require(tx.empty(),"Outgoing packet still pending");
-        NSDictionary *header=@{@"schema":@"computer-wire/1",@"kind":kind,@"value":value,@"payload_bytes":@(png.size())};
+        NSDictionary *header=@{@"schema":@"computer-wire/2",@"kind":kind,@"value":value,@"payload_bytes":@(png.size())};
         NSData *data=[NSJSONSerialization dataWithJSONObject:header options:0 error:nil];
         require(data && data.length>0 && data.length<=65536,"Cannot encode bounded wire header");
         uint32_t n=(uint32_t)data.length;
@@ -161,8 +162,8 @@ struct Bridge {
         if(request && !failure) failure=why;
         // Retain any exact unsent terminal packet; only owned releases may follow.
     }
-    void flush(size_t &budget) {
-        while(!tx.empty() && budget && !sendFailed) {
+    void flush(size_t &budget, long long deadline=LLONG_MAX) {
+        while(!tx.empty() && budget && !sendFailed && (deadline==LLONG_MAX || monotonicMS()<deadline)) {
             ssize_t n=send(channel,tx.data()+txOffset,std::min(budget,tx.size()-txOffset),0);
             if(n<0 && (errno==EAGAIN || errno==EWOULDBLOCK)) return;
             if(n<0 && errno==EINTR) { --budget; continue; }
@@ -170,6 +171,39 @@ struct Bridge {
             txOffset+=(size_t)n; budget-=(size_t)n;
             if(txOffset==tx.size()) { tx.clear(); txOffset=0; terminalTx=false; }
         }
+    }
+    bool flushOnQuit(long long deadline) {
+        // Share one deadline across the old packet and terminal. Never append a
+        // header to a partial packet or schedule fresh work after SDL teardown.
+        size_t budget=MaxFrame+65536+4;
+        while(!tx.empty() && !channelFailed && budget && monotonicMS()<deadline) {
+            flush(budget,deadline);
+            if(tx.empty() || channelFailed || !budget) break;
+            long long remaining=deadline-monotonicMS();
+            if(remaining<=0) break;
+            pollfd fd={channel,POLLOUT,0};
+            int rc=::poll(&fd,1,(int)remaining);
+            if(rc<0 && errno==EINTR) continue;
+            if(rc<=0 || (fd.revents&(POLLERR|POLLHUP|POLLNVAL))) break;
+        }
+        return tx.empty() && !channelFailed;
+    }
+    void quit() {
+        if(sealed) return;
+        sealed=true;
+        init();
+        bool active=enabled;
+        enabled=false;
+        if(!active || channelFailed) return;
+        long long deadline=monotonicMS()+50;
+        if(!flushOnQuit(deadline) || monotonicMS()>=deadline) return;
+        if(deferredPause) {
+            packet(@"receipt",deferredPause);
+            deferredPause=nil;
+            if(!flushOnQuit(deadline) || monotonicMS()>=deadline) return;
+        }
+        packet(@"terminal",@{@"schema":@"computer-terminal/1",@"session":session,@"pid":@(getpid()),@"takeover_generation":@(generation)});
+        flushOnQuit(deadline);
     }
     void receive(size_t &budget) {
         receiveDrained=false; unsigned packets=0;
@@ -194,7 +228,7 @@ struct Bridge {
             // independently detect duplicate object keys.
             id header=[NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
             require(closed(header,@[@"schema",@"kind",@"value",@"payload_bytes"]) &&
-                    [header[@"schema"] isEqual:@"computer-wire/1"] && [header[@"kind"] isEqual:@"request"] &&
+                    [header[@"schema"] isEqual:@"computer-wire/2"] && [header[@"kind"] isEqual:@"request"] &&
                     number(header[@"payload_bytes"],0,0),"Invalid request wire header");
             id value=header[@"value"]; rx.clear(); rxNeed=4; ++packets; claim(value);
         }
@@ -458,6 +492,10 @@ extern "C" void computer_destroy_window(SDL_Window *window) {
     guarded([&] { auto &b=bridge(); std::lock_guard<std::recursive_mutex> guard(b.mutex); if(b.enabled && b.window==window) { b.lost=true; b.pause(@"Bound window destroyed"); b.state(); } });
     SDL_DestroyWindow(window);
 }
+extern "C" void computer_quit() {
+    SDL_Quit();
+    guarded([&] { auto &b=bridge(); std::lock_guard<std::recursive_mutex> guard(b.mutex); b.quit(); });
+}
 extern "C" int computer_poll(SDL_Event *event) {
     // Always ask the real queue first, including the explicit stage-empty call.
     int real=SDL_PollEvent(event);
@@ -483,6 +521,7 @@ static const InterposeEntry computerInterpositions[] = {
     {(const void *)&computer_create_renderer,(const void *)&SDL_CreateRenderer},
     {(const void *)&computer_destroy_renderer,(const void *)&SDL_DestroyRenderer},
     {(const void *)&computer_destroy_window,(const void *)&SDL_DestroyWindow},
+    {(const void *)&computer_quit,(const void *)&SDL_Quit},
     {(const void *)&computer_poll,(const void *)&SDL_PollEvent},
     {(const void *)&computer_mouse,(const void *)&SDL_GetMouseState},
     {(const void *)&computer_global_mouse,(const void *)&SDL_GetGlobalMouseState},

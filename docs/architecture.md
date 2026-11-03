@@ -129,7 +129,7 @@ requires no save, menu or identity check. [Run procedure](operations/campaign-ru
 
 ## Coordinated change
 
-One current set is `computer-wire/1`, request/target/receipt `/2`,
+One current set is `computer-wire/2`, request/target/receipt `/2`,
 `computer-session/3`, `computer-operation/1`, `computer-source/1`,
 `player-memory/1`, `player-record/1`, `player-program/1`, `program-view/3`,
 `player-handoff/2`, `player-host/8` and `campaign-run/7`. The exact contracts own the complete set.
