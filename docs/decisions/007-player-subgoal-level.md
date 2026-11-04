@@ -8,13 +8,19 @@ scope: Accepted direction for a multi-level player (an acting real-time player a
 
 # ADR 007 — An acting player with an asynchronous subgoal level
 
-**Status: accepted direction; not delivered.** The owner agreed draft 4 on 31
+**First-slice outcome, 3 November 2026:** the owner kept the current player.
+V4 benefit remains unestablished. The [dated decision record](../acceptance/2026-11-03-adr007-status-quo.md)
+owns the result and revisit conditions. The direction below is the historical
+proposal and its supersession map did not take effect.
+
+**Original decision:** the owner agreed draft 4 on 31
 October 2026 (evening EDT): "Agree, shape the slice" (recorded on
-[#319](https://github.com/CVX-Hull/enactive/issues/319)). Nothing in it is
-implemented.
+[#319](https://github.com/CVX-Hull/enactive/issues/319)). The running system
+had no implementation of the proposal at that decision.
 - **The current standards and contracts still govern the running system.**
-- **The supersession map is applied later.** The documents it lists are amended
-  when the first slice meets its adoption condition, together with that migration.
+- **Supersession was conditional.** The plan paired changes to the listed
+  documents with a production migration if the first slice met its adoption
+  condition.
 - **The slice is what decides.** If the slice does not improve on arm B, the
   direction is revisited.
 

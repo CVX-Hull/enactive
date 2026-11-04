@@ -11,11 +11,11 @@ scope: Unimplemented monitor proposal for the retired waypoint harness; rational
 **Historical, never implemented.** This proposal was written for the
 waypoint/skills harness that #289 retired; its `SkillDescriptor`, controller and
 waypoint references describe no current runtime. It is kept as rationale for
-#42–#44. Its open questions now belong to
-[ADR-007](../decisions/007-player-subgoal-level.md)'s accepted, not yet delivered
-levels: event abstraction
-and escalation beyond mechanical wake rules are parked as #325 A4, and #43 maps
-to the subgoal level. A replacement design is written when A4 or #42 is shaped.
+#42–#44. The [ADR-007 first-slice outcome](../acceptance/2026-11-03-adr007-status-quo.md)
+retained the current player. The proposed v4 level supplies no production
+expectations. [#42](https://github.com/CVX-Hull/enactive/issues/42) owns the
+read-only evaluation question, and #325 retains deferred abstraction and
+escalation ideas.
 The original text follows unchanged.
 
 **Proposed design, not implemented capability.** This resolves #41 and supplies
