@@ -9,12 +9,85 @@ import re
 import subprocess
 
 from harness.computer.protocol import ControlError,closed,integer,read_json
+from harness.player import recall
 from harness.prepared_app import game_lock_path
 from tools.configure_player_tools import ROOT,configuration
 
 FILES={'route.json','mcp-template.json','context.txt','prompt.txt','target.json'}
 FIELDS={'schema','session','source_commit','files','initial_files','native','library','shared_lock','player_store',
-        'host','effort','port','wall_seconds','host_seconds','total_host_seconds','max_hosts','max_http_attempts','limits','accounting'}
+        'host','effort','port','wall_seconds','host_seconds','total_host_seconds','max_hosts','max_http_attempts','limits','accounting',
+        'actor_profile','level'}
+# Level v4 (ADR-007): the level's own allowance, the episode cutter, the recorder and the derived-state parameters.
+LEVEL_FIELDS={'mode','episode_cap','staleness_inputs','budget_fractions','intent_tail_bytes',
+              'max_http_attempts','pass_max_requests','pass_seconds',
+              'theta','theta_fitting_sha256','min_episode_inputs','stall_settles','confidence_floor','recall','recorder'}
+RECORDER_FIELDS={'max_http_attempts','pass_max_requests','pass_seconds','backlog'}
+RECALL_FIELDS={'tail_top','tail_exploration','level_items'}
+# The owner's K: the longest run of inputs between wakes, which is also the episode cap C (ADR-007 owner parameters).
+OWNER_K=10
+# The frozen, versioned role prompts (ADR-007 appendix); a change makes a new version and a new digest here.
+LEVEL_ROLE=ROOT/'tools/player_roles/subgoal-v5.txt'
+EPISODE_ROLE=ROOT/'tools/player_roles/episode-v2.txt'
+# The recorder backlog bound is fixed by the ADR, not configurable.
+OWNER_BACKLOG=3
+# The recorder's pushed frames are pinned by the host: 7 frames plus one read must fit in the route's image limit.
+RECORDER_IMAGES=8
+FROZEN_ROLE_SHA256={
+    'subgoal-v5.txt':'a675cfba894a2ca0eb925ffb9c31fe27dc7e95826a2dbda877404c5b004f9bf3',
+    'episode-v2.txt':'5079b28a7876a144a4d0fa085278e26fb4234355ca28d58306fa16859f02734e'}
+
+
+def nano_usd(value: str) -> int:
+    if not isinstance(value, str) or not re.fullmatch(r'0|[1-9][0-9]{0,17}', value):
+        raise ControlError('Expected a canonical integer nanodollar allocation')
+    return int(value)
+
+
+def request_cost_bound(route: dict) -> int:
+    model = route['model']
+    costs = model['cost']
+    closed(costs, {'input', 'output', 'cacheRead', 'cacheWrite'})
+    rates = {}
+    for key, value in costs.items():
+        if not isinstance(value, str) or len(value) > 64 or not re.fullmatch(r'(0|[1-9][0-9]*)(?:\.[0-9]+)?', value):
+            raise ControlError('Expected an exact decimal rate in USD per million tokens')
+        numerator, denominator = Decimal(value).as_integer_ratio()
+        rates[key] = (numerator * 1000 + denominator - 1) // denominator
+    return (model['contextWindow'] * max(rates[k] for k in ('input', 'cacheRead', 'cacheWrite'))
+            + model['maxTokens'] * rates['output'])
+
+
+def level_profile(level,actor_profile:str):
+    """Validate the optional subgoal level and episode recorder; null is the zero-level-host configuration."""
+    if level is None:return None
+    closed(level,LEVEL_FIELDS)
+    if actor_profile!='narrowed':raise ControlError('A subgoal level serves only a narrowed-profile actor')
+    if level['mode'] not in ('shadow','live'):raise ControlError('Level mode is shadow or live')
+    for name,low,high in (('episode_cap',1,1000),('staleness_inputs',1,1000),('intent_tail_bytes',1024,1024),
+                         ('max_http_attempts',1,10000),('pass_max_requests',1,64),('pass_seconds',30,3600),
+                         ('min_episode_inputs',1,1000),('stall_settles',1,1000)):
+        integer(level[name],low,high)
+    if level['episode_cap']!=OWNER_K:raise ControlError(f'The episode cap C must equal the owner\'s K ({OWNER_K})')
+    if level['min_episode_inputs']>level['episode_cap']:raise ControlError('The minimum episode length m cannot exceed the cap C')
+    # theta is fitted per game from player-visible captures; it is frozen by value and by the digest of its fitting.
+    theta=level['theta']
+    if type(theta) is not float or not 0<theta<1:raise ControlError('The episode threshold theta is a float strictly between 0 and 1')
+    if not isinstance(level['theta_fitting_sha256'],str) or re.fullmatch('[0-9a-f]{64}',level['theta_fitting_sha256']) is None:
+        raise ControlError('Freeze theta with the SHA256 of its fitting')
+    floor=level['confidence_floor']
+    if type(floor) is not float or not 0<=floor<=1:raise ControlError('The confidence floor c is a float from 0 to 1')
+    fractions=level['budget_fractions']
+    if (type(fractions) is not list or len(fractions)>8 or any(type(f) is not float or not 0<f<1 for f in fractions)
+            or fractions!=sorted(set(fractions))):raise ControlError('Budget fractions are at most 8 increasing values in (0,1)')
+    # The recall sizes are fixed by the custodian; the profile records them and refuses any other value.
+    closed(level['recall'],RECALL_FIELDS)
+    if level['recall']!=dict(tail_top=recall.TAIL_TOP_ITEMS,tail_exploration=1,level_items=recall.LEVEL_ITEMS):
+        raise ControlError('The recall sizes differ from the custodian\'s (2 top and 1 exploration line in the tail, 10 for the level)')
+    recorder=level['recorder']
+    closed(recorder,RECORDER_FIELDS)
+    for name,low,high in (('max_http_attempts',1,10000),('pass_max_requests',1,64),('pass_seconds',30,3600),('backlog',OWNER_BACKLOG,OWNER_BACKLOG)):
+        integer(recorder[name],low,high)
+    return level
 
 
 def digest(path: Path) -> str:
@@ -31,7 +104,7 @@ def local_file(value: str) -> Path:
 
 
 def host_argv(host) -> list[str]:
-    """Validate the closed `player-host/2` adapter selection and return its argv."""
+    """Validate the closed `player-host/8` adapter selection and return its argv."""
     closed(host,{'argv'})
     argv=host['argv']
     if (type(argv) is not list or not 1<=len(argv)<=8
@@ -49,10 +122,12 @@ def preflight(directory: Path) -> tuple[dict,dict,dict]:
     if not directory.is_relative_to(ROOT/'.runtime/computer-sessions') or directory.is_symlink():
         raise ControlError('Select a fresh explicit project-local computer session package')
     profile=read_json(directory/'manifest.json',1048576)
-    if type(profile) is not dict or profile.get('schema')!='campaign-run/3':
+    if type(profile) is not dict or profile.get('schema')!='campaign-run/7':
         raise ControlError('Unsupported campaign package; old admissions are inert history')
     closed(profile,FIELDS)
     host_argv(profile['host'])
+    if profile['actor_profile'] not in ('flat','narrowed'):raise ControlError('Actor profile is flat or narrowed')
+    level=level_profile(profile['level'],profile['actor_profile'])
     if not isinstance(profile['session'],str) or re.fullmatch('[0-9a-f]{32}',profile['session']) is None:
         raise ControlError('Invalid fresh mechanical session')
     current=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()
@@ -63,7 +138,13 @@ def preflight(directory: Path) -> tuple[dict,dict,dict]:
     tracked=subprocess.check_output(['git','ls-files','-z','--',*sorted(adapter)],cwd=ROOT).split(b'\0') if adapter else []
     if adapter-{name.decode() for name in tracked if name}:
         raise ControlError('Player host adapter files must be tracked by the clean source commit')
-    if set(profile['files'])!=FILES:raise ControlError('Freeze every selected driver input')
+    if set(profile['files'])!=FILES|({'level-role.txt','episode-role.txt'} if level else set()):
+        raise ControlError('Freeze every selected driver input')
+    if level:
+        # Each role prompt is byte-identical to its frozen repository version, whose digest is pinned in this validator.
+        for name,frozen in (('level-role.txt',LEVEL_ROLE),('episode-role.txt',EPISODE_ROLE)):
+            if digest(frozen)!=FROZEN_ROLE_SHA256[frozen.name]:raise ControlError(f'{frozen.name} differs from its frozen digest; a change is a new version')
+            if digest(directory/name)!=digest(frozen):raise ControlError(f'The {name} prompt must be the frozen current version ({frozen.name})')
     for name,sha in profile['files'].items():
         path=local_file(str(directory/name))
         if path.stat().st_size>1048576 or digest(path)!=sha:raise ControlError('Frozen driver input differs')
@@ -91,12 +172,20 @@ def preflight(directory: Path) -> tuple[dict,dict,dict]:
     if not profile['host_seconds']<=profile['total_host_seconds']<profile['wall_seconds']-30:
         raise ControlError('Original host and cleanup horizons do not fit')
     route=read_json(directory/'route.json',1048576)
-    if type(route) is not dict or route.get('schema')!='player-host/2':
+    if type(route) is not dict or route.get('schema')!='player-host/8':
         raise ControlError('Unsupported player host route; old routes are inert history')
+    if level and (type(route.get('max_context_images')) is not int or route['max_context_images']<RECORDER_IMAGES):
+        raise ControlError(f'The recorder pins up to 7 frames and reads one more: the route needs max_context_images of at least {RECORDER_IMAGES}')
     if route.get('service_tier')!='default':raise ControlError('This campaign allocation supports only the selected default serving tier')
-    if route['max_requests']>profile['max_http_attempts']:raise ControlError('Per-host attempts exceed original campaign allowance')
+    # Only a live level publishes intent; shadow mode measures it without influencing play.
+    tail=level['intent_tail_bytes'] if level and level['mode']=='live' else None
+    if route.get('role')!='actor' or route.get('intent_tail_bytes',0)!=tail:
+        raise ControlError('The frozen route must be the actor role with the level mode\'s intent tail')
+    # Each actor, its level and its recorder are partitioned before launch within the campaign cap.
+    if route['max_requests']+((level['max_http_attempts']+level['recorder']['max_http_attempts']) if level else 0)>profile['max_http_attempts']:
+        raise ControlError('Per-host attempts exceed original campaign allowance')
     template=read_json(directory/'mcp-template.json',1048576)
-    if template!=configuration('@ACTOR_CONFIG@'):raise ControlError('Only the current explicit actor MCP profile is supported')
+    if template!=configuration('@ACTOR_CONFIG@',profile=profile['actor_profile']):raise ControlError('Only the current explicit actor MCP profile is supported')
     target=read_json(directory/'target.json',1048576)
     closed(target,{'argv','cwd','env'})
     if (type(target['argv']) is not list or not 1<=len(target['argv'])<=32
@@ -115,15 +204,15 @@ def preflight(directory: Path) -> tuple[dict,dict,dict]:
         stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=10,
         env=dict(PATH=os.environ.get('PATH','/usr/bin:/bin'),LANG='en_US.UTF-8'))
     budget=profile['accounting']
-    closed(budget,{'prior_attempts','prior_reserved_usd','ceiling_usd','prospective_reserved_usd'})
+    closed(budget,{'prior_attempts','run_ceiling_nano_usd','role_caps_nano_usd'})
     integer(budget['prior_attempts'],0,10**9)
-    for name in ('prior_reserved_usd','ceiling_usd','prospective_reserved_usd'):
-        amount=Decimal(str(budget[name]))
-        if not amount.is_finite() or amount<0:raise ControlError('Accounting amounts must be finite and nonnegative')
-    costs=route['model']['cost']
-    rate=max(Decimal(str(costs[k])) for k in ('input','cacheRead','cacheWrite'))
-    per=(Decimal(route['model']['contextWindow'])*rate+Decimal(route['model']['maxTokens'])*Decimal(str(costs['output'])))/Decimal(10**6)
-    prospective=Decimal(str(budget['prior_reserved_usd']))+per*profile['max_http_attempts']
-    if prospective!=Decimal(str(budget['prospective_reserved_usd'])) or prospective>Decimal(str(budget['ceiling_usd'])):
-        raise ControlError('Original conservative allocation does not fit selected cumulative ceiling')
+    caps = budget['role_caps_nano_usd']
+    closed(caps, {'actor', 'level', 'recorder'})
+    bound = request_cost_bound(route)
+    amounts = {role: nano_usd(cap) for role, cap in caps.items()}
+    if (route['max_cost_nano_usd'] != caps['actor']
+            or sum(amounts.values()) > nano_usd(budget['run_ceiling_nano_usd'])
+            or any(amount < bound for role, amount in amounts.items() if role == 'actor' or level)
+            or (not level and (amounts['level'] or amounts['recorder']))):
+        raise ControlError('Role dollar pools do not fit the run ceiling or first-attempt bound')
     return profile,route,target

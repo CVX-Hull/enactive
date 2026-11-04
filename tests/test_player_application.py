@@ -12,15 +12,20 @@ def request_id():
     return uuid.uuid4().hex
 
 
+def compose(tmp_path, profile='flat'):
+    runtime,channel,_=make_runtime(tmp_path,mint=False)
+    memory=Memory(tmp_path/'player.sqlite3')
+    app=Application(runtime,memory,tmp_path/'contexts')
+    return runtime,channel,memory,app,app.add_actor(profile)
+
+
 def program(code):
     return dict(schema='player-program/1',code=code,parent_id=None,reason='fixture',
         source_ids=[],record_ids=[],applicability=None)
 
 
 def test_local_program_click_refusal_leaves_basic_input_available(tmp_path):
-    runtime,channel,actor=make_runtime(tmp_path)
-    memory=Memory(tmp_path/'player.sqlite3')
-    app=Application(runtime,memory,tmp_path/'contexts')
+    runtime,channel,memory,app,actor=compose(tmp_path)
     try:
         saved,_=app.call(actor['token'],'player_program_save',{'program':program('''function step(v,s){
             return {status:'act',state:s,actions:[{type:'click',x:10,y:10,button:'left'}],reason:'wrong geometry'};
@@ -41,9 +46,7 @@ def test_local_program_click_refusal_leaves_basic_input_available(tmp_path):
 
 
 def test_authoring_same_request_id_collects_one_immutable_record(tmp_path):
-    runtime,channel,actor=make_runtime(tmp_path)
-    memory=Memory(tmp_path/'player.sqlite3')
-    app=Application(runtime,memory,tmp_path/'contexts')
+    runtime,channel,memory,app,actor=compose(tmp_path)
     try:
         frame,_=runtime.observe(actor['actor_id'])
         value=dict(schema='player-record/1',kind='claim',text='fallible fixture claim',data={'quantity':1},
@@ -60,8 +63,7 @@ def test_authoring_same_request_id_collects_one_immutable_record(tmp_path):
 
 
 def test_public_identity_cannot_be_reused_across_player_and_computer(tmp_path):
-    runtime,channel,actor=make_runtime(tmp_path)
-    memory=Memory(tmp_path/'player.sqlite3');app=Application(runtime,memory,tmp_path/'contexts')
+    runtime,channel,memory,app,actor=compose(tmp_path)
     try:
         saved,_=app.call(actor['token'],'player_program_save',dict(program=program('''function step(v,s){
           return {status:'act',state:s,actions:[{type:'key',key:'x',modifiers:[]}],reason:'fixture'};

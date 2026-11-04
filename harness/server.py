@@ -17,6 +17,23 @@ class LocalServer(ThreadingHTTPServer):
     block_on_close = False
     allow_reuse_address = False
 
+    def __init__(self, *args, **kwargs):
+        self._pause_lock = threading.Lock()
+        self._pause_admission_closed = False
+        self._operator_paused = False
+        super().__init__(*args, **kwargs)
+
+    def accept_operator_pause(self) -> None:
+        with self._pause_lock:
+            if self._pause_admission_closed:
+                raise ControlError('Operator Pause admission closed at campaign closeout')
+            self._operator_paused = True
+
+    def seal_operator_pause(self) -> bool:
+        with self._pause_lock:
+            self._pause_admission_closed = True
+            return self._operator_paused
+
 
 def serve(application, port: int) -> tuple[LocalServer, threading.Thread]:
     class Handler(BaseHTTPRequestHandler):
@@ -90,6 +107,7 @@ def serve(application, port: int) -> tuple[LocalServer, threading.Thread]:
                 value = decode_json(self.rfile.read(length),1048576)
                 if self.path == '/api/pause':
                     closed(value,set())
+                    self.server.accept_operator_pause()
                     stopped = application.runtime.stop('Operator Pause')
                     self.json_reply(200, dict(schema='computer-pause/1',
                         session=application.runtime.session, stop=stopped))

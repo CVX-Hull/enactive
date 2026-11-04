@@ -30,8 +30,12 @@ class SessionStore:
                 frames INTEGER NOT NULL DEFAULT 0, bytes INTEGER NOT NULL DEFAULT 0);
             INSERT INTO resources(id) VALUES(1);
             CREATE TABLE actors(id TEXT PRIMARY KEY,token_hash TEXT NOT NULL UNIQUE,
-                stage TEXT NOT NULL CHECK(stage IN ('active','sealed','quiescent')));
+                stage TEXT NOT NULL CHECK(stage IN ('active','sealed','quiescent','reader')),
+                serves TEXT REFERENCES actors(id),
+                reader_role TEXT CHECK(reader_role IN ('level','recorder')),
+                CHECK((stage='reader')=(serves IS NOT NULL) AND (stage='reader')=(reader_role IS NOT NULL)));
             CREATE UNIQUE INDEX sole_active_actor ON actors(stage) WHERE stage='active';
+            CREATE UNIQUE INDEX one_reader_per_actor_role ON actors(serves,reader_role) WHERE serves IS NOT NULL;
             CREATE TABLE operations(id TEXT PRIMARY KEY,actor TEXT NOT NULL REFERENCES actors(id),
                 kind TEXT NOT NULL CHECK(kind IN ('input','observe','handoff')),
                 created_wall REAL NOT NULL,deadline REAL NOT NULL,input_json TEXT NOT NULL,
@@ -43,11 +47,11 @@ class SessionStore:
                 source TEXT NOT NULL REFERENCES sources(id),PRIMARY KEY(actor,source));
             CREATE TABLE collections(native_id TEXT PRIMARY KEY REFERENCES native_intents(id),
                 receipt TEXT NOT NULL,source TEXT REFERENCES sources(id));
-            PRAGMA user_version=1;
+            PRAGMA user_version=3;
         ''')
         with self.connection:
             self.connection.executemany('INSERT INTO metadata VALUES(?,?)', [
-                ('schema', canonical('computer-session/1')), ('session', canonical(session)),
+                ('schema', canonical('computer-session/3')),('session', canonical(session)),
                 ('limits', canonical(limits)), ('deadline_monotonic', canonical(deadline))])
         (directory / 'sources').mkdir(mode=0o700)
         self.limits = limits.copy()
@@ -61,9 +65,39 @@ class SessionStore:
             row = self.connection.execute('SELECT inputs,requests,frames,bytes FROM resources WHERE id=1').fetchone()
             return dict(zip(('inputs', 'requests', 'frames', 'frame_bytes'), row, strict=True))
 
-    def add_actor(self, identity: str, token_hash: str) -> None:
+    def add_actor(self, identity: str, token_hash: str, serves: str | None = None, role: str | None = None) -> None:
+        """An actor, or a reader (`serves` and `role`, `level` or `recorder`); one reader per (served actor, role)."""
         with self.lock, self.connection:
-            self.connection.execute('INSERT INTO actors VALUES(?,?,?)', (identity, token_hash, 'active'))
+            self.connection.execute('INSERT INTO actors VALUES(?,?,?,?,?)',
+                                    (identity, token_hash, 'active' if serves is None else 'reader', serves, role))
+
+    def actor_log(self, actor_id: str, after: int, limit: int) -> list[dict[str, Any]]:
+        """The served actor's operations in store order; positions are 1-based per actor.
+
+        An in-process projection for the driver and the custodian; no tool serves it.
+        """
+        with self.lock:
+            rows = self.connection.execute('SELECT id,kind,input_json,final_json FROM operations WHERE actor=? '
+                'ORDER BY rowid LIMIT ? OFFSET ?', (actor_id, limit, after)).fetchall()
+        entries = []
+        for position, (identity, kind, actions, final) in enumerate(rows, after + 1):
+            result = decode_json(final, 262144) if final is not None else None
+            entries.append(dict(position=position, operation_id=identity, kind=kind,
+                actions=decode_json(actions) if kind == 'input' else None,
+                status=result['status'] if result else 'pending',
+                source_id=result['source']['source_id'] if result and result.get('source') else None))
+        return entries
+
+    def actor_counts(self, actor_id: str) -> tuple[int, int]:
+        """The served actor's log length and its input operations, for mechanical wake rules."""
+        with self.lock:
+            return self.connection.execute("SELECT COUNT(*),COALESCE(SUM(kind='input'),0) FROM operations WHERE actor=?",
+                                           (actor_id,)).fetchone()
+
+    def inputs_after(self, actor_id: str, position: int) -> int:
+        with self.lock:
+            return self.connection.execute('SELECT COUNT(*) FROM (SELECT kind FROM operations WHERE actor=? '
+                'ORDER BY rowid LIMIT -1 OFFSET ?) WHERE kind=?', (actor_id, position, 'input')).fetchone()[0]
 
     def actor_stage(self, identity: str) -> str | None:
         with self.lock:
@@ -74,7 +108,13 @@ class SessionStore:
         with self.lock, self.connection:
             self.connection.execute('UPDATE actors SET stage=? WHERE id=?', (stage, identity))
 
-    def begin(self, operation: dict[str, Any], actions: object, input_count: int) -> bool:
+    def ending(self) -> dict[str, Any] | None:
+        with self.lock:
+            row = self.connection.execute("SELECT value FROM metadata WHERE key='ending'").fetchone()
+            return decode_json(row[0]) if row else None
+
+    def begin(self, operation: dict[str, Any], actions: object, input_count: int,
+              *, ending: dict[str, Any] | None = None) -> bool:
         """False means this exact ID already exists: collect it, never dispatch."""
         with self.lock, self.connection:
             if self.connection.execute('SELECT 1 FROM operations WHERE id=?', (operation['operation_id'],)).fetchone():
@@ -87,6 +127,9 @@ class SessionStore:
             self.connection.execute('INSERT INTO operations VALUES(?,?,?,?,?,?,NULL)',
                 (operation['operation_id'], operation['actor_id'], operation['kind'],
                  operation['created_wall'], operation['deadline_monotonic'], canonical(actions)))
+            if ending is not None:
+                self.connection.execute("INSERT INTO metadata VALUES('ending',?) "
+                    "ON CONFLICT(key) DO UPDATE SET value=excluded.value", (canonical(ending),))
             return True
 
     def native_intent(self, operation_id: str, native_id: str) -> None:

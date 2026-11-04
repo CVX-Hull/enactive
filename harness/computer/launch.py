@@ -27,11 +27,11 @@ def group_alive(pgid: int) -> bool:
         return True
 
 
-def close_group(child: subprocess.Popen, *, native: bool = False) -> dict[str, Any]:
+def close_group(child: subprocess.Popen, *, native: bool = False, native_grace: bool = True) -> dict[str, Any]:
     """Close only the process group created with this exact Popen handle."""
     signals=[]
     before=child.poll()
-    if native and before is None:
+    if native and native_grace and before is None:
         try:
             child.wait(timeout=1.)
         except subprocess.TimeoutExpired:
@@ -148,11 +148,17 @@ class OwnedTarget:
         try:
             if self.channel is not None:
                 try:
-                    self.channel.close()
+                    if self.process is not None and self.process.poll() is None:
+                        self.channel.stop('Custodian closed; no rearm')
+                        try:
+                            self.process.wait(timeout=1.)
+                        except subprocess.TimeoutExpired:
+                            pass
+                    self.channel.close(drain_exited=self.process is not None and self.process.poll() == 0)
                 except Exception as exc:
                     result['channel_cleanup_error']=type(exc).__name__
             if self.process is not None:
-                cleanup=close_group(self.process,native=True)
+                cleanup=close_group(self.process,native=True,native_grace=self.channel is None)
                 result['native']=cleanup
                 result['native_absence_verified']=cleanup['process_absent'] and cleanup['group_absent']
                 result['normal_native_exit_zero']=cleanup['normal_exit_zero_before_forced_signal']

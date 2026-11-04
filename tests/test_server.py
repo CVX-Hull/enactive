@@ -17,9 +17,10 @@ from test_computer_runtime import make_runtime,key
 
 @pytest.fixture
 def service(tmp_path):
-    runtime,channel,actor=make_runtime(tmp_path)
+    runtime,channel,_=make_runtime(tmp_path,mint=False)
     memory=Memory(tmp_path/'player.sqlite3')
     app=Application(runtime,memory,tmp_path/'contexts')
+    actor=app.add_actor('flat')
     server,thread=serve(app,0)
     config=tmp_path/'actor.json';config.write_text(json.dumps(dict(schema='player-adapter/1',
         base_url=f'http://127.0.0.1:{server.server_port}',session=runtime.session,**actor)))
@@ -151,11 +152,11 @@ def test_program_predispatch_fault_is_terminal_collectable_and_preserves_basic_c
 
 def test_sealed_actor_can_collect_but_cannot_stop_successor(service):
     app,channel,actor,port,client=service
-    result,_,error=client.call('player_handoff',dict(ids=[],summary='Fixture unfinished task'))
+    result,_,error=client.call('player_handoff',{})
     assert not error and client.sealed
     assert client.call('computer_result',dict(operation_id=result['operation_id']))[0]['status']=='sealed'
     app.runtime.confirm_quiescent(actor['actor_id'],result['operation_id'],host_quiescent=True)
-    successor=app.runtime.add_actor()
+    successor=app.add_actor('flat')
     assert successor['actor_id']!=actor['actor_id']
     status,_=post(port,'/api/actor-stop',dict(session=app.runtime.session,reason='old actor'),actor['token'])
     assert status==400 and not channel.stopped.is_set()
@@ -170,18 +171,18 @@ def test_lost_handoff_response_stops_current_sealed_actor_and_cannot_resume(serv
             raise OSError('Fixture lost response after actual sealing')
         return result
     with patch.object(client,'_post',side_effect=lose):
-        value,_,error=client.call('player_handoff',dict(ids=[],summary='Fixture unfinished work'))
+        value,_,error=client.call('player_handoff',{})
     assert value['status']=='unknown' and not error and channel.stopped.is_set()
     collected,_,_=client.call('computer_result',dict(operation_id=value['operation_id']))
     assert collected['status']=='sealed'
     with pytest.raises(ValueError):
         app.runtime.confirm_quiescent(actor['actor_id'],value['operation_id'],host_quiescent=True)
-    with pytest.raises(ValueError):app.runtime.add_actor()
+    with pytest.raises(ValueError):app.add_actor('flat')
 
 
 def test_explicit_mcp_cancellation_can_stop_the_current_sealed_actor(service):
     app,channel,actor,port,client=service
-    client.call('player_handoff',dict(ids=[],summary='Fixture unfinished work'))
+    client.call('player_handoff',{})
     assert client.sealed and not channel.stopped.is_set()
     result=client.stop('MCP operation cancelled')
     assert result['stop_requested'] and channel.stopped.is_set()

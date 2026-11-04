@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import argparse
-from decimal import Decimal
 import json
 import os
 from pathlib import Path
@@ -31,9 +30,9 @@ def run_campaign(directory: Path) -> dict:
     if not secret:raise ValueError('Selected provider credential is unavailable; supply only its explicit environment variable')
     started=time.monotonic();deadline=started+profile['wall_seconds']
     owner=OwnedTarget(directory,profile['session'],target,Path(profile['library']['path']),Path(profile['shared_lock']),deadline)
-    runtime=memory=server=server_thread=investigation_view=None
+    runtime=memory=server=server_thread=investigation_view=timing=None
     stopped=threading.Event();driver=None
-    report=dict(schema='campaign-receipt/2',session=profile['session'],source_commit=profile['source_commit'],
+    report=dict(schema='campaign-receipt/3',session=profile['session'],source_commit=profile['source_commit'],
                 started_wall=time.time(),outcome='incomplete',normal_save_claimed_by_harness=False,
                 deciding_hosts_quiescent=False,native_absence_verified=False,input_authority_revoked=False)
     def cancel(signum,frame):
@@ -54,6 +53,8 @@ def run_campaign(directory: Path) -> dict:
         owner.wait_target()
         if stopped.is_set():raise ValueError('Cancelled before actor admission')
         application=Application(runtime,memory,directory/'contexts')
+        timing=(directory/'call-timing.jsonl').open('x',buffering=1)
+        application.timing=lambda row:timing.write(json.dumps(row)+'\n')
         investigation_view=LiveInvestigationView(directory,profile)
         application.investigation_view=investigation_view
         server,server_thread=serve(application,profile['port'])
@@ -70,6 +71,7 @@ def run_campaign(directory: Path) -> dict:
             try:return function()
             except BaseException as exc:
                 report[name+'_error']=type(exc).__name__;return None
+        operator_pause = attempt('operator_pause_seal', server.seal_operator_pause) if server is not None else None
         if runtime is not None:attempt('pause',lambda:runtime.stop('Custodian closeout; no rearm'))
         cleanup=attempt('native_cleanup',owner.close)
         if cleanup is not None:
@@ -81,6 +83,7 @@ def run_campaign(directory: Path) -> dict:
             attempt('server_shutdown',server.shutdown);attempt('server_close',server.server_close)
             attempt('server_join',lambda:server_thread.join(2))
         if investigation_view is not None:attempt('investigation_close',investigation_view.close)
+        if timing is not None:attempt('timing_close',timing.close)
         if runtime is not None:attempt('store_close',runtime.store.close)
         if memory is not None:attempt('player_store_close',memory.close)
         if driver is None:
@@ -92,17 +95,23 @@ def run_campaign(directory: Path) -> dict:
         report['ended_wall']=time.time();report['elapsed_seconds']=time.monotonic()-started
         attempts=driver['attempts_charged'] if driver else (profile['max_http_attempts'] if (directory/'actors').exists() else 0)
         budget=profile['accounting']
-        allocated=Decimal(str(budget['prospective_reserved_usd']))-Decimal(str(budget['prior_reserved_usd']))
-        per=allocated/profile['max_http_attempts']
+        allocated=budget['run_ceiling_nano_usd']
+        money_complete=bool(driver and driver['money_complete'])
         report['accounting']=dict(attempts_charged=attempts,cumulative_attempts=budget['prior_attempts']+attempts,
-            consumed_conservative_reservation_usd=float(per*attempts),
-            cumulative_conservative_reservation_usd=float(Decimal(str(budget['prior_reserved_usd']))+per*attempts),
+            run_ceiling_nano_usd=allocated,
+            charged_nano_usd=driver['charged_nano_usd'] if money_complete else allocated,
+            money_complete=money_complete,
             allocated_max_attempts=profile['max_http_attempts'],unused_allocation_retired=profile['max_http_attempts']-attempts,
             configured_estimate_usd=driver['configured_estimate_usd'] if driver else None,
             missing_usage_attempts=driver['missing_usage_attempts'] if driver else None,
             reservation_is_not_invoice=True)
         attempt('receipt',lambda:write_new(directory/'receipt.json',report))
         for sig,handler in previous.items():attempt('signal_restore',lambda sig=sig,handler=handler:signal.signal(sig,handler))
+        if owner.channel is not None:
+            proof = attempt('native_terminal', lambda: owner.channel.terminal_evidence())
+            attempt('stop_evidence', lambda: write_new(directory/'stop-evidence.json', dict(
+                schema='campaign-stop-evidence/1', session=profile['session'], operator_pause=operator_pause,
+                signal_cancelled=stopped.is_set() or bool(report.get('signal_restore_error')), native_terminal=proof)))
     return report
 
 

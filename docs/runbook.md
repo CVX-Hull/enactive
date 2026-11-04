@@ -48,6 +48,12 @@ owns retention policy. Use current custodian/driver receipts for exact owned
 process cleanup; old runtime commands in historical artifacts are not executable
 instructions. Preserve failed chains and original binaries/configuration.
 
+## Claim-deciding stages
+
+[Evidence tools](operations/evidence-tools.md): the tracked stage driver, level-stage
+analysis, blind intent audit and sequence lenses; frozen registries and outputs stay
+in `.runtime`, and only current contract versions are read.
+
 ## Coordinated migration
 
 [Migration](operations/migration.md): reject old formats before effects, retain

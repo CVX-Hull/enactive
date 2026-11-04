@@ -31,7 +31,7 @@ logical responsibilities; arrows identify requests, results or user control.
 ## Runtime and state
 
 `tools/campaign_run.py` is the sole finite custodian. It validates a fresh frozen
-`campaign-run/3` package and reserves exclusion before launch. `OwnedTarget` keeps
+`campaign-run/7` package and reserves exclusion before launch. `OwnedTarget` keeps
 exact subprocess handles and passes an inherited shared-lock descriptor and a
 nonblocking Unix socket to the SDL adapter. Native retains the shared lock for
 its lifetime, including after the custodian loses its own reference.
@@ -55,6 +55,15 @@ composes the computer port with optional player memory/program services. A
 project-local stdio MCP adapter owns no writer, native child or provider key.
 The selected [player host](contracts/player-host.md) owns model calls; the campaign
 driver owns exact host/MCP group cleanup.
+
+The *reader class* is a second capability class beside the actors: for each narrowed actor
+the application mints one `level` and one `recorder` reader, each with its own token and a
+fixed tool allowlist (reads, plus one pass-ending write that the custodian turns into a
+record). The driver runs them as concurrent finite hosts beside the actor, a level and a
+recorder per actor, each at most one pass in flight. They send no input and cannot stop the
+run, and after a failure to remember they refuse every tool while the actor continues. The
+contract is in [computer control](contracts/computer-control.md) and the decision in
+[ADR007](decisions/007-player-subgoal-level.md).
 
 Fresh session stores live under `.runtime/computer-sessions/`. A selected
 `player-memory/1` store may span fresh native-child sessions. Old runtime formats
@@ -120,10 +129,10 @@ requires no save, menu or identity check. [Run procedure](operations/campaign-ru
 
 ## Coordinated change
 
-One current set is `computer-wire/1`, request/target/receipt `/2`,
-`computer-session/1`, `computer-operation/1`, `computer-source/1`,
+One current set is `computer-wire/2`, request/target/receipt `/2`,
+`computer-session/3`, `computer-operation/1`, `computer-source/1`,
 `player-memory/1`, `player-record/1`, `player-program/1`, `program-view/3`,
-`player-handoff/1`, `player-host/2` and `campaign-run/3`. The exact contracts own the complete set.
+`player-handoff/2`, `player-host/8` and `campaign-run/7`. The exact contracts own the complete set.
 [Migration](operations/migration.md) rejects old stores before effects and preserves
 artifacts/saves as history. Rollback closes writers and selects a coherent earlier
 source/data deployment; mixed readers and replay are unsupported.

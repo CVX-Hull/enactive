@@ -81,11 +81,14 @@ class Peer:
                     if len(self.buffer) >= total:
                         png = bytes(self.buffer[4 + size:total])
                         del self.buffer[:total]
-                        assert header['kind'] in ('state', 'receipt')
+                        assert header['kind'] in ('state', 'receipt', 'terminal')
                         value = header['value']
                         if header['kind'] == 'state':
                             protocol.state(value, session=self.session, pid=self.pid)
                             self.target = value
+                        elif header['kind'] == 'terminal':
+                            protocol.terminal(value, session=self.session, pid=self.pid)
+                            assert not png
                         else:
                             protocol.receipt(value, identity=value['id'], session=self.session)
                             assert bool(png) == (value['frame'] is not None)
@@ -122,7 +125,7 @@ class Peer:
 
 
 @contextmanager
-def fixture(options, case, *, offscreen=False, noise=False, lifetime=8000):
+def fixture(options, case, *, offscreen=False, noise=False, lifetime=8000, ordinary_exit=False):
     case.mkdir(parents=True, exist_ok=False)
     shared = (case / 'user.lock').open('a')
     fcntl.flock(shared, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -136,6 +139,8 @@ def fixture(options, case, *, offscreen=False, noise=False, lifetime=8000):
         command.append('--offscreen')
     if noise:
         command.append('--noise')
+    if ordinary_exit:
+        command.append('--exit-without-sdl-quit')
     script = case / 'launch.sh'
     script.write_text('export DYLD_INSERT_LIBRARIES="$ENACTIVE_COMPUTER_LIBRARY"\nexec ' + shlex.join(command) + '\n')
     env = dict(PATH=os.environ['PATH'], LANG='en_US.UTF-8',
@@ -347,6 +352,23 @@ def channel_checks(options):
         assert sum(r['id'] == original for r in peer.results) == 1
 
 
+def ordinary_exit_check(options):
+    case = options.output / 'ordinary-exit'
+    with fixture(options, case, lifetime=2500, ordinary_exit=True) as (peer, child):
+        peer.observe()
+        peer.execute(key('t'))
+        while True:
+            kind, proof, _ = peer.packet()
+            if kind == 'terminal':
+                break
+        assert proof['takeover_generation'] == 1, proof
+        assert child.wait(timeout=5) == 0
+        assert not peer.buffer
+        peer.channel.settimeout(1)
+        assert peer.channel.recv(1) == b'', 'Native traffic followed the terminal record'
+        (case / 'check.json').write_text(json.dumps(proof, indent=2) + '\n')
+
+
 def arguments():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('fixture', 'library', 'resources', 'output'):
@@ -360,6 +382,7 @@ def check(options):
         for terminal in ('takeover', 'target-loss'):
             mechanics(options, offscreen=offscreen, terminal=terminal)
     channel_checks(options)
+    ordinary_exit_check(options)
     (options.output / 'check.json').write_text(json.dumps(dict(passed=True,
         scope='Actual independent SDL; synthetic unowned takeover, not real human/game qualification'), indent=2) + '\n')
 

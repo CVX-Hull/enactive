@@ -15,10 +15,10 @@ menu Save is not application exit; a local routine's done is not game success.
 
 ## Player host events
 
-Current [`player-host/2`](contracts/player-host.md) uses telemetry version2 (retained
-`player-host/1` traces report `unsupported_version`; their summaries stay in the
+Current [`player-host/8`](contracts/player-host.md) uses telemetry version2 (retained
+traces of earlier host versions report `unsupported_version`; their summaries stay in the
 acceptance records), one JSONL trace per actor at
-`actors/NNN/host.jsonl`. Original request/tool IDs, wall and monotonic timestamps
+`actors/NNN/host.jsonl` and per level or recorder pass at `actors/NNN/{level,recorder}/PPP/host.jsonl`. Original request/tool IDs, wall and monotonic timestamps
 correlate request construction, fetch, headers, first body, completed response,
 provider refusal, tools and settlement. Exact payload SHA256/byte and image counts
 replace persisted request bodies. Image telemetry stores digest/size references;
@@ -61,9 +61,9 @@ These commands are offline and read-only, writing summaries to stdout:
 .venv/bin/python -m tools.evaluate witness-summary .runtime/computer-sessions/SELECTED observer-export.json
 ```
 
-The selected actor traces and current `campaign-run/3` / `campaign-receipt/2`
+The selected actor traces and current `campaign-run/7` / `campaign-receipt/3`
 sidecars supply scoped provenance. The control reader opens a current
-`computer-session/1` SQLite snapshot read-only, bounded by table/byte/path limits;
+`computer-session/3` SQLite snapshot read-only, bounded by table/byte/path limits;
 it neither migrates data nor reconstructs authority. `observer-timing/4` exports
 join exact session/source/capture/presentation IDs. Duplicate exports do not create
 new witnesses. DOM replacement is neither physical paint nor model attention;

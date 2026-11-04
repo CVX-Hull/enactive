@@ -432,7 +432,7 @@ def export_case(selected, selection_parent):
     if directory.is_symlink() or not directory.is_dir():
         raise ControlError('Select an existing closed case directory')
     receipt = read_json(directory / 'receipt.json', 1024 * 1024)
-    if (not isinstance(receipt, dict) or receipt.get('schema') != 'campaign-receipt/2'
+    if (not isinstance(receipt, dict) or receipt.get('schema') != 'campaign-receipt/3'
             or any(receipt.get(key) is not True for key in ('deciding_hosts_quiescent',
                 'native_absence_verified', 'input_authority_revoked'))):
         raise ControlError('Investigation requires a current closed campaign receipt')
@@ -440,7 +440,7 @@ def export_case(selected, selection_parent):
     if receipt.get('session') != control['session']:
         raise ControlError('Closed receipt session differs from computer store')
     driver = receipt.get('driver')
-    if driver is not None and (not isinstance(driver, dict) or driver.get('schema') != 'player-driver/2'):
+    if driver is not None and (not isinstance(driver, dict) or driver.get('schema') != 'player-driver/8'):
         raise ControlError('Unsupported closed campaign driver version')
     driver = driver or {}
     actors = {}
@@ -455,7 +455,7 @@ def export_case(selected, selection_parent):
         receipt.get('source_commit'), dict(attempts=driver.get('attempts_charged'),
             host_seconds=driver.get('host_seconds_used'), configured_estimate_usd=driver.get('configured_estimate_usd'),
             missing_usage_attempts=driver.get('missing_usage_attempts'),
-            conservative_reservation_usd=accounting.get('consumed_conservative_reservation_usd')))
+            conservative_reservation_usd=int(accounting['charged_nano_usd']) / 10**9))
 
 
 def project_case(selected, selection_parent, directory, control, actors, source_commit, accounting,

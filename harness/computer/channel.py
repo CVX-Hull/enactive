@@ -16,7 +16,7 @@ from typing import Any
 import uuid
 
 from .protocol import (ControlError, NoDispatch, MAX_FRAME_BYTES, MAX_HEADER_BYTES, SCHEMA,
-                       decode_json, encode_packet, receipt, state, wire_header)
+                       decode_json, encode_packet, receipt, state, terminal, wire_header)
 
 
 @dataclass
@@ -47,6 +47,9 @@ class NativeChannel:
         self._pause_id: str | None = None
         self._target: dict[str, Any] | None = None
         self._fault: str | None = None
+        self._terminal: dict[str, Any] | None = None
+        self._takeover_generation = 0
+        self._terminal_eof = False
         self.stop_reason: str | None = None
         self._reader = threading.Thread(target=self._receive, name='native-pixels', daemon=True)
         self._reader.start()
@@ -68,7 +71,7 @@ class NativeChannel:
         try:
             if self._write_closed.is_set():
                 raise NoDispatch('Native write half already closed')
-            if self.stopped.is_set() and not pause:
+            if not pause and (self.stopped.is_set() or self.native_exiting):
                 raise NoDispatch('Stop preceded native publication')
             while offset < len(data):
                 remaining = deadline - time.monotonic()
@@ -134,7 +137,7 @@ class NativeChannel:
     def request(self, kind: str, value: dict[str, Any] | None, deadline: float,
                 identity: str) -> tuple[dict[str, Any], bytes | None]:
         with self._condition:
-            if self.stopped.is_set() or self.closed.is_set() or self._fault is not None:
+            if self.stopped.is_set() or self.closed.is_set() or self._fault is not None or self._terminal is not None:
                 raise NoDispatch('Native input fenced; original collection only')
             if time.monotonic() >= deadline:
                 raise NoDispatch('Original deadline expired before native publication')
@@ -196,10 +199,20 @@ class NativeChannel:
 
     def _accept(self, header: dict[str, Any], png: bytes, received_wall: float, received_monotonic: float) -> None:
         kind, value = header['kind'], header['value']
+        if self._terminal is not None:
+            raise ControlError('Native packet followed the terminal record')
+        if kind == 'terminal':
+            proof = terminal(value, session=self.session, pid=self.pid)
+            with self._condition:
+                if proof['takeover_generation'] < self._takeover_generation:
+                    raise ControlError('Native terminal takeover generation decreased')
+                self._terminal = proof
+            return
         if kind == 'state':
             value = state(value, session=self.session, pid=self.pid)
             with self._condition:
                 self._target = value
+                self._takeover_generation = max(self._takeover_generation, value['takeover_generation'])
                 if value['paused']:
                     self.stopped.set()
                     self.stop_reason = self.stop_reason or value['error'] or 'Native Pause'
@@ -241,6 +254,9 @@ class NativeChannel:
                 except BlockingIOError:
                     continue
                 if not chunk:
+                    with self._condition:
+                        self._terminal_eof = (self._terminal is not None and not buffer and header is None
+                                              and self._fault is None and not self.closed.is_set())
                     raise ConnectionError('Native channel EOF')
                 buffer.extend(chunk)
                 if len(buffer) > MAX_FRAME_BYTES + MAX_HEADER_BYTES + 65540:
@@ -270,7 +286,20 @@ class NativeChannel:
             with self._condition:
                 self._condition.notify_all()
 
-    def close(self) -> None:
+    def terminal_evidence(self) -> dict[str, Any] | None:
+        with self._condition:
+            if not self._terminal_eof or self._reader.is_alive():
+                return None
+            return self._terminal.copy()
+
+    @property
+    def native_exiting(self) -> bool:
+        with self._condition:
+            return self._terminal is not None
+
+    def close(self, *, drain_exited: bool = False) -> None:
+        if drain_exited and threading.current_thread() is not self._reader:
+            self._reader.join(1.)
         self.stop('Custodian closed; no rearm')
         self.closed.set()
         try:

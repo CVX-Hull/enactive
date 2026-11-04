@@ -3,9 +3,9 @@
 
 host-summary selects current telemetry/2 files, actor directories or campaign
 folders (4096 files / 8 GiB; 64 MiB per line; two million events per trace).
-witness-summary selects one computer-session/1 database/directory and 1..32
+witness-summary selects one computer-session/3 database/directory and 1..32
 observer-timing/4 exports (64 MiB each / 256 MiB total; 2000 rows per export).
-control-summary selects 1..32 computer-session/1 databases/directories (512 MiB
+control-summary selects 1..32 computer-session/3 databases/directories (512 MiB
 per database including SQLite sidecars; 200000 rows per selected table).
 investigation-export selects 1..4 explicitly closed cases and writes a bounded
 observer-investigation/1 bundle, optionally with the shared recorded HTML reader.

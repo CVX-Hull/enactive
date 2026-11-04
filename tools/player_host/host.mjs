@@ -5,9 +5,30 @@ import { Type, AssistantMessageEventStream, isRetryableAssistantError } from '@e
 import { stream } from '@earendil-works/pi-ai/api/openai-completions';
 import { retryProviderRequest } from '@earendil-works/pi-ai/utils/provider-retry';
 import { McpClient, StdioTransport, toLlmContent } from '@earendil-works/pi-mcp';
-import { createValidationFeedback } from './validation-feedback.mjs';
+import { createValidationFeedback, FIX_LINE } from './validation-feedback.mjs';
+import { CompletionMarker, RequestBudget, frozenPrice } from './request-budget.mjs';
 
 export const INPUT_LIMIT_BYTES = 1_048_576;
+// A level pass ends with exactly one of these calls, and a recorder pass with exactly one of the episode calls. On its last
+// LEVEL_RESERVED_REQUESTS requests a pass role's host offers only its own terminal tools.
+export const LEVEL_TERMINAL_TOOLS = ['player_level_keep', 'player_level_replace', 'player_level_close', 'player_level_abstain'];
+export const EPISODE_TERMINAL_TOOLS = ['player_episode_record', 'player_episode_abstain'];
+export const LEVEL_RESERVED_REQUESTS = 2;
+// The pass roles. `prefix` names the role's events, tool-refusal reasons and settlement reasons.
+const PASS_ROLES = {
+  level: {prefix:'level', tools:LEVEL_TERMINAL_TOOLS, reads:['player_source'], unended:'level-no-proposal'},
+  recorder: {prefix:'episode', tools:EPISODE_TERMINAL_TOOLS, reads:[], unended:'episode-no-record'}};
+// One line after a tool's example call, for what a minimal example cannot show.
+const TERMINAL_NOTES = {
+  player_level_replace:'In this example previous_outcome is "none" with an empty previous_reason, which is valid only when there is no current subgoal; whenever there is one, set previous_outcome to achieved, failed, abandoned or revised and give previous_reason.',
+  player_episode_record:'With no subgoal, leave the three mark columns empty. Otherwise give one mark and two aligned citation slots per expected observation. An unused citation slot is an empty string. changed and residual may be empty.'};
+const ALIGNED_COLUMNS = {
+  player_level_replace: ['expected_observations', 'observation_kinds', 'observation_windows', 'observation_evidence'],
+  player_episode_record: ['observation_status', 'observation_source_first', 'observation_source_second']};
+// The recorder's pushed input: frames the host reads itself, so no image crosses the 1 MiB stdin bound.
+export const PASS_INPUT_SCHEMA = 'player-pass-input/2';
+export const FRAME_ROLES = ['baseline', 'in-episode', 'last'];
+export const MAX_FRAMES = 7;
 // openai@7.19.0 client.mjs reads these despite Pi's scoped env option.
 // Their values can alter request headers or enable raw SDK logging.
 const AMBIENT_PROVIDER_SETTINGS = ['OPENAI_LOG', 'OPENAI_CUSTOM_HEADERS', 'OPENAI_ORG_ID', 'OPENAI_PROJECT_ID'];
@@ -41,8 +62,12 @@ function bounded(value) {
 /** One frozen route, without credential values, ambient discovery or effort clamping. */
 export function validateConfiguration(configuration, selectedModel, effort) {
   bounded(configuration);
-  closed(configuration, ['schema', 'model', 'api_key_env', 'max_requests', 'max_context_images', 'context_image_block', 'request_timeout_seconds', 'service_tier']);
-  requireThat(configuration.schema === 'player-host/2');
+  closed(configuration, ['schema', 'role', 'intent_tail_bytes', 'model', 'api_key_env', 'max_requests', 'max_context_images', 'context_image_block', 'request_timeout_seconds', 'service_tier', 'max_cost_nano_usd']);
+  requireThat(configuration.schema === 'player-host/8');
+  // An actor may carry the intent tail, whose fixed allocation is the one bound of INTENT_TAIL_BYTES; a level or a recorder never does.
+  requireThat(['actor', 'level', 'recorder'].includes(configuration.role));
+  requireThat(configuration.intent_tail_bytes === null
+    || (configuration.role === 'actor' && configuration.intent_tail_bytes === INTENT_TAIL_BYTES));
   requireThat(/^[A-Za-z_][A-Za-z0-9_]*$/.test(configuration.api_key_env ?? '') && !AMBIENT_PROVIDER_SETTINGS.includes(configuration.api_key_env));
   requireThat(Number.isSafeInteger(configuration.max_requests) && configuration.max_requests > 0);
   requireThat(Number.isSafeInteger(configuration.max_context_images) && configuration.max_context_images > 0);
@@ -58,7 +83,7 @@ export function validateConfiguration(configuration, selectedModel, effort) {
   requireThat(Array.isArray(model.input) && model.input.includes('text') && model.input.includes('image') && model.input.every(item => ['text', 'image'].includes(item)));
   requireThat(Number.isSafeInteger(model.contextWindow) && model.contextWindow > 0 && Number.isSafeInteger(model.maxTokens) && model.maxTokens > 0 && model.maxTokens <= model.contextWindow);
   closed(model.cost, ['input', 'output', 'cacheRead', 'cacheWrite']);
-  requireThat(['input', 'output', 'cacheRead', 'cacheWrite'].every(key => typeof model.cost[key] === 'number' && Number.isFinite(model.cost[key]) && model.cost[key] >= 0));
+  requireThat(['input', 'output', 'cacheRead', 'cacheWrite'].every(key => frozenPrice(model.cost[key])));
   let url;
   try { url = new URL(model.baseUrl); } catch { throw new HostError('invalid-configuration'); }
   requireThat(['https:', 'http:'].includes(url.protocol) && !url.username && !url.password && !url.search && !url.hash);
@@ -95,15 +120,19 @@ export function validateConfiguration(configuration, selectedModel, effort) {
       else requireThat(typeof value === 'boolean');
     }
   }
+  try { new RequestBudget(configuration); }
+  catch { throw new HostError('invalid-configuration'); }
   return configuration;
 }
 
 /** Request-only projection. Canonical messages stay intact; telemetry separately projects image references.
  * Count-only block eviction: beyond maxImages, the oldest images are omitted in whole
  * blocks, so the serialized prefix stays byte-stable between evictions. Block 1 omits
- * exactly the overflow. */
-export function projectImageContext(messages, maxImages, block) {
+ * exactly the overflow. The first `pinned` images (a recorder's pushed frames, the oldest in the history) are never omitted,
+ * and count toward the peak with the protected latest batch: together they above maxImages block the request. */
+export function projectImageContext(messages, maxImages, block, pinned = 0) {
   requireThat(Number.isSafeInteger(block) && block > 0 && block <= maxImages);
+  requireThat(Number.isSafeInteger(pinned) && pinned >= 0);
   const projected = structuredClone(messages);
   const latestBatch = messages.findLastIndex(message => message.role === 'assistant'
     && message.content.some(part => part.type === 'toolCall'));
@@ -117,10 +146,12 @@ export function projectImageContext(messages, maxImages, block) {
     }
   }
   const protectedImages = latestBatch < 0 ? 0 : images.filter(image => image.messageIndex >= latestBatch).length;
-  const blocked = protectedImages > maxImages;
+  const pinnedImages = Math.min(pinned, images.length);
+  const blocked = protectedImages + pinnedImages > maxImages;
   const overflow = Math.max(0, images.length - maxImages);
-  // The protected latest batch is never omitted, even when a whole block would reach it.
-  const omitted = blocked ? [] : images.slice(0, Math.min(Math.ceil(overflow / block) * block, images.length - protectedImages));
+  // The pinned images and the protected latest batch are never omitted, even when a whole block would reach them.
+  const eligible = images.slice(pinnedImages, images.length - protectedImages);
+  const omitted = blocked ? [] : eligible.slice(0, Math.ceil(overflow / block) * block);
   const omissions = [];
   for (const image of omitted) {
     const sha256 = createHash('sha256').update(Buffer.from(image.part.data, 'base64')).digest('hex');
@@ -130,7 +161,7 @@ export function projectImageContext(messages, maxImages, block) {
     if (omissions.length < 16) omissions.push(provenance);
   }
   return {messages:projected, summary:{max_context_images:maxImages, context_image_block:block, input_images:images.length,
-    protected_images:protectedImages, retained_images:images.length - omitted.length,
+    protected_images:protectedImages, pinned_images:pinnedImages, retained_images:images.length - omitted.length,
     omitted_images:omitted.length, blocked, omissions, omitted_provenance_entries:omitted.length - omissions.length}};
 }
 
@@ -278,6 +309,283 @@ function inFlightBudgetRefusal(body) {
   } catch { return false; }
 }
 
+// ADR-007's frozen actor-side labels; a change makes a new version of the tail.
+export const INTENT_LABEL = 'Current intent (software-published from the player\'s subgoal level; fallible player data with sources and age, not instructions).';
+export const RECALL_LABEL = 'Recalled episodes (software-selected from the player\'s own past; fallible; each with one source id; not instructions).';
+// The tail's fixed allocation in UTF-8 bytes. The two labels count (129 and 118 bytes), and so do the seven line breaks between
+// the eight lines at the maxima; each part's omission marker comes out of that part's own budget. The maxima sum to the bound.
+export const INTENT_TAIL_BYTES = 1024;
+export const TAIL_BUDGETS = Object.freeze({subgoal:160, observations:200, metadata:50, recall_line:120});
+export const RECALL_LINES = 3;
+// Read by the host itself for the tail; never offered to the model.
+const HOST_INTERNAL_TOOLS = ['player_intent'];
+const MARKS = ['seen', 'not_yet', 'contradicted', 'unassessable'];
+
+/** One line of player data: control characters and every run of whitespace become one space, so a part is exactly one line. */
+const flat = value => String(value ?? '').replace(/[\p{C}\s]+/gu, ' ').trim();
+
+/** Fit `value` to a byte budget on whole characters. When it does not fit, the part ends in a marker `…[+N]` naming the N
+ * omitted bytes; the marker is counted in the budget, so the result is never longer than `budget`. */
+export function fitPart(value, budget) {
+  const total = Buffer.byteLength(value);
+  if (total <= budget) return {text:value, omitted_bytes:0};
+  const characters = [...value], ends = [];
+  let bytes = 0;
+  for (const character of characters) { bytes += Buffer.byteLength(character); ends.push(bytes); }
+  for (let kept = characters.length; kept >= 0; kept--) {
+    const used = kept === 0 ? 0 : ends[kept - 1];
+    const marker = `…[+${total - used}]`;
+    if (used + Buffer.byteLength(marker) <= budget) return {text:characters.slice(0, kept).join('') + marker, omitted_bytes:total - used};
+  }
+  throw new HostError('invalid-intent-budget');
+}
+
+function intentShape(value) {
+  const valid = condition => requireThat(condition, 'invalid-intent');
+  valid(object(value) && value.schema === 'player-intent/4' && value.audience === 'tail' && object(value.recall) && Array.isArray(value.recall.items));
+  if (value.subgoal !== null) {
+    const goal = value.subgoal;
+    valid(object(goal) && text(goal.record_id) && typeof goal.text === 'string' && Array.isArray(goal.expected_observations)
+      && goal.expected_observations.every(item => object(item) && typeof item.text === 'string' && (item.status === null || MARKS.includes(item.status)))
+      && Number.isFinite(goal.confidence) && goal.confidence >= 0 && goal.confidence <= 1);
+    // An age is non-negative and bounded (a century of seconds, a billion inputs); anything else is a malformed read.
+    valid(object(value.age) && typeof value.age.same_session === 'boolean'
+      && Number.isFinite(value.age.seconds) && value.age.seconds >= 0 && value.age.seconds <= 3.2e9
+      && (value.age.inputs_since_commit === null || (Number.isSafeInteger(value.age.inputs_since_commit)
+        && value.age.inputs_since_commit >= 0 && value.age.inputs_since_commit <= 1e9)));
+  }
+  for (const item of value.recall.items) {
+    valid(object(item) && typeof item.attempted === 'string' && typeof item.changed === 'string'
+      && (item.first_source === null || typeof item.first_source === 'string')
+      && Array.isArray(item.observation_status) && item.observation_status.every(mark => MARKS.includes(mark)));
+  }
+}
+
+/** Observation text on one line, with the characters the observations line uses for structure mapped to neutral ones, so
+ * player text cannot forge a `[status]` token or a `;` separator. */
+const observationText = value => flat(value).replace(/[[\];]/g, character => ({'[': '(', ']': ')', ';': ','})[character]);
+const digits = number => String(number).length;
+
+/** `text` cut to `budget` bytes: `fitPart` with its marker, or, when the budget cannot hold a marker, a bare `…` cut. */
+function cutText(value, budget) {
+  if (Buffer.byteLength(value) <= budget) return {text:value, omitted_bytes:0};
+  try { return fitPart(value, budget); } catch {
+    let kept = '';
+    for (const character of value) {
+      if (Buffer.byteLength(kept + character) > budget - 3) break;
+      kept += character;
+    }
+    const text = budget >= 3 ? kept + '…' : '';
+    return {text, omitted_bytes:Buffer.byteLength(value) - Buffer.byteLength(kept)};
+  }
+}
+
+/** The observations line: each observation gets its `[status] ` token and an equal share of the bytes left (a short one
+ * leaves its spare to the others), cut with a marker, so every status stays visible. */
+function observationsLine(observations, budget) {
+  const prefix = 'Expected: ';
+  if (observations.length === 0) return {text:`${prefix}none stated`, omitted_bytes:0};
+  const tokens = observations.map(item => item.status === null ? '' : `[${item.status}] `);
+  const texts = observations.map(item => observationText(item.text));
+  let remaining = budget - Buffer.byteLength(prefix) - 2 * (observations.length - 1) - tokens.reduce((total, token) => total + Buffer.byteLength(token), 0);
+  const allocation = [];
+  [...texts.keys()].sort((a, b) => Buffer.byteLength(texts[a]) - Buffer.byteLength(texts[b])).forEach((index, rank) => {
+    allocation[index] = Math.min(Buffer.byteLength(texts[index]), Math.max(0, Math.floor(remaining / (texts.length - rank))));
+    remaining -= allocation[index];
+  });
+  const cut = texts.map((value, index) => cutText(value, allocation[index]));
+  return {text:prefix + cut.map((part, index) => tokens[index] + part.text).join('; '), omitted_bytes:cut.reduce((total, part) => total + part.omitted_bytes, 0)};
+}
+
+/** The outcome of a recalled episode: how many of its subgoal's expected observations it showed, or, with no subgoal, a
+ * short excerpt of what visibly changed. `omitted_bytes` counts what the excerpt cut. */
+function outcomeOf(item) {
+  const marks = item.observation_status;
+  if (marks.length === 0) {
+    const excerpt = cutText(flat(item.changed), 32);
+    return {text:`changed: ${excerpt.text || 'nothing'}`, omitted_bytes:excerpt.omitted_bytes};
+  }
+  const contradicted = marks.filter(mark => mark === 'contradicted').length;
+  return {text:`seen ${marks.filter(mark => mark === 'seen').length}/${marks.length}${contradicted ? `, ${contradicted} contradicted` : ''}`, omitted_bytes:0};
+}
+
+/** A recall line: the one full source id of the record's first cited frame, its outcome, then its attempt text; null for an
+ * item with no usable source id, or whose id cannot be shown whole, which the tail leaves out (the frozen label promises one
+ * source id on every line). Every dropped byte counts as omitted. */
+function recallLine(item) {
+  const budget = TAIL_BUDGETS.recall_line;
+  if (!text(item.first_source) || /[\p{C}\s]/u.test(item.first_source)) return null;
+  const id = item.first_source, attempt = flat(item.attempted), size = Buffer.byteLength(attempt);
+  // The attempt keeps at least four bytes of text beside the marker its real length needs (or all of it, when shorter).
+  const need = Math.min(size, 6 + digits(size) + 4);
+  // A source id is never cut: the outcome goes first, and an id that still leaves no room means the item is left out.
+  const outcome = outcomeOf(item), shown = `(${outcome.text}) `;
+  const leads = [[`${id} ${shown}`, outcome.omitted_bytes], [`${id} `, Buffer.byteLength(shown) + outcome.omitted_bytes]];
+  const chosen = leads.find(([candidate]) => Buffer.byteLength(candidate) + need <= budget);
+  if (chosen === undefined) return null;
+  const fitted = cutText(attempt, budget - Buffer.byteLength(chosen[0]));
+  return {text:(chosen[0] + fitted.text).trimEnd(), omitted_bytes:fitted.omitted_bytes + chosen[1]};
+}
+
+/** The request-only intent tail from one `player-intent/4` value; null means the read failed.
+ *
+ * The allocation is fixed at INTENT_TAIL_BYTES: the intent label, then a subgoal line, an observations line and a metadata
+ * line, then the recall label and up to RECALL_LINES lines, each part within TAIL_BUDGETS. A part over its budget is cut inside
+ * that budget and takes room from no other, so recall is never displaced. `parts` reports each part's bytes and omitted bytes
+ * (`omitted_bytes` totals them). A value of the wrong shape throws, and the caller then shows the failed-read text. */
+export function formatIntentTail(value, maxBytes = INTENT_TAIL_BYTES) {
+  requireThat(maxBytes === INTENT_TAIL_BYTES, 'invalid-intent-budget');
+  if (value === null) {
+    const unavailable = `${INTENT_LABEL}\nUnavailable: the intent read failed or was malformed; no intent is shown.`;
+    return {text:unavailable, tail_bytes:Buffer.byteLength(unavailable), surfaced_bytes:0, omitted_bytes:0, skipped_items:0, parts:[]};
+  }
+  intentShape(value);
+  const parts = [], lines = [INTENT_LABEL];
+  const add = (part, line, omitted_bytes = 0) => { parts.push({part, bytes:Buffer.byteLength(line), omitted_bytes}); lines.push(line); };
+  const fit = (part, line, budget) => { const fitted = fitPart(line, budget); add(part, fitted.text, fitted.omitted_bytes); };
+  const goal = value.subgoal, age = value.age;
+  if (goal === null) add('subgoal', 'No committed intent.');
+  else {
+    fit('subgoal', `Subgoal: ${flat(goal.text)}`, TAIL_BUDGETS.subgoal);
+    const observations = observationsLine(goal.expected_observations, TAIL_BUDGETS.observations);
+    fit('observations', observations.text, TAIL_BUDGETS.observations);
+    parts.at(-1).omitted_bytes += observations.omitted_bytes;
+    // The software's own fields come first, so a cut falls on the age.
+    fit('metadata', `id ${[...flat(goal.record_id)].slice(0, 8).join('')}; conf ${goal.confidence.toFixed(1)}; `
+      + `${age.inputs_since_commit === null ? 'earlier actor' : `${age.inputs_since_commit} inputs`}, ${Math.round(age.seconds)}s, `
+      + `${age.same_session ? 'this' : 'prev'}`, TAIL_BUDGETS.metadata);
+  }
+  // An item with no usable source id is left out, and counted.
+  const recall = value.recall.items.slice(0, RECALL_LINES).map(recallLine);
+  const shown = recall.filter(line => line !== null);
+  if (shown.length) {
+    lines.push(RECALL_LABEL);
+    shown.forEach((line, index) => add(`recall-${index + 1}`, line.text, line.omitted_bytes));
+  }
+  const tail = lines.join('\n');
+  requireThat(Buffer.byteLength(tail) <= INTENT_TAIL_BYTES, 'invalid-intent-budget');
+  return {text:tail, tail_bytes:Buffer.byteLength(tail), surfaced_bytes:parts.reduce((total, part) => total + part.bytes, 0),
+    omitted_bytes:parts.reduce((total, part) => total + part.omitted_bytes, 0), skipped_items:recall.length - shown.length, parts};
+}
+
+function levelResult(result) {
+  if (result.isError === true) return null;
+  try { return JSON.parse(result.content?.find(part => part.type === 'text')?.text); } catch { return null; }
+}
+const recordIds = value => Array.isArray(value.records) ? value.records.map(r => r?.id).filter(text) : [];
+
+/** Level telemetry from one keep, replace or close result; local tool errors are not passes.
+ * `subgoal_id` is the subgoal bound at push and `derived` its `{observations, stalled}` after the call (null with no subgoal). */
+export function levelCommitEvent(result) {
+  const value = levelResult(result);
+  if (!object(value) || value.schema !== 'player-level-commit/6' || !['committed', 'discarded'].includes(value.status)
+      || !['keep', 'replace', 'close'].includes(value.action)) return null;
+  return {type:value.status === 'committed' ? 'level-commit' : 'level-discard', receipt_schema:value.schema,
+    action:value.action, reason:value.reason,
+    position:value.position, inputs_since:value.inputs_since, staleness_inputs:value.staleness_inputs,
+    subgoal_id:text(value.subgoal_id) ? value.subgoal_id : null, derived:object(value.derived) ? value.derived : null,
+    record_ids:recordIds(value), kept:Array.isArray(value.kept) ? value.kept.filter(text) : []};
+}
+
+/** A terminal tool's `player-transport/1` unknown receipt: the adapter lost the response and, for a reader, offers no collection.
+ * Whether the call committed is known only to the store, so the pass ends and the driver reconciles `identity`.
+ * `prefix` is the pass role's (`level` or `episode`). */
+export function uncertainEvent(result, prefix) {
+  const value = levelResult(result);
+  if (!object(value) || value.schema !== 'player-transport/1' || value.status !== 'unknown') return null;
+  return {type:`${prefix}-uncertain`, identity:text(value.operation_id) ? value.operation_id : null};
+}
+
+/** Level telemetry from one valid `player_level_abstain` result; it ends the pass with nothing written. */
+export function levelAbstainEvent(result) {
+  const value = levelResult(result);
+  if (!object(value) || value.schema !== 'player-level-abstain/3' || value.status !== 'abstained'
+      || !text(value.reason_code) || !text(value.reason)) return null;
+  return {type:'level-abstain', reason_code:value.reason_code, reason:value.reason};
+}
+
+const episodeFields = value => ({first_position:value.first_position, last_position:value.last_position,
+  subgoal_id:text(value.subgoal_id) ? value.subgoal_id : null, record_ids:recordIds(value)});
+/** Recorder telemetry from one `player_episode_record` result that settled the episode as recorded (never a local tool error).
+ * `counted` says whether the marks counted, `closed` whether software closed the subgoal in the same transaction, and
+ * `observations` and `stalled` are the derived state after the record (null with no subgoal). */
+export function episodeRecordEvent(result) {
+  const value = levelResult(result);
+  if (!object(value) || value.schema !== 'player-episode-record/3' || value.status !== 'recorded' || value.settled !== 'recorded') return null;
+  return {type:'episode-record', ...episodeFields(value), counted:value.counted === true, closed:value.closed === true,
+    observations:Array.isArray(value.observations) ? value.observations : null, stalled:typeof value.stalled === 'boolean' ? value.stalled : null};
+}
+
+/** Recorder telemetry from one valid `player_episode_abstain` result; the episode settles as abstained, with no marks.
+ * The code and reason are the call's own arguments, which the receipt does not repeat. */
+export function episodeAbstainEvent(result, args) {
+  const value = levelResult(result);
+  if (!object(value) || value.schema !== 'player-episode-abstain/3' || value.status !== 'abstained' || value.settled !== 'abstained'
+      || !object(args) || !text(args.reason_code) || !text(args.reason)) return null;
+  return {type:'episode-abstain', ...episodeFields(value), reason_code:args.reason_code, reason:args.reason};
+}
+
+/** The pass-ending event for a terminal tool's result, or null for a rejected call. */
+function terminalEvent(name, result, args) {
+  if (name === 'player_level_abstain') return levelAbstainEvent(result);
+  if (name === 'player_episode_record') return episodeRecordEvent(result);
+  if (name === 'player_episode_abstain') return episodeAbstainEvent(result, args);
+  return levelCommitEvent(result);
+}
+
+/** The recorder's pushed input: a `player-pass-input/2` document on stdin, `{schema, text, frames}`. `frames` are the episode's
+ * frames in order, each `{source_id, role}`: an optional baseline first, then at most 6 episode frames, in-episode ones ending
+ * in exactly one `last` (so at most MAX_FRAMES in all, and `last` is required whenever there are any). The host
+ * reads each frame itself through `player_source`, so no image crosses the bound on the prompt. */
+export function parsePassInput(prompt) {
+  let value;
+  try { value = JSON.parse(prompt); } catch { throw new HostError('invalid-pass-input'); }
+  const valid = condition => requireThat(condition, 'invalid-pass-input');
+  valid(object(value) && Object.keys(value).length === 3 && value.schema === PASS_INPUT_SCHEMA && text(value.text)
+    && Array.isArray(value.frames) && value.frames.length <= MAX_FRAMES);
+  for (const frame of value.frames) valid(object(frame) && Object.keys(frame).length === 2 && text(frame.source_id)
+    && frame.source_id.length <= 128 && !/[\p{C}\s]/u.test(frame.source_id) && FRAME_ROLES.includes(frame.role));
+  valid(new Set(value.frames.map(frame => frame.source_id)).size === value.frames.length);
+  // The frame policy: an optional baseline first, then the episode's own frames (at most 6, in capture order) ending in its last.
+  const episode = value.frames[0]?.role === 'baseline' ? value.frames.slice(1) : value.frames;
+  valid(episode.length <= MAX_FRAMES - 1 && episode.every((frame, index) => frame.role === (index === episode.length - 1 ? 'last' : 'in-episode')));
+  return value;
+}
+
+/** Pi 1.4.0 declares a request's tools in the transcript: system messages carry `toolsAdded`/`toolsRemoved` declarations. */
+export function declaredTools(messages) {
+  const tools = new Map();
+  for (const message of messages.filter(entry => entry.role === 'system')) {
+    for (const tool of message.toolsRemoved ?? []) tools.delete(tool.name);
+    for (const tool of message.toolsAdded ?? []) tools.set(tool.name, tool);
+  }
+  return [...tools.values()];
+}
+
+/** The transcript with only the named tools declared, for one request; the executable tool set and history are unchanged. */
+export function restrictTools(messages, names) {
+  return messages.map(message => message.role === 'system' && message.toolsAdded
+    ? {...message, toolsAdded:message.toolsAdded.filter(tool => names.includes(tool.name))} : message);
+}
+
+/** Dotted paths where `after` differs from `before` (first four), for a refusal that names what the SDK changed. */
+export function changedFields(before, after, prefix = '') {
+  if (isDeepStrictEqual(before, after)) return [];
+  if (!object(before) || !object(after)) return [prefix || 'arguments'];
+  const keys = [...new Set([...Object.keys(before), ...Object.keys(after)])];
+  return keys.flatMap(key => changedFields(before[key], after[key], prefix ? `${prefix}.${key}` : key)).slice(0, 4);
+}
+
+/** True when the latest assistant turn called one of the pass's terminal tools and every terminal call in it was refused (an error result). */
+export function refusedTerminalCall(messages, terminalTools = LEVEL_TERMINAL_TOOLS) {
+  const index = messages.findLastIndex(message => message.role === 'assistant');
+  if (index < 0) return false;
+  const terminal = (messages[index].content ?? []).filter(part => part.type === 'toolCall' && terminalTools.includes(part.name));
+  const results = messages.slice(index + 1).filter(message => message.role === 'toolResult');
+  return terminal.length > 0 && terminal.every(call =>
+    results.some(message => message.toolCallId === call.id && message.isError === true));
+}
+
 // This actual MCP receipt ends this host only. The driver independently checks
 // canonical issuance/context and actual host/MCP quiescence before succession.
 function inspectHandoff(name, args, result, pending) {
@@ -315,7 +623,7 @@ function inspectHandoff(name, args, result, pending) {
   }
   const issued = value.handoff;
   valid(value.status === 'sealed' && object(issued)
-    && issued.schema === 'player-handoff/1' && issued.grants_authority === false
+    && issued.schema === 'player-handoff/2' && issued.grants_authority === false
     && issued.operation_id === origin.operation_id && issued.session === origin.session
     && issued.actor_id === origin.actor_id && id(issued.context_id)
     && typeof issued.context_sha256 === 'string' && /^[a-f0-9]{64}$/.test(issued.context_sha256)
@@ -342,7 +650,18 @@ export async function runHost(options) {
   };
   let agent, client, transport, fatal, closing = false, requests = 0, requestId, requestTimer, requestInFlight = false, requestUsageAvailable = false;
   let workTimer, deadlineTimer;
-  let responseProgress, handoff, pendingHandoff;
+  let budget, completionMarker, responseIdentity, mixedIdentity;
+  const settleMoney = complete => {
+    const charge = budget?.settle(complete);
+    if (!charge) return;
+    emit('request-cost', {request_id:requestId, ...charge});
+    if (charge.violation) stop('request-cost-bound-violation');
+  };
+  let responseProgress, handoff, pendingHandoff, passEnded = false, passUncertain = false;
+  // Frame reads admitted in the current assistant batch: each adds one image to the next request.
+  let batchReads = 0;
+  // Logical requests: one per streamFn call, whatever its provider retries; `reserved` is the current one's.
+  let logicalRequests = 0, reserved = false;
   const progressSnapshot = () => responseProgress ? {...responseProgress,
     scope:requestInFlight ? 'current-http-attempt' : 'last-http-attempt'} : null;
   const stopped = new AbortController();
@@ -386,10 +705,21 @@ export async function runHost(options) {
     options.signal?.addEventListener('abort', cancellation, {once:true});
     if (options.signal?.aborted) stop('cancelled');
     const configuration = validateConfiguration(options.configuration, options.model, options.effort);
+    budget = new RequestBudget(configuration);
     const mcp = validateMcpConfiguration(options.mcpConfig);
+    // A level or a recorder pass ends on one of its terminal tools; an actor has none.
+    const pass = PASS_ROLES[configuration.role];
+    // At the start of a logical request (before it is counted): two or fewer HTTP attempts or logical requests remain.
+    const reservedWindow = () => pass !== undefined
+      && (configuration.max_requests - requests <= LEVEL_RESERVED_REQUESTS || configuration.max_requests - logicalRequests <= LEVEL_RESERVED_REQUESTS);
     requireThat(typeof options.prompt === 'string' && typeof options.context === 'string', 'invalid-input');
     bounded(options.prompt); bounded(options.context);
-    emit('host-start', {telemetry_version:2, schema:configuration.schema, requested_service_tier:configuration.service_tier, model:configuration.model.id, provider:configuration.model.provider, api:configuration.model.api, effort:options.effort, max_output_tokens:configuration.model.maxTokens, context_window:configuration.model.contextWindow, thinking_level_map:{...configuration.model.thinkingLevelMap}, reasoning_format:configuration.model.compat?.thinkingFormat ?? null, provider_routing:configuration.model.compat?.openRouterRouting ? structuredClone(configuration.model.compat.openRouterRouting) : null, max_requests:configuration.max_requests, max_context_images:configuration.max_context_images, context_image_block:configuration.context_image_block, unsupported_features:['compaction', 'session-restore', 'model-fallback', 'reconnect', 'replay', 'ambient-tools', 'resource-discovery'], missing_endpoints:['model-attention', 'server-inference-start', 'physical-paint'], cleanup_budget_ms:cleanupBudget});
+    // A recorder's prompt is its structured pushed input; it is refused before any connection or request.
+    const passInput = configuration.role === 'recorder' ? parsePassInput(options.prompt) : null;
+    // The pushed frames stay in every request of the pass (they are pinned), so they must leave room under the peak of pixel
+    // images for at least one read: the driver's recorder peak is at least its frames + 1.
+    if (passInput) requireThat(passInput.frames.length < configuration.max_context_images, 'invalid-pass-input');
+    emit('host-start', {telemetry_version:2, schema:configuration.schema, role:configuration.role, intent_tail_bytes:configuration.intent_tail_bytes, requested_service_tier:configuration.service_tier, model:configuration.model.id, provider:configuration.model.provider, api:configuration.model.api, effort:options.effort, max_output_tokens:configuration.model.maxTokens, context_window:configuration.model.contextWindow, thinking_level_map:{...configuration.model.thinkingLevelMap}, reasoning_format:configuration.model.compat?.thinkingFormat ?? null, provider_routing:configuration.model.compat?.openRouterRouting ? structuredClone(configuration.model.compat.openRouterRouting) : null, max_requests:configuration.max_requests, max_context_images:configuration.max_context_images, context_image_block:configuration.context_image_block, unsupported_features:['compaction', 'session-restore', 'model-fallback', 'reconnect', 'replay', 'ambient-tools', 'resource-discovery'], missing_endpoints:['model-attention', 'server-inference-start', 'physical-paint'], cleanup_budget_ms:cleanupBudget});
     if (fatal) throw new HostError(fatal);
     requireThat(!AMBIENT_PROVIDER_SETTINGS.some(name => Object.hasOwn(process.env, name)), 'ambient-provider-configuration');
     // The MCP subprocess gets only locale and executable lookup, never provider
@@ -406,6 +736,15 @@ export async function runHost(options) {
     const discovered = await client.listTools({signal:stopped.signal, timeoutMs:mcp.startup_timeout_sec * 1000});
     const names = new Map(discovered.map(tool => [tool.name, tool]));
     requireThat(names.size === discovered.length && mcp.enabled_tools.every(name => names.has(name)), 'missing-required-tools');
+    requireThat(!mcp.enabled_tools.some(name => HOST_INTERNAL_TOOLS.includes(name)), 'host-internal-tool-enabled');
+    if (configuration.intent_tail_bytes !== null) requireThat(names.has('player_intent'), 'missing-required-tools');
+    // Each role enables exactly its own terminal tools: a pass role all of them, and no other role any.
+    const passTools = Object.values(PASS_ROLES).flatMap(role => role.tools);
+    requireThat([...(pass?.tools ?? []), ...(pass?.reads ?? [])].every(name => mcp.enabled_tools.includes(name)), 'missing-required-tools');
+    requireThat(mcp.enabled_tools.every(name => !passTools.includes(name) || pass?.tools.includes(name)), 'unexpected-pass-tools');
+    // Frames are read through the recorder's own `player_source`, which the host never offers beyond the frozen table.
+    if (passInput?.frames.length) requireThat(mcp.enabled_tools.includes('player_source'), 'missing-required-tools');
+    if (pass) emit(`${pass.prefix}-pass`, passInput ? {frames:passInput.frames.map(frame => ({...frame}))} : {});
     const tools = mcp.enabled_tools.map(name => {
       const schema = names.get(name);
       requireThat(object(schema.inputSchema), 'invalid-mcp-schema');
@@ -417,6 +756,19 @@ export async function runHost(options) {
         catch { stop('mcp-call-failed'); throw new HostError(fatal); }
         if (fatal) throw new HostError(fatal);
         emit('tool-result', {request_id:requestId, tool_call_id:toolCallId, tool:name, result:projectToolResultForTelemetry(result)});
+        if (pass?.tools.includes(name)) {
+          // A level's keep, replace or close that becomes a commit or discard, a recorder's record, or a valid abstain, ends the
+          // pass; a rejected call does not. So does a lost transport: a reader cannot collect, so the pass ends and the driver
+          // reconciles the identity.
+          const uncertain = uncertainEvent(result, pass.prefix);
+          const ending = uncertain ?? terminalEvent(name, result, args);
+          if (ending) {
+            const {type, ...fields} = ending;
+            emit(type, {request_id:requestId, tool_call_id:toolCallId, ...(uncertain ? {tool:name} : {}), ...fields});
+            passEnded = true;
+            passUncertain ||= uncertain !== null;
+          }
+        }
         try {
           const transition = inspectHandoff(name, args, result, pendingHandoff);
           if (transition.pending) pendingHandoff = transition.pending;
@@ -433,10 +785,14 @@ export async function runHost(options) {
         return {content, details:undefined, isError:result.isError === true};
       }};
     });
+    // A pass role's refusals name each failing field, its rule, the allowed values and a valid example call.
     const validationFeedback = createValidationFeedback(tools, diagnostic =>
-      emit('tool-validation-feedback', {request_id:`request-${requests + 1}`, ...diagnostic}));
+      emit('tool-validation-feedback', {request_id:`request-${requests + 1}`, ...diagnostic}),
+      pass ? {names:pass.tools, terminal:pass.tools, notes:TERMINAL_NOTES} : {});
     agent = new Agent({
-      initialState:{systemPrompt:options.context + (client.instructions ? '\n\nMCP server instructions:\n' + client.instructions : ''), model:configuration.model, thinkingLevel:options.effort, tools},
+      initialState:{systemPrompt:options.context + (client.instructions ? '\n\nMCP server instructions:\n' + client.instructions : ''), model:{
+        ...configuration.model, cost:Object.fromEntries(Object.entries(configuration.model.cost).map(([key, value]) => [key, Number(value)])),
+      }, thinkingLevel:options.effort, tools},
       toolExecution:'sequential',
       transformContext:async messages => {
         if (fatal) return messages;
@@ -446,18 +802,41 @@ export async function runHost(options) {
           // Memoize against canonical SDK objects before image projection clones
           // them. Earlier diagnostic text remains stable in subsequent prefixes.
           const projectionStarted = performance.now();
-          const projection = projectImageContext(validationFeedback(messages), configuration.max_context_images, configuration.context_image_block);
+          const projection = projectImageContext(validationFeedback(messages), configuration.max_context_images, configuration.context_image_block, passInput?.frames.length ?? 0);
           emit('context-image-projection', {request_id:`request-${requests + 1}`, projection_ms:performance.now() - projectionStarted, ...projection.summary});
           if (projection.summary.blocked) stop('context-image-limit');
+          let intent = '';
+          if (configuration.intent_tail_bytes !== null) {
+            // A failed read shows no intent and never stops the actor or gates its input.
+            let value = null;
+            try {
+              const result = await client.callTool('player_intent', {}, {signal:stopped.signal, timeoutMs:mcp.tool_timeout_sec * 1000});
+              const parsed = JSON.parse(result.content?.find(part => part.type === 'text')?.text);
+              if (result.isError !== true && object(parsed) && parsed.schema === 'player-intent/4') value = parsed;
+            } catch { value = null; }
+            if (fatal) return messages;
+            let tail;
+            // Record data is free-form player data: an unexpected shape shows "Unavailable", never a stop.
+            try { tail = formatIntentTail(value, configuration.intent_tail_bytes); }
+            catch { value = null; tail = formatIntentTail(null, configuration.intent_tail_bytes); }
+            // Per part: bytes surfaced and bytes omitted by the fixed allocation.
+            emit('intent-tail', {request_id:`request-${requests + 1}`, available:value !== null,
+              record_id:value?.subgoal?.record_id ?? null, tail_bytes:tail.tail_bytes, surfaced_bytes:tail.surfaced_bytes,
+              omitted_bytes:tail.omitted_bytes, skipped_items:tail.skipped_items, parts:tail.parts, age:value?.age ?? null});
+            intent = '\n\n' + tail.text;
+          }
           // Request-only bookkeeping follows history, preserving the stable
           // system/tool prefix and canonical messages. Retries reuse this snapshot.
           return [...projection.messages, {role:'user', timestamp:Date.now(), content:[{type:'text', text:
             'Host resource status (software-generated at context construction):\n' +
             `Actual provider HTTP attempts charged before this request: ${requests}/${configuration.max_requests}.\n` +
             `Remaining allowance including this request: ${configuration.max_requests - requests}.\n` +
+            `Remaining monetary allocation: ${budget.allocation - budget.charged} nanodollars. One HTTP attempt needs a reservation of ${budget.bound} nanodollars.\n` +
+            (reservedWindow()
+              ?'This request offers only the pass-ending tools; end the pass with exactly one of them.\n' : '') +
             `Host decision time remaining at this snapshot: ${Math.max(0,(workDeadline-performance.now())/1000).toFixed(3)} seconds. Custodian time is a separate horizon.\n` +
             'An eligible retry can consume another attempt before the next status update. ' +
-            'This is resource bookkeeping, not a human task, gameplay evidence, source-read proof, authority or a latency/quality metric.'}]}];
+            'This is resource bookkeeping, not a human task, gameplay evidence, source-read proof, authority or a latency/quality metric.' + intent}]}];
         } catch {
           stop('context-projection-failed');
           return messages;
@@ -469,17 +848,64 @@ export async function runHost(options) {
           emit('tool-refused', {request_id:requestId, tool_call_id:toolCall.id, tool:toolCall.name, reason:'handoff', dispatched:false});
           return {block:true, reason:'Host ended after completed handoff; no further tool dispatch.', terminate:true};
         }
+        if (passEnded) {
+          emit('tool-refused', {request_id:requestId, tool_call_id:toolCall.id, tool:toolCall.name, reason:`${pass.prefix}-ended`, dispatched:false});
+          return {block:true, reason:`The ${configuration.role} pass ended with its terminal call; no further tool dispatch.`, terminate:true};
+        }
+        // A reserved request offers only the terminal tools. A model can still name another tool, which is executable
+        // but refused here, so the reservation holds and the refusal says which tools to call.
+        if (pass && reserved && !pass.tools.includes(toolCall.name)) {
+          emit('tool-refused', {request_id:requestId, tool_call_id:toolCall.id, tool:toolCall.name, reason:`${pass.prefix}-reserved`, dispatched:false});
+          return {block:true, reason:`${toolCall.name} is not offered on this request and was not run: only ${pass.tools.join(', ')} are available. `
+            + `Call exactly one of them.\n${FIX_LINE}`};
+        }
+        // A recorder's pushed frames are pinned, so the frames it can read at once are what the peak leaves: a read that would
+        // take the next request over the peak is a fixable refusal (one read per turn), not the pass-stopping backstop.
+        if (passInput && toolCall.name === 'player_source') {
+          const room = configuration.max_context_images - passInput.frames.length - batchReads;
+          if (room < 1) {
+            emit('tool-refused', {request_id:requestId, tool_call_id:toolCall.id, tool:toolCall.name, reason:'episode-image-peak', dispatched:false});
+            const slots = configuration.max_context_images - passInput.frames.length;
+            return {block:true, reason:`player_source was not run: a request holds at most ${configuration.max_context_images} images and the ${passInput.frames.length} pushed frames stay in every one, `
+              + `so only ${slots} more can be read at once and ${batchReads} ${batchReads === 1 ? 'was' : 'were'} already read in this turn. `
+              + `Earlier reads are evicted first, so read one frame per turn: call player_source again in your next turn.\n${FIX_LINE}`};
+          }
+        }
         if (!isDeepStrictEqual(toolCall.arguments, args)) {
           emit('tool-refused', {request_id:requestId, tool_call_id:toolCall.id, tool:toolCall.name, reason:'tool-arguments-changed', dispatched:false});
-          return {block:true, reason:'MCP input not sent: SDK changed arguments; explicitly correct the call.'};
+          const fields = changedFields(toolCall.arguments, args).join(', ');
+          return {block:true, reason:`MCP input not sent: the SDK changed the arguments of ${toolCall.name} (field ${fields}); resend the call with ${fields} given exactly as the schema requires, without nulls or coerced values.`
+            + (pass?.tools.includes(toolCall.name) ? `\n${FIX_LINE}` : '')};
         }
+        const columns = pass?.tools.includes(toolCall.name) ? ALIGNED_COLUMNS[toolCall.name] : undefined;
+        if (columns?.some(field => !Array.isArray(args[field]) || args[field].length !== args[columns[0]]?.length)) {
+          emit('tool-refused', {request_id:requestId, tool_call_id:toolCall.id, tool:toolCall.name,
+            reason:'observation-columns-unaligned', dispatched:false});
+          return {block:true, reason:`MCP input not sent: ${columns.join(', ')} must have equal lengths.\n${FIX_LINE}`};
+        }
+        if (passInput && toolCall.name === 'player_source') batchReads++;
       },
       // Pi's per-result terminate hint requires every result in the batch to
-      // terminate. finishTurn also handles ordinary tools preceding a handoff.
-      finishTurn:() => handoff ? {action:'end'} : undefined,
+      // terminate. finishTurn also handles ordinary tools preceding a handoff
+      // or a pass's ending call.
+      finishTurn:() => handoff || passEnded ? {action:'end'} : undefined,
       streamFn:(model, context, streamOptions) => {
         if (fatal) return failureStream(model, fatal);
-        if (requests >= configuration.max_requests) { stop('request-limit'); return failureStream(model, fatal); }
+        if (requests >= configuration.max_requests) {
+          // A refused terminal call on the last allowed request left no budget to correct it: its own settled reason.
+          stop(pass && refusedTerminalCall(context.messages, pass.tools) ? `${pass.prefix}-final-refusal` : 'request-limit');
+          return failureStream(model, fatal);
+        }
+        // A logical request that starts with LEVEL_RESERVED_REQUESTS or fewer HTTP attempts or logical requests left offers
+        // only the terminal tools, so a refused call can be repaired. A provider retry resends its logical request's
+        // declarations: the window is decided once, here.
+        reserved = reservedWindow();
+        logicalRequests++;
+        if (reserved) {
+          context = {...context, messages:restrictTools(context.messages, pass.tools)};
+          emit(`${pass.prefix}-reserved-request`, {request_id:`request-${requests + 1}`, logical_request_id:`request-${logicalRequests}`,
+            offered_tools:declaredTools(context.messages).map(tool => tool.name)});
+        }
         const apiKey = (options.env ?? process.env)[configuration.api_key_env];
         if (!text(apiKey)) { stop('missing-api-key'); return failureStream(model, fatal); }
         try {
@@ -487,13 +913,14 @@ export async function runHost(options) {
           requestTimer = setTimeout(() => stop('request-timeout'), Math.min(configuration.request_timeout_seconds * 1000, totalMs));
           const requestSignal = AbortSignal.any([streamOptions.signal, stopped.signal].filter(Boolean));
           const backendModels = new Set(), observedServiceTiers = new Set();
-          const streamStarted = performance.now(), logicalRequestId = `request-${requests + 1}`;
+          const streamStarted = performance.now(), logicalRequestId = `request-${requests + 1}`, logicalNumber = `request-${logicalRequests}`;
           let payloadReadyAt;
           const actualFetch = options.fetch ?? globalThis.fetch;
           let attempts = 0, previousRequestId;
           // End an eligible first attempt and hand its server delay to the SDK
           // helper. Status is omitted so only the host's declared classes decide.
           const retry = (attemptId, retryClass, status, headers) => {
+            settleMoney(false);
             emit('response-complete', {request_id:attemptId, model:model.id, provider:model.provider, stop_reason:'error', http_status:status, usage_available:false, usage:null, cost_source:null, response_progress:progressSnapshot()});
             requestInFlight = false;
             if (requests >= configuration.max_requests) {
@@ -524,19 +951,26 @@ export async function runHost(options) {
             const sizes = {...payloadSize(payload), payload_bytes:Buffer.byteLength(init.body),
               payload_sha256:createHash('sha256').update(init.body).digest('hex')};
             const inspectionMs = performance.now() - fetchEntered;
+            if (!budget.reserve()) {
+              emit('request-budget-denied', {charged_nano_usd:String(budget.charged), bound_nano_usd:String(budget.bound)});
+              stop('request-budget-limit');
+              throw new HostError(fatal);
+            }
             const attemptId = requestId = `request-${++requests}`;
+            responseIdentity = null;
+            mixedIdentity = false;
             const attemptProgress = responseProgress = {request_id:attemptId, body_bytes:0, body_chunks:0,
               provider_events:0, content_bytes:0, reasoning_bytes:0,
               tool_argument_bytes:0, response_id:null, reported_provider:null, ...progressTimes()};
             requestInFlight = true;
             attempts++;
             if (previousRequestId) emit('provider-retry', {stage:'started', request_id:attemptId, previous_request_id:previousRequestId});
-            emit('request-start', {request_id:attemptId, logical_request_id:logicalRequestId, model:model.id, provider:model.provider,
+            emit('request-start', {request_id:attemptId, logical_request_id:logicalNumber, model:model.id, provider:model.provider,
               sdk_after_payload_ms:attempts === 1 && payloadReadyAt !== undefined ? fetchEntered - payloadReadyAt : null,
               host_inspection_ms:inspectionMs, ...sizes});
             let response;
-            emit('request-fetch-start', {request_id:attemptId});
-            try { response = await actualFetch(url, init); }
+            emit('request-fetch-start', {request_id:attemptId, reserved_nano_usd:String(budget.bound)});
+            try { response = await actualFetch(url, {...init, redirect:'manual'}); }
             catch {
               // A rejected fetch has no response headers. Timeout and abort latch first.
               if (!fatal && !requestSignal.aborted && attempts === 1) retry(attemptId, 'pre-header-rejection', null, null);
@@ -547,12 +981,20 @@ export async function runHost(options) {
               void response.body?.cancel().catch(() => {});
               throw new HostError(fatal ?? 'provider-error');
             }
+            if (response.status >= 300 && response.status < 400) {
+              emit('response-headers', {request_id:attemptId, status:response.status});
+              void response.body?.cancel().catch(() => {});
+              stop('provider-redirect-refused');
+              throw new HostError(fatal);
+            }
             const server = SERVER_RETRY_STATUSES.includes(response.status);
             emit('response-headers', {request_id:attemptId, status:response.status, provider_request_id:
               diagnosticId(response.headers.get('x-request-id'), apiKey),
               ...(server || [402, 429].includes(response.status) ? retryDiagnostic(response.headers) : {})});
             let first = false;
+            const marker = completionMarker = new CompletionMarker();
             const body = response.body?.pipeThrough(new TransformStream({transform(chunk, controller) {
+              if (!marker.complete && response.ok) marker.push(chunk);
               attemptProgress.body_bytes += chunk.byteLength;
               attemptProgress.body_chunks++;
               markProgress(attemptProgress, 'body_chunk', performance.now() - started);
@@ -578,7 +1020,8 @@ export async function runHost(options) {
           }, {maxRetries:1, maxRetryDelayMs:MAX_RETRY_DELAY_MS, signal:requestSignal});
           // The outer request timer includes classification, SDK backoff and
           // both HTTP attempts. Disable the provider stream's nested retries.
-          return stream(model, context, {...streamOptions, apiKey, fetch:observedFetch, env:{}, signal:requestSignal, maxRetries:0, cacheRetention:'short', maxTokens:model.maxTokens, timeoutMs:configuration.request_timeout_seconds * 1000, reasoningEffort:options.effort === 'off' ? undefined : options.effort,
+          // A level pass must end in a terminal call, so its provider is required to call a tool.
+          return stream(model, context, {...streamOptions, ...(pass ? {toolChoice:'required'} : {}), apiKey, fetch:observedFetch, env:{}, signal:requestSignal, maxRetries:0, cacheRetention:'short', maxTokens:model.maxTokens, timeoutMs:configuration.request_timeout_seconds * 1000, reasoningEffort:options.effort === 'off' ? undefined : options.effort,
             onPayload:payload => {
               payloadReadyAt = performance.now();
               emit('provider-payload-ready', {request_id:logicalRequestId, sdk_prepare_ms:payloadReadyAt - streamStarted});
@@ -605,14 +1048,21 @@ export async function runHost(options) {
             if (contentBytes > 0) markProgress(responseProgress, 'content_delta', eventAt);
             if (reasoningBytes > 0) markProgress(responseProgress, 'reasoning_delta', eventAt);
             if (toolBytes > 0) markProgress(responseProgress, 'tool_argument_delta', eventAt);
-            // Optional provider echo only; missing/unrecognized values remain unknown.
-            // This does not change delivery, retries, configured prices or authority.
+            // An absent or unrecognized tier remains unknown. The OpenRouter
+            // guard is priced for the frozen default tier.
             const tier = chunk?.service_tier;
             if (['default', 'priority', 'flex'].includes(tier) && !observedServiceTiers.has(`${requestId}:${tier}`)) {
               observedServiceTiers.add(`${requestId}:${tier}`);
               emit('response-service-tier', {request_id:requestId, applied_service_tier:tier});
             }
+            if (model.provider === 'openrouter' && ['priority', 'flex'].includes(tier)) budget.violation = true;
+            if (text(chunk?.id)) {
+              responseIdentity ??= chunk.id;
+              mixedIdentity ||= chunk.id !== responseIdentity;
+            }
             const usage = chunk?.usage ?? chunk?.choices?.[0]?.usage;
+            budget.observe(usage, responseIdentity !== null && chunk?.id === responseIdentity);
+            if (budget.violation) stop('request-cost-bound-violation');
             // Pi initializes absent usage to zero. Only publish normalized totals
             // when the provider actually reported both input and output counts.
             if (Number.isFinite(usage?.prompt_tokens) && Number.isFinite(usage?.completion_tokens)) requestUsageAvailable = true;
@@ -630,17 +1080,50 @@ export async function runHost(options) {
     agent.subscribe(event => {
       if (event.type === 'message_end' && event.message.role === 'assistant') {
         clearTimeout(requestTimer);
+        batchReads = 0;
         const message = event.message;
         const narration = assistantNarration(message.content);
         if (narration.text || narration.omitted_bytes) emit('assistant-text', {request_id:requestId, ...narration});
-        if (requestInFlight) emit('response-complete', {request_id:requestId, model:message.model, provider:message.provider, stop_reason:message.stopReason, usage_available:requestUsageAvailable, usage:requestUsageAvailable ? message.usage : null, cost_source:requestUsageAvailable ? (message.usage?.cost?.totalFromProvider === true ? 'provider' : 'configured-rates') : null, response_progress:progressSnapshot()});
+        // Every terminal call the model made, so a refusal that never reached tool-start (unparseable arguments, a
+        // validation refusal, a host refusal) can be told from a dispatched call.
+        if (pass) for (const part of message.content ?? []) {
+          if (part.type === 'toolCall' && pass.tools.includes(part.name)) {
+            emit(`${pass.prefix}-terminal-call`, {request_id:requestId, tool_call_id:part.id, tool:part.name, arguments_error:Object.hasOwn(part, 'argumentsError')});
+          }
+        }
+        if (requestInFlight) {
+          settleMoney(!fatal && !mixedIdentity && completionMarker?.complete && ['stop', 'toolUse', 'length'].includes(message.stopReason));
+          emit('response-complete', {request_id:requestId, model:message.model, provider:message.provider, stop_reason:message.stopReason, usage_available:requestUsageAvailable, usage:requestUsageAvailable ? message.usage : null, cost_source:requestUsageAvailable ? (message.usage?.cost?.totalFromProvider === true ? 'provider' : 'configured-rates') : null, response_progress:progressSnapshot()});
+        }
         requestInFlight = false;
         if (['error', 'aborted', 'length', 'deferred'].includes(message.stopReason) && !fatal) stop(message.stopReason === 'error' ? 'provider-error' : `provider-${message.stopReason}`);
       }
     });
-    await agent.prompt(options.prompt);
+    let first = options.prompt;
+    if (passInput) {
+      // The recorder's frames reach it as image parts of its first message, each marked with its source id and role. The host
+      // reads them with the recorder's own `player_source` before any request; a frame it cannot read ends the pass unrequested.
+      const content = [{type:'text', text:passInput.text}];
+      for (const frame of passInput.frames) {
+        let image;
+        try {
+          const result = await client.callTool('player_source', {source_id:frame.source_id}, {signal:stopped.signal, timeoutMs:mcp.tool_timeout_sec * 1000});
+          image = result.isError === true ? undefined : result.content?.find(part => part.type === 'image' && typeof part.data === 'string' && text(part.mimeType));
+        } catch { image = undefined; }
+        if (fatal) throw new HostError(fatal);
+        if (!image) { stop('frame-read-failed'); throw new HostError(fatal); }
+        const bytes = Buffer.from(image.data, 'base64');
+        emit('episode-frame', {source_id:frame.source_id, role:frame.role, media_type:image.mimeType, bytes:bytes.length,
+          sha256:createHash('sha256').update(bytes).digest('hex')});
+        content.push({type:'text', text:`Frame ${frame.source_id} (${frame.role}):`}, {type:'image', data:image.data, mimeType:image.mimeType});
+      }
+      first = {role:'user', content, timestamp:Date.now()};
+    }
+    await agent.prompt(first);
     const terminal = agent.state.messages.findLast(message => message.role === 'assistant');
-    if (!fatal && terminal?.stopReason !== 'stop' && !(handoff && terminal?.stopReason === 'toolUse')) stop('incomplete-terminal-response');
+    if (!fatal && passUncertain) stop(`${pass.prefix}-uncertain`);
+    else if (!fatal && pass && !passEnded) stop(pass.unended);
+    else if (!fatal && terminal?.stopReason !== 'stop' && !((handoff || passEnded) && terminal?.stopReason === 'toolUse')) stop('incomplete-terminal-response');
   } catch (error) {
     if (!fatal) stop(error instanceof HostError ? error.reason : 'host-failed');
   } finally {
@@ -649,9 +1132,13 @@ export async function runHost(options) {
     await close();
     clearTimeout(deadlineTimer);
   }
+  settleMoney(false);
   const terminal = agent?.state.messages.findLast(message => message.role === 'assistant');
   const finalText = !fatal && !handoff ? (terminal?.content ?? []).filter(part => part.type === 'text').map(part => part.text).join('\n') : '';
   const result = {ok:!fatal, reason:fatal ?? (handoff ? 'handoff' : 'completed'), requests, finalText};
-  emit('settled', {ok:result.ok, reason:result.reason, requests, event_output:{...outputStats}, native_cleanup_claimed:false});
+  emit('settled', {ok:result.ok, reason:result.reason, requests,
+    money:budget ? {allocation_nano_usd:String(budget.allocation), charged_nano_usd:String(budget.charged),
+      bound_nano_usd:String(budget.bound), violation:budget.violation} : null,
+    event_output:{...outputStats}, native_cleanup_claimed:false});
   return result;
 }

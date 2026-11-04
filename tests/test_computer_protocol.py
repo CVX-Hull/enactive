@@ -16,15 +16,15 @@ class ComputerProtocolTests(unittest.TestCase):
         header = wire_header(decode_json(packet[4:4 + size]))
         self.assertEqual(header['payload_bytes'], len(png))
         self.assertEqual(packet[4 + size:], png)
-        self.assertEqual(header['schema'], 'computer-wire/1')
+        self.assertEqual(header['schema'], 'computer-wire/2')
 
     def test_no_image_or_unbounded_body_can_enter_native_request(self):
         for kind, count in [('request', 1), ('state', 1), ('receipt', 67108865)]:
             with self.subTest(kind=kind, count=count), self.assertRaises(ControlError):
-                wire_header({'schema': 'computer-wire/1', 'kind': kind,
+                wire_header({'schema': 'computer-wire/2', 'kind': kind,
                              'value': {}, 'payload_bytes': count})
         with self.assertRaises(ControlError):
-            wire_header({'schema': 'computer-wire/0', 'kind': 'request',
+            wire_header({'schema': 'computer-wire/1', 'kind': 'request',
                          'value': {}, 'payload_bytes': 0})
 
     def test_json_ingress_rejects_duplicate_keys_nonfinite_and_oversize(self):

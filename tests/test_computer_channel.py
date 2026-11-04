@@ -49,6 +49,79 @@ def native_receipt(identity,**changes):
         disposition='delivered',emitted_events=2,reason='fixture event handoff only',frame=None),**changes)
 
 
+@pytest.mark.parametrize('suffix,send_eof,valid', [(b'',True,True),(b'\x00',True,False),(b'',False,False)])
+def test_terminal_evidence_requires_complete_peer_eof(suffix,send_eof,valid):
+    left,right=socket.socketpair()
+    channel=NativeChannel(left,'a'*32,123)
+    proof=dict(schema='computer-terminal/1',session='a'*32,pid=123,takeover_generation=1)
+    try:
+        right.sendall(encode_packet('terminal',proof)+suffix)
+        if send_eof:
+            right.shutdown(socket.SHUT_WR)
+        channel.close(drain_exited=send_eof)
+        assert channel.terminal_evidence()==(proof if valid else None)
+    finally:
+        right.close()
+
+
+def test_terminal_packet_does_not_replace_original_quit_collection():
+    left,right=socket.socketpair()
+    channel=NativeChannel(left,'a'*32,123)
+    result=[]
+    right.settimeout(2)
+    thread=threading.Thread(target=lambda:result.append(
+        channel.request('input',{},time.monotonic()+2,'b'*32)))
+    try:
+        thread.start()
+        receive_packet(right)
+        proof=dict(schema='computer-terminal/1',session='a'*32,pid=123,takeover_generation=0)
+        right.sendall(encode_packet('terminal',proof))
+        end=time.monotonic()+1
+        while not channel.native_exiting and time.monotonic()<end:
+            time.sleep(.001)
+        assert channel.native_exiting and not channel.stopped.is_set() and thread.is_alive()
+        right.shutdown(socket.SHUT_WR)
+        thread.join(2)
+        assert result[0][0]['reason']=='Native receive failed: Native channel EOF'
+    finally:
+        channel.close()
+        right.close()
+
+
+def test_terminal_fences_request_waiting_for_writer():
+    left,right=socket.socketpair()
+    channel=NativeChannel(left,'a'*32,123)
+    errors=[]
+
+    def request():
+        try:
+            channel.request('input',{},time.monotonic()+2,'b'*32)
+        except NoDispatch as exc:
+            errors.append(exc)
+
+    thread=threading.Thread(target=request)
+    try:
+        with channel._send_lock:
+            thread.start()
+            end=time.monotonic()+1
+            while channel._normal is None and time.monotonic()<end:
+                time.sleep(.001)
+            assert channel._normal == 'b'*32
+            right.sendall(encode_packet('terminal',dict(schema='computer-terminal/1',
+                session='a'*32,pid=123,takeover_generation=0)))
+            while not channel.native_exiting and time.monotonic()<end:
+                time.sleep(.001)
+            assert channel.native_exiting
+        thread.join(2)
+        assert len(errors)==1
+        right.setblocking(False)
+        with pytest.raises(BlockingIOError):
+            right.recv(1)
+    finally:
+        channel.close()
+        right.close()
+
+
 def test_interrupted_framing_half_closes_before_any_pause_packet():
     left,right=socket.socketpair();link=Link(left,interrupt=True)
     channel=NativeChannel(link,'a'*32,123)

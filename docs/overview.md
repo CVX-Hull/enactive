@@ -33,10 +33,17 @@ effects. The user can Pause independently. Memory contains fallible player claim
 and never grants custody. [Editable source](diagrams/player.mmd).
 
 Each finite run freezes one [player host](components/player-interface.md) adapter
-behind the substitutable [`player-host/2` contract](contracts/player-host.md). The selected
+behind the substitutable [`player-host/8` contract](contracts/player-host.md). The selected
 finite configuration is OpenRouter / explicitly pinned provider / DeepSeek Flash1017 at medium
 effort. Its exact route, metadata, context and limits are frozen per run; this
 selection is not a claim of model quality or provider performance.
+
+Each acting player has two further finite hosts of the same contract, its *readers*: a
+recorder that writes one record per closed episode of the player's inputs, and a subgoal
+level that keeps one current subgoal. They run as concurrent hosts beside the actor, one
+level and one recorder per actor. They read through their own limited tools and send no
+input; the custodian writes what they commit
+([ADR007](decisions/007-player-subgoal-level.md)).
 
 The [visual-player investigation](acceptance/2026-10-30-visual-player.md) rejected
 adoption of Qwen3.8-27B/Wafer after stable actual play and fresh Load still produced

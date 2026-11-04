@@ -1,20 +1,22 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { McpClient } from '@earendil-works/pi-mcp';
-import { runHost, validateConfiguration, validateMcpConfiguration, projectImageContext, projectToolResultForTelemetry, INPUT_LIMIT_BYTES } from '../host.mjs';
+import { runHost, validateConfiguration, validateMcpConfiguration, projectImageContext, projectToolResultForTelemetry, INPUT_LIMIT_BYTES,
+  INTENT_LABEL, formatIntentTail, levelCommitEvent, levelAbstainEvent, episodeRecordEvent, episodeAbstainEvent, uncertainEvent, parsePassInput,
+  changedFields } from '../host.mjs';
 
 const realSetTimeout = globalThis.setTimeout;
 const realDelay = ms => new Promise(resolve=>realSetTimeout(resolve,ms));
 const python = process.env.ENACTIVE_TEST_PYTHON;
 const fixture = fileURLToPath(new URL('../../../tests/fixtures/player_host_mcp.py', import.meta.url));
 const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j1ioAAAAASUVORK5CYII=';
-const model = { id: 'fixture-model', name: 'Offline fixture', api: 'openai-completions', provider: 'fixture', baseUrl: 'https://fixture.invalid/v1', reasoning: false, input: ['text', 'image'], cost: {input:0, output:0, cacheRead:0, cacheWrite:0}, contextWindow: 100000, maxTokens: 1024, compat: { supportsDeveloperRole:false, supportsStore:false, supportsUsageInStreaming:true } };
-const route = () => ({schema:'player-host/2',service_tier:'default', model:structuredClone(model), api_key_env:'OFFLINE_TEST_KEY', max_requests:4, max_context_images:4, context_image_block:1, request_timeout_seconds:2});
+const model = { id: 'fixture-model', name: 'Offline fixture', api: 'openai-completions', provider: 'fixture', baseUrl: 'https://fixture.invalid/v1', reasoning: false, input: ['text', 'image'], cost: {input:'0', output:'0', cacheRead:'0', cacheWrite:'0'}, contextWindow: 100000, maxTokens: 1024, compat: { supportsDeveloperRole:false, supportsStore:false, supportsUsageInStreaming:true } };
+const route = () => ({schema:'player-host/8',role:'actor',intent_tail_bytes:null,service_tier:'default', model:structuredClone(model), api_key_env:'OFFLINE_TEST_KEY', max_requests:4, max_cost_nano_usd:'0', max_context_images:4, context_image_block:1, request_timeout_seconds:2});
 function reply(content = 'finished', calls = [], withUsage = true, reasoning, callPrefix = 'call') {
   const delta = {role:'assistant', ...(content === null ? {} : {content}), ...(reasoning ? {reasoning_content:reasoning} : {}), ...(calls.length ? {tool_calls:calls.map(([name,args],index)=>({index,id:`${callPrefix}-${index}`,type:'function',function:{name,arguments:JSON.stringify(args)}}))} : {})};
   const chunks = [{id:'fixture-response',model:'fixture-backend',choices:[{index:0,delta,finish_reason:null}]},
@@ -42,6 +44,7 @@ async function scenario(t, sequence, overrides = {}) {
   const options = {configuration:route(), mcpConfig, context:'Frozen player guide', prompt:'Offline mission', model:model.id, effort:'off', timeoutSeconds:10, env:{OFFLINE_TEST_KEY:'fixture-key', UNRELATED_HOST_SECRET:'must-not-inherit'}, fetch, ...overrides,
     onEvent:event=>{events.push(event);overrides.onEvent?.(event);}};
   if (overrides.fixtureStartupDelay !== undefined) mcpConfig.args.push(String(overrides.fixtureStartupDelay));
+  if (overrides.intentFixture !== undefined) await writeFile(join(dir,'intent.json'), overrides.intentFixture);
   if (overrides.enabledTools) mcpConfig.enabled_tools=overrides.enabledTools;
   if (overrides.fixtureToolTimeoutSeconds) mcpConfig.tool_timeout_sec=overrides.fixtureToolTimeoutSeconds;
   const running = runHost(options);
@@ -89,8 +92,15 @@ test('route is closed, graphical, finite and model/effort exact', ()=>{
   }
   assert.throws(()=>validateConfiguration(route(),'other','off'));
   assert.throws(()=>validateConfiguration(route(),model.id,'low'));
-  for (const old of ['pi-player-host/1','pi-player-host/2','pi-player-host/3','pi-player-host/4','player-host/0','player-host/1','player-host/3'])
+  for (const old of ['pi-player-host/1','pi-player-host/2','pi-player-host/3','pi-player-host/5','player-host/0','player-host/1','player-host/2','player-host/3','player-host/4','player-host/5','player-host/6','player-host/7'])
     assert.throws(()=>validateConfiguration({...route(),schema:old},model.id,'off'));
+  // The tail is one fixed allocation of INTENT_TAIL_BYTES: any other bound is refused, and only an actor carries one.
+  for (const change of [{role:undefined},{role:'lead'},{intent_tail_bytes:undefined},{intent_tail_bytes:63},{intent_tail_bytes:64},
+    {intent_tail_bytes:1023},{intent_tail_bytes:1025},{intent_tail_bytes:4096},{intent_tail_bytes:1.5},{intent_tail_bytes:'1024'},
+    {role:'level',intent_tail_bytes:1024},{role:'recorder',intent_tail_bytes:1024}])
+    assert.throws(()=>validateConfiguration({...route(),...change},model.id,'off'));
+  for (const change of [{intent_tail_bytes:1024},{role:'level'},{role:'recorder'}])
+    validateConfiguration({...route(),...change},model.id,'off');
   for (const service_tier of [undefined,null,true,1,'flex','auto','',{},[]]) {
     assert.throws(()=>validateConfiguration({...route(),service_tier},model.id,'off'));
   }
@@ -424,34 +434,113 @@ test('request maximum is finite and exits unsuccessful if continuation needed',a
   assert.equal(result.ok,false); assert.equal(result.reason,'request-limit'); assert.equal(payloads.length,1);
   assert.equal(events.find(event=>event.type==='abort').response_progress.scope,'last-http-attempt');
 });
-test('fixture union schema refusal gives stable precise feedback, explicit correction dispatches, MCP errors stay intact',async t=>{
-  const entry={stage:'x'.repeat(244),available:[{subject:'small cardboard box'}]};
-  const bad={snapshot_id:'fixture-snapshot',intent:{entry_type:'work',entry}};
-  const fixed=structuredClone(bad);fixed.intent.entry.stage='partial';
-  fixed.intent.entry.available[0].subject='small_cardboard_box';
-  const mcpError=structuredClone(fixed);mcpError.intent.entry.stage='mcp-error';
-  const configuration=route();configuration.max_requests=6;
-  const {result,calls,payloads,events}=await scenario(t,[
-    reply(null,[['fixture_remember',bad]],true,undefined,'bad'),
-    reply(null,[['fixture_remember',fixed]],true,undefined,'fixed'),
-    reply(null,[['observe',{}]],true,undefined,'later'),
-    reply(null,[['fixture_remember',mcpError]],true,undefined,'mcp-error'),reply()
-  ],{configuration,enabledTools:['fixture_remember','observe']});
+test('the monetary gate refuses before sending the first HTTP request',async t=>{
+  const configuration=route();
+  configuration.model.cost.input='1';
+  configuration.max_cost_nano_usd='99999999';
+  const {result,payloads,events}=await scenario(t,[],{configuration});
+  assert.equal(result.reason,'request-budget-limit');
+  assert.equal(payloads.length,0);
+  assert.equal(events.at(-1).money.charged_nano_usd,'0');
+});
+test('a rate just above a nanodollar boundary rounds upward before admission',async t=>{
+  const configuration=route();
+  configuration.model.cost.input='1.000000000000000000000000000000001';
+  configuration.max_cost_nano_usd='100099999';
+  const {result,payloads,events}=await scenario(t,[],{configuration});
+  assert.equal(result.reason,'request-budget-limit');
+  assert.equal(payloads.length,0);
+  assert.equal(events.at(-1).money.bound_nano_usd,'100100000');
+});
+test('a complete cheap response restores room for a second full reservation',async t=>{
+  const configuration=route();
+  configuration.model.cost.input='1';
+  configuration.max_cost_nano_usd='100011000';
+  const {result,payloads,events}=await scenario(t,[reply(null,[['observe',{}]]),reply()],{configuration});
   assert.equal(result.ok,true);
-  assert.deepEqual(calls.filter(c=>c.tool==='fixture_remember').map(c=>c.intent),[fixed.intent,mcpError.intent]);
-  const first=payloads[1].messages.find(m=>m.role==='tool'&&m.tool_call_id==='bad-0').content;
-  assert.match(first,/entry.stage: must not have more than 128/);
-  assert.match(first,/entry.available.0.subject: must match pattern/);
-  assert.ok(!first.includes('intent.entry.value'));
-  for(const payload of payloads.slice(2)) {
-    assert.equal(payload.messages.find(m=>m.role==='tool'&&m.tool_call_id==='bad-0').content,first);
-  }
-  const diagnostics=events.filter(e=>e.type==='tool-validation-feedback');assert.equal(diagnostics.length,1);
-  assert.match(diagnostics[0].original_result.content[0].text,/intent.entry.value/);
-  assert.equal(diagnostics[0].projected_text,first);
-  const actualMcpError=payloads[4].messages.find(m=>m.role==='tool'&&m.tool_call_id==='mcp-error-0').content;
-  assert.match(actualMcpError,/MCP isError: true/);assert.match(actualMcpError,/fixture MCP refusal/);
-  assert.deepEqual(payloads[0].tools,payloads[4].tools,'the actual full schema remains stable');
+  assert.equal(payloads.length,2);
+  assert.equal(events.at(-1).money.charged_nano_usd,'22000');
+});
+test('an ambiguous retry burns its first reservation and cannot fetch again on the same lease',async t=>{
+  const configuration=route();
+  configuration.model.cost.input='1';
+  configuration.max_cost_nano_usd='100000000';
+  const {result,payloads,events}=await scenario(t,[rateLimit()],{configuration});
+  assert.equal(result.reason,'request-budget-limit');
+  assert.equal(payloads.length,1);
+  assert.equal(events.at(-1).money.charged_nano_usd,'100000000');
+});
+test('finish reason and usage at EOF without a terminal event keep the full reservation',async t=>{
+  const configuration=route();
+  configuration.model.cost.input='1';
+  configuration.max_cost_nano_usd='100011000';
+  const {result,payloads,events}=await scenario(t,[async ()=>{
+    const body=await reply(null,[['observe',{}]]).text();
+    return new Response(body.replace('data: [DONE]\n\n',''), {headers:{'content-type':'text/event-stream'}});
+  },reply()],{configuration});
+  assert.equal(result.reason,'request-budget-limit');
+  assert.equal(payloads.length,1);
+  assert.equal(events.at(-1).money.charged_nano_usd,'100000000');
+});
+for (const [name, alter] of [
+  ['mixed response IDs', body=>body.replace(/fixture-response(?=.*"usage")/, 'different-response')],
+  ['impossible cache counts', body=>body.replace('"prompt_tokens":11', '"prompt_tokens":11,"prompt_tokens_details":{"cached_tokens":12}')],
+  ['array-valued provider cost', body=>body.replace('"prompt_tokens":11', '"prompt_tokens":11,"cost":[0]')],
+]) {
+  test(`${name} keep the full reservation`, async t=>{
+    const configuration=route();
+    configuration.model.cost.input='1';
+    configuration.max_cost_nano_usd='100011000';
+    const {result,payloads,events}=await scenario(t,[async ()=>{
+      const body=await reply(null,[['observe',{}]]).text();
+      return new Response(alter(body), {headers:{'content-type':'text/event-stream'}});
+    },reply()],{configuration});
+    assert.equal(result.reason,'request-budget-limit');
+    assert.equal(payloads.length,1);
+    assert.equal(events.at(-1).money.charged_nano_usd,'100000000');
+  });
+}
+test('a provider redirect cannot resend a reserved request to another endpoint',async t=>{
+  const {result,payloads}=await scenario(t,[init=>{
+    assert.equal(init.redirect,'manual');
+    return new Response(null,{status:307,headers:{location:'https://unapproved.invalid/v1/chat/completions'}});
+  }]);
+  assert.equal(result.reason,'provider-redirect-refused');
+  assert.equal(payloads.length,1);
+});
+test('an over-bound provider bill stops even when token counts are missing',async t=>{
+  const configuration=route();
+  configuration.model.cost.input='1';
+  configuration.max_cost_nano_usd='300000000';
+  const {result,events,payloads}=await scenario(t,[async ()=>{
+    const body=await reply(null,[['observe',{}]]).text();
+    return new Response(body.replace('"prompt_tokens":11,"completion_tokens":5,"total_tokens":16','"cost":0.2'));
+  },reply()],{configuration});
+  assert.equal(result.reason,'request-cost-bound-violation');
+  assert.equal(payloads.length,1);
+  assert.equal(events.find(event=>event.type==='request-cost').observed_nano_usd,'200000000');
+});
+test('a single over-bound token counter stops when its partner is missing',async t=>{
+  const configuration=route();
+  configuration.model.cost.input='1';
+  configuration.max_cost_nano_usd='300000000';
+  const {result,events,payloads}=await scenario(t,[async ()=>{
+    const body=await reply(null,[['observe',{}]]).text();
+    return new Response(body.replace('"prompt_tokens":11,"completion_tokens":5,"total_tokens":16','"prompt_tokens":100001'));
+  },reply()],{configuration});
+  assert.equal(result.reason,'request-cost-bound-violation');
+  assert.equal(payloads.length,1);
+  assert.equal(events.find(event=>event.type==='request-cost').prompt_tokens,100001);
+});
+test('an actor keeps the SDK validation refusal text unchanged; only a level gets field feedback',async t=>{
+  const bad={snapshot_id:'fixture-snapshot',intent:{entry_type:'work',entry:{stage:'x'.repeat(244),available:[{subject:'small cardboard box'}]}}};
+  const {result,payloads,events}=await scenario(t,[reply(null,[['fixture_remember',bad]],true,undefined,'bad'),reply()],
+    {configuration:{...route(),max_requests:3},enabledTools:['fixture_remember']});
+  assert.equal(result.ok,true);
+  const text=payloads[1].messages.find(m=>m.role==='tool'&&m.tool_call_id==='bad-0').content;
+  assert.match(text,/^Validation failed for tool "fixture_remember":/);
+  assert.ok(!text.includes('Valid example call')&&!text.includes('abstaining'));
+  assert.equal(events.filter(e=>e.type==='tool-validation-feedback').length,0);
 });
 
 test('provider errors are nonzero without leaking exception or key',async t=>{
@@ -618,7 +707,7 @@ function productionMcp(enabled_tools) {
 test('real production MCP discovery forwards all exact current actor-only tool schemas', async ()=>{
   const { execFile } = await import('node:child_process');
   const { promisify } = await import('node:util');
-  const {stdout}=await promisify(execFile)(python,['-c','import json; from harness.player_tools import tool_specs; print(json.dumps({name:{"schema":schema,"description":description} for name,(description,schema) in tool_specs().items()}))'],{cwd:productionRoot,maxBuffer:INPUT_LIMIT_BYTES});
+  const {stdout}=await promisify(execFile)(python,['-c','import json; from harness.player_tools import HOST_TOOLS, PROFILES, tool_specs; specs=tool_specs(); print(json.dumps({name:{"schema":specs[name][1],"description":specs[name][0]} for name in PROFILES["flat"] if name not in HOST_TOOLS}))'],{cwd:productionRoot,maxBuffer:INPUT_LIMIT_BYTES});
   const expected=JSON.parse(stdout), payloads=[], bodies=[], events=[];
   const chosen=Object.keys(expected);
   assert.equal(chosen.length,14);
@@ -635,11 +724,658 @@ test('real production MCP discovery forwards all exact current actor-only tool s
     for(const key of ['actor_id','session','token']) assert.equal(Object.hasOwn(tool.function.parameters.properties,key),false);
   }
   const handoff=payloads[0].tools.find(tool=>tool.function.name==='player_handoff').function;
-  assert.deepEqual(handoff.parameters.required,['ids','summary']);
+  assert.deepEqual(handoff.parameters.required,[]);
+  assert.deepEqual(Object.keys(handoff.parameters.properties),[]);
   assert.ok(chosen.includes('computer_result')&&chosen.includes('player_result'));
   assert.ok(chosen.every(name=>!name.startsWith('enactive_')));
   assert.ok(payloads[0].messages[0].content.includes('Only basic computer control is authoritative'));
   assert.throws(()=>process.kill(events.find(e=>e.type==='mcp-connected').child_pid,0),{code:'ESRCH'});
+});
+
+test('actor intent tail is a host-internal custodian read that the model never sees as a tool', async ()=>{
+  const chosen=['computer_observe','computer_input','computer_result','player_result'], payloads=[], events=[];
+  const result=await runHost({configuration:{...route(),intent_tail_bytes:1024},mcpConfig:productionMcp(chosen),
+    context:'Frozen current player guide',prompt:'Do not call tools.',model:model.id,effort:'off',
+    timeoutSeconds:10,env:{OFFLINE_TEST_KEY:'fixture-key'},
+    fetch:async(_url,init)=>{payloads.push(JSON.parse(init.body));return reply();},onEvent:e=>events.push(e)});
+  assert.equal(result.ok,true);
+  assert.ok(payloads[0].tools.every(tool=>tool.function.name!=='player_intent'));
+  const tail=JSON.stringify(payloads[0].messages.at(-1));
+  assert.ok(tail.includes('Current intent (software-published') && tail.includes('No committed intent.'));
+  const event=events.find(e=>e.type==='intent-tail');
+  assert.equal(event.available,true);assert.equal(event.record_id,null);assert.equal(event.request_id,'request-1');
+  const refused=await runHost({configuration:route(),mcpConfig:productionMcp([...chosen,'player_intent']),
+    context:'Frozen current player guide',prompt:'Do not call tools.',model:model.id,effort:'off',
+    timeoutSeconds:10,env:{OFFLINE_TEST_KEY:'fixture-key'},fetch:async()=>reply(),onEvent:()=>{}});
+  assert.equal(refused.ok,false);assert.equal(refused.reason,'host-internal-tool-enabled');
+});
+
+test('an actor with a tail sends player-intent/4 as one labelled, bounded request-only tail and logs each part', async t=>{
+  const intent={schema:'player-intent/4',session:'2'.repeat(32),actor_id:'3'.repeat(32),audience:'tail',pass_index:2,
+    subgoal:{record_id:'a1b2c3d4e5f6',text:'Reach the door é'.repeat(30),sources:[],status:'open',confidence:0.4,stalled:false,contradicted:false,counts:null,
+      expected_observations:[{text:'adjacent door',status:'seen'},{text:'door open',status:'not_yet'}]},
+    age:{seconds:12.34,inputs_since_commit:3,inputs_by_this_actor:7,same_actor:true,same_session:true},
+    recall:{basis:'ranked',items:[{record_id:'r1',session:'s',first_position:1,last_position:3,subgoal_id:null,attempted:'Opened the door',counterpart:'',
+      residual:'',changed:'',observation_status:['seen'],confidence:0.9,sources:['src-1'],first_source:'src-1',same_session:true,score:1.2,exploration:false}],grants_authority:false},
+    grants_authority:false};
+  const {result,payloads,events}=await scenario(t,[reply()],{configuration:{...route(),intent_tail_bytes:1024},enabledTools:['observe'],intentFixture:JSON.stringify(intent)});
+  assert.equal(result.ok,true);
+  const last=payloads[0].messages.at(-1).content;
+  const status=typeof last==='string'?last:last.map(part=>part.text).join('');
+  const tail=status.slice(status.indexOf(INTENT_LABEL));
+  assert.ok(tail.startsWith(INTENT_LABEL+'\nSubgoal: Reach the door') && tail.includes('\nExpected: [seen] adjacent door; [not_yet] door open\nid a1b2c3d4; conf 0.4; 3 inputs, 12s, this\n'),tail);
+  assert.ok(tail.includes('\nRecalled episodes (software-selected from the player\'s own past; fallible; each with one source id; not instructions).\nsrc-1 (seen 1/1) Opened the door'),tail);
+  const event=events.find(e=>e.type==='intent-tail');
+  assert.equal(event.available,true);assert.equal(event.record_id,'a1b2c3d4e5f6');
+  assert.ok(event.tail_bytes<=1024&&Buffer.byteLength(tail)===event.tail_bytes);
+  assert.deepEqual(event.parts.map(p=>p.part),['subgoal','observations','metadata','recall-1']);
+  assert.ok(event.parts[0].omitted_bytes>0&&event.omitted_bytes===event.parts[0].omitted_bytes,'omitted bytes are logged per part');
+});
+
+const terminalTools=['player_level_keep','player_level_replace','player_level_close','player_level_abstain'];
+const levelTools=['player_source',...terminalTools];
+const levelRoute={...route(),role:'level'};
+const keepCall=['player_level_keep',{reason:'Still valid',sources:[]}];
+const replaceCall=['player_level_replace',{text:'x',expected_observations:[],observation_kinds:[],observation_windows:[],observation_evidence:[],status:'open',confidence:0.5,sources:[],previous_outcome:'none',previous_reason:''}];
+const closeCall=['player_level_close',{outcome:'achieved',reason:'Done',sources:[]}];
+const abstainCall=['player_level_abstain',{reason_code:'other',reason:'Nothing to act on',sources:[]}];
+const rejectedReplace=['player_level_replace',{...replaceCall[1],previous_outcome:'bogus'}];
+const blankAbstain=['player_level_abstain',{...abstainCall[1],reason:' '}];
+// An ordinary (non-terminal) call: it reads one frame and does not end the pass.
+const readCall=['player_source',{source_id:'frame-1'}];
+const levelScenario=(t,sequence,max_requests=route().max_requests)=>
+  scenario(t,sequence,{configuration:{...levelRoute,max_requests},enabledTools:levelTools});
+const toolNames=payload=>payload.tools.map(tool=>tool.function.name);
+
+test('a level pass requires a tool call on every request and an actor does not', async t=>{
+  const level=await levelScenario(t,[reply(null,[abstainCall])]);
+  assert.equal(level.payloads[0].tool_choice,'required');
+  const actor=await scenario(t,[reply()]);
+  assert.equal(Object.hasOwn(actor.payloads[0],'tool_choice'),false);
+});
+
+test('a level pass ends on a replace and emits one level-pass and level-commit', async t=>{
+  const {result,events,payloads}=await levelScenario(t,[reply(null,[readCall,replaceCall])]);
+  assert.equal(result.ok,true);assert.equal(result.reason,'completed');assert.equal(payloads.length,1);
+  assert.equal(events.filter(e=>e.type==='level-pass').length,1);
+  const [commit]=events.filter(e=>e.type==='level-commit');
+  assert.deepEqual([commit.action,commit.inputs_since,commit.record_ids],['replace',1,['7'.repeat(32)]]);
+  assert.deepEqual([commit.subgoal_id,commit.derived],['8'.repeat(32),{observations:['seen','not_yet'],stalled:false}]);
+  assert.equal(events.some(e=>e.type==='intent-tail'||e.type==='level-abstain'),false);
+});
+
+for (const [name,call,action] of [['keep',keepCall,'keep'],['close',closeCall,'close']]) {
+  test(`a level pass ends on a discarded ${name}`, async t=>{
+    const {result,events,payloads}=await levelScenario(t,[reply(null,[call])]);
+    assert.equal(result.ok,true);assert.equal(payloads.length,1);
+    const [discard]=events.filter(e=>e.type==='level-discard');
+    assert.deepEqual([discard.action,discard.inputs_since],[action,11]);
+  });
+}
+
+test('a level pass ends on a valid abstain and emits level-abstain with its code and reason', async t=>{
+  const {result,events,payloads}=await levelScenario(t,[reply(null,[abstainCall])]);
+  assert.equal(result.ok,true);assert.equal(payloads.length,1);
+  const [abstain]=events.filter(e=>e.type==='level-abstain');
+  assert.deepEqual([abstain.reason_code,abstain.reason,abstain.request_id,typeof abstain.tool_call_id],['other','Nothing to act on','request-1','string']);
+  assert.equal(events.some(e=>e.type==='level-commit'||e.type==='level-discard'),false);
+});
+
+test('a rejected terminal call does not end the pass, and a later call after the ending one is refused', async t=>{
+  const {result,events,payloads}=await levelScenario(t,[
+    reply(null,[rejectedReplace]),
+    reply(null,[blankAbstain]),
+    reply(null,[replaceCall,abstainCall])]);
+  assert.equal(result.ok,true);assert.equal(payloads.length,3);
+  assert.deepEqual(events.filter(e=>e.type.startsWith('level-')&&e.type!=='level-pass'&&e.type!=='level-reserved-request'&&e.type!=='level-terminal-call').map(e=>e.type),['level-commit']);
+  const refused=events.find(e=>e.type==='tool-refused');
+  assert.deepEqual([refused.tool,refused.reason,refused.dispatched],['player_level_abstain','level-ended',false]);
+});
+
+test('a level pass that ends without a terminal call fails as level-no-proposal', async t=>{
+  for (const sequence of [[reply('I propose a subgoal')],[reply(null,[readCall]),reply('Committed.')]]) {
+    const {result,events}=await levelScenario(t,sequence);
+    assert.equal(result.ok,false);assert.equal(result.reason,'level-no-proposal');
+    assert.equal(events.find(e=>e.type==='abort').reason,'level-no-proposal');
+  }
+  const rejected=await levelScenario(t,[reply(null,[rejectedReplace]),reply('Sorry.')]);
+  assert.equal(rejected.result.reason,'level-no-proposal');
+});
+
+test('a failure latched in a level pass keeps its own reason rather than level-no-proposal', async t=>{
+  const limited=await levelScenario(t,[reply(null,[readCall]),reply(null,[abstainCall])],1);
+  assert.equal(limited.result.ok,false);assert.equal(limited.result.reason,'request-limit');
+  const timeout=await scenario(t,[init=>new Promise((_,reject)=>init.signal.addEventListener('abort',()=>reject(new Error('aborted')),{once:true}))],{configuration:{...levelRoute,request_timeout_seconds:.05},enabledTools:levelTools});
+  assert.equal(timeout.result.ok,false);assert.notEqual(timeout.result.reason,'level-no-proposal');
+  assert.equal(timeout.result.reason,'request-timeout');
+});
+
+test('the last two requests of a level pass offer only the terminal tools and say so', async t=>{
+  const {result,events,payloads}=await levelScenario(t,[
+    reply(null,[readCall]),reply(null,[readCall]),reply(null,[rejectedReplace]),reply(null,[replaceCall])],4);
+  assert.equal(result.ok,true);assert.equal(payloads.length,4);
+  assert.deepEqual(toolNames(payloads[0]),levelTools);
+  assert.deepEqual(toolNames(payloads[1]),levelTools);
+  assert.deepEqual(toolNames(payloads[2]),terminalTools);
+  assert.deepEqual(toolNames(payloads[3]),terminalTools);
+  for (const payload of payloads) assert.equal(payload.tool_choice,'required');
+  const status=payload=>JSON.stringify(payload.messages.at(-1));
+  assert.ok(!status(payloads[1]).includes('offers only the pass-ending tools'));
+  assert.ok(status(payloads[2]).includes('Remaining allowance including this request: 2.')&&status(payloads[2]).includes('offers only the pass-ending tools'));
+  assert.deepEqual(events.filter(e=>e.type==='level-reserved-request').map(e=>e.request_id),['request-3','request-4']);
+});
+
+test('an actor is never restricted to terminal tools, and a pass of two requests or fewer is terminal-only', async t=>{
+  const actor=await scenario(t,[reply(null,[['observe',{}]]),reply(null,[['observe',{}]]),reply()],{configuration:{...route(),max_requests:3}});
+  assert.ok(actor.payloads.every(payload=>toolNames(payload).length===3));
+  assert.equal(actor.events.some(e=>e.type==='level-reserved-request'),false);
+  const short=await levelScenario(t,[reply(null,[replaceCall])],2);
+  assert.deepEqual(toolNames(short.payloads[0]),terminalTools);
+});
+
+test('a terminal call refused on the last allowed request settles as level-final-refusal, not request-limit', async t=>{
+  const {result,events,payloads}=await levelScenario(t,[reply(null,[readCall]),reply(null,[blankAbstain]),reply(null,[rejectedReplace])],3);
+  assert.equal(payloads.length,3);assert.equal(result.ok,false);assert.equal(result.reason,'level-final-refusal');
+  assert.equal(events.find(e=>e.type==='abort').reason,'level-final-refusal');
+  assert.equal(events.at(-1).reason,'level-final-refusal');
+  // A refused terminal call with budget left is repaired by the next request instead.
+  const repaired=await levelScenario(t,[reply(null,[readCall]),reply(null,[blankAbstain]),reply(null,[abstainCall])],3);
+  assert.equal(repaired.result.ok,true);
+  // The last request used by an ordinary tool is still a request-limit.
+  const limited=await levelScenario(t,[reply(null,[readCall]),reply(null,[readCall]),reply(null,[readCall])],3);
+  assert.equal(limited.result.reason,'request-limit');
+});
+
+test('a terminal call whose transport is lost ends the pass as level-uncertain, with its identity and no further dispatch', async t=>{
+  const lost=['player_level_close',{outcome:'achieved',reason:'lost transport',sources:[]}];
+  const {result,events,payloads,calls}=await levelScenario(t,[reply(null,[readCall,lost,abstainCall]),reply(null,[abstainCall])]);
+  assert.equal(result.ok,false);assert.equal(result.reason,'level-uncertain');assert.equal(payloads.length,1);
+  const [uncertain]=events.filter(e=>e.type==='level-uncertain');
+  assert.deepEqual([uncertain.tool,uncertain.identity,uncertain.request_id,typeof uncertain.tool_call_id],['player_level_close','1'.repeat(32),'request-1','string']);
+  assert.equal(events.some(e=>['level-commit','level-discard','level-abstain'].includes(e.type)),false);
+  const refused=events.find(e=>e.type==='tool-refused');
+  assert.deepEqual([refused.tool,refused.reason,refused.dispatched],['player_level_abstain','level-ended',false]);
+  assert.equal(events.find(e=>e.type==='abort').reason,'level-uncertain');
+  assert.equal(events.at(-1).reason,'level-uncertain');
+  assert.deepEqual(calls.map(c=>c.tool),['player_source','player_level_close']);
+});
+
+test('reserved requests are logical requests: a provider retry never changes its request\'s declarations, and attempts bring the window forward', async t=>{
+  // Logical request 1 is retried once (two attempts), so only two HTTP attempts remain when logical request 2 starts:
+  // the window opens by attempts there, and the terminal-only declarations still appear before the budget ends.
+  const shifted=await levelScenario(t,[serverError(502),reply(null,[readCall]),reply(null,[readCall]),reply(null,[rejectedReplace])],4);
+  assert.equal(shifted.result.reason,'level-final-refusal');assert.equal(shifted.payloads.length,4);
+  assert.deepEqual(shifted.payloads.map(toolNames),[levelTools,levelTools,terminalTools,terminalTools]);
+  assert.deepEqual(shifted.events.filter(e=>e.type==='level-reserved-request').map(e=>[e.logical_request_id,e.request_id]),
+    [['request-2','request-3'],['request-3','request-4']]);
+  // One numbering: the logical count, shared by every attempt of a request, in request-start and level-reserved-request.
+  assert.deepEqual(shifted.events.filter(e=>e.type==='request-start').map(e=>[e.request_id,e.logical_request_id]),
+    [['request-1','request-1'],['request-2','request-1'],['request-3','request-2'],['request-4','request-3']]);
+  assert.ok(JSON.stringify(shifted.payloads[2].messages.at(-1)).includes('offers only the pass-ending tools'));
+  assert.equal(JSON.stringify(shifted.payloads[1].messages.at(-1)).includes('offers only the pass-ending tools'),false);
+  // A retry of a reserved logical request resends the same terminal-only declarations.
+  const retried=await levelScenario(t,[reply(null,[readCall]),serverError(502),reply(null,[abstainCall])],3);
+  assert.equal(retried.result.ok,true);assert.equal(retried.payloads.length,3);
+  assert.deepEqual(retried.payloads.map(toolNames),[levelTools,terminalTools,terminalTools]);
+  assert.deepEqual(retried.events.filter(e=>e.type==='level-reserved-request').map(e=>e.logical_request_id),['request-2']);
+  assert.equal(JSON.stringify(retried.payloads[1].tools),JSON.stringify(retried.payloads[2].tools));
+  assert.ok(JSON.stringify(retried.payloads[2].messages.at(-1)).includes('offers only the pass-ending tools'));
+});
+
+test('a non-terminal call on a reserved request is refused without dispatch, with the tools to call and the fix line', async t=>{
+  const {result,events,payloads,calls}=await levelScenario(t,[reply(null,[readCall],true,undefined,'read'),reply(null,[abstainCall])],2);
+  assert.equal(result.ok,true);assert.equal(payloads.length,2);
+  assert.deepEqual(calls.map(c=>c.tool),['player_level_abstain']);
+  const [refused]=events.filter(e=>e.type==='tool-refused');
+  assert.deepEqual([refused.tool,refused.reason,refused.dispatched],['player_source','level-reserved',false]);
+  const message=payloads[1].messages.find(m=>m.role==='tool'&&m.tool_call_id==='read-0').content;
+  assert.ok(message.includes('player_source is not offered on this request and was not run')&&message.includes(terminalTools.join(', ')),message);
+  assert.ok(message.endsWith('Fix the call and resend it; abstaining is not the remedy for a fixable call.'),message);
+  // The refusal does not end the pass: the next request's terminal call does.
+  assert.equal(events.some(e=>e.type==='level-abstain'),true);
+});
+
+test('every terminal call is traced, with unparseable arguments flagged and no tool-start', async t=>{
+  const raw=(name,args)=>new Response([{id:'r',model:'fixture-backend',choices:[{index:0,delta:{role:'assistant',tool_calls:[{index:0,id:'raw-0',type:'function',function:{name,arguments:args}}]},finish_reason:null}]},
+    {id:'r',model:'fixture-backend',choices:[{index:0,delta:{},finish_reason:'tool_calls'}],usage:{prompt_tokens:11,completion_tokens:5,total_tokens:16}}]
+    .map(chunk=>'data: '+JSON.stringify(chunk)+'\n\n').join('')+'data: [DONE]\n\n',{headers:{'content-type':'text/event-stream'}});
+  const {result,events,calls}=await levelScenario(t,[raw('player_level_abstain','{"reason_code":"other",'),reply(null,[readCall,blankAbstain,abstainCall],true,undefined,'ok')]);
+  assert.equal(result.ok,true);
+  const traced=events.filter(e=>e.type==='level-terminal-call').map(e=>[e.request_id,e.tool_call_id,e.tool,e.arguments_error]);
+  assert.deepEqual(traced,[['request-1','raw-0','player_level_abstain',true],['request-2','ok-1','player_level_abstain',false],['request-2','ok-2','player_level_abstain',false]]);
+  const started=events.filter(e=>e.type==='tool-start').map(e=>e.tool_call_id);
+  assert.equal(started.includes('raw-0'),false);
+  // The blank abstain was dispatched (the custodian rejects it); the unparseable one never was.
+  assert.deepEqual(calls.map(c=>c.tool),['player_source','player_level_abstain','player_level_abstain']);
+});
+
+test('a terminal call whose arguments the SDK changed is refused naming the field, with the fix line', async t=>{
+  const coerced=['player_level_replace',{...replaceCall[1],confidence:'0.5'}];
+  const {result,calls,payloads,events}=await levelScenario(t,[reply(null,[coerced],true,undefined,'c'),reply(null,[replaceCall])]);
+  assert.equal(result.ok,true);assert.deepEqual(calls.map(c=>c.tool),['player_level_replace']);
+  assert.equal(events.find(e=>e.type==='tool-refused').reason,'tool-arguments-changed');
+  const message=payloads[1].messages.find(m=>m.role==='tool'&&m.tool_call_id==='c-0').content;
+  assert.ok(message.includes('MCP input not sent')&&message.includes('player_level_replace')&&message.includes('field confidence'),message);
+  assert.ok(message.endsWith('Fix the call and resend it; abstaining is not the remedy for a fixable call.'),message);
+  assert.deepEqual(changedFields({a:1,b:{c:[1],d:2}},{a:1,b:{c:[2],d:3}}),['b.c','b.d']);
+});
+
+test('production level schemas: a refused call names each field, the rule, the allowed values, a received value and an example', async ()=>{
+  const bad={text:'t'.repeat(3000),expected_observations:'one',status:'open',confidence:3,record_id:'r1',
+    previous_outcome:'done',previous_reason:''};
+  const payloads=[], events=[];
+  const sequence=[reply(null,[['player_level_replace',bad]],true,undefined,'bad'),reply(null,[['player_level_abstain',{reason_code:'other'}]],true,undefined,'bad2'),reply()];
+  const result=await runHost({configuration:{...levelRoute,max_requests:8},mcpConfig:productionMcp(levelTools),
+    context:'Frozen current player guide',prompt:'Level pass.',model:model.id,effort:'off',timeoutSeconds:20,env:{OFFLINE_TEST_KEY:'fixture-key'},
+    fetch:async(_url,init)=>{payloads.push(JSON.parse(init.body));return sequence[payloads.length-1] ?? reply();},onEvent:e=>events.push(e)});
+  // Nothing was valid, so no call reached the custodian and the pass ends without a terminal call.
+  assert.equal(result.reason,'level-no-proposal');assert.equal(events.filter(e=>e.type==='tool-start').length,0);
+  const first=payloads.at(-1).messages.find(m=>m.role==='tool'&&m.tool_call_id==='bad-0').content;
+  assert.match(first,/^Validation failed for tool "player_level_replace":/);
+  assert.ok(first.includes('- previous_outcome: must be one of "none", "achieved", "failed", "abandoned", "revised"; received "done"'),first);
+  assert.match(first,/- confidence: .*maximum 1.*received 3/);
+  assert.match(first,/- expected_observations: .*received "one"/);
+  assert.match(first,/- sources: required property is missing/);
+  assert.ok(first.includes('unknown properties "record_id" are not allowed'),first);
+  const received=/- text: .*received (".*)/.exec(first)[1];
+  assert.ok(received.length<200&&received.includes('more characters'),'received values are truncated to 120 characters');
+  assert.ok(first.includes('Valid example call: player_level_replace {"text":"<text>"'),first);
+  assert.ok(first.includes('"previous_outcome":"none","previous_reason":""'),first);
+  assert.ok(first.endsWith('Fix the call and resend it; abstaining is not the remedy for a fixable call.'),first);
+  assert.ok(first.includes('In this example previous_outcome is "none"')&&first.includes('valid only when there is no current subgoal'),first);
+  assert.ok(!first.includes('schema is false'));
+  const second=payloads.at(-1).messages.find(m=>m.role==='tool'&&m.tool_call_id==='bad2-0').content;
+  assert.ok(second.includes('- reason: required property is missing')&&second.includes('- sources: required property is missing'),second);
+  assert.ok(second.includes('Valid example call: player_level_abstain {"reason_code":"insufficient_evidence","reason":"<reason>","sources":[]}'),second);
+  assert.equal(events.filter(e=>e.type==='tool-validation-feedback').length,2);
+  assert.ok(payloads[0].tools.every(tool=>!JSON.stringify(tool.function.parameters).includes('"const"')));
+});
+
+test('a level-role host without the level tools fails before any provider request', async t=>{
+  const {result,payloads}=await scenario(t,[reply()],{configuration:{...route(),role:'level'},enabledTools:['observe']});
+  assert.equal(result.ok,false);assert.equal(result.reason,'missing-required-tools');assert.equal(payloads.length,0);
+  // The four terminal tools are the whole requirement: no log tool exists, and a level without one of them is refused.
+  const partial=await scenario(t,[reply()],{configuration:{...route(),role:'level'},enabledTools:['player_source',...terminalTools.slice(0,3)]});
+  assert.equal(partial.result.reason,'missing-required-tools');assert.equal(partial.payloads.length,0);
+  const complete=await levelScenario(t,[reply(null,[abstainCall])]);
+  assert.equal(complete.result.ok,true);
+});
+
+test('each role enables exactly its own pass tools: a foreign or surplus terminal tool is refused before any request', async t=>{
+  const cases=[['level with the recorder tools',{...route(),role:'level'},['player_source',...terminalTools,'player_episode_record']],
+    ['recorder with the level tools',{...route(),role:'recorder'},['player_episode_record','player_episode_abstain','player_level_keep']],
+    ['actor with a level tool',route(),['observe','player_level_abstain']],
+    ['actor with a recorder tool',route(),['observe','player_episode_abstain']]];
+  for (const [name,configuration,enabledTools] of cases) {
+    const {result,payloads}=await scenario(t,[reply(null,[abstainCall])],{configuration,enabledTools,prompt:configuration.role==='recorder'?JSON.stringify({schema:'player-pass-input/2',text:'x',frames:[]}):'Offline mission'});
+    assert.equal(result.reason,'unexpected-pass-tools',name);assert.equal(payloads.length,0,name);
+  }
+});
+
+const episodeTools=['player_episode_record','player_episode_abstain'];
+const recorderTools=['player_source',...episodeTools];
+const recorderRoute={...route(),role:'recorder'};
+const recordCall=['player_episode_record',{attempted:'Walked to the door',counterpart:'',observation_status:['seen','not_yet'],observation_source_first:['frame-3','frame-3'],observation_source_second:['',''],changed:'',residual:'',confidence:0.8,sources:['frame-3']}];
+const episodeAbstain=['player_episode_abstain',{reason_code:'unreadable_frames',reason:'The frames are blank',sources:[]}];
+const rejectedRecord=['player_episode_record',{...recordCall[1],attempted:' '}];
+const blankEpisodeAbstain=['player_episode_abstain',{...episodeAbstain[1],reason:' '}];
+const episodeFrames=[{source_id:'base-1',role:'baseline'},{source_id:'frame-2',role:'in-episode'},{source_id:'frame-3',role:'last'}];
+const passInput=(text='Episode 4-9. Subgoal: reach the door.',frames=episodeFrames)=>JSON.stringify({schema:'player-pass-input/2',text,frames});
+const recorderScenario=(t,sequence,{max_requests=route().max_requests,frames=episodeFrames,text}={})=>
+  scenario(t,sequence,{configuration:{...recorderRoute,max_requests},enabledTools:recorderTools,prompt:passInput(text,frames)});
+
+test('the recorder host refuses unaligned mark columns before dispatch and accepts a corrected call', async t=>{
+  const unaligned=[recordCall[0],{...recordCall[1],observation_source_second:['']}];
+  const {result,events,calls}=await recorderScenario(t,[reply(null,[unaligned]),reply(null,[recordCall])]);
+  assert.equal(result.ok,true);
+  const refused=events.filter(e=>e.type==='tool-refused'&&e.reason==='observation-columns-unaligned');
+  assert.equal(refused.length,1);
+  assert.equal(refused[0].dispatched,false);
+  assert.equal(calls.filter(c=>c.tool===recordCall[0]).length,1);
+});
+
+test('a recorder pass forces a tool call, shows its frames as marked image parts and ends on a record', async t=>{
+  const {result,events,payloads,calls}=await recorderScenario(t,[reply(null,[readCall,recordCall])]);
+  assert.equal(result.ok,true);assert.equal(result.reason,'completed');assert.equal(payloads.length,1);
+  assert.equal(payloads[0].tool_choice,'required');
+  assert.deepEqual(toolNames(payloads[0]),recorderTools);
+  assert.equal(events[0].type,'host-start');assert.deepEqual([events[0].schema,events[0].role,events[0].intent_tail_bytes],['player-host/8','recorder',null]);
+  // One pass event with the manifest, then one frame read per frame, before the first request.
+  assert.deepEqual(events.filter(e=>e.type==='episode-pass').map(e=>e.frames),[episodeFrames]);
+  const read=events.filter(e=>e.type==='episode-frame');
+  assert.deepEqual(read.map(e=>[e.source_id,e.role,e.media_type,e.bytes,e.sha256]),
+    episodeFrames.map(frame=>[frame.source_id,frame.role,'image/png',68,createHash('sha256').update(Buffer.from(png,'base64')).digest('hex')]));
+  assert.ok(events.findIndex(e=>e.type==='episode-frame')<events.findIndex(e=>e.type==='request-start'));
+  assert.deepEqual(calls.slice(0,3).map(c=>[c.tool,c.source_id]),episodeFrames.map(frame=>['player_source',frame.source_id]));
+  // The first message holds the text, then each frame's marker and image, in order.
+  const first=payloads[0].messages.find(message=>message.role==='user').content;
+  assert.deepEqual(first.map(part=>part.type==='text'?part.text:part.type),['Episode 4-9. Subgoal: reach the door.',
+    'Frame base-1 (baseline):','image_url','Frame frame-2 (in-episode):','image_url','Frame frame-3 (last):','image_url']);
+  assert.ok(first[2].image_url.url.startsWith('data:image/png;base64,'));
+  const [record]=events.filter(e=>e.type==='episode-record');
+  assert.deepEqual([record.first_position,record.last_position,record.subgoal_id,record.counted,record.closed,record.observations,record.stalled,record.record_ids],
+    [4,9,'8'.repeat(32),true,false,['seen','not_yet'],false,['9'.repeat(32)]]);
+  assert.deepEqual([record.request_id,typeof record.tool_call_id],['request-1','string']);
+  assert.equal(events.some(e=>e.type.startsWith('level-')||e.type==='intent-tail'||e.type==='episode-abstain'),false);
+  assert.equal(events.filter(e=>e.type==='episode-terminal-call').length,1);
+});
+
+test('a recorder pass ends on a valid abstain with its code and reason from the call, and the settled episode positions', async t=>{
+  const {result,events,payloads}=await recorderScenario(t,[reply(null,[episodeAbstain])],{frames:[]});
+  assert.equal(result.ok,true);assert.equal(payloads.length,1);
+  const [abstain]=events.filter(e=>e.type==='episode-abstain');
+  assert.deepEqual([abstain.reason_code,abstain.reason,abstain.first_position,abstain.last_position,abstain.subgoal_id,abstain.record_ids,abstain.request_id],
+    ['unreadable_frames','The frames are blank',4,9,'8'.repeat(32),['9'.repeat(32)],'request-1']);
+  assert.equal(events.some(e=>e.type==='episode-record'||e.type==='episode-frame'),false);
+  assert.deepEqual(events.find(e=>e.type==='episode-pass').frames,[]);
+  // With no frame, the first message is the text alone.
+  assert.equal(payloads[0].messages.find(message=>message.role==='user').content.length>=1,true);
+});
+
+test('a rejected recorder call does not end the pass and a call after the ending one is refused', async t=>{
+  const {result,events,payloads}=await recorderScenario(t,[reply(null,[rejectedRecord]),reply(null,[blankEpisodeAbstain]),reply(null,[recordCall,episodeAbstain])]);
+  assert.equal(result.ok,true);assert.equal(payloads.length,3);
+  assert.deepEqual(events.filter(e=>/^episode-(record|abstain)$/.test(e.type)).map(e=>e.type),['episode-record']);
+  const refused=events.find(e=>e.type==='tool-refused');
+  assert.deepEqual([refused.tool,refused.reason,refused.dispatched],['player_episode_abstain','episode-ended',false]);
+});
+
+test('a recorder pass that ends without a terminal call fails as episode-no-record, and a latched failure keeps its own reason', async t=>{
+  for (const sequence of [[reply('I recorded it')],[reply(null,[readCall]),reply('Done.')],[reply(null,[rejectedRecord]),reply('Sorry.')]]) {
+    const {result,events}=await recorderScenario(t,sequence);
+    assert.equal(result.ok,false);assert.equal(result.reason,'episode-no-record');
+    assert.equal(events.find(e=>e.type==='abort').reason,'episode-no-record');
+  }
+  const limited=await recorderScenario(t,[reply(null,[readCall]),reply(null,[episodeAbstain])],{max_requests:1});
+  assert.equal(limited.result.reason,'request-limit');
+});
+
+test('the last two requests of a recorder pass offer only the episode tools and say so; a non-terminal call there is refused', async t=>{
+  const {result,events,payloads,calls}=await recorderScenario(t,[reply(null,[readCall]),reply(null,[readCall]),reply(null,[readCall],true,undefined,'late'),reply(null,[recordCall])],{max_requests:4});
+  assert.equal(result.ok,true);assert.equal(payloads.length,4);
+  assert.deepEqual(payloads.map(toolNames),[recorderTools,recorderTools,episodeTools,episodeTools]);
+  for (const payload of payloads) assert.equal(payload.tool_choice,'required');
+  const status=payload=>JSON.stringify(payload.messages.at(-1));
+  assert.ok(!status(payloads[1]).includes('offers only the pass-ending tools')&&status(payloads[2]).includes('offers only the pass-ending tools'));
+  assert.deepEqual(events.filter(e=>e.type==='episode-reserved-request').map(e=>[e.request_id,e.logical_request_id,e.offered_tools]),
+    [['request-3','request-3',episodeTools],['request-4','request-4',episodeTools]]);
+  assert.equal(events.some(e=>e.type==='level-reserved-request'),false);
+  // The two ordinary calls of requests 1 and 2 ran; the one on a reserved request did not.
+  const [refused]=events.filter(e=>e.type==='tool-refused');
+  assert.deepEqual([refused.tool,refused.reason,refused.dispatched],['player_source','episode-reserved',false]);
+  const message=payloads[3].messages.find(m=>m.role==='tool'&&m.tool_call_id==='late-0').content;
+  assert.ok(message.includes('player_source is not offered on this request and was not run')&&message.includes(episodeTools.join(', ')),message);
+  assert.ok(message.endsWith('Fix the call and resend it; abstaining is not the remedy for a fixable call.'),message);
+  assert.equal(calls.filter(c=>c.tool==='player_source').length,3+2,'three frames and two ordinary reads');
+  const short=await recorderScenario(t,[reply(null,[recordCall])],{max_requests:2});
+  assert.deepEqual(toolNames(short.payloads[0]),episodeTools);
+});
+
+test('a recorder terminal call refused on the last allowed request settles as episode-final-refusal', async t=>{
+  const {result,events,payloads}=await recorderScenario(t,[reply(null,[readCall]),reply(null,[blankEpisodeAbstain]),reply(null,[rejectedRecord])],{max_requests:3});
+  assert.equal(payloads.length,3);assert.equal(result.ok,false);assert.equal(result.reason,'episode-final-refusal');
+  assert.equal(events.find(e=>e.type==='abort').reason,'episode-final-refusal');
+  const repaired=await recorderScenario(t,[reply(null,[readCall]),reply(null,[blankEpisodeAbstain]),reply(null,[episodeAbstain])],{max_requests:3});
+  assert.equal(repaired.result.ok,true);
+  const limited=await recorderScenario(t,[reply(null,[readCall]),reply(null,[readCall]),reply(null,[readCall])],{max_requests:3});
+  assert.equal(limited.result.reason,'request-limit');
+});
+
+test('a recorder terminal call whose transport is lost ends the pass as episode-uncertain with its identity and no further dispatch', async t=>{
+  const lost=['player_episode_record',{...recordCall[1],attempted:'lost transport'}];
+  const {result,events,payloads,calls}=await recorderScenario(t,[reply(null,[lost,episodeAbstain]),reply(null,[episodeAbstain])],{frames:[]});
+  assert.equal(result.ok,false);assert.equal(result.reason,'episode-uncertain');assert.equal(payloads.length,1);
+  const [uncertain]=events.filter(e=>e.type==='episode-uncertain');
+  assert.deepEqual([uncertain.tool,uncertain.identity,uncertain.request_id,typeof uncertain.tool_call_id],['player_episode_record','1'.repeat(32),'request-1','string']);
+  assert.equal(events.some(e=>['episode-record','episode-abstain'].includes(e.type)),false);
+  assert.equal(events.find(e=>e.type==='tool-refused').reason,'episode-ended');
+  assert.equal(events.at(-1).reason,'episode-uncertain');
+  assert.deepEqual(calls.map(c=>c.tool),['player_episode_record']);
+});
+
+test('every recorder terminal call is traced, with unparseable arguments flagged and no tool-start', async t=>{
+  const raw=new Response([{id:'r',model:'fixture-backend',choices:[{index:0,delta:{role:'assistant',tool_calls:[{index:0,id:'raw-0',type:'function',function:{name:'player_episode_abstain',arguments:'{"reason_code":"other",'}}]},finish_reason:null}]},
+    {id:'r',model:'fixture-backend',choices:[{index:0,delta:{},finish_reason:'tool_calls'}],usage:{prompt_tokens:11,completion_tokens:5,total_tokens:16}}]
+    .map(chunk=>'data: '+JSON.stringify(chunk)+'\n\n').join('')+'data: [DONE]\n\n',{headers:{'content-type':'text/event-stream'}});
+  const {result,events}=await recorderScenario(t,[raw,reply(null,[readCall,blankEpisodeAbstain,episodeAbstain],true,undefined,'ok')],{frames:[]});
+  assert.equal(result.ok,true);
+  assert.deepEqual(events.filter(e=>e.type==='episode-terminal-call').map(e=>[e.request_id,e.tool_call_id,e.tool,e.arguments_error]),
+    [['request-1','raw-0','player_episode_abstain',true],['request-2','ok-1','player_episode_abstain',false],['request-2','ok-2','player_episode_abstain',false]]);
+  assert.equal(events.filter(e=>e.type==='tool-start').some(e=>e.tool_call_id==='raw-0'),false);
+});
+
+test('a malformed recorder input is refused before any start event, connection or request', async ()=>{
+  const ok={schema:'player-pass-input/2',text:'Episode.',frames:[{source_id:'f1',role:'baseline'}]};
+  const many=Array.from({length:8},(_, i)=>({source_id:`f${i}`,role:'in-episode'}));
+  const bad=['Offline mission','{','[]','null',JSON.stringify({...ok,schema:'player-pass-input/0'}),JSON.stringify({...ok,extra:1}),
+    JSON.stringify({schema:ok.schema,text:ok.text}),JSON.stringify({...ok,text:''}),JSON.stringify({...ok,text:3}),JSON.stringify({...ok,frames:'none'}),
+    JSON.stringify({...ok,frames:many}),JSON.stringify({...ok,frames:[{source_id:'f1',role:'middle'}]}),JSON.stringify({...ok,frames:[{source_id:'f1'}]}),
+    JSON.stringify({...ok,frames:[{source_id:'f1',role:'baseline',extra:1}]}),JSON.stringify({...ok,frames:[{source_id:'',role:'baseline'}]}),
+    JSON.stringify({...ok,frames:[{source_id:'a b',role:'baseline'}]}),JSON.stringify({...ok,frames:[{source_id:'x'.repeat(129),role:'last'}]}),
+    JSON.stringify({...ok,frames:[{source_id:'f1',role:'baseline'},{source_id:'f2',role:'baseline'}]}),
+    JSON.stringify({...ok,frames:[{source_id:'f1',role:'last'},{source_id:'f2',role:'last'}]}),
+    JSON.stringify({...ok,frames:[{source_id:'f1',role:'baseline'},{source_id:'f1',role:'in-episode'}]})];
+  for (const prompt of bad) {
+    const events=[];
+    const result=await runHost({configuration:{...recorderRoute},mcpConfig:{command:'/nonexistent/never-started',args:[],cwd:tmpdir(),enabled:true,enabled_tools:recorderTools,startup_timeout_sec:1,tool_timeout_sec:1},
+      context:'Frozen guide',prompt,model:model.id,effort:'off',timeoutSeconds:5,env:{OFFLINE_TEST_KEY:'fixture-key'},fetch:async()=>{throw new Error('no request');},onEvent:e=>events.push(e)});
+    assert.equal(result.ok,false,prompt.slice(0,60));assert.equal(result.reason,'invalid-pass-input',prompt.slice(0,60));
+    assert.deepEqual(events.map(e=>e.type),['abort','settled']);
+    assert.equal(events.at(-1).reason,'invalid-pass-input');
+  }
+  // Seven frames (a baseline and six more) is the most the policy allows.
+  const seven=[{source_id:'b',role:'baseline'},...Array.from({length:5},(_, i)=>({source_id:`e${i}`,role:'in-episode'})),{source_id:'l',role:'last'}];
+  assert.equal(parsePassInput(JSON.stringify({...ok,frames:seven})).frames.length,7);
+});
+
+test('the frame policy: an optional baseline first, at most six episode frames, and a last that ends any episode frames', ()=>{
+  const parse=frames=>parsePassInput(JSON.stringify({schema:'player-pass-input/2',text:'Episode.',frames}));
+  const f=(source_id,role)=>({source_id,role});
+  const inEpisode=count=>Array.from({length:count},(_, i)=>f(`e${i}`,'in-episode'));
+  // Allowed: nothing, a lone baseline, a lone last, a baseline and a last, up to a baseline and six episode frames.
+  for (const frames of [[],[f('b','baseline')],[f('l','last')],[f('b','baseline'),f('l','last')],[...inEpisode(5),f('l','last')],
+      [f('b','baseline'),...inEpisode(5),f('l','last')]]) assert.doesNotThrow(()=>parse(frames),JSON.stringify(frames));
+  const refused=[[f('e','in-episode')],[f('b','baseline'),f('e','in-episode')],[f('l','last'),f('e','in-episode')],[f('e','in-episode'),f('l','last'),f('x','in-episode')],
+    [f('e','in-episode'),f('b','baseline'),f('l','last')],[f('l','last'),f('b','baseline')],[...inEpisode(6),f('l','last')],[f('b','baseline'),...inEpisode(6),f('l','last')],
+    [f('b','baseline'),f('b2','baseline'),f('l','last')],[f('a','last'),f('l','last')]];
+  for (const frames of refused) assert.throws(()=>parse(frames),{reason:'invalid-pass-input'},JSON.stringify(frames.map(frame=>frame.role)));
+});
+
+test('pinned images are never omitted and count toward the peak with the protected latest batch', ()=>{
+  // A pushed first message with three frames, then ordinary reads.
+  const first={role:'user',content:[{type:'text',text:'Episode'},...['base','mid','last'].map(name=>({type:'image',mimeType:'image/png',data:Buffer.from(`pushed-${name}`).toString('base64')}))]};
+  const history=turns=>[first,...imageHistory(turns)];
+  const kept=(projection,count)=>projection.messages[0].content.filter(part=>part.type==='image').length===count;
+  // Unpinned, the oldest image (the baseline) is the one evicted.
+  assert.equal(kept(projectImageContext(history(2),4,1),2),true);
+  // Pinned, the read's older image is the one omitted and the three frames stay.
+  const pinned=projectImageContext(history(2),4,1,3);
+  assert.equal(kept(pinned,3),true);
+  assert.deepEqual([pinned.summary.pinned_images,pinned.summary.omitted_images,pinned.summary.retained_images,pinned.summary.blocked],[3,1,4,false]);
+  assert.equal(pixels(pinned),4);
+  // Pinned frames at the peak plus a protected read is over the peak: the request is blocked, and nothing is omitted.
+  const full=projectImageContext(history(1),3,1,3);
+  assert.deepEqual([full.summary.blocked,full.summary.omitted_images,full.summary.protected_images],[true,0,1]);
+  assert.equal(projectImageContext(history(1),4,1,3).summary.blocked,false);
+  // A whole block of 2 omits the two evictable reads, never a pinned frame.
+  const blocks=projectImageContext(history(3),5,2,3);
+  assert.equal(kept(blocks,3),true);assert.equal(blocks.summary.omitted_images,2);
+  assert.throws(()=>projectImageContext(history(1),4,1,-1));
+});
+
+test('a recorder whose frames leave no room for a read under the peak is refused before any start event, connection or request', async ()=>{
+  // Three frames: a peak of 2 (below) and of 3 (equal) are both refused; the driver's peak is at least frames + 1.
+  for (const max_context_images of [2,3]) {
+    const events=[];
+    const result=await runHost({configuration:{...recorderRoute,max_context_images,context_image_block:1},
+      mcpConfig:{command:'/nonexistent/never-started',args:[],cwd:tmpdir(),enabled:true,enabled_tools:recorderTools,startup_timeout_sec:1,tool_timeout_sec:1},
+      context:'Frozen guide',prompt:passInput(),model:model.id,effort:'off',timeoutSeconds:5,env:{OFFLINE_TEST_KEY:'fixture-key'},fetch:async()=>{throw new Error('no request');},onEvent:e=>events.push(e)});
+    assert.equal(result.ok,false,`peak ${max_context_images}`);assert.equal(result.reason,'invalid-pass-input');
+    assert.equal(events.some(e=>e.type==='host-start'||e.type==='mcp-connected'||e.type==='request-start'),false);
+  }
+});
+
+test('pushed recorder frames survive every request of the pass: a read is omitted before the baseline, and a read that would exceed the peak stops the pass', async t=>{
+  const images=payload=>payload.messages.map(message=>Array.isArray(message.content)?message.content.filter(part=>part.type==='image_url').length:0);
+  // Peak 4 for three frames: each read adds one image, and the oldest read is the one omitted.
+  const roomy=await scenario(t,[reply(null,[readCall],true,undefined,'r1'),reply(null,[['player_source',{source_id:'frame-9'}]],true,undefined,'r2'),reply(null,[readCall],true,undefined,'r3'),reply(null,[recordCall])],
+    {configuration:{...recorderRoute,max_requests:5,max_context_images:4,context_image_block:1},enabledTools:recorderTools,prompt:passInput()});
+  assert.equal(roomy.result.ok,true);assert.equal(roomy.payloads.length,4);
+  for (const payload of roomy.payloads) {
+    const first=payload.messages.find(message=>message.role==='user');
+    assert.equal(first.content.filter(part=>part.type==='image_url').length,3,'the three pushed frames are in every request');
+    assert.ok(images(payload).reduce((a,b)=>a+b,0)<=4,'the peak holds');
+  }
+  assert.ok(roomy.events.some(e=>e.type==='context-image-projection'&&e.omitted_images>0&&e.pinned_images===3));
+  // Peak 4 for three frames leaves room for one read at once: two reads in one batch, the first proceeds and the second is a
+  // fixable refusal, and the pass goes on to a record (the context-image-limit stop stays a backstop only).
+  const tight=await scenario(t,[reply(null,[readCall,['player_source',{source_id:'frame-8'}]],true,undefined,'two'),reply(null,[recordCall])],
+    {configuration:{...recorderRoute,max_requests:4,max_context_images:4,context_image_block:1},enabledTools:recorderTools,prompt:passInput()});
+  assert.equal(tight.result.ok,true);assert.equal(tight.payloads.length,2);
+  assert.deepEqual(tight.calls.filter(c=>c.tool==='player_source').map(c=>c.source_id),['base-1','frame-2','frame-3','frame-1']);
+  const [refused]=tight.events.filter(e=>e.type==='tool-refused');
+  assert.deepEqual([refused.tool,refused.reason,refused.dispatched],['player_source','episode-image-peak',false]);
+  const message=tight.payloads[1].messages.find(m=>m.role==='tool'&&m.tool_call_id==='two-1').content;
+  assert.ok(message.includes('only 1 more can be read at once')&&message.includes('1 was already read in this turn')&&message.includes('Earlier reads are evicted first'),message);
+  assert.ok(message.endsWith('Fix the call and resend it; abstaining is not the remedy for a fixable call.'),message);
+  assert.ok(tight.events.every(e=>e.type!=='context-image-projection'||e.blocked===false),'the backstop never fires');
+  assert.equal(tight.events.some(e=>e.type==='episode-record'),true);
+  assert.equal(tight.payloads[1].messages.find(m=>m.role==='user').content.filter(part=>part.type==='image_url').length,3);
+  // The read is allowed again in the next turn.
+  const later=await scenario(t,[reply(null,[readCall]),reply(null,[['player_source',{source_id:'frame-8'}]]),reply(null,[recordCall])],
+    {configuration:{...recorderRoute,max_requests:4,max_context_images:4,context_image_block:1},enabledTools:recorderTools,prompt:passInput()});
+  assert.equal(later.result.ok,true);assert.equal(later.events.some(e=>e.type==='tool-refused'),false);
+});
+
+test('seven pushed frames at a peak of 8 take one read per turn', async t=>{
+  const seven=[{source_id:'b',role:'baseline'},...Array.from({length:5},(_, i)=>({source_id:`e${i}`,role:'in-episode'})),{source_id:'l',role:'last'}];
+  const {result,events}=await scenario(t,[reply(null,[readCall,readCall],true,undefined,'x'),reply(null,[recordCall])],
+    {configuration:{...recorderRoute,max_requests:4,max_context_images:8,context_image_block:1},enabledTools:recorderTools,prompt:passInput('Episode.',seven)});
+  assert.equal(result.ok,true);
+  assert.deepEqual(events.filter(e=>e.type==='tool-refused').map(e=>e.reason),['episode-image-peak']);
+});
+
+test('a level host requires player_source among its enabled tools', async t=>{
+  const {result,payloads}=await scenario(t,[reply(null,[abstainCall])],{configuration:levelRoute,enabledTools:terminalTools});
+  assert.equal(result.reason,'missing-required-tools');assert.equal(payloads.length,0);
+});
+
+test('a frame the recorder host cannot read ends the pass before any request, and every frame needs an enabled player_source', async t=>{
+  for (const source_id of ['missing','no-image']) {
+    const {result,events,payloads}=await recorderScenario(t,[reply(null,[recordCall])],{frames:[{source_id:'base-1',role:'baseline'},{source_id,role:'last'}]});
+    assert.equal(result.ok,false);assert.equal(result.reason,'frame-read-failed',source_id);assert.equal(payloads.length,0);
+    assert.deepEqual(events.filter(e=>e.type==='episode-frame').map(e=>e.source_id),['base-1']);
+    assert.equal(events.some(e=>e.type==='request-start'),false);
+  }
+  const {result,payloads}=await scenario(t,[reply(null,[recordCall])],{configuration:recorderRoute,enabledTools:episodeTools,prompt:passInput()});
+  assert.equal(result.reason,'missing-required-tools');assert.equal(payloads.length,0);
+  const bare=await scenario(t,[reply(null,[episodeAbstain])],{configuration:recorderRoute,enabledTools:episodeTools,prompt:passInput('No frames.',[])});
+  assert.equal(bare.result.ok,true);
+});
+
+test('production episode schemas: a refused call names each field, the rule, the allowed values, a received value and an example', async ()=>{
+  const bad={attempted:'a'.repeat(1100),counterpart:'',observation_status:['seen','maybe'],changed:'',confidence:3,sources:['a','b','c','d','e'],extra:1};
+  const payloads=[], events=[];
+  const sequence=[reply(null,[['player_episode_record',bad]],true,undefined,'bad'),reply(null,[['player_episode_abstain',{reason_code:'tired',reason:'x'}]],true,undefined,'bad2'),reply()];
+  const result=await runHost({configuration:{...recorderRoute,max_requests:8},mcpConfig:productionMcp(recorderTools),
+    context:'Frozen current player guide',prompt:passInput('Episode.',[]),model:model.id,effort:'off',timeoutSeconds:20,env:{OFFLINE_TEST_KEY:'fixture-key'},
+    fetch:async(_url,init)=>{payloads.push(JSON.parse(init.body));return sequence[payloads.length-1] ?? reply();},onEvent:e=>events.push(e)});
+  assert.equal(result.reason,'episode-no-record');assert.equal(events.filter(e=>e.type==='tool-start').length,0);
+  assert.deepEqual(toolNames(payloads[0]),recorderTools);
+  const first=payloads.at(-1).messages.find(m=>m.role==='tool'&&m.tool_call_id==='bad-0').content;
+  assert.match(first,/^Validation failed for tool "player_episode_record":/);
+  assert.ok(first.includes('must be one of "seen", "not_yet", "contradicted", "unassessable"; received "maybe"'),first);
+  assert.match(first,/- confidence: .*maximum 1.*received 3/);
+  assert.match(first,/- sources: .*maxItems 4/);
+  assert.match(first,/- residual: required property is missing/);
+  assert.ok(first.includes('unknown properties "extra" are not allowed'),first);
+  const received=/- attempted: .*received (".*)/.exec(first)[1];
+  assert.ok(received.length<200&&received.includes('more characters'),'received values are truncated to 120 characters');
+  assert.ok(first.includes('Valid example call: player_episode_record {"attempted":"<attempted>","counterpart":"","observation_status":[],"observation_source_first":[],"observation_source_second":[],"changed":"","residual":"","confidence":0,"sources":["<sources>"]}'),first);
+  assert.ok(first.includes('With no subgoal, leave the three mark columns empty.'),first);
+  assert.ok(first.endsWith('Fix the call and resend it; abstaining is not the remedy for a fixable call.'),first);
+  const second=payloads.at(-1).messages.find(m=>m.role==='tool'&&m.tool_call_id==='bad2-0').content;
+  assert.ok(second.includes('must be one of "unreadable_frames", "no_player_action", "other"; received "tired"'),second);
+  assert.ok(second.includes('Valid example call: player_episode_abstain {"reason_code":"unreadable_frames","reason":"<reason>","sources":[]}'),second);
+  assert.equal(events.filter(e=>e.type==='tool-validation-feedback').length,2);
+});
+
+test('recorder telemetry needs a valid receipt of the matching tool and never a local tool error', ()=>{
+  const result=value=>({content:[{type:'text',text:JSON.stringify(value)}]});
+  const receipt={schema:'player-episode-record/3',status:'recorded',settled:'recorded',first_position:4,last_position:9,subgoal_id:'s'.repeat(32),
+    counted:true,closed:true,observations:['seen'],stalled:false,records:[{id:'c1'},{id:'c2'}]};
+  assert.deepEqual(episodeRecordEvent(result(receipt)),{type:'episode-record',first_position:4,last_position:9,subgoal_id:'s'.repeat(32),record_ids:['c1','c2'],
+    counted:true,closed:true,observations:['seen'],stalled:false});
+  const bare=episodeRecordEvent(result({...receipt,subgoal_id:null,counted:false,closed:false,observations:null,stalled:null}));
+  assert.deepEqual([bare.subgoal_id,bare.counted,bare.closed,bare.observations,bare.stalled],[null,false,false,null,null]);
+  assert.equal(episodeRecordEvent({...result(receipt),isError:true}),null);
+  assert.equal(episodeRecordEvent(result({...receipt,schema:'player-episode-record/0'})),null);
+  assert.equal(episodeRecordEvent(result({...receipt,settled:'abstained'})),null);
+  assert.equal(episodeRecordEvent(result({...receipt,schema:'player-episode-abstain/3',status:'abstained',settled:'abstained'})),null);
+  assert.equal(episodeRecordEvent({content:[{type:'text',text:'{'}]}),null);
+  const abstained={schema:'player-episode-abstain/3',status:'abstained',settled:'abstained',first_position:4,last_position:9,subgoal_id:null,records:[{id:'c1'}]};
+  const args={reason_code:'no_player_action',reason:'Nothing happened'};
+  assert.deepEqual(episodeAbstainEvent(result(abstained),args),{type:'episode-abstain',first_position:4,last_position:9,subgoal_id:null,record_ids:['c1'],reason_code:'no_player_action',reason:'Nothing happened'});
+  assert.equal(episodeAbstainEvent({...result(abstained),isError:true},args),null);
+  assert.equal(episodeAbstainEvent(result(abstained),{...args,reason:''}),null);
+  assert.equal(episodeAbstainEvent(result(abstained),undefined),null);
+  assert.equal(episodeAbstainEvent(result({...abstained,schema:'player-episode-record/3'}),args),null);
+  const lost=result({schema:'player-transport/1',status:'unknown',operation_id:'1'.repeat(32)});
+  assert.deepEqual(uncertainEvent(lost,'episode'),{type:'episode-uncertain',identity:'1'.repeat(32)});
+  assert.deepEqual(uncertainEvent(lost,'level'),{type:'level-uncertain',identity:'1'.repeat(32)});
+  assert.equal(uncertainEvent(result({schema:'player-transport/1',status:'known'}),'level'),null);
+});
+
+const intentBase={schema:'player-intent/4',session:'2'.repeat(32),actor_id:'3'.repeat(32),audience:'tail',pass_index:0,subgoal:null,age:null,
+  recall:{basis:'recent',items:[]},grants_authority:false};
+for (const [name,intentFixture] of [['a failed read','error'],
+  ['the previous schema',JSON.stringify({...intentBase,schema:'player-intent/1'})],
+  ['the level audience',JSON.stringify({...intentBase,audience:'level'})],
+  ['an unexpected shape',JSON.stringify({...intentBase,subgoal:{record_id:'r',text:'x',expected_observations:'not-a-list'},age:{}})],
+  ['a recall item of the wrong shape',JSON.stringify({...intentBase,recall:{basis:'recent',items:[{attempted:3}]}})]]) {
+  test(`an intent tail after ${name} shows Unavailable and the actor continues`, async t=>{
+    const {result,payloads,events}=await scenario(t,[reply(null,[['observe',{}]]),reply()],
+      {configuration:{...route(),intent_tail_bytes:1024},enabledTools:['observe'],intentFixture});
+    assert.equal(result.ok,true);assert.equal(payloads.length,2);
+    for (const payload of payloads) assert.ok(JSON.stringify(payload.messages.at(-1)).includes('Unavailable: the intent read failed or was malformed'));
+    assert.deepEqual(events.filter(e=>e.type==='intent-tail').map(e=>e.available),[false,false]);
+  });
+}
+
+test('level commit telemetry distinguishes commits, discards and local tool errors', ()=>{
+  const result=value=>({content:[{type:'text',text:JSON.stringify(value)}]});
+  const derived={observations:['seen','not_yet'],stalled:false}, subgoal_id='s'.repeat(32);
+  const committed=levelCommitEvent(result({schema:'player-level-commit/6',status:'committed',action:'replace',reason:null,position:4,
+    inputs_since:1,staleness_inputs:10,subgoal_id,derived,records:[{id:'w1'}],kept:[]}));
+  assert.deepEqual(committed,{type:'level-commit',receipt_schema:'player-level-commit/6',action:'replace',reason:null,position:4,inputs_since:1,staleness_inputs:10,subgoal_id,derived,record_ids:['w1'],kept:[]});
+  for (const action of ['keep','close'])
+    assert.equal(levelCommitEvent(result({schema:'player-level-commit/6',status:'committed',action,reason:null,position:4,
+      inputs_since:1,staleness_inputs:10,subgoal_id,derived:null,records:[],kept:[]})).action,action);
+  // A first subgoal has no pushed subgoal and no derived state.
+  const first=levelCommitEvent(result({schema:'player-level-commit/6',status:'committed',action:'replace',reason:null,position:0,
+    inputs_since:0,staleness_inputs:10,subgoal_id:null,derived:null,records:[{id:'w1'}],kept:[]}));
+  assert.deepEqual([first.subgoal_id,first.derived],[null,null]);
+  const discarded=levelCommitEvent(result({schema:'player-level-commit/6',status:'discarded',action:'keep',reason:'Current subgoal changed since the pass began',
+    position:4,inputs_since:12,staleness_inputs:10,subgoal_id,records:[],kept:[]}));
+  assert.deepEqual([discarded.type,discarded.reason,discarded.subgoal_id,discarded.derived],['level-discard','Current subgoal changed since the pass began',subgoal_id,null]);
+  assert.equal(levelCommitEvent({...result({schema:'player-level-commit/6',status:'committed',action:'keep'}),isError:true}),null);
+  assert.equal(levelCommitEvent({content:[{type:'text',text:'{'}]}),null);
+  assert.equal(levelCommitEvent(result({schema:'player-error/1'})),null);
+  for (const old of ['player-level-commit/1','player-level-commit/2','player-level-commit/3'])
+    assert.equal(levelCommitEvent(result({schema:old,status:'committed',action:'keep'})),null);
+  assert.equal(levelCommitEvent(result({schema:'player-level-commit/6',status:'committed',action:'bogus'})),null);
+});
+
+test('level abstain telemetry needs a valid abstain result with its reason code and never a local tool error', ()=>{
+  const result=value=>({content:[{type:'text',text:JSON.stringify(value)}]});
+  const ok={schema:'player-level-abstain/3',status:'abstained',reason_code:'no_change_needed',reason:'No evidence'};
+  assert.deepEqual(levelAbstainEvent(result(ok)),{type:'level-abstain',reason_code:'no_change_needed',reason:'No evidence'});
+  assert.equal(levelAbstainEvent({...result(ok),isError:true}),null);
+  assert.equal(levelAbstainEvent(result({...ok,reason:''})),null);
+  assert.equal(levelAbstainEvent(result({...ok,reason_code:undefined})),null);
+  for (const old of ['player-level-abstain/0','player-level-abstain/1'])
+    assert.equal(levelAbstainEvent(result({...ok,schema:old})),null);
+  assert.equal(levelAbstainEvent({content:[{type:'text',text:'{'}]}),null);
 });
 
 test('transport onError latches immediately before any pending-call rejection',async t=>{
@@ -1086,14 +1822,14 @@ test('production MCP sealed handoff settles after earlier ordinary tool without 
     model:model.id,effort:'off',timeoutSeconds:10,env:{OFFLINE_TEST_KEY:'fixture-key'},
     fetch:async(_url,init)=>{
       bodies.push(init.body);payloads.push(JSON.parse(init.body));
-      return reply(null,[['computer_observe',{}],['player_handoff',{ids:[],summary:'synthetic unfinished work'}],['computer_observe',{}]]);
+      return reply(null,[['computer_observe',{}],['player_handoff',{}],['computer_observe',{}]]);
     },onEvent:e=>events.push(e)});
   assert.deepEqual(result,{ok:true,reason:'handoff',requests:1,finalText:''});
   assertRequestMetadata(events,bodies);
   assert.deepEqual(events.filter(e=>e.type==='tool-start').map(e=>e.tool),['computer_observe','player_handoff']);
   const value=JSON.parse(events.find(e=>e.type==='tool-result'&&e.tool==='player_handoff').result.content[0].text);
   assert.equal(value.schema,'computer-operation/1');assert.equal(value.status,'sealed');
-  assert.equal(value.handoff.schema,'player-handoff/1');assert.equal(value.handoff.grants_authority,false);
+  assert.equal(value.handoff.schema,'player-handoff/2');assert.equal(value.handoff.grants_authority,false);
   const event=events.find(e=>e.type==='handoff');
   assert.equal(event.handoff_id,value.operation_id);assert.equal(event.session,value.session);
   assert.equal(event.actor_id,value.actor_id);assert.equal(event.context_id,value.handoff.context_id);
@@ -1102,7 +1838,7 @@ test('production MCP sealed handoff settles after earlier ordinary tool without 
   assert.throws(()=>process.kill(events.find(e=>e.type==='mcp-connected').child_pid,0),{code:'ESRCH'});
 });
 
-const handoffArgs = {ids:[],summary:'Retain current context'};
+const handoffArgs = {};
 const handoffTools = ['mutate','player_handoff','computer_result'];
 const handoffId = '1'.repeat(32);
 const sessionId = '2'.repeat(32);

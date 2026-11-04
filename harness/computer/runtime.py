@@ -19,6 +19,9 @@ from .protocol import ControlError, NoDispatch, GEOMETRY_KEYS, MAX_FRAME_BYTES, 
 from .store import SessionStore
 
 
+READER_ROLES = ('level', 'recorder')
+
+
 class OperationExpired(ControlError):
     pass
 
@@ -32,7 +35,7 @@ def request_identity(value: str | None) -> str:
 
 
 class ComputerRuntime:
-    """No game interpretation, recovery phases, restored custody or semantic veto."""
+    """Mechanical custody without game interpretation or authority restoration."""
 
     def __init__(self, directory: Path, session: str, channel: NativeChannel,
                  process: Any, deadline: float, limits: dict[str, int], *, max_actors: int = 2) -> None:
@@ -53,24 +56,50 @@ class ComputerRuntime:
         with self.serial:
             if self.channel.stopped.is_set() or time.monotonic() >= self.deadline:
                 raise ControlError('Stopped run cannot mint actor custody')
-            if len(self._actors) >= self.max_actors or any(v['stage'] != 'quiescent' for v in self._actors.values()):
+            # Readers never send input, so they neither block nor count toward succession.
+            actors = [v for v in self._actors.values() if v['stage'] != 'reader']
+            if len(actors) >= self.max_actors or any(v['stage'] != 'quiescent' for v in actors):
                 raise ControlError('Prior actor is not quiescent or original actor capacity exhausted')
-            identity, token = uuid.uuid4().hex, secrets.token_urlsafe(32)
-            digest = hashlib.sha256(token.encode()).hexdigest()
-            self.store.add_actor(identity, digest)
-            with self._custody:
-                self._actors[identity] = dict(token_hash=digest, stage='active')
-            return dict(actor_id=identity, token=token)
+            return self._mint(None)
 
-    def authorize(self, token: str, *, write: bool = False) -> str:
+    def add_reader(self, actor_id: str, role: str) -> dict[str, str]:
+        """A read-and-write capability of one role serving one active actor; no input, observe or stop.
+
+        The `level` role ends subgoal passes and the `recorder` role settles episodes. There is at most one
+        reader per (served actor, role).
+        """
+        if role not in READER_ROLES:
+            raise ControlError('Reader role must be level or recorder')
+        with self.serial:
+            if self.channel.stopped.is_set() or time.monotonic() >= self.deadline:
+                raise ControlError('Stopped run cannot mint reader custody')
+            if self.actor_stage(actor_id) != 'active':
+                raise ControlError('A reader serves only the active actor')
+            if any(v.get('serves') == actor_id and v.get('role') == role for v in self._actors.values()):
+                raise ControlError(f'This actor already has its {role} reader')
+            return self._mint(actor_id, role)
+
+    def _mint(self, serves: str | None, role: str | None = None) -> dict[str, str]:
+        identity, token = uuid.uuid4().hex, secrets.token_urlsafe(32)
+        digest = hashlib.sha256(token.encode()).hexdigest()
+        self.store.add_actor(identity, digest, serves, role)
+        with self._custody:
+            self._actors[identity] = dict(token_hash=digest, stage='active' if serves is None else 'reader',
+                                          serves=serves, role=role)
+        return dict(actor_id=identity, token=token)
+
+    def authorize(self, token: str, *, write: bool = False, reader_role: str | None = None) -> str:
+        """A write needs the active actor, or, with `reader_role` (a level terminal call or a recorder settle),
+        a reader of exactly that role: an actor never holds a reader write and a reader never holds an actor write."""
         if not isinstance(token, str) or len(token) > 256:
             raise ControlError('Actor capability unavailable')
         digest = hashlib.sha256(token.encode()).hexdigest()
         with self._custody:
             for identity, actor in self._actors.items():
                 if hmac.compare_digest(digest, actor['token_hash']):
-                    if write and actor['stage'] != 'active':
-                        raise ControlError('Actor sealed; original collection/read only')
+                    if write and (actor['stage'] != 'active' if reader_role is None
+                                  else actor['stage'] != 'reader' or actor['role'] != reader_role):
+                        raise ControlError('This capability holds no such write; original collection/read only')
                     return identity
         raise ControlError('Unknown ephemeral actor capability')
 
@@ -88,7 +117,8 @@ class ComputerRuntime:
 
     def status(self) -> dict[str, Any]:
         with self._custody:
-            actors = [dict(actor_id=k, stage=v['stage']) for k, v in self._actors.items()]
+            actors = [dict(actor_id=k, stage=v['stage'], serves=v['serves'], reader_role=v['role'])
+                      for k, v in self._actors.items()]
         return dict(schema='computer-status/1', session=self.session, target=self.channel.target(),
                     stop=self.channel.stop_status(), remaining=self.remaining(), actors=actors,
                     last_operation=copy.deepcopy(self._last), latest_source=copy.deepcopy(self._latest_source),
@@ -181,22 +211,24 @@ class ComputerRuntime:
 
     def input(self, actor_id: str, actions: list[dict[str, Any]], *, source_id: str | None = None,
               deadline_monotonic: float | None = None,
-              operation_id: str | None = None) -> tuple[dict[str, Any], bytes | None]:
+              operation_id: str | None = None, mode: str = 'normal') -> tuple[dict[str, Any], bytes | None]:
         try:
             prepared=copy.deepcopy(validate_actions(actions))
+            if mode not in ('normal', 'ending', 'final'):
+                raise ValueError('Unknown input mode')
         except (ValueError,TypeError) as exc:
             raise NoDispatch(str(exc)) from exc
         identity=request_identity(operation_id)
         try:
             return self._execute(actor_id, prepared, source_id,
-                                 'input', identity, deadline_monotonic)
+                                 'input', identity, deadline_monotonic, mode)
         except ControlError as exc:
             if not self.store.operation_exists(identity,actor_id):
                 raise NoDispatch(str(exc)) from exc
             raise
 
     def _execute(self, actor_id: str, actions: list[dict[str, Any]], source_id: str | None,
-                 kind: str, supplied_id: str | None, deadline: float | None
+                 kind: str, supplied_id: str | None, deadline: float | None, mode: str = 'normal'
                  ) -> tuple[dict[str, Any], bytes | None]:
         identity = request_identity(supplied_id)
         if deadline is not None and (type(deadline) not in (int, float) or not math.isfinite(deadline)):
@@ -212,6 +244,20 @@ class ComputerRuntime:
             if existing is not None:
                 return self.result(actor_id, identity)
             self._guard(actor_id)
+            ending = self.store.ending()
+            if ending and ending['final_operation_id'] is not None:
+                raise NoDispatch('Final input reserved; original collection only')
+            if mode == 'final' and ending is None:
+                raise NoDispatch('Declare ending before final input')
+            if kind == 'input' and (ending is not None or mode != 'normal'):
+                if len(actions) != 1 or actions[0]['type'] == 'wait':
+                    raise NoDispatch('Ending requires one non-wait input')
+            ending_update = None
+            if mode == 'ending' and ending is None:
+                ending_update = dict(schema='computer-ending/1', actor_id=actor_id,
+                                     declaration_operation_id=identity, final_operation_id=None)
+            elif mode == 'final':
+                ending_update = dict(ending, final_operation_id=identity)
             if time.monotonic() >= original:
                 raise OperationExpired('Original operation deadline expired before dispatch')
             if (self._counts['frames'] >= self.limits['max_frames']
@@ -233,7 +279,7 @@ class ComputerRuntime:
                 reason='Original operation in progress', handoff=None)
             count = sum(a['type'] != 'wait' for a in actions)
             try:
-                if not self.store.begin(result, actions, count):
+                if not self.store.begin(result, actions, count, ending=ending_update):
                     return self.result(actor_id, identity)
             except (OSError,sqlite3.Error) as exc:
                 self.stop('Cannot retain original intent; no input submitted')
@@ -259,7 +305,7 @@ class ComputerRuntime:
                     result['status'] = 'completed'
                     result['reason'] = 'Basic operations completed; application effect is not certified'
                 # The post-input screenshot is an observation, not a goal verdict.
-                if not self.channel.stopped.is_set() and time.monotonic() < original:
+                if mode != 'final' and not self.channel.stopped.is_set() and time.monotonic() < original:
                     reply, metadata, png = self._native(result, 'observe', None, original)
                     result['source'] = metadata
                     if reply['disposition'] != 'delivered':
@@ -313,10 +359,12 @@ class ComputerRuntime:
             raise ControlError('Handoff context requires its original SHA256')
         with self.serial:
             self._guard(actor_id)
+            if self.store.ending() is not None:
+                raise NoDispatch('Ending cannot hand off control')
             if self._last is not None and self._last['status'] in ('pending', 'partial', 'unknown'):
                 raise ControlError('Unsettled input cannot become a handoff')
             now = time.time()
-            issuance = dict(schema='player-handoff/1', operation_id=identity, session=self.session,
+            issuance = dict(schema='player-handoff/2', operation_id=identity, session=self.session,
                 actor_id=actor_id, context_id=context_id, context_sha256=context_sha256,
                 sealed_wall=now, grants_authority=False)
             result = dict(schema='computer-operation/1', operation_id=identity, session=self.session,

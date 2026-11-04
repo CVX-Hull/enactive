@@ -44,8 +44,8 @@ same computer callbacks, up to 64 steps/20seconds under original limits.
 
 Context selects at most32 roots and returns whole records/code within64KiB.
 Oversized/missing material is explicitly omitted with readable IDs, never truncated
-into plausible executable content. Handoff persists this bounded snapshot plus
-player summary; no snapshot grants authority.
+into plausible executable content. Handoff (`player-handoff/2`) carries neither a
+snapshot nor a summary; continuity comes from committed records.
 
 ## Failure, bounds and ownership
 

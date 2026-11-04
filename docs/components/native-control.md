@@ -19,7 +19,7 @@ outside it. The current adapter targets macOS SDL; a second game is unqualified.
 | [Native adapter](../../harness/computer/native/bridge.mm) | Actual default-renderer capture, basic SDL events, real-input precedence, mechanical geometry and nonblocking bounded packet work. |
 | [Channel](../../harness/computer/channel.py) | Socket framing and bounded receipt/state slots; independent permanent stop path; no receive-thread file/DB writes. |
 | [Runtime](../../harness/computer/runtime.py) | One serialized writer, actor capabilities, original IDs/deadlines/capacities, issued sources and exact result collection. |
-| [Store](../../harness/computer/store.py) | Fresh `computer-session/1` SQLite operations/source provenance; cannot reconstruct runtime custody. |
+| [Store](../../harness/computer/store.py) | Fresh `computer-session/3` SQLite operations/source provenance, including reader capabilities (level and recorder roles) and the per-actor operation log that the driver reads in-process; cannot reconstruct runtime custody. |
 
 The native adapter validates the exact inherited shared-lock descriptor/file
 identity and retains its reference for the native lifetime. Descriptor closure,

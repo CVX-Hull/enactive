@@ -10,7 +10,7 @@ from pathlib import Path
 import re
 
 SCHEMA = "computer-request/2"
-WIRE_SCHEMA = "computer-wire/1"
+WIRE_SCHEMA = "computer-wire/2"
 MAX_HEADER_BYTES = 65536
 MAX_FRAME_BYTES = 64 * 1024 * 1024
 GEOMETRY_KEYS = {"width", "height", "window_width", "window_height", "viewport"}
@@ -188,11 +188,22 @@ def validate_actions(actions: object) -> list[dict[str, Any]]:
 
 def wire_header(value: object) -> dict[str, Any]:
     closed(value,{"schema","kind","value","payload_bytes"})
-    if value["schema"] != WIRE_SCHEMA or value["kind"] not in ("request","state","receipt") or type(value["value"]) is not dict:
+    if value["schema"] != WIRE_SCHEMA or value["kind"] not in ("request","state","receipt","terminal") or type(value["value"]) is not dict:
         raise ControlError("Unsupported native wire packet")
     integer(value["payload_bytes"],0,MAX_FRAME_BYTES)
     if value["kind"] != "receipt" and value["payload_bytes"]:
         raise ControlError("Only a capture receipt may carry image bytes")
+    return value
+
+
+def terminal(value: object, *, session: str, pid: int) -> dict[str, Any]:
+    closed(value, {'schema', 'session', 'pid', 'takeover_generation'})
+    if value['schema'] != 'computer-terminal/1' or value['session'] != session:
+        raise ControlError('Native terminal identity differs')
+    integer(value['pid'], 1, 2**31 - 1)
+    if value['pid'] != pid:
+        raise ControlError('Native terminal process differs')
+    integer(value['takeover_generation'], 0, 2**53 - 1)
     return value
 
 
