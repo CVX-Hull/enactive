@@ -57,9 +57,32 @@ Escalate to the owner only for exceptional situations:
 - A failed required check or unresolved review disagreement that could only proceed
   by being waived rather than fixed.
 
-Escalate once with the decision, options and a recommendation, and continue other
-independent work meanwhile. A host or tool permission refusal is respected, not
-worked around: report the exact action so the owner can adjust their own settings.
+### Requesting owner approval
+
+Ask only when an owner decision is required. Put the exact decision and the
+rule that requires it up front. Give the viable options, their tradeoffs and a
+recommendation with its reason. Use plain language. If a project term is needed,
+define it in the request, even if it appeared earlier in the discussion.
+
+Give a concrete example of what the options would do differently. State what
+agreement authorizes, the maximum cost (including $0), any relevant stop condition,
+and how a positive, negative or inconclusive result would affect the next decision.
+Distinguish agreement on a design from permission to implement or run it when
+those are separate decisions.
+
+For example, an owner-held measurement decision could be phrased this way.
+
+> Should we check for an injury in the first screenshot or anywhere in the
+> episode? This changes the predicate, meaning the claim we check against the
+> recorded screenshots. I recommend the first screenshot if the purpose is to
+> see whether two models can apply the same rule to the same image. An injury
+> that appears halfway through would only count under the whole-episode rule,
+> where missing frames can leave the answer unknown. Agreement settles the
+> wording at $0. A paid replay is a separate decision.
+
+Ask once per decision and continue independent authorized work. Record the
+agreement and its scope on the owning issue or pull request. Respect host or tool
+permission refusals and report the exact action and stated reason.
 
 ## Command permissions
 
