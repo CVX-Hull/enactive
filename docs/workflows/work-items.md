@@ -113,7 +113,9 @@ discovery decision; required core, optional scope and exclusions; owner;
 acceptance/failure conditions and applicable validation lanes; dependencies and
 agreed interfaces; risks/unknowns and stop/rescope conditions; effort appetite,
 size, effort range, confidence and assumptions; evidence and completion work
-expected; and any user decision required. For children, link the parent iteration's
+expected; and any user decision required. Follow the [approval request
+requirements](../operator-permissions.md#requesting-owner-approval) for owner-held
+decisions. For children, link the parent iteration's
 appetite and shared integration/validation instead of allocating duplicate budgets.
 An appetite, assignment or forecast grants no runtime/API resources. Consequential
 changes link a [review brief](../standards/work.md#s-work-reviewable-and-proportionate-changes).
