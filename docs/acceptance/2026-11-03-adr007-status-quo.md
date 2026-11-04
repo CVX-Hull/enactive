@@ -21,9 +21,9 @@ was conditional on adoption and did not take effect.
 ## Why the comparison stopped
 
 The four-arm v4 retained-progress count screen reached 48.7% detection at best
-in the tested 1.4× scenario, against the required 80%. Qualifying the recorder
-would have used $162.69 of $165.95 in conservative remaining headroom in the
-draft that fit, with roughly 80% or 25% simulated passage under different
+in the tested 1.4× scenario, against the required 80%. The recorder draft that
+fit allocated $162.69 of $165.95 in conservative remaining headroom, with
+roughly 80% or 25% simulated passage under different
 usable-return assumptions, before stage stops and incomplete scoring. Recorder
 qualification would still leave the gameplay comparison unresolved.
 [Original rescope and retained evidence](https://github.com/CVX-Hull/enactive/issues/329).
@@ -35,9 +35,9 @@ from its player store. This one development session establishes neither
 later-session use nor gameplay benefit. It met R7's own clean-native-exit
 exception. Its original receipt remained incomplete with final delivery unknown.
 
-At one additional visible retained change per four later sessions, the best
+In the scenario of one additional visible retained change per four later sessions, the best
 screened allocation with reserve reached 53.10% detection with complete
-evidence, and 7.47% with modeled session and audit completion. Those maxima
+evidence, and 7.47% with optimistic modeled session and audit completion. Those maxima
 come from possibly different cells. Rates, costs and missingness were
 assumptions informed by limited development data, not measured probabilities
 for this study. A larger gain could pass the complete-evidence screen in an
