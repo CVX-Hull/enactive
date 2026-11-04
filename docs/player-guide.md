@@ -53,6 +53,12 @@ sends no game input. It is not the application’s own wait action and does not
 certify that a message, animation or save finished. The application decides what
 changes during that time; choose any in-game wait/probe through ordinary input.
 
+For shutdown, use `mode: ending` on the first single input. Continue
+with one non-wait action per call. Use `mode: final` for the last
+action, when you have enough visible evidence to choose it. The final
+call has no screenshot and fences further native operations. Collect
+its original result if needed.
+
 Example basic actions (inside `computer_input.actions`):
 
 ```json

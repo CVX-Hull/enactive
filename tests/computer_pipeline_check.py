@@ -14,12 +14,14 @@ from harness.computer.launch import OwnedTarget
 from harness.computer.runtime import ComputerRuntime
 from harness.player.memory import Memory
 from tests.computer_native_check import arguments,exclusion,records
+from tools.level_stage_analysis import declared_final_input
 
 
-def check(options):
+def check(options, *, delayed_exit=False):
     options.output.mkdir(parents=True,exist_ok=False)
     session=uuid.uuid4().hex
-    target=dict(argv=[str(options.fixture),str(options.output/'events.jsonl'),'--hidden','--exit-after-ms','20000'],
+    target=dict(argv=[str(options.fixture),str(options.output/'events.jsonl'),'--hidden','--exit-after-ms',
+                     '12000' if delayed_exit else '20000'],
         cwd=str(options.output),env=dict(DYLD_FRAMEWORK_PATH=str(options.resources),DYLD_LIBRARY_PATH=str(options.resources)))
     owner=OwnedTarget(options.output,session,target,options.library,options.output/'shared.lock',time.monotonic()+25)
     runtime=memory=None;report=dict(passed=False,scope=__doc__)
@@ -55,16 +57,25 @@ def check(options):
         assert result['status']=='done',result
         assert result['steps'][0]['source']!=result['steps'][1]['source']
         assert any(row.get('key')==1073741903 and row.get('type')==768 for row in records(options.output/'events.jsonl'))
-        ending=call('computer_input',dict(actions=[dict(type='key',key='ESC',modifiers=[])]))
-        owner.process.wait(timeout=5)
+        declared=call('computer_input',dict(mode='ending',actions=[dict(type='key',key='LEFT',modifiers=[])]))
+        assert declared['status']=='completed'
+        ending=call('computer_input',dict(mode='final',
+                    actions=[dict(type='key',key='LEFT' if delayed_exit else 'ESC',modifiers=[])]))
+        if delayed_exit:
+            assert ending['status']=='completed' and owner.process.poll() is None
+        owner.process.wait(timeout=15 if delayed_exit else 5)
+        assert declared_final_input(options.output,actor['actor_id'])
+        assert ending['source'] is None and len(ending['receipts'])==1
         report.update(passed=True,initial_source=source,initial_png_sha256=hashlib.sha256(png).hexdigest(),
             record=saved_record,program_id=program['id'],program_run=result,ending_operation=ending)
     finally:
         report['cleanup']=owner.close()
+        report['terminal_proof']=owner.channel.terminal_evidence() if owner.channel else None
         if runtime is not None:runtime.store.close()
         if memory is not None:memory.close()
         (options.output/'check.json').write_text(json.dumps(report,indent=2)+'\n')
     assert report['cleanup']['native_absence_verified'] and report['cleanup']['normal_native_exit_zero'],report['cleanup']
+    assert report['terminal_proof']['takeover_generation']==0
     exclusion(owner.shared_lock,False)
 
 

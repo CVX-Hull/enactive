@@ -35,7 +35,7 @@ def request_identity(value: str | None) -> str:
 
 
 class ComputerRuntime:
-    """No game interpretation, recovery phases, restored custody or semantic veto."""
+    """Mechanical custody without game interpretation or authority restoration."""
 
     def __init__(self, directory: Path, session: str, channel: NativeChannel,
                  process: Any, deadline: float, limits: dict[str, int], *, max_actors: int = 2) -> None:
@@ -211,22 +211,24 @@ class ComputerRuntime:
 
     def input(self, actor_id: str, actions: list[dict[str, Any]], *, source_id: str | None = None,
               deadline_monotonic: float | None = None,
-              operation_id: str | None = None) -> tuple[dict[str, Any], bytes | None]:
+              operation_id: str | None = None, mode: str = 'normal') -> tuple[dict[str, Any], bytes | None]:
         try:
             prepared=copy.deepcopy(validate_actions(actions))
+            if mode not in ('normal', 'ending', 'final'):
+                raise ValueError('Unknown input mode')
         except (ValueError,TypeError) as exc:
             raise NoDispatch(str(exc)) from exc
         identity=request_identity(operation_id)
         try:
             return self._execute(actor_id, prepared, source_id,
-                                 'input', identity, deadline_monotonic)
+                                 'input', identity, deadline_monotonic, mode)
         except ControlError as exc:
             if not self.store.operation_exists(identity,actor_id):
                 raise NoDispatch(str(exc)) from exc
             raise
 
     def _execute(self, actor_id: str, actions: list[dict[str, Any]], source_id: str | None,
-                 kind: str, supplied_id: str | None, deadline: float | None
+                 kind: str, supplied_id: str | None, deadline: float | None, mode: str = 'normal'
                  ) -> tuple[dict[str, Any], bytes | None]:
         identity = request_identity(supplied_id)
         if deadline is not None and (type(deadline) not in (int, float) or not math.isfinite(deadline)):
@@ -242,6 +244,20 @@ class ComputerRuntime:
             if existing is not None:
                 return self.result(actor_id, identity)
             self._guard(actor_id)
+            ending = self.store.ending()
+            if ending and ending['final_operation_id'] is not None:
+                raise NoDispatch('Final input reserved; original collection only')
+            if mode == 'final' and ending is None:
+                raise NoDispatch('Declare ending before final input')
+            if kind == 'input' and (ending is not None or mode != 'normal'):
+                if len(actions) != 1 or actions[0]['type'] == 'wait':
+                    raise NoDispatch('Ending requires one non-wait input')
+            ending_update = None
+            if mode == 'ending' and ending is None:
+                ending_update = dict(schema='computer-ending/1', actor_id=actor_id,
+                                     declaration_operation_id=identity, final_operation_id=None)
+            elif mode == 'final':
+                ending_update = dict(ending, final_operation_id=identity)
             if time.monotonic() >= original:
                 raise OperationExpired('Original operation deadline expired before dispatch')
             if (self._counts['frames'] >= self.limits['max_frames']
@@ -263,7 +279,7 @@ class ComputerRuntime:
                 reason='Original operation in progress', handoff=None)
             count = sum(a['type'] != 'wait' for a in actions)
             try:
-                if not self.store.begin(result, actions, count):
+                if not self.store.begin(result, actions, count, ending=ending_update):
                     return self.result(actor_id, identity)
             except (OSError,sqlite3.Error) as exc:
                 self.stop('Cannot retain original intent; no input submitted')
@@ -289,7 +305,7 @@ class ComputerRuntime:
                     result['status'] = 'completed'
                     result['reason'] = 'Basic operations completed; application effect is not certified'
                 # The post-input screenshot is an observation, not a goal verdict.
-                if not self.channel.stopped.is_set() and time.monotonic() < original:
+                if mode != 'final' and not self.channel.stopped.is_set() and time.monotonic() < original:
                     reply, metadata, png = self._native(result, 'observe', None, original)
                     result['source'] = metadata
                     if reply['disposition'] != 'delivered':
@@ -343,6 +359,8 @@ class ComputerRuntime:
             raise ControlError('Handoff context requires its original SHA256')
         with self.serial:
             self._guard(actor_id)
+            if self.store.ending() is not None:
+                raise NoDispatch('Ending cannot hand off control')
             if self._last is not None and self._last['status'] in ('pending', 'partial', 'unknown'):
                 raise ControlError('Unsettled input cannot become a handoff')
             now = time.time()

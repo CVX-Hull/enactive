@@ -69,6 +69,20 @@ under `campaign-stop-evidence/1`. Admission to a later feasibility start
 requires the matching session, zero takeover generation and clear operator
 stop flags.
 
+The actor declares ending by setting `mode: ending` on its first single
+shutdown input. From then on, every input is one non-wait action.
+Programs and handoffs cannot start in ending. Use `mode: final` for the
+last input. It sends one action without a post-input capture. The
+custodian writes a `computer-ending/1` metadata record with the actor,
+declaration operation ID and final operation ID. Each transition
+commits with the corresponding original operation before native send.
+After the final reservation, new input, observation and handoff
+operations are fenced. Original receipt collection remains available
+and independent Pause remains active. The channel stays open to receive
+the terminal record and clean EOF. Historical stores can be read by
+existing analysis. Admission requiring this ending sequence also
+verifies the declaration, the final input and its original native receipt.
+
 Use one outgoing packet, one deferred Pause receipt and a dirty-state flag.
 Coalesce only unsent passive state. Preserve partial read/write offsets and exact
 pending receipts/images; never replace a terminal receipt or renew its timestamps.

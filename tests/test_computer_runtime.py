@@ -8,7 +8,7 @@ from unittest.mock import patch
 from PIL import Image
 import pytest
 
-from harness.computer.protocol import ControlError
+from harness.computer.protocol import ControlError, NoDispatch
 from harness.computer.runtime import ComputerRuntime
 
 
@@ -87,6 +87,55 @@ def make_runtime(tmp_path, *, mint=True, **limits):
 
 def key(value='x'):
     return dict(type='key', key=value, modifiers=[])
+
+
+def test_ending_final_input_is_durable_and_has_no_capture(tmp_path):
+    runtime, channel, actor = make_runtime(tmp_path)
+    actor_id = actor['actor_id']
+    with pytest.raises(ControlError, match='Declare ending'):
+        runtime.input(actor_id, [key()], mode='final')
+    declared, _ = runtime.input(actor_id, [key()], mode='ending')
+    with pytest.raises(ControlError, match='one non-wait'):
+        runtime.input(actor_id, [key(), key()])
+    with pytest.raises(ControlError, match='cannot hand off'):
+        runtime.seal_actor(actor_id, 'e'*32, 'd'*32, 'c'*64)
+
+    identity = 'f'*32
+    def before_dispatch():
+        assert runtime.store.ending() == dict(schema='computer-ending/1', actor_id=actor_id,
+            declaration_operation_id=declared['operation_id'], final_operation_id=identity)
+        assert runtime.store.operation(identity)['status'] == 'pending'
+
+    channel.before_request = before_dispatch
+    final, image = runtime.input(actor_id, [key()], mode='final', operation_id=identity)
+    assert final['status'] == 'completed' and image is None and final['source'] is None
+    assert len(final['receipts']) == 1
+    assert [request[0] for request in channel.calls] == ['input', 'observe', 'input']
+    assert not channel.stopped.is_set()
+    assert runtime.input(actor_id, [key()], mode='final', operation_id=identity)[0] == final
+    with pytest.raises(ControlError, match='Final input reserved'):
+        runtime.observe(actor_id)
+    with pytest.raises(ControlError, match='Final input reserved'):
+        runtime.input(actor_id, [key()])
+
+
+def test_pause_between_final_reservation_and_native_send_keeps_fence(tmp_path):
+    runtime, channel, actor = make_runtime(tmp_path)
+    actor_id = actor['actor_id']
+    runtime.input(actor_id, [key()], mode='ending')
+    identity = 'f'*32
+
+    def pause_before_send():
+        assert runtime.store.ending()['final_operation_id'] == identity
+        runtime.stop('Operator Pause')
+        raise NoDispatch('Native input fenced before send')
+
+    channel.before_request = pause_before_send
+    result, _ = runtime.input(actor_id, [key()], mode='final', operation_id=identity)
+    assert result['status'] == 'refused'
+    assert runtime.result(actor_id, identity)[0] == result
+    assert runtime.store.ending()['final_operation_id'] == identity
+    assert [request[0] for request in channel.calls] == ['input', 'observe']
 
 
 def test_sealed_actor_stop_bypasses_quiescence_database_wait(tmp_path):

@@ -108,7 +108,13 @@ class SessionStore:
         with self.lock, self.connection:
             self.connection.execute('UPDATE actors SET stage=? WHERE id=?', (stage, identity))
 
-    def begin(self, operation: dict[str, Any], actions: object, input_count: int) -> bool:
+    def ending(self) -> dict[str, Any] | None:
+        with self.lock:
+            row = self.connection.execute("SELECT value FROM metadata WHERE key='ending'").fetchone()
+            return decode_json(row[0]) if row else None
+
+    def begin(self, operation: dict[str, Any], actions: object, input_count: int,
+              *, ending: dict[str, Any] | None = None) -> bool:
         """False means this exact ID already exists: collect it, never dispatch."""
         with self.lock, self.connection:
             if self.connection.execute('SELECT 1 FROM operations WHERE id=?', (operation['operation_id'],)).fetchone():
@@ -121,6 +127,9 @@ class SessionStore:
             self.connection.execute('INSERT INTO operations VALUES(?,?,?,?,?,?,NULL)',
                 (operation['operation_id'], operation['actor_id'], operation['kind'],
                  operation['created_wall'], operation['deadline_monotonic'], canonical(actions)))
+            if ending is not None:
+                self.connection.execute("INSERT INTO metadata VALUES('ending',?) "
+                    "ON CONFLICT(key) DO UPDATE SET value=excluded.value", (canonical(ending),))
             return True
 
     def native_intent(self, operation_id: str, native_id: str) -> None:

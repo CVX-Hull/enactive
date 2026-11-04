@@ -285,6 +285,45 @@ def clean_exit(path: Path, receipt: dict | None, level_quiescent: bool, *, grace
     return all(v for k, v in facts.items() if isinstance(v, bool)), facts
 
 
+def declared_final_input(path: Path, actor_id: str) -> bool:
+    """Verify ending evidence separately from legacy clean-exit assessment."""
+    with session_database(path) as (db, _, session):
+        row = db.execute("SELECT value FROM metadata WHERE key='ending'").fetchone()
+        if row is None:
+            return False
+        ending = json.loads(row[0])
+        if (not isinstance(ending, dict) or ending.get('schema') != 'computer-ending/1'
+                or ending.get('actor_id') != actor_id
+                or not ending.get('final_operation_id')):
+            return False
+        declaration_id = ending.get('declaration_operation_id')
+        final_id = ending['final_operation_id']
+        declaration = db.execute('SELECT rowid FROM operations WHERE id=? AND actor=? AND kind=?',
+                                 (declaration_id, actor_id, 'input')).fetchone()
+        final = db.execute('SELECT rowid,id,actor,kind,input_json,final_json FROM operations ORDER BY rowid DESC LIMIT 1').fetchone()
+        if (declaration is None or final is None or declaration[0] >= final[0]
+                or final[1:4] != (final_id, actor_id, 'input') or final[5] is None):
+            return False
+        actions, result = json.loads(final[4]), json.loads(final[5])
+        if len(actions) != 1 or actions[0]['type'] == 'wait' or result['source'] is not None:
+            return False
+        intents = db.execute('SELECT id,receipt,source,timing FROM native_intents WHERE operation=?',
+                             (final_id,)).fetchall()
+        if len(intents) != 1:
+            return False
+        native_id, receipt, source_id, timing = intents[0]
+        if receipt is None or source_id is not None or json.loads(timing).get('send_finished_wall') is None:
+            return False
+        receipt = json.loads(receipt)
+        return (result['receipts'] == [receipt] and receipt.get('id') == native_id
+                and receipt.get('session') == session and receipt.get('frame') is None
+                and ((result['status'] == 'completed' and receipt.get('schema') == 'computer-receipt/2'
+                      and receipt.get('disposition') == 'delivered')
+                     or (result['status'] == 'unknown' and receipt.get('schema') == 'computer-transport/2'
+                         and receipt.get('disposition') == 'unknown'
+                         and receipt.get('reason') == EOF_REASON)))
+
+
 # ---------------------------------------------------------------- one run
 
 def pass_class(events: list[dict], ending: str | None, wall: float, allocated: float) -> tuple[str, str | None]:

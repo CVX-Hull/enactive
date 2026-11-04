@@ -22,7 +22,10 @@ def tool_specs() -> dict:
     return {
         'computer_observe':('Capture actual owned target pixels and mechanical provenance. Interpret all game meaning yourself. Identical pixels are valid; a frame is not proof of useful progress.',EMPTY),
         'computer_input':('Send1..32 basic key/text/click/wait operations, then capture. Keys: printable ASCII or ENTER ESC UP DOWN LEFT RIGHT TAB BACKSPACE SPACE PAGEUP PAGEDOWN HOME END DELETE; modifiers explicit CTRL ALT SHIFT. Text≤31UTF8 bytes, application consumption unknown. Clicks require source_id actually issued to you and ORIGINAL full-image coordinates. Wait≤2s each/15s combined delays WALL time and sends no game input; it is not the game’s own wait command or proof an operation finished. Delivered means SDL events handed over, never useful success. Partial/unknown ends input: collect original ID, never replay/rearm.',
-            obj(dict(actions=dict(type='array',items=action_schema(),minItems=1,maxItems=32),source_id={'anyOf':[ID,{'type':'null'}]}),['actions'])),
+            obj(dict(actions=dict(type='array',items=action_schema(),minItems=1,maxItems=32),
+                     source_id={'anyOf':[ID,{'type':'null'}]},
+                     mode=dict(type='string',enum=['normal','ending','final'],
+                               description='Use ending on the first single input of shutdown. All ending inputs are single non-wait actions. Use final only for the last input. It skips capture and fences later native operations, programs and handoff. Original collection remains available.')),['actions'])),
         'computer_result':('Collect the exact original mechanical operation and image, including late receipts. This never repeats input or restores authority. Use its operation_id after uncertain transport.',obj(dict(operation_id=ID))),
         'computer_stop':('Permanently fence further input for this run. This does not save, quit, win, undo input or permit another actor.',EMPTY),
         'player_source':('Read exact retained PNG bytes by source_id, from this session or explicitly remembered prior-session knowledge. Source availability is not proof you previously read it.',obj(dict(source_id=ID))),

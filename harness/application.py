@@ -797,9 +797,10 @@ class Application:
                 closed(args, set())
                 return self.runtime.observe(actor, operation_id=identity)
             if name == 'computer_input':
-                if type(args) is not dict or not {'actions'} <= args.keys() or args.keys() - {'actions','source_id'}:
-                    raise ControlError('Input requires actions and optional source_id')
-                return self.runtime.input(actor, args['actions'], source_id=args.get('source_id'), operation_id=identity)
+                if type(args) is not dict or not {'actions'} <= args.keys() or args.keys() - {'actions','source_id','mode'}:
+                    raise ControlError('Input requires actions and permits source_id and mode')
+                return self.runtime.input(actor, args['actions'], source_id=args.get('source_id'),
+                                          operation_id=identity, mode=args.get('mode','normal'))
             if name == 'computer_result':
                 closed(args, {'operation_id'})
                 return self.runtime.result(actor, args['operation_id'])
@@ -852,6 +853,8 @@ class Application:
                 if (type(args) is not dict or not {'program_id','initial_state','interpretation','selection'} <= args.keys()
                         or args.keys() - {'program_id','initial_state','interpretation','selection','max_steps','max_seconds'}):
                     raise PlayerError('Invalid program-run fields')
+                if not player_owned and self.runtime.store.ending() is not None:
+                    raise ControlError('Ending cannot start a program')
                 if not self.memory.begin_service(identity,actor,name,args):
                     retained=self.memory.service_result(identity,actor)
                     return retained['value'] or retained,None
@@ -885,6 +888,8 @@ class Application:
                 return self.episode_call(actor, name, args, identity), None
             if name == 'player_handoff':
                 closed(args, set())
+                if self.runtime.store.ending() is not None:
+                    raise ControlError('Ending cannot hand off control')
                 context_id, sha = self.snapshot(actor)
                 return self.runtime.seal_actor(actor, identity, context_id, sha), None
             raise ControlError('Unknown current tool')
