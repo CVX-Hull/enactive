@@ -20,8 +20,9 @@ The proposed result is one player with an ongoing user objective, a faithful
 computer interface and separately controlled finite tests. For example, the
 player is asked to survive and build a sustainable situation. The test observes
 the first two days without telling the player to finish at that point. When the
-test needs to end, it sends an explicit external request to save and stop. The
-player still chooses all game actions, including how to save.
+test needs to end, it can offer the player a bounded opportunity to finish up,
+then stop automation. The player chooses any game actions appropriate to that
+request. Stopping automation does not require saving or quitting the game.
 
 This is an unadopted proposal, not a new current contract or run authorization.
 The lead owns its integration and verification. Owner agreement is required
@@ -52,6 +53,41 @@ experiments or claim that unattended operation is already supported.
 | Deciding model and player system | Interpret pixels, choose plans/actions, verify effects, manage fallible knowledge and report completion or inability to proceed | Compact guide, current MCP tools, Pi model/tool loop, player memory/programs and sealed handoff |
 | Mechanical custodian | Serialize basic input, preserve exact originals, enforce authority and independent permanent Pause | Current computer port, native packets, original stores and exact process handles |
 | Test controller | Freeze finite allowances, enforce spending/time/input limits, retain failures, request orderly ending early enough and assess the result | Existing campaign package, driver, host accounting and custodian closeout |
+
+### Saving and application lifetime
+
+The controller's portable obligation is to stop further automation when requested,
+independently of a model reply or any game-save mechanism. It reports dispatched
+or uncertain input honestly. Stopping input does not promise to pause a real-time
+game, undo already delivered events or stop engine-owned activity.
+
+Saving is an ordinary game choice made through the available interface, without
+a special save tool or permission request. An optional finish-up request gives
+the player bounded time to conclude what it is doing. A user may additionally
+ask to preserve progress, but the player may find that unsupported, unavailable
+or unverified. That outcome is reported; the controller neither manufactures a
+save nor waits indefinitely for one. Immediate Pause takes precedence over any
+attempt to preserve progress.
+
+| Illustrative game behavior | Player-system consequence | Controller obligation |
+| --- | --- | --- |
+| Manual save is available | The player can discover and use the ordinary controls if appropriate | Supply basic input/observations; make no save claim from delivery alone |
+| Saving happens automatically | The player can report any observed confirmation and uncertainty | Require no fabricated manual Save sequence |
+| Saving is unavailable during play, restricted to certain places, or absent | The player can explain that progress preservation is unavailable or unverified | Stop automation when required; lack of a save mechanism does not fail generic stop control |
+| The game continues while input is stopped | The player may be unable to secure a stable state before control ends | Report that automation stopped, without claiming the game itself paused |
+
+These examples are design cases, not claims of tested support for those games.
+Current qualification remains scoped to CDDA on this Mac. A basic control
+interface does not establish support for every possible game or save mechanism.
+
+Game progress, player-system knowledge/context, automation authority and application
+lifetime are separate state. Retained player records do not save the game or
+restore authority. Stopping the player need not close a user-owned application.
+The finite test custodian still closes its specifically owned processes under the
+frozen cleanup policy; that is a testing obligation, not a universal in-game Quit.
+Preserve earlier CDDA Save/reload/normal-exit acceptance and failures as scoped
+evidence. Any new diagnostic must state its game-specific persistence/exit checks
+separately from generic control acceptance before it is frozen.
 
 Do not add a semantic supervisor, task classifier, second deciding model, game
 state parser, new orchestration service or game-specific input gate. Existing
@@ -134,11 +170,13 @@ incomplete ending and close safely. Sealing or host exit cannot silently erase
 the controller's stop request. Bound inference/tool delivery delay in the ending
 forecast, including the current provider attempt and bounded local program.
 
-The request says that external control asks for a checkpoint and orderly stop.
+The request says that external control asks the player to finish up and stop.
 It contains no requests-remaining count, clock target, prescribed route or game
-tactic. The finite test controller retains ending reserves and the hard deadline.
+tactic, and mandates no Save or application Quit. The finite test controller
+retains ending reserves and the hard deadline. A model's inability to save cannot
+prevent the controller from stopping automation or completing owned cleanup.
 Keep emergency Pause distinct: it fences input immediately, including during
-inference or a local program, and permits no automation rearm or saving afterward.
+inference or a local program, and permits no automation rearm or automated saving afterward.
 An orderly request must not cancel an in-flight MCP input merely to deliver text.
 
 Add one host-owned player-system reporting tool, proposed `player_finish`, beside
@@ -153,11 +191,15 @@ tool result or remembered text cannot impersonate it. A normal assistant reply
 without this signal remains a reply, not a completed task; continuation stays
 subject to external authority and original allowances.
 
-Report the claim, host settlement, Save evidence, native exit and process absence
-separately. A claimed win does not prove a win. `external_stop_complete` names
+Report the claim, host settlement, automation quiescence, any game-specific
+persistence evidence, native exit and process absence separately. A claimed win
+does not prove a win, and a stopped player does not prove a saved or paused game.
+`external_stop_complete` names
 the latched external command; a report without that command cannot claim this
 disposition. Unknown input remains unknown and is never replayed to finish an
-ending. Failure to finish within reserves remains an incomplete test outcome.
+ending. If the player cannot finish within reserves, record its report as
+incomplete and stop automation independently. Failure of a separately specified
+game-persistence check does not erase successful mechanical stopping, or vice versa.
 
 ### Continuity without a new memory architecture
 
@@ -211,7 +253,10 @@ Required checks cover every context delivery route, typed nested collections,
 opaque authored data, unsupported versions, retained original accounting,
 source/uncertainty preservation, retry charging, control identity/duplicates,
 direct completion origin, pending multi-tool suppression, cancellation during
-inference/programs, context turnover and exact group closure. Focused Python/Node
+inference/programs, context turnover, exact group closure and independent stopping
+without a model reply or save/quit mechanism. Exercise the illustrative manual,
+automatic, unavailable-save and continuing-game cases without teaching a game
+handler to the controller. Focused Python/Node
 fixtures precede development play; independent code/architecture review and full
 protected regression precede broad-source merge. Source fixtures cannot prove
 survival, safe saving, useful plans or model benefit.
@@ -236,7 +281,9 @@ one continuation, not a fresh independent start, causal comparison or full cohor
 The test controller should observe useful replenishment, maintained needs, actual
 planning revisions and organically chosen supported program execution, retaining
 all failures/no-ops. Keep observation milestones external and request ending only
-through the new control path. Review original ready/dispatch/child/effect timing
+through the new control path. Specify any CDDA Save/reload/normal-exit evidence
+as this diagnostic's own requirement, without making it a universal player stop
+condition or altering earlier protocols. Review original ready/dispatch/child/effect timing
 on compatible clocks; do not call receipt delivery a useful effect. The original
 20-decision, 2 s p95, 5 s stall and 500 ms local-effect criteria remain unchanged.
 
