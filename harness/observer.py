@@ -23,7 +23,7 @@ ENTRY_LIMIT = 200
 BYTE_LIMIT = 256 * 1024
 TEXT_LIMIT = 8192
 HOST_KINDS = frozenset({'host-start', 'request-start', 'response-complete',
-    'assistant-text', 'tool-start', 'tool-result', 'handoff', 'settled', 'abort', 'provider-retry'})
+    'assistant-text', 'player-finish', 'tool-start', 'tool-result', 'handoff', 'settled', 'abort', 'provider-retry'})
 
 
 def bounded_text(value: Any, limit: int) -> tuple[str | None, int]:
@@ -100,12 +100,14 @@ class ActivityView:
             elif omitted:
                 row.setdefault('omitted_fields', []).append(key)
         row['status'], status_omitted = bounded_text(event.get('stop_reason') or event.get('stage'), 128)
+        if kind == 'player-finish':
+            row['status'], status_omitted = bounded_text(event.get('disposition'),128)
         if kind == 'settled':
             row['status'] = 'completed' if event.get('ok') is True else 'failed'
         row['reason'], reason_omitted = bounded_text(event.get('reason'), 512)
         row['omitted_text_bytes'] = status_omitted + reason_omitted
-        if kind == 'assistant-text':
-            row['text'], row['display_omitted_bytes'] = bounded_text(event.get('text'), TEXT_LIMIT)
+        if kind in ('assistant-text', 'player-finish'):
+            row['text'], row['display_omitted_bytes'] = bounded_text(event.get('report') if kind=='player-finish' else event.get('text'), TEXT_LIMIT)
             row['omitted_bytes'] = event.get('omitted_bytes', 0)
             if type(row['omitted_bytes']) is not int or row['omitted_bytes'] < 0:
                 raise ValueError('Invalid original narration omission count')
@@ -128,7 +130,7 @@ class ActivityView:
             self.host_count += 1
             if not self.host_errors:
                 self.host_coverage = 'available'
-            if kind == 'assistant-text':
+            if kind in ('assistant-text', 'player-finish'):
                 self.latest_statement = row
 
     def _computer_rows(self) -> tuple[list[dict], int]:

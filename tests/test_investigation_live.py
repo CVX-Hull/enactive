@@ -19,10 +19,10 @@ from tools import investigation_live as live
 def case():
     fixture = closed_fixture.InvestigationTests()
     fixture.setUp()
-    fixture.profile = dict(schema='campaign-run/3', session=fixture.session, source_commit='f' * 40)
+    fixture.profile = dict(schema='campaign-run/4', session=fixture.session, source_commit='f' * 40)
     (fixture.case / 'manifest.json').write_text(json.dumps(fixture.profile))
     (fixture.case / 'actors/001/frozen.json').write_text(json.dumps(dict(
-        schema='player-host-inputs/1', session=fixture.session, actor_id=fixture.actor,
+        schema='player-host-inputs/2', session=fixture.session, actor_id=fixture.actor,
         files={'actor.json': '0' * 64})))
     (fixture.case / 'receipt.json').unlink()
     (fixture.case / 'actors/001/actor.json').write_text('PRIVATE_TOKEN_DO_NOT_READ')
@@ -133,7 +133,7 @@ def test_invalid_or_changed_input_is_unavailable(case, tmp_path, fault):
                 db.execute("UPDATE metadata SET value=? WHERE key='session'", (json.dumps('b' * 32),))
     if fault == 'actor_session':
         (case.case / 'actors/001/frozen.json').write_text(json.dumps(dict(
-            schema='player-host-inputs/1', actor_id=case.actor, session='b' * 32, files={})))
+            schema='player-host-inputs/2', actor_id=case.actor, session='b' * 32, files={})))
     if fault == 'manifest':
         (case.case / 'manifest.json').write_text(json.dumps({**case.profile, 'source_commit': 'e' * 40}))
     context = patch.object(live, 'MAX_TRACE_BYTES', 1) if fault == 'budget' else patch.object(live, 'MAX_TRACE_BYTES', live.MAX_TRACE_BYTES)
@@ -269,7 +269,7 @@ def test_campaign_injects_view_and_closes_after_server_before_stores(tmp_path):
     def serve(app, port):
         assert app.investigation_view is view
         return server, Mock()
-    driver = dict(schema='player-driver/2', actors=[], outcome='incomplete', attempts_charged=0,
+    driver = dict(schema='player-driver/3', actors=[], outcome='incomplete', attempts_charged=0,
         configured_estimate_usd=0, missing_usage_attempts=0)
     with patch.object(campaign_run, 'preflight', return_value=(profile, dict(api_key_env='OFFLINE_KEY'), {})), \
             patch.dict('os.environ', {'OFFLINE_KEY': 'PRIVATE_TOKEN'}), \

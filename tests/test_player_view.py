@@ -11,6 +11,7 @@ from mcp import types
 import pytest
 
 from harness.application import Application
+from harness.computer.protocol import ControlError
 from harness.player.contracts import PlayerError, canonical
 from harness.player.memory import Memory
 from harness.player.programs import ProgramRepository, ProgramRunner
@@ -61,6 +62,15 @@ def test_direct_collection_handoff_and_accounting_stay_original(service):
     handoff = call(app, actor, 'player_handoff', {'ids': [], 'summary': 'unfinished'})
     assert actor_result(handoff)['handoff'] == handoff['handoff']
     assert actor_result(handoff)['status'] == 'sealed'
+
+
+def test_malformed_collection_id_keeps_repairable_feedback_without_computer_calls(service):
+    app,runtime,channel,actor=service
+    with pytest.raises(ControlError) as failure:
+        call(app,actor,'computer_result',{'operation_id':'typo'})
+    view=actor_result(dict(schema='player-error/1',error='ControlError',reason=str(failure.value),submission='rejected'))
+    assert view['reason']=='Operation ID must be32 lowercase hexadecimal characters'
+    assert view['input_replayed'] is False and channel.calls==[] and runtime.store.counts()['inputs']==0
 
 
 def test_nested_program_result_collection_and_opaque_authored_data(service):

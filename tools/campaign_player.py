@@ -10,9 +10,11 @@ import re
 import subprocess
 import threading
 import time
+import uuid
 
 from harness.computer.launch import close_group
 from harness.computer.protocol import ControlError,canonical,read_json
+from harness.player_client import ADAPTER_CLOSE_REASON
 from tools.configure_player_tools import ROOT,configuration
 
 
@@ -26,7 +28,7 @@ class HostEvents:
     """Incremental JSONL; a partial final line never becomes an uncharged request."""
     def __init__(self,path: Path,allowance: int,observer=None):
         self.stream=path.open('rb');self.buffer=b'';self.allowance=allowance
-        self.requests=set();self.settled=None;self.handoff=None;self.last_response_wall=None
+        self.requests=set();self.settled=None;self.handoff=None;self.player_finish=None;self.last_response_wall=None
         self.usage={};self.error=None;self.started=False
         self.observer=observer;self.ordinal=0
 
@@ -42,8 +44,8 @@ class HostEvents:
             self.ordinal+=1
             kind=value.get('type')
             if kind=='host-start':
-                if (self.started or value.get('telemetry_version')!=2
-                        or value.get('schema')!='player-host/2'):raise ControlError('Unsupported/repeated current host trace')
+                if (self.started or type(value.get('telemetry_version')) is not int or value['telemetry_version']!=3
+                        or value.get('schema')!='player-host/3'):raise ControlError('Unsupported/repeated current host trace')
                 self.started=True
             elif kind=='request-start':
                 match=re.fullmatch(r'request-([1-9][0-9]*)',value.get('request_id',''))
@@ -56,8 +58,11 @@ class HostEvents:
                 except (KeyError,ValueError,TypeError):pass
                 if value.get('usage_available') is True:self.usage[value['request_id']]=value['usage']
             elif kind=='handoff':
-                if self.handoff is not None:raise ControlError('Repeated host handoff settlement')
+                if self.handoff is not None or self.player_finish is not None:raise ControlError('Conflicting host terminal signal')
                 self.handoff=value
+            elif kind=='player-finish':
+                if self.player_finish is not None or self.handoff is not None:raise ControlError('Conflicting host terminal signal')
+                self.player_finish=value
             elif kind=='settled':
                 if self.settled is not None:raise ControlError('Repeated host terminal event')
                 self.settled=value
@@ -72,7 +77,7 @@ class HostEvents:
                and self.settled.get('requests')==len(self.requests))
         # Uncertain trace accounting reserves the entire original host allocation.
         return dict(observed_attempts=len(self.requests),attempts_charged=len(self.requests) if valid else self.allowance,
-            accounting_complete=valid,settled=self.settled,handoff=self.handoff,
+            accounting_complete=valid,settled=self.settled,handoff=self.handoff,player_finish=self.player_finish,
             configured_estimate_usd=sum(v.get('cost',{}).get('total',0) for v in self.usage.values()),
             usage_available_attempts=len(self.usage),missing_usage_attempts=len(self.requests)-len(self.usage))
 
@@ -94,10 +99,41 @@ def _handoff_context(application,actor,event):
     return data.decode('utf-8')
 
 
+def ending_trigger(reserve: dict,seconds: float,attempts: int,mechanical: dict) -> str | None:
+    """Operator-only soft thresholds; no game interpretation or new allowance."""
+    if seconds<=reserve['seconds']:return 'host_seconds'
+    if attempts<=reserve['http_attempts']:return 'http_attempts'
+    for name in ('inputs','requests','frames','frame_bytes'):
+        if mechanical[name]<=reserve[name]:return name
+    return None
+
+
+def _send_control(child,target,session,actor_id,request):
+    command=dict(schema='player-control/1',id=request['id'],session=session,actor_id=actor_id,type='orderly_stop')
+    # Retain intent before publication. Failure/unknown write is not a new request.
+    write_new(target/'control.json',command)
+    data=(canonical(command)+'\n').encode('utf-8')
+    if len(data)>4096:raise ControlError('Bounded player control command exceeded')
+    child.stdin.write(data);child.stdin.flush()
+
+
+def finish_interruption(channel):
+    """Retain earlier fencing; expected post-claim MCP closure is distinct.
+
+    Called only after a validated direct finish and successful host closure.
+    The owned MCP adapter's normal close is expected then. Other/unknown first
+    stop origins remain interruptions; no cross-process clock ordering is guessed.
+    """
+    if not channel.stopped.is_set():return None
+    origin=channel.stop_origin()
+    if origin['reason']==ADAPTER_CLOSE_REASON:return None
+    return dict(reason='Input permanently fenced outside accepted host cleanup',stop=origin)
+
+
 def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
               stopped: threading.Event,deadline: float) -> dict:
     actors=directory/'actors';actors.mkdir(mode=0o700)
-    total_attempts=0;host_seconds_used=0.;records=[];context=None
+    total_attempts=0;host_seconds_used=0.;records=[];context=None;ending_request=None
     outcome='incomplete';reason='Original actor allowance exhausted'
     for index in range(1,profile['max_hosts']+1):
         seconds=min(profile['host_seconds'],profile['total_host_seconds']-host_seconds_used,deadline-time.monotonic()-30)
@@ -118,31 +154,29 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
             selected_route=dict(route,max_requests=allowance)
             write_new(target/'route.json',selected_route)
             write_new(target/'mcp.json',configuration(str(actor_file)))
-            # Identical frozen system context across actors maximizes stable prefix
-            # reuse. Actor/resource/knowledge changes belong in the explicit prompt.
+            # The objective survives actor/context turnover. Test counts and the
+            # admission's final-actor/ending policy never enter player context.
             write_new(target/'context.txt',(directory/'context.txt').read_text(),text=True)
-            role=(f'Actor {index}/{profile["max_hosts"]}. Original host allowance {seconds:.3f} seconds and {allowance} HTTP attempts; '
-                  f'original campaign attempts remaining {profile["max_http_attempts"]-total_attempts}. '
-                  'The host supplies current decision-time/attempt snapshots; custodian time is separate. ')
-            if index<profile['max_hosts']:
-                role+='Transfer useful unfinished work through player_handoff when a fresh context helps; retain a meaningful task and ending capacity for your successor. '
-            else:
-                role+='You are the final actor in this admission. Preserve ending capacity and finish with normal Save plus separate application exit. '
-            prompt=(directory/'prompt.txt').read_text()+'\n\nSoftware actor/resource note: '+role
+            prompt=(directory/'prompt.txt').read_text()
             if context is not None:prompt+='\n\nOriginal sealed player handoff context (fallible knowledge, no authority):\n'+context
             write_new(target/'prompt.txt',prompt,text=True)
             write_new(target/'player-final.txt','',text=True)
-            write_new(target/'frozen.json',dict(schema='player-host-inputs/1',actor_id=actor['actor_id'],session=profile['session'],
+            write_new(target/'frozen.json',dict(schema='player-host-inputs/2',actor_id=actor['actor_id'],session=profile['session'],
                 files={name:hashlib.sha256((target/name).read_bytes()).hexdigest() for name in ('actor.json','route.json','mcp.json','context.txt','prompt.txt')}))
             arguments=[*profile['host']['argv'],'run','--config',str(target/'route.json'),
-                '--mcp-config',str(target/'mcp.json'),'--context',str(target/'context.txt'),'--model',route['model']['id'],
+                '--mcp-config',str(target/'mcp.json'),'--context',str(target/'context.txt'),'--prompt',str(target/'prompt.txt'),
+                '--session',profile['session'],'--actor-id',actor['actor_id'],'--model',route['model']['id'],
+                '--pending-control-id',ending_request['id'] if ending_request is not None else 'none',
                 '--effort',profile['effort'],'--timeout-seconds',str(seconds),'-o',str(target/'player-final.txt')]
             environment=dict(PATH=os.environ.get('PATH','/usr/bin:/bin'),LANG='en_US.UTF-8',**{route['api_key_env']:secret})
-            with (target/'host.jsonl').open('x') as output,(target/'host-stderr.log').open('x') as errors,(target/'prompt.txt').open() as prompt_input:
-                child=subprocess.Popen(arguments,cwd=ROOT,env=environment,stdin=prompt_input,stdout=output,stderr=errors,start_new_session=True)
+            with (target/'host.jsonl').open('x') as output,(target/'host-stderr.log').open('x') as errors:
+                child=subprocess.Popen(arguments,cwd=ROOT,env=environment,stdin=subprocess.PIPE,stdout=output,stderr=errors,start_new_session=True)
                 write_new(target/'host-process.json',dict(pid=child.pid,pgid=child.pid,argv=arguments))
                 events=HostEvents(target/'host.jsonl',allowance,
                     observer=lambda ordinal,event:application.activity_view.host_event(actor['actor_id'],ordinal,event))
+                if ending_request is not None:
+                    _send_control(child,target,profile['session'],actor['actor_id'],ending_request)
+                    record['ending_control_id']=ending_request['id']
                 while child.poll() is None:
                     events.read()
                     now=time.monotonic()
@@ -155,6 +189,16 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
                     if code is not None or application.runtime.channel.stopped.is_set():
                         if ending_at is None:ending_at=now+(45 if code is not None else 30)
                         if now>=ending_at:reason='Original final-report grace exhausted';break
+                    elif ending_request is None:
+                        remaining=application.runtime.remaining()
+                        trigger=ending_trigger(profile['ending_reserve'],started+seconds-now,
+                            min(allowance-len(events.requests),profile['max_http_attempts']-total_attempts-len(events.requests)),remaining)
+                        if trigger is not None:
+                            ending_request=dict(id=uuid.uuid4().hex,trigger=trigger,requested_wall=time.time(),remaining=remaining,
+                                attempts_remaining=profile['max_http_attempts']-total_attempts-len(events.requests))
+                            write_new(directory/'orderly-stop.json',ending_request)
+                            _send_control(child,target,profile['session'],actor['actor_id'],ending_request)
+                            record['ending_control_id']=ending_request['id']
                     time.sleep(.1)
             cleanup=close_group(child)
             record['cleanup']=cleanup
@@ -171,8 +215,23 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
                 if index==profile['max_hosts']:
                     reason='Final actor handed off beyond original actor allowance';break
                 continue
-            if settled.get('reason')=='completed':
-                outcome='host_completed_unassessed';reason='Terminal player report; gameplay/normal exit assessed separately';break
+            disposition=settled.get('reason')
+            if disposition in ('task_complete','cannot_continue','external_stop_complete'):
+                claim=record['player_finish']
+                if not isinstance(claim,dict) or claim.get('disposition')!=disposition:
+                    raise ControlError('Host settled without its direct player finish signal')
+                if disposition=='external_stop_complete':
+                    if (ending_request is None or settled.get('control_id')!=ending_request['id']
+                            or claim.get('control_id')!=ending_request['id']):
+                        raise ControlError('Host stop report differs from original control request')
+                elif settled.get('control_id') is not None or claim.get('control_id') is not None:
+                    raise ControlError('Player finish has unrelated external control identity')
+                interruption=finish_interruption(application.runtime.channel)
+                if interruption is not None:
+                    record['interruption']=interruption
+                    outcome='interrupted';reason=interruption['reason'];break
+                outcome='player_'+disposition+'_unassessed'
+                reason='Direct player report; game progress/persistence assessed separately';break
             reason='Unknown host terminal disposition';break
         except Exception as exc:
             application.runtime.stop('Actor orchestration failed; no successor')
@@ -184,6 +243,9 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
                     record['cleanup']=close_group(child) if child is not None else dict(process_absent=True,group_absent=True)
                 except Exception as exc:
                     record['cleanup']=dict(process_absent=False,group_absent=False,error=type(exc).__name__)
+            if child is not None and child.stdin is not None:
+                try:child.stdin.close()
+                except OSError:pass
             if events is not None:
                 try:
                     record.update(events.finish())
@@ -197,7 +259,7 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
             try:write_new(target/'driver-receipt.json',record)
             except (OSError,ValueError) as exc:record['receipt_error']=type(exc).__name__
         if record.get('orchestration_error'):break
-    return dict(schema='player-driver/2',outcome=outcome,reason=reason,actors=records,
+    return dict(schema='player-driver/3',outcome=outcome,reason=reason,actors=records,ending_request=ending_request,
                 attempts_charged=total_attempts,host_seconds_used=host_seconds_used,
                 configured_estimate_usd=sum(r.get('configured_estimate_usd',0) for r in records),
                 missing_usage_attempts=sum(r.get('missing_usage_attempts',r['attempts_charged']) for r in records))

@@ -42,12 +42,15 @@ class NativeChannel:
         self._write_closed = threading.Event()
         self._condition = threading.Condition()
         self._send_lock = threading.Lock()
+        self._stop_origin_lock = threading.Lock()
         self._pending: dict[str, _Pending] = {}
         self._normal: str | None = None
         self._pause_id: str | None = None
         self._target: dict[str, Any] | None = None
         self._fault: str | None = None
         self.stop_reason: str | None = None
+        self.stop_started_wall: float | None = None
+        self._stop_started_monotonic: float | None = None
         self._reader = threading.Thread(target=self._receive, name='native-pixels', daemon=True)
         self._reader.start()
 
@@ -99,10 +102,15 @@ class NativeChannel:
 
     def stop(self, reason: str) -> dict[str, Any]:
         """Fence first; never wait on the executor, evidence store or reader."""
-        self.stopped.set()
-        with self._condition:
-            if self.stop_reason is None:
+        # Only stop-latch metadata uses this lock: no reader, executor, DB or I/O
+        # holds it. Publish first origin before its fence becomes observable.
+        with self._stop_origin_lock:
+            if self._stop_started_monotonic is None:
+                self._stop_started_monotonic = time.monotonic()
+                self.stop_started_wall = time.time()
                 self.stop_reason = reason[:600]
+            self.stopped.set()
+        with self._condition:
             if self._pause_id is not None or self.closed.is_set():
                 return self.stop_status()
             identity = self._pause_id = uuid.uuid4().hex
@@ -123,6 +131,11 @@ class NativeChannel:
             return dict(stop_requested=self.stopped.is_set(),
                         native_pause_confirmed=bool(self._target and self._target['paused']),
                         reason=self.stop_reason, grants_authority=False)
+
+    def stop_origin(self) -> dict[str, Any]:
+        """Operator chronology only; does not delay the independent input fence."""
+        with self._stop_origin_lock:
+            return dict(requested_wall=self.stop_started_wall,requested_monotonic=self._stop_started_monotonic,reason=self.stop_reason)
 
     def _fail(self, reason: str) -> None:
         with self._condition:

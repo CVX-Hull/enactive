@@ -3,6 +3,7 @@ import socket
 import struct
 import threading
 import time
+import sys
 
 import pytest
 
@@ -63,6 +64,45 @@ def test_interrupted_framing_half_closes_before_any_pause_packet():
             channel.request('input',{},time.monotonic()+1,'c'*32)
     finally:
         channel.close();right.close()
+
+
+def test_first_stop_origin_survives_later_adapter_cleanup():
+    left,right=socket.socketpair();channel=NativeChannel(left,'a'*32,123)
+    try:
+        before=time.monotonic()
+        channel.stop('Operator Pause')
+        origin=channel.stop_origin()
+        channel.stop('Actor adapter closed')
+        assert channel.stop_origin()==origin
+        assert origin['reason']=='Operator Pause' and before<=origin['requested_monotonic']<=time.monotonic()
+        assert channel.stopped.is_set()
+    finally:
+        channel.close();right.close()
+
+
+def test_visible_fence_has_published_origin_before_later_cleanup():
+    from tools.campaign_player import finish_interruption
+    left,right=socket.socketpair();channel=NativeChannel(left,'a'*32,123)
+    fenced,release=threading.Event(),threading.Event()
+    def trace(frame,event,arg):
+        if (event=='line' and frame.f_code is NativeChannel.stop.__code__
+                and channel.stopped.is_set() and not fenced.is_set()):
+            # Suspend after the fence and origin publication lock is released.
+            if not channel._stop_origin_lock.locked():
+                fenced.set();assert release.wait(2)
+        return trace
+    def pause():
+        sys.settrace(trace)
+        try:channel.stop('Operator Pause')
+        finally:sys.settrace(None)
+    worker=threading.Thread(target=pause)
+    try:
+        worker.start();assert fenced.wait(2)
+        channel.stop('Actor adapter closed')
+        assert finish_interruption(channel)['stop']['reason']=='Operator Pause'
+    finally:
+        release.set();worker.join(2);channel.close();right.close()
+    assert not worker.is_alive()
 
 
 def test_fragmented_receipt_keeps_exact_identity_and_arrival_clock():

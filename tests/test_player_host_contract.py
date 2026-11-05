@@ -183,7 +183,7 @@ class Hosted:
     def flags(self, timeout_seconds="30") -> list[str]:
         return ["--config", str(self.paths["route.json"]), "--mcp-config", str(self.paths["mcp.json"]),
                 "--context", str(self.paths["context.txt"]), "--prompt", str(self.paths["prompt.txt"]),
-                "--session", "2" * 32, "--actor-id", "3" * 32, "--model", "fixture", "--effort", self.effort,
+                "--session", "2" * 32, "--actor-id", "3" * 32, "--pending-control-id", "none", "--model", "fixture", "--effort", self.effort,
                 "--timeout-seconds", timeout_seconds, "-o", str(self.paths["final.txt"])]
 
     def start(self, arguments: list[str] | None = None, *, timeout_seconds="30") -> "Hosted":

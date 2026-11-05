@@ -21,7 +21,7 @@ async function cli(t, handle, extraEnv = {}, enabledTools = ['observe']) {
   const mcp={command:resolve(python),args:[fixture,join(dir,'log'),join(dir,'pid')],cwd:dir,enabled:true,required:true,enabled_tools:enabledTools,startup_timeout_sec:3,tool_timeout_sec:1};
   const paths={route:join(dir,'route.json'),mcp:join(dir,'mcp.json'),context:join(dir,'context.txt'),prompt:join(dir,'prompt.txt'),final:join(dir,'final.txt')};
   await Promise.all([writeFile(paths.route,JSON.stringify(route)),writeFile(paths.mcp,JSON.stringify(mcp)),writeFile(paths.context,'Frozen player guide'),writeFile(paths.prompt,'Offline mission'),writeFile(paths.final,'reserved')]);
-  const child=spawn(process.execPath,[runner,'run','--config',paths.route,'--mcp-config',paths.mcp,'--context',paths.context,'--prompt',paths.prompt,'--session','2'.repeat(32),'--actor-id','3'.repeat(32),'--model','fixture','--effort','off','--timeout-seconds','10','-o',paths.final],{env:{PATH:process.env.PATH,CLI_FIXTURE_KEY:'sentinel-private-key',...extraEnv},stdio:['pipe','pipe','pipe']});
+  const child=spawn(process.execPath,[runner,'run','--config',paths.route,'--mcp-config',paths.mcp,'--context',paths.context,'--prompt',paths.prompt,'--session','2'.repeat(32),'--actor-id','3'.repeat(32),'--pending-control-id','none','--model','fixture','--effort','off','--timeout-seconds','10','-o',paths.final],{env:{PATH:process.env.PATH,CLI_FIXTURE_KEY:'sentinel-private-key',...extraEnv},stdio:['pipe','pipe','pipe']});
   t.after(()=>{if(child.exitCode===null) child.kill('SIGKILL');});
   let stdout='',stderr='';child.stdout.on('data',chunk=>stdout+=chunk);child.stderr.on('data',chunk=>stderr+=chunk);
   child.stdin.on('error',()=>{});

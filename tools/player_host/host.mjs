@@ -386,6 +386,8 @@ export async function runHost(options) {
   let agent, client, transport, fatal, closing = false, requests = 0, requestId, requestTimer, requestInFlight = false, requestUsageAvailable = false;
   let workTimer, deadlineTimer;
   let responseProgress, handoff, pendingHandoff, finish, control, unlistenControl, requestControlId;
+  let releaseInitialControl;
+  const initialControlReady = new Promise(resolve => { releaseInitialControl = resolve; });
   let contextWarning = false;
   const assistantControls = new WeakMap();
   const progressSnapshot = () => responseProgress ? {...responseProgress,
@@ -396,6 +398,7 @@ export async function runHost(options) {
     fatal = reason;
     emit('abort', {reason, request_id:requestId, response_progress:progressSnapshot()});
     stopped.abort();
+    releaseInitialControl();
     agent?.abort();
     // Start owned transport closure immediately, including while MCP connect is
     // pending. The single finally block still awaits the same close operation.
@@ -431,7 +434,8 @@ export async function runHost(options) {
     if (options.signal?.aborted) stop('cancelled');
     const configuration = validateConfiguration(options.configuration, options.model, options.effort);
     const mcp = validateMcpConfiguration(options.mcpConfig);
-    requireThat(identity(options.session) && identity(options.actorId) && options.control?.on, 'invalid-control-binding');
+    requireThat(identity(options.session) && identity(options.actorId) && options.control?.on
+      && (options.pendingControlId === null || identity(options.pendingControlId)), 'invalid-control-binding');
     requireThat(typeof options.prompt === 'string' && typeof options.context === 'string', 'invalid-input');
     bounded(options.prompt); bounded(options.context);
     emit('host-start', {telemetry_version:3, schema:configuration.schema, session:options.session, actor_id:options.actorId, requested_service_tier:configuration.service_tier, model:configuration.model.id, provider:configuration.model.provider, api:configuration.model.api, effort:options.effort, max_output_tokens:configuration.model.maxTokens, context_window:configuration.model.contextWindow, context_reserve_tokens:configuration.context_reserve_tokens, thinking_level_map:{...configuration.model.thinkingLevelMap}, reasoning_format:configuration.model.compat?.thinkingFormat ?? null, provider_routing:configuration.model.compat?.openRouterRouting ? structuredClone(configuration.model.compat.openRouterRouting) : null, max_requests:configuration.max_requests, max_context_images:configuration.max_context_images, context_image_block:configuration.context_image_block, unsupported_features:['compaction', 'session-restore', 'model-fallback', 'reconnect', 'replay', 'ambient-tools', 'resource-discovery'], missing_endpoints:['model-attention', 'server-inference-start', 'physical-paint'], cleanup_budget_ms:cleanupBudget});
@@ -440,10 +444,17 @@ export async function runHost(options) {
         if (!isDeepStrictEqual(control, command)) stop('conflicting-control');
         return;
       }
+      if (options.pendingControlId !== null && command.id !== options.pendingControlId) {
+        stop('invalid-initial-control'); return;
+      }
       control = command;
+      releaseInitialControl();
       emit('control-accepted', {control_id:control.id, session:control.session, actor_id:control.actor_id, control_type:control.type});
       agent?.steer({role:'user', timestamp:Date.now(), content:[{type:'text', text:`${STOP_TEXT}\ncontrol_id: ${control.id}`}]});
     }, stop);
+    // A successor's pending command is declared before spawn. Scheduler order
+    // cannot let it start ordinary work while the parent is still writing it.
+    if (options.pendingControlId !== null) await initialControlReady;
     if (fatal) throw new HostError(fatal);
     requireThat(!AMBIENT_PROVIDER_SETTINGS.some(name => Object.hasOwn(process.env, name)), 'ambient-provider-configuration');
     // The MCP subprocess gets only locale and executable lookup, never provider

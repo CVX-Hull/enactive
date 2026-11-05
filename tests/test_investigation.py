@@ -36,9 +36,9 @@ class InvestigationTests(unittest.TestCase):
         self.session = 'a' * 32
         self.source_id = self.session + '-1'
         self.actor = 'actor-original'
-        self.receipt = dict(schema='campaign-receipt/2', session=self.session, source_commit='abc123',
+        self.receipt = dict(schema='campaign-receipt/3', session=self.session, source_commit='abc123',
             deciding_hosts_quiescent=True, native_absence_verified=True, input_authority_revoked=True,
-            driver=dict(schema='player-driver/2', actors=[dict(index=1, actor_id=self.actor)],
+            driver=dict(schema='player-driver/3', actors=[dict(index=1, actor_id=self.actor)],
                 attempts_charged=1, host_seconds_used=2, configured_estimate_usd=.1, missing_usage_attempts=0),
             accounting=dict(consumed_conservative_reservation_usd=.2), outcome='failed')
         self.put_receipt()
@@ -71,7 +71,7 @@ class InvestigationTests(unittest.TestCase):
             db.execute('INSERT INTO native_intents VALUES(?,?,?,?,?)', ('native1', 'op1', json.dumps(receipt),
                 self.source_id, json.dumps(dict(intent_wall=1, intent_monotonic=5,
                     receipt_received_wall=1.1, receipt_received_monotonic=5.1))))
-        self.events = [dict(type='host-start', schema='player-host/2', telemetry_version=2,
+        self.events = [dict(type='host-start', schema='player-host/3', telemetry_version=3,
             monotonic_ms=0, wall_time='1970-01-01T00:00:01Z', model='fixture', provider='fixture',
             provider_routing=dict(only=['selected'], order=['selected'], allow_fallbacks=False,
                 token='PRIVATE_TOKEN'), prompt='PRIVATE_PROMPT'),
@@ -279,7 +279,7 @@ class InvestigationTests(unittest.TestCase):
         self.events[5]['tool'] = 'player_result'
         self.events[6]['result']['content'][0]['text'] = json.dumps(dict(
             schema='player-service-result/1', operation_id='authoring-request', value=dict(
-                schema='player-program/1', id='version1', code='PRIVATE_CODE', actor_id=self.actor)))
+                schema='player-program/2', view_schema='program-view/4', id='version1', code='PRIVATE_CODE', actor_id=self.actor)))
         self.write_trace()
         tool = next(e for e in export_selection(self.selection)['cases'][0]['events'] if e['kind'] == 'tool')
         self.assertEqual(tool['program_id'], 'version1')

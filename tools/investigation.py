@@ -339,8 +339,8 @@ def host_events(path, actor_id, session, analysis, notes):
                 start_wall_ms=start, end_wall_ms=end, elapsed_ms=measured['observed_ms'],
                 clock='Actor-local monotonic duration; original wall timestamps approximate shared axis.',
                 disposition='censored' if measured['censored'] else 'completed', metrics=metrics)
-        elif kind == 'assistant-text':
-            value = original.get('text')
+        elif kind in ('assistant-text', 'player-finish'):
+            value = original.get('report') if kind == 'player-finish' else original.get('text')
             if not isinstance(value, str):
                 raise ControlError('Invalid public assistant statement')
             omitted = original.get('omitted_bytes')
@@ -362,12 +362,12 @@ def host_events(path, actor_id, session, analysis, notes):
             if value.get('schema') == 'player-service-result/1' and isinstance(value.get('value'), dict):
                 # Current original-result collection can retain a program projection.
                 # Select the same public projection, never progress args or state.
-                if value['value'].get('schema') in ('player-program-run/1', 'player-program/1'):
+                if value['value'].get('schema') in ('player-program-run/1', 'player-program/2'):
                     if value['value']['schema'] == 'player-program-run/1':
                         program_actor = public(value.get('actor_id'), notes)
                     value = value['value']
-            known = value.get('schema') in ('computer-operation/1', 'player-program-run/1', 'player-program/1', 'player-service-result/1', 'player-source-read/1')
-            operation = public(value.get('operation_id'), notes) if value.get('schema') == 'computer-operation/1' else None
+            known = value.get('schema') in ('player-computer-result/1', 'player-program-run/1', 'player-program/2', 'player-service-result/1', 'player-source-read/1')
+            operation = public(value.get('operation_id'), notes) if value.get('schema') == 'player-computer-result/1' else None
             source_id = None
             if known and isinstance(value.get('source'), dict):
                 candidate = value['source']
@@ -378,7 +378,7 @@ def host_events(path, actor_id, session, analysis, notes):
                 source_id = public(candidate.get('source_id'), notes)
             run_id = public(value.get('run_id'), notes) if value.get('schema') == 'player-program-run/1' else None
             program = public(value.get('program_id'), notes) if run_id else (
-                public(value.get('id'), notes) if value.get('schema') == 'player-program/1' else None)
+                public(value.get('id'), notes) if value.get('schema') == 'player-program/2' else None)
             links = [request_ids[request]] if request in request_ids else []
             if operation:
                 links.append('operation:' + operation)
@@ -432,7 +432,7 @@ def export_case(selected, selection_parent):
     if directory.is_symlink() or not directory.is_dir():
         raise ControlError('Select an existing closed case directory')
     receipt = read_json(directory / 'receipt.json', 1024 * 1024)
-    if (not isinstance(receipt, dict) or receipt.get('schema') != 'campaign-receipt/2'
+    if (not isinstance(receipt, dict) or receipt.get('schema') != 'campaign-receipt/3'
             or any(receipt.get(key) is not True for key in ('deciding_hosts_quiescent',
                 'native_absence_verified', 'input_authority_revoked'))):
         raise ControlError('Investigation requires a current closed campaign receipt')
@@ -440,7 +440,7 @@ def export_case(selected, selection_parent):
     if receipt.get('session') != control['session']:
         raise ControlError('Closed receipt session differs from computer store')
     driver = receipt.get('driver')
-    if driver is not None and (not isinstance(driver, dict) or driver.get('schema') != 'player-driver/2'):
+    if driver is not None and (not isinstance(driver, dict) or driver.get('schema') != 'player-driver/3'):
         raise ControlError('Unsupported closed campaign driver version')
     driver = driver or {}
     actors = {}

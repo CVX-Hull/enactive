@@ -51,12 +51,13 @@ harness stop rule or permission to replay uncertain input.
 | `player_program_save/read/run` | Retain immutable JavaScript lineage and run a selected bounded local program through the same basic-control port. |
 | `player_result` | Collect an original memory/program authoring or program-run request after lost transport. |
 | `player_handoff` | Seal this actor with bounded immutable knowledge and unfinished-work summary. Original limits remain. |
+| `player_finish` | Report task completion, inability to continue, or completion of a directly received external stop request. This player-host tool stops your loop; it does not certify game success or saving. |
 
 The schema is authoritative for closed arguments. Keys use printable ASCII or
 `ENTER ESC UP DOWN LEFT RIGHT TAB BACKSPACE SPACE PAGEUP PAGEDOWN HOME END DELETE`,
 with explicit `CTRL ALT SHIFT` modifiers. Text contains 1..31 UTF-8 bytes without
 controls. Each wait is at most 2 seconds; combined waits/operation are at most
-15 seconds and cannot exceed the run deadline. `wait` delays **wall time** and
+15 seconds. `wait` delays **wall time** and
 sends no game input. It is not the application’s own wait action and does not
 certify that a message, animation or save finished. The application decides what
 changes during that time; choose any in-game wait/probe through ordinary input.
@@ -89,8 +90,9 @@ read missing detail or pixels when needed.
 
 A program defines `step(view,state)` and returns
 `{status:"act"|"yield"|"done",state,actions,reason}`. `act` proposes the same basic
-actions; other statuses use `actions:null`. `program-view/3` includes actual source
-metadata, your optional interpretation, original remaining resources and a
+actions; other statuses use `actions:null`. Store programs as `player-program/2`
+with `view_schema:"program-view/4"`. `program-view/4` includes actual source
+metadata, your optional interpretation and a
 player-selected crop/nearest-neighbour RGB view no larger than 96×96. Flat RGB
 values are in `image.rgb`; geometry, crop, sampling and omissions are explicit.
 Map clicks back to full-image pixels. The full PNG is separately readable.
@@ -105,23 +107,32 @@ replays input or renews resources.
 
 There is no registered semantic lifecycle in the harness. Use visible ordinary
 controls to create/load, dismiss menus, play, save and exit. Decide what the screen
-means and whether the same character resumed. Save-to-menu and application exit
-are distinct. Preserve ending capacity for both, then report evidence/uncertainty.
-The harness's normal-exit receipt cannot certify a save or objective.
+means and whether the same character resumed. Saving is an ordinary game choice;
+it needs no special tool or controller permission. Save-to-menu, application exit,
+stopping automation and completing your objective are distinct. A game may save
+automatically, restrict saving or offer none. State what the evidence establishes
+when persistence matters. A normal-exit receipt cannot certify a save or objective.
 
-## Resources, stopping and context
+## Stopping and context
 
-Custodian seconds/input/request/frame/byte capacities are mechanical resources.
-Player host HTTP attempts and host seconds are separately labelled. A remaining counter
-is not new permission or a quality metric. Preserve the frozen ending reserve.
+Pursue the user's objective until it is complete, you cannot continue, or the user
+or external control asks you to stop. A surrounding observation window is not a
+game objective. A labelled external request may offer an opportunity to finish up
+and report. It does not require Save or application Quit; choose appropriate game
+actions yourself. An immediate user Pause takes precedence and permits no further
+automated inputs, including saving. Stopping input may leave the game running.
 
-If another actor is allowed and fresh context helps, call `player_handoff` with
+When fresh context helps and control remains available, call `player_handoff` with
 selected record roots and a concise unfinished-task summary. It seals you; later
 reads/original collection do not permit input or another handoff. The driver must
 verify your actual host/MCP quiescence and canonical context before a successor.
 No save, menu or identity condition is required for this actor-only transfer.
 User Pause or uncertain input cannot become handoff-resumable.
 
-Use a terminal report to distinguish observed effects, player claims, failures and
-unknowns. Do not treat tool delivery, memory, process absence or host exit as game
-acceptance. The user can independently Pause at any point.
+Use `player_finish` to end your loop with `task_complete`, `cannot_continue` or
+`external_stop_complete`, a report, source references and `control_id`. The last
+disposition must name the actual external request you received; other dispositions
+use null. Ordinary assistant narration alone does not finish the task. Distinguish
+observed effects, claims, failures and unknowns. Tool delivery, memory, process
+absence and host exit do not establish a save or a win. The user can independently
+Pause at any point; stopping does not depend on your final report.

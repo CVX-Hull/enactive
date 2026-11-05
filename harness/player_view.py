@@ -44,6 +44,7 @@ _FEEDBACK = {
     'Record data exceeds 16 KiB', 'Identity must be 1..128 characters',
     'Program duration must be finite within (0,20] seconds',
     'Unknown current tool',
+    'Operation ID must be32 lowercase hexadecimal characters',
 }
 
 

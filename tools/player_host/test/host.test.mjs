@@ -41,7 +41,7 @@ async function scenario(t, sequence, overrides = {}) {
     return typeof item === 'function' ? item(init) : item;
   };
   const mcpConfig = {command:resolve(python),args:[fixture,log,pid],cwd:dir,enabled:true,required:true,enabled_tools:['observe','mutate','integer'],startup_timeout_sec:5,tool_timeout_sec:2,default_tools_approval_mode:'never',tools:{}};
-  const options = {session:'2'.repeat(32),actorId:'3'.repeat(32),control:new PassThrough(),configuration:route(), mcpConfig, context:'Frozen player guide', prompt:'Offline mission', model:model.id, effort:'off', timeoutSeconds:10, env:{OFFLINE_TEST_KEY:'fixture-key', UNRELATED_HOST_SECRET:'must-not-inherit'}, fetch, ...overrides,
+  const options = {session:'2'.repeat(32),actorId:'3'.repeat(32),pendingControlId:null,control:new PassThrough(),configuration:route(), mcpConfig, context:'Frozen player guide', prompt:'Offline mission', model:model.id, effort:'off', timeoutSeconds:10, env:{OFFLINE_TEST_KEY:'fixture-key', UNRELATED_HOST_SECRET:'must-not-inherit'}, fetch, ...overrides,
     onEvent:event=>{events.push(event);overrides.onEvent?.(event);}};
   if (overrides.fixtureStartupDelay !== undefined) mcpConfig.args.push(String(overrides.fixtureStartupDelay));
   if (overrides.enabledTools) mcpConfig.enabled_tools=overrides.enabledTools;
@@ -629,7 +629,7 @@ test('real production MCP discovery forwards all exact current actor-only tool s
   const expected=JSON.parse(stdout), payloads=[], bodies=[], events=[];
   const chosen=Object.keys(expected);
   assert.equal(chosen.length,14);
-  const result=await runHost({session:'2'.repeat(32),actorId:'3'.repeat(32),control:new PassThrough(),configuration:route(),mcpConfig:productionMcp(chosen),
+  const result=await runHost({session:'2'.repeat(32),actorId:'3'.repeat(32),pendingControlId:null,control:new PassThrough(),configuration:route(),mcpConfig:productionMcp(chosen),
     context:'Frozen current player guide',prompt:'Do not call tools.',model:model.id,effort:'off',
     timeoutSeconds:10,env:{OFFLINE_TEST_KEY:'fixture-key'},
     fetch:async(_url,init)=>{bodies.push(init.body);payloads.push(JSON.parse(init.body));return reply();},onEvent:e=>events.push(e)});
@@ -1037,7 +1037,7 @@ test('every other 402 stays terminal',async t=>{
 
 test('production MCP preserves actual source JSON and PNG through Pi while event images are references',async()=>{
   const payloads=[],bodies=[],events=[];
-  const result=await runHost({session:'2'.repeat(32),actorId:'3'.repeat(32),control:new PassThrough(),configuration:route(),mcpConfig:productionMcp(['computer_observe','player_source']),
+  const result=await runHost({session:'2'.repeat(32),actorId:'3'.repeat(32),pendingControlId:null,control:new PassThrough(),configuration:route(),mcpConfig:productionMcp(['computer_observe','player_source']),
     context:'Offline current pixel fixture',prompt:'Read actual source pixels.',model:model.id,
     effort:'off',timeoutSeconds:10,env:{OFFLINE_TEST_KEY:'fixture-key'},
     fetch:async(_url,init)=>{
@@ -1070,7 +1070,7 @@ test('production MCP preserves actual source JSON and PNG through Pi while event
 });
 test('production MCP sealed handoff settles after earlier ordinary tool without followup inference or dispatch',async()=>{
   const payloads=[],bodies=[],events=[];
-  const result=await runHost({session:'a'.repeat(32),actorId:'3'.repeat(32),control:new PassThrough(),configuration:route(),mcpConfig:productionMcp(['computer_observe','player_handoff'],'3'.repeat(32)),
+  const result=await runHost({session:'a'.repeat(32),actorId:'3'.repeat(32),pendingControlId:null,control:new PassThrough(),configuration:route(),mcpConfig:productionMcp(['computer_observe','player_handoff'],'3'.repeat(32)),
     context:'Offline current actor handoff fixture',prompt:'Retain unfinished context and hand off.',
     model:model.id,effort:'off',timeoutSeconds:10,env:{OFFLINE_TEST_KEY:'fixture-key'},
     fetch:async(_url,init)=>{
@@ -1093,7 +1093,7 @@ test('production MCP sealed handoff settles after earlier ordinary tool without 
 
 test('production MCP foreign actor handoff cannot settle or dispatch later input',async()=>{
   const events=[];
-  const result=await runHost({session:'a'.repeat(32),actorId:'2'.repeat(32),control:new PassThrough(),configuration:route(),
+  const result=await runHost({session:'a'.repeat(32),actorId:'2'.repeat(32),pendingControlId:null,control:new PassThrough(),configuration:route(),
     mcpConfig:productionMcp(['computer_observe','player_handoff'],'3'.repeat(32)),context:'Offline foreign actor fixture',
     prompt:'Retain unfinished context.',model:model.id,effort:'off',timeoutSeconds:10,env:{OFFLINE_TEST_KEY:'fixture-key'},
     fetch:async()=>reply(null,[['player_handoff',{ids:[],summary:'Foreign actor'}],['computer_observe',{}]]),onEvent:event=>events.push(event)});
@@ -1111,6 +1111,38 @@ const actorId = '3'.repeat(32);
 const collectArgs = {operation_id:handoffId};
 
 const stopCommand = {schema:'player-control/1',id:'a'.repeat(32),session:'2'.repeat(32),actor_id:'3'.repeat(32),type:'orderly_stop'};
+
+test('declared inherited control gates startup until its bound command arrives',async t=>{
+  let connections=0,fetches=0,dispatches=0;
+  t.mock.method(McpClient.prototype,'connect',async()=>{connections++;});
+  t.mock.method(McpClient.prototype,'listTools',async()=>[{name:'observe',inputSchema:{type:'object',properties:{},additionalProperties:false}}]);
+  t.mock.method(McpClient.prototype,'callTool',async()=>{dispatches++;throw Error('No ordinary action is permitted');});
+  t.mock.method(McpClient.prototype,'close',async()=>{});
+  const control=new PassThrough();
+  const running=runHost({session:stopCommand.session,actorId:stopCommand.actor_id,pendingControlId:stopCommand.id,control,
+    configuration:route(),mcpConfig:{command:resolve(python),args:[fixture],cwd:tmpdir(),enabled:true,required:true,enabled_tools:['observe'],startup_timeout_sec:2,tool_timeout_sec:2},
+    context:'Frozen player guide',prompt:'Ongoing task',model:model.id,effort:'off',timeoutSeconds:2,env:{OFFLINE_TEST_KEY:'fixture'},
+    fetch:async()=>{fetches++;return reply(null,[['player_finish',{disposition:'external_stop_complete',report:'Stopped',source_ids:[],control_id:stopCommand.id}]]);}});
+  await realDelay(30);
+  assert.deepEqual([connections,fetches,dispatches],[0,0,0],'parent scheduling delay cannot permit successor work');
+  control.write(JSON.stringify(stopCommand)+'\n');
+  const result=await running;
+  assert.equal(result.reason,'external_stop_complete');assert.equal(result.ok,true);
+  assert.deepEqual([connections,fetches,dispatches],[1,1,0]);
+});
+
+for(const ending of ['eof','wrong-id']) test(`pending startup control ${ending} fails before MCP or provider`,async t=>{
+  let connections=0,fetches=0;
+  t.mock.method(McpClient.prototype,'connect',async()=>{connections++;});
+  const control=new PassThrough();
+  const running=runHost({session:stopCommand.session,actorId:stopCommand.actor_id,pendingControlId:stopCommand.id,control,
+    configuration:route(),mcpConfig:{command:resolve(python),args:[fixture],cwd:tmpdir(),enabled:true,required:true,enabled_tools:['observe'],startup_timeout_sec:2,tool_timeout_sec:2},
+    context:'Frozen guide',prompt:'Ongoing task',model:model.id,effort:'off',timeoutSeconds:2,env:{OFFLINE_TEST_KEY:'fixture'},fetch:async()=>{fetches++;throw Error('No fetch');}});
+  if(ending==='eof')control.end();else control.write(JSON.stringify({...stopCommand,id:'f'.repeat(32)})+'\n');
+  const result=await running;
+  assert.equal(result.ok,false);assert.deepEqual([connections,fetches],[0,0]);
+  assert.equal(result.reason,ending==='eof'?'control-eof':'invalid-initial-control');
+});
 const finishArgs = (disposition='task_complete',control_id=null) => ({disposition,report:'Player report',source_ids:[],control_id});
 test('direct finish fences subsequent calls and settles the accepted player claim',async t=>{
   const {result,calls,events,payloads}=await scenario(t,[reply(null,[

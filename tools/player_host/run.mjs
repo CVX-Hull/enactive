@@ -64,14 +64,14 @@ process.on('SIGTERM', cancel);
 let timer;
 try {
   if (mode !== 'run') throw new HostError('invalid-arguments');
-  const args = parseFlags(process.argv.slice(3), new Set(['--config', '--mcp-config', '--context', '--prompt', '--session', '--actor-id', '--model', '--effort', '--timeout-seconds', '-o']));
+  const args = parseFlags(process.argv.slice(3), new Set(['--config', '--mcp-config', '--context', '--prompt', '--session', '--actor-id', '--pending-control-id', '--model', '--effort', '--timeout-seconds', '-o']));
   const seconds = Number(args['--timeout-seconds']);
   if (!Number.isFinite(seconds) || seconds <= 0 || seconds * 1000 > 2_147_483_647) throw new HostError('invalid-host-timeout');
   timer = setTimeout(cancel, seconds * 1000);
   const [route, mcp, context, prompt] = await Promise.all([readBounded(args['--config'], controller.signal), readBounded(args['--mcp-config'], controller.signal), readBounded(args['--context'], controller.signal), readBounded(args['--prompt'], controller.signal)]);
   const remaining = seconds - (performance.now() - started) / 1000;
   if (remaining <= 0) throw new HostError('host-timeout');
-  const result = await runHost({configuration:JSON.parse(route), mcpConfig:JSON.parse(mcp), context, prompt, session:args['--session'], actorId:args['--actor-id'], control:process.stdin, model:args['--model'], effort:args['--effort'], timeoutSeconds:remaining, signal:controller.signal, onEvent:output});
+  const result = await runHost({configuration:JSON.parse(route), mcpConfig:JSON.parse(mcp), context, prompt, session:args['--session'], actorId:args['--actor-id'], pendingControlId:args['--pending-control-id'] === 'none' ? null : args['--pending-control-id'], control:process.stdin, model:args['--model'], effort:args['--effort'], timeoutSeconds:remaining, signal:controller.signal, onEvent:output});
   // campaign_player owns exclusive reservation of this exact final path; the
   // contract writes only the report from a direct accepted finish invocation.
   if (result.ok && ['task_complete', 'cannot_continue', 'external_stop_complete'].includes(result.reason)) await writeFile(args['-o'], result.finalText + '\n', {encoding:'utf8', signal:controller.signal});
