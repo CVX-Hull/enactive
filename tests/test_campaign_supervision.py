@@ -61,7 +61,7 @@ def receipt(**changes):
 def test_terminal_requires_check_and_current_bound_cleanup_receipt():
     rows = [dict(row(), observation=105, receipt=106, prior_observation=100)]
     scope = dict(session=SESSION, source_commit=COMMIT, rows=rows, ready_wall=1000,
-                 ready_at=100, started_wall=999, native_pid=99)
+                 ready_at=100, started_wall=999, native_pid=99, custody_end=120)
     assert guard.terminal_coverage(receipt(), **scope)
     assert not guard.terminal_coverage(receipt(), **dict(scope, rows=[]))
     for change in (dict(schema='campaign-receipt/2'), dict(source_commit='other'), dict(session='other'),
@@ -70,6 +70,8 @@ def test_terminal_requires_check_and_current_bound_cleanup_receipt():
                    dict(ended_wall=1050, elapsed_seconds=50), dict(started_wall=900)):
         assert not guard.terminal_coverage(receipt(**change), **scope)
     assert not guard.terminal_coverage(receipt(), **dict(scope, native_pid=100))
+    for wall in (1020, 1020.05):
+        assert not guard.terminal_coverage(receipt(ended_wall=wall, elapsed_seconds=wall-1000), **scope)
 
 
 def test_partial_watch_marker_is_never_rearmed(tmp_path, monkeypatch):
@@ -78,6 +80,70 @@ def test_partial_watch_marker_is_never_rearmed(tmp_path, monkeypatch):
     with pytest.raises(ValueError, match='prior/partial'):
         guard.run_supervised(tmp_path)
     assert (tmp_path/'watch-attempts.jsonl').read_text() == 'partial'
+
+
+@pytest.mark.parametrize('late', [0, .05])
+def test_terminal_exit_does_not_bypass_original_custody_cutoff(tmp_path, late):
+    checks, sender = socket.socketpair(type=socket.SOCK_DGRAM)
+    stops, stop_sender = socket.socketpair(type=socket.SOCK_DGRAM)
+    result = dict(accepted=[], started_wall=999, started_monotonic=99)
+    now = [144.5]
+    clock = SimpleNamespace(monotonic=lambda: now[0], time=lambda: now[0]+900)
+    (tmp_path/'started.json').write_text(json.dumps(dict(schema='computer-start/1', session=SESSION,
+        started_wall=1000, deadline_monotonic=160)))
+    (tmp_path/'ready.json').write_text(json.dumps(dict(schema='computer-ready/1', session=SESSION,
+        ready_wall=1000, pid=99, viewer_url='http://127.0.0.1:12345/')))
+    sender.send(json.dumps(row()).encode())
+    def poll():
+        if not result['accepted']:
+            return None
+        now[0] = 160.1
+        (tmp_path/'receipt.json').write_text(json.dumps(receipt(ended_wall=1060+late,
+            elapsed_seconds=60+late)))
+        return 0
+    live = SimpleNamespace(poll=lambda: None)
+    with checks, sender, stops, stop_sender:
+        reason = guard.supervise(tmp_path,
+            dict(session=SESSION, source_commit=COMMIT, wall_seconds=60, port=12345),
+            SimpleNamespace(poll=poll), live, live, checks, stops, lambda: False, result, clock=clock)
+    assert reason == 'terminal_watch_unverified' and not result['terminal_coverage_verified']
+    assert result['custodian_receipt']['native_absence_verified']  # Cleanup remains a separate fact.
+
+
+@pytest.mark.parametrize('completed', [144.997, 145, 145.1])
+def test_confirmation_completion_obeys_cutoff_and_pause_rollback(tmp_path, completed):
+    checks, sender = socket.socketpair(type=socket.SOCK_DGRAM)
+    stops, stop_sender = socket.socketpair(type=socket.SOCK_DGRAM)
+    now = [144.5]
+    class ScheduledConfirmation:
+        def fileno(self):return checks.fileno()
+        def setblocking(self, value):checks.setblocking(value)
+        def recv(self, size):return checks.recv(size)
+        def send(self, data):
+            # Pause arrives after the final pre-send poll but before completion.
+            stop_sender.send(b'pause:144.995');stop_sender.send(b'pause-replied')
+            count = checks.send(data)
+            now[0] = completed
+            return count
+    clock = SimpleNamespace(monotonic=lambda: now[0], time=lambda: now[0]+900)
+    (tmp_path/'started.json').write_text(json.dumps(dict(schema='computer-start/1', session=SESSION,
+        started_wall=1000, deadline_monotonic=200)))
+    (tmp_path/'ready.json').write_text(json.dumps(dict(schema='computer-ready/1', session=SESSION,
+        ready_wall=1000, pid=99, viewer_url='http://127.0.0.1:12345/')))
+    sender.send(json.dumps(row()).encode())
+    result = dict(accepted=[], started_wall=999, started_monotonic=99)
+    live = SimpleNamespace(poll=lambda: None)
+    with checks, sender, stops, stop_sender:
+        reason = guard.supervise(tmp_path,
+            dict(session=SESSION, source_commit=COMMIT, wall_seconds=100, port=12345),
+            live, live, live, ScheduledConfirmation(), stops, lambda: False, result, clock=clock)
+    assert result['accepted'] == []
+    if completed < 145:
+        assert reason == 'operator_pause'
+        assert len(result['checks_raced_with_pause']) == 1
+        assert result['checks_raced_with_pause'][0]['receipt'] == completed
+    else:
+        assert reason == 'watch_deadline'
 
 
 def test_guard_does_not_renew_without_completed_confirmation(tmp_path):

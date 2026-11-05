@@ -224,6 +224,32 @@ def test_guard_accepts_generic_terminal_without_claiming_normal_native_exit(tmp_
         assert f.result['custodian_receipt']['cleanup']['normal_native_exit_zero'] is False
 
 
+@pytest.mark.parametrize('marker', ['started.json', 'ready.json'])
+def test_current_marker_writer_can_finish_after_exposing_its_path(tmp_path, marker):
+    with fixture(tmp_path) as f:
+        path = tmp_path/marker
+        payload = path.read_text()
+        path.unlink()  # Only this synthetic fixture, before the guard starts.
+        thread = threading.Thread(target=f.supervise)
+        try:
+            with path.open('x') as writer:
+                # Match the real producers' visible pathname before buffered close.
+                thread.start()
+                threading.Event().wait(.15)
+                assert thread.is_alive() and 'reason' not in f.result
+                writer.write(payload)
+            response = f.call('/record', form())
+            assert response[0] == 200, (response, f.result)
+            f.call('/api/pause', {})
+            thread.join(3)
+            assert not thread.is_alive() and f.result['reason'] == 'operator_pause'
+            assert len(f.result['accepted']) == 1
+        finally:
+            if thread.is_alive():
+                f.call('/api/pause', {})
+                thread.join(3)
+
+
 def test_ui_behavior_is_included_in_python_suite():
     result = subprocess.run([shutil.which('node') or 'node', '--test', str(ROOT/'tests/test_campaign_watch.cjs')],
                             cwd=ROOT, capture_output=True, text=True, timeout=20)

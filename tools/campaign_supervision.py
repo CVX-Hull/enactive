@@ -69,12 +69,14 @@ def verify_row(row: dict, *, session: str, source_commit: str, sequence: int, re
 
 
 def terminal_coverage(receipt: dict, *, session: str, source_commit: str, rows: list, ready_wall: float | None,
-                      ready_at: float | None, started_wall: float, native_pid: int | None) -> bool:
+                      ready_at: float | None, started_wall: float, native_pid: int | None,
+                      custody_end: float) -> bool:
     try:
         cleanup = receipt['cleanup']
         native = cleanup['native']
         if (receipt['schema'] != 'campaign-receipt/3' or receipt['session'] != session
                 or receipt['source_commit'] != source_commit or not rows or ready_wall is None
+                or not finite(custody_end)
                 or not all(finite(receipt[k]) for k in ('started_wall', 'ended_wall', 'elapsed_seconds'))
                 or not started_wall <= receipt['started_wall'] <= ready_wall <= receipt['ended_wall']
                 or receipt['elapsed_seconds'] < 0
@@ -89,7 +91,7 @@ def terminal_coverage(receipt: dict, *, session: str, source_commit: str, rows: 
                 or native['process_absent'] is not True or native['group_absent'] is not True):
             return False
         terminal_at = ready_at + receipt['ended_wall'] - ready_wall
-        return rows[-1]['receipt'] <= terminal_at < rows[-1]['observation'] + WINDOW
+        return rows[-1]['receipt'] <= terminal_at < min(rows[-1]['observation'] + WINDOW, custody_end)
     except (KeyError, TypeError, ValueError):
         return False
 
@@ -150,47 +152,58 @@ def supervise(package: Path, profile: dict, child: subprocess.Popen, gateway: su
             result['custodian_receipt'] = report
             covered = have_started and terminal_coverage(report, session=profile['session'],
                 source_commit=profile['source_commit'], rows=rows, ready_wall=ready_wall,
-                ready_at=ready_at, started_wall=result['started_wall'], native_pid=result.get('native_pid'))
+                ready_at=ready_at, started_wall=result['started_wall'], native_pid=result.get('native_pid'),
+                custody_end=custody_end)
             result['terminal_coverage_verified'] = bool(covered)
             return 'custodian_terminal' if covered else 'terminal_watch_unverified'
         if not have_started and started.is_file():
             try:
                 opening = read_json(started)
+            except json.JSONDecodeError:
+                # Current producers expose the pathname before their buffered
+                # write closes. Retry incomplete JSON under the original clock.
+                pass
             except (OSError, ValueError):
                 return 'invalid_custodian_start'
-            if type(opening) is not dict:
-                return 'invalid_custodian_start'
-            end = opening.get('deadline_monotonic')
-            wall = opening.get('started_wall')
-            now = clock.monotonic()
-            if (opening.get('schema') != 'computer-start/1' or opening.get('session') != profile['session']
-                    or not finite(end) or not finite(wall)
-                    or not result['started_wall'] <= wall <= clock.time()
-                    or not now < end <= now + profile['wall_seconds']
-                    or abs(end - (result['started_monotonic'] + wall - result['started_wall']
-                                  + profile['wall_seconds'])) > 1):
-                return 'invalid_custodian_start'
-            custody_end = end
-            result['custody_deadline_monotonic'] = end
-            have_started = True
-        if ready_at is None and ready.is_file():
+            else:
+                if type(opening) is not dict:
+                    return 'invalid_custodian_start'
+                end = opening.get('deadline_monotonic')
+                wall = opening.get('started_wall')
+                now = clock.monotonic()
+                if (opening.get('schema') != 'computer-start/1' or opening.get('session') != profile['session']
+                        or not finite(end) or not finite(wall)
+                        or not result['started_wall'] <= wall <= clock.time()
+                        or not now < end <= now + profile['wall_seconds']
+                        or abs(end - (result['started_monotonic'] + wall - result['started_wall']
+                                      + profile['wall_seconds'])) > 1):
+                    return 'invalid_custodian_start'
+                custody_end = end
+                result['custody_deadline_monotonic'] = end
+                have_started = True
+        if have_started and ready_at is None and ready.is_file():
             try:
                 target = read_json(ready)
+            except json.JSONDecodeError:
+                pass
             except (OSError, ValueError):
                 return 'invalid_custodian_ready'
-            if type(target) is not dict:
-                return 'invalid_custodian_ready'
-            wall = target.get('ready_wall')
-            if (target.get('schema') != 'computer-ready/1' or target.get('session') != profile['session']
-                    or not have_started or target.get('viewer_url') != f"http://127.0.0.1:{profile['port']}/"
-                    or type(target.get('pid')) is not int or target['pid'] <= 0 or not finite(wall)
-                    or not opening['started_wall'] <= wall <= clock.time()):
-                return 'invalid_custodian_ready'
-            ready_wall = wall
-            ready_at = last = clock.monotonic() - (clock.time() - wall)
-            result.update(ready_wall=ready_wall, ready_monotonic=ready_at, native_pid=target['pid'])
-            print(f"Exact spectator ready: {result.get('gateway_url')} ({profile['session']})", flush=True)
-        interest = [stops, checks] if not receipt.exists() else [stops]
+            else:
+                if type(target) is not dict:
+                    return 'invalid_custodian_ready'
+                wall = target.get('ready_wall')
+                if (target.get('schema') != 'computer-ready/1' or target.get('session') != profile['session']
+                        or target.get('viewer_url') != f"http://127.0.0.1:{profile['port']}/"
+                        or type(target.get('pid')) is not int or target['pid'] <= 0 or not finite(wall)
+                        or not opening['started_wall'] <= wall <= clock.time()):
+                    return 'invalid_custodian_ready'
+                ready_wall = wall
+                ready_at = last = clock.monotonic() - (clock.time() - wall)
+                result.update(ready_wall=ready_wall, ready_monotonic=ready_at, native_pid=target['pid'])
+                print(f"Exact spectator ready: {result.get('gateway_url')} ({profile['session']})", flush=True)
+        # A check can arrive while a startup file's buffered write is closing.
+        # Keep it queued until those markers are validated; Pause stays immediate.
+        interest = [stops, checks] if ready_at is not None and not receipt.exists() else [stops]
         deadline = min(last + WINDOW, custody_end) if last is not None else custody_end
         available, _, _ = select.select(interest, [], [], max(0, min(.1, deadline-clock.monotonic())))
         now = clock.monotonic()
@@ -215,7 +228,12 @@ def supervise(package: Path, profile: dict, child: subprocess.Popen, gateway: su
             checks.send(f"accepted:{row['sequence']}:{row['start']!r}".encode())
         except OSError:
             return 'acknowledgement_uncertain'
-        rows.append(dict(row, receipt=now, prior_observation=last))
+        completed = clock.monotonic()
+        if not verify_row(row, session=profile['session'], source_commit=profile['source_commit'],
+                          sequence=len(rows)+1, ready_wall=ready_wall, ready_at=ready_at, last=last,
+                          now=completed, custody_end=custody_end):
+            return cutoff_reason(completed, last, custody_end) or 'invalid_watch_acknowledgement'
+        rows.append(dict(row, receipt=completed, prior_observation=last))
         last = row['observation']
 
 
