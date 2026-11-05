@@ -33,10 +33,20 @@ effects. The user can Pause independently. Memory contains fallible player claim
 and never grants custody. [Editable source](diagrams/player.mmd).
 
 Each finite run freezes one [player host](components/player-interface.md) adapter
-behind the substitutable [`player-host/2` contract](contracts/player-host.md). The selected
+behind the substitutable [`player-host/3` contract](contracts/player-host.md). The selected
 finite configuration is OpenRouter / explicitly pinned provider / DeepSeek Flash1017 at medium
 effort. Its exact route, metadata, context and limits are frozen per run; this
 selection is not a claim of model quality or provider performance.
+
+The player keeps an ongoing user objective. Finite tests retain their quotas,
+ending reserves and final-actor policy outside its supplied context. A separate
+control channel can offer bounded finish-up; direct `player_finish` reports the
+player's disposition. User Pause, hard limits and owned cleanup stop automation
+independently of a model reply, saving or Quit. Saving remains an ordinary game
+action, and stopping automation certifies neither persistence nor a paused game.
+The [host contract](contracts/player-host.md#external-control) owns this candidate
+source behavior; [work](work.md#decisive-evidence) separates it from adoption and
+real-play qualification.
 
 The [visual-player investigation](acceptance/2026-10-30-visual-player.md) rejected
 adoption of Qwen3.8-27B/Wafer after stable actual play and fresh Load still produced

@@ -20,10 +20,11 @@ in `route.json`; use no fallback. The current campaign accepts the explicit defa
 service tier. Configuration metadata/prices are not invoice, quality or latency
 attestation. New live calls remain bounded by the prospective allocation.
 
-The package freezes `route.json` (`player-host/2`), `mcp-template.json`,
+The package freezes `route.json` (`player-host/3`), `mcp-template.json`,
 `context.txt`, `prompt.txt` and `target.json`. The route declares explicit model
 text/image capabilities, context/output capacities, effort mapping, costs, request
-timeout, request cap, credential environment name, image peak and eviction block.
+timeout, request cap, credential environment name, image peak, eviction block and
+required `context_reserve_tokens` (at least `maxTokens`, below `contextWindow`).
 Keep the peak within the provider's image limit (30 on DeepInfra). Block 1 keeps the
 earlier rolling policy; a larger block, such as 39/10, keeps the prompt prefix
 cacheable between evictions.
@@ -31,9 +32,10 @@ The [host reference](../../tools/player_host/README.md) owns exact closed fields
 Old route/mission/player-view configurations reject as executable inputs.
 
 The driver creates each actor's `player-adapter/1`, explicit MCP table, fixed
-context, resource/knowledge prompt and file hashes. Pi loads no coding-agent
+context, ongoing-objective/knowledge prompt and `player-host-inputs/2` hashes.
+Experiment quotas and final-actor policy remain outside player context. Pi loads no coding-agent
 shell/file tools, personal settings, resource discovery or resumed history.
-Both original and successor start fresh; at most two hosts fit `campaign-run/3`.
+Both original and successor start fresh; at most two hosts fit `campaign-run/4`.
 No model, transport, host or coding-agent fallback is supported.
 
 Inject only the selected credential environment variable into the provider child.
@@ -41,7 +43,28 @@ No key in files/argv/headers/URLs; no credential/profile discovery. MCP/native
 children receive no provider secret. The host rejects ambient SDK logging/header
 configuration; dedicated child cleanup must not alter global profiles.
 
-The host serializes tools. A direct sealed `computer-operation/1` handoff issuance,
+The driver passes the prompt via `--prompt PATH`, explicit `--session` and
+`--actor-id`, and required `--pending-control-id none|32hex`. Host stdin carries
+closed `player-control/1` JSONL, separate from MCP stdin. Keep it open until
+settlement; unexpected EOF is fatal. Identical same-ID commands are idempotent;
+conflicts, malformed lines, wrong identity/version and lines over4096 UTF8 bytes
+before newline fail. Retain command intent before publication. A successor with
+inherited stop waits for its matching command before MCP connection or fetch.
+
+The host uses Pi's maintained steering/turn hooks for optional finish-up, pending
+call suppression and direct finish settlement. It adds `player_finish` beside
+the MCP table, requiring `disposition,report,source_ids,control_id`. External
+completion names the received stop command; task completion/inability use null.
+Only direct validated execution settles; narration or embedded JSON does not.
+No subsequent tool/provider request dispatches after acceptance. Pause and hard
+cleanup act independently of the model or saving. The [campaign reserve procedure](campaign-run.md#ending-reserve-and-external-stop)
+requires a lead forecast; validators check bounds, not ending adequacy.
+
+Pi's `estimateContextTokens`, reported usage and a text/image heuristic floor
+request existing sealed handoff when context is pressured. Estimates are not a
+provider token guarantee. No compaction, restore or fallback is added.
+
+The host serializes tools. A direct sealed `player-computer-result/1` handoff issuance,
 or exact collection of its own pending original handoff, settles that actor.
 The driver verifies canonical context/digest and actual old host/MCP process-group
 quiescence before minting a successor under original time/attempt/input resources.
@@ -58,8 +81,12 @@ attempts with that retry in mind; unknown accounting charges the allocated bound
 omitted pixels and preserves text/IDs; no automatic tool reread or replay occurs.
 An oversized protected current image group stops before inference.
 
-A terminal host report is `host_completed_unassessed`, not game acceptance. The
-custodian separately samples normal native exit before forced cleanup and reports
+A terminal player report yields `player_task_complete_unassessed`,
+`player_cannot_continue_unassessed` or `player_external_stop_complete_unassessed`.
+These are not game acceptance. The report must come from direct `player_finish`
+(`task_complete`, `cannot_continue`
+or `external_stop_complete`); ordinary assistant text alone cannot complete the
+task. The custodian separately samples normal native exit before forced cleanup and reports
 owned absence/authority revocation. The player owns save/success claims. The
 [production report](../acceptance/2026-10-29-computer-control.md) records bounded
 useful play, program/knowledge/succession and Save/reload/normal ending evidence.

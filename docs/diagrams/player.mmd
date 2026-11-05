@@ -3,7 +3,7 @@ title: Current player and mechanical computer custody
 ---
 flowchart TB
   accTitle: Current player and mechanical computer custody
-  accDescr: Logical responsibilities, not separate required models. The player interprets images and chooses basic controls. Optional player knowledge and programs are fallible. One custodian sends basic input to the windowed game and retains original receipts and images. Independent user Pause permanently stops input. No memory or game claim grants custody.
+  accDescr: Logical responsibilities, not separate required models. The player keeps the user's ongoing objective, interprets images and chooses basic controls. Optional knowledge and programs are fallible. The finite test controller retains quotas outside player context and can request bounded finish-up. Direct finish reports are claims, not save certificates. Independent user Pause and hard limits stop input without a model reply. The game determines effects and saving; no memory or game claim grants custody.
 U["User<br/>Objective and independent Pause"] --> P["Designated player in selected host<br/>Interpret pixels and choose actions"]
   M["Optional player knowledge<br/>Claims, Work, corrections and context"] -->|"Fallible evidence"| P
   P -->|"Basic input or explicit program run"| A["Composition and MCP tools"]
@@ -12,8 +12,11 @@ U["User<br/>Objective and independent Pause"] --> P["Designated player in select
   R -->|"Basic proposals only"| C
   C -->|"SDL events over inherited socket"| G["Windowed game<br/>Determines outcomes"]
   G -->|"Actual pixels and delivery receipts"| C
-  C -->|"Original sources, results and uncertainty"| A
+  C -->|"Original evidence and uncertainty<br/>Actor view excludes global countdowns"| A
   A --> P
+  T["Finite test controller<br/>Operator quotas and ending reserves"] -->|"Optional bounded finish-up request"| P
+  P -->|"Direct player_finish claim"| T
+  T -->|"Independent hard limits and owned cleanup"| C
   P -->|"Explicit supported assertions"| M
   C --> V["Passive spectator<br/>Mechanical status and labelled player claims"]
   U -->|"Permanent stop, independent of writer"| C

@@ -62,7 +62,7 @@ their old environments as current setup.
 ### Install the generic gameplay host
 
 The current player host adapter, [Pi](../tools/player_host/README.md), implements the
-[player host contract](contracts/player-host.md) and uses its own pinned npm lock:
+[player host contract](contracts/player-host.md) (`player-host/3`) and uses its own pinned npm lock:
 
 ```sh
 npm --userconfig /dev/null --cache "$PWD/.cache/npm" --prefix tools/player_host ci --ignore-scripts --no-audit --no-fund
@@ -73,7 +73,8 @@ shell/file tools, personal sessions or global credentials. The selected finite
 route is OpenRouter / explicitly pinned provider / DeepSeek Flash1017 at medium effort.
 The [recorded endpoint dispositions](acceptance/2026-10-29-computer-control.md#failures-and-endpoint-disposition)
 follow actual shared-pool failures, not automatic fallback. Freeze
-its actual endpoint tag, supported parameters, image peak and eviction block and configured
+its actual endpoint tag, supported parameters, image peak, eviction block,
+`context_reserve_tokens` and configured
 prices before each allocation. No route/model fallback is supported. A selected
 route is not gameplay qualification or invoice evidence.
 

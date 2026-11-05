@@ -1,7 +1,8 @@
 ---
 owner: lead
-status: proposed
-review_trigger: Owner decision, player lifecycle, actor context or diagnostic scope changes
+status: historical
+date: 2026-11-05
+scope: Agreed player-objective and external-test-control rationale; candidate implementation, not adoption or real-play acceptance
 ---
 
 # Keep the player's objective separate from test control
@@ -16,7 +17,7 @@ dehydrated without replenishment. Its public explanations prioritized the target
 and conserving requests. This is a reason to correct the experimental incentive,
 not proof that the instruction caused all the planning or visual failures.
 
-The proposed result is one player with an ongoing user objective, a faithful
+The agreed result is one player with an ongoing user objective, a faithful
 computer interface and separately controlled finite tests. For example, the
 player is asked to survive and build a sustainable situation. The test observes
 the first two days without telling the player to finish at that point. When the
@@ -24,12 +25,16 @@ test needs to end, it can offer the player a bounded opportunity to finish up,
 then stop automation. The player chooses any game actions appropriate to that
 request. Stopping automation does not require saving or quitting the game.
 
-This is an unadopted proposal, not a new current contract or run authorization.
-The lead owns its integration and verification. Owner agreement is required
-before implementing this proposed contract change under the existing stop rule.
-Agreement on this design would authorize source implementation and offline
-verification at $0 gameplay/model spend. An exact paid diagnostic must be frozen
-and agreed separately under the active goal; no old admission is reopened.
+The owner agreed to this design for source implementation and offline verification
+at $0 gameplay/model spend. This page retains the agreed rationale, rather than
+owning current executable behavior. The [architecture](../architecture.md),
+[computer/player contract](../contracts/computer-control.md),
+[host contract](../contracts/player-host.md) and
+[campaign procedure](../operations/campaign-run.md) describe the candidate source.
+Main retains its earlier contracts until the candidate is adopted; this record
+claims neither adoption nor real-play acceptance. The lead owns integration and
+verification. An exact paid diagnostic must be frozen and agreed separately; no
+old admission is reopened.
 
 ## Options and recommendation
 
@@ -50,7 +55,7 @@ experiments or claim that unattended operation is already supported.
 
 | Owner | Required behavior | Existing mechanism to reuse |
 | --- | --- | --- |
-| Deciding model and player system | Interpret pixels, choose plans/actions, verify effects, manage fallible knowledge and report completion or inability to proceed | Compact guide, current MCP tools, Pi model/tool loop, player memory/programs and sealed handoff |
+| Deciding model and player system | Interpret pixels, choose plans/actions, verify effects, manage fallible knowledge and report completion or inability to proceed | Compact guide, current MCP tools, selected model/tool loop, player memory/programs and sealed handoff |
 | Mechanical custodian | Serialize basic input, preserve exact originals, enforce authority and independent permanent Pause | Current computer port, native packets, original stores and exact process handles |
 | Test controller | Freeze finite allowances, enforce spending/time/input limits, retain failures, request orderly ending early enough and assess the result | Existing campaign package, driver, host accounting and custodian closeout |
 
@@ -90,10 +95,10 @@ evidence. Any new diagnostic must state its game-specific persistence/exit check
 separately from generic control acceptance before it is frozen.
 
 Do not add a semantic supervisor, task classifier, second deciding model, game
-state parser, new orchestration service or game-specific input gate. Existing
-Pi 1.4.0 exposes `steer`, `followUp`, `finishTurn`, `afterToolCall` and `abort`.
-Its installed `pi-agent-core/dist/agent.d.ts` and README were inspected on
-5 November 2026. These support control delivery and explicit turn settlement;
+state parser, new orchestration service or game-specific input gate. The existing
+host SDK exposes steering, turn settlement, post-tool and abort hooks. The
+[adapter reference](../../tools/player_host/README.md) owns the named library and
+its concrete reuse. These hooks support control delivery and explicit settlement;
 they are not evidence of supported compaction or recovery. Keep the pinned SDK
 unless a concrete missing capability justifies a dependency change.
 
@@ -108,7 +113,7 @@ the guide, assignment, driver note and per-request host additions. Do not replac
 them with guessed game priorities or a prompt that demonstrates a useful program.
 
 At MCP serialization, use one small schema-directed actor result projection.
-Give the computer-operation view its own name, proposed
+Give the computer-operation view its own name, selected
 `player-computer-result/1`. The underlying `computer-operation/1` remains the
 operator's original record. Omit `deadline_monotonic` and the global `remaining`
 object from the actor view. Cover immediate returns, original collection,
@@ -141,7 +146,7 @@ Bind the invocation to explicit session/actor IDs. Commands are closed
 `orderly_stop`; each line is at most 4 KiB and IDs use the existing canonical
 identity format. The driver owns writing and retained command identity. The host
 accepts one latched orderly-stop request and acknowledges receipt in operator telemetry.
-It queues a labelled external request through Pi at a safe turn boundary. A
+It queues a labelled external request through the selected model loop at a safe turn boundary. A
 duplicate cannot allocate resources or replay input. EOF, malformed control,
 unknown version or wrong actor/session is a host failure, never task completion.
 The driver keeps the pipe open until settlement, closes it during owned cleanup
@@ -179,14 +184,14 @@ Keep emergency Pause distinct: it fences input immediately, including during
 inference or a local program, and permits no automation rearm or automated saving afterward.
 An orderly request must not cancel an in-flight MCP input merely to deliver text.
 
-Add one host-owned player-system reporting tool, proposed `player_finish`, beside
+Add one host-owned player-system reporting tool, selected `player_finish`, beside
 the MCP tool table. Its closed arguments are `disposition`, `report` (at most
 8192 characters), `source_ids` (at most 16 existing-format IDs) and nullable
 `control_id`. Disposition is one of `task_complete`, `cannot_continue` or
 `external_stop_complete`. Source references remain fallible supporting claims.
 It has no mechanical input or game-validation
 authority. Validate it normally; record its direct invocation and stop subsequent
-tool dispatch after acceptance, using Pi's existing termination hooks. An arbitrary
+tool dispatch after acceptance, using the existing host termination hooks. An arbitrary
 tool result or remembered text cannot impersonate it. A normal assistant reply
 without this signal remains a reply, not a completed task; continuation stays
 subject to external authority and original allowances.
@@ -211,7 +216,7 @@ test cap as a gameplay finish line or a permanent product quota.
 
 The player can use a fresh context through the existing handoff path. A missing
 or failed handoff remains a failure; no silent truncation, fabricated summary,
-unproven restore or automatic restart. Use the pinned Pi `estimateContextTokens`
+unproven restore or automatic restart. Use the pinned SDK context-estimation
 helper together with actual reported usage to request context turnover
 conservatively, reserving room for tools and external control. This helper uses
 heuristic text/image estimates; it is not a proof that every result fits a
@@ -229,7 +234,7 @@ versions; migrate host handoff inspection and all actor consumers. Program view
 changes require rejecting executable old-view libraries before effects. Use
 `player-program/2` with required `view_schema: "program-view/4"`, and a fresh
 `player-memory/2` store, preserving old stores and
-source-linked evidence as inert history. This proposal selects no automatic
+source-linked evidence as inert history. This design selects no automatic
 library conversion. Preserve the original Alex game save through the upstream
 game's own load/save behavior; no save editing or old-store reader.
 
@@ -245,7 +250,7 @@ Core paths are the player guide; `harness/player_mcp.py`, `player_client.py`,
 `player_tools.py`, `application.py`, player images/programs/contracts/memory;
 `tools/player_host/`, campaign package/player/run; relevant analysis/observer
 readers and their tests. Update overview, architecture, component/contracts and
-operations with implemented behavior, keeping this proposal distinct until then.
+operations with implemented behavior, using this record only as agreed rationale.
 The lead owns the shared runtime and integration. Workers, if useful, receive
 disjoint worktrees/ownership only after interface decisions are fixed.
 
@@ -261,13 +266,11 @@ fixtures precede development play; independent code/architecture review and full
 protected regression precede broad-source merge. Source fixtures cannot prove
 survival, safe saving, useful plans or model benefit.
 
-Plan provisionally for 8–16 focused engineering hours including implementation,
-review, documentation, checks and a diagnostic proposal. Confidence is low because
-control delivery and stored program migration cross existing boundaries. Reassess
-after the first four focused hours of implementation. If the required core cannot
-fit, report the concrete gap and reshape; do not grow an unattended service or
-waive acceptance. Existing two-failed-repair, authority, protocol-deviation,
-spending and design escalation rules remain in force.
+The initial estimate was 8–16 focused engineering hours including implementation,
+review, documentation, checks and a diagnostic proposal, with low confidence
+because control delivery and stored program migration cross existing boundaries.
+That estimate is rationale, not current delivery status. Existing authority,
+protocol-deviation, spending and design escalation rules remain in force.
 
 ## Next evidence decision
 
@@ -292,7 +295,7 @@ worst-case financial reservation from the implemented route and recent actual
 counts before proposing this run. The last continuation cost $2.324057058 for
 102 usage-known requests and about 15 minutes, while covering 48h26m32s in game.
 Those observations are planning inputs, not a promised price or future yield.
-This proposal deliberately grants no uncalculated paid allowance. If a credible
+This design grants no uncalculated paid allowance. If a credible
 informative window cannot fit the standing cumulative ceiling or ending resources,
 report that conflict before admission rather than extending a running test.
 

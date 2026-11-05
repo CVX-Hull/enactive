@@ -5,8 +5,8 @@ flowchart TB
   accTitle: Current optional player knowledge and programs
   accDescr: Player claims and selected source pixels support decisions, not authority. Explicit append or program save lazily remembers referenced images. Corrections preserve history. Bounded programs propose the same basic controls. Context is immutable data for handoff; actual quiescence and canonical issuance are separate custody checks.
 E["Actual computer PNG and provenance"] --> P["Player interprets evidence"]
-  P -->|"Explicit supported append"| M["player-memory/1<br/>Fallible claims, Work and corrections"]
-  P -->|"Save immutable program and lineage"| R["Bounded local program<br/>Selected image view and interpretation"]
+  P -->|"Explicit supported append"| M["player-memory/2<br/>Fallible claims, Work and corrections"]
+  P -->|"Save player-program/2 and lineage"| R["Bounded local program<br/>program-view/4 without global countdowns"]
   R -->|"Basic proposals"| C["Same computer port<br/>Original limits and custody"]
   M -->|"Whole-record bounded context<br/>Explicit omissions"| P
   M --> H["Immutable handoff knowledge<br/>Grants no authority"]

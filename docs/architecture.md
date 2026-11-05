@@ -21,7 +21,8 @@ logical responsibilities; arrows identify requests, results or user control.
 
 | Responsibility | Owned state and authority | Component |
 | --- | --- | --- |
-| Deciding player / player host | Goals, visual interpretation, game choices and fallible claims; explicit provider/context/tools | [Player interface](components/player-interface.md) |
+| Deciding player / player host | Ongoing user objective, visual interpretation, game choices and fallible claims; direct finish reports, explicit provider/context/tools | [Player interface](components/player-interface.md) |
+| Finite test controller | Operator-only quotas and ending reserves, external finish-up request and exact owned process cleanup; no game-save guarantee | [Campaign procedure](operations/campaign-run.md) |
 | Optional player services | Knowledge, corrections, source provenance, program lineage and bounded context; no custody | [Memory and learning](components/memory-learning.md) |
 | Composition service | Connects player proposals to the computer port; retains service requests and context snapshots | [Execution](components/mission-execution.md) |
 | Computer custodian | Exact child/socket/lock handles, serialized operations, original resources and actor capabilities | [Native control](components/native-control.md) |
@@ -31,7 +32,7 @@ logical responsibilities; arrows identify requests, results or user control.
 ## Runtime and state
 
 `tools/campaign_run.py` is the sole finite custodian. It validates a fresh frozen
-`campaign-run/3` package and reserves exclusion before launch. `OwnedTarget` keeps
+`campaign-run/4` package and reserves exclusion before launch. `OwnedTarget` keeps
 exact subprocess handles and passes an inherited shared-lock descriptor and a
 nonblocking Unix socket to the SDL adapter. Native retains the shared lock for
 its lifetime, including after the custodian loses its own reference.
@@ -54,10 +55,14 @@ The [application](../harness/application.py)
 composes the computer port with optional player memory/program services. A
 project-local stdio MCP adapter owns no writer, native child or provider key.
 The selected [player host](contracts/player-host.md) owns model calls; the campaign
-driver owns exact host/MCP group cleanup.
+driver owns exact host/MCP group cleanup. The driver sends bounded JSONL control
+through host stdin; the initial prompt is a frozen file. Pending stop identity
+survives actor turnover and gates a successor before MCP/fetch. Player-facing
+MCP projection excludes global deadline/remaining fields while canonical
+operator records retain them. No game-specific save or Quit step gates stopping.
 
 Fresh session stores live under `.runtime/computer-sessions/`. A selected
-`player-memory/1` store may span fresh native-child sessions. Old runtime formats
+`player-memory/2` store may span fresh native-child sessions. Old runtime formats
 remain inert history; no current reader imports executable old libraries.
 
 ## Action and recovery views
@@ -72,6 +77,13 @@ mechanical geometry and a source actually issued to that actor. Delivered input
 is not game success. [Action source](diagrams/action.mmd).
 
 ### How do I recover control?
+
+An optional orderly-stop request offers bounded player-chosen finish-up. Only a
+direct `player_finish` tool invocation settles its report; ordinary narration
+does not. The finite controller forecasts ending capacity before admission and
+retains the admission's stop request across handoff. This opportunity is separate
+from the immediate mechanical fence below. Neither a report nor stopped input
+certifies persistence, a paused game or normal native exit.
 
 Pause sets the permanent stop event before executor/DB work and sends through a
 separate bounded path; failure to send closes the write side to signal EOF.
@@ -118,12 +130,28 @@ mutate. Only the driver, after canonical issuance/context verification and actua
 old host/MCP group quiescence, can mint a successor under original limits. It
 requires no save, menu or identity check. [Run procedure](operations/campaign-run.md).
 
+![Current logical actor custody, inherited orderly stop and permanent fencing.](diagrams/run-ownership.svg)
+
+This current diagram answers “What permits a successor after handoff or a stop
+request?” Boxes are logical custody/control states; labelled arrows are allowed
+transfers or requests, not separate processes. The driver retains one stop ID;
+an already sealed handoff requires verified old-group quiescence and a successor
+control gate before MCP/fetch. Pause and unknown input prevent succession.
+Direct player finish is a claim, not saving or game acceptance.
+[Editable source](diagrams/run-ownership.mmd) and
+[exact host control](contracts/player-host.md#external-control).
+
 ## Coordinated change
 
 One current set is `computer-wire/1`, request/target/receipt `/2`,
 `computer-session/1`, `computer-operation/1`, `computer-source/1`,
-`player-memory/1`, `player-record/1`, `player-program/1`, `program-view/3`,
-`player-handoff/1`, `player-host/2` and `campaign-run/3`. The exact contracts own the complete set.
+`player-memory/2`, `player-record/1`, `player-program/2`, `program-view/4`,
+`player-handoff/1`, `player-host/3` and `campaign-run/4`. Model-facing operation,
+error and transport envelopes are `player-computer-result/1`, `player-error/2`
+and `player-transport/2`; canonical operations/HTTP records are unchanged.
+The [host contract](contracts/player-host.md) and [campaign procedure](operations/campaign-run.md)
+own telemetry3, `player-driver/3`, `campaign-receipt/3` and `player-host-inputs/2`.
+The exact contracts own the complete fields.
 [Migration](operations/migration.md) rejects old stores before effects and preserves
 artifacts/saves as history. Rollback closes writers and selects a coherent earlier
 source/data deployment; mixed readers and replay are unsupported.

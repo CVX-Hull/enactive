@@ -8,7 +8,7 @@ status: active
 
 Use a prepared windowed project target and a fresh explicit package. The sole
 current launch command is the [finite campaign custodian](campaign-run.md), which
-validates `campaign-run/3` before effects. Do not invoke old controller, mission or
+validates `campaign-run/4` before effects. Do not invoke old controller, mission or
 experimental proof commands or launch an unprepared/fullscreen application.
 
 1. Finish [local setup](../setup.md), retain native/app/adapter bytes and source provenance.

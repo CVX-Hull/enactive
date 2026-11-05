@@ -46,7 +46,20 @@ issuance seals its actor. The player host settles only its direct originating ha
 or exact original collection; the driver verifies context digest and actual
 old host/MCP group quiescence before a successor. Original limits persist.
 The [player host contract](contracts/player-host.md) owns the substitutable
-`player-host/2` invocation, telemetry, settlement and isolation rules.
+`player-host/3` invocation, telemetry, settlement and isolation rules.
+
+The player keeps its ongoing user objective. Experiment quotas and final-actor
+policy remain outside its guide, prompt, MCP results and program views. MCP emits
+`player-computer-result/1` without global deadline/remaining data, plus
+`player-error/2` and `player-transport/2`; canonical operation/HTTP records remain
+unchanged. Programs require `player-program/2` with `view_schema:"program-view/4"`.
+
+The driver owns bounded `player-control/1` stdin and admission-wide pending stop
+identity. A successor declared with a pending ID waits for its matching command
+before MCP connection or provider fetch. Optional finish-up and direct
+`player_finish` settlement do not gate independent Pause, hard limits or owned
+cleanup. Ordinary narration is not completion; stopping does not certify game
+saving, paused state or application exit.
 
 ## Transport and state
 
@@ -58,7 +71,7 @@ neither delivery nor nondelivery. MCP cancellation requests independent permanen
 Pause before abandoning the await.
 
 Current storage is fresh `computer-session/1` plus explicitly selected
-`player-memory/1`. Immutable sources retain original PNG bytes and digest.
+`player-memory/2`. Immutable sources retain original PNG bytes and digest.
 [Current data treatment](contracts/computer-control.md#responsibilities-and-current-data)
 and [migration](operations/migration.md) own versions and historical-state handling.
 

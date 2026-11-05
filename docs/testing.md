@@ -18,7 +18,7 @@ own mandatory checks. This page explains selection, not a passing-run inventory.
 | Mechanical schema/wire | [Protocol](../tests/test_computer_protocol.py), [wire](../tests/test_computer_wire.py) and [channel](../tests/test_computer_channel.py) tests | Synthetic packet/socket cases cannot establish real game effects. |
 | Writer and composition | [Runtime](../tests/test_computer_runtime.py), [application](../tests/test_player_application.py), [MCP](../tests/test_player_host_adapter.py) | Exercise original resources/IDs, custody, service isolation and collection using explicit doubles. |
 | Player knowledge and programs | [Memory](../tests/test_player_memory.py), [programs](../tests/test_player_programs.py) | Pure provenance, image views, bounded evaluation/context and proposals; no usefulness claim. |
-| Player host and orchestration | [Contract suite](../tests/test_player_host_contract.py), [adapter](../tests/test_player_host_adapter.py), [driver](../tests/test_campaign_player.py), [custodian](../tests/test_campaign_run.py) | Each listed adapter through `player-host/2` only, plus actual adapter/MCP with synthetic provider/owned children; no paid inference or game quality claim. |
+| Player host and orchestration | [Contract suite](../tests/test_player_host_contract.py), [adapter](../tests/test_player_host_adapter.py), [driver](../tests/test_campaign_player.py), [custodian](../tests/test_campaign_run.py) | Each listed adapter through `player-host/3` only, plus actual adapter/MCP with synthetic provider/owned children; no paid inference or game quality claim. |
 | Compiled adapter | [Native check](../tests/computer_native_check.py), [lock check](../tests/computer_lock_check.py) | Actual SDL/socket/inherited-lock behavior in a fixture; separate from CDDA usability. |
 | Spectator | [Passive projection](../tests/test_observer_activity.py), [HTTP boundary](../tests/test_server.py), [viewer races](../tests/test_viewer.cjs) | Verified passive reads, coverage, links and session/Pause behavior under explicit doubles; rendered browser/native evidence remains separate. |
 | Recorded investigation | [Export](../tests/test_investigation.py), [live snapshot](../tests/test_investigation_live.py), [worker/reader](../tests/test_investigation.cjs), [session attachment](../tests/test_investigation_session.cjs) | Closed schema, bounded images/rows/read subprocess, clocks, explicit links, inert text, cancellation and stale-session attachment; neither fixtures nor imported integrity prove authorship or gameplay efficacy. |
@@ -33,6 +33,13 @@ commands/membership stay in the existing runner and shared manifest. Broad
 source changes require full regression before merge. Checks never install packages.
 
 A schema change needs ingress/version/negative cases at each affected consumer.
+A player/test-context change also needs typed nested result projection with opaque
+authored data intact, original operator accounting, rejected executable old views
+and fresh-store refusal. External-control checks cover identity, bounded lines,
+duplicates/EOF, direct finish origin, unsent-call suppression, inherited stop
+before successor MCP/fetch and independent stopping without a model reply or save.
+Context estimates and validators do not prove capacity adequacy: before a finite
+test, the lead forecasts burst/in-flight delay against all ending reserves.
 A custody or handoff change needs original collection, cancellation, permanent
 Pause, quiescence and no renewed limits. A program change needs real image-view
 inputs, bounded failures and original child-operation retention. A source/native

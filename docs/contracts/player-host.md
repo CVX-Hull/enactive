@@ -32,7 +32,7 @@ accepts only the current route/MCP configuration, exits zero without credentials
 or network within ten seconds and writes nothing to stdout. The validator gives
 it only `PATH` and `LANG`.
 
-`ARGV run --config ROUTE --mcp-config MCP --context CONTEXT --prompt PROMPT --session SESSION --actor-id ACTOR --model ID --effort EFFORT --timeout-seconds S -o FINAL`
+`ARGV run --config ROUTE --mcp-config MCP --context CONTEXT --prompt PATH --session SESSION --actor-id ACTOR --pending-control-id none|ID --model ID --effort EFFORT --timeout-seconds S -o FINAL`
 hosts one actor. Every flag occurs exactly once; unknown, missing or repeated
 flags refuse. Frozen regular files are at most1MiB each. Session/actor IDs are32
 lowercase hexadecimal characters. The driver reserves `FINAL`; successful direct
@@ -62,7 +62,7 @@ transient refusals. Host seconds and custodian mechanical resources are separate
 These operator counts do not enter the assignment, repeated model messages or
 actor tool/program results.
 
-The current adapter reuses Pi's context estimate, reported usage and a text/image
+The current adapter reuses its maintained context estimate, reported usage and a text/image
 heuristic floor to request existing handoff before capacity becomes critical.
 These estimates are not exact provider token bounds. Known excessive context
 stops before another fetch. Original text, source/omission provenance and tool
@@ -80,7 +80,7 @@ Conflicts, malformed/oversized control, wrong identity/version or unexpected EOF
 fail and close owned MCP safely. The driver retains command intent before writing.
 
 The host acknowledges valid control in operator telemetry and queues a fixed
-labelled finish-up-and-stop message through Pi. It includes command identity but
+labelled finish-up-and-stop message through its model loop. It includes command identity but
 no experiment countdown, game target, Save/Quit mandate or tactic. Unsent calls
 from a pre-control assistant turn are explicitly withheld; dispatched input is
 not canceled/replayed merely to deliver text. New handoff is refused before
@@ -88,10 +88,17 @@ sealing once stop is pending.
 
 The driver retains pending stop for the whole admission. If an in-flight handoff
 already seals, it may deliver the same command to a verified successor before
-ordinary action under original resources, or record incomplete ending. Neither
-sealing nor exit erases it. The test freezes ending reserves for time, attempts
-and mechanical capacity, including the largest admitted burst and delivery delay.
-Hard limits, Pause and uncertainty remain independent.
+ordinary action under original resources, or record incomplete ending. The required
+`--pending-control-id` is `none` for an actor without inherited control, otherwise
+the pending 32hex command ID. In the latter case the host waits for that matching
+control before MCP connection or provider fetch; a wrong ID or unexpected EOF
+fails. Neither sealing nor exit erases the admission's stop request.
+
+The test freezes `ending_reserve` for seconds, HTTP attempts, inputs, requests,
+frames and frame bytes. Validators enforce bounded fields; the lead must forecast
+that the reserves cover the largest admitted burst and in-flight inference/tool
+delivery delay before admission. Validation is not proof of adequate ending
+capacity. Hard limits, Pause and uncertainty remain independent.
 
 Orderly finish-up is optional game work under finite authority. Immediate Pause
 fences automation without awaiting a reply or saving. Stopping input does not

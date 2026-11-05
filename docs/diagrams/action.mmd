@@ -12,7 +12,7 @@ sequenceDiagram
   N->>G: Bounded SDL event handoff
   G-->>N: Actual presented pixels
   N-->>C: Exact receipt and capture
-  C-->>P: Original result, source and remaining resources
+  C-->>P: Projected result, original evidence and source<br/>No global deadline or remaining resources
   Note over P,G: Delivered is not consumed or successful
   alt Partial or unknown input
     C->>C: Permanently stop new input

@@ -1,7 +1,7 @@
 # Bounded Pi player host
 
 This private package is the Pi-based adapter that implements the host-neutral
-[player-host contract](../../docs/contracts/player-host.md) (`player-host/2`);
+[player-host contract](../../docs/contracts/player-host.md) (`player-host/3`);
 the campaign driver selects it only through the package's frozen `host.argv`.
 The [current component](../../docs/components/player-interface.md) owns the player interface;
 [`069-controllable-player-host.md`](../../docs/changes/069-controllable-player-host.md)
@@ -51,27 +51,35 @@ node tools/player_host/run.mjs validate \
 
 ```sh
 node tools/player_host/run.mjs run \
-  --config FROZEN/player-pi-configuration.json \
-  --mcp-config FROZEN/player-host-configuration.json \
-  --context FROZEN/pi-player-context.txt \
+  --config FROZEN/route.json \
+  --mcp-config FROZEN/mcp.json \
+  --context FROZEN/context.txt --prompt FROZEN/prompt.txt \
+  --session SESSION_32HEX --actor-id ACTOR_32HEX \
+  --pending-control-id none \
   --model MODEL --effort EFFORT --timeout-seconds SECONDS \
-  -o DRIVER_RESERVED_FINAL_FILE < FROZEN/prompt.txt
+  -o DRIVER_RESERVED_FINAL_FILE
 ```
 
-Each frozen file and stdin is limited to 1 MiB. Files must be regular files.
+Each frozen input file is limited to 1 MiB and must be regular. Stdin remains an
+open JSONL control pipe, not the initial prompt. For a successor with inherited
+stop, `--pending-control-id` is its 32hex command ID rather than `none`; the host
+waits for that exact command before MCP connection or any provider fetch.
 The driver exclusively reserves the final path; the runner writes that existing
-path only after a successful `completed` settlement and leaves it unchanged after a
+path only with the report from successful direct `player_finish` settlement and leaves it unchanged after a
 handoff or any failure. JSONL events go to stdout. A missing or unknown mode, or a
 missing, repeated or unknown flag, settles `invalid-arguments` and exits one.
-Exit zero requires terminal assistant `stop` or the completed-handoff settlement
-below, no fatal failure latch, successful owned MCP closure, and a successful
-final-file write. `runHost(options)` is the
+Exit zero requires direct finish or completed-handoff settlement below, no fatal
+failure latch, successful owned MCP closure, and any required final-file write.
+Ordinary terminal assistant text alone fails as `incomplete-terminal-response`.
+`runHost(options)` is the
 programmatic seam; tests inject `fetch` there. No fake-provider CLI is exposed.
 
-The closed route has exactly `schema: "player-host/2"`, `model`,
+The closed route has exactly `schema: "player-host/3"`, `model`,
 `api_key_env`, `max_requests`, `request_timeout_seconds`, `service_tier`, the required positive
 integer `max_context_images` and the required integer `context_image_block`
-(1 ≤ block ≤ `max_context_images`). `pi-player-host/1` through `/4`, `player-host/1` and
+(1 ≤ block ≤ `max_context_images`), plus required safe-integer
+`context_reserve_tokens` (`maxTokens` ≤ reserve < `contextWindow`).
+`pi-player-host/1` through `/4`, `player-host/1`, `player-host/2` and
 missing/invalid fields are rejected; closed historical configurations and traces are
 evidence, not runnable current inputs.
 `model` contains Pi's
@@ -120,15 +128,15 @@ marker grants no source-read proof or authority. Existing source IDs remain in
 their unmodified text; the player can request the exact source again through its
 available tools. No tool is called automatically to restore an image.
 
-The request-only projection also appends one clearly labelled, software-generated
-resource-status message after history. It reports actual HTTP attempts charged
-before that request and remaining allowance including it. An eligible retry uses
-the identical body, so its note remains the original context-construction snapshot;
-the next assistant turn includes both charged attempts. This bookkeeping is not a
-human task, gameplay evidence, a read declaration, authority or a quality/latency
-metric. It does not enter canonical agent history, accumulate old notes or change
-the stable system/tool prefix. The hard cap, deadlines and frozen ending reserves
-still apply; seeing a counter does not establish that a player will honor them.
+The request projection adds no HTTP-attempt countdown. The ongoing user objective
+survives actor turnover; experiment quotas, final-actor policy and ending reserves
+stay in operator accounting. MCP's typed actor projection returns
+`player-computer-result/1`, `player-error/2` and `player-transport/2`, without global
+deadline/remaining fields; canonical operator records retain original accounting.
+The host reuses Pi's `estimateContextTokens`, reported usage and a heuristic
+text/image floor to request the existing sealed handoff before critical context
+pressure. These are not exact provider token bounds. Known oversized context
+stops before fetch; no text compaction, restore or fallback is introduced.
 
 Live agent messages retain the pixels needed by the provider. Original source
 images stay in the mechanical/player stores. Telemetry stores image references
@@ -256,7 +264,7 @@ remaining calls and inference. The bounded provider-only recovery above never
 retries a tool/gameplay submission or grants reconnect, replay, fallback,
 automatic compaction or session restoration.
 
-A sealed `computer-operation/1` response from `player_handoff`, or collection
+A sealed `player-computer-result/1` response from `player_handoff`, or collection
 through `computer_result` of this host's one pending original handoff, ends this
 host. The first actual MCP text must bind matching 32-character hex operation/session/actor
 IDs and a current `player-handoff/1` issuance with matching IDs, a 32-character hex context ID,
@@ -264,7 +272,7 @@ IDs and a current `player-handoff/1` issuance with matching IDs, a 32-character 
 There are no game-phase, menu, identity or source-checkpoint requirements.
 Only this host's direct response can establish an origin; collection must request
 that exact operation and return its original session/actor. A direct
-`player-transport/1` unknown receipt establishes only the pending origin.
+`player-transport/2` unknown receipt establishes only the pending origin.
 Unrelated reads and reads without an origin never settle the host. Local MCP
 `isError` refusals establish no origin and preserve explicit correction. Invalid
 successful direct receipts and incoherent original collection latch a fatal stop.
@@ -275,11 +283,38 @@ before dispatch, and uses Pi's maintained `finishTurn` hook to end before anothe
 provider request, including batches with ordinary tools before handoff. The
 `handoff` event carries session/actor, operation as `handoff_id`, context ID/digest
 and `grants_authority:false`. Settlement has reason `handoff`, can end with assistant
-`toolUse`, and writes empty final text (a newline in the reserved CLI file).
+`toolUse`, and leaves the reserved final file unchanged.
 Fatal cancellation, deadlines, transport and cleanup failures still win. The
 host closes its owned MCP child. The driver independently validates canonical
 issuance/context and actual old host/MCP process-group quiescence before minting
 a successor under original limits; host settlement grants no authority.
+
+Stdin carries closed `player-control/1` objects with exactly
+`schema,id,session,actor_id,type`; `type` is `orderly_stop`, with bound 32hex IDs.
+The line limit is 4096 UTF8 bytes before newline. Identical duplicates are
+idempotent. Conflicting or malformed control, wrong identity/version, oversized
+lines and unexpected EOF latch failure and close owned MCP. The driver retains
+intent before writing and preserves pending stop across the whole admission.
+
+Pi's `steer` and turn hooks deliver one fixed labelled finish-up request without
+countdowns, tactics or a Save/Quit mandate. Unsent calls from a pre-control turn
+are withheld; dispatched input is not canceled/replayed for text delivery. New
+handoff is refused before sealing while stop is pending. If a handoff already
+sealed, the driver may deliver the same command to a verified successor under
+original reserves, gated as above, or record incomplete ending. Pause, hard
+deadlines and owned cleanup remain independent of model response or game saving.
+
+The host adds reserved `player_finish` beside MCP tools, with closed
+`disposition,report,source_ids,control_id` arguments. Dispositions are
+`task_complete`, `cannot_continue`, `external_stop_complete`; report≤8192characters,
+unique source IDs≤16 (each1..128characters). External completion must name the
+directly received control; other dispositions require null. Only validated direct
+execution accepts it. Remembered/nested JSON and ordinary narration cannot finish
+the task. Acceptance stops later tool/provider dispatch through Pi's `finishTurn`
+hook and records `player-finish` plus settlement. Supporting claims remain fallible;
+host success, stopped automation, persistence, native exit and owned absence are
+separate facts. The admission's reserve forecast includes the largest burst and
+in-flight delivery delay; field validation does not establish adequate capacity.
 
 The host reserves at most one second (one quarter of short runs) from its total
 budget for cleanup. Stdio closure uses at most 500 ms each for stdin grace and
@@ -287,7 +322,7 @@ post-SIGTERM wait. The provider request count and timeouts are finite. Setup and
 cleanup share the host budget; SIGINT/SIGTERM use the same abort/closure path.
 
 Events carry UTC `wall_time`, host-relative `monotonic_ms`, request IDs and tool
-call IDs where applicable. Telemetry version 2 retains request text/UTF8 counts,
+call IDs where applicable. Telemetry version 3 retains request text/UTF8 counts,
 image/decoded-byte counts, message count, complete serialized payload byte count,
 model/provider and logical request ID. `request-start.payload_sha256` hashes the
 **exact** serialized Fetch `init.body`. No raw request payload, prompt, history,
@@ -348,7 +383,7 @@ progress never renews a timer, retries a partial response, changes provider
 context or authorizes tool input. Its observation overhead belongs in subsequent
 live measurements.
 
-Telemetry version 2 preserves first/last/max consecutive gaps for body chunks, parsed
+Telemetry version 3 preserves first/last/max consecutive gaps for body chunks, parsed
 provider events and nonempty reasoning/content/tool-argument fragments. Missing
 first/last values stay null; max gaps exclude silence after the last fragment.
 `provider-payload-ready`, `request-fetch-start`, projection/inspection timings

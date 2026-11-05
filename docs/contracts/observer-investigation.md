@@ -16,7 +16,7 @@ reads one explicit `investigation-selection/1` file. It names 1–4 cases with
 `id`, `title`, `directory`, optional `observer_exports`, optional `source_ids`,
 and optional `assessments`. Relative input paths resolve against the selection
 file. These private paths never enter the exported artifact. No recursive sibling
-discovery or live-case export. A case requires a current `campaign-receipt/2` with
+discovery or live-case export. A case requires a current `campaign-receipt/3` with
 actual `deciding_hosts_quiescent`, `native_absence_verified` and
 `input_authority_revoked` true. Outcome can be failed/incomplete. Existing analyzers
 validate the current computer-session/host/observer versions; unsupported evidence
