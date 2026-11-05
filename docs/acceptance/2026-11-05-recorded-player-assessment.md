@@ -2,7 +2,7 @@
 owner: lead
 status: historical
 date: 2026-11-05
-scope: Two approved recorded-screen cases; provider/tool continuation and proposed controls only, with no game or executed effects
+scope: Two recorded-screen cases with proposed controls only; subsequent fresh-world development attempt interrupted during setup
 ---
 
 # Recorded-screen candidate assessment
@@ -131,3 +131,51 @@ review and file hashes remain under the project-local ignored directory
 `.runtime/iteration164/candidate-research-2026-11-05/recorded-probe-preparation`.
 Git does not contain that complete runtime corpus. The owning issues and PR
 record publication/main validation and the next allocated action.
+
+## Subsequent development attempt: interrupted during setup
+
+The owner approved [#369](https://github.com/CVX-Hull/enactive/issues/369)'s
+fresh-world, ongoing-survival development campaign and additional $600 ceiling,
+explicitly trusting automatic refill. One admission ran on unchanged main
+`7ad0ef30a0a1fa089cb027b1054759c82c57b083`, session
+`2061bdc1c1dc4248a37205d456904210`, manifest SHA256
+`5dd4484869a9732a2245a6bddce7080dac74080970229233f2a97bb0be6a6f5f`.
+It ended **incomplete after 171.47 seconds**, because the lead missed the frozen
+45-second spectator deadline. Four checks were accepted; all four intervals
+exceeded the 15-second target. The last accepted observation was at
+21:16:07.319 UTC; the guard fired 45.00078 seconds later. The lead attributes the
+miss to context compaction/recovery in the operator conversation; the package
+itself establishes the missed deadline, not that explanation. Terminal watch
+coverage was not verified. This is an operator failure, not a funding refusal
+or a player-quality result.
+
+The original frames show setup menus, item verification and then an unchanged
+overlapping dialog. Nine captures have identical bytes. No in-play identity,
+elapsed game time, useful survival change or organic program was established.
+The final Escape-and-wait operation is **unknown**, with no following frame;
+it was not replayed. Independent review checked all 16 PNG hashes, frozen files,
+watch timing and original tool records. Host/native shutdown required signals;
+receipts and independent process inspection confirmed owned absence. Neither a
+normal ending nor persistence is claimed. The cause of the unchanged display
+remains unknown.
+
+![Last original setup capture; no in-play outcome is visible.](assets/recorded-player-assessment-366/development-369-setup.png)
+
+Eighteen HTTP attempts were charged against capacity. Provider generation records
+for 17 total **$0.04723975**, matching the observed account-usage increase. The
+cancelled eighteenth attempt has neither a generation ID nor usage; retain its
+**$2.74788** worst-case reservation rather than assert it was free. The additional
+actual upper bound is $2.79511975; cumulative actual upper bound $258.406176979
+and cumulative attempts 11,353. The configured $0.6102375 estimate and original
+receipt's conservative reservation are not invoices. The 182 unused attempts
+and $597.20488025 unencumbered allowance were retired, with no automatic restart.
+
+Original receipts, recorder database/PNGs, host log, settlement and independent
+review remain in `.runtime/iteration164/terra-development`. Its
+`execution-evidence-index.json` has SHA256
+`50783884867c7fa858020549284f9835861d298de6d6ea46db5767fc5a898398`;
+the selected public PNG is byte-identical to source ending `2187`.
+This brief finding consolidates the interrupted attempt without changing the
+player, contract or qualification gates. Continuous operator availability needs
+resolution at $0 before proposing another paid admission; automated acknowledgements
+would not constitute observation. #164 and the full cohort remain unqualified.
