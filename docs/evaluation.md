@@ -59,6 +59,16 @@ epochs or label network first-body time as first useful model decision.
 
 ## Retained host and browser analysis
 
+For a separately approved candidate assessment, the scoped
+[recorded-screen fixture](../tests/fixtures/recorded_player_mcp.py) can expose
+original labelled PNGs through current tool schemas to the unchanged player host.
+It refuses every effect and has no live target or player store. The
+[assessment brief](changes/074-recorded-player-assessment.md) owns its local
+packet format, limits and evidence interpretation. Offline tests establish the
+fixture boundary only; provider compatibility, grounded proposals and actual
+game usefulness require separate evidence. Host request-limit failure remains a
+failure even if complete bounded assessment evidence was collected.
+
 These commands are offline and read-only, writing summaries to stdout:
 
 ```sh

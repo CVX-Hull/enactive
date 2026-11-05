@@ -75,7 +75,10 @@ then demonstrated sampled context separation and direct `cannot_continue`
 stopping, but ended in Alex's death with no food/water gain or local program.
 The first operator-truncated admission remains a failure. #359 stays open for
 unexercised real-use paths; #164 and #145 remain held. The owning issues record
-live gates and execution.
+live gates and execution. The scoped [recorded-screen assessment preparation](changes/074-recorded-player-assessment.md)
+uses original views before considering another candidate game. Preparation and
+offline tests authorize no inference or gameplay; current player selection and
+all qualification gates remain unchanged.
 
 | Evidence | Scope and limitation |
 | --- | --- |
