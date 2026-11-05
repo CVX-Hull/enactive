@@ -25,6 +25,10 @@ the player interprets the game; the lead owns admission/source/review.
 [Start/observe](operations/start-observe.md): prepared windowed target, explicit
 project userdir, fresh package and actual spectator images.
 
+[Finite-test supervision](operations/campaign-supervision.md) adds the existing
+explicit operator checks, independent45-second cutoff and owned wrapper cleanup
+when selected by a frozen test. Its counts stay outside the player context.
+
 ## Pause, timeout and recovery
 
 [Pause/timeout](operations/pause-timeout.md): independent permanent stop, exact

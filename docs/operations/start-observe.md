@@ -11,6 +11,10 @@ current launch command is the [finite campaign custodian](campaign-run.md), whic
 validates `campaign-run/4` before effects. Do not invoke old controller, mission or
 experimental proof commands or launch an unprepared/fullscreen application.
 
+For a frozen test selecting45-second explicit operator checks, follow
+[finite-test supervision](campaign-supervision.md) and use its printed gateway
+URL. Normal spectator and Pause ownership remain bound to the selected custodian.
+
 1. Finish [local setup](../setup.md), retain native/app/adapter bytes and source provenance.
 2. Select normal project-local CDDA input options before freezing; mouse is enabled and fullscreen disabled. The primitive layer does not override settings.
 3. Freeze the exact clean source, native/adapter/initial-config hashes, target argv/cwd/environment, player host argv, route/context/prompt and original limits in a fresh `.runtime/computer-sessions/` package.

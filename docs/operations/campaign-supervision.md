@@ -1,0 +1,109 @@
+---
+owner: lead
+review_trigger: Finite-test watch policy, target binding, process ownership or acknowledgement changes
+status: active
+---
+
+# Supervise a finite development test
+
+The optional [test supervisor](../../tools/campaign_supervision.py) preserves the
+existing45-second spectator-check policy around the maintained
+[campaign custodian](campaign-run.md). It belongs to test operation, outside the
+player context. The operator inspects displayed evidence; the independent
+guardian checks clocks and completed acknowledgements; the existing custodian
+owns native input, original allowances and native/host cleanup. The gateway
+forwards passive spectator reads and verified Pause, never actor tools.
+
+This is a Mac finite-test helper. Source delivery grants no gameplay/provider
+spending or new admission. Use a separately agreed frozen package and an available
+operator. General unattended operation remains unqualified.
+
+## Freeze, launch and inspect
+
+1. Prepare the exact clean source and fresh `campaign-run/4` package through the
+   [campaign procedure](campaign-run.md). Resolve scope, spending, original
+   resources, ending reserves and stop rules before admission. Preserve original
+   saves and failed chains; old experiment launchers stay historical evidence.
+2. Supply only the selected route's credential environment. The supervisor passes
+   that value only to the custodian; gateway and keep-awake children receive
+   executable lookup and locale. No new credential lookup or global permission
+   entry is installed.
+3. Invoke from the selected checkout through engineering command permissions:
+
+   ```sh
+   .venv/bin/python -m tools.campaign_supervision --run .runtime/computer-sessions/SELECTED
+   ```
+
+4. Open the exact printed gateway URL. In **Watch**, inspect the current session,
+   status and decoded source, then click **Record operator check**. Confirm the
+   accepted number. Target one completed check every15 seconds. The first must
+   finish strictly before readiness plus45 seconds; each later completion must
+   precede the prior accepted observation plus45 seconds and the original custody
+   cutoff. Equality is too late. A failed or unconfirmed guardian acknowledgement
+   does not renew it. Missing browser confirmation is unknown: the guardian may
+   already have accepted the check. Use Pause when control is uncertain.
+5. Use the same page's **Pause** for immediate control. No check renews after
+   Pause. Refreshing the page cannot resume or reopen a stopped/partial package.
+
+The button requires a trusted explicit click, visible Watch, decoded in-viewport
+pixels and current displayed status. The gateway checks session, source/digest,
+increasing sequence and displayed-status age within12 seconds, then waits for
+the guardian's exact confirmation. This checks displayed retained evidence;
+human attention, physical paint, continuous capture and useful game effects
+remain separate. Repeated or older retained pixels do not become new captures.
+
+## Failure and owned cleanup
+
+The guardian performs no HTTP work. Blocked source reads, delayed checks and
+partial confirmation cannot suspend its deadlines. Renewal uses actual
+confirmation completion; checks racing with Pause are rolled back. Original
+custody also bounds terminal coverage. Incomplete startup JSON is retried under
+the original clocks because producers expose the pathname before buffered close;
+complete invalid marker objects fail.
+
+The expected Pause receiver comes from the newly created custodian handle, not
+retained process JSON. On the supported Mac deployment, the gateway verifies the
+connected loopback socket against that receiver before posting Pause. An
+uncertain receiver gets no POST; renewal stops and owned cleanup proceeds.
+This does not qualify another OS or hostile-process isolation.
+
+On stop, signal, startup or supervision failure, custodian/gateway termination
+is requested before bounded waits. Every launched child, including Mac
+`caffeinate`, receives an explicit cleanup result. The shared group helper acts
+only on groups created by those exact launches. Keep-awake is process-scoped.
+Cleanup errors stay visible; arbitrary OS hangs, abrupt supervisor death and
+native application responsiveness remain limits.
+
+Generic stopping needs no Save, model reply or normal native exit. The player
+chooses ordinary actions. Persistence, native exit, host settlement, supervision
+coverage and owned absence stay distinct. Fencing inputs does not pause a live
+game's clock. Apply save/reload/exit criteria in their separately frozen lane.
+
+## Retained artifacts and assurance
+
+| Artifact | Current version and meaning |
+| --- | --- |
+| `watch-start.json` | `campaign-watch-start/1`; exclusive reservation before children, binding session/source, manifest SHA256, wall/monotonic start and45-second window. Prior/partial markers refuse; never delete to rearm. |
+| `watch-attempts.jsonl` | `campaign-watch-attempt/1`; source/digest, sequence, observation/start/recorded clocks and active/ending phase. Observation/guardian values are monotonic seconds derived from original wall timing; the shared-clock relationship is checked, not assumed exact. |
+| `watch-terminal.json` | `campaign-watch-terminal/1`; accepted checks/completion/prior-observation clocks, raced checks, reason, exact children, bounded cleanup and custodian disposition as separate facts. |
+
+Current `computer-start/1`, `computer-ready/1` and `campaign-receipt/3` must match
+the fresh owned custodian/session/source and chronology. Missing first check,
+late terminal coverage, substituted receipt/manifest or unresolved cleanup cannot
+certify supervision success. No wrapper receipt accepts gameplay or restores
+custody; old unversioned records have no current executable reader.
+
+[Guard/process tests](../../tests/test_campaign_supervision.py),
+[local HTTP/socket tests](../../tests/test_campaign_watch.py) and
+[UI behavior tests](../../tests/test_campaign_watch.cjs) exercise maintained code.
+Fixtures establish protocol behavior, not native game effects, human takeover,
+model competence or real timing. Retain failures before temporary-test pruning;
+use a fresh owned directory. Actual use remains a separately frozen lane.
+
+The engineering lead owns maintenance. Reassess after the first diagnostic;
+replace this helper when the custodian/observer supplies the same independent
+verified-check deadline and owned cleanup, or retire it when the finite-test
+watch policy is explicitly retired. Keep old sealed scripts as evidence rather
+than another current launch path.
+
+[Operations index](../runbook.md).

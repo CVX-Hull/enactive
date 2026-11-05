@@ -13,6 +13,11 @@ successor. The [package validator](../../tools/campaign_package.py) is authorita
 for the closed `campaign-run/4` admission. No game-phase/identity admission or semantic mission
 service remains.
 
+A test that selects the existing45-second operator-watch policy uses
+[the maintained supervisor](campaign-supervision.md) around this same custodian.
+The supervisor owns its wrapper processes and check clocks; native/actor custody
+and original package allowances remain here. Its receipt does not accept gameplay.
+
 ## Frozen data
 
 Select one fresh canonical project-local directory under `.runtime/computer-sessions/`.

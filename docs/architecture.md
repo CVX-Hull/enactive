@@ -61,6 +61,13 @@ survives actor turnover and gates a successor before MCP/fetch. Player-facing
 MCP projection excludes global deadline/remaining fields while canonical
 operator records retain them. No game-specific save or Quit step gates stopping.
 
+An optional [finite-test supervisor](operations/campaign-supervision.md) wraps
+the custodian with the existing45-second operator-check policy. Its independent
+guardian owns clocks and exact newly launched child groups; a separate gateway
+forwards spectator reads and receiver-verified Pause. It adds no player input
+producer or native custody. Supervision, host settlement and game outcomes stay
+separate; source fixtures do not qualify actual play or human attention.
+
 Fresh session stores live under `.runtime/computer-sessions/`. A selected
 `player-memory/2` store may span fresh native-child sessions. Old runtime formats
 remain inert history; no current reader imports executable old libraries.
