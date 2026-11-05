@@ -1,0 +1,138 @@
+{
+  "scope": "Two selected recorded-screen cases; no native game, executed effect, usefulness/cadence/program/survival/adoption qualification",
+  "date": "2026-11-05",
+  "source_main": "6db526e2d823f65c0136b77a900366daf56e9907",
+  "manifest_sha256": "8ccafd27bd4e91eaa9b0b7ddfdb5a664d15d6b653fa08c8f22e41dddb29dab31",
+  "candidate": "openai/gpt-6.1-terra",
+  "provider_generation_model": "openai/gpt-6.1-terra-20261026",
+  "requested_effort": "medium",
+  "requested_tier": "default",
+  "observed_effort_attested": false,
+  "route_only": [
+    "openai"
+  ],
+  "fallback": false,
+  "cases": {
+    "map": {
+      "source_count": 4,
+      "selected_source": "810e172f12b742408b70788c1c18df75-1900",
+      "selected_sha256": "440c79f30a51339df91813bc28aff2c47487310aabe40fd38a4ddb99a7279daa",
+      "request_count": 2,
+      "actual_host_settlement": {
+        "type": "settled",
+        "wall_time": "2026-11-05T20:22:31.652Z",
+        "monotonic_ms": 11307.548459000001,
+        "ok": false,
+        "reason": "request-limit",
+        "requests": 2,
+        "control_id": null,
+        "accepted_control_id": null,
+        "event_output": {
+          "events": 30,
+          "callback_ms": 1.6526649999968868,
+          "max_callback_ms": 0.4274159999999938,
+          "json_ms": 0.08658699999750752,
+          "enqueue_ms": 1.4783290000031002,
+          "bytes": 14740,
+          "backpressure_signals": 0
+        },
+        "native_cleanup_claimed": false
+      },
+      "request_image_parts": [
+        0,
+        4
+      ],
+      "observed_providers": [
+        "OpenAI",
+        "OpenAI"
+      ],
+      "observed_backends": [
+        "openai/gpt-6.1-terra"
+      ],
+      "technical_issues": [],
+      "cleanup": {
+        "pid": 92123,
+        "pgid": 92123,
+        "returncode": 1,
+        "signals": [],
+        "normal_exit_zero_before_forced_signal": false,
+        "process_absent": true,
+        "group_absent": true
+      },
+      "fixture_absent": true,
+      "provider_actual_usd": "0.02667375",
+      "assessment": "narrowly promising under frozen rule; no execution",
+      "limitation": "Proposed mission inspection only; no panel opening or mission gain"
+    },
+    "retreat": {
+      "source_count": 30,
+      "selected_source": "810e172f12b742408b70788c1c18df75-3272",
+      "selected_sha256": "8d03102976b4970250ead80fc4cd708c368c6760c71d24bb86b87ff488d7d0e6",
+      "request_count": 2,
+      "actual_host_settlement": {
+        "type": "settled",
+        "wall_time": "2026-11-05T20:22:49.436Z",
+        "monotonic_ms": 17490.778667,
+        "ok": false,
+        "reason": "request-limit",
+        "requests": 2,
+        "control_id": null,
+        "accepted_control_id": null,
+        "event_output": {
+          "events": 30,
+          "callback_ms": 1.839376999997171,
+          "max_callback_ms": 0.26454200000000583,
+          "json_ms": 0.12117199999616446,
+          "enqueue_ms": 1.5997900000014624,
+          "bytes": 32189,
+          "backpressure_signals": 0
+        },
+        "native_cleanup_claimed": false
+      },
+      "request_image_parts": [
+        0,
+        30
+      ],
+      "observed_providers": [
+        "OpenAI",
+        "OpenAI"
+      ],
+      "observed_backends": [
+        "openai/gpt-6.1-terra"
+      ],
+      "technical_issues": [],
+      "cleanup": {
+        "pid": 92227,
+        "pgid": 92227,
+        "returncode": 1,
+        "signals": [],
+        "normal_exit_zero_before_forced_signal": false,
+        "process_absent": true,
+        "group_absent": true
+      },
+      "fixture_absent": true,
+      "provider_actual_usd": "0.0607663",
+      "assessment": "narrowly promising under frozen rule; no execution",
+      "limitation": "Proposed movement menu opening only; no Run selection or mode change"
+    }
+  },
+  "accounting": {
+    "provider_actual_usd": "0.08744005",
+    "whole_account_usage_delta_usd": "0.087440050",
+    "endpoint_rate_reconstruction_usd": "0.08744005",
+    "conservative_configured_rate_estimate_usd": "0.269895000000000014",
+    "ceiling_usd": "15",
+    "unused_retired_usd": "14.91255995",
+    "missing_usage_attempts": 0,
+    "charged_attempts": 4,
+    "retries": 0,
+    "upper_actual_baseline_before_usd": "255.523617179",
+    "upper_actual_baseline_after_usd": "255.611057229",
+    "cumulative_attempts_after": 11335,
+    "elapsed_seconds": 29.743871374987066,
+    "unrun_cases": [],
+    "native_game_or_effects_executed": false
+  },
+  "no_assessment_outputs_in_player_memory_or_future_context": true,
+  "current_player_changed": false
+}

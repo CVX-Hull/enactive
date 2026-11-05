@@ -62,12 +62,21 @@ epochs or label network first-body time as first useful model decision.
 For a separately approved candidate assessment, the scoped
 [recorded-screen fixture](../tests/fixtures/recorded_player_mcp.py) can expose
 original labelled PNGs through current tool schemas to the unchanged player host.
-It refuses every effect and has no live target or player store. The
-[assessment brief](changes/074-recorded-player-assessment.md) owns its local
-packet format, limits and evidence interpretation. Offline tests establish the
+It refuses every effect and has no live target or player store. Its closed local
+packet contains `current_source_id` and an ordered `sources` list of unchanged
+`computer-source/1` metadata. Original PNGs are sibling `sources/<source_id>.png`;
+hashes, dimensions, membership, regular files, at most thirty sources and 16 MiB
+total PNGs are checked before serving. Source and focused tests own the executable
+format. The [historical brief](changes/074-recorded-player-assessment.md) records
+the reuse decision and original limits; each new paid assessment needs its own
+frozen protocol and agreement. Offline tests establish the
 fixture boundary only; provider compatibility, grounded proposals and actual
 game usefulness require separate evidence. Host request-limit failure remains a
 failure even if complete bounded assessment evidence was collected.
+
+The [two-case candidate result](acceptance/2026-11-05-recorded-player-assessment.md)
+demonstrates one fresh-host recorded-image continuation and consistent proposed
+controls per case. No proposal was executed; it qualifies no live game effect.
 
 These commands are offline and read-only, writing summaries to stdout:
 
