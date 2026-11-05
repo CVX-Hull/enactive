@@ -29,7 +29,7 @@ contract to force a pass.
 
 ## Reuse and responsibilities
 
-Reuse the unchanged `player-host/3` CLI, pinned Pi SDK, current tool definitions,
+Reuse the unchanged `player-host/3` CLI, its pinned SDK, current tool definitions,
 typed argument validation, image projection, request/retry limits, sanitized
 telemetry and owned stdio closure. Do not copy the older identity collector's
 retired imports, hard-coded fourteen-tool count, SSE parser, route or admission.
