@@ -108,7 +108,7 @@ def fixture(tmp_path, *, ready_age=0, receiver_pid=None):
             finally:
                 connection.close()
         yield SimpleNamespace(state=state, call=call, supervise=supervise, result=result,
-                              checks=checks, stops=stops, process=process, port=port)
+                              checks=checks, stops=stops, process=process, port=port, profile=profile)
     finally:
         state['unblock'].set()
         close_group(process)
@@ -225,12 +225,33 @@ def test_guard_accepts_generic_terminal_without_claiming_normal_native_exit(tmp_
 
 
 @pytest.mark.parametrize('marker', ['started.json', 'ready.json'])
-def test_current_marker_writer_can_finish_after_exposing_its_path(tmp_path, marker):
+@pytest.mark.parametrize('delay_confirmation', [False, True])
+def test_current_marker_writer_can_finish_after_exposing_its_path(tmp_path, marker, delay_confirmation):
     with fixture(tmp_path) as f:
         path = tmp_path/marker
         payload = path.read_text()
         path.unlink()  # Only this synthetic fixture, before the guard starts.
-        thread = threading.Thread(target=f.supervise)
+        forwarded, release = threading.Event(), threading.Event()
+        errors = []
+        class DelayedConfirmation:
+            def fileno(self):return f.checks.fileno()
+            def setblocking(self, value):f.checks.setblocking(value)
+            def recv(self, size):return f.checks.recv(size)
+            def send(self, data):
+                count = f.checks.send(data)
+                forwarded.set()
+                if not release.wait(3):raise TimeoutError('Fixture did not release confirmation completion')
+                return count
+        def supervise():
+            try:
+                live = SimpleNamespace(poll=lambda: None)
+                f.result['reason'] = guard.supervise(tmp_path, f.profile, live, f.process, live,
+                    DelayedConfirmation() if delay_confirmation else f.checks,
+                    f.stops, lambda: False, f.result)
+            except BaseException as exc:
+                errors.append(repr(exc))
+        thread = threading.Thread(target=supervise)
+        pause = None
         try:
             with path.open('x') as writer:
                 # Match the real producers' visible pathname before buffered close.
@@ -240,14 +261,31 @@ def test_current_marker_writer_can_finish_after_exposing_its_path(tmp_path, mark
                 writer.write(payload)
             response = f.call('/record', form())
             assert response[0] == 200, (response, f.result)
-            f.call('/api/pause', {})
-            thread.join(3)
-            assert not thread.is_alive() and f.result['reason'] == 'operator_pause'
-            assert len(f.result['accepted']) == 1
-        finally:
-            if thread.is_alive():
+            assert json.loads(response[1])['accepted'] == 1
+            if delay_confirmation:
+                # HTTP success can precede the guardian's post-send sample.
+                assert forwarded.is_set() and not f.result['accepted']
+                pause = threading.Thread(target=lambda: f.call('/api/pause', {}))
+                pause.start()
+                assert select.select([f.stops], [], [], 2)[0], 'Pause was not queued'
+                release.set()
+            else:
                 f.call('/api/pause', {})
-                thread.join(3)
+            thread.join(3)
+            if pause is not None:pause.join(3)
+            assert not thread.is_alive() and not errors and f.result['reason'] == 'operator_pause'
+            raced = f.result.get('checks_raced_with_pause', [])
+            assert [r['sequence'] for r in f.result['accepted']+raced] == [1]
+            assert all(r['receipt'] < f.result['pause_requested'] for r in f.result['accepted'])
+            assert all(r['receipt'] >= f.result['pause_requested'] for r in raced)
+            if delay_confirmation:
+                assert not pause.is_alive() and not f.result['accepted'] and len(raced) == 1
+        finally:
+            release.set()
+            if thread.is_alive() and pause is None:
+                f.call('/api/pause', {})
+            thread.join(3)
+            if pause is not None:pause.join(3)
 
 
 def test_ui_behavior_is_included_in_python_suite():
