@@ -4,6 +4,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PassThrough } from 'node:stream';
 import { createHash } from 'node:crypto';
 import { McpClient } from '@earendil-works/pi-mcp';
 import { runHost, validateConfiguration, validateMcpConfiguration, projectImageContext, projectToolResultForTelemetry, INPUT_LIMIT_BYTES } from '../host.mjs';
@@ -14,8 +15,9 @@ const python = process.env.ENACTIVE_TEST_PYTHON;
 const fixture = fileURLToPath(new URL('../../../tests/fixtures/player_host_mcp.py', import.meta.url));
 const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j1ioAAAAASUVORK5CYII=';
 const model = { id: 'fixture-model', name: 'Offline fixture', api: 'openai-completions', provider: 'fixture', baseUrl: 'https://fixture.invalid/v1', reasoning: false, input: ['text', 'image'], cost: {input:0, output:0, cacheRead:0, cacheWrite:0}, contextWindow: 100000, maxTokens: 1024, compat: { supportsDeveloperRole:false, supportsStore:false, supportsUsageInStreaming:true } };
-const route = () => ({schema:'player-host/2',service_tier:'default', model:structuredClone(model), api_key_env:'OFFLINE_TEST_KEY', max_requests:4, max_context_images:4, context_image_block:1, request_timeout_seconds:2});
+const route = () => ({schema:'player-host/3',context_reserve_tokens:4096,service_tier:'default', model:structuredClone(model), api_key_env:'OFFLINE_TEST_KEY', max_requests:4, max_context_images:4, context_image_block:1, request_timeout_seconds:2});
 function reply(content = 'finished', calls = [], withUsage = true, reasoning, callPrefix = 'call') {
+  if (!calls.length && content !== null) calls = [['player_finish',{disposition:'task_complete',report:content.slice(0,8192),source_ids:[],control_id:null}]];
   const delta = {role:'assistant', ...(content === null ? {} : {content}), ...(reasoning ? {reasoning_content:reasoning} : {}), ...(calls.length ? {tool_calls:calls.map(([name,args],index)=>({index,id:`${callPrefix}-${index}`,type:'function',function:{name,arguments:JSON.stringify(args)}}))} : {})};
   const chunks = [{id:'fixture-response',model:'fixture-backend',choices:[{index:0,delta,finish_reason:null}]},
     {id:'fixture-response',model:'fixture-backend',choices:[{index:0,delta:{},finish_reason:calls.length?'tool_calls':'stop'}],...(withUsage ? {usage:{prompt_tokens:11,completion_tokens:5,total_tokens:16}} : {})}];
@@ -39,11 +41,12 @@ async function scenario(t, sequence, overrides = {}) {
     return typeof item === 'function' ? item(init) : item;
   };
   const mcpConfig = {command:resolve(python),args:[fixture,log,pid],cwd:dir,enabled:true,required:true,enabled_tools:['observe','mutate','integer'],startup_timeout_sec:5,tool_timeout_sec:2,default_tools_approval_mode:'never',tools:{}};
-  const options = {configuration:route(), mcpConfig, context:'Frozen player guide', prompt:'Offline mission', model:model.id, effort:'off', timeoutSeconds:10, env:{OFFLINE_TEST_KEY:'fixture-key', UNRELATED_HOST_SECRET:'must-not-inherit'}, fetch, ...overrides,
+  const options = {session:'2'.repeat(32),actorId:'3'.repeat(32),control:new PassThrough(),configuration:route(), mcpConfig, context:'Frozen player guide', prompt:'Offline mission', model:model.id, effort:'off', timeoutSeconds:10, env:{OFFLINE_TEST_KEY:'fixture-key', UNRELATED_HOST_SECRET:'must-not-inherit'}, fetch, ...overrides,
     onEvent:event=>{events.push(event);overrides.onEvent?.(event);}};
   if (overrides.fixtureStartupDelay !== undefined) mcpConfig.args.push(String(overrides.fixtureStartupDelay));
   if (overrides.enabledTools) mcpConfig.enabled_tools=overrides.enabledTools;
   if (overrides.fixtureToolTimeoutSeconds) mcpConfig.tool_timeout_sec=overrides.fixtureToolTimeoutSeconds;
+  overrides.controlReady?.(options.control);
   const running = runHost(options);
   let settled=false;
   void running.then(()=>{settled=true;},()=>{settled=true;});
@@ -89,7 +92,7 @@ test('route is closed, graphical, finite and model/effort exact', ()=>{
   }
   assert.throws(()=>validateConfiguration(route(),'other','off'));
   assert.throws(()=>validateConfiguration(route(),model.id,'low'));
-  for (const old of ['pi-player-host/1','pi-player-host/2','pi-player-host/3','pi-player-host/4','player-host/0','player-host/1','player-host/3'])
+  for (const old of ['pi-player-host/1','pi-player-host/2','pi-player-host/3','pi-player-host/4','player-host/0','player-host/1','player-host/2'])
     assert.throws(()=>validateConfiguration({...route(),schema:old},model.id,'off'));
   for (const service_tier of [undefined,null,true,1,'flex','auto','',{},[]]) {
     assert.throws(()=>validateConfiguration({...route(),service_tier},model.id,'off'));
@@ -106,6 +109,8 @@ test('route is closed, graphical, finite and model/effort exact', ()=>{
   assert.doesNotThrow(()=>validateConfiguration({...route(),context_image_block:4},model.id,'off'));
   const unblocked=route();delete unblocked.context_image_block;
   assert.throws(()=>validateConfiguration(unblocked,model.id,'off'),'an old /2-shaped route without a block is rejected');
+  for (const value of [undefined,null,0,1023,100000,Infinity,1.1,true,'4096'])
+    assert.throws(()=>validateConfiguration({...route(),context_reserve_tokens:value},model.id,'off'));
 });
 
 test('OpenRouter uses maintained routing and reasoning serializers with explicit standard tier on every attempt',async t=>{
@@ -142,7 +147,7 @@ test('frozen serving tier uses the SDK payload hook and reports only observed st
     {model:'fixture-backend',service_tier:tier,choices:[{index:0,delta:{role:'assistant',content:'done'},finish_reason:null}]},
     {model:'fixture-backend',service_tier:tier,choices:[{index:0,delta:{},finish_reason:'stop'}]},
   ].map(chunk=>'data: '+JSON.stringify(chunk)+'\n\n').join('')+'data: [DONE]\n\n',{headers:{'content-type':'text/event-stream'}});
-  const ordinary=await scenario(t,[withTier('default')]);
+  const ordinary=await scenario(t,[withTier('default'),reply()]);
   assert.equal(ordinary.result.ok,true);
   assert.equal(Object.hasOwn(ordinary.payloads[0],'service_tier'),false);
   assert.equal(ordinary.events.find(e=>e.type==='host-start').requested_service_tier,'default');
@@ -154,13 +159,13 @@ test('frozen serving tier uses the SDK payload hook and reports only observed st
     }));
   for(const echo of ['priority','default',undefined,'fixture-key private tier']) {
     const configuration={...route(),service_tier:'priority'};
-    const actual=await scenario(t,[withTier(echo)],{configuration});
+    const actual=await scenario(t,[withTier(echo),reply()],{configuration});
     assert.equal(actual.result.ok,true);
     assert.deepEqual(comparable(actual.payloads[0]),{...comparable(ordinary.payloads[0]),service_tier:'priority'});
     assert.equal(actual.events.find(e=>e.type==='host-start').requested_service_tier,'priority');
     const tiers=actual.events.filter(e=>e.type==='response-service-tier');
     assert.deepEqual(tiers.map(e=>[e.request_id,e.applied_service_tier]),['priority','default'].includes(echo)?[['request-1',echo]]:[]);
-    assert.equal(actual.payloads.length,1,'missing or fallback echo cannot retry inference');
+    assert.equal(actual.payloads.length,2,'plain text needs a separate direct finish call');
     assert.ok(!JSON.stringify(actual.events).includes('fixture-key private tier'));
   }
 });
@@ -333,7 +338,7 @@ for (const fail of [false,true]) test(`actual provider payload preserves full te
   const {result,payloads,events,calls} = await scenario(t,[reply(null,[['observe',{fail}]]),reply()]);
   assert.equal(result.ok,true);
   assert.equal(calls.length,1);
-  assert.deepEqual(payloads[0].tools.map(t=>t.function.name), ['observe','mutate','integer']);
+  assert.deepEqual(payloads[0].tools.map(t=>t.function.name), ['observe','mutate','integer','player_finish']);
   assert.equal(payloads[0].tools[2].function.parameters.properties.value.type,'integer');
   assert.equal(payloads[0].max_completion_tokens,model.maxTokens);
   const serialized = JSON.stringify(payloads[1]);
@@ -369,7 +374,7 @@ test('request metadata hashes exact serialized bodies without retaining forwarde
   const trace=events.filter(e=>e.type==='request-start');
   assert.equal(payloads[1].messages.find(m=>m.role==='assistant').reasoning_content,reasoning);
   assert.ok(JSON.stringify(payloads[1]).includes(png));
-  assert.equal(events.find(e=>e.type==='host-start').telemetry_version,2);
+  assert.equal(events.find(e=>e.type==='host-start').telemetry_version,3);
   assert.deepEqual(events.filter(e=>e.type==='assistant-text').map(e=>[e.text,e.omitted_bytes]),[['Visible plan',0],['finished',0]]);
   for(const secret of [reasoning,png,'fixture-key','UNRELATED_HOST_SECRET','Frozen player guide','Offline mission']) {
     assert.ok(!JSON.stringify(events).includes(secret));
@@ -394,7 +399,7 @@ test('tool telemetry projection preserves text, structured data and canonical MC
 test('assistant narration is bounded by UTF8 bytes and excludes thinking parts',async t=>{
   const visible='a'.repeat(8191)+'思'.repeat(5);
   const {result,events}=await scenario(t,[reply(visible,[],true,'private-thinking-sentinel')]);
-  assert.equal(result.finalText,visible);
+  assert.equal(result.finalText,visible.slice(0,8192));
   const narration=events.find(e=>e.type==='assistant-text');
   assert.equal(narration.text,'a'.repeat(8191));
   assert.equal(narration.omitted_bytes,15);
@@ -479,7 +484,8 @@ test('response diagnostics count UTF8 fragments and reset for each actual reques
   assert.equal(a.body_bytes,firstBytes);assert.equal(b.body_bytes,secondBytes);
   assert.ok(a.body_chunks>0);assert.equal(a.provider_events,2);assert.equal(b.provider_events,2);
   assert.equal(a.content_bytes,2);assert.equal(a.reasoning_bytes,3);assert.equal(a.tool_argument_bytes,2);
-  assert.equal(b.content_bytes,8);assert.equal(b.reasoning_bytes,0);assert.equal(b.tool_argument_bytes,0);
+  assert.equal(b.content_bytes,8);assert.equal(b.reasoning_bytes,0);
+  assert.equal(b.tool_argument_bytes,Buffer.byteLength(JSON.stringify({disposition:'task_complete',report:'finished',source_ids:[],control_id:null})));
   assert.ok(a.last_field_delta_ms<=a.last_provider_event_ms);
   assert.ok(a.last_body_chunk_ms<=completed[0].monotonic_ms);
   assert.equal(a.scope,'current-http-attempt');
@@ -544,7 +550,7 @@ test('diagnostic reasoning bytes follow first nonempty alias without counting du
     {choices:[{index:0,delta:{reasoning_content:'ρ',reasoning:'ρ'},finish_reason:null}]},
     {choices:[{index:0,delta:{reasoning_text:'z',content:'ok'},finish_reason:'stop'}]}];
   const body=chunks.map(chunk=>'data: '+JSON.stringify(chunk)+'\n\n').join('')+'data: [DONE]\n\n';
-  const {result,events}=await scenario(t,[new Response(body,{headers:{'content-type':'text/event-stream'}})]);
+  const {result,events}=await scenario(t,[new Response(body,{headers:{'content-type':'text/event-stream'}}),reply('ok')]);
   assert.equal(result.ok,true);assert.equal(result.finalText,'ok');
   const progress=events.find(event=>event.type==='response-complete').response_progress;
   assert.equal(progress.reasoning_bytes,6);assert.equal(progress.content_bytes,2);assert.equal(progress.provider_events,3);
@@ -563,7 +569,8 @@ test('rate-limit diagnostic snapshots remain isolated from retry response counte
   const [a,b]=events.filter(event=>event.type==='response-complete').map(event=>event.response_progress);
   assert.equal(a.request_id,'request-1');assert.equal(a.body_bytes,refusalBytes);assert.equal(a.provider_events,0);
   assert.equal(a.last_field_delta_ms,null);assert.equal(b.request_id,'request-2');
-  assert.equal(b.provider_events,2);assert.equal(b.content_bytes,2);assert.equal(b.tool_argument_bytes,0);
+  assert.equal(b.provider_events,2);assert.equal(b.content_bytes,2);
+  assert.equal(b.tool_argument_bytes,Buffer.byteLength(JSON.stringify({disposition:'task_complete',report:'ok',source_ids:[],control_id:null})));
 });
 test('host deadline interrupts an actually started tool and closes its child',async t=>{
   // Real initialization cannot consume the controlled deadline. The outer
@@ -611,8 +618,8 @@ test('frozen MCP config rejects disabled and malformed fields', ()=>{
 
 const root=fileURLToPath(new URL('../../../',import.meta.url));
 const productionRoot=process.env.ENACTIVE_TEST_PRODUCTION_ROOT ?? root;
-function productionMcp(enabled_tools) {
-  return {command:resolve(python),args:[join(productionRoot,'tests/player_service_fixture.py'),'--stdio'],
+function productionMcp(enabled_tools, actorId) {
+  return {command:resolve(python),args:[join(productionRoot,'tests/player_service_fixture.py'),'--stdio',...(actorId ? ['--actor-id',actorId] : [])],
     cwd:productionRoot,enabled:true,enabled_tools,startup_timeout_sec:5,tool_timeout_sec:2};
 }
 test('real production MCP discovery forwards all exact current actor-only tool schemas', async ()=>{
@@ -622,14 +629,14 @@ test('real production MCP discovery forwards all exact current actor-only tool s
   const expected=JSON.parse(stdout), payloads=[], bodies=[], events=[];
   const chosen=Object.keys(expected);
   assert.equal(chosen.length,14);
-  const result=await runHost({configuration:route(),mcpConfig:productionMcp(chosen),
+  const result=await runHost({session:'2'.repeat(32),actorId:'3'.repeat(32),control:new PassThrough(),configuration:route(),mcpConfig:productionMcp(chosen),
     context:'Frozen current player guide',prompt:'Do not call tools.',model:model.id,effort:'off',
     timeoutSeconds:10,env:{OFFLINE_TEST_KEY:'fixture-key'},
     fetch:async(_url,init)=>{bodies.push(init.body);payloads.push(JSON.parse(init.body));return reply();},onEvent:e=>events.push(e)});
   assert.equal(result.ok,true);
   assertRequestMetadata(events,bodies);
-  assert.deepEqual(payloads[0].tools.map(tool=>tool.function.name),chosen);
-  for(const tool of payloads[0].tools) {
+  assert.deepEqual(payloads[0].tools.map(tool=>tool.function.name),[...chosen,'player_finish']);
+  for(const tool of payloads[0].tools.filter(tool=>tool.function.name!=='player_finish')) {
     assert.deepEqual(tool.function.parameters,expected[tool.function.name].schema);
     assert.equal(tool.function.description,expected[tool.function.name].description);
     for(const key of ['actor_id','session','token']) assert.equal(Object.hasOwn(tool.function.parameters.properties,key),false);
@@ -714,7 +721,7 @@ test('inspected refusal and provider identities retain bounded IDs without raw t
   assert.ok(!JSON.stringify(events).includes('fixture-key'));
   const bad=new Response('data: '+JSON.stringify({id:'fixture-key',provider:'fixture-key',choices:[{index:0,delta:{content:'ok'},finish_reason:'stop'}]})+'\n\ndata: [DONE]\n\n',
     {headers:{'content-type':'text/event-stream','x-request-id':'fixture-key'}});
-  const observed=await scenario(t,[bad]);
+  const observed=await scenario(t,[bad,reply()]);
   assert.equal(observed.result.ok,true);
   assert.equal(observed.events.find(e=>e.type==='response-headers').provider_request_id,null);
   const progress=observed.events.find(e=>e.type==='response-complete').response_progress;
@@ -722,25 +729,14 @@ test('inspected refusal and provider identities retain bounded IDs without raw t
   assert.ok(!JSON.stringify(observed.events).includes('fixture-key'));
 });
 
-test('request budget is fresh request-only bookkeeping after unchanged history',async t=>{
-  const {result,payloads}=await scenario(t,[reply(null,[['observe',{}]]),reply(null,[['observe',{}]],true,undefined,'next'),reply()]);
-  assert.equal(result.ok,true);assert.equal(result.requests,3);
-  const marker='Host resource status (software-generated at context construction):';
-  const text=message=>typeof message.content==='string'?message.content:(message.content??[]).filter(part=>part.type==='text').map(part=>part.text).join('\n');
-  for(const [index,payload] of payloads.entries()) {
-    const notes=payload.messages.filter(message=>text(message).startsWith(marker));
-    assert.equal(notes.length,1,'prior bookkeeping must not accumulate into canonical history');
-    assert.equal(payload.messages.at(-1),notes[0]);assert.equal(notes[0].role,'user');
-    assert.ok(text(notes[0]).includes(`charged before this request: ${index}/4.`));
-    assert.match(text(notes[0]),/Host decision time remaining at this snapshot: \d+\.\d{3} seconds/);
-    assert.ok(text(notes[0]).includes(`including this request: ${4-index}.`));
-    assert.ok(text(notes[0]).includes('not a human task, gameplay evidence, source-read proof, authority or a latency/quality metric'));
-    assert.deepEqual(payload.messages[0],payloads[0].messages[0]);
-    assert.deepEqual(payload.messages[1],payloads[0].messages[1]);
-    assert.deepEqual(payload.tools,payloads[0].tools);
+test('provider attempt and time countdowns are absent from model context',async t=>{
+  const {result,payloads,events}=await scenario(t,[reply(null,[['observe',{}]]),reply()]);
+  assert.equal(result.ok,true);
+  assert.equal(events.filter(event=>event.type==='context-estimate').length,2);
+  for(const payload of payloads) {
+    for(const marker of ['Host resource status','Remaining allowance','Host decision time remaining','Actual provider HTTP attempts'])
+      assert.ok(!JSON.stringify(payload).includes(marker));
   }
-  assert.deepEqual(payloads[2].messages.filter(message=>message.role==='tool').map(message=>message.tool_call_id),['call-0','next-0']);
-  assert.ok(!text(payloads[0].messages[1]).includes(marker),'original mission remains intact');
 });
 
 test('eligible 429 consumes a separate attempt with identical context and one tool execution',async t=>{
@@ -749,14 +745,7 @@ test('eligible 429 consumes a separate attempt with identical context and one to
     reply(null,[['mutate',{mode:'ok',index:1}]]),reply()]);
   assert.equal(result.ok,true);assert.equal(result.requests,3);
   assert.deepEqual(payloads[0],payloads[1]);
-  const note=payload=>{
-    const content=payload.messages.at(-1).content;
-    return typeof content==='string'?content:content.map(part=>part.text??'').join('\n');
-  };
-  assert.ok(note(payloads[0]).includes('charged before this request: 0/4.'));
-  assert.ok(note(payloads[0]).includes('An eligible retry can consume another attempt'));
-  assert.ok(note(payloads[2]).includes('charged before this request: 2/4.'));
-  assert.ok(note(payloads[2]).includes('including this request: 2.'));
+  assert.ok(payloads.every(payload=>!JSON.stringify(payload).includes('charged before this request')));
   const starts=events.filter(e=>e.type==='request-start');
   assert.deepEqual(starts.map(e=>e.request_id),['request-1','request-2','request-3']);
   assert.equal(starts[0].payload_sha256,starts[1].payload_sha256);
@@ -1048,7 +1037,7 @@ test('every other 402 stays terminal',async t=>{
 
 test('production MCP preserves actual source JSON and PNG through Pi while event images are references',async()=>{
   const payloads=[],bodies=[],events=[];
-  const result=await runHost({configuration:route(),mcpConfig:productionMcp(['computer_observe','player_source']),
+  const result=await runHost({session:'2'.repeat(32),actorId:'3'.repeat(32),control:new PassThrough(),configuration:route(),mcpConfig:productionMcp(['computer_observe','player_source']),
     context:'Offline current pixel fixture',prompt:'Read actual source pixels.',model:model.id,
     effort:'off',timeoutSeconds:10,env:{OFFLINE_TEST_KEY:'fixture-key'},
     fetch:async(_url,init)=>{
@@ -1063,7 +1052,7 @@ test('production MCP preserves actual source JSON and PNG through Pi while event
   assert.equal(result.ok,true);assert.equal(payloads.length,3);
   assertRequestMetadata(events,bodies);
   const original=JSON.parse(events.find(e=>e.type==='tool-result').result.content[0].text);
-  assert.equal(original.schema,'computer-operation/1');assert.equal(original.status,'completed');
+  assert.equal(original.schema,'player-computer-result/1');assert.equal(original.status,'completed');
   assert.equal(original.source.schema,'computer-source/1');
   assert.equal(original.source.width,4);assert.equal(original.source.height,4);
   const images=payloads[2].messages.flatMap(message=>Array.isArray(message.content)?message.content:[])
@@ -1081,18 +1070,18 @@ test('production MCP preserves actual source JSON and PNG through Pi while event
 });
 test('production MCP sealed handoff settles after earlier ordinary tool without followup inference or dispatch',async()=>{
   const payloads=[],bodies=[],events=[];
-  const result=await runHost({configuration:route(),mcpConfig:productionMcp(['computer_observe','player_handoff']),
+  const result=await runHost({session:'a'.repeat(32),actorId:'3'.repeat(32),control:new PassThrough(),configuration:route(),mcpConfig:productionMcp(['computer_observe','player_handoff'],'3'.repeat(32)),
     context:'Offline current actor handoff fixture',prompt:'Retain unfinished context and hand off.',
     model:model.id,effort:'off',timeoutSeconds:10,env:{OFFLINE_TEST_KEY:'fixture-key'},
     fetch:async(_url,init)=>{
       bodies.push(init.body);payloads.push(JSON.parse(init.body));
       return reply(null,[['computer_observe',{}],['player_handoff',{ids:[],summary:'synthetic unfinished work'}],['computer_observe',{}]]);
     },onEvent:e=>events.push(e)});
-  assert.deepEqual(result,{ok:true,reason:'handoff',requests:1,finalText:''});
+  assert.deepEqual(result,{ok:true,reason:'handoff',requests:1,finalText:'',control_id:null});
   assertRequestMetadata(events,bodies);
   assert.deepEqual(events.filter(e=>e.type==='tool-start').map(e=>e.tool),['computer_observe','player_handoff']);
   const value=JSON.parse(events.find(e=>e.type==='tool-result'&&e.tool==='player_handoff').result.content[0].text);
-  assert.equal(value.schema,'computer-operation/1');assert.equal(value.status,'sealed');
+  assert.equal(value.schema,'player-computer-result/1');assert.equal(value.status,'sealed');
   assert.equal(value.handoff.schema,'player-handoff/1');assert.equal(value.handoff.grants_authority,false);
   const event=events.find(e=>e.type==='handoff');
   assert.equal(event.handoff_id,value.operation_id);assert.equal(event.session,value.session);
@@ -1102,6 +1091,18 @@ test('production MCP sealed handoff settles after earlier ordinary tool without 
   assert.throws(()=>process.kill(events.find(e=>e.type==='mcp-connected').child_pid,0),{code:'ESRCH'});
 });
 
+test('production MCP foreign actor handoff cannot settle or dispatch later input',async()=>{
+  const events=[];
+  const result=await runHost({session:'a'.repeat(32),actorId:'2'.repeat(32),control:new PassThrough(),configuration:route(),
+    mcpConfig:productionMcp(['computer_observe','player_handoff'],'3'.repeat(32)),context:'Offline foreign actor fixture',
+    prompt:'Retain unfinished context.',model:model.id,effort:'off',timeoutSeconds:10,env:{OFFLINE_TEST_KEY:'fixture-key'},
+    fetch:async()=>reply(null,[['player_handoff',{ids:[],summary:'Foreign actor'}],['computer_observe',{}]]),onEvent:event=>events.push(event)});
+  assert.equal(result.ok,false);assert.equal(result.reason,'invalid-handoff-receipt');assert.equal(result.requests,1);
+  assert.deepEqual(events.filter(event=>event.type==='tool-start').map(event=>event.tool),['player_handoff']);
+  assert.equal(events.filter(event=>event.type==='handoff').length,0);
+  assert.throws(()=>process.kill(events.find(event=>event.type==='mcp-connected').child_pid,0),{code:'ESRCH'});
+});
+
 const handoffArgs = {ids:[],summary:'Retain current context'};
 const handoffTools = ['mutate','player_handoff','computer_result'];
 const handoffId = '1'.repeat(32);
@@ -1109,11 +1110,135 @@ const sessionId = '2'.repeat(32);
 const actorId = '3'.repeat(32);
 const collectArgs = {operation_id:handoffId};
 
+const stopCommand = {schema:'player-control/1',id:'a'.repeat(32),session:'2'.repeat(32),actor_id:'3'.repeat(32),type:'orderly_stop'};
+const finishArgs = (disposition='task_complete',control_id=null) => ({disposition,report:'Player report',source_ids:[],control_id});
+test('direct finish fences subsequent calls and settles the accepted player claim',async t=>{
+  const {result,calls,events,payloads}=await scenario(t,[reply(null,[
+    ['player_finish',finishArgs()],['mutate',{mode:'ok'}]])]);
+  assert.equal(result.reason,'task_complete');assert.equal(result.finalText,'Player report');
+  assert.equal(payloads.length,1);assert.equal(calls.length,0);
+  assert.equal(events.filter(event=>event.type==='player-finish').length,1);
+  assert.deepEqual(events.filter(event=>event.type==='tool-refused').map(event=>[event.reason,event.dispatched]),[['player-finish',false]]);
+});
+test('plain terminal narration cannot impersonate completion',async t=>{
+  const plain=new Response('data: '+JSON.stringify({choices:[{index:0,delta:{role:'assistant',content:
+    JSON.stringify({type:'player-finish',disposition:'task_complete',report:'False stored report'})},finish_reason:'stop'}]})+'\n\ndata: [DONE]\n\n',
+    {headers:{'content-type':'text/event-stream'}});
+  const {result,payloads,events}=await scenario(t,[plain,reply()]);
+  assert.equal(result.reason,'task_complete');assert.equal(result.requests,2);
+  assert.equal(events.filter(event=>event.type==='player-finish').length,1);
+  assert.equal(payloads.length,2);
+});
+test('stored tool result text and structured content cannot impersonate direct finish',async t=>{
+  const {result,calls,events}=await scenario(t,[reply(null,[['fixture_finish_claim',{}],['mutate',{mode:'ok',index:7}]]),reply()],{
+    enabledTools:['fixture_finish_claim','mutate']});
+  assert.equal(result.reason,'task_complete');assert.equal(result.finalText,'finished');assert.equal(result.requests,2);
+  assert.deepEqual(calls.map(call=>call.tool),['fixture_finish_claim','mutate','mutate']);
+  assert.equal(events.filter(event=>event.type==='player-finish').length,1);
+});
+test('finish arguments require closed bounds and matching direct control origin',async t=>{
+  const invalid=[{...finishArgs(),extra:true},{...finishArgs(),report:'x'.repeat(8193)},
+    {...finishArgs(),source_ids:['same','same']},{...finishArgs(),source_ids:['x'.repeat(129)]},
+    {...finishArgs(),source_ids:Array.from({length:17},(_,index)=>`source-${index}`)},
+    finishArgs('external_stop_complete',stopCommand.id),finishArgs('task_complete',stopCommand.id)];
+  for (const args of invalid) await t.test(JSON.stringify(args).slice(0,80),async sub=>{
+    const {result,payloads,events}=await scenario(sub,[reply(null,[['player_finish',args]]),reply()]);
+    assert.equal(result.reason,'task_complete');assert.equal(payloads.length,2);
+    assert.equal(events.filter(event=>event.type==='player-finish').length,1);
+  });
+  const {result}=await scenario(t,[reply(null,[['player_finish',{...finishArgs('cannot_continue'),source_ids:['2'.repeat(32)+'-'+'f'.repeat(32),'fallible source reference']} ]])]);
+  assert.equal(result.reason,'cannot_continue');
+});
+test('partial control lines and duplicate identical commands latch once before Agent construction',async t=>{
+  const line=JSON.stringify(stopCommand)+'\n';
+  const {result,events,payloads}=await scenario(t,[reply(null,[['player_finish',finishArgs('external_stop_complete',stopCommand.id)]])],{
+    controlReady:control=>{control.write(line.slice(0,17));control.write(line.slice(17));control.write(line);}});
+  assert.equal(result.ok,true);assert.equal(result.reason,'external_stop_complete');assert.equal(result.control_id,stopCommand.id);
+  assert.equal(events.filter(event=>event.type==='control-accepted').length,1);
+  const text=JSON.stringify(payloads[0]);assert.ok(text.includes('Automation control: orderly stop requested'));
+  assert.ok(text.includes(stopCommand.id));assert.ok(!text.includes('Save/Quit'));
+});
+test('pending control supersedes the unsent pre-control batch without cancelling a dispatched call',async t=>{
+  let control;
+  const {result,calls,events,payloads}=await scenario(t,[reply(null,[['mutate',{mode:'ok',index:1}],['mutate',{mode:'ok',index:2}]]),
+    reply(null,[['player_handoff',handoffArgs]]),reply(null,[['player_finish',finishArgs('external_stop_complete',stopCommand.id)]])],{
+    enabledTools:handoffTools,controlReady:value=>{control=value;},onEvent:event=>{
+      if(event.type==='tool-start'&&event.tool==='mutate') control.write(JSON.stringify(stopCommand)+'\n');
+    }});
+  assert.equal(result.reason,'external_stop_complete');assert.equal(payloads.length,3);
+  assert.deepEqual(calls.map(call=>[call.tool,call.phase,call.index]),[['mutate','start',1],['mutate','end',1]]);
+  assert.deepEqual(events.filter(event=>event.type==='tool-refused').map(event=>[event.tool,event.delivery,event.dispatched]),
+    [['mutate','undelivered',false],['player_handoff','undelivered',false]]);
+});
+test('control arriving during a provider response fences that whole old response',async t=>{
+  let control;
+  const {result,calls,events}=await scenario(t,[reply(null,[['mutate',{mode:'ok'}]]),
+    reply(null,[['player_finish',finishArgs('external_stop_complete',stopCommand.id)]])],{
+    controlReady:value=>{control=value;},onEvent:event=>{
+      if(event.type==='response-headers'&&event.request_id==='request-1') control.write(JSON.stringify(stopCommand)+'\n');
+    }});
+  assert.equal(result.reason,'external_stop_complete');assert.equal(calls.length,0);
+  assert.equal(events.find(event=>event.type==='tool-refused').delivery,'undelivered');
+});
+test('an already dispatched sealed handoff can settle with the accepted control identity',async t=>{
+  let control;
+  const {result,calls,events}=await scenario(t,[reply(null,[['player_handoff',handoffArgs],['mutate',{mode:'ok'}]])],{
+    enabledTools:handoffTools,controlReady:value=>{control=value;},onEvent:event=>{
+      if(event.type==='tool-start'&&event.tool==='player_handoff') control.write(JSON.stringify(stopCommand)+'\n');
+    }});
+  assert.equal(result.reason,'handoff');assert.equal(result.control_id,stopCommand.id);assert.equal(result.requests,1);
+  assert.deepEqual(calls.map(call=>call.tool),['player_handoff']);
+  assert.equal(events.filter(event=>event.type==='handoff').length,1);
+});
+test('control EOF, malformed, oversized, wrong binding and conflicts fail closed',async t=>{
+  const cases=[['control-eof',control=>control.end()],['control-too-large',control=>control.write('x'.repeat(4097))],
+    ['invalid-control',control=>control.write('{\n')],['invalid-control',control=>control.write(Buffer.from([255,10]))],
+    ['invalid-control',control=>control.write(JSON.stringify({...stopCommand,session:'f'.repeat(32)})+'\n')],
+    ['invalid-control',control=>control.write(JSON.stringify({...stopCommand,actor_id:'f'.repeat(32)})+'\n')],
+    ['invalid-control',control=>control.write(JSON.stringify({...stopCommand,schema:'player-control/0'})+'\n')],
+    ['invalid-control',control=>control.write(JSON.stringify({...stopCommand,extra:true})+'\n')],
+    ['invalid-control',control=>control.write(JSON.stringify(stopCommand).replace('"id":','"id":"a","id":')+'\n')],
+    ['conflicting-control',control=>{control.write(JSON.stringify(stopCommand)+'\n');control.write(JSON.stringify({...stopCommand,id:'b'.repeat(32)})+'\n');}]];
+  for(const [reason,send] of cases) await t.test(reason,async sub=>{
+    let control;
+    const {result,payloads}=await scenario(sub,[reply()],{controlReady:value=>{control=value;},onEvent:event=>{
+      if(event.type==='mcp-connected') send(control);
+    }});
+    assert.equal(result.ok,false);assert.equal(result.reason,reason);assert.equal(payloads.length,0);
+  });
+});
+test('cancellation still dominates a directly accepted finish claim',async t=>{
+  const controller=new AbortController();
+  const {result,events}=await scenario(t,[reply()],{signal:controller.signal,onEvent:event=>{
+    if(event.type==='player-finish') controller.abort();
+  }});
+  assert.equal(events.filter(event=>event.type==='player-finish').length,1);
+  assert.equal(result.reason,'cancelled');assert.equal(result.finalText,'');
+});
+test('known context overflow prevents fetch and capacity warning has no experimental countdown',async t=>{
+  const configuration={...route(),model:{...model,contextWindow:6000},context_reserve_tokens:5800};
+  const first=await scenario(t,[reply()],{configuration});
+  assert.equal(first.result.ok,true);
+  assert.ok(JSON.stringify(first.payloads[0]).includes('Host context capacity is approaching'));
+  const overflow={...configuration,model:{...model,contextWindow:2000},context_reserve_tokens:1500};
+  const second=await scenario(t,[reply()],{configuration:overflow,context:'x'.repeat(10000)});
+  assert.equal(second.result.reason,'context-capacity');assert.equal(second.payloads.length,0);
+});
+test('missing or underreported provider usage cannot bypass the context heuristic floor',async t=>{
+  for(const reported of [false,true]) await t.test(String(reported),async sub=>{
+    const configuration={...route(),model:{...model,contextWindow:9000},context_reserve_tokens:1024};
+    const {result,payloads,events}=await scenario(sub,[reply(null,[['observe',{}]],reported),reply()],{configuration});
+    assert.equal(result.reason,'context-capacity');assert.equal(payloads.length,1);
+    const estimate=events.filter(event=>event.type==='context-estimate').at(-1);
+    assert.ok(estimate.tokens>=estimate.heuristic_tokens);assert.equal(estimate.exact,false);
+  });
+});
+
 test('completed handoff fences later batch inputs and ends even after an earlier ordinary tool',async t=>{
   const {result,payloads,calls,events}=await scenario(t,[reply('not a final gameplay report',[
     ['mutate',{mode:'ok',index:1}],['player_handoff',handoffArgs],['mutate',{mode:'ok',index:2}]
   ])],{enabledTools:handoffTools});
-  assert.deepEqual(result,{ok:true,reason:'handoff',requests:1,finalText:''});
+  assert.deepEqual(result,{ok:true,reason:'handoff',requests:1,finalText:'',control_id:null});
   assert.equal(payloads.length,1);
   assert.deepEqual(calls.filter(c=>c.tool==='mutate').map(c=>[c.phase,c.index]),[['start',1],['end',1]]);
   assert.equal(events.filter(e=>e.type==='handoff').length,1);
@@ -1140,13 +1265,13 @@ test('a fresh successor can inspect issuance without ending its host',async t=>{
   const {result,events}=await scenario(t,[
     reply(null,[['computer_result',collectArgs]]),reply()
   ],{enabledTools:handoffTools});
-  assert.equal(result.reason,'completed');assert.equal(result.requests,2);
+  assert.equal(result.reason,'task_complete');assert.equal(result.requests,2);
   assert.equal(events.filter(e=>e.type==='handoff').length,0);
 });
 test('proven nonadmission cannot arm settlement of another issuance',async t=>{
   const {result,events}=await scenario(t,[reply(null,[['player_handoff',{...handoffArgs,mode:'not-admitted'}]]),
     reply(null,[['computer_result',collectArgs]]),reply()],{enabledTools:handoffTools});
-  assert.equal(result.reason,'completed');assert.equal(result.requests,3);
+  assert.equal(result.reason,'task_complete');assert.equal(result.requests,3);
   assert.equal(events.filter(e=>e.type==='handoff').length,0);
 });
 test('ordinary plain-text collection errors preserve explicit correction',async t=>{
@@ -1160,7 +1285,7 @@ test('ordinary plain-text collection errors preserve explicit correction',async 
 test('refused and pending handoffs allow a new explicit model decision',async t=>{
   for(const mode of ['refused','pending','error']) await t.test(mode,async sub=>{
     const {result,events}=await scenario(sub,[reply(null,[['player_handoff',{...handoffArgs,mode}]]),reply()],{enabledTools:handoffTools});
-    assert.equal(result.reason,'completed');assert.equal(result.requests,2);
+    assert.equal(result.reason,'task_complete');assert.equal(result.requests,2);
     assert.equal(events.filter(e=>e.type==='handoff').length,0);
   });
 });
@@ -1175,7 +1300,7 @@ test('reading a different operation cannot settle this host pending handoff',asy
   for(const args of [{operation_id:'4'.repeat(32)},{operation_id:'unrelated'}]) await t.test(args.operation_id,async sub=>{
     const {result,events}=await scenario(sub,[reply(null,[['player_handoff',{...handoffArgs,mode:'pending'}]]),
       reply(null,[['computer_result',args]]),reply()],{enabledTools:handoffTools});
-    assert.equal(result.ok,true);assert.equal(result.reason,'completed');assert.equal(result.requests,3);
+    assert.equal(result.ok,true);assert.equal(result.reason,'task_complete');assert.equal(result.requests,3);
     assert.equal(events.filter(e=>e.type==='handoff').length,0);
   });
 });
@@ -1220,7 +1345,7 @@ test('one pending original handoff cannot be replaced by another direct receipt'
 test('isError handoff cannot establish a pending origin even when it carries a sealed receipt',async t=>{
   const {result,events}=await scenario(t,[reply(null,[['player_handoff',{mode:'error'}]]),
     reply(null,[['computer_result',collectArgs]]),reply()],{enabledTools:handoffTools});
-  assert.equal(result.reason,'completed');assert.equal(result.requests,3);
+  assert.equal(result.reason,'task_complete');assert.equal(result.requests,3);
   assert.equal(events.filter(e=>e.type==='handoff').length,0);
 });
 test('first actual MCP text owns the handoff receipt even when extra text follows',async t=>{

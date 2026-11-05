@@ -4,10 +4,14 @@ import { Agent } from '@earendil-works/pi-agent-core';
 import { Type, AssistantMessageEventStream, isRetryableAssistantError } from '@earendil-works/pi-ai';
 import { stream } from '@earendil-works/pi-ai/api/openai-completions';
 import { retryProviderRequest } from '@earendil-works/pi-ai/utils/provider-retry';
+import { estimateContextTokens } from '@earendil-works/pi-ai/utils/estimate';
 import { McpClient, StdioTransport, toLlmContent } from '@earendil-works/pi-mcp';
 import { createValidationFeedback } from './validation-feedback.mjs';
 
 export const INPUT_LIMIT_BYTES = 1_048_576;
+export const CONTROL_LIMIT_BYTES = 4096;
+const identity = value => typeof value === 'string' && /^[a-f0-9]{32}$/.test(value);
+const STOP_TEXT = 'Automation control: orderly stop requested. Finish up and stop. Use player_finish with disposition external_stop_complete and the control_id below when finished. The player chooses ordinary actions; this control does not certify game persistence or native exit.';
 // openai@7.19.0 client.mjs reads these despite Pi's scoped env option.
 // Their values can alter request headers or enable raw SDK logging.
 const AMBIENT_PROVIDER_SETTINGS = ['OPENAI_LOG', 'OPENAI_CUSTOM_HEADERS', 'OPENAI_ORG_ID', 'OPENAI_PROJECT_ID'];
@@ -38,11 +42,47 @@ function bounded(value) {
   requireThat(Buffer.byteLength(typeof value === 'string' ? value : JSON.stringify(value)) <= INPUT_LIMIT_BYTES, 'input-too-large');
 }
 
+/** Bounded flat JSONL; an unfinished line never grows beyond the wire cap. */
+function listenControl(input, session, actorId, accept, fail) {
+  let pending = Buffer.alloc(0);
+  const data = chunk => {
+    chunk = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    let offset = 0;
+    while (offset < chunk.length) {
+      const newline = chunk.indexOf(10, offset);
+      const end = newline < 0 ? chunk.length : newline;
+      if (pending.length + end - offset > CONTROL_LIMIT_BYTES) { fail('control-too-large'); return; }
+      pending = Buffer.concat([pending, chunk.subarray(offset, end)]);
+      if (newline < 0) return;
+      try {
+        const line = new TextDecoder('utf-8', {fatal:true}).decode(pending);
+        const command = JSON.parse(line);
+        // All five keys and values are strings. Ten JSON string tokens also
+        // rejects duplicate keys, which JSON.parse alone would silently erase.
+        requireThat(object(command) && Object.keys(command).length === 5
+          && Object.keys(command).every(key => ['schema', 'id', 'session', 'actor_id', 'type'].includes(key))
+          && line.match(/"(?:\\.|[^"\\])*"/g)?.length === 10
+          && command.schema === 'player-control/1' && command.type === 'orderly_stop'
+          && identity(command.id) && command.session === session && command.actor_id === actorId,
+          'invalid-control');
+        accept(command);
+      } catch { fail('invalid-control'); return; }
+      pending = Buffer.alloc(0);
+      offset = newline + 1;
+    }
+  };
+  const end = () => fail('control-eof');
+  const error = () => fail('control-failed');
+  input.on('data', data); input.once('end', end); input.once('error', error);
+  if (input.readableEnded || input.destroyed) fail('control-eof');
+  return () => { input.off('data', data); input.off('end', end); input.off('error', error); input.pause(); };
+}
+
 /** One frozen route, without credential values, ambient discovery or effort clamping. */
 export function validateConfiguration(configuration, selectedModel, effort) {
   bounded(configuration);
-  closed(configuration, ['schema', 'model', 'api_key_env', 'max_requests', 'max_context_images', 'context_image_block', 'request_timeout_seconds', 'service_tier']);
-  requireThat(configuration.schema === 'player-host/2');
+  closed(configuration, ['schema', 'model', 'api_key_env', 'max_requests', 'max_context_images', 'context_image_block', 'request_timeout_seconds', 'service_tier', 'context_reserve_tokens']);
+  requireThat(configuration.schema === 'player-host/3');
   requireThat(/^[A-Za-z_][A-Za-z0-9_]*$/.test(configuration.api_key_env ?? '') && !AMBIENT_PROVIDER_SETTINGS.includes(configuration.api_key_env));
   requireThat(Number.isSafeInteger(configuration.max_requests) && configuration.max_requests > 0);
   requireThat(Number.isSafeInteger(configuration.max_context_images) && configuration.max_context_images > 0);
@@ -57,6 +97,9 @@ export function validateConfiguration(configuration, selectedModel, effort) {
   requireThat(typeof model.reasoning === 'boolean');
   requireThat(Array.isArray(model.input) && model.input.includes('text') && model.input.includes('image') && model.input.every(item => ['text', 'image'].includes(item)));
   requireThat(Number.isSafeInteger(model.contextWindow) && model.contextWindow > 0 && Number.isSafeInteger(model.maxTokens) && model.maxTokens > 0 && model.maxTokens <= model.contextWindow);
+  requireThat(Number.isSafeInteger(configuration.context_reserve_tokens)
+    && configuration.context_reserve_tokens >= model.maxTokens
+    && configuration.context_reserve_tokens < model.contextWindow);
   closed(model.cost, ['input', 'output', 'cacheRead', 'cacheWrite']);
   requireThat(['input', 'output', 'cacheRead', 'cacheWrite'].every(key => typeof model.cost[key] === 'number' && Number.isFinite(model.cost[key]) && model.cost[key] >= 0));
   let url;
@@ -280,7 +323,7 @@ function inFlightBudgetRefusal(body) {
 
 // This actual MCP receipt ends this host only. The driver independently checks
 // canonical issuance/context and actual host/MCP quiescence before succession.
-function inspectHandoff(name, args, result, pending) {
+function inspectHandoff(name, args, result, pending, session, actorId) {
   if (!['player_handoff', 'computer_result'].includes(name)) return {};
   const direct = name === 'player_handoff';
   // Reading an unrelated or earlier actor's issuance never arms settlement.
@@ -297,14 +340,14 @@ function inspectHandoff(name, args, result, pending) {
   const id = value => typeof value === 'string' && /^[a-f0-9]{32}$/.test(value);
   const valid = condition => requireThat(condition, 'invalid-handoff-receipt');
   valid(object(value) && id(value.operation_id) && id(value.session) && id(value.actor_id)
-    && value.kind === 'handoff');
+    && value.kind === 'handoff' && value.session === session && value.actor_id === actorId);
   const origin = {operation_id:value.operation_id, session:value.session, actor_id:value.actor_id};
   if (pending) valid(isDeepStrictEqual(origin, pending));
-  if (direct && value.schema === 'player-transport/1') {
+  if (direct && value.schema === 'player-transport/2') {
     valid(value.status === 'unknown' && typeof value.reason === 'string');
     return {pending:origin};
   }
-  valid(value.schema === 'computer-operation/1');
+  valid(value.schema === 'player-computer-result/1');
   if (['pending', 'unknown'].includes(value.status)) {
     valid(value.handoff === null);
     return {pending:origin};
@@ -342,7 +385,9 @@ export async function runHost(options) {
   };
   let agent, client, transport, fatal, closing = false, requests = 0, requestId, requestTimer, requestInFlight = false, requestUsageAvailable = false;
   let workTimer, deadlineTimer;
-  let responseProgress, handoff, pendingHandoff;
+  let responseProgress, handoff, pendingHandoff, finish, control, unlistenControl, requestControlId;
+  let contextWarning = false;
+  const assistantControls = new WeakMap();
   const progressSnapshot = () => responseProgress ? {...responseProgress,
     scope:requestInFlight ? 'current-http-attempt' : 'last-http-attempt'} : null;
   const stopped = new AbortController();
@@ -380,16 +425,25 @@ export async function runHost(options) {
     const totalMs = options.timeoutSeconds * 1000;
     requireThat(Number.isFinite(totalMs) && totalMs <= 2_147_483_647, 'invalid-host-timeout');
     const cleanupBudget = Math.min(1000, totalMs / 4);
-    const workDeadline = started + totalMs - cleanupBudget;
     workTimer = setTimeout(() => stop('host-timeout'), totalMs - cleanupBudget);
     deadlineTimer = setTimeout(() => stop('host-timeout'), totalMs);
     options.signal?.addEventListener('abort', cancellation, {once:true});
     if (options.signal?.aborted) stop('cancelled');
     const configuration = validateConfiguration(options.configuration, options.model, options.effort);
     const mcp = validateMcpConfiguration(options.mcpConfig);
+    requireThat(identity(options.session) && identity(options.actorId) && options.control?.on, 'invalid-control-binding');
     requireThat(typeof options.prompt === 'string' && typeof options.context === 'string', 'invalid-input');
     bounded(options.prompt); bounded(options.context);
-    emit('host-start', {telemetry_version:2, schema:configuration.schema, requested_service_tier:configuration.service_tier, model:configuration.model.id, provider:configuration.model.provider, api:configuration.model.api, effort:options.effort, max_output_tokens:configuration.model.maxTokens, context_window:configuration.model.contextWindow, thinking_level_map:{...configuration.model.thinkingLevelMap}, reasoning_format:configuration.model.compat?.thinkingFormat ?? null, provider_routing:configuration.model.compat?.openRouterRouting ? structuredClone(configuration.model.compat.openRouterRouting) : null, max_requests:configuration.max_requests, max_context_images:configuration.max_context_images, context_image_block:configuration.context_image_block, unsupported_features:['compaction', 'session-restore', 'model-fallback', 'reconnect', 'replay', 'ambient-tools', 'resource-discovery'], missing_endpoints:['model-attention', 'server-inference-start', 'physical-paint'], cleanup_budget_ms:cleanupBudget});
+    emit('host-start', {telemetry_version:3, schema:configuration.schema, session:options.session, actor_id:options.actorId, requested_service_tier:configuration.service_tier, model:configuration.model.id, provider:configuration.model.provider, api:configuration.model.api, effort:options.effort, max_output_tokens:configuration.model.maxTokens, context_window:configuration.model.contextWindow, context_reserve_tokens:configuration.context_reserve_tokens, thinking_level_map:{...configuration.model.thinkingLevelMap}, reasoning_format:configuration.model.compat?.thinkingFormat ?? null, provider_routing:configuration.model.compat?.openRouterRouting ? structuredClone(configuration.model.compat.openRouterRouting) : null, max_requests:configuration.max_requests, max_context_images:configuration.max_context_images, context_image_block:configuration.context_image_block, unsupported_features:['compaction', 'session-restore', 'model-fallback', 'reconnect', 'replay', 'ambient-tools', 'resource-discovery'], missing_endpoints:['model-attention', 'server-inference-start', 'physical-paint'], cleanup_budget_ms:cleanupBudget});
+    unlistenControl = listenControl(options.control, options.session, options.actorId, command => {
+      if (control) {
+        if (!isDeepStrictEqual(control, command)) stop('conflicting-control');
+        return;
+      }
+      control = command;
+      emit('control-accepted', {control_id:control.id, session:control.session, actor_id:control.actor_id, control_type:control.type});
+      agent?.steer({role:'user', timestamp:Date.now(), content:[{type:'text', text:`${STOP_TEXT}\ncontrol_id: ${control.id}`}]});
+    }, stop);
     if (fatal) throw new HostError(fatal);
     requireThat(!AMBIENT_PROVIDER_SETTINGS.some(name => Object.hasOwn(process.env, name)), 'ambient-provider-configuration');
     // The MCP subprocess gets only locale and executable lookup, never provider
@@ -405,7 +459,7 @@ export async function runHost(options) {
     emit('mcp-connected', {child_pid:transport.pid});
     const discovered = await client.listTools({signal:stopped.signal, timeoutMs:mcp.startup_timeout_sec * 1000});
     const names = new Map(discovered.map(tool => [tool.name, tool]));
-    requireThat(names.size === discovered.length && mcp.enabled_tools.every(name => names.has(name)), 'missing-required-tools');
+    requireThat(names.size === discovered.length && !names.has('player_finish') && !mcp.enabled_tools.includes('player_finish') && mcp.enabled_tools.every(name => names.has(name)), 'missing-required-tools');
     const tools = mcp.enabled_tools.map(name => {
       const schema = names.get(name);
       requireThat(object(schema.inputSchema), 'invalid-mcp-schema');
@@ -418,7 +472,7 @@ export async function runHost(options) {
         if (fatal) throw new HostError(fatal);
         emit('tool-result', {request_id:requestId, tool_call_id:toolCallId, tool:name, result:projectToolResultForTelemetry(result)});
         try {
-          const transition = inspectHandoff(name, args, result, pendingHandoff);
+          const transition = inspectHandoff(name, args, result, pendingHandoff, options.session, options.actorId);
           if (transition.pending) pendingHandoff = transition.pending;
           if (transition.completed) handoff = transition.completed;
           if (handoff) emit('handoff', {request_id:requestId, tool_call_id:toolCallId, ...handoff, grants_authority:false});
@@ -433,6 +487,21 @@ export async function runHost(options) {
         return {content, details:undefined, isError:result.isError === true};
       }};
     });
+    tools.push({name:'player_finish', label:'player_finish', description:'Direct player claim that this task is complete or cannot continue, or that accepted automation stop is complete. This stops automation; it certifies neither game persistence nor native exit.',
+      parameters:Type.Unsafe({type:'object', additionalProperties:false, required:['disposition', 'report', 'source_ids', 'control_id'], properties:{
+        disposition:{enum:['task_complete', 'cannot_continue', 'external_stop_complete']}, report:{type:'string', maxLength:8192},
+        source_ids:{type:'array', maxItems:16, uniqueItems:true, items:{type:'string', minLength:1, maxLength:128}},
+        control_id:{anyOf:[{type:'null'}, {type:'string', pattern:'^[a-f0-9]{32}$'}]}}}),
+      async execute(toolCallId, args) {
+        requireThat(!fatal && !handoff && !finish, 'host-already-stopped');
+        requireThat(args.report.isWellFormed() && args.source_ids.every(id => id.isWellFormed()), 'invalid-finish');
+        requireThat(args.disposition === 'external_stop_complete'
+          ? control !== undefined && args.control_id === control.id
+          : args.control_id === null, 'invalid-finish-control');
+        finish = structuredClone(args);
+        emit('player-finish', {request_id:requestId, tool_call_id:toolCallId, ...finish, player_claim:true, game_persistence:'unverified', native_exit:'unverified'});
+        return {content:[{type:'text', text:'Player finish claim accepted; automation is ending.'}], details:undefined, terminate:true};
+      }});
     const validationFeedback = createValidationFeedback(tools, diagnostic =>
       emit('tool-validation-feedback', {request_id:`request-${requests + 1}`, ...diagnostic}));
     agent = new Agent({
@@ -447,27 +516,44 @@ export async function runHost(options) {
           // them. Earlier diagnostic text remains stable in subsequent prefixes.
           const projectionStarted = performance.now();
           const projection = projectImageContext(validationFeedback(messages), configuration.max_context_images, configuration.context_image_block);
+          requestControlId = control && projection.messages.some(message => message.role === 'user'
+            && Array.isArray(message.content) && message.content.some(part => part.type === 'text'
+              && part.text === `${STOP_TEXT}\ncontrol_id: ${control.id}`)) ? control.id : undefined;
           emit('context-image-projection', {request_id:`request-${requests + 1}`, projection_ms:performance.now() - projectionStarted, ...projection.summary});
           if (projection.summary.blocked) stop('context-image-limit');
-          // Request-only bookkeeping follows history, preserving the stable
-          // system/tool prefix and canonical messages. Retries reuse this snapshot.
-          return [...projection.messages, {role:'user', timestamp:Date.now(), content:[{type:'text', text:
-            'Host resource status (software-generated at context construction):\n' +
-            `Actual provider HTTP attempts charged before this request: ${requests}/${configuration.max_requests}.\n` +
-            `Remaining allowance including this request: ${configuration.max_requests - requests}.\n` +
-            `Host decision time remaining at this snapshot: ${Math.max(0,(workDeadline-performance.now())/1000).toFixed(3)} seconds. Custodian time is a separate horizon.\n` +
-            'An eligible retry can consume another attempt before the next status update. ' +
-            'This is resource bookkeeping, not a human task, gameplay evidence, source-read proof, authority or a latency/quality metric.'}]}];
+          const estimate = estimateContextTokens(projection.messages);
+          // Reported usage can be missing or exclude serializer overhead. Keep
+          // a second text/image heuristic as a conservative independent floor.
+          const heuristic = estimateContextTokens(projection.messages.map(message => message.role === 'assistant'
+            ? {...message, usage:{input:0, output:0, cacheRead:0, cacheWrite:0, totalTokens:0}} : message));
+          const tokens = Math.max(estimate.tokens, heuristic.tokens);
+          requireThat(Number.isSafeInteger(tokens) && tokens >= 0, 'context-estimate-failed');
+          emit('context-estimate', {request_id:`request-${requests + 1}`, tokens, usage_tokens:estimate.usageTokens,
+            heuristic_tokens:heuristic.tokens, heuristic:true, exact:false});
+          if (tokens + configuration.model.maxTokens >= configuration.model.contextWindow) stop('context-capacity');
+          if (!contextWarning && tokens + configuration.context_reserve_tokens >= configuration.model.contextWindow) {
+            contextWarning = true;
+            const notice = {role:'user', timestamp:Date.now(), content:[{type:'text', text:control
+              ? 'Host context capacity is approaching. Finish up and use player_finish under the accepted automation control. No compaction or history restoration is available.'
+              : 'Host context capacity is approaching. Request the existing player_handoff with the context you need to retain, or use player_finish if you cannot continue. No compaction or history restoration is available.'}]};
+            if (tokens + estimateContextTokens([notice]).tokens + configuration.model.maxTokens >= configuration.model.contextWindow) stop('context-capacity');
+            return [...projection.messages, notice];
+          }
+          return projection.messages;
         } catch {
           stop('context-projection-failed');
           return messages;
         }
       },
-      beforeToolCall:({toolCall, args}) => {
+      beforeToolCall:({toolCall, args, assistantMessage}) => {
         if (fatal) return {block:true, reason:fatal, terminate:true};
-        if (handoff) {
-          emit('tool-refused', {request_id:requestId, tool_call_id:toolCall.id, tool:toolCall.name, reason:'handoff', dispatched:false});
+        if (handoff || finish) {
+          emit('tool-refused', {request_id:requestId, tool_call_id:toolCall.id, tool:toolCall.name, reason:handoff ? 'handoff' : 'player-finish', dispatched:false});
           return {block:true, reason:'Host ended after completed handoff; no further tool dispatch.', terminate:true};
+        }
+        if (control && (assistantControls.get(assistantMessage) !== control.id || toolCall.name === 'player_handoff')) {
+          emit('tool-refused', {request_id:requestId, tool_call_id:toolCall.id, tool:toolCall.name, reason:'orderly-stop', dispatched:false, delivery:'undelivered'});
+          return {block:true, reason:'Undelivered: automation stop supersedes this unsent call. Follow the labelled control message; no new handoff is admitted.'};
         }
         if (!isDeepStrictEqual(toolCall.arguments, args)) {
           emit('tool-refused', {request_id:requestId, tool_call_id:toolCall.id, tool:toolCall.name, reason:'tool-arguments-changed', dispatched:false});
@@ -476,7 +562,7 @@ export async function runHost(options) {
       },
       // Pi's per-result terminate hint requires every result in the batch to
       // terminate. finishTurn also handles ordinary tools preceding a handoff.
-      finishTurn:() => handoff ? {action:'end'} : undefined,
+      finishTurn:() => fatal || handoff || finish ? {action:'end'} : {action:'continue'},
       streamFn:(model, context, streamOptions) => {
         if (fatal) return failureStream(model, fatal);
         if (requests >= configuration.max_requests) { stop('request-limit'); return failureStream(model, fatal); }
@@ -631,6 +717,7 @@ export async function runHost(options) {
       if (event.type === 'message_end' && event.message.role === 'assistant') {
         clearTimeout(requestTimer);
         const message = event.message;
+        assistantControls.set(message, requestControlId);
         const narration = assistantNarration(message.content);
         if (narration.text || narration.omitted_bytes) emit('assistant-text', {request_id:requestId, ...narration});
         if (requestInFlight) emit('response-complete', {request_id:requestId, model:message.model, provider:message.provider, stop_reason:message.stopReason, usage_available:requestUsageAvailable, usage:requestUsageAvailable ? message.usage : null, cost_source:requestUsageAvailable ? (message.usage?.cost?.totalFromProvider === true ? 'provider' : 'configured-rates') : null, response_progress:progressSnapshot()});
@@ -638,20 +725,22 @@ export async function runHost(options) {
         if (['error', 'aborted', 'length', 'deferred'].includes(message.stopReason) && !fatal) stop(message.stopReason === 'error' ? 'provider-error' : `provider-${message.stopReason}`);
       }
     });
+    if (control) agent.steer({role:'user', timestamp:Date.now(), content:[{type:'text', text:`${STOP_TEXT}\ncontrol_id: ${control.id}`}]});
     await agent.prompt(options.prompt);
-    const terminal = agent.state.messages.findLast(message => message.role === 'assistant');
-    if (!fatal && terminal?.stopReason !== 'stop' && !(handoff && terminal?.stopReason === 'toolUse')) stop('incomplete-terminal-response');
+    if (!fatal && !handoff && !finish) stop('incomplete-terminal-response');
   } catch (error) {
     if (!fatal) stop(error instanceof HostError ? error.reason : 'host-failed');
   } finally {
     clearTimeout(requestTimer); clearTimeout(workTimer);
     options.signal?.removeEventListener('abort', cancellation);
     await close();
+    unlistenControl?.();
     clearTimeout(deadlineTimer);
   }
-  const terminal = agent?.state.messages.findLast(message => message.role === 'assistant');
-  const finalText = !fatal && !handoff ? (terminal?.content ?? []).filter(part => part.type === 'text').map(part => part.text).join('\n') : '';
-  const result = {ok:!fatal, reason:fatal ?? (handoff ? 'handoff' : 'completed'), requests, finalText};
-  emit('settled', {ok:result.ok, reason:result.reason, requests, event_output:{...outputStats}, native_cleanup_claimed:false});
+  const finalText = !fatal && finish ? finish.report : '';
+  const controlId = !fatal && finish ? finish.control_id : control?.id ?? null;
+  const result = {ok:!fatal, reason:fatal ?? (handoff ? 'handoff' : finish.disposition), requests, finalText, control_id:controlId};
+  emit('settled', {ok:result.ok, reason:result.reason, requests, control_id:controlId,
+    accepted_control_id:control?.id ?? null, event_output:{...outputStats}, native_cleanup_claimed:false});
   return result;
 }

@@ -1,4 +1,4 @@
-"""Adapter-agnostic conformance for `player-host/2` (docs/contracts/player-host.md).
+"""Adapter-agnostic conformance for `player-host/3` (docs/contracts/player-host.md).
 
 Each listed adapter is driven only through the contract surface: argv modes,
 files, environment, stdin, stdout JSONL, stderr and exit status. A scripted
@@ -71,10 +71,10 @@ def adapter(request) -> Adapter:
     return request.param
 
 
-def route(adapter: Adapter, base_url: str, *, schema="player-host/2", max_requests=ALLOWANCE) -> dict:
+def route(adapter: Adapter, base_url: str, *, schema="player-host/3", max_requests=ALLOWANCE) -> dict:
     """The contract envelope around the adapter-owned model."""
     return dict(schema=schema, service_tier="default", api_key_env=CREDENTIAL_ENV, max_requests=max_requests,
-                max_context_images=4, context_image_block=1, request_timeout_seconds=10, model=adapter.model(base_url))
+                max_context_images=4, context_image_block=1, context_reserve_tokens=512, request_timeout_seconds=10, model=adapter.model(base_url))
 
 
 # ---------------------------------------------------------------- reference provider
@@ -182,15 +182,15 @@ class Hosted:
 
     def flags(self, timeout_seconds="30") -> list[str]:
         return ["--config", str(self.paths["route.json"]), "--mcp-config", str(self.paths["mcp.json"]),
-                "--context", str(self.paths["context.txt"]), "--model", "fixture", "--effort", self.effort,
+                "--context", str(self.paths["context.txt"]), "--prompt", str(self.paths["prompt.txt"]),
+                "--session", "2" * 32, "--actor-id", "3" * 32, "--model", "fixture", "--effort", self.effort,
                 "--timeout-seconds", timeout_seconds, "-o", str(self.paths["final.txt"])]
 
     def start(self, arguments: list[str] | None = None, *, timeout_seconds="30") -> "Hosted":
         arguments = ["run", *self.flags(timeout_seconds)] if arguments is None else arguments
         environment = dict(PATH=os.environ.get("PATH", "/usr/bin:/bin"), LANG="en_US.UTF-8", **{CREDENTIAL_ENV: CREDENTIAL})
-        with self.paths["host.jsonl"].open("x") as output, self.paths["host-stderr.log"].open("x") as errors, \
-                self.paths["prompt.txt"].open() as prompt:
-            self.process = subprocess.Popen([*self.adapter.argv, *arguments], cwd=ROOT, env=environment, stdin=prompt,
+        with self.paths["host.jsonl"].open("x") as output, self.paths["host-stderr.log"].open("x") as errors:
+            self.process = subprocess.Popen([*self.adapter.argv, *arguments], cwd=ROOT, env=environment, stdin=subprocess.PIPE,
                                             stdout=output, stderr=errors, start_new_session=True)
         return self
 
@@ -282,7 +282,7 @@ def test_validate_accepts_reference_route_and_mcp_table_silently(adapter, valida
 
 
 def test_validate_rejects_old_route_schema(adapter, validation_files):
-    for schema in ("pi-player-host/4", "player-host/0", "player-host/1", "player-host/3"):
+    for schema in ("pi-player-host/4", "player-host/0", "player-host/1", "player-host/2"):
         result = run_mode(adapter, ["validate", *validation_files(envelope=route(adapter, "http://127.0.0.1:9/v1", schema=schema))])
         assert result.returncode != 0, schema
 
@@ -327,21 +327,58 @@ def test_oversized_input_is_refused_before_any_provider_request(adapter, host_fa
 
 
 def test_completed_run_reports_final_text_and_accountable_telemetry(adapter, host_factory):
-    hosted = host_factory([text_response("The mission report.")])
+    hosted = host_factory([tool_response("player_finish", dict(disposition="task_complete", report="The mission report.", source_ids=[], control_id=None))])
     assert hosted.start().wait() == 0
     assert hosted.final().strip() == "The mission report."
     events = hosted.events()
     kinds = [event["type"] for event in events]
     assert kinds[0] == "host-start" and kinds.count("host-start") == 1
-    assert events[0]["schema"] == "player-host/2" and events[0]["telemetry_version"] == 2
+    assert events[0]["schema"] == "player-host/3" and events[0]["telemetry_version"] == 3
     assert kinds[-1] == "settled" and kinds.count("settled") == 1
     accounting = hosted.accounted()
     assert accounting["accounting_complete"] is True
     assert accounting["attempts_charged"] == len(hosted.provider.requests) == 1
-    assert accounting["settled"]["reason"] == "completed" and accounting["settled"]["ok"] is True
+    assert accounting["settled"]["reason"] == "task_complete" and accounting["settled"]["ok"] is True
     assert CREDENTIAL in hosted.provider.requests[0]["authorization"]
     assert hosted.provider.requests[0]["path"].endswith("/chat/completions")
     assert process_gone(hosted.mcp_pid())
+
+
+def test_plain_report_requires_a_direct_finish_call(adapter, host_factory):
+    hosted = host_factory([text_response('This is only narration.'),
+        tool_response('player_finish', dict(disposition='cannot_continue', report='Cannot continue.', source_ids=[], control_id=None))])
+    assert hosted.start().wait() == 0
+    assert hosted.settled()['reason'] == 'cannot_continue'
+    assert hosted.final().strip() == 'Cannot continue.'
+    assert len(hosted.provider.requests) == 2
+    assert len([event for event in hosted.events() if event['type'] == 'player-finish']) == 1
+
+
+def test_external_stop_uses_live_partial_jsonl_and_direct_finish_origin(adapter, host_factory):
+    command = dict(schema='player-control/1', id='a' * 32, session='2' * 32, actor_id='3' * 32, type='orderly_stop')
+    hosted = host_factory([tool_response('player_finish', dict(disposition='external_stop_complete',
+        report='Automation stopped.', source_ids=[], control_id=command['id']))])
+    hosted.start()
+    line = (json.dumps(command) + '\n').encode()
+    hosted.process.stdin.write(line[:17]); hosted.process.stdin.flush()
+    hosted.process.stdin.write(line[17:] + line); hosted.process.stdin.flush()
+    assert hosted.wait() == 0
+    assert hosted.settled()['reason'] == 'external_stop_complete'
+    assert hosted.settled()['control_id'] == command['id']
+    assert len([event for event in hosted.events() if event['type'] == 'control-accepted']) == 1
+    assert process_gone(hosted.mcp_pid())
+
+
+def test_control_eof_before_settlement_is_unsuccessful(adapter, host_factory):
+    hosted = host_factory([HANG])
+    hosted.start()
+    assert hosted.provider.first_request.wait(30)
+    pid = hosted.mcp_pid()
+    hosted.process.stdin.close()
+    assert hosted.wait() != 0
+    assert hosted.settled()['reason'] == 'control-eof'
+    assert hosted.final() == 'reserved'
+    assert process_gone(pid)
 
 
 def test_handoff_settles_once_leaves_final_unchanged_and_closes_the_mcp_child(adapter, host_factory):
@@ -401,7 +438,7 @@ def test_deadline_settles_unsuccessfully_within_the_original_allowance(adapter, 
     assert hosted.start(timeout_seconds="5").wait(30) != 0
     assert time.monotonic() - started < 25
     settled = hosted.settled()
-    assert settled["ok"] is False and settled["reason"] != "completed"
+    assert settled["ok"] is False and settled["reason"] != "task_complete"
     assert hosted.final() == "reserved"
     accounting = hosted.accounted()
     assert accounting["accounting_complete"] is True and accounting["settled"]["requests"] == len(hosted.provider.requests)
