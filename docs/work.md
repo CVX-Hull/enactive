@@ -62,6 +62,11 @@ not qualify parent cadence, learning or survival.
 
 ## Decisive evidence
 
+The proposed [player-objective and external-test-control change](changes/073-player-objective-and-test-control.md)
+turns the context audit into a scoped next design. It is unadopted; current runtime
+contracts and #164's cohort hold remain unchanged. The owning issue records the
+decision and any later separately frozen diagnostic.
+
 | Evidence | Scope and limitation |
 | --- | --- |
 | [Player context and testing responsibilities](acceptance/2026-11-05-player-context-audit.md) | Audits the main player's complete context construction and the retained Alex assignment. Maps experiment quotas and finish-line instructions across prompts, tools and program views. Continuous-play and context changes remain design work. |
