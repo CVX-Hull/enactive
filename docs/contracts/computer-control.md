@@ -29,7 +29,10 @@ drain old inboxes or unrelated retained sessions. Existing native7/mission11/DB1
 proof profiles and executable old player formats are unsupported. Preserve their
 original artifacts/source as inert history; retain upstream saves unchanged and
 load them only through visible controls. Current player knowledge uses a selected
-`player-memory/1` store, which may span fresh native-child sessions.
+`player-memory/2` store, which may span fresh native-child sessions. Its SQLite
+`user_version` is2. Select a fresh store for this migration; unsupported old
+stores refuse without automatic library conversion. The canonical computer
+store and native wire versions are unchanged.
 
 ## Native channel
 
@@ -124,6 +127,20 @@ Client assigns the ID before HTTP submission; duplicates collect or refuse, neve
 dispatch. Source/handoff are null unless present. MCP cancellation first requests
 independent permanent Pause, then abandons the await. Result/source reads have no effects.
 
+At MCP serialization, [the actor projection](../../harness/player_view.py) returns
+`player-computer-result/1`: the operation identity, status, original receipts,
+source and handoff stay intact, but `deadline_monotonic` and global `remaining`
+are absent. This covers immediate results, exact collection and declared nested
+computer results in `player_result`. Native `computer-receipt/2` contents remain
+original evidence. Model-facing errors and transport uncertainty use
+`player-error/2` and `player-transport/2`, preserving correction/control facts and
+original collection identity without experiment countdowns. Unknown mechanical
+versions fail with a bounded unsupported-result error, never raw pass-through.
+Player-authored text, code, interpretation and state are opaque; keys named
+`remaining` or `requests` inside them are not deleted. Canonical
+`computer-operation/1`, internal HTTP/client errors and operator accounting remain
+unchanged; the actor projection is not a database migration.
+
 `computer-source/1` is immutable: `schema,source_id,session,capture_id,sha256,
 media_type,presented_ms,received_wall,width,height,window_width,window_height,viewport`.
 Source ID is `<session>-<capture_id>`; media is image/png. `received_wall` is the
@@ -173,8 +190,9 @@ a prior superseded record. Keep parents/contradictions; default queries hide
 superseded records, never erase history. Quantities/Work/success remain player claims.
 Advice is candidate-only. No old campaign-memory or executable import readers.
 
-`player-program/1`: closed `schema,code,parent_id,reason,source_ids,record_ids,
-applicability`; code≤32KiB UTF-8, reason≤2048, references≤16. Store assigns immutable
+`player-program/2`: closed `schema,view_schema,code,parent_id,reason,source_ids,record_ids,
+applicability`, with required `view_schema:"program-view/4"`; code≤32KiB UTF-8,
+reason≤2048, references≤16. Store assigns immutable
 program ID/SHA/actor/time; parent must exist. Preserve source/record support and
 one-parent ancestry. Sibling revisions may coexist as fallible alternatives;
 the store chooses no winner. Applicability is fallible data, not native eligibility.
@@ -191,7 +209,9 @@ returns whole records, source references and explicit omissions within≤64KiB.
 Oversized records/code are omitted explicitly with readable IDs, never truncated
 into plausible executable content. Source references are availability, not read proof.
 
-`program-view/3` contains `schema,source,image,interpretation,remaining`.
+`program-view/4` contains `schema,source,image,interpretation`, without the global
+experiment-resource `remaining` object. Helper-selected time/step limits and its
+elapsed execution result remain available.
 Pillow13.0.0 decodes exact PNG into a player-selected crop and nearest-neighbour
 RGB view≤96×96. Image includes dimensions, flat RGB channel values, original
 geometry, crop, sampling and explicit omissions/alpha-on-black derivation.
@@ -216,12 +236,14 @@ Compact program results keep source/operation IDs, decisions, state hashes and f
 state, with explicit omissions; full original receipts/images remain separately readable.
 
 Native intent/send/receipt timestamps retain their original wall/monotonic values.
-Late collection never renews a source's `received_wall`. Host telemetry version2
+Late collection never renews a source's `received_wall`. Host telemetry version3
 records payload hashes/counts, image references and bounded ordinary assistant text;
 it excludes private reasoning and base64 history while preserving the actual model
-payload. Stable frozen system context is reused across actors; changing role,
-resources and handoff knowledge are explicit prompt data. Host decision-time and
-custodian horizons stay distinct. Analysis is read-only and current-format only.
+payload. Stable frozen system context and the ongoing user objective are reused
+across actors; handoff knowledge stays explicit fallible player data. Experiment
+quotas, final-actor policy and ending reserves stay in operator accounting,
+outside player prompt/tool/program views. Host decision-time and custodian
+horizons stay distinct. Analysis is read-only and current-format only.
 Observer `observer-timing/4` joins exact session/source/capture to DOM replacement,
 including replacement while Watch is hidden, with missing/invalid clocks labelled;
 it does not establish visibility, paint or useful progress.

@@ -10,7 +10,7 @@ One [campaign custodian](../../tools/campaign_run.py) owns fresh mechanical targ
 store/server lifetime and final cleanup. The [driver](../../tools/campaign_player.py)
 owns the frozen [player host](../contracts/player-host.md)/MCP groups and at most one
 successor. The [package validator](../../tools/campaign_package.py) is authoritative
-for the closed `campaign-run/3` admission. No game-phase/identity admission or semantic mission
+for the closed `campaign-run/4` admission. No game-phase/identity admission or semantic mission
 service remains.
 
 ## Frozen data
@@ -19,26 +19,30 @@ Select one fresh canonical project-local directory under `.runtime/computer-sess
 Its manifest binds the exact clean source commit and SHA256 of all five driver
 inputs: `route.json`, `mcp-template.json`, `context.txt`, `prompt.txt`, `target.json`.
 It also freezes native executable/adapter bytes, bounded initial target files,
-shared-lock path, explicit `player-memory/1` store, player host argv, effort,
+shared-lock path, explicit `player-memory/2` store, player host argv, effort,
 loopback port, original wall/host/aggregate-host seconds, one/two-host limit,
-aggregate HTTP-attempt bound, computer input/request/frame/byte capacities and
-cumulative cap accounting. Source/directory mismatch refuses before launch.
+aggregate HTTP-attempt bound, computer input/request/frame/byte capacities,
+`ending_reserve` and cumulative cap accounting. Source/directory mismatch refuses
+before launch. Player stores use SQLite `user_version=2`; select a fresh
+`player-memory/2` store for this migration and preserve unsupported old libraries
+as inert history without conversion.
 
 `target.json` has explicit argv/cwd/environment; its first executable and selected
 working directory are absolute. Keep the prepared wrapper/windowed project userdir
 and normal input configuration. The target receives only the permitted environment
 and inherited mechanical descriptors, not provider credentials.
 
-`route.json` uses current `player-host/2` with text/image input and explicit
+`route.json` uses current `player-host/3` with text/image input and explicit
 provider/effort/price metadata and image peak and block, chosen against the
 provider's image limit. The selected route is OpenRouter /
 an explicitly pinned provider / DeepSeek Flash1017 medium, default service tier, no fallback.
 Diagnostic or qualification packages may freeze another conformed route; their
 record names it, and it confers no selection.
 `mcp-template.json` must equal the current generated profile with `@ACTOR_CONFIG@`.
-Freeze the player guide/current schema, meaningful task, original limits and ending
-reserve in context/prompt. Do not put mutable engineering source or hidden game
-facts into player context.
+Freeze the player guide/current schema and ongoing user objective in context/prompt.
+Keep experiment quotas, ending reserves and final-actor policy in operator files,
+outside the player's supplied prompt/tool/program views. Do not put mutable
+engineering source or hidden game facts into player context.
 
 A prior player's terminal report may be included as clearly bounded **fallible
 historical data**, preserving its mistakes and uncertainty. It is not operator
@@ -46,6 +50,9 @@ instructions or current evidence. Old source/operation references gain no
 readability, memory registration or input authority from inclusion in the packet;
 current observations and actual tool availability govern the new player. This
 does not replace canonical actor handoff or import a memory record.
+For the next player/test-separation diagnostic, do not import the old quota-bearing
+assignment or report; the [agreed rationale](../changes/073-player-objective-and-test-control.md#next-evidence-decision)
+owns that prospective scope. Historical data is not scrubbed or rewritten.
 
 The validator rejects unsupported/partial/used packages and selected old player
 stores before native effects. It does not create a new allocation or discover a
@@ -86,7 +93,7 @@ the actual bytes, for example `shasum -a 256 SELECTED_FILE`; preserve those byte
 
 ```json
 {
-  "schema": "campaign-run/3",
+  "schema": "campaign-run/4",
   "session": "NEW_32_LOWERCASE_HEX_ID",
   "source_commit": "EXACT_40_HEX_CLEAN_HEAD",
   "files": {
@@ -103,6 +110,7 @@ the actual bytes, for example `shasum -a 256 SELECTED_FILE`; preserve those byte
   "wall_seconds": 9000, "host_seconds": 3600, "total_host_seconds": 7200,
   "max_hosts": 2, "max_http_attempts": 360,
   "limits": {"max_inputs": 6000, "max_requests": 10000, "max_frames": 1500, "max_bytes": 2147483648},
+  "ending_reserve": {"seconds": 120, "http_attempts": 8, "inputs": 128, "requests": 128, "frames": 128, "frame_bytes": 134217728},
   "accounting": {
     "prior_attempts": 0, "prior_reserved_usd": 0,
     "ceiling_usd": 0, "prospective_reserved_usd": 0
@@ -173,6 +181,34 @@ store must be current; it never restores computer custody. The maintained
 validator is authoritative and rejects changed bytes/unsupported fields before
 effects. Do not remove markers to reuse a failed package.
 
+### Ending reserve and external stop
+
+`ending_reserve` is closed: `seconds,http_attempts,inputs,requests,frames,frame_bytes`.
+Every value is a positive integer strictly below its corresponding original
+host/route/mechanical limit. The driver requests ending at the first threshold
+crossed in host seconds, remaining attempts or mechanical capacities. It retains
+one command identity for the whole admission. Static validation checks field
+bounds only. Before admission the lead forecasts reserve adequacy for the largest
+already-admitted input/program burst, the current provider attempt, control
+delivery and any permitted successor, under the original limits. The example
+numbers above are placeholders, not a proof that a particular ending fits.
+
+The driver retains `control.json` intent before writing a closed
+`player-control/1` `orderly_stop` command to host stdin. The initial prompt is
+passed by `--prompt PATH`; `--session`, `--actor-id` and
+`--pending-control-id none|32hex` bind each actor. The pipe stays open until
+settlement. Duplicate identical commands are idempotent; malformed, oversized,
+conflicting or wrong-identity input and unexpected EOF fail the host.
+
+Finish-up is optional bounded player-chosen game work. It mandates no Save or
+Quit and never delays independent permanent Pause, hard limits or cleanup. Unsent
+pre-control tool calls are withheld; dispatched input is not canceled/replayed
+to deliver text. New handoff is refused while stop is pending. If an in-flight
+handoff has already sealed, a verified successor receives the same command ID
+before MCP connection or provider fetch, or ending stays incomplete. Sealing
+and host exit never erase the request. Direct `player_finish` and its command
+identity are retained separately from game saving, native exit and owned absence.
+
 The current CDDA launch binding requires the canonical absolute
 `.runtime/bridge/game.lock`, shared with install/preparation and the project
 userdir. A different project-local lock is rejected. This is preparation coupling
@@ -191,7 +227,8 @@ through its explicit environment name:
 The custodian takes shared exclusion and writes `started.json` before native/DB
 creation. Native inherits the exact shared-lock descriptor/socket, retaining
 exclusion for its own lifetime. `ready.json` gives the loopback viewer URL. The
-driver creates exclusive per-actor inputs/host traces and original resource notes.
+driver creates exclusive per-actor inputs/host traces and operator-only resource
+notes; `frozen.json` is `player-host-inputs/2`.
 It verifies canonical handoff/context plus actual host/MCP group quiescence before
 a successor, without changing original limits. [Host details](player-host.md).
 
@@ -215,12 +252,19 @@ for or adopts unrelated processes. Normal native exit zero is sampled before
 forced cleanup. Save-to-menu, player save/success claims, native exit and absence
 are separate evidence.
 
-`receipt.json` (`campaign-receipt/2`) reports driver disposition, host quiescence,
+`receipt.json` (`campaign-receipt/3`) reports driver disposition, host quiescence,
 native absence, input revocation, cleanup and original accounting. Configured
 estimates and conservative reservations are not invoices. Unknown trace accounting
-charges the allocated attempts. `host_completed_unassessed` means only successful
-host completion; missing normal native exit becomes an incomplete outcome.
-No receipt alone accepts gameplay. Preserve failures and unrun lanes.
+charges the allocated attempts. Direct finish yields
+`player_task_complete_unassessed`, `player_cannot_continue_unassessed` or
+`player_external_stop_complete_unassessed`. An earlier non-cleanup permanent
+fence remains `interrupted`; later expected adapter closure cannot erase it.
+Normal native exit is reported separately; its absence is not a save certificate
+or an automatic failure of generic stop control. Apply any separately frozen
+game-persistence/exit criterion to its own evidence lane.
+The embedded driver result is `player-driver/3`, with the retained ending request,
+per-actor direct player-finish/settlement and original attempt charges. No receipt
+alone accepts gameplay. Preserve failures and unrun lanes.
 
 Never reopen the selected package, delete markers to retry, replay uncertain input
 or resume after user Pause. Use a fresh coherent admission after owned cleanup.

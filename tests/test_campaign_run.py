@@ -18,7 +18,7 @@ def package(root):
     directory=root/'.runtime/computer-sessions/selected';directory.mkdir(parents=True)
     for name in ('native','library','options','interpreter','adapter'):(root/name).write_bytes(name.encode())
     values={
-        'route.json':dict(schema='player-host/2',service_tier='default',max_requests=10,model=dict(id='fixture',
+        'route.json':dict(schema='player-host/3',service_tier='default',max_requests=10,context_reserve_tokens=200,model=dict(id='fixture',
             contextWindow=1000,maxTokens=100,cost=dict(input=.45,cacheRead=.45,cacheWrite=.45,output=1.8))),
         'mcp-template.json':configuration('@ACTOR_CONFIG@'),
         'context.txt':'Frozen context','prompt.txt':'Frozen mission',
@@ -26,13 +26,14 @@ def package(root):
     }
     for name,value in values.items():(directory/name).write_text(value if isinstance(value,str) else json.dumps(value))
     artifact=lambda p:dict(path=str(p),sha256=hashlib.sha256(p.read_bytes()).hexdigest())
-    profile=dict(schema='campaign-run/3',session='a'*32,source_commit='f'*40,
+    profile=dict(schema='campaign-run/4',session='a'*32,source_commit='f'*40,
         files={name:artifact(directory/name)['sha256'] for name in values},
         initial_files={str(root/'options'):artifact(root/'options')['sha256']},
         native=artifact(root/'native'),library=artifact(root/'library'),shared_lock=str(root/'.runtime/bridge/game.lock'),
         player_store=str(root/'player.sqlite3'),host=dict(argv=[str(root/'interpreter'),str(root/'adapter')]),effort='off',port=8766,
         wall_seconds=300,host_seconds=100,total_host_seconds=200,max_hosts=2,max_http_attempts=10,
         limits=dict(max_inputs=100,max_requests=100,max_frames=100,max_bytes=1000000),
+        ending_reserve=dict(seconds=10,http_attempts=2,inputs=10,requests=10,frames=10,frame_bytes=1000),
         accounting=dict(prior_attempts=0,prior_reserved_usd=0,prospective_reserved_usd=.0063,ceiling_usd=1))
     (directory/'manifest.json').write_text(json.dumps(profile))
     return directory,profile
@@ -69,15 +70,16 @@ def test_only_selected_fresh_package_is_read(tmp_path):
     assert not (directory/'started.json').exists() and not (directory/'session.sqlite3').exists()
 
 
-@pytest.mark.parametrize('fault',['old','old_node','old_route','untracked_adapter','partial','changed','dirty',
+@pytest.mark.parametrize('fault',['old','previous_package','old_node','old_route','previous_route','untracked_adapter','partial','changed','dirty',
                                   'credentials','different_lock'])
 def test_invalid_selected_package_never_launches_or_opens_store(tmp_path,fault):
     directory,profile=package(tmp_path)
     if fault=='old':profile['schema']='campaign-run/1'
+    if fault=='previous_package':profile['schema']='campaign-run/3'
     if fault=='old_node':
         profile['schema']='campaign-run/2';profile['node']=profile.pop('host')['argv'][0]
-    if fault=='old_route':
-        path=directory/'route.json';route=json.loads(path.read_text());route['schema']='pi-player-host/4'
+    if fault in ('old_route','previous_route'):
+        path=directory/'route.json';route=json.loads(path.read_text());route['schema']='pi-player-host/4' if fault=='old_route' else 'player-host/2'
         path.write_text(json.dumps(route));profile['files']['route.json']=hashlib.sha256(path.read_bytes()).hexdigest()
     if fault=='partial':(directory/'started.json').write_text('{}')
     if fault=='changed':(directory/'prompt.txt').write_text('different')
@@ -86,7 +88,7 @@ def test_invalid_selected_package_never_launches_or_opens_store(tmp_path,fault):
         path=directory/'target.json';target=json.loads(path.read_text());target['env']['API_KEY']='fixture'
         path.write_text(json.dumps(target));profile['files']['target.json']=hashlib.sha256(path.read_bytes()).hexdigest()
     (directory/'manifest.json').write_text(json.dumps(profile))
-    expected={'old':'inert history','old_node':'inert history','old_route':'inert history',
+    expected={'old':'inert history','previous_package':'inert history','old_node':'inert history','old_route':'inert history','previous_route':'inert history',
               'untracked_adapter':'tracked by the clean source commit'}.get(fault)
     # Ignored files never appear in porcelain status; only tracking binds them to the commit.
     with patch.object(packages,'ROOT',tmp_path),\
@@ -164,3 +166,15 @@ def test_external_interpreter_outside_project_is_selectable(tmp_path):
     root=tmp_path/'project';root.mkdir()
     outside=tmp_path/'external-interpreter';outside.write_bytes(b'x')
     assert selected_host(root,dict(argv=[str(outside),str(root/'adapter')])) is True
+
+
+@pytest.mark.parametrize('field',['seconds','http_attempts','inputs','requests','frames','frame_bytes'])
+@pytest.mark.parametrize('fault',['missing','zero','over','boolean'])
+def test_invalid_original_ending_reserves_refuse_before_effects(tmp_path,field,fault):
+    directory,profile=package(tmp_path)
+    if fault=='missing':profile['ending_reserve'].pop(field)
+    else:profile['ending_reserve'][field]={'zero':0,'over':10**12,'boolean':True}[fault]
+    (directory/'manifest.json').write_text(json.dumps(profile))
+    with patch.object(packages,'ROOT',tmp_path),git(),patch.object(packages.subprocess,'run') as validator,pytest.raises(ControlError):
+        packages.preflight(directory)
+    assert not validator.called and not (directory/'started.json').exists()

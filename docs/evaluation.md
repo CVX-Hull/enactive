@@ -15,8 +15,8 @@ menu Save is not application exit; a local routine's done is not game success.
 
 ## Player host events
 
-Current [`player-host/2`](contracts/player-host.md) uses telemetry version2 (retained
-`player-host/1` traces report `unsupported_version`; their summaries stay in the
+Current [`player-host/3`](contracts/player-host.md) uses telemetry version3 (retained
+`player-host/1` and `/2` traces report `unsupported_version`; their summaries stay in the
 acceptance records), one JSONL trace per actor at
 `actors/NNN/host.jsonl`. Original request/tool IDs, wall and monotonic timestamps
 correlate request construction, fetch, headers, first body, completed response,
@@ -28,10 +28,16 @@ base64 history are excluded from telemetry without altering the actual model inp
 Returned usage/cache/backend/service-tier metadata remains labelled by source.
 Missing usage is unknown, not zero or an invoice. Every HTTP attempt, including an
 eligible bounded 429 retry, consumes the original allowance. Stable frozen system
-context is reused across actors; variable role, resource and handoff data stays
-explicit in prompts. The host's decision-time budget is distinct from the native
+context and the ongoing objective are reused across actors; handoff knowledge
+stays explicit fallible prompt data. Experiment quotas and final-actor policy
+remain operator data. The host's decision-time budget is distinct from the native
 custodian horizon. Request serialization and context projection have their own
 measured costs; local headers/first bytes do not isolate provider queue or inference.
+
+Control intent/acceptance, direct player-finish claims, host settlement, permanent
+stop, game-persistence evidence, normal native exit and owned absence are separate
+facts. A finish report does not certify the game outcome. Incomplete ending or
+missing persistence evidence remains visible even if mechanical cleanup succeeds.
 
 ## Latency budgets for interactive play
 
@@ -61,7 +67,7 @@ These commands are offline and read-only, writing summaries to stdout:
 .venv/bin/python -m tools.evaluate witness-summary .runtime/computer-sessions/SELECTED observer-export.json
 ```
 
-The selected actor traces and current `campaign-run/3` / `campaign-receipt/2`
+The selected actor traces and current `campaign-run/4` / `campaign-receipt/3`
 sidecars supply scoped provenance. The control reader opens a current
 `computer-session/1` SQLite snapshot read-only, bounded by table/byte/path limits;
 it neither migrates data nor reconstructs authority. `observer-timing/4` exports

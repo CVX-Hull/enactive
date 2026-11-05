@@ -119,6 +119,20 @@ def test_missing_computer_projection_is_an_observer_gap_not_stop(service):
     assert not channel.stopped.is_set()
 
 
+def test_finish_report_is_a_player_claim_without_save_or_source_certification(tmp_path):
+    runtime,channel,actor=make_runtime(tmp_path)
+    try:
+        view=ActivityView(runtime.session,runtime.store.path)
+        view.host_event(actor['actor_id'],1,dict(type='player-finish',report='I think the task is complete.',
+            disposition='task_complete',control_id=None,source_ids=['unverified-source']))
+        row=view.snapshot()['latest_statement']
+        assert row['kind']=='player-finish' and row['text']=='I think the task is complete.'
+        assert row['status']=='task_complete' and 'source' not in row
+        assert not channel.stopped.is_set() and runtime.store.counts()['inputs']==0
+    finally:
+        runtime.close()
+
+
 def test_pause_is_independent_of_blocked_activity_read(service):
     app, channel, actor, port, client = service
     entered, release = threading.Event(), threading.Event()
@@ -144,7 +158,7 @@ def test_pause_is_independent_of_blocked_activity_read(service):
 
 def test_partial_host_lines_keep_original_accounting_and_single_projection(tmp_path):
     path = tmp_path / 'host.jsonl'
-    path.write_text(json.dumps(dict(type='host-start', telemetry_version=2, schema='player-host/2')) + '\n' + '{"type":"request-start"')
+    path.write_text(json.dumps(dict(type='host-start', telemetry_version=3, schema='player-host/3')) + '\n' + '{"type":"request-start"')
     received = []
     events = HostEvents(path, 10, observer=lambda ordinal, row: received.append((ordinal, row['type'])))
     try:

@@ -15,8 +15,8 @@ owns exact formats; [architecture](../architecture.md) explains authority separa
 
 | Part | Owned data and consequence |
 | --- | --- |
-| [Memory](../../harness/player/memory.py) | Explicit `player-memory/1` SQLite store: typed claims/Work/decisions/procedures/corrections/advice, source bytes and support/supersession links. |
-| [Contracts](../../harness/player/contracts.py) | Closed `player-record/1` / `player-program/1`, bounded fields and fallible applicability. |
+| [Memory](../../harness/player/memory.py) | Explicit `player-memory/2` SQLite store: typed claims/Work/decisions/procedures/corrections/advice, source bytes and support/supersession links. |
+| [Contracts](../../harness/player/contracts.py) | Closed `player-record/1` / `player-program/2`, bounded fields and fallible applicability. |
 | [Images](../../harness/player/images.py) | Pillow decoding of exact PNG to player-selected crop/nearest RGB view, disclosed geometry/sampling/omissions. |
 | [Programs](../../harness/player/programs.py) | Immutable program IDs/digests/one-parent lineage; bounded JavaScript evaluation and coordinator proposals. |
 | [Context](../../harness/player/context.py) | Whole-record bounded support/correction/program ancestry with explicit omissions. |
@@ -33,12 +33,15 @@ Memory append/program save explicitly register selected source PNGs before the
 transaction; ordinary Observe does not copy every image into long-term memory.
 The bounded 256MiB BLOB store preserves digest-verified original pixels across
 fresh native-child sessions. A retained reference proves availability, not reading.
-No old campaign-memory/executable import reader is supported.
+No old campaign-memory/executable import reader is supported. Current stores have
+SQLite `user_version=2`; this migration selects a fresh `player-memory/2` store
+and refuses old stores/libraries without conversion. Retained history grants no authority.
 
-Programs receive `program-view/3`: actual source metadata, player-selected crop
-and nearest-neighbour RGB image ≤96×96, optional player interpretation and original
-mechanical resources. Full PNG is separately readable. No structured game facts
-are supplied. `step(view,state)` returns act/yield/done and basic controls only;
+Programs receive `program-view/4`: actual source metadata, player-selected crop
+and nearest-neighbour RGB image ≤96×96 and optional player interpretation. The
+global experiment-resource object is absent. Stored `player-program/2` requires
+`view_schema:"program-view/4"`. Full PNG is separately readable. No structured game
+facts are supplied. `step(view,state)` returns act/yield/done and basic controls only;
 evaluation has no direct effects or host I/O. The runner uses real captures and
 same computer callbacks, up to 64 steps/20seconds under original limits.
 

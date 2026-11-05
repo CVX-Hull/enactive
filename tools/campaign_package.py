@@ -14,7 +14,7 @@ from tools.configure_player_tools import ROOT,configuration
 
 FILES={'route.json','mcp-template.json','context.txt','prompt.txt','target.json'}
 FIELDS={'schema','session','source_commit','files','initial_files','native','library','shared_lock','player_store',
-        'host','effort','port','wall_seconds','host_seconds','total_host_seconds','max_hosts','max_http_attempts','limits','accounting'}
+        'host','effort','port','wall_seconds','host_seconds','total_host_seconds','max_hosts','max_http_attempts','limits','ending_reserve','accounting'}
 
 
 def digest(path: Path) -> str:
@@ -31,7 +31,7 @@ def local_file(value: str) -> Path:
 
 
 def host_argv(host) -> list[str]:
-    """Validate the closed `player-host/2` adapter selection and return its argv."""
+    """Validate the closed `player-host/3` adapter selection and return its argv."""
     closed(host,{'argv'})
     argv=host['argv']
     if (type(argv) is not list or not 1<=len(argv)<=8
@@ -49,7 +49,7 @@ def preflight(directory: Path) -> tuple[dict,dict,dict]:
     if not directory.is_relative_to(ROOT/'.runtime/computer-sessions') or directory.is_symlink():
         raise ControlError('Select a fresh explicit project-local computer session package')
     profile=read_json(directory/'manifest.json',1048576)
-    if type(profile) is not dict or profile.get('schema')!='campaign-run/3':
+    if type(profile) is not dict or profile.get('schema')!='campaign-run/4':
         raise ControlError('Unsupported campaign package; old admissions are inert history')
     closed(profile,FIELDS)
     host_argv(profile['host'])
@@ -91,10 +91,16 @@ def preflight(directory: Path) -> tuple[dict,dict,dict]:
     if not profile['host_seconds']<=profile['total_host_seconds']<profile['wall_seconds']-30:
         raise ControlError('Original host and cleanup horizons do not fit')
     route=read_json(directory/'route.json',1048576)
-    if type(route) is not dict or route.get('schema')!='player-host/2':
+    if type(route) is not dict or route.get('schema')!='player-host/3':
         raise ControlError('Unsupported player host route; old routes are inert history')
     if route.get('service_tier')!='default':raise ControlError('This campaign allocation supports only the selected default serving tier')
     if route['max_requests']>profile['max_http_attempts']:raise ControlError('Per-host attempts exceed original campaign allowance')
+    reserve=profile['ending_reserve']
+    closed(reserve,{'seconds','http_attempts','inputs','requests','frames','frame_bytes'})
+    bounds=dict(seconds=profile['host_seconds'],http_attempts=route['max_requests'],
+                inputs=profile['limits']['max_inputs'],requests=profile['limits']['max_requests'],
+                frames=profile['limits']['max_frames'],frame_bytes=profile['limits']['max_bytes'])
+    for name,maximum in bounds.items():integer(reserve[name],1,maximum-1)
     template=read_json(directory/'mcp-template.json',1048576)
     if template!=configuration('@ACTOR_CONFIG@'):raise ControlError('Only the current explicit actor MCP profile is supported')
     target=read_json(directory/'target.json',1048576)

@@ -57,7 +57,7 @@ def snapshot_bundle(directory: Path, profile: dict, snapshot_directory: Path, de
     directory, snapshot_directory = Path(directory), Path(snapshot_directory)
     check_deadline(deadline)
     manifest = read_json(directory / 'manifest.json', 1024 * 1024)
-    if (not isinstance(manifest, dict) or manifest.get('schema') != 'campaign-run/3'
+    if (not isinstance(manifest, dict) or manifest.get('schema') != 'campaign-run/4'
             or manifest.get('session') != profile['session']
             or manifest.get('source_commit') != profile['source_commit']):
         raise ControlError('Selected current manifest identity differs')
@@ -86,7 +86,7 @@ def snapshot_bundle(directory: Path, profile: dict, snapshot_directory: Path, de
             if frozen_path.is_symlink():
                 raise ControlError('Selected actor metadata is a symlink')
             frozen = read_json(frozen_path, 1024 * 1024)
-            if (not isinstance(frozen, dict) or frozen.get('schema') != 'player-host-inputs/1'
+            if (not isinstance(frozen, dict) or frozen.get('schema') != 'player-host-inputs/2'
                     or frozen.get('session') != session):
                 raise ControlError('Selected original actor/session metadata differs')
             actors[index] = frozen.get('actor_id')

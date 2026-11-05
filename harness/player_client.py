@@ -13,6 +13,7 @@ import uuid
 from .computer.protocol import ControlError, canonical, closed, decode_json, read_json
 
 IMAGE_LIMIT = 16 * 1024 * 1024
+ADAPTER_CLOSE_REASON = 'Actor adapter closed'
 EFFECT_TOOLS = {'computer_observe','computer_input','player_program_run','player_handoff'}
 
 
@@ -49,7 +50,7 @@ class PlayerClient:
             raise ControlError('Response exceeds frozen adapter byte capacity')
         return data if image else decode_json(data,maximum)
 
-    def stop(self, reason: str='Actor adapter closed') -> dict:
+    def stop(self, reason: str=ADAPTER_CLOSE_REASON) -> dict:
         try:
             return self._post('/api/actor-stop',{'session':self.config['session'],'reason':reason[:600]},timeout=2.)
         except (OSError,ValueError):

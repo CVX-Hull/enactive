@@ -47,7 +47,7 @@ def check(options):
             actions:[{type:'key',key:'RIGHT',modifiers:[]}],reason:'fixture raw input'};
           return {status:v.image.rgb[0]!==s.before?'done':'yield',state:s,actions:null,reason:'actual changed pixel comparison'};
         }"""
-        program=call('player_program_save',dict(program=dict(schema='player-program/1',code=code,parent_id=None,
+        program=call('player_program_save',dict(program=dict(schema='player-program/2',view_schema='program-view/4',code=code,parent_id=None,
             reason='Independent fixture image-conditioned candidate',source_ids=[source['source_id']],
             record_ids=[saved_record['id']],applicability=None)))
         result=call('player_program_run',dict(program_id=program['id'],initial_state=dict(n=0),interpretation={},

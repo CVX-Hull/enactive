@@ -21,6 +21,8 @@ class Channel:
     """Explicit receiver double; real SDL behavior has a separate native lane."""
     def __init__(self):
         self.stopped = threading.Event()
+        self.stop_started_wall = None
+        self.stop_reason = None
         self.fault = None
         self.calls = []
         self.capture = 1
@@ -36,11 +38,16 @@ class Channel:
         return dict(window_id=1, paused=self.stopped.is_set())
 
     def stop(self, reason):
+        if self.stop_started_wall is None:
+            self.stop_started_wall,self.stop_reason=time.time(),reason
         self.stopped.set()
         return dict(stop_requested=True, native_pause_confirmed=False, reason=reason)
 
     def stop_status(self):
         return dict(stop_requested=self.stopped.is_set(), native_pause_confirmed=False)
+
+    def stop_origin(self):
+        return dict(requested_wall=self.stop_started_wall,reason=self.stop_reason)
 
     def request(self, kind, value, deadline, identity):
         if self.before_request:

@@ -87,7 +87,7 @@ _NULL_ID = {'anyOf': [_text(128), {'type': 'null'}]}
 _RECORD = _object(dict(schema={'const': 'player-record/1'}, kind=_enum('claim', 'work', 'decision', 'procedure', 'correction', 'advice'),
                        text=_text(8192, empty=True), data={'type': 'object'}, sources=_REFS, supports=_REFS,
                        supersedes=_NULL_ID, applicability=_APPLICABILITY, program_id=_NULL_ID))
-_PROGRAM = _object(dict(schema={'const': 'player-program/1'}, code=_text(32768), parent_id=_NULL_ID,
+_PROGRAM = _object(dict(schema={'const': 'player-program/2'}, view_schema={'const': 'program-view/4'}, code=_text(32768), parent_id=_NULL_ID,
                         reason=_text(2048, empty=True), source_ids=_REFS, record_ids=_REFS, applicability=_APPLICABILITY))
 
 

@@ -8,7 +8,7 @@ from test_player_memory import capture, record
 
 
 def program(**changes):
-    return {**dict(schema='player-program/1', code="function step(v,s){return {status:'yield',state:s,actions:null,reason:'inspect'}}",
+    return {**dict(schema='player-program/2', view_schema='program-view/4', code="function step(v,s){return {status:'yield',state:s,actions:null,reason:'inspect'}}",
                   parent_id=None, reason='candidate', source_ids=[], record_ids=[], applicability=None), **changes}
 
 

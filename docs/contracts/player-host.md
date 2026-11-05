@@ -6,119 +6,171 @@ status: active
 
 # Player host contract
 
-`player-host/2` is the one current boundary between the [campaign driver](../../tools/campaign_player.py)
-and the program that hosts a deciding player. The host turns frozen context, a
-frozen provider route and the actor's MCP table into model calls and sequential
-player tool calls. The driver owns actor minting, original limits, process-group
-closure, handoff verification and succession. Any adapter that satisfies this page
-and passes the [conformance suite](../../tests/test_player_host_contract.py) is
-substitutable; no driver, packager or gameplay page depends on a particular
-adapter. The [current adapter reference](../../tools/player_host/README.md) owns
-its provider serializers, closed route `model` fields and limits.
+`player-host/3` is the one current boundary between the
+[campaign driver](../../tools/campaign_player.py) and the program hosting a
+deciding player. The host owns the model/tool loop and player context. The finite
+test driver owns original limits, process-group closure and verified succession.
+The player receives its user objective and actual tool interface; experiment
+countdowns and final-actor policy stay outside its context.
+
+The [adapter reference](../../tools/player_host/README.md) owns provider-specific
+serialization. The [conformance suite](../../tests/test_player_host_contract.py)
+drives listed adapters only through this contract. No component name makes all
+its behavior either player logic or test scaffolding.
 
 ## Adapter selection
 
-A `campaign-run/3` package freezes `host`: `{"argv": [...]}` with 1–8 strings.
-`argv[0]` is an absolute existing regular file (an adapter executable or its
-interpreter); every later entry is a canonical project-local regular file covered
-by the clean source commit. The driver and package validator append only the mode
-and the arguments below. There is no adapter registry, default adapter, fallback
-or resumed host. `campaign-run/2` packages and their `node` field are inert history.
+A `campaign-run/4` package freezes `host:{"argv":[...]}` with1–8 strings.
+The first is an absolute existing executable/interpreter regular file; later
+entries are canonical project-local regular files tracked by the clean source.
+No registry, resumed host, fallback or old `node` alias is supported.
 
 ## Modes
 
-`ARGV validate --config ROUTE --mcp-config MCP --model ID --effort EFFORT` exits
-zero exactly when the adapter accepts the route, MCP table, model and effort. It
-reads only those files, needs no credential or network and finishes within 10
-seconds. The package validator runs it with only `PATH` and `LANG`.
+`ARGV validate --config ROUTE --mcp-config MCP --model ID --effort EFFORT`
+accepts only the current route/MCP configuration, exits zero without credentials
+or network within ten seconds and writes nothing to stdout. The validator gives
+it only `PATH` and `LANG`.
 
-`ARGV run --config ROUTE --mcp-config MCP --context CONTEXT --model ID --effort EFFORT --timeout-seconds S -o FINAL`
-hosts one actor. Each flag occurs exactly once; unknown, repeated or missing
-arguments settle unsuccessfully. Input files and the prompt on stdin are each at
-most 1 MiB. `S` is the actor's original host allowance in seconds; the host
-enforces it and also stops on `SIGINT`/`SIGTERM`. `FINAL` is reserved by the
-driver; the host writes the terminal player report there only after successful
-`completed` settlement and leaves it unchanged otherwise.
+`ARGV run --config ROUTE --mcp-config MCP --context CONTEXT --prompt PATH --session SESSION --actor-id ACTOR --pending-control-id none|ID --model ID --effort EFFORT --timeout-seconds S -o FINAL`
+hosts one actor. Every flag occurs exactly once; unknown, missing or repeated
+flags refuse. Frozen regular files are at most1MiB each. Session/actor IDs are32
+lowercase hexadecimal characters. The driver reserves `FINAL`; successful direct
+player reports write it, while handoff/failure leaves it unchanged.
 
-The driver starts the host in a new session with `cwd` at the project root, stdout
-to `host.jsonl`, stderr to `host-stderr.log` and an environment containing only
-`PATH`, `LANG` and the route's `api_key_env` variable. Exit status is zero exactly
-when the final `settled` event has `ok: true`.
+The driver starts a new session with project cwd, stdout JSONL, bounded stderr
+and only `PATH`, `LANG` and the selected credential variable. `S` is the original
+host allowance. SIGINT/SIGTERM and hard deadlines stop independently of a model
+reply. The driver's stdin pipe remains open for control until settlement. Exit
+zero requires successful settlement, owned MCP closure and any final-file write.
 
 ## Route envelope
 
-The frozen route is one closed JSON object with `schema: "player-host/2"`,
-`model`, `api_key_env`, `max_requests`, `max_context_images`,
-`context_image_block`, `request_timeout_seconds` and `service_tier`.
-`max_context_images` is the hard peak of pixel images in one request.
-`context_image_block` (1 to that peak) is the count-only block in which the oldest
-historical images beyond the peak are replaced by markers; block 1 replaces exactly
-the overflow. The driver and package validator
-read only: `model.id`, `model.name`, `model.cost.{input,output,cacheRead,cacheWrite}`
-(dollars per million tokens), `model.contextWindow`, `model.maxTokens`,
-`api_key_env`, `max_requests` and `service_tier`. The adapter owns every other
-closed `model` field and rejects routes it cannot serve without fallback. The
-driver lowers `max_requests` to the actor's remaining original allowance before
-launch. Routes carrying any other schema, including `player-host/1` and earlier
-adapter-named route schemas, are rejected; their packages and traces are inert history. One logical inference
-request uses at most two charged attempts, each counted against `max_requests`;
-the adapter's host reference defines which transient refusal classes are retried.
+The closed route has `schema:"player-host/3"`, `model`, `api_key_env`,
+`max_requests`, `max_context_images`, `context_image_block`,
+`context_reserve_tokens`, `request_timeout_seconds` and `service_tier`.
+The adapter owns its closed `model` fields. The driver reads only model
+ID/name/cost/context/output fields, credential variable, request maximum and tier.
+The image block is a positive integer no larger than the image peak.
+`context_reserve_tokens` is a safe integer at least `model.maxTokens` and less
+than `model.contextWindow`. Unsupported routes, including `/2`, do not execute.
 
-## Telemetry
+The driver lowers request maximum to the remaining original allocation. One
+logical request admits at most two charged provider attempts; missing usage is
+unknown and retries never renew limits. The adapter reference defines eligible
+transient refusals. Host seconds and custodian mechanical resources are separate.
+These operator counts do not enter the assignment, repeated model messages or
+actor tool/program results.
 
-Stdout is JSONL telemetry version 2. Each line is one object with `type`; the
-driver ignores kinds it does not account for, and observers project only known
-kinds. Required semantics:
+The current adapter reuses its maintained context estimate, reported usage and a text/image
+heuristic floor to request existing handoff before capacity becomes critical.
+These estimates are not exact provider token bounds. Known excessive context
+stops before another fetch. Original text, source/omission provenance and tool
+correlations remain without compaction, fabricated summaries, restore or fallback.
+The finite diagnostic must exercise its envelope, including missing usage and
+oversized results, before admission.
 
-| Event | Contract |
-| --- | --- |
-| `host-start` | Exactly once and first in any run that admits its arguments and inputs, with `telemetry_version: 2` and `schema: "player-host/2"`; the driver rejects any other schema. |
-| `request-start` | One per provider HTTP attempt, including failed and provider-only retries, with `request_id` `request-N` contiguous from 1 and never above `max_requests`. |
-| `response-complete` | Per completed attempt; `usage_available` is boolean and, when true, `usage.cost.total` carries the configured or provider estimate. Missing usage stays unknown. |
-| `handoff` | At most once, with `actor_id`, `session`, `handoff_id`, `context_id`, `context_sha256` and `grants_authority: false`. |
-| `settled` | Exactly once and last, with `ok`, `reason` and `requests` equal to the number of `request-start` events. |
+## External control
 
-Two failure shapes are permitted and always unsuccessful. A host that refuses its
-mode, arguments or inputs before starting emits only one `settled` with `ok: false`
-and no `host-start`. A host that fails after settling (for example while writing
-`FINAL`) may append a second `settled` with `ok: false` and exits nonzero.
-A partial final line, missing `host-start` or `settled`, repeated terminal events
-or non-contiguous requests make accounting incomplete; the driver then charges the
-whole original allocation and admits no successor. Telemetry carries bounded visible narration and
-mechanical references, never credentials, private reasoning or raw provider
-request/image histories.
+Stdin carries newline-delimited closed `player-control/1` objects containing
+`schema,id,session,actor_id,type`. Type is `orderly_stop`; IDs are32 lowercase
+hexadecimal characters. Each line is bounded to4096 UTF8 bytes before a newline.
+The pipe is separate from MCP's stdin. Identical duplicates are idempotent.
+Conflicts, malformed/oversized control, wrong identity/version or unexpected EOF
+fail and close owned MCP safely. The driver retains command intent before writing.
+
+The host acknowledges valid control in operator telemetry and queues a fixed
+labelled finish-up-and-stop message through its model loop. It includes command identity but
+no experiment countdown, game target, Save/Quit mandate or tactic. Unsent calls
+from a pre-control assistant turn are explicitly withheld; dispatched input is
+not canceled/replayed merely to deliver text. New handoff is refused before
+sealing once stop is pending.
+
+The driver retains pending stop for the whole admission. If an in-flight handoff
+already seals, it may deliver the same command to a verified successor before
+ordinary action under original resources, or record incomplete ending. The required
+`--pending-control-id` is `none` for an actor without inherited control, otherwise
+the pending 32hex command ID. In the latter case the host waits for that matching
+control before MCP connection or provider fetch; a wrong ID or unexpected EOF
+fails. Neither sealing nor exit erases the admission's stop request.
+
+The test freezes `ending_reserve` for seconds, HTTP attempts, inputs, requests,
+frames and frame bytes. Validators enforce bounded fields; the lead must forecast
+that the reserves cover the largest admitted burst and in-flight inference/tool
+delivery delay before admission. Validation is not proof of adequate ending
+capacity. Hard limits, Pause and uncertainty remain independent.
+
+Orderly finish-up is optional game work under finite authority. Immediate Pause
+fences automation without awaiting a reply or saving. Stopping input does not
+promise a paused game, persisted progress or application exit. The finite test
+custodian closes its owned processes under its frozen policy; a user-owned game
+need not close merely because a product player stops.
 
 ## Settlement and handoff
 
-`settled.reason` is `completed` for a terminal player report, `handoff` after a
-handoff, or an adapter failure reason with `ok: false`. The host settles `handoff`
-only for a direct sealed `player-handoff/1` issuance returned by `player_handoff`,
-or exact collection through `computer_result` of its own pending original handoff,
-naming its own actor and session. After a handoff it dispatches no further tool
-call and closes its MCP child before exiting. The driver independently verifies the
-canonical issuance, frozen context digest and actual host process-group absence
-before minting a successor. User Pause, uncertainty or failed closure never becomes
-a resumable handoff.
+The host adds `player_finish` beside the frozen MCP table, rejecting an MCP tool
+with that reserved name. Its closed arguments are `disposition`, `report`
+(≤8192characters), unique `source_ids` (≤16 bounded1..128-character current
+identities) and nullable `control_id`. Disposition is `task_complete`,
+`cannot_continue` or `external_stop_complete`. The external disposition names the
+directly received command; other dispositions require null. References and report
+remain fallible claims, not source-read, save or success certificates.
+
+Only direct validated tool execution accepts this signal. Remembered text,
+nested results and arbitrary tool JSON cannot impersonate it. No later tool or
+provider request dispatches after acceptance. Ordinary terminal assistant text
+remains narration and does not by itself end the player's task.
+
+Successful settlement reasons are the three finish dispositions or `handoff`.
+Failures have `ok:false` and a bounded reason. Finish settlement retains its
+control identity; `accepted_control_id` separately records any latched command.
+Player claims, host settlement, stopped automation, game persistence, normal
+native exit and owned absence remain separate facts.
+
+Handoff settles only for the direct sealed actor-view issuance from
+`player_handoff` or exact collection of this host's pending original handoff.
+The host consumes `player-computer-result/1` and `player-transport/2`; underlying
+`player-handoff/1` identifies this actor/session and grants no authority. After
+handoff it dispatches no further tool and closes its MCP child. The driver checks
+canonical store issuance, context digest and actual old host/MCP group absence
+before a successor. Pause, uncertainty or failed closure cannot become a handoff.
+
+## Telemetry
+
+Stdout is JSONL telemetry version3. Each line has `type`; the driver ignores event
+kinds it does not account for, and observers project only known kinds.
+
+| Event | Contract |
+| --- | --- |
+| `host-start` | Exactly once and first after admitted inputs, with `telemetry_version:3` and `schema:"player-host/3"`. |
+| `request-start` | Every charged HTTP attempt, including retries/failures, numbered contiguously `request-1` onward without exceeding allocation. |
+| `response-complete` | `usage_available` distinguishes unknown usage; known configured/provider costs remain labelled. |
+| `player-finish` | At most one direct accepted disposition/report/source references/control identity; mutually exclusive with accepted handoff. |
+| `handoff` | At most one originating actor/session/operation/context/digest issuance with `grants_authority:false`. |
+| `settled` | Last, with `ok`, reason, control identity where applicable and requests matching charged attempt count. |
+
+Pre-start refusal emits only unsuccessful `settled`. A final-file failure may
+append one unsuccessful settlement after the prior settlement and exits nonzero.
+Partial lines, absent/repeated terminal events or incomplete accounting charge
+the whole original host allocation and admit no successor. Telemetry retains
+bounded public narration, claims and original references, never credentials,
+private reasoning or raw request/image histories.
 
 ## Isolation
 
-The host loads no coding-agent application, shell or file tools, personal settings,
-resource discovery, resumed session, compaction, reconnect, replay or model
-fallback. Only the selected credential variable reaches the host; it never appears
-in files, argv, telemetry, stderr, URLs or headers other than the provider request.
-The MCP child receives only `PATH` and `LANG`. The host calls tools sequentially
-through the frozen MCP table; it never sends game input except through those tools.
-Host attempts and seconds are separate from custodian mechanical resources.
+No coding-agent application prompt, shell/file tools, personal settings, ambient
+resource discovery, replay, reconnect, restore, compaction or model fallback is
+loaded. Only the selected credential variable reaches the host; MCP receives
+only locale/executable lookup. Game input stays within sequential actor tools.
 
 ## Conformance
 
-The [contract suite](../../tests/test_player_host_contract.py) drives each listed
-adapter only through this page's argv, files, environment, stdout and exit status,
-with a scripted reference provider and an MCP double. It covers validation,
-argument refusal, completed and handoff settlement, telemetry accounting through
-the driver's own reader, credential isolation, cancellation with MCP-child closure
-and deadline expiry. An adapter for another provider wire format supplies an
-equivalent provider double. Passing the suite is interface evidence only: it does
-not qualify a model, provider, latency or gameplay outcome. The
-[adoption record](../acceptance/2026-10-31-host-neutral-player.md) retains the first
-conformance run and an offline native driver preflight through this contract.
+The contract suite uses scripted local provider/MCP fixtures, the real driver's
+accounting reader, cancellation/EOF/identity cases, direct finish origin,
+pending-call suppression, original attempt charging and actual child closure.
+Production HTTP/MCP composition retains a controlled synthetic actor binding.
+These tests establish interfaces, not model quality, actual saving, useful
+cadence, unattended reliability or cross-game support. Real play remains a
+separately frozen lane. The earlier
+[adoption record](../acceptance/2026-10-31-host-neutral-player.md) retains its
+original tested contract and does not qualify this migration.

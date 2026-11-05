@@ -11,7 +11,7 @@ from harness.computer.protocol import GEOMETRY_KEYS, source as validate_source
 from .contracts import PlayerError, bounded_integer, json_object
 
 
-def program_view(source: dict, png: bytes, selection: dict, interpretation: dict, remaining: dict) -> dict:
+def program_view(source: dict, png: bytes, selection: dict, interpretation: dict) -> dict:
     try:
         source = json_object(source)
         validate_source(source)
@@ -59,11 +59,11 @@ def program_view(source: dict, png: bytes, selection: dict, interpretation: dict
         if dimensions != (w, h):
             omissions.append('Nearest-neighbour sampling omits original pixels; no inferred detail')
         omissions.append('Alpha composited on black; original alpha retained only in full PNG')
-        return dict(schema='program-view/3', source=source,
+        return dict(schema='program-view/4', source=source,
                     image=dict(width=dimensions[0], height=dimensions[1], rgb=channels,
                                original_geometry={k: source[k] for k in sorted(GEOMETRY_KEYS)}, crop=crop,
                                sampling='nearest', alpha='composited-on-black', omissions=omissions,
                                full_reference=dict(source_id=source['source_id'], sha256=source['sha256'])),
-                    interpretation=json_object(interpretation), remaining=json_object(remaining))
+                    interpretation=json_object(interpretation))
     except (ValueError, TypeError, OSError, OverflowError, Image.DecompressionBombError, Image.DecompressionBombWarning) as exc:
         raise PlayerError(f'Cannot derive player image view: {exc}') from exc

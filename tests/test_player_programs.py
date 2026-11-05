@@ -31,8 +31,9 @@ def test_program_lineage_and_immutable_support(tmp_path):
 
 def test_actual_image_crop_sampling_alpha_and_full_reference():
     metadata, png = capture(size=(8, 4))
-    view = program_view(metadata, png, {'crop': [2, 1, 4, 2], 'size': [2, 2]}, {'guess': 'red'}, {'seconds': 5})
-    assert view['schema'] == 'program-view/3'
+    view = program_view(metadata, png, {'crop': [2, 1, 4, 2], 'size': [2, 2]}, {'guess': 'red'})
+    assert view['schema'] == 'program-view/4'
+    assert set(view) == {'schema', 'source', 'image', 'interpretation'}
     assert view['source'] == metadata
     assert view['image']['width'] == 2 and view['image']['height'] == 1
     assert view['image']['rgb'] == [128, 0, 0] * 2
@@ -44,9 +45,9 @@ def test_actual_image_crop_sampling_alpha_and_full_reference():
     for selection in ({'crop': [7, 0, 2, 1], 'size': [1, 1]}, {'crop': None, 'size': [97, 1]},
                       {'crop': None, 'size': [True, 1]}, {'crop': None, 'size': [1, 1], 'other': 1}):
         with pytest.raises(PlayerError):
-            program_view(metadata, png, selection, {}, {})
+            program_view(metadata, png, selection, {})
     with pytest.raises(PlayerError):
-        program_view(metadata, png + b'corrupt', {'crop': None, 'size': [1, 1]}, {}, {})
+        program_view(metadata, png + b'corrupt', {'crop': None, 'size': [1, 1]}, {})
 
 
 class Port:

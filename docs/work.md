@@ -36,8 +36,8 @@ the current player host retries one transient provider failure per logical reque
 502/503/504, a pre-header fetch rejection or OpenRouter's in-flight 402), proven by
 offline fixtures only; no live 5xx has yet exercised it.
 
-Since [#313](https://github.com/CVX-Hull/enactive/issues/313), routes are `player-host/2`
-and evict historical screenshots in whole count-only blocks, so the prompt prefix stays
+At [#313](https://github.com/CVX-Hull/enactive/issues/313), the tested `player-host/2`
+routes evicted historical screenshots in whole count-only blocks, so the prompt prefix stayed
 cacheable between evictions. A zero-spend replay of #304's traces predicts that a peak
 of 39 with block 10 cuts input cost 2.5–3.9× against the rolling 30-image policy
 (block 1). A bounded live check on Gemini/Vertex with retained frames cost $0.41
@@ -62,14 +62,18 @@ not qualify parent cadence, learning or survival.
 
 ## Decisive evidence
 
-The proposed [player-objective and external-test-control change](changes/073-player-objective-and-test-control.md)
-turns the context audit into a scoped next design. It is unadopted; current runtime
-contracts and #164's cohort hold remain unchanged. The owning issue records the
-decision and any later separately frozen diagnostic.
+The agreed [player-objective and external-test-control rationale](changes/073-player-objective-and-test-control.md)
+links the context audit to the candidate implementation in
+[#359](https://github.com/CVX-Hull/enactive/issues/359). Current pages describe that
+candidate's `player-host/3`, projected actor results, fresh `player-memory/2` and
+`campaign-run/4` contracts. Main keeps its earlier executable contracts until
+adoption. No new real-play outcome or paid diagnostic is claimed; #164's cohort
+hold remains. The owning issue records delivery gates and any separately frozen
+diagnostic, rather than this page duplicating live execution state.
 
 | Evidence | Scope and limitation |
 | --- | --- |
-| [Player context and testing responsibilities](acceptance/2026-11-05-player-context-audit.md) | Audits the main player's complete context construction and the retained Alex assignment. Maps experiment quotas and finish-line instructions across prompts, tools and program views. Continuous-play and context changes remain design work. |
+| [Player context and testing responsibilities](acceptance/2026-11-05-player-context-audit.md) | Audits the then-main player's complete context construction and retained Alex assignment. Maps experiment quotas and finish-line instructions across prompts, tools and program views; rationale for #359, not evidence that its candidate is accepted. |
 | [ADR-007 first-slice outcome](acceptance/2026-11-03-adr007-status-quo.md) | The owner retained the current player after the offline feasibility screen. V4 benefit remains unestablished. |
 | [Transition corpus](acceptance/2026-11-01-transition-corpus.md) | Method calibration under a reviewed pre-registration, $95.49 actual; one procedural deviation, accepted by the owner (resumed after a provider failure before consulting the owner; runs 02–10). 37 complete runs of the unchanged #314 arm-A player from one restored state; 2,605 transitions labelled with frozen alphabets A1 and A2. On A1, at disagreement 3.1% [1.6–6.0%]: the action predicts the next state (0.354 bit held-out; predictive, not interventional); no two-set slow split with τ ≥ 40 (τ = 20 not excluded); memory beyond one step indeterminate (d exceeds the 1.9% gate). A2 descriptive only. One start state, one policy, no terminal events. |
 | [Grounded no-gain diagnosis](acceptance/2026-10-31-grounded-no-gain-diagnosis.md) | Diagnostic only, with blind audit, restored state and $8.62 actual. Gemini ×3 (one run with a 300-attempt budget) and Haiku ×1 all made no retained change from one shared save. C ended by choice at 95/300, consistent with budget not being the bottleneck; H matched A, consistent with the pattern not being model-specific (n = 1 each). Goal selection versus control was not separated: no nudge arm, per the owner. Gemini reports overstated, but they followed the included predecessor report as a template. |

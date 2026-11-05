@@ -33,7 +33,7 @@ def run_campaign(directory: Path) -> dict:
     owner=OwnedTarget(directory,profile['session'],target,Path(profile['library']['path']),Path(profile['shared_lock']),deadline)
     runtime=memory=server=server_thread=investigation_view=None
     stopped=threading.Event();driver=None
-    report=dict(schema='campaign-receipt/2',session=profile['session'],source_commit=profile['source_commit'],
+    report=dict(schema='campaign-receipt/3',session=profile['session'],source_commit=profile['source_commit'],
                 started_wall=time.time(),outcome='incomplete',normal_save_claimed_by_harness=False,
                 deciding_hosts_quiescent=False,native_absence_verified=False,input_authority_revoked=False)
     def cancel(signum,frame):
@@ -87,8 +87,6 @@ def run_campaign(directory: Path) -> dict:
             # Without a completed driver report, do not call an actor absent.
             # Before any actor directory exists, zero hosts were launched.
             report['deciding_hosts_quiescent']=not (directory/'actors').exists()
-        if report['outcome']=='host_completed_unassessed' and not report.get('normal_native_exit_zero'):
-            report['outcome']='incomplete_normal_native_exit'
         report['ended_wall']=time.time();report['elapsed_seconds']=time.monotonic()-started
         attempts=driver['attempts_charged'] if driver else (profile['max_http_attempts'] if (directory/'actors').exists() else 0)
         budget=profile['accounting']
@@ -112,8 +110,11 @@ def main(argv=None) -> int:
     args=parser.parse_args(argv)
     result=run_campaign(args.run)
     print(json.dumps(result))
-    return 0 if (result['outcome']=='host_completed_unassessed' and result['deciding_hosts_quiescent']
-                 and result['native_absence_verified'] and result.get('normal_native_exit_zero')) else 1
+    # This exit code certifies bounded orchestration/owned cleanup, not game save,
+    # native normal exit, a win or a qualified gameplay outcome.
+    return 0 if (result['outcome'] in {'player_task_complete_unassessed','player_cannot_continue_unassessed',
+                                    'player_external_stop_complete_unassessed'} and result['deciding_hosts_quiescent']
+                 and result['native_absence_verified'] and result['input_authority_revoked']) else 1
 
 
 if __name__=='__main__':
