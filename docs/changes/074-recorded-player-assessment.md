@@ -115,7 +115,11 @@ At proposed full 1.05M context/16,384 output, conservative maximum input/cache
 rate $2.50/M and output $7.50/M, four attempts reserve $10.99152. Existing planning
 margin 8% + $3 gives $14.8708416; prospective cap $15. Verify exact endpoint rates,
 retention assumptions, current account headroom and cumulative actual baseline
-before requesting approval. No purchase, refill change or paid eligibility call
+before requesting approval. The unchanged SDK selects short retention;
+[OpenRouter's cache documentation](https://openrouter.ai/docs/guides/best-practices/prompt-caching),
+read 5 November 2026, describes default cache writes at 1.25 times input pricing.
+The bound uses the higher long-prompt cache-write rate for every input token.
+No purchase, refill change or paid eligibility call
 is authorized by this brief. Missing usage counts at its worst case.
 
 ## Verification and limits
