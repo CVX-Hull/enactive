@@ -274,6 +274,13 @@ protocol-deviation, spending and design escalation rules remain in force.
 
 ## Next evidence decision
 
+The separately approved [5 November diagnostic](../acceptance/2026-11-05-player-test-diagnostic.md)
+carried out this continuation after source delivery. Its first admission was
+operator-truncated; the replacement verified sampled context separation and
+direct stopping but ended in Alex's death, without replenishment or a local
+program. External orderly-stop and other unexercised paths remain unqualified.
+The following prospective rationale is retained; it grants no further admission.
+
 After offline checks, freeze a focused prospective continuation on the preserved
 Alex save, on the exact candidate and selected current route. Give only an ongoing
 survival objective and ordinary visible observations. The retained save starts

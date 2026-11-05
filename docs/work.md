@@ -68,13 +68,18 @@ links the context audit to [#359](https://github.com/CVX-Hull/enactive/issues/35
 projected actor results, fresh `player-memory/2` and `campaign-run/4` on main;
 the [actual-main full controller](https://github.com/CVX-Hull/enactive/actions/runs/42037235120)
 passed on `faa5256f6a215d0e0565233d5f9f485409a8df22`. This is source delivery,
-not a new real-play result, paid admission or cohort qualification. #359 remains
-open for its real-use lane. [#361](https://github.com/CVX-Hull/enactive/issues/361)
-owns reuse of the existing finite-test spectator supervision before the next
-separately frozen diagnostic. The owning issues record live gates and execution.
+not a cohort qualification. Completed [#361](https://github.com/CVX-Hull/enactive/issues/361)
+supplies maintained finite-test spectator supervision. The separately approved
+[ongoing-objective diagnostic](acceptance/2026-11-05-player-test-diagnostic.md)
+then demonstrated sampled context separation and direct `cannot_continue`
+stopping, but ended in Alex's death with no food/water gain or local program.
+The first operator-truncated admission remains a failure. #359 stays open for
+unexercised real-use paths; #164 and #145 remain held. The owning issues record
+live gates and execution.
 
 | Evidence | Scope and limitation |
 | --- | --- |
+| [Ongoing objective under finite test control](acceptance/2026-11-05-player-test-diagnostic.md) | Two admissions, $1.410764544 combined: first missed operator watch deadline; replacement maintained coverage, acquired a dog whistle, then Alex died. Direct finish/context separation worked; no food/water gain, program, external finish-up, persistence or cadence qualification. |
 | [Player context and testing responsibilities](acceptance/2026-11-05-player-context-audit.md) | Audits the then-main player's complete context construction and retained Alex assignment. Maps experiment quotas and finish-line instructions across prompts, tools and program views; rationale for #359, not evidence that its candidate is accepted. |
 | [ADR-007 first-slice outcome](acceptance/2026-11-03-adr007-status-quo.md) | The owner retained the current player after the offline feasibility screen. V4 benefit remains unestablished. |
 | [Transition corpus](acceptance/2026-11-01-transition-corpus.md) | Method calibration under a reviewed pre-registration, $95.49 actual; one procedural deviation, accepted by the owner (resumed after a provider failure before consulting the owner; runs 02–10). 37 complete runs of the unchanged #314 arm-A player from one restored state; 2,605 transitions labelled with frozen alphabets A1 and A2. On A1, at disagreement 3.1% [1.6–6.0%]: the action predicts the next state (0.354 bit held-out; predictive, not interventional); no two-set slow split with τ ≥ 40 (τ = 20 not excluded); memory beyond one step indeterminate (d exceeds the 1.9% gate). A2 descriptive only. One start state, one policy, no terminal events. |

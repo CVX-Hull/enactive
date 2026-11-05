@@ -1,0 +1,73 @@
+{
+  "scope": "Derived public diagnostic evidence, not raw runtime receipts or a new executable contract",
+  "source_commit": "e6adfb7e277a5bcb85725eb0279cc1f782a51217",
+  "sessions": {
+    "operator_truncated": "20f89b24784e4d3794a851027f7e2597",
+    "replacement": "810e172f12b742408b70788c1c18df75"
+  },
+  "manifest_sha256": "be5f86e93af87f12c18d55fed97d775b4ad185bb3dcb652ffaa3913ef11a0a8b",
+  "raw_receipt_sha256": "ac89d5bc0f198d1668e04106e6dba1eaa6d103f2c5b375ed627a0ce04426da5c",
+  "raw_watch_terminal_sha256": "2c5e0fe884a867d7298bfed58848b9c796c16088d8cd59363215670d458b1c1b",
+  "raw_host_trace_sha256": "67a727fa136425decdd3c65dc9b6b403c17703e5e6d9baa3dab2e778fda14d1a",
+  "retained_local_evidence_family": ".runtime/iteration164/candidate-research-2026-11-05/ongoing-alex/",
+  "outcome": "Alex died; full qualification cohort held",
+  "replacement": {
+    "elapsed_seconds": 489.9739053340163,
+    "requests": 79,
+    "missing_usage_attempts": 0,
+    "unused_attempts_retired": 321,
+    "direct_player_finish": "cannot_continue",
+    "normal_native_exit_zero": false,
+    "native_absence_verified": true,
+    "deciding_hosts_quiescent": true,
+    "input_authority_revoked": true,
+    "completed_computer_operations": 77,
+    "native_delivered_receipts": 482,
+    "original_sources": 77,
+    "programs": 0,
+    "memory_claim_records": 1
+  },
+  "watch": {
+    "reason": "custodian_terminal",
+    "accepted_checks": 43,
+    "terminal_coverage_verified": true,
+    "cleanup_verified": true,
+    "first_completed_check_seconds_after_ready": 15.236150074459147,
+    "maximum_completed_check_interval_seconds": 19.857070375001058,
+    "completed_check_intervals_over_15s_target_including_first": 6,
+    "minimum_strict_45s_headroom_seconds": 24.56307680782629
+  },
+  "spend": {
+    "operator_truncated_usd": "0.037240632",
+    "replacement_account_delta_and_configured_estimate_usd": "1.373523912",
+    "combined_usd": "1.410764544",
+    "combined_ceiling_usd": 220,
+    "new_actual_upper_baseline_usd": "255.523617179"
+  },
+  "unexercised": [
+    "external orderly-stop",
+    "handoff",
+    "organic local program",
+    "manual Pause receiver in this run",
+    "normal application exit",
+    "living-character saved-state continuation"
+  ],
+  "assets": {
+    "identity.png": {
+      "source_id": "810e172f12b742408b70788c1c18df75-215",
+      "sha256": "e6f57e9774d7cdb7cfff94861bd92115cfadd96f86193d9ec800bdd531dcf3bf"
+    },
+    "whistle.png": {
+      "source_id": "810e172f12b742408b70788c1c18df75-1830",
+      "sha256": "5bc229f980bfaf11ac4c6a6d0aab6e4d70beef571aa06fca163528dc33122e7b"
+    },
+    "map-controls.png": {
+      "source_id": "810e172f12b742408b70788c1c18df75-1900",
+      "sha256": "440c79f30a51339df91813bc28aff2c47487310aabe40fd38a4ddb99a7279daa"
+    },
+    "death.png": {
+      "source_id": "810e172f12b742408b70788c1c18df75-4147",
+      "sha256": "7ce7aa8fa4875fede0fd7e19ed2361167b064df56f1b82fa2480b009501ba574"
+    }
+  }
+}
