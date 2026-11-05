@@ -63,13 +63,15 @@ not qualify parent cadence, learning or survival.
 ## Decisive evidence
 
 The agreed [player-objective and external-test-control rationale](changes/073-player-objective-and-test-control.md)
-links the context audit to the candidate implementation in
-[#359](https://github.com/CVX-Hull/enactive/issues/359). Current pages describe that
-candidate's `player-host/3`, projected actor results, fresh `player-memory/2` and
-`campaign-run/4` contracts. Main keeps its earlier executable contracts until
-adoption. No new real-play outcome or paid diagnostic is claimed; #164's cohort
-hold remains. The owning issue records delivery gates and any separately frozen
-diagnostic, rather than this page duplicating live execution state.
+links the context audit to [#359](https://github.com/CVX-Hull/enactive/issues/359).
+[PR #360](https://github.com/CVX-Hull/enactive/pull/360) delivered `player-host/3`,
+projected actor results, fresh `player-memory/2` and `campaign-run/4` on main;
+the [actual-main full controller](https://github.com/CVX-Hull/enactive/actions/runs/42037235120)
+passed on `faa5256f6a215d0e0565233d5f9f485409a8df22`. This is source delivery,
+not a new real-play result, paid admission or cohort qualification. #359 remains
+open for its real-use lane. [#361](https://github.com/CVX-Hull/enactive/issues/361)
+owns reuse of the existing finite-test spectator supervision before the next
+separately frozen diagnostic. The owning issues record live gates and execution.
 
 | Evidence | Scope and limitation |
 | --- | --- |
