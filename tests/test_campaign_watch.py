@@ -264,7 +264,11 @@ def test_current_marker_writer_can_finish_after_exposing_its_path(tmp_path, mark
             assert json.loads(response[1])['accepted'] == 1
             if delay_confirmation:
                 # HTTP success can precede the guardian's post-send sample.
-                assert forwarded.is_set() and not f.result['accepted']
+                # The worker can reply after receiving bytes, before the sender
+                # resumes to publish its fixture barrier. Synchronize on that
+                # barrier before checking the deliberately held completion.
+                assert forwarded.wait(2), 'Guard did not enter the confirmation barrier'
+                assert not f.result['accepted']
                 pause = threading.Thread(target=lambda: f.call('/api/pause', {}))
                 pause.start()
                 assert select.select([f.stops], [], [], 2)[0], 'Pause was not queued'
