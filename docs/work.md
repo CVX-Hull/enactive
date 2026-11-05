@@ -75,13 +75,15 @@ then demonstrated sampled context separation and direct `cannot_continue`
 stopping, but ended in Alex's death with no food/water gain or local program.
 The first operator-truncated admission remains a failure. #359 stays open for
 unexercised real-use paths; #164 and #145 remain held. The owning issues record
-live gates and execution. The scoped [recorded-screen assessment preparation](changes/074-recorded-player-assessment.md)
-uses original views before considering another candidate game. Preparation and
-offline tests authorize no inference or gameplay; current player selection and
-all qualification gates remain unchanged.
+live gates and execution. The [recorded-screen candidate assessment](acceptance/2026-11-05-recorded-player-assessment.md)
+then served two selected cases for $0.08744005, with narrowly promising proposals
+and unsuccessful request-limit host endings. No proposal reached a game. The
+result supports shaping further unassisted development play, with separate
+agreement; current player selection and all qualification gates remain unchanged.
 
 | Evidence | Scope and limitation |
 | --- | --- |
+| [Recorded-screen candidate assessment](acceptance/2026-11-05-recorded-player-assessment.md) | Four requests through the unchanged host; both cases narrowly promising, no executed effects. The retreat key opens a movement-mode menu, with Run selection untested. No model ranking, program, survival or cadence qualification. |
 | [Ongoing objective under finite test control](acceptance/2026-11-05-player-test-diagnostic.md) | Two admissions, $1.410764544 combined: first missed operator watch deadline; replacement maintained coverage, acquired a dog whistle, then Alex died. Direct finish/context separation worked; no food/water gain, program, external finish-up, persistence or cadence qualification. |
 | [Player context and testing responsibilities](acceptance/2026-11-05-player-context-audit.md) | Audits the then-main player's complete context construction and retained Alex assignment. Maps experiment quotas and finish-line instructions across prompts, tools and program views; rationale for #359, not evidence that its candidate is accepted. |
 | [ADR-007 first-slice outcome](acceptance/2026-11-03-adr007-status-quo.md) | The owner retained the current player after the offline feasibility screen. V4 benefit remains unestablished. |

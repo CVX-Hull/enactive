@@ -1,10 +1,17 @@
 ---
 owner: lead
-status: active
-review_trigger: Recorded-screen assessment scope, no-execution boundary or candidate admission changes
+status: historical
+date: 2026-11-05
+scope: Recorded-screen fixture rationale and original assessment plan; actual results are separate from gameplay qualification
 ---
 
 # Recorded-screen deciding-player assessment
+
+The [executed assessment](../acceptance/2026-11-05-recorded-player-assessment.md)
+records the approved calls, actual charges, unsuccessful host settlements and
+narrowly promising proposals. Current fixture operation is described in
+[evaluation](../evaluation.md#retained-host-and-browser-analysis); this original
+plan grants no future execution or spending authority.
 
 ## Decision and scope
 
