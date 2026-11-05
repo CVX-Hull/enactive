@@ -97,8 +97,7 @@ class ProgramRunner:
                         break
                     if png is None or operation.get('source') is None:
                         raise PlayerError('A program step requires an actual captured PNG')
-                    view = program_view(operation['source'], png, selection, interpretation,
-                                        operation.get('remaining', {}))
+                    view = program_view(operation['source'], png, selection, interpretation)
                     step = dict(operation=operation, source=view['source'], result=None)
                     steps.append(step)
                     remaining = deadline - monotonic()

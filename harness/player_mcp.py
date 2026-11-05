@@ -13,7 +13,9 @@ from mcp.server.stdio import stdio_server
 
 from .computer.protocol import canonical
 from .player_client import PlayerClient
+from .player.contracts import PlayerError
 from .player_tools import tool_specs
+from .player_view import actor_error, actor_result
 
 
 def make_server(client: PlayerClient) -> Server:
@@ -25,7 +27,7 @@ def make_server(client: PlayerClient) -> Server:
 
     async def call_tool(context,params):
         if params.name not in specs:
-            return types.CallToolResult(is_error=True,content=[types.TextContent(type='text',text='Unknown current tool')])
+            return types.CallToolResult(is_error=True,content=[types.TextContent(type='text',text=canonical(actor_error(PlayerError('Unknown current tool'))))])
         args={} if params.arguments is None else params.arguments
         try:
             try:
@@ -33,13 +35,13 @@ def make_server(client: PlayerClient) -> Server:
             except anyio.get_cancelled_exc_class():
                 client.stop('MCP operation cancelled; original collection only')
                 raise
-            content=[types.TextContent(type='text',text=canonical(value))]
+            content=[types.TextContent(type='text',text=canonical(actor_result(value)))]
             if png is not None:
                 content.append(types.ImageContent(type='image',data=base64.b64encode(png).decode('ascii'),mime_type='image/png'))
             return types.CallToolResult(is_error=error,content=content)
         except Exception as exc:
             return types.CallToolResult(is_error=True,content=[types.TextContent(type='text',text=canonical(
-                dict(schema='player-error/1',error=type(exc).__name__,reason=str(exc)[:600],input_replayed=False)))])
+                actor_error(exc)))])
 
     server=Server('enactive-player',version='2.0.0',
         instructions=('Only basic computer control is authoritative. You own all game interpretation, goals, menus, identity, time, '

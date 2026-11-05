@@ -13,7 +13,7 @@ def request_id():
 
 
 def program(code):
-    return dict(schema='player-program/1',code=code,parent_id=None,reason='fixture',
+    return dict(schema='player-program/2',view_schema='program-view/4',code=code,parent_id=None,reason='fixture',
         source_ids=[],record_ids=[],applicability=None)
 
 

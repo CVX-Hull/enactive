@@ -1,4 +1,4 @@
-"""Append-only player-memory/1, explicitly selected independently of a session."""
+"""Append-only player-memory/2, explicitly selected independently of a session."""
 from __future__ import annotations
 
 from contextlib import contextmanager
@@ -25,7 +25,7 @@ class Memory:
             if not tables and version == 0:
                 with self._transaction():
                     self._db.execute('CREATE TABLE metadata (schema TEXT NOT NULL)')
-                    self._db.execute("INSERT INTO metadata VALUES ('player-memory/1')")
+                    self._db.execute("INSERT INTO metadata VALUES ('player-memory/2')")
                     self._db.execute('CREATE TABLE sources (id TEXT PRIMARY KEY, metadata TEXT NOT NULL, png BLOB)')
                     self._db.execute('''CREATE TABLE programs (id TEXT PRIMARY KEY, document TEXT NOT NULL,
                         parent_id TEXT REFERENCES programs(id))''')
@@ -39,11 +39,11 @@ class Memory:
                     self._db.execute('CREATE INDEX corrections ON records(supersedes)')
                     self._db.execute('''CREATE TABLE service_operations(id TEXT PRIMARY KEY,actor TEXT NOT NULL,
                         tool TEXT NOT NULL,args TEXT NOT NULL,progress TEXT NOT NULL,result TEXT)''')
-                    self._db.execute('PRAGMA user_version=1')
-            elif version != 1 or tables != {'metadata', 'sources', 'programs', 'records', 'record_sources',
+                    self._db.execute('PRAGMA user_version=2')
+            elif version != 2 or tables != {'metadata', 'sources', 'programs', 'records', 'record_sources',
                                             'record_supports', 'program_sources', 'program_records', 'service_operations'}:
-                raise PlayerError('Unsupported player store; select a fresh player-memory/1 store')
-            if self._db.execute('SELECT schema FROM metadata').fetchall() != [('player-memory/1',)]:
+                raise PlayerError('Unsupported player store; select a fresh player-memory/2 store')
+            if self._db.execute('SELECT schema FROM metadata').fetchall() != [('player-memory/2',)]:
                 raise PlayerError('Unsupported player store version')
         except (sqlite3.Error, PlayerError) as exc:
             self.close()
