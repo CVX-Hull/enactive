@@ -49,6 +49,21 @@ def test_known_prelaunch_failure_has_zero_attempts_and_no_successor(tmp_path):
     assert application.runtime.add_actor.call_count==1
 
 
+def test_invalid_consumed_trace_cannot_become_valid_during_cleanup(tmp_path):
+    path=tmp_path/'host.jsonl'
+    rows=[dict(type='host-start',telemetry_version=3,schema='player-host/3'),
+          dict(type='request-start',request_id='request-1'),
+          dict(type='settled',requests=1,ok=True),
+          dict(type='player-finish',disposition='task_complete'),
+          dict(type='handoff')]
+    path.write_text(''.join(json.dumps(row)+'\n' for row in rows))
+    events=HostEvents(path,20)
+    try:
+        with pytest.raises(ControlError,match='Conflicting'):events.read()
+        with pytest.raises(ControlError,match='trace failed validation'):events.finish()
+    finally:events.close()
+
+
 FAKE_HOST = """
 import json, os, sys
 from datetime import datetime, timezone
@@ -109,6 +124,18 @@ def test_driver_launches_selected_host_without_experimental_prompt_additions(tmp
     assert launched[:3]==[*profile['host']['argv'],'run']
     assert (tmp_path/'actors/001/player-final.txt').read_text()=='report\n'
     assert result['ending_request'] is None
+
+
+def test_driver_cleanup_retains_full_charge_after_invalid_consumed_trace(tmp_path):
+    profile,route,application=driver_case(tmp_path,two_actors=True)
+    adapter=tmp_path/'adapter.py'
+    adapter.write_text(FAKE_HOST+"\nemit(type='handoff')\n")
+    result=run_hosts(tmp_path,profile,route,application,'fixture-secret',threading.Event(),time.monotonic()+300)
+    actor=result['actors'][0]
+    assert result['outcome']=='incomplete' and result['attempts_charged']==20,result
+    assert not actor['accounting_complete'] and actor['attempts_charged']==20
+    assert application.runtime.add_actor.call_count==1 and not application.runtime.confirm_quiescent.called
+    assert actor['cleanup']['process_absent'] and actor['cleanup']['group_absent']
 
 
 @pytest.mark.parametrize('trigger',['seconds','http_attempts','inputs','requests','frames','frame_bytes'])

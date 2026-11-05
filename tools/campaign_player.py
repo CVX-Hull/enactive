@@ -33,6 +33,17 @@ class HostEvents:
         self.observer=observer;self.ordinal=0
 
     def read(self) -> bool:
+        if self.error is not None:
+            raise ControlError(self.error)
+        try:
+            return self._read()
+        except Exception as exc:
+            # Cleanup may call finish() after the initial read failed. Consumed
+            # bytes cannot make that invalid trace valid on the second read.
+            self.error='Host trace failed validation: '+type(exc).__name__
+            raise
+
+    def _read(self) -> bool:
         chunk=self.stream.read(1048576)
         if not chunk:return False
         self.buffer+=chunk
