@@ -100,16 +100,22 @@ class NativeChannel:
         except OSError:
             pass
 
-    def stop(self, reason: str) -> dict[str, Any]:
-        """Fence first; never wait on the executor, evidence store or reader."""
-        # Only stop-latch metadata uses this lock: no reader, executor, DB or I/O
-        # holds it. Publish first origin before its fence becomes observable.
+    def _latch_stop(self, reason: str) -> None:
+        """Publish the first cause before fencing; no condition lock or I/O.
+
+        Native receipt/state handlers may already hold the condition. This short
+        lock is released before any caller takes that condition or sends Pause.
+        """
         with self._stop_origin_lock:
             if self._stop_started_monotonic is None:
                 self._stop_started_monotonic = time.monotonic()
                 self.stop_started_wall = time.time()
                 self.stop_reason = reason[:600]
             self.stopped.set()
+
+    def stop(self, reason: str) -> dict[str, Any]:
+        """Fence first; never wait on the executor, evidence store or reader."""
+        self._latch_stop(reason)
         with self._condition:
             if self._pause_id is not None or self.closed.is_set():
                 return self.stop_status()
@@ -214,8 +220,7 @@ class NativeChannel:
             with self._condition:
                 self._target = value
                 if value['paused']:
-                    self.stopped.set()
-                    self.stop_reason = self.stop_reason or value['error'] or 'Native Pause'
+                    self._latch_stop(value['error'] or 'Native Pause')
                 self._condition.notify_all()
             return
         if kind != 'receipt':
@@ -237,8 +242,7 @@ class NativeChannel:
             pending.reply, pending.png = value, png or None
             pending.timing.update(receipt_received_wall=received_wall,receipt_received_monotonic=received_monotonic)
             if value['disposition'] in ('partial', 'unknown'):
-                self.stopped.set()
-                self.stop_reason = self.stop_reason or value['reason']
+                self._latch_stop(value['reason'])
             self._condition.notify_all()
 
     def _receive(self) -> None:

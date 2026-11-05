@@ -105,6 +105,74 @@ def test_visible_fence_has_published_origin_before_later_cleanup():
     assert not worker.is_alive()
 
 
+@pytest.mark.parametrize('cause', ['takeover', 'partial', 'unknown'])
+def test_native_fence_origin_survives_cleanup_and_late_collection(cause):
+    from tools.campaign_player import finish_interruption
+    from harness.player_client import ADAPTER_CLOSE_REASON
+    left,right=socket.socketpair();channel=NativeChannel(left,'a'*32,123)
+    request=None;result=[]
+    reason='Native human takeover' if cause=='takeover' else 'Native delivery '+cause
+    try:
+        before=time.monotonic()
+        if cause=='takeover':
+            value=dict(schema='computer-target/2',session='a'*32,pid=123,
+                window_id=1,paused=True,takeover_generation=1,latest_frame=None,error=reason)
+            right.sendall(encode_packet('state',value))
+        else:
+            request=threading.Thread(target=lambda:result.append(
+                channel.request('input',{},time.monotonic()+2,'b'*32)))
+            request.start();receive_packet(right)
+            value=native_receipt('b'*32,disposition=cause,reason=reason)
+            right.sendall(encode_packet('receipt',value))
+        assert channel.stopped.wait(2)
+        origin=channel.stop_origin()
+        assert origin['reason']==reason
+        assert before<=origin['requested_monotonic']<=time.monotonic()
+        assert origin['requested_wall'] is not None
+        channel.stop(ADAPTER_CLOSE_REASON)
+        assert channel.stop_origin()==origin
+        assert finish_interruption(channel)['stop']==origin
+        with pytest.raises(NoDispatch):
+            channel.request('input',{},time.monotonic()+1,'c'*32)
+        if request:
+            request.join(2);assert not request.is_alive()
+            assert result[0][0]==value and channel.collect('b'*32)[0]==value
+    finally:
+        channel.close();right.close()
+        if request:request.join(2)
+
+
+def test_native_fence_and_concurrent_cleanup_publish_one_origin_without_deadlock():
+    from tools.campaign_player import finish_interruption
+    from harness.player_client import ADAPTER_CLOSE_REASON
+    left,right=socket.socketpair();channel=NativeChannel(left,'a'*32,123)
+    fenced,release=threading.Event(),threading.Event()
+    errors=[]
+    def trace(frame,event,arg):
+        if event=='return' and frame.f_code is NativeChannel._latch_stop.__code__:
+            fenced.set()
+            if not release.wait(2):errors.append('native receive did not resume')
+        return trace
+    value=dict(schema='computer-target/2',session='a'*32,pid=123,
+        window_id=1,paused=True,takeover_generation=1,latest_frame=None,error='Native human takeover')
+    def native_state():
+        sys.settrace(trace)
+        try:channel._accept(dict(kind='state',value=value),b'',time.time(),time.monotonic())
+        finally:sys.settrace(None)
+    receiver=threading.Thread(target=native_state)
+    cleanup=threading.Thread(target=lambda:channel.stop(ADAPTER_CLOSE_REASON))
+    try:
+        receiver.start();assert fenced.wait(2)
+        cleanup.start()
+        assert finish_interruption(channel)['stop']['reason']=='Native human takeover'
+    finally:
+        release.set();receiver.join(2)
+        if cleanup.ident is not None:cleanup.join(2)
+        channel.close();right.close()
+    assert not receiver.is_alive() and not cleanup.is_alive() and not errors
+    assert channel.stop_origin()['reason']=='Native human takeover'
+
+
 def test_fragmented_receipt_keeps_exact_identity_and_arrival_clock():
     left,right=socket.socketpair();link=Link(left,fragment=True)
     channel=NativeChannel(link,'a'*32,123);result=[]
