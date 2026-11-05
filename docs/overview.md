@@ -44,7 +44,7 @@ control channel can offer bounded finish-up; direct `player_finish` reports the
 player's disposition. User Pause, hard limits and owned cleanup stop automation
 independently of a model reply, saving or Quit. Saving remains an ordinary game
 action, and stopping automation certifies neither persistence nor a paused game.
-The [host contract](contracts/player-host.md#external-control) owns this candidate
+The [host contract](contracts/player-host.md#external-control) owns this current
 source behavior; [work](work.md#decisive-evidence) separates it from adoption and
 real-play qualification.
 
