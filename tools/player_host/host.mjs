@@ -305,13 +305,17 @@ function retryableRefusal(body) {
   const kind = [error.type, error.code, error.metadata?.error_type, error.metadata?.provider_code,
     error.metadata?.limit_source].filter(text).join(' ');
   const details = [kind, error.message].filter(text).join(' ');
+  // Authorization, key, permission, malformed-request and context-length errors are never transient.
+  if (/(?:auth|api[_ -]?key|permission|invalid|malformed|context)/i.test(kind)
+      || /(?:authenticat|authorizat|api[_ -]?key|permission|invalid[_ -]?(?:request|parameter)|malformed|context[_ -]?(?:length|window))/i.test(details)) return false;
+  // OpenRouter's admission control is a transient hold. It can arrive with no
+  // message, or cite the account balance while automatic refill catches up
+  // (development runs B6 and B7), so balance wording does not make it terminal.
+  if (error.metadata?.limit_source === 'openrouter_admission_control') return true;
   // Pi's positive classifier is deliberately broad. Explicit non-transient
   // kinds must win even when their message also mentions a rate limit or 429.
-  if (/(?:auth|api[_ -]?key|permission|invalid|malformed|context|quota|billing|budget|payment|credit)/i.test(kind)
-      || /(?:authenticat|authorizat|api[_ -]?key|permission|invalid[_ -]?(?:request|parameter)|malformed|context[_ -]?(?:length|window)|quota|billing|budget|payment|credit)/i.test(details)) return false;
-  // OpenRouter's admission control is a transient capacity hold; it can arrive with
-  // no message for the text classifier to recognise (seen in development run B6).
-  if (error.metadata?.limit_source === 'openrouter_admission_control') return true;
+  if (/(?:quota|billing|budget|payment|credit)/i.test(kind)
+      || /(?:quota|billing|budget|payment|credit)/i.test(details)) return false;
   return isRetryableAssistantError({stopReason:'error', errorMessage:details});
 }
 

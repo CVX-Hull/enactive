@@ -765,10 +765,16 @@ test('message-less OpenRouter admission-control 429 is retried once',async t=>{
   assert.equal(result.ok,true);assert.equal(result.requests,2);
   assert.deepEqual(events.filter(e=>e.type==='response-headers').map(e=>e.status),[429,200]);
   assert.equal(events.find(e=>e.type==='provider-retry').retry_class,'rate-limit');
-  // An explicit non-transient kind still wins over the admission-control source.
-  const terminal=await scenario(t,[
-    rateLimit({code:429,message:'Quota exhausted',metadata:{limit_source:'openrouter_admission_control'}}),reply()]);
-  assert.equal(terminal.result.ok,false);assert.equal(terminal.result.requests,1);
+  // Balance wording under admission control stays transient while refill catches up.
+  const balance=await scenario(t,[
+    rateLimit({code:429,message:'Insufficient credits; add credits to continue',metadata:{limit_source:'openrouter_admission_control'}}),reply()]);
+  assert.equal(balance.result.ok,true);assert.equal(balance.result.requests,2);
+  // Authorization and malformed-request errors stay terminal even under admission control.
+  for (const message of ['Invalid API key','Malformed request','Context length exceeded']) {
+    const terminal=await scenario(t,[
+      rateLimit({code:429,message,metadata:{limit_source:'openrouter_admission_control'}}),reply()]);
+    assert.equal(terminal.result.ok,false);assert.equal(terminal.result.requests,1);
+  }
 });
 test('repeated 429 stops after exactly two charged attempts',async t=>{
   const {result,payloads,events,calls}=await scenario(t,[rateLimit(),rateLimit(),reply()]);
