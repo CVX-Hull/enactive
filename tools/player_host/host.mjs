@@ -299,6 +299,43 @@ function retryDiagnostic(headers) {
     retry_suppressed:headers.get('x-should-retry') === 'false', max_retry_delay_ms:MAX_RETRY_DELAY_MS};
 }
 
+// Read a successful event stream up to its first `data:` event (at most 64 KiB)
+// without delivering anything to the SDK. An error object as that first event, or
+// a stream that ends with no data, means no output reached the player, so the
+// request is safe to retry. Otherwise the buffered bytes are replayed unchanged.
+const PEEK_LIMIT = 65536;
+async function peekFirstEvent(response, signal) {
+  const reader = response.body.getReader();
+  const chunks = [];
+  let bytes = 0, text = '', done = false, first = null;
+  const decoder = new TextDecoder();
+  while (first === null && bytes < PEEK_LIMIT) {
+    signal.throwIfAborted();
+    const step = await reader.read();
+    if (step.done) { done = true; break; }
+    chunks.push(step.value);
+    bytes += step.value.byteLength;
+    text += decoder.decode(step.value, {stream:true}).replace(/\r\n?/g, '\n');
+    const match = /(?:^|\n)data:[ ]?([^\n]*)\n\n/.exec(text);
+    if (match) first = match[1];
+  }
+  let errorEvent = false;
+  if (first !== null) {
+    try { errorEvent = object(JSON.parse(first)?.error); } catch { errorEvent = false; }
+  }
+  const failed = errorEvent || (done && !/(?:^|\n)data:/.test(text));
+  const replay = new ReadableStream({
+    start(controller) { for (const chunk of chunks) controller.enqueue(chunk); if (done) controller.close(); },
+    async pull(controller) {
+      const step = await reader.read();
+      if (step.done) controller.close(); else controller.enqueue(step.value);
+    },
+    cancel(reason) { return reader.cancel(reason); },
+  });
+  return {failed, cancel:() => reader.cancel().catch(() => {}),
+    response:new Response(replay, {status:response.status, statusText:response.statusText, headers:response.headers})};
+}
+
 function retryableRefusal(body) {
   const error = JSON.parse(body)?.error;
   if (!object(error)) return false;
@@ -666,7 +703,20 @@ export async function runHost(options) {
               controller.enqueue(chunk);
             }}));
             response = new Response(body ?? null, {status:response.status, statusText:response.statusText, headers:response.headers});
-            if (response.status < 400) return response;
+            if (response.status < 400) {
+              if (attempts !== 1 || !response.body || response.headers.get('x-should-retry') === 'false'
+                  || !/event-stream/i.test(response.headers.get('content-type') ?? '')) return response;
+              let peeked;
+              try { peeked = await peekFirstEvent(response, requestSignal); }
+              catch (error) { if (!fatal && !requestSignal.aborted) stop('provider-error'); throw new HostError(fatal ?? 'provider-error'); }
+              if (peeked.failed && !fatal && !requestSignal.aborted) {
+                await peeked.cancel();
+                emit('provider-refusal', {request_id:attemptId, status:response.status, body_read:true, stream_start_error:true,
+                  error_type:null, error_code:null, provider_error_code:null, limit_source:null, reason:null});
+                retry(attemptId, 'stream-start-error', response.status, response.headers);
+              }
+              return peeked.response;
+            }
             let errorBody = null;
             // A declared 5xx stays eligible by status when its refusal body is
             // unreadable; 402 and 429 need their bounded body classifiers.

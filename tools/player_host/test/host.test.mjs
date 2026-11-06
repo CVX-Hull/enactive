@@ -759,6 +759,29 @@ test('eligible 429 consumes a separate attempt with identical context and one to
   assert.equal(events.find(e=>e.type==='tool-start').request_id,'request-2');
   assert.ok(!JSON.stringify({result,events}).includes('fixture-key'));
 });
+function eventStream(text) {
+  return new Response(text, {headers:{'content-type':'text/event-stream'}});
+}
+test('a stream that fails before its first data event is retried once',async t=>{
+  const keepAlive=': OPENROUTER PROCESSING\n\n'.repeat(3);
+  for (const failed of [keepAlive+'data: {"error":{"message":"Upstream error","code":502}}\n\n', keepAlive]) {
+    const {result,events}=await scenario(t,[eventStream(failed),reply()]);
+    assert.equal(result.ok,true);assert.equal(result.requests,2);
+    assert.equal(events.find(e=>e.type==='provider-retry').retry_class,'stream-start-error');
+  }
+});
+test('a stream error after delivered data is not retried',async t=>{
+  const first={id:'fixture-response',model:'fixture-backend',choices:[{index:0,delta:{role:'assistant',content:'partial'},finish_reason:null}]};
+  const late=eventStream('data: '+JSON.stringify(first)+'\n\ndata: {"error":{"message":"Upstream error","code":502}}\n\n');
+  const {result,events}=await scenario(t,[late,reply()]);
+  assert.equal(result.ok,false);assert.equal(result.requests,1);
+  assert.ok(!events.some(e=>e.type==='provider-retry'));
+});
+test('repeated stream-start errors stop after two charged attempts',async t=>{
+  const failed=()=>eventStream('data: {"error":{"message":"Upstream error","code":502}}\n\n');
+  const {result,payloads}=await scenario(t,[failed(),failed(),reply()]);
+  assert.equal(result.ok,false);assert.equal(result.requests,2);assert.equal(payloads.length,2);
+});
 test('message-less OpenRouter admission-control 429 is retried once',async t=>{
   const {result,events}=await scenario(t,[
     rateLimit({code:429,metadata:{limit_source:'openrouter_admission_control'}}),reply()]);
