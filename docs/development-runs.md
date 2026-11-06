@@ -141,7 +141,7 @@ configuration otherwise unchanged.
 | --- | --- | --- | --- | ---: | --- | ---: | --- | --- | ---: | ---: | --- |
 | T1 | 2026-11-06 | Ceiling | S1 | 0.59 | Alive at stop (orderly finish) | 4 | — | 231 (22) | 3.46 | 1,539 | Morgan Vale; 08:00 → 08:35:39. Pointy stick, 7 protein rations, clean water, emergency blanket and jacket. Recruited a follower. |
 | T2 | 2026-11-06 | Ceiling | S2 | 0.05 | Died | 0 | Surrounded by zombies and ferals on a riverbank | 70 (—) | 0.52 | 425 | Russell Dobbs; chose a fitness-gym start among about 16 zombies. Memorial "Survived 2m". |
-| T3 | 2026-11-06 | Ceiling | S1 | 0.61 | Alive at stop (orderly finish) | 2 | — | 231 (24) | 3.65 | 1,642 | Morgan Hale; 08:00 → 08:36:30. Foraged fiddleheads and leaves, stick. Recruited a follower. |
+| T3 | 2026-11-06 | Ceiling | S1 | 0.61 | Alive at stop (orderly finish) | 2 | — | 231 (24) | 3.65 | 1,642 | Morgan Hale; 08:00 → 08:36:45. Foraged fiddleheads and leaves, stick. Recruited a follower. |
 | T4 | 2026-11-06 | Ceiling | S2 | 0.03 | Died | 0 | Knocked down by a feral's thrown rock in a crowd | 37 (18) | 0.16 | 209 | Kathlyn Maloney; chose a candy-shop start among zombies. Memorial "Survived 1m". |
 | T5 | 2026-11-06 | Ceiling | S1 | 2.11 | Alive at stop (orderly finish) | 4 | — | 237 (19) | 3.98 | 1,763 | Morgan Vale; 08:00 → 10:06:36. Ate a ration, clean water, medical supplies, wooden club. Saved per player claim. |
 
@@ -149,8 +149,11 @@ configuration otherwise unchanged.
 against the 24 h rule, so under the pre-registered rule grounding is the
 bottleneck and the aid arms begin. The adoption bar for an aid is a median of at
 least 2.59 h. Two observations sit beside the rule and do not change it. First,
-every S1 survivor was alive when its allowance ended, after 30–130 in-game minutes
+every S1 survivor was alive when its allowance ended, after 36–127 in-game minutes
 for about 230 decisions: survival hours are bounded mainly by time scale, about
-8–30 game seconds per request. Second, both deaths followed the player's own S2
+9–32 game seconds per request. Second, both deaths followed the player's own S2
 choice of a dense urban start, and each came within 3 game minutes. The arm cost
-$11.78.
+$11.78 (unrounded OpenRouter generation-record totals, $11.777728; the rounded
+column sums to $11.77). Dollar columns come from those per-generation records,
+reconciled by the lead after each run; the custodian receipt itself carries only
+the configured-rate estimate, which matched them.
