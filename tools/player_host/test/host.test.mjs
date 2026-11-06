@@ -1252,6 +1252,11 @@ test('known context overflow prevents fetch and capacity warning has no experime
   const first=await scenario(t,[reply()],{configuration});
   assert.equal(first.result.ok,true);
   assert.ok(JSON.stringify(first.payloads[0]).includes('Host context capacity is approaching'));
+  // Without a handoff tool the warning names no successor; with one it offers the handoff.
+  assert.ok(JSON.stringify(first.payloads[0]).includes('no successor actor is available'));
+  assert.ok(!JSON.stringify(first.payloads[0]).includes('Request the existing player_handoff'));
+  const withHandoff=await scenario(t,[reply()],{configuration,enabledTools:['mutate','player_handoff','computer_result']});
+  assert.ok(JSON.stringify(withHandoff.payloads[0]).includes('Request the existing player_handoff'));
   const overflow={...configuration,model:{...model,contextWindow:2000},context_reserve_tokens:1500};
   const second=await scenario(t,[reply()],{configuration:overflow,context:'x'.repeat(10000)});
   assert.equal(second.result.reason,'context-capacity');assert.equal(second.payloads.length,0);

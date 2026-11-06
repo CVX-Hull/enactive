@@ -33,9 +33,14 @@ Old route/mission/player-view configurations reject as executable inputs.
 
 The driver creates each actor's `player-adapter/1`, explicit MCP table, fixed
 context, ongoing-objective/knowledge prompt and `player-host-inputs/2` hashes.
-Experiment quotas and final-actor policy remain outside player context. Pi loads no coding-agent
+Experiment quotas, host counts and other final-actor policy remain outside player
+context, with one deliberate exception below. Pi loads no coding-agent
 shell/file tools, personal settings, resource discovery or resumed history.
 Both original and successor start fresh; at most two hosts fit `campaign-run/4`.
+The final actor's tool table omits `player_handoff`, so it is never offered a
+handoff that would only end the admission; its capacity warning asks for
+`player_finish` instead. Earlier actors are offered the tool by position alone, so
+a successor can still be refused when original resources run out.
 No model, transport, host or coding-agent fallback is supported.
 
 Inject only the selected credential environment variable into the provider child.
