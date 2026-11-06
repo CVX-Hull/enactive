@@ -764,6 +764,7 @@ test('message-less OpenRouter admission-control 429 is retried once',async t=>{
     rateLimit({code:429,metadata:{limit_source:'openrouter_admission_control'}}),reply()]);
   assert.equal(result.ok,true);assert.equal(result.requests,2);
   assert.deepEqual(events.filter(e=>e.type==='response-headers').map(e=>e.status),[429,200]);
+  assert.equal(events.find(e=>e.type==='provider-retry').retry_class,'rate-limit');
   // An explicit non-transient kind still wins over the admission-control source.
   const terminal=await scenario(t,[
     rateLimit({code:429,message:'Quota exhausted',metadata:{limit_source:'openrouter_admission_control'}}),reply()]);
