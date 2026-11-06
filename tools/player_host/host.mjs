@@ -305,25 +305,43 @@ function retryDiagnostic(headers) {
 // request is safe to retry. Otherwise the buffered bytes are replayed unchanged.
 const PEEK_LIMIT = 65536;
 async function peekFirstEvent(response, signal) {
+  signal.throwIfAborted();
   const reader = response.body.getReader();
+  // As in refusalBody: cancellation releases a pending read without waiting on
+  // an untrusted source's cancel hook.
+  const cancel = () => { void reader.cancel().catch(() => {}); };
+  signal.addEventListener('abort', cancel, {once:true});
   const chunks = [];
-  let bytes = 0, text = '', done = false, first = null;
+  let bytes = 0, text = '', done = false, broken = false, first = null;
   const decoder = new TextDecoder();
-  while (first === null && bytes < PEEK_LIMIT) {
-    signal.throwIfAborted();
-    const step = await reader.read();
-    if (step.done) { done = true; break; }
-    chunks.push(step.value);
-    bytes += step.value.byteLength;
-    text += decoder.decode(step.value, {stream:true}).replace(/\r\n?/g, '\n');
-    const match = /(?:^|\n)data:[ ]?([^\n]*)\n\n/.exec(text);
-    if (match) first = match[1];
+  try {
+    while (first === null && bytes < PEEK_LIMIT) {
+      signal.throwIfAborted();
+      let step;
+      // A transport error before any data event reached the SDK is retryable.
+      try { step = await reader.read(); }
+      catch (error) { signal.throwIfAborted(); broken = true; break; }
+      signal.throwIfAborted();
+      if (step.done) { done = true; break; }
+      chunks.push(step.value);
+      bytes += step.value.byteLength;
+      text += decoder.decode(step.value, {stream:true}).replace(/\r\n?/g, '\n');
+      const match = /(?:^|\n)data:[ ]?([^\n]*)\n\n/.exec(text);
+      if (match) first = match[1];
+    }
+  } catch (error) {
+    cancel();
+    throw error;
+  } finally {
+    signal.removeEventListener('abort', cancel);
   }
   let errorEvent = false;
-  if (first !== null) {
+  if (first !== null && first.trim() !== '[DONE]') {
     try { errorEvent = object(JSON.parse(first)?.error); } catch { errorEvent = false; }
   }
-  const failed = errorEvent || (done && !/(?:^|\n)data:/.test(text));
+  // A partial data event that then breaks stays terminal, as before.
+  const noData = !/(?:^|\n)data:/.test(text);
+  const failed = errorEvent || first?.trim() === '[DONE]' || ((broken || done) && noData);
   const replay = new ReadableStream({
     start(controller) { for (const chunk of chunks) controller.enqueue(chunk); if (done) controller.close(); },
     async pull(controller) {

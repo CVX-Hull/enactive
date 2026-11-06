@@ -900,6 +900,24 @@ test('a stalled refusal body is cancellable without waiting for its cancel hook'
   }],{signal:controller.signal});
   assert.equal(result.reason,'cancelled');assert.equal(result.requests,1);assert.equal(payloads.length,1);
 });
+test('a stalled stream peek is cancellable without waiting for its cancel hook',async t=>{
+  const controller=new AbortController();
+  const {result,payloads}=await scenario(t,[()=>{
+    setTimeout(()=>controller.abort(),20);
+    return new Response(new ReadableStream({start(c){c.enqueue(new TextEncoder().encode(': keep-alive\n\n'));},
+      cancel:()=>new Promise(()=>{})}),{headers:{'content-type':'text/event-stream'}});
+  }],{signal:controller.signal});
+  assert.equal(result.reason,'cancelled');assert.equal(result.requests,1);assert.equal(payloads.length,1);
+});
+test('a transport error or first [DONE] before any data event is retried once',async t=>{
+  const broken=()=>new Response(new ReadableStream({start(c){c.enqueue(new TextEncoder().encode(': keep-alive\n\n'));c.error(new Error('reset'));}}),
+    {headers:{'content-type':'text/event-stream'}});
+  for (const first of [broken, ()=>eventStream('data: [DONE]\n\n')]) {
+    const {result,events}=await scenario(t,[first(),reply()]);
+    assert.equal(result.ok,true);assert.equal(result.requests,2);
+    assert.equal(events.find(e=>e.type==='provider-retry').retry_class,'stream-start-error');
+  }
+});
 test('both HTTP attempts share the original request timer',async t=>{
   t.mock.timers.enable({apis:['setTimeout']});
   const configuration=route();configuration.request_timeout_seconds=1;
@@ -971,9 +989,10 @@ test('host deadline also covers provider retry backoff',async t=>{
 });
 test('a partial provider stream is never retried and cannot dispatch its tool',async t=>{
   const first='data: '+JSON.stringify({choices:[{index:0,delta:{role:'assistant',tool_calls:[{index:0,id:'partial',type:'function',function:{name:'mutate',arguments:'{"mode":"ok"}'}}]},finish_reason:null}]})+'\n\n';
+  // Error on the next pull so the partial tool call really is delivered first.
   const {result,payloads,calls}=await scenario(t,[new Response(new ReadableStream({start(c){
-    c.enqueue(new TextEncoder().encode(first));c.error(new Error('fixture-key private stream failure'));
-  }}),{headers:{'content-type':'text/event-stream'}}),reply()]);
+    c.enqueue(new TextEncoder().encode(first));
+  },pull(c){c.error(new Error('fixture-key private stream failure'));}},{highWaterMark:0}),{headers:{'content-type':'text/event-stream'}}),reply()]);
   assert.equal(result.reason,'provider-error');assert.equal(payloads.length,1);assert.equal(calls.length,0);
 });
 
@@ -1031,10 +1050,11 @@ test('one retry is shared across classes and a second transient failure is termi
   });
 });
 test('suppressed, undeclared and partial-stream failures are terminal without retry',async t=>{
+  // Erroring in start() would discard the queued chunk; error on the next pull so
+  // the partial data really is delivered before the reset.
   const partial=()=>new Response(new ReadableStream({start(c){
     c.enqueue(new TextEncoder().encode('data: '+JSON.stringify({choices:[{index:0,delta:{role:'assistant',content:'par'},finish_reason:null}]})+'\n\n'));
-    c.error(new Error('fixture-key reset after headers'));
-  }}),{headers:{'content-type':'text/event-stream'}});
+  },pull(c){c.error(new Error('fixture-key reset after headers'));}},{highWaterMark:0}),{headers:{'content-type':'text/event-stream'}});
   for (const [name,response] of [
     ['503-suppressed',()=>serverError(503,{'x-should-retry':'false'})],
     ...[500,501,408,409,418].map(status=>[String(status),()=>serverError(status)]),
