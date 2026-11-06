@@ -89,10 +89,20 @@ request also rewrote the prompt cache. The scored runs therefore use the larger
 window, so the attempt allowance binds rather than context, and the block
 eviction from [#313](https://github.com/CVX-Hull/enactive/issues/313), which keeps
 the cached prefix stable between evictions. The pilot is retained but is not one
-of the five scored ceiling runs. Each package freezes `ceiling_usd` at $410 and the
-current cumulative actual upper bound as `prior_reserved_usd`, so a run is
-admissible only while the remaining D2 headroom covers its full worst case. When
-it no longer does, the loop stops and asks the owner rather than shrinking runs.
+of the five scored ceiling runs.
+
+D2's binding cap is the lower of its two limits: the pre-loop actual upper bound
+($258.406176979 over 11,353 attempts, after #369) plus $150, which is
+$408.406176979. Packages from C2 onward freeze that value as `ceiling_usd`; P1 and C1
+were frozen at $410 and their worst cases fit either value. Each package also
+freezes the current cumulative actual upper bound as `prior_reserved_usd`, so a run
+is admissible only while the remaining headroom covers its full $102.40 worst
+case, that is, while cumulative actual spend is at most $306.01. From $264.46 after
+P1, that leaves about $41.5 of actual spend. At P1's $0.0445 per attempt a scored run
+costs about $11, so **three or four scored runs are expected to fit, not five**.
+When the next run no longer fits, the loop stops and asks the owner rather than
+shrinking runs. The reservation is a worst case, not an invoice: actual spend stays
+far below it.
 
 ## Metric
 
@@ -101,7 +111,8 @@ samples the claims in each arm.
 
 - **Survival hours (primary):** in-game time from the first in-play clock to the
   last frame showing the survivor alive, or to the death screen.
-- **Status:** died, alive at stop (allowance or time ended), or player finished.
+- **Status:** died, alive at stop (attempt allowance, time or context capacity
+  ended the run), or player finished. Dates are UTC.
 - **Verified improvements:** distinct visible changes that improve needs (thirst,
   hunger, fatigue or pain reduced), supplies (new food, water or tools confirmed
   carried) or shelter (secured and used for rest). Claims without a confirming
