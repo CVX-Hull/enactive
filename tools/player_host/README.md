@@ -221,6 +221,12 @@ declared classes, recorded as `provider-retry.retry_class`, are:
   with account-balance wording (OpenRouter's transient admission hold, which clears
   when automatic refill lands); authorization, key, permission, malformed-request and
   context-length errors stay terminal.
+- `stream-start-error`: an HTTP 2xx `text/event-stream` whose first `data:` event
+  is an error object or `[DONE]`, or which ends or fails in transport before any
+  `data:` event. The host reads it before anything reaches the SDK, until the first
+  event or until about 64 KiB (checked per chunk). Keep-alive comments are skipped;
+  once a normal event has been read the stream is replayed unchanged, so a later
+  error stays terminal. Abort and timeout cancel a stalled read, as for refusal bodies.
 - `in-flight-budget`: HTTP 402 only when its metadata has both
   `limit_source:openrouter_in_flight_budget` and `reason:in_flight_budget_exhausted`
   (OpenRouter's documented [transient hold](https://openrouter.ai/docs/api-reference/limits))
