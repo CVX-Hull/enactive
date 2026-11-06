@@ -49,6 +49,7 @@ def worker(package: Path, session: str, source_commit: str, upstream: int, recei
     attention = {('required', 45): 'Operator target: check every 15 seconds. Cutoff: 45 seconds.',
                  ('best-effort', None): 'Best-effort observation: checks are optional; Pause still stops input.'}
     policy = attention.get((opening.get('attention'), opening.get('watch_seconds')))
+    recording = opening.get('attention') == 'required'
     if (opening.get('schema') != 'campaign-watch-start/2' or opening.get('session') != session
             or opening.get('source_commit') != source_commit or policy is None
             or opening.get('manifest_sha256') != digest(package/'manifest.json')
@@ -122,7 +123,12 @@ def worker(package: Path, session: str, source_commit: str, upstream: int, recei
                 status, data, media = relay(self.path)
             except (OSError, ValueError):
                 self.reply_json(503, error='Original spectator unavailable'); return
-            if self.path == '/' and status == 200:
+            if self.path == '/' and status == 200 and not recording:
+                # Best-effort observation offers no check that could stop a healthy run.
+                markup = f'<aside aria-label="Operator observation"><p>{policy}</p></aside>'.encode()
+                data = data.replace(b'<div class="frame-shell" id="watch-frame-shell"',
+                                    markup+b'<div class="frame-shell" id="watch-frame-shell"', 1)
+            elif self.path == '/' and status == 200:
                 data = data.replace(b'</head>', b'<script src="/campaign_watch_ui.js" defer></script></head>', 1)
                 markup = (f'<aside aria-label="Operator acknowledgement"><button id="watch-record" '
                     f'type="button" data-next="{accepted+1}">Record operator check</button>'
@@ -135,6 +141,7 @@ def worker(package: Path, session: str, source_commit: str, upstream: int, recei
         def do_POST(self):
             nonlocal accepted, ending_seen
             if (not self.scoped(mutation=True) or self.path not in {'/record', '/api/pause'}
+                    or (self.path == '/record' and not recording)
                     or self.headers.get('Content-Type') != 'application/json'):
                 self.send_error(403); return
             try:

@@ -17,7 +17,7 @@ Every launch selects one attention policy, recorded in `watch-start.json`:
 
 | Policy | Use | Stop rule added to custody, Pause and uncertain-delivery stops |
 | --- | --- | --- |
-| `best-effort` | Development runs (owner decision D1, [#369](https://github.com/CVX-Hull/enactive/issues/369), 5 November 2026) | None. Operator checks are optional and renew nothing. An unnoticed bad loop or death can continue until the original finite limits end the run; the lead cancels on first observed death or replacement. |
+| `best-effort` | Development runs (owner decision D1, [#369](https://github.com/CVX-Hull/enactive/issues/369), 5 November 2026) | None. The gateway offers no operator check. An unnoticed bad loop or death can continue until the original finite limits end the run; the lead cancels on first observed death or replacement. |
 | `required` | A frozen test that explicitly requires continuous attention | No completed operator check within 45 seconds stops the run. |
 
 The custody deadline is the independent outer timeout in both policies: the
@@ -45,9 +45,12 @@ spending or new admission. General unattended operation remains unqualified.
    ```
 
    Use `--attention required` only when the frozen test requires the 45-second
-   policy; step 4 then applies.
+   policy; step 5 then applies.
 
-4. Under `required`, open the exact printed gateway URL. In **Watch**, inspect the current session,
+4. Under either policy, open the exact printed gateway URL in **Watch** to observe
+   play and reach Pause. Under `best-effort` the page shows no check button and the
+   gateway refuses check records, so an optional check can never stop a healthy run.
+5. Under `required`, inspect the current session,
    status and decoded source, then click **Record operator check**. Confirm the
    accepted number. Target one completed check every15 seconds. The first must
    finish strictly before readiness plus45 seconds; each later completion must
@@ -55,7 +58,7 @@ spending or new admission. General unattended operation remains unqualified.
    cutoff. Equality is too late. A failed or unconfirmed guardian acknowledgement
    does not renew it. Missing browser confirmation is unknown: the guardian may
    already have accepted the check. Use Pause when control is uncertain.
-5. Use the same page's **Pause** for immediate control. No check renews after
+6. Use the same page's **Pause** for immediate control. No check renews after
    Pause. Refreshing the page cannot resume or reopen a stopped/partial package.
 
 The button requires a trusted explicit click, visible Watch, decoded in-viewport

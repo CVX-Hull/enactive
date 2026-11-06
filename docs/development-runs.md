@@ -7,9 +7,10 @@ status: active
 # Development runs: ceiling benchmark and grounding aids
 
 This page owns the benchmark, metric and one-row-per-run results of the current
-development loop. Each run also gets one comment on its owning issue. Acceptance
-records and independent review are reserved for adoption decisions, contract
-changes and merges ([evidence cadence](workflows/evidence-cadence.md)).
+development loop. Each run also gets one comment on its owning issue,
+[#372](https://github.com/CVX-Hull/enactive/issues/372). Acceptance records and
+independent review are reserved for adoption decisions, contract changes and
+merges ([evidence cadence](workflows/evidence-cadence.md)).
 
 ## Owner decisions, 5 November 2026
 
@@ -35,6 +36,13 @@ Five ceiling runs of GPT-6.1 Terra decide the next branch, fixed before any run:
 - **Median below 24 in-game hours:** grounding is the bottleneck. Test the
   game-neutral, player-owned aids below against the ceiling arm.
 
+A survivor still alive when its allowance ends counts at its observed hours, so
+the rule asks whether the player survives 24 hours *within the allowance*. Using
+time well (resting, waiting out the night) is part of the tested competence, not
+a separate pacing effect. The run note states whether each survivor died, was
+alive at stop, or stopped by its own choice, so a reader can see when pacing rather
+than death decided the median.
+
 An aid is adopted only when its arm's median survival exceeds the ceiling arm's
 by at least 50% and at least 2 in-game hours, with no more setup failures than
 the ceiling arm. Otherwise the change is reverted and the result recorded. With
@@ -45,13 +53,14 @@ qualification.
 
 Every run starts from a fresh project-local userdir containing only normal
 windowed input options: no world, save, player memory or predecessor report.
-The player creates a normal world with default rules and its own survivor
-through ordinary visible menus, then pursues indefinite survival. The lead gives
-no class, traits, location, tactic, target item or hint.
+The previous run's userdir and game log are archived, never deleted. The player
+creates a normal world with default rules and its own survivor through ordinary
+visible menus, then pursues indefinite survival. The lead gives no class,
+traits, location, tactic, target item or hint.
 
 | Start | Assignment difference |
 | --- | --- |
-| S1 | The player selects the default **Evacuee** scenario; profession, traits and stats are its choice. |
+| S1 | The player uses the default **Evacuee** scenario; profession, traits and stats are its choice. |
 | S2 | The player chooses every setup option, including the scenario. |
 
 Runs alternate S1, S2, S1, S2, S1 within an arm. Each run is frozen as a fresh
@@ -60,11 +69,20 @@ player's context:
 
 | Setting | Value |
 | --- | --- |
-| Route | OpenRouter, `openai/gpt-6.1-terra`, pinned `openai`, no fallback, medium effort |
-| Context | 262,144-token window at short-prompt rates; 65,536 reserve; 30 images, block 1 |
-| Requests | 150 charged HTTP attempts including retries, at most 2 hosts |
+| Route | OpenRouter, `openai/gpt-6.1-terra`, pinned `openai`, no fallback, medium effort, default tier |
+| Context | 131,072-token window, 16,384 output tokens, 32,768 reserve (successor handoff when reached); 30 images, block 1 |
+| Requests | 250 charged HTTP attempts including retries, across at most 2 hosts |
 | Time | 7,200 host seconds; 7,800 custodian seconds |
 | Supervision | `--attention best-effort` |
+
+The window stays below OpenRouter's 272,000-token long-prompt threshold, so the
+short-prompt rates apply: $1.00/M input, $1.25/M cache write, $0.05/M cache read
+and $5.00/M output (read from the public model list on 5 November 2026). The
+validator's worst case is (131,072 × $1.25 + 16,384 × $5.00) / 1M = $0.24576 per
+attempt, or $61.44 per run. Each package freezes `ceiling_usd` at $410 and the
+current cumulative actual upper bound as `prior_reserved_usd`, so a run is
+admissible only while the remaining D2 headroom covers its full worst case. When
+it no longer does, the loop stops and asks the owner rather than shrinking runs.
 
 ## Metric
 
@@ -72,9 +90,8 @@ Measured by the lead from original frames and receipts; an independent reviewer
 samples the claims in each arm.
 
 - **Survival hours (primary):** in-game time from the first in-play clock to the
-  last frame showing the survivor alive, or to the death screen. A survivor alive
-  at stop is recorded as censored (`alive`) at its observed value, and the median
-  uses the observed value.
+  last frame showing the survivor alive, or to the death screen.
+- **Status:** died, alive at stop (allowance or time ended), or player finished.
 - **Verified improvements:** distinct visible changes that improve needs (thirst,
   hunger, fatigue or pain reduced), supplies (new food, water or tools confirmed
   carried) or shelter (secured and used for rest). Claims without a confirming
@@ -87,7 +104,3 @@ samples the claims in each arm.
 
 | Run | Date | Arm | Start | Survival h | Status | Verified improvements | Death cause | Attempts (setup) | $ actual | Wall s | Note |
 | --- | --- | --- | --- | ---: | --- | ---: | --- | --- | ---: | ---: | --- |
-</content>
-</invoke>
-<invoke name="Bash">
-<parameter name="command">cd "/Users/shilongdai/Developer/CDDA Player" && .venv/bin/python tools/check.py --fast 2>&1 | tail -25
