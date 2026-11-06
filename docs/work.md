@@ -10,6 +10,17 @@ The [public Project](https://github.com/users/CVX-Hull/projects/2) and GitHub Is
 own live execution. This page routes to scoped evidence; it is not a second backlog.
 [Overview](overview.md) owns capabilities and limits.
 
+## Current development loop
+
+On 5 November 2026 the owner reset the loop (decisions D1–D4 in
+[development runs](development-runs.md)). First establish a ceiling: can GPT-6.1
+Terra survive through the current pixels-and-keys boundary? Then branch, by a rule
+fixed in advance, to cost reduction or to game-neutral grounding aids.
+[#145](https://github.com/CVX-Hull/enactive/issues/145)'s seven-day gate is the
+north star; [#164](https://github.com/CVX-Hull/enactive/issues/164)'s cadence
+criteria are deferred until a capability baseline exists. Development runs use
+best-effort observation, a $150 envelope and one table row plus one issue comment each.
+
 ## Current integrated checkpoint
 
 The production source has the [computer-control boundary](contracts/computer-control.md):

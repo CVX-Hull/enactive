@@ -31,6 +31,13 @@ allocation before admission. Reservation is not an invoice. A failed actor canno
 automatically renew resources. User Pause remains permanent for that admission.
 Changes outside the user's authorized scope still require the applicable decision.
 
+**Development-loop envelope (owner decision D2, 5 November 2026).** For the
+ceiling benchmark and grounding-aid study in the [development run table](development-runs.md),
+new model/gameplay spend is at most $150, keeping the cumulative actual upper bound
+at or below $410 within the standing $1,000. Within that envelope the lead admits
+development runs without per-run owner approval and reports each run's spend in
+its table row. Stop and ask the owner when the envelope is reached.
+
 ## Engineering decision and merge delegation
 
 The owner is not a routine gate. The lead carries ordinary engineering work through

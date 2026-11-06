@@ -72,8 +72,8 @@ def fixture(tmp_path, *, ready_age=0, receiver_pid=None):
     stops, stop_tx = socket.socketpair(type=socket.SOCK_DGRAM)
     wall, mono = time.time(), time.monotonic()
     (tmp_path/'manifest.json').write_text('{}')
-    put(tmp_path/'watch-start.json', dict(schema='campaign-watch-start/1', session=SESSION,
-        source_commit=COMMIT, manifest_sha256=sha256(b'{}').hexdigest(), watch_seconds=45,
+    put(tmp_path/'watch-start.json', dict(schema='campaign-watch-start/2', session=SESSION,
+        source_commit=COMMIT, manifest_sha256=sha256(b'{}').hexdigest(), attention='required', watch_seconds=45,
         started_wall=wall-ready_age-.1, started_monotonic=mono-ready_age-.1))
     (tmp_path/'watch-attempts.jsonl').touch()
     put(tmp_path/'started.json', dict(schema='computer-start/1', session=SESSION,
@@ -311,3 +311,16 @@ def test_receiver_check_binds_exact_connected_socket_and_handle_pid(monkeypatch)
     called.clear()
     with pytest.raises(ValueError, match='did not own'):
         watch.bind_pause_receiver(connection, 12346, 1234)
+
+
+@pytest.mark.parametrize('schema, attention, seconds', [
+    ('campaign-watch-start/1', 'required', 45), ('campaign-watch-start/2', 'best-effort', 45),
+    ('campaign-watch-start/2', 'required', None), ('campaign-watch-start/2', None, 45)])
+def test_gateway_refuses_inconsistent_or_old_attention_policy(tmp_path, schema, attention, seconds):
+    (tmp_path/'manifest.json').write_text('{}')
+    (tmp_path/'watch-attempts.jsonl').touch()
+    put(tmp_path/'watch-start.json', dict(schema=schema, session=SESSION, source_commit=COMMIT,
+        manifest_sha256=sha256(b'{}').hexdigest(), attention=attention, watch_seconds=seconds))
+    checks, tx = socket.socketpair(type=socket.SOCK_DGRAM)
+    with checks, tx, pytest.raises(ValueError, match='exclusively reserved'):
+        watch.worker(tmp_path, SESSION, COMMIT, 1, 1, checks, tx)

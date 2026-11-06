@@ -62,7 +62,8 @@ MCP projection excludes global deadline/remaining fields while canonical
 operator records retain them. No game-specific save or Quit step gates stopping.
 
 An optional [finite-test supervisor](operations/campaign-supervision.md) wraps
-the custodian with the existing45-second operator-check policy. Its independent
+the custodian with an explicitly selected attention policy: `required` (45-second
+operator checks) or `best-effort` (checks optional; development runs). Its independent
 guardian owns clocks and exact newly launched child groups; a separate gateway
 forwards spectator reads and receiver-verified Pause. It adds no player input
 producer or native custody. Supervision, host settlement and game outcomes stay
