@@ -104,6 +104,13 @@ When the next run no longer fits, the loop stops and asks the owner rather than
 shrinking runs. The reservation is a worst case, not an invoice: actual spend stays
 far below it.
 
+That happened at aid run B3, after $48.50 of actual new spend; the refused
+package never started. The owner then chose to keep the configuration and
+enforce D2 on actual spend ([budget delegation](operator-permissions.md#finite-gameplay-budget-delegation)).
+From B3 onward packages freeze the standing $1,000 as `ceiling_usd`, and a run is
+admitted only while actual new spend plus twice the largest single run so far
+stays within $150.
+
 ## Metric
 
 Measured by the lead from original frames and receipts; an independent reviewer
