@@ -117,6 +117,20 @@ scope. [#164](https://github.com/CVX-Hull/enactive/issues/164),
 [#145](https://github.com/CVX-Hull/enactive/issues/145) own cadence, learning and
 independent survival outcomes. These are separate claims, not implied by migration.
 
+The [development loop](development-runs.md) of 5–6 November 2026 measured a ceiling.
+Through this boundary, GPT-6.1 Terra plays competently in the short term: runs
+gather food, water, tools and weapons, and most deaths followed the player's own
+choice of a dense urban start. But median survival was **0.59 in-game hours**
+inside a 250-decision allowance. Three game-neutral grounding aids (zoom, the
+game's own help, reflection lineage) were each rejected on that metric. They
+produced the first real player use of memory, reflections and an organic program.
+**Within that allowance the metric is bounded by time scale**: about 230 decisions
+pass 10–130 game minutes. The aids did not isolate perception. The recommended
+next step is a long-horizon arm tracking game seconds per decision. It needs a new
+spend envelope and more actors or context per admission.
+#145's seven-day gate is the north star, and #164's cadence criteria stay
+deferred until that baseline exists.
+
 ## How you stay in control of the project
 
 Use the [Project](https://github.com/users/CVX-Hull/projects/2) for priorities,

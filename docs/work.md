@@ -21,6 +21,18 @@ north star; [#164](https://github.com/CVX-Hull/enactive/issues/164)'s cadence
 criteria are deferred until a capability baseline exists. Development runs use
 best-effort observation, a $150 envelope and one table row plus one issue comment each.
 
+**Result, 6 November 2026** ([#372](https://github.com/CVX-Hull/enactive/issues/372)).
+The Terra ceiling's median survival was 0.59 in-game hours, far below the 24-hour
+rule, so the three game-neutral aids were tested: zoom view, guide permission to
+consult the game's own help, and reflection lineage. Each was rejected on the
+primary metric, with medians of 0.30, 0.38 and 0.45 h. The aids still showed the
+first real uptake of player memory, reflections and an organic local program. Short-term play is
+competent, but survival is bounded by time scale: about 230 decisions pass 10–130
+game minutes. The recommended next step is a long-horizon arm that tracks game
+seconds per decision ([development runs](development-runs.md#loop-result-and-next-step)).
+Loop spend was $88.54 of $150. Host fixes #378–#380 retry three transient
+provider failure classes.
+
 ## Current integrated checkpoint
 
 The production source has the [computer-control boundary](contracts/computer-control.md):
