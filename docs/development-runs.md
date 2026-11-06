@@ -187,5 +187,5 @@ help, command and keybinding screens and to keep what it learns as memory record
 
 | Run | Date | Arm | Start | Survival h | Status | Verified improvements | Death cause | Attempts (setup) | $ actual | Wall s | Note |
 | --- | --- | --- | --- | ---: | --- | ---: | --- | --- | ---: | ---: | --- |
-| B1 | 2026-11-06 | B (help) | S1 | 0.38 | Alive at stop (orderly finish) | 3 | — | 231 (13) | 3.49 | 2,016 | Claude Townsend. Wooden club, chocolate drink, flashlight; follower. Saved a keybinding `procedure` record. |
+| B1 | 2026-11-06 | B (help) | S1 | 0.38 | Alive at stop (orderly finish) | 3 | — | 231 (13) | 3.49 | 2,016 | C. Townsend (player-chosen name). Wooden club, chocolate drink, flashlight; follower. Saved a keybinding `procedure` record. |
 | B2 | 2026-11-06 | B (help) | S2 | 0.29 | Alive at stop (orderly finish) | 4 | — | 239 (16) | 3.64 | 2,282 | Carolynn Hardy; default scenario. Cattails, rations, clean water, mission reward of cattail jelly. Two keybinding `procedure` records. |

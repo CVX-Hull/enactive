@@ -759,6 +759,17 @@ test('eligible 429 consumes a separate attempt with identical context and one to
   assert.equal(events.find(e=>e.type==='tool-start').request_id,'request-2');
   assert.ok(!JSON.stringify({result,events}).includes('fixture-key'));
 });
+test('message-less OpenRouter admission-control 429 is retried once',async t=>{
+  const {result,events}=await scenario(t,[
+    rateLimit({code:429,metadata:{limit_source:'openrouter_admission_control'}}),reply()]);
+  assert.equal(result.ok,true);assert.equal(result.requests,2);
+  assert.deepEqual(events.filter(e=>e.type==='response-headers').map(e=>e.status),[429,200]);
+  assert.equal(events.find(e=>e.type==='provider-retry').retry_class,'rate-limit');
+  // An explicit non-transient kind still wins over the admission-control source.
+  const terminal=await scenario(t,[
+    rateLimit({code:429,message:'Quota exhausted',metadata:{limit_source:'openrouter_admission_control'}}),reply()]);
+  assert.equal(terminal.result.ok,false);assert.equal(terminal.result.requests,1);
+});
 test('repeated 429 stops after exactly two charged attempts',async t=>{
   const {result,payloads,events,calls}=await scenario(t,[rateLimit(),rateLimit(),reply()]);
   assert.equal(result.ok,false);assert.equal(result.reason,'provider-error');

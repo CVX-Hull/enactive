@@ -309,6 +309,9 @@ function retryableRefusal(body) {
   // kinds must win even when their message also mentions a rate limit or 429.
   if (/(?:auth|api[_ -]?key|permission|invalid|malformed|context|quota|billing|budget|payment|credit)/i.test(kind)
       || /(?:authenticat|authorizat|api[_ -]?key|permission|invalid[_ -]?(?:request|parameter)|malformed|context[_ -]?(?:length|window)|quota|billing|budget|payment|credit)/i.test(details)) return false;
+  // OpenRouter's admission control is a transient capacity hold; it can arrive with
+  // no message for the text classifier to recognise (seen in development run B6).
+  if (error.metadata?.limit_source === 'openrouter_admission_control') return true;
   return isRetryableAssistantError({stopReason:'error', errorMessage:details});
 }
 
