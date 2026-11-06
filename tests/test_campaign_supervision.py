@@ -82,6 +82,39 @@ def test_partial_watch_marker_is_never_rearmed(tmp_path, monkeypatch):
     assert (tmp_path/'watch-attempts.jsonl').read_text() == 'partial'
 
 
+def test_credential_prefers_environment_then_mapped_keychain_item(tmp_path):
+    calls = []
+    def run(argv, **kwargs):
+        calls.append(argv)
+        return SimpleNamespace(returncode=0, stdout='synthetic-not-a-provider-key\n')
+    mapping = tmp_path/'credentials.json'
+    assert guard.credential('KEY', environ={'KEY': 'from-env'}, mapping=mapping, run=run) == 'from-env'
+    assert guard.credential('KEY', environ={}, mapping=mapping, run=run) is None
+    mapping.write_text(json.dumps({'OTHER': {'keychain_service': 'other-item'}}))
+    assert guard.credential('KEY', environ={}, mapping=mapping, run=run) is None and calls == []
+    mapping.write_text(json.dumps({'KEY': {'keychain_service': 'operator-item'}}))
+    assert guard.credential('KEY', environ={}, mapping=mapping, run=run) == 'synthetic-not-a-provider-key'
+    assert calls == [['/usr/bin/security', 'find-generic-password', '-s', 'operator-item', '-w']]
+
+
+@pytest.mark.parametrize('entry', [{'keychain_service': ''}, {'keychain_service': 1}, 'operator-item',
+                                   {'keychain_service': 'item', 'account': 'x'}])
+def test_credential_refuses_malformed_map_entries(tmp_path, entry):
+    mapping = tmp_path/'credentials.json'
+    mapping.write_text(json.dumps({'KEY': entry}))
+    with pytest.raises(ValueError, match='Invalid credential map entry'):
+        guard.credential('KEY', environ={}, mapping=mapping, run=lambda *a, **k: pytest.fail('no lookup'))
+
+
+@pytest.mark.parametrize('result', [SimpleNamespace(returncode=44, stdout=''),
+                                    SimpleNamespace(returncode=0, stdout='\n')])
+def test_missing_keychain_item_is_named_without_any_value(tmp_path, result):
+    mapping = tmp_path/'credentials.json'
+    mapping.write_text(json.dumps({'KEY': {'keychain_service': 'operator-item'}}))
+    with pytest.raises(ValueError, match="Keychain item 'operator-item' for KEY is unavailable"):
+        guard.credential('KEY', environ={}, mapping=mapping, run=lambda *a, **k: result)
+
+
 def test_attention_policy_must_be_explicit(tmp_path):
     with pytest.raises(ValueError, match='explicit attention policy'):
         guard.run_supervised(tmp_path, attention='none')

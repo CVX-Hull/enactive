@@ -34,10 +34,12 @@ spending or new admission. General unattended operation remains unqualified.
    [campaign procedure](campaign-run.md). Resolve scope, spending, original
    resources, ending reserves and stop rules before admission. Preserve original
    saves and failed chains; old experiment launchers stay historical evidence.
-2. Supply only the selected route's credential environment. The supervisor passes
-   that value only to the custodian; gateway and keep-awake children receive
-   executable lookup and locale. No new credential lookup or global permission
-   entry is installed.
+2. Supply the selected route's credential: export its environment variable, or
+   map it to your own keychain item in the git-ignored `.runtime/credentials.json`
+   ([setup](../setup.md#install-the-generic-gameplay-host)). The supervisor reads a mapped
+   item with `security find-generic-password` only when the variable is unset,
+   and passes the value only to the custodian; gateway and keep-awake children
+   receive executable lookup and locale. No global permission entry is installed.
 3. Invoke from the selected checkout through engineering command permissions:
 
    ```sh

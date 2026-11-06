@@ -80,7 +80,19 @@ route is not gameplay qualification or invoice evidence.
 
 Supply only the configured credential environment variable to the dedicated host;
 never write its value to files/argv/logs. MCP/native children receive no provider
-secret. The host rejects ambient OpenAI SDK logging/header/org/project overrides;
+secret. On a Mac, the [finite-test supervisor](operations/campaign-supervision.md)
+can read the value from your own login-keychain item instead. Store the key once
+as a generic password (`security add-generic-password -s YOUR_ITEM -a "$USER" -w`
+prompts for it), then map the variable to that item in the checkout's git-ignored
+`.runtime/credentials.json`:
+
+```json
+{"OPENROUTER_API_KEY": {"keychain_service": "YOUR_ITEM"}}
+```
+
+An exported variable takes precedence. The map holds only the item name, never
+the key; each operator keeps their own map and item name out of Git. A separate
+worktree needs its own copy of the map. The host rejects ambient OpenAI SDK logging/header/org/project overrides;
 clear those only for the dedicated invocation, without changing global profiles.
 
 ## Configure the structured player tools
