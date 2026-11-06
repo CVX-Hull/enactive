@@ -38,6 +38,13 @@ at or below $410 within the standing $1,000. Within that envelope the lead admit
 development runs without per-run owner approval and reports each run's spend in
 its table row. Stop and ask the owner when the envelope is reached.
 
+**Actual-spend admission (owner decision, 6 November 2026).** The per-run
+worst-case reservation ($102.40) would have closed the envelope after about $48
+of actual spend. Packages for this loop therefore freeze the standing $1,000 as
+their `ceiling_usd` worst-case guard, and D2 is enforced on actual
+provider-reported spend: the lead admits a run only while actual new spend plus
+twice the largest single run so far stays within $150.
+
 ## Engineering decision and merge delegation
 
 The owner is not a routine gate. The lead carries ordinary engineering work through
