@@ -46,8 +46,10 @@ Diagnostic or qualification packages may freeze another conformed route; their
 record names it, and it confers no selection.
 `mcp-template.json` must equal the current generated profile with `@ACTOR_CONFIG@`.
 Freeze the player guide/current schema and ongoing user objective in context/prompt.
-Keep experiment quotas, ending reserves and final-actor policy in operator files,
-outside the player's supplied prompt/tool/program views. Do not put mutable
+Keep experiment quotas, ending reserves and host counts in operator files,
+outside the player's supplied prompt/tool/program views. The one deliberate
+final-actor signal is the tool table: an actor with no successor is offered no
+`player_handoff` ([host procedure](player-host.md)). Do not put mutable
 engineering source or hidden game facts into player context.
 
 A prior player's terminal report may be included as clearly bounded **fallible

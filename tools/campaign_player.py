@@ -225,6 +225,8 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
                 context=_handoff_context(application,actor,record['handoff'])
                 application.runtime.confirm_quiescent(actor['actor_id'],record['handoff']['handoff_id'],host_quiescent=True)
                 if index==profile['max_hosts']:
+                    # Defensive: the final actor is offered no handoff tool, so only a
+                    # non-conforming host can reach this through the custodian.
                     reason='Final actor handed off beyond original actor allowance';break
                 continue
             disposition=settled.get('reason')

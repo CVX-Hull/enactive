@@ -42,7 +42,9 @@ The package freezes one player host adapter under the
 compact [guide](../player-guide.md), ongoing user objective and current tool schema.
 Keep routine engineering history/source searches outside its context. Preserve
 ending capacity in operator-only accounting and, if permitted, meaningful unfinished
-work for a fresh successor. Do not inject experiment quotas or final-actor policy.
+work for a fresh successor. Do not inject experiment quotas, host counts or other
+final-actor policy; the only final-actor signal is that its tool table omits
+`player_handoff`.
 The driver retains any orderly-stop identity across turnover and gates a successor
 before MCP/fetch; independent Pause and owned cleanup never wait for a save or reply.
 Do not inject lead tactics or curate memory to manufacture a successful outcome.
