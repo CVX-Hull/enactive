@@ -82,6 +82,58 @@ def test_partial_watch_marker_is_never_rearmed(tmp_path, monkeypatch):
     assert (tmp_path/'watch-attempts.jsonl').read_text() == 'partial'
 
 
+def test_credential_prefers_environment_then_mapped_keychain_item(tmp_path):
+    calls = []
+    def run(argv, **kwargs):
+        calls.append(argv)
+        return SimpleNamespace(returncode=0, stdout='synthetic-not-a-provider-key\n')
+    mapping = tmp_path/'credentials.json'
+    assert guard.credential('KEY', environ={'KEY': 'from-env'}, mapping=mapping, run=run) == 'from-env'
+    assert guard.credential('KEY', environ={}, mapping=mapping, run=run) is None
+    mapping.write_text(json.dumps({'OTHER': {'keychain_service': 'other-item'}}))
+    assert guard.credential('KEY', environ={}, mapping=mapping, run=run) is None and calls == []
+    mapping.write_text(json.dumps({'KEY': {'keychain_service': 'operator-item'}}))
+    assert guard.credential('KEY', environ={}, mapping=mapping, run=run) == 'synthetic-not-a-provider-key'
+    assert calls == [['/usr/bin/security', 'find-generic-password', '-s', 'operator-item', '-w']]
+
+
+@pytest.mark.parametrize('content, message', [('[]', 'must be a JSON object'), ('{"KEY": 1, "KEY": 2}', 'bounded regular'),
+                                              ('not json', 'bounded regular')])
+def test_credential_refuses_malformed_map_naming_it(tmp_path, content, message):
+    mapping = tmp_path/'credentials.json'
+    mapping.write_text(content)
+    with pytest.raises(ValueError, match=message):
+        guard.credential('KEY', environ={}, mapping=mapping, run=lambda *a, **k: pytest.fail('no lookup'))
+
+
+def test_credential_lookup_timeout_is_a_clean_refusal(tmp_path):
+    mapping = tmp_path/'credentials.json'
+    mapping.write_text(json.dumps({'KEY': {'keychain_service': 'operator-item'}}))
+    def run(argv, **kwargs):
+        raise subprocess.TimeoutExpired(argv, kwargs['timeout'], output='partial-secret')
+    with pytest.raises(ValueError, match="'operator-item' for KEY timed out") as raised:
+        guard.credential('KEY', environ={}, mapping=mapping, run=run)
+    assert 'partial-secret' not in str(raised.value) and raised.value.__cause__ is None
+
+
+@pytest.mark.parametrize('entry', [{'keychain_service': ''}, {'keychain_service': 1}, 'operator-item',
+                                   {'keychain_service': 'item', 'account': 'x'}, None])
+def test_credential_refuses_malformed_map_entries(tmp_path, entry):
+    mapping = tmp_path/'credentials.json'
+    mapping.write_text(json.dumps({'KEY': entry}))
+    with pytest.raises(ValueError, match='Invalid credential map entry'):
+        guard.credential('KEY', environ={}, mapping=mapping, run=lambda *a, **k: pytest.fail('no lookup'))
+
+
+@pytest.mark.parametrize('result', [SimpleNamespace(returncode=44, stdout=''),
+                                    SimpleNamespace(returncode=0, stdout='\n')])
+def test_missing_keychain_item_is_named_without_any_value(tmp_path, result):
+    mapping = tmp_path/'credentials.json'
+    mapping.write_text(json.dumps({'KEY': {'keychain_service': 'operator-item'}}))
+    with pytest.raises(ValueError, match="Keychain item 'operator-item' for KEY is unavailable"):
+        guard.credential('KEY', environ={}, mapping=mapping, run=lambda *a, **k: result)
+
+
 def test_attention_policy_must_be_explicit(tmp_path):
     with pytest.raises(ValueError, match='explicit attention policy'):
         guard.run_supervised(tmp_path, attention='none')

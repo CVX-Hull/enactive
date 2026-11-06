@@ -33,6 +33,42 @@ WINDOW = 45
 ATTENTION = {'required': WINDOW, 'best-effort': None}
 PAUSE_REPLY = .75
 MARKERS = ('watch-start.json', 'watch-attempts.jsonl', 'watch-terminal.json')
+# Optional, git-ignored map from a credential variable to the operator's own
+# macOS keychain item: {"OPENROUTER_API_KEY": {"keychain_service": "NAME"}}.
+CREDENTIALS = ROOT/'.runtime'/'credentials.json'
+
+
+def credential(name: str, *, environ=os.environ, mapping: Path = CREDENTIALS, run=subprocess.run) -> str | None:
+    """Return the route credential from the environment, else from the mapped keychain item.
+
+    The value is returned only to the caller; it is never printed, logged or written.
+    """
+    if environ.get(name):
+        return environ[name]
+    if not mapping.is_file():
+        return None
+    try:
+        entries = read_json(mapping, 65536)
+    except ValueError as exc:
+        raise ValueError(f'Credential map {mapping} is not a bounded regular JSON file') from exc
+    if type(entries) is not dict:
+        raise ValueError(f'Credential map {mapping} must be a JSON object')
+    if name not in entries:
+        return None
+    entry = entries[name]
+    service = entry.get('keychain_service') if type(entry) is dict and set(entry) == {'keychain_service'} else None
+    if type(service) is not str or not service or len(service) > 256:
+        raise ValueError(f'Invalid credential map entry for {name}; use {{"keychain_service": "NAME"}}')
+    try:
+        # Allow time for a locked keychain's unlock dialog.
+        found = run(['/usr/bin/security', 'find-generic-password', '-s', service, '-w'],
+                    capture_output=True, text=True, timeout=60)
+    except subprocess.TimeoutExpired:
+        raise ValueError(f'Keychain item {service!r} for {name} timed out; unlock the keychain') from None
+    value = found.stdout.rstrip('\n') if found.returncode == 0 else ''
+    if not value:
+        raise ValueError(f'Keychain item {service!r} for {name} is unavailable')
+    return value
 
 
 def finite(value: object) -> bool:
@@ -253,9 +289,10 @@ def run_supervised(directory: Path, *, attention: str, popen=subprocess.Popen, c
     if any((directory/name).exists() or (directory/name).is_symlink() for name in MARKERS):
         raise ValueError('Selected package has prior/partial supervision; never rearm it')
     profile, route, _ = preflight(directory)
-    secret = os.environ.get(route['api_key_env'])
+    secret = credential(route['api_key_env'])
     if not secret:
-        raise ValueError('Selected provider credential is unavailable; supply its explicit environment variable')
+        raise ValueError('Selected provider credential is unavailable; supply its environment variable '
+                         'or map it to a keychain item in .runtime/credentials.json')
     manifest_sha = digest(directory/'manifest.json')
     result = dict(schema='campaign-watch-terminal/2', session=profile['session'],
         source_commit=profile['source_commit'], manifest_sha256=manifest_sha,
