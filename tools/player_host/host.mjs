@@ -546,7 +546,9 @@ export async function runHost(options) {
             contextWarning = true;
             const notice = {role:'user', timestamp:Date.now(), content:[{type:'text', text:control
               ? 'Host context capacity is approaching. Finish up and use player_finish under the accepted automation control. No compaction or history restoration is available.'
-              : 'Host context capacity is approaching. Request the existing player_handoff with the context you need to retain, or use player_finish if you cannot continue. No compaction or history restoration is available.'}]};
+              : mcp.enabled_tools.includes('player_handoff')
+                ? 'Host context capacity is approaching. Request the existing player_handoff with the context you need to retain, or use player_finish if you cannot continue. No compaction or history restoration is available.'
+                : 'Host context capacity is approaching and no successor actor is available. Use player_finish before context runs out, reporting where play stands. No compaction or history restoration is available.'}]};
             if (tokens + estimateContextTokens([notice]).tokens + configuration.model.maxTokens >= configuration.model.contextWindow) stop('context-capacity');
             return [...projection.messages, notice];
           }

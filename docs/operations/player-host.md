@@ -36,6 +36,10 @@ context, ongoing-objective/knowledge prompt and `player-host-inputs/2` hashes.
 Experiment quotas and final-actor policy remain outside player context. Pi loads no coding-agent
 shell/file tools, personal settings, resource discovery or resumed history.
 Both original and successor start fresh; at most two hosts fit `campaign-run/4`.
+Only an actor with an available successor is offered `player_handoff`: the final
+actor's tool table omits it, so the player sees an honest affordance instead of a
+handoff that would end the admission. The admission's host count itself stays
+outside player context.
 No model, transport, host or coding-agent fallback is supported.
 
 Inject only the selected credential environment variable into the provider child.

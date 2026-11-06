@@ -164,7 +164,8 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
                                      session=profile['session'],**actor))
             selected_route=dict(route,max_requests=allowance)
             write_new(target/'route.json',selected_route)
-            write_new(target/'mcp.json',configuration(str(actor_file)))
+            # The final actor has no successor, so it is not offered a handoff it cannot use.
+            write_new(target/'mcp.json',configuration(str(actor_file),handoff=index<profile['max_hosts']))
             # The objective survives actor/context turnover. Test counts and the
             # admission's final-actor/ending policy never enter player context.
             write_new(target/'context.txt',(directory/'context.txt').read_text(),text=True)

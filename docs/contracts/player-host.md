@@ -63,7 +63,9 @@ These operator counts do not enter the assignment, repeated model messages or
 actor tool/program results.
 
 The current adapter reuses its maintained context estimate, reported usage and a text/image
-heuristic floor to request existing handoff before capacity becomes critical.
+heuristic floor to warn before capacity becomes critical. The warning offers the
+existing handoff when the actor's tool table includes `player_handoff`; otherwise it
+says no successor is available and asks for `player_finish`.
 These estimates are not exact provider token bounds. Known excessive context
 stops before another fetch. Original text, source/omission provenance and tool
 correlations remain without compaction, fabricated summaries, restore or fallback.

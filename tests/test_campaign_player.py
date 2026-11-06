@@ -188,6 +188,16 @@ def test_pending_stop_survives_verified_handoff_before_successor_action(tmp_path
     assert result['attempts_charged']==2 and application.runtime.confirm_quiescent.call_count==1
     launched=json.loads((tmp_path/'actors/002/host-process.json').read_text())['argv']
     assert launched[launched.index('--pending-control-id')+1]==first['id']
+    # Only an actor with an available successor is offered the handoff tool.
+    tools=[json.loads((tmp_path/f'actors/{n}/mcp.json').read_text())['enabled_tools'] for n in ('001','002')]
+    assert 'player_handoff' in tools[0] and 'player_handoff' not in tools[1]
+    assert set(tools[0])-set(tools[1])=={'player_handoff'}
+
+
+def test_single_host_admission_offers_no_handoff_tool(tmp_path):
+    profile,route,application=driver_case(tmp_path)
+    run_hosts(tmp_path,profile,route,application,'fixture-secret',threading.Event(),time.monotonic()+300)
+    assert 'player_handoff' not in json.loads((tmp_path/'actors/001/mcp.json').read_text())['enabled_tools']
 
 
 def test_permanent_fence_cannot_be_overwritten_by_later_finish_report(tmp_path):
