@@ -97,8 +97,27 @@ def test_credential_prefers_environment_then_mapped_keychain_item(tmp_path):
     assert calls == [['/usr/bin/security', 'find-generic-password', '-s', 'operator-item', '-w']]
 
 
+@pytest.mark.parametrize('content, message', [('[]', 'must be a JSON object'), ('{"KEY": 1, "KEY": 2}', 'bounded regular'),
+                                              ('not json', 'bounded regular')])
+def test_credential_refuses_malformed_map_naming_it(tmp_path, content, message):
+    mapping = tmp_path/'credentials.json'
+    mapping.write_text(content)
+    with pytest.raises(ValueError, match=message):
+        guard.credential('KEY', environ={}, mapping=mapping, run=lambda *a, **k: pytest.fail('no lookup'))
+
+
+def test_credential_lookup_timeout_is_a_clean_refusal(tmp_path):
+    mapping = tmp_path/'credentials.json'
+    mapping.write_text(json.dumps({'KEY': {'keychain_service': 'operator-item'}}))
+    def run(argv, **kwargs):
+        raise subprocess.TimeoutExpired(argv, kwargs['timeout'], output='partial-secret')
+    with pytest.raises(ValueError, match="'operator-item' for KEY timed out") as raised:
+        guard.credential('KEY', environ={}, mapping=mapping, run=run)
+    assert 'partial-secret' not in str(raised.value) and raised.value.__cause__ is None
+
+
 @pytest.mark.parametrize('entry', [{'keychain_service': ''}, {'keychain_service': 1}, 'operator-item',
-                                   {'keychain_service': 'item', 'account': 'x'}])
+                                   {'keychain_service': 'item', 'account': 'x'}, None])
 def test_credential_refuses_malformed_map_entries(tmp_path, entry):
     mapping = tmp_path/'credentials.json'
     mapping.write_text(json.dumps({'KEY': entry}))

@@ -47,15 +47,24 @@ def credential(name: str, *, environ=os.environ, mapping: Path = CREDENTIALS, ru
         return environ[name]
     if not mapping.is_file():
         return None
-    entries = read_json(mapping, 65536)
-    entry = entries.get(name) if type(entries) is dict else None
-    if entry is None:
+    try:
+        entries = read_json(mapping, 65536)
+    except ValueError as exc:
+        raise ValueError(f'Credential map {mapping} is not a bounded regular JSON file') from exc
+    if type(entries) is not dict:
+        raise ValueError(f'Credential map {mapping} must be a JSON object')
+    if name not in entries:
         return None
+    entry = entries[name]
     service = entry.get('keychain_service') if type(entry) is dict and set(entry) == {'keychain_service'} else None
     if type(service) is not str or not service or len(service) > 256:
         raise ValueError(f'Invalid credential map entry for {name}; use {{"keychain_service": "NAME"}}')
-    found = run(['/usr/bin/security', 'find-generic-password', '-s', service, '-w'],
-                capture_output=True, text=True, timeout=10)
+    try:
+        # Allow time for a locked keychain's unlock dialog.
+        found = run(['/usr/bin/security', 'find-generic-password', '-s', service, '-w'],
+                    capture_output=True, text=True, timeout=60)
+    except subprocess.TimeoutExpired:
+        raise ValueError(f'Keychain item {service!r} for {name} timed out; unlock the keychain') from None
     value = found.stdout.rstrip('\n') if found.returncode == 0 else ''
     if not value:
         raise ValueError(f'Keychain item {service!r} for {name} is unavailable')
