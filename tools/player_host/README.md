@@ -219,8 +219,8 @@ declared classes, recorded as `provider-retry.retry_class`, are:
   limits, malformed or unrecognized errors stay terminal. A 429 whose metadata has
   `limit_source:openrouter_admission_control` is eligible even with no message or
   with account-balance wording (OpenRouter's transient admission hold, which clears
-  when automatic refill lands); authorization, key, permission and malformed-request
-  errors stay terminal.
+  when automatic refill lands); authorization, key, permission, malformed-request and
+  context-length errors stay terminal.
 - `in-flight-budget`: HTTP 402 only when its metadata has both
   `limit_source:openrouter_in_flight_budget` and `reason:in_flight_budget_exhausted`
   (OpenRouter's documented [transient hold](https://openrouter.ai/docs/api-reference/limits))

@@ -770,7 +770,7 @@ test('message-less OpenRouter admission-control 429 is retried once',async t=>{
     rateLimit({code:429,message:'Insufficient credits; add credits to continue',metadata:{limit_source:'openrouter_admission_control'}}),reply()]);
   assert.equal(balance.result.ok,true);assert.equal(balance.result.requests,2);
   // Authorization and malformed-request errors stay terminal even under admission control.
-  for (const message of ['Invalid API key','Malformed request']) {
+  for (const message of ['Invalid API key','Malformed request','Context length exceeded']) {
     const terminal=await scenario(t,[
       rateLimit({code:429,message,metadata:{limit_source:'openrouter_admission_control'}}),reply()]);
     assert.equal(terminal.result.ok,false);assert.equal(terminal.result.requests,1);
