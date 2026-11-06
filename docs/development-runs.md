@@ -179,7 +179,7 @@ optional nearest-neighbour `zoom` of a crop, and the guide's tool row mentions i
 rejects the aid for **no uptake**; it is not evidence about zoomed reading itself.
 The branch stays unmerged. Arm cost $17.41, including the failed A2.
 
-### Aid arm B: consult the game's own help (in progress)
+### Aid arm B: consult the game's own help (rejected)
 
 Source `784d3ae` (differs from the ceiling source only in docs); the frozen
 context is the guide plus a paragraph permitting the player to open the game's own
@@ -189,3 +189,68 @@ help, command and keybinding screens and to keep what it learns as memory record
 | --- | --- | --- | --- | ---: | --- | ---: | --- | --- | ---: | ---: | --- |
 | B1 | 2026-11-06 | B (help) | S1 | 0.38 | Alive at stop (orderly finish) | 3 | — | 231 (13) | 3.49 | 2,016 | C. Townsend (player-chosen name). Wooden club, chocolate drink, flashlight; follower. Saved a keybinding `procedure` record. |
 | B2 | 2026-11-06 | B (help) | S2 | 0.29 | Alive at stop (orderly finish) | 4 | — | 239 (16) | 3.64 | 2,282 | Carolynn Hardy; default scenario. Cattails, rations, clean water, mission reward of cattail jelly. Two keybinding `procedure` records. |
+| B3 | 2026-11-06 | B (help) | S1 | 0.42 | Alive at stop (orderly finish) | 4 | — | 234 (16) | 4.02 | 2,108 | Timothy Lowery. Long pointy stick, fiddleheads, clean water, ration. Two self-correction records; no keybinding record. |
+| B4 | 2026-11-06 | B (help) | S2 | 0.17 | Alive at stop (orderly finish) | 0 | — | 231 (16) | 3.45 | 2,266 | Li Avery; random sewage-plant start. Carried weight rose, but no pickup is separable from starting kit. Keybinding `procedure` record. |
+| B5 | 2026-11-06 | B (help) | S1 | — | Infrastructure failure | — | — | 191 (17) | 2.61 | 1,425 | HTTP 403: the API key's $250 monthly limit was exhausted. The owner raised it. Not scored. |
+| B6 | 2026-11-06 | B (help) | S1 | — | Infrastructure failure | — | — | 211 (—) | 3.13 | 1,518 | 429 from OpenRouter admission control with no message; not retried (#378). Not scored. |
+| B7 | 2026-11-06 | B (help) | S1 | — | Infrastructure failure | — | — | 199 (—) | 3.56 | 1,439 | Admission-control 429 citing a low account balance during auto-refill (#379). Not scored. |
+| B8 | 2026-11-06 | B (help) | S1 | — | Infrastructure failure | — | — | 172 (—) | 2.48 | 1,150 | HTTP 200, then a stream error before any event (#380). Not scored. |
+| B9 | 2026-11-06 | B (help) | S1 | 0.70 | Alive at stop (orderly finish) | 4 | — | 231 (20) | 3.41 | 1,817 | Morgan Reed; farmhouse. Wooden club, water, clean water, ration, emergency blanket; killed a zombie. No keybinding record. |
+
+**Arm B decision: rejected.** Median survival is 0.38 h against the ceiling's 0.59 h
+and the 2.59 h bar, so the guide stays unchanged. This was the first aid with real
+uptake: three of five players read the game's own keybinding screen and kept what
+they learned as `procedure` records. Median verified improvements were 4, against
+the ceiling's 2, and no arm-B survivor died. These are signals beside the rule, not
+measured effects. The B5–B8 dollar figures include the $0.4096 worst-case
+reservation for each failed attempt that had no provider record.
+
+### Aid arm C: reflection lineage (rejected)
+
+Source `c313346` (#380). The frozen context is the guide plus a paragraph asking the
+player to record an `advice` reflection before it hands off or finishes, and when its
+survivor dies. Each run's assignment carries the earlier arm-C players' reflections
+as bounded, fallible historical data.
+
+| Run | Date | Arm | Start | Survival h | Status | Verified improvements | Death cause | Attempts (setup) | $ actual | Wall s | Note |
+| --- | --- | --- | --- | ---: | --- | ---: | --- | --- | ---: | ---: | --- |
+| C1 | 2026-11-06 | C (reflect) | S1 | 0.45 | Alive at stop (orderly finish) | 5 | — | 232 (22) | 4.09 | 1,800 | Morgan Hale; follower. Long pointy stick, rhubarb, rations, clean water, emergency jacket and blanket. Two reflections. One stream-start error, retried by #380. |
+| C2 | 2026-11-06 | C (reflect) | S2 | 0.22 | Died | 5 | Caught by a feral soldier near a house | 196 (22) | 2.35 | 1,480 | Alex Rowan; follower. Club, water, honey, rations, first-aid kit, emergency clothing. Post-death reflection named the decisive error. |
+| C3 | 2026-11-06 | C (reflect) | S1 | 0.49 | Alive at stop (orderly finish) | 1 | — | 232 (27) | 3.47 | 1,921 | Elias Reed; injured. Bandaged a torso wound; killed a tough zombie and two feral mechanics. Two reflections. |
+| C4 | 2026-11-06 | C (reflect) | S2 | — | Custody safety stop | — | — | 30 (—) | 0.10 | 151 | Character-creation input expired during dispatch; uncertain delivery permanently fenced input, as designed. Not scored; replaced by C6. |
+| C5 | 2026-11-06 | C (reflect) | S1 | 0.28 | Alive at stop (orderly finish) | 1 | — | 234 (33) | 3.81 | 1,702 | Evan Mercer. Foraged burdock and pine materials. **First organic local program of the loop**: a saved bounded walking routine, run twice to `done`. Saved and quit per the player. |
+| C6 | 2026-11-06 | C (reflect) | S2 | 2.06 | Alive at stop (orderly finish) | 1 | — | 236 (26) | 3.57 | 1,832 | Avery Stone; evac shelter start. Drank (thirst "Slaked"); long auto-travel; withdrew from a deranged axeman. Two reflections. |
+
+**Arm C decision: rejected.** Median survival is 0.45 h against the ceiling's 0.59 h
+and the 2.59 h bar, so the guide stays unchanged. Uptake was complete: every scored
+run wrote reflections (ten in all), C2's post-death reflection named its decisive
+error, and C5 produced the loop's only organic local program. None of this moved
+survival hours at n=5. Arm cost $17.38, including the $0.10 C4 stop and C1's
+$0.41 retry reservation.
+
+## Loop result and next step
+
+| Arm | Median survival h | Range | Deaths | Median verified improvements | Uptake | Decision |
+| --- | ---: | --- | ---: | ---: | --- | --- |
+| Ceiling (Terra) | 0.59 | 0.03–2.11 | 2 of 5 | 2 | — | Baseline |
+| A: zoom view | 0.30 | 0.07–2.11 | 1 of 5 | 3 | No zoom used | Rejected (no uptake) |
+| B: game help | 0.38 | 0.17–0.70 | 0 of 5 | 4 | 3 of 5 saved keybindings | Rejected |
+| C: reflection | 0.45 | 0.22–2.06 | 1 of 5 | 1 | 5 of 5 reflected; 1 program | Rejected |
+
+The loop spent $88.54 of D2's $150. A frontier player through the pixels-and-keys
+boundary does play competently in the short term: no Evacuee-start survivor died,
+and runs routinely gather food, water, tools and weapons. But it cannot reach even
+one in-game day inside its allowance. **The binding constraint is time scale, not
+perception:** about 230 decisions pass 10–130 game minutes. Deaths came from the
+player's own S2 choice of dense urban starts. The two longest runs (T5, C6) and the
+only organic program (C5) all passed game time cheaply: through activities,
+auto-travel or a loop.
+
+The recommended next step tests time scale directly rather than adding more
+perception aids. Run a long-horizon Terra arm (for example three Evacuee runs of
+1,500 attempts, about $20–25 each) and track **game seconds per decision** beside
+survival hours, to see whether needs, rest and supplies hold once the clock passes
+a day. That is the first point at which #145's seven-day question becomes
+observable. #164's cadence criteria stay deferred until that baseline exists.
+Infrastructure lessons are recorded as fixes #378–#380 and the actual-spend
+admission rule.
