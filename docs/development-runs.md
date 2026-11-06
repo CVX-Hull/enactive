@@ -238,19 +238,26 @@ $0.41 retry reservation.
 | C: reflection | 0.45 | 0.22–2.06 | 1 of 5 | 1 | 5 of 5 reflected; 1 program | Rejected |
 
 The loop spent $88.54 of D2's $150. A frontier player through the pixels-and-keys
-boundary does play competently in the short term: no Evacuee-start survivor died,
-and runs routinely gather food, water, tools and weapons. But it cannot reach even
-one in-game day inside its allowance. **The binding constraint is time scale, not
-perception:** about 230 decisions pass 10–130 game minutes. Deaths came from the
-player's own S2 choice of dense urban starts. The two longest runs (T5, C6) and the
-only organic program (C5) all passed game time cheaply: through activities,
+boundary plays competently in the short term: runs routinely gather food, water,
+tools and weapons. Of 20 scored runs, 4 died. Three followed the player's own S2
+choice of a dense urban start; one (C2) followed a tactical error in an
+evac-shelter start, which its own reflection named. But no run reached even one
+in-game day inside its allowance. **Within a 250-decision allowance the survival
+metric is bounded by time scale:** about 230 decisions pass 10–130 game minutes,
+roughly 9–32 game seconds per decision. A 2.59 h bar is therefore nearly
+unreachable for any aid that does not change pacing. The aids did not isolate
+perception: arm A had no uptake. The three longest runs (T5, A4, C6) and the only
+organic program (C5) all passed game time cheaply, through activities,
 auto-travel or a loop.
 
 The recommended next step tests time scale directly rather than adding more
-perception aids. Run a long-horizon Terra arm (for example three Evacuee runs of
-1,500 attempts, about $20–25 each) and track **game seconds per decision** beside
-survival hours, to see whether needs, rest and supplies hold once the clock passes
-a day. That is the first point at which #145's seven-day question becomes
-observable. #164's cadence criteria stay deferred until that baseline exists.
-Infrastructure lessons are recorded as fixes #378–#380 and the actual-spend
-admission rule.
+perception aids. Run a long-horizon Terra arm, for example three Evacuee runs of
+about 1,500 decisions each (roughly $20–25 each by this loop's rate), and track
+**game seconds per decision** beside survival hours. The question is whether
+needs, rest and supplies hold once the clock passes a day, which is the first
+point at which #145's seven-day question becomes observable. It needs two owner
+decisions. First, a new spend envelope: about $61 of D2 remains. Second, either
+more actors per admission or a longer context window: two hosts of a 262k window
+hold roughly 350 decisions, and `campaign-run/4` allows at most two hosts. #164's
+cadence criteria stay deferred until that baseline exists. Infrastructure lessons
+are recorded as fixes #378–#380 and the actual-spend admission rule.
