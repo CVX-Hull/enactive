@@ -216,7 +216,9 @@ declared classes, recorded as `provider-retry.retry_class`, are:
   timeout, cancellation or host deadline latches first and is never retried.
 - `rate-limit`: HTTP 429 whose classifier reads at most16KiB of a JSON error
   object; explicit authorization/invalid-request kinds, quota/billing/budget/credit
-  limits, malformed or unrecognized errors stay terminal.
+  limits, malformed or unrecognized errors stay terminal. A 429 whose metadata has
+  `limit_source:openrouter_admission_control` is eligible even with no message
+  (OpenRouter's transient admission hold), unless one of those explicit kinds applies.
 - `in-flight-budget`: HTTP 402 only when its metadata has both
   `limit_source:openrouter_in_flight_budget` and `reason:in_flight_budget_exhausted`
   (OpenRouter's documented [transient hold](https://openrouter.ai/docs/api-reference/limits))
