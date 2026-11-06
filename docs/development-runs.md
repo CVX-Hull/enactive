@@ -70,7 +70,7 @@ player's context:
 | Setting | Value |
 | --- | --- |
 | Route | OpenRouter, `openai/gpt-6.1-terra`, pinned `openai`, no fallback, medium effort, default tier |
-| Context | 131,072-token window, 16,384 output tokens, 32,768 reserve (successor handoff when reached); 30 images, block 1 |
+| Context | 262,144-token window, 16,384 output tokens, 32,768 reserve (successor handoff when reached); 39 images, evicted in blocks of 10 |
 | Requests | 250 charged HTTP attempts including retries, across at most 2 hosts |
 | Time | 7,200 host seconds; 7,800 custodian seconds |
 | Supervision | `--attention best-effort` |
@@ -78,11 +78,31 @@ player's context:
 The window stays below OpenRouter's 272,000-token long-prompt threshold, so the
 short-prompt rates apply: $1.00/M input, $1.25/M cache write, $0.05/M cache read
 and $5.00/M output (read from the public model list on 5 November 2026). The
-validator's worst case is (131,072 × $1.25 + 16,384 × $5.00) / 1M = $0.24576 per
-attempt, or $61.44 per run. Each package freezes `ceiling_usd` at $410 and the
-current cumulative actual upper bound as `prior_reserved_usd`, so a run is
-admissible only while the remaining D2 headroom covers its full worst case. When
-it no longer does, the loop stops and asks the owner rather than shrinking runs.
+validator's worst case is (262,144 × $1.25 + 16,384 × $5.00) / 1M = $0.4096 per
+attempt, or $102.40 per run. Costs are reconciled against OpenRouter's
+per-generation records.
+
+**Pilot (P1).** The first run used a 131,072-token window with 30 images evicted
+one at a time. Context grew about 1.3k tokens per request, both hosts handed off
+at the window's reserve and the run ended after 136 of its 250 attempts. Each
+request also rewrote the prompt cache. The scored runs therefore use the larger
+window, so the attempt allowance binds rather than context, and the block
+eviction from [#313](https://github.com/CVX-Hull/enactive/issues/313), which keeps
+the cached prefix stable between evictions. The pilot is retained but is not one
+of the five scored ceiling runs.
+
+D2's binding cap is the lower of its two limits: the pre-loop actual upper bound
+($258.406176979 over 11,353 attempts, after #369) plus $150, which is
+$408.406176979. Packages from C2 onward freeze that value as `ceiling_usd`; P1 and C1
+were frozen at $410 and their worst cases fit either value. Each package also
+freezes the current cumulative actual upper bound as `prior_reserved_usd`, so a run
+is admissible only while the remaining headroom covers its full $102.40 worst
+case, that is, while cumulative actual spend is at most $306.01. From $264.46 after
+P1, that leaves about $41.5 of actual spend. At P1's $0.0445 per attempt a scored run
+costs about $11, so **three or four scored runs are expected to fit, not five**.
+When the next run no longer fits, the loop stops and asks the owner rather than
+shrinking runs. The reservation is a worst case, not an invoice: actual spend stays
+far below it.
 
 ## Metric
 
@@ -91,7 +111,8 @@ samples the claims in each arm.
 
 - **Survival hours (primary):** in-game time from the first in-play clock to the
   last frame showing the survivor alive, or to the death screen.
-- **Status:** died, alive at stop (allowance or time ended), or player finished.
+- **Status:** died, alive at stop (attempt allowance, time or context capacity
+  ended the run), or player finished. Dates are UTC.
 - **Verified improvements:** distinct visible changes that improve needs (thirst,
   hunger, fatigue or pain reduced), supplies (new food, water or tools confirmed
   carried) or shelter (secured and used for rest). Claims without a confirming
@@ -104,3 +125,4 @@ samples the claims in each arm.
 
 | Run | Date | Arm | Start | Survival h | Status | Verified improvements | Death cause | Attempts (setup) | $ actual | Wall s | Note |
 | --- | --- | --- | --- | ---: | --- | ---: | --- | --- | ---: | ---: | --- |
+| P1 | 2026-11-06 | Pilot (131k, 30/1) | S1 | 0.21 | Alive at stop (context capacity, both hosts) | 1 | — | 136 (25) | 6.05 | 859 | Mara Ellis, Evacuee; 08:00:00 → 08:12:22, Spring day 61. Crafted and wielded a pointy stick; looted a strip mall. Not scored. |
