@@ -91,25 +91,20 @@ eviction from [#313](https://github.com/CVX-Hull/enactive/issues/313), which kee
 the cached prefix stable between evictions. The pilot is retained but is not one
 of the five scored ceiling runs.
 
-D2's binding cap is the lower of its two limits: the pre-loop actual upper bound
-($258.406176979 over 11,353 attempts, after #369) plus $150, which is
-$408.406176979. Packages from C2 onward freeze that value as `ceiling_usd`; P1 and C1
-were frozen at $410 and their worst cases fit either value. Each package also
-freezes the current cumulative actual upper bound as `prior_reserved_usd`, so a run
-is admissible only while the remaining headroom covers its full $102.40 worst
-case, that is, while cumulative actual spend is at most $306.01. From $264.46 after
-P1, that leaves about $41.5 of actual spend. At P1's $0.0445 per attempt a scored run
-costs about $11, so **three or four scored runs are expected to fit, not five**.
-When the next run no longer fits, the loop stops and asks the owner rather than
-shrinking runs. The reservation is a worst case, not an invoice: actual spend stays
-far below it.
+**Current admission rule (from aid run B3).** Packages freeze the standing $1,000
+as their `ceiling_usd` worst-case guard, and D2 is enforced on actual
+provider-reported spend: a run is admitted only while actual new spend plus twice
+the largest single run so far stays within $150 (owner decision, 6 November 2026;
+[budget delegation](operator-permissions.md#finite-gameplay-budget-delegation)).
+The pre-loop actual upper bound was $258.406176979 over 11,353 attempts, after #369.
 
-That happened at aid run B3, after $48.50 of actual new spend; the refused
-package never started. The owner then chose to keep the configuration and
-enforce D2 on actual spend ([budget delegation](operator-permissions.md#finite-gameplay-budget-delegation)).
-From B3 onward packages freeze the standing $1,000 as `ceiling_usd`, and a run is
-admitted only while actual new spend plus twice the largest single run so far
-stays within $150.
+**Earlier rule (P1 through B2).** Packages froze D2's lower limit, the pre-loop bound
+plus $150 ($408.406176979; P1 and C1 used $410), as `ceiling_usd`, so a run was
+admissible only while the remaining headroom covered its full $102.40 worst case,
+that is, while cumulative actual spend stayed at or below $306.01. The rule
+refused B3's package after $48.50 of actual new spend; that package never started.
+The reservation is a worst case, not an invoice, and actual spend stayed far below
+it.
 
 ## Metric
 
@@ -164,3 +159,33 @@ $11.78 (unrounded OpenRouter generation-record totals, $11.777728; the rounded
 column sums to $11.77). Dollar columns come from those per-generation records,
 reconciled by the lead after each run; the custodian receipt itself carries only
 the configured-rate estimate, which matched them.
+
+### Aid arm A: zoom view (rejected)
+
+Source `70eda9a` on the unmerged `aid-zoom-view` branch: `player_source` takes an
+optional nearest-neighbour `zoom` of a crop, and the guide's tool row mentions it.
+
+| Run | Date | Arm | Start | Survival h | Status | Verified improvements | Death cause | Attempts (setup) | $ actual | Wall s | Note |
+| --- | --- | --- | --- | ---: | --- | ---: | --- | --- | ---: | ---: | --- |
+| A1 | 2026-11-06 | A (zoom) | S1 | 0.27 | Alive at stop (orderly finish) | 3 | — | 231 (18) | 3.54 | 1,610 | Morgan Hale. Protein ration, foraged cattails and fiddleheads, long pointy stick. 0 zoom uses. |
+| A2 | 2026-11-06 | A (zoom) | S2 | — | Infrastructure failure | — | — | 76 (29) | 0.76 | 464 | Mid-stream provider error at request 76 (HTTP 200, then `stop_reason: error`); not scored, replaced by A6. |
+| A3 | 2026-11-06 | A (zoom) | S1 | 0.30 | Alive at stop (orderly finish) | 1 | — | 234 (25) | 3.99 | 1,688 | Alex Rowan. Long pointy stick. One `player_source` read without zoom. |
+| A4 | 2026-11-06 | A (zoom) | S2 | 2.11 | Alive at stop (orderly finish) | 3 | — | 236 (23) | 4.12 | 1,761 | Clay Foxtail; chose an evac shelter start. Ate a ration, picked up rations, digging stick. 0 zoom uses. |
+| A5 | 2026-11-06 | A (zoom) | S1 | 0.93 | Alive at stop (orderly finish) | 5 | — | 234 (23) | 4.04 | 2,000 | Alex Morgan. Wooden club, rations, clean water, emergency jacket and blanket, dogbane. 0 zoom uses. |
+| A6 | 2026-11-06 | A (zoom) | S2 | 0.07 | Died | 0 | Overrun on a road by about 51 zombies and ferals | 85 (24) | 0.95 | 639 | Buffy Shapiro; urban start with an infected arm. 0 zoom uses. |
+
+**Arm A decision: rejected.** Median survival is 0.30 h against the ceiling's
+0.59 h and the 2.59 h bar. The player never used zoom in any arm-A run, so this
+rejects the aid for **no uptake**; it is not evidence about zoomed reading itself.
+The branch stays unmerged. Arm cost $17.41, including the failed A2.
+
+### Aid arm B: consult the game's own help (in progress)
+
+Source `784d3ae` (differs from the ceiling source only in docs); the frozen
+context is the guide plus a paragraph permitting the player to open the game's own
+help, command and keybinding screens and to keep what it learns as memory records.
+
+| Run | Date | Arm | Start | Survival h | Status | Verified improvements | Death cause | Attempts (setup) | $ actual | Wall s | Note |
+| --- | --- | --- | --- | ---: | --- | ---: | --- | --- | ---: | ---: | --- |
+| B1 | 2026-11-06 | B (help) | S1 | 0.38 | Alive at stop (orderly finish) | 3 | — | 231 (13) | 3.49 | 2,016 | Claude Townsend. Wooden club, chocolate drink, flashlight; follower. Saved a keybinding `procedure` record. |
+| B2 | 2026-11-06 | B (help) | S2 | 0.29 | Alive at stop (orderly finish) | 4 | — | 239 (16) | 3.64 | 2,282 | Carolynn Hardy; default scenario. Cattails, rations, clean water, mission reward of cattail jelly. Two keybinding `procedure` records. |
