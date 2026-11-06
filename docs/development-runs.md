@@ -126,3 +126,13 @@ samples the claims in each arm.
 | Run | Date | Arm | Start | Survival h | Status | Verified improvements | Death cause | Attempts (setup) | $ actual | Wall s | Note |
 | --- | --- | --- | --- | ---: | --- | ---: | --- | --- | ---: | ---: | --- |
 | P1 | 2026-11-06 | Pilot (131k, 30/1) | S1 | 0.21 | Alive at stop (context capacity, both hosts) | 1 | — | 136 (25) | 6.05 | 859 | Mara Ellis, Evacuee; 08:00:00 → 08:12:22, Spring day 61. Crafted and wielded a pointy stick; looted a strip mall. Not scored. |
+| C1 | 2026-11-06 | A0 (2-host handoff) | S1 | 5.49 | Alive at stop (orderly finish at the attempt reserve) | 4 | — | 233 (23) | 3.58 | 1,856 | Morgan Reed, Evacuee; 08:00:00 → 13:29:21, Spring day 61. Crafted fishing rod, foraged cattails, canned beans, clean water. Saved per player claim. |
+| C2 | 2026-11-06 | A0 (2-host handoff) | S2 | 0.16 | Alive at stop (second voluntary handoff) | 0 | — | 158 (21) | 1.71 | 1,176 | Raelene Grant, chose Winter day 1; 08:00:17 → 08:09:49. Killed a feral; ocular zombie adjacent at stop. |
+| C3 | 2026-11-06 | A0 (2-host handoff) | S1 | 0.10 | Alive at stop (second voluntary handoff) | 1 | — | 115 (23) | 0.84 | 740 | Alex Rowan, Evacuee; 08:00:00 → 08:05:50, Spring day 61. Crafted pointy stick. |
+
+**Arm A0 is development data, not the ceiling.** Every A0 run ended at the
+player's second voluntary handoff: the guide invites a handoff "when fresh context
+helps", players took it at 96k–139k tokens of a 262k window, and the hidden 2-host
+limit then ended the run at 115–233 of 250 attempts. The final actor is now offered
+no handoff tool, so the five scored ceiling runs restart on that fix with the
+configuration otherwise unchanged.
