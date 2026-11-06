@@ -7,8 +7,11 @@ status: active
 # Evidence and documentation cadence
 
 Use the existing issue, immutable admission, ledger and archive. A development
-attempt needs a short closure/finding note referencing source and artifacts,
-outcome, known costs/unknowns, cleanup disposition and the next owned action.
+run gets exactly one row in the [development run table](../development-runs.md)
+and one comment on its owning issue: source and artifacts, outcome on the frozen
+metric, known costs/unknowns, cleanup disposition and the next owned action
+(owner decision D4, 5 November 2026). Acceptance records and independent review
+are for adoption decisions, contract changes and merges.
 Do not copy the entire contract, write a standalone acceptance report, launch
 another review swarm or publish an amendment for every menu error. Retain the raw
 evidence immediately; consolidate reports, selected images/provenance and finding

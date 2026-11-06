@@ -33,7 +33,7 @@ def put(path, value):
 
 
 @contextmanager
-def fixture(tmp_path, *, ready_age=0, receiver_pid=None):
+def fixture(tmp_path, *, ready_age=0, receiver_pid=None, attention='required'):
     state = dict(block=False, fetching=threading.Event(), unblock=threading.Event(), paused=False,
                  status_session=SESSION, native=None, reason=None, source_bytes=PNG)
     class Upstream(BaseHTTPRequestHandler):
@@ -72,8 +72,9 @@ def fixture(tmp_path, *, ready_age=0, receiver_pid=None):
     stops, stop_tx = socket.socketpair(type=socket.SOCK_DGRAM)
     wall, mono = time.time(), time.monotonic()
     (tmp_path/'manifest.json').write_text('{}')
-    put(tmp_path/'watch-start.json', dict(schema='campaign-watch-start/1', session=SESSION,
-        source_commit=COMMIT, manifest_sha256=sha256(b'{}').hexdigest(), watch_seconds=45,
+    put(tmp_path/'watch-start.json', dict(schema='campaign-watch-start/2', session=SESSION,
+        source_commit=COMMIT, manifest_sha256=sha256(b'{}').hexdigest(), attention=attention,
+        watch_seconds=guard.ATTENTION[attention],
         started_wall=wall-ready_age-.1, started_monotonic=mono-ready_age-.1))
     (tmp_path/'watch-attempts.jsonl').touch()
     put(tmp_path/'started.json', dict(schema='computer-start/1', session=SESSION,
@@ -94,7 +95,8 @@ def fixture(tmp_path, *, ready_age=0, receiver_pid=None):
         live = SimpleNamespace(poll=lambda: None)
         def supervise(child=live):
             result['reason'] = guard.supervise(tmp_path, profile, child, process, live,
-                                              checks, stops, lambda: False, result)
+                                              checks, stops, lambda: False, result,
+                                              window=guard.ATTENTION[attention])
         def call(path, form=None, origin=True):
             connection = HTTPConnection('127.0.0.1', port, timeout=5)
             try:
@@ -159,6 +161,22 @@ def test_completed_checks_duplicate_rejection_ending_and_pause(tmp_path):
         assert f.state['paused'] == (sys.platform == 'darwin')
         assert [r['phase'] for r in f.result['accepted']] == ['active', 'ending']
         assert f.call('/record', form(3))[0] == 409
+
+
+def test_best_effort_gateway_offers_no_check_but_keeps_pause(tmp_path):
+    with fixture(tmp_path, attention='best-effort') as f:
+        thread = threading.Thread(target=f.supervise); thread.start()
+        code, page = f.call('/')
+        assert code == 200 and b'id="pause"' in page and b'watch-record' not in page
+        assert b'campaign_watch_ui.js' not in page and b'Best-effort observation' in page
+        assert f.call('/record', form())[0] == 403
+        assert (tmp_path/'watch-attempts.jsonl').read_text() == ''
+        pause_code = f.call('/api/pause', {})[0]
+        assert pause_code == (200 if sys.platform == 'darwin' else 409)
+        thread.join(3)
+        assert not thread.is_alive() and f.result['accepted'] == []
+        if sys.platform == 'darwin':
+            assert f.result['reason'] == 'operator_pause'
 
 
 def test_uncertain_receiver_never_receives_pause_post(tmp_path):
@@ -311,3 +329,16 @@ def test_receiver_check_binds_exact_connected_socket_and_handle_pid(monkeypatch)
     called.clear()
     with pytest.raises(ValueError, match='did not own'):
         watch.bind_pause_receiver(connection, 12346, 1234)
+
+
+@pytest.mark.parametrize('schema, attention, seconds', [
+    ('campaign-watch-start/1', 'required', 45), ('campaign-watch-start/2', 'best-effort', 45),
+    ('campaign-watch-start/2', 'required', None), ('campaign-watch-start/2', None, 45)])
+def test_gateway_refuses_inconsistent_or_old_attention_policy(tmp_path, schema, attention, seconds):
+    (tmp_path/'manifest.json').write_text('{}')
+    (tmp_path/'watch-attempts.jsonl').touch()
+    put(tmp_path/'watch-start.json', dict(schema=schema, session=SESSION, source_commit=COMMIT,
+        manifest_sha256=sha256(b'{}').hexdigest(), attention=attention, watch_seconds=seconds))
+    checks, tx = socket.socketpair(type=socket.SOCK_DGRAM)
+    with checks, tx, pytest.raises(ValueError, match='exclusively reserved'):
+        watch.worker(tmp_path, SESSION, COMMIT, 1, 1, checks, tx)

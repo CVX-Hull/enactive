@@ -6,17 +6,27 @@ status: active
 
 # Supervise a finite development test
 
-The optional [test supervisor](../../tools/campaign_supervision.py) preserves the
-existing45-second spectator-check policy around the maintained
+The [test supervisor](../../tools/campaign_supervision.py) wraps the maintained
 [campaign custodian](campaign-run.md). It belongs to test operation, outside the
-player context. The operator inspects displayed evidence; the independent
-guardian checks clocks and completed acknowledgements; the existing custodian
-owns native input, original allowances and native/host cleanup. The gateway
-forwards passive spectator reads and verified Pause, never actor tools.
+player context. The independent guardian owns the original custody deadline, Pause
+receipt and owned wrapper cleanup; the existing custodian owns native input,
+original allowances and native/host cleanup. The gateway forwards passive
+spectator reads and verified Pause, never actor tools.
+
+Every launch selects one attention policy, recorded in `watch-start.json`:
+
+| Policy | Use | Stop rule added to custody, Pause and uncertain-delivery stops |
+| --- | --- | --- |
+| `best-effort` | Development runs (owner decision D1, [#369](https://github.com/CVX-Hull/enactive/issues/369), 5 November 2026) | None. The gateway offers no operator check. An unnoticed bad loop or death can continue until the original finite limits end the run; the lead cancels on first observed death or replacement. |
+| `required` | A frozen test that explicitly requires continuous attention | No completed operator check within 45 seconds stops the run. |
+
+The custody deadline is the independent outer timeout in both policies: the
+guardian terminates the custodian at the original `wall_seconds` bound, whatever
+the operator conversation is doing. Neither policy generates acknowledgements
+automatically.
 
 This is a Mac finite-test helper. Source delivery grants no gameplay/provider
-spending or new admission. Use a separately agreed frozen package and an available
-operator. General unattended operation remains unqualified.
+spending or new admission. General unattended operation remains unqualified.
 
 ## Freeze, launch and inspect
 
@@ -31,10 +41,16 @@ operator. General unattended operation remains unqualified.
 3. Invoke from the selected checkout through engineering command permissions:
 
    ```sh
-   .venv/bin/python -m tools.campaign_supervision --run .runtime/computer-sessions/SELECTED
+   .venv/bin/python -m tools.campaign_supervision --attention best-effort --run .runtime/computer-sessions/SELECTED
    ```
 
-4. Open the exact printed gateway URL. In **Watch**, inspect the current session,
+   Use `--attention required` only when the frozen test requires the 45-second
+   policy; step 5 then applies.
+
+4. Under either policy, open the exact printed gateway URL in **Watch** to observe
+   play and reach Pause. Under `best-effort` the page shows no check button and the
+   gateway refuses check records, so an optional check can never stop a healthy run.
+5. Under `required`, inspect the current session,
    status and decoded source, then click **Record operator check**. Confirm the
    accepted number. Target one completed check every15 seconds. The first must
    finish strictly before readiness plus45 seconds; each later completion must
@@ -42,7 +58,7 @@ operator. General unattended operation remains unqualified.
    cutoff. Equality is too late. A failed or unconfirmed guardian acknowledgement
    does not renew it. Missing browser confirmation is unknown: the guardian may
    already have accepted the check. Use Pause when control is uncertain.
-5. Use the same page's **Pause** for immediate control. No check renews after
+6. Use the same page's **Pause** for immediate control. No check renews after
    Pause. Refreshing the page cannot resume or reopen a stopped/partial package.
 
 The button requires a trusted explicit click, visible Watch, decoded in-viewport
@@ -83,13 +99,14 @@ game's clock. Apply save/reload/exit criteria in their separately frozen lane.
 
 | Artifact | Current version and meaning |
 | --- | --- |
-| `watch-start.json` | `campaign-watch-start/1`; exclusive reservation before children, binding session/source, manifest SHA256, wall/monotonic start and45-second window. Prior/partial markers refuse; never delete to rearm. |
+| `watch-start.json` | `campaign-watch-start/2`; exclusive reservation before children, binding session/source, manifest SHA256, wall/monotonic start, `attention` and `watch_seconds` (45 for `required`, null for `best-effort`). Prior/partial markers refuse; never delete to rearm. |
 | `watch-attempts.jsonl` | `campaign-watch-attempt/1`; source/digest, sequence, observation/start/recorded clocks and active/ending phase. Observation/guardian values are monotonic seconds derived from original wall timing; the shared-clock relationship is checked, not assumed exact. |
-| `watch-terminal.json` | `campaign-watch-terminal/1`; accepted checks/completion/prior-observation clocks, raced checks, reason, exact children, bounded cleanup and custodian disposition as separate facts. |
+| `watch-terminal.json` | `campaign-watch-terminal/2`; attention policy, accepted checks/completion/prior-observation clocks, raced checks, reason, exact children, bounded cleanup and custodian disposition as separate facts. |
 
 Current `computer-start/1`, `computer-ready/1` and `campaign-receipt/3` must match
-the fresh owned custodian/session/source and chronology. Missing first check,
-late terminal coverage, substituted receipt/manifest or unresolved cleanup cannot
+the fresh owned custodian/session/source and chronology. Under `required`, a missing
+first check or late terminal coverage cannot certify supervision; under either policy,
+a terminal receipt after the custody deadline, substituted receipt/manifest or unresolved cleanup cannot
 certify supervision success. No wrapper receipt accepts gameplay or restores
 custody; old unversioned records have no current executable reader.
 

@@ -62,8 +62,9 @@ def main(argv=None) -> int:
     def write(name, value):
         (directory/name).write_text(json.dumps(value, indent=2)+'\n')
     wall, mono = time.time(), time.monotonic()
-    write('watch-start.json', dict(schema='campaign-watch-start/1', session=SESSION,
-        source_commit=source, manifest_sha256=hashlib.sha256(manifest).hexdigest(), watch_seconds=45,
+    write('watch-start.json', dict(schema='campaign-watch-start/2', session=SESSION,
+        source_commit=source, manifest_sha256=hashlib.sha256(manifest).hexdigest(),
+        attention='required', watch_seconds=45,
         started_wall=wall, started_monotonic=mono))
     (directory/'watch-attempts.jsonl').touch()
     write('started.json', dict(schema='computer-start/1', session=SESSION,

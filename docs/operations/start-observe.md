@@ -11,7 +11,8 @@ current launch command is the [finite campaign custodian](campaign-run.md), whic
 validates `campaign-run/4` before effects. Do not invoke old controller, mission or
 experimental proof commands or launch an unprepared/fullscreen application.
 
-For a frozen test selecting45-second explicit operator checks, follow
+For a development run (`--attention best-effort`) or a frozen test that requires
+45-second operator checks (`--attention required`), follow
 [finite-test supervision](campaign-supervision.md) and use its printed gateway
 URL. Normal spectator and Pause ownership remain bound to the selected custodian.
 
