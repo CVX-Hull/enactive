@@ -36,7 +36,7 @@ context, ongoing-objective/knowledge prompt and `player-host-inputs/2` hashes.
 Experiment quotas, host counts and other final-actor policy remain outside player
 context, with one deliberate exception below. Pi loads no coding-agent
 shell/file tools, personal settings, resource discovery or resumed history.
-Both original and successor start fresh; at most two hosts fit `campaign-run/4`.
+Both original and successor start fresh; at most two hosts fit `campaign-run/5`.
 The final actor's tool table omits `player_handoff`, so it is never offered a
 handoff that would only end the admission; its capacity warning asks for
 `player_finish` instead. Earlier actors are offered the tool by position alone, so

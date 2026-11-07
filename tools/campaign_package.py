@@ -14,7 +14,28 @@ from tools.configure_player_tools import ROOT,configuration
 
 FILES={'route.json','mcp-template.json','context.txt','prompt.txt','target.json'}
 FIELDS={'schema','session','source_commit','files','initial_files','native','library','shared_lock','player_store',
-        'host','effort','port','wall_seconds','host_seconds','total_host_seconds','max_hosts','max_http_attempts','limits','ending_reserve','accounting'}
+        'host','effort','port','wall_seconds','host_seconds','total_host_seconds','max_hosts','max_http_attempts','limits','ending_reserve','accounting',
+        'labels'}
+LABEL_FIELDS={'arm','start','scenario','lineage','admission'}
+PRINTABLE_ASCII=re.compile('[ -~]+')
+
+
+def labels(value) -> None:
+    """Validate the closed operator-only analysis labels.
+
+    The labels are frozen for the evaluator and spectator and never reach the
+    player: no driver input, route, prompt, context, MCP file or environment is
+    derived from them.
+    """
+    closed(value,LABEL_FIELDS)
+    for name,high in (('arm',40),('start',40),('scenario',80),('lineage',40)):
+        text=value[name]
+        if text is None and name=='lineage':continue
+        if type(text) is not str or not 1<=len(text)<=high or PRINTABLE_ASCII.fullmatch(text) is None:
+            raise ControlError('Operator label must be 1 to its bound of printable ASCII characters')
+    if value['admission'] is not None:integer(value['admission'],1,10000)
+    if (value['lineage'] is None)!=(value['admission'] is None):
+        raise ControlError('Lineage and admission position are both set or both null')
 
 
 def digest(path: Path) -> str:
@@ -49,9 +70,10 @@ def preflight(directory: Path) -> tuple[dict,dict,dict]:
     if not directory.is_relative_to(ROOT/'.runtime/computer-sessions') or directory.is_symlink():
         raise ControlError('Select a fresh explicit project-local computer session package')
     profile=read_json(directory/'manifest.json',1048576)
-    if type(profile) is not dict or profile.get('schema')!='campaign-run/4':
+    if type(profile) is not dict or profile.get('schema')!='campaign-run/5':
         raise ControlError('Unsupported campaign package; old admissions are inert history')
     closed(profile,FIELDS)
+    labels(profile['labels'])
     host_argv(profile['host'])
     if not isinstance(profile['session'],str) or re.fullmatch('[0-9a-f]{32}',profile['session']) is None:
         raise ControlError('Invalid fresh mechanical session')

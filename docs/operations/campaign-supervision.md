@@ -30,7 +30,7 @@ spending or new admission. General unattended operation remains unqualified.
 
 ## Freeze, launch and inspect
 
-1. Prepare the exact clean source and fresh `campaign-run/4` package through the
+1. Prepare the exact clean source and fresh `campaign-run/5` package through the
    [campaign procedure](campaign-run.md). Resolve scope, spending, original
    resources, ending reserves and stop rules before admission. Preserve original
    saves and failed chains; old experiment launchers stay historical evidence.
