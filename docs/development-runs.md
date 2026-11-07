@@ -550,3 +550,41 @@ Morgan Reed, an Evacuee in the world Stirling City (evac shelter A-23), 7 Novemb
   - After ENTER on a 12-portion batch (50 minutes 57 seconds), seven decisions returned the identical frame, and the player stopped.
   - The custodian then ended the game with SIGTERM. The game's log records only its shutdown, so it can neither confirm a busy simulation nor rule out a wait for input.
   - All 13 recorded long activities in the lineage, including the 7.5 h sleep, completed normally.
+
+#### Lineage 2: Day-viable
+
+Morgan Hale, an Evacuee in the world Brokaw (evac shelter B-05), 7 November 2026.
+
+| Admission | Status | Attempts | Decisions (setup or reload) | Game h | Clock | Boundary (hand check) | $ actual | Wall s |
+| --- | --- | ---: | --- | ---: | --- | --- | ---: | ---: |
+| `lh2a1` | Alive at stop: context capacity, Save and Quit | 304 | 295 (7) | 2.49 | 8:00 → 10:29 AM, day 61 | First admission; see the setup restart below | 6.55 | 2,225 |
+| `lh2a2` | Alive at stop: context capacity, Save and Quit | 331 | 323 (4) | 22.55 | 10:29 AM day 61 → 9:02 AM day 62 | Brokaw, Morgan Hale; 10:29:31 AM, gap 0 s | 7.06 | 2,429 |
+
+| Run | Arm | Start | End | Game h | Decisions | Setup | Routine pace | Long activities | Out of play | Longest stall | $ / decision | Large rewrites |
+| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| lh2a1 | long-horizon | S1 | player_stop | 2.49 | 295 | 7 | 4.2 | 1 · 0.55 h | 72% | 23 | 0.0222 | 67% |
+| lh2a2 | long-horizon | S1 | player_stop | 22.55 | 323 | 4 | 4.4 | 9 · 20.54 h | 67% | 22 | 0.0218 | 66% |
+
+**Lineage row** (`evaluate-lineage`):
+- **Elapsed:** 25.04 h in 618 decisions, an overall pace of **145.9** game seconds per decision.
+- **Long activities:** 21.08 h, a share of **0.842**.
+- **Day check:** passed at `lh2a2` step 304, at 24.724 h with a lag of 0.724 h, with no severe need.
+  - 8:00 AM on day 62 fell inside a 55-minute long activity, and the next five steps hid the clock behind prompts.
+- **Memory reuse across admissions:** 1 record. A `player_memory_query` at `lh2a2` step 129 returned a record written in `lh2a1`.
+- **Cost:** $13.60, which is $0.54 per game hour, so seven days would cost about $91.
+
+**Hand checks** (labels 7–9 in [`labels.jsonl`](../data/evaluation/labels.jsonl)):
+- **Setup restart in `lh2a1` (the lead's ruling, pending the owner's confirmation, as for lineage 1).**
+  - After "Play Now!" the player entered play once as a random Evacuee in world Jayuya at 8:00:00 AM. The save file names Al Joyner.
+  - On the next decision it chose Save and Quit, and then built its own Evacuee, Morgan Hale (Str, Dex, Int and Per all 10), in Brokaw. Morgan Hale was first in play at step 22, again at 8:00:00 AM.
+  - Unlike lineage 1, the first survivor already met the assignment, so this is the player's own restart, not a correction.
+  - The *Setup* column counts the 7 decisions to the first survivor's in-play frame.
+- **Boundary.** The load menu selected Brokaw, whose only character is Morgan Hale. The first in-play clock, 10:29:31 AM on day 61, equals `lh2a1`'s last reading.
+- **Day point.** At 8:43:28 AM on day 62 thirst read "Hydrated", hunger and rest were blank, weariness "Fresh" and the body bars full.
+
+**Time passing** (checked from frames for three of the nine `lh2a2` long activities):
+- a 3.9 h stretch crafting a wooden spear in the shelter (12:20 → 4:11 PM);
+- sleep from about 9:21 PM to 6:44:50 AM, in two stretches of 4.1 h and 5.2 h. The survivor woke "Very thirsty" and drank well before the day point;
+- the other six long activities total 7.3 h and were not individually checked.
+
+`lh2a1` passed only 2.49 h with one long activity, close to the #372 loop's pace. That compares with lineage 1's first admission at 5.93 h and five long activities, at a similar decision count and cost.
