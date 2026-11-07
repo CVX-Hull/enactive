@@ -63,17 +63,24 @@ async function shot(page, name) {
 }
 
 const settle = (page, ms = 400) => new Promise(r => setTimeout(r, ms));
+/** Poll a predicate in the page. (page.waitForFunction proved unreliable for this page's predicates.) */
+async function until(page, fn, arg, timeout = 10000) {
+  const end = Date.now() + timeout;
+  for (;;) {
+    if (await page.evaluate(fn, arg).catch(() => false)) return;
+    if (Date.now() > end) throw new Error(`condition not met in ${timeout} ms: ${fn}`);
+    await settle(page, 100);
+  }
+}
 async function ready(page) {
-  await page.waitForSelector('#statusline', {timeout: 8000, polling: 100});
-  await page.waitForFunction(() => document.getElementById('connection').dataset.state === 'ok'
-    && document.getElementById('frame') && !document.getElementById('frame').hidden && document.getElementById('frame').naturalWidth > 0, {timeout: 8000, polling: 100});
-  await page.waitForFunction(() => document.querySelector('#app .panel, #app .insuf'), {timeout: 8000, polling: 100});
+  await until(page, () => document.getElementById('connection') && document.getElementById('connection').dataset.state === 'ok'
+    && document.getElementById('frame') && !document.getElementById('frame').hidden && document.getElementById('frame').naturalWidth > 0);
+  await until(page, () => document.querySelector('#app .panel, #app .insuf'));
   const hash = new URL(page.url()).hash;
-  if (hash === '' || hash === '#live') await page.waitForSelector('#conds li, #tl canvas', {timeout: 8000});
-  if (hash === '' || hash === '#live') await page.waitForSelector('#tl canvas', {timeout: 8000});
+  if (hash === '' || hash === '#live') await until(page, () => document.querySelector('#conds li, #pauseanswer') && document.querySelector('#tl canvas'));
 }
 async function overflow(page) {
   return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 }
 
-module.exports = {startFixture, launch, open, shot, settle, ready, overflow, SHOTS};
+module.exports = {startFixture, launch, open, shot, settle, ready, until, overflow, SHOTS};

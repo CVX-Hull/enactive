@@ -1,112 +1,264 @@
 {
  "schema": "spectator-view/1",
  "group": "start",
- "horizon": 0.5,
- "groups": [
-  {
-   "name": "S1 Evacuee start",
-   "n": 12,
+ "horizon_hours": 0.5,
+ "groups": {
+  "S1": {
+   "n": 15,
    "deaths": 0,
-   "censored": 12,
-   "km": {
-    "t": [
+   "censored": 15,
+   "curve": {
+    "times": [
      0.0,
-     0.75
+     0.09722222222222222,
+     0.2061111111111111,
+     0.2702777777777778,
+     0.2836111111111111,
+     0.29583333333333334,
+     0.38305555555555554,
+     0.42083333333333334,
+     0.4525,
+     0.49166666666666664,
+     0.5941666666666666,
+     0.6125,
+     0.6977777777777778,
+     0.9322222222222222,
+     2.11,
+     5.489166666666667
     ],
-    "s": [
+    "survival": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
      1.0,
      1.0
     ],
-    "lo": [
+    "lower": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
      1.0,
      1.0
     ],
-    "hi": [
+    "upper": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
      1.0,
      1.0
-    ]
+    ],
+    "confidence": 0.95
    },
    "median": "not_reached",
    "rmst": {
-    "value": 0.45,
-    "lo": 0.33,
-    "hi": 0.5,
     "horizon": 0.5,
-    "method": "bootstrap"
+    "value": 0.5,
+    "low": 0.5,
+    "high": 0.5,
+    "resamples": 2000,
+    "confidence": 0.95
    },
-   "excluded": []
+   "runs": [
+    "aidA1",
+    "aidA3",
+    "aidA5",
+    "aidB1",
+    "aidB3",
+    "aidB9",
+    "aidC1",
+    "aidC3",
+    "aidC5",
+    "ceil01",
+    "ceil02",
+    "ceil04",
+    "ceil05",
+    "ceil07",
+    "ceil09"
+   ],
+   "versions": {
+    "source_commits": [
+     "62598dcced41dd70571e5070c0c9619bba66be58",
+     "70eda9ab6e90cf49b746ebafdc47dd6d5a835434",
+     "784d3aeae24b03c24581144049b0505e4b8253c4",
+     "9276672ec8cef1316c9ca70ea483427b572c77e9",
+     "c3133466e9ebe9ea4498fbe0b751b1ab9866c2ed"
+    ],
+    "models": [
+     "openai/gpt-6.1-terra"
+    ],
+    "efforts": [
+     "medium"
+    ],
+    "binding_versions": [
+     "1"
+    ],
+    "starts": {
+     "S1": 15
+    }
+   }
   },
-  {
-   "name": "S2 player-chosen start",
-   "n": 8,
-   "deaths": 2,
-   "censored": 6,
-   "km": {
-    "t": [
+  "S2": {
+   "n": 9,
+   "deaths": 4,
+   "censored": 5,
+   "curve": {
+    "times": [
      0.0,
-     0.22,
-     0.31,
-     0.75
+     0.0325,
+     0.04805555555555555,
+     0.06638888888888889,
+     0.16361111111111112,
+     0.1711111111111111,
+     0.21611111111111111,
+     0.2863888888888889,
+     2.058333333333333,
+     2.1147222222222224
     ],
-    "s": [
+    "survival": [
      1.0,
-     0.875,
-     0.75,
-     0.75
+     0.8888888888888888,
+     0.7777777777777777,
+     0.6666666666666665,
+     0.6666666666666665,
+     0.6666666666666665,
+     0.4999999999999999,
+     0.4999999999999999,
+     0.4999999999999999,
+     0.4999999999999999
     ],
-    "lo": [
+    "lower": [
      1.0,
-     0.6879,
-     0.4881,
-     0.4881
+     0.6835698038000477,
+     0.5061661584975858,
+     0.35868803903340485,
+     0.35868803903340485,
+     0.35868803903340485,
+     0.13478227475975763,
+     0.13478227475975763,
+     0.13478227475975763,
+     0.13478227475975763
     ],
-    "hi": [
+    "upper": [
      1.0,
-     1,
-     1,
-     1
-    ]
+     1.0,
+     1.0,
+     0.9746452942999282,
+     0.9746452942999282,
+     0.9746452942999282,
+     0.8652177252402422,
+     0.8652177252402422,
+     0.8652177252402422,
+     0.8652177252402422
+    ],
+    "confidence": 0.95
    },
-   "median": "not_reached",
+   "median": 0.21611111111111111,
    "rmst": {
-    "value": 0.39,
-    "lo": 0.33,
-    "hi": 0.5,
     "horizon": 0.5,
-    "method": "bootstrap"
+    "value": 0.3023456790123456,
+    "low": 0.15199845679012344,
+    "high": 0.44978395061728393,
+    "resamples": 2000,
+    "confidence": 0.95
    },
-   "excluded": []
+   "runs": [
+    "aidA4",
+    "aidA6",
+    "aidB2",
+    "aidB4",
+    "aidC2",
+    "aidC6",
+    "ceil03",
+    "ceil06",
+    "ceil08"
+   ],
+   "versions": {
+    "source_commits": [
+     "62598dcced41dd70571e5070c0c9619bba66be58",
+     "70eda9ab6e90cf49b746ebafdc47dd6d5a835434",
+     "784d3aeae24b03c24581144049b0505e4b8253c4",
+     "9276672ec8cef1316c9ca70ea483427b572c77e9",
+     "c3133466e9ebe9ea4498fbe0b751b1ab9866c2ed"
+    ],
+    "models": [
+     "openai/gpt-6.1-terra"
+    ],
+    "efforts": [
+     "medium"
+    ],
+    "binding_versions": [
+     "1"
+    ],
+    "starts": {
+     "S2": 9
+    }
+   }
+  }
+ },
+ "excluded": [
+  {
+   "run": "aidA2",
+   "group": "S2",
+   "reason": "infrastructure"
+  },
+  {
+   "run": "aidB5",
+   "group": "S1",
+   "reason": "infrastructure"
+  },
+  {
+   "run": "aidB6",
+   "group": "S1",
+   "reason": "infrastructure"
+  },
+  {
+   "run": "aidB7",
+   "group": "S1",
+   "reason": "infrastructure"
+  },
+  {
+   "run": "aidB8",
+   "group": "S1",
+   "reason": "infrastructure"
+  },
+  {
+   "run": "aidC4",
+   "group": "S2",
+   "reason": "custody"
   }
  ],
- "versions": [
-  {
-   "group": "Ceiling",
-   "source_commit": "9276672",
-   "starts": "3 S1 / 1 S2",
-   "model_route": "terra-1 medium openrouter",
-   "evaluator": "core 1 / cdda 1"
-  },
-  {
-   "group": "Zoom aid",
-   "source_commit": "9276672",
-   "starts": "3 S1 / 1 S2",
-   "model_route": "terra-1 medium openrouter",
-   "evaluator": "core 1 / cdda 1"
-  },
-  {
-   "group": "Game-help aid",
-   "source_commit": "41ab9d2",
-   "starts": "3 S1 / 1 S2",
-   "model_route": "terra-1 medium openrouter",
-   "evaluator": "core 1 / cdda 1"
-  },
-  {
-   "group": "Reflection aid",
-   "source_commit": "9276672",
-   "starts": "3 S1 / 1 S2",
-   "model_route": "terra-1 medium openrouter",
-   "evaluator": "core 1 / cdda 1"
-  }
- ],
- "note": "All deaths are in S2 starts."
+ "seed": 383
 }

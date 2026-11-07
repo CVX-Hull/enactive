@@ -9,20 +9,23 @@ export const html = htm.bind(h);
 const KINDS = {
   recorded: ['rec', 'recorded'], read: ['read', 'read'], derived: ['calc', 'derived'],
   player_claim: ['claim', 'player claim'], claim: ['claim', 'player claim'], human: ['human', 'human'],
-  example: ['ex', 'example'],
+  example: ['ex', 'example'], harness: ['rec', 'recorded'], reader: ['read', 'read'],
 };
 /** One chip per interpretive value: the word is the API's `source`, the hue repeats it. */
 export function Pv({source, detail}) {
   const [kind, word] = KINDS[source] || ['unk', source ? String(source) : 'no source'];
   return html`<span class="pv ${kind}">${word}${detail ? html` <small>${detail}</small>` : null}</span>`;
 }
-const VALIDATION = {passes: 'passes floor', below_floor: 'below floor', fails_floor: 'fails floor'};
-export const validationText = status => (status ? VALIDATION[status] || String(status) : '');
+/** Held-out validation of a reader: `{pass, accuracy, n, floor}` or null when the reader has none. */
+export function validationText(check) {
+  if (!check) return 'not validated';
+  return check.pass ? 'passes floor' : 'below floor';
+}
 export function ReadChip({reading}) {
   const bits = [];
   if (typeof reading.confidence === 'number') bits.push(`${Math.round(reading.confidence * 100)}%`);
-  if (reading.validation) bits.push(validationText(reading.validation));
-  return html`<${Pv} source=${reading.source || 'read'} detail=${bits.join(' · ')} />`;
+  bits.push(validationText(reading.validation));
+  return html`<${Pv} source="read" detail=${bits.join(' · ')} />`;
 }
 
 /* ---------------------------------------------------------------- formatting */
@@ -33,7 +36,22 @@ export const trim = x => (x === null || x === undefined ? '—' : Number.isInteg
 export const bytes = b => (b === null || b === undefined ? '—' : b >= 1e6 ? `${(b / 1e6).toFixed(2)} MB` : `${(b / 1e3).toFixed(1)} KB`);
 export const mmss = seconds => `+${Math.floor(seconds / 60)}:${String(Math.round(seconds % 60)).padStart(2, '0')}`;
 export const shortId = id => (typeof id === 'string' && id.length > 12 ? `${id.slice(0, 8)}…` : id);
-export const runName = run => (run ? run.label || shortId(run.run) : '—');
+export const runName = run => (run ? shortId(run.run) : '—');
+/** Game time is whole seconds from the game's epoch; the day counts from 1. */
+export function gameClock(seconds) {
+  if (seconds === null || seconds === undefined) return '—';
+  const day = Math.floor(seconds / 86400) + 1, rest = seconds % 86400;
+  return `day ${day}, ${String(Math.floor(rest / 3600)).padStart(2, '0')}:${String(Math.floor(rest % 3600 / 60)).padStart(2, '0')}`;
+}
+/** One comparable number from a stored metric value (mirrors the viewer's own reduction). */
+export function scalar(value) {
+  if (typeof value === 'boolean') return Number(value);
+  if (typeof value === 'number') return value;
+  if (value && typeof value === 'object') for (const key of ['hours', 'value', 'count']) if (typeof value[key] === 'number') return value[key];
+  return null;
+}
+export const compact = value => (value === null || value === undefined ? '—' : typeof value === 'object' ? JSON.stringify(value) : String(value));
+export const label = text => String(text).replace(/_/g, ' ');
 export function median(values) {
   const sorted = values.filter(v => v !== null && v !== undefined).sort((a, b) => a - b);
   if (!sorted.length) return null;

@@ -40,8 +40,8 @@ export function timelineOption({steps, requests, markers, t0, cursorSeq}) {
   const writes = requests.map(r => [rel(r.wall), (r.cache_write || 0) / 1000]);
   let total = 0;
   const spend = requests.map(r => { total += r.dollars || 0; return [rel(r.wall), +total.toFixed(3)]; });
-  const evictions = markers.filter(m => m.kind === 'eviction').map(m => ({xAxis: rel(m.wall)}));
-  const handoffs = markers.filter(m => m.kind === 'handoff').map(m => ({xAxis: rel(m.wall), label: {show: true, formatter: 'handoff', color: C.muted, fontSize: 10}}));
+  const evictions = markers.filter(m => m.kind === 'context_eviction' && m.wall !== null).map(m => ({xAxis: rel(m.wall)}));
+  const handoffs = markers.filter(m => m.kind === 'handoff' && m.wall !== null).map(m => ({xAxis: rel(m.wall), label: {show: true, formatter: 'handoff', color: C.muted, fontSize: 10}}));
   const cursor = steps.find(s => s.seq === cursorSeq) || steps[steps.length - 1];
   const xMax = Math.max(1, Math.ceil(Math.max(steps.length ? rel(steps[steps.length - 1].wall) : 1, ...(requests.length ? [rel(requests[requests.length - 1].wall)] : [0]))));
   const grids = [{top: 14, height: 100}, {top: 134, height: 20}, {top: 174, height: 80}, {top: 276, height: 46}];
@@ -52,7 +52,7 @@ export function timelineOption({steps, requests, markers, t0, cursorSeq}) {
     tooltip: {trigger: 'axis', ...tooltipBase(C), formatter: ps => {
       const x = ps[0].axisValue;
       const s = steps.reduce((a, b) => (Math.abs(rel(b.wall) - x) < Math.abs(rel(a.wall) - x) ? b : a), steps[0]);
-      return s ? `Step ${s.seq} · +${(+x).toFixed(1)} min<br>${s.mode === 'in_play' ? 'in play' : 'out of play'}<br>${String(s.keys || '').replace(/[<>&]/g, '')}` : '';
+      return s ? `Step ${s.seq} · +${(+x).toFixed(1)} min<br>${s.mode === 'in_play' ? 'in play' : 'out of play'}<br>${(s.keys || []).join(' ').replace(/[<>&]/g, '')}` : '';
     }},
     grid: grids.map(g => ({...g, left: 96, right: 16})),
     xAxis: grids.map((g, k) => ({...base, type: 'value', gridIndex: k, min: 0, max: xMax, axisLabel: {...base.axisLabel, show: k === 3, formatter: v => `+${v} min`}})),
@@ -70,7 +70,7 @@ export function timelineOption({steps, requests, markers, t0, cursorSeq}) {
         return {type: 'rect', shape: {x: a[0], y: a[1] + (inplay ? 0 : 4), width: Math.max(1, b[0] - a[0]), height: b[1] - a[1] - (inplay ? 0 : 8)}, style: {fill: inplay ? C.quiet : C.watch}};
       }},
       {id: 'writes', type: 'bar', xAxisIndex: 2, yAxisIndex: 2, data: writes, barWidth: 2, itemStyle: {color: C.calc},
-        markLine: {silent: true, symbol: 'none', lineStyle: {color: C.watch, width: 1, type: 'dotted'}, label: {show: false}, data: evictions}},
+        markLine: {silent: true, symbol: 'none', lineStyle: {color: C.watch, width: 1, type: 'dotted', opacity: 0.4}, label: {show: false}, data: evictions}},
       {id: 'spend', type: 'line', xAxisIndex: 3, yAxisIndex: 3, data: spend, symbol: 'none', lineStyle: {color: C.quiet, width: 1.5},
         markLine: {silent: true, symbol: 'none', lineStyle: {color: C.accent, type: 'dashed'}, data: handoffs}}],
   };
@@ -99,10 +99,10 @@ export function requestsOption(requests, markers, t0) {
     grid: {left: 56, right: 16, top: 34, bottom: 30},
     xAxis: {type: 'value', axisLabel: {color: C.muted, formatter: v => `+${Math.round(v)} min`}, axisLine: {lineStyle: {color: C.line}}},
     yAxis: {type: 'value', axisLabel: {color: C.muted, formatter: v => `${v / 1000}k`}, splitLine: {lineStyle: {color: C.line, opacity: 0.4}}},
-    series: [{name: 'Input tokens', type: 'line', data: requests.map(r => [rel(r.wall), r.input_tokens]), symbol: 'none', lineStyle: {color: C.quiet}},
+    series: [{name: 'Input tokens', type: 'line', data: requests.map(r => [rel(r.wall), (r.input_tokens + r.cache_read + r.cache_write)]), symbol: 'none', lineStyle: {color: C.quiet}},
       {name: 'Cache-write tokens', type: 'bar', barWidth: 2, data: requests.map(r => [rel(r.wall), r.cache_write]), itemStyle: {color: C.calc},
-        markLine: {silent: true, symbol: 'none', lineStyle: {color: C.watch, type: 'dotted'}, label: {show: false},
-          data: markers.filter(m => m.kind === 'eviction').map(m => ({xAxis: rel(m.wall)}))}}]};
+        markLine: {silent: true, symbol: 'none', lineStyle: {color: C.watch, type: 'dotted', opacity: 0.4}, label: {show: false},
+          data: markers.filter(m => m.kind === 'context_eviction' && m.wall !== null).map(m => ({xAxis: rel(m.wall)}))}}]};
 }
 
 export function transitionsOption(tools, transitions, label) {
@@ -138,9 +138,9 @@ export function survivalOption(groups) {
   const colours = [C.fg, C.accent, C.watch, C.calc];
   const series = [];
   groups.forEach((g, k) => {
-    const colour = colours[k % colours.length], km = g.km || {t: [], s: [], lo: []};
-    series.push({name: g.name, type: 'line', step: 'end', data: km.t.map((t, i) => [t, km.s[i]]), symbol: 'none', lineStyle: {color: colour, width: 2}, itemStyle: {color: colour}});
-    series.push({name: g.name, type: 'line', step: 'end', data: km.t.map((t, i) => [t, km.lo[i]]), symbol: 'none', lineStyle: {color: colour, width: 1, type: 'dotted', opacity: 0.7}, tooltip: {show: false}});
+    const colour = colours[k % colours.length], km = g.curve || {times: [], survival: [], lower: []};
+    series.push({name: g.name, type: 'line', step: 'end', data: km.times.map((t, i) => [t, km.survival[i]]), symbol: 'none', lineStyle: {color: colour, width: 2}, itemStyle: {color: colour}});
+    series.push({name: g.name, type: 'line', step: 'end', data: km.times.map((t, i) => [t, km.lower[i]]), symbol: 'none', lineStyle: {color: colour, width: 1, type: 'dotted', opacity: 0.7}, tooltip: {show: false}});
   });
   return {animation: false, aria: {enabled: true}, legend: {top: 0, textStyle: {color: C.fg}, data: groups.map(g => g.name)},
     grid: {left: 48, right: 16, top: 34, bottom: 36}, tooltip: {trigger: 'item', ...tooltipBase(C)},

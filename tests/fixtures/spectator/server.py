@@ -6,8 +6,11 @@ It imitates only the parts of the supervised gateway that the page depends on:
 - sends the gateway's Content-Security-Policy on every response;
 - answers the control path: GET /api/status (computer-status/1), GET /api/source/<id>
   (PNG), POST /api/pause with a reason, POST /record;
-- answers `/api/view/*` from the JSON files beside this script (one run, every route),
+- answers `/api/view/*` from the JSON files beside this script (real viewer responses for one run and the
+  cross-run routes, trimmed; `refresh.py` regenerates them),
   or `503 {"viewer": "unavailable"}` while the viewer is switched off.
+
+With `--viewer URL` the view routes go to a real viewer process instead (the control path stays stubbed).
 
 Test hooks (never part of the product): GET /__fixture/state, POST /__fixture/viewer?mode=down|up,
 POST /__fixture/advance?n=5. Standard library only.
@@ -20,6 +23,8 @@ import json
 import re
 import threading
 import time
+import urllib.error
+import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -31,7 +36,7 @@ UI = ROOT / 'tools' / 'campaign_watch_ui.js'
 CSP = "default-src 'self'; img-src 'self' blob:; frame-ancestors 'none'"
 TYPES = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css',
          '.md': 'text/markdown', '.json': 'application/json', '.png': 'image/png'}
-SESSION = '5c7e91d2a4b84f60b3d1e0a9c2f7184d'
+SESSION = 'c6c09be0b7d43fba2839147651a4f6a5'    # the live run's real session id
 POLICY = 'Operator target: check every 15 seconds. Cutoff: 45 seconds.'
 REASONS = {'loop', 'fault', 'spend', 'other'}
 
@@ -41,15 +46,16 @@ def load(name):
 
 
 class State:
-    def __init__(self, attention):
+    def __init__(self, attention, upstream=None):
+        self.upstream = upstream
         self.lock = threading.Lock()
         self.attention = attention
-        self.steps = load('steps.json')['steps']
+        self.steps = load('steps.json')['items']
         self.requests = load('requests.json')
-        self.runs = {row['run'] for row in load('runs.json')['runs']}
+        self.runs = {row['run'] for row in load('runs.json')['items']}
         self.png = (HERE / 'frame.png').read_bytes()
         self.sha = hashlib.sha256(self.png).hexdigest()
-        self.visible = len(self.steps) - 10
+        self.visible = len(self.steps) - 4
         self.viewer_down = False
         self.pauses, self.records, self.view_requests = [], [], []
         self.started = time.time()
@@ -149,6 +155,19 @@ def make_handler(state: State):
             self.reply(200, data, TYPES.get(target.suffix, 'application/octet-stream'))
 
         # ------------------------------------------------------------ viewer routes
+        def forward(self, upstream, path):
+            """Like the gateway: JSON or PNG only, 2 s timeout, 503 when the viewer cannot answer."""
+            try:
+                with urllib.request.urlopen(upstream.rstrip('/') + path, timeout=2) as response:
+                    body, media, status = response.read(4 * 1024 * 1024 + 1), response.headers.get_content_type(), response.status
+            except urllib.error.HTTPError as error:
+                body, media, status = error.read(), error.headers.get_content_type(), error.code
+            except (OSError, ValueError):
+                self.json(503, {'viewer': 'unavailable'}); return
+            if media not in ('application/json', 'image/png'):
+                self.json(503, {'viewer': 'unavailable'}); return
+            self.reply(status, body, media)
+
         def view(self, route, query):
             with state.lock:
                 state.view_requests.append(route + ('?' + urlparse(self.path).query if query else ''))
@@ -156,9 +175,15 @@ def make_handler(state: State):
                 visible = state.visible
             if down:
                 self.json(503, {'viewer': 'unavailable'}); return
+            if state.upstream:
+                self.forward(state.upstream, self.path); return
             first = lambda key, default=None: (query.get(key) or [default])[0]
             if route == 'runs':
-                self.json(200, load('runs.json')); return
+                body = load('runs.json')
+                after, limit = int(first('after', 0)), min(500, int(first('limit', 100)))
+                rows = body['items'][after:after + limit + 1]
+                body.update(items=rows[:limit], next=after + limit if len(rows) > limit else None, limit=limit)
+                self.json(200, body); return
             if route == 'improve/changes':
                 self.json(200, load('improve-changes.json')); return
             if route == 'improve/failures':
@@ -177,20 +202,23 @@ def make_handler(state: State):
                 self.reply(200, state.png, 'image/png'); return
             if sub == 'summary':
                 body = load('summary.json')
-                body['facts']['decisions'] = body['outcome']['decisions'] = visible
+                body['decisions'] = state.steps[visible - 1]['decision']
+                body['findings'] = [f for f in body['findings'] if f['seq_start'] <= state.steps[visible - 1]['seq']]
                 self.json(200, body); return
             if sub == 'steps':
-                after = int(first('after', -1))
-                limit = min(500, int(first('limit', 500)))
+                after = int(first('after', 0))
+                limit = min(500, int(first('limit', 100)))
                 rows = [s for s in state.steps[:visible] if s['seq'] > after]
                 page = rows[:limit]
-                self.json(200, dict(schema='spectator-view/1', steps=page,
+                self.json(200, dict(schema='spectator-view/1', items=page, limit=limit,
                                     next=page[-1]['seq'] if len(rows) > limit else None)); return
             if sub == 'requests':
                 body = load('requests.json')
                 horizon = state.steps[visible - 1]['wall']
-                body['requests'] = [r for r in body['requests'] if r['wall'] <= horizon]
-                body['markers'] = [m for m in body['markers'] if m['wall'] <= horizon]
+                after, limit = int(first('after', 0)), min(500, int(first('limit', 100)))
+                rows = [r for r in body['items'] if r['id'] > after and r['wall'] <= horizon]
+                body.update(items=rows[:limit], limit=limit, next=rows[limit - 1]['id'] if len(rows) > limit else None,
+                            markers=[m for m in body['markers'] if m['wall'] is not None and m['wall'] <= horizon])
                 self.json(200, body); return
             if sub.startswith('context/'):
                 body = load('context.json')
@@ -200,7 +228,7 @@ def make_handler(state: State):
                 body = load('calls.json')
                 for key in ('tool', 'status'):
                     if first(key):
-                        body['calls'] = [c for c in body['calls'] if c[key] == first(key)]
+                        body['items'] = [c for c in body['items'] if c[key] == first(key)]
                 self.json(200, body); return
             if sub in ('tools', 'memory', 'programs', 'handoffs'):
                 self.json(200, load(sub + '.json')); return
@@ -244,8 +272,8 @@ def make_handler(state: State):
     return Handler
 
 
-def serve(attention: str = 'required', port: int = 0):
-    state = State(attention)
+def serve(attention: str = 'required', port: int = 0, upstream: str | None = None):
+    state = State(attention, upstream)
     server = ThreadingHTTPServer(('127.0.0.1', port), make_handler(state))
     return server, state
 
@@ -254,8 +282,9 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--port', type=int, default=0)
     parser.add_argument('--attention', choices=('required', 'best-effort'), default='required')
+    parser.add_argument('--viewer', help='forward /api/view/* to a real viewer (http://127.0.0.1:port) instead of the fixtures')
     args = parser.parse_args(argv)
-    server, _ = serve(args.attention, args.port)
+    server, _ = serve(args.attention, args.port, args.viewer)
     print(json.dumps(dict(url=f'http://127.0.0.1:{server.server_port}/')), flush=True)
     try:
         server.serve_forever()

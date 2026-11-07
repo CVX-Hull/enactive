@@ -2,152 +2,1214 @@
  "schema": "spectator-view/1",
  "changes": [
   {
-   "id": "help",
+   "id": "game-help-aid",
    "name": "Game-help aid (B1-B9)",
    "arms": [
-    "Ceiling",
-    "Game-help aid"
+    "aidB*"
    ],
-   "commits": [
-    "41ab9d2"
+   "baseline": [
+    "ceil05",
+    "ceil06",
+    "ceil07",
+    "ceil08",
+    "ceil09"
    ],
-   "hypothesis": "Reading the in-game help shortens keybinding and menu hunts.",
-   "target_failure": "Keybinding and menu hunts",
+   "commits": [],
+   "hypothesis": "Pointing the player at the in-game help and keybinding list shortens keybinding and menu hunts.",
+   "target_failure": "stall",
    "target_metric": {
-    "name": "Longest out-of-play streak per run",
+    "name": "stall.longest",
     "direction": "lower",
     "min_effect": 5
    },
-   "uptake_metric": "Runs that wrote a keybinding procedure",
-   "guards": [
-    "Survival",
-    "Spend"
-   ],
-   "verdict": "wrong_way",
-   "notes": "The aid is itself out of play, so the target metric is confounded by the change.",
-   "uptake": {
-    "text": "3 of 5 runs wrote a keybinding procedure",
-    "n": 3,
-    "denominator": 5
+   "uptake_metric": {
+    "name": "memory.records",
+    "key": "procedure",
+    "definition": "Procedure records written to the memory store, which is where the player kept keybinding procedures"
    },
-   "arms_values": [
+   "guards": [
     {
-     "arm": "Ceiling",
-     "runs": [
-      {
-       "run": "A1",
-       "target": 12,
-       "uptake": 0,
-       "guard": 0.52
-      },
-      {
-       "run": "A2",
-       "target": 9,
-       "uptake": 0,
-       "guard": 0.31
-      },
-      {
-       "run": "T5",
-       "target": 14,
-       "uptake": 0,
-       "guard": 2.1
-      }
-     ]
+     "name": "survival.game_hours",
+     "key": ""
     },
     {
-     "arm": "Game-help aid",
-     "runs": [
-      {
-       "run": "B1",
-       "target": 31,
-       "uptake": 1,
-       "guard": 0.5
-      },
-      {
-       "run": "B2",
-       "target": 27,
-       "uptake": 1,
-       "guard": 0.22
-      }
-     ]
+     "name": "host.dollars_per_decision",
+     "key": ""
     }
    ],
-   "interval": {
-    "estimate": 17.0,
-    "lo": 6.5,
-    "hi": 26.0,
-    "level": 0.95,
-    "method": "bootstrap",
-    "n_a": 3,
-    "n_b": 2
+   "verdict": "wrong_way",
+   "notes": "Lost runs are excluded. The aid's own action, reading the in-game help, is out of play, so the target metric is confounded by the change itself. The mode reader has since passed re-validation, so the stall counts are no longer provisional. Next: measure hunts by screen identity, not by mode.",
+   "target": {
+    "metric": {
+     "name": "stall.longest",
+     "direction": "lower",
+     "min_effect": 5
+    },
+    "arm": {
+     "runs": [
+      {
+       "run": "aidB1",
+       "session": "4e33fac0ea42f93449a5a00291a19660",
+       "value": 18.0
+      },
+      {
+       "run": "aidB2",
+       "session": "30feab17ef71853e4ad5b86dbd94e61c",
+       "value": 22.0
+      },
+      {
+       "run": "aidB3",
+       "session": "20d51b154e0077ab83109060223075c2",
+       "value": 16.0
+      },
+      {
+       "run": "aidB4",
+       "session": "995dea082ac6e05976883a6e34398860",
+       "value": 20.0
+      },
+      {
+       "run": "aidB9",
+       "session": "9313a6ff091a1c6bd4e9d30817d792ce",
+       "value": 14.0
+      }
+     ],
+     "n": 5,
+     "mean": 18.0,
+     "median": 18.0
+    },
+    "baseline": {
+     "runs": [
+      {
+       "run": "ceil05",
+       "session": "2256dc8fbab78519fdea458f3f66315e",
+       "value": 16.0
+      },
+      {
+       "run": "ceil06",
+       "session": "859c8124fe534285fb35b23db5d59eca",
+       "value": 7.0
+      },
+      {
+       "run": "ceil07",
+       "session": "bbef26ac5228651c066afc27a5af5c32",
+       "value": 15.0
+      },
+      {
+       "run": "ceil08",
+       "session": "725598848e982c67bae7e80129b51f78",
+       "value": 3.0
+      },
+      {
+       "run": "ceil09",
+       "session": "c6c09be0b7d43fba2839147651a4f6a5",
+       "value": 17.0
+      }
+     ],
+     "n": 5,
+     "mean": 11.6,
+     "median": 15.0
+    },
+    "difference": {
+     "difference": 6.4,
+     "low": 1.1999999999999993,
+     "high": 12.2,
+     "resamples": 4000
+    },
+    "excluded": [
+     "aidB5",
+     "aidB6",
+     "aidB7",
+     "aidB8"
+    ]
    },
-   "guard_note": "Survival: not detected at n = 5",
-   "source": "derived"
+   "uptake": {
+    "metric": {
+     "name": "memory.records",
+     "key": "procedure",
+     "definition": "Procedure records written to the memory store, which is where the player kept keybinding procedures"
+    },
+    "runs": [
+     {
+      "run": "aidB1",
+      "value": 1.0
+     },
+     {
+      "run": "aidB2",
+      "value": 2.0
+     },
+     {
+      "run": "aidB3",
+      "value": 0.0
+     },
+     {
+      "run": "aidB4",
+      "value": 1.0
+     },
+     {
+      "run": "aidB9",
+      "value": 0.0
+     }
+    ],
+    "n": 5,
+    "with_uptake": 3,
+    "total": 4.0
+   },
+   "guard_values": [
+    {
+     "metric": {
+      "name": "survival.game_hours",
+      "key": ""
+     },
+     "arm": {
+      "runs": [
+       {
+        "run": "aidB1",
+        "session": "4e33fac0ea42f93449a5a00291a19660",
+        "value": 0.38305555555555554
+       },
+       {
+        "run": "aidB2",
+        "session": "30feab17ef71853e4ad5b86dbd94e61c",
+        "value": 0.2863888888888889
+       },
+       {
+        "run": "aidB3",
+        "session": "20d51b154e0077ab83109060223075c2",
+        "value": 0.42083333333333334
+       },
+       {
+        "run": "aidB4",
+        "session": "995dea082ac6e05976883a6e34398860",
+        "value": 0.1711111111111111
+       },
+       {
+        "run": "aidB9",
+        "session": "9313a6ff091a1c6bd4e9d30817d792ce",
+        "value": 0.6977777777777778
+       }
+      ],
+      "n": 5,
+      "mean": 0.39183333333333337,
+      "median": 0.38305555555555554
+     },
+     "baseline": {
+      "runs": [
+       {
+        "run": "ceil05",
+        "session": "2256dc8fbab78519fdea458f3f66315e",
+        "value": 0.5941666666666666
+       },
+       {
+        "run": "ceil06",
+        "session": "859c8124fe534285fb35b23db5d59eca",
+        "value": 0.04805555555555555
+       },
+       {
+        "run": "ceil07",
+        "session": "bbef26ac5228651c066afc27a5af5c32",
+        "value": 0.6125
+       },
+       {
+        "run": "ceil08",
+        "session": "725598848e982c67bae7e80129b51f78",
+        "value": 0.0325
+       },
+       {
+        "run": "ceil09",
+        "session": "c6c09be0b7d43fba2839147651a4f6a5",
+        "value": 2.11
+       }
+      ],
+      "n": 5,
+      "mean": 0.6794444444444444,
+      "median": 0.5941666666666666
+     }
+    },
+    {
+     "metric": {
+      "name": "host.dollars_per_decision",
+      "key": ""
+     },
+     "arm": {
+      "runs": [
+       {
+        "run": "aidB1",
+        "session": "4e33fac0ea42f93449a5a00291a19660",
+        "value": 0.015633565695067266
+       },
+       {
+        "run": "aidB2",
+        "session": "30feab17ef71853e4ad5b86dbd94e61c",
+        "value": 0.016098255088495578
+       },
+       {
+        "run": "aidB3",
+        "session": "20d51b154e0077ab83109060223075c2",
+        "value": 0.017967426116071432
+       },
+       {
+        "run": "aidB4",
+        "session": "995dea082ac6e05976883a6e34398860",
+        "value": 0.01546533004484305
+       },
+       {
+        "run": "aidB9",
+        "session": "9313a6ff091a1c6bd4e9d30817d792ce",
+        "value": 0.015300021076233183
+       }
+      ],
+      "n": 5,
+      "mean": 0.0160929196041421,
+      "median": 0.015633565695067266
+     },
+     "baseline": {
+      "runs": [
+       {
+        "run": "ceil05",
+        "session": "2256dc8fbab78519fdea458f3f66315e",
+        "value": 0.015390208222222222
+       },
+       {
+        "run": "ceil06",
+        "session": "859c8124fe534285fb35b23db5d59eca",
+        "value": 0.00807562
+       },
+       {
+        "run": "ceil07",
+        "session": "bbef26ac5228651c066afc27a5af5c32",
+        "value": 0.016385858968609866
+       },
+       {
+        "run": "ceil08",
+        "session": "725598848e982c67bae7e80129b51f78",
+        "value": 0.004495005714285715
+       },
+       {
+        "run": "ceil09",
+        "session": "c6c09be0b7d43fba2839147651a4f6a5",
+        "value": 0.01737399344978166
+       }
+      ],
+      "n": 5,
+      "mean": 0.012344137270979893,
+      "median": 0.015390208222222222
+     }
+    }
+   ],
+   "computed_verdict": "wrong_way"
   },
   {
-   "id": "zoom",
+   "id": "zoom-aid",
    "name": "Zoom aid (A1-A6)",
    "arms": [
-    "Ceiling",
-    "Zoom aid"
+    "aidA*"
    ],
-   "commits": [
-    "5d084ca"
+   "baseline": [
+    "ceil05",
+    "ceil06",
+    "ceil07",
+    "ceil08",
+    "ceil09"
    ],
-   "hypothesis": "Zoomed re-reads reduce perception errors.",
-   "target_failure": "Perception errors",
+   "commits": [],
+   "hypothesis": "A zoomed re-read of a frame cuts perception errors (misread needs, creatures and text).",
+   "target_failure": "identity_or_world_error",
    "target_metric": {
-    "name": "Survival and milestones",
+    "name": "survival.game_hours",
     "direction": "higher",
-    "min_effect": null
+    "min_effect": 0.25
    },
-   "uptake_metric": "Zoomed re-reads",
+   "uptake_metric": {
+    "name": "tools.calls",
+    "key": "player_source+zoom",
+    "definition": "player_source calls that passed a zoom argument"
+   },
    "guards": [
-    "Survival"
+    {
+     "name": "survival.game_hours",
+     "key": ""
+    }
    ],
    "verdict": "untested",
-   "notes": "An aid that is never used cannot be judged.",
-   "uptake": {
-    "text": "0 zoomed re-reads in 6 runs",
-    "n": 0,
-    "denominator": 6
+   "notes": "The aid was never used, so it cannot be judged. Next: find out why the player did not use it before trying again.",
+   "target": {
+    "metric": {
+     "name": "survival.game_hours",
+     "direction": "higher",
+     "min_effect": 0.25
+    },
+    "arm": {
+     "runs": [
+      {
+       "run": "aidA1",
+       "session": "1138c1218e1cfe1c52397cf44fc835f9",
+       "value": 0.2702777777777778
+      },
+      {
+       "run": "aidA3",
+       "session": "23e50008ea8f6ec6192b9a96009dceed",
+       "value": 0.29583333333333334
+      },
+      {
+       "run": "aidA4",
+       "session": "b04fe7fd3ab40e18fe250503473b7c84",
+       "value": 2.1147222222222224
+      },
+      {
+       "run": "aidA5",
+       "session": "b328dac77cd4b4f1b5d2ee9a0c82894b",
+       "value": 0.9322222222222222
+      },
+      {
+       "run": "aidA6",
+       "session": "767e16a0b18c05f47c99a65aeae22d16",
+       "value": 0.06638888888888889
+      }
+     ],
+     "n": 5,
+     "mean": 0.735888888888889,
+     "median": 0.29583333333333334
+    },
+    "baseline": {
+     "runs": [
+      {
+       "run": "ceil05",
+       "session": "2256dc8fbab78519fdea458f3f66315e",
+       "value": 0.5941666666666666
+      },
+      {
+       "run": "ceil06",
+       "session": "859c8124fe534285fb35b23db5d59eca",
+       "value": 0.04805555555555555
+      },
+      {
+       "run": "ceil07",
+       "session": "bbef26ac5228651c066afc27a5af5c32",
+       "value": 0.6125
+      },
+      {
+       "run": "ceil08",
+       "session": "725598848e982c67bae7e80129b51f78",
+       "value": 0.0325
+      },
+      {
+       "run": "ceil09",
+       "session": "c6c09be0b7d43fba2839147651a4f6a5",
+       "value": 2.11
+      }
+     ],
+     "n": 5,
+     "mean": 0.6794444444444444,
+     "median": 0.5941666666666666
+    },
+    "difference": {
+     "difference": 0.05644444444444463,
+     "low": -0.8919680555555556,
+     "high": 0.9051166666666669,
+     "resamples": 4000
+    },
+    "excluded": [
+     "aidA2"
+    ]
    },
-   "arms_values": [],
-   "interval": null,
-   "guard_note": "Survival: not detected",
-   "source": "human"
+   "uptake": {
+    "metric": {
+     "name": "tools.calls",
+     "key": "player_source+zoom",
+     "definition": "player_source calls that passed a zoom argument"
+    },
+    "runs": [
+     {
+      "run": "aidA1",
+      "value": 0.0
+     },
+     {
+      "run": "aidA3",
+      "value": 0.0
+     },
+     {
+      "run": "aidA4",
+      "value": 0.0
+     },
+     {
+      "run": "aidA5",
+      "value": 0.0
+     },
+     {
+      "run": "aidA6",
+      "value": 0.0
+     }
+    ],
+    "n": 5,
+    "with_uptake": 0,
+    "total": 0.0
+   },
+   "guard_values": [
+    {
+     "metric": {
+      "name": "survival.game_hours",
+      "key": ""
+     },
+     "arm": {
+      "runs": [
+       {
+        "run": "aidA1",
+        "session": "1138c1218e1cfe1c52397cf44fc835f9",
+        "value": 0.2702777777777778
+       },
+       {
+        "run": "aidA3",
+        "session": "23e50008ea8f6ec6192b9a96009dceed",
+        "value": 0.29583333333333334
+       },
+       {
+        "run": "aidA4",
+        "session": "b04fe7fd3ab40e18fe250503473b7c84",
+        "value": 2.1147222222222224
+       },
+       {
+        "run": "aidA5",
+        "session": "b328dac77cd4b4f1b5d2ee9a0c82894b",
+        "value": 0.9322222222222222
+       },
+       {
+        "run": "aidA6",
+        "session": "767e16a0b18c05f47c99a65aeae22d16",
+        "value": 0.06638888888888889
+       }
+      ],
+      "n": 5,
+      "mean": 0.735888888888889,
+      "median": 0.29583333333333334
+     },
+     "baseline": {
+      "runs": [
+       {
+        "run": "ceil05",
+        "session": "2256dc8fbab78519fdea458f3f66315e",
+        "value": 0.5941666666666666
+       },
+       {
+        "run": "ceil06",
+        "session": "859c8124fe534285fb35b23db5d59eca",
+        "value": 0.04805555555555555
+       },
+       {
+        "run": "ceil07",
+        "session": "bbef26ac5228651c066afc27a5af5c32",
+        "value": 0.6125
+       },
+       {
+        "run": "ceil08",
+        "session": "725598848e982c67bae7e80129b51f78",
+        "value": 0.0325
+       },
+       {
+        "run": "ceil09",
+        "session": "c6c09be0b7d43fba2839147651a4f6a5",
+        "value": 2.11
+       }
+      ],
+      "n": 5,
+      "mean": 0.6794444444444444,
+      "median": 0.5941666666666666
+     }
+    }
+   ],
+   "computed_verdict": "untested"
   },
   {
-   "id": "retry",
+   "id": "provider-retry-fixes",
    "name": "Provider retry fixes (#378-#380)",
    "arms": [
-    "Ceiling"
+    "aidB9",
+    "aidC*"
+   ],
+   "baseline": [
+    "aidA*",
+    "aidB1",
+    "aidB2",
+    "aidB3",
+    "aidB4",
+    "aidB5",
+    "aidB6",
+    "aidB7",
+    "aidB8",
+    "ceil*"
    ],
    "commits": [
+    "1f9c907",
+    "5d084ca",
     "c313346"
    ],
-   "hypothesis": "Retries cut runs lost to provider errors.",
-   "target_failure": "Runs lost to provider errors",
+   "hypothesis": "Retrying a message-less 429, a balance-citing 429 and a stream that fails before its first event stops runs ending on provider errors.",
+   "target_failure": "infrastructure_loss",
    "target_metric": {
-    "name": "Infrastructure losses per arm",
+    "name": "run.provider_loss",
     "direction": "lower",
-    "min_effect": 1
+    "min_effect": 0.1
    },
-   "uptake_metric": "Retries fired",
+   "uptake_metric": {
+    "name": "host.retry_share",
+    "key": "",
+    "definition": "Share of requests that were retries, aborts or non-tool stops"
+   },
    "guards": [
-    "Play unchanged"
+    {
+     "name": "survival.game_hours",
+     "key": ""
+    }
    ],
    "verdict": "moved",
-   "notes": "Retries fired as designed.",
-   "uptake": {
-    "text": "Retries fired as designed",
-    "n": null,
-    "denominator": null
+   "notes": "Five runs (A2 and four game-help runs) ended on provider errors before the fixes landed. After them no run ended on a provider error; one reflection run was lost to a custody stop, which is not a provider error. Retries fired as designed in aidC1. The runs ran in order, so the comparison mixes the fixes with run order and provider drift.",
+   "target": {
+    "metric": {
+     "name": "run.provider_loss",
+     "direction": "lower",
+     "min_effect": 0.1
+    },
+    "arm": {
+     "runs": [
+      {
+       "run": "aidB9",
+       "session": "9313a6ff091a1c6bd4e9d30817d792ce",
+       "value": 0.0
+      },
+      {
+       "run": "aidC1",
+       "session": "7b73a17e6d536f2a09e6d7781c2eab43",
+       "value": 0.0
+      },
+      {
+       "run": "aidC2",
+       "session": "d08fa4a66fe594d1f8c6e004e487b010",
+       "value": 0.0
+      },
+      {
+       "run": "aidC3",
+       "session": "9563f3e91455a4779463ac5335b69640",
+       "value": 0.0
+      },
+      {
+       "run": "aidC4",
+       "session": "e7638809125d26dd19015d50450966b3",
+       "value": 0.0
+      },
+      {
+       "run": "aidC5",
+       "session": "3f763f128c636eb36f35bb229a9fb30d",
+       "value": 0.0
+      },
+      {
+       "run": "aidC6",
+       "session": "4e14a90ad858f9b70d04d8aa6166a48f",
+       "value": 0.0
+      }
+     ],
+     "n": 7,
+     "mean": 0.0,
+     "median": 0.0
+    },
+    "baseline": {
+     "runs": [
+      {
+       "run": "aidA1",
+       "session": "1138c1218e1cfe1c52397cf44fc835f9",
+       "value": 0.0
+      },
+      {
+       "run": "aidA2",
+       "session": "a7d4748fb051580bbeaa8b8015818124",
+       "value": 1.0
+      },
+      {
+       "run": "aidA3",
+       "session": "23e50008ea8f6ec6192b9a96009dceed",
+       "value": 0.0
+      },
+      {
+       "run": "aidA4",
+       "session": "b04fe7fd3ab40e18fe250503473b7c84",
+       "value": 0.0
+      },
+      {
+       "run": "aidA5",
+       "session": "b328dac77cd4b4f1b5d2ee9a0c82894b",
+       "value": 0.0
+      },
+      {
+       "run": "aidA6",
+       "session": "767e16a0b18c05f47c99a65aeae22d16",
+       "value": 0.0
+      },
+      {
+       "run": "aidB1",
+       "session": "4e33fac0ea42f93449a5a00291a19660",
+       "value": 0.0
+      },
+      {
+       "run": "aidB2",
+       "session": "30feab17ef71853e4ad5b86dbd94e61c",
+       "value": 0.0
+      },
+      {
+       "run": "aidB3",
+       "session": "20d51b154e0077ab83109060223075c2",
+       "value": 0.0
+      },
+      {
+       "run": "aidB4",
+       "session": "995dea082ac6e05976883a6e34398860",
+       "value": 0.0
+      },
+      {
+       "run": "aidB5",
+       "session": "a435e6b2c3a965c77bc07ab550594395",
+       "value": 1.0
+      },
+      {
+       "run": "aidB6",
+       "session": "a10199bac022a9fe2b25e55d883dbdb1",
+       "value": 1.0
+      },
+      {
+       "run": "aidB7",
+       "session": "514f6705846c67a875a29b5f58058962",
+       "value": 1.0
+      },
+      {
+       "run": "aidB8",
+       "session": "c9ec9dc97e980c2c5102b8156b1761b8",
+       "value": 1.0
+      },
+      {
+       "run": "ceil01",
+       "session": "c06925379f233c7505303e83eb567f89",
+       "value": 0.0
+      },
+      {
+       "run": "ceil02",
+       "session": "52a979f5e7510f9bcebbbbdf286a4fa1",
+       "value": 0.0
+      },
+      {
+       "run": "ceil03",
+       "session": "3d2746e6c4ba9ee9776276b73343192e",
+       "value": 0.0
+      },
+      {
+       "run": "ceil04",
+       "session": "eddfce3810528fa6814e4b497e47e5e0",
+       "value": 0.0
+      },
+      {
+       "run": "ceil05",
+       "session": "2256dc8fbab78519fdea458f3f66315e",
+       "value": 0.0
+      },
+      {
+       "run": "ceil06",
+       "session": "859c8124fe534285fb35b23db5d59eca",
+       "value": 0.0
+      },
+      {
+       "run": "ceil07",
+       "session": "bbef26ac5228651c066afc27a5af5c32",
+       "value": 0.0
+      },
+      {
+       "run": "ceil08",
+       "session": "725598848e982c67bae7e80129b51f78",
+       "value": 0.0
+      },
+      {
+       "run": "ceil09",
+       "session": "c6c09be0b7d43fba2839147651a4f6a5",
+       "value": 0.0
+      }
+     ],
+     "n": 23,
+     "mean": 0.21739130434782608,
+     "median": 0.0
+    },
+    "difference": {
+     "difference": -0.21739130434782608,
+     "low": -0.391304347826087,
+     "high": -0.043478260869565216,
+     "resamples": 4000
+    },
+    "excluded": []
    },
-   "arms_values": [],
-   "interval": null,
-   "guard_note": "No change to play",
-   "source": "human"
+   "uptake": {
+    "metric": {
+     "name": "host.retry_share",
+     "key": "",
+     "definition": "Share of requests that were retries, aborts or non-tool stops"
+    },
+    "runs": [
+     {
+      "run": "aidB9",
+      "value": 0.0
+     },
+     {
+      "run": "aidC1",
+      "value": 0.008620689655172414
+     },
+     {
+      "run": "aidC2",
+      "value": 0.0
+     },
+     {
+      "run": "aidC3",
+      "value": 0.0
+     },
+     {
+      "run": "aidC5",
+      "value": 0.0
+     },
+     {
+      "run": "aidC6",
+      "value": 0.0
+     }
+    ],
+    "n": 6,
+    "with_uptake": 1,
+    "total": 0.008620689655172414
+   },
+   "guard_values": [
+    {
+     "metric": {
+      "name": "survival.game_hours",
+      "key": ""
+     },
+     "arm": {
+      "runs": [
+       {
+        "run": "aidB9",
+        "session": "9313a6ff091a1c6bd4e9d30817d792ce",
+        "value": 0.6977777777777778
+       },
+       {
+        "run": "aidC1",
+        "session": "7b73a17e6d536f2a09e6d7781c2eab43",
+        "value": 0.4525
+       },
+       {
+        "run": "aidC2",
+        "session": "d08fa4a66fe594d1f8c6e004e487b010",
+        "value": 0.21611111111111111
+       },
+       {
+        "run": "aidC3",
+        "session": "9563f3e91455a4779463ac5335b69640",
+        "value": 0.49166666666666664
+       },
+       {
+        "run": "aidC4",
+        "session": "e7638809125d26dd19015d50450966b3",
+        "value": 0.0
+       },
+       {
+        "run": "aidC5",
+        "session": "3f763f128c636eb36f35bb229a9fb30d",
+        "value": 0.2836111111111111
+       },
+       {
+        "run": "aidC6",
+        "session": "4e14a90ad858f9b70d04d8aa6166a48f",
+        "value": 2.058333333333333
+       }
+      ],
+      "n": 7,
+      "mean": 0.5999999999999999,
+      "median": 0.4525
+     },
+     "baseline": {
+      "runs": [
+       {
+        "run": "aidA1",
+        "session": "1138c1218e1cfe1c52397cf44fc835f9",
+        "value": 0.2702777777777778
+       },
+       {
+        "run": "aidA2",
+        "session": "a7d4748fb051580bbeaa8b8015818124",
+        "value": 0.12
+       },
+       {
+        "run": "aidA3",
+        "session": "23e50008ea8f6ec6192b9a96009dceed",
+        "value": 0.29583333333333334
+       },
+       {
+        "run": "aidA4",
+        "session": "b04fe7fd3ab40e18fe250503473b7c84",
+        "value": 2.1147222222222224
+       },
+       {
+        "run": "aidA5",
+        "session": "b328dac77cd4b4f1b5d2ee9a0c82894b",
+        "value": 0.9322222222222222
+       },
+       {
+        "run": "aidA6",
+        "session": "767e16a0b18c05f47c99a65aeae22d16",
+        "value": 0.06638888888888889
+       },
+       {
+        "run": "aidB1",
+        "session": "4e33fac0ea42f93449a5a00291a19660",
+        "value": 0.38305555555555554
+       },
+       {
+        "run": "aidB2",
+        "session": "30feab17ef71853e4ad5b86dbd94e61c",
+        "value": 0.2863888888888889
+       },
+       {
+        "run": "aidB3",
+        "session": "20d51b154e0077ab83109060223075c2",
+        "value": 0.42083333333333334
+       },
+       {
+        "run": "aidB4",
+        "session": "995dea082ac6e05976883a6e34398860",
+        "value": 0.1711111111111111
+       },
+       {
+        "run": "aidB5",
+        "session": "a435e6b2c3a965c77bc07ab550594395",
+        "value": 0.19944444444444445
+       },
+       {
+        "run": "aidB6",
+        "session": "a10199bac022a9fe2b25e55d883dbdb1",
+        "value": 1.2866666666666666
+       },
+       {
+        "run": "aidB7",
+        "session": "514f6705846c67a875a29b5f58058962",
+        "value": 0.3675
+       },
+       {
+        "run": "aidB8",
+        "session": "c9ec9dc97e980c2c5102b8156b1761b8",
+        "value": 0.19583333333333333
+       },
+       {
+        "run": "ceil01",
+        "session": "c06925379f233c7505303e83eb567f89",
+        "value": 0.2061111111111111
+       },
+       {
+        "run": "ceil02",
+        "session": "52a979f5e7510f9bcebbbbdf286a4fa1",
+        "value": 5.489166666666667
+       },
+       {
+        "run": "ceil03",
+        "session": "3d2746e6c4ba9ee9776276b73343192e",
+        "value": 0.16361111111111112
+       },
+       {
+        "run": "ceil04",
+        "session": "eddfce3810528fa6814e4b497e47e5e0",
+        "value": 0.09722222222222222
+       },
+       {
+        "run": "ceil05",
+        "session": "2256dc8fbab78519fdea458f3f66315e",
+        "value": 0.5941666666666666
+       },
+       {
+        "run": "ceil06",
+        "session": "859c8124fe534285fb35b23db5d59eca",
+        "value": 0.04805555555555555
+       },
+       {
+        "run": "ceil07",
+        "session": "bbef26ac5228651c066afc27a5af5c32",
+        "value": 0.6125
+       },
+       {
+        "run": "ceil08",
+        "session": "725598848e982c67bae7e80129b51f78",
+        "value": 0.0325
+       },
+       {
+        "run": "ceil09",
+        "session": "c6c09be0b7d43fba2839147651a4f6a5",
+        "value": 2.11
+       }
+      ],
+      "n": 23,
+      "mean": 0.7158091787439614,
+      "median": 0.2863888888888889
+     }
+    }
+   ],
+   "computed_verdict": "moved"
+  },
+  {
+   "id": "reflection-lineage",
+   "name": "Reflection lineage (C1-C6)",
+   "arms": [
+    "aidC*"
+   ],
+   "baseline": [
+    "ceil05",
+    "ceil06",
+    "ceil07",
+    "ceil08",
+    "ceil09"
+   ],
+   "commits": [],
+   "hypothesis": "Carrying reflection advice into each admission stops a survivor repeating the same failure.",
+   "target_failure": "memory_unused",
+   "target_metric": {
+    "name": "survival.game_hours",
+    "direction": "higher",
+    "min_effect": 0.25
+   },
+   "uptake_metric": null,
+   "guards": [
+    {
+     "name": "survival.game_hours",
+     "key": ""
+    },
+    {
+     "name": "memory.reads",
+     "key": ""
+    }
+   ],
+   "verdict": "untested",
+   "notes": "Advice records were carried into each admission, but whether the player followed them cannot be measured without the player stating its intent, which is deferred until after #382.",
+   "target": {
+    "metric": {
+     "name": "survival.game_hours",
+     "direction": "higher",
+     "min_effect": 0.25
+    },
+    "arm": {
+     "runs": [
+      {
+       "run": "aidC1",
+       "session": "7b73a17e6d536f2a09e6d7781c2eab43",
+       "value": 0.4525
+      },
+      {
+       "run": "aidC2",
+       "session": "d08fa4a66fe594d1f8c6e004e487b010",
+       "value": 0.21611111111111111
+      },
+      {
+       "run": "aidC3",
+       "session": "9563f3e91455a4779463ac5335b69640",
+       "value": 0.49166666666666664
+      },
+      {
+       "run": "aidC5",
+       "session": "3f763f128c636eb36f35bb229a9fb30d",
+       "value": 0.2836111111111111
+      },
+      {
+       "run": "aidC6",
+       "session": "4e14a90ad858f9b70d04d8aa6166a48f",
+       "value": 2.058333333333333
+      }
+     ],
+     "n": 5,
+     "mean": 0.7004444444444443,
+     "median": 0.4525
+    },
+    "baseline": {
+     "runs": [
+      {
+       "run": "ceil05",
+       "session": "2256dc8fbab78519fdea458f3f66315e",
+       "value": 0.5941666666666666
+      },
+      {
+       "run": "ceil06",
+       "session": "859c8124fe534285fb35b23db5d59eca",
+       "value": 0.04805555555555555
+      },
+      {
+       "run": "ceil07",
+       "session": "bbef26ac5228651c066afc27a5af5c32",
+       "value": 0.6125
+      },
+      {
+       "run": "ceil08",
+       "session": "725598848e982c67bae7e80129b51f78",
+       "value": 0.0325
+      },
+      {
+       "run": "ceil09",
+       "session": "c6c09be0b7d43fba2839147651a4f6a5",
+       "value": 2.11
+      }
+     ],
+     "n": 5,
+     "mean": 0.6794444444444444,
+     "median": 0.5941666666666666
+    },
+    "difference": {
+     "difference": 0.020999999999999908,
+     "low": -0.8629624999999999,
+     "high": 0.9075486111111113,
+     "resamples": 4000
+    },
+    "excluded": [
+     "aidC4"
+    ]
+   },
+   "uptake": null,
+   "guard_values": [
+    {
+     "metric": {
+      "name": "survival.game_hours",
+      "key": ""
+     },
+     "arm": {
+      "runs": [
+       {
+        "run": "aidC1",
+        "session": "7b73a17e6d536f2a09e6d7781c2eab43",
+        "value": 0.4525
+       },
+       {
+        "run": "aidC2",
+        "session": "d08fa4a66fe594d1f8c6e004e487b010",
+        "value": 0.21611111111111111
+       },
+       {
+        "run": "aidC3",
+        "session": "9563f3e91455a4779463ac5335b69640",
+        "value": 0.49166666666666664
+       },
+       {
+        "run": "aidC5",
+        "session": "3f763f128c636eb36f35bb229a9fb30d",
+        "value": 0.2836111111111111
+       },
+       {
+        "run": "aidC6",
+        "session": "4e14a90ad858f9b70d04d8aa6166a48f",
+        "value": 2.058333333333333
+       }
+      ],
+      "n": 5,
+      "mean": 0.7004444444444443,
+      "median": 0.4525
+     },
+     "baseline": {
+      "runs": [
+       {
+        "run": "ceil05",
+        "session": "2256dc8fbab78519fdea458f3f66315e",
+        "value": 0.5941666666666666
+       },
+       {
+        "run": "ceil06",
+        "session": "859c8124fe534285fb35b23db5d59eca",
+        "value": 0.04805555555555555
+       },
+       {
+        "run": "ceil07",
+        "session": "bbef26ac5228651c066afc27a5af5c32",
+        "value": 0.6125
+       },
+       {
+        "run": "ceil08",
+        "session": "725598848e982c67bae7e80129b51f78",
+        "value": 0.0325
+       },
+       {
+        "run": "ceil09",
+        "session": "c6c09be0b7d43fba2839147651a4f6a5",
+        "value": 2.11
+       }
+      ],
+      "n": 5,
+      "mean": 0.6794444444444444,
+      "median": 0.5941666666666666
+     }
+    },
+    {
+     "metric": {
+      "name": "memory.reads",
+      "key": ""
+     },
+     "arm": {
+      "runs": [
+       {
+        "run": "aidC1",
+        "session": "7b73a17e6d536f2a09e6d7781c2eab43",
+        "value": 0.0
+       },
+       {
+        "run": "aidC2",
+        "session": "d08fa4a66fe594d1f8c6e004e487b010",
+        "value": 1.0
+       },
+       {
+        "run": "aidC3",
+        "session": "9563f3e91455a4779463ac5335b69640",
+        "value": 0.0
+       },
+       {
+        "run": "aidC5",
+        "session": "3f763f128c636eb36f35bb229a9fb30d",
+        "value": 1.0
+       },
+       {
+        "run": "aidC6",
+        "session": "4e14a90ad858f9b70d04d8aa6166a48f",
+        "value": 0.0
+       }
+      ],
+      "n": 5,
+      "mean": 0.4,
+      "median": 0.0
+     },
+     "baseline": {
+      "runs": [
+       {
+        "run": "ceil05",
+        "session": "2256dc8fbab78519fdea458f3f66315e",
+        "value": 0.0
+       },
+       {
+        "run": "ceil06",
+        "session": "859c8124fe534285fb35b23db5d59eca",
+        "value": 0.0
+       },
+       {
+        "run": "ceil07",
+        "session": "bbef26ac5228651c066afc27a5af5c32",
+        "value": 0.0
+       },
+       {
+        "run": "ceil08",
+        "session": "725598848e982c67bae7e80129b51f78",
+        "value": 0.0
+       },
+       {
+        "run": "ceil09",
+        "session": "c6c09be0b7d43fba2839147651a4f6a5",
+        "value": 0.0
+       }
+      ],
+      "n": 5,
+      "mean": 0.0,
+      "median": 0.0
+     }
+    }
+   ],
+   "computed_verdict": "untested"
   }
- ]
+ ],
+ "seed": 383,
+ "resamples": 4000
 }

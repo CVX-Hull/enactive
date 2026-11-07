@@ -1,180 +1,452 @@
 {
  "schema": "spectator-view/1",
  "group": "arm",
- "horizon": 0.5,
- "groups": [
-  {
-   "name": "Ceiling",
+ "horizon_hours": 0.5,
+ "groups": {
+  "ceiling": {
    "n": 5,
-   "deaths": 1,
-   "censored": 4,
-   "km": {
-    "t": [
+   "deaths": 2,
+   "censored": 3,
+   "curve": {
+    "times": [
      0.0,
-     0.31,
-     0.75
+     0.0325,
+     0.04805555555555555,
+     0.5941666666666666,
+     0.6125,
+     2.11
     ],
-    "s": [
+    "survival": [
      1.0,
      0.8,
-     0.8
+     0.6000000000000001,
+     0.6000000000000001,
+     0.6000000000000001,
+     0.6000000000000001
     ],
-    "lo": [
+    "lower": [
      1.0,
-     0.5138,
-     0.5138
+     0.44939098376936737,
+     0.17059340550788232,
+     0.17059340550788232,
+     0.17059340550788232,
+     0.17059340550788232
     ],
-    "hi": [
+    "upper": [
      1.0,
-     1,
-     1
-    ]
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "confidence": 0.95
    },
    "median": "not_reached",
    "rmst": {
-    "value": 0.42,
-    "lo": 0.33,
-    "hi": 0.5,
     "horizon": 0.5,
-    "method": "bootstrap"
+    "value": 0.3161111111111112,
+    "low": 0.12911111111111112,
+    "high": 0.5,
+    "resamples": 2000,
+    "confidence": 0.95
    },
-   "excluded": []
+   "runs": [
+    "ceil05",
+    "ceil06",
+    "ceil07",
+    "ceil08",
+    "ceil09"
+   ],
+   "versions": {
+    "source_commits": [
+     "9276672ec8cef1316c9ca70ea483427b572c77e9"
+    ],
+    "models": [
+     "openai/gpt-6.1-terra"
+    ],
+    "efforts": [
+     "medium"
+    ],
+    "binding_versions": [
+     "1"
+    ],
+    "starts": {
+     "S1": 3,
+     "S2": 2
+    }
+   }
   },
-  {
-   "name": "Zoom aid",
+  "game-help-aid": {
    "n": 5,
    "deaths": 0,
    "censored": 5,
-   "km": {
-    "t": [
+   "curve": {
+    "times": [
      0.0,
-     0.75
+     0.1711111111111111,
+     0.2863888888888889,
+     0.38305555555555554,
+     0.42083333333333334,
+     0.6977777777777778
     ],
-    "s": [
+    "survival": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
      1.0,
      1.0
     ],
-    "lo": [
+    "lower": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
      1.0,
      1.0
     ],
-    "hi": [
+    "upper": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
      1.0,
      1.0
-    ]
+    ],
+    "confidence": 0.95
    },
    "median": "not_reached",
    "rmst": {
-    "value": 0.45,
-    "lo": 0.33,
-    "hi": 0.5,
     "horizon": 0.5,
-    "method": "bootstrap"
+    "value": 0.5,
+    "low": 0.5,
+    "high": 0.5,
+    "resamples": 2000,
+    "confidence": 0.95
    },
-   "excluded": []
+   "runs": [
+    "aidB1",
+    "aidB2",
+    "aidB3",
+    "aidB4",
+    "aidB9"
+   ],
+   "versions": {
+    "source_commits": [
+     "784d3aeae24b03c24581144049b0505e4b8253c4",
+     "c3133466e9ebe9ea4498fbe0b751b1ab9866c2ed"
+    ],
+    "models": [
+     "openai/gpt-6.1-terra"
+    ],
+    "efforts": [
+     "medium"
+    ],
+    "binding_versions": [
+     "1"
+    ],
+    "starts": {
+     "S1": 3,
+     "S2": 2
+    }
+   }
   },
-  {
-   "name": "Game-help aid",
+  "pilot": {
+   "n": 1,
+   "deaths": 0,
+   "censored": 1,
+   "curve": {
+    "times": [
+     0.0,
+     0.2061111111111111
+    ],
+    "survival": [
+     1.0,
+     1.0
+    ],
+    "lower": [
+     1.0,
+     1.0
+    ],
+    "upper": [
+     1.0,
+     1.0
+    ],
+    "confidence": 0.95
+   },
+   "median": "not_reached",
+   "rmst": {
+    "horizon": 0.5,
+    "value": null,
+    "reason": "horizon_beyond_observed_range",
+    "longest": 0.2061111111111111
+   },
+   "runs": [
+    "ceil01"
+   ],
+   "versions": {
+    "source_commits": [
+     "62598dcced41dd70571e5070c0c9619bba66be58"
+    ],
+    "models": [
+     "openai/gpt-6.1-terra"
+    ],
+    "efforts": [
+     "medium"
+    ],
+    "binding_versions": [
+     "1"
+    ],
+    "starts": {
+     "S1": 1
+    }
+   }
+  },
+  "pre-loop": {
+   "n": 3,
+   "deaths": 0,
+   "censored": 3,
+   "curve": {
+    "times": [
+     0.0,
+     0.09722222222222222,
+     0.16361111111111112,
+     5.489166666666667
+    ],
+    "survival": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "lower": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "upper": [
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "confidence": 0.95
+   },
+   "median": "not_reached",
+   "rmst": {
+    "horizon": 0.5,
+    "value": 0.5,
+    "low": 0.5,
+    "high": 0.5,
+    "resamples": 2000,
+    "confidence": 0.95
+   },
+   "runs": [
+    "ceil02",
+    "ceil03",
+    "ceil04"
+   ],
+   "versions": {
+    "source_commits": [
+     "62598dcced41dd70571e5070c0c9619bba66be58"
+    ],
+    "models": [
+     "openai/gpt-6.1-terra"
+    ],
+    "efforts": [
+     "medium"
+    ],
+    "binding_versions": [
+     "1"
+    ],
+    "starts": {
+     "S1": 2,
+     "S2": 1
+    }
+   }
+  },
+  "reflection-aid": {
    "n": 5,
    "deaths": 1,
    "censored": 4,
-   "km": {
-    "t": [
+   "curve": {
+    "times": [
      0.0,
-     0.22,
-     0.75
+     0.21611111111111111,
+     0.2836111111111111,
+     0.4525,
+     0.49166666666666664,
+     2.058333333333333
     ],
-    "s": [
+    "survival": [
      1.0,
+     0.8,
+     0.8,
+     0.8,
      0.8,
      0.8
     ],
-    "lo": [
+    "lower": [
      1.0,
-     0.5138,
-     0.5138
+     0.44939098376936737,
+     0.44939098376936737,
+     0.44939098376936737,
+     0.44939098376936737,
+     0.44939098376936737
     ],
-    "hi": [
+    "upper": [
      1.0,
-     1,
-     1
-    ]
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "confidence": 0.95
    },
    "median": "not_reached",
    "rmst": {
-    "value": 0.42,
-    "lo": 0.33,
-    "hi": 0.5,
     "horizon": 0.5,
-    "method": "bootstrap"
+    "value": 0.4432222222222223,
+    "low": 0.32966666666666666,
+    "high": 0.5,
+    "resamples": 2000,
+    "confidence": 0.95
    },
-   "excluded": []
+   "runs": [
+    "aidC1",
+    "aidC2",
+    "aidC3",
+    "aidC5",
+    "aidC6"
+   ],
+   "versions": {
+    "source_commits": [
+     "c3133466e9ebe9ea4498fbe0b751b1ab9866c2ed"
+    ],
+    "models": [
+     "openai/gpt-6.1-terra"
+    ],
+    "efforts": [
+     "medium"
+    ],
+    "binding_versions": [
+     "1"
+    ],
+    "starts": {
+     "S1": 3,
+     "S2": 2
+    }
+   }
   },
-  {
-   "name": "Reflection aid",
+  "zoom-aid": {
    "n": 5,
-   "deaths": 0,
-   "censored": 5,
-   "km": {
-    "t": [
+   "deaths": 1,
+   "censored": 4,
+   "curve": {
+    "times": [
      0.0,
-     0.75
+     0.06638888888888889,
+     0.2702777777777778,
+     0.29583333333333334,
+     0.9322222222222222,
+     2.1147222222222224
     ],
-    "s": [
+    "survival": [
+     1.0,
+     0.8,
+     0.8,
+     0.8,
+     0.8,
+     0.8
+    ],
+    "lower": [
+     1.0,
+     0.44939098376936737,
+     0.44939098376936737,
+     0.44939098376936737,
+     0.44939098376936737,
+     0.44939098376936737
+    ],
+    "upper": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
      1.0,
      1.0
     ],
-    "lo": [
-     1.0,
-     1.0
-    ],
-    "hi": [
-     1.0,
-     1.0
-    ]
+    "confidence": 0.95
    },
    "median": "not_reached",
    "rmst": {
-    "value": 0.45,
-    "lo": 0.33,
-    "hi": 0.5,
     "horizon": 0.5,
-    "method": "bootstrap"
+    "value": 0.4132777777777778,
+    "low": 0.23983333333333334,
+    "high": 0.5,
+    "resamples": 2000,
+    "confidence": 0.95
    },
-   "excluded": [
-    "C2"
-   ]
+   "runs": [
+    "aidA1",
+    "aidA3",
+    "aidA4",
+    "aidA5",
+    "aidA6"
+   ],
+   "versions": {
+    "source_commits": [
+     "70eda9ab6e90cf49b746ebafdc47dd6d5a835434"
+    ],
+    "models": [
+     "openai/gpt-6.1-terra"
+    ],
+    "efforts": [
+     "medium"
+    ],
+    "binding_versions": [
+     "1"
+    ],
+    "starts": {
+     "S1": 3,
+     "S2": 2
+    }
+   }
+  }
+ },
+ "excluded": [
+  {
+   "run": "aidA2",
+   "group": "zoom-aid",
+   "reason": "infrastructure"
+  },
+  {
+   "run": "aidB5",
+   "group": "game-help-aid",
+   "reason": "infrastructure"
+  },
+  {
+   "run": "aidB6",
+   "group": "game-help-aid",
+   "reason": "infrastructure"
+  },
+  {
+   "run": "aidB7",
+   "group": "game-help-aid",
+   "reason": "infrastructure"
+  },
+  {
+   "run": "aidB8",
+   "group": "game-help-aid",
+   "reason": "infrastructure"
+  },
+  {
+   "run": "aidC4",
+   "group": "reflection-aid",
+   "reason": "custody"
   }
  ],
- "versions": [
-  {
-   "group": "Ceiling",
-   "source_commit": "9276672",
-   "starts": "3 S1 / 1 S2",
-   "model_route": "terra-1 medium openrouter",
-   "evaluator": "core 1 / cdda 1"
-  },
-  {
-   "group": "Zoom aid",
-   "source_commit": "9276672",
-   "starts": "3 S1 / 1 S2",
-   "model_route": "terra-1 medium openrouter",
-   "evaluator": "core 1 / cdda 1"
-  },
-  {
-   "group": "Game-help aid",
-   "source_commit": "41ab9d2",
-   "starts": "3 S1 / 1 S2",
-   "model_route": "terra-1 medium openrouter",
-   "evaluator": "core 1 / cdda 1"
-  },
-  {
-   "group": "Reflection aid",
-   "source_commit": "9276672",
-   "starts": "3 S1 / 1 S2",
-   "model_route": "terra-1 medium openrouter",
-   "evaluator": "core 1 / cdda 1"
-  }
- ],
- "note": "No arm reaches 50% deaths, so median survival is not reached anywhere."
+ "seed": 383
 }

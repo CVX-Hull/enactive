@@ -1,43 +1,35 @@
 {
  "schema": "spectator-view/1",
- "summary": {
-  "saved": 1,
-  "runs": 2,
-  "min_sample": 5
- },
- "programs": [
+ "programs": [],
+ "runs": [
   {
-   "id": "p-9f21",
-   "actor": 1,
-   "parent": null,
-   "source": "player_claim",
-   "doc": {
-    "name": "walk_to_door",
-    "steps": [
-     {
-      "keys": "LEFT",
-      "repeat": 4
-     },
-     {
-      "keys": "UP",
-      "repeat": 2
-     }
-    ]
-   },
-   "runs": [
-    {
-     "status": "completed",
-     "steps": 6,
-     "elapsed_seconds": 5.2,
-     "reason": "arrived at the door"
-    },
-    {
-     "status": "stopped",
-     "steps": 2,
-     "elapsed_seconds": 1.9,
-     "reason": "a creature appeared"
-    }
-   ]
+   "actor": "2d3ce1adb8b740889c3872eba436e22f",
+   "program_id": "ee2cbfa403d5420f9f39dffaafa9933f",
+   "run_id": "b718850df785486c8a759eefc9e5e3cd",
+   "status": "done",
+   "steps": 3,
+   "elapsed_seconds": 2.6145907499594614,
+   "reason": "Two northward batches complete; inspect.",
+   "wall": 1793992033.12
+  },
+  {
+   "actor": "2d3ce1adb8b740889c3872eba436e22f",
+   "program_id": "ee2cbfa403d5420f9f39dffaafa9933f",
+   "run_id": "ba24ed8f2f84474897d7b56499a345a6",
+   "status": "done",
+   "steps": 3,
+   "elapsed_seconds": 2.6827001250348985,
+   "reason": "Two northward batches complete; inspect.",
+   "wall": 1793992043.742
   }
- ]
+ ],
+ "saves": [
+  {
+   "actor": "2d3ce1adb8b740889c3872eba436e22f",
+   "call": 17,
+   "parent_id": null,
+   "program_id": "ee2cbfa403d5420f9f39dffaafa9933f"
+  }
+ ],
+ "provenance": "player_claim"
 }

@@ -169,7 +169,7 @@ button.link[aria-pressed="true"] { font-weight: 700; }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 12px; display: grid; gap: 6px; text-align: left; cursor: pointer; }
 .card[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
 .card .top { display: flex; justify-content: space-between; gap: 8px; align-items: center; flex-wrap: wrap; }
-.seq { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 2px; }
+.seq { display: grid; grid-template-columns: repeat(13, minmax(0, 1fr)); gap: 2px; }
 .seq span { height: 22px; border-radius: 2px; font: .6rem var(--mono); display: grid; place-items: center; color: var(--surface); }
 .seq .in_play { background: var(--quiet); } .seq .prompt { background: var(--watch); } .seq .menu { background: var(--muted); } .seq .dead { background: var(--alert); } .seq .unknown { background: var(--sunk); color: var(--muted); }
 .aligned { display: grid; gap: 10px; }

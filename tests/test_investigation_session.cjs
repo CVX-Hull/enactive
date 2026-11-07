@@ -7,7 +7,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const S = require('./fixtures/spectator/support.cjs');
 
-const SESSION = '5c7e91d2a4b84f60b3d1e0a9c2f7184d';
+const SESSION = 'c6c09be0b7d43fba2839147651a4f6a5';
 let fx, browser, page;
 before(async () => { browser = await S.launch(); });
 after(async () => { if (browser) await browser.close(); });
@@ -106,7 +106,7 @@ test('timeline keyboard: arrows move one step, shift moves ten, Home and End jum
   await start();
   const now = () => page.$eval('#tl', n => Number(n.getAttribute('aria-valuenow')));
   const last = await now();
-  assert.ok(last >= 99);
+  assert.ok(last >= 100);
   await page.focus('#tl');
   await page.keyboard.press('ArrowLeft');
   assert.equal(await now(), last - 1);

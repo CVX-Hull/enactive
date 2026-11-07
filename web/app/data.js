@@ -94,20 +94,30 @@ export function useView(path, every = 5000) {
 
 /* ---------------------------------------------------------------- run polling */
 let generation = 0;
-async function pollRunOnce(run, token) {
-  const base = store.steps.length ? store.steps[store.steps.length - 1].seq : -1;
-  const summary = await viewerGet(runPath(run, 'summary'));
-  let steps = store.steps, after = base;
-  for (let page = 0; page < 20; page++) {
-    const body = await viewerGet(`${runPath(run, 'steps')}?after=${after}&limit=${LIMIT}`);
-    if (token !== generation) return;
-    steps = steps.concat(body.steps || []);
+/** Pages of a list route (`items`, `next`), continuing from the known cursor until it ends. */
+async function pages(path, after, token) {
+  let items = [], last = null;
+  for (let page = 0; page < 40; page++) {
+    const body = await viewerGet(`${path}${path.includes('?') ? '&' : '?'}after=${after}&limit=${LIMIT}`);
+    if (token !== generation) return null;
+    items = items.concat(body.items || []);
+    last = body;
     if (body.next === null || body.next === undefined) break;
     after = body.next;
   }
-  const requests = await viewerGet(`${runPath(run, 'requests')}?limit=${LIMIT}`);
-  if (token !== generation) return;
-  set({summary, steps, requests: requests.requests || [], markers: requests.markers || []});
+  return {items, last};
+}
+
+async function pollRunOnce(run, token) {
+  const summary = await viewerGet(runPath(run, 'summary'));
+  const seen = store.steps.length ? store.steps[store.steps.length - 1].seq : 0;
+  const steps = await pages(runPath(run, 'steps'), seen, token);
+  if (!steps) return;
+  const known = store.requests.length ? store.requests[store.requests.length - 1].id : 0;
+  const requests = await pages(runPath(run, 'requests'), known, token);
+  if (!requests || token !== generation) return;
+  set({summary, steps: store.steps.concat(steps.items), requests: store.requests.concat(requests.items),
+    markers: requests.last && requests.last.markers ? requests.last.markers : store.markers});
   announce();
 }
 
@@ -121,8 +131,8 @@ export function selectRun(run) {
 let runsTimer = null, runTimer = null;
 async function loadRuns() {
   try {
-    const body = await viewerGet('runs');
-    const runs = body.runs || [];
+    const listing = await pages('runs', 0, generation);
+    const runs = listing ? listing.items : store.runs || [];
     const patch = {runs};
     if (!store.runId || !runs.some(r => r.run === store.runId)) {
       const pick = runs.find(r => r.state === 'live') || runs[0];
@@ -147,7 +157,12 @@ export function startPolling() {
 }
 
 /* ---------------------------------------------------------------- playhead */
-export const liveRun = () => (store.runs || []).find(r => r.state === 'live') || null;
+/** Epoch seconds of the run's first step or request: the viewer reports no separate start time. */
+export function runStart() {
+  const walls = [store.steps[0] && store.steps[0].wall, store.requests[0] && store.requests[0].wall].filter(w => typeof w === 'number');
+  return walls.length ? Math.min(...walls) : 0;
+}
+export const liveRun =() => (store.runs || []).find(r => r.state === 'live') || null;
 export const selectedRun = () => (store.runs || []).find(r => r.run === store.runId) || null;
 /** True when the playhead follows the live edge of the live run. A viewer outage cannot be inspected, so it counts as live. */
 export function isLive() {
@@ -180,7 +195,7 @@ export function announce() {
     document.dispatchEvent(new CustomEvent('enactive:playhead', {detail: {live}}));
   }
   const s = store.summary;
-  const facts = s ? `Decision ${s.facts?.decisions ?? '?'}, ${s.pause?.spent !== undefined ? `$${Number(s.pause.spent).toFixed(2)} spent` : 'spend unknown'}.` : '';
+  const facts = s ? `Decision ${s.decisions ?? '?'}, $${Number(s.dollars ?? 0).toFixed(2)} spent.` : '';
   document.dispatchEvent(new CustomEvent('enactive:facts', {detail: {text: store.viewerOk ? facts : ''}}));
 }
 

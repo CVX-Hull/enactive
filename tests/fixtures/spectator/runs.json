@@ -1,245 +1,1268 @@
 {
  "schema": "spectator-view/1",
- "runs": [
+ "items": [
   {
-   "run": "5c7e91d2a4b84f60b3d1e0a9c2f7184d",
-   "label": "T5",
+   "run": "aidA1",
+   "session": "1138c1218e1cfe1c52397cf44fc835f9",
+   "state": "final",
+   "labels": {
+    "admission": null,
+    "arm": "zoom-aid",
+    "lineage": null,
+    "scenario": "Evacuee",
+    "start": "S1"
+   },
+   "outcome": {
+    "hours": 0.2702777777777778,
+    "died": false,
+    "outcome": "censored",
+    "censor_reason": "budget",
+    "episodes": 1,
+    "lost": false
+   },
+   "decisions": 224,
+   "dollars": 3.54008725,
+   "source_commit": "70eda9ab6e90cf49b746ebafdc47dd6d5a835434",
+   "model": "openai/gpt-6.1-terra",
+   "effort": "medium",
+   "headline": {
+    "survival.game_hours": 0.2702777777777778,
+    "stall.longest": 14.0,
+    "stall.count": 0.0,
+    "mode.out_of_play_share": 0.6192660550458715,
+    "pace.routine_seconds_per_decision": 5.0,
+    "host.dollars_per_decision": 0.0158039609375,
+    "host.large_rewrite_share": 0.6020405429272965,
+    "run.infrastructure_loss": 0.0
+   },
+   "versions": {
+    "core_version": 1,
+    "binding_id": "cdda",
+    "binding_version": 1,
+    "state": "final",
+    "created_wall": 1794024944.156063
+   }
+  },
+  {
+   "run": "aidA2",
+   "session": "a7d4748fb051580bbeaa8b8015818124",
+   "state": "final",
+   "labels": {
+    "admission": null,
+    "arm": "zoom-aid",
+    "lineage": null,
+    "scenario": "player-chosen",
+    "start": "S2"
+   },
+   "outcome": {
+    "hours": 0.12,
+    "died": false,
+    "outcome": "censored",
+    "censor_reason": "infrastructure",
+    "episodes": 1,
+    "lost": true
+   },
+   "decisions": 74,
+   "dollars": 0.6598397500000001,
+   "source_commit": "70eda9ab6e90cf49b746ebafdc47dd6d5a835434",
+   "model": "openai/gpt-6.1-terra",
+   "effort": "medium",
+   "headline": {
+    "survival.game_hours": 0.12,
+    "stall.longest": 10.0,
+    "stall.count": 0.0,
+    "mode.out_of_play_share": 0.6470588235294118,
+    "pace.routine_seconds_per_decision": 2.0,
+    "host.dollars_per_decision": 0.008916753378378378,
+    "host.large_rewrite_share": 0.4911797902445253,
+    "run.infrastructure_loss": 1.0
+   },
+   "versions": {
+    "core_version": 1,
+    "binding_id": "cdda",
+    "binding_version": 1,
+    "state": "final",
+    "created_wall": 1794024945.766338
+   }
+  },
+  {
+   "run": "aidA3",
+   "session": "23e50008ea8f6ec6192b9a96009dceed",
+   "state": "final",
+   "labels": {
+    "admission": null,
+    "arm": "zoom-aid",
+    "lineage": null,
+    "scenario": "Evacuee",
+    "start": "S1"
+   },
+   "outcome": {
+    "hours": 0.29583333333333334,
+    "died": false,
+    "outcome": "censored",
+    "censor_reason": "budget",
+    "episodes": 1,
+    "lost": false
+   },
+   "decisions": 226,
+   "dollars": 3.98656655,
+   "source_commit": "70eda9ab6e90cf49b746ebafdc47dd6d5a835434",
+   "model": "openai/gpt-6.1-terra",
+   "effort": "medium",
+   "headline": {
+    "survival.game_hours": 0.29583333333333334,
+    "stall.longest": 15.0,
+    "stall.count": 1.0,
+    "mode.out_of_play_share": 0.5799086757990868,
+    "pace.routine_seconds_per_decision": 4.0,
+    "host.dollars_per_decision": 0.017639675,
+    "host.large_rewrite_share": 0.621574861204813,
+    "run.infrastructure_loss": 0.0
+   },
+   "versions": {
+    "core_version": 1,
+    "binding_id": "cdda",
+    "binding_version": 1,
+    "state": "final",
+    "created_wall": 1794024946.379234
+   }
+  },
+  {
+   "run": "aidA4",
+   "session": "b04fe7fd3ab40e18fe250503473b7c84",
+   "state": "final",
+   "labels": {
+    "admission": null,
+    "arm": "zoom-aid",
+    "lineage": null,
+    "scenario": "player-chosen",
+    "start": "S2"
+   },
+   "outcome": {
+    "hours": 2.1147222222222224,
+    "died": false,
+    "outcome": "censored",
+    "censor_reason": "budget",
+    "episodes": 1,
+    "lost": false
+   },
+   "decisions": 229,
+   "dollars": 4.1236726,
+   "source_commit": "70eda9ab6e90cf49b746ebafdc47dd6d5a835434",
+   "model": "openai/gpt-6.1-terra",
+   "effort": "medium",
+   "headline": {
+    "survival.game_hours": 2.1147222222222224,
+    "stall.longest": 17.0,
+    "stall.count": 1.0,
+    "mode.out_of_play_share": 0.6502242152466368,
+    "pace.routine_seconds_per_decision": 3.0,
+    "host.dollars_per_decision": 0.018007303930131002,
+    "host.large_rewrite_share": 0.6361612825421689,
+    "run.infrastructure_loss": 0.0
+   },
+   "versions": {
+    "core_version": 1,
+    "binding_id": "cdda",
+    "binding_version": 1,
+    "state": "final",
+    "created_wall": 1794024948.109038
+   }
+  },
+  {
+   "run": "aidA5",
+   "session": "b328dac77cd4b4f1b5d2ee9a0c82894b",
+   "state": "final",
+   "labels": {
+    "admission": null,
+    "arm": "zoom-aid",
+    "lineage": null,
+    "scenario": "Evacuee",
+    "start": "S1"
+   },
+   "outcome": {
+    "hours": 0.9322222222222222,
+    "died": false,
+    "outcome": "censored",
+    "censor_reason": "budget",
+    "episodes": 1,
+    "lost": false
+   },
+   "decisions": 226,
+   "dollars": 4.04435895,
+   "source_commit": "70eda9ab6e90cf49b746ebafdc47dd6d5a835434",
+   "model": "openai/gpt-6.1-terra",
+   "effort": "medium",
+   "headline": {
+    "survival.game_hours": 0.9322222222222222,
+    "stall.longest": 14.0,
+    "stall.count": 0.0,
+    "mode.out_of_play_share": 0.6232558139534884,
+    "pace.routine_seconds_per_decision": 6.0,
+    "host.dollars_per_decision": 0.017895393584070798,
+    "host.large_rewrite_share": 0.6319468255902458,
+    "run.infrastructure_loss": 0.0
+   },
+   "versions": {
+    "core_version": 1,
+    "binding_id": "cdda",
+    "binding_version": 1,
+    "state": "final",
+    "created_wall": 1794024949.855768
+   }
+  },
+  {
+   "run": "aidA6",
+   "session": "767e16a0b18c05f47c99a65aeae22d16",
+   "state": "final",
+   "labels": {
+    "admission": null,
+    "arm": "zoom-aid",
+    "lineage": null,
+    "scenario": "player-chosen",
+    "start": "S2"
+   },
+   "outcome": {
+    "hours": 0.06638888888888889,
+    "died": true,
+    "outcome": "died",
+    "censor_reason": "died",
+    "episodes": 1,
+    "lost": false
+   },
+   "decisions": 83,
+   "dollars": 0.9535225,
+   "source_commit": "70eda9ab6e90cf49b746ebafdc47dd6d5a835434",
+   "model": "openai/gpt-6.1-terra",
+   "effort": "medium",
+   "headline": {
+    "survival.game_hours": 0.06638888888888889,
+    "stall.longest": 16.0,
+    "stall.count": 1.0,
+    "mode.out_of_play_share": 0.4935064935064935,
+    "pace.routine_seconds_per_decision": 4.25,
+    "host.dollars_per_decision": 0.011488222891566266,
+    "host.large_rewrite_share": 0.5658075713997309,
+    "run.infrastructure_loss": 0.0
+   },
+   "versions": {
+    "core_version": 1,
+    "binding_id": "cdda",
+    "binding_version": 1,
+    "state": "final",
+    "created_wall": 1794024951.6579452
+   }
+  },
+  {
+   "run": "aidB1",
+   "session": "4e33fac0ea42f93449a5a00291a19660",
+   "state": "final",
+   "labels": {
+    "admission": null,
+    "arm": "game-help-aid",
+    "lineage": null,
+    "scenario": "Evacuee",
+    "start": "S1"
+   },
+   "outcome": {
+    "hours": 0.38305555555555554,
+    "died": false,
+    "outcome": "censored",
+    "censor_reason": "budget",
+    "episodes": 1,
+    "lost": false
+   },
+   "decisions": 223,
+   "dollars": 3.48628515,
+   "source_commit": "784d3aeae24b03c24581144049b0505e4b8253c4",
+   "model": "openai/gpt-6.1-terra",
+   "effort": "medium",
+   "headline": {
+    "survival.game_hours": 0.38305555555555554,
+    "stall.longest": 18.0,
+    "stall.count": 1.0,
+    "mode.out_of_play_share": 0.6481481481481481,
+    "pace.routine_seconds_per_decision": 3.0,
+    "host.dollars_per_decision": 0.015633565695067266,
+    "host.large_rewrite_share": 0.6151082047892726,
+    "run.infrastructure_loss": 0.0
+   },
+   "versions": {
+    "core_version": 1,
+    "binding_id": "cdda",
+    "binding_version": 1,
+    "state": "final",
+    "created_wall": 1794024952.352316
+   }
+  },
+  {
+   "run": "aidB2",
+   "session": "30feab17ef71853e4ad5b86dbd94e61c",
+   "state": "final",
+   "labels": {
+    "admission": null,
+    "arm": "game-help-aid",
+    "lineage": null,
+    "scenario": "player-chosen",
+    "start": "S2"
+   },
+   "outcome": {
+    "hours": 0.2863888888888889,
+    "died": false,
+    "outcome": "censored",
+    "censor_reason": "budget",
+    "episodes": 1,
+    "lost": false
+   },
+   "decisions": 226,
+   "dollars": 3.63820565,
+   "source_commit": "784d3aeae24b03c24581144049b0505e4b8253c4",
+   "model": "openai/gpt-6.1-terra",
+   "effort": "medium",
+   "headline": {
+    "survival.game_hours": 0.2863888888888889,
+    "stall.longest": 22.0,
+    "stall.count": 2.0,
+    "mode.out_of_play_share": 0.5636363636363636,
+    "pace.routine_seconds_per_decision": 5.0,
+    "host.dollars_per_decision": 0.016098255088495578,
+    "host.large_rewrite_share": 0.59430477768622,
+    "run.infrastructure_loss": 0.0
+   },
+   "versions": {
+    "core_version": 1,
+    "binding_id": "cdda",
+    "binding_version": 1,
+    "state": "final",
+    "created_wall": 1794024954.153215
+   }
+  },
+  {
+   "run": "aidB3",
+   "session": "20d51b154e0077ab83109060223075c2",
+   "state": "final",
+   "labels": {
+    "admission": null,
+    "arm": "game-help-aid",
+    "lineage": null,
+    "scenario": "Evacuee",
+    "start": "S1"
+   },
+   "outcome": {
+    "hours": 0.42083333333333334,
+    "died": false,
+    "outcome": "censored",
+    "censor_reason": "budget",
+    "episodes": 1,
+    "lost": false
+   },
+   "decisions": 224,
+   "dollars": 4.0247034500000005,
+   "source_commit": "784d3aeae24b03c24581144049b0505e4b8253c4",
+   "model": "openai/gpt-6.1-terra",
+   "effort": "medium",
+   "headline": {
+    "survival.game_hours": 0.42083333333333334,
+    "stall.longest": 16.0,
+    "stall.count": 1.0,
+    "mode.out_of_play_share": 0.5342465753424658,
+    "pace.routine_seconds_per_decision": 7.75,
+    "host.dollars_per_decision": 0.017967426116071432,
+    "host.large_rewrite_share": 0.6011131205207181,
+    "run.infrastructure_loss": 0.0
+   },
+   "versions": {
+    "core_version": 1,
+    "binding_id": "cdda",
+    "binding_version": 1,
+    "state": "final",
+    "created_wall": 1794024956.143487
+   }
+  },
+  {
+   "run": "aidB4",
+   "session": "995dea082ac6e05976883a6e34398860",
+   "state": "final",
+   "labels": {
+    "admission": null,
+    "arm": "game-help-aid",
+    "lineage": null,
+    "scenario": "player-chosen",
+    "start": "S2"
+   },
+   "outcome": {
+    "hours": 0.1711111111111111,
+    "died": false,
+    "outcome": "censored",
+    "censor_reason": "budget",
+    "episodes": 1,
+    "lost": false
+   },
+   "decisions": 223,
+   "dollars": 3.4487686,
+   "source_commit": "784d3aeae24b03c24581144049b0505e4b8253c4",
+   "model": "openai/gpt-6.1-terra",
+   "effort": "medium",
+   "headline": {
+    "survival.game_hours": 0.1711111111111111,
+    "stall.longest": 20.0,
+    "stall.count": 1.0,
+    "mode.out_of_play_share": 0.4423963133640553,
+    "pace.routine_seconds_per_decision": 3.0,
+    "host.dollars_per_decision": 0.01546533004484305,
+    "host.large_rewrite_share": 0.5793839575087757,
+    "run.infrastructure_loss": 0.0
+   },
+   "versions": {
+    "core_version": 1,
+    "binding_id": "cdda",
+    "binding_version": 1,
+    "state": "final",
+    "created_wall": 1794024957.9673479
+   }
+  },
+  {
+   "run": "aidB5",
+   "session": "a435e6b2c3a965c77bc07ab550594395",
+   "state": "final",
+   "labels": {
+    "admission": null,
+    "arm": "game-help-aid",
+    "lineage": null,
+    "scenario": "Evacuee",
+    "start": "S1"
+   },
+   "outcome": {
+    "hours": 0.19944444444444445,
+    "died": false,
+    "outcome": "censored",
+    "censor_reason": "infrastructure",
+    "episodes": 1,
+    "lost": true
+   },
+   "decisions": 185,
+   "dollars": 2.20120535,
+   "source_commit": "784d3aeae24b03c24581144049b0505e4b8253c4",
+   "model": "openai/gpt-6.1-terra",
+   "effort": "medium",
+   "headline": {
+    "survival.game_hours": 0.19944444444444445,
+    "stall.longest": 20.0,
+    "stall.count": 2.0,
+    "mode.out_of_play_share": 0.6368715083798883,
+    "pace.routine_seconds_per_decision": 3.0,
+    "host.dollars_per_decision": 0.011898407297297298,
+    "host.large_rewrite_share": 0.54188260990734,
+    "run.infrastructure_loss": 1.0
+   },
+   "versions": {
+    "core_version": 1,
+    "binding_id": "cdda",
+    "binding_version": 1,
+    "state": "final",
+    "created_wall": 1794024959.893076
+   }
+  },
+  {
+   "run": "aidB6",
+   "session": "a10199bac022a9fe2b25e55d883dbdb1",
+   "state": "final",
+   "labels": {
+    "admission": null,
+    "arm": "game-help-aid",
+    "lineage": null,
+    "scenario": "Evacuee",
+    "start": "S1"
+   },
+   "outcome": {
+    "hours": 1.2866666666666666,
+    "died": false,
+    "outcome": "censored",
+    "censor_reason": "infrastructure",
+    "episodes": 1,
+    "lost": true
+   },
+   "decisions": 205,
+   "dollars": 2.71981275,
+   "source_commit": "784d3aeae24b03c24581144049b0505e4b8253c4",
+   "model": "openai/gpt-6.1-terra",
+   "effort": "medium",
+   "headline": {
+    "survival.game_hours": 1.2866666666666666,
+    "stall.longest": 23.0,
+    "stall.count": 3.0,
+    "mode.out_of_play_share": 0.7653061224489796,
+    "pace.routine_seconds_per_decision": 4.0,
+    "host.dollars_per_decision": 0.013267379268292682,
+    "host.large_rewrite_share": 0.5760605946126254,
+    "run.infrastructure_loss": 1.0
+   },
+   "versions": {
+    "core_version": 1,
+    "binding_id": "cdda",
+    "binding_version": 1,
+    "state": "final",
+    "created_wall": 1794024961.38923
+   }
+  },
+  {
+   "run": "aidB7",
+   "session": "514f6705846c67a875a29b5f58058962",
+   "state": "final",
+   "labels": {
+    "admission": null,
+    "arm": "game-help-aid",
+    "lineage": null,
+    "scenario": "Evacuee",
+    "start": "S1"
+   },
+   "outcome": {
+    "hours": 0.3675,
+    "died": false,
+    "outcome": "censored",
+    "censor_reason": "infrastructure",
+    "episodes": 1,
+    "lost": true
+   },
+   "decisions": 193,
+   "dollars": 3.1483663500000003,
+   "source_commit": "1f9c907cb4873bb275575d04da0ecd170d5730e2",
+   "model": "openai/gpt-6.1-terra",
+   "effort": "medium",
+   "headline": {
+    "survival.game_hours": 0.3675,
+    "stall.longest": 19.0,
+    "stall.count": 1.0,
+    "mode.out_of_play_share": 0.6149732620320856,
+    "pace.routine_seconds_per_decision": 5.0,
+    "host.dollars_per_decision": 0.016312779015544045,
+    "host.large_rewrite_share": 0.6225263778467204,
+    "run.infrastructure_loss": 1.0
+   },
+   "versions": {
+    "core_version": 1,
+    "binding_id": "cdda",
+    "binding_version": 1,
+    "state": "final",
+    "created_wall": 1794024962.952527
+   }
+  },
+  {
+   "run": "aidB8",
+   "session": "c9ec9dc97e980c2c5102b8156b1761b8",
+   "state": "final",
+   "labels": {
+    "admission": null,
+    "arm": "game-help-aid",
+    "lineage": null,
+    "scenario": "Evacuee",
+    "start": "S1"
+   },
+   "outcome": {
+    "hours": 0.19583333333333333,
+    "died": false,
+    "outcome": "censored",
+    "censor_reason": "infrastructure",
+    "episodes": 1,
+    "lost": true
+   },
+   "decisions": 165,
+   "dollars": 2.06981405,
+   "source_commit": "5d084ca424d3ec8d5d484497728b514a0cbc088d",
+   "model": "openai/gpt-6.1-terra",
+   "effort": "medium",
+   "headline": {
+    "survival.game_hours": 0.19583333333333333,
+    "stall.longest": 28.0,
+    "stall.count": 3.0,
+    "mode.out_of_play_share": 0.660377358490566,
+    "pace.routine_seconds_per_decision": 2.0,
+    "host.dollars_per_decision": 0.012544327575757576,
+    "host.large_rewrite_share": 0.5558893563409717,
+    "run.infrastructure_loss": 1.0
+   },
+   "versions": {
+    "core_version": 1,
+    "binding_id": "cdda",
+    "binding_version": 1,
+    "state": "final",
+    "created_wall": 1794024964.398175
+   }
+  },
+  {
+   "run": "aidB9",
+   "session": "9313a6ff091a1c6bd4e9d30817d792ce",
+   "state": "final",
+   "labels": {
+    "admission": null,
+    "arm": "game-help-aid",
+    "lineage": null,
+    "scenario": "Evacuee",
+    "start": "S1"
+   },
+   "outcome": {
+    "hours": 0.6977777777777778,
+    "died": false,
+    "outcome": "censored",
+    "censor_reason": "budget",
+    "episodes": 1,
+    "lost": false
+   },
+   "decisions": 223,
+   "dollars": 3.4119047,
+   "source_commit": "c3133466e9ebe9ea4498fbe0b751b1ab9866c2ed",
+   "model": "openai/gpt-6.1-terra",
+   "effort": "medium",
+   "headline": {
+    "survival.game_hours": 0.6977777777777778,
+    "stall.longest": 14.0,
+    "stall.count": 0.0,
+    "mode.out_of_play_share": 0.5852534562211982,
+    "pace.routine_seconds_per_decision": 3.0,
+    "host.dollars_per_decision": 0.015300021076233183,
+    "host.large_rewrite_share": 0.6001559627383497,
+    "run.infrastructure_loss": 0.0
+   },
+   "versions": {
+    "core_version": 1,
+    "binding_id": "cdda",
+    "binding_version": 1,
+    "state": "final",
+    "created_wall": 1794024965.718226
+   }
+  },
+  {
+   "run": "aidC1",
+   "session": "7b73a17e6d536f2a09e6d7781c2eab43",
+   "state": "final",
+   "labels": {
+    "admission": 1,
+    "arm": "reflection-aid",
+    "lineage": "reflection-aid",
+    "scenario": "Evacuee",
+    "start": "S1"
+   },
+   "outcome": {
+    "hours": 0.4525,
+    "died": false,
+    "outcome": "censored",
+    "censor_reason": "budget",
+    "episodes": 1,
+    "lost": false
+   },
+   "decisions": 223,
+   "dollars": 3.6806923,
+   "source_commit": "c3133466e9ebe9ea4498fbe0b751b1ab9866c2ed",
+   "model": "openai/gpt-6.1-terra",
+   "effort": "medium",
+   "headline": {
+    "survival.game_hours": 0.4525,
+    "stall.longest": 13.0,
+    "stall.count": 0.0,
+    "mode.out_of_play_share": 0.5990783410138248,
+    "pace.routine_seconds_per_decision": 6.0,
+    "host.dollars_per_decision": 0.0165053466367713,
+    "host.large_rewrite_share": 0.6227696213562867,
+    "run.infrastructure_loss": 0.0
+   },
+   "versions": {
+    "core_version": 1,
+    "binding_id": "cdda",
+    "binding_version": 1,
+    "state": "final",
+    "created_wall": 1794024967.477418
+   }
+  },
+  {
+   "run": "aidC2",
+   "session": "d08fa4a66fe594d1f8c6e004e487b010",
+   "state": "final",
+   "labels": {
+    "admission": 2,
+    "arm": "reflection-aid",
+    "lineage": "reflection-aid",
+    "scenario": "player-chosen",
+    "start": "S2"
+   },
+   "outcome": {
+    "hours": 0.21611111111111111,
+    "died": true,
+    "outcome": "died",
+    "censor_reason": "died",
+    "episodes": 2,
+    "lost": false
+   },
+   "decisions": 188,
+   "dollars": 2.35321175,
+   "source_commit": "c3133466e9ebe9ea4498fbe0b751b1ab9866c2ed",
+   "model": "openai/gpt-6.1-terra",
+   "effort": "medium",
+   "headline": {
+    "survival.game_hours": 0.21611111111111111,
+    "stall.longest": 13.0,
+    "stall.count": 0.0,
+    "mode.out_of_play_share": 0.5384615384615384,
+    "pace.routine_seconds_per_decision": 2.75,
+    "host.dollars_per_decision": 0.012517083776595744,
+    "host.large_rewrite_share": 0.533224729988706,
+    "run.infrastructure_loss": 0.0
+   },
+   "versions": {
+    "core_version": 1,
+    "binding_id": "cdda",
+    "binding_version": 1,
+    "state": "final",
+    "created_wall": 1794024969.223886
+   }
+  },
+  {
+   "run": "aidC3",
+   "session": "9563f3e91455a4779463ac5335b69640",
+   "state": "final",
+   "labels": {
+    "admission": 3,
+    "arm": "reflection-aid",
+    "lineage": "reflection-aid",
+    "scenario": "Evacuee",
+    "start": "S1"
+   },
+   "outcome": {
+    "hours": 0.49166666666666664,
+    "died": false,
+    "outcome": "censored",
+    "censor_reason": "budget",
+    "episodes": 1,
+    "lost": false
+   },
+   "decisions": 223,
+   "dollars": 3.4700213,
+   "source_commit": "c3133466e9ebe9ea4498fbe0b751b1ab9866c2ed",
+   "model": "openai/gpt-6.1-terra",
+   "effort": "medium",
+   "headline": {
+    "survival.game_hours": 0.49166666666666664,
+    "stall.longest": 16.0,
+    "stall.count": 1.0,
+    "mode.out_of_play_share": 0.6363636363636364,
+    "pace.routine_seconds_per_decision": 3.0,
+    "host.dollars_per_decision": 0.015560633632286996,
+    "host.large_rewrite_share": 0.6110601684202919,
+    "run.infrastructure_loss": 0.0
+   },
+   "versions": {
+    "core_version": 1,
+    "binding_id": "cdda",
+    "binding_version": 1,
+    "state": "final",
+    "created_wall": 1794024970.705596
+   }
+  },
+  {
+   "run": "aidC4",
+   "session": "e7638809125d26dd19015d50450966b3",
+   "state": "final",
+   "labels": {
+    "admission": 4,
+    "arm": "reflection-aid",
+    "lineage": "reflection-aid",
+    "scenario": "player-chosen",
+    "start": "S2"
+   },
+   "outcome": {
+    "hours": 0.0,
+    "died": false,
+    "outcome": "censored",
+    "censor_reason": "custody",
+    "episodes": 1,
+    "lost": true
+   },
+   "decisions": 23,
+   "dollars": 0.09539035,
+   "source_commit": "c3133466e9ebe9ea4498fbe0b751b1ab9866c2ed",
+   "model": "openai/gpt-6.1-terra",
+   "effort": "medium",
+   "headline": {
+    "survival.game_hours": 0.0,
+    "stall.longest": 16.0,
+    "stall.count": 1.0,
+    "mode.out_of_play_share": 0.9411764705882353,
+    "pace.routine_seconds_per_decision": null,
+    "host.dollars_per_decision": 0.003974597916666667,
+    "host.large_rewrite_share": 0.0,
+    "run.infrastructure_loss": 1.0
+   },
+   "versions": {
+    "core_version": 1,
+    "binding_id": "cdda",
+    "binding_version": 1,
+    "state": "final",
+    "created_wall": 1794024972.4371781
+   }
+  },
+  {
+   "run": "aidC5",
+   "session": "3f763f128c636eb36f35bb229a9fb30d",
+   "state": "final",
+   "labels": {
+    "admission": 5,
+    "arm": "reflection-aid",
+    "lineage": "reflection-aid",
+    "scenario": "Evacuee",
+    "start": "S1"
+   },
+   "outcome": {
+    "hours": 0.2836111111111111,
+    "died": false,
+    "outcome": "censored",
+    "censor_reason": "budget",
+    "episodes": 1,
+    "lost": false
+   },
+   "decisions": 222,
+   "dollars": 3.80509225,
+   "source_commit": "c3133466e9ebe9ea4498fbe0b751b1ab9866c2ed",
+   "model": "openai/gpt-6.1-terra",
+   "effort": "medium",
+   "headline": {
+    "survival.game_hours": 0.2836111111111111,
+    "stall.longest": 12.0,
+    "stall.count": 0.0,
+    "mode.out_of_play_share": 0.5365853658536586,
+    "pace.routine_seconds_per_decision": 4.0,
+    "host.dollars_per_decision": 0.01714005518018018,
+    "host.large_rewrite_share": 0.606736748629419,
+    "run.infrastructure_loss": 0.0
+   },
+   "versions": {
+    "core_version": 1,
+    "binding_id": "cdda",
+    "binding_version": 1,
+    "state": "final",
+    "created_wall": 1794024972.6387799
+   }
+  },
+  {
+   "run": "aidC6",
+   "session": "4e14a90ad858f9b70d04d8aa6166a48f",
+   "state": "final",
+   "labels": {
+    "admission": 6,
+    "arm": "reflection-aid",
+    "lineage": "reflection-aid",
+    "scenario": "player-chosen",
+    "start": "S2"
+   },
+   "outcome": {
+    "hours": 2.058333333333333,
+    "died": false,
+    "outcome": "censored",
+    "censor_reason": "budget",
+    "episodes": 1,
+    "lost": false
+   },
+   "decisions": 226,
+   "dollars": 3.5704187000000003,
+   "source_commit": "c3133466e9ebe9ea4498fbe0b751b1ab9866c2ed",
+   "model": "openai/gpt-6.1-terra",
+   "effort": "medium",
+   "headline": {
+    "survival.game_hours": 2.058333333333333,
+    "stall.longest": 17.0,
+    "stall.count": 1.0,
+    "mode.out_of_play_share": 0.6280193236714976,
+    "pace.routine_seconds_per_decision": 4.0,
+    "host.dollars_per_decision": 0.015798312831858407,
+    "host.large_rewrite_share": 0.5766390087526709,
+    "run.infrastructure_loss": 0.0
+   },
+   "versions": {
+    "core_version": 1,
+    "binding_id": "cdda",
+    "binding_version": 1,
+    "state": "final",
+    "created_wall": 1794024974.3304262
+   }
+  },
+  {
+   "run": "ceil01",
+   "session": "c06925379f233c7505303e83eb567f89",
+   "state": "final",
+   "labels": {
+    "admission": null,
+    "arm": "pilot",
+    "lineage": null,
+    "scenario": "Evacuee",
+    "start": "S1"
+   },
+   "outcome": {
+    "hours": 0.2061111111111111,
+    "died": false,
+    "outcome": "censored",
+    "censor_reason": "budget",
+    "episodes": 1,
+    "lost": false
+   },
+   "decisions": 129,
+   "dollars": 6.05494015,
+   "source_commit": "62598dcced41dd70571e5070c0c9619bba66be58",
+   "model": "openai/gpt-6.1-terra",
+   "effort": "medium",
+   "headline": {
+    "survival.game_hours": 0.2061111111111111,
+    "stall.longest": 17.0,
+    "stall.count": 1.0,
+    "mode.out_of_play_share": 0.5934959349593496,
+    "pace.routine_seconds_per_decision": 5.0,
+    "host.dollars_per_decision": 0.04693752054263566,
+    "host.large_rewrite_share": 0.9603932996761331,
+    "run.infrastructure_loss": 0.0
+   },
+   "versions": {
+    "core_version": 1,
+    "binding_id": "cdda",
+    "binding_version": 1,
+    "state": "final",
+    "created_wall": 1794024976.1235929
+   }
+  },
+  {
+   "run": "ceil02",
+   "session": "52a979f5e7510f9bcebbbbdf286a4fa1",
+   "state": "final",
+   "labels": {
+    "admission": null,
+    "arm": "pre-loop",
+    "lineage": null,
+    "scenario": "Evacuee",
+    "start": "S1"
+   },
+   "outcome": {
+    "hours": 5.489166666666667,
+    "died": false,
+    "outcome": "censored",
+    "censor_reason": "budget",
+    "episodes": 1,
+    "lost": false
+   },
+   "decisions": 227,
+   "dollars": 3.58032095,
+   "source_commit": "62598dcced41dd70571e5070c0c9619bba66be58",
+   "model": "openai/gpt-6.1-terra",
+   "effort": "medium",
+   "headline": {
+    "survival.game_hours": 5.489166666666667,
+    "stall.longest": 19.0,
+    "stall.count": 2.0,
+    "mode.out_of_play_share": 0.6306306306306306,
+    "pace.routine_seconds_per_decision": 3.0,
+    "host.dollars_per_decision": 0.01577233898678414,
+    "host.large_rewrite_share": 0.6110085605593544,
+    "run.infrastructure_loss": 0.0
+   },
+   "versions": {
+    "core_version": 1,
+    "binding_id": "cdda",
+    "binding_version": 1,
+    "state": "final",
+    "created_wall": 1794024977.135505
+   }
+  },
+  {
+   "run": "ceil03",
+   "session": "3d2746e6c4ba9ee9776276b73343192e",
+   "state": "final",
+   "labels": {
+    "admission": null,
+    "arm": "pre-loop",
+    "lineage": null,
+    "scenario": "player-chosen",
+    "start": "S2"
+   },
+   "outcome": {
+    "hours": 0.16361111111111112,
+    "died": false,
+    "outcome": "censored",
+    "censor_reason": "budget",
+    "episodes": 1,
+    "lost": false
+   },
+   "decisions": 151,
+   "dollars": 1.71082985,
+   "source_commit": "62598dcced41dd70571e5070c0c9619bba66be58",
+   "model": "openai/gpt-6.1-terra",
+   "effort": "medium",
+   "headline": {
+    "survival.game_hours": 0.16361111111111112,
+    "stall.longest": 4.0,
+    "stall.count": 0.0,
+    "mode.out_of_play_share": 0.30344827586206896,
+    "pace.routine_seconds_per_decision": 2.0,
+    "host.dollars_per_decision": 0.011329999006622517,
+    "host.large_rewrite_share": 0.4909069712572527,
+    "run.infrastructure_loss": 0.0
+   },
+   "versions": {
+    "core_version": 1,
+    "binding_id": "cdda",
+    "binding_version": 1,
+    "state": "final",
+    "created_wall": 1794024978.926316
+   }
+  },
+  {
+   "run": "ceil04",
+   "session": "eddfce3810528fa6814e4b497e47e5e0",
+   "state": "final",
+   "labels": {
+    "admission": null,
+    "arm": "pre-loop",
+    "lineage": null,
+    "scenario": "Evacuee",
+    "start": "S1"
+   },
+   "outcome": {
+    "hours": 0.09722222222222222,
+    "died": false,
+    "outcome": "censored",
+    "censor_reason": "budget",
+    "episodes": 1,
+    "lost": false
+   },
+   "decisions": 109,
+   "dollars": 0.84114275,
+   "source_commit": "62598dcced41dd70571e5070c0c9619bba66be58",
+   "model": "openai/gpt-6.1-terra",
+   "effort": "medium",
+   "headline": {
+    "survival.game_hours": 0.09722222222222222,
+    "stall.longest": 14.0,
+    "stall.count": 0.0,
+    "mode.out_of_play_share": 0.6310679611650486,
+    "pace.routine_seconds_per_decision": 2.0,
+    "host.dollars_per_decision": 0.007716905963302753,
+    "host.large_rewrite_share": 0.34711355474442357,
+    "run.infrastructure_loss": 0.0
+   },
+   "versions": {
+    "core_version": 1,
+    "binding_id": "cdda",
+    "binding_version": 1,
+    "state": "final",
+    "created_wall": 1794024980.195114
+   }
+  },
+  {
+   "run": "ceil05",
+   "session": "2256dc8fbab78519fdea458f3f66315e",
+   "state": "final",
+   "labels": {
+    "admission": null,
+    "arm": "ceiling",
+    "lineage": null,
+    "scenario": "Evacuee",
+    "start": "S1"
+   },
+   "outcome": {
+    "hours": 0.5941666666666666,
+    "died": false,
+    "outcome": "censored",
+    "censor_reason": "budget",
+    "episodes": 1,
+    "lost": false
+   },
+   "decisions": 225,
+   "dollars": 3.46279685,
+   "source_commit": "9276672ec8cef1316c9ca70ea483427b572c77e9",
+   "model": "openai/gpt-6.1-terra",
+   "effort": "medium",
+   "headline": {
+    "survival.game_hours": 0.5941666666666666,
+    "stall.longest": 16.0,
+    "stall.count": 1.0,
+    "mode.out_of_play_share": 0.7077625570776256,
+    "pace.routine_seconds_per_decision": 3.666666666666667,
+    "host.dollars_per_decision": 0.015390208222222222,
+    "host.large_rewrite_share": 0.6183741041580305,
+    "run.infrastructure_loss": 0.0
+   },
+   "versions": {
+    "core_version": 1,
+    "binding_id": "cdda",
+    "binding_version": 1,
+    "state": "final",
+    "created_wall": 1794024981.0633001
+   }
+  },
+  {
+   "run": "ceil06",
+   "session": "859c8124fe534285fb35b23db5d59eca",
+   "state": "final",
+   "labels": {
+    "admission": null,
+    "arm": "ceiling",
+    "lineage": null,
+    "scenario": "player-chosen",
+    "start": "S2"
+   },
+   "outcome": {
+    "hours": 0.04805555555555555,
+    "died": true,
+    "outcome": "died",
+    "censor_reason": "died",
+    "episodes": 1,
+    "lost": false
+   },
+   "decisions": 65,
+   "dollars": 0.5249153,
+   "source_commit": "9276672ec8cef1316c9ca70ea483427b572c77e9",
+   "model": "openai/gpt-6.1-terra",
+   "effort": "medium",
+   "headline": {
+    "survival.game_hours": 0.04805555555555555,
+    "stall.longest": 7.0,
+    "stall.count": 0.0,
+    "mode.out_of_play_share": 0.559322033898305,
+    "pace.routine_seconds_per_decision": 2.25,
+    "host.dollars_per_decision": 0.00807562,
+    "host.large_rewrite_share": 0.44631657716968814,
+    "run.infrastructure_loss": 0.0
+   },
+   "versions": {
+    "core_version": 1,
+    "binding_id": "cdda",
+    "binding_version": 1,
+    "state": "final",
+    "created_wall": 1794024982.7251358
+   }
+  },
+  {
+   "run": "ceil07",
+   "session": "bbef26ac5228651c066afc27a5af5c32",
+   "state": "final",
+   "labels": {
+    "admission": null,
+    "arm": "ceiling",
+    "lineage": null,
+    "scenario": "Evacuee",
+    "start": "S1"
+   },
+   "outcome": {
+    "hours": 0.6125,
+    "died": false,
+    "outcome": "censored",
+    "censor_reason": "budget",
+    "episodes": 1,
+    "lost": false
+   },
+   "decisions": 223,
+   "dollars": 3.65404655,
+   "source_commit": "9276672ec8cef1316c9ca70ea483427b572c77e9",
+   "model": "openai/gpt-6.1-terra",
+   "effort": "medium",
+   "headline": {
+    "survival.game_hours": 0.6125,
+    "stall.longest": 15.0,
+    "stall.count": 1.0,
+    "mode.out_of_play_share": 0.695852534562212,
+    "pace.routine_seconds_per_decision": 3.0,
+    "host.dollars_per_decision": 0.016385858968609866,
+    "host.large_rewrite_share": 0.6584729606140349,
+    "run.infrastructure_loss": 0.0
+   },
+   "versions": {
+    "core_version": 1,
+    "binding_id": "cdda",
+    "binding_version": 1,
+    "state": "final",
+    "created_wall": 1794024983.316281
+   }
+  },
+  {
+   "run": "ceil08",
+   "session": "725598848e982c67bae7e80129b51f78",
+   "state": "final",
+   "labels": {
+    "admission": null,
+    "arm": "ceiling",
+    "lineage": null,
+    "scenario": "player-chosen",
+    "start": "S2"
+   },
+   "outcome": {
+    "hours": 0.0325,
+    "died": true,
+    "outcome": "died",
+    "censor_reason": "died",
+    "episodes": 1,
+    "lost": false
+   },
+   "decisions": 35,
+   "dollars": 0.1573252,
+   "source_commit": "9276672ec8cef1316c9ca70ea483427b572c77e9",
+   "model": "openai/gpt-6.1-terra",
+   "effort": "medium",
+   "headline": {
+    "survival.game_hours": 0.0325,
+    "stall.longest": 3.0,
+    "stall.count": 0.0,
+    "mode.out_of_play_share": 0.20689655172413793,
+    "pace.routine_seconds_per_decision": 4.0,
+    "host.dollars_per_decision": 0.004495005714285715,
+    "host.large_rewrite_share": 0.0,
+    "run.infrastructure_loss": 0.0
+   },
+   "versions": {
+    "core_version": 1,
+    "binding_id": "cdda",
+    "binding_version": 1,
+    "state": "final",
+    "created_wall": 1794024985.0281851
+   }
+  },
+  {
+   "run": "ceil09",
+   "session": "c6c09be0b7d43fba2839147651a4f6a5",
    "state": "live",
-   "arm": "Ceiling",
-   "start": "S1",
-   "hours": 1.93,
-   "died": false,
-   "censor_reason": null,
-   "decisions": 110,
-   "dollars": 3.13,
-   "started_wall": 1792913600.0,
-   "metrics": {
-    "pace": 20,
-    "oop": 0.29000000000000004,
-    "stall_longest": 37,
-    "setup": 17,
-    "mem_w": 2,
-    "mem_r": 1,
-    "handoffs": 1,
-    "refused": 1,
-    "per_dec": 0.0285,
-    "rewrite": 0.67
+   "labels": {
+    "admission": null,
+    "arm": "ceiling",
+    "lineage": null,
+    "scenario": "Evacuee",
+    "start": "S1"
+   },
+   "outcome": {
+    "hours": 2.11,
+    "died": false,
+    "outcome": "censored",
+    "censor_reason": "budget",
+    "episodes": 1,
+    "lost": false
+   },
+   "decisions": 229,
+   "dollars": 3.9786445,
+   "source_commit": "9276672ec8cef1316c9ca70ea483427b572c77e9",
+   "model": "openai/gpt-6.1-terra",
+   "effort": "medium",
+   "headline": {
+    "survival.game_hours": 2.11,
+    "stall.longest": 17.0,
+    "stall.count": 3.0,
+    "mode.out_of_play_share": 0.5990990990990991,
+    "pace.routine_seconds_per_decision": 4.0,
+    "host.dollars_per_decision": 0.01737399344978166,
+    "host.large_rewrite_share": 0.5990627209844961,
+    "run.infrastructure_loss": 0.0
    },
    "versions": {
-    "core": "1",
-    "binding": "cdda 1",
-    "source_commit": "9276672"
-   }
-  },
-  {
-   "run": "01f3a9f3a9f3a9f3a9f3a9f3a9f3a90d",
-   "label": "A1",
-   "state": "final",
-   "arm": "Ceiling",
-   "start": "S1",
-   "hours": 0.52,
-   "died": false,
-   "censor_reason": "budget",
-   "decisions": 210,
-   "dollars": 4.1,
-   "started_wall": 1792222400.0,
-   "metrics": {
-    "pace": 12,
-    "oop": 0.21000000000000002,
-    "stall_longest": 13,
-    "setup": 9,
-    "mem_w": 3,
-    "mem_r": 1,
-    "handoffs": 1,
-    "refused": 1,
-    "per_dec": 0.0195,
-    "rewrite": 0.43000000000000005
-   },
-   "versions": {
-    "core": "1",
-    "binding": "cdda 1",
-    "source_commit": "9276672"
-   }
-  },
-  {
-   "run": "02f3a9f3a9f3a9f3a9f3a9f3a9f3a90d",
-   "label": "A2",
-   "state": "final",
-   "arm": "Ceiling",
-   "start": "S2",
-   "hours": 0.31,
-   "died": true,
-   "censor_reason": "died",
-   "decisions": 160,
-   "dollars": 3.3,
-   "started_wall": 1792308800.0,
-   "metrics": {
-    "pace": 13,
-    "oop": 0.22,
-    "stall_longest": 16,
-    "setup": 10,
-    "mem_w": 4,
-    "mem_r": 0,
-    "handoffs": 0,
-    "refused": 2,
-    "per_dec": 0.0206,
-    "rewrite": 0.46
-   },
-   "versions": {
-    "core": "1",
-    "binding": "cdda 1",
-    "source_commit": "9276672"
-   }
-  },
-  {
-   "run": "03f3a9f3a9f3a9f3a9f3a9f3a9f3a90d",
-   "label": "A3",
-   "state": "final",
-   "arm": "Zoom aid",
-   "start": "S1",
-   "hours": 0.48,
-   "died": false,
-   "censor_reason": "budget",
-   "decisions": 200,
-   "dollars": 4.0,
-   "started_wall": 1792395200.0,
-   "metrics": {
-    "pace": 14,
-    "oop": 0.23,
-    "stall_longest": 19,
-    "setup": 11,
-    "mem_w": 2,
-    "mem_r": 1,
-    "handoffs": 1,
-    "refused": 3,
-    "per_dec": 0.02,
-    "rewrite": 0.49
-   },
-   "versions": {
-    "core": "1",
-    "binding": "cdda 1",
-    "source_commit": "9276672"
-   }
-  },
-  {
-   "run": "04f3a9f3a9f3a9f3a9f3a9f3a9f3a90d",
-   "label": "B1",
-   "state": "final",
-   "arm": "Game-help aid",
-   "start": "S1",
-   "hours": 0.5,
-   "died": false,
-   "censor_reason": "budget",
-   "decisions": 190,
-   "dollars": 3.8,
-   "started_wall": 1792481600.0,
-   "metrics": {
-    "pace": 15,
-    "oop": 0.24000000000000002,
-    "stall_longest": 31,
-    "setup": 12,
-    "mem_w": 3,
-    "mem_r": 0,
-    "handoffs": 0,
-    "refused": 0,
-    "per_dec": 0.02,
-    "rewrite": 0.52
-   },
-   "versions": {
-    "core": "1",
-    "binding": "cdda 1",
-    "source_commit": "41ab9d2"
-   }
-  },
-  {
-   "run": "05f3a9f3a9f3a9f3a9f3a9f3a9f3a90d",
-   "label": "B2",
-   "state": "final",
-   "arm": "Game-help aid",
-   "start": "S2",
-   "hours": 0.22,
-   "died": true,
-   "censor_reason": "died",
-   "decisions": 90,
-   "dollars": 2.0,
-   "started_wall": 1792568000.0,
-   "metrics": {
-    "pace": 16,
-    "oop": 0.25,
-    "stall_longest": 27,
-    "setup": 13,
-    "mem_w": 4,
-    "mem_r": 1,
-    "handoffs": 1,
-    "refused": 1,
-    "per_dec": 0.0222,
-    "rewrite": 0.55
-   },
-   "versions": {
-    "core": "1",
-    "binding": "cdda 1",
-    "source_commit": "41ab9d2"
-   }
-  },
-  {
-   "run": "06f3a9f3a9f3a9f3a9f3a9f3a9f3a90d",
-   "label": "C1",
-   "state": "final",
-   "arm": "Reflection aid",
-   "start": "S1",
-   "hours": 0.61,
-   "died": false,
-   "censor_reason": "budget",
-   "decisions": 230,
-   "dollars": 4.6,
-   "started_wall": 1792654400.0,
-   "metrics": {
-    "pace": 17,
-    "oop": 0.26,
-    "stall_longest": 28,
-    "setup": 14,
-    "mem_w": 2,
-    "mem_r": 0,
-    "handoffs": 0,
-    "refused": 2,
-    "per_dec": 0.02,
-    "rewrite": 0.5800000000000001
-   },
-   "versions": {
-    "core": "1",
-    "binding": "cdda 1",
-    "source_commit": "9276672"
-   }
-  },
-  {
-   "run": "07f3a9f3a9f3a9f3a9f3a9f3a9f3a90d",
-   "label": "C2",
-   "state": "final",
-   "arm": "Reflection aid",
-   "start": "S2",
-   "hours": 0.0,
-   "died": false,
-   "censor_reason": "infrastructure",
-   "decisions": 30,
-   "dollars": 0.7,
-   "started_wall": 1792740800.0,
-   "metrics": {
-    "pace": 18,
-    "oop": 0.27,
-    "stall_longest": 31,
-    "setup": 15,
-    "mem_w": 3,
-    "mem_r": 1,
-    "handoffs": 1,
-    "refused": 3,
-    "per_dec": 0.0233,
-    "rewrite": 0.61
-   },
-   "versions": {
-    "core": "1",
-    "binding": "cdda 1",
-    "source_commit": "9276672"
+    "core_version": 1,
+    "binding_id": "cdda",
+    "binding_version": 1,
+    "state": "live",
+    "created_wall": 1794024985.378208
    }
   }
- ]
+ ],
+ "next": null,
+ "limit": 500,
+ "total": 30
 }
