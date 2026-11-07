@@ -172,9 +172,9 @@ excludes headless sessions and does not observe downstream code use, limiting
 transfer to this agent team. Abstract-only iteration-length and Little's-law
 readings were not used to derive duration or numerical WIP rules.
 
-Selected source texts, download/extraction manifests and the longer synthesis are
-retained privately in `.runtime/research/iteration-design-2026-10-25/` in the primary
-project checkout. PDF layout text/HTML extraction supports the prose used here;
+Selected source texts, download/extraction manifests and the longer synthesis were
+kept privately under `.runtime/research/` until the old run output was retired on
+7 November 2026 ([record](acceptance/2026-11-07-runtime-retirement.md)). PDF layout text/HTML extraction supports the prose used here;
 no equation/table calculation or complete third-party text is republished. Current
 standards/templates apply the adopted decision; Issues own its execution. Revisit
 through the existing #26 trigger (#75 closed on 24 October) on material capacity, queue, model/tool or
@@ -258,8 +258,8 @@ important risks; they need evidence beyond source tests. This engineering model
 adds no per-action player approval or reflective-path dependency.
 
 Eight public source PDFs, extraction manifests, scoped notes and the evidence
-matrix are retained privately under `.runtime/research/risk-test-selection/` in
-the lead checkout. Layout text was used for qualitative PDF reading; the T-TS
+matrix were kept privately under `.runtime/research/` until the 7 November 2026
+retirement ([record](acceptance/2026-11-07-runtime-retirement.md)). Layout text was used for qualitative PDF reading; the T-TS
 deployment table was checked against the arXiv HTML. No full
 third-party text is republished. Google 2026 core-library selection was abstract-only;
 GSN/IEEE scope pages were not full-standard readings; inaccessible 2026 optimization

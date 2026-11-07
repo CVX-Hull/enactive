@@ -55,11 +55,12 @@ excluded from the main evidential claims; multiple versions of one paper are not
 independent evidence. No exhaustive review, benchmark replication or SOTA ranking
 is claimed.
 
-Ten primary PDFs/HTMLs and extraction manifests are retained project-locally under
-ignored `.runtime/iteration300/research/`. Extraction used installed `pdftotext`
+Ten primary PDFs/HTMLs and extraction manifests were kept project-locally under
+ignored `.runtime/` until the 7 November 2026 retirement
+([record](acceptance/2026-11-07-runtime-retirement.md)). Extraction used installed `pdftotext`
 and HTML fallback; tables/equations are flattened. The judgments below concern
 methods and qualitative limits, not unverified table arithmetic. Full texts are
-not republished, and the complete corpus may be unavailable in a fresh checkout.
+not republished, and the corpus is no longer available.
 The exact deployed checkpoint, tiled game graphics and screenshot/action interface
 were not tested by these papers.
 
