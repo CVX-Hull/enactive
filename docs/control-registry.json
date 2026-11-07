@@ -232,11 +232,11 @@
       "rationale": null,
       "replacement": null,
       "last_exercise": {
-        "date": "2026-10-24",
-        "outcome": "Coherent repair passes 214 focused tests in 15.264 seconds and fast structural checks; initial sandbox run retains 32 denied loopback errors, scoped rerun passes. Exact 5ec16e0 CI40082957202 remains failed at one stale fixture; new exact candidate CI is required.",
-        "scope": "Real root expiry, bounded observation/unchanged lineage and charges, explicit menu closure; clock-frontier historical-oracle/randomized differential checks; closed-paused donor locks/pins/closure. SDK working-set/preflight regressions address failed023; synthetic evidence is not actual successor application.",
+        "date": "2026-11-07",
+        "outcome": "The full portable profile passed locally on merged main f00cf4b: 660 tests and 333 subtests with four workers, including the viewer, diagram and player-host adapter suites. The exact #407 candidate's protected controller (full profile) passed in run 42383863357.",
+        "scope": "Current computer, player, evaluation, viewer, supervision and host regressions, including the audit #400 expiry, archive-gate and read-only tests. Portable fixtures do not qualify gameplay, native behaviour or browser layout.",
         "evidence": [
-          "docs/acceptance/2026-10-24-independent-seven-day-twenty-third-attempt.md"
+          "docs/acceptance/2026-11-07-standards-audit.md"
         ]
       },
       "maintenance_review": {
@@ -527,10 +527,11 @@
       "rationale": null,
       "replacement": null,
       "last_exercise": {
-        "date": "2026-10-31",
-        "outcome": "Four current Import Linter contracts, the player-host/1 conformance suite on the current adapter and the host-neutrality regression pass in the full 1cae70f profile; an offline native driver preflight ran through the contract.",
-        "scope": "Computer/player/adapters/server dependency boundaries, the player host boundary with one listed adapter, and lexical host naming in current pages and tooling. Source import constraints and scripted-provider conformance do not prove semantic correctness, portability or gameplay.",
+        "date": "2026-11-07",
+        "outcome": "On merged main f00cf4b all eight Import Linter contracts are kept, and the negative fixtures (now covering all eight), the player-host/3 contract and adapter conformance suites and the host-neutrality regression pass (38 tests, 62 subtests).",
+        "scope": "Computer/player/adapters/server and ADR008 evaluation/viewer dependency boundaries, the player-host/3 boundary with one listed adapter, and lexical host naming. Source import constraints and scripted-provider conformance do not prove semantic correctness, portability or gameplay.",
         "evidence": [
+          "docs/acceptance/2026-11-07-standards-audit.md",
           "docs/acceptance/2026-10-31-host-neutral-player.md",
           "docs/acceptance/2026-10-29-computer-control.md",
           "docs/acceptance/2026-10-29-computer-control-development.md"
@@ -784,11 +785,11 @@
       "rationale": null,
       "replacement": null,
       "last_exercise": {
-        "date": "2026-10-18",
-        "outcome": "Passed within round014 local/source/native scope; hosted publication is a separately verified lane. Failures and limitations retained.",
-        "scope": "Cardinal-v3 current/future guard split, isolated handoff/integration, independent reviews, 438 portable tests, real completion/intermediate stop/Pause, official Actions-pin review and gated readiness.",
+        "date": "2026-11-07",
+        "outcome": "Audit #400 fix PRs #406 and #407 merged under the active main ruleset (pull request required, strict controller check, no bypass actors) through auto-merge pinned to each reviewed head; #407's pin was refused once on a stale head and re-pinned after a branch update. Exact-candidate controller runs 42383272942 and 42383863357 passed.",
+        "scope": "Independent agent review before merge, identity and message inspection, closing-reference check and pinned auto-merge. Agent review is evidence, not human approval.",
         "evidence": [
-          "docs/acceptance/2026-10-18-waypoint-readiness.md"
+          "docs/acceptance/2026-11-07-standards-audit.md"
         ]
       },
       "maintenance_review": {

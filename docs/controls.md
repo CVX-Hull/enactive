@@ -42,16 +42,16 @@ full checks remain strict. Event triggers can require earlier review.
 
 | Control | Lifecycle | Last exercise | Maintenance review | Effectiveness | Next review |
 | --- | --- | --- | --- | --- | --- |
-| C-PORTABLE | active | 2026-10-24 | 2026-10-24 | partially_effective | 2027-01-15 |
+| C-PORTABLE | active | 2026-11-07 | 2026-10-24 | partially_effective | 2027-01-15 |
 | C-RUNTIME | active | 2026-10-29 | 2026-10-29 | partially_effective | 2027-01-15 |
 | C-NATIVE | active | 2026-10-29 | 2026-10-29 | partially_effective | 2027-01-15 |
 | C-USABILITY | active | 2026-10-29 | 2026-10-29 | partially_effective | 2027-01-15 |
-| C-BOUNDARY | active | 2026-10-31 | 2026-10-29 | partially_effective | 2027-01-15 |
+| C-BOUNDARY | active | 2026-11-07 | 2026-10-29 | partially_effective | 2027-01-15 |
 | C-REVIEW | active | 2026-10-29 | 2026-10-29 | partially_effective | 2027-01-15 |
 | C-GOVERNANCE | active | 2026-10-27 | 2026-10-27 | partially_effective | 2027-01-15 |
 | C-PROTOCOL | retired | 2026-10-17 | 2026-10-17 | effective | none |
 | C-SETUP | active | 2026-10-29 | 2026-10-29 | partially_effective | 2027-01-15 |
-| C-RELEASE | active | 2026-10-18 | 2026-10-18 | partially_effective | 2027-01-15 |
+| C-RELEASE | active | 2026-11-07 | 2026-10-18 | partially_effective | 2027-01-15 |
 | C-MAINTENANCE | active | 2026-10-27 | 2026-10-27 | partially_effective | 2027-01-15 |
 | C-VISUAL | active | 2026-10-27 | 2026-10-27 | partially_effective | 2027-01-15 |
 
@@ -71,9 +71,9 @@ Coverage gap: Fast mode omits behavioral tests, viewer regressions and rendered 
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
-Last exercise: 2026-10-24. Outcome: Coherent repair passes 214 focused tests in 15.264 seconds and fast structural checks; initial sandbox run retains 32 denied loopback errors, scoped rerun passes. Exact 5ec16e0 CI40082957202 remains failed at one stale fixture; new exact candidate CI is required.
-Scope: Real root expiry, bounded observation/unchanged lineage and charges, explicit menu closure; clock-frontier historical-oracle/randomized differential checks; closed-paused donor locks/pins/closure. SDK working-set/preflight regressions address failed023; synthetic evidence is not actual successor application.
-Exercise evidence: [docs/acceptance/2026-10-24-independent-seven-day-twenty-third-attempt.md](../docs/acceptance/2026-10-24-independent-seven-day-twenty-third-attempt.md).
+Last exercise: 2026-11-07. Outcome: The full portable profile passed locally on merged main f00cf4b: 660 tests and 333 subtests with four workers, including the viewer, diagram and player-host adapter suites. The exact #407 candidate's protected controller (full profile) passed in run 42383863357.
+Scope: Current computer, player, evaluation, viewer, supervision and host regressions, including the audit #400 expiry, archive-gate and read-only tests. Portable fixtures do not qualify gameplay, native behaviour or browser layout.
+Exercise evidence: [docs/acceptance/2026-11-07-standards-audit.md](../docs/acceptance/2026-11-07-standards-audit.md).
 
 Maintenance review: 2026-10-24. Effectiveness: partially_effective.
 Findings: An exact full lane caught a stale assertion missed by focused selection. Correct the real expiry scenario, not production behavior to satisfy the predecessor test. Derive source metadata capacity from the atomic handoff contract and distinguish pure new refusal from staged/transport uncertainty.
@@ -175,9 +175,9 @@ Coverage gap: Static import graph with configured external roots. Dynamic import
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
-Last exercise: 2026-10-31. Outcome: Four current Import Linter contracts, the player-host/1 conformance suite on the current adapter and the host-neutrality regression pass in the full 1cae70f profile; an offline native driver preflight ran through the contract.
-Scope: Computer/player/adapters/server dependency boundaries, the player host boundary with one listed adapter, and lexical host naming in current pages and tooling. Source import constraints and scripted-provider conformance do not prove semantic correctness, portability or gameplay.
-Exercise evidence: [docs/acceptance/2026-10-31-host-neutral-player.md](../docs/acceptance/2026-10-31-host-neutral-player.md), [docs/acceptance/2026-10-29-computer-control.md](../docs/acceptance/2026-10-29-computer-control.md), [docs/acceptance/2026-10-29-computer-control-development.md](../docs/acceptance/2026-10-29-computer-control-development.md).
+Last exercise: 2026-11-07. Outcome: On merged main f00cf4b all eight Import Linter contracts are kept, and the negative fixtures (now covering all eight), the player-host/3 contract and adapter conformance suites and the host-neutrality regression pass (38 tests, 62 subtests).
+Scope: Computer/player/adapters/server and ADR008 evaluation/viewer dependency boundaries, the player-host/3 boundary with one listed adapter, and lexical host naming. Source import constraints and scripted-provider conformance do not prove semantic correctness, portability or gameplay.
+Exercise evidence: [docs/acceptance/2026-11-07-standards-audit.md](../docs/acceptance/2026-11-07-standards-audit.md), [docs/acceptance/2026-10-31-host-neutral-player.md](../docs/acceptance/2026-10-31-host-neutral-player.md), [docs/acceptance/2026-10-29-computer-control.md](../docs/acceptance/2026-10-29-computer-control.md), [docs/acceptance/2026-10-29-computer-control-development.md](../docs/acceptance/2026-10-29-computer-control-development.md).
 
 Maintenance review: 2026-10-29. Effectiveness: partially_effective.
 Findings: Replaced obsolete semantic dependency contracts with four current ownership rules. Independent seam review and actual player/control composition supplement syntax/import assertions.
@@ -305,9 +305,9 @@ Coverage gap: Working-tree hooks do not prove a partially staged candidate. Host
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
-Last exercise: 2026-10-18. Outcome: Passed within round014 local/source/native scope; hosted publication is a separately verified lane. Failures and limitations retained.
-Scope: Cardinal-v3 current/future guard split, isolated handoff/integration, independent reviews, 438 portable tests, real completion/intermediate stop/Pause, official Actions-pin review and gated readiness.
-Exercise evidence: [docs/acceptance/2026-10-18-waypoint-readiness.md](../docs/acceptance/2026-10-18-waypoint-readiness.md).
+Last exercise: 2026-11-07. Outcome: Audit #400 fix PRs #406 and #407 merged under the active main ruleset (pull request required, strict controller check, no bypass actors) through auto-merge pinned to each reviewed head; #407's pin was refused once on a stale head and re-pinned after a branch update. Exact-candidate controller runs 42383272942 and 42383863357 passed.
+Scope: Independent agent review before merge, identity and message inspection, closing-reference check and pinned auto-merge. Agent review is evidence, not human approval.
+Exercise evidence: [docs/acceptance/2026-11-07-standards-audit.md](../docs/acceptance/2026-11-07-standards-audit.md).
 
 Maintenance review: 2026-10-18. Effectiveness: partially_effective.
 Findings: Exact runtime hashes, unchanged native binary, scoped portable and real native lanes recorded; immutable official Node24 action identities verified. Hosted candidate/main checks, warning resolution and active rules require separate publication readback; no new enforcement probe or human approval claimed. Round014 ad-hoc source hashes are retained history; current standard now requires a Git checkpoint before future native acceptance, avoiding parallel source inventories. User-directed development-first checkpoints retain protected formal acceptance while avoiding full local+duplicate hosted checks before every short attempt. A passing exact hosted full suite can satisfy portable qualification; no redundant local rerun is required solely for ceremony.
