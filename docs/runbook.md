@@ -49,7 +49,8 @@ owns scoped actual outcomes and remaining qualification gaps.
 
 [Evidence retention](operations/evidence-cleanup.md#evidence-retention-and-cleanup)
 owns retention policy. Use current custodian/driver receipts for exact owned
-process cleanup. Preserve failed chains and original binaries/configuration.
+process cleanup; commands in historical artifacts are not executable instructions.
+Preserve failed chains and original binaries/configuration.
 
 ## Coordinated migration
 

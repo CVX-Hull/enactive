@@ -66,12 +66,13 @@ failure per logical request ([#308](https://github.com/CVX-Hull/enactive/issues/
 429, 502/503/504, a pre-header fetch rejection or OpenRouter's in-flight 402), proven
 by offline fixtures only; no live 5xx has yet exercised it.
 
-The host evicts historical screenshots in whole count-only blocks (peak 39, block 10)
-so the prompt prefix stays cacheable between evictions. A bounded live check on
-Gemini/Vertex proved the mechanism only; its cost, provenance and the deviation from
-its pre-set rule are on [#313](https://github.com/CVX-Hull/enactive/issues/313). Play
-behaviour with up to 39 frames, residency at game pace and other providers remain
-unmeasured.
+The host evicts historical screenshots in whole count-only blocks of each package's
+frozen `context_image_block`, so the prompt prefix stays cacheable between evictions
+(the development runs used peak 39, block 10). A bounded live check on Gemini/Vertex
+proved the mechanism only and narrowly failed its pre-set cost rule (0.52× against
+≤ 0.5×); its cost, provenance and the owner's disposition are on
+[#313](https://github.com/CVX-Hull/enactive/issues/313). Play behaviour with up to
+39 frames, residency at game pace and other providers remain unmeasured.
 
 The compact [player guide](player-guide.md#play-from-observed-effects) now emphasizes
 observed effects, quantity/container scope and confirmation focus. The
@@ -84,7 +85,8 @@ not qualify parent cadence, learning or survival.
 
 The agreed [player-objective and external-test-control rationale](changes/073-player-objective-and-test-control.md)
 links the context audit to [#359](https://github.com/CVX-Hull/enactive/issues/359).
-[PR #360](https://github.com/CVX-Hull/enactive/pull/360) delivered it on main:
+[PR #360](https://github.com/CVX-Hull/enactive/pull/360) delivered `player-host/3`,
+projected actor results and `player-memory/2` on main:
 this is source delivery, not a cohort qualification. The scoped
 [ongoing-objective diagnostic](acceptance/2026-11-05-player-test-diagnostic.md) and
 [recorded-screen candidate assessment](acceptance/2026-11-05-recorded-player-assessment.md)

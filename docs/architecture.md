@@ -72,8 +72,10 @@ producer or native custody. Supervision, host settlement and game outcomes stay
 separate; source fixtures do not qualify actual play or human attention.
 
 Fresh session stores live under `.runtime/computer-sessions/`. A selected
-`player-memory/2` store may span fresh native-child sessions. No current reader
-imports old runtime formats or executable old libraries.
+`player-memory/2` store may span fresh native-child sessions. Old runtime formats
+stay inert, except that the evaluator reads the closed set of archived
+`campaign-run/4` development-loop sessions read-only; no current reader imports
+executable old libraries.
 
 ## Action and recovery views
 

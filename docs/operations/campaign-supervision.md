@@ -122,6 +122,8 @@ game's clock. Apply save/reload/exit criteria in their separately frozen lane.
 | `watch-terminal.json` | `campaign-watch-terminal/3`; attention policy, accepted checks/completion/prior-observation clocks, raced checks, reason, `pause_reason` (`loop`, `fault`, `spend`, `other` or `unspecified`; null when the owner did not press Pause), exact children (the viewer with its pid, port and `supervised: false`, or its launch error), bounded cleanup and custodian disposition as separate facts. |
 | `viewer-stdout.txt`, `viewer-stderr.txt` | The viewer's own output, created exclusively by the supervisor; diagnostics only. |
 
+Supervision refuses watch records of any other version.
+
 Current `computer-start/1`, `computer-ready/1` and `campaign-receipt/3` must match
 the fresh owned custodian/session/source and chronology. Under `required`, a missing
 first check or late terminal coverage cannot certify supervision; under either policy,

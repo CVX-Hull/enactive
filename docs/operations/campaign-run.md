@@ -143,7 +143,8 @@ this baseline plus each settled run's actual cost, taken as follows:
   allocation.
 
 Only the package being admitted reserves its own attempts at the worst case.
-Record the baseline's sources with each package.
+Record the baseline's sources with each package; the current cumulative actual
+spend is in [operator permissions](../operator-permissions.md).
 
 A custodian report's `cumulative_conservative_reservation_usd` is the baseline plus
 the run's charged attempts at the worst case; it is never the next baseline. The

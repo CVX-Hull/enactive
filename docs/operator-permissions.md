@@ -43,8 +43,8 @@ owner decision.
 Owner-set envelopes, each within the standing $1,000 cumulative cap:
 
 - The ceiling benchmark and grounding-aid study ([#372](acceptance/2026-11-06-development-loop.md), decision D2)
-  and the long-horizon arm ([#382](acceptance/2026-11-07-long-horizon-382.md), decision D1) each had $150 of
-  new spend. Both are closed, and an unspent remainder is not carried to other work.
+  and the long-horizon arm ([#382](acceptance/2026-11-07-long-horizon-382.md), decision D1) each had a $150
+  new-spend envelope. Both are closed, and an unspent remainder is not carried to other work.
   Cumulative actual spend after them is $377.41.
 - One seven-day development lineage ([#397](https://github.com/CVX-Hull/enactive/issues/397),
   decision E1, 7 November 2026) has a new $150 envelope, so the cumulative cap is about

@@ -50,10 +50,11 @@ real-play qualification.
 
 Earlier player investigations rejected two candidate models for adoption
 ([visual player](acceptance/2026-10-30-visual-player.md),
-[capable player](acceptance/2026-10-31-capable-player.md)) and found no retained
-readiness gain from a larger attempt budget or a different model
-([grounded no-gain diagnosis](acceptance/2026-10-31-grounded-no-gain-diagnosis.md),
-one run each). Successful serving does not qualify useful cadence, and the player
+[capable player](acceptance/2026-10-31-capable-player.md)). The
+[grounded no-gain diagnosis](acceptance/2026-10-31-grounded-no-gain-diagnosis.md)
+found no retained readiness gain, consistent with neither attempt budget nor model
+choice being the lever (one run each; the larger budget was not used up). Goal
+selection versus control was not separated. Successful serving does not qualify useful cadence, and the player
 stays self-sufficient: no lead hints in any run. The pre-registered
 [transition corpus](acceptance/2026-11-01-transition-corpus.md) is a method
 calibration; nothing from it enters the player.
