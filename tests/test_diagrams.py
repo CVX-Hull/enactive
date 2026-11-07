@@ -1,5 +1,6 @@
 """Real renderer rejection and source/artifact drift, distinct from visual review."""
 from pathlib import Path
+import hashlib
 import json
 import os
 import shutil
@@ -106,6 +107,52 @@ console.log(JSON.stringify({version: await puppeteer.browserVersion(),
             path.write_text('<svg xmlns="http://www.w3.org/2000/svg"><title>T</title><desc>D</desc></svg>')
             with self.assertRaisesRegex(ValueError, "SVG ID"):
                 diagrams.check_accessibility(path)
+
+    def test_font_stylesheet_order_is_canonical(self):
+        # Mermaid CLI embeds the regular and italic font sheets in load-completion order.
+        def sheet(style):
+            return ('<style>/* license */\n@font-face { font-family: "Open Sans"; '
+                    f'font-style: {style}; src: url("data:font/woff2;base64,{style}"); }}</style>')
+        first = '<style>#cdda-x{fill:red}</style>'
+        tail = '<g><text>Open Sans</text></g></svg>'
+        head = '<svg xmlns="http://www.w3.org/2000/svg" id="cdda-x"><title>T</title>'
+        one = head + first + sheet("normal") + sheet("italic") + tail
+        two = head + first + sheet("italic") + sheet("normal") + tail
+        self.assertNotEqual(one, two)
+        self.assertEqual(diagrams.canonical_font_order(one), diagrams.canonical_font_order(two))
+        canonical = diagrams.canonical_font_order(one)
+        self.assertEqual(diagrams.canonical_font_order(canonical), canonical)
+        # Only the font blocks are reassigned: same blocks, same slots, other styles untouched.
+        self.assertEqual(sorted(canonical), sorted(one))
+        self.assertTrue(canonical.startswith(head + first + "<style>/* license */"))
+        self.assertTrue(canonical.endswith(tail))
+        no_fonts = head + first + tail
+        self.assertEqual(diagrams.canonical_font_order(no_fonts), no_fonts)
+
+    def test_tracked_svgs_are_in_canonical_font_order(self):
+        for path in sorted((ROOT / diagrams.DIRECTORY).glob("*.svg")):
+            with self.subTest(name=path.name):
+                text = path.read_bytes().decode("utf-8")
+                self.assertEqual(diagrams.canonical_font_order(text), text)
+
+    def test_repeated_real_renders_are_byte_identical(self):
+        cache = ROOT / ".cache/diagrams"
+        cache.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(prefix="repeat-", dir=cache) as directory:
+            source = Path(directory) / "player.mmd"
+            shutil.copyfile(ROOT / diagrams.DIRECTORY / "player.mmd", source)
+            outputs = []
+            for index in range(2):
+                output = Path(directory) / f"player-{index}.svg"
+                diagrams.render(ROOT, source, output)
+                outputs.append(output.read_bytes())
+            self.assertEqual(outputs[0], outputs[1])
+
+    def test_digest_is_the_sha256_of_the_file_bytes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "data"
+            path.write_bytes(b"abc\x00\xff")
+            self.assertEqual(diagrams.digest(path), hashlib.sha256(b"abc\x00\xff").hexdigest())
 
     def test_real_renderer_rejects_invalid_mermaid(self):
         cache = ROOT / ".cache/diagrams"

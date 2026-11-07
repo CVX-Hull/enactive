@@ -345,7 +345,7 @@ Next review: 2027-01-15.
 
 ### C-VISUAL — Rendered visual documentation (automatic)
 
-Mermaid sources and generated SVGs in docs/diagrams. Pinned local Mermaid CLI renders every source in a headless project-local browser. Hash receipt covers sources, config, wrapper, package lock and tracked SVGs; title/description and root SVG ID are required. Explicit --write regenerates; normal checks leave tracked files unchanged.
+Mermaid sources and generated SVGs in docs/diagrams. Pinned local Mermaid CLI renders every source in a headless project-local browser. Hash receipt covers sources, config, wrapper, package lock and tracked SVGs; title/description and root SVG ID are required. Explicit --write regenerates; normal checks leave tracked files unchanged. The wrapper puts the embedded font stylesheets in one canonical order, so repeated renders of unchanged sources are byte-identical.
 
 Owner: documentation maintainer. Trigger: common command; source, renderer configuration or dependency changes require rendered review.
 Enforcement: Common command fails on renderer errors, missing title/description/ID or changed input/output receipts; negative fixtures include a real parse failure. No global installation or automatic fetch.
