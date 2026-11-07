@@ -52,7 +52,8 @@ admission only while the arm's actual new spend plus twice its largest single ad
 so far stays within $150. The arm starts from the loop's cumulative actual
 $346.948934979, so the cumulative cap is about $497 within the standing $1,000.
 Packages keep the standing $1,000 as their `ceiling_usd` worst-case guard. Stop and ask
-the owner when the envelope is reached.
+the owner when the envelope is reached. The arm ended on 7 November 2026 having spent
+$30.46 (cumulative actual $377.41); the unspent remainder is not carried to other work.
 
 ## Engineering decision and merge delegation
 

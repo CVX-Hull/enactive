@@ -307,7 +307,7 @@
         "docs/contracts/evaluation.md"
       ],
       "failure_response": "Reject or permanently freeze further dispatch as applicable; collect original results, preserve uncertainty and perform owned cleanup. Any later play requires a fresh admission, never restored authority.",
-      "limitations": "Runtime fixtures establish their stated boundaries, not useful game effects, save success, real-human takeover or general portability. No restart authority revival. Unknown original delivery remains unknown even when a later ACK is collected. A game that stops polling for longer than an input request's 5 s window after an early key fences that multi-key input permanently and ends the admission; #382 lineage 3 lost two admissions this way (#396).",
+      "limitations": "Runtime fixtures establish their stated boundaries, not useful game effects, save success, real-human takeover or general portability. No restart authority revival. Unknown original delivery remains unknown even when a later ACK is collected. A game that consumes a key-down and then stops polling for longer than that input request's 5 s window, before its key-up, fences input permanently and ends the admission; #382 lineage 3 lost two admissions this way (#396).",
       "enforcement": "Implemented at runtime; regression execution is C-PORTABLE. Source references alone establish no behavioral pass.",
       "status": "active",
       "rationale": null,

@@ -627,10 +627,12 @@ Morgan Vale, an Evacuee in the world Crenshaw (evac shelter A-23), 7 November 20
 - The class names how the lineage stopped; it is not a survival result.
 
 **The custody stops** ([#396](https://github.com/CVX-Hull/enactive/issues/396)).
-- In both admissions the last input was a multi-key ENTER-first input dismissing the shelter board's "mark down the coordinates" message: ENTER, UP, g, then ENTER, E.
-- Each emitted only ENTER before the game stopped polling events for the rest of the bridge's 5 s request window. The request expired with a partial receipt, and input was fenced permanently, as designed.
-- Across the arm's 1,566 computer inputs, every other non-wait input took 3.5 s or less. These two took 7.4 s and 11.5 s.
-- Lineage 2's player read its shelter's board with no delay, so the stall depends on lineage 3's world state.
+- In both admissions the last input began with ENTER to dismiss the shelter board's "mark down the coordinates" message (ENTER, UP, g, then ENTER, E). Each action in an input is its own native request.
+- The game consumed ENTER's key-down and then stopped polling events before its key-up, past the bridge's 5 s request window.
+  - ENTER's own request expired with a partial receipt; its two emitted events are the key-down and the owned release.
+  - Input was fenced permanently, as designed. A lone ENTER would have fenced the same way.
+- Across the arm's 1,566 computer inputs, every input without a wait action took 1.9 s or less. These two took 7.4 s and 11.5 s.
+- Lineage 2's player recorded studying its own shelter's board and marking the refugee center (memory record, `lh2a1`), with no slow input. So the stall plausibly depends on lineage 3's world state; this is a hypothesis.
 
 **Hand checks** (labels 10–11):
 - **Setup restart in `lh3a1` (D7).** "Play Now!" placed the first survivor in a helicopter-crash start, bleeding and surrounded by zombies, at 8:00:00 AM on day 61. On the next decision it chose Save and Quit, then created the Evacuee Morgan Vale, first in play at step 22.
@@ -644,7 +646,7 @@ Morgan Vale, an Evacuee in the world Crenshaw (evac shelter A-23), 7 November 20
 | 2 | Morgan Hale | Day-viable | 25.04 | 618 | 145.9 | 0.842 | 13.60 |
 | 3 | Morgan Vale | Slow (stop rule) | 0.54 | 304 | 6.4 | 0.000 | 3.67 |
 
-**Arm result: "Day-scale survival is viable through this boundary"**: two of three lineages Day-viable and no continuity failure. With three lineages this is a screen, not a qualification.
+**Arm result: "Day-scale survival is viable through this boundary"**: two of three lineages Day-viable and no continuity failure, given the owner's setup-restart ruling (D7). With three lineages this is a screen, not a qualification.
 - Under #382's table the next step is to design the seven-day attempt for #145 and the cost and latency plan that resumes #164 ([#397](https://github.com/CVX-Hull/enactive/issues/397)).
 - The arm spent **$30.46** of its $150 envelope: 1,610 attempts, about 3.2 h of wall time, cumulative actual $377.41.
 
@@ -667,8 +669,14 @@ Morgan Vale, an Evacuee in the world Crenshaw (evac shelter A-23), 7 November 20
 - Severe-need recall stays unmeasured (`reader-validation.json`).
 - The evaluator cannot see setup restarts: identity was read only on creation screens, and the clock was unchanged.
 
-**Evidence frames** ([assets](acceptance/assets/long-horizon-382)):
-- lineage 1 falling asleep (10:30 PM), waking at the rollover (6:00:58 AM, day 62) and the day point (8:08:44 AM);
-- lineage 2's boundary load menu and day point (8:43:28 AM, day 62);
-- lineage 1's setup-restart Save and Quit prompt;
-- lineage 3's board message, the last frame before the second fence.
+**Evidence frames** ([assets](acceptance/assets/long-horizon-382), copied unchanged from the packages' `sources/`):
+
+| Asset | Source frame | Shows |
+| --- | --- | --- |
+| `l1-night-asleep-2230.png` | `lh1a3` -9217 | Falling asleep, 10:30 PM, day 61 |
+| `l1-rollover-wake-0600.png` | `lh1a3` -9685 | Waking "Very thirsty", 6:00:58 AM, day 62 |
+| `l1-day-point-0808.png` | `lh1a3` -10739 | Day point, 8:08:44 AM, day 62 |
+| `l1-setup-restart-save-and-quit.png` | `lh1a1` -228 | Setup restart: Save and Quit prompt |
+| `l2-boundary-load-menu.png` | `lh2a2` -3 | Boundary load menu (Brokaw, Morgan Hale) |
+| `l2-day-point-0843.png` | `lh2a2` -15930 | Day point, 8:43:28 AM, day 62 |
+| `l3-board-message-before-fence.png` | `lh3a2` -5163 | Board message before the second fence |
