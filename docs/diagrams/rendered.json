@@ -6,7 +6,7 @@
     ".puppeteerrc.cjs": "7ec13dc5764452feb5c4ed518bab239ff914240f0a50c8d7014dd4d687ddd476",
     "docs/diagrams/config.json": "78effd6af57e41e916790d265d0c0533bff47f5fe66b128ef7cb7b70963e4283",
     "docs/diagrams/browser.json": "1bd136d7b569818e3052e9e49d93bee0a5ee7336d6098e2b709eef9fdb52da75",
-    "tools/diagrams.py": "f36470eeee167ab0039e17f9b6288e6d0d620df704419dbffa864bad54b7d4c1",
+    "tools/diagrams.py": "57861d0c5c28e10c7e273f4dad9410c535f692119734c46e517093de7b985813",
     "docs/diagrams/action.mmd": "405ec46254a07fda396c6597c05f730d1a88131e5ff81905648233c02fd54f7d",
     "docs/diagrams/architecture-review.mmd": "fc717695a54a0d92981744cd0db5fab06c53a30139950419c1f699837d888996",
     "docs/diagrams/asynchronous-reflection.mmd": "c37b8367212ed0030d36d1c43187274e83561945e62bafbfded82f842949758f",
@@ -43,7 +43,7 @@
     "docs/diagrams/recovery.svg": "521fed604850f2d5dcdbee5f16951c0b6c615123b11eecb5c67116664ded22bc",
     "docs/diagrams/request-receipts.svg": "f6f8f82cc23f2b4d0a6f6425346b8ad7e58baf40f3d151fede7e20f565c8bcc1",
     "docs/diagrams/run-ownership.svg": "2845a1663692f6f29d6a233708cc9fbfefb39a1bc6d2de9fbf629ebfb2d91d6f",
-    "docs/diagrams/tiered-gameplay.svg": "1cfb76e65e9bd1faba24558a6714c47abfda978152212085d3908140d88c4bbb",
+    "docs/diagrams/tiered-gameplay.svg": "f1365ba740a6991d8641cea20bfae17f525c5935550a730aae5b666cf63d5d61",
     "docs/diagrams/transition-corpus.svg": "b85b1aeb11f6d672651e65721e55e2eea1ca352db8f1352d096ddb7f3c863cbf"
   }
 }
