@@ -24,8 +24,6 @@
     "docs/diagrams/recovery.mmd": "ef3ca765a6a9329add1f00d44fc3ca0863920ca333337b7c28b25239137c7e9f",
     "docs/diagrams/request-receipts.mmd": "4e9e436a18b8c57960bc41e1efc4b34760fb7b455059fb4223e432379bcaf19e",
     "docs/diagrams/run-ownership.mmd": "f0b7321c055e662c50e84f1dbf2ad69fb6d1c6726f5da44358f6b07e285374cd",
-    "docs/diagrams/skill.mmd": "1b8f1491f0930eadbd0494f24b1b0a52ff586e08a5aa4b4f5ed3c3502cc75822",
-    "docs/diagrams/supervisor.mmd": "c2e111a8bd52e0295fcd457f8d20c431de3aefeb2396c47962b5a38d8d872e89",
     "docs/diagrams/tiered-gameplay.mmd": "213b4301edc6c852c661cf8b29fc75d73c4510b0632170287555afc9ad336cb5",
     "docs/diagrams/transition-corpus.mmd": "083ea685cc77a62648490d2b890e861b6a6a6458533d9e7f3289203ab42a335b"
   },
@@ -47,8 +45,6 @@
     "docs/diagrams/recovery.svg": "521fed604850f2d5dcdbee5f16951c0b6c615123b11eecb5c67116664ded22bc",
     "docs/diagrams/request-receipts.svg": "f6f8f82cc23f2b4d0a6f6425346b8ad7e58baf40f3d151fede7e20f565c8bcc1",
     "docs/diagrams/run-ownership.svg": "2845a1663692f6f29d6a233708cc9fbfefb39a1bc6d2de9fbf629ebfb2d91d6f",
-    "docs/diagrams/skill.svg": "3b2e76f92e6156731d6b6ef9d1b79a76e6b2ba73e6ae1dd3f7db1ecca0ab26b4",
-    "docs/diagrams/supervisor.svg": "2c2ddcb2c68fcf2b0f55ab43f2872f2fc5544eccc2eafb8344311e01a52328e2",
     "docs/diagrams/tiered-gameplay.svg": "1cfb76e65e9bd1faba24558a6714c47abfda978152212085d3908140d88c4bbb",
     "docs/diagrams/transition-corpus.svg": "b85b1aeb11f6d672651e65721e55e2eea1ca352db8f1352d096ddb7f3c863cbf"
   }

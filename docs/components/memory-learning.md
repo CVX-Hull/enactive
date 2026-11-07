@@ -45,6 +45,18 @@ facts are supplied. `step(view,state)` returns act/yield/done and basic controls
 evaluation has no direct effects or host I/O. The runner uses real captures and
 same computer callbacks, up to 64 steps/20seconds under original limits.
 
+![Current logical flow of optional player knowledge and programs: claims and source pixels support decisions, bounded programs propose the same basic controls, and context is handoff data that grants no authority.](../diagrams/player-owned-memory.svg)
+
+Current. “How do optional knowledge and programs feed the player without gaining
+authority?” Boxes are logical stores and ports; labelled arrows are explicit saves,
+proposals and context reads. Exact formats are in the
+[contract](../contracts/computer-control.md#player-knowledge-and-executable-proposals).
+The player explicitly appends a supported claim or saves a program, which lazily
+remembers the referenced images. Programs only propose basic controls through the
+same computer port under original limits. Bounded whole-record context, with
+explicit omissions, returns to the player and becomes immutable handoff knowledge.
+[Editable source](../diagrams/player-owned-memory.mmd).
+
 Context selects at most32 roots and returns whole records/code within64KiB.
 Oversized/missing material is explicitly omitted with readable IDs, never truncated
 into plausible executable content. Handoff persists this bounded snapshot plus

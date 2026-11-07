@@ -111,6 +111,19 @@ bounded image bytes over its inherited socket. File publication is outside its
 callbacks; this does not promise resistance to upstream save I/O, PNG CPU or
 arbitrary OS hangs. The original publication-stall cause remains unknown.
 
+![Current logical computer and player context: the player decides, one mechanical custodian drives the windowed game, and the user watches passively and can independently Pause or use native input.](diagrams/context.svg)
+
+This current diagram answers “What does the user see and override around the
+player and game?” Boxes are logical responsibilities; arrows are requests, actual
+images or user control, with the socket drawn only where the adapter is inherited.
+It complements the responsibility diagram above and is owned here because it spans
+player, custodian, game and user, not one component. The player submits basic
+controls through the custodian, which returns actual images and exact receipts. The
+custodian reaches the game over the inherited socket and SDL adapter, not file IPC.
+The user watches as a passive spectator, can Pause independently and keeps native
+input precedence; claims never certify effects. [Editable source](diagrams/context.mmd)
+and [contract](contracts/computer-control.md#native-channel).
+
 ## Game-family portability
 
 The computer package imports no game interpretation. Shared player claims,
