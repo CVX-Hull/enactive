@@ -31,12 +31,14 @@ allocation before admission. Reservation is not an invoice. A failed actor canno
 automatically renew resources. User Pause remains permanent for that admission.
 Changes outside the user's authorized scope still require the applicable decision.
 
-**Actual-spend admission.** Packages freeze the standing $1,000 as their
-`ceiling_usd` worst-case guard. Within an owner-set envelope the lead admits a run
-or admission without per-run owner approval, only while the study's actual
-provider-reported new spend plus twice its largest single admission so far stays
-within the envelope, and reports each run's spend in its table row. Stop and ask the
-owner when the envelope is reached. `tools/run_ledger.py totals` applies the rule.
+**Actual-spend admission (owner decisions of 6 and 7 November 2026).** For each
+envelope listed below, and for no other spend, packages freeze the standing $1,000 as
+their `ceiling_usd` worst-case guard, and the lead admits a run or admission without
+per-run owner approval only while the study's actual provider-reported new spend plus
+twice its largest single admission so far stays within that envelope. The lead reports
+each run's spend in its table row and stops to ask the owner when the envelope is
+reached. `tools/run_ledger.py totals` applies the rule. A new envelope needs its own
+owner decision.
 
 Owner-set envelopes, each within the standing $1,000 cumulative cap:
 
