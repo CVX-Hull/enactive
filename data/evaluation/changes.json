@@ -1,0 +1,58 @@
+[
+  {
+    "id": "game-help-aid",
+    "name": "Game-help aid (B1-B9)",
+    "arms": ["aidB*"],
+    "baseline": ["ceil05", "ceil06", "ceil07", "ceil08", "ceil09"],
+    "commits": [],
+    "hypothesis": "Pointing the player at the in-game help and keybinding list shortens keybinding and menu hunts.",
+    "target_failure": "stall",
+    "target_metric": {"name": "stall.longest", "direction": "lower", "min_effect": 5},
+    "uptake_metric": {"name": "memory.records", "key": "procedure", "definition": "Procedure records written to the memory store, which is where the player kept keybinding procedures"},
+    "guards": [{"name": "survival.game_hours", "key": ""}, {"name": "host.dollars_per_decision", "key": ""}],
+    "verdict": "wrong_way",
+    "notes": "Lost runs are excluded. The aid's own action, reading the in-game help, is out of play, so the target metric is confounded by the change itself. The mode reader has since passed re-validation, so the stall counts are no longer provisional. Next: measure hunts by screen identity, not by mode."
+  },
+  {
+    "id": "zoom-aid",
+    "name": "Zoom aid (A1-A6)",
+    "arms": ["aidA*"],
+    "baseline": ["ceil05", "ceil06", "ceil07", "ceil08", "ceil09"],
+    "commits": [],
+    "hypothesis": "A zoomed re-read of a frame cuts perception errors (misread needs, creatures and text).",
+    "target_failure": "identity_or_world_error",
+    "target_metric": {"name": "survival.game_hours", "direction": "higher", "min_effect": 0.25},
+    "uptake_metric": {"name": "tools.calls", "key": "player_source+zoom", "definition": "player_source calls that passed a zoom argument"},
+    "guards": [{"name": "survival.game_hours", "key": ""}],
+    "verdict": "untested",
+    "notes": "The aid was never used, so it cannot be judged. Next: find out why the player did not use it before trying again."
+  },
+  {
+    "id": "provider-retry-fixes",
+    "name": "Provider retry fixes (#378-#380)",
+    "arms": ["aidB5", "aidB6", "aidB7", "aidB8", "aidC*"],
+    "baseline": ["aidA*", "ceil*"],
+    "commits": ["1f9c907", "5d084ca", "c313346"],
+    "hypothesis": "Retrying a message-less 429, a balance-citing 429 and a stream that fails before its first event stops runs ending on provider errors.",
+    "target_failure": "infrastructure_loss",
+    "target_metric": {"name": "run.infrastructure_loss", "direction": "lower", "min_effect": 0.2},
+    "uptake_metric": {"name": "host.retry_share", "key": "", "definition": "Share of requests that were retries, aborts or non-tool stops"},
+    "guards": [{"name": "survival.game_hours", "key": ""}],
+    "verdict": "moved",
+    "notes": "Four game-help runs were lost before the fixes landed. After them one reflection run was lost, to a custody stop and not a provider error. Retries fired as designed in aidC1 and no later run ended on a provider error. Interval-based verdicts are weak at these counts."
+  },
+  {
+    "id": "reflection-lineage",
+    "name": "Reflection lineage (C1-C6)",
+    "arms": ["aidC*"],
+    "baseline": ["ceil05", "ceil06", "ceil07", "ceil08", "ceil09"],
+    "commits": [],
+    "hypothesis": "Carrying reflection advice into each admission stops a survivor repeating the same failure.",
+    "target_failure": "memory_unused",
+    "target_metric": {"name": "survival.game_hours", "direction": "higher", "min_effect": 0.25},
+    "uptake_metric": null,
+    "guards": [{"name": "survival.game_hours", "key": ""}, {"name": "memory.reads", "key": ""}],
+    "verdict": "untested",
+    "notes": "Advice records were carried into each admission, but whether the player followed them cannot be measured without the player stating its intent, which is deferred until after #382."
+  }
+]
