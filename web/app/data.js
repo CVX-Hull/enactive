@@ -28,6 +28,7 @@ export function useStore() {
   useEffect(() => {
     const f = () => force(n => n + 1);
     subscribers.add(f);
+    f();   // a change between the first render and this effect would otherwise be missed
     return () => subscribers.delete(f);
   }, []);
   return store;

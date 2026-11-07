@@ -38,6 +38,7 @@ let latest = null;          // last good status
 let receivedAt = null;      // browser time of the last good status
 let shown = null;           // {key, source} of the decoded frame in #frame
 let frameGeneration = 0;
+let loadingKey = null;     // a source being fetched; a slow fetch must not be restarted by every poll
 let live = true;            // from the page's playhead; the operator check needs live
 let playheadNote = false;
 
@@ -130,6 +131,7 @@ async function showSource(source) {
     return;
   }
   let url = null;
+  loadingKey = source.source_id;
   try {
     const response = await fetch(`/api/source/${encodeURIComponent(source.source_id)}`, {cache: 'force-cache', credentials: 'same-origin'});
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -159,7 +161,10 @@ async function showSource(source) {
     emit('enactive:frame', {url: shown.url, source});
   } catch (error) {
     if (generation === frameGeneration) $('frame-note').textContent = `Frame unavailable: ${error.message}`;
-  } finally { if (url) URL.revokeObjectURL(url); }
+  } finally {
+    if (url) URL.revokeObjectURL(url);
+    if (generation === frameGeneration) loadingKey = null;
+  }
 }
 
 let busy = false;
@@ -172,14 +177,14 @@ async function poll() {
       throw new Error('Unsupported status schema');
     }
     if (session !== status.session) {
-      session = status.session; shown = null; frameGeneration++;
+      session = status.session; shown = null; loadingKey = null; frameGeneration++;
       $('source-details').textContent = 'No displayed source.';
       $('frame').hidden = true;
     }
     receivedAt = Date.now();
     renderStatus(status);
     const key = status.latest_source ? status.latest_source.source_id : null;
-    if (key !== (shown && shown.key)) void showSource(status.latest_source);
+    if (key !== (shown && shown.key) && key !== loadingKey) void showSource(status.latest_source);
   } catch (error) {
     renderStatusError(error);
   } finally {

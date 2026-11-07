@@ -38,6 +38,9 @@ async function open(browser, url, {width = 1280, height = 900, scheme = 'light',
   await page.setViewport({width, height, deviceScaleFactor: 1, isMobile: mobile, hasTouch: mobile});
   await page.emulateMediaFeatures([{name: 'prefers-color-scheme', value: scheme}]);
   const problems = [];
+  // The gateway's policy has no 'unsafe-inline': any violation is a test failure.
+  await page.evaluateOnNewDocument(() => document.addEventListener('securitypolicyviolation',
+    e => console.error(`CSP violation: ${e.violatedDirective} ${e.blockedURI}`)));
   // A failed HTTP load is reported twice (console and response); keep the response, which names the URL.
   page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) problems.push(`console: ${m.text()}`); });
   page.on('pageerror', e => problems.push(`pageerror: ${e.message}`));
@@ -61,10 +64,13 @@ async function shot(page, name) {
 
 const settle = (page, ms = 400) => new Promise(r => setTimeout(r, ms));
 async function ready(page) {
-  await page.waitForSelector('#statusline', {timeout: 8000});
+  await page.waitForSelector('#statusline', {timeout: 8000, polling: 100});
   await page.waitForFunction(() => document.getElementById('connection').dataset.state === 'ok'
-    && document.getElementById('frame') && !document.getElementById('frame').hidden && document.getElementById('frame').naturalWidth > 0, {timeout: 8000});
-  await page.waitForFunction(() => document.querySelector('#app .panel, #app .insuf'), {timeout: 8000});
+    && document.getElementById('frame') && !document.getElementById('frame').hidden && document.getElementById('frame').naturalWidth > 0, {timeout: 8000, polling: 100});
+  await page.waitForFunction(() => document.querySelector('#app .panel, #app .insuf'), {timeout: 8000, polling: 100});
+  const hash = new URL(page.url()).hash;
+  if (hash === '' || hash === '#live') await page.waitForSelector('#conds li, #tl canvas', {timeout: 8000});
+  if (hash === '' || hash === '#live') await page.waitForSelector('#tl canvas', {timeout: 8000});
 }
 async function overflow(page) {
   return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);

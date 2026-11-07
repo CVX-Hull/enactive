@@ -1,7 +1,7 @@
 """Static fixture server for the spectator page tests: web/ plus stub APIs, no game, no provider.
 
 It imitates only the parts of the supervised gateway that the page depends on:
-- serves web/ and injects the operator-check panel and `campaign_watch_ui.js` into the
+- serves web/index.html, web/app/* and web/vendor/* (as the gateway does) and injects the operator-check panel and `campaign_watch_ui.js` into the
   index page at the same anchors the gateway uses;
 - sends the gateway's Content-Security-Policy on every response;
 - answers the control path: GET /api/status (computer-status/1), GET /api/source/<id>
@@ -139,7 +139,9 @@ def make_handler(state: State):
         def static(self, path):
             name = 'index.html' if path == '/' else path.lstrip('/')
             target = (WEB / name).resolve()
-            if not target.is_relative_to(WEB) or not target.is_file():
+            # The gateway serves only the page, web/app/* and web/vendor/*; so does this server.
+            allowed = name == 'index.html' or name.startswith(('app/', 'vendor/'))
+            if not allowed or not target.is_relative_to(WEB) or not target.is_file():
                 self.send_error(404); return
             data = target.read_bytes()
             if name == 'index.html':
