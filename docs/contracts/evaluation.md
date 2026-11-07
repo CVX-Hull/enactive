@@ -188,14 +188,15 @@ There is no UI hash check, and no check compares the game's UI with anything. Wh
 - The glyph atlas (`atlas.json`) carries a version and an 8×16 cell size, and loading it
   fails when either differs from the code's. This guards the atlas data against the code,
   not the game UI against the atlas.
-- A font change at the same frame and cell size shows as `unknown_glyph` abstentions: the
-  cells' ink masks are not in the atlas.
+- A font change at the same frame and cell size shows as `no_signature`, `label_occluded`
+  and `unknown_glyph` abstentions: label and anchor checks fail before most glyphs are
+  decoded, and the cells' ink masks are not in the atlas.
 - A same-font layout change shows as `label_occluded`, `unknown_label`,
   `clock_not_legible` or `no_signature` abstentions, depending on what moved. It is not
   guaranteed to abstain: the clock reader only lowers its confidence to 0.85 when its
   `Date:` and `Time:` labels are not where it expects but its text still parses.
 
-Either loss shows as lower `reader.coverage`. The atlas is relearned when the game's font,
+Abstentions show as lower `reader.coverage`. The atlas is relearned when the game's font,
 size or layout changes (this follows the custom-code table in
 [ADR008](../decisions/008-evaluation-and-spectator.md), whose correction line points here).
 
