@@ -2,7 +2,7 @@
 owner: lead
 status: historical
 date: 2026-10-17
-scope: Retired first waypoint slice; passive components and dated evidence only
+scope: Retired first waypoint slice; design rationale and dated evidence only (its components were removed in #289)
 review_trigger: Gameplay interfaces, supported observations, model adapters, budgets or evaluation criteria change
 ---
 
@@ -12,7 +12,7 @@ This page preserves the first-slice design and its dated implementation narrativ
 Its live waypoint/planner ingress has been retired; it is not a supported runtime
 mode. Use [current architecture](../architecture.md) and the
 [current mission contract](../protocol.md#integrated-mission-lifecycle) for operation.
-Passive study components remain current-format libraries.
+Its passive study components were removed with `harness/gameplay/` in #289.
 
 Original design for implementation under [#17](https://github.com/CVX-Hull/enactive/issues/17).
 Typed gameplay/1 records and the passive bounded evidence adapter are implemented
@@ -65,7 +65,7 @@ because an epoch changed. Service/game restart does not resume tasks from a jour
 
 ### Dedicated player sub-agent
 
-![Current mission architecture, which supersedes the first-slice arrangement described below: the dedicated player proposes plans, the service validates and executes, and you retain Pause.](../diagrams/player.svg)
+![Current player architecture, which replaced the first-slice arrangement described below: one player interprets pixels, a mechanical custodian sends basic input, and you retain Pause.](../diagrams/player.svg)
 
 Solid arrows show responsibility and feedback, not independent model tiers.
 [Editable diagram](../diagrams/player.mmd). Current behavior is specified in the
@@ -149,8 +149,8 @@ standard-library typed records for internal data. No generated executable schema
 | `StageResult` | Stage ID/version; disposition `completed`, `blocked`, `interrupted`, `budget_exhausted`, `failed` or `unknown`; verified steps/displacement, evidence references, and pending action ID if any. Progress and disposition are independent fields. |
 | `RunStatus` | Task/plan/stage IDs, execution epoch, state, active model/configuration and skill version, progress, remaining budgets, next check, last public reason, lease ownership/pause/freshness and evidence references. Model timing/cost is additional telemetry, not completion proof. |
 
-Implemented module ownership: `harness/gameplay/contracts.py` and `evidence.py`.
-The bounded injected `planner.py` and passive remaining-route `skills.py` are implemented.
+Module ownership before #289 removed `harness/gameplay/`: `contracts.py` and `evidence.py`.
+The bounded injected `planner.py` and passive remaining-route `skills.py` were implemented.
 The skill proposes/evaluates one step; a new instance derives the remaining route
 from retained settled history. It cannot dispatch or automatically resume.
 See the [current skill contract](../protocol.md#passive-bounded-movement-skills).

@@ -6,12 +6,12 @@ status: active
 
 # Computer control and player ports
 
-This is the current source contract for [#176](https://github.com/CVX-Hull/enactive/issues/176),
+This is the current source contract, delivered by [#176](https://github.com/CVX-Hull/enactive/issues/176)
 with one production backend. [ADR006](../decisions/006-computer-control-boundary.md)
 owns the boundary; the [cutover brief](../changes/071-computer-control-cutover.md)
 retains historical rationale. Native7/mission11 and the prototype are retired
 executable routes. The [production report](../acceptance/2026-10-29-computer-control.md)
-owns scoped actual outcomes; #176 and its linked PR own protected delivery state.
+owns scoped actual outcomes; #176 and its linked PR retain the delivery receipts.
 
 ## Responsibilities and current data
 
@@ -80,6 +80,8 @@ relabelled receipts; remember all prior IDs in a bounded65536-entry set, then st
 | `computer-target/2` | `schema,session,pid,window_id,paused,takeover_generation,latest_frame,error` |
 | Frame | `name,capture_id,presented_ms,width,height,window_width,window_height,viewport`; name is logical `frame-N.png`, never a native filesystem path |
 | `computer-receipt/2` | `schema,id,session,disposition,emitted_events,reason,frame`; disposition delivered/rejected/partial/unknown, emitted0..8, frame null or frame above |
+| `computer-local/1` | Same fields, written by the custodian when the channel refuses publication before any byte is sent: disposition `rejected`, emitted0, frame null ([runtime](../../harness/computer/runtime.py)) |
+| `computer-transport/2` | Same fields, written when native delivery cannot be resolved: disposition `unknown`, `emitted_events` null, frame null ([channel](../../harness/computer/channel.py)); input then stops permanently |
 
 At claim, derive a **single** local monotonic expiry from the original wall expiry,
 capped5s; check it before every command event without renewal. Parent operation/run
@@ -139,7 +141,18 @@ versions fail with a bounded unsupported-result error, never raw pass-through.
 Player-authored text, code, interpretation and state are opaque; keys named
 `remaining` or `requests` inside them are not deleted. Canonical
 `computer-operation/1`, internal HTTP/client errors and operator accounting remain
-unchanged; the actor projection is not a database migration.
+unchanged; the actor projection is not a database migration. An operation's
+`receipts` hold `computer-receipt/2`, `computer-local/1` or `computer-transport/2`
+values (table above).
+
+Internal service envelopes, below the actor projection, are `player-response/1`,
+`player-error/1` and `player-transport/1` ([service](../../harness/server.py),
+[client](../../harness/player_client.py)), plus the per-tool results
+`player-service-result/1`, `player-program-run/1`, `player-source-read/1`,
+`player-query/1` and `player-context/1`. [The actor projection](../../harness/player_view.py)
+is their authority. It maps the internal error and transport envelopes to
+`player-error/2` and `player-transport/2` for the model. These are layer names,
+not older versions of the `/2` envelopes.
 
 `computer-source/1` is immutable: `schema,source_id,session,capture_id,sha256,
 media_type,presented_ms,received_wall,width,height,window_width,window_height,viewport`.

@@ -1,10 +1,16 @@
 ---
 owner: lead
 review_trigger: Monitor implementation, new primary evidence, model or observer changes, active weekly research review
-status: proposed
+status: historical
+date: 2026-11-07
+scope: Research for the never-implemented monitor proposal; rationale only
 ---
 
 # Evidence for outcome monitoring and escalation
+
+**Historical.** The [monitor proposal](design/outcome-monitoring.md) this supported
+was never implemented, and its runtime issues #43 and #44 closed as not planned on
+7 November 2026. The surviving read-only expectation question is #42.
 
 Review cutoff: **2026-10-17**. This focused extension of the
 [tiered-gameplay research](research-tiered-gameplay.md) supports the

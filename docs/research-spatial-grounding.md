@@ -6,8 +6,8 @@ status: active
 
 # Spatial grounding, visual inspection and working state
 
-Research cutoff: **30 October 2026**. This focused review informs
-[#300](https://github.com/CVX-Hull/enactive/issues/300). It extends the
+Research cutoff: **30 October 2026**. This focused review informed
+[#300](https://github.com/CVX-Hull/enactive/issues/300), which tested and rejected one candidate. It extends the
 [context review](research-context-engineering.md), whose earlier source-bound
 measurements are historical. Research is evidence for a candidate, not a guarantee
 of better CDDA play or an instruction to add another model/service.

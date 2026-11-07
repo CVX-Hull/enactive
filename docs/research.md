@@ -49,15 +49,15 @@ The [follow-through comparison](acceptance/2026-10-28-endpoint-gameplay.md) test
 fixed OpenRouter endpoints through actual play, distinguishes cache/stream clocks
 from useful effects, and exposes routine and outcome-accounting failures.
 
-The [October26 context, prompt and ergonomics review](research-context-engineering.md)
+*Historical:* the [October26 context, prompt and ergonomics review](research-context-engineering.md)
 examines the user's fast, less flagship model direction against current primary
 small-model/tool studies, memory/compaction counterexamples, provider contracts
 and actual player host context growth. It prioritizes sufficient current context,
 examples and mechanical authoring ergonomics with recoverable evidence; neither
-more context nor fewer tokens guarantees useful apparent speed. The existing
-Issues own selected experiments, scope and unchanged readiness criteria.
+more context nor fewer tokens guarantees useful apparent speed. It informed #251,
+which closed on 26 October 2026; #164 owns the unchanged readiness criteria.
 
-The [October24 multi-rate review](research-multirate-agents.md) checks fresh
+*Historical:* the [October24 multi-rate review](research-multirate-agents.md) checks fresh
 control/skill and contrary memory evidence against Fresh024. It recommends
 improving routine coverage and off-path candidate authoring within the existing
 player/learner/writer split. It does not prescribe additional model tiers or
@@ -67,11 +67,11 @@ The [October23 executable-policy review](research-executable-policies.md) starts
 with fresh recent searches and cross-checks player-authored scripts, branching
 strategies, online revision and their failure modes against current procedure
 memory. It recommended a bounded executable-artifact path alongside ordinary
-exploration from an advisory Procedure/2 baseline. Current bounded Procedure/3
-execution is described in the [memory component](components/memory-learning.md);
-the research recommendation itself did not implement or qualify it.
+exploration from an advisory Procedure/2 baseline. Current bounded player programs
+(`player-program/2`) are described in the [memory component](components/memory-learning.md);
+the research recommendation itself did not implement or qualify them.
 
-The [October 22 responsive-gameplay update](research-responsive-gameplay.md)
+*Historical:* the [October 22 responsive-gameplay update](research-responsive-gameplay.md)
 cross-checks recent roguelike skills, asynchronous VLA control, context/memory and
 tool ergonomics against prior design and closed host traces. It separates measured
 result/context waste from unknown inference latency, and supports configuration
@@ -104,8 +104,9 @@ The [organic-discovery crosswalk](design/organic-discovery.md#cross-check-agains
 [mixed-input design](design/mixed-input.md) and
 [procedure/reflection boundary](design/procedure-learning.md) already point in
 this direction. Actual campaign002 shows a gap between that intent and execution:
-a zero-input representation error revoked ordinary input. #190 fixes that known
-case; #176 owns the broader whole-loop qualification. Changed labels/layouts or
+a zero-input representation error revoked ordinary input. #190 fixed that known
+case, and #176 delivered the computer-control cutover; whole-loop qualification
+remains open under #145 and #164. Changed labels/layouts or
 behavior after an arbitrary f(T) are nonstationary conditions, not permission to
 reuse stale coordinates or silently replay an uncertain input. Neither passing
 finite perturbation tests nor one seven-day campaign guarantees success against

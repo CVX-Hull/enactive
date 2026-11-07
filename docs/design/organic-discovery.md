@@ -1,10 +1,17 @@
 ---
 owner: lead
 review_trigger: Player action space, procedural learning, evidence or adaptation policy changes
-status: proposed
+status: historical
+date: 2026-11-07
+scope: Pre-cutover proposal written for mission/skill machinery that #289 retired; rationale only
 ---
 
 # Organic discovery and player-learned procedures
+
+**Historical.** This proposal predates the [computer-control boundary](../decisions/006-computer-control-boundary.md).
+Its mission writer, semantic skills and catalogue describe retired machinery. The
+[computer/player contract](../contracts/computer-control.md) owns current player
+memory and `player-program/2` behaviour.
 
 The player should explore through ordinary game interaction, learn from its
 outcomes and increasingly reuse its own abstractions. Higher-level skills save

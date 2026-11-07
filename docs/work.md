@@ -54,7 +54,7 @@ provider failure classes.
 - **Result: day-scale survival is viable through this boundary.** Two of three lineages
   of chained save and reload admissions reached 24 elapsed game hours with the day check
   passed. Both slept through the night in shelter, at 139–146 game seconds per decision
-  against the earlier 28.7.
+  against the earlier 28.7. With three lineages this is a screen, not a qualification.
 - **Lineage 3** ended as Slow at 0.54 h after two custody stops with one cause: a game
   stall longer than the bridge's 5 s input window ([#396](https://github.com/CVX-Hull/enactive/issues/396)).
 - **Spend:** $30.46 of the $150 envelope.
@@ -66,9 +66,9 @@ provider failure classes.
 The production source has the [computer-control boundary](contracts/computer-control.md):
 basic pixels/input, mechanical custody/resources, independent permanent Pause,
 optional player-owned memory/program/context and actor-only handoff.
-[#176](https://github.com/CVX-Hull/enactive/issues/176) owns integrated delivery;
-[#287](https://github.com/CVX-Hull/enactive/issues/287) and
-[#288](https://github.com/CVX-Hull/enactive/issues/288) own its mechanical and
+[#176](https://github.com/CVX-Hull/enactive/issues/176) delivered it on 29 October 2026,
+with [#287](https://github.com/CVX-Hull/enactive/issues/287) and
+[#288](https://github.com/CVX-Hull/enactive/issues/288) for its mechanical and
 playing-system responsibilities. [ADR006](decisions/006-computer-control-boundary.md)
 and the [cutover brief](changes/071-computer-control-cutover.md) retain rationale.
 
@@ -76,8 +76,8 @@ The [production evidence](acceptance/2026-10-29-computer-control.md) consolidate
 actual pointer/text effects, useful stock, image-conditioned scouting, correction,
 fresh succession, deliberate Save/new-child reload and final normal ending.
 The [development record](acceptance/2026-10-29-computer-control-development.md)
-preserves intermediate failures. Protected PR/main receipts and live delivery state
-belong in #176 and its linked PR; this page does not duplicate the tracker.
+preserves intermediate failures. Protected PR/main delivery receipts are in #176
+and its linked PR; this page does not duplicate the tracker.
 Each finite package freezes one player host adapter under the
 [player host contract](contracts/player-host.md); each OpenRouter / DeepSeek Flash1017
 medium package pins its provider. The [recorded endpoint dispositions](acceptance/2026-10-29-computer-control.md#failures-and-endpoint-disposition)
@@ -101,8 +101,8 @@ served 68% from cache under blocks against 0% rolling. Under the Ready rule (blo
 input cost per call ≤ 0.5× rolling) it **failed narrowly** at 0.52× over calls 2–20,
 while passing at 0.44× over calls 12–20. Three frames per call evicts every ~3.3
 calls rather than every 10, so the check proves the mechanism only. Play behaviour with up to 39 frames, residency at game pace and other
-providers remain unmeasured; the next qualification play compares against the
-30-image baseline.
+providers remain unmeasured. The later development runs used a peak of 39 images
+evicted in blocks of 10 ([benchmark](development-runs.md)).
 
 The compact [player guide](player-guide.md#play-from-observed-effects) now emphasizes
 observed effects, quantity/container scope and confirmation focus. The
@@ -133,6 +133,9 @@ agreement; current player selection and all qualification gates remain unchanged
 
 | Evidence | Scope and limitation |
 | --- | --- |
+| [Long-horizon arm](development-runs.md#arm-result) (#382) | GPT-6.1 Terra (a diagnostic route) in chained save/reload admissions: two of three lineages passed a hand-checked 24 h day check. A screen on three lineages, not a qualification; one lineage ended on an input-window stall (#396). |
+| [Evaluator re-score and power check](development-runs.md#evaluator-re-score-and-power-check-383) (#383) | The ADR008 evaluator re-scored all 30 loop runs, with stated differences from the hand tables; its readers were validated on held-out frames with stated gaps. Whole-run survival cannot separate arms at affordable n. |
+| [Development loop](development-runs.md#loop-result-and-next-step) (#372) | Ceiling median 0.59 in-game hours in a 250-decision allowance; three grounding aids rejected (two on that metric, zoom for no uptake). Survival there was bounded by time scale, not isolated as perception. |
 | [Recorded-screen candidate assessment](acceptance/2026-11-05-recorded-player-assessment.md) | Four requests through the unchanged host; both cases narrowly promising, no executed effects. The retreat key opens a movement-mode menu, with Run selection untested. No model ranking, program, survival or cadence qualification. |
 | [Ongoing objective under finite test control](acceptance/2026-11-05-player-test-diagnostic.md) | Two admissions, $1.410764544 combined: first missed operator watch deadline; replacement maintained coverage, acquired a dog whistle, then Alex died. Direct finish/context separation worked; no food/water gain, program, external finish-up, persistence or cadence qualification. |
 | [Player context and testing responsibilities](acceptance/2026-11-05-player-context-audit.md) | Audits the then-main player's complete context construction and retained Alex assignment. Maps experiment quotas and finish-line instructions across prompts, tools and program views; rationale for #359, not evidence that its candidate is accepted. |

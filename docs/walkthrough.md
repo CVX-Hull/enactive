@@ -1,10 +1,18 @@
 ---
 owner: maintainer
-status: active
+status: historical
+date: 2026-11-07
+scope: Pre-#383 spectator walkthrough; Resume, planner and mission-actor panels it names were retired
 review_trigger: Spectator controls, observation authority or first-session workflow changes
 ---
 
 # Understand your first spectator session
+
+**Historical.** This walkthrough describes the spectator before the
+[ADR008 redesign](decisions/008-evaluation-and-spectator.md) and names retired
+Resume, planner and mission-actor panels. Use
+[observer operations](components/observer-operations.md) and
+[start and observe](operations/start-observe.md#start-and-observe) for the current spectator.
 
 This walkthrough explains what to look for. Use [setup](setup.md) for installation
 and [start and observe](operations/start-observe.md#start-and-observe) for the exact launch commands.

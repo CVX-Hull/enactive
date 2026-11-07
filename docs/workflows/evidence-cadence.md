@@ -68,9 +68,10 @@ Retain the starting basis, source/configuration, intent, observations, delivery 
 semantic outcome, costs, interventions and finding disposition in the existing
 admission/ledger/archive/Git/Issues. Show the maintainer a small coverage/findings
 summary with links to those records; do not build a second history or tracker.
-Current normal checkpoint reload is limited to its own mission's proven save.
-[Cross-admission development checkpoint reuse #175](https://github.com/CVX-Hull/enactive/issues/175)
-is proposed work, not permission to restore old authority or roll back a run.
+Continuing across admissions is an ordinary player Load of a game save, as in
+#382's chained lineages. The earlier checkpoint-reuse proposal
+([#175](https://github.com/CVX-Hull/enactive/issues/175)) closed as not planned. Neither
+restores old authority or rolls back a run.
 Source repairs still require closure and a new finite admission; exploratory
 evidence keeps its declared conditions and does not become a fresh assessment.
 

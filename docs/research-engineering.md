@@ -177,7 +177,7 @@ retained privately in `.runtime/research/iteration-design-2026-10-25/` in the pr
 project checkout. PDF layout text/HTML extraction supports the prose used here;
 no equation/table calculation or complete third-party text is republished. Current
 standards/templates apply the adopted decision; Issues own its execution. Revisit
-through the existing #26/#75 triggers on material capacity, queue, model/tool or
+through the existing #26 trigger (#75 closed on 24 October) on material capacity, queue, model/tool or
 validation-cost evidence, without automatically renewing unrelated review dates.
 
 ## Risk, assurance and precise test selection — 2026-10-25
@@ -190,8 +190,8 @@ review or a claim that any selector is state of the art for this project.
 The current [assurance policy](workflows/review.md#risk-based-assurance),
 [CI profiles](workflows/ci-profiles.md#protected-ci-profiles) and
 [test responsibility guide](testing.md) remain authoritative. The
-[proposed pilot #225](https://github.com/CVX-Hull/enactive/issues/225) owns action
-items; this research does not adopt a new selection mechanism or gameplay review.
+[pilot #225](https://github.com/CVX-Hull/enactive/issues/225) (closed 25 October) owned
+its action items; this research does not adopt a new selection mechanism or gameplay review.
 
 ### What the evidence supports
 
