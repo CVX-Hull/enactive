@@ -71,18 +71,36 @@ before telemetry tooling is added.
    - **Control path.** The supervised gateway keeps Pause and the attention checks
      with their current independence and safety checks. It also serves the page's
      origin and static files. Its exit still ends supervision, so it stays minimal.
+     - The check panel shows the frame and status that the checks read.
+     - It takes them only from the custodian's `/api/status` and `/api/source/<id>`.
+     - Its elements keep the identifiers that `tools/campaign_watch_ui.js` reads.
+     - So a viewer outage cannot block a required check.
    - **Viewer.** A separate read-only process outside supervision runs the evaluator
      incrementally over the live run's records and serves the
      [`spectator-view/1`](../contracts/evaluation.md#spectator-view) API. The gateway
      forwards view requests with a short timeout and a size cap.
    - **Failure.** A viewer failure shows "viewer unavailable" on the page. It never
      ends, pauses or gates a run, and Pause never depends on it.
-6. **The old spectator paths are removed together**, per S-MIGRATION:
-   - the Watch/Timeline/Analysis page;
-   - the activity projection;
-   - the recorded investigation export and its contract.
+6. **The old spectator paths are removed together**, per S-MIGRATION, in the same
+   change that ships the replacement page and check panel:
 
-   The redesigned page is built only after the owner approves the UX design.
+   | Producer or consumer | Format | Fate |
+   | --- | --- | --- |
+   | The Watch/Timeline/Analysis page (`web/app.js`, `web/index.html`, `web/investigation*.js`) | — | Replaced |
+   | `web/app.js` timing producer; `witness-summary` in `tools/evaluate.py`, `tools/observer_analysis.py` | `observer-timing/4` | Removed |
+   | `/api/activity` and `/api/investigation` (`harness/server.py`); `harness/observer.py`; the driver's activity hook | `observer-activity/1` | Removed |
+   | `LiveInvestigationView` (`tools/campaign_run.py`), `tools/investigation_live.py`, `tools/investigation.py`, `investigation-export` | `observer-investigation/1` and its contract | Removed |
+   | The passive-spectator section of the computer-control contract | — | Rewritten to the control path |
+
+   The custodian's `/api/status`, `/api/source/<id>` and `/api/pause` stay. The
+   redesigned page is built only after the owner approves the UX design.
+8. **Exact context manifest.** The owner approved this on 6 November 2026.
+   - The host records, for every request, an ordered manifest of what it sent: each
+     part's role and kind, byte size and digest, and image source IDs, kept or omitted.
+     No raw text is stored beyond what is already recorded.
+   - This is a `player-host` telemetry version change under S-MIGRATION.
+   - With it, the context inspector shows exactly what each actor saw. Without it, the
+     view would be a reconstruction.
 7. **Adopt, don't reinvent.** Each capability was assessed on fit, license,
    maintenance, security, offline use and size. The adopted set is below. Custom code
    is limited to the recorded gaps.
@@ -90,28 +108,28 @@ before telemetry tooling is added.
 ## Dependency assessment
 
 Library facts were read from npm, PyPI and project repositories on 6 November 2026.
-Every adopted package is pinned, installed project-locally and recorded with its
-license.
+- The Python packages are pinned in `requirements.in` and the lock.
+- The browser libraries are vendored, with their integrity hashes, when the page is built.
+- Each adopted package gets a license and provenance entry in `NOTICE.md` in the change
+  that adopts it.
 
 | Capability | Adopted | Considered and not adopted | Reason |
 | --- | --- | --- | --- |
 | UI components | **Preact + htm**, vendored ES modules, no build step | Vanilla JS; Lit (Shadow DOM complicates browser tests); Svelte, React + Vite, Solid (build chain); Panel, Dash, Streamlit, NiceGUI, Shiny (heavy server models that still need custom JS for the timeline) | Small (MIT/Apache-2.0), no build tooling for one maintainer, ordinary DOM for browser tests |
-| Charts and timeline | **Apache ECharts** (Apache-2.0), vendored | uPlot plus a custom canvas timeline; Observable Plot; Vega-Lite; Chart.js; vis-timeline; Plotly | One library covers lane timelines (custom series), zoom and brushing, step curves with bands, sparklines and an accessibility description, so no timeline renderer is written. The mockup prototyped the timeline and survival curves with it. |
+| Charts and timeline | **Apache ECharts** (Apache-2.0), vendored | uPlot plus a custom canvas timeline; Observable Plot; Vega-Lite; Chart.js; vis-timeline; Plotly | One library covers lane timelines (custom series), zoom and brushing, step curves with bands, sparklines and an accessibility description, so no timeline renderer is written. The design mockup's timeline, small multiples and survival curves were built with it. |
 | Viewer server | **Starlette + uvicorn** (BSD-3), pinned directly | stdlib `http.server` with hand-written server-sent events; sse-starlette | Already present transitively; static files, streaming and a test client built in |
-| Survival statistics | **numpy + scipy** (BSD) | lifelines (pulls pandas, matplotlib, autograd); statsmodels (adds pandas); scikit-survival (GPL-3.0) | `scipy.stats.ecdf` with censored data, `logrank` and `bootstrap`. Restricted mean survival time is about ten lines (the integral of the Kaplan–Meier step function), checked once against lifelines in a throwaway environment. |
+| Survival statistics | **numpy + scipy** (BSD) | lifelines (pulls pandas, matplotlib, autograd); statsmodels (adds pandas); scikit-survival (GPL-3.0) | `scipy.stats.ecdf` with censored data, `logrank` and `bootstrap`. Restricted mean survival time is about ten lines (the integral of the Kaplan–Meier step function); it is to be checked once against lifelines in a throwaway environment. |
 | Storage | **SQLite** (stdlib) | DuckDB, pyarrow, Polars, pandas | About two million rows at the expected scale; the project already relies on SQLite transactions |
 | Screen reading | **Glyph atlas on Pillow** (custom, recorded gap) | OpenCV matchTemplate; Apple Vision through pyobjc; RapidOCR; Tesseract (system binary); EasyOCR | A fixed bitmap font makes exact glyph lookup lossless and deterministic at about 1 ms per line. Neural OCR is tuned for scene text, is not deterministic across OS versions and costs tens of milliseconds. Colour bars need pixel classes, which OCR does not provide. The atlas is data, so another game re-learns it. |
 | Trace browsing | **None**; the spectator timeline shows requests and tools | Phoenix (Elastic-2.0, 53 dependencies, analytics on by default); Langfuse; Inspect view; MLflow; Weave; Jaeger; Perfetto UI; otel-desktop-viewer; Docent | No tool renders frames or game lanes. A Chrome trace-event export for Perfetto stays an optional later addition. |
 
-Custom scope and retirement triggers:
-- **Glyph reader.**
-  - Replace it if a game binding needs free text the atlas cannot cover.
-  - Then evaluate Apple Vision as an atlas-miss fallback.
-- **Restricted mean.**
-  - Replace it if scipy gains the function.
-- **Viewer proxy in the gateway.**
-  - Bounded forwarding only.
-  - Remove it if the viewer moves to the gateway's origin some other way.
+Custom scope, owner, maintenance cost and retirement trigger:
+
+| Custom code | Owner | Maintenance cost | Retire or replace when |
+| --- | --- | --- | --- |
+| Glyph reader (about 300 lines plus atlas data) | Lead | Relearn the atlas when the game's font, size or UI layout changes; the binding's validation fails closed on a UI hash change | A binding needs free text the atlas cannot cover; then evaluate Apple Vision as an atlas-miss fallback |
+| Restricted mean (about 10 lines) | Lead | None beyond its unit test | scipy gains the function |
+| Gateway forwarding (bounded) | Lead | One route with timeout, size cap and media-type allowlist | The viewer reaches the page origin some other way |
 
 ## Constraints this changes
 
@@ -130,6 +148,9 @@ Custom scope and retirement triggers:
 - The binding validation is CDDA on one Mac. It is not a portability claim.
 - The viewer adds a second local process during supervised runs. Its failure is
   isolated by design and tested by stopping it during a replay.
+- Import-linter covers only the `harness` package. A reference test therefore also
+  checks that the player driver (`tools/campaign_player.py`) and the player host
+  (`tools/player_host/`) never mention the evaluation package or its store path.
 - Deferred until after #382, each in its own issue:
   - intent visibility;
   - a label store;
