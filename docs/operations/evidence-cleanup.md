@@ -29,7 +29,7 @@ names `Cataclysm.app`, `credentials.json`, `.env`, `.venv`, `__pycache__`, `node
 `.DS_Store` and any `*.lock`; refuses links and names a manifest line cannot hold; leaves
 nothing behind if it fails; and only removes write permission. A sealed study is never
 rewritten; removing one is an owner decision, recorded by setting its `availability` to
-`removed` with the reason. `tools/evidence.py verify` runs in the fast checks (file set,
+`removed` and its `removed` field to the date and reason. `tools/evidence.py verify` runs in the fast checks (file set,
 total bytes, no write permission) and the full profile (every hash). A sealed study
 missing from a present store is an error; a fresh clone without the store reports each
 study as not present. The store is the only copy: there is no off-machine backup, and

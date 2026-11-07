@@ -77,6 +77,21 @@ def test_verify_reports_missing_extra_changed_writable_and_tampered_evidence(tmp
     assert verify(full=False, **where)[0] == ['s1: manifest missing or changed since sealing']
 
 
+def test_a_malformed_manifest_is_reported_without_hiding_other_studies(tmp_path):
+    run, _ = sources(tmp_path)
+    where = stores(tmp_path)
+    seal('s1', [('.', run, 'o')], CITED, 'test', **where)
+    seal('s2', [('.', run, 'o')], CITED, 'test', **where)
+    bad = b'0' * 64 + b'  odd\rname\n'
+    (where['manifests'] / 's1.sha256').write_bytes(bad)
+    index = json.loads((where['manifests'] / 'index.json').read_text())
+    index['studies']['s1']['manifest_sha256'] = __import__('hashlib').sha256(bad).hexdigest()
+    (where['manifests'] / 'index.json').write_text(json.dumps(index))
+    errors, notes = verify(full=False, **where)
+    assert errors == ['s1: s1.sha256:1: not a relative shasum line, or a repeated path']
+    assert notes == ['s2: 4 files verified (file set, total bytes, read-only)']
+
+
 def test_a_deleted_study_fails_while_an_absent_store_is_only_a_note(tmp_path):
     run, _ = sources(tmp_path)
     where = stores(tmp_path)
@@ -107,9 +122,11 @@ def test_a_failed_seal_leaves_nothing_and_bad_inputs_are_refused(tmp_path):
         seal('s3', [('.', run, 'o')], CITED, 'test', **where)
     assert not (where['store'] / 's3').exists()
     (run / 'link').unlink()
-    (run / 'bad\\name').write_text('x')
-    with pytest.raises(EvidenceError, match='cannot be written in a shasum manifest'):
-        seal('s4', [('.', run, 'o')], CITED, 'test', **where)
+    for bad in ('bad\\name', 'carriage\rreturn', 'form\x0cfeed', 'line separator'):
+        (run / bad).write_text('x')
+        with pytest.raises(EvidenceError, match='cannot be written in a shasum manifest'):
+            seal('s4', [('.', run, 'o')], CITED, 'test', **where)
+        (run / bad).unlink()
     with pytest.raises(EvidenceError, match='excluded name cannot be a source'):
         seal('s5', [('game', run / 'Cataclysm.app', 'o')], CITED, 'test', **where)
     with pytest.raises(EvidenceError, match='cited records must exist'):

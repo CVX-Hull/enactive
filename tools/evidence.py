@@ -34,7 +34,7 @@ EXCLUDE_NAMES = frozenset({'Cataclysm.app', 'credentials.json', '.env', '.venv',
                            '.DS_Store'})
 EXCLUDE_SUFFIXES = ('.lock',)
 STUDY = re.compile(r'[a-z0-9][a-z0-9-]*')
-LINE = re.compile(r'([0-9a-f]{64})  (\S[^\n\\]*)')
+LINE = re.compile(r'([0-9a-f]{64})  ([^\x00-\x20\x7f\\][^\x00-\x1f\x7f\\]*)')
 
 
 class EvidenceError(ValueError):
@@ -59,7 +59,8 @@ def listing(root: Path) -> list[str]:
             path = Path(directory) / name
             if path.is_symlink() or not (path.is_dir() or path.is_file()):
                 raise EvidenceError(f'{path}: links and special files are not evidence')
-            if '\n' in name or '\\' in name or name != name.lstrip():
+            if (name.splitlines() != [name] or '\\' in name or name != name.lstrip()
+                    or any(ord(character) < 32 or ord(character) == 127 for character in name)):
                 raise EvidenceError(f'{path}: the name cannot be written in a shasum manifest')
         found += [(Path(directory) / name).relative_to(root).as_posix() for name in files]
     return sorted(found)
@@ -77,9 +78,13 @@ def read_index(directory: Path = MANIFESTS) -> dict:
 
 def read_manifest(path: Path) -> dict[str, str]:
     entries = {}
-    for number, line in enumerate(path.read_bytes().decode('utf-8').splitlines(), 1):
+    text = path.read_bytes().decode('utf-8')
+    if text and not text.endswith('\n'):
+        raise EvidenceError(f'{path.name}: does not end with a newline')
+    for number, line in enumerate(text.split('\n')[:-1] if text else [], 1):
         match = LINE.fullmatch(line)
-        if not match or match.group(2) in entries or match.group(2).startswith('/') or '..' in match.group(2).split('/'):
+        if (not match or match.group(2) in entries or match.group(2).startswith('/')
+                or '..' in match.group(2).split('/') or match.group(2).splitlines() != [match.group(2)]):
             raise EvidenceError(f'{path.name}:{number}: not a relative shasum line, or a repeated path')
         entries[match.group(2)] = match.group(1)
     return entries
@@ -189,7 +194,11 @@ def verify(*, full: bool, store: Path = STORE, manifests: Path = MANIFESTS,
         if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != entry['manifest_sha256']:
             errors.append(f'{study}: manifest missing or changed since sealing')
             continue
-        manifest = read_manifest(path)
+        try:
+            manifest = read_manifest(path)
+        except EvidenceError as error:  # one bad manifest must not hide the other studies
+            errors.append(f'{study}: {error}')
+            continue
         target = store / study
         if not store.is_dir():
             notes.append(f'{study}: store not present on this checkout ({entry["files"]} files)')
