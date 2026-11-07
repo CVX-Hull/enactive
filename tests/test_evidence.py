@@ -129,6 +129,14 @@ def test_a_failed_seal_leaves_nothing_and_bad_inputs_are_refused(tmp_path):
         (run / bad).unlink()
     with pytest.raises(EvidenceError, match='excluded name cannot be a source'):
         seal('s5', [('game', run / 'Cataclysm.app', 'o')], CITED, 'test', **where)
+    # Two files into one subdir under different origins would leave the index naming only the last one.
+    with pytest.raises(EvidenceError, match='different origins share this subdir'):
+        seal('s7', [('bridge', run / 'bridge' / 'admissions.json', '.runtime/a.json'),
+                    ('bridge', run / 'a-first-file.sqlite3', '.runtime/b.sqlite3')], CITED, 'test', **where)
+    assert not (where['store'] / 's7').exists()
+    entry = seal('s7', [('bridge', run / 'bridge' / 'admissions.json', '.runtime/run'),
+                        ('bridge', run / 'a-first-file.sqlite3', '.runtime/run')], CITED, 'test', **where)
+    assert entry['sources'] == {'bridge': '.runtime/run'} and entry['files'] == 2
     with pytest.raises(EvidenceError, match='cited records must exist'):
         seal('s6', [('.', run, 'o')], ['docs/none.md'], 'test', **where)
     with pytest.raises(EvidenceError, match='lower-case'):
