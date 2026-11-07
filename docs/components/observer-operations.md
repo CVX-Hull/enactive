@@ -82,8 +82,8 @@ The gateway forwards `GET /api/view/*` to it on its own connection:
   over the cap, returns `502` with `{"error": "Viewer response refused"}`, so HTML or
   script from the viewer is never served;
 - at most eight forwards at once, and the gateway's own headers on every reply;
-- any other failure, including a refused connection, a timeout, a viewer error status
-  or no free forwarding slot, returns `503` with `{"viewer": "unavailable"}`. The page
+- any other failure, including a refused connection, a timeout, a viewer status other
+  than 200, 400, 404, 409 or 413, or no free forwarding slot, returns `503` with `{"viewer": "unavailable"}`. The page
   shows both `502` and `503` as "viewer unavailable".
 
 The viewer's exit is never supervision loss: the guardian, startup wait and cleanup

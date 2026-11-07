@@ -65,7 +65,7 @@ path preserves native fallback rather than declaring success.
 
 ![Current native manual recovery after a permanent stop. The diagram now shows the current recovery; the Resume step this historical design describes was retired.](../diagrams/native-recovery.svg)
 
-The activity and debug branches both return to observation. Neither an answer nor
+In this historical design, the activity and debug branches both returned to observation (the current diagram above no longer shows them). Neither an answer nor
 a dismissal proves task completion. [Editable diagram](../diagrams/native-recovery.mmd).
 
 ## Boundary identity and scope

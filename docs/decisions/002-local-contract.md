@@ -2,15 +2,10 @@
 date: '2026-10-17'
 owner: maintainer
 scope: ADR 002 — Local serialized bridge and small service
-status: superseded
-replacement: docs/contracts/computer-control.md
+status: historical
 ---
 
 # ADR 002 — Local serialized bridge and small service
-
-**Superseded.** The [computer-control contract](../contracts/computer-control.md),
-delivered under [ADR006](006-computer-control-boundary.md), replaced this bridge
-and service with the current native channel.
 
 Owner: maintainer. Status: accepted; reconstructed from the implemented MVP on
 2026-10-17. Review on transport, distribution, dependency or concurrency change.
