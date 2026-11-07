@@ -14,7 +14,7 @@ import pytest
 from starlette.testclient import TestClient
 
 from harness.evaluation.core.pipeline import evaluate
-from harness.evaluation.core.records import open_readonly, read_metadata
+from harness.evaluation.core.records import CORE_VERSION, open_readonly, read_metadata
 from harness.viewer.app import MAX_BYTES, create_app
 from harness.viewer.catalog import API, Catalog
 from harness.viewer.live import LiveEvaluator
@@ -97,7 +97,7 @@ def test_runs_summarise_facts_outcome_and_versions(archive):
     died, lost = rows['base1'], rows['aid2']
     assert died['outcome']['died'] is True and died['outcome']['censor_reason'] == 'died' and died['state'] == 'final'
     assert died['labels'] == dict(arm='base', start='S1', scenario='s', lineage=None, admission=None)
-    assert died['versions'] == dict(core_version=1, binding_id='fake', binding_version=3, state='final', created_wall=1.0)
+    assert died['versions'] == dict(core_version=CORE_VERSION, binding_id='fake', binding_version=3, state='final', created_wall=1.0)
     assert lost['outcome']['censor_reason'] == 'infrastructure' and lost['outcome']['lost'] is True
     assert rows['aid1']['outcome']['censor_reason'] == 'player_stop' or rows['aid1']['outcome']['censor_reason'] is None
     assert died['decisions'] == 13 and died['dollars'] == pytest.approx(0.14)

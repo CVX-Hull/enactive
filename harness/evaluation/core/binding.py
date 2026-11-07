@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal, Protocol, Sequence
+from typing import Literal, Mapping, Protocol, Sequence
 
 MODES = ('in_play', 'menu', 'prompt', 'loading', 'dead', 'unknown')
 THREAT_BUCKETS = ('none', 'low', 'high', 'lethal')
@@ -95,4 +95,10 @@ class Binding(Protocol):
 
     def rung_reached(self, rung: Rung, history: Sequence[FrameReading]) -> int | None:
         """Index into `history` where `rung` is first reached, or None (always None for human rungs)."""
+        ...
+
+    def severe_needs(self, values: Mapping[str, object]) -> list[str] | None:
+        """Needs that fail the lineage day check at one step, from that step's stored reading values
+        (reader name to value, including `core.frame`); an empty list when none is severe, None when
+        the needs are not legible at that step."""
         ...

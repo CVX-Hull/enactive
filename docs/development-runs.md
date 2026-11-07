@@ -267,22 +267,23 @@ are recorded as fixes #378–#380 and the actual-spend admission rule.
 
 ## Evaluator re-score and power check (#383)
 
-The [run evaluator](contracts/evaluation.md) (core 1, CDDA binding 1) re-scored all
+The [run evaluator](contracts/evaluation.md) (core 2, CDDA binding 2) re-scored all
 30 runs from their recorded frames, traces and memory stores. These are new,
 generated rows. The hand-scored tables above are unchanged and remain the record of
 the loop's decisions. Regenerate the table with
 `python -m tools.evaluate evaluate-table .runtime/evaluations`.
 
-**Frozen for #382.** The following are frozen at the #383 merge commit, which each
-admission records as `source_commit`:
-- evaluator core 1 with CDDA binding 1 (`evaluation-record/1`);
+**Frozen for #382.** The following are frozen at the merge commit of the lineage day-check
+change, which each admission records as `source_commit`:
+- evaluator core 2 with CDDA binding 2 (`evaluation-record/1`);
 - the `spectator-view/1` viewer API;
 - the `campaign-watch-start/3` and `campaign-watch-terminal/3` control path;
 - `campaign-run/5` manifests;
 - player-host telemetry v3 with `context-manifest`.
 
 Any change to one of these during #382 starts a new arm. All 30 records above were
-re-scored with the frozen evaluator. The spectator's graphical lane on the final source
+re-scored with the frozen evaluator; core 1 and core 2 give the same table, because core 2
+only adds lineage metrics. The spectator's graphical lane on the final source
 has its own [evidence manifest](acceptance/assets/spectator-383/summary.json): an
 archived run replayed into a copy, checks and Pause kept working after the viewer was
 killed, and the run ended only on the owner's Pause.

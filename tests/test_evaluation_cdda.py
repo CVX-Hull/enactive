@@ -423,7 +423,7 @@ class LadderTests(unittest.TestCase):
 
 class BindingShapeTests(unittest.TestCase):
     def test_identity_and_constants(self):
-        self.assertEqual((BINDING.binding_id, BINDING.binding_version, BINDING.game_time_unit), ('cdda', 1, 'seconds'))
+        self.assertEqual((BINDING.binding_id, BINDING.binding_version, BINDING.game_time_unit), ('cdda', 2, 'seconds'))
         self.assertEqual(BINDING.long_activity_seconds, 900)
         self.assertEqual(BINDING.map_region, (0, 0, 608, 640))
         self.assertTrue({'h', 'j', 'k', 'l', 'y', 'u', 'b', 'n', 'UP', 'DOWN', 'LEFT', 'RIGHT'} <= BINDING.movement_keys)
@@ -432,6 +432,31 @@ class BindingShapeTests(unittest.TestCase):
     def test_every_reading_is_versioned(self):
         for r in read('sidebar_calm').readings:
             self.assertEqual(r.version, rd.READER_VERSION)
+
+
+class DayCheckTests(unittest.TestCase):
+    """The lineage day check uses #382's severe list, narrower than the readers' `critical` flag."""
+
+    def needs(self, thirst='', hunger='', weariness='fresh', critical=False):
+        value = lambda label: dict(label=label, level=0.5, critical=critical)
+        return {'vital.thirst': value(thirst), 'vital.hunger': value(hunger), 'vital.weariness': value(weariness)}
+
+    def test_severe_labels_fail_and_others_pass(self):
+        b = CddaBinding(atlas=Atlas.load())
+        self.assertEqual(b.severe_needs(self.needs()), [])
+        self.assertEqual(b.severe_needs(self.needs(thirst='parched', hunger='famished', weariness='dead tired')),
+            ['thirst: parched', 'hunger: famished', 'weariness: dead tired'])
+        # Severe pain, extreme weariness and red labels are critical to the readers but not in #382's list.
+        values = self.needs(thirst='thirsty', hunger='hungry', weariness='extreme', critical=True)
+        values['vital.pain'] = dict(label='severe pain', level=0.1, critical=True)
+        self.assertEqual(b.severe_needs(values), [])
+
+    def test_needs_not_legible_abstain(self):
+        b = CddaBinding(atlas=Atlas.load())
+        partial = self.needs()
+        del partial['vital.hunger']
+        self.assertIsNone(b.severe_needs(partial))
+        self.assertIsNone(b.severe_needs({}))
 
 
 if __name__ == '__main__':

@@ -16,7 +16,7 @@ import sqlite3
 from typing import Any, Iterable, Sequence
 
 SCHEMA = 'evaluation-record/1'
-CORE_VERSION = 1
+CORE_VERSION = 2
 EVENT_SOURCES = ('harness', 'reader', 'derived', 'player_claim', 'human')
 EVENT_KINDS = ('mode_change', 'long_activity', 'stall', 'ineffective_repeat', 'vital_change', 'threat_change',
     'milestone', 'death', 'handoff', 'memory_write', 'memory_read', 'program_save', 'program_run',

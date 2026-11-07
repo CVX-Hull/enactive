@@ -26,7 +26,8 @@ from .derive import (CORE_READERS, CORE_VERSION, NO_FRAME, READER_CLOCK, READER_
 from .facts import LABEL_KEYS, run_facts
 from .host import host_events, host_facts, seq_resolver
 from .metrics import compute_metrics
-from .lineage import METRIC as LINEAGE_METRIC
+from .lineage import DAY_METRIC, ELAPSED_METRIC, MEMORY_METRIC, METRIC as LINEAGE_METRIC
+LINEAGE_METRICS = (LINEAGE_METRIC, ELAPSED_METRIC, DAY_METRIC, MEMORY_METRIC)
 from .records import EvaluationError, MetricRow, ReadingRow, RecordWriter, StepRow, record_path
 from .sources import ARCHIVE_SCHEMA, RunInputs, archive_labels, read_run, sha256_file
 
@@ -104,7 +105,7 @@ def _derive(writer: RecordWriter, inputs: RunInputs, binding: Binding, facts, ex
     writer.replace_readings(READER_CLOCK, clock)
     writer.set_game_times([(row.seq, row.value) for row in clock])
     writer.replace_events(events)
-    writer.replace_metrics(metrics, keep=(LINEAGE_METRIC,))
+    writer.replace_metrics(metrics, keep=LINEAGE_METRICS)  # stitching owns these; a pass never drops them
     writer.upsert_metrics([MetricRow(LINEAGE_METRIC, 1, [], 0, 0, None)], replace=False)
     return dict(first_in_play_seq=steps[timeline.first_in_play].seq if timeline.first_in_play is not None else None)
 

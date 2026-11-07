@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Sequence
+from typing import Mapping, Sequence
 
 import numpy as np
 from PIL import Image
@@ -11,6 +11,15 @@ from harness.evaluation.cdda import readers as rd
 from harness.evaluation.cdda.atlas import Atlas
 from harness.evaluation.cdda.ladder import LADDER, rung_reached
 from harness.evaluation.core.binding import FrameReading, Reading, Rung, Vital
+
+# #382's "severe" needs for the lineage day check, by need reader. The weariness reader reports the
+# worse of weariness and rest, so its labels include the rest labels. Narrower than the readers'
+# own `critical` flag, which also covers pain, red labels and limbs.
+DAY_CHECK_SEVERE = {
+    'vital.thirst': frozenset({'very thirsty', 'dehydrated', 'parched'}),
+    'vital.hunger': frozenset({'very hungry', 'famished', 'near starving', 'starving'}),
+    'vital.weariness': frozenset({'dead tired', 'exhausted'}),
+}
 
 NEEDS = (('thirst', rd.read_thirst), ('hunger', rd.read_hunger), ('weariness', rd.read_weariness), ('pain', rd.read_pain))
 
@@ -22,7 +31,7 @@ def _reading(name: str, result: rd.Result) -> Reading:
 
 class CddaBinding:
     binding_id = 'cdda'
-    binding_version = 1
+    binding_version = 2
     game_time_unit = 'seconds'
     long_activity_seconds = 900
     # Sleeping or waiting through a night is the longest single legitimate step (about 12 h).
@@ -87,3 +96,12 @@ class CddaBinding:
 
     def rung_reached(self, rung: Rung, history: Sequence[FrameReading]) -> int | None:
         return rung_reached(rung, history)
+
+    def severe_needs(self, values: Mapping[str, object]) -> list[str] | None:
+        """#382's day check: thirst, hunger and rest labels in `DAY_CHECK_SEVERE`; None unless all three are read."""
+        labels = {reader: value.get('label') for reader in DAY_CHECK_SEVERE
+                  for value in [values.get(reader)] if isinstance(value, dict)}
+        if len(labels) != len(DAY_CHECK_SEVERE):
+            return None
+        return [f'{reader.removeprefix("vital.")}: {label}' for reader, label in labels.items()
+                if label in DAY_CHECK_SEVERE[reader]]
