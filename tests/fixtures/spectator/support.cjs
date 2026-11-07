@@ -4,7 +4,8 @@ const path = require('node:path');
 const fs = require('node:fs');
 
 const SERVER = path.join(__dirname, 'server.py');
-const SHOTS = process.env.SPECTATOR_SHOTS || '/private/tmp/claude-501/-Users-shilongdai-Developer-CDDA-Player/67f32725-983a-4997-a335-17325909c74b/scratchpad/web-shots';
+// Screenshots stay project-local and git-ignored unless SPECTATOR_SHOTS names another directory.
+const SHOTS = process.env.SPECTATOR_SHOTS || path.join(__dirname, '..', '..', '..', '.runtime', 'spectator-shots');
 
 function startFixture(attention = 'required') {
   return new Promise((resolve, reject) => {
