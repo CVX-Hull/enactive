@@ -77,14 +77,15 @@ generator refuses to overwrite an existing file or leave the checkout.
 
 ## Waiting on CI
 
-The host-neutral rule is in [development-first delivery](../workflows/development.md#minimum-checks-and-escalation):
-one background `gh pr checks <PR> --watch`, then a wait for the merge. Hosts differ
-only in how a session resumes and what re-invokes it.
+The host-neutral rule is in [minimum checks and escalation](../workflows/development.md#minimum-checks-and-escalation):
+one `gh pr checks <PR> --watch` and pinned auto-merge. Hosts differ only in how a
+session runs the wait and what re-invokes it. Host permission prompts and refusals
+still apply.
 
 | Host | Mechanics |
 | --- | --- |
 | Codex | Run the watch in the turn that waits on CI. |
-| Claude Code | A `/goal` stop check re-runs every time a turn ends, so ending a turn while CI is pending starts a re-prompting loop. Before ending such a turn, start the watch with `run_in_background`; its exit notifies the session once. The owner approved this background watch on 2026-11-07, so a fresh session uses it without asking. In the desktop app, Auto-fix wakes a session only on CI failures, conflicts and review comments, never on success, so a pass needs the watch or auto-merge. |
+| Claude Code | Start the watch with `run_in_background` before ending a turn that waits on CI; its exit notifies the session once. In #383, observed: a `/goal` stop check re-ran each time a turn ended while CI was pending, re-prompting the session every few seconds. In the desktop app, Auto-fix woke the session on CI failures, conflicts and review comments but not on a pass, so a pass relies on the watch or pinned auto-merge. |
 
 ## Per-user activation
 

@@ -58,6 +58,11 @@ still running, queue auto-merge pinned to the validated head (`gh pr merge --aut
 check passes. Agent review stays evidence, not human approval; say so in the pull
 request rather than waiting for one.
 
+**Waiting on CI (owner decision, 7 November 2026).** The lead waits for PR
+validation with one `gh pr checks --watch`, and may run it in the background
+([waiting on CI](operations/coding-agents.md#waiting-on-ci)), instead of re-checking
+by hand. This authorizes the wait only; host tool permissions still apply.
+
 Escalate to the owner only for exceptional situations:
 
 - Irreversible or destructive actions beyond normal history: force-push or deletion

@@ -98,17 +98,18 @@ a development gate; a discovered applicable failure stops affected new inputs fo
 repair. Preserve all prior evidence and costs. Never suppress a failed gate or use
 `--no-verify` as the workflow.
 
-**Waiting for PR validation.** Use one blocking wait, never repeated checks:
-- Start `gh pr checks <PR> --watch` as a background command, followed by a wait for the
-  merge. It reports once, when the checks finish.
-- Once review and the required evidence are complete, the lead may enable squash
-  auto-merge under the standing delegation, so a pass merges with no further round
-  trip. Main protection still requires the passed profile. A failure returns to
-  repair.
+**Waiting for PR validation.** Wait with one `gh pr checks <PR> --watch`, started
+once the checks appear. Never re-check by hand.
+- When only the required check is still running, queue pinned auto-merge as the
+  [standing delegation](../operator-permissions.md#engineering-decision-and-merge-delegation)
+  describes.
+- The watch's exit is then the only wake-up. Confirm the merge once with
+  `gh pr view <PR> --json state`.
+- A failure returns to repair.
 
-A task or goal whose finish line includes CI either ends with that wait running or
-contains it. [Coding-agent hosts](../operations/coding-agents.md#waiting-on-ci) maps
-this to each host's wake-up and stop mechanics.
+A task whose finish line includes CI either ends with that wait running or contains
+it. [Coding-agent hosts](../operations/coding-agents.md#waiting-on-ci) maps how each
+host runs the wait.
 
 Freeze source and declared conditions for EACH finite run, including development.
 A source repair happens only after the deciding actor is quiescent and the owned
