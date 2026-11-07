@@ -13,9 +13,8 @@ inspection. Older closed cases remain optional imports. The shared recorded read
 connects measured intervals, original records and selected verified screenshots,
 while current-target permanent Pause remains outside the inspection state.
 
-The [observer component](../components/observer-operations.md) and
-[investigation contract](../contracts/observer-investigation.md) own current
-behavior. [#295](https://github.com/CVX-Hull/enactive/issues/295) and its PR own
+The [observer component](../components/observer-operations.md) owns current
+behavior; the removed [investigation contract](https://github.com/CVX-Hull/enactive/blob/3a76dd1d76fec8eb9713254b8aa32d519764d620/docs/contracts/observer-investigation.md) is retained in Git history. [#295](https://github.com/CVX-Hull/enactive/issues/295) and its PR own
 delivery state. The [small evidence manifest](assets/investigation-295/summary.json)
 binds original source/receipt hashes, resources, selected assets and the
 [public selected archive](https://github.com/CVX-Hull/enactive/issues/295#issuecomment-6515374811).

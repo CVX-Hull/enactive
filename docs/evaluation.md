@@ -83,40 +83,33 @@ These commands are offline and read-only, writing summaries to stdout:
 ```sh
 .venv/bin/python -m tools.evaluate host-summary .runtime/computer-sessions/SELECTED
 .venv/bin/python -m tools.evaluate control-summary .runtime/computer-sessions/SELECTED
-.venv/bin/python -m tools.evaluate witness-summary .runtime/computer-sessions/SELECTED observer-export.json
 ```
 
 The selected actor traces and current `campaign-run/5` / `campaign-receipt/3`
 sidecars supply scoped provenance. The control reader opens a current
 `computer-session/1` SQLite snapshot read-only, bounded by table/byte/path limits;
-it neither migrates data nor reconstructs authority. `observer-timing/4` exports
-join exact session/source/capture/presentation IDs. Duplicate exports do not create
-new witnesses. DOM replacement is neither physical paint nor model attention;
-missing/invalid clocks and unmatched sources remain explicit. No runtime-wide
+it neither migrates data nor reconstructs authority. The browser page produces no
+timing record: DOM replacement was neither physical paint nor model attention, and the
+browser timing producer and its summary are removed
+([ADR008](decisions/008-evaluation-and-spectator.md)). No runtime-wide
 recursive history scan or legacy executable reader is supported.
 
 ## Investigate a selected interval
 
-The [local investigation procedure](operations/start-observe.md) turns explicitly
-selected closed current cases into a bounded [artifact](contracts/observer-investigation.md).
-Analysis also attaches an on-demand current-session snapshot, labelled by its
-separate producer cutoffs, per-kind retention and unknown live totals. Refresh
-does not manufacture a closure receipt, new observation or automatic outcome.
-The shared live/offline reader exposes interval lanes, exact rows, source pixels,
-usage fields and existing attributed assessments. It does not collect new evidence
-or turn public statements into verified outcomes. Whole-case coverage and omitted
-fields remain visible beside a selected interval.
+The spectator's separate read-only viewer shows a run from the offline evaluator's
+records ([evaluation contract](contracts/evaluation.md)): steps with their original
+frames, tool calls, requests, memory, programs and handoffs, each labelled with its
+source and confidence. Operator steps are in
+[start and observe](operations/start-observe.md). The viewer collects no new evidence,
+captures no pixels and turns no public statement into a verified outcome. Coverage and
+missing readings stay visible beside each value.
 
-Compare request/tool wall unions, overlap and uncovered intervals without adding
-overlapping spans or calling uncovered time idle. Same-domain original durations
-remain separate from the approximate shared wall axis; result/presentation points
-do not imply zero execution time. Kind/text filters narrow exact rows, not timing
-accounting. Program local elapsed time excludes authoring/retrieval/repair unless
-separate retained records establish those costs. Same-version links expose available
-authoring/read/collection spans without treating a later collection as original preparation. A live snapshot's
-added axis tail is unmeasured time, including snapshot preparation, not an inferred
-ongoing request or idle/inference duration. Missing program/error/authoring
-detail limits diagnosis even when child native/source references are available.
+Compare request and tool wall time without adding overlapping spans or calling
+uncovered time idle. Same-domain original durations stay separate from the
+approximate shared wall axis; result and presentation points do not imply zero
+execution time. Program elapsed time excludes authoring, retrieval and repair unless
+separate retained records establish those costs. Missing program, error or authoring
+detail limits diagnosis even when child native and source references are available.
 
 Use the evidence to choose a concrete next gameplay experiment, explicit no-change
 or missing-data decision. A plausible chart pattern is a hypothesis, not an

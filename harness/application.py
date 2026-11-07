@@ -14,7 +14,6 @@ from .computer.runtime import ComputerRuntime
 from .player.contracts import PlayerError
 from .player.memory import Memory
 from .player.programs import ProgramRepository, ProgramRunner
-from .observer import ActivityView
 
 READ_TOOLS = {'computer_result', 'player_source', 'player_memory_read', 'player_memory_query',
               'player_memory_context', 'player_program_read', 'player_result'}
@@ -69,10 +68,6 @@ class Application:
         self.serial = threading.RLock()
         self.host: dict[str, Any] | None = None
         self.claims: list[dict[str, Any]] = []
-        self.activity_view = ActivityView(runtime.session, runtime.store.path)
-        # The custodian may inject a bounded passive snapshot adapter. Actor
-        # services and the independent Pause path never await this work.
-        self.investigation_view = None
 
     def status(self) -> dict[str, Any]:
         return dict(self.runtime.status(), host=copy.deepcopy(self.host), player_claims=copy.deepcopy(self.claims))

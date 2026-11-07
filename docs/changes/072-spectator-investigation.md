@@ -51,7 +51,7 @@ cases; do not grow a private tracing platform. Source history stays in Git.
 ## Frozen implementation interface
 
 The implemented closed artifact and selection shapes now live in the
-[recorded investigation contract](../contracts/observer-investigation.md).
+[recorded investigation contract](https://github.com/CVX-Hull/enactive/blob/3a76dd1d76fec8eb9713254b8aa32d519764d620/docs/contracts/observer-investigation.md) (removed; Git history).
 The producer, worker and shared reader migrate together; this brief retains the
 design rationale and acceptance plan rather than a second schema copy.
 
@@ -89,8 +89,8 @@ Analysis and closed; it remains interrupted evidence. A separately authorized si
 fresh probe selected BaseTen for the next gameplay admission; Fireworks recovered
 after its429 and remains eligible. The issue owns actual finite allowances/accounting.
 
-The current [artifact contract](../contracts/observer-investigation.md#attached-current-session-snapshot)
-owns the exact live envelope/resource interface. A tools-owned injected view runs
+The [artifact contract](https://github.com/CVX-Hull/enactive/blob/3a76dd1d76fec8eb9713254b8aa32d519764d620/docs/contracts/observer-investigation.md#attached-current-session-snapshot)
+(removed; Git history) owned the exact live envelope/resource interface. A tools-owned injected view runs
 one finite credential-free child, reads a coherent read-only DB backup and identical
 newline-complete trace prefixes, and removes its parent's temporary copy. It reuses
 the same projection and validator without inventing a closed receipt or driver.

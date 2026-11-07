@@ -222,7 +222,6 @@
         "tests/test_player_memory.py",
         "tests/test_player_context.py",
         "tests/test_player_programs.py",
-        "tests/test_observer_analysis.py",
         "docs/acceptance/2026-10-29-computer-control-development.md"
       ],
       "failure_response": "Preserve failure output, fix the cause and rerun before claiming portable acceptance.",
