@@ -197,6 +197,8 @@ def cross_check(rows: list[dict], documents: dict[str, tuple[int, ...]] = HAND_T
             else:
                 matched.add((hits[0]['study'], hits[0]['run']))
     covered = {study for studies in documents.values() for study in studies}
+    errors.extend(f'{r["run"]}: study {r["study"]} has no hand-table document in HAND_TABLES'
+                  for r in rows if r['study'] not in covered)
     errors.extend(f'{r["run"]} (study {r["study"]}, label {r["label"]}): no hand-scored row cross-checks it'
                   for r in rows if r['study'] in covered and (r['study'], r['run']) not in matched)
     return errors

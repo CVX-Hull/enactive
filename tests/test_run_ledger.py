@@ -123,6 +123,7 @@ def test_hand_rows_are_cross_checked_against_the_ledger(tmp_path):
     assert any('hand row C1 (232 attempts, $4.10, 1800 s) matches 0 ledger rows' in e for e in errors)
     assert any('aidC1 (study 999, label C1): no hand-scored row' in e for e in errors)
     assert any('hand row Z9 has no ledger row' in e for e in errors)
+    assert cross_check([row(study=397)], {}, tmp_path) == ['lh9a1: study 397 has no hand-table document in HAND_TABLES']
 
 
 def test_tracked_ledger_snapshot_and_generated_tables_are_consistent():
@@ -181,6 +182,11 @@ def test_malformed_markers_fail_before_anything_is_written(tmp_path, capsys, bro
         assert evaluate_main(['evaluate-table', str(snapshot), '--ledger', str(ledger), mode, str(document)]) == 1
         assert 'malformed evaluate-table markers' in capsys.readouterr().err
     assert document.read_text() == broken
+    good = tmp_path / 'good.md'  # a valid document listed first is not written when a later one is malformed
+    good.write_text('<!-- evaluate-table study=999 lineage=L9 core=2 binding=cdda:2 -->\nstale\n<!-- /evaluate-table -->\n')
+    assert evaluate_main(['evaluate-table', str(snapshot), '--ledger', str(ledger), '--write', str(good), str(document)]) == 1
+    assert 'stale' in good.read_text()
+    capsys.readouterr()
     assert has_blocks(broken) and not has_blocks('Inline `<!-- evaluate-table study=N -->` mention.\n')
 
 

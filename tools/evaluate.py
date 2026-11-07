@@ -233,8 +233,9 @@ def block_rows(selector: str, snapshot: list[dict], ledger: list[dict]) -> list[
 
 
 def write_blocks(documents: list[Path], snapshot: list[dict], ledger: list[dict], *, check: bool) -> list[str]:
-    """Regenerate every marked block; with check, report stale blocks instead of writing."""
-    stale = []
+    """Regenerate every marked block; with check, report stale blocks instead of writing. Every document is read,
+    validated and rendered before any is written."""
+    planned = []
     for document in documents:
         text = document.read_text()
         opens, closes = len(LOOSE_OPEN.findall(text)), len(LOOSE_CLOSE.findall(text))
@@ -243,11 +244,11 @@ def write_blocks(documents: list[Path], snapshot: list[dict], ledger: list[dict]
                              f'{len(BLOCK.findall(text))} well-formed blocks); fix the markers by hand')
         fresh = BLOCK.sub(lambda m: m.group(1) + table(block_rows(m.group(2), snapshot, ledger)) + '\n' + m.group(4), text)
         if fresh != text:
-            if check:
-                stale.append(str(document))
-            else:
-                document.write_text(fresh)
-    return stale
+            planned.append((document, fresh))
+    if not check:
+        for document, fresh in planned:
+            document.write_text(fresh)
+    return [str(document) for document, _ in planned] if check else []
 
 
 def evaluate_table(arguments: argparse.Namespace) -> str:
