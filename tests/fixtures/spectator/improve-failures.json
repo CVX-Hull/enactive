@@ -1,0 +1,114 @@
+{
+ "schema": "spectator-view/1",
+ "taxonomy_version": 1,
+ "modes": [
+  {
+   "code": "death",
+   "name": "Death",
+   "occurrences": 2,
+   "runs": 2,
+   "decisions": 250,
+   "dollars": 5.3,
+   "source": "derived",
+   "items": [
+    {
+     "run": "A2",
+     "label": "A2",
+     "seq_start": 150,
+     "seq_end": 160,
+     "decisions": 10,
+     "dollars": 0.3
+    },
+    {
+     "run": "B2",
+     "label": "B2",
+     "seq_start": 80,
+     "seq_end": 90,
+     "decisions": 10,
+     "dollars": 0.2
+    }
+   ]
+  },
+  {
+   "code": "stall",
+   "name": "Out-of-play stall (15 or more decisions)",
+   "occurrences": 3,
+   "runs": 2,
+   "decisions": 71,
+   "dollars": 2.1,
+   "source": "derived",
+   "items": [
+    {
+     "run": "B1",
+     "label": "B1",
+     "seq_start": 20,
+     "seq_end": 51,
+     "decisions": 31,
+     "dollars": 1.0
+    },
+    {
+     "run": "B2",
+     "label": "B2",
+     "seq_start": 30,
+     "seq_end": 57,
+     "decisions": 27,
+     "dollars": 0.8
+    },
+    {
+     "run": "5c7e91d2a4b84f60b3d1e0a9c2f7184d",
+     "label": "T5",
+     "seq_start": 36,
+     "seq_end": 49,
+     "decisions": 14,
+     "dollars": 0.3
+    }
+   ]
+  },
+  {
+   "code": "tool_refused",
+   "name": "Tool call refused",
+   "occurrences": 2,
+   "runs": 2,
+   "decisions": 0,
+   "dollars": 0,
+   "source": "recorded",
+   "items": [
+    {
+     "run": "5c7e91d2a4b84f60b3d1e0a9c2f7184d",
+     "label": "T5",
+     "seq_start": 95,
+     "seq_end": 95,
+     "decisions": 0,
+     "dollars": 0
+    },
+    {
+     "run": "A1",
+     "label": "A1",
+     "seq_start": 12,
+     "seq_end": 12,
+     "decisions": 0,
+     "dollars": 0
+    }
+   ]
+  },
+  {
+   "code": "identity",
+   "name": "Identity or world error carried",
+   "occurrences": 1,
+   "runs": 1,
+   "decisions": 0,
+   "dollars": 0,
+   "source": "human",
+   "items": [
+    {
+     "run": "5c7e91d2a4b84f60b3d1e0a9c2f7184d",
+     "label": "T5",
+     "seq_start": 70,
+     "seq_end": 70,
+     "decisions": 0,
+     "dollars": 0
+    }
+   ]
+  }
+ ]
+}

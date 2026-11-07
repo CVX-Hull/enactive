@@ -1,0 +1,313 @@
+{
+ "schema": "spectator-view/1",
+ "columns": [
+  "run",
+  "label",
+  "arm",
+  "start",
+  "outcome",
+  "reason",
+  "hours",
+  "decisions",
+  "setup",
+  "oop",
+  "stall_longest",
+  "pace",
+  "dollars"
+ ],
+ "rows": [
+  {
+   "run": "5c7e91d2a4b84f60b3d1e0a9c2f7184d",
+   "label": "T5",
+   "arm": "Ceiling",
+   "start": "S1",
+   "outcome": "censored",
+   "reason": null,
+   "hours": 1.93,
+   "decisions": 110,
+   "setup": 17,
+   "oop": 0.29,
+   "stall_longest": 37,
+   "pace": 20,
+   "dollars": 3.13
+  },
+  {
+   "run": "01f3a9f3a9f3a9f3a9f3a9f3a9f3a90d",
+   "label": "A1",
+   "arm": "Ceiling",
+   "start": "S1",
+   "outcome": "censored",
+   "reason": "budget",
+   "hours": 0.52,
+   "decisions": 210,
+   "setup": 9,
+   "oop": 0.21,
+   "stall_longest": 13,
+   "pace": 12,
+   "dollars": 4.1
+  },
+  {
+   "run": "02f3a9f3a9f3a9f3a9f3a9f3a9f3a90d",
+   "label": "A2",
+   "arm": "Ceiling",
+   "start": "S2",
+   "outcome": "died",
+   "reason": "died",
+   "hours": 0.31,
+   "decisions": 160,
+   "setup": 10,
+   "oop": 0.22,
+   "stall_longest": 16,
+   "pace": 13,
+   "dollars": 3.3
+  },
+  {
+   "run": "03f3a9f3a9f3a9f3a9f3a9f3a9f3a90d",
+   "label": "A3",
+   "arm": "Zoom aid",
+   "start": "S1",
+   "outcome": "censored",
+   "reason": "budget",
+   "hours": 0.48,
+   "decisions": 200,
+   "setup": 11,
+   "oop": 0.23,
+   "stall_longest": 19,
+   "pace": 14,
+   "dollars": 4.0
+  },
+  {
+   "run": "04f3a9f3a9f3a9f3a9f3a9f3a9f3a90d",
+   "label": "B1",
+   "arm": "Game-help aid",
+   "start": "S1",
+   "outcome": "censored",
+   "reason": "budget",
+   "hours": 0.5,
+   "decisions": 190,
+   "setup": 12,
+   "oop": 0.24,
+   "stall_longest": 31,
+   "pace": 15,
+   "dollars": 3.8
+  },
+  {
+   "run": "05f3a9f3a9f3a9f3a9f3a9f3a9f3a90d",
+   "label": "B2",
+   "arm": "Game-help aid",
+   "start": "S2",
+   "outcome": "died",
+   "reason": "died",
+   "hours": 0.22,
+   "decisions": 90,
+   "setup": 13,
+   "oop": 0.25,
+   "stall_longest": 27,
+   "pace": 16,
+   "dollars": 2.0
+  },
+  {
+   "run": "06f3a9f3a9f3a9f3a9f3a9f3a9f3a90d",
+   "label": "C1",
+   "arm": "Reflection aid",
+   "start": "S1",
+   "outcome": "censored",
+   "reason": "budget",
+   "hours": 0.61,
+   "decisions": 230,
+   "setup": 14,
+   "oop": 0.26,
+   "stall_longest": 28,
+   "pace": 17,
+   "dollars": 4.6
+  },
+  {
+   "run": "07f3a9f3a9f3a9f3a9f3a9f3a9f3a90d",
+   "label": "C2",
+   "arm": "Reflection aid",
+   "start": "S2",
+   "outcome": "lost",
+   "reason": "infrastructure",
+   "hours": 0.0,
+   "decisions": 30,
+   "setup": 15,
+   "oop": 0.27,
+   "stall_longest": 31,
+   "pace": 18,
+   "dollars": 0.7
+  }
+ ],
+ "stat": {
+  "metric": "hours",
+  "n": 8,
+  "median": 0.48,
+  "q1": 0.31,
+  "q3": 0.55,
+  "ci": [
+   0.31,
+   0.52
+  ],
+  "min_n": 5,
+  "source": "derived"
+ },
+ "before_death": [
+  {
+   "run": "A2",
+   "label": "A2",
+   "start": "S2",
+   "rows": [
+    {
+     "decision": 1,
+     "mode": "in_play",
+     "keys": "LEFT",
+     "threat": null
+    },
+    {
+     "decision": 2,
+     "mode": "in_play",
+     "keys": "LEFT",
+     "threat": null
+    },
+    {
+     "decision": 3,
+     "mode": "in_play",
+     "keys": "LEFT",
+     "threat": null
+    },
+    {
+     "decision": 4,
+     "mode": "in_play",
+     "keys": "LEFT",
+     "threat": null
+    },
+    {
+     "decision": 5,
+     "mode": "in_play",
+     "keys": "LEFT",
+     "threat": null
+    },
+    {
+     "decision": 6,
+     "mode": "in_play",
+     "keys": "LEFT",
+     "threat": null
+    },
+    {
+     "decision": 7,
+     "mode": "in_play",
+     "keys": "LEFT",
+     "threat": null
+    },
+    {
+     "decision": 8,
+     "mode": "in_play",
+     "keys": "LEFT",
+     "threat": null
+    },
+    {
+     "decision": 9,
+     "mode": "in_play",
+     "keys": "LEFT",
+     "threat": "high"
+    },
+    {
+     "decision": 10,
+     "mode": "dead",
+     "keys": "LEFT",
+     "threat": null
+    },
+    {
+     "decision": 11,
+     "mode": "dead",
+     "keys": "LEFT",
+     "threat": null
+    },
+    {
+     "decision": 12,
+     "mode": "dead",
+     "keys": "LEFT",
+     "threat": null
+    }
+   ]
+  },
+  {
+   "run": "B2",
+   "label": "B2",
+   "start": "S2",
+   "rows": [
+    {
+     "decision": 1,
+     "mode": "in_play",
+     "keys": "e",
+     "threat": null
+    },
+    {
+     "decision": 2,
+     "mode": "in_play",
+     "keys": "e",
+     "threat": null
+    },
+    {
+     "decision": 3,
+     "mode": "in_play",
+     "keys": "e",
+     "threat": null
+    },
+    {
+     "decision": 4,
+     "mode": "in_play",
+     "keys": "e",
+     "threat": null
+    },
+    {
+     "decision": 5,
+     "mode": "in_play",
+     "keys": "e",
+     "threat": null
+    },
+    {
+     "decision": 6,
+     "mode": "in_play",
+     "keys": "e",
+     "threat": "lethal"
+    },
+    {
+     "decision": 7,
+     "mode": "menu",
+     "keys": "e",
+     "threat": null
+    },
+    {
+     "decision": 8,
+     "mode": "menu",
+     "keys": "e",
+     "threat": null
+    },
+    {
+     "decision": 9,
+     "mode": "menu",
+     "keys": "e",
+     "threat": null
+    },
+    {
+     "decision": 10,
+     "mode": "menu",
+     "keys": "e",
+     "threat": null
+    },
+    {
+     "decision": 11,
+     "mode": "menu",
+     "keys": "e",
+     "threat": null
+    },
+    {
+     "decision": 12,
+     "mode": "dead",
+     "keys": "e",
+     "threat": null
+    }
+   ]
+  }
+ ]
+}

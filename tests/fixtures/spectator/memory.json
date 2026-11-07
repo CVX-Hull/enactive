@@ -1,0 +1,70 @@
+{
+ "schema": "spectator-view/1",
+ "summary": {
+  "written": 3,
+  "queries": 1,
+  "returned": 0
+ },
+ "records": [
+  {
+   "id": "7b9ba96c",
+   "kind": "knowledge",
+   "chain": "world",
+   "actor": 1,
+   "wall": 1793000698.959,
+   "text": "World: Baytown. Shelter at evac center; water from the sink works.",
+   "sources": [
+    "5c7e91d2a4b84f60b3d1e0a9c2f7184d-60",
+    "5c7e91d2a4b84f60b3d1e0a9c2f7184d-62"
+   ],
+   "supports": [],
+   "supersedes": null,
+   "reads": [],
+   "handoff_carry": true,
+   "audit": {
+    "verdict": "wrong",
+    "note": "world name later corrected to Cedar Butte",
+    "author": "owner"
+   },
+   "source": "player_claim"
+  },
+  {
+   "id": "8a3537c3",
+   "kind": "knowledge",
+   "chain": "needs",
+   "actor": 1,
+   "wall": 1793000396.626,
+   "text": "Thirst appears after about 2 game hours. Drink at the sink before leaving.",
+   "sources": [
+    "5c7e91d2a4b84f60b3d1e0a9c2f7184d-41"
+   ],
+   "supports": [
+    "7b9ba96c"
+   ],
+   "supersedes": null,
+   "reads": [],
+   "handoff_carry": true,
+   "audit": {
+    "verdict": "right",
+    "note": "",
+    "author": "owner"
+   },
+   "source": "player_claim"
+  },
+  {
+   "id": "33e9e04a",
+   "kind": "work_note",
+   "chain": "plan",
+   "actor": 2,
+   "wall": 1793000936.712,
+   "text": "Next: craft a wooden bowl, then collect water.",
+   "sources": [],
+   "supports": [],
+   "supersedes": null,
+   "reads": [],
+   "handoff_carry": false,
+   "audit": null,
+   "source": "player_claim"
+  }
+ ]
+}

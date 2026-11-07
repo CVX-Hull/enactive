@@ -1,0 +1,52 @@
+{
+ "schema": "spectator-view/1",
+ "summary": {
+  "count": 9,
+  "median_resume": 3,
+  "q1": 2,
+  "q3": 5
+ },
+ "handoffs": [
+  {
+   "id": "h-1",
+   "run": "5c7e91d2a4b84f60b3d1e0a9c2f7184d",
+   "label": "T5",
+   "arm": "Ceiling",
+   "at_decision": 71,
+   "position": "after request req-024",
+   "decisions_to_resume": 3,
+   "carry_ratio": 0.082,
+   "predecessor_note": "Work note: world Baytown, shelter found, water at sink.",
+   "carry_text": "Carry to actor 2: you are in the evac center shelter. World: Baytown.",
+   "identity_check": {
+    "verdict": "wrong",
+    "note": "carry repeats Baytown; the later report says Cedar Butte",
+    "source": "human"
+   }
+  },
+  {
+   "id": "h-2",
+   "run": "01f3a9f3a9f3a9f3a9f3a9f3a9f3a90d",
+   "label": "A1",
+   "arm": "Ceiling",
+   "at_decision": 88,
+   "decisions_to_resume": 2,
+   "carry_ratio": 0.05,
+   "predecessor_note": "",
+   "carry_text": "",
+   "identity_check": null
+  },
+  {
+   "id": "h-3",
+   "run": "06f3a9f3a9f3a9f3a9f3a9f3a9f3a90d",
+   "label": "C1",
+   "arm": "Reflection aid",
+   "at_decision": 102,
+   "decisions_to_resume": null,
+   "carry_ratio": null,
+   "predecessor_note": "",
+   "carry_text": "",
+   "identity_check": null
+  }
+ ]
+}

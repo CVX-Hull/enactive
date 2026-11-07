@@ -1,0 +1,245 @@
+{
+ "schema": "spectator-view/1",
+ "runs": [
+  {
+   "run": "5c7e91d2a4b84f60b3d1e0a9c2f7184d",
+   "label": "T5",
+   "state": "live",
+   "arm": "Ceiling",
+   "start": "S1",
+   "hours": 1.93,
+   "died": false,
+   "censor_reason": null,
+   "decisions": 110,
+   "dollars": 3.13,
+   "started_wall": 1792913600.0,
+   "metrics": {
+    "pace": 20,
+    "oop": 0.29000000000000004,
+    "stall_longest": 37,
+    "setup": 17,
+    "mem_w": 2,
+    "mem_r": 1,
+    "handoffs": 1,
+    "refused": 1,
+    "per_dec": 0.0285,
+    "rewrite": 0.67
+   },
+   "versions": {
+    "core": "1",
+    "binding": "cdda 1",
+    "source_commit": "9276672"
+   }
+  },
+  {
+   "run": "01f3a9f3a9f3a9f3a9f3a9f3a9f3a90d",
+   "label": "A1",
+   "state": "final",
+   "arm": "Ceiling",
+   "start": "S1",
+   "hours": 0.52,
+   "died": false,
+   "censor_reason": "budget",
+   "decisions": 210,
+   "dollars": 4.1,
+   "started_wall": 1792222400.0,
+   "metrics": {
+    "pace": 12,
+    "oop": 0.21000000000000002,
+    "stall_longest": 13,
+    "setup": 9,
+    "mem_w": 3,
+    "mem_r": 1,
+    "handoffs": 1,
+    "refused": 1,
+    "per_dec": 0.0195,
+    "rewrite": 0.43000000000000005
+   },
+   "versions": {
+    "core": "1",
+    "binding": "cdda 1",
+    "source_commit": "9276672"
+   }
+  },
+  {
+   "run": "02f3a9f3a9f3a9f3a9f3a9f3a9f3a90d",
+   "label": "A2",
+   "state": "final",
+   "arm": "Ceiling",
+   "start": "S2",
+   "hours": 0.31,
+   "died": true,
+   "censor_reason": "died",
+   "decisions": 160,
+   "dollars": 3.3,
+   "started_wall": 1792308800.0,
+   "metrics": {
+    "pace": 13,
+    "oop": 0.22,
+    "stall_longest": 16,
+    "setup": 10,
+    "mem_w": 4,
+    "mem_r": 0,
+    "handoffs": 0,
+    "refused": 2,
+    "per_dec": 0.0206,
+    "rewrite": 0.46
+   },
+   "versions": {
+    "core": "1",
+    "binding": "cdda 1",
+    "source_commit": "9276672"
+   }
+  },
+  {
+   "run": "03f3a9f3a9f3a9f3a9f3a9f3a9f3a90d",
+   "label": "A3",
+   "state": "final",
+   "arm": "Zoom aid",
+   "start": "S1",
+   "hours": 0.48,
+   "died": false,
+   "censor_reason": "budget",
+   "decisions": 200,
+   "dollars": 4.0,
+   "started_wall": 1792395200.0,
+   "metrics": {
+    "pace": 14,
+    "oop": 0.23,
+    "stall_longest": 19,
+    "setup": 11,
+    "mem_w": 2,
+    "mem_r": 1,
+    "handoffs": 1,
+    "refused": 3,
+    "per_dec": 0.02,
+    "rewrite": 0.49
+   },
+   "versions": {
+    "core": "1",
+    "binding": "cdda 1",
+    "source_commit": "9276672"
+   }
+  },
+  {
+   "run": "04f3a9f3a9f3a9f3a9f3a9f3a9f3a90d",
+   "label": "B1",
+   "state": "final",
+   "arm": "Game-help aid",
+   "start": "S1",
+   "hours": 0.5,
+   "died": false,
+   "censor_reason": "budget",
+   "decisions": 190,
+   "dollars": 3.8,
+   "started_wall": 1792481600.0,
+   "metrics": {
+    "pace": 15,
+    "oop": 0.24000000000000002,
+    "stall_longest": 31,
+    "setup": 12,
+    "mem_w": 3,
+    "mem_r": 0,
+    "handoffs": 0,
+    "refused": 0,
+    "per_dec": 0.02,
+    "rewrite": 0.52
+   },
+   "versions": {
+    "core": "1",
+    "binding": "cdda 1",
+    "source_commit": "41ab9d2"
+   }
+  },
+  {
+   "run": "05f3a9f3a9f3a9f3a9f3a9f3a9f3a90d",
+   "label": "B2",
+   "state": "final",
+   "arm": "Game-help aid",
+   "start": "S2",
+   "hours": 0.22,
+   "died": true,
+   "censor_reason": "died",
+   "decisions": 90,
+   "dollars": 2.0,
+   "started_wall": 1792568000.0,
+   "metrics": {
+    "pace": 16,
+    "oop": 0.25,
+    "stall_longest": 27,
+    "setup": 13,
+    "mem_w": 4,
+    "mem_r": 1,
+    "handoffs": 1,
+    "refused": 1,
+    "per_dec": 0.0222,
+    "rewrite": 0.55
+   },
+   "versions": {
+    "core": "1",
+    "binding": "cdda 1",
+    "source_commit": "41ab9d2"
+   }
+  },
+  {
+   "run": "06f3a9f3a9f3a9f3a9f3a9f3a9f3a90d",
+   "label": "C1",
+   "state": "final",
+   "arm": "Reflection aid",
+   "start": "S1",
+   "hours": 0.61,
+   "died": false,
+   "censor_reason": "budget",
+   "decisions": 230,
+   "dollars": 4.6,
+   "started_wall": 1792654400.0,
+   "metrics": {
+    "pace": 17,
+    "oop": 0.26,
+    "stall_longest": 28,
+    "setup": 14,
+    "mem_w": 2,
+    "mem_r": 0,
+    "handoffs": 0,
+    "refused": 2,
+    "per_dec": 0.02,
+    "rewrite": 0.5800000000000001
+   },
+   "versions": {
+    "core": "1",
+    "binding": "cdda 1",
+    "source_commit": "9276672"
+   }
+  },
+  {
+   "run": "07f3a9f3a9f3a9f3a9f3a9f3a9f3a90d",
+   "label": "C2",
+   "state": "final",
+   "arm": "Reflection aid",
+   "start": "S2",
+   "hours": 0.0,
+   "died": false,
+   "censor_reason": "infrastructure",
+   "decisions": 30,
+   "dollars": 0.7,
+   "started_wall": 1792740800.0,
+   "metrics": {
+    "pace": 18,
+    "oop": 0.27,
+    "stall_longest": 31,
+    "setup": 15,
+    "mem_w": 3,
+    "mem_r": 1,
+    "handoffs": 1,
+    "refused": 3,
+    "per_dec": 0.0233,
+    "rewrite": 0.61
+   },
+   "versions": {
+    "core": "1",
+    "binding": "cdda 1",
+    "source_commit": "9276672"
+   }
+  }
+ ]
+}

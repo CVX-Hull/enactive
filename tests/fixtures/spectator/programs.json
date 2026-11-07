@@ -1,0 +1,43 @@
+{
+ "schema": "spectator-view/1",
+ "summary": {
+  "saved": 1,
+  "runs": 2,
+  "min_sample": 5
+ },
+ "programs": [
+  {
+   "id": "p-9f21",
+   "actor": 1,
+   "parent": null,
+   "source": "player_claim",
+   "doc": {
+    "name": "walk_to_door",
+    "steps": [
+     {
+      "keys": "LEFT",
+      "repeat": 4
+     },
+     {
+      "keys": "UP",
+      "repeat": 2
+     }
+    ]
+   },
+   "runs": [
+    {
+     "status": "completed",
+     "steps": 6,
+     "elapsed_seconds": 5.2,
+     "reason": "arrived at the door"
+    },
+    {
+     "status": "stopped",
+     "steps": 2,
+     "elapsed_seconds": 1.9,
+     "reason": "a creature appeared"
+    }
+   ]
+  }
+ ]
+}

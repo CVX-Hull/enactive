@@ -1,0 +1,143 @@
+{
+ "schema": "spectator-view/1",
+ "tools": [
+  {
+   "tool": "computer_input",
+   "calls": 1320,
+   "runs": 30,
+   "p50_ms": 410,
+   "p95_ms": 960,
+   "refused": 2,
+   "errors": 1,
+   "result_bytes": 1900000
+  },
+  {
+   "tool": "computer_observe",
+   "calls": 310,
+   "runs": 30,
+   "p50_ms": 220,
+   "p95_ms": 600,
+   "refused": 0,
+   "errors": 0,
+   "result_bytes": 120000
+  },
+  {
+   "tool": "computer_result",
+   "calls": 180,
+   "runs": 30,
+   "p50_ms": 90,
+   "p95_ms": 240,
+   "refused": 0,
+   "errors": 0,
+   "result_bytes": 40000
+  },
+  {
+   "tool": "player_source",
+   "calls": 14,
+   "runs": 8,
+   "p50_ms": 130,
+   "p95_ms": 300,
+   "refused": 0,
+   "errors": 0,
+   "result_bytes": 90000
+  },
+  {
+   "tool": "player_memory_append",
+   "calls": 24,
+   "runs": 14,
+   "p50_ms": 40,
+   "p95_ms": 80,
+   "refused": 0,
+   "errors": 0,
+   "result_bytes": 12000
+  },
+  {
+   "tool": "player_memory_query",
+   "calls": 3,
+   "runs": 3,
+   "p50_ms": 35,
+   "p95_ms": 60,
+   "refused": 0,
+   "errors": 0,
+   "result_bytes": 2000
+  },
+  {
+   "tool": "player_program_run",
+   "calls": 2,
+   "runs": 1,
+   "p50_ms": 5200,
+   "p95_ms": 7400,
+   "refused": 0,
+   "errors": 0,
+   "result_bytes": 3000
+  },
+  {
+   "tool": "player_handoff",
+   "calls": 9,
+   "runs": 8,
+   "p50_ms": 60,
+   "p95_ms": 90,
+   "refused": 1,
+   "errors": 0,
+   "result_bytes": 4000
+  },
+  {
+   "tool": "player_finish",
+   "calls": 4,
+   "runs": 4,
+   "p50_ms": 30,
+   "p95_ms": 50,
+   "refused": 0,
+   "errors": 0,
+   "result_bytes": 1000
+  }
+ ],
+ "transitions": [
+  [
+   "computer_input",
+   "computer_input",
+   900
+  ],
+  [
+   "computer_input",
+   "computer_observe",
+   300
+  ],
+  [
+   "computer_input",
+   "computer_result",
+   170
+  ],
+  [
+   "computer_input",
+   "player_source",
+   12
+  ],
+  [
+   "computer_input",
+   "player_memory_append",
+   20
+  ],
+  [
+   "computer_observe",
+   "computer_input",
+   280
+  ],
+  [
+   "computer_result",
+   "computer_input",
+   150
+  ],
+  [
+   "player_source",
+   "computer_input",
+   12
+  ],
+  [
+   "player_memory_append",
+   "computer_input",
+   20
+  ]
+ ],
+ "scope": "all runs"
+}
