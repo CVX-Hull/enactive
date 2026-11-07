@@ -9,7 +9,7 @@ const TOOL_LABELS = {computer_input: 'input', computer_observe: 'observe', compu
   player_memory_append: 'memory write', player_memory_query: 'memory query', player_memory_read: 'memory read', player_memory_context: 'memory bundle',
   player_program_save: 'program save', player_program_run: 'program run', player_handoff: 'handoff', player_finish: 'finish'};
 export const toolLabel = t => TOOL_LABELS[t] || t;
-const GROUPS = {survival: 'Survival', pace: 'Pace and game time', stall: 'Stalls', mode: 'Mode', host: 'Host and spend', input: 'Input', memory: 'Memory',
+const GROUPS = {survival: 'Survival', custody: 'Custody', pace: 'Pace and game time', stall: 'Stalls', mode: 'Mode', host: 'Host and spend', input: 'Input', memory: 'Memory',
   handoff: 'Handoffs', programs: 'Programs', tools: 'Tool calls', needs: 'Needs', lineage: 'Lineage', run: 'Run losses'};
 
 export function SubNav({tabs, base, current, label: aria}) {
@@ -34,7 +34,7 @@ const metricText = m => {
   if (v === null) return m.value === null || (Array.isArray(m.value) && !m.value.length) ? 'none' : compact(m.value);
   return Math.abs(v) >= 100 ? String(Math.round(v)) : trim(+v.toFixed(3));
 };
-const metricNote = m => [m.count !== null && m.count !== undefined ? `n ${trim(m.count)}${m.denominator ? `/${trim(m.denominator)}` : ''}` : '', m.missing ? (typeof m.missing === 'number' ? `${trim(m.missing)} missing` : `missing: ${label(m.missing)}`) : ''].filter(Boolean).join(' · ');
+const metricNote = m => [m.count !== null && m.count !== undefined ? `n ${trim(m.count)}${m.denominator ? `/${trim(m.denominator)}` : ''}` : '', m.missing ? (typeof m.missing === 'number' ? `${trim(m.missing)} missing` : (/missing/i.test(label(m.missing)) ? label(m.missing) : `missing: ${label(m.missing)}`)) : ''].filter(Boolean).join(' · ');
 
 function Overview() {
   const s = store.summary;
@@ -63,7 +63,7 @@ function Overview() {
         <dt>Model · effort</dt><dd>${facts.model || '—'} · ${facts.effort || '—'}</dd>
         <dt>Evaluator</dt><dd>core ${s.versions?.core_version} · ${s.versions?.binding_id} ${s.versions?.binding_version}</dd></dl><//>
     ${[...groups.entries()].map(([name, list]) => html`<${Panel} title=${name} span="s4"><dl class="kv">${list.map(m => html`<dt>${label(m.name.split('.').slice(1).join('.'))}${m.key ? ` · ${m.key}` : ''} <${Pv} source=${m.source} /><${Unvalidated} metric=${m} /></dt>
-      <dd title=${metricNote(m)}>${metricText(m)} <span class="note">${metricNote(m)}</span></dd>`)}</dl><//>`)}
+      <dd title=${metricNote(m)}>${metricText(m)} <span class="note sub">${metricNote(m)}</span></dd>`)}</dl><//>`)}
     <${Panel} title="Findings in this run" note="every row opens its evidence on Supervise · newest first, up to 100" span="s12">
       ${listed.length ? html`<${Table} columns=${[{title: 'Finding', render: f => findingText(f)}, {title: 'When', render: f => (f.wall === null ? '—' : mmss(f.wall - t0))}, {title: 'Step', num: true, render: f => f.seq_start}, {title: 'Source', render: f => html`<${Pv} source=${f.source} />`}]} rows=${listed} />`
         : html`<${Insufficient}>No findings recorded for this run.<//>`}

@@ -95,6 +95,13 @@ test('Diagnose overview: metrics with provenance, n and denominators, reader cov
     'a metric from a reader without a passing validation is labelled');
   assert.ok(await page.$$eval('#app .pv.calc', n => n.length) >= 3);
   assert.equal(await page.$eval('.subnav a[aria-current="page"]', n => n.textContent), 'Overview');
+  // A long count or missing-data note never squeezes a metric name into its value.
+  const squeezed = await page.$$eval('#app dl.kv:not(.wide) dt', ts => ts.map(dt => {
+    const a = dt.getBoundingClientRect(), b = dt.nextElementSibling.getBoundingClientRect();
+    return {name: dt.textContent.trim(), width: a.width, overlap: a.right > b.left + 1};
+  }).filter(r => r.width < 100 || r.overlap));
+  assert.deepEqual(squeezed, []);
+  assert.doesNotMatch(body, /missing: missing/);
 });
 
 test('Diagnose tools: table, transition matrix, filtered calls and the frame a call produced', async () => {
@@ -151,6 +158,9 @@ test('Improve: change cards with verdicts, failure modes ranked deaths first, co
   await go('#improve/components');
   const heads = await page.$$eval('.data thead th', n => n.map(x => x.textContent.replace(/\s+/g, ' ').replace(/n = \d+$/, '').trim()));
   for (const arm of ['ceiling', 'zoom-aid', 'game-help-aid', 'reflection-aid']) assert.ok(heads.includes(arm), `${arm} in ${heads}`);
+  // Every arm is visible at desktop width without scrolling the table sideways.
+  const fit = await page.$eval('.data', t => [t.parentElement.scrollWidth, t.parentElement.clientWidth]);
+  assert.ok(fit[0] <= fit[1], `components table ${fit[0]} px overflows its ${fit[1]} px panel`);
   assert.match(await text('#app'), /Excluded: \S+/);
 });
 

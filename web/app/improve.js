@@ -83,6 +83,6 @@ function Components() {
   return html`<${Panel} title="Components by arm" note="median [interquartile range] · n = scored runs · lost runs excluded and listed · no thresholds until each has a stated source" span="s12">
     <div class="scroll"><table class="data"><thead><tr><th>Metric</th>${arms.map(a => html`<th class="num">${a}<br /><span class="note">n = ${inArm(a).length}</span></th>`)}</tr></thead>
       <tbody>${COMPONENT_METRICS.map(([name, key, kind]) => html`<tr><td>${name}</td>${arms.map(a => { const v = inArm(a).map(r => r.headline[key]);
-        return html`<td class="num">${fmt(median(v), kind)} <span class="note">[${fmt(quantile(v, 0.25), kind)}–${fmt(quantile(v, 0.75), kind)}]</span></td>`; })}</tr>`)}</tbody></table></div>
+        return html`<td class="num">${fmt(median(v), kind)}<br /><span class="note">[${fmt(quantile(v, 0.25), kind)}–${fmt(quantile(v, 0.75), kind)}]</span></td>`; })}</tr>`)}</tbody></table></div>
     <p class="note"><${Pv} source="derived" detail="computed in this page from the viewer's per-run headline metrics" /> Arms ran one after another, so differences mix the arm with run order, code fixes and provider drift. Read this table as exploratory unless a change page pre-registered the metric. Excluded: ${lost.join(', ') || 'none'}.</p><//>`;
 }

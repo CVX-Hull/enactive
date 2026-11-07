@@ -133,8 +133,9 @@ main > div { display: grid; gap: 16px; }
 .frame img { display: block; width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
 .frame .src { position: absolute; left: 8px; bottom: 8px; font: 600 .68rem var(--mono); background: rgba(0, 0, 0, .6); color: #fff; padding: 4px 6px; border-radius: 4px; max-width: calc(100% - 16px); }
 .frame-empty { display: grid; place-items: center; height: 100%; color: var(--muted); }
-.kv { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 5px 14px; font-size: .86rem; align-items: baseline; margin: 0; }
+.kv { display: grid; grid-template-columns: minmax(8em, 1fr) minmax(0, auto); gap: 5px 14px; font-size: .86rem; align-items: baseline; margin: 0; }
 .kv dt { color: var(--muted); }
+.kv dd .sub { display: block; }
 .kv dd { margin: 0; font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; overflow-wrap: anywhere; }
 .kv.wide { grid-template-columns: minmax(0, .5fr) minmax(0, 1fr); }
 .kv.wide dd { font-family: var(--body); text-align: left; }
