@@ -34,14 +34,15 @@ for a capability baseline.
   ([#396](https://github.com/CVX-Hull/enactive/issues/396)).
 
 The seven-day attempt is [#397](https://github.com/CVX-Hull/enactive/issues/397), a
-development run that informs #145 and #164. It waits on the input bridge's post-key-down
-bound ([#396](https://github.com/CVX-Hull/enactive/issues/396)). ADR008's follow-ons wait
-for that run's evidence: intent visibility
+development run that informs #145 and #164; the input-bridge change for the stall is
+[#396](https://github.com/CVX-Hull/enactive/issues/396). Most of ADR008's follow-ons take
+their trigger from that run's evidence: intent visibility
 ([#384](https://github.com/CVX-Hull/enactive/issues/384)), label writing
-([#385](https://github.com/CVX-Hull/enactive/issues/385)), judges
-([#386](https://github.com/CVX-Hull/enactive/issues/386)), a cross-run channel
+([#385](https://github.com/CVX-Hull/enactive/issues/385)), a cross-run channel
 ([#387](https://github.com/CVX-Hull/enactive/issues/387)) and a scenario bank
-([#388](https://github.com/CVX-Hull/enactive/issues/388)).
+([#388](https://github.com/CVX-Hull/enactive/issues/388)). Judges
+([#386](https://github.com/CVX-Hull/enactive/issues/386)) wait for a process metric the
+readers cannot score.
 
 ## Current integrated checkpoint
 
