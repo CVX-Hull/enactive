@@ -20,10 +20,10 @@ from .binding import DEATH_CAUSES, Binding, FrameReading, Reading, Vital
 from .records import CORE_VERSION, EvaluationError, EventRow, ReadingRow, StepRow
 from .sources import Operation
 
-READER_FRAME = 'frame'
-READER_INPUT = 'input'
-READER_CLOCK = 'game_time'
-READER_MAP = 'map_change'
+READER_FRAME = 'core.frame'
+READER_INPUT = 'core.input'
+READER_CLOCK = 'core.game_time'
+READER_MAP = 'core.map_change'
 CORE_READERS = (READER_FRAME, READER_INPUT, READER_CLOCK, READER_MAP)
 
 STALL_DECISIONS = 15

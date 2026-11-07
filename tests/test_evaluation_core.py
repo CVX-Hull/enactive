@@ -492,7 +492,7 @@ def test_implausible_jump_is_marked_in_the_record(tmp_path):
         return directory
     path = run_and_evaluate(tmp_path, build)
     connection = open_readonly(path)
-    clock = {r.seq: r for r in read_readings(connection) if r.reader == 'game_time'}
+    clock = {r.seq: r for r in read_readings(connection) if r.reader == 'core.game_time'}
     assert clock[3].abstain == 'implausible_jump' and clock[3].value is None
     assert [r.value for r in clock.values()] == [3600, 3660, None, 3720, 3780]
     assert [s.game_time for s in read_steps(connection)] == [3600, 3660, None, 3720, 3780]
@@ -717,8 +717,8 @@ def test_every_metric_row_is_present_with_count_and_denominator(tmp_path):
         'host.large_rewrite_share', 'host.latency', 'host.retry_share', 'needs.severe_share', 'ladder.reached',
         'lineage.continuity'}
     assert expected <= set(metrics)
-    assert {n for n in metrics if n.startswith('reader.coverage.')} >= {'reader.coverage.frame', 'reader.coverage.clock',
-        'reader.coverage.mode', 'reader.coverage.game_time', 'reader.coverage.map_change'}
+    assert {n for n in metrics if n.startswith('reader.coverage.')} >= {'reader.coverage.core.frame', 'reader.coverage.clock',
+        'reader.coverage.mode', 'reader.coverage.core.game_time', 'reader.coverage.core.map_change'}
     assert all(row.version == 1 for row in metrics.values())
 
 
@@ -799,7 +799,7 @@ def test_abstentions_and_missing_captures_are_excluded_and_counted(tmp_path):
     assert (rate.count, rate.denominator) == (2, 5) and rate.value['value'] == pytest.approx(0.4)
     per = metrics['host.dollars_per_decision']
     assert per.missing == 'missing_usage_excluded' and per.value['excluded'] == 1
-    coverage = metrics['reader.coverage.frame']
+    coverage = metrics['reader.coverage.core.frame']
     assert coverage.denominator == 6 and coverage.count == 6  # six captures; the unknown frame is still a legible frame
     assert metrics['reader.coverage.clock'].count == 5  # the unknown-mode frame carries no time
     assert metrics['input.uncertain_deliveries'].value == dict(value=2, uncertain_receipts=1, runs_ended=1)
@@ -1009,7 +1009,7 @@ def test_a_corrupt_frame_abstains_instead_of_being_read(tmp_path):
     victim.write_bytes(b'not the original bytes')
     path = evaluate(directory, FakeBinding(), tmp_path / 'e', created_wall=1.0)
     connection = open_readonly(path)
-    frames = {r.seq: r for r in read_readings(connection) if r.reader == 'frame'}
+    frames = {r.seq: r for r in read_readings(connection) if r.reader == 'core.frame'}
     assert frames[4].abstain == 'frame_integrity' and frames[4].value is None
     assert sum(1 for r in frames.values() if r.abstain) == 1
     connection.close()
@@ -1020,7 +1020,7 @@ def test_binding_reader_names_cannot_shadow_core_readers(tmp_path):
         def read_frame(self, png):
             frame = super().read_frame(png)
             return FrameReading(frame.mode, frame.game_time, frame.identity, frame.vitals, frame.threat,
-                frame.threat_count, frame.death, (Reading('frame', 1, 1, 1.0),))
+                frame.threat_count, frame.death, (Reading('core.frame', 1, 1, 1.0),))
     directory = main_scenario(tmp_path / 'run')
     with pytest.raises(EvaluationError, match='core reader name'):
         evaluate(directory, Greedy(), tmp_path / 'e')

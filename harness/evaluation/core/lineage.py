@@ -39,7 +39,7 @@ def summarise(record: Path) -> Admission:
         if unit is None:
             raise EvaluationError(f'{record}: unsupported game time unit {metadata.get("game_time_unit")!r}')
         rows = connection.execute('SELECT s.seq,s.game_time,r.value FROM steps s LEFT JOIN readings r '
-            "ON r.seq=s.seq AND r.reader='frame' ORDER BY s.seq").fetchall()
+            "ON r.seq=s.seq AND r.reader='core.frame' ORDER BY s.seq").fetchall()
     finally:
         connection.close()
     times = [(seq, t * unit) for seq, t, _ in rows if t is not None]
