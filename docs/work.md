@@ -105,7 +105,7 @@ not qualify parent cadence, learning or survival.
 The agreed [player-objective and external-test-control rationale](changes/073-player-objective-and-test-control.md)
 links the context audit to [#359](https://github.com/CVX-Hull/enactive/issues/359).
 [PR #360](https://github.com/CVX-Hull/enactive/pull/360) delivered `player-host/3`,
-projected actor results, fresh `player-memory/2` and `campaign-run/5` on main;
+projected actor results, fresh `player-memory/2` and `campaign-run/4` on main;
 the [actual-main full controller](https://github.com/CVX-Hull/enactive/actions/runs/42037235120)
 passed on `faa5256f6a215d0e0565233d5f9f485409a8df22`. This is source delivery,
 not a cohort qualification. Completed [#361](https://github.com/CVX-Hull/enactive/issues/361)
