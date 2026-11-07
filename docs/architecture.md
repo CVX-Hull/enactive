@@ -47,10 +47,11 @@ The source modules are [launch](../harness/computer/launch.py),
 [channel](../harness/computer/channel.py), [runtime](../harness/computer/runtime.py)
 and [store](../harness/computer/store.py).
 
-The loopback [HTTP server](../harness/server.py) exposes passive spectator reads,
-independent Pause and authenticated per-actor tools. The bounded
-[activity projection](../harness/observer.py) reuses original host events and a
-separate read-only computer snapshot; it owns no executor or durable journal.
+The loopback [HTTP server](../harness/server.py) exposes passive status and
+source reads, independent Pause and authenticated per-actor tools; it serves no
+page. Under supervision the [gateway](../tools/campaign_watch.py) serves the page and
+forwards view reads to a separate read-only viewer
+([observer operations](components/observer-operations.md)).
 The [application](../harness/application.py)
 composes the computer port with optional player memory/program services. A
 project-local stdio MCP adapter owns no writer, native child or provider key.

@@ -11,56 +11,36 @@ current launch command is the [finite campaign custodian](campaign-run.md), whic
 validates `campaign-run/5` before effects. Do not invoke old controller, mission or
 experimental proof commands or launch an unprepared/fullscreen application.
 
-For a development run (`--attention best-effort`) or a frozen test that requires
-45-second operator checks (`--attention required`), follow
-[finite-test supervision](campaign-supervision.md) and use its printed gateway
-URL. Normal spectator and Pause ownership remain bound to the selected custodian.
+Observe a run through [finite-test supervision](campaign-supervision.md): choose
+`--attention best-effort` for a development run, or `--attention required` for a frozen
+test that needs 45-second operator checks, and open its printed gateway URL. The
+gateway serves the page, relays the custodian's status and source reads and owns
+Pause; the custodian serves no page of its own.
 
 1. Finish [local setup](../setup.md), retain native/app/adapter bytes and source provenance.
 2. Select normal project-local CDDA input options before freezing; mouse is enabled and fullscreen disabled. The primitive layer does not override settings.
 3. Freeze the exact clean source, native/adapter/initial-config hashes, target argv/cwd/environment, player host argv, route/context/prompt and original limits in a fresh `.runtime/computer-sessions/` package.
-4. Launch only that selected package through `tools/campaign_run.py --run`.
-5. Read its `ready.json` for the selected loopback viewer URL. Inspect actual images and status, including original remaining resources and uncertainty.
+4. Launch only that selected package through supervision, which starts the custodian
+   (`tools/campaign_run.py --run`), the gateway, keep-awake and the viewer.
+5. Open the printed gateway URL. Inspect actual images and status, including original
+   remaining resources and uncertainty.
 
-Use Watch for current pixels and fallible public statements. After looking away,
-read its "arrived while this page was hidden" count, then mark it seen. An identical
-image after an input is a valid capture, not a failure. In Timeline, select
-recorded activity to inspect its explicit request/operation/source links; inspection
-stays frozen while play continues. Follow latest returns to the current tail.
-Search/filter applies only to retained rows. Collapsible groups use explicit
-actor/request or operation references; nearby coverage discloses omissions.
-Compare the recorded session with the persistent current control target: Pause
-stops the custodian receiving it even during historical inspection. A fresh
-admission after permanent Pause is separate custody, not Resume. Only one previous
-activity snapshot is retained; reload discards client history. See the
-[observer component](../components/observer-operations.md) for coverage and failure
-limits. Local timing downloads measure DOM replacement, not physical paint or
-useful progress, and should be retained project-locally with the selected evidence.
+**Control.** The page shows the current captured image and the custodian's status.
+Pause, with a reason (loop, fault, spend or other), stops the custodian receiving it,
+even while you inspect the viewer. A fresh admission after permanent Pause is
+separate custody, not Resume. An identical image after an input is a valid capture,
+not a failure. See the [observer component](../components/observer-operations.md)
+for the control path and its limits.
 
-Open **Analysis** to attach the current session automatically. Its as-of snapshot
-stays stable while you investigate; **Refresh current session** reads a fresh bounded
-snapshot of existing records. Coverage names producer cutoffs, omissions and unknown
-live accounting. A failed refresh retains the previous recorded evidence. A new
-serving target updates the control bar but does not overwrite inspection; explicitly
-attach it when ready. Snapshot work cannot capture pixels or change custody/Pause.
-
-For optional closed-case investigation, create a private `investigation-selection/1` JSON
-with 1–4 explicit case directories, selected original source IDs, optional timing
-exports and existing attributed assessments. Its exact shape and limits are in
-the [artifact contract](../contracts/observer-investigation.md). Export once:
-
-```sh
-.venv/bin/python -m tools.evaluate investigation-export selection.json --output investigation.json --html investigation.html
-```
-
-Outputs must be fresh paths. Import the JSON through **Analysis → Import recorded
-bundle**, select a case and whole case/interval, then follow exact record links to
-original images. Coverage explains unavailable bytes and omitted fields; a missing
-image is never replaced with latest pixels. Assessments are fallible attributed
-interpretation, separate from measurements and player claims. The current control
-bar still targets the live custodian while you inspect recorded evidence.
-Open the optional HTML for the same reader without a live session; it is recorded
-evidence only and cannot Pause, replay or resume input. File import remains local.
+**Viewer.** The supervisor also starts the read-only viewer as a separate process,
+outside supervision, and stops it with the other children. It shows the evaluator's
+interpretation of the live run and of archived runs when you pass
+`--runs DIR` to supervision, each reading labelled with its source and confidence
+([contract](../contracts/evaluation.md#spectator-view-api-spectator-view1)). Its
+displays inform you and gate nothing; the Pause conditions it computes are advice.
+If the page says **viewer unavailable**, the run, the required checks, the frame and
+Pause are unaffected. Read the run directory's `viewer-stderr.txt` for the cause. The
+viewer is not restarted during a run.
 
 The custodian reserves `started.json` before DB/native creation, owns one native
 process group and passes the exact inherited lock/socket. A partial/used package
