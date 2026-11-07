@@ -54,5 +54,19 @@
     "guards": [{"name": "survival.game_hours", "key": ""}, {"name": "memory.reads", "key": ""}],
     "verdict": "untested",
     "notes": "Advice records were carried into each admission, but whether the player followed them cannot be measured without the player stating its intent, which is deferred until after #382."
+  },
+  {
+    "id": "long-horizon",
+    "name": "Long-horizon lineages (#382)",
+    "arms": ["lh*"],
+    "baseline": ["ceil01", "ceil02", "ceil04", "ceil05", "ceil07", "ceil09"],
+    "commits": [],
+    "hypothesis": "Given enough decisions to reach a game day through chained save and reload admissions, the player passes more of its game time in long activities (sleep, waiting, travel or crafting) than within a 250-decision allowance.",
+    "target_failure": "time_scale",
+    "target_metric": {"name": "lineage.elapsed", "key": "", "direction": "higher", "min_effect": 0.1},
+    "uptake_metric": {"name": "pace.long_activities", "key": "", "definition": "Long activities (single stretches of 15 game minutes or more) per admission"},
+    "guards": [{"name": "survival.game_hours", "key": ""}, {"name": "host.dollars_per_decision", "key": ""}],
+    "verdict": "untested",
+    "notes": "Pre-registered on 7 November 2026, before admission 1 (owner decision D5). Measure: each lineage's lineage.elapsed long_activity_share (long-activity hours divided by lineage elapsed hours). Comparator: the six no-aid S1 runs' per-run share, pace.long_activities total_game_seconds divided by survival seconds, which is 0, 0.911, 0, 0, 0 and 0.790 (mean 0.284; pooled 0.732, dominated by ceil02). Expected direction: the median lineage share exceeds the comparator mean by at least 0.1. Descriptive, with no power claim: n is three lineages against six runs, and the comparator's long activities come from two runs. The viewer cannot read a share from the lineage.elapsed object, so the lead computes it. time_scale names the loop's finding that survival is bounded by time scale; it is not a taxonomy failure code."
   }
 ]

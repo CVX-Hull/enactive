@@ -45,6 +45,15 @@ their `ceiling_usd` worst-case guard, and D2 is enforced on actual
 provider-reported spend: the lead admits a run only while actual new spend plus
 twice the largest single run so far stays within $150.
 
+**Long-horizon envelope (owner decision D1 of [#382](https://github.com/CVX-Hull/enactive/issues/382), 7 November 2026).**
+The long-horizon arm in the [development run table](development-runs.md#long-horizon-arm-382)
+gets a new $150 envelope under the same actual-spend admission rule: the lead admits an
+admission only while the arm's actual new spend plus twice its largest single admission
+so far stays within $150. The arm starts from the loop's cumulative actual
+$346.948934979, so the cumulative cap is about $497 within the standing $1,000.
+Packages keep the standing $1,000 as their `ceiling_usd` worst-case guard. Stop and ask
+the owner when the envelope is reached.
+
 ## Engineering decision and merge delegation
 
 The owner is not a routine gate. The lead carries ordinary engineering work through
