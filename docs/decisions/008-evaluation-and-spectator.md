@@ -98,7 +98,9 @@ before telemetry tooling is added.
    - The host records, for every request, an ordered manifest of what it sent: each
      part's role and kind, byte size and digest, and image source IDs, kept or omitted.
      No raw text is stored beyond what is already recorded.
-   - This is a `player-host` telemetry version change under S-MIGRATION.
+   - It is an additive `context-manifest` event within `player-host` telemetry version 3, absent
+     from traces recorded before 6 November 2026. A version bump would have made every archived
+     trace unreadable under S-MIGRATION, including the 30 runs this work re-scores.
    - With it, the context inspector shows exactly what each actor saw. Without it, the
      view would be a reconstruction.
 7. **Adopt, don't reinvent.** Each capability was assessed on fit, license,
