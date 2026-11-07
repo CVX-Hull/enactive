@@ -47,6 +47,16 @@ class HostAnalysisTests(unittest.TestCase):
         self.assertEqual(row["timing_ms"]["first_reasoning"]["n"], 0)
         self.assertEqual(row["pending_tools"], 0)
 
+    def test_context_manifest_is_not_a_request_or_an_attempt(self):
+        e = self.event
+        events = [e("host-start", 0), e("request-start", 10, request_id="r1"),
+            e("context-manifest", 11, request_id="r1", base_request_id=None, reused_prefix_parts=0, part_count=0, parts=[]),
+            e("request-fetch-start", 12, request_id="r1"),
+            e("response-complete", 20, request_id="r1", stop_reason="stop", usage_available=False), e("settled", 30)]
+        row = analyze_trace(self.trace(events))
+        self.assertEqual(row["http_attempts_observed"], 1)
+        self.assertEqual(row["counts"]["context-manifest"], 1)
+
     def test_actor_directory_selects_current_trace_and_explicit_duplicates_refuse(self):
         path = self.trace([self.event("host-start", 0)], "host.jsonl")
         self.assertEqual(discover([self.root]), [path.resolve()])
@@ -187,7 +197,7 @@ class HostAnalysisTests(unittest.TestCase):
         actor.mkdir(parents=True)
         path = actor / "host.jsonl"
         path.write_text(json.dumps(self.event("host-start", 0)) + "\n")
-        (self.root / "manifest.json").write_text(json.dumps(dict(schema="campaign-run/4", source_commit="abc")))
+        (self.root / "manifest.json").write_text(json.dumps(dict(schema="campaign-run/5", source_commit="abc")))
         receipt = dict(schema="campaign-receipt/3", outcome="player_task_complete_unassessed",
             normal_save_claimed_by_harness=False, driver=dict(schema="player-driver/3", attempts_charged=1))
         (self.root / "receipt.json").write_text(json.dumps(receipt))

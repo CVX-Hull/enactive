@@ -87,7 +87,7 @@ The [architecture](architecture.md) explains ownership, the
 | Player services | Actual image-conditioned scouting, failed/revised programs, source-backed correction and successor application are demonstrated. This is functional utility, not a safe-navigation or learning-benefit guarantee. |
 | Player context | The [observed-effects workflow](player-guide.md#play-from-observed-effects) was refined through [actual care, food use and historical-claim reconciliation](acceptance/2026-10-29-player-context.md). The [unchanged-guide continuation study](acceptance/2026-10-30-observed-effects.md) found limited exploration/corrections but no retained new supplies or needs improvement; spatial and search claims still exceeded the evidence. The [spatial-grounding study](acceptance/2026-10-30-spatial-grounding.md) tested and rejected a reference-frame context addition; current guidance was restored. No causal prompt benefit or general reliability is qualified. |
 | Actor replacement | Actual old host/MCP quiescence and immutable context preceded a fresh successor under original limits. No game menu, save or identity condition grants authority. |
-| Spectator | Watch and recent Timeline connect fallible statements to original evidence. [Analysis](acceptance/2026-10-30-spectator-investigation.md) automatically attaches a current-session snapshot and supports selected recorded interval/program/source inspection, with independent current-target Pause. Broad archival queries, causal diagnosis and human-usability efficacy remain unqualified. |
+| Spectator | The [redesigned spectator](components/observer-operations.md) separates a supervised control path (frame, attention checks, Pause with a recorded reason) from a read-only viewer of the [run evaluator](contracts/evaluation.md). It shows whether anything warrants a Pause, drills from every number to its instances, and tracks changes, failure modes and cross-run comparisons with provenance on every value. Reader accuracy is validated on held-out frames; night and day-rollover readings, creature counting and death recall are not yet. Human-usability efficacy remains unqualified. |
 | Earlier CDDA play | [Organic corrected-program play](acceptance/2026-10-28-organic-play.md), [endpoint comparison](acceptance/2026-10-28-endpoint-gameplay.md) and [computer proof](acceptance/2026-10-29-basic-computer-control.md) retain their tested source/route and failures. They do not qualify this production boundary. |
 | Remaining outcomes | Useful apparent cadence, causal learning benefit, independent seven-day survival, second-game control, broader geometry, Unicode/IME and actual-human takeover qualification remain open. |
 
@@ -130,6 +130,10 @@ next step is a long-horizon arm tracking game seconds per decision. It needs a n
 spend envelope and more actors or context per admission.
 #145's seven-day gate is the north star, and #164's cadence criteria stay
 deferred until that baseline exists.
+The [run evaluator and spectator](decisions/008-evaluation-and-spectator.md) (#383) now
+score runs from recorded frames and traces. Their power check showed that whole-run survival
+cannot separate arms at affordable run counts, so each change pre-registers a targeted
+process metric, with survival, cost and setup as guards.
 
 ## How you stay in control of the project
 

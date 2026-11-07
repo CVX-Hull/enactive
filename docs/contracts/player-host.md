@@ -20,7 +20,7 @@ its behavior either player logic or test scaffolding.
 
 ## Adapter selection
 
-A `campaign-run/4` package freezes `host:{"argv":[...]}` with1–8 strings.
+A `campaign-run/5` package freezes `host:{"argv":[...]}` with1–8 strings.
 The first is an absolute existing executable/interpreter regular file; later
 entries are canonical project-local regular files tracked by the clean source.
 No registry, resumed host, fallback or old `node` alias is supported.
@@ -146,10 +146,54 @@ kinds it does not account for, and observers project only known kinds.
 | --- | --- |
 | `host-start` | Exactly once and first after admitted inputs, with `telemetry_version:3` and `schema:"player-host/3"`. |
 | `request-start` | Every charged HTTP attempt, including retries/failures, numbered contiguously `request-1` onward without exceeding allocation. |
+| `context-manifest` | Exactly one per HTTP attempt, retries included, after that attempt's `request-start` and before its `request-fetch-start`, with the same `request_id`. It is the exact ordered list of parts of the payload actually sent, as digests only, delta-encoded (below). Additive within version 3: absent from traces recorded before 6 November 2026, which stay readable. |
 | `response-complete` | `usage_available` distinguishes unknown usage; known configured/provider costs remain labelled. |
 | `player-finish` | At most one direct accepted disposition/report/source references/control identity; mutually exclusive with accepted handoff. |
 | `handoff` | At most one originating actor/session/operation/context/digest issuance with `grants_authority:false`. |
 | `settled` | Last, with `ok`, reason, control identity where applicable and requests matching charged attempt count. |
+
+### Context manifest
+
+`context-manifest` fields: `request_id`; `base_request_id` (the previous attempt's
+manifest in this host, `null` for the first); `reused_prefix_parts`; `part_count`;
+`parts`, only the parts after the reused prefix; and `omitted_image_indexes`, the
+full list of part indexes whose image was omitted, present only when it differs from
+the base manifest's (absent means unchanged; the first manifest's base is empty).
+
+**Replay rule.** For a manifest M, `parts(M) = parts(base(M))[0:reused_prefix_parts] ++ M.parts`
+and `omitted(M) = M.omitted_image_indexes` if present, else `omitted(base(M))`. Replay
+every manifest of one host in trace order from its first; `len(parts(M))` equals
+`part_count` and each part's `index` equals its position. A new host (handoff successor)
+starts a fresh chain with `base_request_id:null`. A retry attempt resends the same body,
+so its manifest has `reused_prefix_parts == part_count` and no `parts`. The prefix is
+the longest run of leading parts equal in every field, so a request that only appends
+costs its new parts; an image eviction rewrites the parts after the oldest newly
+omitted image, because omitted images change positions.
+
+**Parts** follow the payload's message order; within a message: `reasoning`, then
+text, then tool calls. Fields: `index`, `role` (`system`, `user`, `assistant` or
+`tool`; the provider's `developer` role is `system`), `kind`, `bytes`, `sha256`.
+
+| `kind` | `bytes` / `sha256` cover | Also |
+| --- | --- | --- |
+| `text` | the UTF-8 text of the system, user or assistant text part | |
+| `reasoning` | the UTF-8 reasoning text returned to the provider | |
+| `tool_call` | the compact JSON of the tool call as serialized | `tool_call_id`, `tool` |
+| `tool_result_text` | the UTF-8 text of the tool message (with any omission marker) | `tool_call_id`, `tool` |
+| `image` | the decoded image bytes | `state`, `tool_call_id`, `image_index`, `source_id` |
+
+An image has `state:"sent"` (a part of the payload) or `"omitted"` (replaced by the
+frozen omission marker inside its tool result's text; listed directly after that
+`tool_result_text`). Its `sha256` equals the `image_reference` digest in `tool-result` and
+the marker's `SHA256=`, and `bytes` is the decoded size. `tool_call_id`/`image_index`
+match `context-image-projection`'s `omissions`, whose preview stays capped at 16; the
+manifest lists every omitted image. `source_id` is present when the tool result's JSON
+text has `source.source_id`. Tool definitions are not parts; `payload_sha256` on
+`request-start` covers the whole body.
+
+Privacy: a manifest holds indexes, roles, kinds, sizes, SHA-256 digests and tool,
+call and source identities. It never holds text, reasoning, tool arguments, image
+bytes or data URLs, so the bodies stay unrecoverable from telemetry.
 
 Pre-start refusal emits only unsuccessful `settled`. A final-file failure may
 append one unsuccessful settlement after the prior settlement and exits nonzero.

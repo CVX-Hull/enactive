@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { PassThrough } from 'node:stream';
 import { createHash } from 'node:crypto';
 import { McpClient } from '@earendil-works/pi-mcp';
-import { runHost, validateConfiguration, validateMcpConfiguration, projectImageContext, projectToolResultForTelemetry, INPUT_LIMIT_BYTES } from '../host.mjs';
+import { runHost, payloadManifestParts, validateConfiguration, validateMcpConfiguration, projectImageContext, projectToolResultForTelemetry, INPUT_LIMIT_BYTES } from '../host.mjs';
 
 const realSetTimeout = globalThis.setTimeout;
 const realDelay = ms => new Promise(resolve=>realSetTimeout(resolve,ms));
@@ -1448,4 +1448,141 @@ test('isError handoff cannot establish a pending origin even when it carries a s
 test('first actual MCP text owns the handoff receipt even when extra text follows',async t=>{
   const {result}=await scenario(t,[reply(null,[['player_handoff',{mode:'extra-text'}]])],{enabledTools:handoffTools});
   assert.equal(result.reason,'handoff');assert.equal(result.requests,1);
+});
+
+// ---- context-manifest: exact ordered per-request parts as digests, delta-encoded ----
+const sha=value=>createHash('sha256').update(value).digest('hex');
+const sourceTools=['observe','mutate','integer','observe_source'];
+/** Rebuild every request's full ordered part list and omitted set from the delta events alone. */
+function replayManifests(manifests) {
+  const lists=new Map(),omitted=new Map();
+  for(const manifest of manifests) {
+    const base=manifest.base_request_id;
+    const prefix=base===null?[]:lists.get(base);
+    assert.ok(prefix,`base ${base} must be an earlier manifest`);
+    assert.ok(manifest.reused_prefix_parts<=prefix.length);
+    const parts=[...prefix.slice(0,manifest.reused_prefix_parts),...manifest.parts];
+    assert.equal(parts.length,manifest.part_count);
+    assert.deepEqual(parts.map(part=>part.index),parts.map((_,index)=>index),'indexes are positions');
+    lists.set(manifest.request_id,parts);
+    omitted.set(manifest.request_id,manifest.omitted_image_indexes??(base===null?[]:omitted.get(base)));
+  }
+  return {lists,omitted};
+}
+/** Independent expectation from the actual sent payload: [role, kind, bytes, sha256] in order. */
+function sentParts(payload) {
+  const rows=[];
+  for(const message of payload.messages) {
+    const role=message.role,tool=role==='tool';
+    for(const key of ['reasoning_content','reasoning','reasoning_text']) if(message[key]) rows.push([role,'reasoning',Buffer.byteLength(message[key]),sha(message[key])]);
+    const kind=tool?'tool_result_text':'text';
+    if(typeof message.content==='string') rows.push([role,kind,Buffer.byteLength(message.content),sha(message.content)]);
+    else for(const part of message.content??[]) {
+      if(part.type==='text') rows.push([role,kind,Buffer.byteLength(part.text),sha(part.text)]);
+      else {const bytes=Buffer.from(part.image_url.url.split(',')[1],'base64');rows.push([role,'image',bytes.length,sha(bytes)]);}
+    }
+    for(const call of message.tool_calls??[]) rows.push([role,'tool_call',Buffer.byteLength(JSON.stringify(call)),sha(JSON.stringify(call))]);
+  }
+  return rows;
+}
+const sourceReplies=(count,prefix='c')=>Array.from({length:count},(_,turn)=>reply(null,[['observe_source',{n:turn+1}]],true,undefined,`${prefix}${turn+1}`));
+function checkManifests({events,payloads}) {
+  const manifests=events.filter(event=>event.type==='context-manifest');
+  const starts=events.filter(event=>event.type==='request-start');
+  assert.deepEqual(manifests.map(event=>event.request_id),starts.map(event=>event.request_id),'one manifest per HTTP attempt');
+  assert.equal(manifests.length,payloads.length);
+  // Emitted after request-start and before the fetch for the same attempt.
+  for(const manifest of manifests) {
+    const at=events.indexOf(manifest);
+    assert.equal(events[at-1].type==='provider-retry'||events[at-1].type==='request-start',true);
+    assert.equal(events[at-1].request_id,manifest.request_id);
+    assert.deepEqual([events[at+1].type,events[at+1].request_id],['request-fetch-start',manifest.request_id]);
+  }
+  const {lists,omitted}=replayManifests(manifests);
+  const projections=events.filter(event=>event.type==='context-image-projection');
+  let projectionIndex=-1,lastLogical;
+  for(const [index,manifest] of manifests.entries()) {
+    const parts=lists.get(manifest.request_id);
+    const sentOnly=parts.filter(part=>part.state!=='omitted');
+    assert.deepEqual(sentOnly.map(part=>[part.role,part.kind,part.bytes,part.sha256]),sentParts(payloads[index]),`request ${index+1} replays exactly`);
+    // A retry attempt shares its logical request's projection.
+    const logical=starts[index].logical_request_id;
+    if(logical!==lastLogical) projectionIndex++;
+    lastLogical=logical;
+    const projection=projections[projectionIndex];
+    const omittedParts=parts.filter(part=>part.state==='omitted');
+    assert.deepEqual(omitted.get(manifest.request_id),parts.flatMap((part,at)=>part.state==='omitted'?[at]:[]));
+    // The projection previews at most 16 omissions; the manifest lists every one.
+    assert.deepEqual(omittedParts.slice(0,16).map(part=>({tool_call_id:part.tool_call_id,image_index:part.image_index,sha256:part.sha256})),projection.omissions);
+    assert.equal(omittedParts.length,projection.omitted_images);
+    assert.equal(parts.filter(part=>part.kind==='image'&&part.state==='sent').length,projection.retained_images);
+    for(const part of omittedParts) {
+      const text=payloads[index].messages.find(message=>message.tool_call_id===part.tool_call_id).content;
+      assert.ok(text.includes(`SHA256=${part.sha256}`)&&text.includes('Historical pixels omitted'));
+    }
+    for(const part of parts.filter(part=>part.kind==='image')) {
+      const turn=Number(part.tool_call_id.match(/\d+/)[0]);
+      assert.equal(part.sha256,sha(`fixture-image-${turn}`));
+      assert.equal(part.bytes,`fixture-image-${turn}`.length);
+      assert.equal(part.source_id,`${'a'.repeat(32)}-${turn}`);
+    }
+    for(const part of parts.filter(part=>part.kind==='tool_result_text'||part.kind==='tool_call')) assert.equal(part.tool,'observe_source');
+  }
+  // Privacy: digests, sizes and identities only; never bodies or pixels.
+  const serialized=JSON.stringify(manifests);
+  for(const forbidden of ['Frozen player guide','Offline mission','MCP server instructions','player-computer-result','Historical pixels',Buffer.from('fixture-image-1').toString('base64'),'base64,','image_url'])
+    assert.ok(!serialized.includes(forbidden),forbidden);
+  for(const manifest of manifests) for(const part of manifest.parts) assert.deepEqual(Object.keys(part).filter(key=>['text','content','data','url','arguments'].includes(key)),[]);
+  return {manifests,lists,omitted};
+}
+test('context manifest replays the exact ordered parts of every request, retry and eviction',async t=>{
+  const configuration=route();configuration.max_context_images=2;configuration.max_requests=12;
+  const sequence=[...sourceReplies(2),rateLimit(),reply(null,[['observe_source',{n:3}]],true,undefined,'c3'),
+    reply(null,[['observe_source',{n:4}]],true,undefined,'c4'),reply(null,[['observe_source',{n:5}]],true,'Historical thinking','c5'),reply()];
+  const observed=await scenario(t,sequence,{configuration,enabledTools:sourceTools});
+  assert.equal(observed.result.ok,true);
+  assert.equal(observed.payloads.length,7,'six logical requests plus one retried attempt');
+  const {manifests,lists}=checkManifests(observed);
+  // The retried attempt has an identical body, so its manifest reuses the whole previous list.
+  const retried=manifests[3];
+  assert.equal(retried.base_request_id,manifests[2].request_id);
+  assert.equal(retried.reused_prefix_parts,retried.part_count);assert.deepEqual(retried.parts,[]);
+  assert.equal(manifests[0].base_request_id,null);assert.equal(manifests[0].reused_prefix_parts,0);
+  // Eviction really happened and each omitted image is a listed part, not only a count.
+  assert.ok(manifests.some(manifest=>manifest.omitted_image_indexes?.length>0));
+  assert.ok(lists.get(manifests.at(-1).request_id).some(part=>part.state==='omitted'));
+  assert.ok(lists.get(manifests.at(-1).request_id).some(part=>part.kind==='reasoning'));
+  assert.equal(JSON.stringify(manifests).includes('Historical thinking'),false);
+  // The omitted set is carried only when it changes.
+  assert.ok(manifests.some(manifest=>!('omitted_image_indexes' in manifest)&&manifest.base_request_id!==null));
+  // Earlier telemetry is retained unchanged.
+  assert.ok(observed.events.some(event=>event.type==='context-image-projection'&&event.omitted_images>0&&event.omissions.length>0));
+});
+test('context manifest stays small over a long image history',async t=>{
+  const configuration=route();configuration.max_context_images=8;configuration.context_image_block=4;configuration.max_requests=40;
+  const turns=30;
+  const observed=await scenario(t,[...sourceReplies(turns),reply()],{configuration,enabledTools:sourceTools});
+  assert.equal(observed.result.ok,true);assert.equal(observed.payloads.length,turns+1);
+  const {manifests,lists}=checkManifests(observed);
+  const sizes=manifests.map(manifest=>Buffer.byteLength(JSON.stringify({type:'context-manifest',...manifest})));
+  const evictions=manifests.filter(manifest=>manifest.omitted_image_indexes!==undefined).length;
+  assert.ok(evictions>=5);
+  // Steady requests append only their new turn.
+  const steady=manifests.flatMap((manifest,index)=>index>0&&!('omitted_image_indexes' in manifest)?[sizes[index]]:[]);
+  assert.ok(Math.max(...steady)<=1200,`steady manifest bytes ${Math.max(...steady)}`);
+  const total=sizes.reduce((sum,size)=>sum+size,0);
+  assert.ok(total/manifests.length<=2500,`average manifest bytes ${total/manifests.length}`);
+  // A full listing per request would be far larger than the deltas.
+  const full=[...lists.values()].reduce((sum,parts)=>sum+JSON.stringify(parts).length,0);
+  assert.ok(total*3<full,`delta ${total} vs full ${full}`);
+  console.log(`manifest bytes: steady max ${Math.max(...steady)}, steady avg ${Math.round(steady.reduce((a,b)=>a+b,0)/steady.length)}, eviction max ${Math.max(...sizes)}, average ${Math.round(total/sizes.length)}, total ${total}, full-listing ${full}, parts ${lists.get(manifests.at(-1).request_id).length}`);
+});
+test('payload manifest never lists bodies and tolerates an unattributable image list',()=>{
+  const payload={messages:[{role:'developer',content:'secret system'},
+    {role:'user',content:[{type:'text',text:'secret mission'},{type:'image_url',image_url:{url:'data:image/png;base64,'+png}}]}]};
+  const parts=payloadManifestParts(payload,[],new Map());
+  assert.deepEqual(parts.map(part=>[part.role,part.kind]),[['system','text'],['user','text'],['user','image']]);
+  assert.equal(parts[2].sha256,sha(Buffer.from(png,'base64')));assert.equal(parts[2].state,'sent');
+  assert.equal('tool_call_id' in parts[2],false);
+  assert.ok(!JSON.stringify(parts).includes('secret'));
 });

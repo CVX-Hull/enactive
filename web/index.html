@@ -2,77 +2,63 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Enactive · Local spectator</title>
-  <link rel="stylesheet" href="/style.css">
-  <link rel="stylesheet" href="/investigation.css">
-  <script src="/investigation.js" defer></script>
-  <script src="/investigation-session.js" defer></script>
-  <script src="/app.js" defer></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Enactive Spectator</title>
+  <link rel="stylesheet" href="/app/app.css">
+  <link rel="icon" href="/app/icon.png">
+  <script type="module" src="/app/control.js"></script>
+  <script type="module" src="/app/main.js"></script>
 </head>
 <body>
-  <header class="control-bar">
-    <div class="brand"><span class="mark" aria-hidden="true"></span><div><span class="eyebrow">Enactive</span><h1>Spectator</h1></div></div>
-    <div class="current-state"><div class="chips"><span class="chip status-chip" id="connection" role="status" data-state="pending">Connecting…</span><span class="chip"><span class="chip-label">Control target</span> <span class="mono" id="current-session">Session unknown</span></span></div><p id="control-freshness" class="hint">No status received; liveness unknown.</p><details class="control-provenance"><summary>Full current session</summary><p id="current-session-full">Session unknown</p></details></div><div class="stop-control"><button id="pause" type="button">Pause automation permanently</button><p id="stop-state" role="status">Pause state unknown.</p><p id="pause-receiver" class="hint" hidden></p></div>
+  <!-- Control path. Static markup driven only by app/control.js from /api/status and
+       /api/source/<id>. The gateway injects the operator check before the frame-shell
+       anchor and a script before the head close tag; app/control.js never reads the viewer. -->
+  <header class="ctl" aria-label="Control path">
+    <div class="wrap" id="watch">
+      <button class="pause" id="pause" type="button" aria-describedby="pause-hint">Pause run…<span class="fillbar" id="fillbar"></span></button>
+      <div class="status" aria-live="polite">
+        <div class="line" id="statusline">Waiting for the control path…</div>
+        <div class="sub" id="statussub"></div>
+        <span id="connection" class="conn" role="status" data-state="pending">Connecting…</span>
+        <p id="control-freshness" class="fresh">No status received; liveness unknown.</p>
+        <p id="status-error" class="alert-line" role="alert" hidden></p>
+        <span id="current-session-full" class="mono sess">Session unknown</span>
+        <p id="pause-hint" class="note">Hold to pause, or press Enter.</p>
+        <p id="pause-result" class="note" role="status" hidden></p>
+      </div>
+      <div class="ctl-frame">
+        <div class="frame-shell" id="watch-frame-shell" tabindex="0" role="region" aria-label="Live frame from the control path"><img id="frame" alt="Live game screen from the control path" hidden><span class="frame-note" id="frame-note">No frame yet</span></div>
+        <details class="src-details"><summary>Frame source</summary><pre id="source-details">No displayed source.</pre></details>
+      </div>
+      <div class="ctl-right" id="strip-viewer"></div>
+    </div>
   </header>
-  <div class="observer-messages"><p id="status-error" class="error" role="alert" hidden></p><p id="pause-error" class="error" role="alert" hidden></p></div>
-  <nav class="view-tabs" role="tablist" aria-label="Observer views"><button id="tab-watch" role="tab" aria-selected="true" aria-controls="watch" tabindex="0">Watch</button><button id="tab-timeline" role="tab" aria-selected="false" aria-controls="timeline" tabindex="-1">Timeline</button><button id="tab-analysis" role="tab" aria-selected="false" aria-controls="analysis" tabindex="-1">Analysis</button></nav>
-  <main id="watch" role="tabpanel" aria-labelledby="tab-watch" tabindex="0">
-    <section class="stage" aria-labelledby="view-heading">
-      <div class="stage-heading"><h2 id="view-heading">Captured screen <span class="badge passive">Passive view</span></h2><button id="watch-size" class="ghost" type="button" aria-pressed="false">Show original pixel size</button></div>
-      <div class="frame-shell" id="watch-frame-shell" tabindex="0" role="region" aria-label="Captured image viewport"><img id="frame" alt="Original PNG captured from the native window" hidden><p id="frame-note" role="status">No captured source available.</p></div>
-      <div class="frame-facts"><p id="source-age" class="age">No displayed source.</p><p id="frame-change" class="fact">No recorded input capture to compare yet.</p></div>
-      <details class="explain"><summary>What this view shows</summary><p class="hint">The actual pixels the player received, fitted to this page; source metadata describes the full original PNG. Polling reads retained status and pixels; it never captures a new frame. An old image has an age, not an inferred game meaning. Ages compare the source's wall clock with this browser's; a negative value means the clocks differ.</p></details>
-      <details><summary>Original source and geometry</summary><p id="source-details">No displayed source.</p></details>
-      <details>
-        <summary>Local observer timing</summary>
-        <p>Download retains the latest 2,000 source attempts on this page, with an explicit omitted-row count. Original presented time and receipt time use the source's clock. Browser timestamps mark status observation, completed decode and DOM replacement only, including updates while Watch is hidden. DOM replacement does not establish visibility, physical screen paint or model attention. Wall-clock differences or changes can invalidate comparisons. These measurements do not establish useful gameplay success. Reloading discards this local history; no trace is uploaded.</p>
-        <button id="download-observer-measurements" type="button">Download timing</button>
-        <p id="timing-summary">No source attempts recorded.</p>
-      </details>
-    </section>
-    <aside>
-      <section class="statement" aria-labelledby="statement-heading"><div class="card-heading"><h2 id="statement-heading">What the player said</h2><span class="badge">Fallible claim</span></div><p id="latest-statement" tabindex="0" role="region" aria-label="Public player statement">No public statement available.</p><p id="statement-meta" class="hint">Missing narration does not establish inactivity.</p><details class="explain"><summary>About this statement</summary><p class="hint">Long statements scroll within this panel. Original evidence and limits are available in Timeline.</p></details></section>
-      <section aria-labelledby="activity-heading"><h2 id="activity-heading">Recent activity</h2><div class="since" ><p id="since-last-look" role="status" hidden></p><button id="mark-seen" class="ghost" type="button" hidden>Mark as seen</button></div><ul id="recent-activity" class="feed" role="list"><li class="empty">No activity available.</li></ul><p id="activity-summary" class="hint">Activity not yet received.</p><button id="open-timeline" class="ghost" type="button">Inspect Timeline</button></section>
-      <details class="diagnostics"><summary>Mechanical facts, budgets and player assertions</summary>
-      <section aria-labelledby="control-heading">
-        <h2 id="control-heading">Control and mechanical facts</h2>
-        <dl>
-          <dt>Session</dt><dd id="session">Unknown</dd>
-          <dt>Actors and recorded stages</dt><dd id="ownership">Unknown</dd>
-          <dt>Native target</dt><dd id="target">Unknown</dd>
-          <dt>Last operation</dt><dd id="operation">Unreported</dd>
-          <dt>Native process exit</dt><dd id="native-exit">Unreported</dd>
-        </dl>
-        <p class="hint">This page is a spectator and never grants input authority. Use the native window for human takeover. Pause prevents future automation; it cannot undo a delivered input or cancel an already running activity. A request for Pause and native confirmation are separate facts. There is no Resume here.</p>
-        <p class="hint">Delivery is an event handoff, not proof of application consumption or useful success. A native exit code of 0 does not certify a Save.</p>
-      </section>
-      <section aria-labelledby="resources-heading">
-        <h2 id="resources-heading">Original remaining resources</h2>
-        <dl><dt>Custodian time remaining</dt><dd id="custodian-remaining">Unreported</dd><dt>Control capacities remaining</dt><dd id="resource-remaining">Unreported</dd></dl>
-        <p class="hint">Reported original limits; browser reads do not renew them.</p>
-      </section>
-      <section aria-labelledby="host-heading">
-        <h2 id="host-heading">Player host diagnostics</h2>
-        <dl><dt>Host time remaining</dt><dd id="host-remaining">Unreported</dd><dt>Host HTTP attempts</dt><dd id="host-requests">Unreported</dd><dt>Configuration / last response</dt><dd id="host-details">Unreported</dd></dl>
-        <p class="hint">Host time and HTTP attempt budget are separate from custodian resources. Model, provider and response timestamps are diagnostics, not game progress or proof of current host liveness.</p>
-      </section>
-      <section aria-labelledby="claims-heading">
-        <h2 id="claims-heading">Player assertions</h2>
-        <p class="hint">Fallible player-authored claims, work and interpretations. These do not certify game outcomes, Save, control ownership or authority.</p>
-        <ul id="player-claims"><li>No player assertions reported.</li></ul>
-      </section>
-      </details>
-    </aside>
-  </main>
-  <section id="timeline" class="timeline-panel" role="tabpanel" aria-labelledby="tab-timeline" tabindex="0" hidden>
-    <div class="timeline-toolbar"><div><h2>Recent Timeline</h2><p id="timeline-scope">Current session; waiting for activity.</p></div><button id="follow-latest" type="button">Follow latest</button></div>
-    <p id="stop-history" class="hint">No previous-session Pause evidence retained.</p><p id="new-items" role="status">Following latest.</p><p id="activity-error" class="error" hidden></p><p id="activity-coverage" class="hint">Coverage unknown.</p><details><summary>Original coverage and omission counts</summary><pre id="coverage-details">No coverage received.</pre></details>
-    <div class="timeline-layout"><div class="timeline-list-panel"><label for="timeline-session">Recorded session</label><select id="timeline-session"><option value="current">Current session</option><option value="previous">Previous session (unavailable)</option><option value="unavailable" disabled hidden>Inspected session unavailable</option></select><label for="timeline-filter">Find retained evidence</label><input id="timeline-filter" type="search" maxlength="200" placeholder="Statement, identifier or disposition"><label for="timeline-kind">Recorded kind</label><select id="timeline-kind"><option value="all">All activity</option><option value="statements">Player statements</option><option value="model">Model requests / responses</option><option value="tools">Tool calls / results</option><option value="computer">Computer operations</option></select><label class="group-choice"><input id="timeline-group" type="checkbox"> Group explicit requests / operations</label><p id="timeline-results" class="hint">Search covers retained rows only.</p><ol id="activity-list" aria-label="Recorded activity"></ol><p id="timeline-empty">No recorded activity available.</p></div>
-    <article class="inspection" aria-labelledby="inspection-heading"><h2 id="inspection-heading">Select an entry</h2><p id="inspection-scope">Inspection does not stop automation or replay input.</p><p id="inspection-coverage" class="hint">Selected evidence coverage unknown.</p><p id="entry-summary">Choose recorded activity to inspect its original evidence.</p><p id="entry-text"></p><div id="entry-links"></div><details><summary>Original identifiers, clocks and dispositions</summary><pre id="entry-details">No entry selected.</pre></details><button id="inspection-size" type="button" aria-pressed="false">Show original pixel size</button><div class="frame-shell" id="inspection-frame-shell" tabindex="0" role="region" aria-label="Recorded image viewport"><img id="inspection-frame" alt="Retained source explicitly linked to the selected entry" hidden><p id="inspection-frame-note">No source selected.</p></div><p id="inspection-source" class="hint"></p></article></div>
-    <p class="hint">Latest 200 entries per session; at most the current and one previous session are retained on this page. Previous-session pixels are unavailable from a replacement server. Reload discards client history. Original traces may retain evidence outside this view. Cross-process wall-clock ordering is approximate; nearby events do not establish causation.</p>
-  </section>
-  <section id="analysis" class="analysis-panel" role="tabpanel" aria-labelledby="tab-analysis" tabindex="0" hidden><div class="timeline-toolbar"><div><h2>Investigate this session</h2><p id="investigation-session-status" class="hint" role="status">Open Analysis to attach the current session. A snapshot stays stable while you inspect it.</p></div><button id="investigation-refresh" type="button">Refresh current session</button></div><p class="hint">Current-target Pause above stays independent. A refresh reads existing evidence; it does not capture new game pixels. Opening an older recorded bundle below is optional.</p><div id="investigation-root"></div></section>
-  <footer>Private loopback spectator · Captured pixels and mechanical facts · Game interpretation belongs to the player</footer>
+  <nav class="jobs wrap" aria-label="Views">
+    <div class="grp"><span>Supervise</span><a href="#live" data-nav="live">Live</a></div>
+    <div class="grp"><span>Diagnose</span><a href="#run" data-nav="run">Run</a></div>
+    <div class="grp"><span>Improve</span><a href="#improve" data-nav="improve">Changes and failures</a></div>
+    <div class="grp"><span>Cross-run</span><a href="#explore" data-nav="explore">Explore</a><a href="#compare" data-nav="compare">Compare</a></div>
+    <span class="spacer"></span>
+    <button class="themebtn" id="theme" type="button" aria-label="Switch colour theme">Theme</button>
+  </nav>
+
+  <main class="wrap" id="app" aria-live="off"><p class="note">Loading the viewer…</p></main>
+
+  <div class="sheet-bg" id="sheet" hidden>
+    <form class="sheet" id="sheetform" role="dialog" aria-modal="true" aria-labelledby="sheet-title" novalidate>
+      <h2 id="sheet-title">Pause this run?</h2>
+      <p class="note" id="sheetfacts"></p>
+      <fieldset class="opts" id="reasons">
+        <legend>Reason</legend>
+        <label><input type="radio" name="why" value="loop"> Runaway loop or stall</label>
+        <label><input type="radio" name="why" value="fault"> Harness or custody fault</label>
+        <label><input type="radio" name="why" value="spend"> Spend</label>
+        <label><input type="radio" name="why" value="other"> Other</label>
+      </fieldset>
+      <p class="alert-line" id="sheet-error" role="alert" hidden></p>
+      <p class="note">The reason is stored with the control path's watch record, so analysis can tell an owner stop from a natural end. Nothing reaches the player.</p>
+      <div class="row"><button type="button" class="btn" id="sheetcancel">Keep running</button><button type="submit" class="pause small" id="sheetsubmit">Pause permanently</button></div>
+    </form>
+  </div>
 </body>
 </html>

@@ -1,6 +1,7 @@
 """Offline MCP double for player-host/3 tests, using the maintained Python MCP server.
 
 Shared by the adapter node tests and the adapter-agnostic contract suite."""
+import base64
 import json
 import os
 from pathlib import Path
@@ -35,6 +36,15 @@ async def observe(fail: bool = False) -> CallToolResult:
     record({"tool": "observe", "fail": fail})
     value = {"original_collection": {"operation_id": "original-op", "source": "source-1", "cursor": 7}}
     return CallToolResult(content=[TextContent(type="text", text="x" * 30001), TextContent(type="text", text=json.dumps(value)), ImageContent(type="image", data=PNG, mimeType="image/png")], structuredContent=value, isError=fail)
+
+@server.tool()
+async def observe_source(n: int = 0) -> CallToolResult:
+    """Computer-style result: distinct image bytes and a source identity per call."""
+    record({"tool": "observe_source", "n": n})
+    value = {"schema": "player-computer-result/1", "status": "completed", "source": {"source_id": f"{'a' * 32}-{n}"}}
+    image = base64.b64encode(f"fixture-image-{n}".encode()).decode()
+    return CallToolResult(content=[TextContent(type="text", text=json.dumps(value)),
+                                   ImageContent(type="image", data=image, mimeType="image/png")], structuredContent=value)
 
 @server.tool()
 async def mutate(mode: str, index: int = 0) -> str:

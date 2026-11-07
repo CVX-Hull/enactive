@@ -26,13 +26,14 @@ logical responsibilities; arrows identify requests, results or user control.
 | Optional player services | Knowledge, corrections, source provenance, program lineage and bounded context; no custody | [Memory and learning](components/memory-learning.md) |
 | Composition service | Connects player proposals to the computer port; retains service requests and context snapshots | [Execution](components/mission-execution.md) |
 | Computer custodian | Exact child/socket/lock handles, serialized operations, original resources and actor capabilities | [Native control](components/native-control.md) |
-| Observer / operator | Passive status/images, bounded linked recent activity, labelled player claims and independent permanent Pause | [Observer operations](components/observer-operations.md) |
+| Observer / operator | Supervised control path (status, frame, attention checks, independent permanent Pause with a recorded reason) and an unsupervised read-only viewer of interpretive evaluation | [Observer operations](components/observer-operations.md) |
+| Run evaluator | Offline, versioned interpretive records and metrics with a game binding; never player-visible, gates nothing | [Evaluation contract](contracts/evaluation.md) |
 | Game | Consumes ordinary SDL input and determines outcomes | Windowed prepared CDDA; no semantic engine bridge |
 
 ## Runtime and state
 
 `tools/campaign_run.py` is the sole finite custodian. It validates a fresh frozen
-`campaign-run/4` package and reserves exclusion before launch. `OwnedTarget` keeps
+`campaign-run/5` package and reserves exclusion before launch. `OwnedTarget` keeps
 exact subprocess handles and passes an inherited shared-lock descriptor and a
 nonblocking Unix socket to the SDL adapter. Native retains the shared lock for
 its lifetime, including after the custodian loses its own reference.
@@ -47,10 +48,11 @@ The source modules are [launch](../harness/computer/launch.py),
 [channel](../harness/computer/channel.py), [runtime](../harness/computer/runtime.py)
 and [store](../harness/computer/store.py).
 
-The loopback [HTTP server](../harness/server.py) exposes passive spectator reads,
-independent Pause and authenticated per-actor tools. The bounded
-[activity projection](../harness/observer.py) reuses original host events and a
-separate read-only computer snapshot; it owns no executor or durable journal.
+The loopback [HTTP server](../harness/server.py) exposes passive status and
+source reads, independent Pause and authenticated per-actor tools; it serves no
+page. Under supervision the [gateway](../tools/campaign_watch.py) serves the page and
+forwards view reads to a separate read-only viewer
+([observer operations](components/observer-operations.md)).
 The [application](../harness/application.py)
 composes the computer port with optional player memory/program services. A
 project-local stdio MCP adapter owns no writer, native child or provider key.
@@ -154,7 +156,7 @@ Direct player finish is a claim, not saving or game acceptance.
 One current set is `computer-wire/1`, request/target/receipt `/2`,
 `computer-session/1`, `computer-operation/1`, `computer-source/1`,
 `player-memory/2`, `player-record/1`, `player-program/2`, `program-view/4`,
-`player-handoff/1`, `player-host/3` and `campaign-run/4`. Model-facing operation,
+`player-handoff/1`, `player-host/3` and `campaign-run/5`. Model-facing operation,
 error and transport envelopes are `player-computer-result/1`, `player-error/2`
 and `player-transport/2`; canonical operations/HTTP records are unchanged.
 The [host contract](contracts/player-host.md) and [campaign procedure](operations/campaign-run.md)
@@ -173,7 +175,8 @@ source/data deployment; mixed readers and replay are unsupported.
 | Packet/input/custody | Strict schema, socket/backpressure, writer/deadline and uncertainty assertions; [native control](components/native-control.md#assurance-and-evidence) adds compiled behavior. |
 | Memory/program/context | Pure player and composition assertions for provenance, helper fault isolation and original child IDs; [memory](components/memory-learning.md#assurance-and-evidence). |
 | Host/driver | Contract conformance and actual adapter/MCP fixtures, origin-bound handoff, attempt accounting and exact group quiescence; [player interface](components/player-interface.md#assurance-and-evidence). |
-| Spectator/operation | Actual images, mechanical versus claim labels and independent Pause; [observer](components/observer-operations.md#assurance-and-evidence). |
+| Spectator/operation | Control-path checks and Pause independent of the viewer, provenance labels and viewer-unavailable behaviour; [observer](components/observer-operations.md#assurance-and-evidence). |
+| Evaluator/viewer | Synthetic-run evaluator tests, held-out reader validation, viewer API tests and the replayed graphical lane; [evaluation contract](contracts/evaluation.md). |
 
 The [testing guide](testing.md) selects lanes. [Production outcome evidence](acceptance/2026-10-29-computer-control.md)
 covers actual basic input, useful stock, conditional scouting, succession and

@@ -1,0 +1,2856 @@
+{
+ "schema": "spectator-view/1",
+ "run": "ceil09",
+ "session": "c6c09be0b7d43fba2839147651a4f6a5",
+ "state": "live",
+ "facts": {
+  "assignment_sha256": "4194136391609b4ce7a56dd334c60d8b0f024c54e4e5ac398a272b12e08c07c5",
+  "declared_ceiling_usd": 408.406176979,
+  "effort": "medium",
+  "ending_reserve": {
+   "frame_bytes": 17179869184,
+   "frames": 512,
+   "http_attempts": 20,
+   "inputs": 6144,
+   "requests": 512,
+   "seconds": 360
+  },
+  "guide_sha256": "083598ad8a0293683150fbb0be0af54ea6f6b03f99bc3856d9c902c5bef02bac",
+  "host_seconds": 7200,
+  "labels": {
+   "admission": null,
+   "arm": "ceiling",
+   "lineage": null,
+   "scenario": "Evacuee",
+   "start": "S1"
+  },
+  "limits": {
+   "max_bytes": 34359738368,
+   "max_frames": 2000,
+   "max_inputs": 20000,
+   "max_requests": 10000
+  },
+  "manifest_schema": "campaign-run/4",
+  "max_hosts": 2,
+  "max_http_attempts": 250,
+  "model": "openai/gpt-6.1-terra",
+  "prior_reserved_usd": 278.392494979,
+  "provider": "openrouter",
+  "route": {
+   "allow_fallbacks": false,
+   "only": [
+    "openai"
+   ],
+   "order": [
+    "openai"
+   ],
+   "require_parameters": true
+  },
+  "source_commit": "9276672ec8cef1316c9ca70ea483427b572c77e9",
+  "spend_allowance_usd": 130.013682,
+  "wall_seconds": 7800
+ },
+ "labels": {
+  "admission": null,
+  "arm": "ceiling",
+  "lineage": null,
+  "scenario": "Evacuee",
+  "start": "S1"
+ },
+ "outcome": {
+  "hours": 2.11,
+  "died": false,
+  "outcome": "censored",
+  "censor_reason": "budget",
+  "episodes": 1,
+  "lost": false
+ },
+ "decisions": 229,
+ "dollars": 3.9786445,
+ "versions": {
+  "core_version": 1,
+  "binding_id": "cdda",
+  "binding_version": 1,
+  "state": "live",
+  "created_wall": 1794025658.238645
+ },
+ "live": true,
+ "evaluator": {
+  "running": true,
+  "passes": 464,
+  "error": null,
+  "last_pass_wall": 1794026157.0694962,
+  "last_seq": 232,
+  "finished": false
+ },
+ "pause": {
+  "answer": "no",
+  "met": [],
+  "dollars_per_minute": 0.19463047952755017,
+  "spent": 3.9786445,
+  "conditions": [
+   {
+    "id": "feed_alive",
+    "name": "Feed alive",
+    "value": 4.0,
+    "threshold": "met after 300 s with no new operation",
+    "met": false,
+    "detail": "seconds since the last operation",
+    "dollars_per_minute": 0.19463047952755017
+   },
+   {
+    "id": "custody_healthy",
+    "name": "Custody healthy",
+    "value": {
+     "uncertain_receipts": 0,
+     "custody_stops": 0
+    },
+    "threshold": "met at any partial or unknown receipt, or a custody stop",
+    "met": false,
+    "detail": "",
+    "dollars_per_minute": 0.19463047952755017
+   },
+   {
+    "id": "not_looping",
+    "name": "Not looping",
+    "value": {
+     "decisions_out_of_play": 5,
+     "game_time_advancing": false
+    },
+    "threshold": "met at 30 or more decisions without play while game time does not advance",
+    "met": false,
+    "detail": "",
+    "dollars_per_minute": 0.19463047952755017
+   },
+   {
+    "id": "spend_inside_allowance",
+    "name": "Spend inside allowance",
+    "value": {
+     "spent": 3.9786,
+     "projected_one_hour": 15.6565,
+     "ceiling": 130.013682
+    },
+    "threshold": "met when spend or the one-hour projection exceeds the manifest ceiling",
+    "met": false,
+    "detail": "",
+    "dollars_per_minute": 0.19463047952755017
+   },
+   {
+    "id": "not_dead_and_spending",
+    "name": "Not dead and still spending",
+    "value": {
+     "died": false,
+     "requests_after_death": 0
+    },
+    "threshold": "met at a death followed by further requests",
+    "met": false,
+    "detail": "",
+    "dollars_per_minute": 0.19463047952755017
+   }
+  ]
+ },
+ "game_state": {
+  "provenance": "read",
+  "seq": 232,
+  "decision": 229,
+  "wall": 1793942401.098507,
+  "source_id": "c6c09be0b7d43fba2839147651a4f6a5-10133",
+  "frame_sha256": "046738e43a90089a09fd3af919f3c450673867867f191f98486977ca48179c60",
+  "mode": "menu",
+  "game_time": null,
+  "identity": null,
+  "vitals": [],
+  "threat": null,
+  "threat_count": null,
+  "readings": {
+   "death": {
+    "value": false,
+    "confidence": 0.9,
+    "abstain": null,
+    "version": 1,
+    "validation": {
+     "pass": true,
+     "accuracy": 1.0,
+     "n": 240,
+     "floor": 0.95
+    }
+   },
+   "game_time": {
+    "value": null,
+    "confidence": null,
+    "abstain": "not_in_game",
+    "version": 1,
+    "validation": {
+     "pass": true,
+     "accuracy": 1.0,
+     "n": 115,
+     "floor": 0.98
+    }
+   },
+   "identity": {
+    "value": null,
+    "confidence": null,
+    "abstain": "no_name_on_screen",
+    "version": 1,
+    "validation": null
+   },
+   "mode": {
+    "value": "menu",
+    "confidence": 0.9,
+    "abstain": null,
+    "version": 1,
+    "validation": {
+     "pass": true,
+     "accuracy": 1.0,
+     "n": 200,
+     "floor": 0.97
+    }
+   },
+   "threat": {
+    "value": null,
+    "confidence": null,
+    "abstain": "not_in_play",
+    "version": 1,
+    "validation": {
+     "pass": true,
+     "accuracy": 1.0,
+     "n": 91,
+     "floor": 0.95
+    }
+   },
+   "vital": {
+    "value": null,
+    "confidence": null,
+    "abstain": "not_in_game",
+    "version": 1,
+    "validation": null
+   }
+  }
+ },
+ "findings": [
+  {
+   "id": 244,
+   "seq_start": 232,
+   "seq_end": 232,
+   "kind": "run_end",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "control_id": "36cb8f1e5adb4e378adae88bbc725be2",
+    "orderly_stop": true,
+    "reason": "external_stop_complete"
+   },
+   "decision": 229,
+   "wall": 1793942401.098507
+  },
+  {
+   "id": 243,
+   "seq_start": 232,
+   "seq_end": 232,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 120,
+    "retained_images": 38
+   },
+   "decision": 229,
+   "wall": 1793942401.098507
+  },
+  {
+   "id": 242,
+   "seq_start": 231,
+   "seq_end": 231,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 120,
+    "retained_images": 37
+   },
+   "decision": 228,
+   "wall": 1793942387.167382
+  },
+  {
+   "id": 240,
+   "seq_start": 230,
+   "seq_end": 230,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 120,
+    "retained_images": 36
+   },
+   "decision": 227,
+   "wall": 1793942363.8776479
+  },
+  {
+   "id": 239,
+   "seq_start": 230,
+   "seq_end": 230,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 120,
+    "retained_images": 35
+   },
+   "decision": 227,
+   "wall": 1793942363.8776479
+  },
+  {
+   "id": 238,
+   "seq_start": 229,
+   "seq_end": 229,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 120,
+    "retained_images": 34
+   },
+   "decision": 226,
+   "wall": 1793942351.724624
+  },
+  {
+   "id": 236,
+   "seq_start": 228,
+   "seq_end": 228,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 120,
+    "retained_images": 33
+   },
+   "decision": 225,
+   "wall": 1793942343.881213
+  },
+  {
+   "id": 235,
+   "seq_start": 227,
+   "seq_end": 227,
+   "kind": "tool_refused",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "delivery": "undelivered",
+    "reason": "orderly-stop",
+    "tool": "computer_input"
+   },
+   "decision": 224,
+   "wall": 1793942330.816704
+  },
+  {
+   "id": 234,
+   "seq_start": 227,
+   "seq_end": 227,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 120,
+    "retained_images": 32
+   },
+   "decision": 224,
+   "wall": 1793942330.816704
+  },
+  {
+   "id": 233,
+   "seq_start": 227,
+   "seq_end": 227,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 120,
+    "retained_images": 32
+   },
+   "decision": 224,
+   "wall": 1793942330.816704
+  },
+  {
+   "id": 230,
+   "seq_start": 226,
+   "seq_end": 226,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 120,
+    "retained_images": 31
+   },
+   "decision": 223,
+   "wall": 1793942320.874372
+  },
+  {
+   "id": 229,
+   "seq_start": 225,
+   "seq_end": 225,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 120,
+    "retained_images": 30
+   },
+   "decision": 222,
+   "wall": 1793942311.190099
+  },
+  {
+   "id": 228,
+   "seq_start": 224,
+   "seq_end": 224,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 110,
+    "retained_images": 39
+   },
+   "decision": 221,
+   "wall": 1793942294.8013718
+  },
+  {
+   "id": 227,
+   "seq_start": 223,
+   "seq_end": 223,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 110,
+    "retained_images": 38
+   },
+   "decision": 220,
+   "wall": 1793942287.104328
+  },
+  {
+   "id": 226,
+   "seq_start": 222,
+   "seq_end": 222,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 110,
+    "retained_images": 37
+   },
+   "decision": 219,
+   "wall": 1793942278.161603
+  },
+  {
+   "id": 225,
+   "seq_start": 221,
+   "seq_end": 221,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 110,
+    "retained_images": 36
+   },
+   "decision": 218,
+   "wall": 1793942265.090284
+  },
+  {
+   "id": 223,
+   "seq_start": 220,
+   "seq_end": 220,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 110,
+    "retained_images": 35
+   },
+   "decision": 217,
+   "wall": 1793942257.158807
+  },
+  {
+   "id": 222,
+   "seq_start": 219,
+   "seq_end": 219,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 110,
+    "retained_images": 34
+   },
+   "decision": 216,
+   "wall": 1793942246.155978
+  },
+  {
+   "id": 220,
+   "seq_start": 218,
+   "seq_end": 218,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 110,
+    "retained_images": 33
+   },
+   "decision": 215,
+   "wall": 1793942238.380544
+  },
+  {
+   "id": 219,
+   "seq_start": 217,
+   "seq_end": 217,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 110,
+    "retained_images": 32
+   },
+   "decision": 214,
+   "wall": 1793942232.048583
+  },
+  {
+   "id": 217,
+   "seq_start": 216,
+   "seq_end": 216,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 110,
+    "retained_images": 31
+   },
+   "decision": 213,
+   "wall": 1793942222.525161
+  },
+  {
+   "id": 216,
+   "seq_start": 215,
+   "seq_end": 215,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 110,
+    "retained_images": 30
+   },
+   "decision": 212,
+   "wall": 1793942214.085469
+  },
+  {
+   "id": 214,
+   "seq_start": 214,
+   "seq_end": 214,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 100,
+    "retained_images": 39
+   },
+   "decision": 211,
+   "wall": 1793942205.062691
+  },
+  {
+   "id": 212,
+   "seq_start": 213,
+   "seq_end": 213,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 100,
+    "retained_images": 38
+   },
+   "decision": 210,
+   "wall": 1793942197.63007
+  },
+  {
+   "id": 210,
+   "seq_start": 212,
+   "seq_end": 212,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 100,
+    "retained_images": 37
+   },
+   "decision": 209,
+   "wall": 1793942186.6683588
+  },
+  {
+   "id": 209,
+   "seq_start": 211,
+   "seq_end": 211,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 100,
+    "retained_images": 36
+   },
+   "decision": 208,
+   "wall": 1793942181.587845
+  },
+  {
+   "id": 207,
+   "seq_start": 210,
+   "seq_end": 210,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 100,
+    "retained_images": 35
+   },
+   "decision": 207,
+   "wall": 1793942175.302721
+  },
+  {
+   "id": 206,
+   "seq_start": 209,
+   "seq_end": 209,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 100,
+    "retained_images": 34
+   },
+   "decision": 206,
+   "wall": 1793942167.1051478
+  },
+  {
+   "id": 204,
+   "seq_start": 208,
+   "seq_end": 208,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 100,
+    "retained_images": 33
+   },
+   "decision": 205,
+   "wall": 1793942157.946989
+  },
+  {
+   "id": 203,
+   "seq_start": 207,
+   "seq_end": 207,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 100,
+    "retained_images": 32
+   },
+   "decision": 204,
+   "wall": 1793942149.868892
+  },
+  {
+   "id": 201,
+   "seq_start": 206,
+   "seq_end": 206,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 100,
+    "retained_images": 31
+   },
+   "decision": 203,
+   "wall": 1793942141.510497
+  },
+  {
+   "id": 199,
+   "seq_start": 205,
+   "seq_end": 205,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 100,
+    "retained_images": 30
+   },
+   "decision": 202,
+   "wall": 1793942133.811115
+  },
+  {
+   "id": 198,
+   "seq_start": 204,
+   "seq_end": 204,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 90,
+    "retained_images": 39
+   },
+   "decision": 201,
+   "wall": 1793942126.620553
+  },
+  {
+   "id": 197,
+   "seq_start": 203,
+   "seq_end": 203,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 90,
+    "retained_images": 38
+   },
+   "decision": 200,
+   "wall": 1793942115.959863
+  },
+  {
+   "id": 195,
+   "seq_start": 202,
+   "seq_end": 202,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 90,
+    "retained_images": 37
+   },
+   "decision": 199,
+   "wall": 1793942099.9790652
+  },
+  {
+   "id": 194,
+   "seq_start": 201,
+   "seq_end": 201,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 90,
+    "retained_images": 36
+   },
+   "decision": 198,
+   "wall": 1793942091.0999172
+  },
+  {
+   "id": 192,
+   "seq_start": 200,
+   "seq_end": 200,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 90,
+    "retained_images": 35
+   },
+   "decision": 197,
+   "wall": 1793942079.5714948
+  },
+  {
+   "id": 191,
+   "seq_start": 199,
+   "seq_end": 199,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 90,
+    "retained_images": 34
+   },
+   "decision": 196,
+   "wall": 1793942071.3138108
+  },
+  {
+   "id": 190,
+   "seq_start": 198,
+   "seq_end": 198,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 90,
+    "retained_images": 33
+   },
+   "decision": 195,
+   "wall": 1793942063.700078
+  },
+  {
+   "id": 189,
+   "seq_start": 197,
+   "seq_end": 197,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 90,
+    "retained_images": 32
+   },
+   "decision": 194,
+   "wall": 1793942056.822757
+  },
+  {
+   "id": 187,
+   "seq_start": 196,
+   "seq_end": 196,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 90,
+    "retained_images": 31
+   },
+   "decision": 193,
+   "wall": 1793942049.093146
+  },
+  {
+   "id": 185,
+   "seq_start": 195,
+   "seq_end": 195,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 90,
+    "retained_images": 30
+   },
+   "decision": 192,
+   "wall": 1793942034.7639859
+  },
+  {
+   "id": 184,
+   "seq_start": 194,
+   "seq_end": 194,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 80,
+    "retained_images": 39
+   },
+   "decision": 191,
+   "wall": 1793942026.0226839
+  },
+  {
+   "id": 183,
+   "seq_start": 193,
+   "seq_end": 193,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 80,
+    "retained_images": 38
+   },
+   "decision": 190,
+   "wall": 1793942020.0703459
+  },
+  {
+   "id": 182,
+   "seq_start": 192,
+   "seq_end": 192,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 80,
+    "retained_images": 37
+   },
+   "decision": 189,
+   "wall": 1793942012.12609
+  },
+  {
+   "id": 181,
+   "seq_start": 191,
+   "seq_end": 191,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 80,
+    "retained_images": 36
+   },
+   "decision": 188,
+   "wall": 1793942003.122248
+  },
+  {
+   "id": 180,
+   "seq_start": 190,
+   "seq_end": 190,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 80,
+    "retained_images": 35
+   },
+   "decision": 187,
+   "wall": 1793941988.510897
+  },
+  {
+   "id": 179,
+   "seq_start": 189,
+   "seq_end": 189,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 80,
+    "retained_images": 34
+   },
+   "decision": 186,
+   "wall": 1793941979.47661
+  },
+  {
+   "id": 178,
+   "seq_start": 188,
+   "seq_end": 195,
+   "kind": "long_activity",
+   "source": "derived",
+   "confidence": 0.5,
+   "payload": {
+    "decisions": 7,
+    "end_game_time": 5219720,
+    "seconds": 6003,
+    "start_game_time": 5213717,
+    "unit": "seconds"
+   },
+   "decision": 185,
+   "wall": 1793941966.7929258
+  },
+  {
+   "id": 177,
+   "seq_start": 188,
+   "seq_end": 188,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 80,
+    "retained_images": 33
+   },
+   "decision": 185,
+   "wall": 1793941966.7929258
+  },
+  {
+   "id": 176,
+   "seq_start": 187,
+   "seq_end": 187,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 80,
+    "retained_images": 32
+   },
+   "decision": 184,
+   "wall": 1793941960.465674
+  },
+  {
+   "id": 174,
+   "seq_start": 186,
+   "seq_end": 186,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 80,
+    "retained_images": 31
+   },
+   "decision": 183,
+   "wall": 1793941952.207247
+  },
+  {
+   "id": 173,
+   "seq_start": 185,
+   "seq_end": 185,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 80,
+    "retained_images": 30
+   },
+   "decision": 182,
+   "wall": 1793941942.0663218
+  },
+  {
+   "id": 172,
+   "seq_start": 184,
+   "seq_end": 184,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 70,
+    "retained_images": 39
+   },
+   "decision": 181,
+   "wall": 1793941933.10951
+  },
+  {
+   "id": 170,
+   "seq_start": 183,
+   "seq_end": 183,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 70,
+    "retained_images": 38
+   },
+   "decision": 180,
+   "wall": 1793941924.6185138
+  },
+  {
+   "id": 168,
+   "seq_start": 182,
+   "seq_end": 182,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 70,
+    "retained_images": 37
+   },
+   "decision": 179,
+   "wall": 1793941915.538315
+  },
+  {
+   "id": 166,
+   "seq_start": 181,
+   "seq_end": 181,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 70,
+    "retained_images": 36
+   },
+   "decision": 178,
+   "wall": 1793941907.0063071
+  },
+  {
+   "id": 164,
+   "seq_start": 180,
+   "seq_end": 180,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 70,
+    "retained_images": 35
+   },
+   "decision": 177,
+   "wall": 1793941897.783556
+  },
+  {
+   "id": 162,
+   "seq_start": 179,
+   "seq_end": 179,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 70,
+    "retained_images": 34
+   },
+   "decision": 176,
+   "wall": 1793941887.8193011
+  },
+  {
+   "id": 160,
+   "seq_start": 178,
+   "seq_end": 178,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 70,
+    "retained_images": 33
+   },
+   "decision": 175,
+   "wall": 1793941878.716675
+  },
+  {
+   "id": 159,
+   "seq_start": 177,
+   "seq_end": 177,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 70,
+    "retained_images": 32
+   },
+   "decision": 174,
+   "wall": 1793941869.662678
+  },
+  {
+   "id": 158,
+   "seq_start": 176,
+   "seq_end": 176,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 70,
+    "retained_images": 31
+   },
+   "decision": 173,
+   "wall": 1793941860.3109272
+  },
+  {
+   "id": 156,
+   "seq_start": 175,
+   "seq_end": 175,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 70,
+    "retained_images": 30
+   },
+   "decision": 172,
+   "wall": 1793941851.096342
+  },
+  {
+   "id": 154,
+   "seq_start": 174,
+   "seq_end": 174,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 60,
+    "retained_images": 39
+   },
+   "decision": 171,
+   "wall": 1793941839.8712351
+  },
+  {
+   "id": 152,
+   "seq_start": 173,
+   "seq_end": 173,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 60,
+    "retained_images": 38
+   },
+   "decision": 170,
+   "wall": 1793941834.071831
+  },
+  {
+   "id": 151,
+   "seq_start": 172,
+   "seq_end": 172,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 60,
+    "retained_images": 37
+   },
+   "decision": 169,
+   "wall": 1793941825.812723
+  },
+  {
+   "id": 150,
+   "seq_start": 171,
+   "seq_end": 171,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 60,
+    "retained_images": 36
+   },
+   "decision": 168,
+   "wall": 1793941816.903549
+  },
+  {
+   "id": 148,
+   "seq_start": 170,
+   "seq_end": 170,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 60,
+    "retained_images": 35
+   },
+   "decision": 167,
+   "wall": 1793941807.7821188
+  },
+  {
+   "id": 147,
+   "seq_start": 169,
+   "seq_end": 169,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 60,
+    "retained_images": 34
+   },
+   "decision": 166,
+   "wall": 1793941797.8913448
+  },
+  {
+   "id": 146,
+   "seq_start": 168,
+   "seq_end": 168,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 60,
+    "retained_images": 33
+   },
+   "decision": 165,
+   "wall": 1793941784.638366
+  },
+  {
+   "id": 144,
+   "seq_start": 167,
+   "seq_end": 167,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 60,
+    "retained_images": 32
+   },
+   "decision": 164,
+   "wall": 1793941778.222968
+  },
+  {
+   "id": 143,
+   "seq_start": 166,
+   "seq_end": 166,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 60,
+    "retained_images": 31
+   },
+   "decision": 163,
+   "wall": 1793941773.058836
+  },
+  {
+   "id": 141,
+   "seq_start": 165,
+   "seq_end": 165,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 60,
+    "retained_images": 30
+   },
+   "decision": 162,
+   "wall": 1793941767.010444
+  },
+  {
+   "id": 140,
+   "seq_start": 164,
+   "seq_end": 164,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 50,
+    "retained_images": 39
+   },
+   "decision": 161,
+   "wall": 1793941760.370711
+  },
+  {
+   "id": 139,
+   "seq_start": 163,
+   "seq_end": 163,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 50,
+    "retained_images": 38
+   },
+   "decision": 160,
+   "wall": 1793941749.488242
+  },
+  {
+   "id": 138,
+   "seq_start": 162,
+   "seq_end": 162,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 50,
+    "retained_images": 37
+   },
+   "decision": 159,
+   "wall": 1793941742.601887
+  },
+  {
+   "id": 136,
+   "seq_start": 161,
+   "seq_end": 161,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 50,
+    "retained_images": 36
+   },
+   "decision": 158,
+   "wall": 1793941735.943234
+  },
+  {
+   "id": 135,
+   "seq_start": 160,
+   "seq_end": 160,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 50,
+    "retained_images": 35
+   },
+   "decision": 157,
+   "wall": 1793941724.392421
+  },
+  {
+   "id": 134,
+   "seq_start": 159,
+   "seq_end": 159,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 50,
+    "retained_images": 34
+   },
+   "decision": 156,
+   "wall": 1793941718.30492
+  },
+  {
+   "id": 133,
+   "seq_start": 158,
+   "seq_end": 158,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 50,
+    "retained_images": 33
+   },
+   "decision": 155,
+   "wall": 1793941711.561835
+  },
+  {
+   "id": 132,
+   "seq_start": 157,
+   "seq_end": 157,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 50,
+    "retained_images": 32
+   },
+   "decision": 154,
+   "wall": 1793941704.808356
+  },
+  {
+   "id": 131,
+   "seq_start": 156,
+   "seq_end": 156,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 50,
+    "retained_images": 31
+   },
+   "decision": 153,
+   "wall": 1793941699.32126
+  },
+  {
+   "id": 130,
+   "seq_start": 155,
+   "seq_end": 155,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 50,
+    "retained_images": 30
+   },
+   "decision": 152,
+   "wall": 1793941688.999517
+  },
+  {
+   "id": 129,
+   "seq_start": 154,
+   "seq_end": 154,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 40,
+    "retained_images": 39
+   },
+   "decision": 151,
+   "wall": 1793941679.869963
+  },
+  {
+   "id": 128,
+   "seq_start": 153,
+   "seq_end": 153,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 40,
+    "retained_images": 38
+   },
+   "decision": 150,
+   "wall": 1793941674.046793
+  },
+  {
+   "id": 127,
+   "seq_start": 152,
+   "seq_end": 152,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 40,
+    "retained_images": 37
+   },
+   "decision": 149,
+   "wall": 1793941665.853557
+  },
+  {
+   "id": 126,
+   "seq_start": 151,
+   "seq_end": 151,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 40,
+    "retained_images": 36
+   },
+   "decision": 148,
+   "wall": 1793941658.574755
+  },
+  {
+   "id": 125,
+   "seq_start": 150,
+   "seq_end": 150,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 40,
+    "retained_images": 35
+   },
+   "decision": 147,
+   "wall": 1793941651.815466
+  },
+  {
+   "id": 124,
+   "seq_start": 149,
+   "seq_end": 149,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 40,
+    "retained_images": 34
+   },
+   "decision": 146,
+   "wall": 1793941640.907707
+  },
+  {
+   "id": 123,
+   "seq_start": 148,
+   "seq_end": 148,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 40,
+    "retained_images": 33
+   },
+   "decision": 145,
+   "wall": 1793941635.3627
+  },
+  {
+   "id": 122,
+   "seq_start": 147,
+   "seq_end": 147,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 40,
+    "retained_images": 32
+   },
+   "decision": 144,
+   "wall": 1793941622.937073
+  },
+  {
+   "id": 121,
+   "seq_start": 146,
+   "seq_end": 146,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 40,
+    "retained_images": 31
+   },
+   "decision": 143,
+   "wall": 1793941615.034148
+  },
+  {
+   "id": 120,
+   "seq_start": 145,
+   "seq_end": 145,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 40,
+    "retained_images": 30
+   },
+   "decision": 142,
+   "wall": 1793941608.483575
+  },
+  {
+   "id": 119,
+   "seq_start": 144,
+   "seq_end": 160,
+   "kind": "stall",
+   "source": "derived",
+   "confidence": null,
+   "payload": {
+    "decisions": 17,
+    "modes": {
+     "prompt": 17
+    },
+    "ongoing": false,
+    "setup": false
+   },
+   "decision": 141,
+   "wall": 1793941599.2366872
+  },
+  {
+   "id": 117,
+   "seq_start": 144,
+   "seq_end": 144,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 30,
+    "retained_images": 39
+   },
+   "decision": 141,
+   "wall": 1793941599.2366872
+  },
+  {
+   "id": 115,
+   "seq_start": 143,
+   "seq_end": 143,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 30,
+    "retained_images": 38
+   },
+   "decision": 140,
+   "wall": 1793941591.953183
+  },
+  {
+   "id": 113,
+   "seq_start": 142,
+   "seq_end": 142,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 30,
+    "retained_images": 37
+   },
+   "decision": 139,
+   "wall": 1793941582.3978539
+  },
+  {
+   "id": 111,
+   "seq_start": 141,
+   "seq_end": 141,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 30,
+    "retained_images": 36
+   },
+   "decision": 138,
+   "wall": 1793941575.7180521
+  },
+  {
+   "id": 110,
+   "seq_start": 140,
+   "seq_end": 140,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 30,
+    "retained_images": 35
+   },
+   "decision": 137,
+   "wall": 1793941563.337248
+  },
+  {
+   "id": 108,
+   "seq_start": 139,
+   "seq_end": 139,
+   "kind": "context_eviction",
+   "source": "harness",
+   "confidence": null,
+   "payload": {
+    "actor": "4a3a47da83ed45d08f527576f8cc40f4",
+    "blocked": false,
+    "omitted_images": 30,
+    "retained_images": 34
+   },
+   "decision": 136,
+   "wall": 1793941552.536423
+  }
+ ],
+ "ladder": {
+  "highest": "ate",
+  "rungs": [
+   {
+    "clocks": {
+     "decision": 8,
+     "dollars": 0.02385905,
+     "game_time": 5212800,
+     "tokens": 84154,
+     "wall": 1793940694.67798
+    },
+    "decisions": 0,
+    "evidence": "reader",
+    "id": "in_play",
+    "seq": 9,
+    "status": "reached"
+   },
+   {
+    "evidence": "human",
+    "id": "armed",
+    "status": "not_assessed"
+   },
+   {
+    "evidence": "human",
+    "id": "water_obtained",
+    "status": "not_assessed"
+   },
+   {
+    "evidence": "reader",
+    "id": "drank",
+    "status": "not_reached"
+   },
+   {
+    "evidence": "human",
+    "id": "food_obtained",
+    "status": "not_assessed"
+   },
+   {
+    "clocks": {
+     "decision": 223,
+     "dollars": 3.8639039999999993,
+     "game_time": 5220376,
+     "tokens": 20496699,
+     "wall": 1793942320.874372
+    },
+    "decisions": 215,
+    "evidence": "reader",
+    "id": "ate",
+    "seq": 226,
+    "status": "reached"
+   },
+   {
+    "evidence": "human",
+    "id": "shelter",
+    "status": "not_assessed"
+   },
+   {
+    "evidence": "human",
+    "id": "clean_water",
+    "status": "not_assessed"
+   },
+   {
+    "evidence": "reader",
+    "id": "slept",
+    "status": "not_reached"
+   },
+   {
+    "evidence": "reader",
+    "id": "survived_first_night",
+    "status": "not_reached"
+   },
+   {
+    "evidence": "reader",
+    "id": "elapsed_24h",
+    "status": "not_reached"
+   },
+   {
+    "evidence": "reader",
+    "id": "elapsed_72h",
+    "status": "not_reached"
+   },
+   {
+    "evidence": "reader",
+    "id": "elapsed_168h",
+    "status": "not_reached"
+   },
+   {
+    "evidence": "human",
+    "id": "resupplied",
+    "status": "not_assessed"
+   }
+  ]
+ },
+ "metrics": [
+  {
+   "name": "handoff.carry_ratio",
+   "key": "",
+   "value": {
+    "excluded": 0,
+    "value": 0.07322287010367218
+   },
+   "count": 1,
+   "denominator": 1.0,
+   "missing": null,
+   "source": "derived"
+  },
+  {
+   "name": "handoff.carry_ratio",
+   "key": "0",
+   "value": 0.07322287010367218,
+   "count": 1,
+   "denominator": 1.0,
+   "missing": null,
+   "source": "derived"
+  },
+  {
+   "name": "handoff.decisions_to_resume",
+   "key": "",
+   "value": {
+    "excluded": 0,
+    "value": 2
+   },
+   "count": 1,
+   "denominator": 1.0,
+   "missing": null,
+   "source": "derived"
+  },
+  {
+   "name": "handoff.decisions_to_resume",
+   "key": "0",
+   "value": 2,
+   "count": 1,
+   "denominator": 1.0,
+   "missing": null,
+   "source": "derived"
+  },
+  {
+   "name": "host.cache_write_share",
+   "key": "",
+   "value": 0.7107414346770614,
+   "count": 237,
+   "denominator": 3.9786445,
+   "missing": null,
+   "source": "recorded"
+  },
+  {
+   "name": "host.dollars_per_decision",
+   "key": "",
+   "value": {
+    "excluded": 0,
+    "value": 0.01737399344978166
+   },
+   "count": 237,
+   "denominator": 229.0,
+   "missing": null,
+   "source": "recorded"
+  },
+  {
+   "name": "host.large_rewrite_share",
+   "key": "",
+   "value": 0.5990627209844961,
+   "count": 17,
+   "denominator": 3.9786445,
+   "missing": null,
+   "source": "recorded"
+  },
+  {
+   "name": "host.latency",
+   "key": "first_chunk.p50",
+   "value": 3189.1140840000007,
+   "count": 237,
+   "denominator": 237.0,
+   "missing": null,
+   "source": "recorded"
+  },
+  {
+   "name": "host.latency",
+   "key": "first_chunk.p95",
+   "value": 4148.964333000011,
+   "count": 237,
+   "denominator": 237.0,
+   "missing": null,
+   "source": "recorded"
+  },
+  {
+   "name": "host.latency",
+   "key": "response.p50",
+   "value": 6362.858000000007,
+   "count": 237,
+   "denominator": 237.0,
+   "missing": null,
+   "source": "recorded"
+  },
+  {
+   "name": "host.latency",
+   "key": "response.p95",
+   "value": 12284.771416999982,
+   "count": 237,
+   "denominator": 237.0,
+   "missing": null,
+   "source": "recorded"
+  },
+  {
+   "name": "host.retry_share",
+   "key": "",
+   "value": {
+    "aborts": 0,
+    "non_tool_stops": 0,
+    "retries": 0,
+    "value": 0.0
+   },
+   "count": 0,
+   "denominator": 237.0,
+   "missing": null,
+   "source": "recorded"
+  },
+  {
+   "name": "input.actions_per_call",
+   "key": "",
+   "value": 4.8384279475982535,
+   "count": 1108,
+   "denominator": 229.0,
+   "missing": null,
+   "source": "recorded"
+  },
+  {
+   "name": "input.frame_unchanged_rate",
+   "key": "",
+   "value": {
+    "excluded": 0,
+    "value": 0.013100436681222707
+   },
+   "count": 3,
+   "denominator": 229.0,
+   "missing": null,
+   "source": "recorded"
+  },
+  {
+   "name": "custody.uncertain_receipts",
+   "key": "",
+   "value": 0.0,
+   "count": 0,
+   "denominator": 1339.0,
+   "missing": null,
+   "source": "recorded"
+  },
+  {
+   "name": "custody.stopped",
+   "key": "",
+   "value": false,
+   "count": 0,
+   "denominator": null,
+   "missing": null,
+   "source": "recorded"
+  },
+  {
+   "name": "input.unseen_action_share",
+   "key": "",
+   "value": 0.7933212996389891,
+   "count": 879,
+   "denominator": 1108.0,
+   "missing": null,
+   "source": "recorded"
+  },
+  {
+   "name": "ladder.reached",
+   "key": "",
+   "value": {
+    "highest": "ate",
+    "rungs": [
+     {
+      "clocks": {
+       "decision": 8,
+       "dollars": 0.02385905,
+       "game_time": 5212800,
+       "tokens": 84154,
+       "wall": 1793940694.67798
+      },
+      "decisions": 0,
+      "evidence": "reader",
+      "id": "in_play",
+      "seq": 9,
+      "status": "reached"
+     },
+     {
+      "evidence": "human",
+      "id": "armed",
+      "status": "not_assessed"
+     },
+     {
+      "evidence": "human",
+      "id": "water_obtained",
+      "status": "not_assessed"
+     },
+     {
+      "evidence": "reader",
+      "id": "drank",
+      "status": "not_reached"
+     },
+     {
+      "evidence": "human",
+      "id": "food_obtained",
+      "status": "not_assessed"
+     },
+     {
+      "clocks": {
+       "decision": 223,
+       "dollars": 3.8639039999999993,
+       "game_time": 5220376,
+       "tokens": 20496699,
+       "wall": 1793942320.874372
+      },
+      "decisions": 215,
+      "evidence": "reader",
+      "id": "ate",
+      "seq": 226,
+      "status": "reached"
+     },
+     {
+      "evidence": "human",
+      "id": "shelter",
+      "status": "not_assessed"
+     },
+     {
+      "evidence": "human",
+      "id": "clean_water",
+      "status": "not_assessed"
+     },
+     {
+      "evidence": "reader",
+      "id": "slept",
+      "status": "not_reached"
+     },
+     {
+      "evidence": "reader",
+      "id": "survived_first_night",
+      "status": "not_reached"
+     },
+     {
+      "evidence": "reader",
+      "id": "elapsed_24h",
+      "status": "not_reached"
+     },
+     {
+      "evidence": "reader",
+      "id": "elapsed_72h",
+      "status": "not_reached"
+     },
+     {
+      "evidence": "reader",
+      "id": "elapsed_168h",
+      "status": "not_reached"
+     },
+     {
+      "evidence": "human",
+      "id": "resupplied",
+      "status": "not_assessed"
+     }
+    ]
+   },
+   "count": 2,
+   "denominator": 14.0,
+   "missing": "human_rungs_not_assessed",
+   "source": "read"
+  },
+  {
+   "name": "lineage.continuity",
+   "key": "",
+   "value": [],
+   "count": 0,
+   "denominator": 0.0,
+   "missing": null,
+   "source": "derived"
+  },
+  {
+   "name": "memory.late_write_share",
+   "key": "",
+   "value": 1.0,
+   "count": 1,
+   "denominator": 1.0,
+   "missing": null,
+   "source": "derived"
+  },
+  {
+   "name": "memory.reads",
+   "key": "",
+   "value": 0,
+   "count": 0,
+   "denominator": null,
+   "missing": null,
+   "source": "recorded"
+  },
+  {
+   "name": "memory.records",
+   "key": "work",
+   "value": 1,
+   "count": 1,
+   "denominator": 1.0,
+   "missing": null,
+   "source": "recorded"
+  },
+  {
+   "name": "memory.retrieved_beyond_carry",
+   "key": "",
+   "value": 0.0,
+   "count": 0,
+   "denominator": 1.0,
+   "missing": null,
+   "source": "derived"
+  },
+  {
+   "name": "memory.writes",
+   "key": "",
+   "value": 1,
+   "count": 1,
+   "denominator": null,
+   "missing": null,
+   "source": "recorded"
+  },
+  {
+   "name": "mode.out_of_play_share",
+   "key": "",
+   "value": {
+    "excluded": 0,
+    "setup_decisions": 8,
+    "value": 0.5990990990990991
+   },
+   "count": 133,
+   "denominator": 222.0,
+   "missing": null,
+   "source": "read"
+  },
+  {
+   "name": "needs.severe_share",
+   "key": "",
+   "value": {
+    "excluded": 0,
+    "value": 0.0
+   },
+   "count": 0,
+   "denominator": 89.0,
+   "missing": null,
+   "source": "read"
+  },
+  {
+   "name": "pace.dollars_per_game_hour",
+   "key": "",
+   "value": 1.885613507109005,
+   "count": 237,
+   "denominator": 2.11,
+   "missing": null,
+   "source": "derived"
+  },
+  {
+   "name": "pace.long_activities",
+   "key": "",
+   "value": {
+    "count": 1,
+    "total_game_seconds": 6003
+   },
+   "count": 1,
+   "denominator": null,
+   "missing": null,
+   "source": "derived"
+  },
+  {
+   "name": "pace.routine_seconds_per_decision",
+   "key": "",
+   "value": 4.0,
+   "count": 107,
+   "denominator": 107.0,
+   "missing": null,
+   "source": "derived"
+  },
+  {
+   "name": "programs.outcomes",
+   "key": "",
+   "value": 0,
+   "count": 0,
+   "denominator": null,
+   "missing": "no_program_runs",
+   "source": "recorded"
+  },
+  {
+   "name": "programs.reused",
+   "key": "",
+   "value": 0,
+   "count": 0,
+   "denominator": null,
+   "missing": null,
+   "source": "recorded"
+  },
+  {
+   "name": "programs.runs",
+   "key": "",
+   "value": 0,
+   "count": 0,
+   "denominator": null,
+   "missing": null,
+   "source": "recorded"
+  },
+  {
+   "name": "programs.saved",
+   "key": "",
+   "value": 0,
+   "count": 0,
+   "denominator": null,
+   "missing": null,
+   "source": "recorded"
+  },
+  {
+   "name": "reader.coverage",
+   "key": "core.frame",
+   "value": 1.0,
+   "count": 231,
+   "denominator": 231.0,
+   "missing": null,
+   "source": "read"
+  },
+  {
+   "name": "reader.coverage",
+   "key": "core.game_time",
+   "value": 0.47186147186147187,
+   "count": 109,
+   "denominator": 231.0,
+   "missing": null,
+   "source": "read"
+  },
+  {
+   "name": "reader.coverage",
+   "key": "core.map_change",
+   "value": 0.9913419913419913,
+   "count": 229,
+   "denominator": 231.0,
+   "missing": null,
+   "source": "read"
+  },
+  {
+   "name": "reader.coverage",
+   "key": "death",
+   "value": 1.0,
+   "count": 231,
+   "denominator": 231.0,
+   "missing": null,
+   "source": "read"
+  },
+  {
+   "name": "reader.coverage",
+   "key": "game_time",
+   "value": 0.47186147186147187,
+   "count": 109,
+   "denominator": 231.0,
+   "missing": null,
+   "source": "read"
+  },
+  {
+   "name": "reader.coverage",
+   "key": "identity",
+   "value": 0.008658008658008658,
+   "count": 2,
+   "denominator": 231.0,
+   "missing": null,
+   "source": "read"
+  },
+  {
+   "name": "reader.coverage",
+   "key": "mode",
+   "value": 1.0,
+   "count": 231,
+   "denominator": 231.0,
+   "missing": null,
+   "source": "read"
+  },
+  {
+   "name": "reader.coverage",
+   "key": "threat",
+   "value": 0.3852813852813853,
+   "count": 89,
+   "denominator": 231.0,
+   "missing": null,
+   "source": "read"
+  },
+  {
+   "name": "reader.coverage",
+   "key": "vital",
+   "value": 0.0,
+   "count": 0,
+   "denominator": 231.0,
+   "missing": null,
+   "source": "read"
+  },
+  {
+   "name": "reader.coverage",
+   "key": "vital.hunger",
+   "value": 0.49783549783549785,
+   "count": 115,
+   "denominator": 231.0,
+   "missing": null,
+   "source": "read"
+  },
+  {
+   "name": "reader.coverage",
+   "key": "vital.limb.head",
+   "value": 0.645021645021645,
+   "count": 149,
+   "denominator": 231.0,
+   "missing": null,
+   "source": "read"
+  },
+  {
+   "name": "reader.coverage",
+   "key": "vital.limb.l_arm",
+   "value": 0.645021645021645,
+   "count": 149,
+   "denominator": 231.0,
+   "missing": null,
+   "source": "read"
+  },
+  {
+   "name": "reader.coverage",
+   "key": "vital.limb.l_leg",
+   "value": 0.645021645021645,
+   "count": 149,
+   "denominator": 231.0,
+   "missing": null,
+   "source": "read"
+  },
+  {
+   "name": "reader.coverage",
+   "key": "vital.limb.r_arm",
+   "value": 0.645021645021645,
+   "count": 149,
+   "denominator": 231.0,
+   "missing": null,
+   "source": "read"
+  },
+  {
+   "name": "reader.coverage",
+   "key": "vital.limb.r_leg",
+   "value": 0.645021645021645,
+   "count": 149,
+   "denominator": 231.0,
+   "missing": null,
+   "source": "read"
+  },
+  {
+   "name": "reader.coverage",
+   "key": "vital.limb.torso",
+   "value": 0.645021645021645,
+   "count": 149,
+   "denominator": 231.0,
+   "missing": null,
+   "source": "read"
+  },
+  {
+   "name": "reader.coverage",
+   "key": "vital.pain",
+   "value": 0.48484848484848486,
+   "count": 112,
+   "denominator": 231.0,
+   "missing": null,
+   "source": "read"
+  },
+  {
+   "name": "reader.coverage",
+   "key": "vital.thirst",
+   "value": 0.49783549783549785,
+   "count": 115,
+   "denominator": 231.0,
+   "missing": null,
+   "source": "read"
+  },
+  {
+   "name": "reader.coverage",
+   "key": "vital.weariness",
+   "value": 0.48484848484848486,
+   "count": 112,
+   "denominator": 231.0,
+   "missing": null,
+   "source": "read"
+  },
+  {
+   "name": "run.infrastructure_loss",
+   "key": "",
+   "value": 0,
+   "count": 0,
+   "denominator": 1.0,
+   "missing": null,
+   "source": "derived"
+  },
+  {
+   "name": "run.provider_loss",
+   "key": "",
+   "value": 0,
+   "count": 0,
+   "denominator": 1.0,
+   "missing": null,
+   "source": "derived"
+  },
+  {
+   "name": "stall.count",
+   "key": "",
+   "value": 3,
+   "count": 3,
+   "denominator": 222.0,
+   "missing": null,
+   "source": "derived"
+  },
+  {
+   "name": "stall.longest",
+   "key": "",
+   "value": 17,
+   "count": null,
+   "denominator": 222.0,
+   "missing": null,
+   "source": "derived"
+  },
+  {
+   "name": "survival.game_hours",
+   "key": "",
+   "value": {
+    "censor_reason": "budget",
+    "end_game_time": 5220396,
+    "episode": 0,
+    "episodes": 1,
+    "hours": 2.11,
+    "outcome": "censored",
+    "start_game_time": 5212800
+   },
+   "count": 109,
+   "denominator": null,
+   "missing": null,
+   "source": "derived",
+   "validated": false
+  },
+  {
+   "name": "tools.calls",
+   "key": "computer_input",
+   "value": {
+    "calls": 231,
+    "errors": 1,
+    "refused": 1
+   },
+   "count": 231,
+   "denominator": 236.0,
+   "missing": null,
+   "source": "recorded"
+  },
+  {
+   "name": "tools.calls",
+   "key": "computer_observe",
+   "value": {
+    "calls": 2,
+    "errors": 0,
+    "refused": 0
+   },
+   "count": 2,
+   "denominator": 236.0,
+   "missing": null,
+   "source": "recorded"
+  },
+  {
+   "name": "tools.calls",
+   "key": "player_handoff",
+   "value": {
+    "calls": 1,
+    "errors": 0,
+    "refused": 0
+   },
+   "count": 1,
+   "denominator": 236.0,
+   "missing": null,
+   "source": "recorded"
+  },
+  {
+   "name": "tools.calls",
+   "key": "player_memory_append",
+   "value": {
+    "calls": 1,
+    "errors": 0,
+    "refused": 0
+   },
+   "count": 1,
+   "denominator": 236.0,
+   "missing": null,
+   "source": "recorded"
+  },
+  {
+   "name": "tools.calls",
+   "key": "player_source",
+   "value": {
+    "calls": 1,
+    "errors": 0,
+    "refused": 0
+   },
+   "count": 1,
+   "denominator": 236.0,
+   "missing": null,
+   "source": "recorded"
+  },
+  {
+   "name": "tools.calls",
+   "key": "player_source+zoom",
+   "value": 0,
+   "count": 0,
+   "denominator": 1.0,
+   "missing": null,
+   "source": "recorded"
+  }
+ ],
+ "reader_coverage": [
+  {
+   "reader": "core.frame",
+   "coverage": 1.0,
+   "count": 231,
+   "denominator": 231.0,
+   "missing": null,
+   "validation": null
+  },
+  {
+   "reader": "core.game_time",
+   "coverage": 0.47186147186147187,
+   "count": 109,
+   "denominator": 231.0,
+   "missing": null,
+   "validation": null
+  },
+  {
+   "reader": "core.map_change",
+   "coverage": 0.9913419913419913,
+   "count": 229,
+   "denominator": 231.0,
+   "missing": null,
+   "validation": null
+  },
+  {
+   "reader": "death",
+   "coverage": 1.0,
+   "count": 231,
+   "denominator": 231.0,
+   "missing": null,
+   "validation": {
+    "version": 1,
+    "accuracy": 1.0,
+    "n": 240,
+    "floor": 0.95,
+    "pass": true,
+    "sample": "held-out frames: 240/240 with no positive examples, so recall is unmeasured"
+   }
+  },
+  {
+   "reader": "game_time",
+   "coverage": 0.47186147186147187,
+   "count": 109,
+   "denominator": 231.0,
+   "missing": null,
+   "validation": {
+    "version": 1,
+    "accuracy": 1.0,
+    "n": 115,
+    "floor": 0.98,
+    "pass": true,
+    "sample": "held-out frames, exact date and time: 115/115"
+   }
+  },
+  {
+   "reader": "identity",
+   "coverage": 0.008658008658008658,
+   "count": 2,
+   "denominator": 231.0,
+   "missing": null,
+   "validation": null
+  },
+  {
+   "reader": "mode",
+   "coverage": 1.0,
+   "count": 231,
+   "denominator": 231.0,
+   "missing": null,
+   "validation": {
+    "version": 1,
+    "accuracy": 1.0,
+    "n": 200,
+    "floor": 0.97,
+    "pass": true,
+    "sample": "fresh held-out sample after fix 6beeb3b: 200/200 correct, 0 abstained; the first sample scored 206/219 (0.94) before the fix and failed"
+   }
+  },
+  {
+   "reader": "threat",
+   "coverage": 0.3852813852813853,
+   "count": 89,
+   "denominator": 231.0,
+   "missing": null,
+   "validation": {
+    "version": 1,
+    "accuracy": 1.0,
+    "n": 91,
+    "floor": 0.95,
+    "pass": true,
+    "sample": "fresh held-out sample: 91/91, empty creature lists only; no held-out frame lists a creature, so counting is not validated (the first sample scored 59/84 before the fix)",
+    "scope": "empty_list_only"
+   }
+  },
+  {
+   "reader": "vital",
+   "coverage": 0.0,
+   "count": 0,
+   "denominator": 231.0,
+   "missing": null,
+   "validation": null
+  },
+  {
+   "reader": "vital.hunger",
+   "coverage": 0.49783549783549785,
+   "count": 115,
+   "denominator": 231.0,
+   "missing": null,
+   "validation": {
+    "version": 1,
+    "accuracy": 1.0,
+    "n": 84,
+    "floor": 0.95,
+    "pass": true,
+    "sample": "held-out frames: 84/84"
+   }
+  },
+  {
+   "reader": "vital.limb.head",
+   "coverage": 0.645021645021645,
+   "count": 149,
+   "denominator": 231.0,
+   "missing": null,
+   "validation": null
+  },
+  {
+   "reader": "vital.limb.l_arm",
+   "coverage": 0.645021645021645,
+   "count": 149,
+   "denominator": 231.0,
+   "missing": null,
+   "validation": null
+  },
+  {
+   "reader": "vital.limb.l_leg",
+   "coverage": 0.645021645021645,
+   "count": 149,
+   "denominator": 231.0,
+   "missing": null,
+   "validation": null
+  },
+  {
+   "reader": "vital.limb.r_arm",
+   "coverage": 0.645021645021645,
+   "count": 149,
+   "denominator": 231.0,
+   "missing": null,
+   "validation": null
+  },
+  {
+   "reader": "vital.limb.r_leg",
+   "coverage": 0.645021645021645,
+   "count": 149,
+   "denominator": 231.0,
+   "missing": null,
+   "validation": null
+  },
+  {
+   "reader": "vital.limb.torso",
+   "coverage": 0.645021645021645,
+   "count": 149,
+   "denominator": 231.0,
+   "missing": null,
+   "validation": null
+  },
+  {
+   "reader": "vital.pain",
+   "coverage": 0.48484848484848486,
+   "count": 112,
+   "denominator": 231.0,
+   "missing": null,
+   "validation": {
+    "version": 1,
+    "accuracy": 1.0,
+    "n": 84,
+    "floor": 0.95,
+    "pass": true,
+    "sample": "held-out frames: 84/84"
+   }
+  },
+  {
+   "reader": "vital.thirst",
+   "coverage": 0.49783549783549785,
+   "count": 115,
+   "denominator": 231.0,
+   "missing": null,
+   "validation": {
+    "version": 1,
+    "accuracy": 1.0,
+    "n": 84,
+    "floor": 0.95,
+    "pass": true,
+    "sample": "held-out frames: 84/84"
+   }
+  },
+  {
+   "reader": "vital.weariness",
+   "coverage": 0.48484848484848486,
+   "count": 112,
+   "denominator": 231.0,
+   "missing": null,
+   "validation": {
+    "version": 1,
+    "accuracy": 1.0,
+    "n": 84,
+    "floor": 0.95,
+    "pass": true,
+    "sample": "held-out frames: 84/84"
+   }
+  }
+ ]
+}

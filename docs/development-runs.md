@@ -120,12 +120,15 @@ samples the claims in each arm.
   carried) or shelter (secured and used for rest). Claims without a confirming
   frame do not count.
 - **Death cause**, if shown.
-- **Cost:** provider-reported dollars, charged attempts, setup attempts (until the
-  first in-play frame) and wall seconds.
+- **Cost:** dollars, charged attempts, setup attempts (until the first in-play
+  frame) and wall seconds. The **$ upper bound** column is provider-reported usage
+  plus $0.4096 for every attempt without a provider record, so it is an upper bound,
+  not an invoice. The generated table below reports configured-rate dollars per
+  decision from host usage instead.
 
 ## Results
 
-| Run | Date | Arm | Start | Survival h | Status | Verified improvements | Death cause | Attempts (setup) | $ actual | Wall s | Note |
+| Run | Date | Arm | Start | Survival h | Status | Verified improvements | Death cause | Attempts (setup) | $ upper bound | Wall s | Note |
 | --- | --- | --- | --- | ---: | --- | ---: | --- | --- | ---: | ---: | --- |
 | P1 | 2026-11-06 | Pilot (131k, 30/1) | S1 | 0.21 | Alive at stop (context capacity, both hosts) | 1 | — | 136 (25) | 6.05 | 859 | Mara Ellis, Evacuee; 08:00:00 → 08:12:22, Spring day 61. Crafted and wielded a pointy stick; looted a strip mall. Not scored. |
 | C1 | 2026-11-06 | A0 (2-host handoff) | S1 | 5.49 | Alive at stop (orderly finish at the attempt reserve) | 4 | — | 233 (23) | 3.58 | 1,856 | Morgan Reed, Evacuee; 08:00:00 → 13:29:21, Spring day 61. Crafted fishing rod, foraged cattails, canned beans, clean water. Saved per player claim. |
@@ -139,7 +142,7 @@ limit then ended the run at 115–233 of 250 attempts. The final actor is now of
 no handoff tool, so the five scored ceiling runs restart on that fix with the
 configuration otherwise unchanged.
 
-| Run | Date | Arm | Start | Survival h | Status | Verified improvements | Death cause | Attempts (setup) | $ actual | Wall s | Note |
+| Run | Date | Arm | Start | Survival h | Status | Verified improvements | Death cause | Attempts (setup) | $ upper bound | Wall s | Note |
 | --- | --- | --- | --- | ---: | --- | ---: | --- | --- | ---: | ---: | --- |
 | T1 | 2026-11-06 | Ceiling | S1 | 0.59 | Alive at stop (orderly finish) | 4 | — | 231 (22) | 3.46 | 1,539 | Morgan Vale; 08:00 → 08:35:39. Pointy stick, 7 protein rations, clean water, emergency blanket and jacket. Recruited a follower. |
 | T2 | 2026-11-06 | Ceiling | S2 | 0.05 | Died | 0 | Surrounded by zombies and ferals on a riverbank | 70 (—) | 0.52 | 425 | Russell Dobbs; chose a fitness-gym start among about 16 zombies. Memorial "Survived 2m". |
@@ -165,7 +168,7 @@ the configured-rate estimate, which matched them.
 Source `70eda9a` on the unmerged `aid-zoom-view` branch: `player_source` takes an
 optional nearest-neighbour `zoom` of a crop, and the guide's tool row mentions it.
 
-| Run | Date | Arm | Start | Survival h | Status | Verified improvements | Death cause | Attempts (setup) | $ actual | Wall s | Note |
+| Run | Date | Arm | Start | Survival h | Status | Verified improvements | Death cause | Attempts (setup) | $ upper bound | Wall s | Note |
 | --- | --- | --- | --- | ---: | --- | ---: | --- | --- | ---: | ---: | --- |
 | A1 | 2026-11-06 | A (zoom) | S1 | 0.27 | Alive at stop (orderly finish) | 3 | — | 231 (18) | 3.54 | 1,610 | Morgan Hale. Protein ration, foraged cattails and fiddleheads, long pointy stick. 0 zoom uses. |
 | A2 | 2026-11-06 | A (zoom) | S2 | — | Infrastructure failure | — | — | 76 (29) | 0.76 | 464 | Mid-stream provider error at request 76 (HTTP 200, then `stop_reason: error`); not scored, replaced by A6. |
@@ -185,7 +188,7 @@ Source `784d3ae` (differs from the ceiling source only in docs); the frozen
 context is the guide plus a paragraph permitting the player to open the game's own
 help, command and keybinding screens and to keep what it learns as memory records.
 
-| Run | Date | Arm | Start | Survival h | Status | Verified improvements | Death cause | Attempts (setup) | $ actual | Wall s | Note |
+| Run | Date | Arm | Start | Survival h | Status | Verified improvements | Death cause | Attempts (setup) | $ upper bound | Wall s | Note |
 | --- | --- | --- | --- | ---: | --- | ---: | --- | --- | ---: | ---: | --- |
 | B1 | 2026-11-06 | B (help) | S1 | 0.38 | Alive at stop (orderly finish) | 3 | — | 231 (13) | 3.49 | 2,016 | C. Townsend (player-chosen name). Wooden club, chocolate drink, flashlight; follower. Saved a keybinding `procedure` record. |
 | B2 | 2026-11-06 | B (help) | S2 | 0.29 | Alive at stop (orderly finish) | 4 | — | 239 (16) | 3.64 | 2,282 | Carolynn Hardy; default scenario. Cattails, rations, clean water, mission reward of cattail jelly. Two keybinding `procedure` records. |
@@ -212,7 +215,7 @@ player to record an `advice` reflection before it hands off or finishes, and whe
 survivor dies. Each run's assignment carries the earlier arm-C players' reflections
 as bounded, fallible historical data.
 
-| Run | Date | Arm | Start | Survival h | Status | Verified improvements | Death cause | Attempts (setup) | $ actual | Wall s | Note |
+| Run | Date | Arm | Start | Survival h | Status | Verified improvements | Death cause | Attempts (setup) | $ upper bound | Wall s | Note |
 | --- | --- | --- | --- | ---: | --- | ---: | --- | --- | ---: | ---: | --- |
 | C1 | 2026-11-06 | C (reflect) | S1 | 0.45 | Alive at stop (orderly finish) | 5 | — | 232 (22) | 4.09 | 1,800 | Morgan Hale; follower. Long pointy stick, rhubarb, rations, clean water, emergency jacket and blanket. Two reflections. One stream-start error, retried by #380. |
 | C2 | 2026-11-06 | C (reflect) | S2 | 0.22 | Died | 5 | Caught by a feral soldier near a house | 196 (22) | 2.35 | 1,480 | Alex Rowan; follower. Club, water, honey, rations, first-aid kit, emergency clothing. Post-death reflection named the decisive error. |
@@ -261,3 +264,115 @@ more actors per admission or a longer context window: two hosts of a 262k window
 hold roughly 350 decisions, and `campaign-run/4` allows at most two hosts. #164's
 cadence criteria stay deferred until that baseline exists. Infrastructure lessons
 are recorded as fixes #378–#380 and the actual-spend admission rule.
+
+## Evaluator re-score and power check (#383)
+
+The [run evaluator](contracts/evaluation.md) (core 1, CDDA binding 1) re-scored all
+30 runs from their recorded frames, traces and memory stores. These are new,
+generated rows. The hand-scored tables above are unchanged and remain the record of
+the loop's decisions. Regenerate the table with
+`python -m tools.evaluate evaluate-table .runtime/evaluations`.
+
+**Frozen for #382.** The following are frozen at the #383 merge commit, which each
+admission records as `source_commit`:
+- evaluator core 1 with CDDA binding 1 (`evaluation-record/1`);
+- the `spectator-view/1` viewer API;
+- the `campaign-watch-start/3` and `campaign-watch-terminal/3` control path;
+- `campaign-run/5` manifests;
+- player-host telemetry v3 with `context-manifest`.
+
+Any change to one of these during #382 starts a new arm. All 30 records above were
+re-scored with the frozen evaluator. The spectator's graphical lane on the final source
+has its own [evidence manifest](acceptance/assets/spectator-383/summary.json): an
+archived run replayed into a copy, checks and Pause kept working after the viewer was
+killed, and the run ended only on the owner's Pause.
+
+| Run | Arm | Start | End | Game h | Decisions | Setup | Routine pace | Long activities | Out of play | Longest stall | $ / decision | Large rewrites |
+| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| ceil01 | pilot | S1 | budget | 0.21 | 129 | 7 | 5.0 | 0 · 0.00 h | 59% | 17 | 0.0469 | 96% |
+| ceil02 | pre-loop | S1 | budget | 5.49 | 227 | 6 | 3.0 | 1 · 5.00 h | 63% | 19 | 0.0158 | 61% |
+| ceil03 | pre-loop | S2 | budget | 0.16 | 151 | 7 | 2.0 | 0 · 0.00 h | 30% | 4 | 0.0113 | 49% |
+| ceil04 | pre-loop | S1 | budget | 0.10 | 109 | 7 | 2.0 | 0 · 0.00 h | 63% | 14 | 0.0077 | 35% |
+| ceil05 | ceiling | S1 | budget | 0.59 | 225 | 7 | 3.7 | 0 · 0.00 h | 71% | 16 | 0.0154 | 62% |
+| ceil06 | ceiling | S2 | died | 0.05 | 65 | 7 | 2.2 | 0 · 0.00 h | 56% | 7 | 0.0081 | 45% |
+| ceil07 | ceiling | S1 | budget | 0.61 | 223 | 7 | 3.0 | 0 · 0.00 h | 70% | 15 | 0.0164 | 66% |
+| ceil08 | ceiling | S2 | died | 0.03 | 35 | 7 | 4.0 | 0 · 0.00 h | 21% | 3 | 0.0045 | 0% |
+| ceil09 | ceiling | S1 | budget | 2.11 | 229 | 8 | 4.0 | 1 · 1.67 h | 60% | 17 | 0.0174 | 60% |
+| aidA1 | zoom-aid | S1 | budget | 0.27 | 224 | 7 | 5.0 | 0 · 0.00 h | 62% | 14 | 0.0158 | 60% |
+| aidA2 | zoom-aid | S2 | infrastructure | 0.12 | 74 | 7 | 2.0 | 0 · 0.00 h | 65% | 10 | 0.0089 | 49% |
+| aidA3 | zoom-aid | S1 | budget | 0.30 | 226 | 7 | 4.0 | 0 · 0.00 h | 58% | 15 | 0.0176 | 62% |
+| aidA4 | zoom-aid | S2 | budget | 2.11 | 229 | 7 | 3.0 | 1 · 1.65 h | 65% | 17 | 0.0180 | 64% |
+| aidA5 | zoom-aid | S1 | budget | 0.93 | 226 | 9 | 6.0 | 0 · 0.00 h | 62% | 14 | 0.0179 | 63% |
+| aidA6 | zoom-aid | S2 | died | 0.07 | 83 | 6 | 4.2 | 0 · 0.00 h | 49% | 16 | 0.0115 | 57% |
+| aidB1 | game-help-aid | S1 | budget | 0.38 | 223 | 8 | 3.0 | 0 · 0.00 h | 65% | 18 | 0.0156 | 62% |
+| aidB2 | game-help-aid | S2 | budget | 0.29 | 226 | 7 | 5.0 | 0 · 0.00 h | 56% | 22 | 0.0161 | 59% |
+| aidB3 | game-help-aid | S1 | budget | 0.42 | 224 | 6 | 7.8 | 0 · 0.00 h | 53% | 16 | 0.0180 | 60% |
+| aidB4 | game-help-aid | S2 | budget | 0.17 | 223 | 7 | 3.0 | 0 · 0.00 h | 44% | 20 | 0.0155 | 58% |
+| aidB5 | game-help-aid | S1 | infrastructure | 0.20 | 185 | 7 | 3.0 | 0 · 0.00 h | 64% | 20 | 0.0119 | 54% |
+| aidB6 | game-help-aid | S1 | infrastructure | 1.29 | 205 | 10 | 4.0 | 1 · 0.82 h | 77% | 23 | 0.0133 | 58% |
+| aidB7 | game-help-aid | S1 | infrastructure | 0.37 | 193 | 7 | 5.0 | 0 · 0.00 h | 61% | 19 | 0.0163 | 62% |
+| aidB8 | game-help-aid | S1 | infrastructure | 0.20 | 165 | 7 | 2.0 | 0 · 0.00 h | 66% | 28 | 0.0125 | 56% |
+| aidB9 | game-help-aid | S1 | budget | 0.70 | 223 | 7 | 3.0 | 0 · 0.00 h | 59% | 14 | 0.0153 | 60% |
+| aidC1 | reflection-aid | S1 | budget | 0.45 | 223 | 7 | 6.0 | 0 · 0.00 h | 60% | 13 | 0.0165 | 62% |
+| aidC2 | reflection-aid | S2 | died | 0.22 | 188 | 7 | 2.8 | 0 · 0.00 h | 54% | 13 | 0.0125 | 53% |
+| aidC3 | reflection-aid | S1 | budget | 0.49 | 223 | 15 | 3.0 | 0 · 0.00 h | 64% | 16 | 0.0156 | 61% |
+| aidC4 | reflection-aid | S2 | custody | 0.00 | 23 | 7 | — | 0 · 0.00 h | 94% | 16 | 0.0040 | 0% |
+| aidC5 | reflection-aid | S1 | budget | 0.28 | 222 | 17 | 4.0 | 0 · 0.00 h | 54% | 12 | 0.0171 | 61% |
+| aidC6 | reflection-aid | S2 | budget | 2.06 | 226 | 17 | 4.0 | 1 · 1.45 h | 63% | 17 | 0.0158 | 58% |
+
+- **Columns.**
+  - *Game h* is survival within the run's last episode.
+  - *End* is the censor reason.
+  - *Setup* counts decisions before the first in-play frame.
+  - *Routine pace* is the median game seconds per decision over clock intervals shorter
+    than 15 minutes.
+  - *Long activities* are single stretches advancing 15 minutes or more.
+  - *Out of play* and *Longest stall* come from the mode reader.
+  - *$ / decision* is configured-rate host usage.
+  - *Large rewrites* is the share of spend in requests writing over 30,000 cache tokens.
+- **Agreement with hand scores.** The evaluator matches the hand-scored survival hours
+  on every scored run.
+  - C2 now reads 0.22 h: its survivor started a second world, and the evaluator
+    measures within the last episode.
+  - B6's 1.29 h is an infrastructure-lost run that the hand tables did not score.
+- **Reader validation.** Held-out frames from pre-loop sessions, labelled blind:
+  - **Clock:** 115/115 exact.
+  - **Needs:** 84/84 each.
+  - **Mode:** 200/200 on a fresh sample after one fix.
+  - **Death:** 240/240, but with no deaths in the samples, so recall is unmeasured.
+  - **Threat:** 91/91 on empty creature lists only; counting creatures is not yet validated.
+  - **Gap:** every held-out clock read Spring day 61 between 8 and 10 AM. Night, PM and
+    day-rollover readings are covered only by synthetic tests until the first #382
+    admission is checked by hand.
+- **The game-help aid's target metric moved the wrong way.** The mean longest
+  out-of-play streak was 18.0 decisions against the ceiling's 11.6 (+6.4, 95%
+  bootstrap interval +1.2 to +12.2). Reading the in-game help is itself out of play,
+  so the aid confounds its own metric.
+
+**Power check (#383 decision D4).** The simulation is fitted to the 20 scored runs:
+- an exponential death hazard of 0.319 per game hour
+  (4 deaths in 12.54 game hours);
+- censoring drawn from the alive runs' stopping times;
+- 1,500 simulations per cell, two-sided α 0.05.
+
+| Metric (test) | Effect | n = 5 per arm | n = 10 | n = 20 | n = 40 |
+| --- | --- | ---: | ---: | ---: | ---: |
+| Censored survival (log-rank) | 2× survival time | 1% | 5% | 12% | 21% |
+| Censored survival (log-rank) | 3× survival time | 2% | 8% | 18% | 37% |
+| Ladder progress beyond in-play (Fisher exact) | odds × 4 | 8% | 16% | 42% | 82% |
+| Routine pace (Welch t on logs) | 1.5× | 44% | 80% | 98% | 100% |
+
+At the #382 horizon (censoring about eight times later), three against three lineages
+detect a 2× survival change 10% of the time.
+
+**Decision under D4.** Censored survival and the milestone ladder do **not** become
+the metric of record. They stay descriptive guards.
+- With four deaths in 12.5 game hours and budget censoring, no affordable run count
+  detects even a tripling of survival.
+- At this run length the ladder rarely moves past "in play": 5 of 20 runs ate and
+  1 drank.
+
+Each change instead pre-registers a targeted process metric on its change page,
+such as routine pace, stall length or the target failure's rate. Survival, cost and
+setup serve as guards. Routine pace reaches 80% power for a 1.5× change at about 10
+runs per arm.

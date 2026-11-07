@@ -1,0 +1,4147 @@
+{
+ "schema": "spectator-view/1",
+ "items": [
+  {
+   "seq": 1,
+   "decision": 0,
+   "wall": 1793940669.1553311,
+   "kind": "observe",
+   "mode": "menu",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-2",
+   "frame_changed": null,
+   "dollars": 0.00523675,
+   "keys": []
+  },
+  {
+   "seq": 2,
+   "decision": 1,
+   "wall": 1793940672.4001632,
+   "kind": "input",
+   "mode": "menu",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-4",
+   "frame_changed": true,
+   "dollars": 0.0072464,
+   "keys": [
+    "key:RIGHT",
+    "key:RIGHT"
+   ]
+  },
+  {
+   "seq": 3,
+   "decision": 2,
+   "wall": 1793940674.515242,
+   "kind": "input",
+   "mode": "menu",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-5",
+   "frame_changed": true,
+   "dollars": 0.0094039,
+   "keys": [
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 4,
+   "decision": 3,
+   "wall": 1793940676.929216,
+   "kind": "input",
+   "mode": "menu",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-6",
+   "frame_changed": true,
+   "dollars": 0.0115471,
+   "keys": [
+    "key:f"
+   ]
+  },
+  {
+   "seq": 5,
+   "decision": 4,
+   "wall": 1793940679.405361,
+   "kind": "input",
+   "mode": "menu",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-41",
+   "frame_changed": true,
+   "dollars": 0.013748799999999999,
+   "keys": [
+    "key:SHIFT+Y",
+    "wait"
+   ]
+  },
+  {
+   "seq": 6,
+   "decision": 5,
+   "wall": 1793940683.236928,
+   "kind": "input",
+   "mode": "menu",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-45",
+   "frame_changed": true,
+   "dollars": 0.016194399999999998,
+   "keys": [
+    "key:LEFT",
+    "key:LEFT",
+    "key:UP",
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 7,
+   "decision": 6,
+   "wall": 1793940686.144563,
+   "kind": "input",
+   "mode": "loading",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-91",
+   "frame_changed": true,
+   "dollars": 0.019097649999999997,
+   "keys": [
+    "key:HOME",
+    "key:ENTER",
+    "wait"
+   ]
+  },
+  {
+   "seq": 8,
+   "decision": 7,
+   "wall": 1793940689.012094,
+   "kind": "input",
+   "mode": "loading",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-173",
+   "frame_changed": true,
+   "dollars": 0.02157915,
+   "keys": [
+    "wait"
+   ]
+  },
+  {
+   "seq": 9,
+   "decision": 8,
+   "wall": 1793940694.67798,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5212800,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-210",
+   "frame_changed": true,
+   "dollars": 0.02385905,
+   "keys": [
+    "wait"
+   ]
+  },
+  {
+   "seq": 10,
+   "decision": 9,
+   "wall": 1793940701.9016562,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5212800,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-245",
+   "frame_changed": true,
+   "dollars": 0.026539,
+   "keys": [
+    "key:SHIFT+Q"
+   ]
+  },
+  {
+   "seq": 11,
+   "decision": 10,
+   "wall": 1793940705.517175,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": 5212800,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-268",
+   "frame_changed": true,
+   "dollars": 0.02919925,
+   "keys": [
+    "key:ESC"
+   ]
+  },
+  {
+   "seq": 12,
+   "decision": 11,
+   "wall": 1793940710.0249221,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": 5212800,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-365",
+   "frame_changed": true,
+   "dollars": 0.0319887,
+   "keys": [
+    "key:SHIFT+S",
+    "wait"
+   ]
+  },
+  {
+   "seq": 13,
+   "decision": 12,
+   "wall": 1793940714.757974,
+   "kind": "input",
+   "mode": "menu",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-404",
+   "frame_changed": true,
+   "dollars": 0.03474025,
+   "keys": [
+    "key:SHIFT+Y",
+    "wait"
+   ]
+  },
+  {
+   "seq": 14,
+   "decision": 13,
+   "wall": 1793940720.759524,
+   "kind": "input",
+   "mode": "menu",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-406",
+   "frame_changed": true,
+   "dollars": 0.03758545,
+   "keys": [
+    "key:RIGHT",
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 15,
+   "decision": 14,
+   "wall": 1793940724.439201,
+   "kind": "input",
+   "mode": "menu",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-408",
+   "frame_changed": true,
+   "dollars": 0.04062305,
+   "keys": [
+    "key:f",
+    "key:SHIFT+Y",
+    "wait"
+   ]
+  },
+  {
+   "seq": 16,
+   "decision": 15,
+   "wall": 1793940729.7138119,
+   "kind": "input",
+   "mode": "menu",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-410",
+   "frame_changed": true,
+   "dollars": 0.0437578,
+   "keys": [
+    "key:LEFT",
+    "key:LEFT"
+   ]
+  },
+  {
+   "seq": 17,
+   "decision": 16,
+   "wall": 1793940733.0141828,
+   "kind": "input",
+   "mode": "menu",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-411",
+   "frame_changed": true,
+   "dollars": 0.0468315,
+   "keys": [
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 18,
+   "decision": 17,
+   "wall": 1793940736.710867,
+   "kind": "input",
+   "mode": "loading",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-449",
+   "frame_changed": true,
+   "dollars": 0.0498731,
+   "keys": [
+    "key:ENTER",
+    "wait"
+   ]
+  },
+  {
+   "seq": 19,
+   "decision": 18,
+   "wall": 1793940741.962997,
+   "kind": "input",
+   "mode": "menu",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-542",
+   "frame_changed": true,
+   "dollars": 0.052929449999999996,
+   "keys": [
+    "wait"
+   ]
+  },
+  {
+   "seq": 20,
+   "decision": 19,
+   "wall": 1793940747.0758872,
+   "kind": "input",
+   "mode": "menu",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-543",
+   "frame_changed": true,
+   "dollars": 0.056028499999999995,
+   "keys": [
+    "key:TAB"
+   ]
+  },
+  {
+   "seq": 21,
+   "decision": 20,
+   "wall": 1793940750.838717,
+   "kind": "input",
+   "mode": "menu",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-544",
+   "frame_changed": true,
+   "dollars": 0.059367899999999994,
+   "keys": [
+    "key:TAB"
+   ]
+  },
+  {
+   "seq": 22,
+   "decision": 21,
+   "wall": 1793940755.09165,
+   "kind": "input",
+   "mode": "menu",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-546",
+   "frame_changed": true,
+   "dollars": 0.0628204,
+   "keys": [
+    "key:TAB",
+    "key:TAB"
+   ]
+  },
+  {
+   "seq": 23,
+   "decision": 22,
+   "wall": 1793940759.712265,
+   "kind": "input",
+   "mode": "menu",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-554",
+   "frame_changed": true,
+   "dollars": 0.06680095,
+   "keys": [
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:DOWN",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:TAB",
+    "key:TAB",
+    "key:TAB"
+   ]
+  },
+  {
+   "seq": 24,
+   "decision": 23,
+   "wall": 1793940763.641776,
+   "kind": "input",
+   "mode": "menu",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-557",
+   "frame_changed": true,
+   "dollars": 0.0711868,
+   "keys": [
+    "key:ENTER",
+    "text",
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 25,
+   "decision": 24,
+   "wall": 1793940767.9120939,
+   "kind": "input",
+   "mode": "menu",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-558",
+   "frame_changed": true,
+   "dollars": 0.07491099999999999,
+   "keys": [
+    "key:TAB"
+   ]
+  },
+  {
+   "seq": 26,
+   "decision": 25,
+   "wall": 1793940771.7799392,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5212800,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-627",
+   "frame_changed": true,
+   "dollars": 0.07851834999999999,
+   "keys": [
+    "key:SHIFT+Y",
+    "wait"
+   ]
+  },
+  {
+   "seq": 27,
+   "decision": 26,
+   "wall": 1793940778.695235,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": 5212800,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-654",
+   "frame_changed": true,
+   "dollars": 0.08223549999999999,
+   "keys": [
+    "key:SHIFT+@"
+   ]
+  },
+  {
+   "seq": 28,
+   "decision": 27,
+   "wall": 1793940783.700285,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": 5212800,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-656",
+   "frame_changed": true,
+   "dollars": 0.08627184999999998,
+   "keys": [
+    "key:ESC",
+    "key:SHIFT+C"
+   ]
+  },
+  {
+   "seq": 29,
+   "decision": 28,
+   "wall": 1793940787.7354481,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-714",
+   "frame_changed": true,
+   "dollars": 0.09019699999999999,
+   "keys": [
+    "key:t"
+   ]
+  },
+  {
+   "seq": 30,
+   "decision": 29,
+   "wall": 1793940792.52646,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-715",
+   "frame_changed": true,
+   "dollars": 0.09405899999999999,
+   "keys": [
+    "key:f"
+   ]
+  },
+  {
+   "seq": 31,
+   "decision": 30,
+   "wall": 1793940797.638991,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-719",
+   "frame_changed": true,
+   "dollars": 0.09823444999999999,
+   "keys": [
+    "key:d",
+    "key:SHIFT+C",
+    "key:t",
+    "key:d"
+   ]
+  },
+  {
+   "seq": 32,
+   "decision": 31,
+   "wall": 1793940802.4873002,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-720",
+   "frame_changed": true,
+   "dollars": 0.10259624999999999,
+   "keys": [
+    "key:b"
+   ]
+  },
+  {
+   "seq": 33,
+   "decision": 32,
+   "wall": 1793940806.6756039,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-724",
+   "frame_changed": true,
+   "dollars": 0.10685744999999999,
+   "keys": [
+    "key:a",
+    "key:SHIFT+C",
+    "key:t",
+    "key:c"
+   ]
+  },
+  {
+   "seq": 34,
+   "decision": 33,
+   "wall": 1793940811.5275111,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-725",
+   "frame_changed": true,
+   "dollars": 0.11129724999999999,
+   "keys": [
+    "key:a"
+   ]
+  },
+  {
+   "seq": 35,
+   "decision": 34,
+   "wall": 1793940816.015383,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-727",
+   "frame_changed": true,
+   "dollars": 0.11557714999999999,
+   "keys": [
+    "key:a",
+    "key:a"
+   ]
+  },
+  {
+   "seq": 36,
+   "decision": 35,
+   "wall": 1793940821.256053,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-729",
+   "frame_changed": true,
+   "dollars": 0.12005554999999998,
+   "keys": [
+    "key:a",
+    "key:i"
+   ]
+  },
+  {
+   "seq": 37,
+   "decision": 36,
+   "wall": 1793940825.798831,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-731",
+   "frame_changed": true,
+   "dollars": 0.12454034999999998,
+   "keys": [
+    "key:h",
+    "key:i"
+   ]
+  },
+  {
+   "seq": 38,
+   "decision": 37,
+   "wall": 1793940832.390485,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-733",
+   "frame_changed": true,
+   "dollars": 0.12912624999999997,
+   "keys": [
+    "key:ESC",
+    "key:m"
+   ]
+  },
+  {
+   "seq": 39,
+   "decision": 38,
+   "wall": 1793940840.1843379,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-904",
+   "frame_changed": true,
+   "dollars": 0.13400774999999998,
+   "keys": [
+    "key:ESC",
+    "key:x"
+   ]
+  },
+  {
+   "seq": 40,
+   "decision": 39,
+   "wall": 1793940845.1362472,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-906",
+   "frame_changed": true,
+   "dollars": 0.13887514999999998,
+   "keys": [
+    "key:RIGHT",
+    "key:RIGHT"
+   ]
+  },
+  {
+   "seq": 41,
+   "decision": 40,
+   "wall": 1793940852.257927,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-908",
+   "frame_changed": true,
+   "dollars": 0.1988604,
+   "keys": [
+    "key:ESC",
+    "key:a"
+   ]
+  },
+  {
+   "seq": 42,
+   "decision": 41,
+   "wall": 1793940857.131862,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": 5212803,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-911",
+   "frame_changed": true,
+   "dollars": 0.20344895,
+   "keys": [
+    "key:DOWN",
+    "key:DOWN",
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 43,
+   "decision": 42,
+   "wall": 1793940861.641976,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5212803,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-978",
+   "frame_changed": true,
+   "dollars": 0.20807555,
+   "keys": [
+    "key:0"
+   ]
+  },
+  {
+   "seq": 44,
+   "decision": 43,
+   "wall": 1793940866.661181,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5212806,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-1014",
+   "frame_changed": true,
+   "dollars": 0.21274875,
+   "keys": [
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:SHIFT+>"
+   ]
+  },
+  {
+   "seq": 45,
+   "decision": 44,
+   "wall": 1793940874.29443,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5212808,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-1068",
+   "frame_changed": true,
+   "dollars": 0.2179012,
+   "keys": [
+    "key:UP",
+    "key:o",
+    "key:UP"
+   ]
+  },
+  {
+   "seq": 46,
+   "decision": 45,
+   "wall": 1793940880.021591,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5212812,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-1110",
+   "frame_changed": true,
+   "dollars": 0.22302624999999998,
+   "keys": [
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP"
+   ]
+  },
+  {
+   "seq": 47,
+   "decision": 46,
+   "wall": 1793940885.65253,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5212812,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-1148",
+   "frame_changed": true,
+   "dollars": 0.22817649999999998,
+   "keys": [
+    "key:SHIFT+V"
+   ]
+  },
+  {
+   "seq": 48,
+   "decision": 47,
+   "wall": 1793940893.028794,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5212819,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-1204",
+   "frame_changed": true,
+   "dollars": 0.23361264999999998,
+   "keys": [
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN"
+   ]
+  },
+  {
+   "seq": 49,
+   "decision": 48,
+   "wall": 1793940900.9096808,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5212825,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-1263",
+   "frame_changed": true,
+   "dollars": 0.23948309999999998,
+   "keys": [
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:SHIFT+V"
+   ]
+  },
+  {
+   "seq": 50,
+   "decision": 49,
+   "wall": 1793940907.370471,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5212827,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-1311",
+   "frame_changed": true,
+   "dollars": 0.24523924999999996,
+   "keys": [
+    "key:LEFT",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:SHIFT+V"
+   ]
+  },
+  {
+   "seq": 51,
+   "decision": 50,
+   "wall": 1793940913.568767,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5212832,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-1358",
+   "frame_changed": true,
+   "dollars": 0.31652699999999995,
+   "keys": [
+    "key:LEFT",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:SHIFT+V"
+   ]
+  },
+  {
+   "seq": 52,
+   "decision": 51,
+   "wall": 1793940921.0951328,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5212839,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-1414",
+   "frame_changed": true,
+   "dollars": 0.32260734999999996,
+   "keys": [
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP"
+   ]
+  },
+  {
+   "seq": 53,
+   "decision": 52,
+   "wall": 1793940928.6749198,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5212849,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-1473",
+   "frame_changed": true,
+   "dollars": 0.32886609999999994,
+   "keys": [
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:DOWN",
+    "key:DOWN"
+   ]
+  },
+  {
+   "seq": 54,
+   "decision": 53,
+   "wall": 1793940935.004875,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5212849,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-1514",
+   "frame_changed": true,
+   "dollars": 0.3349490499999999,
+   "keys": [
+    "key:SHIFT+<"
+   ]
+  },
+  {
+   "seq": 55,
+   "decision": 54,
+   "wall": 1793940939.6151009,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5212851,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-1546",
+   "frame_changed": true,
+   "dollars": 0.34015984999999993,
+   "keys": [
+    "key:DOWN",
+    "key:SHIFT+<"
+   ]
+  },
+  {
+   "seq": 56,
+   "decision": 55,
+   "wall": 1793940944.930201,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5212855,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-1584",
+   "frame_changed": true,
+   "dollars": 0.34569219999999995,
+   "keys": [
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP"
+   ]
+  },
+  {
+   "seq": 57,
+   "decision": 56,
+   "wall": 1793940953.478621,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5212861,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-1647",
+   "frame_changed": true,
+   "dollars": 0.35191079999999997,
+   "keys": [
+    "key:LEFT",
+    "key:LEFT",
+    "key:UP",
+    "key:UP",
+    "key:o",
+    "key:UP"
+   ]
+  },
+  {
+   "seq": 58,
+   "decision": 57,
+   "wall": 1793940959.893552,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-1692",
+   "frame_changed": true,
+   "dollars": 0.35827285,
+   "keys": [
+    "key:a",
+    "key:DOWN",
+    "key:DOWN",
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 59,
+   "decision": 58,
+   "wall": 1793940969.7367392,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5212865,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-1843",
+   "frame_changed": true,
+   "dollars": 0.3641566,
+   "keys": [
+    "key:6",
+    "key:UP",
+    "key:UP"
+   ]
+  },
+  {
+   "seq": 60,
+   "decision": 59,
+   "wall": 1793940979.11764,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-1903",
+   "frame_changed": true,
+   "dollars": 0.37005525,
+   "keys": [
+    "key:SHIFT+V"
+   ]
+  },
+  {
+   "seq": 61,
+   "decision": 60,
+   "wall": 1793940986.781141,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5212871,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-1911",
+   "frame_changed": true,
+   "dollars": 0.453763,
+   "keys": [
+    "key:ESC",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN"
+   ]
+  },
+  {
+   "seq": 62,
+   "decision": 61,
+   "wall": 1793940993.489035,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": 5212871,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-1954",
+   "frame_changed": true,
+   "dollars": 0.4600283,
+   "keys": [
+    "key:s",
+    "key:LEFT"
+   ]
+  },
+  {
+   "seq": 63,
+   "decision": 62,
+   "wall": 1793940998.256073,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5212875,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-2024",
+   "frame_changed": true,
+   "dollars": 0.46562105,
+   "keys": [
+    "key:SHIFT+Y",
+    "wait"
+   ]
+  },
+  {
+   "seq": 64,
+   "decision": 63,
+   "wall": 1793941005.399295,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-2070",
+   "frame_changed": true,
+   "dollars": 0.4712961,
+   "keys": [
+    "key:SHIFT+&",
+    "key:/",
+    "text",
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 65,
+   "decision": 64,
+   "wall": 1793941011.958518,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-2074",
+   "frame_changed": true,
+   "dollars": 0.47747005,
+   "keys": [
+    "key:r",
+    "key:f",
+    "text",
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 66,
+   "decision": 65,
+   "wall": 1793941017.297368,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-2075",
+   "frame_changed": true,
+   "dollars": 0.48345855,
+   "keys": [
+    "key:DOWN"
+   ]
+  },
+  {
+   "seq": 67,
+   "decision": 66,
+   "wall": 1793941024.46936,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213181,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-2092",
+   "frame_changed": true,
+   "dollars": 0.4892179,
+   "keys": [
+    "key:ENTER",
+    "wait"
+   ]
+  },
+  {
+   "seq": 68,
+   "decision": 67,
+   "wall": 1793941039.9901419,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-2189",
+   "frame_changed": true,
+   "dollars": 0.5007593499999999,
+   "keys": [
+    "key:SHIFT+&",
+    "key:f",
+    "key:CTRL+a",
+    "text",
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 69,
+   "decision": 68,
+   "wall": 1793941046.165778,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-2193",
+   "frame_changed": true,
+   "dollars": 0.5072843499999999,
+   "keys": [
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN"
+   ]
+  },
+  {
+   "seq": 70,
+   "decision": 69,
+   "wall": 1793941055.15655,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-2199",
+   "frame_changed": true,
+   "dollars": 0.51403645,
+   "keys": [
+    "key:ESC",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:SHIFT+V"
+   ]
+  },
+  {
+   "seq": 71,
+   "decision": 70,
+   "wall": 1793941061.8853729,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-2205",
+   "frame_changed": true,
+   "dollars": 0.60897295,
+   "keys": [
+    "key:ESC",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:g"
+   ]
+  },
+  {
+   "seq": 72,
+   "decision": 71,
+   "wall": 1793941069.657604,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-2208",
+   "frame_changed": true,
+   "dollars": 0.6156742,
+   "keys": [
+    "key:3",
+    "key:b",
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 73,
+   "decision": 72,
+   "wall": 1793941077.626985,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-2213",
+   "frame_changed": true,
+   "dollars": 0.6225415,
+   "keys": [
+    "key:a",
+    "key:DOWN",
+    "key:DOWN",
+    "key:3",
+    "key:RIGHT"
+   ]
+  },
+  {
+   "seq": 74,
+   "decision": 73,
+   "wall": 1793941085.5527139,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-2221",
+   "frame_changed": true,
+   "dollars": 0.6294202999999999,
+   "keys": [
+    "key:ENTER",
+    "key:i"
+   ]
+  },
+  {
+   "seq": 75,
+   "decision": 73,
+   "wall": 1793941107.0191329,
+   "kind": "handoff",
+   "mode": "unknown",
+   "game_time": null,
+   "source_id": null,
+   "frame_changed": null,
+   "dollars": 0.64540575,
+   "keys": []
+  },
+  {
+   "seq": 76,
+   "decision": 73,
+   "wall": 1793941109.203383,
+   "kind": "observe",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-2221",
+   "frame_changed": false,
+   "dollars": 0.6526225,
+   "keys": []
+  },
+  {
+   "seq": 77,
+   "decision": 74,
+   "wall": 1793941111.517575,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213197,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-2222",
+   "frame_changed": true,
+   "dollars": 0.65462135,
+   "keys": [
+    "key:ESC"
+   ]
+  },
+  {
+   "seq": 78,
+   "decision": 75,
+   "wall": 1793941116.114203,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": 5213202,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-2258",
+   "frame_changed": true,
+   "dollars": 0.65738365,
+   "keys": [
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:e",
+    "key:RIGHT"
+   ]
+  },
+  {
+   "seq": 79,
+   "decision": 76,
+   "wall": 1793941120.6577852,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-2320",
+   "frame_changed": true,
+   "dollars": 0.6606103999999999,
+   "keys": [
+    "key:ESC",
+    "key:/"
+   ]
+  },
+  {
+   "seq": 80,
+   "decision": 77,
+   "wall": 1793941125.251914,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-2322",
+   "frame_changed": true,
+   "dollars": 0.6633115999999999,
+   "keys": [
+    "key:ESC",
+    "key:&"
+   ]
+  },
+  {
+   "seq": 81,
+   "decision": 78,
+   "wall": 1793941130.8957162,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-2325",
+   "frame_changed": true,
+   "dollars": 0.6659594999999999,
+   "keys": [
+    "key:f",
+    "text",
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 82,
+   "decision": 79,
+   "wall": 1793941133.786912,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-2329",
+   "frame_changed": true,
+   "dollars": 0.6688320499999999,
+   "keys": [
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN"
+   ]
+  },
+  {
+   "seq": 83,
+   "decision": 80,
+   "wall": 1793941138.654549,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-2331",
+   "frame_changed": true,
+   "dollars": 0.6719588999999999,
+   "keys": [
+    "key:ESC",
+    "key:m"
+   ]
+  },
+  {
+   "seq": 84,
+   "decision": 81,
+   "wall": 1793941144.851496,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213210,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-2472",
+   "frame_changed": true,
+   "dollars": 0.6755840499999999,
+   "keys": [
+    "key:ESC",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:UP",
+    "key:UP",
+    "key:UP"
+   ]
+  },
+  {
+   "seq": 85,
+   "decision": 82,
+   "wall": 1793941148.051979,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213214,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-2496",
+   "frame_changed": true,
+   "dollars": 0.6794182499999999,
+   "keys": [
+    "key:UP",
+    "key:UP",
+    "key:UP"
+   ]
+  },
+  {
+   "seq": 86,
+   "decision": 83,
+   "wall": 1793941155.252707,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213230,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-2560",
+   "frame_changed": true,
+   "dollars": 0.6834289499999999,
+   "keys": [
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN"
+   ]
+  },
+  {
+   "seq": 87,
+   "decision": 84,
+   "wall": 1793941160.744171,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213246,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-2608",
+   "frame_changed": true,
+   "dollars": 0.6889894,
+   "keys": [
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN"
+   ]
+  },
+  {
+   "seq": 88,
+   "decision": 85,
+   "wall": 1793941167.342861,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213267,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-2671",
+   "frame_changed": true,
+   "dollars": 0.6949455999999999,
+   "keys": [
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN"
+   ]
+  },
+  {
+   "seq": 89,
+   "decision": 86,
+   "wall": 1793941173.9241269,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213287,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-2730",
+   "frame_changed": true,
+   "dollars": 0.7014724,
+   "keys": [
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN"
+   ]
+  },
+  {
+   "seq": 90,
+   "decision": 87,
+   "wall": 1793941178.9817688,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-2759",
+   "frame_changed": true,
+   "dollars": 0.70696155,
+   "keys": [
+    "key:m"
+   ]
+  },
+  {
+   "seq": 91,
+   "decision": 88,
+   "wall": 1793941187.152725,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213307,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-2952",
+   "frame_changed": true,
+   "dollars": 0.7121045,
+   "keys": [
+    "key:ESC",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT"
+   ]
+  },
+  {
+   "seq": 92,
+   "decision": 89,
+   "wall": 1793941194.410649,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213318,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-3015",
+   "frame_changed": true,
+   "dollars": 0.7192054,
+   "keys": [
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN"
+   ]
+  },
+  {
+   "seq": 93,
+   "decision": 90,
+   "wall": 1793941201.7746072,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213328,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-3070",
+   "frame_changed": true,
+   "dollars": 0.7258178,
+   "keys": [
+    "key:'",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN"
+   ]
+  },
+  {
+   "seq": 94,
+   "decision": 91,
+   "wall": 1793941208.845655,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213337,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-3132",
+   "frame_changed": true,
+   "dollars": 0.73203645,
+   "keys": [
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN"
+   ]
+  },
+  {
+   "seq": 95,
+   "decision": 92,
+   "wall": 1793941215.802447,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213343,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-3182",
+   "frame_changed": true,
+   "dollars": 0.7388760999999999,
+   "keys": [
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:e",
+    "key:DOWN"
+   ]
+  },
+  {
+   "seq": 96,
+   "decision": 93,
+   "wall": 1793941220.4642072,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213348,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-3217",
+   "frame_changed": true,
+   "dollars": 0.7442458,
+   "keys": [
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:e",
+    "key:DOWN"
+   ]
+  },
+  {
+   "seq": 97,
+   "decision": 94,
+   "wall": 1793941226.8792388,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213354,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-3264",
+   "frame_changed": true,
+   "dollars": 0.7496224499999999,
+   "keys": [
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:e",
+    "key:DOWN"
+   ]
+  },
+  {
+   "seq": 98,
+   "decision": 95,
+   "wall": 1793941232.576245,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213355,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-3301",
+   "frame_changed": true,
+   "dollars": 0.75506915,
+   "keys": [
+    "key:s",
+    "key:DOWN"
+   ]
+  },
+  {
+   "seq": 99,
+   "decision": 96,
+   "wall": 1793941237.756095,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": 5213355,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-3336",
+   "frame_changed": true,
+   "dollars": 0.75972705,
+   "keys": [
+    "key:e",
+    "key:DOWN"
+   ]
+  },
+  {
+   "seq": 100,
+   "decision": 97,
+   "wall": 1793941243.552247,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213360,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-3426",
+   "frame_changed": true,
+   "dollars": 0.7644179999999999,
+   "keys": [
+    "key:Y",
+    "key:DOWN"
+   ]
+  },
+  {
+   "seq": 101,
+   "decision": 98,
+   "wall": 1793941252.199754,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213368,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-3489",
+   "frame_changed": true,
+   "dollars": 0.7697946499999999,
+   "keys": [
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT"
+   ]
+  },
+  {
+   "seq": 102,
+   "decision": 99,
+   "wall": 1793941258.105869,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213371,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-3529",
+   "frame_changed": true,
+   "dollars": 0.7754222499999999,
+   "keys": [
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT"
+   ]
+  },
+  {
+   "seq": 103,
+   "decision": 100,
+   "wall": 1793941267.8241029,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-3593",
+   "frame_changed": true,
+   "dollars": 0.7805387499999998,
+   "keys": [
+    "key:V"
+   ]
+  },
+  {
+   "seq": 104,
+   "decision": 101,
+   "wall": 1793941277.244425,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-3599",
+   "frame_changed": true,
+   "dollars": 0.7860126999999998,
+   "keys": [
+    "key:ESC",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:g"
+   ]
+  },
+  {
+   "seq": 105,
+   "decision": 102,
+   "wall": 1793941283.7752278,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213377,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-3606",
+   "frame_changed": true,
+   "dollars": 0.7919789499999997,
+   "keys": [
+    "key:ESC",
+    "key:DOWN",
+    "key:DOWN",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT"
+   ]
+  },
+  {
+   "seq": 106,
+   "decision": 103,
+   "wall": 1793941290.8101408,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213380,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-3654",
+   "frame_changed": true,
+   "dollars": 0.7981673499999997,
+   "keys": [
+    "key:DOWN",
+    "key:LEFT",
+    "key:LEFT"
+   ]
+  },
+  {
+   "seq": 107,
+   "decision": 104,
+   "wall": 1793941298.082046,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213382,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-3703",
+   "frame_changed": true,
+   "dollars": 0.8037330499999997,
+   "keys": [
+    "key:LEFT",
+    "key:LEFT",
+    "key:g"
+   ]
+  },
+  {
+   "seq": 108,
+   "decision": 105,
+   "wall": 1793941304.074194,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": 5213382,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-3786",
+   "frame_changed": true,
+   "dollars": 0.8091251999999998,
+   "keys": [
+    "key:/"
+   ]
+  },
+  {
+   "seq": 109,
+   "decision": 106,
+   "wall": 1793941310.675725,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-3879",
+   "frame_changed": true,
+   "dollars": 0.8143517999999997,
+   "keys": [
+    "key:DOWN"
+   ]
+  },
+  {
+   "seq": 110,
+   "decision": 107,
+   "wall": 1793941317.167614,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213389,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-3888",
+   "frame_changed": true,
+   "dollars": 0.8197990999999998,
+   "keys": [
+    "key:a",
+    "key:b",
+    "key:d",
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 111,
+   "decision": 108,
+   "wall": 1793941323.328913,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213389,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-3928",
+   "frame_changed": false,
+   "dollars": 0.8255331999999997,
+   "keys": [
+    "key:g",
+    "key:b"
+   ]
+  },
+  {
+   "seq": 112,
+   "decision": 109,
+   "wall": 1793941330.307243,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-3974",
+   "frame_changed": true,
+   "dollars": 0.8310369499999998,
+   "keys": [
+    "key:V"
+   ]
+  },
+  {
+   "seq": 113,
+   "decision": 110,
+   "wall": 1793941338.646288,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-3977",
+   "frame_changed": true,
+   "dollars": 0.8367507999999998,
+   "keys": [
+    "key:ESC",
+    "key:g",
+    "key:n"
+   ]
+  },
+  {
+   "seq": 114,
+   "decision": 111,
+   "wall": 1793941347.171286,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-3988",
+   "frame_changed": true,
+   "dollars": 0.8429399999999998,
+   "keys": [
+    "key:b",
+    "key:f",
+    "key:m",
+    "key:n",
+    "key:ENTER",
+    "key:g",
+    "key:DOWN"
+   ]
+  },
+  {
+   "seq": 115,
+   "decision": 112,
+   "wall": 1793941354.960332,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-3992",
+   "frame_changed": true,
+   "dollars": 0.8494480999999998,
+   "keys": [
+    "key:ESC",
+    "key:LEFT",
+    "key:g",
+    "key:DOWN"
+   ]
+  },
+  {
+   "seq": 116,
+   "decision": 113,
+   "wall": 1793941361.553714,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-3996",
+   "frame_changed": true,
+   "dollars": 0.9356133999999998,
+   "keys": [
+    "key:ESC",
+    "key:V",
+    "key:f",
+    "text",
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 117,
+   "decision": 114,
+   "wall": 1793941376.914861,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-3998",
+   "frame_changed": true,
+   "dollars": 0.9425120999999999,
+   "keys": [
+    "key:ESC",
+    "key:a"
+   ]
+  },
+  {
+   "seq": 118,
+   "decision": 115,
+   "wall": 1793941385.121574,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": 5213431,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-4010",
+   "frame_changed": true,
+   "dollars": 0.9487808499999999,
+   "keys": [
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 119,
+   "decision": 116,
+   "wall": 1793941391.1912699,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213462,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-4100",
+   "frame_changed": true,
+   "dollars": 0.9549824499999999,
+   "keys": [
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 120,
+   "decision": 117,
+   "wall": 1793941404.2179441,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-4196",
+   "frame_changed": true,
+   "dollars": 0.9620353999999999,
+   "keys": [
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:V"
+   ]
+  },
+  {
+   "seq": 121,
+   "decision": 118,
+   "wall": 1793941414.602462,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213469,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-4202",
+   "frame_changed": true,
+   "dollars": 0.9697112499999999,
+   "keys": [
+    "key:ESC",
+    "key:RIGHT",
+    "key:UP",
+    "key:UP",
+    "key:RIGHT",
+    "key:g"
+   ]
+  },
+  {
+   "seq": 122,
+   "decision": 119,
+   "wall": 1793941424.146632,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213469,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-4338",
+   "frame_changed": true,
+   "dollars": 0.9765193499999999,
+   "keys": [
+    "key:."
+   ]
+  },
+  {
+   "seq": 123,
+   "decision": 120,
+   "wall": 1793941431.6584692,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213469,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-4387",
+   "frame_changed": false,
+   "dollars": 0.9826899999999998,
+   "keys": [
+    "key:g",
+    "key:5"
+   ]
+  },
+  {
+   "seq": 124,
+   "decision": 121,
+   "wall": 1793941438.2522821,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213469,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-4429",
+   "frame_changed": true,
+   "dollars": 0.9889154999999998,
+   "keys": [
+    "key:g"
+   ]
+  },
+  {
+   "seq": 125,
+   "decision": 122,
+   "wall": 1793941447.779194,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-4565",
+   "frame_changed": true,
+   "dollars": 0.9954429499999998,
+   "keys": [
+    "key:RIGHT"
+   ]
+  },
+  {
+   "seq": 126,
+   "decision": 123,
+   "wall": 1793941455.743653,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-4567",
+   "frame_changed": true,
+   "dollars": 1.093732,
+   "keys": [
+    "key:ESC",
+    "key:/"
+   ]
+  },
+  {
+   "seq": 127,
+   "decision": 124,
+   "wall": 1793941461.7802281,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-4571",
+   "frame_changed": true,
+   "dollars": 1.100169,
+   "keys": [
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:m"
+   ]
+  },
+  {
+   "seq": 128,
+   "decision": 125,
+   "wall": 1793941467.17995,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213471,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-4576",
+   "frame_changed": true,
+   "dollars": 1.10663725,
+   "keys": [
+    "key:1",
+    "key:ENTER",
+    "key:ESC"
+   ]
+  },
+  {
+   "seq": 129,
+   "decision": 126,
+   "wall": 1793941474.520392,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-4623",
+   "frame_changed": true,
+   "dollars": 1.1130286999999999,
+   "keys": [
+    "key:i"
+   ]
+  },
+  {
+   "seq": 130,
+   "decision": 127,
+   "wall": 1793941483.537196,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213480,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-4634",
+   "frame_changed": true,
+   "dollars": 1.11994855,
+   "keys": [
+    "key:ESC",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN"
+   ]
+  },
+  {
+   "seq": 131,
+   "decision": 128,
+   "wall": 1793941490.316452,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-4677",
+   "frame_changed": true,
+   "dollars": 1.1274157,
+   "keys": [
+    "key:V"
+   ]
+  },
+  {
+   "seq": 132,
+   "decision": 129,
+   "wall": 1793941497.4873211,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-4688",
+   "frame_changed": true,
+   "dollars": 1.13424515,
+   "keys": [
+    "key:ESC",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:V"
+   ]
+  },
+  {
+   "seq": 133,
+   "decision": 130,
+   "wall": 1793941503.407518,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-4690",
+   "frame_changed": true,
+   "dollars": 1.141637,
+   "keys": [
+    "key:PAGEDOWN",
+    "key:PAGEDOWN"
+   ]
+  },
+  {
+   "seq": 134,
+   "decision": 131,
+   "wall": 1793941510.6416051,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-4692",
+   "frame_changed": true,
+   "dollars": 1.1483042,
+   "keys": [
+    "key:PAGEDOWN",
+    "key:PAGEDOWN"
+   ]
+  },
+  {
+   "seq": 135,
+   "decision": 132,
+   "wall": 1793941517.5501702,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-4693",
+   "frame_changed": true,
+   "dollars": 1.1550293,
+   "keys": [
+    "key:PAGEUP"
+   ]
+  },
+  {
+   "seq": 136,
+   "decision": 133,
+   "wall": 1793941526.171236,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-4697",
+   "frame_changed": true,
+   "dollars": 1.2646196,
+   "keys": [
+    "key:ESC",
+    "key:DOWN",
+    "key:g",
+    "key:b"
+   ]
+  },
+  {
+   "seq": 137,
+   "decision": 134,
+   "wall": 1793941536.115995,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-4702",
+   "frame_changed": true,
+   "dollars": 1.27185605,
+   "keys": [
+    "key:1",
+    "key:a",
+    "key:1",
+    "key:p",
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 138,
+   "decision": 135,
+   "wall": 1793941544.821425,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213491,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-4705",
+   "frame_changed": true,
+   "dollars": 1.27907635,
+   "keys": [
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 139,
+   "decision": 136,
+   "wall": 1793941552.536423,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-4757",
+   "frame_changed": true,
+   "dollars": 1.28596315,
+   "keys": [
+    "key:DOWN",
+    "key:DOWN",
+    "key:RIGHT",
+    "key:g",
+    "key:DOWN"
+   ]
+  },
+  {
+   "seq": 140,
+   "decision": 137,
+   "wall": 1793941563.337248,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-4759",
+   "frame_changed": false,
+   "dollars": 1.2932502,
+   "keys": [
+    "key:e",
+    "key:a"
+   ]
+  },
+  {
+   "seq": 141,
+   "decision": 138,
+   "wall": 1793941575.7180521,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213498,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-4765",
+   "frame_changed": true,
+   "dollars": 1.30039675,
+   "keys": [
+    "key:a",
+    "key:d",
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 142,
+   "decision": 139,
+   "wall": 1793941582.3978539,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-4808",
+   "frame_changed": true,
+   "dollars": 1.30753485,
+   "keys": [
+    "key:g",
+    "key:n"
+   ]
+  },
+  {
+   "seq": 143,
+   "decision": 140,
+   "wall": 1793941591.953183,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213507,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-4821",
+   "frame_changed": true,
+   "dollars": 1.3149376499999998,
+   "keys": [
+    "key:m",
+    "key:s",
+    "key:z",
+    "key:A",
+    "key:d",
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 144,
+   "decision": 141,
+   "wall": 1793941599.2366872,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-4867",
+   "frame_changed": true,
+   "dollars": 1.3226120499999998,
+   "keys": [
+    "key:g",
+    "key:b"
+   ]
+  },
+  {
+   "seq": 145,
+   "decision": 142,
+   "wall": 1793941608.483575,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-4869",
+   "frame_changed": true,
+   "dollars": 1.3304208499999999,
+   "keys": [
+    "key:ESC",
+    "key:d"
+   ]
+  },
+  {
+   "seq": 146,
+   "decision": 143,
+   "wall": 1793941615.034148,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-4874",
+   "frame_changed": true,
+   "dollars": 1.45089115,
+   "keys": [
+    "key:1",
+    "key:C",
+    "key:ENTER",
+    "key:g",
+    "key:b"
+   ]
+  },
+  {
+   "seq": 147,
+   "decision": 144,
+   "wall": 1793941622.937073,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-4876",
+   "frame_changed": true,
+   "dollars": 1.4590306499999999,
+   "keys": [
+    "key:ESC",
+    "key:/"
+   ]
+  },
+  {
+   "seq": 148,
+   "decision": 145,
+   "wall": 1793941635.3627,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-4878",
+   "frame_changed": true,
+   "dollars": 1.4668819,
+   "keys": [
+    "key:TAB",
+    "key:m"
+   ]
+  },
+  {
+   "seq": 149,
+   "decision": 146,
+   "wall": 1793941640.907707,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-4959",
+   "frame_changed": true,
+   "dollars": 1.4742205,
+   "keys": [
+    "key:5",
+    "key:1",
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 150,
+   "decision": 147,
+   "wall": 1793941651.815466,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-4968",
+   "frame_changed": true,
+   "dollars": 1.4825772,
+   "keys": [
+    "key:TAB",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:m"
+   ]
+  },
+  {
+   "seq": 151,
+   "decision": 148,
+   "wall": 1793941658.574755,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-4977",
+   "frame_changed": true,
+   "dollars": 1.4910500999999998,
+   "keys": [
+    "key:ESC",
+    "key:DOWN",
+    "key:m",
+    "key:1",
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 152,
+   "decision": 149,
+   "wall": 1793941665.853557,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-4985",
+   "frame_changed": true,
+   "dollars": 1.6290755999999997,
+   "keys": [
+    "key:TAB",
+    "key:DOWN",
+    "key:DOWN",
+    "key:m",
+    "key:5",
+    "key:1",
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 153,
+   "decision": 150,
+   "wall": 1793941674.046793,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-4987",
+   "frame_changed": true,
+   "dollars": 1.6394087999999998,
+   "keys": [
+    "key:TAB",
+    "key:UP"
+   ]
+  },
+  {
+   "seq": 154,
+   "decision": 151,
+   "wall": 1793941679.869963,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-4990",
+   "frame_changed": true,
+   "dollars": 1.6471838499999998,
+   "keys": [
+    "key:DOWN",
+    "key:m",
+    "key:1",
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 155,
+   "decision": 152,
+   "wall": 1793941688.999517,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-5125",
+   "frame_changed": true,
+   "dollars": 1.6556732999999997,
+   "keys": [
+    "key:TAB",
+    "key:f",
+    "text",
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 156,
+   "decision": 153,
+   "wall": 1793941699.32126,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-5130",
+   "frame_changed": true,
+   "dollars": 1.7890135999999996,
+   "keys": [
+    "key:r",
+    "key:TAB",
+    "key:f",
+    "text",
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 157,
+   "decision": 154,
+   "wall": 1793941704.808356,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-5136",
+   "frame_changed": true,
+   "dollars": 1.7970346999999995,
+   "keys": [
+    "key:m",
+    "key:5",
+    "key:1",
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 158,
+   "decision": 155,
+   "wall": 1793941711.561835,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-5137",
+   "frame_changed": true,
+   "dollars": 1.8050143499999995,
+   "keys": [
+    "key:TAB"
+   ]
+  },
+  {
+   "seq": 159,
+   "decision": 156,
+   "wall": 1793941718.30492,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-5148",
+   "frame_changed": true,
+   "dollars": 1.8132221499999996,
+   "keys": [
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:m"
+   ]
+  },
+  {
+   "seq": 160,
+   "decision": 157,
+   "wall": 1793941724.392421,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-5154",
+   "frame_changed": true,
+   "dollars": 1.8220206499999996,
+   "keys": [
+    "key:1",
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 161,
+   "decision": 158,
+   "wall": 1793941735.943234,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213533,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-5170",
+   "frame_changed": true,
+   "dollars": 1.8316162499999995,
+   "keys": [
+    "key:ESC",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP"
+   ]
+  },
+  {
+   "seq": 162,
+   "decision": 159,
+   "wall": 1793941742.601887,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213536,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-5219",
+   "frame_changed": true,
+   "dollars": 1.8416473999999996,
+   "keys": [
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT"
+   ]
+  },
+  {
+   "seq": 163,
+   "decision": 160,
+   "wall": 1793941749.488242,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213542,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-5271",
+   "frame_changed": true,
+   "dollars": 1.8510474499999996,
+   "keys": [
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT"
+   ]
+  },
+  {
+   "seq": 164,
+   "decision": 161,
+   "wall": 1793941760.370711,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213550,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-5348",
+   "frame_changed": true,
+   "dollars": 1.8608582999999996,
+   "keys": [
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:UP",
+    "key:UP",
+    "key:UP"
+   ]
+  },
+  {
+   "seq": 165,
+   "decision": 162,
+   "wall": 1793941767.010444,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": 5213555,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-5396",
+   "frame_changed": true,
+   "dollars": 1.8702673499999996,
+   "keys": [
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:e",
+    "key:b"
+   ]
+  },
+  {
+   "seq": 166,
+   "decision": 163,
+   "wall": 1793941773.058836,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": 5213555,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-5480",
+   "frame_changed": true,
+   "dollars": 2.0187501499999994,
+   "keys": [
+    "key:c"
+   ]
+  },
+  {
+   "seq": 167,
+   "decision": 164,
+   "wall": 1793941778.222968,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213558,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-5482",
+   "frame_changed": true,
+   "dollars": 2.026725999999999,
+   "keys": [
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 168,
+   "decision": 165,
+   "wall": 1793941784.638366,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213566,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-5532",
+   "frame_changed": true,
+   "dollars": 2.035614849999999,
+   "keys": [
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:UP",
+    "key:UP",
+    "key:UP"
+   ]
+  },
+  {
+   "seq": 169,
+   "decision": 166,
+   "wall": 1793941797.8913448,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213572,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-5626",
+   "frame_changed": true,
+   "dollars": 2.0451443499999993,
+   "keys": [
+    "key:DOWN",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT"
+   ]
+  },
+  {
+   "seq": 170,
+   "decision": 167,
+   "wall": 1793941807.7821188,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213582,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-5699",
+   "frame_changed": true,
+   "dollars": 2.055017399999999,
+   "keys": [
+    "key:UP",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:RIGHT",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP"
+   ]
+  },
+  {
+   "seq": 171,
+   "decision": 168,
+   "wall": 1793941816.903549,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213582,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-5759",
+   "frame_changed": true,
+   "dollars": 2.064997149999999,
+   "keys": [
+    "key:'",
+    "key:UP",
+    "key:UP",
+    "key:UP"
+   ]
+  },
+  {
+   "seq": 172,
+   "decision": 169,
+   "wall": 1793941825.812723,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213583,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-5816",
+   "frame_changed": true,
+   "dollars": 2.0742414499999993,
+   "keys": [
+    "key:LEFT",
+    "key:u"
+   ]
+  },
+  {
+   "seq": 173,
+   "decision": 170,
+   "wall": 1793941834.071831,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213585,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-5869",
+   "frame_changed": true,
+   "dollars": 2.083177749999999,
+   "keys": [
+    "key:UP",
+    "key:u"
+   ]
+  },
+  {
+   "seq": 174,
+   "decision": 171,
+   "wall": 1793941839.8712351,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213589,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-5911",
+   "frame_changed": true,
+   "dollars": 2.092014149999999,
+   "keys": [
+    "key:u",
+    "key:UP",
+    "key:UP"
+   ]
+  },
+  {
+   "seq": 175,
+   "decision": 172,
+   "wall": 1793941851.096342,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213593,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-6013",
+   "frame_changed": true,
+   "dollars": 2.102664149999999,
+   "keys": [
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP"
+   ]
+  },
+  {
+   "seq": 176,
+   "decision": 173,
+   "wall": 1793941860.3109272,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213597,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-6090",
+   "frame_changed": true,
+   "dollars": 2.267971949999999,
+   "keys": [
+    "key:'",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP"
+   ]
+  },
+  {
+   "seq": 177,
+   "decision": 174,
+   "wall": 1793941869.662678,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213602,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-6166",
+   "frame_changed": true,
+   "dollars": 2.2801796499999987,
+   "keys": [
+    "key:'",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP"
+   ]
+  },
+  {
+   "seq": 178,
+   "decision": 175,
+   "wall": 1793941878.716675,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213622,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-6241",
+   "frame_changed": true,
+   "dollars": 2.2924754499999986,
+   "keys": [
+    "key:'",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP"
+   ]
+  },
+  {
+   "seq": 179,
+   "decision": 176,
+   "wall": 1793941887.8193011,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-6317",
+   "frame_changed": true,
+   "dollars": 2.3049049499999987,
+   "keys": [
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:m"
+   ]
+  },
+  {
+   "seq": 180,
+   "decision": 177,
+   "wall": 1793941897.783556,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213662,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-6532",
+   "frame_changed": true,
+   "dollars": 2.317766299999999,
+   "keys": [
+    "key:ESC",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP"
+   ]
+  },
+  {
+   "seq": 181,
+   "decision": 178,
+   "wall": 1793941907.0063071,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-6586",
+   "frame_changed": true,
+   "dollars": 2.329635699999999,
+   "keys": [
+    "key:m"
+   ]
+  },
+  {
+   "seq": 182,
+   "decision": 179,
+   "wall": 1793941915.538315,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213682,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-6788",
+   "frame_changed": true,
+   "dollars": 2.340286999999999,
+   "keys": [
+    "key:ESC",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT"
+   ]
+  },
+  {
+   "seq": 183,
+   "decision": 180,
+   "wall": 1793941924.6185138,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213699,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-6861",
+   "frame_changed": true,
+   "dollars": 2.353412699999999,
+   "keys": [
+    "key:RIGHT",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP"
+   ]
+  },
+  {
+   "seq": 184,
+   "decision": 181,
+   "wall": 1793941933.10951,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213709,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-6928",
+   "frame_changed": true,
+   "dollars": 2.365640149999999,
+   "keys": [
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:DOWN",
+    "key:DOWN"
+   ]
+  },
+  {
+   "seq": 185,
+   "decision": 182,
+   "wall": 1793941942.0663218,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5213717,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-6993",
+   "frame_changed": true,
+   "dollars": 2.376985349999999,
+   "keys": [
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:LEFT",
+    "key:DOWN",
+    "key:DOWN"
+   ]
+  },
+  {
+   "seq": 186,
+   "decision": 183,
+   "wall": 1793941952.207247,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-7062",
+   "frame_changed": true,
+   "dollars": 2.567960649999999,
+   "keys": [
+    "key:&",
+    "key:f",
+    "text",
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 187,
+   "decision": 184,
+   "wall": 1793941960.465674,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-7067",
+   "frame_changed": true,
+   "dollars": 2.578854799999999,
+   "keys": [
+    "key:ESC",
+    "key:i",
+    "key:/",
+    "text",
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 188,
+   "decision": 185,
+   "wall": 1793941966.7929258,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": 5213717,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-7068",
+   "frame_changed": true,
+   "dollars": 2.5891444499999987,
+   "keys": [
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 189,
+   "decision": 186,
+   "wall": 1793941979.47661,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-7258",
+   "frame_changed": true,
+   "dollars": 2.6002627999999985,
+   "keys": [
+    "key:d",
+    "key:&",
+    "key:f",
+    "text",
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 190,
+   "decision": 187,
+   "wall": 1793941988.510897,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-7259",
+   "frame_changed": true,
+   "dollars": 2.6109366999999986,
+   "keys": [
+    "key:DOWN"
+   ]
+  },
+  {
+   "seq": 191,
+   "decision": 188,
+   "wall": 1793942003.122248,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-7261",
+   "frame_changed": true,
+   "dollars": 2.6221305999999984,
+   "keys": [
+    "key:ESC",
+    "key:V"
+   ]
+  },
+  {
+   "seq": 192,
+   "decision": 189,
+   "wall": 1793942012.12609,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-7266",
+   "frame_changed": true,
+   "dollars": 2.6332186499999986,
+   "keys": [
+    "key:ESC",
+    "key:&",
+    "key:f",
+    "text",
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 193,
+   "decision": 190,
+   "wall": 1793942020.0703459,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-7267",
+   "frame_changed": true,
+   "dollars": 2.6440559999999986,
+   "keys": [
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 194,
+   "decision": 191,
+   "wall": 1793942026.0226839,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-7382",
+   "frame_changed": true,
+   "dollars": 2.6543156499999987,
+   "keys": [
+    "key:2",
+    "wait"
+   ]
+  },
+  {
+   "seq": 195,
+   "decision": 192,
+   "wall": 1793942034.7639859,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5219720,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-7581",
+   "frame_changed": true,
+   "dollars": 2.6645999499999986,
+   "keys": [
+    "key:ENTER",
+    "wait"
+   ]
+  },
+  {
+   "seq": 196,
+   "decision": 193,
+   "wall": 1793942049.093146,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-7660",
+   "frame_changed": true,
+   "dollars": 2.8668402499999988,
+   "keys": [
+    "key:g"
+   ]
+  },
+  {
+   "seq": 197,
+   "decision": 194,
+   "wall": 1793942056.822757,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-7671",
+   "frame_changed": true,
+   "dollars": 2.877561049999999,
+   "keys": [
+    "key:a",
+    "key:ENTER",
+    "key:i",
+    "key:/",
+    "text",
+    "key:ENTER",
+    "key:ENTER",
+    "key:U"
+   ]
+  },
+  {
+   "seq": 198,
+   "decision": 195,
+   "wall": 1793942063.700078,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": 5219724,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-7766",
+   "frame_changed": true,
+   "dollars": 2.888497399999999,
+   "keys": [
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 199,
+   "decision": 196,
+   "wall": 1793942071.3138108,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-7767",
+   "frame_changed": true,
+   "dollars": 2.898728199999999,
+   "keys": [
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 200,
+   "decision": 197,
+   "wall": 1793942079.5714948,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5219724,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-7885",
+   "frame_changed": true,
+   "dollars": 2.909127849999999,
+   "keys": [
+    "key:g",
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 201,
+   "decision": 198,
+   "wall": 1793942091.0999172,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5219726,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-8054",
+   "frame_changed": true,
+   "dollars": 2.919884449999999,
+   "keys": [
+    "key:DOWN"
+   ]
+  },
+  {
+   "seq": 202,
+   "decision": 199,
+   "wall": 1793942099.9790652,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-8115",
+   "frame_changed": true,
+   "dollars": 2.9312314499999994,
+   "keys": [
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:g"
+   ]
+  },
+  {
+   "seq": 203,
+   "decision": 200,
+   "wall": 1793942115.959863,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": 5219729,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-8117",
+   "frame_changed": true,
+   "dollars": 2.9430643999999995,
+   "keys": [
+    "key:DOWN",
+    "key:w"
+   ]
+  },
+  {
+   "seq": 204,
+   "decision": 201,
+   "wall": 1793942126.620553,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-8279",
+   "frame_changed": true,
+   "dollars": 2.9544122999999995,
+   "keys": [
+    "key:ENTER",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP"
+   ]
+  },
+  {
+   "seq": 205,
+   "decision": 202,
+   "wall": 1793942133.811115,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5219741,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-8291",
+   "frame_changed": true,
+   "dollars": 2.9662817499999994,
+   "keys": [
+    "key:b",
+    "key:ENTER",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP"
+   ]
+  },
+  {
+   "seq": 206,
+   "decision": 203,
+   "wall": 1793942141.510497,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-8342",
+   "frame_changed": true,
+   "dollars": 3.1795857999999995,
+   "keys": [
+    "key:UP",
+    "key:UP",
+    "key:d"
+   ]
+  },
+  {
+   "seq": 207,
+   "decision": 204,
+   "wall": 1793942149.868892,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-8345",
+   "frame_changed": true,
+   "dollars": 3.1913000999999994,
+   "keys": [
+    "key:a",
+    "key:ENTER",
+    "key:a"
+   ]
+  },
+  {
+   "seq": 208,
+   "decision": 205,
+   "wall": 1793942157.946989,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5219743,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-8350",
+   "frame_changed": true,
+   "dollars": 3.2026154499999993,
+   "keys": [
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 209,
+   "decision": 206,
+   "wall": 1793942167.1051478,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5219750,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-8497",
+   "frame_changed": true,
+   "dollars": 3.2145695499999993,
+   "keys": [
+    "key:ESC",
+    "key:DOWN",
+    "key:a",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:ENTER",
+    "key:UP",
+    "wait"
+   ]
+  },
+  {
+   "seq": 210,
+   "decision": 207,
+   "wall": 1793942175.302721,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-8545",
+   "frame_changed": true,
+   "dollars": 3.2265821999999993,
+   "keys": [
+    "key:&",
+    "key:f",
+    "text",
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 211,
+   "decision": 208,
+   "wall": 1793942181.587845,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-8546",
+   "frame_changed": true,
+   "dollars": 3.2378222999999995,
+   "keys": [
+    "key:b"
+   ]
+  },
+  {
+   "seq": 212,
+   "decision": 209,
+   "wall": 1793942186.6683588,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5220211,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-8569",
+   "frame_changed": true,
+   "dollars": 3.2488549999999994,
+   "keys": [
+    "key:DOWN",
+    "key:ENTER",
+    "wait"
+   ]
+  },
+  {
+   "seq": 213,
+   "decision": 210,
+   "wall": 1793942197.63007,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-8629",
+   "frame_changed": true,
+   "dollars": 3.2608304499999994,
+   "keys": [
+    "key:UP",
+    "key:d",
+    "key:/",
+    "text",
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 214,
+   "decision": 211,
+   "wall": 1793942205.062691,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5220214,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-8639",
+   "frame_changed": true,
+   "dollars": 3.2730714999999995,
+   "keys": [
+    "key:a",
+    "key:ENTER",
+    "key:DOWN",
+    "key:a",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:ENTER",
+    "key:UP"
+   ]
+  },
+  {
+   "seq": 215,
+   "decision": 212,
+   "wall": 1793942214.085469,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5220220,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-8703",
+   "frame_changed": true,
+   "dollars": 3.2856879999999995,
+   "keys": [
+    "key:a",
+    "key:/",
+    "text",
+    "key:ENTER",
+    "key:ENTER",
+    "key:UP"
+   ]
+  },
+  {
+   "seq": 216,
+   "decision": 213,
+   "wall": 1793942222.525161,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": 5220301,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-8783",
+   "frame_changed": true,
+   "dollars": 3.5120595499999996,
+   "keys": [
+    "key:a",
+    "key:/",
+    "text",
+    "key:ENTER",
+    "key:ENTER",
+    "wait"
+   ]
+  },
+  {
+   "seq": 217,
+   "decision": 214,
+   "wall": 1793942232.048583,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-8909",
+   "frame_changed": true,
+   "dollars": 3.5237652499999994,
+   "keys": [
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 218,
+   "decision": 215,
+   "wall": 1793942238.380544,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5220310,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-8918",
+   "frame_changed": true,
+   "dollars": 3.5352823999999994,
+   "keys": [
+    "key:ENTER",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN",
+    "key:DOWN"
+   ]
+  },
+  {
+   "seq": 219,
+   "decision": 216,
+   "wall": 1793942246.155978,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5220311,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-8971",
+   "frame_changed": true,
+   "dollars": 3.5473539499999993,
+   "keys": [
+    "key:DOWN",
+    "key:g"
+   ]
+  },
+  {
+   "seq": 220,
+   "decision": 217,
+   "wall": 1793942257.158807,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-9137",
+   "frame_changed": true,
+   "dollars": 3.559081849999999,
+   "keys": [
+    "key:ESC",
+    "key:/"
+   ]
+  },
+  {
+   "seq": 221,
+   "decision": 218,
+   "wall": 1793942265.090284,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-9140",
+   "frame_changed": true,
+   "dollars": 3.5713884499999993,
+   "keys": [
+    "key:ESC",
+    "key:g",
+    "key:5"
+   ]
+  },
+  {
+   "seq": 222,
+   "decision": 219,
+   "wall": 1793942278.161603,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": 5220313,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-9144",
+   "frame_changed": true,
+   "dollars": 3.583267599999999,
+   "keys": [
+    "key:w",
+    "key:ESC"
+   ]
+  },
+  {
+   "seq": 223,
+   "decision": 220,
+   "wall": 1793942287.104328,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-9273",
+   "frame_changed": true,
+   "dollars": 3.5951808499999993,
+   "keys": [
+    "key:ESC",
+    "key:E"
+   ]
+  },
+  {
+   "seq": 224,
+   "decision": 221,
+   "wall": 1793942294.8013718,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-9277",
+   "frame_changed": true,
+   "dollars": 3.6071967499999995,
+   "keys": [
+    "key:DOWN",
+    "key:DOWN",
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 225,
+   "decision": 222,
+   "wall": 1793942311.190099,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": 5220355,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-9293",
+   "frame_changed": true,
+   "dollars": 3.6229261999999993,
+   "keys": [
+    "key:ESC",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP"
+   ]
+  },
+  {
+   "seq": 226,
+   "decision": 223,
+   "wall": 1793942320.874372,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5220376,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-9450",
+   "frame_changed": true,
+   "dollars": 3.8639039999999993,
+   "keys": [
+    "key:N",
+    "key:LEFT",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP"
+   ]
+  },
+  {
+   "seq": 227,
+   "decision": 224,
+   "wall": 1793942330.816704,
+   "kind": "input",
+   "mode": "in_play",
+   "game_time": 5220396,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-9531",
+   "frame_changed": true,
+   "dollars": 3.8791147999999995,
+   "keys": [
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP",
+    "key:UP"
+   ]
+  },
+  {
+   "seq": 228,
+   "decision": 225,
+   "wall": 1793942343.881213,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": 5220396,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-9617",
+   "frame_changed": true,
+   "dollars": 3.9038508499999995,
+   "keys": [
+    "key:ESC"
+   ]
+  },
+  {
+   "seq": 229,
+   "decision": 226,
+   "wall": 1793942351.724624,
+   "kind": "input",
+   "mode": "prompt",
+   "game_time": 5220396,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-9749",
+   "frame_changed": true,
+   "dollars": 3.9158954499999994,
+   "keys": [
+    "key:S",
+    "wait"
+   ]
+  },
+  {
+   "seq": 230,
+   "decision": 227,
+   "wall": 1793942363.8776479,
+   "kind": "input",
+   "mode": "menu",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-9918",
+   "frame_changed": true,
+   "dollars": 3.9279043499999995,
+   "keys": [
+    "key:Y",
+    "wait"
+   ]
+  },
+  {
+   "seq": 231,
+   "decision": 228,
+   "wall": 1793942387.167382,
+   "kind": "input",
+   "mode": "menu",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-9919",
+   "frame_changed": true,
+   "dollars": 3.9526319499999993,
+   "keys": [
+    "key:ENTER"
+   ]
+  },
+  {
+   "seq": 232,
+   "decision": 229,
+   "wall": 1793942401.098507,
+   "kind": "input",
+   "mode": "menu",
+   "game_time": null,
+   "source_id": "c6c09be0b7d43fba2839147651a4f6a5-10133",
+   "frame_changed": true,
+   "dollars": 3.9649444499999995,
+   "keys": [
+    "key:ESC"
+   ]
+  }
+ ],
+ "next": null,
+ "limit": 500
+}

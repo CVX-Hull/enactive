@@ -15,7 +15,7 @@ same-page chain below demonstrates normal ending, fresh admission, operator Paus
 and another fresh admission without inheriting the old Pause latch.
 
 The [observer component](../components/observer-operations.md) and
-[contract](../contracts/computer-control.md#passive-spectator-projections) own current
+[contract](../contracts/computer-control.md#passive-spectator-reads-and-operator-pause) own current
 behavior. [#293](https://github.com/CVX-Hull/enactive/issues/293) and its linked PR
 own protected delivery receipts. The [curated summary](assets/spectator-293/summary.json)
 binds selected assets and original closed receipts; it is not another live tracker.

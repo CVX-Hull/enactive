@@ -218,8 +218,8 @@ class ProfileTests(unittest.TestCase):
             with self.subTest(name=name): self.assertFalse(ci.editorial(name))
 
     def test_component_complete_comparisons_run_selected_scope_on_pr_and_main(self):
-        for path, profile in (("web/style.css", "viewer"),
-                              ("web/app.js", "viewer")):
+        for path, profile in (("web/app/app.css", "viewer"),
+                              ("web/app/main.js", "viewer")):
             self.git("reset", "--hard", self.main)
             self.write(path, "Changed")
             self.write("docs/architecture.md", "Current explanation")
@@ -233,24 +233,24 @@ class ProfileTests(unittest.TestCase):
     def test_component_cannot_hide_crosscutting_files_renames_or_nonregular_objects(self):
         def change(path, after="100644"):
             return ci.Change(path, "100644", after)
-        for paths in (("harness/movement.py", "web/app.js"),
-                      ("web/app.js", "harness/server.py"),
+        for paths in (("harness/movement.py", "web/app/main.js"),
+                      ("web/app/main.js", "harness/server.py"),
                       ("harness/movement.py", "tests/test_controller.py"),
                       ("harness/movement.py", "schemas/gameplay.schema.json"),
-                      ("web/style.css", "tools/check.py"), ("web/style.css", "unknown")):
+                      ("web/app/app.css", "tools/check.py"), ("web/app/app.css", "unknown")):
             with self.subTest(paths=paths): self.assertIsNone(ci.component([change(p) for p in paths]))
-        self.assertIsNone(ci.component([change("web/app.js", "120000")]))
+        self.assertIsNone(ci.component([change("web/app/main.js", "120000")]))
         self.assertIsNone(ci.component([]))
         before = self.main
-        self.write("web/app.js", "Source")
+        self.write("web/app/main.js", "Source")
         base = self.commit("viewer source")
         (self.root / "docs").mkdir(exist_ok=True)
-        self.git("mv", "web/app.js", "docs/renamed.md")
+        self.git("mv", "web/app/main.js", "docs/renamed.md")
         head = self.commit("rename")
         # Both sides participate: deleting the viewer source is still viewer scope.
         self.assertEqual(ci.choose(self.repository, "pull_request", self.pr(base=base, head=head), head).profile, "viewer")
         self.git("reset", "--hard", before)
-        self.git("mv", "harness/example.py", "web/app.js")
+        self.git("mv", "harness/example.py", "web/app/main.js")
         head = self.commit("cross boundary rename")
         self.assertEqual(ci.choose(self.repository, "pull_request", self.pr(base=before, head=head), head).profile, "full")
 

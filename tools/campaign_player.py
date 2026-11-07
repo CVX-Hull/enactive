@@ -26,11 +26,10 @@ def write_new(path: Path,value,*,text=False) -> None:
 
 class HostEvents:
     """Incremental JSONL; a partial final line never becomes an uncharged request."""
-    def __init__(self,path: Path,allowance: int,observer=None):
+    def __init__(self,path: Path,allowance: int):
         self.stream=path.open('rb');self.buffer=b'';self.allowance=allowance
         self.requests=set();self.settled=None;self.handoff=None;self.player_finish=None;self.last_response_wall=None
         self.usage={};self.error=None;self.started=False
-        self.observer=observer;self.ordinal=0
 
     def read(self) -> bool:
         if self.error is not None:
@@ -52,7 +51,6 @@ class HostEvents:
         for line in lines:
             if not line:continue
             value=json.loads(line)
-            self.ordinal+=1
             kind=value.get('type')
             if kind=='host-start':
                 if (self.started or type(value.get('telemetry_version')) is not int or value['telemetry_version']!=3
@@ -77,8 +75,6 @@ class HostEvents:
             elif kind=='settled':
                 if self.settled is not None:raise ControlError('Repeated host terminal event')
                 self.settled=value
-            if self.observer is not None:
-                self.observer(self.ordinal,value)
         return True
 
     def finish(self) -> dict:
@@ -184,8 +180,7 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
             with (target/'host.jsonl').open('x') as output,(target/'host-stderr.log').open('x') as errors:
                 child=subprocess.Popen(arguments,cwd=ROOT,env=environment,stdin=subprocess.PIPE,stdout=output,stderr=errors,start_new_session=True)
                 write_new(target/'host-process.json',dict(pid=child.pid,pgid=child.pid,argv=arguments))
-                events=HostEvents(target/'host.jsonl',allowance,
-                    observer=lambda ordinal,event:application.activity_view.host_event(actor['actor_id'],ordinal,event))
+                events=HostEvents(target/'host.jsonl',allowance)
                 if ending_request is not None:
                     _send_control(child,target,profile['session'],actor['actor_id'],ending_request)
                     record['ending_control_id']=ending_request['id']

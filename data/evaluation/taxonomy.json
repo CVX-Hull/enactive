@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "codes": [
+    {"code": "stall", "name": "Out-of-play stall", "definition": "Fifteen or more consecutive decisions without an in-play screen, after the first in-play frame of the episode.", "examples": ["Keybinding or menu hunts in the in-game help", "A prompt the player does not leave"]},
+    {"code": "ineffective_repeat", "name": "Ineffective repeated input", "definition": "The same movement input three or more times in a row while the map region changes by under 1% of its pixels.", "examples": ["Walking into a wall or closed door"]},
+    {"code": "death", "name": "Death", "definition": "A death screen was read in the episode survival is measured in. The cause is refined by a human label.", "examples": ["Any run with a death event"]},
+    {"code": "death_crowd_start", "name": "Died to a crowd met at the start", "definition": "Death by a group of hostile creatures that was already listed when the survivor first acted.", "examples": ["A lethal crowd on the creature list in the 12 decisions before death"]},
+    {"code": "death_ignored_threat", "name": "Died with a threat in view", "definition": "Death after a listed threat was visible for several decisions and the player kept an unrelated plan.", "examples": ["Continuing to craft or read while a creature approaches"]},
+    {"code": "tool_refused", "name": "Tool call refused", "definition": "The host refused a model tool call before dispatch (an orderly stop, a finish or a handoff in progress, or changed arguments).", "examples": ["computer_input after an accepted orderly stop"]},
+    {"code": "infrastructure_loss", "name": "Run lost to infrastructure", "definition": "The run ended because the provider failed or custody was lost, not because of play.", "examples": ["A provider error that ended the final actor", "A partial or unknown delivery that stopped the run"]},
+    {"code": "identity_or_world_error", "name": "Identity or world error carried", "definition": "A memory record or handoff carried a wrong survivor name or world name that a later observation corrected.", "examples": ["A work record naming the wrong world"]},
+    {"code": "memory_unused", "name": "Memory written but never read back", "definition": "Records were written and no later read, query or context call returned them.", "examples": ["A work record that no successor queried"]}
+  ]
+}

@@ -40,10 +40,13 @@ reader task or boundary benefits; no universal file-size quota applies.
 | --- | --- |
 | `harness/computer/` | Mechanical packets, socket, writer, store, target custody and SDL adapter; no game/player semantics. |
 | `harness/player/` | Pure fallible knowledge, image views, bounded programs and context; no process/provider/native authority. |
-| `harness/application.py`, `harness/observer.py` and transport adapters | Compose current ports/tools and bounded passive evidence views without granting observer authority. |
+| `harness/application.py` and transport adapters | Compose current ports/tools without granting observer authority. |
+| `harness/evaluation/` | Interpretive run evaluation ([contract](contracts/evaluation.md)): game-neutral `core/` and the `cdda/` binding. It is never imported by player, computer or server code. |
+| `harness/viewer/` | The read-only viewer process the spectator page reads through the gateway; outside supervision. |
+| `data/evaluation/` | Git-tracked human evaluation data: failure taxonomy, labels, change records, archive labels and reader validation. |
 | `tools/` | Maintained setup/check/build/campaign entry points and the current player host adapter. |
 | `native/` | Upstream provenance and preparation inputs, not a semantic control backend. |
-| `web/` | Passive spectator and independent user Pause. |
+| `web/` | The spectator page (served by the supervised gateway) and independent user Pause. |
 | `tests/` | Scoped behavioral assertions/doubles and compiled fixtures; actual outcomes are separate evidence. |
 | `docs/components/`, `contracts/`, `standards/`, `workflows/`, `operations/` | Explanation, exact rules, mandatory qualities, decisions and supported tasks. |
 | `docs/acceptance/`, `changes/`, `decisions/` | Dated evidence/rationale under explicit status, not live commands or permission. |
@@ -58,7 +61,7 @@ reader task or boundary benefits; no universal file-size quota applies.
 | Replace an actor | [Host procedure](operations/player-host.md) → [custody contract](contracts/computer-control.md#computer-operations-and-custody). Canonical context and actual quiescence precede successor capability. |
 | End automation | [Host control](contracts/player-host.md#external-control) → [campaign reserves/closeout](operations/campaign-run.md). Optional finish-up is distinct from independent permanent Pause; game saving is an ordinary player choice. |
 | Save/load/exit | [Player guide](player-guide.md#current-registered-cdda-lifecycle) → actual visible ordinary controls. The player judges game state; the harness certifies no save. |
-| Investigate observed play | [Start/observe](operations/start-observe.md) → [observer component](components/observer-operations.md) → [passive projection contract](contracts/computer-control.md#passive-spectator-projections). Recorded inspection and current control target remain distinct. |
+| Observe play | [Start/observe](operations/start-observe.md) → [observer component](components/observer-operations.md) → [passive reads and Pause contract](contracts/computer-control.md#passive-spectator-reads-and-operator-pause). The viewer's recorded views and the current control target remain distinct. |
 | Select validation | [Testing](testing.md) → [development policy](workflows/development.md) and [CI profiles](workflows/ci-profiles.md). Native/gameplay evidence stays separate. |
 
 ## One authoritative home per kind of fact
@@ -71,8 +74,8 @@ GitHub owns live work, proposals own unadopted scope, ADRs own dated rationale,
 and acceptance reports own original observations. The control registry/map owns
 control lifecycle, not a second contract or work tracker.
 
-The [recorded investigation contract](contracts/observer-investigation.md) owns the
-current bounded passive artifact. Other historical `contracts/` pages are superseded bookmarks for the native7/mission11
+The [evaluation contract](contracts/evaluation.md) owns the spectator view API.
+Other historical `contracts/` pages are superseded bookmarks for the native7/mission11
 system. They retain original-source links and headings for historical references;
 current readers follow their explicit replacement. Do not treat historical
 contracts or old executable artifacts as another supported backend.

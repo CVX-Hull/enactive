@@ -27,6 +27,7 @@ from harness.computer.launch import close_group
 from harness.computer.protocol import read_json
 from tools.campaign_package import digest, preflight
 from tools.campaign_player import write_new
+from tools.campaign_watch import PAUSE_RECORDED, UNSPECIFIED
 
 ROOT = Path(__file__).resolve().parents[1]
 WINDOW = 45
@@ -69,6 +70,13 @@ def credential(name: str, *, environ=os.environ, mapping: Path = CREDENTIALS, ru
     if not value:
         raise ValueError(f'Keychain item {service!r} for {name} is unavailable')
     return value
+
+
+def free_loopback_port() -> int:
+    """A currently unused loopback port for the viewer (the viewer's bind decides the race)."""
+    with socket.socket() as probe:
+        probe.bind(('127.0.0.1', 0))
+        return probe.getsockname()[1]
 
 
 def finite(value: object) -> bool:
@@ -165,13 +173,20 @@ def supervise(package: Path, profile: dict, child: subprocess.Popen, gateway: su
     rows = result['accepted']
 
     def receive_stop():
-        message = stops.recv(128).decode()
-        if not message.startswith('pause:'):
+        fields = stops.recv(128).decode().split(':')
+        if fields[0] != 'pause' or len(fields) != 3:
             return 'acknowledgement_uncertain'
-        pause_at = float(message.removeprefix('pause:'))
+        try:
+            pause_at = float(fields[1])
+        except ValueError:
+            return 'invalid_pause_clock'
         if not finite(pause_at) or not result['started_monotonic'] <= pause_at <= clock.monotonic():
             return 'invalid_pause_clock'
+        reason = fields[2] or UNSPECIFIED  # a missing reason is recorded; it never refuses the stop
+        if reason not in PAUSE_RECORDED:
+            return 'invalid_pause_reason'
         result['pause_requested'] = pause_at
+        result['pause_reason'] = reason
         reason, grace, raced = pause_boundary(rows, last, pause_at, clock.monotonic(), custody_end, window)
         result['checks_raced_with_pause'] = raced
         if reason:
@@ -281,7 +296,8 @@ def supervise(package: Path, profile: dict, child: subprocess.Popen, gateway: su
         last = row['observation']
 
 
-def run_supervised(directory: Path, *, attention: str, popen=subprocess.Popen, clock=time) -> dict:
+def run_supervised(directory: Path, *, attention: str, runs: Path | None = None, popen=subprocess.Popen,
+                   clock=time, viewer_port: Callable[[], int] = free_loopback_port) -> dict:
     if attention not in ATTENTION:
         raise ValueError('Select an explicit attention policy: '+', '.join(ATTENTION))
     window = ATTENTION[attention]
@@ -294,19 +310,23 @@ def run_supervised(directory: Path, *, attention: str, popen=subprocess.Popen, c
         raise ValueError('Selected provider credential is unavailable; supply its environment variable '
                          'or map it to a keychain item in .runtime/credentials.json')
     manifest_sha = digest(directory/'manifest.json')
-    result = dict(schema='campaign-watch-terminal/2', session=profile['session'],
+    port = viewer_port()
+    result = dict(schema='campaign-watch-terminal/3', session=profile['session'],
         source_commit=profile['source_commit'], manifest_sha256=manifest_sha,
         started_wall=clock.time(), started_monotonic=clock.monotonic(), attention=attention,
         watch_seconds=window,
-        accepted=[], children={}, cleanup={}, gateway_url=None, pause_reply_forwarded=False,
-        terminal_coverage_verified=False, reason='startup_failed')
+        viewer_port=port, accepted=[], children={}, cleanup={}, gateway_url=None, pause_reason=None,
+        pause_reply_forwarded=False, terminal_coverage_verified=False, reason='startup_failed')
     write_new(directory/'watch-start.json', {**{k: result[k] for k in ('session', 'source_commit',
-        'manifest_sha256', 'started_wall', 'started_monotonic', 'attention', 'watch_seconds')},
-        'schema': 'campaign-watch-start/2'})
+        'manifest_sha256', 'started_wall', 'started_monotonic', 'attention', 'watch_seconds', 'viewer_port')},
+        'schema': 'campaign-watch-start/3'})
     # Reserve every evidence file before any child. Even partial reservation is inert forever.
     interrupted = False
     previous = {}
     handles = {}
+    # The viewer is outside supervision: its exit never counts as loss, so it is kept apart
+    # from `handles`, which the startup wait and guard treat as required children.
+    viewer = {}
     def stop(signum, frame):
         nonlocal interrupted
         interrupted = True
@@ -332,9 +352,23 @@ def run_supervised(directory: Path, *, attention: str, popen=subprocess.Popen, c
                 child = launch('custodian', [sys.executable, '-m', 'tools.campaign_run', '--run', str(directory)],
                     cwd=ROOT, env={**env, route['api_key_env']: secret}, stdout=stdout, stderr=stderr)
                 del secret
+                try:
+                    with (directory/'viewer-stdout.txt').open('xb') as viewer_out, \
+                            (directory/'viewer-stderr.txt').open('xb') as viewer_err:
+                        argv = [sys.executable, '-m', 'harness.viewer', '--run', str(directory),
+                                '--root', str(ROOT/'.runtime'/'evaluations'),
+                                *(['--runs', str(runs)] if runs is not None else []),
+                                '--port', str(port), '--host', '127.0.0.1']
+                        handle = popen(argv, start_new_session=True, cwd=ROOT, env=env,
+                                       stdout=viewer_out, stderr=viewer_err)
+                        viewer['handle'] = handle
+                        result['children']['viewer'] = dict(pid=handle.pid, pgid=handle.pid, port=port,
+                                                            created_process_group=True, argv=argv, supervised=False)
+                except OSError as exc:
+                    result['children']['viewer'] = dict(port=port, supervised=False, launch_error=type(exc).__name__)
                 gateway = launch('gateway', [sys.executable, '-m', 'tools.campaign_watch', str(directory),
                     profile['session'], profile['source_commit'], str(profile['port']), str(child.pid),
-                    str(tx.fileno()), str(stop_tx.fileno())], cwd=ROOT, env=env,
+                    str(tx.fileno()), str(stop_tx.fileno()), '--viewer-port', str(port)], cwd=ROOT, env=env,
                     pass_fds=(tx.fileno(), stop_tx.fileno()), stdout=stdout, stderr=stderr)
                 tx.close(); stop_tx.close()
                 wake = launch('wake', ['/usr/bin/caffeinate', '-di', '-w', str(child.pid)], env=env,
@@ -368,7 +402,19 @@ def run_supervised(directory: Path, *, attention: str, popen=subprocess.Popen, c
                 except OSError as exc:
                     termination[name] = dict(termination_error=type(exc).__name__)
         # close_group is only used for handles launched here with start_new_session.
-        for name in ('gateway', 'custodian', 'wake'):
+        if 'handle' in viewer and viewer['handle'].poll() is None:
+            try:
+                viewer['handle'].terminate()
+            except OSError:
+                pass
+        for name in ('gateway', 'custodian', 'wake', 'viewer'):
+            if name == 'viewer' and 'handle' in viewer:
+                try:
+                    result['cleanup'][name] = dict(launched=True, **close_group(viewer['handle']))
+                except BaseException as exc:
+                    result['cleanup'][name] = dict(launched=True, process_absent=False, group_absent=False,
+                        error=type(exc).__name__, error_message=str(exc)[:400])
+                continue
             if name not in handles:
                 result['cleanup'][name] = dict(launched=False)
                 continue
@@ -426,8 +472,10 @@ def main(argv=None) -> int:
     parser.add_argument('--attention', choices=tuple(ATTENTION), required=True,
         help='required: stop when no operator check completes within 45 seconds; '
              'best-effort: checks are optional and only original custody limits, Pause and stops apply')
+    parser.add_argument('--runs', type=Path, default=None,
+        help='directory of archived run directories for the viewer to list beside the live run')
     options = parser.parse_args(argv)
-    result = run_supervised(options.run, attention=options.attention)
+    result = run_supervised(options.run, attention=options.attention, runs=options.runs)
     print(json.dumps(result))
     return 0 if (result['reason'] == 'custodian_terminal' and result['terminal_coverage_verified']
         and result['cleanup_verified'] and result['manifest_unchanged']

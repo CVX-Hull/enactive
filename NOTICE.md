@@ -144,3 +144,23 @@ is an unchanged actual CDDA/UltiCa capture from 2026-10-19. Its source and byte 
 are recorded in the [campaign report](docs/acceptance/2026-10-19-seven-day-survival.md)
 and manifest. It retains the same upstream game/art attribution and CC BY-SA 3.0
 terms above, and is not covered by the project's MIT grant.
+
+The CDDA evaluation binding's glyph atlas (`harness/evaluation/cdda/atlas.json`) is derived from the
+Terminus font (SIL OFL 1.1) as rendered by Cataclysm: DDA at 8x16 pixels. Each glyph is a 128-pixel ink
+mask learned from recorded frames and checked against the font, so it is a derivative of Terminus. Its
+text crops under `tests/fixtures/evaluation/cdda` are unaltered sidebar and menu text regions of CDDA
+screenshots containing no tileset art. The font keeps its upstream licence and copyright notice;
+reproducing it needs the OFL text, available at https://openfontlicense.org/.
+
+## Spectator page libraries
+
+The redesigned spectator page ([ADR 008](docs/decisions/008-evaluation-and-spectator.md))
+vendors three browser libraries in `web/vendor/` with no build step and no network use at
+run time: Preact 11.2.0 (MIT), htm 3.1.1 (Apache-2.0) and Apache ECharts 5.5.1
+(Apache-2.0). Their tarball URLs, integrity hashes, per-file digests and the one
+rewritten import specifier are in [web/vendor/PROVENANCE.md](web/vendor/PROVENANCE.md);
+each library's `LICENSE` (and ECharts' `NOTICE`) sits beside it and must travel with
+any redistribution. The viewer's survival statistics use numpy 2.5.4 and scipy 1.18.1
+(BSD-3-Clause), pinned in [requirements.in](requirements.in) and the shared lock and
+installed only in the project environment; nothing from them is vendored in Git.
+Package metadata was read on 2026-11-06.

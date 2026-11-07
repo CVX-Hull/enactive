@@ -10,8 +10,9 @@ The [test supervisor](../../tools/campaign_supervision.py) wraps the maintained
 [campaign custodian](campaign-run.md). It belongs to test operation, outside the
 player context. The independent guardian owns the original custody deadline, Pause
 receipt and owned wrapper cleanup; the existing custodian owns native input,
-original allowances and native/host cleanup. The gateway forwards passive
-spectator reads and verified Pause, never actor tools.
+original allowances and native/host cleanup. The gateway serves the page, relays
+passive status and source reads, forwards bounded viewer reads and verified Pause, and
+never actor tools. A separate read-only viewer runs outside supervision.
 
 Every launch selects one attention policy, recorded in `watch-start.json`:
 
@@ -30,7 +31,7 @@ spending or new admission. General unattended operation remains unqualified.
 
 ## Freeze, launch and inspect
 
-1. Prepare the exact clean source and fresh `campaign-run/4` package through the
+1. Prepare the exact clean source and fresh `campaign-run/5` package through the
    [campaign procedure](campaign-run.md). Resolve scope, spending, original
    resources, ending reserves and stop rules before admission. Preserve original
    saves and failed chains; old experiment launchers stay historical evidence.
@@ -47,24 +48,34 @@ spending or new admission. General unattended operation remains unqualified.
    ```
 
    Use `--attention required` only when the frozen test requires the 45-second
-   policy; step 5 then applies.
+   policy; step 5 then applies. Add `--runs DIR` to let the viewer list archived run
+   directories beside the live run.
 
-4. Under either policy, open the exact printed gateway URL in **Watch** to observe
-   play and reach Pause. Under `best-effort` the page shows no check button and the
-   gateway refuses check records, so an optional check can never stop a healthy run.
+4. Under either policy, open the exact printed gateway URL to observe play and reach
+   Pause. Under `best-effort` the page shows no check button and the gateway refuses
+   check records, so an optional check can never stop a healthy run. The supervisor
+   starts the viewer as an unsupervised child on a free loopback port; if the page shows
+   **viewer unavailable**, play, checks, the frame and Pause are unaffected, and the
+   cause is in the run directory's `viewer-stderr.txt`. Its exit is never a stop.
 5. Under `required`, inspect the current session,
-   status and decoded source, then click **Record operator check**. Confirm the
+   status and decoded source in the check panel, then click **Record operator check**. Confirm the
    accepted number. Target one completed check every15 seconds. The first must
    finish strictly before readiness plus45 seconds; each later completion must
    precede the prior accepted observation plus45 seconds and the original custody
    cutoff. Equality is too late. A failed or unconfirmed guardian acknowledgement
    does not renew it. Missing browser confirmation is unknown: the guardian may
    already have accepted the check. Use Pause when control is uncertain.
-6. Use the same page's **Pause** for immediate control. No check renews after
-   Pause. Refreshing the page cannot resume or reopen a stopped/partial package.
+6. Use the same page's **Pause** for immediate control and choose its reason (loop,
+   fault, spend or other). The page asks for a reason, but the gateway never refuses a
+   stop over one: it stops first, then records the reason as given, or `unspecified`
+   when it is missing or unknown. It forwards an empty Pause to the custodian and
+   records the reason in `watch-terminal.json`; Pause never waits for the viewer. No
+   check renews after Pause. Refreshing the page cannot resume or reopen a
+   stopped/partial package.
 
-The button requires a trusted explicit click, visible Watch, decoded in-viewport
-pixels and current displayed status. The gateway checks session, source/digest,
+The button requires a trusted explicit click, a visible check panel, decoded in-viewport
+pixels and current displayed status, all taken from the custodian's status and source
+reads, never from the viewer. The gateway checks session, source/digest,
 increasing sequence and displayed-status age within12 seconds, then waits for
 the guardian's exact confirmation. This checks displayed retained evidence;
 human attention, physical paint, continuous capture and useful game effects
@@ -86,8 +97,9 @@ uncertain receiver gets no POST; renewal stops and owned cleanup proceeds.
 This does not qualify another OS or hostile-process isolation.
 
 On stop, signal, startup or supervision failure, custodian/gateway termination
-is requested before bounded waits. Every launched child, including Mac
-`caffeinate`, receives an explicit cleanup result. The shared group helper acts
+is requested before bounded waits. Every launched child, including the viewer and Mac
+`caffeinate`, receives an explicit cleanup result. A viewer that exits early or cannot
+start is recorded but is not supervision loss, and never fails startup. The shared group helper acts
 only on groups created by those exact launches. Keep-awake is process-scoped.
 Cleanup errors stay visible; arbitrary OS hangs, abrupt supervisor death and
 native application responsiveness remain limits.
@@ -101,16 +113,17 @@ game's clock. Apply save/reload/exit criteria in their separately frozen lane.
 
 | Artifact | Current version and meaning |
 | --- | --- |
-| `watch-start.json` | `campaign-watch-start/2`; exclusive reservation before children, binding session/source, manifest SHA256, wall/monotonic start, `attention` and `watch_seconds` (45 for `required`, null for `best-effort`). Prior/partial markers refuse; never delete to rearm. |
+| `watch-start.json` | `campaign-watch-start/3`; exclusive reservation before children, binding session/source, manifest SHA256, wall/monotonic start, `attention`, `watch_seconds` (45 for `required`, null for `best-effort`) and the planned `viewer_port`, which the gateway must match. Prior/partial markers refuse; never delete to rearm. |
 | `watch-attempts.jsonl` | `campaign-watch-attempt/1`; source/digest, sequence, observation/start/recorded clocks and active/ending phase. Observation/guardian values are monotonic seconds derived from original wall timing; the shared-clock relationship is checked, not assumed exact. |
-| `watch-terminal.json` | `campaign-watch-terminal/2`; attention policy, accepted checks/completion/prior-observation clocks, raced checks, reason, exact children, bounded cleanup and custodian disposition as separate facts. |
+| `watch-terminal.json` | `campaign-watch-terminal/3`; attention policy, accepted checks/completion/prior-observation clocks, raced checks, reason, `pause_reason` (`loop`, `fault`, `spend`, `other` or `unspecified`; null when the owner did not press Pause), exact children (the viewer with its pid, port and `supervised: false`, or its launch error), bounded cleanup and custodian disposition as separate facts. |
+| `viewer-stdout.txt`, `viewer-stderr.txt` | The viewer's own output, created exclusively by the supervisor; diagnostics only. |
 
 Current `computer-start/1`, `computer-ready/1` and `campaign-receipt/3` must match
 the fresh owned custodian/session/source and chronology. Under `required`, a missing
 first check or late terminal coverage cannot certify supervision; under either policy,
 a terminal receipt after the custody deadline, substituted receipt/manifest or unresolved cleanup cannot
 certify supervision success. No wrapper receipt accepts gameplay or restores
-custody; old unversioned records have no current executable reader.
+custody; old unversioned records and `watch-start/2` and `watch-terminal/2` records have no current executable reader.
 
 [Guard/process tests](../../tests/test_campaign_supervision.py),
 [local HTTP/socket tests](../../tests/test_campaign_watch.py) and

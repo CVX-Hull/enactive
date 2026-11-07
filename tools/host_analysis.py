@@ -110,7 +110,7 @@ def campaign_evidence(path: Path) -> dict:
     root = path.parent.parent.parent if path.parent.parent.name == "actors" else path.parent
     result = {"metadata_coverage": {}}
     fields = {
-        "manifest.json": ("campaign-run/4", ("session", "source_commit")),
+        "manifest.json": ("campaign-run/5", ("session", "source_commit")),
         "receipt.json": ("campaign-receipt/3", ("session", "source_commit", "outcome",
             "normal_save_claimed_by_harness", "native_absence_verified", "normal_native_exit_zero",
             "deciding_hosts_quiescent", "input_authority_revoked")),

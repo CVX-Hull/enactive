@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import select
 import shutil
+import signal
 import socket
 import subprocess
 import sys
@@ -26,6 +27,23 @@ ROOT = Path(__file__).resolve().parents[1]
 SESSION = 'a'*32
 COMMIT = 'b'*40
 PNG = b'synthetic immutable source bytes'
+INDEX = (b'<html><head></head><body><button id="pause">Pause</button>'
+         b'<div class="frame-shell" id="watch-frame-shell"></div></body></html>')
+VIEWER_SCRIPT = (
+    'import http.server,sys\n'
+    'class H(http.server.BaseHTTPRequestHandler):\n'
+    '    def log_message(self,*a):pass\n'
+    '    def do_GET(self):\n'
+    '        d=b\'{"schema":"spectator-view/1"}\'\n'
+    '        self.send_response(200);self.send_header("Content-Type","application/json")\n'
+    '        self.send_header("Content-Length",str(len(d)));self.end_headers();self.wfile.write(d)\n'
+    'http.server.ThreadingHTTPServer(("127.0.0.1",int(sys.argv[1])),H).serve_forever()\n')
+
+
+def unused_port():
+    with socket.socket() as probe:
+        probe.bind(('127.0.0.1', 0))
+        return probe.getsockname()[1]
 
 
 def put(path, value):
@@ -33,9 +51,11 @@ def put(path, value):
 
 
 @contextmanager
-def fixture(tmp_path, *, ready_age=0, receiver_pid=None, attention='required'):
+def fixture(tmp_path, *, ready_age=0, receiver_pid=None, attention='required', viewer='thread'):
     state = dict(block=False, fetching=threading.Event(), unblock=threading.Event(), paused=False,
-                 status_session=SESSION, native=None, reason=None, source_bytes=PNG)
+                 status_session=SESSION, native=None, reason=None, source_bytes=PNG, pause_body=None,
+                 view=dict(status=200, media='application/json', body=b'{"schema":"spectator-view/1"}',
+                           declared=None, delay=0, paths=[]))
     class Upstream(BaseHTTPRequestHandler):
         def log_message(self, *args):
             pass
@@ -52,7 +72,7 @@ def fixture(tmp_path, *, ready_age=0, receiver_pid=None, attention='required'):
                     state['unblock'].wait(3)
                 data = state['source_bytes']
             else:
-                data = b'<head></head><button id="pause">Pause</button><div class="frame-shell" id="watch-frame-shell"></div>'
+                self.send_error(404); return
             self.send_response(200); self.send_header('Content-Length', str(len(data))); self.end_headers()
             try:
                 self.wfile.write(data)
@@ -61,20 +81,67 @@ def fixture(tmp_path, *, ready_age=0, receiver_pid=None, attention='required'):
 
         def do_POST(self):
             state['paused'] = True
+            state['pause_body'] = self.rfile.read(int(self.headers['Content-Length']))
             data = json.dumps(dict(schema='computer-pause/1', session=SESSION,
                                    stop=dict(stop_requested=True))).encode()
             self.send_response(200); self.send_header('Content-Length', str(len(data))); self.end_headers()
             self.wfile.write(data)
 
+    class Viewer(BaseHTTPRequestHandler):
+        def log_message(self, *args):
+            pass
+
+        def do_GET(self):
+            view = state['view']
+            view['paths'].append(self.path)
+            time.sleep(view['delay'])
+            body = view['body']
+            try:
+                if view.get('trickle'):
+                    self.send_response(200); self.send_header('Content-Type', 'application/json')
+                    self.send_header('Content-Length', '100'); self.end_headers()
+                    for _ in range(100):
+                        self.wfile.write(b' '); self.wfile.flush(); time.sleep(.1)
+                    return
+                self.send_response(view['status'])
+                self.send_header('Content-Type', view['media'])
+                self.send_header('Content-Length', str(len(body) if view['declared'] is None else view['declared']))
+                self.send_header('Content-Security-Policy', "default-src *; script-src 'unsafe-inline'")
+                self.end_headers()
+                self.wfile.write(body)
+            except (BrokenPipeError, ConnectionResetError):
+                pass
+
     server = ThreadingHTTPServer(('127.0.0.1', 0), Upstream)
     serving = threading.Thread(target=server.serve_forever, daemon=True); serving.start()
+    web = tmp_path/'web'
+    (web/'app').mkdir(parents=True); (web/'vendor').mkdir(); (web/'private').mkdir()
+    (web/'index.html').write_bytes(INDEX)
+    (web/'app'/'main.js').write_text('export const ready = true;')
+    (web/'app'/'style.css').write_text('body{margin:0}')
+    (web/'vendor'/'chart.js').write_text('/* vendored */')
+    (web/'app'/'notes.txt').write_text('not a served type')
+    (web/'private'/'secret.js').write_text('not under app or vendor')
+    (tmp_path/'outside.js').write_text('outside the web root')
+    (web/'app'/'link.js').symlink_to(tmp_path/'outside.js')
+    viewing = viewer_process = None
+    if viewer == 'process':
+        port_of_viewer = unused_port()
+        viewer_process = subprocess.Popen([sys.executable, '-c', VIEWER_SCRIPT, str(port_of_viewer)],
+                                          start_new_session=True)
+    elif viewer == 'thread':
+        viewing = ThreadingHTTPServer(('127.0.0.1', 0), Viewer)
+        threading.Thread(target=viewing.serve_forever, daemon=True).start()
+        port_of_viewer = viewing.server_port
+    else:
+        port_of_viewer = unused_port()
     checks, tx = socket.socketpair(type=socket.SOCK_DGRAM)
     stops, stop_tx = socket.socketpair(type=socket.SOCK_DGRAM)
     wall, mono = time.time(), time.monotonic()
     (tmp_path/'manifest.json').write_text('{}')
-    put(tmp_path/'watch-start.json', dict(schema='campaign-watch-start/2', session=SESSION,
+    put(tmp_path/'watch-start.json', dict(schema='campaign-watch-start/3', session=SESSION,
         source_commit=COMMIT, manifest_sha256=sha256(b'{}').hexdigest(), attention=attention,
-        watch_seconds=guard.ATTENTION[attention],
+        watch_seconds=guard.ATTENTION[attention], viewer_port=port_of_viewer,
         started_wall=wall-ready_age-.1, started_monotonic=mono-ready_age-.1))
     (tmp_path/'watch-attempts.jsonl').touch()
     put(tmp_path/'started.json', dict(schema='computer-start/1', session=SESSION,
@@ -83,7 +150,8 @@ def fixture(tmp_path, *, ready_age=0, receiver_pid=None, attention='required'):
         ready_wall=wall-ready_age, viewer_url=f'http://127.0.0.1:{server.server_port}/'))
     process = subprocess.Popen([sys.executable, '-m', 'tools.campaign_watch', str(tmp_path), SESSION,
         COMMIT, str(server.server_port), str(os.getpid() if receiver_pid is None else receiver_pid),
-        str(tx.fileno()), str(stop_tx.fileno())], cwd=ROOT, pass_fds=(tx.fileno(), stop_tx.fileno()),
+        str(tx.fileno()), str(stop_tx.fileno()), '--viewer-port', str(port_of_viewer), '--web-root', str(web)],
+        cwd=ROOT, pass_fds=(tx.fileno(), stop_tx.fileno()),
         start_new_session=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     tx.close(); stop_tx.close()
     try:
@@ -97,8 +165,8 @@ def fixture(tmp_path, *, ready_age=0, receiver_pid=None, attention='required'):
             result['reason'] = guard.supervise(tmp_path, profile, child, process, live,
                                               checks, stops, lambda: False, result,
                                               window=guard.ATTENTION[attention])
-        def call(path, form=None, origin=True):
-            connection = HTTPConnection('127.0.0.1', port, timeout=5)
+        def reply(path, form=None, origin=True):
+            connection = HTTPConnection('127.0.0.1', port, timeout=8)
             try:
                 headers = {'Content-Type': 'application/json'}
                 if origin:
@@ -106,14 +174,22 @@ def fixture(tmp_path, *, ready_age=0, receiver_pid=None, attention='required'):
                 connection.request('GET' if form is None else 'POST', path,
                                    None if form is None else json.dumps(form), headers)
                 response = connection.getresponse()
-                return response.status, response.read()
+                return response, response.read()
             finally:
                 connection.close()
-        yield SimpleNamespace(state=state, call=call, supervise=supervise, result=result,
-                              checks=checks, stops=stops, process=process, port=port, profile=profile)
+        def call(path, form=None, origin=True):
+            response, data = reply(path, form, origin)
+            return response.status, data
+        yield SimpleNamespace(state=state, call=call, reply=reply, supervise=supervise, result=result,
+                              checks=checks, stops=stops, process=process, port=port, profile=profile,
+                              viewer_process=viewer_process, web=web)
     finally:
         state['unblock'].set()
         close_group(process)
+        if viewer_process is not None:
+            close_group(viewer_process)
+        if viewing is not None:
+            viewing.shutdown(); viewing.server_close()
         server.shutdown(); server.server_close(); serving.join(2)
         checks.close(); stops.close()
         stdout, stderr = process.communicate(timeout=2)
@@ -140,6 +216,8 @@ def test_gateway_rejects_stale_wrong_source_session_digest_and_origin(tmp_path):
         assert (tmp_path/'watch-attempts.jsonl').read_text() == ''
         code, page = f.call('/')
         assert code == 200 and page.index(b'id="pause"') < page.index(b'id="watch-record"')
+        assert page.index(b'id="watch-record"') < page.index(b'id="watch-frame-shell"')
+        assert page.index(b'campaign_watch_ui.js') < page.index(b'</head>')
 
 
 def test_completed_checks_duplicate_rejection_ending_and_pause(tmp_path):
@@ -153,7 +231,7 @@ def test_completed_checks_duplicate_rejection_ending_and_pause(tmp_path):
         assert f.call('/record', form(3))[0] == 409
         # Exact receiver is this fixture server's process, rather than retained JSON.
         put(tmp_path/'launcher-process.json', dict(pid=1, session='substituted'))
-        pause_code = f.call('/api/pause', {})[0]
+        pause_code = f.call('/api/pause', {'reason': 'other'})[0]
         assert pause_code == (200 if sys.platform == 'darwin' else 409)
         thread.join(3)
         assert not thread.is_alive() and f.result['reason'] == 'operator_pause'
@@ -171,7 +249,7 @@ def test_best_effort_gateway_offers_no_check_but_keeps_pause(tmp_path):
         assert b'campaign_watch_ui.js' not in page and b'Best-effort observation' in page
         assert f.call('/record', form())[0] == 403
         assert (tmp_path/'watch-attempts.jsonl').read_text() == ''
-        pause_code = f.call('/api/pause', {})[0]
+        pause_code = f.call('/api/pause', {'reason': 'other'})[0]
         assert pause_code == (200 if sys.platform == 'darwin' else 409)
         thread.join(3)
         assert not thread.is_alive() and f.result['accepted'] == []
@@ -182,7 +260,7 @@ def test_best_effort_gateway_offers_no_check_but_keeps_pause(tmp_path):
 def test_uncertain_receiver_never_receives_pause_post(tmp_path):
     with fixture(tmp_path, receiver_pid=1) as f:
         thread = threading.Thread(target=f.supervise); thread.start()
-        assert f.call('/api/pause', {})[0] == 409
+        assert f.call('/api/pause', {'reason': 'other'})[0] == 409
         thread.join(3)
         assert not thread.is_alive() and f.result['reason'] == 'operator_pause'
         assert not f.result.get('pause_reply_forwarded', False) and not f.state['paused']
@@ -287,12 +365,12 @@ def test_current_marker_writer_can_finish_after_exposing_its_path(tmp_path, mark
                 # barrier before checking the deliberately held completion.
                 assert forwarded.wait(2), 'Guard did not enter the confirmation barrier'
                 assert not f.result['accepted']
-                pause = threading.Thread(target=lambda: f.call('/api/pause', {}))
+                pause = threading.Thread(target=lambda: f.call('/api/pause', {'reason': 'other'}))
                 pause.start()
                 assert select.select([f.stops], [], [], 2)[0], 'Pause was not queued'
                 release.set()
             else:
-                f.call('/api/pause', {})
+                f.call('/api/pause', {'reason': 'other'})
             thread.join(3)
             if pause is not None:pause.join(3)
             assert not thread.is_alive() and not errors and f.result['reason'] == 'operator_pause'
@@ -305,7 +383,7 @@ def test_current_marker_writer_can_finish_after_exposing_its_path(tmp_path, mark
         finally:
             release.set()
             if thread.is_alive() and pause is None:
-                f.call('/api/pause', {})
+                f.call('/api/pause', {'reason': 'other'})
             thread.join(3)
             if pause is not None:pause.join(3)
 
@@ -331,14 +409,208 @@ def test_receiver_check_binds_exact_connected_socket_and_handle_pid(monkeypatch)
         watch.bind_pause_receiver(connection, 12346, 1234)
 
 
-@pytest.mark.parametrize('schema, attention, seconds', [
-    ('campaign-watch-start/1', 'required', 45), ('campaign-watch-start/2', 'best-effort', 45),
-    ('campaign-watch-start/2', 'required', None), ('campaign-watch-start/2', None, 45)])
-def test_gateway_refuses_inconsistent_or_old_attention_policy(tmp_path, schema, attention, seconds):
+@pytest.mark.parametrize('schema, attention, seconds, port', [
+    ('campaign-watch-start/1', 'required', 45, 5000), ('campaign-watch-start/2', 'required', 45, 5000),
+    ('campaign-watch-start/3', 'best-effort', 45, 5000), ('campaign-watch-start/3', 'required', None, 5000),
+    ('campaign-watch-start/3', None, 45, 5000), ('campaign-watch-start/3', 'required', 45, 5001)])
+def test_gateway_refuses_inconsistent_or_old_attention_policy(tmp_path, schema, attention, seconds, port):
     (tmp_path/'manifest.json').write_text('{}')
     (tmp_path/'watch-attempts.jsonl').touch()
     put(tmp_path/'watch-start.json', dict(schema=schema, session=SESSION, source_commit=COMMIT,
-        manifest_sha256=sha256(b'{}').hexdigest(), attention=attention, watch_seconds=seconds))
+        manifest_sha256=sha256(b'{}').hexdigest(), attention=attention, watch_seconds=seconds, viewer_port=port))
     checks, tx = socket.socketpair(type=socket.SOCK_DGRAM)
     with checks, tx, pytest.raises(ValueError, match='exclusively reserved'):
-        watch.worker(tmp_path, SESSION, COMMIT, 1, 1, checks, tx)
+        watch.worker(tmp_path, SESSION, COMMIT, 1, 1, checks, tx, viewer_port=5000)
+
+
+def test_pause_forwards_empty_object_and_reports_the_reason_to_the_guard(tmp_path):
+    with fixture(tmp_path) as f:
+        thread = threading.Thread(target=f.supervise); thread.start()
+        assert f.call('/api/pause', {'reason': 'spend'})[0] == (200 if sys.platform == 'darwin' else 409)
+        thread.join(3)
+        assert not thread.is_alive() and f.result['reason'] == 'operator_pause'
+        assert f.result['pause_reason'] == 'spend'
+        if sys.platform == 'darwin':
+            assert f.state['pause_body'] == b'{}'
+
+
+@pytest.mark.parametrize('bad', [{}, {'reason': 'boredom'}, {'reason': 'loop', 'note': 'x'}, {'reason': None}, [],
+    {'reason': ['loop']}, {'reason': ''}, 'loop'])
+def test_pause_is_never_refused_for_a_missing_or_unknown_reason(tmp_path, bad):
+    with fixture(tmp_path) as f:
+        thread = threading.Thread(target=f.supervise); thread.start()
+        assert f.call('/api/pause', bad)[0] == (200 if sys.platform == 'darwin' else 409)
+        thread.join(3)
+        assert not thread.is_alive() and f.result['reason'] == 'operator_pause'
+        assert f.result['pause_reason'] == 'unspecified'
+        if sys.platform == 'darwin':
+            assert f.state['pause_body'] == b'{}'
+
+
+@pytest.mark.parametrize('reason', watch.PAUSE_REASONS)
+def test_every_pause_reason_is_recorded_by_the_guard(tmp_path, reason):
+    with fixture(tmp_path) as f:
+        thread = threading.Thread(target=f.supervise); thread.start()
+        f.call('/api/pause', {'reason': reason})
+        thread.join(3)
+        assert not thread.is_alive() and f.result['pause_reason'] == reason
+
+
+def test_viewer_json_and_png_pass_with_gateway_owned_headers(tmp_path):
+    with fixture(tmp_path) as f:
+        response, data = f.reply('/api/view/runs?limit=5')
+        assert response.status == 200 and json.loads(data) == {'schema': 'spectator-view/1'}
+        assert f.state['view']['paths'] == ['/api/view/runs?limit=5']
+        assert response.getheader('Content-Type') == 'application/json'
+        policy = response.getheader('Content-Security-Policy')
+        assert policy.startswith("default-src 'self'") and 'unsafe-inline' not in policy
+        assert response.getheader('X-Content-Type-Options') == 'nosniff'
+        assert response.getheader('Cache-Control') == 'no-store'
+        f.state['view'].update(media='image/png; charset=binary', body=b'\x89PNG viewer bytes')
+        response, data = f.reply('/api/view/run/'+SESSION+'/frame/'+SESSION+'-1')
+        assert response.status == 200 and data == b'\x89PNG viewer bytes'
+        assert response.getheader('Content-Type') == 'image/png'
+        f.state['view'].update(media='application/json', status=404, body=b'{"error":"unknown run"}')
+        assert f.call('/api/view/run/other/summary')[0] == 404
+
+
+@pytest.mark.parametrize('media', ['text/html', 'text/html; charset=utf-8', 'text/javascript',
+                                   'application/javascript', 'image/svg+xml', 'application/octet-stream', ''])
+def test_forwarding_refuses_html_script_and_untyped_viewer_responses(tmp_path, media):
+    with fixture(tmp_path) as f:
+        f.state['view'].update(media=media, body=b'<script>alert(1)</script>')
+        code, data = f.call('/api/view/runs')
+        assert code == 502 and b'<script' not in data
+
+
+@pytest.mark.parametrize('declared', [None, 4*1024*1024+1])
+def test_forwarding_refuses_oversize_bodies_declared_or_not(tmp_path, declared):
+    with fixture(tmp_path) as f:
+        f.state['view'].update(body=b'{"pad":"' + b'x'*(4*1024*1024) + b'"}', declared=declared)
+        assert f.call('/api/view/runs')[0] == 502
+        f.state['view'].update(body=b'{"ok":true}', declared=None)
+        assert f.call('/api/view/runs')[0] == 200
+
+
+def test_forwarding_accepts_a_body_exactly_at_the_cap(tmp_path):
+    with fixture(tmp_path) as f:
+        body = b'{"pad":"' + b'x'*(4*1024*1024-10) + b'"}'
+        assert len(body) == 4*1024*1024
+        f.state['view'].update(body=body)
+        code, data = f.call('/api/view/runs')
+        assert code == 200 and len(data) == 4*1024*1024
+
+
+@pytest.mark.parametrize('status', [400, 404, 409, 413])
+def test_documented_viewer_statuses_pass_through(tmp_path, status):
+    with fixture(tmp_path) as f:
+        f.state['view'].update(status=status, media='application/json', body=b'{"error":"documented"}')
+        code, data = f.call('/api/view/runs')
+        assert code == status and json.loads(data) == {'error': 'documented'}
+
+
+@pytest.mark.parametrize('status', [301, 401, 429, 500, 502, 503])
+def test_viewer_failure_statuses_become_unavailable(tmp_path, status):
+    with fixture(tmp_path) as f:
+        f.state['view'].update(status=status)
+        code, data = f.call('/api/view/runs')
+        assert code == 503 and json.loads(data) == {'viewer': 'unavailable'}
+
+
+@pytest.mark.parametrize('path', ['/api/view/../status', '/api/view/%00x#', '/api/viewer/runs',
+                                  '/api/view'])
+def test_forwarding_only_takes_view_routes(tmp_path, path):
+    with fixture(tmp_path) as f:
+        assert f.call(path)[0] in (403, 404)
+        assert f.state['view']['paths'] == []
+
+
+def test_unreachable_viewer_is_unavailable_and_never_blocks_pause_status_or_checks(tmp_path):
+    with fixture(tmp_path, viewer='absent') as f:
+        thread = threading.Thread(target=f.supervise); thread.start()
+        code, data = f.call('/api/view/runs')
+        assert code == 503 and json.loads(data) == {'viewer': 'unavailable'}
+        assert f.call('/api/status')[0] == 200
+        assert f.call('/record', form())[0] == 200
+        assert f.call('/api/pause', {'reason': 'fault'})[0] == (200 if sys.platform == 'darwin' else 409)
+        thread.join(3)
+        assert not thread.is_alive() and f.result['reason'] == 'operator_pause'
+        assert [r['phase'] for r in f.result['accepted']] == ['active']
+
+
+def test_killed_viewer_mid_run_leaves_required_checks_and_pause_working(tmp_path):
+    with fixture(tmp_path, viewer='process') as f:
+        thread = threading.Thread(target=f.supervise); thread.start()
+        deadline = time.monotonic()+5
+        while True:
+            code, data = f.call('/api/view/runs')
+            if code == 200 or time.monotonic() > deadline:
+                break
+            time.sleep(.05)
+        assert code == 200 and json.loads(data)['schema'] == 'spectator-view/1'
+        assert f.call('/record', form())[0] == 200
+        os.killpg(f.viewer_process.pid, signal.SIGKILL)
+        f.viewer_process.wait(3)
+        assert json.loads(f.call('/api/view/runs')[1]) == {'viewer': 'unavailable'}
+        assert thread.is_alive() and 'reason' not in f.result
+        assert f.call('/record', form(2))[0] == 200
+        assert f.call('/api/status')[0] == 200
+        assert f.call('/api/pause', {'reason': 'loop'})[0] == (200 if sys.platform == 'darwin' else 409)
+        thread.join(3)
+        assert not thread.is_alive() and f.result['reason'] == 'operator_pause'
+        assert len(f.result['accepted']) == 2 and f.result['pause_reason'] == 'loop'
+
+
+def test_slow_viewer_times_out_without_delaying_pause_or_checks(tmp_path):
+    with fixture(tmp_path) as f:
+        f.state['view'].update(delay=4)
+        outcome = []
+        slow = threading.Thread(target=lambda: outcome.append((f.call('/api/view/runs'), time.monotonic())))
+        started = time.monotonic()
+        slow.start()
+        time.sleep(.3)
+        thread = threading.Thread(target=f.supervise); thread.start()
+        began = time.monotonic()
+        assert f.call('/record', form())[0] == 200
+        assert f.call('/api/status')[0] == 200
+        assert f.call('/api/pause', {'reason': 'other'})[0] == (200 if sys.platform == 'darwin' else 409)
+        assert time.monotonic()-began < 1.5
+        slow.join(6)
+        (code, data), finished = outcome[0]
+        assert code == 503 and json.loads(data) == {'viewer': 'unavailable'}
+        assert 1.8 <= finished-started < 3.5
+        thread.join(3)
+
+
+def test_slow_trickling_viewer_cannot_exceed_the_total_deadline(tmp_path):
+    with fixture(tmp_path) as f:
+        f.state['view'].update(trickle=True)
+        started = time.monotonic()
+        code, data = f.call('/api/view/runs')
+        assert code == 503 and json.loads(data) == {'viewer': 'unavailable'}
+        assert time.monotonic()-started < 3.5
+
+
+def test_gateway_serves_only_the_page_app_and_vendor_files_with_media_types(tmp_path):
+    with fixture(tmp_path) as f:
+        response, page = f.reply('/')
+        assert response.status == 200 and response.getheader('Content-Type').startswith('text/html')
+        for path, media, text in [('/app/main.js', 'text/javascript', b'export const ready'),
+                                  ('/app/style.css', 'text/css', b'margin'),
+                                  ('/vendor/chart.js', 'text/javascript', b'vendored')]:
+            response, data = f.reply(path)
+            assert response.status == 200 and text in data and response.getheader('Content-Type').startswith(media)
+            assert response.getheader('X-Content-Type-Options') == 'nosniff'
+        for path in ['/app/notes.txt', '/private/secret.js', '/app/link.js', '/app/missing.js', '/app/', '/app',
+                     '/vendor/', '/index.html', '/app.js', '/style.css', '/investigation.js', '/api/activity',
+                     '/api/investigation', '/app/../private/secret.js', '/app/%2e%2e/private/secret.js',
+                     '/app//main.js', '/../outside.js']:
+            assert f.call(path)[0] in (403, 404), path
+
+
+def test_repository_page_keeps_the_anchors_the_gateway_injects_around():
+    page = (ROOT/'web'/'index.html').read_text()
+    assert page.count('<div class="frame-shell" id="watch-frame-shell"') == 1 and page.count('</head>') == 1
+    for identifier in ('current-session-full', 'control-freshness', 'source-details', 'frame', 'watch',
+                       'connection', 'status-error'):
+        assert f'id="{identifier}"' in page, identifier

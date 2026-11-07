@@ -1,0 +1,82 @@
+{
+ "schema": "spectator-view/1",
+ "tools": [
+  {
+   "tool": "computer_input",
+   "calls": 231,
+   "refused": 1,
+   "errors": 1,
+   "result_bytes": 516317,
+   "p50_ms": 433.2322090000089,
+   "p95_ms": 1698.3500409999397
+  },
+  {
+   "tool": "computer_observe",
+   "calls": 2,
+   "refused": 0,
+   "errors": 0,
+   "result_bytes": 2246,
+   "p50_ms": 334.9162080000001,
+   "p95_ms": 344.31287499999985
+  },
+  {
+   "tool": "player_memory_append",
+   "calls": 1,
+   "refused": 0,
+   "errors": 0,
+   "result_bytes": 2373,
+   "p50_ms": 15.57874999998603,
+   "p95_ms": 15.57874999998603
+  },
+  {
+   "tool": "player_handoff",
+   "calls": 1,
+   "refused": 0,
+   "errors": 0,
+   "result_bytes": 717,
+   "p50_ms": 9.933916000009049,
+   "p95_ms": 9.933916000009049
+  },
+  {
+   "tool": "player_source",
+   "calls": 1,
+   "refused": 0,
+   "errors": 0,
+   "result_bytes": 469,
+   "p50_ms": 3.1548750000074506,
+   "p95_ms": 3.1548750000074506
+  }
+ ],
+ "transitions": [
+  [
+   "computer_input",
+   "computer_input",
+   228
+  ],
+  [
+   "computer_input",
+   "player_memory_append",
+   1
+  ],
+  [
+   "computer_input",
+   "player_source",
+   1
+  ],
+  [
+   "computer_observe",
+   "computer_input",
+   2
+  ],
+  [
+   "player_memory_append",
+   "player_handoff",
+   1
+  ],
+  [
+   "player_source",
+   "computer_input",
+   1
+  ]
+ ]
+}

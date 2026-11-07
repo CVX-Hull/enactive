@@ -1,0 +1,28 @@
+{
+  "schema": "spectator-383-evidence/1",
+  "scope": "Graphical lane for the #383 spectator: real control path (custodian, server, gateway, supervisor) serving synthetic pixels, plus the real viewer over a copy of archived run ceil09 replayed at its original pace. No game, provider, player or spend.",
+  "source_commit": "3985a51",
+  "harness": ["tests/spectator_lane.cjs", "tests/spectator_lane_fixture.py", "tests/spectator_replay.py"],
+  "original_private_location": ".runtime/spectator-lane-3985a51",
+  "private_availability": "Retained project-local; the replayed copy, records and full screenshot set are unavailable in a fresh checkout",
+  "result": {
+    "checks_accepted": 4,
+    "checks_accepted_after_viewer_killed": 2,
+    "live_decisions_over_20_s": [178, 180],
+    "strip_after_viewer_kill": "viewer unavailable",
+    "terminal_reason": "operator_pause",
+    "pause_reason": "other",
+    "viewer_alive_at_end": false,
+    "synthetic_channel_stopped": true,
+    "guardian_absent": true,
+    "gateway_process_and_group_absent": true
+  },
+  "known_artifact": "The replay keeps the archive's wall times, so the Pause panel's 'Feed alive' reads the archive's age (about 88,000 s) and shows met; a real run records current times.",
+  "assets": {
+    "owner-live-before-kill.png": "7f526596a8c45b71e3c4a7ffecb1930389096e0818f8889a6c492ee8d28b6416",
+    "owner-after-viewer-kill.png": "8f0b66a44aa27ff19864789f89dbcfab96d28495afe6eacfb78562f83798288a",
+    "owner-pause-sheet.png": "262401fda9ed7f6cd5f701552ccaa983a26484a4fbfee73ca66cb39164461f47",
+    "phone-live.png": "f30bc7e6000aef34228d79085a318bf6d3e164eda63dcf1f7ff638efad09be2d",
+    "desktop-light-improve-components.png": "6ecdd27d35acd211a42c77c05167b7aace89ec15e9c0bce9a06f7571fc2cb344"
+  }
+}

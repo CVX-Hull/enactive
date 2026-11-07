@@ -1,0 +1,10 @@
+{
+  "clock": {"version": 1, "accuracy": 1.0, "n": 115, "floor": 0.98, "pass": true, "sample": "held-out frames, exact date and time: 115/115"},
+  "thirst": {"version": 1, "accuracy": 1.0, "n": 84, "floor": 0.95, "pass": true, "sample": "held-out frames: 84/84"},
+  "hunger": {"version": 1, "accuracy": 1.0, "n": 84, "floor": 0.95, "pass": true, "sample": "held-out frames: 84/84"},
+  "weariness": {"version": 1, "accuracy": 1.0, "n": 84, "floor": 0.95, "pass": true, "sample": "held-out frames: 84/84"},
+  "pain": {"version": 1, "accuracy": 1.0, "n": 84, "floor": 0.95, "pass": true, "sample": "held-out frames: 84/84"},
+  "death": {"version": 1, "accuracy": 1.0, "n": 240, "floor": 0.95, "pass": null, "sample": "held-out frames: 240/240 with no positive examples, so recall is unmeasured", "note": "death recall is unmeasured: no held-out frame is a death screen, so the reader is unvalidated"},
+  "mode": {"version": 1, "accuracy": 1.0, "n": 200, "floor": 0.97, "pass": true, "sample": "fresh held-out sample after fix 6beeb3b: 200/200 correct, 0 abstained; the first sample scored 206/219 (0.94) before the fix and failed"},
+  "threat": {"version": 1, "accuracy": 1.0, "n": 91, "floor": 0.95, "pass": null, "sample": "fresh held-out sample: 91/91, empty creature lists only; no held-out frame lists a creature, so counting is not validated (the first sample scored 59/84 before the fix)", "scope": "empty_list_only", "note": "validated on empty lists only; counting creatures is unmeasured, so the reader is unvalidated"}
+}

@@ -33,6 +33,23 @@ seconds per decision ([development runs](development-runs.md#loop-result-and-nex
 Loop spend was $88.54 of $150. Host fixes #378–#380 retry three transient
 provider failure classes.
 
+**Evaluation framework, 7 November 2026** ([#383](https://github.com/CVX-Hull/enactive/issues/383),
+[ADR008](decisions/008-evaluation-and-spectator.md)).
+- **Evaluator and spectator.** An offline evaluator with a CDDA binding re-scored all
+  30 loop runs ([development runs](development-runs.md#evaluator-re-score-and-power-check-383)).
+  A redesigned spectator separates the supervised control path from a read-only viewer.
+- **Power check.** Censored survival and the milestone ladder cannot separate arms at
+  affordable n, so changes now pre-register targeted process metrics on change pages.
+  Survival, cost and setup serve as guards.
+- **Deferred items:**
+  - intent visibility ([#384](https://github.com/CVX-Hull/enactive/issues/384));
+  - label writing ([#385](https://github.com/CVX-Hull/enactive/issues/385));
+  - judges ([#386](https://github.com/CVX-Hull/enactive/issues/386));
+  - a cross-run channel ([#387](https://github.com/CVX-Hull/enactive/issues/387));
+  - a scenario bank ([#388](https://github.com/CVX-Hull/enactive/issues/388)).
+- **Next step.** The long-horizon arm ([#382](https://github.com/CVX-Hull/enactive/issues/382))
+  runs with the frozen evaluator and the spectator.
+
 ## Current integrated checkpoint
 
 The production source has the [computer-control boundary](contracts/computer-control.md):

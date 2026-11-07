@@ -54,7 +54,9 @@ SMOKE_TESTS = (
 )
 # Explicit demonstrated boundaries, not inferred dependency-impact analysis.
 COMPONENT_PATHS = {
-    "viewer": {"web/app.js", "web/index.html", "web/style.css", "tests/test_viewer.cjs"},
+    # Entries ending in "/" cover that whole tree (the spectator page, its modules and vendored libraries).
+    "viewer": {"web/", "tests/test_viewer.cjs", "tests/test_investigation.cjs", "tests/test_investigation_session.cjs",
+               "tests/fixtures/spectator/"},
 }
 COMPONENT_TESTS = {
     "viewer": ("tests/test_cli.py", *SMOKE_TESTS),
@@ -78,7 +80,8 @@ def component(changes: list[Change]) -> str | None:
         return None
     paths = {change.path for change in changes if not editorial(change.path)}
     for name, allowed in COMPONENT_PATHS.items():
-        if paths and paths <= allowed:
+        covered = lambda path: path in allowed or any(entry.endswith("/") and path.startswith(entry) for entry in allowed)
+        if paths and all(covered(path) for path in paths):
             return name
     return None
 
