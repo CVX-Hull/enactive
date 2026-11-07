@@ -33,13 +33,15 @@ for a capability baseline.
   lineages Day-viable, a screen; lineage 3 ended on an input-window stall
   ([#396](https://github.com/CVX-Hull/enactive/issues/396)).
 
-Deferred by ADR008 until after #382: intent visibility
+The seven-day attempt is [#397](https://github.com/CVX-Hull/enactive/issues/397), a
+development run that informs #145 and #164. It waits on the input bridge's post-key-down
+bound ([#396](https://github.com/CVX-Hull/enactive/issues/396)). ADR008's follow-ons wait
+for that run's evidence: intent visibility
 ([#384](https://github.com/CVX-Hull/enactive/issues/384)), label writing
 ([#385](https://github.com/CVX-Hull/enactive/issues/385)), judges
 ([#386](https://github.com/CVX-Hull/enactive/issues/386)), a cross-run channel
 ([#387](https://github.com/CVX-Hull/enactive/issues/387)) and a scenario bank
-([#388](https://github.com/CVX-Hull/enactive/issues/388)). The seven-day attempt and
-its cost and latency plan are [#397](https://github.com/CVX-Hull/enactive/issues/397).
+([#388](https://github.com/CVX-Hull/enactive/issues/388)).
 
 ## Current integrated checkpoint
 
@@ -91,8 +93,8 @@ this is source delivery, not a cohort qualification. The scoped
 [ongoing-objective diagnostic](acceptance/2026-11-05-player-test-diagnostic.md) and
 [recorded-screen candidate assessment](acceptance/2026-11-05-recorded-player-assessment.md)
 below qualify no player; current player selection and all qualification gates are
-unchanged. The owning issues (#359, #164, #145) record the remaining real-use paths,
-live gates and execution.
+unchanged. The owning issues (#164, #145, and #290 for the manual Pause receiver)
+record the remaining real-use paths, live gates and execution.
 
 | Evidence | Scope and limitation |
 | --- | --- |
