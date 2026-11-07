@@ -102,6 +102,17 @@ test('the check is disabled while the playhead is not live and returns with live
   await until(() => /Check 1 accepted/.test(document.getElementById('watch-feedback').textContent));
 });
 
+test('the check does not depend on viewer data: enabled before the viewer lists the live run', async () => {
+  await start();
+  await fx.viewer('nolive');
+  await page.reload({waitUntil: 'load'});
+  await S.settle(page, 2500);
+  assert.equal(await page.$eval('#watch-record', b => b.disabled), false);
+  await page.click('#watch-record');
+  await until(() => /Check \d+ accepted/.test(document.getElementById('watch-feedback').textContent));
+  await fx.viewer('up');
+});
+
 test('timeline keyboard: arrows move one step, shift moves ten, Home and End jump', async () => {
   await start();
   const now = () => page.$eval('#tl', n => Number(n.getAttribute('aria-valuenow')));

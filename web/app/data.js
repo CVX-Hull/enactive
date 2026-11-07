@@ -164,11 +164,12 @@ export function runStart() {
 }
 export const liveRun =() => (store.runs || []).find(r => r.state === 'live') || null;
 export const selectedRun = () => (store.runs || []).find(r => r.run === store.runId) || null;
-/** True when the playhead follows the live edge of the live run. A viewer outage cannot be inspected, so it counts as live. */
+/** False only while the owner has moved the playhead into history. The operator check depends on the
+ *  control path, never on viewer data: a viewer that is down, slow, or has not yet listed the live run
+ *  must not disable it (ADR008 item 5). */
 export function isLive() {
   if (!store.viewerOk) return true;
-  const run = selectedRun();
-  return !!run && run.state === 'live' && store.cursor === null;
+  return store.cursor === null;
 }
 export function cursorIndex() {
   if (!store.steps.length) return -1;
