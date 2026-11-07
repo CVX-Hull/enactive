@@ -75,6 +75,39 @@ def test_terminal_requires_check_and_current_bound_cleanup_receipt():
         assert not guard.terminal_coverage(receipt(ended_wall=wall, elapsed_seconds=wall-1000), **scope)
 
 
+@pytest.mark.parametrize('window', [guard.WINDOW, None])
+def test_terminal_ordering_tolerates_clock_mapping_skew_but_not_deadlines(window):
+    # The last accepted check was received at monotonic 106; readiness maps wall 1000 to 100,
+    # so a receipt ending at wall W is mapped to monotonic 100 + (W - 1000).
+    rows = [dict(row(), observation=105, receipt=106, prior_observation=100)]
+    scope = dict(session=SESSION, source_commit=COMMIT, rows=rows, ready_wall=1000,
+                 ready_at=100, started_wall=999, native_pid=99, custody_end=120, window=window)
+    def covered(ended_wall):
+        return guard.terminal_coverage(receipt(ended_wall=ended_wall, elapsed_seconds=ended_wall-1000), **scope)
+    assert covered(1006)  # exactly at the check
+    # A few milliseconds of mapping skew puts the end before the check; strict ordering would reject it.
+    assert 100 + (1005.995 - 1000) < rows[-1]['receipt']
+    assert covered(1005.995)
+    assert covered(1005.8)  # inside the named tolerance
+    assert guard.CLOCK_MAPPING_TOLERANCE == .25
+    # Beyond the tolerance the end is not after the last accepted check.
+    for ended_wall in (1005.7, 1005):
+        assert not covered(ended_wall)
+    # The tolerance never relaxes the custody deadline (mapped 120).
+    assert covered(1019.99)
+    for ended_wall in (1020, 1020.25):
+        assert not covered(ended_wall)
+
+
+def test_windowed_terminal_keeps_strict_watch_deadline():
+    rows = [dict(row(), observation=105, receipt=106, prior_observation=100)]
+    scope = dict(session=SESSION, source_commit=COMMIT, rows=rows, ready_wall=1000,
+                 ready_at=100, started_wall=999, native_pid=99, custody_end=500)
+    for ended_wall, expected in ((1049.99, True), (1050, False), (1050.2, False)):  # 105 + WINDOW = 150
+        assert guard.terminal_coverage(receipt(ended_wall=ended_wall, elapsed_seconds=ended_wall-1000),
+                                       **scope) is expected
+
+
 def test_partial_watch_marker_is_never_rearmed(tmp_path, monkeypatch):
     (tmp_path/'watch-attempts.jsonl').write_text('partial')
     monkeypatch.setattr(guard, 'preflight', lambda _: ({}, {}, {}))

@@ -45,6 +45,38 @@ not gate keys/text. Clicks require issued source geometry. Real native input
 precedes synthetic events and fences automation without discarding human input.
 Restart reads no old inbox and reconstructs no authority.
 
+### Stop, collection and recovery views
+
+These three diagrams are current. Boxes are logical states, not processes; labelled
+arrows are the transitions or reads the
+[contract](../contracts/computer-control.md#computer-operations-and-custody) allows.
+The paragraph under each image is its text equivalent.
+
+![Current logical request path: the client assigns the original ID, refusal proves no submission only when verified, and admitted or uncertain work is collected without replay.](../diagrams/request-receipts.svg)
+
+Current. “How is one submitted request collected, and when may the player submit a corrected replacement?”
+Only a verified complete local refusal permits a new corrected choice; admitted or
+uncertain work is collected under its original ID, and partial or unknown input
+stops input permanently. A lost response is collected under the same ID. After
+collection the player interprets the actual effect before its next choice, unless
+input stopped. [Editable source](../diagrams/request-receipts.mmd).
+
+![Current logical permanent stop: Pause, takeover or uncertain input fence automation; original results stay collectable; native recovery and cleanup restore no authority.](../diagrams/recovery.svg)
+
+Current. “What happens after Pause, takeover or uncertain input?” Automation stays
+fenced, original receipts are collected without replay or renewed limits, and any
+further play needs separate explicit admission of a fresh session. The operator may
+instead recover through ordinary native controls; both paths end in exact owned
+cleanup, with normal exit kept distinct from forced signals. [Editable source](../diagrams/recovery.mmd).
+
+![Current logical manual recovery: after permanent Pause the operator uses ordinary native controls, and the harness records the intervention without certifying a save.](../diagrams/native-recovery.svg)
+
+Current. “What may an operator do by hand after a permanent stop?” This expands the
+operator branch of the recovery diagram above. Use the game's
+ordinary controls; the harness supplies no recovery handler and certifies neither
+the recovery nor a save. See [Pause procedure](../operations/pause-timeout.md#operator-recovery).
+[Editable source](../diagrams/native-recovery.mmd).
+
 ## Portability and verification
 
 Actual PNG and mechanical geometry are the whole observation port. Save/load,
