@@ -28,6 +28,29 @@ The evaluator reads one run directory read-only:
 Open SQLite read-only (`mode=ro`) with a bounded busy timeout. A missing or unsupported
 input format is an error naming the file and version. Nothing is guessed.
 
+**One JSON reader, one host parser.**
+- Every JSON document the evaluation side and the viewer read from a run or from
+  `data/evaluation/` goes through `records.loads`: a malformed document, a duplicate key or
+  a non-finite number is an error naming where it came from. Files go through
+  `sources.read_json_file` and `read_json_lines`, which refuse a file over 16 MiB.
+  The exceptions are the binding's own `atlas.json` and `anchors.json` (`atlas.py`), which
+  ship with the code, and the tool-result text embedded in host events (`context.py`,
+  `host.py`), which is probed for JSON and may be anything.
+- The viewer reads a run's `manifest.json` only through `sources.read_manifest`, so an
+  unsupported version is rejected there too.
+- `harness/computer/protocol.py` keeps its own decoder, because the import contracts
+  forbid the computer importing evaluation.
+- `sources.iter_host` is the one offline parser of `host.jsonl` (`player-host/3`), used by
+  the evaluator, the viewer and `host-summary`. The supervisor's live incremental reader in
+  `tools/campaign_player.py` stays separate because evaluation never gates the control path
+  ([ADR008](../decisions/008-evaluation-and-spectator.md)). `iter_host` is bounded to 64 MiB
+  per line and two million lines per trace, skips blank lines, and rejects a trace that is
+  empty (or only blank lines), whose first event is not a `host-start`, or whose
+  `host-start` is not `player-host/3` telemetry 3. An unterminated final line that does not
+  parse is an error for `host-summary`; the evaluator and the viewer ignore it on every
+  pass, live or final, because a trace may still be appending. A newline-terminated
+  malformed line is always an error.
+
 **Sequence and incremental reading.**
 - The operation sequence `seq` is the `operations` table's rowid.
 - An incremental pass reads rows with `seq` greater than the last one seen.
@@ -157,6 +180,26 @@ that reads no frame reader) and the page shows it next to the provenance chip. A
 
 A `human` rung is reported as not assessed until a human or a later reader confirms it.
 
+### How the binding detects a UI change
+
+There is no UI hash check, and no check compares the game's UI with anything. What exists:
+- A frame that is not 960×640 abstains: the `mode` reading carries `frame_size` and no
+  other reader runs.
+- The glyph atlas (`atlas.json`) carries a version and an 8×16 cell size, and loading it
+  fails when either differs from the code's. This guards the atlas data against the code,
+  not the game UI against the atlas.
+- A font change at the same frame and cell size shows as `no_signature`, `label_occluded`
+  and `unknown_glyph` abstentions: label and anchor checks fail before most glyphs are
+  decoded, and the cells' ink masks are not in the atlas.
+- A same-font layout change shows as `label_occluded`, `unknown_label`,
+  `clock_not_legible` or `no_signature` abstentions, depending on what moved. It is not
+  guaranteed to abstain: the clock reader only lowers its confidence to 0.85 when its
+  `Date:` and `Time:` labels are not where it expects but its text still parses.
+
+Abstentions show as lower `reader.coverage`. The atlas is relearned when the game's font,
+size or layout changes (this follows the custom-code table in
+[ADR008](../decisions/008-evaluation-and-spectator.md), whose correction line points here).
+
 ## Metrics, version 1
 
 A **decision** is one completed `computer_input` operation. Rates are shown with their
@@ -208,6 +251,27 @@ the lineage is stitched again.
 - bootstrap intervals.
 
 Censored runs stay censored.
+
+## Diagnostics owned by this contract
+
+`tools/evaluate.py` also prints two read-only diagnostics. They report recorded intervals and
+counts, are interpretive like every value here, and give no verdict. The evaluator reuses
+their numbers for latency and delivery counts.
+
+| Command | Output format | Reports |
+| --- | --- | --- |
+| `host-summary` | `host-analysis/1` | Per `host.jsonl` trace: coverage (`player_host`, `empty`, `unsupported_format`, `unsupported_version` or `invalid`), request attempts and censoring, host time and request share, and distributions (count, sum, p50, p95, max) of response, tool, timing, usage and context figures. `--format markdown` prints a table. |
+| `control-summary` | `control-analysis/1` | Per `computer-session/1` database: original native dispositions and the timing distributions between intent, send and receipt. |
+
+**Percentiles.** There is one definition, nearest rank (`metrics.nearest_rank`): the
+`ceil(q·n)`-th smallest value, and the smallest value when that rank is 0. Every `p50` and
+`p95` uses it: the `host.latency` metric, the viewer's tool latencies, and the distributions
+of both diagnostics. A metric named a median (the pace and handoff rows) is the arithmetic
+median, the mean of the middle pair for an even count. The viewer's explore cohort median,
+IQR and bootstrap intervals are not percentiles of this kind: they use numpy's defaults.
+`host-summary` and `control-summary`
+`p50` values were medians before #404, so on an even count they now are the lower middle
+value, and no other figure changed.
 
 ## Control path and viewer
 

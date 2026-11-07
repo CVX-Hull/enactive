@@ -8,13 +8,13 @@ file and its WAL). Nothing here writes.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-import json
 from pathlib import Path
 import sqlite3
 import threading
 from typing import Any
 
 from harness.evaluation.core.records import (EvaluationError, open_readonly, read_metadata, read_metrics, read_run_facts)
+from harness.evaluation.core.sources import read_json_file, read_json_lines, read_manifest
 
 API = 'spectator-view/1'
 DATA_DIR = Path(__file__).resolve().parents[2] / 'data' / 'evaluation'
@@ -90,11 +90,10 @@ class Catalog:
         for directory in self.runs_dirs:
             candidates.extend(sorted(p for p in directory.iterdir() if p.is_dir())) if directory.is_dir() else None
         for candidate in candidates:
-            manifest = candidate / 'manifest.json'
-            if manifest.is_file():
+            if (candidate / 'manifest.json').is_file():
                 try:
-                    session = json.loads(manifest.read_text()).get('session')
-                except (OSError, ValueError):
+                    session = read_manifest(candidate).get('session')
+                except (OSError, EvaluationError):
                     continue
                 if isinstance(session, str):
                     found.setdefault(session, candidate)
@@ -173,25 +172,21 @@ class Catalog:
 
     def data_json(self, name: str, default: Any) -> Any:
         path = self.data_dir / name
-        try:
-            return json.loads(path.read_text())
-        except FileNotFoundError:
+        if not path.is_file():
             return default
-        except ValueError as exc:
+        try:
+            return read_json_file(path)
+        except EvaluationError as exc:
             raise ViewError(500, 'bad_data_file', f'{name}: {exc}') from exc
 
     def labels(self) -> list[dict]:
         path = self.data_dir / 'labels.jsonl'
         if not path.is_file():
             return []
-        rows = []
-        for number, line in enumerate(path.read_text().splitlines(), 1):
-            if line.strip():
-                try:
-                    rows.append(json.loads(line))
-                except ValueError as exc:
-                    raise ViewError(500, 'bad_data_file', f'labels.jsonl:{number}: {exc}') from exc
-        return rows
+        try:
+            return read_json_lines(path)
+        except EvaluationError as exc:
+            raise ViewError(500, 'bad_data_file', f'labels.jsonl: {exc}') from exc
 
     def taxonomy(self) -> dict:
         return self.data_json('taxonomy.json', dict(version=1, codes=[]))

@@ -2,16 +2,18 @@
 from __future__ import annotations
 
 from collections import Counter
-import json
 import hashlib
 import math
 from pathlib import Path
-import statistics
 
-from harness.computer.protocol import ControlError, decode_json, read_json
+from harness.computer.protocol import ControlError, read_json
+from harness.evaluation.core.metrics import nearest_rank
+from harness.evaluation.core.records import EvaluationError
+from harness.evaluation.core.sources import HostTraceUnsupported, iter_host
 
-MAX_LINE_BYTES = 64 * 1024 * 1024
 MAX_REQUESTS = 200_000
+#: A `HostTraceUnsupported.kind` is reported as this coverage.
+UNSUPPORTED_COVERAGE = {"empty": "empty", "format": "unsupported_format", "version": "unsupported_version"}
 
 
 def number(value):
@@ -22,11 +24,11 @@ def number(value):
 
 
 def distribution(values):
+    """`p50` and `p95` are nearest rank (`harness.evaluation.core.metrics.nearest_rank`), the evaluator's definition."""
     items = sorted(value for value in values if number(value))
     if not items:
         return {"n": 0, "sum": None, "p50": None, "p95": None, "max": None}
-    return {"n": len(items), "sum": sum(items), "p50": statistics.median(items),
-            "p95": items[math.ceil(.95 * len(items)) - 1], "max": items[-1]}
+    return {"n": len(items), "sum": sum(items), "p50": nearest_rank(items, .5), "p95": nearest_rank(items, .95), "max": items[-1]}
 
 
 def delta(end, start):
@@ -152,7 +154,10 @@ def progress_metadata(value: dict | None) -> dict:
 
 
 def analyze_trace(path: Path) -> dict:
-    if path.is_symlink() or not path.is_file() or path.stat().st_size > 8 * 1024 ** 3:
+    if path.is_symlink() or not path.is_file():
+        raise ControlError("Select a bounded regular trace file")
+    size = path.stat().st_size
+    if size > 8 * 1024 ** 3:
         raise ControlError("Select a bounded regular trace file")
     rows, tools, tool_intervals = {}, {}, []
     counts = Counter()
@@ -161,27 +166,11 @@ def analyze_trace(path: Path) -> dict:
     host_count = 0
     context, config, output_sink = [], {}, None
     abort = None
-    parsed_bytes = 0
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for line_number in range(1, 2_000_001):
-            line = stream.readline(MAX_LINE_BYTES + 1)
-            if not line:
-                break
-            parsed_bytes += len(line)
-            digest.update(line)
-            if len(line) > MAX_LINE_BYTES:
-                raise ControlError(f"Trace line exceeds 64 MiB: {path}:{line_number}")
-            try:
-                event = decode_json(line, MAX_LINE_BYTES)
-            except (ValueError, UnicodeError, RecursionError) as exc:
-                raise ControlError(f"Malformed trace JSON: {path}:{line_number}") from exc
-            if not isinstance(event, dict):
-                raise ControlError(f"Expected event object: {path}:{line_number}")
-            kind, at = event.get("type"), event.get("monotonic_ms")
-            if line_number == 1 and kind != "host-start":
-                return {"path": str(path), "coverage": "unsupported_format", "file_bytes": path.stat().st_size}
-            counts[kind if isinstance(kind, str) else "missing_type"] += 1
+    try:
+        for parsed in iter_host(path, path.parent.name):
+            event, line_number = parsed.fields, parsed.line
+            kind, at = parsed.type, event.get("monotonic_ms")
+            counts[kind] += 1
             if terminal is not None:
                 raise ControlError(f"Event after host settlement: {path}:{line_number}")
             if kind in ("request-fetch-start", "response-headers", "response-first-chunk", "response-complete", "provider-refusal", "tool-start", "tool-result"):
@@ -194,8 +183,6 @@ def analyze_trace(path: Path) -> dict:
             if number(at):
                 previous = at
             if kind == "host-start":
-                if event.get("schema") != "player-host/3" or type(event.get("telemetry_version")) is not int or event["telemetry_version"] != 3:
-                    return {"path": str(path), "coverage": "unsupported_version", "file_bytes": path.stat().st_size}
                 host_count += 1
                 if host_count > 1:
                     raise ControlError(f"Multiple hosts in one trace; split at original host boundaries: {path}")
@@ -252,10 +239,13 @@ def analyze_trace(path: Path) -> dict:
                     raise ControlError("Expected event output metadata")
                 output_sink = {key: sink.get(key) if number(sink.get(key)) else None for key in
                     ("events", "callback_ms", "max_callback_ms", "json_ms", "enqueue_ms", "bytes", "backpressure_signals")} if sink else None
-        else:
-            raise ControlError(f"Trace exceeds two million events: {path}")
-    if not counts:
-        return {"path": str(path), "coverage": "empty", "file_bytes": path.stat().st_size}
+    except HostTraceUnsupported as exc:
+        return {"path": str(path), "coverage": UNSUPPORTED_COVERAGE[exc.kind], "file_bytes": size}
+    with path.open("rb") as stream:
+        sha256 = hashlib.file_digest(stream, "sha256").hexdigest()
+        parsed_bytes = stream.tell()
+    if parsed_bytes != size:
+        raise ControlError("Trace changed during analysis")
     host_ms = delta(terminal.get("monotonic_ms"), start) if terminal else None
     durations, rates, requests_intervals = [], [], []
     field_times = {key: [] for key in ("headers", "first_body", "first_reasoning", "first_content", "first_tool_argument",
@@ -304,7 +294,7 @@ def analyze_trace(path: Path) -> dict:
     observed_tools = union_ms(tool_intervals) if clock_valid else None
     overlaps = overlap_ms(requests_intervals, tool_intervals) if clock_valid else None
     return {"path": str(path), "coverage": "player_host",
-        "file_bytes": path.stat().st_size, "sha256": digest.hexdigest(), "parsed_bytes": parsed_bytes, "configuration": config,
+        "file_bytes": size, "sha256": sha256, "parsed_bytes": parsed_bytes, "configuration": config,
         "clock_valid": clock_valid, "terminal": None if terminal is None else
             {key: terminal.get(key) for key in ("ok", "reason", "requests")},
         "host_ms": host_ms if clock_valid else None, "observed_request_ms": observed_requests,
@@ -329,10 +319,10 @@ def host_summary(paths: list[Path]) -> dict:
     for path in discover(paths):
         try:
             reports.append(analyze_trace(path))
-        except (ControlError, OSError, ValueError, UnicodeError, RecursionError) as exc:
+        except (ControlError, EvaluationError, OSError, ValueError, UnicodeError, RecursionError) as exc:
             reports.append({"path": str(path), "coverage": "invalid", "error": str(exc)})
     return {"complete": all(r["coverage"] == "player_host" for r in reports),"schema": "host-analysis/1", "scope": "Diagnostic host intervals and reported tokens; not server inference, attention, useful-goal latency or readiness",
-        "units": "milliseconds unless named otherwise; p95 is nearest rank; reasoning is a subset of output, not added to it",
+        "units": "milliseconds unless named otherwise; p50 and p95 are nearest rank; reasoning is a subset of output, not added to it",
         "coverage": dict(Counter(r["coverage"] for r in reports)),
         "duplicate_content": [[r["path"] for r in reports if r.get("sha256") == sha]
             for sha, count in Counter(r.get("sha256") for r in reports if r.get("sha256")).items() if count > 1],
