@@ -1,0 +1,50 @@
+{
+  "schema": "evidence-index/1",
+  "studies": {
+    "164-terra": {
+      "availability": "present",
+      "bytes": 1711907,
+      "cited_by": [
+        "docs/acceptance/2026-11-05-recorded-player-assessment.md"
+      ],
+      "files": 78,
+      "manifest_sha256": "46187cb1bcf692215521943054f0b2bb542c108e4c7d9890312c971da4bf0c37",
+      "note": "Recorded-player assessment (#368) and interrupted #370 preparation: sessions, userdirs and stores from the worktrees' .runtime. A path .runtime/computer-sessions/... cited from those worktrees is now <part>/computer-sessions/... here. Operator files (for example terra-development/execution-evidence-index.json) remain in .runtime/iteration164/ (#420).",
+      "sources": {
+        "development": ".runtime/iteration164/terra-development/source/.runtime@7ad0ef3",
+        "next-preparation": ".runtime/iteration164/terra-next-preparation/source/.runtime@32dee27"
+      },
+      "visibility": "private"
+    },
+    "359-ongoing-alex": {
+      "availability": "present",
+      "bytes": 31382101,
+      "cited_by": [
+        "docs/acceptance/2026-11-05-player-test-diagnostic.md"
+      ],
+      "files": 1183,
+      "manifest_sha256": "e0e553df477502d86c13cccbc4df70ffb4ba26c2dfd379bd65b69b6861e7c44f",
+      "note": "Both #359 diagnostic admissions: sessions, userdir and player store from the worktrees' .runtime. A path .runtime/<x> cited from those worktrees is now <part>/<x> here. Operator files remain in .runtime/iteration164/candidate-research-2026-11-05/ (#420).",
+      "sources": {
+        "production-ongoing": ".runtime/iteration164/candidate-research-2026-11-05/ongoing-alex/production-ongoing/.runtime@e6adfb7",
+        "production-replacement": ".runtime/iteration164/candidate-research-2026-11-05/ongoing-alex/production-replacement/.runtime@e6adfb7"
+      },
+      "visibility": "private"
+    },
+    "372-382-dev-loop": {
+      "availability": "present",
+      "bytes": 1029358869,
+      "cited_by": [
+        "docs/acceptance/2026-11-06-development-loop.md",
+        "docs/acceptance/2026-11-07-long-horizon-382.md"
+      ],
+      "files": 8634,
+      "manifest_sha256": "a63ed3ac367bbf6cd190eeaed1b92549dec98bf623d621238ae758c003b0a6a8",
+      "note": "The 37 run packages, evaluator records, memory stores and the reused bridge build (computer-builds/reused-176/bridge.dylib) from the dev-loop worktree's .runtime. A path .runtime/<x> cited from that worktree is now <x> here. Operator ledgers, logs, scripts and archived userdirs remain in .runtime/dev-loop/ (#420).",
+      "sources": {
+        ".": ".runtime/dev-loop/source/.runtime@509a9fd"
+      },
+      "visibility": "private"
+    }
+  }
+}

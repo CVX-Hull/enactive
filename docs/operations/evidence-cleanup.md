@@ -15,6 +15,29 @@ Keep the full live journal, label the snapshot/cutoff, and verify its bytes/hash
 not truncate a journal or overwrite a historical hash to hide later events. A hash
 identifies bytes; it does not prove the depicted behavior without inspection.
 
+**Sealed evidence store (owner decision, 7 November 2026).** Raw run evidence that a
+dated record cites (packages, frames, traces, evaluator records, memory stores,
+userdirs) is sealed read-only under `.runtime/evidence/<study>/` before the worktree or
+directory that holds it is removed. `python -m tools.evidence seal STUDY --from
+SUBDIR=PATH@ORIGIN --cited-by RECORD --note TEXT` copies it in once and checks every copy
+by hash. It then writes the tracked manifest `data/evidence/<study>.sha256` (one
+`shasum -a 256` line per file, so stock tools verify it) and the study's
+`evidence-index/1` entry in `data/evidence/index.json`: citing records, each part's
+origin (repository-relative path and commit), file count, total bytes, manifest hash,
+visibility, availability and a note on what stayed elsewhere. It skips and reports the
+names `Cataclysm.app`, `credentials.json`, `.env`, `.venv`, `__pycache__`, `node_modules`,
+`.DS_Store` and any `*.lock`; refuses links and names a manifest line cannot hold; leaves
+nothing behind if it fails; and only removes write permission. A sealed study is never
+rewritten; removing one is an owner decision, recorded by setting its `availability` to
+`removed` and its `removed` field to the date and reason. `tools/evidence.py verify` runs in the fast checks (file set,
+total bytes, no write permission) and the full profile (every hash). A sealed study
+missing from a present store is an error; a fresh clone without the store reports each
+study as not present. The store is the only copy: there is no off-machine backup, and
+raw evidence is not published (owner decisions, 7 November 2026; restic to object
+storage is the researched option if a backup is chosen). Older items directly under
+`.runtime/evidence/` and the operator files each study's note names stay outside the
+seal until [#420](https://github.com/CVX-Hull/enactive/issues/420).
+
 Retain curated acceptance artifacts and failure evidence until superseded by
 reviewed equivalent evidence or explicitly selected for removal; if removed,
 record availability as removed in the evidence index. Keep unresolved-incident
