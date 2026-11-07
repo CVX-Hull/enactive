@@ -43,6 +43,9 @@ reviewed equivalent evidence or explicitly selected for removal; if removed,
 record availability as removed in the evidence index. Keep unresolved-incident
 journals until resolved. Routine unreferenced journals/frames can be pruned after
 30 days, only with sessions stopped and after checking references/ownership.
+Checker logs under `.runtime/check-logs/` are routine local output and can be pruned
+whenever no check is running; a record that relies on one quotes the relevant lines
+or seals the log with `tools.evidence seal`.
 This initial policy is manual; no scheduled deletion is installed. Current captured
 PNGs are immutable custodian-owned sources charged to the original frame/byte
 capacities. Do not rotate or delete them during a live session.

@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from unittest.mock import patch
 
@@ -219,20 +220,38 @@ class DevToolTests(unittest.TestCase):
         self.assertIn("Command elapsed: 2.50s", output.getvalue())
 
     def test_failed_command_output_is_kept_and_its_log_path_reported(self):
-        output = io.StringIO()
+        output, success = io.StringIO(), io.StringIO()
         script = "import sys; print('first line'); print('assertion detail', file=sys.stderr); sys.exit(3)"
-        with patch.object(check, "ROOT", self.root), patch.object(check, "_log_directory", None), \
-                redirect_stdout(output), self.assertRaises(subprocess.CalledProcessError) as error:
-            check.run([sys.executable, "-c", script])
+        with patch.object(check, "ROOT", self.root), patch.object(check, "_log_directory", None):
+            with redirect_stdout(output), self.assertRaises(subprocess.CalledProcessError) as error:
+                check.run([sys.executable, "-c", script])
+            with redirect_stdout(success):
+                check.run([sys.executable, "-c", "print('ok')"])
         self.assertEqual(error.exception.returncode, 3)
         logs = sorted((self.root / check.CHECK_LOGS).rglob("*.log"))
-        self.assertEqual(len(logs), 1)
+        self.assertEqual([path.name[:3] for path in logs], ["01-", "02-"])  # one log per command, one run directory
+        self.assertEqual(len({path.parent for path in logs}), 1)
         self.assertEqual(logs[0].read_text().splitlines(), ["first line", "assertion detail"])
         self.assertIn("first line", output.getvalue())  # still streamed live
         self.assertIn(f"Full output of the failed command: {logs[0].relative_to(self.root)}", output.getvalue())
-        with patch.object(check, "ROOT", self.root), redirect_stdout(io.StringIO()):
-            check.run([sys.executable, "-c", "print('ok')"])
-        self.assertEqual(len(sorted((self.root / check.CHECK_LOGS).rglob("*.log"))), 2)  # one log per command
+        self.assertNotIn("Full output", success.getvalue())
+
+    def test_a_descendant_holding_the_output_pipe_cannot_hang_the_checker(self):
+        # The command exits at once, but a grandchild keeps the inherited pipe open for much longer.
+        script = ("import subprocess, sys; subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(30)']);"
+                  " print('parent done')")
+        output = io.StringIO()
+        with patch.object(check, "ROOT", self.root), patch.object(check, "_log_directory", None), \
+                patch.object(check, "DRAIN_SECONDS", 0.5), redirect_stdout(output):
+            started = time.monotonic()
+            check.run([sys.executable, "-c", script])
+            elapsed = time.monotonic() - started
+        self.assertLess(elapsed, 10)
+        self.assertIn("parent done", output.getvalue())
+        self.assertIn("Output pipe still held by a descendant", output.getvalue())
+        log = next((self.root / check.CHECK_LOGS).rglob("*.log")).read_text()
+        self.assertIn("parent done", log)
+        self.assertIn("still held by a descendant", log)
 
     def test_all_profiles_reject_invalid_python_before_reporting_success(self):
         self.write("computer/runtime.py", "def broken(:\n")
