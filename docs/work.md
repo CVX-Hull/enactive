@@ -133,7 +133,7 @@ agreement; current player selection and all qualification gates remain unchanged
 
 | Evidence | Scope and limitation |
 | --- | --- |
-| [Standards and discoverability audit](acceptance/2026-11-07-standards-audit.md) (#400) | Eight-lens audit of docs, code, tests, controls and tracker at `bd549ca`: no ADR006 boundary violation; drift fixed in #406 and #407. Storage format, documentation size and two S-MIGRATION exceptions await owner decisions (#401–#403). |
+| [Standards and discoverability audit](acceptance/2026-11-07-standards-audit.md) (#400) | Eight-lens audit of docs, code, tests, controls and tracker at `bd549ca`: no ADR006 boundary violation; drift fixed in #406 and #407. Proposals on storage format, documentation size and two S-MIGRATION exceptions went to the owner as #401–#403. |
 | [Long-horizon arm](development-runs.md#arm-result) (#382) | GPT-6.1 Terra (a diagnostic route) in chained save/reload admissions: two of three lineages passed a hand-checked 24 h day check. A screen on three lineages, not a qualification; one lineage ended on an input-window stall (#396). |
 | [Evaluator re-score and power check](development-runs.md#evaluator-re-score-and-power-check-383) (#383) | The ADR008 evaluator re-scored all 30 loop runs, with stated differences from the hand tables; its readers were validated on held-out frames with stated gaps. Whole-run survival cannot separate arms at affordable n. |
 | [Development loop](development-runs.md#loop-result-and-next-step) (#372) | Ceiling median 0.59 in-game hours in a 250-decision allowance; three grounding aids rejected (two on that metric, zoom for no uptake). Survival there was bounded by time scale, not isolated as perception. |
