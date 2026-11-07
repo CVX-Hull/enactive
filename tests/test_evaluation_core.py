@@ -228,16 +228,23 @@ class Run:
     def settle(self, operation: str) -> None:
         self.store.finish(self.records[operation])
 
-    def finish(self, memory: Path | None = None, close: bool = True, **manifest) -> Path:
-        """Write the host traces and manifest. `close=False` leaves the store open to keep growing."""
+    def finish(self, memory: Path | None = None, close: bool = True, settled: dict | None = None, **manifest) -> Path:
+        """Write the host traces and manifest. `close=False` leaves the store open to keep growing.
+        `settled` replaces the last actor's terminal `settled` fields (default: ok, task_complete)."""
         if close:
             self.store.close()
         for index, actor in enumerate(self.actors, 1):
             directory = self.directory / 'actors' / f'{index:03d}'
             directory.mkdir(parents=True, exist_ok=True)
-            events = [*self.host[actor], self.event(actor, 'settled', ok=True, reason='task_complete',
+            fields = dict(ok=True, reason='task_complete')
+            if settled is not None and actor == self.actors[-1]:
+                fields = settled
+            events = [*self.host[actor], self.event(actor, 'settled', **fields,
                 requests=sum(e['type'] == 'request-start' for e in self.host[actor]))]
             (directory / 'host.jsonl').write_text(''.join(json.dumps(e) + '\n' for e in events))
+            (directory / 'actor.json').write_text(json.dumps(dict(schema='player-adapter/1', actor_id=actor)))
+            (directory / 'context.txt').write_text('GUIDE')
+            (directory / 'prompt.txt').write_text(f'ASSIGNMENT {index}')
         self.manifest = dict(schema='campaign-run/4', session=self.session, source_commit='fixture', **manifest)
         if memory is not None:
             self.manifest['player_store'] = str(memory)
@@ -1109,3 +1116,228 @@ def test_evaluate_options_are_refused_for_other_commands_and_externals_are_used(
     assert (metrics['host.latency', 'response.p50'].count, metrics['host.latency', 'first_chunk.p50'].count) == (3, 2)
     uncertain = metrics['input.uncertain_deliveries']
     assert (uncertain.value['uncertain_receipts'], uncertain.denominator, uncertain.count) == (2, 7, 2)
+
+
+# ---------------------------------------------------------------------------------------------
+# Record extensions: episodes, run end, censor reasons, rows, replay.
+
+def survival_of(path: Path) -> dict:
+    return metrics_of(path)['survival.game_hours'].value
+
+
+def test_a_restarted_clock_starts_a_new_episode_and_survival_uses_the_last(tmp_path):
+    def build(directory):
+        run = Run(directory)
+        a = run.actor()
+        for index, t in enumerate((200_000, 200_060, 100, 160, 220)):  # the second world starts a day or more earlier
+            run.step(a, 'input', [key('j')], F('in_play', t, identity=1, fill=index))
+        run.finish()
+        return directory
+    path = run_and_evaluate(tmp_path, build)
+    episodes = events_of(path, 'episode')
+    assert [(e['seq_start'], e['source'], e['payload']['index'], e['payload']['reason']) for e in episodes] == [
+        (3, 'derived', 1, 'clock_backward')]
+    assert episodes[0]['payload']['previous_game_time'] == 200_060 and episodes[0]['payload']['game_time'] == 100
+    value = survival_of(path)
+    assert value['hours'] == pytest.approx(120 / 3600) and value['episode'] == 1 and value['episodes'] == 2
+    assert value['start_game_time'] == 100 and value['end_game_time'] == 220
+    # The first episode's long stretch is not mistaken for a long activity or a pace interval.
+    assert events_of(path, 'long_activity') == []
+
+
+def test_a_small_backward_step_is_still_a_rejected_reading_not_an_episode(tmp_path):
+    def build(directory):
+        run = Run(directory)
+        a = run.actor()
+        for index, t in enumerate((3600, 3660, 3000, 3720)):
+            run.step(a, 'input', [key('j')], F('in_play', t, identity=1, fill=index))
+        run.finish()
+        return directory
+    path = run_and_evaluate(tmp_path, build)
+    assert events_of(path, 'episode') == [] and survival_of(path)['hours'] == pytest.approx(120 / 3600)
+
+
+def identity_run(directory: Path, readings: list[tuple[int, int]]) -> Path:
+    run = Run(directory)
+    a = run.actor()
+    for index, (t, who) in enumerate(readings):
+        run.step(a, 'input', [key('j')], F('in_play', t, identity=who, fill=index))
+    run.finish()
+    return directory
+
+
+def test_a_confirmed_identity_change_starts_a_new_episode(tmp_path):
+    path = evaluate(identity_run(tmp_path / 'a', [(3600, 1), (3660, 1), (3720, 2), (3780, 2), (3840, 2)]), FakeBinding(),
+        tmp_path / 'evals', created_wall=1.0)
+    episodes = events_of(path, 'episode')
+    assert [(e['seq_start'], e['payload']['reason'], e['payload']['identity'], e['payload']['previous_identity'])
+        for e in episodes] == [(3, 'identity_change', 'id2', 'id1')]
+    assert survival_of(path)['hours'] == pytest.approx(120 / 3600)
+    # An identity seen once is not confirmed, so it starts nothing.
+    lone = evaluate(identity_run(tmp_path / 'b', [(3600, 1), (3660, 2), (3720, 1), (3780, 1)]), FakeBinding(),
+        tmp_path / 'e2', created_wall=1.0)
+    assert events_of(lone, 'episode') == []
+
+
+def ended_run(directory: Path, *, finish: list[dict] = (), controls: list[dict] = (), settled: dict | None = None,
+              status: str = 'completed', receipt: str = 'delivered', files: dict | None = None, hosts: bool = True,
+              dead: bool = False) -> Path:
+    run = Run(directory, hosts=hosts)
+    a = run.actor()
+    for index, t in enumerate((3600, 3660, 3720)):
+        run.step(a, 'input', [key('j')], F('in_play', t, identity=1, fill=index))
+    if status != 'completed':
+        run.step(a, 'input', [key('j')], F('in_play', 3780, identity=1, fill=9), status=status, receipt=receipt)
+    if dead:
+        run.step(a, 'input', [key('j')], F('dead', 3840, death=True, identity=1, fill=10))
+    for index, fields in enumerate(controls):
+        run.host[a].append(run.event(a, 'control-accepted', iso(BASE + 40 + index), session=SESSION, actor_id=a, **fields))
+    for index, fields in enumerate(finish):
+        run.host[a].append(run.event(a, 'player-finish', iso(BASE + 50 + index), request_id='request-1', report='r', **fields))
+    run.finish(settled=settled)
+    for name, value in (files or {}).items():
+        (directory / name).write_text(json.dumps(value))
+    return directory
+
+
+@pytest.mark.parametrize('name, options, reason', [
+    ('died', dict(dead=True), 'died'),
+    ('player', dict(finish=[dict(disposition='cannot_continue', control_id=None)]), 'player_stop'),
+    ('complete', dict(finish=[dict(disposition='task_complete', control_id=None)]), 'player_stop'),
+    ('budget', dict(controls=[dict(control_id='c' * 32, control_type='orderly_stop')],
+        finish=[dict(disposition='external_stop_complete', control_id='c' * 32)]), 'budget'),
+    ('handoff', dict(settled=dict(ok=True, reason='handoff')), 'budget'),
+    ('infra', dict(settled=dict(ok=False, reason='provider-error')), 'infrastructure'),
+    ('custody', dict(status='unknown', receipt='unknown'), 'custody'),
+    ('pause', dict(files={'watch-terminal.json': dict(pause_reply_forwarded=True, pause_reason='spend')}), 'owner_pause'),
+    ('receipt', dict(files={'receipt.json': dict(outcome='incomplete', driver=dict(ending_request=dict(trigger='http_attempts')))}),
+        'budget'),
+    ('live', dict(hosts=False), None)])
+def test_censor_reasons(tmp_path, name, options, reason):
+    path = evaluate(ended_run(tmp_path / name, **options), FakeBinding(), tmp_path / 'evals', created_wall=1.0)
+    value = survival_of(path)
+    assert value['censor_reason'] == reason
+    assert value['outcome'] == ('died' if reason == 'died' else 'censored')
+    assert metrics_of(path)['run.infrastructure_loss'].value == int(reason in ('infrastructure', 'custody'))
+
+
+def test_run_end_events_for_finishes_and_orderly_stops(tmp_path):
+    control = dict(control_id='c' * 32, control_type='orderly_stop')
+    path = evaluate(ended_run(tmp_path / 'one', controls=[control],
+        finish=[dict(disposition='external_stop_complete', control_id='c' * 32)]), FakeBinding(), tmp_path / 'evals', created_wall=1.0)
+    ends = events_of(path, 'run_end')
+    assert [(e['payload']['reason'], e['payload']['orderly_stop'], e['payload']['control_id']) for e in ends] == [
+        ('external_stop_complete', True, 'c' * 32)]
+    assert events_of(path, 'custody_stop') == []
+    two = evaluate(ended_run(tmp_path / 'two', finish=[dict(disposition='cannot_continue', control_id=None)]), FakeBinding(),
+        tmp_path / 'e2', created_wall=1.0)
+    assert [(e['payload']['reason'], e['payload']['orderly_stop']) for e in events_of(two, 'run_end')] == [('cannot_continue', False)]
+
+
+def test_run_facts_labels_and_host_rows(tmp_path):
+    def build(directory):
+        run = Run(directory)
+        a = run.actor()
+        run.host[a][0].update(model='m/x', provider='p', provider_routing=dict(only=['p']))
+        run.step(a, 'input', [key('j')], F('in_play', 3600, fill=1))
+        run.call(a, 'computer_input', dict(actions=[]), dict(operation_id='o' * 32), error=True)
+        run.host[a].append(run.event(a, 'tool-refused', iso(BASE + 20), request_id='request-1', tool_call_id='gone',
+            tool='computer_input', reason='orderly-stop', dispatched=False, delivery='undelivered'))
+        run.host[a].append(run.event(a, 'provider-retry', iso(BASE + 21), stage='eligible', request_id='request-1',
+            retry_class='stream-start-error'))
+        run.host[a].append(run.event(a, 'context-image-projection', iso(BASE + 22), request_id='request-1', omitted_images=2))
+        run.finish(labels=dict(arm='X', start='S1', scenario='s', lineage=None, admission=None),
+            effort='medium', files={'context.txt': 'g' * 64, 'prompt.txt': 'p' * 64},
+            accounting=dict(prior_reserved_usd='10', ceiling_usd='25.5', prospective_reserved_usd='12'), limits=LIMITS)
+        manifest = json.loads((directory / 'manifest.json').read_text())
+        manifest['schema'] = 'campaign-run/5'
+        (directory / 'manifest.json').write_text(json.dumps(manifest))
+        return directory
+    path = run_and_evaluate(tmp_path, build)
+    connection = open_readonly(path)
+    facts = read_run_facts(connection)
+    assert facts['labels'] == dict(arm='X', start='S1', scenario='s', lineage=None, admission=None)
+    assert (facts['model'], facts['provider'], facts['route'], facts['effort']) == ('m/x', 'p', dict(only=['p']), 'medium')
+    assert (facts['guide_sha256'], facts['assignment_sha256']) == ('g' * 64, 'p' * 64)
+    assert (facts['declared_ceiling_usd'], facts['spend_allowance_usd'], facts['limits']) == (25.5, 15.5, LIMITS)
+    assert read_metadata(connection)['labels']['arm'] == 'X' and read_metadata(connection)['arm'] == 'X'
+    calls = read_tool_calls(connection)
+    by_status = {c.status: c for c in calls}
+    assert len(calls) == 3 and set(by_status) == {'ok', 'error', 'refused'} and {c.tool for c in calls} == {'computer_input'}
+    assert by_status['ok'].operation_id is None and by_status['error'].operation_id == 'o' * 32
+    assert by_status['error'].result_bytes > 0 and by_status['error'].latency_ms is not None
+    assert by_status['refused'].latency_ms is None and by_status['refused'].tool_call_id == 'gone'
+    requests = read_requests(connection)
+    assert [(r.request_id, r.attempt, r.manifest, r.dollars) for r in requests] == [('request-1', 1, 'absent', 0.01)]
+    assert (requests[0].retry_class, requests[0].omitted_images, requests[0].cache_write) == ('stream-start-error', 2, 1000)
+    connection.close()
+    assert metrics_of(path)['tools.calls', 'computer_input'].value == dict(calls=3, refused=1, errors=1)
+    assert metrics_of(path)['tools.calls', 'player_source+zoom'].value == 0
+
+
+def test_archived_manifests_use_supplied_labels(tmp_path):
+    directory = main_scenario(tmp_path / 'run')
+    path = evaluate(directory, FakeBinding(), tmp_path / 'evals', created_wall=1.0, labels=dict(arm='Old', start='S2'))
+    connection = open_readonly(path)
+    assert read_run_facts(connection)['labels']['arm'] == 'Old' and read_metadata(connection)['arm'] == 'Old'
+    connection.close()
+
+
+def test_manifest_replay_is_exact_and_rejects_a_broken_chain():
+    from harness.evaluation.core.context import replay_manifests
+    from harness.evaluation.core.sources import HostEvent
+
+    def event(line, **fields):
+        return HostEvent('actor', line, 'context-manifest', None, None, dict(type='context-manifest', **fields))
+
+    def part(index, role, kind, **extra):
+        return dict(index=index, role=role, kind=kind, bytes=10 + index, sha256=f'{index:064x}', **extra)
+    first = [part(0, 'system', 'text'), part(1, 'user', 'text'), part(2, 'assistant', 'tool_call', tool_call_id='t1', tool='x')]
+    second = [part(3, 'tool', 'tool_result_text', tool_call_id='t1', tool='x'),
+        part(4, 'tool', 'image', state='sent', tool_call_id='t1', image_index=0, source_id='s-1')]
+    events = [
+        event(1, request_id='request-1', base_request_id=None, reused_prefix_parts=0, part_count=3, parts=first),
+        event(2, request_id='request-2', base_request_id='request-1', reused_prefix_parts=3, part_count=5, parts=second),
+        event(3, request_id='request-3', base_request_id='request-2', reused_prefix_parts=5, part_count=5),  # a retry resends
+        event(4, request_id='request-4', base_request_id='request-3', reused_prefix_parts=4, part_count=5,
+            parts=[part(4, 'tool', 'image', state='omitted', tool_call_id='t1', image_index=0)], omitted_image_indexes=[4]),
+        event(5, request_id='request-5', base_request_id='request-4', reused_prefix_parts=5, part_count=5)]
+    replayed = replay_manifests(events)
+    assert [replayed[f'request-{n}']['part_count'] for n in range(1, 6)] == [3, 5, 5, 5, 5]
+    assert replayed['request-3']['parts'] == replayed['request-2']['parts'] and replayed['request-3']['omitted_image_indexes'] == []
+    assert replayed['request-4']['parts'][4]['state'] == 'omitted' and replayed['request-4']['parts'][:4] == replayed['request-2']['parts'][:4]
+    assert replayed['request-5']['omitted_image_indexes'] == [4]  # absent means unchanged from the base
+    assert [p['index'] for p in replayed['request-5']['parts']] == [0, 1, 2, 3, 4]
+    for broken in (event(9, request_id='r', base_request_id='nope', reused_prefix_parts=0, part_count=0),
+            event(9, request_id='r', base_request_id='request-1', reused_prefix_parts=9, part_count=9),
+            event(9, request_id='r', base_request_id='request-1', reused_prefix_parts=3, part_count=4, parts=[])):
+        with pytest.raises(EvaluationError):
+            replay_manifests([*events[:1], broken])
+
+
+def test_context_is_exact_with_a_manifest_and_reconstructed_without(tmp_path):
+    from harness.evaluation.core.context import request_context
+    from harness.evaluation.core.sources import read_run
+
+    def build(directory):
+        run = Run(directory)
+        a = run.actor()
+        run.step(a, 'input', [key('j')], F('in_play', 3600, fill=1))
+        run.host[a].append(run.event(a, 'context-image-projection', iso(BASE + 30), request_id='request-2', omitted_images=1,
+            omissions=[dict(tool_call_id='call-1', image_index=0, sha256='a' * 64)]))
+        run.host[a].append(run.event(a, 'request-start', iso(BASE + 31), request_id='request-2', logical_request_id='request-2'))
+        run.host[a].append(run.event(a, 'context-manifest', iso(BASE + 31), request_id='request-2', base_request_id=None,
+            reused_prefix_parts=0, part_count=1, parts=[dict(index=0, role='system', kind='text', bytes=5, sha256='b' * 64)]))
+        run.finish()
+        return directory
+    directory = build(tmp_path / 'run')
+    inputs = read_run(directory)
+    actor = inputs.actors[0]
+    exact = request_context(directory, actor, inputs.host[actor], 'request-2')
+    assert exact['exact'] is True and exact['part_count'] == 1 and exact['parts'][0]['sha256'] == 'b' * 64
+    built = request_context(directory, actor, inputs.host[actor], 'request-1')
+    assert built['exact'] is False and built['missing'] == ['assistant_text', 'reasoning']
+    assert [(p['role'], p['kind']) for p in built['parts']] == [('system', 'text'), ('user', 'text')]
+    assert built['parts'][0]['bytes'] == 5 and built['parts'][1]['bytes'] == len('ASSIGNMENT 1')
+    with pytest.raises(EvaluationError, match='no request'):
+        request_context(directory, actor, inputs.host[actor], 'request-99')
