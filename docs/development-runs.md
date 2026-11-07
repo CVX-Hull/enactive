@@ -502,8 +502,8 @@ cache-rewrite share and image evictions.
 
 ### Admissions
 
-Each admission gets one comment on #382. Following the goal's step 7, a lineage's rows
-are added here when it ends; this replaces the earlier "one row per admission" wording.
+Each admission gets one comment on #382. By the lead's decision, a lineage's rows are
+added here when it ends; this replaces the earlier "one row per admission" wording.
 
 #### Lineage 1: Day-viable
 
@@ -534,7 +534,7 @@ Morgan Reed, an Evacuee in the world Stirling City (evac shelter A-23), 7 Novemb
   - The first survivor's name, Krista Hobson, comes only from the save filename.
   - No game time passed and no lineage survivor existed yet, so the lead rules this a setup correction, not a continuity failure. D3's wording, "a wrong survivor", could be read to cover it. The class would change only if this is ruled a continuity failure.
   - The evaluator cannot see this kind of switch: identity was read only on Morgan's creation frames, and the clock did not change.
-  - The *Setup* column counts 7 decisions, up to the first survivor's in-play frame. The 12 correction decisions after it (about $0.07) count as play in `lh1a1`'s pace and out-of-play share.
+  - The *Setup* column counts 7 decisions, up to the first survivor's in-play frame. The 12 correction decisions after it (about $0.06) count as play in `lh1a1`'s pace and out-of-play share.
 - **Both boundaries.** The load menu selected Stirling City, whose only character is Morgan Reed, and the first clock continued the previous admission's. Boundary 2 lost 230 s because `lh1a2` ended without saving.
 - **Night and rollover.**
   - 10:30:00 PM, day 61: the survivor falls asleep in the shelter.
@@ -549,4 +549,4 @@ Morgan Reed, an Evacuee in the world Stirling City (evac shelter A-23), 7 Novemb
 - **The `lh1a2` stall is unexplained.**
   - After ENTER on a 12-portion batch (50 minutes 57 seconds), seven decisions returned the identical frame, and the player stopped.
   - The custodian then ended the game with SIGTERM. The game's log records only its shutdown, so it can neither confirm a busy simulation nor rule out a wait for input.
-  - Eight other long activities, including the 7.5 h sleep, completed normally.
+  - All 13 recorded long activities in the lineage, including the 7.5 h sleep, completed normally.
