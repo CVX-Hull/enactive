@@ -1097,6 +1097,13 @@ def test_evaluate_run_and_compare_commands(tmp_path, capsys):
     capsys.readouterr()
     assert main(['evaluate-run', str(directory), '--binding', 'nope', '--root', str(root)]) == 1
     assert 'Unknown binding' in capsys.readouterr().err
+    # Table: one generated Markdown row per record, from a root or explicit files; nothing is written.
+    before = sorted(p.stat().st_mtime_ns for p in root.rglob('*'))
+    assert main(['evaluate-table', str(root), str(other_record)]) == 0
+    lines = capsys.readouterr().out.strip().splitlines()
+    assert lines[0].startswith('| Run | Arm |') and len(lines) == 4
+    assert all(line.count('|') == lines[0].count('|') for line in lines)
+    assert sorted(p.stat().st_mtime_ns for p in root.rglob('*')) == before
 
 
 def test_evaluate_options_are_refused_for_other_commands_and_externals_are_used(tmp_path, capsys, monkeypatch):

@@ -19,6 +19,8 @@ holds a manifest.json) below one directory, taking each run's memory store from 
 campaign-run/4 run from data/evaluation/archive-labels.json. evaluate-compare reads evaluation
 records and prints Kaplan-Meier curves, restricted mean survival to --horizon hours, bootstrap
 intervals and pairwise log-rank tests by arm (the record's arm metadata, or --arm RECORD=LABEL).
+evaluate-table prints a Markdown table of headline metrics from evaluation records (files, or
+roots holding <session>/<versions>.sqlite3) for the development-run log; it edits no file.
 Unsupported historical formats remain inert evidence, available in Git history.
 """
 from __future__ import annotations
@@ -32,7 +34,7 @@ from typing import Any, Callable, Sequence
 
 from harness.computer.protocol import ControlError
 
-EVALUATION_COMMANDS = ('evaluate-run', 'evaluate-runs', 'evaluate-compare')
+EVALUATION_COMMANDS = ('evaluate-run', 'evaluate-runs', 'evaluate-compare', 'evaluate-table')
 # A game binding is imported only when it is named, so the core never depends on one.
 BINDINGS: dict[str, tuple[str, str]] = {'cdda': ('harness.evaluation.cdda', 'CddaBinding')}
 ARCHIVE_LABELS = Path(__file__).resolve().parents[1] / 'data' / 'evaluation' / 'archive-labels.json'
@@ -124,6 +126,42 @@ def evaluate_compare(arguments: argparse.Namespace) -> dict:
     return compare_records(arguments.paths, arguments.horizon, arms)
 
 
+TABLE_COLUMNS = ('Run', 'Arm', 'Start', 'End', 'Game h', 'Decisions', 'Setup', 'Routine pace', 'Long activities',
+                 'Out of play', 'Longest stall', '$ / decision', 'Large rewrites')
+
+
+def evaluate_table(arguments: argparse.Namespace) -> str:
+    """A Markdown table of headline metrics, one row per evaluation record, for the run log.
+
+    Generated from records only; it never edits hand-scored tables (ADR008)."""
+    from harness.evaluation.core.records import open_readonly, read_metadata, read_metrics
+    paths: list[Path] = []
+    for path in arguments.paths:
+        paths.extend(sorted(path.glob('*/*.sqlite3')) if path.is_dir() else [path])
+    rows = []
+    for path in paths:
+        connection = open_readonly(path)
+        meta, metrics = read_metadata(connection), read_metrics(connection)
+        value = lambda name, key='': metrics[(name, key)].value if (name, key) in metrics else None
+        inner = lambda item: item.get('value') if isinstance(item, dict) else item
+        survival = value('survival.game_hours') or {}
+        setup = (value('mode.out_of_play_share') or {}).get('setup_decisions') if isinstance(value('mode.out_of_play_share'), dict) else None
+        long = value('pace.long_activities') or {}
+        labels = meta.get('labels') or {}
+        share = lambda item: '—' if item is None else f'{round(item * 100)}%'
+        number = lambda item, digits: '—' if item is None else f'{item:.{digits}f}'
+        rows.append((meta.get('run', ''), labels.get('arm', meta.get('arm', '')), labels.get('start', ''),
+            survival.get('censor_reason', '—'), number(survival.get('hours'), 2), str(connection.execute('SELECT COALESCE(MAX(decision), 0) FROM steps').fetchone()[0]),
+            '—' if setup is None else str(setup), number(value('pace.routine_seconds_per_decision'), 1),
+            f"{long.get('count', 0)} · {(long.get('total_game_seconds') or 0) / 3600:.2f} h",
+            share(inner(value('mode.out_of_play_share'))), '—' if value('stall.longest') is None else str(value('stall.longest')),
+            number(inner(value('host.dollars_per_decision')), 4), share(value('host.large_rewrite_share'))))
+    order = {'pilot': 0, 'pre-loop': 1, 'ceiling': 2, 'zoom-aid': 3, 'game-help-aid': 4, 'reflection-aid': 5}
+    rows.sort(key=lambda row: (order.get(row[1], 9), row[0]))
+    header = f'| {" | ".join(TABLE_COLUMNS)} |\n| {" | ".join("---" if k < 4 else "---:" for k in range(len(TABLE_COLUMNS)))} |'
+    return '\n'.join([header, *(f'| {" | ".join(row)} |' for row in rows)])
+
+
 def main(argv: Sequence[str] | None = None, *, binding: Any = None,
          load: Callable[[str], Any] = load_binding) -> int:
     """`binding` and `load` are test hooks; the command line resolves --binding through BINDINGS."""
@@ -158,6 +196,9 @@ def main(argv: Sequence[str] | None = None, *, binding: Any = None,
         from harness.evaluation.core.records import EvaluationError
         if evaluating:
             try:
+                if arguments.command == 'evaluate-table':
+                    print(evaluate_table(arguments))
+                    return 0
                 if arguments.command == 'evaluate-compare':
                     result = evaluate_compare(arguments)
                 else:
