@@ -199,7 +199,7 @@ class Run:
         if self.hosts and request:
             self.request(actor, usage)
             tool = dict(input='computer_input', observe='computer_observe', handoff='player_handoff')[kind]
-            self.call(actor, tool, dict(actions=actions or []), {}, wall=wall - 1)
+            self.call(actor, tool, dict(actions=actions or []), dict(operation_id=operation), wall=wall - 1)
         record = dict(schema='computer-operation/1', operation_id=operation, session=self.session, actor_id=actor,
             kind=kind, status=status, created_wall=wall, deadline_monotonic=1e9, receipts=[], source=None,
             remaining={}, reason='fixture', handoff=handoff)
@@ -1181,8 +1181,8 @@ def test_a_confirmed_identity_change_starts_a_new_episode(tmp_path):
 
 def ended_run(directory: Path, *, finish: list[dict] = (), controls: list[dict] = (), settled: dict | None = None,
               status: str = 'completed', receipt: str = 'delivered', files: dict | None = None, hosts: bool = True,
-              dead: bool = False) -> Path:
-    run = Run(directory, hosts=hosts)
+              dead: bool = False, session: str = SESSION) -> Path:
+    run = Run(directory, hosts=hosts, session=session)
     a = run.actor()
     for index, t in enumerate((3600, 3660, 3720)):
         run.step(a, 'input', [key('j')], F('in_play', t, identity=1, fill=index))
@@ -1219,6 +1219,7 @@ def test_censor_reasons(tmp_path, name, options, reason):
     assert value['censor_reason'] == reason
     assert value['outcome'] == ('died' if reason == 'died' else 'censored')
     assert metrics_of(path)['run.infrastructure_loss'].value == int(reason in ('infrastructure', 'custody'))
+    assert metrics_of(path)['run.provider_loss'].value == int(reason == 'infrastructure')
 
 
 def test_run_end_events_for_finishes_and_orderly_stops(tmp_path):
@@ -1264,7 +1265,7 @@ def test_run_facts_labels_and_host_rows(tmp_path):
     calls = read_tool_calls(connection)
     by_status = {c.status: c for c in calls}
     assert len(calls) == 3 and set(by_status) == {'ok', 'error', 'refused'} and {c.tool for c in calls} == {'computer_input'}
-    assert by_status['ok'].operation_id is None and by_status['error'].operation_id == 'o' * 32
+    assert by_status['ok'].operation_id == f'{0x1001:032x}' and by_status['error'].operation_id == 'o' * 32
     assert by_status['error'].result_bytes > 0 and by_status['error'].latency_ms is not None
     assert by_status['refused'].latency_ms is None and by_status['refused'].tool_call_id == 'gone'
     requests = read_requests(connection)

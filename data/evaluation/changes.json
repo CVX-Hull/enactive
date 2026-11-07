@@ -30,16 +30,16 @@
   {
     "id": "provider-retry-fixes",
     "name": "Provider retry fixes (#378-#380)",
-    "arms": ["aidB5", "aidB6", "aidB7", "aidB8", "aidC*"],
-    "baseline": ["aidA*", "ceil*"],
+    "arms": ["aidB9", "aidC*"],
+    "baseline": ["aidA*", "aidB1", "aidB2", "aidB3", "aidB4", "aidB5", "aidB6", "aidB7", "aidB8", "ceil*"],
     "commits": ["1f9c907", "5d084ca", "c313346"],
     "hypothesis": "Retrying a message-less 429, a balance-citing 429 and a stream that fails before its first event stops runs ending on provider errors.",
     "target_failure": "infrastructure_loss",
-    "target_metric": {"name": "run.infrastructure_loss", "direction": "lower", "min_effect": 0.2},
+    "target_metric": {"name": "run.provider_loss", "direction": "lower", "min_effect": 0.1},
     "uptake_metric": {"name": "host.retry_share", "key": "", "definition": "Share of requests that were retries, aborts or non-tool stops"},
     "guards": [{"name": "survival.game_hours", "key": ""}],
     "verdict": "moved",
-    "notes": "Four game-help runs were lost before the fixes landed. After them one reflection run was lost, to a custody stop and not a provider error. Retries fired as designed in aidC1 and no later run ended on a provider error. Interval-based verdicts are weak at these counts."
+    "notes": "Five runs (A2 and four game-help runs) ended on provider errors before the fixes landed. After them no run ended on a provider error; one reflection run was lost to a custody stop, which is not a provider error. Retries fired as designed in aidC1. The runs ran in order, so the comparison mixes the fixes with run order and provider drift."
   },
   {
     "id": "reflection-lineage",

@@ -106,7 +106,9 @@ def compute_metrics(timeline: Timeline, operations: Sequence[Operation], events:
     survival_row, hours, reason = survival(timeline, events, binding, facts, end)
     rows.append(survival_row)
     lost = int(reason in LOST_REASONS)
-    rows.append(_row('run.infrastructure_loss', lost, lost, 1, None if reason is not None else 'end_not_recorded'))
+    missing_end = None if reason is not None else 'end_not_recorded'
+    rows.append(_row('run.infrastructure_loss', lost, lost, 1, missing_end))
+    rows.append(_row('run.provider_loss', int(reason == 'infrastructure'), int(reason == 'infrastructure'), 1, missing_end))
     no_host = None if facts.present else 'no_host_trace'
 
     # Decisions and setup.
