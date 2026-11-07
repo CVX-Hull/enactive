@@ -157,9 +157,10 @@ def evaluate_table(arguments: argparse.Namespace) -> str:
             share(inner(value('mode.out_of_play_share'))), '—' if value('stall.longest') is None else str(value('stall.longest')),
             number(inner(value('host.dollars_per_decision')), 4), share(value('host.large_rewrite_share'))))
     order = {'pilot': 0, 'pre-loop': 1, 'ceiling': 2, 'zoom-aid': 3, 'game-help-aid': 4, 'reflection-aid': 5}
-    rows.sort(key=lambda row: (order.get(row[1], 9), row[0]))
+    rows.sort(key=lambda row: (order.get(row[1], 9), str(row[0])))
     header = f'| {" | ".join(TABLE_COLUMNS)} |\n| {" | ".join("---" if k < 4 else "---:" for k in range(len(TABLE_COLUMNS)))} |'
-    return '\n'.join([header, *(f'| {" | ".join(row)} |' for row in rows)])
+    cell = lambda item: '—' if item is None or item == '' else str(item)
+    return '\n'.join([header, *(f'| {" | ".join(cell(item) for item in row)} |' for row in rows)])
 
 
 def main(argv: Sequence[str] | None = None, *, binding: Any = None,
