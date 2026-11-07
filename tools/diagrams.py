@@ -7,6 +7,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 import tempfile
@@ -55,7 +56,8 @@ def install_browser(root: Path) -> None:
 
 
 def digest(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    with path.open("rb") as handle:
+        return hashlib.file_digest(handle, "sha256").hexdigest()
 
 
 def sources(root: Path) -> list[Path]:
@@ -97,6 +99,34 @@ def check_accessibility(path: Path) -> None:
         raise ValueError(f"{path.name}: missing SVG ID; scoped Mermaid styles would not apply")
 
 
+STYLE = re.compile(r"<style(?:\s[^>]*)?>(.*?)</style>", re.DOTALL)
+
+
+def canonical_font_order(svg: str) -> str:
+    """Put the embedded font stylesheets of a rendered SVG in one fixed order.
+
+    Inside a `Promise.all`, Mermaid CLI appends each CSS import's `<link>` once
+    its asynchronous path resolution finishes, then embeds the linked sheets after
+    its own first `<style>` in that page order. So the embedded Open Sans regular
+    and italic `@font-face` blocks arrive in a run-dependent order. They hold
+    distinct faces, so sorting them by text changes bytes but not rendering; they
+    are reassigned to the slots they already occupy and nothing else moves.
+    An embedded sheet without `@font-face` (an icon stylesheet, say) is refused,
+    because this normalisation would not make its position deterministic.
+    """
+    matches = list(STYLE.finditer(svg))[1:]  # the first block is Mermaid's own diagram style
+    other = [match.group(1)[:60] for match in matches if "@font-face" not in match.group(1)]
+    if other:
+        raise ValueError(f"Rendered SVG embeds a stylesheet without @font-face ({other[0]!r}); "
+                         "its order would vary between renders, so extend canonical_font_order (#414)")
+    ordered = iter(sorted(match.group(1) for match in matches))
+    pieces, position = [], 0
+    for match in matches:
+        pieces += [svg[position:match.start(1)], next(ordered)]
+        position = match.end(1)
+    return "".join(pieces) + svg[position:]
+
+
 def render(root: Path, source: Path, output: Path) -> None:
     require_local(root, [source, output] + [root / name for name in (*CONFIGURATION, *CACHES)])
     executable = root / "node_modules/.bin/mmdc"
@@ -110,6 +140,7 @@ def render(root: Path, source: Path, output: Path) -> None:
                "--size", "1000", "--svgId", "cdda-" + source.stem, "--quiet"]
     subprocess.run(command, cwd=root, env=environment, check=True, timeout=60,
                    capture_output=True, text=True)
+    output.write_bytes(canonical_font_order(output.read_bytes().decode("utf-8")).encode("utf-8"))
     check_accessibility(output)
 
 
