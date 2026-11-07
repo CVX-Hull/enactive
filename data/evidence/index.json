@@ -45,7 +45,7 @@
       ],
       "files": 2094,
       "manifest_sha256": "50119b382376a58cd16580d76f5ee479db2dec0298caf47a357abc715c609220",
-      "note": "The 17-18 October 2026 evidence rounds and MVP artifacts, kept directly under .runtime/evidence/ before the store existed; copied in with names unchanged. Originals stay in place until the owner decides (#420).",
+      "note": "The 17-18 October 2026 evidence rounds and MVP artifacts, kept directly under .runtime/evidence/ before the store existed; copied in with names unchanged. The originals were removed on 7 November 2026 after a final full verify (owner decision on #420).",
       "sources": {
         ".": ".runtime/evidence",
         "design-round": ".runtime/evidence/design-round",
@@ -73,7 +73,7 @@
       ],
       "files": 5316,
       "manifest_sha256": "d30860bf51f44ca96f02fb070bf4ff9ae96864b602743d3b7136bac6b3b26fc6",
-      "note": "#164 iteration runs and reviews of 26 October to 4 November 2026, published as #164 issue comments; source checkouts (all at faca1d0) and game builds were not copied (only their .runtime evidence). Originals stay in place until the owner decides (#420). 1 symbolic link (a dependency link) was not copied; its target is a local path.",
+      "note": "#164 iteration runs and reviews of 26 October to 4 November 2026, published as #164 issue comments; source checkouts (all at faca1d0) and game builds were not copied (only their .runtime evidence). The originals were removed on 7 November 2026 after a final full verify (owner decision on #420).1 symbolic link (a dependency link) was not copied; its target is a local path.",
       "sources": {
         ".": ".runtime/iteration164",
         "brownlee-continuation-2026-11-04": ".runtime/iteration164/brownlee-continuation-2026-11-04",
@@ -118,7 +118,7 @@
       ],
       "files": 5005,
       "manifest_sha256": "8139d124328cf83ccd0fb2c7c4b302491282fc437830fa288fbf1f14f88cbe69",
-      "note": "#164 candidate research of 5 November 2026 and the operator files of the #359 diagnostic and Terra preparations (their worktree runtimes are sealed in 359-ongoing-alex and 164-terra); source checkouts (all at faca1d0) and builds not copied. Originals stay in place until the owner decides (#420). 170 symbolic links (pytest temporary-directory \"current\" links to sibling folders, which are sealed) were not copied.",
+      "note": "#164 candidate research of 5 November 2026 and the operator files of the #359 diagnostic and Terra preparations (their worktree runtimes are sealed in 359-ongoing-alex and 164-terra); source checkouts (all at faca1d0) and builds not copied. The originals were removed on 7 November 2026 after a final full verify (owner decision on #420).170 symbolic links (pytest temporary-directory \"current\" links to sibling folders, which are sealed) were not copied.",
       "sources": {
         "candidate-research-2026-11-05": ".runtime/iteration164/candidate-research-2026-11-05",
         "candidate-research-2026-11-05/alex-continuation-screen": ".runtime/iteration164/candidate-research-2026-11-05/alex-continuation-screen",
@@ -439,7 +439,7 @@
       ],
       "files": 4584,
       "manifest_sha256": "b97506dc4f8ae02da378658af41f24a7c49f5918750248715f7a1e360de89cf7",
-      "note": "Operator ledgers, supervisor outputs, package receipts, reflections, proposals, the #382 admission tooling (lh/) and the archived userdirs of the #372 and #382 runs, from .runtime/dev-loop/ (the runs themselves are in 372-382-dev-loop). Originals stay in place until the owner decides (#420).",
+      "note": "Operator ledgers, supervisor outputs, package receipts, reflections, proposals, the #382 admission tooling (lh/) and the archived userdirs of the #372 and #382 runs, from .runtime/dev-loop/ (the runs themselves are in 372-382-dev-loop). The originals were removed on 7 November 2026 after a final full verify (owner decision on #420).",
       "sources": {
         ".": ".runtime/dev-loop",
         "archive": ".runtime/dev-loop/archive",
