@@ -2,14 +2,16 @@
 owner: lead
 status: historical
 date: '2026-10-28'
-scope: Accepted direction for the computer-control boundary and coordinated migration; not delivered runtime support
+scope: Accepted direction for the computer-control boundary and coordinated migration; delivered in #289 (#176)
 ---
 
 # ADR 006 — Basic computer control, player-owned semantics
 
 The owner selected this direction on October28,2026. It replaces the
 engine-specific authority direction in [ADR005](005-gameplay-foundation.md).
-It does not change the running native7/mission11 contract. Current coupling is
+**Delivered** on 29 October 2026 through #289 under #176; the
+[computer-control contract](../contracts/computer-control.md) owns the running
+behaviour. When written, it did not change the running native7/mission11 contract. Current coupling is
 listed in [architecture](../architecture.md#game-family-portability); the
 [portability outcome](https://github.com/CVX-Hull/enactive/issues/191) owns delivery.
 

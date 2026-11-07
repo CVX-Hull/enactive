@@ -87,8 +87,9 @@ The [architecture](architecture.md) explains ownership, the
 | Player services | Actual image-conditioned scouting, failed/revised programs, source-backed correction and successor application are demonstrated. This is functional utility, not a safe-navigation or learning-benefit guarantee. |
 | Player context | The [observed-effects workflow](player-guide.md#play-from-observed-effects) was refined through [actual care, food use and historical-claim reconciliation](acceptance/2026-10-29-player-context.md). The [unchanged-guide continuation study](acceptance/2026-10-30-observed-effects.md) found limited exploration/corrections but no retained new supplies or needs improvement; spatial and search claims still exceeded the evidence. The [spatial-grounding study](acceptance/2026-10-30-spatial-grounding.md) tested and rejected a reference-frame context addition; current guidance was restored. No causal prompt benefit or general reliability is qualified. |
 | Actor replacement | Actual old host/MCP quiescence and immutable context preceded a fresh successor under original limits. No game menu, save or identity condition grants authority. |
-| Spectator | The [redesigned spectator](components/observer-operations.md) separates a supervised control path (frame, attention checks, Pause with a recorded reason) from a read-only viewer of the [run evaluator](contracts/evaluation.md). It shows whether anything warrants a Pause, drills from every number to its instances, and tracks changes, failure modes and cross-run comparisons with provenance on every value. Reader accuracy is validated on held-out frames; night and day-rollover readings, creature counting and death recall are not yet. Human-usability efficacy remains unqualified. |
+| Spectator | The [redesigned spectator](components/observer-operations.md) separates a supervised control path (frame, attention checks, Pause with a recorded reason) from a read-only viewer of the [run evaluator](contracts/evaluation.md). It shows whether anything warrants a Pause, drills from every number to its instances, and tracks changes, failure modes and cross-run comparisons with provenance on every value. Reader accuracy is validated on held-out frames, plus hand-checked night and day-rollover frames. No held-out clock falls between 7:50 PM and 6:00 AM, popup-covered clocks and severe need labels have no held-out examples, and creature counting and death recall are not yet validated ([reader validation](development-runs.md#evaluator-re-score-and-power-check-383)). Human-usability efficacy remains unqualified. |
 | Earlier CDDA play | [Organic corrected-program play](acceptance/2026-10-28-organic-play.md), [endpoint comparison](acceptance/2026-10-28-endpoint-gameplay.md) and [computer proof](acceptance/2026-10-29-basic-computer-control.md) retain their tested source/route and failures. They do not qualify this production boundary. |
+| Day-scale play | GPT-6.1 Terra, a diagnostic route rather than the selected configuration, survived 24 in-game hours in two of three chained save/reload lineages ([arm result](development-runs.md#arm-result)). This is a screen on three lineages, not a qualification; seven-day survival and cadence remain open. |
 | Remaining outcomes | Useful apparent cadence, causal learning benefit, independent seven-day survival, second-game control, broader geometry, Unicode/IME and actual-human takeover qualification remain open. |
 
 Delivered means SDL events were handed over. It does not mean the application
@@ -108,17 +109,18 @@ for failed gameplay. Keep every failed or abandoned chain and its original limit
 ## Current direction and decisions
 
 [ADR006](decisions/006-computer-control-boundary.md) explains the selected boundary;
-[#176](https://github.com/CVX-Hull/enactive/issues/176) owns its integrated delivery,
-[#287](https://github.com/CVX-Hull/enactive/issues/287) the mechanical implementation,
-and [#288](https://github.com/CVX-Hull/enactive/issues/288) the playing system.
+[#176](https://github.com/CVX-Hull/enactive/issues/176) delivered it,
+with [#287](https://github.com/CVX-Hull/enactive/issues/287) for the mechanical implementation
+and [#288](https://github.com/CVX-Hull/enactive/issues/288) for the playing system.
 The [cutover brief](changes/071-computer-control-cutover.md) retains the delivery
 scope. [#164](https://github.com/CVX-Hull/enactive/issues/164),
 [#177](https://github.com/CVX-Hull/enactive/issues/177) and
 [#145](https://github.com/CVX-Hull/enactive/issues/145) own cadence, learning and
 independent survival outcomes. These are separate claims, not implied by migration.
 
-The [development loop](development-runs.md) of 5–6 November 2026 measured a ceiling.
-Through this boundary, GPT-6.1 Terra plays competently in the short term: runs
+The [development loop](development-runs.md) of 5–6 November 2026 measured a ceiling
+with GPT-6.1 Terra, a diagnostic route that confers no player selection.
+Through this boundary, it plays competently in the short term: runs
 gather food, water, tools and weapons, and most deaths followed the player's own
 choice of a dense urban start. But median survival was **0.59 in-game hours**
 inside a 250-decision allowance. Three game-neutral grounding aids (zoom, the
@@ -131,7 +133,8 @@ same player enough decisions through chained save and reload admissions. Two of 
 lineages survived a full in-game day with no severe need at the day point, sleeping
 through the night in shelter at about 140 game seconds per decision. The third ended
 early on a game stall that fenced input (#396). Day-scale survival is therefore viable
-through this boundary, at about $13 per game day. #145's seven-day gate remains the
+through this boundary, at about $13 per game day; with three lineages this is a screen,
+not a qualification. #145's seven-day gate remains the
 north star, and #164's cadence criteria remain unqualified.
 The [run evaluator and spectator](decisions/008-evaluation-and-spectator.md) (#383) now
 score runs from recorded frames and traces. Their power check showed that whole-run survival

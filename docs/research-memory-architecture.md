@@ -105,7 +105,7 @@ Reader question: **how does the player remember and act without the lead becomin
 a routine gameplay dependency?** This is a proposed logical view; participants are not
 new processes, databases or model tiers.
 
-![Proposed player-owned memory and gameplay loop, with source-linked views, semantic skills, current guards and optional reviewed improvement.](diagrams/player-owned-memory.svg)
+![Current player-owned memory: the diagram now shows player-memory/2 and player-program/2, which replaced the semantic skills this historical review discusses.](diagrams/player-owned-memory.svg)
 
 Solid arrows show requests or updates; dashed arrows return observations or results.
 Notes mark the user control and optional improvement boundaries. Text equivalent: retain visible observations and

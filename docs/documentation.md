@@ -24,10 +24,10 @@ approval stages. [Editable source](diagrams/architecture-review.mmd).
 | --- | --- | --- |
 | Purpose and constraints | [Charter](charter.md) | [Engineering standards](engineering.md) |
 | Product capability and limits | [Overview](overview.md) | [Architecture](architecture.md) |
-| Ownership, state and failures | A component linked from architecture | [Current exact contract](contracts/computer-control.md), code and assertions |
+| Ownership, state and failures | A component linked from architecture | [Contract index](protocol.md): [computer control](contracts/computer-control.md), [player host](contracts/player-host.md), [evaluation](contracts/evaluation.md); code and assertions |
 | Operate a finite run | [Setup](setup.md), [runbook](runbook.md) | [Campaign procedure](operations/campaign-run.md) |
 | Change scope and acceptance | GitHub Issue/PR | Affected parent/component, contract and [review policy](workflows/review.md) |
-| Evidence and remaining work | [Work](work.md) / public Project | Dated original report and artifacts |
+| Evidence and remaining work | [Work](work.md) / public Project | Latest runs in [development runs](development-runs.md); dated original reports and artifacts |
 | Checks and their limits | [Testing](testing.md) | Shared [CI selection](../tools/ci.py) and actual assertions |
 
 Architecture starts outside a responsibility, then explains owned state,
@@ -72,7 +72,8 @@ architecture/components own current responsibilities and assurance limits;
 schemas/source own their declared executable interface; operations own tasks.
 GitHub owns live work, proposals own unadopted scope, ADRs own dated rationale,
 and acceptance reports own original observations. The control registry/map owns
-control lifecycle, not a second contract or work tracker.
+control lifecycle, not a second contract or work tracker. The
+[authority contract](workflows/authority.md) owns which summaries may restate what.
 
 The [evaluation contract](contracts/evaluation.md) owns the spectator view API.
 Other historical `contracts/` pages are superseded bookmarks for the native7/mission11

@@ -36,13 +36,14 @@ beyond this repository; adoption, integration and deletion can be more valuable
 than new implementation. Include setup, latency, review and ongoing operating cost
 in the choice. Do not turn a speculative framework, exhaustive defense or process
 improvement into a campaign prerequisite without a concrete outcome dependency.
-The Project README links this contract, the overview and these three saved views:
+The Project README links this contract, the overview and these four saved views:
 
 | View | User question and contents |
 | --- | --- |
-| Direction | What outcome comes next and why? Group by Horizon; show milestone, priority, outcome, confidence and decision needed |
-| Execution | What is moving? Board by Status; show owner, size, dependencies and linked pull request |
-| Needs attention | What needs intervention? Filter blocked, decision-needed and risk labels; lead flags aging Review/Validation work during checkpoint triage |
+| Current iteration | What is moving? Board by Status of open Horizon Now leaves (aggregates excluded); show owner, size, dependencies and linked pull request |
+| Backlog | What is unselected? Open leaves outside Horizon Now (Next and Later candidates) |
+| Direction | What outcome comes next and why? Open `outcome` aggregates grouped by Horizon and sorted by Priority; show milestone, priority, outcome, confidence and decision needed |
+| Needs attention | What needs intervention? Open Now/Next items labelled blocked or decision-needed; a generic risk label alone does not qualify. The lead flags aging Review/Validation work during checkpoint triage |
 
 At a meaningful checkpoint, update the Project with outcomes achieved, next
 outcome, risks/blockers, decisions needed and evidence links. Give consequences

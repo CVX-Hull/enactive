@@ -70,7 +70,7 @@ under C-REVIEW, retaining the [two-writer/shared-runtime limits](../standards/ag
 
 Aggregate outcomes use the `outcome` label and remain Backlog while their children
 carry execution. They do not inherit a child's stage and are excluded from the
-execution view and leaf WIP count. Direction shows these open outcomes separately;
+Current iteration view and leaf WIP count. Direction shows these open outcomes separately;
 Backlog shows unselected delivery work. A parent's checklist is not another job.
 
 Blocked current work keeps its stage, reason, accountable owner and next action

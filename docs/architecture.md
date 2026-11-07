@@ -118,6 +118,19 @@ programs and context consume only the computer port and explicit player data.
 CDDA-specific preparation stays outside that package. This separation is a source
 boundary; actual portability to a second game remains unqualified.
 
+Current coupling. None of it is in the shared player code. The entries inside
+`harness/computer/` are platform coupling (macOS, SDL and dyld injection), not game coupling:
+
+| Coupling | Where | Owner |
+| --- | --- | --- |
+| CDDA prepared launch script and app paths (`Cataclysm.app`, `cataclysm-tiles`) | [`harness/prepared_app.py`](../harness/prepared_app.py) | [Setup](setup.md) |
+| Game download, verification, patching and installing the built adapter | [`tools/setup.py`](../tools/setup.py), [`tools/patch_game.py`](../tools/patch_game.py), [`tools/prepare_game.py`](../tools/prepare_game.py) | [Setup](setup.md) |
+| CDDA screen readers and the only registered evaluation binding | [`harness/evaluation/cdda/`](../harness/evaluation/cdda), `BINDINGS` in the viewer and in [`tools/evaluate.py`](../tools/evaluate.py) | [Evaluation contract](contracts/evaluation.md) |
+| CDDA-class vocabulary in the game-neutral evaluation core (modes including `dead`, threat buckets) | [`harness/evaluation/core/binding.py`](../harness/evaluation/core/binding.py) | [Evaluation contract](contracts/evaluation.md) |
+| macOS SDL adapter loaded into the game process | [`harness/computer/native/`](../harness/computer/native) | [Native control](components/native-control.md) |
+| Adapter injection through `DYLD_INSERT_LIBRARIES` | [`harness/computer/launch.py`](../harness/computer/launch.py) | [Native control](components/native-control.md) |
+| CDDA-specific play guidance | [Player guide](player-guide.md) | Player guide |
+
 ## Separate recovery and memory boundaries
 
 Remembered sources/claims and old process IDs never restore custody. Player
@@ -153,7 +166,8 @@ Direct player finish is a claim, not saving or game acceptance.
 
 ## Coordinated change
 
-One current set is `computer-wire/1`, request/target/receipt `/2`,
+The main current formats (not an exhaustive list; the contracts own every field)
+are `computer-wire/1`, request/target/receipt `/2`,
 `computer-session/1`, `computer-operation/1`, `computer-source/1`,
 `player-memory/2`, `player-record/1`, `player-program/2`, `program-view/4`,
 `player-handoff/1`, `player-host/3` and `campaign-run/5`. Model-facing operation,

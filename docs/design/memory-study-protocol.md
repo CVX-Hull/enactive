@@ -1,10 +1,17 @@
 ---
 owner: lead
-status: proposed
+status: historical
+date: 2026-11-07
+scope: Completed 2026-10-18 memory-representation study protocol; its offline package was removed in #289
 review_trigger: Hypotheses, comparison rules, generators, visibility, budgets or analysis change
 ---
 
 # Memory representation experiment protocol
+
+**Historical.** This protocol was executed and adjudicated in October 2026
+([outcome](../acceptance/2026-10-18-memory-representations.md)). Its offline
+package under `tools/memory_study/` was removed in #289; the current memory format
+is `player-memory/2` in the [computer/player contract](../contracts/computer-control.md).
 
 Protocol **memory-study-v1.1**, current revision **2026-10-18**. Initial v1 was
 frozen on that date after independent protocol

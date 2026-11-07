@@ -8,7 +8,8 @@ replacement: docs/contracts/computer-control.md
 # Player transport and original result collection
 
 This contract is historical. The sole current replacement is
-[Computer control and player ports](computer-control.md). The current harness
+[Computer control and player ports](computer-control.md), which also owns the current
+model-facing `player-transport/2` envelope. The current harness
 provides pixels, basic key/text/pointer/wait, mechanical custody/resources,
 independent permanent Pause and exact original collection. All game semantics,
 save/load, identity, memory assertions and outcome judgments belong to the player.

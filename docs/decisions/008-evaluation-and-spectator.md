@@ -3,7 +3,7 @@ owner: lead
 review_trigger: Evaluator placement, the evaluation-record or spectator-view contracts, an adopted dependency, or a second game binding
 status: historical
 date: '2026-11-07'
-scope: Accepted direction for the run evaluator, its game binding and the redesigned spectator (#383); not delivered runtime support
+scope: Accepted direction for the run evaluator, its game binding and the redesigned spectator (#383); delivered in #389
 ---
 
 # ADR 008 — Offline evaluator, game binding and a split spectator
@@ -77,7 +77,7 @@ before telemetry tooling is added.
      - So a viewer outage cannot block a required check.
    - **Viewer.** A separate read-only process outside supervision runs the evaluator
      incrementally over the live run's records and serves the
-     [`spectator-view/1`](../contracts/evaluation.md#spectator-view) API. The gateway
+     [`spectator-view/1`](../contracts/evaluation.md#spectator-view-api-spectator-view1) API. The gateway
      forwards view requests with a short timeout and a size cap.
    - **Failure.** A viewer failure shows "viewer unavailable" on the page. It never
      ends, pauses or gates a run, and Pause never depends on it.
@@ -94,6 +94,9 @@ before telemetry tooling is added.
 
    The custodian's `/api/status`, `/api/source/<id>` and `/api/pause` stay. The
    redesigned page is built only after the owner approves the UX design.
+7. **Adopt, don't reinvent.** Each capability was assessed on fit, license,
+   maintenance, security, offline use and size. The adopted set is below. Custom code
+   is limited to the recorded gaps.
 8. **Exact context manifest.** The owner approved this on 6 November 2026.
    - The host records, for every request, an ordered manifest of what it sent: each
      part's role and kind, byte size and digest, and image source IDs, kept or omitted.
@@ -103,9 +106,6 @@ before telemetry tooling is added.
      trace unreadable under S-MIGRATION, including the 30 runs this work re-scores.
    - With it, the context inspector shows exactly what each actor saw. Without it, the
      view would be a reconstruction.
-7. **Adopt, don't reinvent.** Each capability was assessed on fit, license,
-   maintenance, security, offline use and size. The adopted set is below. Custom code
-   is limited to the recorded gaps.
 
 ## Dependency assessment
 

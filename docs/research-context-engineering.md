@@ -1,10 +1,16 @@
 ---
 owner: lead
 review_trigger: Player context, tools, memory, model configuration or a new performance claim
-status: active
+status: historical
+date: 2026-11-07
+scope: 2026-10-26 review that informed #251 (closed); its description of the player's context is pre-cutover
 ---
 
 # Context, prompts and ergonomics for fast gameplay models
+
+**Historical.** #251 closed on 26 October 2026, and the player context described
+below predates the #289 cutover. The [player guide](player-guide.md) and the
+[computer/player contract](contracts/computer-control.md) own the current context.
 
 Research cutoff: **October 26, 2026**. The user's direction is to make faster,
 less flagship gameplay models effective through better context and interfaces.
