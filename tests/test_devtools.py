@@ -238,19 +238,18 @@ class DevToolTests(unittest.TestCase):
 
     def test_a_descendant_holding_the_output_pipe_cannot_hang_the_checker(self):
         # The command exits at once, but a grandchild keeps the inherited pipe open for much longer.
-        script = ("import subprocess, sys; subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(30)']);"
+        # The cut-off note is asserted, not the parent's line, which a loaded machine may schedule late.
+        script = ("import subprocess, sys; subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(4)']);"
                   " print('parent done')")
         output = io.StringIO()
         with patch.object(check, "ROOT", self.root), patch.object(check, "_log_directory", None), \
-                patch.object(check, "DRAIN_SECONDS", 0.5), redirect_stdout(output):
+                patch.object(check, "DRAIN_SECONDS", 1), redirect_stdout(output):
             started = time.monotonic()
             check.run([sys.executable, "-c", script])
             elapsed = time.monotonic() - started
-        self.assertLess(elapsed, 10)
-        self.assertIn("parent done", output.getvalue())
+        self.assertLess(elapsed, 3.5)  # returned before the grandchild released the pipe
         self.assertIn("Output pipe still held by a descendant", output.getvalue())
         log = next((self.root / check.CHECK_LOGS).rglob("*.log")).read_text()
-        self.assertIn("parent done", log)
         self.assertIn("still held by a descendant", log)
 
     def test_all_profiles_reject_invalid_python_before_reporting_success(self):

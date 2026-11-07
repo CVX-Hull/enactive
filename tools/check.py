@@ -171,13 +171,18 @@ class _Output:
         self.thread.start()
 
     def _copy(self) -> None:
-        for line in self.stream:
+        try:
+            for line in self.stream:
+                with self.lock:
+                    if self.stopped:
+                        return
+                    self.log.write(line)
+                    sys.stdout.write(line.decode(errors="replace"))
+                    sys.stdout.flush()
+        finally:
             with self.lock:
-                if self.stopped:
-                    return
-                self.log.write(line)
-                sys.stdout.write(line.decode(errors="replace"))
-                sys.stdout.flush()
+                if self.stopped:  # cut off: the caller has left, so this thread owns the pipe
+                    self.stream.close()
 
     def finish(self, timeout: float) -> bool:
         """Wait for the end of output; True when it ended, False when it was cut off after `timeout` seconds."""
@@ -202,13 +207,15 @@ def run(command: list[str], **kwargs) -> None:
             output = _Output(process.stdout, log)
             try:
                 returncode = process.wait()
+                # A descendant that outlived the command (an orphaned fixture server, say) can hold the pipe
+                # open; read what it still sends for a bounded time instead of waiting for it to exit.
+                drained = output.finish(DRAIN_SECONDS)
             except BaseException:  # as subprocess.run does: an interrupted check leaves no child running
                 process.kill()
                 process.wait()
+                output.finish(0)  # stop the reader before the log closes
                 raise
-            # A descendant that outlived the command (an orphaned fixture server, say) can hold the pipe open;
-            # read what it still sends for a bounded time instead of waiting for it to exit.
-            if output.finish(DRAIN_SECONDS):
+            if drained:
                 process.stdout.close()
             else:
                 note = (f"Output pipe still held by a descendant {DRAIN_SECONDS}s after the command exited "
