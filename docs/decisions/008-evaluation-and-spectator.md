@@ -3,7 +3,7 @@ owner: lead
 review_trigger: Evaluator placement, the evaluation-record or spectator-view contracts, an adopted dependency, or a second game binding
 status: historical
 date: '2026-11-07'
-scope: Accepted direction for the run evaluator, its game binding and the redesigned spectator (#383); delivered in #389
+scope: 'Accepted direction for the run evaluator, its game binding and the redesigned spectator (#383); delivered in #389'
 ---
 
 # ADR 008 — Offline evaluator, game binding and a split spectator

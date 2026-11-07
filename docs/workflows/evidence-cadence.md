@@ -7,7 +7,9 @@ status: active
 # Evidence and documentation cadence
 
 Use the existing issue, immutable admission, ledger and archive. A development
-run gets exactly one row in the [development run table](../development-runs.md)
+run gets exactly one row in the [tracked run ledger](../contracts/evaluation.md#tracked-run-ledger-and-metrics-snapshot),
+one hand-scored row in its study's dated record (method in
+[development runs](../development-runs.md#recording-a-run)),
 and one comment on its owning issue: source and artifacts, outcome on the frozen
 metric, known costs/unknowns, cleanup disposition and the next owned action
 (owner decision D4, 5 November 2026). Acceptance records and independent review

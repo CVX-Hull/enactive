@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "note": "Operator labels for the archived campaign-run/4 development-loop runs, which predate the manifest labels of campaign-run/5. Keyed by session ID: the evaluator reads a campaign-run/4 manifest only for a session listed here (a closed archive reader). `run` is the run directory name. Arms and starts are from docs/development-runs.md and each run's frozen prompt.txt (S1: the Evacuee scenario; S2: the player chooses).",
+  "note": "Operator labels for the archived campaign-run/4 development-loop runs, which predate the manifest labels of campaign-run/5. Keyed by session ID: the evaluator reads a campaign-run/4 manifest only for a session listed here (a closed archive reader). `run` is the run directory name. Arms and starts are from docs/acceptance/2026-11-06-development-loop.md and each run's frozen prompt.txt (S1: the Evacuee scenario; S2: the player chooses).",
   "runs": {
     "1138c1218e1cfe1c52397cf44fc835f9": {"run": "aidA1", "arm": "zoom-aid", "start": "S1", "scenario": "Evacuee", "lineage": null, "admission": null},
     "a7d4748fb051580bbeaa8b8015818124": {"run": "aidA2", "arm": "zoom-aid", "start": "S2", "scenario": "player-chosen", "lineage": null, "admission": null},

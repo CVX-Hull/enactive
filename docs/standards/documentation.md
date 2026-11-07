@@ -56,7 +56,13 @@ summaries through ordinary Git edits; retain dated evidence and owned action ite
 Use the [documentation roles and lifecycle](../documentation.md) when deciding where
 an artifact belongs. Dated acceptance/audit records are historical, even when their
 observations remain relevant; the existing metadata check enforces that narrow
-role rule. Incorporate adopted design into current architecture/contracts, transfer
+role rule. Active pages hold method, contracts and current state, not dated run
+records: run outcomes and result tables, dated owner decisions and admission
+procedures go in a dated acceptance record, and the active page keeps the method,
+one line per checkpoint and a link. Per-run quantities live in tracked data
+(S-EVIDENCE), and generated indexes list every dated acceptance record and change
+brief from its front matter, with a staleness check. C-REVIEW applies this rule to
+changed pages. Incorporate adopted design into current architecture/contracts, transfer
 remaining actions to GitHub and retain its brief as dated rationale. Partial
 proposals identify their remaining proposal scope. No new attempt paragraph is
 required in current architecture or the overview.

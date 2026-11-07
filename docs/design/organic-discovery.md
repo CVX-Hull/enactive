@@ -3,7 +3,7 @@ owner: lead
 review_trigger: Player action space, procedural learning, evidence or adaptation policy changes
 status: historical
 date: 2026-11-07
-scope: Pre-cutover proposal written for mission/skill machinery that #289 retired; rationale only
+scope: 'Pre-cutover proposal written for mission/skill machinery that #289 retired; rationale only'
 ---
 
 # Organic discovery and player-learned procedures

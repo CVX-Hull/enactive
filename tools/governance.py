@@ -157,6 +157,19 @@ def check_registry(root: Path, registry: dict, *, as_of: date | None = None,
     return errors
 
 
+def evidence_line(references: list[str]) -> str:
+    """Implementation and current references linked; dated records counted and routed to the indexes."""
+    records = [r for r in references if re.fullmatch(r"docs/(acceptance|changes)/[^/#]+\.md(#.*)?", r)]
+    parts = [f"[{ref}](../{ref})" for ref in references if ref not in records]
+    if not parts:  # a control evidenced only by dated records keeps them readable here
+        return ", ".join(f"[{ref}](../{ref})" for ref in references)
+    if records:
+        parts.append(f"{len(records)} dated record{'s' if len(records) != 1 else ''} named in the "
+                     "[registry](control-registry.json) ([acceptance index](acceptance/index.md), "
+                     "[change index](changes/index.md))")
+    return ", ".join(parts)
+
+
 def render_map(registry: dict) -> str:
     lines = ["---", "owner: maintainer", "status: active",
              "review_trigger: Changed standards, mechanisms, evidence or coverage", "---", "",
@@ -192,8 +205,7 @@ def render_map(registry: dict) -> str:
                   f"Owner: {control['owner']}. Trigger: {control['trigger']}.",
                   f"Enforcement: {control['enforcement']}",
                   f"Failure response: {control['failure_response']}", "",
-                  "Evidence / implementation: " + ", ".join(
-                      f"[{ref}](../{ref})" for ref in control["evidence"]) + ".", "",
+                  "Evidence / implementation: " + evidence_line(control["evidence"]) + ".", "",
                   f"Coverage gap: {control['limitations']}", ""]
         lines += [f"Lifecycle: {control['status']}. Rationale: {control['rationale'] or 'none recorded'}. "
                   f"Replacement: {control['replacement'] or 'none'}.", ""]

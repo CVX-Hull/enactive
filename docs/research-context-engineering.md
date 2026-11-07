@@ -3,7 +3,7 @@ owner: lead
 review_trigger: Player context, tools, memory, model configuration or a new performance claim
 status: historical
 date: 2026-11-07
-scope: 2026-10-26 review that informed #251 (closed); its description of the player's context is pre-cutover
+scope: "2026-10-26 review that informed #251 (closed); its description of the player's context is pre-cutover"
 ---
 
 # Context, prompts and ergonomics for fast gameplay models

@@ -32,7 +32,7 @@ automatically renew resources. User Pause remains permanent for that admission.
 Changes outside the user's authorized scope still require the applicable decision.
 
 **Development-loop envelope (owner decision D2, 5 November 2026).** For the
-ceiling benchmark and grounding-aid study in the [development run table](development-runs.md),
+ceiling benchmark and grounding-aid study in the [development loop record](acceptance/2026-11-06-development-loop.md),
 new model/gameplay spend is at most $150, keeping the cumulative actual upper bound
 at or below $410 within the standing $1,000. Within that envelope the lead admits
 development runs without per-run owner approval and reports each run's spend in
@@ -46,7 +46,7 @@ provider-reported spend: the lead admits a run only while actual new spend plus
 twice the largest single run so far stays within $150.
 
 **Long-horizon envelope (owner decision D1 of [#382](https://github.com/CVX-Hull/enactive/issues/382), 7 November 2026).**
-The long-horizon arm in the [development run table](development-runs.md#long-horizon-arm-382)
+The [long-horizon arm](acceptance/2026-11-07-long-horizon-382.md)
 gets a new $150 envelope under the same actual-spend admission rule: the lead admits an
 admission only while the arm's actual new spend plus twice its largest single admission
 so far stays within $150. The arm starts from the loop's cumulative actual
