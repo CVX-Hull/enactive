@@ -121,7 +121,10 @@ async function pollRunOnce(run, token) {
   announce();
 }
 
+// Until the owner picks a run, the page follows the live run, including one listed after the first load.
+let ownerPicked = false;
 export function selectRun(run) {
+  ownerPicked = true;
   if (run === store.runId) return;
   generation++;
   set({runId: run, summary: null, steps: [], requests: [], markers: [], cursor: null});
@@ -134,8 +137,10 @@ async function loadRuns() {
     const listing = await pages('runs', 0, generation);
     const runs = listing ? listing.items : store.runs || [];
     const patch = {runs};
-    if (!store.runId || !runs.some(r => r.run === store.runId)) {
-      const pick = runs.find(r => r.state === 'live') || runs[0];
+    const live = runs.find(r => r.state === 'live');
+    const shown = runs.some(r => r.run === store.runId);
+    if (!store.runId || !shown || (!ownerPicked && live && live.run !== store.runId)) {
+      const pick = live || runs[0];
       if (pick) { generation++; Object.assign(patch, {runId: pick.run, summary: null, steps: [], requests: [], markers: [], cursor: null}); }
     }
     set(patch);

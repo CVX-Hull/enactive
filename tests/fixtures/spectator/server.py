@@ -253,20 +253,24 @@ def make_handler(state: State):
                 with state.lock:
                     state.visible = min(len(state.steps), state.visible + int(parse_qs(url.query).get('n', ['1'])[0]))
                 self.json(200, {'visible': state.visible}); return
-            try:
-                form = json.loads(raw or b'{}')
-            except ValueError:
-                self.json(400, {'error': 'bad json'}); return
             if url.path == '/api/pause':
-                if not isinstance(form, dict) or set(form) != {'reason'} or form['reason'] not in REASONS:
-                    self.json(400, {'error': 'Pause requires one reason'}); return
+                # Like tools/campaign_watch.py: a Pause is never refused; a missing or unknown reason is 'unspecified'.
+                try:
+                    form = json.loads(raw or b'{}')
+                except ValueError:
+                    form = None
+                given = form.get('reason') if isinstance(form, dict) and set(form) == {'reason'} else None
                 with state.lock:
-                    state.pauses.append(form)
+                    state.pauses.append({'reason': given if given in REASONS else 'unspecified'})
                 self.json(200, dict(schema='computer-pause/1', session=SESSION,
                                     stop=dict(stop_requested=True, native_pause_confirmed=False,
                                               reason='Operator Pause')))
                 return
-            if url.path == '/record' and state.attention == 'required':
+            try:
+                form = json.loads(raw or b'{}')
+            except ValueError:
+                self.json(400, {'error': 'bad json'}); return
+            if url.path == '/record' and state.attention == 'required' and isinstance(form, dict):
                 with state.lock:
                     if form.get('sequence') != len(state.records) + 1 or form.get('session') != SESSION:
                         self.json(409, {'error': 'Wrong or stopped session, or stale check number'}); return

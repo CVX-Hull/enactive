@@ -113,6 +113,31 @@ test('the check does not depend on viewer data: enabled before the viewer lists 
   await fx.viewer('up');
 });
 
+test('the run picker follows a live run listed after first load, until the owner picks a run', async () => {
+  await start();
+  await fx.viewer('nolive');
+  await page.reload({waitUntil: 'load'});
+  const shown = () => page.$eval('#runpick', s => s.options[s.selectedIndex].textContent);
+  await until(() => document.getElementById('runpick').options.length > 1);
+  assert.doesNotMatch(await shown(), /· live/);
+  await fx.viewer('up');
+  await until(() => / · live/.test(document.getElementById('runpick').selectedOptions[0].textContent), null, 15000);
+  const other = await page.$eval('#runpick', s => [...s.options].find(o => !/· live/.test(o.textContent)).value);
+  await page.select('#runpick', other);
+  await S.settle(page, 11000);   // one runs refresh (RUNS_MS) later, the owner's pick stands
+  assert.equal(await page.$eval('#runpick', s => s.value), other);
+});
+
+test('Pause is never refused over its reason: a missing or unknown one is recorded as unspecified', async () => {
+  await start();
+  const replies = await page.evaluate(async () => {
+    const post = body => fetch('/api/pause', {method: 'POST', headers: {'Content-Type': 'application/json'}, body}).then(r => r.status);
+    return [await post('{}'), await post('{"reason":"bored"}'), await post('not json')];
+  });
+  assert.deepEqual(replies, [200, 200, 200]);
+  assert.deepEqual((await fx.state()).pauses.map(p => p.reason), ['unspecified', 'unspecified', 'unspecified']);
+});
+
 test('timeline keyboard: arrows move one step, shift moves ten, Home and End jump', async () => {
   await start();
   const now = () => page.$eval('#tl', n => Number(n.getAttribute('aria-valuenow')));
