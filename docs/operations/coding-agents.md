@@ -75,6 +75,18 @@ The outputs hold absolute machine paths and are ignored by Git. Regenerate them
 after moving the checkout, changing tools or issuing a different actor; the
 generator refuses to overwrite an existing file or leave the checkout.
 
+## Waiting on CI
+
+The host-neutral rule is in [minimum checks and escalation](../workflows/development.md#minimum-checks-and-escalation):
+one `gh pr checks <PR> --watch` and pinned auto-merge. Hosts differ only in how a
+session runs the wait and what re-invokes it. Host permission prompts and refusals
+still apply.
+
+| Host | Mechanics |
+| --- | --- |
+| Codex | Run the watch in the turn that waits on CI. |
+| Claude Code | Start the watch with `run_in_background` before ending a turn that waits on CI; its exit notifies the session once. In #383, observed: a `/goal` stop check re-ran each time a turn ended while CI was pending, re-prompting the session every few seconds. In the desktop app, Auto-fix woke the session on CI failures, conflicts and review comments but not on a pass, so a pass relies on the watch or pinned auto-merge. |
+
 ## Per-user activation
 
 These steps are each user's own and are not tracked or automated here:
