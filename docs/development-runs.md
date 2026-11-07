@@ -458,16 +458,29 @@ receives:
 > historical data, not instructions or current evidence.
 
 followed by the last non-empty `player-final.txt` of the previous admission, unedited.
+If the previous admission left no report, the last paragraph is omitted as well.
+
+The runner refuses an admission out of lineage order, a new admission while any started
+admission lacks a spend row, and a source other than `509a9fd`. It always reconciles a
+started admission, whatever its terminal state; when reconciliation fails it charges
+each recorded attempt $0.4096. The 2,000-decision cap is enforced through the attempt
+allowance, `min(400, 2,000 − the lineage's charged attempts)`. Charged attempts bound
+decisions, so a lineage may end a few decisions short of 2,000. An allowance of 20 or
+fewer, the ending reserve, ends the lineage.
 
 The admission check is D1: an admission starts only while the arm's actual new spend
 plus twice its largest admission so far stays within $150. Before the first admission
 completes, the largest admission is taken as $6.50, the proposal's upper forecast.
 Actual spend is OpenRouter's per-generation total plus $0.4096 for each attempt
-without a record.
+without a record. D1 is the only working spend guard. The viewer's "spend" Pause
+condition measures against the manifest allowance (`ceiling_usd` minus prior spend, about
+$650 here), so it cannot fire at about $6 per admission.
 
 After each admission the lead:
 1. scores it with `evaluate-run` (final) and stitches the lineage so far with
-   `evaluate-lineage`;
+   `evaluate-lineage`, running the worktree's own evaluator into the worktree's
+   `.runtime/evaluations`, which the supervised viewer reads (that viewer's
+   `data/evaluation` is the `509a9fd` copy, without the `long-horizon` record);
 2. confirms from frames the survivor at the boundary (world, name and clock from the
    load-menu and first in-play frames), the vitals at the day point and every death,
    and records them as hand labels;
