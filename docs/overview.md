@@ -125,11 +125,14 @@ inside a 250-decision allowance. Three game-neutral grounding aids (zoom, the
 game's own help, reflection lineage) were each rejected on that metric. They
 produced the first real player use of memory, reflections and an organic program.
 **Within that allowance the metric is bounded by time scale**: about 230 decisions
-pass 10–130 game minutes. The aids did not isolate perception. The recommended
-next step is a long-horizon arm tracking game seconds per decision. It needs a new
-spend envelope and more actors or context per admission.
-#145's seven-day gate is the north star, and #164's cadence criteria stay
-deferred until that baseline exists.
+pass 10–130 game minutes. The aids did not isolate perception.
+The [long-horizon arm](development-runs.md#arm-result) (#382, 7 November 2026) gave the
+same player enough decisions through chained save and reload admissions. Two of three
+lineages survived a full in-game day with no severe need, sleeping through the night in
+shelter at about 140 game seconds per decision. The third ended early on a game stall
+that fenced input (#396). Day-scale survival is therefore viable through this boundary,
+at about $13.50 per game day. #145's seven-day gate is the north star; its design and
+#164's cost and latency plan are next (#397).
 The [run evaluator and spectator](decisions/008-evaluation-and-spectator.md) (#383) now
 score runs from recorded frames and traces. Their power check showed that whole-run survival
 cannot separate arms at affordable run counts, so each change pre-registers a targeted
