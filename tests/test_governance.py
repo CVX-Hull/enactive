@@ -383,13 +383,29 @@ def test_evidence_schema_ids_must_be_defined_or_listed_exactly(tmp_path):
     assert governance.check_evidence_ids(root) == []  # a contract names it
     evidence.write_text(json.dumps({"schema": "one-off-summary/1"}))
     assert "defined nowhere" in "\n".join(governance.check_evidence_ids(root))
-    entry = {"record": "docs/acceptance/2026-01-01-x.md", "files": ["docs/acceptance/assets/x/summary.json"]}
+    # Only whole tokens in schemas, contracts or code define an id: not a substring, not a run log.
+    (root / "docs/contracts/c.md").write_text("Rows are `known-shape/1`, `big-run/12` and `xrun/1`.\n")
+    (root / "docs/log.md").write_text("A run/1 happened.\n")
+    for undefined in ("run/1", "shape/1", "big-run/1"):
+        evidence.write_text(json.dumps({"schema": undefined}))
+        assert "defined nowhere" in "\n".join(governance.check_evidence_ids(root)), undefined
+    evidence.write_text(json.dumps({"schema": "one-off-summary/1"}))
+    entry = {"records": ["docs/acceptance/2026-01-01-x.md"], "files": ["docs/acceptance/assets/x/summary.json"]}
     registry.write_text(json.dumps({"ids": {"one-off-summary/1": entry}}))
     assert governance.check_evidence_ids(root) == []
-    registry.write_text(json.dumps({"ids": {"one-off-summary/1": entry, "gone/1": entry | {"record": "docs/none.md"}}}))
+    registry.write_text(json.dumps({"ids": {"one-off-summary/1": entry, "gone/1": entry | {"records": ["docs/none.md"]}}}))
     errors = "\n".join(governance.check_evidence_ids(root))
     assert "gone/1 lists" in errors and "missing record" in errors
     assert governance.check_evidence_ids(governance.ROOT) == []
+
+
+def test_the_frozen_evidence_id_registry_is_closed():
+    registry = json.loads((governance.ROOT / governance.EVIDENCE_IDS).read_text())["ids"]
+    assert sorted(registry) == [
+        "campaign-evidence-summary/1", "capable-player-304-summary/1", "corpus320-summary/1", "diagnosis-314-summary/1",
+        "effects-298-evidence/1", "grounding-300-evidence/1", "investigation-295-evidence/1", "organic-play-evidence/1",
+        "request-timing-summary/1", "spectator-383-evidence/1", "useful-trials-accounting/1",
+        "visual-player-302-evidence/1"]
 
 
 if __name__ == "__main__":

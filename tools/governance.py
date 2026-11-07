@@ -262,13 +262,14 @@ def check_manifests(root: Path) -> list[str]:
 
 
 EVIDENCE_IDS = "schemas/evidence-ids.json"
-DEFINING = ("docs/contracts/*.md", "docs/components/*.md", "docs/operations/*.md", "docs/*.md",
-            "schemas/*.schema.json", "harness/**/*.py", "tools/**/*.py", "tools/**/*.mjs")
+# Where a schema id counts as defined: a schema file, a contract, or code.
+DEFINING = ("schemas/*.schema.json", "docs/contracts/*.md", "harness/**/*.py", "tools/**/*.py", "tools/**/*.mjs")
 
 
 def check_evidence_ids(root: Path) -> list[str]:
-    """Every versioned `schema` a tracked evidence JSON declares is defined: by a current document, schema or
-    code that names it, or as a frozen one-off shape in schemas/evidence-ids.json, whose entries must be exact."""
+    """Every versioned `schema` a tracked evidence JSON declares is defined: named as a whole token by a schema
+    file, contract or code, or listed as a frozen one-off shape in schemas/evidence-ids.json, whose entries must
+    be exact."""
     registry = json.loads((root / EVIDENCE_IDS).read_text())["ids"]
     defining = "\n".join(path.read_text(errors="ignore") for pattern in DEFINING for path in root.glob(pattern)
                          if "node_modules" not in path.parts)
@@ -281,13 +282,14 @@ def check_evidence_ids(root: Path) -> list[str]:
                 continue
             if isinstance(schema, str) and re.fullmatch(r"[a-z0-9][a-z0-9-]*/[0-9]+", schema):
                 declared.setdefault(schema, []).append(str(path.relative_to(root)))
+    named = lambda schema: re.search(rf"(?<![A-Za-z0-9_/-]){re.escape(schema)}(?![0-9])", defining) is not None
     errors = [f"{files[0]}: schema {schema!r} is defined nowhere; define it or list it in {EVIDENCE_IDS}"
-              for schema, files in sorted(declared.items()) if schema not in registry and schema not in defining]
+              for schema, files in sorted(declared.items()) if schema not in registry and not named(schema)]
     for schema, entry in sorted(registry.items()):
         if sorted(entry["files"]) != sorted(declared.get(schema, [])):
             errors.append(f"{EVIDENCE_IDS}: {schema} lists {entry['files']}, but {declared.get(schema, [])} declare it")
-        if not local_reference(root, entry["record"]):
-            errors.append(f"{EVIDENCE_IDS}: {schema} names a missing record {entry['record']!r}")
+        errors.extend(f"{EVIDENCE_IDS}: {schema} names a missing record {record!r}"
+                      for record in entry["records"] if not local_reference(root, record))
     return errors
 
 

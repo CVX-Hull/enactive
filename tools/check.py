@@ -188,8 +188,9 @@ def _check(argv: list[str] | None = None) -> int:
     run([sys.executable, "-m", "tools.documents"])
     run([sys.executable, "tools/governance.py"] + (["--development"] if args.fast else []))
     run([sys.executable, "-m", "tools.run_ledger", "check"])
+    from tools.evaluate import has_blocks
     generated = sorted(str(path.relative_to(ROOT)) for path in (ROOT / "docs").rglob("*.md")
-                       if "<!-- evaluate-table " in path.read_text())
+                       if has_blocks(path.read_text()))
     run([sys.executable, "-m", "tools.evaluate", "evaluate-table", "data/evaluation/run-metrics.jsonl",
          "--check", *generated])
     if not args.fast:

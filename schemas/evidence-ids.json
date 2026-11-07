@@ -1,17 +1,17 @@
 {
-  "note": "Frozen one-off evidence shapes. Each id below was written once, for the dated record named, by a script that was not kept; its fields are defined by that record's text and the file itself, and no current reader exists. They are historical evidence, never inputs. A new evidence JSON uses a schema in schemas/ or a contract-defined id instead; tools/governance.py rejects an undefined id.",
+  "note": "Frozen one-off evidence shapes. Each id below was written for the dated records named, by a script that was not kept or that was later removed (see Git history); its fields are defined by those records' text and the files themselves, and no current reader exists. They are historical evidence, never inputs. This list is closed: a new evidence JSON uses a schema in schemas/ or an id a contract or code defines instead, and tools/documents.py rejects an undefined id.",
   "ids": {
-    "campaign-evidence-summary/1": {"record": "docs/acceptance/2026-10-22-independent-seven-day-eighth-attempt.md", "files": ["docs/assets/independent-seven-day008-evidence.json"]},
-    "capable-player-304-summary/1": {"record": "docs/acceptance/2026-10-31-capable-player.md", "files": ["docs/acceptance/assets/capable-player-304/summary.json"]},
-    "corpus320-summary/1": {"record": "docs/acceptance/2026-11-01-transition-corpus.md", "files": ["docs/acceptance/assets/corpus-320/summary.json"]},
-    "diagnosis-314-summary/1": {"record": "docs/acceptance/2026-10-31-grounded-no-gain-diagnosis.md", "files": ["docs/acceptance/assets/diagnosis-314/summary.json"]},
-    "effects-298-evidence/1": {"record": "docs/acceptance/2026-10-30-observed-effects.md", "files": ["docs/acceptance/assets/effects-298/summary.json"]},
-    "grounding-300-evidence/1": {"record": "docs/acceptance/2026-10-30-spatial-grounding.md", "files": ["docs/acceptance/assets/grounding-300/summary.json"]},
-    "investigation-295-evidence/1": {"record": "docs/acceptance/2026-10-30-spectator-investigation.md", "files": ["docs/acceptance/assets/investigation-295/summary.json"]},
-    "organic-play-evidence/1": {"record": "docs/acceptance/2026-10-28-organic-play.md", "files": ["docs/acceptance/assets/organic-play-264-027/manifest.json"]},
-    "request-timing-summary/1": {"record": "docs/acceptance/2026-10-25-useful-play-readiness.md", "files": ["docs/acceptance/assets/useful-learning-006/request-timing-summary.json", "docs/acceptance/assets/useful-learning-007/request-timing-summary.json"]},
-    "spectator-383-evidence/1": {"record": "docs/development-runs.md", "files": ["docs/acceptance/assets/spectator-383/summary.json"]},
-    "useful-trials-accounting/1": {"record": "docs/acceptance/2026-10-24-useful-bootstrap-trials.md", "files": ["docs/acceptance/2026-10-24-useful-bootstrap-accounting.json"]},
-    "visual-player-302-evidence/1": {"record": "docs/acceptance/2026-10-30-visual-player.md", "files": ["docs/acceptance/assets/visual-player-302/summary.json"]}
+    "campaign-evidence-summary/1": {"records": ["docs/acceptance/2026-10-22-independent-seven-day-eighth-attempt.md"], "files": ["docs/assets/independent-seven-day008-evidence.json"]},
+    "capable-player-304-summary/1": {"records": ["docs/acceptance/2026-10-31-capable-player.md"], "files": ["docs/acceptance/assets/capable-player-304/summary.json"]},
+    "corpus320-summary/1": {"records": ["docs/acceptance/2026-11-01-transition-corpus.md"], "files": ["docs/acceptance/assets/corpus-320/summary.json"]},
+    "diagnosis-314-summary/1": {"records": ["docs/acceptance/2026-10-31-grounded-no-gain-diagnosis.md"], "files": ["docs/acceptance/assets/diagnosis-314/summary.json"]},
+    "effects-298-evidence/1": {"records": ["docs/acceptance/2026-10-30-observed-effects.md"], "files": ["docs/acceptance/assets/effects-298/summary.json"]},
+    "grounding-300-evidence/1": {"records": ["docs/acceptance/2026-10-30-spatial-grounding.md"], "files": ["docs/acceptance/assets/grounding-300/summary.json"]},
+    "investigation-295-evidence/1": {"records": ["docs/acceptance/2026-10-30-spectator-investigation.md"], "files": ["docs/acceptance/assets/investigation-295/summary.json"]},
+    "organic-play-evidence/1": {"records": ["docs/acceptance/2026-10-28-organic-play.md"], "files": ["docs/acceptance/assets/organic-play-264-027/manifest.json"]},
+    "request-timing-summary/1": {"records": ["docs/acceptance/2026-10-25-useful-play-readiness.md", "docs/acceptance/2026-10-25-useful-play-seventh-assessment.md"], "files": ["docs/acceptance/assets/useful-learning-006/request-timing-summary.json", "docs/acceptance/assets/useful-learning-007/request-timing-summary.json"]},
+    "spectator-383-evidence/1": {"records": ["docs/development-runs.md"], "files": ["docs/acceptance/assets/spectator-383/summary.json"]},
+    "useful-trials-accounting/1": {"records": ["docs/acceptance/2026-10-24-useful-bootstrap-trials.md"], "files": ["docs/acceptance/2026-10-24-useful-bootstrap-accounting.json"]},
+    "visual-player-302-evidence/1": {"records": ["docs/acceptance/2026-10-30-visual-player.md"], "files": ["docs/acceptance/assets/visual-player-302/summary.json"]}
   }
 }

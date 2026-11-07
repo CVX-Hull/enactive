@@ -145,7 +145,15 @@ TABLE_COLUMNS = ('Run', 'Arm', 'Start', 'End', 'Game h', 'Decisions', 'Setup', '
 HEADLINE_METRICS = ('survival.game_hours', 'mode.out_of_play_share', 'pace.routine_seconds_per_decision',
                     'pace.long_activities', 'stall.longest', 'host.dollars_per_decision', 'host.large_rewrite_share')
 SNAPSHOT = Path(__file__).resolve().parents[1] / 'data' / 'evaluation' / 'run-metrics.jsonl'
-BLOCK = re.compile(r'(<!-- evaluate-table ([^>]*?) -->\n)(.*?)(<!-- /evaluate-table -->)', re.S)
+# Markers are whole lines; a block's content may not contain another opening marker.
+BLOCK = re.compile(r'^(<!-- evaluate-table ([^>\n]+) -->\n)((?:(?!^<!-- evaluate-table ).)*?)(^<!-- /evaluate-table -->)$',
+                   re.S | re.M)
+LOOSE_OPEN = re.compile(r'^\s*<!--\s*evaluate-table\b', re.M)
+LOOSE_CLOSE = re.compile(r'^\s*<!--\s*/\s*evaluate-table\b', re.M)
+
+
+def has_blocks(text: str) -> bool:
+    return bool(LOOSE_OPEN.search(text) or LOOSE_CLOSE.search(text))
 
 
 def headline(path: Path) -> dict:
@@ -161,13 +169,23 @@ def headline(path: Path) -> dict:
         metrics={name: metrics[(name, '')].value for name in HEADLINE_METRICS if (name, '') in metrics})
 
 
+def snapshot_errors(row: object) -> list[str]:
+    """Schema violations of one run-metrics/1 row (schemas/run-metrics.schema.json)."""
+    from jsonschema import Draft202012Validator
+    schema = json.loads((SNAPSHOT.parents[2] / 'schemas' / 'run-metrics.schema.json').read_text())
+    return [f'{e.json_path}: {e.message}' for e in Draft202012Validator(schema).iter_errors(row)]
+
+
 def read_snapshot(path: Path) -> list[dict]:
-    """Every run-metrics/1 row; any other row is an error naming the line."""
+    """Every run-metrics/1 row, schema-validated; any other row is an error naming the line."""
     rows = []
     for number, line in enumerate(path.read_text().splitlines(), 1):
         row = json.loads(line)
-        if not isinstance(row, dict) or row.get('schema') != 'run-metrics/1' or not isinstance(row.get('metrics'), dict):
+        if not isinstance(row, dict) or row.get('schema') != 'run-metrics/1':
             raise ValueError(f'{path.name}:{number}: not a run-metrics/1 row')
+        errors = snapshot_errors(row)
+        if errors:
+            raise ValueError(f'{path.name}:{number}: {errors[0]}')
         rows.append(row)
     return rows
 
@@ -219,6 +237,10 @@ def write_blocks(documents: list[Path], snapshot: list[dict], ledger: list[dict]
     stale = []
     for document in documents:
         text = document.read_text()
+        opens, closes = len(LOOSE_OPEN.findall(text)), len(LOOSE_CLOSE.findall(text))
+        if not opens == closes == len(BLOCK.findall(text)):
+            raise ValueError(f'{document}: malformed evaluate-table markers ({opens} opening, {closes} closing, '
+                             f'{len(BLOCK.findall(text))} well-formed blocks); fix the markers by hand')
         fresh = BLOCK.sub(lambda m: m.group(1) + table(block_rows(m.group(2), snapshot, ledger)) + '\n' + m.group(4), text)
         if fresh != text:
             if check:
@@ -242,6 +264,9 @@ def evaluate_table(arguments: argparse.Namespace) -> str:
     if arguments.snapshot is not None:
         key = lambda r: (r['session'], r['core_version'], r['binding_id'], r['binding_version'])
         merged = {key(r): r for r in (read_snapshot(arguments.snapshot) if arguments.snapshot.is_file() else [])}
+        for row in rows:
+            if errors := snapshot_errors(row):
+                raise ValueError(f'{row.get("run")}: derived snapshot row is invalid: {errors[0]}')
         merged.update((key(r), r) for r in rows)
         ordered = sorted(merged.values(), key=lambda r: (r['run'], *key(r)))
         arguments.snapshot.write_text(''.join(json.dumps(r, sort_keys=True, ensure_ascii=False) + '\n' for r in ordered))
@@ -328,7 +353,7 @@ def main(argv: Sequence[str] | None = None, *, binding: Any = None,
         result = {'host-summary': host_summary, 'control-summary': control_summary}[arguments.command](arguments.paths)
         print(markdown(result) if arguments.format == 'markdown' else json.dumps(result, allow_nan=False, sort_keys=True))
         return 0 if result.get('complete', True) else 1
-    except (ControlError, OSError, ValueError, UnicodeError, RecursionError, ImportError) as exc:
+    except (ControlError, OSError, ValueError, KeyError, UnicodeError, RecursionError, ImportError) as exc:
         print(f'Trace analysis failed: {exc}', file=sys.stderr)
         return 1
 

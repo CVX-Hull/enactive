@@ -11,7 +11,7 @@
     "schema": {"const": "dev-run/1"},
     "study": {"description": "The GitHub issue that owns the study, e.g. 372 or 382.", "type": "integer", "minimum": 1},
     "run": {"description": "The package directory name.", "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9-]*$"},
-    "label": {"description": "The run's name in the hand-scored table (e.g. T1), or null when it has none.", "type": ["string", "null"], "minLength": 1},
+    "label": {"description": "The run's name in its hand-scored table (e.g. T1, or the run name).", "type": "string", "minLength": 1},
     "arm": {"type": "string", "minLength": 1},
     "start": {"enum": ["S1", "S2"]},
     "lineage": {"description": "The manifest's lineage label (e.g. L1), or null for a single-run admission.", "type": ["string", "null"], "minLength": 1},

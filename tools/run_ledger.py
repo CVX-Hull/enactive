@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 LEDGER = ROOT / 'data' / 'evaluation' / 'runs.jsonl'
 SCHEMA = 'dev-run/1'
 # Documents holding hand-scored run tables that the ledger cross-checks.
-HAND_TABLES = ('docs/development-runs.md',)
+HAND_TABLES = {'docs/development-runs.md': (372, 382)}
 ATTEMPT_COLUMNS = ('Attempts', 'Attempts (setup)')
 SPEND_COLUMNS = ('$ upper bound', '$ actual')
 
@@ -43,7 +43,7 @@ def validator():
 def read_ledger(path: Path = LEDGER) -> list[dict]:
     """Every row, validated; an unversioned or invalid row, or a repeated (study, run), is an error."""
     check = validator()
-    rows, seen = [], set()
+    rows, seen, sessions = [], set(), set()
     for number, line in enumerate(path.read_text().splitlines(), 1):
         try:
             row = json.loads(line)
@@ -63,6 +63,11 @@ def read_ledger(path: Path = LEDGER) -> list[dict]:
                 raise LedgerError(f'{path.name}:{number}: spend_usd is not provider_usd plus unpriced attempts at their charge')
         elif any(part is not None for part in parts):
             raise LedgerError(f'{path.name}:{number}: provider_usd, unpriced_attempts and unpriced_attempt_usd are recorded together or not at all')
+        if row['unpriced_attempts'] is not None and row['unpriced_attempts'] > row['attempts']:
+            raise LedgerError(f'{path.name}:{number}: more unpriced attempts than charged attempts')
+        if row['session'] in sessions:
+            raise LedgerError(f'{path.name}:{number}: session {row["session"]} is already recorded')
+        sessions.add(row['session'])
         rows.append(row)
     return rows
 
@@ -74,19 +79,18 @@ def _json(path: Path) -> dict:
     return data
 
 
-def package_row(package: Path, *, study: int, label: str | None, spend_usd: str, provider_usd: str | None,
-                unpriced_attempts: int | None, unpriced_attempt_usd: str | None, labels: dict | None = None) -> dict:
-    """One dev-run/1 row from a finished package; `labels` supplies the operator labels of an archived manifest."""
+def package_row(package: Path, *, study: int, label: str, spend_usd: str, provider_usd: str,
+                unpriced_attempts: int, unpriced_attempt_usd: str) -> dict:
+    """One dev-run/1 row from a finished campaign-run/5 package (receipt campaign-receipt/3)."""
     manifest, receipt_path = _json(package / 'manifest.json'), package / 'receipt.json'
     if not receipt_path.is_file():
         raise LedgerError(f'{package.name}: no receipt.json; reconcile the admission before recording it')
     receipt = _json(receipt_path)
     if receipt.get('schema') != 'campaign-receipt/3':
         raise LedgerError(f'{package.name}: unsupported receipt {receipt.get("schema")!r}')
-    if labels is None:
-        if manifest.get('schema') != 'campaign-run/5':
-            raise LedgerError(f'{package.name}: unsupported manifest {manifest.get("schema")!r}')
-        labels = manifest['labels']
+    if manifest.get('schema') != 'campaign-run/5':
+        raise LedgerError(f'{package.name}: unsupported manifest {manifest.get("schema")!r}')
+    labels = manifest['labels']
     if receipt['session'] != manifest['session'] or receipt['source_commit'] != manifest['source_commit']:
         raise LedgerError(f'{package.name}: receipt and manifest disagree on session or source')
     ended = datetime.fromtimestamp(receipt['ended_wall'], timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
@@ -111,14 +115,16 @@ def decimal_text(value: str, name: str) -> str:
 def record(arguments: argparse.Namespace) -> dict:
     provider_usd = decimal_text(arguments.provider_usd, '--provider-usd')
     charge = decimal_text(arguments.unpriced_attempt_usd, '--unpriced-attempt-usd')
-    receipt = _json(arguments.package / 'receipt.json') if (arguments.package / 'receipt.json').is_file() else None
-    attempts = receipt['accounting']['attempts_charged'] if receipt else 0
+    if not (arguments.package / 'receipt.json').is_file():
+        raise LedgerError(f'{arguments.package.name}: no receipt.json; reconcile the admission before recording it')
+    attempts = _json(arguments.package / 'receipt.json')['accounting']['attempts_charged']
     if not 0 <= arguments.provider_records <= attempts:
         raise LedgerError(f'--provider-records must be between 0 and the {attempts} charged attempts')
     unpriced = attempts - arguments.provider_records
     spend = Decimal(provider_usd) + unpriced * Decimal(charge)
-    row = package_row(arguments.package, study=arguments.study, label=arguments.label, spend_usd=str(spend),
-        provider_usd=provider_usd, unpriced_attempts=unpriced, unpriced_attempt_usd=charge)
+    row = package_row(arguments.package, study=arguments.study, label=arguments.label or arguments.package.name,
+        spend_usd=provider_usd if not unpriced else format(spend, 'f'), provider_usd=provider_usd,
+        unpriced_attempts=unpriced, unpriced_attempt_usd=charge)
     rows = read_ledger(arguments.ledger)
     if any((r['study'], r['run']) == (row['study'], row['run']) for r in rows):
         raise LedgerError(f'{row["run"]} is already recorded for study {row["study"]}')
@@ -130,10 +136,12 @@ def record(arguments: argparse.Namespace) -> dict:
     return row
 
 
-def totals(rows: list[dict], study: int, envelope: Decimal | None) -> dict:
+def totals(rows: list[dict], study: int, envelope: Decimal | None, forecast: Decimal | None = None) -> dict:
+    """Spend so far; with an envelope, headroom = envelope - spend - 2 x largest admission. Before any admission the
+    largest is the stated forecast (e.g. #382's $6.50), or 0 when none is given."""
     chosen = [r for r in rows if r['study'] == study]
     spend = sum((Decimal(r['spend_usd']) for r in chosen), Decimal(0))
-    largest = max((Decimal(r['spend_usd']) for r in chosen), default=Decimal(0))
+    largest = max((Decimal(r['spend_usd']) for r in chosen), default=forecast or Decimal(0))
     result = dict(study=study, admissions=len(chosen), attempts=sum(r['attempts'] for r in chosen),
                   wall_seconds=sum(r['wall_seconds'] for r in chosen), spend_usd=str(spend), largest_usd=str(largest))
     if envelope is not None:
@@ -171,14 +179,15 @@ def hand_rows(text: str) -> list[tuple[str, int, int, str, int]]:
     return found
 
 
-def cross_check(rows: list[dict], documents: tuple[str, ...] = HAND_TABLES, root: Path = ROOT) -> list[str]:
-    """Each hand row must equal exactly one labelled ledger row, and each labelled row must have a hand row."""
+def cross_check(rows: list[dict], documents: dict[str, tuple[int, ...]] = HAND_TABLES, root: Path = ROOT) -> list[str]:
+    """Within each document's studies, every hand row must equal exactly one ledger row with its label (a label
+    repeated in a study is told apart by its values), and every ledger row of those studies must have a hand row."""
     errors, matched = [], set()
-    labelled = [r for r in rows if r['label'] is not None]
-    for document in documents:
+    for document, studies in documents.items():
         for label, line, attempts, dollars, wall in hand_rows((root / document).read_text()):
-            candidates = [r for r in labelled if r['label'] == label]
+            candidates = [r for r in rows if r['study'] in studies and r['label'] == label]
             if not candidates:
+                errors.append(f'{document}:{line}: hand row {label} has no ledger row in study {", ".join(map(str, studies))}')
                 continue
             hits = [r for r in candidates if r['attempts'] == attempts and r['wall_seconds'] == wall
                     and dollars == f'{Decimal(r["spend_usd"]):.2f}']
@@ -187,8 +196,9 @@ def cross_check(rows: list[dict], documents: tuple[str, ...] = HAND_TABLES, root
                               f'matches {len(hits)} ledger rows')
             else:
                 matched.add((hits[0]['study'], hits[0]['run']))
-    errors.extend(f'{r["run"]} (label {r["label"]}): no hand-scored row cross-checks it'
-                  for r in labelled if (r['study'], r['run']) not in matched)
+    covered = {study for studies in documents.values() for study in studies}
+    errors.extend(f'{r["run"]} (study {r["study"]}, label {r["label"]}): no hand-scored row cross-checks it'
+                  for r in rows if r['study'] in covered and (r['study'], r['run']) not in matched)
     return errors
 
 
@@ -199,13 +209,14 @@ def main(argv: list[str] | None = None) -> int:
     add = commands.add_parser('record', help='append one finished admission')
     add.add_argument('package', type=Path)
     add.add_argument('--study', type=int, required=True)
-    add.add_argument('--label', help="the run's name in its hand-scored table, if any")
+    add.add_argument('--label', help="the run's name in its hand-scored table (default: the package name)")
     add.add_argument('--provider-records', type=int, required=True, help='charged attempts with a provider record')
     add.add_argument('--provider-usd', required=True, help='decimal provider-reported cost of those attempts')
     add.add_argument('--unpriced-attempt-usd', required=True, help='decimal worst-case charge per unpriced attempt')
     total = commands.add_parser('totals', help="a study's spend, optionally against an envelope")
     total.add_argument('--study', type=int, required=True)
     total.add_argument('--envelope', help='decimal envelope in dollars')
+    total.add_argument('--forecast-largest', help='decimal largest admission assumed before the first one completes')
     commands.add_parser('check', help='validate rows and cross-check the hand-scored tables')
     arguments = parser.parse_args(argv)
     try:
@@ -213,7 +224,9 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(record(arguments), sort_keys=True))
         elif arguments.command == 'totals':
             envelope = Decimal(decimal_text(arguments.envelope, '--envelope')) if arguments.envelope else None
-            print(json.dumps(totals(read_ledger(arguments.ledger), arguments.study, envelope), sort_keys=True))
+            forecast = (Decimal(decimal_text(arguments.forecast_largest, '--forecast-largest'))
+                        if arguments.forecast_largest else None)
+            print(json.dumps(totals(read_ledger(arguments.ledger), arguments.study, envelope, forecast), sort_keys=True))
         else:
             errors = cross_check(read_ledger(arguments.ledger))
             if errors:
