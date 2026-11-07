@@ -48,7 +48,9 @@ provider failure classes.
   - a cross-run channel ([#387](https://github.com/CVX-Hull/enactive/issues/387));
   - a scenario bank ([#388](https://github.com/CVX-Hull/enactive/issues/388)).
 - **Next step.** The long-horizon arm ([#382](https://github.com/CVX-Hull/enactive/issues/382))
-  runs with the frozen evaluator and the spectator.
+  runs with the frozen evaluator and the spectator. The owner approved it on
+  7 November 2026 with a new $150 envelope
+  ([decisions](development-runs.md#long-horizon-arm-382)).
 
 ## Current integrated checkpoint
 
