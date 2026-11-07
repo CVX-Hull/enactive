@@ -344,11 +344,14 @@ killed, and the run ended only on the owner's Pause.
   - **Mode:** 200/200 on a fresh sample after one fix.
   - **Death:** 240/240, but with no deaths in the samples, so recall is unmeasured.
   - **Threat:** 91/91 on empty creature lists only; counting creatures is not yet validated.
-  - **Gap, now closed:** every held-out clock above read Spring day 61 between 8 and
-    10 AM. #382's lineage 1 adds a fresh blind sample, 60/60 exact, covering the
-    afternoon, the evening and the morning of day 62. It also adds hand-checked night and
-    day-rollover frames, all exact. The night itself has no held-out frame, because the
-    survivor slept through it ([lineage 1](#lineage-1-day-viable)).
+  - **Gap, narrowed:** every held-out clock above read Spring day 61 between 8 and
+    10 AM. #382's lineage 1 adds a fresh blind sample of unobstructed sidebar clocks,
+    60/60 exact, covering the afternoon, three evening frames to 7:50 PM and the morning
+    of day 62, plus hand-checked night and day-rollover frames, all exact.
+    - No held-out frame falls between 7:50 PM and 6:00 AM: menus covered the clock until
+      the survivor fell asleep at 10:30 PM, and it then slept in one decision.
+    - Clocks partly covered by a popup, and the severe need labels, have no held-out
+      examples ([lineage 1](#lineage-1-day-viable), `reader-validation.json`).
 - **The game-help aid's target metric moved the wrong way.** The mean longest
   out-of-play streak was 18.0 decisions against the ceiling's 11.6 (+6.4, 95%
   bootstrap interval +1.2 to +12.2). Reading the in-game help is itself out of play,
@@ -499,13 +502,14 @@ cache-rewrite share and image evictions.
 
 ### Admissions
 
-Each admission gets one comment on #382. The rows are added here when each lineage ends.
+Each admission gets one comment on #382. Following the goal's step 7, a lineage's rows
+are added here when it ends; this replaces the earlier "one row per admission" wording.
 
 #### Lineage 1: Day-viable
 
 Morgan Reed, an Evacuee in the world Stirling City (evac shelter A-23), 7 November 2026.
 
-| Admission | Status | Attempts | Decisions (reload) | Game h | Clock | Boundary (hand check) | $ actual | Wall s |
+| Admission | Status | Attempts | Decisions (setup or reload) | Game h | Clock | Boundary (hand check) | $ actual | Wall s |
 | --- | --- | ---: | --- | ---: | --- | --- | ---: | ---: |
 | `lh1a1` | Alive at stop: context capacity, Save and Quit | 253 | 246 (7) | 5.93 | 8:00 AM → 1:55 PM, day 61 | First admission; see the setup correction below | 5.38 | 1,844 |
 | `lh1a2` | Alive at stop: the player judged the screen stalled during a 12-portion craft; no save | 125 | 123 (4) | 1.87 | 1:55 → 3:47 PM, day 61 | Stirling City, Morgan Reed; 1:55:36 PM, gap 0 s | 1.85 | 997 |
@@ -524,10 +528,13 @@ Morgan Reed, an Evacuee in the world Stirling City (evac shelter A-23), 7 Novemb
 - **Memory reuse across admissions:** 0 records.
 - **Cost:** $13.18, which is $0.53 per game hour, so seven days would cost about $90.
 
-**Hand checks** (labels 3–6 in [`labels.jsonl`](../data/evaluation/labels.jsonl)):
-- **Setup correction in `lh1a1`.** The player first entered play as Krista Hobson in a stadium start (world Diamond Bluff). On the next decision it chose Save and Quit and created the assigned Evacuee in Stirling City.
-  - No game time passed and no lineage survivor existed yet, so this is not a continuity failure.
-  - The evaluator reports no episode change.
+**Hand checks** (labels 3–6 in [`labels.jsonl`](../data/evaluation/labels.jsonl), taxonomy version 2):
+- **Setup correction in `lh1a1` (the lead's ruling, pending the owner's confirmation).**
+  - After "Play Now!" the player entered play in a stadium start in world Diamond Bluff at 8:00:00 AM on day 61. On the next decision it chose Save and Quit, and then created the assigned Evacuee, Morgan Reed, in Stirling City; he was first in play at step 20.
+  - The first survivor's name, Krista Hobson, comes only from the save filename.
+  - No game time passed and no lineage survivor existed yet, so the lead rules this a setup correction, not a continuity failure. D3's wording, "a wrong survivor", could be read to cover it. The class would change only if this is ruled a continuity failure.
+  - The evaluator cannot see this kind of switch: identity was read only on Morgan's creation frames, and the clock did not change.
+  - The *Setup* column counts 7 decisions, up to the first survivor's in-play frame. The 12 correction decisions after it (about $0.07) count as play in `lh1a1`'s pace and out-of-play share.
 - **Both boundaries.** The load menu selected Stirling City, whose only character is Morgan Reed, and the first clock continued the previous admission's. Boundary 2 lost 230 s because `lh1a2` ended without saving.
 - **Night and rollover.**
   - 10:30:00 PM, day 61: the survivor falls asleep in the shelter.
@@ -536,7 +543,10 @@ Morgan Reed, an Evacuee in the world Stirling City (evac shelter A-23), 7 Novemb
 - **Day point.** At 8:08:44 AM on day 62, thirst, hunger and rest are blank, weariness is "Fresh" and the body bars are full.
 
 **Time passing.**
-- The survivor slept 7.5 h in one decision.
+- From 7:50 PM the survivor tried to fall asleep for 2.66 h (one long activity), then slept 7.5 h in one decision.
 - It crafted in long batches (quarterstaff, bowl, needle, starch) and boiled water.
-- 62–74% of decisions were out of play, mostly in crafting and item menus.
-- The `lh1a2` stall shows a cost of long activities: after ENTER on a 50-minute batch, seven decisions returned the same frame. The player stopped, and the game log shows a normal shutdown, not a crash.
+- 63–74% of decisions were out of play, mostly in crafting and item menus.
+- **The `lh1a2` stall is unexplained.**
+  - After ENTER on a 12-portion batch (50 minutes 57 seconds), seven decisions returned the identical frame, and the player stopped.
+  - The custodian then ended the game with SIGTERM. The game's log records only its shutdown, so it can neither confirm a busy simulation nor rule out a wait for input.
+  - Eight other long activities, including the 7.5 h sleep, completed normally.

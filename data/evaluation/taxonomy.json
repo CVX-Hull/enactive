@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "codes": [
     {"code": "stall", "name": "Out-of-play stall", "definition": "Fifteen or more consecutive decisions without an in-play screen, after the first in-play frame of the episode.", "examples": ["Keybinding or menu hunts in the in-game help", "A prompt the player does not leave"]},
     {"code": "ineffective_repeat", "name": "Ineffective repeated input", "definition": "The same movement input three or more times in a row while the map region changes by under 1% of its pixels.", "examples": ["Walking into a wall or closed door"]},
@@ -9,6 +9,8 @@
     {"code": "tool_refused", "name": "Tool call refused", "definition": "The host refused a model tool call before dispatch (an orderly stop, a finish or a handoff in progress, or changed arguments).", "examples": ["computer_input after an accepted orderly stop"]},
     {"code": "infrastructure_loss", "name": "Run lost to infrastructure", "definition": "The run ended because the provider failed or custody was lost, not because of play.", "examples": ["A provider error that ended the final actor", "A partial or unknown delivery that stopped the run"]},
     {"code": "identity_or_world_error", "name": "Identity or world error carried", "definition": "A memory record or handoff carried a wrong survivor name or world name that a later observation corrected.", "examples": ["A work record naming the wrong world"]},
-    {"code": "memory_unused", "name": "Memory written but never read back", "definition": "Records were written and no later read, query or context call returned them.", "examples": ["A work record that no successor queried"]}
+    {"code": "memory_unused", "name": "Memory written but never read back", "definition": "Records were written and no later read, query or context call returned them.", "examples": ["A work record that no successor queried"]},
+    {"code": "continuity_failure", "name": "Continuity failure across admissions", "definition": "A continuation admission resumed a different survivor or world, or an admission of a lineage started a new episode (#382 decision D3). A lead's frame check at a boundary is labelled reject when continuity held.", "examples": ["A reload into a newly created world", "A different survivor selected from the load menu"]},
+    {"code": "day_check_failure", "name": "Day check failed", "definition": "At 24 elapsed game hours of a lineage the survivor was dead or showed a severe thirst, hunger or rest label (#382's list). A lead's frame check at the day point is labelled reject when the check passed.", "examples": ["Dehydrated on the sidebar at the day point"]}
   ]
 }
