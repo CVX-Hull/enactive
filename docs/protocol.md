@@ -23,7 +23,7 @@ explains the decision, and [migration](operations/migration.md) explains state t
 | Claims, sources, programs and bounded context | [Player knowledge and executable proposals](contracts/computer-control.md#player-knowledge-and-executable-proposals), [player package](../harness/player/) |
 | Tool arguments | [Current tool descriptions/schemas](../harness/player_tools.py); `.venv/bin/python -m tools.configure_player_tools --describe` |
 | Finite package and cleanup | [Campaign procedure](operations/campaign-run.md), [package validator](../tools/campaign_package.py) |
-| Interpretive run evaluation and the spectator view (planned) | Proposed target formats in [evaluation records, metrics and spectator view](contracts/evaluation.md); rationale in [ADR008](decisions/008-evaluation-and-spectator.md). Not yet current behavior. Nothing in it reaches the player or gates input. |
+| Interpretive run evaluation and the spectator view | [Evaluation records, metrics and spectator view](contracts/evaluation.md); rationale in [ADR008](decisions/008-evaluation-and-spectator.md). Nothing in it reaches the player or gates input. |
 
 ## Controller run ownership
 

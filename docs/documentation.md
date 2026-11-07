@@ -41,6 +41,9 @@ reader task or boundary benefits; no universal file-size quota applies.
 | `harness/computer/` | Mechanical packets, socket, writer, store, target custody and SDL adapter; no game/player semantics. |
 | `harness/player/` | Pure fallible knowledge, image views, bounded programs and context; no process/provider/native authority. |
 | `harness/application.py` and transport adapters | Compose current ports/tools without granting observer authority. |
+| `harness/evaluation/` | Interpretive run evaluation ([contract](contracts/evaluation.md)): game-neutral `core/` and the `cdda/` binding. It is never imported by player, computer or server code. |
+| `harness/viewer/` | The read-only viewer process the spectator page reads through the gateway; outside supervision. |
+| `data/evaluation/` | Git-tracked human evaluation data: failure taxonomy, labels, change records, archive labels and reader validation. |
 | `tools/` | Maintained setup/check/build/campaign entry points and the current player host adapter. |
 | `native/` | Upstream provenance and preparation inputs, not a semantic control backend. |
 | `web/` | The spectator page (served by the supervised gateway) and independent user Pause. |

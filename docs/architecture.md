@@ -26,7 +26,8 @@ logical responsibilities; arrows identify requests, results or user control.
 | Optional player services | Knowledge, corrections, source provenance, program lineage and bounded context; no custody | [Memory and learning](components/memory-learning.md) |
 | Composition service | Connects player proposals to the computer port; retains service requests and context snapshots | [Execution](components/mission-execution.md) |
 | Computer custodian | Exact child/socket/lock handles, serialized operations, original resources and actor capabilities | [Native control](components/native-control.md) |
-| Observer / operator | Passive status/images, bounded linked recent activity, labelled player claims and independent permanent Pause | [Observer operations](components/observer-operations.md) |
+| Observer / operator | Supervised control path (status, frame, attention checks, independent permanent Pause with a recorded reason) and an unsupervised read-only viewer of interpretive evaluation | [Observer operations](components/observer-operations.md) |
+| Run evaluator | Offline, versioned interpretive records and metrics with a game binding; never player-visible, gates nothing | [Evaluation contract](contracts/evaluation.md) |
 | Game | Consumes ordinary SDL input and determines outcomes | Windowed prepared CDDA; no semantic engine bridge |
 
 ## Runtime and state
@@ -174,7 +175,8 @@ source/data deployment; mixed readers and replay are unsupported.
 | Packet/input/custody | Strict schema, socket/backpressure, writer/deadline and uncertainty assertions; [native control](components/native-control.md#assurance-and-evidence) adds compiled behavior. |
 | Memory/program/context | Pure player and composition assertions for provenance, helper fault isolation and original child IDs; [memory](components/memory-learning.md#assurance-and-evidence). |
 | Host/driver | Contract conformance and actual adapter/MCP fixtures, origin-bound handoff, attempt accounting and exact group quiescence; [player interface](components/player-interface.md#assurance-and-evidence). |
-| Spectator/operation | Actual images, mechanical versus claim labels and independent Pause; [observer](components/observer-operations.md#assurance-and-evidence). |
+| Spectator/operation | Control-path checks and Pause independent of the viewer, provenance labels and viewer-unavailable behaviour; [observer](components/observer-operations.md#assurance-and-evidence). |
+| Evaluator/viewer | Synthetic-run evaluator tests, held-out reader validation, viewer API tests and the replayed graphical lane; [evaluation contract](contracts/evaluation.md). |
 
 The [testing guide](testing.md) selects lanes. [Production outcome evidence](acceptance/2026-10-29-computer-control.md)
 covers actual basic input, useful stock, conditional scouting, succession and

@@ -1,13 +1,12 @@
 ---
 owner: lead
 review_trigger: A record, metric, reader, health rule or view-API change, or a new game binding
-status: proposed
+status: active
 ---
 
 # Run evaluation records, metrics and the spectator view
 
-**Status: proposed target formats for [#383](https://github.com/CVX-Hull/enactive/issues/383).**
-This page becomes the current contract when the evaluator ships.
+This page owns the current formats delivered in [#383](https://github.com/CVX-Hull/enactive/issues/383).
 [ADR008](../decisions/008-evaluation-and-spectator.md) owns the rationale.
 
 Every value here is **interpretive**. It is derived from recorded evidence, carries its
