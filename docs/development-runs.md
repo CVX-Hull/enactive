@@ -274,8 +274,12 @@ are recorded as fixes #378–#380 and the actual-spend admission rule.
 The [run evaluator](contracts/evaluation.md) (core 2, CDDA binding 2) re-scored all
 30 runs from their recorded frames, traces and memory stores. These are new,
 generated rows. The hand-scored tables above are unchanged and remain the record of
-the loop's decisions. Regenerate the table with
-`python -m tools.evaluate evaluate-table .runtime/evaluations`.
+the loop's decisions; their attempts, dollars and wall seconds are cross-checked
+against the tracked [run ledger](../data/evaluation/runs.jsonl) by
+`python -m tools.run_ledger check`. The generated tables here are regenerated from the
+tracked [metrics snapshot](../data/evaluation/run-metrics.jsonl) with
+`python -m tools.evaluate evaluate-table data/evaluation/run-metrics.jsonl --write docs/development-runs.md`,
+and the fast checks fail if they drift.
 
 **Frozen for #382.** The following are frozen at the merge commit of the lineage day-check
 change, which each admission records as `source_commit`:
@@ -292,6 +296,7 @@ has its own [evidence manifest](acceptance/assets/spectator-383/summary.json): a
 archived run replayed into a copy, checks and Pause kept working after the viewer was
 killed, and the run ended only on the owner's Pause.
 
+<!-- evaluate-table study=372 core=2 binding=cdda:2 -->
 | Run | Arm | Start | End | Game h | Decisions | Setup | Routine pace | Long activities | Out of play | Longest stall | $ / decision | Large rewrites |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | ceil01 | pilot | S1 | budget | 0.21 | 129 | 7 | 5.0 | 0 · 0.00 h | 59% | 17 | 0.0469 | 96% |
@@ -324,6 +329,7 @@ killed, and the run ended only on the owner's Pause.
 | aidC4 | reflection-aid | S2 | custody | 0.00 | 23 | 7 | — | 0 · 0.00 h | 94% | 16 | 0.0040 | 0% |
 | aidC5 | reflection-aid | S1 | budget | 0.28 | 222 | 17 | 4.0 | 0 · 0.00 h | 54% | 12 | 0.0171 | 61% |
 | aidC6 | reflection-aid | S2 | budget | 2.06 | 226 | 17 | 4.0 | 1 · 1.45 h | 63% | 17 | 0.0158 | 58% |
+<!-- /evaluate-table -->
 
 - **Columns.**
   - *Game h* is survival within the run's last episode.
@@ -525,11 +531,13 @@ Morgan Reed, an Evacuee in the world Stirling City (evac shelter A-23), 7 Novemb
 | `lh1a2` | Alive at stop: the player judged the screen stalled during a 12-portion craft; no save | 125 | 123 (4) | 1.87 | 1:55 → 3:47 PM, day 61 | Stirling City, Morgan Reed; 1:55:36 PM, gap 0 s | 1.85 | 997 |
 | `lh1a3` | Alive at stop: context capacity, Save and Quit | 274 | 269 (10) | 16.98 | 3:43 PM day 61 → 8:42 AM day 62 | Stirling City, Morgan Reed; 3:43:46 PM, rewound 230 s to the autosave | 5.95 | 1,948 |
 
+<!-- evaluate-table study=382 lineage=L1 core=2 binding=cdda:2 -->
 | Run | Arm | Start | End | Game h | Decisions | Setup | Routine pace | Long activities | Out of play | Longest stall | $ / decision | Large rewrites |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | lh1a1 | long-horizon | S1 | player_stop | 5.93 | 246 | 7 | 4.8 | 5 · 5.22 h | 62% | 16 | 0.0219 | 64% |
 | lh1a2 | long-horizon | S1 | player_stop | 1.87 | 123 | 4 | 2.6 | 1 · 1.43 h | 74% | 13 | 0.0151 | 60% |
 | lh1a3 | long-horizon | S1 | player_stop | 16.98 | 269 | 10 | 6.0 | 7 · 15.83 h | 67% | 17 | 0.0221 | 66% |
+<!-- /evaluate-table -->
 
 **Lineage row** (`evaluate-lineage`):
 - **Elapsed:** 24.71 h in 638 decisions, an overall pace of **139.4** game seconds per decision.
@@ -570,10 +578,12 @@ Morgan Hale, an Evacuee in the world Brokaw (evac shelter B-05), 7 November 2026
 | `lh2a1` | Alive at stop: context capacity, Save and Quit | 304 | 295 (7) | 2.49 | 8:00 → 10:29 AM, day 61 | First admission; see the setup restart below | 6.55 | 2,225 |
 | `lh2a2` | Alive at stop: context capacity, Save and Quit | 331 | 323 (4) | 22.55 | 10:29 AM day 61 → 9:02 AM day 62 | Brokaw, Morgan Hale; 10:29:31 AM, gap 0 s | 7.06 | 2,429 |
 
+<!-- evaluate-table study=382 lineage=L2 core=2 binding=cdda:2 -->
 | Run | Arm | Start | End | Game h | Decisions | Setup | Routine pace | Long activities | Out of play | Longest stall | $ / decision | Large rewrites |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | lh2a1 | long-horizon | S1 | player_stop | 2.49 | 295 | 7 | 4.2 | 1 · 0.55 h | 72% | 23 | 0.0222 | 67% |
 | lh2a2 | long-horizon | S1 | player_stop | 22.55 | 323 | 4 | 4.4 | 9 · 20.54 h | 67% | 22 | 0.0218 | 66% |
+<!-- /evaluate-table -->
 
 **Lineage row** (`evaluate-lineage`):
 - **Elapsed:** 25.04 h in 618 decisions, an overall pace of **145.9** game seconds per decision.
@@ -614,10 +624,12 @@ Morgan Vale, an Evacuee in the world Crenshaw (evac shelter A-23), 7 November 20
 | `lh3a1` | Custody stop: input expired during dispatch (partial) | 219 | 208 (8) | 0.17 | 8:00 → about 8:10 AM, day 61 | First admission; see the setup restart below | 2.91 | 1,346 |
 | `lh3a2` | Custody stop: input expired during dispatch (partial) | 104 | 96 (4) | 0.38 | 8:10 → 8:32 AM, day 61 | Crenshaw, Morgan Vale; 8:10:00 AM, rewound 20 s to the autosave | 0.76 | 640 |
 
+<!-- evaluate-table study=382 lineage=L3 core=2 binding=cdda:2 -->
 | Run | Arm | Start | End | Game h | Decisions | Setup | Routine pace | Long activities | Out of play | Longest stall | $ / decision | Large rewrites |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | lh3a1 | long-horizon | S1 | custody | 0.17 | 208 | 8 | 3.0 | 0 · 0.00 h | 67% | 28 | 0.0139 | 59% |
 | lh3a2 | long-horizon | S1 | custody | 0.38 | 96 | 4 | 3.4 | 0 · 0.00 h | 63% | 10 | 0.0078 | 36% |
+<!-- /evaluate-table -->
 
 **Lineage row** (`evaluate-lineage`):
 - **Elapsed:** 0.54 h in 304 decisions, 6.4 game seconds per decision; no long activities.

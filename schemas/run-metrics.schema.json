@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "run-metrics/1: evaluator headline metrics for one session in data/evaluation/run-metrics.jsonl",
+  "description": "A tracked snapshot of an evaluation-record/1 store's headline metrics, keyed by session and evaluator core and binding versions, so the generated run tables can be regenerated from a clone. Metric values are copied verbatim from the record.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "session", "run", "core_version", "binding_id", "binding_version", "arm", "start", "decisions", "metrics"],
+  "properties": {
+    "schema": {"const": "run-metrics/1"},
+    "session": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+    "run": {"type": "string", "minLength": 1},
+    "core_version": {"type": "integer", "minimum": 1},
+    "binding_id": {"type": "string", "minLength": 1},
+    "binding_version": {"type": "integer", "minimum": 1},
+    "arm": {"type": "string"},
+    "start": {"type": "string"},
+    "decisions": {"description": "The record's highest step decision number.", "type": "integer", "minimum": 0},
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "survival.game_hours": {},
+        "mode.out_of_play_share": {},
+        "pace.routine_seconds_per_decision": {},
+        "pace.long_activities": {},
+        "stall.longest": {},
+        "host.dollars_per_decision": {},
+        "host.large_rewrite_share": {}
+      }
+    }
+  }
+}

@@ -175,6 +175,8 @@ error and transport envelopes are `player-computer-result/1`, `player-error/2`
 and `player-transport/2`; canonical operations/HTTP records are unchanged.
 The [host contract](contracts/player-host.md) and [campaign procedure](operations/campaign-run.md)
 own telemetry3, `player-driver/3`, `campaign-receipt/3` and `player-host-inputs/2`.
+The [evaluation contract](contracts/evaluation.md) owns `evaluation-record/1` and the
+tracked `dev-run/1` ledger and `run-metrics/1` snapshot.
 The exact contracts own the complete fields.
 [Migration](operations/migration.md) rejects old stores before effects and preserves
 artifacts/saves as history. Rollback closes writers and selects a coherent earlier

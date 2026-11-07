@@ -16,7 +16,7 @@ try:
 except ImportError as error:
     raise SystemExit("Development dependencies are missing; use .venv/bin/python after installing requirements-dev.lock (see docs/setup.md).") from error
 
-from tools.governance import local_reference, schema_errors
+from tools.governance import check_evidence_ids, local_reference, schema_errors
 
 ROOT_DOCUMENTS = ("README.md", "AGENTS.md", "NOTICE.md", "CONTRIBUTING.md", "SECURITY.md")
 # Current documents outside the root and docs/ trees; checked wherever they exist.
@@ -61,11 +61,11 @@ def check_metadata(root: Path) -> list[str]:
 
 
 def main() -> int:
-    errors = check_metadata(ROOT)
+    errors = check_metadata(ROOT) + check_evidence_ids(ROOT)
     if errors:
         print("Document metadata failed:\n" + "\n".join(errors), file=sys.stderr)
         return 1
-    print("Document stewardship metadata: passed; content truth was not verified.")
+    print("Document stewardship metadata and evidence schema ids: passed; content truth was not verified.")
     return 0
 
 

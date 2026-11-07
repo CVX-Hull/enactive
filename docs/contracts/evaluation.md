@@ -336,6 +336,41 @@ evaluator reads them, and nothing writes them at run time.
 Labels enter records as `human` events. A label never changes a derived value; it sits
 beside it.
 
+## Tracked run ledger and metrics snapshot
+
+Development-run quantities live as data in git, and pages render or check against them
+(S-EVIDENCE). Both files hold no local paths, ports or secrets.
+
+| File | Format | Written by |
+| --- | --- | --- |
+| `runs.jsonl` | One [`dev-run/1`](../../schemas/dev-run.schema.json) row per admission: study issue, run, hand-table label, arm, start, lineage, admission, session, source commit, UTC end, receipt outcome, charged attempts, wall seconds, and spend as decimal strings | `tools/run_ledger.py record`, from the package's `campaign-run/5` manifest and `campaign-receipt/3` plus the operator's provider reconciliation |
+| `run-metrics.jsonl` | One [`run-metrics/1`](../../schemas/run-metrics.schema.json) row per session and evaluator core and binding version: the headline metric values, copied verbatim from the evaluation record | `tools/evaluate.py evaluate-table RECORDS --snapshot data/evaluation/run-metrics.jsonl` |
+
+- **Origin.** `record` reads `campaign-run/5` packages only. The 37 rows of #372 and #382
+  were backfilled once, offline, from the retired operator ledgers and receipts; the 30 #372
+  rows took arm and start from `archive-labels.json` because their manifests are
+  `campaign-run/4`. That was a migration input, not a supported reader.
+- **Spend.** `spend_usd` is an upper bound for the admission rule, not an invoice. It is
+  `provider_usd` plus `unpriced_attempts` × `unpriced_attempt_usd`. A row with an unknown split
+  holds null in all three fields; today that is only the four #372 pre-loop runs, whose
+  every attempt reported usage, priced at the receipt's configured estimate verbatim
+  (including its floating-point digits).
+- **Rejection.** A row without `schema: dev-run/1`, a schema violation (a label is required),
+  a repeated study and run, a repeated session, more unpriced than charged attempts, or an
+  inconsistent spend split is an error naming the line. Snapshot rows are validated against
+  their schema when read and before they are written.
+- **Generated tables.** A `<!-- evaluate-table study=N [lineage=L] core=C binding=ID:V -->` …
+  `<!-- /evaluate-table -->` block is the table of the snapshot rows for that study (and
+  lineage), joined to the ledger on session, at those versions. Markers are whole lines and
+  blocks do not nest; mismatched or malformed markers are an error before anything is
+  written. `evaluate-table … --write` regenerates the blocks, and the fast checks run
+  `--check`, which fails on a stale block.
+- **Hand tables.** ADR008's hand-scored rows are never rewritten. `run_ledger check`, also
+  part of the fast checks, reads the tables with attempt, dollar and wall-second columns in
+  each study's documents. Every hand row must match exactly one ledger row of that study with
+  its label, on attempts, dollars to the cent and wall seconds; every ledger row of the
+  study must have such a hand row. Other tables and prose sums are not checked.
+
 ## Spectator view API (`spectator-view/1`)
 
 All routes are `GET`, return JSON with `"schema": "spectator-view/1"` unless noted, stay
