@@ -21,13 +21,15 @@ this is not a process dashboard or attempt log.
 | `.runtime/build-manifest.json` and its owned temporary workspace | Current build provenance, exact source/configuration and ownership marker. The recorded workspace may be outside the checkout because upstream Make does not reliably accept spaces. Verify the marker before removal; do not infer ownership from a path prefix. |
 | `.runtime/user/` | Project configuration and saves. Preserve accepted checkpoints; archive/member-hash verify stale failed/technical worlds before removing active copies. No save editing or restoration to manufacture success. |
 | `.runtime/computer-sessions/`, `.runtime/evaluations/`, `.runtime/bridge/` | Where current runs write frozen admissions, immutable PNGs, original ledgers/host traces and evaluator records; `bridge/game.lock` is the shared game lock. Closed stores never restore authority. |
+| `.runtime/computer-builds/` | Owned native adapter builds and their receipts, built fresh per [setup](setup.md). |
+| `.runtime/logs/`, `.runtime/credentials.json`, `.runtime/worktrees/` | The prepared wrapper's game log, the operator credential reference (never a key) and the root for any project-owned worktrees. |
 | `.runtime/evidence/` | The sealed, read-only evidence store; [evidence cleanup](operations/evidence-cleanup.md) owns sealing, verification and removal. |
 | `.runtime/check-logs/` | Each checker run's full command output; routine local output under [evidence cleanup](operations/evidence-cleanup.md). |
 | `tools/player_host/node_modules/` | Locked dependencies of the current player host adapter; npm cache stays in project `.cache/npm`. No model/API credential belongs in this directory. [Host setup](setup.md#install-the-generic-gameplay-host) owns install and support limits. |
 | `.codex/`, `.claude/`, `CLAUDE.md`, repository-local Git configuration/hooks | Reviewed project coding-agent tool/permission configuration and public identity. Generated `.codex/config.toml`, `.mcp.json` and `.claude/settings.local.json` are machine-local and ignored. [Operator permissions](operator-permissions.md) separates rule matching, host activation and gameplay authority; [coding-agent hosts](operations/coding-agents.md) maps each host. |
 
-All other run output under `.runtime` from before 7 November 2026, cited or not, was retired
-on the owner's decision; [the retirement record](acceptance/2026-11-07-runtime-retirement.md)
+All other run output under `.runtime` up to the 7 November 2026 retirement, cited or not,
+was deleted on the owner's decision; [the retirement record](acceptance/2026-11-07-runtime-retirement.md)
 lists it. A new run writes only to the locations above or to a path its admission names.
 
 Existing Python, Node, Xcode/Clang, uv and ffmpeg may be reused without modifying

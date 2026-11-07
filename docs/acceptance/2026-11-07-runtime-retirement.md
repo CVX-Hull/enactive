@@ -16,8 +16,9 @@ of hash manifests to Git; the owner chose not to carry it.
 
 The dated records that cite these paths keep their results and limits as written. Their
 raw evidence is no longer available, and this record is where that is stated: a
-`.runtime/<entry>` path in a record dated before 7 November 2026 that is not one of the
-kept entries below refers to retired evidence. The seven studies already sealed in
+`.runtime/<entry>` path named by any tracked record or asset, dated on or before
+7 November 2026 or undated, that is not one of the kept entries below refers to retired
+evidence. The seven studies already sealed in
 `.runtime/evidence/` (#419, #420) are not affected.
 
 ## What was kept
@@ -31,19 +32,23 @@ Live infrastructure named by current code or [the environment](../environment.md
 - `worktrees/`: the empty worktree root;
 - `bridge/game.lock`: the shared game lock (`harness/prepared_app.py`).
 
-`computer-sessions/`, `evaluations/` and `bridge/` are where current tools write new runs,
-so those folders remain, empty apart from `bridge/game.lock`.
+`computer-sessions/` and `evaluations/` are where current tools write new runs, so those
+folders remain, empty; `bridge/` remains only to hold `game.lock`.
 
 ## Checks before retirement
 
-- **Liveness:** no file in `campaigns/`, `missions/`, `computer-sessions/` or `research/` was written after 4 November 2026, and no game process or check run was active.
+- **Liveness:** no file in `campaigns/`, `missions/`, `computer-sessions/` or `research/` was written after 4 November 2026, and no game process or check run was active. Five retired entries were written on 7 November itself:
+  - the `evaluations/` contents, the #383 re-score records, which can be rebuilt from the sealed `372-382-dev-loop` study and the tracked `data/evaluation/run-metrics.jsonl`;
+  - `spectator-lane-3985a51/`, the raw lane behind `docs/acceptance/assets/spectator-383/summary.json`, and its copies `spectator-lane/` and `spectator-lane-final/`;
+  - `spectator-shots/`, test output that the spectator suites recreate.
 - **Secrets:** a scan of every small text file for API-key, token and private-key patterns found only false positives (`task-<hex>` identifiers and pip's vendored public CA bundle). `credentials.json` is a kept live file.
 - **Citations:** every tracked file was searched for `.runtime/<entry>` paths. Paths named only by tests or by code as output locations are not citations.
 
 ## Cited entries retired
 
-41 entries, 20.47 GB, 181,324 files. The citing records are those that name
-`.runtime/<entry>` at this record's commit.
+41 entries, 20.47 GB, 181,323 files. The citing records are those that named
+`.runtime/<entry>` at the parent commit `c1ae593`, before this change edited the current
+pages among them.
 
 | Entry | Size | Files | Newest file | Citing records |
 | --- | ---: | ---: | --- | --- |
@@ -56,7 +61,7 @@ so those folders remain, empty apart from `bridge/game.lock`.
 | `campaign-closeout` | 710.9 MB | 2 | 2026-10-24 | `docs/acceptance/2026-10-24-fresh024-closeout.json`, `docs/acceptance/2026-10-24-independent-seven-day-twenty-fourth-attempt.md`, `docs/environment.md` |
 | `computer-control-181-20261029` | 653.6 MB | 1,629 | 2026-10-29 | `docs/acceptance/2026-10-29-basic-computer-control.md`, `docs/acceptance/assets/basic-computer-control/summary.json` |
 | `iteration329` | 456.3 MB | 7,304 | 2026-11-03 | `docs/acceptance/2026-11-03-adr007-status-quo.md` |
-| `bridge` (contents except `game.lock`) | 368.9 MB | 3,011 | 2026-10-28 | `docs/acceptance/2026-10-19-seven-day-survival-manifest.json`, `docs/changes/070-computer-control-proof.md`, `docs/operations/campaign-run.md` |
+| `bridge` (contents except `game.lock`) | 368.9 MB | 3,010 | 2026-10-28 | `docs/acceptance/2026-10-19-seven-day-survival-manifest.json`, `docs/changes/070-computer-control-proof.md`, `docs/operations/campaign-run.md` |
 | `sessions` | 251.3 MB | 289 | 2026-10-28 | `docs/acceptance/2026-10-17-mvp-manifest.json`, `docs/acceptance/2026-10-17-mvp.md`, `docs/acceptance/2026-10-18-integrated-player-manifest.json`, `docs/acceptance/2026-10-24-fresh024-execution-review.md` and 2 more |
 | `procedure-library` | 214.7 MB | 1,522 | 2026-10-28 | `docs/changes/070-computer-control-proof.md` |
 | `cutover-176-20261029` | 143.4 MB | 575 | 2026-10-29 | `docs/acceptance/2026-10-29-computer-control-development.md`, `docs/acceptance/2026-10-29-computer-control.md` |
@@ -102,6 +107,7 @@ superseded copies such as `spectator-lane` and `spectator-lane-final`.
 
 ## How it was done
 
-The retired entries were moved out of the checkout to a folder in the macOS Trash, so they
-can be restored until the Trash is emptied. Emptying it is the owner's step. No file was
-edited, and none was copied into Git.
+The retired entries were moved out of the checkout to a folder in the macOS Trash, with a
+list of what was moved; the folder held exactly the inventoried 188,093 files and
+21.139 GB. The owner emptied the Trash on 7 November 2026, so the retired evidence is
+permanently deleted. No file was edited, and none was copied into Git.
