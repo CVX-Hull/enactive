@@ -21,14 +21,12 @@ project-local windowed target and original resources; retain failures.
 
 Do not edit saves, inspect hidden engine state, bypass input checks or repair source
 while the actor/game is live. A later source repair never relabels an earlier run.
-The [proof report](../acceptance/2026-10-29-basic-computer-control.md) is earlier
-scoped evidence, not production acceptance. Geometry/resize, Unicode/IME,
-actual-human takeover and second-game qualification remain explicit gaps.
+Geometry/resize, Unicode/IME, actual-human takeover and second-game
+qualification remain explicit gaps.
 
 ## Passive skill acceptance
 
-Old semantic movement/planner contracts are retired. Optional player programs
-receive actual image views and propose the same basic controls; their usefulness
+Optional player programs receive actual image views and propose the same basic controls; their usefulness
 and corrections need authentic observed effects, not a passing evaluator or
 synthetic displacement. No helper result grants custody or certifies success.
 

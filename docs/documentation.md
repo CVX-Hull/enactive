@@ -76,16 +76,19 @@ control lifecycle, not a second contract or work tracker. The
 [authority contract](workflows/authority.md) owns which summaries may restate what.
 
 The [evaluation contract](contracts/evaluation.md) owns the spectator view API.
-Other historical `contracts/` pages are superseded bookmarks for the native7/mission11
-system. They retain original-source links and headings for historical references;
-current readers follow their explicit replacement. Do not treat historical
-contracts or old executable artifacts as another supported backend.
 
 ## Lifecycle and maintenance
 
 Use `active`, `proposed`, `historical` or `superseded` stewardship metadata according
 to artifact authority. Superseded guidance names a repository-relative replacement.
 A timestamp or parser pass does not establish truth. Keep original failures intact.
+
+Historical records and superseded pages are evidence, not runnable instructions,
+another supported backend or authority to import old data; they keep their original
+tested scope. This covers acceptance reports, change briefs, superseded ADRs, the
+superseded `contracts/` pages and old executable artifacts. The superseded pages
+stay so that dated records' links and headings resolve; follow their named
+replacement. Only `contracts/` pages with `status: active` are current contracts.
 
 Update parent/component/contract/callers/storage/operations together when behavior
 changes. Incorporate adopted design into current pages, transfer remaining work

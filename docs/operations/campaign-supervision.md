@@ -122,12 +122,14 @@ game's clock. Apply save/reload/exit criteria in their separately frozen lane.
 | `watch-terminal.json` | `campaign-watch-terminal/3`; attention policy, accepted checks/completion/prior-observation clocks, raced checks, reason, `pause_reason` (`loop`, `fault`, `spend`, `other` or `unspecified`; null when the owner did not press Pause), exact children (the viewer with its pid, port and `supervised: false`, or its launch error), bounded cleanup and custodian disposition as separate facts. |
 | `viewer-stdout.txt`, `viewer-stderr.txt` | The viewer's own output, created exclusively by the supervisor; diagnostics only. |
 
+Supervision refuses watch records of any other version.
+
 Current `computer-start/1`, `computer-ready/1` and `campaign-receipt/3` must match
 the fresh owned custodian/session/source and chronology. Under `required`, a missing
 first check or late terminal coverage cannot certify supervision; under either policy,
 a terminal receipt after the custody deadline, substituted receipt/manifest or unresolved cleanup cannot
 certify supervision success. No wrapper receipt accepts gameplay or restores
-custody; old unversioned records and `watch-start/2` and `watch-terminal/2` records have no current executable reader.
+custody.
 
 [Guard/process tests](../../tests/test_campaign_supervision.py),
 [local HTTP/socket tests](../../tests/test_campaign_watch.py) and
@@ -136,10 +138,8 @@ Fixtures establish protocol behavior, not native game effects, human takeover,
 model competence or real timing. Retain failures before temporary-test pruning;
 use a fresh owned directory. Actual use remains a separately frozen lane.
 
-The engineering lead owns maintenance. Reassess after the first diagnostic;
-replace this helper when the custodian/observer supplies the same independent
-verified-check deadline and owned cleanup, or retire it when the finite-test
-watch policy is explicitly retired. Keep old sealed scripts as evidence rather
-than another current launch path.
+The engineering lead owns maintenance. Replace this helper when the
+custodian/observer supplies the same independent verified-check deadline and owned
+cleanup, or retire it when the finite-test watch policy is explicitly retired.
 
 [Operations index](../runbook.md).

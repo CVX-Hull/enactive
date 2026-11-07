@@ -110,7 +110,6 @@ Limits:
 - A check is evidence that the displayed pixels and status were current at a click.
   Human attention, physical paint and useful game effects are separate.
 - Actual browser/native visual inspection is separate from parser, hash and HTTP
-  checks. [Operations](../runbook.md) route launch, Pause and cleanup. The
-  [production report](../acceptance/2026-10-29-computer-control.md) retains earlier
-  native/player qualification; older reports of the removed Watch, Timeline and
-  Analysis page are scoped historical evidence.
+  checks. [Operations](../runbook.md) route launch, Pause and cleanup; the
+  [production report](../acceptance/2026-10-29-computer-control.md) retains
+  native/player qualification.

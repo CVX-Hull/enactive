@@ -63,7 +63,7 @@ traits, location, tactic, target item or hint.
 | S2 | The player chooses every setup option, including the scenario. |
 
 Runs alternate S1, S2, S1, S2, S1 within an arm. Each run is frozen as a fresh
-`campaign-run/4` package from merged main, with these limits outside the
+`campaign-run/5` package from merged main, with these limits outside the
 player's context:
 
 | Setting | Value |
@@ -81,13 +81,11 @@ validator's worst case is (262,144 × $1.25 + 16,384 × $5.00) / 1M = $0.4096 pe
 attempt, or $102.40 per run. Costs are reconciled against OpenRouter's
 per-generation records.
 
-**Admission rule (from #372 aid run B3).** Packages freeze the standing $1,000
-as their `ceiling_usd` worst-case guard, and an envelope is enforced on actual
-provider-reported spend: a run is admitted only while actual new spend plus twice
-the largest single run so far stays within the envelope
-([budget delegation](operator-permissions.md#finite-gameplay-budget-delegation)).
+**Admission rule.** A run is admitted on actual provider-reported spend under the
+[budget delegation](operator-permissions.md#finite-gameplay-budget-delegation) rule,
+adopted in [#372](acceptance/2026-11-06-development-loop.md#pilot-and-the-admission-rules).
 `python -m tools.run_ledger totals --study ISSUE --envelope USD` applies it to the
-tracked ledger. The rule it replaced is in the [development loop record](acceptance/2026-11-06-development-loop.md#pilot-and-the-admission-rules).
+tracked ledger.
 
 ## Metric
 

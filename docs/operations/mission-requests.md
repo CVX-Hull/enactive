@@ -8,8 +8,7 @@ status: active
 
 # Basic computer tools and the player
 
-The former typed semantic mission API is retired. The current
-[tool schema](../../harness/player_tools.py) exposes basic computer controls plus
+The [tool schema](../../harness/player_tools.py) exposes basic computer controls plus
 optional player-owned knowledge/program/context. Inspect it read-only with:
 
 ```sh
@@ -40,5 +39,3 @@ under original resources. User Pause/unknown input is never handoff-resumable.
 [exact contract](../contracts/computer-control.md).
 
 [Operations index](../runbook.md).
-
-<!-- Retained bookmarks for the coordinated contract migration. -->

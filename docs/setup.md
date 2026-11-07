@@ -55,9 +55,7 @@ Or bootstrap pip inside the local environment:
 .venv/bin/python -m pip --isolated install --index-url https://pypi.org/simple --cache-dir "$PWD/.cache/pip" --require-hashes -r requirements-dev.lock
 ```
 
-Installation needs network; checks never install dependencies. The optional
-verification-pilot runner and memory-study tools are retired. Do not reconstruct
-their old environments as current setup.
+Installation needs network; checks never install dependencies.
 
 ### Install the generic gameplay host
 
@@ -111,7 +109,6 @@ explicit project-local paths and refuses to overwrite the output:
 .venv/bin/python -m tools.configure_player_tools --actor-config /absolute/project/actor.json --output /absolute/project/mcp.json
 ```
 
-The old trust-table `--write` and mission-client configuration are unsupported.
 [Player tools](../harness/player_tools.py) own tool arguments; the
 [player guide](player-guide.md) explains use.
 
@@ -165,8 +162,7 @@ project-local output directory:
 ```
 
 This builds `bridge.dylib` and the native fixture, retaining commands/source/output
-hashes in `build.json`. It is not a gameplay pass. The old semantic native patch
-and experimental computer backend are retired. Launch only through the frozen
+hashes in `build.json`. It is not a gameplay pass. Launch only through the frozen
 [current campaign custodian](operations/campaign-run.md).
 
 ## Common checks and local hook

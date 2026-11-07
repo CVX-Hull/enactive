@@ -9,7 +9,7 @@ status: active
 Enactive separates mechanical computer custody from player-owned interpretation.
 The [overview](overview.md) owns capabilities and limits; the
 [computer-control contract](contracts/computer-control.md) owns exact fields,
-versions and failure behavior. Historical native7/mission11 contracts are replaced.
+versions and failure behavior.
 
 ## Scope and responsibilities
 
@@ -73,7 +73,9 @@ separate; source fixtures do not qualify actual play or human attention.
 
 Fresh session stores live under `.runtime/computer-sessions/`. A selected
 `player-memory/2` store may span fresh native-child sessions. Old runtime formats
-remain inert history; no current reader imports executable old libraries.
+stay inert, except that the evaluator reads the closed set of archived
+`campaign-run/4` development-loop sessions read-only; no current reader imports
+executable old libraries.
 
 ## Action and recovery views
 
@@ -201,10 +203,6 @@ covers actual basic input, useful stock, conditional scouting, succession and
 Save/new-child reload/normal ending. Source fixtures alone cannot qualify those
 effects; useful cadence, general safe navigation and survival remain separate.
 
-<!-- Retained bookmarks for the coordinated contract migration. -->
+<!-- Anchors that dated records link to. -->
 <a id="passive-skill-verification"></a>
 <a id="passive-task-supervision"></a>
-
-Earlier semantic lifecycle and tool bookmarks now route to the current
-computer-control boundary described on this page; the [protocol](protocol.md)
-links the replacement contract and historical references.

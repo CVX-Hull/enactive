@@ -56,9 +56,8 @@ change needs compiled interoperability and real-game qualification as applicable
 
 Parent [architecture assurance](architecture.md#responsibility-assurance) routes
 to component-specific invariants and evidence limits. Tests should observe failure
-responsibility, not mirror implementation literals. Native7's literal-count/AST
-protocol check is retired with its producers; strict ingress/version tests,
-compiled interoperability and independent migration review own the new boundary.
+responsibility, not mirror implementation literals. Strict ingress/version tests,
+compiled interoperability and independent migration review own the boundary.
 
 ## Engineering assurance
 
@@ -66,12 +65,6 @@ The strict lane includes metadata/local references, governance, import boundarie
 syntax/lint, whitespace and diagrams in the declared profile. Metadata, diagram
 hashes and parser success cannot establish content truth. Independent review
 compares changed claims/flows with actual contracts and source.
-
-## Advisory test-impact experiment
-
-The optional historical test-impact/verification pilots are retired. Their
-measurement records remain historical; no old pilot executable or environment is
-part of the current check/acceptance route.
 
 ## Review overlap by failure responsibility
 

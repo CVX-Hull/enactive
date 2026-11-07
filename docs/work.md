@@ -61,29 +61,18 @@ and its linked PR; this page does not duplicate the tracker.
 Each finite package freezes one player host adapter under the
 [player host contract](contracts/player-host.md); each OpenRouter / DeepSeek Flash1017
 medium package pins its provider. The [recorded endpoint dispositions](acceptance/2026-10-29-computer-control.md#failures-and-endpoint-disposition)
-retain Fireworks/BaseTen failures and the explicit DeepInfra ending continuation,
-not a quality ranking. Since [#308](https://github.com/CVX-Hull/enactive/issues/308),
-the current player host retries one transient provider failure per logical request (429,
-502/503/504, a pre-header fetch rejection or OpenRouter's in-flight 402), proven by
-offline fixtures only; no live 5xx has yet exercised it.
+are not a quality ranking. The current player host retries one transient provider
+failure per logical request ([#308](https://github.com/CVX-Hull/enactive/issues/308);
+429, 502/503/504, a pre-header fetch rejection or OpenRouter's in-flight 402), proven
+by offline fixtures only; no live 5xx has yet exercised it.
 
-At [#313](https://github.com/CVX-Hull/enactive/issues/313), the tested `player-host/2`
-routes evicted historical screenshots in whole count-only blocks, so the prompt prefix stayed
-cacheable between evictions. A zero-spend replay of #304's traces predicts that a peak
-of 39 with block 10 cuts input cost 2.5–3.9× against the rolling 30-image policy
-(block 1). A bounded live check on Gemini/Vertex with retained frames followed; its
-cost and provenance are on [#313](https://github.com/CVX-Hull/enactive/issues/313).
-Before running, the lead raised
-the output cap from the Ready decision's 1024 to 2048 tokens and replaced its cost
-rule with a prediction-fidelity and mechanism rule. That was a deviation, recorded
-afterwards on #313 rather than settled beforehand. Under the frozen replacement rule
-the check passed: observed cache reads were 0.90× the prediction, and calls 12–20
-served 68% from cache under blocks against 0% rolling. Under the Ready rule (blocked
-input cost per call ≤ 0.5× rolling) it **failed narrowly** at 0.52× over calls 2–20,
-while passing at 0.44× over calls 12–20. Three frames per call evicts every ~3.3
-calls rather than every 10, so the check proves the mechanism only. Play behaviour with up to 39 frames, residency at game pace and other
-providers remain unmeasured. The later development runs used a peak of 39 images
-evicted in blocks of 10 ([benchmark](development-runs.md#benchmark)).
+The host evicts historical screenshots in whole count-only blocks of each package's
+frozen `context_image_block`, so the prompt prefix stays cacheable between evictions
+(the development runs used peak 39, block 10). A bounded live check on Gemini/Vertex
+proved the mechanism only and narrowly failed its pre-set cost rule (0.52× against
+≤ 0.5×); its cost, provenance and the owner's disposition are on
+[#313](https://github.com/CVX-Hull/enactive/issues/313). Play behaviour with up to
+39 frames, residency at game pace and other providers remain unmeasured.
 
 The compact [player guide](player-guide.md#play-from-observed-effects) now emphasizes
 observed effects, quantity/container scope and confirmation focus. The
@@ -97,20 +86,13 @@ not qualify parent cadence, learning or survival.
 The agreed [player-objective and external-test-control rationale](changes/073-player-objective-and-test-control.md)
 links the context audit to [#359](https://github.com/CVX-Hull/enactive/issues/359).
 [PR #360](https://github.com/CVX-Hull/enactive/pull/360) delivered `player-host/3`,
-projected actor results, fresh `player-memory/2` and `campaign-run/4` on main;
-the [actual-main full controller](https://github.com/CVX-Hull/enactive/actions/runs/42037235120)
-passed on `faa5256f6a215d0e0565233d5f9f485409a8df22`. This is source delivery,
-not a cohort qualification. Completed [#361](https://github.com/CVX-Hull/enactive/issues/361)
-supplies maintained finite-test spectator supervision. The separately approved
-[ongoing-objective diagnostic](acceptance/2026-11-05-player-test-diagnostic.md)
-then demonstrated sampled context separation and direct `cannot_continue`
-stopping, but ended in Alex's death with no food/water gain or local program.
-The first operator-truncated admission remains a failure. The owning issues
-(#359, #164, #145) record the remaining real-use paths, live gates and execution. The [recorded-screen candidate assessment](acceptance/2026-11-05-recorded-player-assessment.md)
-then served two selected cases, with narrowly promising proposals
-and unsuccessful request-limit host endings. No proposal reached a game. The
-result supports shaping further unassisted development play, with separate
-agreement; current player selection and all qualification gates remain unchanged.
+projected actor results and `player-memory/2` on main:
+this is source delivery, not a cohort qualification. The scoped
+[ongoing-objective diagnostic](acceptance/2026-11-05-player-test-diagnostic.md) and
+[recorded-screen candidate assessment](acceptance/2026-11-05-recorded-player-assessment.md)
+below qualify no player; current player selection and all qualification gates are
+unchanged. The owning issues (#359, #164, #145) record the remaining real-use paths,
+live gates and execution.
 
 | Evidence | Scope and limitation |
 | --- | --- |
