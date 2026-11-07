@@ -180,6 +180,7 @@ All three ran on merged `main` at `f00cf4b`.
 - **Limits of the dead-code check.** It used grep reference counts because vulture is not installed, so names referenced only by tests and unused JavaScript exports were not checked.
 - **Limits of the drift spot-check.** It covered about 40 cells, not every number.
 - **Old worktrees left untouched.** Nine older agent worktrees and six `.runtime`
-  source worktrees remain from earlier work. They may hold retained evidence, so the
+  source worktrees remain from earlier work. The audit's own worker worktree
+  (`audit-400-code`, merged as #407) is locked by the agent harness, which removes it. They may hold retained evidence, so the
   audit removed none. Their retirement belongs with #401's backfill, which has to
   happen first.
