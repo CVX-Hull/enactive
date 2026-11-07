@@ -8,8 +8,7 @@ status: active
 
 # Execution: one mechanical writer and optional player services
 
-The old MissionRuntime and semantic lifecycle are retired. Execution now composes
-one [ComputerRuntime](../../harness/computer/runtime.py) with optional player
+Execution composes one [ComputerRuntime](../../harness/computer/runtime.py) with optional player
 services through [Application](../../harness/application.py). The
 [current contract](../contracts/computer-control.md) owns exact interfaces and
 [architecture](../architecture.md) owns system relationships.
@@ -68,5 +67,3 @@ composition, proposal, transport and cleanup boundaries. Check actual assertions
 against the changed invariant; fixtures do not qualify real game usefulness or
 save/reload/ending. The [production report](../acceptance/2026-10-29-computer-control.md)
 owns those actual outcomes and their limits.
-
-<!-- Retained bookmarks for the coordinated contract migration. -->

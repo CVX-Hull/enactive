@@ -51,8 +51,10 @@ records the migration and limits; it was delivered on 29 October 2026, and the
 [computer-control contract](contracts/computer-control.md) owns the running behavior.
 
 Current assumptions: one game/controller and one designated deciding player;
-the active player owns planning and ordinary interpretation, with a separately
-assigned advisory actor for reflection. The engineering lead owns the project,
+the active player owns planning, ordinary interpretation and its own reflection;
+advisers and programs are optional and only propose. The current route has no
+asynchronous learner service. One is added only if a study shows it improves play,
+and the decision to add it is recorded. The engineering lead owns the project,
 admission and verification. This Mac is the validated host. Recheck these before
 additional concurrent games, unattended operation, distribution or platform expansion.
 

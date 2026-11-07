@@ -31,38 +31,27 @@ allocation before admission. Reservation is not an invoice. A failed actor canno
 automatically renew resources. User Pause remains permanent for that admission.
 Changes outside the user's authorized scope still require the applicable decision.
 
-**Development-loop envelope (owner decision D2, 5 November 2026).** For the
-ceiling benchmark and grounding-aid study in the [development loop record](acceptance/2026-11-06-development-loop.md),
-new model/gameplay spend is at most $150, keeping the cumulative actual upper bound
-at or below $410 within the standing $1,000. Within that envelope the lead admits
-development runs without per-run owner approval and reports each run's spend in
-its table row. Stop and ask the owner when the envelope is reached.
+**Actual-spend admission (owner decisions of 6 and 7 November 2026).** For each
+envelope listed below, and for no other spend, packages freeze the standing $1,000 as
+their `ceiling_usd` worst-case guard, and the lead admits a run or admission without
+per-run owner approval only while the study's actual provider-reported new spend plus
+twice its largest single admission so far stays within that envelope. The lead reports
+each run's spend in its table row and stops to ask the owner when the envelope is
+reached. `tools/run_ledger.py totals` applies the rule. A new envelope needs its own
+owner decision.
 
-**Actual-spend admission (owner decision, 6 November 2026).** The per-run
-worst-case reservation ($102.40) would have closed the envelope after about $48
-of actual spend. Packages for this loop therefore freeze the standing $1,000 as
-their `ceiling_usd` worst-case guard, and D2 is enforced on actual
-provider-reported spend: the lead admits a run only while actual new spend plus
-twice the largest single run so far stays within $150.
+Owner-set envelopes, each within the standing $1,000 cumulative cap:
 
-**Long-horizon envelope (owner decision D1 of [#382](https://github.com/CVX-Hull/enactive/issues/382), 7 November 2026).**
-The [long-horizon arm](acceptance/2026-11-07-long-horizon-382.md)
-gets a new $150 envelope under the same actual-spend admission rule: the lead admits an
-admission only while the arm's actual new spend plus twice its largest single admission
-so far stays within $150. The arm starts from the loop's cumulative actual
-$346.948934979, so the cumulative cap is about $497 within the standing $1,000.
-Packages keep the standing $1,000 as their `ceiling_usd` worst-case guard. Stop and ask
-the owner when the envelope is reached. The arm ended on 7 November 2026 having spent
-$30.46 (cumulative actual $377.41); the unspent remainder is not carried to other work.
-
-**Seven-day envelope (owner decision E1 of [#397](https://github.com/CVX-Hull/enactive/issues/397), 7 November 2026).**
-One seven-day development lineage gets a new $150 envelope under the same actual-spend
-admission rule: the lead admits an admission only while the attempt's actual new spend
-plus twice its largest single admission so far stays within $150. The cumulative cap
-is about $527 within the standing $1,000. The owner also chose to build the tracked
-run ledger (#401) and change the input bridge (#396) before any admission, so no
-admission is authorized until both have landed and the package is frozen and reviewed.
-Stop and ask the owner when the envelope is reached.
+- The ceiling benchmark and grounding-aid study ([#372](acceptance/2026-11-06-development-loop.md), decision D2)
+  and the long-horizon arm ([#382](acceptance/2026-11-07-long-horizon-382.md), decision D1) each had a $150
+  new-spend envelope. Both are closed, and an unspent remainder is not carried to other work.
+  Cumulative actual spend after them is $377.41.
+- One seven-day development lineage ([#397](https://github.com/CVX-Hull/enactive/issues/397),
+  decision E1, 7 November 2026) has a new $150 envelope, so the cumulative cap is about
+  $527. The owner chose to change the input bridge
+  ([#396](https://github.com/CVX-Hull/enactive/issues/396)) before any admission: no
+  admission is authorized until that change has landed and the package is frozen
+  and reviewed.
 
 ## Engineering decision and merge delegation
 
@@ -127,7 +116,7 @@ permission refusals and report the exact action and stated reason.
 Engineering process/network permission, mechanical input custody and player
 judgment are separate boundaries. Current CLI commands are `run --run`, `status
 --url` and `pause --url`; the [campaign runbook](operations/campaign-run.md)
-explains frozen admission. Old semantic/mission commands are removed. Setup,
+explains frozen admission. Setup,
 Keychain retrieval, source/GitHub operations and arbitrary shell code retain their
 own tool policies; do not hide them behind an allowed command.
 
@@ -141,12 +130,11 @@ host's maintained checker or headless attempt and the harmless matching/nonmatch
 examples, without a custom policy parser; [coding-agent hosts](operations/coding-agents.md)
 gives the commands. No global trust/profile change is part of this setup.
 
-### Verified loading and retired recorder allowance
+### Verified loading
 
-Earlier policy-loading and recorder observations are retained in
-[the pre-cutover document](https://github.com/CVX-Hull/enactive/blob/433ed973afe312d03f777d8b102a0cba528af746/docs/operator-permissions.md).
-They do not prove newly edited rules are loaded. No restart is required merely to
-repeat a known unchanged setup; use actual execution evidence for the selected route.
+An earlier policy-loading observation does not prove newly edited rules are loaded. No restart is
+required merely to repeat a known unchanged setup; use actual execution evidence for
+the selected route.
 
 ## Dedicated gameplay context
 
@@ -168,7 +156,7 @@ under [development-first delivery](workflows/development.md#development-first-de
 The lead alone schedules the shared runtime. Actual permission failure is evidence,
 not a passing mock or an invitation to evade tool review. Resolve it before play.
 
-### Historical execution gap and current scoped verification
+### Scoped verification
 
 Source, sandbox, native build, real game and provider outcomes are distinct lanes.
 A prefix match or test double does not prove live permissions, normal ending,

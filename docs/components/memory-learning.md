@@ -33,9 +33,8 @@ Memory append/program save explicitly register selected source PNGs before the
 transaction; ordinary Observe does not copy every image into long-term memory.
 The bounded 256MiB BLOB store preserves digest-verified original pixels across
 fresh native-child sessions. A retained reference proves availability, not reading.
-No old campaign-memory/executable import reader is supported. Current stores have
-SQLite `user_version=2`; this migration selects a fresh `player-memory/2` store
-and refuses old stores/libraries without conversion. Retained history grants no authority.
+Current stores are `player-memory/2` with SQLite `user_version=2`; old
+stores/libraries are refused without conversion or import.
 
 Programs receive `program-view/4`: actual source metadata, player-selected crop
 and nearest-neighbour RGB image ≤96×96 and optional player interpretation. The
@@ -77,17 +76,13 @@ The store can span native sessions but cannot reconstitute a capability.
 
 Use the [tool schema](../../harness/player_tools.py) and [player guide](../player-guide.md)
 for authoring/retrieval; exact constraints remain in the current contract/source.
-Historical semantic memory/procedure/advisory formats are superseded, not imported
-as current executable knowledge. Git retains their code and dated reports.
 
 ## Assurance and evidence
 
 [Memory](../../tests/test_player_memory.py), [program](../../tests/test_player_programs.py)
 and [composition](../../tests/test_player_application.py) tests cover provenance,
 bounds, context closure/omissions, actual image inputs, faults and original-child
-collection. They do not establish learning efficacy. The
-[older organic case](../acceptance/2026-10-28-organic-play.md) is scoped to its earlier
-source. The [production report](../acceptance/2026-10-29-computer-control.md) records
+collection. They do not establish learning efficacy. The [production report](../acceptance/2026-10-29-computer-control.md) records
 actual conditional scouting, correction and fresh successor application, with
 failed safety claims and no causal learning-benefit qualification.
 No asynchronous learner service is part of the current route.

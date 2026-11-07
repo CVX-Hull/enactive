@@ -19,9 +19,9 @@ The campaign driver invokes the frozen `host.argv` followed by a mode word with
 frozen provider/MCP/context inputs; no coding-agent launch or resumed-host fallback
 is supported. Host choice
 is independent of whether a particular model passes gameplay qualification.
-Separately admitted gameplay advisers/reflectors use this same core with their
-own explicit context, tool profile and budget; the campaign driver does not
-automatically activate those roles.
+A separately admitted gameplay adviser, which only proposes, uses this same core
+with its own explicit context, tool profile and budget; the campaign driver does
+not automatically activate it.
 
 From this directory, install and test with project-local dependencies:
 

@@ -8,11 +8,13 @@ status: active
 
 # Computer control and player contract
 
-The sole current exact contract is [Computer control and player ports](contracts/computer-control.md).
-It replaces native7/mission11, semantic gameplay commands, phase/identity admission,
-legacy snapshots and old executable-memory import. Unsupported versions refuse;
-there is no compatibility backend. [ADR006](decisions/006-computer-control-boundary.md)
-explains the decision, and [migration](operations/migration.md) explains state treatment.
+The exact contracts are [Computer control and player ports](contracts/computer-control.md),
+the [player host](contracts/player-host.md) and [evaluation](contracts/evaluation.md).
+Unsupported versions refuse; there is no compatibility backend.
+[ADR006](decisions/006-computer-control-boundary.md) explains the boundary decision, and
+[migration](operations/migration.md) explains state treatment. Other pages in
+`contracts/` are superseded; [documentation](documentation.md#lifecycle-and-maintenance)
+says how to read them.
 
 ## Contract navigation
 
@@ -83,46 +85,7 @@ The lead owns source, frozen admission, review and verification. Explorers and
 reviewers send no game input. Advisers and programs are optional fallible aids;
 the current route has no asynchronous semantic worker or hidden game-state feed.
 
-## Historical contract navigation
-
-The current contracts in `contracts/` are [computer control](contracts/computer-control.md),
-[player host](contracts/player-host.md) and [evaluation](contracts/evaluation.md).
-The other pages there are superseded bookmarks for the earlier
-native7/mission11 system. Each links its original accepted source and the current
-replacement. They are not runnable current instructions or authority to import
-old data. Historical acceptance reports retain their original tested scope.
-
-### Retired contracts
-
-Every page below has front-matter `status: superseded`; its replacement is
-[Computer control and player ports](contracts/computer-control.md). None is an authority.
-
-- [Asynchronous reflection and advice](contracts/advisory-reflection.md)
-- [Bounded injected planner](contracts/injected-planner.md)
-- [Controller run ownership](contracts/controller-ownership.md)
-- [Creation, Load transitions and initial menu dismissal](contracts/lifecycle-create-load.md)
-- [Explicit operator recovery](contracts/operator-recovery.md)
-- [Historical procedure and advisory import](contracts/historical-import.md)
-- [Integrated mission lifecycle](contracts/mission-admission.md)
-- [Lifecycle action preconditions](contracts/lifecycle-preconditions.md)
-- [Native commands, visible observations and boundaries](contracts/native-observations.md)
-- [Operation entry refresh and ordinary prompt observation](contracts/operation-observation.md)
-- [Ordinary delivery receipts and observation continuation](contracts/ordinary-delivery.md)
-- [Ordinary direct input and source applicability](contracts/ordinary-input.md)
-- [Ordinary discovery and procedure data](contracts/procedure-programs.md)
-- [Owned normal exit and menu cleanup](contracts/lifecycle-exit.md)
-- [Passive bounded movement skills](contracts/movement-skills.md)
-- [Passive gameplay records and evidence](contracts/gameplay-evidence.md)
-- [Passive mission and deciding-host status](contracts/mission-status.md)
-- [Player Claims and source grounding](contracts/player-claims.md)
-- [Player snapshots, detail and image presentation](contracts/player-snapshots.md)
-- [Player transport and original result collection](contracts/player-transport.md)
-- [Quiescent player replacement](contracts/handoff-issuance.md)
-- [Selected item, inspection and activity composition](contracts/item-inspection.md)
-- [Skill request binding errors](contracts/request-binding.md)
-- [Unknown delivery collection and reconciliation](contracts/delivery-reconciliation.md)
-
-<!-- Retained bookmarks for the coordinated contract migration. -->
+<!-- Anchors that dated records link to. -->
 <a id="lifecycle-action-preconditions"></a>
 <a id="skill-request-binding-errors"></a>
 <a id="selected-item-inspection-and-activity-composition"></a>
@@ -135,7 +98,3 @@ Every page below has front-matter `status: superseded`; its replacement is
 <a id="bounded-injected-planner"></a>
 <a id="passive-bounded-movement-skills"></a>
 <a id="passive-waypoint-supervision"></a>
-
-Earlier semantic lifecycle and tool bookmarks now route to the current
-computer-control boundary described above. The remaining contract pages retain
-their historical source links.

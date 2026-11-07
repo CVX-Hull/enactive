@@ -67,9 +67,8 @@ packet contains `current_source_id` and an ordered `sources` list of unchanged
 `computer-source/1` metadata. Original PNGs are sibling `sources/<source_id>.png`;
 hashes, dimensions, membership, regular files, at most thirty sources and 16 MiB
 total PNGs are checked before serving. Source and focused tests own the executable
-format. The [historical brief](changes/074-recorded-player-assessment.md) records
-the reuse decision and original limits; each new paid assessment needs its own
-frozen protocol and agreement. Offline tests establish the
+format. Each new paid assessment needs its own frozen protocol and agreement
+([rationale](changes/074-recorded-player-assessment.md)). Offline tests establish the
 fixture boundary only; provider compatibility, grounded proposals and actual
 game usefulness require separate evidence. Host request-limit failure remains a
 failure even if complete bounded assessment evidence was collected.
@@ -89,10 +88,9 @@ The selected actor traces and current `campaign-run/5` / `campaign-receipt/3`
 sidecars supply scoped provenance. The control reader opens a current
 `computer-session/1` SQLite snapshot read-only, bounded by table/byte/path limits;
 it neither migrates data nor reconstructs authority. The browser page produces no
-timing record: DOM replacement was neither physical paint nor model attention, and the
-browser timing producer and its summary are removed
+timing record, because DOM replacement is neither physical paint nor model attention
 ([ADR008](decisions/008-evaluation-and-spectator.md)). No runtime-wide
-recursive history scan or legacy executable reader is supported.
+recursive history scan is supported.
 
 ## Investigate a selected interval
 
@@ -127,7 +125,4 @@ resolved visible effects must both remain in the account.
 ## Offline review
 
 Current fixture suites establish their stated source/SDK/socket/SQLite/V8 bounds,
-not organic gameplay. Earlier waypoint/mission evaluation formats and commands are
-retired; their original readers and reports remain in
-[Git history](https://github.com/CVX-Hull/enactive/blob/433ed973afe312d03f777d8b102a0cba528af746/docs/evaluation.md).
-A successful later repair cannot relabel a failed attempt or renew its allocation.
+not organic gameplay. A successful later repair cannot relabel a failed attempt or renew its allocation.

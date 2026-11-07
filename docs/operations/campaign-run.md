@@ -30,9 +30,8 @@ loopback port, original wall/host/aggregate-host seconds, one/two-host limit,
 aggregate HTTP-attempt bound, computer input/request/frame/byte capacities,
 `ending_reserve`, cumulative cap accounting and the operator-only
 [`labels`](#operator-labels). Source/directory mismatch refuses
-before launch. Player stores use SQLite `user_version=2`; select a fresh
-`player-memory/2` store for this migration and preserve unsupported old libraries
-as inert history without conversion.
+before launch. Player stores use SQLite `user_version=2`; unsupported old
+libraries are refused without conversion.
 
 `target.json` has explicit argv/cwd/environment; its first executable and selected
 working directory are absolute. Keep the prepared wrapper/windowed project userdir
@@ -59,9 +58,6 @@ instructions or current evidence. Old source/operation references gain no
 readability, memory registration or input authority from inclusion in the packet;
 current observations and actual tool availability govern the new player. This
 does not replace canonical actor handoff or import a memory record.
-For the next player/test-separation diagnostic, do not import the old quota-bearing
-assignment or report; the [agreed rationale](../changes/073-player-objective-and-test-control.md#next-evidence-decision)
-owns that prospective scope. Historical data is not scrubbed or rewritten.
 
 The validator rejects unsupported/partial/used packages and selected old player
 stores before native effects. It does not create a new allocation or discover a
@@ -147,21 +143,14 @@ this baseline plus each settled run's actual cost, taken as follows:
   allocation.
 
 Only the package being admitted reserves its own attempts at the worst case.
-Record the baseline's sources with each package.
-
-The first baseline under this rule is $47.64. It is about $30–40 billed on this
-project's provider accounts when the old cumulative reservation stood at $1066.80
-(owner reading, upper end), plus #304's $7.64, its account and key usage readings
-over conformance, the visual check and play. If the owner's reading postdates part
-of #304, the sum double-counts, which errs high.
+Record the baseline's sources with each package; the current cumulative actual
+spend is in [operator permissions](../operator-permissions.md).
 
 A custodian report's `cumulative_conservative_reservation_usd` is the baseline plus
 the run's charged attempts at the worst case; it is never the next baseline. The
-field names are unchanged and no format migration applies, because the validator
-and custodian only add a lead-supplied baseline to the package's own worst case. The
-basis changed: receipts before this rule (through #304) record a cumulative
-worst-case baseline, and later ones an actual-cost baseline. Do not compare the two
-across that boundary.
+validator and custodian only add a lead-supplied baseline to the package's own
+worst case. Receipts through #304 record a cumulative worst-case baseline and later
+ones an actual-cost baseline; do not compare the two across that boundary.
 
 The worst-case figure stays a bound on one package, not spend: it charges every
 attempt as if it filled the whole context window and output limit, which
@@ -209,7 +198,7 @@ the experiment arm, start and scenario without inferring them from player data.
 Strings are printable ASCII only (space through `~`), with no control or non-ASCII
 characters. A missing field, extra field or out-of-bound value refuses the package
 before effects, like the rest of the manifest. Packages of any earlier schema
-have no `labels` and are rejected as inert history; there is no conversion or default.
+have no `labels` and are rejected; there is no conversion or default.
 
 **The labels are not player-visible.** Only the validator, evaluator and spectator
 read them. The driver builds every player-visible input (host argv, route, prompt,
@@ -312,10 +301,9 @@ run's name in its hand-scored table (default: the package name). That command ap
 `data/evaluation/runs.jsonl`. The provider figures come from the operator's own
 reconciliation. A package without a receipt gets no row, and no further admission
 is made until the lead resolves it. `run_ledger totals --study ISSUE --envelope USD`
-applies the actual-spend admission rule: new spend plus twice the largest admission,
-with `--forecast-largest USD` standing in for the largest before any admission completes.
-This is the only ledger writer: the untracked `.runtime` arm runners and `lh_admit.py`
-that wrote the #372 and #382 operator ledgers are retired.
+applies the [actual-spend admission rule](../operator-permissions.md#finite-gameplay-budget-delegation),
+with `--forecast-largest USD` standing in for the largest admission before any completes.
+This is the only ledger writer.
 
 Never reopen the selected package, delete markers to retry, replay uncertain input
 or resume after user Pause. Use a fresh coherent admission after owned cleanup.
