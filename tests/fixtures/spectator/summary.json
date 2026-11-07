@@ -1,0 +1,357 @@
+{
+ "schema": "spectator-view/1",
+ "run": "5c7e91d2a4b84f60b3d1e0a9c2f7184d",
+ "facts": {
+  "session": "5c7e91d2a4b84f60b3d1e0a9c2f7184d",
+  "label": "T5",
+  "arm": "Ceiling",
+  "start": "S1",
+  "scenario": "evacuee shelter",
+  "lineage": "ceiling-1",
+  "admission": "A1",
+  "source_commit": "9276672c1f0e4d5ab8e91d3f40c2a77b58e3a1d0",
+  "model": "terra-1",
+  "effort": "medium",
+  "route": "openrouter",
+  "guide_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "assignment_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "limits": {
+   "wall_seconds": 3600,
+   "max_requests": 2000
+  },
+  "ceiling_dollars": 6.0,
+  "started_wall": 1793000000.0,
+  "decisions": 110
+ },
+ "state": "live",
+ "outcome": {
+  "hours": 1.93,
+  "died": false,
+  "censor_reason": null,
+  "decisions": 110,
+  "dollars": 3.13,
+  "source": "derived"
+ },
+ "pause": {
+  "answer": "no",
+  "continuing_cost_per_minute": 0.12,
+  "spent": 3.13,
+  "conditions": [
+   {
+    "id": "feed_alive",
+    "name": "Feed alive",
+    "value": "4 s since the last operation",
+    "threshold": "met at 300 s",
+    "met": false,
+    "dollars_per_minute": 0.12,
+    "source": "recorded"
+   },
+   {
+    "id": "custody",
+    "name": "Custody healthy",
+    "value": "0 uncertain receipts, 0 custody stops",
+    "threshold": "met at any uncertain delivery",
+    "met": false,
+    "dollars_per_minute": 0.12,
+    "source": "recorded"
+   },
+   {
+    "id": "looping",
+    "name": "Not looping",
+    "value": "out-of-play streak 0, game time advancing",
+    "threshold": "met at 30 decisions with no game time",
+    "met": false,
+    "dollars_per_minute": 0.12,
+    "source": "derived"
+   },
+   {
+    "id": "spend",
+    "name": "Spend inside allowance",
+    "value": "$3.13, on pace for $10.33 in an hour",
+    "threshold": "met when projected over $6.00",
+    "met": false,
+    "dollars_per_minute": 0.12,
+    "source": "derived"
+   },
+   {
+    "id": "dead",
+    "name": "Not dead and still spending",
+    "value": "no death screen",
+    "threshold": "met at a death screen with requests continuing",
+    "met": false,
+    "dollars_per_minute": 0.12,
+    "source": "read"
+   }
+  ]
+ },
+ "game_state": {
+  "binding": "cdda 1",
+  "readings": [
+   {
+    "key": "thirst",
+    "label": "Thirst",
+    "value": "blank",
+    "confidence": 0.97,
+    "validation": "passes",
+    "source": "read"
+   },
+   {
+    "key": "hunger",
+    "label": "Hunger",
+    "value": "peckish",
+    "confidence": 0.97,
+    "validation": "passes",
+    "source": "read"
+   },
+   {
+    "key": "weariness",
+    "label": "Weariness",
+    "value": "fresh",
+    "confidence": 0.95,
+    "validation": "passes",
+    "source": "read"
+   },
+   {
+    "key": "pain",
+    "label": "Pain",
+    "value": "blank",
+    "confidence": 0.97,
+    "validation": "passes",
+    "source": "read"
+   },
+   {
+    "key": "limbs",
+    "label": "Limbs",
+    "value": "none critical",
+    "confidence": 0.95,
+    "validation": "passes",
+    "source": "read"
+   },
+   {
+    "key": "threat",
+    "label": "Creatures listed",
+    "value": "0",
+    "confidence": 0.8,
+    "validation": "fails_floor",
+    "source": "read"
+   },
+   {
+    "key": "mode",
+    "label": "Mode",
+    "value": "in play",
+    "confidence": 0.97,
+    "validation": "below_floor",
+    "source": "read"
+   },
+   {
+    "key": "clock",
+    "label": "Game clock",
+    "value": "Spring 61, 9:55 AM",
+    "confidence": 0.99,
+    "validation": "passes",
+    "source": "read"
+   },
+   {
+    "key": "skin",
+    "label": "Skin",
+    "value": null,
+    "abstain": "low contrast",
+    "source": "read"
+   }
+  ]
+ },
+ "findings": [
+  {
+   "id": "f1",
+   "kind": "long_activity",
+   "text": "Long activity: 1.67 game h in 7 decisions",
+   "wall": 1793000871.539,
+   "seq": 88,
+   "source": "derived"
+  },
+  {
+   "id": "f2",
+   "kind": "stall",
+   "text": "Out of play 14 decisions",
+   "wall": 1793000491.573,
+   "seq": 49,
+   "source": "derived"
+  },
+  {
+   "id": "f3",
+   "kind": "handoff",
+   "text": "Handoff to actor 2",
+   "wall": 1793000707.344,
+   "seq": 70,
+   "source": "recorded"
+  },
+  {
+   "id": "f4",
+   "kind": "memory",
+   "text": "Player wrote a work note (cites 5 frames)",
+   "wall": 1793000698.959,
+   "seq": 69,
+   "source": "player_claim"
+  },
+  {
+   "id": "f5",
+   "kind": "stall",
+   "text": "Out of play 6 decisions",
+   "wall": 1793000792.056,
+   "seq": 79,
+   "source": "derived"
+  }
+ ],
+ "ladder": [
+  {
+   "name": "Left the shelter",
+   "reached": true,
+   "at_hours": 0.05
+  },
+  {
+   "name": "Found water",
+   "reached": true,
+   "at_hours": 0.4
+  },
+  {
+   "name": "Built a shelter",
+   "reached": false,
+   "at_hours": null
+  }
+ ],
+ "metrics": [
+  {
+   "name": "Survival",
+   "key": "hours",
+   "group": "Outcome",
+   "value": 1.93,
+   "unit": "game h",
+   "source": "derived",
+   "count": 110,
+   "denominator": 110,
+   "missing": 0
+  },
+  {
+   "name": "Hand-scored survival",
+   "key": "hand_hours",
+   "group": "Outcome",
+   "value": 2.1,
+   "unit": "game h",
+   "source": "human",
+   "count": 1,
+   "denominator": 1,
+   "missing": 0
+  },
+  {
+   "name": "Setup decisions",
+   "key": "setup",
+   "group": "Outcome",
+   "value": 9,
+   "unit": "decisions",
+   "source": "read",
+   "count": 9,
+   "denominator": 110,
+   "missing": 0
+  },
+  {
+   "name": "Long activity game time",
+   "key": "long_h",
+   "group": "Where game time came from",
+   "value": 1.67,
+   "unit": "game h",
+   "source": "derived",
+   "count": 1,
+   "denominator": 110,
+   "missing": 0
+  },
+  {
+   "name": "Routine pace",
+   "key": "pace",
+   "group": "Where game time came from",
+   "value": 11.4,
+   "unit": "game s / decision",
+   "source": "derived",
+   "count": 109,
+   "denominator": 110,
+   "missing": 0
+  },
+  {
+   "name": "Stalls of 15 or more decisions",
+   "key": "stalls",
+   "group": "Stalls and repeats",
+   "value": 0,
+   "unit": "stalls",
+   "source": "derived",
+   "count": 0,
+   "denominator": 110,
+   "missing": 0
+  },
+  {
+   "name": "Longest out-of-play streak",
+   "key": "stall_longest",
+   "group": "Stalls and repeats",
+   "value": 14,
+   "unit": "decisions",
+   "source": "read",
+   "count": 110,
+   "denominator": 110,
+   "missing": 3
+  },
+  {
+   "name": "Large cache rewrites",
+   "key": "rewrite",
+   "group": "Stalls and repeats",
+   "value": 0.58,
+   "unit": "share of spend",
+   "source": "derived",
+   "count": 4,
+   "denominator": 37,
+   "missing": 0
+  },
+  {
+   "name": "Tool refusals",
+   "key": "refused",
+   "group": "Stalls and repeats",
+   "value": 2,
+   "unit": "calls",
+   "source": "recorded",
+   "count": 2,
+   "denominator": 140,
+   "missing": 0
+  }
+ ],
+ "readers": [
+  {
+   "name": "Game clock",
+   "accuracy": 0.99,
+   "floor": 0.97,
+   "status": "passes",
+   "n": 120,
+   "held_out": true
+  },
+  {
+   "name": "Mode",
+   "accuracy": 0.94,
+   "floor": 0.97,
+   "status": "below_floor",
+   "n": 120,
+   "held_out": true
+  },
+  {
+   "name": "Vitals",
+   "accuracy": 0.97,
+   "floor": 0.95,
+   "status": "passes",
+   "n": 120,
+   "held_out": true
+  },
+  {
+   "name": "Creature list",
+   "accuracy": 0.8,
+   "floor": 0.9,
+   "status": "fails_floor",
+   "n": 120,
+   "held_out": true
+  }
+ ]
+}

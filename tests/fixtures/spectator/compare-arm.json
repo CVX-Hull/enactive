@@ -1,0 +1,180 @@
+{
+ "schema": "spectator-view/1",
+ "group": "arm",
+ "horizon": 0.5,
+ "groups": [
+  {
+   "name": "Ceiling",
+   "n": 5,
+   "deaths": 1,
+   "censored": 4,
+   "km": {
+    "t": [
+     0.0,
+     0.31,
+     0.75
+    ],
+    "s": [
+     1.0,
+     0.8,
+     0.8
+    ],
+    "lo": [
+     1.0,
+     0.5138,
+     0.5138
+    ],
+    "hi": [
+     1.0,
+     1,
+     1
+    ]
+   },
+   "median": "not_reached",
+   "rmst": {
+    "value": 0.42,
+    "lo": 0.33,
+    "hi": 0.5,
+    "horizon": 0.5,
+    "method": "bootstrap"
+   },
+   "excluded": []
+  },
+  {
+   "name": "Zoom aid",
+   "n": 5,
+   "deaths": 0,
+   "censored": 5,
+   "km": {
+    "t": [
+     0.0,
+     0.75
+    ],
+    "s": [
+     1.0,
+     1.0
+    ],
+    "lo": [
+     1.0,
+     1.0
+    ],
+    "hi": [
+     1.0,
+     1.0
+    ]
+   },
+   "median": "not_reached",
+   "rmst": {
+    "value": 0.45,
+    "lo": 0.33,
+    "hi": 0.5,
+    "horizon": 0.5,
+    "method": "bootstrap"
+   },
+   "excluded": []
+  },
+  {
+   "name": "Game-help aid",
+   "n": 5,
+   "deaths": 1,
+   "censored": 4,
+   "km": {
+    "t": [
+     0.0,
+     0.22,
+     0.75
+    ],
+    "s": [
+     1.0,
+     0.8,
+     0.8
+    ],
+    "lo": [
+     1.0,
+     0.5138,
+     0.5138
+    ],
+    "hi": [
+     1.0,
+     1,
+     1
+    ]
+   },
+   "median": "not_reached",
+   "rmst": {
+    "value": 0.42,
+    "lo": 0.33,
+    "hi": 0.5,
+    "horizon": 0.5,
+    "method": "bootstrap"
+   },
+   "excluded": []
+  },
+  {
+   "name": "Reflection aid",
+   "n": 5,
+   "deaths": 0,
+   "censored": 5,
+   "km": {
+    "t": [
+     0.0,
+     0.75
+    ],
+    "s": [
+     1.0,
+     1.0
+    ],
+    "lo": [
+     1.0,
+     1.0
+    ],
+    "hi": [
+     1.0,
+     1.0
+    ]
+   },
+   "median": "not_reached",
+   "rmst": {
+    "value": 0.45,
+    "lo": 0.33,
+    "hi": 0.5,
+    "horizon": 0.5,
+    "method": "bootstrap"
+   },
+   "excluded": [
+    "C2"
+   ]
+  }
+ ],
+ "versions": [
+  {
+   "group": "Ceiling",
+   "source_commit": "9276672",
+   "starts": "3 S1 / 1 S2",
+   "model_route": "terra-1 medium openrouter",
+   "evaluator": "core 1 / cdda 1"
+  },
+  {
+   "group": "Zoom aid",
+   "source_commit": "9276672",
+   "starts": "3 S1 / 1 S2",
+   "model_route": "terra-1 medium openrouter",
+   "evaluator": "core 1 / cdda 1"
+  },
+  {
+   "group": "Game-help aid",
+   "source_commit": "41ab9d2",
+   "starts": "3 S1 / 1 S2",
+   "model_route": "terra-1 medium openrouter",
+   "evaluator": "core 1 / cdda 1"
+  },
+  {
+   "group": "Reflection aid",
+   "source_commit": "9276672",
+   "starts": "3 S1 / 1 S2",
+   "model_route": "terra-1 medium openrouter",
+   "evaluator": "core 1 / cdda 1"
+  }
+ ],
+ "note": "No arm reaches 50% deaths, so median survival is not reached anywhere."
+}

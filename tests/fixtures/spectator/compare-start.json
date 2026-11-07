@@ -1,0 +1,112 @@
+{
+ "schema": "spectator-view/1",
+ "group": "start",
+ "horizon": 0.5,
+ "groups": [
+  {
+   "name": "S1 Evacuee start",
+   "n": 12,
+   "deaths": 0,
+   "censored": 12,
+   "km": {
+    "t": [
+     0.0,
+     0.75
+    ],
+    "s": [
+     1.0,
+     1.0
+    ],
+    "lo": [
+     1.0,
+     1.0
+    ],
+    "hi": [
+     1.0,
+     1.0
+    ]
+   },
+   "median": "not_reached",
+   "rmst": {
+    "value": 0.45,
+    "lo": 0.33,
+    "hi": 0.5,
+    "horizon": 0.5,
+    "method": "bootstrap"
+   },
+   "excluded": []
+  },
+  {
+   "name": "S2 player-chosen start",
+   "n": 8,
+   "deaths": 2,
+   "censored": 6,
+   "km": {
+    "t": [
+     0.0,
+     0.22,
+     0.31,
+     0.75
+    ],
+    "s": [
+     1.0,
+     0.875,
+     0.75,
+     0.75
+    ],
+    "lo": [
+     1.0,
+     0.6879,
+     0.4881,
+     0.4881
+    ],
+    "hi": [
+     1.0,
+     1,
+     1,
+     1
+    ]
+   },
+   "median": "not_reached",
+   "rmst": {
+    "value": 0.39,
+    "lo": 0.33,
+    "hi": 0.5,
+    "horizon": 0.5,
+    "method": "bootstrap"
+   },
+   "excluded": []
+  }
+ ],
+ "versions": [
+  {
+   "group": "Ceiling",
+   "source_commit": "9276672",
+   "starts": "3 S1 / 1 S2",
+   "model_route": "terra-1 medium openrouter",
+   "evaluator": "core 1 / cdda 1"
+  },
+  {
+   "group": "Zoom aid",
+   "source_commit": "9276672",
+   "starts": "3 S1 / 1 S2",
+   "model_route": "terra-1 medium openrouter",
+   "evaluator": "core 1 / cdda 1"
+  },
+  {
+   "group": "Game-help aid",
+   "source_commit": "41ab9d2",
+   "starts": "3 S1 / 1 S2",
+   "model_route": "terra-1 medium openrouter",
+   "evaluator": "core 1 / cdda 1"
+  },
+  {
+   "group": "Reflection aid",
+   "source_commit": "9276672",
+   "starts": "3 S1 / 1 S2",
+   "model_route": "terra-1 medium openrouter",
+   "evaluator": "core 1 / cdda 1"
+  }
+ ],
+ "note": "All deaths are in S2 starts."
+}

@@ -1,0 +1,646 @@
+{
+ "schema": "spectator-view/1",
+ "calls": [
+  {
+   "request_id": "req-027",
+   "tool_call_id": "tc-000",
+   "actor": 2,
+   "decision": 81,
+   "tool": "player_source",
+   "status": "ok",
+   "latency_ms": 600,
+   "result_bytes": 2329,
+   "wall": 1793000805.039,
+   "step": {
+    "seq": 80,
+    "source_id": "5c7e91d2a4b84f60b3d1e0a9c2f7184d-81"
+   },
+   "keys": "UP"
+  },
+  {
+   "request_id": "req-028",
+   "tool_call_id": "tc-001",
+   "actor": 2,
+   "decision": 82,
+   "tool": "computer_input",
+   "status": "ok",
+   "latency_ms": 790,
+   "result_bytes": 1759,
+   "wall": 1793000812.587,
+   "step": {
+    "seq": 81,
+    "source_id": "5c7e91d2a4b84f60b3d1e0a9c2f7184d-82"
+   },
+   "keys": ""
+  },
+  {
+   "request_id": "req-028",
+   "tool_call_id": "tc-002",
+   "actor": 2,
+   "decision": 83,
+   "tool": "computer_input",
+   "status": "ok",
+   "latency_ms": 427,
+   "result_bytes": 1285,
+   "wall": 1793000820.133,
+   "step": {
+    "seq": 82,
+    "source_id": "5c7e91d2a4b84f60b3d1e0a9c2f7184d-83"
+   },
+   "keys": "g"
+  },
+  {
+   "request_id": "req-028",
+   "tool_call_id": "tc-003",
+   "actor": 2,
+   "decision": 84,
+   "tool": "computer_input",
+   "status": "ok",
+   "latency_ms": 524,
+   "result_bytes": 722,
+   "wall": 1793000825.924,
+   "step": {
+    "seq": 83,
+    "source_id": "5c7e91d2a4b84f60b3d1e0a9c2f7184d-84"
+   },
+   "keys": "DOWN DOWN"
+  },
+  {
+   "request_id": "req-029",
+   "tool_call_id": "tc-004",
+   "actor": 2,
+   "decision": 85,
+   "tool": "computer_input",
+   "status": "ok",
+   "latency_ms": 210,
+   "result_bytes": 878,
+   "wall": 1793000832.82,
+   "step": {
+    "seq": 84,
+    "source_id": "5c7e91d2a4b84f60b3d1e0a9c2f7184d-85"
+   },
+   "keys": "ENTER"
+  },
+  {
+   "request_id": "req-029",
+   "tool_call_id": "tc-005",
+   "actor": 2,
+   "decision": 86,
+   "tool": "computer_input",
+   "status": "ok",
+   "latency_ms": 878,
+   "result_bytes": 1570,
+   "wall": 1793000840.341,
+   "step": {
+    "seq": 85,
+    "source_id": "5c7e91d2a4b84f60b3d1e0a9c2f7184d-86"
+   },
+   "keys": "g"
+  },
+  {
+   "request_id": "req-029",
+   "tool_call_id": "tc-006",
+   "actor": 2,
+   "decision": 87,
+   "tool": "computer_input",
+   "status": "ok",
+   "latency_ms": 501,
+   "result_bytes": 2302,
+   "wall": 1793000852.275,
+   "step": {
+    "seq": 86,
+    "source_id": "5c7e91d2a4b84f60b3d1e0a9c2f7184d-87"
+   },
+   "keys": "DOWN DOWN"
+  },
+  {
+   "request_id": "req-030",
+   "tool_call_id": "tc-007",
+   "actor": 2,
+   "decision": 88,
+   "tool": "player_source",
+   "status": "ok",
+   "latency_ms": 423,
+   "result_bytes": 1563,
+   "wall": 1793000859.637,
+   "step": {
+    "seq": 87,
+    "source_id": "5c7e91d2a4b84f60b3d1e0a9c2f7184d-88"
+   },
+   "keys": "."
+  },
+  {
+   "request_id": "req-030",
+   "tool_call_id": "tc-008",
+   "actor": 2,
+   "decision": 89,
+   "tool": "computer_input",
+   "status": "ok",
+   "latency_ms": 817,
+   "result_bytes": 1456,
+   "wall": 1793000871.539,
+   "step": {
+    "seq": 88,
+    "source_id": "5c7e91d2a4b84f60b3d1e0a9c2f7184d-89"
+   },
+   "keys": "g"
+  },
+  {
+   "request_id": "req-030",
+   "tool_call_id": "tc-009",
+   "actor": 2,
+   "decision": 90,
+   "tool": "computer_input",
+   "status": "ok",
+   "latency_ms": 888,
+   "result_bytes": 740,
+   "wall": 1793000884.625,
+   "step": {
+    "seq": 89,
+    "source_id": "5c7e91d2a4b84f60b3d1e0a9c2f7184d-90"
+   },
+   "keys": "RIGHT"
+  },
+  {
+   "request_id": "req-031",
+   "tool_call_id": "tc-010",
+   "actor": 2,
+   "decision": 91,
+   "tool": "computer_input",
+   "status": "ok",
+   "latency_ms": 411,
+   "result_bytes": 2098,
+   "wall": 1793000891.39,
+   "step": {
+    "seq": 90,
+    "source_id": "5c7e91d2a4b84f60b3d1e0a9c2f7184d-91"
+   },
+   "keys": ""
+  },
+  {
+   "request_id": "req-031",
+   "tool_call_id": "tc-011",
+   "actor": 2,
+   "decision": 92,
+   "tool": "computer_input",
+   "status": "ok",
+   "latency_ms": 679,
+   "result_bytes": 640,
+   "wall": 1793000901.92,
+   "step": {
+    "seq": 91,
+    "source_id": "5c7e91d2a4b84f60b3d1e0a9c2f7184d-92"
+   },
+   "keys": "ESC"
+  },
+  {
+   "request_id": "req-031",
+   "tool_call_id": "tc-012",
+   "actor": 2,
+   "decision": 93,
+   "tool": "computer_input",
+   "status": "ok",
+   "latency_ms": 313,
+   "result_bytes": 1241,
+   "wall": 1793000910.784,
+   "step": {
+    "seq": 92,
+    "source_id": "5c7e91d2a4b84f60b3d1e0a9c2f7184d-93"
+   },
+   "keys": "LEFT LEFT"
+  },
+  {
+   "request_id": "req-032",
+   "tool_call_id": "tc-013",
+   "actor": 2,
+   "decision": 94,
+   "tool": "computer_input",
+   "status": "refused",
+   "latency_ms": 864,
+   "result_bytes": 1039,
+   "wall": 1793000918.359,
+   "step": {
+    "seq": 93,
+    "source_id": "5c7e91d2a4b84f60b3d1e0a9c2f7184d-94"
+   },
+   "keys": "DOWN"
+  },
+  {
+   "request_id": "req-032",
+   "tool_call_id": "tc-014",
+   "actor": 2,
+   "decision": 95,
+   "tool": "player_source",
+   "status": "ok",
+   "latency_ms": 768,
+   "result_bytes": 1504,
+   "wall": 1793000925.363,
+   "step": {
+    "seq": 94,
+    "source_id": "5c7e91d2a4b84f60b3d1e0a9c2f7184d-95"
+   },
+   "keys": "LEFT"
+  },
+  {
+   "request_id": "req-032",
+   "tool_call_id": "tc-015",
+   "actor": 2,
+   "decision": 96,
+   "tool": "computer_input",
+   "status": "ok",
+   "latency_ms": 211,
+   "result_bytes": 1230,
+   "wall": 1793000936.712,
+   "step": {
+    "seq": 95,
+    "source_id": "5c7e91d2a4b84f60b3d1e0a9c2f7184d-96"
+   },
+   "keys": "e"
+  },
+  {
+   "request_id": "req-033",
+   "tool_call_id": "tc-016",
+   "actor": 2,
+   "decision": 97,
+   "tool": "computer_input",
+   "status": "ok",
+   "latency_ms": 136,
+   "result_bytes": 709,
+   "wall": 1793000947.574,
+   "step": {
+    "seq": 96,
+    "source_id": "5c7e91d2a4b84f60b3d1e0a9c2f7184d-97"
+   },
+   "keys": "e"
+  },
+  {
+   "request_id": "req-033",
+   "tool_call_id": "tc-017",
+   "actor": 2,
+   "decision": 98,
+   "tool": "computer_input",
+   "status": "ok",
+   "latency_ms": 130,
+   "result_bytes": 1844,
+   "wall": 1793000955.117,
+   "step": {
+    "seq": 97,
+    "source_id": "5c7e91d2a4b84f60b3d1e0a9c2f7184d-98"
+   },
+   "keys": "UP"
+  },
+  {
+   "request_id": "req-033",
+   "tool_call_id": "tc-018",
+   "actor": 2,
+   "decision": 99,
+   "tool": "computer_input",
+   "status": "ok",
+   "latency_ms": 898,
+   "result_bytes": 1729,
+   "wall": 1793000964.326,
+   "step": {
+    "seq": 98,
+    "source_id": "5c7e91d2a4b84f60b3d1e0a9c2f7184d-99"
+   },
+   "keys": "DOWN DOWN"
+  },
+  {
+   "request_id": "req-034",
+   "tool_call_id": "tc-019",
+   "actor": 2,
+   "decision": 100,
+   "tool": "computer_input",
+   "status": "ok",
+   "latency_ms": 742,
+   "result_bytes": 1286,
+   "wall": 1793000970.691,
+   "step": {
+    "seq": 99,
+    "source_id": "5c7e91d2a4b84f60b3d1e0a9c2f7184d-100"
+   },
+   "keys": ""
+  },
+  {
+   "request_id": "req-034",
+   "tool_call_id": "tc-020",
+   "actor": 2,
+   "decision": 101,
+   "tool": "computer_input",
+   "status": "ok",
+   "latency_ms": 339,
+   "result_bytes": 1896,
+   "wall": 1793000978.865,
+   "step": {
+    "seq": 100,
+    "source_id": "5c7e91d2a4b84f60b3d1e0a9c2f7184d-101"
+   },
+   "keys": "g"
+  },
+  {
+   "request_id": "req-034",
+   "tool_call_id": "tc-021",
+   "actor": 2,
+   "decision": 102,
+   "tool": "player_source",
+   "status": "ok",
+   "latency_ms": 193,
+   "result_bytes": 678,
+   "wall": 1793000984.377,
+   "step": {
+    "seq": 101,
+    "source_id": "5c7e91d2a4b84f60b3d1e0a9c2f7184d-102"
+   },
+   "keys": "5"
+  },
+  {
+   "request_id": "req-035",
+   "tool_call_id": "tc-022",
+   "actor": 2,
+   "decision": 103,
+   "tool": "computer_input",
+   "status": "ok",
+   "latency_ms": 422,
+   "result_bytes": 1791,
+   "wall": 1793000995.404,
+   "step": {
+    "seq": 102,
+    "source_id": "5c7e91d2a4b84f60b3d1e0a9c2f7184d-103"
+   },
+   "keys": "UP"
+  },
+  {
+   "request_id": "req-035",
+   "tool_call_id": "tc-023",
+   "actor": 2,
+   "decision": 104,
+   "tool": "computer_input",
+   "status": "ok",
+   "latency_ms": 366,
+   "result_bytes": 1745,
+   "wall": 1793001008.074,
+   "step": {
+    "seq": 103,
+    "source_id": "5c7e91d2a4b84f60b3d1e0a9c2f7184d-104"
+   },
+   "keys": "e"
+  },
+  {
+   "request_id": "req-035",
+   "tool_call_id": "tc-024",
+   "actor": 2,
+   "decision": 105,
+   "tool": "computer_input",
+   "status": "ok",
+   "latency_ms": 294,
+   "result_bytes": 1802,
+   "wall": 1793001013.829,
+   "step": {
+    "seq": 104,
+    "source_id": "5c7e91d2a4b84f60b3d1e0a9c2f7184d-105"
+   },
+   "keys": "LEFT"
+  },
+  {
+   "request_id": "req-036",
+   "tool_call_id": "tc-025",
+   "actor": 2,
+   "decision": 106,
+   "tool": "computer_input",
+   "status": "ok",
+   "latency_ms": 511,
+   "result_bytes": 971,
+   "wall": 1793001027.78,
+   "step": {
+    "seq": 105,
+    "source_id": "5c7e91d2a4b84f60b3d1e0a9c2f7184d-106"
+   },
+   "keys": "DOWN DOWN"
+  },
+  {
+   "request_id": "req-036",
+   "tool_call_id": "tc-026",
+   "actor": 2,
+   "decision": 107,
+   "tool": "computer_input",
+   "status": "ok",
+   "latency_ms": 321,
+   "result_bytes": 1550,
+   "wall": 1793001039.615,
+   "step": {
+    "seq": 106,
+    "source_id": "5c7e91d2a4b84f60b3d1e0a9c2f7184d-107"
+   },
+   "keys": "e"
+  },
+  {
+   "request_id": "req-036",
+   "tool_call_id": "tc-027",
+   "actor": 2,
+   "decision": 108,
+   "tool": "computer_input",
+   "status": "ok",
+   "latency_ms": 230,
+   "result_bytes": 2020,
+   "wall": 1793001045.878,
+   "step": {
+    "seq": 107,
+    "source_id": "5c7e91d2a4b84f60b3d1e0a9c2f7184d-108"
+   },
+   "keys": "ESC"
+  },
+  {
+   "request_id": "req-037",
+   "tool_call_id": "tc-028",
+   "actor": 2,
+   "decision": 109,
+   "tool": "player_source",
+   "status": "ok",
+   "latency_ms": 595,
+   "result_bytes": 2258,
+   "wall": 1793001057.058,
+   "step": {
+    "seq": 108,
+    "source_id": "5c7e91d2a4b84f60b3d1e0a9c2f7184d-109"
+   },
+   "keys": ""
+  },
+  {
+   "request_id": "req-037",
+   "tool_call_id": "tc-029",
+   "actor": 2,
+   "decision": 110,
+   "tool": "computer_input",
+   "status": "ok",
+   "latency_ms": 186,
+   "result_bytes": 2030,
+   "wall": 1793001066.738,
+   "step": {
+    "seq": 109,
+    "source_id": "5c7e91d2a4b84f60b3d1e0a9c2f7184d-110"
+   },
+   "keys": "ESC"
+  },
+  {
+   "request_id": "req-027",
+   "tool_call_id": "tc-030",
+   "actor": 2,
+   "decision": 81,
+   "tool": "computer_input",
+   "status": "ok",
+   "latency_ms": 353,
+   "result_bytes": 1408,
+   "wall": 1793000805.039,
+   "step": {
+    "seq": 80,
+    "source_id": "5c7e91d2a4b84f60b3d1e0a9c2f7184d-81"
+   },
+   "keys": "UP"
+  },
+  {
+   "request_id": "req-028",
+   "tool_call_id": "tc-031",
+   "actor": 2,
+   "decision": 82,
+   "tool": "computer_input",
+   "status": "ok",
+   "latency_ms": 561,
+   "result_bytes": 2116,
+   "wall": 1793000812.587,
+   "step": {
+    "seq": 81,
+    "source_id": "5c7e91d2a4b84f60b3d1e0a9c2f7184d-82"
+   },
+   "keys": ""
+  },
+  {
+   "request_id": "req-028",
+   "tool_call_id": "tc-032",
+   "actor": 2,
+   "decision": 83,
+   "tool": "computer_input",
+   "status": "ok",
+   "latency_ms": 627,
+   "result_bytes": 1101,
+   "wall": 1793000820.133,
+   "step": {
+    "seq": 82,
+    "source_id": "5c7e91d2a4b84f60b3d1e0a9c2f7184d-83"
+   },
+   "keys": "g"
+  },
+  {
+   "request_id": "req-028",
+   "tool_call_id": "tc-033",
+   "actor": 2,
+   "decision": 84,
+   "tool": "computer_input",
+   "status": "ok",
+   "latency_ms": 388,
+   "result_bytes": 765,
+   "wall": 1793000825.924,
+   "step": {
+    "seq": 83,
+    "source_id": "5c7e91d2a4b84f60b3d1e0a9c2f7184d-84"
+   },
+   "keys": "DOWN DOWN"
+  },
+  {
+   "request_id": "req-029",
+   "tool_call_id": "tc-034",
+   "actor": 2,
+   "decision": 85,
+   "tool": "computer_input",
+   "status": "ok",
+   "latency_ms": 566,
+   "result_bytes": 1632,
+   "wall": 1793000832.82,
+   "step": {
+    "seq": 84,
+    "source_id": "5c7e91d2a4b84f60b3d1e0a9c2f7184d-85"
+   },
+   "keys": "ENTER"
+  },
+  {
+   "request_id": "req-029",
+   "tool_call_id": "tc-035",
+   "actor": 2,
+   "decision": 86,
+   "tool": "player_source",
+   "status": "ok",
+   "latency_ms": 300,
+   "result_bytes": 1212,
+   "wall": 1793000840.341,
+   "step": {
+    "seq": 85,
+    "source_id": "5c7e91d2a4b84f60b3d1e0a9c2f7184d-86"
+   },
+   "keys": "g"
+  },
+  {
+   "request_id": "req-029",
+   "tool_call_id": "tc-036",
+   "actor": 2,
+   "decision": 87,
+   "tool": "computer_input",
+   "status": "ok",
+   "latency_ms": 844,
+   "result_bytes": 1496,
+   "wall": 1793000852.275,
+   "step": {
+    "seq": 86,
+    "source_id": "5c7e91d2a4b84f60b3d1e0a9c2f7184d-87"
+   },
+   "keys": "DOWN DOWN"
+  },
+  {
+   "request_id": "req-030",
+   "tool_call_id": "tc-037",
+   "actor": 2,
+   "decision": 88,
+   "tool": "computer_input",
+   "status": "ok",
+   "latency_ms": 416,
+   "result_bytes": 1005,
+   "wall": 1793000859.637,
+   "step": {
+    "seq": 87,
+    "source_id": "5c7e91d2a4b84f60b3d1e0a9c2f7184d-88"
+   },
+   "keys": "."
+  },
+  {
+   "request_id": "req-030",
+   "tool_call_id": "tc-038",
+   "actor": 2,
+   "decision": 89,
+   "tool": "computer_input",
+   "status": "ok",
+   "latency_ms": 590,
+   "result_bytes": 1995,
+   "wall": 1793000871.539,
+   "step": {
+    "seq": 88,
+    "source_id": "5c7e91d2a4b84f60b3d1e0a9c2f7184d-89"
+   },
+   "keys": "g"
+  },
+  {
+   "request_id": "req-030",
+   "tool_call_id": "tc-039",
+   "actor": 2,
+   "decision": 90,
+   "tool": "computer_input",
+   "status": "ok",
+   "latency_ms": 641,
+   "result_bytes": 802,
+   "wall": 1793000884.625,
+   "step": {
+    "seq": 89,
+    "source_id": "5c7e91d2a4b84f60b3d1e0a9c2f7184d-90"
+   },
+   "keys": "RIGHT"
+  }
+ ],
+ "next": null
+}

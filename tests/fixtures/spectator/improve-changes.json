@@ -1,0 +1,153 @@
+{
+ "schema": "spectator-view/1",
+ "changes": [
+  {
+   "id": "help",
+   "name": "Game-help aid (B1-B9)",
+   "arms": [
+    "Ceiling",
+    "Game-help aid"
+   ],
+   "commits": [
+    "41ab9d2"
+   ],
+   "hypothesis": "Reading the in-game help shortens keybinding and menu hunts.",
+   "target_failure": "Keybinding and menu hunts",
+   "target_metric": {
+    "name": "Longest out-of-play streak per run",
+    "direction": "lower",
+    "min_effect": 5
+   },
+   "uptake_metric": "Runs that wrote a keybinding procedure",
+   "guards": [
+    "Survival",
+    "Spend"
+   ],
+   "verdict": "wrong_way",
+   "notes": "The aid is itself out of play, so the target metric is confounded by the change.",
+   "uptake": {
+    "text": "3 of 5 runs wrote a keybinding procedure",
+    "n": 3,
+    "denominator": 5
+   },
+   "arms_values": [
+    {
+     "arm": "Ceiling",
+     "runs": [
+      {
+       "run": "A1",
+       "target": 12,
+       "uptake": 0,
+       "guard": 0.52
+      },
+      {
+       "run": "A2",
+       "target": 9,
+       "uptake": 0,
+       "guard": 0.31
+      },
+      {
+       "run": "T5",
+       "target": 14,
+       "uptake": 0,
+       "guard": 2.1
+      }
+     ]
+    },
+    {
+     "arm": "Game-help aid",
+     "runs": [
+      {
+       "run": "B1",
+       "target": 31,
+       "uptake": 1,
+       "guard": 0.5
+      },
+      {
+       "run": "B2",
+       "target": 27,
+       "uptake": 1,
+       "guard": 0.22
+      }
+     ]
+    }
+   ],
+   "interval": {
+    "estimate": 17.0,
+    "lo": 6.5,
+    "hi": 26.0,
+    "level": 0.95,
+    "method": "bootstrap",
+    "n_a": 3,
+    "n_b": 2
+   },
+   "guard_note": "Survival: not detected at n = 5",
+   "source": "derived"
+  },
+  {
+   "id": "zoom",
+   "name": "Zoom aid (A1-A6)",
+   "arms": [
+    "Ceiling",
+    "Zoom aid"
+   ],
+   "commits": [
+    "5d084ca"
+   ],
+   "hypothesis": "Zoomed re-reads reduce perception errors.",
+   "target_failure": "Perception errors",
+   "target_metric": {
+    "name": "Survival and milestones",
+    "direction": "higher",
+    "min_effect": null
+   },
+   "uptake_metric": "Zoomed re-reads",
+   "guards": [
+    "Survival"
+   ],
+   "verdict": "untested",
+   "notes": "An aid that is never used cannot be judged.",
+   "uptake": {
+    "text": "0 zoomed re-reads in 6 runs",
+    "n": 0,
+    "denominator": 6
+   },
+   "arms_values": [],
+   "interval": null,
+   "guard_note": "Survival: not detected",
+   "source": "human"
+  },
+  {
+   "id": "retry",
+   "name": "Provider retry fixes (#378-#380)",
+   "arms": [
+    "Ceiling"
+   ],
+   "commits": [
+    "c313346"
+   ],
+   "hypothesis": "Retries cut runs lost to provider errors.",
+   "target_failure": "Runs lost to provider errors",
+   "target_metric": {
+    "name": "Infrastructure losses per arm",
+    "direction": "lower",
+    "min_effect": 1
+   },
+   "uptake_metric": "Retries fired",
+   "guards": [
+    "Play unchanged"
+   ],
+   "verdict": "moved",
+   "notes": "Retries fired as designed.",
+   "uptake": {
+    "text": "Retries fired as designed",
+    "n": null,
+    "denominator": null
+   },
+   "arms_values": [],
+   "interval": null,
+   "guard_note": "No change to play",
+   "source": "human"
+  }
+ ]
+}
