@@ -26,6 +26,9 @@ export function Chart({option, label, className = '', onReady, epoch, tabindex, 
   return html`<div class="chart ${className}" ref=${box} role=${role} aria-label=${label} tabindex=${tabindex} onKeyDown=${onKeyDown} ...${extra}></div>`;
 }
 
+/** ECharts renders tooltip strings as HTML, so every run, tool or key name goes through this first. */
+export const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+
 const axisBase = C => ({axisLine: {lineStyle: {color: C.line}}, axisLabel: {color: C.muted, fontFamily: C.mono, fontSize: 10}, splitLine: {show: false}});
 const tooltipBase = C => ({backgroundColor: C.surface, borderColor: C.line, textStyle: {color: C.fg, fontSize: 11}});
 
@@ -52,7 +55,7 @@ export function timelineOption({steps, requests, markers, t0, cursorSeq}) {
     tooltip: {trigger: 'axis', ...tooltipBase(C), formatter: ps => {
       const x = ps[0].axisValue;
       const s = steps.reduce((a, b) => (Math.abs(rel(b.wall) - x) < Math.abs(rel(a.wall) - x) ? b : a), steps[0]);
-      return s ? `Step ${s.seq} · +${(+x).toFixed(1)} min<br>${s.mode === 'in_play' ? 'in play' : 'out of play'}<br>${(s.keys || []).join(' ').replace(/[<>&]/g, '')}` : '';
+      return s ? `Step ${s.seq} · +${(+x).toFixed(1)} min<br>${s.mode === 'in_play' ? 'in play' : 'out of play'}<br>${esc((s.keys || []).join(' '))}` : '';
     }},
     grid: grids.map(g => ({...g, left: 96, right: 16})),
     xAxis: grids.map((g, k) => ({...base, type: 'value', gridIndex: k, min: 0, max: xMax, axisLabel: {...base.axisLabel, show: k === 3, formatter: v => `+${v} min`}})),
@@ -111,7 +114,7 @@ export function transitionsOption(tools, transitions, label) {
   const names = [...new Set(transitions.flatMap(t => [t[0], t[1]]))].sort((a, b) => (order.get(b) || 0) - (order.get(a) || 0));
   const max = Math.max(1, ...transitions.map(t => t[2]));
   return {animation: false, aria: {enabled: true},
-    tooltip: {...tooltipBase(C), formatter: p => `${label(names[p.value[1]])} → ${label(names[p.value[0]])}: ${p.value[2]}`},
+    tooltip: {...tooltipBase(C), formatter: p => `${esc(label(names[p.value[1]]))} → ${esc(label(names[p.value[0]]))}: ${esc(p.value[2])}`},
     grid: {left: 110, right: 16, top: 10, bottom: 70},
     xAxis: {type: 'category', data: names.map(label), axisLabel: {color: C.muted, rotate: 40, fontSize: 10}, name: 'next', nameTextStyle: {color: C.muted}},
     yAxis: {type: 'category', inverse: true, data: names.map(label), axisLabel: {color: C.muted, fontSize: 10}, name: 'previous', nameTextStyle: {color: C.muted}},
@@ -126,7 +129,7 @@ export function dotsOption(arms, threshold, metricName) {
   const names = arms.map(a => a.arm);
   const data = [];
   arms.forEach((a, k) => a.runs.forEach(r => { if (r.target !== null && r.target !== undefined) data.push({value: [r.target, k], name: r.run}); }));
-  return {animation: false, aria: {enabled: true}, grid: {left: 110, right: 20, top: 10, bottom: 34}, tooltip: {...tooltipBase(C), formatter: p => `${p.name}: ${p.value[0]}`},
+  return {animation: false, aria: {enabled: true}, grid: {left: 110, right: 20, top: 10, bottom: 34}, tooltip: {...tooltipBase(C), formatter: p => `${esc(p.name)}: ${esc(p.value[0])}`},
     xAxis: {type: 'value', name: metricName, nameLocation: 'middle', nameGap: 22, nameTextStyle: {color: C.muted}, axisLabel: {color: C.muted}, splitLine: {lineStyle: {color: C.line, opacity: 0.4}}},
     yAxis: {type: 'category', data: names, axisLabel: {color: C.fg}},
     series: [{type: 'scatter', symbolSize: 12, data, itemStyle: {color: p => (p.value[1] ? C.watch : C.accent)},

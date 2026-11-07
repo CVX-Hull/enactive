@@ -189,3 +189,14 @@ test('viewer unavailable greys interpretive panels, says so in the strip and a b
   await waitFor(() => !document.getElementById('viewer').classList.contains('down'), null, 12000);
   assert.equal(await page.$('.banner.down'), null);
 });
+
+test('chart tooltips escape run and tool names before ECharts renders them as HTML', async () => {
+  const out = await page.evaluate(async () => {
+    const {dotsOption, transitionsOption} = await import('/app/charts.js');
+    const evil = '<img src=x onerror=alert(1)>"&';
+    const dots = dotsOption([{arm: 'a', runs: [{run: evil, target: 1}]}], null, 'm').tooltip.formatter({name: evil, value: [1, 0]});
+    const trans = transitionsOption([{tool: evil, calls: 1}], [[evil, evil, 2]], x => x).tooltip.formatter({value: [0, 0, 2]});
+    return [dots, trans];
+  });
+  for (const html of out) { assert.ok(!html.includes('<img'), html); assert.match(html, /&lt;img src=x onerror=alert\(1\)&gt;&quot;&amp;/); }
+});
