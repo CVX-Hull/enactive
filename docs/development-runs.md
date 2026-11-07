@@ -282,7 +282,10 @@ admission records as `source_commit`:
 - player-host telemetry v3 with `context-manifest`.
 
 Any change to one of these during #382 starts a new arm. All 30 records above were
-re-scored with the frozen evaluator.
+re-scored with the frozen evaluator. The spectator's graphical lane on the final source
+has its own [evidence manifest](acceptance/assets/spectator-383/summary.json): an
+archived run replayed into a copy, checks and Pause kept working after the viewer was
+killed, and the run ended only on the owner's Pause.
 
 | Run | Arm | Start | End | Game h | Decisions | Setup | Routine pace | Long activities | Out of play | Longest stall | $ / decision | Large rewrites |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
