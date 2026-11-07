@@ -569,22 +569,28 @@ Morgan Hale, an Evacuee in the world Brokaw (evac shelter B-05), 7 November 2026
 - **Elapsed:** 25.04 h in 618 decisions, an overall pace of **145.9** game seconds per decision.
 - **Long activities:** 21.08 h, a share of **0.842**.
 - **Day check:** passed at `lh2a2` step 304, at 24.724 h with a lag of 0.724 h, with no severe need.
-  - 8:00 AM on day 62 fell inside a 55-minute long activity, and the next five steps hid the clock behind prompts.
-- **Memory reuse across admissions:** 1 record. A `player_memory_query` at `lh2a2` step 129 returned a record written in `lh2a1`.
+  - The last clock below the day was 7:48:24 AM (step 298, the end of a digging-stick craft).
+  - Steps 299–303 were crafting-menu navigation with the clock hidden, so no game time passed.
+  - Step 304's input started a stick craft. 8:00 AM fell inside that single decision, which ended at 8:43:28.
+- **Memory reuse across admissions:** 1 record. A `player_memory_query` at `lh2a2` step 129 returned three records, one of them written in `lh2a1`; the other two were written earlier in `lh2a2`.
 - **Cost:** $13.60, which is $0.54 per game hour, so seven days would cost about $91.
 
 **Hand checks** (labels 7–9 in [`labels.jsonl`](../data/evaluation/labels.jsonl)):
 - **Setup restart in `lh2a1` (the lead's ruling, pending the owner's confirmation, as for lineage 1).**
   - After "Play Now!" the player entered play once as a random Evacuee in world Jayuya at 8:00:00 AM. The save file names Al Joyner.
   - On the next decision it chose Save and Quit, and then built its own Evacuee, Morgan Hale (Str, Dex, Int and Per all 10), in Brokaw. Morgan Hale was first in play at step 22, again at 8:00:00 AM.
-  - Unlike lineage 1, the first survivor already met the assignment, so this is the player's own restart, not a correction.
-  - The *Setup* column counts the 7 decisions to the first survivor's in-play frame.
+  - Unlike lineage 1's stadium start, this first survivor was in an Evacuee start. Its setup was chosen at random by "Play Now!", not by the player.
+  - The evaluator cannot see this kind of switch: identity was read only on Morgan Hale's creation frames (steps 20–21), and the clock stayed at 8:00:00.
+  - The *Setup* column counts the 7 decisions to the first survivor's in-play frame. The 13 restart decisions after it ($0.55, about 8% of `lh2a1`'s spend) count as play in `lh2a1`'s out-of-play share and dollars per decision.
 - **Boundary.** The load menu selected Brokaw, whose only character is Morgan Hale. The first in-play clock, 10:29:31 AM on day 61, equals `lh2a1`'s last reading.
 - **Day point.** At 8:43:28 AM on day 62 thirst read "Hydrated", hunger and rest were blank, weariness "Fresh" and the body bars full.
 
 **Time passing** (checked from frames for three of the nine `lh2a2` long activities):
 - a 3.9 h stretch crafting a wooden spear in the shelter (12:20 → 4:11 PM);
-- sleep from about 9:21 PM to 6:44:50 AM, in two stretches of 4.1 h and 5.2 h. The survivor woke "Very thirsty" and drank well before the day point;
+- the night, 9.3 h in two stretches of 4.1 h and 5.2 h:
+  - The survivor stopped waiting at 9:21:11 PM and lay down.
+  - It had trouble sleeping, for a stretch whose length the frames do not show.
+  - It was asleep by 1:30:00 AM and woke at 6:44:50 AM "Very thirsty". It drank by 6:46 AM, well before the day point;
 - the other six long activities total 7.3 h and were not individually checked.
 
 `lh2a1` passed only 2.49 h with one long activity, close to the #372 loop's pace. That compares with lineage 1's first admission at 5.93 h and five long activities, at a similar decision count and cost.
