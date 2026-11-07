@@ -18,7 +18,7 @@ Terra survive through the current pixels-and-keys boundary? Then branch, by a ru
 fixed in advance, to cost reduction or to game-neutral grounding aids.
 [#145](https://github.com/CVX-Hull/enactive/issues/145)'s seven-day gate is the
 north star; [#164](https://github.com/CVX-Hull/enactive/issues/164)'s cadence
-criteria are deferred until a capability baseline exists. Development runs use
+criteria were deferred until a capability baseline existed. Development runs use
 best-effort observation, a $150 envelope and one table row plus one issue comment each.
 
 **Result, 6 November 2026** ([#372](https://github.com/CVX-Hull/enactive/issues/372)).
@@ -42,8 +42,12 @@ provider failure classes.
 - **Power check.** Censored survival and the milestone ladder cannot separate arms at
   affordable n, so changes now pre-register targeted process metrics on change pages.
   Survival, cost and setup serve as guards.
-- **Out of scope:** ADR008 lists what it deferred (intent visibility, label writing,
-  judges, a cross-run channel and a scenario bank), each with its own issue.
+- **Deferred by ADR008 until after #382:** intent visibility
+  ([#384](https://github.com/CVX-Hull/enactive/issues/384)), label writing
+  ([#385](https://github.com/CVX-Hull/enactive/issues/385)), judges
+  ([#386](https://github.com/CVX-Hull/enactive/issues/386)), a cross-run channel
+  ([#387](https://github.com/CVX-Hull/enactive/issues/387)) and a scenario bank
+  ([#388](https://github.com/CVX-Hull/enactive/issues/388)).
 
 **Long-horizon arm, 7 November 2026** ([#382](https://github.com/CVX-Hull/enactive/issues/382),
 [development runs](development-runs.md#arm-result)).
