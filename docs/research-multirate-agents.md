@@ -1,10 +1,16 @@
 ---
 owner: lead
 review_trigger: Changes to active/background roles, executable learning, memory consolidation or responsiveness claims
-status: active
+status: historical
+date: 2026-11-07
+scope: 2026-10-24 literature synthesis behind the multi-level player direction, which was not adopted
 ---
 
 # Different decision horizons, fewer synchronous model calls
+
+**Historical.** The multi-level direction this synthesis supported was investigated
+as ADR-007 and not adopted ([status-quo record](acceptance/2026-11-03-adr007-status-quo.md)).
+The literature summary remains background.
 
 Research cutoff: **2026-10-24**. The question is how to make Enactive responsive
 without sacrificing organic discovery, current feedback or independent learning.

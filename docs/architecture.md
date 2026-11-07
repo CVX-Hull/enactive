@@ -118,6 +118,18 @@ programs and context consume only the computer port and explicit player data.
 CDDA-specific preparation stays outside that package. This separation is a source
 boundary; actual portability to a second game remains unqualified.
 
+Current coupling. None of it is in the shared player code. The only entry inside
+`harness/computer/` is the platform adapter, which assumes macOS and SDL but no game:
+
+| Coupling | Where | Owner |
+| --- | --- | --- |
+| CDDA prepared launch script and app paths (`Cataclysm.app`, `cataclysm-tiles`) | [`harness/prepared_app.py`](../harness/prepared_app.py) | [Setup](setup.md) |
+| Game download, verification and patching | [`tools/setup.py`](../tools/setup.py), [`tools/patch_game.py`](../tools/patch_game.py) | [Setup](setup.md) |
+| CDDA screen readers and the only registered evaluation binding | [`harness/evaluation/cdda/`](../harness/evaluation/cdda), the viewer's `BINDINGS` | [Evaluation contract](contracts/evaluation.md) |
+| CDDA-class vocabulary in the game-neutral evaluation core (modes including `dead`, threat buckets) | [`harness/evaluation/core/binding.py`](../harness/evaluation/core/binding.py) | [Evaluation contract](contracts/evaluation.md) |
+| macOS SDL adapter loaded into the game process | [`harness/computer/native/`](../harness/computer/native) | [Native control](components/native-control.md) |
+| CDDA-specific play guidance | [Player guide](player-guide.md) | Player guide |
+
 ## Separate recovery and memory boundaries
 
 Remembered sources/claims and old process IDs never restore custody. Player

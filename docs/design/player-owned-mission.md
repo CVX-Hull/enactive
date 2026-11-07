@@ -8,7 +8,12 @@ scope: Original mission migration design and development checkpoints; current be
 
 # Player-owned mission design
 
-This is the accepted design deliverable for [#137](https://github.com/CVX-Hull/enactive/issues/137),
+**Historical, pre-cutover.** The mission runtime, semantic skills and
+`harness/gameplay/` modules this page describes were retired in #289 under
+[ADR006](../decisions/006-computer-control-boundary.md). The
+[computer/player contract](../contracts/computer-control.md) owns current behaviour.
+
+This was the accepted design deliverable for [#137](https://github.com/CVX-Hull/enactive/issues/137),
 with implemented component checkpoints and remaining acceptance work below; it
 is not a gameplay admission. The coordinated mission/8 ingress now replaces the
 waypoint runtime. [Architecture](../architecture.md) and [protocol](../protocol.md)
@@ -36,7 +41,7 @@ claimed from this functional delivery.
 Reader question: **who remembers, who chooses, and who can send input?**
 The existing proposed logical diagram applies to this design:
 
-![One player retrieves supported state and pending work, requests bounded skills and revises memory from observed results; current guards and user Pause remain separate.](../diagrams/player-owned-memory.svg)
+![Current player-owned memory: the diagram now shows player-memory/2 and player-program/2, which replaced the bounded skills this historical design describes.](../diagrams/player-owned-memory.svg)
 
 Boxes are responsibilities, not required model tiers/processes. Solid arrows are
 requests and updates; dashed arrows are returned observations/results. Retained

@@ -1,11 +1,15 @@
 ---
 owner: lead
-status: historical
+status: superseded
 date: '2026-10-17'
 scope: Accepted design decision for future native recovery and bounded gameplay implementation
+replacement: docs/decisions/006-computer-control-boundary.md
 ---
 
 # ADR 005 — Grounded gameplay before model routing
+
+**Superseded** on 28 October 2026 by [ADR006](006-computer-control-boundary.md),
+which replaced its engine-specific authority direction with basic computer control.
 
 Decision accepted after independent review on 2026-10-17 for #6 and #17. This selects future implementation
 interfaces; it does not change current runtime support. The

@@ -78,12 +78,13 @@ player context or any input.
 
 The gateway forwards `GET /api/view/*` to it on its own connection:
 - a 2-second total deadline and a 4 MiB cap;
-- only `application/json` and `image/png` responses (anything else is `502`, so HTML or
-  script from the viewer is never served);
+- only `application/json` and `image/png` responses; another media type, or a response
+  over the cap, returns `502` with `{"error": "Viewer response refused"}`, so HTML or
+  script from the viewer is never served;
 - at most eight forwards at once, and the gateway's own headers on every reply;
-- any other failure, including a refused connection, a timeout or a viewer error
-  status, returns `503` with `{"viewer": "unavailable"}`, which the page shows as
-  "viewer unavailable".
+- any other failure, including a refused connection, a timeout, a viewer error status
+  or no free forwarding slot, returns `503` with `{"viewer": "unavailable"}`. The page
+  shows both `502` and `503` as "viewer unavailable".
 
 The viewer's exit is never supervision loss: the guardian, startup wait and cleanup
 treat it separately from the custodian, gateway and keep-awake children. The supervisor

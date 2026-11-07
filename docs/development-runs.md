@@ -328,7 +328,8 @@ killed, and the run ended only on the owner's Pause.
 - **Columns.**
   - *Game h* is survival within the run's last episode.
   - *End* is the censor reason.
-  - *Setup* counts decisions before the first in-play frame.
+  - *Setup* counts decisions before the first in-play frame. The hand table's
+    "Attempts (setup)" counts attempts instead, so the two setup figures differ.
   - *Routine pace* is the median game seconds per decision over clock intervals shorter
     than 15 minutes.
   - *Long activities* are single stretches advancing 15 minutes or more.
@@ -673,12 +674,12 @@ Morgan Vale, an Evacuee in the world Crenshaw (evac shelter A-23), 7 November 20
 
 **Evidence frames** ([assets](acceptance/assets/long-horizon-382), copied unchanged from the packages' `sources/`):
 
-| Asset | Source frame | Shows |
-| --- | --- | --- |
-| `l1-night-asleep-2230.png` | `lh1a3` -9217 | Falling asleep, 10:30 PM, day 61 |
-| `l1-rollover-wake-0600.png` | `lh1a3` -9685 | Waking "Very thirsty", 6:00:58 AM, day 62 |
-| `l1-day-point-0808.png` | `lh1a3` -10739 | Day point, 8:08:44 AM, day 62 |
-| `l1-setup-restart-save-and-quit.png` | `lh1a1` -228 | Setup restart: Save and Quit prompt |
-| `l2-boundary-load-menu.png` | `lh2a2` -3 | Boundary load menu (Brokaw, Morgan Hale) |
-| `l2-day-point-0843.png` | `lh2a2` -15930 | Day point, 8:43:28 AM, day 62 |
-| `l3-board-message-before-fence.png` | `lh3a2` -5163 | Board message before the second fence |
+| Asset | Source frame | Shows | SHA-256 (first 16) | Bytes |
+| --- | --- | --- | --- | ---: |
+| `l1-night-asleep-2230.png` | `lh1a3` -9217 | Falling asleep, 10:30 PM, day 61 | `644f9e4e1505524d` | 122,916 |
+| `l1-rollover-wake-0600.png` | `lh1a3` -9685 | Waking "Very thirsty", 6:00:58 AM, day 62 | `c4ef891afded48f1` | 161,929 |
+| `l1-day-point-0808.png` | `lh1a3` -10739 | Day point, 8:08:44 AM, day 62 | `1cf519e7914f2c37` | 169,317 |
+| `l1-setup-restart-save-and-quit.png` | `lh1a1` -228 | Setup restart: Save and Quit prompt | `48c60a1df5f790eb` | 125,698 |
+| `l2-boundary-load-menu.png` | `lh2a2` -3 | Boundary load menu (Brokaw, Morgan Hale) | `05092e478c7419b4` | 12,439 |
+| `l2-day-point-0843.png` | `lh2a2` -15930 | Day point, 8:43:28 AM, day 62 | `1cfcdcd5f33de264` | 206,568 |
+| `l3-board-message-before-fence.png` | `lh3a2` -5163 | Board message before the second fence | `77f0d2cf3672e6b4` | 133,551 |

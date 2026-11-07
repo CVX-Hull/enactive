@@ -21,7 +21,8 @@ The evaluator reads one run directory read-only:
 - each `actors/NNN/host.jsonl` (`player-host/3`), including its per-request context
   manifest once the host records one;
 - the handoff contexts under `contexts/*.json` (`player-handoff-context/1`);
-- `manifest.json` (`campaign-run/5`), including its operator labels;
+- `manifest.json` (`campaign-run/5`), including its operator labels, or `campaign-run/4`
+  for the closed set of archived sessions only (see "Rules settled in implementation");
 - the run's `player-memory/2` store.
 
 Open SQLite read-only (`mode=ro`) with a bounded busy timeout. A missing or unsupported
@@ -229,7 +230,10 @@ cannot block a check, a Pause or a run.
   status is a forwarding failure;
 - the gateway's own security headers on every response.
 
-A forwarding failure returns `503` with `{"viewer": "unavailable"}`. The page polls;
+A viewer response with a disallowed media type or over the size cap returns `502` with
+`{"error": "Viewer response refused"}`. Any other forwarding failure (a refused connection,
+a timeout, another viewer status, or all eight forwarding slots in use) returns `503` with
+`{"viewer": "unavailable"}`. The page treats both as "viewer unavailable". The page polls;
 there is no streaming connection.
 
 **Launch and lifetime.**

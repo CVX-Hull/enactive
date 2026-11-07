@@ -1,10 +1,16 @@
 ---
 owner: lead
 review_trigger: Player host, context, model, control redesign or a new performance claim
-status: active
+status: historical
+date: 2026-11-07
+scope: 2026-10-22 targeted review for brief 060; its sources predate the #289 cutover
 ---
 
 # Responsive gameplay: context and control evidence
+
+**Historical.** This review's local references (hand-authored skills, `procedure/2`)
+predate the [computer-control boundary](decisions/006-computer-control-boundary.md).
+The literature summary remains background; #164 owns the open responsiveness claim.
 
 Cutoff: October 22, 2026. Searches prioritized 2026/2025 primary literature and
 official implementation guidance, then followed references. Two independent
