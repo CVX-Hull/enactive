@@ -56,7 +56,8 @@ record availability as removed in the evidence index for a sealed study, or list
 a dated retirement record for evidence that was never sealed. Keep unresolved-incident
 journals until resolved. Routine unreferenced journals/frames can be pruned after
 30 days, only with sessions stopped and after checking references/ownership.
-Checker logs under `.runtime/check-logs/` are routine local output and can be pruned
+Checker logs under `.runtime/check-logs/` and spectator-suite screenshots under
+`.runtime/spectator-shots/` are routine local output and can be pruned
 whenever no check is running; a record that relies on one quotes the relevant lines
 or seals the log with `tools.evidence seal`.
 This initial policy is manual; no scheduled deletion is installed. Current captured

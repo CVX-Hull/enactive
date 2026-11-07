@@ -248,7 +248,7 @@ Failure response: Stop failed stage, preserve diagnostics and retry only after i
 
 Evidence / implementation: [tools/setup.py](../tools/setup.py), [tools/build_computer.py](../tools/build_computer.py), [tools/prepare_game.py](../tools/prepare_game.py), [tools/patch_game.py](../tools/patch_game.py), [native/upstream.json](../native/upstream.json), [tests/test_setup.py](../tests/test_setup.py), [docs/setup.md](../docs/setup.md), [docs/environment.md](../docs/environment.md), [docs/operations/coding-agents.md](../docs/operations/coding-agents.md), [tools/configure_player_tools.py](../tools/configure_player_tools.py), [tests/test_coding_agent_config.py](../tests/test_coding_agent_config.py), [package.json](../package.json), 4 dated records named in the [registry](control-registry.json) ([acceptance index](acceptance/index.md), [change index](changes/index.md)).
 
-Coverage gap: Portable fixtures do not perform fresh downloads, native compilation/signing or install. Setup is validated only on this Mac; broader hosts remain unverified.
+Coverage gap: Portable fixtures do not perform fresh downloads, native compilation/signing or install. Real setup (download, native build, install) is validated only on this Mac; broader hosts remain unverified.
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 

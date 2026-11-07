@@ -24,7 +24,7 @@ this is not a process dashboard or attempt log.
 | `.runtime/computer-builds/` | Owned native adapter builds and their receipts, built fresh per [setup](setup.md). |
 | `.runtime/logs/`, `.runtime/credentials.json`, `.runtime/worktrees/` | The prepared wrapper's game log, the operator credential reference (never a key) and the root for any project-owned worktrees. |
 | `.runtime/evidence/` | The sealed, read-only evidence store; [evidence cleanup](operations/evidence-cleanup.md) owns sealing, verification and removal. |
-| `.runtime/check-logs/`, `.runtime/spectator-shots/` | Each checker run's full command output, and the spectator suites' screenshots (recreated by each run); routine local output under [evidence cleanup](operations/evidence-cleanup.md). |
+| `.runtime/check-logs/`, `.runtime/spectator-shots/` | Each checker run's full command output, and the spectator suites' screenshots (rewritten by each run); routine local output under [evidence cleanup](operations/evidence-cleanup.md). |
 | `tools/player_host/node_modules/` | Locked dependencies of the current player host adapter; npm cache stays in project `.cache/npm`. No model/API credential belongs in this directory. [Host setup](setup.md#install-the-generic-gameplay-host) owns install and support limits. |
 | `.codex/`, `.claude/`, `CLAUDE.md`, repository-local Git configuration/hooks | Reviewed project coding-agent tool/permission configuration and public identity. Generated `.codex/config.toml`, `.mcp.json` and `.claude/settings.local.json` are machine-local and ignored. [Operator permissions](operator-permissions.md) separates rule matching, host activation and gameplay authority; [coding-agent hosts](operations/coding-agents.md) maps each host. |
 

@@ -699,7 +699,7 @@
         "docs/acceptance/2026-10-29-computer-control-development.md"
       ],
       "failure_response": "Stop failed stage, preserve diagnostics and retry only after identifying the corrupt input or owned workspace.",
-      "limitations": "Portable fixtures do not perform fresh downloads, native compilation/signing or install. Setup is validated only on this Mac; broader hosts remain unverified.",
+      "limitations": "Portable fixtures do not perform fresh downloads, native compilation/signing or install. Real setup (download, native build, install) is validated only on this Mac; broader hosts remain unverified.",
       "enforcement": "Implemented stage guards plus portable setup regressions; native reproducibility requires C-NATIVE and manual provenance review.",
       "status": "active",
       "rationale": null,
