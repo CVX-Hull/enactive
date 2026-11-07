@@ -10,9 +10,8 @@ ROOT = Path(__file__).resolve().parents[1]
 # This bounds the whole expanding subprocess suite, not a gameplay latency goal.
 # CI's original 90s watchdog truncated valid later cases; host deadlines have
 # separate controlled-clock assertions and must not depend on Python startup.
-# On 7 November 2026 the passing CI runs took 106-148 s against about 68 s locally,
-# and three unchanged runs exceeded 180 s after completing about half the suite, so
-# the bound leaves room for that runner variance while still catching a hang.
+# CI runs this suite about 1.6-2.9x slower than a local run under its parallel test
+# workers; the bound leaves room for that variance while still catching a hang.
 CONFORMANCE_TIMEOUT_SECONDS = 360
 
 
