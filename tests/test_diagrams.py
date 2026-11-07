@@ -15,11 +15,11 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class DiagramTests(unittest.TestCase):
     def test_escaping_destinations_are_rejected_before_render_or_write(self):
-        for name in ("docs/diagrams/context.svg", str(diagrams.RECEIPT),
+        for name in ("docs/diagrams/player.svg", str(diagrams.RECEIPT),
                      *diagrams.CACHES, "docs/diagrams/config.json"):
             with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory) / "project"
-                source = root / diagrams.DIRECTORY / "context.mmd"
+                source = root / diagrams.DIRECTORY / "player.mmd"
                 source.parent.mkdir(parents=True)
                 source.write_text("flowchart TD\n A-->B\n")
                 outside = Path(directory) / "outside"
@@ -75,7 +75,7 @@ console.log(JSON.stringify({version: await puppeteer.browserVersion(),
                 shutil.copyfile(path, target)
             diagrams.check_receipt(root)
             baseline = (root / diagrams.RECEIPT).read_bytes()
-            for name in ("docs/diagrams/context.mmd", "docs/diagrams/context.svg",
+            for name in ("docs/diagrams/player.mmd", "docs/diagrams/player.svg",
                          "docs/diagrams/config.json", "package-lock.json"):
                 with self.subTest(name=name):
                     path = root / name
@@ -90,7 +90,7 @@ console.log(JSON.stringify({version: await puppeteer.browserVersion(),
             with self.assertRaises(ValueError):
                 diagrams.check_receipt(root)
             extra.unlink()
-            (root / diagrams.DIRECTORY / "context.mmd").unlink()
+            (root / diagrams.DIRECTORY / "player.mmd").unlink()
             with self.assertRaisesRegex(ValueError, "changed"):
                 diagrams.check_receipt(root)
             (root / diagrams.RECEIPT).unlink()
