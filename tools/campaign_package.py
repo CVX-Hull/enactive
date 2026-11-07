@@ -38,10 +38,9 @@ def labels(value) -> None:
         raise ControlError('Lineage and admission position are both set or both null')
 
 
-def digest(path: Path) -> str:
+def _sha256(path: Path) -> str:
     with path.open('rb') as stream:
-        value=hashlib.file_digest(stream,'sha256').hexdigest()
-    return value
+        return hashlib.file_digest(stream,'sha256').hexdigest()
 
 
 def local_file(value: str) -> Path:
@@ -88,15 +87,15 @@ def preflight(directory: Path) -> tuple[dict,dict,dict]:
     if set(profile['files'])!=FILES:raise ControlError('Freeze every selected driver input')
     for name,sha in profile['files'].items():
         path=local_file(str(directory/name))
-        if path.stat().st_size>1048576 or digest(path)!=sha:raise ControlError('Frozen driver input differs')
+        if path.stat().st_size>1048576 or _sha256(path)!=sha:raise ControlError('Frozen driver input differs')
     for name in ('native','library'):
         closed(profile[name],{'path','sha256'})
-        if digest(local_file(profile[name]['path']))!=profile[name]['sha256']:
+        if _sha256(local_file(profile[name]['path']))!=profile[name]['sha256']:
             raise ControlError('Frozen target/adapter bytes differ')
     initial=profile['initial_files']
     if type(initial) is not dict or not 1<=len(initial)<=16:raise ControlError('Freeze bounded initial target files')
     for name,sha in initial.items():
-        if digest(local_file(name))!=sha:raise ControlError('Initial target configuration differs')
+        if _sha256(local_file(name))!=sha:raise ControlError('Initial target configuration differs')
     if any((directory/name).exists() for name in ('started.json','session.sqlite3','native-process.json','actors','contexts')):
         raise ControlError('Selected package has prior/partial application; never reopen it')
     lock=Path(profile['shared_lock']);player=Path(profile['player_store'])

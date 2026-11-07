@@ -63,7 +63,7 @@ class HostEvents:
                 if identity in self.requests or identity>self.allowance:raise ControlError('Host request accounting differs')
                 self.requests.add(identity)
             elif kind=='response-complete':
-                try:self.last_response_wall=datetime.fromisoformat(value['wall_time'].replace('Z','+00:00')).timestamp()
+                try:self.last_response_wall=datetime.fromisoformat(value['wall_time']).timestamp()
                 except (KeyError,ValueError,TypeError):pass
                 if value.get('usage_available') is True:self.usage[value['request_id']]=value['usage']
             elif kind=='handoff':

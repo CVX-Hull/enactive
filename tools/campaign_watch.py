@@ -1,6 +1,6 @@
 """Private HTTP worker for campaign_supervision; no provider credentials or game inputs."""
 from datetime import datetime
-from hashlib import sha256
+from hashlib import file_digest, sha256
 import argparse
 from http.client import HTTPConnection
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -16,7 +16,6 @@ import time
 from urllib.parse import urlsplit
 
 from harness.computer.protocol import read_json
-from tools.campaign_package import digest
 
 UI = Path(__file__).with_name('campaign_watch_ui.js')
 WEB = Path(__file__).resolve().parents[1]/'web'
@@ -91,10 +90,12 @@ def worker(package: Path, session: str, source_commit: str, upstream: int, recei
                  ('best-effort', None): 'Best-effort observation: checks are optional; Pause still stops input.'}
     policy = attention.get((opening.get('attention'), opening.get('watch_seconds')))
     recording = opening.get('attention') == 'required'
+    with (package/'manifest.json').open('rb') as stream:
+        manifest_sha256 = file_digest(stream, 'sha256').hexdigest()
     if (opening.get('schema') != 'campaign-watch-start/3' or opening.get('session') != session
             or type(viewer_port) is not int or opening.get('viewer_port') != viewer_port
             or opening.get('source_commit') != source_commit or policy is None
-            or opening.get('manifest_sha256') != digest(package/'manifest.json')
+            or opening.get('manifest_sha256') != manifest_sha256
             or not (package/'watch-attempts.jsonl').is_file()
             or (package/'watch-attempts.jsonl').is_symlink()):
         raise ValueError('Worker has no current exclusively reserved supervision')

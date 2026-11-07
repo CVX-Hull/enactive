@@ -12,11 +12,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 import hashlib
-import json
 from pathlib import Path
 import sqlite3
+from typing import Iterator
 
-from .records import EvaluationError
+from .records import EvaluationError, loads
 
 SESSION_SCHEMA = 'computer-session/1'
 OPERATION_SCHEMA = 'computer-operation/1'
@@ -33,6 +33,10 @@ WATCH_TERMINAL_ARCHIVE_SCHEMA = 'campaign-watch-terminal/2'
 MEMORY_SCHEMA = 'player-memory/2'
 CONTEXT_SCHEMA = 'player-handoff-context/1'
 BUSY_TIMEOUT_SECONDS = 1.0
+#: Bounds of one JSON file and of one host trace (4096 traces and 8 GiB are `host-summary`'s selection bounds).
+MAX_JSON_FILE_BYTES = 16 * 1024 * 1024
+MAX_HOST_LINE_BYTES = 64 * 1024 * 1024
+MAX_HOST_EVENTS = 2_000_000
 
 
 @dataclass(frozen=True)
@@ -97,26 +101,25 @@ class RunInputs:
     end: EndFacts = field(default_factory=EndFacts)
 
 
-def sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open('rb') as stream:
-        for block in iter(lambda: stream.read(1 << 20), b''):
-            digest.update(block)
-    return digest.hexdigest()
+def read_json_file(path: Path, maximum: int = MAX_JSON_FILE_BYTES) -> object:
+    """One bounded JSON file, decoded by `records.loads`; a file over `maximum` bytes is an error."""
+    if path.stat().st_size > maximum:
+        raise EvaluationError(f'{path}: larger than {maximum} bytes')
+    return loads(path.read_bytes(), str(path))
 
 
-def _json(text: str | bytes, where: str) -> object:
-    try:
-        return json.loads(text)
-    except (ValueError, UnicodeError, RecursionError) as exc:
-        raise EvaluationError(f'{where}: malformed JSON') from exc
+def read_json_lines(path: Path, maximum: int = MAX_JSON_FILE_BYTES) -> list[object]:
+    """The documents of one bounded JSON-lines file; a blank line is skipped."""
+    if path.stat().st_size > maximum:
+        raise EvaluationError(f'{path}: larger than {maximum} bytes')
+    return [loads(line, f'{path}:{number}') for number, line in enumerate(path.read_bytes().splitlines(), 1) if line.strip()]
 
 
 def read_manifest(run_dir: Path) -> dict:
     path = run_dir / 'manifest.json'
     if not path.is_file():
         raise EvaluationError(f'{path}: missing campaign-run manifest')
-    value = _json(path.read_bytes(), str(path))
+    value = read_json_file(path)
     if not isinstance(value, dict) or value.get('schema') not in MANIFEST_SCHEMAS:
         found = value.get('schema') if isinstance(value, dict) else None
         raise EvaluationError(f'{path}: unsupported manifest version {found!r}; expected one of {", ".join(MANIFEST_SCHEMAS)}')
@@ -130,7 +133,7 @@ def archive_labels() -> dict[str, dict]:
     """The archived campaign-run/4 sessions: session ID to `{run, arm, start, scenario, lineage, admission}`."""
     if not ARCHIVE_LABELS.is_file():
         return {}
-    value = _json(ARCHIVE_LABELS.read_bytes(), str(ARCHIVE_LABELS))
+    value = read_json_file(ARCHIVE_LABELS)
     runs = value.get('runs') if isinstance(value, dict) else None
     return {key: item for key, item in runs.items() if isinstance(item, dict)} if isinstance(runs, dict) else {}
 
@@ -149,11 +152,11 @@ def _session_connection(path: Path) -> tuple[sqlite3.Connection, str]:
     except sqlite3.Error as exc:
         connection.close()
         raise EvaluationError(f'{path}: cannot read {SESSION_SCHEMA} ({exc})') from exc
-    schema = _json(rows['schema'], str(path)) if 'schema' in rows else None
+    schema = loads(rows['schema'], str(path)) if 'schema' in rows else None
     if version != 1 or schema != SESSION_SCHEMA:
         connection.close()
         raise EvaluationError(f'{path}: unsupported session version {schema!r} (user_version {version}); expected {SESSION_SCHEMA}')
-    session = _json(rows.get('session', 'null'), str(path))
+    session = loads(rows.get('session', 'null'), str(path))
     if not isinstance(session, str) or not session:
         connection.close()
         raise EvaluationError(f'{path}: missing session identity')
@@ -165,12 +168,12 @@ def read_operations(run_dir: Path, *, after_seq: int | None = None, settled_only
     path = run_dir / 'session.sqlite3'
     connection, session = _session_connection(path)
     try:
-        sources = {identity: _json(encoded, f'{path}:sources') for identity, encoded in connection.execute(
+        sources = {identity: loads(encoded, f'{path}:sources') for identity, encoded in connection.execute(
             'SELECT id,metadata FROM sources')}
         receipts: dict[str, list[dict]] = {}
         for operation, encoded in connection.execute(
                 'SELECT operation,receipt FROM native_intents WHERE receipt IS NOT NULL ORDER BY rowid'):
-            receipts.setdefault(operation, []).append(_json(encoded, f'{path}:native_intents'))
+            receipts.setdefault(operation, []).append(loads(encoded, f'{path}:native_intents'))
         operations = []
         rows = connection.execute('SELECT rowid,id,actor,kind,created_wall,input_json,final_json FROM operations '
             'WHERE rowid > ? ORDER BY rowid', (after_seq or 0,)).fetchall()
@@ -179,7 +182,7 @@ def read_operations(run_dir: Path, *, after_seq: int | None = None, settled_only
     finally:
         connection.close()
     for seq, identity, actor, kind, created, encoded_input, encoded_final in rows:
-        final = None if encoded_final is None else _json(encoded_final, f'{path}:{identity}')
+        final = loads(encoded_final, f'{path}:{identity}')
         if encoded_final is None and settled_only:
             break
         if final is not None and (not isinstance(final, dict) or final.get('schema') != OPERATION_SCHEMA
@@ -194,7 +197,7 @@ def read_operations(run_dir: Path, *, after_seq: int | None = None, settled_only
             indexed = sources.get(source_id)
             sha = (indexed or source).get('sha256')
         png = run_dir / 'sources' / f'{source_id}.png' if source_id is not None else None
-        actions = _json(encoded_input, f'{path}:{identity}') if encoded_input is not None else None
+        actions = loads(encoded_input, f'{path}:{identity}')
         operations.append(Operation(seq, identity, actor, kind, float(created), final.get('status', 'pending'),
             final.get('reason'), tuple(actions) if isinstance(actions, list) else None, source_id, sha,
             png if png is not None and png.is_file() else None, tuple(receipts.get(identity, ())),
@@ -206,40 +209,78 @@ def _wall(value: object) -> float | None:
     if not isinstance(value, str):
         return None
     try:
-        return datetime.fromisoformat(value.replace('Z', '+00:00')).timestamp()
+        return datetime.fromisoformat(value).timestamp()
     except ValueError:
         return None
 
 
-def read_host(path: Path, actor_hint: str) -> tuple[str, tuple[HostEvent, ...]]:
-    """Parse one player-host/3 trace. A truncated final line (live append) is ignored."""
-    events: list[HostEvent] = []
+def _milliseconds(value: object) -> float | None:
+    try:
+        return float(value) if type(value) in (int, float) else None
+    except OverflowError:  # an integer beyond the float range is not a clock reading
+        return None
+
+
+class HostTraceUnsupported(EvaluationError):
+    """A host trace that is not a current `player-host/3` trace. `kind` is `empty` (no event), `format` (the first
+    event is not a `host-start`) or `version` (a `host-start` of another schema or telemetry version)."""
+
+    def __init__(self, message: str, kind: str) -> None:
+        super().__init__(message)
+        self.kind = kind
+
+
+def iter_host(path: Path, actor_hint: str, *, partial_tail: bool = False) -> Iterator[HostEvent]:
+    """Stream one player-host/3 trace: the one offline parser of `host.jsonl` (the evaluator, the viewer and
+    host-summary). The supervisor's live incremental reader in tools/campaign_player.py stays separate because
+    evaluation never gates the control path (ADR008).
+
+    Bounded: a line over `MAX_HOST_LINE_BYTES`, or more than `MAX_HOST_EVENTS` lines, is an error. A blank line is
+    skipped. A duplicate key, a non-finite number or an event without a string `type` is an error. An unterminated
+    final line that does not parse is an error too, unless `partial_tail` (a trace may still be appending) ignores
+    it. A newline-terminated malformed line is always an error."""
     actor = actor_hint
-    data = path.read_bytes()
-    lines = data.split(b'\n')
-    for number, line in enumerate(lines, 1):
-        if not line.strip():
-            continue
-        try:
-            event = json.loads(line)
-        except (ValueError, UnicodeError):
-            if number == len(lines):
-                break
-            raise EvaluationError(f'{path}:{number}: malformed trace JSON') from None
-        if not isinstance(event, dict) or not isinstance(event.get('type'), str):
-            raise EvaluationError(f'{path}:{number}: expected an event object with a type')
-        if not events:
-            if event['type'] != 'host-start' or event.get('schema') != HOST_SCHEMA or event.get('telemetry_version') != 3:
-                raise EvaluationError(f"{path}: unsupported host trace version {event.get('schema')!r}/"
-                    f"{event.get('telemetry_version')!r}; expected {HOST_SCHEMA} telemetry 3")
-            if isinstance(event.get('actor_id'), str):
-                actor = event['actor_id']
-        monotonic = event.get('monotonic_ms')
-        events.append(HostEvent(actor, number, event['type'], _wall(event.get('wall_time')),
-            float(monotonic) if type(monotonic) in (int, float) else None, event))
-    if not events:
-        raise EvaluationError(f'{path}: empty host trace')
-    return actor, tuple(events)
+    count = 0
+    with path.open('rb') as stream:
+        number = 0
+        while line := stream.readline(MAX_HOST_LINE_BYTES + 1):
+            number += 1
+            if len(line) > MAX_HOST_LINE_BYTES:
+                raise EvaluationError(f'{path}:{number}: trace line exceeds {MAX_HOST_LINE_BYTES} bytes')
+            if number > MAX_HOST_EVENTS:
+                raise EvaluationError(f'{path}: trace exceeds {MAX_HOST_EVENTS} lines')
+            if not line.strip():
+                continue
+            try:
+                event = loads(line, f'{path}:{number}')
+            except EvaluationError:
+                if partial_tail and not line.endswith(b'\n'):
+                    break
+                raise
+            if not isinstance(event, dict):
+                raise EvaluationError(f'{path}:{number}: expected an event object')
+            if not count:
+                if event.get('type') != 'host-start':
+                    raise HostTraceUnsupported(f"{path}: not a host trace; the first event is {event.get('type')!r}", 'format')
+                if event.get('schema') != HOST_SCHEMA or type(event.get('telemetry_version')) is not int or event['telemetry_version'] != 3:
+                    raise HostTraceUnsupported(f"{path}: unsupported host trace version {event.get('schema')!r}/"
+                        f"{event.get('telemetry_version')!r}; expected {HOST_SCHEMA} telemetry 3", 'version')
+                if isinstance(event.get('actor_id'), str):
+                    actor = event['actor_id']
+            elif not isinstance(event.get('type'), str):
+                raise EvaluationError(f'{path}:{number}: expected an event with a type')
+            count += 1
+            yield HostEvent(actor, number, event['type'], _wall(event.get('wall_time')),
+                _milliseconds(event.get('monotonic_ms')), event)
+    if not count:
+        raise HostTraceUnsupported(f'{path}: empty host trace', 'empty')
+
+
+def read_host(path: Path, actor_hint: str) -> tuple[str, tuple[HostEvent, ...]]:
+    """One whole player-host/3 trace and its actor (the `host-start`'s `actor_id`, else `actor_hint`). A trace may
+    still be appending, so an unterminated final line that does not parse is ignored on every pass, live or final."""
+    events = tuple(iter_host(path, actor_hint, partial_tail=True))
+    return events[0].actor, events
 
 
 def read_memory(path: Path) -> MemoryFacts:
@@ -253,10 +294,10 @@ def read_memory(path: Path) -> MemoryFacts:
                 f'schema {schemas!r}); expected {MEMORY_SCHEMA}')
         records = {}
         for identity, document in connection.execute('SELECT id,document FROM records ORDER BY rowid'):
-            records[identity] = _json(document, f'{path}:records:{identity}')
+            records[identity] = loads(document, f'{path}:records:{identity}')
         programs = {}
         for identity, document in connection.execute('SELECT id,document FROM programs ORDER BY rowid'):
-            programs[identity] = _json(document, f'{path}:programs:{identity}')
+            programs[identity] = loads(document, f'{path}:programs:{identity}')
     except sqlite3.Error as exc:
         raise EvaluationError(f'{path}: cannot read {MEMORY_SCHEMA} ({exc})') from exc
     finally:
@@ -271,7 +312,7 @@ def read_carry(run_dir: Path) -> dict[str, frozenset[str]]:
     if not directory.is_dir():
         return carry
     for path in sorted(directory.glob('*.json')):
-        packet = _json(path.read_bytes(), str(path))
+        packet = read_json_file(path)
         if not isinstance(packet, dict) or packet.get('schema') != CONTEXT_SCHEMA:
             found = packet.get('schema') if isinstance(packet, dict) else None
             raise EvaluationError(f'{path}: unsupported handoff context version {found!r}; expected {CONTEXT_SCHEMA}')
@@ -285,7 +326,7 @@ def _optional_json(path: Path, schemas: tuple[str, ...]) -> dict | None:
     """A file that exists only once a run has ended; when present, only the named versions are read."""
     if not path.is_file():
         return None
-    value = _json(path.read_bytes(), str(path))
+    value = read_json_file(path)
     found = value.get('schema') if isinstance(value, dict) else None
     if found not in schemas:
         raise EvaluationError(f'{path}: unsupported version {found!r}; expected {" or ".join(schemas)}')
@@ -322,7 +363,12 @@ def read_run(run_dir: Path, *, after_seq: int | None = None, settled_only: bool 
     session, operations = read_operations(run_dir, after_seq=after_seq, settled_only=settled_only)
     if manifest.get('session') not in (None, session):
         raise EvaluationError(f'{run_dir / "manifest.json"}: session {manifest.get("session")!r} differs from the session database')
-    digest = sha256_file if digests else (lambda path: '')
+    def digest(path: Path) -> str:
+        if not digests:
+            return ''
+        with path.open('rb') as stream:
+            return hashlib.file_digest(stream, 'sha256').hexdigest()
+
     found = {'manifest.json': digest(run_dir / 'manifest.json'), 'session.sqlite3': digest(run_dir / 'session.sqlite3')}
     host: dict[str, tuple[HostEvent, ...]] = {}
     actors: list[str] = []

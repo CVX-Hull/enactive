@@ -14,6 +14,7 @@ readers are `frame` (the normalised frame reading), `input`, `game_time` and `ma
 """
 from __future__ import annotations
 
+import hashlib
 import os
 from pathlib import Path
 import time
@@ -29,7 +30,12 @@ from .metrics import compute_metrics
 from .lineage import DAY_METRIC, ELAPSED_METRIC, MEMORY_METRIC, METRIC as LINEAGE_METRIC
 LINEAGE_METRICS = (LINEAGE_METRIC, ELAPSED_METRIC, DAY_METRIC, MEMORY_METRIC)
 from .records import EvaluationError, MetricRow, ReadingRow, RecordWriter, StepRow, record_path
-from .sources import ARCHIVE_SCHEMA, RunInputs, archive_labels, read_run, sha256_file
+from .sources import ARCHIVE_SCHEMA, RunInputs, archive_labels, read_run
+
+
+def _frame_matches(png: Path, sha256: str | None) -> bool:
+    with png.open('rb') as stream:
+        return hashlib.file_digest(stream, 'sha256').hexdigest() == sha256
 
 
 def _read_new_steps(inputs: RunInputs, binding: Binding, known: list[StepRow], facts) -> tuple[list[StepRow], list[ReadingRow]]:
@@ -47,7 +53,7 @@ def _read_new_steps(inputs: RunInputs, binding: Binding, known: list[StepRow], f
             frame_abstain = 'no_frame'
         elif op.png is None:
             frame_abstain = 'frame_unavailable'
-        elif sha256_file(op.png) != op.sha256:
+        elif not _frame_matches(op.png, op.sha256):
             frame_abstain = 'frame_integrity'
         else:
             try:

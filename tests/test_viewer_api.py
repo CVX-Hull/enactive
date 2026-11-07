@@ -468,3 +468,66 @@ def test_a_failed_pass_is_reported_and_retried(tmp_path):
     evaluator.run_dir = run_dir
     evaluator.tick()
     assert evaluator.status['error'] is None and evaluator.status['passes'] == 1
+
+
+def info_for(run_dir: Path):
+    from harness.viewer.catalog import RunInfo
+    return RunInfo(SESSION, 'run', run_dir / 'record.sqlite3', run_dir, {}, {}, {}, 0, 0.0)
+
+
+def test_tool_latency_percentiles_are_the_evaluators_nearest_rank():
+    import sqlite3
+    from harness.viewer import views
+    connection = sqlite3.connect(':memory:')
+    connection.execute('CREATE TABLE tool_calls (actor TEXT, tool TEXT, status TEXT, latency_ms REAL, result_bytes INTEGER, wall REAL)')
+    connection.executemany('INSERT INTO tool_calls VALUES (?,?,?,?,?,?)',
+        [('a', 'computer_input', 'ok', latency, 1, index) for index, latency in enumerate((400, 100, 300, 200))])
+    row = views.tools(connection)['tools'][0]
+    assert (row['p50_ms'], row['p95_ms']) == (200, 400)  # nearest rank, not the 250 a median would give
+    assert not hasattr(views, 'percentile')
+
+
+def test_the_viewer_reads_only_manifests_of_a_supported_version(tmp_path):
+    from harness.viewer import views
+    from harness.viewer.catalog import ViewError
+    (tmp_path / 'runs').mkdir()
+    current, unversioned, future = (tmp_path / 'runs' / name for name in ('current', 'unversioned', 'future'))
+    for directory, manifest in ((current, dict(schema='campaign-run/5', session='1' * 32)), (unversioned, dict(session='2' * 32)),
+            (future, dict(schema='campaign-run/6', session='3' * 32))):
+        directory.mkdir()
+        (directory / 'manifest.json').write_text(json.dumps(manifest))
+    catalog = Catalog(tmp_path / 'root', (tmp_path / 'runs',), data_dir=data_directory(tmp_path))
+    assert catalog.run_dir_for('1' * 32, {}) == current
+    assert catalog.run_dir_for('2' * 32, {}) is None and catalog.run_dir_for('3' * 32, {}) is None
+    store = tmp_path / 'player-memory.sqlite3'
+    (unversioned / 'manifest.json').write_text(json.dumps(dict(session='2' * 32, player_store=str(store))))
+    with pytest.raises(ViewError, match='bad_manifest') as error:
+        views.memory_store(catalog, info_for(unversioned))
+    assert error.value.status == 500 and 'unsupported manifest version' in error.value.detail
+    assert views.memory_store(catalog, info_for(current)) is None  # a supported manifest naming no store
+
+
+def test_the_live_session_comes_from_a_supported_manifest(tmp_path):
+    run_dir = tmp_path / 'run'
+    run_dir.mkdir()
+    (run_dir / 'manifest.json').write_text(json.dumps(dict(session=SESSION)))
+    evaluator = LiveEvaluator(run_dir, tmp_path / 'root', FakeBinding())
+    assert evaluator.session() is None
+    (run_dir / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/5', session=SESSION)))
+    assert evaluator.session() == SESSION
+
+
+def test_the_labels_file_is_bounded_and_a_bad_line_names_its_position(tmp_path):
+    from harness.viewer.catalog import ViewError
+    directory = data_directory(tmp_path)
+    catalog = Catalog(tmp_path / 'root', (), data_dir=directory)
+    assert [label['id'] for label in catalog.labels()] == ['l1']
+    (directory / 'labels.jsonl').write_text('{"id": "l1"}\n\n{"id": "l2", "id": "l3"}\n')
+    with pytest.raises(ViewError) as error:
+        catalog.labels()
+    assert error.value.code == 'bad_data_file' and 'labels.jsonl' in error.value.detail and ':3' in error.value.detail
+    assert 'duplicate key' in error.value.detail
+    (directory / 'labels.jsonl').write_text(' ' * (16 * 1024 * 1024 + 1))
+    with pytest.raises(ViewError) as error:
+        catalog.labels()
+    assert error.value.code == 'bad_data_file' and 'larger than' in error.value.detail

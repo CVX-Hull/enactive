@@ -33,8 +33,28 @@ def dumps(value: object) -> str:
     return json.dumps(value, sort_keys=True, separators=(',', ':'), ensure_ascii=False, allow_nan=False)
 
 
-def loads(text: str | None) -> Any:
-    return None if text is None else json.loads(text)
+def _single_keys(pairs: list[tuple[str, Any]]) -> dict:
+    found: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in found:
+            raise ValueError(f'duplicate key {key!r}')
+        found[key] = value
+    return found
+
+
+def _finite(constant: str) -> Any:
+    raise ValueError(f'non-finite number {constant}')
+
+
+def loads(text: str | bytes | None, where: str = 'evaluation record') -> Any:
+    """The one JSON decoder of the evaluation side. A malformed document, a duplicate key or a
+    non-finite number is an `EvaluationError` naming `where`; `None` (a nullable column) stays `None`."""
+    if text is None:
+        return None
+    try:
+        return json.loads(text, object_pairs_hook=_single_keys, parse_constant=_finite)
+    except (ValueError, UnicodeError, RecursionError) as exc:
+        raise EvaluationError(f'{where}: malformed JSON ({exc})') from exc
 
 
 @dataclass(frozen=True)
