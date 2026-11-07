@@ -200,7 +200,9 @@ def read_limbs(frame: Frame) -> dict[str, Result]:
 
 # Threat: parsed from the sidebar creature list (rows 24-26).
 ENTRY = re.compile(r'^(\S) (?:(\d+) )?(.+)$')
-PROPER_NAME = re.compile(r'^[A-Z][a-z]+(?: [A-Z][a-z]+)+$')
+# Creature names in the list are lower case ("feral human", "fat zombie"); a person's own name
+# starts with a capital ("Smokes", "Roseann Romo") and is not a creature to count.
+PERSON_NAME = re.compile(r'^[A-Z]')
 THREAT_LOW, THREAT_HIGH, THREAT_LETHAL = 1, 3, 10
 
 
@@ -231,7 +233,7 @@ def read_threat(frame: Frame) -> Result:
             if not m:
                 flagged = True
                 continue
-            if m[1] == '@' and PROPER_NAME.match(m[3]):
+            if PERSON_NAME.match(m[3]) and not m[2]:
                 continue  # a named person is not counted as a threat
             entries += 1
             count += int(m[2]) if m[2] else 1
@@ -240,16 +242,36 @@ def read_threat(frame: Frame) -> Result:
 
 
 def popup_present(arr: np.ndarray) -> bool:
-    """A window border (one-pixel gray line, 200 or more pixels long) in the frame."""
+    """A window frame drawn over the screen.
+
+    Windows are bordered with gray (150 or 128) lines. Either one line of 200 or more
+    pixels, or a rectangle: two lines of 64 or more pixels with the same start and length at
+    least 24 rows apart, joined by a gray side line. Tile art does not draw such rectangles.
+    """
     px = arr.astype(np.int16)
     gray = (px[..., 0] == px[..., 1]) & (px[..., 1] == px[..., 2]) & ((px[..., 0] == 150) | (px[..., 0] == 128))
-    for y in np.nonzero(gray.sum(axis=1) >= 200)[0].tolist():
+    lines: list[tuple[int, int, int]] = []
+    for y in np.nonzero(gray.sum(axis=1) >= 64)[0].tolist():
         row = np.concatenate(([0], gray[y].astype(np.int8), [0]))
         edges = np.diff(row)
-        starts, ends = np.nonzero(edges == 1)[0], np.nonzero(edges == -1)[0]
-        if (ends - starts).max() >= 200:
-            return True
+        for a, b in zip(np.nonzero(edges == 1)[0].tolist(), np.nonzero(edges == -1)[0].tolist()):
+            if b - a >= 200:
+                return True
+            if b - a >= 64:
+                lines.append((y, a, b - a))
+    for n, (y1, a1, l1) in enumerate(lines):
+        for y2, a2, l2 in lines[n + 1:]:
+            if y2 - y1 >= 24 and abs(a1 - a2) <= 1 and abs(l1 - l2) <= 2:
+                if max(gray[y1:y2 + 1, a1].mean(), gray[y1:y2 + 1, a1 + 1].mean()) >= 0.8:
+                    return True
     return False
+
+
+def side_panel_ui(arr: np.ndarray) -> bool:
+    """A full-height gray divider: the overmap and look-around screens replace the sidebar with a panel."""
+    px = arr[:, 200:900].astype(np.int16)
+    gray = (px[..., 0] == px[..., 1]) & (px[..., 1] == px[..., 2]) & ((px[..., 0] == 150) | (px[..., 0] == 128) | (px[..., 0] == 255))
+    return bool((gray.sum(axis=0) >= 560).any())
 
 
 def loading_screen(arr: np.ndarray) -> bool:
@@ -263,21 +285,24 @@ def loading_screen(arr: np.ndarray) -> bool:
     return paper.mean() > 0.3
 
 
-def _row_has(frame: Frame, y: int, needle: str, cols: int = 120) -> bool:
-    return needle in decode_line(frame.arr, 0, y, cols, frame.atlas)
+MENU_BAR_TOKENS = ('[MOTD]', '[New Game]', '[Load]', '[World]', '[Tutorial Game]', '[Settings]', '[Help]', '[Credits]', 'Quit]')
+CREATION_TABS = ('POINTS', 'SCENARIO', 'PROFESSION', 'BACKGROUND', 'STATS', 'TRAITS', 'SKILLS', 'DESCRIPTION')
 
 
 def menu_screen(frame: Frame) -> bool:
     """Pre-game screens: main menu, world creation or selection, character creation."""
-    r23 = decode_line(frame.arr, 0, 23 * CELL_H, 120, frame.atlas)
-    r32 = decode_line(frame.arr, 0, 32 * CELL_H, 120, frame.atlas)
-    if 'Version:' in r23 and '[MOTD]' in r32:
+    # A dialog drawn over a menu ("Really quit?", a world list) hides only part of the base screen,
+    # so any one surviving marker names the base screen. No game is loaded behind these screens.
+    bar = decode_line(frame.arr, 0, 32 * CELL_H, 120, frame.atlas)
+    if sum(token in bar for token in MENU_BAR_TOKENS) >= 2:
+        return True
+    if 'Version:' in decode_line(frame.arr, 0, 23 * CELL_H, 120, frame.atlas) and any(token in bar for token in MENU_BAR_TOKENS):
         return True
     r0 = decode_line(frame.arr, 0, 0, 120, frame.atlas)
-    r1 = decode_line(frame.arr, 0, CELL_H, 120, frame.atlas)
     if 'Create World' in r0 or 'World selection' in r0:
         return True
-    return 'PROFESSION' in r1 and 'SCENARIO' in r1
+    tabs = decode_line(frame.arr, 0, CELL_H, 120, frame.atlas)
+    return sum(tab in tabs for tab in CREATION_TABS) >= 2
 
 
 def read_death(frame: Frame) -> tuple[bool, str | None]:
@@ -314,6 +339,6 @@ def classify_mode(frame: Frame) -> tuple[str, float | None, str | None, str | No
         return 'loading', 0.8, None, None
     if menu_screen(frame):
         return 'menu', 0.9, None, None
-    if anchors >= 3 or popup_present(frame.arr):
+    if anchors >= 3 or popup_present(frame.arr) or side_panel_ui(frame.arr):
         return 'prompt', 0.7, None, None
     return 'unknown', None, 'no_signature', None

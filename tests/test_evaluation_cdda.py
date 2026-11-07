@@ -42,6 +42,18 @@ def read(*names, edit=None) -> FrameReading:
         path.unlink()
 
 
+GLYPHS = {char: np.unpackbits(np.frombuffer(key, dtype=np.uint8).reshape(16, 1), axis=1).astype(bool)
+          for key, char in Atlas.load().glyphs.items()}
+
+
+def put_text(array, row: int, col: int, text: str, colour=(150, 150, 150), x0: int = 0) -> None:
+    """Draw text on the 8x16 cell grid using the atlas glyph masks."""
+    for n, char in enumerate(text):
+        if char != ' ':
+            cell = array[row * 16:row * 16 + 16, x0 + (col + n) * 8:x0 + (col + n + 1) * 8]
+            cell[GLYPHS[char]] = colour
+
+
 def vital(frame: FrameReading, name: str, scope: str = 'whole') -> Vital | None:
     return next((v for v in frame.vitals if v.name == name and v.scope == scope), None)
 
@@ -134,6 +146,47 @@ class ModeTests(unittest.TestCase):
             array[300, 100:400] = (150, 150, 150)
             array[360, 100:400] = (150, 150, 150)
         self.assertEqual(read('sidebar_calm', edit=border).mode, 'prompt')
+
+    def box(self, array, x0, y0, x1, y1, colour=(150, 150, 150)):
+        array[y0:y1, x0:x1] = 0
+        array[y0, x0:x1] = array[y1 - 1, x0:x1] = colour
+        array[y0:y1, x0] = array[y0:y1, x1 - 1] = colour
+
+    def test_dialog_over_the_main_menu_is_still_a_menu(self):
+        def really_quit(array):
+            self.box(array, 280, 200, 680, 300)
+            put_text(array, 13, 37, 'Really quit?  [Y]es  [N]o')
+        self.assertEqual(read('main_menu', edit=really_quit).mode, 'menu')
+
+    def test_menu_with_the_version_line_and_part_of_the_bar_covered_is_a_menu(self):
+        def cover(array):
+            array[368:400, :] = 0                 # version line gone
+            array[512:528, 176:480] = 0           # '[New Game] ... [Tutorial Game]' gone
+            self.box(array, 100, 100, 500, 300)
+        self.assertEqual(read('main_menu', edit=cover).mode, 'menu')
+
+    def test_small_window_over_the_map_is_a_prompt(self):
+        def actions(array):
+            self.box(array, 406, 210, 554, 432, (128, 128, 128))
+        self.assertEqual(read('sidebar_calm', edit=actions).mode, 'prompt')
+
+    def test_double_width_border_is_a_prompt(self):
+        def thick(array):
+            self.box(array, 100, 200, 300, 400)
+            self.box(array, 101, 201, 299, 399)
+        self.assertEqual(read('sidebar_calm', edit=thick).mode, 'prompt')
+
+    def test_a_dialog_over_a_menu_does_not_hide_a_loaded_game(self):
+        # The same box over the in-game sidebar remains a prompt: only menu markers win.
+        def really_quit(array):
+            self.box(array, 280, 200, 680, 300)
+        self.assertEqual(read('sidebar_calm', edit=really_quit).mode, 'prompt')
+
+    def test_full_height_panel_screen_is_a_prompt(self):
+        def panel(array):
+            array[:, 738] = (255, 255, 255)
+            put_text(array, 1, 93, 'evac shelter C-41')
+        self.assertEqual(read(edit=panel).mode, 'prompt')
 
     def test_covered_sidebar_label_is_a_prompt(self):
         def cover(array):
@@ -234,8 +287,31 @@ class ThreatTests(unittest.TestCase):
                          ['none', 'low', 'low', 'high', 'high', 'lethal', 'lethal'])
 
     def test_named_people_are_not_threats(self):
-        self.assertEqual(rd.PROPER_NAME.match('Elijah Herring') is not None, True)
-        self.assertIsNone(rd.PROPER_NAME.match('feral human'))
+        self.assertIsNotNone(rd.PERSON_NAME.match('Elijah Herring'))
+        self.assertIsNotNone(rd.PERSON_NAME.match('Smokes'))
+        self.assertIsNone(rd.PERSON_NAME.match('feral human'))
+
+    def threat_rows(self, *rows):
+        def draw(array):
+            array[24 * 16:27 * 16, 616:960] = 0
+            for n, text in enumerate(rows):
+                put_text(array, 24 + n, 77, text)
+        frame_ = read('sidebar_calm', edit=draw)
+        return frame_.threat, frame_.threat_count
+
+    def test_two_entries_per_row_are_both_parsed(self):
+        self.assertEqual(self.threat_rows('Z 4 zombies   @ feral human', 'd 2 zombie dogs'), ('high', 7))
+        self.assertEqual(self.threat_rows('@ feral human  Z fat zombie'), ('low', 2))
+
+    def test_rows_of_only_named_people_count_nothing(self):
+        self.assertEqual(self.threat_rows('@ Smokes   @ Roseann Romo'), ('none', 0))
+        self.assertEqual(self.threat_rows('@ Elijah Herring', '@ Smokes  @ Roseann Romo'), ('none', 0))
+
+    def test_named_people_beside_creatures_are_excluded(self):
+        self.assertEqual(self.threat_rows('@ Smokes   Z 11 zombies', '@ Roseann Romo  @ feral soldier'), ('lethal', 12))
+
+    def test_empty_list_is_none(self):
+        self.assertEqual(self.threat_rows(), ('none', 0))
 
     def test_threat_is_only_read_in_play(self):
         self.assertIsNone(read('main_menu').threat)
