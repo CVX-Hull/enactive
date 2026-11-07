@@ -132,7 +132,9 @@ def evaluate(run_dir: Path, binding: Binding, root: Path, memory_store: Path | N
 
     `state` is `final` (default: after the run ended; input digests are taken) or `live` (the viewer's
     incremental store; no digests). A `live` store is replaced by any pass of the same versions; a `final`
-    store is only rewritten with `replace=True`. `labels` stand in for the operator labels that a
+    store is only rewritten by a `final` pass with `replace=True`. A `live` pass is refused when a `final`
+    store of the same versions exists, and an incremental pass (`after_seq`) continues only a record whose
+    recorded state is the requested one, so a `final` record is never continued. `labels` stand in for the operator labels that a
     campaign-run/4 manifest lacks. `external` optionally carries numbers computed by the existing host and
     control summaries: `response_ms` and `first_chunk_ms` (lists) and `custody` (`{"receipts": n, "uncertain": n}`).
     `created_wall` defaults to the current time; fix it for byte-identical records.
@@ -150,9 +152,14 @@ def evaluate(run_dir: Path, binding: Binding, root: Path, memory_store: Path | N
         game_time_unit=binding.game_time_unit, run=run_dir.resolve().name, run_dir=str(run_dir.resolve()),
         session=inputs.session, arm=arm or (labels or {}).get('arm') or (inputs.manifest.get('labels') or {}).get('arm'),
         memory_store=str(memory_store) if memory_store else None, state=state)
+    if state == 'live' and existing_state(final) == 'final':
+        raise EvaluationError(f'{final}: a final evaluation record for these versions exists; a live pass never touches it')
     if incremental:
         writer = RecordWriter.open(final)
         recorded = writer.metadata()
+        if recorded.get('state') != state or state == 'final':
+            writer.close()
+            raise EvaluationError(f'{final}: the record is {recorded.get("state")!r}; a {state!r} pass cannot continue it')
         if recorded.get('session') != inputs.session or recorded.get('last_seq') != after_seq:
             writer.close()
             raise EvaluationError(f'{final}: after_seq {after_seq} does not continue this record '

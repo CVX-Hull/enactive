@@ -1,7 +1,8 @@
 """Incremental evaluation of the live run into its `live` store, about once a second.
 
 This is the viewer's only write: the live run's own `live` evaluation store under the evaluation root. A
-`final` store of the same versions is never touched, and the live run directory is only read. A pass that
+`final` store of the same versions is never touched (the viewer serves it read-only and stops live
+evaluation), and the live run directory is only read. A pass that
 fails is recorded in `status` and retried on the next tick; it never stops the viewer.
 """
 from __future__ import annotations
@@ -42,6 +43,7 @@ class LiveEvaluator:
         state = existing_state(path)
         if state == 'final':
             self.status.update(finished=True, error=None)
+            self._stop.set()
             return
         if state == 'live':
             try:
@@ -49,6 +51,7 @@ class LiveEvaluator:
                     last = writer.metadata().get('last_seq')
                 evaluate(self.run_dir, self.binding, self.root, after_seq=last, state='live')
             except EvaluationError:
+                # the live store cannot be continued; rebuild it (never a final store: evaluate refuses that)
                 evaluate(self.run_dir, self.binding, self.root, state='live', replace=True)
         else:
             evaluate(self.run_dir, self.binding, self.root, state='live', replace=True)

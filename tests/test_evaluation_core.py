@@ -406,15 +406,15 @@ def test_incremental_append_equals_a_full_pass_over_the_grown_run(tmp_path):
         run.step(a, *item)
     run.finish(close=False)
     root = tmp_path / 'evals'
-    path = evaluate(run_dir, FakeBinding(), root, created_wall=1.0)
+    path = evaluate(run_dir, FakeBinding(), root, created_wall=1.0, state='live')
     assert dump(path)['meta']['last_seq'] == 4
     assert events_of(path, 'ineffective_repeat') == []
     for item in sequence[4:]:  # the live store grows; the host trace grows with it
         run.step(a, *item)
     run.finish(close=False)
     with pytest.raises(EvaluationError, match='does not continue'):
-        evaluate(run_dir, FakeBinding(), root, after_seq=3)
-    assert evaluate(run_dir, FakeBinding(), root, after_seq=4, created_wall=1.0) == path
+        evaluate(run_dir, FakeBinding(), root, after_seq=3, state='live')
+    assert evaluate(run_dir, FakeBinding(), root, after_seq=4, created_wall=1.0, state='live') == path
     incremental = dump(path)
     full = dump(evaluate(run_dir, FakeBinding(), tmp_path / 'full-evals', created_wall=1.0))
     assert incremental['meta']['last_seq'] == 7
@@ -423,11 +423,40 @@ def test_incremental_append_equals_a_full_pass_over_the_grown_run(tmp_path):
     stuck = [e for e in incremental['events'] if e['kind'] == 'ineffective_repeat']
     assert [(e['seq_start'], e['seq_end'], e['payload']['inputs']) for e in stuck] == [(5, 7, 3)]
     # A second incremental pass with nothing new changes nothing.
-    evaluate(run_dir, FakeBinding(), root, after_seq=7, created_wall=1.0)
+    evaluate(run_dir, FakeBinding(), root, after_seq=7, created_wall=1.0, state='live')
     assert dump(path) == incremental
     run.store.close()
     with pytest.raises(EvaluationError, match='no evaluation record'):
-        evaluate(run_dir, FakeBinding(), tmp_path / 'nowhere', after_seq=7)
+        evaluate(run_dir, FakeBinding(), tmp_path / 'nowhere', after_seq=7, state='live')
+
+
+def test_a_final_record_is_never_continued_or_overwritten_by_a_live_pass(tmp_path):
+    run_dir = tmp_path / 'run'
+    run, a, sequence = growing_run(run_dir)
+    for item in sequence[:4]:
+        run.step(a, *item)
+    run.finish(close=False)
+    root = tmp_path / 'evals'
+    path = evaluate(run_dir, FakeBinding(), root, created_wall=1.0)
+    for item in sequence[4:]:
+        run.step(a, *item)
+    run.finish(close=False)
+    before = path.read_bytes()
+    with pytest.raises(EvaluationError, match='cannot continue'):
+        evaluate(run_dir, FakeBinding(), root, after_seq=4, created_wall=1.0)
+    with pytest.raises(EvaluationError, match='cannot continue|never touches'):
+        evaluate(run_dir, FakeBinding(), root, after_seq=4, created_wall=1.0, state='live')
+    for replace in (False, True):
+        with pytest.raises(EvaluationError, match='never touches'):
+            evaluate(run_dir, FakeBinding(), root, created_wall=1.0, state='live', replace=replace)
+    assert path.read_bytes() == before
+    connection = open_readonly(path)
+    assert read_metadata(connection)['inputs']  # the final input digests survive
+    connection.close()
+    # An operator's explicit final replacement is still allowed.
+    assert evaluate(run_dir, FakeBinding(), root, created_wall=1.0, replace=True) == path
+    assert dump(path)['meta']['last_seq'] == 7
+    run.store.close()
 
 
 def test_sources_report_unsettled_operations_and_resume_after_a_sequence(tmp_path):
@@ -459,19 +488,19 @@ def test_an_unsettled_operation_is_reread_once_it_settles(tmp_path):
         run.step(a, *item)
     run.finish(close=False)
     root = tmp_path / 'evals'
-    path = evaluate(run_dir, FakeBinding(), root, created_wall=1.0)
+    path = evaluate(run_dir, FakeBinding(), root, created_wall=1.0, state='live')
     assert dump(path)['meta']['last_seq'] == 2
     pending = run.step(a, *sequence[2], pending=True)
     run.step(a, *sequence[3])
     run.finish(close=False)
-    evaluate(run_dir, FakeBinding(), root, after_seq=2, created_wall=1.0)
+    evaluate(run_dir, FakeBinding(), root, after_seq=2, created_wall=1.0, state='live')
     waiting = dump(path)
     assert waiting['meta']['last_seq'] == 4 and waiting['meta']['pending_seqs'] == [3]
     assert [s.source_id is not None for s in waiting['steps']] == [True, True, False, True]
     assert [s.decision for s in waiting['steps']] == [0, 1, 1, 2]  # the unsettled input is no decision yet
     run.settle(pending)
     run.finish(close=False)
-    evaluate(run_dir, FakeBinding(), root, after_seq=4, created_wall=1.0)
+    evaluate(run_dir, FakeBinding(), root, after_seq=4, created_wall=1.0, state='live')
     caught_up = dump(path)
     assert caught_up['meta']['pending_seqs'] == [] and [s.source_id is not None for s in caught_up['steps']] == [True] * 4
     assert [s.decision for s in caught_up['steps']] == [0, 1, 2, 3]
@@ -833,7 +862,7 @@ def test_abstentions_and_missing_captures_are_excluded_and_counted(tmp_path):
 
 
 def test_ladder_marks_human_rungs_not_assessed_and_accepts_a_human_confirmation(tmp_path):
-    path = run_and_evaluate(tmp_path)
+    path = run_and_evaluate(tmp_path, state='live')
     ladder = metrics_of(path)['ladder.reached']
     assert ladder.value['highest'] == 'ate'
     assert [(r['id'], r['status']) for r in ladder.value['rungs']] == [('play', 'reached'), ('armed', 'not_assessed'),
@@ -844,7 +873,7 @@ def test_ladder_marks_human_rungs_not_assessed_and_accepts_a_human_confirmation(
     with RecordWriter.open(path) as writer:
         writer.connection.execute("INSERT INTO events(seq_start,seq_end,kind,source,confidence,payload) "
             "VALUES(5,5,'milestone','human',NULL,?)", (json.dumps(dict(rung='armed')),))
-    again = evaluate(tmp_path / 'run', FakeBinding(), tmp_path / 'evaluations', replace=False, after_seq=14, created_wall=1.0)
+    again = evaluate(tmp_path / 'run', FakeBinding(), tmp_path / 'evaluations', replace=False, after_seq=14, created_wall=1.0, state='live')
     events = events_of(again, 'milestone')
     assert {e['source'] for e in events} == {'reader', 'human'}
     ladder = metrics_of(again)['ladder.reached']

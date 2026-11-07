@@ -86,8 +86,10 @@ def create_app(catalog: Catalog, evaluator: LiveEvaluator | None = None, now: Ca
         return reply(dict(items=window[:limit], next=after + limit if more else None, limit=limit, total=len(rows)))
 
     def summary(request: Request, info: RunInfo, connection) -> Response:
-        is_live = evaluator is not None and info.session == live_session() and info.state == 'live'
-        return reply(views.summary(catalog, info, connection, is_live, evaluator.status if is_live else None, clock()))
+        mine = evaluator is not None and info.session == live_session()
+        is_live = mine and info.state == 'live'
+        # A final store of the live run is served read-only; the evaluator status says live evaluation stopped.
+        return reply(views.summary(catalog, info, connection, is_live, evaluator.status if mine else None, clock()))
 
     def steps(request: Request, info: RunInfo, connection) -> Response:
         after, limit = paging(request)

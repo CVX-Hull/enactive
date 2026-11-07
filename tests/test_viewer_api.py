@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import time
 
 import pytest
 from starlette.testclient import TestClient
@@ -391,16 +392,38 @@ def test_the_live_evaluator_extends_a_live_store_incrementally_and_never_touches
     other = open_readonly(full)
     assert read_metadata(other)['last_seq'] == 7
     other.close()
-    # A final store replaces the live one and is then left alone.
+    # A final store replaces the live one and is then left alone: the live loop stops, the summary says so.
     final = evaluate(run_dir, FakeBinding(), tmp_path / 'root', created_wall=1.0)
     assert final == path
     before = path.read_bytes()
     evaluator.tick()
+    evaluator.tick()
     assert evaluator.status['finished'] is True and path.read_bytes() == before
+    summary = live.get(f'/api/view/run/{SESSION}/summary').json()
+    assert summary['state'] == 'final' and summary['live'] is False and summary['evaluator']['finished'] is True
     connection = open_readonly(path)
     assert read_metadata(connection)['state'] == 'final'
     connection.close()
     run.store.close()
+
+
+def test_the_live_loop_never_overwrites_a_final_store_an_operator_wrote(tmp_path):
+    run_dir = pause_run(tmp_path / 'run', 'clear')
+    root = tmp_path / 'root'
+    evaluator = LiveEvaluator(run_dir, root, FakeBinding(), interval=0.01)
+    evaluator.tick()
+    path = evaluator.record()
+    final = evaluate(run_dir, FakeBinding(), root, created_wall=1.0)  # evaluate-run while the viewer's loop is running
+    assert final == path
+    before = path.read_bytes()
+    evaluator.start()
+    time.sleep(0.2)
+    evaluator.stop()
+    assert path.read_bytes() == before and evaluator.status['finished'] is True and evaluator.status['error'] is None
+    connection = open_readonly(path)
+    meta = read_metadata(connection)
+    connection.close()
+    assert meta['state'] == 'final' and meta['inputs']
 
 
 def test_a_failed_pass_is_reported_and_retried(tmp_path):

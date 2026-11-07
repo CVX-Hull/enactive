@@ -41,8 +41,13 @@ Its `metadata.state` is `live` or `final`.
 - **Live.** The viewer may write and extend a `live` store while the run moves.
 - **Final.** `evaluate-run` writes a `final` store after the run ends, replacing a
   `live` store of the same versions. Input digests are taken only then.
-- **No overwrite.** A `final` store is never overwritten. Re-scoring under new
-  versions writes a new file. Hand-scored evidence elsewhere is never modified.
+- **No overwrite.** A `final` store is never overwritten by a `live` pass and is never
+  continued incrementally; only an explicit `evaluate-run --replace` (a `final` pass)
+  rewrites it. A `live` pass is refused while a `final` store of the same versions exists,
+  and it never erases the final input digests. The viewer then serves the `final` store
+  read-only, stops live evaluation and reports that in the summary's `evaluator` status
+  (`finished`). Re-scoring under new versions writes a new file. Hand-scored evidence
+  elsewhere is never modified.
 
 | Table | Columns | Meaning |
 | --- | --- | --- |
@@ -237,8 +242,9 @@ percentile, per status or per handoff. The primary key is (`name`, `key`).
     evidence; it is not an admission, and admission still requires `/5`.
   - Their operator labels come from `data/evaluation/archive-labels.json`.
 - **Metadata key.** `metadata.last_seq` names the last operation read.
-- **Store replacement.** A `live` store is replaced by any later pass. A `final` store
-  needs an explicit replace.
+- **Store replacement.** A `live` store is replaced by any later `final` pass. A `final`
+  store needs an explicit replace and is never replaced or continued by a `live` pass.
+  An incremental pass (`after_seq`) continues only a `live` record.
 - **`tool_calls` table.** It also stores `operation_id`, linking a call to the step it produced.
 - **Long-form metric keys:**
   - `reader.coverage` per reader;
