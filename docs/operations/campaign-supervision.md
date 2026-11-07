@@ -86,7 +86,10 @@ remain separate. Repeated or older retained pixels do not become new captures.
 The guardian performs no HTTP work. Blocked source reads, delayed checks and
 partial confirmation cannot suspend its deadlines. Renewal uses actual
 confirmation completion; checks racing with Pause are rolled back. Original
-custody also bounds terminal coverage. Incomplete startup JSON is retried under
+custody also bounds terminal coverage. The receipt's wall-clock end is mapped
+onto the monotonic clock from readiness, so "terminal after the last accepted
+check" allows `CLOCK_MAPPING_TOLERANCE` (0.25 s, the same bound the check-row
+mapping uses); the custody and watch deadlines stay strict. Incomplete startup JSON is retried under
 the original clocks because producers expose the pathname before buffered close;
 complete invalid marker objects fail.
 

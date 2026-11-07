@@ -303,7 +303,15 @@ def test_guard_accepts_generic_terminal_without_claiming_normal_native_exit(tmp_
         child = SimpleNamespace(poll=lambda: 0 if ended.is_set() else None)
         thread = threading.Thread(target=lambda: f.supervise(child)); thread.start()
         assert f.call('/record', form())[0] == 200
-        ending_wall = time.time()
+        # The guard appends the row after its acknowledgement reaches the worker.
+        deadline = time.monotonic() + 5
+        while not f.result['accepted'] and time.monotonic() < deadline:
+            time.sleep(.01)
+        assert f.result['accepted']
+        # End deterministically 50 ms after the accepted check on the guard's own wall/monotonic
+        # mapping instead of racing time.time() against the check's receipt.
+        ending_wall = (f.result['ready_wall'] + f.result['accepted'][-1]['receipt']
+                       - f.result['ready_monotonic'] + .05)
         report = dict(schema='campaign-receipt/3', session=SESSION, source_commit=COMMIT,
             started_wall=f.result['started_wall'], ended_wall=ending_wall,
             elapsed_seconds=ending_wall-f.result['started_wall'],
