@@ -15,10 +15,11 @@ from harness.evaluation.core.binding import FrameReading, Reading, Rung, Vital
 # #382's "severe" needs for the lineage day check, as (reader, field of its value) -> labels.
 # The weariness reader's `label` is the worse of Weariness and Rest, so rest is read from its own
 # `rest` field. Narrower than the readers' `critical` flag, which also covers pain, red labels and limbs.
+# The sets are the readers' own critical label sets, so they cannot drift from the label tables.
 DAY_CHECK_SEVERE = {
-    ('vital.thirst', 'label'): frozenset({'very thirsty', 'dehydrated', 'parched'}),
-    ('vital.hunger', 'label'): frozenset({'very hungry', 'famished', 'near starving', 'starving'}),
-    ('vital.weariness', 'rest'): frozenset({'dead tired', 'exhausted'}),
+    ('vital.thirst', 'label'): frozenset(rd.THIRST_CRITICAL),
+    ('vital.hunger', 'label'): frozenset(rd.HUNGER_CRITICAL),
+    ('vital.weariness', 'rest'): frozenset(rd.REST_CRITICAL),
 }
 DAY_CHECK_NAMES = {'vital.thirst': 'thirst', 'vital.hunger': 'hunger', 'vital.weariness': 'rest'}
 
@@ -99,10 +100,16 @@ class CddaBinding:
         return rung_reached(rung, history)
 
     def severe_needs(self, values: Mapping[str, object]) -> list[str] | None:
-        """#382's day check: thirst, hunger and rest labels in `DAY_CHECK_SEVERE`; None unless all three are read."""
+        """#382's day check: thirst, hunger and rest labels in `DAY_CHECK_SEVERE`.
+
+        Any severe need that was read is reported even when another need is unreadable; None only
+        when nothing read is severe and at least one need is unreadable (the weariness reader
+        abstains as a whole when either of its two fields is unreadable).
+        """
         labels = {(reader, field): value[field] for reader, field in DAY_CHECK_SEVERE
                   for value in [values.get(reader)] if isinstance(value, dict) and isinstance(value.get(field), str)}
-        if len(labels) != len(DAY_CHECK_SEVERE):
-            return None
-        return [f'{DAY_CHECK_NAMES[reader]}: {label}' for (reader, field), label in labels.items()
-                if label in DAY_CHECK_SEVERE[(reader, field)]]
+        severe = [f'{DAY_CHECK_NAMES[reader]}: {label}' for (reader, field), label in labels.items()
+                  if label in DAY_CHECK_SEVERE[(reader, field)]]
+        if severe or len(labels) == len(DAY_CHECK_SEVERE):
+            return severe
+        return None

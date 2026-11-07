@@ -469,6 +469,17 @@ class DayCheckTests(unittest.TestCase):
         self.assertIsNone(b.severe_needs(partial))
         self.assertIsNone(b.severe_needs({}))
 
+    def test_a_severe_need_that_was_read_counts_even_if_another_is_unreadable(self):
+        b = CddaBinding(atlas=Atlas.load())
+        partial = self.needs(thirst='parched')
+        del partial['vital.weariness']   # the weariness reader abstains as a whole
+        self.assertEqual(b.severe_needs(partial), ['thirst: parched'])
+
+    def test_severe_sets_are_the_readers_critical_sets(self):
+        from harness.evaluation.cdda.binding import DAY_CHECK_SEVERE
+        self.assertEqual({k[0]: set(v) for k, v in DAY_CHECK_SEVERE.items()},
+            {'vital.thirst': rd.THIRST_CRITICAL, 'vital.hunger': rd.HUNGER_CRITICAL, 'vital.weariness': rd.REST_CRITICAL})
+
 
 if __name__ == '__main__':
     unittest.main()

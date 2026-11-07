@@ -151,7 +151,7 @@ def elapsed_metric(timelines: Sequence[Timeline]) -> MetricRow:
         return MetricRow(ELAPSED_METRIC, 1, None, decisions, None, 'no_game_time')
     seconds = last - first
     value = dict(game_seconds=seconds, game_hours=round(seconds / 3600, 3), decisions=decisions,
-        game_seconds_per_decision=round(seconds / decisions, 2) if decisions else None,
+        game_seconds_per_decision=round(seconds / decisions, 2) if decisions and seconds > 0 else None,
         long_activity_hours=round(long_seconds / 3600, 3),
         long_activity_share=round(long_seconds / seconds, 3) if seconds > 0 else None,
         admissions=len(timelines), episode_changes=_episode_changes(timelines))
@@ -173,8 +173,11 @@ def day_check_metric(timelines: Sequence[Timeline], binding: Binding) -> MetricR
     The crossing is the first step after the lineage's LAST reading below one day, so a reload that
     rewinds below the day undoes an earlier crossing. The needs are read at the first legible in-play
     step from the crossing on, in that admission or a later one; `lag_hours` reports how far past the
-    day that step is. A death read at or before that step fails the check. New episodes (another world
-    or survivor inside an admission) are listed; #382 classifies those as continuity failures first.
+    day that step is. Deaths are compared in lineage order: one at or before the crossing fails the
+    check (#382's "death before 24 elapsed hours"); one after the crossing but before the scored step
+    leaves it unscored (`died_in_lag`). New episodes (another world or survivor inside an admission)
+    are listed; #382 classifies those as continuity failures first. If admission 1 never reaches play,
+    the first in-play clock of a later admission is the zero.
     """
     first = _start(timelines)
     if first is None:
@@ -186,7 +189,9 @@ def day_check_metric(timelines: Sequence[Timeline], binding: Binding) -> MetricR
         return MetricRow(DAY_METRIC, 1, None, 0, 1, 'not_reached')
     index, crossing, _, _ = flat[after]
     base = dict(run=timelines[index].run, crossing_seq=crossing, episode_changes=_episode_changes(timelines))
-    if any(t.deaths for t in timelines[:index]) or any(d <= crossing for d in timelines[index].deaths):
+    # Deaths in lineage order (admission, seq): a death read in an admission a reload later rewound still counts.
+    deaths = [(i, d) for i, t in enumerate(timelines) for d in t.deaths]
+    if any(death <= (index, crossing) for death in deaths):
         return MetricRow(DAY_METRIC, 1, dict(base, died_before=True, severe=None, passed=False), 0, 1, None)
     for line_index, seq, seconds, mode in flat[after:]:
         if mode != 'in_play':
@@ -194,11 +199,13 @@ def day_check_metric(timelines: Sequence[Timeline], binding: Binding) -> MetricR
         severe = binding.severe_needs(_step_values(timelines[line_index].record, seq))
         if severe is None:
             continue
-        died = any(t.deaths for t in timelines[:line_index]) or any(d <= seq for d in timelines[line_index].deaths)
         hours = (seconds - first) / 3600
         value = dict(base, scored_run=timelines[line_index].run, seq=seq, elapsed_hours=round(hours, 3),
-            lag_hours=round(hours - DAY_SECONDS / 3600, 3), died_before=died,
-            severe=None if died else list(severe), passed=not died and not severe)
+            lag_hours=round(hours - DAY_SECONDS / 3600, 3), died_before=False)
+        # Alive at the day, then a death before the needs could be read: the day check cannot be scored.
+        if any((index, crossing) < death <= (line_index, seq) for death in deaths):
+            return MetricRow(DAY_METRIC, 1, dict(value, died_in_lag=True, severe=None, passed=None), 0, 1, 'died_in_lag')
+        value.update(died_in_lag=False, severe=list(severe), passed=not severe)
         return MetricRow(DAY_METRIC, 1, value, int(value['passed']), 1, None)
     return MetricRow(DAY_METRIC, 1, dict(base, passed=None, severe=None), 0, 1, 'needs_not_legible')
 

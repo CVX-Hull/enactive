@@ -1065,6 +1065,18 @@ def test_lineage_day_check_rewind_lag_start_and_episodes(tmp_path):
                          F('prompt', 3600 + DAY + 60, identity=1)],
                         [F('in_play', 3600 + DAY + 3600, identity=1)]])
     assert (lagged['run'], lagged['scored_run'], lagged['passed'], lagged['lag_hours']) == ('c7-1', 'c7-2', True, 1.0)
+    # Alive at the day, then dead before the needs could be read: unscored, not a day-check failure.
+    in_lag = stitch(frames_lineage(tmp_path, 'e9', [[F('in_play', 3600, identity=1), F('in_play', 3660, identity=1)],
+        [F('in_play', 3600 + DAY - 120, identity=1), F('in_play', 3600 + DAY - 60, identity=1),
+         F('prompt', 3600 + DAY + 60, identity=1), F('prompt', 3600 + DAY + 120, identity=1, death=True)],
+        [F('in_play', 3600 + DAY + 3600, identity=1)]]), FakeBinding(), tmp_path / 'evals')
+    lagged_death = metrics_of(Path(in_lag['records'][0]))['lineage.day_check']
+    assert lagged_death.missing == 'died_in_lag' and lagged_death.value['passed'] is None
+    assert lagged_death.value['died_before'] is False
+    # A net rewind below the start leaves no meaningful per-decision pace.
+    net = stitch(frames_lineage(tmp_path, 'fa', [[F('in_play', 3600, identity=1), F('in_play', 3660, identity=1)],
+        [F('in_play', 3000, identity=1), F('in_play', 3060, identity=1)]]), FakeBinding(), tmp_path / 'evals')['lineage.elapsed']
+    assert net['game_seconds'] == -540 and net['game_seconds_per_decision'] is None and net['long_activity_share'] is None
     # A restarted clock inside an admission (another world) is listed for the continuity check.
     episode = stitch(frames_lineage(tmp_path, 'd8', [[F('in_play', t, identity=1) for t in (200_000, 200_060, 100, 160, 220)]]),
         FakeBinding(), tmp_path / 'evals')['lineage.elapsed']
