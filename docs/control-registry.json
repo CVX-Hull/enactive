@@ -268,7 +268,7 @@
       "trigger": "every relevant request, observation and image decode",
       "evidence": [
         "harness/server.py",
-        "web/app.js",
+        "web/app/main.js",
         "tests/test_server.py",
         "tests/test_viewer.cjs",
         "docs/protocol.md",
@@ -426,7 +426,7 @@
         "docs/overview.md",
         "docs/changes/001-engineering-system.md",
         "docs/runbook.md",
-        "web/app.js",
+        "web/app/main.js",
         "docs/walkthrough.md",
         "docs/architecture.md",
         "docs/project-management.md",
