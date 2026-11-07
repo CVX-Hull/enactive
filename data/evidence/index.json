@@ -1,0 +1,36 @@
+{
+  "schema": "evidence-index/1",
+  "studies": {
+    "164-terra": {
+      "bytes": 1711907,
+      "cited_by": [
+        "docs/acceptance/2026-11-05-recorded-player-assessment.md"
+      ],
+      "files": 78,
+      "manifest_sha256": "46187cb1bcf692215521943054f0b2bb542c108e4c7d9890312c971da4bf0c37",
+      "note": "Recorded-player assessment (#368) and interrupted #370 preparation sessions, userdirs and stores from worktrees at 7ad0ef3 and 32dee27; operator files remain in .runtime/iteration164/.",
+      "visibility": "private"
+    },
+    "359-ongoing-alex": {
+      "bytes": 31382101,
+      "cited_by": [
+        "docs/acceptance/2026-11-05-player-test-diagnostic.md"
+      ],
+      "files": 1183,
+      "manifest_sha256": "e0e553df477502d86c13cccbc4df70ffb4ba26c2dfd379bd65b69b6861e7c44f",
+      "note": "Both #359 diagnostic admissions (sessions, userdir, player store) from their worktrees at e6adfb7; operator files remain in .runtime/iteration164/candidate-research-2026-11-05/.",
+      "visibility": "private"
+    },
+    "372-382-dev-loop": {
+      "bytes": 1029358869,
+      "cited_by": [
+        "docs/acceptance/2026-11-06-development-loop.md",
+        "docs/acceptance/2026-11-07-long-horizon-382.md"
+      ],
+      "files": 8634,
+      "manifest_sha256": "a63ed3ac367bbf6cd190eeaed1b92549dec98bf623d621238ae758c003b0a6a8",
+      "note": "Packages, evaluator records, memory stores and build receipt from the dev-loop worktree at 509a9fd. Operator ledgers, logs and archived userdirs remain in .runtime/dev-loop/.",
+      "visibility": "private"
+    }
+  }
+}

@@ -15,6 +15,21 @@ Keep the full live journal, label the snapshot/cutoff, and verify its bytes/hash
 not truncate a journal or overwrite a historical hash to hide later events. A hash
 identifies bytes; it does not prove the depicted behavior without inspection.
 
+**Retained run evidence store (owner decision, 7 November 2026).** Raw run evidence
+that a dated record cites (packages, frames, traces, evaluator records, memory stores,
+userdirs) lives read-only under `.runtime/evidence/<study>/`, outside any worktree.
+`python -m tools.evidence seal STUDY --from SUBDIR=PATH --cited-by RECORD --note TEXT`
+copies it in once, checks every copy by hash, and writes the tracked manifest
+`data/evidence/<study>.sha256` (`shasum -a 256` format, so stock tools verify it) and its
+entry in `data/evidence/index.json` (`evidence-index/1`). It never copies game builds,
+locks, credentials, environments or caches, and a sealed study is never rewritten.
+`tools/evidence.py verify` runs in the fast checks (file set and bytes) and the full
+profile (every hash); a fresh clone has no store and reports each study as not present.
+The store is the only copy: there is no off-machine backup, and raw evidence is not
+published (owner decisions, 7 November 2026; restic to object storage was the
+researched option if a backup is chosen later). Seal a study before removing the
+worktree or directory that held it.
+
 Retain curated acceptance artifacts and failure evidence until superseded by
 reviewed equivalent evidence or explicitly selected for removal; if removed,
 record availability as removed in the evidence index. Keep unresolved-incident
