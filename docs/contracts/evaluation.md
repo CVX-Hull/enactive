@@ -198,13 +198,92 @@ cannot block a check, a Pause or a run.
 A forwarding failure returns `503` with `{"viewer": "unavailable"}`. The page polls;
 there is no streaming connection.
 
-**Routes.** The route list and the health and attention rules are **finalised with the
-approved spectator design**. Until then the starting set is:
-- `GET /api/view/runs`;
-- `GET /api/view/run/<run>/summary`;
-- `GET /api/view/run/<run>/steps?after=<seq>&limit=<n ≤ 500>`;
-- `GET /api/view/run/<run>/frame/<source_id>`, served only after its SHA-256 matches;
-- `GET /api/view/lineage/<lineage>`;
-- `GET /api/view/compare?runs=<ids>`.
+**Launch and lifetime.**
+- The supervisor starts the viewer as an **unsupervised** child: `python -m harness.viewer`.
+- Its exit never ends, pauses or gates the run, and the supervisor stops it at the end.
+- The viewer reads the live run directory and the evaluation root (`.runtime/evaluations`).
+- It writes only the live run's `live` evaluation store.
 
-No route writes anything.
+## Record extensions (version 1 additions, before first delivery)
+
+| Table | Columns | Meaning |
+| --- | --- | --- |
+| `run_facts` | `key`, `value` | From `manifest.json` and frozen inputs: `labels` (arm, start, scenario, lineage, admission), `source_commit`, model id, effort, route, guide and assignment SHA-256 digests, limits, and the declared spend ceiling |
+| `tool_calls` | `request_id`, `tool_call_id`, `actor`, `decision`, `tool`, `status` (`ok`, `error`, `refused`), `latency_ms`, `result_bytes`, `wall` | One row per tool call, from host `tool-start`, `tool-result` and `tool-refused` |
+| `requests` | `request_id`, `actor`, `wall`, `attempt`, `input_tokens`, `cache_read`, `cache_write`, `output_tokens`, `dollars`, `retry_class`, `omitted_images`, `manifest` | One row per HTTP attempt. `manifest` is `exact` when a `context-manifest` event exists, else `absent`. |
+
+`metrics` gains a `key` column for multi-valued metrics, such as per reader, per
+percentile, per status or per handoff. The primary key is (`name`, `key`).
+
+**Further additions:**
+- `source` gains `derived` for values computed from other records.
+- `survival.game_hours` carries `censor_reason`:
+  - `died`;
+  - `budget`;
+  - `player_stop`;
+  - `custody`;
+  - `infrastructure`;
+  - `owner_pause`.
+- **Episodes.** When game time moves backward by more than one day, or the identity
+  reading changes, the evaluator starts a new **episode**. It emits an `episode` event,
+  and survival is measured within the last episode.
+- **Run end.** An orderly stop or a player finish is a `run_end` event with its reason.
+  It is not a `custody_stop`, which is reserved for partial or unknown delivery and
+  custody fences.
+
+## Human labels and change records
+
+Human-authored evaluation data lives in git-tracked files under `data/evaluation/`. The
+evaluator reads them, and nothing writes them at run time.
+
+| File | Content |
+| --- | --- |
+| `taxonomy.json` | `{version, codes: [{code, name, definition, examples}]}` for failure modes |
+| `labels.jsonl` | One label per line: `{id, session, seq_start, seq_end, target, code, verdict, note, author, date, taxonomy_version}`. `target` names an event or record ID, and `verdict` is `confirm`, `reject` or `unsure`. |
+| `changes.json` | `[{id, name, arms, commits, hypothesis, target_failure, target_metric: {name, direction, min_effect}, uptake_metric, guards, verdict, notes}]`, where `verdict` is `moved`, `wrong_way`, `no_effect_detected` or `untested` |
+
+Labels enter records as `human` events. A label never changes a derived value; it sits
+beside it.
+
+## Spectator view API (`spectator-view/1`)
+
+All routes are `GET`, return JSON with `"schema": "spectator-view/1"` unless noted, stay
+under 4 MiB, and write nothing. `<run>` is a session ID. Lists paginate with
+`after`/`limit` (`limit` ≤ 500).
+
+| Route | Returns |
+| --- | --- |
+| `/api/view/runs` | One summary per known run: facts, state (`live` or `final`), outcome (hours, died, `censor_reason`), decisions, dollars, headline metrics, versions. Built by scanning record stores read-only and cached in memory. |
+| `/api/view/run/<run>/summary` | Facts; outcome; the Pause conditions (below); game state with provenance; findings; ladder; metrics with `source`, `count`, `denominator`, `missing`; reader coverage with held-out validation status |
+| `/api/view/run/<run>/steps?after=&limit=` | Steps: `seq`, `decision`, `wall`, `kind`, `mode`, `game_time`, `source_id`, `frame_changed`, `dollars`, `keys` |
+| `/api/view/run/<run>/frame/<source_id>` | The original PNG (`image/png`), only after its SHA-256 matches the record |
+| `/api/view/run/<run>/tools` | Per-tool aggregates (calls, p50 and p95 latency, refused, errors, result bytes) and transitions `[from, to, n]` |
+| `/api/view/run/<run>/calls?tool=&status=&after=&limit=` | Tool-call rows, each with the step it produced (and its frame) where one exists |
+| `/api/view/run/<run>/requests?after=&limit=` | Request rows, plus eviction and handoff markers |
+| `/api/view/run/<run>/context/<request_id>` | Ordered parts replayed from the manifest (`exact: true`). Without a manifest: frozen inputs plus recorded tool results (`exact: false`). |
+| `/api/view/run/<run>/memory` | Records with kind, chain, cited sources, reads (record IDs returned), handoff carry and human audit labels |
+| `/api/view/run/<run>/programs` | Programs with lineage and runs (status, steps, elapsed, reason) |
+| `/api/view/run/<run>/handoffs` | Handoffs with position, decisions to resume, carry ratio, carry text and identity check |
+| `/api/view/improve/changes` | Change records with per-run target, uptake and guard values for each arm, and bootstrap intervals |
+| `/api/view/improve/failures` | Failure modes from derived events and human labels: occurrences, runs, decisions and dollars inside, source |
+| `/api/view/compare?group=arm\|start&runs=` | Per group: n, deaths, censored, Kaplan–Meier with Greenwood bounds, median or `not_reached`, restricted mean to the stated horizon with a bootstrap interval, excluded runs, version facts |
+| `/api/view/explore?arm=&start=&outcome=&metric=` | Cohort rows; the metric's n, median, IQR and bootstrap interval for the median (n ≥ 5); the 12 decisions before each death |
+
+## Pause conditions (supervise)
+
+The viewer computes these for the live run. They inform the owner and gate nothing.
+Each has a value, a threshold, `met`, and the dollars per minute that continuing costs.
+
+| Condition | Met when |
+| --- | --- |
+| Feed alive | No new operation for 300 s |
+| Custody healthy | Any partial or unknown receipt, or a custody stop |
+| Not looping | 30 or more decisions without `in_play` while game time does not advance |
+| Spend inside allowance | Spend so far, or the one-hour projection, exceeds the manifest's declared ceiling |
+| Not dead and still spending | A death event followed by further requests |
+
+Game state (vitals, threat) is information only and never a Pause condition.
+
+**Pause.** The gateway's Pause takes `{"reason": "loop" | "fault" | "spend" | "other"}`.
+It forwards `{}` to the custodian unchanged and records the reason in its watch terminal
+record. Pause never waits for the viewer.
