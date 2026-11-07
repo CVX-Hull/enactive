@@ -23,7 +23,7 @@ from harness.evaluation.core.derive import guard_clock
 from harness.evaluation.core.lineage import stitch
 from harness.evaluation.core.pipeline import evaluate
 from harness.evaluation.core.records import (EvaluationError, RecordWriter, open_readonly, read_events, read_metadata,
-    read_metrics, read_readings, read_steps, record_path)
+    read_metrics, read_readings, read_requests, read_run_facts, read_steps, read_tool_calls, record_path)
 from harness.evaluation.core.survival import (Observation, bootstrap_rmst, compare, kaplan_meier, logrank,
     restricted_mean, rmst)
 from harness.player.memory import Memory
@@ -285,7 +285,8 @@ def main_scenario(directory: Path, **options) -> Path:
 def metrics_of(path: Path) -> dict:
     connection = open_readonly(path)
     try:
-        return read_metrics(connection)
+        # A keyless metric is found by its name, a member of a multi-valued one by (name, key).
+        return {(name if not key else (name, key)): row for (name, key), row in read_metrics(connection).items()}
     finally:
         connection.close()
 
@@ -318,11 +319,18 @@ def test_record_follows_the_contract_tables(tmp_path):
         'mode', 'source_id', 'frame_sha256', 'frame_changed']
     assert tables['readings'] == ['seq', 'reader', 'reader_version', 'value', 'confidence', 'abstain']
     assert tables['events'] == ['id', 'seq_start', 'seq_end', 'kind', 'source', 'confidence', 'payload']
-    assert tables['metrics'] == ['name', 'version', 'value', 'count', 'denominator', 'missing']
+    assert tables['metrics'] == ['name', 'key', 'version', 'value', 'count', 'denominator', 'missing']
+    assert tables['run_facts'] == ['key', 'value']
+    assert tables['tool_calls'] == ['request_id', 'tool_call_id', 'actor', 'decision', 'tool', 'status', 'latency_ms',
+        'result_bytes', 'wall', 'operation_id']
+    assert tables['requests'] == ['request_id', 'actor', 'wall', 'attempt', 'input_tokens', 'cache_read', 'cache_write',
+        'output_tokens', 'dollars', 'retry_class', 'omitted_images', 'manifest']
+    assert [r[1] for r in connection.execute("PRAGMA table_info(metrics)") if r[5]] == ['name', 'key']
     meta = read_metadata(connection)
+    assert meta['state'] == 'final' and meta['labels'] == dict(arm=None, start=None, scenario=None, lineage=None, admission=None)
     assert (meta['schema'], meta['core_version'], meta['binding_id'], meta['binding_version'], meta['session']) == (
         'evaluation-record/1', 1, 'fake', 3, SESSION)
-    assert meta['last_operation_seq'] == 14 and meta['first_in_play_seq'] == 3 and meta['created_wall'] == 1.0
+    assert meta['last_seq'] == 14 and meta['first_in_play_seq'] == 3 and meta['created_wall'] == 1.0
     assert set(meta['inputs']) == {'manifest.json', 'session.sqlite3', 'actors/001/host.jsonl'}
     steps = read_steps(connection)
     assert [s.seq for s in steps] == list(range(1, 15))
@@ -355,7 +363,9 @@ def dump(path: Path) -> dict:
         meta = read_metadata(connection)
         meta.pop('inputs')
         return dict(meta=meta, steps=read_steps(connection), readings=read_readings(connection),
-            events=read_events(connection), metrics={k: v for k, v in read_metrics(connection).items()})
+            events=read_events(connection), metrics={k: v for k, v in read_metrics(connection).items()},
+            run_facts=read_run_facts(connection), tool_calls=read_tool_calls(connection),
+            requests=read_requests(connection))
     finally:
         connection.close()
 
@@ -364,7 +374,7 @@ def test_a_full_pass_is_deterministic(tmp_path):
     first = run_and_evaluate(tmp_path / 'one')
     second = run_and_evaluate(tmp_path / 'two')
     one, two = dump(first), dump(second)
-    for part in ('steps', 'readings', 'events', 'metrics'):
+    for part in ('steps', 'readings', 'events', 'metrics', 'run_facts', 'tool_calls', 'requests'):
         assert one[part] == two[part]
     assert one['meta']['created_wall'] == two['meta']['created_wall']
 
@@ -390,7 +400,7 @@ def test_incremental_append_equals_a_full_pass_over_the_grown_run(tmp_path):
     run.finish(close=False)
     root = tmp_path / 'evals'
     path = evaluate(run_dir, FakeBinding(), root, created_wall=1.0)
-    assert dump(path)['meta']['last_operation_seq'] == 4
+    assert dump(path)['meta']['last_seq'] == 4
     assert events_of(path, 'ineffective_repeat') == []
     for item in sequence[4:]:  # the live store grows; the host trace grows with it
         run.step(a, *item)
@@ -400,8 +410,8 @@ def test_incremental_append_equals_a_full_pass_over_the_grown_run(tmp_path):
     assert evaluate(run_dir, FakeBinding(), root, after_seq=4, created_wall=1.0) == path
     incremental = dump(path)
     full = dump(evaluate(run_dir, FakeBinding(), tmp_path / 'full-evals', created_wall=1.0))
-    assert incremental['meta']['last_operation_seq'] == 7
-    for part in ('steps', 'readings', 'events', 'metrics'):
+    assert incremental['meta']['last_seq'] == 7
+    for part in ('steps', 'readings', 'events', 'metrics', 'run_facts', 'tool_calls', 'requests'):
         assert incremental[part] == full[part], part
     stuck = [e for e in incremental['events'] if e['kind'] == 'ineffective_repeat']
     assert [(e['seq_start'], e['seq_end'], e['payload']['inputs']) for e in stuck] == [(5, 7, 3)]
@@ -443,13 +453,13 @@ def test_an_unsettled_operation_is_reread_once_it_settles(tmp_path):
     run.finish(close=False)
     root = tmp_path / 'evals'
     path = evaluate(run_dir, FakeBinding(), root, created_wall=1.0)
-    assert dump(path)['meta']['last_operation_seq'] == 2
+    assert dump(path)['meta']['last_seq'] == 2
     pending = run.step(a, *sequence[2], pending=True)
     run.step(a, *sequence[3])
     run.finish(close=False)
     evaluate(run_dir, FakeBinding(), root, after_seq=2, created_wall=1.0)
     waiting = dump(path)
-    assert waiting['meta']['last_operation_seq'] == 4 and waiting['meta']['pending_seqs'] == [3]
+    assert waiting['meta']['last_seq'] == 4 and waiting['meta']['pending_seqs'] == [3]
     assert [s.source_id is not None for s in waiting['steps']] == [True, True, False, True]
     assert [s.decision for s in waiting['steps']] == [0, 1, 1, 2]  # the unsettled input is no decision yet
     run.settle(pending)
@@ -459,7 +469,7 @@ def test_an_unsettled_operation_is_reread_once_it_settles(tmp_path):
     assert caught_up['meta']['pending_seqs'] == [] and [s.source_id is not None for s in caught_up['steps']] == [True] * 4
     assert [s.decision for s in caught_up['steps']] == [0, 1, 2, 3]
     full = dump(evaluate(run_dir, FakeBinding(), tmp_path / 'full', created_wall=1.0))
-    for part in ('steps', 'readings', 'events', 'metrics'):
+    for part in ('steps', 'readings', 'events', 'metrics', 'run_facts', 'tool_calls', 'requests'):
         assert caught_up[part] == full[part], part
     run.store.close()
 
@@ -527,7 +537,7 @@ def test_mode_vital_threat_long_activity_milestone_and_death_events(tmp_path):
     assert len(death) == 1 and death[0]['seq_start'] == 14 and death[0]['payload']['cause'] == 'combat'
     assert death[0]['source'] == 'reader' and death[0]['confidence'] == pytest.approx(0.7)
     for event in events:
-        assert event['source'] in ('harness', 'reader', 'player_claim', 'human')
+        assert event['source'] in ('harness', 'reader', 'derived', 'player_claim', 'human')
         assert event['confidence'] is None or 0 <= event['confidence'] <= 1
 
 
@@ -596,9 +606,11 @@ def test_custody_stop_handoff_and_host_events(tmp_path):
         return directory
     path = run_and_evaluate(tmp_path, build)
     stops = events_of(path, 'custody_stop')
-    assert [(e['payload']['cause'], e['source'], e['confidence']) for e in stops] == [
-        ('unknown', 'harness', None), ('orderly_stop', 'harness', None)]
+    # An accepted orderly stop is a run_end, never a custody stop; only partial or unknown delivery is.
+    assert [(e['payload']['cause'], e['source'], e['confidence']) for e in stops] == [('unknown', 'harness', None)]
     assert stops[0]['seq_start'] == 2
+    ends = events_of(path, 'run_end')
+    assert [(e['payload']['reason'], e['payload']['orderly_stop'], e['source']) for e in ends] == [('orderly_stop', True, 'harness')]
     handoff = events_of(path, 'handoff')
     assert len(handoff) == 1 and handoff[0]['payload']['context_sha256'] == 'b' * 64 and handoff[0]['seq_start'] == 3
     refused = events_of(path, 'tool_refused')
@@ -682,11 +694,15 @@ def test_memory_program_and_handoff_events_and_metrics(tmp_path):
     assert late.denominator == 3 and late.count == 1 and late.value == pytest.approx(1 / 3)
     assert metrics['programs.saved'].value == 1 and metrics['programs.run'].value == 3
     assert metrics['programs.reused'].value == 2
-    assert metrics['programs.outcomes'].value == {'done': 2, 'yield': 1}
+    assert [metrics['programs.outcomes', s].value for s in ('done', 'yield')] == [2, 1]
+    assert metrics['programs.outcomes', 'done'].denominator == 3 and 'programs.outcomes' not in metrics
+    assert [metrics['memory.records', k].value for k in ('claim', 'decision', 'work')] == [1, 1, 1]
     resume = metrics['handoff.decisions_to_resume']
-    assert resume.denominator == 1 and resume.count == 1 and resume.value['per_handoff'] == [2]
+    assert resume.denominator == 1 and resume.count == 1 and resume.value == dict(value=2, excluded=0)
+    assert metrics['handoff.decisions_to_resume', '0'].value == 2  # per-handoff values are keyed by index
     ratio = metrics['handoff.carry_ratio']
-    assert ratio.count == 1 and ratio.value['per_handoff'] == [pytest.approx(0.25)] and ratio.missing is None
+    assert ratio.count == 1 and ratio.value['value'] == pytest.approx(0.25) and ratio.missing is None
+    assert metrics['handoff.carry_ratio', '0'].value == pytest.approx(0.25)
 
 
 def test_memory_metrics_missing_without_a_host_trace(tmp_path):
@@ -714,11 +730,14 @@ def test_every_metric_row_is_present_with_count_and_denominator(tmp_path):
         'input.uncertain_deliveries', 'memory.writes', 'memory.reads', 'memory.retrieved_beyond_carry',
         'memory.late_write_share', 'programs.saved', 'programs.run', 'programs.reused', 'programs.outcomes',
         'handoff.decisions_to_resume', 'handoff.carry_ratio', 'host.dollars_per_decision', 'host.cache_write_share',
-        'host.large_rewrite_share', 'host.latency', 'host.retry_share', 'needs.severe_share', 'ladder.reached',
-        'lineage.continuity'}
+        'host.large_rewrite_share', 'host.retry_share', 'needs.severe_share', 'ladder.reached',
+        'lineage.continuity', 'run.infrastructure_loss'}
     assert expected <= set(metrics)
-    assert {n for n in metrics if n.startswith('reader.coverage.')} >= {'reader.coverage.core.frame', 'reader.coverage.clock',
-        'reader.coverage.mode', 'reader.coverage.core.game_time', 'reader.coverage.core.map_change'}
+    keyed = {n: {k for item in metrics if isinstance(item, tuple) for name, k in [item] if name == n}
+        for n in ('reader.coverage', 'host.latency', 'tools.calls')}
+    assert keyed['reader.coverage'] >= {'core.frame', 'clock', 'mode', 'core.game_time', 'core.map_change'}
+    assert keyed['host.latency'] == {'response.p50', 'response.p95', 'first_chunk.p50', 'first_chunk.p95'}
+    assert {'computer_input', 'player_source+zoom'} <= keyed['tools.calls']
     assert all(row.version == 1 for row in metrics.values())
 
 
@@ -739,9 +758,10 @@ def test_survival_pace_and_cost_metrics(tmp_path):
     assert cache.value == pytest.approx(0.4) and cache.denominator == pytest.approx(0.14)
     large = metrics['host.large_rewrite_share']
     assert large.value == pytest.approx(1 / 14) and large.count == 1
-    latency = metrics['host.latency']
-    assert latency.value == dict(response_ms=dict(n=14, p50=200, p95=200), first_chunk_ms=dict(n=14, p50=100, p95=100))
-    assert latency.denominator == 14
+    for series, expected in (('response', 200), ('first_chunk', 100)):
+        for percentile in ('p50', 'p95'):
+            latency = metrics['host.latency', f'{series}.{percentile}']
+            assert latency.value == expected and latency.count == 14 and latency.denominator == 14
     retry = metrics['host.retry_share']
     assert retry.value['value'] == 0 and retry.count == 0 and retry.denominator == 14
 
@@ -799,9 +819,9 @@ def test_abstentions_and_missing_captures_are_excluded_and_counted(tmp_path):
     assert (rate.count, rate.denominator) == (2, 5) and rate.value['value'] == pytest.approx(0.4)
     per = metrics['host.dollars_per_decision']
     assert per.missing == 'missing_usage_excluded' and per.value['excluded'] == 1
-    coverage = metrics['reader.coverage.core.frame']
+    coverage = metrics['reader.coverage', 'core.frame']
     assert coverage.denominator == 6 and coverage.count == 6  # six captures; the unknown frame is still a legible frame
-    assert metrics['reader.coverage.clock'].count == 5  # the unknown-mode frame carries no time
+    assert metrics['reader.coverage', 'clock'].count == 5  # the unknown-mode frame carries no time
     assert metrics['input.uncertain_deliveries'].value == dict(value=2, uncertain_receipts=1, runs_ended=1)
 
 
@@ -1037,11 +1057,11 @@ def test_evaluate_run_and_compare_commands(tmp_path, capsys):
         binding=FakeBinding()) == 0
     out = json.loads(capsys.readouterr().out)
     record = Path(out['record'])
-    assert record == record_path(root, SESSION, 'fake', 3) and out['last_operation_seq'] == 14
+    assert record == record_path(root, SESSION, 'fake', 3) and out['last_seq'] == 14
     assert 'survival.game_hours' in out['metrics']
     # Host and custody figures come from the existing summaries.
     metrics = metrics_of(record)
-    assert metrics['host.latency'].value['response_ms']['p50'] == pytest.approx(200)
+    assert metrics['host.latency', 'response.p50'].value == pytest.approx(200)
     assert metrics['input.uncertain_deliveries'].denominator == 14  # the control summary counts native receipts
     from tools.evaluate import run_external
     external = run_external(directory)
@@ -1085,6 +1105,7 @@ def test_evaluate_options_are_refused_for_other_commands_and_externals_are_used(
     assert main(['evaluate-run', str(directory), '--binding', 'fake', '--root', str(tmp_path / 'evals')],
         binding=FakeBinding()) == 0
     metrics = metrics_of(Path(json.loads(capsys.readouterr().out)['record']))
-    assert metrics['host.latency'].value == dict(response_ms=dict(n=3, p50=20, p95=30), first_chunk_ms=dict(n=2, p50=1, p95=2))
+    assert [metrics['host.latency', k].value for k in ('response.p50', 'response.p95', 'first_chunk.p50', 'first_chunk.p95')] == [20, 30, 1, 2]
+    assert (metrics['host.latency', 'response.p50'].count, metrics['host.latency', 'first_chunk.p50'].count) == (3, 2)
     uncertain = metrics['input.uncertain_deliveries']
     assert (uncertain.value['uncertain_receipts'], uncertain.denominator, uncertain.count) == (2, 7, 2)

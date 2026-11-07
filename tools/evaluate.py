@@ -9,17 +9,16 @@ and the issue's decision rule.
 
 host-summary selects current telemetry/2 files, actor directories or campaign
 folders (4096 files / 8 GiB; 64 MiB per line; two million events per trace).
-witness-summary selects one computer-session/1 database/directory and 1..32
-observer-timing/4 exports (64 MiB each / 256 MiB total; 2000 rows per export).
 control-summary selects 1..32 computer-session/1 databases/directories (512 MiB
 per database including SQLite sidecars; 200000 rows per selected table).
-investigation-export selects 1..4 explicitly closed cases and writes a bounded
-observer-investigation/1 bundle, optionally with the shared recorded HTML reader.
 evaluate-run reads one run directory read-only and writes an evaluation-record/1 store
 under --root with the named game binding; it reuses the host and control summaries for
-latency and delivery counts. evaluate-compare reads evaluation records and prints
-Kaplan-Meier curves, restricted mean survival to --horizon hours, bootstrap intervals
-and pairwise log-rank tests by arm (the record's arm metadata, or --arm RECORD=LABEL).
+latency and delivery counts. evaluate-runs does the same for every run directory (one that
+holds a manifest.json) below one directory, taking each run's memory store from --memory-dir
+(player-memory-<run>.sqlite3) or its manifest, and the operator labels of an archived
+campaign-run/4 run from data/evaluation/archive-labels.json. evaluate-compare reads evaluation
+records and prints Kaplan-Meier curves, restricted mean survival to --horizon hours, bootstrap
+intervals and pairwise log-rank tests by arm (the record's arm metadata, or --arm RECORD=LABEL).
 Unsupported historical formats remain inert evidence, available in Git history.
 """
 from __future__ import annotations
@@ -33,9 +32,10 @@ from typing import Any, Callable, Sequence
 
 from harness.computer.protocol import ControlError
 
-EVALUATION_COMMANDS = ('evaluate-run', 'evaluate-compare')
+EVALUATION_COMMANDS = ('evaluate-run', 'evaluate-runs', 'evaluate-compare')
 # A game binding is imported only when it is named, so the core never depends on one.
 BINDINGS: dict[str, tuple[str, str]] = {'cdda': ('harness.evaluation.cdda', 'CddaBinding')}
+ARCHIVE_LABELS = Path(__file__).resolve().parents[1] / 'data' / 'evaluation' / 'archive-labels.json'
 
 
 def load_binding(name: str) -> Any:
@@ -66,14 +66,48 @@ def run_external(run_dir: Path) -> dict:
     return external
 
 
+def archive_labels() -> dict[str, dict]:
+    """Operator labels of archived runs whose campaign-run/4 manifest has none, by run directory name."""
+    if not ARCHIVE_LABELS.is_file():
+        return {}
+    value = json.loads(ARCHIVE_LABELS.read_text())
+    return value.get('runs', {}) if isinstance(value, dict) else {}
+
+
+def evaluate_one(run: Path, binding: Any, arguments: argparse.Namespace, memory: Path | None, label: str | None = None) -> Path:
+    from harness.evaluation.core.pipeline import evaluate
+    labels = archive_labels().get(Path(run).resolve().name)
+    return evaluate(run, binding, arguments.root, memory_store=memory, replace=arguments.replace,
+        arm=label, labels=labels, external=run_external(run))
+
+
 def evaluate_run(arguments: argparse.Namespace, binding: Any) -> dict:
-    from harness.evaluation.core.pipeline import evaluate, record_summary
-    run = arguments.paths[0]
-    path = evaluate(run, binding, arguments.root, memory_store=arguments.memory, replace=arguments.replace,
-        arm=arguments.arm[0] if arguments.arm else None, external=run_external(run))
+    from harness.evaluation.core.pipeline import record_summary
+    path = evaluate_one(arguments.paths[0], binding, arguments, arguments.memory,
+        arguments.arm[0] if arguments.arm else None)
     summary = record_summary(path)
     return dict(record=str(path), session=summary['metadata']['session'],
-        last_operation_seq=summary['metadata']['last_operation_seq'], metrics=sorted(summary['metrics']))
+        last_seq=summary['metadata']['last_seq'], metrics=sorted(summary['metrics']))
+
+
+def evaluate_runs(arguments: argparse.Namespace, binding: Any) -> dict:
+    from harness.evaluation.core.pipeline import record_summary
+    directory = arguments.paths[0]
+    runs = sorted(p for p in directory.iterdir() if (p / 'manifest.json').is_file())
+    if not runs:
+        raise ControlError(f'{directory}: no run directory (one holding a manifest.json) found')
+    results = []
+    for run in runs:
+        memory = None
+        if arguments.memory_dir is not None:
+            candidate = arguments.memory_dir / f'player-memory-{run.name}.sqlite3'
+            memory = candidate if candidate.is_file() else None
+        path = evaluate_one(run, binding, arguments, memory)
+        survival = record_summary(path)['metrics']['survival.game_hours']['value']
+        results.append(dict(run=run.name, record=str(path), hours=None if not survival else survival['hours'],
+            outcome=None if not survival else survival['outcome'],
+            censor_reason=None if not survival else survival.get('censor_reason')))
+    return dict(runs=results)
 
 
 def evaluate_compare(arguments: argparse.Namespace) -> dict:
@@ -94,60 +128,50 @@ def main(argv: Sequence[str] | None = None, *, binding: Any = None,
          load: Callable[[str], Any] = load_binding) -> int:
     """`binding` and `load` are test hooks; the command line resolves --binding through BINDINGS."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=('host-summary', 'witness-summary', 'control-summary', 'investigation-export',
-        *EVALUATION_COMMANDS))
+    parser.add_argument('command', choices=('host-summary', 'control-summary', *EVALUATION_COMMANDS))
     parser.add_argument('paths', type=Path, nargs='+')
     parser.add_argument('--format', choices=('json', 'markdown'), default='json')
-    parser.add_argument('--output', type=Path)
-    parser.add_argument('--html', type=Path)
-    parser.add_argument('--binding', help='evaluate-run: game binding name')
-    parser.add_argument('--root', type=Path, help='evaluate-run: evaluation record root, e.g. .runtime/evaluations')
+    parser.add_argument('--binding', help='evaluate-run, evaluate-runs: game binding name')
+    parser.add_argument('--root', type=Path, help='evaluate-run, evaluate-runs: evaluation record root, e.g. .runtime/evaluations')
     parser.add_argument('--memory', type=Path, help='evaluate-run: player-memory/2 store if the manifest does not name it')
-    parser.add_argument('--replace', action='store_true', help='evaluate-run: rewrite an existing record for these versions')
+    parser.add_argument('--memory-dir', type=Path, help='evaluate-runs: directory of player-memory-<run>.sqlite3 stores')
+    parser.add_argument('--replace', action='store_true', help='evaluate-run, evaluate-runs: rewrite an existing record for these versions')
     parser.add_argument('--horizon', type=float, help='evaluate-compare: restricted mean horizon in game hours')
     parser.add_argument('--arm', action='append',
         help='evaluate-run: arm label stored in the record; evaluate-compare: RECORD=LABEL (repeatable)')
     arguments = parser.parse_args(argv)
     evaluating = arguments.command in EVALUATION_COMMANDS
-    if arguments.command == 'investigation-export' and (len(arguments.paths) != 1 or arguments.output is None):
-        parser.error('investigation-export requires one selection file and --output')
-    if arguments.command != 'investigation-export' and (arguments.output is not None or arguments.html is not None):
-        parser.error('--output and --html are supported for investigation-export only')
-    if arguments.command == 'evaluate-run':
+    if arguments.command in ('evaluate-run', 'evaluate-runs'):
         if len(arguments.paths) != 1 or arguments.root is None or (binding is None and arguments.binding is None):
-            parser.error('evaluate-run requires one run directory, --root and --binding')
-        if arguments.arm is not None and len(arguments.arm) != 1:
-            parser.error('evaluate-run takes at most one --arm label')
+            parser.error(f'{arguments.command} requires one directory, --root and --binding')
+        if arguments.arm is not None and (arguments.command == 'evaluate-runs' or len(arguments.arm) != 1):
+            parser.error('evaluate-run takes at most one --arm label; evaluate-runs takes none')
+    if arguments.command != 'evaluate-runs' and arguments.memory_dir is not None:
+        parser.error('--memory-dir is supported for evaluate-runs only')
     if arguments.command == 'evaluate-compare' and (arguments.horizon is None or not arguments.horizon > 0):
         parser.error('evaluate-compare requires --horizon HOURS greater than zero')
     if not evaluating and any(value is not None and value is not False for value in (
-            arguments.binding, arguments.root, arguments.memory, arguments.horizon, arguments.arm, arguments.replace or None)):
-        parser.error('--binding, --root, --memory, --replace, --horizon and --arm are supported for the evaluate commands only')
+            arguments.binding, arguments.root, arguments.memory, arguments.memory_dir, arguments.horizon, arguments.arm,
+            arguments.replace or None)):
+        parser.error('--binding, --root, --memory, --memory-dir, --replace, --horizon and --arm are supported for the evaluate commands only')
     try:
         from harness.evaluation.core.records import EvaluationError
         if evaluating:
             try:
-                if arguments.command == 'evaluate-run':
-                    result = evaluate_run(arguments, binding if binding is not None else load(arguments.binding))
-                else:
+                if arguments.command == 'evaluate-compare':
                     result = evaluate_compare(arguments)
+                else:
+                    chosen = binding if binding is not None else load(arguments.binding)
+                    result = (evaluate_run if arguments.command == 'evaluate-run' else evaluate_runs)(arguments, chosen)
             except EvaluationError as exc:
                 raise ControlError(str(exc)) from exc
             print(json.dumps(result, allow_nan=False, sort_keys=True))
             return 0
         from tools.host_analysis import host_summary, markdown
-        from tools.observer_analysis import witness_summary
         from tools.control_analysis import control_summary
-        if arguments.command == 'investigation-export':
-            from tools.investigation import write_export
-            if arguments.format != 'json':
-                raise ControlError('investigation-export supports JSON only')
-            write_export(arguments.paths[0], arguments.output, arguments.html)
-            return 0
         if arguments.format == 'markdown' and arguments.command != 'host-summary':
             raise ControlError('Markdown output is supported for host-summary only')
-        result = {'host-summary': host_summary, 'witness-summary': witness_summary,
-            'control-summary': control_summary}[arguments.command](arguments.paths)
+        result = {'host-summary': host_summary, 'control-summary': control_summary}[arguments.command](arguments.paths)
         print(markdown(result) if arguments.format == 'markdown' else json.dumps(result, allow_nan=False, sort_keys=True))
         return 0 if result.get('complete', True) else 1
     except (ControlError, OSError, ValueError, UnicodeError, RecursionError, ImportError) as exc:

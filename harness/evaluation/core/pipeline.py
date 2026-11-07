@@ -4,7 +4,7 @@
 appends the raw rows, and rewrites the derived rows (guarded game time, events, metrics)
 from the whole record. A full pass is deterministic: the same run, binding and
 `created_wall` give the same record. An incremental pass (`after_seq`, the record's
-`last_operation_seq`) continues a record for a live run. An operation whose terminal state
+`last_seq`) continues a record for a live run. An operation whose terminal state
 was not yet written is recorded as a step without a frame and listed in `pending_seqs`; when
 it settles, the pass rebuilds the record from that step on (its frame, and the change versus
 it, were not known before).
@@ -23,6 +23,7 @@ from .binding import Binding
 from .derive import (CORE_READERS, CORE_VERSION, NO_FRAME, READER_CLOCK, READER_FRAME, READER_INPUT, READER_MAP,
     build_timeline, clock_readings, core_events, describe_actions, frame_summary, map_change_fraction,
     operation_events)
+from .facts import run_facts
 from .host import host_events, host_facts, seq_resolver
 from .metrics import compute_metrics
 from .lineage import METRIC as LINEAGE_METRIC
@@ -84,7 +85,8 @@ def _read_new_steps(inputs: RunInputs, binding: Binding, known: list[StepRow], f
     return steps, readings
 
 
-def _derive(writer: RecordWriter, inputs: RunInputs, binding: Binding, facts, external: Mapping[str, Any] | None) -> dict:
+def _derive(writer: RecordWriter, inputs: RunInputs, binding: Binding, facts, external: Mapping[str, Any] | None,
+            labels: Mapping[str, object] | None = None) -> dict:
     steps = writer.steps()
     timeline = build_timeline(steps, writer.readings(), binding)
     clock = clock_readings(timeline, binding)
@@ -94,7 +96,11 @@ def _derive(writer: RecordWriter, inputs: RunInputs, binding: Binding, facts, ex
     events = [*core_events(timeline, binding), *operation_events(inputs.operations),
         *host_events(facts, resolve, inputs.memory)]
     human = frozenset(e['payload'].get('rung') for e in writer.events() if e['source'] == 'human' and e['kind'] == 'milestone')
-    metrics = compute_metrics(timeline, inputs.operations, events, facts, binding, inputs.carry, human, external)
+    metrics = compute_metrics(timeline, inputs.operations, events, facts, binding, inputs.carry, human, external, inputs.end)
+    run = run_facts(inputs.manifest, inputs.host, inputs.actors, labels)
+    writer.replace_run_facts(run)
+    writer.replace_host_rows(facts.tool_rows(), facts.request_rows())
+    writer.set_metadata(dict(labels=run['labels']))
     writer.replace_readings(READER_CLOCK, clock)
     writer.set_game_times([(row.seq, row.value) for row in clock])
     writer.replace_events(events)
@@ -103,37 +109,61 @@ def _derive(writer: RecordWriter, inputs: RunInputs, binding: Binding, facts, ex
     return dict(first_in_play_seq=steps[timeline.first_in_play].seq if timeline.first_in_play is not None else None)
 
 
+def existing_state(path: Path) -> str | None:
+    """The `state` of the record at `path` (`live` or `final`), or None when there is none or it is unreadable."""
+    from .records import open_readonly, read_metadata
+    if not path.is_file():
+        return None
+    try:
+        connection = open_readonly(path)
+    except EvaluationError:
+        return None
+    try:
+        return read_metadata(connection).get('state')
+    finally:
+        connection.close()
+
+
 def evaluate(run_dir: Path, binding: Binding, root: Path, memory_store: Path | None = None, replace: bool = False,
              after_seq: int | None = None, *, arm: str | None = None, external: Mapping[str, Any] | None = None,
-             created_wall: float | None = None) -> Path:
+             created_wall: float | None = None, state: str = 'final',
+             labels: Mapping[str, object] | None = None) -> Path:
     """Evaluate one run and return its record path.
 
-    `external` optionally carries numbers computed by the existing host and control summaries:
-    `response_ms` and `first_chunk_ms` (lists) and `custody` (`{"receipts": n, "uncertain": n}`).
+    `state` is `final` (default: after the run ended; input digests are taken) or `live` (the viewer's
+    incremental store; no digests). A `live` store is replaced by any pass of the same versions; a `final`
+    store is only rewritten with `replace=True`. `labels` stand in for the operator labels that a
+    campaign-run/4 manifest lacks. `external` optionally carries numbers computed by the existing host and
+    control summaries: `response_ms` and `first_chunk_ms` (lists) and `custody` (`{"receipts": n, "uncertain": n}`).
     `created_wall` defaults to the current time; fix it for byte-identical records.
     """
+    if state not in ('live', 'final'):
+        raise ValueError(f'state must be live or final, not {state!r}')
     run_dir = Path(run_dir)
     incremental = after_seq is not None
-    inputs = read_run(run_dir, memory_path=memory_store)
+    inputs = read_run(run_dir, memory_path=memory_store, digests=state == 'final')
     final = record_path(Path(root), inputs.session, binding.binding_id, binding.binding_version)
     facts = host_facts(inputs.actors, inputs.host)
+    if arm is not None and labels is None:
+        labels = dict(arm=arm)
     base = dict(core_version=CORE_VERSION, binding_id=binding.binding_id, binding_version=binding.binding_version,
         game_time_unit=binding.game_time_unit, run=run_dir.resolve().name, run_dir=str(run_dir.resolve()),
-        session=inputs.session, arm=arm, memory_store=str(memory_store) if memory_store else None)
+        session=inputs.session, arm=arm or (labels or {}).get('arm') or (inputs.manifest.get('labels') or {}).get('arm'),
+        memory_store=str(memory_store) if memory_store else None, state=state)
     if incremental:
         writer = RecordWriter.open(final)
         recorded = writer.metadata()
-        if recorded.get('session') != inputs.session or recorded.get('last_operation_seq') != after_seq:
+        if recorded.get('session') != inputs.session or recorded.get('last_seq') != after_seq:
             writer.close()
             raise EvaluationError(f'{final}: after_seq {after_seq} does not continue this record '
-                f'(last_operation_seq {recorded.get("last_operation_seq")})')
+                f'(last_seq {recorded.get("last_seq")})')
         target = final
     else:
-        if final.exists() and not replace:
+        if final.exists() and not replace and existing_state(final) != 'live':
             raise EvaluationError(f'{final}: an evaluation record for these versions exists; pass replace=True to rewrite it')
         target = final.with_name(final.name + '.partial')
         writer = RecordWriter.create(target, dict(base, created_wall=created_wall if created_wall is not None else time.time(),
-            last_operation_seq=0, first_in_play_seq=None, inputs=inputs.digests), replace=True)
+            last_seq=0, first_in_play_seq=None, inputs=inputs.digests if state == 'final' else {}), replace=True)
     try:
         with writer.transaction():
             # An operation recorded while its terminal state was unwritten is re-read once it settles.
@@ -145,8 +175,8 @@ def evaluate(run_dir: Path, binding: Binding, root: Path, memory_store: Path | N
             known = writer.steps()
             steps, readings = _read_new_steps(inputs, binding, known, facts)
             writer.append_steps(steps, readings)
-            derived = _derive(writer, inputs, binding, facts, external)
-            writer.set_metadata(dict(last_operation_seq=inputs.last_seq or 0, inputs=inputs.digests,
+            derived = _derive(writer, inputs, binding, facts, external, labels)
+            writer.set_metadata(dict(last_seq=inputs.last_seq or 0, inputs=inputs.digests if state == 'final' else {},
                 pending_seqs=[op.seq for op in inputs.operations if op.status == 'pending'], **derived))
     except BaseException:
         writer.close()
@@ -156,6 +186,8 @@ def evaluate(run_dir: Path, binding: Binding, root: Path, memory_store: Path | N
         raise
     writer.close()
     if not incremental:
+        for suffix in ('-wal', '-shm'):
+            Path(str(final) + suffix).unlink(missing_ok=True)
         os.replace(target, final)
         for suffix in ('-wal', '-shm'):
             Path(str(target) + suffix).unlink(missing_ok=True)
@@ -168,7 +200,7 @@ def record_summary(path: Path) -> dict:
     connection = open_readonly(path)
     try:
         return dict(metadata=read_metadata(connection),
-            metrics={name: dict(value=row.value, count=row.count, denominator=row.denominator, missing=row.missing)
-                for name, row in read_metrics(connection).items()})
+            metrics={name if not key else f'{name}[{key}]': dict(value=row.value, count=row.count,
+                denominator=row.denominator, missing=row.missing) for (name, key), row in read_metrics(connection).items()})
     finally:
         connection.close()

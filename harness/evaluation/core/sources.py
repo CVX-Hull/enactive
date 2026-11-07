@@ -21,7 +21,9 @@ from .records import EvaluationError
 SESSION_SCHEMA = 'computer-session/1'
 OPERATION_SCHEMA = 'computer-operation/1'
 HOST_SCHEMA = 'player-host/3'
-MANIFEST_SCHEMA = 'campaign-run/4'
+#: `campaign-run/5` adds the operator labels; `campaign-run/4` is the schema of the archived development-loop
+#: runs this evaluator re-scores, and their labels come from `data/evaluation/archive-labels.json`.
+MANIFEST_SCHEMAS = ('campaign-run/4', 'campaign-run/5')
 MEMORY_SCHEMA = 'player-memory/2'
 CONTEXT_SCHEMA = 'player-handoff-context/1'
 BUSY_TIMEOUT_SECONDS = 1.0
@@ -62,6 +64,19 @@ class MemoryFacts:
 
 
 @dataclass(frozen=True)
+class EndFacts:
+    """How the run ended, from the custodian's `receipt.json` and the gateway's `watch-terminal.json`.
+    Both are absent while a run is live; every field is then None or empty."""
+
+    outcome: str | None = None
+    ending_trigger: str | None = None
+    settled: tuple[dict, ...] = ()
+    finishes: tuple[str | None, ...] = ()
+    paused: bool = False
+    pause_reason: str | None = None
+
+
+@dataclass(frozen=True)
 class RunInputs:
     run_dir: Path
     session: str
@@ -73,6 +88,7 @@ class RunInputs:
     carry: dict[str, frozenset[str]]
     memory: MemoryFacts | None
     digests: dict[str, str] = field(default_factory=dict)
+    end: EndFacts = field(default_factory=EndFacts)
 
 
 def sha256_file(path: Path) -> str:
@@ -93,11 +109,11 @@ def _json(text: str | bytes, where: str) -> object:
 def read_manifest(run_dir: Path) -> dict:
     path = run_dir / 'manifest.json'
     if not path.is_file():
-        raise EvaluationError(f'{path}: missing {MANIFEST_SCHEMA} manifest')
+        raise EvaluationError(f'{path}: missing campaign-run manifest')
     value = _json(path.read_bytes(), str(path))
-    if not isinstance(value, dict) or value.get('schema') != MANIFEST_SCHEMA:
+    if not isinstance(value, dict) or value.get('schema') not in MANIFEST_SCHEMAS:
         found = value.get('schema') if isinstance(value, dict) else None
-        raise EvaluationError(f'{path}: unsupported manifest version {found!r}; expected {MANIFEST_SCHEMA}')
+        raise EvaluationError(f'{path}: unsupported manifest version {found!r}; expected one of {", ".join(MANIFEST_SCHEMAS)}')
     return value
 
 
@@ -247,8 +263,33 @@ def read_carry(run_dir: Path) -> dict[str, frozenset[str]]:
     return carry
 
 
+def _optional_json(path: Path) -> dict | None:
+    if not path.is_file():
+        return None
+    value = _json(path.read_bytes(), str(path))
+    return value if isinstance(value, dict) else None
+
+
+def read_end_facts(run_dir: Path) -> EndFacts:
+    """`receipt.json` (campaign-receipt/3) and `watch-terminal.json`, when the run has ended."""
+    receipt = _optional_json(run_dir / 'receipt.json') or {}
+    driver = receipt.get('driver') if isinstance(receipt.get('driver'), dict) else {}
+    actors = [a for a in driver.get('actors', ()) if isinstance(a, dict)]
+    ending = driver.get('ending_request') if isinstance(driver.get('ending_request'), dict) else {}
+    watch = _optional_json(run_dir / 'watch-terminal.json') or {}
+    pause = watch.get('pause') if isinstance(watch.get('pause'), dict) else {}
+    reason = watch.get('pause_reason', pause.get('reason'))
+    return EndFacts(receipt.get('outcome') if isinstance(receipt.get('outcome'), str) else None,
+        ending.get('trigger') if isinstance(ending.get('trigger'), str) else None,
+        tuple(a['settled'] for a in actors if isinstance(a.get('settled'), dict)),
+        tuple((a.get('player_finish') or {}).get('disposition') for a in actors),
+        watch.get('pause_reply_forwarded') is True or reason is not None or bool(pause),
+        reason if isinstance(reason, str) else None)
+
+
 def read_run(run_dir: Path, *, after_seq: int | None = None, settled_only: bool = False,
-             memory_path: Path | None = None) -> RunInputs:
+             memory_path: Path | None = None, digests: bool = True) -> RunInputs:
+    """`digests=False` skips the SHA-256 of every input, which only a final record keeps."""
     run_dir = Path(run_dir)
     if not run_dir.is_dir():
         raise EvaluationError(f'{run_dir}: not a run directory')
@@ -256,7 +297,8 @@ def read_run(run_dir: Path, *, after_seq: int | None = None, settled_only: bool 
     session, operations = read_operations(run_dir, after_seq=after_seq, settled_only=settled_only)
     if manifest.get('session') not in (None, session):
         raise EvaluationError(f'{run_dir / "manifest.json"}: session {manifest.get("session")!r} differs from the session database')
-    digests = {'manifest.json': sha256_file(run_dir / 'manifest.json'), 'session.sqlite3': sha256_file(run_dir / 'session.sqlite3')}
+    digest = sha256_file if digests else (lambda path: '')
+    found = {'manifest.json': digest(run_dir / 'manifest.json'), 'session.sqlite3': digest(run_dir / 'session.sqlite3')}
     host: dict[str, tuple[HostEvent, ...]] = {}
     actors: list[str] = []
     actor_root = run_dir / 'actors'
@@ -269,7 +311,7 @@ def read_run(run_dir: Path, *, after_seq: int | None = None, settled_only: bool 
             raise EvaluationError(f'{trace}: actor {actor} appears in two host traces')
         host[actor] = events
         actors.append(actor)
-        digests[f'actors/{directory.name}/host.jsonl'] = sha256_file(trace)
+        found[f'actors/{directory.name}/host.jsonl'] = digest(trace)
     selected = memory_path
     if selected is None and isinstance(manifest.get('player_store'), str):
         candidate = Path(manifest['player_store'])
@@ -277,6 +319,6 @@ def read_run(run_dir: Path, *, after_seq: int | None = None, settled_only: bool 
         selected = candidate if candidate.is_file() else None
     memory = read_memory(Path(selected)) if selected is not None else None
     if selected is not None:
-        digests['player-memory'] = sha256_file(Path(selected))
+        found['player-memory'] = digest(Path(selected))
     return RunInputs(run_dir, session, manifest, tuple(operations), operations[-1].seq if operations else None,
-        tuple(actors), host, read_carry(run_dir), memory, digests)
+        tuple(actors), host, read_carry(run_dir), memory, found, read_end_facts(run_dir))

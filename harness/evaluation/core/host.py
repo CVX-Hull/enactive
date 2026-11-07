@@ -5,6 +5,11 @@ the cumulative tokens and dollars of a step (the run's decision count comes from
 input operations, see pipeline). An operation is attributed to the last operation-creating
 tool call that started at or before its creation time on the same actor, which also covers
 the child operations of a program run. Nothing here reads a game screen.
+
+The same pass builds the `tool_calls` and `requests` rows of the record (one per tool call and
+per HTTP attempt) and the host-side events: memory, program, refusal, eviction, handoff-adjacent
+facts, custody stops (partial or unknown delivery only) and `run_end` (an orderly stop or a
+player finish, which is not a custody stop).
 """
 from __future__ import annotations
 
@@ -14,12 +19,13 @@ import json
 import math
 from typing import Callable, Sequence
 
-from .records import EventRow
+from .records import EventRow, RequestRow, ToolCallRow
 from .sources import HostEvent, MemoryFacts, Operation
 
 CREATING_TOOLS = ('computer_input', 'computer_observe', 'player_handoff', 'player_program_run')
 MEMORY_READ_TOOLS = ('player_memory_query', 'player_memory_read', 'player_memory_context')
 LARGE_REWRITE_CACHE_TOKENS = 30_000
+UNCERTAIN_DELIVERY = ('partial', 'unknown')
 
 
 def _number(value: object) -> bool:
@@ -33,6 +39,8 @@ class Request:
     actor: str
     decision: int
     start_ms: float | None
+    wall: float | None = None
+    attempt: int = 1
     fetch_ms: float | None = None
     first_ms: float | None = None
     end_ms: float | None = None
@@ -40,10 +48,15 @@ class Request:
     usage_available: bool = False
     tokens: int | None = None
     dollars: float | None = None
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    cache_read_tokens: int | None = None
     cache_write_tokens: float | None = None
     cache_write_dollars: float | None = None
     retry: bool = False
+    retry_class: str | None = None
     aborted: bool = False
+    manifest: bool = False
 
     @property
     def completed(self) -> bool:
@@ -63,9 +76,20 @@ class ToolCall:
     decision: int | None
     tool: str
     arguments: dict
+    request_id: str | None = None
+    tool_call_id: str | None = None
+    start_ms: float | None = None
+    end_ms: float | None = None
     result: object | None = None
+    result_bytes: int | None = None
     error: bool = False
+    refused: bool = False
     finished: bool = False
+
+    @property
+    def operation_id(self) -> str | None:
+        value = self.result.get('operation_id') if isinstance(self.result, dict) else None
+        return value if isinstance(value, str) else None
 
 
 @dataclass
@@ -77,6 +101,10 @@ class HostFacts:
     refusals: list[HostEvent] = field(default_factory=list)
     evictions: list[HostEvent] = field(default_factory=list)
     controls: list[HostEvent] = field(default_factory=list)
+    finishes: list[HostEvent] = field(default_factory=list)
+    settles: dict[str, HostEvent] = field(default_factory=dict)
+    manifests: dict[str, list[dict]] = field(default_factory=dict)
+    omitted: dict[tuple[str, str], int] = field(default_factory=dict)
     _starts: dict[str, list[tuple[float, int]]] = field(default_factory=dict)
     _prefix: dict[int, tuple[int, float]] = field(default_factory=dict)
     _keys: list[int] | None = None
@@ -114,6 +142,25 @@ class HostFacts:
         at = bisect_right(keys, decision) - 1
         return self._prefix[keys[at]] if at >= 0 else (0, 0.0)
 
+    def tool_rows(self) -> list[ToolCallRow]:
+        """One row per tool call: `ok`, `error` (the result flagged an error) or `refused` (never dispatched).
+        A call still in flight, or cut off without a result, has no row yet."""
+        rows = []
+        for call in self.calls:
+            if call.request_id is None or call.tool_call_id is None or not (call.finished or call.refused):
+                continue
+            status = 'refused' if call.refused else 'error' if call.error else 'ok'
+            latency = call.end_ms - call.start_ms if call.start_ms is not None and call.end_ms is not None \
+                and call.end_ms >= call.start_ms else None
+            rows.append(ToolCallRow(call.request_id, call.tool_call_id, call.actor, call.decision, call.tool, status,
+                latency, call.result_bytes, call.wall, call.operation_id))
+        return rows
+
+    def request_rows(self) -> list[RequestRow]:
+        return [RequestRow(r.key, r.actor, r.wall, r.attempt, r.input_tokens, r.cache_read_tokens,
+            None if r.cache_write_tokens is None else int(r.cache_write_tokens), r.output_tokens, r.dollars, r.retry_class,
+            self.omitted.get((r.actor, r.key)), 'exact' if r.manifest else 'absent') for r in self.requests]
+
 
 def _text(result: object) -> object | None:
     if not isinstance(result, dict) or not isinstance(result.get('content'), list):
@@ -127,18 +174,29 @@ def _text(result: object) -> object | None:
     return None
 
 
+def _result_bytes(result: object) -> int | None:
+    """UTF-8 size of the text a tool result adds to the player's context (image references excluded)."""
+    if not isinstance(result, dict) or not isinstance(result.get('content'), list):
+        return None
+    return sum(len(part['text'].encode('utf-8')) for part in result['content']
+        if isinstance(part, dict) and isinstance(part.get('text'), str))
+
+
 def host_facts(actors: Sequence[str], host: dict[str, Sequence[HostEvent]]) -> HostFacts:
     facts = HostFacts(tuple(actors))
     offset = 0
     for actor in actors:
         by_key: dict[str, Request] = {}
         by_logical: dict[str, Request] = {}
+        attempts: dict[str, int] = {}
         ordinals: dict[str, int] = {}
         open_calls: dict[tuple[object, object], ToolCall] = {}
         retries: set[object] = set()
+        classes: dict[object, str] = {}
         calls = 0
         facts._starts[actor] = []
         facts.estimates[actor] = []
+        facts.manifests[actor] = []
 
         def request_for(key: object) -> Request | None:
             return by_key.get(key) or by_logical.get(key)  # type: ignore[arg-type]
@@ -153,14 +211,28 @@ def host_facts(actors: Sequence[str], host: dict[str, Sequence[HostEvent]]) -> H
                     continue
                 if logical not in ordinals:
                     ordinals[logical] = len(ordinals) + 1
-                request = Request(key, logical, actor, offset + ordinals[logical], event.monotonic_ms, retry=key in retries)
+                attempts[logical] = attempts.get(logical, 0) + 1
+                request = Request(key, logical, actor, offset + ordinals[logical], event.monotonic_ms, event.wall,
+                    attempts[logical], retry=key in retries, retry_class=classes.get(key))
                 by_key[key] = by_logical[logical] = request
                 facts.requests.append(request)
-            elif kind == 'provider-retry' and fields.get('stage') == 'started':
-                # Emitted just before the retry attempt's own request-start.
-                retries.add(fields.get('request_id'))
-                if request_for(fields.get('request_id')) is not None:
-                    request_for(fields.get('request_id')).retry = True
+            elif kind == 'provider-retry':
+                if fields.get('stage') == 'started':
+                    # Emitted just before the retry attempt's own request-start.
+                    retries.add(fields.get('request_id'))
+                    if request_for(fields.get('request_id')) is not None:
+                        request_for(fields.get('request_id')).retry = True
+                elif fields.get('stage') == 'eligible' and isinstance(fields.get('retry_class'), str):
+                    # The failed attempt carries the class; its own request-start is already recorded.
+                    classes[fields.get('request_id')] = fields['retry_class']
+                    failed = by_key.get(fields.get('request_id'))
+                    if failed is not None:
+                        failed.retry_class = fields['retry_class']
+            elif kind == 'context-manifest':
+                facts.manifests[actor].append(fields)
+                request = by_key.get(fields.get('request_id'))
+                if request is not None:
+                    request.manifest = True
             elif kind in ('request-fetch-start', 'response-first-chunk', 'response-complete', 'abort'):
                 request = request_for(fields.get('request_id'))
                 if request is None:
@@ -181,12 +253,17 @@ def host_facts(actors: Sequence[str], host: dict[str, Sequence[HostEvent]]) -> H
                             if _number(usage.get(k))))
                         cost = usage.get('cost') if isinstance(usage.get('cost'), dict) else {}
                         request.dollars = float(cost['total']) if _number(cost.get('total')) else None
+                        request.input_tokens = int(usage['input']) if _number(usage.get('input')) else None
+                        request.output_tokens = int(usage['output']) if _number(usage.get('output')) else None
+                        request.cache_read_tokens = int(usage['cacheRead']) if _number(usage.get('cacheRead')) else None
                         request.cache_write_tokens = usage.get('cacheWrite') if _number(usage.get('cacheWrite')) else None
                         request.cache_write_dollars = float(cost['cacheWrite']) if _number(cost.get('cacheWrite')) else None
             elif kind == 'tool-start':
                 request = request_for(fields.get('request_id'))
                 call = ToolCall(actor, calls, event.wall, event.line, request.decision if request else None,
-                    str(fields.get('tool')), fields.get('arguments') if isinstance(fields.get('arguments'), dict) else {})
+                    str(fields.get('tool')), fields.get('arguments') if isinstance(fields.get('arguments'), dict) else {},
+                    fields.get('request_id') if isinstance(fields.get('request_id'), str) else None,
+                    fields.get('tool_call_id') if isinstance(fields.get('tool_call_id'), str) else None, event.monotonic_ms)
                 calls += 1
                 open_calls[(fields.get('request_id'), fields.get('tool_call_id'))] = call
                 facts.calls.append(call)
@@ -197,11 +274,24 @@ def host_facts(actors: Sequence[str], host: dict[str, Sequence[HostEvent]]) -> H
                 if call is not None:
                     result = fields.get('result')
                     call.finished = True
+                    call.end_ms = event.monotonic_ms
                     call.error = isinstance(result, dict) and result.get('isError') is True
                     call.result = _text(result)
+                    call.result_bytes = _result_bytes(result)
             elif kind == 'tool-refused':
                 facts.refusals.append(event)
+                call = open_calls.pop((fields.get('request_id'), fields.get('tool_call_id')), None)
+                request = request_for(fields.get('request_id'))
+                if call is None:
+                    call = ToolCall(actor, calls, event.wall, event.line, request.decision if request else None,
+                        str(fields.get('tool')), {}, fields.get('request_id') if isinstance(fields.get('request_id'), str) else None,
+                        fields.get('tool_call_id') if isinstance(fields.get('tool_call_id'), str) else None, event.monotonic_ms)
+                    calls += 1
+                    facts.calls.append(call)
+                call.refused = True
             elif kind == 'context-image-projection':
+                if _number(fields.get('omitted_images')) and isinstance(fields.get('request_id'), str):
+                    facts.omitted[(actor, fields['request_id'])] = int(fields['omitted_images'])
                 if (_number(fields.get('omitted_images')) and fields['omitted_images'] > 0) or fields.get('blocked'):
                     facts.evictions.append(event)
             elif kind == 'context-estimate':
@@ -209,6 +299,10 @@ def host_facts(actors: Sequence[str], host: dict[str, Sequence[HostEvent]]) -> H
                     facts.estimates[actor].append(int(fields['tokens']))
             elif kind == 'control-accepted':
                 facts.controls.append(event)
+            elif kind == 'player-finish':
+                facts.finishes.append(event)
+            elif kind == 'settled':
+                facts.settles[actor] = event
         facts._starts[actor].sort()
         facts._walls[actor] = [wall for wall, _ in facts._starts[actor]]
         offset += len(ordinals)
@@ -244,7 +338,7 @@ def host_events(facts: HostFacts, resolve: Callable[[float | None], int],
     events: list[EventRow] = []
     saved_by: dict[str, str] = {}
     for call in facts.calls:
-        if not call.finished or call.error:
+        if not call.finished or call.error or call.refused:
             continue
         seq = resolve(call.wall)
         value = call.result if isinstance(call.result, dict) else {}
@@ -260,7 +354,7 @@ def host_events(facts: HostFacts, resolve: Callable[[float | None], int],
             events.append(EventRow(seq, seq, 'program_save', 'player_claim', None, dict(actor=call.actor,
                 program_id=value['id'], parent_id=value.get('parent_id'), call=call.index)))
     for call in facts.calls:
-        if call.tool != 'player_program_run' or not call.finished or call.error:
+        if call.tool != 'player_program_run' or not call.finished or call.error or call.refused:
             continue
         seq = resolve(call.wall)
         value = call.result if isinstance(call.result, dict) else {}
@@ -275,14 +369,26 @@ def host_events(facts: HostFacts, resolve: Callable[[float | None], int],
         seq = resolve(event.wall)
         events.append(EventRow(seq, seq, 'tool_refused', 'harness', None, dict(actor=event.actor,
             tool=event.fields.get('tool'), reason=event.fields.get('reason'), delivery=event.fields.get('delivery'))))
+        if event.fields.get('delivery') in UNCERTAIN_DELIVERY:  # a custody fence: delivery of the refused call is unknown
+            events.append(EventRow(seq, seq, 'custody_stop', 'harness', None, dict(actor=event.actor,
+                cause='fence', tool=event.fields.get('tool'), delivery=event.fields.get('delivery'))))
     for event in facts.evictions:
         seq = resolve(event.wall)
         fields = event.fields
         events.append(EventRow(seq, seq, 'context_eviction', 'harness', None, dict(actor=event.actor,
             omitted_images=fields.get('omitted_images'), retained_images=fields.get('retained_images'),
             blocked=bool(fields.get('blocked')))))
-    for event in facts.controls:
+    # run_end: a player finish, or an accepted orderly stop the actor never finished. Neither is a custody stop.
+    finished = {e.actor for e in facts.finishes}
+    for event in facts.finishes:
         seq = resolve(event.wall)
-        events.append(EventRow(seq, seq, 'custody_stop', 'harness', None, dict(actor=event.actor, cause='orderly_stop',
-            control_id=event.fields.get('control_id'))))
+        orderly = any(c.actor == event.actor and c.fields.get('control_id') == event.fields.get('control_id')
+            for c in facts.controls) if event.fields.get('control_id') else False
+        events.append(EventRow(seq, seq, 'run_end', 'harness', None, dict(actor=event.actor,
+            reason=event.fields.get('disposition'), control_id=event.fields.get('control_id'), orderly_stop=orderly)))
+    for event in facts.controls:
+        if event.actor not in finished:
+            seq = resolve(event.wall)
+            events.append(EventRow(seq, seq, 'run_end', 'harness', None, dict(actor=event.actor, reason='orderly_stop',
+                control_id=event.fields.get('control_id'), orderly_stop=True)))
     return events
