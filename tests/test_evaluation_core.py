@@ -6,6 +6,7 @@ binding "reads". These tests establish the core's contract, not any game reader.
 """
 from __future__ import annotations
 
+import dataclasses
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import hashlib
@@ -1030,6 +1031,44 @@ def test_lineage_elapsed_day_check_and_memory_reuse(tmp_path):
     short = stitch([lineage_run(tmp_path / 'short', '9' * 32, [3600, 3660], 1, BASE)], FakeBinding(), tmp_path / 'evals')
     record = metrics_of(Path(short['records'][0]))
     assert record['lineage.day_check'].missing == 'not_reached' and record['lineage.memory_reuse'].missing == 'no_earlier_writes'
+
+
+def frames_lineage(tmp_path: Path, name: str, admissions: list[list[F]]) -> list[Path]:
+    paths = []
+    for number, frames in enumerate(admissions):
+        directory = tmp_path / f'{name}-{number}'
+        run = Run(directory, session=f'{name}{number}'.ljust(32, '0')[:32], base=BASE + 1000 * number)
+        actor = run.actor()
+        for index, frame in enumerate(frames):
+            run.step(actor, 'input', [key('j')], dataclasses.replace(frame, fill=index))
+        run.finish()
+        paths.append(directory)
+    return paths
+
+
+def test_lineage_day_check_rewind_lag_start_and_episodes(tmp_path):
+    day = lambda name, admissions: stitch(frames_lineage(tmp_path, name, admissions), FakeBinding(),
+        tmp_path / 'evals')['lineage.day_check']
+    # Start is the first in-play clock: an earlier clock on a prompt frame does not count.
+    started = day('a5', [[F('prompt', 0, identity=1), F('in_play', 3600, identity=1), F('in_play', 3600 + DAY - 10, identity=1)]])
+    assert started is None   # 3600 + DAY - 10 is short of a day from 3600, though a day from 0
+    # A reload that rewinds below the day undoes an earlier crossing.
+    rewound = stitch(frames_lineage(tmp_path, 'b6', [
+        [F('in_play', 3600, identity=1), F('in_play', 3600 + DAY + 60, identity=1)],
+        [F('in_play', 3600 + DAY - 600, identity=1), F('in_play', 3600 + DAY - 540, identity=1)]]),
+        FakeBinding(), tmp_path / 'evals')
+    assert rewound['lineage.day_check'] is None and rewound['lineage.elapsed']['game_seconds'] == DAY - 540
+    assert metrics_of(Path(rewound['records'][0]))['lineage.day_check'].missing == 'not_reached'
+    # A crossing on an unreadable screen is scored at the next legible step, in the next admission, with its lag.
+    lagged = day('c7', [[F('in_play', 3600, identity=1), F('in_play', 3660, identity=1)],
+                        [F('in_play', 3600 + DAY - 120, identity=1), F('in_play', 3600 + DAY - 60, identity=1),
+                         F('prompt', 3600 + DAY + 60, identity=1)],
+                        [F('in_play', 3600 + DAY + 3600, identity=1)]])
+    assert (lagged['run'], lagged['scored_run'], lagged['passed'], lagged['lag_hours']) == ('c7-1', 'c7-2', True, 1.0)
+    # A restarted clock inside an admission (another world) is listed for the continuity check.
+    episode = stitch(frames_lineage(tmp_path, 'd8', [[F('in_play', t, identity=1) for t in (200_000, 200_060, 100, 160, 220)]]),
+        FakeBinding(), tmp_path / 'evals')['lineage.elapsed']
+    assert [change['run'] for change in episode['episode_changes']] == ['d8-0']
 
 
 def test_lineage_reports_identity_and_rewound_game_time(tmp_path, capsys, monkeypatch):

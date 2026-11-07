@@ -12,14 +12,15 @@ from harness.evaluation.cdda.atlas import Atlas
 from harness.evaluation.cdda.ladder import LADDER, rung_reached
 from harness.evaluation.core.binding import FrameReading, Reading, Rung, Vital
 
-# #382's "severe" needs for the lineage day check, by need reader. The weariness reader reports the
-# worse of weariness and rest, so its labels include the rest labels. Narrower than the readers'
-# own `critical` flag, which also covers pain, red labels and limbs.
+# #382's "severe" needs for the lineage day check, as (reader, field of its value) -> labels.
+# The weariness reader's `label` is the worse of Weariness and Rest, so rest is read from its own
+# `rest` field. Narrower than the readers' `critical` flag, which also covers pain, red labels and limbs.
 DAY_CHECK_SEVERE = {
-    'vital.thirst': frozenset({'very thirsty', 'dehydrated', 'parched'}),
-    'vital.hunger': frozenset({'very hungry', 'famished', 'near starving', 'starving'}),
-    'vital.weariness': frozenset({'dead tired', 'exhausted'}),
+    ('vital.thirst', 'label'): frozenset({'very thirsty', 'dehydrated', 'parched'}),
+    ('vital.hunger', 'label'): frozenset({'very hungry', 'famished', 'near starving', 'starving'}),
+    ('vital.weariness', 'rest'): frozenset({'dead tired', 'exhausted'}),
 }
+DAY_CHECK_NAMES = {'vital.thirst': 'thirst', 'vital.hunger': 'hunger', 'vital.weariness': 'rest'}
 
 NEEDS = (('thirst', rd.read_thirst), ('hunger', rd.read_hunger), ('weariness', rd.read_weariness), ('pain', rd.read_pain))
 
@@ -99,9 +100,9 @@ class CddaBinding:
 
     def severe_needs(self, values: Mapping[str, object]) -> list[str] | None:
         """#382's day check: thirst, hunger and rest labels in `DAY_CHECK_SEVERE`; None unless all three are read."""
-        labels = {reader: value.get('label') for reader in DAY_CHECK_SEVERE
-                  for value in [values.get(reader)] if isinstance(value, dict)}
+        labels = {(reader, field): value[field] for reader, field in DAY_CHECK_SEVERE
+                  for value in [values.get(reader)] if isinstance(value, dict) and isinstance(value.get(field), str)}
         if len(labels) != len(DAY_CHECK_SEVERE):
             return None
-        return [f'{reader.removeprefix("vital.")}: {label}' for reader, label in labels.items()
-                if label in DAY_CHECK_SEVERE[reader]]
+        return [f'{DAY_CHECK_NAMES[reader]}: {label}' for (reader, field), label in labels.items()
+                if label in DAY_CHECK_SEVERE[(reader, field)]]

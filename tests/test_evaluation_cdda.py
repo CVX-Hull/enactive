@@ -437,19 +437,30 @@ class BindingShapeTests(unittest.TestCase):
 class DayCheckTests(unittest.TestCase):
     """The lineage day check uses #382's severe list, narrower than the readers' `critical` flag."""
 
-    def needs(self, thirst='', hunger='', weariness='fresh', critical=False):
+    def needs(self, thirst='', hunger='', weariness='fresh', rest='', critical=False):
         value = lambda label: dict(label=label, level=0.5, critical=critical)
-        return {'vital.thirst': value(thirst), 'vital.hunger': value(hunger), 'vital.weariness': value(weariness)}
+        # read_weariness's shape: `label` is the worse of the two, with each kept in its own field.
+        wear, rested = rd.WEARINESS[weariness], rd.REST[rest]
+        tired = dict(label=weariness if wear <= rested else rest, level=min(wear, rested), critical=critical,
+                     weariness=weariness, rest=rest, colour=None)
+        return {'vital.thirst': value(thirst), 'vital.hunger': value(hunger), 'vital.weariness': tired}
 
     def test_severe_labels_fail_and_others_pass(self):
         b = CddaBinding(atlas=Atlas.load())
         self.assertEqual(b.severe_needs(self.needs()), [])
-        self.assertEqual(b.severe_needs(self.needs(thirst='parched', hunger='famished', weariness='dead tired')),
-            ['thirst: parched', 'hunger: famished', 'weariness: dead tired'])
+        self.assertEqual(b.severe_needs(self.needs(thirst='parched', hunger='famished', rest='dead tired')),
+            ['thirst: parched', 'hunger: famished', 'rest: dead tired'])
         # Severe pain, extreme weariness and red labels are critical to the readers but not in #382's list.
         values = self.needs(thirst='thirsty', hunger='hungry', weariness='extreme', critical=True)
         values['vital.pain'] = dict(label='severe pain', level=0.1, critical=True)
         self.assertEqual(b.severe_needs(values), [])
+
+    def test_rest_is_read_even_when_weariness_is_the_worse_label(self):
+        b = CddaBinding(atlas=Atlas.load())
+        for weariness, rest in (('extreme', 'dead tired'), ('very', 'dead tired'), ('extreme', 'exhausted')):
+            values = self.needs(weariness=weariness, rest=rest)
+            self.assertEqual(values['vital.weariness']['label'], weariness)   # the case the review found
+            self.assertEqual(b.severe_needs(values), [f'rest: {rest}'])
 
     def test_needs_not_legible_abstain(self):
         b = CddaBinding(atlas=Atlas.load())

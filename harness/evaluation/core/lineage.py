@@ -90,6 +90,7 @@ class Timeline:
     long_seconds: float
     points: tuple[tuple[int, int, str], ...]      # (seq, game seconds, mode) for steps with a game time
     deaths: tuple[int, ...]                       # seq of each death event
+    episodes: tuple[int, ...]                     # seq of each new episode (restarted clock or other survivor)
     written: frozenset[str]
     read: frozenset[str]
 
@@ -107,12 +108,15 @@ def timeline(record: Path) -> Timeline:
         long_row = connection.execute("SELECT value FROM metrics WHERE name='pace.long_activities' AND key=''").fetchone()
         long_value = loads(long_row[0]) if long_row else None
         events = connection.execute(
-            "SELECT kind,seq_start,payload FROM events WHERE kind IN ('death','memory_write','memory_read') ORDER BY seq_start")
-        deaths, written, read = [], set(), set()
+            "SELECT kind,seq_start,payload FROM events WHERE kind IN ('death','episode','memory_write','memory_read') "
+            'ORDER BY seq_start')
+        deaths, episodes, written, read = [], [], set(), set()
         for kind, seq, payload in events:
             data = loads(payload)
             if kind == 'death':
                 deaths.append(seq)
+            elif kind == 'episode':
+                episodes.append(seq)
             elif kind == 'memory_write':
                 written.add(data['record_id'])
             else:
@@ -121,11 +125,25 @@ def timeline(record: Path) -> Timeline:
         connection.close()
     long_seconds = float(long_value.get('total_game_seconds') or 0) if isinstance(long_value, dict) else 0.0
     return Timeline(record, str(metadata.get('run')), unit, int(decisions), long_seconds, points, tuple(deaths),
-        frozenset(written), frozenset(read))
+        tuple(episodes), frozenset(written), frozenset(read))
+
+
+def _flat(timelines: Sequence[Timeline]) -> list[tuple[int, int, int, str]]:
+    """(admission index, seq, game seconds, mode) for every step with a game time, in lineage order."""
+    return [(index, seq, seconds, mode) for index, line in enumerate(timelines) for seq, seconds, mode in line.points]
+
+
+def _start(timelines: Sequence[Timeline]) -> int | None:
+    """Admission 1's first in-play clock: the lineage's zero (#382)."""
+    return next((seconds for _, _, seconds, mode in _flat(timelines) if mode == 'in_play'), None)
+
+
+def _episode_changes(timelines: Sequence[Timeline]) -> list[dict]:
+    return [dict(run=line.run, seq=seq) for line in timelines for seq in line.episodes]
 
 
 def elapsed_metric(timelines: Sequence[Timeline]) -> MetricRow:
-    first = next((t.points[0][1] for t in timelines if t.points), None)
+    first = _start(timelines)
     last = next((t.points[-1][1] for t in reversed(timelines) if t.points), None)
     decisions = sum(t.decisions for t in timelines)
     long_seconds = sum(t.long_seconds for t in timelines)
@@ -136,7 +154,7 @@ def elapsed_metric(timelines: Sequence[Timeline]) -> MetricRow:
         game_seconds_per_decision=round(seconds / decisions, 2) if decisions else None,
         long_activity_hours=round(long_seconds / 3600, 3),
         long_activity_share=round(long_seconds / seconds, 3) if seconds > 0 else None,
-        admissions=len(timelines))
+        admissions=len(timelines), episode_changes=_episode_changes(timelines))
     return MetricRow(ELAPSED_METRIC, 1, value, decisions, seconds, None)
 
 
@@ -150,29 +168,39 @@ def _step_values(record: Path, seq: int) -> dict[str, object]:
 
 
 def day_check_metric(timelines: Sequence[Timeline], binding: Binding) -> MetricRow:
-    """Alive at one game day after admission 1's first reading, with no severe need (binding's rule)."""
-    first = next((t.points[0][1] for t in timelines if t.points), None)
+    """Alive at one game day after admission 1's first in-play clock, with no severe need (binding's rule).
+
+    The crossing is the first step after the lineage's LAST reading below one day, so a reload that
+    rewinds below the day undoes an earlier crossing. The needs are read at the first legible in-play
+    step from the crossing on, in that admission or a later one; `lag_hours` reports how far past the
+    day that step is. A death read at or before that step fails the check. New episodes (another world
+    or survivor inside an admission) are listed; #382 classifies those as continuity failures first.
+    """
+    first = _start(timelines)
     if first is None:
         return MetricRow(DAY_METRIC, 1, None, 0, 1, 'no_game_time')
-    for index, line in enumerate(timelines):
-        crossing = next((seq for seq, seconds, _ in line.points if seconds - first >= DAY_SECONDS), None)
-        if crossing is None:
+    flat = _flat(timelines)
+    below = [i for i, (_, _, seconds, _) in enumerate(flat) if seconds - first < DAY_SECONDS]
+    after = below[-1] + 1 if below else 0
+    if after >= len(flat):
+        return MetricRow(DAY_METRIC, 1, None, 0, 1, 'not_reached')
+    index, crossing, _, _ = flat[after]
+    base = dict(run=timelines[index].run, crossing_seq=crossing, episode_changes=_episode_changes(timelines))
+    if any(t.deaths for t in timelines[:index]) or any(d <= crossing for d in timelines[index].deaths):
+        return MetricRow(DAY_METRIC, 1, dict(base, died_before=True, severe=None, passed=False), 0, 1, None)
+    for line_index, seq, seconds, mode in flat[after:]:
+        if mode != 'in_play':
             continue
-        died = any(t.deaths for t in timelines[:index]) or any(seq <= crossing for seq in line.deaths)
-        base = dict(run=line.run, crossing_seq=crossing, died_before=died)
-        if died:
-            return MetricRow(DAY_METRIC, 1, dict(base, passed=False, severe=None), 0, 1, None)
-        for seq, seconds, mode in line.points:
-            if seq < crossing or mode != 'in_play':
-                continue
-            severe = binding.severe_needs(_step_values(line.record, seq))
-            if severe is None:
-                continue
-            passed = not severe
-            return MetricRow(DAY_METRIC, 1, dict(base, seq=seq, elapsed_hours=round((seconds - first) / 3600, 3),
-                passed=passed, severe=list(severe)), int(passed), 1, None)
-        return MetricRow(DAY_METRIC, 1, dict(base, passed=None, severe=None), 0, 1, 'needs_not_legible')
-    return MetricRow(DAY_METRIC, 1, None, 0, 1, 'not_reached')
+        severe = binding.severe_needs(_step_values(timelines[line_index].record, seq))
+        if severe is None:
+            continue
+        died = any(t.deaths for t in timelines[:line_index]) or any(d <= seq for d in timelines[line_index].deaths)
+        hours = (seconds - first) / 3600
+        value = dict(base, scored_run=timelines[line_index].run, seq=seq, elapsed_hours=round(hours, 3),
+            lag_hours=round(hours - DAY_SECONDS / 3600, 3), died_before=died,
+            severe=None if died else list(severe), passed=not died and not severe)
+        return MetricRow(DAY_METRIC, 1, value, int(value['passed']), 1, None)
+    return MetricRow(DAY_METRIC, 1, dict(base, passed=None, severe=None), 0, 1, 'needs_not_legible')
 
 
 def memory_metric(timelines: Sequence[Timeline]) -> MetricRow:

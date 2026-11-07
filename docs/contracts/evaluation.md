@@ -137,7 +137,8 @@ that reads no frame reader) and the page shows it next to the provenance chip. A
 - #382's severe needs for the day check (binding version 2):
   - thirst "very thirsty", "dehydrated" or "parched";
   - hunger "very hungry", "famished", "near starving" or "starving";
-  - rest "dead tired" or "exhausted".
+  - rest "dead tired" or "exhausted", read from the weariness reader's `rest` field (its
+    `label` is the worse of weariness and rest).
 
   This is narrower than the readers' `critical` flag, which also covers pain, red labels
   and limbs;
@@ -191,8 +192,8 @@ its `count` and `denominator`, and the viewer shows an insufficient sample as su
 | `ladder.reached` | Highest rung reached and decisions to each rung | — | `human` rungs: not assessed |
 | `reader.coverage` | Non-abstained readings ÷ frames, per reader | frames | — |
 | `lineage.continuity` | Per admission boundary: same identity (or `unknown`) and game-time gap (negative means rewound) | boundaries | — |
-| `lineage.elapsed` | Game time from admission 1's first accepted reading to the lineage's last (a rewind lowers it), with total decisions, overall game seconds per decision, long-activity hours and their share of elapsed time | game seconds | No accepted reading: missing (`no_game_time`) |
-| `lineage.day_check` | At the first in-play step at or after one game day from admission 1's first reading whose needs the binding can read: `passed` when no death event precedes it and the binding's `severe_needs` reports none; also `severe`, `died_before`, the run and step | 1 | Not crossed: `not_reached`; needs never legible after the crossing: `needs_not_legible` |
+| `lineage.elapsed` | Game time from admission 1's first in-play clock to the lineage's last accepted reading (a rewind lowers it), with total decisions, overall game seconds per decision, long-activity hours and their share of elapsed time, and `episode_changes` (a restarted clock or another survivor inside an admission) | game seconds | No accepted reading: missing (`no_game_time`) |
+| `lineage.day_check` | The crossing is the first step after the lineage's last reading below one game day from that start, so a rewind below the day undoes an earlier crossing. The needs are scored at the first in-play step from the crossing on whose needs the binding can read, in that admission or a later one (`scored_run`, `lag_hours` past the day). `passed` when no death event comes at or before the scored step and `severe_needs` reports none. Also `severe`, `died_before` and `episode_changes`; #382 classifies an episode change as a continuity failure first | 1 | Not crossed: `not_reached`; needs never legible after the crossing: `needs_not_legible` |
 | `lineage.memory_reuse` | Distinct memory record IDs read in an admission that an earlier admission of the lineage wrote, per admission and in total | records written before the last admission | None written: `no_earlier_writes` |
 
 The four `lineage.*` metrics are written only by `evaluate-lineage` and are the same in every
