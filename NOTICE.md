@@ -144,3 +144,10 @@ is an unchanged actual CDDA/UltiCa capture from 2026-10-19. Its source and byte 
 are recorded in the [campaign report](docs/acceptance/2026-10-19-seven-day-survival.md)
 and manifest. It retains the same upstream game/art attribution and CC BY-SA 3.0
 terms above, and is not covered by the project's MIT grant.
+
+The CDDA evaluation binding's glyph atlas (`harness/evaluation/cdda/atlas.json`) is derived from the
+Terminus font (SIL OFL 1.1) as rendered by Cataclysm: DDA at 8x16 pixels. Each glyph is a 128-pixel ink
+mask learned from recorded frames and checked against the font, so it is a derivative of Terminus. Its
+text crops under `tests/fixtures/evaluation/cdda` are unaltered sidebar and menu text regions of CDDA
+screenshots containing no tileset art. The font keeps its upstream licence and copyright notice;
+reproducing it needs the OFL text, available at https://openfontlicense.org/.
