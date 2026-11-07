@@ -282,8 +282,8 @@ percentile, per status or per handoff. The primary key is (`name`, `key`).
     any other `/4` manifest is an error naming the file and version. The same file holds
     the operator labels.
   - `receipt.json` is read only as `campaign-receipt/3`. `watch-terminal.json` is read as
-    `campaign-watch-terminal/3`, or the archived `/2` (archive read only; it has no
-    `pause_reason`). Any other version is an error naming the file and version.
+    `campaign-watch-terminal/3`, or the archived `/2` only beside a listed `/4` manifest
+    (archive read only; it has no `pause_reason`). Any other version is an error naming the file and version.
 - **Metadata key.** `metadata.last_seq` names the last operation read.
 - **Store replacement.** A `live` store is replaced by any later `final` pass. A `final`
   store needs an explicit replace and is never replaced or continued by a `live` pass.

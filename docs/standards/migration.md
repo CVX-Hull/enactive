@@ -31,17 +31,20 @@ upstream internals remain CDDA's responsibility: pin the chosen engine and follo
 its supported save procedures; do not edit saves or remove authentic engine behavior.
 
 **Closed archive reads and additive evidence events (owner decision on #403, 7 November
-2026).** Two narrow cases are part of this requirement, not exceptions to it. First, a
-read-only evaluator may read a closed, listed archive of evidence recorded before a
-current format: today only the sessions in `data/evaluation/archive-labels.json`, as
-`campaign-run/4` manifests and `campaign-watch-terminal/2` terminals. It must reject any
-unlisted old-version record by file and version, never admit, play or write from the
-archive, and the list never grows. Second, an evidence-only event may be added inside an
-unchanged telemetry version when it changes no existing field and every reader reports
-its absence in older traces explicitly as not recorded, never as a default or a failure;
-today this is `context-manifest` in `player-host` telemetry version 3, which the
-evaluator records as `manifest: absent`. Anything else, including
-a new archive or a changed existing field, needs a new version and a migration as above.
+2026).** The owner scoped this requirement to allow two narrow cases. Because the owner
+set them, the closing rule below still holds: no repository exception can add to them.
+First, the evaluator reads, read-only, the one closed archive of sessions listed in
+`data/evaluation/archive-labels.json`: their `campaign-run/4` manifests and, for those
+manifests only, `campaign-watch-terminal/2` terminals. The list never grows, and every
+other old version is an error naming the file and version. The evaluator never admits
+or plays from the archive and never modifies it; it only derives evaluation records.
+Second, an evidence-only event (one that no admission, control or player-visible path
+reads) may be added inside an unchanged telemetry version when it changes no existing
+field and every reader that uses it marks its absence in older traces as not recorded,
+never as a failure or as a value presented as recorded. Today this is `context-manifest`
+in `player-host` telemetry version 3, which the evaluator records as `manifest: absent`
+and the context view rebuilds as `exact: false`. Anything else, including another
+archive or a changed existing field, needs a new version and a migration as above.
 
 Every affected PR identifies the old and new contracts, migrated callers/data,
 removed paths, rejection tests, deployment order and rollback/retention decision,
