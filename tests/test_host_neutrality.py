@@ -27,8 +27,9 @@ ALLOWED = (
 )
 ROOT_DOCUMENTS = ("README.md", "AGENTS.md", "CONTRIBUTING.md", "SECURITY.md", "NOTICE.md")
 REGISTRY = "docs/control-registry.json"
-# Rendered from the registry, which is checked structurally below.
-GENERATED = ("docs/controls.md",)
+# Rendered from the registry, which is checked structurally below, or listing the
+# scopes of historical records verbatim (the dated-record indexes).
+GENERATED = ("docs/controls.md", "docs/acceptance/index.md", "docs/changes/index.md")
 DATED_RECORDS = ("last_exercise", "maintenance_review")
 
 

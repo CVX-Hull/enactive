@@ -2,7 +2,7 @@
 owner: lead
 status: historical
 date: '2026-10-28'
-scope: Accepted direction for the computer-control boundary and coordinated migration; delivered in #289 (#176)
+scope: 'Accepted direction for the computer-control boundary and coordinated migration; delivered in #289 (#176)'
 ---
 
 # ADR 006 — Basic computer control, player-owned semantics

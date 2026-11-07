@@ -2,7 +2,7 @@
 owner: lead
 status: historical
 date: 2026-11-07
-scope: Audit #400 of docs, design, code, tests, controls and tracker against the charter principles, standards, controls, storage formats and discoverability at main bd549ca
+scope: 'Audit #400 of docs, design, code, tests, controls and tracker against the charter principles, standards, controls, storage formats and discoverability at main bd549ca'
 review_trigger: None; dated record
 ---
 

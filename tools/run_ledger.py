@@ -21,7 +21,8 @@ ROOT = Path(__file__).resolve().parents[1]
 LEDGER = ROOT / 'data' / 'evaluation' / 'runs.jsonl'
 SCHEMA = 'dev-run/1'
 # Documents holding hand-scored run tables that the ledger cross-checks.
-HAND_TABLES = {'docs/development-runs.md': (372, 382)}
+HAND_TABLES = {'docs/acceptance/2026-11-06-development-loop.md': (372,),
+               'docs/acceptance/2026-11-07-long-horizon-382.md': (382,)}
 ATTEMPT_COLUMNS = ('Attempts', 'Attempts (setup)')
 SPEND_COLUMNS = ('$ upper bound', '$ actual')
 

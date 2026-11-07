@@ -2,7 +2,7 @@
 owner: lead
 status: historical
 date: 2026-11-01
-scope: Pre-registered transition corpus of the unchanged #314 arm-A player on one frozen state, labelled with two frozen sensor alphabets, to test for memory, action and slow-mode structure
+scope: 'Pre-registered transition corpus of the unchanged #314 arm-A player on one frozen state, labelled with two frozen sensor alphabets, to test for memory, action and slow-mode structure'
 ---
 
 # Transition corpus: structure at sensor resolution

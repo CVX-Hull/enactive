@@ -12,54 +12,34 @@ own live execution. This page routes to scoped evidence; it is not a second back
 
 ## Development loop and long-horizon arm
 
-On 5 November 2026 the owner reset the loop (decisions D1–D4 in
-[development runs](development-runs.md)). First establish a ceiling: can GPT-6.1
-Terra survive through the current pixels-and-keys boundary? Then branch, by a rule
-fixed in advance, to cost reduction or to game-neutral grounding aids.
-[#145](https://github.com/CVX-Hull/enactive/issues/145)'s seven-day gate is the
-north star; [#164](https://github.com/CVX-Hull/enactive/issues/164)'s cadence
-criteria were deferred until a capability baseline existed. Development runs use
-best-effort observation, a $150 envelope and one table row plus one issue comment each.
+The [development-run method](development-runs.md) owns the benchmark, metric and
+classification; each study's decisions and results are in its dated record, and
+per-run quantities are in the tracked run ledger.
+[#145](https://github.com/CVX-Hull/enactive/issues/145)'s seven-day gate is the north
+star; [#164](https://github.com/CVX-Hull/enactive/issues/164)'s cadence criteria wait
+for a capability baseline.
 
-**Result, 6 November 2026** ([#372](https://github.com/CVX-Hull/enactive/issues/372)).
-The Terra ceiling's median survival was 0.59 in-game hours, far below the 24-hour
-rule, so the three game-neutral aids were tested: zoom view, guide permission to
-consult the game's own help, and reflection lineage. Each was rejected on the
-primary metric, with medians of 0.30, 0.38 and 0.45 h. The aids still showed the
-first real uptake of player memory, reflections and an organic local program. Short-term play is
-competent, but survival is bounded by time scale: about 230 decisions pass 10–130
-game minutes. The loop recommended a long-horizon arm that tracks game seconds per
-decision ([development runs](development-runs.md#loop-result-and-next-step)); it ran
-as #382 below.
-Loop spend was $88.54 of $150. Host fixes #378–#380 retry three transient
-provider failure classes.
+- **Development loop, 6 November 2026** ([#372](https://github.com/CVX-Hull/enactive/issues/372),
+  [record](acceptance/2026-11-06-development-loop.md)): ceiling median 0.59 in-game
+  hours within a 250-decision allowance; three grounding aids rejected (zoom had no
+  uptake; the aids did not isolate perception); survival was bounded by time scale.
+- **Evaluation framework, 7 November 2026** ([#383](https://github.com/CVX-Hull/enactive/issues/383),
+  [ADR008](decisions/008-evaluation-and-spectator.md),
+  [record](acceptance/2026-11-06-development-loop.md#evaluator-re-score-and-power-check-383)):
+  the evaluator re-scored the loop and the spectator views it; changes pre-register targeted process
+  metrics, with survival, cost and setup as guards.
+- **Long-horizon arm, 7 November 2026** ([#382](https://github.com/CVX-Hull/enactive/issues/382),
+  [record](acceptance/2026-11-07-long-horizon-382.md)): two of three save/reload
+  lineages Day-viable, a screen; lineage 3 ended on an input-window stall
+  ([#396](https://github.com/CVX-Hull/enactive/issues/396)).
 
-**Evaluation framework, 7 November 2026** ([#383](https://github.com/CVX-Hull/enactive/issues/383),
-[ADR008](decisions/008-evaluation-and-spectator.md)).
-- **Evaluator and spectator.** An offline evaluator with a CDDA binding re-scored all
-  30 loop runs ([development runs](development-runs.md#evaluator-re-score-and-power-check-383)).
-  A redesigned spectator separates the supervised control path from a read-only viewer.
-- **Power check.** Censored survival and the milestone ladder cannot separate arms at
-  affordable n, so changes now pre-register targeted process metrics on change pages.
-  Survival, cost and setup serve as guards.
-- **Deferred by ADR008 until after #382:** intent visibility
-  ([#384](https://github.com/CVX-Hull/enactive/issues/384)), label writing
-  ([#385](https://github.com/CVX-Hull/enactive/issues/385)), judges
-  ([#386](https://github.com/CVX-Hull/enactive/issues/386)), a cross-run channel
-  ([#387](https://github.com/CVX-Hull/enactive/issues/387)) and a scenario bank
-  ([#388](https://github.com/CVX-Hull/enactive/issues/388)).
-
-**Long-horizon arm, 7 November 2026** ([#382](https://github.com/CVX-Hull/enactive/issues/382),
-[development runs](development-runs.md#arm-result)).
-- **Result: day-scale survival is viable through this boundary.** Two of three lineages
-  of chained save and reload admissions reached 24 elapsed game hours with the day check
-  passed. Both slept through the night in shelter, at 139–146 game seconds per decision
-  against the earlier 28.7. With three lineages this is a screen, not a qualification.
-- **Lineage 3** ended as Slow at 0.54 h after two custody stops with one cause: a game
-  stall longer than the bridge's 5 s input window ([#396](https://github.com/CVX-Hull/enactive/issues/396)).
-- **Spend:** $30.46 of the $150 envelope.
-- **Follow-up design:** the seven-day attempt and its cost and latency plan
-  ([#397](https://github.com/CVX-Hull/enactive/issues/397)).
+Deferred by ADR008 until after #382: intent visibility
+([#384](https://github.com/CVX-Hull/enactive/issues/384)), label writing
+([#385](https://github.com/CVX-Hull/enactive/issues/385)), judges
+([#386](https://github.com/CVX-Hull/enactive/issues/386)), a cross-run channel
+([#387](https://github.com/CVX-Hull/enactive/issues/387)) and a scenario bank
+([#388](https://github.com/CVX-Hull/enactive/issues/388)). The seven-day attempt and
+its cost and latency plan are [#397](https://github.com/CVX-Hull/enactive/issues/397).
 
 ## Current integrated checkpoint
 
@@ -91,8 +71,9 @@ At [#313](https://github.com/CVX-Hull/enactive/issues/313), the tested `player-h
 routes evicted historical screenshots in whole count-only blocks, so the prompt prefix stayed
 cacheable between evictions. A zero-spend replay of #304's traces predicts that a peak
 of 39 with block 10 cuts input cost 2.5–3.9× against the rolling 30-image policy
-(block 1). A bounded live check on Gemini/Vertex with retained frames cost $0.41
-actual (whole account delta on a shared account). Before running, the lead raised
+(block 1). A bounded live check on Gemini/Vertex with retained frames followed; its
+cost and provenance are on [#313](https://github.com/CVX-Hull/enactive/issues/313).
+Before running, the lead raised
 the output cap from the Ready decision's 1024 to 2048 tokens and replaced its cost
 rule with a prediction-fidelity and mechanism rule. That was a deviation, recorded
 afterwards on #313 rather than settled beforehand. Under the frozen replacement rule
@@ -102,7 +83,7 @@ input cost per call ≤ 0.5× rolling) it **failed narrowly** at 0.52× over cal
 while passing at 0.44× over calls 12–20. Three frames per call evicts every ~3.3
 calls rather than every 10, so the check proves the mechanism only. Play behaviour with up to 39 frames, residency at game pace and other
 providers remain unmeasured. The later development runs used a peak of 39 images
-evicted in blocks of 10 ([benchmark](development-runs.md)).
+evicted in blocks of 10 ([benchmark](development-runs.md#benchmark)).
 
 The compact [player guide](player-guide.md#play-from-observed-effects) now emphasizes
 observed effects, quantity/container scope and confirmation focus. The
@@ -126,7 +107,7 @@ then demonstrated sampled context separation and direct `cannot_continue`
 stopping, but ended in Alex's death with no food/water gain or local program.
 The first operator-truncated admission remains a failure. The owning issues
 (#359, #164, #145) record the remaining real-use paths, live gates and execution. The [recorded-screen candidate assessment](acceptance/2026-11-05-recorded-player-assessment.md)
-then served two selected cases for $0.08744005, with narrowly promising proposals
+then served two selected cases, with narrowly promising proposals
 and unsuccessful request-limit host endings. No proposal reached a game. The
 result supports shaping further unassisted development play, with separate
 agreement; current player selection and all qualification gates remain unchanged.
@@ -134,15 +115,15 @@ agreement; current player selection and all qualification gates remain unchanged
 | Evidence | Scope and limitation |
 | --- | --- |
 | [Standards and discoverability audit](acceptance/2026-11-07-standards-audit.md) (#400) | Eight-lens audit of docs, code, tests, controls and tracker at `bd549ca`: no ADR006 boundary violation; drift fixed in #406 and #407. Proposals on storage format, documentation size and two S-MIGRATION exceptions went to the owner as #401–#403. |
-| [Long-horizon arm](development-runs.md#arm-result) (#382) | GPT-6.1 Terra (a diagnostic route) in chained save/reload admissions: two of three lineages passed a hand-checked 24 h day check. A screen on three lineages, not a qualification; one lineage ended on an input-window stall (#396). |
-| [Evaluator re-score and power check](development-runs.md#evaluator-re-score-and-power-check-383) (#383) | The ADR008 evaluator re-scored all 30 loop runs, with stated differences from the hand tables; its readers were validated on held-out frames with stated gaps. Whole-run survival cannot separate arms at affordable n. |
-| [Development loop](development-runs.md#loop-result-and-next-step) (#372) | Ceiling median 0.59 in-game hours in a 250-decision allowance; three grounding aids rejected (two on that metric, zoom for no uptake). Survival there was bounded by time scale, not isolated as perception. |
+| [Long-horizon arm](acceptance/2026-11-07-long-horizon-382.md) (#382) | GPT-6.1 Terra (a diagnostic route) in chained save/reload admissions: two of three lineages passed a hand-checked 24 h day check. A screen on three lineages, not a qualification; one lineage ended on an input-window stall (#396). |
+| [Evaluator re-score and power check](acceptance/2026-11-06-development-loop.md#evaluator-re-score-and-power-check-383) (#383) | The ADR008 evaluator re-scored all 30 loop runs, with stated differences from the hand tables; its readers were validated on held-out frames with stated gaps. Whole-run survival cannot separate arms at affordable n. |
+| [Development loop](acceptance/2026-11-06-development-loop.md) (#372) | Ceiling median 0.59 in-game hours in a 250-decision allowance; three grounding aids rejected (two on that metric, zoom for no uptake). Survival there was bounded by time scale, not isolated as perception. |
 | [Recorded-screen candidate assessment](acceptance/2026-11-05-recorded-player-assessment.md) | Four requests through the unchanged host; both cases narrowly promising, no executed effects. The retreat key opens a movement-mode menu, with Run selection untested. No model ranking, program, survival or cadence qualification. |
-| [Ongoing objective under finite test control](acceptance/2026-11-05-player-test-diagnostic.md) | Two admissions, $1.410764544 combined: first missed operator watch deadline; replacement maintained coverage, acquired a dog whistle, then Alex died. Direct finish/context separation worked; no food/water gain, program, external finish-up, persistence or cadence qualification. |
+| [Ongoing objective under finite test control](acceptance/2026-11-05-player-test-diagnostic.md) | Two admissions: first missed operator watch deadline; replacement maintained coverage, acquired a dog whistle, then Alex died. Direct finish/context separation worked; no food/water gain, program, external finish-up, persistence or cadence qualification. |
 | [Player context and testing responsibilities](acceptance/2026-11-05-player-context-audit.md) | Audits the then-main player's complete context construction and retained Alex assignment. Maps experiment quotas and finish-line instructions across prompts, tools and program views; rationale for #359, not evidence that its candidate is accepted. |
 | [ADR-007 first-slice outcome](acceptance/2026-11-03-adr007-status-quo.md) | The owner retained the current player after the offline feasibility screen. V4 benefit remains unestablished. |
-| [Transition corpus](acceptance/2026-11-01-transition-corpus.md) | Method calibration under a reviewed pre-registration, $95.49 actual; one procedural deviation, accepted by the owner (resumed after a provider failure before consulting the owner; runs 02–10). 37 complete runs of the unchanged #314 arm-A player from one restored state; 2,605 transitions labelled with frozen alphabets A1 and A2. On A1, at disagreement 3.1% [1.6–6.0%]: the action predicts the next state (0.354 bit held-out; predictive, not interventional); no two-set slow split with τ ≥ 40 (τ = 20 not excluded); memory beyond one step indeterminate (d exceeds the 1.9% gate). A2 descriptive only. One start state, one policy, no terminal events. |
-| [Grounded no-gain diagnosis](acceptance/2026-10-31-grounded-no-gain-diagnosis.md) | Diagnostic only, with blind audit, restored state and $8.62 actual. Gemini ×3 (one run with a 300-attempt budget) and Haiku ×1 all made no retained change from one shared save. C ended by choice at 95/300, consistent with budget not being the bottleneck; H matched A, consistent with the pattern not being model-specific (n = 1 each). Goal selection versus control was not separated: no nudge arm, per the owner. Gemini reports overstated, but they followed the included predecessor report as a template. |
+| [Transition corpus](acceptance/2026-11-01-transition-corpus.md) | Method calibration under a reviewed pre-registration; one procedural deviation, accepted by the owner (resumed after a provider failure before consulting the owner; runs 02–10). 37 complete runs of the unchanged #314 arm-A player from one restored state; 2,605 transitions labelled with frozen alphabets A1 and A2. On A1, at disagreement 3.1% [1.6–6.0%]: the action predicts the next state (0.354 bit held-out; predictive, not interventional); no two-set slow split with τ ≥ 40 (τ = 20 not excluded); memory beyond one step indeterminate (d exceeds the 1.9% gate). A2 descriptive only. One start state, one policy, no terminal events. |
+| [Grounded no-gain diagnosis](acceptance/2026-10-31-grounded-no-gain-diagnosis.md) | Diagnostic only, with blind audit and restored state. Gemini ×3 (one run with a 300-attempt budget) and Haiku ×1 all made no retained change from one shared save. C ended by choice at 95/300, consistent with budget not being the bottleneck; H matched A, consistent with the pattern not being model-specific (n = 1 each). Goal selection versus control was not separated: no nudge arm, per the owner. Gemini reports overstated, but they followed the included predecessor report as a template. |
 | [Capable-player qualification](acceptance/2026-10-31-capable-player.md) | Three models conformed under `player-host/1`; Gemini led a fixed visual check, then grounded and navigated with one normal ending but no readiness gain and an inflated report; rejected. An account-credit 402 and a provider 503 ended two admissions. |
 | [Visual-player qualification](acceptance/2026-10-30-visual-player.md) | Qwen/Wafer served substantive play and fresh Load with normal endings, but retained spatial/confirmation errors and no readiness gain; candidate rejected, earlier provider failures preserved. |
 | [Spatial grounding and context rejection](acceptance/2026-10-30-spatial-grounding.md) | Primary-literature-informed candidate failed retained frame assessment and organic play; no retained readiness gain, guide restored, original failures/normal ending preserved. |

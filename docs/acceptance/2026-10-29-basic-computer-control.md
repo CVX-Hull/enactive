@@ -2,7 +2,7 @@
 owner: lead
 status: historical
 date: '2026-10-29'
-scope: Bounded #181 computer-control enabler; failed organic play retained; not the production cutover or game-family qualification
+scope: 'Bounded #181 computer-control enabler; failed organic play retained; not the production cutover or game-family qualification'
 ---
 
 # Basic computer control through organic gameplay

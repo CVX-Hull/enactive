@@ -1,27 +1,24 @@
 ---
 owner: lead
-review_trigger: A new development run, a change to the benchmark or metric, or a step-5 branch decision
+review_trigger: A new development study, or a change to the benchmark, metric, admission rule or long-horizon method
 status: active
 ---
 
-# Development runs: ceiling benchmark and grounding aids
+# Development runs: method
 
-This page owns the benchmark, metric and one-row-per-run results of the
-development loop of 5–6 November 2026, which reported on
-[#372](https://github.com/CVX-Hull/enactive/issues/372), and of the
-[long-horizon arm](#long-horizon-arm-382) of 7 November, which reported on
-[#382](https://github.com/CVX-Hull/enactive/issues/382). Both are complete. Acceptance records and
-independent review are reserved for adoption decisions, contract changes and
-merges ([evidence cadence](workflows/evidence-cadence.md)).
+This page owns the method of development runs: the ceiling benchmark, its metric,
+the admission rule and the long-horizon classification. Dated owner decisions,
+admissions and results are not kept here (S-DOCS); they are in dated records,
+listed in the [acceptance index](acceptance/index.md). Per-run attempts, dollars
+and wall seconds are data in the [tracked run ledger](contracts/evaluation.md#tracked-run-ledger-and-metrics-snapshot).
+Acceptance records and independent review are reserved for adoption decisions,
+contract changes and merges ([evidence cadence](workflows/evidence-cadence.md)).
 
-## Owner decisions, 5 November 2026
-
-| | Decision |
-| --- | --- |
-| D1 | Development runs use the supervisor's `best-effort` attention policy: Pause, uncertainty/custody stops, the independent custody deadline and finite limits stay; the 45-second lead acknowledgement does not apply ([supervision](operations/campaign-supervision.md)). No automated acknowledgements. |
-| D2 | New model/gameplay spend for this loop is at most $150, keeping the cumulative actual upper bound at or below $410 within the standing $1,000. The lead admits runs inside it without per-run approval ([budget delegation](operator-permissions.md#finite-gameplay-budget-delegation)). |
-| D3 | [#145](https://github.com/CVX-Hull/enactive/issues/145)'s fresh, unassisted seven-day survival is the north star. [#164](https://github.com/CVX-Hull/enactive/issues/164)'s cadence criteria (20 useful decisions, 2 s p95, 5 s stall, 500 ms local effect) are deferred until a capability baseline exists. They are not deleted or met. |
-| D4 | One table row plus one issue comment per development run. |
+| Study | Dated record | Checkpoint |
+| --- | --- | --- |
+| Ceiling benchmark and grounding aids ([#372](https://github.com/CVX-Hull/enactive/issues/372)), 5–6 November 2026 | [Development loop](acceptance/2026-11-06-development-loop.md) | Ceiling median 0.59 in-game hours within a 250-decision allowance; aids A–C rejected |
+| Evaluator re-score and power check ([#383](https://github.com/CVX-Hull/enactive/issues/383)) | [Development loop](acceptance/2026-11-06-development-loop.md#evaluator-re-score-and-power-check-383) | Evaluator matches the hand-scored survival; changes pre-register targeted process metrics |
+| Long-horizon arm ([#382](https://github.com/CVX-Hull/enactive/issues/382)), 7 November 2026 | [Long-horizon arm](acceptance/2026-11-07-long-horizon-382.md) | Two of three lineages Day-viable: a screen, not a qualification |
 
 ## Question and decision rule
 
@@ -84,29 +81,13 @@ validator's worst case is (262,144 × $1.25 + 16,384 × $5.00) / 1M = $0.4096 pe
 attempt, or $102.40 per run. Costs are reconciled against OpenRouter's
 per-generation records.
 
-**Pilot (P1).** The first run used a 131,072-token window with 30 images evicted
-one at a time. Context grew about 1.3k tokens per request, both hosts handed off
-at the window's reserve and the run ended after 136 of its 250 attempts. Each
-request also rewrote the prompt cache. The scored runs therefore use the larger
-window, so the attempt allowance binds rather than context, and the block
-eviction from [#313](https://github.com/CVX-Hull/enactive/issues/313), which keeps
-the cached prefix stable between evictions. The pilot is retained but is not one
-of the five scored ceiling runs.
-
-**Current admission rule (from aid run B3).** Packages freeze the standing $1,000
-as their `ceiling_usd` worst-case guard, and D2 is enforced on actual
+**Admission rule (from #372 aid run B3).** Packages freeze the standing $1,000
+as their `ceiling_usd` worst-case guard, and an envelope is enforced on actual
 provider-reported spend: a run is admitted only while actual new spend plus twice
-the largest single run so far stays within $150 (owner decision, 6 November 2026;
-[budget delegation](operator-permissions.md#finite-gameplay-budget-delegation)).
-The pre-loop actual upper bound was $258.406176979 over 11,353 attempts, after #369.
-
-**Earlier rule (P1 through B2).** Packages froze D2's lower limit, the pre-loop bound
-plus $150 ($408.406176979; P1 and C1 used $410), as `ceiling_usd`, so a run was
-admissible only while the remaining headroom covered its full $102.40 worst case,
-that is, while cumulative actual spend stayed at or below $306.01. The rule
-refused B3's package after $48.50 of actual new spend; that package never started.
-The reservation is a worst case, not an invoice, and actual spend stayed far below
-it.
+the largest single run so far stays within the envelope
+([budget delegation](operator-permissions.md#finite-gameplay-budget-delegation)).
+`python -m tools.run_ledger totals --study ISSUE --envelope USD` applies it to the
+tracked ledger. The rule it replaced is in the [development loop record](acceptance/2026-11-06-development-loop.md#pilot-and-the-admission-rules).
 
 ## Metric
 
@@ -125,299 +106,17 @@ samples the claims in each arm.
 - **Cost:** dollars, charged attempts, setup attempts (until the first in-play
   frame) and wall seconds. The **$ upper bound** column is provider-reported usage
   plus $0.4096 for every attempt without a provider record, so it is an upper bound,
-  not an invoice. The generated table below reports configured-rate dollars per
-  decision from host usage instead.
+  not an invoice. The generated evaluator tables in the dated records report
+  configured-rate dollars per decision from host usage instead; their columns are
+  defined beside the [#383 table](acceptance/2026-11-06-development-loop.md#evaluator-re-score-and-power-check-383).
 
-## Results
-
-| Run | Date | Arm | Start | Survival h | Status | Verified improvements | Death cause | Attempts (setup) | $ upper bound | Wall s | Note |
-| --- | --- | --- | --- | ---: | --- | ---: | --- | --- | ---: | ---: | --- |
-| P1 | 2026-11-06 | Pilot (131k, 30/1) | S1 | 0.21 | Alive at stop (context capacity, both hosts) | 1 | — | 136 (25) | 6.05 | 859 | Mara Ellis, Evacuee; 08:00:00 → 08:12:22, Spring day 61. Crafted and wielded a pointy stick; looted a strip mall. Not scored. |
-| C1 | 2026-11-06 | A0 (2-host handoff) | S1 | 5.49 | Alive at stop (orderly finish at the attempt reserve) | 4 | — | 233 (23) | 3.58 | 1,856 | Morgan Reed, Evacuee; 08:00:00 → 13:29:21, Spring day 61. Crafted fishing rod, foraged cattails, canned beans, clean water. Saved per player claim. |
-| C2 | 2026-11-06 | A0 (2-host handoff) | S2 | 0.16 | Alive at stop (second voluntary handoff) | 0 | — | 158 (21) | 1.71 | 1,176 | Raelene Grant, chose Winter day 1; 08:00:17 → 08:09:49. Killed a feral; ocular zombie adjacent at stop. |
-| C3 | 2026-11-06 | A0 (2-host handoff) | S1 | 0.10 | Alive at stop (second voluntary handoff) | 1 | — | 115 (23) | 0.84 | 740 | Alex Rowan, Evacuee; 08:00:00 → 08:05:50, Spring day 61. Crafted pointy stick. |
-
-**Arm A0 is development data, not the ceiling.** Every A0 run ended at the
-player's second voluntary handoff: the guide invites a handoff "when fresh context
-helps", players took it at 96k–139k tokens of a 262k window, and the hidden 2-host
-limit then ended the run at 115–233 of 250 attempts. The final actor is now offered
-no handoff tool, so the five scored ceiling runs restart on that fix with the
-configuration otherwise unchanged.
-
-| Run | Date | Arm | Start | Survival h | Status | Verified improvements | Death cause | Attempts (setup) | $ upper bound | Wall s | Note |
-| --- | --- | --- | --- | ---: | --- | ---: | --- | --- | ---: | ---: | --- |
-| T1 | 2026-11-06 | Ceiling | S1 | 0.59 | Alive at stop (orderly finish) | 4 | — | 231 (22) | 3.46 | 1,539 | Morgan Vale; 08:00 → 08:35:39. Pointy stick, 7 protein rations, clean water, emergency blanket and jacket. Recruited a follower. |
-| T2 | 2026-11-06 | Ceiling | S2 | 0.05 | Died | 0 | Surrounded by zombies and ferals on a riverbank | 70 (—) | 0.52 | 425 | Russell Dobbs; chose a fitness-gym start among about 16 zombies. Memorial "Survived 2m". |
-| T3 | 2026-11-06 | Ceiling | S1 | 0.61 | Alive at stop (orderly finish) | 2 | — | 231 (24) | 3.65 | 1,642 | Morgan Hale; 08:00 → 08:36:45. Foraged fiddleheads and leaves, stick. Recruited a follower. |
-| T4 | 2026-11-06 | Ceiling | S2 | 0.03 | Died | 0 | Knocked down by a feral's thrown rock in a crowd | 37 (18) | 0.16 | 209 | Kathlyn Maloney; chose a candy-shop start among zombies. Memorial "Survived 1m". |
-| T5 | 2026-11-06 | Ceiling | S1 | 2.11 | Alive at stop (orderly finish) | 4 | — | 237 (19) | 3.98 | 1,763 | Morgan Vale; 08:00 → 10:06:36. Ate a ration, clean water, medical supplies, wooden club. Saved per player claim. |
-
-**Ceiling result (step 5).** Median survival is **0.59 h** (range 0.03–2.11 h)
-against the 24 h rule, so under the pre-registered rule grounding is the
-bottleneck and the aid arms begin. The adoption bar for an aid is a median of at
-least 2.59 h. Two observations sit beside the rule and do not change it. First,
-every S1 survivor was alive when its allowance ended, after 36–127 in-game minutes
-for about 230 decisions: survival hours are bounded mainly by time scale, about
-9–32 game seconds per request. Second, both deaths followed the player's own S2
-choice of a dense urban start, and each came within 3 game minutes. The arm cost
-$11.78 (unrounded OpenRouter generation-record totals, $11.777728; the rounded
-column sums to $11.77). Dollar columns come from those per-generation records,
-reconciled by the lead after each run; the custodian receipt itself carries only
-the configured-rate estimate, which matched them.
-
-### Aid arm A: zoom view (rejected)
-
-Source `70eda9a` on the unmerged `aid-zoom-view` branch: `player_source` takes an
-optional nearest-neighbour `zoom` of a crop, and the guide's tool row mentions it.
-
-| Run | Date | Arm | Start | Survival h | Status | Verified improvements | Death cause | Attempts (setup) | $ upper bound | Wall s | Note |
-| --- | --- | --- | --- | ---: | --- | ---: | --- | --- | ---: | ---: | --- |
-| A1 | 2026-11-06 | A (zoom) | S1 | 0.27 | Alive at stop (orderly finish) | 3 | — | 231 (18) | 3.54 | 1,610 | Morgan Hale. Protein ration, foraged cattails and fiddleheads, long pointy stick. 0 zoom uses. |
-| A2 | 2026-11-06 | A (zoom) | S2 | — | Infrastructure failure | — | — | 76 (29) | 0.76 | 464 | Mid-stream provider error at request 76 (HTTP 200, then `stop_reason: error`); not scored, replaced by A6. |
-| A3 | 2026-11-06 | A (zoom) | S1 | 0.30 | Alive at stop (orderly finish) | 1 | — | 234 (25) | 3.99 | 1,688 | Alex Rowan. Long pointy stick. One `player_source` read without zoom. |
-| A4 | 2026-11-06 | A (zoom) | S2 | 2.11 | Alive at stop (orderly finish) | 3 | — | 236 (23) | 4.12 | 1,761 | Clay Foxtail; chose an evac shelter start. Ate a ration, picked up rations, digging stick. 0 zoom uses. |
-| A5 | 2026-11-06 | A (zoom) | S1 | 0.93 | Alive at stop (orderly finish) | 5 | — | 234 (23) | 4.04 | 2,000 | Alex Morgan. Wooden club, rations, clean water, emergency jacket and blanket, dogbane. 0 zoom uses. |
-| A6 | 2026-11-06 | A (zoom) | S2 | 0.07 | Died | 0 | Overrun on a road by about 51 zombies and ferals | 85 (24) | 0.95 | 639 | Buffy Shapiro; urban start with an infected arm. 0 zoom uses. |
-
-**Arm A decision: rejected.** Median survival is 0.30 h against the ceiling's
-0.59 h and the 2.59 h bar. The player never used zoom in any arm-A run, so this
-rejects the aid for **no uptake**; it is not evidence about zoomed reading itself.
-The branch stays unmerged. Arm cost $17.41, including the failed A2.
-
-### Aid arm B: consult the game's own help (rejected)
-
-Source `784d3ae` (differs from the ceiling source only in docs); the frozen
-context is the guide plus a paragraph permitting the player to open the game's own
-help, command and keybinding screens and to keep what it learns as memory records.
-
-| Run | Date | Arm | Start | Survival h | Status | Verified improvements | Death cause | Attempts (setup) | $ upper bound | Wall s | Note |
-| --- | --- | --- | --- | ---: | --- | ---: | --- | --- | ---: | ---: | --- |
-| B1 | 2026-11-06 | B (help) | S1 | 0.38 | Alive at stop (orderly finish) | 3 | — | 231 (13) | 3.49 | 2,016 | C. Townsend (player-chosen name). Wooden club, chocolate drink, flashlight; follower. Saved a keybinding `procedure` record. |
-| B2 | 2026-11-06 | B (help) | S2 | 0.29 | Alive at stop (orderly finish) | 4 | — | 239 (16) | 3.64 | 2,282 | Carolynn Hardy; default scenario. Cattails, rations, clean water, mission reward of cattail jelly. Two keybinding `procedure` records. |
-| B3 | 2026-11-06 | B (help) | S1 | 0.42 | Alive at stop (orderly finish) | 4 | — | 234 (16) | 4.02 | 2,108 | Timothy Lowery. Long pointy stick, fiddleheads, clean water, ration. Two self-correction records; no keybinding record. |
-| B4 | 2026-11-06 | B (help) | S2 | 0.17 | Alive at stop (orderly finish) | 0 | — | 231 (16) | 3.45 | 2,266 | Li Avery; random sewage-plant start. Carried weight rose, but no pickup is separable from starting kit. Keybinding `procedure` record. |
-| B5 | 2026-11-06 | B (help) | S1 | — | Infrastructure failure | — | — | 191 (17) | 2.61 | 1,425 | HTTP 403: the API key's $250 monthly limit was exhausted. The owner raised it. Not scored. |
-| B6 | 2026-11-06 | B (help) | S1 | — | Infrastructure failure | — | — | 211 (—) | 3.13 | 1,518 | 429 from OpenRouter admission control with no message; not retried (#378). Not scored. |
-| B7 | 2026-11-06 | B (help) | S1 | — | Infrastructure failure | — | — | 199 (—) | 3.56 | 1,439 | Admission-control 429 citing a low account balance during auto-refill (#379). Not scored. |
-| B8 | 2026-11-06 | B (help) | S1 | — | Infrastructure failure | — | — | 172 (—) | 2.48 | 1,150 | HTTP 200, then a stream error before any event (#380). Not scored. |
-| B9 | 2026-11-06 | B (help) | S1 | 0.70 | Alive at stop (orderly finish) | 4 | — | 231 (20) | 3.41 | 1,817 | Morgan Reed; farmhouse. Wooden club, water, clean water, ration, emergency blanket; killed a zombie. No keybinding record. |
-
-**Arm B decision: rejected.** Median survival is 0.38 h against the ceiling's 0.59 h
-and the 2.59 h bar, so the guide stays unchanged. This was the first aid with real
-uptake: three of five players read the game's own keybinding screen and kept what
-they learned as `procedure` records. Median verified improvements were 4, against
-the ceiling's 2, and no arm-B survivor died. These are signals beside the rule, not
-measured effects. The B5–B8 dollar figures include the $0.4096 worst-case
-reservation for each failed attempt that had no provider record.
-
-### Aid arm C: reflection lineage (rejected)
-
-Source `c313346` (#380). The frozen context is the guide plus a paragraph asking the
-player to record an `advice` reflection before it hands off or finishes, and when its
-survivor dies. Each run's assignment carries the earlier arm-C players' reflections
-as bounded, fallible historical data.
-
-| Run | Date | Arm | Start | Survival h | Status | Verified improvements | Death cause | Attempts (setup) | $ upper bound | Wall s | Note |
-| --- | --- | --- | --- | ---: | --- | ---: | --- | --- | ---: | ---: | --- |
-| C1 | 2026-11-06 | C (reflect) | S1 | 0.45 | Alive at stop (orderly finish) | 5 | — | 232 (22) | 4.09 | 1,800 | Morgan Hale; follower. Long pointy stick, rhubarb, rations, clean water, emergency jacket and blanket. Two reflections. One stream-start error, retried by #380. |
-| C2 | 2026-11-06 | C (reflect) | S2 | 0.22 | Died | 5 | Caught by a feral soldier near a house | 196 (22) | 2.35 | 1,480 | Alex Rowan; follower. Club, water, honey, rations, first-aid kit, emergency clothing. Post-death reflection named the decisive error. |
-| C3 | 2026-11-06 | C (reflect) | S1 | 0.49 | Alive at stop (orderly finish) | 1 | — | 232 (27) | 3.47 | 1,921 | Elias Reed; injured. Bandaged a torso wound; killed a tough zombie and two feral mechanics. Two reflections. |
-| C4 | 2026-11-06 | C (reflect) | S2 | — | Custody safety stop | — | — | 30 (—) | 0.10 | 151 | Character-creation input expired during dispatch; uncertain delivery permanently fenced input, as designed. Not scored; replaced by C6. |
-| C5 | 2026-11-06 | C (reflect) | S1 | 0.28 | Alive at stop (orderly finish) | 1 | — | 234 (33) | 3.81 | 1,702 | Evan Mercer. Foraged burdock and pine materials. **First organic local program of the loop**: a saved bounded walking routine, run twice to `done`. Saved and quit per the player. |
-| C6 | 2026-11-06 | C (reflect) | S2 | 2.06 | Alive at stop (orderly finish) | 1 | — | 236 (26) | 3.57 | 1,832 | Avery Stone; evac shelter start. Drank (thirst "Slaked"); long auto-travel; withdrew from a deranged axeman. Two reflections. |
-
-**Arm C decision: rejected.** Median survival is 0.45 h against the ceiling's 0.59 h
-and the 2.59 h bar, so the guide stays unchanged. Uptake was complete: every scored
-run wrote reflections (ten in all), C2's post-death reflection named its decisive
-error, and C5 produced the loop's only organic local program. None of this moved
-survival hours at n=5. Arm cost $17.38, including the $0.10 C4 stop and C1's
-$0.41 retry reservation.
-
-## Loop result and next step
-
-| Arm | Median survival h | Range | Deaths | Median verified improvements | Uptake | Decision |
-| --- | ---: | --- | ---: | ---: | --- | --- |
-| Ceiling (Terra) | 0.59 | 0.03–2.11 | 2 of 5 | 2 | — | Baseline |
-| A: zoom view | 0.30 | 0.07–2.11 | 1 of 5 | 3 | No zoom used | Rejected (no uptake) |
-| B: game help | 0.38 | 0.17–0.70 | 0 of 5 | 4 | 3 of 5 saved keybindings | Rejected |
-| C: reflection | 0.45 | 0.22–2.06 | 1 of 5 | 1 | 5 of 5 reflected; 1 program | Rejected |
-
-The loop spent $88.54 of D2's $150. A frontier player through the pixels-and-keys
-boundary plays competently in the short term: runs routinely gather food, water,
-tools and weapons. Of 20 scored runs, 4 died. Three followed the player's own S2
-choice of a dense urban start; one (C2) followed a tactical error in an
-evac-shelter start, which its own reflection named. But no run reached even one
-in-game day inside its allowance. **Within a 250-decision allowance the survival
-metric is bounded by time scale:** about 230 decisions pass 10–130 game minutes,
-roughly 9–32 game seconds per decision. A 2.59 h bar is therefore nearly
-unreachable for any aid that does not change pacing. The aids did not isolate
-perception: arm A had no uptake. The three longest runs (T5, A4, C6) and the only
-organic program (C5) all passed game time cheaply, through activities,
-auto-travel or a loop.
-
-The loop recommended (6 November) testing time scale directly rather than adding
-more perception aids. That recommendation ran as the
-[long-horizon arm](#long-horizon-arm-382); the rest of this paragraph is the
-recommendation as recorded. Run a long-horizon Terra arm, for example three Evacuee runs of
-about 1,500 decisions each (roughly $20–25 each by this loop's rate), and track
-**game seconds per decision** beside survival hours. The question is whether
-needs, rest and supplies hold once the clock passes a day, which is the first
-point at which #145's seven-day question becomes observable. It needs two owner
-decisions. First, a new spend envelope: about $61 of D2 remains. Second, either
-more actors per admission or a longer context window: two hosts of a 262k window
-hold roughly 350 decisions, and `campaign-run/4` allows at most two hosts. #164's
-cadence criteria stay deferred until that baseline exists. Infrastructure lessons
-are recorded as fixes #378–#380 and the actual-spend admission rule.
-
-## Evaluator re-score and power check (#383)
-
-The [run evaluator](contracts/evaluation.md) (core 2, CDDA binding 2) re-scored all
-30 runs from their recorded frames, traces and memory stores. These are new,
-generated rows. The hand-scored tables above are unchanged and remain the record of
-the loop's decisions; their attempts, dollars and wall seconds are cross-checked
-against the tracked [run ledger](../data/evaluation/runs.jsonl) by
-`python -m tools.run_ledger check`. The generated tables here are regenerated from the
-tracked [metrics snapshot](../data/evaluation/run-metrics.jsonl) with
-`python -m tools.evaluate evaluate-table data/evaluation/run-metrics.jsonl --write docs/development-runs.md`,
-and the fast checks fail if they drift.
-
-**Frozen for #382.** The following are frozen at the merge commit of the lineage day-check
-change, which each admission records as `source_commit`:
-- evaluator core 2 with CDDA binding 2 (`evaluation-record/1`);
-- the `spectator-view/1` viewer API;
-- the `campaign-watch-start/3` and `campaign-watch-terminal/3` control path;
-- `campaign-run/5` manifests;
-- player-host telemetry v3 with `context-manifest`.
-
-Any change to one of these during #382 starts a new arm. All 30 records above were
-re-scored with the frozen evaluator; core 1 and core 2 give the same table, because core 2
-only adds lineage metrics. The spectator's graphical lane on the final source
-has its own [evidence manifest](acceptance/assets/spectator-383/summary.json): an
-archived run replayed into a copy, checks and Pause kept working after the viewer was
-killed, and the run ended only on the owner's Pause.
-
-<!-- evaluate-table study=372 core=2 binding=cdda:2 -->
-| Run | Arm | Start | End | Game h | Decisions | Setup | Routine pace | Long activities | Out of play | Longest stall | $ / decision | Large rewrites |
-| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| ceil01 | pilot | S1 | budget | 0.21 | 129 | 7 | 5.0 | 0 · 0.00 h | 59% | 17 | 0.0469 | 96% |
-| ceil02 | pre-loop | S1 | budget | 5.49 | 227 | 6 | 3.0 | 1 · 5.00 h | 63% | 19 | 0.0158 | 61% |
-| ceil03 | pre-loop | S2 | budget | 0.16 | 151 | 7 | 2.0 | 0 · 0.00 h | 30% | 4 | 0.0113 | 49% |
-| ceil04 | pre-loop | S1 | budget | 0.10 | 109 | 7 | 2.0 | 0 · 0.00 h | 63% | 14 | 0.0077 | 35% |
-| ceil05 | ceiling | S1 | budget | 0.59 | 225 | 7 | 3.7 | 0 · 0.00 h | 71% | 16 | 0.0154 | 62% |
-| ceil06 | ceiling | S2 | died | 0.05 | 65 | 7 | 2.2 | 0 · 0.00 h | 56% | 7 | 0.0081 | 45% |
-| ceil07 | ceiling | S1 | budget | 0.61 | 223 | 7 | 3.0 | 0 · 0.00 h | 70% | 15 | 0.0164 | 66% |
-| ceil08 | ceiling | S2 | died | 0.03 | 35 | 7 | 4.0 | 0 · 0.00 h | 21% | 3 | 0.0045 | 0% |
-| ceil09 | ceiling | S1 | budget | 2.11 | 229 | 8 | 4.0 | 1 · 1.67 h | 60% | 17 | 0.0174 | 60% |
-| aidA1 | zoom-aid | S1 | budget | 0.27 | 224 | 7 | 5.0 | 0 · 0.00 h | 62% | 14 | 0.0158 | 60% |
-| aidA2 | zoom-aid | S2 | infrastructure | 0.12 | 74 | 7 | 2.0 | 0 · 0.00 h | 65% | 10 | 0.0089 | 49% |
-| aidA3 | zoom-aid | S1 | budget | 0.30 | 226 | 7 | 4.0 | 0 · 0.00 h | 58% | 15 | 0.0176 | 62% |
-| aidA4 | zoom-aid | S2 | budget | 2.11 | 229 | 7 | 3.0 | 1 · 1.65 h | 65% | 17 | 0.0180 | 64% |
-| aidA5 | zoom-aid | S1 | budget | 0.93 | 226 | 9 | 6.0 | 0 · 0.00 h | 62% | 14 | 0.0179 | 63% |
-| aidA6 | zoom-aid | S2 | died | 0.07 | 83 | 6 | 4.2 | 0 · 0.00 h | 49% | 16 | 0.0115 | 57% |
-| aidB1 | game-help-aid | S1 | budget | 0.38 | 223 | 8 | 3.0 | 0 · 0.00 h | 65% | 18 | 0.0156 | 62% |
-| aidB2 | game-help-aid | S2 | budget | 0.29 | 226 | 7 | 5.0 | 0 · 0.00 h | 56% | 22 | 0.0161 | 59% |
-| aidB3 | game-help-aid | S1 | budget | 0.42 | 224 | 6 | 7.8 | 0 · 0.00 h | 53% | 16 | 0.0180 | 60% |
-| aidB4 | game-help-aid | S2 | budget | 0.17 | 223 | 7 | 3.0 | 0 · 0.00 h | 44% | 20 | 0.0155 | 58% |
-| aidB5 | game-help-aid | S1 | infrastructure | 0.20 | 185 | 7 | 3.0 | 0 · 0.00 h | 64% | 20 | 0.0119 | 54% |
-| aidB6 | game-help-aid | S1 | infrastructure | 1.29 | 205 | 10 | 4.0 | 1 · 0.82 h | 77% | 23 | 0.0133 | 58% |
-| aidB7 | game-help-aid | S1 | infrastructure | 0.37 | 193 | 7 | 5.0 | 0 · 0.00 h | 61% | 19 | 0.0163 | 62% |
-| aidB8 | game-help-aid | S1 | infrastructure | 0.20 | 165 | 7 | 2.0 | 0 · 0.00 h | 66% | 28 | 0.0125 | 56% |
-| aidB9 | game-help-aid | S1 | budget | 0.70 | 223 | 7 | 3.0 | 0 · 0.00 h | 59% | 14 | 0.0153 | 60% |
-| aidC1 | reflection-aid | S1 | budget | 0.45 | 223 | 7 | 6.0 | 0 · 0.00 h | 60% | 13 | 0.0165 | 62% |
-| aidC2 | reflection-aid | S2 | died | 0.22 | 188 | 7 | 2.8 | 0 · 0.00 h | 54% | 13 | 0.0125 | 53% |
-| aidC3 | reflection-aid | S1 | budget | 0.49 | 223 | 15 | 3.0 | 0 · 0.00 h | 64% | 16 | 0.0156 | 61% |
-| aidC4 | reflection-aid | S2 | custody | 0.00 | 23 | 7 | — | 0 · 0.00 h | 94% | 16 | 0.0040 | 0% |
-| aidC5 | reflection-aid | S1 | budget | 0.28 | 222 | 17 | 4.0 | 0 · 0.00 h | 54% | 12 | 0.0171 | 61% |
-| aidC6 | reflection-aid | S2 | budget | 2.06 | 226 | 17 | 4.0 | 1 · 1.45 h | 63% | 17 | 0.0158 | 58% |
-<!-- /evaluate-table -->
-
-- **Columns.**
-  - *Game h* is survival within the run's last episode.
-  - *End* is the censor reason.
-  - *Setup* counts decisions before the first in-play frame. The hand table's
-    "Attempts (setup)" counts attempts instead, so the two setup figures differ.
-  - *Routine pace* is the median game seconds per decision over clock intervals shorter
-    than 15 minutes.
-  - *Long activities* are single stretches advancing 15 minutes or more.
-  - *Out of play* and *Longest stall* come from the mode reader.
-  - *$ / decision* is configured-rate host usage.
-  - *Large rewrites* is the share of spend in requests writing over 30,000 cache tokens.
-- **Agreement with hand scores.** The evaluator matches the hand-scored survival hours
-  on every scored run.
-  - C2 now reads 0.22 h: its survivor started a second world, and the evaluator
-    measures within the last episode.
-  - B6's 1.29 h is an infrastructure-lost run that the hand tables did not score.
-- **Reader validation.** Held-out frames from pre-loop sessions, labelled blind:
-  - **Clock:** 115/115 exact.
-  - **Needs:** 84/84 each.
-  - **Mode:** 200/200 on a fresh sample after one fix.
-  - **Death:** 240/240, but with no deaths in the samples, so recall is unmeasured.
-  - **Threat:** 91/91 on empty creature lists only; counting creatures is not yet validated.
-  - **Gap, narrowed:** every held-out clock above read Spring day 61 between 8 and
-    10 AM. #382's lineage 1 adds a fresh blind sample of unobstructed sidebar clocks,
-    60/60 exact, covering the afternoon, three evening frames to 7:50 PM and the morning
-    of day 62, plus hand-checked night and day-rollover frames, all exact.
-    - No held-out frame falls between 7:50 PM and 6:00 AM: menus covered the clock until
-      the survivor fell asleep at 10:30 PM, and it then slept in one decision.
-    - Clocks partly covered by a popup, and the severe need labels, have no held-out
-      examples ([lineage 1](#lineage-1-day-viable), `reader-validation.json`).
-- **The game-help aid's target metric moved the wrong way.** The mean longest
-  out-of-play streak was 18.0 decisions against the ceiling's 11.6 (+6.4, 95%
-  bootstrap interval +1.2 to +12.2). Reading the in-game help is itself out of play,
-  so the aid confounds its own metric.
-
-**Power check (#383 decision D4).** The simulation is fitted to the 20 scored runs:
-- an exponential death hazard of 0.319 per game hour
-  (4 deaths in 12.54 game hours);
-- censoring drawn from the alive runs' stopping times;
-- 1,500 simulations per cell, two-sided α 0.05.
-
-| Metric (test) | Effect | n = 5 per arm | n = 10 | n = 20 | n = 40 |
-| --- | --- | ---: | ---: | ---: | ---: |
-| Censored survival (log-rank) | 2× survival time | 1% | 5% | 12% | 21% |
-| Censored survival (log-rank) | 3× survival time | 2% | 8% | 18% | 37% |
-| Ladder progress beyond in-play (Fisher exact) | odds × 4 | 8% | 16% | 42% | 82% |
-| Routine pace (Welch t on logs) | 1.5× | 44% | 80% | 98% | 100% |
-
-At the #382 horizon (censoring about eight times later), three against three lineages
-detect a 2× survival change 10% of the time.
-
-**Decision under D4.** Censored survival and the milestone ladder do **not** become
-the metric of record. They stay descriptive guards.
-- With four deaths in 12.5 game hours and budget censoring, no affordable run count
-  detects even a tripling of survival.
-- At this run length the ladder rarely moves past "in play": 5 of 20 runs ate and
-  1 drank.
-
-Each change instead pre-registers a targeted process metric on its change page,
-such as routine pace, stall length or the target failure's rate. Survival, cost and
-setup serve as guards. Routine pace reaches 80% power for a 1.5× change at about 10
-runs per arm.
-
-## Long-horizon arm (#382)
+## Long-horizon method (#382)
 
 Over a full in-game day, do needs, rest and supplies hold, and does game time per
-decision rise when the player chooses to sleep, wait or travel? The proposal and its
-amendments are on [#382](https://github.com/CVX-Hull/enactive/issues/382). This
-section records the owner's decisions, the frozen procedure and one row per admission.
-
-### Owner decisions, 7 November 2026
-
-| | Decision |
-| --- | --- |
-| D1 | A new $150 envelope under the actual-spend admission rule; the cumulative cap is about $497 within the standing $1,000 ([budget delegation](operator-permissions.md#finite-gameplay-budget-delegation)). |
-| D2 | Three lineages, run one after another, each a chain of `campaign-run/5` admissions in one world, with one userdir and one `player-memory/2` store. Player: S1 Evacuee, GPT-6.1 Terra medium, the unchanged guide, no aid. A continuation admission is told to load and continue, and it carries the previous admission's final report as fallible historical data. That report begins with the test's own orderly-stop wording, so it is a stated confound. |
-| D3 | The classification below is fixed before any run. Severe needs are #382's list; pain, red labels and limbs are excluded. A wrong survivor or an episode change is a continuity failure. The lead resolves `died_in_lag` and `needs_not_legible` from frames. |
-| D4 | Between admissions the lead reviews the finished admission against the Pause conditions. If looping or a spend overrun was met, the lead decides whether to continue. A single custody hit does not end a lineage. The other stop rules are unchanged. |
-| D5 | The long-activity share is pre-registered against the six no-aid S1 runs in [`changes.json`](../data/evaluation/changes.json) (`long-horizon`), expected higher. It is descriptive, with no power claim. |
-| D6 | A lineage ends at 24 elapsed in-game hours, at death, at 2,000 decisions or at a stop rule. |
-
-Two further owner decisions were taken during the arm, on 7 November 2026:
-
-| | Decision |
-| --- | --- |
-| D7 | A setup restart is not a D3 continuity failure: the player enters play for one decision with no game time, saves and quits, then creates the survivor the lineage carries. This happened in all three lineages. |
-| D8 | Lineage 3 ends as Slow under the stop rule after two consecutive custody stops with one cause (#396), with no change to the frozen harness. |
+decision rise when the player chooses to sleep, wait or travel? The owner's
+decisions, the frozen inputs, the pinned admission procedure and the lineages are in
+the [long-horizon record](acceptance/2026-11-07-long-horizon-382.md). A new long-horizon
+arm freezes its own inputs the same way and states them in its record.
 
 ### Classification (fixed before any run)
 
@@ -443,255 +142,13 @@ boundary, day point and death from frames.
 
 With three lineages this is a screen, not a qualification.
 
-### Admission procedure
+## Recording a run
 
-Admissions run from the dev-loop worktree at `509a9fd`, whose evaluator (core 2, CDDA
-binding 2) is frozen for this arm. Lineage *L*'s admission *N* is the package
-`lhLaN` (for example `lh1a3`), labelled `{arm: "long-horizon", start: "S1",
-scenario: "Evacuee", lineage: "L<L>", admission: N}`. Each package is built fresh with
-these limits, outside the player's context:
-
-| Setting | Value |
-| --- | --- |
-| Route | As in the [benchmark](#benchmark): OpenRouter, `openai/gpt-6.1-terra`, pinned `openai`, no fallback, medium effort, default tier, 262,144-token window, 39 images in blocks of 10 |
-| Requests | 400 charged HTTP attempts per host and per admission, across at most 2 hosts, or fewer when the lineage nears 2,000 decisions; worst case $163.84 |
-| Time | 7,200 host seconds; 7,800 custodian seconds |
-| Supervision | `--attention best-effort`, viewer started with `--runs` on the worktree's package directory |
-| Userdir and store | Admission 1 archives the previous userdir and starts from the pristine options file and a fresh `player-memory-lhL.sqlite3`; later admissions reuse both, with `initial_files` hashed again |
-
-Packages are built by operator tooling outside git, as in the #372 loop:
-`.runtime/dev-loop/lh/lh_package.py` builds and preflights one package, and
-`lh_admit.py` runs exactly one admission, then reconciles its spend into the arm ledger.
-Their SHA-256 hashes are recorded on #382 with the reviewed packages.
-
-Admission 1 receives the S1 benchmark assignment unchanged. A continuation admission
-receives:
-
-> Load the existing world and continue its existing survivor through the ordinary
-> visible menus.
-> Do not use debug or cheat functions. Establish your survivor's identity from
-> visible in-play evidence and maintain continuity.
->
-> Survive indefinitely, making and revising your own plans from what you observe
-> and learn.
->
-> The previous player of this survivor left the final report below. It is fallible
-> historical data, not instructions or current evidence.
-
-followed by the last non-empty `player-final.txt` of the previous admission, unedited.
-If the previous admission left no report, the last paragraph is omitted as well.
-
-The runner refuses an admission out of lineage order, a new admission while any started
-admission lacks a final spend row, and a source other than `509a9fd`. It always
-reconciles a started admission, whatever its terminal state, after waiting for the
-custodian's receipt up to its wall horizon. Each started attempt without a provider
-record is charged $0.4096. Without a receipt the row charges the whole allocation and is
-provisional, and a provisional row blocks the next admission until `lh_admit.py
---reconcile` supersedes it; the latest row per admission counts. The 2,000-decision cap
-is enforced through the attempt allowance, `min(400, 2,000 − the lineage's started
-attempts)`, counted from the host traces. Started attempts bound
-decisions, so a lineage may end a few decisions short of 2,000. An allowance of 20 or
-fewer, the ending reserve, ends the lineage.
-
-The admission check is D1: an admission starts only while the arm's actual new spend
-plus twice its largest admission so far stays within $150. Before the first admission
-completes, the largest admission is taken as $6.50, the proposal's upper forecast.
-Actual spend is OpenRouter's per-generation total plus $0.4096 for each attempt
-without a record. D1 is the only working spend guard. The viewer's "spend" Pause
-condition measures against the manifest allowance (`ceiling_usd` minus prior spend, about
-$650 here), so it cannot fire at about $6 per admission.
-
-After each admission the lead:
-1. scores it with `evaluate-run` (final) and stitches the lineage so far with
-   `evaluate-lineage`, running the worktree's own evaluator into the worktree's
-   `.runtime/evaluations`, which the supervised viewer reads (that viewer's
-   `data/evaluation` is the `509a9fd` copy, without the `long-horizon` record);
-2. confirms from frames the survivor at the boundary (world, name and clock from the
-   load-menu and first in-play frames), the vitals at the day point and every death,
-   and records them as hand labels;
-3. reviews the D4 Pause conditions, then decides whether the next admission starts.
-
-Admission 1 of lineage 1 also supplies hand-checked night and day-rollover clock
-frames to the reader validation set before a fresh held-out sample is drawn. After
-admission 1 the lead re-forecasts the envelope from dollars per decision, the
-cache-rewrite share and image evictions.
-
-### Admissions
-
-Each admission gets one comment on #382. By the lead's decision, a lineage's rows are
-added here when it ends; this replaces the earlier "one row per admission" wording.
-
-#### Lineage 1: Day-viable
-
-Morgan Reed, an Evacuee in the world Stirling City (evac shelter A-23), 7 November 2026.
-
-| Admission | Status | Attempts | Decisions (setup or reload) | Game h | Clock | Boundary (hand check) | $ actual | Wall s |
-| --- | --- | ---: | --- | ---: | --- | --- | ---: | ---: |
-| `lh1a1` | Alive at stop: context capacity, Save and Quit | 253 | 246 (7) | 5.93 | 8:00 AM → 1:55 PM, day 61 | First admission; see the setup correction below | 5.38 | 1,844 |
-| `lh1a2` | Alive at stop: the player judged the screen stalled during a 12-portion craft; no save | 125 | 123 (4) | 1.87 | 1:55 → 3:47 PM, day 61 | Stirling City, Morgan Reed; 1:55:36 PM, gap 0 s | 1.85 | 997 |
-| `lh1a3` | Alive at stop: context capacity, Save and Quit | 274 | 269 (10) | 16.98 | 3:43 PM day 61 → 8:42 AM day 62 | Stirling City, Morgan Reed; 3:43:46 PM, rewound 230 s to the autosave | 5.95 | 1,948 |
-
-<!-- evaluate-table study=382 lineage=L1 core=2 binding=cdda:2 -->
-| Run | Arm | Start | End | Game h | Decisions | Setup | Routine pace | Long activities | Out of play | Longest stall | $ / decision | Large rewrites |
-| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| lh1a1 | long-horizon | S1 | player_stop | 5.93 | 246 | 7 | 4.8 | 5 · 5.22 h | 62% | 16 | 0.0219 | 64% |
-| lh1a2 | long-horizon | S1 | player_stop | 1.87 | 123 | 4 | 2.6 | 1 · 1.43 h | 74% | 13 | 0.0151 | 60% |
-| lh1a3 | long-horizon | S1 | player_stop | 16.98 | 269 | 10 | 6.0 | 7 · 15.83 h | 67% | 17 | 0.0221 | 66% |
-<!-- /evaluate-table -->
-
-**Lineage row** (`evaluate-lineage`):
-- **Elapsed:** 24.71 h in 638 decisions, an overall pace of **139.4** game seconds per decision.
-- **Long activities:** 22.48 h, a share of **0.910** (the D5 comparator mean is 0.284).
-- **Day check:** passed at `lh1a3` step 241, at 24.146 h with a lag of 0.146 h, with no severe need.
-- **Memory reuse across admissions:** 0 records.
-- **Cost:** $13.18, which is $0.53 per game hour, so seven days would cost about $90.
-
-**Hand checks** (labels 3–6 in [`labels.jsonl`](../data/evaluation/labels.jsonl), taxonomy version 2):
-- **Setup correction in `lh1a1` (the lead's ruling, confirmed by the owner as D7).**
-  - After "Play Now!" the player entered play in a stadium start in world Diamond Bluff at 8:00:00 AM on day 61. On the next decision it chose Save and Quit, and then created the assigned Evacuee, Morgan Reed, in Stirling City; he was first in play at step 20.
-  - The first survivor's name, Krista Hobson, comes only from the save filename.
-  - No game time passed and no lineage survivor existed yet, so the lead ruled this a setup correction, not a continuity failure. D3's wording, "a wrong survivor", could have been read to cover it; the owner confirmed the ruling (D7).
-  - The evaluator cannot see this kind of switch: identity was read only on Morgan's creation frames, and the clock did not change.
-  - The *Setup* column counts 7 decisions, up to the first survivor's in-play frame. The 12 correction decisions after it (about $0.06) count as play in `lh1a1`'s pace and out-of-play share.
-- **Both boundaries.** The load menu selected Stirling City, whose only character is Morgan Reed, and the first clock continued the previous admission's. Boundary 2 lost 230 s because `lh1a2` ended without saving.
-- **Night and rollover.**
-  - 10:30:00 PM, day 61: the survivor falls asleep in the shelter.
-  - 6:00:58 AM, day 62: they wake "Very thirsty".
-  - Both evaluator readings match the frames.
-- **Day point.** At 8:08:44 AM on day 62, thirst, hunger and rest are blank, weariness is "Fresh" and the body bars are full.
-
-**Time passing.**
-- From 7:50 PM the survivor tried to fall asleep for 2.66 h (one long activity), then slept 7.5 h in one decision.
-- It crafted in long batches (quarterstaff, bowl, needle, starch) and boiled water.
-- 63–74% of decisions were out of play, mostly in crafting and item menus.
-- **The `lh1a2` stall is unexplained.**
-  - After ENTER on a 12-portion batch (50 minutes 57 seconds), seven decisions returned the identical frame, and the player stopped.
-  - The custodian then ended the game with SIGTERM. The game's log records only its shutdown, so it can neither confirm a busy simulation nor rule out a wait for input.
-  - All 13 recorded long activities in the lineage, including the 7.5 h sleep, completed normally.
-
-#### Lineage 2: Day-viable
-
-Morgan Hale, an Evacuee in the world Brokaw (evac shelter B-05), 7 November 2026.
-
-| Admission | Status | Attempts | Decisions (setup or reload) | Game h | Clock | Boundary (hand check) | $ actual | Wall s |
-| --- | --- | ---: | --- | ---: | --- | --- | ---: | ---: |
-| `lh2a1` | Alive at stop: context capacity, Save and Quit | 304 | 295 (7) | 2.49 | 8:00 → 10:29 AM, day 61 | First admission; see the setup restart below | 6.55 | 2,225 |
-| `lh2a2` | Alive at stop: context capacity, Save and Quit | 331 | 323 (4) | 22.55 | 10:29 AM day 61 → 9:02 AM day 62 | Brokaw, Morgan Hale; 10:29:31 AM, gap 0 s | 7.06 | 2,429 |
-
-<!-- evaluate-table study=382 lineage=L2 core=2 binding=cdda:2 -->
-| Run | Arm | Start | End | Game h | Decisions | Setup | Routine pace | Long activities | Out of play | Longest stall | $ / decision | Large rewrites |
-| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| lh2a1 | long-horizon | S1 | player_stop | 2.49 | 295 | 7 | 4.2 | 1 · 0.55 h | 72% | 23 | 0.0222 | 67% |
-| lh2a2 | long-horizon | S1 | player_stop | 22.55 | 323 | 4 | 4.4 | 9 · 20.54 h | 67% | 22 | 0.0218 | 66% |
-<!-- /evaluate-table -->
-
-**Lineage row** (`evaluate-lineage`):
-- **Elapsed:** 25.04 h in 618 decisions, an overall pace of **145.9** game seconds per decision.
-- **Long activities:** 21.08 h, a share of **0.842**.
-- **Day check:** passed at `lh2a2` step 304, at 24.724 h with a lag of 0.724 h, with no severe need.
-  - The last clock below the day was 7:48:24 AM (step 298, the end of a digging-stick craft).
-  - Steps 299–303 were crafting-menu navigation with the clock hidden, so no game time passed.
-  - Step 304's input started a stick craft. 8:00 AM fell inside that single decision, which ended at 8:43:28.
-- **Memory reuse across admissions:** 1 record. A `player_memory_query` at `lh2a2` step 129 returned three records, one of them written in `lh2a1`; the other two were written earlier in `lh2a2`.
-- **Cost:** $13.60, which is $0.54 per game hour, so seven days would cost about $91.
-
-**Hand checks** (labels 7–9 in [`labels.jsonl`](../data/evaluation/labels.jsonl)):
-- **Setup restart in `lh2a1` (confirmed by the owner as D7, as for lineage 1).**
-  - After "Play Now!" the player entered play once as a random Evacuee in world Jayuya at 8:00:00 AM. The save file names Al Joyner.
-  - On the next decision it chose Save and Quit, and then built its own Evacuee, Morgan Hale (Str, Dex, Int and Per all 10), in Brokaw. Morgan Hale was first in play at step 22, again at 8:00:00 AM.
-  - Unlike lineage 1's stadium start, this first survivor was in an Evacuee start. Its setup was chosen at random by "Play Now!", not by the player.
-  - The evaluator cannot see this kind of switch: identity was read only on Morgan Hale's creation frames (steps 20–21), and the clock stayed at 8:00:00.
-  - The *Setup* column counts the 7 decisions to the first survivor's in-play frame. The 13 restart decisions after it ($0.55, about 8% of `lh2a1`'s spend) count as play in `lh2a1`'s out-of-play share and dollars per decision.
-- **Boundary.** The load menu selected Brokaw, whose only character is Morgan Hale. The first in-play clock, 10:29:31 AM on day 61, equals `lh2a1`'s last reading.
-- **Day point.** At 8:43:28 AM on day 62 thirst read "Hydrated", hunger and rest were blank, weariness "Fresh" and the body bars full.
-
-**Time passing** (checked from frames for three of the nine `lh2a2` long activities):
-- a 3.9 h stretch crafting a wooden spear in the shelter (12:20 → 4:11 PM);
-- the night, 9.3 h in two stretches of 4.1 h and 5.2 h:
-  - The survivor stopped waiting at 9:21:11 PM and lay down.
-  - It had trouble sleeping, for a stretch whose length the frames do not show.
-  - It was asleep by 1:30:00 AM and woke at 6:44:50 AM "Very thirsty". It drank by 6:46 AM, well before the day point;
-- the other six long activities total 7.3 h and were not individually checked.
-
-`lh2a1` passed only 2.49 h with one long activity, close to the #372 loop's pace. That compares with lineage 1's first admission at 5.93 h and five long activities, at a similar decision count and cost.
-
-#### Lineage 3: Slow (ended by a stop rule)
-
-Morgan Vale, an Evacuee in the world Crenshaw (evac shelter A-23), 7 November 2026.
-
-| Admission | Status | Attempts | Decisions (setup or reload) | Game h | Clock | Boundary (hand check) | $ actual | Wall s |
-| --- | --- | ---: | --- | ---: | --- | --- | ---: | ---: |
-| `lh3a1` | Custody stop: input expired during dispatch (partial) | 219 | 208 (8) | 0.17 | 8:00 → about 8:10 AM, day 61 | First admission; see the setup restart below | 2.91 | 1,346 |
-| `lh3a2` | Custody stop: input expired during dispatch (partial) | 104 | 96 (4) | 0.38 | 8:10 → 8:32 AM, day 61 | Crenshaw, Morgan Vale; 8:10:00 AM, rewound 20 s to the autosave | 0.76 | 640 |
-
-<!-- evaluate-table study=382 lineage=L3 core=2 binding=cdda:2 -->
-| Run | Arm | Start | End | Game h | Decisions | Setup | Routine pace | Long activities | Out of play | Longest stall | $ / decision | Large rewrites |
-| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| lh3a1 | long-horizon | S1 | custody | 0.17 | 208 | 8 | 3.0 | 0 · 0.00 h | 67% | 28 | 0.0139 | 59% |
-| lh3a2 | long-horizon | S1 | custody | 0.38 | 96 | 4 | 3.4 | 0 · 0.00 h | 63% | 10 | 0.0078 | 36% |
-<!-- /evaluate-table -->
-
-**Lineage row** (`evaluate-lineage`):
-- **Elapsed:** 0.54 h in 304 decisions, 6.4 game seconds per decision; no long activities.
-- **Day check:** not reached.
-- **Cost:** $3.67.
-
-**Classification: Slow** (owner decision D8).
-- Alive under 24 elapsed hours, ended by the stop rule after two consecutive infrastructure failures with one cause.
-- Continuity held at the boundary.
-- The class names how the lineage stopped; it is not a survival result.
-
-**The custody stops** ([#396](https://github.com/CVX-Hull/enactive/issues/396)).
-- In both admissions the last input began with ENTER to dismiss the shelter board's "mark down the coordinates" message (ENTER, UP, g, then ENTER, E). Each action in an input is its own native request.
-- The game consumed ENTER's key-down and then stopped polling events before its key-up, past the bridge's 5 s request window.
-  - ENTER's own request expired with a partial receipt; its two emitted events are the key-down and the owned release.
-  - Input was fenced permanently, as designed. A lone ENTER would have fenced the same way.
-- Across the arm's 1,566 computer inputs, every input without a wait action took 1.9 s or less. These two took 7.4 s and 11.5 s.
-- Lineage 2's player recorded studying its own shelter's board and marking the refugee center (memory record, `lh2a1`), with no slow input. So the stall plausibly depends on lineage 3's world state; this is a hypothesis.
-
-**Hand checks** (labels 10–11):
-- **Setup restart in `lh3a1` (D7).** "Play Now!" placed the first survivor in a helicopter-crash start, bleeding and surrounded by zombies, at 8:00:00 AM on day 61. On the next decision it chose Save and Quit, then created the Evacuee Morgan Vale, first in play at step 22.
-- **Boundary.** The load menu selected Crenshaw, whose only character is Morgan Vale. The first in-play clock, 8:10:00 AM with "Saving game", is 20 s before `lh3a1`'s last reading.
-
-### Arm result
-
-| Lineage | Survivor | Class | Elapsed h | Decisions | Pace (s/decision) | Long-activity share | $ |
-| --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
-| 1 | Morgan Reed | Day-viable | 24.71 | 638 | 139.4 | 0.910 | 13.18 |
-| 2 | Morgan Hale | Day-viable | 25.04 | 618 | 145.9 | 0.842 | 13.60 |
-| 3 | Morgan Vale | Slow (stop rule) | 0.54 | 304 | 6.4 | 0.000 | 3.67 |
-
-**Arm result: "Day-scale survival is viable through this boundary"**: two of three lineages Day-viable and no continuity failure, given the owner's setup-restart ruling (D7). With three lineages this is a screen, not a qualification.
-- #382's pre-registered table maps this result to a seven-day design for #145 and a cost and latency plan for #164, tracked on [#397](https://github.com/CVX-Hull/enactive/issues/397).
-- The arm spent **$30.46** of its $150 envelope: 1,610 attempts, about 3.2 h of wall time, cumulative actual $377.41.
-
-**Time passing.** Given enough decisions, both Day-viable players slept through the night in shelter.
-- Lineage 1 slept 7.5 h in one decision.
-- Lineage 2 spent 9.3 h on the night, including an unreadable stretch of trying to fall asleep.
-- Both woke "Very thirsty" and drank before the day point.
-- Both crafted in long batches, and two-thirds of decisions were out of play, mostly in crafting and item menus.
-- Overall pace rose from the #372 no-aid S1 runs' pooled 28.7 game seconds per decision to 139–146.
-- Most of the difference is long activities, and admissions differed widely: `lh2a1` ran at 30.4 s per decision, `lh2a2` at 251.
-- Every lineage opened with a "Play Now!" setup restart (D7).
-
-**D5 outcome (descriptive, pre-registered).**
-- The lineage long-activity shares are 0.910, 0.842 and 0.000, a median of **0.842**. The comparator, the six no-aid S1 runs' per-run mean, is **0.284**.
-- The pre-registered expectation, a median above the comparator by at least 0.1, holds.
-- This makes no power claim: three lineages against six runs, and the comparator's long activities come from two runs.
-
-**Reader and evaluator notes.**
-- The weariness reader's whole-reader abstention did not affect any result: both day points were read directly and confirmed by hand.
-- Severe-need recall stays unmeasured (`reader-validation.json`).
-- The evaluator cannot see setup restarts: identity was read only on creation screens, and the clock was unchanged.
-
-**Evidence frames** ([assets](acceptance/assets/long-horizon-382), copied unchanged from the packages' `sources/`):
-
-| Asset | Source frame | Shows | SHA-256 (first 16) | Bytes |
-| --- | --- | --- | --- | ---: |
-| `l1-night-asleep-2230.png` | `lh1a3` -9217 | Falling asleep, 10:30 PM, day 61 | `644f9e4e1505524d` | 122,916 |
-| `l1-rollover-wake-0600.png` | `lh1a3` -9685 | Waking "Very thirsty", 6:00:58 AM, day 62 | `c4ef891afded48f1` | 161,929 |
-| `l1-day-point-0808.png` | `lh1a3` -10739 | Day point, 8:08:44 AM, day 62 | `1cf519e7914f2c37` | 169,317 |
-| `l1-setup-restart-save-and-quit.png` | `lh1a1` -228 | Setup restart: Save and Quit prompt | `48c60a1df5f790eb` | 125,698 |
-| `l2-boundary-load-menu.png` | `lh2a2` -3 | Boundary load menu (Brokaw, Morgan Hale) | `05092e478c7419b4` | 12,439 |
-| `l2-day-point-0843.png` | `lh2a2` -15930 | Day point, 8:43:28 AM, day 62 | `1cfcdcd5f33de264` | 206,568 |
-| `l3-board-message-before-fence.png` | `lh3a2` -5163 | Board message before the second fence | `77f0d2cf3672e6b4` | 133,551 |
+Each admission gets one row in the [tracked ledger](../data/evaluation/runs.jsonl),
+written by `tools/run_ledger.py record` ([campaign procedure](operations/campaign-run.md#start-and-close)),
+one issue comment, and its hand-scored row and notes in the study's dated record.
+Evaluator headlines go into the [metrics snapshot](../data/evaluation/run-metrics.jsonl)
+with `python -m tools.evaluate evaluate-table RECORDS --snapshot data/evaluation/run-metrics.jsonl`,
+and a record's generated tables are regenerated with
+`python -m tools.evaluate evaluate-table data/evaluation/run-metrics.jsonl --write RECORD`. The fast checks
+cross-check hand rows against the ledger and reject stale generated tables.

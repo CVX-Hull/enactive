@@ -2,7 +2,7 @@
 owner: lead
 status: historical
 date: 2026-10-17
-scope: Frozen #30/#21 interfaces, implementation handoffs and adjudicated review repairs
+scope: 'Frozen #30/#21 interfaces, implementation handoffs and adjudicated review repairs'
 ---
 
 # Recovery and memory — implementation brief

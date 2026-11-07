@@ -2,7 +2,7 @@
 owner: lead
 status: historical
 date: '2026-10-29'
-scope: Implemented isolated #181 enabler and reviewed #176 handoff; not the production cutover
+scope: 'Implemented isolated #181 enabler and reviewed #176 handoff; not the production cutover'
 ---
 
 # Basic computer-control proof (#181)

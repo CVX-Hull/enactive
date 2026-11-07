@@ -2,7 +2,7 @@
 owner: lead
 status: historical
 date: 2026-11-07
-scope: Completed 2026-10-18 memory-representation study protocol; its offline package was removed in #289
+scope: 'Completed 2026-10-18 memory-representation study protocol; its offline package was removed in #289'
 review_trigger: Hypotheses, comparison rules, generators, visibility, budgets or analysis change
 ---
 
