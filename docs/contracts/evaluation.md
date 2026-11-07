@@ -271,7 +271,9 @@ percentile, per status or per handoff. The primary key is (`name`, `key`).
 
 ### Rules settled in implementation
 
-- **Archived runs.**
+- **Archived runs.** These readers are the closed-archive case that
+  [S-MIGRATION](../standards/migration.md) allows; the `requests.manifest` column applies
+  its additive-event case to `context-manifest`.
   - The evaluator also reads archived `campaign-run/4` manifests, as a closed archive
     reader. This reads historical evidence; it is not an admission, and admission still
     requires `/5`.

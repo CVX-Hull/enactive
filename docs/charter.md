@@ -58,7 +58,8 @@ additional concurrent games, unattended operation, distribution or platform expa
 
 Current validation uses CDDA on this Mac; family-wide support is not yet qualified.
 Current technical decisions are [native Tiles](decisions/001-native-platform.md)
-and [a local serialized bridge](decisions/002-local-contract.md). They may change
+and [basic computer control](decisions/006-computer-control-boundary.md) over a
+local serialized channel, specified by the [computer-control contract](contracts/computer-control.md). They may change
 when evidence or requirements change. They are not permanent principles.
 General autonomous survival, combat policy and cross-platform support remain
 outside current capability; future scope needs explicit acceptance conditions.

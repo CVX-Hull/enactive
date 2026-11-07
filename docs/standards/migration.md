@@ -30,6 +30,19 @@ immutable evidence, not supported execution paths. Upstream-owned game saves and
 upstream internals remain CDDA's responsibility: pin the chosen engine and follow
 its supported save procedures; do not edit saves or remove authentic engine behavior.
 
+**Closed archive reads and additive evidence events (owner decision on #403, 7 November
+2026).** Two narrow cases are part of this requirement, not exceptions to it. First, a
+read-only evaluator may read a closed, listed archive of evidence recorded before a
+current format: today only the sessions in `data/evaluation/archive-labels.json`, as
+`campaign-run/4` manifests and `campaign-watch-terminal/2` terminals. It must reject any
+unlisted old-version record by file and version, never admit, play or write from the
+archive, and the list never grows. Second, an evidence-only event may be added inside an
+unchanged telemetry version when it changes no existing field and every reader reports
+its absence in older traces explicitly as not recorded, never as a default or a failure;
+today this is `context-manifest` in `player-host` telemetry version 3, which the
+evaluator records as `manifest: absent`. Anything else, including
+a new archive or a changed existing field, needs a new version and a migration as above.
+
 Every affected PR identifies the old and new contracts, migrated callers/data,
 removed paths, rejection tests, deployment order and rollback/retention decision,
 or explains why no migration applies. Existing version guards, schemas and negative

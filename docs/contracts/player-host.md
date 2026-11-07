@@ -146,7 +146,7 @@ kinds it does not account for, and observers project only known kinds.
 | --- | --- |
 | `host-start` | Exactly once and first after admitted inputs, with `telemetry_version:3` and `schema:"player-host/3"`. |
 | `request-start` | Every charged HTTP attempt, including retries/failures, numbered contiguously `request-1` onward without exceeding allocation. |
-| `context-manifest` | Exactly one per HTTP attempt, retries included, after that attempt's `request-start` and before its `request-fetch-start`, with the same `request_id`. It is the exact ordered list of parts of the payload actually sent, as digests only, delta-encoded (below). Additive within version 3: absent from traces recorded before 6 November 2026, which stay readable. |
+| `context-manifest` | Exactly one per HTTP attempt, retries included, after that attempt's `request-start` and before its `request-fetch-start`, with the same `request_id`. It is the exact ordered list of parts of the payload actually sent, as digests only, delta-encoded (below). Additive within version 3 under [S-MIGRATION](../standards/migration.md)'s additive-event case: absent from traces recorded before 6 November 2026, which stay readable, and readers report its absence explicitly. |
 | `response-complete` | `usage_available` distinguishes unknown usage; known configured/provider costs remain labelled. |
 | `player-finish` | At most one direct accepted disposition/report/source references/control identity; mutually exclusive with accepted handoff. |
 | `handoff` | At most one originating actor/session/operation/context/digest issuance with `grants_authority:false`. |
