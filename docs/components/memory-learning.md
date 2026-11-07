@@ -52,7 +52,9 @@ authority?” Boxes are logical stores and ports; labelled arrows are explicit s
 proposals and context reads. Exact formats are in the
 [contract](../contracts/computer-control.md#player-knowledge-and-executable-proposals).
 The player explicitly appends a supported claim or saves a program, which lazily
-remembers the referenced images. Programs only propose basic controls through the
+remembers the referenced images. Programs are saved in the same player-memory/2
+store and act only through an explicit program run; context may return program
+code. Programs only propose basic controls through the
 same computer port under original limits. Bounded whole-record context, with
 explicit omissions, returns to the player and becomes immutable handoff knowledge.
 [Editable source](../diagrams/player-owned-memory.mmd).
