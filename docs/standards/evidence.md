@@ -24,8 +24,8 @@ a plausible live summary is not a substitute. Record corrections without replaci
 the original evidence. Development-run quantities go in the tracked
 [run ledger and metrics snapshot](../contracts/evaluation.md#tracked-run-ledger-and-metrics-snapshot),
 and pages render or check against them rather than copy them. Raw run evidence a
-record cites is sealed read-only with tracked hash manifests
-([evidence store](../operations/evidence-cleanup.md)). A tracked evidence JSON
+record cites is sealed read-only with tracked hash manifests before the worktree or
+directory holding it is removed ([evidence store](../operations/evidence-cleanup.md)). A tracked evidence JSON
 declares a schema that a schema file, contract or code defines, or one listed as a
 frozen one-off shape in `schemas/evidence-ids.json`; the document check rejects any other.
 
