@@ -117,12 +117,18 @@ def game_state(connection: sqlite3.Connection, validation: dict) -> dict | None:
         vitals=summary.get('vitals'), threat=summary.get('threat'), threat_count=summary.get('threat_count'), readings=readings)
 
 
+# Image evictions happen every few requests; they are listed on the requests route, and never crowd
+# rarer findings (handoffs, memory writes, stalls) out of the summary window.
+ROUTINE_FINDINGS = ('context_eviction',)
+
+
 def findings(connection: sqlite3.Connection, limit: int = 100) -> list[dict]:
-    marks = ','.join('?' * len(FINDING_KINDS))
+    kinds = [kind for kind in FINDING_KINDS if kind not in ROUTINE_FINDINGS]
+    marks = ','.join('?' * len(kinds))
     rows = connection.execute(
         f'SELECT e.id, e.seq_start, e.seq_end, e.kind, e.source, e.confidence, e.payload, s.decision, s.wall FROM events e '
         f'LEFT JOIN steps s ON s.seq=e.seq_start WHERE e.kind IN ({marks}) ORDER BY e.seq_start DESC, e.id DESC LIMIT ?',
-        (*FINDING_KINDS, limit)).fetchall()
+        (*kinds, limit)).fetchall()
     return [dict(id=i, seq_start=a, seq_end=b, kind=k, source=src, confidence=c, payload=loads(p), decision=d, wall=w)
         for i, a, b, k, src, c, p, d, w in rows]
 
@@ -142,8 +148,11 @@ def summary(catalog: Catalog, info: RunInfo, connection: sqlite3.Connection, liv
             now: float | None = None) -> dict:
     validation = catalog.validation()
     ladder = info.metric('ladder.reached')
+    started = connection.execute('SELECT MIN(wall) FROM steps').fetchone()[0]
+    routine = connection.execute(f"SELECT COUNT(*) FROM events WHERE kind IN ({','.join('?' * len(ROUTINE_FINDINGS))})",
+        ROUTINE_FINDINGS).fetchone()[0]
     return dict(run=info.run, session=info.session, state=info.state, facts=info.facts, labels=info.labels,
-        outcome=outcome(info), decisions=info.decisions, dollars=info.dollars, versions=versions(info), live=live,
+        started_wall=started, routine_findings=dict(context_eviction=routine), outcome=outcome(info), decisions=info.decisions, dollars=info.dollars, versions=versions(info), live=live,
         evaluator=evaluator,
         pause=pause.conditions(connection, info.facts, time.time() if now is None else now) if live else None,
         game_state=game_state(connection, validation), findings=findings(connection), ladder=ladder,

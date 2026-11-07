@@ -171,6 +171,8 @@ def test_summary_carries_game_state_findings_ladder_metrics_and_validation(archi
     assert state['readings']['clock']['validation']['pass'] is True and state['readings']['ate']['validation'] is None
     kinds = {f['kind'] for f in summary['findings']}
     assert {'long_activity', 'death', 'stall'} <= kinds | {'long_activity', 'death', 'stall'} and 'death' in kinds
+    assert 'context_eviction' not in kinds and isinstance(summary['routine_findings']['context_eviction'], int)
+    assert summary['started_wall'] == min(s['wall'] for s in client.get('/api/view/run/' + 'a' * 32 + '/steps?after=0').json()['items'])
     assert summary['ladder']['highest'] == 'ate' and [r['id'] for r in summary['ladder']['rungs']] == ['play', 'armed', 'ate']
     metric = next(m for m in summary['metrics'] if m['name'] == 'survival.game_hours')
     assert metric['source'] == 'derived' and metric['count'] == 12 and 'denominator' in metric and 'missing' in metric
