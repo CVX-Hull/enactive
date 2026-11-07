@@ -23,7 +23,7 @@ class DevToolTests(unittest.TestCase):
         shutil.copyfile(ROOT / "pyproject.toml", self.root / "pyproject.toml")
         (self.root / "harness").mkdir()
         self.write("__init__.py", "")
-        for package in ("computer", "player"):
+        for package in ("computer", "player", "evaluation", "evaluation/core", "evaluation/cdda", "viewer"):
             (self.root / "harness" / package).mkdir()
             self.write(f"{package}/__init__.py", "")
         for module in ("computer/protocol", "computer/ports", "computer/runtime", "computer/channel", "computer/store", "computer/launch", "player/memory", "application", "player_client", "player_tools", "player_mcp", "server", "__main__"):
@@ -53,7 +53,18 @@ class DevToolTests(unittest.TestCase):
     def test_composition_root_and_http_adapter_are_allowed(self):
         result = self.lint_imports()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIn("4 kept, 0 broken", result.stdout)
+        contracts = (ROOT / "pyproject.toml").read_text().count("[[tool.importlinter.contracts]]")
+        self.assertIn(f"{contracts} kept, 0 broken", result.stdout)
+
+    def test_player_and_computer_cannot_reach_evaluation(self):
+        for source in ("player/memory", "player_tools", "computer/runtime", "server"):
+            self.write(source+".py", "from harness.evaluation import core\n")
+            self.assert_broken(self.lint_imports(), "harness.evaluation")
+            self.write(source+".py", "import http.server\nfrom .computer import protocol\n" if source == "server" else "")
+
+    def test_evaluation_core_cannot_import_a_binding(self):
+        self.write("evaluation/core/__init__.py", "from harness.evaluation import cdda\n")
+        self.assert_broken(self.lint_imports(), "harness.evaluation.cdda")
 
     def test_player_adapters_cannot_acquire_executor_directly_or_indirectly(self):
         for source in ("player_client", "player_tools", "player_mcp"):
