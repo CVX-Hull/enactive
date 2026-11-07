@@ -49,7 +49,6 @@ full checks remain strict. Event triggers can require earlier review.
 | C-BOUNDARY | active | 2026-11-07 | 2026-10-29 | partially_effective | 2027-01-15 |
 | C-REVIEW | active | 2026-10-29 | 2026-10-29 | partially_effective | 2027-01-15 |
 | C-GOVERNANCE | active | 2026-10-27 | 2026-10-27 | partially_effective | 2027-01-15 |
-| C-PROTOCOL | retired | 2026-10-17 | 2026-10-17 | effective | none |
 | C-SETUP | active | 2026-10-29 | 2026-10-29 | partially_effective | 2027-01-15 |
 | C-RELEASE | active | 2026-11-07 | 2026-10-18 | partially_effective | 2027-01-15 |
 | C-MAINTENANCE | active | 2026-10-27 | 2026-10-27 | partially_effective | 2027-01-15 |
@@ -239,32 +238,6 @@ Review evidence: [docs/acceptance/2026-10-27-audit-resolution.md](../docs/accept
 
 Next review: 2027-01-15.
 
-### C-PROTOCOL — Current protocol source agreement (automatic)
-
-Native emitter/validator, controller send/response/stored-request validators, server advertisement, CLI discovery validator, viewer guard and protocol document version. Recognize current native observation/control emitters and validators, Python AST request/response literals for both channels, discovery, viewer, evidence schema and document version; require one current version across every bounded source form. Representation changes require checker review.
-
-Owner: bridge and controller maintainer. Trigger: common command; any protocol representation change requires checker review.
-Enforcement: Common command fails on version drift or unrecognized source form; each representation has a negative fixture.
-Failure response: Resolve version drift; for a refactor/version change review and update checker plus contract, then run required native acceptance.
-
-Evidence / implementation: [docs/changes/071-computer-control-cutover.md](../docs/changes/071-computer-control-cutover.md), [docs/acceptance/2026-10-17-recovery-memory.md](../docs/acceptance/2026-10-17-recovery-memory.md).
-
-Coverage gap: Narrow source drift detector, not a robust C++ parser or protocol conformance proof. Refactored representations fail for review; matching literals cannot prove runtime behavior.
-
-Lifecycle: retired. Rationale: Retired with #176: native7 literal-count/AST source matching no longer fits the sole mechanical contract. Current strict rejection and cross-component behavior belong to existing C-PORTABLE and C-NATIVE, plus migration/source review; no replacement parser is added.. Replacement: C-PORTABLE.
-
-Last exercise: 2026-10-17. Outcome: Passed within recorded scope after preserved repairs; limitations retained.
-Scope: Current wire-v3 recognized forms for both channels, evidence validation, discovery, CLI, viewer and document agreement.
-Exercise evidence: [docs/acceptance/2026-10-17-recovery-memory.md](../docs/acceptance/2026-10-17-recovery-memory.md).
-
-Maintenance review: 2026-10-17. Effectiveness: effective.
-Findings: Known representations agree on v3 and drift fixtures reject changes. Final native wire-v2 control rejection observed. This is not a whole-code proof against compatibility paths.
-Cost: Targeted independent review, existing common checks and serialized native probes; manual acceptance remains substantial.
-Follow-up: @CVX-Hull owns live follow-up through the maintenance review [#26](https://github.com/CVX-Hull/enactive/issues/26) (#75 closed on 24 October 2026); the Issue owns acceptance, allocation and stage. This scoped maintenance assessment does not close product outcomes or renew evidence.
-Review evidence: [docs/acceptance/2026-10-17-recovery-memory.md](../docs/acceptance/2026-10-17-recovery-memory.md).
-
-Next review: none.
-
 ### C-SETUP — Isolated pinned setup (runtime)
 
 Explicit download/extract/build/install stages and checkout-owned temporary workspaces. Setup verifies checksums, extraction paths and build ownership; preserves existing app/environment, records local manifests and never launches the game automatically.
@@ -275,7 +248,7 @@ Failure response: Stop failed stage, preserve diagnostics and retry only after i
 
 Evidence / implementation: [tools/setup.py](../tools/setup.py), [tools/build_computer.py](../tools/build_computer.py), [tools/prepare_game.py](../tools/prepare_game.py), [tools/patch_game.py](../tools/patch_game.py), [native/upstream.json](../native/upstream.json), [tests/test_setup.py](../tests/test_setup.py), [docs/setup.md](../docs/setup.md), [docs/environment.md](../docs/environment.md), [docs/operations/coding-agents.md](../docs/operations/coding-agents.md), [tools/configure_player_tools.py](../tools/configure_player_tools.py), [tests/test_coding_agent_config.py](../tests/test_coding_agent_config.py), [package.json](../package.json), 4 dated records named in the [registry](control-registry.json) ([acceptance index](acceptance/index.md), [change index](changes/index.md)).
 
-Coverage gap: Portable fixtures do not perform fresh downloads, native compilation/signing or install. Existing-host recipe is historical; broader hosts remain unverified.
+Coverage gap: Portable fixtures do not perform fresh downloads, native compilation/signing or install. Real setup (download, native build, install) is validated only on this Mac; broader hosts remain unverified.
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
