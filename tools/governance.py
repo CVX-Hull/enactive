@@ -261,6 +261,36 @@ def check_manifests(root: Path) -> list[str]:
     return errors
 
 
+EVIDENCE_IDS = "schemas/evidence-ids.json"
+DEFINING = ("docs/contracts/*.md", "docs/components/*.md", "docs/operations/*.md", "docs/*.md",
+            "schemas/*.schema.json", "harness/**/*.py", "tools/**/*.py", "tools/**/*.mjs")
+
+
+def check_evidence_ids(root: Path) -> list[str]:
+    """Every versioned `schema` a tracked evidence JSON declares is defined: by a current document, schema or
+    code that names it, or as a frozen one-off shape in schemas/evidence-ids.json, whose entries must be exact."""
+    registry = json.loads((root / EVIDENCE_IDS).read_text())["ids"]
+    defining = "\n".join(path.read_text(errors="ignore") for pattern in DEFINING for path in root.glob(pattern)
+                         if "node_modules" not in path.parts)
+    declared: dict[str, list[str]] = {}
+    for base in ("docs", "data"):
+        for path in sorted((root / base).rglob("*.json")):
+            try:
+                schema = json.loads(path.read_text()).get("schema")
+            except (ValueError, AttributeError):
+                continue
+            if isinstance(schema, str) and re.fullmatch(r"[a-z0-9][a-z0-9-]*/[0-9]+", schema):
+                declared.setdefault(schema, []).append(str(path.relative_to(root)))
+    errors = [f"{files[0]}: schema {schema!r} is defined nowhere; define it or list it in {EVIDENCE_IDS}"
+              for schema, files in sorted(declared.items()) if schema not in registry and schema not in defining]
+    for schema, entry in sorted(registry.items()):
+        if sorted(entry["files"]) != sorted(declared.get(schema, [])):
+            errors.append(f"{EVIDENCE_IDS}: {schema} lists {entry['files']}, but {declared.get(schema, [])} declare it")
+        if not local_reference(root, entry["record"]):
+            errors.append(f"{EVIDENCE_IDS}: {schema} names a missing record {entry['record']!r}")
+    return errors
+
+
 def parse_as_of(value: str) -> date:
     if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
         raise argparse.ArgumentTypeError("expected YYYY-MM-DD")

@@ -304,6 +304,15 @@ The embedded driver result is `player-driver/3`, with the retained ending reques
 per-actor direct player-finish/settlement and original attempt charges. No receipt
 alone accepts gameplay. Preserve failures and unrun lanes.
 
+A development admission is recorded once its receipt exists, with
+`.venv/bin/python -m tools.run_ledger record PACKAGE --study ISSUE --provider-records N
+--provider-usd X --unpriced-attempt-usd 0.4096`. That command appends one
+[`dev-run/1`](../contracts/evaluation.md#tracked-run-ledger-and-metrics-snapshot) row to
+`data/evaluation/runs.jsonl`. The provider figures come from the operator's own
+reconciliation. A package without a receipt gets no row, and no further admission
+is made until the lead resolves it. `run_ledger totals --study ISSUE --envelope USD`
+applies the actual-spend admission rule: new spend plus twice the largest admission.
+
 Never reopen the selected package, delete markers to retry, replay uncertain input
 or resume after user Pause. Use a fresh coherent admission after owned cleanup.
 The [production report](../acceptance/2026-10-29-computer-control.md) retains scoped

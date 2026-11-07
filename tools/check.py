@@ -187,6 +187,11 @@ def _check(argv: list[str] | None = None) -> int:
     print("Required documents, current Markdown fragments and responsibility navigation: passed", flush=True)
     run([sys.executable, "-m", "tools.documents"])
     run([sys.executable, "tools/governance.py"] + (["--development"] if args.fast else []))
+    run([sys.executable, "-m", "tools.run_ledger", "check"])
+    generated = sorted(str(path.relative_to(ROOT)) for path in (ROOT / "docs").rglob("*.md")
+                       if "<!-- evaluate-table " in path.read_text())
+    run([sys.executable, "-m", "tools.evaluate", "evaluate-table", "data/evaluation/run-metrics.jsonl",
+         "--check", *generated])
     if not args.fast:
         run([sys.executable, "tools/diagrams.py"])
     if not args.fast and args.profile != "editorial":

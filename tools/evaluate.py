@@ -23,7 +23,11 @@ continuity rows into each record. evaluate-compare reads evaluation
 records and prints Kaplan-Meier curves, restricted mean survival to --horizon hours, bootstrap
 intervals and pairwise log-rank tests by arm (the record's arm metadata, or --arm RECORD=LABEL).
 evaluate-table prints a Markdown table of headline metrics from evaluation records (files, or
-roots holding <session>/<versions>.sqlite3) for the development-run log; it edits no file.
+roots holding <session>/<versions>.sqlite3) or run-metrics/1 snapshots (.jsonl) for the development-run
+log. --snapshot merges the selected records into the tracked data/evaluation/run-metrics.jsonl;
+--write and --check regenerate or verify the `<!-- evaluate-table study=N [lineage=L] core=C
+binding=ID:V -->` blocks in documents from that snapshot joined to the dev-run/1 ledger on session.
+It never edits a record or a hand-scored table.
 Unsupported historical formats remain inert evidence, available in Git history.
 """
 from __future__ import annotations
@@ -32,6 +36,7 @@ import argparse
 import importlib
 import json
 from pathlib import Path
+import re
 import sys
 from typing import Any, Callable, Sequence
 
@@ -136,37 +141,119 @@ TABLE_COLUMNS = ('Run', 'Arm', 'Start', 'End', 'Game h', 'Decisions', 'Setup', '
                  'Out of play', 'Longest stall', '$ / decision', 'Large rewrites')
 
 
-def evaluate_table(arguments: argparse.Namespace) -> str:
-    """A Markdown table of headline metrics, one row per evaluation record, for the run log.
+#: The metrics the table shows, copied verbatim into a run-metrics/1 snapshot row.
+HEADLINE_METRICS = ('survival.game_hours', 'mode.out_of_play_share', 'pace.routine_seconds_per_decision',
+                    'pace.long_activities', 'stall.longest', 'host.dollars_per_decision', 'host.large_rewrite_share')
+SNAPSHOT = Path(__file__).resolve().parents[1] / 'data' / 'evaluation' / 'run-metrics.jsonl'
+BLOCK = re.compile(r'(<!-- evaluate-table ([^>]*?) -->\n)(.*?)(<!-- /evaluate-table -->)', re.S)
 
-    Generated from records only; it never edits hand-scored tables (ADR008)."""
+
+def headline(path: Path) -> dict:
+    """One run-metrics/1 row from an evaluation record: its key, labels and headline metric values."""
     from harness.evaluation.core.records import open_readonly, read_metadata, read_metrics
-    paths: list[Path] = []
-    for path in arguments.paths:
-        paths.extend(sorted(path.glob('*/*.sqlite3')) if path.is_dir() else [path])
+    connection = open_readonly(path)
+    meta, metrics = read_metadata(connection), read_metrics(connection)
+    labels = meta.get('labels') or {}
+    return dict(schema='run-metrics/1', session=meta['session'], run=meta.get('run', ''),
+        core_version=int(meta['core_version']), binding_id=meta['binding_id'], binding_version=int(meta['binding_version']),
+        arm=labels.get('arm', meta.get('arm', '')) or '', start=labels.get('start', ''),
+        decisions=connection.execute('SELECT COALESCE(MAX(decision), 0) FROM steps').fetchone()[0],
+        metrics={name: metrics[(name, '')].value for name in HEADLINE_METRICS if (name, '') in metrics})
+
+
+def read_snapshot(path: Path) -> list[dict]:
+    """Every run-metrics/1 row; any other row is an error naming the line."""
     rows = []
-    for path in paths:
-        connection = open_readonly(path)
-        meta, metrics = read_metadata(connection), read_metrics(connection)
-        value = lambda name, key='': metrics[(name, key)].value if (name, key) in metrics else None
+    for number, line in enumerate(path.read_text().splitlines(), 1):
+        row = json.loads(line)
+        if not isinstance(row, dict) or row.get('schema') != 'run-metrics/1' or not isinstance(row.get('metrics'), dict):
+            raise ValueError(f'{path.name}:{number}: not a run-metrics/1 row')
+        rows.append(row)
+    return rows
+
+
+def table(rows: list[dict]) -> str:
+    """The Markdown table of headline metrics, one row per run-metrics/1 row."""
+    lines = []
+    for row in rows:
+        value = row['metrics'].get
         inner = lambda item: item.get('value') if isinstance(item, dict) else item
         survival = value('survival.game_hours') or {}
         setup = (value('mode.out_of_play_share') or {}).get('setup_decisions') if isinstance(value('mode.out_of_play_share'), dict) else None
         long = value('pace.long_activities') or {}
-        labels = meta.get('labels') or {}
         share = lambda item: '—' if item is None else f'{round(item * 100)}%'
         number = lambda item, digits: '—' if item is None else f'{item:.{digits}f}'
-        rows.append((meta.get('run', ''), labels.get('arm', meta.get('arm', '')), labels.get('start', ''),
-            survival.get('censor_reason', '—'), number(survival.get('hours'), 2), str(connection.execute('SELECT COALESCE(MAX(decision), 0) FROM steps').fetchone()[0]),
+        lines.append((row['run'], row['arm'], row['start'],
+            survival.get('censor_reason', '—'), number(survival.get('hours'), 2), str(row['decisions']),
             '—' if setup is None else str(setup), number(value('pace.routine_seconds_per_decision'), 1),
             f"{long.get('count', 0)} · {(long.get('total_game_seconds') or 0) / 3600:.2f} h",
             share(inner(value('mode.out_of_play_share'))), '—' if value('stall.longest') is None else str(value('stall.longest')),
             number(inner(value('host.dollars_per_decision')), 4), share(value('host.large_rewrite_share'))))
     order = {'pilot': 0, 'pre-loop': 1, 'ceiling': 2, 'zoom-aid': 3, 'game-help-aid': 4, 'reflection-aid': 5}
-    rows.sort(key=lambda row: (order.get(row[1], 9), str(row[0])))
+    lines.sort(key=lambda line: (order.get(line[1], 9), str(line[0])))
     header = f'| {" | ".join(TABLE_COLUMNS)} |\n| {" | ".join("---" if k < 4 else "---:" for k in range(len(TABLE_COLUMNS)))} |'
     cell = lambda item: '—' if item is None or item == '' else str(item)
-    return '\n'.join([header, *(f'| {" | ".join(cell(item) for item in row)} |' for row in rows)])
+    return '\n'.join([header, *(f'| {" | ".join(cell(item) for item in line)} |' for line in lines)])
+
+
+def block_rows(selector: str, snapshot: list[dict], ledger: list[dict]) -> list[dict]:
+    """The snapshot rows a block selects: `study=N [lineage=L] core=C binding=ID:V`, joined on session."""
+    fields = dict(part.split('=', 1) for part in selector.split())
+    if set(fields) - {'study', 'lineage', 'core', 'binding'} or not {'study', 'core', 'binding'} <= set(fields):
+        raise ValueError(f'evaluate-table block selector {selector!r} needs study, core and binding, and may name lineage')
+    binding_id, _, binding_version = fields['binding'].partition(':')
+    chosen = [r for r in ledger if str(r['study']) == fields['study']
+              and ('lineage' not in fields or r['lineage'] == fields['lineage'])]
+    if not chosen:
+        raise ValueError(f'evaluate-table block {selector!r} selects no ledger row')
+    keyed = {(r['session'], r['core_version'], r['binding_id'], r['binding_version']): r for r in snapshot}
+    missing = [r['run'] for r in chosen
+               if (r['session'], int(fields['core']), binding_id, int(binding_version)) not in keyed]
+    if missing:
+        raise ValueError(f'evaluate-table block {selector!r}: no snapshot row for {", ".join(missing)}')
+    return [keyed[(r['session'], int(fields['core']), binding_id, int(binding_version))] for r in chosen]
+
+
+def write_blocks(documents: list[Path], snapshot: list[dict], ledger: list[dict], *, check: bool) -> list[str]:
+    """Regenerate every marked block; with check, report stale blocks instead of writing."""
+    stale = []
+    for document in documents:
+        text = document.read_text()
+        fresh = BLOCK.sub(lambda m: m.group(1) + table(block_rows(m.group(2), snapshot, ledger)) + '\n' + m.group(4), text)
+        if fresh != text:
+            if check:
+                stale.append(str(document))
+            else:
+                document.write_text(fresh)
+    return stale
+
+
+def evaluate_table(arguments: argparse.Namespace) -> str:
+    """Headline metrics for the run log: print a table from records or snapshots, write a snapshot of records,
+    or regenerate or check the marked blocks in documents from the tracked snapshot and ledger.
+
+    Generated from records only; it never edits hand-scored tables (ADR008)."""
+    rows: list[dict] = []
+    for path in arguments.paths:
+        if path.suffix == '.jsonl':
+            rows.extend(read_snapshot(path))
+        else:
+            rows.extend(headline(record) for record in (sorted(path.glob('*/*.sqlite3')) if path.is_dir() else [path]))
+    if arguments.snapshot is not None:
+        key = lambda r: (r['session'], r['core_version'], r['binding_id'], r['binding_version'])
+        merged = {key(r): r for r in (read_snapshot(arguments.snapshot) if arguments.snapshot.is_file() else [])}
+        merged.update((key(r), r) for r in rows)
+        ordered = sorted(merged.values(), key=lambda r: (r['run'], *key(r)))
+        arguments.snapshot.write_text(''.join(json.dumps(r, sort_keys=True, ensure_ascii=False) + '\n' for r in ordered))
+        return f'{len(rows)} rows written; {arguments.snapshot.name} holds {len(ordered)}'
+    if arguments.write or arguments.check:
+        from tools.run_ledger import read_ledger
+        stale = write_blocks(arguments.write or arguments.check, rows, read_ledger(arguments.ledger), check=bool(arguments.check))
+        if stale:
+            raise ValueError(f'generated run tables are stale in {", ".join(stale)}; run evaluate-table '
+                             f'{SNAPSHOT.relative_to(SNAPSHOT.parents[2])} --write DOCUMENT')
+        return 'Generated run tables: current.' if arguments.check else 'Generated run tables: written.'
+    return table(rows)
 
 
 def main(argv: Sequence[str] | None = None, *, binding: Any = None,
@@ -184,7 +271,20 @@ def main(argv: Sequence[str] | None = None, *, binding: Any = None,
     parser.add_argument('--horizon', type=float, help='evaluate-compare: restricted mean horizon in game hours')
     parser.add_argument('--arm', action='append',
         help='evaluate-run: arm label stored in the record; evaluate-compare: RECORD=LABEL (repeatable)')
+    table_output = parser.add_mutually_exclusive_group()
+    table_output.add_argument('--snapshot', type=Path, help='evaluate-table: merge the selected records into this run-metrics/1 file')
+    table_output.add_argument('--write', type=Path, nargs='+', help='evaluate-table: regenerate the marked blocks in these documents')
+    table_output.add_argument('--check', type=Path, nargs='+', help='evaluate-table: fail if the marked blocks in these documents are stale')
+    parser.add_argument('--ledger', type=Path, help='evaluate-table --write/--check: the dev-run/1 ledger (default data/evaluation/runs.jsonl)')
     arguments = parser.parse_args(argv)
+    if arguments.command != 'evaluate-table' and any(
+            value is not None for value in (arguments.snapshot, arguments.write, arguments.check, arguments.ledger)):
+        parser.error('--snapshot, --write, --check and --ledger are supported for evaluate-table only')
+    if arguments.ledger is not None and not (arguments.write or arguments.check):
+        parser.error('--ledger is used with --write or --check only')
+    if arguments.ledger is None:
+        from tools.run_ledger import LEDGER
+        arguments.ledger = LEDGER
     evaluating = arguments.command in EVALUATION_COMMANDS
     if arguments.command in ('evaluate-run', 'evaluate-runs'):
         if len(arguments.paths) != 1 or arguments.root is None or (binding is None and arguments.binding is None):
