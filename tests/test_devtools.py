@@ -85,6 +85,22 @@ class DevToolTests(unittest.TestCase):
             self.write("computer/runtime.py", f"import {module}\n")
             self.assert_broken(self.lint_imports(), "harness.computer")
 
+    def test_evaluation_cannot_acquire_custody_or_network(self):
+        for module in ("harness.computer.runtime", "harness.computer.channel", "harness.computer.launch",
+                       "harness.application", "harness.server", "harness.player_mcp", "harness.player_client",
+                       "tools", "http", "urllib", "socket", "subprocess"):
+            self.write("evaluation/core/__init__.py", f"import {module}\n")
+            self.assert_broken(self.lint_imports(), f"harness.evaluation is not allowed to import {module}")
+            self.write("evaluation/core/__init__.py", "")
+
+    def test_viewer_cannot_acquire_custody_or_player_access(self):
+        for module in ("harness.computer.runtime", "harness.computer.channel", "harness.computer.launch",
+                       "harness.application", "harness.server", "harness.player", "harness.player_client",
+                       "harness.player_tools", "harness.player_mcp", "harness.__main__", "tools", "subprocess"):
+            self.write("viewer/__init__.py", f"import {module}\n")
+            self.assert_broken(self.lint_imports(), f"harness.viewer is not allowed to import {module}")
+            self.write("viewer/__init__.py", "")
+
     def test_server_cannot_depend_on_cli_or_tooling(self):
         for module in ("harness.__main__", "tools"):
             self.write("server.py", f"import {module}\n")

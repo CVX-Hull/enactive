@@ -7,7 +7,7 @@ docs/contracts/evaluation.md): each value carries its source and confidence, and
 evaluator still accepts no run or claim. Acceptance stays with frames, receipts, review
 and the issue's decision rule.
 
-host-summary selects current telemetry/2 files, actor directories or campaign
+host-summary selects current player-host/3 (telemetry version 3) files, actor directories or campaign
 folders (4096 files / 8 GiB; 64 MiB per line; two million events per trace).
 control-summary selects 1..32 computer-session/1 databases/directories (512 MiB
 per database including SQLite sidecars; 200000 rows per selected table).

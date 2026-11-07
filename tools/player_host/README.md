@@ -1,3 +1,9 @@
+---
+owner: lead
+review_trigger: Responsibility, supported behavior, interfaces or qualification change
+status: active
+---
+
 # Bounded Pi player host
 
 This private package is the Pi-based adapter that implements the host-neutral

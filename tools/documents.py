@@ -19,12 +19,16 @@ except ImportError as error:
 from tools.governance import local_reference, schema_errors
 
 ROOT_DOCUMENTS = ("README.md", "AGENTS.md", "NOTICE.md", "CONTRIBUTING.md", "SECURITY.md")
+# Current documents outside the root and docs/ trees; checked wherever they exist.
+COMPONENT_DOCUMENTS = ("tools/player_host/README.md",)
 
 
 def check_metadata(root: Path) -> list[str]:
     errors = []
     yaml_handler = frontmatter.YAMLHandler()
-    paths = [*(root / name for name in ROOT_DOCUMENTS), *sorted((root / "docs").rglob("*.md"))]
+    paths = [*(root / name for name in ROOT_DOCUMENTS),
+             *(root / name for name in COMPONENT_DOCUMENTS if (root / name).exists()),
+             *sorted((root / "docs").rglob("*.md"))]
     for path in paths:
         label = str(path.relative_to(root))
         try:

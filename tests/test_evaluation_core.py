@@ -1369,8 +1369,6 @@ def ended_run(directory: Path, *, finish: list[dict] = (), controls: list[dict] 
     ('custody', dict(status='unknown', receipt='unknown'), 'custody'),
     ('pause', dict(files={'watch-terminal.json': dict(schema='campaign-watch-terminal/3', reason='operator_pause',
         pause_reason='spend')}), 'owner_pause'),
-    ('archived-pause', dict(files={'watch-terminal.json': dict(schema='campaign-watch-terminal/2', reason='operator_pause')}),
-        'owner_pause'),
     ('not-paused', dict(files={'watch-terminal.json': dict(schema='campaign-watch-terminal/3', reason='custodian_terminal',
         pause_reason=None)}), None),
     ('receipt', dict(files={'receipt.json': dict(schema='campaign-receipt/3', outcome='incomplete',
@@ -1385,34 +1383,41 @@ def test_censor_reasons(tmp_path, name, options, reason):
     assert metrics_of(path)['run.provider_loss'].value == int(reason == 'infrastructure')
 
 
-def test_end_facts_read_only_the_supported_receipt_and_terminal_versions(tmp_path):
+def test_end_facts_read_only_the_supported_receipt_and_terminal_versions(tmp_path, monkeypatch):
     from harness.evaluation.core.sources import read_end_facts
+    archive_of(tmp_path, monkeypatch, {SESSION: dict(run='old01')})
+    current = dict(schema='campaign-run/5', session=SESSION)
+    archived = dict(schema='campaign-run/4', session=SESSION)
     directory = tmp_path / 'end'
     directory.mkdir()
     terminal = directory / 'watch-terminal.json'
     terminal.write_text(json.dumps(dict(schema='campaign-watch-terminal/3', reason='operator_pause', pause_reason='loop')))
-    facts = read_end_facts(directory)
+    facts = read_end_facts(directory, current)
     assert facts.paused is True and facts.pause_reason == 'loop'
-    # The archived /2 terminal is read for the Pause only; it has no reason of its own.
+    # The archived /2 terminal is read for the Pause only, and only for an archived session; it has no reason of its own.
     terminal.write_text(json.dumps(dict(schema='campaign-watch-terminal/2', reason='operator_pause', pause_reason='loop')))
-    facts = read_end_facts(directory)
+    facts = read_end_facts(directory, archived)
     assert facts.paused is True and facts.pause_reason is None
+    for manifest in (current, dict(archived, session='f' * 32)):
+        with pytest.raises(EvaluationError, match=r'watch-terminal\.json.*campaign-watch-terminal/2'):
+            read_end_facts(directory, manifest)
     # No other shape counts as a Pause: not the old nested field, nor a forwarded reply on its own.
     terminal.write_text(json.dumps(dict(schema='campaign-watch-terminal/3', reason='custodian_terminal',
         pause=dict(reason='loop'), pause_reply_forwarded=True, pause_reason=None)))
-    assert read_end_facts(directory).paused is False
+    assert read_end_facts(directory, current).paused is False
     for found in ('campaign-watch-terminal/1', 'campaign-watch-terminal/4', None):
         terminal.write_text(json.dumps(dict(schema=found, reason='operator_pause')))
-        with pytest.raises(EvaluationError, match=rf'watch-terminal\.json.*{found}'):
-            read_end_facts(directory)
+        for manifest in (current, archived):
+            with pytest.raises(EvaluationError, match=rf'watch-terminal\.json.*{found}'):
+                read_end_facts(directory, manifest)
     terminal.unlink()
     receipt = directory / 'receipt.json'
     receipt.write_text(json.dumps(dict(schema='campaign-receipt/3', outcome='complete')))
-    assert read_end_facts(directory).outcome == 'complete'
+    assert read_end_facts(directory, current).outcome == 'complete'
     for found in ('campaign-receipt/2', 'campaign-receipt/4', None):
         receipt.write_text(json.dumps(dict(schema=found, outcome='complete')))
         with pytest.raises(EvaluationError, match=rf'receipt\.json.*{found}'):
-            read_end_facts(directory)
+            read_end_facts(directory, current)
 
 
 def test_a_run_with_an_unsupported_terminal_or_receipt_version_is_an_error(tmp_path):
@@ -1461,6 +1466,26 @@ def test_a_campaign_run_4_manifest_of_an_unlisted_session_is_an_error(tmp_path, 
     archive_of(tmp_path, monkeypatch, {})
     with pytest.raises(EvaluationError, match='campaign-run/4'):
         evaluate(archived_run(tmp_path / 'again'), FakeBinding(), tmp_path / 'evals')
+
+
+def test_an_archived_session_reads_its_v2_terminal_for_the_owner_pause(tmp_path, monkeypatch):
+    archive_of(tmp_path, monkeypatch, {SESSION: dict(run='old01', arm='pilot', start='S1', scenario='Evacuee',
+                                                     lineage=None, admission=None)})
+    directory = archived_run(tmp_path / 'old01')
+    (directory / 'watch-terminal.json').write_text(json.dumps(
+        dict(schema='campaign-watch-terminal/2', reason='operator_pause')))
+    path = evaluate(directory, FakeBinding(), tmp_path / 'evals', created_wall=1.0)
+    assert survival_of(path)['censor_reason'] == 'owner_pause'
+
+
+def test_a_campaign_run_5_run_with_a_v2_terminal_is_an_error(tmp_path, monkeypatch):
+    # Listing the session does not matter: /2 is for campaign-run/4 manifests only.
+    archive_of(tmp_path, monkeypatch, {SESSION: dict(run='old01')})
+    directory = ended_run(tmp_path / 'current', files={'watch-terminal.json': dict(
+        schema='campaign-watch-terminal/2', reason='operator_pause')})
+    assert json.loads((directory / 'manifest.json').read_text())['schema'] == 'campaign-run/5'
+    with pytest.raises(EvaluationError, match=r'watch-terminal\.json.*unsupported version.*campaign-watch-terminal/2'):
+        evaluate(directory, FakeBinding(), tmp_path / 'evals')
 
 
 def test_the_shipped_archive_lists_each_archived_session_once(tmp_path):

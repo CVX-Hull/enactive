@@ -1,8 +1,9 @@
 """Pause conditions for the live run (docs/contracts/evaluation.md, Pause conditions).
 
 Computed from the live evaluation store alone. They inform the owner and gate nothing. Each has a value, a
-threshold, `met` and the dollars per minute that continuing costs. Game state (vitals, threat) is never a
-condition: survival is the player's job.
+threshold, `met` and the dollars per minute that continuing costs. No game state (vitals, threat) is a
+condition: survival is the player's job. The evaluator's death reading is used only to flag continued
+spending after a death.
 """
 from __future__ import annotations
 
