@@ -23,12 +23,12 @@ from .binding import Binding
 from .derive import (CORE_READERS, CORE_VERSION, NO_FRAME, READER_CLOCK, READER_FRAME, READER_INPUT, READER_MAP,
     build_timeline, clock_readings, core_events, describe_actions, frame_summary, map_change_fraction,
     operation_events)
-from .facts import run_facts
+from .facts import LABEL_KEYS, run_facts
 from .host import host_events, host_facts, seq_resolver
 from .metrics import compute_metrics
 from .lineage import METRIC as LINEAGE_METRIC
 from .records import EvaluationError, MetricRow, ReadingRow, RecordWriter, StepRow, record_path
-from .sources import RunInputs, read_run, sha256_file
+from .sources import ARCHIVE_SCHEMA, RunInputs, archive_labels, read_run, sha256_file
 
 
 def _read_new_steps(inputs: RunInputs, binding: Binding, known: list[StepRow], facts) -> tuple[list[StepRow], list[ReadingRow]]:
@@ -135,7 +135,7 @@ def evaluate(run_dir: Path, binding: Binding, root: Path, memory_store: Path | N
     store is only rewritten by a `final` pass with `replace=True`. A `live` pass is refused when a `final`
     store of the same versions exists, and an incremental pass (`after_seq`) continues only a record whose
     recorded state is the requested one, so a `final` record is never continued. `labels` stand in for the operator labels that a
-    campaign-run/4 manifest lacks. `external` optionally carries numbers computed by the existing host and
+    campaign-run/4 manifest lacks (default: the archive's labels for its session). `external` optionally carries numbers computed by the existing host and
     control summaries: `response_ms` and `first_chunk_ms` (lists) and `custody` (`{"receipts": n, "uncertain": n}`).
     `created_wall` defaults to the current time; fix it for byte-identical records.
     """
@@ -146,6 +146,9 @@ def evaluate(run_dir: Path, binding: Binding, root: Path, memory_store: Path | N
     inputs = read_run(run_dir, memory_path=memory_store, digests=state == 'final')
     final = record_path(Path(root), inputs.session, binding.binding_id, binding.binding_version)
     facts = host_facts(inputs.actors, inputs.host)
+    if labels is None and inputs.manifest.get('schema') == ARCHIVE_SCHEMA:  # an archived run's labels are keyed by session
+        listed = archive_labels().get(inputs.session) or {}
+        labels = {key: listed.get(key) for key in LABEL_KEYS}
     if arm is not None and labels is None:
         labels = dict(arm=arm)
     base = dict(core_version=CORE_VERSION, binding_id=binding.binding_id, binding_version=binding.binding_version,

@@ -16,7 +16,8 @@ under --root with the named game binding; it reuses the host and control summari
 latency and delivery counts. evaluate-runs does the same for every run directory (one that
 holds a manifest.json) below one directory, taking each run's memory store from --memory-dir
 (player-memory-<run>.sqlite3) or its manifest, and the operator labels of an archived
-campaign-run/4 run from data/evaluation/archive-labels.json. evaluate-compare reads evaluation
+campaign-run/4 run from data/evaluation/archive-labels.json (keyed by session ID, and the only
+campaign-run/4 sessions the evaluator reads). evaluate-compare reads evaluation
 records and prints Kaplan-Meier curves, restricted mean survival to --horizon hours, bootstrap
 intervals and pairwise log-rank tests by arm (the record's arm metadata, or --arm RECORD=LABEL).
 evaluate-table prints a Markdown table of headline metrics from evaluation records (files, or
@@ -37,7 +38,6 @@ from harness.computer.protocol import ControlError
 EVALUATION_COMMANDS = ('evaluate-run', 'evaluate-runs', 'evaluate-compare', 'evaluate-table')
 # A game binding is imported only when it is named, so the core never depends on one.
 BINDINGS: dict[str, tuple[str, str]] = {'cdda': ('harness.evaluation.cdda', 'CddaBinding')}
-ARCHIVE_LABELS = Path(__file__).resolve().parents[1] / 'data' / 'evaluation' / 'archive-labels.json'
 
 
 def load_binding(name: str) -> Any:
@@ -68,19 +68,11 @@ def run_external(run_dir: Path) -> dict:
     return external
 
 
-def archive_labels() -> dict[str, dict]:
-    """Operator labels of archived runs whose campaign-run/4 manifest has none, by run directory name."""
-    if not ARCHIVE_LABELS.is_file():
-        return {}
-    value = json.loads(ARCHIVE_LABELS.read_text())
-    return value.get('runs', {}) if isinstance(value, dict) else {}
-
-
 def evaluate_one(run: Path, binding: Any, arguments: argparse.Namespace, memory: Path | None, label: str | None = None) -> Path:
     from harness.evaluation.core.pipeline import evaluate
-    labels = archive_labels().get(Path(run).resolve().name)
+    # An archived campaign-run/4 run takes its labels from the archive reader, keyed by session ID.
     return evaluate(run, binding, arguments.root, memory_store=memory, replace=arguments.replace,
-        arm=label, labels=labels, external=run_external(run))
+        arm=label, external=run_external(run))
 
 
 def evaluate_run(arguments: argparse.Namespace, binding: Any) -> dict:

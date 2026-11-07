@@ -21,9 +21,15 @@ from .records import EvaluationError
 SESSION_SCHEMA = 'computer-session/1'
 OPERATION_SCHEMA = 'computer-operation/1'
 HOST_SCHEMA = 'player-host/3'
-#: `campaign-run/5` adds the operator labels; `campaign-run/4` is the schema of the archived development-loop
-#: runs this evaluator re-scores, and their labels come from `data/evaluation/archive-labels.json`.
+#: `campaign-run/5` adds the operator labels. `campaign-run/4` is archive-read only: the closed set of development-loop
+#: sessions in `data/evaluation/archive-labels.json` (keyed by session ID), which also holds their operator labels.
 MANIFEST_SCHEMAS = ('campaign-run/4', 'campaign-run/5')
+ARCHIVE_SCHEMA = 'campaign-run/4'
+ARCHIVE_LABELS = Path(__file__).resolve().parents[3] / 'data' / 'evaluation' / 'archive-labels.json'
+RECEIPT_SCHEMA = 'campaign-receipt/3'
+#: `campaign-watch-terminal/2` is archive-read only (the archived runs predate Pause reasons).
+WATCH_TERMINAL_SCHEMA = 'campaign-watch-terminal/3'
+WATCH_TERMINAL_ARCHIVE_SCHEMA = 'campaign-watch-terminal/2'
 MEMORY_SCHEMA = 'player-memory/2'
 CONTEXT_SCHEMA = 'player-handoff-context/1'
 BUSY_TIMEOUT_SECONDS = 1.0
@@ -114,7 +120,19 @@ def read_manifest(run_dir: Path) -> dict:
     if not isinstance(value, dict) or value.get('schema') not in MANIFEST_SCHEMAS:
         found = value.get('schema') if isinstance(value, dict) else None
         raise EvaluationError(f'{path}: unsupported manifest version {found!r}; expected one of {", ".join(MANIFEST_SCHEMAS)}')
+    if value['schema'] == ARCHIVE_SCHEMA and value.get('session') not in archive_labels():
+        raise EvaluationError(f'{path}: {ARCHIVE_SCHEMA} is read only for the archived sessions listed in '
+            f'{ARCHIVE_LABELS.name}; session {value.get("session")!r} is not listed')
     return value
+
+
+def archive_labels() -> dict[str, dict]:
+    """The archived campaign-run/4 sessions: session ID to `{run, arm, start, scenario, lineage, admission}`."""
+    if not ARCHIVE_LABELS.is_file():
+        return {}
+    value = _json(ARCHIVE_LABELS.read_bytes(), str(ARCHIVE_LABELS))
+    runs = value.get('runs') if isinstance(value, dict) else None
+    return {key: item for key, item in runs.items() if isinstance(item, dict)} if isinstance(runs, dict) else {}
 
 
 def _connect_readonly(path: Path) -> sqlite3.Connection:
@@ -263,27 +281,31 @@ def read_carry(run_dir: Path) -> dict[str, frozenset[str]]:
     return carry
 
 
-def _optional_json(path: Path) -> dict | None:
+def _optional_json(path: Path, schemas: tuple[str, ...]) -> dict | None:
+    """A file that exists only once a run has ended; when present, only the named versions are read."""
     if not path.is_file():
         return None
     value = _json(path.read_bytes(), str(path))
-    return value if isinstance(value, dict) else None
+    found = value.get('schema') if isinstance(value, dict) else None
+    if found not in schemas:
+        raise EvaluationError(f'{path}: unsupported version {found!r}; expected {" or ".join(schemas)}')
+    return value
 
 
 def read_end_facts(run_dir: Path) -> EndFacts:
-    """`receipt.json` (campaign-receipt/3) and `watch-terminal.json`, when the run has ended."""
-    receipt = _optional_json(run_dir / 'receipt.json') or {}
+    """`receipt.json` (campaign-receipt/3) and `watch-terminal.json` (campaign-watch-terminal/3, or the
+    archived /2), when the run has ended. The owner Pause is the terminal's `reason == 'operator_pause'`."""
+    receipt = _optional_json(run_dir / 'receipt.json', (RECEIPT_SCHEMA,)) or {}
     driver = receipt.get('driver') if isinstance(receipt.get('driver'), dict) else {}
     actors = [a for a in driver.get('actors', ()) if isinstance(a, dict)]
     ending = driver.get('ending_request') if isinstance(driver.get('ending_request'), dict) else {}
-    watch = _optional_json(run_dir / 'watch-terminal.json') or {}
-    pause = watch.get('pause') if isinstance(watch.get('pause'), dict) else {}
-    reason = watch.get('pause_reason', pause.get('reason'))
+    watch = _optional_json(run_dir / 'watch-terminal.json', (WATCH_TERMINAL_SCHEMA, WATCH_TERMINAL_ARCHIVE_SCHEMA)) or {}
+    reason = watch.get('pause_reason') if watch.get('schema') == WATCH_TERMINAL_SCHEMA else None
     return EndFacts(receipt.get('outcome') if isinstance(receipt.get('outcome'), str) else None,
         ending.get('trigger') if isinstance(ending.get('trigger'), str) else None,
         tuple(a['settled'] for a in actors if isinstance(a.get('settled'), dict)),
         tuple((a.get('player_finish') or {}).get('disposition') for a in actors),
-        watch.get('pause_reply_forwarded') is True or reason is not None or bool(pause),
+        watch.get('reason') == 'operator_pause',
         reason if isinstance(reason, str) else None)
 
 

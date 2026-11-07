@@ -245,7 +245,7 @@ class Run:
             (directory / 'actor.json').write_text(json.dumps(dict(schema='player-adapter/1', actor_id=actor)))
             (directory / 'context.txt').write_text('GUIDE')
             (directory / 'prompt.txt').write_text(f'ASSIGNMENT {index}')
-        self.manifest = dict(schema='campaign-run/4', session=self.session, source_commit='fixture', **manifest)
+        self.manifest = dict(schema='campaign-run/5', session=self.session, source_commit='fixture', **manifest)
         if memory is not None:
             self.manifest['player_store'] = str(memory)
         (self.directory / 'manifest.json').write_text(json.dumps(self.manifest))
@@ -1010,7 +1010,7 @@ def test_unsupported_input_versions_are_errors(tmp_path):
     (directory / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/3', session=SESSION)))
     with pytest.raises(EvaluationError, match=r'manifest\.json.*campaign-run/3'):
         evaluate(directory, FakeBinding(), tmp_path / 'e1')
-    (directory / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/4', session=SESSION)))
+    (directory / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/5', session=SESSION)))
     host = directory / 'actors' / '001' / 'host.jsonl'
     original = host.read_text()
     host.write_text(original.replace('player-host/3', 'player-host/2'))
@@ -1245,9 +1245,14 @@ def ended_run(directory: Path, *, finish: list[dict] = (), controls: list[dict] 
     ('handoff', dict(settled=dict(ok=True, reason='handoff')), 'budget'),
     ('infra', dict(settled=dict(ok=False, reason='provider-error')), 'infrastructure'),
     ('custody', dict(status='unknown', receipt='unknown'), 'custody'),
-    ('pause', dict(files={'watch-terminal.json': dict(pause_reply_forwarded=True, pause_reason='spend')}), 'owner_pause'),
-    ('receipt', dict(files={'receipt.json': dict(outcome='incomplete', driver=dict(ending_request=dict(trigger='http_attempts')))}),
-        'budget'),
+    ('pause', dict(files={'watch-terminal.json': dict(schema='campaign-watch-terminal/3', reason='operator_pause',
+        pause_reason='spend')}), 'owner_pause'),
+    ('archived-pause', dict(files={'watch-terminal.json': dict(schema='campaign-watch-terminal/2', reason='operator_pause')}),
+        'owner_pause'),
+    ('not-paused', dict(files={'watch-terminal.json': dict(schema='campaign-watch-terminal/3', reason='custodian_terminal',
+        pause_reason=None)}), None),
+    ('receipt', dict(files={'receipt.json': dict(schema='campaign-receipt/3', outcome='incomplete',
+        driver=dict(ending_request=dict(trigger='http_attempts')))}), 'budget'),
     ('live', dict(hosts=False), None)])
 def test_censor_reasons(tmp_path, name, options, reason):
     path = evaluate(ended_run(tmp_path / name, **options), FakeBinding(), tmp_path / 'evals', created_wall=1.0)
@@ -1256,6 +1261,92 @@ def test_censor_reasons(tmp_path, name, options, reason):
     assert value['outcome'] == ('died' if reason == 'died' else 'censored')
     assert metrics_of(path)['run.infrastructure_loss'].value == int(reason in ('infrastructure', 'custody'))
     assert metrics_of(path)['run.provider_loss'].value == int(reason == 'infrastructure')
+
+
+def test_end_facts_read_only_the_supported_receipt_and_terminal_versions(tmp_path):
+    from harness.evaluation.core.sources import read_end_facts
+    directory = tmp_path / 'end'
+    directory.mkdir()
+    terminal = directory / 'watch-terminal.json'
+    terminal.write_text(json.dumps(dict(schema='campaign-watch-terminal/3', reason='operator_pause', pause_reason='loop')))
+    facts = read_end_facts(directory)
+    assert facts.paused is True and facts.pause_reason == 'loop'
+    # The archived /2 terminal is read for the Pause only; it has no reason of its own.
+    terminal.write_text(json.dumps(dict(schema='campaign-watch-terminal/2', reason='operator_pause', pause_reason='loop')))
+    facts = read_end_facts(directory)
+    assert facts.paused is True and facts.pause_reason is None
+    # No other shape counts as a Pause: not the old nested field, nor a forwarded reply on its own.
+    terminal.write_text(json.dumps(dict(schema='campaign-watch-terminal/3', reason='custodian_terminal',
+        pause=dict(reason='loop'), pause_reply_forwarded=True, pause_reason=None)))
+    assert read_end_facts(directory).paused is False
+    for found in ('campaign-watch-terminal/1', 'campaign-watch-terminal/4', None):
+        terminal.write_text(json.dumps(dict(schema=found, reason='operator_pause')))
+        with pytest.raises(EvaluationError, match=rf'watch-terminal\.json.*{found}'):
+            read_end_facts(directory)
+    terminal.unlink()
+    receipt = directory / 'receipt.json'
+    receipt.write_text(json.dumps(dict(schema='campaign-receipt/3', outcome='complete')))
+    assert read_end_facts(directory).outcome == 'complete'
+    for found in ('campaign-receipt/2', 'campaign-receipt/4', None):
+        receipt.write_text(json.dumps(dict(schema=found, outcome='complete')))
+        with pytest.raises(EvaluationError, match=rf'receipt\.json.*{found}'):
+            read_end_facts(directory)
+
+
+def test_a_run_with_an_unsupported_terminal_or_receipt_version_is_an_error(tmp_path):
+    for name, schema in (('watch-terminal.json', 'campaign-watch-terminal/1'), ('receipt.json', 'campaign-receipt/2')):
+        directory = ended_run(tmp_path / name[:5], files={name: dict(schema=schema)})
+        with pytest.raises(EvaluationError, match=rf'{name.replace(".", chr(92) + ".")}.*{schema}'):
+            evaluate(directory, FakeBinding(), tmp_path / 'evals')
+
+
+def archive_of(tmp_path: Path, monkeypatch, sessions: dict) -> None:
+    import harness.evaluation.core.sources as sources
+    path = tmp_path / 'archive-labels.json'
+    path.write_text(json.dumps(dict(version=2, runs=sessions)))
+    monkeypatch.setattr(sources, 'ARCHIVE_LABELS', path)
+
+
+def archived_run(directory: Path, session: str = SESSION) -> Path:
+    run = Run(directory, session=session)
+    a = run.actor()
+    for index, t in enumerate((3600, 3660, 3720)):
+        run.step(a, 'input', [key('j')], F('in_play', t, identity=1, fill=index))
+    run.finish()
+    manifest = json.loads((directory / 'manifest.json').read_text())
+    manifest['schema'] = 'campaign-run/4'
+    (directory / 'manifest.json').write_text(json.dumps(manifest))
+    return directory
+
+
+def test_a_campaign_run_4_manifest_is_read_only_for_a_listed_session(tmp_path, monkeypatch):
+    listed = dict(run='old01', arm='pilot', start='S1', scenario='Evacuee', lineage=None, admission=None)
+    archive_of(tmp_path, monkeypatch, {SESSION: listed})
+    path = evaluate(archived_run(tmp_path / 'old01'), FakeBinding(), tmp_path / 'evals', created_wall=1.0)
+    connection = open_readonly(path)
+    assert read_run_facts(connection)['labels'] == dict(arm='pilot', start='S1', scenario='Evacuee', lineage=None, admission=None)
+    assert read_run_facts(connection)['manifest_schema'] == 'campaign-run/4'
+    connection.close()
+    # The directory name is not the key: a renamed run directory is the same listed session.
+    renamed = evaluate(archived_run(tmp_path / 'renamed'), FakeBinding(), tmp_path / 'other', created_wall=1.0)
+    assert metrics_of(renamed)['survival.game_hours'].value['hours'] == pytest.approx(120 / 3600)
+
+
+def test_a_campaign_run_4_manifest_of_an_unlisted_session_is_an_error(tmp_path, monkeypatch):
+    archive_of(tmp_path, monkeypatch, {'f' * 32: dict(run=SESSION)})
+    with pytest.raises(EvaluationError, match=r'manifest\.json.*campaign-run/4.*not listed'):
+        evaluate(archived_run(tmp_path / SESSION), FakeBinding(), tmp_path / 'evals')
+    archive_of(tmp_path, monkeypatch, {})
+    with pytest.raises(EvaluationError, match='campaign-run/4'):
+        evaluate(archived_run(tmp_path / 'again'), FakeBinding(), tmp_path / 'evals')
+
+
+def test_the_shipped_archive_lists_each_archived_session_once(tmp_path):
+    from harness.evaluation.core.sources import archive_labels
+    runs = archive_labels()
+    assert len(runs) == 30 and all(len(key) == 32 and set(key) <= set('0123456789abcdef') for key in runs)
+    assert len({item['run'] for item in runs.values()}) == 30
+    assert all(set(item) >= {'run', 'arm', 'start', 'scenario', 'lineage', 'admission'} for item in runs.values())
 
 
 def test_run_end_events_for_finishes_and_orderly_stops(tmp_path):

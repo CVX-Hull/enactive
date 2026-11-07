@@ -238,9 +238,16 @@ percentile, per status or per handoff. The primary key is (`name`, `key`).
 ### Rules settled in implementation
 
 - **Archived runs.**
-  - The evaluator also reads archived `campaign-run/4` manifests. This reads historical
-    evidence; it is not an admission, and admission still requires `/5`.
-  - Their operator labels come from `data/evaluation/archive-labels.json`.
+  - The evaluator also reads archived `campaign-run/4` manifests, as a closed archive
+    reader. This reads historical evidence; it is not an admission, and admission still
+    requires `/5`.
+  - `data/evaluation/archive-labels.json` is keyed by **session ID** (the run directory
+    name is a field). A `/4` manifest is accepted only for a session listed there, and
+    any other `/4` manifest is an error naming the file and version. The same file holds
+    the operator labels.
+  - `receipt.json` is read only as `campaign-receipt/3`. `watch-terminal.json` is read as
+    `campaign-watch-terminal/3`, or the archived `/2` (archive read only; it has no
+    `pause_reason`). Any other version is an error naming the file and version.
 - **Metadata key.** `metadata.last_seq` names the last operation read.
 - **Store replacement.** A `live` store is replaced by any later `final` pass. A `final`
   store needs an explicit replace and is never replaced or continued by a `live` pass.
@@ -257,7 +264,8 @@ percentile, per status or per handoff. The primary key is (`name`, `key`).
   `run.provider_loss` covers provider-error loss only.
 - **Censor reasons.** The first matching reason applies, in this order:
   1. `died`;
-  2. `owner_pause` (the gateway's watch terminal record has a Pause reason);
+  2. `owner_pause` (the watch terminal record's `reason` is `operator_pause`;
+     `pause_reason` is read from `/3` only);
   3. `custody`;
   4. `infrastructure` (the last actor settled not ok);
   5. `player_stop`;
