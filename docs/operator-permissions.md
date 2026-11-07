@@ -55,6 +55,15 @@ Packages keep the standing $1,000 as their `ceiling_usd` worst-case guard. Stop 
 the owner when the envelope is reached. The arm ended on 7 November 2026 having spent
 $30.46 (cumulative actual $377.41); the unspent remainder is not carried to other work.
 
+**Seven-day envelope (owner decision E1 of [#397](https://github.com/CVX-Hull/enactive/issues/397), 7 November 2026).**
+One seven-day development lineage gets a new $150 envelope under the same actual-spend
+admission rule: the lead admits an admission only while the attempt's actual new spend
+plus twice its largest single admission so far stays within $150. The cumulative cap
+is about $527 within the standing $1,000. The owner also chose to build the tracked
+run ledger (#401) and change the input bridge (#396) before any admission, so no
+admission is authorized until both have landed and the package is frozen and reviewed.
+Stop and ask the owner when the envelope is reached.
+
 ## Engineering decision and merge delegation
 
 The owner is not a routine gate. The lead carries ordinary engineering work through
