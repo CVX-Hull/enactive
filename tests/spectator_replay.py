@@ -3,7 +3,9 @@
 The copy is a test fixture, never evidence: static files, frames and every session table
 except `operations` are copied first; `operations` rows and host trace lines then appear on
 their original wall-clock offsets (optionally after an instant prefix), so the viewer sees a
-run that is still moving. No game, provider or player is involved.
+run that is still moving. No game, provider or player is involved. Rows keep the archive's
+wall times, so wall-clock readings against "now" (the Pause panel's "Feed alive") show the
+archive's age and report met; readings between rows (pace, spend rate) are unaffected.
 """
 from __future__ import annotations
 

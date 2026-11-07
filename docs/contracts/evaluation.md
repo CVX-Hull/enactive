@@ -48,6 +48,10 @@ Its `metadata.state` is `live` or `final`.
   read-only, stops live evaluation and reports that in the summary's `evaluator` status
   (`finished`). Re-scoring under new versions writes a new file. Hand-scored evidence
   elsewhere is never modified.
+- **Lineage.** `evaluate-lineage` takes one lineage's admission run directories in order. It
+  scores any admission without a `final` store as `evaluate-run` does, then writes
+  `lineage.continuity` and `continuity` events into every admission's store. Stitching again
+  after re-scoring an admission restores them.
 
 | Table | Columns | Meaning |
 | --- | --- | --- |

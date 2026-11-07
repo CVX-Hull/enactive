@@ -17,7 +17,9 @@ latency and delivery counts. evaluate-runs does the same for every run directory
 holds a manifest.json) below one directory, taking each run's memory store from --memory-dir
 (player-memory-<run>.sqlite3) or its manifest, and the operator labels of an archived
 campaign-run/4 run from data/evaluation/archive-labels.json (keyed by session ID, and the only
-campaign-run/4 sessions the evaluator reads). evaluate-compare reads evaluation
+campaign-run/4 sessions the evaluator reads). evaluate-lineage takes one lineage's admission run
+directories in order, scores any without a record as evaluate-run does, and writes the lineage's
+continuity rows into each record. evaluate-compare reads evaluation
 records and prints Kaplan-Meier curves, restricted mean survival to --horizon hours, bootstrap
 intervals and pairwise log-rank tests by arm (the record's arm metadata, or --arm RECORD=LABEL).
 evaluate-table prints a Markdown table of headline metrics from evaluation records (files, or
@@ -35,7 +37,7 @@ from typing import Any, Callable, Sequence
 
 from harness.computer.protocol import ControlError
 
-EVALUATION_COMMANDS = ('evaluate-run', 'evaluate-runs', 'evaluate-compare', 'evaluate-table')
+EVALUATION_COMMANDS = ('evaluate-run', 'evaluate-runs', 'evaluate-lineage', 'evaluate-compare', 'evaluate-table')
 # A game binding is imported only when it is named, so the core never depends on one.
 BINDINGS: dict[str, tuple[str, str]] = {'cdda': ('harness.evaluation.cdda', 'CddaBinding')}
 
@@ -104,6 +106,18 @@ def evaluate_runs(arguments: argparse.Namespace, binding: Any) -> dict:
     return dict(runs=results)
 
 
+def evaluate_lineage(arguments: argparse.Namespace, binding: Any) -> dict:
+    """Score each admission like evaluate-run (an existing final record is kept unless --replace), then stitch them."""
+    from harness.evaluation.core.lineage import stitch
+    from harness.evaluation.core.records import record_path
+    from harness.evaluation.core.sources import read_operations
+    for run in arguments.paths:
+        session, _ = read_operations(run, settled_only=True)
+        if arguments.replace or not record_path(arguments.root, session, binding.binding_id, binding.binding_version).exists():
+            evaluate_one(run, binding, arguments, None)
+    return stitch(arguments.paths, binding, arguments.root)
+
+
 def evaluate_compare(arguments: argparse.Namespace) -> dict:
     from harness.evaluation.core.survival import compare_records
     arms = {}
@@ -162,11 +176,11 @@ def main(argv: Sequence[str] | None = None, *, binding: Any = None,
     parser.add_argument('command', choices=('host-summary', 'control-summary', *EVALUATION_COMMANDS))
     parser.add_argument('paths', type=Path, nargs='+')
     parser.add_argument('--format', choices=('json', 'markdown'), default='json')
-    parser.add_argument('--binding', help='evaluate-run, evaluate-runs: game binding name')
-    parser.add_argument('--root', type=Path, help='evaluate-run, evaluate-runs: evaluation record root, e.g. .runtime/evaluations')
+    parser.add_argument('--binding', help='evaluate-run, evaluate-runs, evaluate-lineage: game binding name')
+    parser.add_argument('--root', type=Path, help='evaluate-run, evaluate-runs, evaluate-lineage: evaluation record root, e.g. .runtime/evaluations')
     parser.add_argument('--memory', type=Path, help='evaluate-run: player-memory/2 store if the manifest does not name it')
     parser.add_argument('--memory-dir', type=Path, help='evaluate-runs: directory of player-memory-<run>.sqlite3 stores')
-    parser.add_argument('--replace', action='store_true', help='evaluate-run, evaluate-runs: rewrite an existing record for these versions')
+    parser.add_argument('--replace', action='store_true', help='evaluate-run, evaluate-runs, evaluate-lineage: rewrite an existing record for these versions')
     parser.add_argument('--horizon', type=float, help='evaluate-compare: restricted mean horizon in game hours')
     parser.add_argument('--arm', action='append',
         help='evaluate-run: arm label stored in the record; evaluate-compare: RECORD=LABEL (repeatable)')
@@ -177,6 +191,11 @@ def main(argv: Sequence[str] | None = None, *, binding: Any = None,
             parser.error(f'{arguments.command} requires one directory, --root and --binding')
         if arguments.arm is not None and (arguments.command == 'evaluate-runs' or len(arguments.arm) != 1):
             parser.error('evaluate-run takes at most one --arm label; evaluate-runs takes none')
+    if arguments.command == 'evaluate-lineage':
+        if arguments.root is None or (binding is None and arguments.binding is None):
+            parser.error('evaluate-lineage requires admission run directories in order, --root and --binding')
+        if arguments.arm is not None or arguments.memory is not None:
+            parser.error('evaluate-lineage takes no --arm or --memory; each admission names its memory store and labels')
     if arguments.command != 'evaluate-runs' and arguments.memory_dir is not None:
         parser.error('--memory-dir is supported for evaluate-runs only')
     if arguments.command == 'evaluate-compare' and (arguments.horizon is None or not arguments.horizon > 0):
@@ -196,7 +215,8 @@ def main(argv: Sequence[str] | None = None, *, binding: Any = None,
                     result = evaluate_compare(arguments)
                 else:
                     chosen = binding if binding is not None else load(arguments.binding)
-                    result = (evaluate_run if arguments.command == 'evaluate-run' else evaluate_runs)(arguments, chosen)
+                    result = {'evaluate-run': evaluate_run, 'evaluate-runs': evaluate_runs,
+                              'evaluate-lineage': evaluate_lineage}[arguments.command](arguments, chosen)
             except EvaluationError as exc:
                 raise ControlError(str(exc)) from exc
             print(json.dumps(result, allow_nan=False, sort_keys=True))

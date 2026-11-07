@@ -976,7 +976,8 @@ def lineage_run(directory: Path, session: str, times: list[int], identity: int, 
     return directory
 
 
-def test_lineage_reports_identity_and_rewound_game_time(tmp_path):
+def test_lineage_reports_identity_and_rewound_game_time(tmp_path, capsys, monkeypatch):
+    monkeypatch.setattr("tools.evaluate.run_external", lambda run: dict(custody=dict(receipts=7, uncertain=0)))
     first = lineage_run(tmp_path / 'one', '1' * 32, [3600, 3660, 3720], 1, BASE)
     second = lineage_run(tmp_path / 'two', '2' * 32, [3780, 3840], 1, BASE + 1000)       # continues
     third = lineage_run(tmp_path / 'three', '3' * 32, [3000, 3060], 1, BASE + 2000)      # rewound by 840 s
@@ -1000,6 +1001,15 @@ def test_lineage_reports_identity_and_rewound_game_time(tmp_path):
     assert events_of(paths[1], 'continuity') == []
     assert stitch(admissions, FakeBinding(), tmp_path / 'evals')['boundaries'] == boundaries
     assert len(events_of(paths[1], 'continuity')) == 1
+    # The command line stitches the same lineage; a missing admission record is scored like evaluate-run.
+    paths[3].unlink()
+    assert main(['evaluate-lineage', *map(str, admissions), '--binding', 'fake', '--root', str(tmp_path / 'evals')],
+        binding=FakeBinding()) == 0
+    assert json.loads(capsys.readouterr().out)['boundaries'] == boundaries
+    assert metrics_of(paths[3])['custody.uncertain_receipts'].denominator == 7    # the external numbers were used
+    with pytest.raises(SystemExit):
+        main(['evaluate-lineage', str(first), '--root', str(tmp_path / 'evals')])  # needs --binding
+    capsys.readouterr()
     # A single run carries an empty continuity metric.
     solo = metrics_of(evaluate(lineage_run(tmp_path / 'solo', '6' * 32, [3600, 3660], 1, BASE), FakeBinding(),
         tmp_path / 'solo-evals'))['lineage.continuity']
