@@ -15,6 +15,7 @@ states. Records are dated evidence, not current instructions; the
 | Date | Record | Scope | Status |
 | --- | --- | --- | --- |
 | 2026-11-07 | [Standards, storage and discoverability audit (#400)](2026-11-07-standards-audit.md) | Audit #400 of docs, design, code, tests, controls and tracker against the charter principles, standards, controls, storage formats and discoverability at main bd549ca | historical |
+| 2026-11-07 | [Retirement of old `.runtime` run output, 7 November 2026](2026-11-07-runtime-retirement.md) | Retirement of the old raw run output under .runtime, cited and uncited, on the owner decision of 7 November 2026 (#425) | historical |
 | 2026-11-07 | [Long-horizon arm (#382)](2026-11-07-long-horizon-382.md) | Long-horizon arm #382: owner decisions D1–D8, the pinned admission procedure, three chained save/reload lineages, the arm result and its evidence frames | historical |
 | 2026-11-06 | [Development loop: ceiling benchmark and grounding aids (#372, #383)](2026-11-06-development-loop.md) | Development loop #372 (ceiling benchmark and grounding aids A–C) and its evaluator re-score #383: owner decisions, hand-scored run tables, loop result, generated metrics and power check | historical |
 | 2026-11-05 | [Recorded-screen candidate assessment](2026-11-05-recorded-player-assessment.md) | Two recorded-screen cases with proposed controls only; subsequent fresh-world development attempt interrupted during setup | historical |

@@ -44,12 +44,16 @@ evidence was copied; symbolic links are never copied. When a whole folder is sea
 reproducible, removing the original is an owner decision. On 7 November 2026 the
 originals `.runtime/iteration164`, the legacy items under `.runtime/evidence` and
 `.runtime/dev-loop` were removed on the owner's decision, after a final `verify --full`.
-Their tracked provenance is the studies' `sources` and notes. Cited evidence still outside the store is
-[#425](https://github.com/CVX-Hull/enactive/issues/425).
+Their tracked provenance is the studies' `sources` and notes. The same day, under
+[#425](https://github.com/CVX-Hull/enactive/issues/425), the owner retired all other old
+run output under `.runtime`, cited or not, without sealing it; the
+[retirement record](../acceptance/2026-11-07-runtime-retirement.md) lists every entry, and
+[the environment](../environment.md) lists what remains.
 
 Retain curated acceptance artifacts and failure evidence until superseded by
 reviewed equivalent evidence or explicitly selected for removal; if removed,
-record availability as removed in the evidence index. Keep unresolved-incident
+record availability as removed in the evidence index for a sealed study, or list it in
+a dated retirement record for evidence that was never sealed. Keep unresolved-incident
 journals until resolved. Routine unreferenced journals/frames can be pruned after
 30 days, only with sessions stopped and after checking references/ownership.
 Checker logs under `.runtime/check-logs/` are routine local output and can be pruned
