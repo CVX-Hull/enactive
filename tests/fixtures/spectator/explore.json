@@ -36,9 +36,9 @@
     "run.infrastructure_loss": 0.0
    },
    "versions": {
-    "core_version": 1,
+    "core_version": 2,
     "binding_id": "cdda",
-    "binding_version": 1,
+    "binding_version": 2,
     "state": "final",
     "created_wall": 1794024944.156063
    },
@@ -79,9 +79,9 @@
     "run.infrastructure_loss": 1.0
    },
    "versions": {
-    "core_version": 1,
+    "core_version": 2,
     "binding_id": "cdda",
-    "binding_version": 1,
+    "binding_version": 2,
     "state": "final",
     "created_wall": 1794024945.766338
    },
@@ -122,9 +122,9 @@
     "run.infrastructure_loss": 0.0
    },
    "versions": {
-    "core_version": 1,
+    "core_version": 2,
     "binding_id": "cdda",
-    "binding_version": 1,
+    "binding_version": 2,
     "state": "final",
     "created_wall": 1794024946.379234
    },
@@ -165,9 +165,9 @@
     "run.infrastructure_loss": 0.0
    },
    "versions": {
-    "core_version": 1,
+    "core_version": 2,
     "binding_id": "cdda",
-    "binding_version": 1,
+    "binding_version": 2,
     "state": "final",
     "created_wall": 1794024948.109038
    },
@@ -208,9 +208,9 @@
     "run.infrastructure_loss": 0.0
    },
    "versions": {
-    "core_version": 1,
+    "core_version": 2,
     "binding_id": "cdda",
-    "binding_version": 1,
+    "binding_version": 2,
     "state": "final",
     "created_wall": 1794024949.855768
    },
@@ -251,9 +251,9 @@
     "run.infrastructure_loss": 0.0
    },
    "versions": {
-    "core_version": 1,
+    "core_version": 2,
     "binding_id": "cdda",
-    "binding_version": 1,
+    "binding_version": 2,
     "state": "final",
     "created_wall": 1794024951.6579452
    },
@@ -294,9 +294,9 @@
     "run.infrastructure_loss": 0.0
    },
    "versions": {
-    "core_version": 1,
+    "core_version": 2,
     "binding_id": "cdda",
-    "binding_version": 1,
+    "binding_version": 2,
     "state": "final",
     "created_wall": 1794024952.352316
    },
@@ -337,9 +337,9 @@
     "run.infrastructure_loss": 0.0
    },
    "versions": {
-    "core_version": 1,
+    "core_version": 2,
     "binding_id": "cdda",
-    "binding_version": 1,
+    "binding_version": 2,
     "state": "final",
     "created_wall": 1794024954.153215
    },
@@ -380,9 +380,9 @@
     "run.infrastructure_loss": 0.0
    },
    "versions": {
-    "core_version": 1,
+    "core_version": 2,
     "binding_id": "cdda",
-    "binding_version": 1,
+    "binding_version": 2,
     "state": "final",
     "created_wall": 1794024956.143487
    },
@@ -423,9 +423,9 @@
     "run.infrastructure_loss": 0.0
    },
    "versions": {
-    "core_version": 1,
+    "core_version": 2,
     "binding_id": "cdda",
-    "binding_version": 1,
+    "binding_version": 2,
     "state": "final",
     "created_wall": 1794024957.9673479
    },
@@ -466,9 +466,9 @@
     "run.infrastructure_loss": 1.0
    },
    "versions": {
-    "core_version": 1,
+    "core_version": 2,
     "binding_id": "cdda",
-    "binding_version": 1,
+    "binding_version": 2,
     "state": "final",
     "created_wall": 1794024959.893076
    },
@@ -509,9 +509,9 @@
     "run.infrastructure_loss": 1.0
    },
    "versions": {
-    "core_version": 1,
+    "core_version": 2,
     "binding_id": "cdda",
-    "binding_version": 1,
+    "binding_version": 2,
     "state": "final",
     "created_wall": 1794024961.38923
    },
@@ -552,9 +552,9 @@
     "run.infrastructure_loss": 1.0
    },
    "versions": {
-    "core_version": 1,
+    "core_version": 2,
     "binding_id": "cdda",
-    "binding_version": 1,
+    "binding_version": 2,
     "state": "final",
     "created_wall": 1794024962.952527
    },
@@ -595,9 +595,9 @@
     "run.infrastructure_loss": 1.0
    },
    "versions": {
-    "core_version": 1,
+    "core_version": 2,
     "binding_id": "cdda",
-    "binding_version": 1,
+    "binding_version": 2,
     "state": "final",
     "created_wall": 1794024964.398175
    },
@@ -638,9 +638,9 @@
     "run.infrastructure_loss": 0.0
    },
    "versions": {
-    "core_version": 1,
+    "core_version": 2,
     "binding_id": "cdda",
-    "binding_version": 1,
+    "binding_version": 2,
     "state": "final",
     "created_wall": 1794024965.718226
    },
@@ -681,9 +681,9 @@
     "run.infrastructure_loss": 0.0
    },
    "versions": {
-    "core_version": 1,
+    "core_version": 2,
     "binding_id": "cdda",
-    "binding_version": 1,
+    "binding_version": 2,
     "state": "final",
     "created_wall": 1794024967.477418
    },
@@ -724,9 +724,9 @@
     "run.infrastructure_loss": 0.0
    },
    "versions": {
-    "core_version": 1,
+    "core_version": 2,
     "binding_id": "cdda",
-    "binding_version": 1,
+    "binding_version": 2,
     "state": "final",
     "created_wall": 1794024969.223886
    },
@@ -767,9 +767,9 @@
     "run.infrastructure_loss": 0.0
    },
    "versions": {
-    "core_version": 1,
+    "core_version": 2,
     "binding_id": "cdda",
-    "binding_version": 1,
+    "binding_version": 2,
     "state": "final",
     "created_wall": 1794024970.705596
    },
@@ -810,9 +810,9 @@
     "run.infrastructure_loss": 1.0
    },
    "versions": {
-    "core_version": 1,
+    "core_version": 2,
     "binding_id": "cdda",
-    "binding_version": 1,
+    "binding_version": 2,
     "state": "final",
     "created_wall": 1794024972.4371781
    },
@@ -853,9 +853,9 @@
     "run.infrastructure_loss": 0.0
    },
    "versions": {
-    "core_version": 1,
+    "core_version": 2,
     "binding_id": "cdda",
-    "binding_version": 1,
+    "binding_version": 2,
     "state": "final",
     "created_wall": 1794024972.6387799
    },
@@ -896,9 +896,9 @@
     "run.infrastructure_loss": 0.0
    },
    "versions": {
-    "core_version": 1,
+    "core_version": 2,
     "binding_id": "cdda",
-    "binding_version": 1,
+    "binding_version": 2,
     "state": "final",
     "created_wall": 1794024974.3304262
    },
@@ -939,9 +939,9 @@
     "run.infrastructure_loss": 0.0
    },
    "versions": {
-    "core_version": 1,
+    "core_version": 2,
     "binding_id": "cdda",
-    "binding_version": 1,
+    "binding_version": 2,
     "state": "final",
     "created_wall": 1794024976.1235929
    },
@@ -982,9 +982,9 @@
     "run.infrastructure_loss": 0.0
    },
    "versions": {
-    "core_version": 1,
+    "core_version": 2,
     "binding_id": "cdda",
-    "binding_version": 1,
+    "binding_version": 2,
     "state": "final",
     "created_wall": 1794024977.135505
    },
@@ -1025,9 +1025,9 @@
     "run.infrastructure_loss": 0.0
    },
    "versions": {
-    "core_version": 1,
+    "core_version": 2,
     "binding_id": "cdda",
-    "binding_version": 1,
+    "binding_version": 2,
     "state": "final",
     "created_wall": 1794024978.926316
    },
@@ -1068,9 +1068,9 @@
     "run.infrastructure_loss": 0.0
    },
    "versions": {
-    "core_version": 1,
+    "core_version": 2,
     "binding_id": "cdda",
-    "binding_version": 1,
+    "binding_version": 2,
     "state": "final",
     "created_wall": 1794024980.195114
    },
@@ -1111,9 +1111,9 @@
     "run.infrastructure_loss": 0.0
    },
    "versions": {
-    "core_version": 1,
+    "core_version": 2,
     "binding_id": "cdda",
-    "binding_version": 1,
+    "binding_version": 2,
     "state": "final",
     "created_wall": 1794024981.0633001
    },
@@ -1154,9 +1154,9 @@
     "run.infrastructure_loss": 0.0
    },
    "versions": {
-    "core_version": 1,
+    "core_version": 2,
     "binding_id": "cdda",
-    "binding_version": 1,
+    "binding_version": 2,
     "state": "final",
     "created_wall": 1794024982.7251358
    },
@@ -1197,9 +1197,9 @@
     "run.infrastructure_loss": 0.0
    },
    "versions": {
-    "core_version": 1,
+    "core_version": 2,
     "binding_id": "cdda",
-    "binding_version": 1,
+    "binding_version": 2,
     "state": "final",
     "created_wall": 1794024983.316281
    },
@@ -1240,9 +1240,9 @@
     "run.infrastructure_loss": 0.0
    },
    "versions": {
-    "core_version": 1,
+    "core_version": 2,
     "binding_id": "cdda",
-    "binding_version": 1,
+    "binding_version": 2,
     "state": "final",
     "created_wall": 1794024985.0281851
    },
@@ -1283,9 +1283,9 @@
     "run.infrastructure_loss": 0.0
    },
    "versions": {
-    "core_version": 1,
+    "core_version": 2,
     "binding_id": "cdda",
-    "binding_version": 1,
+    "binding_version": 2,
     "state": "final",
     "created_wall": 1794024985.378208
    },

@@ -50,8 +50,11 @@ Its `metadata.state` is `live` or `final`.
   elsewhere is never modified.
 - **Lineage.** `evaluate-lineage` takes one lineage's admission run directories in order. It
   scores any admission without a `final` store as `evaluate-run` does, then writes
-  `lineage.continuity` and `continuity` events into every admission's store. Stitching again
-  after re-scoring an admission restores them.
+  `continuity` events and the four `lineage.*` metrics (continuity, elapsed time, the day
+  check and memory reuse) into every admission's store. Stitching again after re-scoring an
+  admission restores them.
+- **Current versions.** Core 2 and CDDA binding 2. Core 2 added the lineage elapsed time,
+  day check and memory reuse; binding 2 added `severe_needs`.
 
 | Table | Columns | Meaning |
 | --- | --- | --- |
@@ -106,6 +109,7 @@ The interface is [`harness/evaluation/core/binding.py`](../../harness/evaluation
 | `identity` | Text identifying the playing entity, when legible | An identity reader |
 | `milestone` | A rung on an ordered ladder, with first-reached times on all three clocks | The ladder; each rung names the reader evidence that fires it, or `human` |
 | `death` | A death event with a binding-supplied cause string | A death-screen reader |
+| severe needs | The lineage day check's failing needs at one step | `severe_needs(values)`: the needs that fail, `[]` when none does, None when the needs are not legible |
 
 **Plausibility guard.** A clock reading earlier than the last accepted one, or later by
 more than the binding's maximum jump, abstains with `implausible`. The exception is a
@@ -130,6 +134,14 @@ that reads no frame reader) and the page shows it next to the provenance chip. A
 - the death screen;
 - identity where legible;
 - a 900-second long-activity threshold;
+- #382's severe needs for the day check (binding version 2):
+  - thirst "very thirsty", "dehydrated" or "parched";
+  - hunger "very hungry", "famished", "near starving" or "starving";
+  - rest "dead tired" or "exhausted", read from the weariness reader's `rest` field (its
+    `label` is the worse of weariness and rest).
+
+  This is narrower than the readers' `critical` flag, which also covers pain, red labels
+  and limbs;
 - this ladder (evidence in brackets):
 
 | Rung | Evidence | Rung | Evidence |
@@ -180,6 +192,13 @@ its `count` and `denominator`, and the viewer shows an insufficient sample as su
 | `ladder.reached` | Highest rung reached and decisions to each rung | — | `human` rungs: not assessed |
 | `reader.coverage` | Non-abstained readings ÷ frames, per reader | frames | — |
 | `lineage.continuity` | Per admission boundary: same identity (or `unknown`) and game-time gap (negative means rewound) | boundaries | — |
+| `lineage.elapsed` | Game time from admission 1's first in-play clock to the lineage's last accepted reading (a rewind lowers it), with total decisions, overall game seconds per decision (null when elapsed is not positive), long-activity hours and their share of elapsed time (null when elapsed is not positive, and above 1 when a reload undid long activities), and `episode_changes` (a restarted clock or another survivor inside an admission) | game seconds | No accepted reading: missing (`no_game_time`) |
+| `lineage.day_check` | The crossing is the first step after the lineage's last reading below one game day from that start, so a rewind below the day undoes an earlier crossing. The needs are scored at the first in-play step from the crossing on whose needs the binding can read, in that admission or a later one (`scored_run`, `lag_hours` past the day). Deaths are compared in lineage order (admission, then step), so a death in an admission a reload later rewound still counts. A death at or before the crossing fails the check (`died_before`). A death after the crossing but before the scored step leaves it unscored (`died_in_lag`). Otherwise `passed` when `severe_needs` reports none; a severe need that was read counts even when another need is unreadable. Also `severe` and `episode_changes`; #382 classifies an episode change as a continuity failure first. If admission 1 never reaches play, a later admission's first in-play clock is the zero | 1 | Not crossed: `not_reached`; needs never legible after the crossing: `needs_not_legible`; death in the lag: `died_in_lag` |
+| `lineage.memory_reuse` | Distinct memory record IDs read in an admission that an earlier admission of the lineage wrote, per admission and in total | records written before the last admission | None written: `no_earlier_writes` |
+
+The four `lineage.*` metrics are written only by `evaluate-lineage` and are the same in every
+admission's store. An incremental pass keeps them; a fresh `--replace` pass drops them until
+the lineage is stitched again.
 
 **Comparison statistics** (across runs, never within the player):
 - Kaplan–Meier survival with Greenwood intervals;

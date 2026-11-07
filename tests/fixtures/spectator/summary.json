@@ -68,9 +68,9 @@
  "decisions": 229,
  "dollars": 3.9786445,
  "versions": {
-  "core_version": 1,
+  "core_version": 2,
   "binding_id": "cdda",
-  "binding_version": 1,
+  "binding_version": 2,
   "state": "live",
   "created_wall": 1794025658.238645
  },

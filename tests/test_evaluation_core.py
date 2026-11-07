@@ -6,6 +6,7 @@ binding "reads". These tests establish the core's contract, not any game reader.
 """
 from __future__ import annotations
 
+import dataclasses
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import hashlib
@@ -22,7 +23,7 @@ from harness.evaluation.core.binding import FrameReading, Reading, Rung, Vital
 from harness.evaluation.core.derive import guard_clock
 from harness.evaluation.core.lineage import stitch
 from harness.evaluation.core.pipeline import evaluate
-from harness.evaluation.core.records import (EvaluationError, RecordWriter, open_readonly, read_events, read_metadata,
+from harness.evaluation.core.records import (CORE_VERSION, EvaluationError, RecordWriter, open_readonly, read_events, read_metadata,
     read_metrics, read_readings, read_requests, read_run_facts, read_steps, read_tool_calls, record_path)
 from harness.evaluation.core.survival import (Observation, bootstrap_rmst, compare, kaplan_meier, logrank,
     restricted_mean, rmst)
@@ -98,6 +99,12 @@ class FakeBinding:
             readings.append(Reading('death_cause', 1, 'combat', 0.7))
         return FrameReading(mode, t, identity, vitals, THREATS[threat_code], 1 if THREATS[threat_code] else None,
             bool(death), tuple(readings))
+
+    def severe_needs(self, values) -> list[str] | None:
+        frame = values.get('core.frame')
+        if not isinstance(frame, dict) or frame.get('mode') != 'in_play' or not frame.get('vitals'):
+            return None
+        return [v['name'] for v in frame['vitals'] if v['critical']]
 
     def rung_reached(self, rung: Rung, history) -> int | None:
         if rung.evidence == 'human':
@@ -317,7 +324,7 @@ def run_and_evaluate(tmp_path: Path, build=main_scenario, **options) -> Path:
 def test_record_follows_the_contract_tables(tmp_path):
     path = run_and_evaluate(tmp_path)
     assert path == record_path(tmp_path / 'evaluations', SESSION, 'fake', 3)
-    assert path.name == '1-fake-3.sqlite3'
+    assert path.name == f'{CORE_VERSION}-fake-3.sqlite3'
     connection = open_readonly(path)
     tables = {r[0]: [c[1] for c in connection.execute(f'PRAGMA table_info({r[0]})')]
         for r in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
@@ -336,7 +343,7 @@ def test_record_follows_the_contract_tables(tmp_path):
     meta = read_metadata(connection)
     assert meta['state'] == 'final' and meta['labels'] == dict(arm=None, start=None, scenario=None, lineage=None, admission=None)
     assert (meta['schema'], meta['core_version'], meta['binding_id'], meta['binding_version'], meta['session']) == (
-        'evaluation-record/1', 1, 'fake', 3, SESSION)
+        'evaluation-record/1', CORE_VERSION, 'fake', 3, SESSION)
     assert meta['last_seq'] == 14 and meta['first_in_play_seq'] == 3 and meta['created_wall'] == 1.0
     assert set(meta['inputs']) == {'manifest.json', 'session.sqlite3', 'actors/001/host.jsonl'}
     steps = read_steps(connection)
@@ -359,7 +366,7 @@ def test_refuses_to_overwrite_unless_replaced(tmp_path):
     other = FakeBinding()
     other.binding_version = 4  # new versions write a new file beside the old one
     second = evaluate(tmp_path / 'run', other, tmp_path / 'evaluations', created_wall=1.0)
-    assert second != path and second.name == '1-fake-4.sqlite3' and path.exists()
+    assert second != path and second.name == f'{CORE_VERSION}-fake-4.sqlite3' and path.exists()
     with pytest.raises(EvaluationError, match='exists'):
         RecordWriter.create(path, {})
 
@@ -974,6 +981,106 @@ def lineage_run(directory: Path, session: str, times: list[int], identity: int, 
         run.step(a, 'input', [key('j')], F('in_play', t, identity=identity, fill=index))
     run.finish()
     return directory
+
+
+DAY = 24 * 3600
+
+
+def day_lineage(tmp_path: Path, name: str, *, critical: bool = False, death: bool = False) -> list[Path]:
+    """Two admissions: the first writes a memory record, the second crosses one game day and reads it."""
+    one = Run(tmp_path / f'{name}-one', session=f'{name}1'.ljust(32, '0')[:32], base=BASE)
+    a = one.actor()
+    one.step(a, 'input', [key('j')], F('in_play', 3600, identity=1, fill=0))
+    one.call(a, 'player_memory_append', dict(record=record_doc()), dict(id='rec-1', kind='work', supports=[], sources=[]))
+    one.step(a, 'input', [key('j')], F('in_play', 3660, identity=1, fill=1, death=death))
+    one.step(a, 'input', [key('j')], F('in_play', 3720, identity=1, fill=2))
+    one.finish()
+    two = Run(tmp_path / f'{name}-two', session=f'{name}2'.ljust(32, '0')[:32], base=BASE + 1000)
+    b = two.actor()
+    two.step(b, 'input', [key('j')], F('in_play', 3600 + DAY - 60, identity=1, fill=0))
+    two.call(b, 'player_memory_read', dict(record_id='rec-1'), dict(id='rec-1', kind='work'))
+    two.step(b, 'input', [key('j')], F('in_play', 3600 + DAY + 60, identity=1, fill=1, critical=critical))
+    two.step(b, 'input', [key('j')], F('in_play', 3600 + DAY + 120, identity=1, fill=2))
+    two.finish()
+    return [tmp_path / f'{name}-one', tmp_path / f'{name}-two']
+
+
+def test_lineage_elapsed_day_check_and_memory_reuse(tmp_path):
+    result = stitch(day_lineage(tmp_path, 'ab'), FakeBinding(), tmp_path / 'evals')
+    elapsed = result['lineage.elapsed']
+    assert elapsed['game_seconds'] == DAY + 120 and elapsed['admissions'] == 2 and elapsed['decisions'] > 0
+    assert elapsed['game_seconds_per_decision'] == round((DAY + 120) / elapsed['decisions'], 2)
+    day = result['lineage.day_check']
+    assert (day['passed'], day['severe'], day['died_before']) == (True, [], False)
+    assert day['elapsed_hours'] == round((DAY + 60) / 3600, 3)
+    assert result['lineage.memory_reuse'] == dict(per_admission=[dict(run='ab-one', reused=0), dict(run='ab-two', reused=1)],
+        reused=1)
+    # Every admission carries the lineage metrics; a fresh re-score drops them until the lineage is stitched again.
+    for path in map(Path, result['records']):
+        metrics = metrics_of(path)
+        assert metrics['lineage.day_check'].count == 1 and metrics['lineage.memory_reuse'].denominator == 1
+    evaluate(tmp_path / 'ab-two', FakeBinding(), tmp_path / 'evals', replace=True)
+    assert 'lineage.elapsed' not in metrics_of(Path(result['records'][1]))
+    assert stitch(day_lineage(tmp_path / 'again', 'ab'), FakeBinding(), tmp_path / 'again-evals')['lineage.elapsed'] == elapsed
+    # A severe need at the day point fails the check; a death read earlier in the lineage fails it too.
+    severe = stitch(day_lineage(tmp_path, 'cd', critical=True), FakeBinding(), tmp_path / 'evals')['lineage.day_check']
+    assert (severe['passed'], severe['severe']) == (False, ['hunger'])
+    died = stitch(day_lineage(tmp_path, 'ef', death=True), FakeBinding(), tmp_path / 'evals')['lineage.day_check']
+    assert (died['passed'], died['died_before']) == (False, True)
+    # A lineage short of a day is reported as not reached, and a single admission has no earlier writes.
+    short = stitch([lineage_run(tmp_path / 'short', '9' * 32, [3600, 3660], 1, BASE)], FakeBinding(), tmp_path / 'evals')
+    record = metrics_of(Path(short['records'][0]))
+    assert record['lineage.day_check'].missing == 'not_reached' and record['lineage.memory_reuse'].missing == 'no_earlier_writes'
+
+
+def frames_lineage(tmp_path: Path, name: str, admissions: list[list[F]]) -> list[Path]:
+    paths = []
+    for number, frames in enumerate(admissions):
+        directory = tmp_path / f'{name}-{number}'
+        run = Run(directory, session=f'{name}{number}'.ljust(32, '0')[:32], base=BASE + 1000 * number)
+        actor = run.actor()
+        for index, frame in enumerate(frames):
+            run.step(actor, 'input', [key('j')], dataclasses.replace(frame, fill=index))
+        run.finish()
+        paths.append(directory)
+    return paths
+
+
+def test_lineage_day_check_rewind_lag_start_and_episodes(tmp_path):
+    day = lambda name, admissions: stitch(frames_lineage(tmp_path, name, admissions), FakeBinding(),
+        tmp_path / 'evals')['lineage.day_check']
+    # Start is the first in-play clock: an earlier clock on a prompt frame does not count.
+    started = day('a5', [[F('prompt', 0, identity=1), F('in_play', 3600, identity=1), F('in_play', 3600 + DAY - 10, identity=1)]])
+    assert started is None   # 3600 + DAY - 10 is short of a day from 3600, though a day from 0
+    # A reload that rewinds below the day undoes an earlier crossing.
+    rewound = stitch(frames_lineage(tmp_path, 'b6', [
+        [F('in_play', 3600, identity=1), F('in_play', 3600 + DAY + 60, identity=1)],
+        [F('in_play', 3600 + DAY - 600, identity=1), F('in_play', 3600 + DAY - 540, identity=1)]]),
+        FakeBinding(), tmp_path / 'evals')
+    assert rewound['lineage.day_check'] is None and rewound['lineage.elapsed']['game_seconds'] == DAY - 540
+    assert metrics_of(Path(rewound['records'][0]))['lineage.day_check'].missing == 'not_reached'
+    # A crossing on an unreadable screen is scored at the next legible step, in the next admission, with its lag.
+    lagged = day('c7', [[F('in_play', 3600, identity=1), F('in_play', 3660, identity=1)],
+                        [F('in_play', 3600 + DAY - 120, identity=1), F('in_play', 3600 + DAY - 60, identity=1),
+                         F('prompt', 3600 + DAY + 60, identity=1)],
+                        [F('in_play', 3600 + DAY + 3600, identity=1)]])
+    assert (lagged['run'], lagged['scored_run'], lagged['passed'], lagged['lag_hours']) == ('c7-1', 'c7-2', True, 1.0)
+    # Alive at the day, then dead before the needs could be read: unscored, not a day-check failure.
+    in_lag = stitch(frames_lineage(tmp_path, 'e9', [[F('in_play', 3600, identity=1), F('in_play', 3660, identity=1)],
+        [F('in_play', 3600 + DAY - 120, identity=1), F('in_play', 3600 + DAY - 60, identity=1),
+         F('prompt', 3600 + DAY + 60, identity=1), F('prompt', 3600 + DAY + 120, identity=1, death=True)],
+        [F('in_play', 3600 + DAY + 3600, identity=1)]]), FakeBinding(), tmp_path / 'evals')
+    lagged_death = metrics_of(Path(in_lag['records'][0]))['lineage.day_check']
+    assert lagged_death.missing == 'died_in_lag' and lagged_death.value['passed'] is None
+    assert lagged_death.value['died_before'] is False
+    # A net rewind below the start leaves no meaningful per-decision pace.
+    net = stitch(frames_lineage(tmp_path, 'fa', [[F('in_play', 3600, identity=1), F('in_play', 3660, identity=1)],
+        [F('in_play', 3000, identity=1), F('in_play', 3060, identity=1)]]), FakeBinding(), tmp_path / 'evals')['lineage.elapsed']
+    assert net['game_seconds'] == -540 and net['game_seconds_per_decision'] is None and net['long_activity_share'] is None
+    # A restarted clock inside an admission (another world) is listed for the continuity check.
+    episode = stitch(frames_lineage(tmp_path, 'd8', [[F('in_play', t, identity=1) for t in (200_000, 200_060, 100, 160, 220)]]),
+        FakeBinding(), tmp_path / 'evals')['lineage.elapsed']
+    assert [change['run'] for change in episode['episode_changes']] == ['d8-0']
 
 
 def test_lineage_reports_identity_and_rewound_game_time(tmp_path, capsys, monkeypatch):
