@@ -17,8 +17,8 @@ of hash manifests to Git; the owner chose not to carry it.
 The dated records that cite these paths keep their results and limits as written. Their
 raw evidence is no longer available, and this record is where that is stated: a
 `.runtime/<entry>` path named by any tracked record or asset, dated on or before
-7 November 2026 or undated, that is not one of the kept entries below refers to retired
-evidence. The seven studies already sealed in
+7 November 2026 or undated, that is neither one of the kept entries below nor the recorded
+source of a sealed study refers to retired evidence. The seven studies already sealed in
 `.runtime/evidence/` (#419, #420) are not affected.
 
 ## What was kept
@@ -108,6 +108,6 @@ superseded copies such as `spectator-lane` and `spectator-lane-final`.
 ## How it was done
 
 The retired entries were moved out of the checkout to a folder in the macOS Trash, with a
-list of what was moved; the folder held exactly the inventoried 188,093 files and
-21.139 GB. The owner emptied the Trash on 7 November 2026, so the retired evidence is
+list of what was moved; the folder held exactly the inventory less `bridge/game.lock`,
+188,093 files and 21.139 GB. The owner emptied the Trash on 7 November 2026, so the retired evidence is
 permanently deleted. No file was edited, and none was copied into Git.
