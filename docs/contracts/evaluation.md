@@ -198,6 +198,8 @@ cannot block a check, a Pause or a run.
 `/api/view/*` to it under these rules:
 - 2-second timeout and 4 MiB cap;
 - only `application/json` and `image/png` responses, never HTML or script;
+- the viewer's `200`, `400`, `404`, `409` and `413` pass through unchanged, and any other
+  status is a forwarding failure;
 - the gateway's own security headers on every response.
 
 A forwarding failure returns `503` with `{"viewer": "unavailable"}`. The page polls;

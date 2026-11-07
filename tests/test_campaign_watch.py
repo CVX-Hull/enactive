@@ -501,7 +501,15 @@ def test_forwarding_accepts_a_body_exactly_at_the_cap(tmp_path):
         assert code == 200 and len(data) == 4*1024*1024
 
 
-@pytest.mark.parametrize('status', [301, 500, 503])
+@pytest.mark.parametrize('status', [400, 404, 409, 413])
+def test_documented_viewer_statuses_pass_through(tmp_path, status):
+    with fixture(tmp_path) as f:
+        f.state['view'].update(status=status, media='application/json', body=b'{"error":"documented"}')
+        code, data = f.call('/api/view/runs')
+        assert code == status and json.loads(data) == {'error': 'documented'}
+
+
+@pytest.mark.parametrize('status', [301, 401, 429, 500, 502, 503])
 def test_viewer_failure_statuses_become_unavailable(tmp_path, status):
     with fixture(tmp_path) as f:
         f.state['view'].update(status=status)

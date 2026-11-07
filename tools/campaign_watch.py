@@ -31,7 +31,7 @@ PAUSE_RECORDED = (*PAUSE_REASONS, UNSPECIFIED)
 # The viewer is read-only and outside supervision: bounded, typed, never trusted.
 VIEW_TIMEOUT = 2.
 VIEW_MEDIA = {'application/json', 'image/png'}
-VIEW_STATUSES = {200, 400, 404}
+VIEW_STATUSES = {200, 400, 404, 409, 413}  # spectator-view/1: 409 ambiguous request, 413 too large; the rest is 503
 VIEW_SLOTS = 8
 VIEW_PATH = re.compile(r'/api/view/[A-Za-z0-9_./=&?%,|:+~-]*')
 STATIC_PART = re.compile(r'[A-Za-z0-9_][A-Za-z0-9._-]*')
