@@ -23,11 +23,11 @@ SUBDIR=PATH@ORIGIN --cited-by RECORD --note TEXT` copies it in once and checks e
 by hash. It then writes the tracked manifest `data/evidence/<study>.sha256` (one
 `shasum -a 256` line per file, so stock tools verify it) and the study's
 `evidence-index/1` entry in `data/evidence/index.json`: citing records, each part's
-origin (repository-relative path, with the commit where it is a checkout), file count, total bytes, manifest hash,
-visibility, availability and a note on what stayed elsewhere. It skips and reports the
-names `Cataclysm.app`, `credentials.json`, `.env`, `.venv`, `__pycache__`, `node_modules`,
-`.DS_Store` and any `*.lock`; refuses links, names a manifest line cannot hold and two
-origins for one subdir; leaves
+origin (repository-relative path, with the commit where it is a checkout), file count,
+total bytes, manifest hash, visibility, availability and a note on what stayed
+elsewhere. It skips and reports the names `Cataclysm.app`, `credentials.json`, `.env`,
+`.venv`, `__pycache__`, `node_modules`, `.DS_Store` and any `*.lock`; refuses links,
+names a manifest line cannot hold and two different origins for one subdir; leaves
 nothing behind if it fails; and only removes write permission. A sealed study is never
 rewritten; removing one is an owner decision, recorded by setting its `availability` to
 `removed` and its `removed` field to the date and reason. `tools/evidence.py verify` runs in the fast checks (file set,
@@ -37,13 +37,14 @@ study as not present. The store is the only copy: there is no off-machine backup
 raw evidence is not published (owner decisions, 7 November 2026; restic to object
 storage is the researched option if a backup is chosen). Under
 [#420](https://github.com/CVX-Hull/enactive/issues/420) the older evidence (the
-17–18 October rounds, the #164 runs and candidate research of 3–5 November, and the
+17–18 October rounds, the #164 runs and candidate research of 26 October to 5 November, and the
 #372/#382 operator files) was sealed the same way. Source checkouts inside those folders
 are reproducible from the commit each study's note names, so only their `.runtime`
 evidence was copied; symbolic links are never copied. When a whole folder is sealed or
-reproducible, removing the original is an owner decision. On 7 November 2026 all three
-originals were removed on the owner's decision, after a final `verify --full`. Their tracked provenance is
-the studies' `sources` and notes. Cited evidence still outside the store is
+reproducible, removing the original is an owner decision. On 7 November 2026 the
+originals `.runtime/iteration164`, the legacy items under `.runtime/evidence` and
+`.runtime/dev-loop` were removed on the owner's decision, after a final `verify --full`.
+Their tracked provenance is the studies' `sources` and notes. Cited evidence still outside the store is
 [#425](https://github.com/CVX-Hull/enactive/issues/425).
 
 Retain curated acceptance artifacts and failure evidence until superseded by
