@@ -17,7 +17,6 @@ Lineage-wide metrics are written to every admission's record as well:
 from __future__ import annotations
 
 from dataclasses import dataclass
-import json
 from pathlib import Path
 from typing import Mapping, Sequence
 
@@ -55,7 +54,7 @@ def summarise(record: Path) -> Admission:
     finally:
         connection.close()
     times = [(seq, t * unit) for seq, t, _ in rows if t is not None]
-    identities = [v for _, _, raw in rows if raw is not None for v in [json.loads(raw).get('identity')] if v is not None]
+    identities = [v for _, _, raw in rows if raw is not None for v in [loads(raw).get('identity')] if v is not None]
     return Admission(str(metadata.get('run')), rows[0][0] if rows else None, times[0][1] if times else None,
         times[-1][1] if times else None, identities[0] if identities else None, identities[-1] if identities else None)
 

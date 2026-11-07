@@ -7,7 +7,6 @@ JSON-able dict (the app adds the schema field and bounds the size). Values keep 
 from __future__ import annotations
 
 import hashlib
-import json
 from pathlib import Path
 import re
 import sqlite3
@@ -15,8 +14,9 @@ import time
 
 from harness.evaluation.core import context as ctx
 from harness.evaluation.core.host import host_facts
-from harness.evaluation.core.records import loads
-from harness.evaluation.core.sources import read_carry, read_host, read_memory
+from harness.evaluation.core.metrics import nearest_rank
+from harness.evaluation.core.records import EvaluationError, loads
+from harness.evaluation.core.sources import read_carry, read_host, read_json_file, read_manifest, read_memory
 
 from .catalog import Catalog, RunInfo, ViewError
 from . import pause
@@ -210,14 +210,6 @@ def frame(catalog: Catalog, info: RunInfo, connection: sqlite3.Connection, sourc
 
 # Tools, calls, requests ----------------------------------------------------------------------------
 
-def percentile(values: list[float], fraction: float) -> float | None:
-    ordered = sorted(values)
-    if not ordered:
-        return None
-    import math
-    return ordered[max(0, math.ceil(fraction * len(ordered)) - 1)]
-
-
 def tools(connection: sqlite3.Connection) -> dict:
     per: dict[str, dict] = {}
     transitions: dict[tuple[str, str], int] = {}
@@ -237,7 +229,7 @@ def tools(connection: sqlite3.Connection) -> dict:
     rows = []
     for tool, entry in sorted(per.items(), key=lambda kv: -kv[1]['calls']):
         latencies = entry.pop('latencies')
-        rows.append(dict(entry, p50_ms=percentile(latencies, .5), p95_ms=percentile(latencies, .95)))
+        rows.append(dict(entry, p50_ms=nearest_rank(latencies, .5), p95_ms=nearest_rank(latencies, .95)))
     return dict(tools=rows, transitions=[[a, b, n] for (a, b), n in sorted(transitions.items())])
 
 
@@ -300,8 +292,7 @@ def context(catalog: Catalog, info: RunInfo, connection: sqlite3.Connection, req
 def memory_store(catalog: Catalog, info: RunInfo):
     path = info.meta.get('memory_store')
     if not path:
-        manifest = json.loads((catalog.need_run_dir(info) / 'manifest.json').read_text())
-        path = manifest.get('player_store')
+        path = read_manifest(catalog.need_run_dir(info)).get('player_store')
     if not path or not Path(path).is_file():
         return None
     return read_memory(Path(path))
@@ -374,12 +365,12 @@ def handoffs(catalog: Catalog, info: RunInfo, connection: sqlite3.Connection) ->
         if run_dir is not None and isinstance(context_id, str) and SOURCE_ID.fullmatch(context_id):
             path = run_dir / 'contexts' / f'{context_id}.json'
             try:
-                packet = json.loads(path.read_text())
+                packet = read_json_file(path)
                 text = packet.get('summary')
                 knowledge = packet.get('knowledge') or {}
                 ids = [n['id'] for k in ('records', 'programs') for n in knowledge.get(k, ()) if isinstance(n, dict) and 'id' in n]
                 carry = path.stat().st_size
-            except (OSError, ValueError):
+            except (OSError, EvaluationError):
                 pass
         resume = info.metrics.get(('handoff.decisions_to_resume', str(index)))
         ratio = info.metrics.get(('handoff.carry_ratio', str(index)))

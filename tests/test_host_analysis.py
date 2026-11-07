@@ -3,9 +3,12 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest import mock
 
 from harness.computer.protocol import ControlError
-from tools.host_analysis import analyze_trace, discover, host_summary
+from harness.evaluation.core.metrics import nearest_rank
+from harness.evaluation.core.sources import read_host
+from tools.host_analysis import analyze_trace, discover, distribution, host_summary
 
 
 class HostAnalysisTests(unittest.TestCase):
@@ -46,6 +49,37 @@ class HostAnalysisTests(unittest.TestCase):
         self.assertEqual(row["observed_request_ms"], 140)
         self.assertEqual(row["timing_ms"]["first_reasoning"]["n"], 0)
         self.assertEqual(row["pending_tools"], 0)
+
+    def test_p50_is_nearest_rank_not_the_mean_of_the_middle_pair(self):
+        e = self.event
+        events = [e("host-start", 0), e("request-start", 10, request_id="r1"),
+            e("response-complete", 110, request_id="r1", stop_reason="stop"),
+            e("request-start", 200, request_id="r2"), e("response-complete", 500, request_id="r2", stop_reason="stop"),
+            e("settled", 600)]
+        row = analyze_trace(self.trace(events))
+        self.assertEqual(row["completed_response_ms"]["n"], 2)
+        self.assertEqual((row["completed_response_ms"]["p50"], row["completed_response_ms"]["p95"]), (100, 300))
+        values = [4, 1, 3, 2]
+        self.assertEqual(distribution(values)["p50"], nearest_rank(values, .5))
+        self.assertEqual((distribution(values)["p50"], distribution(values)["p95"]), (2, 4))
+        self.assertEqual(distribution([5])["p50"], 5)
+
+    def test_the_trace_is_parsed_by_the_evaluator_parser(self):
+        e = self.event
+        path = self.trace([e("host-start", 0), e("request-start", 10, request_id="r1"),
+            e("response-complete", 20, request_id="r1", stop_reason="stop"), e("settled", 30)])
+        text = path.read_text().split("\n")
+        path.write_text("\n".join([text[0], "", *text[1:]]))  # a blank line: skipped by the one parser
+        row = analyze_trace(path)
+        self.assertEqual(sum(row["counts"].values()), len(read_host(path, "x")[1]))
+        with mock.patch("harness.evaluation.core.sources.MAX_HOST_LINE_BYTES", 64):  # its bounds are host-summary's bounds
+            self.assertEqual(host_summary([path])["coverage"], dict(invalid=1))
+        with mock.patch("harness.evaluation.core.sources.MAX_HOST_EVENTS", 2):
+            self.assertEqual(host_summary([path])["coverage"], dict(invalid=1))
+        with path.open("a") as stream:
+            stream.write('{"type":')
+        self.assertEqual(len(read_host(path, "x")[1]), 4)  # the evaluator ignores a line still being appended
+        self.assertEqual(host_summary([path])["coverage"], dict(invalid=1))  # a retained trace must be whole
 
     def test_context_manifest_is_not_a_request_or_an_attempt(self):
         e = self.event

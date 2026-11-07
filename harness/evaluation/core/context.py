@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Sequence
 
 from .records import EvaluationError
-from .sources import HostEvent
+from .sources import HostEvent, read_json_file
 
 PART_FIELDS = ('index', 'role', 'kind', 'bytes', 'sha256', 'tool_call_id', 'tool', 'state', 'image_index', 'source_id')
 
@@ -53,9 +53,9 @@ def _actor_directory(run_dir: Path, actor: str) -> Path | None:
     root = run_dir / 'actors'
     for directory in sorted(p for p in root.iterdir() if p.is_dir()) if root.is_dir() else ():
         try:
-            if json.loads((directory / 'actor.json').read_text()).get('actor_id') == actor:
+            if read_json_file(directory / 'actor.json').get('actor_id') == actor:
                 return directory
-        except (OSError, ValueError):
+        except (OSError, EvaluationError, AttributeError):
             continue
     return None
 

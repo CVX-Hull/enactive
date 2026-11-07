@@ -1616,3 +1616,62 @@ def test_context_is_exact_with_a_manifest_and_reconstructed_without(tmp_path):
     assert built['parts'][0]['bytes'] == 5 and built['parts'][1]['bytes'] == len('ASSIGNMENT 1')
     with pytest.raises(EvaluationError, match='no request'):
         request_context(directory, actor, inputs.host[actor], 'request-99')
+
+
+def test_the_evaluation_decoder_rejects_what_it_would_have_to_guess():
+    from harness.evaluation.core.records import loads
+    assert loads(None) is None and loads(b'{"a": [1, 2.5]}', 'x') == {'a': [1, 2.5]}
+    for text, reason in (('{"a": 1, "a": 2}', 'duplicate key'), ('{"a": NaN}', 'non-finite'), ('{"a": Infinity}', 'non-finite'),
+            ('{"a": ', 'Expecting value'), (b'\xff', 'codec')):
+        with pytest.raises(EvaluationError, match=f'where-it-came-from: malformed JSON .*{reason}'):
+            loads(text, 'where-it-came-from')
+
+
+def test_json_files_are_read_through_one_bounded_reader(tmp_path):
+    from harness.evaluation.core.sources import read_json_file, read_json_lines
+    path = tmp_path / 'value.json'
+    path.write_text('{"a": 1}')
+    assert read_json_file(path) == {'a': 1}
+    with pytest.raises(EvaluationError, match='larger than 4 bytes'):
+        read_json_file(path, 4)
+    path.write_text('{"a": 1}\n\n[2]\n')
+    assert read_json_lines(path) == [{'a': 1}, [2]]
+    with pytest.raises(EvaluationError, match='larger than 4 bytes'):
+        read_json_lines(path, 4)
+    path.write_text('{"a": 1}\n{"b"\n')
+    with pytest.raises(EvaluationError, match=r'value\.json:2'):
+        read_json_lines(path)
+
+
+def test_input_digests_are_the_sha256_of_each_file(tmp_path):
+    from harness.evaluation.core.sources import read_run
+    run = Run(tmp_path / 'run')
+    a = run.actor()
+    run.step(a, 'input', [key('j')], F('in_play', 3600, fill=1))
+    run.finish()
+    directory = tmp_path / 'run'
+    inputs = read_run(directory)
+    assert inputs.digests['manifest.json'] == hashlib.sha256((directory / 'manifest.json').read_bytes()).hexdigest()
+    assert inputs.digests['session.sqlite3'] == hashlib.sha256((directory / 'session.sqlite3').read_bytes()).hexdigest()
+    assert set(read_run(directory, digests=False).digests.values()) == {''}
+    run.store.close()
+
+
+def test_the_host_parser_reads_z_times_and_names_unsupported_traces(tmp_path):
+    from harness.evaluation.core.sources import HostTraceUnsupported, read_host
+    start = dict(type='host-start', schema='player-host/3', telemetry_version=3, actor_id='actor-1', monotonic_ms=0,
+        wall_time='2026-11-07T01:02:03.500Z')
+    path = tmp_path / 'host.jsonl'
+    path.write_text(json.dumps(start) + '\n' + json.dumps(dict(type='settled', monotonic_ms=1, wall_time='not a time')) + '\n')
+    actor, events = read_host(path, 'hint')
+    assert actor == 'actor-1' and events[0].wall == pytest.approx(datetime(2026, 11, 7, 1, 2, 3, 500000, timezone.utc).timestamp())
+    assert events[1].wall is None and events[1].line == 2
+    for lines, kind in (([], 'empty'), ([dict(type='thread.started')], 'format'),
+            ([dict(start, schema='player-host/2')], 'version'), ([dict(start, telemetry_version=3.0)], 'version')):
+        path.write_text(''.join(json.dumps(line) + '\n' for line in lines))
+        with pytest.raises(HostTraceUnsupported) as error:
+            read_host(path, 'hint')
+        assert error.value.kind == kind and isinstance(error.value, EvaluationError)
+    path.write_text(json.dumps(start) + '\n{"type":"x"}\n{"monotonic_ms": 1}\n')
+    with pytest.raises(EvaluationError, match=r'host\.jsonl:3'):
+        read_host(path, 'hint')

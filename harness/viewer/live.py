@@ -7,7 +7,6 @@ fails is recorded in `status` and retried on the next tick; it never stops the v
 """
 from __future__ import annotations
 
-import json
 from pathlib import Path
 import threading
 import time
@@ -15,6 +14,7 @@ from typing import Any
 
 from harness.evaluation.core.pipeline import evaluate, existing_state
 from harness.evaluation.core.records import EvaluationError, RecordWriter, record_path
+from harness.evaluation.core.sources import read_manifest
 
 
 class LiveEvaluator:
@@ -26,8 +26,8 @@ class LiveEvaluator:
 
     def session(self) -> str | None:
         try:
-            value = json.loads((self.run_dir / 'manifest.json').read_text()).get('session')
-        except (OSError, ValueError):
+            value = read_manifest(self.run_dir).get('session')
+        except (OSError, EvaluationError):
             return None
         return value if isinstance(value, str) else None
 

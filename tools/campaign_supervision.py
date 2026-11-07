@@ -10,6 +10,7 @@ import argparse
 from collections.abc import Callable
 from contextlib import ExitStack
 from datetime import datetime
+import hashlib
 import json
 import math
 import os
@@ -25,7 +26,7 @@ import traceback
 
 from harness.computer.launch import close_group
 from harness.computer.protocol import read_json
-from tools.campaign_package import digest, preflight
+from tools.campaign_package import preflight
 from tools.campaign_player import write_new
 from tools.campaign_watch import PAUSE_RECORDED, UNSPECIFIED
 
@@ -315,7 +316,8 @@ def run_supervised(directory: Path, *, attention: str, runs: Path | None = None,
     if not secret:
         raise ValueError('Selected provider credential is unavailable; supply its environment variable '
                          'or map it to a keychain item in .runtime/credentials.json')
-    manifest_sha = digest(directory/'manifest.json')
+    with (directory/'manifest.json').open('rb') as stream:
+        manifest_sha = hashlib.file_digest(stream, 'sha256').hexdigest()
     port = viewer_port()
     result = dict(schema='campaign-watch-terminal/3', session=profile['session'],
         source_commit=profile['source_commit'], manifest_sha256=manifest_sha,
@@ -462,7 +464,8 @@ def run_supervised(directory: Path, *, attention: str, runs: Path | None = None,
             for v in result['cleanup'].values() if v['launched'])
         result['ended_wall'] = clock.time(); result['ended_monotonic'] = clock.monotonic()
         try:
-            result['manifest_unchanged'] = digest(directory/'manifest.json') == manifest_sha
+            with (directory/'manifest.json').open('rb') as stream:
+                result['manifest_unchanged'] = hashlib.file_digest(stream, 'sha256').hexdigest() == manifest_sha
         except OSError as exc:
             result['manifest_unchanged'] = False
             result['manifest_error'] = type(exc).__name__

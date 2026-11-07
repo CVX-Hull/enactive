@@ -28,6 +28,22 @@ The evaluator reads one run directory read-only:
 Open SQLite read-only (`mode=ro`) with a bounded busy timeout. A missing or unsupported
 input format is an error naming the file and version. Nothing is guessed.
 
+**One JSON reader, one host parser.**
+- Every JSON document the evaluation side and the viewer read goes through
+  `records.loads`: a malformed document, a duplicate key or a non-finite number is an
+  error naming where it came from. Files go through `sources.read_json_file` and
+  `read_json_lines`, which refuse a file over 16 MiB.
+- The viewer reads a run's `manifest.json` only through `sources.read_manifest`, so an
+  unsupported version is rejected there too.
+- `harness/computer/protocol.py` keeps its own decoder, because the import contracts
+  forbid the computer importing evaluation and evaluation reaching the computer.
+- `sources.iter_host` is the one parser of `host.jsonl` (`player-host/3`), used by the
+  evaluator, the viewer and `host-summary`. It is bounded to 64 MiB per line and two
+  million events per trace, skips blank lines, and rejects a trace that is empty, whose
+  first event is not a `host-start`, or whose `host-start` is not `player-host/3`
+  telemetry 3. A final line that does not parse is an error, except for a run still being
+  written, where the evaluator and the viewer ignore it.
+
 **Sequence and incremental reading.**
 - The operation sequence `seq` is the `operations` table's rowid.
 - An incremental pass reads rows with `seq` greater than the last one seen.
@@ -157,6 +173,19 @@ that reads no frame reader) and the page shows it next to the provenance chip. A
 
 A `human` rung is reported as not assessed until a human or a later reader confirms it.
 
+**How the binding detects a UI change.** There is no UI hash check. The binding detects a
+changed game window or font in three ways:
+- A frame that is not 960×640 abstains: the `mode` reading carries `frame_size` and no
+  other reader runs.
+- The glyph atlas (`atlas.json`) carries a version and an 8×16 cell size. Loading it fails
+  when either differs from the code's.
+- Within a 960×640 frame with the same cell size, a changed layout is not detected as
+  such. Its cells decode to unknown glyphs, so readers abstain per frame (`unknown_glyph`,
+  `unknown_label`, `no_signature`), and the loss shows as lower `reader.coverage`.
+
+The atlas is relearned when the game's font, size or layout changes
+([ADR008](../decisions/008-evaluation-and-spectator.md), correction after its decision table).
+
 ## Metrics, version 1
 
 A **decision** is one completed `computer_input` operation. Rates are shown with their
@@ -208,6 +237,25 @@ the lineage is stitched again.
 - bootstrap intervals.
 
 Censored runs stay censored.
+
+## Diagnostics owned by this contract
+
+`tools/evaluate.py` also prints two read-only diagnostics. They report recorded intervals and
+counts, are interpretive like every value here, and give no verdict. The evaluator reuses
+their numbers for latency and delivery counts.
+
+| Command | Output format | Reports |
+| --- | --- | --- |
+| `host-summary` | `host-analysis/1` | Per `host.jsonl` trace: coverage (`player_host`, `empty`, `unsupported_format`, `unsupported_version` or `invalid`), request attempts and censoring, host time and request share, and distributions (count, sum, p50, p95, max) of response, tool, timing, usage and context figures. `--format markdown` prints a table. |
+| `control-summary` | `control-analysis/1` | Per `computer-session/1` database: original native dispositions and the timing distributions between intent, send and receipt. |
+
+**Percentiles.** There is one definition, nearest rank (`metrics.nearest_rank`): the
+`ceil(q·n)`-th smallest value, and the smallest value when that rank is 0. Every `p50` and
+`p95` uses it: the `host.latency` metric, the viewer's tool latencies, and the distributions
+of both diagnostics. A metric named a median (the pace and handoff rows) is the arithmetic
+median, the mean of the middle pair for an even count. `host-summary` and `control-summary`
+`p50` values were medians before #404, so on an even count they now are the lower middle
+value, and no other figure changed.
 
 ## Control path and viewer
 

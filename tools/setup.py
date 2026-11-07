@@ -28,17 +28,12 @@ FREETYPE_URL = "https://download.savannah.gnu.org/releases/freetype/freetype-2.1
 FREETYPE_SHA256 = "36bc4f1cc413335368ee656c42afca65c5a3987e8768cc28cf11ba775e785a5f"
 
 
-def sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
-
-
 def verify(path: Path, expected: str) -> None:
-    if not path.is_file() or sha256(path) != expected:
-        raise ValueError(f"Missing or SHA-256 mismatch: {path}; remove corrupt cache and use --download")
+    if path.is_file():
+        with path.open("rb") as stream:
+            if hashlib.file_digest(stream, "sha256").hexdigest() == expected:
+                return
+    raise ValueError(f"Missing or SHA-256 mismatch: {path}; remove corrupt cache and use --download")
 
 
 def download(url: str, target: Path, expected: str) -> None:
@@ -262,7 +257,8 @@ def main(argv: list[str] | None = None) -> int:
         print(shlex.join(command), flush=True)
         subprocess.run(command, check=True)
         binary = Path(value["source"]) / "cataclysm-tiles"
-        value.update(state="built", binary_sha256=sha256(binary))
+        with binary.open("rb") as stream:
+            value.update(state="built", binary_sha256=hashlib.file_digest(stream, "sha256").hexdigest())
         write_manifest(manifest, value)
     if args.install:
         value = load_manifest(manifest, pin)
