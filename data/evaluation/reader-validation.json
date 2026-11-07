@@ -1,8 +1,8 @@
 {
-  "clock": {"version": 1, "accuracy": 1.0, "n": 115, "floor": 0.98, "pass": true, "sample": "held-out frames, exact date and time: 115/115"},
-  "thirst": {"version": 1, "accuracy": 1.0, "n": 84, "floor": 0.95, "pass": true, "sample": "held-out frames: 84/84"},
-  "hunger": {"version": 1, "accuracy": 1.0, "n": 84, "floor": 0.95, "pass": true, "sample": "held-out frames: 84/84"},
-  "weariness": {"version": 1, "accuracy": 1.0, "n": 84, "floor": 0.95, "pass": true, "sample": "held-out frames: 84/84"},
+  "clock": {"version": 1, "accuracy": 1.0, "n": 175, "floor": 0.98, "pass": true, "sample": "held-out frames, exact date and time: 115/115 (day-61 mornings), then a fresh blind sample of 60 frames from #382 lineage 1 (lh1a1-lh1a3): 60/60, covering afternoon and evening to 7:50 PM on day 61 and the morning of day 62", "note": "Ground truth checked by the lead from frames, outside the held-out counts: 10:30:00 PM day 61 (falling asleep), 6:00:58 AM day 62 (the day rollover, after one sleep), 8:08:44 AM day 62 (the day point) and 1:53:29 PM day 61, all read exactly. No held-out frame falls between 7:50 PM and 6:00 AM, because the survivor slept through it."},
+  "thirst": {"version": 1, "accuracy": 1.0, "n": 137, "floor": 0.95, "pass": true, "sample": "held-out frames: 84/84, then 53/53 in-play frames of the #382 lineage 1 sample, including Slaked and Thirsty; the lead read Very thirsty at the 6:00:58 AM day-62 ground-truth frame"},
+  "hunger": {"version": 1, "accuracy": 1.0, "n": 137, "floor": 0.95, "pass": true, "sample": "held-out frames: 84/84, then 53/53 in-play frames of the #382 lineage 1 sample, including Peckish and Satisfied"},
+  "weariness": {"version": 1, "accuracy": 1.0, "n": 137, "floor": 0.95, "pass": true, "sample": "held-out frames: 84/84, then 53/53 in-play frames of the #382 lineage 1 sample (all Fresh)"},
   "pain": {"version": 1, "accuracy": 1.0, "n": 84, "floor": 0.95, "pass": true, "sample": "held-out frames: 84/84"},
   "death": {"version": 1, "accuracy": 1.0, "n": 240, "floor": 0.95, "pass": null, "sample": "held-out frames: 240/240 with no positive examples, so recall is unmeasured", "note": "death recall is unmeasured: no held-out frame is a death screen, so the reader is unvalidated"},
   "mode": {"version": 1, "accuracy": 1.0, "n": 200, "floor": 0.97, "pass": true, "sample": "fresh held-out sample after fix 6beeb3b: 200/200 correct, 0 abstained; the first sample scored 206/219 (0.94) before the fix and failed"},

@@ -344,9 +344,11 @@ killed, and the run ended only on the owner's Pause.
   - **Mode:** 200/200 on a fresh sample after one fix.
   - **Death:** 240/240, but with no deaths in the samples, so recall is unmeasured.
   - **Threat:** 91/91 on empty creature lists only; counting creatures is not yet validated.
-  - **Gap:** every held-out clock read Spring day 61 between 8 and 10 AM. Night, PM and
-    day-rollover readings are covered only by synthetic tests until the first #382
-    admission is checked by hand.
+  - **Gap, now closed:** every held-out clock above read Spring day 61 between 8 and
+    10 AM. #382's lineage 1 adds a fresh blind sample, 60/60 exact, covering the
+    afternoon, the evening and the morning of day 62. It also adds hand-checked night and
+    day-rollover frames, all exact. The night itself has no held-out frame, because the
+    survivor slept through it ([lineage 1](#lineage-1-day-viable)).
 - **The game-help aid's target metric moved the wrong way.** The mean longest
   out-of-play streak was 18.0 decisions against the ceiling's 11.6 (+6.4, 95%
   bootstrap interval +1.2 to +12.2). Reading the in-game help is itself out of play,
@@ -497,4 +499,44 @@ cache-rewrite share and image evictions.
 
 ### Admissions
 
-No admission has run yet. Each admission adds one row here and one comment on #382.
+Each admission gets one comment on #382. The rows are added here when each lineage ends.
+
+#### Lineage 1: Day-viable
+
+Morgan Reed, an Evacuee in the world Stirling City (evac shelter A-23), 7 November 2026.
+
+| Admission | Status | Attempts | Decisions (reload) | Game h | Clock | Boundary (hand check) | $ actual | Wall s |
+| --- | --- | ---: | --- | ---: | --- | --- | ---: | ---: |
+| `lh1a1` | Alive at stop: context capacity, Save and Quit | 253 | 246 (7) | 5.93 | 8:00 AM → 1:55 PM, day 61 | First admission; see the setup correction below | 5.38 | 1,844 |
+| `lh1a2` | Alive at stop: the player judged the screen stalled during a 12-portion craft; no save | 125 | 123 (4) | 1.87 | 1:55 → 3:47 PM, day 61 | Stirling City, Morgan Reed; 1:55:36 PM, gap 0 s | 1.85 | 997 |
+| `lh1a3` | Alive at stop: context capacity, Save and Quit | 274 | 269 (10) | 16.98 | 3:43 PM day 61 → 8:42 AM day 62 | Stirling City, Morgan Reed; 3:43:46 PM, rewound 230 s to the autosave | 5.95 | 1,948 |
+
+| Run | Arm | Start | End | Game h | Decisions | Setup | Routine pace | Long activities | Out of play | Longest stall | $ / decision | Large rewrites |
+| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| lh1a1 | long-horizon | S1 | player_stop | 5.93 | 246 | 7 | 4.8 | 5 · 5.22 h | 62% | 16 | 0.0219 | 64% |
+| lh1a2 | long-horizon | S1 | player_stop | 1.87 | 123 | 4 | 2.6 | 1 · 1.43 h | 74% | 13 | 0.0151 | 60% |
+| lh1a3 | long-horizon | S1 | player_stop | 16.98 | 269 | 10 | 6.0 | 7 · 15.83 h | 67% | 17 | 0.0221 | 66% |
+
+**Lineage row** (`evaluate-lineage`):
+- **Elapsed:** 24.71 h in 638 decisions, an overall pace of **139.4** game seconds per decision.
+- **Long activities:** 22.48 h, a share of **0.910** (the D5 comparator mean is 0.284).
+- **Day check:** passed at `lh1a3` step 241, at 24.146 h with a lag of 0.146 h, with no severe need.
+- **Memory reuse across admissions:** 0 records.
+- **Cost:** $13.18, which is $0.53 per game hour, so seven days would cost about $90.
+
+**Hand checks** (labels 3–6 in [`labels.jsonl`](../data/evaluation/labels.jsonl)):
+- **Setup correction in `lh1a1`.** The player first entered play as Krista Hobson in a stadium start (world Diamond Bluff). On the next decision it chose Save and Quit and created the assigned Evacuee in Stirling City.
+  - No game time passed and no lineage survivor existed yet, so this is not a continuity failure.
+  - The evaluator reports no episode change.
+- **Both boundaries.** The load menu selected Stirling City, whose only character is Morgan Reed, and the first clock continued the previous admission's. Boundary 2 lost 230 s because `lh1a2` ended without saving.
+- **Night and rollover.**
+  - 10:30:00 PM, day 61: the survivor falls asleep in the shelter.
+  - 6:00:58 AM, day 62: they wake "Very thirsty".
+  - Both evaluator readings match the frames.
+- **Day point.** At 8:08:44 AM on day 62, thirst, hunger and rest are blank, weariness is "Fresh" and the body bars are full.
+
+**Time passing.**
+- The survivor slept 7.5 h in one decision.
+- It crafted in long batches (quarterstaff, bowl, needle, starch) and boiled water.
+- 62–74% of decisions were out of play, mostly in crafting and item menus.
+- The `lh1a2` stall shows a cost of long activities: after ENTER on a 50-minute batch, seven decisions returned the same frame. The player stopped, and the game log shows a normal shutdown, not a crash.
