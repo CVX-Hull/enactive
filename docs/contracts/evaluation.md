@@ -231,6 +231,48 @@ percentile, per status or per handoff. The primary key is (`name`, `key`).
   It is not a `custody_stop`, which is reserved for partial or unknown delivery and
   custody fences.
 
+### Rules settled in implementation
+
+- **Archived runs.**
+  - The evaluator also reads archived `campaign-run/4` manifests. This reads historical
+    evidence; it is not an admission, and admission still requires `/5`.
+  - Their operator labels come from `data/evaluation/archive-labels.json`.
+- **Metadata key.** `metadata.last_seq` names the last operation read.
+- **Store replacement.** A `live` store is replaced by any later pass. A `final` store
+  needs an explicit replace.
+- **`tool_calls` table.** It also stores `operation_id`, linking a call to the step it produced.
+- **Long-form metric keys:**
+  - `reader.coverage` per reader;
+  - `host.latency` with keys `response.p50`, `response.p95`, `first_chunk.p50` and `first_chunk.p95`;
+  - `programs.outcomes` per status;
+  - `tools.calls` per tool, plus `player_source+zoom`;
+  - `memory.records` per kind;
+  - `handoff.*` as one summary row plus one row per handoff.
+- **Run-loss metrics.** `run.infrastructure_loss` covers infrastructure or custody loss;
+  `run.provider_loss` covers provider-error loss only.
+- **Censor reasons.** The first matching reason applies, in this order:
+  1. `died`;
+  2. `owner_pause` (the gateway's watch terminal record has a Pause reason);
+  3. `custody`;
+  4. `infrastructure` (the last actor settled not ok);
+  5. `player_stop`;
+  6. `budget`.
+- **Episodes.**
+  - A new episode starts when game time moves back by more than one day, or identity
+    changes, and the next reading confirms it.
+  - Survival uses the last episode that has an in-play clock reading.
+  - A death counts if it falls in or after that episode.
+- **Derived events.** `stall`, `ineffective_repeat`, `long_activity`, `episode` and
+  `continuity` have source `derived`.
+- **Spend allowance** is the manifest's `ceiling_usd` minus `prior_reserved_usd`. The
+  spend rate uses the last ten minutes of requests.
+- **Change baselines.** A change record may name `baseline` arms or run patterns to compare against.
+- **View request rules:**
+  - A `limit` outside 1–500 returns `400`.
+  - The context route accepts `?actor=` and returns `409` when a request ID is ambiguous across actors.
+  - The compare route accepts `horizon` in game hours, default 0.5.
+  - Runs resolve by session ID or run directory name.
+
 ## Human labels and change records
 
 Human-authored evaluation data lives in git-tracked files under `data/evaluation/`. The
