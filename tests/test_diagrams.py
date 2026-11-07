@@ -109,7 +109,7 @@ console.log(JSON.stringify({version: await puppeteer.browserVersion(),
                 diagrams.check_accessibility(path)
 
     def test_font_stylesheet_order_is_canonical(self):
-        # Mermaid CLI embeds the regular and italic font sheets in load-completion order.
+        # Mermaid CLI embeds the regular and italic font sheets in an order set by a Promise.all race.
         def sheet(style):
             return ('<style>/* license */\n@font-face { font-family: "Open Sans"; '
                     f'font-style: {style}; src: url("data:font/woff2;base64,{style}"); }}</style>')
@@ -122,12 +122,19 @@ console.log(JSON.stringify({version: await puppeteer.browserVersion(),
         self.assertEqual(diagrams.canonical_font_order(one), diagrams.canonical_font_order(two))
         canonical = diagrams.canonical_font_order(one)
         self.assertEqual(diagrams.canonical_font_order(canonical), canonical)
-        # Only the font blocks are reassigned: same blocks, same slots, other styles untouched.
-        self.assertEqual(sorted(canonical), sorted(one))
-        self.assertTrue(canonical.startswith(head + first + "<style>/* license */"))
-        self.assertTrue(canonical.endswith(tail))
+        # Only the font blocks are reassigned: the same blocks, in the same slots, and every byte outside them kept.
+        blocks = lambda svg: [m.group(1) for m in diagrams.STYLE.finditer(svg)]  # noqa: E731
+        outside = lambda svg: diagrams.STYLE.sub("<style></style>", svg)  # noqa: E731
+        self.assertEqual(sorted(blocks(canonical)), sorted(blocks(one)))
+        self.assertEqual(blocks(canonical)[0], blocks(one)[0])
+        self.assertEqual(outside(canonical), outside(one))
         no_fonts = head + first + tail
         self.assertEqual(diagrams.canonical_font_order(no_fonts), no_fonts)
+        # A stylesheet with attributes is still recognised, and an embedded sheet with no font face is refused.
+        attributed = head + first + sheet("italic").replace("<style>", '<style type="text/css">') + sheet("normal") + tail
+        self.assertEqual(blocks(diagrams.canonical_font_order(attributed)), blocks(canonical))
+        with self.assertRaisesRegex(ValueError, "without @font-face"):
+            diagrams.canonical_font_order(head + first + sheet("normal") + "<style>.fa{display:inline}</style>" + tail)
 
     def test_tracked_svgs_are_in_canonical_font_order(self):
         for path in sorted((ROOT / diagrams.DIRECTORY).glob("*.svg")):
@@ -135,18 +142,24 @@ console.log(JSON.stringify({version: await puppeteer.browserVersion(),
                 text = path.read_bytes().decode("utf-8")
                 self.assertEqual(diagrams.canonical_font_order(text), text)
 
-    def test_repeated_real_renders_are_byte_identical(self):
+    def test_a_real_render_in_either_font_order_normalises_to_the_same_bytes(self):
+        # A second render hits the swapped order only about one run in ten, so swap a real render's blocks instead.
         cache = ROOT / ".cache/diagrams"
         cache.mkdir(parents=True, exist_ok=True)
         with tempfile.TemporaryDirectory(prefix="repeat-", dir=cache) as directory:
             source = Path(directory) / "player.mmd"
             shutil.copyfile(ROOT / diagrams.DIRECTORY / "player.mmd", source)
-            outputs = []
-            for index in range(2):
-                output = Path(directory) / f"player-{index}.svg"
-                diagrams.render(ROOT, source, output)
-                outputs.append(output.read_bytes())
-            self.assertEqual(outputs[0], outputs[1])
+            output = Path(directory) / "player.svg"
+            diagrams.render(ROOT, source, output)
+            rendered = output.read_bytes().decode("utf-8")
+        fonts = list(diagrams.STYLE.finditer(rendered))[1:]
+        self.assertEqual(len(fonts), 2)  # regular and italic; a renderer change that adds or drops one must be seen
+        self.assertTrue(all("@font-face" in match.group(1) for match in fonts))
+        first, second = fonts
+        swapped = (rendered[:first.start(1)] + second.group(1) + rendered[first.end(1):second.start(1)]
+                   + first.group(1) + rendered[second.end(1):])
+        self.assertNotEqual(swapped, rendered)
+        self.assertEqual(diagrams.canonical_font_order(swapped), rendered)
 
     def test_digest_is_the_sha256_of_the_file_bytes(self):
         with tempfile.TemporaryDirectory() as directory:

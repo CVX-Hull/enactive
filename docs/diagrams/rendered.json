@@ -6,7 +6,7 @@
     ".puppeteerrc.cjs": "7ec13dc5764452feb5c4ed518bab239ff914240f0a50c8d7014dd4d687ddd476",
     "docs/diagrams/config.json": "78effd6af57e41e916790d265d0c0533bff47f5fe66b128ef7cb7b70963e4283",
     "docs/diagrams/browser.json": "1bd136d7b569818e3052e9e49d93bee0a5ee7336d6098e2b709eef9fdb52da75",
-    "tools/diagrams.py": "06aad54cb91e6c2c9a78d309a2802eb273ed9d00e78be1ec9af42d3c9a19feee",
+    "tools/diagrams.py": "57861d0c5c28e10c7e273f4dad9410c535f692119734c46e517093de7b985813",
     "docs/diagrams/action.mmd": "405ec46254a07fda396c6597c05f730d1a88131e5ff81905648233c02fd54f7d",
     "docs/diagrams/architecture-review.mmd": "fc717695a54a0d92981744cd0db5fab06c53a30139950419c1f699837d888996",
     "docs/diagrams/asynchronous-reflection.mmd": "c37b8367212ed0030d36d1c43187274e83561945e62bafbfded82f842949758f",

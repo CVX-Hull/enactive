@@ -99,19 +99,26 @@ def check_accessibility(path: Path) -> None:
         raise ValueError(f"{path.name}: missing SVG ID; scoped Mermaid styles would not apply")
 
 
-STYLE = re.compile(r"<style>(.*?)</style>", re.DOTALL)
+STYLE = re.compile(r"<style(?:\s[^>]*)?>(.*?)</style>", re.DOTALL)
 
 
 def canonical_font_order(svg: str) -> str:
     """Put the embedded font stylesheets of a rendered SVG in one fixed order.
 
-    Mermaid CLI appends one stylesheet link per font (regular and italic) as
-    concurrent loads finish, so the embedded `<style>` blocks that carry
-    `@font-face` rules arrive in a run-dependent order. The blocks hold distinct
-    faces, so sorting them by text changes bytes but not rendering; they are
-    reassigned to the slots they already occupy and nothing else moves.
+    Inside a `Promise.all`, Mermaid CLI appends each CSS import's `<link>` once
+    its asynchronous path resolution finishes, then embeds the linked sheets after
+    its own first `<style>` in that page order. So the embedded Open Sans regular
+    and italic `@font-face` blocks arrive in a run-dependent order. They hold
+    distinct faces, so sorting them by text changes bytes but not rendering; they
+    are reassigned to the slots they already occupy and nothing else moves.
+    An embedded sheet without `@font-face` (an icon stylesheet, say) is refused,
+    because this normalisation would not make its position deterministic.
     """
-    matches = [match for match in STYLE.finditer(svg) if "@font-face" in match.group(1)]
+    matches = list(STYLE.finditer(svg))[1:]  # the first block is Mermaid's own diagram style
+    other = [match.group(1)[:60] for match in matches if "@font-face" not in match.group(1)]
+    if other:
+        raise ValueError(f"Rendered SVG embeds a stylesheet without @font-face ({other[0]!r}); "
+                         "its order would vary between renders, so extend canonical_font_order (#414)")
     ordered = iter(sorted(match.group(1) for match in matches))
     pieces, position = [], 0
     for match in matches:

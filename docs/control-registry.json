@@ -871,7 +871,7 @@
       "name": "Rendered visual documentation",
       "mode": "automatic",
       "scope": "Mermaid sources and generated SVGs in docs/diagrams.",
-      "mechanism": "Pinned local Mermaid CLI renders every source in a headless project-local browser. Hash receipt covers sources, config, wrapper, package lock and tracked SVGs; title/description and root SVG ID are required. Explicit --write regenerates; normal checks leave tracked files unchanged. The wrapper puts the embedded font stylesheets in one canonical order, so repeated renders of unchanged sources are byte-identical.",
+      "mechanism": "Pinned local Mermaid CLI renders every source in a headless project-local browser. Hash receipt covers sources, config, wrapper, package lock and tracked SVGs; title/description and root SVG ID are required. Explicit --write regenerates; normal checks leave tracked files unchanged. The wrapper puts the embedded font stylesheets in one canonical order and refuses a render that embeds any other stylesheet, so repeated renders of unchanged sources are byte-identical; this is a property of the wrapper, and the check does not compare fresh renders with the tracked SVGs.",
       "owner": "documentation maintainer",
       "trigger": "common command; source, renderer configuration or dependency changes require rendered review",
       "evidence": [
