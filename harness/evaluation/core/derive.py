@@ -16,7 +16,7 @@ from typing import Sequence
 import numpy as np
 from PIL import Image
 
-from .binding import DEATH_CAUSES, Binding, FrameReading, Reading, Vital
+from .binding import Binding, FrameReading, Reading, Vital
 from .records import CORE_VERSION, EvaluationError, EventRow, ReadingRow, StepRow
 from .sources import Operation
 
@@ -401,7 +401,7 @@ def core_events(timeline: Timeline, binding: Binding) -> list[EventRow]:
             cause = next((r for r in frame.readings if r.reader == 'death_cause' and r.abstain is None), None)
             events.append(EventRow(steps[index].seq, steps[index].seq, 'death', 'reader',
                 cause.confidence if cause is not None else None,
-                dict(cause=cause.value if cause is not None and cause.value in DEATH_CAUSES else 'unknown',
+                dict(cause=cause.value if cause is not None and isinstance(cause.value, str) and cause.value else 'unknown',
                     game_time=timeline.clock[index])))
     # milestone per reader rung, over the episode survival is measured in
     offset = timeline.play_episode.start if timeline.play_episode is not None else 0

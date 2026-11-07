@@ -12,7 +12,6 @@ from typing import Literal, Protocol, Sequence
 
 MODES = ('in_play', 'menu', 'prompt', 'loading', 'dead', 'unknown')
 THREAT_BUCKETS = ('none', 'low', 'high', 'lethal')
-DEATH_CAUSES = ('combat', 'starvation_thirst', 'environment', 'unknown')
 SOURCES = ('harness', 'reader', 'derived', 'player_claim', 'human')
 
 
