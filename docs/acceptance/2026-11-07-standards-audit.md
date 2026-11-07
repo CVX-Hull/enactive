@@ -68,8 +68,10 @@ Each issue states the options, cost, a recommendation and what agreement authori
 
 ## Disposition ledger
 
-Fixes landed in the audit's documentation PR (docs) and code PR (code), both
-referencing #400.
+Fixes marked "docs" landed in [PR #406](https://github.com/CVX-Hull/enactive/pull/406)
+(`5d9bd0d`), and fixes marked "code" in [PR #407](https://github.com/CVX-Hull/enactive/pull/407)
+(`f00cf4b`). Each had an independent agent review before merge, and every finding
+from those reviews was addressed.
 
 **Lens 1, principles.**
 1. The evaluator's `campaign-run/4` archive reader: owner decision, #403.
@@ -163,9 +165,22 @@ referencing #400.
   - label hygiene.
 - 16. Visible fields and sorting in the Backlog and Current iteration views: deferred. GitHub's API cannot edit view settings, so this is a manual step in the Project UI.
 
+## Control exercises recorded at close-out
+
+All three ran on merged `main` at `f00cf4b`.
+
+- **C-PORTABLE.** The full portable profile passed with four workers: 660 tests and 333 subtests, including the viewer, diagram and player-host adapter suites. The exact #407 candidate's protected controller run 42383863357 passed.
+- **C-BOUNDARY.** All eight Import Linter contracts are kept. The negative fixtures (now covering all eight contracts), the `player-host/3` contract and adapter suites, and the host-neutrality regression passed: 38 tests and 62 subtests.
+- **C-RELEASE.** #406 and #407 merged under the active ruleset `main-reviewed-and-verified` (pull request, strict `controller` check, no bypass actors) through auto-merge pinned to the reviewed head. #407's first pin was refused because GitHub had not yet registered the pushed head. It was re-pinned after a branch update.
+
 ## Method and limits
 
 - **Commands.** The lenses ran the fast checks, governance, and focused non-native pytest suites: 120 tests plus 240 subtests, then 339 tests. The player-host Node suite passed 194 of 194. All of these passed at `bd549ca`.
 - **Not run.** The full suite, native checks, headless-browser suites and diagram rendering were not run in the lenses. Protected CI ran on each fix PR.
 - **Limits of the dead-code check.** It used grep reference counts because vulture is not installed, so names referenced only by tests and unused JavaScript exports were not checked.
 - **Limits of the drift spot-check.** It covered about 40 cells, not every number.
+- **Old worktrees left untouched.** Nine older agent worktrees and six `.runtime`
+  source worktrees remain from earlier work. The audit's own worker worktree
+  (`audit-400-code`, merged as #407) is locked by the agent harness, which removes it. They may hold retained evidence, so the
+  audit removed none. Their retirement belongs with #401's backfill, which has to
+  happen first.
