@@ -5,3 +5,8 @@ mcp==2.3.0
 mini-racer==0.14.1
 # Decode player-selected image views; no game-specific perception in control.
 Pillow==13.0.0
+# Interpretive run evaluation (ADR008): survival statistics and the read-only viewer.
+numpy==2.5.4
+scipy==1.18.1
+starlette==1.9.0
+uvicorn==0.54.0

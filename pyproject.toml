@@ -27,6 +27,24 @@ source_modules = ["harness.player_client", "harness.player_tools", "harness.play
 forbidden_modules = ["harness.computer.runtime", "harness.computer.channel", "harness.computer.store", "harness.computer.launch", "harness.application", "harness.server", "harness.__main__", "tools"]
 
 [[tool.importlinter.contracts]]
+name = "Evaluation never reaches the player, its adapters or the computer (ADR008)"
+type = "forbidden"
+source_modules = ["harness.player", "harness.player_client", "harness.player_tools", "harness.player_mcp", "harness.computer", "harness.application", "harness.server"]
+forbidden_modules = ["harness.evaluation"]
+
+[[tool.importlinter.contracts]]
+name = "Evaluation core is game-neutral and imports no binding"
+type = "forbidden"
+source_modules = ["harness.evaluation.core"]
+forbidden_modules = ["harness.evaluation.cdda"]
+
+[[tool.importlinter.contracts]]
+name = "Evaluation reads records only and holds no custody or network access"
+type = "forbidden"
+source_modules = ["harness.evaluation"]
+forbidden_modules = ["harness.computer.runtime", "harness.computer.channel", "harness.computer.launch", "harness.application", "harness.server", "harness.player_mcp", "harness.player_client", "tools", "http", "urllib", "socket", "subprocess"]
+
+[[tool.importlinter.contracts]]
 name = "HTTP server does not depend on CLI or build tooling"
 type = "forbidden"
 source_modules = ["harness.server"]
