@@ -461,10 +461,14 @@ followed by the last non-empty `player-final.txt` of the previous admission, une
 If the previous admission left no report, the last paragraph is omitted as well.
 
 The runner refuses an admission out of lineage order, a new admission while any started
-admission lacks a spend row, and a source other than `509a9fd`. It always reconciles a
-started admission, whatever its terminal state; when reconciliation fails it charges
-each recorded attempt $0.4096. The 2,000-decision cap is enforced through the attempt
-allowance, `min(400, 2,000 − the lineage's charged attempts)`. Charged attempts bound
+admission lacks a final spend row, and a source other than `509a9fd`. It always
+reconciles a started admission, whatever its terminal state, after waiting for the
+custodian's receipt up to its wall horizon. Each started attempt without a provider
+record is charged $0.4096. Without a receipt the row charges the whole allocation and is
+provisional, and a provisional row blocks the next admission until `lh_admit.py
+--reconcile` supersedes it; the latest row per admission counts. The 2,000-decision cap
+is enforced through the attempt allowance, `min(400, 2,000 − the lineage's started
+attempts)`, counted from the host traces. Started attempts bound
 decisions, so a lineage may end a few decisions short of 2,000. An allowance of 20 or
 fewer, the ending reserve, ends the lineage.
 
