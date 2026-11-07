@@ -33,8 +33,8 @@ ROOT = Path(__file__).resolve().parents[1]
 WINDOW = 45
 ATTENTION = {'required': WINDOW, 'best-effort': None}
 PAUSE_REPLY = .75
-# Wall-clock stamps are mapped onto the monotonic clock from two samples taken at
-# slightly different instants, so the mapping carries bounded skew (seconds).
+# Wall-clock stamps are mapped onto the guard's monotonic clock from readiness; drift
+# or steps between wall and monotonic time since then carry bounded skew (seconds).
 CLOCK_MAPPING_TOLERANCE = .25
 MARKERS = ('watch-start.json', 'watch-attempts.jsonl', 'watch-terminal.json')
 # Optional, git-ignored map from a credential variable to the operator's own
@@ -147,8 +147,8 @@ def terminal_coverage(receipt: dict, *, session: str, source_commit: str, rows: 
         # the custody and watch deadlines stay strict.
         after_check = terminal_at + CLOCK_MAPPING_TOLERANCE
         if window is None:
-            return (not rows or rows[-1]['receipt'] <= after_check) and terminal_at < custody_end
-        return rows[-1]['receipt'] <= after_check and terminal_at < min(rows[-1]['observation'] + window, custody_end)
+            return (not rows or rows[-1]['receipt'] < after_check) and terminal_at < custody_end
+        return rows[-1]['receipt'] < after_check and terminal_at < min(rows[-1]['observation'] + window, custody_end)
     except (KeyError, TypeError, ValueError):
         return False
 

@@ -88,8 +88,9 @@ partial confirmation cannot suspend its deadlines. Renewal uses actual
 confirmation completion; checks racing with Pause are rolled back. Original
 custody also bounds terminal coverage. The receipt's wall-clock end is mapped
 onto the monotonic clock from readiness, so "terminal after the last accepted
-check" allows `CLOCK_MAPPING_TOLERANCE` (0.25 s, the same bound the check-row
-mapping uses); the custody and watch deadlines stay strict. Incomplete startup JSON is retried under
+check" allows less than `CLOCK_MAPPING_TOLERANCE` (0.25 s, the same bound the
+check-row mapping uses) for drift or steps between the clocks; the custody and
+watch deadlines stay strict. Incomplete startup JSON is retried under
 the original clocks because producers expose the pathname before buffered close;
 complete invalid marker objects fail.
 
