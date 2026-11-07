@@ -47,8 +47,8 @@ observation/control and mechanical custody, delivery, cancellation and resource
 limits. The entire playing system owns game semantics, including menus,
 inventory, activities, identity, save/load, progress and loops. A game-specific
 classification cannot be a prerequisite for basic input. [ADR006](decisions/006-computer-control-boundary.md)
-records the migration and limits; this direction is not a claim that the current
-runtime already implements it.
+records the migration and limits; it was delivered on 29 October 2026, and the
+[computer-control contract](contracts/computer-control.md) owns the running behavior.
 
 Current assumptions: one game/controller and one designated deciding player;
 the active player owns planning and ordinary interpretation, with a separately
@@ -58,8 +58,10 @@ additional concurrent games, unattended operation, distribution or platform expa
 
 Current validation uses CDDA on this Mac; family-wide support is not yet qualified.
 Current technical decisions are [native Tiles](decisions/001-native-platform.md)
-and [a local serialized bridge](decisions/002-local-contract.md). They may change
-when evidence or requirements change. They are not permanent principles.
+and a local serialized channel to the game (one inherited socket pair, specified by
+the [computer-control contract](contracts/computer-control.md#native-channel)), the
+backend chosen for the constraint above. They may change when evidence or
+requirements change. They are not permanent principles.
 General autonomous survival, combat policy and cross-platform support remain
 outside current capability; future scope needs explicit acceptance conditions.
 
