@@ -163,12 +163,27 @@ def _log_path(command: list[str]) -> Path:
 
 
 class _Output:
-    """Copies a command's merged output to its log and the terminal until stopped."""
+    """Copies a command's merged output to its log and the terminal until stopped.
+
+    The thread owns the pipe: it always reads to the end (or until stopped) and closes it, even when a write
+    fails, because a pipe nobody drains would block the command. The first write error is kept in `error`.
+    """
 
     def __init__(self, stream, log):
         self.stream, self.log, self.lock, self.stopped = stream, log, threading.Lock(), False
+        self.error: Exception | None = None
+        self.sinks = {"log": self._to_log, "terminal": self._to_terminal}
         self.thread = threading.Thread(target=self._copy, daemon=True)
         self.thread.start()
+
+    def _to_log(self, line: bytes) -> None:
+        self.log.write(line)
+        self.log.flush()  # a killed checker still leaves the output so far
+
+    @staticmethod
+    def _to_terminal(line: bytes) -> None:
+        sys.stdout.write(line.decode(errors="replace"))
+        sys.stdout.flush()
 
     def _copy(self) -> None:
         try:
@@ -176,13 +191,14 @@ class _Output:
                 with self.lock:
                     if self.stopped:
                         return
-                    self.log.write(line)
-                    sys.stdout.write(line.decode(errors="replace"))
-                    sys.stdout.flush()
+                    for name, write in list(self.sinks.items()):
+                        try:
+                            write(line)
+                        except (OSError, ValueError) as error:  # e.g. `check.py | head`, a closed terminal, a full disk
+                            del self.sinks[name]
+                            self.error = self.error or OSError(f"could not write command output to the {name}: {error}")
         finally:
-            with self.lock:
-                if self.stopped:  # cut off: the caller has left, so this thread owns the pipe
-                    self.stream.close()
+            self.stream.close()
 
     def finish(self, timeout: float) -> bool:
         """Wait for the end of output; True when it ended, False when it was cut off after `timeout` seconds."""
@@ -215,9 +231,7 @@ def run(command: list[str], **kwargs) -> None:
                 process.wait()
                 output.finish(0)  # stop the reader before the log closes
                 raise
-            if drained:
-                process.stdout.close()
-            else:
+            if not drained:
                 note = (f"Output pipe still held by a descendant {DRAIN_SECONDS}s after the command exited "
                         f"(status {returncode}); stopped reading.\n")
                 log.write(note.encode())
@@ -225,6 +239,8 @@ def run(command: list[str], **kwargs) -> None:
         if returncode:
             print(f"Full output of the failed command: {path.relative_to(ROOT)}", flush=True)
             raise subprocess.CalledProcessError(returncode, command)
+        if output.error:
+            raise output.error
     finally:
         print(f"Command elapsed: {time.perf_counter() - started:.2f}s", flush=True)
 

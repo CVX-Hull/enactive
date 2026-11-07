@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import unittest
 from unittest.mock import patch
@@ -235,6 +236,34 @@ class DevToolTests(unittest.TestCase):
         self.assertIn("first line", output.getvalue())  # still streamed live
         self.assertIn(f"Full output of the failed command: {logs[0].relative_to(self.root)}", output.getvalue())
         self.assertNotIn("Full output", success.getvalue())
+
+    def test_a_broken_terminal_fails_the_check_instead_of_hanging_it(self):
+        class Broken(io.StringIO):  # like `check.py | head` once head exits: the runner's own lines get through first
+            def write(self, text):
+                if text.startswith(("+ ", "Command elapsed")) or text == "\n":
+                    return super().write(text)
+                raise BrokenPipeError(32, "Broken pipe")
+
+        # About 1 MB, far more than a pipe buffer, so a reader that stopped draining would block the command.
+        script = "import sys\nfor i in range(20000): print('x' * 50, i)"
+        outcome = {}
+
+        def attempt():
+            with patch.object(check, "ROOT", self.root), patch.object(check, "_log_directory", None), \
+                    redirect_stdout(Broken()):
+                try:
+                    check.run([sys.executable, "-c", script])
+                except OSError as error:
+                    outcome["error"] = error
+
+        worker = threading.Thread(target=attempt, daemon=True)
+        worker.start()
+        worker.join(60)
+        self.assertFalse(worker.is_alive(), "the checker hung after its terminal broke")
+        self.assertIn("could not write command output to the terminal", str(outcome.get("error")))
+        log = next((self.root / check.CHECK_LOGS).rglob("*.log")).read_text().splitlines()
+        self.assertEqual(len(log), 20000)  # the log kept everything
+        self.assertTrue(log[-1].endswith(" 19999"))
 
     def test_a_descendant_holding_the_output_pipe_cannot_hang_the_checker(self):
         # The command exits at once, but a grandchild keeps the inherited pipe open for much longer.
