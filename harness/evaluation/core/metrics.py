@@ -131,7 +131,7 @@ def compute_metrics(timeline: Timeline, operations: Sequence[Operation], events:
         last = index
     enough = len(pairs) >= INSUFFICIENT
     rows.append(_row('pace.routine_seconds_per_decision', statistics.median(pairs) if enough else None, len(pairs),
-        len(pairs), None if enough else 'insufficient_intervals'))
+        len(pairs), None if enough else 'insufficient'))
     long_events = [e for e in events if e.kind == 'long_activity']
     rows.append(_row('pace.long_activities', dict(count=len(long_events),
         total_game_seconds=sum(e.payload['seconds'] for e in long_events)), len(long_events), None))
@@ -170,9 +170,11 @@ def compute_metrics(timeline: Timeline, operations: Sequence[Operation], events:
     if custody is None:
         receipts = [r for op in operations for r in op.receipts]
         custody = dict(receipts=len(receipts), uncertain=sum(1 for r in receipts if receipt_uncertain(r)))
-    ended = int(any(e.kind == 'custody_stop' for e in events))
-    rows.append(_row('input.uncertain_deliveries', dict(value=custody['uncertain'] + ended,
-        uncertain_receipts=custody['uncertain'], runs_ended=ended), custody['uncertain'] + ended, custody['receipts']))
+    # Partial or unknown receipts over receipts; a custody stop is its own boolean and never enters the rate.
+    rows.append(_row('custody.uncertain_receipts', custody['uncertain'] / custody['receipts'] if custody['receipts'] else None,
+        custody['uncertain'], custody['receipts'], None if custody['receipts'] else 'no_receipts'))
+    stopped = any(e.kind == 'custody_stop' for e in events)
+    rows.append(_row('custody.stopped', stopped, int(stopped), None))
 
     # memory.*, programs.*
     writes = [e for e in events if e.kind == 'memory_write']
@@ -180,12 +182,13 @@ def compute_metrics(timeline: Timeline, operations: Sequence[Operation], events:
     rows.append(_row('memory.writes', len(writes) if facts.present else None, len(writes), None, no_host))
     rows.append(_row('memory.reads', len(reads) if facts.present else None, len(reads), None, no_host))
     previous_actor = {actor: facts.actors[i - 1] for i, actor in enumerate(facts.actors) if i > 0}
-    beyond = 0
+    beyond: set[str] = set()  # distinct record IDs read that the reading actor's handoff context did not carry
     for actor in facts.actors:
         returned_ids = {r for e in reads if e.payload['actor'] == actor for r in e.payload['record_ids']}
-        beyond += len(returned_ids - carry.get(previous_actor.get(actor, ''), frozenset()))
-    rows.append(_row('memory.retrieved_beyond_carry', beyond / len(writes) if writes else None, beyond, len(writes),
-        None if writes else ('no_writes' if facts.present else no_host)))
+        beyond |= returned_ids - carry.get(previous_actor.get(actor, ''), frozenset())
+    written = {e.payload['record_id'] for e in writes}
+    rows.append(_row('memory.retrieved_beyond_carry', min(1.0, len(beyond) / len(written)) if written else None, len(beyond),
+        len(written), None if written else ('no_writes' if facts.present else no_host)))
     calls = {actor: sum(1 for c in facts.calls if c.actor == actor and not c.refused) for actor in facts.actors}
     late = sum(1 for e in writes if e.payload['call'] >= calls[e.payload['actor']] - 6)
     rows.append(_row('memory.late_write_share', late / len(writes) if writes else None, late, len(writes),
@@ -196,7 +199,7 @@ def compute_metrics(timeline: Timeline, operations: Sequence[Operation], events:
     for e in runs:
         outcomes[str(e.payload['status'])] = outcomes.get(str(e.payload['status']), 0) + 1
     rows.append(_row('programs.saved', len(saves) if facts.present else None, len(saves), None, no_host))
-    rows.append(_row('programs.run', len(runs) if facts.present else None, len(runs), None, no_host))
+    rows.append(_row('programs.runs', len(runs) if facts.present else None, len(runs), None, no_host))
     reused = sum(1 for e in runs if e.payload['reused'])
     rows.append(_row('programs.reused', reused if facts.present else None, reused, None, no_host))
     if not facts.present or not outcomes:

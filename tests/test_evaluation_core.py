@@ -657,8 +657,10 @@ def test_custody_stop_handoff_and_host_events(tmp_path):
     assert evictions[0]['payload'] == dict(actor=evictions[0]['payload']['actor'], omitted_images=3, retained_images=6, blocked=True)
     assert evictions[0]['source'] == 'harness' and evictions[0]['confidence'] is None
     metrics = metrics_of(path)
-    assert metrics['input.uncertain_deliveries'].value == dict(value=2, uncertain_receipts=1, runs_ended=1)
-    assert metrics['input.uncertain_deliveries'].denominator == 2
+    # A custody stop is its own boolean; it never enters the receipt rate.
+    assert metrics['custody.uncertain_receipts'].value == pytest.approx(0.5)
+    assert (metrics['custody.uncertain_receipts'].count, metrics['custody.uncertain_receipts'].denominator) == (1, 2)
+    assert metrics['custody.stopped'].value is True and metrics['custody.stopped'].count == 1
 
 
 def record_doc(kind: str = 'work') -> dict:
@@ -728,7 +730,7 @@ def test_memory_program_and_handoff_events_and_metrics(tmp_path):
     # Actor 1 made 16 tool calls; its third write is call 14, inside the last six. The first two are not.
     late = metrics['memory.late_write_share']
     assert late.denominator == 3 and late.count == 1 and late.value == pytest.approx(1 / 3)
-    assert metrics['programs.saved'].value == 1 and metrics['programs.run'].value == 3
+    assert metrics['programs.saved'].value == 1 and metrics['programs.runs'].value == 3
     assert metrics['programs.reused'].value == 2
     assert [metrics['programs.outcomes', s].value for s in ('done', 'yield')] == [2, 1]
     assert metrics['programs.outcomes', 'done'].denominator == 3 and 'programs.outcomes' not in metrics
@@ -763,8 +765,8 @@ def test_every_metric_row_is_present_with_count_and_denominator(tmp_path):
     expected = {'survival.game_hours', 'pace.routine_seconds_per_decision', 'pace.long_activities',
         'pace.dollars_per_game_hour', 'mode.out_of_play_share', 'stall.longest', 'stall.count',
         'input.actions_per_call', 'input.unseen_action_share', 'input.frame_unchanged_rate',
-        'input.uncertain_deliveries', 'memory.writes', 'memory.reads', 'memory.retrieved_beyond_carry',
-        'memory.late_write_share', 'programs.saved', 'programs.run', 'programs.reused', 'programs.outcomes',
+        'custody.uncertain_receipts', 'custody.stopped', 'memory.writes', 'memory.reads', 'memory.retrieved_beyond_carry',
+        'memory.late_write_share', 'programs.saved', 'programs.runs', 'programs.reused', 'programs.outcomes',
         'handoff.decisions_to_resume', 'handoff.carry_ratio', 'host.dollars_per_decision', 'host.cache_write_share',
         'host.large_rewrite_share', 'host.retry_share', 'needs.severe_share', 'ladder.reached',
         'lineage.continuity', 'run.infrastructure_loss'}
@@ -811,7 +813,7 @@ def test_pace_routine_is_missing_with_fewer_than_five_intervals(tmp_path):
         run.finish()
         return directory
     routine = metrics_of(run_and_evaluate(tmp_path, build))['pace.routine_seconds_per_decision']
-    assert routine.value is None and routine.missing == 'insufficient_intervals' and routine.count == 4
+    assert routine.value is None and routine.missing == 'insufficient' and routine.count == 4
 
 
 def test_mode_input_and_needs_metrics(tmp_path):
@@ -828,8 +830,9 @@ def test_mode_input_and_needs_metrics(tmp_path):
     assert unchanged.value == dict(value=0.0, excluded=0) and (unchanged.count, unchanged.denominator) == (0, 13)
     needs = metrics['needs.severe_share']
     assert needs.value == dict(value=pytest.approx(5 / 11), excluded=0) and (needs.count, needs.denominator) == (5, 11)
-    uncertain = metrics['input.uncertain_deliveries']
-    assert uncertain.value['value'] == 0 and uncertain.denominator == 14 and uncertain.count == 0
+    uncertain = metrics['custody.uncertain_receipts']
+    assert uncertain.value == 0 and uncertain.denominator == 14 and uncertain.count == 0
+    assert metrics['custody.stopped'].value is False
 
 
 def test_abstentions_and_missing_captures_are_excluded_and_counted(tmp_path):
@@ -858,7 +861,9 @@ def test_abstentions_and_missing_captures_are_excluded_and_counted(tmp_path):
     coverage = metrics['reader.coverage', 'core.frame']
     assert coverage.denominator == 6 and coverage.count == 6  # six captures; the unknown frame is still a legible frame
     assert metrics['reader.coverage', 'clock'].count == 5  # the unknown-mode frame carries no time
-    assert metrics['input.uncertain_deliveries'].value == dict(value=2, uncertain_receipts=1, runs_ended=1)
+    uncertain = metrics['custody.uncertain_receipts']
+    assert uncertain.count == 1 and uncertain.denominator == 7 and uncertain.value == pytest.approx(1 / 7)
+    assert metrics['custody.stopped'].value is True
 
 
 def test_ladder_marks_human_rungs_not_assessed_and_accepts_a_human_confirmation(tmp_path):
@@ -1098,7 +1103,7 @@ def test_evaluate_run_and_compare_commands(tmp_path, capsys):
     # Host and custody figures come from the existing summaries.
     metrics = metrics_of(record)
     assert metrics['host.latency', 'response.p50'].value == pytest.approx(200)
-    assert metrics['input.uncertain_deliveries'].denominator == 14  # the control summary counts native receipts
+    assert metrics['custody.uncertain_receipts'].denominator == 14  # the control summary counts native receipts
     from tools.evaluate import run_external
     external = run_external(directory)
     assert external['custody'] == dict(receipts=14, uncertain=0)
@@ -1150,8 +1155,8 @@ def test_evaluate_options_are_refused_for_other_commands_and_externals_are_used(
     metrics = metrics_of(Path(json.loads(capsys.readouterr().out)['record']))
     assert [metrics['host.latency', k].value for k in ('response.p50', 'response.p95', 'first_chunk.p50', 'first_chunk.p95')] == [20, 30, 1, 2]
     assert (metrics['host.latency', 'response.p50'].count, metrics['host.latency', 'first_chunk.p50'].count) == (3, 2)
-    uncertain = metrics['input.uncertain_deliveries']
-    assert (uncertain.value['uncertain_receipts'], uncertain.denominator, uncertain.count) == (2, 7, 2)
+    uncertain = metrics['custody.uncertain_receipts']
+    assert (uncertain.value, uncertain.denominator, uncertain.count) == (pytest.approx(2 / 7), 7, 2)
 
 
 # ---------------------------------------------------------------------------------------------

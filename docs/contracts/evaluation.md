@@ -139,8 +139,9 @@ A `human` rung is reported as not assessed until a human or a later reader confi
 ## Metrics, version 1
 
 A **decision** is one completed `computer_input` operation. Rates are shown with their
-counts. A median or rate built from fewer than five qualifying intervals or events
-reports `missing: insufficient`.
+counts. The pace median built from fewer than five qualifying intervals reports
+`missing: insufficient` (the one name for this rule). Every other rate and median carries
+its `count` and `denominator`, and the viewer shows an insufficient sample as such.
 
 | Name | Definition | Denominator | Missing data |
 | --- | --- | --- | --- |
@@ -150,16 +151,16 @@ reports `missing: insufficient`.
 | `pace.dollars_per_game_hour` | Run dollars ÷ survival game hours | game hours | Zero hours: null |
 | `mode.out_of_play_share` | Decisions whose mode is not `in_play` ÷ decisions with a non-abstained mode | mode readings | Abstentions excluded and counted |
 | `stall.longest` / `stall.count` | Longest streak of decisions without `in_play` (abstentions neither extend nor break a streak); number of `stall` events | decisions | — |
-| `input.actions_per_call` | Actions in input operations ÷ input operations | input operations | — |
+| `input.actions_per_call` | Key, text and click actions in input operations (`wait` actions excluded) ÷ input operations | input operations | — |
 | `input.unseen_action_share` | 1 − input operations with a capture ÷ actions in input operations | input actions | — |
 | `input.frame_unchanged_rate` | Input operations whose capture SHA-256 equals the previous capture's ÷ input operations with a capture | captured inputs | — |
-| `custody.uncertain_receipts` | Partial or unknown receipts ÷ receipts | receipts | — |
-| `custody.stopped` | Whether a custody stop ended the run | — | — |
+| `custody.uncertain_receipts` | Partial or unknown receipts ÷ receipts; a run end or custody stop never counts here | receipts | No receipts: null (`no_receipts`) |
+| `custody.stopped` | Boolean: whether a custody stop ended the run | — | — |
 | `tools.calls` | Calls per tool, with refusals and error results per tool | calls | — |
 | `memory.writes` / `memory.reads` | Append calls; query, read and context calls | — | — |
-| `memory.retrieved_beyond_carry` | Distinct records returned by any read that were not in the reading actor's handoff context ÷ distinct records written (at most 1) | records written | No writes: null |
+| `memory.retrieved_beyond_carry` | Distinct record IDs returned by any read that were not in the reading actor's handoff context ÷ distinct records written (capped at 1) | records written | No writes: null |
 | `memory.late_write_share` | Writes within an actor's last six tool calls ÷ writes | writes | — |
-| `programs.saved` / `runs` / `reused` / `outcomes` | Saves; runs; runs by an actor or run other than the author; runs per status | — | — |
+| `programs.saved` / `programs.runs` / `programs.reused` / `programs.outcomes` | Saves; runs; runs by an actor or run other than the author; runs per status | — | — |
 | `handoff.decisions_to_resume` | Decisions after a handoff until the first input operation with three or more actions and a changed capture | handoffs | — |
 | `handoff.carry_ratio` | Handoff context file bytes ÷ the predecessor's last request text bytes | handoffs | — |
 | `host.dollars_per_decision` | Configured-rate dollars ÷ decisions | decisions | Requests without usage: counted and excluded |

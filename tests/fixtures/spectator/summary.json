@@ -2070,15 +2070,20 @@
    "source": "recorded"
   },
   {
-   "name": "input.uncertain_deliveries",
+   "name": "custody.uncertain_receipts",
    "key": "",
-   "value": {
-    "runs_ended": 0,
-    "uncertain_receipts": 0,
-    "value": 0
-   },
+   "value": 0.0,
    "count": 0,
    "denominator": 1339.0,
+   "missing": null,
+   "source": "recorded"
+  },
+  {
+   "name": "custody.stopped",
+   "key": "",
+   "value": false,
+   "count": 0,
+   "denominator": null,
    "missing": null,
    "source": "recorded"
   },
@@ -2320,7 +2325,7 @@
    "source": "recorded"
   },
   {
-   "name": "programs.run",
+   "name": "programs.runs",
    "key": "",
    "value": 0,
    "count": 0,
