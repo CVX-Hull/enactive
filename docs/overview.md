@@ -48,32 +48,15 @@ The [host contract](contracts/player-host.md#external-control) owns this current
 source behavior; [work](work.md#decisive-evidence) separates it from adoption and
 real-play qualification.
 
-The [visual-player investigation](acceptance/2026-10-30-visual-player.md) rejected
-adoption of Qwen3.8-27B/Wafer after stable actual play and fresh Load still produced
-no retained readiness gain. Its earlier provider failures and visual-grounding
-errors remain evidence; successful serving does not qualify useful cadence.
-The [capable-player qualification](acceptance/2026-10-31-capable-player.md) likewise
-rejected Gemini 3.8 Flash. It led a fixed visual check, then grounded the avatar
-and UI, explored new areas and completed a normal Save/Quit ending, but made no
-retained readiness gain and overstated its own outcome. A provider in-flight budget hold on a low account and a transient
-provider 503 cut off two of its three admissions. The host now retries one such
-transient failure ([#308](https://github.com/CVX-Hull/enactive/issues/308)), and
-the lead reads the account balance before paid play ([#310](https://github.com/CVX-Hull/enactive/issues/310)).
-The [grounded no-gain diagnosis](acceptance/2026-10-31-grounded-no-gain-diagnosis.md)
-then ran Gemini and Haiku from one restored save under blind audit. No run made a retained
-change. A player given 300 attempts stopped by its own choice at 95, and Haiku matched
-Gemini. That is consistent with neither budget nor model choice being the lever (n = 1
-each). Goal selection versus control stays unseparated, and the shared save and the
-included predecessor report confound the runs. The player must stay self-sufficient: no
-lead hints in any run.
-A pre-registered [transition corpus](acceptance/2026-11-01-transition-corpus.md) of the same
-player (37 runs, 2,605 transitions) then tested for structure in two frozen
-screen alphabets. On the interface-mode alphabet, at labeller disagreement 3.1% [1.6–6.0%],
-the action predicts the next state (a predictive claim only), there is no two-set slow split
-with τ ≥ 40 at this alphabet resolution (τ ≈ 20 not excluded), and memory beyond one step is
-indeterminate under label noise. Collection resumed after one provider failure before the
-owner was consulted (runs 02–10), a procedural deviation the owner accepted. It is a method calibration; nothing
-from it enters the player.
+Earlier player investigations rejected two candidate models for adoption
+([visual player](acceptance/2026-10-30-visual-player.md),
+[capable player](acceptance/2026-10-31-capable-player.md)) and found no retained
+readiness gain from a larger attempt budget or a different model
+([grounded no-gain diagnosis](acceptance/2026-10-31-grounded-no-gain-diagnosis.md),
+one run each). Successful serving does not qualify useful cadence, and the player
+stays self-sufficient: no lead hints in any run. The pre-registered
+[transition corpus](acceptance/2026-11-01-transition-corpus.md) is a method
+calibration; nothing from it enters the player.
 
 The [architecture](architecture.md) explains ownership, the
 [player guide](player-guide.md) supplies compact working context, and the

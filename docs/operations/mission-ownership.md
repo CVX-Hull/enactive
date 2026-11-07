@@ -54,5 +54,3 @@ enters any run: not mid-run, not in the frozen context, and not as a labelled
 diagnostic arm. Record interventions, failures and unknowns. [Campaign procedure](campaign-run.md).
 
 [Operations index](../runbook.md).
-
-<!-- Retained bookmarks for the coordinated contract migration. -->

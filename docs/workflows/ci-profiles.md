@@ -93,8 +93,7 @@ dependency graph; narrower reuse needs a demonstrated benefit. Normal feature re
 but do not alone change validation context. Unknown main paths, nonstandard pushes,
 nonregular objects, tree mismatch or unavailable proof select full. Existing pinned
 workflow/dependency contracts define the supported environment; no green cache,
-provenance service or ambient host fingerprint is introduced. This migration itself
-changes validation context and requires full PR and main checks.
+provenance service or ambient host fingerprint is introduced.
 
 Print the selected profile and reason in logs and the Actions summary. Main-smoke
 links its qualifying PR run and explicitly reports full regression as unrun on main.

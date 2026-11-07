@@ -217,6 +217,4 @@ pending-call suppression, original attempt charging and actual child closure.
 Production HTTP/MCP composition retains a controlled synthetic actor binding.
 These tests establish interfaces, not model quality, actual saving, useful
 cadence, unattended reliability or cross-game support. Real play remains a
-separately frozen lane. The earlier
-[adoption record](../acceptance/2026-10-31-host-neutral-player.md) retains its
-original tested contract and does not qualify this migration.
+separately frozen lane.

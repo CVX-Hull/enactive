@@ -7,8 +7,7 @@ status: active
 # Operate, recover and retain evidence
 
 Use the [current computer/player contract](contracts/computer-control.md),
-[setup](setup.md) and a fresh frozen finite run. Old semantic mission commands,
-Resume, identity adoption and recovery phases are unsupported.
+[setup](setup.md) and a fresh frozen finite run.
 
 ## When a mission owns execution
 
@@ -50,8 +49,7 @@ owns scoped actual outcomes and remaining qualification gaps.
 
 [Evidence retention](operations/evidence-cleanup.md#evidence-retention-and-cleanup)
 owns retention policy. Use current custodian/driver receipts for exact owned
-process cleanup; old runtime commands in historical artifacts are not executable
-instructions. Preserve failed chains and original binaries/configuration.
+process cleanup. Preserve failed chains and original binaries/configuration.
 
 ## Coordinated migration
 
@@ -60,18 +58,18 @@ inert history, select fresh stores and roll back only as a coherent deployment.
 
 ## Passive skill acceptance
 
-The old semantic movement/planner interfaces are retired. Player programs propose
-basic controls and need their own actual-use evidence; see [native acceptance](operations/native-acceptance.md#passive-skill-acceptance).
+Player programs propose basic controls and need their own actual-use evidence;
+see [native acceptance](operations/native-acceptance.md#passive-skill-acceptance).
 
 ## Designated campaign operator
 
 [Assignment](operations/mission-ownership.md#designated-campaign-operator): one
 explicitly designated player, run by the frozen player host, owns routine choices, with actor-only handoff.
 
-## Typed mission requests and the player
+## Basic computer tools and the player
 
-[Current tool procedure](operations/mission-requests.md) replaces typed semantic
-mission requests. [Finite run](operations/campaign-run.md) owns launch/closeout.
+[Current tool procedure](operations/mission-requests.md) covers the basic computer
+tools. [Finite run](operations/campaign-run.md) owns launch/closeout.
 
 ### Bounded player host activation
 

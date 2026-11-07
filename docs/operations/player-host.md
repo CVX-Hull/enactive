@@ -25,11 +25,11 @@ The package freezes `route.json` (`player-host/3`), `mcp-template.json`,
 text/image capabilities, context/output capacities, effort mapping, costs, request
 timeout, request cap, credential environment name, image peak, eviction block and
 required `context_reserve_tokens` (at least `maxTokens`, below `contextWindow`).
-Keep the peak within the provider's image limit (30 on DeepInfra). Block 1 keeps the
-earlier rolling policy; a larger block, such as 39/10, keeps the prompt prefix
+Keep the peak within the provider's image limit (30 on DeepInfra). Block 1 evicts
+one image at a time (rolling); a larger block, such as 39/10, keeps the prompt prefix
 cacheable between evictions.
 The [host reference](../../tools/player_host/README.md) owns exact closed fields.
-Old route/mission/player-view configurations reject as executable inputs.
+Unsupported route and player-view configurations are rejected as executable inputs.
 
 The driver creates each actor's `player-adapter/1`, explicit MCP table, fixed
 context, ongoing-objective/knowledge prompt and `player-host-inputs/2` hashes.

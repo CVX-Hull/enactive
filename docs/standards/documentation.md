@@ -89,6 +89,6 @@ The user must be able to find purpose, current capabilities/limits, architectura
 rationale, next change/tradeoffs and supporting evidence from the overview and
 its immediate links. Preserve consequential limitations in plain language.
 Retire inaccurate guidance; mark superseded decisions with replacements and keep
-useful history. Archived plans/reports are not current instructions.
+useful history.
 
 [Standards index](../engineering.md).

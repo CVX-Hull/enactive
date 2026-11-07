@@ -9,8 +9,7 @@ status: active
 This is the current source contract, delivered by [#176](https://github.com/CVX-Hull/enactive/issues/176)
 with one production backend. [ADR006](../decisions/006-computer-control-boundary.md)
 owns the boundary; the [cutover brief](../changes/071-computer-control-cutover.md)
-retains historical rationale. Native7/mission11 and the prototype are retired
-executable routes. The [production report](../acceptance/2026-10-29-computer-control.md)
+retains historical rationale. The [production report](../acceptance/2026-10-29-computer-control.md)
 owns scoped actual outcomes; #176 and its linked PR retain the delivery receipts.
 
 ## Responsibilities and current data

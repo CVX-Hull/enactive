@@ -44,8 +44,9 @@ Explorers/reviewers never send game inputs.
   or engine-validation bypass to manufacture a demonstration.
 - Tests, native builds and graphical acceptance are separate evidence lanes.
   Record failure and uncertainty; never replace a real failure with a passing mock.
-- Keep the overview and authoritative contracts current with behavior. Historical
-  reports, proposals and superseded ADRs are evidence, not current instructions.
+- Keep the overview and authoritative contracts current with behavior. The
+  [documentation map](docs/documentation.md#lifecycle-and-maintenance) says how to
+  read historical records and superseded pages.
 - Apply S-CODE's reuse review to tools, documentation and controls. Git owns tracked
   source history; custom infrastructure needs a concrete gap and maintenance owner.
   Rely on configured DB/OS/library contracts; justify residual checks and recovery

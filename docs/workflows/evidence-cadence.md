@@ -71,9 +71,7 @@ semantic outcome, costs, interventions and finding disposition in the existing
 admission/ledger/archive/Git/Issues. Show the maintainer a small coverage/findings
 summary with links to those records; do not build a second history or tracker.
 Continuing across admissions is an ordinary player Load of a game save, as in
-#382's chained lineages. The earlier checkpoint-reuse proposal
-([#175](https://github.com/CVX-Hull/enactive/issues/175)) closed as not planned. Neither
-restores old authority or rolls back a run.
+#382's chained lineages. It restores no old authority and rolls back no run.
 Source repairs still require closure and a new finite admission; exploratory
 evidence keeps its declared conditions and does not become a fresh assessment.
 
