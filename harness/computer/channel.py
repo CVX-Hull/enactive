@@ -15,8 +15,9 @@ import time
 from typing import Any
 import uuid
 
-from .protocol import (ControlError, NoDispatch, MAX_FRAME_BYTES, MAX_HEADER_BYTES, SCHEMA,
-                       decode_json, encode_packet, receipt, state, wire_header)
+from .protocol import (COLLECTION_MARGIN_SECONDS, ControlError, NoDispatch, MAX_FRAME_BYTES,
+                       MAX_HEADER_BYTES, SCHEMA, START_SECONDS, decode_json, encode_packet,
+                       receipt, state, wire_header)
 
 
 @dataclass
@@ -122,8 +123,9 @@ class NativeChannel:
             identity = self._pause_id = uuid.uuid4().hex
             self._pending[identity] = _Pending()
             self._condition.notify_all()
+        expires = int(time.time() * 1000) + 5000
         packet = dict(schema=SCHEMA, id=identity, session=self.session,
-                      kind='pause', expires_ms=int(time.time() * 1000) + 5000, input=None)
+                      kind='pause', expires_ms=expires, continue_ms=expires, input=None)
         try:
             self._send(encode_packet('request', packet), time.monotonic() + .25, pause=True)
         except (OSError, TimeoutError, ValueError):
@@ -155,15 +157,17 @@ class NativeChannel:
         with self._condition:
             if self.stopped.is_set() or self.closed.is_set() or self._fault is not None:
                 raise NoDispatch('Native input fenced; original collection only')
-            if time.monotonic() >= deadline:
-                raise NoDispatch('Original deadline expired before native publication')
+            if time.monotonic() >= deadline - COLLECTION_MARGIN_SECONDS:
+                raise NoDispatch('Original deadline leaves no native collection margin')
             if self._normal is not None or identity in self._pending:
                 raise NoDispatch('Original native request remains outstanding')
             self._normal = identity
             pending = self._pending[identity] = _Pending()
+        # Both native bounds end at least the collection margin before this wait does.
+        wall, edge = time.time(), max(0., deadline - COLLECTION_MARGIN_SECONDS - time.monotonic())
         packet = dict(schema=SCHEMA, id=identity, session=self.session, kind=kind,
-                      expires_ms=int((time.time() + max(0., min(5., deadline - time.monotonic()))) * 1000),
-                      input=value)
+                      expires_ms=int((wall + min(START_SECONDS, edge)) * 1000),
+                      continue_ms=int((wall + edge) * 1000), input=value)
         try:
             pending.timing.update(send_started_wall=time.time(),send_started_monotonic=time.monotonic())
             self._send(encode_packet('request', packet), deadline)

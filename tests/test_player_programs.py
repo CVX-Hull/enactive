@@ -105,6 +105,15 @@ def test_yield_fault_unknown_and_original_time_leave_no_helper_authority(tmp_pat
         with patch('harness.player.programs.monotonic', side_effect=[10, 10, 10, 31, 31]):
             run = ProgramRunner(repo, port).run(p['id'], 'a', {}, {}, {'crop': None, 'size': [1, 1]}, max_seconds=20)
         assert run['status'] == 'limit' and len(port.calls) == 1
+        # #396: inside the computer's collection margin the run ends at its limit,
+        # rather than calling a port that would refuse the operation.
+        port = Port()
+        with patch('harness.player.programs.monotonic', side_effect=[10, 10, 10, 10, 29.9, 29.9]):
+            run = ProgramRunner(repo, port).run(p['id'], 'a', {}, {}, {'crop': None, 'size': [1, 1]}, max_seconds=20)
+        assert run['status'] == 'limit' and [c[0] for c in port.calls] == ['observe']
+        port = Port()
+        run = ProgramRunner(repo, port).run(p['id'], 'a', {}, {}, {'crop': None, 'size': [1, 1]}, max_seconds=.2)
+        assert run['status'] == 'limit' and port.calls == []
         for kwargs in ({'max_steps': 65}, {'max_seconds': 21}, {'max_seconds': float('nan')}):
             port = Port()
             result = ProgramRunner(repo, port).run(p['id'], 'a', {}, {}, {'crop': None, 'size': [1, 1]}, **kwargs)

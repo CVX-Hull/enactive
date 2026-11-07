@@ -53,6 +53,9 @@ int main(int argc,char **argv) {
                 if(e.type==SDL_KEYDOWN) { red=(Uint8)(red+37); if(e.key.keysym.sym==SDLK_ESCAPE) running=false; if(e.key.keysym.sym==SDLK_LEFT) markerX-=10; if(e.key.keysym.sym==SDLK_RIGHT) markerX+=10; if(e.key.keysym.sym==SDLK_UP) markerY-=10; if(e.key.keysym.sym==SDLK_DOWN) markerY+=10;
                     // Independent application behavior for mechanical tests only.
                     if(e.key.keysym.sym==SDLK_r) SDL_SetWindowSize(window,800,500);
+                    // Stall the loop between this key's down and up events, as a game
+                    // busy on one action does (#396). No poll happens during the delay.
+                    if(e.key.keysym.sym==SDLK_s) SDL_Delay(7000);
                     if(e.key.keysym.sym==SDLK_d) {
                         if(noiseTexture) { SDL_DestroyTexture(noiseTexture); noiseTexture=nullptr; }
                         if(target) { SDL_DestroyTexture(target); target=nullptr; }

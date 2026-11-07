@@ -9,7 +9,7 @@ import uuid
 from typing import Any
 
 from harness.computer.ports import ComputerPort
-from harness.computer.protocol import NoDispatch
+from harness.computer.protocol import COLLECTION_MARGIN_SECONDS, NoDispatch
 from .contracts import PlayerError, bounded_integer, canonical, identity, json_object, program
 from .images import program_view
 from .memory import Memory
@@ -78,10 +78,13 @@ class ProgramRunner:
             interpretation = json_object(interpretation)
             selection = json_object(selection)
             deadline = started + max_seconds
+            # The computer refuses an operation inside its collection margin; reaching
+            # it here is the run's time limit, not a refused or faulted step (#396).
+            usable = deadline - COLLECTION_MARGIN_SECONDS
             saved = self.repository.read(program_id)
             with PolicyProgram(saved['code']) as policy:
                 for _ in range(max_steps):
-                    if monotonic() >= deadline:
+                    if monotonic() >= usable:
                         break
                     if operation is None or png is None or operation.get('source') is None:
                         in_port, port_kind = True, 'observe'
@@ -106,7 +109,7 @@ class ProgramRunner:
                     result = policy.step(view, state, timeout_seconds=min(.05, remaining))
                     step['result'] = result
                     state = result['state']
-                    if monotonic() >= deadline:
+                    if monotonic() >= usable:
                         break
                     if result['status'] != 'act':
                         status, reason = result['status'], result['reason']

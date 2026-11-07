@@ -9,7 +9,13 @@ import math
 from pathlib import Path
 import re
 
-SCHEMA = "computer-request/2"
+SCHEMA = "computer-request/3"
+# A request's first command event must be emitted within START_SECONDS. Once one
+# is emitted, the rest may follow until the operation deadline less this margin.
+# Both bounds end at least the margin before the deadline, so the native side
+# stops emitting before the custodian stops collecting (#396).
+START_SECONDS = 5.
+COLLECTION_MARGIN_SECONDS = .25
 WIRE_SCHEMA = "computer-wire/1"
 MAX_HEADER_BYTES = 65536
 MAX_FRAME_BYTES = 64 * 1024 * 1024
