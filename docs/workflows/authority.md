@@ -43,7 +43,7 @@ The Project README links this contract, the overview and these four saved views:
 | Current iteration | What is moving? Board by Status of open Horizon Now leaves (aggregates excluded), sorted by Horizon then Priority; show owner, Horizon, Priority, size, confidence, parent issue and linked pull request. GitHub views have no dependency field: an issue blocked through GitHub's issue dependencies carries a Blocked mark on its card |
 | Backlog | What is unselected? Open leaves outside Horizon Now (Next and Later candidates), sorted by Horizon then Priority; show Horizon, Priority, parent issue and sub-issue progress |
 | Direction | What outcome comes next and why? Open `outcome` aggregates grouped by Horizon and sorted by Priority; show milestone, priority, outcome, confidence and decision needed |
-| Needs attention | What needs intervention? Open Now/Next items labelled blocked or decision-needed, or blocked by an open issue dependency (`is:blocked`); a generic risk label alone does not qualify. Sub-issues show nested under their parent. The lead flags aging Review/Validation work during checkpoint triage |
+| Needs attention | What needs intervention? Open Now/Next items labelled blocked or decision-needed, or blocked through an issue dependency (`is:blocked`); a generic risk label alone does not qualify. The lead flags aging Review/Validation work during checkpoint triage |
 
 At a meaningful checkpoint, update the Project with outcomes achieved, next
 outcome, risks/blockers, decisions needed and evidence links. Give consequences
