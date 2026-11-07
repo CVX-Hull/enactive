@@ -131,8 +131,8 @@ same player enough decisions through chained save and reload admissions. Two of 
 lineages survived a full in-game day with no severe need at the day point, sleeping
 through the night in shelter at about 140 game seconds per decision. The third ended
 early on a game stall that fenced input (#396). Day-scale survival is therefore viable
-through this boundary, at about $13 per game day. #145's seven-day gate is the north star; its design and
-#164's cost and latency plan are next (#397).
+through this boundary, at about $13 per game day. #145's seven-day gate remains the
+north star, and #164's cadence criteria remain unqualified.
 The [run evaluator and spectator](decisions/008-evaluation-and-spectator.md) (#383) now
 score runs from recorded frames and traces. Their power check showed that whole-run survival
 cannot separate arms at affordable run counts, so each change pre-registers a targeted

@@ -10,7 +10,7 @@ The [public Project](https://github.com/users/CVX-Hull/projects/2) and GitHub Is
 own live execution. This page routes to scoped evidence; it is not a second backlog.
 [Overview](overview.md) owns capabilities and limits.
 
-## Current development loop
+## Development loop and long-horizon arm
 
 On 5 November 2026 the owner reset the loop (decisions D1–D4 in
 [development runs](development-runs.md)). First establish a ceiling: can GPT-6.1
@@ -18,7 +18,7 @@ Terra survive through the current pixels-and-keys boundary? Then branch, by a ru
 fixed in advance, to cost reduction or to game-neutral grounding aids.
 [#145](https://github.com/CVX-Hull/enactive/issues/145)'s seven-day gate is the
 north star; [#164](https://github.com/CVX-Hull/enactive/issues/164)'s cadence
-criteria are deferred until a capability baseline exists. Development runs use
+criteria were deferred until a capability baseline existed. Development runs use
 best-effort observation, a $150 envelope and one table row plus one issue comment each.
 
 **Result, 6 November 2026** ([#372](https://github.com/CVX-Hull/enactive/issues/372)).
@@ -28,8 +28,9 @@ consult the game's own help, and reflection lineage. Each was rejected on the
 primary metric, with medians of 0.30, 0.38 and 0.45 h. The aids still showed the
 first real uptake of player memory, reflections and an organic local program. Short-term play is
 competent, but survival is bounded by time scale: about 230 decisions pass 10–130
-game minutes. The recommended next step is a long-horizon arm that tracks game
-seconds per decision ([development runs](development-runs.md#loop-result-and-next-step)).
+game minutes. The loop recommended a long-horizon arm that tracks game seconds per
+decision ([development runs](development-runs.md#loop-result-and-next-step)); it ran
+as #382 below.
 Loop spend was $88.54 of $150. Host fixes #378–#380 retry three transient
 provider failure classes.
 
@@ -41,12 +42,12 @@ provider failure classes.
 - **Power check.** Censored survival and the milestone ladder cannot separate arms at
   affordable n, so changes now pre-register targeted process metrics on change pages.
   Survival, cost and setup serve as guards.
-- **Deferred items:**
-  - intent visibility ([#384](https://github.com/CVX-Hull/enactive/issues/384));
-  - label writing ([#385](https://github.com/CVX-Hull/enactive/issues/385));
-  - judges ([#386](https://github.com/CVX-Hull/enactive/issues/386));
-  - a cross-run channel ([#387](https://github.com/CVX-Hull/enactive/issues/387));
-  - a scenario bank ([#388](https://github.com/CVX-Hull/enactive/issues/388)).
+- **Deferred by ADR008 until after #382:** intent visibility
+  ([#384](https://github.com/CVX-Hull/enactive/issues/384)), label writing
+  ([#385](https://github.com/CVX-Hull/enactive/issues/385)), judges
+  ([#386](https://github.com/CVX-Hull/enactive/issues/386)), a cross-run channel
+  ([#387](https://github.com/CVX-Hull/enactive/issues/387)) and a scenario bank
+  ([#388](https://github.com/CVX-Hull/enactive/issues/388)).
 
 **Long-horizon arm, 7 November 2026** ([#382](https://github.com/CVX-Hull/enactive/issues/382),
 [development runs](development-runs.md#arm-result)).
@@ -57,9 +58,8 @@ provider failure classes.
 - **Lineage 3** ended as Slow at 0.54 h after two custody stops with one cause: a game
   stall longer than the bridge's 5 s input window ([#396](https://github.com/CVX-Hull/enactive/issues/396)).
 - **Spend:** $30.46 of the $150 envelope.
-- **Next step:** design the seven-day attempt for #145 and the cost and latency plan that
-  resumes #164 ([#397](https://github.com/CVX-Hull/enactive/issues/397)). Nothing is
-  approved yet.
+- **Follow-up design:** the seven-day attempt and its cost and latency plan
+  ([#397](https://github.com/CVX-Hull/enactive/issues/397)).
 
 ## Current integrated checkpoint
 
@@ -124,9 +124,8 @@ supplies maintained finite-test spectator supervision. The separately approved
 [ongoing-objective diagnostic](acceptance/2026-11-05-player-test-diagnostic.md)
 then demonstrated sampled context separation and direct `cannot_continue`
 stopping, but ended in Alex's death with no food/water gain or local program.
-The first operator-truncated admission remains a failure. #359 stays open for
-unexercised real-use paths; #164 and #145 remain held. The owning issues record
-live gates and execution. The [recorded-screen candidate assessment](acceptance/2026-11-05-recorded-player-assessment.md)
+The first operator-truncated admission remains a failure. The owning issues
+(#359, #164, #145) record the remaining real-use paths, live gates and execution. The [recorded-screen candidate assessment](acceptance/2026-11-05-recorded-player-assessment.md)
 then served two selected cases for $0.08744005, with narrowly promising proposals
 and unsuccessful request-limit host endings. No proposal reached a game. The
 result supports shaping further unassisted development play, with separate
