@@ -331,6 +331,9 @@ Each has a value, a threshold, `met`, and the dollars per minute that continuing
 
 Game state (vitals, threat) is information only and never a Pause condition.
 
-**Pause.** The gateway's Pause takes `{"reason": "loop" | "fault" | "spend" | "other"}`.
-It forwards `{}` to the custodian unchanged and records the reason in its watch terminal
-record. Pause never waits for the viewer.
+**Pause.** The gateway's Pause asks for `{"reason": "loop" | "fault" | "spend" | "other"}`
+but never refuses a stop over it. It stops first (the Pause flag, the guardian datagram,
+then `{}` to the custodian unchanged), and records the reason as given when valid, else
+`unspecified`. Only a malformed datagram or an unknown reason on the guardian's own
+datagram ends supervision as `invalid_pause_reason`. The watch terminal record holds
+`pause_reason`. Pause never waits for the viewer.

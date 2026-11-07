@@ -51,8 +51,9 @@ own security headers (`default-src 'self'`, `nosniff`, `no-store`). It relays on
   in-viewport pixels, matching session/source/digest, an increasing number and a
   displayed status at most 12 seconds old. The panel takes the frame and status only
   from the two relayed routes, so a viewer outage cannot block a check.
-- **Pause.** The page posts `{"reason": "loop" | "fault" | "spend" | "other"}`; any
-  other body is refused. The gateway sends the guardian the reason with the Pause time,
+- **Pause.** The page posts `{"reason": "loop" | "fault" | "spend" | "other"}`; a missing
+  or unknown reason is recorded as `unspecified`, and the stop is never refused. The
+  gateway sends the guardian the reason with the Pause time,
   then forwards `{}` to the custodian unchanged, after verifying the connected socket
   belongs to the exact custodian child. The reason lands in the watch terminal record
   (`pause_reason`, null when no owner Pause). Pause never waits for the viewer or a

@@ -27,7 +27,7 @@ from harness.computer.launch import close_group
 from harness.computer.protocol import read_json
 from tools.campaign_package import digest, preflight
 from tools.campaign_player import write_new
-from tools.campaign_watch import PAUSE_REASONS
+from tools.campaign_watch import PAUSE_RECORDED, UNSPECIFIED
 
 ROOT = Path(__file__).resolve().parents[1]
 WINDOW = 45
@@ -182,10 +182,11 @@ def supervise(package: Path, profile: dict, child: subprocess.Popen, gateway: su
             return 'invalid_pause_clock'
         if not finite(pause_at) or not result['started_monotonic'] <= pause_at <= clock.monotonic():
             return 'invalid_pause_clock'
-        if fields[2] not in PAUSE_REASONS:
+        reason = fields[2] or UNSPECIFIED  # a missing reason is recorded; it never refuses the stop
+        if reason not in PAUSE_RECORDED:
             return 'invalid_pause_reason'
         result['pause_requested'] = pause_at
-        result['pause_reason'] = fields[2]
+        result['pause_reason'] = reason
         reason, grace, raced = pause_boundary(rows, last, pause_at, clock.monotonic(), custody_end, window)
         result['checks_raced_with_pause'] = raced
         if reason:

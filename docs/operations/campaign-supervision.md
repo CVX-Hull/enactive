@@ -66,7 +66,9 @@ spending or new admission. General unattended operation remains unqualified.
    does not renew it. Missing browser confirmation is unknown: the guardian may
    already have accepted the check. Use Pause when control is uncertain.
 6. Use the same page's **Pause** for immediate control and choose its reason (loop,
-   fault, spend or other). The gateway forwards an empty Pause to the custodian and
+   fault, spend or other). The page asks for a reason, but the gateway never refuses a
+   stop over one: it stops first, then records the reason as given, or `unspecified`
+   when it is missing or unknown. It forwards an empty Pause to the custodian and
    records the reason in `watch-terminal.json`; Pause never waits for the viewer. No
    check renews after Pause. Refreshing the page cannot resume or reopen a
    stopped/partial package.
@@ -113,7 +115,7 @@ game's clock. Apply save/reload/exit criteria in their separately frozen lane.
 | --- | --- |
 | `watch-start.json` | `campaign-watch-start/3`; exclusive reservation before children, binding session/source, manifest SHA256, wall/monotonic start, `attention`, `watch_seconds` (45 for `required`, null for `best-effort`) and the planned `viewer_port`, which the gateway must match. Prior/partial markers refuse; never delete to rearm. |
 | `watch-attempts.jsonl` | `campaign-watch-attempt/1`; source/digest, sequence, observation/start/recorded clocks and active/ending phase. Observation/guardian values are monotonic seconds derived from original wall timing; the shared-clock relationship is checked, not assumed exact. |
-| `watch-terminal.json` | `campaign-watch-terminal/3`; attention policy, accepted checks/completion/prior-observation clocks, raced checks, reason, `pause_reason` (`loop`, `fault`, `spend` or `other`; null when the owner did not press Pause), exact children (the viewer with its pid, port and `supervised: false`, or its launch error), bounded cleanup and custodian disposition as separate facts. |
+| `watch-terminal.json` | `campaign-watch-terminal/3`; attention policy, accepted checks/completion/prior-observation clocks, raced checks, reason, `pause_reason` (`loop`, `fault`, `spend`, `other` or `unspecified`; null when the owner did not press Pause), exact children (the viewer with its pid, port and `supervised: false`, or its launch error), bounded cleanup and custodian disposition as separate facts. |
 | `viewer-stdout.txt`, `viewer-stderr.txt` | The viewer's own output, created exclusively by the supervisor; diagnostics only. |
 
 Current `computer-start/1`, `computer-ready/1` and `campaign-receipt/3` must match

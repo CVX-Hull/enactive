@@ -396,7 +396,7 @@ def stops_case(message, tmp_path):
     return reason, result
 
 
-@pytest.mark.parametrize('reason', ['loop', 'fault', 'spend', 'other'])
+@pytest.mark.parametrize('reason', ['loop', 'fault', 'spend', 'other', 'unspecified'])
 def test_guard_records_the_owner_pause_reason(tmp_path, reason):
     outcome, result = stops_case('pause:{at!r}:'+reason, tmp_path)
     assert outcome == 'operator_pause' and result['pause_reason'] == reason
@@ -405,12 +405,18 @@ def test_guard_records_the_owner_pause_reason(tmp_path, reason):
 
 @pytest.mark.parametrize('message, expected', [
     ('pause:{at!r}', 'acknowledgement_uncertain'), ('pause:{at!r}:loop:x', 'acknowledgement_uncertain'),
-    ('pause:{at!r}:boredom', 'invalid_pause_reason'), ('pause:{at!r}:', 'invalid_pause_reason'),
+    ('pause:{at!r}:boredom', 'invalid_pause_reason'),
     ('pause:nan:loop', 'invalid_pause_clock'), ('pause:abc:loop', 'invalid_pause_clock'),
     ('ack-uncertain', 'acknowledgement_uncertain')])
-def test_guard_refuses_unreasoned_or_malformed_pause_messages(tmp_path, message, expected):
+def test_guard_refuses_unknown_or_malformed_pause_messages(tmp_path, message, expected):
     outcome, result = stops_case(message, tmp_path)
     assert outcome == expected and 'pause_reason' not in result
+
+
+def test_guard_records_a_missing_pause_reason_as_unspecified(tmp_path):
+    outcome, result = stops_case('pause:{at!r}:', tmp_path)
+    assert outcome == 'operator_pause' and result['pause_reason'] == 'unspecified'
+    assert result['pause_reply_forwarded'] is True
 
 
 def test_terminal_without_first_check_never_certifies_coverage(tmp_path):

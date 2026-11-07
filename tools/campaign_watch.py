@@ -23,8 +23,11 @@ WEB = Path(__file__).resolve().parents[1]/'web'
 PAGES = {'/api/status'}
 MAX_BODY = 4 * 1024 * 1024
 NORMAL_EOF = 'Native receive failed: Native channel EOF'
-# Owner Pause reasons (ADR008 item 5). The reason is recorded; the custodian never sees it.
+# Owner Pause reasons (ADR008 item 5). The reason is recorded; the custodian never sees it. A Pause is
+# never refused over its reason: a missing or unknown one is recorded as `unspecified`.
 PAUSE_REASONS = ('loop', 'fault', 'spend', 'other')
+UNSPECIFIED = 'unspecified'
+PAUSE_RECORDED = (*PAUSE_REASONS, UNSPECIFIED)
 # The viewer is read-only and outside supervision: bounded, typed, never trusted.
 VIEW_TIMEOUT = 2.
 VIEW_MEDIA = {'application/json', 'image/png'}
@@ -232,6 +235,16 @@ def worker(package: Path, session: str, source_commit: str, upstream: int, recei
                 view_slots.release()
             self.reply(status, data, media)
 
+        def pause_reason(self):
+            """The reason as given when valid, else `unspecified`; a bad body never refuses the stop."""
+            try:
+                length = int(self.headers.get('Content-Length') or 0)
+                form = json.loads(self.rfile.read(length)) if 0 < length <= 512 else None
+            except (OSError, TypeError, ValueError, OverflowError):
+                return UNSPECIFIED
+            reason = form.get('reason') if type(form) is dict and set(form) == {'reason'} else None
+            return reason if type(reason) is str and reason in PAUSE_REASONS else UNSPECIFIED
+
         def do_POST(self):
             nonlocal accepted, ending_seen
             if (not self.scoped(mutation=True) or self.path not in {'/record', '/api/pause'}
@@ -239,19 +252,11 @@ def worker(package: Path, session: str, source_commit: str, upstream: int, recei
                     or self.headers.get('Content-Type') != 'application/json'):
                 self.send_error(403); return
             try:
-                length = int(self.headers['Content-Length'])
-                if not 0 < length <= 512:
-                    raise ValueError('Unexpected request size')
-                body = self.rfile.read(length)
-                if len(body) != length:
-                    raise ValueError('Incomplete request body')
-                form = json.loads(body)
                 if self.path == '/api/pause':
-                    if type(form) is not dict or set(form) != {'reason'} or form['reason'] not in PAUSE_REASONS:
-                        raise ValueError('Pause requires {"reason": ' + ' | '.join(PAUSE_REASONS) + '}')
+                    reason = self.pause_reason()
                     # Independent from record lock, including blocked source fetch/guard ACK.
                     paused.set()
-                    stops.send(f"pause:{time.monotonic()!r}:{form['reason']}".encode())
+                    stops.send(f"pause:{time.monotonic()!r}:{reason}".encode())
                     # The custodian receives the original empty Pause; the reason is not its concern.
                     status, payload, media = relay(self.path, b'{}')
                     received = json.loads(payload)
@@ -261,6 +266,13 @@ def worker(package: Path, session: str, source_commit: str, upstream: int, recei
                     self.reply(status, payload, media); self.wfile.flush()
                     stops.send(b'pause-replied')
                     return
+                length = int(self.headers['Content-Length'])
+                if not 0 < length <= 512:
+                    raise ValueError('Unexpected request size')
+                body = self.rfile.read(length)
+                if len(body) != length:
+                    raise ValueError('Incomplete request body')
+                form = json.loads(body)
                 with lock:
                     if (type(form) is not dict or set(form) != {'sequence', 'session', 'observed', 'source', 'sha256'}
                             or type(form['sequence']) is not int or form['sequence'] != accepted+1

@@ -423,16 +423,26 @@ def test_gateway_refuses_inconsistent_or_old_attention_policy(tmp_path, schema, 
         watch.worker(tmp_path, SESSION, COMMIT, 1, 1, checks, tx, viewer_port=5000)
 
 
-def test_pause_takes_only_a_known_reason_forwards_empty_object_and_reports_it_to_the_guard(tmp_path):
+def test_pause_forwards_empty_object_and_reports_the_reason_to_the_guard(tmp_path):
     with fixture(tmp_path) as f:
-        for bad in ({}, {'reason': 'boredom'}, {'reason': 'loop', 'note': 'x'}, {'reason': None}, [], {'reason': ['loop']}):
-            assert f.call('/api/pause', bad)[0] == 409
-        assert f.state['pause_body'] is None and not f.state['paused']
         thread = threading.Thread(target=f.supervise); thread.start()
         assert f.call('/api/pause', {'reason': 'spend'})[0] == (200 if sys.platform == 'darwin' else 409)
         thread.join(3)
         assert not thread.is_alive() and f.result['reason'] == 'operator_pause'
         assert f.result['pause_reason'] == 'spend'
+        if sys.platform == 'darwin':
+            assert f.state['pause_body'] == b'{}'
+
+
+@pytest.mark.parametrize('bad', [{}, {'reason': 'boredom'}, {'reason': 'loop', 'note': 'x'}, {'reason': None}, [],
+    {'reason': ['loop']}, {'reason': ''}, 'loop'])
+def test_pause_is_never_refused_for_a_missing_or_unknown_reason(tmp_path, bad):
+    with fixture(tmp_path) as f:
+        thread = threading.Thread(target=f.supervise); thread.start()
+        assert f.call('/api/pause', bad)[0] == (200 if sys.platform == 'darwin' else 409)
+        thread.join(3)
+        assert not thread.is_alive() and f.result['reason'] == 'operator_pause'
+        assert f.result['pause_reason'] == 'unspecified'
         if sys.platform == 'darwin':
             assert f.state['pause_body'] == b'{}'
 
