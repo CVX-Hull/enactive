@@ -62,9 +62,13 @@ def main(argv=None) -> int:
     def write(name, value):
         (directory/name).write_text(json.dumps(value, indent=2)+'\n')
     wall, mono = time.time(), time.monotonic()
-    write('watch-start.json', dict(schema='campaign-watch-start/2', session=SESSION,
+    with socket.socket() as probe:
+        probe.bind(('127.0.0.1', 0))
+        # No viewer runs in this fixture, so the page shows its viewer-unavailable state.
+        viewer_port = probe.getsockname()[1]
+    write('watch-start.json', dict(schema='campaign-watch-start/3', session=SESSION,
         source_commit=source, manifest_sha256=hashlib.sha256(manifest).hexdigest(),
-        attention='required', watch_seconds=45,
+        attention='required', watch_seconds=45, viewer_port=viewer_port,
         started_wall=wall, started_monotonic=mono))
     (directory/'watch-attempts.jsonl').touch()
     write('started.json', dict(schema='computer-start/1', session=SESSION,
@@ -85,7 +89,8 @@ def main(argv=None) -> int:
         accepted=[], started_wall=wall, started_monotonic=mono)
     try:
         gateway = subprocess.Popen([sys.executable, '-m', 'tools.campaign_watch', str(directory),
-            SESSION, source, str(server.server_port), str(os.getpid()), str(tx.fileno()), str(stop_tx.fileno())],
+            SESSION, source, str(server.server_port), str(os.getpid()), str(tx.fileno()), str(stop_tx.fileno()),
+            '--viewer-port', str(viewer_port)],
             cwd=ROOT, start_new_session=True, pass_fds=(tx.fileno(), stop_tx.fileno()),
             env=dict(PATH=os.environ.get('PATH', '/usr/bin:/bin'), LANG='en_US.UTF-8'))
         tx.close(); stop_tx.close()

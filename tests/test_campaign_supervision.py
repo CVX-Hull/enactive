@@ -6,6 +6,7 @@ import signal
 import socket
 import subprocess
 import sys
+import time
 from types import SimpleNamespace
 
 import pytest
@@ -227,7 +228,7 @@ def test_confirmation_completion_obeys_cutoff_and_pause_rollback(tmp_path, compl
         def recv(self, size):return checks.recv(size)
         def send(self, data):
             # Pause arrives after the final pre-send poll but before completion.
-            stop_sender.send(b'pause:144.995');stop_sender.send(b'pause-replied')
+            stop_sender.send(b'pause:144.995:other');stop_sender.send(b'pause-replied')
             count = checks.send(data)
             now[0] = completed
             return count
@@ -245,7 +246,7 @@ def test_confirmation_completion_obeys_cutoff_and_pause_rollback(tmp_path, compl
             live, live, live, ScheduledConfirmation(), stops, lambda: False, result, clock=clock)
     assert result['accepted'] == []
     if completed < 145:
-        assert reason == 'operator_pause'
+        assert reason == 'operator_pause' and result['pause_reason'] == 'other'
         assert len(result['checks_raced_with_pause']) == 1
         assert result['checks_raced_with_pause'][0]['receipt'] == completed
     else:
@@ -271,7 +272,14 @@ def test_guard_does_not_renew_without_completed_confirmation(tmp_path):
     assert reason == 'acknowledgement_uncertain' and result['accepted'] == []
 
 
-@pytest.mark.parametrize('fail_at', [0, 1, 2, None])
+def gateway_command(argv):
+    code = ('import socket,sys,time,json; '
+        's=socket.socket(fileno=int(sys.argv[1])); '
+        's.send(json.dumps({"port":12346}).encode()); time.sleep(20)')
+    return [sys.executable, '-c', code, argv[argv.index('--viewer-port')-2]]
+
+
+@pytest.mark.parametrize('fail_at', [0, 1, 2, 3, None])
 def test_startup_failures_and_signal_close_only_created_groups(tmp_path, monkeypatch, fail_at):
     profile = dict(session=SESSION, source_commit=COMMIT, wall_seconds=60, port=12345)
     monkeypatch.setattr(guard, 'preflight', lambda _: (profile, {'api_key_env': 'WATCH_TEST_KEY'}, {}))
@@ -283,15 +291,12 @@ def test_startup_failures_and_signal_close_only_created_groups(tmp_path, monkeyp
         index = len(calls)
         calls.append((argv, kwargs))
         opening = json.loads((tmp_path/'watch-start.json').read_text())
-        assert opening['schema'] == 'campaign-watch-start/2'
+        assert opening['schema'] == 'campaign-watch-start/3' and opening['viewer_port'] == 54321
         assert (opening['attention'], opening['watch_seconds']) == ('required', 45)
         if index == fail_at:
             raise OSError('synthetic spawn failure')
-        if index == 1:
-            code = ('import socket,sys,time,json; '
-                's=socket.socket(fileno=int(sys.argv[1])); '
-                's.send(json.dumps({"port":12346}).encode()); time.sleep(20)')
-            command = [sys.executable, '-c', code, argv[-2]]
+        if '--viewer-port' in argv:
+            command = gateway_command(argv)
         else:
             command = [sys.executable, '-c', 'import time; time.sleep(20)']
         child = subprocess.Popen(command, **kwargs)
@@ -304,23 +309,108 @@ def test_startup_failures_and_signal_close_only_created_groups(tmp_path, monkeyp
         return 'supervision_lost'
     monkeypatch.setattr(guard, 'supervise', supervision)
     original = signal.getsignal(signal.SIGTERM)
-    result = guard.run_supervised(tmp_path, attention='required', popen=launch)
+    result = guard.run_supervised(tmp_path, attention='required', popen=launch, viewer_port=lambda: 54321)
     assert signal.getsignal(signal.SIGTERM) == original
     assert all(child.poll() is not None for child in launched)
     assert result['cleanup_verified'] and not result['terminal_coverage_verified']
     assert result['manifest_unchanged']
-    assert result['reason'] == ('supervision_lost' if fail_at is None else 'launch_or_supervision_error')
-    assert result['children'].keys() == set(('custodian', 'gateway', 'wake')[:len(launched)])
+    # A viewer that cannot start never costs the run its supervision; any other launch failure does.
+    fatal = fail_at in (0, 2, 3)
+    assert result['reason'] == ('launch_or_supervision_error' if fatal else 'supervision_lost')
+    assert result['schema'] == 'campaign-watch-terminal/3' and result['pause_reason'] is None
+    order = ['custodian', 'viewer', 'gateway', 'wake']
+    expected = set(order) if fail_at in (None, 1) else set(order[:fail_at])
+    assert result['children'].keys() == expected
+    if fail_at == 1:
+        assert result['children']['viewer'] == dict(port=54321, supervised=False, launch_error='OSError')
+        assert result['cleanup']['viewer'] == dict(launched=False)
+    elif fail_at in (None, 2, 3):
+        viewer = result['children']['viewer']
+        assert viewer['port'] == 54321 and viewer['supervised'] is False and viewer['pid'] == launched[1].pid
+        assert result['cleanup']['viewer']['process_absent'] and result['cleanup']['viewer']['group_absent']
     if fail_at is None:
         assert result['signal'] == 'SIGTERM'
-        assert calls[1][0][-3] == str(launched[0].pid)
+        gateway = calls[2][0]
+        assert gateway[gateway.index('--viewer-port')+1] == '54321'
+        assert gateway[gateway.index('--viewer-port')-3] == str(launched[0].pid)
+    if fail_at != 0:
+        argv = calls[1][0]
+        assert argv[1:3] == ['-m', 'harness.viewer'] and argv[argv.index('--port')+1] == '54321'
+        assert argv[argv.index('--host')+1] == '127.0.0.1' and argv[argv.index('--run')+1] == str(tmp_path)
+        assert argv[argv.index('--root')+1] == str(guard.ROOT/'.runtime'/'evaluations') and '--runs' not in argv
     for index, (_, options) in enumerate(calls):
         assert options['start_new_session'] is True
         assert ('WATCH_TEST_KEY' in options['env']) == (index == 0)
     terminal = json.loads((tmp_path/'watch-terminal.json').read_text())
     assert terminal == result
     with pytest.raises(ValueError, match='prior/partial'):
-        guard.run_supervised(tmp_path, attention='required', popen=launch)
+        guard.run_supervised(tmp_path, attention='required', popen=launch, viewer_port=lambda: 54321)
+
+
+def test_viewer_exit_never_counts_as_supervision_loss(tmp_path, monkeypatch):
+    profile = dict(session=SESSION, source_commit=COMMIT, wall_seconds=60, port=12345)
+    monkeypatch.setattr(guard, 'preflight', lambda _: (profile, {'api_key_env': 'WATCH_TEST_KEY'}, {}))
+    monkeypatch.setenv('WATCH_TEST_KEY', 'synthetic-not-a-provider-key')
+    (tmp_path/'manifest.json').write_text('{}')
+    launched = {}
+    def launch(argv, **kwargs):
+        if 'harness.viewer' in argv:
+            command = [sys.executable, '-c', 'pass']  # The viewer exits at once.
+            name = 'viewer'
+        elif '--viewer-port' in argv:
+            command = gateway_command(argv)
+            command[2] = 'import time; time.sleep(.6); ' + command[2]  # Gateway reports after the viewer died.
+            name = 'gateway'
+        else:
+            command = [sys.executable, '-c', 'import time; time.sleep(20)']
+            name = 'other'+str(len(launched))
+        launched[name] = subprocess.Popen(command, **kwargs)
+        return launched[name]
+    outcome = {}
+    def supervision(*args, **kwargs):
+        viewer = launched['viewer']
+        viewer.wait(3)
+        outcome['viewer_exited'] = viewer.returncode == 0
+        outcome['others_alive'] = all(h.poll() is None for n, h in launched.items() if n != 'viewer')
+        return 'custodian_terminal'
+    monkeypatch.setattr(guard, 'supervise', supervision)
+    result = guard.run_supervised(tmp_path, attention='best-effort', popen=launch, runs=tmp_path/'archive')
+    assert outcome == dict(viewer_exited=True, others_alive=True)
+    assert result['reason'] == 'custodian_terminal' and 'error' not in result
+    assert result['cleanup_verified'] and result['children']['viewer']['supervised'] is False
+    assert '--runs' in result['children']['viewer']['argv']
+    assert result['cleanup']['viewer']['process_absent']
+
+
+def stops_case(message, tmp_path):
+    checks, sender = socket.socketpair(type=socket.SOCK_DGRAM)
+    stops, stop_sender = socket.socketpair(type=socket.SOCK_DGRAM)
+    live = SimpleNamespace(poll=lambda: None)
+    now = time.monotonic()
+    result = dict(accepted=[], started_wall=999, started_monotonic=now-10)
+    with checks, sender, stops, stop_sender:
+        stop_sender.send(message.format(at=now-1).encode())
+        stop_sender.send(b'pause-replied')
+        reason = guard.supervise(tmp_path, dict(session=SESSION, source_commit=COMMIT, wall_seconds=100),
+                                 live, live, live, checks, stops, lambda: False, result)
+    return reason, result
+
+
+@pytest.mark.parametrize('reason', ['loop', 'fault', 'spend', 'other'])
+def test_guard_records_the_owner_pause_reason(tmp_path, reason):
+    outcome, result = stops_case('pause:{at!r}:'+reason, tmp_path)
+    assert outcome == 'operator_pause' and result['pause_reason'] == reason
+    assert result['pause_reply_forwarded'] is True
+
+
+@pytest.mark.parametrize('message, expected', [
+    ('pause:{at!r}', 'acknowledgement_uncertain'), ('pause:{at!r}:loop:x', 'acknowledgement_uncertain'),
+    ('pause:{at!r}:boredom', 'invalid_pause_reason'), ('pause:{at!r}:', 'invalid_pause_reason'),
+    ('pause:nan:loop', 'invalid_pause_clock'), ('pause:abc:loop', 'invalid_pause_clock'),
+    ('ack-uncertain', 'acknowledgement_uncertain')])
+def test_guard_refuses_unreasoned_or_malformed_pause_messages(tmp_path, message, expected):
+    outcome, result = stops_case(message, tmp_path)
+    assert outcome == expected and 'pause_reason' not in result
 
 
 def test_terminal_without_first_check_never_certifies_coverage(tmp_path):
@@ -388,10 +478,8 @@ def test_final_substitution_and_cleanup_failure_cannot_certify_success(tmp_path,
     (tmp_path/'manifest.json').write_text('{}')
     handles = []
     def launch(argv, **kwargs):
-        if len(handles) == 1:
-            command = [sys.executable, '-c',
-                'import socket,sys,time; socket.socket(fileno=int(sys.argv[1])).send(b\'{"port":12346}\'); time.sleep(20)',
-                argv[-2]]
+        if '--viewer-port' in argv:
+            command = gateway_command(argv)
         else:
             command = [sys.executable, '-c', 'import time; time.sleep(20)']
         handle = subprocess.Popen(command, **kwargs); handles.append(handle)
@@ -410,12 +498,12 @@ def test_final_substitution_and_cleanup_failure_cannot_certify_success(tmp_path,
     closed = []
     def close(handle):
         actual = original_close(handle); closed.append(handle.pid)
-        if substitution == 'cleanup' and handle is handles[1]:
+        if substitution == 'cleanup' and handle is handles[2]:
             raise PermissionError('synthetic denied cleanup verification after actual fixture cleanup')
         return actual
     monkeypatch.setattr(guard, 'close_group', close)
     result = guard.run_supervised(tmp_path, attention='required', popen=launch)
-    assert len(closed) == 3 and all(h.poll() is not None for h in handles)
+    assert len(closed) == 4 and all(h.poll() is not None for h in handles)
     if substitution == 'cleanup':
         assert not result['cleanup_verified']
         assert result['cleanup']['gateway']['error'] == 'PermissionError'
