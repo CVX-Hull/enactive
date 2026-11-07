@@ -8,7 +8,7 @@ from unittest.mock import patch
 from PIL import Image
 import pytest
 
-from harness.computer.protocol import ControlError
+from harness.computer.protocol import ControlError, NoDispatch
 from harness.computer.runtime import ComputerRuntime
 
 
@@ -323,7 +323,7 @@ def wait(seconds):
 def test_deadline_already_passed_refuses_without_dispatch(tmp_path, clock):
     runtime, channel, actor = make_runtime(tmp_path)
     try:
-        with pytest.raises(ControlError, match='deadline expired before dispatch'):
+        with pytest.raises(NoDispatch, match='deadline expired before dispatch'):
             runtime.input(actor['actor_id'], [key()], deadline_monotonic=clock.now - 1)
         assert channel.calls == []
         assert runtime.store.counts()['inputs'] == 0
@@ -371,6 +371,14 @@ def test_expiry_between_keys_is_partial_keeps_receipts_and_fences_input(tmp_path
         assert len(channel.calls) == 1
         collected, _ = runtime.result(actor['actor_id'], result['operation_id'])
         assert collected['status'] == 'partial' and len(collected['receipts']) == 1
+        # Resubmitting the original ID collects or refuses; it never dispatches again.
+        try:
+            again, _ = runtime.input(actor['actor_id'], [key(), key('y'), key('z')],
+                                     operation_id=result['operation_id'])
+            assert again['status'] == 'partial'
+        except ControlError:
+            pass
+        assert len(channel.calls) == 1
         with pytest.raises(ControlError):
             runtime.seal_actor(actor['actor_id'], 'b'*32, 'c'*32, 'd'*64)
     finally:

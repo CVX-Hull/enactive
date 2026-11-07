@@ -171,6 +171,9 @@ def test_evaluation_and_the_viewer_leave_the_run_directories_untouched(archive, 
     assert any(name.startswith('base1/sources/') and name.endswith('.png') for name in before)
     evaluate(runs / 'base1', FakeBinding(), tmp_path / 'fresh', created_wall=2.0)
     assert snapshot(runs) == before
+    evaluate(runs / 'base1', FakeBinding(), tmp_path / 'live', state='live', created_wall=2.0)
+    LiveEvaluator(runs / 'base1', tmp_path / 'live', FakeBinding()).step()
+    assert snapshot(runs) == before
     item = next(i for i in client.get(f'/api/view/run/{session}/steps').json()['items'] if i['source_id'])
     for route in (f'/api/view/run/{session}/summary', f'/api/view/run/{session}/frame/{item["source_id"]}',
                   f'/api/view/run/{session}/context/request-1', f'/api/view/run/{session}/requests',
