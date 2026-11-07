@@ -22,7 +22,7 @@ async function waitFor(fn, arg, timeout = 8000) {
   const end = Date.now() + timeout;
   for (;;) {
     if (await page.evaluate(fn, arg).catch(() => false)) return;
-    if (Date.now() > end) throw new Error(`condition not met in ${timeout} ms: ${fn}`);
+    if (Date.now() > end) throw await S.stalled(page, fn, timeout);
     await S.settle(page, 100);
   }
 }

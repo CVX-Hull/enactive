@@ -218,6 +218,22 @@ class DevToolTests(unittest.TestCase):
         process.assert_called_once_with(["fixture"], cwd=check.ROOT, check=True, input=b"source")
         self.assertIn("Command elapsed: 2.50s", output.getvalue())
 
+    def test_failed_command_output_is_kept_and_its_log_path_reported(self):
+        output = io.StringIO()
+        script = "import sys; print('first line'); print('assertion detail', file=sys.stderr); sys.exit(3)"
+        with patch.object(check, "ROOT", self.root), patch.object(check, "_log_directory", None), \
+                redirect_stdout(output), self.assertRaises(subprocess.CalledProcessError) as error:
+            check.run([sys.executable, "-c", script])
+        self.assertEqual(error.exception.returncode, 3)
+        logs = sorted((self.root / check.CHECK_LOGS).rglob("*.log"))
+        self.assertEqual(len(logs), 1)
+        self.assertEqual(logs[0].read_text().splitlines(), ["first line", "assertion detail"])
+        self.assertIn("first line", output.getvalue())  # still streamed live
+        self.assertIn(f"Full output of the failed command: {logs[0].relative_to(self.root)}", output.getvalue())
+        with patch.object(check, "ROOT", self.root), redirect_stdout(io.StringIO()):
+            check.run([sys.executable, "-c", "print('ok')"])
+        self.assertEqual(len(sorted((self.root / check.CHECK_LOGS).rglob("*.log"))), 2)  # one log per command
+
     def test_all_profiles_reject_invalid_python_before_reporting_success(self):
         self.write("computer/runtime.py", "def broken(:\n")
         for arguments in (["--fast"], [], ["--profile", "editorial"], ["--profile", "main-smoke"],

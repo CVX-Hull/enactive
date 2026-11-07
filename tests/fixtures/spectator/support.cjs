@@ -64,12 +64,19 @@ async function shot(page, name) {
 }
 
 const settle = (page, ms = 400) => new Promise(r => setTimeout(r, ms));
+/** The error for a wait that ran out, with what the page had recorded, so a failure under load is diagnosable (#421). */
+async function stalled(page, fn, timeout) {
+  const state = await page.evaluate(() => ({ready: document.readyState, app: (document.getElementById('app') || {}).childElementCount}))
+    .catch(error => ({unreadable: error.message}));
+  return new Error(`condition not met in ${timeout} ms: ${fn}\npage: ${JSON.stringify(state)}\n`
+    + `problems: ${JSON.stringify(page.problems || [])}`);
+}
 /** Poll a predicate in the page. (page.waitForFunction proved unreliable for this page's predicates.) */
 async function until(page, fn, arg, timeout = 10000) {
   const end = Date.now() + timeout;
   for (;;) {
     if (await page.evaluate(fn, arg).catch(() => false)) return;
-    if (Date.now() > end) throw new Error(`condition not met in ${timeout} ms: ${fn}`);
+    if (Date.now() > end) throw await stalled(page, fn, timeout);
     await settle(page, 100);
   }
 }
@@ -84,4 +91,4 @@ async function overflow(page) {
   return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 }
 
-module.exports = {startFixture, launch, open, shot, settle, ready, until, overflow, SHOTS};
+module.exports = {startFixture, launch, open, shot, settle, ready, until, stalled, overflow, SHOTS};

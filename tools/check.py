@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 from html.parser import HTMLParser
 import json
+import os
 import frontmatter
 from pathlib import Path
 import shutil
@@ -138,11 +139,41 @@ def check_documents(root: Path) -> list[str]:
     return errors
 
 
+#: Each checker invocation keeps every command's full output here, so a failure stays diagnosable even when the
+#: terminal output was truncated (#421).
+CHECK_LOGS = Path(".runtime") / "check-logs"
+_log_directory: Path | None = None
+
+
+def _log_path(command: list[str]) -> Path:
+    global _log_directory
+    if _log_directory is None or not _log_directory.is_dir():
+        _log_directory = ROOT / CHECK_LOGS / time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+        _log_directory.mkdir(parents=True, exist_ok=True)
+    name = "-".join(Path(part).name for part in command[:4])
+    name = "".join(c if c.isalnum() or c in "._-" else "-" for c in name)[:60]
+    return _log_directory / f"{len(list(_log_directory.iterdir())) + 1:02d}-{name}.log"
+
+
 def run(command: list[str], **kwargs) -> None:
     print("+ " + " ".join(command), flush=True)
     started = time.perf_counter()
     try:
-        subprocess.run(command, cwd=ROOT, check=True, **kwargs)
+        if kwargs:  # stdin-fed syntax checks: short, silent on success
+            subprocess.run(command, cwd=ROOT, check=True, **kwargs)
+            return
+        path = _log_path(command)
+        environment = {**os.environ, "PYTHONUNBUFFERED": "1"}  # keep stdout/stderr order as on a terminal
+        with path.open("wb") as log, subprocess.Popen(command, cwd=ROOT, stdout=subprocess.PIPE,
+                                                       stderr=subprocess.STDOUT, env=environment) as process:
+            for line in process.stdout:
+                log.write(line)
+                sys.stdout.write(line.decode(errors="replace"))
+                sys.stdout.flush()
+            returncode = process.wait()
+        if returncode:
+            print(f"Full output of the failed command: {path.relative_to(ROOT)}", flush=True)
+            raise subprocess.CalledProcessError(returncode, command)
     finally:
         print(f"Command elapsed: {time.perf_counter() - started:.2f}s", flush=True)
 
