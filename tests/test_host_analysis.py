@@ -187,7 +187,7 @@ class HostAnalysisTests(unittest.TestCase):
         actor.mkdir(parents=True)
         path = actor / "host.jsonl"
         path.write_text(json.dumps(self.event("host-start", 0)) + "\n")
-        (self.root / "manifest.json").write_text(json.dumps(dict(schema="campaign-run/4", source_commit="abc")))
+        (self.root / "manifest.json").write_text(json.dumps(dict(schema="campaign-run/5", source_commit="abc")))
         receipt = dict(schema="campaign-receipt/3", outcome="player_task_complete_unassessed",
             normal_save_claimed_by_harness=False, driver=dict(schema="player-driver/3", attempts_charged=1))
         (self.root / "receipt.json").write_text(json.dumps(receipt))

@@ -20,7 +20,7 @@ its behavior either player logic or test scaffolding.
 
 ## Adapter selection
 
-A `campaign-run/4` package freezes `host:{"argv":[...]}` with1–8 strings.
+A `campaign-run/5` package freezes `host:{"argv":[...]}` with1–8 strings.
 The first is an absolute existing executable/interpreter regular file; later
 entries are canonical project-local regular files tracked by the clean source.
 No registry, resumed host, fallback or old `node` alias is supported.

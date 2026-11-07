@@ -10,7 +10,7 @@ One [campaign custodian](../../tools/campaign_run.py) owns fresh mechanical targ
 store/server lifetime and final cleanup. The [driver](../../tools/campaign_player.py)
 owns the frozen [player host](../contracts/player-host.md)/MCP groups and at most one
 successor. The [package validator](../../tools/campaign_package.py) is authoritative
-for the closed `campaign-run/4` admission. No game-phase/identity admission or semantic mission
+for the closed `campaign-run/5` admission. No game-phase/identity admission or semantic mission
 service remains.
 
 Development runs (`--attention best-effort`) and frozen tests that require
@@ -28,7 +28,8 @@ It also freezes native executable/adapter bytes, bounded initial target files,
 shared-lock path, explicit `player-memory/2` store, player host argv, effort,
 loopback port, original wall/host/aggregate-host seconds, one/two-host limit,
 aggregate HTTP-attempt bound, computer input/request/frame/byte capacities,
-`ending_reserve` and cumulative cap accounting. Source/directory mismatch refuses
+`ending_reserve`, cumulative cap accounting and the operator-only
+[`labels`](#operator-labels). Source/directory mismatch refuses
 before launch. Player stores use SQLite `user_version=2`; select a fresh
 `player-memory/2` store for this migration and preserve unsupported old libraries
 as inert history without conversion.
@@ -101,9 +102,10 @@ the actual bytes, for example `shasum -a 256 SELECTED_FILE`; preserve those byte
 
 ```json
 {
-  "schema": "campaign-run/4",
+  "schema": "campaign-run/5",
   "session": "NEW_32_LOWERCASE_HEX_ID",
   "source_commit": "EXACT_40_HEX_CLEAN_HEAD",
+  "labels": {"arm": "ARM", "start": "START", "scenario": "SCENARIO", "lineage": null, "admission": null},
   "files": {
     "route.json": "SHA256", "mcp-template.json": "SHA256",
     "context.txt": "SHA256", "prompt.txt": "SHA256", "target.json": "SHA256"
@@ -188,6 +190,34 @@ session DB, native-process receipt, actors or contexts. An existing selected pla
 store must be current; it never restores computer custody. The maintained
 validator is authoritative and rejects changed bytes/unsupported fields before
 effects. Do not remove markers to reuse a failed package.
+
+### Operator labels
+
+`labels` is required and closed: `arm`, `start`, `scenario`, `lineage`, `admission`.
+They are operator-only analysis labels frozen with the admission so the evaluator
+and spectator ([ADR008](../decisions/008-evaluation-and-spectator.md)) can name
+the experiment arm, start and scenario without inferring them from player data.
+
+| Field | Value |
+|---|---|
+| `arm` | string, 1-40 characters (for example `ceiling`, `long-horizon`) |
+| `start` | string, 1-40 characters (for example `S1`) |
+| `scenario` | string, 1-80 characters (for example `Evacuee`) |
+| `lineage` | string, 1-40 characters, or `null`; chained admissions of one survivor share it |
+| `admission` | integer 1-10000, or `null`; position within the lineage; `null` exactly when `lineage` is `null` |
+
+Strings are printable ASCII only (space through `~`), with no control or non-ASCII
+characters. A missing field, extra field or out-of-bound value refuses the package
+before effects, like the rest of the manifest. Packages of any earlier schema
+have no `labels` and are rejected as inert history; there is no conversion or default.
+
+**The labels are not player-visible.** Only the validator, evaluator and spectator
+read them. The driver builds every player-visible input (host argv, route, prompt,
+context, MCP configuration, actor identity, control command and host environment)
+from other manifest fields, and never from `labels`. Do not copy a label into the
+prompt, context, route or target files, which are frozen and hashed separately. A
+negative test (`test_operator_labels_never_reach_the_player_host`) asserts that the
+launched argv, environment and every file written for an actor lack the label values.
 
 ### Ending reserve and external stop
 

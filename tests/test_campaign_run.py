@@ -26,7 +26,8 @@ def package(root):
     }
     for name,value in values.items():(directory/name).write_text(value if isinstance(value,str) else json.dumps(value))
     artifact=lambda p:dict(path=str(p),sha256=hashlib.sha256(p.read_bytes()).hexdigest())
-    profile=dict(schema='campaign-run/4',session='a'*32,source_commit='f'*40,
+    profile=dict(schema='campaign-run/5',session='a'*32,source_commit='f'*40,
+        labels=dict(arm='ceiling',start='S1',scenario='Evacuee',lineage=None,admission=None),
         files={name:artifact(directory/name)['sha256'] for name in values},
         initial_files={str(root/'options'):artifact(root/'options')['sha256']},
         native=artifact(root/'native'),library=artifact(root/'library'),shared_lock=str(root/'.runtime/bridge/game.lock'),
@@ -70,12 +71,13 @@ def test_only_selected_fresh_package_is_read(tmp_path):
     assert not (directory/'started.json').exists() and not (directory/'session.sqlite3').exists()
 
 
-@pytest.mark.parametrize('fault',['old','previous_package','old_node','old_route','previous_route','untracked_adapter','partial','changed','dirty',
+@pytest.mark.parametrize('fault',['old','previous_package','previous_labelless','old_node','old_route','previous_route','untracked_adapter','partial','changed','dirty',
                                   'credentials','different_lock'])
 def test_invalid_selected_package_never_launches_or_opens_store(tmp_path,fault):
     directory,profile=package(tmp_path)
     if fault=='old':profile['schema']='campaign-run/1'
     if fault=='previous_package':profile['schema']='campaign-run/3'
+    if fault=='previous_labelless':profile['schema']='campaign-run/4';del profile['labels']
     if fault=='old_node':
         profile['schema']='campaign-run/2';profile['node']=profile.pop('host')['argv'][0]
     if fault in ('old_route','previous_route'):
@@ -88,7 +90,7 @@ def test_invalid_selected_package_never_launches_or_opens_store(tmp_path,fault):
         path=directory/'target.json';target=json.loads(path.read_text());target['env']['API_KEY']='fixture'
         path.write_text(json.dumps(target));profile['files']['target.json']=hashlib.sha256(path.read_bytes()).hexdigest()
     (directory/'manifest.json').write_text(json.dumps(profile))
-    expected={'old':'inert history','previous_package':'inert history','old_node':'inert history','old_route':'inert history','previous_route':'inert history',
+    expected={'old':'inert history','previous_package':'inert history','previous_labelless':'inert history','old_node':'inert history','old_route':'inert history','previous_route':'inert history',
               'untracked_adapter':'tracked by the clean source commit'}.get(fault)
     # Ignored files never appear in porcelain status; only tracking binds them to the commit.
     with patch.object(packages,'ROOT',tmp_path),\
@@ -97,6 +99,60 @@ def test_invalid_selected_package_never_launches_or_opens_store(tmp_path,fault):
         packages.preflight(directory)
     assert not validator.called
     assert not (directory/'session.sqlite3').exists() and not (directory/'native-process.json').exists()
+
+
+def test_labels_are_required_and_current_schema_only(tmp_path):
+    directory,profile=package(tmp_path)
+    assert validate(directory,tmp_path)[0]['labels']==dict(arm='ceiling',start='S1',scenario='Evacuee',lineage=None,admission=None)
+    del profile['labels']
+    (directory/'manifest.json').write_text(json.dumps(profile))
+    with patch.object(packages,'ROOT',tmp_path),git(),patch.object(packages.subprocess,'run') as validator,\
+            pytest.raises(ControlError,match='Invalid mechanical object fields'):packages.preflight(directory)
+    assert not validator.called
+
+
+@pytest.mark.parametrize('labels',[
+    'text',None,[],dict(arm='a',start='S1',scenario='x',lineage=None),
+    dict(arm='a',start='S1',scenario='x',lineage=None,admission=None,extra=1),
+    dict(arm='',start='S1',scenario='x',lineage=None,admission=None),
+    dict(arm='a'*41,start='S1',scenario='x',lineage=None,admission=None),
+    dict(arm='a',start='S'*41,scenario='x',lineage=None,admission=None),
+    dict(arm='a',start='S1',scenario='x'*81,lineage=None,admission=None),
+    dict(arm='a',start='S1',scenario='',lineage=None,admission=None),
+    dict(arm='a',start='S1',scenario='x',lineage='',admission=1),
+    dict(arm='a',start='S1',scenario='x',lineage='l'*41,admission=1),
+    dict(arm=None,start='S1',scenario='x',lineage=None,admission=None),
+    dict(arm=1,start='S1',scenario='x',lineage=None,admission=None),
+    dict(arm='café',start='S1',scenario='x',lineage=None,admission=None),
+    dict(arm='a\nb',start='S1',scenario='x',lineage=None,admission=None),
+    dict(arm='a',start='S1\x00',scenario='x',lineage=None,admission=None),
+    dict(arm='a',start='S1',scenario='x\x7f',lineage=None,admission=None),
+    dict(arm='a',start='S1',scenario='x',lineage='l',admission=None),
+    dict(arm='a',start='S1',scenario='x',lineage=None,admission=1),
+    dict(arm='a',start='S1',scenario='x',lineage='l',admission=0),
+    dict(arm='a',start='S1',scenario='x',lineage='l',admission=10001),
+    dict(arm='a',start='S1',scenario='x',lineage='l',admission=True),
+    dict(arm='a',start='S1',scenario='x',lineage='l',admission='1'),
+])
+def test_invalid_operator_labels_refuse_before_effects(tmp_path,labels):
+    directory,profile=package(tmp_path)
+    profile['labels']=labels
+    (directory/'manifest.json').write_text(json.dumps(profile))
+    with patch.object(packages,'ROOT',tmp_path),git(),patch.object(packages.subprocess,'run') as validator,pytest.raises(ControlError):
+        packages.preflight(directory)
+    assert not validator.called
+
+
+@pytest.mark.parametrize('labels',[
+    dict(arm='a'*40,start='S'*40,scenario='x'*80,lineage='l'*40,admission=10000),
+    dict(arm='long-horizon',start='S2',scenario='Mixed printable ~!@# punctuation',lineage='survivor-1',admission=1),
+    dict(arm='ceiling',start='S1',scenario='Evacuee',lineage=None,admission=None),
+])
+def test_valid_operator_labels_are_admitted(tmp_path,labels):
+    directory,profile=package(tmp_path)
+    profile['labels']=labels
+    (directory/'manifest.json').write_text(json.dumps(profile))
+    assert validate(directory,tmp_path)[0]['labels']==labels
 
 
 @pytest.mark.parametrize('when',['before','during'])

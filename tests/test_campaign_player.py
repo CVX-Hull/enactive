@@ -1,5 +1,6 @@
 """Original host-attempt accounting and known prelaunch failures."""
 import json
+import subprocess
 import sys
 import threading
 import time
@@ -192,6 +193,36 @@ def test_pending_stop_survives_verified_handoff_before_successor_action(tmp_path
     tools=[json.loads((tmp_path/f'actors/{n}/mcp.json').read_text())['enabled_tools'] for n in ('001','002')]
     assert 'player_handoff' in tools[0] and 'player_handoff' not in tools[1]
     assert set(tools[0])-set(tools[1])=={'player_handoff'}
+
+
+def test_operator_labels_never_reach_the_player_host(tmp_path):
+    """Frozen analysis labels are operator data, absent from every player-visible input."""
+    marks=dict(arm='LABEL-ARM-9f3',start='LABEL-START-9f3',scenario='LABEL-SCENARIO-9f3',lineage='LABEL-LINEAGE-9f3',admission=7777)
+    profile,route,application=driver_case(tmp_path,'Frozen mission READ_CONTROL HANDOFF_RACE',two_actors=True)
+    profile['labels']=marks
+    launches=[];real=subprocess.Popen
+    def spy(*args,**kwargs):
+        launches.append((args[0],kwargs['env']));return real(*args,**kwargs)
+    with patch('tools.campaign_player._handoff_context',return_value='{"fallible":"unfinished work"}'),\
+            patch('tools.campaign_player.subprocess.Popen',side_effect=spy):
+        result=run_hosts(tmp_path,profile,route,application,'fixture-secret',threading.Event(),time.monotonic()+300)
+    assert result['outcome']=='player_external_stop_complete_unassessed',result
+    assert len(launches)==2
+    # The integer position is checked through the label object; its digits alone could collide with hashes.
+    needles=[value for value in marks.values() if isinstance(value,str)]+['LABEL-']
+    # Argv and environment handed to each host process.
+    for argv,env in launches:
+        text=json.dumps([argv,env])
+        assert not any(needle in text for needle in needles),text
+    # Every file the driver wrote for the actors: route, prompt, context, MCP config,
+    # actor identity, control command, frozen digests and final report.
+    written=[path for path in (tmp_path/'actors').rglob('*') if path.is_file()]
+    assert {'route.json','prompt.txt','context.txt','mcp.json','actor.json','frozen.json','control.json'}<={p.name for p in written}
+    for path in written:
+        content=path.read_text()
+        assert not any(needle in content for needle in needles),path
+    # Nothing label-derived was requested of the runtime on behalf of an actor.
+    assert application.runtime.add_actor.call_args_list==[((),{}),((),{})]
 
 
 def test_single_host_admission_offers_no_handoff_tool(tmp_path):

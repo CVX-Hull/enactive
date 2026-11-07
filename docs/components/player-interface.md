@@ -72,7 +72,7 @@ originating issuance or exact original collection settles host handoff. After th
 host closes its owned MCP child, the driver checks actual old process-group
 quiescence and context digest before minting a successor under original limits.
 No menu/save/identity check is required. User Pause, uncertainty or failed closure
-cannot become resumable handoff. At most two hosts are permitted by `campaign-run/4`.
+cannot become resumable handoff. At most two hosts are permitted by `campaign-run/5`.
 
 ## Assurance and evidence
 

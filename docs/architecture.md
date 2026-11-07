@@ -32,7 +32,7 @@ logical responsibilities; arrows identify requests, results or user control.
 ## Runtime and state
 
 `tools/campaign_run.py` is the sole finite custodian. It validates a fresh frozen
-`campaign-run/4` package and reserves exclusion before launch. `OwnedTarget` keeps
+`campaign-run/5` package and reserves exclusion before launch. `OwnedTarget` keeps
 exact subprocess handles and passes an inherited shared-lock descriptor and a
 nonblocking Unix socket to the SDL adapter. Native retains the shared lock for
 its lifetime, including after the custodian loses its own reference.
@@ -154,7 +154,7 @@ Direct player finish is a claim, not saving or game acceptance.
 One current set is `computer-wire/1`, request/target/receipt `/2`,
 `computer-session/1`, `computer-operation/1`, `computer-source/1`,
 `player-memory/2`, `player-record/1`, `player-program/2`, `program-view/4`,
-`player-handoff/1`, `player-host/3` and `campaign-run/4`. Model-facing operation,
+`player-handoff/1`, `player-host/3` and `campaign-run/5`. Model-facing operation,
 error and transport envelopes are `player-computer-result/1`, `player-error/2`
 and `player-transport/2`; canonical operations/HTTP records are unchanged.
 The [host contract](contracts/player-host.md) and [campaign procedure](operations/campaign-run.md)
