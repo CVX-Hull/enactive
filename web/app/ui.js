@@ -19,7 +19,11 @@ export function Pv({source, detail}) {
 /** Held-out validation of a reader: `{pass, accuracy, n, floor}` or null when the reader has none. */
 export function validationText(check) {
   if (!check) return 'not validated';
-  return check.pass ? 'passes floor' : 'below floor';
+  return check.pass === true ? 'passes floor' : check.pass === false ? 'below floor' : 'unmeasured';
+}
+/** Beside a metric's provenance chip: `validated` is false when a reader the value depends on has no passing validation. */
+export function Unvalidated({metric}) {
+  return metric.validated === false ? html` <span class="state watch" title="A reader this value depends on has not passed held-out validation">unvalidated</span>` : null;
 }
 export function ReadChip({reading}) {
   const bits = [];

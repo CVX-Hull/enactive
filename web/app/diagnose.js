@@ -1,5 +1,5 @@
 // Diagnose: one run, every number drills down to its instances.
-import {html, useState, useMemo, Panel, Pv, Waiting, Table, Insufficient, Callout, fmtH, fmtMoney, pct, trim, bytes, mmss, shortId, scalar, label, compact} from './ui.js';
+import {html, useState, useMemo, Panel, Pv, Unvalidated, Waiting, Table, Insufficient, Callout, fmtH, fmtMoney, pct, trim, bytes, mmss, shortId, scalar, label, compact} from './ui.js';
 import {store, useView, runPath, framePath, runStart} from './data.js';
 import {Chart, requestsOption, transitionsOption} from './charts.js';
 import {findingText} from './supervise.js';
@@ -62,7 +62,7 @@ function Overview() {
         <dt>Source commit</dt><dd>${String(facts.source_commit || '').slice(0, 7) || '—'}</dd>
         <dt>Model · effort</dt><dd>${facts.model || '—'} · ${facts.effort || '—'}</dd>
         <dt>Evaluator</dt><dd>core ${s.versions?.core_version} · ${s.versions?.binding_id} ${s.versions?.binding_version}</dd></dl><//>
-    ${[...groups.entries()].map(([name, list]) => html`<${Panel} title=${name} span="s4"><dl class="kv">${list.map(m => html`<dt>${label(m.name.split('.').slice(1).join('.'))}${m.key ? ` · ${m.key}` : ''} <${Pv} source=${m.source} /></dt>
+    ${[...groups.entries()].map(([name, list]) => html`<${Panel} title=${name} span="s4"><dl class="kv">${list.map(m => html`<dt>${label(m.name.split('.').slice(1).join('.'))}${m.key ? ` · ${m.key}` : ''} <${Pv} source=${m.source} /><${Unvalidated} metric=${m} /></dt>
       <dd title=${metricNote(m)}>${metricText(m)} <span class="note">${metricNote(m)}</span></dd>`)}</dl><//>`)}
     <${Panel} title="Findings in this run" note="every row opens its evidence on Supervise · newest first, up to 100" span="s12">
       ${listed.length ? html`<${Table} columns=${[{title: 'Finding', render: f => findingText(f)}, {title: 'When', render: f => (f.wall === null ? '—' : mmss(f.wall - t0))}, {title: 'Step', num: true, render: f => f.seq_start}, {title: 'Source', render: f => html`<${Pv} source=${f.source} />`}]} rows=${listed} />`
@@ -71,7 +71,7 @@ function Overview() {
     <${Panel} title="Reader coverage" note="how often each reader produced a value, and its held-out validation; values from a reader below its floor are provisional" span="s7">
       <${Table} columns=${[{title: 'Reader', key: 'reader'}, {title: 'Coverage', num: true, render: r => pct(r.coverage, 1)}, {title: 'Frames', num: true, render: r => `${trim(r.count)}/${trim(r.denominator)}`},
         {title: 'Held-out', num: true, render: r => (r.validation ? `${pct(r.validation.accuracy, 1)} of ${r.validation.n} · floor ${pct(r.validation.floor, 1)}` : '—')},
-        {title: 'Status', render: r => (r.validation ? html`<span class="state ${r.validation.pass ? 'clear' : 'watch'}">${r.validation.pass ? 'passes' : 'below floor'}</span>` : html`<span class="note">not validated</span>`)}]} rows=${s.reader_coverage || []} empty="No reader coverage recorded." /><//>
+        {title: 'Status', render: r => (r.validation ? html`<span class="state ${r.validation.pass === true ? 'clear' : 'watch'}">${r.validation.pass === true ? 'passes' : r.validation.pass === false ? 'below floor' : 'unmeasured'}</span>` : html`<span class="note">not validated</span>`)}]} rows=${s.reader_coverage || []} empty="No reader coverage recorded." /><//>
     <${Panel} title="Milestone ladder" note=${s.ladder ? `highest reached: ${label(s.ladder.highest || 'none')}` : ''} span="s5">
       <${Table} columns=${[{title: 'Milestone', render: r => label(r.id)}, {title: 'Status', render: r => label(r.status)}, {title: 'Evidence', render: r => html`<${Pv} source=${r.evidence} />`},
         {title: 'At decision', num: true, render: r => (r.clocks ? r.clocks.decision : '—')}, {title: '$', num: true, render: r => (r.clocks ? fmtMoney(r.clocks.dollars) : '—')}]}

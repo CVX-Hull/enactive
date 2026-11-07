@@ -179,6 +179,10 @@ def test_summary_carries_game_state_findings_ladder_metrics_and_validation(archi
     assert metric['source'] == 'derived' and metric['count'] == 12 and 'denominator' in metric and 'missing' in metric
     assert next(m for m in summary['metrics'] if m['name'] == 'host.dollars_per_decision')['source'] == 'recorded'
     assert next(m for m in summary['metrics'] if m['name'] == 'mode.out_of_play_share')['source'] == 'read'
+    # `validated` follows the readers a metric depends on: mode fails its floor, clock passes, death has no entry.
+    flags = {m['name']: m['validated'] for m in summary['metrics']}
+    assert flags['mode.out_of_play_share'] is False and flags['survival.game_hours'] is False
+    assert flags['host.dollars_per_decision'] is None and flags['pace.long_activities'] is True
     coverage = {c['reader']: c for c in summary['reader_coverage']}
     assert coverage['mode']['validation']['pass'] is False and coverage['clock']['validation']['pass'] is True
     assert coverage['ate']['validation'] is None and coverage['mode']['denominator'] == 14

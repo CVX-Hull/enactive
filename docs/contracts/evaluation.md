@@ -107,11 +107,15 @@ The interface is [`harness/evaluation/core/binding.py`](../../harness/evaluation
 more than the binding's maximum jump, abstains with `implausible`. The exception is a
 jump the next reading confirms.
 
-**Accuracy floors.** A reader's values feed a metric only after held-out validation
-meets its floor:
-- clock: 98% exact;
-- mode: 97%;
-- every other reader: 95% on non-abstained frames.
+**Accuracy floors (a process rule).** Each reader has a held-out validation record in
+`data/evaluation/reader-validation.json` with a floor: clock 98% exact, mode 97%, every
+other reader 95% on non-abstained frames. The record is shown with every reader's values,
+with `pass` of `true` (floor met), `false` (below it) or `null` (unmeasured, with a note).
+Values are never hidden. A metric derived from a reader without `pass: true` is labelled
+unvalidated: the metric JSON carries `validated` (`true`, `false` or `null` for a metric
+that reads no frame reader) and the page shows it next to the provenance chip. At present
+`death` (recall unmeasured: no held-out death screen) and `threat` (empty lists only) are
+`null`.
 
 **The CDDA binding** (`harness/evaluation/cdda`) supplies:
 - a glyph-atlas sidebar reader for date and time;

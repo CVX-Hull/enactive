@@ -50,9 +50,29 @@ def scalar(value: object) -> float | None:
     return None
 
 
-def metric_json(row) -> dict:
+# The validated readers each metric is derived from. A metric is `validated` only when every one of them has `pass: true`
+# in data/evaluation/reader-validation.json; a missing entry or `pass: null` (unmeasured) is unvalidated. Metrics that
+# read no frame reader (host, tool, custody, memory, program and handoff facts) are `null`.
+NEEDS_READERS = ('hunger', 'thirst', 'weariness', 'pain')
+METRIC_READERS = {'survival.game_hours': ('clock', 'mode', 'death'), 'pace.routine_seconds_per_decision': ('clock', 'mode'),
+    'pace.long_activities': ('clock',), 'pace.dollars_per_game_hour': ('clock', 'mode'), 'mode.out_of_play_share': ('mode',),
+    'stall.longest': ('mode',), 'stall.count': ('mode',), 'needs.severe_share': ('mode', *NEEDS_READERS),
+    'ladder.reached': ('clock', 'mode', *NEEDS_READERS), 'lineage.continuity': ('clock', 'identity'),
+    'run.infrastructure_loss': ('death',), 'run.provider_loss': ('death',)}
+
+
+def validated(name: str, validation: dict | None) -> bool | None:
+    """`true` when every reader the metric depends on passed held-out validation, `false` when any did not (or none
+    is recorded), `null` when the metric depends on no reader."""
+    readers = METRIC_READERS.get(name)
+    if readers is None:
+        return None
+    return all((validation or {}).get(reader, {}).get('pass') is True for reader in readers)
+
+
+def metric_json(row, validation: dict | None = None) -> dict:
     return dict(name=row.name, key=row.key, value=row.value, count=row.count, denominator=row.denominator,
-        missing=row.missing, source=provenance(row.name))
+        missing=row.missing, source=provenance(row.name), validated=validated(row.name, validation))
 
 
 def outcome(info: RunInfo) -> dict:
@@ -156,7 +176,7 @@ def summary(catalog: Catalog, info: RunInfo, connection: sqlite3.Connection, liv
         evaluator=evaluator,
         pause=pause.conditions(connection, info.facts, time.time() if now is None else now) if live else None,
         game_state=game_state(connection, validation), findings=findings(connection), ladder=ladder,
-        metrics=[metric_json(row) for _, row in sorted(info.metrics.items())],
+        metrics=[metric_json(row, validation) for _, row in sorted(info.metrics.items())],
         reader_coverage=reader_coverage(info, validation))
 
 

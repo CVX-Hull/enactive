@@ -91,6 +91,8 @@ test('Diagnose overview: metrics with provenance, n and denominators, reader cov
   assert.match(body, /Milestone ladder/);
   assert.match(body, /highest reached: ate/);
   assert.match(body, /below floor|passes/i);
+  assert.ok(await page.$$eval('#app .state.watch', n => n.some(e => /unvalidated/i.test(e.textContent))),
+    'a metric from a reader without a passing validation is labelled');
   assert.ok(await page.$$eval('#app .pv.calc', n => n.length) >= 3);
   assert.equal(await page.$eval('.subnav a[aria-current="page"]', n => n.textContent), 'Overview');
 });
