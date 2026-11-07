@@ -333,6 +333,22 @@ def test_deadline_already_passed_refuses_without_dispatch(tmp_path, clock):
         runtime.close()
 
 
+def test_operation_starting_inside_collection_margin_refuses_without_dispatch(tmp_path, clock):
+    """#396 review: no fence and no empty 'completed' when nothing can be published."""
+    runtime, channel, actor = make_runtime(tmp_path)
+    try:
+        with pytest.raises(NoDispatch, match='deadline expired before dispatch'):
+            runtime.input(actor['actor_id'], [key()], deadline_monotonic=clock.now + .2)
+        with pytest.raises(ControlError, match='deadline expired before dispatch'):
+            runtime.observe(actor['actor_id'], deadline_monotonic=clock.now + .2)
+        assert channel.calls == [] and not channel.stopped.is_set()
+        assert runtime.status()['last_operation'] is None
+        later, _ = runtime.input(actor['actor_id'], [key()])
+        assert later['status'] == 'completed'
+    finally:
+        runtime.close()
+
+
 def test_wait_that_does_not_fit_deadline_is_partial_and_fences_input(tmp_path, clock):
     runtime, channel, actor = make_runtime(tmp_path)
     try:

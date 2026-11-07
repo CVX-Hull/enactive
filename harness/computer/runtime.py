@@ -213,7 +213,9 @@ class ComputerRuntime:
             if existing is not None:
                 return self.result(actor_id, identity)
             self._guard(actor_id)
-            if time.monotonic() >= original:
+            # Inside the collection margin nothing can be published (#396): refuse
+            # here, before intent is stored, rather than fence inside the loop.
+            if time.monotonic() >= original - COLLECTION_MARGIN_SECONDS:
                 raise OperationExpired('Original operation deadline expired before dispatch')
             if (self._counts['frames'] >= self.limits['max_frames']
                     or self._counts['frame_bytes'] + MAX_FRAME_BYTES > self.limits['max_bytes']):
