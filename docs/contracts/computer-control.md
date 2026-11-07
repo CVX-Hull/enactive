@@ -89,10 +89,12 @@ emitted, the remaining events may follow until the **continuation bound**
 (`continue_ms`, capped15s). A game that stalls between a key's down and up events
 ([#396](https://github.com/CVX-Hull/enactive/issues/396)) then still receives the
 release. At either bound the request fails: before any event it is rejected; after
-one it latches Pause, neutralizes owned presses and ends partial. The custodian sets
-the continuation bound to its operation deadline less250ms, so native emission ends
-before receipt collection does. Parent operation/run monotonic deadlines remain
-independent. Delivered means SDL event handoff, not
+one it latches Pause, neutralizes owned presses and ends partial. A request first
+read after its start bound (the game was busy before polling) is likewise rejected
+with no events; a stale Pause is a protocol fault and fences. The custodian ends
+both bounds at least250ms before its operation deadline and publishes nothing,
+including the post-input capture, inside that margin, so native emission ends before
+receipt collection does. Parent operation/run monotonic deadlines remain independent. Delivered means SDL event handoff, not
 application consumption/success; emitted input cannot become undelivered rejection.
 Capture is the last actual default-renderer present, with original time/geometry.
 Keys have no image-age/equality or game-phase predicate. Clicks bind returned

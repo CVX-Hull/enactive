@@ -15,7 +15,8 @@ from typing import Any
 import uuid
 
 from .channel import NativeChannel
-from .protocol import ControlError, NoDispatch, GEOMETRY_KEYS, MAX_FRAME_BYTES, validate_actions
+from .protocol import (COLLECTION_MARGIN_SECONDS, ControlError, NoDispatch, GEOMETRY_KEYS,
+                       MAX_FRAME_BYTES, validate_actions)
 from .store import SessionStore
 
 
@@ -243,7 +244,7 @@ class ComputerRuntime:
             try:
                 for action in actions:
                     self._guard(actor_id)
-                    if time.monotonic() >= original:
+                    if time.monotonic() >= original - COLLECTION_MARGIN_SECONDS:
                         raise OperationExpired('Original operation deadline exhausted')
                     if action['type'] == 'wait':
                         self._wait(actor_id, action['seconds'], original)
@@ -258,8 +259,9 @@ class ComputerRuntime:
                 else:
                     result['status'] = 'completed'
                     result['reason'] = 'Basic operations completed; application effect is not certified'
-                # The post-input screenshot is an observation, not a goal verdict.
-                if not self.channel.stopped.is_set() and time.monotonic() < original:
+                # The post-input screenshot is an observation, not a goal verdict. It
+                # is skipped, not attempted, when no collection margin remains (#396).
+                if not self.channel.stopped.is_set() and time.monotonic() < original - COLLECTION_MARGIN_SECONDS:
                     reply, metadata, png = self._native(result, 'observe', None, original)
                     result['source'] = metadata
                     if reply['disposition'] != 'delivered':

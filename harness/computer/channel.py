@@ -157,18 +157,17 @@ class NativeChannel:
         with self._condition:
             if self.stopped.is_set() or self.closed.is_set() or self._fault is not None:
                 raise NoDispatch('Native input fenced; original collection only')
-            if time.monotonic() >= deadline:
-                raise NoDispatch('Original deadline expired before native publication')
+            if time.monotonic() >= deadline - COLLECTION_MARGIN_SECONDS:
+                raise NoDispatch('Original deadline leaves no native collection margin')
             if self._normal is not None or identity in self._pending:
                 raise NoDispatch('Original native request remains outstanding')
             self._normal = identity
             pending = self._pending[identity] = _Pending()
-        wall, left = time.time(), max(0., deadline - time.monotonic())
-        expires = int((wall + min(START_SECONDS, left)) * 1000)
+        # Both native bounds end at least the collection margin before this wait does.
+        wall, edge = time.time(), max(0., deadline - COLLECTION_MARGIN_SECONDS - time.monotonic())
         packet = dict(schema=SCHEMA, id=identity, session=self.session, kind=kind,
-                      expires_ms=expires,
-                      continue_ms=max(expires, int((wall + left - COLLECTION_MARGIN_SECONDS) * 1000)),
-                      input=value)
+                      expires_ms=int((wall + min(START_SECONDS, edge)) * 1000),
+                      continue_ms=int((wall + edge) * 1000), input=value)
         try:
             pending.timing.update(send_started_wall=time.time(),send_started_monotonic=time.monotonic())
             self._send(encode_packet('request', packet), deadline)

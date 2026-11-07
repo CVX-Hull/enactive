@@ -119,7 +119,7 @@ struct Bridge {
     int windowPixelsW=0, windowPixelsH=0;
     std::vector<Uint8> pixels; std::vector<SDL_Event> stages; size_t next=0; unsigned emitted=0;
     std::vector<SDL_Keycode> held; Uint32 buttons=0; SDL_Keymod modifiers=KMOD_NONE; int mouseX=0,mouseY=0;
-    NSString *failure=nil;
+    NSString *failure=nil; bool stale=false;
     void pause(NSString *why, bool takeover=false) {
         bool changed=!paused || (takeover && !human);
         if(takeover && !human) { ++generation; human=true; }
@@ -263,7 +263,7 @@ struct Bridge {
     void finish(NSString *disposition, NSString *reason, NSDictionary *frame=nil, std::vector<Uint8> png={}) {
         require(request!=nil && tx.empty(),"Cannot finish active request while packet pending");
         packet(@"receipt",receipt(request[@"id"],disposition,emitted,reason,frame),std::move(png));
-        request=nil; stages.clear(); next=0; emitted=0; held.clear(); buttons=0; modifiers=KMOD_NONE; failure=nil; cleaning=false; state();
+        request=nil; stages.clear(); next=0; emitted=0; held.clear(); buttons=0; modifiers=KMOD_NONE; failure=nil; cleaning=false; stale=false; state();
     }
     SDL_Event key(SDL_Keycode code, bool down, SDL_Keymod mods) {
         SDL_Event e={}; e.type=down?SDL_KEYDOWN:SDL_KEYUP; e.key.timestamp=SDL_GetTicks(); e.key.windowID=windowID; e.key.state=down?SDL_PRESSED:SDL_RELEASED; e.key.keysym.sym=code; e.key.keysym.scancode=SDL_GetScancodeFromKey(code); e.key.keysym.mod=mods; return e;
@@ -321,8 +321,10 @@ struct Bridge {
         require(seen.size()<65536 && seen.insert(id).second,"Duplicate request or identity capacity exhausted");
         long long wall=nowMS(), remaining=[value[@"expires_ms"] longLongValue]-wall;
         long long continuing=[value[@"continue_ms"] longLongValue]-wall;
-        require(remaining>0 && remaining<=5000,"Request expiry outside five-second bound");
+        require(remaining<=5000,"Request expiry outside five-second bound");
         require(continuing>=remaining && continuing<=15000,"Request continuation outside fifteen-second bound");
+        // A Pause must arrive in time; a stale one is a protocol fault and fences.
+        require(remaining>0 || ![value[@"kind"] isEqual:@"pause"],"Pause request already expired");
         if([value[@"kind"] isEqual:@"pause"]) {
             require(value[@"input"]==[NSNull null],"Pause input must be null");
             pause(@"External Pause"); if(request && next<stages.size() && !failure) failure=error;
@@ -332,6 +334,9 @@ struct Bridge {
         require(!request && !terminalTx && !deferredPause,"Normal request while original receipt pending");
         long long claimed=monotonicMS();
         request=value; emitted=0; expiresMonotonic=claimed+remaining; continueMonotonic=claimed+continuing;
+        // The game read this request only after its start bound (it was busy before
+        // polling). Nothing was emitted, so it is truthfully rejected, not fenced.
+        if(remaining<=0) { stale=true; failure=@"Request expired before claim"; return; }
         if([request[@"kind"] isEqual:@"observe"]) require(request[@"input"]==[NSNull null],"Observe input must be null");
         else {
             try { fence(); require(!paused,"Target paused"); require(window && renderer && !lost,"Bound target not ready"); prepare(request[@"input"]); }
@@ -365,6 +370,7 @@ struct Bridge {
         if(!request) return 0;
         if([request[@"kind"] isEqual:@"observe"]) {
             if(!tx.empty() || sendFailed) return 0;
+            if(stale) { finish(@"rejected",failure); return 0; }
             try {
                 std::vector<Uint8> png; NSDictionary *frame=saveFrame(png);
                 finish(@"delivered",@"Captured presented pixels",frame,std::move(png));

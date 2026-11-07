@@ -354,6 +354,22 @@ def test_wait_that_does_not_fit_deadline_is_partial_and_fences_input(tmp_path, c
         runtime.close()
 
 
+def test_input_delivered_inside_collection_margin_skips_capture_and_keeps_input(tmp_path, clock):
+    """#396: a stall delivered near the deadline must not stop input through the capture."""
+    runtime, channel, actor = make_runtime(tmp_path)
+    try:
+        channel.before_request = lambda: setattr(clock, 'now', clock.now + 4.9)
+        result, png = runtime.input(actor['actor_id'], [key()], deadline_monotonic=clock.now + 5)
+        channel.before_request = None
+        assert result['status'] == 'completed' and png is None and result['source'] is None
+        assert [c[0] for c in channel.calls] == ['input']
+        assert not channel.stopped.is_set()
+        later, _ = runtime.input(actor['actor_id'], [key('y')])
+        assert later['status'] == 'completed'
+    finally:
+        runtime.close()
+
+
 def test_expiry_between_keys_is_partial_keeps_receipts_and_fences_input(tmp_path, clock):
     runtime, channel, actor = make_runtime(tmp_path)
     try:

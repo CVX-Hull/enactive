@@ -53,9 +53,9 @@ class Peer:
         self.results = []
         self.target = None
 
-    def request_packet(self, kind, value=None, *, identity=None, continue_seconds=None):
+    def request_packet(self, kind, value=None, *, identity=None, continue_seconds=None, expire_seconds=4):
         identity = identity or uuid.uuid4().hex
-        expires = int(time.time() * 1000) + 4000
+        expires = int((time.time() + expire_seconds) * 1000)
         continuation = expires if continue_seconds is None else int((time.time() + continue_seconds) * 1000)
         value = dict(schema=protocol.SCHEMA, id=identity, session=self.session, kind=kind,
                      expires_ms=expires, continue_ms=continuation, input=value)
@@ -253,6 +253,63 @@ def stall_checks(options):
             (case / 'check.json').write_text(json.dumps(dict(result=value, elapsed_seconds=elapsed,
                 continue_seconds=continuation, scope='Fixture loop stall between key-down and key-up; not a game stall'),
                 indent=2) + '\n')
+    case = options.output / 'stall-pause'
+    with fixture(options, case, lifetime=20000) as (peer, child):
+        # Pause sent during a continuation stall still wins once the loop resumes.
+        peer.observe()
+        original = peer.request('input', key('s'), continue_seconds=12)
+        time.sleep(3)
+        # The Pause must still be current when the stalled loop reads it at about 7 s.
+        pause, packet = peer.request_packet('pause', expire_seconds=5)
+        peer.channel.sendall(packet)
+        value, _ = peer.collect(original)
+        assert value['disposition'] == 'partial' and value['emitted_events'] == 2, value
+        ack, _ = peer.collect(pause)
+        assert ack['disposition'] == 'delivered', ack
+        entries = records(case / 'events.jsonl')
+        assert not any(r['type'] == 771 for r in entries), 'Text stage emitted after Pause'
+        assert sum(r['type'] == 769 and r.get('key') == 115 for r in entries) == 1, 'Owned key not released'
+        (case / 'check.json').write_text(json.dumps(dict(original=value, pause=ack), indent=2) + '\n')
+    case = options.output / 'stale-claim'
+    with fixture(options, case, lifetime=8000) as (peer, child):
+        # The game is busy before it reads a request: rejected with no events, input stays live.
+        peer.observe()
+        try:
+            os.kill(child.pid, signal.SIGSTOP)
+            pid, status = os.waitpid(child.pid, os.WUNTRACED)
+            assert pid == child.pid and os.WIFSTOPPED(status), 'Fixture stop was not confirmed'
+            original, packet = peer.request_packet('input', key('a'), expire_seconds=.5)
+            peer.channel.sendall(packet)
+            time.sleep(1)
+        finally:
+            if child.poll() is None:
+                os.kill(child.pid, signal.SIGCONT)
+        value, _ = peer.collect(original)
+        assert value['disposition'] == 'rejected' and value['emitted_events'] == 0, value
+        assert 'before claim' in value['reason'], value
+        after, _ = peer.execute(key('b'))
+        assert after['disposition'] == 'delivered', after
+        assert not any(r['type'] == 768 and r.get('key') == 97 for r in records(case / 'events.jsonl'))
+        (case / 'check.json').write_text(json.dumps(dict(stale=value, after=after), indent=2) + '\n')
+    for name, change, error in (('refuse-request-2', dict(schema='computer-request/2'), 'Invalid native request'),
+                                ('refuse-continuation', None, 'fifteen-second')):
+        case = options.output / name
+        with fixture(options, case, lifetime=3000) as (peer, child):
+            # Unsupported versions and bounds refuse: protocol fault, permanent Pause, no event.
+            peer.observe()
+            identity = uuid.uuid4().hex
+            value = dict(schema=protocol.SCHEMA, id=identity, session=peer.session, kind='input',
+                         expires_ms=int(time.time() * 1000) + 4000, continue_ms=int(time.time() * 1000) + 20000,
+                         input=key('RIGHT'))
+            if change:
+                value.update(change)
+                del value['continue_ms']
+            peer.channel.sendall(protocol.encode_packet('request', value))
+            while not peer.target or not peer.target['paused']:
+                peer.packet()
+            assert error in peer.target['error'], peer.target
+            assert not any(r.get('key') == 1073741903 for r in records(case / 'events.jsonl'))
+            assert not any(r['id'] == identity for r in peer.results)
 
 
 def partial_control_checks(options):
