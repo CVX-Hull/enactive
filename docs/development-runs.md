@@ -6,11 +6,11 @@ status: active
 
 # Development runs: ceiling benchmark and grounding aids
 
-This page owns the benchmark, metric and one-row-per-run results of the current
-development loop. Each run also gets one comment on its owning issue,
-[#372](https://github.com/CVX-Hull/enactive/issues/372); the
-[long-horizon arm](#long-horizon-arm-382) reports on
-[#382](https://github.com/CVX-Hull/enactive/issues/382). Acceptance records and
+This page owns the benchmark, metric and one-row-per-run results of the
+development loop of 5–6 November 2026, which reported on
+[#372](https://github.com/CVX-Hull/enactive/issues/372), and of the
+[long-horizon arm](#long-horizon-arm-382) of 7 November, which reported on
+[#382](https://github.com/CVX-Hull/enactive/issues/382). Both are complete. Acceptance records and
 independent review are reserved for adoption decisions, contract changes and
 merges ([evidence cadence](workflows/evidence-cadence.md)).
 
@@ -255,8 +255,10 @@ perception: arm A had no uptake. The three longest runs (T5, A4, C6) and the onl
 organic program (C5) all passed game time cheaply, through activities,
 auto-travel or a loop.
 
-The recommended next step tests time scale directly rather than adding more
-perception aids. Run a long-horizon Terra arm, for example three Evacuee runs of
+The loop recommended (6 November) testing time scale directly rather than adding
+more perception aids. That recommendation ran as the
+[long-horizon arm](#long-horizon-arm-382); the rest of this paragraph is the
+recommendation as recorded. Run a long-horizon Terra arm, for example three Evacuee runs of
 about 1,500 decisions each (roughly $20–25 each by this loop's rate), and track
 **game seconds per decision** beside survival hours. The question is whether
 needs, rest and supplies hold once the clock passes a day, which is the first
@@ -647,7 +649,7 @@ Morgan Vale, an Evacuee in the world Crenshaw (evac shelter A-23), 7 November 20
 | 3 | Morgan Vale | Slow (stop rule) | 0.54 | 304 | 6.4 | 0.000 | 3.67 |
 
 **Arm result: "Day-scale survival is viable through this boundary"**: two of three lineages Day-viable and no continuity failure, given the owner's setup-restart ruling (D7). With three lineages this is a screen, not a qualification.
-- Under #382's table the next step is to design the seven-day attempt for #145 and the cost and latency plan that resumes #164 ([#397](https://github.com/CVX-Hull/enactive/issues/397)).
+- #382's pre-registered table maps this result to a seven-day design for #145 and a cost and latency plan for #164, tracked on [#397](https://github.com/CVX-Hull/enactive/issues/397).
 - The arm spent **$30.46** of its $150 envelope: 1,610 attempts, about 3.2 h of wall time, cumulative actual $377.41.
 
 **Time passing.** Given enough decisions, both Day-viable players slept through the night in shelter.
