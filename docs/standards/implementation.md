@@ -18,7 +18,8 @@ capability and lifetime cost; pin locally and record provenance. Evaluate mature
 tools before writing generic controls, parsers or infrastructure. Use maintained
 implementations that fit the requirement; custom code needs a documented gap and
 a bounded scope. Review adoption, compatibility, licenses and upgrade burden. Current stack
-preferences are [decisions](../decisions/002-local-contract.md), not permanent bans.
+preferences are decisions ([native Tiles](../decisions/001-native-platform.md) and the
+[computer-control boundary](../decisions/006-computer-control-boundary.md)), not permanent bans.
 
 This reuse requirement applies to architecture, implementation, documentation,
 workflow and controls. Before adding or substantially expanding a custom tool or

@@ -33,6 +33,9 @@ ROOT = Path(__file__).resolve().parents[1]
 WINDOW = 45
 ATTENTION = {'required': WINDOW, 'best-effort': None}
 PAUSE_REPLY = .75
+# Wall-clock stamps are mapped onto the guard's monotonic clock from readiness; drift
+# or steps between wall and monotonic time since then carry bounded skew (seconds).
+CLOCK_MAPPING_TOLERANCE = .25
 MARKERS = ('watch-start.json', 'watch-attempts.jsonl', 'watch-terminal.json')
 # Optional, git-ignored map from a credential variable to the operator's own
 # macOS keychain item: {"OPENROUTER_API_KEY": {"keychain_service": "NAME"}}.
@@ -106,7 +109,7 @@ def verify_row(row: dict, *, session: str, source_commit: str, sequence: int, re
             and all(finite(row[k]) for k in ('start', 'observation', 'recorded_wall'))
             and re.fullmatch(re.escape(session)+r'-[0-9]+', row['source']) is not None
             and re.fullmatch(r'[a-f0-9]{64}', row['sha256']) is not None
-            and wall >= ready_wall and abs(ready_at + wall - ready_wall - row['observation']) < .25
+            and wall >= ready_wall and abs(ready_at + wall - ready_wall - row['observation']) < CLOCK_MAPPING_TOLERANCE
             and last < row['observation'] <= row['start'] <= now < row['start'] + 4
             and row['start'] - row['observation'] <= 12
             and abs(row['recorded_wall'] - (ready_wall + row['start'] - ready_at)) < 4
@@ -140,9 +143,12 @@ def terminal_coverage(receipt: dict, *, session: str, source_commit: str, rows: 
                 or native['process_absent'] is not True or native['group_absent'] is not True):
             return False
         terminal_at = ready_at + receipt['ended_wall'] - ready_wall
+        # The mapping skew may only relax "terminal after the last accepted check";
+        # the custody and watch deadlines stay strict.
+        after_check = terminal_at + CLOCK_MAPPING_TOLERANCE
         if window is None:
-            return (not rows or rows[-1]['receipt'] <= terminal_at) and terminal_at < custody_end
-        return rows[-1]['receipt'] <= terminal_at < min(rows[-1]['observation'] + window, custody_end)
+            return (not rows or rows[-1]['receipt'] < after_check) and terminal_at < custody_end
+        return rows[-1]['receipt'] < after_check and terminal_at < min(rows[-1]['observation'] + window, custody_end)
     except (KeyError, TypeError, ValueError):
         return False
 
