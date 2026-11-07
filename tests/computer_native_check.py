@@ -53,14 +53,17 @@ class Peer:
         self.results = []
         self.target = None
 
-    def request_packet(self, kind, value=None, *, identity=None):
+    def request_packet(self, kind, value=None, *, identity=None, continue_seconds=None):
         identity = identity or uuid.uuid4().hex
-        value = dict(schema=protocol.SCHEMA, id=identity, session=self.session,
-                     kind=kind, expires_ms=int(time.time() * 1000) + 4000, input=value)
+        expires = int(time.time() * 1000) + 4000
+        continuation = expires if continue_seconds is None else int((time.time() + continue_seconds) * 1000)
+        value = dict(schema=protocol.SCHEMA, id=identity, session=self.session, kind=kind,
+                     expires_ms=expires, continue_ms=continuation, input=value)
         return identity, protocol.encode_packet('request', value)
 
-    def request(self, kind, value=None, *, fragmented=False, identity=None):
-        identity, packet = self.request_packet(kind, value, identity=identity)
+    def request(self, kind, value=None, *, fragmented=False, identity=None, continue_seconds=None):
+        identity, packet = self.request_packet(kind, value, identity=identity,
+                                               continue_seconds=continue_seconds)
         if fragmented:
             for position in range(0, len(packet), 3):
                 self.channel.sendall(packet[position:position + 3])
@@ -220,6 +223,38 @@ def mechanics(options, *, offscreen, terminal):
         (case / 'check.json').write_text(json.dumps(dict(results=peer.results, stopped=peer.target), indent=2) + '\n')
 
 
+def stall_checks(options):
+    """#396: the fixture stalls 7 s after 's' key-down, past the 4 s start bound."""
+    for name, continuation, expected in (('stall-continued', 12, 'delivered'), ('stall-expired', 5, 'partial')):
+        case = options.output / name
+        with fixture(options, case, lifetime=20000) as (peer, child):
+            peer.observe()
+            started = time.monotonic()
+            value, _ = peer.collect(peer.request('input', key('s'), continue_seconds=continuation))
+            elapsed = time.monotonic() - started
+            assert value['disposition'] == expected and elapsed >= 6.5, (value, elapsed)
+            entries = records(case / 'events.jsonl')
+            downs = [r for r in entries if r['type'] == 768 and r.get('key') == 115]
+            ups = [r for r in entries if r['type'] == 769 and r.get('key') == 115]
+            assert len(downs) == 1 and len(ups) == 1, 'Stalled key was not released exactly once'
+            if expected == 'delivered':
+                # The release and the rest of the request followed the stall; input stays live.
+                assert value['emitted_events'] == 3 and 's' in [r.get('text') for r in entries if r['type'] == 771]
+                after, _ = peer.execute(key('a'))
+                assert after['disposition'] == 'delivered', after
+            else:
+                # Same custody as before #396: owned release only, then permanent Pause.
+                assert value['emitted_events'] == 2 and 'continuation' in value['reason'], value
+                assert not any(r['type'] == 771 for r in entries), 'Undelivered text stage was emitted'
+                while not peer.target or not peer.target['paused']:
+                    peer.packet()
+                refused, _ = peer.execute(key('RIGHT'))
+                assert refused['disposition'] == 'rejected' and refused['emitted_events'] == 0, refused
+            (case / 'check.json').write_text(json.dumps(dict(result=value, elapsed_seconds=elapsed,
+                continue_seconds=continuation, scope='Fixture loop stall between key-down and key-up; not a game stall'),
+                indent=2) + '\n')
+
+
 def partial_control_checks(options):
     """Fence before the first stage; this does not qualify mid-held-key timing."""
     for prefix in ('length', 'json'):
@@ -359,6 +394,7 @@ def check(options):
     for offscreen in (False, True):
         for terminal in ('takeover', 'target-loss'):
             mechanics(options, offscreen=offscreen, terminal=terminal)
+    stall_checks(options)
     channel_checks(options)
     (options.output / 'check.json').write_text(json.dumps(dict(passed=True,
         scope='Actual independent SDL; synthetic unowned takeover, not real human/game qualification'), indent=2) + '\n')

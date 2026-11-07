@@ -82,7 +82,7 @@ def invalid(options, mode):
                 wait_for(lambda: any(r.get('fixture_ready') for r in records(case / 'events.jsonl')))
                 parent.sendall(protocol.encode_packet('request', dict(schema=protocol.SCHEMA,
                     id=uuid.uuid4().hex, session=env['ENACTIVE_COMPUTER_SESSION'], kind='input',
-                    expires_ms=int(time.time() * 1000) + 4000,
+                    expires_ms=(expires := int(time.time() * 1000) + 4000), continue_ms=expires,
                     input=dict(type='key', key='RIGHT', modifiers=[]))))
                 assert not select.select([parent], [], [], .15)[0], 'Invalid inherited ownership enabled native transport'
                 assert not any(r.get('key') == 1073741903 for r in records(case / 'events.jsonl'))

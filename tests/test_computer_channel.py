@@ -66,6 +66,36 @@ def test_interrupted_framing_half_closes_before_any_pause_packet():
         channel.close();right.close()
 
 
+@pytest.mark.parametrize('seconds,start,continuation', [(12,5.,11.75),(3,3.,2.75),(.6,.6,.6)])
+def test_request_carries_start_and_continuation_bounds(seconds,start,continuation):
+    """#396: the first event within 5 s; the rest until the operation deadline less 250 ms."""
+    left,right=socket.socketpair();channel=NativeChannel(left,'a'*32,123);result=[]
+    try:
+        before=time.time()
+        thread=threading.Thread(target=lambda:result.append(channel.request('input',{},time.monotonic()+seconds,'b'*32)))
+        thread.start();header,_=receive_packet(right)
+        value=header['value']
+        assert value['schema']=='computer-request/3'
+        assert value['expires_ms']<=value['continue_ms']
+        assert abs(value['expires_ms']/1000-before-start)<.1
+        assert abs(value['continue_ms']/1000-before-max(start,continuation))<.1
+        right.sendall(encode_packet('receipt',native_receipt('b'*32)))
+        thread.join(2);assert result[0][0]['disposition']=='delivered'
+        channel.release('b'*32)
+    finally:
+        channel.close();right.close()
+
+
+def test_pause_has_no_continuation():
+    left,right=socket.socketpair();channel=NativeChannel(left,'a'*32,123)
+    try:
+        channel.stop('Operator Pause');header,_=receive_packet(right)
+        value=header['value']
+        assert value['kind']=='pause' and value['continue_ms']==value['expires_ms']
+    finally:
+        channel.close();right.close()
+
+
 def test_first_stop_origin_survives_later_adapter_cleanup():
     left,right=socket.socketpair();channel=NativeChannel(left,'a'*32,123)
     try:

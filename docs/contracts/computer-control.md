@@ -75,16 +75,24 @@ relabelled receipts; remember all prior IDs in a bounded65536-entry set, then st
 
 | Value | Closed fields |
 | --- | --- |
-| `computer-request/2` | `schema,id,session,kind,expires_ms,input`;32hex IDs/session; kind `observe`, `input` or `pause`; null input for observe/Pause |
+| `computer-request/3` | `schema,id,session,kind,expires_ms,continue_ms,input`;32hex IDs/session; kind `observe`, `input` or `pause`; null input for observe/Pause; `expires_ms` ≤ `continue_ms`, which Pause sets equal |
 | `computer-target/2` | `schema,session,pid,window_id,paused,takeover_generation,latest_frame,error` |
 | Frame | `name,capture_id,presented_ms,width,height,window_width,window_height,viewport`; name is logical `frame-N.png`, never a native filesystem path |
 | `computer-receipt/2` | `schema,id,session,disposition,emitted_events,reason,frame`; disposition delivered/rejected/partial/unknown, emitted0..8, frame null or frame above |
 | `computer-local/1` | Same fields, written by the custodian when the channel refuses publication before any byte is sent: disposition `rejected`, emitted0, frame null ([runtime](../../harness/computer/runtime.py)) |
 | `computer-transport/2` | Same fields, written when native delivery cannot be resolved: disposition `unknown`, `emitted_events` null, frame null ([channel](../../harness/computer/channel.py)); input then stops permanently |
 
-At claim, derive a **single** local monotonic expiry from the original wall expiry,
-capped5s; check it before every command event without renewal. Parent operation/run
-monotonic deadlines remain independent. Delivered means SDL event handoff, not
+At claim, derive two local monotonic bounds once, from the original wall times, and
+check them before every command event without renewal. The **start bound**
+(`expires_ms`, capped5s) refuses a request's first command event. Once one is
+emitted, the remaining events may follow until the **continuation bound**
+(`continue_ms`, capped15s). A game that stalls between a key's down and up events
+([#396](https://github.com/CVX-Hull/enactive/issues/396)) then still receives the
+release. At either bound the request fails: before any event it is rejected; after
+one it latches Pause, neutralizes owned presses and ends partial. The custodian sets
+the continuation bound to its operation deadline less250ms, so native emission ends
+before receipt collection does. Parent operation/run monotonic deadlines remain
+independent. Delivered means SDL event handoff, not
 application consumption/success; emitted input cannot become undelivered rejection.
 Capture is the last actual default-renderer present, with original time/geometry.
 Keys have no image-age/equality or game-phase predicate. Clicks bind returned

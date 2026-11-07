@@ -111,7 +111,8 @@ struct Bridge {
     bool channelFailed=false, sendFailed=false, receiveDrained=false, dirty=true, terminalTx=false, cleaning=false;
     std::vector<Uint8> tx, rx; size_t txOffset=0, rxNeed=4;
     NSDictionary *deferredPause=nil; std::unordered_set<std::string> seen;
-    long long expiresMonotonic=0;
+    // Start bound for the first command event; continuation bound once one is emitted (#396).
+    long long expiresMonotonic=0, continueMonotonic=0;
     SDL_Renderer *renderer=nullptr; SDL_Window *window=nullptr; Uint32 windowID=0;
     uint64_t generation=0, captureID=0; long long presented=0;
     NSDictionary *currentGeometry=nil, *latestFrame=nil, *request=nil;
@@ -312,14 +313,16 @@ struct Bridge {
         require(stages.size()<=8,"Event bound exceeded");
     }
     void claim(id value) {
-        require(closed(value,@[@"schema",@"id",@"session",@"kind",@"expires_ms",@"input"]) &&
-                identity(value[@"id"]) && [value[@"schema"] isEqual:@"computer-request/2"] &&
+        require(closed(value,@[@"schema",@"id",@"session",@"kind",@"expires_ms",@"continue_ms",@"input"]) &&
+                identity(value[@"id"]) && [value[@"schema"] isEqual:@"computer-request/3"] &&
                 [value[@"session"] isEqual:session] && [@[@"observe",@"input",@"pause"] containsObject:value[@"kind"]] &&
-                number(value[@"expires_ms"],1,MaxInteger),"Invalid native request");
+                number(value[@"expires_ms"],1,MaxInteger) && number(value[@"continue_ms"],1,MaxInteger),"Invalid native request");
         std::string id=[value[@"id"] UTF8String];
         require(seen.size()<65536 && seen.insert(id).second,"Duplicate request or identity capacity exhausted");
-        long long remaining=[value[@"expires_ms"] longLongValue]-nowMS();
+        long long wall=nowMS(), remaining=[value[@"expires_ms"] longLongValue]-wall;
+        long long continuing=[value[@"continue_ms"] longLongValue]-wall;
         require(remaining>0 && remaining<=5000,"Request expiry outside five-second bound");
+        require(continuing>=remaining && continuing<=15000,"Request continuation outside fifteen-second bound");
         if([value[@"kind"] isEqual:@"pause"]) {
             require(value[@"input"]==[NSNull null],"Pause input must be null");
             pause(@"External Pause"); if(request && next<stages.size() && !failure) failure=error;
@@ -327,7 +330,8 @@ struct Bridge {
             deferredPause=receipt(value[@"id"],@"delivered",0,@"Permanent Pause latched"); return;
         }
         require(!request && !terminalTx && !deferredPause,"Normal request while original receipt pending");
-        request=value; emitted=0; expiresMonotonic=monotonicMS()+remaining;
+        long long claimed=monotonicMS();
+        request=value; emitted=0; expiresMonotonic=claimed+remaining; continueMonotonic=claimed+continuing;
         if([request[@"kind"] isEqual:@"observe"]) require(request[@"input"]==[NSNull null],"Observe input must be null");
         else {
             try { fence(); require(!paused,"Target paused"); require(window && renderer && !lost,"Bound target not ready"); prepare(request[@"input"]); }
@@ -367,8 +371,12 @@ struct Bridge {
             } catch(const std::exception &e) { finish(@"rejected",[NSString stringWithUTF8String:e.what()]); }
             return 0;
         }
-        if(next<stages.size() && monotonicMS()>=expiresMonotonic && !failure) {
-            failure=@"Request expired during dispatch"; if(emitted) pause(failure);
+        // No first command event after the start bound. Once one is emitted, the
+        // game may stall before polling again (#396): the rest may follow until the
+        // continuation bound, and expiry then keeps the same partial custody.
+        if(next<stages.size() && !failure && monotonicMS()>=(emitted?continueMonotonic:expiresMonotonic)) {
+            if(emitted) { failure=@"Request continuation expired during dispatch"; pause(failure); }
+            else failure=@"Request expired before its first event";
         }
         if(paused && next<stages.size() && !failure) failure=error;
         if(failure && !cleaning) cleanup();

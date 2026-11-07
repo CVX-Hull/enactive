@@ -15,8 +15,9 @@ import time
 from typing import Any
 import uuid
 
-from .protocol import (ControlError, NoDispatch, MAX_FRAME_BYTES, MAX_HEADER_BYTES, SCHEMA,
-                       decode_json, encode_packet, receipt, state, wire_header)
+from .protocol import (COLLECTION_MARGIN_SECONDS, ControlError, NoDispatch, MAX_FRAME_BYTES,
+                       MAX_HEADER_BYTES, SCHEMA, START_SECONDS, decode_json, encode_packet,
+                       receipt, state, wire_header)
 
 
 @dataclass
@@ -122,8 +123,9 @@ class NativeChannel:
             identity = self._pause_id = uuid.uuid4().hex
             self._pending[identity] = _Pending()
             self._condition.notify_all()
+        expires = int(time.time() * 1000) + 5000
         packet = dict(schema=SCHEMA, id=identity, session=self.session,
-                      kind='pause', expires_ms=int(time.time() * 1000) + 5000, input=None)
+                      kind='pause', expires_ms=expires, continue_ms=expires, input=None)
         try:
             self._send(encode_packet('request', packet), time.monotonic() + .25, pause=True)
         except (OSError, TimeoutError, ValueError):
@@ -161,8 +163,11 @@ class NativeChannel:
                 raise NoDispatch('Original native request remains outstanding')
             self._normal = identity
             pending = self._pending[identity] = _Pending()
+        wall, left = time.time(), max(0., deadline - time.monotonic())
+        expires = int((wall + min(START_SECONDS, left)) * 1000)
         packet = dict(schema=SCHEMA, id=identity, session=self.session, kind=kind,
-                      expires_ms=int((time.time() + max(0., min(5., deadline - time.monotonic()))) * 1000),
+                      expires_ms=expires,
+                      continue_ms=max(expires, int((wall + left - COLLECTION_MARGIN_SECONDS) * 1000)),
                       input=value)
         try:
             pending.timing.update(send_started_wall=time.time(),send_started_monotonic=time.monotonic())
