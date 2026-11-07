@@ -273,6 +273,17 @@ generated rows. The hand-scored tables above are unchanged and remain the record
 the loop's decisions. Regenerate the table with
 `python -m tools.evaluate evaluate-table .runtime/evaluations`.
 
+**Frozen for #382.** The following are frozen at the #383 merge commit, which each
+admission records as `source_commit`:
+- evaluator core 1 with CDDA binding 1 (`evaluation-record/1`);
+- the `spectator-view/1` viewer API;
+- the `campaign-watch-start/3` and `campaign-watch-terminal/3` control path;
+- `campaign-run/5` manifests;
+- player-host telemetry v3 with `context-manifest`.
+
+Any change to one of these during #382 starts a new arm. All 30 records above were
+re-scored with the frozen evaluator.
+
 | Run | Arm | Start | End | Game h | Decisions | Setup | Routine pace | Long activities | Out of play | Longest stall | $ / decision | Large rewrites |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | ceil01 | pilot | S1 | budget | 0.21 | 129 | 7 | 5.0 | 0 · 0.00 h | 59% | 17 | 0.0469 | 96% |
