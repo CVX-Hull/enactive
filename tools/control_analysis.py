@@ -79,11 +79,6 @@ def sources_in(connection: sqlite3.Connection, session: str) -> list[dict]:
     return records
 
 
-def read_sources(path: Path) -> list[dict]:
-    with session_database(path) as (connection, _, session):
-        return sources_in(connection, session)
-
-
 def native_disposition(encoded: str | None, identity: str, session: str) -> str:
     if encoded is None:
         return 'unrecorded'

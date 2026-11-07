@@ -1,4 +1,4 @@
-"""The CDDA game binding for the evaluation core (binding_id 'cdda', version 1)."""
+"""The CDDA game binding for the evaluation core (binding_id 'cdda')."""
 from __future__ import annotations
 
 from pathlib import Path

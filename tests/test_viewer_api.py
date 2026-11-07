@@ -152,6 +152,33 @@ def test_frames_are_served_only_after_their_digest_matches(archive):
     assert refused.status_code == 409 and refused.json()['error'] == 'frame_digest_mismatch'
 
 
+def snapshot(directory: Path) -> dict[str, tuple[int, bytes | None]]:
+    """Every path under a directory with its modification time and bytes (None for a directory).
+
+    A WAL-mode reader maps the `-shm` wal-index even with `mode=ro`, which can move its mtime; it is a transient
+    lock/index file that holds no run data, so only its presence is compared."""
+    return {str(p.relative_to(directory)): (None, None) if p.name.endswith('-shm') else
+            (p.stat().st_mtime_ns, p.read_bytes() if p.is_file() else None)
+            for p in sorted(directory.rglob('*'))}
+
+
+def test_evaluation_and_the_viewer_leave_the_run_directories_untouched(archive, tmp_path):
+    client, _, runs = archive
+    session = 'a' * 32
+    before = snapshot(runs)
+    names = {Path(name).name for name in before}
+    assert {'session.sqlite3', 'host.jsonl', 'manifest.json'} <= names
+    assert any(name.startswith('base1/sources/') and name.endswith('.png') for name in before)
+    evaluate(runs / 'base1', FakeBinding(), tmp_path / 'fresh', created_wall=2.0)
+    assert snapshot(runs) == before
+    item = next(i for i in client.get(f'/api/view/run/{session}/steps').json()['items'] if i['source_id'])
+    for route in (f'/api/view/run/{session}/summary', f'/api/view/run/{session}/frame/{item["source_id"]}',
+                  f'/api/view/run/{session}/context/request-1', f'/api/view/run/{session}/requests',
+                  f'/api/view/run/{session}/steps', '/api/view/runs'):
+        assert client.get(route).status_code == 200, route
+    assert snapshot(runs) == before
+
+
 @pytest.mark.parametrize('method', ['post', 'put', 'delete', 'patch'])
 def test_no_route_accepts_a_write_method(archive, method):
     client, _, _ = archive

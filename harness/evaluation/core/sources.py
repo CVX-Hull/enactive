@@ -292,14 +292,17 @@ def _optional_json(path: Path, schemas: tuple[str, ...]) -> dict | None:
     return value
 
 
-def read_end_facts(run_dir: Path) -> EndFacts:
-    """`receipt.json` (campaign-receipt/3) and `watch-terminal.json` (campaign-watch-terminal/3, or the
-    archived /2), when the run has ended. The owner Pause is the terminal's `reason == 'operator_pause'`."""
+def read_end_facts(run_dir: Path, manifest: dict) -> EndFacts:
+    """`receipt.json` (campaign-receipt/3) and `watch-terminal.json` (campaign-watch-terminal/3, or /2 only for
+    an archived session: a `campaign-run/4` manifest listed in the archive labels), when the run has ended.
+    The owner Pause is the terminal's `reason == 'operator_pause'`."""
+    archived = manifest.get('schema') == ARCHIVE_SCHEMA and manifest.get('session') in archive_labels()
+    terminals = (WATCH_TERMINAL_SCHEMA, WATCH_TERMINAL_ARCHIVE_SCHEMA) if archived else (WATCH_TERMINAL_SCHEMA,)
     receipt = _optional_json(run_dir / 'receipt.json', (RECEIPT_SCHEMA,)) or {}
     driver = receipt.get('driver') if isinstance(receipt.get('driver'), dict) else {}
     actors = [a for a in driver.get('actors', ()) if isinstance(a, dict)]
     ending = driver.get('ending_request') if isinstance(driver.get('ending_request'), dict) else {}
-    watch = _optional_json(run_dir / 'watch-terminal.json', (WATCH_TERMINAL_SCHEMA, WATCH_TERMINAL_ARCHIVE_SCHEMA)) or {}
+    watch = _optional_json(run_dir / 'watch-terminal.json', terminals) or {}
     reason = watch.get('pause_reason') if watch.get('schema') == WATCH_TERMINAL_SCHEMA else None
     return EndFacts(receipt.get('outcome') if isinstance(receipt.get('outcome'), str) else None,
         ending.get('trigger') if isinstance(ending.get('trigger'), str) else None,
@@ -343,4 +346,4 @@ def read_run(run_dir: Path, *, after_seq: int | None = None, settled_only: bool 
     if selected is not None:
         found['player-memory'] = digest(Path(selected))
     return RunInputs(run_dir, session, manifest, tuple(operations), operations[-1].seq if operations else None,
-        tuple(actors), host, read_carry(run_dir), memory, found, read_end_facts(run_dir))
+        tuple(actors), host, read_carry(run_dir), memory, found, read_end_facts(run_dir, manifest))
