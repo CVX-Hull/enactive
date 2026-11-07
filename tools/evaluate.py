@@ -8,7 +8,7 @@ evaluator still accepts no run or claim. Acceptance stays with frames, receipts,
 and the issue's decision rule.
 
 host-summary selects current player-host/3 (telemetry version 3) files, actor directories or campaign
-folders (4096 files / 8 GiB; 64 MiB per line; two million events per trace).
+folders (4096 files / 8 GiB; 64 MiB per line; two million lines per trace).
 control-summary selects 1..32 computer-session/1 databases/directories (512 MiB
 per database including SQLite sidecars; 200000 rows per selected table).
 evaluate-run reads one run directory read-only and writes an evaluation-record/1 store

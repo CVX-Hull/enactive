@@ -154,7 +154,10 @@ def progress_metadata(value: dict | None) -> dict:
 
 
 def analyze_trace(path: Path) -> dict:
-    if path.is_symlink() or not path.is_file() or path.stat().st_size > 8 * 1024 ** 3:
+    if path.is_symlink() or not path.is_file():
+        raise ControlError("Select a bounded regular trace file")
+    size = path.stat().st_size
+    if size > 8 * 1024 ** 3:
         raise ControlError("Select a bounded regular trace file")
     rows, tools, tool_intervals = {}, {}, []
     counts = Counter()
@@ -237,10 +240,12 @@ def analyze_trace(path: Path) -> dict:
                 output_sink = {key: sink.get(key) if number(sink.get(key)) else None for key in
                     ("events", "callback_ms", "max_callback_ms", "json_ms", "enqueue_ms", "bytes", "backpressure_signals")} if sink else None
     except HostTraceUnsupported as exc:
-        return {"path": str(path), "coverage": UNSUPPORTED_COVERAGE[exc.kind], "file_bytes": path.stat().st_size}
+        return {"path": str(path), "coverage": UNSUPPORTED_COVERAGE[exc.kind], "file_bytes": size}
     with path.open("rb") as stream:
         sha256 = hashlib.file_digest(stream, "sha256").hexdigest()
         parsed_bytes = stream.tell()
+    if parsed_bytes != size:
+        raise ControlError("Trace changed during analysis")
     host_ms = delta(terminal.get("monotonic_ms"), start) if terminal else None
     durations, rates, requests_intervals = [], [], []
     field_times = {key: [] for key in ("headers", "first_body", "first_reasoning", "first_content", "first_tool_argument",
@@ -289,7 +294,7 @@ def analyze_trace(path: Path) -> dict:
     observed_tools = union_ms(tool_intervals) if clock_valid else None
     overlaps = overlap_ms(requests_intervals, tool_intervals) if clock_valid else None
     return {"path": str(path), "coverage": "player_host",
-        "file_bytes": path.stat().st_size, "sha256": sha256, "parsed_bytes": parsed_bytes, "configuration": config,
+        "file_bytes": size, "sha256": sha256, "parsed_bytes": parsed_bytes, "configuration": config,
         "clock_valid": clock_valid, "terminal": None if terminal is None else
             {key: terminal.get(key) for key in ("ok", "reason", "requests")},
         "host_ms": host_ms if clock_valid else None, "observed_request_ms": observed_requests,
@@ -317,7 +322,7 @@ def host_summary(paths: list[Path]) -> dict:
         except (ControlError, EvaluationError, OSError, ValueError, UnicodeError, RecursionError) as exc:
             reports.append({"path": str(path), "coverage": "invalid", "error": str(exc)})
     return {"complete": all(r["coverage"] == "player_host" for r in reports),"schema": "host-analysis/1", "scope": "Diagnostic host intervals and reported tokens; not server inference, attention, useful-goal latency or readiness",
-        "units": "milliseconds unless named otherwise; p95 is nearest rank; reasoning is a subset of output, not added to it",
+        "units": "milliseconds unless named otherwise; p50 and p95 are nearest rank; reasoning is a subset of output, not added to it",
         "coverage": dict(Counter(r["coverage"] for r in reports)),
         "duplicate_content": [[r["path"] for r in reports if r.get("sha256") == sha]
             for sha, count in Counter(r.get("sha256") for r in reports if r.get("sha256")).items() if count > 1],

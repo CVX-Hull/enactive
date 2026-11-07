@@ -488,8 +488,8 @@ def test_tool_latency_percentiles_are_the_evaluators_nearest_rank():
 
 
 def test_the_viewer_reads_only_manifests_of_a_supported_version(tmp_path):
-    from harness.evaluation.core.records import EvaluationError
     from harness.viewer import views
+    from harness.viewer.catalog import ViewError
     (tmp_path / 'runs').mkdir()
     current, unversioned, future = (tmp_path / 'runs' / name for name in ('current', 'unversioned', 'future'))
     for directory, manifest in ((current, dict(schema='campaign-run/5', session='1' * 32)), (unversioned, dict(session='2' * 32)),
@@ -501,8 +501,9 @@ def test_the_viewer_reads_only_manifests_of_a_supported_version(tmp_path):
     assert catalog.run_dir_for('2' * 32, {}) is None and catalog.run_dir_for('3' * 32, {}) is None
     store = tmp_path / 'player-memory.sqlite3'
     (unversioned / 'manifest.json').write_text(json.dumps(dict(session='2' * 32, player_store=str(store))))
-    with pytest.raises(EvaluationError, match='unsupported manifest version'):
+    with pytest.raises(ViewError, match='bad_manifest') as error:
         views.memory_store(catalog, info_for(unversioned))
+    assert error.value.status == 500 and 'unsupported manifest version' in error.value.detail
     assert views.memory_store(catalog, info_for(current)) is None  # a supported manifest naming no store
 
 

@@ -133,7 +133,7 @@ Custom scope, owner, maintenance cost and retirement trigger:
 | Restricted mean (about 10 lines) | Lead | None beyond its unit test | scipy gains the function |
 | Gateway forwarding (bounded) | Lead | One route with timeout, size cap and media-type allowlist | The viewer reaches the page origin some other way |
 
-Correction (7 November 2026, #404): no UI hash check exists; the evaluation contract states how the binding detects a UI change.
+Correction (7 November 2026, #404): no UI hash check exists; the [evaluation contract](../contracts/evaluation.md#how-the-binding-detects-a-ui-change) states how the binding detects a UI change.
 
 ## Constraints this changes
 

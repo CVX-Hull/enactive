@@ -231,12 +231,14 @@ class HostTraceUnsupported(EvaluationError):
 
 
 def iter_host(path: Path, actor_hint: str, *, partial_tail: bool = False) -> Iterator[HostEvent]:
-    """Stream one player-host/3 trace, the one parser of `host.jsonl`.
+    """Stream one player-host/3 trace: the one offline parser of `host.jsonl` (the evaluator, the viewer and
+    host-summary). The supervisor's live incremental reader in tools/campaign_player.py stays separate because
+    evaluation never gates the control path (ADR008).
 
-    Bounded: a line over `MAX_HOST_LINE_BYTES` or more than `MAX_HOST_EVENTS` events is an error. A blank line is
+    Bounded: a line over `MAX_HOST_LINE_BYTES`, or more than `MAX_HOST_EVENTS` lines, is an error. A blank line is
     skipped. A duplicate key, a non-finite number or an event without a string `type` is an error. An unterminated
-    final line that does not parse is an error too, unless `partial_tail` (a live append, still being written)
-    ignores it."""
+    final line that does not parse is an error too, unless `partial_tail` (a trace may still be appending) ignores
+    it. A newline-terminated malformed line is always an error."""
     actor = actor_hint
     count = 0
     with path.open('rb') as stream:
@@ -246,7 +248,7 @@ def iter_host(path: Path, actor_hint: str, *, partial_tail: bool = False) -> Ite
             if len(line) > MAX_HOST_LINE_BYTES:
                 raise EvaluationError(f'{path}:{number}: trace line exceeds {MAX_HOST_LINE_BYTES} bytes')
             if number > MAX_HOST_EVENTS:
-                raise EvaluationError(f'{path}: trace exceeds {MAX_HOST_EVENTS} events')
+                raise EvaluationError(f'{path}: trace exceeds {MAX_HOST_EVENTS} lines')
             if not line.strip():
                 continue
             try:
@@ -275,8 +277,8 @@ def iter_host(path: Path, actor_hint: str, *, partial_tail: bool = False) -> Ite
 
 
 def read_host(path: Path, actor_hint: str) -> tuple[str, tuple[HostEvent, ...]]:
-    """One whole player-host/3 trace and its actor (the `host-start`'s `actor_id`, else `actor_hint`). A run may be
-    live, so a final line still being appended is ignored."""
+    """One whole player-host/3 trace and its actor (the `host-start`'s `actor_id`, else `actor_hint`). A trace may
+    still be appending, so an unterminated final line that does not parse is ignored on every pass, live or final."""
     events = tuple(iter_host(path, actor_hint, partial_tail=True))
     return events[0].actor, events
 

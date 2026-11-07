@@ -29,20 +29,27 @@ Open SQLite read-only (`mode=ro`) with a bounded busy timeout. A missing or unsu
 input format is an error naming the file and version. Nothing is guessed.
 
 **One JSON reader, one host parser.**
-- Every JSON document the evaluation side and the viewer read goes through
-  `records.loads`: a malformed document, a duplicate key or a non-finite number is an
-  error naming where it came from. Files go through `sources.read_json_file` and
-  `read_json_lines`, which refuse a file over 16 MiB.
+- Every JSON document the evaluation side and the viewer read from a run or from
+  `data/evaluation/` goes through `records.loads`: a malformed document, a duplicate key or
+  a non-finite number is an error naming where it came from. Files go through
+  `sources.read_json_file` and `read_json_lines`, which refuse a file over 16 MiB.
+  The exceptions are the binding's own `atlas.json` and `anchors.json` (`atlas.py`), which
+  ship with the code, and the tool-result text embedded in host events (`context.py`,
+  `host.py`), which is probed for JSON and may be anything.
 - The viewer reads a run's `manifest.json` only through `sources.read_manifest`, so an
   unsupported version is rejected there too.
 - `harness/computer/protocol.py` keeps its own decoder, because the import contracts
-  forbid the computer importing evaluation and evaluation reaching the computer.
-- `sources.iter_host` is the one parser of `host.jsonl` (`player-host/3`), used by the
-  evaluator, the viewer and `host-summary`. It is bounded to 64 MiB per line and two
-  million events per trace, skips blank lines, and rejects a trace that is empty, whose
-  first event is not a `host-start`, or whose `host-start` is not `player-host/3`
-  telemetry 3. A final line that does not parse is an error, except for a run still being
-  written, where the evaluator and the viewer ignore it.
+  forbid the computer importing evaluation.
+- `sources.iter_host` is the one offline parser of `host.jsonl` (`player-host/3`), used by
+  the evaluator, the viewer and `host-summary`. The supervisor's live incremental reader in
+  `tools/campaign_player.py` stays separate because evaluation never gates the control path
+  ([ADR008](../decisions/008-evaluation-and-spectator.md)). `iter_host` is bounded to 64 MiB
+  per line and two million lines per trace, skips blank lines, and rejects a trace that is
+  empty (or only blank lines), whose first event is not a `host-start`, or whose
+  `host-start` is not `player-host/3` telemetry 3. An unterminated final line that does not
+  parse is an error for `host-summary`; the evaluator and the viewer ignore it on every
+  pass, live or final, because a trace may still be appending. A newline-terminated
+  malformed line is always an error.
 
 **Sequence and incremental reading.**
 - The operation sequence `seq` is the `operations` table's rowid.
@@ -173,18 +180,24 @@ that reads no frame reader) and the page shows it next to the provenance chip. A
 
 A `human` rung is reported as not assessed until a human or a later reader confirms it.
 
-**How the binding detects a UI change.** There is no UI hash check. The binding detects a
-changed game window or font in three ways:
+### How the binding detects a UI change
+
+There is no UI hash check, and no check compares the game's UI with anything. What exists:
 - A frame that is not 960×640 abstains: the `mode` reading carries `frame_size` and no
   other reader runs.
-- The glyph atlas (`atlas.json`) carries a version and an 8×16 cell size. Loading it fails
-  when either differs from the code's.
-- Within a 960×640 frame with the same cell size, a changed layout is not detected as
-  such. Its cells decode to unknown glyphs, so readers abstain per frame (`unknown_glyph`,
-  `unknown_label`, `no_signature`), and the loss shows as lower `reader.coverage`.
+- The glyph atlas (`atlas.json`) carries a version and an 8×16 cell size, and loading it
+  fails when either differs from the code's. This guards the atlas data against the code,
+  not the game UI against the atlas.
+- A font change at the same frame and cell size shows as `unknown_glyph` abstentions: the
+  cells' ink masks are not in the atlas.
+- A same-font layout change shows as `label_occluded`, `unknown_label`,
+  `clock_not_legible` or `no_signature` abstentions, depending on what moved. It is not
+  guaranteed to abstain: the clock reader only lowers its confidence to 0.85 when its
+  `Date:` and `Time:` labels are not where it expects but its text still parses.
 
-The atlas is relearned when the game's font, size or layout changes
-([ADR008](../decisions/008-evaluation-and-spectator.md), correction after its decision table).
+Either loss shows as lower `reader.coverage`. The atlas is relearned when the game's font,
+size or layout changes (this follows the custom-code table in
+[ADR008](../decisions/008-evaluation-and-spectator.md), whose correction line points here).
 
 ## Metrics, version 1
 
@@ -253,7 +266,9 @@ their numbers for latency and delivery counts.
 `ceil(q·n)`-th smallest value, and the smallest value when that rank is 0. Every `p50` and
 `p95` uses it: the `host.latency` metric, the viewer's tool latencies, and the distributions
 of both diagnostics. A metric named a median (the pace and handoff rows) is the arithmetic
-median, the mean of the middle pair for an even count. `host-summary` and `control-summary`
+median, the mean of the middle pair for an even count. The viewer's explore cohort median,
+IQR and bootstrap intervals are not percentiles of this kind: they use numpy's defaults.
+`host-summary` and `control-summary`
 `p50` values were medians before #404, so on an even count they now are the lower middle
 value, and no other figure changed.
 

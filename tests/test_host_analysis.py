@@ -7,7 +7,8 @@ from unittest import mock
 
 from harness.computer.protocol import ControlError
 from harness.evaluation.core.metrics import nearest_rank
-from harness.evaluation.core.sources import read_host
+from harness.evaluation.core.records import EvaluationError
+from harness.evaluation.core.sources import iter_host, read_host
 from tools.host_analysis import analyze_trace, discover, distribution, host_summary
 
 
@@ -80,6 +81,49 @@ class HostAnalysisTests(unittest.TestCase):
             stream.write('{"type":')
         self.assertEqual(len(read_host(path, "x")[1]), 4)  # the evaluator ignores a line still being appended
         self.assertEqual(host_summary([path])["coverage"], dict(invalid=1))  # a retained trace must be whole
+
+    def test_the_parser_edge_cases_are_pinned(self):
+        e = self.event
+        # An integer beyond the float range is not a clock reading; it must not crash the parser.
+        huge = self.trace([e("host-start", 10 ** 400)], "huge.jsonl")
+        self.assertIsNone(read_host(huge, "x")[1][0].monotonic_ms)
+        # A second host-start of another version is invalid, not an unsupported trace.
+        second = self.trace([e("host-start", 0), e("host-start", 1, schema="player-host/2")], "second.jsonl")
+        self.assertEqual(host_summary([second])["coverage"], dict(invalid=1))
+        # A later event without a string type is invalid.
+        for bad in (dict(monotonic_ms=1), dict(type=7, monotonic_ms=1)):
+            typeless = self.trace([e("host-start", 0), bad], "typeless.jsonl")
+            self.assertEqual(host_summary([typeless])["coverage"], dict(invalid=1))
+            with self.assertRaises(EvaluationError):
+                read_host(typeless, "x")
+        # A duplicate key on a later line is rejected by the shared parser, not only on the first line.
+        duplicate = self.root / "duplicate.jsonl"
+        duplicate.write_text(json.dumps(e("host-start", 0)) + '\n{"type":"settled","type":"abort"}\n')
+        self.assertEqual(host_summary([duplicate])["coverage"], dict(invalid=1))
+        with self.assertRaises(EvaluationError):
+            read_host(duplicate, "x")
+        # Only blank lines is an empty trace; the event bound counts lines and accepts exactly the bound.
+        blank = self.root / "blank.jsonl"
+        blank.write_text("\n\n")
+        self.assertEqual(host_summary([blank])["coverage"], dict(empty=1))
+        four = self.trace([e("host-start", 0), e("request-start", 1, request_id="r"), e("abort", 2), e("settled", 3)], "four.jsonl")
+        with mock.patch("harness.evaluation.core.sources.MAX_HOST_EVENTS", 4):
+            self.assertEqual(host_summary([four])["coverage"], dict(player_host=1))
+        with mock.patch("harness.evaluation.core.sources.MAX_HOST_EVENTS", 3):
+            self.assertEqual(host_summary([four])["coverage"], dict(invalid=1))
+
+    def test_a_trace_that_grows_during_analysis_is_refused(self):
+        e = self.event
+        path = self.trace([e("host-start", 0), e("settled", 1)])
+        parse = iter_host
+
+        def growing(*args, **kwargs):
+            yield from parse(*args, **kwargs)
+            with path.open("a") as stream:
+                stream.write("\n")
+        with mock.patch("tools.host_analysis.iter_host", growing):
+            with self.assertRaisesRegex(ControlError, "changed during analysis"):
+                analyze_trace(path)
 
     def test_context_manifest_is_not_a_request_or_an_attempt(self):
         e = self.event

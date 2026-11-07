@@ -292,7 +292,10 @@ def context(catalog: Catalog, info: RunInfo, connection: sqlite3.Connection, req
 def memory_store(catalog: Catalog, info: RunInfo):
     path = info.meta.get('memory_store')
     if not path:
-        path = read_manifest(catalog.need_run_dir(info)).get('player_store')
+        try:
+            path = read_manifest(catalog.need_run_dir(info)).get('player_store')
+        except EvaluationError as exc:
+            raise ViewError(500, 'bad_manifest', str(exc)) from exc
     if not path or not Path(path).is_file():
         return None
     return read_memory(Path(path))
