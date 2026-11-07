@@ -173,6 +173,34 @@ All three ran on merged `main` at `f00cf4b`.
 - **C-BOUNDARY.** All eight Import Linter contracts are kept. The negative fixtures (now covering all eight contracts), the `player-host/3` contract and adapter suites, and the host-neutrality regression passed: 38 tests and 62 subtests.
 - **C-RELEASE.** #406 and #407 merged under the active ruleset `main-reviewed-and-verified` (pull request, strict `controller` check, no bypass actors) through auto-merge pinned to the reviewed head. #407's first pin was refused because GitHub had not yet registered the pushed head. It was re-pinned after a branch update.
 
+## Follow-up close-out, 7 November 2026
+
+Every finding left to the owner, filed or deferred above was then closed or given a
+trigger, applying the owner's decisions on #400–#403. Each change below was its own pull
+request with an independent clean-context review (re-verified after fixes), the full
+portable profile and protected CI, merged through auto-merge pinned to the reviewed head.
+
+| Findings | Resolution |
+| --- | --- |
+| Lens 1: 1 and 3; #403 | [#412](https://github.com/CVX-Hull/enactive/pull/412): S-MIGRATION names the closed archive read and the additive evidence event, in wording the owner approved; the charter cites ADR006 and the computer-control contract instead of ADR002, also owner-approved. |
+| Lens 5: 9; lens 7: 1–4; #401 | [#416](https://github.com/CVX-Hull/enactive/pull/416): the tracked `dev-run/1` ledger and `run-metrics/1` snapshot (37 rows backfilled and verified), generated run tables with a staleness check, hand rows cross-checked, and the 12 undefined evidence schema ids defined in a closed registry. |
+| Lens 5: 3, 4 and 7; lens 6: F1, F2 and F4; #402 | [#417](https://github.com/CVX-Hull/enactive/pull/417): S-DOCS keeps dated run records out of active pages; `development-runs.md` split into method plus two dated records; one line per checkpoint and no exact costs in the overview and work map; generated acceptance and change indexes; `controls.md` routes records to the indexes. |
+| Lens 1: 11; lens 2: 8–11 and 13; lens 4: 19; #404 | [#418](https://github.com/CVX-Hull/enactive/pull/418): standard and shared helpers for hashing, percentiles (nearest-rank p50, documented), bounded JSON reading and the offline host-trace parser; the diagnostics' owner named; the UI-hash claim corrected. Outputs on the 37 archived runs are identical apart from p50. |
+| Lens 4: 7 and 8; lens 5: 16; #405 | [#413](https://github.com/CVX-Hull/enactive/pull/413): current diagrams hosted in their owner pages, the stale `context` diagram and two historical orphans retired, and retired contracts listed in `protocol.md`. |
+| Close-out C1; #409 | [#415](https://github.com/CVX-Hull/enactive/pull/415): the test race removed and a strict clock-mapping tolerance added to terminal coverage. |
+| Lens 8: 16 | The Backlog and Current iteration views show Horizon, Priority and Parent issue, sorted by Horizon then Priority, set in the Project UI and verified by GraphQL. GitHub offers no issue-dependency field for views; Parent issue is the nearest relationship field. |
+| Worktree inventory | Eleven integrated agent worktrees and two evidence-free ones were removed, keeping every branch. By the owner's decisions, the evidence in five `.runtime` worktrees was sealed in a read-only store with tracked hash manifests before they were removed ([#419](https://github.com/CVX-Hull/enactive/pull/419)); no off-machine backup and no publication for now. |
+| Lens 3: F14 | Deferred with its trigger: the first case where an untracked file satisfies a governance reference (clean-checkout CI catches it today). |
+| Lens 7: 3, the 59 schemaless evidence files | Deferred: they stay frozen historical evidence. Trigger: a new tracked evidence JSON format; any declared schema id must already be defined. |
+
+New findings during the close-out, each with a disposition:
+- the diagram renderer's non-deterministic font order, filed as [#414](https://github.com/CVX-Hull/enactive/issues/414) (the `tools/diagrams.py` hash swap waits on it);
+- unindexed older evidence under `.runtime`, filed as [#420](https://github.com/CVX-Hull/enactive/issues/420);
+- intermittent browser-suite failures at the end of the local full profile, filed as [#421](https://github.com/CVX-Hull/enactive/issues/421);
+- front matter silently truncated by an unquoted ` #`, fixed with a guard in #417;
+- unversioned viewer manifest reads, fixed in #418;
+- a second occurrence of the #409 flake on #413's first candidate, retained, with #413 re-run only after the fix merged.
+
 ## Method and limits
 
 - **Commands.** The lenses ran the fast checks, governance, and focused non-native pytest suites: 120 tests plus 240 subtests, then 339 tests. The player-host Node suite passed 194 of 194. All of these passed at `bd549ca`.
