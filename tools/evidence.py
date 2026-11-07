@@ -138,6 +138,12 @@ def seal(study: str, sources: list[tuple[str, Path, str]], cited_by: list[str], 
     missing = [record for record in cited_by if not (ROOT / record).is_file()]
     if missing or not cited_by:
         raise EvidenceError(f'cited records must exist: {missing or "none given"}')
+    # The index records one origin per subdir; it is the only tracked provenance once originals are removed.
+    origins: dict[str, str] = {}
+    for subdir, _, origin in sources:
+        if origins.setdefault(subdir, origin) != origin:
+            raise EvidenceError(f'{subdir}: sources with different origins share this subdir; '
+                                'give them their common folder as the origin, or separate subdirs')
     skipped: list[str] = []
     try:
         for subdir, source, _ in sources:
@@ -158,7 +164,7 @@ def seal(study: str, sources: list[tuple[str, Path, str]], cited_by: list[str], 
         entry = dict(cited_by=sorted(cited_by), files=len(paths),
                      bytes=sum((target / p).stat().st_size for p in paths),
                      manifest_sha256=hashlib.sha256(text.encode('utf-8')).hexdigest(),
-                     sources={subdir: origin for subdir, _, origin in sources},
+                     sources=origins,
                      visibility='private', availability='present', note=note)
         index['studies'][study] = entry
         temporary = manifests / 'index.json.tmp'
