@@ -404,6 +404,12 @@ settled event; they do not measure disk durability or async drain. Library calle
 without sink instrumentation retain null sink measurements. Observing overhead
 still adds work and must be measured during subsequent play.
 
+`context-manifest` (additive in version 3, absent from traces before 6 November 2026)
+records, once per HTTP attempt before the fetch, the ordered parts of the payload as
+roles, kinds, sizes and SHA-256 digests with tool-call, image and source identities,
+delta-encoded against the previous attempt; it stores no text or pixels. The replay rule
+and fields are in [the contract](../../docs/contracts/player-host.md#context-manifest).
+
 `host-start` records the configured output cap, context window, effort mapping and
 image policy (`max_context_images`, `context_image_block`, also repeated on each
 `context-image-projection`);

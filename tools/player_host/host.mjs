@@ -165,14 +165,20 @@ export function projectImageContext(messages, maxImages, block) {
   // The protected latest batch is never omitted, even when a whole block would reach it.
   const omitted = blocked ? [] : images.slice(0, Math.min(Math.ceil(overflow / block) * block, images.length - protectedImages));
   const omissions = [];
+  // Complete ordered record for the context manifest; the summary caps its preview.
+  const omittedDetails = new Map();
   for (const image of omitted) {
-    const sha256 = createHash('sha256').update(Buffer.from(image.part.data, 'base64')).digest('hex');
+    const decoded = Buffer.from(image.part.data, 'base64');
+    const sha256 = createHash('sha256').update(decoded).digest('hex');
+    omittedDetails.set(image, {sha256, bytes:decoded.length});
     const provenance = {tool_call_id:image.toolCallId, image_index:image.imageIndex, sha256};
     projected[image.messageIndex].content[image.contentIndex] = {type:'text',
       text:`Historical pixels omitted from this request by frozen image policy; toolCallId=${image.toolCallId}; image_index=${image.imageIndex}; SHA256=${sha256}. Pixels were not reread; this marker grants no authority or source-read proof.`};
     if (omissions.length < 16) omissions.push(provenance);
   }
-  return {messages:projected, summary:{max_context_images:maxImages, context_image_block:block, input_images:images.length,
+  return {messages:projected, images:images.map(image => ({tool_call_id:image.toolCallId, image_index:image.imageIndex,
+    ...(omittedDetails.has(image) ? {omitted:true, ...omittedDetails.get(image)} : {omitted:false})})),
+    summary:{max_context_images:maxImages, context_image_block:block, input_images:images.length,
     protected_images:protectedImages, retained_images:images.length - omitted.length,
     omitted_images:omitted.length, blocked, omissions, omitted_provenance_entries:omitted.length - omissions.length}};
 }
@@ -208,6 +214,57 @@ function payloadSize(payload) {
   return {text_parts:textParts, text_bytes:textBytes, image_parts:imageParts, image_bytes:imageBytes, message_count:payload.messages?.length ?? 0};
 }
 
+const sha256Hex = data => createHash('sha256').update(data).digest('hex');
+const TEXT_FIELDS = ['reasoning_content', 'reasoning', 'reasoning_text'];
+
+/** Ordered parts of one actually serialized chat-completions payload, as digests only.
+ * Parts are listed per message in payload order (reasoning, text/content, tool calls);
+ * an image evicted from the request is listed as an `omitted` image directly after the
+ * tool-result text that carries its marker. `images` is projectImageContext's ordered
+ * image list, which attributes sent images to tool calls; `sourceIds` maps tool call to
+ * the source identity of its result. Bodies and image bytes are never returned. */
+export function payloadManifestParts(payload, images = [], sourceIds = new Map()) {
+  const parts = [], toolNames = new Map(), omitted = new Map();
+  for (const image of images) if (image.omitted) omitted.set(image.tool_call_id, [...omitted.get(image.tool_call_id) ?? [], image]);
+  const sentImages = images.filter(image => !image.omitted);
+  const sentParts = (payload.messages ?? []).flatMap(message => Array.isArray(message.content) ? message.content : [])
+    .filter(part => part?.type === 'image_url').length;
+  const attributed = sentImages.length === sentParts;
+  let sentSeen = 0;
+  const textPart = (role, kind, value, extra = {}) => parts.push({role, kind, bytes:Buffer.byteLength(value), sha256:sha256Hex(value), ...extra});
+  const imagePart = (role, image, source) => parts.push({role, kind:'image', bytes:image.bytes, sha256:image.sha256,
+    ...(image.tool_call_id != null ? {tool_call_id:image.tool_call_id, image_index:image.image_index} : {}),
+    ...(source != null ? {source_id:source} : {}), state:image.omitted ? 'omitted' : 'sent'});
+  const emitOmitted = id => { for (const image of omitted.get(id) ?? []) imagePart('tool', image, sourceIds.get(id)); omitted.delete(id); };
+  for (const message of payload.messages ?? []) {
+    const role = message.role === 'developer' ? 'system' : message.role;
+    for (const key of TEXT_FIELDS) if (typeof message[key] === 'string' && message[key]) textPart(role, 'reasoning', message[key]);
+    const tool = role === 'tool';
+    const identity = tool ? {tool_call_id:message.tool_call_id, tool:toolNames.get(message.tool_call_id) ?? null} : {};
+    const kind = tool ? 'tool_result_text' : 'text';
+    if (typeof message.content === 'string') textPart(role, kind, message.content, identity);
+    else if (Array.isArray(message.content)) for (const part of message.content) {
+      if (part?.type === 'text' && typeof part.text === 'string') textPart(role, kind, part.text, identity);
+      else if (part?.type === 'image_url') {
+        const url = typeof part.image_url?.url === 'string' ? part.image_url.url : '';
+        const comma = url.startsWith('data:') ? url.indexOf(',') : -1;
+        const bytes = comma < 0 ? Buffer.from(url) : Buffer.from(url.slice(comma + 1), 'base64');
+        const attribution = attributed ? sentImages[sentSeen] : undefined;
+        sentSeen++;
+        imagePart(role, {...attribution, omitted:false, bytes:bytes.length, sha256:sha256Hex(bytes)}, attribution && sourceIds.get(attribution.tool_call_id));
+      }
+    }
+    for (const call of message.tool_calls ?? []) {
+      toolNames.set(call.id, call.function?.name ?? null);
+      textPart(role, 'tool_call', JSON.stringify(call), {tool_call_id:call.id, tool:call.function?.name ?? null});
+    }
+    if (tool) emitOmitted(message.tool_call_id);
+  }
+  // A marker whose tool message is not in the payload still stays visible.
+  for (const id of [...omitted.keys()]) emitOmitted(id);
+  return parts;
+}
+
 /** Evidence projection only. Pi receives the unchanged actual MCP result. */
 export function projectToolResultForTelemetry(result) {
   let imageIndex = 0;
@@ -219,6 +276,17 @@ export function projectToolResultForTelemetry(result) {
       sha256:createHash('sha256').update(bytes).digest('hex'), image_index:imageIndex++};
   });
   return projected;
+}
+
+/** Source identity of a computer/source tool result (`source.source_id` in its JSON text), else null. */
+function resultSourceId(result) {
+  for (const part of (Array.isArray(result?.content) ? result.content : []).filter(part => part.type === 'text').slice(0, 8)) {
+    let value;
+    try { value = JSON.parse(part.text); } catch { continue; }
+    const id = object(value) && object(value.source) ? value.source.source_id : undefined;
+    if (typeof id === 'string' && id.length > 0 && id.length <= 128) return id;
+  }
+  return null;
 }
 
 function assistantNarration(content) {
@@ -451,6 +519,26 @@ export async function runHost(options) {
   let releaseInitialControl;
   const initialControlReady = new Promise(resolve => { releaseInitialControl = resolve; });
   let contextWarning = false;
+  // Context manifest state: the latest projection's ordered images, tool-result source
+  // identities, and the previous manifest (part keys and omitted indexes) for deltas.
+  let contextImages = [], manifestBase = null;
+  const sourceIds = new Map();
+  // Delta against the previous attempt's manifest: the leading parts identical to it are
+  // counted, not repeated. Replay rule: contract `context-manifest` row.
+  const nextContextManifest = (attemptId, payload) => {
+    const parts = payloadManifestParts(payload, contextImages, sourceIds);
+    const keys = parts.map(part => JSON.stringify(part));
+    const previous = manifestBase?.keys ?? [];
+    let reused = 0;
+    while (reused < previous.length && reused < keys.length && previous[reused] === keys[reused]) reused++;
+    const omittedIndexes = parts.flatMap((part, index) => part.state === 'omitted' ? [index] : []);
+    const changed = !isDeepStrictEqual(omittedIndexes, manifestBase?.omitted ?? []);
+    const event = {request_id:attemptId, base_request_id:manifestBase?.requestId ?? null, reused_prefix_parts:reused,
+      part_count:parts.length, parts:parts.slice(reused).map((part, offset) => ({index:reused + offset, ...part})),
+      ...(changed ? {omitted_image_indexes:omittedIndexes} : {})};
+    manifestBase = {requestId:attemptId, keys, omitted:omittedIndexes};
+    return event;
+  };
   const assistantControls = new WeakMap();
   const progressSnapshot = () => responseProgress ? {...responseProgress,
     scope:requestInFlight ? 'current-http-attempt' : 'last-http-attempt'} : null;
@@ -543,6 +631,8 @@ export async function runHost(options) {
         try { result = await client.callTool(name, args, {signal, timeoutMs:mcp.tool_timeout_sec * 1000}); }
         catch { stop('mcp-call-failed'); throw new HostError(fatal); }
         if (fatal) throw new HostError(fatal);
+        const sourceId = resultSourceId(result);
+        if (sourceId !== null) sourceIds.set(toolCallId, sourceId);
         emit('tool-result', {request_id:requestId, tool_call_id:toolCallId, tool:name, result:projectToolResultForTelemetry(result)});
         try {
           const transition = inspectHandoff(name, args, result, pendingHandoff, options.session, options.actorId);
@@ -592,6 +682,7 @@ export async function runHost(options) {
           requestControlId = control && projection.messages.some(message => message.role === 'user'
             && Array.isArray(message.content) && message.content.some(part => part.type === 'text'
               && part.text === `${STOP_TEXT}\ncontrol_id: ${control.id}`)) ? control.id : undefined;
+          contextImages = projection.images;
           emit('context-image-projection', {request_id:`request-${requests + 1}`, projection_ms:performance.now() - projectionStarted, ...projection.summary});
           if (projection.summary.blocked) stop('context-image-limit');
           const estimate = estimateContextTokens(projection.messages);
@@ -695,6 +786,7 @@ export async function runHost(options) {
             emit('request-start', {request_id:attemptId, logical_request_id:logicalRequestId, model:model.id, provider:model.provider,
               sdk_after_payload_ms:attempts === 1 && payloadReadyAt !== undefined ? fetchEntered - payloadReadyAt : null,
               host_inspection_ms:inspectionMs, ...sizes});
+            emit('context-manifest', nextContextManifest(attemptId, payload));
             let response;
             emit('request-fetch-start', {request_id:attemptId});
             try { response = await actualFetch(url, init); }
