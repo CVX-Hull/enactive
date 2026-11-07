@@ -5,11 +5,14 @@ from __future__ import annotations
 import argparse
 from html.parser import HTMLParser
 import json
+import os
 import frontmatter
 from pathlib import Path
 import shutil
 import subprocess
 import sys
+import tempfile
+import threading
 import time
 from urllib.parse import unquote, urlsplit
 
@@ -138,11 +141,106 @@ def check_documents(root: Path) -> list[str]:
     return errors
 
 
+#: Each checker invocation keeps the full output of every subprocess command (except the short stdin-fed syntax
+#: checks) in its own directory here, so a failure stays diagnosable even when terminal output was truncated (#421).
+CHECK_LOGS = Path(".runtime") / "check-logs"
+#: How long output may keep arriving after the command exits, from descendants that inherited the pipe.
+DRAIN_SECONDS = 10
+_log_directory: Path | None = None
+_log_count = 0
+
+
+def _log_path(command: list[str]) -> Path:
+    global _log_directory, _log_count
+    if _log_directory is None or not _log_directory.is_dir() or not _log_directory.is_relative_to(ROOT):
+        (ROOT / CHECK_LOGS).mkdir(parents=True, exist_ok=True)
+        stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+        _log_directory, _log_count = Path(tempfile.mkdtemp(prefix=f"{stamp}-", dir=ROOT / CHECK_LOGS)), 0
+    _log_count += 1
+    name = "-".join(Path(part).name for part in command[:4])
+    name = "".join(c if c.isalnum() or c in "._-" else "-" for c in name)[:60]
+    return _log_directory / f"{_log_count:02d}-{name}.log"
+
+
+class _Output:
+    """Copies a command's merged output to its log and the terminal until stopped.
+
+    The thread owns the pipe: it always reads to the end (or until stopped) and closes it, even when a write
+    fails, because a pipe nobody drains would block the command. The first write error is kept in `error`.
+    """
+
+    def __init__(self, stream, log):
+        self.stream, self.log, self.lock, self.stopped = stream, log, threading.Lock(), False
+        self.error: Exception | None = None
+        self.sinks = {"log": self._to_log, "terminal": self._to_terminal}
+        self.thread = threading.Thread(target=self._copy, daemon=True)
+        self.thread.start()
+
+    def _to_log(self, line: bytes) -> None:
+        self.log.write(line)
+        self.log.flush()  # a killed checker still leaves the output so far
+
+    @staticmethod
+    def _to_terminal(line: bytes) -> None:
+        sys.stdout.write(line.decode(errors="replace"))
+        sys.stdout.flush()
+
+    def _copy(self) -> None:
+        try:
+            for line in self.stream:
+                with self.lock:
+                    if self.stopped:
+                        return
+                    for name, write in list(self.sinks.items()):
+                        try:
+                            write(line)
+                        except (OSError, ValueError) as error:  # e.g. `check.py | head`, a closed terminal, a full disk
+                            del self.sinks[name]
+                            self.error = self.error or OSError(f"could not write command output to the {name}: {error}")
+        finally:
+            self.stream.close()
+
+    def finish(self, timeout: float) -> bool:
+        """Wait for the end of output; True when it ended, False when it was cut off after `timeout` seconds."""
+        self.thread.join(timeout)
+        with self.lock:
+            self.stopped = True
+        return not self.thread.is_alive()
+
+
 def run(command: list[str], **kwargs) -> None:
     print("+ " + " ".join(command), flush=True)
     started = time.perf_counter()
     try:
-        subprocess.run(command, cwd=ROOT, check=True, **kwargs)
+        if "input" in kwargs:  # stdin-fed syntax checks: short, silent on success
+            subprocess.run(command, cwd=ROOT, check=True, **kwargs)
+            return
+        path = _log_path(command)
+        environment = {**os.environ, "PYTHONUNBUFFERED": "1"}  # keep stdout/stderr order as on a terminal
+        with path.open("xb") as log:
+            process = subprocess.Popen(command, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                       env=environment, **kwargs)
+            output = _Output(process.stdout, log)
+            try:
+                returncode = process.wait()
+                # A descendant that outlived the command (an orphaned fixture server, say) can hold the pipe
+                # open; read what it still sends for a bounded time instead of waiting for it to exit.
+                drained = output.finish(DRAIN_SECONDS)
+            except BaseException:  # as subprocess.run does: an interrupted check leaves no child running
+                process.kill()
+                process.wait()
+                output.finish(0)  # stop the reader before the log closes
+                raise
+            if not drained:
+                note = (f"Output pipe still held by a descendant {DRAIN_SECONDS}s after the command exited "
+                        f"(status {returncode}); stopped reading.\n")
+                log.write(note.encode())
+                print(note, end="", flush=True)
+        if returncode:
+            print(f"Full output of the failed command: {path.relative_to(ROOT)}", flush=True)
+            raise subprocess.CalledProcessError(returncode, command)
+        if output.error:
+            raise output.error
     finally:
         print(f"Command elapsed: {time.perf_counter() - started:.2f}s", flush=True)
 

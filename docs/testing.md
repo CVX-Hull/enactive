@@ -31,6 +31,13 @@ relevant focused tests. The default `.venv/bin/python tools/check.py` runs full
 portable regression. Use the explicit CI profiles only under the policy; exact
 commands/membership stay in the existing runner and shared manifest. Broad
 source changes require full regression before merge. Checks never install packages.
+Each checker run also writes the full output of every subprocess command (all but the
+short stdin-fed syntax checks) to its own directory under `.runtime/check-logs/`, named
+by UTC start time, and a failed command prints the path of its log, so a failure stays
+diagnosable when terminal output was cut short. Output a surviving descendant still
+holds is cut off 10 seconds after the command exits, with a note in the log. The
+[cleanup procedure](operations/evidence-cleanup.md) says when logs can be pruned and
+how a record cites one.
 
 A schema change needs ingress/version/negative cases at each affected consumer.
 A player/test-context change also needs typed nested result projection with opaque
