@@ -403,6 +403,13 @@ section records the owner's decisions, the frozen procedure and one row per admi
 | D5 | The long-activity share is pre-registered against the six no-aid S1 runs in [`changes.json`](../data/evaluation/changes.json) (`long-horizon`), expected higher. It is descriptive, with no power claim. |
 | D6 | A lineage ends at 24 elapsed in-game hours, at death, at 2,000 decisions or at a stop rule. |
 
+Two further owner decisions were taken during the arm, on 7 November 2026:
+
+| | Decision |
+| --- | --- |
+| D7 | A setup restart is not a D3 continuity failure: the player enters play for one decision with no game time, saves and quits, then creates the survivor the lineage carries. This happened in all three lineages. |
+| D8 | Lineage 3 ends as Slow under the stop rule after two consecutive custody stops with one cause (#396), with no change to the frozen harness. |
+
 ### Classification (fixed before any run)
 
 Each lineage gets exactly one class, checked in this order:
@@ -529,10 +536,10 @@ Morgan Reed, an Evacuee in the world Stirling City (evac shelter A-23), 7 Novemb
 - **Cost:** $13.18, which is $0.53 per game hour, so seven days would cost about $90.
 
 **Hand checks** (labels 3–6 in [`labels.jsonl`](../data/evaluation/labels.jsonl), taxonomy version 2):
-- **Setup correction in `lh1a1` (the lead's ruling, pending the owner's confirmation).**
+- **Setup correction in `lh1a1` (the lead's ruling, confirmed by the owner as D7).**
   - After "Play Now!" the player entered play in a stadium start in world Diamond Bluff at 8:00:00 AM on day 61. On the next decision it chose Save and Quit, and then created the assigned Evacuee, Morgan Reed, in Stirling City; he was first in play at step 20.
   - The first survivor's name, Krista Hobson, comes only from the save filename.
-  - No game time passed and no lineage survivor existed yet, so the lead rules this a setup correction, not a continuity failure. D3's wording, "a wrong survivor", could be read to cover it. The class would change only if this is ruled a continuity failure.
+  - No game time passed and no lineage survivor existed yet, so the lead ruled this a setup correction, not a continuity failure. D3's wording, "a wrong survivor", could have been read to cover it; the owner confirmed the ruling (D7).
   - The evaluator cannot see this kind of switch: identity was read only on Morgan's creation frames, and the clock did not change.
   - The *Setup* column counts 7 decisions, up to the first survivor's in-play frame. The 12 correction decisions after it (about $0.06) count as play in `lh1a1`'s pace and out-of-play share.
 - **Both boundaries.** The load menu selected Stirling City, whose only character is Morgan Reed, and the first clock continued the previous admission's. Boundary 2 lost 230 s because `lh1a2` ended without saving.
@@ -576,7 +583,7 @@ Morgan Hale, an Evacuee in the world Brokaw (evac shelter B-05), 7 November 2026
 - **Cost:** $13.60, which is $0.54 per game hour, so seven days would cost about $91.
 
 **Hand checks** (labels 7–9 in [`labels.jsonl`](../data/evaluation/labels.jsonl)):
-- **Setup restart in `lh2a1` (the lead's ruling, pending the owner's confirmation, as for lineage 1).**
+- **Setup restart in `lh2a1` (confirmed by the owner as D7, as for lineage 1).**
   - After "Play Now!" the player entered play once as a random Evacuee in world Jayuya at 8:00:00 AM. The save file names Al Joyner.
   - On the next decision it chose Save and Quit, and then built its own Evacuee, Morgan Hale (Str, Dex, Int and Per all 10), in Brokaw. Morgan Hale was first in play at step 22, again at 8:00:00 AM.
   - Unlike lineage 1's stadium start, this first survivor was in an Evacuee start. Its setup was chosen at random by "Play Now!", not by the player.
@@ -594,3 +601,82 @@ Morgan Hale, an Evacuee in the world Brokaw (evac shelter B-05), 7 November 2026
 - the other six long activities total 7.3 h and were not individually checked.
 
 `lh2a1` passed only 2.49 h with one long activity, close to the #372 loop's pace. That compares with lineage 1's first admission at 5.93 h and five long activities, at a similar decision count and cost.
+
+#### Lineage 3: Slow (ended by a stop rule)
+
+Morgan Vale, an Evacuee in the world Crenshaw (evac shelter A-23), 7 November 2026.
+
+| Admission | Status | Attempts | Decisions (setup or reload) | Game h | Clock | Boundary (hand check) | $ actual | Wall s |
+| --- | --- | ---: | --- | ---: | --- | --- | ---: | ---: |
+| `lh3a1` | Custody stop: input expired during dispatch (partial) | 219 | 208 (8) | 0.17 | 8:00 → about 8:10 AM, day 61 | First admission; see the setup restart below | 2.91 | 1,346 |
+| `lh3a2` | Custody stop: input expired during dispatch (partial) | 104 | 96 (4) | 0.38 | 8:10 → 8:32 AM, day 61 | Crenshaw, Morgan Vale; 8:10:00 AM, rewound 20 s to the autosave | 0.76 | 640 |
+
+| Run | Arm | Start | End | Game h | Decisions | Setup | Routine pace | Long activities | Out of play | Longest stall | $ / decision | Large rewrites |
+| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| lh3a1 | long-horizon | S1 | custody | 0.17 | 208 | 8 | 3.0 | 0 · 0.00 h | 67% | 28 | 0.0139 | 59% |
+| lh3a2 | long-horizon | S1 | custody | 0.38 | 96 | 4 | 3.4 | 0 · 0.00 h | 63% | 10 | 0.0078 | 36% |
+
+**Lineage row** (`evaluate-lineage`):
+- **Elapsed:** 0.54 h in 304 decisions, 6.4 game seconds per decision; no long activities.
+- **Day check:** not reached.
+- **Cost:** $3.67.
+
+**Classification: Slow** (owner decision D8).
+- Alive under 24 elapsed hours, ended by the stop rule after two consecutive infrastructure failures with one cause.
+- Continuity held at the boundary.
+- The class names how the lineage stopped; it is not a survival result.
+
+**The custody stops** ([#396](https://github.com/CVX-Hull/enactive/issues/396)).
+- In both admissions the last input began with ENTER to dismiss the shelter board's "mark down the coordinates" message (ENTER, UP, g, then ENTER, E). Each action in an input is its own native request.
+- The game consumed ENTER's key-down and then stopped polling events before its key-up, past the bridge's 5 s request window.
+  - ENTER's own request expired with a partial receipt; its two emitted events are the key-down and the owned release.
+  - Input was fenced permanently, as designed. A lone ENTER would have fenced the same way.
+- Across the arm's 1,566 computer inputs, every input without a wait action took 1.9 s or less. These two took 7.4 s and 11.5 s.
+- Lineage 2's player recorded studying its own shelter's board and marking the refugee center (memory record, `lh2a1`), with no slow input. So the stall plausibly depends on lineage 3's world state; this is a hypothesis.
+
+**Hand checks** (labels 10–11):
+- **Setup restart in `lh3a1` (D7).** "Play Now!" placed the first survivor in a helicopter-crash start, bleeding and surrounded by zombies, at 8:00:00 AM on day 61. On the next decision it chose Save and Quit, then created the Evacuee Morgan Vale, first in play at step 22.
+- **Boundary.** The load menu selected Crenshaw, whose only character is Morgan Vale. The first in-play clock, 8:10:00 AM with "Saving game", is 20 s before `lh3a1`'s last reading.
+
+### Arm result
+
+| Lineage | Survivor | Class | Elapsed h | Decisions | Pace (s/decision) | Long-activity share | $ |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
+| 1 | Morgan Reed | Day-viable | 24.71 | 638 | 139.4 | 0.910 | 13.18 |
+| 2 | Morgan Hale | Day-viable | 25.04 | 618 | 145.9 | 0.842 | 13.60 |
+| 3 | Morgan Vale | Slow (stop rule) | 0.54 | 304 | 6.4 | 0.000 | 3.67 |
+
+**Arm result: "Day-scale survival is viable through this boundary"**: two of three lineages Day-viable and no continuity failure, given the owner's setup-restart ruling (D7). With three lineages this is a screen, not a qualification.
+- Under #382's table the next step is to design the seven-day attempt for #145 and the cost and latency plan that resumes #164 ([#397](https://github.com/CVX-Hull/enactive/issues/397)).
+- The arm spent **$30.46** of its $150 envelope: 1,610 attempts, about 3.2 h of wall time, cumulative actual $377.41.
+
+**Time passing.** Given enough decisions, both Day-viable players slept through the night in shelter.
+- Lineage 1 slept 7.5 h in one decision.
+- Lineage 2 spent 9.3 h on the night, including an unreadable stretch of trying to fall asleep.
+- Both woke "Very thirsty" and drank before the day point.
+- Both crafted in long batches, and two-thirds of decisions were out of play, mostly in crafting and item menus.
+- Overall pace rose from the #372 no-aid S1 runs' pooled 28.7 game seconds per decision to 139–146.
+- Most of the difference is long activities, and admissions differed widely: `lh2a1` ran at 30.4 s per decision, `lh2a2` at 251.
+- Every lineage opened with a "Play Now!" setup restart (D7).
+
+**D5 outcome (descriptive, pre-registered).**
+- The lineage long-activity shares are 0.910, 0.842 and 0.000, a median of **0.842**. The comparator, the six no-aid S1 runs' per-run mean, is **0.284**.
+- The pre-registered expectation, a median above the comparator by at least 0.1, holds.
+- This makes no power claim: three lineages against six runs, and the comparator's long activities come from two runs.
+
+**Reader and evaluator notes.**
+- The weariness reader's whole-reader abstention did not affect any result: both day points were read directly and confirmed by hand.
+- Severe-need recall stays unmeasured (`reader-validation.json`).
+- The evaluator cannot see setup restarts: identity was read only on creation screens, and the clock was unchanged.
+
+**Evidence frames** ([assets](acceptance/assets/long-horizon-382), copied unchanged from the packages' `sources/`):
+
+| Asset | Source frame | Shows |
+| --- | --- | --- |
+| `l1-night-asleep-2230.png` | `lh1a3` -9217 | Falling asleep, 10:30 PM, day 61 |
+| `l1-rollover-wake-0600.png` | `lh1a3` -9685 | Waking "Very thirsty", 6:00:58 AM, day 62 |
+| `l1-day-point-0808.png` | `lh1a3` -10739 | Day point, 8:08:44 AM, day 62 |
+| `l1-setup-restart-save-and-quit.png` | `lh1a1` -228 | Setup restart: Save and Quit prompt |
+| `l2-boundary-load-menu.png` | `lh2a2` -3 | Boundary load menu (Brokaw, Morgan Hale) |
+| `l2-day-point-0843.png` | `lh2a2` -15930 | Day point, 8:43:28 AM, day 62 |
+| `l3-board-message-before-fence.png` | `lh3a2` -5163 | Board message before the second fence |

@@ -47,10 +47,19 @@ provider failure classes.
   - judges ([#386](https://github.com/CVX-Hull/enactive/issues/386));
   - a cross-run channel ([#387](https://github.com/CVX-Hull/enactive/issues/387));
   - a scenario bank ([#388](https://github.com/CVX-Hull/enactive/issues/388)).
-- **Next step.** The long-horizon arm ([#382](https://github.com/CVX-Hull/enactive/issues/382))
-  runs with the frozen evaluator and the spectator. The owner approved it on
-  7 November 2026 with a new $150 envelope
-  ([decisions](development-runs.md#long-horizon-arm-382)).
+
+**Long-horizon arm, 7 November 2026** ([#382](https://github.com/CVX-Hull/enactive/issues/382),
+[development runs](development-runs.md#arm-result)).
+- **Result: day-scale survival is viable through this boundary.** Two of three lineages
+  of chained save and reload admissions reached 24 elapsed game hours with the day check
+  passed. Both slept through the night in shelter, at 139–146 game seconds per decision
+  against the earlier 28.7.
+- **Lineage 3** ended as Slow at 0.54 h after two custody stops with one cause: a game
+  stall longer than the bridge's 5 s input window ([#396](https://github.com/CVX-Hull/enactive/issues/396)).
+- **Spend:** $30.46 of the $150 envelope.
+- **Next step:** design the seven-day attempt for #145 and the cost and latency plan that
+  resumes #164 ([#397](https://github.com/CVX-Hull/enactive/issues/397)). Nothing is
+  approved yet.
 
 ## Current integrated checkpoint
 
