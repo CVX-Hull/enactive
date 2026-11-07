@@ -19,10 +19,11 @@ from .derive import (READER_FRAME, READER_INPUT, STALL_DECISIONS, Timeline, out_
     unit_seconds)
 from .host import HostFacts, LARGE_REWRITE_CACHE_TOKENS
 from .records import EventRow, MetricRow
-from .sources import Operation
+from .sources import EndFacts, Operation
 
 VERSION = 1
 INSUFFICIENT = 5
+LOST_REASONS = ('infrastructure', 'custody')
 
 
 def nearest_rank(values: Sequence[float], fraction: float) -> float | None:
@@ -30,36 +31,84 @@ def nearest_rank(values: Sequence[float], fraction: float) -> float | None:
     return ordered[max(0, math.ceil(fraction * len(ordered)) - 1)] if ordered else None
 
 
-def _row(name: str, value: Any, count: int | None, denominator: float | None, missing: str | None = None) -> MetricRow:
-    return MetricRow(name, VERSION, value, count, denominator, missing)
+def _row(name: str, value: Any, count: int | None, denominator: float | None, missing: str | None = None,
+         key: str = '') -> MetricRow:
+    return MetricRow(name, VERSION, value, count, denominator, missing, key)
 
 
-def survival(timeline: Timeline, events: Sequence[EventRow], binding: Binding) -> tuple[MetricRow, float | None]:
+def censor_reason(died: bool, events: Sequence[EventRow], facts: HostFacts, end: EndFacts) -> str | None:
+    """Why a run's survival observation ended. First match wins:
+
+    1. `died`: a death event in the survival episode (or after it).
+    2. `owner_pause`: the gateway's `watch-terminal.json` records a forwarded Pause or a pause reason.
+    3. `custody`: a `custody_stop` event (partial or unknown delivery, or a custody fence).
+    4. `infrastructure`: the last actor's host settled unsuccessfully (a provider error), from the host
+       trace or `receipt.json`.
+    5. `player_stop`: the last player finish was `cannot_continue` or `task_complete`.
+    6. `budget`: an orderly stop was requested (a `control-accepted` host event, or an ending request in
+       `receipt.json`), or the last actor settled with a handoff that no successor continued (hosts exhausted).
+    Otherwise None: the run is still live, or its end is not recorded."""
+    if died:
+        return 'died'
+    if end.paused:
+        return 'owner_pause'
+    if any(e.kind == 'custody_stop' for e in events):
+        return 'custody'
+    last = end.settled[-1] if end.settled else (facts.settles[facts.actors[-1]].fields
+        if facts.actors and facts.actors[-1] in facts.settles else None)
+    if last is not None and last.get('ok') is False:
+        return 'infrastructure'
+    finishes = [e.fields.get('disposition') for e in facts.finishes] or [d for d in end.finishes if d]
+    if finishes and finishes[-1] in ('cannot_continue', 'task_complete'):
+        return 'player_stop'
+    if facts.controls or end.ending_trigger:
+        return 'budget'
+    if last is not None and last.get('reason') == 'handoff':
+        return 'budget'
+    if finishes:
+        return 'player_stop'
+    return None
+
+
+def survival(timeline: Timeline, events: Sequence[EventRow], binding: Binding, facts: HostFacts,
+             end: EndFacts) -> tuple[MetricRow, float | None, str | None]:
+    """Survival within the last episode that has an accepted in-play clock reading."""
     clock = timeline.clock
-    readable = [i for i, value in enumerate(clock) if value is not None]
-    start = next((i for i in readable if timeline.frames[i].mode == 'in_play'), None)
-    if not readable:
-        return _row('survival.game_hours', None, 0, None, 'no_clock_reading'), None
-    if start is None:
-        return _row('survival.game_hours', None, len(readable), None, 'no_in_play_clock'), None
+    if not any(value is not None for value in clock):
+        return _row('survival.game_hours', None, 0, None, 'no_clock_reading'), None, None
+    start, episode = timeline.survival_start, timeline.play_episode
+    if start is None or episode is None:
+        return _row('survival.game_hours', None, sum(v is not None for v in clock), None, 'no_in_play_clock'), None, None
+    span = timeline.episode_range(episode)
+    readable = [i for i in span if clock[i] is not None]
     hours = (clock[readable[-1]] - clock[start]) * unit_seconds(binding) / 3600
-    died = any(e.kind == 'death' for e in events)
-    return _row('survival.game_hours', dict(hours=hours, outcome='died' if died else 'censored',
-        start_game_time=clock[start], end_game_time=clock[readable[-1]]), len(readable), None), hours
+    first_seq = timeline.steps[episode.start].seq
+    died = any(e.kind == 'death' and e.seq_start >= first_seq for e in events)
+    reason = censor_reason(died, events, facts, end)
+    return _row('survival.game_hours', dict(hours=hours, outcome='died' if died else 'censored', censor_reason=reason,
+        start_game_time=clock[start], end_game_time=clock[readable[-1]], episode=episode.index,
+        episodes=len(timeline.episodes)), len(readable), None), hours, reason
 
 
 def compute_metrics(timeline: Timeline, operations: Sequence[Operation], events: Sequence[EventRow],
                     facts: HostFacts, binding: Binding, carry: Mapping[str, frozenset[str]],
-                    human_rungs: frozenset[str] = frozenset(), external: Mapping[str, Any] | None = None) -> list[MetricRow]:
+                    human_rungs: frozenset[str] = frozenset(), external: Mapping[str, Any] | None = None,
+                    end: EndFacts | None = None) -> list[MetricRow]:
     """All metric rows for one run. `external` carries plain numbers computed elsewhere from the
     existing host and control summaries: `response_ms` and `first_chunk_ms` (lists) and
-    `custody` (`{"receipts": n, "uncertain": n}`)."""
+    `custody` (`{"receipts": n, "uncertain": n}`). Multi-valued metrics (per reader, percentile, status,
+    tool, record kind or handoff) are one row per member, named by `key`."""
     external = external or {}
+    end = end or EndFacts()
     steps, frames = timeline.steps, timeline.frames
     factor = unit_seconds(binding)
     rows: list[MetricRow] = []
-    survival_row, hours = survival(timeline, events, binding)
+    survival_row, hours, reason = survival(timeline, events, binding, facts, end)
     rows.append(survival_row)
+    lost = int(reason in LOST_REASONS)
+    missing_end = None if reason is not None else 'end_not_recorded'
+    rows.append(_row('run.infrastructure_loss', lost, lost, 1, missing_end))
+    rows.append(_row('run.provider_loss', int(reason == 'infrastructure'), int(reason == 'infrastructure'), 1, missing_end))
     no_host = None if facts.present else 'no_host_trace'
 
     # Decisions and setup.
@@ -73,7 +122,8 @@ def compute_metrics(timeline: Timeline, operations: Sequence[Operation], events:
     for index, value in enumerate(timeline.clock):
         if value is None:
             continue
-        if last is not None and (timeline.first_in_play is None or last >= timeline.first_in_play):
+        if last is not None and timeline.episode_of[last] == timeline.episode_of[index] \
+                and (timeline.first_in_play is None or last >= timeline.first_in_play):
             seconds = (value - timeline.clock[last]) * factor
             decisions = timeline.ranks[index] - timeline.ranks[last]
             if decisions > 0 and seconds < binding.long_activity_seconds:
@@ -136,7 +186,7 @@ def compute_metrics(timeline: Timeline, operations: Sequence[Operation], events:
         beyond += len(returned_ids - carry.get(previous_actor.get(actor, ''), frozenset()))
     rows.append(_row('memory.retrieved_beyond_carry', beyond / len(writes) if writes else None, beyond, len(writes),
         None if writes else ('no_writes' if facts.present else no_host)))
-    calls = {actor: sum(1 for c in facts.calls if c.actor == actor) for actor in facts.actors}
+    calls = {actor: sum(1 for c in facts.calls if c.actor == actor and not c.refused) for actor in facts.actors}
     late = sum(1 for e in writes if e.payload['call'] >= calls[e.payload['actor']] - 6)
     rows.append(_row('memory.late_write_share', late / len(writes) if writes else None, late, len(writes),
         None if writes else ('no_writes' if facts.present else no_host)))
@@ -149,7 +199,18 @@ def compute_metrics(timeline: Timeline, operations: Sequence[Operation], events:
     rows.append(_row('programs.run', len(runs) if facts.present else None, len(runs), None, no_host))
     reused = sum(1 for e in runs if e.payload['reused'])
     rows.append(_row('programs.reused', reused if facts.present else None, reused, None, no_host))
-    rows.append(_row('programs.outcomes', outcomes if facts.present else None, len(runs), None, no_host))
+    if not facts.present or not outcomes:
+        rows.append(_row('programs.outcomes', None if not facts.present else 0, len(runs), None,
+            no_host or 'no_program_runs'))
+    for status in sorted(outcomes):
+        rows.append(_row('programs.outcomes', outcomes[status], outcomes[status], len(runs), key=status))
+    kinds: dict[str, int] = {}
+    for e in writes:
+        kinds[str(e.payload['record_kind'])] = kinds.get(str(e.payload['record_kind']), 0) + 1
+    if not kinds:
+        rows.append(_row('memory.records', None if not facts.present else 0, 0, 0, no_host or 'no_writes'))
+    for kind in sorted(kinds):
+        rows.append(_row('memory.records', kinds[kind], kinds[kind], len(writes), key=kind))
 
     # handoff.*
     index_of = {s.seq: k for k, s in enumerate(steps)}
@@ -161,8 +222,11 @@ def compute_metrics(timeline: Timeline, operations: Sequence[Operation], events:
         resume.append(None if found is None else timeline.ranks[found] - timeline.ranks[index])
     resolved = [v for v in resume if v is not None]
     rows.append(_row('handoff.decisions_to_resume', dict(value=statistics.median(resolved) if resolved else None,
-        per_handoff=resume, excluded=len(resume) - len(resolved)), len(resolved), len(handoffs),
+        excluded=len(resume) - len(resolved)), len(resolved), len(handoffs),
         'unresolved_excluded' if len(resolved) < len(handoffs) else None))
+    for k, value in enumerate(resume):
+        rows.append(_row('handoff.decisions_to_resume', value, int(value is not None), 1,
+            None if value is not None else 'unresolved', key=str(k)))
     ratios: list[float | None] = []
     for _, event in handoffs:
         actor = event.payload['actor']
@@ -172,8 +236,11 @@ def compute_metrics(timeline: Timeline, operations: Sequence[Operation], events:
         ratios.append(after[0] / before[-1] if before and after and before[-1] else None)
     ratio_values = [v for v in ratios if v is not None]
     rows.append(_row('handoff.carry_ratio', dict(value=statistics.median(ratio_values) if ratio_values else None,
-        per_handoff=ratios, excluded=len(ratios) - len(ratio_values)), len(ratio_values), len(handoffs),
+        excluded=len(ratios) - len(ratio_values)), len(ratio_values), len(handoffs),
         'unresolved_excluded' if len(ratio_values) < len(handoffs) else None))
+    for k, value in enumerate(ratios):
+        rows.append(_row('handoff.carry_ratio', value, int(value is not None), 1,
+            None if value is not None else 'unresolved', key=str(k)))
 
     # host.*
     input_count = len(inputs)
@@ -194,8 +261,11 @@ def compute_metrics(timeline: Timeline, operations: Sequence[Operation], events:
         first = [r.first_ms - r.fetch_ms for r in facts.requests if r.first_ms is not None and r.fetch_ms is not None
             and r.first_ms >= r.fetch_ms]
     figures = lambda values: dict(n=len(values), p50=nearest_rank(values, .5), p95=nearest_rank(values, .95))  # noqa: E731
-    rows.append(_row('host.latency', dict(response_ms=figures(response), first_chunk_ms=figures(first)) if facts.present or response else None,
-        len(response), len(facts.requests), None if facts.present or response else 'no_host_trace'))
+    for series, values in (('response', response), ('first_chunk', first)):
+        stats = figures(values)
+        for percentile in ('p50', 'p95'):
+            rows.append(_row('host.latency', stats[percentile], len(values), len(facts.requests),
+                None if values else (no_host or 'no_samples'), key=f'{series}.{percentile}'))
     flagged = [r for r in facts.requests if r.retry or r.aborted or r.non_tool_stop]
     rows.append(_row('host.retry_share', dict(value=len(flagged) / len(facts.requests) if facts.requests else None,
         retries=sum(r.retry for r in facts.requests), aborts=sum(r.aborted for r in facts.requests),
@@ -233,7 +303,23 @@ def compute_metrics(timeline: Timeline, operations: Sequence[Operation], events:
     names = sorted({r for seq in captured for r in timeline.readings.get(seq, {})} - {READER_INPUT})
     for name in names:
         good = sum(1 for seq in captured if (row := timeline.readings.get(seq, {}).get(name)) is not None and row.abstain is None)
-        rows.append(_row(f'reader.coverage.{name}', good / len(captured), good, len(captured)))
+        rows.append(_row('reader.coverage', good / len(captured), good, len(captured), key=name))
     if not names:
-        rows.append(_row(f'reader.coverage.{READER_FRAME}', None, 0, 0, 'no_frames'))
+        rows.append(_row('reader.coverage', None, 0, 0, 'no_frames', key=READER_FRAME))
+
+    # tools.calls, one row per tool: calls with their refusals and error results
+    per_tool: dict[str, dict[str, int]] = {}
+    for call in facts.calls:
+        entry = per_tool.setdefault(call.tool, dict(calls=0, refused=0, errors=0))
+        entry['calls'] += 1
+        entry['refused'] += int(call.refused)
+        entry['errors'] += int(call.error)
+    total_calls = len(facts.calls)
+    for tool in sorted(per_tool):
+        rows.append(_row('tools.calls', per_tool[tool], per_tool[tool]['calls'], total_calls, key=tool))
+    zoomed = sum(1 for c in facts.calls if c.tool == 'player_source' and 'zoom' in c.arguments)
+    rows.append(_row('tools.calls', zoomed if facts.present else None, zoomed, per_tool.get('player_source', {}).get('calls', 0),
+        no_host, key='player_source+zoom'))
+    if not per_tool:
+        rows.append(_row('tools.calls', None, 0, 0, no_host or 'no_calls'))
     return rows

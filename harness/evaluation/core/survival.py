@@ -119,7 +119,7 @@ def record_observation(path: Path) -> tuple[Observation | None, str | None, dict
     connection = open_readonly(path)
     try:
         metadata = read_metadata(connection)
-        metric = read_metrics(connection).get('survival.game_hours')
+        metric = read_metrics(connection).get(('survival.game_hours', ''))
     finally:
         connection.close()
     if metric is None:

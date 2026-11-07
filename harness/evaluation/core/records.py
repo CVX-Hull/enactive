@@ -17,10 +17,10 @@ from typing import Any, Iterable, Sequence
 
 SCHEMA = 'evaluation-record/1'
 CORE_VERSION = 1
-EVENT_SOURCES = ('harness', 'reader', 'player_claim', 'human')
+EVENT_SOURCES = ('harness', 'reader', 'derived', 'player_claim', 'human')
 EVENT_KINDS = ('mode_change', 'long_activity', 'stall', 'ineffective_repeat', 'vital_change', 'threat_change',
     'milestone', 'death', 'handoff', 'memory_write', 'memory_read', 'program_save', 'program_run',
-    'custody_stop', 'continuity', 'context_eviction', 'tool_refused')
+    'custody_stop', 'continuity', 'context_eviction', 'tool_refused', 'episode', 'run_end')
 #: Events a pass never rewrites: hand-recorded rows and lineage continuity.
 PRESERVED = "source = 'human' OR kind = 'continuity'"
 
@@ -88,7 +88,8 @@ class EventRow:
 @dataclass(frozen=True)
 class MetricRow:
     """`count` and `denominator` are stored for every metric; `denominator` is NULL only where
-    the contract's table gives none ("—")."""
+    the contract's table gives none ("—"). `key` names the member of a multi-valued metric (a reader,
+    a percentile, a status, a handoff index) and is the empty string for a single-valued one."""
 
     name: str
     version: int
@@ -96,6 +97,46 @@ class MetricRow:
     count: int | None
     denominator: float | None
     missing: str | None
+    key: str = ''
+
+
+TOOL_STATUSES = ('ok', 'error', 'refused')
+
+
+@dataclass(frozen=True)
+class ToolCallRow:
+    """One tool call from host `tool-start`, `tool-result` and `tool-refused`. `operation_id` names the
+    computer operation the call created, where the result carries one."""
+
+    request_id: str
+    tool_call_id: str
+    actor: str
+    decision: int | None
+    tool: str
+    status: str
+    latency_ms: float | None
+    result_bytes: int | None
+    wall: float | None
+    operation_id: str | None = None
+
+
+@dataclass(frozen=True)
+class RequestRow:
+    """One HTTP attempt. `attempt` counts attempts of one logical request from 1; `retry_class` is set on
+    an attempt the host judged retryable; `manifest` is `exact` when a context-manifest event exists."""
+
+    request_id: str
+    actor: str
+    wall: float | None
+    attempt: int
+    input_tokens: int | None
+    cache_read: int | None
+    cache_write: int | None
+    output_tokens: int | None
+    dollars: float | None
+    retry_class: str | None
+    omitted_images: int | None
+    manifest: str
 
 
 def number(value: object) -> bool:
@@ -119,8 +160,18 @@ CREATE TABLE events(id INTEGER PRIMARY KEY, seq_start INTEGER NOT NULL, seq_end 
     source TEXT NOT NULL CHECK(source IN ({','.join(repr(s) for s in EVENT_SOURCES)})),
     confidence REAL CHECK(confidence IS NULL OR confidence BETWEEN 0 AND 1), payload TEXT NOT NULL);
 CREATE INDEX events_by_seq ON events(seq_start, kind);
-CREATE TABLE metrics(name TEXT PRIMARY KEY, version INTEGER NOT NULL, value TEXT, count INTEGER,
-    denominator REAL, missing TEXT);
+CREATE TABLE metrics(name TEXT NOT NULL, key TEXT NOT NULL DEFAULT '', version INTEGER NOT NULL, value TEXT,
+    count INTEGER, denominator REAL, missing TEXT, PRIMARY KEY(name, key));
+CREATE TABLE run_facts(key TEXT PRIMARY KEY, value TEXT NOT NULL);
+CREATE TABLE tool_calls(request_id TEXT NOT NULL, tool_call_id TEXT NOT NULL, actor TEXT NOT NULL, decision INTEGER,
+    tool TEXT NOT NULL, status TEXT NOT NULL CHECK(status IN ({','.join(repr(s) for s in TOOL_STATUSES)})),
+    latency_ms REAL, result_bytes INTEGER, wall REAL, operation_id TEXT, PRIMARY KEY(actor, request_id, tool_call_id));
+CREATE INDEX tool_calls_by_wall ON tool_calls(wall);
+CREATE TABLE requests(request_id TEXT NOT NULL, actor TEXT NOT NULL, wall REAL, attempt INTEGER NOT NULL,
+    input_tokens INTEGER, cache_read INTEGER, cache_write INTEGER, output_tokens INTEGER, dollars REAL,
+    retry_class TEXT, omitted_images INTEGER, manifest TEXT NOT NULL CHECK(manifest IN ('exact','absent')),
+    PRIMARY KEY(actor, request_id));
+CREATE INDEX requests_by_wall ON requests(wall);
 PRAGMA user_version=1;
 '''
 
@@ -224,18 +275,34 @@ class RecordWriter:
             (start + index, e.seq_start, e.seq_end, e.kind, e.source, e.confidence, dumps(e.payload))
             for index, e in enumerate(sorted(events, key=EventRow.sort_key))])
 
+    @staticmethod
+    def _metric_values(metrics: Sequence[MetricRow]) -> list[tuple]:
+        return [(m.name, m.key, m.version, None if m.value is None else dumps(m.value), m.count, m.denominator, m.missing)
+            for m in metrics]
+
     def replace_metrics(self, metrics: Sequence[MetricRow], *, keep: Sequence[str] = ()) -> None:
         marks = ','.join('?' * len(keep))
         self.connection.execute(f'DELETE FROM metrics WHERE name NOT IN ({marks})' if keep else 'DELETE FROM metrics', tuple(keep))
-        self.connection.executemany('INSERT OR REPLACE INTO metrics VALUES(?,?,?,?,?,?)', [
-            (m.name, m.version, None if m.value is None else dumps(m.value), m.count, m.denominator, m.missing)
-            for m in metrics])
+        self.connection.executemany('INSERT OR REPLACE INTO metrics VALUES(?,?,?,?,?,?,?)', self._metric_values(metrics))
 
     def upsert_metrics(self, metrics: Sequence[MetricRow], *, replace: bool = True) -> None:
         verb = 'REPLACE' if replace else 'IGNORE'
-        self.connection.executemany(f'INSERT OR {verb} INTO metrics VALUES(?,?,?,?,?,?)', [
-            (m.name, m.version, None if m.value is None else dumps(m.value), m.count, m.denominator, m.missing)
-            for m in metrics])
+        self.connection.executemany(f'INSERT OR {verb} INTO metrics VALUES(?,?,?,?,?,?,?)', self._metric_values(metrics))
+
+    def replace_run_facts(self, facts: dict[str, object]) -> None:
+        self.connection.execute('DELETE FROM run_facts')
+        self.connection.executemany('INSERT INTO run_facts VALUES(?,?)', [(k, dumps(v)) for k, v in sorted(facts.items())])
+
+    def replace_host_rows(self, calls: Sequence[ToolCallRow], requests: Sequence[RequestRow]) -> None:
+        """The host-derived `tool_calls` and `requests` tables, rewritten from the whole trace on every pass."""
+        self.connection.execute('DELETE FROM tool_calls')
+        self.connection.execute('DELETE FROM requests')
+        self.connection.executemany('INSERT OR REPLACE INTO tool_calls VALUES(?,?,?,?,?,?,?,?,?,?)', [
+            (c.request_id, c.tool_call_id, c.actor, c.decision, c.tool, c.status, c.latency_ms, c.result_bytes, c.wall,
+             c.operation_id) for c in calls])
+        self.connection.executemany('INSERT OR REPLACE INTO requests VALUES(?,?,?,?,?,?,?,?,?,?,?,?)', [
+            (r.request_id, r.actor, r.wall, r.attempt, r.input_tokens, r.cache_read, r.cache_write, r.output_tokens,
+             r.dollars, r.retry_class, r.omitted_images, r.manifest) for r in requests])
 
     # Reads over the stored record ----------------------------------------------------------
 
@@ -305,6 +372,23 @@ def read_metadata(connection: sqlite3.Connection) -> dict[str, Any]:
     return {key: loads(value) for key, value in connection.execute('SELECT key,value FROM metadata')}
 
 
-def read_metrics(connection: sqlite3.Connection) -> dict[str, MetricRow]:
-    return {r[0]: MetricRow(r[0], r[1], loads(r[2]), r[3], r[4], r[5])
-        for r in connection.execute('SELECT name,version,value,count,denominator,missing FROM metrics ORDER BY name')}
+def read_metrics(connection: sqlite3.Connection) -> dict[tuple[str, str], MetricRow]:
+    """Every metric row keyed by (name, key); a single-valued metric has the empty key."""
+    return {(r[0], r[1]): MetricRow(r[0], r[2], loads(r[3]), r[4], r[5], r[6], r[1])
+        for r in connection.execute('SELECT name,key,version,value,count,denominator,missing FROM metrics ORDER BY name,key')}
+
+
+def read_run_facts(connection: sqlite3.Connection) -> dict[str, Any]:
+    return {key: loads(value) for key, value in connection.execute('SELECT key,value FROM run_facts ORDER BY key')}
+
+
+def read_tool_calls(connection: sqlite3.Connection) -> list[ToolCallRow]:
+    return [ToolCallRow(*row) for row in connection.execute(
+        'SELECT request_id,tool_call_id,actor,decision,tool,status,latency_ms,result_bytes,wall,operation_id '
+        'FROM tool_calls ORDER BY wall, rowid')]
+
+
+def read_requests(connection: sqlite3.Connection) -> list[RequestRow]:
+    return [RequestRow(*row) for row in connection.execute(
+        'SELECT request_id,actor,wall,attempt,input_tokens,cache_read,cache_write,output_tokens,dollars,retry_class,'
+        'omitted_images,manifest FROM requests ORDER BY wall, rowid')]

@@ -75,7 +75,7 @@ def apply(records: Sequence[Path], items: Sequence[dict]) -> None:
             first = writer.connection.execute('SELECT MIN(seq) FROM steps').fetchone()[0]
             events = []
             if index > 0 and first is not None:
-                events.append(EventRow(first, first, 'continuity', 'reader', None, dict(items[index - 1])))
+                events.append(EventRow(first, first, 'continuity', 'derived', None, dict(items[index - 1])))
             with writer.transaction():
                 writer.replace_continuity(events)
                 writer.upsert_metrics([metric(items)])

@@ -99,18 +99,56 @@ def map_change_fraction(previous: Path, current: Path, region: tuple[int, int, i
     return float(changed)
 
 
-def guard_clock(raw: Sequence[int | None], max_jump: int) -> list[tuple[int | None, str | None]]:
-    """(game_time, abstain reason) per reading. No backward step; a forward jump beyond
-    `max_jump` is accepted only if the next legible reading confirms it (not backward and
-    within `max_jump` of it). The last reading of a growing run stays unconfirmed until the
-    next pass supplies its successor."""
+@dataclass(frozen=True)
+class Episode:
+    """A stretch of one survivor in one world: it starts at step index `start`. Episode 0 starts at the
+    first step; later ones start where the clock restarted (backward by more than a day, confirmed by the
+    next reading) or the legible identity changed (confirmed by the next legible identity)."""
+
+    index: int
+    start: int
+    reason: str | None
+    identity: str | None = None
+    previous_identity: str | None = None
+    previous_game_time: int | None = None
+    game_time: int | None = None
+
+
+def guard_episodes(raw: Sequence[int | None], max_jump: int, identities: Sequence[str | None] | None = None,
+                   day: int | None = None) -> tuple[list[tuple[int | None, str | None]], list[Episode]]:
+    """(game_time, abstain reason) per reading, and the episodes. Within an episode there is no backward
+    step; a forward jump beyond `max_jump` is accepted only if the next legible reading confirms it (not
+    backward and within `max_jump` of it). The last reading of a growing run stays unconfirmed until the
+    next pass supplies its successor. With `day` (the binding's one day, in its game-time unit) a backward
+    step of more than a day that the next reading confirms starts a new episode instead of abstaining, and a
+    legible identity that differs from the episode's and is confirmed by the next legible identity starts
+    one too and resets the clock."""
+    names = list(identities) if identities is not None else [None] * len(raw)
     result: list[tuple[int | None, str | None]] = []
+    episodes = [Episode(0, 0, None)]
     accepted: int | None = None
+    current: str | None = None
     for index, value in enumerate(raw):
+        name = names[index]
+        if name is not None:
+            if current is None:
+                current = name
+            elif name != current:
+                following_name = next((v for v in names[index + 1:] if v is not None), None)
+                if following_name == name:
+                    episodes.append(Episode(len(episodes), index, 'identity_change', name, current, accepted))
+                    current, accepted = name, None
         if value is None:
             result.append((None, 'unreadable'))
         elif accepted is not None and value < accepted:
-            result.append((None, 'backward_step'))
+            following = next((v for v in raw[index + 1:] if v is not None), None)
+            if day is not None and accepted - value > day and following is not None and following >= value \
+                    and following - value <= max_jump:
+                episodes.append(Episode(len(episodes), index, 'clock_backward', current, current, accepted, value))
+                accepted = value
+                result.append((value, None))
+            else:
+                result.append((None, 'backward_step'))
         elif accepted is not None and value - accepted > max_jump:
             following = next((v for v in raw[index + 1:] if v is not None), None)
             if following is not None and following >= value and following - value <= max_jump:
@@ -121,7 +159,12 @@ def guard_clock(raw: Sequence[int | None], max_jump: int) -> list[tuple[int | No
         else:
             accepted = value
             result.append((value, None))
-    return result
+    return result, episodes
+
+
+def guard_clock(raw: Sequence[int | None], max_jump: int) -> list[tuple[int | None, str | None]]:
+    """The guarded clock of a single episode (see `guard_episodes`)."""
+    return guard_episodes(raw, max_jump)[0]
 
 
 def frame_confidence(frames: Sequence[FrameReading]) -> float | None:
@@ -141,6 +184,25 @@ class Timeline:
     ranks: list[int]
     first_in_play: int | None
     readings: dict[int, dict[str, ReadingRow]] = field(default_factory=dict)
+    episodes: list[Episode] = field(default_factory=lambda: [Episode(0, 0, None)])
+    episode_of: list[int] = field(default_factory=list)
+    survival_start: int | None = None
+    guard_abstain: list[str | None] = field(default_factory=list)
+
+    @property
+    def play_episode(self) -> Episode | None:
+        """The last episode that has an accepted in-play clock reading: the one survival is measured in."""
+        return self.episodes[self.episode_of[self.survival_start]] if self.survival_start is not None else None
+
+    def episode_range(self, episode: Episode) -> range:
+        end = self.episodes[episode.index + 1].start if episode.index + 1 < len(self.episodes) else len(self.steps)
+        return range(episode.start, end)
+
+    def before_play(self, index: int) -> bool:
+        """Whether step `index` precedes the first in-play frame of its own episode (setup)."""
+        first = next((i for i in self.episode_range(self.episodes[self.episode_of[index]])
+            if self.frames[i].mode == 'in_play'), None)
+        return first is not None and index < first
 
     def decision_rows(self) -> tuple[list[int], int]:
         """One representative step per decision: its last step with a legible mode. Also the
@@ -155,7 +217,8 @@ class Timeline:
         return [last[rank] for rank in sorted(last)], len(framed - set(last))
 
     def decisions_since_play(self, index: int) -> int:
-        base = self.ranks[self.first_in_play] if self.first_in_play is not None else self.ranks[0]
+        start = self.survival_start if self.survival_start is not None else self.first_in_play
+        base = self.ranks[start] if start is not None else self.ranks[0]
         return self.ranks[index] - base
 
 
@@ -189,16 +252,31 @@ def build_timeline(steps: Sequence[StepRow], readings: Sequence[ReadingRow], bin
         actions.append(input_row.value if input_row is not None and input_row.value is not None else None)
         map_row = rows.get(READER_MAP)
         change.append(map_row.value if map_row is not None else None)
-    guarded = guard_clock([f.game_time for f in frames], max_jump(binding))
+    guarded, episodes = guard_episodes([f.game_time for f in frames], max_jump(binding), [f.identity for f in frames],
+        86400 / unit_seconds(binding))
     clock = [value for value, _ in guarded]
     first = next((i for i, f in enumerate(frames) if f.mode == 'in_play'), None)
-    return Timeline(list(steps), frames, actions, change, clock, decision_ranks(steps), first, by_seq)
+    episode_of, at = [], 0
+    for index in range(len(steps)):
+        while at + 1 < len(episodes) and episodes[at + 1].start <= index:
+            at += 1
+        episode_of.append(at)
+    # Survival is measured in the last episode that has an accepted in-play clock reading.
+    survival_start = None
+    for episode in reversed(episodes):
+        end = episodes[episode.index + 1].start if episode.index + 1 < len(episodes) else len(steps)
+        survival_start = next((i for i in range(episode.start, end) if clock[i] is not None and frames[i].mode == 'in_play'), None)
+        if survival_start is not None:
+            break
+    timeline = Timeline(list(steps), frames, actions, change, clock, decision_ranks(steps), first, by_seq, episodes,
+        episode_of, survival_start)
+    timeline.guard_abstain[:] = [abstain for _, abstain in guarded]
+    return timeline
 
 
 def clock_readings(timeline: Timeline, binding: Binding) -> list[ReadingRow]:
-    guarded = guard_clock([f.game_time for f in timeline.frames], max_jump(binding))
     rows = []
-    for step, (value, abstain) in zip(timeline.steps, guarded):
+    for step, value, abstain in zip(timeline.steps, timeline.clock, timeline.guard_abstain):
         if abstain == 'unreadable' and step.source_id is None:
             abstain = 'no_frame'
         rows.append(ReadingRow(step.seq, READER_CLOCK, CORE_VERSION, value, None, abstain))
@@ -226,7 +304,7 @@ def out_of_play_streaks(timeline: Timeline) -> list[Streak]:
             modes: dict[str, int] = {}
             for i in current:
                 modes[timeline.frames[i].mode] = modes.get(timeline.frames[i].mode, 0) + 1
-            setup = timeline.first_in_play is not None and current[-1] < timeline.first_in_play
+            setup = timeline.before_play(current[-1])
             streaks.append(Streak(current[0], current[-1], len(current), setup, ongoing, modes))
             current.clear()
 
@@ -256,8 +334,9 @@ def core_events(timeline: Timeline, binding: Binding) -> list[EventRow]:
     for index, value in enumerate(timeline.clock):
         if value is None:
             continue
-        if last is not None and (value - timeline.clock[last]) * unit_seconds(binding) >= binding.long_activity_seconds:
-            events.append(EventRow(steps[last].seq, steps[index].seq, 'long_activity', 'reader',
+        if last is not None and timeline.episode_of[last] == timeline.episode_of[index] \
+                and (value - timeline.clock[last]) * unit_seconds(binding) >= binding.long_activity_seconds:
+            events.append(EventRow(steps[last].seq, steps[index].seq, 'long_activity', 'derived',
                 frame_confidence([frames[last], frames[index]]), dict(seconds=(value - timeline.clock[last]) * unit_seconds(binding),
                     decisions=timeline.ranks[index] - timeline.ranks[last], unit=binding.game_time_unit,
                     start_game_time=timeline.clock[last], end_game_time=value)))
@@ -265,7 +344,7 @@ def core_events(timeline: Timeline, binding: Binding) -> list[EventRow]:
     # stall
     for streak in out_of_play_streaks(timeline):
         if streak.length >= STALL_DECISIONS:
-            events.append(EventRow(steps[streak.start].seq, steps[streak.end].seq, 'stall', 'reader', None,
+            events.append(EventRow(steps[streak.start].seq, steps[streak.end].seq, 'stall', 'derived', None,
                 dict(decisions=streak.length, modes=streak.modes, setup=streak.setup, ongoing=streak.ongoing)))
     # ineffective_repeat: the binding's movement input, three or more times, with the map unchanged
     run: list[int] = []
@@ -273,7 +352,7 @@ def core_events(timeline: Timeline, binding: Binding) -> list[EventRow]:
     def close_run() -> None:
         if len(run) >= STUCK_INPUTS:
             key = movement_key(timeline.actions[run[0]], binding)
-            events.append(EventRow(steps[run[0]].seq, steps[run[-1]].seq, 'ineffective_repeat', 'reader', None,
+            events.append(EventRow(steps[run[0]].seq, steps[run[-1]].seq, 'ineffective_repeat', 'derived', None,
                 dict(key=key, inputs=len(run), max_change=max(timeline.map_change[i] for i in run))))
         run.clear()
 
@@ -308,22 +387,32 @@ def core_events(timeline: Timeline, binding: Binding) -> list[EventRow]:
                 events.append(EventRow(steps[index].seq, steps[index].seq, 'threat_change', 'reader',
                     frame_confidence([frame]), dict(previous=previous_threat, threat=frame.threat, count=frame.threat_count)))
             previous_threat = frame.threat
-    # death: the first dead frame
+    # episode: a restarted clock or a different survivor starts a new episode
+    for episode in timeline.episodes[1:]:
+        step = steps[episode.start]
+        events.append(EventRow(step.seq, step.seq, 'episode', 'derived', None, dict(index=episode.index,
+            reason=episode.reason, identity=episode.identity, previous_identity=episode.previous_identity,
+            previous_game_time=episode.previous_game_time, game_time=episode.game_time, unit=binding.game_time_unit)))
+    # death: the first dead frame of each episode
+    dead_episodes: set[int] = set()
     for index, frame in enumerate(frames):
-        if frame.death or frame.mode == 'dead':
+        if (frame.death or frame.mode == 'dead') and timeline.episode_of[index] not in dead_episodes:
+            dead_episodes.add(timeline.episode_of[index])
             cause = next((r for r in frame.readings if r.reader == 'death_cause' and r.abstain is None), None)
             events.append(EventRow(steps[index].seq, steps[index].seq, 'death', 'reader',
                 cause.confidence if cause is not None else None,
                 dict(cause=cause.value if cause is not None and cause.value in DEATH_CAUSES else 'unknown',
                     game_time=timeline.clock[index])))
-            break
-    # milestone per reader rung
+    # milestone per reader rung, over the episode survival is measured in
+    offset = timeline.play_episode.start if timeline.play_episode is not None else 0
+    history = frames[offset:]
     for position, rung in enumerate(binding.ladder):
         if rung.evidence != 'reader':
             continue
-        index = binding.rung_reached(rung, frames)
-        if type(index) is not int or not 0 <= index < len(steps):
+        found = binding.rung_reached(rung, history)
+        if type(found) is not int or not 0 <= found < len(history):
             continue
+        index = found + offset
         step = steps[index]
         events.append(EventRow(step.seq, step.seq, 'milestone', 'reader', frame_confidence([frames[index]]),
             dict(rung=rung.id, label=rung.label, position=position, clocks=dict(wall=step.wall, decision=step.decision,

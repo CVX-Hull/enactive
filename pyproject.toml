@@ -45,6 +45,12 @@ source_modules = ["harness.evaluation"]
 forbidden_modules = ["harness.computer.runtime", "harness.computer.channel", "harness.computer.launch", "harness.application", "harness.server", "harness.player_mcp", "harness.player_client", "tools", "http", "urllib", "socket", "subprocess"]
 
 [[tool.importlinter.contracts]]
+name = "The viewer reads evaluation records only and holds no custody or player access (ADR008)"
+type = "forbidden"
+source_modules = ["harness.viewer"]
+forbidden_modules = ["harness.computer.runtime", "harness.computer.channel", "harness.computer.launch", "harness.application", "harness.server", "harness.player", "harness.player_client", "harness.player_tools", "harness.player_mcp", "harness.__main__", "tools", "subprocess"]
+
+[[tool.importlinter.contracts]]
 name = "HTTP server does not depend on CLI or build tooling"
 type = "forbidden"
 source_modules = ["harness.server"]
