@@ -107,7 +107,7 @@ def driver_case(tmp_path,prompt='Frozen mission',*,two_actors=False,low_frames=F
             remaining=Mock(return_value=dict(inputs=10000,requests=10000,frames=5 if low_frames else 10000,frame_bytes=10**9)),
             process=SimpleNamespace(poll=lambda:None),channel=SimpleNamespace(stopped=threading.Event(),
                 stop_origin=lambda:dict(requested_wall=None,reason='fixture fence')),session='b'*32),
-        activity_view=SimpleNamespace(host_event=Mock()),host=None)
+        host=None)
     reserve=dict(seconds=10,http_attempts=19 if 'READ_CONTROL' in prompt else 2,inputs=10,requests=10,frames=5,frame_bytes=1000)
     profile=dict(max_hosts=2 if two_actors else 1,host_seconds=100,total_host_seconds=200,max_http_attempts=30,effort='off',port=8766,
                  ending_reserve=reserve,session='b'*32,host=dict(argv=[sys.executable,str(adapter)]))

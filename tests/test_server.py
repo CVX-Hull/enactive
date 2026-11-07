@@ -65,66 +65,25 @@ def test_operator_pause_does_not_wait_for_player_service_lock(service):
         assert time.monotonic()-started<1 and channel.stopped.is_set()
 
 
-def test_investigation_assets_are_explicit_passive_routes(service):
-    app,channel,actor,port,client=service
-    before=len(channel.calls)
-    for name,media in [('investigation.js','text/javascript'),('investigation-worker.js','text/javascript'),
-                       ('investigation-session.js','text/javascript'),('investigation.css','text/css')]:
-        connection=HTTPConnection('127.0.0.1',port,timeout=3)
-        try:
-            connection.request('GET','/'+name)
-            reply=connection.getresponse()
-            assert reply.status==200 and reply.read()
-            assert reply.getheader('Content-Type').startswith(media)
-            assert "worker-src 'self'" in reply.getheader('Content-Security-Policy')
-        finally:connection.close()
+def get(port,path):
     connection=HTTPConnection('127.0.0.1',port,timeout=3)
     try:
-        connection.request('GET','/investigation-export/private.json')
-        reply=connection.getresponse()
-        assert reply.status==404
-        reply.read()
+        connection.request('GET',path)
+        reply=connection.getresponse();return reply.status,reply.read(),reply
     finally:connection.close()
-    assert len(channel.calls)==before and not channel.stopped.is_set()
 
 
-def test_snapshot_work_is_passive_and_cannot_block_operator_pause(service):
-    app,channel,actor,port,client=service
-    entered,released=threading.Event(),threading.Event()
-    class View:
-        def snapshot(self,refresh=False):
-            assert refresh
-            entered.set()
-            assert released.wait(3)
-            return dict(schema='observer-investigation-snapshot/1',session=app.runtime.session,
-                state='loading',snapshot_wall_ms=None,bundle=None,error=None)
-    app.investigation_view=View()
-    result=[]
-    thread=threading.Thread(target=lambda:result.append(post(port,'/api/investigation',{})))
-    before=len(channel.calls)
-    thread.start()
-    try:
-        assert entered.wait(1)
-        started=time.monotonic()
-        status,value=post(port,'/api/pause',{})
-        assert status==200 and value['stop']['stop_requested'] and time.monotonic()-started<1
-    finally:
-        released.set();thread.join(3)
-    assert result[0][0]==202 and len(channel.calls)==before
-
-
-def test_snapshot_route_rejects_paths_cross_origin_and_missing_adapter(service):
+def test_custodian_serves_only_status_source_pause_and_actor_routes(service):
     app,channel,actor,port,client=service
     before=len(channel.calls)
-    assert post(port,'/api/investigation',{'directory':'private'})[0]==400
-    assert post(port,'/api/investigation',{},origin='http://example.com')[0]==400
-    status,value=post(port,'/api/investigation',{})
-    assert status==503 and value['state']=='unavailable' and value['session']==app.runtime.session
-    connection=HTTPConnection('127.0.0.1',port,timeout=3)
-    try:
-        connection.request('GET','/api/investigation?path=private')
-        reply=connection.getresponse();assert reply.status==400;reply.read()
-    finally:connection.close()
+    for path in ('/','/index.html','/app.js','/app/main.js','/api/activity','/api/investigation',
+                 '/api/view/runs','/investigation.js'):
+        assert get(port,path)[0]==404,path
+    assert post(port,'/api/investigation',{})[0]==400
+    status,body,reply=get(port,'/api/status')
+    assert status==200 and json.loads(body)['schema']=='computer-status/1'
+    assert reply.getheader('Content-Security-Policy')=="default-src 'none'; frame-ancestors 'none'"
+    assert get(port,'/api/source/'+app.runtime.session+'-1')[0]==400
     assert len(channel.calls)==before and not channel.stopped.is_set()
 
 
