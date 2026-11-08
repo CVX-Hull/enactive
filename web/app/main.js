@@ -6,8 +6,9 @@ import {Supervise} from './supervise.js';
 import {Diagnose} from './diagnose.js';
 import {Improve} from './improve.js';
 import {Explore, Compare} from './crossrun.js';
+import {Frame} from './frame.js';
 
-const VIEWS = ['live', 'run', 'improve', 'explore', 'compare'];
+const VIEWS = ['live', 'run', 'improve', 'explore', 'compare', 'frame'];
 function parse() {
   const [view, section] = (location.hash || '#live').slice(1).split('/');
   return {view: VIEWS.includes(view) ? view : 'live', section: section || ''};
@@ -42,7 +43,8 @@ function App() {
     document.title = store.viewerOk ? name : 'viewer unavailable — Enactive Spectator';
   }, [run && run.run, run && run.state, store.viewerOk]);
   const page = view === 'live' ? html`<${Supervise} />` : view === 'run' ? html`<${Diagnose} section=${section} />` :
-    view === 'improve' ? html`<${Improve} section=${section} />` : view === 'explore' ? html`<${Explore} />` : html`<${Compare} />`;
+    view === 'improve' ? html`<${Improve} section=${section} />` : view === 'explore' ? html`<${Explore} />` :
+    view === 'frame' ? html`<${Frame} section=${section} />` : html`<${Compare} />`;
   return html`<div data-viewer=${store.viewerOk ? 'ok' : 'down'}><${Banner} />${page}</div>`;
 }
 

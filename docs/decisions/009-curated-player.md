@@ -580,7 +580,9 @@ and detail view cover most kinds, with a few role-specific panels.
 
 **Phasing:** P0 delivers sidecar manifests over the sealed traces and the new
 frame, which can already show actor sessions and the four forgetting episodes. Each
-later phase ships its views with it, so every view has real data when it ships.
+later phase ships its views with it, so every view has real data when it ships. The
+P0 frame's routes and payloads are in the
+[spectator frame contract](../contracts/evaluation.md#spectator-frame-spectator-frame1).
 
 ## Latency, concurrency and cost
 
