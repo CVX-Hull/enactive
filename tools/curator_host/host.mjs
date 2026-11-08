@@ -31,8 +31,9 @@ function closed(value, allowed) {
 export function validateConfiguration(configuration) {
   requireThat(Buffer.byteLength(JSON.stringify(configuration ?? null)) <= CONFIG_LIMIT_BYTES, 'configuration-too-large');
   closed(configuration, ['schema', 'model', 'effort', 'max_requests', 'request_timeout_seconds', 'wall_seconds',
-    'max_context_images', 'context_image_block', 'workbench_timeout_seconds']);
+    'max_context_images', 'context_image_block', 'workbench_timeout_seconds', 'budget_usd']);
   requireThat(configuration.schema === SCHEMA);
+  requireThat(typeof configuration.budget_usd === 'number' && Number.isFinite(configuration.budget_usd) && configuration.budget_usd > 0);
   for (const key of ['max_requests', 'request_timeout_seconds', 'wall_seconds', 'max_context_images', 'context_image_block', 'workbench_timeout_seconds']) {
     requireThat(positive(configuration[key]));
   }
@@ -96,6 +97,21 @@ export function projectImages(messages, maxImages, block) {
   return { messages: projected, omitted: omitted.length };
 }
 
+/* Budget phases, as a share of the session's requests or dollars, whichever is further along. */
+export const WRITE_AT = 0.5;
+export const FINISH_AT = 0.8;
+const READING_TOOLS = new Set(['list_dir', 'read_file', 'view_frame', 'run_workbench']);
+
+/** A transient note for the end of the context: the budget used so far and what to do now. It is
+ * appended per request and never stored, so the cached prefix is unchanged. */
+export function budgetNote({ requests, maxRequests, spent, budget }) {
+  const share = Math.max(requests / maxRequests, spent / budget);
+  const status = `Budget: ${requests} of ${maxRequests} requests used; about $${spent.toFixed(2)} of $${budget.toFixed(2)} spent.`;
+  if (share >= FINISH_AT) return { share, text: `${status} The budget is nearly spent. Reading tools are now refused: write your submission or draft with write_file now, then call finish.` };
+  if (share >= WRITE_AT) return { share, text: `${status} More than half is spent. Start writing what you have found: a submission for facts you can cite, a draft for the rest.` };
+  return { share, text: status };
+}
+
 function resultBytes(result) {
   let total = 0;
   for (const part of result.content ?? []) {
@@ -122,7 +138,8 @@ export async function runCurator(options) {
   const model = { ...configuration.model, api: 'openai-completions', provider: 'openrouter', baseUrl: proxy.baseUrl };
   const effort = configuration.effort;
   let agent, fatal, finished, requests = 0, toolCalls = 0, requestId, requestTimer, inFlight = false;
-  let rawUsage, httpStatus, errorBody, lastPromptTokens = 0, contextWarning = false;
+  let rawUsage, httpStatus, errorBody, lastPromptTokens = 0, contextWarning = false, spent = 0;
+  const budget = () => budgetNote({ requests, maxRequests: configuration.max_requests, spent, budget: configuration.budget_usd });
   const stopped = new AbortController();
   const stop = reason => {
     if (fatal) return;
@@ -156,9 +173,14 @@ export async function runCurator(options) {
       parameters: Type.Object({ path: Type.String({ maxLength: 512 }), offset: Type.Optional(Type.Integer({ minimum: 0 })),
         max_bytes: Type.Optional(Type.Integer({ minimum: 1, maximum: 262144 })) }),
       run: args => readFile(root, args) },
-    { name: 'view_frame', label: 'view_frame', description: 'Show one recorded frame as an image. Pass its source id, as cited in steps and tool records.',
-      parameters: Type.Object({ frame: Type.String({ maxLength: 160 }) }),
-      run: args => viewFrame(root, args) },
+    { name: 'view_frame', label: 'view_frame', description: 'Show one to four recorded frames as images in one call. Pass their source ids, as cited in steps and tool records. Choose frames first (steps, workbench diff/similar); every image costs budget.',
+      parameters: Type.Object({ frames: Type.Array(Type.String({ maxLength: 160 }), { minItems: 1, maxItems: 4 }) }),
+      run: async args => {
+        if (!Array.isArray(args.frames) || args.frames.length < 1 || args.frames.length > 4) throw new ToolError('frames must list one to four source ids');
+        const content = [];
+        for (const frame of args.frames) content.push(...(await viewFrame(root, { frame })).content);
+        return { content, details: undefined, isError: false };
+      } },
     { name: 'write_file', label: 'write_file', description: 'Write a text file, replacing it, under submissions/, drafts/ or scratch/ only. Parent directories are created.',
       parameters: Type.Object({ path: Type.String({ maxLength: 512 }), content: Type.String({ maxLength: 524288 }) }),
       run: args => writeFile(root, args) },
@@ -177,7 +199,12 @@ export async function runCurator(options) {
       if (fatal) throw new HostError(fatal);
       const before = performance.now();
       let result;
-      try { result = await tool.run(args); }
+      try {
+        if (READING_TOOLS.has(tool.name) && budget().share >= FINISH_AT) {
+          throw new ToolError('the budget is nearly spent; write your submission or draft with write_file, then call finish');
+        }
+        result = await tool.run(args);
+      }
       catch (error) {
         if (!(error instanceof ToolError)) {
           result = { content: [{ type: 'text', text: 'the tool failed' }], details: undefined, isError: true };
@@ -211,12 +238,12 @@ export async function runCurator(options) {
           try {
             if (lastPromptTokens + model.maxTokens >= model.contextWindow) { stop('context-capacity'); return messages; }
             const projection = projectImages(messages, configuration.max_context_images, configuration.context_image_block);
+            const notes = [budget().text];
             if (!contextWarning && lastPromptTokens + model.maxTokens >= model.contextWindow * 0.75) {
               contextWarning = true;
-              return [...projection.messages, { role: 'user', timestamp: Date.now(), content: [{ type: 'text',
-                text: 'The context window is nearly full. Write any submission or draft now and call finish.' }] }];
+              notes.push('The context window is nearly full. Write any submission or draft now and call finish.');
             }
-            return projection.messages;
+            return [...projection.messages, { role: 'user', timestamp: Date.now(), content: [{ type: 'text', text: notes.join(' ') }] }];
           } catch { stop('context-projection-failed'); return messages; }
         },
         finishTurn: () => (fatal || finished ? { action: 'end' } : undefined),
@@ -285,6 +312,7 @@ export async function runCurator(options) {
           const usage = rawUsage ?? {};
           const number = value => (typeof value === 'number' && Number.isFinite(value) ? value : null);
           lastPromptTokens = number(usage.prompt_tokens) ?? lastPromptTokens;
+          spent += number(usage.cost) ?? 0;
           emit('request-end', { request_id: requestId, status: httpStatus ?? null, stop_reason: message.stopReason,
             usage_reported: number(usage.prompt_tokens) !== null && number(usage.completion_tokens) !== null,
             prompt_tokens: number(usage.prompt_tokens), completion_tokens: number(usage.completion_tokens),

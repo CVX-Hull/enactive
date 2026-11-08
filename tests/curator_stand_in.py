@@ -55,7 +55,7 @@ def script(messages: list[dict], attack: str | None = None) -> list[tuple[str, d
                                    dict(op='add_fact', fact=dict(schema='curator-fact/1', id='f1', type='control',
                                                                  statement='stand-in statement', scope=dict(game=game),
                                                                  citations=frames[:1]))])
-        return [('view_frame', {'frame': frames[0]}), ('run_workbench', {'args': ['--help']}),
+        return [('view_frame', {'frames': frames[:2]}), ('run_workbench', {'args': ['--help']}),
                 ('write_file', {'path': 'submissions/stand-in/submission.json', 'content': json.dumps(submission)}),
                 ('write_file', {'path': 'drafts/notes/notes.md', 'content': 'unfinished'}),
                 ('read_file', {'path': '../escape'})]

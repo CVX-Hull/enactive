@@ -48,6 +48,8 @@ DEFAULT_PRICES = ROOT/'data'/'curator'/'openrouter-prices-2026-11-08.json'
 OPENROUTER_ORIGIN = 'https://openrouter.ai'
 GAME = 'cdda'
 KEY_VARIABLE = 'OPENROUTER_API_KEY'
+HOST_BUDGET_SHARE = Decimal('0.85')  # the host's budget as a share of its session's proxy cap
+LOOPBACK_KEY = 'loopback-test-key'  # a local test upstream never receives the operator's key
 
 # Sampled sessions only, in lineage order. 397: the seven admissions. 372: the six runs named by
 # the issue. Nothing else can be selected.
@@ -111,11 +113,12 @@ def select(lineage: str, sessions: list[str] | None) -> tuple[dict, list[str]]:
 
 def host_configuration(arm: Arm, prices: dict[str, Price], *, effort: str, max_requests: int, max_output_tokens: int,
                        request_timeout_seconds: int, wall_seconds: int, max_context_images: int,
-                       context_image_block: int, workbench_timeout_seconds: int) -> dict:
+                       context_image_block: int, workbench_timeout_seconds: int, budget_usd: float) -> dict:
     price = prices[arm.model]
     per = lambda value: float(value)  # noqa: E731 - Pi's cost entries are informational numbers
     return dict(
         schema=HOST_SCHEMA, effort=effort, max_requests=max_requests, request_timeout_seconds=request_timeout_seconds,
+        budget_usd=budget_usd,
         wall_seconds=wall_seconds, max_context_images=max_context_images, context_image_block=context_image_block,
         workbench_timeout_seconds=workbench_timeout_seconds,
         model=dict(id=arm.model, name=arm.name, reasoning=True, input=['text', 'image'],
@@ -169,6 +172,15 @@ def node_tool_roots(node: Path | None = None) -> tuple[Path, tuple[Path, ...]]:
     return node, tuple(sorted(roots))
 
 
+def refuse_broad_root(root: Path) -> None:
+    """A readable tool root must not expose the disk, the home directory or the project runtime."""
+    home = Path.home().resolve()
+    project = ROOT.resolve()
+    if root == Path('/') or root == home or root in home.parents or root in project.parents or root == project \
+            or (project/'.runtime') in (root, *root.parents) or root in (project/'.runtime').parents:
+        raise ShadowError(f'refusing a tool root that would expose too much: {root}')
+
+
 def host_tools(extra: tuple[Path, ...] = ()) -> dict:
     """Everything the curator host process needs as sandbox tool roots, resolved."""
     if not (HOST_DIR/'node_modules').is_dir():
@@ -177,6 +189,8 @@ def host_tools(extra: tuple[Path, ...] = ()) -> dict:
     node, node_roots = node_tool_roots()
     python = Path(os.path.realpath(sys.executable))
     roots = (*node_roots, HOST_DIR.resolve(), Path(sys.base_prefix).resolve(), *extra)
+    for root in roots:
+        refuse_broad_root(root)
     # node reads an OpenSSL configuration file at startup (under Homebrew, outside every root) and
     # aborts when it is refused; the host speaks plain http to the loopback proxy, so none is needed.
     return dict(node=node, python=python, roots=tuple(dict.fromkeys(roots)),
@@ -249,16 +263,22 @@ def run_one(*, arm_name: str, lineage: str, name: str, trace: Path, repo: Reposi
     session_dir.mkdir(parents=True)
     arm = ARMS[arm_name]
     proxy = ModelProxy(provider=OPENROUTER, upstream=upstream, key=key, prices={arm.model: prices[arm.model]},
-                       cap_usd=cap, ledger=session_dir/'proxy-ledger.jsonl', max_output_tokens=max_output_tokens)
+                       cap_usd=cap, ledger=session_dir/'proxy-ledger.jsonl', max_output_tokens=max_output_tokens,
+                       routing=model_config['model']['compat']['openRouterRouting'])
     port = proxy.start()
+    # The host's own budget sits below the proxy cap, so its write and finish phases begin while
+    # the proxy still admits requests (the proxy refuses on worst-case reservations, not spend).
+    budget = float(cap * HOST_BUDGET_SHARE)
+    session_config = _write(config_dir/f'{name}.json', dict(model_config, budget_usd=budget))
     summary = dict(schema=SCHEMA, kind='session', arm=arm_name, model=arm.model, effort=model_config['effort'],
                    lineage=lineage, trace_session=name, memory=dict(passed=memory is not None, note=memory_note),
-                   cap_usd=str(cap), started_wall=time.time())
+                   cap_usd=str(cap), host_budget_usd=budget, published_before=repo.published(),
+                   started_wall=time.time())
     started = time.monotonic()
     record = None
     try:
         config = SessionConfig(
-            argv=host_argv(host, config_path),
+            argv=host_argv(host, session_config),
             tools=(*host['roots'], config_dir.resolve()),
             limits=sandbox.Limits(wall_seconds=wall_seconds), proxy=proxy, proxy_port=port,
             extra_env=host['env'], host=host_identity(host, model_config))
@@ -333,12 +353,17 @@ def run_shadow(args: argparse.Namespace, key: str) -> dict:
         arm, prices, effort=args.effort or arm.effort, max_requests=args.max_requests,
         max_output_tokens=args.max_output_tokens, request_timeout_seconds=args.request_timeout_seconds,
         wall_seconds=args.wall_seconds - 30, max_context_images=args.max_context_images,
-        context_image_block=args.context_image_block, workbench_timeout_seconds=60)
+        context_image_block=args.context_image_block, workbench_timeout_seconds=60, budget_usd=float(cap))
+    # Each run starts its own knowledge repository, named by its output directory, so no run can
+    # replay a trace against knowledge that later sessions built.
+    knowledge = runtime/'knowledge'/'shadow-454'/out.name/args.arm/args.lineage
+    if knowledge.exists():
+        raise ShadowError(f'{knowledge} exists; every run starts a fresh knowledge repository')
     out.mkdir(parents=True)
     config_dir = out/'host-config'
     config_dir.mkdir()
     config_path = _write(config_dir/f'{args.arm}.json', model_config)
-    repo = Repository(runtime/'knowledge'/'shadow-454'/args.arm/args.lineage, GAME)
+    repo = Repository(knowledge, GAME)
     repo.ensure()
     run = dict(schema=SCHEMA, kind='run', arm=args.arm, model=arm.model, effort=model_config['effort'],
                lineage=args.lineage, sessions_planned=names, cap_usd=str(cap), session_cap_usd=str(session_cap) if session_cap else None,
@@ -415,7 +440,10 @@ def main(argv: list[str] | None = None) -> int:
         # the git-ignored .runtime/credentials.json. The value goes only to the proxy.
         # The map lives beside the runtime this run uses, not beside this code: from a worktree,
         # the code's own checkout has no .runtime/credentials.json.
-        key = credential(KEY_VARIABLE, mapping=Path(args.runtime_root)/'credentials.json')
+        if args.upstream != OPENROUTER_ORIGIN:
+            key = LOOPBACK_KEY  # a local test upstream never receives the operator's key
+        else:
+            key = credential(KEY_VARIABLE, mapping=Path(args.runtime_root)/'credentials.json')
         if not key:
             raise ShadowError(f'{KEY_VARIABLE} is not set and not mapped to a keychain item (docs/setup.md)')
         run = run_shadow(args, key)

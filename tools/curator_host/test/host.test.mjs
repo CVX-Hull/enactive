@@ -10,7 +10,7 @@ const TOKEN = 'a1'.repeat(32);
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j1ioAAAAASUVORK5CYII=', 'base64');
 export const configuration = () => ({
   schema: 'curator-host/1', effort: 'medium', max_requests: 6, request_timeout_seconds: 10, wall_seconds: 60,
-  max_context_images: 4, context_image_block: 2, workbench_timeout_seconds: 5,
+  max_context_images: 4, context_image_block: 2, workbench_timeout_seconds: 5, budget_usd: 1,
   model: { id: 'openai/gpt-6.1-terra', name: 'Terra', reasoning: true, input: ['text', 'image'],
     cost: { input: 1, output: 5, cacheRead: 0.05, cacheWrite: 1.25 }, contextWindow: 262144, maxTokens: 4096,
     thinkingLevelMap: { medium: 'medium' },
@@ -82,7 +82,7 @@ test('only the proxy on loopback is an endpoint', () => {
 test('a scripted session lists, writes a submission and a draft, views a frame and finishes', async t => {
   const submission = { schema: 'curator-submission/1', base_version: 'v0', summary: 's', changes: [] };
   const { root, events, payloads, result } = await session(t, [
-    sse([['list_dir', { path: 'trace/frames' }], ['view_frame', { frame: 's-2' }]]),
+    sse([['list_dir', { path: 'trace/frames' }], ['view_frame', { frames: ['s-2'] }]]),
     sse([['write_file', { path: 'submissions/s1/submission.json', content: JSON.stringify(submission) }],
       ['write_file', { path: 'drafts/idea/notes.md', content: 'unfinished' }], ['read_file', { path: '../secret' }]]),
     sse([['finish', { summary: 'wrote one submission' }]]),
@@ -147,6 +147,35 @@ test('read tools stay inside the workspace, refuse links and binary files', asyn
   assert.match(bounded.content[0].text, /^# Se\n\[truncated: 11 more bytes; use offset=4\]/);
   const listing = (await listDir(root, { path: 'scratch' })).content[0].text;
   assert.match(listing, /link\t-\tleak/);
+});
+
+test('every request ends with a budget note, and past four fifths reading tools are refused', async t => {
+  // Five requests of a budget of six: the fifth reply asks to read, after 4/6 > 0.5 and 5/6 > 0.8.
+  const replies = [...Array.from({ length: 5 }, () => () => sse([['list_dir', {}]])), () => sse([['finish', { summary: 'done' }]])];
+  const { events, payloads } = await session(t, replies);
+  const notes = payloads.map(payload => payload.body.messages.at(-1));
+  assert.ok(notes.every(note => note.role === 'user' && /^Budget: \d+ of 6 requests used/.test(String(note.content?.[0]?.text ?? note.content))));
+  assert.match(String(notes[3].content?.[0]?.text ?? notes[3].content), /More than half is spent/);
+  assert.match(String(notes[5].content?.[0]?.text ?? notes[5].content), /Reading tools are now refused/);
+  const lists = events.filter(event => event.type === 'tool-call' && event.name === 'list_dir');
+  assert.equal(lists.at(-1).ok, false);
+  assert.match(lists.at(-1).error, /budget is nearly spent/);
+  // The note is transient: no earlier note survives in a later request's history.
+  assert.ok(payloads.at(-1).body.messages.slice(0, -1).every(m => !/^Budget:/.test(String(m.content?.[0]?.text ?? m.content ?? ''))));
+});
+
+test('the dollar budget moves the phase too', async () => {
+  const { budgetNote } = await import('../host.mjs');
+  assert.match(budgetNote({ requests: 1, maxRequests: 100, spent: 0.6, budget: 1 }).text, /More than half/);
+  assert.match(budgetNote({ requests: 1, maxRequests: 100, spent: 0.85, budget: 1 }).text, /refused/);
+  assert.doesNotMatch(budgetNote({ requests: 1, maxRequests: 100, spent: 0.1, budget: 1 }).text, /half|refused/);
+});
+
+test('view_frame shows up to four frames in one call', async t => {
+  const { events, payloads } = await session(t, [
+    sse([['view_frame', { frames: ['s-2', 's-2'] }]]), sse([['finish', { summary: 'looked' }]])]);
+  assert.equal(events.find(event => event.name === 'view_frame').ok, true);
+  assert.equal(JSON.stringify(payloads[1].body).split('"type":"image_url"').length - 1, 2);
 });
 
 test('the request limit stops the host and telemetry says why', async t => {

@@ -165,6 +165,42 @@ def test_inline_images_reserve_a_bounded_token_count_not_their_encoding(tmp_path
         assert len(seen) == 1
 
 
+def test_a_bring_your_own_key_route_settles_at_the_upstream_charge_too():
+    from harness.curator.proxy import reported_cost
+    byok = sse(dict(prompt_tokens=10, completion_tokens=2, cost=0.00001, is_byok=True,
+                    cost_details=dict(upstream_inference_cost=0.5)))
+    assert reported_cost(byok) == Decimal('0.50001')
+    routed = sse(dict(prompt_tokens=10, completion_tokens=2, cost=0.002, cost_details=dict(upstream_inference_cost=0.0019)))
+    assert reported_cost(routed) == Decimal('0.002')
+    assert reported_cost(sse(dict(prompt_tokens=1, cost='free', cost_details=dict(upstream_inference_cost=-1)))) is None
+
+
+def test_only_image_blocks_are_discounted_as_images():
+    from harness.curator.proxy import inline_images
+    big = 'A' * 600_000
+    smuggled = [
+        dict(messages=[dict(role='assistant', content=[dict(type='tool_use', id='t', name='n', input=dict(
+            source=dict(type='base64', media_type='image/png', data=big)))])]),
+        dict(messages=[dict(role='user', content=[dict(type='image_url', image_url=f'data:text/plain;base64,{big}')])]),
+        dict(messages=[dict(role='user', content=[dict(type='text', text='x', image_url=f'data:image/png;base64,{big}')])]),
+        dict(messages=[dict(role='user', content=[dict(type='image', source=dict(type='base64', media_type='text/plain', data=big))])]),
+    ]
+    for request in smuggled:
+        assert inline_images(request) == (0, 0), request
+
+
+def test_the_proxy_requires_the_pinned_routing(tmp_path):
+    pinned = dict(only=['vendor'], order=['vendor'], allow_fallbacks=False, require_parameters=True)
+    usage = dict(prompt_tokens=10, completion_tokens=2, total_tokens=12, cost=0.0001)
+    with openrouter(tmp_path, usage) as (proxy, port, seen):
+        proxy.routing = pinned
+        for routing in (None, dict(pinned, allow_fallbacks=True), dict(pinned, only=['other'], order=['other'])):
+            payload = body() if routing is None else body(provider=routing)
+            assert post(port, payload, proxy.token)[0] == 400
+        assert seen == []
+        assert post(port, body(provider=pinned), proxy.token)[0] == 200 and len(seen) == 1
+
+
 def test_an_image_billed_above_its_bound_still_revokes(tmp_path):
     usage = dict(prompt_tokens=50_000, completion_tokens=2, total_tokens=50_002)  # no reported cost: tokens settle
     request = body(messages=[dict(role='user', content=[

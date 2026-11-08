@@ -36,7 +36,7 @@ KEY = 'stand-in-provider-key'
 
 def host_config(tmp_path: Path, arm='terra', **override):
     values = dict(effort='medium', max_requests=10, max_output_tokens=4096, request_timeout_seconds=30, wall_seconds=60,
-                  max_context_images=4, context_image_block=2, workbench_timeout_seconds=30)
+                  max_context_images=4, context_image_block=2, workbench_timeout_seconds=30, budget_usd=1.0)
     values.update(override)
     config = shadow.host_configuration(shadow.ARMS[arm], PRICES, **values)
     directory = (tmp_path/'host-config').resolve()
@@ -274,6 +274,15 @@ def test_the_runner_needs_the_key_in_its_variable_and_only_loopback_or_openroute
     assert shadow.main([*base[:-1], str(tmp_path/'elsewhere')]) == 2 and 'inside' in capsys.readouterr().err
 
 
+def test_tool_roots_that_expose_the_disk_home_or_runtime_are_refused():
+    for broad in (Path('/'), Path.home().resolve(), shadow.ROOT.resolve(), shadow.ROOT.resolve()/'.runtime',
+                  shadow.ROOT.resolve()/'.runtime'/'evidence'):
+        with pytest.raises(shadow.ShadowError, match='too much'):
+            shadow.refuse_broad_root(broad)
+    shadow.refuse_broad_root(shadow.HOST_DIR.resolve())          # the host package itself is fine
+    shadow.refuse_broad_root(Path(sys.base_prefix).resolve())
+
+
 @pytest.mark.skipif(not INSTALLED, reason='needs npm ci in tools/curator_host')
 def test_the_hosts_node_unit_tests_pass():
     done = subprocess.run([shutil.which('node'), '--test', *sorted(str(p) for p in (shadow.HOST_DIR/'test').glob('*.test.mjs'))],
@@ -306,7 +315,7 @@ def test_both_arms_configure_a_host_the_proxy_allows():
     for arm in shadow.ARMS.values():
         config = shadow.host_configuration(arm, PRICES, effort=arm.effort, max_requests=5, max_output_tokens=4096,
                                            request_timeout_seconds=30, wall_seconds=60, max_context_images=4,
-                                           context_image_block=2, workbench_timeout_seconds=30)
+                                           context_image_block=2, workbench_timeout_seconds=30, budget_usd=1.0)
         assert config['model']['compat']['maxTokensField'] == 'max_completion_tokens'
         assert config['model']['compat']['openRouterRouting']['only'] == [arm.provider]
         script = ("import {validateConfiguration} from './host.mjs';"
@@ -321,7 +330,7 @@ SUMMARY_FIELDS = {'schema', 'kind', 'arm', 'model', 'effort', 'lineage', 'trace_
                   'run_state', 'wall_seconds', 'cost_usd', 'proxy', 'stopped_by_cap', 'session_id', 'record', 'session_state',
                   'sandbox', 'errors', 'refused', 'submissions', 'accepted', 'rejected', 'verdicts', 'drafts', 'published_after',
                   'requests', 'time_to_first_request_seconds', 'first_request_prompt_tokens', 'tokens', 'host_reported_cost_usd',
-                  'tool_calls', 'host_end', 'model_status'}
+                  'tool_calls', 'host_end', 'model_status', 'host_budget_usd', 'published_before'}
 
 
 @native
@@ -344,7 +353,9 @@ def test_a_dry_run_writes_a_complete_summary_per_session_and_per_run(tmp_path, m
     run = json.loads((out/'summary.json').read_text())
     assert run['schema'] == 'curator-shadow/1' and run['kind'] == 'run' and run['complete'] is True and run['stopped'] is None
     assert run['total_cost_usd'] == '0.0036' and run['published_version'] == 'v1' and run['sessions_run'] == 1
-    assert (runtime/'knowledge'/'shadow-454'/'terra'/'397'/'cdda').is_dir()
+    # Each run has its own fresh repository, named by its output directory.
+    assert (runtime/'knowledge'/'shadow-454'/'dry-run'/'terra'/'397'/'cdda').is_dir()
+    assert json.loads((out/'397'/'sd1a1'/'summary.json').read_text())['published_before'] == 'v0'
     assert KEY not in ''.join(p.read_text(errors='replace') for p in out.rglob('*') if p.is_file())
     assert [r['status'] for r in shadow._lines(out/'397'/'sd1a1'/'proxy-ledger.jsonl')] == [200, 200, 200]
 

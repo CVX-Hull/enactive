@@ -36,6 +36,7 @@ import http.client
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 from pathlib import Path
+import re
 import secrets
 import threading
 import time
@@ -171,8 +172,18 @@ def refusal(provider: Provider, request: object) -> str | None:
 IMAGE_TOKENS = 10_000
 
 
+IMAGE_MEDIA = re.compile(r'image/(png|jpeg|gif|webp)')
+IMAGE_DATA_URL = re.compile(r'data:image/(png|jpeg|gif|webp);base64,')
+
+
 def inline_images(request: object) -> tuple[int, int]:
-    """The base64 bytes and count of inline images in an already-allowlisted request body."""
+    """The base64 bytes and count of inline images in an already-allowlisted request body.
+
+    Only image content blocks count: an Anthropic `image` block with a base64 `image/*` source,
+    or an `image_url`/`input_image` part with a `data:image/...;base64,` URL. The walk skips the
+    same opaque fields as `refusal`, so a tool argument or text that merely looks like an image
+    is billed by its bytes.
+    """
     total = count = 0
     stack = [request.get('messages'), request.get('system'), request.get('input')] if isinstance(request, dict) else []
     while stack:
@@ -180,18 +191,25 @@ def inline_images(request: object) -> tuple[int, int]:
         if isinstance(item, list):
             stack.extend(item)
         elif isinstance(item, dict):
-            source = item.get('source')
-            url = item.get('image_url')
-            url = url.get('url') if isinstance(url, dict) else url
-            data = source.get('data') if isinstance(source, dict) and source.get('type') == 'base64' else (
-                url if isinstance(url, str) and url.startswith('data:') else None)
+            kind = item.get('type')
+            data = None
+            if kind == 'image':
+                source = item.get('source')
+                if (isinstance(source, dict) and source.get('type') == 'base64'
+                        and isinstance(source.get('media_type'), str) and IMAGE_MEDIA.fullmatch(source['media_type'])):
+                    data = source.get('data')
+            elif kind in ('image_url', 'input_image'):
+                url = item.get('image_url')
+                url = url.get('url') if isinstance(url, dict) else url
+                if isinstance(url, str) and IMAGE_DATA_URL.match(url):
+                    data = url
             if isinstance(data, str):
                 # The body is re-serialized compactly with ASCII escapes, so a base64 string's byte
                 # length in the body equals its character length.
                 total += len(data)
                 count += 1
                 continue
-            stack.extend(v for k, v in item.items() if k not in ('source', 'image_url'))
+            stack.extend(v for k, v in item.items() if k not in OPAQUE)
     return total, count
 
 
@@ -240,12 +258,29 @@ def _usages(body: bytes):
             yield found
 
 
+def _amount(value) -> Decimal | None:
+    if isinstance(value, (Decimal, int)) and not isinstance(value, bool) and value >= 0:
+        return Decimal(value)
+    return None
+
+
 def reported_cost(body: bytes) -> Decimal | None:
-    """The provider's own charge (OpenRouter `usage.cost`, US dollars), or None when absent."""
-    costs = [found['cost'] for found in _usages(body)
-             if isinstance(found.get('cost'), (Decimal, int)) and not isinstance(found.get('cost'), bool)
-             and found['cost'] >= 0]
-    return Decimal(max(costs)) if costs else None
+    """The whole charge for a request (US dollars), or None when the provider reported none.
+
+    OpenRouter's `usage.cost` is what it bills the account. On a bring-your-own-key route that is
+    only its fee: the provider bills `cost_details.upstream_inference_cost` to the operator's own
+    key. Both are counted, so the cap tracks the real spend on either route.
+    """
+    charges = []
+    for found in _usages(body):
+        cost = _amount(found.get('cost'))
+        details = found.get('cost_details') if isinstance(found.get('cost_details'), dict) else {}
+        upstream = _amount(details.get('upstream_inference_cost'))
+        if cost is None and upstream is None:
+            continue
+        charges.append((cost or Decimal(0)) + (upstream or Decimal(0)) if found.get('is_byok') is True
+                       else max(cost or Decimal(0), upstream or Decimal(0)))
+    return max(charges) if charges else None
 
 
 def cost_of(provider: Provider, price: Price, usage: dict[str, int], body: bytes = b'') -> Decimal:
@@ -272,7 +307,7 @@ class ModelProxy:
 
     def __init__(self, *, provider: Provider, upstream: str, key: str, prices: dict[str, Price],
                  cap_usd: Decimal, ledger: Path, max_output_tokens: int = 64_000,
-                 betas: frozenset[str] = frozenset()):
+                 betas: frozenset[str] = frozenset(), routing: dict | None = None):
         parts = urlsplit(upstream)
         if parts.scheme not in ('https', 'http') or not parts.hostname or parts.path not in ('', '/'):
             raise ValueError('Upstream must be a bare http(s) origin')
@@ -281,6 +316,9 @@ class ModelProxy:
         self.provider, self.upstream, self._key = provider, parts, key
         self.prices, self.cap = dict(prices), Decimal(cap_usd)
         self.ledger, self.max_output_tokens, self.betas = ledger, max_output_tokens, frozenset(betas)
+        # When set, every request must carry exactly this provider routing (OpenRouter `provider`),
+        # so a host cannot widen it to fallbacks or other providers.
+        self.routing = None if routing is None else json.loads(json.dumps(routing))
         self.token = secrets.token_hex(32)
         self.spent = Decimal(0)
         self.reserved = Decimal(0)
@@ -382,6 +420,8 @@ class ModelProxy:
                 try:
                     request = json.loads(body)
                     reason = refusal(proxy.provider, request)
+                    if reason is None and proxy.routing is not None and request.get('provider') != proxy.routing:
+                        reason = 'provider routing must be the pinned routing'
                     body = json.dumps(request, separators=(',', ':')).encode()
                 except (ValueError, TypeError, RecursionError):
                     return self.refuse(400, 'body must be well-formed JSON')
