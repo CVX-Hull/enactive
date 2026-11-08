@@ -11,6 +11,14 @@ Owner: lead. Evidence reviewed: 2026-10-17. Refresh at controller redesign or
 release if older than 90 days. Sources below distinguish observed findings from
 our engineering inferences; they are not a claim to exhaust the literature.
 
+## Curated player (ADR 009)
+
+Research behind [ADR 009](decisions/009-curated-player.md), dated 2026-11-08:
+
+- [Curator sandbox](research-curator-sandbox.md) (R13, #451): project-local sandbox
+  mechanisms on this Mac, coding-agent hosts under them, session cost evidence and
+  gate gaming, with the prototype's escape-suite results and residual risks.
+
 ## Engineering
 
 The authoritative [engineering research synthesis](research-engineering.md) records
