@@ -55,6 +55,27 @@ spectator. Its implementation and test plan is
 [#143](https://github.com/CVX-Hull/enactive/issues/143). Current contracts govern
 until a phase is adopted on study evidence.
 
+P0 finished on 8 November 2026 ([record](acceptance/2026-11-08-adr009-p0.md)). It built:
+- the curator sandbox and model proxy;
+- the trace workbench and sidecar containers;
+- the knowledge repository, drafts and gate v0;
+- the probe baseline;
+- the spectator frame;
+- shadow curator sessions.
+
+Its adoption condition is met, with qualifications on blinded probe recall and on
+prompt caching. The shadow code runs only on sealed traces, the
+[curator component](components/curator.md) describes it, and the running player does
+not use it.
+
+Before P1, the owner set a readiness stage, P1.0, in [ADR 009](decisions/009-curated-player.md#phases):
+- context stability and clarity for the actor and the curator;
+- probe validation;
+- the P1 pre-registration.
+
+P1, the curator against the simpler working-set arm in offline replay, is decided on
+that pre-registration.
+
 ## Current integrated checkpoint
 
 The production source has the [computer-control boundary](contracts/computer-control.md):
