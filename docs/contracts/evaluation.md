@@ -473,13 +473,18 @@ curator (ADR008). The container and probe directories default to the repository'
 them for tests.
 
 - **Health.** `slots` in a fixed order: `actor_cadence`, `curator_lag`, `gate_pass_rate`,
-  `snapshot_freshness`, `program_delegation_share`, `monitor_alerts`, `spend_against_cap`; plus
-  `containers` and `runs` (catalog runs that belong to a container). `actor_cadence` is
-  `measured` (derived from the catalog runs whose session a container manifest records:
-  `decisions`, `steps`, `game_hours`, `decisions_per_game_hour`, `steps_per_game_hour`,
-  `dollars`, `runs`) or `no-data` when no such run has a game-time reading. Every other
-  slot is `{"state": "not-yet-measured", "phase": "P1" | "P2"}` and carries no number until
-  the phase that delivers it.
+  `snapshot_freshness`, `program_delegation_share`, `monitor_alerts`, `spend_against_cap`. Each
+  slot has an `id` and a `label`. The response also has `containers`, and `runs` (catalog
+  runs that belong to a container).
+  - `actor_cadence` is `measured` when derived from the catalog runs whose session a
+    container manifest records. It then has `source` (`derived`), `runs`, `unreadable_runs`,
+    `decisions`, `steps`, `game_hours`, `decisions_per_game_hour`, `steps_per_game_hour` and
+    `dollars`. A run whose store cannot be read is counted in `unreadable_runs` and left out
+    of the figures.
+  - `actor_cadence` is `no-data`, with a `detail`, when no readable run has a game-time
+    reading.
+  - Every other slot is `{"state": "not-yet-measured", "phase": "P1" | "P2"}` and carries no
+    number until the phase that delivers it.
 - **Containers.** Every `data/containers/*.json` index (`container-index/1`), each manifest
   checked with `harness.trace.sidecar.validate`. The list pages like the run list: `items`
   (`id`, `kind`, `owner_role`, `lifecycle_state`, `retention_policy`, `evidence_study`,
@@ -489,16 +494,30 @@ them for tests.
   `bad_data_file`; the inventory never lists a manifest that does not validate. Age is not
   reported, because a sealed manifest records no creation time.
 - **Episodes.** `lineages`, one per `data/evaluation/probes/*/episodes.json`
-  (`probe-episodes/1`, validated by `harness.evaluation.core.probes.episodes`), each with
-  its episodes' `title`, `fact`, `lost_at`, `probe` (`boundary`, `failing`, `costly`,
-  `annotation`: `blinded` or `adjudicated`) and the anchors `observed`, `needed` and
-  `acted_without` (null when not recorded). An anchor is `chunk`, `run` (the catalog run
-  name for the frame's session, else the chunk's run name, else null), `actor` (the chunk's
-  actor directory), `actor_id` and `container` where a manifest describes the session,
-  `source_id`, `available` and `reason`. `available` is true only when
-  `/api/view/run/<run>/frame/<source_id>` would serve that frame now; otherwise `reason` is
-  `no_frame`, `run_not_in_catalog` or that route's own error code. The page opens anchors
-  through the per-run views; frames are served only by that route.
+  (`probe-episodes/1`, validated by `harness.evaluation.core.probes.episodes`).
+  - **Each lineage** has `lineage`, `study`, `note`, `source` and its `episodes`.
+  - **Each episode** has `id`, `title`, `fact`, `record` (a memory record ID prefix or null)
+    and `lost_at`. It also has `probe` (`boundary`, `failing`, `costly`, and `annotation`,
+    which is `blinded` or `adjudicated`), and the anchors `observed`, `needed` and
+    `acted_without` (null when not recorded).
+  - **Each anchor** has `chunk`, `run`, `actor` (the chunk's actor directory), `source_id`,
+    `available` and `reason`. Where a manifest describes the session it also has `actor_id`
+    and `container`, and it has `text` when the fact appears only in the actor's text.
+  - **`run`** is the catalog run name for the frame's session. An anchor without a frame
+    falls back to the chunk's run name. An anchor whose session is absent from the catalog
+    has `run` null.
+  - **`available`** is true only when `/api/view/run/<run>/frame/<source_id>` would serve
+    that frame now. Otherwise `reason` is one of:
+    - `no_frame`;
+    - `run_not_in_catalog`;
+    - `ambiguous_run`: another session's run has the same name, and that route resolves the
+      name to it;
+    - that route's own error code. An unreadable store gives `record_unavailable` for that
+      anchor rather than failing the route.
+
+  The page opens anchors through the per-run views; frames are served only by that route.
+  Each poll re-checks every anchor's frame digest. That is cheap at P0's dozen anchors, and
+  it is the cost to revisit when lineages grow.
 
 The gateway forwards only the statuses listed in the
 [observer component](../components/observer-operations.md#viewer), so a `500` from these

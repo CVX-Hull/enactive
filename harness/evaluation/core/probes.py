@@ -201,10 +201,19 @@ def episodes(document: dict) -> list[dict]:
     found = document.get('episodes')
     if not isinstance(found, list) or not found:
         raise ProbeError('episodes must be a non-empty list')
+    ids: set[str] = set()
     for index, episode in enumerate(found):
         where = f'episodes[{index}]'
         if not isinstance(episode, dict) or set(episode) != _EPISODE_KEYS:
             raise ProbeError(f'{where}: fields must be exactly {sorted(_EPISODE_KEYS)}')
+        for key in ('id', 'title', 'fact'):
+            if not isinstance(episode[key], str) or not episode[key]:
+                raise ProbeError(f'{where}: {key} must be a non-empty string')
+        if episode['id'] in ids:
+            raise ProbeError(f'{where}: repeated episode id {episode["id"]!r}')
+        ids.add(episode['id'])
+        if episode['record'] is not None and not isinstance(episode['record'], str):
+            raise ProbeError(f'{where}: record must be a string or null')
         for key in ('lost_at',):
             if not isinstance(episode[key], str) or '>' not in episode[key]:
                 raise ProbeError(f'{where}: {key} must be a boundary')
@@ -216,9 +225,11 @@ def episodes(document: dict) -> list[dict]:
             anchor = episode[key]
             if anchor is None and key == 'acted_without':
                 continue
-            if not (isinstance(anchor, dict) and isinstance(anchor.get('chunk'), str)
-                    and (anchor.get('frame') is None or isinstance(anchor['frame'], str))):
-                raise ProbeError(f'{where}: {key} needs a chunk and a frame or null')
+            if not (isinstance(anchor, dict) and isinstance(anchor.get('chunk'), str) and '-' in anchor['chunk']
+                    and (anchor.get('frame') is None or isinstance(anchor['frame'], str))
+                    and set(anchor) <= {'chunk', 'frame', 'text'}
+                    and (anchor.get('text') is None or isinstance(anchor['text'], str))):
+                raise ProbeError(f'{where}: {key} needs a chunk, a frame or null, and optional text')
         if not isinstance(episode['needed'].get('frame'), str):
             raise ProbeError(f'{where}: the needed anchor must name a frame')
     return found

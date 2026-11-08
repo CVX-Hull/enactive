@@ -1,53 +1,15 @@
 // The spectator's frame (ADR 009 D18): a health strip over role views. Actor works on real sealed data and shows
 // the forgetting episodes; Curator, Knowledge and Programs say which phase brings them; Containers is the inventory.
 // Read-only: every value comes from /api/view/frame/* (spectator-frame/1); anchors open the existing per-run views.
-import {html, useState, useEffect, Panel, Pv, Waiting, Table, Insufficient, Callout, fmtMoney, trim, label} from './ui.js';
-import {store, framePath, selectRun, set} from './data.js';
+import {html, useState, Panel, Pv, Waiting, Table, Insufficient, Callout, fmtMoney, trim, label} from './ui.js';
+import {store, framePath, selectRun, set, useView} from './data.js';
 import {SubNav} from './diagnose.js';
 
 const SCHEMA = 'spectator-frame/1';
-const TIMEOUT_MS = 4000;
 export const ROLES = [['actor', 'Actor'], ['curator', 'Curator'], ['knowledge', 'Knowledge'], ['programs', 'Programs'], ['containers', 'Containers']];
 
-/* ---------------------------------------------------------------- fetching */
-async function frameGet(path) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-  let response;
-  try {
-    response = await fetch(`/api/view/${path}`, {signal: controller.signal, cache: 'no-store', credentials: 'same-origin'});
-  } catch {
-    throw new Error('Viewer unavailable');
-  } finally { clearTimeout(timer); }
-  let body = null;
-  try { body = await response.json(); } catch { /* not JSON */ }
-  if (!response.ok) {
-    if (response.status === 503) throw new Error('Viewer unavailable');
-    throw new Error(body && body.error ? `${label(body.error)}${body.detail ? `: ${body.detail}` : ''}` : `The viewer has nothing here (HTTP ${response.status})`);
-  }
-  if (!body || body.schema !== SCHEMA) throw new Error('Unsupported frame response');
-  return body;
-}
-
-function useFrame(path, every = 15000) {
-  const [state, setState] = useState({path: null, data: null, error: null});
-  useEffect(() => {
-    if (!path) return undefined;
-    let dead = false, timer;
-    const run = async () => {
-      try {
-        const data = await frameGet(path);
-        if (!dead) setState({path, data, error: null});
-      } catch (error) {
-        if (!dead) setState(s => ({path, data: s.path === path ? s.data : null, error}));
-      }
-      if (!dead && every) timer = setTimeout(run, every);
-    };
-    void run();
-    return () => { dead = true; clearTimeout(timer); };
-  }, [path, every]);
-  return state.path === path ? state : {path, data: null, error: null};
-}
+/* The shared viewer fetch (outage marking, timeouts) with the frame's own schema. */
+const useFrame = (path, every = 15000) => useView(path, every, SCHEMA);
 
 /* ---------------------------------------------------------------- frame */
 export function Frame({section}) {
@@ -98,47 +60,58 @@ function Placeholder({role}) {
 /* ---------------------------------------------------------------- actor: the forgetting episodes */
 const REASONS = {no_frame: 'no frame: stated in the actor\'s own text', run_not_in_catalog: 'its run is not in this viewer\'s catalog',
   unknown_frame: 'the run has no such frame', frame_unavailable: 'the frame file is missing', frame_digest_mismatch: 'the frame file fails its SHA-256 check',
-  run_directory_unavailable: 'the run directory is not available'};
+  run_directory_unavailable: 'the run directory is not available', record_unavailable: 'the run\'s evaluation store cannot be read',
+  ambiguous_run: 'two catalog runs share this run name; open it from the run list'};
 const ANCHORS = [['observed', 'Observed'], ['needed', 'Needed'], ['acted_without', 'Acted without']];
 
-/** Select the run, wait for its steps to load, put the shared playhead on the step and open Supervise there. */
-function openAnchor(anchor, setBusy) {
+/* One anchor opens at a time; navigating away or opening another cancels the pending one. */
+let pending = null;
+
+/** Select the run, wait for its steps to load, put the shared playhead on the step and open Live there. */
+function openAnchor(anchor, setBusy, setFailed) {
+  if (pending) pending.cancel();
+  const from = location.hash;
   setBusy(anchor.source_id);
+  setFailed(null);
   selectRun(anchor.run);
   const end = Date.now() + 90000;
   const timer = setInterval(() => {
+    if (location.hash !== from) return finish();
     const step = store.runId === anchor.run ? store.steps.find(s => s.source_id === anchor.source_id) : null;
     if (step) {
-      clearInterval(timer);
+      finish();
       set({cursor: step.seq});
-      setBusy(null);
       location.hash = '#live';
     } else if (Date.now() > end) {
-      clearInterval(timer);
-      setBusy(null);
+      finish();
+      setFailed(anchor.source_id);
     }
   }, 250);
+  const finish = () => { clearInterval(timer); setBusy(null); if (pending && pending.timer === timer) pending = null; };
+  pending = {timer, cancel: finish};
 }
 
-function Anchor({name, anchor, busy, setBusy}) {
+function Anchor({name, anchor, busy, setBusy, failed, setFailed}) {
   if (!anchor) return html`<div class="anchor"><b>${name}</b><span class="note">not recorded for this episode</span></div>`;
   const where = `${anchor.chunk}${anchor.run ? ` · run ${anchor.run}` : ''} · actor ${anchor.actor}`;
   return html`<div class="anchor" data-anchor=${name.toLowerCase()}><b>${name}</b><span class="mono wrapany">${where}</span>
     ${anchor.available ? html`<span class="acts">
-        <button type="button" class="btn" disabled=${busy !== null} onClick=${() => openAnchor(anchor, setBusy)}>${busy === anchor.source_id ? 'Opening…' : 'Open in Live view'}</button>
+        <button type="button" class="btn" disabled=${busy !== null} onClick=${() => openAnchor(anchor, setBusy, setFailed)}>${busy === anchor.source_id ? 'Opening…' : 'Open in Live view'}</button>
         <a href=${framePath(anchor.run, anchor.source_id)} target="_blank" rel="noopener">Original frame</a>
-        <span class="note mono wrapany">${anchor.source_id}</span></span>`
+        <span class="note mono wrapany">${anchor.source_id}</span>
+        ${failed === anchor.source_id ? html`<span class="state watch">the run's steps did not load in time; try again or open the original frame</span>` : null}</span>`
       : html`<span class="acts"><span class="state watch">frame unavailable</span><span class="note">${REASONS[anchor.reason] || label(anchor.reason || 'unknown')}</span></span>`}
     ${anchor.text ? html`<span class="note">${anchor.text}</span>` : null}</div>`;
 }
 
 function Episode({episode}) {
   const [busy, setBusy] = useState(null);
+  const [failed, setFailed] = useState(null);
   return html`<${Panel} title=${episode.title} note=${`fact ${episode.fact}`} span="s6">
     <dl class="kv"><dt>Lost at</dt><dd>${episode.lost_at}</dd>
       <dt>Failing probe boundary</dt><dd>${episode.probe.boundary}</dd>
       <dt>Annotation layer</dt><dd>${episode.probe.annotation} <${Pv} source="human" /></dd></dl>
-    <div class="anchors">${ANCHORS.map(([key, name]) => html`<${Anchor} name=${name} anchor=${episode[key]} busy=${busy} setBusy=${setBusy} />`)}</div><//>`;
+    <div class="anchors">${ANCHORS.map(([key, name]) => html`<${Anchor} name=${name} anchor=${episode[key]} busy=${busy} setBusy=${setBusy} failed=${failed} setFailed=${setFailed} />`)}</div><//>`;
 }
 
 function Actor() {
@@ -172,7 +145,8 @@ function Containers() {
   const [pick, setPick] = useState(null);
   if (!data) return html`<${Panel} title="Containers" span="s12"><${Waiting} store=${store} what="the container inventory" error=${error} /><//>`;
   const kinds = Object.entries(data.kinds || {}).map(([k, n]) => `${n} ${k}`).join(' · ');
-  return html`<${Panel} title="Containers" note=${`${data.total} listed${kinds ? ` · ${kinds}` : ''}`} span="s12">
+  const shown = data.next === null ? `${data.total} listed` : `first ${data.items.length} of ${data.total} listed`;
+  return html`<${Panel} title="Containers" note=${`${shown}${kinds ? ` · ${kinds}` : ''}`} span="s12">
       <${Table} columns=${[{title: 'Container', render: c => c.id}, {title: 'Kind', key: 'kind'}, {title: 'Owner role', key: 'owner_role'}, {title: 'State', key: 'lifecycle_state'},
         {title: 'Retention', key: 'retention_policy'}, {title: 'Evidence study', render: c => c.evidence_study || '—'}]}
         rows=${data.items} onPick=${(i, row) => setPick(row.id)} selected=${data.items.findIndex(c => c.id === pick)} empty="No containers are indexed." />

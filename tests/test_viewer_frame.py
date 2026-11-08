@@ -134,6 +134,7 @@ def test_health_measures_actor_cadence_and_never_invents_the_rest(frame):
     cadence = slots['actor_cadence']
     hours = 2540 / 3600
     assert cadence['state'] == 'measured' and cadence['source'] == 'derived' and cadence['runs'] == 1
+    assert cadence['unreadable_runs'] == 0
     assert cadence['decisions'] == 13 and cadence['steps'] == 14 and cadence['game_hours'] == pytest.approx(hours)
     assert cadence['decisions_per_game_hour'] == pytest.approx(13 / hours)
     assert cadence['steps_per_game_hour'] == pytest.approx(14 / hours)
@@ -187,11 +188,63 @@ def test_episodes_resolve_anchors_to_runs_and_say_when_a_frame_cannot_be_served(
 def test_an_invalid_episodes_document_is_refused(frame):
     client, _, sources, _ = frame
     path = sources.probes / 'syn' / 'episodes.json'
+    for damage in ('no needed frame', 'repeated id', 'numeric title', 'unknown anchor field'):
+        document = episodes_document()
+        if damage == 'no needed frame':
+            document['episodes'][0]['needed']['frame'] = None
+        elif damage == 'repeated id':
+            document['episodes'][1]['id'] = document['episodes'][0]['id']
+        elif damage == 'numeric title':
+            document['episodes'][0]['title'] = 7
+        else:
+            document['episodes'][0]['observed']['url'] = 'https://example.com'
+        path.write_text(json.dumps(document))
+        response = client.get('/api/view/frame/episodes')
+        assert response.status_code == 500 and response.json()['error'] == 'bad_data_file', damage
+
+
+def test_a_run_name_shared_by_two_sessions_is_not_reported_available(frame):
+    _, _, sources, tmp_path = frame
+    other = 'b' * 32
+    twin = tmp_path / 'twin-runs'
+    main_scenario(twin / 'base1', session=other)                  # a second archived run with the same name
+    evaluate(twin / 'base1', FakeBinding(), tmp_path / 'root', created_wall=2.0)
+    catalog = Catalog(tmp_path / 'root', (tmp_path / 'runs', twin), data_dir=data_directory(tmp_path))
     document = episodes_document()
-    document['episodes'][0]['needed']['frame'] = None
-    path.write_text(json.dumps(document))
-    response = client.get('/api/view/frame/episodes')
-    assert response.status_code == 500 and response.json()['error'] == 'bad_data_file'
+    document['episodes'][0]['needed'] = anchor(other, 3)
+    (sources.probes / 'syn' / 'episodes.json').write_text(json.dumps(document))
+    client = TestClient(create_app(catalog, frame_sources=sources))
+    needed = client.get('/api/view/frame/episodes').json()['lineages'][0]['episodes'][0]['needed']
+    assert needed['available'] is False and needed['reason'] == 'ambiguous_run'
+    # The route really would refuse it: the name selects the other session's run.
+    assert client.get(f'/api/view/run/base1/frame/{other}-3').status_code == 404
+
+
+def test_an_anchor_whose_session_is_absent_never_borrows_a_same_named_run(frame):
+    client, _, sources, _ = frame
+    document = episodes_document()
+    document['episodes'][0]['needed'] = anchor(ABSENT, 3)           # chunk names base1, frame names another session
+    (sources.probes / 'syn' / 'episodes.json').write_text(json.dumps(document))
+    needed = client.get('/api/view/frame/episodes').json()['lineages'][0]['episodes'][0]['needed']
+    assert needed['run'] is None and needed['reason'] == 'run_not_in_catalog' and needed['container'] == 'syn/gone'
+
+
+def test_an_unreadable_store_marks_its_anchors_and_leaves_the_routes_up(frame, monkeypatch):
+    from harness.viewer.catalog import ViewError
+    client, catalog, _, _ = frame
+
+    def broken(_info):
+        raise ViewError(503, 'record_unavailable', 'synthetic')
+
+    monkeypatch.setattr(catalog, 'connect', broken)
+    episodes = client.get('/api/view/frame/episodes')
+    assert episodes.status_code == 200
+    served = episodes.json()['lineages'][0]['episodes'][0]
+    assert served['needed']['available'] is False and served['needed']['reason'] == 'record_unavailable'
+    health = client.get('/api/view/frame/health')
+    assert health.status_code == 200
+    cadence = {slot['id']: slot for slot in health.json()['slots']}['actor_cadence']
+    assert cadence['state'] == 'no-data' and 'unreadable' in cadence['detail']
 
 
 def test_the_tracked_data_follows_the_shapes_the_frame_reads(tmp_path):
