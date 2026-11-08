@@ -9,7 +9,9 @@ scope: Proposed direction for an acting player with a coding-agent curator in ep
 # ADR 009 — A curated player: actor, curator, ontology and programs
 
 **Status: proposed, 8 November 2026.** The owner set the direction below in
-discussion on 8 November 2026. Nothing here is adopted or implemented. The
+discussion on 8 November 2026. Nothing here is adopted. P0, the shadow baseline,
+workbench and frame, is complete, and its [outcome](#phases) is recorded; P1 awaits the
+owner. The
 [computer-control contract](../contracts/computer-control.md), the
 [player guide](../player-guide.md) and the current standards govern the running
 system until a phase meets its adoption condition. Each phase is adopted on study
@@ -645,6 +647,16 @@ checks its power by simulation before it runs.
 | **P1: curator and memory** | Required emissions in every arm (D10). Arm A, the simpler path: root validation plus a pushed working set built from existing records, with no curator. Arm B: the epistemic core, the knowledge repository, curator sessions and the gate, snapshots, `player_hint`, and actor write tools removed. Ablations within B only where power allows. Spectator actor, curator, knowledge and draft views | Offline replay: curator calls only. Live: per package, after the gate before spend | Offline: pre-registered probe and rediscovery metrics, B against A, on replayed traces. Live: non-inferiority guards held |
 | **P2: programs and monitor** | Actor-interface programs as passive policies; capability slots with record and replay; supervised runs with preemption and verified risk classes; monitor slot; offline fitting; probation and library statistics; spectator program views | Per package, after the gate before spend | Pre-registered delegation share at matched failure rate; monitor detection on anomalies in recorded program runs |
 | **P3: practice instance** | One-way forks; determinism measurement; live fitting; slot swaps; spectator fork views | Per package | Owner decision first; concurrency guards held |
+
+**P0 outcome (8 November 2026).** P0's adoption condition is met, with two
+qualifications ([record](../acceptance/2026-11-08-adr009-p0.md)).
+- **Episode recall.** The four episodes are failing probes only with the lead's
+  unblinded adjudication layer.
+- **Cost.** The shadow cost was measured with prompt caching barely working, so it is
+  likely an overestimate.
+
+P1 waits for the owner's go/no-go. Nothing is adopted, and the current contracts still
+govern the running system.
 
 Every phase replaces its contracts and stores in one migration
 (`player-memory/2` → `/3`, `player-record/1` and `player-program/2` → their

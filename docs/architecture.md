@@ -28,6 +28,7 @@ logical responsibilities; arrows identify requests, results or user control.
 | Computer custodian | Exact child/socket/lock handles, serialized operations, original resources and actor capabilities | [Native control](components/native-control.md) |
 | Observer / operator | Supervised control path (status, frame, attention checks, independent permanent Pause with a recorded reason) and an unsupervised read-only viewer of interpretive evaluation | [Observer operations](components/observer-operations.md) |
 | Run evaluator | Offline, versioned interpretive records and metrics with a game binding; never player-visible, gates nothing | [Evaluation contract](contracts/evaluation.md) |
+| Curator shadow (ADR 009 P0, not adopted) | Sealed-trace projection and workbench; sandboxed curator sessions, a key-holding model proxy, a gate-only knowledge repository and drafts; no custody, no player access, never reached by the player | [Curator and trace workbench](components/curator.md) |
 | Game | Consumes ordinary SDL input and determines outcomes | Windowed prepared CDDA; no semantic engine bridge |
 
 ## Runtime and state
@@ -197,6 +198,7 @@ source/data deployment; mixed readers and replay are unsupported.
 | Host/driver | Contract conformance and actual adapter/MCP fixtures, origin-bound handoff, attempt accounting and exact group quiescence; [player interface](components/player-interface.md#assurance-and-evidence). |
 | Spectator/operation | Control-path checks and Pause independent of the viewer, provenance labels and viewer-unavailable behaviour; [observer](components/observer-operations.md#assurance-and-evidence). |
 | Evaluator/viewer | Synthetic-run evaluator tests, held-out reader validation, viewer API tests and the replayed graphical lane; [evaluation contract](contracts/evaluation.md). |
+| Curator shadow | The sandbox escape suite against the real listeners (macOS), projection secret guards, gate and close-out negative tests, and proxy allowlist and settlement tests; [curator](components/curator.md#assurance-and-evidence). |
 
 The [testing guide](testing.md) selects lanes. [Production outcome evidence](acceptance/2026-10-29-computer-control.md)
 covers actual basic input, useful stock, conditional scouting, succession and
