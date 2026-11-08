@@ -116,7 +116,7 @@ selection, under the [development-run method](development-runs.md):
   survival is viable through this boundary, as a screen, not a qualification.
 - The [seven-day lineage](acceptance/2026-11-07-seven-day-397.md) (#397, 7 November 2026)
   passed day 1, then died on day 2 at 47.8 elapsed hours: the player caught fire
-  resuming a craft beside a fire. It is one development lineage, not #145 evidence of
+  starting a craft beside a fuelled fire. It is one development lineage, not #145 evidence of
   failure.
 
 #145's seven-day gate remains the north star, and #164's cadence criteria remain unqualified.
