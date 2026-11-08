@@ -49,9 +49,10 @@ readers cannot score.
 A proposed direction, not adopted: [ADR009](decisions/009-curated-player.md) (8 November
 2026) separates the actor from a coding-agent curator, replaces the memory record kinds
 with a fitted ontology, puts programs on the actor's interface and redesigns the
-spectator. Its phases route to #387, #177, #178, #384, #42, #164 and
-[#143](https://github.com/CVX-Hull/enactive/issues/143), which would absorb
-[#294](https://github.com/CVX-Hull/enactive/issues/294); current contracts govern
+spectator. Its implementation and test plan is
+[#445](https://github.com/CVX-Hull/enactive/issues/445): P0 in #446, P1 in #387, P2 in
+#177, P3 in #472, spectator views under
+[#143](https://github.com/CVX-Hull/enactive/issues/143). Current contracts govern
 until a phase is adopted on study evidence.
 
 ## Current integrated checkpoint

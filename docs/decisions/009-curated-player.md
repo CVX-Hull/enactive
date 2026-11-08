@@ -723,10 +723,13 @@ sources only.
 
 ## Issue routing
 
+[#445](https://github.com/CVX-Hull/enactive/issues/445) holds the implementation and test
+plan (phases, critical path, evidence split, test strategy and where each owner decision
+sits). [#446](https://github.com/CVX-Hull/enactive/issues/446) owns P0;
 [#387](https://github.com/CVX-Hull/enactive/issues/387) (cross-run knowledge) owns P1
 memory and the knowledge repository; [#177](https://github.com/CVX-Hull/enactive/issues/177)
-owns P2 programs; [#178](https://github.com/CVX-Hull/enactive/issues/178) owns the P1
-study gate; [#384](https://github.com/CVX-Hull/enactive/issues/384) owns emissions;
+owns P2 programs; [#472](https://github.com/CVX-Hull/enactive/issues/472) owns P3;
+[#178](https://github.com/CVX-Hull/enactive/issues/178) owns the P1 study gate; [#384](https://github.com/CVX-Hull/enactive/issues/384) owns emissions;
 [#42](https://github.com/CVX-Hull/enactive/issues/42) owns expectation evaluation;
 [#164](https://github.com/CVX-Hull/enactive/issues/164) owns the cadence target that
 programs serve; [#143](https://github.com/CVX-Hull/enactive/issues/143) owns the
