@@ -144,6 +144,36 @@ def test_without_a_reported_cost_tokens_settle_at_the_highest_input_price(tmp_pa
         assert proxy.spent == (100 * Decimal('2.5') + 20 * Decimal(10)) / Decimal(1_000_000)
 
 
+def test_inline_images_reserve_a_bounded_token_count_not_their_encoding(tmp_path):
+    from harness.curator.proxy import ANTHROPIC, IMAGE_TOKENS, inline_images
+    frame = 'A' * 280_000                                      # a 280 KB base64 frame
+    request = body(messages=[dict(role='user', content=[
+        dict(type='text', text='look'), dict(type='image_url', image_url=dict(url=f'data:image/png;base64,{frame}')),
+        dict(type='image_url', image_url=dict(url=f'data:image/png;base64,{frame}'))])])
+    assert inline_images(request) == (2 * (len(frame) + len('data:image/png;base64,')), 2)
+    nested = dict(messages=[dict(role='user', content=[dict(type='tool_result', content=[
+        dict(type='image', source=dict(type='base64', media_type='image/png', data=frame))])])])
+    assert inline_images(nested) == (len(frame), 1) and inline_images(None) == (0, 0)
+    assert refusal(ANTHROPIC, dict(nested, model='m', max_tokens=1)) is None
+    usage = dict(prompt_tokens=10, completion_tokens=2, total_tokens=12, cost=0.0001)
+    with openrouter(tmp_path, usage) as (proxy, port, seen):
+        assert post(port, request, proxy.token)[0] == 200
+        reserved = Decimal(json.loads((tmp_path/'ledger.jsonl').read_text())['reserved'])
+        encoded = len(json.dumps(request, separators=(',', ':')).encode())
+        expected = ((encoded - inline_images(request)[0] + 2 * IMAGE_TOKENS) * Decimal('2.5') + 100 * 10) / Decimal(1_000_000)
+        assert reserved == expected and reserved < Decimal('0.06')  # not the ~$1.40 the raw bytes would reserve
+        assert len(seen) == 1
+
+
+def test_an_image_billed_above_its_bound_still_revokes(tmp_path):
+    usage = dict(prompt_tokens=50_000, completion_tokens=2, total_tokens=50_002)  # no reported cost: tokens settle
+    request = body(messages=[dict(role='user', content=[
+        dict(type='image_url', image_url=dict(url='data:image/png;base64,' + 'A' * 1000))])])
+    with openrouter(tmp_path, usage) as (proxy, port, _seen):
+        assert post(port, request, proxy.token)[0] == 200
+        assert proxy.breaches == 1 and proxy.revoked
+
+
 def test_a_reported_cost_above_the_reservation_revokes_the_session(tmp_path):
     usage = dict(prompt_tokens=10, completion_tokens=2, total_tokens=12, cost=5)
     with openrouter(tmp_path, usage, cap='10') as (proxy, port, seen):

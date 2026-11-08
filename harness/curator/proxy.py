@@ -164,6 +164,37 @@ def refusal(provider: Provider, request: object) -> str | None:
     return None
 
 
+# Each inline image reserves this many input tokens instead of its base64 bytes. Providers bill an
+# image by its pixels, not its encoding: Anthropic about width × height / 750 tokens after scaling
+# to at most about 1.15 megapixels (about 1,600 tokens), and OpenAI a bounded tile count. 10,000
+# leaves several times that headroom. A charge above the reservation still revokes the session.
+IMAGE_TOKENS = 10_000
+
+
+def inline_images(request: object) -> tuple[int, int]:
+    """The base64 bytes and count of inline images in an already-allowlisted request body."""
+    total = count = 0
+    stack = [request.get('messages'), request.get('system'), request.get('input')] if isinstance(request, dict) else []
+    while stack:
+        item = stack.pop()
+        if isinstance(item, list):
+            stack.extend(item)
+        elif isinstance(item, dict):
+            source = item.get('source')
+            url = item.get('image_url')
+            url = url.get('url') if isinstance(url, dict) else url
+            data = source.get('data') if isinstance(source, dict) and source.get('type') == 'base64' else (
+                url if isinstance(url, str) and url.startswith('data:') else None)
+            if isinstance(data, str):
+                # The body is re-serialized compactly with ASCII escapes, so a base64 string's byte
+                # length in the body equals its character length.
+                total += len(data)
+                count += 1
+                continue
+            stack.extend(v for k, v in item.items() if k not in ('source', 'image_url'))
+    return total, count
+
+
 # OpenRouter provider preferences that only choose among providers for the requested model.
 ROUTING = frozenset({'order', 'only', 'ignore', 'allow_fallbacks', 'require_parameters', 'data_collection', 'zdr'})
 
@@ -261,13 +292,15 @@ class ModelProxy:
         self._thread: threading.Thread | None = None
 
     # -- accounting -------------------------------------------------------
-    def _reserve(self, model: str, body: bytes, output_limit: int) -> Decimal | str:
+    def _reserve(self, model: str, body: bytes, output_limit: int, request: object = None) -> Decimal | str:
         price = self.prices.get(model)
         if price is None:
             return f'model {model!r} has no frozen price'
         if not (0 < output_limit <= self.max_output_tokens):
             return f'output limit must be between 1 and {self.max_output_tokens}'
-        worst = (len(body) * price.worst_input + output_limit * price.output) / Decimal(1_000_000)
+        image_bytes, images = inline_images(request)
+        input_tokens = len(body) - image_bytes + images * IMAGE_TOKENS
+        worst = (input_tokens * price.worst_input + output_limit * price.output) / Decimal(1_000_000)
         with self._lock:
             if self.revoked:
                 return 'session token revoked'
@@ -361,7 +394,7 @@ class ModelProxy:
                     output_limit = 0
                 betas = [b.strip() for b in (self.headers.get('anthropic-beta') or '').split(',') if b.strip()]
                 dropped = sorted(set(betas) - proxy.betas)
-                reservation = proxy._reserve(model if isinstance(model, str) else '', body, output_limit)
+                reservation = proxy._reserve(model if isinstance(model, str) else '', body, output_limit, request)
                 if isinstance(reservation, str):
                     return self.refuse(429, reservation, model=model)
                 status, received, actual, error = 502, b'', None, None
