@@ -164,6 +164,47 @@ chunks from the #397 order. The record compares three things.
 - **New facts**: the lead matches statements across annotators and reports
   matched ÷ union, with the matching shown.
 
+## Recall check against independently found re-observations (#490)
+
+Blinded annotation fully recognised none of the four known #397 episodes. Before arms
+are scored against probes, the protocol's blinded recall is checked against
+re-observations that neither the lead nor the annotators chose.
+
+This rule was fixed on 8 November 2026, before any candidate was computed. The
+evaluator records no rediscovery event, so the candidates come from frames.
+
+1. **Frames.** Each chunk's frames are taken in operation order, as in the timelines.
+2. **Hash.** Each frame gets a 256-bit difference hash (`harness.trace.images.dhash`,
+   size 16).
+3. **A new screen** is a frame at least 64 bits from the previous frame in the same
+   chunk.
+4. **A candidate** is a new screen in chunk c, for c ≥ 1, within 16 bits of some frame
+   from an earlier chunk of the same lineage. Within c, a candidate whose nearest
+   earlier match was already used by a candidate in the previous 20 frames is dropped,
+   so one re-opened screen counts once.
+5. **The sample** is `random.Random(490).sample` of up to 40 candidates from #397 and up
+   to 20 from the #372 sample, in a fixed sorted order. Held-out lineages are never
+   used.
+6. **The judge.** A blinded agent sees only the two frames, in a fresh context. It is
+   not told the game, the study or which frame came first. It answers whether both
+   frames show **the same specific information** (the same list, contents, message or
+   text, not merely the same kind of view) and names it in one line. A "yes" is a
+   confirmed re-observation.
+7. **Captured.** A confirmed pair is captured when the blinded ledger, without the
+   adjudication layer, holds in the later chunk a `rediscovered` or `needed` event:
+   - on a fact observed in an earlier chunk;
+   - citing a frame of the same session whose frame number is within 15 of the later
+     frame's.
+8. **Recall** is captured pairs ÷ confirmed pairs, per lineage and pooled.
+
+**Decision, fixed in advance.** If pooled recall is **0.6 or more**, the fact-label
+protocol stands. Below 0.6, the probes become query-style:
+- for each boundary, one blinded agent writes queries from the predecessor's chunk;
+- a second, in a fresh context, answers them from the successor's received text;
+- the check is re-run on the query probes.
+
+Either way, one fact ledger per development lineage is frozen as the scoring ledger.
+
 ## Cost
 
 Each chunk's annotator tokens and wall time come from the agent host's own task report.
