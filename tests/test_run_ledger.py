@@ -128,9 +128,10 @@ def test_hand_rows_are_cross_checked_against_the_ledger(tmp_path):
 
 def test_tracked_ledger_snapshot_and_generated_tables_are_consistent():
     rows = read_ledger()
-    assert len(rows) == 37 and {r['study'] for r in rows} == {372, 382}
+    assert len(rows) == 44 and {r['study'] for r in rows} == {372, 382, 397}
     assert cross_check(rows) == []
     assert totals(rows, 382, None)['spend_usd'] == '30.46049960'
+    assert totals(rows, 397, None)['spend_usd'] == '38.39958335'
     snapshot = read_snapshot(run_ledger.ROOT / 'data/evaluation/run-metrics.jsonl')
     assert {r['session'] for r in rows} == {r['session'] for r in snapshot}
     text = ''.join(Path(p).read_text() for p in (run_ledger.LEDGER, run_ledger.ROOT / 'data/evaluation/run-metrics.jsonl'))
