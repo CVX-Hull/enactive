@@ -109,8 +109,12 @@ For example, an owner-held measurement decision could be phrased this way.
 > where missing frames can leave the answer unknown. Agreement settles the
 > wording at $0. A paid replay is a separate decision.
 
-Ask once per decision and continue independent authorized work. Record the
-agreement and its scope on the owning issue or pull request. Respect host or tool
+Ask once per decision and continue independent authorized work. Put every
+approval request through the host's structured question tool where the host has
+one, not only in prose, with the recommended option first
+([coding-agent hosts](operations/coding-agents.md#owner-approvals) names the tool per
+host; owner guidance, 8 November 2026). Record the agreement and its scope on the
+owning issue or pull request. Respect host or tool
 permission refusals and report the exact action and stated reason.
 
 ## Command permissions
