@@ -300,5 +300,60 @@
   "judged": 60,
   "recall": 0.514
  },
+ "query_probes": {
+  "decision": "below the bar: the probe design went back to the owner",
+  "informative": {
+   "confirmed": 21,
+   "fact": 12,
+   "query": 13,
+   "query_recall": 0.619,
+   "union": 17,
+   "union_recall": 0.81
+  },
+  "lineages": {
+   "372": {
+    "confirmed": 13,
+    "fact": 3,
+    "query": 3,
+    "query_recall": 0.231,
+    "union": 5,
+    "union_recall": 0.385
+   },
+   "397": {
+    "confirmed": 24,
+    "fact": 16,
+    "query": 12,
+    "query_recall": 0.5,
+    "union": 20,
+    "union_recall": 0.833
+   }
+  },
+  "pooled": {
+   "confirmed": 37,
+   "fact": 19,
+   "query": 15,
+   "query_recall": 0.405,
+   "union": 25,
+   "union_recall": 0.676
+  },
+  "trivial": [
+   "p006",
+   "p013",
+   "p022",
+   "p030",
+   "p031",
+   "p035",
+   "p037",
+   "p041",
+   "p044",
+   "p048",
+   "p049",
+   "p050",
+   "p051",
+   "p052",
+   "p054",
+   "p055"
+  ]
+ },
  "schema": "probe-validation/1"
 }

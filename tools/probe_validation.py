@@ -175,13 +175,76 @@ def recall(out: Path) -> dict:
     result['pooled'] = totals
     result['decision'] = None if totals['recall'] is None else (
         'fact-label protocol stands' if totals['recall'] >= 0.6 else 'switch to query-style probes')
+    coverage_file = out/'query-coverage.jsonl'
+    if coverage_file.is_file():
+        result['query_probes'] = query_figures(data, verdicts, result['pairs'], _lines(coverage_file))
     (out/'recall.json').write_text(json.dumps(result, indent=1, sort_keys=True) + '\n')
     return result
 
 
+# Words in the pairwise judge's note that mark a match carrying no durable information (an empty
+# menu, a search prompt or a loading screen). Used only for the descriptive "informative" figures,
+# which were not pre-registered; the decision uses every confirmed pair.
+TRIVIAL = ('empty', '0 in category', 'loading', 'search help', 'search-help')
+
+
+def query_figures(data: dict, verdicts: dict, fact_pairs: list[dict], coverage: list[dict]) -> dict:
+    """Query-probe recall (pre-registered bar 0.6) and, descriptively, the union with the fact ledger."""
+    covered = {row['id']: row['covered'] is True for row in coverage}
+    captured = {row['id']: row['captured'] for row in fact_pairs if row.get('confirmed')}
+    lineage = {pair['id']: pair['lineage'] for pair in data['pairs']}
+    trivial = {i for i in captured if any(word in verdicts[i]['what'].lower() for word in TRIVIAL)}
+    if set(covered) != set(captured):
+        raise SystemExit('query coverage must judge exactly the confirmed pairs')
+
+    def figures(ids):
+        n = len(ids)
+        return dict(confirmed=n, query=sum(covered[i] for i in ids), fact=sum(captured[i] for i in ids),
+                    union=sum(covered[i] or captured[i] for i in ids),
+                    query_recall=round(sum(covered[i] for i in ids) / n, 3) if n else None,
+                    union_recall=round(sum(covered[i] or captured[i] for i in ids) / n, 3) if n else None)
+
+    ids = sorted(captured)
+    pooled = figures(ids)
+    return dict(lineages={name: figures([i for i in ids if lineage[i] == name]) for name in ('397', '372')},
+                pooled=pooled, informative=figures([i for i in ids if i not in trivial]), trivial=sorted(trivial),
+                decision='query probes adopted' if pooled['query_recall'] >= 0.6 else
+                'below the bar: the probe design went back to the owner')
+
+
+LEDGER_SCHEMA = 'probe-ledger/1'
+
+
+def freeze(probes: Path) -> dict:
+    """The scoring ledger the owner chose (8 November 2026): both blinded ledgers, frozen by digest.
+
+    Per development lineage: the fact-label chunks with the unblinded adjudication layer kept as a
+    separate file, and the query probes of every chunk that precedes a boundary. An arm is scored
+    against both; nothing here may change after P1's pre-registration."""
+    import hashlib
+
+    def digest(path: Path) -> str:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+
+    lineages = {}
+    for name, chunks in LINEAGES.items():
+        group = '397' if name == '397' else '372'
+        facts = {chunk: digest(probes/name/f'{chunk}.jsonl') for chunk in chunks}
+        adjudication = probes/name/'adjudication.jsonl'
+        queries = {path.stem: digest(path) for path in sorted((probes/'queries'/group).glob('*.jsonl'))
+                   if path.stem in chunks}
+        lineages[name] = dict(fact_chunks=facts, queries=queries,
+                              adjudication=digest(adjudication) if adjudication.is_file() else None)
+    ledger = dict(schema=LEDGER_SCHEMA, protocol='probe-protocol/1', frozen='2026-11-08', lineages=lineages,
+                  note='Both blinded ledgers are frozen together (owner decision, #490). The 0.6 recall bar was '
+                       'missed by each; their union figure is post hoc. See docs/design/probe-protocol.md.')
+    (probes/'ledger.json').write_text(json.dumps(ledger, indent=1, sort_keys=True) + '\n')
+    return ledger
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('step', choices=('candidates', 'recall'))
+    parser.add_argument('step', choices=('candidates', 'recall', 'freeze'))
     parser.add_argument('--evidence-root', type=Path,
                         default=Path(os.environ.get('ENACTIVE_EVIDENCE_ROOT', ROOT/'.runtime'/'evidence')))
     parser.add_argument('--out', type=Path, default=ROOT/'data'/'evaluation'/'probes'/'validation')
@@ -189,6 +252,10 @@ def main(argv=None) -> int:
     if args.step == 'candidates':
         result = candidates(args.evidence_root, args.out)
         print(json.dumps(result['lineages']))
+    elif args.step == 'freeze':
+        ledger = freeze(args.out.parent)
+        print(json.dumps({name: dict(facts=len(v['fact_chunks']), queries=len(v['queries']))
+                          for name, v in ledger['lineages'].items()}))
     else:
         result = recall(args.out)
         print(json.dumps(dict(lineages=result['lineages'], pooled=result['pooled'], decision=result['decision'])))

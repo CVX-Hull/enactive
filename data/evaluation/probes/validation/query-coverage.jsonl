@@ -1,0 +1,37 @@
+{"id":"p001","covered":true,"query":"Q17","why":"Q17 states the overmap shelter label 'evac shelter B-19 north from Newcastle', lake to the west, and the g travel key.","batch":1}
+{"id":"p013","covered":false,"query":null,"why":"The image is an empty recipe menu (Favorite tab, 'No hidden recipe - 0 in category'). No p013 query states this.","batch":1}
+{"id":"p017","covered":true,"query":"Q32","why":"Q32 gives the pointy stick recipe: cutting 1+ tool, plank/stick/broom/pool cue, 1 min 1 s, bash 5, pierce 9, 31 in.","batch":1}
+{"id":"p023","covered":true,"query":"Q27","why":"Q27 gives the pine needle tea recipe: food handling 2/2, survival 1/2, missing Forager Cooking, cutting 2+ and boiling 1+, nearby fire, 50 quench, 8 mg Vitamin C, better hot. Its time of 8m52s differs from the image's 9m22s.","batch":1}
+{"id":"p031","covered":false,"query":null,"why":"The image is the recipe search help dialog with the text 'pine needle teapine' typed in. No query describes it.","batch":1}
+{"id":"p035","covered":false,"query":null,"why":"The image is an empty Searched recipe tab ('0 in category'). No p035 query states this.","batch":1}
+{"id":"p041","covered":true,"query":"Q20","why":"Q20 says the 'cudgel' and 'spear' searches returned nothing: 'No hidden recipe - 0 in category'.","batch":1}
+{"id":"p048","covered":false,"query":null,"why":"The image is an empty Favorite recipe tab. No p048 query states it.","batch":1}
+{"id":"p052","covered":false,"query":null,"why":"The image is an empty Favorite recipe tab. No p052 query states it.","batch":1}
+{"id":"p058","covered":false,"query":null,"why":"The image is an overmap view with the destination 'evac shelter A-23 north from Columbia' and a notes popup. Q5 gives only the shelter label A-23, not the overmap location or Columbia.","batch":1}
+{"id":"p004","covered":true,"query":"Q17","why":"Overmap shows evac shelter B-19 north from Newcastle with the lake to the west, as Q17 states.","batch":2}
+{"id":"p014","covered":true,"query":"Q4","why":"The simple knife spear recipe screen is stated: 3 hours 1 minute, no tool, long pole or stick, knife blade, patch and cordage.","batch":2}
+{"id":"p018","covered":true,"query":"Q4","why":"Overmap with the target 'evac shelter B-19 north' from Newcastle and the W route-preview instruction is stated.","batch":2}
+{"id":"p025","covered":true,"query":"Q38","why":"The 'Select tinder to use for lighting a fire' list is stated: 5 wrappers > protein ration, tinder (16), wrapper.","batch":2}
+{"id":"p032","covered":true,"query":"Q17","why":"The tinder selection list is stated: 5 wrappers with protein ration, tinder (14), wrapper.","batch":2}
+{"id":"p037","covered":false,"query":null,"why":"The frame is an empty 'Searched' recipe tab (No hidden recipe - 0 in category). No query states an empty search result.","batch":2}
+{"id":"p043","covered":true,"query":"Q26","why":"Overmap description 'forest west from Whitingham', with Whitingham to the east, is stated.","batch":2}
+{"id":"p049","covered":false,"query":null,"why":"The frame is an empty 'Searched' recipe tab (0 in category). No query in this item states an empty search result.","batch":2}
+{"id":"p054","covered":true,"query":"Q26","why":"The empty Favorites crafting tab (0 in category) with its categories WEAPON, AMMO, FOOD, CHEM, ELECTRONIC, ARMOR, APPLIANCE is stated.","batch":2}
+{"id":"p006","covered":false,"query":null,"why":"Image is an empty Searched recipe tab (0 in category); no query states an empty recipe search result.","batch":3}
+{"id":"p015","covered":true,"query":"Q40","why":"Q40 states the clean water recipe: food handling 2, 8 min 7 sec, 20% batch savings, boiling tool, 1 water (had 4), crafting slowed to 61%.","batch":3}
+{"id":"p020","covered":false,"query":null,"why":"Image is the starch crafting recipe (51 min, hammering/cutting/containing tools, 2 cattail rhizomes, byproduct plant fiber 50). Q28 only gives eating stats, not the recipe.","batch":3}
+{"id":"p029","covered":true,"query":"Q38","why":"Q38 lists the tinder prompt options: 5 wrappers > protein ration, tinder (16), wrapper.","batch":3}
+{"id":"p033","covered":false,"query":null,"why":"Image is the egg-recipe list with the caviar and egg sandwich details (needs boiled egg, mayonnaise, caviar, bread). No query states it; Q12 and Q10 cover only the boiled egg recipe.","batch":3}
+{"id":"p039","covered":false,"query":null,"why":"Image is the overmap with the label 'evac shelter B-19 north from Newcastle'. No p039 query describes the overmap.","batch":3}
+{"id":"p044","covered":false,"query":null,"why":"Image is an empty Searched recipe tab (0 in category). No query states an empty recipe search result.","batch":3}
+{"id":"p050","covered":false,"query":null,"why":"Image is the empty Favorite crafting tab (0 in category). No p050 query states it.","batch":3}
+{"id":"p055","covered":false,"query":null,"why":"Image is an empty Searched recipe tab. Q26 mentions an empty Favorites tab ('0 in category') with categories, not an empty search result.","batch":3}
+{"id":"p009","covered":false,"query":null,"why":"Frame shows the simple knife spear recipe (3h07m, Carving missing, bash 4/pierce 26); Q12 only mentions the spears group, not these details.","batch":4}
+{"id":"p016","covered":true,"query":"Q40","why":"Shelter interior at 2:52 PM with 40 plant fiber, bindle, long pointy stick, Ava following is stated in Q40.","batch":4}
+{"id":"p022","covered":false,"query":null,"why":"Frame is the recipe search help screen with 'pine needle teapine' typed and 0 results; no query states this.","batch":4}
+{"id":"p030","covered":false,"query":null,"why":"Frame is a loading splash screen ('Verifying Mapgen palettes'); no query describes it.","batch":4}
+{"id":"p034","covered":true,"query":"Q4","why":"Simple knife spear recipe (about 3h, components, no tools) is stated in Q4, with damage in Q5 and stock in Q6.","batch":4}
+{"id":"p040","covered":false,"query":null,"why":"Frame is the inventory list (weight 47.1/99.3, makeshift sling, eggs, burdock, cattail stalks, bow fire drill 4/10); no query states this content.","batch":4}
+{"id":"p046","covered":false,"query":null,"why":"Frame is the overmap showing evac shelter B-05 northwest from Codyville; Q11 gives only the place name, not this map description.","batch":4}
+{"id":"p051","covered":false,"query":null,"why":"Frame is an empty craft search screen with 0 recipes in category; no query states it.","batch":4}
+{"id":"p057","covered":false,"query":null,"why":"Frame lists 13 craftable recipes (baked potato etc., oven requirements); Q16 covers a different search (cudgel/club) with no results.","batch":4}

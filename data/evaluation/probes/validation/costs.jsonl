@@ -1,0 +1,27 @@
+{"step":"pairwise judge","unit":"batch1","tokens":90891,"ms":48795,"deviation":null}
+{"step":"pairwise judge","unit":"batch2","tokens":89300,"ms":42295,"deviation":null}
+{"step":"pairwise judge","unit":"batch3","tokens":89540,"ms":35390,"deviation":null}
+{"step":"pairwise judge","unit":"batch4","tokens":90331,"ms":43161,"deviation":null}
+{"step":"query writer","unit":"sd1a1-001","tokens":119257,"ms":104299,"deviation":"its reply was truncated in transit; on resumption the writer reported it no longer had Q18 onward, so the chunk keeps 17 queries"}
+{"step":"query writer","unit":"sd1a1-002","tokens":166204,"ms":168048,"deviation":"resumed to write its output to a file"}
+{"step":"query writer","unit":"sd1a2-001","tokens":113948,"ms":159984,"deviation":"resumed to write its output to a file"}
+{"step":"query writer","unit":"sd1a2-002","tokens":169031,"ms":222349,"deviation":"wrote 43 queries, three over the cap of 40; all kept"}
+{"step":"query writer","unit":"sd1a3-001","tokens":152154,"ms":162906,"deviation":"resumed to write its output to a file"}
+{"step":"query writer","unit":"sd1a3-002","tokens":136652,"ms":160382,"deviation":"resumed to write its output to a file"}
+{"step":"query writer","unit":"sd1a4-001","tokens":105970,"ms":146966,"deviation":"its reply was truncated in transit; resumed to write the full output to a file"}
+{"step":"query writer","unit":"sd1a4-002","tokens":155044,"ms":179508,"deviation":"resumed to write its output to a file"}
+{"step":"query writer","unit":"sd1a5-001","tokens":86652,"ms":57743,"deviation":"viewed 19 frames, fewer than the coverage rule asks; output copied from its reply"}
+{"step":"query writer","unit":"sd1a5-002","tokens":168413,"ms":224491,"deviation":"resumed to write its output to a file"}
+{"step":"query writer","unit":"sd1a6-001","tokens":107401,"ms":75183,"deviation":null}
+{"step":"query writer","unit":"sd1a6-002","tokens":152984,"ms":144460,"deviation":null}
+{"step":"query writer","unit":"sd1a7-001","tokens":133006,"ms":111078,"deviation":null}
+{"step":"query writer","unit":"aidB3-001","tokens":105593,"ms":65638,"deviation":null}
+{"step":"query writer","unit":"ceil09-001","tokens":96693,"ms":51603,"deviation":null}
+{"step":"query writer","unit":"ceil07-001","tokens":105675,"ms":68329,"deviation":null}
+{"step":"query writer","unit":"ceil05-001","tokens":102028,"ms":59760,"deviation":null}
+{"step":"query writer","unit":"aidB9-001","tokens":102281,"ms":62575,"deviation":null}
+{"step":"query writer","unit":"aidA5-001","tokens":102960,"ms":83185,"deviation":null}
+{"step":"coverage judge","unit":"batch1","tokens":105614,"ms":27677,"deviation":null}
+{"step":"coverage judge","unit":"batch2","tokens":102586,"ms":22952,"deviation":null}
+{"step":"coverage judge","unit":"batch3","tokens":106628,"ms":26669,"deviation":null}
+{"step":"coverage judge","unit":"batch4","tokens":101292,"ms":22962,"deviation":null}

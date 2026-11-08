@@ -245,6 +245,26 @@ shows.
 - Below 0.6, the record says so, and the probe design goes back to the owner before
   #491.
 
+**Result (8 November 2026).** 19 writers wrote 649 queries. Query recall was 0.41: 15 of
+37 confirmed re-observations covered, #397 0.50 and the #372 sample 0.23. That is below
+the bar. Two figures are post hoc and descriptive only:
+- **Union.** Either ledger, fact labels or queries, captured 0.68 of the 37.
+- **Informative pairs.** Excluding 16 pairs that match only an empty menu, a search
+  prompt or a loading screen, query recall was 0.62 (13 of 21) and the union 0.81 (17
+  of 21).
+
+**The owner's decision: freeze both ledgers together as the scoring ledger.** The
+manifest, with a digest per file, is
+[`data/evaluation/probes/ledger.json`](../../data/evaluation/probes/ledger.json).
+An arm is scored against both:
+- whether the text it puts in front of the successor carries each live fact;
+- whether that text answers each query of the predecessor's chunk.
+
+**Before relying on the combined ledger, #178:**
+- tightens the confirmation rule, so that a pair matching only an empty menu, a search
+  prompt or a loading screen is not a re-observation;
+- re-tests the combined ledger once on held-out data, with its bar fixed in advance.
+
 ## Cost
 
 Each chunk's annotator tokens and wall time come from the agent host's own task report.
