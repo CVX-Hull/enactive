@@ -244,9 +244,16 @@ evidence".
   card), stamped "as of decision N, game time T".
 - The actor's next observation result carries a **diff** against the last snapshot
   it saw, only when one changed, so the system prompt is not rewritten. Diffs still
-  add to history. What they cost in cache rewrites and context is a hypothesis to
-  measure in P0: in #397, 58–66% of requests already had large cache rewrites from
-  image eviction.
+  add to history.
+  - **#397's large rewrites.** 58–66% of each admission's **spend** went to requests
+    with large cache rewrites (the evaluator's `host.large_rewrite_share`, a dollar
+    share over requests writing more than 30,000 cached tokens). It was not 58–66%
+    of requests, as this page first said. The #455 estimate found those rewrites on
+    8% of requests, mostly where the host's context projection shortened the prompt.
+  - **What a diff costs.** The [snapshot-diff cost](../design/snapshot-diff-cost.md)
+    record (#455) estimates it offline: one 200-token diff adds about 5–14% of an
+    average request's cost. It recommends a cap of about 200 tokens per diff and
+    about 2,000 tokens of live diff text.
 - Each published snapshot is an immutable file per version, so the actor's reads
   never wait on the gate's writes. The actor never waits for the curator; a lagging
   curator means an older, labelled snapshot. Lag is accepted (D15).
