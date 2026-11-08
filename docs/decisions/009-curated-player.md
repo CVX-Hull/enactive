@@ -658,6 +658,36 @@ qualifications ([record](../acceptance/2026-11-08-adr009-p0.md)).
 P1 waits for the owner's go/no-go. Nothing is adopted, and the current contracts still
 govern the running system.
 
+**Before P1: a readiness stage, P1.0 (owner decision, 8 November 2026).** It runs no
+study and adopts nothing. It has three leaves:
+1. **Context stability and clarity** for both the actor and the curator:
+   - one session-affinity value per session;
+   - byte-stable system prompts and tool tables;
+   - rare image eviction;
+   - tail notices that persist;
+   - warnings before forced stops;
+   - source IDs in eviction markers;
+   - labelled predecessor fields in the handoff packet.
+
+   It is proven by a request-serialization test with no spend, and then by one paid
+   curator session with a cap of about $2. The owner allows these changes to the
+   running actor host before P1 adoption, for cache and clarity only, with no change
+   to game semantics. A short actor development run to verify them is a separate
+   gameplay-spend decision.
+2. **Probe validation** on development data. Blinded annotation is checked against
+   episodes found independently, and if recall stays weak the probes become
+   query-style. One fact ledger is frozen per lineage.
+3. **The P1 pre-registration.**
+   - **Arms:** A, with no curator, against B, with the curator.
+   - **Curator model:** terra, the actor's model, fixed.
+   - **Metrics:** probe recall, rediscovery per game hour, cost against actor cost, and
+     an audited false-fact rate.
+   - **Statistics:** a descriptive study with effect-size thresholds agreed in advance,
+     because #382's three lineages cannot support a significance test.
+   - **Spend:** an envelope of about $120, staged behind a pilot.
+
+The P1 go/no-go is decided on that pre-registration.
+
 Every phase replaces its contracts and stores in one migration
 (`player-memory/2` → `/3`, `player-record/1` and `player-program/2` → their
 successors); unsupported versions are refused.

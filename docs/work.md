@@ -66,8 +66,15 @@ P0 finished on 8 November 2026 ([record](acceptance/2026-11-08-adr009-p0.md)). I
 Its adoption condition is met, with qualifications on blinded probe recall and on
 prompt caching. The shadow code runs only on sealed traces, the
 [curator component](components/curator.md) describes it, and the running player does
-not use it. P1, the curator against the simpler working-set arm in offline replay,
-waits for the owner's go/no-go.
+not use it.
+
+Before P1, the owner set a readiness stage, P1.0, in [ADR 009](decisions/009-curated-player.md#phases):
+- context stability and clarity for the actor and the curator;
+- probe validation;
+- the P1 pre-registration.
+
+P1, the curator against the simpler working-set arm in offline replay, is decided on
+that pre-registration.
 
 ## Current integrated checkpoint
 
