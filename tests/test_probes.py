@@ -98,6 +98,20 @@ def test_the_tracked_baseline_reproduces_from_the_tracked_annotations(tmp_path):
     assert json.loads((tmp_path/'baseline.json').read_text()) == json.loads((tracked/'baseline.json').read_text())
 
 
+def test_the_tracked_episodes_validate_and_malformed_ones_are_refused():
+    from pathlib import Path
+    import json
+    from harness.evaluation.core.probes import episodes
+    from tools import probe_baseline
+    tracked = json.loads((Path(probe_baseline.ROOT)/'data'/'evaluation'/'probes'/'397'/'episodes.json').read_text())
+    assert [e['id'] for e in episodes(tracked)] == ['batteries', 'fishing-rod', 'rations', 'roof-tank']
+    for broken in ({**tracked, 'schema': 'probe-episodes/2'}, {**tracked, 'episodes': []},
+                   {**tracked, 'episodes': [{**tracked['episodes'][0], 'extra': 1}]},
+                   {**tracked, 'episodes': [{**tracked['episodes'][0], 'needed': {'chunk': 'x', 'frame': None}}]}):
+        with pytest.raises(ProbeError):
+            episodes(broken)
+
+
 def test_adjudication_rows_must_name_a_chunk_of_the_lineage(tmp_path, monkeypatch):
     import json
     from tools import probe_baseline

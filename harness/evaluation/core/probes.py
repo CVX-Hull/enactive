@@ -190,6 +190,38 @@ def rate(numerator: float, denominator: float) -> float | None:
 
 
 BASELINE_SCHEMA = 'probe-baseline/1'
+EPISODES_SCHEMA = 'probe-episodes/1'
+_EPISODE_KEYS = {'id', 'title', 'fact', 'record', 'observed', 'lost_at', 'probe', 'needed', 'acted_without'}
+
+
+def episodes(document: dict) -> list[dict]:
+    """Validate a `probe-episodes/1` document: named failing probes anchored in sealed frames."""
+    if not isinstance(document, dict) or document.get('schema') != EPISODES_SCHEMA:
+        raise ProbeError(f'expected {EPISODES_SCHEMA}')
+    found = document.get('episodes')
+    if not isinstance(found, list) or not found:
+        raise ProbeError('episodes must be a non-empty list')
+    for index, episode in enumerate(found):
+        where = f'episodes[{index}]'
+        if not isinstance(episode, dict) or set(episode) != _EPISODE_KEYS:
+            raise ProbeError(f'{where}: fields must be exactly {sorted(_EPISODE_KEYS)}')
+        for key in ('lost_at',):
+            if not isinstance(episode[key], str) or '>' not in episode[key]:
+                raise ProbeError(f'{where}: {key} must be a boundary')
+        probe = episode['probe']
+        if not (isinstance(probe, dict) and isinstance(probe.get('boundary'), str) and '>' in probe['boundary']
+                and probe.get('annotation') in ('blinded', 'adjudicated')):
+            raise ProbeError(f'{where}: probe needs a boundary and its annotation layer')
+        for key in ('observed', 'needed', 'acted_without'):
+            anchor = episode[key]
+            if anchor is None and key == 'acted_without':
+                continue
+            if not (isinstance(anchor, dict) and isinstance(anchor.get('chunk'), str)
+                    and (anchor.get('frame') is None or isinstance(anchor['frame'], str))):
+                raise ProbeError(f'{where}: {key} needs a chunk and a frame or null')
+        if not isinstance(episode['needed'].get('frame'), str):
+            raise ProbeError(f'{where}: the needed anchor must name a frame')
+    return found
 
 
 def summary(name: str, lineage: Lineage, game_hours: float) -> dict:
