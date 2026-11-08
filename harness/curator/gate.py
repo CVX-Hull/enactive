@@ -246,8 +246,8 @@ def gate(repo: Repository, submission_dir: Path, *, session_id: str,
                 files = _publication(repo, data, session_id, submission_dir.name, version)
                 summary = data['summary'].strip().splitlines()[0] if data['summary'].strip() \
                     else 'no summary'
-                message = (f'Publish {version}: {summary}\n\nsession: {session_id}\n'
-                           f'submission: {submission_dir.name}')
+                message = (f'Publish {version}: {summary!r}\n\nsession: {session_id}\n'
+                           f'submission: {submission_dir.name!r}')
                 published = repo.commit(files, message)
                 verdict['accepted'] = True
                 verdict['version'] = published

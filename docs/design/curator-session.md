@@ -102,7 +102,20 @@ directories included.
 - A draft that is, or holds, a link or a special file is refused.
 - Any link or special file under `submissions/` stops all gating for the session.
 
-Each refusal is listed in the record. Files are read with `O_NOFOLLOW` and size limits.
+Each refusal is listed in the record.
+
+**Close-out reads through directory descriptors.** A host process that escaped the stop
+with `setsid` is not listed as a survivor and may still be writing. So every collected
+tree is walked component by component.
+- Each component is opened relative to its parent's descriptor with `O_NOFOLLOW` and
+  checked with `fstat`, so a link swapped in during the walk refuses the tree rather than
+  redirecting it.
+- Sizes are checked from `fstat` before reading. A tree over its limits is refused, never
+  truncated.
+- The limits:
+  - a draft: 4 MiB;
+  - all submissions together: 16 MiB;
+  - entries per tree: 10,000.
 
 **On abort.** A crash, a breached limit or a failure anywhere in preparation or close-out
 seals the session as `aborted`, with the error in the record. Its drafts are kept and its

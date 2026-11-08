@@ -31,65 +31,103 @@ class UnsafeTree(ValueError):
     """A tree the curator wrote holds a link, a special file or an unreadable entry."""
 
 
-def safe_files(root: Path) -> list[Path]:
-    """Regular files under `root`, relative, refusing anything that is not a plain tree.
+MAX_ENTRIES = 10_000
+_DIRECTORY = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+_FILE = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK
 
-    `root` itself and every entry are examined without following links; a symbolic link, a
-    FIFO, a device or an unreadable entry anywhere makes the whole tree unsafe.
-    """
+
+def open_directory(name: str | os.PathLike, dir_fd: int | None = None) -> int:
+    """Open a directory without following a link at its last component; refuse anything else."""
     try:
-        if not stat.S_ISDIR(os.lstat(root).st_mode):
-            raise UnsafeTree(f'{root.name}: not a plain directory')
-        files: list[Path] = []
-        stack = [root]
-        while stack:
-            directory = stack.pop()
-            with os.scandir(directory) as entries:
-                for entry in entries:
-                    mode = entry.stat(follow_symlinks=False).st_mode
-                    if stat.S_ISDIR(mode):
-                        stack.append(Path(entry.path))
-                    elif stat.S_ISREG(mode):
-                        files.append(Path(entry.path).relative_to(root))
-                    else:
-                        raise UnsafeTree(f'{entry.name}: a link or special file')
+        fd = os.open(name, _DIRECTORY, dir_fd=dir_fd)
     except OSError as exc:
-        raise UnsafeTree(f'{root.name}: unreadable ({type(exc).__name__})') from exc
-    return sorted(files)
-
-
-def _read(path: Path) -> bytes:
-    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
-    try:
-        if not stat.S_ISREG(os.fstat(fd).st_mode):
-            raise UnsafeTree(f'{path.name}: not a regular file')
-        with os.fdopen(fd, 'rb', closefd=False) as stream:
-            return stream.read(MAX_DRAFT_BYTES + 1)
-    finally:
+        raise UnsafeTree(f'{os.fsdecode(name)!r}: not a plain, readable directory ({type(exc).__name__})') from exc
+    if not stat.S_ISDIR(os.fstat(fd).st_mode):
         os.close(fd)
+        raise UnsafeTree(f'{os.fsdecode(name)!r}: not a directory')
+    return fd
 
 
-def copy_tree(source: Path, dest: Path, *, limit: int = MAX_DRAFT_BYTES) -> None:
-    """Copy a plain tree of regular files, never following links; refuse it over `limit` bytes."""
-    files = safe_files(source)
-    data = {rel: _read(source/rel) for rel in files}
-    if sum(len(v) for v in data.values()) > limit:
-        raise UnsafeTree(f'{source.name}: over the size limit')
+def read_tree(root: str | os.PathLike, *, limit: int, file_limit: int | None = None, dir_fd: int | None = None,
+              max_entries: int = MAX_ENTRIES) -> dict[str, bytes]:
+    """Every regular file under `root`, by relative POSIX path, read through directory descriptors.
+
+    Each component is opened relative to its parent's descriptor with `O_NOFOLLOW`, and each
+    opened object is checked with `fstat`, so a writer that swaps a directory for a link while
+    this runs cannot redirect the walk outside `root`. A link, a special file, an unreadable
+    entry, more than `max_entries` entries, a file over `file_limit` or a total over `limit`
+    refuses the whole tree; nothing is truncated.
+    """
+    file_limit = limit if file_limit is None else file_limit
+    files: dict[str, bytes] = {}
+    total = entries = 0
+    stack = [(open_directory(root, dir_fd), '')]
+    try:
+        while stack:
+            directory, prefix = stack.pop()
+            try:
+                with os.scandir(directory) as listing:
+                    names = [(entry.name, entry.stat(follow_symlinks=False).st_mode) for entry in listing]
+                for name, mode in names:
+                    entries += 1
+                    if entries > max_entries:
+                        raise UnsafeTree(f'more than {max_entries} entries')
+                    relative = prefix + name
+                    if stat.S_ISDIR(mode):
+                        stack.append((open_directory(name, directory), relative + '/'))
+                        continue
+                    if not stat.S_ISREG(mode):
+                        raise UnsafeTree(f'{relative!r}: a link or special file')
+                    fd = os.open(name, _FILE, dir_fd=directory)
+                    try:
+                        size = os.fstat(fd)
+                        if not stat.S_ISREG(size.st_mode):
+                            raise UnsafeTree(f'{relative!r}: not a regular file')
+                        if size.st_size > file_limit or total + size.st_size > limit:
+                            raise UnsafeTree(f'{relative!r}: over the size limit')
+                        with os.fdopen(fd, 'rb', closefd=False) as stream:
+                            content = stream.read(min(file_limit, limit - total) + 1)
+                    finally:
+                        os.close(fd)
+                    total += len(content)
+                    if len(content) > file_limit or total > limit:
+                        raise UnsafeTree(f'{relative!r}: over the size limit')
+                    files[relative] = content
+            finally:
+                os.close(directory)
+    except OSError as exc:
+        raise UnsafeTree(f'unreadable entry ({type(exc).__name__})') from exc
+    finally:
+        for directory, _ in stack:
+            os.close(directory)
+    return dict(sorted(files.items()))
+
+
+def write_tree(files: dict[str, bytes], dest: Path) -> None:
     dest.mkdir(parents=True, exist_ok=True)
-    for rel, content in data.items():
-        (dest/rel).parent.mkdir(parents=True, exist_ok=True)
-        (dest/rel).write_bytes(content)
+    for relative, content in files.items():
+        (dest/relative).parent.mkdir(parents=True, exist_ok=True)
+        (dest/relative).write_bytes(content)
+
+
+def copy_tree(source: Path, dest: Path, *, limit: int = MAX_DRAFT_BYTES, file_limit: int | None = None) -> None:
+    """Copy a plain tree of regular files, never following links; refuse it over the limits."""
+    write_tree(read_tree(source, limit=limit, file_limit=file_limit), dest)
+
+
+def digest(files: dict[str, bytes]) -> str:
+    """A content digest of a draft's files (length-prefixed names and bytes), ignoring the manifest."""
+    h = hashlib.sha256()
+    for relative, content in sorted(files.items()):
+        if relative == 'manifest.json':
+            continue
+        name = relative.encode()
+        h.update(len(name).to_bytes(8, 'big') + name + len(content).to_bytes(8, 'big') + content)
+    return h.hexdigest()
 
 
 def _digest(directory: Path) -> str:
-    """A content digest of a draft's files (length-prefixed names and bytes), ignoring the manifest."""
-    h = hashlib.sha256()
-    for rel in safe_files(directory):
-        if rel.as_posix() == 'manifest.json':
-            continue
-        name, content = rel.as_posix().encode(), _read(directory/rel)
-        h.update(len(name).to_bytes(8, 'big') + name + len(content).to_bytes(8, 'big') + content)
-    return h.hexdigest()
+    return digest(read_tree(directory, limit=MAX_DRAFT_BYTES))
 
 
 class Drafts:
@@ -120,68 +158,67 @@ class Drafts:
         before = {}
         for manifest in self.list():
             draft_id = manifest['id']
-            copy_tree(self.root/draft_id, target/draft_id)
-            manifest_copy = target/draft_id/'manifest.json'
-            if manifest_copy.exists():
-                manifest_copy.unlink()
-            before[draft_id] = _digest(target/draft_id)
+            files = {k: v for k, v in read_tree(self.root/draft_id, limit=MAX_DRAFT_BYTES * 2).items()
+                     if k != 'manifest.json'}
+            write_tree(files, target/draft_id)
+            before[draft_id] = digest(files)
         return before
 
     def collect(self, source: Path, session_id: str, before: dict[str, str], *, age: bool = True) -> dict:
         """Bring a workspace's drafts back after a session; renew, create, age and archive.
 
-        `source` must be a plain directory (the caller lstats it). Each entry is examined
-        without following links: a symbolic link, a special file or a tree holding one is
-        refused, never copied. `age=False` (an aborted session) collects without ageing.
+        `source` and every draft are read through directory descriptors without following a
+        link (see `read_tree`): a link, a special file or a tree holding one is refused, never
+        copied, even if a surviving writer swaps entries during collection. `age=False` (an
+        aborted session) collects without ageing. Raises `UnsafeTree` if `source` itself is
+        not a plain directory.
         """
         report = dict(created=[], renewed=[], aged=[], stale=[], abandoned=[], refused=[])
+        parent = open_directory(source)
         try:
-            with os.scandir(source) as listing:
-                entries = sorted(listing, key=lambda entry: entry.name)
-        except OSError:
-            entries = []
-        for entry in entries:
-            draft_id = entry.name
-            try:
-                plain = stat.S_ISDIR(entry.stat(follow_symlinks=False).st_mode)
-            except OSError:
-                plain = False
-            if not plain:
-                report['refused'].append(dict(id=draft_id, reason='not a plain directory'))
-                continue
-            directory = Path(entry.path)
-            if not DRAFT_ID.fullmatch(draft_id) or (self.archive/draft_id).exists():
-                report['refused'].append(dict(id=draft_id, reason='invalid or already-archived draft id'))
-                continue
-            try:
+            with os.scandir(parent) as listing:
+                names = sorted(entry.name for entry in listing)
+            for draft_id in names:
+                if not DRAFT_ID.fullmatch(draft_id) or (self.archive/draft_id).exists():
+                    report['refused'].append(dict(id=draft_id, reason='invalid or already-archived draft id'))
+                    continue
+                try:
+                    files = read_tree(draft_id, dir_fd=parent, limit=MAX_DRAFT_BYTES)
+                except UnsafeTree as exc:
+                    report['refused'].append(dict(id=draft_id, reason=str(exc)))
+                    continue
+                files.pop('manifest.json', None)
+                if digest(files) == before.get(draft_id):
+                    continue
                 staged = self.staging/draft_id
                 if staged.exists():
                     shutil.rmtree(staged)
-                copy_tree(directory, staged)
-            except UnsafeTree as exc:
-                report['refused'].append(dict(id=draft_id, reason=str(exc)))
-                continue
-            changed = _digest(staged) != before.get(draft_id)
-            if not changed:
-                shutil.rmtree(staged)
-                continue
-            existing = (self.root/draft_id/'manifest.json').is_file()
-            manifest = self._manifest(draft_id) if existing else dict(
-                schema='container-manifest/1', id=draft_id, kind='draft', owner_role='curator',
-                inputs=dict(created_by_session=session_id), pinned={}, budgets=dict(max_bytes=MAX_DRAFT_BYTES),
-                lifecycle={}, provenance=dict(sessions=[]), retention=dict(
-                    policy=f'stale after {STALE_AFTER} untouched sessions, abandoned after {ABANDON_AFTER} more'))
-            if (staged/'manifest.json').exists():
-                (staged/'manifest.json').unlink()
-            if existing:
-                shutil.rmtree(self.root/draft_id)
-            staged.rename(self.root/draft_id)
-            manifest['lifecycle'] = dict(state='open', untouched_sessions=0, last_touched_session=session_id)
-            manifest['provenance']['sessions'].append(session_id)
-            self._write(draft_id, manifest)
-            report['renewed' if existing else 'created'].append(draft_id)
-        if not age:
-            return report
+                write_tree(files, staged)
+                self._renew(draft_id, staged, session_id, report)
+        finally:
+            os.close(parent)
+        if age:
+            self._age(report)
+        return report
+
+    def _renew(self, draft_id: str, staged: Path, session_id: str, report: dict) -> None:
+        """Replace a draft's files with the staged copy and mark it open (created or renewed)."""
+        existing = (self.root/draft_id/'manifest.json').is_file()
+        manifest = self._manifest(draft_id) if existing else dict(
+            schema='container-manifest/1', id=draft_id, kind='draft', owner_role='curator',
+            inputs=dict(created_by_session=session_id), pinned={}, budgets=dict(max_bytes=MAX_DRAFT_BYTES),
+            lifecycle={}, provenance=dict(sessions=[]), retention=dict(
+                policy=f'stale after {STALE_AFTER} untouched sessions, abandoned after {ABANDON_AFTER} more'))
+        if existing:
+            shutil.rmtree(self.root/draft_id)
+        staged.rename(self.root/draft_id)
+        manifest['lifecycle'] = dict(state='open', untouched_sessions=0, last_touched_session=session_id)
+        manifest['provenance']['sessions'].append(session_id)
+        self._write(draft_id, manifest)
+        report['renewed' if existing else 'created'].append(draft_id)
+
+    def _age(self, report: dict) -> None:
+        """Age every open or stale draft this session did not write; archive the abandoned."""
         for manifest in self.list():
             draft_id = manifest['id']
             if draft_id in report['created'] or draft_id in report['renewed']:
@@ -199,7 +236,6 @@ class Drafts:
             self._write(draft_id, manifest)
             if life['state'] == 'abandoned':
                 shutil.move(str(self.root/draft_id), str(self.archive/draft_id))
-        return report
 
     def promote(self, draft_ids, session_id: str) -> list[str]:
         promoted = []

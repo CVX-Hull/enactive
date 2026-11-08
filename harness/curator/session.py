@@ -28,7 +28,7 @@ from harness.trace.projection import project
 from harness.trace.sidecar import validate
 
 from . import sandbox
-from .containers import Drafts, UnsafeTree, copy_tree
+from .containers import Drafts, UnsafeTree, read_tree, write_tree
 from .gate import gate
 from .knowledge import Repository
 
@@ -71,18 +71,39 @@ def _remove(path: Path) -> None:
             os.chmod(target, stat.S_IRWXU)
         function(target)
 
+    def open_up(directory_fd: int) -> None:
+        # Make every directory searchable and writable through descriptors, never by path, so a
+        # writer that survived the stop cannot redirect the change with a swapped link.
+        with os.scandir(directory_fd) as listing:
+            children = [entry.name for entry in listing if entry.is_dir(follow_symlinks=False)]
+        for name in children:
+            try:
+                os.chmod(name, stat.S_IRWXU, dir_fd=directory_fd, follow_symlinks=False)
+                child = os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=directory_fd)
+            except (OSError, NotImplementedError):
+                continue
+            try:
+                open_up(child)
+            finally:
+                os.close(child)
+
     if not os.path.lexists(path):
         return
-    unlock(str(path))
     if os.path.isdir(path) and not os.path.islink(path):
-        for directory, dirs, files in os.walk(path):
-            for name in dirs + files:
-                unlock(os.path.join(directory, name))
-            for name in dirs:
-                try:
-                    os.chmod(os.path.join(directory, name), stat.S_IRWXU, follow_symlinks=False)
-                except (OSError, NotImplementedError):
-                    pass
+        unlock(str(path))
+        try:
+            root = os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        except OSError:
+            root = None
+        if root is not None:
+            try:
+                open_up(root)
+            except OSError:
+                pass
+            finally:
+                os.close(root)
+        # rmtree is descriptor-based; file flags are cleared only for an entry it cannot remove
+        # (Python has no descriptor-relative chflags on macOS; recorded as a residual risk).
         shutil.rmtree(path, onexc=fix)
     else:
         os.unlink(path)
@@ -245,18 +266,25 @@ def _close_out(repo, session_id, record_dir, workspace, manifest, result, errors
     draft_report: dict = {}
     verdicts: list[dict] = []
     if collectable:
+        # Everything below reads the workspace through directory descriptors (containers.read_tree),
+        # so a writer that escaped the stop cannot redirect it with a swapped link.
         for name in WRITABLE:
             if not _plain_directory(workspace/name):
                 refused.append(f'{name}: replaced by a link or special file; not collected')
-        submissions = workspace/'submissions'
-        if _plain_directory(submissions):
+        if _plain_directory(workspace/'submissions'):
             try:
-                copy_tree(submissions, record_dir/'submissions', limit=MAX_SUBMISSIONS_BYTES)
+                files = read_tree(workspace/'submissions', limit=MAX_SUBMISSIONS_BYTES)
+                write_tree(files, record_dir/'submissions')
             except UnsafeTree as exc:
                 refused.append(f'submissions: {exc}; none gated')
-                _remove(record_dir/'submissions')
-            except OSError as exc:
+            except Exception as exc:  # noqa: BLE001 - sealed into the record
                 errors.append(f'close-out: submissions: {_error(exc)}')
+            if any(r.startswith('submissions:') for r in refused) or errors:
+                try:
+                    _remove(record_dir/'submissions')
+                except Exception as exc:  # noqa: BLE001
+                    errors.append(f'close-out: removing partial submissions: {_error(exc)}')
+        aborted = aborted or bool(errors)
         try:
             if drafts is not None and _plain_directory(workspace/'drafts'):
                 draft_report = drafts.collect(workspace/'drafts', session_id, before or {}, age=not aborted)
@@ -274,6 +302,11 @@ def _close_out(repo, session_id, record_dir, workspace, manifest, result, errors
                 except Exception as exc:  # noqa: BLE001
                     errors.append(f'close-out: gate {submission.name!r}: {_error(exc)}')
                     break
+    try:
+        published_after = repo.published()
+    except Exception as exc:  # noqa: BLE001
+        published_after = None
+        errors.append(f'close-out: published version: {_error(exc)}')
     aborted = aborted or bool(errors)
     if manifest is None:
         manifest = dict(schema='container-manifest/1', id=session_id, kind='curator-session', owner_role='curator',
@@ -285,11 +318,6 @@ def _close_out(repo, session_id, record_dir, workspace, manifest, result, errors
     if result is not None:
         manifest['provenance'].update(peak_memory_bytes=result.peak_memory_bytes,
                                       peak_disk_bytes=result.peak_disk_bytes, seconds=round(result.seconds, 3))
-    try:
-        published_after = repo.published()
-    except Exception as exc:  # noqa: BLE001
-        published_after = None
-        errors.append(f'close-out: published version: {_error(exc)}')
     record = dict(manifest=manifest, verdicts=verdicts, drafts=draft_report, published_after=published_after)
     validate(manifest)
     (record_dir/'manifest.json').write_text(json.dumps(manifest, indent=1, sort_keys=True))

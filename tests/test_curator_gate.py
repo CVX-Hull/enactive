@@ -412,6 +412,92 @@ def test_remove_clears_immutable_and_unreadable_entries(tmp_path):
     assert not tree.exists()
 
 
+def test_a_directory_swapped_for_a_link_during_the_walk_is_refused(tmp_path, monkeypatch):
+    secret = tmp_path / 'host-secrets'
+    secret.mkdir()
+    (secret / 'key').write_text('do not copy')
+    tree = tmp_path / 'tree'
+    (tree / 'a').mkdir(parents=True)
+    (tree / 'a' / 'f').write_text('fine')
+    real = containers.open_directory
+
+    def racing(name, dir_fd=None):
+        if dir_fd is not None and name == 'a':  # a surviving writer swaps 'a' after it was listed
+            os.rename('a', 'a-moved', src_dir_fd=dir_fd, dst_dir_fd=dir_fd)
+            os.symlink(secret, 'a', dir_fd=dir_fd)
+        return real(name, dir_fd)
+
+    monkeypatch.setattr(containers, 'open_directory', racing)
+    with pytest.raises(UnsafeTree):
+        containers.read_tree(tree, limit=1 << 20)
+
+
+def test_tree_limits_refuse_before_reading_and_never_truncate(tmp_path):
+    sparse = tmp_path / 'sparse'
+    sparse.mkdir()
+    with open(sparse / 'big', 'wb') as handle:
+        handle.truncate(1 << 30)  # 1 GiB apparent, almost no blocks: refused from fstat alone
+    with pytest.raises(UnsafeTree, match='size limit'):
+        containers.read_tree(sparse, limit=4 << 20)
+    exact = tmp_path / 'exact'
+    exact.mkdir()
+    (exact / 'f').write_bytes(b'12345')
+    with pytest.raises(UnsafeTree, match='size limit'):
+        containers.read_tree(exact, limit=4)
+    assert containers.read_tree(exact, limit=5) == {'f': b'12345'}
+    many = tmp_path / 'many'
+    many.mkdir()
+    for index in range(6):
+        (many / f'f{index}').write_text('x')
+    with pytest.raises(UnsafeTree, match='entries'):
+        containers.read_tree(many, limit=1 << 20, max_entries=5)
+
+
+def test_an_unreadable_file_refuses_only_its_draft(tmp_path):
+    drafts = Drafts(tmp_path / 'state')
+    source = tmp_path / 'ws'
+    (source / 'locked').mkdir(parents=True)
+    (source / 'locked' / 'f').write_text('x')
+    os.chmod(source / 'locked' / 'f', 0)
+    (source / 'open').mkdir()
+    (source / 'open' / 'f').write_text('y')
+    try:
+        report = drafts.collect(source, 'sess', {})
+    finally:
+        os.chmod(source / 'locked' / 'f', 0o600)
+    assert report['created'] == ['open'] and [r['id'] for r in report['refused']] == ['locked']
+
+
+def test_a_failure_while_collecting_submissions_is_sealed(tmp_path, monkeypatch):
+    repo = make_repo(tmp_path)
+    workspace = tmp_path / 'ws'
+    for name in session.WRITABLE:
+        (workspace / name).mkdir(parents=True)
+    submission(workspace, [{'op': 'add_type', 'type': kind()}])
+    record_dir = tmp_path / 'record'
+    record_dir.mkdir()
+
+    def exhausted(*_args, **_kwargs):
+        raise MemoryError
+
+    monkeypatch.setattr(session, 'read_tree', exhausted)
+    result = sandbox.Result(0, None, 0, 0, 0.1, [])
+    record = session._close_out(repo, 'sess', record_dir, workspace, None, result, [], FRAMES,
+                                Drafts(repo.state), {})
+    life = record['manifest']['lifecycle']
+    assert life['state'] == 'aborted' and any('MemoryError' in e for e in life['errors'])
+    assert record['verdicts'] == [] and (record_dir / 'close-out.json').is_file()
+
+
+def test_submission_names_cannot_add_lines_to_the_commit_message(tmp_path):
+    repo = make_repo(tmp_path)
+    verdict = run(repo, submission(tmp_path, [{'op': 'add_type', 'type': kind()}],
+                                   name='s1\nCo-Authored-By: someone <x@example.com>'))
+    assert verdict['accepted']
+    message = git(repo, 'log', '-1', '--format=%B')
+    assert not any(line.startswith('Co-Authored-By') for line in message.splitlines())
+
+
 def test_the_draft_digest_separates_names_from_contents(tmp_path):
     one, two = tmp_path / 'one', tmp_path / 'two'
     one.mkdir()
