@@ -333,8 +333,16 @@ class ModelProxy:
                                   usage_missing=actual is None, breach=breach, error=error, dropped_betas=dropped)
                 if error and not self.started:
                     self.refuse(502, f'upstream failed: {error}')
+                elif self.started and self.client_open and not error:
+                    try:
+                        self.wfile.write(b'0\r\n\r\n')
+                    except OSError:
+                        pass
+                elif self.started:
+                    self.close_connection = True  # an unfinished chunked body: never reuse the connection
 
             started = False
+            client_open = False
 
             def forward(self, path: str, body: bytes, betas: list[str]) -> tuple[int, bytes]:
                 up = proxy.upstream
@@ -368,8 +376,9 @@ class ModelProxy:
                                 self.wfile.flush()
                             except OSError:
                                 client = False  # keep reading so the usage is settled
-                    if client:
-                        self.wfile.write(b'0\r\n\r\n')
+                    # The final chunk is written by the caller after settlement, so a client
+                    # never sees a complete response before its charge and any revocation.
+                    self.client_open = client
                     # An encoded body cannot be read for usage: settle it as missing usage.
                     return response.status, bytes(received) if encoding == 'identity' else b''
                 finally:
