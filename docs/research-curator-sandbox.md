@@ -16,8 +16,10 @@ and `actor.json` holds each actor's custody token. The custodian's Pause route t
 loopback.
 
 Search and retrieval date: **2026-11-08**. Conclusions whose newest support predates
-2025-05-08 are flagged *stale*. Host: macOS 27.2 (26B123), Apple silicon, Claude Code
-2.1.319, Codex CLI 0.162.1.
+2025-05-08 are flagged *stale*. Host: macOS 27.2 (26B123), Apple silicon. This page
+calls the two coding-agent hosts studied the *first* and *second host*; their names,
+versions and host-specific settings are on the operator page
+[curator hosts](operations/curator-hosts.md).
 
 ## Finding
 
@@ -29,8 +31,8 @@ loopback model proxy. The prototype
 [`harness/curator/proxy.py`](../harness/curator/proxy.py)) passes the escape suite
 ([`tests/test_curator_sandbox.py`](../tests/test_curator_sandbox.py)). The suite runs
 against the real custodian/playing-service HTTP listener and the real Pause gateway,
-over their receiver doubles. The real Claude Code 2.1.319 completed headless turns
-under it, including a Bash tool call, through the proxy only (L13, L14).
+over their receiver doubles. The real first host completed headless turns under it,
+including a shell tool call, through the proxy only (L13, L14).
 
 Two caveats:
 - **Apple has deprecated `sandbox-exec`.** Its developer support calls custom SBPL
@@ -72,7 +74,7 @@ and reproduced L1 to L3 independently (L9 to L12).
 
 Key: **Y** enforces; **P** partial; **N** no; **–** not established.
 
-| Element | Seatbelt | setrlimit | `taskpolicy` | Sparse disk image | Lima / Colima VM | Apple `container` | Claude Code's own sandbox | Codex's own sandbox |
+| Element | Seatbelt | setrlimit | `taskpolicy` | Sparse disk image | Lima / Colima VM | Apple `container` | First host's own sandbox | Second host's own sandbox |
 |---|---|---|---|---|---|---|---|---|
 | Default-deny reads | **Y** (L1, L9) | N | N | N | Y | Y | P: reads default-allow; Bash children only (S1) | P: restricted-read mode exists (S8) |
 | Writes only to named directories | **Y** (L1, L9) | N | N | P (whole image) | Y | Y | Y for Bash children (S1) | Y (S8) |
@@ -83,7 +85,7 @@ Key: **Y** enforces; **P** partial; **N** no; **–** not established.
 | Process-count cap | N | P: counted per user, not per tree (L3) | N | N | Y | Y | N | N |
 | Low CPU priority | N | N | Y, documented; effect not measured (L4) | N | P | P | N | N |
 | Footprint | None (built in) | None | None | None; mount visible while attached (L5) | Starts a VM; changes existing `~/.lima`, `~/.colima`, `~/.docker` (L6, S10) | Administrator install under `/usr/local` (S12): excluded by the [environment rule](environment.md) | Part of the host | Part of the host |
-| Status | Deprecated; unsupported by Apple DTS (S5, S6); used by Chromium (S7, stale), Codex (S8) and Claude Code (S1) | Current | Current (L4) | `hdiutil create -size` deprecated in favour of `diskutil image` (L5) | Active (S10, S11) | Active; macOS 26+ (S12) | Active | Active |
+| Status | Deprecated; unsupported by Apple DTS (S5, S6); used by Chromium (S7, stale) and by both hosts (S1, S8) | Current | Current (L4) | `hdiutil create -size` deprecated in favour of `diskutil image` (L5) | Active (S10, S11) | Active; macOS 26+ (S12) | Active | Active |
 
 **Rejected for P0:**
 - VMs and containers: VM state under existing per-user directories, or a global
@@ -250,15 +252,10 @@ The pass also found three new problems, all now fixed with tests:
 - **H2 on OpenAI.** The body walk now descends every nested value except opaque
   argument fields.
 
-Claude Code 2.1.319 sends five beta flags:
-- `claude-code-20250219`
-- `context-management-2025-06-27`
-- `effort-2025-11-24`
-- `interleaved-thinking-2025-05-14`
-- `thinking-token-count-2026-05-13`
-
-It also sends a clearing `context_management` field. The proxy drops unlisted flags and
-records them. #454 freezes the allowlist after checking each flag against the real API.
+The first host sends five beta flags and a clearing `context_management` field
+([curator hosts](operations/curator-hosts.md) lists them). The proxy drops unlisted
+flags and records them. #454 freezes the allowlist after checking each flag against the
+real API.
 
 ## Residual risks
 
@@ -272,36 +269,32 @@ records them. #454 freezes the allowlist after checking each flag against the re
 | 6 | Shared kernel: a kernel or Seatbelt bug escapes | S3 | Accepted for P0; escalate to a VM if the owner's threat model requires it |
 | 7 | The proxy channel carries data out; any local process can reach the proxy port | S3 | Per-session revocable token, model routes only, ledger; trace content is model-visible by design |
 | 8 | Host version drift changes flags and startup behaviour | L13, S4 | Record host version and binary hash per session; re-run the host probe on update |
-| 9 | Claude Code writes its temporary root to `/tmp/claude-<uid>` unless `CLAUDE_CODE_TMPDIR` is set; allowing that path would share state with other sessions | L13 | The runner sets `CLAUDE_CODE_TMPDIR` to `scratch/`; the profile never allows `/tmp` |
-| 10 | Codex was not yet run under the profile, and the OpenAI request allowlist rests on field names not yet checked against a dated source | — | #454's second host; same probe with a Responses-shape stand-in before any spend |
+| 9 | The first host writes a shared temporary root under `/tmp` unless its temporary-directory variable is set; allowing that path would share state with other sessions | L13 | The runner points the variable at `scratch/` ([curator hosts](operations/curator-hosts.md)); the profile never allows `/tmp` |
+| 10 | The second host was not yet run under the profile, and the OpenAI request allowlist rests on field names not yet checked against a dated source | — | #454 runs the same probe with a Responses-shape stand-in before any spend |
 | 11 | A stream that errors after content may be undercharged if the provider bills partial output | Review L2 | The reservation still bounds each request; #454 compares the ledger with provider-reported cost |
 | 12 | The free-space floor can stop a session falsely when another process writes heavily during it | — | A visible stop, not a hidden failure; it is recorded as the stop reason |
 
 ## Coding-agent hosts
 
-**Claude Code (2.1.319).**
-- `--bare` skips hooks, plugins, auto-memory, keychain reads and CLAUDE.md discovery,
-  and takes its key only from `ANTHROPIC_API_KEY` (local `--help`, L8; S4).
-- `ANTHROPIC_BASE_URL` points it at the proxy (S16).
-- `CLAUDE_CODE_DISABLE_AUTO_MEMORY` and `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` are
-  documented (S14, S16). Under the profile, network is denied anyway.
-- Observed under the profile (L13, L14), with stand-in token counts and a synthetic
-  price, so not a real-cost figure:
+Host names, flags and settings are on the operator page
+[curator hosts](operations/curator-hosts.md). In summary:
+- **First host.** It has a minimal mode that skips hooks, plugins, auto-memory,
+  keychain reads and instruction-file discovery, and takes its key from one variable
+  (S4, L8). A base-URL variable points it at the proxy (S16).
+- **Observed under the profile (L13, L14).** The stand-in's token counts and price are
+  synthetic, so these are not real-cost figures:
   - exactly one upstream route (`/v1/messages`) per turn;
-  - a Bash tool call that wrote `scratch/` and was refused the project secret;
+  - a shell tool call that wrote `scratch/` and was refused the project secret;
   - 0.23–0.24 s from launch to finish against the stand-in;
   - about 157 MB peak resident memory;
   - no survivors;
   - a ledger charge settled from the streamed usage.
-
-**Codex CLI (0.162.1).** `codex exec` has `--ephemeral`, `--ignore-user-config` and
-`--ignore-rules` (L8). A custom `model_providers.<id>.base_url` and the `memories.*`
-switches exist in the configuration schema (S9). Whether `project_doc_max_bytes=0`
-disables instruction files is not verified. It has not been run under the profile.
-
-**Comparison.** Both hosts can be started headless against a local proxy with memory
-and instruction files off, according to their own documentation. The outer profile is
-the common boundary.
+- **Second host.** Its documentation and schema offer an ephemeral non-interactive mode,
+  a custom provider base URL, and memory and instruction switches (S9, L8). It has not
+  been run under the profile.
+- **Comparison.** Both hosts can be started headless against a local proxy with memory
+  and instruction files off, according to their own documentation. The outer profile is
+  the common boundary.
 
 ## Session cost and cold start
 
@@ -350,22 +343,22 @@ Read scope: FT full text through the fetch tool; SS stated sections; AB abstract
 
 | ID | Source | Date | Read scope | Used for | Flags |
 |---|---|---|---|---|---|
-| S1 | Anthropic, Claude Code sandboxing docs, code.claude.com/docs/en/sandboxing | Undated; release markers to v2.1.310 | SS (first 100k of 111k chars) | Built-in sandbox scope, defaults, `allowLocalBinding` | V |
+| S1 | [First host's sandboxing docs](https://code.claude.com/docs/en/sandboxing) | Undated; release markers to v2.1.310 | SS (first 100k of 111k chars) | Built-in sandbox scope, defaults, `allowLocalBinding` | V |
 | S2 | anthropic-experimental/sandbox-runtime README | Release v0.0.81, 2026-10-20 | SS | Beta status, profile style, warnings | V, beta |
 | S3 | Anthropic, "Securely deploying AI agents" | Undated | FT | Proxy-for-credentials pattern; shared-kernel risk | V |
-| S4 | Anthropic, headless docs, code.claude.com/docs/en/headless | Undated; notes to v2.1.295 | FT | `--bare`; cost fields are client estimates | V |
+| S4 | [First host's headless docs](https://code.claude.com/docs/en/headless) | Undated; notes to v2.1.295 | FT | `--bare`; cost fields are client estimates | V |
 | S5 | `man sandbox-exec` on this Mac | Page dated 2017; shipped with 27.2 | FT, local; re-read by the lead | "DEPRECATED" | Current as shipped |
 | S6 | Apple Developer Forums thread 777509 | Posts Mar 2025, Sep 2026, Oct 2026 | SS; quotes re-verified by the lead | SBPL "never been documented for third-party use"; custom SBPL "unsupported by DTS"; supported options are Endpoint Security, App Sandbox and Virtualization | Mar 2025 post stale; later posts current |
 | S7 | Chromium, "How Chromium uses Seatbelt on macOS" | Updated 2025-01-30 | FT | Deny-by-default profile in production use | Stale |
-| S8 | openai/codex `codex-rs/sandboxing` (`seatbelt.rs`, `.sbpl` policies) | main, 2026-11-08 | CODE (policies in full; parts of `seatbelt.rs`) | Restricted-read mode, loopback-port rules, platform read defaults | Apache-2.0; not copied |
-| S9 | openai/codex `config.schema.json` | main, 2026-11-08 | SS (descriptions) | Provider, memory and instruction keys | Schema, not behaviour |
+| S8 | [Second host's sandboxing source](https://github.com/openai/codex/tree/main/codex-rs/sandboxing) (`seatbelt.rs`, `.sbpl` policies) | main, 2026-11-08 | CODE (policies in full; parts of `seatbelt.rs`) | Restricted-read mode, loopback-port rules, platform read defaults | Apache-2.0; not copied |
+| S9 | [Second host's configuration schema](https://github.com/openai/codex/blob/main/codex-rs/core/config.schema.json) | main, 2026-11-08 | SS (descriptions) | Provider, memory and instruction keys | Schema, not behaviour |
 | S10 | Lima internals page | Lima v2.3.0, 2026-11-06 | SS | Default state under `~/.lima` | |
 | S11 | abiosoft/colima README | v0.10.3, 2026-06-04 | SS | Resource flags | |
 | S12 | apple/container README | 1.7.1, 2026-11-06 | SS | Administrator install under `/usr/local`; macOS 26+ | |
 | S13 | Anthropic, "Other LLM gateways" | Undated | FT | Gateways hold credentials and spend controls | V |
-| S14 | Anthropic, "How Claude remembers your project" | Undated | SS | Auto-memory switches | V |
+| S14 | [First host's memory docs](https://code.claude.com/docs/en/memory) | Undated | SS | Auto-memory switches | V |
 | S15 | Anthropic, "Hosting the Agent SDK" | Undated | FT | Ephemeral pattern; resource guidance | V |
-| S16 | Anthropic, "Connect Claude Code to an LLM gateway" | Undated | FT | `ANTHROPIC_BASE_URL`; nonessential-traffic switch and its limits | V |
+| S16 | [First host's gateway docs](https://code.claude.com/docs/en/llm-gateway-connect) | Undated | FT | `ANTHROPIC_BASE_URL`; nonessential-traffic switch and its limits | V |
 | S18 | Smékal, arXiv 2608.25399v1 | 2026-08-26 | AB + intro | Token-spend spread (Kimi K3, 2,700 runs) | PP, SR |
 | S19 | Vats and Golev, arXiv 2607.22585v1 | 2026-06-08 | AB + intro + related work | Harness effect on tokens per solved task | PP, vendor-affiliated |
 | S20 | Anthropic, "Manage costs effectively" | Undated | FT | Cache-miss behaviour; costs are client estimates | V |
@@ -376,7 +369,7 @@ Read scope: FT full text through the fetch tool; SS stated sections; AB abstract
 | S25 | Qwen Team, "The Verification Horizon", arXiv 2606.26300v2 | 2026-06-29 | SS | Trajectory monitor in RL training | PP, vendor |
 | S26 | Lodkaew et al., arXiv 2606.07379v2 | 2026-06-08 | AB + figure 1 | Capped-score detection idea | PP |
 
-S17 (OpenAI Codex security pages) held almost no detail and supports nothing.
+S17 (the second host's security pages) held almost no detail and supports nothing.
 
 ## Local observations
 
@@ -384,7 +377,7 @@ All were made on this Mac on 2026-11-08, as single runs. They demonstrate that t
 boundary exists; they are not a security evaluation.
 
 - **L1 to L8, by the research agent.**
-  - **L1.** A deny-default profile built from Codex's policies allowed workspace
+  - **L1.** A deny-default profile built from the second host's policies allowed workspace
     reads, writes to `submissions/` and one loopback port. It refused `$HOME`, an
     outside file, the workspace root, a second loopback port and an external address.
   - **L2.** Signal to PID 1, process-table sysctls, the mDNSResponder socket and `ps`
@@ -402,10 +395,11 @@ boundary exists; they are not a security evaluation.
     running; their per-user directories already exist.
   - **L7.** A nested `sandbox-exec` failed with `sandbox_apply: Operation not
     permitted`.
-  - **L8.** Host `--help` flags and binary locations: a 307 MB `claude` Mach-O and a
-    235 MB `codex` Mach-O, both linking only system libraries.
-- **L9, by the lead.** The project's own profile was written independently of Codex's
-  files. It refused reads of the repository and home and writes to `trace/`, and
+  - **L8.** Host `--help` flags and binary locations: two single native binaries
+    (307 MB and 235 MB), both linking only system libraries
+    ([curator hosts](operations/curator-hosts.md)).
+- **L9, by the lead.** The project's own profile was written independently of the
+  second host's files. It refused reads of the repository and home and writes to `trace/`, and
   allowed workspace reads and `scratch/` writes.
   - Before Mach lookups were restricted, `pbpaste` inside the sandbox read the
     owner's clipboard.
@@ -420,15 +414,15 @@ boundary exists; they are not a security evaluation.
   same-user process returned its argv but not its environment, outside and inside
   the sandbox. That held under `process-info* (target self)` and under a named
   `sysctl-read` list. A `deny` of the name did not change it.
-- **L13. Real Claude Code, one turn.** Claude Code 2.1.319 ran with `--bare -p`,
-  `ANTHROPIC_BASE_URL` set to the proxy and the session token as `ANTHROPIC_API_KEY`,
-  against a local Messages-shape stand-in.
-  - It first failed with `EPERM ... open '/tmp/claude-501'`. After setting
-    `CLAUDE_CODE_TMPDIR` to `scratch/`, it completed.
+- **L13. Real first host, one turn.** The host ran headless in its minimal mode, with
+  the proxy as its base URL and the session token as its key, against a local
+  Messages-shape stand-in ([curator hosts](operations/curator-hosts.md)).
+  - It first failed with `EPERM` opening a shared temporary root under `/tmp`. After
+    its temporary-directory variable was set to `scratch/`, it completed.
   - The upstream saw one `/v1/messages` streaming request carrying the real key.
-  - Home after the run: `.claude.json`, `.claude/backups`, `.claude/plugins/store`
-    and `.claude/sessions`.
-- **L14. Real Claude Code, a Bash tool call.** A two-turn run with the Bash tool:
+  - The fresh home afterwards held only the host's own configuration, backups, plugin
+    store and sessions directories.
+- **L14. Real first host, a shell tool call.** A two-turn run with the host's shell tool:
   - The stand-in asked for a command that writes `scratch/`, reads
     `.runtime/credentials.json` and lists `~/../..`.
   - The tool result returned to the model was `written / secret-denied /
