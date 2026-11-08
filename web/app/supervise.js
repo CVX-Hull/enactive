@@ -82,13 +82,17 @@ function caption(step, prefix = '') {
 }
 const SHORTCUTS = [['Space', 'hold or resume the view'], ['← / →', 'previous or next recorded frame'], ['L', 'live'],
   ['T', 'wide player'], ['F', 'full screen'], ['0 1 2 3', 'Fit, 1:1, 2×, 3×']];
-/** Shortcuts never act on a key meant for a control, a field, the timeline or the Pause sheet. */
+/** Shortcuts never take a key that the focused element itself uses. Fields, the timeline, the Pause button and the
+ *  open Pause sheet keep every key; Space also stays with anything it activates (buttons, links, disclosure
+ *  summaries, focusable elements), so letters and arrows still work after clicking a player button. */
 function forPlayer(event) {
   if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return false;
-  const target = event.target;
-  if (target && target.closest && target.closest('button, input, select, textarea, a, [contenteditable], #tl, form, dialog, [role="dialog"]')) return false;
   const sheet = document.getElementById('sheet');
-  return !(sheet && !sheet.hidden);
+  if (sheet && !sheet.hidden) return false;
+  const target = event.target;
+  if (!target || !target.closest) return true;
+  if (target.closest('input, select, textarea, [contenteditable], #tl, #pause, form, dialog, [role="dialog"]')) return false;
+  return !(event.key === ' ' && target.closest('button, a, summary, [tabindex]'));
 }
 
 /** The game feed (#435). Each frame is decoded before it replaces the last one and is drawn at its own pixel size,
@@ -106,7 +110,7 @@ export function FeedPlayer({run, step}) {
     if (!src || held) return undefined;
     // What this frame is, fixed now: a newer frame arriving during the decode must not relabel it.
     const label = following
-      ? {following: true, source: store.control.frameSource || null}
+      ? {following: true, source: store.control.frameSource || null, latest: store.steps[store.steps.length - 1] || null}
       : {following: false, seq: step ? step.seq : null, wall: step ? step.wall : null};
     let cancelled = false;
     const image = new Image();
@@ -164,6 +168,7 @@ export function FeedPlayer({run, step}) {
       const keyed = {' ': a.hold, ArrowLeft: a.back, ArrowRight: a.forward, l: a.live, L: a.live, t: a.wide, T: a.wide, f: a.full, F: a.full,
         0: () => scaleRef.current('fit'), 1: () => scaleRef.current('1'), 2: () => scaleRef.current('2'), 3: () => scaleRef.current('3')}[event.key];
       if (!keyed) return;
+      if (event.repeat && event.key === ' ') { event.preventDefault(); return; }   // holding Space toggles once
       event.preventDefault();
       keyed();
     };
@@ -176,7 +181,8 @@ export function FeedPlayer({run, step}) {
   const missing = !following && step && !step.source_id ? ` · no frame at step ${step.seq}` : '';
   // The caption names the decision on screen: the step for a recorded frame, the newest step while following live.
   const shownStep = shown && !shown.following ? steps.find(s => s.seq === shown.seq) : null;
-  const words = shown ? (shown.following ? caption(steps[steps.length - 1], 'latest ') : caption(shownStep)) : '';
+  // Following live, the caption is the newest step when this frame was drawn, so a held frame keeps its words.
+  const words = shown ? (shown.following ? caption(held ? shown.latest : steps[steps.length - 1], 'latest ') : caption(shownStep)) : '';
   // Liveness: the frame's age (amber when the Pause condition "feed alive" is met) and how far the view is behind.
   const feedStale = !!(store.summary && store.summary.pause && store.summary.pause.conditions
     && store.summary.pause.conditions.some(c => c.id === 'feed_alive' && c.met));

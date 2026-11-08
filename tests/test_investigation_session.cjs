@@ -377,6 +377,16 @@ test('stream player: integer scales, wide layout, caption, liveness badges and s
   let s = await q();
   assert.match(s.caption, /^latest decision \d+ · .+ · .+ · keys /);
   assert.match(s.age, /^frame \d+ s old$/);
+  const age = Number(s.age.match(/\d+/)[0]);
+  await until(a => Number((document.getElementById('feed-age').textContent.match(/\d+/) || [0])[0]) >= a + 2, age, 6000);
+  // A held frame keeps its caption while the run moves on.
+  await page.click('#feed-hold');
+  const heldCaption = (await q()).caption;
+  await fx.advance(1);   // the fixture holds back four steps; this test uses all of them
+  await until(() => /^1 step behind live$/.test((document.getElementById('feed-behind') || {}).textContent || ''));
+  assert.equal((await q()).caption, heldCaption);
+  await page.click('#feed-hold');
+  await until(previous => document.getElementById('feed-caption').textContent !== previous, heldCaption);
   // Integer scales are exact multiples of the frame width; 1:1 is the frame itself.
   for (const [id, width] of [['#feed-scale-2', 1280], ['#feed-scale-3', 1920], ['#feed-scale-1', 640]]) {
     await page.click(id);
@@ -407,9 +417,34 @@ test('stream player: integer scales, wide layout, caption, liveness badges and s
   await key('t'); await until(() => document.querySelector('.player').dataset.wide === 'no');
   await key('Space'); await until(() => document.getElementById('feed-hold').getAttribute('aria-pressed') === 'true');
   await key('Space'); await until(() => document.getElementById('feed-hold').getAttribute('aria-pressed') === 'false');
-  await page.focus('#feed-wide');
+  // After clicking a player button, arrows and letters still work; Space stays with the focused control.
+  await page.click('#feed-back');
+  await until(() => /^step \d+/.test(document.getElementById('feed-meta').textContent));
+  const clicked = Number((await q()).meta.match(/^step (\d+)/)[1]);
+  await page.keyboard.press('ArrowLeft');
+  await until(seq => document.getElementById('feed-meta').textContent.startsWith(`step ${seq - 1} `), clicked);
+  await page.focus('#feed-hold');
   await page.keyboard.press('t');
-  assert.equal((await q()).wide, 'no', 'a key aimed at a control is not a shortcut');
+  await until(() => document.querySelector('.player').dataset.wide === 'yes');
+  await page.keyboard.press('t');
+  await until(() => document.querySelector('.player').dataset.wide === 'no');
+  await page.focus('.player-bar details.keys summary');
+  await page.keyboard.press('Space');
+  await until(() => document.querySelector('.player-bar details.keys').open);
+  assert.equal(await page.$eval('#feed-hold', b => b.getAttribute('aria-pressed')), 'false', 'Space on the shortcut list opens it');
+  await page.keyboard.press('Space');
+  await key('l');
+  // Holding Space down toggles once.
+  await page.evaluate(() => document.activeElement && document.activeElement.blur());
+  await page.keyboard.down('Space');
+  await page.evaluate(() => document.dispatchEvent(new KeyboardEvent('keydown', {key: ' ', repeat: true, bubbles: true})));
+  await page.keyboard.up('Space');
+  await until(() => document.getElementById('feed-hold').getAttribute('aria-pressed') === 'true');
+  await key('Space');
+  await until(() => document.getElementById('feed-hold').getAttribute('aria-pressed') === 'false');
+  await page.focus('#tl');
+  await page.keyboard.press('t');
+  assert.equal((await q()).wide, 'no', 'the timeline keeps its keys');
   await page.focus('#pause');
   await page.keyboard.press('Enter');
   await until(() => !document.getElementById('sheet').hidden);
@@ -423,6 +458,18 @@ test('stream player: integer scales, wide layout, caption, liveness badges and s
   await S.ready(page);
   await until(() => document.querySelector('.player') && document.querySelector('.player').dataset.scale === '3');
   assert.deepEqual(page.problems, []);
+  await page.evaluate(() => { localStorage.removeItem('feed-scale'); localStorage.removeItem('feed-wide'); });
+});
+
+test('stream player at phone width: wide and 3x scroll inside the player, never the page (#437)', async () => {
+  await start('required', {width: 390, height: 800, mobile: true});
+  await until(() => !document.getElementById('feed').hidden);
+  for (const id of ['#feed-wide', '#feed-scale-3']) await page.click(id);
+  await until(() => document.getElementById('feed').clientWidth === 1920);
+  assert.equal(await S.overflow(page), 0);
+  await page.click('#feed-scale-fit');
+  assert.equal(await S.overflow(page), 0);
+  await page.evaluate(() => { localStorage.removeItem('feed-scale'); localStorage.removeItem('feed-wide'); });
 });
 
 test('a run whose live store was never finalized is labelled and not followed (#435)', async () => {

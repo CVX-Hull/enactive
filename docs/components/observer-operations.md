@@ -88,9 +88,9 @@ frame:
 - **Wide** puts the player first, across the page ([#437](https://github.com/CVX-Hull/enactive/issues/437)).
 - **Hold** freezes the view only. It sends nothing to the run and is separate from Pause.
 - The step buttons move the shared playhead.
-- A caption names the decision on screen: its game clock, mode and the keys the player sent. The newest step's caption shows while following live.
+- A caption names the decision on screen: its game clock, mode and the keys the player sent. While following live, it shows the newest step as of the frame on screen, so a held frame keeps its caption.
 - **Liveness:** a frame-age badge turns amber when the "feed alive" Pause condition is met. A "steps behind live" badge jumps back to live.
-- **Shortcuts** act only from the page body, never from a control, a field, the timeline or the open Pause sheet:
+- **Shortcuts** never take a key from a text field, the timeline, the Pause button or the open Pause sheet. Space also stays with any button, link or other control it would activate, and holding it down toggles only once:
   - Space: hold;
   - ← / →: step;
   - L: live;
