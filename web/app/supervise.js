@@ -71,11 +71,11 @@ function savedScale() {
   try { return localStorage.getItem(SCALE_KEY) === 'fit' ? 'fit' : 'native'; } catch { return 'native'; }
 }
 
+const clockTime = ms => new Date(ms).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', second: '2-digit'});
+
 /** The game feed (#435). Each frame is decoded before it replaces the last one and is drawn at its own pixel size,
  *  so the picture never blanks or rescales as frames arrive. Hold freezes this view only: it sends nothing to the
  *  run and is unrelated to the custody Pause above. The step buttons move the shared playhead. */
-const clockTime = ms => new Date(ms).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', second: '2-digit'});
-
 export function FeedPlayer({run, step}) {
   const liveRunSelected = selectedRun()?.state === 'live';
   const following = store.cursor === null && liveRunSelected;
