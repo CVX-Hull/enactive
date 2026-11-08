@@ -228,6 +228,11 @@ and leaves basic input available. Verify SHA on image read; no silent eviction.
 
 Context selects≤32 roots, follows bounded support/correction/program ancestry and
 returns whole records, source references and explicit omissions within≤64KiB.
+`player_handoff` first requires every root to name a stored record or program. Any
+other root refuses the handoff before a context is written or the actor is sealed
+(`player-error/1`, `submission: none`), naming the unknown IDs so the actor can
+correct them (#450). A read-only context request still reports such a root as an
+omission.
 Oversized records/code are omitted explicitly with readable IDs, never truncated
 into plausible executable content. Source references are availability, not read proof.
 
