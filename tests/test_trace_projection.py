@@ -111,11 +111,123 @@ def test_projection_keeps_what_the_actor_saw_and_drops_every_secret(tmp_path):
         assert hashlib.sha256((out/relative).read_bytes()).hexdigest() == digest
 
 
-def test_a_frame_that_differs_from_its_sealed_hash_is_refused(tmp_path):
+def no_output(tmp_path) -> bool:
+    return not (tmp_path/'trace').exists() and not list(tmp_path.glob('.trace.partial-*'))
+
+
+def test_a_frame_that_differs_from_its_sealed_hash_is_refused_and_leaves_nothing(tmp_path):
     session = make_session(tmp_path)
     (session/'sources'/f'{"a"*32}-3.png').write_bytes(png('green'))
     with pytest.raises(ProjectionError, match='SHA-256'):
         project([session], tmp_path/'trace')
+    assert no_output(tmp_path)
+
+
+@pytest.mark.parametrize('channel', ['final report', 'handoff knowledge', 'handoff summary', 'memory record',
+                                     'error reason', 'key pattern'])
+def test_the_secret_guard_fails_closed_on_free_text_channels(tmp_path, channel):
+    session = make_session(tmp_path)
+    actor = session/'actors'/'001'
+    memory = None
+    if channel == 'final report':
+        (actor/'player-final.txt').write_text(f'Done. My token was {TOKEN}.')
+    elif channel == 'handoff knowledge':
+        (session/'contexts'/'ctx.json').write_text(json.dumps(dict(
+            schema='player-handoff-context/1', context_id='ctx', summary='carry on',
+            knowledge=dict(records=[dict(text=f'connect to {BASE_URL}')]))))
+    elif channel == 'handoff summary':
+        (session/'contexts'/'ctx.json').write_text(json.dumps(dict(
+            schema='player-handoff-context/1', context_id='ctx', summary=f'route key {ROUTE_KEY}', knowledge={})))
+    elif channel == 'memory record':
+        memory = tmp_path/'m.sqlite3'
+        make_store(memory)
+        db = sqlite3.connect(memory)
+        db.execute('UPDATE records SET document=? WHERE id=?',
+                   (json.dumps(dict(actor_id='x', created_wall=1, text=TOKEN, data={})), 'r1'))
+        db.commit()
+        db.close()
+    elif channel == 'error reason':
+        events = [json.loads(line) for line in (actor/'host.jsonl').read_text().splitlines()]
+        events[1]['result']['content'][0]['text'] = json.dumps(dict(status='failed', reason=f'cannot reach {BASE_URL}'))
+        (actor/'host.jsonl').write_text('\n'.join(json.dumps(e) for e in events))
+    else:
+        (actor/'player-final.txt').write_text('debug: Bearer abcdefghijklmnopqrstuvwxyz0123')
+    with pytest.raises(ProjectionError, match='Secret guard'):
+        project([session], tmp_path/'trace', memory=memory)
+    assert no_output(tmp_path)
+
+
+def test_wait_durations_input_sources_and_refused_or_unfinished_calls_are_kept(tmp_path):
+    session = make_session(tmp_path)
+    db = sqlite3.connect(session/'session.sqlite3')
+    db.execute('INSERT INTO operations VALUES(?,?,?,?,?,?,?)', ('op3', 'b'*32, 'input', 3.0, 9.0,
+               json.dumps([dict(type='wait', seconds=2.5)]), None))
+    db.commit()
+    db.close()
+    actor = session/'actors'/'001'
+    events = [json.loads(line) for line in (actor/'host.jsonl').read_text().splitlines()]
+    events[0]['arguments']['source_id'] = f'{"a"*32}-2'
+    events += [dict(type='tool-start', tool_call_id='c2', tool='computer_input', arguments=dict(actions=[])),
+               dict(type='tool-refused', tool_call_id='c2', tool='computer_input', reason='orderly-stop'),
+               dict(type='tool-start', tool_call_id='c3', tool='computer_observe', arguments={})]
+    (actor/'host.jsonl').write_text('\n'.join(json.dumps(e) for e in events))
+    project([session], tmp_path/'trace')
+    steps = [json.loads(line) for line in (tmp_path/'trace'/'s1'/'001'/'steps.jsonl').read_text().splitlines()]
+    assert steps[2]['actions'] == [dict(type='wait', seconds=2.5)]
+    tools = [json.loads(line) for line in (tmp_path/'trace'/'s1'/'001'/'tools.jsonl').read_text().splitlines()]
+    assert tools[0]['arguments']['source_id'] == f'{"a"*32}-2'
+    assert tools[1]['outcome'] == dict(refused=True, reason='orderly-stop')
+    assert tools[2]['tool'] == 'computer_observe' and tools[2]['outcome'] == dict(unfinished=True)
+
+
+@pytest.mark.parametrize('damage', ['foreign frame id', 'symlinked prompt', 'no frozen inputs', 'bad event'])
+def test_damaged_sealed_inputs_are_refused(tmp_path, damage):
+    session = make_session(tmp_path)
+    actor = session/'actors'/'001'
+    if damage == 'foreign frame id':
+        db = sqlite3.connect(session/'session.sqlite3')
+        db.execute("UPDATE native_intents SET source='../../escape-2' WHERE id='n1'")
+        db.commit()
+        db.close()
+    elif damage == 'symlinked prompt':
+        (actor/'prompt.txt').unlink()
+        (actor/'prompt.txt').symlink_to(actor/'actor.json')
+    elif damage == 'no frozen inputs':
+        (actor/'frozen.json').unlink()
+    else:
+        (actor/'host.jsonl').write_text('{"type": "tool-start"')
+    with pytest.raises(ProjectionError):
+        project([session], tmp_path/'trace')
+    assert no_output(tmp_path)
+
+
+def test_stray_files_in_the_actors_directory_are_ignored(tmp_path):
+    session = make_session(tmp_path)
+    (session/'actors'/'.DS_Store').write_bytes(b'x')
+    manifest = project([session], tmp_path/'trace')
+    assert [a['directory'] for a in manifest['sessions'][0]['actors']] == ['001']
+
+
+def test_workbench_commands_over_a_projection(tmp_path):
+    from harness.trace import workbench
+    project([make_session(tmp_path)], tmp_path/'trace')
+
+    def run(*args):
+        out = io.StringIO()
+        workbench.main([*args], out=out)
+        return [json.loads(line) for line in out.getvalue().splitlines()]
+
+    trace = str(tmp_path/'trace')
+    assert [s['seq'] for s in run('steps', trace, '--kind', 'input')] == [2]
+    frames = run('frames', trace, '--actor', 's1/001')
+    assert [f['frame'] for f in frames] == [f'{"a"*32}-2', f'{"a"*32}-3']
+    assert run('tools', trace, '--tool', 'computer_input')[0]['outcome']['status'] == 'completed'
+    cells = run('diff', trace, frames[0]['frame'], frames[1]['frame'], '--grid', '2x2')
+    assert len(cells) == 4 and all(c['changed_fraction'] == 1.0 for c in cells)
+    assert [n['frame'] for n in run('similar', trace, frames[0]['frame'], '--k', '1')] == [frames[1]['frame']]
+    for bad in (['diff', trace, '../manifest', frames[0]['frame']], ['similar', trace, '..']):
+        with pytest.raises(SystemExit):
+            run(*bad)
 
 
 def test_projection_never_overwrites_an_existing_target(tmp_path):
@@ -147,11 +259,21 @@ def make_store(path: Path, schema='player-memory/2'):
 
 def test_evidence_reader_reads_a_sealed_store_without_writing_beside_it(tmp_path):
     make_store(tmp_path/'m.sqlite3')
+    db = sqlite3.connect(tmp_path/'m.sqlite3')
+    db.execute('PRAGMA journal_mode=WAL')  # a WAL store: a plain read-only open would create -shm
+    db.close()
     before = sorted(p.name for p in tmp_path.iterdir())
     store = memory_reader.read(tmp_path/'m.sqlite3')
     assert [r['id'] for r in store['records']] == ['r1', 'r2']
     assert store['records'][1]['supersedes'] == 'r1' and store['records'][1]['supports'] == ['r1']
     assert sorted(p.name for p in tmp_path.iterdir()) == before
+
+
+def test_evidence_reader_refuses_an_unchecked_write_ahead_log(tmp_path):
+    make_store(tmp_path/'m.sqlite3')
+    (tmp_path/'m.sqlite3-wal').write_bytes(b'unapplied rows')
+    with pytest.raises(memory_reader.StoreError, match='write-ahead log'):
+        memory_reader.read(tmp_path/'m.sqlite3')
 
 
 @pytest.mark.parametrize('schema', ['player-memory/1', 'player-memory/3'])
@@ -226,6 +348,20 @@ def test_container_manifests_are_validated(change):
     with pytest.raises(sidecar.ManifestError):
         sidecar.validate(manifest(**change))
     assert sidecar.validate(manifest())['kind'] == 'draft'
+
+
+def test_sidecar_cli_writes_a_valid_index_without_secret_file_digests(tmp_path):
+    study = tmp_path/'study'
+    (study/'computer-sessions').mkdir(parents=True)
+    session = make_session(study/'computer-sessions')
+    (session/'actors'/'001'/'frozen.json').write_text(json.dumps(dict(
+        actor_id='b'*32, files={'actor.json': 'a'*64, 'route.json': 'b'*64, 'prompt.txt': 'c'*64})))
+    sidecar.main([str(study), '--study', 'study', '--out', str(tmp_path/'index.json')])
+    index = json.loads((tmp_path/'index.json').read_text())
+    assert index['schema'] == 'container-index/1' and len(index['containers']) == 1
+    manifest = sidecar.validate(index['containers'][0])
+    assert manifest['inputs']['actors'][0]['given_sha256'] == {'prompt.txt': 'c'*64}
+    assert 'a'*64 not in json.dumps(index) and 'b'*64 not in json.dumps(index)
 
 
 @pytest.mark.skipif(not (EVIDENCE/'computer-sessions').is_dir(), reason='sealed #397 evidence not on this checkout')

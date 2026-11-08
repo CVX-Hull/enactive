@@ -21,16 +21,31 @@ evaluation or the curator, and it opens no network or process.
 [`projection.project`](../../harness/trace/projection.py) writes `trace-projection/1`.
 
 **What it contains:**
-- **Frames**, copied after their SHA-256 matches the sealed metadata.
-- **Steps per actor**: operation kind, input actions with named fields only, status and
-  frame.
+- **Frames**, copied after their SHA-256 matches the sealed metadata. Frame IDs must
+  belong to the session.
+- **Steps per actor**: operation kind, input actions with named fields only (including
+  wait durations), status and frame.
 - **Tool calls**: the tool name, arguments allowlisted per tool, and the outcome's named
-  fields.
-- **The actor's prompt and final report.**
+  fields. Refused and unfinished calls are included and marked.
+- **What the actor was given and wrote**: its prompt, its working guide and its final
+  report.
 - **Sealed handoff packets.**
 - **The memory store**, read through the evidence reader.
 
-The manifest records a digest for every file and lists what is never projected.
+The manifest records a digest for every file, what is never projected, and what is
+dropped.
+
+**Fail-closed secret guard.** Some channels are free text an actor or service wrote:
+reports, handoff summaries and knowledge, memory records and error reasons. No allowlist
+can vet free text. So every projection is built in a sibling directory and scanned before
+it is renamed into place. The scan looks for every credential- or address-like value in the
+sessions' custody, route, MCP and process files, and for key-like patterns. On any hit, or
+any other failure, nothing is published and no partial directory remains. Session and
+actor IDs are excluded from the scan because the projection keeps them by design.
+
+**Refused inputs.** A sealed input that is damaged or ambiguous is refused, not guessed.
+That covers symbolic links, unreadable events or stores, an un-checkpointed write-ahead
+log, frame IDs from another session, and actors without frozen inputs.
 
 **What it never contains:** `actor.json` (custody token), `route.json` (provider route),
 MCP and host configuration, process records, custodian, viewer and watch files, receipts,
@@ -38,9 +53,12 @@ raw `host.jsonl` and the raw session store. Session, actor and operation IDs sta
 they grant nothing and are how frames are cited.
 
 **Tests** ([`tests/test_trace_projection.py`](../../tests/test_trace_projection.py)):
-- **Synthetic fixture.** It plants a token, a route key and the custodian URL in every
-  place a careless copy would carry them: argument extras, result extras, unknown
+- **Synthetic fixture.** It plants a token, a route key and the custodian URL in
+  structured places a careless copy would carry: argument extras, result extras, unknown
   operation fields, process records and custodian output. None reaches the projection.
+- **Guard.** Separate cases plant a secret in each free-text channel: the final report,
+  handoff knowledge and summary, a memory record, an error reason, and a bearer string.
+  Each projection is refused and leaves nothing behind.
 - **Integrity.** A frame whose bytes differ from its sealed hash is refused.
 - **Real lineages.** The sealed #397 lineage and the six sampled #372 runs are
   projected and scanned for every custody token, custodian URL and route value of
@@ -58,7 +76,9 @@ as the issue text first said.
 `player-memory/2` store as data: records with their supports and sources, programs, and
 source metadata. It is not the player's memory contract. Sealed stores stay readable after
 the live contract migrates. The reader accepts only `player-memory/2` and never writes
-beside the store; it opens SQLite immutable. On the sealed #397 store it read 11 records,
+beside the store: it opens SQLite immutable, and a test proves this on a write-ahead-log
+store. Immutable mode would silently ignore an un-checkpointed log, so a store with a
+non-empty `-wal` is refused rather than read incomplete. On the sealed #397 store it read 11 records,
 0 programs and 61 sources.
 
 ## Workbench

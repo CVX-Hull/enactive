@@ -14,7 +14,8 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
-import sqlite3
+
+from .stores import sealed
 
 SCHEMA = 'container-manifest/1'
 INDEX_SCHEMA = 'container-index/1'
@@ -51,7 +52,7 @@ def validate(manifest: dict) -> dict:
 
 
 def _session_id(path: Path) -> str:
-    with sqlite3.connect(path.resolve().as_uri() + '?mode=ro&immutable=1', uri=True) as db:
+    with sealed(path) as db:
         return json.loads(dict(db.execute('SELECT key, value FROM metadata'))['session'])
 
 
