@@ -597,13 +597,16 @@ checks its power by simulation before it runs.
   trace before either arm is replayed, so they cannot depend on the arm. Their
   annotation cost (fact-level labelling per lineage) is estimated in P0 before any
   spend; ADR 007's recorder failed on a cost of this kind.
-- **Development data:** the sealed #397 and #382 traces, including the four
-  episodes above. Probes built from them fit and debug the system; they decide
-  nothing.
-- **Baseline lineages:** the two-lineage screen the owner selected for
-  [#145](https://github.com/CVX-Hull/enactive/issues/145)
-  ([#441](https://github.com/CVX-Hull/enactive/issues/441)) runs on the current player
-  and can supply baseline rediscovery and carry rates, if its package records them.
+- **Development data:** the sealed #397 lineage, including the four episodes above,
+  and #372's short development-loop runs. Probes built from them fit and debug the
+  system; they decide nothing.
+- **Held-out data:** #382's three day-scale lineages, sealed in `372-382-dev-loop`.
+  No episode, probe or design choice came from them; this page's problem statement
+  counted their records and queries only in aggregates. #178 writes their probes.
+  They predate emissions, which the P1 study records as a limitation.
+- **#441 is deferred.** On 8 November the owner decided: "I would prefer to do this
+  run after we move forward on the ADR we just discussed to be fruitful." Its
+  lineages are re-shaped against the design in place when it resumes.
 - **Gate before spend:** each live study first simulates its power from the
   variance in development data and states a lineage count and dollar estimate. If
   it cannot reach the pre-registered detection rate within the owner's envelope, it
@@ -715,7 +718,8 @@ sources only.
 1. Whether to adopt the practice instance (P3) and its one-way fork rule.
 2. The curator's spend cap as a fraction of actor spend, and whether its model may
    differ from the actor's.
-3. Whether #441's baseline lineages record the P0 metrics before this design runs.
+3. *Decided 8 November 2026:* #441 is deferred until this design has moved forward,
+   and P1's held-out data comes from #382 instead (above).
 4. The belief model, after R3.
 5. Where the knowledge repository lives: the proposed project-local runtime path, or
    tracked alongside the source.
