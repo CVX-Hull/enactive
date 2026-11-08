@@ -1,0 +1,20 @@
+{"type":"fact","id":"F1","statement":"The survivor is Morgan Reed, an Evacuee in world Enka, starting at evac shelter A-23 on spring day 61 at 8:00 AM","category":"self","observed":"9313a6ff091a1c6bd4e9d30817d792ce-609","stored":"dc62ad"}
+{"type":"fact","id":"F2","statement":"Lachlan, an NPC in the shelter, has a job for the survivor (the inhaler quest)","category":"plan","observed":"9313a6ff091a1c6bd4e9d30817d792ce-775","stored":"68f11d"}
+{"type":"fact","id":"F3","statement":"Lachlan refuses to share equipment; persuasion, lie and intimidation options are offered at 45%, 33% and 23%","category":"other","observed":"9313a6ff091a1c6bd4e9d30817d792ce-778","stored":null}
+{"type":"fact","id":"F4","statement":"A large wooden club can be crafted from memory in 5 minutes from one plank (2 in hand) and a cutting tool","category":"procedure","observed":"9313a6ff091a1c6bd4e9d30817d792ce-1087","stored":"68f11d"}
+{"type":"fact","id":"F5","statement":"A trash can in the shelter basement holds a protein ration, emergency blanket, plastic bottle, garbage bag and FEMA pamphlet","category":"resource","observed":"9313a6ff091a1c6bd4e9d30817d792ce-1448","stored":"68f11d"}
+{"type":"fact","id":"F6","statement":"The survivor carries a messenger bag, pocket knife, smartphone with a flashlight app, and a matchbook of 20 matches","category":"item","observed":"9313a6ff091a1c6bd4e9d30817d792ce-1169","stored":null}
+{"type":"fact","id":"F7","statement":"The shelter has a basement with stairs, a bench area and a restroom with sinks","category":"place","observed":"9313a6ff091a1c6bd4e9d30817d792ce-1573","stored":null}
+{"type":"fact","id":"F8","statement":"The town of Hamilton lies west of the shelter; the survivor is in the field east of it","category":"place","observed":"9313a6ff091a1c6bd4e9d30817d792ce-3050","stored":null}
+{"type":"fact","id":"F9","statement":"The survivor started with 2 units of clean water, not consumed as of the last inventory look","category":"resource","observed":"text","stored":"68f11d"}
+{"type":"fact","id":"F10","statement":"Chamomile grows in the field northwest of the shelter","category":"resource","observed":"9313a6ff091a1c6bd4e9d30817d792ce-3441","stored":null}
+{"type":"fact","id":"F11","statement":"No save-to-menu was done; the game autosaved on leaving the shelter, so live continuity must be kept","category":"procedure","observed":"9313a6ff091a1c6bd4e9d30817d792ce-2196","stored":null}
+{"type":"fact","id":"F12","statement":"Plan: establish food and safe water and reassess from the current view","category":"plan","observed":"text","stored":null}
+{"type":"event","fact":"F4","event":"used","frame":"9313a6ff091a1c6bd4e9d30817d792ce-1169","note":"wielded the crafted wooden club"}
+{"type":"event","fact":"F5","event":"used","frame":"9313a6ff091a1c6bd4e9d30817d792ce-1573","note":"picked up the protein ration and other items from the trash can"}
+{"type":"event","fact":"F2","event":"needed","frame":"9313a6ff091a1c6bd4e9d30817d792ce-2033","note":"talked to Lachlan again, who asked 'Any luck?' about the job"}
+{"type":"event","fact":"F2","event":"used","frame":"9313a6ff091a1c6bd4e9d30817d792ce-2033","note":"answered 'Not yet' consistent with the open job"}
+{"type":"event","fact":"F6","event":"used","frame":"9313a6ff091a1c6bd4e9d30817d792ce-2033","note":"smartphone menu opened to use the flashlight in the dark basement"}
+{"type":"event","fact":"F8","event":"needed","frame":"9313a6ff091a1c6bd4e9d30817d792ce-3050","note":"opened the map to decide where to travel; Hamilton is west"}
+{"type":"event","fact":"F11","event":"needed","frame":"9313a6ff091a1c6bd4e9d30817d792ce-2196","note":"autosave message appeared on leaving the shelter"}
+{"type":"end","frames_viewed":34}

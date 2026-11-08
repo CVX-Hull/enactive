@@ -1,0 +1,30 @@
+{"chunk":"aidB3-001","rater":"A","tokens":110688,"tool_uses":41,"ms":64823,"frames_in_chunk":89,"deviation":null}
+{"chunk":"aidA5-001","rater":"A","tokens":102716,"tool_uses":34,"ms":65597,"frames_in_chunk":76,"deviation":"one read-only Bash call (head/grep of the two input files), self-reported"}
+{"chunk":"sd1a1-001","rater":"A","tokens":127153,"tool_uses":51,"ms":80232,"frames_in_chunk":133,"deviation":null}
+{"chunk":"ceil09-001","rater":"A","tokens":105443,"tool_uses":40,"ms":54317,"frames_in_chunk":74,"deviation":null}
+{"chunk":"ceil07-001","rater":"A","tokens":108588,"tool_uses":40,"ms":78536,"frames_in_chunk":90,"deviation":null}
+{"chunk":"aidB3-002","rater":"A","tokens":139239,"tool_uses":59,"ms":114448,"frames_in_chunk":137,"deviation":null}
+{"chunk":"aidA5-002","rater":"A","tokens":146278,"tool_uses":64,"ms":132903,"frames_in_chunk":153,"deviation":null}
+{"chunk":"sd1a1-002","rater":"A","tokens":167702,"tool_uses":77,"ms":155865,"frames_in_chunk":202,"deviation":null}
+{"chunk":"ceil09-002","rater":"A","tokens":147143,"tool_uses":63,"ms":140258,"frames_in_chunk":157,"deviation":null}
+{"chunk":"ceil07-002","rater":"A","tokens":139691,"tool_uses":56,"ms":135629,"frames_in_chunk":135,"deviation":null}
+{"chunk":"ceil05-001","rater":"A","tokens":105975,"tool_uses":39,"ms":67164,"frames_in_chunk":85,"deviation":null}
+{"chunk":"aidB9-001","rater":"A","tokens":108858,"tool_uses":41,"ms":67212,"frames_in_chunk":85,"deviation":null}
+{"chunk":"sd1a2-001","rater":"A","tokens":112480,"tool_uses":39,"ms":101848,"frames_in_chunk":80,"deviation":null}
+{"chunk":"aidB9-002","rater":"A","tokens":138890,"tool_uses":60,"ms":122759,"frames_in_chunk":140,"deviation":"created a stray file outside the output path (/private/tmp/claude-501/-Users-shilongdai-Developer CDDA Player/placeholder); its removal was refused by the permission check and is left to the owner"}
+{"chunk":"ceil05-002","rater":"A","tokens":142480,"tool_uses":57,"ms":127195,"frames_in_chunk":142,"deviation":null}
+{"chunk":"sd1a2-002","rater":"A","tokens":178098,"tool_uses":73,"ms":202205,"frames_in_chunk":192,"deviation":null}
+{"chunk":"sd1a3-001","rater":"A","tokens":177342,"tool_uses":68,"ms":209261,"frames_in_chunk":179,"deviation":null}
+{"chunk":"sd1a3-002","rater":"A","tokens":171746,"tool_uses":58,"ms":180651,"frames_in_chunk":147,"deviation":null}
+{"chunk":"sd1a4-001","rater":"A","tokens":142523,"tool_uses":37,"ms":116548,"frames_in_chunk":79,"deviation":null}
+{"chunk":"sd1a4-002","rater":"A","tokens":203775,"tool_uses":73,"ms":189200,"frames_in_chunk":188,"deviation":null}
+{"chunk":"sd1a5-001","rater":"A","tokens":144523,"tool_uses":29,"ms":112824,"frames_in_chunk":48,"deviation":"viewed 19 frames, under the coverage rule (about 21 for 46 changed frames)"}
+{"chunk":"sd1a5-002","rater":"A","tokens":233747,"tool_uses":80,"ms":262683,"frames_in_chunk":199,"deviation":null}
+{"chunk":"sd1a6-001","rater":"A","tokens":199968,"tool_uses":41,"ms":254451,"frames_in_chunk":88,"deviation":null}
+{"chunk":"sd1a6-002","rater":"A","tokens":273253,"tool_uses":77,"ms":388596,"frames_in_chunk":190,"deviation":null}
+{"chunk":"sd1a7-001","rater":"A","tokens":null,"tool_uses":null,"ms":null,"frames_in_chunk":155,"deviation":"first attempt interrupted when the lead session ended; it wrote no output and its cost was not recorded"}
+{"chunk":"sd1a7-001","rater":"A","tokens":245209,"tool_uses":68,"ms":229715,"frames_in_chunk":155,"deviation":"retry after the interrupted attempt"}
+{"chunk":"sd1a2-001","rater":"B","tokens":110126,"tool_uses":41,"ms":91267,"frames_in_chunk":80,"deviation":null}
+{"chunk":"sd1a7-002","rater":"A","tokens":142901,"tool_uses":35,"ms":175380,"frames_in_chunk":53,"deviation":"wrote its output through a shell heredoc and read the large ledger with grep and sed, where the brief allowed only viewing files"}
+{"chunk":"sd1a3-001","rater":"B","tokens":175088,"tool_uses":69,"ms":186251,"frames_in_chunk":179,"deviation":null}
+{"chunk":"sd1a7-002","rater":"B","tokens":213176,"tool_uses":35,"ms":179572,"frames_in_chunk":53,"deviation":null}

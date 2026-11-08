@@ -14,6 +14,7 @@ states. Records are dated evidence, not current instructions; the
 
 | Date | Record | Scope | Status |
 | --- | --- | --- | --- |
+| 2026-11-08 | [Probe baseline from sealed traces (#449)](2026-11-08-probe-baseline-449.md) | Probe suite and baseline carry and rediscovery rates from the sealed #397 lineage and a seeded #372 sample, with inter-rater agreement and annotation cost (#449) | historical |
 | 2026-11-07 | [Standards, storage and discoverability audit (#400)](2026-11-07-standards-audit.md) | Audit #400 of docs, design, code, tests, controls and tracker against the charter principles, standards, controls, storage formats and discoverability at main bd549ca | historical |
 | 2026-11-07 | [Seven-day development lineage (#397)](2026-11-07-seven-day-397.md) | Seven-day development lineage #397: owner decisions E1–E4, F1 and F2, the frozen package on the #396 arm, the classification and stop rules, and one row per admission | historical |
 | 2026-11-07 | [Retirement of old `.runtime` run output, 7 November 2026](2026-11-07-runtime-retirement.md) | Retirement of the old raw run output under .runtime, cited and uncited, on the owner decision of 7 November 2026 (#425) | historical |

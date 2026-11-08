@@ -1,0 +1,237 @@
+{"type": "carry", "fact": "F1", "boundary": "sd1a6-001>sd1a6-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F2", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F3", "boundary": "sd1a6-001>sd1a6-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F4", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F5", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F6", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F7", "boundary": "sd1a6-001>sd1a6-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F8", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F9", "boundary": "sd1a6-001>sd1a6-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F10", "boundary": "sd1a6-001>sd1a6-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F11", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F12", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F13", "boundary": "sd1a6-001>sd1a6-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F14", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F15", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F16", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F17", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F18", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F19", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F20", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F21", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F22", "boundary": "sd1a6-001>sd1a6-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F23", "boundary": "sd1a6-001>sd1a6-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F24", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F25", "boundary": "sd1a6-001>sd1a6-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F26", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F27", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F28", "boundary": "sd1a6-001>sd1a6-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F29", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F30", "boundary": "sd1a6-001>sd1a6-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F31", "boundary": "sd1a6-001>sd1a6-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F32", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F33", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F34", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F35", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F36", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F37", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F38", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F39", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F40", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F41", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F42", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F43", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F44", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F45", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F46", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F47", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F48", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F49", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F50", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F51", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F52", "boundary": "sd1a6-001>sd1a6-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F53", "boundary": "sd1a6-001>sd1a6-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F54", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F55", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F56", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F57", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F58", "boundary": "sd1a6-001>sd1a6-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F59", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F60", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F61", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F62", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F63", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F64", "boundary": "sd1a6-001>sd1a6-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F65", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F66", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F69", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F70", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F71", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F72", "boundary": "sd1a6-001>sd1a6-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F73", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F74", "boundary": "sd1a6-001>sd1a6-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F75", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F77", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F78", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F79", "boundary": "sd1a6-001>sd1a6-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F80", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F84", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F85", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F86", "boundary": "sd1a6-001>sd1a6-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F87", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F88", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F89", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F90", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F92", "boundary": "sd1a6-001>sd1a6-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F93", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F94", "boundary": "sd1a6-001>sd1a6-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F95", "boundary": "sd1a6-001>sd1a6-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F96", "boundary": "sd1a6-001>sd1a6-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F97", "boundary": "sd1a6-001>sd1a6-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F98", "boundary": "sd1a6-001>sd1a6-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F99", "boundary": "sd1a6-001>sd1a6-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F100", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F101", "boundary": "sd1a6-001>sd1a6-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F102", "boundary": "sd1a6-001>sd1a6-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F103", "boundary": "sd1a6-001>sd1a6-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F104", "boundary": "sd1a6-001>sd1a6-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F105", "boundary": "sd1a6-001>sd1a6-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F106", "boundary": "sd1a6-001>sd1a6-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F107", "boundary": "sd1a6-001>sd1a6-002", "carried": true, "where": "report"}
+{"type": "event", "fact": "F1", "event": "needed", "frame": "910bb98c06461865f5a73e3574cdd95a-3021", "note": "opens the character screen to confirm who the survivor is"}
+{"type": "event", "fact": "F1", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-3021", "note": "stats screen shows Morgan Hale, male, 25 years"}
+{"type": "event", "fact": "F28", "event": "used", "frame": "910bb98c06461865f5a73e3574cdd95a-3021", "note": "long pointy stick is the wielded weapon on the character screen"}
+{"type": "event", "fact": "F3", "event": "used", "frame": "910bb98c06461865f5a73e3574cdd95a-3021", "note": "log shows Ava Burkhart assisting with crafting and a position swap with her"}
+{"type": "event", "fact": "F22", "event": "needed", "frame": "910bb98c06461865f5a73e3574cdd95a-3021", "note": "resuming the cooked cattail stalk craft depends on a nearby fire"}
+{"type": "event", "fact": "F22", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-3021", "note": "log says no nearby fire and the in-progress cooked cattail stalk (24%) cannot continue"}
+{"type": "event", "fact": "F104", "event": "used", "frame": "910bb98c06461865f5a73e3574cdd95a-3021", "note": "works on the in-progress cooked cattail stalk batch again"}
+{"type": "event", "fact": "F7", "event": "needed", "frame": "910bb98c06461865f5a73e3574cdd95a-3036", "note": "a piglet is near as the player moves through the shelter"}
+{"type": "event", "fact": "F7", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-3036", "note": "wild boar piglet listed SE beside Ava"}
+{"type": "event", "fact": "F70", "event": "needed", "frame": "910bb98c06461865f5a73e3574cdd95a-3036", "note": "gear on the shelter floor is relevant to carrying and crafting"}
+{"type": "event", "fact": "F70", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-3036", "note": "log says you see here 1 bindle and 40 plant fiber"}
+{"type": "event", "fact": "F30", "event": "needed", "frame": "910bb98c06461865f5a73e3574cdd95a-3124", "note": "scans the shelter floor for crafting materials"}
+{"type": "event", "fact": "F30", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-3124", "note": "item list shows plank, nuts and bolts, scrap metal, nails, sheets and a stick"}
+{"type": "event", "fact": "F72", "event": "needed", "frame": "910bb98c06461865f5a73e3574cdd95a-3124", "note": "checks what material lies on the shelter floor"}
+{"type": "event", "fact": "F72", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-3124", "note": "item list shows plant fiber (147), sheets, a plank and a wooden needle"}
+{"type": "event", "fact": "F75", "event": "needed", "frame": "910bb98c06461865f5a73e3574cdd95a-3124", "note": "item list is scanned for the water lying outside"}
+{"type": "event", "fact": "F75", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-3124", "note": "water (dirty)[3] listed 21 N"}
+{"type": "event", "fact": "F12", "event": "needed", "frame": "910bb98c06461865f5a73e3574cdd95a-3536", "note": "looks for a fire source to resume the stalled craft"}
+{"type": "event", "fact": "F12", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-3536", "note": "use-item menu shows matchbook 7/20 and pocket knife"}
+{"type": "event", "fact": "F64", "event": "needed", "frame": "910bb98c06461865f5a73e3574cdd95a-3536", "note": "needs a way to start a fire; the use-item list is open"}
+{"type": "event", "fact": "F64", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-3536", "note": "bow fire drill listed with 6/10 charges and Start a fire quickly"}
+{"type": "event", "fact": "F107", "event": "invalidated", "frame": "910bb98c06461865f5a73e3574cdd95a-3536", "note": "bow fire drill is now at 6/10 charges, not 8/10 or 7/10"}
+{"type": "event", "fact": "F37", "event": "needed", "frame": "910bb98c06461865f5a73e3574cdd95a-3536", "note": "checks light and tools in the use-item list"}
+{"type": "event", "fact": "F37", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-3536", "note": "smartphone 0/56 kJ and flashlight batteries listed dead"}
+{"type": "event", "fact": "F43", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-3536", "note": "glass bottle of 21 single pot still Irish whiskey is carried"}
+{"type": "event", "fact": "F104", "event": "used", "frame": "910bb98c06461865f5a73e3574cdd95a-3536", "note": "in progress cooked cattail stalk (44%) listed as Work on craft"}
+{"type": "event", "fact": "F94", "event": "needed", "frame": "910bb98c06461865f5a73e3574cdd95a-3628", "note": "needs a fire beside the craft and uses the bow fire drill"}
+{"type": "event", "fact": "F94", "event": "used", "frame": "910bb98c06461865f5a73e3574cdd95a-3628", "note": "log says it takes around 7 minutes to light a fire, then lights it successfully"}
+{"type": "event", "fact": "F64", "event": "used", "frame": "910bb98c06461865f5a73e3574cdd95a-3628", "note": "the bow fire drill lights the fire on the pavement"}
+{"type": "event", "fact": "F11", "event": "needed", "frame": "910bb98c06461865f5a73e3574cdd95a-3628", "note": "a black rat is near the player on the pavement"}
+{"type": "event", "fact": "F11", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-3628", "note": "black rat listed north beside Ava"}
+{"type": "event", "fact": "F101", "event": "needed", "frame": "910bb98c06461865f5a73e3574cdd95a-3798", "note": "the in-progress craft lies on the pavement and is not carried"}
+{"type": "event", "fact": "F101", "event": "used", "frame": "910bb98c06461865f5a73e3574cdd95a-3798", "note": "wields the in-progress cooked cattail stalk and works on it in place"}
+{"type": "event", "fact": "F95", "event": "used", "frame": "910bb98c06461865f5a73e3574cdd95a-3798", "note": "resumes the pavement craft in place instead of pocketing it"}
+{"type": "event", "fact": "F22", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-3798", "note": "log again says no nearby fire and the craft cannot continue at 44%"}
+{"type": "event", "fact": "F94", "event": "used", "frame": "910bb98c06461865f5a73e3574cdd95a-3906", "note": "lights another fire and works on the craft (59%) before the fire is gone again"}
+{"type": "event", "fact": "F3", "event": "used", "frame": "910bb98c06461865f5a73e3574cdd95a-4214", "note": "opens Ava's interaction menu in the shelter doorway"}
+{"type": "event", "fact": "F104", "event": "used", "frame": "910bb98c06461865f5a73e3574cdd95a-4214", "note": "drops the in-progress cooked cattail stalk (74%) on the pavement and re-wields the stick"}
+{"type": "event", "fact": "F4", "event": "needed", "frame": "910bb98c06461865f5a73e3574cdd95a-4335", "note": "checks the items beside the shelter lockers"}
+{"type": "event", "fact": "F4", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-4335", "note": "list shows a sealed bottle with 2 clean water, 4 more clean water and a plastic knife by the lockers"}
+{"type": "event", "fact": "F30", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-4335", "note": "list shows nuts and bolts, scrap metal, nails, sheets, sticks and a bindle"}
+{"type": "event", "fact": "F75", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-4335", "note": "water (dirty)[3] listed 17 N"}
+{"type": "event", "fact": "F106", "event": "used", "frame": "910bb98c06461865f5a73e3574cdd95a-4662", "note": "drops cotton sheets and a stick on the pavement beside the craft as fire fuel"}
+{"type": "event", "fact": "F101", "event": "used", "frame": "910bb98c06461865f5a73e3574cdd95a-4662", "note": "log says you see here the in-progress cooked cattail stalk (74%) lying on the pavement"}
+{"type": "event", "fact": "F12", "event": "used", "frame": "910bb98c06461865f5a73e3574cdd95a-4783", "note": "after choosing the matchbook the log shows a fire successfully lit beside the craft"}
+{"type": "event", "fact": "F93", "event": "needed", "frame": "910bb98c06461865f5a73e3574cdd95a-4981", "note": "searches egg recipes for a use for the few mixed wild eggs"}
+{"type": "event", "fact": "F100", "event": "needed", "frame": "910bb98c06461865f5a73e3574cdd95a-4981", "note": "boiled egg appears in the egg recipe search list"}
+{"type": "event", "fact": "F92", "event": "needed", "frame": "910bb98c06461865f5a73e3574cdd95a-4981", "note": "decides what to do with the collected wild eggs"}
+{"type": "event", "fact": "F8", "event": "needed", "frame": "910bb98c06461865f5a73e3574cdd95a-4996", "note": "opens the overmap to plan where to go next"}
+{"type": "event", "fact": "F8", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-4996", "note": "overmap shows the lake west of evac shelter B-19"}
+{"type": "event", "fact": "F3", "event": "used", "frame": "910bb98c06461865f5a73e3574cdd95a-5337", "note": "log shows Ava helping with crafting many times"}
+{"type": "event", "fact": "F70", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-5337", "note": "log says you see here 1 bindle and 40 plant fiber"}
+{"type": "event", "fact": "F28", "event": "needed", "frame": "910bb98c06461865f5a73e3574cdd95a-5486", "note": "searches spear recipes for a better weapon than the stick"}
+{"type": "event", "fact": "F78", "event": "needed", "frame": "910bb98c06461865f5a73e3574cdd95a-5486", "note": "simple knife spear is listed among the spear recipes"}
+{"type": "event", "fact": "F79", "event": "used", "frame": "910bb98c06461865f5a73e3574cdd95a-5486", "note": "looks for safer equipment as planned"}
+{"type": "event", "fact": "F88", "event": "needed", "frame": "910bb98c06461865f5a73e3574cdd95a-5495", "note": "searches cordage recipes to get line; the search list is empty"}
+{"type": "event", "fact": "F90", "event": "needed", "frame": "910bb98c06461865f5a73e3574cdd95a-5495", "note": "line is needed and was not in the received text, so cordage recipes are searched"}
+{"type": "event", "fact": "F16", "event": "needed", "frame": "910bb98c06461865f5a73e3574cdd95a-5515", "note": "searches cordage and string recipes for the line a fishing rod needs"}
+{"type": "event", "fact": "F88", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-5519", "note": "long cordage piece needs a spinning wheel and tanbark, willowbark, straw or withered plants, shown red"}
+{"type": "fact", "id": "F108", "statement": "A fire lit with the bow fire drill, notched sticks and tinder burns only about 10 minutes (lit 5:31 PM, gone by 5:40 PM), so a long craft stalls and the fire must be relit", "category": "procedure", "observed": "910bb98c06461865f5a73e3574cdd95a-3798", "stored": "e6b360"}
+{"type": "fact", "id": "F109", "statement": "A makeshift sling is crafted in about 51 seconds from one sheet or blanket with no tools; it hangs on the back torso and works as carrying gear", "category": "procedure", "observed": "910bb98c06461865f5a73e3574cdd95a-5532", "stored": null}
+{"type": "event", "fact": "F109", "event": "used", "frame": "910bb98c06461865f5a73e3574cdd95a-5699", "note": "crafts the makeshift sling from memory"}
+{"type": "event", "fact": "F4", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-5781", "note": "list beside the lockers shows a flashlight, plastic knife and emergency blanket"}
+{"type": "event", "fact": "F39", "event": "needed", "frame": "910bb98c06461865f5a73e3574cdd95a-5781", "note": "looks over the locker supplies for blankets and gear"}
+{"type": "event", "fact": "F39", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-5781", "note": "emergency blanket and plastic knife listed beside the lockers"}
+{"type": "event", "fact": "F30", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-5781", "note": "list shows plant fiber (147), nuts and bolts, scrap metal, nails, sheets and sticks"}
+{"type": "event", "fact": "F53", "event": "needed", "frame": "910bb98c06461865f5a73e3574cdd95a-5786", "note": "opens the consume menu and checks the vitamin header"}
+{"type": "event", "fact": "F96", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-5786", "note": "header shows vitamin C 86%, iron 63%, calcium 46%"}
+{"type": "event", "fact": "F52", "event": "needed", "frame": "910bb98c06461865f5a73e3574cdd95a-5786", "note": "pine needle tea is an option for vitamin C"}
+{"type": "event", "fact": "F52", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-5786", "note": "2 portions of pine needle tea listed"}
+{"type": "event", "fact": "F20", "event": "needed", "frame": "910bb98c06461865f5a73e3574cdd95a-5786", "note": "chooses among foods"}
+{"type": "event", "fact": "F20", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-5786", "note": "5 protein rations listed at +800 kcal"}
+{"type": "event", "fact": "F25", "event": "needed", "frame": "910bb98c06461865f5a73e3574cdd95a-5786", "note": "chooses among foods"}
+{"type": "event", "fact": "F25", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-5786", "note": "27 cattail stalks listed at +18 kcal"}
+{"type": "event", "fact": "F99", "event": "needed", "frame": "910bb98c06461865f5a73e3574cdd95a-5786", "note": "chooses among foods"}
+{"type": "event", "fact": "F99", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-5786", "note": "4 roasted cattail rhizomes listed at +280 kcal with a 5 day shelf life"}
+{"type": "event", "fact": "F92", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-5786", "note": "robin, cardinal and 2 crow eggs listed"}
+{"type": "event", "fact": "F43", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-5786", "note": "single pot still Irish whiskey (21) listed"}
+{"type": "event", "fact": "F58", "event": "needed", "frame": "910bb98c06461865f5a73e3574cdd95a-5786", "note": "the cooked cattail stalk batch has just finished"}
+{"type": "event", "fact": "F58", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-5786", "note": "5 cooked cattail stalks (hot) listed at +25 kcal"}
+{"type": "event", "fact": "F102", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-5786", "note": "4 roasted rhizomes, 27 stalks, 5 rations, 7 pine resin and four eggs are listed"}
+{"type": "event", "fact": "F103", "event": "invalidated", "frame": "910bb98c06461865f5a73e3574cdd95a-5786", "note": "clean water now 9 portions and pine needle tea 2, not 5 clean water and 2 tea in different containers"}
+{"type": "event", "fact": "F104", "event": "invalidated", "frame": "910bb98c06461865f5a73e3574cdd95a-5786", "note": "the cooked cattail stalk batch is finished: 5 cooked stalks are carried"}
+{"type": "fact", "id": "F110", "statement": "Morgan wears the makeshift sling", "category": "self", "observed": "910bb98c06461865f5a73e3574cdd95a-5786", "stored": null}
+{"type": "fact", "id": "F111", "statement": "The batch of five cooked cattail stalks is finished; each gives 25 kcal and keeps about 2 days", "category": "item", "observed": "910bb98c06461865f5a73e3574cdd95a-5786", "stored": null}
+{"type": "fact", "id": "F112", "statement": "The survivor now carries 9 clean water portions and 2 portions of pine needle tea after picking up the sealed bottle and loose clean water near the lockers", "category": "item", "observed": "910bb98c06461865f5a73e3574cdd95a-5786", "stored": null}
+{"type": "event", "fact": "F30", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-6029", "note": "list shows a basic fishing rod, nails, plant fiber, bindle, nuts and bolts, scrap metal and a stick"}
+{"type": "event", "fact": "F72", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-6029", "note": "cotton patch[63], plant fiber[97] and 6 sheets are listed"}
+{"type": "event", "fact": "F37", "event": "needed", "frame": "910bb98c06461865f5a73e3574cdd95a-6045", "note": "searches the use-item list for a flashlight"}
+{"type": "event", "fact": "F37", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-6045", "note": "flashlight (off) listed with batteries dead and no available choices"}
+{"type": "fact", "id": "F113", "statement": "A short string is crafted from 50 plant fiber in about 8 minutes with no tools; the Fiber Twisting proficiency is missing, and Ava can assist", "category": "procedure", "observed": "910bb98c06461865f5a73e3574cdd95a-6156", "stored": null}
+{"type": "event", "fact": "F90", "event": "needed", "frame": "910bb98c06461865f5a73e3574cdd95a-6156", "note": "searches short string recipes to supply line for the improvised hook"}
+{"type": "event", "fact": "F113", "event": "used", "frame": "910bb98c06461865f5a73e3574cdd95a-6294", "note": "crafts short strings from memory"}
+{"type": "event", "fact": "F3", "event": "used", "frame": "910bb98c06461865f5a73e3574cdd95a-6294", "note": "Ava assists with crafting the strings"}
+{"type": "fact", "id": "F114", "statement": "A pair of 2-by-arm guards needs 2 short strings, a plank and 2 cotton patches and takes about 16 minutes 33 seconds", "category": "procedure", "observed": "910bb98c06461865f5a73e3574cdd95a-6430", "stored": null}
+{"type": "event", "fact": "F79", "event": "used", "frame": "910bb98c06461865f5a73e3574cdd95a-6430", "note": "searches arm guard recipes as part of upgrading equipment"}
+{"type": "event", "fact": "F3", "event": "used", "frame": "910bb98c06461865f5a73e3574cdd95a-6659", "note": "Ava helps with the string crafting while the player waits"}
+{"type": "event", "fact": "F96", "event": "invalidated", "frame": "910bb98c06461865f5a73e3574cdd95a-8042", "note": "after midnight the consume header shows vitamin C 9%, iron 0%, calcium 0%"}
+{"type": "event", "fact": "F102", "event": "invalidated", "frame": "910bb98c06461865f5a73e3574cdd95a-8042", "note": "3 roasted rhizomes remain, not 4"}
+{"type": "fact", "id": "F115", "statement": "Daily vitamin and calorie intake resets at midnight; yesterday's total was 2455 kcal, and one pine needle tea gives vitamin C 9% for the new day", "category": "self", "observed": "910bb98c06461865f5a73e3574cdd95a-8042", "stored": null}
+{"type": "fact", "id": "F116", "statement": "On waking the survivor carries 5 cooked cattail stalks, 27 raw stalks, 3 roasted rhizomes, 5 protein rations, 9 clean water, 1 pine needle tea and 4 wild eggs", "category": "item", "observed": "910bb98c06461865f5a73e3574cdd95a-8042", "stored": null}
+{"type": "event", "fact": "F52", "event": "used", "frame": "910bb98c06461865f5a73e3574cdd95a-8042", "note": "drinks pine needle tea on waking"}
+{"type": "event", "fact": "F53", "event": "used", "frame": "910bb98c06461865f5a73e3574cdd95a-8042", "note": "drinks tea for vitamin C; the header shows it at 9% for the new day"}
+{"type": "event", "fact": "F20", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-8042", "note": "5 protein rations listed at +800 kcal"}
+{"type": "event", "fact": "F99", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-8042", "note": "3 roasted rhizomes listed at +280 kcal with a 5 day shelf life"}
+{"type": "event", "fact": "F20", "event": "used", "frame": "910bb98c06461865f5a73e3574cdd95a-8069", "note": "log shows the player ate a protein ration for breakfast"}
+{"type": "event", "fact": "F99", "event": "used", "frame": "910bb98c06461865f5a73e3574cdd95a-8069", "note": "log shows the player ate a roasted cattail rhizome"}
+{"type": "event", "fact": "F7", "event": "needed", "frame": "910bb98c06461865f5a73e3574cdd95a-8160", "note": "a piglet is near the road while heading out"}
+{"type": "event", "fact": "F7", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-8160", "note": "wild boar piglet listed south of the player on the road"}
+{"type": "event", "fact": "F11", "event": "needed", "frame": "910bb98c06461865f5a73e3574cdd95a-8243", "note": "checks the monster list while travelling"}
+{"type": "event", "fact": "F11", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-8243", "note": "black rat ignoring, 58 NE"}
+{"type": "event", "fact": "F7", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-8379", "note": "wild boar piglet ignoring, 25 E"}
+{"type": "event", "fact": "F34", "event": "needed", "frame": "910bb98c06461865f5a73e3574cdd95a-8428", "note": "examines Ava's gear"}
+{"type": "event", "fact": "F34", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-8428", "note": "Ava is wearing a pair of foot rags"}
+{"type": "event", "fact": "F3", "event": "used", "frame": "910bb98c06461865f5a73e3574cdd95a-8428", "note": "Ava follows the player on the road"}
+{"type": "fact", "id": "F117", "statement": "Ava wields a small game lever-action rifle and wears socks, foot rags, gray pants, a lab coat, rubber gloves, safety glasses and a baseball cap", "category": "other", "observed": "910bb98c06461865f5a73e3574cdd95a-8428", "stored": null}
+{"type": "event", "fact": "F8", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-8459", "note": "overmap shows the lake west and forest east of the field the player is crossing"}
+{"type": "fact", "id": "F118", "statement": "Autumn olive (silverberry) shrubs grow in the fields northeast of the shelter but only bear fruit in autumn", "category": "resource", "observed": "910bb98c06461865f5a73e3574cdd95a-9074", "stored": null}
+{"type": "event", "fact": "F105", "event": "needed", "frame": "910bb98c06461865f5a73e3574cdd95a-9110", "note": "scans ground items in the field for useful stone and materials"}
+{"type": "event", "fact": "F105", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-9110", "note": "flint 27 SW, flaking rock 38 W and sharp rock 52 NW are listed"}
+{"type": "event", "fact": "F75", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-9110", "note": "water (dirty)[3] listed 56 SW on the pavement"}
+{"type": "fact", "id": "F119", "statement": "Murky water (about 230 units) lies on the ground roughly 43 tiles northeast of the field where the player searched", "category": "place", "observed": "910bb98c06461865f5a73e3574cdd95a-9110", "stored": null}
+{"type": "event", "fact": "F86", "event": "needed", "frame": "910bb98c06461865f5a73e3574cdd95a-9160", "note": "forages the forest floor for food and materials"}
+{"type": "event", "fact": "F86", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-9160", "note": "log shows picking up a hickory root in the forest"}
+{"type": "event", "fact": "F11", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-9160", "note": "black rat listed west in the forest"}
+{"type": "fact", "id": "F121", "statement": "A mutated poppy grows in the northeastern forest and an approximate danger warning was added to the map", "category": "hazard", "observed": "text", "stored": null}
+{"type": "fact", "id": "F122", "statement": "Blackberry bushes grow in the northeast forest and block the path with a confirm prompt", "category": "resource", "observed": "910bb98c06461865f5a73e3574cdd95a-9453", "stored": null}
+{"type": "event", "fact": "F49", "event": "needed", "frame": "910bb98c06461865f5a73e3574cdd95a-9847", "note": "searches for burdock to harvest in the forest"}
+{"type": "event", "fact": "F49", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-9847", "note": "prompt asks Pick burdock? in the forest"}
+{"type": "event", "fact": "F49", "event": "used", "frame": "910bb98c06461865f5a73e3574cdd95a-9847", "note": "picks burdock in the forest for food"}
+{"type": "fact", "id": "F120", "statement": "Burdock seeds are crafted from 1 burdock in about 2 minutes 17 seconds (survival 1/2); Ava knows the recipe and the seeds can be planted", "category": "procedure", "observed": "910bb98c06461865f5a73e3574cdd95a-10079", "stored": null}
+{"type": "event", "fact": "F120", "event": "used", "frame": "910bb98c06461865f5a73e3574cdd95a-10276", "note": "crafts burdock seeds using a reference and picks them up"}
+{"type": "event", "fact": "F7", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-10827", "note": "wild boar piglet ignoring, 48 S"}
+{"type": "event", "fact": "F7", "event": "rediscovered", "frame": "910bb98c06461865f5a73e3574cdd95a-10868", "note": "wild boar piglet ignoring, 42 SE"}
+{"type": "event", "fact": "F23", "event": "used", "frame": "910bb98c06461865f5a73e3574cdd95a-10870", "note": "Save and quit confirm prompt is shown"}
+{"type": "event", "fact": "F23", "event": "used", "frame": "910bb98c06461865f5a73e3574cdd95a-11056", "note": "the load list shows Whitethorn after quitting"}
+{"type": "end", "frames_viewed": 66}

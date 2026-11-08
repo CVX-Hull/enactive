@@ -1,0 +1,41 @@
+{"type":"carry","fact":"F1","boundary":"ceil05-001>ceil05-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F2","boundary":"ceil05-001>ceil05-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F3","boundary":"ceil05-001>ceil05-002","carried":false,"where":null}
+{"type":"carry","fact":"F4","boundary":"ceil05-001>ceil05-002","carried":false,"where":null}
+{"type":"carry","fact":"F5","boundary":"ceil05-001>ceil05-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F6","boundary":"ceil05-001>ceil05-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F7","boundary":"ceil05-001>ceil05-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F8","boundary":"ceil05-001>ceil05-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F9","boundary":"ceil05-001>ceil05-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F10","boundary":"ceil05-001>ceil05-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F11","boundary":"ceil05-001>ceil05-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F12","boundary":"ceil05-001>ceil05-002","carried":true,"where":"packet"}
+{"type":"event","fact":"F9","event":"used","frame":"2256dc8fbab78519fdea458f3f66315e-2665","note":"Wielding the pointy stick while exploring the field"}
+{"type":"event","fact":"F6","event":"needed","frame":"2256dc8fbab78519fdea458f3f66315e-2944","note":"Monsters list shows hostile zombie 60 tiles south; decision whether to engage"}
+{"type":"event","fact":"F6","event":"used","frame":"2256dc8fbab78519fdea458f3f66315e-3651","note":"Zombie 59 tiles southeast spotted again and ignored while continuing in the shelter"}
+{"type":"event","fact":"F2","event":"used","frame":"2256dc8fbab78519fdea458f3f66315e-3194","note":"Returned to evac shelter B-05 to loot lockers"}
+{"type":"event","fact":"F5","event":"needed","frame":"2256dc8fbab78519fdea458f3f66315e-3194","note":"Choosing what to take from a shelter locker holding blanket, jacket, flashlight, water, rations"}
+{"type":"event","fact":"F5","event":"used","frame":"2256dc8fbab78519fdea458f3f66315e-3194","note":"Opened another shelter locker to pick up supplies"}
+{"type":"event","fact":"F11","event":"needed","frame":"2256dc8fbab78519fdea458f3f66315e-3148","note":"Inventory shows weight 16.7 of 99.3 lbs, relevant to how much more to carry"}
+{"type":"event","fact":"F12","event":"needed","frame":"2256dc8fbab78519fdea458f3f66315e-3482","note":"Searching crafting recipes for clean water in pursuit of sustainable water"}
+{"type":"event","fact":"F12","event":"used","frame":"2256dc8fbab78519fdea458f3f66315e-3482","note":"Looking up water purification and tool recipes consistent with the plan"}
+{"type":"event","fact":"F3","event":"needed","frame":"2256dc8fbab78519fdea458f3f66315e-4133","note":"Talking to Casey Oglesby, whose request the player had accepted, and asking her to travel"}
+{"type":"event","fact":"F3","event":"needed","frame":"2256dc8fbab78519fdea458f3f66315e-8828","note":"Casey asks whether the request about her mother is done; the player lies and she rejects it"}
+{"type":"event","fact":"F3","event":"acted_without","frame":"2256dc8fbab78519fdea458f3f66315e-4133","note":"Left the shelter with Casey having told her the request was not yet done and without asking for equipment"}
+{"type":"fact","id":"F13","statement":"The evac shelter info board in B-05 carries a map to the nearest refugee center; studying it marks the refugee center and its road on the overmap","category":"place","observed":"2256dc8fbab78519fdea458f3f66315e-3651","stored":null}
+{"type":"fact","id":"F14","statement":"Evac shelter B-05 lies northwest of the town Revere, roughly 340-360 tiles (about 5 miles) from the character's later positions","category":"place","observed":"2256dc8fbab78519fdea458f3f66315e-2843","stored":null}
+{"type":"fact","id":"F15","statement":"Casey Oglesby agreed to travel with the survivor and follows him as a friendly companion","category":"other","observed":"2256dc8fbab78519fdea458f3f66315e-5788","stored":null}
+{"type":"fact","id":"F16","statement":"Casey Oglesby declines to teach the survivor anything (persuasion 37% failed)","category":"other","observed":"2256dc8fbab78519fdea458f3f66315e-4194","stored":null}
+{"type":"fact","id":"F17","statement":"A hostile zombie soldier and a hostile kreck were fighting each other about 60 tiles southwest of the survivor in the fields","category":"hazard","observed":"2256dc8fbab78519fdea458f3f66315e-5788","stored":null}
+{"type":"fact","id":"F18","statement":"A hostile zombie dog, about as fast as the survivor, approached from the northeast along the road; Casey fights it with a nail bat","category":"hazard","observed":"2256dc8fbab78519fdea458f3f66315e-8246","stored":null}
+{"type":"fact","id":"F19","statement":"A lake lies to the north of the explored fields on the overmap","category":"place","observed":"2256dc8fbab78519fdea458f3f66315e-7179","stored":null}
+{"type":"fact","id":"F20","statement":"Rocks, flint, sticks and honeydew lie scattered in the fields northwest and east of the survivor, usable as crafting materials","category":"resource","observed":"2256dc8fbab78519fdea458f3f66315e-7646","stored":null}
+{"type":"fact","id":"F21","statement":"Making clean water from water needs a heat source with boiling (fire, stove or similar) and plain water as component","category":"procedure","observed":"2256dc8fbab78519fdea458f3f66315e-3482","stored":null}
+{"type":"fact","id":"F22","statement":"The survivor carries 7 protein rations and 12 units of clean water after eating one ration (lost the Foodless conduct)","category":"item","observed":"2256dc8fbab78519fdea458f3f66315e-8318","stored":null}
+{"type":"fact","id":"F23","statement":"A rural church with glass windows and pews stands east of the road and fields near where the survivor ended; its door could not be opened","category":"place","observed":"2256dc8fbab78519fdea458f3f66315e-9446","stored":null}
+{"type":"fact","id":"F24","statement":"Casey Oglesby wields a nail bat and wears a lab coat, jean vest, winter boots, dust mask and carries an inhaler","category":"other","observed":"2256dc8fbab78519fdea458f3f66315e-8699","stored":null}
+{"type":"fact","id":"F25","statement":"Casey rejected the false claim that her mother was already put down (\"forget it\"); her request remains unfulfilled","category":"other","observed":"2256dc8fbab78519fdea458f3f66315e-8828","stored":null}
+{"type":"event","fact":"F13","event":"needed","frame":"2256dc8fbab78519fdea458f3f66315e-3888","note":"Searching the overmap for the refugee center that the board's map marked"}
+{"type":"event","fact":"F18","event":"needed","frame":"2256dc8fbab78519fdea458f3f66315e-8246","note":"Decision whether to fight or flee the zombie dog"}
+{"type":"event","fact":"F22","event":"used","frame":"2256dc8fbab78519fdea458f3f66315e-8318","note":"Ate a protein ration from the carried stock"}
+{"type":"end","frames_viewed":51}

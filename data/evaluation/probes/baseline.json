@@ -1,0 +1,805 @@
+{
+ "annotation_costs": {
+  "397:A": {
+   "chunks": 14,
+   "deviations": 2,
+   "seconds": 2659.4590000000003,
+   "tokens": 2520420,
+   "unrecorded_attempts": 1
+  },
+  "397:B": {
+   "chunks": 3,
+   "deviations": 0,
+   "seconds": 457.09000000000003,
+   "tokens": 498390,
+   "unrecorded_attempts": 0
+  },
+  "aidA5:A": {
+   "chunks": 2,
+   "deviations": 1,
+   "seconds": 198.5,
+   "tokens": 248994,
+   "unrecorded_attempts": 0
+  },
+  "aidB3:A": {
+   "chunks": 2,
+   "deviations": 0,
+   "seconds": 179.271,
+   "tokens": 249927,
+   "unrecorded_attempts": 0
+  },
+  "aidB9:A": {
+   "chunks": 2,
+   "deviations": 1,
+   "seconds": 189.971,
+   "tokens": 247748,
+   "unrecorded_attempts": 0
+  },
+  "ceil05:A": {
+   "chunks": 2,
+   "deviations": 0,
+   "seconds": 194.35899999999998,
+   "tokens": 248455,
+   "unrecorded_attempts": 0
+  },
+  "ceil07:A": {
+   "chunks": 2,
+   "deviations": 0,
+   "seconds": 214.165,
+   "tokens": 248279,
+   "unrecorded_attempts": 0
+  },
+  "ceil09:A": {
+   "chunks": 2,
+   "deviations": 0,
+   "seconds": 194.57500000000002,
+   "tokens": 252586,
+   "unrecorded_attempts": 0
+  }
+ },
+ "inter_rater": [
+  {
+   "carry": {
+    "kappa": 0.8576388888888887,
+    "n": 41,
+    "percent": 0.9512195121951219
+   },
+   "chunk": "sd1a3-001",
+   "needed": {
+    "kappa": 0.8479604449938196,
+    "n": 41,
+    "percent": 0.926829268292683
+   },
+   "new_facts": {
+    "A": 22,
+    "B": 13
+   }
+  },
+  {
+   "carry": {
+    "kappa": 0.9271874362635121,
+    "n": 119,
+    "percent": 0.9747899159663865
+   },
+   "chunk": "sd1a7-002",
+   "needed": {
+    "kappa": 0.6899888351321174,
+    "n": 119,
+    "percent": 0.9411764705882353
+   },
+   "new_facts": {
+    "A": 8,
+    "B": 4
+   }
+  },
+  {
+   "carry": {
+    "kappa": 0.8930232558139536,
+    "n": 23,
+    "percent": 0.9565217391304348
+   },
+   "chunk": "sd1a2-001",
+   "needed": {
+    "kappa": 0.45669291338582657,
+    "n": 23,
+    "percent": 0.7391304347826086
+   },
+   "new_facts": {
+    "A": 7,
+    "B": 6
+   }
+  }
+ ],
+ "lineages": [
+  {
+   "annotation": "blinded",
+   "boundaries": [
+    {
+     "boundary": "sd1a1-001>sd1a1-002",
+     "carried": 13,
+     "kind": "handoff",
+     "live": 13,
+     "needed": 3,
+     "needed_carried": 3,
+     "unlabelled": []
+    },
+    {
+     "boundary": "sd1a1-002>sd1a2-001",
+     "carried": 6,
+     "kind": "admission",
+     "live": 23,
+     "needed": 10,
+     "needed_carried": 1,
+     "unlabelled": []
+    },
+    {
+     "boundary": "sd1a2-001>sd1a2-002",
+     "carried": 15,
+     "kind": "handoff",
+     "live": 30,
+     "needed": 14,
+     "needed_carried": 5,
+     "unlabelled": []
+    },
+    {
+     "boundary": "sd1a2-002>sd1a3-001",
+     "carried": 9,
+     "kind": "admission",
+     "live": 41,
+     "needed": 16,
+     "needed_carried": 1,
+     "unlabelled": []
+    },
+    {
+     "boundary": "sd1a3-001>sd1a3-002",
+     "carried": 25,
+     "kind": "handoff",
+     "live": 63,
+     "needed": 16,
+     "needed_carried": 7,
+     "unlabelled": []
+    },
+    {
+     "boundary": "sd1a3-002>sd1a4-001",
+     "carried": 15,
+     "kind": "admission",
+     "live": 73,
+     "needed": 10,
+     "needed_carried": 3,
+     "unlabelled": []
+    },
+    {
+     "boundary": "sd1a4-001>sd1a4-002",
+     "carried": 24,
+     "kind": "handoff",
+     "live": 78,
+     "needed": 17,
+     "needed_carried": 9,
+     "unlabelled": []
+    },
+    {
+     "boundary": "sd1a4-002>sd1a5-001",
+     "carried": 17,
+     "kind": "admission",
+     "live": 83,
+     "needed": 16,
+     "needed_carried": 7,
+     "unlabelled": []
+    },
+    {
+     "boundary": "sd1a5-001>sd1a5-002",
+     "carried": 21,
+     "kind": "handoff",
+     "live": 87,
+     "needed": 26,
+     "needed_carried": 12,
+     "unlabelled": []
+    },
+    {
+     "boundary": "sd1a5-002>sd1a6-001",
+     "carried": 21,
+     "kind": "admission",
+     "live": 92,
+     "needed": 24,
+     "needed_carried": 8,
+     "unlabelled": []
+    },
+    {
+     "boundary": "sd1a6-001>sd1a6-002",
+     "carried": 33,
+     "kind": "handoff",
+     "live": 100,
+     "needed": 37,
+     "needed_carried": 18,
+     "unlabelled": []
+    },
+    {
+     "boundary": "sd1a6-002>sd1a7-001",
+     "carried": 13,
+     "kind": "admission",
+     "live": 110,
+     "needed": 32,
+     "needed_carried": 5,
+     "unlabelled": []
+    },
+    {
+     "boundary": "sd1a7-001>sd1a7-002",
+     "carried": 26,
+     "kind": "handoff",
+     "live": 119,
+     "needed": 16,
+     "needed_carried": 6,
+     "unlabelled": []
+    }
+   ],
+   "carry": {
+    "admission": {
+     "boundaries": 6,
+     "carried": 81,
+     "carry_rate": 0.19194312796208532,
+     "live": 422,
+     "needed": 108,
+     "needed_carried": 25,
+     "needed_carry_rate": 0.23148148148148148,
+     "unlabelled": 0
+    },
+    "handoff": {
+     "boundaries": 7,
+     "carried": 157,
+     "carry_rate": 0.32040816326530613,
+     "live": 490,
+     "needed": 129,
+     "needed_carried": 60,
+     "needed_carry_rate": 0.46511627906976744,
+     "unlabelled": 0
+    },
+    "pooled": {
+     "boundaries": 13,
+     "carried": 238,
+     "carry_rate": 0.26096491228070173,
+     "live": 912,
+     "needed": 237,
+     "needed_carried": 85,
+     "needed_carry_rate": 0.35864978902953587,
+     "unlabelled": 0
+    }
+   },
+   "chunks": 14,
+   "facts": 139,
+   "frames_viewed": 699,
+   "game_hours": 47.791,
+   "lineage": "397",
+   "probes": {
+    "failing": 152,
+    "failing_with_cost": 120,
+    "total": 237
+   },
+   "rediscoveries": 210,
+   "rediscoveries_per_game_hour": 4.39413278650792,
+   "schema": "probe-baseline/1"
+  },
+  {
+   "annotation": "blinded plus unblinded adjudication of the four known episodes",
+   "boundaries": [
+    {
+     "boundary": "sd1a1-001>sd1a1-002",
+     "carried": 13,
+     "kind": "handoff",
+     "live": 13,
+     "needed": 3,
+     "needed_carried": 3,
+     "unlabelled": []
+    },
+    {
+     "boundary": "sd1a1-002>sd1a2-001",
+     "carried": 6,
+     "kind": "admission",
+     "live": 23,
+     "needed": 10,
+     "needed_carried": 1,
+     "unlabelled": []
+    },
+    {
+     "boundary": "sd1a2-001>sd1a2-002",
+     "carried": 15,
+     "kind": "handoff",
+     "live": 30,
+     "needed": 14,
+     "needed_carried": 5,
+     "unlabelled": []
+    },
+    {
+     "boundary": "sd1a2-002>sd1a3-001",
+     "carried": 9,
+     "kind": "admission",
+     "live": 41,
+     "needed": 17,
+     "needed_carried": 1,
+     "unlabelled": []
+    },
+    {
+     "boundary": "sd1a3-001>sd1a3-002",
+     "carried": 25,
+     "kind": "handoff",
+     "live": 63,
+     "needed": 16,
+     "needed_carried": 7,
+     "unlabelled": []
+    },
+    {
+     "boundary": "sd1a3-002>sd1a4-001",
+     "carried": 15,
+     "kind": "admission",
+     "live": 73,
+     "needed": 10,
+     "needed_carried": 3,
+     "unlabelled": []
+    },
+    {
+     "boundary": "sd1a4-001>sd1a4-002",
+     "carried": 24,
+     "kind": "handoff",
+     "live": 78,
+     "needed": 18,
+     "needed_carried": 9,
+     "unlabelled": []
+    },
+    {
+     "boundary": "sd1a4-002>sd1a5-001",
+     "carried": 17,
+     "kind": "admission",
+     "live": 83,
+     "needed": 16,
+     "needed_carried": 7,
+     "unlabelled": []
+    },
+    {
+     "boundary": "sd1a5-001>sd1a5-002",
+     "carried": 21,
+     "kind": "handoff",
+     "live": 87,
+     "needed": 26,
+     "needed_carried": 12,
+     "unlabelled": []
+    },
+    {
+     "boundary": "sd1a5-002>sd1a6-001",
+     "carried": 21,
+     "kind": "admission",
+     "live": 92,
+     "needed": 25,
+     "needed_carried": 8,
+     "unlabelled": []
+    },
+    {
+     "boundary": "sd1a6-001>sd1a6-002",
+     "carried": 33,
+     "kind": "handoff",
+     "live": 100,
+     "needed": 37,
+     "needed_carried": 18,
+     "unlabelled": []
+    },
+    {
+     "boundary": "sd1a6-002>sd1a7-001",
+     "carried": 13,
+     "kind": "admission",
+     "live": 110,
+     "needed": 32,
+     "needed_carried": 5,
+     "unlabelled": []
+    },
+    {
+     "boundary": "sd1a7-001>sd1a7-002",
+     "carried": 26,
+     "kind": "handoff",
+     "live": 119,
+     "needed": 16,
+     "needed_carried": 6,
+     "unlabelled": []
+    }
+   ],
+   "carry": {
+    "admission": {
+     "boundaries": 6,
+     "carried": 81,
+     "carry_rate": 0.19194312796208532,
+     "live": 422,
+     "needed": 110,
+     "needed_carried": 25,
+     "needed_carry_rate": 0.22727272727272727,
+     "unlabelled": 0
+    },
+    "handoff": {
+     "boundaries": 7,
+     "carried": 157,
+     "carry_rate": 0.32040816326530613,
+     "live": 490,
+     "needed": 130,
+     "needed_carried": 60,
+     "needed_carry_rate": 0.46153846153846156,
+     "unlabelled": 0
+    },
+    "pooled": {
+     "boundaries": 13,
+     "carried": 238,
+     "carry_rate": 0.26096491228070173,
+     "live": 912,
+     "needed": 240,
+     "needed_carried": 85,
+     "needed_carry_rate": 0.3541666666666667,
+     "unlabelled": 0
+    }
+   },
+   "chunks": 14,
+   "facts": 139,
+   "frames_viewed": 699,
+   "game_hours": 47.791,
+   "lineage": "397",
+   "probes": {
+    "failing": 155,
+    "failing_with_cost": 123,
+    "total": 240
+   },
+   "rediscoveries": 210,
+   "rediscoveries_per_game_hour": 4.39413278650792,
+   "schema": "probe-baseline/1"
+  },
+  {
+   "annotation": "blinded",
+   "boundaries": [
+    {
+     "boundary": "aidB3-001>aidB3-002",
+     "carried": 10,
+     "kind": "handoff",
+     "live": 11,
+     "needed": 4,
+     "needed_carried": 3,
+     "unlabelled": []
+    }
+   ],
+   "carry": {
+    "admission": {
+     "boundaries": 0,
+     "carried": 0,
+     "carry_rate": null,
+     "live": 0,
+     "needed": 0,
+     "needed_carried": 0,
+     "needed_carry_rate": null,
+     "unlabelled": 0
+    },
+    "handoff": {
+     "boundaries": 1,
+     "carried": 10,
+     "carry_rate": 0.9090909090909091,
+     "live": 11,
+     "needed": 4,
+     "needed_carried": 3,
+     "needed_carry_rate": 0.75,
+     "unlabelled": 0
+    },
+    "pooled": {
+     "boundaries": 1,
+     "carried": 10,
+     "carry_rate": 0.9090909090909091,
+     "live": 11,
+     "needed": 4,
+     "needed_carried": 3,
+     "needed_carry_rate": 0.75,
+     "unlabelled": 0
+    }
+   },
+   "chunks": 2,
+   "facts": 23,
+   "frames_viewed": 88,
+   "game_hours": 0.421,
+   "lineage": "aidB3",
+   "probes": {
+    "failing": 1,
+    "failing_with_cost": 1,
+    "total": 4
+   },
+   "rediscoveries": 2,
+   "rediscoveries_per_game_hour": 4.750593824228028,
+   "schema": "probe-baseline/1"
+  },
+  {
+   "annotation": "blinded",
+   "boundaries": [
+    {
+     "boundary": "ceil09-001>ceil09-002",
+     "carried": 9,
+     "kind": "handoff",
+     "live": 10,
+     "needed": 1,
+     "needed_carried": 1,
+     "unlabelled": []
+    }
+   ],
+   "carry": {
+    "admission": {
+     "boundaries": 0,
+     "carried": 0,
+     "carry_rate": null,
+     "live": 0,
+     "needed": 0,
+     "needed_carried": 0,
+     "needed_carry_rate": null,
+     "unlabelled": 0
+    },
+    "handoff": {
+     "boundaries": 1,
+     "carried": 9,
+     "carry_rate": 0.9,
+     "live": 10,
+     "needed": 1,
+     "needed_carried": 1,
+     "needed_carry_rate": 1.0,
+     "unlabelled": 0
+    },
+    "pooled": {
+     "boundaries": 1,
+     "carried": 9,
+     "carry_rate": 0.9,
+     "live": 10,
+     "needed": 1,
+     "needed_carried": 1,
+     "needed_carry_rate": 1.0,
+     "unlabelled": 0
+    }
+   },
+   "chunks": 2,
+   "facts": 20,
+   "frames_viewed": 90,
+   "game_hours": 2.11,
+   "lineage": "ceil09",
+   "probes": {
+    "failing": 0,
+    "failing_with_cost": 0,
+    "total": 1
+   },
+   "rediscoveries": 0,
+   "rediscoveries_per_game_hour": 0.0,
+   "schema": "probe-baseline/1"
+  },
+  {
+   "annotation": "blinded",
+   "boundaries": [
+    {
+     "boundary": "ceil07-001>ceil07-002",
+     "carried": 12,
+     "kind": "handoff",
+     "live": 14,
+     "needed": 6,
+     "needed_carried": 6,
+     "unlabelled": []
+    }
+   ],
+   "carry": {
+    "admission": {
+     "boundaries": 0,
+     "carried": 0,
+     "carry_rate": null,
+     "live": 0,
+     "needed": 0,
+     "needed_carried": 0,
+     "needed_carry_rate": null,
+     "unlabelled": 0
+    },
+    "handoff": {
+     "boundaries": 1,
+     "carried": 12,
+     "carry_rate": 0.8571428571428571,
+     "live": 14,
+     "needed": 6,
+     "needed_carried": 6,
+     "needed_carry_rate": 1.0,
+     "unlabelled": 0
+    },
+    "pooled": {
+     "boundaries": 1,
+     "carried": 12,
+     "carry_rate": 0.8571428571428571,
+     "live": 14,
+     "needed": 6,
+     "needed_carried": 6,
+     "needed_carry_rate": 1.0,
+     "unlabelled": 0
+    }
+   },
+   "chunks": 2,
+   "facts": 27,
+   "frames_viewed": 83,
+   "game_hours": 0.613,
+   "lineage": "ceil07",
+   "probes": {
+    "failing": 0,
+    "failing_with_cost": 0,
+    "total": 6
+   },
+   "rediscoveries": 1,
+   "rediscoveries_per_game_hour": 1.6313213703099512,
+   "schema": "probe-baseline/1"
+  },
+  {
+   "annotation": "blinded",
+   "boundaries": [
+    {
+     "boundary": "ceil05-001>ceil05-002",
+     "carried": 10,
+     "kind": "handoff",
+     "live": 12,
+     "needed": 5,
+     "needed_carried": 4,
+     "unlabelled": []
+    }
+   ],
+   "carry": {
+    "admission": {
+     "boundaries": 0,
+     "carried": 0,
+     "carry_rate": null,
+     "live": 0,
+     "needed": 0,
+     "needed_carried": 0,
+     "needed_carry_rate": null,
+     "unlabelled": 0
+    },
+    "handoff": {
+     "boundaries": 1,
+     "carried": 10,
+     "carry_rate": 0.8333333333333334,
+     "live": 12,
+     "needed": 5,
+     "needed_carried": 4,
+     "needed_carry_rate": 0.8,
+     "unlabelled": 0
+    },
+    "pooled": {
+     "boundaries": 1,
+     "carried": 10,
+     "carry_rate": 0.8333333333333334,
+     "live": 12,
+     "needed": 5,
+     "needed_carried": 4,
+     "needed_carry_rate": 0.8,
+     "unlabelled": 0
+    }
+   },
+   "chunks": 2,
+   "facts": 25,
+   "frames_viewed": 84,
+   "game_hours": 0.594,
+   "lineage": "ceil05",
+   "probes": {
+    "failing": 1,
+    "failing_with_cost": 1,
+    "total": 5
+   },
+   "rediscoveries": 0,
+   "rediscoveries_per_game_hour": 0.0,
+   "schema": "probe-baseline/1"
+  },
+  {
+   "annotation": "blinded",
+   "boundaries": [
+    {
+     "boundary": "aidB9-001>aidB9-002",
+     "carried": 10,
+     "kind": "handoff",
+     "live": 12,
+     "needed": 3,
+     "needed_carried": 2,
+     "unlabelled": []
+    }
+   ],
+   "carry": {
+    "admission": {
+     "boundaries": 0,
+     "carried": 0,
+     "carry_rate": null,
+     "live": 0,
+     "needed": 0,
+     "needed_carried": 0,
+     "needed_carry_rate": null,
+     "unlabelled": 0
+    },
+    "handoff": {
+     "boundaries": 1,
+     "carried": 10,
+     "carry_rate": 0.8333333333333334,
+     "live": 12,
+     "needed": 3,
+     "needed_carried": 2,
+     "needed_carry_rate": 0.6666666666666666,
+     "unlabelled": 0
+    },
+    "pooled": {
+     "boundaries": 1,
+     "carried": 10,
+     "carry_rate": 0.8333333333333334,
+     "live": 12,
+     "needed": 3,
+     "needed_carried": 2,
+     "needed_carry_rate": 0.6666666666666666,
+     "unlabelled": 0
+    }
+   },
+   "chunks": 2,
+   "facts": 22,
+   "frames_viewed": 84,
+   "game_hours": 0.698,
+   "lineage": "aidB9",
+   "probes": {
+    "failing": 1,
+    "failing_with_cost": 1,
+    "total": 3
+   },
+   "rediscoveries": 1,
+   "rediscoveries_per_game_hour": 1.4326647564469914,
+   "schema": "probe-baseline/1"
+  },
+  {
+   "annotation": "blinded",
+   "boundaries": [
+    {
+     "boundary": "aidA5-001>aidA5-002",
+     "carried": 7,
+     "kind": "handoff",
+     "live": 11,
+     "needed": 1,
+     "needed_carried": 1,
+     "unlabelled": []
+    }
+   ],
+   "carry": {
+    "admission": {
+     "boundaries": 0,
+     "carried": 0,
+     "carry_rate": null,
+     "live": 0,
+     "needed": 0,
+     "needed_carried": 0,
+     "needed_carry_rate": null,
+     "unlabelled": 0
+    },
+    "handoff": {
+     "boundaries": 1,
+     "carried": 7,
+     "carry_rate": 0.6363636363636364,
+     "live": 11,
+     "needed": 1,
+     "needed_carried": 1,
+     "needed_carry_rate": 1.0,
+     "unlabelled": 0
+    },
+    "pooled": {
+     "boundaries": 1,
+     "carried": 7,
+     "carry_rate": 0.6363636363636364,
+     "live": 11,
+     "needed": 1,
+     "needed_carried": 1,
+     "needed_carry_rate": 1.0,
+     "unlabelled": 0
+    }
+   },
+   "chunks": 2,
+   "facts": 24,
+   "frames_viewed": 86,
+   "game_hours": 0.932,
+   "lineage": "aidA5",
+   "probes": {
+    "failing": 0,
+    "failing_with_cost": 0,
+    "total": 1
+   },
+   "rediscoveries": 0,
+   "rediscoveries_per_game_hour": 0.0,
+   "schema": "probe-baseline/1"
+  }
+ ],
+ "protocol": "probe-protocol/1",
+ "schema": "probe-baseline-set/1"
+}

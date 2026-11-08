@@ -1,0 +1,131 @@
+{
+ "sd1a2-001": {
+  "matched": [
+   [
+    "F24",
+    "F24"
+   ],
+   [
+    "F26",
+    "F25",
+    "conflict: A says north of the shelter, B says south"
+   ],
+   [
+    "F28",
+    "F26"
+   ],
+   [
+    "F30",
+    "F27"
+   ]
+  ],
+  "only_A": [
+   "F25",
+   "F27",
+   "F29"
+  ],
+  "only_B": [
+   "F28",
+   "F29"
+  ],
+  "note": "B's F28 (a fishing rod on a bench in the shelter) is a fact A did not record in this chunk."
+ },
+ "sd1a3-001": {
+  "matched": [
+   [
+    "F55",
+    "F42"
+   ],
+   [
+    "F44",
+    "F43"
+   ],
+   [
+    "F45",
+    "F44"
+   ],
+   [
+    "F46",
+    "F45"
+   ],
+   [
+    "F42",
+    "F46",
+    "B also names the ladder room (A's F62)"
+   ],
+   [
+    "F43",
+    "F47"
+   ],
+   [
+    "F51",
+    "F48"
+   ],
+   [
+    "F52",
+    "F49"
+   ],
+   [
+    "F49",
+    "F50"
+   ],
+   [
+    "F53",
+    "F51"
+   ],
+   [
+    "F57",
+    "F52"
+   ],
+   [
+    "F54",
+    "F53"
+   ],
+   [
+    "F47",
+    "F54"
+   ]
+  ],
+  "only_A": [
+   "F48",
+   "F50",
+   "F56",
+   "F58",
+   "F59",
+   "F60",
+   "F61",
+   "F62",
+   "F63"
+  ],
+  "only_B": [],
+  "note": "B records the roof tank (F46) but not its 18 L content (A's F63)."
+ },
+ "sd1a7-002": {
+  "matched": [
+   [
+    "F136",
+    "F132"
+   ],
+   [
+    "F133",
+    "F133"
+   ],
+   [
+    "F137",
+    "F134"
+   ],
+   [
+    "F132",
+    "F135"
+   ]
+  ],
+  "only_A": [
+   "F134",
+   "F135",
+   "F138",
+   "F139"
+  ],
+  "only_B": [],
+  "note": "Both record the death and its cause (crafting beside the pavement fire)."
+ }
+}
