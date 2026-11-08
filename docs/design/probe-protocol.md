@@ -10,8 +10,11 @@ review_trigger: A change to the labels, the probe rule, the rates, the blinding,
 
 Protocol **probe-protocol/1**, written 8 November 2026. It turns a sealed lineage into
 **probes** of the form "at this boundary, a query about X should surface Y". It also
-yields two baseline rates:
-- **carry rate per boundary**: how much of what was known crosses a boundary;
+yields baseline rates:
+- **carry rate per boundary**: how much of the ledger so far reaches the successor
+  (cumulative: a fact lost once stays uncarried at later boundaries);
+- **retention per boundary**: how much of what the predecessor held crosses this
+  boundary;
 - **rediscovery rate per game hour**: how often the player re-observes what was known
   before a boundary.
 
@@ -41,14 +44,14 @@ recorded with the results.
 - **Chunk.** One actor's span in a sealed session: everything between its first and last
   operation. A lineage is annotated chunk by chunk in order.
 - **Boundary.** The step from one chunk to the next. It is either a handoff inside an
-  admission (`sd1a3-001>sd1a3-002`) or an admission boundary (`sd1a3-002>sd1a4-001`).
+  admission (`r2-001>r2-002`) or an admission boundary (`r2-002>r3-001`).
   The successor's "What this actor received" section shows exactly what crossed: the
   prompt, handoff packet and previous report.
 - **Fact.** A durable proposition about the world, the character or the player's own
   plans or procedures that a later decision could depend on. A fact is either visible
   in a frame or stated in the player's own text (memory records, packet, report).
   Facts are written in the annotator's words, at the level a query could name, for
-  example "the cupboard in the shelter's kitchen holds ration boxes". Transient
+  example "the shed beside the north gate holds a coil of rope". Transient
   states, such as a single frame's cursor position, are not facts.
 
 ## Labels
@@ -56,9 +59,9 @@ recorded with the results.
 Each chunk's annotation is JSON Lines with three line types.
 
 ```json
-{"type":"fact","id":"F12","statement":"…","category":"resource","observed":"<source id>","stored":"5db17f"}
-{"type":"carry","fact":"F12","boundary":"sd1a5-002>sd1a6-001","carried":false,"where":null}
-{"type":"event","fact":"F12","event":"acted_without","frame":"<source id>","note":"…"}
+{"type":"fact","id":"F12","statement":"…","category":"resource","observed":"<source id>","stored":"<record id prefix>"}
+{"type":"carry","fact":"F12","boundary":"<chunk>><next chunk>","carried":false,"where":null}
+{"type":"event","fact":"F12","event":"used","frame":"<source id>","note":"…"}
 ```
 
 - **`fact`.** A new fact first observed in this chunk.
@@ -93,12 +96,22 @@ these from the labels.
   That defines one probe `(b, F)`: at b, a query about F's subject should surface F.
   It **fails** when F was not carried at b.
 - **Failing probe with cost.** A failing probe whose fact also has a `rediscovered` or
-  `acted_without` event in chunk c or later.
+  `acted_without` event in chunk c, the chunk that needed it. (This text first said "in
+  chunk c or later"; the code and the #449 figures always used chunk c. Corrected after
+  review on 8 November 2026. The wider rule would give 131 rather than 120 for #397's
+  blinded annotation.)
 - **Carry rate** at b: carried live facts ÷ live facts. Reported per boundary kind
-  (handoff, admission) and pooled. It is also reported over needed facts only.
+  (handoff, admission) and pooled. It is also reported over needed facts only. It is
+  **cumulative ledger coverage**: a fact lost at one boundary counts as uncarried at
+  every later boundary, so it does not say where a loss happened.
+- **Retention** at b: carried facts ÷ live facts the predecessor chunk **held**. A fact
+  is held if the predecessor observed it, received it at its own boundary, or has an
+  event on it. This rate locates losses.
 - **Rediscovery rate**: `rediscovered` events for facts observed before the most recent
   boundary, ÷ the lineage's in-play game hours. Game hours come from the sealed
-  evaluation stores' game clock, not from annotators.
+  evaluation stores' game clock, not from annotators. The hours include the first
+  chunk, which cannot contain a rediscovery. Lineages with few chunks are therefore
+  diluted more, and comparisons across lineages of different lengths should say so.
 
 ## Frame coverage
 
@@ -107,7 +120,9 @@ An annotator views these frames:
 - every frame in the chunk's last five operations;
 - every frame cited in a `fact` or `event` line.
 
-It may view more. Each chunk ends with `frames_viewed`. A pilot on `sd1a1-001` before
+Where a timeline has no change flags (sessions whose evaluator records were not sealed),
+"every third changed frame" becomes every third frame. It may view more. Each chunk ends
+with `frames_viewed`. A pilot on `sd1a1-001` before
 this rule viewed 16 of 133 frames and leaned on the player's own records. It is kept as
 a pilot and is not used for the rates.
 
@@ -127,6 +142,13 @@ evidence. They are told not to open repository documents, issues or acceptance r
 and not to read the evaluator's derived `events` table. They are not told which
 episodes, facts or outcomes anyone expects. The lead does not edit annotations. A
 correction is a new, recorded line with its reason.
+
+**The protocol's own examples carry no evaluation content.** Annotators read the units
+and labels sections, so no example there may name a fact, record ID, boundary or outcome
+from a lineage under study. A change to those sections is reviewed against this rule.
+In the #449 application the examples did name one of the known episodes; the
+[record](../acceptance/2026-11-08-probe-baseline-449.md#deviations-found-in-review) lists
+this as a deviation.
 
 **Limitation:** an annotator agent with file tools could still read a document. The
 brief forbids it, but that cannot be enforced, and the record says so.

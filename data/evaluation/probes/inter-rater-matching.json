@@ -16,7 +16,8 @@
    ],
    [
     "F30",
-    "F27"
+    "F27+F28",
+    "A's compound F30 (floor materials and the fishing rod on the bench) spans B's F27 (fibre, lockers) and F28 (the rod)"
    ]
   ],
   "only_A": [
@@ -25,10 +26,9 @@
    "F29"
   ],
   "only_B": [
-   "F28",
    "F29"
   ],
-  "note": "B's F28 (a fishing rod on a bench in the shelter) is a fact A did not record in this chunk."
+  "note": "Corrected 8 November 2026 after review: the first matching paired A's F30 with B's F27 only and listed B's F28 (the rod) as a fact A did not record, but A's F30 names the rod. Counting a one-to-two match as one matched cluster gives 4 matched of 8 distinct clusters (A 7 + B 6 - 5 links)."
  },
  "sd1a3-001": {
   "matched": [

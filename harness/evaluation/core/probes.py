@@ -5,7 +5,8 @@ without judgment of its own:
 
 - probes: for a fact observed in an earlier chunk and needed in chunk c, "at the boundary into
   c, a query about the fact should surface it"; a probe fails when the fact was not carried;
-- carry rates per boundary over live facts and over needed facts;
+- carry rates per boundary: cumulative ledger coverage (over every live fact), retention (over
+  the live facts the predecessor chunk held) and over needed facts;
 - rediscovery counts (re-observing a fact known before a boundary);
 - agreement statistics for the inter-rater check.
 
@@ -74,6 +75,10 @@ def parse(name: str, lines: Iterable[dict], boundary: str | None) -> Chunk:
                 raise ProbeError(f'{where}: carried must be true or false')
             if line['carried'] and line.get('where') not in WHERE:
                 raise ProbeError(f'{where}: a carried fact names where it was carried')
+            if not isinstance(line.get('fact'), str):
+                raise ProbeError(f'{where}: a carry line names its fact')
+            if line['fact'] in chunk.carries:
+                raise ProbeError(f'{where}: a second carry line for {line["fact"]}')
             chunk.carries[line['fact']] = line['carried']
         elif kind == 'event':
             if line.get('event') not in EVENTS or not isinstance(line.get('fact'), str):
@@ -108,16 +113,26 @@ class Lineage:
         names = [name for name, _ in ordered]
         into = [None, *boundaries(names)]
         chunks = [parse(name, lines, b) for (name, lines), b in zip(ordered, into)]
+        lineage = cls(chunks)
         seen: set[str] = set()
-        for chunk in chunks:
+        for index, chunk in enumerate(chunks):
             clash = seen & chunk.facts.keys()
             if clash:
                 raise ProbeError(f'{chunk.name}: fact ids reused: {sorted(clash)}')
             for event in chunk.events:
                 if event['fact'] not in seen and event['fact'] not in chunk.facts:
                     raise ProbeError(f'{chunk.name}: event for unknown fact {event["fact"]}')
+            stray = sorted(set(chunk.carries) - lineage._live_before(index).keys())
+            if stray:
+                raise ProbeError(f'{chunk.name}: carry lines for facts not live at the boundary: {stray}')
             seen |= chunk.facts.keys()
-        return cls(chunks)
+        return lineage
+
+    def _held_by(self, index: int, live: dict[str, dict]) -> set[str]:
+        """Live facts the chunk at `index` held: observed there, received at its own boundary or used there."""
+        chunk = self.chunks[index]
+        touched = {e['fact'] for e in chunk.events}
+        return {f for f in live if f in chunk.facts or chunk.carries.get(f, False) or f in touched}
 
     def _live_before(self, index: int) -> dict[str, dict]:
         """Facts observed before chunk `index` and not invalidated before it."""
@@ -135,11 +150,13 @@ class Lineage:
             chunk = self.chunks[index]
             live = self._live_before(index)
             needed = {e['fact'] for e in chunk.events if e['event'] in NEED and e['fact'] in live}
+            held = self._held_by(index - 1, live)
             rows.append(dict(
                 boundary=f'{self.chunks[index-1].name}>{chunk.name}',
                 kind=boundary_kind(f'{self.chunks[index-1].name}>{chunk.name}'),
                 live=len(live), carried=sum(chunk.carries.get(f, False) for f in live),
                 unlabelled=sorted(f for f in live if f not in chunk.carries),
+                held=len(held), held_carried=sum(chunk.carries.get(f, False) for f in held),
                 needed=len(needed), needed_carried=sum(chunk.carries.get(f, False) for f in needed)))
         return rows
 
@@ -185,6 +202,8 @@ def summary(name: str, lineage: Lineage, game_hours: float) -> dict:
         return dict(boundaries=len(chosen), live=sum(r['live'] for r in chosen),
                     carried=sum(r['carried'] for r in chosen),
                     carry_rate=rate(sum(r['carried'] for r in chosen), sum(r['live'] for r in chosen)),
+                    held=sum(r['held'] for r in chosen), held_carried=sum(r['held_carried'] for r in chosen),
+                    retention_rate=rate(sum(r['held_carried'] for r in chosen), sum(r['held'] for r in chosen)),
                     needed=sum(r['needed'] for r in chosen),
                     needed_carried=sum(r['needed_carried'] for r in chosen),
                     needed_carry_rate=rate(sum(r['needed_carried'] for r in chosen), sum(r['needed'] for r in chosen)),

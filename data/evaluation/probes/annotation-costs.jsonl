@@ -11,7 +11,7 @@
 {"chunk":"ceil05-001","rater":"A","tokens":105975,"tool_uses":39,"ms":67164,"frames_in_chunk":85,"deviation":null}
 {"chunk":"aidB9-001","rater":"A","tokens":108858,"tool_uses":41,"ms":67212,"frames_in_chunk":85,"deviation":null}
 {"chunk":"sd1a2-001","rater":"A","tokens":112480,"tool_uses":39,"ms":101848,"frames_in_chunk":80,"deviation":null}
-{"chunk":"aidB9-002","rater":"A","tokens":138890,"tool_uses":60,"ms":122759,"frames_in_chunk":140,"deviation":"created a stray file outside the output path (/private/tmp/claude-501/-Users-shilongdai-Developer CDDA Player/placeholder); its removal was refused by the permission check and is left to the owner"}
+{"chunk":"aidB9-002","rater":"A","tokens":138890,"tool_uses":60,"ms":122759,"frames_in_chunk":140,"deviation":"the annotator reported creating a stray file outside the output path (/private/tmp/claude-501/-Users-shilongdai-Developer CDDA Player/placeholder) and that its removal was refused by the permission check; the lead found no file or directory at that path on 8 November 2026"}
 {"chunk":"ceil05-002","rater":"A","tokens":142480,"tool_uses":57,"ms":127195,"frames_in_chunk":142,"deviation":null}
 {"chunk":"sd1a2-002","rater":"A","tokens":178098,"tool_uses":73,"ms":202205,"frames_in_chunk":192,"deviation":null}
 {"chunk":"sd1a3-001","rater":"A","tokens":177342,"tool_uses":68,"ms":209261,"frames_in_chunk":179,"deviation":null}

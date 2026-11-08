@@ -14,7 +14,7 @@ import argparse
 import json
 from pathlib import Path
 
-from harness.evaluation.core.probes import NEED, Lineage, agreement, summary
+from harness.evaluation.core.probes import NEED, Lineage, ProbeError, agreement, summary
 
 ROOT = Path(__file__).resolve().parents[1]
 LINEAGES = {'397': [f'sd1a{n}-{a}' for n in range(1, 8) for a in ('001', '002')]}
@@ -30,6 +30,9 @@ def _lines(path: Path) -> list[dict]:
 
 def _lineage(probes: Path, name: str, adjudicated: bool = False) -> Lineage:
     extra = _lines(probes/name/'adjudication.jsonl') if adjudicated and (probes/name/'adjudication.jsonl').is_file() else []
+    unmatched = sorted({row.get('chunk') for row in extra} - set(LINEAGES[name]), key=str)
+    if unmatched:
+        raise ProbeError(f'{name}: adjudication rows name no chunk of the lineage: {unmatched}')
     ordered = []
     for chunk in LINEAGES[name]:
         lines = _lines(probes/name/f'{chunk}.jsonl')
@@ -95,8 +98,10 @@ def main(argv=None) -> int:
                   inter_rater=_inter_rater(args.probes), annotation_costs=_costs(args.probes))
     args.out.write_text(json.dumps(result, indent=1, sort_keys=True) + '\n')
     for row in lineages:
-        print(f"{row['lineage']:7s} {row['annotation'][:8]:8s} probes {row['probes']['total']:3d} failing "
+        label = 'blinded' if row['annotation'] == 'blinded' else 'adjudicated'
+        print(f"{row['lineage']:7s} {label:11s} probes {row['probes']['total']:3d} failing "
               f"{row['probes']['failing']:3d} carry {row['carry']['pooled']['carry_rate']:.2f} "
+              f"retention {row['carry']['pooled']['retention_rate']:.2f} "
               f"rediscovery/h {row['rediscoveries_per_game_hour']:.2f}")
     return 0
 
