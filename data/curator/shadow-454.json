@@ -1,0 +1,846 @@
+{
+ "arms": {
+  "opus": {
+   "accepted": 5,
+   "cost_usd": 33.3773,
+   "curator_dollars_per_game_hour": 1.0424,
+   "game_hours": 32.02,
+   "gate_pass_rate": 1.0,
+   "median_first_request_prompt_tokens": 4639,
+   "median_lag_decisions": 28.1,
+   "median_lag_game_hours": 0.522,
+   "median_time_to_first_request_seconds": 0.133,
+   "median_wall_seconds": 158.973,
+   "proxy_breaches": 0,
+   "proxy_refusals": 0,
+   "sealed": 5,
+   "sessions": 5,
+   "spend_share_of_actor": 1.243,
+   "stopped_by_cap": 0,
+   "submissions": 5
+  },
+  "terra": {
+   "accepted": 10,
+   "cost_usd": 39.4112,
+   "curator_dollars_per_game_hour": 0.7546,
+   "game_hours": 52.226,
+   "gate_pass_rate": 1.0,
+   "median_first_request_prompt_tokens": 2924.0,
+   "median_lag_decisions": 46.900000000000006,
+   "median_lag_game_hours": 0.159,
+   "median_time_to_first_request_seconds": 0.133,
+   "median_wall_seconds": 189.36149999999998,
+   "proxy_breaches": 0,
+   "proxy_refusals": 2,
+   "sealed": 10,
+   "sessions": 12,
+   "spend_share_of_actor": 0.692,
+   "stopped_by_cap": 2,
+   "submissions": 10
+  }
+ },
+ "runs": [
+  {
+   "arm": "terra",
+   "cap_usd": "24.0",
+   "complete": false,
+   "effort": "medium",
+   "host": {
+    "effort": "medium",
+    "max_requests": 120,
+    "model": "openai/gpt-6.1-terra",
+    "name": "enactive-curator-host",
+    "node": "v26.13.0",
+    "schema": "curator-host/1",
+    "version": "0.1.0"
+   },
+   "lineage": "397",
+   "name": "run-terra-397",
+   "sessions_planned": [
+    "sd1a1",
+    "sd1a2",
+    "sd1a3",
+    "sd1a4",
+    "sd1a5",
+    "sd1a6",
+    "sd1a7"
+   ],
+   "stopped": "cap-reached",
+   "total_cost_usd": "23.27453625"
+  },
+  {
+   "arm": "terra",
+   "cap_usd": "16.73",
+   "complete": false,
+   "effort": "medium",
+   "host": {
+    "effort": "medium",
+    "max_requests": 120,
+    "model": "openai/gpt-6.1-terra",
+    "name": "enactive-curator-host",
+    "node": "v26.13.0",
+    "schema": "curator-host/1",
+    "version": "0.1.0"
+   },
+   "lineage": "372",
+   "name": "run-terra-372",
+   "sessions_planned": [
+    "aidB3",
+    "ceil09",
+    "ceil07",
+    "ceil05",
+    "aidB9",
+    "aidA5"
+   ],
+   "stopped": "cap-reached",
+   "total_cost_usd": "16.13667500"
+  },
+  {
+   "arm": "opus",
+   "cap_usd": "25.0",
+   "complete": true,
+   "effort": "medium",
+   "host": {
+    "effort": "medium",
+    "max_requests": 120,
+    "model": "anthropic/claude-opus-5.5",
+    "name": "enactive-curator-host",
+    "node": "v26.13.0",
+    "schema": "curator-host/1",
+    "version": "0.1.0"
+   },
+   "lineage": "397",
+   "name": "run-opus-397",
+   "sessions_planned": [
+    "sd1a1",
+    "sd1a2",
+    "sd1a3"
+   ],
+   "stopped": null,
+   "total_cost_usd": "21.913582"
+  },
+  {
+   "arm": "opus",
+   "cap_usd": "18.09",
+   "complete": true,
+   "effort": "medium",
+   "host": {
+    "effort": "medium",
+    "max_requests": 120,
+    "model": "anthropic/claude-opus-5.5",
+    "name": "enactive-curator-host",
+    "node": "v26.13.0",
+    "schema": "curator-host/1",
+    "version": "0.1.0"
+   },
+   "lineage": "372",
+   "name": "run-opus-372",
+   "sessions_planned": [
+    "aidB3",
+    "ceil09"
+   ],
+   "stopped": null,
+   "total_cost_usd": "11.463747"
+  }
+ ],
+ "schema": "curator-shadow-report/1",
+ "sessions": [
+  {
+   "accepted": 1,
+   "actor": {
+    "decisions": 333,
+    "dollars": 6.4425,
+    "game_hours": 7.19,
+    "routine_seconds_per_decision": 5.0
+   },
+   "arm": "terra",
+   "cost_usd": 7.080665,
+   "curator_dollars_per_game_hour": 0.9848,
+   "drafts_created": 0,
+   "first_request_prompt_tokens": 2863,
+   "host_end": "finished",
+   "lag_decisions": 84.6,
+   "lag_game_hours": 1.826,
+   "lineage": "397",
+   "model": "openai/gpt-6.1-terra",
+   "proxy": {
+    "breaches": 0,
+    "refusals": 0,
+    "revoked": false
+   },
+   "rejected": 0,
+   "requests": 67,
+   "run": "run-terra-397",
+   "session": "sd1a1",
+   "spend_share_of_actor": 1.099,
+   "state": "sealed",
+   "stopped_by_cap": false,
+   "submissions": 1,
+   "time_to_first_request_seconds": 0.146,
+   "tokens": {
+    "cache_write": 5601562,
+    "cached": 180230,
+    "completion": 13900,
+    "prompt": 5781993,
+    "reasoning": 1713
+   },
+   "wall_seconds": 422.922
+  },
+  {
+   "accepted": 1,
+   "actor": {
+    "decisions": 270,
+    "dollars": 6.0833,
+    "game_hours": 16.325,
+    "routine_seconds_per_decision": 5.5
+   },
+   "arm": "terra",
+   "cost_usd": 4.85575125,
+   "curator_dollars_per_game_hour": 0.2974,
+   "drafts_created": 0,
+   "first_request_prompt_tokens": 2887,
+   "host_end": "finished",
+   "lag_decisions": 61.4,
+   "lag_game_hours": 3.714,
+   "lineage": "397",
+   "model": "openai/gpt-6.1-terra",
+   "proxy": {
+    "breaches": 0,
+    "refusals": 0,
+    "revoked": false
+   },
+   "rejected": 0,
+   "requests": 50,
+   "run": "run-terra-397",
+   "session": "sd1a2",
+   "spend_share_of_actor": 0.798,
+   "state": "sealed",
+   "stopped_by_cap": false,
+   "submissions": 1,
+   "time_to_first_request_seconds": 0.127,
+   "tokens": {
+    "cache_write": 3834441,
+    "cached": 134500,
+    "completion": 11165,
+    "prompt": 3969091,
+    "reasoning": 2140
+   },
+   "wall_seconds": 337.884
+  },
+  {
+   "accepted": 1,
+   "actor": {
+    "decisions": 324,
+    "dollars": 6.3316,
+    "game_hours": 5.973888888888889,
+    "routine_seconds_per_decision": 4.666666666666667
+   },
+   "arm": "terra",
+   "cost_usd": 5.34887375,
+   "curator_dollars_per_game_hour": 0.8954,
+   "drafts_created": 0,
+   "first_request_prompt_tokens": 2912,
+   "host_end": "finished",
+   "lag_decisions": 57.5,
+   "lag_game_hours": 1.061,
+   "lineage": "397",
+   "model": "openai/gpt-6.1-terra",
+   "proxy": {
+    "breaches": 0,
+    "refusals": 0,
+    "revoked": false
+   },
+   "rejected": 0,
+   "requests": 41,
+   "run": "run-terra-397",
+   "session": "sd1a3",
+   "spend_share_of_actor": 0.845,
+   "state": "sealed",
+   "stopped_by_cap": false,
+   "submissions": 1,
+   "time_to_first_request_seconds": 0.123,
+   "tokens": {
+    "cache_write": 4233845,
+    "cached": 110290,
+    "completion": 10186,
+    "prompt": 4344258,
+    "reasoning": 1253
+   },
+   "wall_seconds": 268.554
+  },
+  {
+   "accepted": 1,
+   "actor": {
+    "decisions": 265,
+    "dollars": 5.4518,
+    "game_hours": 1.3936111111111111,
+    "routine_seconds_per_decision": 7.0
+   },
+   "arm": "terra",
+   "cost_usd": 1.7289525,
+   "curator_dollars_per_game_hour": 1.2406,
+   "drafts_created": 0,
+   "first_request_prompt_tokens": 2936,
+   "host_end": "finished",
+   "lag_decisions": 16.9,
+   "lag_game_hours": 0.089,
+   "lineage": "397",
+   "model": "openai/gpt-6.1-terra",
+   "proxy": {
+    "breaches": 0,
+    "refusals": 0,
+    "revoked": false
+   },
+   "rejected": 0,
+   "requests": 17,
+   "run": "run-terra-397",
+   "session": "sd1a4",
+   "spend_share_of_actor": 0.317,
+   "state": "sealed",
+   "stopped_by_cap": false,
+   "submissions": 1,
+   "time_to_first_request_seconds": 0.259,
+   "tokens": {
+    "cache_write": 1361920,
+    "cached": 45730,
+    "completion": 4843,
+    "prompt": 1407701,
+    "reasoning": 1510
+   },
+   "wall_seconds": 117.953
+  },
+  {
+   "accepted": 1,
+   "actor": {
+    "decisions": 244,
+    "dollars": 5.2516,
+    "game_hours": 0.7938888888888889,
+    "routine_seconds_per_decision": 4.333333333333334
+   },
+   "arm": "terra",
+   "cost_usd": 2.04594875,
+   "curator_dollars_per_game_hour": 2.5771,
+   "drafts_created": 0,
+   "first_request_prompt_tokens": 2963,
+   "host_end": "finished",
+   "lag_decisions": 40.4,
+   "lag_game_hours": 0.132,
+   "lineage": "397",
+   "model": "openai/gpt-6.1-terra",
+   "proxy": {
+    "breaches": 0,
+    "refusals": 0,
+    "revoked": false
+   },
+   "rejected": 0,
+   "requests": 24,
+   "run": "run-terra-397",
+   "session": "sd1a5",
+   "spend_share_of_actor": 0.39,
+   "state": "sealed",
+   "stopped_by_cap": false,
+   "submissions": 1,
+   "time_to_first_request_seconds": 0.247,
+   "tokens": {
+    "cache_write": 1604411,
+    "cached": 64560,
+    "completion": 7427,
+    "prompt": 1669043,
+    "reasoning": 1059
+   },
+   "wall_seconds": 175.254
+  },
+  {
+   "accepted": 1,
+   "actor": {
+    "decisions": 273,
+    "dollars": 5.5808,
+    "game_hours": 14.653611111111111,
+    "routine_seconds_per_decision": 2.416666666666667
+   },
+   "arm": "terra",
+   "cost_usd": 1.25948125,
+   "curator_dollars_per_game_hour": 0.086,
+   "drafts_created": 0,
+   "first_request_prompt_tokens": 2989,
+   "host_end": "finished",
+   "lag_decisions": 45.6,
+   "lag_game_hours": 2.445,
+   "lineage": "397",
+   "model": "openai/gpt-6.1-terra",
+   "proxy": {
+    "breaches": 0,
+    "refusals": 0,
+    "revoked": false
+   },
+   "rejected": 0,
+   "requests": 15,
+   "run": "run-terra-397",
+   "session": "sd1a6",
+   "spend_share_of_actor": 0.226,
+   "state": "sealed",
+   "stopped_by_cap": false,
+   "submissions": 1,
+   "time_to_first_request_seconds": 0.228,
+   "tokens": {
+    "cache_write": 982387,
+    "cached": 40350,
+    "completion": 5887,
+    "prompt": 1022782,
+    "reasoning": 731
+   },
+   "wall_seconds": 110.094
+  },
+  {
+   "accepted": 0,
+   "actor": {
+    "decisions": 206,
+    "dollars": 3.258,
+    "game_hours": 1.4605555555555556,
+    "routine_seconds_per_decision": 6.333333333333333
+   },
+   "arm": "terra",
+   "cost_usd": 0.95486375,
+   "curator_dollars_per_game_hour": 0.6538,
+   "drafts_created": 0,
+   "first_request_prompt_tokens": 3015,
+   "host_end": "provider-error",
+   "lag_decisions": 8.7,
+   "lag_game_hours": 0.062,
+   "lineage": "397",
+   "model": "openai/gpt-6.1-terra",
+   "proxy": {
+    "breaches": 0,
+    "refusals": 1,
+    "revoked": false
+   },
+   "rejected": 0,
+   "requests": 10,
+   "run": "run-terra-397",
+   "session": "sd1a7",
+   "spend_share_of_actor": 0.293,
+   "state": "aborted",
+   "stopped_by_cap": true,
+   "submissions": 0,
+   "time_to_first_request_seconds": 0.126,
+   "tokens": {
+    "cache_write": 752373,
+    "cached": 24210,
+    "completion": 2632,
+    "prompt": 776610,
+    "reasoning": 314
+   },
+   "wall_seconds": 55.273
+  },
+  {
+   "accepted": 1,
+   "actor": {
+    "decisions": 224,
+    "dollars": 4.0247,
+    "game_hours": 0.42083333333333334,
+    "routine_seconds_per_decision": 7.75
+   },
+   "arm": "terra",
+   "cost_usd": 4.76258375,
+   "curator_dollars_per_game_hour": 11.317,
+   "drafts_created": 0,
+   "first_request_prompt_tokens": 2862,
+   "host_end": "finished",
+   "lag_decisions": 48.2,
+   "lag_game_hours": 0.091,
+   "lineage": "372",
+   "model": "openai/gpt-6.1-terra",
+   "proxy": {
+    "breaches": 0,
+    "refusals": 0,
+    "revoked": false
+   },
+   "rejected": 0,
+   "requests": 53,
+   "run": "run-terra-372",
+   "session": "aidB3",
+   "spend_share_of_actor": 1.183,
+   "state": "sealed",
+   "stopped_by_cap": false,
+   "submissions": 1,
+   "time_to_first_request_seconds": 0.133,
+   "tokens": {
+    "cache_write": 3758745,
+    "cached": 142570,
+    "completion": 11373,
+    "prompt": 3901474,
+    "reasoning": 2007
+   },
+   "wall_seconds": 373.816
+  },
+  {
+   "accepted": 1,
+   "actor": {
+    "decisions": 229,
+    "dollars": 3.9786,
+    "game_hours": 2.11,
+    "routine_seconds_per_decision": 4.0
+   },
+   "arm": "terra",
+   "cost_usd": 5.24885375,
+   "curator_dollars_per_game_hour": 2.4876,
+   "drafts_created": 0,
+   "first_request_prompt_tokens": 2885,
+   "host_end": "finished",
+   "lag_decisions": 80.8,
+   "lag_game_hours": 0.744,
+   "lineage": "372",
+   "model": "openai/gpt-6.1-terra",
+   "proxy": {
+    "breaches": 0,
+    "refusals": 0,
+    "revoked": false
+   },
+   "rejected": 0,
+   "requests": 50,
+   "run": "run-terra-372",
+   "session": "ceil09",
+   "spend_share_of_actor": 1.319,
+   "state": "sealed",
+   "stopped_by_cap": false,
+   "submissions": 1,
+   "time_to_first_request_seconds": 0.133,
+   "tokens": {
+    "cache_write": 4144647,
+    "cached": 134500,
+    "completion": 12234,
+    "prompt": 4279297,
+    "reasoning": 1766
+   },
+   "wall_seconds": 323.138
+  },
+  {
+   "accepted": 1,
+   "actor": {
+    "decisions": 223,
+    "dollars": 3.654,
+    "game_hours": 0.6125,
+    "routine_seconds_per_decision": 3.0
+   },
+   "arm": "terra",
+   "cost_usd": 2.9985425,
+   "curator_dollars_per_game_hour": 4.8956,
+   "drafts_created": 0,
+   "first_request_prompt_tokens": 2912,
+   "host_end": "finished",
+   "lag_decisions": 67.8,
+   "lag_game_hours": 0.186,
+   "lineage": "372",
+   "model": "openai/gpt-6.1-terra",
+   "proxy": {
+    "breaches": 0,
+    "refusals": 0,
+    "revoked": false
+   },
+   "rejected": 0,
+   "requests": 35,
+   "run": "run-terra-372",
+   "session": "ceil07",
+   "spend_share_of_actor": 0.821,
+   "state": "sealed",
+   "stopped_by_cap": false,
+   "submissions": 1,
+   "time_to_first_request_seconds": 0.124,
+   "tokens": {
+    "cache_write": 2371936,
+    "cached": 94150,
+    "completion": 5762,
+    "prompt": 2466191,
+    "reasoning": 644
+   },
+   "wall_seconds": 203.469
+  },
+  {
+   "accepted": 1,
+   "actor": {
+    "decisions": 225,
+    "dollars": 3.4628,
+    "game_hours": 0.5941666666666666,
+    "routine_seconds_per_decision": 3.666666666666667
+   },
+   "arm": "terra",
+   "cost_usd": 2.0735875,
+   "curator_dollars_per_game_hour": 3.4899,
+   "drafts_created": 0,
+   "first_request_prompt_tokens": 2938,
+   "host_end": "finished",
+   "lag_decisions": 37.2,
+   "lag_game_hours": 0.098,
+   "lineage": "372",
+   "model": "openai/gpt-6.1-terra",
+   "proxy": {
+    "breaches": 0,
+    "refusals": 0,
+    "revoked": false
+   },
+   "rejected": 0,
+   "requests": 23,
+   "run": "run-terra-372",
+   "session": "ceil05",
+   "spend_share_of_actor": 0.599,
+   "state": "sealed",
+   "stopped_by_cap": false,
+   "submissions": 1,
+   "time_to_first_request_seconds": 0.148,
+   "tokens": {
+    "cache_write": 1634636,
+    "cached": 61870,
+    "completion": 5426,
+    "prompt": 1696575,
+    "reasoning": 589
+   },
+   "wall_seconds": 136.444
+  },
+  {
+   "accepted": 0,
+   "actor": {
+    "decisions": 223,
+    "dollars": 3.4119,
+    "game_hours": 0.6977777777777778,
+    "routine_seconds_per_decision": 3.0
+   },
+   "arm": "terra",
+   "cost_usd": 1.0531075,
+   "curator_dollars_per_game_hour": 1.5092,
+   "drafts_created": 0,
+   "first_request_prompt_tokens": 2965,
+   "host_end": "provider-error",
+   "lag_decisions": 25.1,
+   "lag_game_hours": 0.079,
+   "lineage": "372",
+   "model": "openai/gpt-6.1-terra",
+   "proxy": {
+    "breaches": 0,
+    "refusals": 1,
+    "revoked": false
+   },
+   "rejected": 0,
+   "requests": 14,
+   "run": "run-terra-372",
+   "session": "aidB9",
+   "spend_share_of_actor": 0.309,
+   "state": "aborted",
+   "stopped_by_cap": true,
+   "submissions": 0,
+   "time_to_first_request_seconds": 0.132,
+   "tokens": {
+    "cache_write": 828764,
+    "cached": 34970,
+    "completion": 3073,
+    "prompt": 863773,
+    "reasoning": 394
+   },
+   "wall_seconds": 75.402
+  },
+  {
+   "accepted": 1,
+   "actor": {
+    "decisions": 333,
+    "dollars": 6.4425,
+    "game_hours": 7.19,
+    "routine_seconds_per_decision": 5.0
+   },
+   "arm": "opus",
+   "cost_usd": 7.192917,
+   "curator_dollars_per_game_hour": 1.0004,
+   "drafts_created": 0,
+   "first_request_prompt_tokens": 4603,
+   "host_end": "finished",
+   "lag_decisions": 24.2,
+   "lag_game_hours": 0.522,
+   "lineage": "397",
+   "model": "anthropic/claude-opus-5.5",
+   "proxy": {
+    "breaches": 0,
+    "refusals": 0,
+    "revoked": false
+   },
+   "rejected": 0,
+   "requests": 23,
+   "run": "run-opus-397",
+   "session": "sd1a1",
+   "spend_share_of_actor": 1.116,
+   "state": "sealed",
+   "stopped_by_cap": false,
+   "submissions": 1,
+   "time_to_first_request_seconds": 0.146,
+   "tokens": {
+    "cache_write": 1397175,
+    "cached": 94270,
+    "completion": 9391,
+    "prompt": 1491537,
+    "reasoning": 2156
+   },
+   "wall_seconds": 120.91
+  },
+  {
+   "accepted": 1,
+   "actor": {
+    "decisions": 270,
+    "dollars": 6.0833,
+    "game_hours": 16.325,
+    "routine_seconds_per_decision": 5.5
+   },
+   "arm": "opus",
+   "cost_usd": 7.213141,
+   "curator_dollars_per_game_hour": 0.4418,
+   "drafts_created": 0,
+   "first_request_prompt_tokens": 4639,
+   "host_end": "finished",
+   "lag_decisions": 28.9,
+   "lag_game_hours": 1.748,
+   "lineage": "397",
+   "model": "anthropic/claude-opus-5.5",
+   "proxy": {
+    "breaches": 0,
+    "refusals": 0,
+    "revoked": false
+   },
+   "rejected": 0,
+   "requests": 22,
+   "run": "run-opus-397",
+   "session": "sd1a2",
+   "spend_share_of_actor": 1.186,
+   "state": "sealed",
+   "stopped_by_cap": false,
+   "submissions": 1,
+   "time_to_first_request_seconds": 0.14,
+   "tokens": {
+    "cache_write": 1397455,
+    "cached": 94270,
+    "completion": 10333,
+    "prompt": 1491813,
+    "reasoning": 4141
+   },
+   "wall_seconds": 158.973
+  },
+  {
+   "accepted": 1,
+   "actor": {
+    "decisions": 324,
+    "dollars": 6.3316,
+    "game_hours": 5.973888888888889,
+    "routine_seconds_per_decision": 4.666666666666667
+   },
+   "arm": "opus",
+   "cost_usd": 7.507524,
+   "curator_dollars_per_game_hour": 1.2567,
+   "drafts_created": 1,
+   "first_request_prompt_tokens": 4688,
+   "host_end": "finished",
+   "lag_decisions": 41.2,
+   "lag_game_hours": 0.759,
+   "lineage": "397",
+   "model": "anthropic/claude-opus-5.5",
+   "proxy": {
+    "breaches": 0,
+    "refusals": 0,
+    "revoked": false
+   },
+   "rejected": 0,
+   "requests": 28,
+   "run": "run-opus-397",
+   "session": "sd1a3",
+   "spend_share_of_actor": 1.186,
+   "state": "sealed",
+   "stopped_by_cap": false,
+   "submissions": 1,
+   "time_to_first_request_seconds": 0.133,
+   "tokens": {
+    "cache_write": 1434112,
+    "cached": 119980,
+    "completion": 15626,
+    "prompt": 1554204,
+    "reasoning": 4632
+   },
+   "wall_seconds": 192.212
+  },
+  {
+   "accepted": 1,
+   "actor": {
+    "decisions": 224,
+    "dollars": 4.0247,
+    "game_hours": 0.42083333333333334,
+    "routine_seconds_per_decision": 7.75
+   },
+   "arm": "opus",
+   "cost_usd": 8.970691,
+   "curator_dollars_per_game_hour": 21.3165,
+   "drafts_created": 1,
+   "first_request_prompt_tokens": 4602,
+   "host_end": "finished",
+   "lag_decisions": 28.1,
+   "lag_game_hours": 0.053,
+   "lineage": "372",
+   "model": "anthropic/claude-opus-5.5",
+   "proxy": {
+    "breaches": 0,
+    "refusals": 0,
+    "revoked": false
+   },
+   "rejected": 0,
+   "requests": 27,
+   "run": "run-opus-372",
+   "session": "aidB3",
+   "spend_share_of_actor": 2.229,
+   "state": "sealed",
+   "stopped_by_cap": false,
+   "submissions": 1,
+   "time_to_first_request_seconds": 0.123,
+   "tokens": {
+    "cache_write": 1726596,
+    "cached": 115695,
+    "completion": 15707,
+    "prompt": 1842399,
+    "reasoning": 3532
+   },
+   "wall_seconds": 217.643
+  },
+  {
+   "accepted": 1,
+   "actor": {
+    "decisions": 229,
+    "dollars": 3.9786,
+    "game_hours": 2.11,
+    "routine_seconds_per_decision": 4.0
+   },
+   "arm": "opus",
+   "cost_usd": 2.493056,
+   "curator_dollars_per_game_hour": 1.1815,
+   "drafts_created": 0,
+   "first_request_prompt_tokens": 4677,
+   "host_end": "finished",
+   "lag_decisions": 17.3,
+   "lag_game_hours": 0.159,
+   "lineage": "372",
+   "model": "anthropic/claude-opus-5.5",
+   "proxy": {
+    "breaches": 0,
+    "refusals": 0,
+    "revoked": false
+   },
+   "rejected": 0,
+   "requests": 12,
+   "run": "run-opus-372",
+   "session": "ceil09",
+   "spend_share_of_actor": 0.627,
+   "state": "sealed",
+   "stopped_by_cap": false,
+   "submissions": 1,
+   "time_to_first_request_seconds": 0.123,
+   "tokens": {
+    "cache_write": 474480,
+    "cached": 51420,
+    "completion": 5509,
+    "prompt": 525948,
+    "reasoning": 1251
+   },
+   "wall_seconds": 69.096
+  }
+ ]
+}
