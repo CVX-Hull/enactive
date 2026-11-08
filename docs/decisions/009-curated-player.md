@@ -500,7 +500,9 @@ so the same workspace can run under different coding-agent hosts and models.
 - **Program fitting:** offline replay, and practice-instance trials if P3 is adopted.
 - **Slot benchmarks:** candidate bindings scored on recorded cases.
 
-The workbench is game-neutral; recorded cases are per game and lineage.
+The workbench is game-neutral; recorded cases are per game and lineage. Its first part,
+the trace projection, evidence reader, trace tools and sidecar manifests (#452), is
+described in [trace projection and workbench](../design/trace-workbench.md).
 
 ## Containers (D17)
 

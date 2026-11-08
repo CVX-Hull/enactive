@@ -51,6 +51,12 @@ source_modules = ["harness.viewer"]
 forbidden_modules = ["harness.computer.runtime", "harness.computer.channel", "harness.computer.launch", "harness.application", "harness.server", "harness.player", "harness.player_client", "harness.player_tools", "harness.player_mcp", "harness.__main__", "tools", "subprocess"]
 
 [[tool.importlinter.contracts]]
+name = "Trace projection reads sealed evidence only and holds no custody, player or evaluation access"
+type = "forbidden"
+source_modules = ["harness.trace"]
+forbidden_modules = ["harness.computer", "harness.application", "harness.server", "harness.player", "harness.player_client", "harness.player_tools", "harness.player_mcp", "harness.evaluation", "harness.viewer", "harness.curator", "harness.__main__", "tools", "http", "urllib", "socket", "subprocess"]
+
+[[tool.importlinter.contracts]]
 name = "The curator holds no custody, player access or evaluation records (ADR 009, ADR008)"
 type = "forbidden"
 source_modules = ["harness.curator"]
