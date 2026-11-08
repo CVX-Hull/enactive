@@ -57,7 +57,7 @@ def make_layout(base: Path) -> sandbox.Layout:
 class Upstream:
     """A local stand-in for the provider: records what it received and answers with usage."""
 
-    def __init__(self, reply=None, stream=False):
+    def __init__(self, reply=None, stream=False, gzip=False):
         self.requests = []
         upstream = self
 
@@ -77,8 +77,13 @@ class Upstream:
                     data = json.dumps(reply if reply is not None else
                                       dict(usage=dict(input_tokens=1000, output_tokens=200))).encode()
                     media = 'application/json'
+                if gzip:
+                    import gzip as compressor
+                    data = compressor.compress(data)
                 self.send_response(200)
                 self.send_header('content-type', media)
+                if gzip:
+                    self.send_header('content-encoding', 'gzip')
                 self.send_header('content-length', str(len(data)))
                 self.end_headers()
                 self.wfile.write(data)
@@ -93,10 +98,11 @@ class Upstream:
 
 
 @contextmanager
-def running_proxy(tmp_path, *, cap='1', reply=None, stream=False):
-    upstream = Upstream(reply, stream)
+def running_proxy(tmp_path, *, cap='1', reply=None, stream=False, gzip=False, betas=frozenset()):
+    upstream = Upstream(reply, stream, gzip)
     proxy = ModelProxy(provider=ANTHROPIC, upstream=upstream.url, key='real-provider-key', prices=PRICES,
-                       cap_usd=Decimal(cap), ledger=tmp_path/'ledger.jsonl', max_output_tokens=4096)
+                       cap_usd=Decimal(cap), ledger=tmp_path/'ledger.jsonl', max_output_tokens=4096,
+                       betas=betas)
     port = proxy.start()
     try:
         yield proxy, port, upstream
@@ -105,10 +111,11 @@ def running_proxy(tmp_path, *, cap='1', reply=None, stream=False):
         upstream.close()
 
 
-def post(port, path, body: dict | bytes, token):
+def post(port, path, body: dict | bytes, token, headers=None):
     data = body if isinstance(body, bytes) else json.dumps(body).encode()
     connection = http.client.HTTPConnection('127.0.0.1', port, timeout=10)
-    connection.request('POST', path, body=data, headers={'x-api-key': token, 'content-type': 'application/json'})
+    connection.request('POST', path, body=data, headers={'x-api-key': token, 'content-type': 'application/json',
+                                                         **(headers or {})})
     response = connection.getresponse()
     payload = response.read()
     connection.close()
@@ -175,27 +182,89 @@ def test_proxy_swaps_the_session_token_for_the_key_and_records_no_key(tmp_path):
     assert Decimal(entry['charged']) == Decimal('0.006') and entry['usage_missing'] is False
 
 
-@pytest.mark.parametrize('case', ['wrong token', 'no token', 'route', 'model', 'no limit', 'not json', 'too large'])
+def image(source):
+    return dict(request(), messages=[dict(role='user', content=[dict(type='image', source=source)])])
+
+
+REFUSED = {
+    'wrong token': (401, dict(token='x'*64)),
+    'no token': (401, dict(token='')),
+    'route': (404, dict(path='/v1/files')),
+    'route with dots': (404, dict(path='/v1/messages/../files')),
+    'unpriced model': (429, dict(body=dict(request(), model='unpriced'))),
+    'no output limit': (429, dict(body=dict(model='model-a', messages=[]))),
+    'over output limit': (429, dict(body=dict(request(), max_tokens=10_000))),
+    'not json': (400, dict(body=b'not json')),
+    'body too large': (413, dict(declared=proxy_module.MAX_BODY + 1)),
+    'image by url': (400, dict(body=image(dict(type='url', url='https://example.com/x.png')))),
+    'stored file': (400, dict(body=image(dict(type='file', file_id='file_1')))),
+    'document block': (400, dict(body=dict(request(), messages=[dict(role='user', content=[
+        dict(type='document', source=dict(type='base64', media_type='application/pdf', data='AA=='))])]))),
+    'server tool': (400, dict(body=dict(request(), tools=[dict(type='web_fetch_20260209', name='web_fetch')]))),
+    'mcp servers': (400, dict(body=dict(request(), mcp_servers=[dict(type='url', url='https://x', name='x')]))),
+    'speed tier': (400, dict(body=dict(request(), speed='fast'))),
+    'service tier': (400, dict(body=dict(request(), service_tier='priority'))),
+    'fallbacks': (400, dict(body=dict(request(), fallbacks='default'))),
+    'container': (400, dict(body=dict(request(), container='c'))),
+}
+
+
+@pytest.mark.parametrize('case', sorted(REFUSED))
 def test_proxy_refuses_before_reaching_the_provider(tmp_path, case):
+    expected, change = REFUSED[case]
     with running_proxy(tmp_path) as (proxy, port, upstream):
-        path, body, token = '/v1/messages', request(), proxy.token
-        if case == 'wrong token':
-            token = 'x'*64
-        elif case == 'no token':
-            token = ''
-        elif case == 'route':
-            path = '/v1/files'
-        elif case == 'model':
-            body = dict(request(), model='unpriced')
-        elif case == 'no limit':
-            body = dict(model='model-a', messages=[])
-        elif case == 'not json':
-            body = b'not json'
+        if 'declared' in change:
+            # Declare an oversize body and send none: the proxy must refuse on the header alone.
+            connection = http.client.HTTPConnection('127.0.0.1', port, timeout=10)
+            connection.putrequest('POST', '/v1/messages')
+            connection.putheader('x-api-key', proxy.token)
+            connection.putheader('content-length', str(change['declared']))
+            connection.endheaders()
+            status = connection.getresponse().status
+            connection.close()
         else:
-            body = dict(request(), max_tokens=10_000)
-        status, _ = post(port, path, body, token)
-        assert status in (400, 401, 404, 413, 429)
+            status, _ = post(port, change.get('path', '/v1/messages'), change.get('body', request()),
+                             change.get('token', proxy.token))
+        assert status == expected
         assert upstream.requests == []
+
+
+def test_inline_image_and_client_tools_pass(tmp_path):
+    body = dict(image(dict(type='base64', media_type='image/png', data='AA==')),
+                tools=[dict(name='t', description='d', input_schema=dict(type='object'))])
+    with running_proxy(tmp_path) as (proxy, port, upstream):
+        assert post(port, '/v1/messages', body, proxy.token)[0] == 200
+        assert len(upstream.requests) == 1
+
+
+def test_only_allowlisted_headers_and_frozen_betas_reach_the_provider(tmp_path):
+    headers = {'cookie': 'c=1', 'openai-organization': 'org', 'accept-encoding': 'gzip, br',
+               'anthropic-beta': 'allowed-beta,unlisted-beta', 'anthropic-version': '2026-10-21'}
+    with running_proxy(tmp_path, betas=frozenset({'allowed-beta'})) as (proxy, port, upstream):
+        assert post(port, '/v1/messages', request(), proxy.token, headers)[0] == 200
+        sent = {k.lower(): v for k, v in upstream.requests[0]['headers'].items()}
+    assert 'cookie' not in sent and 'openai-organization' not in sent
+    assert sent['accept-encoding'] == 'identity' and sent['anthropic-beta'] == 'allowed-beta'
+    assert sent['anthropic-version'] == '2026-10-21'
+    assert json.loads((tmp_path/'ledger.jsonl').read_text())['dropped_betas'] == ['unlisted-beta']
+
+
+def test_a_charge_above_its_reservation_revokes_the_session(tmp_path):
+    expensive = dict(usage=dict(input_tokens=300_000, output_tokens=10))
+    with running_proxy(tmp_path, reply=expensive) as (proxy, port, upstream):
+        assert post(port, '/v1/messages', request(), proxy.token)[0] == 200
+        assert proxy.breaches == 1 and proxy.revoked
+        assert post(port, '/v1/messages', request(), proxy.token)[0] == 429
+        assert len(upstream.requests) == 1
+    assert json.loads((tmp_path/'ledger.jsonl').read_text().splitlines()[0])['breach'] is True
+
+
+def test_an_encoded_response_cannot_hide_usage(tmp_path):
+    with running_proxy(tmp_path, gzip=True) as (proxy, port, upstream):
+        post(port, '/v1/messages', request(), proxy.token)
+        assert proxy.revoked and proxy.spent > Decimal('0.0015')
+        assert post(port, '/v1/messages', request(), proxy.token)[0] == 429
+        assert len(upstream.requests) == 1
 
 
 def test_proxy_cap_refuses_by_worst_case_reservation(tmp_path):
@@ -321,6 +390,9 @@ def test_escape_suite_against_real_listeners(tmp_path, custodian):
                      'proxy (control)': proxy_port},
                 udp={'custodian': custodian_port},
                 unix={'outside socket': str(short/'s')},
+                stat={'project credentials': str(ROOT/'.runtime'/'credentials.json'),
+                      'user ssh': str(Path.home()/'.ssh'), 'other session home': str(other.home/'marker')},
+                terminals=sorted(str(p) for p in Path('/dev').glob('ttys*'))[:4],
                 other_pid=os.getpid())
             outcomes = run_adversary(layout, targets, proxy_port=proxy_port, token=proxy.token)
             assert upstream.requests == []
@@ -382,6 +454,12 @@ FORKS = ('import subprocess,sys,time\nkids=[]\n'
          'try:\n    for i in range(64): kids.append(subprocess.Popen(["/bin/sleep","30"]))\n'
          'except OSError: print("fork refused"); sys.exit(3)\ntime.sleep(30)')
 BIG_FILE = 'open("scratch/big","wb").write(b"x"*(8<<20))'
+# Hide data from the disk count: a mode-000 directory, or a path too long to stat.
+HIDDEN = ('import os,time\nos.makedirs("scratch/h"); open("scratch/h/f","wb").write(b"x"*(4<<20))\n'
+          'os.chmod("scratch/h",0)\ntime.sleep(30)')
+LONG_PATH = ('import os,time\nos.chdir("scratch")\n'
+             'for i in range(9): os.mkdir("d"*120); os.chdir("d"*120)\n'
+             'open("f"*250,"wb").write(b"x")\ntime.sleep(30)')
 
 
 @native
@@ -392,12 +470,18 @@ BIG_FILE = 'open("scratch/big","wb").write(b"x"*(8<<20))'
     ('wall clock', 'import time; time.sleep(30)', sandbox.Limits(wall_seconds=1), 'wall-clock limit'),
     ('cpu', SPIN, sandbox.Limits(cpu_seconds=1, wall_seconds=30), 'killed'),
     ('file size', BIG_FILE, sandbox.Limits(file_bytes=1 << 20, wall_seconds=30), 'killed'),
+    ('hidden directory', HIDDEN, sandbox.Limits(wall_seconds=30), 'disk unmeasurable'),
+    ('long path', LONG_PATH, sandbox.Limits(wall_seconds=30), 'disk unmeasurable'),
 ])
 def test_resource_exhaustion_is_stopped(tmp_path, name, code, limits, expect):
     layout = make_layout(tmp_path/'s')
     started = time.monotonic()
     result = sandbox.run([str(PYTHON), '-I', '-c', code], layout, limits=limits,
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    for directory, _dirs, _files in os.walk(layout.workspace/'scratch'):
+        os.chmod(directory, 0o700)  # let the test directory be removed after the hidden-directory case
+    if (layout.workspace/'scratch'/'h').exists():
+        os.chmod(layout.workspace/'scratch'/'h', 0o700)
     assert result.survivors == []
     assert time.monotonic() - started < 25
     if expect == 'killed':

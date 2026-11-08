@@ -100,12 +100,16 @@ Key: **Y** enforces; **P** partial; **N** no; **–** not established.
 **Profile.** [`sandbox.profile`](../harness/curator/sandbox.py) emits SBPL from a
 validated layout:
 - Default deny.
-- Reads: only `/`, a fixed list of system roots, the workspace, the fresh home and
-  named tool roots.
+- Reads: only `/`, a fixed list of system roots, the workspace, the fresh home, named
+  tool roots and six named devices. The user's terminals are not among the devices.
+- File metadata: only for those roots and the directories on the way to them.
+- Device control (`ioctl`): only on the named devices and the process's own
+  descriptors.
 - Writes: only the declared writable directories (`submissions/`, `drafts/`,
   `scratch/`) and the home, plus a few devices.
 - Network: one rule, `(remote ip "localhost:<proxy port>")`.
 - Mach services: four, for libc user lookup, notifications and logging.
+- POSIX shared memory and semaphores: not allowed.
 - Signals and process information: own processes only.
 - Kernel values: a named list, no process tables.
 
@@ -120,33 +124,56 @@ outside the workspace or equal to it, and a home inside the workspace.
   user;
 - at nice 19, in its own process group.
 
-The supervisor polls the tree's resident memory, the writable directories' disk use,
-the tree's process count and wall-clock time, and kills the group on a breach. At
-close it signals the group and its descendants. It reads the tree only while the
-group exists, so a reused process ID is never signalled.
+The supervisor polls five things and kills the group on a breach:
+- the tree's resident memory;
+- the writable directories' disk use;
+- the volume's free space against a floor (session allowance plus 1 GiB);
+- the tree's process count;
+- wall-clock time.
+
+An unmeasurable tree is a breach. Examples are a mode-000 directory or a path too long
+to examine. A supervisor error still closes the tree before it propagates.
+
+At close the supervisor signals the group and its descendants. Once the group is gone
+it never looks again, so a reused process ID is never signalled.
 
 **Model proxy.** [`ModelProxy`](../harness/curator/proxy.py) is a loopback HTTP
 server outside the sandbox.
 - **Authentication and routes.** It holds the key and accepts only a per-session token
   that it can revoke. It forwards only the provider's model route (`/v1/messages` or
   `/v1/responses`) and rewrites authentication.
+- **What reaches the provider is allowlisted.**
+  - **Headers:** content type, accept, API version and user agent. Beta flags come only
+    from a frozen set, and the response is always requested uncompressed.
+  - **Body fields:** an allowlist. Content blocks allow inline text and base64 images,
+    tool use and results, and thinking. Tools must be client tools.
+  - **Refused:** URL or file sources, documents, server tools, MCP servers,
+    containers, speed and service tiers, fallbacks, compaction, and provider-side
+    storage.
 - **The cap is enforced by reservation.** Before forwarding, it reserves the worst
   case: every body byte counted as an input token at the highest input-side price,
   plus the requested output limit at the output price. A request whose reservation
   would cross the cap is refused.
-- **Settlement.** After the call it settles at the reported usage, or keeps the whole
-  reservation when usage is missing.
+- **Settlement.** After the call it settles at the reported usage. It reads the
+  upstream response to the end even when the client has gone.
+- **Fail closed.** A charge above its reservation is recorded as a breach and revokes
+  the token. So does a 200 response without readable usage, which also keeps the whole
+  reservation.
+- **Limits.** Concurrency is bounded (8), request reads time out (30 s), and bodies
+  are capped at 8 MiB.
 - **Ledger.** Each request is appended without the key or token. Prices are a frozen
   input with their source; there is no default.
-- **Reuse review (S-CODE).** Gateways exist (LiteLLM, Envoy and mitmproxy are named in
-  S13 and S20), but they add a dependency that is unaudited by its own vendor's
-  statement (S20). The required behaviour is about 250 lines with tests: token swap,
-  two routes, a reservation cap and a ledger. Owner: the lead. Retire it if a vetted
-  gateway with reservation caps is adopted.
+- **Reuse review (S-CODE).** Gateways exist: Anthropic's gateway pages name LiteLLM,
+  Envoy and mitmproxy (S13, S16). The research agent read Anthropic's documentation as
+  saying LiteLLM is unaffiliated with Anthropic and not security-audited. Not one of
+  them was shown to reserve worst-case cost or allowlist request bodies. The required
+  behaviour is about 380 lines with tests: token swap, two routes, the header and body
+  allowlists, a reservation cap and a ledger. Owner: the lead. Retire it if a vetted
+  gateway with reservation caps and body allowlists is adopted.
 
 **Escape suite.** An adversary script runs inside the sandbox and reports only
-allowed or denied, never contents. The local run on 2026-11-08 passed 29 tests in
-18 s. Exactly these attempts were allowed: reading the brief and knowledge files,
+allowed or denied, never contents. After the independent review (below), the local
+run on 2026-11-08 passed 46 tests in 31 s. Exactly these attempts were allowed: reading the brief and knowledge files,
 writing `scratch/`, `submissions/` and `drafts/`, and reaching the proxy. Every
 other attempt was denied:
 - **Secrets.** Reading the real `.runtime/credentials.json`, a live `actor.json` with
@@ -158,6 +185,9 @@ other attempt was denied:
   TCP6 and UDP; the real Pause gateway; an outside Unix socket; external TCP and DNS.
 - **Host services and processes.** The pasteboard, opening an application, signalling
   the test runner and listing processes.
+- **Added after review.** File metadata of the credentials, `~/.ssh` and another
+  session's home; opening the user's terminal devices; POSIX shared memory and
+  semaphores.
 
 Further tests show:
 - the proxy is the only way out, and a forged token gets 401;
@@ -174,20 +204,62 @@ probe ([`tests/curator_host_probe.py`](../tests/curator_host_probe.py)) is a man
 local check because it needs an installed host binary. It spends $0, because a local
 stand-in answers in the Messages streaming shape.
 
+## Independent review
+
+A security review in a clean context, on 8 November 2026, tested the first prototype
+with synthetic canaries. Every finding was fixed and is now covered by a test, except
+the two at the end.
+
+**Verified by experiment:**
+- **H1. The cap could be exceeded.** A cheap body (URL documents, server tools) or a
+  forwarded `accept-encoding` that hid usage let spend reach 9× and 180× the cap
+  against a stand-in.
+- **H2. Headers and body went through unchanged**, so the provider could fetch URLs,
+  reach MCP servers or read stored files.
+- **H3. The sandbox could open the user's live terminal devices.**
+- **M1. A long path crashed the supervisor**, leaving the tree running unsupervised.
+- **M2. A mode-000 directory or unlinked open files hid disk use.**
+- **M3. POSIX shared memory persisted into the next session.**
+- **M4. Metadata of any path was readable.**
+
+**From code:**
+- **M5. Unbounded proxy threads and reads.**
+- **L1. Exception paths could write a second status line.**
+- **L3. A theoretical process-ID reuse at close.**
+- **L4. Tests that did not test their claim.**
+
+**Left open:**
+- **L2.** A stream that ends in an error after content may be undercharged, depending
+  on how the provider bills partial output. This is risk 11.
+- **Unlinked open files** are caught only by the volume floor, not the per-session
+  count. This is part of risk 3.
+
+Claude Code 2.1.319 sends five beta flags:
+- `claude-code-20250219`
+- `context-management-2025-06-27`
+- `effort-2025-11-24`
+- `interleaved-thinking-2025-05-14`
+- `thinking-token-count-2026-05-13`
+
+It also sends a clearing `context_management` field. The proxy drops unlisted flags and
+records them. #454 freezes the allowlist after checking each flag against the real API.
+
 ## Residual risks
 
 | # | Risk | Evidence | Mitigation or decision |
 |---|---|---|---|
 | 1 | Seatbelt is deprecated and unsupported; an OS update may break or widen the profile | S5, S6, S7 | Re-run the escape suite after every macOS or host update and record host versions per session; the VM fallback stays documented |
 | 2 | **Same-user argv is readable** (`KERN_PROCARGS2`), even with process information limited to self and a named kernel-value list; environments were not readable | L12 | No credential may travel in argv. Today the token is in `actor.json` and the key in the environment (`tools/campaign_player.py`). The #454 run checks live argv for the session's secrets |
-| 3 | **Memory, disk total and process count are polled, not kernel-enforced**; overshoot is bounded by the allocation rate times the 0.1 s poll | L3, L11 | Supervisor kills on breach; file size and open files are rlimits. A sparse disk image (L5) would make disk a hard cap and is the first hardening step if #454 shows bursts |
+| 3 | **Memory, disk total and process count are polled, not kernel-enforced.** Overshoot is bounded by the allocation rate times the 0.1 s poll. Space held by unlinked open files is caught only by the volume free-space floor | L3, L11, review M2 | Supervisor kills on breach; file size (64 MiB) and open files (256) are rlimits. A sparse disk image (L5) would make disk a hard cap and is the first hardening step if #454 shows bursts |
 | 4 | **An orphaned descendant that left the process group** (double fork plus `setsid`) cannot be safely identified at close | L15 | It keeps the inherited profile. Once the workspace is deleted it cannot recreate it, its token is revoked, and it runs at nice 19 under the CPU rlimit. Its memory is unbounded: residual. #454 checks for survivors after every session |
 | 5 | System read surface: `/usr`, `/System`, `/private/etc` (including `passwd`), `/dev`, the hostname and hardware values | L9, S8 | Accepted; nothing project-secret lives there |
 | 6 | Shared kernel: a kernel or Seatbelt bug escapes | S3 | Accepted for P0; escalate to a VM if the owner's threat model requires it |
 | 7 | The proxy channel carries data out; any local process can reach the proxy port | S3 | Per-session revocable token, model routes only, ledger; trace content is model-visible by design |
 | 8 | Host version drift changes flags and startup behaviour | L13, S4 | Record host version and binary hash per session; re-run the host probe on update |
 | 9 | Claude Code writes its temporary root to `/tmp/claude-<uid>` unless `CLAUDE_CODE_TMPDIR` is set; allowing that path would share state with other sessions | L13 | The runner sets `CLAUDE_CODE_TMPDIR` to `scratch/`; the profile never allows `/tmp` |
-| 10 | Codex was not yet run under the profile | — | #454's second host; same probe with a Responses-shape stand-in before any spend |
+| 10 | Codex was not yet run under the profile, and the OpenAI request allowlist rests on field names not yet checked against a dated source | — | #454's second host; same probe with a Responses-shape stand-in before any spend |
+| 11 | A stream that errors after content may be undercharged if the provider bills partial output | Review L2 | The reservation still bounds each request; #454 compares the ledger with provider-reported cost |
+| 12 | The free-space floor can stop a session falsely when another process writes heavily during it | — | A visible stop, not a hidden failure; it is recorded as the stop reason |
 
 ## Coding-agent hosts
 

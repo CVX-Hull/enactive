@@ -1,14 +1,31 @@
 """Model proxy for curator sessions (ADR 009 isolation; #451).
 
 The proxy runs outside the sandbox on one loopback port. It holds the provider key; the curator
-holds only a per-session token the proxy can revoke. It forwards only allowlisted model routes
-and enforces a dollar cap by reservation: before forwarding, it reserves the request's
-worst-case cost (every body byte counted as an input token at the highest input-side price, plus
-the requested output limit at the output price) and refuses a request whose reservation would
-exceed the cap. Afterwards it settles at the reported usage, or keeps the whole reservation when
-usage is missing. Every request is appended to the proxy's ledger.
+holds only a per-session token the proxy can revoke.
 
-Prices are a frozen input supplied by the caller (with their source and date), never a default.
+What reaches the provider is allowlisted, not filtered:
+- **Route.** Only the provider's model route is forwarded.
+- **Headers.** Only a few headers pass, and beta flags only from a frozen set. Responses
+  are always requested uncompressed, so usage stays readable.
+- **Body.** Top-level fields and content blocks are allowlisted. Inline text and base64
+  images pass. Fetched or stored sources (URLs, files), documents, provider-run tools
+  (server tools, MCP servers, containers), stored provider state and pricing tiers are
+  refused.
+
+Without that, a few-hundred-byte request could make the provider fetch any URL or bill far
+above the reservation.
+
+The dollar cap is enforced by reservation:
+- **Reserve.** Before forwarding, the proxy reserves the worst case: every body byte counted
+  as an input token at the highest input-side price, plus the requested output limit at the
+  output price. A request whose reservation would exceed the cap is refused.
+- **Settle.** Afterwards it settles at the reported usage. The response is read to the end
+  even if the client has gone, so usage is not lost.
+- **Fail closed.** A 200 response without usage keeps the whole reservation and revokes the
+  session token. So does a charge above its reservation, recorded as a breach.
+
+Every request is appended to the proxy's ledger, without the key or token. Prices are a frozen
+input supplied by the caller (with their source and date), never a default.
 """
 from __future__ import annotations
 
@@ -24,14 +41,15 @@ import threading
 import time
 from urllib.parse import urlsplit
 
-HOP_HEADERS = {'connection', 'keep-alive', 'proxy-authenticate', 'proxy-authorization', 'te', 'trailers',
-               'transfer-encoding', 'upgrade', 'host', 'content-length', 'x-api-key', 'authorization'}
-MAX_BODY = 32 << 20
+MAX_BODY = 8 << 20
+READ_TIMEOUT = 30
+MAX_CONCURRENT = 8
+FORWARD_HEADERS = frozenset({'content-type', 'accept', 'anthropic-version', 'user-agent'})
 
 
 @dataclass(frozen=True)
 class Price:
-    """US dollars per million tokens."""
+    """US dollars per million tokens. `cache_write` must be the highest cache-write tier allowed."""
     input: Decimal
     output: Decimal
     cache_write: Decimal = Decimal(0)
@@ -44,11 +62,13 @@ class Price:
 
 @dataclass(frozen=True)
 class Provider:
-    """How one provider authenticates and reports usage."""
+    """How one provider authenticates, which request shapes are allowed and where usage is."""
     name: str
     routes: frozenset[str]
     key_header: str  # 'x-api-key' or 'authorization'
     output_field: str  # body field holding the output-token limit
+    fields: frozenset[str]  # allowed top-level body fields
+    blocks: frozenset[str]  # allowed content-block types
 
     def auth(self, key: str) -> tuple[str, str]:
         return (self.key_header, key) if self.key_header == 'x-api-key' else ('authorization', f'Bearer {key}')
@@ -59,18 +79,78 @@ class Provider:
         return value or (bearer[7:] if bearer.lower().startswith('bearer ') else '')
 
 
-ANTHROPIC = Provider('anthropic', frozenset({'/v1/messages'}), 'x-api-key', 'max_tokens')
-OPENAI = Provider('openai', frozenset({'/v1/responses'}), 'authorization', 'max_output_tokens')
+ANTHROPIC = Provider(
+    'anthropic', frozenset({'/v1/messages'}), 'x-api-key', 'max_tokens',
+    frozenset({'model', 'max_tokens', 'messages', 'system', 'tools', 'tool_choice', 'stream', 'metadata',
+               'stop_sequences', 'thinking', 'output_config', 'cache_control', 'temperature', 'top_p', 'top_k',
+               'context_management'}),
+    frozenset({'text', 'image', 'tool_use', 'tool_result', 'thinking', 'redacted_thinking'}))
+# OpenAI's Responses shapes are not yet verified against a dated primary source; #454 freezes them.
+OPENAI = Provider(
+    'openai', frozenset({'/v1/responses'}), 'authorization', 'max_output_tokens',
+    frozenset({'model', 'input', 'instructions', 'tools', 'tool_choice', 'max_output_tokens', 'stream',
+               'reasoning', 'text', 'parallel_tool_calls', 'store', 'temperature', 'top_p'}),
+    frozenset({'message', 'input_text', 'output_text', 'input_image', 'function_call', 'function_call_output',
+               'reasoning'}))
+
+
+def refusal(provider: Provider, request: object) -> str | None:
+    """Why this request body may not be forwarded, or None."""
+    if not isinstance(request, dict):
+        return 'body must be a JSON object'
+    extra = sorted(set(request) - provider.fields)
+    if extra:
+        return f'fields not allowed: {", ".join(extra)}'
+    for tool in request.get('tools') or []:
+        if not isinstance(tool, dict):
+            return 'malformed tool'
+        if provider is ANTHROPIC and ('input_schema' not in tool or tool.get('type') not in (None, 'custom')):
+            return 'only client tools with an input schema are allowed'
+        if provider is OPENAI and tool.get('type') != 'function':
+            return 'only function tools are allowed'
+    management = request.get('context_management')
+    if management is not None:
+        # Clearing old tool results or thinking only removes context; server-side compaction
+        # runs extra model work whose billing is not verified, so it is refused.
+        edits = management.get('edits') if isinstance(management, dict) else None
+        if not isinstance(edits, list) or any(
+                not isinstance(e, dict) or not str(e.get('type', '')).startswith(('clear_tool_uses_', 'clear_thinking_'))
+                for e in edits):
+            return 'only clearing context edits are allowed'
+    if provider is OPENAI and request.get('store') not in (None, False):
+        return 'provider-side storage is not allowed'
+    if provider is OPENAI and request.get('store') is None:
+        request['store'] = False
+    stack = [request.get('messages'), request.get('system'), request.get('input')]
+    while stack:
+        item = stack.pop()
+        if isinstance(item, list):
+            stack.extend(item)
+        elif isinstance(item, dict):
+            kind = item.get('type')
+            if kind is not None and kind not in provider.blocks:
+                return f'content block {kind!r} not allowed'
+            source = item.get('source')
+            if isinstance(source, dict) and source.get('type') != 'base64':
+                return 'only inline base64 sources are allowed'
+            image_url = item.get('image_url')
+            if image_url is not None and not (isinstance(image_url, str) and image_url.startswith('data:')):
+                return 'only inline images are allowed'
+            if 'file_id' in item or 'file_url' in item:
+                return 'stored or fetched files are not allowed'
+            stack.extend(v for k, v in item.items() if k in ('content', 'messages'))
+    return None
 
 
 def usage_of(provider: Provider, body: bytes) -> dict[str, int] | None:
-    """Token usage from a JSON or server-sent-event response, or None when absent."""
+    """Token usage from a JSON or server-sent-event response, or None when absent.
+
+    Integer counts are kept at their maximum across events; nested cache-creation detail is
+    summed into `cache_creation_input_tokens` when the flat total is absent.
+    """
     text = body.decode('utf-8', 'replace')
-    documents = []
-    if text.lstrip().startswith('{'):
-        documents.append(text)
-    else:
-        documents += [line[5:].strip() for line in text.splitlines() if line.startswith('data:')]
+    documents = [text] if text.lstrip().startswith('{') else [
+        line[5:].strip() for line in text.splitlines() if line.startswith('data:')]
     usage: dict[str, int] = {}
     for document in documents:
         try:
@@ -81,10 +161,15 @@ def usage_of(provider: Provider, body: bytes) -> dict[str, int] | None:
             continue
         found = (event.get('usage') or (event.get('message') or {}).get('usage')
                  or (event.get('response') or {}).get('usage'))
-        if isinstance(found, dict):
-            for key, value in found.items():
-                if isinstance(value, int) and not isinstance(value, bool):
-                    usage[key] = max(usage.get(key, 0), value)
+        if not isinstance(found, dict):
+            continue
+        for key, value in found.items():
+            if isinstance(value, int) and not isinstance(value, bool):
+                usage[key] = max(usage.get(key, 0), value)
+        nested = found.get('cache_creation')
+        if isinstance(nested, dict) and 'cache_creation_input_tokens' not in found:
+            total = sum(v for v in nested.values() if isinstance(v, int) and not isinstance(v, bool))
+            usage['cache_creation_input_tokens'] = max(usage.get('cache_creation_input_tokens', 0), total)
     return usage or None
 
 
@@ -103,7 +188,8 @@ class ModelProxy:
     """One proxy per session. `upstream` is the provider base URL (https in use; http only in tests)."""
 
     def __init__(self, *, provider: Provider, upstream: str, key: str, prices: dict[str, Price],
-                 cap_usd: Decimal, ledger: Path, max_output_tokens: int = 64_000):
+                 cap_usd: Decimal, ledger: Path, max_output_tokens: int = 64_000,
+                 betas: frozenset[str] = frozenset()):
         parts = urlsplit(upstream)
         if parts.scheme not in ('https', 'http') or not parts.hostname or parts.path not in ('', '/'):
             raise ValueError('Upstream must be a bare http(s) origin')
@@ -111,12 +197,14 @@ class ModelProxy:
             raise ValueError('Proxy needs a key, a positive cap and frozen prices')
         self.provider, self.upstream, self._key = provider, parts, key
         self.prices, self.cap = dict(prices), Decimal(cap_usd)
-        self.ledger, self.max_output_tokens = ledger, max_output_tokens
+        self.ledger, self.max_output_tokens, self.betas = ledger, max_output_tokens, frozenset(betas)
         self.token = secrets.token_hex(32)
         self.spent = Decimal(0)
         self.reserved = Decimal(0)
         self.revoked = False
+        self.breaches = 0
         self._lock = threading.Lock()
+        self._slots = threading.BoundedSemaphore(MAX_CONCURRENT)
         self._server: ThreadingHTTPServer | None = None
         self._thread: threading.Thread | None = None
 
@@ -136,12 +224,17 @@ class ModelProxy:
             self.reserved += worst
         return worst
 
-    def _settle(self, reservation: Decimal, actual: Decimal | None) -> Decimal:
+    def _settle(self, reservation: Decimal, actual: Decimal | None, status: int) -> tuple[Decimal, bool]:
+        """Charge the actual cost (or the reservation when unknown). Fail closed on surprises."""
         charge = reservation if actual is None else actual
+        breach = actual is not None and actual > reservation
         with self._lock:
             self.reserved -= reservation
             self.spent += charge
-        return charge
+            if breach or (actual is None and status == 200):
+                self.revoked = True
+            self.breaches += breach
+        return charge, breach
 
     def _record(self, **entry):
         entry['time'] = time.time()
@@ -158,12 +251,13 @@ class ModelProxy:
 
         class Handler(BaseHTTPRequestHandler):
             protocol_version = 'HTTP/1.1'
+            timeout = READ_TIMEOUT
 
             def log_message(self, *_args):
                 pass
 
             def refuse(self, status: int, reason: str, **fields):
-                proxy._record(path=self.path, status=status, refused=reason, **fields)
+                proxy._record(path=urlsplit(self.path).path, status=status, refused=reason, **fields)
                 data = json.dumps(dict(type='error', error=dict(type='curator_proxy', message=reason))).encode()
                 self.send_response(status)
                 self.send_header('content-type', 'application/json')
@@ -175,11 +269,22 @@ class ModelProxy:
                 self.refuse(404, 'route not allowed')
 
             def do_POST(self):
+                if not proxy._slots.acquire(blocking=False):
+                    self.close_connection = True
+                    return self.refuse(429, 'too many concurrent requests')
+                try:
+                    self.handle_post()
+                finally:
+                    proxy._slots.release()
+
+            def handle_post(self):
                 path = urlsplit(self.path).path
                 if not hmac.compare_digest(proxy.provider.presented(self.headers).encode(), proxy.token.encode()):
                     return self.refuse(401, 'unknown session token')
                 if path not in proxy.provider.routes:
                     return self.refuse(404, 'route not allowed')
+                if self.headers.get('transfer-encoding'):
+                    return self.refuse(411, 'a content length is required')
                 try:
                     length = int(self.headers.get('content-length', '-1'))
                 except ValueError:
@@ -187,52 +292,78 @@ class ModelProxy:
                 if not (0 <= length <= MAX_BODY):
                     return self.refuse(413, 'body length missing or too large')
                 body = self.rfile.read(length)
+                if len(body) != length:
+                    return self.refuse(400, 'incomplete body')
                 try:
                     request = json.loads(body)
-                    model = request['model']
+                except ValueError:
+                    return self.refuse(400, 'body must be JSON')
+                reason = refusal(proxy.provider, request)
+                if reason:
+                    return self.refuse(400, reason)
+                body = json.dumps(request, separators=(',', ':')).encode()
+                model = request.get('model')
+                try:
                     output_limit = int(request.get(proxy.provider.output_field) or 0)
-                except (ValueError, KeyError, TypeError):
-                    return self.refuse(400, 'request must be JSON with a model and an output limit')
-                reservation = proxy._reserve(model, body, output_limit)
+                except (TypeError, ValueError):
+                    output_limit = 0
+                betas = [b.strip() for b in (self.headers.get('anthropic-beta') or '').split(',') if b.strip()]
+                dropped = sorted(set(betas) - proxy.betas)
+                reservation = proxy._reserve(model if isinstance(model, str) else '', body, output_limit)
                 if isinstance(reservation, str):
                     return self.refuse(429, reservation, model=model)
-                status, received, actual = 502, b'', None
+                status, received, actual, error = 502, b'', None, None
                 try:
-                    status, received = self.forward(path, body)
-                    usage = usage_of(proxy.provider, received)
-                    actual = None if usage is None else cost_of(proxy.provider, proxy.prices[model], usage)
-                except OSError as error:
-                    if not received:
-                        self.refuse(502, f'upstream unreachable: {type(error).__name__}')
+                    status, received = self.forward(path, body, [b for b in betas if b in proxy.betas])
+                except Exception as exc:  # noqa: BLE001 - every failure settles below and fails closed
+                    error = type(exc).__name__
                 finally:
-                    charge = proxy._settle(reservation, actual)
-                    proxy._record(path=path, model=model, status=status, reserved=reservation,
-                                  charged=charge, usage_missing=actual is None)
+                    usage = usage_of(proxy.provider, received) if received else None
+                    actual = None if usage is None else cost_of(proxy.provider, proxy.prices[model], usage)
+                    charge, breach = proxy._settle(reservation, actual, status)
+                    proxy._record(path=path, model=model, status=status, reserved=reservation, charged=charge,
+                                  usage_missing=actual is None, breach=breach, error=error, dropped_betas=dropped)
+                if error and not self.started:
+                    self.refuse(502, f'upstream failed: {error}')
 
-            def forward(self, path: str, body: bytes) -> tuple[int, bytes]:
+            started = False
+
+            def forward(self, path: str, body: bytes, betas: list[str]) -> tuple[int, bytes]:
                 up = proxy.upstream
                 connection_type = http.client.HTTPSConnection if up.scheme == 'https' else http.client.HTTPConnection
                 connection = connection_type(up.hostname, up.port, timeout=600)
-                headers = {k: v for k, v in self.headers.items() if k.lower() not in HOP_HEADERS}
+                headers = {k: v for k, v in self.headers.items() if k.lower() in FORWARD_HEADERS}
+                if betas:
+                    headers['anthropic-beta'] = ','.join(betas)
                 name, value = proxy.provider.auth(proxy._key)
                 headers[name] = value
+                headers['accept-encoding'] = 'identity'
                 headers['content-length'] = str(len(body))
                 try:
                     connection.request('POST', path, body=body, headers=headers)
                     response = connection.getresponse()
+                    encoding = (response.getheader('content-encoding') or 'identity').lower()
                     self.send_response(response.status)
+                    self.started = True
                     for k, v in response.getheaders():
-                        if k.lower() not in HOP_HEADERS:
+                        if k.lower() in ('content-type', 'request-id', 'retry-after'):
                             self.send_header(k, v)
                     self.send_header('transfer-encoding', 'chunked')
                     self.end_headers()
                     received = bytearray()
+                    client = True
                     while chunk := response.read1(65536):
                         received += chunk
-                        self.wfile.write(b'%x\r\n%s\r\n' % (len(chunk), chunk))
-                        self.wfile.flush()
-                    self.wfile.write(b'0\r\n\r\n')
-                    return response.status, bytes(received)
+                        if client:
+                            try:
+                                self.wfile.write(b'%x\r\n%s\r\n' % (len(chunk), chunk))
+                                self.wfile.flush()
+                            except OSError:
+                                client = False  # keep reading so the usage is settled
+                    if client:
+                        self.wfile.write(b'0\r\n\r\n')
+                    # An encoded body cannot be read for usage: settle it as missing usage.
+                    return response.status, bytes(received) if encoding == 'identity' else b''
                 finally:
                     connection.close()
 

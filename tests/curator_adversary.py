@@ -64,6 +64,28 @@ def signal_other():
     os.kill(targets['other_pid'], 0)
 
 
+def shared_memory():
+    from multiprocessing import shared_memory as shm
+    block = shm.SharedMemory(create=True, size=16)
+    block.close()
+    block.unlink()
+
+
+def semaphore():
+    import multiprocessing
+    multiprocessing.Lock()
+
+
+def terminal(path):
+    os.close(os.open(path, os.O_RDONLY | os.O_NONBLOCK))
+
+
+for name, path in targets.get('stat', {}).items():
+    attempt(f'stat {name}', lambda p=path: os.stat(p))
+for path in targets.get('terminals', []):
+    attempt(f'open terminal {os.path.basename(path)}', lambda p=path: terminal(p))
+attempt('posix shared memory', shared_memory)
+attempt('posix semaphore', semaphore)
 for name, path in targets.get('read', {}).items():
     attempt(f'read {name}', lambda p=path: read(p))
 for name, path in targets.get('list', {}).items():
