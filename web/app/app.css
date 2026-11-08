@@ -146,7 +146,7 @@ main > div { display: grid; gap: 16px; }
 .player[data-scale="fit"] .player-view canvas { width: 100%; height: auto; image-rendering: auto; }
 .player[data-held="yes"] .player-view { outline: 2px dashed var(--line); outline-offset: -2px; }
 .player-meta { font: 600 .68rem var(--mono); color: var(--muted); }
-.player:fullscreen { background: #000; padding: 12px; grid-template-rows: auto 1fr auto; }
+.player:fullscreen { background: var(--surface); padding: 12px; grid-template-rows: auto 1fr auto; }
 .player:fullscreen .player-view { max-height: none; place-items: center; }
 .player:fullscreen[data-scale="fit"] .player-view canvas { width: auto; height: auto; max-width: 100%; max-height: calc(100vh - 90px); }
 .kv { display: grid; grid-template-columns: minmax(8em, 1fr) minmax(0, auto); gap: 5px 14px; font-size: .86rem; align-items: baseline; margin: 0; }

@@ -74,8 +74,11 @@ function savedScale() {
 /** The game feed (#435). Each frame is decoded before it replaces the last one and is drawn at its own pixel size,
  *  so the picture never blanks or rescales as frames arrive. Hold freezes this view only: it sends nothing to the
  *  run and is unrelated to the custody Pause above. The step buttons move the shared playhead. */
+const clockTime = ms => new Date(ms).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', second: '2-digit'});
+
 export function FeedPlayer({run, step}) {
-  const following = store.cursor === null && selectedRun()?.state === 'live';
+  const liveRunSelected = selectedRun()?.state === 'live';
+  const following = store.cursor === null && liveRunSelected;
   const src = following ? store.control.frameUrl : step && step.source_id ? framePath(run, step.source_id) : null;
   const canvas = useRef(null), shell = useRef(null);
   const [held, setHeld] = useState(false);
@@ -83,6 +86,10 @@ export function FeedPlayer({run, step}) {
   const [shown, setShown] = useState(null);
   useEffect(() => {
     if (!src || held) return undefined;
+    // What this frame is, fixed now: a newer frame arriving during the decode must not relabel it.
+    const label = following
+      ? {following: true, source: store.control.frameSource || null}
+      : {following: false, seq: step ? step.seq : null, wall: step ? step.wall : null};
     let cancelled = false;
     const image = new Image();
     image.src = src;
@@ -93,32 +100,35 @@ export function FeedPlayer({run, step}) {
         target.width = image.naturalWidth; target.height = image.naturalHeight;
       }
       target.getContext('2d').drawImage(image, 0, 0);
-      setShown({following, seq: step ? step.seq : null, source: following ? store.control.frameSource : null,
-        width: image.naturalWidth, height: image.naturalHeight});
+      setShown({...label, width: image.naturalWidth, height: image.naturalHeight});
     }).catch(() => { /* a frame that fails to decode leaves the last good one in place */ });
     return () => { cancelled = true; };
   }, [src, held]);
   const choose = value => { setScale(value); try { localStorage.setItem(SCALE_KEY, value); } catch { /* no storage */ } };
   const expand = () => { const el = shell.current; if (el && el.requestFullscreen) el.requestFullscreen().catch(() => {}); };
+  // Stepping always shows the step it moves to, so it releases a held view.
+  const stepTo = target => { setHeld(false); setCursorIndex(target); };
   const where = !shown ? 'waiting for the first frame'
-    : shown.following ? `live · control path${shown.source ? ` · capture ${shown.source.capture_id}` : ''}`
-    : `step ${shown.seq} · viewer · original frame · sha-256 checked`;
+    : shown.following ? `live · control path${shown.source ? ` · capture ${shown.source.capture_id} at ${clockTime(shown.source.presented_ms)}` : ''}`
+    : `step ${shown.seq}${typeof shown.wall === 'number' ? ` at ${clockTime(shown.wall * 1000)}` : ''} · viewer · original frame · sha-256 checked`;
+  const missing = !following && step && !step.source_id ? ` · no frame at step ${step.seq}` : '';
   const index = cursorIndex();
+  const canExpand = typeof document !== 'undefined' && document.fullscreenEnabled;
   return html`<div class="s7 frame-col"><div class="player" ref=${shell} data-scale=${scale} data-held=${held ? 'yes' : 'no'}>
     <div class="player-bar" role="toolbar" aria-label="Feed player (view only; never pauses the run)">
-      <button type="button" id="feed-back" title="Previous recorded frame" disabled=${index <= 0} onClick=${() => setCursorIndex(index - 1)}>◀</button>
-      <button type="button" id="feed-hold" aria-pressed=${held} title="Freeze this view; the run keeps going" onClick=${() => setHeld(!held)}>${held ? 'Resume view' : 'Hold view'}</button>
-      <button type="button" id="feed-forward" title="Next recorded frame" disabled=${index < 0 || index >= store.steps.length - 1} onClick=${() => setCursorIndex(index + 1)}>▶</button>
-      <button type="button" id="feed-live" disabled=${following && !held} onClick=${() => { setHeld(false); goLive(); }}>Live</button>
+      <button type="button" id="feed-back" aria-label="Previous recorded frame" title="Previous recorded frame" disabled=${index <= 0} onClick=${() => stepTo(index - 1)}>◀</button>
+      <button type="button" id="feed-hold" aria-pressed=${held} title="Freeze this view; the run keeps going" onClick=${() => setHeld(!held)}>Hold view</button>
+      <button type="button" id="feed-forward" aria-label="Next recorded frame" title="Next recorded frame" disabled=${index < 0 || index >= store.steps.length - 1} onClick=${() => stepTo(index + 1)}>▶</button>
+      <button type="button" id="feed-live" title=${liveRunSelected ? 'Follow the live frame' : 'This run is not live'} disabled=${!liveRunSelected || (following && !held)} onClick=${() => { setHeld(false); goLive(); }}>Live</button>
       <span class="player-gap"></span>
-      <button type="button" id="feed-scale" aria-pressed=${scale === 'fit'} title="Show the frame pixel for pixel, or scaled to the column"
-        onClick=${() => choose(scale === 'fit' ? 'native' : 'fit')}>${scale === 'fit' ? 'Fit' : '1:1'}</button>
-      <button type="button" id="feed-expand" title="Full screen" onClick=${expand}>Expand</button>
+      <button type="button" id="feed-scale" aria-pressed=${scale === 'fit'} title="Off: pixel for pixel (1:1). On: scaled to the column"
+        onClick=${() => choose(scale === 'fit' ? 'native' : 'fit')}>Fit</button>
+      ${canExpand ? html`<button type="button" id="feed-expand" title="Full screen" onClick=${expand}>Expand</button>` : null}
     </div>
     <div class="player-view">${src || shown ? null : html`<span class="frame-empty">No frame</span>`}
       <canvas ref=${canvas} id="feed" role="img" hidden=${!shown}
         aria-label=${shown ? `Game screen, ${where}` : 'Game screen not yet shown'}></canvas></div>
-    <div class="player-meta" id="feed-meta" role="status">${held ? 'held · ' : ''}${where}${shown ? ` · ${shown.width} × ${shown.height}` : ''}</div>
+    <div class="player-meta" id="feed-meta" aria-live="off">${held ? 'held · ' : ''}${where}${shown ? ` · ${shown.width} × ${shown.height} · ${scale === 'fit' ? 'fit' : '1:1'}` : ''}${missing}</div>
   </div></div>`;
 }
 
