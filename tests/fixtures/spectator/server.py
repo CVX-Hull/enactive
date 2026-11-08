@@ -12,7 +12,7 @@ It imitates only the parts of the supervised gateway that the page depends on:
 
 With `--viewer URL` the view routes go to a real viewer process instead (the control path stays stubbed).
 
-Test hooks (never part of the product): GET /__fixture/state, POST /__fixture/viewer?mode=down|up|nolive,
+Test hooks (never part of the product): GET /__fixture/state, POST /__fixture/viewer?mode=down|up|nolive|stale,
 POST /__fixture/advance?n=5. Standard library only.
 """
 from __future__ import annotations
@@ -58,6 +58,7 @@ class State:
         self.visible = len(self.steps) - 4
         self.viewer_down = False
         self.no_live = False
+        self.stale = False
         self.pauses, self.records, self.view_requests = [], [], []
         self.started = time.time()
 
@@ -185,6 +186,9 @@ def make_handler(state: State):
                 rows = body['items'][after:after + limit + 1]
                 if state.no_live:
                     rows = [dict(row, state='final') for row in rows]
+                if state.stale:
+                    # stale: the first-listed run left a live store that was never finalized (#435).
+                    rows = [dict(row, state='unfinished') if index == 0 and after == 0 else row for index, row in enumerate(rows)]
                 body.update(items=rows[:limit], next=after + limit if len(rows) > limit else None, limit=limit)
                 self.json(200, body); return
             if route == 'improve/changes':
@@ -248,7 +252,8 @@ def make_handler(state: State):
                     state.viewer_down = mode == ['down']
                     # nolive: the viewer is up but has not yet listed the live run (its first pass is still running).
                     state.no_live = mode == ['nolive']
-                self.json(200, {'viewer_down': state.viewer_down, 'no_live': state.no_live}); return
+                    state.stale = mode == ['stale']
+                self.json(200, {'viewer_down': state.viewer_down, 'no_live': state.no_live, 'stale': state.stale}); return
             if url.path == '/__fixture/advance':
                 with state.lock:
                     state.visible = min(len(state.steps), state.visible + int(parse_qs(url.query).get('n', ['1'])[0]))

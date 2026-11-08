@@ -76,6 +76,18 @@ evaluator incrementally over the live run's records and serves `spectator-view/1
 writes only the live run's `live` evaluation store and never reaches the custodian, the
 player context or any input.
 
+The viewer lists only its own live run as `live`. Another run whose store is still
+`live`, because its final `evaluate-run` pass never ran, is listed as `unfinished`, so the
+page cannot follow it in place of the real live run
+([#435](https://github.com/CVX-Hull/enactive/issues/435)).
+
+The page's feed player shows the live control-path frame or the playhead's recorded
+frame:
+- Each frame is decoded before it replaces the last, and is drawn at its own pixel size. It never blanks or rescales as frames arrive.
+- **1:1** (the default) scrolls instead of scaling; **Fit** scales to the column.
+- **Hold** freezes the view only. It sends nothing to the run and is separate from Pause.
+- The step buttons move the shared playhead.
+
 The gateway forwards `GET /api/view/*` to it on its own connection:
 - a 2-second total deadline and a 4 MiB cap;
 - only `application/json` and `image/png` responses; another media type, or a response

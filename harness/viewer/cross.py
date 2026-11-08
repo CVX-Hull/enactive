@@ -199,7 +199,8 @@ def compare(catalog: Catalog, group: str, selector: str | None, horizon: float) 
     return dict(group=group, horizon_hours=horizon, groups=out, excluded=excluded, seed=SEED)
 
 
-def explore(catalog: Catalog, arm: str | None, start: str | None, outcome: str | None, metric: str | None) -> dict:
+def explore(catalog: Catalog, arm: str | None, start: str | None, outcome: str | None, metric: str | None,
+            live_session: str | None) -> dict:
     runs = catalog.runs()
 
     def keep(info: RunInfo) -> bool:
@@ -217,7 +218,7 @@ def explore(catalog: Catalog, arm: str | None, start: str | None, outcome: str |
         stats.update(iqr=[low, high])
     stats['bootstrap'] = bootstrap_median(numbers) if len(numbers) >= MIN_MEDIAN_N else None
     stats['bootstrap_note'] = None if len(numbers) >= MIN_MEDIAN_N else f'needs n >= {MIN_MEDIAN_N}'
-    rows = [dict(run_row(r), value=v) for r, v in values]
+    rows = [dict(run_row(r, live_session), value=v) for r, v in values]
     before = []
     for info in cohort:
         if not (info.survival and info.survival.get('outcome') == 'died'):

@@ -299,7 +299,82 @@ test('phone layout: Pause leads the strip and the Pause? list leads the page', a
     return {pause: top('#pause'), conds: top('#conds'), state: top('#gamestate'), tl: top('#tl')};
   });
   assert.ok(order.pause < order.conds && order.conds < order.state && order.state < order.tl, JSON.stringify(order));
+  // A 640-pixel frame at 1:1 scrolls inside the player, never the page.
+  await until(() => !document.getElementById('feed').hidden);
   assert.equal(await S.overflow(page), 0);
+});
+
+test('the feed player keeps each frame at its size, never blanks, and holding the view never touches the run (#435)', async () => {
+  await start();
+  const feed = () => page.evaluate(() => {
+    const c = document.getElementById('feed'), v = document.querySelector('.player-view');
+    return {w: c.width, h: c.height, cw: c.clientWidth, vw: v.clientWidth, hidden: c.hidden, meta: document.getElementById('feed-meta').textContent};
+  });
+  await until(() => /^live · control path · capture \d+/.test(document.getElementById('feed-meta').textContent));
+  const first = await feed();
+  assert.deepEqual([first.w, first.h, first.cw, first.hidden], [640, 360, 640, false], 'drawn pixel for pixel by default');
+  // New frames replace the picture without a blank or a size change.
+  await page.evaluate(() => {
+    window.__feed = [];
+    new MutationObserver(() => { const c = document.getElementById('feed'); window.__feed.push([c.hidden, c.width, c.height]); })
+      .observe(document.querySelector('.player'), {subtree: true, attributes: true, childList: true});
+  });
+  await fx.advance(3);
+  await until(previous => !document.getElementById('feed-meta').textContent.includes(previous), first.meta.match(/capture \d+/)[0]);
+  const after = await feed();
+  assert.deepEqual([after.w, after.h, after.cw], [640, 360, 640]);
+  assert.ok((await page.evaluate(() => window.__feed)).every(([hidden, w, h]) => !hidden && w === 640 && h === 360));
+  // The canvas holds real pixels, not just a label.
+  assert.ok(await page.evaluate(() => {
+    const data = document.getElementById('feed').getContext('2d').getImageData(0, 0, 640, 360).data;
+    for (let i = 3; i < data.length; i += 4) if (data[i] !== 0) return true;
+    return false;
+  }), 'the frame was drawn');
+  // Hold freezes this view only: no Pause or record reaches the control path, and the run keeps going.
+  await page.click('#feed-hold');
+  const held = (await feed()).meta;
+  await fx.advance(2);
+  await S.settle(page, 2500);
+  assert.equal((await feed()).meta, held);
+  assert.match(held, /^held · live/);
+  const state = await fx.state();
+  assert.equal(state.pauses.length + state.records.length, 0);
+  await page.click('#feed-hold');
+  await until(previous => document.getElementById('feed-meta').textContent !== previous, held);
+  // Fit scales to the column; a recorded step and Live return as expected.
+  await page.click('#feed-scale');
+  const fit = await feed();
+  assert.equal(fit.cw, fit.vw);
+  // Stepping while held releases the hold and shows that step; forward moves on; Live returns.
+  await page.click('#feed-hold');
+  await page.click('#feed-back');
+  await until(() => /^step \d+ at .* · viewer/.test(document.getElementById('feed-meta').textContent));
+  assert.equal(await page.$eval('#feed-hold', b => b.getAttribute('aria-pressed')), 'false');
+  const backAt = Number((await feed()).meta.match(/^step (\d+)/)[1]);
+  await page.click('#feed-back');
+  await until(seq => document.getElementById('feed-meta').textContent.startsWith(`step ${seq - 1} `), backAt);
+  await page.click('#feed-forward');
+  await until(seq => document.getElementById('feed-meta').textContent.startsWith(`step ${seq} `), backAt);
+  await page.click('#feed-live');
+  await until(() => /^live · control path/.test(document.getElementById('feed-meta').textContent));
+  // On a run that is not live, Live is disabled and the player shows that run's recorded frames.
+  await page.select('#runpick', 'aidA1');
+  await until(() => document.getElementById('feed-live').disabled && /^step \d+/.test(document.getElementById('feed-meta').textContent));
+  assert.deepEqual(page.problems, []);
+});
+
+test('a run whose live store was never finalized is labelled and not followed (#435)', async () => {
+  fx = await S.startFixture();
+  await fx.viewer('stale');
+  page = await S.open(browser, `${fx.url}#live`);
+  await S.ready(page);
+  await until(() => document.getElementById('runpick').selectedOptions[0]?.textContent.startsWith('ceil09'));
+  const options = await page.$$eval('#runpick option', o => o.map(x => x.textContent));
+  assert.match(options[0], /^aidA1 · .* · not finalized$/);
+  assert.match(options.find(o => o.startsWith('ceil09')), / · live$/);
+  await page.select('#runpick', 'aidA1');
+  await until(() => /ended, not finalized/.test(document.getElementById('viewer-facts').textContent));
+  assert.deepEqual(page.problems, []);
 });
 
 test('keyboard operation: tab reaches the Pause button, findings rows and nav with a visible focus ring', async () => {

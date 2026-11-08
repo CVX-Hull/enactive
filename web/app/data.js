@@ -211,6 +211,6 @@ document.addEventListener('enactive:control', event => {
   store.control = {...store.control, ok: event.detail.ok, status: event.detail.status};
   if (flipped) set({});
 });
-document.addEventListener('enactive:frame', event => set({control: {...store.control, frameUrl: event.detail.url}}));
+document.addEventListener('enactive:frame', event => set({control: {...store.control, frameUrl: event.detail.url, frameSource: event.detail.source}}));
 document.addEventListener('enactive:theme', () => set({themeEpoch: store.themeEpoch + 1}));
 document.dispatchEvent(new CustomEvent('enactive:hello'));

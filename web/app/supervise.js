@@ -1,5 +1,5 @@
 // Supervise: should I Pause, what is on screen, and where is the playhead.
-import {html, useMemo, useRef, Panel, Pv, ReadChip, Waiting, fmtMoney, mmss, gameClock, label, pct, trim} from './ui.js';
+import {html, useEffect, useMemo, useRef, useState, Panel, Pv, ReadChip, Waiting, fmtMoney, mmss, gameClock, label, pct, trim} from './ui.js';
 import {store, framePath, selectedRun, setCursorIndex, cursorIndex, goLive, isLive, runStart} from './data.js';
 import {Chart, timelineOption, legendItems, nearestStep} from './charts.js';
 
@@ -66,12 +66,70 @@ export function GameState({summary}) {
       : html`<div class="insuf" id="gamestate">No frame has been read yet.</div>`}<//>`;
 }
 
-function PlayheadFrame({run, step}) {
-  const following = store.cursor === null && selectedRun()?.state === 'live';
-  const live = store.control.frameUrl;
-  const src = following ? live : step && step.source_id ? framePath(run, step.source_id) : null;
-  return html`<div class="s7 frame-col"><div class="frame">${src ? html`<img src=${src} alt=${following ? 'Latest game screen from the control path' : `Game screen at step ${step.seq}`} />` : html`<span class="frame-empty">No frame</span>`}
-    <span class="src">${following ? 'control path · /api/source · live' : `viewer · original frame · step ${step ? step.seq : '—'} · sha-256 checked`}</span></div></div>`;
+const SCALE_KEY = 'feed-scale';
+function savedScale() {
+  try { return localStorage.getItem(SCALE_KEY) === 'fit' ? 'fit' : 'native'; } catch { return 'native'; }
+}
+
+const clockTime = ms => new Date(ms).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', second: '2-digit'});
+
+/** The game feed (#435). Each frame is decoded before it replaces the last one and is drawn at its own pixel size,
+ *  so the picture never blanks or rescales as frames arrive. Hold freezes this view only: it sends nothing to the
+ *  run and is unrelated to the custody Pause above. The step buttons move the shared playhead. */
+export function FeedPlayer({run, step}) {
+  const liveRunSelected = selectedRun()?.state === 'live';
+  const following = store.cursor === null && liveRunSelected;
+  const src = following ? store.control.frameUrl : step && step.source_id ? framePath(run, step.source_id) : null;
+  const canvas = useRef(null), shell = useRef(null);
+  const [held, setHeld] = useState(false);
+  const [scale, setScale] = useState(savedScale);
+  const [shown, setShown] = useState(null);
+  useEffect(() => {
+    if (!src || held) return undefined;
+    // What this frame is, fixed now: a newer frame arriving during the decode must not relabel it.
+    const label = following
+      ? {following: true, source: store.control.frameSource || null}
+      : {following: false, seq: step ? step.seq : null, wall: step ? step.wall : null};
+    let cancelled = false;
+    const image = new Image();
+    image.src = src;
+    image.decode().then(() => {
+      const target = canvas.current;
+      if (cancelled || !target) return;
+      if (target.width !== image.naturalWidth || target.height !== image.naturalHeight) {
+        target.width = image.naturalWidth; target.height = image.naturalHeight;
+      }
+      target.getContext('2d').drawImage(image, 0, 0);
+      setShown({...label, width: image.naturalWidth, height: image.naturalHeight});
+    }).catch(() => { /* a frame that fails to decode leaves the last good one in place */ });
+    return () => { cancelled = true; };
+  }, [src, held]);
+  const choose = value => { setScale(value); try { localStorage.setItem(SCALE_KEY, value); } catch { /* no storage */ } };
+  const expand = () => { const el = shell.current; if (el && el.requestFullscreen) el.requestFullscreen().catch(() => {}); };
+  // Stepping always shows the step it moves to, so it releases a held view.
+  const stepTo = target => { setHeld(false); setCursorIndex(target); };
+  const where = !shown ? 'waiting for the first frame'
+    : shown.following ? `live · control path${shown.source ? ` · capture ${shown.source.capture_id} at ${clockTime(shown.source.presented_ms)}` : ''}`
+    : `step ${shown.seq}${typeof shown.wall === 'number' ? ` at ${clockTime(shown.wall * 1000)}` : ''} · viewer · original frame · sha-256 checked`;
+  const missing = !following && step && !step.source_id ? ` · no frame at step ${step.seq}` : '';
+  const index = cursorIndex();
+  const canExpand = typeof document !== 'undefined' && document.fullscreenEnabled;
+  return html`<div class="s7 frame-col"><div class="player" ref=${shell} data-scale=${scale} data-held=${held ? 'yes' : 'no'}>
+    <div class="player-bar" role="toolbar" aria-label="Feed player (view only; never pauses the run)">
+      <button type="button" id="feed-back" aria-label="Previous recorded frame" title="Previous recorded frame" disabled=${index <= 0} onClick=${() => stepTo(index - 1)}>◀</button>
+      <button type="button" id="feed-hold" aria-pressed=${held} title="Freeze this view; the run keeps going" onClick=${() => setHeld(!held)}>Hold view</button>
+      <button type="button" id="feed-forward" aria-label="Next recorded frame" title="Next recorded frame" disabled=${index < 0 || index >= store.steps.length - 1} onClick=${() => stepTo(index + 1)}>▶</button>
+      <button type="button" id="feed-live" title=${liveRunSelected ? 'Follow the live frame' : 'This run is not live'} disabled=${!liveRunSelected || (following && !held)} onClick=${() => { setHeld(false); goLive(); }}>Live</button>
+      <span class="player-gap"></span>
+      <button type="button" id="feed-scale" aria-pressed=${scale === 'fit'} title="Off: pixel for pixel (1:1). On: scaled to the column"
+        onClick=${() => choose(scale === 'fit' ? 'native' : 'fit')}>Fit</button>
+      ${canExpand ? html`<button type="button" id="feed-expand" title="Full screen" onClick=${expand}>Expand</button>` : null}
+    </div>
+    <div class="player-view">${src || shown ? null : html`<span class="frame-empty">No frame</span>`}
+      <canvas ref=${canvas} id="feed" role="img" hidden=${!shown}
+        aria-label=${shown ? `Game screen, ${where}` : 'Game screen not yet shown'}></canvas></div>
+    <div class="player-meta" id="feed-meta" aria-live="off">${held ? 'held · ' : ''}${where}${shown ? ` · ${shown.width} × ${shown.height} · ${scale === 'fit' ? 'fit' : '1:1'}` : ''}${missing}</div>
+  </div></div>`;
 }
 
 /** One line of text for a recorded finding. */
@@ -149,6 +207,6 @@ export function Supervise() {
   const step = store.steps[cursorIndex()];
   return html`<section class="grid" data-view="live" aria-label="Supervise">
     <${PauseConditions} summary=${s} /><${GameState} summary=${s} />
-    <${PlayheadFrame} run=${run} step=${step} /><${Findings} summary=${s} />
+    <${FeedPlayer} run=${run} step=${step} /><${Findings} summary=${s} />
     <${Timeline} summary=${s} /></section>`;
 }

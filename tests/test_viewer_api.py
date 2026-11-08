@@ -398,6 +398,24 @@ def test_pause_helpers_cover_edges():
     assert looping_streak([(1, 'menu', None), (2, 'prompt', 5)])[1] is True  # game time advanced during the streak
 
 
+def test_only_the_viewers_own_run_is_listed_live(tmp_path):
+    """#435: a live store an earlier run left unfinalized must not be listed live, or the page follows it."""
+    runs = tmp_path / 'runs'
+    earlier = ended_run(runs / 'earlier', session='b' * 32)
+    evaluate(earlier, FakeBinding(), tmp_path / 'root', state='live', created_wall=1.0)
+    current = pause_run(runs / 'current', 'healthy')
+    evaluate(current, FakeBinding(), tmp_path / 'root', state='live', created_wall=2.0)
+    catalog = Catalog(tmp_path / 'root', (runs,), current, data_dir=data_directory(tmp_path))
+    client = TestClient(create_app(catalog, LiveEvaluator(current, tmp_path / 'root', FakeBinding())))
+    states = {r['session']: r['state'] for r in client.get('/api/view/runs').json()['items']}
+    assert states == {'b' * 32: 'unfinished', SESSION: 'live'}
+    explored = {r['session']: r['state'] for r in client.get('/api/view/explore').json()['cohort']}
+    assert explored == states
+    # A viewer with no live run lists every unfinalized store as unfinished.
+    idle = TestClient(create_app(Catalog(tmp_path / 'root', (runs,), data_dir=data_directory(tmp_path))))
+    assert {r['state'] for r in idle.get('/api/view/runs').json()['items']} == {'unfinished'}
+
+
 def test_the_live_evaluator_extends_a_live_store_incrementally_and_never_touches_a_final_one(tmp_path):
     run_dir = tmp_path / 'run'
     run, a, sequence = growing_run(run_dir)

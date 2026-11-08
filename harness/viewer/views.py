@@ -91,9 +91,16 @@ def versions(info: RunInfo) -> dict:
         binding_version=info.meta.get('binding_version'), state=info.state, created_wall=info.meta.get('created_wall'))
 
 
-def run_row(info: RunInfo) -> dict:
+def run_state(info: RunInfo, live_session: str | None) -> str:
+    """`live` only for the run this viewer evaluates. A `live` store of any other run was never finalized (#435)."""
+    if info.state != 'live':
+        return info.state
+    return 'live' if info.session == live_session else 'unfinished'
+
+
+def run_row(info: RunInfo, live_session: str | None) -> dict:
     facts = info.facts
-    return dict(run=info.run, session=info.session, state=info.state, labels=info.labels, outcome=outcome(info),
+    return dict(run=info.run, session=info.session, state=run_state(info, live_session), labels=info.labels, outcome=outcome(info),
         decisions=info.decisions, dollars=info.dollars, source_commit=facts.get('source_commit'), model=facts.get('model'),
         effort=facts.get('effort'), headline=headline(info), versions=versions(info))
 
