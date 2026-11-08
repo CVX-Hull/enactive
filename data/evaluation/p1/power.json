@@ -1,0 +1,63 @@
+{
+ "assumptions": {
+  "effect_sd": 0.05,
+  "flip": 0.05,
+  "lineage_sd": 0.1,
+  "repeat_sd": 0.05
+ },
+ "development": {
+  "candidates_per_boundary": [
+   10,
+   10,
+   15,
+   20,
+   20,
+   20,
+   25,
+   34,
+   15,
+   20,
+   10,
+   0,
+   0
+  ],
+  "delivery_rates": [
+   1.0,
+   0.1,
+   0.35714285714285715,
+   0.0625,
+   0.4375,
+   0.3,
+   0.5294117647058824,
+   0.4375,
+   0.46153846153846156,
+   0.3333333333333333,
+   0.4864864864864865,
+   0.15625,
+   0.375
+  ],
+  "informative_share": 0.425
+ },
+ "note": "Primary criterion only, in both curator repeats; guards and re-judging are not simulated.",
+ "primary_probes": {
+  "median": 98,
+  "p10": 77,
+  "p90": 120
+ },
+ "probability_of_go": {
+  "0.00": 0.009,
+  "0.10": 0.147,
+  "0.15": 0.342,
+  "0.20": 0.582,
+  "0.25": 0.811,
+  "0.30": 0.933
+ },
+ "schema": "p1-power/1",
+ "seed": 491,
+ "shape": {
+  "lh1": 7,
+  "lh2": 7,
+  "lh3": 1
+ },
+ "simulations": 2000
+}
