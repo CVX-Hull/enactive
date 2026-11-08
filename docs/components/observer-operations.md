@@ -84,9 +84,21 @@ page cannot follow it in place of the real live run
 The page's feed player shows the live control-path frame or the playhead's recorded
 frame:
 - Each frame is decoded before it replaces the last, and is drawn at its own pixel size. It never blanks or rescales as frames arrive.
-- **1:1** (the default) scrolls instead of scaling; **Fit** scales to the column.
+- **1:1** (the default), **2×** and **3×** are pixel-exact and scroll instead of scaling. **Fit** scales smoothly within the column and the screen height.
+- **Wide** puts the player first, across the page ([#437](https://github.com/CVX-Hull/enactive/issues/437)).
 - **Hold** freezes the view only. It sends nothing to the run and is separate from Pause.
 - The step buttons move the shared playhead.
+- A caption names the decision on screen: its game clock, mode and the keys the player sent. While following live, it shows the newest step as of the frame on screen, so a held frame keeps its caption.
+- **Liveness:** a frame-age badge turns amber when the "feed alive" Pause condition is met. A "steps behind live" badge jumps back to live.
+- **Shortcuts** never take a key from a text field, the timeline, the Pause button or the open Pause sheet. Space also stays with any button, link or other control it would activate, and holding it down toggles only once:
+  - Space: hold;
+  - ← / →: step;
+  - L: live;
+  - T: wide;
+  - F: full screen;
+  - 0–3: scale.
+
+  The "?" button lists them. The scale and wide choices are remembered per browser.
 
 The gateway forwards `GET /api/view/*` to it on its own connection:
 - a 2-second total deadline and a 4 MiB cap;

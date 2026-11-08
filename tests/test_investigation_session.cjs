@@ -342,7 +342,7 @@ test('the feed player keeps each frame at its size, never blanks, and holding th
   await page.click('#feed-hold');
   await until(previous => document.getElementById('feed-meta').textContent !== previous, held);
   // Fit scales to the column; a recorded step and Live return as expected.
-  await page.click('#feed-scale');
+  await page.click('#feed-scale-fit');
   const fit = await feed();
   assert.equal(fit.cw, fit.vw);
   // Stepping while held releases the hold and shows that step; forward moves on; Live returns.
@@ -361,6 +361,115 @@ test('the feed player keeps each frame at its size, never blanks, and holding th
   await page.select('#runpick', 'aidA1');
   await until(() => document.getElementById('feed-live').disabled && /^step \d+/.test(document.getElementById('feed-meta').textContent));
   assert.deepEqual(page.problems, []);
+});
+
+test('stream player: integer scales, wide layout, caption, liveness badges and shortcuts (#437)', async () => {
+  await start();
+  const q = () => page.evaluate(() => {
+    const c = document.getElementById('feed');
+    return {cw: c.clientWidth, hidden: c.hidden, scale: document.querySelector('.player').dataset.scale,
+      wide: document.querySelector('.player').dataset.wide, col: document.querySelector('.frame-col').className,
+      first: document.querySelector('[data-view="live"]').firstElementChild.className,
+      caption: (document.getElementById('feed-caption') || {}).textContent || '', age: (document.getElementById('feed-age') || {}).textContent || '',
+      behind: (document.getElementById('feed-behind') || {}).textContent || '', meta: document.getElementById('feed-meta').textContent};
+  });
+  await until(() => /^live · control path · capture/.test(document.getElementById('feed-meta').textContent));
+  let s = await q();
+  assert.match(s.caption, /^latest decision \d+ · .+ · .+ · keys /);
+  assert.match(s.age, /^frame \d+ s old$/);
+  const age = Number(s.age.match(/\d+/)[0]);
+  await until(a => Number((document.getElementById('feed-age').textContent.match(/\d+/) || [0])[0]) >= a + 2, age, 6000);
+  // A held frame keeps its caption while the run moves on.
+  await page.click('#feed-hold');
+  const heldCaption = (await q()).caption;
+  await fx.advance(1);   // the fixture holds back four steps; this test uses all of them
+  await until(() => /^1 step behind live$/.test((document.getElementById('feed-behind') || {}).textContent || ''));
+  assert.equal((await q()).caption, heldCaption);
+  await page.click('#feed-hold');
+  await until(previous => document.getElementById('feed-caption').textContent !== previous, heldCaption);
+  // Integer scales are exact multiples of the frame width; 1:1 is the frame itself.
+  for (const [id, width] of [['#feed-scale-2', 1280], ['#feed-scale-3', 1920], ['#feed-scale-1', 640]]) {
+    await page.click(id);
+    await until(w => document.getElementById('feed').clientWidth === w, width);
+  }
+  // Wide moves the player to the top at full width, without page overflow.
+  await page.click('#feed-wide');
+  s = await q();
+  assert.deepEqual([s.wide, s.col, s.first], ['yes', 's12 frame-col', 's12 frame-col']);
+  assert.equal(await S.overflow(page), 0);
+  // Behind live: hold, let the run move on, then jump back from the badge.
+  await page.click('#feed-hold');
+  await fx.advance(3);
+  await until(() => /^3 steps behind live$/.test((document.getElementById('feed-behind') || {}).textContent || ''));
+  await page.click('#feed-behind');
+  await until(() => !document.getElementById('feed-behind') && document.getElementById('feed-hold').getAttribute('aria-pressed') === 'false');
+  // Shortcuts act from the page body, never from a focused control or the open Pause sheet.
+  const key = async k => { await page.evaluate(() => document.activeElement && document.activeElement.blur()); await page.keyboard.press(k); };
+  await key('ArrowLeft');
+  await until(() => /^step \d+/.test(document.getElementById('feed-meta').textContent));
+  s = await q();
+  assert.match(s.caption, /^decision \d+ · /);
+  assert.match(s.behind, /^1 step behind live$/);
+  await key('l');
+  await until(() => /^live · control path/.test(document.getElementById('feed-meta').textContent));
+  await key('2'); await until(() => document.querySelector('.player').dataset.scale === '2');
+  await key('0'); await until(() => document.querySelector('.player').dataset.scale === 'fit');
+  await key('t'); await until(() => document.querySelector('.player').dataset.wide === 'no');
+  await key('Space'); await until(() => document.getElementById('feed-hold').getAttribute('aria-pressed') === 'true');
+  await key('Space'); await until(() => document.getElementById('feed-hold').getAttribute('aria-pressed') === 'false');
+  // After clicking a player button, arrows and letters still work; Space stays with the focused control.
+  await page.click('#feed-back');
+  await until(() => /^step \d+/.test(document.getElementById('feed-meta').textContent));
+  const clicked = Number((await q()).meta.match(/^step (\d+)/)[1]);
+  await page.keyboard.press('ArrowLeft');
+  await until(seq => document.getElementById('feed-meta').textContent.startsWith(`step ${seq - 1} `), clicked);
+  await page.focus('#feed-hold');
+  await page.keyboard.press('t');
+  await until(() => document.querySelector('.player').dataset.wide === 'yes');
+  await page.keyboard.press('t');
+  await until(() => document.querySelector('.player').dataset.wide === 'no');
+  await page.focus('.player-bar details.keys summary');
+  await page.keyboard.press('Space');
+  await until(() => document.querySelector('.player-bar details.keys').open);
+  assert.equal(await page.$eval('#feed-hold', b => b.getAttribute('aria-pressed')), 'false', 'Space on the shortcut list opens it');
+  await page.keyboard.press('Space');
+  await key('l');
+  // Holding Space down toggles once.
+  await page.evaluate(() => document.activeElement && document.activeElement.blur());
+  await page.keyboard.down('Space');
+  await page.evaluate(() => document.dispatchEvent(new KeyboardEvent('keydown', {key: ' ', repeat: true, bubbles: true})));
+  await page.keyboard.up('Space');
+  await until(() => document.getElementById('feed-hold').getAttribute('aria-pressed') === 'true');
+  await key('Space');
+  await until(() => document.getElementById('feed-hold').getAttribute('aria-pressed') === 'false');
+  await page.focus('#tl');
+  await page.keyboard.press('t');
+  assert.equal((await q()).wide, 'no', 'the timeline keeps its keys');
+  await page.focus('#pause');
+  await page.keyboard.press('Enter');
+  await until(() => !document.getElementById('sheet').hidden);
+  await page.keyboard.press('t');
+  assert.equal((await q()).wide, 'no', 'no shortcut while the Pause sheet is open');
+  await page.keyboard.press('Escape');
+  assert.equal((await fx.state()).pauses.length, 0);
+  // The choices are remembered per browser.
+  await page.click('#feed-scale-3');
+  await page.reload();
+  await S.ready(page);
+  await until(() => document.querySelector('.player') && document.querySelector('.player').dataset.scale === '3');
+  assert.deepEqual(page.problems, []);
+  await page.evaluate(() => { localStorage.removeItem('feed-scale'); localStorage.removeItem('feed-wide'); });
+});
+
+test('stream player at phone width: wide and 3x scroll inside the player, never the page (#437)', async () => {
+  await start('required', {width: 390, height: 800, mobile: true});
+  await until(() => !document.getElementById('feed').hidden);
+  for (const id of ['#feed-wide', '#feed-scale-3']) await page.click(id);
+  await until(() => document.getElementById('feed').clientWidth === 1920);
+  assert.equal(await S.overflow(page), 0);
+  await page.click('#feed-scale-fit');
+  assert.equal(await S.overflow(page), 0);
+  await page.evaluate(() => { localStorage.removeItem('feed-scale'); localStorage.removeItem('feed-wide'); });
 });
 
 test('a run whose live store was never finalized is labelled and not followed (#435)', async () => {
