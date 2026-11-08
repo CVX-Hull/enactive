@@ -51,8 +51,8 @@ Owner-set envelopes, each within the standing $1,000 cumulative cap:
   during the lineage, after admission 4, when the pace projected the $150 cap before
   168 h (decision F2, the same day). The cumulative cap is therefore about $677. The
   owner chose to change the input bridge
-  ([#396](https://github.com/CVX-Hull/enactive/issues/396)) before any admission: no
-  admission is authorized until that change has landed and the package is frozen
+  ([#396](https://github.com/CVX-Hull/enactive/issues/396)) before any admission, and no
+  admission was authorized until that change had landed and the package was frozen
   and reviewed.
 
 ## Engineering decision and merge delegation
