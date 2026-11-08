@@ -413,7 +413,9 @@ def main(argv: list[str] | None = None) -> int:
         select(args.lineage, args.sessions)  # refuse held-out and unsampled names before anything else
         # The campaign's own resolution: the variable, else the operator's keychain item mapped in
         # the git-ignored .runtime/credentials.json. The value goes only to the proxy.
-        key = credential(KEY_VARIABLE)
+        # The map lives beside the runtime this run uses, not beside this code: from a worktree,
+        # the code's own checkout has no .runtime/credentials.json.
+        key = credential(KEY_VARIABLE, mapping=Path(args.runtime_root)/'credentials.json')
         if not key:
             raise ShadowError(f'{KEY_VARIABLE} is not set and not mapped to a keychain item (docs/setup.md)')
         run = run_shadow(args, key)
