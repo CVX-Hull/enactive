@@ -117,6 +117,21 @@ main > div { display: grid; gap: 16px; }
 .subnav { display: flex; gap: 2px; flex-wrap: wrap; border-bottom: 1px solid var(--line); }
 .subnav a { text-decoration: none; padding: 7px 12px; font-weight: 600; color: var(--muted); border-bottom: 2px solid transparent; font-size: .9rem; }
 .subnav a[aria-current="page"] { color: var(--accent); border-bottom-color: var(--accent); }
+/* spectator frame: health strip and episode anchors */
+.hstrip { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr)); gap: 8px; }
+.hitem { display: grid; min-width: 0; }
+.hitem.wide { grid-column: 1 / -1; }
+.hslot { border: 1px solid var(--line); border-radius: var(--r); background: var(--sunk); padding: 10px 12px; display: grid; gap: 3px; align-content: start; min-width: 0; }
+.hslot .name { font: 700 .66rem var(--display); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.hslot .val { font: 600 .95rem var(--mono); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.hslot .sub { font-size: .78rem; color: var(--muted); overflow-wrap: anywhere; }
+.hslot.pending { background: transparent; border-style: dashed; }
+.hslot.pending .val { color: var(--muted); font-weight: 500; font-size: .86rem; }
+.anchors { display: grid; gap: 8px; }
+.anchor { border-top: 1px solid var(--line); padding-top: 8px; display: grid; gap: 4px; font-size: .86rem; min-width: 0; }
+.anchor .acts { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; }
+.wrapany { overflow-wrap: anywhere; }
+.btn:disabled { opacity: .6; cursor: default; }
 [data-viewer="down"] .interp { opacity: .5; filter: grayscale(1); }
 [data-viewer="down"] .interp .chart { pointer-events: none; }
 

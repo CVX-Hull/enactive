@@ -6,7 +6,8 @@ const assert = require('node:assert/strict');
 const S = require('./fixtures/spectator/support.cjs');
 
 const ROUTES = ['#live', '#run/overview', '#run/tools', '#run/programs', '#run/memory', '#run/handoffs', '#run/context',
-  '#improve/changes', '#improve/failures', '#improve/components', '#explore', '#compare'];
+  '#improve/changes', '#improve/failures', '#improve/components', '#explore', '#compare',
+  '#frame/actor', '#frame/curator', '#frame/knowledge', '#frame/programs', '#frame/containers'];
 const CONFIGS = [['light', 1280, 'light', false], ['dark', 1280, 'dark', false], ['phone', 390, 'light', true]];
 let fx, browser;
 before(async () => { fx = await S.startFixture(); browser = await S.launch(); });
@@ -33,6 +34,28 @@ for (const [name, width, scheme, mobile] of CONFIGS) {
     } finally { await page.close(); }
   });
 }
+
+test('frame: an episode anchor opens the live view at its step, and a container opens its manifest', {timeout: 60000}, async () => {
+  const page = await S.open(browser, `${fx.url}#frame/actor`, {scheme: 'light'});
+  try {
+    await S.ready(page);
+    await S.until(page, () => document.querySelector('[data-anchor="observed"] button.btn'));
+    const slots = await page.$$eval('[data-slot]', nodes => nodes.map(n => [n.dataset.slot, n.className.includes('pending')]));
+    assert.deepEqual(slots.map(s => s[0]), ['actor_cadence', 'curator_lag', 'gate_pass_rate', 'snapshot_freshness',
+      'program_delegation_share', 'monitor_alerts', 'spend_against_cap']);
+    assert.deepEqual(slots.slice(1).map(s => s[1]), [true, true, true, true, true, true]);
+    assert.match(await page.$eval('#app', n => n.innerText), /frame unavailable/i);   // the text-only anchor and the uncatalogued run
+    await page.click('[data-anchor="observed"] button.btn');
+    await S.until(page, () => location.hash === '#live');
+    await S.until(page, () => { const back = document.getElementById('feed-back'); return back && back.disabled; });   // the playhead is on the first step
+    await page.evaluate(h => { location.hash = h; }, '#frame/containers');
+    await S.until(page, () => document.querySelector('#app table.data button.link'));
+    await page.click('#app table.data button.link');
+    await S.until(page, () => /container-manifest\/1/.test(document.getElementById('app').innerText));
+    assert.equal(await S.overflow(page), 0);
+    assert.deepEqual(page.problems, []);
+  } finally { await page.close(); }
+});
 
 test('theme button switches tokens and keeps the page clean', {timeout: 30000}, async () => {
   const page = await S.open(browser, `${fx.url}#live`, {scheme: 'light'});

@@ -8,7 +8,8 @@ It imitates only the parts of the supervised gateway that the page depends on:
   (PNG), POST /api/pause with a reason, POST /record;
 - answers `/api/view/*` from the JSON files beside this script (real viewer responses for one run and the
   cross-run routes, trimmed; `refresh.py` regenerates them),
-  or `503 {"viewer": "unavailable"}` while the viewer is switched off.
+  or `503 {"viewer": "unavailable"}` while the viewer is switched off; the `frame-*.json` files (the spectator's
+  frame, `spectator-frame/1`) are synthetic and hand-built, not captured, so `refresh.py` does not touch them.
 
 With `--viewer URL` the view routes go to a real viewer process instead (the control path stays stubbed).
 
@@ -27,7 +28,7 @@ import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
@@ -191,6 +192,16 @@ def make_handler(state: State):
                     rows = [dict(row, state='unfinished') if index == 0 and after == 0 else row for index, row in enumerate(rows)]
                 body.update(items=rows[:limit], next=after + limit if len(rows) > limit else None, limit=limit)
                 self.json(200, body); return
+            if route in ('frame/health', 'frame/containers', 'frame/episodes'):
+                self.json(200, load('frame-' + route.split('/')[1] + '.json')); return
+            if route.startswith('frame/containers/'):
+                wanted = unquote(route[len('frame/containers/'):])
+                found = [c for c in load('frame-container.json') if c['container']['id'] == wanted]
+                if found:
+                    self.json(200, found[0])
+                else:
+                    self.json(404, {'schema': 'spectator-view/1', 'error': 'unknown_container', 'detail': wanted})
+                return
             if route == 'improve/changes':
                 self.json(200, load('improve-changes.json')); return
             if route == 'improve/failures':

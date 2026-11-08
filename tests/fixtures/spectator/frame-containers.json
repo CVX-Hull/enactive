@@ -1,0 +1,15 @@
+{
+ "schema": "spectator-frame/1",
+ "items": [
+  {"id": "fixture-study/s1", "kind": "actor-session", "owner_role": "actor", "lifecycle_state": "sealed",
+   "retention_policy": "evidence", "evidence_study": "fixture-study", "index_study": "fixture-study"},
+  {"id": "fixture-study/s2", "kind": "actor-session", "owner_role": "actor", "lifecycle_state": "sealed",
+   "retention_policy": "evidence", "evidence_study": "fixture-study", "index_study": "fixture-study"},
+  {"id": "fixture-study/s3", "kind": "actor-session", "owner_role": "actor", "lifecycle_state": "sealed",
+   "retention_policy": "evidence", "evidence_study": "fixture-study", "index_study": "fixture-study"}
+ ],
+ "next": null,
+ "limit": 100,
+ "total": 3,
+ "kinds": {"actor-session": 3}
+}
