@@ -587,7 +587,7 @@ later phase ships its views with it, so every view has real data when it ships.
 | Actor waits | Curator in its own process, never the application lock; the actor reads published snapshots only | Actor wait per request, against the #164 cadence target |
 | Store contention | SQLite locks a whole database file for each write, and the current store uses the default rollback journal with a 1 s timeout (`harness/player/memory.py:20`). The actor's emissions and hints go to the session store or their own file; published snapshots are read-only to the actor; only the gate writes the knowledge store | Lock waits; failed writes |
 | Curator lag | Sessions triggered by new decisions, hints, boundaries or gate failures; one at a time per repository; lag accepted (D15) | Lag in decisions and game time |
-| Spend | Coding agents read a lot. Shadow measurement on sealed traces before live use, on two curator hosts; a cap as a fraction of actor spend | $ per game hour (actor $0.80 in #397) |
+| Spend | Coding agents read a lot. Shadow measurement on sealed traces before live use, with one controlled host and two models under a $100 P0 cap (open decision 2); for P1, a cap as a fraction of actor spend | $ per game hour (actor $0.80 in #397) |
 | Local CPU | Background priority for curator sessions, workbench runs and practice work | Live input latency and frame timing |
 
 ## Evaluation and studies
@@ -635,7 +635,7 @@ checks its power by simulation before it runs.
 
 | Phase | Scope | Spend | Adoption condition |
 | --- | --- | --- | --- |
-| **P0: baseline, workbench and frame** | Trace tools; probe suite from sealed runs and its annotation cost; baseline rediscovery and carry rates; handoff root validation (reject unknown IDs at handoff, not list them as omissions the successor may never see); snapshot-diff cache cost; draft containers and sidecar manifests over sealed traces; the spectator's new frame; the sandbox mechanism (R13); curator shadow sessions on sealed traces under two hosts (cost, lag, cold start); the research synthesis | $0 gameplay; research and shadow curator calls only | Workbench reproduces the four episodes as failing probes; shadow cost and lag measured; a sandbox enforcing the [isolation boundary](#isolation) exists |
+| **P0: baseline, workbench and frame** | Trace tools; probe suite from sealed runs and its annotation cost; baseline rediscovery and carry rates; handoff root validation (reject unknown IDs at handoff, not list them as omissions the successor may never see); snapshot-diff cache cost; draft containers and sidecar manifests over sealed traces; the spectator's new frame; the sandbox mechanism (R13); curator shadow sessions on sealed traces with one controlled host and two models (cost, lag, cold start); the research synthesis | $0 gameplay; research and shadow curator calls only | Workbench reproduces the four episodes as failing probes; shadow cost and lag measured; a sandbox enforcing the [isolation boundary](#isolation) exists |
 | **P1: curator and memory** | Required emissions in every arm (D10). Arm A, the simpler path: root validation plus a pushed working set built from existing records, with no curator. Arm B: the epistemic core, the knowledge repository, curator sessions and the gate, snapshots, `player_hint`, and actor write tools removed. Ablations within B only where power allows. Spectator actor, curator, knowledge and draft views | Offline replay: curator calls only. Live: per package, after the gate before spend | Offline: pre-registered probe and rediscovery metrics, B against A, on replayed traces. Live: non-inferiority guards held |
 | **P2: programs and monitor** | Actor-interface programs as passive policies; capability slots with record and replay; supervised runs with preemption and verified risk classes; monitor slot; offline fitting; probation and library statistics; spectator program views | Per package, after the gate before spend | Pre-registered delegation share at matched failure rate; monitor detection on anomalies in recorded program runs |
 | **P3: practice instance** | One-way forks; determinism measurement; live fitting; slot swaps; spectator fork views | Per package | Owner decision first; concurrency guards held |
@@ -721,15 +721,27 @@ sources only.
 - the baseline rediscovery and carry rates on sealed traces;
 - the probe suite and its inter-rater check;
 - emission feasibility (tokens and pace from a short development run);
-- curator shadow sessions on sealed traces under two hosts: cost, lag, cold start
-  and gate pass rate;
+- curator shadow sessions on sealed traces with one controlled Pi-based host and
+  two models (open decision 2): cost, lag, cold start and gate pass rate;
 - practice-instance determinism and concurrency (P3, after an owner decision).
 
 ## Open owner decisions
 
 1. Whether to adopt the practice instance (P3) and its one-way fork rule.
 2. The curator's spend cap as a fraction of actor spend, and whether its model may
-   differ from the actor's.
+   differ from the actor's. *For P0, decided 8 November 2026:*
+   - **Cap.** #454's shadow sessions are capped at **$100 in total**, enforced by the
+     proxy. They are staged: a short pilot comes first, and the run stops if the cost
+     projects past the cap.
+   - **Hosts.** #454 measures one harness the project controls, a **Pi-based curator
+     host** like the actor's own `tools/player_host`, with **two models through
+     OpenRouter**: the actor's `openai/gpt-6.1-terra` and Claude Opus 5.5. It does not
+     measure two off-the-shelf coding agents.
+   - **Credentials.** The proxy holds the project's existing keychain key and never
+     prints it.
+
+   The P1 cap, as a fraction of actor spend, and the P1 model stay open until #454
+   reports.
 3. *Decided 8 November 2026:* #441 is deferred until this design has moved forward,
    and P1's held-out data comes from #382 instead (above).
 4. The belief model, after R3.
