@@ -33,6 +33,16 @@ not in this repository.
 | Worker, owned paths | `agent_type` worker with `fork_turns=none`, separate worktree | `subagent_type` worker, fresh agent (not a fork), `isolation: worktree` |
 | Reviewer, clean context | `agent_type` reviewer with `fork_turns=none` | `subagent_type` reviewer, fresh agent |
 
+## Owner approvals
+
+[Requesting owner approval](../operator-permissions.md#requesting-owner-approval)
+requires the host's structured question tool where one exists.
+
+| Host | Mechanism |
+| --- | --- |
+| Claude Code | `AskUserQuestion`, one question per decision, recommended option first |
+| Codex | None recorded; ask one explicit question at the end of the turn |
+
 ## Gameplay command allowances
 
 Both hosts allow exactly the stable prefixes `.venv/bin/python -m harness status`,
