@@ -127,7 +127,8 @@ rolling policy. Choose the counts per route against the provider's image limit.
 The host gives Pi one `sessionId` per mechanical session (a digest of the session
 ID, shared by every actor of the session and recorded as
 `host-start.session_affinity_id`), and Pi sends it as
-`x-session-id` on every OpenRouter request; Pi enables that header for an OpenRouter
+`x-session-id` on every OpenRouter request (on a direct `api.openai.com` route Pi
+would also send it as `prompt_cache_key`; none is configured); Pi enables that header for an OpenRouter
 route by itself, so no compat key is needed, and the host fails closed
 (`session-affinity-missing`) if a request would go out without it. Whether OpenRouter
 honours sticky routing with a pinned `provider.order` is unmeasured; the paid

@@ -96,7 +96,9 @@ handoff successor and a new admission's first actor, with no provider call:
   shares, recorded as `session_affinity_id` in `host-start`. For a route whose provider takes a
   session-affinity header (the adapter reference names it) the serializer sends it on
   every request, retries included; a request that would go out without it fails
-  closed (`session-affinity-missing`) before any charge. It is not a credential.
+  closed (`session-affinity-missing`) before any charge. It is not a credential. A
+  serializer may also derive a provider prompt-cache key from it on routes that take
+  one (the adapter reference names them).
 - **Omission markers** carry the omitted frame's `source_id` (when its tool result
   has one) and name `player_source` as the way to read it again.
 - **Tail notices** are appended to one request only, never stored, and stay on

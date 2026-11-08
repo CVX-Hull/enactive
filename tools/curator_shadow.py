@@ -433,8 +433,9 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument('--request-timeout-seconds', type=int, default=240)
     p.add_argument('--wall-seconds', type=int, default=1800, help='sandbox wall-clock limit for each session')
     # Eviction rewrites the prompt prefix, so it is kept rare: a wide window and a block of half of it.
-    p.add_argument('--max-context-images', type=int, default=24)
-    p.add_argument('--context-image-block', type=int, default=12)
+    # Sixteen of the largest recorded frames stay under the proxy's 8 MiB body limit; 24 would not.
+    p.add_argument('--max-context-images', type=int, default=16)
+    p.add_argument('--context-image-block', type=int, default=8)
     p.add_argument('--stop-on-abort', action='store_true')
     return p
 

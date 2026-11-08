@@ -50,7 +50,7 @@ harness stop rule or permission to replay uncertain input.
 | `player_memory_append/read/query/context` | Store or retrieve fallible claims, Work, decisions, procedures, corrections and candidate advice with sources/support. |
 | `player_program_save/read/run` | Retain immutable JavaScript lineage and run a selected bounded local program through the same basic-control port. |
 | `player_result` | Collect an original memory/program authoring or program-run request after lost transport. |
-| `player_handoff` | Seal this actor with bounded immutable knowledge and unfinished-work summary. Original limits remain. Always listed; if no successor is available the call is refused and nothing changes, so then write your report and call `player_finish`. |
+| `player_handoff` | Seal this actor with bounded immutable knowledge and unfinished-work summary. Original limits remain. Always listed. If it is refused because you are the final actor, nothing changes: write your report and call `player_finish`. Otherwise a call seals you, even when the admission then ends. |
 | `player_finish` | Report task completion, inability to continue, or completion of a directly received external stop request. This player-host tool stops your loop; it does not certify game success or saving. |
 
 The schema is authoritative for closed arguments. Keys use printable ASCII or

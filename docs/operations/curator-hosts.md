@@ -152,10 +152,19 @@ roots added to the layout.
 
 **Image cost in the reservation.** The proxy counts each inline image as a bounded number of input
 tokens (`IMAGE_TOKENS`), not its base64 bytes, at the arm's highest input price, so more images in a
-request raise the reservation. The host keeps at most `--max-context-images` (default 24) in a
-request, evicting the oldest in blocks of `--context-image-block` (default 12). Eviction rewrites the
-prompt prefix, so the defaults keep it rare; each marker names the evicted frame's source ID so
-`view_frame` can show it again.
+request raise the reservation. The host keeps at most `--max-context-images` (default 16) in a
+request, evicting the oldest in blocks of `--context-image-block` (default 8). Each marker names the
+evicted frame's source ID so `view_frame` can show it again. The peak trades three limits:
+- **Eviction.** It rewrites the prompt prefix, so a wide window keeps it rare.
+- **Reservation.** Each image reserves `IMAGE_TOKENS` (10,000) at the highest input price, $0.16
+  per request at 16 images on terra and $1.28 on Opus, before any text or output. A small session
+  cap therefore refuses requests that would really cost cents.
+- **Body size.** Recorded frames reach about 280 KB, or 375 KB as base64. Sixteen stay under the
+  proxy's 8 MiB request limit, while 24 such frames would exceed it and end the session with a 413.
+
+The #454 runs passed 24/12 explicitly. No request in them reached the body limit: their only proxy
+refusals were spend-cap refusals. The #489 check passes 24/12 too, so its cached share compares
+with #454's.
 
 **Cache stability (ADR 009 P1.0).** A prompt cache only helps when each request extends the last
 byte for byte, so:
