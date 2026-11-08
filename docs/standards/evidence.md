@@ -49,7 +49,9 @@ of a brief, design or code, rests only on dated primary sources read for the tas
 (publication or revision date, or the retrieval date where none is given; the
 recency flag above still applies), because the field changes too fast for
 remembered knowledge. Prior knowledge of the lead or of an agent is a hypothesis
-to verify, never evidence. Sources on LLM and agent methods are read critically:
+to verify, never evidence; this includes recalled knowledge of a game's mechanics,
+keys or interface, which a design may not assume and the player tests through play
+(P-GENERALITY). Sources on LLM and agent methods are read critically:
 the synthesis records what each source measured, against which baseline,
 whether the comparison matched budget (compute, calls or tokens), and whether
 its idea restates earlier work from another field. Vendor-reported, synthetic,
