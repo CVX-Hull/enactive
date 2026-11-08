@@ -443,7 +443,7 @@ under 4 MiB, and write nothing. `<run>` is a session ID. Lists paginate with
 
 | Route | Returns |
 | --- | --- |
-| `/api/view/runs` | One summary per known run: facts, state (`live` or `final`), outcome (hours, died, `censor_reason`), decisions, dollars, headline metrics, versions. Built by scanning record stores read-only and cached in memory. |
+| `/api/view/runs` | One summary per known run: facts, state (`live` only for the run this viewer evaluates; `unfinished` for any other run whose store is still `live`, because its final pass never ran; otherwise `final`), outcome (hours, died, `censor_reason`), decisions, dollars, headline metrics, versions. Built by scanning record stores read-only and cached in memory. |
 | `/api/view/run/<run>/summary` | Facts; outcome; the Pause conditions (below); game state with provenance; findings; ladder; metrics with `source`, `count`, `denominator`, `missing`; reader coverage with held-out validation status |
 | `/api/view/run/<run>/steps?after=&limit=` | Steps: `seq`, `decision`, `wall`, `kind`, `mode`, `game_time`, `source_id`, `frame_changed`, `dollars`, `keys` |
 | `/api/view/run/<run>/frame/<source_id>` | The original PNG (`image/png`), only after its SHA-256 matches the record |

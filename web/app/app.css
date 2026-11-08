@@ -133,6 +133,22 @@ main > div { display: grid; gap: 16px; }
 .frame img { display: block; width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
 .frame .src { position: absolute; left: 8px; bottom: 8px; font: 600 .68rem var(--mono); background: rgba(0, 0, 0, .6); color: #fff; padding: 4px 6px; border-radius: 4px; max-width: calc(100% - 16px); }
 .frame-empty { display: grid; place-items: center; height: 100%; color: var(--muted); }
+/* Feed player (#435): the frame keeps its own aspect ratio and, at 1:1, its own pixels; the view scrolls instead. */
+.player { display: grid; gap: 6px; min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 8px; }
+.player-bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.player-bar button { background: none; border: 1px solid var(--line); border-radius: var(--r); padding: 5px 10px; font: 600 .8rem var(--mono); color: var(--fg); cursor: pointer; }
+.player-bar button[aria-pressed="true"] { background: var(--accent-soft); }
+.player-bar button[disabled] { opacity: .45; cursor: default; }
+.player-gap { flex: 1; }
+.player-view { background: var(--sunk); border-radius: 4px; overflow: auto; max-height: 80vh; min-height: 120px; display: grid; place-items: start center; }
+.player-view canvas { display: block; }
+.player[data-scale="native"] .player-view canvas { width: auto; height: auto; max-width: none; image-rendering: pixelated; }
+.player[data-scale="fit"] .player-view canvas { width: 100%; height: auto; image-rendering: auto; }
+.player[data-held="yes"] .player-view { outline: 2px dashed var(--line); outline-offset: -2px; }
+.player-meta { font: 600 .68rem var(--mono); color: var(--muted); }
+.player:fullscreen { background: #000; padding: 12px; grid-template-rows: auto 1fr auto; }
+.player:fullscreen .player-view { max-height: none; place-items: center; }
+.player:fullscreen[data-scale="fit"] .player-view canvas { width: auto; height: auto; max-width: 100%; max-height: calc(100vh - 90px); }
 .kv { display: grid; grid-template-columns: minmax(8em, 1fr) minmax(0, auto); gap: 5px 14px; font-size: .86rem; align-items: baseline; margin: 0; }
 .kv dt { color: var(--muted); }
 .kv dd .sub { display: block; }

@@ -302,6 +302,48 @@ test('phone layout: Pause leads the strip and the Pause? list leads the page', a
   assert.equal(await S.overflow(page), 0);
 });
 
+test('the feed player keeps each frame at its size, never blanks, and holding the view never touches the run (#435)', async () => {
+  await start();
+  const feed = () => page.evaluate(() => {
+    const c = document.getElementById('feed'), v = document.querySelector('.player-view');
+    return {w: c.width, h: c.height, cw: c.clientWidth, vw: v.clientWidth, hidden: c.hidden, meta: document.getElementById('feed-meta').textContent};
+  });
+  await until(() => /^live · control path · capture \d+/.test(document.getElementById('feed-meta').textContent));
+  const first = await feed();
+  assert.deepEqual([first.w, first.h, first.cw, first.hidden], [640, 360, 640, false], 'drawn pixel for pixel by default');
+  // New frames replace the picture without a blank or a size change.
+  await page.evaluate(() => {
+    window.__feed = [];
+    new MutationObserver(() => { const c = document.getElementById('feed'); window.__feed.push([c.hidden, c.width, c.height]); })
+      .observe(document.querySelector('.player'), {subtree: true, attributes: true, childList: true});
+  });
+  await fx.advance(3);
+  await until(previous => !document.getElementById('feed-meta').textContent.includes(previous), first.meta.match(/capture \d+/)[0]);
+  const after = await feed();
+  assert.deepEqual([after.w, after.h, after.cw], [640, 360, 640]);
+  assert.ok((await page.evaluate(() => window.__feed)).every(([hidden, w, h]) => !hidden && w === 640 && h === 360));
+  // Hold freezes this view only: no Pause or record reaches the control path, and the run keeps going.
+  await page.click('#feed-hold');
+  const held = (await feed()).meta;
+  await fx.advance(2);
+  await S.settle(page, 2500);
+  assert.equal((await feed()).meta, held);
+  assert.match(held, /^held · live/);
+  const state = await fx.state();
+  assert.equal(state.pauses.length + state.records.length, 0);
+  await page.click('#feed-hold');
+  await until(previous => document.getElementById('feed-meta').textContent !== previous, held);
+  // Fit scales to the column; a recorded step and Live return as expected.
+  await page.click('#feed-scale');
+  const fit = await feed();
+  assert.equal(fit.cw, fit.vw);
+  await page.click('#feed-back');
+  await until(() => /^step \d+ · viewer/.test(document.getElementById('feed-meta').textContent));
+  await page.click('#feed-live');
+  await until(() => /^live · control path/.test(document.getElementById('feed-meta').textContent));
+  assert.deepEqual(page.problems, []);
+});
+
 test('keyboard operation: tab reaches the Pause button, findings rows and nav with a visible focus ring', async () => {
   await start();
   await page.focus('#pause');

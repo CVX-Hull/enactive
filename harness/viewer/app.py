@@ -80,7 +80,8 @@ def create_app(catalog: Catalog, evaluator: LiveEvaluator | None = None, now: Ca
 
     def runs(request: Request) -> Response:
         after, limit = paging(request)
-        rows = [views.run_row(info) for info in catalog.runs()]
+        live = live_session()
+        rows = [views.run_row(info, live) for info in catalog.runs()]
         window = rows[after:after + limit + 1]
         more = len(window) > limit
         return reply(dict(items=window[:limit], next=after + limit if more else None, limit=limit, total=len(rows)))
@@ -143,7 +144,7 @@ def create_app(catalog: Catalog, evaluator: LiveEvaluator | None = None, now: Ca
     def explore(request: Request) -> Response:
         q = request.query_params
         return reply(cross.explore(catalog, q.get('arm') or None, q.get('start') or None, q.get('outcome') or None,
-            q.get('metric') or None))
+            q.get('metric') or None, live_session()))
 
     prefix = '/api/view'
     routes = [Route(f'{prefix}/runs', plain(runs), methods=['GET']),

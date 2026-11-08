@@ -57,8 +57,8 @@ function StripViewer() {
   return html`<div class="strip-viewer">
     <span class="viewer ${store.viewerOk ? '' : 'down'}" id="viewer" title="The viewer computes interpretive values; Pause and checks never depend on it" role="status">${store.viewerOk ? (store.viewerSeen ? 'viewer · connected' : 'viewer · connecting') : 'viewer unavailable'}</span>
     <label class="note">Run <select class="runpick" id="runpick" aria-label="Run to show" value=${store.runId || ''} disabled=${!runs.length} onChange=${e => selectRun(e.target.value)}>
-      ${runs.length ? runs.map(r => html`<option value=${r.run} selected=${r.run === store.runId}>${runName(r)} · ${r.labels.arm || 'no arm'}${r.state === 'live' ? ' · live' : ''}${r.outcome.lost ? ' · lost' : ''}</option>`) : html`<option>no runs</option>`}</select></label>
-    <div class="vfacts ${store.viewerOk ? '' : 'greyed'}" id="viewer-facts">${store.viewerOk && facts && run ? html`<span>${runName(run)} ${run.state === 'live' ? 'running' : 'final'} · decision ${s.decisions}</span>
+      ${runs.length ? runs.map(r => html`<option value=${r.run} selected=${r.run === store.runId}>${runName(r)} · ${r.labels.arm || 'no arm'}${r.state === 'live' ? ' · live' : r.state === 'unfinished' ? ' · not finalized' : ''}${r.outcome.lost ? ' · lost' : ''}</option>`) : html`<option>no runs</option>`}</select></label>
+    <div class="vfacts ${store.viewerOk ? '' : 'greyed'}" id="viewer-facts">${store.viewerOk && facts && run ? html`<span>${runName(run)} ${run.state === 'live' ? 'running' : run.state === 'unfinished' ? 'ended, not finalized' : 'final'} · decision ${s.decisions}</span>
       <span>${fmtMoney(s.dollars)}${facts.spend_allowance_usd ? ` of ${fmtMoney(facts.spend_allowance_usd)}` : ''} <${Pv} source="recorded" detail="spend allowance" /></span>
       <span>${(s.labels && s.labels.arm) || 'no arm'} · ${(s.labels && s.labels.start) || 'no start'} · ${String(facts.source_commit || '').slice(0, 7)}</span>${live && run.run !== live.run ? html`<span class="state watch">not the live run</span>` : null}` : null}</div></div>`;
 }
