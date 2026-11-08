@@ -46,9 +46,11 @@ Owner-set envelopes, each within the standing $1,000 cumulative cap:
   and the long-horizon arm ([#382](acceptance/2026-11-07-long-horizon-382.md), decision D1) each had a $150
   new-spend envelope. Both are closed, and an unspent remainder is not carried to other work.
   Cumulative actual spend after them is $377.41.
-- One seven-day development lineage ([#397](https://github.com/CVX-Hull/enactive/issues/397),
-  decision E1, 7 November 2026) has a new $150 envelope, so the cumulative cap is about
-  $527. The owner chose to change the input bridge
+- One seven-day development lineage ([#397](https://github.com/CVX-Hull/enactive/issues/397))
+  had a new $150 envelope (decision E1, 7 November 2026). The owner raised it to **$300**
+  during the lineage, after admission 4, when the pace projected the $150 cap before
+  168 h (decision F2, the same day). The cumulative cap is therefore about $677. The
+  owner chose to change the input bridge
   ([#396](https://github.com/CVX-Hull/enactive/issues/396)) before any admission: no
   admission is authorized until that change has landed and the package is frozen
   and reviewed.
