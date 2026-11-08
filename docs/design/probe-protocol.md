@@ -205,6 +205,46 @@ protocol stands. Below 0.6, the probes become query-style:
 
 Either way, one fact ledger per development lineage is frozen as the scoring ledger.
 
+**Result (8 November 2026).** Pooled recall was 0.51: 19 of 37 confirmed
+re-observations captured. #397 reached 0.67 and the #372 sample 0.23. That is below the
+bar, so the probes become query-style
+([`data/evaluation/probes/validation/`](../../data/evaluation/probes/validation)).
+
+## Query probes (#490)
+
+Fixed on 8 November 2026, after the recall result and before any query was written.
+
+**Writers.**
+- Every chunk that precedes a boundary gets one blinded writer: #397's `sd1a1-001`
+  through `sd1a7-001`, and each #372 sample run's `-001` chunk.
+- A writer works in a fresh context from the chunk's timeline and frames, under the
+  same frame-coverage rule as annotators.
+- It is not told about the study, the episodes or any other chunk.
+- It writes up to 40 queries, each with the information a later player in the same
+  world might need, such as:
+  - places;
+  - what containers hold;
+  - items lying around;
+  - hazards;
+  - controls and procedures;
+  - the character's state and plans.
+- Each query is answerable from a frame the writer viewed. It carries its answer and
+  that frame:
+  `{"type":"query","id":"Q1","question":"…","answer":"…","frame":"<source id>","category":"…"}`.
+
+**The query set frozen per lineage is the scoring ledger.** An arm is scored by whether
+the text it would put in front of the successor answers each query of the predecessor's
+chunk.
+
+**Re-check, with its bar fixed in advance.** For each confirmed re-observation, a
+blinded judge in a fresh context sees the earlier frame and the queries written for that
+frame's chunk. It decides whether any query's answer states the information the frame
+shows.
+- **Query recall** is covered ÷ confirmed.
+- At 0.6 or more, query probes are adopted.
+- Below 0.6, the record says so, and the probe design goes back to the owner before
+  #491.
+
 ## Cost
 
 Each chunk's annotator tokens and wall time come from the agent host's own task report.

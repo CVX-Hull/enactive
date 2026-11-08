@@ -1,0 +1,304 @@
+{
+ "decision": "switch to query-style probes",
+ "kind": "recall",
+ "lineages": {
+  "372": {
+   "captured": 3,
+   "confirmed": 13,
+   "judged": 20,
+   "recall": 0.231
+  },
+  "397": {
+   "captured": 16,
+   "confirmed": 24,
+   "judged": 40,
+   "recall": 0.667
+  }
+ },
+ "pairs": [
+  {
+   "captured": true,
+   "confirmed": true,
+   "id": "p001"
+  },
+  {
+   "confirmed": false,
+   "id": "p002"
+  },
+  {
+   "confirmed": false,
+   "id": "p003"
+  },
+  {
+   "captured": false,
+   "confirmed": true,
+   "id": "p004"
+  },
+  {
+   "confirmed": false,
+   "id": "p005"
+  },
+  {
+   "captured": true,
+   "confirmed": true,
+   "id": "p006"
+  },
+  {
+   "confirmed": false,
+   "id": "p007"
+  },
+  {
+   "confirmed": false,
+   "id": "p008"
+  },
+  {
+   "captured": true,
+   "confirmed": true,
+   "id": "p009"
+  },
+  {
+   "confirmed": false,
+   "id": "p010"
+  },
+  {
+   "confirmed": false,
+   "id": "p011"
+  },
+  {
+   "confirmed": false,
+   "id": "p012"
+  },
+  {
+   "captured": true,
+   "confirmed": true,
+   "id": "p013"
+  },
+  {
+   "captured": true,
+   "confirmed": true,
+   "id": "p014"
+  },
+  {
+   "captured": false,
+   "confirmed": true,
+   "id": "p015"
+  },
+  {
+   "captured": false,
+   "confirmed": true,
+   "id": "p016"
+  },
+  {
+   "captured": true,
+   "confirmed": true,
+   "id": "p017"
+  },
+  {
+   "captured": true,
+   "confirmed": true,
+   "id": "p018"
+  },
+  {
+   "confirmed": false,
+   "id": "p019"
+  },
+  {
+   "captured": true,
+   "confirmed": true,
+   "id": "p020"
+  },
+  {
+   "confirmed": false,
+   "id": "p021"
+  },
+  {
+   "captured": false,
+   "confirmed": true,
+   "id": "p022"
+  },
+  {
+   "captured": true,
+   "confirmed": true,
+   "id": "p023"
+  },
+  {
+   "confirmed": false,
+   "id": "p024"
+  },
+  {
+   "captured": true,
+   "confirmed": true,
+   "id": "p025"
+  },
+  {
+   "confirmed": false,
+   "id": "p026"
+  },
+  {
+   "confirmed": false,
+   "id": "p027"
+  },
+  {
+   "confirmed": false,
+   "id": "p028"
+  },
+  {
+   "captured": false,
+   "confirmed": true,
+   "id": "p029"
+  },
+  {
+   "captured": false,
+   "confirmed": true,
+   "id": "p030"
+  },
+  {
+   "captured": true,
+   "confirmed": true,
+   "id": "p031"
+  },
+  {
+   "captured": true,
+   "confirmed": true,
+   "id": "p032"
+  },
+  {
+   "captured": true,
+   "confirmed": true,
+   "id": "p033"
+  },
+  {
+   "captured": true,
+   "confirmed": true,
+   "id": "p034"
+  },
+  {
+   "captured": true,
+   "confirmed": true,
+   "id": "p035"
+  },
+  {
+   "confirmed": false,
+   "id": "p036"
+  },
+  {
+   "captured": false,
+   "confirmed": true,
+   "id": "p037"
+  },
+  {
+   "confirmed": false,
+   "id": "p038"
+  },
+  {
+   "captured": false,
+   "confirmed": true,
+   "id": "p039"
+  },
+  {
+   "captured": true,
+   "confirmed": true,
+   "id": "p040"
+  },
+  {
+   "captured": false,
+   "confirmed": true,
+   "id": "p041"
+  },
+  {
+   "confirmed": false,
+   "id": "p042"
+  },
+  {
+   "captured": false,
+   "confirmed": true,
+   "id": "p043"
+  },
+  {
+   "captured": false,
+   "confirmed": true,
+   "id": "p044"
+  },
+  {
+   "confirmed": false,
+   "id": "p045"
+  },
+  {
+   "captured": false,
+   "confirmed": true,
+   "id": "p046"
+  },
+  {
+   "confirmed": false,
+   "id": "p047"
+  },
+  {
+   "captured": false,
+   "confirmed": true,
+   "id": "p048"
+  },
+  {
+   "captured": true,
+   "confirmed": true,
+   "id": "p049"
+  },
+  {
+   "captured": false,
+   "confirmed": true,
+   "id": "p050"
+  },
+  {
+   "captured": false,
+   "confirmed": true,
+   "id": "p051"
+  },
+  {
+   "captured": false,
+   "confirmed": true,
+   "id": "p052"
+  },
+  {
+   "confirmed": false,
+   "id": "p053"
+  },
+  {
+   "captured": true,
+   "confirmed": true,
+   "id": "p054"
+  },
+  {
+   "captured": true,
+   "confirmed": true,
+   "id": "p055"
+  },
+  {
+   "confirmed": false,
+   "id": "p056"
+  },
+  {
+   "captured": false,
+   "confirmed": true,
+   "id": "p057"
+  },
+  {
+   "captured": false,
+   "confirmed": true,
+   "id": "p058"
+  },
+  {
+   "confirmed": false,
+   "id": "p059"
+  },
+  {
+   "confirmed": false,
+   "id": "p060"
+  }
+ ],
+ "pooled": {
+  "captured": 19,
+  "confirmed": 37,
+  "judged": 60,
+  "recall": 0.514
+ },
+ "schema": "probe-validation/1"
+}
