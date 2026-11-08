@@ -1,0 +1,156 @@
+{"type":"carry","fact":"F1","boundary":"sd1a5-001>sd1a5-002","carried":true,"where":"report"}
+{"type":"carry","fact":"F2","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F3","boundary":"sd1a5-001>sd1a5-002","carried":true,"where":"report"}
+{"type":"carry","fact":"F4","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F5","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F6","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F7","boundary":"sd1a5-001>sd1a5-002","carried":true,"where":"report"}
+{"type":"carry","fact":"F8","boundary":"sd1a5-001>sd1a5-002","carried":true,"where":"report"}
+{"type":"carry","fact":"F9","boundary":"sd1a5-001>sd1a5-002","carried":true,"where":"report"}
+{"type":"carry","fact":"F10","boundary":"sd1a5-001>sd1a5-002","carried":true,"where":"report"}
+{"type":"carry","fact":"F11","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F12","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F13","boundary":"sd1a5-001>sd1a5-002","carried":true,"where":"report"}
+{"type":"carry","fact":"F14","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F15","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F16","boundary":"sd1a5-001>sd1a5-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F17","boundary":"sd1a5-001>sd1a5-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F18","boundary":"sd1a5-001>sd1a5-002","carried":true,"where":"report"}
+{"type":"carry","fact":"F19","boundary":"sd1a5-001>sd1a5-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F20","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F21","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F22","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F23","boundary":"sd1a5-001>sd1a5-002","carried":true,"where":"report"}
+{"type":"carry","fact":"F24","boundary":"sd1a5-001>sd1a5-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F25","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F26","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F27","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F28","boundary":"sd1a5-001>sd1a5-002","carried":true,"where":"report"}
+{"type":"carry","fact":"F29","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F30","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F31","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F32","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F33","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F34","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F35","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F36","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F37","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F38","boundary":"sd1a5-001>sd1a5-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F39","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F40","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F41","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F42","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F43","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F44","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F45","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F46","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F47","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F48","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F49","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F50","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F51","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F52","boundary":"sd1a5-001>sd1a5-002","carried":true,"where":"report"}
+{"type":"carry","fact":"F53","boundary":"sd1a5-001>sd1a5-002","carried":true,"where":"report"}
+{"type":"carry","fact":"F54","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F55","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F56","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F57","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F58","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F59","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F60","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F61","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F62","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F63","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F64","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F65","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F66","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F69","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F70","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F71","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F72","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F73","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F74","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F75","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F77","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F78","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F79","boundary":"sd1a5-001>sd1a5-002","carried":true,"where":"report"}
+{"type":"carry","fact":"F80","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F82","boundary":"sd1a5-001>sd1a5-002","carried":true,"where":"report"}
+{"type":"carry","fact":"F83","boundary":"sd1a5-001>sd1a5-002","carried":true,"where":"report"}
+{"type":"carry","fact":"F84","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F85","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F86","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F87","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F88","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F89","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"carry","fact":"F90","boundary":"sd1a5-001>sd1a5-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F91","boundary":"sd1a5-001>sd1a5-002","carried":false,"where":null}
+{"type":"event","fact":"F38","event":"needed","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-1439","note":"looks at the cupboard while checking food stores"}
+{"type":"event","fact":"F38","event":"rediscovered","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-1439","note":"look-around lists small cardboard box with protein ration [20] on the cupboard"}
+{"type":"event","fact":"F88","event":"needed","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-1448","note":"searches cordage recipes to get line for the fishing rod"}
+{"type":"event","fact":"F90","event":"needed","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-1448","note":"hook is in hand but line is missing, so the player searches cordage recipes"}
+{"type":"event","fact":"F88","event":"rediscovered","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-1451","note":"short cordage piece again needs electric spinwheel and tanbark, willowbark, straw or withered plant, shown red"}
+{"type":"event","fact":"F16","event":"needed","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-1462","note":"searches short string recipes for the line the fishing rod requires"}
+{"type":"event","fact":"F78","event":"needed","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-1477","note":"opens spear recipes as a weapon upgrade"}
+{"type":"event","fact":"F78","event":"rediscovered","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-1477","note":"simple knife spear needs long stick, knife blade, cotton patch and string, 3 hours 8 minutes, only 1 short string on hand"}
+{"type":"event","fact":"F28","event":"needed","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-1477","note":"weapon upgrade search for the damaged long pointy stick"}
+{"type":"event","fact":"F91","event":"needed","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-1477","note":"cotton patch component is needed for the spear recipe"}
+{"type":"event","fact":"F91","event":"rediscovered","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-1477","note":"recipe shows cotton patch (have 2)"}
+{"type":"event","fact":"F75","event":"needed","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-1668","note":"steps out onto the pavement north of the shelter door"}
+{"type":"event","fact":"F75","event":"rediscovered","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-1668","note":"spilled water puddle visible on the pavement north of the door"}
+{"type":"event","fact":"F7","event":"needed","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-1798","note":"a piglet is near on the walk out into the field"}
+{"type":"event","fact":"F7","event":"rediscovered","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-1798","note":"wild boar piglet listed southwest in the field"}
+{"type":"event","fact":"F3","event":"used","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-2164","note":"checks Ava following 12 tiles southwest and her gear in the monster list"}
+{"type":"event","fact":"F86","event":"needed","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-2226","note":"picks up forest items in the east forest looking for food"}
+{"type":"event","fact":"F86","event":"rediscovered","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-2226","note":"pickup list shows junipers on the forest floor"}
+{"type":"event","fact":"F31","event":"needed","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-2877","note":"needs a long stick to make a new long pointy stick"}
+{"type":"event","fact":"F31","event":"rediscovered","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-2877","note":"log shows 2 long sticks on the forest floor here"}
+{"type":"event","fact":"F31","event":"used","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-2877","note":"crafts a long pointy stick from one of the long sticks"}
+{"type":"event","fact":"F28","event":"used","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-2877","note":"crafts long pointy stick from memory and wields it"}
+{"type":"event","fact":"F26","event":"used","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-3206","note":"forages through the underbrush in the forest"}
+{"type":"event","fact":"F13","event":"used","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-3206","note":"forages for food while seeking a sustainable supply"}
+{"type":"event","fact":"F51","event":"needed","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-3446","note":"pine tree prompt while picking trees for boughs"}
+{"type":"event","fact":"F11","event":"needed","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-4708","note":"a black rat is listed north of the player near the shelter on return"}
+{"type":"event","fact":"F11","event":"rediscovered","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-4708","note":"black rat listed beside the shelter"}
+{"type":"event","fact":"F53","event":"needed","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-5137","note":"consume menu is opened to raise vitamin C"}
+{"type":"event","fact":"F53","event":"used","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-5137","note":"ate juniper berries; header shows vitamin C 86%"}
+{"type":"event","fact":"F82","event":"invalidated","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-5137","note":"vitamin C header now 86% instead of 75%"}
+{"type":"event","fact":"F86","event":"used","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-5137","note":"log says you eat your junipers"}
+{"type":"event","fact":"F20","event":"needed","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-5137","note":"chooses among foods"}
+{"type":"event","fact":"F20","event":"rediscovered","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-5137","note":"5 protein rations listed at +800 kcal"}
+{"type":"event","fact":"F25","event":"needed","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-5137","note":"chooses among foods"}
+{"type":"event","fact":"F25","event":"rediscovered","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-5137","note":"32 cattail stalks listed at +18 kcal"}
+{"type":"event","fact":"F19","event":"needed","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-5137","note":"chooses among foods"}
+{"type":"event","fact":"F19","event":"rediscovered","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-5137","note":"4 cattail rhizomes listed at +250 kcal with 3 days shelf life"}
+{"type":"event","fact":"F43","event":"rediscovered","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-5137","note":"single pot still Irish whiskey (21) carried"}
+{"type":"event","fact":"F52","event":"needed","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-5466","note":"wants more vitamin C and starts tea beside the shelter door"}
+{"type":"event","fact":"F52","event":"used","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-5466","note":"crafts pine needle tea from memory with Ava assisting"}
+{"type":"event","fact":"F3","event":"used","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-6001","note":"uses Ava's interaction menu to have her use an item; she drinks"}
+{"type":"event","fact":"F7","event":"rediscovered","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-6187","note":"monster list shows wild boar piglets ignoring, 48 S and 58 SW"}
+{"type":"event","fact":"F7","event":"rediscovered","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-6767","note":"monster list shows a wild boar 33 S, another 43 SW and piglets"}
+{"type":"event","fact":"F7","event":"needed","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-6924","note":"2 wild boars and piglets listed near the route to the lake"}
+{"type":"event","fact":"F8","event":"used","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-7129","note":"walks to the lake shore west of the shelter"}
+{"type":"event","fact":"F18","event":"needed","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-7129","note":"at the lake shore with cattails in the shallows"}
+{"type":"event","fact":"F18","event":"rediscovered","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-7129","note":"cattails visible growing in the shallow water"}
+{"type":"event","fact":"F9","event":"needed","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-7349","note":"scooping lake water into containers"}
+{"type":"event","fact":"F9","event":"used","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-7349","note":"pours shallow-water lake water into plastic bottles to boil later"}
+{"type":"event","fact":"F79","event":"used","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-7349","note":"collects water from the lake to boil safely"}
+{"type":"event","fact":"F10","event":"needed","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-8428","note":"starts boiling the collected water at the shelter pavement"}
+{"type":"event","fact":"F10","event":"used","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-8428","note":"starts the in-progress clean water craft"}
+{"type":"event","fact":"F22","event":"needed","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-8428","note":"the craft needs a nearby fire"}
+{"type":"event","fact":"F22","event":"rediscovered","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-8428","note":"log says you no longer have a nearby fire and cannot continue crafting"}
+{"type":"event","fact":"F83","event":"needed","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-8428","note":"the player expects the earlier pavement fire to still burn for boiling"}
+{"type":"event","fact":"F83","event":"invalidated","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-8428","note":"the game reports no nearby fire; the earlier outdoor fire has burned out"}
+{"type":"event","fact":"F64","event":"needed","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-8506","note":"looks for a way to light a fire"}
+{"type":"event","fact":"F64","event":"rediscovered","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-8506","note":"bow fire drill listed as lacking enough charges"}
+{"type":"event","fact":"F12","event":"needed","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-8506","note":"use-item filter is typed for the bow fire drill while a fire source is sought"}
+{"type":"event","fact":"F74","event":"used","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-9102","note":"selects tinder (16) to light a fire"}
+{"type":"event","fact":"F23","event":"used","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-11116","note":"saves and quits; the load list shows Whitethorn"}
+{"type":"fact","id":"F92","statement":"Foraging the underbrush in the east forest can yield wild bird eggs (cardinal, American crow, robin)","category":"resource","observed":"3c6acb3817ebc5b0fced8f7a122b7bbf-3206","stored":null}
+{"type":"fact","id":"F93","statement":"Fried eggs need a food-cooking fire and many eggs of one kind (about 12 blue jay or 14 robin eggs, or 2 crow eggs), so a few mixed eggs are mostly eaten raw","category":"procedure","observed":"3c6acb3817ebc5b0fced8f7a122b7bbf-4799","stored":null}
+{"type":"fact","id":"F94","statement":"A notched stick can be crafted from memory and reloads the bow fire drill; lighting a fire with it and tinder takes about 7 minutes","category":"procedure","observed":"3c6acb3817ebc5b0fced8f7a122b7bbf-8872","stored":null}
+{"type":"fact","id":"F95","statement":"An in-progress clean water craft left on the pavement cannot be picked up ('does not fit in any pocket'), so it must be resumed in place beside a fire","category":"procedure","observed":"3c6acb3817ebc5b0fced8f7a122b7bbf-9705","stored":null}
+{"type":"fact","id":"F96","statement":"After eating juniper berries the displayed daily vitamin intake is vitamin C 86%, iron 63% and calcium 46%","category":"self","observed":"3c6acb3817ebc5b0fced8f7a122b7bbf-5137","stored":null}
+{"type":"fact","id":"F97","statement":"Ava drinks a clean water when told 'I want you to use this item' in her interaction menu","category":"procedure","observed":"3c6acb3817ebc5b0fced8f7a122b7bbf-6001","stored":null}
+{"type":"fact","id":"F98","statement":"The old damaged long pointy stick was dropped on the forest floor and replaced by a newly crafted long pointy stick","category":"item","observed":"3c6acb3817ebc5b0fced8f7a122b7bbf-2622","stored":null}
+{"type":"end","frames_viewed":68}

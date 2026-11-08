@@ -45,7 +45,7 @@ export function useStore() {
 /* ---------------------------------------------------------------- fetching */
 export class ViewerDown extends Error {}
 
-export async function viewerGet(path) {
+export async function viewerGet(path, schema = 'spectator-view/1') {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), VIEW_TIMEOUT_MS);
   let response;
@@ -63,7 +63,7 @@ export async function viewerGet(path) {
     markViewer(true);
     throw new Error(body && body.error ? String(body.error) : `The viewer has nothing here (HTTP ${response.status})`);
   }
-  if (!body || body.schema !== 'spectator-view/1') {
+  if (!body || body.schema !== schema) {
     markViewer(false);
     throw new ViewerDown('Unsupported viewer response');
   }
@@ -80,14 +80,14 @@ export const runPath = (run, tail) => `run/${encodeURIComponent(run)}/${tail}`;
 export const framePath = (run, sourceId) => `/api/view/${runPath(run, `frame/${encodeURIComponent(sourceId)}`)}`;
 
 /** Fetch one viewer route into component state; refetch on an interval and when the viewer returns. */
-export function useView(path, every = 5000) {
+export function useView(path, every = 5000, schema = 'spectator-view/1') {
   const [state, setState] = useState({path: null, data: null, error: null});
   useEffect(() => {
     if (!path) return undefined;
     let dead = false, timer;
     const run = async () => {
       try {
-        const data = await viewerGet(path);
+        const data = await viewerGet(path, schema);
         if (!dead) setState({path, data, error: null});
       } catch (error) {
         if (!dead) setState(s => ({path, data: s.path === path ? s.data : null, error}));
@@ -96,7 +96,7 @@ export function useView(path, every = 5000) {
     };
     void run();
     return () => { dead = true; clearTimeout(timer); };
-  }, [path, every]);
+  }, [path, every, schema]);
   return state.path === path ? state : {path, data: null, error: null};
 }
 

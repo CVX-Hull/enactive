@@ -1,0 +1,22 @@
+{"type":"fact","id":"F1","statement":"The survivor is Morgan Hale, a male Evacuee-scenario character with Survivor profession and Str/Dex/Int/Per all 8","category":"self","observed":"bbef26ac5228651c066afc27a5af5c32-498","stored":"fc79e3"}
+{"type":"fact","id":"F2","statement":"The game starts in evac shelter A-23 (basement start) on spring day 61 at 8:00 AM, the shelter being southeast of Trenton","category":"place","observed":"bbef26ac5228651c066afc27a5af5c32-594","stored":"fc79e3"}
+{"type":"fact","id":"F3","statement":"The shelter basement bathroom sinks hold 20 soap bars, a scrub brush, a FEMA evacuation pamphlet, paper, a first aid kit box (21 items) and a gallon jug of bleach","category":"resource","observed":"bbef26ac5228651c066afc27a5af5c32-1354","stored":"24fcea"}
+{"type":"fact","id":"F4","statement":"The survivor carries a first aid kit box holding 21 items including 18 drugs","category":"item","observed":"bbef26ac5228651c066afc27a5af5c32-2804","stored":"24fcea"}
+{"type":"fact","id":"F5","statement":"The survivor carries 10 soap bars","category":"resource","observed":"bbef26ac5228651c066afc27a5af5c32-2804","stored":"24fcea"}
+{"type":"fact","id":"F6","statement":"The survivor carries a matchbook with 20 matches","category":"resource","observed":"bbef26ac5228651c066afc27a5af5c32-2804","stored":"24fcea"}
+{"type":"fact","id":"F7","statement":"The smartphone has a flashlight app and 54 of 56 battery charge","category":"item","observed":"bbef26ac5228651c066afc27a5af5c32-1057","stored":"24fcea"}
+{"type":"fact","id":"F8","statement":"The survivor carries a sealed plastic bottle with 2 units of clean water and has no food","category":"resource","observed":"bbef26ac5228651c066afc27a5af5c32-2804","stored":"24fcea"}
+{"type":"fact","id":"F9","statement":"Janette Sutherland, a Modern Archer NPC with a takedown recurve bow, is in the shelter and agreed to travel with the survivor after a persuade check","category":"other","observed":"bbef26ac5228651c066afc27a5af5c32-2801","stored":"fc79e3"}
+{"type":"fact","id":"F10","statement":"Janette has no spare equipment to give when asked to share","category":"other","observed":"bbef26ac5228651c066afc27a5af5c32-725","stored":null}
+{"type":"fact","id":"F11","statement":"Janette's job is to find a corporate accounting book for her","category":"plan","observed":"bbef26ac5228651c066afc27a5af5c32-660","stored":null}
+{"type":"fact","id":"F12","statement":"The survivor wields a stick picked up outside the shelter, which is the only weapon","category":"item","observed":"bbef26ac5228651c066afc27a5af5c32-1942","stored":"24fcea"}
+{"type":"fact","id":"F13","statement":"The shelter's south wall has a curtained window that was opened and used as the exit to the outside forest","category":"place","observed":"bbef26ac5228651c066afc27a5af5c32-1818","stored":null}
+{"type":"fact","id":"F14","statement":"Remaining work: find food, renewable water, a cooking container and long-term survival plans; an antibiotics request is unfinished","category":"plan","observed":"text","stored":"24fcea"}
+{"type":"event","fact":"F3","event":"needed","frame":"bbef26ac5228651c066afc27a5af5c32-1228","note":"Reached the sink with soap and supplies and decided what to pick up"}
+{"type":"event","fact":"F3","event":"used","frame":"bbef26ac5228651c066afc27a5af5c32-1354","note":"Picked up the kit box, soap bars and pamphlet from the sink"}
+{"type":"event","fact":"F7","event":"used","frame":"bbef26ac5228651c066afc27a5af5c32-1188","note":"Flashlight app was on while exploring the dark basement"}
+{"type":"event","fact":"F10","event":"needed","frame":"bbef26ac5228651c066afc27a5af5c32-725","note":"Asked Janette to share equipment and she had nothing to give"}
+{"type":"event","fact":"F9","event":"used","frame":"bbef26ac5228651c066afc27a5af5c32-2802","note":"Talked with Janette as a follower and opened the cooperation options"}
+{"type":"event","fact":"F11","event":"needed","frame":"bbef26ac5228651c066afc27a5af5c32-2799","note":"Janette's job option was available and the survivor reported no luck"}
+{"type":"event","fact":"F8","event":"needed","frame":"bbef26ac5228651c066afc27a5af5c32-2804","note":"Checked inventory for food and water at the end of the chunk"}
+{"type":"end","frames_viewed":34}

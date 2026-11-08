@@ -1,0 +1,11 @@
+{"type":"fact","id":"F1","statement":"The survivor is Morgan Vale, a 25-year-old male Evacuee-scenario Survivor with Str 10, Dex 10, Int 8, Per 8","category":"self","observed":"c6c09be0b7d43fba2839147651a4f6a5-558","stored":"383c5c"}
+{"type":"fact","id":"F2","statement":"The game starts inside evac shelter A-23 on spring day 61 at 8:00 AM","category":"place","observed":"c6c09be0b7d43fba2839147651a4f6a5-654","stored":"383c5c"}
+{"type":"fact","id":"F3","statement":"Erin Bergman, a trucker NPC, is in the shelter and will only follow the survivor if the survivor comes back in a few days","category":"other","observed":"c6c09be0b7d43fba2839147651a4f6a5-725","stored":null}
+{"type":"fact","id":"F4","statement":"The survivor starts with a pocket knife, a smartphone with a flashlight app, a sealed plastic bottle with 2 clean water, a wallet with currency and a matchbook","category":"item","observed":"c6c09be0b7d43fba2839147651a4f6a5-731","stored":"383c5c"}
+{"type":"fact","id":"F5","statement":"The shelter's ground floor has stairs leading down to a basement with benches and corridors","category":"place","observed":"c6c09be0b7d43fba2839147651a4f6a5-906","stored":null}
+{"type":"fact","id":"F6","statement":"The shelter ground floor has a window with curtains on its north wall that opens to the outdoors","category":"place","observed":"c6c09be0b7d43fba2839147651a4f6a5-1692","stored":null}
+{"type":"fact","id":"F7","statement":"The shelter floor holds about 21 small cardboard boxes of protein ration plus planks, nails, a wooden panel and splintered wood","category":"resource","observed":"c6c09be0b7d43fba2839147651a4f6a5-2205","stored":"383c5c"}
+{"type":"fact","id":"F8","statement":"The survivor can craft a wooden club from memory and wields one","category":"procedure","observed":"c6c09be0b7d43fba2839147651a4f6a5-2199","stored":null}
+{"type":"fact","id":"F9","statement":"The survivor carries 3 protein ration boxes and 2 clean water in a messenger bag","category":"resource","observed":"c6c09be0b7d43fba2839147651a4f6a5-2221","stored":"383c5c"}
+{"type":"fact","id":"F10","statement":"Plan: inspect shelter storage, find safe water and a cooking vessel, then scout carefully","category":"plan","observed":"text","stored":"383c5c"}
+{"type":"end","frames_viewed":34}

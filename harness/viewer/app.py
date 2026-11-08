@@ -2,7 +2,8 @@
 
 All routes are GET. JSON responses carry `"schema": "spectator-view/1"`, stay under 4 MiB and are paginated with
 `after` and `limit` (at most 500) where they list. The application writes nothing; the only write in the process
-is the live evaluator's own `live` store, which the app merely reports on.
+is the live evaluator's own `live` store, which the app merely reports on. The `/frame/` routes are the spectator's
+frame (`spectator-frame/1`, `frame.py`): errors still use the `spectator-view/1` envelope.
 """
 from __future__ import annotations
 
@@ -15,6 +16,7 @@ from starlette.responses import JSONResponse, Response
 from starlette.routing import Route
 
 from . import cross, views
+from . import frame as frame_view
 from .catalog import API, Catalog, RunInfo, ViewError
 from .live import LiveEvaluator
 
@@ -24,8 +26,8 @@ DEFAULT_LIMIT = 100
 HEADERS = {'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff'}
 
 
-def reply(payload: dict, status: int = 200) -> Response:
-    body = json.dumps(dict(schema=API, **payload), separators=(',', ':'), allow_nan=False, default=str).encode()
+def reply(payload: dict, status: int = 200, schema: str = API) -> Response:
+    body = json.dumps(dict(schema=schema, **payload), separators=(',', ':'), allow_nan=False, default=str).encode()
     if len(body) > MAX_BYTES:
         raise ViewError(413, 'response_too_large', f'{len(body)} bytes')
     return Response(body, status, headers=HEADERS, media_type='application/json')
@@ -46,9 +48,11 @@ def paging(request: Request) -> tuple[int, int]:
     return number('after', 0, 0, None), number('limit', DEFAULT_LIMIT, 1, MAX_LIMIT)
 
 
-def create_app(catalog: Catalog, evaluator: LiveEvaluator | None = None, now: Callable[[], float] | None = None) -> Starlette:
+def create_app(catalog: Catalog, evaluator: LiveEvaluator | None = None, now: Callable[[], float] | None = None,
+               frame_sources: frame_view.FrameSources | None = None) -> Starlette:
     import time
     clock = now or time.time
+    sources = frame_sources or frame_view.FrameSources()
 
     def live_session() -> str | None:
         return evaluator.session() if evaluator is not None else None
@@ -146,8 +150,28 @@ def create_app(catalog: Catalog, evaluator: LiveEvaluator | None = None, now: Ca
         return reply(cross.explore(catalog, q.get('arm') or None, q.get('start') or None, q.get('outcome') or None,
             q.get('metric') or None, live_session()))
 
+    def frame_reply(payload: dict) -> Response:
+        return reply(payload, schema=frame_view.API)
+
+    def frame_health(request: Request) -> Response:
+        return frame_reply(frame_view.health(catalog, sources))
+
+    def frame_containers(request: Request) -> Response:
+        after, limit = paging(request)
+        return frame_reply(frame_view.containers(sources, after, limit))
+
+    def frame_container(request: Request) -> Response:
+        return frame_reply(frame_view.container(sources, request.path_params['container_id']))
+
+    def frame_episodes(request: Request) -> Response:
+        return frame_reply(frame_view.episodes(catalog, sources))
+
     prefix = '/api/view'
-    routes = [Route(f'{prefix}/runs', plain(runs), methods=['GET']),
+    routes = [Route(f'{prefix}/frame/health', plain(frame_health), methods=['GET']),
+        Route(f'{prefix}/frame/containers', plain(frame_containers), methods=['GET']),
+        Route(f'{prefix}/frame/containers/{{container_id:path}}', plain(frame_container), methods=['GET']),
+        Route(f'{prefix}/frame/episodes', plain(frame_episodes), methods=['GET']),
+        Route(f'{prefix}/runs', plain(runs), methods=['GET']),
         Route(f'{prefix}/run/{{run}}/summary', with_run(summary), methods=['GET']),
         Route(f'{prefix}/run/{{run}}/steps', with_run(steps), methods=['GET']),
         Route(f'{prefix}/run/{{run}}/frame/{{source_id}}', with_run(frame), methods=['GET']),

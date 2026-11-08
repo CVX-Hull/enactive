@@ -1,0 +1,53 @@
+{
+ "schema": "probe-episodes/1",
+ "lineage": "397",
+ "study": "397-seven-day",
+ "source": "docs/acceptance/2026-11-08-probe-baseline-449.md#the-four-397-episodes; frames from the tracked annotations and adjudication.jsonl in this directory",
+ "note": "Evaluation data for the spectator (ADR 009 D18). Never shown to the player or the curator (ADR008).",
+ "episodes": [
+  {
+   "id": "batteries",
+   "title": "Batteries in the shelter lockers",
+   "fact": "F4",
+   "record": "f49b80",
+   "observed": {"chunk": "sd1a1-001", "frame": "f37efc17970589e90aff3c73d3742a89-1267"},
+   "lost_at": "sd1a2-002>sd1a3-001",
+   "probe": {"boundary": "sd1a2-002>sd1a3-001", "failing": true, "costly": true, "annotation": "adjudicated"},
+   "needed": {"chunk": "sd1a3-001", "frame": "12ba39c88fbb4da11264b8d2c4634db1-216"},
+   "acted_without": {"chunk": "sd1a3-001", "frame": "12ba39c88fbb4da11264b8d2c4634db1-502"}
+  },
+  {
+   "id": "fishing-rod",
+   "title": "A fishing rod on the shelter floor",
+   "fact": "F30",
+   "record": "94ce47",
+   "observed": {"chunk": "sd1a2-001", "frame": "507f7c538191fedb29b11639ed137b70-3311"},
+   "lost_at": "sd1a2-002>sd1a3-001",
+   "probe": {"boundary": "sd1a4-002>sd1a5-001", "failing": true, "costly": true, "annotation": "blinded"},
+   "needed": {"chunk": "sd1a5-001", "frame": "3c6acb3817ebc5b0fced8f7a122b7bbf-1201"},
+   "acted_without": null
+  },
+  {
+   "id": "rations",
+   "title": "Ration boxes in the shelter cupboard",
+   "fact": "F38",
+   "record": "5db17f",
+   "observed": {"chunk": "sd1a2-002", "frame": "507f7c538191fedb29b11639ed137b70-12079"},
+   "lost_at": "sd1a5-002>sd1a6-001",
+   "probe": {"boundary": "sd1a5-002>sd1a6-001", "failing": true, "costly": true, "annotation": "adjudicated"},
+   "needed": {"chunk": "sd1a6-001", "frame": "910bb98c06461865f5a73e3574cdd95a-1375"},
+   "acted_without": {"chunk": "sd1a6-001", "frame": "910bb98c06461865f5a73e3574cdd95a-1375"}
+  },
+  {
+   "id": "roof-tank",
+   "title": "Clean water in the roof tank",
+   "fact": "F63",
+   "record": null,
+   "observed": {"chunk": "sd1a3-001", "frame": null, "text": "stated in the sd1a3-001 actor's own text only"},
+   "lost_at": "sd1a3-002>sd1a4-001",
+   "probe": {"boundary": "sd1a4-001>sd1a4-002", "failing": true, "costly": true, "annotation": "adjudicated"},
+   "needed": {"chunk": "sd1a4-002", "frame": "92505965fcbd23adda6919b8a38decc4-5615"},
+   "acted_without": {"chunk": "sd1a4-002", "frame": "92505965fcbd23adda6919b8a38decc4-5615"}
+  }
+ ]
+}

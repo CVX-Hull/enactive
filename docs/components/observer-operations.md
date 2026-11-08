@@ -110,6 +110,16 @@ The gateway forwards `GET /api/view/*` to it on its own connection:
   than 200, 400, 404, 409 or 413, or no free forwarding slot, returns `503` with `{"viewer": "unavailable"}`. The page
   shows both `502` and `503` as "viewer unavailable".
 
+**Spectator frame.** The page's *Roles and containers* view
+([ADR 009](../decisions/009-curated-player.md) D18, `web/app/frame.js`) is a health strip
+over role tabs. *Actor* lists the four #397 forgetting episodes from the tracked probe
+episodes, each anchor opening the existing Live view at that step, or saying why its frame
+is unavailable. *Containers* lists the sidecar inventory with each manifest. *Curator*,
+*Knowledge* and *Programs* are placeholders that name the phase that brings them, and
+health slots without data say "not yet measured" instead of a number. It is served by the
+viewer's `/api/view/frame/*` routes ([contract](../contracts/evaluation.md#spectator-frame-spectator-frame1)),
+reads only, and leaves the Pause path untouched.
+
 The viewer's exit is never supervision loss: the guardian, startup wait and cleanup
 treat it separately from the custodian, gateway and keep-awake children. The supervisor
 stops it with them at the end and records its pid and port (`campaign-watch-start/3`

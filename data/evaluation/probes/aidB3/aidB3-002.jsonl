@@ -1,0 +1,31 @@
+{"type":"carry","fact":"F1","boundary":"aidB3-001>aidB3-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F2","boundary":"aidB3-001>aidB3-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F3","boundary":"aidB3-001>aidB3-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F4","boundary":"aidB3-001>aidB3-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F5","boundary":"aidB3-001>aidB3-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F6","boundary":"aidB3-001>aidB3-002","carried":false,"where":null}
+{"type":"carry","fact":"F7","boundary":"aidB3-001>aidB3-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F8","boundary":"aidB3-001>aidB3-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F9","boundary":"aidB3-001>aidB3-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F10","boundary":"aidB3-001>aidB3-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F11","boundary":"aidB3-001>aidB3-002","carried":true,"where":"packet"}
+{"type":"event","fact":"F5","event":"needed","frame":"20d51b154e0077ab83109060223075c2-4396","note":"Back in daylight at the shelter exit, the flashlight must be turned off; the smartphone menu offers Turn off flashlight"}
+{"type":"event","fact":"F5","event":"used","frame":"20d51b154e0077ab83109060223075c2-4606","note":"Flashlight app deactivated after leaving the basement, as planned"}
+{"type":"event","fact":"F8","event":"needed","frame":"20d51b154e0077ab83109060223075c2-4835","note":"Passing the shelter cupboard while setting out; its sealed water bottles are relevant to supplies"}
+{"type":"event","fact":"F8","event":"rediscovered","frame":"20d51b154e0077ab83109060223075c2-4835","note":"Stepping on the cupboard shows 5 sealed plastic bottles with 2 cold clean water"}
+{"type":"event","fact":"F6","event":"rediscovered","frame":"20d51b154e0077ab83109060223075c2-5020","note":"Outside the shelter's west door the road and parking area with fields are seen again"}
+{"type":"event","fact":"F9","event":"used","frame":"20d51b154e0077ab83109060223075c2-15939","note":"Inspects food in the inventory, with fiddleheads added to the carried items"}
+{"type":"event","fact":"F3","event":"needed","frame":"20d51b154e0077ab83109060223075c2-16626","note":"After save and quit, the main menu lists Freemont and Rossiter and the new world's name is still not established"}
+{"type":"fact","id":"F12","statement":"The evac shelter B-05 sits beside a road next to Codyville Plantation, with open fields to the west and forest to the northwest","category":"place","observed":"20d51b154e0077ab83109060223075c2-5205","stored":null}
+{"type":"fact","id":"F13","statement":"A dumpsite in the field southwest of the shelter holds piles of scrap and junk: paper wrappers, plastic bags and sheets, bottles, aluminum cans, string, a small tin can, flyers and a gallon jug","category":"place","observed":"20d51b154e0077ab83109060223075c2-8704","stored":null}
+{"type":"fact","id":"F14","statement":"The small tin can at the dumpsite is steel with a level 1 boiling quality, so it can heat liquids","category":"item","observed":"20d51b154e0077ab83109060223075c2-8993","stored":null}
+{"type":"fact","id":"F15","statement":"The makeshift pot recipe needs 1 sheet metal plus a tool with hammering 2, and cannot be crafted in the dark","category":"procedure","observed":"20d51b154e0077ab83109060223075c2-9161","stored":null}
+{"type":"fact","id":"F16","statement":"The homemade polehammer recipe needs a spear shaft, a hammer or makeshift polehammer, 3 nails and cutting and hammering tools; the survivor lacks the hammer and nails","category":"procedure","observed":"20d51b154e0077ab83109060223075c2-9588","stored":null}
+{"type":"fact","id":"F17","statement":"Ferns in the forest give fresh fiddleheads (13 kcal each, perishable in 2 days, can cause food poisoning raw, better cooked); foraging the underbrush also gave a stick, plant fiber, a large rock and a field stone","category":"resource","observed":"20d51b154e0077ab83109060223075c2-6540","stored":null}
+{"type":"fact","id":"F18","statement":"Foraging the forest yields wild garlic seeds, and a sassafras tree near the shelter yielded 2 sassafras roots","category":"resource","observed":"20d51b154e0077ab83109060223075c2-16285","stored":null}
+{"type":"fact","id":"F19","statement":"Wild animals live near the shelter (wild turkeys in the forest; fox, opossum, feral pigeon and a calico cat in the fields), a possible meat source","category":"resource","observed":"20d51b154e0077ab83109060223075c2-5492","stored":null}
+{"type":"fact","id":"F20","statement":"A zapper zombie was spotted about 60 tiles to the southeast of the dumpsite field; safe mode warns of it","category":"hazard","observed":"20d51b154e0077ab83109060223075c2-13836","stored":null}
+{"type":"fact","id":"F21","statement":"The survivor's name was corrected to Timothy Lowery after matching the initial and current character screens (earlier read as Adkins)","category":"self","observed":"text","stored":"e6bea7"}
+{"type":"fact","id":"F22","statement":"Plan: establish sustainable food and cooking, needing a cooking vessel and calorie supply","category":"plan","observed":"text","stored":"33e9e0"}
+{"type":"fact","id":"F23","statement":"The game was saved and quit to the main menu, listing worlds Freemont and Rossiter; the game was not reloaded to verify the save","category":"other","observed":"20d51b154e0077ab83109060223075c2-16626","stored":"33e9e0"}
+{"type":"end","frames_viewed":51}

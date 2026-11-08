@@ -1,0 +1,131 @@
+{
+ "sd1a2-001": {
+  "matched": [
+   [
+    "F24",
+    "F24"
+   ],
+   [
+    "F26",
+    "F25",
+    "conflict: A says north of the shelter, B says south"
+   ],
+   [
+    "F28",
+    "F26"
+   ],
+   [
+    "F30",
+    "F27+F28",
+    "A's compound F30 (floor materials and the fishing rod on the bench) spans B's F27 (fibre, lockers) and F28 (the rod)"
+   ]
+  ],
+  "only_A": [
+   "F25",
+   "F27",
+   "F29"
+  ],
+  "only_B": [
+   "F29"
+  ],
+  "note": "Corrected 8 November 2026 after review: the first matching paired A's F30 with B's F27 only and listed B's F28 (the rod) as a fact A did not record, but A's F30 names the rod. Counting a one-to-two match as one matched cluster gives 4 matched of 8 distinct clusters (A 7 + B 6 - 5 links)."
+ },
+ "sd1a3-001": {
+  "matched": [
+   [
+    "F55",
+    "F42"
+   ],
+   [
+    "F44",
+    "F43"
+   ],
+   [
+    "F45",
+    "F44"
+   ],
+   [
+    "F46",
+    "F45"
+   ],
+   [
+    "F42",
+    "F46",
+    "B also names the ladder room (A's F62)"
+   ],
+   [
+    "F43",
+    "F47"
+   ],
+   [
+    "F51",
+    "F48"
+   ],
+   [
+    "F52",
+    "F49"
+   ],
+   [
+    "F49",
+    "F50"
+   ],
+   [
+    "F53",
+    "F51"
+   ],
+   [
+    "F57",
+    "F52"
+   ],
+   [
+    "F54",
+    "F53"
+   ],
+   [
+    "F47",
+    "F54"
+   ]
+  ],
+  "only_A": [
+   "F48",
+   "F50",
+   "F56",
+   "F58",
+   "F59",
+   "F60",
+   "F61",
+   "F62",
+   "F63"
+  ],
+  "only_B": [],
+  "note": "B records the roof tank (F46) but not its 18 L content (A's F63)."
+ },
+ "sd1a7-002": {
+  "matched": [
+   [
+    "F136",
+    "F132"
+   ],
+   [
+    "F133",
+    "F133"
+   ],
+   [
+    "F137",
+    "F134"
+   ],
+   [
+    "F132",
+    "F135"
+   ]
+  ],
+  "only_A": [
+   "F134",
+   "F135",
+   "F138",
+   "F139"
+  ],
+  "only_B": [],
+  "note": "Both record the death and its cause (crafting beside the pavement fire)."
+ }
+}
