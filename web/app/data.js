@@ -18,7 +18,15 @@ export const store = {
   cursor: null,            // null = following live; otherwise a step seq
   control: {ok: null, status: null, frameUrl: null},
   themeEpoch: 0,
+  feedWide: savedFlag('feed-wide'),   // the feed player spans the page (#437); a per-browser view choice
 };
+function savedFlag(key) {
+  try { return localStorage.getItem(key) === 'yes'; } catch { return false; }
+}
+export function setFeedWide(wide) {
+  try { localStorage.setItem('feed-wide', wide ? 'yes' : 'no'); } catch { /* no storage */ }
+  set({feedWide: wide});
+}
 export function set(patch) {
   Object.assign(store, patch);
   for (const f of subscribers) f();
