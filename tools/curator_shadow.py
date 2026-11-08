@@ -1,4 +1,4 @@
-"""Shadow runner for the Pi curator host over sealed traces (#454; ADR 009 open decision 2).
+"""Shadow runner for the curator host (tools/curator_host) over sealed traces (#454; ADR 009 open decision 2).
 
 Replays recorded lineages through curator sessions, one `run_session` per admission or run in
 lineage order, against a per-arm, per-lineage knowledge repository. The arm picks the model
@@ -74,12 +74,20 @@ class Arm:
     effort: str
 
 
-ARMS = {
-    'terra': Arm('openai/gpt-6.1-terra', 'GPT-6.1 Terra via pinned openai (curator)', 'openai', 'medium'),
-    # The pinned provider slug is OpenRouter's name for Anthropic's own endpoint; confirm it against
-    # the model's endpoint list before the first paid request.
-    'opus': Arm('anthropic/claude-opus-5.5', 'Claude Opus 5.5 via pinned anthropic (curator)', 'anthropic', 'medium'),
-}
+# The arms are tracked configuration beside the frozen prices: each arm's OpenRouter model, display
+# name, the one provider its route is pinned to, and its effort.
+ARMS_SCHEMA = 'curator-shadow-arms/1'
+ARMS_FILE = ROOT/'data'/'curator'/'shadow-arms.json'
+
+
+def load_arms(path: Path = ARMS_FILE) -> dict[str, Arm]:
+    data = json.loads(Path(path).read_text())
+    if data.get('schema') != ARMS_SCHEMA:
+        raise ShadowError(f'{path}: not a {ARMS_SCHEMA} file')
+    return {name: Arm(**row) for name, row in data['arms'].items()}
+
+
+ARMS = load_arms()
 
 
 def load_prices(path: Path) -> dict[str, Price]:
@@ -115,7 +123,7 @@ def host_configuration(arm: Arm, prices: dict[str, Price], *, effort: str, max_r
                        request_timeout_seconds: int, wall_seconds: int, max_context_images: int,
                        context_image_block: int, workbench_timeout_seconds: int, budget_usd: float) -> dict:
     price = prices[arm.model]
-    per = lambda value: float(value)  # noqa: E731 - Pi's cost entries are informational numbers
+    per = lambda value: float(value)  # noqa: E731 - the host's cost entries are informational numbers
     return dict(
         schema=HOST_SCHEMA, effort=effort, max_requests=max_requests, request_timeout_seconds=request_timeout_seconds,
         budget_usd=budget_usd,

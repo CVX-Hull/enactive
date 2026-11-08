@@ -99,7 +99,7 @@ OPENAI = Provider(
 # - `plugins` (`web` is live web search), `models` and `route` (fallback models), `prompt`, `debug`
 #   and `user` are left out of the allowlist;
 # - `image_url` accepts remote URLs, so only `data:` URLs pass.
-# The fields are those the project's Pi serializer sends for an OpenRouter model.
+# The fields are those the project's curator host serializer sends for an OpenRouter model.
 OPENROUTER = Provider(
     'openrouter', frozenset({'/api/v1/chat/completions'}), 'authorization', 'max_completion_tokens',
     frozenset({'model', 'messages', 'stream', 'stream_options', 'max_completion_tokens', 'temperature', 'top_p',

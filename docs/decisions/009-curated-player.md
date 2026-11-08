@@ -727,8 +727,8 @@ sources only.
 - the baseline rediscovery and carry rates on sealed traces;
 - the probe suite and its inter-rater check;
 - emission feasibility (tokens and pace from a short development run);
-- curator shadow sessions on sealed traces with one controlled Pi-based host and
-  two models (open decision 2): cost, lag, cold start and gate pass rate;
+- curator shadow sessions on sealed traces with one controlled host and two models
+  (open decision 2): cost, lag, cold start and gate pass rate;
 - practice-instance determinism and concurrency (P3, after an owner decision).
 
 ## Open owner decisions
@@ -739,10 +739,11 @@ sources only.
    - **Cap.** #454's shadow sessions are capped at **$100 in total**, enforced by the
      proxy. They are staged: a short pilot comes first, and the run stops if the cost
      projects past the cap.
-   - **Hosts.** #454 measures one harness the project controls, a **Pi-based curator
-     host** like the actor's own `tools/player_host`, with **two models through
-     OpenRouter**: the actor's `openai/gpt-6.1-terra` and Claude Opus 5.5. It does not
-     measure two off-the-shelf coding agents.
+   - **Hosts.** #454 measures **one curator host the project controls**, built on the
+     same agent library as the actor's own host, with **two models through
+     OpenRouter**: the actor's model and a second model. The
+     [curator hosts](../operations/curator-hosts.md) page names both models and the
+     library. It does not measure two off-the-shelf coding agents.
    - **Credentials.** The proxy holds the project's existing keychain key and never
      prints it.
 
