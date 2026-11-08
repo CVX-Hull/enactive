@@ -25,7 +25,7 @@ no player access, and reads no evaluation records. P0's
 | [Model proxy](../../harness/curator/proxy.py) | Holds the provider key and allowlists requests (Anthropic, OpenAI Responses, OpenRouter). Reserves the worst case, settles at reported usage, and revokes on any surprise |
 | [Knowledge repository](../../harness/curator/knowledge.py), [gate](../../harness/curator/gate.py) | One Git repository per game. Only gate v0 commits to it, and it checks form, base version, scope and provenance. [Design](../design/curator-session.md) |
 | [Drafts](../../harness/curator/containers.py), [sessions](../../harness/curator/session.py) | The draft lifecycle (open, stale, abandoned, promoted) and one ephemeral sandboxed session per run, with a close-out that never follows a link |
-| [Pi curator host](../../tools/curator_host) | Workspace-only tools, budget phases and a frozen prompt with no game knowledge. [Operations](../operations/curator-hosts.md) |
+| [Curator host](../../tools/curator_host) (an adapter) | Workspace-only tools, budget phases and a frozen prompt with no game knowledge. [Operations](../operations/curator-hosts.md) |
 | [Shadow runner](../../tools/curator_shadow.py), [report](../../tools/curator_shadow_report.py) | Replays the #397 and #372 development lineages (never #382's held-out lineages) under a dollar cap, and derives the measurements |
 
 ## Failure, bounds and ownership
