@@ -480,8 +480,10 @@ its custody token. The boundary is therefore default-deny:
   with live input latency as a guard.
 - **No evaluator records** (ADR008) and **no lead probes** are reachable.
 
-Which project-local sandbox mechanism can enforce this is a research question (R13),
-not an assumption. If none can, P1 does not run live.
+Which project-local sandbox mechanism can enforce this was a research question (R13).
+The [curator sandbox](../research-curator-sandbox.md) page records the answer, a
+Seatbelt profile with a supervisor and the proxy (open decision 6), and its residual
+risks. If a later escape-suite run fails, P1 does not run live.
 
 The curator runs on a substitutable host, as the actor does under `player-host/3`,
 so the same workspace can run under different coding-agent hosts and models.
@@ -529,10 +531,13 @@ expired one. A draft goes stale after a set number of sessions untouched and is
 archived after a further period unless renewed. Cleanup is a policy, not something
 the curator must remember.
 
-**Containers are logical, not Docker.** Container engines on this Mac would need a
-global installation, which the project's environment rules forbid
-([environment](../environment.md)). A container is a directory, a manifest, Git
-branches or worktrees and, where code runs, an OS sandbox profile.
+**Containers are logical, not Docker.** On this Mac a container engine means a Linux
+VM: Docker, Colima and Lima are installed but would start a VM and change existing
+per-user state, and Apple's `container` needs an administrator install. The project's
+environment rules exclude both ([environment](../environment.md); corrected 8
+November 2026 from "would need a global installation", per R13 in the
+[curator sandbox](../research-curator-sandbox.md) page). A container is a directory, a
+manifest, Git branches or worktrees and, where code runs, an OS sandbox profile.
 
 **Sealed evidence is never rewritten.** Existing and sealed directories, such as
 `computer-sessions/<id>`, are described by **sidecar manifests** written beside them
@@ -728,9 +733,14 @@ sources only.
 3. *Decided 8 November 2026:* #441 is deferred until this design has moved forward,
    and P1's held-out data comes from #382 instead (above).
 4. The belief model, after R3.
-5. Where the knowledge repository lives: the proposed project-local runtime path, or
-   tracked alongside the source.
-6. The sandbox mechanism, after R13.
+5. *Decided 8 November 2026:* the knowledge repository lives at the project-local
+   runtime path `.runtime/knowledge/<game>/`, a separate Git repository sealed into
+   the evidence store per study (#453).
+6. *Decided 8 November 2026, after R13:* the sandbox is a project-owned Seatbelt
+   profile with a supervisor and the key-holding model proxy, for P0 shadow runs and,
+   if #454 holds, live P1. The escape suite is re-run after every macOS or host update.
+   Disk becomes a hard cap through a sparse disk image if #454 shows write bursts
+   ([curator sandbox](../research-curator-sandbox.md), #451).
 
 ## Issue routing
 
