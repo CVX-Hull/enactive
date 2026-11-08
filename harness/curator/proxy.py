@@ -92,6 +92,18 @@ OPENAI = Provider(
                'reasoning', 'text', 'parallel_tool_calls', 'store', 'temperature', 'top_p'}),
     frozenset({'message', 'input_text', 'output_text', 'input_image', 'function_call', 'function_call_output',
                'reasoning'}))
+# OpenRouter chat completions (#454; ADR 009 open decision 2). Checked on 8 November 2026 against
+# openrouter.ai/docs/api/reference/overview, /docs/use-cases/usage-accounting and /docs/faq:
+# - usage, including `cost`, is always returned, and the base currency is US dollars;
+# - `plugins` (`web` is live web search), `models` and `route` (fallback models), `prompt`, `debug`
+#   and `user` are left out of the allowlist;
+# - `image_url` accepts remote URLs, so only `data:` URLs pass.
+# The fields are those the project's Pi serializer sends for an OpenRouter model.
+OPENROUTER = Provider(
+    'openrouter', frozenset({'/api/v1/chat/completions'}), 'authorization', 'max_completion_tokens',
+    frozenset({'model', 'messages', 'stream', 'stream_options', 'max_completion_tokens', 'temperature', 'top_p',
+               'tools', 'tool_choice', 'reasoning', 'provider', 'store'}),
+    frozenset({'text', 'image_url', 'function', 'reasoning.text', 'reasoning.summary', 'reasoning.encrypted'}))
 
 
 def refusal(provider: Provider, request: object) -> str | None:
@@ -106,8 +118,14 @@ def refusal(provider: Provider, request: object) -> str | None:
             return 'malformed tool'
         if provider is ANTHROPIC and ('input_schema' not in tool or tool.get('type') not in (None, 'custom')):
             return 'only client tools with an input schema are allowed'
-        if provider is OPENAI and tool.get('type') != 'function':
+        if provider in (OPENAI, OPENROUTER) and tool.get('type') != 'function':
             return 'only function tools are allowed'
+    if provider is OPENROUTER:
+        routing = request.get('provider')
+        if routing is not None and not (isinstance(routing, dict) and set(routing) <= ROUTING):
+            return 'provider routing may only order, require or restrict providers'
+        if request.get('store') not in (None, False):
+            return 'provider-side storage is not allowed'
     management = request.get('context_management')
     if management is not None:
         # Clearing old tool results or thinking only removes context; server-side compaction
@@ -136,13 +154,18 @@ def refusal(provider: Provider, request: object) -> str | None:
             if isinstance(source, dict) and source.get('type') != 'base64':
                 return 'only inline base64 sources are allowed'
             image_url = item.get('image_url')
-            if image_url is not None and not (isinstance(image_url, str) and image_url.startswith('data:')):
+            if isinstance(image_url, dict):  # chat completions: {"url": ..., "detail": ...}
+                image_url = image_url.get('url')
+            if 'image_url' in item and not (isinstance(image_url, str) and image_url.startswith('data:')):
                 return 'only inline images are allowed'
             if 'file_id' in item or 'file_url' in item:
                 return 'stored or fetched files are not allowed'
             stack.extend(v for k, v in item.items() if k not in OPAQUE)
     return None
 
+
+# OpenRouter provider preferences that only choose among providers for the requested model.
+ROUTING = frozenset({'order', 'only', 'ignore', 'allow_fallbacks', 'require_parameters', 'data_collection', 'zdr'})
 
 # Fields whose values are tool arguments or schemas, not content blocks.
 # `source` is checked where it appears; `cache_control` carries its own unrelated `type`.
@@ -156,21 +179,8 @@ def usage_of(provider: Provider, body: bytes) -> dict[str, int] | None:
     Integer counts are kept at their maximum across events; nested cache-creation detail is
     summed into `cache_creation_input_tokens` when the flat total is absent.
     """
-    text = body.decode('utf-8', 'replace')
-    documents = [text] if text.lstrip().startswith('{') else [
-        line[5:].strip() for line in text.splitlines() if line.startswith('data:')]
     usage: dict[str, int] = {}
-    for document in documents:
-        try:
-            event = json.loads(document)
-        except ValueError:
-            continue
-        if not isinstance(event, dict):
-            continue
-        found = (event.get('usage') or (event.get('message') or {}).get('usage')
-                 or (event.get('response') or {}).get('usage'))
-        if not isinstance(found, dict):
-            continue
+    for found in _usages(body):
         for key, value in found.items():
             if isinstance(value, int) and not isinstance(value, bool):
                 usage[key] = max(usage.get(key, 0), value)
@@ -181,8 +191,42 @@ def usage_of(provider: Provider, body: bytes) -> dict[str, int] | None:
     return usage or None
 
 
-def cost_of(provider: Provider, price: Price, usage: dict[str, int]) -> Decimal:
+def _usages(body: bytes):
+    """Every usage object in a JSON or server-sent-event response body."""
+    text = body.decode('utf-8', 'replace')
+    documents = [text] if text.lstrip().startswith('{') else [
+        line[5:].strip() for line in text.splitlines() if line.startswith('data:')]
+    for document in documents:
+        try:
+            event = json.loads(document, parse_float=Decimal)
+        except ValueError:
+            continue
+        if not isinstance(event, dict):
+            continue
+        found = (event.get('usage') or (event.get('message') or {}).get('usage')
+                 or (event.get('response') or {}).get('usage'))
+        if isinstance(found, dict):
+            yield found
+
+
+def reported_cost(body: bytes) -> Decimal | None:
+    """The provider's own charge (OpenRouter `usage.cost`, US dollars), or None when absent."""
+    costs = [found['cost'] for found in _usages(body)
+             if isinstance(found.get('cost'), (Decimal, int)) and not isinstance(found.get('cost'), bool)
+             and found['cost'] >= 0]
+    return Decimal(max(costs)) if costs else None
+
+
+def cost_of(provider: Provider, price: Price, usage: dict[str, int], body: bytes = b'') -> Decimal:
     per = Decimal(1_000_000)
+    if provider is OPENROUTER:
+        # The provider's reported charge is authoritative. Without it, all prompt tokens are
+        # charged at the highest input-side price, so cache writes are never undercounted.
+        reported = reported_cost(body)
+        if reported is not None:
+            return reported
+        return (usage.get('prompt_tokens', 0) * price.worst_input
+                + usage.get('completion_tokens', 0) * price.output) / per
     if provider is ANTHROPIC:
         return (usage.get('input_tokens', 0) * price.input + usage.get('output_tokens', 0) * price.output
                 + usage.get('cache_creation_input_tokens', 0) * price.cache_write
@@ -327,7 +371,7 @@ class ModelProxy:
                     error = type(exc).__name__
                 finally:
                     usage = usage_of(proxy.provider, received) if received else None
-                    actual = None if usage is None else cost_of(proxy.provider, proxy.prices[model], usage)
+                    actual = None if usage is None else cost_of(proxy.provider, proxy.prices[model], usage, received)
                     charge, breach = proxy._settle(reservation, actual, status)
                     proxy._record(path=path, model=model, status=status, reserved=reservation, charged=charge,
                                   usage_missing=actual is None, breach=breach, error=error, dropped_betas=dropped)
