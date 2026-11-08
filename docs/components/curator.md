@@ -34,7 +34,8 @@ no player access, and reads no evaluation records. P0's
   surviving process is sealed `aborted`, and nothing it wrote is gated. The gate
   publishes atomically or not at all.
 - **The proxy.** It fails closed: missing usage keeps the whole reservation, and a
-  charge above its reservation revokes the session.
+  charge above its reservation revokes the session. It also sets one session-affinity
+  header per session so the provider's prompt cache can be reused.
 - **Knowledge and records.** Each run starts its own knowledge repository. Session
   records are kept, and workspaces are deleted.
 - **Ownership.** The lead owns this code until P1 assigns it.

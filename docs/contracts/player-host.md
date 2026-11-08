@@ -64,13 +64,51 @@ actor tool/program results.
 
 The current adapter reuses its maintained context estimate, reported usage and a text/image
 heuristic floor to warn before capacity becomes critical. The warning offers the
-existing handoff when the actor's tool table includes `player_handoff`; otherwise it
-says no successor is available and asks for `player_finish`.
+existing handoff when the actor's tool table includes `player_handoff` (every actor's
+does; the final actor's handoff call is refused, and the notice says to use
+`player_finish` then); otherwise it says no successor is available and asks for
+`player_finish`.
 These estimates are not exact provider token bounds. Known excessive context
 stops before another fetch. Original text, source/omission provenance and tool
 correlations remain without compaction, fabricated summaries, restore or fallback.
 The finite diagnostic must exercise its envelope, including missing usage and
 oversized results, before admission.
+
+### Request stability and tail notices
+
+A provider's prompt cache helps only when each request extends the previous one
+byte for byte. The host therefore keeps these rules, which the offline
+request-serialization tests prove for consecutive requests, a retried request, a
+handoff successor and a new admission's first actor, with no provider call:
+
+- **Prefix.** A request's messages, minus its transient tail notice, begin with the
+  previous request's messages, minus its own. The one earlier rewrite is image
+  eviction: whole blocks of the oldest pixels become omission markers, each image
+  once, and a marker never changes afterwards. Every other request field (tool table,
+  limits, routing) is identical.
+- **System prompt and tool table.** The system prompt is the frozen context plus the
+  MCP server instructions, and holds no per-actor identity. Every actor of a package
+  gets the same system prompt and the same tool table, so they are byte-identical
+  across actors. The final actor keeps `player_handoff`. An actor's own session and
+  actor IDs (audit data granting no authority) are in the first user message.
+- **Session affinity.** The host gives its provider serializer one session identifier
+  per mechanical session, a digest of the session ID that every actor of the session
+  shares, recorded as `session_affinity_id` in `host-start`. For a route whose provider takes a
+  session-affinity header (the adapter reference names it) the serializer sends it on
+  every request, retries included; a request that would go out without it fails
+  closed (`session-affinity-missing`) before any charge. It is not a credential.
+- **Omission markers** carry the omitted frame's `source_id` (when its tool result
+  has one) and name `player_source` as the way to read it again.
+- **Tail notices** are appended to one request only, never stored, and stay on
+  every later request once their threshold is passed. Each warns before a stop the
+  host itself enforces, naming how to wrap up: the context notice (latched once the
+  `context_reserve_tokens` line is crossed, with the tokens of room left before the
+  stop), the request notice (when `requestWarningAt(max_requests)` requests remain,
+  that is a tenth of them and at least two but at most half), and the time notice
+  (when the work deadline is within a tenth of the allowance, at least a minute but
+  at most half). Each emission is a `tail-notice` event with `request_id` and
+  `kinds`; the notice text itself is not telemetry. Provider errors cannot be warned
+  of before they happen.
 
 ## External control
 
@@ -144,7 +182,8 @@ kinds it does not account for, and observers project only known kinds.
 
 | Event | Contract |
 | --- | --- |
-| `host-start` | Exactly once and first after admitted inputs, with `telemetry_version:3` and `schema:"player-host/3"`. |
+| `host-start` | Exactly once and first after admitted inputs, with `telemetry_version:3` and `schema:"player-host/3"`. It records `session_affinity_id` (additive, absent before 8 November 2026). |
+| `tail-notice` | One per request that carried a tail notice: `request_id`, `kinds` (`context-capacity`, `request-limit`, `host-timeout`) and the context `tokens` estimate. Additive; the driver ignores it. |
 | `request-start` | Every charged HTTP attempt, including retries/failures, numbered contiguously `request-1` onward without exceeding allocation. |
 | `context-manifest` | Exactly one per HTTP attempt, retries included, after that attempt's `request-start` and before its `request-fetch-start`, with the same `request_id`. It is the exact ordered list of parts of the payload actually sent, as digests only, delta-encoded (below). Additive within version 3 under [S-MIGRATION](../standards/migration.md)'s additive-event case: absent from traces recorded before 6 November 2026, which stay readable, and readers report its absence explicitly. |
 | `response-complete` | `usage_available` distinguishes unknown usage; known configured/provider costs remain labelled. |

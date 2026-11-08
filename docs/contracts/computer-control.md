@@ -233,6 +233,16 @@ other root refuses the handoff before a context is written or the actor is seale
 (`player-error/1`, `submission: none`), naming the unknown IDs so the actor can
 correct them (#450). A read-only context request still reports such a root as an
 omission.
+The sealed packet (`player-handoff-context/1`) names the actor that sealed it in
+`session` and `actor_id`. The driver gives it to the successor labelled as its
+predecessor's, and says those fields name the previous actor, not the reader; the
+successor's own IDs come in its first user message.
+Every actor is offered `player_handoff`, so the tool table is constant. The final
+actor of an admission, which has no successor, gets a refusal
+(`player-error/1`, `submission: none`: "no successor is available, because this is the
+final actor. Write your report and call player_finish."). The refusal comes before a
+context is written or the actor is sealed, so it changes no state and the actor keeps
+playing.
 Oversized records/code are omitted explicitly with readable IDs, never truncated
 into plausible executable content. Source references are availability, not read proof.
 

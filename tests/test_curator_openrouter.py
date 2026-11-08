@@ -131,10 +131,27 @@ def test_the_reported_cost_settles_and_the_key_never_leaves_the_proxy(tmp_path):
         assert status == 200 and b'[DONE]' in payload
         assert proxy.spent == Decimal('0.00042') and not proxy.revoked
         sent = {k.lower(): v for k, v in seen[0]['headers'].items()}
-        assert sent['authorization'] == 'Bearer real-router-key' and 'x-session-id' not in sent
+        # The host's own affinity value ('curator-session') is never forwarded; the proxy's is.
+        assert sent['authorization'] == 'Bearer real-router-key' and sent['x-session-id'] == proxy.affinity != 'curator-session'
         assert seen[0]['path'] == ROUTE
     ledger = (tmp_path/'ledger.jsonl').read_text()
-    assert 'real-router-key' not in ledger and proxy.token not in ledger
+    assert 'real-router-key' not in ledger and proxy.token not in ledger and proxy.affinity not in ledger
+
+
+def test_one_affinity_value_per_proxy_session_on_every_request(tmp_path):
+    usage = dict(prompt_tokens=10, completion_tokens=2, total_tokens=12, cost=0.0001)
+    with openrouter(tmp_path, usage) as (proxy, port, seen):
+        for _ in range(3):
+            assert post(port, body(), proxy.token)[0] == 200
+        values = {{k.lower(): v for k, v in entry['headers'].items()}['x-session-id'] for entry in seen}
+        assert values == {proxy.affinity} and len(seen) == 3
+        # Not the session token, and not a function a reader of the ledger can invert to it.
+        assert proxy.affinity != proxy.token and proxy.token not in proxy.affinity
+    rows = [json.loads(line) for line in (tmp_path/'ledger.jsonl').read_text().splitlines()]
+    assert {row['affinity_sha256'] for row in rows} == {proxy.affinity_digest} and proxy.affinity_digest != proxy.affinity
+    (tmp_path/'other').mkdir()
+    with openrouter(tmp_path/'other', usage) as (second, _port, _seen):
+        assert second.affinity != proxy.affinity
 
 
 def test_without_a_reported_cost_tokens_settle_at_the_highest_input_price(tmp_path):

@@ -67,7 +67,8 @@ task completion, inability to continue or completion of that external request;
 ordinary assistant narration does not settle the task. None certifies a save,
 paused game or application exit. [Exact control and settlement](../contracts/player-host.md#external-control).
 
-`player_handoff` seals this actor with canonical immutable context. Only its direct
+Every actor has the same tool table, `player_handoff` included; the final actor of an
+admission is refused a handoff with no state change. `player_handoff` seals this actor with canonical immutable context. Only its direct
 originating issuance or exact original collection settles host handoff. After the
 host closes its owned MCP child, the driver checks actual old process-group
 quiescence and context digest before minting a successor under original limits.

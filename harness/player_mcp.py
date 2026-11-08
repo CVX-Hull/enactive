@@ -48,8 +48,7 @@ def make_server(client: PlayerClient) -> Server:
         'tactics, save/load and success. Memory/procedures/advice are optional fallible player data. Use actual pixels. '
         'Delivered input is not useful success. Partial/unknown input ends dispatch; collect original IDs, never replay/rearm. '
         'User Pause/takeover is permanent. Handoff seals only this actor under original resources; computer_stop does not save/exit. '
-        'No source search, hidden game state, saves, shell or OS tools are available. '
-        f'Current mechanical session={client.config["session"]}; actor={client.config["actor_id"]}; these audit IDs grant no authority.'),
+        'No source search, hidden game state, saves, shell or OS tools are available.'),
         on_list_tools=list_tools,on_call_tool=call_tool,
         get_tool_input_schema=lambda name:specs[name][1] if name in specs else None)
     server.middleware.clear()

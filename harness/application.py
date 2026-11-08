@@ -68,6 +68,8 @@ class Application:
         self.serial = threading.RLock()
         self.host: dict[str, Any] | None = None
         self.claims: list[dict[str, Any]] = []
+        # The actor of this admission that has no successor; set by the driver before that actor starts.
+        self.final_actor: str | None = None
 
     def status(self) -> dict[str, Any]:
         return dict(self.runtime.status(), host=copy.deepcopy(self.host), player_claims=copy.deepcopy(self.claims))
@@ -219,6 +221,10 @@ class Application:
                 return dict(result,collected_operations=collected),None
             if name == 'player_handoff':
                 closed(args, {'ids','summary'})
+                if actor == self.final_actor:
+                    # The tool table is constant across actors; the final actor learns here, with no state change.
+                    raise PlayerError('Handoff not sealed: no successor is available, because this is the final actor. '
+                                      'Write your report and call player_finish.')
                 context_id, sha = self.snapshot(actor, args['ids'], args['summary'])
                 return self.runtime.seal_actor(actor, identity, context_id, sha), None
             raise ControlError('Unknown current tool')

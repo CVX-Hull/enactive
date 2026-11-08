@@ -147,6 +147,18 @@ def test_unknown_handoff_root_is_refused_before_sealing_and_can_be_corrected(ser
     assert packet['knowledge']['omissions']==[]
 
 
+def test_the_final_actor_is_refused_a_handoff_without_any_state_change(service):
+    app,channel,actor,port,client=service
+    app.final_actor=actor['actor_id']
+    refused,_,error=client.call('player_handoff',dict(ids=[],summary='Fixture unfinished task'))
+    assert error and refused['schema']=='player-error/1' and refused['submission']=='none'
+    assert 'no successor is available' in refused['reason'] and 'final actor' in refused['reason'] and 'player_finish' in refused['reason']
+    assert not client.sealed and list(app.context_directory.glob('*.json'))==[]
+    assert app.runtime.actor_stage(actor['actor_id'])=='active'
+    observed,_,error=client.call('computer_observe',{})
+    assert not error and observed['status']=='completed'
+
+
 @pytest.mark.parametrize('bad', ['', 'x'*129])
 def test_malformed_handoff_root_is_refused_before_sealing(service, bad):
     app,channel,actor,port,client=service

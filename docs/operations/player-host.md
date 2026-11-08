@@ -26,8 +26,12 @@ text/image capabilities, context/output capacities, effort mapping, costs, reque
 timeout, request cap, credential environment name, image peak, eviction block and
 required `context_reserve_tokens` (at least `maxTokens`, below `contextWindow`).
 Keep the peak within the provider's image limit (30 on DeepInfra). Block 1 evicts
-one image at a time (rolling); a larger block, such as 39/10, keeps the prompt prefix
-cacheable between evictions.
+one image at a time (rolling); a larger block keeps the prompt prefix cacheable
+between evictions. Prefer a block of about half the peak, such as 39/20 (the
+development runs used 39/10), so evictions are rare. Pi sends a per-session
+`x-session-id` affinity value on the OpenRouter route; the host's
+[request-stability rules](../contracts/player-host.md#request-stability-and-tail-notices)
+govern the rest.
 The [host reference](../../tools/player_host/README.md) owns exact closed fields.
 Unsupported route and player-view configurations are rejected as executable inputs.
 
@@ -37,10 +41,12 @@ Experiment quotas, host counts and other final-actor policy remain outside playe
 context, with one deliberate exception below. Pi loads no coding-agent
 shell/file tools, personal settings, resource discovery or resumed history.
 Both original and successor start fresh; at most two hosts fit `campaign-run/5`.
-The final actor's tool table omits `player_handoff`, so it is never offered a
-handoff that would only end the admission; its capacity warning asks for
-`player_finish` instead. Earlier actors are offered the tool by position alone, so
-a successor can still be refused when original resources run out.
+Every actor gets the same tool table and the same system prompt, so their request
+prefixes are byte-identical; the per-actor session and actor IDs go in the first user
+message. The final actor's `player_handoff` call is refused by the application with no
+state change ("no successor is available"), and the driver marks that actor before it
+starts. Earlier actors are offered the tool by position alone, so a successor can still
+be refused when original resources run out.
 No model, transport, host or coding-agent fallback is supported.
 
 Inject only the selected credential environment variable into the provider child.
