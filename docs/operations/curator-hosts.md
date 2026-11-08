@@ -65,6 +65,97 @@ synthetic.
 is not yet checked against a dated source. #454 does both before any spend, using the
 same probe with a Responses-shape stand-in.
 
+## Pi curator host (the P0 shadow host)
+
+The owner chose one host the project controls for #454 (ADR 009 open decision 2), measured with two
+models through OpenRouter. [`tools/curator_host`](../../tools/curator_host) is a private Node package
+on `@earendil-works/pi-agent-core` and `pi-ai` 1.4.0, the versions the actor's
+[`tools/player_host`](../../tools/player_host/README.md) uses. It has no MCP, no shell and no
+coding-agent application. [`tools/curator_shadow.py`](../../tools/curator_shadow.py) runs it over
+sealed traces.
+
+**Install** (project-local, nothing global):
+`npm --userconfig /dev/null --cache .cache/npm ci --ignore-scripts --no-audit --no-fund --prefix tools/curator_host`.
+Node tests: `cd tools/curator_host && npm test`.
+
+**What a session is.**
+- `run.mjs --config FILE` runs in the workspace. The system prompt is
+  [`prompt.md`](../../tools/curator_host/prompt.md); the first user message is `brief.md`.
+- The frozen configuration is `curator-host/1`: model, effort, request and wall limits, image
+  limits. It names no endpoint and holds no key.
+- The host reads `CURATOR_PROXY_URL` (must be `http://127.0.0.1:<port>`) and presents
+  `CURATOR_PROXY_TOKEN` as its API key. Anything else is refused at start.
+- The tools are `list_dir`, `read_file`, `view_frame`, `write_file` (only `submissions/`,
+  `drafts/`, `scratch/`; no `..`, absolute path or link), `run_workbench` and `finish`.
+  The sandbox enforces the same limits, so the host's refusals are a courtesy to the model.
+- The host stops after `finish`, the request limit, a provider error, the wall limit or
+  context capacity. A session that ends without `finish` fails.
+- Telemetry is JSON lines on stdout: `host-start`, `request-start`, `request-end` (tokens, cached,
+  reasoning and the provider's reported `cost`), `tool-call` (name, ok, duration, bytes) and
+  `host-end`. It never carries the token or a header.
+
+**The shadow runner.**
+`.venv/bin/python -m tools.curator_shadow --arm terra|opus --lineage 397|372 [--sessions NAME…] --cap-usd N --out .runtime/curator-shadow/RUN`.
+- **Input.** It reads the key only from `OPENROUTER_API_KEY`, and fails without it. `--upstream`
+  accepts only OpenRouter or a local http origin. It selects only the sampled sessions (397:
+  `sd1a1`–`sd1a7`; 372: `aidB3 ceil09 ceil07 ceil05 aidB9 aidA5`, in that order) and refuses
+  `lh1`–`lh3` and any other name. A 372 run gets its own sealed memory store; the 397 lineage
+  store is not passed, because it would carry later admissions into earlier sessions.
+- **Run.** One `run_session` per session against `.runtime/knowledge/shadow-454/<arm>/<lineage>/`
+  (game `cdda`). Each session has its own proxy and token, sized to what the whole-run cap leaves
+  (or `--session-cap-usd`). The run stops when the cap is reached, the proxy revokes or records
+  a breach.
+- **Output.** `curator-shadow/1` summaries: one per session (`<out>/<lineage>/<session>/summary.json`
+  and its `proxy-ledger.jsonl`) and one per run (`<out>/summary.json`). A session summary holds
+  wall seconds, host start to first model request, first-request prompt tokens, tokens by kind,
+  proxy-settled cost, requests, tool calls, submissions, verdicts with diagnostics, drafts, the
+  record path, the proxy's `revoked` and breaches, and whether the cap stopped it.
+
+**Two arms, one route each.** The route is pinned to one provider with no fallback.
+
+| Arm | OpenRouter model | Pinned provider | Effort | Frozen price per MTok (in / out / cache read / cache write) |
+| --- | --- | --- | --- | --- |
+| `terra` | `openai/gpt-6.1-terra` | `openai` (as the actor) | medium | $1 / $5 / $0.05 / $1.25 |
+| `opus` | `anthropic/claude-opus-5.5` | `anthropic` (not yet confirmed against the model's endpoint list) | medium | $4 / $20 / $0.20 / $8 (1-hour tier; 5-minute $5) |
+
+Prices are in [`data/curator/openrouter-prices-2026-11-08.json`](../../data/curator/openrouter-prices-2026-11-08.json)
+(`curator-prices/1`), read from OpenRouter's public model list on 8 November 2026. The context window
+is 262,144 tokens for both arms, so they see the same capacity as the actor; Terra's higher
+long-prompt tier (above 272,000 tokens) is therefore unreachable. Opus's reasoning is mandatory and
+its listed default effort is high; `--effort` overrides.
+
+**What differs from the actor's route.** The proxy forwards a fixed field list, so the curator's
+frozen route sets `maxTokensField: max_completion_tokens` (the actor uses `max_tokens`) and the host
+never adds `service_tier` (the actor's host adds `default`). Both are refused by the proxy. Nothing
+else Pi sends was refused: in the tests every request of both arms passed the allowlist and the
+proxy ledger shows no refusal.
+
+**Tool roots.** Node is a Homebrew build linked against about twenty kegs through
+`/opt/homebrew/opt/<name>` links. The tool roots are the node keg, each keg its libraries live in
+(read from `otool -L`), `/opt/homebrew/opt` (links only), the host package directory, the directory
+holding the frozen configuration, and the Python base prefix for the workbench. Two facts about
+running node under the profile:
+- **`OPENSSL_CONF=/dev/null`.** Node reads `/opt/homebrew/etc/openssl@4/openssl.cnf` at start and
+  aborts when the profile refuses it. The host speaks plain http to the loopback proxy, so no
+  configuration is needed.
+- **`launch.py`.** Node aborts at start when its standard output is a file the profile does not
+  let it read (it calls `fstat` on descriptors 0 to 2, and the session record's `host-output.log`
+  is outside the profile). A pipe is accepted. The sandbox argv is therefore
+  `python -I launch.py <node> run.mjs --config FILE`, which relays node's output into the log. A
+  sandbox that allowed metadata on its own output file would remove the relay.
+
+**Observed footprint** (2026-11-08, $0, local stand-in with three scripted requests, one frame image
+and one workbench call): about 0.35 s of host time, 93–98 MB peak, 0.13–0.15 s from process start
+to the first model request, no surviving process. The escape suite
+(`tests/curator_adversary.py` through `tests/test_curator_sandbox.py`) passes unchanged with these
+roots added to the layout.
+
+**Image cost in the reservation.** A 960×640 frame is about 280 KB; its base64 is counted by the
+proxy as that many input tokens at the arm's highest input price. Six images (about 2.3 MB of
+base64) reserve about $2.90 on the Terra arm and about $18 on the Opus arm per request, before
+any real cost, so a small session cap refuses requests that would really cost cents. The host keeps at
+most `--max-context-images` (default 6) in a request, evicting the oldest in blocks.
+
 ## Both hosts
 
 - **Binaries.** Both are single native binaries linking only system libraries:

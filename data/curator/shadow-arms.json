@@ -1,0 +1,8 @@
+{
+ "schema": "curator-shadow-arms/1",
+ "note": "The two #454 arms (ADR 009 open decision 2, owner decision of 8 November 2026). Each route is pinned to one OpenRouter provider.",
+ "arms": {
+  "terra": {"model": "openai/gpt-6.1-terra", "name": "GPT-6.1 Terra via pinned openai (curator)", "provider": "openai", "effort": "medium"},
+  "opus": {"model": "anthropic/claude-opus-5.5", "name": "Claude Opus 5.5 via pinned anthropic (curator)", "provider": "anthropic", "effort": "medium"}
+ }
+}

@@ -18,6 +18,7 @@ PRODUCT = re.compile(r"\bPi\b|pi-player-host|pi-agent-core|pi-ai\b|pi-mcp|earend
 CITATIONS = re.compile(r"\[[^\]]*\]\(https?://[^)]*\)|\]\([^)]*\)|https?://\S+")
 ALLOWED = (
     "tools/player_host/",     # current adapter
+    "tools/curator_host/",    # the curator's adapter (ADR 009 P0 shadow)
     "docs/operations/",       # operator procedures, including coding-agent hosts
     "docs/setup.md",
     "docs/environment.md",
