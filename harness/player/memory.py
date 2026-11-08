@@ -174,6 +174,21 @@ class Memory:
         except (sqlite3.Error, ValueError, TypeError) as exc:
             raise PlayerError(f'Cannot read source: {exc}') from exc
 
+    def unknown_roots(self, ids: list[str]) -> list[str]:
+        """Root IDs that name neither a stored record nor a stored program, in order."""
+        if type(ids) is not list or len(ids) > 32:
+            raise PlayerError('Context selects at most 32 roots')
+        unknown = []
+        try:
+            for item_id in dict.fromkeys(ids):
+                identity(item_id)
+                if not any(self._db.execute(f'SELECT 1 FROM {table} WHERE id=?', (item_id,)).fetchone()
+                           for table in ('records', 'programs')):
+                    unknown.append(item_id)
+        except sqlite3.Error as exc:
+            raise PlayerError(f'Cannot read player memory: {exc}') from exc
+        return unknown
+
     def context(self, ids: list[str], max_bytes: int = 65536) -> dict:
         from .context import build_context
         return build_context(self, ids, max_bytes=max_bytes)

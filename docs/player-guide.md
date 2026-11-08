@@ -123,7 +123,9 @@ actions yourself. An immediate user Pause takes precedence and permits no furthe
 automated inputs, including saving. Stopping input may leave the game running.
 
 When fresh context helps and control remains available, call `player_handoff` with
-selected record roots and a concise unfinished-task summary. It seals you; later
+selected record roots and a concise unfinished-task summary. Every root must be the
+ID of a stored record or program. If one is not, the handoff is refused before
+anything is sealed and the error names the ID: correct it and call again. It seals you; later
 reads/original collection do not permit input or another handoff. The driver must
 verify your actual host/MCP quiescence and canonical context before a successor.
 No save, menu or identity condition is required for this actor-only transfer.

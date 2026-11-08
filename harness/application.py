@@ -104,6 +104,13 @@ class Application:
     def snapshot(self, actor_id: str, roots: list[str], summary: str) -> tuple[str, str]:
         if not isinstance(summary, str) or len(summary) > 8192:
             raise PlayerError('Handoff summary must be within8192 characters')
+        # Refuse before anything is written or sealed, so the actor can correct the IDs
+        # and retry; an unknown root would otherwise reach the successor only as an omission.
+        unknown = self.memory.unknown_roots(roots)
+        if unknown:
+            raise PlayerError('Handoff not sealed: no stored record or program has ID '
+                              + ', '.join(unknown) + '. Check the IDs (player_memory_read or '
+                              'player_memory_query lists stored records) and call player_handoff again.')
         context = self.memory.context(roots, max_bytes=65536)
         identity = uuid.uuid4().hex
         packet = dict(schema='player-handoff-context/1', context_id=identity, session=self.runtime.session,
