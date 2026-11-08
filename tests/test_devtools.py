@@ -25,7 +25,8 @@ class DevToolTests(unittest.TestCase):
         shutil.copyfile(ROOT / "pyproject.toml", self.root / "pyproject.toml")
         (self.root / "harness").mkdir()
         self.write("__init__.py", "")
-        for package in ("computer", "player", "evaluation", "evaluation/core", "evaluation/cdda", "viewer", "curator"):
+        for package in ("computer", "player", "evaluation", "evaluation/core", "evaluation/cdda", "viewer", "curator",
+                        "trace"):
             (self.root / "harness" / package).mkdir()
             self.write(f"{package}/__init__.py", "")
         for module in ("computer/protocol", "computer/ports", "computer/runtime", "computer/channel", "computer/store", "computer/launch", "player/memory", "application", "player_client", "player_tools", "player_mcp", "server", "__main__"):
