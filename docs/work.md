@@ -35,7 +35,8 @@ for a capability baseline.
 - **Seven-day lineage, 7 November 2026** ([#397](https://github.com/CVX-Hull/enactive/issues/397),
   [record](acceptance/2026-11-07-seven-day-397.md)): a development run on the #396 arm.
   It died on day 2 at 47.8 elapsed hours, catching fire while resuming a craft beside a
-  fire. Day 1 passed; there were no stalls, and about $0.80 per game hour.
+  fire. Day 1 passed; no input-window stall (#396) or custody stop occurred; about $0.80
+  per game hour.
 
 Most of ADR008's follow-ons take their trigger from the seven-day lineage's evidence: intent visibility
 ([#384](https://github.com/CVX-Hull/enactive/issues/384)), label writing
