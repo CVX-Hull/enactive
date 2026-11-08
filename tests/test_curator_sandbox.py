@@ -206,7 +206,34 @@ REFUSED = {
     'service tier': (400, dict(body=dict(request(), service_tier='priority'))),
     'fallbacks': (400, dict(body=dict(request(), fallbacks='default'))),
     'container': (400, dict(body=dict(request(), container='c'))),
+    'url image inside a tool result': (400, dict(body=dict(request(), messages=[dict(role='user', content=[
+        dict(type='tool_result', tool_use_id='t', content=[dict(type='image', source=dict(type='url', url='u'))])])]))),
+    'unhashable block type': (400, dict(body=dict(request(), messages=[dict(role='user', content=[
+        dict(type=['text'], text='x')])]))),
 }
+
+
+def test_openai_shapes_cannot_fetch_through_tool_output(tmp_path):
+    from harness.curator.proxy import OPENAI, refusal
+    fetch = dict(model='m', max_output_tokens=10, input=[dict(type='function_call_output', call_id='c', output=[
+        dict(type='input_file', file_url='https://example.com/x.pdf?d=leak')])])
+    image = dict(model='m', max_output_tokens=10, input=[dict(type='function_call_output', call_id='c', output=[
+        dict(type='input_image', image_url='https://example.com/x.png')])])
+    assert refusal(OPENAI, fetch) and refusal(OPENAI, image)
+    stored = dict(model='m', max_output_tokens=10, input='hi', previous_response_id='r')
+    assert refusal(OPENAI, stored)
+    plain = dict(model='m', max_output_tokens=10, input=[dict(type='message', role='user', content=[
+        dict(type='input_text', text='hi')])])
+    assert refusal(OPENAI, plain) is None and plain['store'] is False
+
+
+@pytest.mark.skipif(sys.platform != 'darwin' or not Path(sandbox.SANDBOX_EXEC).exists(), reason='Seatbelt lane')
+def test_ordinary_temporary_file_churn_is_not_a_breach(tmp_path):
+    layout = make_layout(tmp_path/'s')
+    churn = ('import os,shutil,tempfile,time\nend=time.time()+3\n'
+             'while time.time()<end:\n    d=tempfile.mkdtemp(); os.makedirs(d+"/a/b"); shutil.rmtree(d)\n')
+    result = sandbox.run([str(PYTHON), '-I', '-c', churn], layout, limits=sandbox.Limits(wall_seconds=20, poll_seconds=.01))
+    assert result.stopped is None and result.returncode == 0
 
 
 @pytest.mark.parametrize('case', sorted(REFUSED))

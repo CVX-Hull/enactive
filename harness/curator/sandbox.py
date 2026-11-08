@@ -181,6 +181,10 @@ def _disk(paths) -> int:
     total = 0
 
     def fail(error):
+        # An entry removed or replaced between listing and reading is ordinary temporary-file
+        # churn, not hiding; anything else (permission, over-long path) is a breach.
+        if isinstance(error, (FileNotFoundError, NotADirectoryError)):
+            return
         raise Unmeasurable(str(error))
 
     for root in paths:
@@ -188,7 +192,7 @@ def _disk(paths) -> int:
             for name in files:
                 try:
                     total += os.lstat(os.path.join(directory, name)).st_blocks * 512
-                except FileNotFoundError:
+                except (FileNotFoundError, NotADirectoryError):
                     pass
                 except OSError as error:
                     raise Unmeasurable(str(error)) from error

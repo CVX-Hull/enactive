@@ -159,6 +159,11 @@ server outside the sandbox.
 - **Fail closed.** A charge above its reservation is recorded as a breach and revokes
   the token. So does a 200 response without readable usage, which also keeps the whole
   reservation.
+- **The cap is not absolute.** Revocation happens after a response, so recorded spend
+  can pass the cap by the overshoot of the requests already in flight, at most eight.
+  With the allowed shapes, body bytes bound tokens and the overshoot is small. A fixed
+  provider-side overhead on a tiny request could still trip a breach and revoke a
+  legitimate session; that would be a stopped session, not lost money.
 - **Limits.** Concurrency is bounded (8), request reads time out (30 s), and bodies
   are capped at 8 MiB.
 - **Ledger.** Each request is appended without the key or token. Prices are a frozen
@@ -173,7 +178,7 @@ server outside the sandbox.
 
 **Escape suite.** An adversary script runs inside the sandbox and reports only
 allowed or denied, never contents. After the independent review (below), the local
-run on 2026-11-08 passed 46 tests in 31 s. Exactly these attempts were allowed: reading the brief and knowledge files,
+run on 2026-11-08 passed 50 tests in 38 s. Exactly these attempts were allowed: reading the brief and knowledge files,
 writing `scratch/`, `submissions/` and `drafts/`, and reaching the proxy. Every
 other attempt was denied:
 - **Secrets.** Reading the real `.runtime/credentials.json`, a live `actor.json` with
@@ -233,6 +238,17 @@ the two at the end.
   on how the provider bills partial output. This is risk 11.
 - **Unlinked open files** are caught only by the volume floor, not the per-session
   count. This is part of risk 3.
+
+**Verification pass.** The same reviewer re-ran its probes against the fixes. Eight of
+eleven findings were fixed outright. H1 was partial, as the cap caveat above records.
+L4 was partial. H2 still had a gap on the OpenAI path: tool outputs were not walked.
+
+The pass also found three new problems, all now fixed with tests:
+- **N1.** The disk fix stopped sessions falsely on ordinary temporary-directory churn,
+  because a vanished entry counted as unmeasurable.
+- **N2.** A non-string block `type` crashed the handler.
+- **H2 on OpenAI.** The body walk now descends every nested value except opaque
+  argument fields.
 
 Claude Code 2.1.319 sends five beta flags:
 - `claude-code-20250219`

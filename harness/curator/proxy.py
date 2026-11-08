@@ -121,6 +121,8 @@ def refusal(provider: Provider, request: object) -> str | None:
         return 'provider-side storage is not allowed'
     if provider is OPENAI and request.get('store') is None:
         request['store'] = False
+    # Walk every nested value of the conversation, except fields that are opaque arguments
+    # or schemas rather than content.
     stack = [request.get('messages'), request.get('system'), request.get('input')]
     while stack:
         item = stack.pop()
@@ -128,7 +130,7 @@ def refusal(provider: Provider, request: object) -> str | None:
             stack.extend(item)
         elif isinstance(item, dict):
             kind = item.get('type')
-            if kind is not None and kind not in provider.blocks:
+            if kind is not None and (not isinstance(kind, str) or kind not in provider.blocks):
                 return f'content block {kind!r} not allowed'
             source = item.get('source')
             if isinstance(source, dict) and source.get('type') != 'base64':
@@ -138,8 +140,14 @@ def refusal(provider: Provider, request: object) -> str | None:
                 return 'only inline images are allowed'
             if 'file_id' in item or 'file_url' in item:
                 return 'stored or fetched files are not allowed'
-            stack.extend(v for k, v in item.items() if k in ('content', 'messages'))
+            stack.extend(v for k, v in item.items() if k not in OPAQUE)
     return None
+
+
+# Fields whose values are tool arguments or schemas, not content blocks.
+# `source` is checked where it appears; `cache_control` carries its own unrelated `type`.
+OPAQUE = frozenset({'input', 'arguments', 'input_schema', 'parameters', 'data', 'text', 'thinking', 'signature',
+                    'source', 'cache_control'})
 
 
 def usage_of(provider: Provider, body: bytes) -> dict[str, int] | None:
@@ -296,12 +304,12 @@ class ModelProxy:
                     return self.refuse(400, 'incomplete body')
                 try:
                     request = json.loads(body)
-                except ValueError:
-                    return self.refuse(400, 'body must be JSON')
-                reason = refusal(proxy.provider, request)
+                    reason = refusal(proxy.provider, request)
+                    body = json.dumps(request, separators=(',', ':')).encode()
+                except (ValueError, TypeError, RecursionError):
+                    return self.refuse(400, 'body must be well-formed JSON')
                 if reason:
                     return self.refuse(400, reason)
-                body = json.dumps(request, separators=(',', ':')).encode()
                 model = request.get('model')
                 try:
                     output_limit = int(request.get(proxy.provider.output_field) or 0)
