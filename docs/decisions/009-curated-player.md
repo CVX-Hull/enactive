@@ -420,6 +420,8 @@ Each session gets a fresh workspace with the access a coding agent expects:
   down by the brief and an index of types and programs that the curator maintains
   in the knowledge repository, published through the gate like everything else.
   It is measured in the P0 shadow run.
+- **Version 0** of the repository, sessions, drafts and gate (#453) is specified in
+  [curator sessions, drafts and gate v0](../design/curator-session.md).
 
 ### Submission gate
 
