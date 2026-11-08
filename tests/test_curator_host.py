@@ -242,6 +242,12 @@ def test_the_runner_refuses_held_out_and_unsampled_names(tmp_path, monkeypatch, 
     assert shadow.select('397', None)[1] == [f'sd1a{n}' for n in range(1, 8)]
 
 
+@pytest.fixture(autouse=True)
+def no_keychain(monkeypatch):
+    """The runner falls back to the operator's keychain map; tests never reach a real keychain."""
+    monkeypatch.setattr(shadow, 'credential', lambda name: os.environ.get(name) or None)
+
+
 def test_the_runner_needs_the_key_in_its_variable_and_only_loopback_or_openrouter(tmp_path, monkeypatch, capsys):
     base = ['--arm', 'terra', '--lineage', '397', '--cap-usd', '1', '--runtime-root', str(tmp_path/'runtime'),
             '--out', str(tmp_path/'runtime'/'curator-shadow'/'x')]

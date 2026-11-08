@@ -4,7 +4,9 @@ Replays recorded lineages through curator sessions, one `run_session` per admiss
 lineage order, against a per-arm, per-lineage knowledge repository. The arm picks the model
 (`terra` or `opus`, both through OpenRouter). Every model request goes through a `ModelProxy`
 that holds the provider key and enforces the dollar cap; the host presents only a per-session
-token. The key is read from `OPENROUTER_API_KEY` and nowhere else, and is never printed or written.
+token. The key comes from `OPENROUTER_API_KEY`, or else from the operator's keychain item mapped in
+the git-ignored `.runtime/credentials.json` (the campaign's own `credential()`), and is never
+printed or written.
 
     python -m tools.curator_shadow --arm terra --lineage 397 --sessions sd1a1 --cap-usd 2 \
         --out .runtime/curator-shadow/pilot-1
@@ -36,6 +38,7 @@ from harness.curator import sandbox  # noqa: E402
 from harness.curator.knowledge import Repository  # noqa: E402
 from harness.curator.proxy import OPENROUTER, ModelProxy, Price  # noqa: E402
 from harness.curator.session import SessionConfig, run_session  # noqa: E402
+from tools.campaign_supervision import credential  # noqa: E402
 
 SCHEMA = 'curator-shadow/1'
 PRICES_SCHEMA = 'curator-prices/1'
@@ -408,11 +411,13 @@ def main(argv: list[str] | None = None) -> int:
         args.evidence_root = os.environ['ENACTIVE_EVIDENCE_ROOT']
     try:
         select(args.lineage, args.sessions)  # refuse held-out and unsampled names before anything else
-        key = os.environ.get(KEY_VARIABLE)
+        # The campaign's own resolution: the variable, else the operator's keychain item mapped in
+        # the git-ignored .runtime/credentials.json. The value goes only to the proxy.
+        key = credential(KEY_VARIABLE)
         if not key:
-            raise ShadowError(f'{KEY_VARIABLE} is not set; the runner reads the provider key only from that variable')
+            raise ShadowError(f'{KEY_VARIABLE} is not set and not mapped to a keychain item (docs/setup.md)')
         run = run_shadow(args, key)
-    except (ShadowError, OSError, subprocess.CalledProcessError) as error:
+    except (ShadowError, OSError, ValueError, subprocess.CalledProcessError) as error:
         print(f'curator_shadow: {error}', file=sys.stderr)
         return 2
     print(json.dumps({k: run[k] for k in ('arm', 'lineage', 'sessions_run', 'total_cost_usd', 'stopped', 'complete')}))
