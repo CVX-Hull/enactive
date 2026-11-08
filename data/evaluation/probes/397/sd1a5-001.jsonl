@@ -1,0 +1,118 @@
+{"type":"carry","fact":"F1","boundary":"sd1a4-002>sd1a5-001","carried":true,"where":"report"}
+{"type":"carry","fact":"F2","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F3","boundary":"sd1a4-002>sd1a5-001","carried":true,"where":"report"}
+{"type":"carry","fact":"F4","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F5","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F6","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F7","boundary":"sd1a4-002>sd1a5-001","carried":true,"where":"report"}
+{"type":"carry","fact":"F8","boundary":"sd1a4-002>sd1a5-001","carried":true,"where":"report"}
+{"type":"carry","fact":"F9","boundary":"sd1a4-002>sd1a5-001","carried":true,"where":"report"}
+{"type":"carry","fact":"F10","boundary":"sd1a4-002>sd1a5-001","carried":true,"where":"report"}
+{"type":"carry","fact":"F11","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F12","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F13","boundary":"sd1a4-002>sd1a5-001","carried":true,"where":"report"}
+{"type":"carry","fact":"F14","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F15","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F16","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F17","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F18","boundary":"sd1a4-002>sd1a5-001","carried":true,"where":"report"}
+{"type":"carry","fact":"F19","boundary":"sd1a4-002>sd1a5-001","carried":true,"where":"packet"}
+{"type":"carry","fact":"F20","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F21","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F22","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F23","boundary":"sd1a4-002>sd1a5-001","carried":true,"where":"report"}
+{"type":"carry","fact":"F24","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F25","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F26","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F27","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F28","boundary":"sd1a4-002>sd1a5-001","carried":true,"where":"report"}
+{"type":"carry","fact":"F29","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F30","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F31","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F32","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F33","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F34","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F35","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F36","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F37","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F38","boundary":"sd1a4-002>sd1a5-001","carried":true,"where":"packet"}
+{"type":"carry","fact":"F39","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F40","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F41","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F42","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F43","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F44","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F45","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F46","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F47","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F48","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F49","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F50","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F51","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F52","boundary":"sd1a4-002>sd1a5-001","carried":true,"where":"report"}
+{"type":"carry","fact":"F53","boundary":"sd1a4-002>sd1a5-001","carried":true,"where":"report"}
+{"type":"carry","fact":"F54","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F55","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F56","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F57","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F58","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F59","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F60","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F61","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F62","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F63","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F64","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F65","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F66","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F69","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F70","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F71","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F72","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F73","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F74","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F75","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F77","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F78","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F79","boundary":"sd1a4-002>sd1a5-001","carried":true,"where":"report"}
+{"type":"carry","fact":"F80","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F82","boundary":"sd1a4-002>sd1a5-001","carried":true,"where":"report"}
+{"type":"carry","fact":"F83","boundary":"sd1a4-002>sd1a5-001","carried":true,"where":"report"}
+{"type":"carry","fact":"F84","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F85","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F86","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"carry","fact":"F87","boundary":"sd1a4-002>sd1a5-001","carried":false,"where":null}
+{"type":"event","fact":"F23","event":"used","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-3","note":"loads Morgan Hale from the Whitethorn entry in the load menu"}
+{"type":"event","fact":"F1","event":"needed","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-195","note":"opens the character screen to establish who the survivor is"}
+{"type":"event","fact":"F1","event":"rediscovered","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-195","note":"stats screen shows Morgan Hale, male, 25 years"}
+{"type":"event","fact":"F28","event":"used","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-195","note":"the long pointy stick is the wielded weapon on the character screen"}
+{"type":"event","fact":"F3","event":"rediscovered","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-195","note":"Ava Burkhart is listed beside the player and the log notes a position swap with her"}
+{"type":"event","fact":"F70","event":"needed","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-195","note":"gear on the shelter floor is relevant to what the survivor carries"}
+{"type":"event","fact":"F70","event":"rediscovered","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-195","note":"log says you see here 1 bindle on the floor"}
+{"type":"event","fact":"F28","event":"needed","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-205","note":"searches recipes for a long pointy stick or spear as a weapon upgrade"}
+{"type":"event","fact":"F28","event":"rediscovered","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-214","note":"long pointy stick recipe again needs 1 long stick, shown red, and about 1 minute 2 seconds"}
+{"type":"event","fact":"F31","event":"needed","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-214","note":"the recipe lacks a long stick, which the forest pile would supply"}
+{"type":"event","fact":"F16","event":"needed","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-351","note":"searches cordage recipes to get line for the basic fishing rod"}
+{"type":"event","fact":"F3","event":"used","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-858","note":"opens Ava's interaction menu in the shelter"}
+{"type":"event","fact":"F54","event":"needed","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-1073","note":"tries to go down the stairs and gets can't go down here"}
+{"type":"event","fact":"F58","event":"needed","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-1120","note":"searches cattail recipes for cooked stalks"}
+{"type":"event","fact":"F58","event":"rediscovered","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-1120","note":"cooked cattail stalk gives 25 kcal and needs a cooking heat source, shown red, and light"}
+{"type":"event","fact":"F82","event":"needed","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-1158","note":"opens the consume menu to review food and vitamins"}
+{"type":"event","fact":"F82","event":"rediscovered","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-1158","note":"header shows vitamin C 75%, list shows 32 stalks, 4 rhizomes, 3 clean water, 5 rations"}
+{"type":"event","fact":"F19","event":"needed","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-1158","note":"chooses among foods"}
+{"type":"event","fact":"F19","event":"rediscovered","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-1158","note":"4 rhizomes listed at +250 kcal with 3 days shelf life"}
+{"type":"event","fact":"F20","event":"needed","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-1158","note":"chooses among foods"}
+{"type":"event","fact":"F20","event":"rediscovered","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-1158","note":"5 protein rations listed at +800 kcal"}
+{"type":"event","fact":"F25","event":"needed","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-1158","note":"chooses among foods"}
+{"type":"event","fact":"F25","event":"rediscovered","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-1158","note":"cattail stalks listed at +18 kcal"}
+{"type":"event","fact":"F43","event":"rediscovered","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-1158","note":"single pot still Irish whiskey (21) is carried"}
+{"type":"event","fact":"F30","event":"needed","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-1201","note":"floor items on the route are checked for crafting materials"}
+{"type":"event","fact":"F30","event":"rediscovered","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-1201","note":"log lists a plank, nails, hinges, splintered wood and a nail on the floor"}
+{"type":"event","fact":"F38","event":"needed","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-1201","note":"steps onto the cupboard while looking at food stores"}
+{"type":"event","fact":"F38","event":"rediscovered","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-1201","note":"log shows 20 small cardboard boxes of protein ration on the cupboard"}
+{"type":"event","fact":"F38","event":"rediscovered","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-1289","note":"expanded pickup list shows 20 boxes each holding a protein ration"}
+{"type":"event","fact":"F83","event":"needed","frame":"3c6acb3817ebc5b0fced8f7a122b7bbf-1295","note":"look-around check of the shelter surroundings before handoff"}
+{"type":"fact","id":"F88","statement":"A short cordage piece needs an electric spinwheel and tanbark, willowbark, straw or a withered plant, so it cannot be made here","category":"procedure","observed":"3c6acb3817ebc5b0fced8f7a122b7bbf-355","stored":null}
+{"type":"fact","id":"F89","statement":"A pointy stick can be crafted from memory using a stick or a plank from the shelter floor, with Ava assisting","category":"procedure","observed":"3c6acb3817ebc5b0fced8f7a122b7bbf-723","stored":null}
+{"type":"fact","id":"F90","statement":"The survivor carries an improvised fishing hook but no fishing line, so the basic fishing rod is not crafted","category":"item","observed":"text","stored":"5db17f"}
+{"type":"fact","id":"F91","statement":"The survivor also carries 6 pine resin and 2 cotton patches","category":"item","observed":"3c6acb3817ebc5b0fced8f7a122b7bbf-1158","stored":null}
+{"type":"end","frames_viewed":19}

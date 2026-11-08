@@ -1,0 +1,97 @@
+{"type":"carry","fact":"F1","boundary":"sd1a2-002>sd1a3-001","carried":true,"where":"report"}
+{"type":"carry","fact":"F2","boundary":"sd1a2-002>sd1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F3","boundary":"sd1a2-002>sd1a3-001","carried":true,"where":"report"}
+{"type":"carry","fact":"F12","boundary":"sd1a2-002>sd1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F4","boundary":"sd1a2-002>sd1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F11","boundary":"sd1a2-002>sd1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F5","boundary":"sd1a2-002>sd1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F6","boundary":"sd1a2-002>sd1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F7","boundary":"sd1a2-002>sd1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F8","boundary":"sd1a2-002>sd1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F9","boundary":"sd1a2-002>sd1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F10","boundary":"sd1a2-002>sd1a3-001","carried":true,"where":"report"}
+{"type":"carry","fact":"F13","boundary":"sd1a2-002>sd1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F14","boundary":"sd1a2-002>sd1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F15","boundary":"sd1a2-002>sd1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F16","boundary":"sd1a2-002>sd1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F17","boundary":"sd1a2-002>sd1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F18","boundary":"sd1a2-002>sd1a3-001","carried":true,"where":"report"}
+{"type":"carry","fact":"F19","boundary":"sd1a2-002>sd1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F20","boundary":"sd1a2-002>sd1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F21","boundary":"sd1a2-002>sd1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F22","boundary":"sd1a2-002>sd1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F23","boundary":"sd1a2-002>sd1a3-001","carried":true,"where":"report"}
+{"type":"carry","fact":"F24","boundary":"sd1a2-002>sd1a3-001","carried":true,"where":"report"}
+{"type":"carry","fact":"F25","boundary":"sd1a2-002>sd1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F26","boundary":"sd1a2-002>sd1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F27","boundary":"sd1a2-002>sd1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F28","boundary":"sd1a2-002>sd1a3-001","carried":true,"where":"report"}
+{"type":"carry","fact":"F29","boundary":"sd1a2-002>sd1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F30","boundary":"sd1a2-002>sd1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F31","boundary":"sd1a2-002>sd1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F32","boundary":"sd1a2-002>sd1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F33","boundary":"sd1a2-002>sd1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F34","boundary":"sd1a2-002>sd1a3-001","carried":true,"where":"report"}
+{"type":"carry","fact":"F35","boundary":"sd1a2-002>sd1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F36","boundary":"sd1a2-002>sd1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F37","boundary":"sd1a2-002>sd1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F38","boundary":"sd1a2-002>sd1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F39","boundary":"sd1a2-002>sd1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F40","boundary":"sd1a2-002>sd1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F41","boundary":"sd1a2-002>sd1a3-001","carried":true,"where":"report"}
+{"type":"event","fact":"F23","event":"used","frame":"12ba39c88fbb4da11264b8d2c4634db1-2","note":"loads Morgan Hale from the Whitethorn load list"}
+{"type":"event","fact":"F12","event":"needed","frame":"12ba39c88fbb4da11264b8d2c4634db1-216","note":"inventory check while planning fire and light sources"}
+{"type":"event","fact":"F12","event":"rediscovered","frame":"12ba39c88fbb4da11264b8d2c4634db1-216","note":"inventory shows matchbook 15/20 and pocket knife"}
+{"type":"event","fact":"F37","event":"needed","frame":"12ba39c88fbb4da11264b8d2c4634db1-216","note":"looking for a light source in the inventory"}
+{"type":"event","fact":"F37","event":"rediscovered","frame":"12ba39c88fbb4da11264b8d2c4634db1-216","note":"smartphone shows 0 charge and flashlight is off"}
+{"type":"event","fact":"F28","event":"used","frame":"12ba39c88fbb4da11264b8d2c4634db1-216","note":"keeps the long pointy stick wielded as the weapon"}
+{"type":"event","fact":"F10","event":"used","frame":"12ba39c88fbb4da11264b8d2c4634db1-355","note":"crafts clean water from memory with Ava assisting"}
+{"type":"event","fact":"F3","event":"used","frame":"12ba39c88fbb4da11264b8d2c4634db1-355","note":"swaps places with Ava and she assists with crafting"}
+{"type":"event","fact":"F24","event":"used","frame":"12ba39c88fbb4da11264b8d2c4634db1-777","note":"crafts starch from rhizomes"}
+{"type":"event","fact":"F40","event":"used","frame":"12ba39c88fbb4da11264b8d2c4634db1-777","note":"Ava helps with the starch batch while the player waits"}
+{"type":"event","fact":"F29","event":"needed","frame":"12ba39c88fbb4da11264b8d2c4634db1-965","note":"searches flour recipes to turn starch into flour"}
+{"type":"event","fact":"F29","event":"rediscovered","frame":"12ba39c88fbb4da11264b8d2c4634db1-965","note":"bread flour recipe again needs a food processor shown missing"}
+{"type":"event","fact":"F11","event":"needed","frame":"12ba39c88fbb4da11264b8d2c4634db1-1202","note":"black rats listed beside the shelter door on leaving"}
+{"type":"event","fact":"F11","event":"rediscovered","frame":"12ba39c88fbb4da11264b8d2c4634db1-1202","note":"black rat listed near the shelter exit"}
+{"type":"event","fact":"F7","event":"needed","frame":"12ba39c88fbb4da11264b8d2c4634db1-1202","note":"piglets sit outside the door on the route out"}
+{"type":"event","fact":"F7","event":"rediscovered","frame":"12ba39c88fbb4da11264b8d2c4634db1-1202","note":"2 wild boar piglets listed near the door"}
+{"type":"event","fact":"F38","event":"needed","frame":"12ba39c88fbb4da11264b8d2c4634db1-1394","note":"walks across the cupboard while moving through the shelter"}
+{"type":"event","fact":"F38","event":"rediscovered","frame":"12ba39c88fbb4da11264b8d2c4634db1-1394","note":"cupboard holds 20 small cardboard boxes of protein ration"}
+{"type":"event","fact":"F39","event":"needed","frame":"12ba39c88fbb4da11264b8d2c4634db1-1394","note":"passes the locker area while checking clothing"}
+{"type":"event","fact":"F39","event":"rediscovered","frame":"12ba39c88fbb4da11264b8d2c4634db1-1394","note":"message lists 7 emergency jackets here"}
+{"type":"event","fact":"F7","event":"rediscovered","frame":"12ba39c88fbb4da11264b8d2c4634db1-4246","note":"2 wild boar piglets listed near the road"}
+{"type":"event","fact":"F14","event":"needed","frame":"12ba39c88fbb4da11264b8d2c4634db1-3254","note":"overmap cursor on the boat rental while choosing a destination"}
+{"type":"event","fact":"F14","event":"rediscovered","frame":"12ba39c88fbb4da11264b8d2c4634db1-4599","note":"item list near the lake shows the cash register on the floor"}
+{"type":"event","fact":"F8","event":"needed","frame":"12ba39c88fbb4da11264b8d2c4634db1-3254","note":"overmap shows the lake west while the player picks a travel target"}
+{"type":"event","fact":"F21","event":"needed","frame":"12ba39c88fbb4da11264b8d2c4634db1-3802","note":"zombie spotted cancels the auto move toward the lake"}
+{"type":"event","fact":"F33","event":"needed","frame":"12ba39c88fbb4da11264b8d2c4634db1-6335","note":"salvages a shelter sheet for cloth for the hand wraps"}
+{"type":"event","fact":"F3","event":"used","frame":"12ba39c88fbb4da11264b8d2c4634db1-6335","note":"Ava helps with the crafting task"}
+{"type":"event","fact":"F19","event":"needed","frame":"12ba39c88fbb4da11264b8d2c4634db1-6566","note":"opens the consume menu to choose food"}
+{"type":"event","fact":"F19","event":"rediscovered","frame":"12ba39c88fbb4da11264b8d2c4634db1-6566","note":"rhizomes listed at +250 kcal with 3 days shelf life"}
+{"type":"event","fact":"F20","event":"needed","frame":"12ba39c88fbb4da11264b8d2c4634db1-6566","note":"chooses among foods"}
+{"type":"event","fact":"F20","event":"rediscovered","frame":"12ba39c88fbb4da11264b8d2c4634db1-6566","note":"protein rations listed at +800 kcal"}
+{"type":"event","fact":"F25","event":"needed","frame":"12ba39c88fbb4da11264b8d2c4634db1-6566","note":"chooses among foods"}
+{"type":"event","fact":"F25","event":"rediscovered","frame":"12ba39c88fbb4da11264b8d2c4634db1-6566","note":"cattail stalks listed at +18 kcal"}
+{"type":"event","fact":"F24","event":"used","frame":"12ba39c88fbb4da11264b8d2c4634db1-6566","note":"eats the prepared starch"}
+{"type":"event","fact":"F1","event":"needed","frame":"12ba39c88fbb4da11264b8d2c4634db1-6572","note":"opens the character screen to confirm identity"}
+{"type":"event","fact":"F1","event":"rediscovered","frame":"12ba39c88fbb4da11264b8d2c4634db1-6572","note":"character screen shows Morgan Hale, male"}
+{"type":"event","fact":"F26","event":"used","frame":"12ba39c88fbb4da11264b8d2c4634db1-7700","note":"forages the underbrush north of the shelter for food"}
+{"type":"event","fact":"F13","event":"used","frame":"12ba39c88fbb4da11264b8d2c4634db1-7935","note":"forages in the forest to find sustainable food"}
+{"type":"event","fact":"F30","event":"needed","frame":"12ba39c88fbb4da11264b8d2c4634db1-10564","note":"surveys the floor items for crafting materials"}
+{"type":"event","fact":"F30","event":"rediscovered","frame":"12ba39c88fbb4da11264b8d2c4634db1-10564","note":"floor list shows nuts and bolts, scrap metal, sheets, nails, stick and the basic fishing rod"}
+{"type":"event","fact":"F22","event":"needed","frame":"12ba39c88fbb4da11264b8d2c4634db1-10713","note":"pine needle tea recipe needs a nearby fire"}
+{"type":"event","fact":"F22","event":"rediscovered","frame":"12ba39c88fbb4da11264b8d2c4634db1-10713","note":"recipe lists nearby fire among missing heat sources"}
+{"type":"fact","id":"F42","statement":"A swimmer zombie is about 60 tiles northwest of the shelter and safe mode warns about it","category":"hazard","observed":"12ba39c88fbb4da11264b8d2c4634db1-4246","stored":null}
+{"type":"fact","id":"F43","statement":"A pair of hand wraps is crafted in about 1 minute 19 seconds from 6 cotton patches and 18 plant fiber with a sewing and a cutting tool","category":"procedure","observed":"12ba39c88fbb4da11264b8d2c4634db1-6024","stored":null}
+{"type":"fact","id":"F44","statement":"Salvaging a shelter sheet yields dozens of cotton patches (79 from one salvage), which supply tailoring crafts","category":"procedure","observed":"12ba39c88fbb4da11264b8d2c4634db1-6335","stored":null}
+{"type":"fact","id":"F45","statement":"A simple patchwork scarf is crafted from a cotton sheet or patchwork sheet with plant fiber and Ava can assist; a headscarf takes 48 minutes","category":"procedure","observed":"12ba39c88fbb4da11264b8d2c4634db1-6585","stored":null}
+{"type":"fact","id":"F46","statement":"The shelter roof is reached from the interior ladder room and holds a standing water tank, planks, nails and other items","category":"place","observed":"12ba39c88fbb4da11264b8d2c4634db1-1755","stored":null}
+{"type":"fact","id":"F47","statement":"The roof also has a bottle of single pot still Irish whiskey (21 charges), 2 short strings and cigarette butts that can be picked up","category":"resource","observed":"12ba39c88fbb4da11264b8d2c4634db1-10356","stored":null}
+{"type":"fact","id":"F48","statement":"Picking a pine tree in the forest east/northeast of the shelter yields 3 pine boughs, a pinecone and pine resin","category":"resource","observed":"12ba39c88fbb4da11264b8d2c4634db1-11316","stored":"ef2ead"}
+{"type":"fact","id":"F49","statement":"Pine needle tea is made from pine needles in about 29 minutes with boiling and a nearby fire, gives 8 mg vitamin C (9% daily) per portion, and needs survival 1","category":"procedure","observed":"12ba39c88fbb4da11264b8d2c4634db1-10713","stored":null}
+{"type":"fact","id":"F50","statement":"Burdock harvested from forest underbrush is edible and supplies iron and calcium but no vitamin C","category":"resource","observed":"12ba39c88fbb4da11264b8d2c4634db1-7935","stored":null}
+{"type":"fact","id":"F51","statement":"The player's current need is vitamin C, sustainable food, lighting and safer equipment","category":"plan","observed":"text","stored":"ef2ead"}
+{"type":"fact","id":"F52","statement":"Morgan wears hand wraps and a simple patchwork scarf, and wields the damaged long pointy stick","category":"self","observed":"12ba39c88fbb4da11264b8d2c4634db1-6503","stored":"ef2ead"}
+{"type":"fact","id":"F53","statement":"The shelter basement below the stairs is very dark and unexplored, and the flashlight there has no charge","category":"place","observed":"12ba39c88fbb4da11264b8d2c4634db1-355","stored":null}
+{"type":"fact","id":"F54","statement":"A torch recipe needs 100 units of liquid fuel such as gasoline plus a cotton sheet and a stick, and cannot be crafted in the dark","category":"procedure","observed":"12ba39c88fbb4da11264b8d2c4634db1-502","stored":null}
+{"type":"end","frames_viewed":63}

@@ -1,0 +1,29 @@
+{"type":"carry","fact":"F1","boundary":"aidA5-001>aidA5-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F2","boundary":"aidA5-001>aidA5-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F3","boundary":"aidA5-001>aidA5-002","carried":false,"where":null}
+{"type":"carry","fact":"F4","boundary":"aidA5-001>aidA5-002","carried":false,"where":null}
+{"type":"carry","fact":"F5","boundary":"aidA5-001>aidA5-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F6","boundary":"aidA5-001>aidA5-002","carried":false,"where":null}
+{"type":"carry","fact":"F7","boundary":"aidA5-001>aidA5-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F8","boundary":"aidA5-001>aidA5-002","carried":false,"where":null}
+{"type":"carry","fact":"F9","boundary":"aidA5-001>aidA5-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F10","boundary":"aidA5-001>aidA5-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F11","boundary":"aidA5-001>aidA5-002","carried":true,"where":"packet"}
+{"type":"event","fact":"F9","event":"used","frame":"b328dac77cd4b4f1b5d2ee9a0c82894b-2555","note":"Wielding the wooden club and wearing the jacket while leaving the shelter"}
+{"type":"event","fact":"F10","event":"used","frame":"b328dac77cd4b4f1b5d2ee9a0c82894b-3340","note":"Overmap navigation relies on shelter C-41 being west of Whitingham"}
+{"type":"event","fact":"F11","event":"used","frame":"b328dac77cd4b4f1b5d2ee9a0c82894b-3937","note":"Searches recipes for clean water, working on the sustainable water plan"}
+{"type":"event","fact":"F5","event":"needed","frame":"b328dac77cd4b4f1b5d2ee9a0c82894b-9696","note":"Hunger shows peckish; the protein rations and bottled water were relevant to eating or drinking"}
+{"type":"fact","id":"F12","statement":"Murky water puddles (shallow pits) exist in the forest northwest of the shelter; the player marked them on the map as a water source needing purification","category":"resource","observed":"b328dac77cd4b4f1b5d2ee9a0c82894b-3925","stored":null}
+{"type":"fact","id":"F13","statement":"Crafting clean water from water requires a water purifier or charcoal water purifier tool with charges (survival skill, 9 seconds)","category":"procedure","observed":"b328dac77cd4b4f1b5d2ee9a0c82894b-3937","stored":null}
+{"type":"fact","id":"F14","statement":"A makeshift pot (a cooking and boiling vessel) needs 1 sheet metal and a tool with hammering 2, and takes 1.5 hours","category":"procedure","observed":"b328dac77cd4b4f1b5d2ee9a0c82894b-2807","stored":null}
+{"type":"fact","id":"F15","statement":"A makeshift hammer needs a chunk of metal or steel, a plank or stick, and cordage or plant fiber, and no hammering tool; the player has none of the metal parts yet","category":"procedure","observed":"b328dac77cd4b4f1b5d2ee9a0c82894b-14161","stored":null}
+{"type":"fact","id":"F16","statement":"A hostile zombie is inside a fenced industrial or warehouse compound west of Whitingham, about 57 tiles southwest of the plains position","category":"hazard","observed":"b328dac77cd4b4f1b5d2ee9a0c82894b-7945","stored":null}
+{"type":"fact","id":"F17","statement":"The farm northwest of Whitingham has planted crop fields, a silo, and zombies (including a fat zombie and zombie child) around it","category":"hazard","observed":"b328dac77cd4b4f1b5d2ee9a0c82894b-11590","stored":null}
+{"type":"fact","id":"F18","statement":"The farm also holds livestock (chickens, geese, ducks, llamas, a cat) but the player has no seeds or fertilizer to plant","category":"resource","observed":"b328dac77cd4b4f1b5d2ee9a0c82894b-10943","stored":null}
+{"type":"fact","id":"F19","statement":"A zombie dog roams near the industrial building west of Whitingham","category":"hazard","observed":"b328dac77cd4b4f1b5d2ee9a0c82894b-13774","stored":null}
+{"type":"fact","id":"F20","statement":"There is a crater (a mapgen debug error referenced it) on the route northwest of Whitingham that the player intends to avoid","category":"hazard","observed":"b328dac77cd4b4f1b5d2ee9a0c82894b-9226","stored":null}
+{"type":"fact","id":"F21","statement":"Foraging underbrush on the forest trail yielded dogbane (2 picked up), a source of plant fiber","category":"resource","observed":"b328dac77cd4b4f1b5d2ee9a0c82894b-15404","stored":null}
+{"type":"fact","id":"F22","statement":"Foraging the forest trail also produced twigs, flaking rock, pinecone, straw, pine boughs, hickory root and tinder, now carried","category":"item","observed":"b328dac77cd4b4f1b5d2ee9a0c82894b-15962","stored":null}
+{"type":"fact","id":"F23","statement":"An industrial building lies west of Whitingham on the overmap, northwest of the farm","category":"place","observed":"b328dac77cd4b4f1b5d2ee9a0c82894b-7288","stored":null}
+{"type":"fact","id":"F24","statement":"Alex Morgan was saved and quit to the main menu in world Jauca at 8:55 on day 61 and appears in the Load list","category":"self","observed":"b328dac77cd4b4f1b5d2ee9a0c82894b-17064","stored":null}
+{"type":"end","frames_viewed":57}

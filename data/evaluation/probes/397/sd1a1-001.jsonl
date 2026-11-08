@@ -1,0 +1,23 @@
+{"type":"fact","id":"F1","statement":"The survivor is Morgan Hale, a male Evacuee-scenario character","category":"self","observed":"f37efc17970589e90aff3c73d3742a89-584","stored":"0c6e56"}
+{"type":"fact","id":"F2","statement":"The game starts inside evac shelter B-19 (north of Newcastle) on Spring day 61, 8:00 AM","category":"place","observed":"f37efc17970589e90aff3c73d3742a89-670","stored":"0c6e56"}
+{"type":"fact","id":"F3","statement":"Ava Burkhart, Chemical Engineer, is an NPC who agreed to travel with the survivor and follows","category":"other","observed":"f37efc17970589e90aff3c73d3742a89-729","stored":"0c6e56"}
+{"type":"fact","id":"F12","statement":"The starting inventory holds a pocket knife, a smartphone with flashlight app, a sealed bottle of 2 clean water and a matchbook with 20 matches","category":"item","observed":"f37efc17970589e90aff3c73d3742a89-738","stored":"0c6e56"}
+{"type":"fact","id":"F4","statement":"The shelter's lockers and benches hold supplies: protein rations, sealed clean water bottles, a tupperware, a flashlight and batteries","category":"resource","observed":"f37efc17970589e90aff3c73d3742a89-1267","stored":"f49b80"}
+{"type":"fact","id":"F11","statement":"Black rats are present around the shelter exit","category":"hazard","observed":"f37efc17970589e90aff3c73d3742a89-1050","stored":"f49b80"}
+{"type":"fact","id":"F5","statement":"A wooden club is crafted from a plank (found in the shelter) with a cutting tool in about 5 minutes and wielded as a melee weapon","category":"procedure","observed":"f37efc17970589e90aff3c73d3742a89-1686","stored":"0c6e56"}
+{"type":"fact","id":"F6","statement":"A zombie child and a crawling zombie are about 59-60 tiles southwest near the road","category":"hazard","observed":"f37efc17970589e90aff3c73d3742a89-2591","stored":"f49b80"}
+{"type":"fact","id":"F7","statement":"Wild boars and boar piglets roam the fields and road north of the shelter and are neutral until provoked","category":"hazard","observed":"f37efc17970589e90aff3c73d3742a89-2674","stored":"f49b80"}
+{"type":"fact","id":"F8","statement":"A lake lies west of the shelter along the road","category":"place","observed":"f37efc17970589e90aff3c73d3742a89-3889","stored":"f49b80"}
+{"type":"fact","id":"F9","statement":"Water scooped from the lake into bottles is raw and must be boiled before drinking","category":"procedure","observed":"f37efc17970589e90aff3c73d3742a89-4084","stored":"f49b80"}
+{"type":"fact","id":"F10","statement":"Clean water is crafted by boiling raw water over a lit fire in about 5 minutes, then poured into a container","category":"procedure","observed":"f37efc17970589e90aff3c73d3742a89-5419","stored":"0c6e56"}
+{"type":"fact","id":"F13","statement":"The player's plan is to secure sustainable food and fuel and avoid city threats and boars","category":"plan","observed":"text","stored":"f49b80"}
+{"type":"event","fact":"F4","event":"used","frame":"f37efc17970589e90aff3c73d3742a89-1461","note":"picks up rations, tupperware, water and flashlight from the shelter lockers"}
+{"type":"event","fact":"F3","event":"used","frame":"f37efc17970589e90aff3c73d3742a89-5908","note":"Ava helps with the fire and crafting while following"}
+{"type":"event","fact":"F5","event":"used","frame":"f37efc17970589e90aff3c73d3742a89-1757","note":"crafts and wields the wooden club"}
+{"type":"event","fact":"F8","event":"used","frame":"f37efc17970589e90aff3c73d3742a89-3889","note":"walks to the lake shore"}
+{"type":"event","fact":"F9","event":"used","frame":"f37efc17970589e90aff3c73d3742a89-4195","note":"fills bottles with lake water for later boiling"}
+{"type":"event","fact":"F12","event":"used","frame":"f37efc17970589e90aff3c73d3742a89-5908","note":"lights a fire using the matchbook"}
+{"type":"event","fact":"F10","event":"used","frame":"f37efc17970589e90aff3c73d3742a89-6262","note":"completes the clean water craft by boiling"}
+{"type":"event","fact":"F11","event":"needed","frame":"f37efc17970589e90aff3c73d3742a89-5198","note":"rats sit near the shelter door while the player works outside"}
+{"type":"event","fact":"F6","event":"needed","frame":"f37efc17970589e90aff3c73d3742a89-3192","note":"crawling zombie alert shapes whether to continue toward the lake"}
+{"type":"end","frames_viewed":46}

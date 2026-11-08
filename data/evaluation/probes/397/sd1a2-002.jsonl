@@ -1,0 +1,78 @@
+{"type": "carry", "fact": "F1", "boundary": "sd1a2-001>sd1a2-002", "carried": true, "where": "prompt"}
+{"type": "carry", "fact": "F2", "boundary": "sd1a2-001>sd1a2-002", "carried": true, "where": "prompt"}
+{"type": "carry", "fact": "F3", "boundary": "sd1a2-001>sd1a2-002", "carried": true, "where": "prompt"}
+{"type": "carry", "fact": "F12", "boundary": "sd1a2-001>sd1a2-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F4", "boundary": "sd1a2-001>sd1a2-002", "carried": true, "where": "prompt"}
+{"type": "carry", "fact": "F11", "boundary": "sd1a2-001>sd1a2-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F5", "boundary": "sd1a2-001>sd1a2-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F6", "boundary": "sd1a2-001>sd1a2-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F7", "boundary": "sd1a2-001>sd1a2-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F8", "boundary": "sd1a2-001>sd1a2-002", "carried": true, "where": "prompt"}
+{"type": "carry", "fact": "F9", "boundary": "sd1a2-001>sd1a2-002", "carried": true, "where": "prompt"}
+{"type": "carry", "fact": "F10", "boundary": "sd1a2-001>sd1a2-002", "carried": true, "where": "prompt"}
+{"type": "carry", "fact": "F13", "boundary": "sd1a2-001>sd1a2-002", "carried": true, "where": "prompt"}
+{"type": "carry", "fact": "F14", "boundary": "sd1a2-001>sd1a2-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F15", "boundary": "sd1a2-001>sd1a2-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F16", "boundary": "sd1a2-001>sd1a2-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F17", "boundary": "sd1a2-001>sd1a2-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F18", "boundary": "sd1a2-001>sd1a2-002", "carried": true, "where": "prompt"}
+{"type": "carry", "fact": "F19", "boundary": "sd1a2-001>sd1a2-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F20", "boundary": "sd1a2-001>sd1a2-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F21", "boundary": "sd1a2-001>sd1a2-002", "carried": true, "where": "prompt"}
+{"type": "carry", "fact": "F22", "boundary": "sd1a2-001>sd1a2-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F23", "boundary": "sd1a2-001>sd1a2-002", "carried": true, "where": "prompt"}
+{"type": "carry", "fact": "F24", "boundary": "sd1a2-001>sd1a2-002", "carried": true, "where": "prompt"}
+{"type": "carry", "fact": "F25", "boundary": "sd1a2-001>sd1a2-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F26", "boundary": "sd1a2-001>sd1a2-002", "carried": true, "where": "prompt"}
+{"type": "carry", "fact": "F27", "boundary": "sd1a2-001>sd1a2-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F28", "boundary": "sd1a2-001>sd1a2-002", "carried": true, "where": "prompt"}
+{"type": "carry", "fact": "F29", "boundary": "sd1a2-001>sd1a2-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F30", "boundary": "sd1a2-001>sd1a2-002", "carried": true, "where": "prompt"}
+{"type": "fact", "id": "F31", "statement": "A pile in the forest southeast of the shelter holds 2 long sticks, which supply the long stick for a long pointy stick", "category": "resource", "observed": "507f7c538191fedb29b11639ed137b70-4156", "stored": null}
+{"type": "fact", "id": "F32", "statement": "The wooden club was dropped on the ground in the forest when the long pointy stick was wielded in its place", "category": "item", "observed": "507f7c538191fedb29b11639ed137b70-4637", "stored": null}
+{"type": "fact", "id": "F33", "statement": "Disassembling a sheet in the shelter yields about 11 cotton sheets", "category": "procedure", "observed": "507f7c538191fedb29b11639ed137b70-6194", "stored": null}
+{"type": "fact", "id": "F34", "statement": "Foot rags are crafted from cotton sheets with Ava helping, and Ava puts the foot rags on when handed them", "category": "procedure", "observed": "507f7c538191fedb29b11639ed137b70-6685", "stored": null}
+{"type": "fact", "id": "F35", "statement": "A wooden needle is crafted from 1 splintered wood with a cutting tool in about 31 minutes", "category": "procedure", "observed": "507f7c538191fedb29b11639ed137b70-5415", "stored": null}
+{"type": "fact", "id": "F36", "statement": "An NPC called overconfident officer walks near the lake shore and a gunshot is heard from the northwest", "category": "hazard", "observed": "507f7c538191fedb29b11639ed137b70-7720", "stored": null}
+{"type": "fact", "id": "F37", "statement": "The smartphone ran out of battery after playing on it, and the flashlight batteries are dead", "category": "item", "observed": "507f7c538191fedb29b11639ed137b70-10220", "stored": null}
+{"type": "fact", "id": "F38", "statement": "A cupboard in the shelter holds 23 small cardboard boxes containing protein rations", "category": "resource", "observed": "507f7c538191fedb29b11639ed137b70-12079", "stored": null}
+{"type": "fact", "id": "F39", "statement": "A shelter locker holds an emergency jacket, blanket and plastic knife; the jacket was worn against chilly mornings", "category": "item", "observed": "507f7c538191fedb29b11639ed137b70-12100", "stored": null}
+{"type": "fact", "id": "F40", "statement": "Ava completes crafting tasks assigned to her, such as making starch from rhizomes, while the player waits", "category": "procedure", "observed": "507f7c538191fedb29b11639ed137b70-10631", "stored": null}
+{"type": "fact", "id": "F41", "statement": "Shelter benches are smashable and yield splintered wood", "category": "resource", "observed": "507f7c538191fedb29b11639ed137b70-12962", "stored": null}
+{"type": "event", "fact": "F1", "event": "needed", "frame": "507f7c538191fedb29b11639ed137b70-3565", "note": "opens the character screen to confirm identity"}
+{"type": "event", "fact": "F1", "event": "rediscovered", "frame": "507f7c538191fedb29b11639ed137b70-3565", "note": "character screen shows Morgan Hale, male"}
+{"type": "event", "fact": "F30", "event": "needed", "frame": "507f7c538191fedb29b11639ed137b70-5638", "note": "needs materials on the shelter floor for crafting"}
+{"type": "event", "fact": "F30", "event": "rediscovered", "frame": "507f7c538191fedb29b11639ed137b70-5638", "note": "floor listing shows plank, nuts and bolts, scrap metal, nails, sheets and stick"}
+{"type": "event", "fact": "F28", "event": "used", "frame": "507f7c538191fedb29b11639ed137b70-4482", "note": "starts crafting the long pointy stick from a long stick"}
+{"type": "event", "fact": "F5", "event": "needed", "frame": "507f7c538191fedb29b11639ed137b70-4637", "note": "drops the wooden club and wields the long pointy stick instead"}
+{"type": "event", "fact": "F6", "event": "needed", "frame": "507f7c538191fedb29b11639ed137b70-7228", "note": "monster list shows the zombie child before heading to the lake"}
+{"type": "event", "fact": "F6", "event": "rediscovered", "frame": "507f7c538191fedb29b11639ed137b70-7228", "note": "zombie child listed hostile 60 tiles southwest"}
+{"type": "event", "fact": "F7", "event": "needed", "frame": "507f7c538191fedb29b11639ed137b70-7228", "note": "boars and piglets listed ignoring on the route"}
+{"type": "event", "fact": "F7", "event": "rediscovered", "frame": "507f7c538191fedb29b11639ed137b70-7228", "note": "wild boar piglet and two wild boars listed neutral"}
+{"type": "event", "fact": "F21", "event": "needed", "frame": "507f7c538191fedb29b11639ed137b70-7397", "note": "safe mode spots the zombie child 60 tiles away and the player ignores it"}
+{"type": "event", "fact": "F8", "event": "used", "frame": "507f7c538191fedb29b11639ed137b70-7858", "note": "walks to the lake shore"}
+{"type": "event", "fact": "F18", "event": "used", "frame": "507f7c538191fedb29b11639ed137b70-8006", "note": "harvests cattail rhizomes and stalks in the shallows"}
+{"type": "event", "fact": "F13", "event": "used", "frame": "507f7c538191fedb29b11639ed137b70-8006", "note": "harvests cattails to build a sustainable food supply"}
+{"type": "event", "fact": "F9", "event": "used", "frame": "507f7c538191fedb29b11639ed137b70-8207", "note": "fills plastic bottles with lake water to boil later"}
+{"type": "event", "fact": "F12", "event": "needed", "frame": "507f7c538191fedb29b11639ed137b70-9937", "note": "checks tools to light a fire"}
+{"type": "event", "fact": "F12", "event": "rediscovered", "frame": "507f7c538191fedb29b11639ed137b70-9937", "note": "use-item list shows pocket knife, smartphone and matchbook 17/20"}
+{"type": "event", "fact": "F24", "event": "needed", "frame": "507f7c538191fedb29b11639ed137b70-10298", "note": "looks at the starch item on the floor"}
+{"type": "event", "fact": "F24", "event": "rediscovered", "frame": "507f7c538191fedb29b11639ed137b70-10298", "note": "starch examined at 668 kcal"}
+{"type": "event", "fact": "F24", "event": "used", "frame": "507f7c538191fedb29b11639ed137b70-12063", "note": "eats the starch"}
+{"type": "event", "fact": "F19", "event": "needed", "frame": "507f7c538191fedb29b11639ed137b70-11995", "note": "checks cattail food before eating in the morning"}
+{"type": "event", "fact": "F19", "event": "rediscovered", "frame": "507f7c538191fedb29b11639ed137b70-11995", "note": "consume menu shows rhizomes +250 kcal with 3 days shelf life"}
+{"type": "event", "fact": "F20", "event": "needed", "frame": "507f7c538191fedb29b11639ed137b70-11995", "note": "chooses between food options"}
+{"type": "event", "fact": "F20", "event": "rediscovered", "frame": "507f7c538191fedb29b11639ed137b70-11995", "note": "protein rations listed at +800 kcal"}
+{"type": "event", "fact": "F25", "event": "needed", "frame": "507f7c538191fedb29b11639ed137b70-11995", "note": "chooses between food options"}
+{"type": "event", "fact": "F25", "event": "rediscovered", "frame": "507f7c538191fedb29b11639ed137b70-11995", "note": "cattail stalks listed at +18 kcal"}
+{"type": "event", "fact": "F3", "event": "used", "frame": "507f7c538191fedb29b11639ed137b70-6685", "note": "hands Ava the foot rags through her interaction menu"}
+{"type": "event", "fact": "F4", "event": "needed", "frame": "507f7c538191fedb29b11639ed137b70-12100", "note": "searches the shelter lockers for warm clothing"}
+{"type": "event", "fact": "F4", "event": "rediscovered", "frame": "507f7c538191fedb29b11639ed137b70-12100", "note": "locker listing shows blanket, jacket, bottles and protein rations"}
+{"type": "event", "fact": "F4", "event": "used", "frame": "507f7c538191fedb29b11639ed137b70-12452", "note": "takes the jacket and protein rations from the locker"}
+{"type": "event", "fact": "F10", "event": "used", "frame": "507f7c538191fedb29b11639ed137b70-13326", "note": "opens the clean water batch recipe needing a fire"}
+{"type": "event", "fact": "F22", "event": "needed", "frame": "507f7c538191fedb29b11639ed137b70-13398", "note": "carrying the craft out of range of the fire"}
+{"type": "event", "fact": "F22", "event": "used", "frame": "507f7c538191fedb29b11639ed137b70-13398", "note": "game reports no nearby fire so the crafting stops, then relights the fire"}
+{"type": "event", "fact": "F11", "event": "needed", "frame": "507f7c538191fedb29b11639ed137b70-13810", "note": "rats near the door while working outside"}
+{"type": "event", "fact": "F11", "event": "rediscovered", "frame": "507f7c538191fedb29b11639ed137b70-13810", "note": "2 black rats listed near the shelter exit"}
+{"type": "event", "fact": "F23", "event": "used", "frame": "507f7c538191fedb29b11639ed137b70-14365", "note": "saves and quits and the load list shows Whitethorn"}
+{"type": "end", "frames_viewed": 65}

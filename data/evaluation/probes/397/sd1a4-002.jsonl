@@ -1,0 +1,135 @@
+{"type": "carry", "fact": "F1", "boundary": "sd1a4-001>sd1a4-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F2", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F3", "boundary": "sd1a4-001>sd1a4-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F4", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F5", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F6", "boundary": "sd1a4-001>sd1a4-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F7", "boundary": "sd1a4-001>sd1a4-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F8", "boundary": "sd1a4-001>sd1a4-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F9", "boundary": "sd1a4-001>sd1a4-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F10", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F11", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F12", "boundary": "sd1a4-001>sd1a4-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F13", "boundary": "sd1a4-001>sd1a4-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F14", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F15", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F16", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F17", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F18", "boundary": "sd1a4-001>sd1a4-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F19", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F20", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F21", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F22", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F23", "boundary": "sd1a4-001>sd1a4-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F24", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F25", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F26", "boundary": "sd1a4-001>sd1a4-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F27", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F28", "boundary": "sd1a4-001>sd1a4-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F29", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F30", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F31", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F32", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F33", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F34", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F35", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F36", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F37", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F38", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F39", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F40", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F41", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F42", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F43", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F44", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F45", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F46", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F47", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F48", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F49", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F50", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F51", "boundary": "sd1a4-001>sd1a4-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F52", "boundary": "sd1a4-001>sd1a4-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F53", "boundary": "sd1a4-001>sd1a4-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F54", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F55", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F56", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F57", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F58", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F59", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F60", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F61", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F62", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F63", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F64", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F65", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F66", "boundary": "sd1a4-001>sd1a4-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F69", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F70", "boundary": "sd1a4-001>sd1a4-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F71", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F72", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F73", "boundary": "sd1a4-001>sd1a4-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F74", "boundary": "sd1a4-001>sd1a4-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F75", "boundary": "sd1a4-001>sd1a4-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F76", "boundary": "sd1a4-001>sd1a4-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F77", "boundary": "sd1a4-001>sd1a4-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F78", "boundary": "sd1a4-001>sd1a4-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F79", "boundary": "sd1a4-001>sd1a4-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F80", "boundary": "sd1a4-001>sd1a4-002", "carried": true, "where": "packet"}
+{"type": "event", "fact": "F1", "event": "needed", "frame": "92505965fcbd23adda6919b8a38decc4-3262", "note": "opens the character screen to confirm identity"}
+{"type": "event", "fact": "F1", "event": "rediscovered", "frame": "92505965fcbd23adda6919b8a38decc4-3262", "note": "stats screen shows Morgan Hale, male, 25 years"}
+{"type": "event", "fact": "F26", "event": "used", "frame": "92505965fcbd23adda6919b8a38decc4-3262", "note": "forages the underbrush in the forest and finds nothing"}
+{"type": "event", "fact": "F13", "event": "used", "frame": "92505965fcbd23adda6919b8a38decc4-3262", "note": "forages the forest for food while seeking a sustainable supply"}
+{"type": "event", "fact": "F80", "event": "needed", "frame": "92505965fcbd23adda6919b8a38decc4-3262", "note": "an oversized aphid is listed near the player while foraging"}
+{"type": "event", "fact": "F80", "event": "rediscovered", "frame": "92505965fcbd23adda6919b8a38decc4-3262", "note": "oversized aphid listed to the northeast in the forest"}
+{"type": "event", "fact": "F28", "event": "needed", "frame": "92505965fcbd23adda6919b8a38decc4-3356", "note": "searches recipes for a spear or long pointy stick as an upgrade; the search list is empty"}
+{"type": "event", "fact": "F11", "event": "needed", "frame": "92505965fcbd23adda6919b8a38decc4-4295", "note": "rats sit beside the shelter door as the player returns"}
+{"type": "event", "fact": "F11", "event": "rediscovered", "frame": "92505965fcbd23adda6919b8a38decc4-4295", "note": "2 black rats listed near the shelter"}
+{"type": "event", "fact": "F7", "event": "needed", "frame": "92505965fcbd23adda6919b8a38decc4-4363", "note": "piglets near the road south of the door while going west"}
+{"type": "event", "fact": "F7", "event": "rediscovered", "frame": "92505965fcbd23adda6919b8a38decc4-4363", "note": "2 wild boar piglets listed beside the road"}
+{"type": "event", "fact": "F75", "event": "needed", "frame": "92505965fcbd23adda6919b8a38decc4-4363", "note": "passes the spilled dirty water on the pavement outside the door"}
+{"type": "event", "fact": "F75", "event": "rediscovered", "frame": "92505965fcbd23adda6919b8a38decc4-4363", "note": "spilled water puddle visible on the pavement north of the door"}
+{"type": "event", "fact": "F8", "event": "used", "frame": "92505965fcbd23adda6919b8a38decc4-5413", "note": "walks to the lake shore west of the shelter"}
+{"type": "event", "fact": "F9", "event": "used", "frame": "92505965fcbd23adda6919b8a38decc4-5615", "note": "fills a plastic bottle with raw lake water to boil later"}
+{"type": "event", "fact": "F79", "event": "used", "frame": "92505965fcbd23adda6919b8a38decc4-5615", "note": "collects water from the lake to boil safely"}
+{"type": "event", "fact": "F10", "event": "needed", "frame": "92505965fcbd23adda6919b8a38decc4-5817", "note": "opens the clean water recipe to see how to boil the lake water"}
+{"type": "event", "fact": "F10", "event": "rediscovered", "frame": "92505965fcbd23adda6919b8a38decc4-5817", "note": "clean water recipe shows boiling needs a heat source or nearby fire"}
+{"type": "event", "fact": "F74", "event": "used", "frame": "92505965fcbd23adda6919b8a38decc4-7500", "note": "crafts tinder as an in-progress item beside the shelter door"}
+{"type": "event", "fact": "F12", "event": "needed", "frame": "92505965fcbd23adda6919b8a38decc4-8005", "note": "needs a fire to boil the water"}
+{"type": "event", "fact": "F12", "event": "used", "frame": "92505965fcbd23adda6919b8a38decc4-8005", "note": "lights a fire on the pavement with the matchbook and tinder"}
+{"type": "event", "fact": "F22", "event": "needed", "frame": "92505965fcbd23adda6919b8a38decc4-8212", "note": "the clean water craft stops when the fire is no longer nearby"}
+{"type": "event", "fact": "F22", "event": "rediscovered", "frame": "92505965fcbd23adda6919b8a38decc4-8212", "note": "log says no nearby fire and the craft cannot continue"}
+{"type": "event", "fact": "F22", "event": "used", "frame": "92505965fcbd23adda6919b8a38decc4-8311", "note": "relights the fire and resumes the in-progress clean water"}
+{"type": "event", "fact": "F10", "event": "used", "frame": "92505965fcbd23adda6919b8a38decc4-8698", "note": "finishes boiling and pours hot clean water into a container"}
+{"type": "event", "fact": "F76", "event": "invalidated", "frame": "92505965fcbd23adda6919b8a38decc4-9169", "note": "consume header now shows vitamin C 38% instead of 28%"}
+{"type": "event", "fact": "F77", "event": "needed", "frame": "92505965fcbd23adda6919b8a38decc4-9169", "note": "chooses between foods in the consume menu"}
+{"type": "event", "fact": "F77", "event": "rediscovered", "frame": "92505965fcbd23adda6919b8a38decc4-9169", "note": "2 handfuls of young leaves listed at +13 kcal, 1 day shelf life"}
+{"type": "event", "fact": "F25", "event": "needed", "frame": "92505965fcbd23adda6919b8a38decc4-9169", "note": "chooses between foods"}
+{"type": "event", "fact": "F25", "event": "rediscovered", "frame": "92505965fcbd23adda6919b8a38decc4-9169", "note": "cattail stalks listed at +18 kcal"}
+{"type": "event", "fact": "F20", "event": "needed", "frame": "92505965fcbd23adda6919b8a38decc4-9169", "note": "chooses between foods"}
+{"type": "event", "fact": "F20", "event": "rediscovered", "frame": "92505965fcbd23adda6919b8a38decc4-9169", "note": "5 protein rations listed at +800 kcal"}
+{"type": "event", "fact": "F19", "event": "needed", "frame": "92505965fcbd23adda6919b8a38decc4-9169", "note": "chooses between foods"}
+{"type": "event", "fact": "F19", "event": "rediscovered", "frame": "92505965fcbd23adda6919b8a38decc4-9169", "note": "4 cattail rhizomes listed at +250 kcal with 3 days shelf life"}
+{"type": "event", "fact": "F52", "event": "used", "frame": "92505965fcbd23adda6919b8a38decc4-9186", "note": "crafts pine needle tea from memory and drinks it"}
+{"type": "event", "fact": "F53", "event": "used", "frame": "92505965fcbd23adda6919b8a38decc4-9186", "note": "drinks pine needle tea for vitamin C"}
+{"type": "event", "fact": "F51", "event": "needed", "frame": "92505965fcbd23adda6919b8a38decc4-10061", "note": "looks at a pine tree to harvest boughs"}
+{"type": "event", "fact": "F51", "event": "used", "frame": "92505965fcbd23adda6919b8a38decc4-10337", "note": "picks pine trees and harvests 7 pine boughs, 2 pinecones and 2 pine resin"}
+{"type": "event", "fact": "F31", "event": "needed", "frame": "92505965fcbd23adda6919b8a38decc4-10721", "note": "searches the bundle of long sticks recipe, which needs 5 long sticks"}
+{"type": "event", "fact": "F77", "event": "used", "frame": "92505965fcbd23adda6919b8a38decc4-11295", "note": "eats a handful of young leaves"}
+{"type": "event", "fact": "F66", "event": "used", "frame": "92505965fcbd23adda6919b8a38decc4-12523", "note": "pours hot pine needle tea into a container beside the shelter door"}
+{"type": "event", "fact": "F81", "event": "invalidated", "frame": "92505965fcbd23adda6919b8a38decc4-13157", "note": "consume header now shows vitamin C 75%"}
+{"type": "event", "fact": "F70", "event": "needed", "frame": "92505965fcbd23adda6919b8a38decc4-13157", "note": "the bindle left on the shelter floor is relevant to gear"}
+{"type": "event", "fact": "F70", "event": "rediscovered", "frame": "92505965fcbd23adda6919b8a38decc4-13157", "note": "'you see here 1 bindle' on the shelter floor"}
+{"type": "event", "fact": "F3", "event": "used", "frame": "92505965fcbd23adda6919b8a38decc4-13565", "note": "opens Ava's interaction menu in the shelter doorway"}
+{"type": "event", "fact": "F30", "event": "needed", "frame": "92505965fcbd23adda6919b8a38decc4-13373", "note": "checks the shelter floor for crafting materials"}
+{"type": "event", "fact": "F30", "event": "rediscovered", "frame": "92505965fcbd23adda6919b8a38decc4-13373", "note": "floor list shows nut and bolt, a plank and scrap metal"}
+{"type": "event", "fact": "F28", "event": "used", "frame": "92505965fcbd23adda6919b8a38decc4-13797", "note": "picks up and wields the long pointy stick again before saving"}
+{"type": "event", "fact": "F23", "event": "used", "frame": "92505965fcbd23adda6919b8a38decc4-14424", "note": "saves and quits; the load list shows Whitethorn"}
+{"type": "fact", "id": "F81", "statement": "After the third and fourth pine needle teas the displayed daily vitamin intake is vitamin C 38%, iron 63% and calcium 46%", "category": "self", "observed": "92505965fcbd23adda6919b8a38decc4-9169", "stored": null}
+{"type": "fact", "id": "F82", "statement": "After further tea the displayed daily vitamin intake is vitamin C 75%, iron 63% and calcium 46%, with 3 clean water, 32 cattail stalks, 4 rhizomes and 5 protein rations in the consume list", "category": "self", "observed": "92505965fcbd23adda6919b8a38decc4-13157", "stored": null}
+{"type": "fact", "id": "F83", "statement": "The fire on the pavement outside the shelter door is lit again and burning at 2:52 PM, with a plank dropped on it", "category": "place", "observed": "92505965fcbd23adda6919b8a38decc4-14091", "stored": null}
+{"type": "fact", "id": "F84", "statement": "Tinder in one minute needs a cutting tool and any one of cattail stalks, cotton patches, pine boughs, planks, sticks, pinecones or paper, and makes 50 tinder", "category": "procedure", "observed": "92505965fcbd23adda6919b8a38decc4-7203", "stored": null}
+{"type": "fact", "id": "F85", "statement": "A bundle of long sticks needs 5 long sticks plus 2 ropes, vines or wires and takes about a minute", "category": "procedure", "observed": "92505965fcbd23adda6919b8a38decc4-10721", "stored": null}
+{"type": "fact", "id": "F86", "statement": "The forest east of the shelter has junipers (22 kcal), flint, flaking rock, a stick, hickory root and a pinecone lying about", "category": "resource", "observed": "92505965fcbd23adda6919b8a38decc4-9779", "stored": null}
+{"type": "fact", "id": "F87", "statement": "A hickory tree stands in the forest east of the shelter but nothing can be harvested from it this season", "category": "resource", "observed": "92505965fcbd23adda6919b8a38decc4-9779", "stored": null}
+{"type": "end", "frames_viewed": 65}

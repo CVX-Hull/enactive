@@ -1,0 +1,48 @@
+{"type": "carry", "fact": "F1", "boundary": "sd1a1-002>sd1a2-001", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F2", "boundary": "sd1a1-002>sd1a2-001", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F3", "boundary": "sd1a1-002>sd1a2-001", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F12", "boundary": "sd1a1-002>sd1a2-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F4", "boundary": "sd1a1-002>sd1a2-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F11", "boundary": "sd1a1-002>sd1a2-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F5", "boundary": "sd1a1-002>sd1a2-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F6", "boundary": "sd1a1-002>sd1a2-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F7", "boundary": "sd1a1-002>sd1a2-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F8", "boundary": "sd1a1-002>sd1a2-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F9", "boundary": "sd1a1-002>sd1a2-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F10", "boundary": "sd1a1-002>sd1a2-001", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F13", "boundary": "sd1a1-002>sd1a2-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F14", "boundary": "sd1a1-002>sd1a2-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F15", "boundary": "sd1a1-002>sd1a2-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F16", "boundary": "sd1a1-002>sd1a2-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F17", "boundary": "sd1a1-002>sd1a2-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F18", "boundary": "sd1a1-002>sd1a2-001", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F19", "boundary": "sd1a1-002>sd1a2-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F20", "boundary": "sd1a1-002>sd1a2-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F21", "boundary": "sd1a1-002>sd1a2-001", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F22", "boundary": "sd1a1-002>sd1a2-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F23", "boundary": "sd1a1-002>sd1a2-001", "carried": true, "where": "report"}
+{"type": "fact", "id": "F24", "statement": "Cattail rhizomes can be crafted into starch (about 668 kcal per unit), requiring the crafter to put down a wielded item first", "category": "procedure", "observed": "507f7c538191fedb29b11639ed137b70-471", "stored": null}
+{"type": "fact", "id": "F25", "statement": "Foraging the underbrush in the forest south of the shelter yields handfuls of young leaves, edible with a 1 day shelf life", "category": "resource", "observed": "507f7c538191fedb29b11639ed137b70-2024", "stored": null}
+{"type": "fact", "id": "F26", "statement": "A long pointy stick is crafted in about 1 minute from a long stick with a cutting tool", "category": "procedure", "observed": "507f7c538191fedb29b11639ed137b70-3304", "stored": "6aedc7"}
+{"type": "fact", "id": "F27", "statement": "A pile of 50 plant fiber lies on the shelter floor and the lockers hold clothing, a whistle, a light battery and a tupperware", "category": "resource", "observed": "507f7c538191fedb29b11639ed137b70-3310", "stored": "94ce47"}
+{"type": "fact", "id": "F28", "statement": "A basic fishing rod rests on a bench in the shelter's north-west", "category": "item", "observed": "507f7c538191fedb29b11639ed137b70-3312", "stored": null}
+{"type": "fact", "id": "F29", "statement": "Crafting is slowed by low morale (78-80 percent) caused by food", "category": "self", "observed": "507f7c538191fedb29b11639ed137b70-740", "stored": "6aedc7"}
+{"type": "event", "fact": "F1", "event": "used", "frame": "507f7c538191fedb29b11639ed137b70-3", "note": "loads Morgan Hale from the Whitethorn world's load list"}
+{"type": "event", "fact": "F23", "event": "used", "frame": "507f7c538191fedb29b11639ed137b70-2", "note": "finds the Whitethorn world in the load menu as the report said"}
+{"type": "event", "fact": "F2", "event": "used", "frame": "507f7c538191fedb29b11639ed137b70-188", "note": "resumes in evac shelter B-19 on spring day 61 afternoon"}
+{"type": "event", "fact": "F3", "event": "used", "frame": "507f7c538191fedb29b11639ed137b70-1636", "note": "Ava follows and helps with crafting"}
+{"type": "event", "fact": "F5", "event": "needed", "frame": "507f7c538191fedb29b11639ed137b70-471", "note": "prompt offers to dispose of the wielded wooden club to craft"}
+{"type": "event", "fact": "F5", "event": "used", "frame": "507f7c538191fedb29b11639ed137b70-964", "note": "keeps the wooden club wielded while going outside"}
+{"type": "event", "fact": "F4", "event": "rediscovered", "frame": "507f7c538191fedb29b11639ed137b70-3310", "note": "re-inspects the shelter lockers with water, rations and tupperware"}
+{"type": "event", "fact": "F20", "event": "used", "frame": "507f7c538191fedb29b11639ed137b70-1636", "note": "lists protein rations at 800 kcal when choosing food"}
+{"type": "event", "fact": "F19", "event": "used", "frame": "507f7c538191fedb29b11639ed137b70-1636", "note": "consume list shows cattail rhizomes 250 kcal each"}
+{"type": "event", "fact": "F18", "event": "needed", "frame": "507f7c538191fedb29b11639ed137b70-1636", "note": "holds 17 cattail stalks and 2 rhizomes from shore harvesting"}
+{"type": "event", "fact": "F10", "event": "needed", "frame": "507f7c538191fedb29b11639ed137b70-332", "note": "views clean water recipe with fire among required tools"}
+{"type": "event", "fact": "F10", "event": "used", "frame": "507f7c538191fedb29b11639ed137b70-332", "note": "clean water recipe selected for crafting"}
+{"type": "event", "fact": "F22", "event": "used", "frame": "507f7c538191fedb29b11639ed137b70-332", "note": "recipe lists nearby fire as a requirement"}
+{"type": "event", "fact": "F11", "event": "needed", "frame": "507f7c538191fedb29b11639ed137b70-964", "note": "black rats appear next to the shelter door"}
+{"type": "event", "fact": "F7", "event": "needed", "frame": "507f7c538191fedb29b11639ed137b70-188", "note": "wild boar piglet shown nearby in the sidebar"}
+{"type": "event", "fact": "F7", "event": "needed", "frame": "507f7c538191fedb29b11639ed137b70-964", "note": "two wild boar piglets listed near the exit"}
+{"type": "event", "fact": "F16", "event": "rediscovered", "frame": "507f7c538191fedb29b11639ed137b70-3312", "note": "examines the basic fishing rod in the shelter"}
+{"type": "event", "fact": "F13", "event": "needed", "frame": "507f7c538191fedb29b11639ed137b70-3304", "note": "looks up weapon recipes for the plan of defense and food"}
+{"type": "end", "frames_viewed": 31}
