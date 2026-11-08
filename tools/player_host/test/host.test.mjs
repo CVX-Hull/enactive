@@ -447,7 +447,11 @@ test('fixture union schema refusal gives stable precise feedback, explicit corre
   const first=payloads[1].messages.find(m=>m.role==='tool'&&m.tool_call_id==='bad-0').content;
   assert.match(first,/entry.stage: must not have more than 128/);
   assert.match(first,/entry.available.0.subject: must match pattern/);
-  assert.ok(!first.includes('intent.entry.value'));
+  // The validator's own wording comes first, unchanged; the narrowed diagnostic names only the selected branch.
+  const [own,narrowed]=first.split('\n\nThe errors above check every intent branch and may name another one. ');
+  assert.match(own,/intent.entry.value/);
+  assert.ok(narrowed.startsWith('For the selected intent.entry_type='));
+  assert.ok(!narrowed.includes('intent.entry.value'));
   for(const payload of payloads.slice(2)) {
     assert.equal(payload.messages.find(m=>m.role==='tool'&&m.tool_call_id==='bad-0').content,first);
   }

@@ -141,11 +141,18 @@ export function validateConfiguration(configuration, selectedModel, effort) {
   return configuration;
 }
 
+/** Remaining model requests at or below which the tail notice warns of the request limit. */
+export const requestWarningAt = maxRequests => Math.min(Math.max(2, Math.ceil(maxRequests * 0.1)), Math.floor(maxRequests / 2));
+/** Remaining work time (ms) at or below which the tail notice warns of the host deadline. */
+export const wallWarningMs = workMs => Math.min(Math.max(workMs * 0.1, 60_000), workMs / 2);
+
 /** Request-only projection. Canonical messages stay intact; telemetry separately projects image references.
  * Count-only block eviction: beyond maxImages, the oldest images are omitted in whole
  * blocks, so the serialized prefix stays byte-stable between evictions. Block 1 omits
- * exactly the overflow. */
-export function projectImageContext(messages, maxImages, block) {
+ * exactly the overflow. `sourceIds` maps a tool call to the source identity of its result;
+ * an omission marker names it, so the player can read the frame again by source ID. The
+ * marker is a function of the frame alone, so it stays byte-identical on every later request. */
+export function projectImageContext(messages, maxImages, block, sourceIds = new Map()) {
   requireThat(Number.isSafeInteger(block) && block > 0 && block <= maxImages);
   const projected = structuredClone(messages);
   const latestBatch = messages.findLastIndex(message => message.role === 'assistant'
@@ -172,8 +179,9 @@ export function projectImageContext(messages, maxImages, block) {
     const sha256 = createHash('sha256').update(decoded).digest('hex');
     omittedDetails.set(image, {sha256, bytes:decoded.length});
     const provenance = {tool_call_id:image.toolCallId, image_index:image.imageIndex, sha256};
+    const sourceId = sourceIds.get(image.toolCallId);
     projected[image.messageIndex].content[image.contentIndex] = {type:'text',
-      text:`Historical pixels omitted from this request by frozen image policy; toolCallId=${image.toolCallId}; image_index=${image.imageIndex}; SHA256=${sha256}. Pixels were not reread; this marker grants no authority or source-read proof.`};
+      text:`Historical pixels omitted from this request by frozen image policy; toolCallId=${image.toolCallId}; ${sourceId != null ? `source_id=${sourceId}; ` : ''}image_index=${image.imageIndex}; SHA256=${sha256}. Pixels were not reread; this marker grants no authority or source-read proof.${sourceId != null ? ` To see this frame again, read source_id ${sourceId} with player_source.` : ''}`};
     if (omissions.length < 16) omissions.push(provenance);
   }
   return {messages:projected, images:images.map(image => ({tool_call_id:image.toolCallId, image_index:image.imageIndex,
@@ -215,6 +223,11 @@ function payloadSize(payload) {
 }
 
 const sha256Hex = data => createHash('sha256').update(data).digest('hex');
+/** The provider-affinity value of one mechanical session: a digest of the session identity (not
+ * random per request), so every request of every actor in the session carries the same value and a
+ * successor reaches the backend that holds the shared system-prompt and tool-table prefix. It is a
+ * digest of an audit identity, not a credential, and is recorded in `host-start`. */
+export const sessionAffinityId = session => 'enactive-' + sha256Hex(`player-host-session/1\0${session}`).slice(0, 48);
 const TEXT_FIELDS = ['reasoning_content', 'reasoning', 'reasoning_text'];
 
 /** Ordered parts of one actually serialized chat-completions payload, as digests only.
@@ -518,7 +531,7 @@ export async function runHost(options) {
   let responseProgress, handoff, pendingHandoff, finish, control, unlistenControl, requestControlId;
   let releaseInitialControl;
   const initialControlReady = new Promise(resolve => { releaseInitialControl = resolve; });
-  let contextWarning = false;
+  let contextWarning = false, affinityId;
   // Context manifest state: the latest projection's ordered images, tool-result source
   // identities, and the previous manifest (part keys and omitted indexes) for deltas.
   let contextImages = [], manifestBase = null;
@@ -588,7 +601,8 @@ export async function runHost(options) {
       && (options.pendingControlId === null || identity(options.pendingControlId)), 'invalid-control-binding');
     requireThat(typeof options.prompt === 'string' && typeof options.context === 'string', 'invalid-input');
     bounded(options.prompt); bounded(options.context);
-    emit('host-start', {telemetry_version:3, schema:configuration.schema, session:options.session, actor_id:options.actorId, requested_service_tier:configuration.service_tier, model:configuration.model.id, provider:configuration.model.provider, api:configuration.model.api, effort:options.effort, max_output_tokens:configuration.model.maxTokens, context_window:configuration.model.contextWindow, context_reserve_tokens:configuration.context_reserve_tokens, thinking_level_map:{...configuration.model.thinkingLevelMap}, reasoning_format:configuration.model.compat?.thinkingFormat ?? null, provider_routing:configuration.model.compat?.openRouterRouting ? structuredClone(configuration.model.compat.openRouterRouting) : null, max_requests:configuration.max_requests, max_context_images:configuration.max_context_images, context_image_block:configuration.context_image_block, unsupported_features:['compaction', 'session-restore', 'model-fallback', 'reconnect', 'replay', 'ambient-tools', 'resource-discovery'], missing_endpoints:['model-attention', 'server-inference-start', 'physical-paint'], cleanup_budget_ms:cleanupBudget});
+    affinityId = sessionAffinityId(options.session);
+    emit('host-start', {telemetry_version:3, schema:configuration.schema, session:options.session, actor_id:options.actorId, requested_service_tier:configuration.service_tier, model:configuration.model.id, provider:configuration.model.provider, api:configuration.model.api, effort:options.effort, max_output_tokens:configuration.model.maxTokens, context_window:configuration.model.contextWindow, context_reserve_tokens:configuration.context_reserve_tokens, thinking_level_map:{...configuration.model.thinkingLevelMap}, reasoning_format:configuration.model.compat?.thinkingFormat ?? null, provider_routing:configuration.model.compat?.openRouterRouting ? structuredClone(configuration.model.compat.openRouterRouting) : null, max_requests:configuration.max_requests, max_context_images:configuration.max_context_images, context_image_block:configuration.context_image_block, unsupported_features:['compaction', 'session-restore', 'model-fallback', 'reconnect', 'replay', 'ambient-tools', 'resource-discovery'], missing_endpoints:['model-attention', 'server-inference-start', 'physical-paint'], cleanup_budget_ms:cleanupBudget, session_affinity_id:affinityId});
     unlistenControl = listenControl(options.control, options.session, options.actorId, command => {
       if (control) {
         if (!isDeepStrictEqual(control, command)) stop('conflicting-control');
@@ -670,6 +684,8 @@ export async function runHost(options) {
     agent = new Agent({
       initialState:{systemPrompt:options.context + (client.instructions ? '\n\nMCP server instructions:\n' + client.instructions : ''), model:configuration.model, thinkingLevel:options.effort, tools},
       toolExecution:'sequential',
+      // One provider-affinity value per mechanical session; Pi sends it as `x-session-id` on an OpenRouter route.
+      sessionId:affinityId,
       transformContext:async messages => {
         if (fatal) return messages;
         // Pi requires this hook never to throw/reject. Latch a terminal stop and
@@ -678,7 +694,7 @@ export async function runHost(options) {
           // Memoize against canonical SDK objects before image projection clones
           // them. Earlier diagnostic text remains stable in subsequent prefixes.
           const projectionStarted = performance.now();
-          const projection = projectImageContext(validationFeedback(messages), configuration.max_context_images, configuration.context_image_block);
+          const projection = projectImageContext(validationFeedback(messages), configuration.max_context_images, configuration.context_image_block, sourceIds);
           requestControlId = control && projection.messages.some(message => message.role === 'user'
             && Array.isArray(message.content) && message.content.some(part => part.type === 'text'
               && part.text === `${STOP_TEXT}\ncontrol_id: ${control.id}`)) ? control.id : undefined;
@@ -695,17 +711,39 @@ export async function runHost(options) {
           emit('context-estimate', {request_id:`request-${requests + 1}`, tokens, usage_tokens:estimate.usageTokens,
             heuristic_tokens:heuristic.tokens, heuristic:true, exact:false});
           if (tokens + configuration.model.maxTokens >= configuration.model.contextWindow) stop('context-capacity');
-          if (!contextWarning && tokens + configuration.context_reserve_tokens >= configuration.model.contextWindow) {
-            contextWarning = true;
-            const notice = {role:'user', timestamp:Date.now(), content:[{type:'text', text:control
-              ? 'Host context capacity is approaching. Finish up and use player_finish under the accepted automation control. No compaction or history restoration is available.'
-              : mcp.enabled_tools.includes('player_handoff')
-                ? 'Host context capacity is approaching. Request the existing player_handoff with the context you need to retain, or use player_finish if you cannot continue. No compaction or history restoration is available.'
-                : 'Host context capacity is approaching and no successor actor is available. Use player_finish before context runs out, reporting where play stands. No compaction or history restoration is available.'}]};
-            if (tokens + estimateContextTokens([notice]).tokens + configuration.model.maxTokens >= configuration.model.contextWindow) stop('context-capacity');
-            return [...projection.messages, notice];
+          // Tail notices warn before each stop the host itself will enforce: context capacity, the
+          // request allowance and the work deadline. They are appended to this request only and never
+          // stored, so the serialized prefix is unchanged and the notice persists on every later request
+          // once its threshold is passed (the context one is latched; the others only grow nearer).
+          const lines = [], kinds = [];
+          const wrapUp = control
+            ? 'Finish up and use player_finish under the accepted automation control.'
+            : mcp.enabled_tools.includes('player_handoff')
+              ? 'Request the existing player_handoff with the context you need to retain (if it reports that no successor is available, use player_finish), or use player_finish if you cannot continue.'
+              : 'Use player_finish, reporting where play stands.';
+          if (tokens + configuration.context_reserve_tokens >= configuration.model.contextWindow) contextWarning = true;
+          if (contextWarning) {
+            const room = Math.max(0, configuration.model.contextWindow - configuration.model.maxTokens - tokens);
+            kinds.push('context-capacity');
+            lines.push(`${control || mcp.enabled_tools.includes('player_handoff')
+              ? `Host context capacity is approaching. ${wrapUp}`
+              : 'Host context capacity is approaching and no successor actor is available. Use player_finish before context runs out, reporting where play stands.'} No compaction or history restoration is available. About ${room} tokens of room remain before the host must stop.`);
           }
-          return projection.messages;
+          const requestsLeft = configuration.max_requests - requests;
+          if (requestsLeft > 0 && requestsLeft <= requestWarningAt(configuration.max_requests)) {
+            kinds.push('request-limit');
+            lines.push(`Host request allowance: ${requestsLeft} of ${configuration.max_requests} model requests remain, this one included (a retried request counts again). The host stops when none remain. ${wrapUp}`);
+          }
+          const workLeftMs = totalMs - cleanupBudget - (performance.now() - started);
+          if (workLeftMs > 0 && workLeftMs <= wallWarningMs(totalMs - cleanupBudget)) {
+            kinds.push('host-timeout');
+            lines.push(`Host time allowance: about ${workLeftMs >= 120_000 ? `${Math.ceil(workLeftMs / 60_000)} minutes` : `${Math.ceil(workLeftMs / 1000)} seconds`} remain before the host stops. ${wrapUp}`);
+          }
+          if (lines.length === 0) return projection.messages;
+          const notice = {role:'user', timestamp:Date.now(), content:[{type:'text', text:lines.join('\n')}]};
+          if (tokens + estimateContextTokens([notice]).tokens + configuration.model.maxTokens >= configuration.model.contextWindow) stop('context-capacity');
+          emit('tail-notice', {request_id:`request-${requests + 1}`, kinds, tokens});
+          return [...projection.messages, notice];
         } catch {
           stop('context-projection-failed');
           return messages;
@@ -772,6 +810,9 @@ export async function runHost(options) {
             }
             const fetchEntered = performance.now();
             requireThat(typeof init?.body === 'string', 'invalid-provider-payload');
+            // Pi enables affinity headers for an OpenRouter route by its own detection; fail closed
+            // before any charge if a maintained-SDK change ever stops sending this session's value.
+            if (model.provider === 'openrouter') requireThat(new Headers(init.headers).get('x-session-id') === affinityId, 'session-affinity-missing');
             const payload = JSON.parse(init.body);
             const sizes = {...payloadSize(payload), payload_bytes:Buffer.byteLength(init.body),
               payload_sha256:createHash('sha256').update(init.body).digest('hex')};

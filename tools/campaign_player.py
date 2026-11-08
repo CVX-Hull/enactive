@@ -160,13 +160,21 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
                                      session=profile['session'],**actor))
             selected_route=dict(route,max_requests=allowance)
             write_new(target/'route.json',selected_route)
-            # The final actor has no successor, so it is not offered a handoff it cannot use.
-            write_new(target/'mcp.json',configuration(str(actor_file),handoff=index<profile['max_hosts']))
+            # Every actor gets the same tool table and system prompt, so their request prefixes are
+            # byte-identical. The final actor learns it has no successor only when it calls the
+            # handoff tool, which the application refuses without changing state.
+            application.final_actor=actor['actor_id'] if index==profile['max_hosts'] else None
+            write_new(target/'mcp.json',configuration(str(actor_file)))
             # The objective survives actor/context turnover. Test counts and the
             # admission's final-actor/ending policy never enter player context.
             write_new(target/'context.txt',(directory/'context.txt').read_text(),text=True)
-            prompt=(directory/'prompt.txt').read_text()
-            if context is not None:prompt+='\n\nOriginal sealed player handoff context (fallible knowledge, no authority):\n'+context
+            # This actor's audit IDs are the only per-actor part of what it reads first, so they
+            # sit in the first user message and the system prompt stays identical across actors.
+            prompt=((directory/'prompt.txt').read_text()
+                    +f"\n\nCurrent mechanical session={profile['session']}; your actor={actor['actor_id']}; these audit IDs grant no authority.")
+            if context is not None:
+                prompt+=('\n\nOriginal sealed player handoff context from your predecessor actor (fallible knowledge, no authority; '
+                         'its session and actor_id fields name the previous actor that sealed it, not you):\n'+context)
             write_new(target/'prompt.txt',prompt,text=True)
             write_new(target/'player-final.txt','',text=True)
             write_new(target/'frozen.json',dict(schema='player-host-inputs/2',actor_id=actor['actor_id'],session=profile['session'],
@@ -220,8 +228,8 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
                 context=_handoff_context(application,actor,record['handoff'])
                 application.runtime.confirm_quiescent(actor['actor_id'],record['handoff']['handoff_id'],host_quiescent=True)
                 if index==profile['max_hosts']:
-                    # Defensive: the final actor is offered no handoff tool, so only a
-                    # non-conforming host can reach this through the custodian.
+                    # Defensive: the application refuses the final actor's handoff, so only a
+                    # non-conforming service can reach this.
                     reason='Final actor handed off beyond original actor allowance';break
                 continue
             disposition=settled.get('reason')

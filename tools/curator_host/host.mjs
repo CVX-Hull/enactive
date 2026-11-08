@@ -83,7 +83,11 @@ export function projectImages(messages, maxImages, block) {
   for (const [messageIndex, message] of messages.entries()) {
     if (!Array.isArray(message.content)) continue;
     for (const [contentIndex, part] of message.content.entries()) {
-      if (part.type === 'image') images.push({ messageIndex, contentIndex, toolCallId: message.toolCallId ?? null });
+      if (part.type === 'image') {
+        // view_frame puts "frame <source id> (<n> bytes)" right before each image it returns.
+        const label = /^frame (\S+) \(/.exec(message.content[contentIndex - 1]?.text ?? '');
+        images.push({ messageIndex, contentIndex, toolCallId: message.toolCallId ?? null, sourceId: label ? label[1] : null });
+      }
     }
   }
   const overflow = images.length - maxImages;
@@ -91,8 +95,11 @@ export function projectImages(messages, maxImages, block) {
   const omitted = images.slice(0, Math.min(Math.ceil(overflow / block) * block, images.length));
   const projected = structuredClone(messages);
   for (const image of omitted) {
+    // The marker depends on the frame alone, so it is byte-identical on every later request.
     projected[image.messageIndex].content[image.contentIndex] = { type: 'text',
-      text: `[Earlier frame image omitted to bound the request (tool call ${image.toolCallId}); call view_frame again to see it.]` };
+      text: image.sourceId
+        ? `[Earlier frame image omitted to bound the request (tool call ${image.toolCallId}, frame ${image.sourceId}); call view_frame with frames ["${image.sourceId}"] to see it again.]`
+        : `[Earlier frame image omitted to bound the request (tool call ${image.toolCallId}); call view_frame again to see it.]` };
   }
   return { messages: projected, omitted: omitted.length };
 }
@@ -103,13 +110,19 @@ export const FINISH_AT = 0.8;
 const READING_TOOLS = new Set(['list_dir', 'read_file', 'view_frame', 'run_workbench']);
 
 /** A transient note for the end of the context: the budget used so far and what to do now. It is
- * appended per request and never stored, so the cached prefix is unchanged. */
-export function budgetNote({ requests, maxRequests, spent, budget }) {
+ * appended per request and never stored, so the cached prefix is unchanged. Requests and dollars set
+ * the phase (and so the refusal of reading tools); the wall-clock limit only warns, because the host
+ * stops when it passes. */
+export function budgetNote({ requests, maxRequests, spent, budget, elapsedSeconds = 0, wallSeconds = Infinity }) {
   const share = Math.max(requests / maxRequests, spent / budget);
-  const status = `Budget: ${requests} of ${maxRequests} requests used; about $${spent.toFixed(2)} of $${budget.toFixed(2)} spent.`;
-  if (share >= FINISH_AT) return { share, text: `${status} The budget is nearly spent. Reading tools are now refused: write your submission or draft with write_file now, then call finish.` };
-  if (share >= WRITE_AT) return { share, text: `${status} More than half is spent. Start writing what you have found: a submission for facts you can cite, a draft for the rest.` };
-  return { share, text: status };
+  const time = Number.isFinite(wallSeconds) ? elapsedSeconds / wallSeconds : 0;
+  const status = `Budget: ${requests} of ${maxRequests} requests used; about $${spent.toFixed(2)} of $${budget.toFixed(2)} spent`
+    + (Number.isFinite(wallSeconds) ? `; ${Math.floor(elapsedSeconds)} of ${wallSeconds} s of time used.` : '.');
+  const clock = time >= FINISH_AT ? ' The time is nearly up: the host stops the session when it runs out. Write your submission or draft with write_file now, then call finish.'
+    : time >= WRITE_AT ? ' More than half the time is used. Start writing what you have found.' : '';
+  if (share >= FINISH_AT) return { share, text: `${status} The budget is nearly spent. Reading tools are now refused: write your submission or draft with write_file now, then call finish.${clock}` };
+  if (share >= WRITE_AT) return { share, text: `${status} More than half is spent. Start writing what you have found: a submission for facts you can cite, a draft for the rest.${clock}` };
+  return { share, text: status + clock };
 }
 
 function resultBytes(result) {
@@ -139,7 +152,8 @@ export async function runCurator(options) {
   const effort = configuration.effort;
   let agent, fatal, finished, requests = 0, toolCalls = 0, requestId, requestTimer, inFlight = false;
   let rawUsage, httpStatus, errorBody, lastPromptTokens = 0, contextWarning = false, spent = 0;
-  const budget = () => budgetNote({ requests, maxRequests: configuration.max_requests, spent, budget: configuration.budget_usd });
+  const budget = () => budgetNote({ requests, maxRequests: configuration.max_requests, spent, budget: configuration.budget_usd,
+    elapsedSeconds: (performance.now() - started) / 1000, wallSeconds: configuration.wall_seconds });
   const stopped = new AbortController();
   const stop = reason => {
     if (fatal) return;
@@ -239,9 +253,12 @@ export async function runCurator(options) {
             if (lastPromptTokens + model.maxTokens >= model.contextWindow) { stop('context-capacity'); return messages; }
             const projection = projectImages(messages, configuration.max_context_images, configuration.context_image_block);
             const notes = [budget().text];
-            if (!contextWarning && lastPromptTokens + model.maxTokens >= model.contextWindow * 0.75) {
-              contextWarning = true;
-              notes.push('The context window is nearly full. Write any submission or draft now and call finish.');
+            // Once past the threshold the warning is on every request (latched), and always at the tail,
+            // so the host's capacity stop never comes without notice and the prefix is not touched.
+            if (lastPromptTokens + model.maxTokens >= model.contextWindow * 0.75) contextWarning = true;
+            if (contextWarning) {
+              const room = Math.max(0, model.contextWindow - model.maxTokens - lastPromptTokens);
+              notes.push(`The context window is nearly full: about ${room} tokens of room remain before the host stops the session. Write any submission or draft now and call finish.`);
             }
             return [...projection.messages, { role: 'user', timestamp: Date.now(), content: [{ type: 'text', text: notes.join(' ') }] }];
           } catch { stop('context-projection-failed'); return messages; }

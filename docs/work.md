@@ -103,7 +103,8 @@ by offline fixtures only; no live 5xx has yet exercised it.
 
 The host evicts historical screenshots in whole count-only blocks of each package's
 frozen `context_image_block`, so the prompt prefix stays cacheable between evictions
-(the development runs used peak 39, block 10). A bounded live check on Gemini/Vertex
+(the development runs used peak 39, block 10; a block of about half the peak is now
+recommended, such as 39/20). A bounded live check on Gemini/Vertex
 proved the mechanism only and narrowly failed its pre-set cost rule (0.52× against
 ≤ 0.5×); its cost, provenance and the owner's disposition are on
 [#313](https://github.com/CVX-Hull/enactive/issues/313). Play behaviour with up to

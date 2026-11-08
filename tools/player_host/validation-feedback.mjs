@@ -39,7 +39,10 @@ export function createValidationFeedback(tools, report) {
     try { validateToolArguments(narrowed, call); }
     catch (error) {
       if (error instanceof Error && error.message.startsWith(header)) {
-        text = `Selected intent.entry_type=${JSON.stringify(kind)}.\n${error.message}`;
+        // Keep the validator's own wording, then add the narrowed diagnostic: the union-wide
+        // errors above may name a branch other than the one the call selected.
+        text = `${original[0].text}\n\nThe errors above check every intent branch and may name another one. `
+          + `For the selected intent.entry_type=${JSON.stringify(kind)} alone:\n${error.message.slice(header.length)}`;
       }
     }
     cache.set(result, {call, text});

@@ -150,11 +150,35 @@ to the first model request, no surviving process. The escape suite
 (`tests/curator_adversary.py` through `tests/test_curator_sandbox.py`) passes unchanged with these
 roots added to the layout.
 
-**Image cost in the reservation.** A 960×640 frame is about 280 KB; its base64 is counted by the
-proxy as that many input tokens at the arm's highest input price. Six images (about 2.3 MB of
-base64) reserve about $2.90 on the Terra arm and about $18 on the Opus arm per request, before
-any real cost, so a small session cap refuses requests that would really cost cents. The host keeps at
-most `--max-context-images` (default 6) in a request, evicting the oldest in blocks.
+**Image cost in the reservation.** The proxy counts each inline image as a bounded number of input
+tokens (`IMAGE_TOKENS`), not its base64 bytes, at the arm's highest input price, so more images in a
+request raise the reservation. The host keeps at most `--max-context-images` (default 16) in a
+request, evicting the oldest in blocks of `--context-image-block` (default 8). Each marker names the
+evicted frame's source ID so `view_frame` can show it again. The peak trades three limits:
+- **Eviction.** It rewrites the prompt prefix, so a wide window keeps it rare.
+- **Reservation.** Each image reserves `IMAGE_TOKENS` (10,000) at the highest input price, $0.16
+  per request at 16 images on terra and $1.28 on Opus, before any text or output. A small session
+  cap therefore refuses requests that would really cost cents.
+- **Body size.** Recorded frames reach about 280 KB, or 375 KB as base64. Sixteen stay under the
+  proxy's 8 MiB request limit, while 24 such frames would exceed it and end the session with a 413.
+
+The #454 runs passed 24/12 explicitly. No request in them reached the body limit: their only proxy
+refusals were spend-cap refusals. The #489 check passes 24/12 too, so its cached share compares
+with #454's.
+
+**Cache stability (ADR 009 P1.0).** A prompt cache only helps when each request extends the last
+byte for byte, so:
+- **Affinity.** The proxy generates one affinity value per proxy, that is per session, and sets it
+  as `x-session-id` on every OpenRouter request. It is independent of the session token, the host's
+  own header is never forwarded, and the ledger holds only a short SHA-256 of it (`affinity_sha256`).
+- **Tail notice.** The budget note is the last message of each request and is never stored. It now
+  includes the time used against the wall-clock limit and warns past half and four fifths of it;
+  only requests and dollars set the phase that refuses reading tools. Once the
+  prompt passes three quarters of the context window, a context warning with the room left joins it
+  on every later request, before the capacity stop.
+- **Proof.** Request-serialization tests in `tools/curator_host/test/host.test.mjs` and
+  `tests/test_curator_openrouter.py` check the prefix, the tail note, eviction and the header
+  with no provider call.
 
 ## Both hosts
 

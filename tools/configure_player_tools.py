@@ -17,9 +17,13 @@ SERVER='enactive_player'
 FORMATS=('mcp-servers-json','mcp-servers-toml')
 
 
-def configuration(actor_config: str, root: Path = ROOT, *, handoff: bool = True) -> dict:
-    """Actor MCP profile; a final actor with no available successor is offered no handoff tool."""
-    tools=[name for name in tool_specs() if handoff or name!='player_handoff']
+def configuration(actor_config: str, root: Path = ROOT) -> dict:
+    """Actor MCP profile: one constant tool table for every actor, so the request prefix is byte-stable.
+
+    The final actor of an admission keeps `player_handoff`; the service refuses its call with a
+    clear message and no state change.
+    """
+    tools=list(tool_specs())
     return dict(command=str(root/'.venv/bin/python'),args=['-m','harness.player_mcp','--actor-config',actor_config],
         cwd=str(root),enabled=True,required=True,enabled_tools=tools,
         startup_timeout_sec=15,tool_timeout_sec=30)

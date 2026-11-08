@@ -36,7 +36,11 @@ test('real SDK refusal gains accurate branch feedback, stable across later histo
   const first=project(originals);
   assert.match(first[1].content[0].text,/entry.stage: must not have more than 128/);
   assert.match(first[1].content[0].text,/entry.subject: must match pattern/);
-  assert.ok(!first[1].content[0].text.includes('intent.entry.value'));
+  // The validator's own wording is kept, first and unchanged; the narrowed diagnostic follows it.
+  assert.ok(first[1].content[0].text.startsWith(message.content[0].text + '\n\n'));
+  assert.match(first[1].content[0].text,/may name another one\. For the selected intent\.entry_type="work" alone:\n/);
+  const narrowed=first[1].content[0].text.slice(message.content[0].text.length);
+  assert.ok(!narrowed.includes('intent.entry.value'),'the diagnostic names only the selected branch');
   assert.equal(events.length,1);assert.equal(events[0].original_result,message);
   const later=[...originals,assistant({type:'toolCall',id:'other',name:'observe',arguments:{}}),
     {role:'toolResult',toolCallId:'other',toolName:'observe',content:[{type:'text',text:'later'}],durationMs:0}];
