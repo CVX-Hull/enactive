@@ -46,6 +46,14 @@ Most of ADR008's follow-ons take their trigger from the seven-day lineage's evid
 ([#386](https://github.com/CVX-Hull/enactive/issues/386)) wait for a process metric the
 readers cannot score.
 
+A proposed direction, not adopted: [ADR009](decisions/009-curated-player.md) (8 November
+2026) separates the actor from a coding-agent curator, replaces the memory record kinds
+with a fitted ontology, puts programs on the actor's interface and redesigns the
+spectator. Its phases route to #387, #177, #178, #384, #42, #164 and
+[#143](https://github.com/CVX-Hull/enactive/issues/143), which would absorb
+[#294](https://github.com/CVX-Hull/enactive/issues/294); current contracts govern
+until a phase is adopted on study evidence.
+
 ## Current integrated checkpoint
 
 The production source has the [computer-control boundary](contracts/computer-control.md):
