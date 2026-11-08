@@ -178,10 +178,11 @@ class Memory:
         """Root IDs that name neither a stored record nor a stored program, in order."""
         if type(ids) is not list or len(ids) > 32:
             raise PlayerError('Context selects at most 32 roots')
+        for item_id in ids:
+            identity(item_id)  # every root is validated before any is deduplicated or looked up
         unknown = []
         try:
             for item_id in dict.fromkeys(ids):
-                identity(item_id)
                 if not any(self._db.execute(f'SELECT 1 FROM {table} WHERE id=?', (item_id,)).fetchone()
                            for table in ('records', 'programs')):
                     unknown.append(item_id)

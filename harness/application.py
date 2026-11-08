@@ -108,9 +108,11 @@ class Application:
         # and retry; an unknown root would otherwise reach the successor only as an omission.
         unknown = self.memory.unknown_roots(roots)
         if unknown:
-            raise PlayerError('Handoff not sealed: no stored record or program has ID '
-                              + ', '.join(unknown) + '. Check the IDs (player_memory_read or '
-                              'player_memory_query lists stored records) and call player_handoff again.')
+            # The instruction comes first so a truncated error still carries it.
+            listed = ', '.join(unknown[:8]) + (f' and {len(unknown) - 8} more' if len(unknown) > 8 else '')
+            raise PlayerError('Handoff not sealed. Correct these root IDs and call player_handoff again '
+                              '(player_memory_query lists records; player_program_read reads programs). '
+                              f'No stored record or program has ID: {listed}')
         context = self.memory.context(roots, max_bytes=65536)
         identity = uuid.uuid4().hex
         packet = dict(schema='player-handoff-context/1', context_id=identity, session=self.runtime.session,

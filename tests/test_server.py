@@ -134,7 +134,7 @@ def test_unknown_handoff_root_is_refused_before_sealing_and_can_be_corrected(ser
     ids=[saved['id'] if root == 'stored' else root for root in roots]
     refused,_,error=client.call('player_handoff',dict(ids=ids,summary='Fixture unfinished task'))
     assert error and refused['schema']=='player-error/1' and refused['submission']=='none'
-    assert MISTYPED in refused['reason'] and saved['id'] not in refused['reason']
+    assert refused['reason'].count(MISTYPED)==1 and saved['id'] not in refused['reason']
     assert 'player_handoff again' in refused['reason']
     assert not client.sealed and list(app.context_directory.glob('*.json'))==[]
     # Still the active actor: it can act, then hand off with the corrected root.
@@ -147,10 +147,32 @@ def test_unknown_handoff_root_is_refused_before_sealing_and_can_be_corrected(ser
     assert packet['knowledge']['omissions']==[]
 
 
-def test_malformed_handoff_root_is_refused_before_sealing(service):
+@pytest.mark.parametrize('bad', ['', 'x'*129])
+def test_malformed_handoff_root_is_refused_before_sealing(service, bad):
     app,channel,actor,port,client=service
-    refused,_,error=client.call('player_handoff',dict(ids=['not-an-id'],summary='Fixture'))
-    assert error and refused['submission']=='none' and not client.sealed
+    refused,_,error=client.call('player_handoff',dict(ids=[MISTYPED,bad],summary='Fixture'))
+    assert error and refused['submission']=='none' and refused['error']=='PlayerError'
+    assert not client.sealed and list(app.context_directory.glob('*.json'))==[]
+
+
+def test_many_unknown_roots_keep_the_instruction_within_the_error_cut(service):
+    app,channel,actor,port,client=service
+    ids=[f'{i:032x}' for i in range(1, 33)]
+    refused,_,error=client.call('player_handoff',dict(ids=ids,summary='Fixture'))
+    assert error and 'player_handoff again' in refused['reason'] and 'and 24 more' in refused['reason']
+
+
+def test_a_stored_program_is_a_valid_handoff_root(service):
+    app,channel,actor,port,client=service
+    code="function step(v,s){return {status:'done',state:s,actions:null,reason:'fixture'};}"
+    program,_,error=client.call('player_program_save',dict(program=dict(schema='player-program/2',
+        view_schema='program-view/4',code=code,parent_id=None,reason='Fixture program root',source_ids=[],
+        record_ids=[],applicability=None)))
+    assert not error, program
+    sealed,_,error=client.call('player_handoff',dict(ids=[program['id']],summary='Fixture unfinished task'))
+    assert not error and client.sealed
+    packet=json.loads(next(app.context_directory.glob('*.json')).read_text())
+    assert [p['id'] for p in packet['knowledge']['programs']]==[program['id']]
 
 
 def test_lost_handoff_response_stops_current_sealed_actor_and_cannot_resume(service):
