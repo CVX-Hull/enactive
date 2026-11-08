@@ -1,0 +1,391 @@
+{
+ "containers": [
+  {
+   "budgets": {
+    "host_seconds": 7200,
+    "limits": {
+     "max_bytes": 34359738368,
+     "max_frames": 2000,
+     "max_inputs": 20000,
+     "max_requests": 10000
+    },
+    "max_hosts": 2,
+    "max_http_attempts": 400,
+    "total_host_seconds": 7200,
+    "wall_seconds": 7800
+   },
+   "id": "397-seven-day/sd1a1",
+   "inputs": {
+    "actors": [
+     {
+      "actor_id": "4b53df8e07f14a52bd8c400a3937280c",
+      "directory": "001",
+      "given_sha256": {
+       "context.txt": "083598ad8a0293683150fbb0be0af54ea6f6b03f99bc3856d9c902c5bef02bac",
+       "prompt.txt": "4194136391609b4ce7a56dd334c60d8b0f024c54e4e5ac398a272b12e08c07c5"
+      }
+     },
+     {
+      "actor_id": "9847a81d10cc461abf3eee2a14a316ea",
+      "directory": "002",
+      "given_sha256": {
+       "context.txt": "083598ad8a0293683150fbb0be0af54ea6f6b03f99bc3856d9c902c5bef02bac",
+       "prompt.txt": "d756e1bae35977b70cf23f85ef341ad2b737e94f9bf43480f6e90d3f5fbb32cb"
+      }
+     }
+    ],
+    "session_id": "f37efc17970589e90aff3c73d3742a89"
+   },
+   "kind": "actor-session",
+   "lifecycle": {
+    "state": "sealed"
+   },
+   "owner_role": "actor",
+   "pinned": {
+    "run_manifest_sha256": "63ea3f86a2959adffdd29bdb39190b0602add472402b343ec199c865899b1bee",
+    "source_commit": "db38b30296e876456763283dc339efa927d24824"
+   },
+   "provenance": {
+    "evidence_study": "397-seven-day",
+    "path": "computer-sessions/sd1a1"
+   },
+   "retention": {
+    "note": "sealed; described by this sidecar, never rewritten",
+    "policy": "evidence"
+   },
+   "schema": "container-manifest/1"
+  },
+  {
+   "budgets": {
+    "host_seconds": 7200,
+    "limits": {
+     "max_bytes": 34359738368,
+     "max_frames": 2000,
+     "max_inputs": 20000,
+     "max_requests": 10000
+    },
+    "max_hosts": 2,
+    "max_http_attempts": 400,
+    "total_host_seconds": 7200,
+    "wall_seconds": 7800
+   },
+   "id": "397-seven-day/sd1a2",
+   "inputs": {
+    "actors": [
+     {
+      "actor_id": "52f06ae4662841c0b105155f2c795c4e",
+      "directory": "001",
+      "given_sha256": {
+       "context.txt": "083598ad8a0293683150fbb0be0af54ea6f6b03f99bc3856d9c902c5bef02bac",
+       "prompt.txt": "9453263fb311ad157bbfeedfb14ea30c048b30ffc2dc32f64c5f99cb1e987c01"
+      }
+     },
+     {
+      "actor_id": "2e9d7a7859c64a02b092fd7150091072",
+      "directory": "002",
+      "given_sha256": {
+       "context.txt": "083598ad8a0293683150fbb0be0af54ea6f6b03f99bc3856d9c902c5bef02bac",
+       "prompt.txt": "80a6770a0697f45447913d485d80f6aa66a9bf431ed73f756076c019b0ee3da4"
+      }
+     }
+    ],
+    "session_id": "507f7c538191fedb29b11639ed137b70"
+   },
+   "kind": "actor-session",
+   "lifecycle": {
+    "state": "sealed"
+   },
+   "owner_role": "actor",
+   "pinned": {
+    "run_manifest_sha256": "524e21581d9f5ad0b939eae32c76cbc73810aa51bd8ceeb889b522b3fd02754e",
+    "source_commit": "db38b30296e876456763283dc339efa927d24824"
+   },
+   "provenance": {
+    "evidence_study": "397-seven-day",
+    "path": "computer-sessions/sd1a2"
+   },
+   "retention": {
+    "note": "sealed; described by this sidecar, never rewritten",
+    "policy": "evidence"
+   },
+   "schema": "container-manifest/1"
+  },
+  {
+   "budgets": {
+    "host_seconds": 7200,
+    "limits": {
+     "max_bytes": 34359738368,
+     "max_frames": 2000,
+     "max_inputs": 20000,
+     "max_requests": 10000
+    },
+    "max_hosts": 2,
+    "max_http_attempts": 400,
+    "total_host_seconds": 7200,
+    "wall_seconds": 7800
+   },
+   "id": "397-seven-day/sd1a3",
+   "inputs": {
+    "actors": [
+     {
+      "actor_id": "c025d1b691c54c919dd5a914f84e4728",
+      "directory": "001",
+      "given_sha256": {
+       "context.txt": "083598ad8a0293683150fbb0be0af54ea6f6b03f99bc3856d9c902c5bef02bac",
+       "prompt.txt": "eb19fff8f446e921a31a11f35f74100c10702d92240ac690f60f02029ef55f5f"
+      }
+     },
+     {
+      "actor_id": "8459d27b4f00442bbce8c5c2628b1b63",
+      "directory": "002",
+      "given_sha256": {
+       "context.txt": "083598ad8a0293683150fbb0be0af54ea6f6b03f99bc3856d9c902c5bef02bac",
+       "prompt.txt": "80ccbe2b885a35c41042f422943a7d514cb4676801cf9b03152808988675041f"
+      }
+     }
+    ],
+    "session_id": "12ba39c88fbb4da11264b8d2c4634db1"
+   },
+   "kind": "actor-session",
+   "lifecycle": {
+    "state": "sealed"
+   },
+   "owner_role": "actor",
+   "pinned": {
+    "run_manifest_sha256": "81ae982b9099db45b4f3a71263a61bf7b6764418b20dd13790cfbd0067368d3f",
+    "source_commit": "db38b30296e876456763283dc339efa927d24824"
+   },
+   "provenance": {
+    "evidence_study": "397-seven-day",
+    "path": "computer-sessions/sd1a3"
+   },
+   "retention": {
+    "note": "sealed; described by this sidecar, never rewritten",
+    "policy": "evidence"
+   },
+   "schema": "container-manifest/1"
+  },
+  {
+   "budgets": {
+    "host_seconds": 7200,
+    "limits": {
+     "max_bytes": 34359738368,
+     "max_frames": 2000,
+     "max_inputs": 20000,
+     "max_requests": 10000
+    },
+    "max_hosts": 2,
+    "max_http_attempts": 400,
+    "total_host_seconds": 7200,
+    "wall_seconds": 7800
+   },
+   "id": "397-seven-day/sd1a4",
+   "inputs": {
+    "actors": [
+     {
+      "actor_id": "96ded65ebd114bd887dffc3926b936bd",
+      "directory": "001",
+      "given_sha256": {
+       "context.txt": "083598ad8a0293683150fbb0be0af54ea6f6b03f99bc3856d9c902c5bef02bac",
+       "prompt.txt": "3fbefc2558def5117bc0f0beb9f9f1a70357f0a521f2f370144c4a89189e403d"
+      }
+     },
+     {
+      "actor_id": "e5c4124d5f2b4ea59ab8ff01e2ccfce2",
+      "directory": "002",
+      "given_sha256": {
+       "context.txt": "083598ad8a0293683150fbb0be0af54ea6f6b03f99bc3856d9c902c5bef02bac",
+       "prompt.txt": "8d19eaa2b1981dcd9eb7c6f8b2e25fd60fd81fe427f2705fcd3683176b01f0fe"
+      }
+     }
+    ],
+    "session_id": "92505965fcbd23adda6919b8a38decc4"
+   },
+   "kind": "actor-session",
+   "lifecycle": {
+    "state": "sealed"
+   },
+   "owner_role": "actor",
+   "pinned": {
+    "run_manifest_sha256": "ead2de21044777bc44d7cb8dd6b3ea8a7ed5a18ada0fd001001fd3e29cb1fd7d",
+    "source_commit": "db38b30296e876456763283dc339efa927d24824"
+   },
+   "provenance": {
+    "evidence_study": "397-seven-day",
+    "path": "computer-sessions/sd1a4"
+   },
+   "retention": {
+    "note": "sealed; described by this sidecar, never rewritten",
+    "policy": "evidence"
+   },
+   "schema": "container-manifest/1"
+  },
+  {
+   "budgets": {
+    "host_seconds": 7200,
+    "limits": {
+     "max_bytes": 34359738368,
+     "max_frames": 2000,
+     "max_inputs": 20000,
+     "max_requests": 10000
+    },
+    "max_hosts": 2,
+    "max_http_attempts": 400,
+    "total_host_seconds": 7200,
+    "wall_seconds": 7800
+   },
+   "id": "397-seven-day/sd1a5",
+   "inputs": {
+    "actors": [
+     {
+      "actor_id": "487e6af307c746c4be6f2dde4f99b97d",
+      "directory": "001",
+      "given_sha256": {
+       "context.txt": "083598ad8a0293683150fbb0be0af54ea6f6b03f99bc3856d9c902c5bef02bac",
+       "prompt.txt": "060cf8828d01f572a66fc91fc62b3e5b943166ff023d623e68233880f17b22e5"
+      }
+     },
+     {
+      "actor_id": "a39248bc4e1a45a4a3f4fb749cfb5969",
+      "directory": "002",
+      "given_sha256": {
+       "context.txt": "083598ad8a0293683150fbb0be0af54ea6f6b03f99bc3856d9c902c5bef02bac",
+       "prompt.txt": "a36960ed06d09ca79d7d5198a007a07430f874f25fcdf17ea7fe113476223fda"
+      }
+     }
+    ],
+    "session_id": "3c6acb3817ebc5b0fced8f7a122b7bbf"
+   },
+   "kind": "actor-session",
+   "lifecycle": {
+    "state": "sealed"
+   },
+   "owner_role": "actor",
+   "pinned": {
+    "run_manifest_sha256": "30b63b5a648caa528e4c505cb9d2ecb66e03dad5971792b2aa395510b7ce8229",
+    "source_commit": "db38b30296e876456763283dc339efa927d24824"
+   },
+   "provenance": {
+    "evidence_study": "397-seven-day",
+    "path": "computer-sessions/sd1a5"
+   },
+   "retention": {
+    "note": "sealed; described by this sidecar, never rewritten",
+    "policy": "evidence"
+   },
+   "schema": "container-manifest/1"
+  },
+  {
+   "budgets": {
+    "host_seconds": 7200,
+    "limits": {
+     "max_bytes": 34359738368,
+     "max_frames": 2000,
+     "max_inputs": 20000,
+     "max_requests": 10000
+    },
+    "max_hosts": 2,
+    "max_http_attempts": 400,
+    "total_host_seconds": 7200,
+    "wall_seconds": 7800
+   },
+   "id": "397-seven-day/sd1a6",
+   "inputs": {
+    "actors": [
+     {
+      "actor_id": "5feb256fff514d71aa781cc17240b4c6",
+      "directory": "001",
+      "given_sha256": {
+       "context.txt": "083598ad8a0293683150fbb0be0af54ea6f6b03f99bc3856d9c902c5bef02bac",
+       "prompt.txt": "785275b2d18fec04f4f23d997fd8ac187b99ff9e25dc3ec63cc6e6a0475c1e76"
+      }
+     },
+     {
+      "actor_id": "bb93b88cba5b434d8be3f538b1c09364",
+      "directory": "002",
+      "given_sha256": {
+       "context.txt": "083598ad8a0293683150fbb0be0af54ea6f6b03f99bc3856d9c902c5bef02bac",
+       "prompt.txt": "975e69a730a3658280253a54062dc5a154a736505b3df23f19dfcf157f089f4d"
+      }
+     }
+    ],
+    "session_id": "910bb98c06461865f5a73e3574cdd95a"
+   },
+   "kind": "actor-session",
+   "lifecycle": {
+    "state": "sealed"
+   },
+   "owner_role": "actor",
+   "pinned": {
+    "run_manifest_sha256": "b1ca650129b46f3de1625dd20f59f324a713b64f034194fa946fb279a1893818",
+    "source_commit": "db38b30296e876456763283dc339efa927d24824"
+   },
+   "provenance": {
+    "evidence_study": "397-seven-day",
+    "path": "computer-sessions/sd1a6"
+   },
+   "retention": {
+    "note": "sealed; described by this sidecar, never rewritten",
+    "policy": "evidence"
+   },
+   "schema": "container-manifest/1"
+  },
+  {
+   "budgets": {
+    "host_seconds": 7200,
+    "limits": {
+     "max_bytes": 34359738368,
+     "max_frames": 2000,
+     "max_inputs": 20000,
+     "max_requests": 10000
+    },
+    "max_hosts": 2,
+    "max_http_attempts": 400,
+    "total_host_seconds": 7200,
+    "wall_seconds": 7800
+   },
+   "id": "397-seven-day/sd1a7",
+   "inputs": {
+    "actors": [
+     {
+      "actor_id": "6e8a51dad41a4d5fabad8ce21aedbb4c",
+      "directory": "001",
+      "given_sha256": {
+       "context.txt": "083598ad8a0293683150fbb0be0af54ea6f6b03f99bc3856d9c902c5bef02bac",
+       "prompt.txt": "708d684a2b7546daea29fb7da79d2db60268bfaaf4072ccc48902856dd3caa71"
+      }
+     },
+     {
+      "actor_id": "6d1edf495d4a47e2a908697dc7e0d606",
+      "directory": "002",
+      "given_sha256": {
+       "context.txt": "083598ad8a0293683150fbb0be0af54ea6f6b03f99bc3856d9c902c5bef02bac",
+       "prompt.txt": "1f81dfbee96d685ca3e63efd3215ae3053f4f8001f06724ded7a8cf772d2f27b"
+      }
+     }
+    ],
+    "session_id": "bf01a9f1ca634ea63144b01cd8debe8d"
+   },
+   "kind": "actor-session",
+   "lifecycle": {
+    "state": "sealed"
+   },
+   "owner_role": "actor",
+   "pinned": {
+    "run_manifest_sha256": "d923719632ee2249ad1558a01928642690f5b6e452e92c901603d86b694f7c98",
+    "source_commit": "db38b30296e876456763283dc339efa927d24824"
+   },
+   "provenance": {
+    "evidence_study": "397-seven-day",
+    "path": "computer-sessions/sd1a7"
+   },
+   "retention": {
+    "note": "sealed; described by this sidecar, never rewritten",
+    "policy": "evidence"
+   },
+   "schema": "container-manifest/1"
+  }
+ ],
+ "schema": "container-index/1",
+ "study": "397-seven-day"
+}

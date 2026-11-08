@@ -420,6 +420,8 @@ Each session gets a fresh workspace with the access a coding agent expects:
   down by the brief and an index of types and programs that the curator maintains
   in the knowledge repository, published through the gate like everything else.
   It is measured in the P0 shadow run.
+- **Version 0** of the repository, sessions, drafts and gate (#453) is specified in
+  [curator sessions, drafts and gate v0](../design/curator-session.md).
 
 ### Submission gate
 
@@ -500,7 +502,9 @@ so the same workspace can run under different coding-agent hosts and models.
 - **Program fitting:** offline replay, and practice-instance trials if P3 is adopted.
 - **Slot benchmarks:** candidate bindings scored on recorded cases.
 
-The workbench is game-neutral; recorded cases are per game and lineage.
+The workbench is game-neutral; recorded cases are per game and lineage. Its first part,
+the trace projection, evidence reader, trace tools and sidecar manifests (#452), is
+described in [trace projection and workbench](../design/trace-workbench.md).
 
 ## Containers (D17)
 
