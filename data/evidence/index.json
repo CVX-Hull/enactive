@@ -447,6 +447,21 @@
         "lh": ".runtime/dev-loop/lh"
       },
       "visibility": "private"
+    },
+    "397-seven-day": {
+      "availability": "present",
+      "bytes": 304836561,
+      "cited_by": [
+        "docs/acceptance/2026-11-07-seven-day-397.md"
+      ],
+      "files": 2566,
+      "manifest_sha256": "2487838cdb3218e00d419c7cede6d31923ee5f6efc843718ad3c3853833d89d2",
+      "note": "The #397 seven-day lineage (sd1a1-sd1a7, 7 November 2026): the run worktree's .runtime at db38b30 (seven run packages, final evaluation records, the lineage userdir with the Whitethorn and Modale saves, the player-memory-sd1 store, the 397-db38b30 adapter build and its native check) and the operator directory (packaging and admission scripts, operator ledgers, admission logs, supervisor output, D4 reviews, day-check and close-out analyses). The app copy, credential reference and locks are skipped by rule.",
+      "sources": {
+        ".": ".runtime/worktrees/397/source/.runtime@db38b30",
+        "operator": ".runtime/worktrees/397/operator"
+      },
+      "visibility": "private"
     }
   }
 }

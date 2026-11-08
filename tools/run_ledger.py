@@ -22,7 +22,8 @@ LEDGER = ROOT / 'data' / 'evaluation' / 'runs.jsonl'
 SCHEMA = 'dev-run/1'
 # Documents holding hand-scored run tables that the ledger cross-checks.
 HAND_TABLES = {'docs/acceptance/2026-11-06-development-loop.md': (372,),
-               'docs/acceptance/2026-11-07-long-horizon-382.md': (382,)}
+               'docs/acceptance/2026-11-07-long-horizon-382.md': (382,),
+               'docs/acceptance/2026-11-07-seven-day-397.md': (397,)}
 ATTEMPT_COLUMNS = ('Attempts', 'Attempts (setup)')
 SPEND_COLUMNS = ('$ upper bound', '$ actual')
 

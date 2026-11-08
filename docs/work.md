@@ -32,11 +32,13 @@ for a capability baseline.
   [record](acceptance/2026-11-07-long-horizon-382.md)): two of three save/reload
   lineages Day-viable, a screen; lineage 3 ended on an input-window stall
   ([#396](https://github.com/CVX-Hull/enactive/issues/396)).
+- **Seven-day lineage, 7 November 2026** ([#397](https://github.com/CVX-Hull/enactive/issues/397),
+  [record](acceptance/2026-11-07-seven-day-397.md)): a development run on the #396 arm.
+  It died on day 2 at 47.8 elapsed hours, catching fire while resuming a craft beside a
+  fire. Day 1 passed; no input-window stall (#396) or custody stop occurred; about $0.80
+  per game hour.
 
-The seven-day attempt is [#397](https://github.com/CVX-Hull/enactive/issues/397), a
-development run that informs #145 and #164; the input-bridge change for the stall is
-[#396](https://github.com/CVX-Hull/enactive/issues/396). Most of ADR008's follow-ons take
-their trigger from that run's evidence: intent visibility
+Most of ADR008's follow-ons take their trigger from the seven-day lineage's evidence: intent visibility
 ([#384](https://github.com/CVX-Hull/enactive/issues/384)), label writing
 ([#385](https://github.com/CVX-Hull/enactive/issues/385)), a cross-run channel
 ([#387](https://github.com/CVX-Hull/enactive/issues/387)) and a scenario bank
