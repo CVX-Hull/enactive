@@ -131,10 +131,16 @@ Across the 17 measured sessions, cached prompt tokens were 2.5–9.8% of all pro
 and cache writes made up nearly the rest. The 24-image window, which makes image
 evictions rare, did not change that.
 
-**Likely cause, not verified.** Pi sends an `x-session-id` header for OpenRouter's sticky
-routing, which keeps one session on the same provider backend, where its cache lives.
-The proxy's header allowlist (`content-type`, `accept`, `anthropic-version`,
-`user-agent`) drops that header.
+**Likely cause, not verified.** No session-affinity header was ever sent. OpenRouter's
+sticky routing keeps a session on the same provider backend, where its cache lives, and
+it needs such a header.
+- **The host.** The serializer sends `x-session-id` only when the agent is given a
+  session ID. The curator host never sets one, and neither does the actor's host.
+- **The proxy.** Its header allowlist (`content-type`, `accept`, `anthropic-version`,
+  `user-agent`) would drop the header anyway.
+
+A context review after the runs found this. A first draft of this record wrongly said
+the host sent the header and the proxy dropped it.
 
 **Why it matters.** Terra's prices are $1.25 per million tokens to write the cache and
 $0.05 to read it. If caching worked, most of each request's prompt would be billed at
@@ -142,8 +148,10 @@ the read price, so the measured cost is likely an overestimate of what a fixed h
 would spend.
 
 **The fix is a P1 prerequisite.**
-- The proxy sets its own per-session affinity value. It never forwards the host's.
-- One paid session verifies the change.
+- Each session gets one affinity value. The proxy is the place to set it, because the
+  host cannot widen the headers it sends.
+- One paid session verifies whether affinity actually raises the cached share. Until
+  then, missing affinity is a hypothesis, not a measured cause.
 - The verification is not in this record's spend.
 
 ## Isolation
