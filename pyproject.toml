@@ -51,6 +51,18 @@ source_modules = ["harness.viewer"]
 forbidden_modules = ["harness.computer.runtime", "harness.computer.channel", "harness.computer.launch", "harness.application", "harness.server", "harness.player", "harness.player_client", "harness.player_tools", "harness.player_mcp", "harness.__main__", "tools", "subprocess"]
 
 [[tool.importlinter.contracts]]
+name = "The curator holds no custody, player access or evaluation records (ADR 009, ADR008)"
+type = "forbidden"
+source_modules = ["harness.curator"]
+forbidden_modules = ["harness.computer", "harness.application", "harness.server", "harness.player", "harness.player_client", "harness.player_tools", "harness.player_mcp", "harness.evaluation", "harness.viewer", "harness.__main__", "tools"]
+
+[[tool.importlinter.contracts]]
+name = "Nothing in the player, its adapters, the computer or evaluation reaches the curator"
+type = "forbidden"
+source_modules = ["harness.player", "harness.player_client", "harness.player_tools", "harness.player_mcp", "harness.computer", "harness.application", "harness.server", "harness.evaluation", "harness.viewer"]
+forbidden_modules = ["harness.curator"]
+
+[[tool.importlinter.contracts]]
 name = "HTTP server does not depend on CLI or build tooling"
 type = "forbidden"
 source_modules = ["harness.server"]
