@@ -35,14 +35,19 @@ STUDIES = {'397': '397-seven-day', '372': '372-382-dev-loop'}
 HELD_OUT = ('lh1', 'lh2', 'lh3')
 
 
+def development() -> dict[str, list[str]]:
+    """The annotated development lineages and their chunks; any held-out name is refused."""
+    if any(name.startswith(HELD_OUT) or any(c.startswith(HELD_OUT) for c in chunks)
+           for name, chunks in LINEAGES.items()):
+        raise SystemExit('held-out lineages are never used')
+    return LINEAGES
+
+
 def lineage_runs() -> dict[str, list[str]]:
     """Each development lineage's runs in order: #397's admissions, then the six #372 sample runs."""
-    runs = {'397': sorted({chunk.rsplit('-', 1)[0] for chunk in LINEAGES['397']})}
-    runs['372'] = [name for name in LINEAGES if name != '397']
-    for names in runs.values():
-        if any(name.startswith(HELD_OUT) for name in names):
-            raise SystemExit('held-out lineages are never used')
-    return runs
+    lineages = development()
+    return {'397': sorted({chunk.rsplit('-', 1)[0] for chunk in lineages['397']}),
+            '372': [name for name in lineages if name != '397']}
 
 
 def chunk_frames(session: Path) -> list[tuple[str, list[str]]]:
@@ -147,6 +152,7 @@ def recall(out: Path) -> dict:
     data = json.loads((out/'candidates.json').read_text())
     verdicts = {row['id']: row for row in _lines(out/'judgments.jsonl')}
     probes = ROOT/'data'/'evaluation'/'probes'
+    lineages = development()
     result = dict(schema=SCHEMA, kind='recall', lineages={}, pairs=[])
     totals = dict(judged=0, confirmed=0, captured=0)
     for lineage in ('397', '372'):
@@ -161,7 +167,7 @@ def recall(out: Path) -> dict:
                 result['pairs'].append(dict(id=pair['id'], confirmed=False))
                 continue
             name = '397' if lineage == '397' else pair['run']
-            order = LINEAGES[name]
+            order = lineages[name]
             ledger = {chunk: _lines(probes/name/f'{chunk}.jsonl') for chunk in order}
             hit = captured(pair, ledger, order)
             figures['confirmed'] += 1
@@ -176,8 +182,10 @@ def recall(out: Path) -> dict:
     result['decision'] = None if totals['recall'] is None else (
         'fact-label protocol stands' if totals['recall'] >= 0.6 else 'switch to query-style probes')
     coverage_file = out/'query-coverage.jsonl'
+    content_file = out/'fact-content.jsonl'
     if coverage_file.is_file():
-        result['query_probes'] = query_figures(data, verdicts, result['pairs'], _lines(coverage_file))
+        result['query_probes'] = query_figures(data, verdicts, result['pairs'], _lines(coverage_file),
+                                               _lines(content_file) if content_file.is_file() else None)
     (out/'recall.json').write_text(json.dumps(result, indent=1, sort_keys=True) + '\n')
     return result
 
@@ -188,21 +196,38 @@ def recall(out: Path) -> dict:
 TRIVIAL = ('empty', '0 in category', 'loading', 'search help', 'search-help')
 
 
-def query_figures(data: dict, verdicts: dict, fact_pairs: list[dict], coverage: list[dict]) -> dict:
-    """Query-probe recall (pre-registered bar 0.6) and, descriptively, the union with the fact ledger."""
+def query_figures(data: dict, verdicts: dict, fact_pairs: list[dict], coverage: list[dict],
+                  fact_content: list[dict] | None = None) -> dict:
+    """Query-probe recall (pre-registered bar 0.6) and, descriptively, the union with the fact ledger.
+
+    The pre-registered fact rule counts any nearby need on any earlier fact, whatever it says.
+    `fact_content` (post hoc, after review) holds a blinded judge's verdict on whether one of those
+    nearby facts states what the earlier frame shows; with it, `fact_content` and `union_content`
+    count content-matched captures, comparable with query coverage."""
     covered = {row['id']: row['covered'] is True for row in coverage}
     captured = {row['id']: row['captured'] for row in fact_pairs if row.get('confirmed')}
     lineage = {pair['id']: pair['lineage'] for pair in data['pairs']}
     trivial = {i for i in captured if any(word in verdicts[i]['what'].lower() for word in TRIVIAL)}
     if set(covered) != set(captured):
         raise SystemExit('query coverage must judge exactly the confirmed pairs')
+    content = None
+    if fact_content is not None:
+        content = {row['id']: row['covered'] is True for row in fact_content}
+        if set(content) != {i for i, hit in captured.items() if hit}:
+            raise SystemExit('fact content must judge exactly the captured pairs')
 
     def figures(ids):
         n = len(ids)
-        return dict(confirmed=n, query=sum(covered[i] for i in ids), fact=sum(captured[i] for i in ids),
-                    union=sum(covered[i] or captured[i] for i in ids),
-                    query_recall=round(sum(covered[i] for i in ids) / n, 3) if n else None,
-                    union_recall=round(sum(covered[i] or captured[i] for i in ids) / n, 3) if n else None)
+        out = dict(confirmed=n, query=sum(covered[i] for i in ids), fact=sum(captured[i] for i in ids),
+                   union=sum(covered[i] or captured[i] for i in ids),
+                   query_recall=round(sum(covered[i] for i in ids) / n, 3) if n else None,
+                   union_recall=round(sum(covered[i] or captured[i] for i in ids) / n, 3) if n else None)
+        if content is not None:
+            matched = sum(content.get(i, False) for i in ids)
+            either = sum(covered[i] or content.get(i, False) for i in ids)
+            out.update(fact_content=matched, union_content=either,
+                       union_content_recall=round(either / n, 3) if n else None)
+        return out
 
     ids = sorted(captured)
     pooled = figures(ids)
@@ -216,28 +241,32 @@ LEDGER_SCHEMA = 'probe-ledger/1'
 
 
 def freeze(probes: Path) -> dict:
-    """The scoring ledger the owner chose (8 November 2026): both blinded ledgers, frozen by digest.
+    """Both blinded ledgers, frozen by digest for P1's secondary figures (owner decision, 8 November 2026).
 
     Per development lineage: the fact-label chunks with the unblinded adjudication layer kept as a
-    separate file, and the query probes of every chunk that precedes a boundary. An arm is scored
-    against both; nothing here may change after P1's pre-registration."""
+    separate file, and the query probes of every chunk that precedes a boundary. P1's primary
+    probes are confirmed re-observations; nothing here may change after P1's pre-registration."""
     import hashlib
 
     def digest(path: Path) -> str:
         return hashlib.sha256(path.read_bytes()).hexdigest()
 
     lineages = {}
-    for name, chunks in LINEAGES.items():
+    for name, chunks in development().items():
         group = '397' if name == '397' else '372'
         facts = {chunk: digest(probes/name/f'{chunk}.jsonl') for chunk in chunks}
         adjudication = probes/name/'adjudication.jsonl'
         queries = {path.stem: digest(path) for path in sorted((probes/'queries'/group).glob('*.jsonl'))
                    if path.stem in chunks}
+        if set(queries) != set(chunks[:-1]):
+            raise SystemExit(f'{name}: query files must be exactly the chunks before a boundary; '
+                             f'have {sorted(queries)}, want {chunks[:-1]}')
         lineages[name] = dict(fact_chunks=facts, queries=queries,
                               adjudication=digest(adjudication) if adjudication.is_file() else None)
     ledger = dict(schema=LEDGER_SCHEMA, protocol='probe-protocol/1', frozen='2026-11-08', lineages=lineages,
-                  note='Both blinded ledgers are frozen together (owner decision, #490). The 0.6 recall bar was '
-                       'missed by each; their union figure is post hoc. See docs/design/probe-protocol.md.')
+                  note='Both blinded ledgers, frozen for P1\'s secondary, descriptive figures (owner decision, '
+                       '#490). Each missed the 0.6 recall bar; P1\'s primary probes are confirmed '
+                       're-observations. See docs/design/probe-protocol.md.')
     (probes/'ledger.json').write_text(json.dumps(ledger, indent=1, sort_keys=True) + '\n')
     return ledger
 

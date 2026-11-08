@@ -25,3 +25,4 @@
 {"step":"coverage judge","unit":"batch2","tokens":102586,"ms":22952,"deviation":null}
 {"step":"coverage judge","unit":"batch3","tokens":106628,"ms":26669,"deviation":null}
 {"step":"coverage judge","unit":"batch4","tokens":101292,"ms":22962,"deviation":null}
+{"step":"content judge","unit":"post hoc","tokens":81710,"ms":54714,"deviation":"post hoc after review; skipped two items on its first pass and judged them on resumption; an earlier launch on a different model was stopped and discarded"}

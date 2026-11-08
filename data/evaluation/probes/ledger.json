@@ -96,7 +96,7 @@
    }
   }
  },
- "note": "Both blinded ledgers are frozen together (owner decision, #490). The 0.6 recall bar was missed by each; their union figure is post hoc. See docs/design/probe-protocol.md.",
+ "note": "Both blinded ledgers, frozen for P1's secondary, descriptive figures (owner decision, #490). Each missed the 0.6 recall bar; P1's primary probes are confirmed re-observations. See docs/design/probe-protocol.md.",
  "protocol": "probe-protocol/1",
  "schema": "probe-ledger/1"
 }

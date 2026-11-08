@@ -118,7 +118,40 @@ def test_freeze_digests_both_ledgers_per_lineage(tmp_path, monkeypatch):
     assert validation.freeze(tmp_path)['lineages']['397']['fact_chunks']['a-001'] != before
 
 
-def test_held_out_lineages_are_refused(monkeypatch):
+def test_freeze_refuses_a_query_file_set_that_does_not_match_the_boundaries(tmp_path, monkeypatch):
+    monkeypatch.setattr(validation, 'LINEAGES', {'397': ['a-001', 'a-002']})
+    (tmp_path/'397').mkdir()
+    for chunk in ('a-001', 'a-002'):
+        (tmp_path/'397'/f'{chunk}.jsonl').write_text('x\n')
+    (tmp_path/'queries'/'397').mkdir(parents=True)
+    (tmp_path/'queries'/'397'/'a-002.jsonl').write_text('q\n')     # the last chunk precedes no boundary
+    with pytest.raises(SystemExit, match='exactly the chunks before a boundary'):
+        validation.freeze(tmp_path)
+
+
+@pytest.mark.parametrize('step', ['lineage_runs', 'freeze', 'recall'])
+def test_held_out_lineages_are_refused(monkeypatch, tmp_path, step):
     monkeypatch.setitem(validation.LINEAGES, 'lh1', ['lh1-001'])
+    call = {'lineage_runs': lambda: validation.lineage_runs(), 'freeze': lambda: validation.freeze(tmp_path),
+            'recall': lambda: validation.recall(tmp_path)}[step]
+    (tmp_path/'candidates.json').write_text('{"pairs": []}')
+    (tmp_path/'judgments.jsonl').write_text('')
     with pytest.raises(SystemExit, match='held-out'):
-        validation.lineage_runs()
+        call()
+
+
+def test_the_tracked_figures_and_ledger_reproduce_from_their_inputs(tmp_path):
+    import json
+    import shutil
+    probes = validation.ROOT/'data'/'evaluation'/'probes'
+    copy = tmp_path/'probes'
+    shutil.copytree(probes, copy)
+    assert validation.freeze(copy) == json.loads((probes/'ledger.json').read_text())
+    validation.ROOT, root = tmp_path, validation.ROOT
+    try:
+        (tmp_path/'data'/'evaluation').mkdir(parents=True)
+        (copy).rename(tmp_path/'data'/'evaluation'/'probes')
+        result = validation.recall(tmp_path/'data'/'evaluation'/'probes'/'validation')
+    finally:
+        validation.ROOT = root
+    assert result == json.loads((probes/'validation'/'recall.json').read_text())

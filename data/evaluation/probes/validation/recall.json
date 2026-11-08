@@ -305,35 +305,47 @@
   "informative": {
    "confirmed": 21,
    "fact": 12,
+   "fact_content": 4,
    "query": 13,
    "query_recall": 0.619,
    "union": 17,
+   "union_content": 14,
+   "union_content_recall": 0.667,
    "union_recall": 0.81
   },
   "lineages": {
    "372": {
     "confirmed": 13,
     "fact": 3,
+    "fact_content": 0,
     "query": 3,
     "query_recall": 0.231,
     "union": 5,
+    "union_content": 3,
+    "union_content_recall": 0.231,
     "union_recall": 0.385
    },
    "397": {
     "confirmed": 24,
     "fact": 16,
+    "fact_content": 4,
     "query": 12,
     "query_recall": 0.5,
     "union": 20,
+    "union_content": 13,
+    "union_content_recall": 0.542,
     "union_recall": 0.833
    }
   },
   "pooled": {
    "confirmed": 37,
    "fact": 19,
+   "fact_content": 4,
    "query": 15,
    "query_recall": 0.405,
    "union": 25,
+   "union_content": 16,
+   "union_content_recall": 0.432,
    "union_recall": 0.676
   },
   "trivial": [

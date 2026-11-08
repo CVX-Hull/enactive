@@ -247,23 +247,38 @@ shows.
 
 **Result (8 November 2026).** 19 writers wrote 649 queries. Query recall was 0.41: 15 of
 37 confirmed re-observations covered, #397 0.50 and the #372 sample 0.23. That is below
-the bar. Two figures are post hoc and descriptive only:
-- **Union.** Either ledger, fact labels or queries, captured 0.68 of the 37.
-- **Informative pairs.** Excluding 16 pairs that match only an empty menu, a search
-  prompt or a loading screen, query recall was 0.62 (13 of 21) and the union 0.81 (17
-  of 21).
+the bar.
 
-**The owner's decision: freeze both ledgers together as the scoring ledger.** The
-manifest, with a digest per file, is
-[`data/evaluation/probes/ledger.json`](../../data/evaluation/probes/ledger.json).
-An arm is scored against both:
-- whether the text it puts in front of the successor carries each live fact;
-- whether that text answers each query of the predecessor's chunk.
+**Correction after review (8 November 2026).** Step 7's fact-label rule checks only that
+a need falls near the later frame, not what the fact says. A blinded content check, with
+the same judge model and question as the query re-check, found that only **4 of the 19**
+captured pairs have a nearby fact that states what the earlier frame shows. Content-matched
+figures, post hoc and descriptive only:
 
-**Before relying on the combined ledger, #178:**
-- tightens the confirmation rule, so that a pair matching only an empty menu, a search
-  prompt or a loading screen is not a re-observation;
-- re-tests the combined ledger once on held-out data, with its bar fixed in advance.
+| | Fact labels | Queries | Either |
+| --- | ---: | ---: | ---: |
+| All 37 confirmed pairs | 4 (0.11) | 15 (0.41) | 16 (0.43) |
+| 21 informative pairs (no empty menu, search prompt or loading screen) | 4 | 13 (0.62) | 14 (0.67) |
+
+The pre-registered fact figure, 0.51, stands as computed. It does not show that the
+fact ledger records these re-observations, and the two ledgers are not complementary.
+A first version of this result reported a union of 0.68 (0.81 on informative pairs) from
+the uncorrected rule, and the owner's first decision, to score on both ledgers, rested on it.
+
+**The owner's decision, on the corrected figures: confirmed re-observations are P1's
+primary probes.**
+- **Source.** The probes come from the fixed candidate rule (steps 1–4). On held-out data,
+  every candidate is judged, not a sample.
+- **Confirmation.** A blinded judge confirms each one under a tightened rule: a pair that
+  matches only an empty menu, a search prompt or a loading screen is not a re-observation.
+- **Scoring.** At the boundary a pair crosses, a blinded judge decides whether the arm's
+  delivered text states what the earlier frame shows.
+- **Secondary figures.** Both blinded ledgers stay frozen in
+  [`data/evaluation/probes/ledger.json`](../../data/evaluation/probes/ledger.json), with a
+  digest per file. They give descriptive figures: needed-fact recall from the fact
+  ledger, and query coverage.
+
+The P1 pre-registration (#491) fixes these rules. #178 writes the held-out ledgers.
 
 ## Cost
 
