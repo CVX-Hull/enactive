@@ -1,0 +1,29 @@
+{"type":"carry","fact":"F1","boundary":"ceil09-001>ceil09-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F2","boundary":"ceil09-001>ceil09-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F3","boundary":"ceil09-001>ceil09-002","carried":false,"where":null}
+{"type":"carry","fact":"F4","boundary":"ceil09-001>ceil09-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F5","boundary":"ceil09-001>ceil09-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F6","boundary":"ceil09-001>ceil09-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F7","boundary":"ceil09-001>ceil09-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F8","boundary":"ceil09-001>ceil09-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F9","boundary":"ceil09-001>ceil09-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F10","boundary":"ceil09-001>ceil09-002","carried":true,"where":"packet"}
+{"type":"event","fact":"F6","event":"used","frame":"c6c09be0b7d43fba2839147651a4f6a5-2496","note":"Leaves the shelter through the open north window, which is slow to cross, into the field."}
+{"type":"fact","id":"F11","statement":"A house stands in the field a short walk from the shelter; its windows are locked, with a bedroom, bathroom with bathtub, kitchen and a gray basement-like room inside","category":"place","observed":"c6c09be0b7d43fba2839147651a4f6a5-3132","stored":null}
+{"type":"event","fact":"F10","event":"used","frame":"c6c09be0b7d43fba2839147651a4f6a5-5626","note":"Scouts the nearby house and fills a kettle with water, advancing the find-water-and-vessel plan."}
+{"type":"fact","id":"F12","statement":"The house bathroom held medical supplies (ibuprofen, alcohol wipes, antiseptic, vitamin C, gummy vitamin, soap bars, cotton balls, adhesive bandages), which the survivor took","category":"resource","observed":"c6c09be0b7d43fba2839147651a4f6a5-3879","stored":null}
+{"type":"event","fact":"F9","event":"invalidated","frame":"c6c09be0b7d43fba2839147651a4f6a5-5136","note":"Drops one ration box on the floor to cut weight; the survivor now carries 2 ration boxes."}
+{"type":"fact","id":"F13","statement":"The house kitchen cupboard held a hammer, pliers, screwdriver, lighter (14/100 butane), flashlight and batteries, which the survivor took, and a kettle is in the kitchen","category":"item","observed":"c6c09be0b7d43fba2839147651a4f6a5-4808","stored":null}
+{"type":"fact","id":"F14","statement":"The house kitchen refrigerator held pineapple juice bottles, tofu and other food; the survivor took 4 portions of pineapple juice","category":"resource","observed":"c6c09be0b7d43fba2839147651a4f6a5-4757","stored":null}
+{"type":"fact","id":"F15","statement":"The house bathtub holds about 6 L of dirty water that can be poured into a kettle","category":"resource","observed":"c6c09be0b7d43fba2839147651a4f6a5-5480","stored":null}
+{"type":"fact","id":"F16","statement":"Dirty water becomes clean water by crafting (boiling), which needs a nearby fire or a cooker or other tool with a boiling quality","category":"procedure","observed":"c6c09be0b7d43fba2839147651a4f6a5-8546","stored":null}
+{"type":"event","fact":"F4","event":"needed","frame":"c6c09be0b7d43fba2839147651a4f6a5-8546","note":"Boiling water needs a fire or heat source; the survivor has the matchbook and (from the house) a lighter."}
+{"type":"event","fact":"F4","event":"used","frame":"c6c09be0b7d43fba2839147651a4f6a5-8909","note":"Hot clean water from boiling is poured into the kettle."}
+{"type":"fact","id":"F17","statement":"The survivor can craft a large wooden bowl from memory","category":"procedure","observed":"c6c09be0b7d43fba2839147651a4f6a5-7660","stored":null}
+{"type":"fact","id":"F18","statement":"Zombies, including a zombie runner, roam 33 to 56 tiles to the south and southeast of the shelter area, spotted from the field","category":"hazard","observed":"c6c09be0b7d43fba2839147651a4f6a5-2952","stored":null}
+{"type":"event","fact":"F2","event":"used","frame":"c6c09be0b7d43fba2839147651a4f6a5-7767","note":"Returns to the evac shelter A-23 to craft the bowl and boil water."}
+{"type":"event","fact":"F7","event":"used","frame":"c6c09be0b7d43fba2839147651a4f6a5-8115","note":"The shelter floor still holds 19 small cardboard boxes of protein ration, consistent with the handoff count."}
+{"type":"event","fact":"F8","event":"used","frame":"c6c09be0b7d43fba2839147651a4f6a5-9273","note":"Rewields the wooden club after crafting before heading out."}
+{"type":"fact","id":"F19","statement":"The survivor's save is in the world named Cedar Butte (load menu shows Morgan Vale there), not Baytown","category":"other","observed":"c6c09be0b7d43fba2839147651a4f6a5-9919","stored":null}
+{"type":"fact","id":"F20","statement":"At the end the survivor carries 2 protein ration boxes, 4 clean water portions, 4 pineapple juice portions and the medical supplies; 19 ration boxes remain at the shelter","category":"resource","observed":"c6c09be0b7d43fba2839147651a4f6a5-9273","stored":null}
+{"type":"end","frames_viewed":56}

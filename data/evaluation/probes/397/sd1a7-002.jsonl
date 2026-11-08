@@ -1,0 +1,162 @@
+{"type": "carry", "fact": "F1", "boundary": "sd1a7-001>sd1a7-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F2", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F3", "boundary": "sd1a7-001>sd1a7-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F4", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F5", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F6", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F7", "boundary": "sd1a7-001>sd1a7-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F8", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F9", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F10", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F11", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F12", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F13", "boundary": "sd1a7-001>sd1a7-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F14", "boundary": "sd1a7-001>sd1a7-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F15", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F16", "boundary": "sd1a7-001>sd1a7-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F17", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F18", "boundary": "sd1a7-001>sd1a7-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F19", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F20", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F21", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F22", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F23", "boundary": "sd1a7-001>sd1a7-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F24", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F25", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F26", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F27", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F28", "boundary": "sd1a7-001>sd1a7-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F29", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F30", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F31", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F32", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F33", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F34", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F35", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F36", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F37", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F38", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F39", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F40", "boundary": "sd1a7-001>sd1a7-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F41", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F42", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F43", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F44", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F45", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F46", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F47", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F48", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F49", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F50", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F51", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F52", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F53", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F54", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F55", "boundary": "sd1a7-001>sd1a7-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F56", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F57", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F58", "boundary": "sd1a7-001>sd1a7-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F59", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F60", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F61", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F62", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F63", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F64", "boundary": "sd1a7-001>sd1a7-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F65", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F66", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F69", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F70", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F71", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F72", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F73", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F74", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F75", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F77", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F78", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F79", "boundary": "sd1a7-001>sd1a7-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F80", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F84", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F85", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F86", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F87", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F88", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F89", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F90", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F92", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F93", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F94", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F95", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F97", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F98", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F99", "boundary": "sd1a7-001>sd1a7-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F100", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F101", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F105", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F106", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F108", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F109", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F110", "boundary": "sd1a7-001>sd1a7-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F111", "boundary": "sd1a7-001>sd1a7-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F112", "boundary": "sd1a7-001>sd1a7-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F113", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F114", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F115", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F116", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F117", "boundary": "sd1a7-001>sd1a7-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F118", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F119", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F120", "boundary": "sd1a7-001>sd1a7-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F121", "boundary": "sd1a7-001>sd1a7-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F122", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F123", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F124", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F125", "boundary": "sd1a7-001>sd1a7-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F126", "boundary": "sd1a7-001>sd1a7-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F127", "boundary": "sd1a7-001>sd1a7-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F128", "boundary": "sd1a7-001>sd1a7-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F129", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F130", "boundary": "sd1a7-001>sd1a7-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F131", "boundary": "sd1a7-001>sd1a7-002", "carried": true, "where": "packet"}
+{"type": "fact", "id": "F132", "statement": "Morgan Hale died of burns in front of evac shelter B-19 on spring day 63 at about 7:47 AM, having survived 1 day 23 hours 47 minutes with no kills", "category": "self", "observed": "bf01a9f1ca634ea63144b01cd8debe8d-12318", "stored": null}
+{"type": "fact", "id": "F133", "statement": "Starting an in-progress clean water craft beside the burning pavement fire outside the shelter door set Morgan on fire; the fire burned legs, then the whole body, and ended the run within about 15 game seconds", "category": "hazard", "observed": "bf01a9f1ca634ea63144b01cd8debe8d-11479", "stored": null}
+{"type": "fact", "id": "F134", "statement": "When on fire, waiting in place or rolling on the ground tries to put the fire out but repeatedly failed to extinguish it; the burns cut strength and dexterity to 1, cause severe pain and break bones, and standing was a struggle", "category": "procedure", "observed": "bf01a9f1ca634ea63144b01cd8debe8d-11742", "stored": null}
+{"type": "fact", "id": "F135", "statement": "Interacting with shallow lake water offers consume it, pour into a container, or pour on the ground; filling plastic bottles from it gives two bottles of raw water", "category": "procedure", "observed": "bf01a9f1ca634ea63144b01cd8debe8d-10373", "stored": null}
+{"type": "fact", "id": "F136", "statement": "A lake trout is visible in the lake shallows just west of the field north of the shelter", "category": "resource", "observed": "bf01a9f1ca634ea63144b01cd8debe8d-10321", "stored": null}
+{"type": "fact", "id": "F137", "statement": "A batch of four clean water takes about 18 minutes 44 seconds (5 min 30 s for one), needs a nearby fire and 4 raw water on hand, and warns when there is no empty container to hold the result", "category": "procedure", "observed": "bf01a9f1ca634ea63144b01cd8debe8d-11039", "stored": null}
+{"type": "fact", "id": "F138", "statement": "Morgan wields the long pointy stick and carries a bow fire drill at 4/10, flashlight off, pocket knife, dead smartphone, 27+ cattail stalks, burdock, 2 crow eggs, a robin egg, a cardinal egg, 2 cooked cattail stalks and clean water; worn gear includes sling, messenger bag, jeans, emergency jacket, hand wraps, scarf and plastic shopping bag", "category": "item", "observed": "bf01a9f1ca634ea63144b01cd8debe8d-9775", "stored": null}
+{"type": "fact", "id": "F139", "statement": "Hand encumbrance from worn gear slows crafting to 90 percent", "category": "procedure", "observed": "bf01a9f1ca634ea63144b01cd8debe8d-9425", "stored": null}
+{"type": "event", "fact": "F117", "event": "rediscovered", "frame": "bf01a9f1ca634ea63144b01cd8debe8d-9405", "note": "monster sidebar shows Ava wielding the small game lever-action rifle and listing her worn clothes"}
+{"type": "event", "fact": "F3", "event": "used", "frame": "bf01a9f1ca634ea63144b01cd8debe8d-9405", "note": "Ava is listed friendly and following 4 tiles north"}
+{"type": "event", "fact": "F11", "event": "needed", "frame": "bf01a9f1ca634ea63144b01cd8debe8d-9405", "note": "black rat appears in the monster list while the player stands on the pavement"}
+{"type": "event", "fact": "F11", "event": "rediscovered", "frame": "bf01a9f1ca634ea63144b01cd8debe8d-9405", "note": "black rat listed neutral and ignoring 42 NE"}
+{"type": "event", "fact": "F1", "event": "needed", "frame": "bf01a9f1ca634ea63144b01cd8debe8d-9407", "note": "opens the character screen to confirm identity"}
+{"type": "event", "fact": "F1", "event": "rediscovered", "frame": "bf01a9f1ca634ea63144b01cd8debe8d-9407", "note": "character screen reads Morgan Hale, Male"}
+{"type": "event", "fact": "F100", "event": "needed", "frame": "bf01a9f1ca634ea63144b01cd8debe8d-9425", "note": "searches egg recipes while carrying wild eggs"}
+{"type": "event", "fact": "F100", "event": "rediscovered", "frame": "bf01a9f1ca634ea63144b01cd8debe8d-9425", "note": "boiled egg recipe viewed again: 11 minutes, needs nearby fire and boiling tool"}
+{"type": "event", "fact": "F57", "event": "needed", "frame": "bf01a9f1ca634ea63144b01cd8debe8d-9775", "note": "opens the inventory to review worn gear"}
+{"type": "event", "fact": "F57", "event": "rediscovered", "frame": "bf01a9f1ca634ea63144b01cd8debe8d-9775", "note": "pair of hand wraps and simple patchwork scarf listed worn"}
+{"type": "event", "fact": "F70", "event": "rediscovered", "frame": "bf01a9f1ca634ea63144b01cd8debe8d-9775", "note": "plastic shopping bag listed worn"}
+{"type": "event", "fact": "F110", "event": "rediscovered", "frame": "bf01a9f1ca634ea63144b01cd8debe8d-9775", "note": "makeshift sling listed worn holding cattail stalks"}
+{"type": "event", "fact": "F37", "event": "rediscovered", "frame": "bf01a9f1ca634ea63144b01cd8debe8d-9775", "note": "flashlight listed off and smartphone at 0/56 kJ"}
+{"type": "event", "fact": "F128", "event": "needed", "frame": "bf01a9f1ca634ea63144b01cd8debe8d-9775", "note": "reviews fire-starting tools in inventory"}
+{"type": "event", "fact": "F128", "event": "rediscovered", "frame": "bf01a9f1ca634ea63144b01cd8debe8d-9775", "note": "bow fire drill listed at 4/10"}
+{"type": "event", "fact": "F8", "event": "needed", "frame": "bf01a9f1ca634ea63144b01cd8debe8d-10321", "note": "walks to the water for a supply of water"}
+{"type": "event", "fact": "F8", "event": "rediscovered", "frame": "bf01a9f1ca634ea63144b01cd8debe8d-10321", "note": "a lake lies west of the field with a lake trout in the shallows"}
+{"type": "event", "fact": "F9", "event": "needed", "frame": "bf01a9f1ca634ea63144b01cd8debe8d-10487", "note": "fills bottles with lake water"}
+{"type": "event", "fact": "F9", "event": "used", "frame": "bf01a9f1ca634ea63144b01cd8debe8d-10487", "note": "fills two plastic bottles with raw water, then later plans to boil it"}
+{"type": "event", "fact": "F13", "event": "used", "frame": "bf01a9f1ca634ea63144b01cd8debe8d-10487", "note": "gathers water as part of securing sustainable supplies"}
+{"type": "event", "fact": "F79", "event": "used", "frame": "bf01a9f1ca634ea63144b01cd8debe8d-10487", "note": "finds a water source to collect and boil safely"}
+{"type": "event", "fact": "F7", "event": "needed", "frame": "bf01a9f1ca634ea63144b01cd8debe8d-10751", "note": "wild boar piglet listed on the walk back"}
+{"type": "event", "fact": "F7", "event": "rediscovered", "frame": "bf01a9f1ca634ea63144b01cd8debe8d-10751", "note": "wild boar piglet listed south of the player"}
+{"type": "event", "fact": "F10", "event": "needed", "frame": "bf01a9f1ca634ea63144b01cd8debe8d-10941", "note": "searches the clean water recipe back at the shelter"}
+{"type": "event", "fact": "F10", "event": "rediscovered", "frame": "bf01a9f1ca634ea63144b01cd8debe8d-10941", "note": "clean water recipe needs a nearby fire and boiling tool, 5 min 30 s"}
+{"type": "event", "fact": "F22", "event": "needed", "frame": "bf01a9f1ca634ea63144b01cd8debe8d-10941", "note": "fire must be nearby for the craft"}
+{"type": "event", "fact": "F22", "event": "rediscovered", "frame": "bf01a9f1ca634ea63144b01cd8debe8d-10941", "note": "tools list shows nearby fire as the heat source"}
+{"type": "event", "fact": "F101", "event": "used", "frame": "bf01a9f1ca634ea63144b01cd8debe8d-11261", "note": "chooses to put the in-progress clean water down and start working in place"}
+{"type": "event", "fact": "F127", "event": "needed", "frame": "bf01a9f1ca634ea63144b01cd8debe8d-11261", "note": "walks onto the pavement fire tile to resume crafting"}
+{"type": "event", "fact": "F127", "event": "rediscovered", "frame": "bf01a9f1ca634ea63144b01cd8debe8d-11261", "note": "log shows 10 wood ashes and then 2 wood ashes and 6 splintered wood on the tiles"}
+{"type": "event", "fact": "F123", "event": "needed", "frame": "bf01a9f1ca634ea63144b01cd8debe8d-11261", "note": "steps on ashes while checking the pavement fire"}
+{"type": "event", "fact": "F123", "event": "rediscovered", "frame": "bf01a9f1ca634ea63144b01cd8debe8d-11261", "note": "wood ashes lie on the pavement tiles"}
+{"type": "event", "fact": "F131", "event": "used", "frame": "bf01a9f1ca634ea63144b01cd8debe8d-11261", "note": "resumes crafting beside the pavement fire fed with splintered wood"}
+{"type": "event", "fact": "F10", "event": "used", "frame": "bf01a9f1ca634ea63144b01cd8debe8d-11381", "note": "starts boiling water with the in-progress craft at 9 percent before being burned"}
+{"type": "end", "frames_viewed": 25}

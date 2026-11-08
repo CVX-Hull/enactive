@@ -1,0 +1,45 @@
+{"type":"carry","fact":"F1","boundary":"ceil07-001>ceil07-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F2","boundary":"ceil07-001>ceil07-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F3","boundary":"ceil07-001>ceil07-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F4","boundary":"ceil07-001>ceil07-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F5","boundary":"ceil07-001>ceil07-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F6","boundary":"ceil07-001>ceil07-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F7","boundary":"ceil07-001>ceil07-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F8","boundary":"ceil07-001>ceil07-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F9","boundary":"ceil07-001>ceil07-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F10","boundary":"ceil07-001>ceil07-002","carried":false,"where":null}
+{"type":"carry","fact":"F11","boundary":"ceil07-001>ceil07-002","carried":false,"where":null}
+{"type":"carry","fact":"F12","boundary":"ceil07-001>ceil07-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F13","boundary":"ceil07-001>ceil07-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F14","boundary":"ceil07-001>ceil07-002","carried":true,"where":"packet"}
+{"type":"event","fact":"F3","event":"needed","frame":"bbef26ac5228651c066afc27a5af5c32-3292","note":"Returned to the basement bathroom and listed the items on the sinks and floor"}
+{"type":"event","fact":"F3","event":"rediscovered","frame":"bbef26ac5228651c066afc27a5af5c32-3292","note":"Re-observed the sink contents (soap, scrub brush, bleach, first aid kit box) although the packet said other bathroom items remain nearby"}
+{"type":"event","fact":"F7","event":"needed","frame":"bbef26ac5228651c066afc27a5af5c32-3182","note":"Opened the smartphone menu in the dark basement, flashlight option offered"}
+{"type":"event","fact":"F7","event":"used","frame":"bbef26ac5228651c066afc27a5af5c32-3440","note":"Log shows the flashlight app was activated and then deactivated while visiting the basement"}
+{"type":"event","fact":"F13","event":"needed","frame":"bbef26ac5228651c066afc27a5af5c32-3563","note":"Left the shelter again through the curtained south window"}
+{"type":"event","fact":"F13","event":"used","frame":"bbef26ac5228651c066afc27a5af5c32-3563","note":"Moved onto and off the open window with curtains, known to be slow but passable"}
+{"type":"event","fact":"F12","event":"used","frame":"bbef26ac5228651c066afc27a5af5c32-3563","note":"Went out wielding the stick as the weapon"}
+{"type":"event","fact":"F8","event":"invalidated","frame":"bbef26ac5228651c066afc27a5af5c32-4259","note":"Picked up a fresh plant stalk, so the survivor now carries food"}
+{"type":"event","fact":"F9","event":"used","frame":"bbef26ac5228651c066afc27a5af5c32-6653","note":"Monster list shows Janette following four tiles away as the survivor travels"}
+{"type":"event","fact":"F14","event":"needed","frame":"bbef26ac5228651c066afc27a5af5c32-6895","note":"Searched crafting recipes for a hammer to make tools, serving the food and cookware goals"}
+{"type":"event","fact":"F2","event":"used","frame":"bbef26ac5228651c066afc27a5af5c32-7124","note":"Went back to evac shelter A-23 to craft with Janette's help"}
+{"type":"event","fact":"F9","event":"needed","frame":"bbef26ac5228651c066afc27a5af5c32-7124","note":"Janette helps with crafting in the shelter"}
+{"type":"event","fact":"F14","event":"used","frame":"bbef26ac5228651c066afc27a5af5c32-8166","note":"Searched recipes for a pot to cook the foraged fiddleheads"}
+{"type":"event","fact":"F6","event":"needed","frame":"bbef26ac5228651c066afc27a5af5c32-8166","note":"Cooking recipes require a heat source such as a nearby fire, relevant to the matchbook"}
+{"type":"fact","id":"F15","statement":"The shelter basement bathroom holds a large stack of water, 48 units in two stacks of 24, beside the other sink items","category":"resource","observed":"bbef26ac5228651c066afc27a5af5c32-3292","stored":"24fcea"}
+{"type":"fact","id":"F16","statement":"Foraging through underbrush in the forest outside the shelter can yield fresh plant stalks, which are food","category":"resource","observed":"bbef26ac5228651c066afc27a5af5c32-3663","stored":null}
+{"type":"fact","id":"F17","statement":"A patch of ferns and underbrush on the forest trail east of the shelter yields fresh fiddleheads, which are edible but should be cooked because raw ones can cause food poisoning","category":"resource","observed":"bbef26ac5228651c066afc27a5af5c32-7993","stored":null}
+{"type":"fact","id":"F18","statement":"Foraging in the same forest underbrush also yields handfuls of young leaves, a low-calorie food","category":"resource","observed":"bbef26ac5228651c066afc27a5af5c32-7772","stored":null}
+{"type":"fact","id":"F19","statement":"A hostile zombie child wanders about 60 tiles north of the road east of the shelter and cancels auto-travel when spotted","category":"hazard","observed":"bbef26ac5228651c066afc27a5af5c32-5551","stored":null}
+{"type":"fact","id":"F20","statement":"Hammering crafts such as the wooden billet and polehammer need a tool with hammering quality, and the survivor has none","category":"procedure","observed":"bbef26ac5228651c066afc27a5af5c32-7374","stored":null}
+{"type":"fact","id":"F21","statement":"Cooking recipes need a heat source tool such as a nearby fire and the survivor has no pot, so the fiddleheads cannot yet be cooked","category":"procedure","observed":"bbef26ac5228651c066afc27a5af5c32-8166","stored":null}
+{"type":"fact","id":"F22","statement":"A tough zombie and groups of zombie children roam the road and fields north and east of the shelter","category":"hazard","observed":"bbef26ac5228651c066afc27a5af5c32-8935","stored":null}
+{"type":"fact","id":"F23","statement":"Murky water lies on the ground near the road east of the shelter, which is not clean drinking water","category":"resource","observed":"bbef26ac5228651c066afc27a5af5c32-6802","stored":null}
+{"type":"fact","id":"F24","statement":"Hickory nuts can be disassembled from hickory nut items and the shelled nuts eaten","category":"procedure","observed":"bbef26ac5228651c066afc27a5af5c32-10579","stored":null}
+{"type":"fact","id":"F25","statement":"Several hostiles including zombie technicians, a feral mechanic and a feral human gather east of the field near an industrial building east of Trenton","category":"hazard","observed":"bbef26ac5228651c066afc27a5af5c32-11378","stored":null}
+{"type":"fact","id":"F26","statement":"Janette helps with crafting and can assist with batches while the survivor crafts in the shelter","category":"other","observed":"bbef26ac5228651c066afc27a5af5c32-7124","stored":null}
+{"type":"fact","id":"F27","statement":"The survivor carries a sealed bottle with 2 clean water and also has 6 adhesive bandages, 3 bandages, 6 medical gauzes, antiseptic, 10 aspirin and saline in the kit","category":"resource","observed":"bbef26ac5228651c066afc27a5af5c32-10579","stored":"24fcea"}
+{"type":"event","fact":"F27","event":"needed","frame":"bbef26ac5228651c066afc27a5af5c32-10579","note":"Opened the consume menu after eating hickory nuts and chose among food and clean water"}
+{"type":"event","fact":"F17","event":"used","frame":"bbef26ac5228651c066afc27a5af5c32-10579","note":"Carries 12 fiddleheads to cook later"}
+{"type":"event","fact":"F25","event":"needed","frame":"bbef26ac5228651c066afc27a5af5c32-11378","note":"Hostile group spotted and the survivor withdrew from the industrial building"}
+{"type":"end","frames_viewed":49}

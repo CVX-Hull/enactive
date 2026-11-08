@@ -1,0 +1,151 @@
+{"type":"carry","fact":"F1","boundary":"sd1a7-001>sd1a7-002","carried":true,"where":"report"}
+{"type":"carry","fact":"F2","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F3","boundary":"sd1a7-001>sd1a7-002","carried":true,"where":"report"}
+{"type":"carry","fact":"F4","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F5","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F6","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F7","boundary":"sd1a7-001>sd1a7-002","carried":true,"where":"report"}
+{"type":"carry","fact":"F8","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F9","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F10","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F11","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F12","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F13","boundary":"sd1a7-001>sd1a7-002","carried":true,"where":"report"}
+{"type":"carry","fact":"F14","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F15","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F16","boundary":"sd1a7-001>sd1a7-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F17","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F18","boundary":"sd1a7-001>sd1a7-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F19","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F20","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F21","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F22","boundary":"sd1a7-001>sd1a7-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F23","boundary":"sd1a7-001>sd1a7-002","carried":true,"where":"report"}
+{"type":"carry","fact":"F24","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F25","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F26","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F27","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F28","boundary":"sd1a7-001>sd1a7-002","carried":true,"where":"report"}
+{"type":"carry","fact":"F29","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F30","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F31","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F32","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F33","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F34","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F35","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F36","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F37","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F38","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F39","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F40","boundary":"sd1a7-001>sd1a7-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F41","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F42","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F43","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F44","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F45","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F46","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F47","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F48","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F49","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F50","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F51","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F52","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F53","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F54","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F55","boundary":"sd1a7-001>sd1a7-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F56","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F57","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F58","boundary":"sd1a7-001>sd1a7-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F59","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F60","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F61","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F62","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F63","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F64","boundary":"sd1a7-001>sd1a7-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F65","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F66","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F69","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F70","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F71","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F72","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F73","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F74","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F75","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F77","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F78","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F79","boundary":"sd1a7-001>sd1a7-002","carried":true,"where":"report"}
+{"type":"carry","fact":"F80","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F84","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F85","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F86","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F87","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F88","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F89","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F90","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F92","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F93","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F94","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F95","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F97","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F98","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F99","boundary":"sd1a7-001>sd1a7-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F100","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F101","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F105","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F106","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F108","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F109","boundary":"sd1a7-001>sd1a7-002","carried":true,"where":"report"}
+{"type":"carry","fact":"F110","boundary":"sd1a7-001>sd1a7-002","carried":true,"where":"report"}
+{"type":"carry","fact":"F111","boundary":"sd1a7-001>sd1a7-002","carried":true,"where":"report"}
+{"type":"carry","fact":"F112","boundary":"sd1a7-001>sd1a7-002","carried":true,"where":"report"}
+{"type":"carry","fact":"F113","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F114","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F115","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F116","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F117","boundary":"sd1a7-001>sd1a7-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F118","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F119","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F120","boundary":"sd1a7-001>sd1a7-002","carried":true,"where":"report"}
+{"type":"carry","fact":"F121","boundary":"sd1a7-001>sd1a7-002","carried":true,"where":"report"}
+{"type":"carry","fact":"F122","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F123","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F124","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F125","boundary":"sd1a7-001>sd1a7-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F126","boundary":"sd1a7-001>sd1a7-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F127","boundary":"sd1a7-001>sd1a7-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F128","boundary":"sd1a7-001>sd1a7-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F129","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F130","boundary":"sd1a7-001>sd1a7-002","carried":false,"where":null}
+{"type":"carry","fact":"F131","boundary":"sd1a7-001>sd1a7-002","carried":true,"where":"packet"}
+{"type":"event","fact":"F1","event":"needed","frame":"bf01a9f1ca634ea63144b01cd8debe8d-9407","note":"opens the character screen to confirm who the survivor is"}
+{"type":"event","fact":"F1","event":"rediscovered","frame":"bf01a9f1ca634ea63144b01cd8debe8d-9407","note":"stats screen shows Morgan Hale, male, 25 years"}
+{"type":"event","fact":"F28","event":"used","frame":"bf01a9f1ca634ea63144b01cd8debe8d-9407","note":"long pointy stick is the wielded weapon on the status panel"}
+{"type":"event","fact":"F3","event":"used","frame":"bf01a9f1ca634ea63144b01cd8debe8d-9407","note":"Ava Burkhart is listed beside Morgan and the log shows her helping with crafting"}
+{"type":"event","fact":"F11","event":"needed","frame":"bf01a9f1ca634ea63144b01cd8debe8d-9407","note":"a black rat is listed near the player at the shelter"}
+{"type":"event","fact":"F11","event":"rediscovered","frame":"bf01a9f1ca634ea63144b01cd8debe8d-9407","note":"black rat listed in the monster summary"}
+{"type":"event","fact":"F127","event":"rediscovered","frame":"bf01a9f1ca634ea63144b01cd8debe8d-9407","note":"log shows the 20 splintered wood dropped on the pavement fire tile"}
+{"type":"event","fact":"F126","event":"used","frame":"bf01a9f1ca634ea63144b01cd8debe8d-9407","note":"log shows salvaging 10 splintered wood with Ava's help, dropped as fuel"}
+{"type":"event","fact":"F100","event":"needed","frame":"bf01a9f1ca634ea63144b01cd8debe8d-9425","note":"searches egg recipes for use of the wild eggs"}
+{"type":"event","fact":"F100","event":"rediscovered","frame":"bf01a9f1ca634ea63144b01cd8debe8d-9425","note":"boiled egg recipe needs a nearby fire and boiling tool, about 11 minutes"}
+{"type":"event","fact":"F8","event":"needed","frame":"bf01a9f1ca634ea63144b01cd8debe8d-9660","note":"opens the overmap to choose where to fetch water"}
+{"type":"event","fact":"F8","event":"rediscovered","frame":"bf01a9f1ca634ea63144b01cd8debe8d-9660","note":"overmap shows the lake west of evac shelter B-19 and the swamp lilies to the north"}
+{"type":"event","fact":"F8","event":"used","frame":"bf01a9f1ca634ea63144b01cd8debe8d-10321","note":"walks to the lake shore west of the shelter"}
+{"type":"event","fact":"F9","event":"needed","frame":"bf01a9f1ca634ea63144b01cd8debe8d-10321","note":"at the shore, scooped lake water would be raw"}
+{"type":"event","fact":"F9","event":"used","frame":"bf01a9f1ca634ea63144b01cd8debe8d-10373","note":"chooses to pour shallow water into a container rather than drink it, to boil later"}
+{"type":"event","fact":"F7","event":"needed","frame":"bf01a9f1ca634ea63144b01cd8debe8d-10751","note":"a wild boar piglet is listed near the road on the way back"}
+{"type":"event","fact":"F7","event":"rediscovered","frame":"bf01a9f1ca634ea63144b01cd8debe8d-10751","note":"wild boar piglet listed south of the player"}
+{"type":"event","fact":"F11","event":"rediscovered","frame":"bf01a9f1ca634ea63144b01cd8debe8d-10751","note":"black rat listed east of the player"}
+{"type":"event","fact":"F10","event":"needed","frame":"bf01a9f1ca634ea63144b01cd8debe8d-10941","note":"searches the clean water recipe to boil the collected water"}
+{"type":"event","fact":"F10","event":"rediscovered","frame":"bf01a9f1ca634ea63144b01cd8debe8d-10941","note":"clean water recipe needs a boiling tool or nearby fire and 1 water, about 5 min 30 s"}
+{"type":"event","fact":"F10","event":"used","frame":"bf01a9f1ca634ea63144b01cd8debe8d-11039","note":"opens the batch of 4 clean water about 18 min 44 s"}
+{"type":"event","fact":"F79","event":"used","frame":"bf01a9f1ca634ea63144b01cd8debe8d-11039","note":"boils the collected lake water so it can be drunk safely"}
+{"type":"event","fact":"F22","event":"needed","frame":"bf01a9f1ca634ea63144b01cd8debe8d-11381","note":"the clean water craft is begun on the pavement beside the fire"}
+{"type":"event","fact":"F22","event":"used","frame":"bf01a9f1ca634ea63144b01cd8debe8d-11381","note":"works on the in-progress clean water beside the pavement fire"}
+{"type":"event","fact":"F101","event":"used","frame":"bf01a9f1ca634ea63144b01cd8debe8d-11381","note":"puts the in-progress clean water on the ground and works on it in place"}
+{"type":"event","fact":"F127","event":"needed","frame":"bf01a9f1ca634ea63144b01cd8debe8d-11381","note":"the pavement fire fed with the splintered wood is beside the crafting spot when Morgan is hurt"}
+{"type":"event","fact":"F127","event":"acted_without","frame":"bf01a9f1ca634ea63144b01cd8debe8d-11381","note":"the record said recheck the fire before dependent crafting; Morgan starts crafting beside it and catches fire"}
+{"type":"fact","id":"F132","statement":"Lake trout swim in the lake shallows west of the field, a short walk from the shelter pavement","category":"resource","observed":"bf01a9f1ca634ea63144b01cd8debe8d-10321","stored":null}
+{"type":"fact","id":"F133","statement":"Crafting beside the pavement fire fed with 20 splintered wood can set Morgan on fire; the burn causes severe pain, stat collapse and broken bones, and repeated attempts to put it out failed","category":"hazard","observed":"bf01a9f1ca634ea63144b01cd8debe8d-11381","stored":null}
+{"type":"fact","id":"F134","statement":"Boiling 4 raw water into clean water in one batch takes about 18 minutes 44 seconds and warns when no container is on hand to store it","category":"procedure","observed":"bf01a9f1ca634ea63144b01cd8debe8d-11039","stored":null}
+{"type":"fact","id":"F135","statement":"Morgan Hale died of burns on spring day 63 at 7:47 AM next to shelter B-19; the memorial screen reads survived 1 day 23 hours 47 minutes, 0 kills","category":"self","observed":"bf01a9f1ca634ea63144b01cd8debe8d-12318","stored":null}
+{"type":"end","frames_viewed":20}

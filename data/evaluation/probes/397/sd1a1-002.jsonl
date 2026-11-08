@@ -1,0 +1,35 @@
+{"type":"carry","fact":"F1","boundary":"sd1a1-001>sd1a1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F2","boundary":"sd1a1-001>sd1a1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F3","boundary":"sd1a1-001>sd1a1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F12","boundary":"sd1a1-001>sd1a1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F4","boundary":"sd1a1-001>sd1a1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F11","boundary":"sd1a1-001>sd1a1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F5","boundary":"sd1a1-001>sd1a1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F6","boundary":"sd1a1-001>sd1a1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F7","boundary":"sd1a1-001>sd1a1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F8","boundary":"sd1a1-001>sd1a1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F9","boundary":"sd1a1-001>sd1a1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F10","boundary":"sd1a1-001>sd1a1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F13","boundary":"sd1a1-001>sd1a1-002","carried":true,"where":"packet"}
+{"type":"fact","id":"F14","statement":"A boat rental building stands on the lake shore a short walk from the shelter; its floor holds swimwear, a cash register, nails, sheets and a stick","category":"place","observed":"f37efc17970589e90aff3c73d3742a89-6888","stored":null}
+{"type":"fact","id":"F15","statement":"Tearing the curtains off the shelter windows yields long strings","category":"procedure","observed":"f37efc17970589e90aff3c73d3742a89-8321","stored":null}
+{"type":"fact","id":"F16","statement":"A basic fishing rod is crafted in about 5 minutes from 6 long strings, 1 stick and 1 fishing hook","category":"procedure","observed":"f37efc17970589e90aff3c73d3742a89-7197","stored":null}
+{"type":"fact","id":"F17","statement":"A fishing hook can be crafted from salvaged materials such as nails","category":"procedure","observed":"f37efc17970589e90aff3c73d3742a89-11043","stored":null}
+{"type":"fact","id":"F18","statement":"Cattail rhizomes and stalks can be harvested by walking through the cattails in the shallows of the lake shore","category":"resource","observed":"f37efc17970589e90aff3c73d3742a89-13297","stored":null}
+{"type":"fact","id":"F19","statement":"Raw cattail rhizome gives about 250 kcal, is perishable (about 3 days) and is more nutritious cooked","category":"item","observed":"f37efc17970589e90aff3c73d3742a89-16226","stored":null}
+{"type":"fact","id":"F20","statement":"A protein ration gives about 800 kcal","category":"item","observed":"f37efc17970589e90aff3c73d3742a89-13164","stored":null}
+{"type":"fact","id":"F21","statement":"A hostile zombie was seen about 60 tiles southeast of the lake shore, and a zombie child was spotted again while walking back","category":"hazard","observed":"f37efc17970589e90aff3c73d3742a89-12465","stored":null}
+{"type":"fact","id":"F22","statement":"A crafting job such as boiling water cannot continue unless a fire stays nearby","category":"procedure","observed":"f37efc17970589e90aff3c73d3742a89-16541","stored":null}
+{"type":"fact","id":"F23","statement":"The game was saved and quit from inside shelter B-19; the load list shows Morgan Hale in the world Whitethorn","category":"other","observed":"f37efc17970589e90aff3c73d3742a89-18452","stored":null}
+{"type":"event","fact":"F12","event":"used","frame":"f37efc17970589e90aff3c73d3742a89-6696","note":"checks the inventory showing pocket knife, smartphone, matchbook 19/20 and bottles"}
+{"type":"event","fact":"F13","event":"used","frame":"f37efc17970589e90aff3c73d3742a89-12189","note":"goes fishing with a rod at the lake to seek sustainable food"}
+{"type":"event","fact":"F8","event":"used","frame":"f37efc17970589e90aff3c73d3742a89-11156","note":"fishes and later harvests cattails on the lake shore west of the shelter"}
+{"type":"event","fact":"F7","event":"needed","frame":"f37efc17970589e90aff3c73d3742a89-15306","note":"wild boars and piglets close to the route back from the lake"}
+{"type":"event","fact":"F6","event":"needed","frame":"f37efc17970589e90aff3c73d3742a89-14753","note":"zombie child spotted, auto move canceled, player ignores it and continues"}
+{"type":"event","fact":"F11","event":"needed","frame":"f37efc17970589e90aff3c73d3742a89-16718","note":"black rats listed near the shelter door while the player lights a fire outside"}
+{"type":"event","fact":"F12","event":"used","frame":"f37efc17970589e90aff3c73d3742a89-16718","note":"lights a fire with the matchbook to boil water again"}
+{"type":"event","fact":"F10","event":"used","frame":"f37efc17970589e90aff3c73d3742a89-16876","note":"pours boiled clean water into containers after crafting it by the fire"}
+{"type":"event","fact":"F3","event":"used","frame":"f37efc17970589e90aff3c73d3742a89-17311","note":"Ava follows and the player opens her interaction menu"}
+{"type":"event","fact":"F5","event":"used","frame":"f37efc17970589e90aff3c73d3742a89-17708","note":"re-wields the wooden club"}
+{"type":"event","fact":"F4","event":"used","frame":"f37efc17970589e90aff3c73d3742a89-18330","note":"opens a shelter locker holding clean water, rations and supplies"}
+{"type":"end","frames_viewed":81}

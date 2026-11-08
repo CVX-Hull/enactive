@@ -1,0 +1,36 @@
+{"type":"carry","fact":"F1","boundary":"aidB9-001>aidB9-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F2","boundary":"aidB9-001>aidB9-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F3","boundary":"aidB9-001>aidB9-002","carried":false,"where":null}
+{"type":"carry","fact":"F4","boundary":"aidB9-001>aidB9-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F5","boundary":"aidB9-001>aidB9-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F6","boundary":"aidB9-001>aidB9-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F7","boundary":"aidB9-001>aidB9-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F8","boundary":"aidB9-001>aidB9-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F9","boundary":"aidB9-001>aidB9-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F10","boundary":"aidB9-001>aidB9-002","carried":false,"where":null}
+{"type":"carry","fact":"F11","boundary":"aidB9-001>aidB9-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F12","boundary":"aidB9-001>aidB9-002","carried":true,"where":"packet"}
+{"type":"event","fact":"F10","event":"needed","frame":"9313a6ff091a1c6bd4e9d30817d792ce-3600","note":"standing in the chamomile field while choosing where to go for food and water"}
+{"type":"event","fact":"F10","event":"rediscovered","frame":"9313a6ff091a1c6bd4e9d30817d792ce-3600","note":"walked onto chamomile again and got the slow-move message"}
+{"type":"event","fact":"F8","event":"needed","frame":"9313a6ff091a1c6bd4e9d30817d792ce-3838","note":"opened the map to pick a destination relative to Hamilton"}
+{"type":"event","fact":"F8","event":"used","frame":"9313a6ff091a1c6bd4e9d30817d792ce-3838","note":"navigated by the map with Hamilton to the west and travelled north to the hunting blind"}
+{"type":"event","fact":"F12","event":"used","frame":"9313a6ff091a1c6bd4e9d30817d792ce-4272","note":"searched recipes for a pot, pursuing the water and food plan"}
+{"type":"event","fact":"F9","event":"needed","frame":"9313a6ff091a1c6bd4e9d30817d792ce-4272","note":"searching for a cooking vessel to make safe water"}
+{"type":"event","fact":"F4","event":"used","frame":"9313a6ff091a1c6bd4e9d30817d792ce-8839","note":"fought a zombie with the wooden club"}
+{"type":"event","fact":"F1","event":"used","frame":"9313a6ff091a1c6bd4e9d30817d792ce-9163","note":"opened the character screen showing Morgan Reed, consistent with continuity"}
+{"type":"event","fact":"F6","event":"used","frame":"9313a6ff091a1c6bd4e9d30817d792ce-9605","note":"pulped the zombie corpse with the club and pocket knife"}
+{"type":"event","fact":"F9","event":"needed","frame":"9313a6ff091a1c6bd4e9d30817d792ce-10040","note":"filled the plastic bottle with untreated well water while the sealed 2 clean water stayed untouched"}
+{"type":"event","fact":"F9","event":"used","frame":"9313a6ff091a1c6bd4e9d30817d792ce-12026","note":"unload menu shows the sealed bottle of 2 clean water still held and kept"}
+{"type":"event","fact":"F6","event":"used","frame":"9313a6ff091a1c6bd4e9d30817d792ce-12244","note":"lit a fire with a matchbook"}
+{"type":"fact","id":"F13","statement":"A hunting blind lies northeast of Hamilton on the map, with a rural road and fields to its north","category":"place","observed":"9313a6ff091a1c6bd4e9d30817d792ce-4095","stored":null}
+{"type":"fact","id":"F14","statement":"A makeshift pot can be crafted in 1 hour 30 minutes from one sheet of metal with a hammering tool","category":"procedure","observed":"9313a6ff091a1c6bd4e9d30817d792ce-4272","stored":null}
+{"type":"fact","id":"F15","statement":"A farmhouse north of Hamilton, reached by the rural road, has a yard with a water pump and a kitchen","category":"place","observed":"9313a6ff091a1c6bd4e9d30817d792ce-9839","stored":null}
+{"type":"fact","id":"F16","statement":"The farmhouse yard pump supplies untreated water that fills the plastic bottle","category":"resource","observed":"9313a6ff091a1c6bd4e9d30817d792ce-10040","stored":null}
+{"type":"fact","id":"F17","statement":"The farmhouse kitchen holds a casserole pot with rotten casserole, a fire extinguisher, glass shards, sheets and string","category":"resource","observed":"9313a6ff091a1c6bd4e9d30817d792ce-10519","stored":null}
+{"type":"fact","id":"F18","statement":"The farmhouse kitchen refrigerator held 2 unfertilized eggs and 2 pieces of bacon, and the kitchen had a hammer, pliers and screwdriver","category":"resource","observed":"9313a6ff091a1c6bd4e9d30817d792ce-10677","stored":null}
+{"type":"fact","id":"F19","statement":"Clean water is made by boiling water (1 water per clean water, 5 minutes each, faster in batches) and needs a boiling tool or a nearby fire","category":"procedure","observed":"9313a6ff091a1c6bd4e9d30817d792ce-10677","stored":null}
+{"type":"fact","id":"F20","statement":"The farmhouse windows are locked and cannot be pried open with a hammer, so they must be smashed to enter","category":"hazard","observed":"9313a6ff091a1c6bd4e9d30817d792ce-10255","stored":null}
+{"type":"fact","id":"F21","statement":"A crafting job stops if the nearby fire goes out; the boiling attempt was lost when the fire died","category":"procedure","observed":"9313a6ff091a1c6bd4e9d30817d792ce-12435","stored":null}
+{"type":"fact","id":"F22","statement":"Zombies roam the rural road north of the shelter, along with pigs; one was fought and pulped","category":"hazard","observed":"9313a6ff091a1c6bd4e9d30817d792ce-8711","stored":null}
+{"type":"event","fact":"F17","event":"used","frame":"9313a6ff091a1c6bd4e9d30817d792ce-12026","note":"carries the casserole pot and prepares to boil water"}
+{"type":"end","frames_viewed":50}

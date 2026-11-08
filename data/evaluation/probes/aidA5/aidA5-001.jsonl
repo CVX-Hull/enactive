@@ -1,0 +1,14 @@
+{"type":"fact","id":"F1","statement":"The survivor is Alex Morgan, Survivor profession, Evacuee scenario, in the world Jauca","category":"self","observed":"b328dac77cd4b4f1b5d2ee9a0c82894b-490","stored":"f74f08"}
+{"type":"fact","id":"F2","statement":"The game starts inside evac shelter C-41; its wooden door on the south wall leads out to a forest","category":"place","observed":"b328dac77cd4b4f1b5d2ee9a0c82894b-658","stored":null}
+{"type":"fact","id":"F3","statement":"The NPC Vito Hostetler in the shelter is asthmatic and asked the player to fetch an inhaler within a couple of days; the player agreed","category":"plan","observed":"b328dac77cd4b4f1b5d2ee9a0c82894b-721","stored":null}
+{"type":"fact","id":"F4","statement":"Vito Hostetler gave equipment after a persuasion check: protein rations, bottles of clean water, an emergency jacket and an emergency blanket","category":"resource","observed":"b328dac77cd4b4f1b5d2ee9a0c82894b-879","stored":null}
+{"type":"fact","id":"F5","statement":"The survivor carries 6 sealed plastic bottles with 2 clean water each and 8 protein rations","category":"resource","observed":"b328dac77cd4b4f1b5d2ee9a0c82894b-2421","stored":"f74f08"}
+{"type":"fact","id":"F6","statement":"The standalone flashlight has dead batteries; the smartphone's flashlight app works as a light source","category":"item","observed":"b328dac77cd4b4f1b5d2ee9a0c82894b-1037","stored":null}
+{"type":"fact","id":"F7","statement":"A wooden club can be crafted from one plank with a cutting tool (the pocket knife) using fabrication skill; a plank comes from smashing a shelter bench","category":"procedure","observed":"b328dac77cd4b4f1b5d2ee9a0c82894b-1852","stored":null}
+{"type":"fact","id":"F8","statement":"Smashing a bench in the shelter leaves nuts and bolts, scrap metal and splintered wood on the floor","category":"resource","observed":"b328dac77cd4b4f1b5d2ee9a0c82894b-2080","stored":null}
+{"type":"fact","id":"F9","statement":"The survivor wields a crafted wooden club, wears the emergency jacket and carries the emergency blanket","category":"item","observed":"b328dac77cd4b4f1b5d2ee9a0c82894b-2421","stored":null}
+{"type":"fact","id":"F10","statement":"The evac shelter lies in forest west of the town Whitingham","category":"place","observed":"b328dac77cd4b4f1b5d2ee9a0c82894b-2162","stored":null}
+{"type":"fact","id":"F11","statement":"Plan: develop sustainable food and water, avoid unnecessary combat, no save of Alex yet, no debug or cheats","category":"plan","observed":"text","stored":null}
+{"type":"event","fact":"F7","event":"used","frame":"b328dac77cd4b4f1b5d2ee9a0c82894b-2106","note":"Crafted and wielded a wooden club from a bench plank"}
+{"type":"event","fact":"F3","event":"needed","frame":"b328dac77cd4b4f1b5d2ee9a0c82894b-2106","note":"Left the shelter into the forest; the inhaler errand was relevant to where to go"}
+{"type":"end","frames_viewed":29}

@@ -1,0 +1,21 @@
+{"type":"fact","id":"F1","statement":"The survivor is Morgan Vale, male, Survivor profession, Evacuee scenario, started Spring day 61 at 8:00 in the game","category":"self","observed":"2256dc8fbab78519fdea458f3f66315e-463","stored":"cd77cc"}
+{"type":"fact","id":"F2","statement":"The survivor starts inside government evac shelter B-05, a dark building with a door on its south side leading out to fields","category":"place","observed":"2256dc8fbab78519fdea458f3f66315e-626","stored":"cd77cc"}
+{"type":"fact","id":"F3","statement":"Casey Oglesby, a neutral NPC in the shelter, will share equipment if asked in dialogue (persuasion succeeded) after accepting her request to put down her zombified mother","category":"other","observed":"2256dc8fbab78519fdea458f3f66315e-767","stored":null}
+{"type":"fact","id":"F4","statement":"The shelter's cupboards hold emergency jackets (a cupboard holds 8)","category":"resource","observed":"2256dc8fbab78519fdea458f3f66315e-1183","stored":null}
+{"type":"fact","id":"F5","statement":"A locker in the shelter holds an emergency blanket, flashlight, light battery, FEMA pamphlet, plastic bottles of clean water (2 units each) and wrapped protein rations","category":"resource","observed":"2256dc8fbab78519fdea458f3f66315e-1474","stored":"cd77cc"}
+{"type":"fact","id":"F6","statement":"A hostile zombie was spotted about 58 tiles southeast of the shelter; it is slower than the survivor and safe mode is on","category":"hazard","observed":"2256dc8fbab78519fdea458f3f66315e-1177","stored":null}
+{"type":"fact","id":"F7","statement":"Smashing a bench in the shelter yields planks, scrap metal, nuts and bolts and splintered wood","category":"resource","observed":"2256dc8fbab78519fdea458f3f66315e-1003","stored":null}
+{"type":"fact","id":"F8","statement":"Outside the shelter are fields and forest with a weasel, guineafowl and a squirrel nearby; foraging underbrush there found nothing","category":"hazard","observed":"2256dc8fbab78519fdea458f3f66315e-2136","stored":"cd77cc"}
+{"type":"fact","id":"F9","statement":"The survivor crafted a pointy stick from a plank from memory and wields it as a weapon","category":"item","observed":"2256dc8fbab78519fdea458f3f66315e-2196","stored":"cd77cc"}
+{"type":"fact","id":"F10","statement":"An earlier world Isla Vista holds an accidentally created random character, separate from the real survivor in the world Wabuska; it must not be loaded","category":"procedure","observed":"2256dc8fbab78519fdea458f3f66315e-258","stored":null}
+{"type":"fact","id":"F11","statement":"The survivor's stats are 8 strength, dexterity, intelligence and perception, with an overweight weight limit of 99.2 lbs","category":"self","observed":"2256dc8fbab78519fdea458f3f66315e-623","stored":null}
+{"type":"fact","id":"F12","statement":"The plan is to find sustainable food and clean water and safe gear for long-term survival, while avoiding threats","category":"plan","observed":"text","stored":"cd77cc"}
+{"type":"event","fact":"F4","event":"needed","frame":"2256dc8fbab78519fdea458f3f66315e-1183","note":"Choosing clothing from the cupboard"}
+{"type":"event","fact":"F4","event":"used","frame":"2256dc8fbab78519fdea458f3f66315e-1354","note":"Picked up one emergency jacket from the cupboard"}
+{"type":"event","fact":"F5","event":"used","frame":"2256dc8fbab78519fdea458f3f66315e-1555","note":"Picked up flashlight, blanket, protein rations and bottle of clean water from the locker"}
+{"type":"event","fact":"F6","event":"needed","frame":"2256dc8fbab78519fdea458f3f66315e-1354","note":"Zombie spotted; safe mode warning, decision whether to engage"}
+{"type":"event","fact":"F6","event":"used","frame":"2256dc8fbab78519fdea458f3f66315e-1354","note":"Chose to ignore the distant zombie and continue looting"}
+{"type":"event","fact":"F7","event":"used","frame":"2256dc8fbab78519fdea458f3f66315e-1003","note":"Smashed bench and picked up a plank from the debris"}
+{"type":"event","fact":"F9","event":"used","frame":"2256dc8fbab78519fdea458f3f66315e-2196","note":"Wielding the pointy stick while exploring"}
+{"type":"event","fact":"F12","event":"needed","frame":"2256dc8fbab78519fdea458f3f66315e-2517","note":"Choosing the next activity at the end of the chunk after the crafting menus"}
+{"type":"end","frames_viewed":33}
