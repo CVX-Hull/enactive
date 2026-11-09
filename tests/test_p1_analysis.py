@@ -50,7 +50,16 @@ def guards_ok(false_b=1):
                for r in (1, 2) for i in range(40)]
             + [dict(type='cost', schema=p1.SCORE_SCHEMA, repeat=r, lineage='lh1', curator_dollars=15.0,
                     actor_dollars=30.0, stopped_by_cap=False) for r in (1, 2)]
-            + [dict(type='guess', correct=i % 2 == 0) for i in range(30)])
+            + guesses(15))
+
+
+def guesses(right):
+    """30 arm guesses, 15 per arm, with `right` of them matching the arm under the label mapping A=1."""
+    rows = [dict(type='guess', arm='A' if i < 15 else 'B') for i in range(30)]
+    for i, row in enumerate(rows):
+        matched = i < right
+        row['guess'] = ('1' if row['arm'] == 'A' else '2') if matched else ('2' if row['arm'] == 'A' else '1')
+    return rows
 
 
 def study(rates, per_boundary=10, extra=(), flip=lambda row: row['stated']):
@@ -140,7 +149,7 @@ def test_a_failed_guard_blocks_a_go_and_says_so(extra, check):
 def test_a_held_out_repeat_that_reached_its_cap_fails_the_cost_guard_without_scoring():
     rows = spread(probes())
     capped = [dict(type='cost', schema=p1.SCORE_SCHEMA, repeat=2, lineage='lh2', curator_dollars=31.0,
-                   actor_dollars=30.0, stopped_by_cap=True), dict(type='guess', correct=True), dict(type='guess', correct=False)]
+                   actor_dollars=30.0, stopped_by_cap=True), *guesses(15)]
     result = p1.score(rows, HOURS, capped)       # partial labels: none at all
     assert result['decision']['go'] is False and 'reached its cap' in result['decision']['outcome']
 
@@ -159,9 +168,15 @@ def test_rejudging_must_be_exactly_the_seeded_sample():
 def test_the_arm_guessing_check_is_required_and_bounded():
     rows, scores = study({'A1': 0.3, 'B1': 0.8, 'B2': 0.8}, extra=[r for r in guards_ok() if r['type'] != 'guess'])
     with pytest.raises(p1.ScoreError, match='arm-guessing'):
-        p1.score(rows, HOURS, scores)
-    with pytest.raises(p1.ScoreError, match='guessed'):
-        p1.score(rows, HOURS, scores + [dict(type='guess', correct=True)] * 10)
+        p1.score(rows, HOURS, scores)                                    # missing
+    with pytest.raises(p1.ScoreError, match='arm-guessing'):
+        p1.score(rows, HOURS, scores + guesses(15)[:-1])                 # not 30, or unbalanced
+    # The limit is the binomial tail under no leak, with the better of two mappings: 21 of 30.
+    assert p1.guess_limit() == 21
+    for right in (21, 9):                                                # either mapping counts
+        with pytest.raises(p1.ScoreError, match='guessed'):
+            p1.score(rows, HOURS, scores + guesses(right))
+    assert p1.score(rows, HOURS, scores + guesses(20))['arm_guessing']['leaks'] is False
 
 
 def test_units_count_one_cluster_once_per_boundary_and_only_confirmed_informative_probes():
@@ -171,6 +186,17 @@ def test_units_count_one_cluster_once_per_boundary_and_only_confirmed_informativ
     unit_rows = p1.units(p1.primary_probes(rows))
     assert len(unit_rows) == 5 and {u['probe'] for u in unit_rows} >= {'lh1-0-00'}
     assert 'lh1-0-01' not in {u['probe'] for u in unit_rows}
+
+
+def test_clusters_do_not_chain_frames_that_are_not_all_near_each_other():
+    rows = probes(per_boundary=1, boundaries=3)[:3]
+    # a~b and b~c are 10 bits apart, a~c 20: chaining would merge all three; complete linkage does not.
+    for row, h in zip(rows, (0, (1 << 10) - 1, (1 << 20) - 1)):
+        row['earlier_dhash'] = format(h, '064x')
+    found = p1.clusters(rows)
+    assert found[rows[0]['id']] == found[rows[1]['id']] != found[rows[2]['id']]
+    assert p1.cluster_sizes(p1.units(rows)) == {'1': 1, '2': 1}
+
 
 
 @pytest.mark.parametrize('mutate, match', [
@@ -195,7 +221,7 @@ def test_incomplete_or_malformed_rows_are_refused(mutate, match):
 def test_development_lineages_are_never_scored():
     rows = [dict(r, lineage='397') for r in probes()]
     with pytest.raises(p1.ScoreError, match='held-out'):
-        p1.score(rows, HOURS, [dict(type='guess', correct=False)])
+        p1.score(rows, HOURS, guesses(15))
 
 
 def test_the_tracked_power_simulation_reproduces_and_its_page_figures_match():
@@ -205,5 +231,7 @@ def test_the_tracked_power_simulation_reproduces_and_its_page_figures_match():
     assert gate['passes'] is (gate['no_effect'] <= 0.05 and gate['at_interest'] >= 0.80)
     planning = tracked['probability_of_go'][tracked['assumptions']['planning']]
     page = (p1.ROOT/'docs'/'design'/'p1-study.md').read_text()
-    row = ' | '.join(f'{planning[d]:.3f}' for d in ('0.00', '0.10', '0.15', '0.20', '0.25', '0.30'))
-    assert row in page.replace('**', ''), 'the power table on the page must render power.json'
+    assert planning is tracked['probability_of_go'][tracked['assumptions']['planning']]
+    for variant in tracked['probability_of_go'].values():     # every row of the page's power table
+        row = ' | '.join(f'{variant[d]:.3f}' for d in ('0.00', '0.10', '0.15', '0.20', '0.25', '0.30'))
+        assert row in page.replace('**', ''), f'the power table on the page must render power.json: {row}'

@@ -688,6 +688,27 @@ study and adopts nothing. It has three leaves:
 
 The P1 go/no-go is decided on that pre-registration.
 
+**P1.0 outcome (8 November 2026).**
+1. **Context stability** ([record](../acceptance/2026-11-08-context-stability-489.md)).
+   - **Done:** both hosts' requests are byte-stable apart from their tails, proven without
+     spend.
+   - **Not fixed: prompt caching.** One paid curator session sent a constant affinity value
+     and still cached only 3.3% of prompt tokens: the static prompt, never the history.
+     Affinity is refuted as the whole cause, and the next checks are recorded.
+2. **Probe validation** ([record](../acceptance/2026-11-08-probe-validation-490.md)).
+   - **Both pre-registered bars were missed:** fact labels 0.51 and queries 0.41.
+   - **After a content-matched correction,** the owner made confirmed re-observations P1's
+     primary probes. The frozen ledgers become secondary.
+3. **The pre-registration** ([p1-study](../design/p1-study.md)) is written and reviewed.
+   - **Arms.** Arm A against arm B, with B run twice and per admission, on #382.
+   - **Rule.** Clustered re-observation units and a conjunctive go rule with guards.
+   - **Spend.** An expected $71–90 within $120.
+   - **The gate before spend passes narrowly, after its target moved.** At the planning
+     assumption, false positives are 3.1%. P(go) is 0.81 at an effect of interest of 0.30,
+     which was raised from 0.25 after the simulation gave 0.67 there; that change is recorded
+     as a deviation. With three lineages, the study detects only large effects. Whether to
+     accept that or reshape is the owner's go/no-go.
+
 Every phase replaces its contracts and stores in one migration
 (`player-memory/2` → `/3`, `player-record/1` and `player-program/2` → their
 successors); unsupported versions are refused.

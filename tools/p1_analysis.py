@@ -24,7 +24,7 @@ import random
 from pathlib import Path
 
 import numpy as np
-from scipy.stats import beta
+from scipy.stats import beta, binom
 
 from harness.evaluation.core.probes import kappa
 
@@ -42,7 +42,8 @@ MIN_UNITS = 20           # a lineage with at least this many units must show B a
 BOOTSTRAP = 2000         # cluster resamples within lineage
 LOWER_QUANTILE = 0.025   # the one-sided 97.5% bound of the mean difference must exceed 0
 INTEREST = 0.30          # the effect of interest: the gate needs P(go) >= 0.80 there and <= 0.05 at none
-GUESS_LIMIT = 0.60       # an arm-guessing check above this share correct stops scoring (rendering leaks the arm)
+GUESSES = 30             # the arm-guessing check: 15 texts per arm, seeded order
+GUESS_ALPHA = 0.05       # scoring stops if the better label mapping is right this improbably often by chance
 FALSE_FACT_CAP = 0.10    # B's audited false-fact rate (point), its one-sided 95% upper bound,
 FALSE_FACT_BOUND = 0.20  # and at most A's plus the margin
 FALSE_FACT_MARGIN = 0.05
@@ -87,25 +88,22 @@ def primary_probes(rows: list[dict]) -> list[dict]:
 
 
 def clusters(probes: list[dict]) -> dict[str, str]:
-    """Probe id -> information cluster: earlier frames within NEAR bits, linked, within one lineage."""
-    parent = {p['id']: p['id'] for p in probes}
-
-    def root(i):
-        while parent[i] != i:
-            parent[i] = parent[parent[i]]
-            i = parent[i]
-        return i
-    by_lineage: dict[str, list[tuple[str, int]]] = {}
-    for p in probes:
-        by_lineage.setdefault(p['lineage'], []).append((p['id'], int(p['earlier_dhash'], 16)))
-    for members in by_lineage.values():
-        for i, (a, ha) in enumerate(members):
-            for b, hb in members[i + 1:]:
-                if (ha ^ hb).bit_count() <= NEAR:
-                    parent[root(a)] = root(b)
-    out = {}
-    for p in probes:
-        out[p['id']] = min((q['id'] for q in probes if root(q['id']) == root(p['id'])))
+    """Probe id -> information cluster, within one lineage, by complete linkage: in probe-id order, a
+    probe joins the first cluster whose every earlier frame is within NEAR bits of its own, else it
+    starts one. Nothing chains: two frames 16 bits apart can show different lists (#490), so a cluster
+    never joins frames that are not all near each other. The cluster is named by its first probe."""
+    out: dict[str, str] = {}
+    groups: dict[str, list[tuple[str, list[int]]]] = {}
+    for p in sorted(probes, key=lambda p: p['id']):
+        h = int(p['earlier_dhash'], 16)
+        for name, members in groups.setdefault(p['lineage'], []):
+            if all((h ^ m).bit_count() <= NEAR for m in members):
+                members.append(h)
+                out[p['id']] = name
+                break
+        else:
+            groups[p['lineage']].append((p['id'], [h]))
+            out[p['id']] = p['id']
     return out
 
 
@@ -117,6 +115,17 @@ def units(probes: list[dict]) -> list[dict]:
     for p in sorted(probes, key=lambda p: p['id']):
         chosen.setdefault((p['lineage'], p['boundary'], cluster[p['id']]), p)
     return [dict(lineage=k[0], boundary=k[1], cluster=k[2], probe=p['id']) for k, p in sorted(chosen.items())]
+
+
+def cluster_sizes(unit_rows: list[dict]) -> dict[str, int]:
+    """How many clusters have each number of units: the clustering the power check depends on."""
+    sizes: dict[tuple, int] = {}
+    for u in unit_rows:
+        sizes[(u['lineage'], u['cluster'])] = sizes.get((u['lineage'], u['cluster']), 0) + 1
+    out: dict[str, int] = {}
+    for size in sizes.values():
+        out[str(size)] = out.get(str(size), 0) + 1
+    return dict(sorted(out.items(), key=lambda kv: int(kv[0])))
 
 
 def rejudge_sample(unit_rows: list[dict]) -> set[tuple]:
@@ -265,18 +274,33 @@ def agreement(first: dict, second: dict) -> dict:
     return dict(n=len(pairs), percent=_rate(sum(x == y for x, y in pairs), len(pairs)), kappa=kappa(pairs))
 
 
+def guess_limit(n: int = GUESSES) -> int:
+    """Correct guesses (under the better of the two label mappings) at which scoring stops: the
+    smallest k with P(max(X, n - X) >= k) <= GUESS_ALPHA for X ~ Binomial(n, 1/2), i.e. no leak."""
+    return next(k for k in range(n // 2 + 1, n + 1) if 2 * binom.sf(k - 1, n, 0.5) <= GUESS_ALPHA)
+
+
+def arm_guessing(rows: list[dict]) -> dict:
+    """The guesser labels each text "1" or "2"; the better mapping of labels to arms is scored."""
+    if (len(rows) != GUESSES or any(r.get('arm') not in ('A', 'B') or r.get('guess') not in ('1', '2') for r in rows)
+            or sum(r['arm'] == 'A' for r in rows) != GUESSES // 2):
+        raise ScoreError(f'the arm-guessing check needs exactly {GUESSES} guesses, half per arm')
+    agree = sum((r['arm'] == 'A') == (r['guess'] == '1') for r in rows)
+    best = max(agree, len(rows) - agree)
+    return dict(n=len(rows), correct=best, limit=guess_limit(), leaks=best >= guess_limit())
+
+
 def score(probe_rows: list[dict], hours: dict[str, float], rows: list[dict]) -> dict:
-    guesses = [row for row in rows if row.get('type') == 'guess']
+    guessing = arm_guessing([row for row in rows if row.get('type') == 'guess'])
+    if guessing['leaks']:
+        raise ScoreError(f"the arm can be guessed from the text ({guessing['correct']} of {guessing['n']}); "
+                         'fix the rendering first')
     rows = [row for row in rows if row.get('type') != 'guess']
-    if not guesses or not all(isinstance(g.get('correct'), bool) for g in guesses):
-        raise ScoreError('the arm-guessing check is required before scoring')
-    guessed = sum(g['correct'] for g in guesses) / len(guesses)
-    if guessed > GUESS_LIMIT:
-        raise ScoreError(f'the arm can be guessed from the text ({guessed:.2f} correct); fix the rendering first')
     audits, costs = _validated(rows)
     unit_rows = units(primary_probes(probe_rows))
     base = dict(schema=RESULT_SCHEMA, probes=dict(listed=len(probe_rows), units=len(unit_rows),
-                                                  clusters=len({(u['lineage'], u['cluster']) for u in unit_rows})),
+                                                  clusters=len({(u['lineage'], u['cluster']) for u in unit_rows}),
+                                                  cluster_sizes=cluster_sizes(unit_rows)),
                 thresholds=dict(effect=EFFECT, min_units=MIN_UNITS, lower_quantile=LOWER_QUANTILE, interest=INTEREST,
                                 false_fact_cap=FALSE_FACT_CAP, false_fact_bound=FALSE_FACT_BOUND,
                                 false_fact_margin=FALSE_FACT_MARGIN, cost_cap=COST_CAP))
@@ -305,7 +329,7 @@ def score(probe_rows: list[dict], hours: dict[str, float], rows: list[dict]) -> 
         outcome = 'inconclusive: B is above A on average but the criterion did not hold'
     slim = {k: {key: val for key, val in v.items() if key != 'units'} for k, v in figs.items()}
     return dict(base, figures=slim, judge_agreement=agreement(first, second),
-                arm_guessing=dict(n=len(guesses), correct=guessed),
+                arm_guessing=guessing,
                 decision=dict(go=go, outcome=outcome, mean_delta=main['delta'], robust_to_rejudging=robust,
                               primary=main, guards=guard))
 
@@ -321,7 +345,7 @@ FLIP = 0.05              # judge error per label
 CLUSTER_MEAN = 3.0       # planning assumption: units per information cluster (#397's sample: 1.4)
 VARIANTS = ((1.4, 0.0), (3.0, 0.0), (6.0, 0.0), (3.0, 0.05))   # (cluster mean, judge bias toward B)
 DELTAS = (0.0, 0.10, 0.15, 0.20, 0.25, 0.30)
-SIMULATIONS = 1000
+SIMULATIONS = 5000
 DEV_HOURS, DEV_BOUNDARIES, DEV_CANDIDATES = 47.791, 13, 197   # #397 (#449, #490)
 
 
@@ -407,7 +431,9 @@ def simulate(simulations: int = SIMULATIONS, seed: int = SEED, layout: list[tupl
                                                                   for _ in range(simulations)) / simulations, 3)
                                            for d in DELTAS}}
         return dict(schema=POWER_SCHEMA, seed=seed, simulations=simulations, units=len(layout),
-                    clusters=len(set(layout)), probability_of_go=variants,
+                    clusters=len(set(layout)),
+                    cluster_sizes=cluster_sizes([dict(lineage=name, cluster=c) for name, c in layout]),
+                    probability_of_go=variants,
                     gate=gate(variants['held-out structure']))
     shape = held_out_shape()
     variants = {}

@@ -60,9 +60,11 @@ table under [Power](#power) renders it.
   (probe-protocol/1).
 - **Primary probe.** A confirmed, informative re-observation. Its boundary is the last boundary
   before the later frame's chunk.
-- **Information cluster.** Probes whose earlier frames are linked within 16 difference-hash bits,
-  within one lineage (`clusters`). The same information is often re-observed at several
-  boundaries: in #397's sample, 17 informative probes formed 12 clusters.
+- **Information cluster.** Probes within one lineage whose earlier frames are **all** within 16
+  difference-hash bits of each other (complete linkage in probe-id order, `clusters`). Nothing
+  chains: #490 found that frames 16 bits apart can show different lists. The same information
+  is often re-observed at several boundaries: in #397's sample, 17 informative probes formed 12
+  clusters. The result reports the distribution of cluster sizes.
 - **Scoring unit.** One per lineage, boundary and cluster (`units`). Re-observing the same
   information several times after one boundary counts once. Only the unit's probe, the one with
   the lowest id, is judged.
@@ -150,9 +152,9 @@ shows?
   and Cohen's kappa, is reported as the judges' repeat variance.
 
 **Arm-guessing check.** It runs before scoring. A fresh judge sees 30 delivered texts, 15 from A
-and 15 from B in a seeded order, and guesses each one's arm. If more than **60%** of its guesses
-are right, the rendering leaks the arm. Scoring is then refused (`score`) until the rendering is
-fixed, and the fix is recorded.
+and 15 from B in a seeded order, and sorts each into one of two unnamed systems. If its split
+matches the arms on **21 or more** of 30, the rendering leaks the arm. Scoring is then refused
+(`score`) until the rendering is fixed, and the fix is recorded.
 
 **False-fact auditor.**
 - **Sample.** For each arm and each repeat, `Random(4913)` draws up to 40 (working-set item,
@@ -197,8 +199,10 @@ fixed, and the fix is recorded.
 > only JSON Lines: {"id":"<id>","false":true|false,"frame":"<source id or null>","why":"<one
 > line>"}.
 
-**Scoring the arm guess.** The guesser's labels "1" and "2" are mapped to arms by whichever mapping
-scores higher. A share above 60% therefore means that its consistent split separates the arms.
+**Scoring the arm guess.** `arm_guessing` maps the guesser's labels "1" and "2" to arms by whichever
+mapping scores higher, and requires exactly 30 guesses, 15 per arm. The limit is fixed so that a
+guesser that cannot tell the arms apart reaches it at most 5% of the time, counting the better of
+the two mappings: 2 × P(Binomial(30, ½) ≥ 21) = 0.043.
 
 ## Metrics
 
@@ -251,23 +255,34 @@ The effect of interest is **0.30**. **The gate before spend** (ADR 009) requires
 - P(go) of 0.80 or more at the effect of interest;
 
 both under the planning assumption: on average **3 units per information cluster**, and no judge
-bias.
+bias. Each figure below comes from 5,000 simulations, with a standard error of at most 0.007.
 
 | True effect (B − A) | 0 | 0.10 | 0.15 | 0.20 | 0.25 | 0.30 |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| P(go), planning assumption | 0.026 | 0.174 | 0.306 | 0.469 | 0.675 | 0.790 |
-| 1.4 units per cluster (#397's sample) | 0.019 | 0.166 | 0.350 | 0.585 | 0.791 | 0.906 |
-| 6 units per cluster | 0.024 | 0.158 | 0.286 | 0.437 | 0.596 | 0.754 |
-| Planning, with judges 5 points more likely to say "stated" for B | 0.062 | 0.263 | 0.429 | 0.598 | 0.723 | 0.869 |
+| P(go), planning assumption | 0.031 | 0.183 | 0.314 | 0.488 | 0.666 | 0.810 |
+| 1.4 units per cluster (#397's 20% sample: a lower bound on clustering) | 0.016 | 0.161 | 0.343 | 0.562 | 0.766 | 0.902 |
+| 6 units per cluster (pessimistic) | 0.034 | 0.170 | 0.289 | 0.451 | 0.608 | 0.754 |
+| Planning, with judges 5 points more likely to say "stated" for B | 0.064 | 0.259 | 0.421 | 0.607 | 0.737 | 0.856 |
 
-**The gate is not met: 0.790 against 0.80 at the effect of interest.**
-- **False positives** are well controlled without judge bias.
-- **Detection.** With three lineages and repeated information, the study detects only large
-  effects. Even 0.30 is missed about one time in five.
-- **Judge bias toward B** is the main threat to false positives. Hence the arm-blind rendering
-  and the guessing check.
-- **Which way to go is the owner's decision** at the P1 go/no-go: accept this detection rate, or
-  reshape the study (more held-out data means new gameplay).
+**The gate passes narrowly, and only because its target moved.**
+- **The target moved.** The first version of this page set the effect of interest at 0.25. The
+  clustered simulation then gave P(go) of 0.666 there, so the effect of interest was raised to
+  0.30 after seeing that result. This is recorded as a deviation from the design as first
+  written.
+- **At the new target,** the gate passes by 0.010 at the planning assumption: 0.810 against 0.80.
+  It fails if information repeats more (6 units per cluster: 0.754).
+- **The cluster mean.** #397's sample shows 1.4 units per cluster, but that is a 20% sample, which
+  understates repetition. Its full lineage likely repeats about 4–5 times. Three per cluster is
+  a middle value, not a conservative one.
+- **Judge bias toward B** is the main threat to false positives (0.064 at 5 points). Hence the
+  arm-blind rendering and the guessing check.
+- **Not modelled.** The simulation applies one effect at every boundary, while under D2 timing B
+  delivers nothing extra at the first admission's handoffs. That makes the simulated power
+  somewhat optimistic.
+- **For the owner's go/no-go.** The study can detect only a large effect (0.30). Running it at
+  this power, rather than reshaping it as ADR 009 says a design that misses its gate must be,
+  needs the owner's explicit acceptance, recorded as a deviation if the held-out re-check also
+  falls short.
 
 **Assumptions** (in [`power.json`](../../data/evaluation/p1/power.json); from development data and
 ledger aggregates only):
@@ -308,7 +323,8 @@ amounts do not move between stages without the owner.
   revocation) stops every stage.
 - **Stage caps.**
   - A development stage that reaches its cap stops there, and its partial data is reported.
-  - A held-out stage that reaches its cap records the cost guard as failed (above).
+  - A held-out stage that reaches its cap records the cost guard as failed (above). If repeat 1
+    reaches its cap, repeat 2 does not run.
 - **Pilot.**
   - **Cost.** It goes back to the owner if a session costs more than 2× the same session's #454
     cost (`aidB3` $4.76, `ceil09` $5.25).
