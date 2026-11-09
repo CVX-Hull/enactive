@@ -85,8 +85,8 @@ that pre-registration.
   only large effects.
 
 **The owner's go/no-go: go, but fix caching first** ([ADR 009](decisions/009-curated-player.md#phases)).
-Prompt caching is diagnosed and fixed first. Then come #178's held-out probes, the held-out
-power re-check and the pilot.
+Prompt caching was diagnosed and fixed first: notes stay where they were first sent. Next
+come #178's held-out probes, the held-out power re-check and the pilot.
 
 ## Current integrated checkpoint
 

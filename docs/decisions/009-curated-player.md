@@ -716,11 +716,13 @@ The P1 go/no-go is decided on that pre-registration.
 
 **The owner's P1 go/no-go (8 November 2026): go, but fix caching first.** P1 runs as
 pre-registered, accepting that it detects only large effects. Prompt caching is fixed
-first, which lowers P1's cost before the pilot:
-1. **A check with no spend.** Per-message digests of the real request bodies, taken at the
-   proxy, show where the cache stops.
-2. **A cache-key change, if the digests point to it.** A `prompt_cache_key`-style change,
-   verified by a small paid check. That check needs its own approval.
+first, which lowers P1's cost before the pilot.
+
+**Caching was fixed, with its cause found as above.**
+- **The cause** came from free checks on the real request bodies, then replays capped at
+  $1.50 by the owner. They spent $0.535.
+- **A cache key was not needed.** `prompt_cache_key` made no difference.
+- **The cached share is not yet measured live.** The pilot measures it.
 
 Then:
 - #178 writes the held-out probes, with no spend;
