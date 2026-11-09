@@ -54,21 +54,11 @@ Effectiveness can be unassessed; a fresh metadata review must not refresh native
 Exercise and maintenance review are independent events. Dated reports retain prior
 observations when the latest record changes. A failure remains in history after repair.
 
-Active/deprecated controls need a next review within 90 days of the recorded review,
-with event triggers requiring earlier work. Every strict CI profile and standalone
-governance uses the current date and fails **after** the due date. Fast development
-checkpoints instead
-print calendar-expiry warnings for all controls; they do not infer which controls
-are relevant or relax structural, ownership, evidence/reference, chronology,
-protocol or generated-map checks. Event-triggered review on resumption, incidents,
-changed boundaries and release still applies; actual affected failures or evidence
-gaps stop the affected work. Resolve overdue review at the existing integration/
-formal-acceptance checkpoint. A warning is not effectiveness or support evidence.
-The standalone `tools/governance.py --as-of YYYY-MM-DD` forecasts maintenance only;
-it never renews records and cannot substitute for the common command's current-date
-check. No check or background job edits dates automatically. At an overdue failure,
-the owner reviews the control, records evidence/findings/actions, then chooses a
-justified new date or retires/replaces it. Do not advance dates just to pass a check.
+Active/deprecated controls record a next review within 90 days of the recorded review.
+A passed date is not a check failure in any profile ([ADR 010](../decisions/010-streamlined-delivery.md)):
+a control is reviewed when it fails, is bypassed, costs more than expected, or its
+boundary changes, and actual affected failures or evidence gaps stop the affected
+work. No check or background job edits dates. Do not advance dates without a review.
 An exception issue identifies scope, owner, expiry, reason and mitigation; it
 does not silently suppress a failed mechanical gate or override user constraints.
 

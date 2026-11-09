@@ -9,8 +9,6 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 permissions:
   contents: read
-  actions: read
-  pull-requests: read
 jobs:
   controller:
     runs-on: ubuntu-24.04
@@ -27,16 +25,18 @@ jobs:
           node-version: '22'
       - name: Select strict validation profile
         id: validation
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: python tools/ci.py
       - run: python -m venv .venv
       - run: .venv/bin/python -m pip install --cache-dir .cache/pip --require-hashes -r requirements-dev.lock
       - run: npm --userconfig /dev/null --cache "$PWD/.cache/npm" ci --ignore-scripts --no-audit --no-fund
-      - run: npm --userconfig /dev/null --cache "$PWD/.cache/npm" --prefix tools/player_host ci --ignore-scripts --no-audit --no-fund
-      - run: npm --userconfig /dev/null --cache "$PWD/.cache/npm" --prefix tools/curator_host ci --ignore-scripts --no-audit --no-fund
-      - run: .venv/bin/python tools/diagrams.py --install-browser
+      - if: steps.validation.outputs.profile != 'main'
+        run: npm --userconfig /dev/null --cache "$PWD/.cache/npm" --prefix tools/player_host ci --ignore-scripts --no-audit --no-fund
+      - if: steps.validation.outputs.profile != 'main'
+        run: npm --userconfig /dev/null --cache "$PWD/.cache/npm" --prefix tools/curator_host ci --ignore-scripts --no-audit --no-fund
+      - if: steps.validation.outputs.profile != 'main'
+        run: .venv/bin/python tools/diagrams.py --install-browser
       - name: Allow the project Chrome sandbox on this disposable runner
+        if: steps.validation.outputs.profile != 'main'
         run: |
           chrome_path=$(node --input-type=module -e "import puppeteer from 'puppeteer'; process.stdout.write(await puppeteer.executablePath())")
           test -x "$chrome_path"

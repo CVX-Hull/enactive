@@ -6,101 +6,63 @@ status: active
 
 # Protected CI profiles
 
-![Proportional validation before and after protected integration.](../diagrams/ci-validation.svg)
+![Proportional validation on pull requests, structural checks on main.](../diagrams/ci-validation.svg)
 
-This view separates the required PR gate from post-merge evidence. Unknown
-eligibility uses full checks; native/gameplay outcomes remain separate.
+A pull request runs the narrowest closed profile its complete diff qualifies for; a
+push to main runs the structural checks. Native and gameplay outcomes stay separate.
 [Editable source](../diagrams/ci-validation.mmd).
 
-One always-present Actions `controller` job remains required with its existing App
-association and strict main ruleset. Pull-request triggers explicitly target main;
-main pushes also run. There are no workflow path filters, conditional required jobs,
-manual labels/overrides or ignored failures. Superseded PR runs are cancelled;
-running main checks are not cancelled by that policy. `tools/ci.py` chooses a closed
-profile from existing Git/GitHub facts and invokes `tools/check.py`. Missing or
-ambiguous eligibility selects full; checker or execution failure fails the job.
-The [proportional validation brief](../changes/065-proportional-ci.md) records rationale.
+One always-present Actions `controller` job is required by main's ruleset: pull
+requests to main only, strict up-to-date status checks, squash merges and no bypass
+actors. There are no workflow path filters, conditional required jobs, manual
+labels or ignored failures. Superseded pull request runs are cancelled. `tools/ci.py`
+chooses a profile from Git facts and invokes `tools/check.py`; missing or ambiguous
+eligibility selects full, and a checker or execution failure fails the job.
 
-All hosted profiles run syntax, selected Ruff, import contracts, JavaScript syntax,
-document metadata/local links, current-date strict governance, whitespace and diagram
-rendering. Local `--fast` retains calendar-only warnings and omits behavioral tests
-and diagram rendering. It is not a hosted profile.
+Every hosted profile runs Python syntax, selected Ruff, import contracts, JavaScript
+syntax, document metadata and local links, governance structure, the run ledger,
+evidence verification, generated run tables and whitespace. Local `--fast` runs the
+same structural checks and nothing else; it is not a hosted profile.
 
-| Profile | Additional executed checks | Supported claim |
-| --- | --- | --- |
-| Full (also the default local command) | Complete pytest collection of existing unittest cases, four xdist processes with work stealing and 20 slowest durations, plus viewer/investigation regressions | Full portable regression; native build/gameplay remain separate |
-| Editorial | No runtime tests or viewer regressions | Strict document/structural validation only |
-| Viewer | Server and fixed boundary smoke, plus production viewer logic with a synthetic DOM | Contained viewer/boundary regression; no browser layout or full regression claim |
-| Main-smoke | Fixed computer protocol/runtime, player composition and HTTP cases, plus viewer/investigation regressions; serial pytest | Bounded smoke on main with linked qualifying full PR coverage; full regression was not rerun on main |
+| Profile | Runs on | Additional checks | Supported claim |
+| --- | --- | --- | --- |
+| Full (also the default local command) | A pull request with any change outside the other profiles | Complete pytest collection on four xdist processes with work stealing and the 20 slowest durations, beside a browser lane: diagram rendering, then the viewer and investigation suites | Full portable regression; native build and gameplay remain separate |
+| Editorial | A pull request changing only eligible documents | Diagram rendering | Document and structural validation only |
+| Viewer | A pull request confined to the viewer allowlist, optionally with eligible documents | Server and fixed boundary smoke on four xdist processes grouped by file, beside the browser lane | Contained viewer and boundary regression; no browser layout or full regression claim |
+| Main | Every push to main | None; tests and diagrams already ran on this tree | The tree main received is the pull request head whose run passed |
 
 The [testing guide](../testing.md) maps test responsibilities, overlap and upkeep.
 `tools/ci.py` owns the exact source allowlists and test targets; the checker consumes
-that same manifest. Full and component scopes use four pytest-xdist processes. Full uses built-in
-work stealing to balance heterogeneous case durations; component scopes group by
-file to keep module/class fixtures together. Main-smoke is serial.
-Worker crashes fail the run without restart or silent serial fallback. The pinned
-pytest version supports existing unittest assertions, setup/cleanup and subtests.
-Collection identity and representative negative matrices are checked when changing
-the runner; counts alone do not establish semantic coverage.
+that same manifest. Worker crashes fail the run without restart or silent serial
+fallback. The full profile's two lanes run at once and the run fails after both end
+if either failed; each lane's output is printed whole.
 
-Editorial eligibility requires a complete nonempty native Git diff, using the
-event's original PR base/head via merge base or main before/after, with
-`--no-renames` and NUL-separated paths. Both sides of renames/deletions participate;
-every changed object must be regular. The five root documents inspected by the
-checker and all `docs/**/*.md` qualify, including current guidance and contracts.
-Report assets/JSON under acceptance, assets under docs/assets, and Mermaid source,
-SVG and rendered.json directly under docs/diagrams also qualify. Ancillary Markdown
-outside the checked set, executable assets, configuration, schemas and registry
-JSON do not qualify. Structural consistency cannot prove prose or prompt semantics:
-C-REVIEW still checks changed guidance against contracts/source and selects any
-needed native/player evidence; running unchanged Python code cannot establish that
-new instructions are effective.
+**Editorial eligibility.** A complete nonempty Git diff from the pull request's merge
+base, with `--no-renames` and NUL-separated paths. Both sides of renames and deletions
+count, and every changed object must be regular. The five root documents and all
+`docs/**/*.md` qualify, including current guidance and contracts, as do acceptance
+assets and JSON, `docs/assets/` images, and Mermaid sources, SVGs and `rendered.json`
+directly under `docs/diagrams/`. Other Markdown, executable assets, configuration,
+schemas and registry JSON do not. Structural checks cannot prove prose or prompt
+semantics: review compares changed guidance with contracts and source and selects any
+needed native or player evidence.
 
-A regular diff confined to the explicit viewer allowlist, optionally
-with eligible documents, runs that component profile on both PR and main. Viewer
-includes CLI, computer protocol/runtime, player composition and HTTP boundary smoke
-and the Node viewer suite. Additional source/test helpers, state/persistence/authority, native code, schemas,
-dependencies, validation machinery or unknown paths require full PR regression.
-Do not infer transitive impact or use manual labels to widen an allowlist. Extending
-a boundary requires reviewed consumer coverage and measured benefit. Browser layout
-changes retain proportionate rendered review; a synthetic DOM cannot qualify them.
+**Viewer eligibility.** A regular diff confined to the explicit viewer allowlist,
+optionally with eligible documents. Other source or test helpers, state, persistence,
+authority, native code, schemas, dependencies, validation machinery or unknown paths
+select full. Do not infer transitive impact or use labels to widen an allowlist;
+extending one needs reviewed consumer coverage and measured benefit. Browser layout
+changes keep proportionate rendered review; a synthetic DOM cannot qualify them.
 
-A main editorial or component diff independently executes its selected scope;
-it does not borrow a PR pass or claim full coverage. Otherwise main-smoke is
-eligible only for an ordinary single-parent squash push adding exactly one commit:
-the event's before SHA equals its parent P; exactly one actual merged PR has that
-merge SHA, a main base P and head H; P is an ancestor of H; and H's tree equals
-actual main. The latest expected `check.yml` pull_request run at H must be completed
-and successful, with one successful completed `controller` job, its unique successful
-completed `Run strict full validation` step, and an original
-`created_at` strictly earlier than the PR's `merged_at`. Equality, malformed times,
-a newer failed/cancelled/incomplete run or missing/ambiguous facts require full;
-do not search past a newer run for an older success. A successful editorial step
-is not full coverage: the earlier run's comparison can differ from the merged PR's
-comparison even at the same head. The native step receipt identifies actual full
-execution without a new evidence store. The main-only PR trigger,
-strict up-to-date protection and default PR merge checkout bind that coverage to
-the actual main tree. GitHub's run `pull_requests` list may be empty after merge;
-use actual PR/run/Git relationships without fabricating an association.
+**Main pushes.** Strict up-to-date protection makes every pull request head contain
+main's tip before it can merge, and serializes merges; a squash merge then gives main
+exactly the tree the pull request's required run tested. So a push to main reruns no
+tests, and its summary says so. The ruleset is the guarantee: changing it, the
+required check or the merge method requires this page and the selector to change
+with it. Broad source changes receive full regression before merge, on the pull
+request. A reduced profile never establishes full regression, native support or
+gameplay acceptance.
 
-Changes to validation machinery/context force full on main too: `.github/`, all
-engineering `tools/` initially (including checker, selector and package bootstrap),
-tests package bootstrap, dependency manifests/locks, renderer
-configuration, schemas and control-registry JSON. Covered Markdown alone uses
-editorial regardless of whether it describes policy; source changes to implement
-that policy are classified separately. This coarse tools boundary avoids maintaining a checker-helper
-dependency graph; narrower reuse needs a demonstrated benefit. Normal feature regression tests still receive full PR coverage
-but do not alone change validation context. Unknown main paths, nonstandard pushes,
-nonregular objects, tree mismatch or unavailable proof select full. Existing pinned
-workflow/dependency contracts define the supported environment; no green cache,
-provenance service or ambient host fingerprint is introduced.
-
-Print the selected profile and reason in logs and the Actions summary. Main-smoke
-links its qualifying PR run and explicitly reports full regression as unrun on main.
-Done requires the appropriate actual PR/main profile and outcome evidence; a reduced
-pass never establishes full regression, native support or gameplay acceptance.
-Broad source changes always receive full regression before merge. Reuse valid
-exact-candidate evidence without duplicating a hosted full pass locally solely for
-a checklist; new changes, failures or uncovered risk can require fresh coverage.
+Print the selected profile and reason in logs and the Actions summary.
 
 [Workflow index](../project-management.md).

@@ -6,7 +6,13 @@ import sys
 import time
 import unittest
 
-from harness.player.policy_program import PolicyProgram, PolicyProgramError
+from harness.player.policy_program import STEP_SECONDS, PolicyProgram, PolicyProgramError
+
+
+def Program(code, **kwargs):
+    """A program with a generous step budget, for tests that do not test timing: a loaded runner
+    must not fail them. Timing tests construct PolicyProgram with the contract's budget."""
+    return PolicyProgram(code, **{'step_seconds': 5.0, **kwargs})
 
 
 def policy(expression):
@@ -31,7 +37,7 @@ class PolicyProgramTests(unittest.TestCase):
         }
         """
         state = {'target': 'odd unfamiliar item'}
-        with PolicyProgram(code) as program:
+        with Program(code) as program:
             for i in range(20):
                 rows = [{'label': 'distractor', 'x': 1, 'y': 2},
                         {'label': state['target'], 'x': 100 + i, 'y': 50 + i}]
@@ -53,10 +59,10 @@ class PolicyProgramTests(unittest.TestCase):
                   {'type': 'text', 'text': 'a' * 31},
                   {'type': 'click', 'button': 'right', 'x': 16383, 'y': 0}]
         for value in actions:
-            with self.subTest(value=value), PolicyProgram(policy(
+            with self.subTest(value=value), Program(policy(
                     "{status:'act', state, reason:'try', actions:[view.actions]}")) as program:
                 self.assertEqual(program.step({'actions': value}, {})['actions'], [value])
-        with PolicyProgram(policy("{status:'done', state, reason:'terminated', actions:null}")) as program:
+        with Program(policy("{status:'done', state, reason:'terminated', actions:null}")) as program:
             self.assertEqual(program.step({}, {})['status'], 'done')
 
     def test_actions_schema_rejects_missing_modifiers_geometry_and_invalid_values(self):
@@ -67,7 +73,7 @@ class PolicyProgramTests(unittest.TestCase):
                    {'type': 'click', 'button': 'left', 'x': -1, 'y': 1},
                    {'type': 'click', 'button': 'left', 'x': True, 'y': 1}]
         for value in invalid:
-            with self.subTest(value=value), PolicyProgram(policy(
+            with self.subTest(value=value), Program(policy(
                     "{status:'act', state, reason:'try', actions:[view.actions]}")) as program:
                 self.assert_faulted(program, {'actions': value}, {})
 
@@ -83,20 +89,20 @@ class PolicyProgramTests(unittest.TestCase):
                        "throw new Error('compile failure')",
                        'function step(){}; const again=()=>Promise.resolve().then(again); again();'):
             with self.subTest(source=source), self.assertRaises(PolicyProgramError):
-                PolicyProgram(source)
+                Program(source)
 
     def test_json_numeric_domain_rejects_loss_before_policy_can_choose_actions(self):
         for value in (2**53, 2**53 + 1, -(2**53 + 1), 10**400, float(2**53)):
-            with self.subTest(value=str(value)[:24]), PolicyProgram(policy(YIELD)) as program:
+            with self.subTest(value=str(value)[:24]), Program(policy(YIELD)) as program:
                 self.assert_faulted(program, state={'n':value})
-        with PolicyProgram(policy("{status:'yield',state,actions:null,reason:'finite binary64'}")) as program:
+        with Program(policy("{status:'yield',state,actions:null,reason:'finite binary64'}")) as program:
             self.assertEqual(program.step({}, {'n':2**53-1,'fraction':.25})['state'],
                              {'n':2**53-1,'fraction':.25})
-        with PolicyProgram(policy("{status:'yield',state:{n:1e100},actions:null,reason:'unsafe integer'}")) as program:
+        with Program(policy("{status:'yield',state:{n:1e100},actions:null,reason:'unsafe integer'}")) as program:
             self.assert_faulted(program)
 
     def test_huge_timeout_is_a_normal_fault_and_closes_instance(self):
-        with PolicyProgram(policy(YIELD)) as program:
+        with Program(policy(YIELD)) as program:
             self.assert_faulted(program, timeout_seconds=10**1000)
 
     def test_exceptions_loops_and_memory_exhaustion_invalidate_program(self):
@@ -119,9 +125,9 @@ class PolicyProgramTests(unittest.TestCase):
                    "{status:'yield', state:{get n(){throw Error('getter ran')}}, actions:null, reason:'bad'}",
                    "{status:'yield', state:{[Symbol()]:1}, actions:null, reason:'bad'}"]
         for expression in invalid:
-            with self.subTest(expression=expression), PolicyProgram(policy(expression)) as program:
+            with self.subTest(expression=expression), Program(policy(expression)) as program:
                 self.assert_faulted(program)
-        with PolicyProgram("function step(){ const a={}; a.self=a; return a; }") as program:
+        with Program("function step(){ const a={}; a.self=a; return a; }") as program:
             self.assert_faulted(program)
 
     def test_result_schema_and_utf8_bounds(self):
@@ -137,25 +143,30 @@ class PolicyProgramTests(unittest.TestCase):
                    "{status:'yield', state:{x:'界'.repeat(12000)}, actions:null, reason:'large result'}",
                    "{status:'yield', state:{}, actions:null, reason:'\\ud800'}"]
         for expression in invalid:
-            with self.subTest(expression=expression), PolicyProgram(policy(expression)) as program:
+            with self.subTest(expression=expression), Program(policy(expression)) as program:
                 self.assert_faulted(program)
 
     def test_host_actions_and_source_bounds(self):
         for source in (None, 1, ' ' * (32768 + 1), '//界' * 11000, '\ud800'):
             with self.subTest(source_type=type(source)), self.assertRaises(PolicyProgramError):
-                PolicyProgram(source)
+                Program(source)
         for view, state in (([], {}), ({}, []), ({'n': float('nan')}, {}),
                             ({'x': 'x' * 262144}, {}), ({}, {'x': 'x' * 16384}),
                             ({'x': '\ud800'}, {})):
-            with self.subTest(view_type=type(view)), PolicyProgram(policy(YIELD)) as program:
+            with self.subTest(view_type=type(view)), Program(policy(YIELD)) as program:
                 self.assert_faulted(program, view, state)
 
     def test_step_timeout_argument(self):
-        for timeout in (0, -1, .051, float('nan'), float('inf'), True, None):
+        for timeout in (0, -1, STEP_SECONDS + .001, float('nan'), float('inf'), True, '0.01'):
             with self.subTest(timeout=timeout), PolicyProgram(policy(YIELD)) as program:
+                self.assertEqual(program.step_seconds, STEP_SECONDS)  # the contract's budget by default
                 self.assert_faulted(program, timeout_seconds=timeout)
-        with PolicyProgram(policy(YIELD)) as program:
-            self.assertEqual(program.step({}, {}, timeout_seconds=.04)['status'], 'yield')
+        # A timeout within a program's budget is accepted (timing aside, so a generous budget).
+        with Program(policy(YIELD)) as program:
+            self.assertEqual(program.step({}, {}, timeout_seconds=4.0)['status'], 'yield')
+        for budget in (0, -1, 61, float('nan'), True):
+            with self.subTest(budget=budget), self.assertRaises(PolicyProgramError):
+                PolicyProgram(policy(YIELD), step_seconds=budget)
 
     def test_bridge_intrinsics_cannot_be_replaced(self):
         source = """
@@ -172,9 +183,9 @@ class PolicyProgramTests(unittest.TestCase):
           return {status:'yield', state:{n:view.n, a:[1,2]}, actions:null, reason:'original'};
         }
         """
-        with PolicyProgram(source) as program:
+        with Program(source) as program:
             self.assertEqual(program.step({'n': 17}, {})['state'], {'n': 17, 'a': [1, 2]})
-        with PolicyProgram("Number.isFinite=()=>true;" + policy(
+        with Program("Number.isFinite=()=>true;" + policy(
                 "{status:'yield',state:{n:NaN},actions:null,reason:'bad'}")) as program:
             self.assert_faulted(program)
 
@@ -185,7 +196,7 @@ class PolicyProgramTests(unittest.TestCase):
                  'read', 'load', 'std', 'os', 'XMLHttpRequest', 'WebSocket']
         source = policy("{status:'yield', state:{types:view.names.map(n => typeof globalThis[n]),"
                         "waitAsync:typeof Atomics.waitAsync}, actions:null, reason:'capabilities'}")
-        with PolicyProgram(source) as program:
+        with Program(source) as program:
             result = program.step({'names': names}, {})['state']
             self.assertEqual(result['types'], ['undefined'] * len(names))
             self.assertEqual(result['waitAsync'], 'undefined')
@@ -198,7 +209,7 @@ class PolicyProgramTests(unittest.TestCase):
           return {status:'yield', state:{n}, actions:null, reason:'microtask count'};
         }
         """
-        with PolicyProgram(source) as program:
+        with Program(source) as program:
             program.step({'schedule': True}, {})
             before = program.step({}, {})['state']['n']
             time.sleep(.03)
@@ -226,7 +237,7 @@ class PolicyProgramTests(unittest.TestCase):
             self.assert_faulted(program)
 
     def test_close_is_idempotent_and_context_exit_does_not_reopen(self):
-        program = PolicyProgram(policy(YIELD))
+        program = Program(policy(YIELD))
         program.close()
         program.close()
         with self.assertRaises(PolicyProgramError):
@@ -260,15 +271,15 @@ class BasicActionBoundsTests(unittest.TestCase):
     def test_public_sequence_and_wait_bounds_are_evaluated_before_dispatch(self):
         code = policy("{status:'act', state, actions:view.actions, reason:'proposal'}")
         key = {'type': 'key', 'key': 'x', 'modifiers': []}
-        with PolicyProgram(code) as p:
+        with Program(code) as p:
             self.assertEqual(p.step({'actions': [key] * 32}, {})['actions'], [key] * 32)
         for actions in ([], [key] * 33, [{'type': 'wait', 'seconds': 2}] * 8,
                         [{'type': 'wait', 'seconds': True}], [{'type': 'wait', 'seconds': 2.01}],
                         [{'type': 'click', 'button': 'left', 'x': 1.5, 'y': 0}]):
-            with self.subTest(actions=actions), PolicyProgram(code) as p:
+            with self.subTest(actions=actions), Program(code) as p:
                 with self.assertRaises(PolicyProgramError):
                     p.step({'actions': actions}, {})
-        with PolicyProgram(code) as p:
+        with Program(code) as p:
             self.assertEqual(p.step({'actions': [{'type': 'wait', 'seconds': 2}]}, {})['status'], 'act')
 
 

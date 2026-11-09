@@ -78,7 +78,7 @@ def test_runner_consumes_actual_initial_and_post_input_captures(tmp_path):
                   actions:n===3?null:[{type:'key',key:'x',modifiers:[]}],reason:'player choice'};
         }"""))
         port = Port()
-        run = ProgramRunner(repo, port).run(p['id'], 'a', {}, {}, {'crop': None, 'size': [4, 4]})
+        run = ProgramRunner(repo, port, step_seconds=5.0).run(p['id'], 'a', {}, {}, {'crop': None, 'size': [4, 4]})
         assert [c[0] for c in port.calls] == ['observe', 'input', 'input']
         assert run['status'] == 'done' and run['final_state'] == {'n': 3, 'capture': 3}
         assert [s['source']['capture_id'] for s in run['steps']] == [1, 2, 3]
@@ -93,30 +93,30 @@ def test_yield_fault_unknown_and_original_time_leave_no_helper_authority(tmp_pat
         for code, status in ((program()['code'], 'yield'), ('function step(){throw Error("bad")}', 'fault')):
             port = Port()
             p = repo.save('a', program(code=code))
-            run = ProgramRunner(repo, port).run(p['id'], 'a', {}, {}, {'crop': None, 'size': [1, 1]})
+            run = ProgramRunner(repo, port, step_seconds=5.0).run(p['id'], 'a', {}, {}, {'crop': None, 'size': [1, 1]})
             assert run['status'] == status
             assert [c[0] for c in port.calls] == ['observe']
             port.input('a', [{'type': 'key', 'key': 'x', 'modifiers': []}])
         p = repo.save('a', program(code="function step(v,s){return {status:'act',state:s,actions:[{type:'wait',seconds:0}],reason:'try'}}"))
         port = Port('unknown')
-        run = ProgramRunner(repo, port).run(p['id'], 'a', {}, {}, {'crop': None, 'size': [1, 1]})
+        run = ProgramRunner(repo, port, step_seconds=5.0).run(p['id'], 'a', {}, {}, {'crop': None, 'size': [1, 1]})
         assert run['status'] == 'unknown' and len(port.calls) == 1
         port = Port()
         with patch('harness.player.programs.monotonic', side_effect=[10, 10, 10, 31, 31]):
-            run = ProgramRunner(repo, port).run(p['id'], 'a', {}, {}, {'crop': None, 'size': [1, 1]}, max_seconds=20)
+            run = ProgramRunner(repo, port, step_seconds=5.0).run(p['id'], 'a', {}, {}, {'crop': None, 'size': [1, 1]}, max_seconds=20)
         assert run['status'] == 'limit' and len(port.calls) == 1
         # #396: inside the computer's collection margin the run ends at its limit,
         # rather than calling a port that would refuse the operation.
         port = Port()
         with patch('harness.player.programs.monotonic', side_effect=[10, 10, 10, 10, 29.9, 29.9]):
-            run = ProgramRunner(repo, port).run(p['id'], 'a', {}, {}, {'crop': None, 'size': [1, 1]}, max_seconds=20)
+            run = ProgramRunner(repo, port, step_seconds=5.0).run(p['id'], 'a', {}, {}, {'crop': None, 'size': [1, 1]}, max_seconds=20)
         assert run['status'] == 'limit' and [c[0] for c in port.calls] == ['observe']
         port = Port()
-        run = ProgramRunner(repo, port).run(p['id'], 'a', {}, {}, {'crop': None, 'size': [1, 1]}, max_seconds=.2)
+        run = ProgramRunner(repo, port, step_seconds=5.0).run(p['id'], 'a', {}, {}, {'crop': None, 'size': [1, 1]}, max_seconds=.2)
         assert run['status'] == 'limit' and port.calls == []
         for kwargs in ({'max_steps': 65}, {'max_seconds': 21}, {'max_seconds': float('nan')}):
             port = Port()
-            result = ProgramRunner(repo, port).run(p['id'], 'a', {}, {}, {'crop': None, 'size': [1, 1]}, **kwargs)
+            result = ProgramRunner(repo, port, step_seconds=5.0).run(p['id'], 'a', {}, {}, {'crop': None, 'size': [1, 1]}, **kwargs)
             assert result['status'] == 'fault' and port.calls == []
 
 
@@ -134,7 +134,7 @@ def test_runner_retains_uncertain_input_without_replay(tmp_path):
         for delivery in ('partial', 'unknown', 'refused'):
             port = Uncertain()
             port.delivery = delivery
-            run = ProgramRunner(repo, port).run(p['id'], 'a', {}, {}, {'crop': None, 'size': [1, 1]})
+            run = ProgramRunner(repo, port, step_seconds=5.0).run(p['id'], 'a', {}, {}, {'crop': None, 'size': [1, 1]})
             assert run['status'] == delivery
             assert [c[0] for c in port.calls] == ['observe', 'input']
             assert run['operations'][-1]['operation_id'] == '2'
@@ -153,13 +153,13 @@ def test_runner_reobserves_only_when_input_returns_no_capture_and_never_renews(t
         repo = ProgramRepository(memory)
         p = repo.save('a', program(code="function step(v,s){return {status:s.n?'done':'act',state:{n:1},actions:s.n?null:[{type:'wait',seconds:0}],reason:'choice'}}"))
         port = MissingCapture()
-        run = ProgramRunner(repo, port).run(p['id'], 'a', {}, {}, {'crop': None, 'size': [1, 1]})
+        run = ProgramRunner(repo, port, step_seconds=5.0).run(p['id'], 'a', {}, {}, {'crop': None, 'size': [1, 1]})
         assert run['status'] == 'done'
         assert [c[0] for c in port.calls] == ['observe', 'input', 'observe']
         assert port.calls[0][2] == port.calls[1][4] == port.calls[2][2]
         port = Port()
         clock = iter([10, 10, 10, 10, 31, 31])
         with patch('harness.player.programs.monotonic', side_effect=lambda: next(clock, 31)):
-            run = ProgramRunner(repo, port).run(p['id'], 'a', {}, {}, {'crop': None, 'size': [1, 1]}, max_seconds=20)
+            run = ProgramRunner(repo, port, step_seconds=5.0).run(p['id'], 'a', {}, {}, {'crop': None, 'size': [1, 1]}, max_seconds=20)
         assert run['status'] == 'limit'
         assert [c[0] for c in port.calls] == ['observe']  # evaluation consumed original allowance

@@ -28,7 +28,7 @@ REQUIRED_DOCS = ("README.md", "AGENTS.md", "NOTICE.md", "CONTRIBUTING.md", "SECU
                  "docs/environment.md", "docs/research.md", "docs/setup.md")
 if __package__ in (None, ""):
     sys.path.insert(0, str(ROOT))
-from tools.ci import COMPONENT_TESTS, SMOKE_TESTS
+from tools.ci import COMPONENT_TESTS
 
 
 class _HTMLAnchors(HTMLParser):
@@ -148,18 +148,21 @@ CHECK_LOGS = Path(".runtime") / "check-logs"
 DRAIN_SECONDS = 10
 _log_directory: Path | None = None
 _log_count = 0
+_log_lock = threading.Lock()
 
 
 def _log_path(command: list[str]) -> Path:
     global _log_directory, _log_count
-    if _log_directory is None or not _log_directory.is_dir() or not _log_directory.is_relative_to(ROOT):
-        (ROOT / CHECK_LOGS).mkdir(parents=True, exist_ok=True)
-        stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
-        _log_directory, _log_count = Path(tempfile.mkdtemp(prefix=f"{stamp}-", dir=ROOT / CHECK_LOGS)), 0
-    _log_count += 1
+    with _log_lock:  # lanes allocate log names concurrently
+        if _log_directory is None or not _log_directory.is_dir() or not _log_directory.is_relative_to(ROOT):
+            (ROOT / CHECK_LOGS).mkdir(parents=True, exist_ok=True)
+            stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+            _log_directory, _log_count = Path(tempfile.mkdtemp(prefix=f"{stamp}-", dir=ROOT / CHECK_LOGS)), 0
+        _log_count += 1
+        count = _log_count
     name = "-".join(Path(part).name for part in command[:4])
     name = "".join(c if c.isalnum() or c in "._-" else "-" for c in name)[:60]
-    return _log_directory / f"{_log_count:02d}-{name}.log"
+    return _log_directory / f"{count:02d}-{name}.log"
 
 
 class _Output:
@@ -169,10 +172,10 @@ class _Output:
     fails, because a pipe nobody drains would block the command. The first write error is kept in `error`.
     """
 
-    def __init__(self, stream, log):
+    def __init__(self, stream, log, *, terminal: bool = True):
         self.stream, self.log, self.lock, self.stopped = stream, log, threading.Lock(), False
         self.error: Exception | None = None
-        self.sinks = {"log": self._to_log, "terminal": self._to_terminal}
+        self.sinks = {"log": self._to_log, **({"terminal": self._to_terminal} if terminal else {})}
         self.thread = threading.Thread(target=self._copy, daemon=True)
         self.thread.start()
 
@@ -208,9 +211,19 @@ class _Output:
         return not self.thread.is_alive()
 
 
-def run(command: list[str], **kwargs) -> None:
-    print("+ " + " ".join(command), flush=True)
+_print_lock = threading.Lock()
+
+
+def run(command: list[str], *, lane: str | None = None, **kwargs) -> None:
+    """Run one command, keeping its full output in a check log.
+
+    Without a lane, output streams to the terminal. In a lane (run beside other lanes), the output is
+    printed whole when the command ends, so lanes do not interleave on the terminal."""
+    label = f"[{lane}] " if lane else ""
+    if not lane:
+        print("+ " + " ".join(command), flush=True)
     started = time.perf_counter()
+    path = None
     try:
         if "input" in kwargs:  # stdin-fed syntax checks: short, silent on success
             subprocess.run(command, cwd=ROOT, check=True, **kwargs)
@@ -220,7 +233,7 @@ def run(command: list[str], **kwargs) -> None:
         with path.open("xb") as log:
             process = subprocess.Popen(command, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                        env=environment, **kwargs)
-            output = _Output(process.stdout, log)
+            output = _Output(process.stdout, log, terminal=lane is None)
             try:
                 returncode = process.wait()
                 # A descendant that outlived the command (an orphaned fixture server, say) can hold the pipe
@@ -237,12 +250,40 @@ def run(command: list[str], **kwargs) -> None:
                 log.write(note.encode())
                 print(note, end="", flush=True)
         if returncode:
-            print(f"Full output of the failed command: {path.relative_to(ROOT)}", flush=True)
+            print(f"{label}Full output of the failed command: {path.relative_to(ROOT)}", flush=True)
             raise subprocess.CalledProcessError(returncode, command)
         if output.error:
             raise output.error
     finally:
-        print(f"Command elapsed: {time.perf_counter() - started:.2f}s", flush=True)
+        elapsed = f"{label}Command elapsed: {time.perf_counter() - started:.2f}s"
+        if lane:
+            with _print_lock:
+                print(f"{label}+ " + " ".join(command), flush=True)
+                if path is not None and path.is_file():
+                    sys.stdout.write(path.read_bytes().decode(errors="replace"))
+                print(elapsed, flush=True)
+        else:
+            print(elapsed, flush=True)
+
+
+def run_lanes(lanes: dict[str, list[list[str]]]) -> None:
+    """Run each lane's commands in order, all lanes at once; fail after every lane ends if any failed."""
+    failures: list[BaseException] = []
+
+    def lane(name: str, commands: list[list[str]]) -> None:
+        try:
+            for command in commands:
+                run(command, lane=name)
+        except BaseException as error:  # reported once every lane has ended
+            failures.append(error)
+
+    threads = [threading.Thread(target=lane, args=item) for item in lanes.items()]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    if failures:
+        raise failures[0]
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -258,8 +299,9 @@ def _check(argv: list[str] | None = None) -> int:
     scope = parser.add_mutually_exclusive_group()
     scope.add_argument("--fast", action="store_true",
                        help="Checkpoint structure/lint checks only; no behavioral tests or diagram rendering")
-    scope.add_argument("--profile", choices=("full", "editorial", "main-smoke", *COMPONENT_TESTS), default="full",
-                       help="Strict validation profile (default: full)")
+    scope.add_argument("--profile", choices=("full", "editorial", "main", *COMPONENT_TESTS), default="full",
+                       help="Strict validation profile (default: full); main is the structural checks a main "
+                            "push runs on the tree its pull request's run already tested")
     args = parser.parse_args(argv)
     import_linter = Path(sys.executable).parent / "lint-imports"
     if not import_linter.is_file():
@@ -284,7 +326,7 @@ def _check(argv: list[str] | None = None) -> int:
         raise ValueError("\n".join(errors))
     print("Required documents, current Markdown fragments and responsibility navigation: passed", flush=True)
     run([sys.executable, "-m", "tools.documents"])
-    run([sys.executable, "tools/governance.py"] + (["--development"] if args.fast else []))
+    run([sys.executable, "tools/governance.py"])
     run([sys.executable, "-m", "tools.run_ledger", "check"])
     run([sys.executable, "-m", "tools.evidence", "verify"] + ([] if args.fast else ["--full"]))
     from tools.evaluate import has_blocks
@@ -292,25 +334,28 @@ def _check(argv: list[str] | None = None) -> int:
                        if has_blocks(path.read_text()))
     run([sys.executable, "-m", "tools.evaluate", "evaluate-table", "data/evaluation/run-metrics.jsonl",
          "--check", *generated])
-    if not args.fast:
-        run([sys.executable, "tools/diagrams.py"])
-    if not args.fast and args.profile != "editorial":
-        targets = ("tests",) if args.profile == "full" else (
-            SMOKE_TESTS if args.profile == "main-smoke" else COMPONENT_TESTS[args.profile])
-        workers = "0" if args.profile == "main-smoke" else "4"
-        run([sys.executable, "-m", "pytest", "-q", "-n", workers, "--dist", "worksteal" if args.profile == "full" else "loadfile",
-             "--max-worker-restart=0", "--durations=20", *targets])
-        run([node, "tests/test_viewer.cjs"])
-        run([node, "tests/test_investigation.cjs"])
-        run([node, "tests/test_investigation_session.cjs"])
     run(["git", "diff", "--check"])
     run(["git", "diff", "--cached", "--check"])
+    structural = args.fast or args.profile == "main"
+    if not structural:
+        browser = [[sys.executable, "tools/diagrams.py"]]
+        if args.profile != "editorial":
+            browser += [[node, "tests/test_viewer.cjs"], [node, "tests/test_investigation.cjs"],
+                        [node, "tests/test_investigation_session.cjs"]]
+        lanes = {"browser": browser}
+        if args.profile != "editorial":
+            targets = ("tests",) if args.profile == "full" else COMPONENT_TESTS[args.profile]
+            lanes["pytest"] = [[sys.executable, "-m", "pytest", "-q", "-n", "4",
+                                "--dist", "worksteal" if args.profile == "full" else "loadfile",
+                                "--max-worker-restart=0", "--durations=20", *targets]]
+        run_lanes(lanes)
     if args.fast:
         print("Fast checkpoint checks passed. Behavioral tests, rendered diagrams, native build and real gameplay were not run.")
+    elif args.profile == "main":
+        print("Main structural checks passed on the tree its pull request's full run tested. Tests, rendered "
+              "diagrams, native build and real gameplay were not run here.")
     elif args.profile == "editorial":
         print("Editorial checks passed. Runtime tests, viewer tests, full regression, native build and real gameplay were not run.")
-    elif args.profile == "main-smoke":
-        print("Selected smoke and viewer tests passed. Full regression, native build and real gameplay were not run.")
     elif args.profile in COMPONENT_TESTS:
         print(f"{args.profile.capitalize()} component and boundary smoke tests passed. Full regression, native build and real gameplay were not run.")
     else:

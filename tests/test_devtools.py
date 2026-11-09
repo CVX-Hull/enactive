@@ -154,38 +154,39 @@ class DevToolTests(unittest.TestCase):
         smoke_cases = ["tests/test_computer_protocol.py", "tests/test_computer_runtime.py",
                        "tests/test_player_application.py", "tests/test_server.py"]
         components = {"viewer": ["tests/test_cli.py", *smoke_cases]}
+        structural = {"fast", "main"}
         for arguments, profile in ((["--fast"], "fast"), ([], "full"),
-                *((["--profile", name], name) for name in ("full", "editorial", "main-smoke", *components))):
+                *((["--profile", name], name) for name in ("full", "editorial", "main", *components))):
             with self.subTest(arguments=arguments):
                 result, executed, output = self.checker_commands(arguments)
                 self.assertEqual(result, 0)
                 commands = [command for command in executed if "pytest" in command]
-                if profile not in {"fast", "editorial"}:
-                    targets = ["tests"] if profile == "full" else (
-                        smoke_cases if profile == "main-smoke" else components[profile])
-                    self.assertEqual(commands, [[sys.executable, "-m", "pytest", "-q", "-n",
-                        "0" if profile == "main-smoke" else "4", "--dist",
+                if profile not in structural | {"editorial"}:
+                    targets = ["tests"] if profile == "full" else components[profile]
+                    self.assertEqual(commands, [[sys.executable, "-m", "pytest", "-q", "-n", "4", "--dist",
                         "worksteal" if profile == "full" else "loadfile",
                         "--max-worker-restart=0", "--durations=20", *targets]])
                 else:
                     self.assertEqual(commands, [])
-                self.assertEqual(any("tools/diagrams.py" in command for command in executed), profile != "fast")
+                self.assertEqual(any("tools/diagrams.py" in command for command in executed),
+                                 profile not in structural)
                 self.assertEqual(any("tests/test_viewer.cjs" in command for command in executed),
-                                 profile not in {"fast", "editorial"})
+                                 profile not in structural | {"editorial"})
                 governance_commands = [command for command in executed if "tools/governance.py" in command]
-                self.assertEqual(governance_commands, [[sys.executable, "tools/governance.py"] +
-                                                       (["--development"] if profile == "fast" else [])])
+                self.assertEqual(governance_commands, [[sys.executable, "tools/governance.py"]])
                 self.assertIn([sys.executable, "-m", "ruff", "check", "--config", "pyproject.toml",
                                "harness", "tools", "tests"], executed)
                 self.assertIn([str(Path(sys.executable).parent / "lint-imports"), "--config",
                                "pyproject.toml", "--no-cache", "--no-logo"], executed)
                 self.assertIn(["/fixture/node", "--check", "--input-type=module"], executed)
                 self.assertIn([sys.executable, "-m", "tools.documents"], executed)
-                self.assertEqual(executed[-2:], [["git", "diff", "--check"],
-                                                ["git", "diff", "--cached", "--check"]])
+                self.assertIn(["git", "diff", "--check"], executed)
+                self.assertIn(["git", "diff", "--cached", "--check"], executed)
                 self.assertEqual("Portable checks passed." in output, profile == "full")
-                if profile in {"editorial", "main-smoke", *components}:
+                if profile in {"editorial", *components}:
                     self.assertIn("Full regression" if profile != "editorial" else "full regression", output)
+                if profile == "main":
+                    self.assertIn("Tests, rendered diagrams", output)
                 self.assertIn("real gameplay", output)
 
     def test_profiles_reject_fast_combination_and_unknown_names_before_execution(self):
@@ -198,7 +199,7 @@ class DevToolTests(unittest.TestCase):
             commands.assert_not_called()
 
     def test_selected_command_failures_propagate_without_success_report(self):
-        for profile in ("full", "editorial", "main-smoke", "viewer"):
+        for profile in ("full", "editorial", "main", "viewer"):
             _, expected, _ = self.checker_commands(["--profile", profile])
             for command in expected:
                 with self.subTest(profile=profile, command=command):
@@ -282,9 +283,27 @@ class DevToolTests(unittest.TestCase):
         log = next((self.root / check.CHECK_LOGS).rglob("*.log")).read_text()
         self.assertIn("still held by a descendant", log)
 
+    def test_lanes_run_at_once_print_whole_outputs_and_fail_after_every_lane_ends(self):
+        def command(text, seconds, status=0):
+            return [sys.executable, "-c", f"import sys, time; print('{text} start'); time.sleep({seconds}); "
+                                          f"print('{text} end'); sys.exit({status})"]
+        output = io.StringIO()
+        with patch.object(check, "ROOT", self.root), patch.object(check, "_log_directory", None), \
+                redirect_stdout(output):
+            started = time.perf_counter()
+            with self.assertRaises(subprocess.CalledProcessError) as error:
+                check.run_lanes({"a": [command("alpha", 0.6, 4)], "b": [command("beta", 0.6), command("gamma", 0)]})
+            elapsed = time.perf_counter() - started
+        self.assertEqual(error.exception.returncode, 4)
+        self.assertLess(elapsed, 1.1)  # the lanes overlapped
+        text = output.getvalue()
+        for name in ("alpha", "beta", "gamma"):  # every lane finished, failing lane included
+            self.assertIn(f"{name} start\n{name} end\n", text)  # whole, not interleaved
+        self.assertIn("[a] Full output of the failed command", text)
+
     def test_all_profiles_reject_invalid_python_before_reporting_success(self):
         self.write("computer/runtime.py", "def broken(:\n")
-        for arguments in (["--fast"], [], ["--profile", "editorial"], ["--profile", "main-smoke"],
+        for arguments in (["--fast"], [], ["--profile", "editorial"], ["--profile", "main"],
                           ["--profile", "viewer"]):
             output = io.StringIO()
             with self.subTest(arguments=arguments), patch.object(check, "ROOT", self.root), \
@@ -294,7 +313,7 @@ class DevToolTests(unittest.TestCase):
             self.assertNotIn("checks passed", output.getvalue())
 
     def test_all_profiles_reject_broken_document_links_before_reporting_success(self):
-        for arguments in (["--fast"], [], ["--profile", "editorial"], ["--profile", "main-smoke"],
+        for arguments in (["--fast"], [], ["--profile", "editorial"], ["--profile", "main"],
                           ["--profile", "viewer"]):
             output = io.StringIO()
             with self.subTest(arguments=arguments), patch.object(check, "ROOT", self.root), \

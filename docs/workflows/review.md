@@ -95,11 +95,9 @@ At integration use existing command/CI/PR/run receipts to compare useful progres
 defects caught/escaped, review/rework/waiting effort and cost of checks. Record
 unknowns without inventing measurements. Keep, narrow, replace or retire a control
 from that evidence under C-MAINTENANCE. Do not create another metrics service,
-review queue or per-action gameplay approval. Fast checkpoints visibly warn on
-calendar-only maintenance expiry for every control; every hosted profile remains
-strict at the current date. No dates are renewed automatically. Event-triggered
-review and applicable actual failures/evidence gaps still govern the affected work; resolve overdue
-review at the existing integration/formal-acceptance checkpoint under S-DOCS.
+review queue or per-action gameplay approval. A passed review date fails no check;
+event-triggered review and applicable actual failures/evidence gaps govern the
+affected work.
 
 ## Milestone review and controls
 

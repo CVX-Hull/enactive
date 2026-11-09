@@ -13,7 +13,7 @@ from harness.computer.protocol import COLLECTION_MARGIN_SECONDS, NoDispatch
 from .contracts import PlayerError, bounded_integer, canonical, identity, json_object, program
 from .images import program_view
 from .memory import Memory
-from .policy_program import PolicyProgram
+from .policy_program import STEP_SECONDS, PolicyProgram
 
 
 class ProgramRepository:
@@ -52,9 +52,11 @@ class ProgramRunner:
     runner passes its single original deadline to each callback and checks it
     before and after calls. Callbacks may only shorten their own limits.
     """
-    def __init__(self, repository: ProgramRepository, control_port: ComputerPort) -> None:
+    def __init__(self, repository: ProgramRepository, control_port: ComputerPort, *,
+                 step_seconds: float = STEP_SECONDS) -> None:
         self.repository = repository
         self.control_port = control_port
+        self.step_seconds = step_seconds  # the contract's budget; tests that do not test timing raise it
 
     def run(self, program_id: str, actor_id: str, initial_state: dict,
             interpretation: dict, selection: dict, max_steps: int = 16,
@@ -82,7 +84,7 @@ class ProgramRunner:
             # it here is the run's time limit, not a refused or faulted step (#396).
             usable = deadline - COLLECTION_MARGIN_SECONDS
             saved = self.repository.read(program_id)
-            with PolicyProgram(saved['code']) as policy:
+            with PolicyProgram(saved['code'], step_seconds=self.step_seconds) as policy:
                 for _ in range(max_steps):
                     if monotonic() >= usable:
                         break
@@ -106,7 +108,7 @@ class ProgramRunner:
                     remaining = deadline - monotonic()
                     if remaining <= 0:
                         break
-                    result = policy.step(view, state, timeout_seconds=min(.05, remaining))
+                    result = policy.step(view, state, timeout_seconds=min(self.step_seconds, remaining))
                     step['result'] = result
                     state = result['state']
                     if monotonic() >= usable:

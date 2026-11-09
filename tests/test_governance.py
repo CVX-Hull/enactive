@@ -132,10 +132,10 @@ class GovernanceTests(unittest.TestCase):
         self.registry["controls"][0]["next_review"] = "2027-01-14"
         self.assertEqual(self.registry_errors(), "")
 
-    def test_due_boundary_and_retired_controls_do_not_require_periodic_review(self):
-        self.assertEqual(governance.check_registry(self.root, self.registry, as_of=date(2027, 1, 15)), [])
-        self.assertIn("overdue", "\n".join(governance.check_registry(
-            self.root, self.registry, as_of=date(2027, 1, 16))))
+    def test_a_passed_review_date_is_not_an_error_and_retired_controls_need_none(self):
+        for day in (date(2027, 1, 15), date(2027, 1, 16), date(2030, 1, 1)):
+            with self.subTest(day=day):
+                self.assertEqual(governance.check_registry(self.root, self.registry, as_of=day), [])
         control = self.extra_control("retired")
         control.update(maintenance_review=copy.deepcopy(self.registry["controls"][0]["maintenance_review"]),
                        next_review="2026-10-16")
@@ -151,19 +151,6 @@ class GovernanceTests(unittest.TestCase):
                     self.registry["controls"][0][field]["evidence"] = [reference]
                     self.assertIn("evidence reference", self.registry_errors())
 
-    def test_forecast_prints_date_and_never_renews_records(self):
-        registry_path = self.root / "docs/control-registry.json"
-        before = registry_path.read_bytes()
-        map_path = self.root / "docs/controls.md"
-        before_map = map_path.read_bytes()
-        with patch.object(governance, "ROOT", self.root), contextlib.redirect_stdout(io.StringIO()) as out:
-            self.assertEqual(governance.main(["--as-of", "2027-01-15"]), 0)
-        self.assertIn("2027-01-15", out.getvalue())
-        with patch.object(governance, "ROOT", self.root), contextlib.redirect_stderr(io.StringIO()):
-            self.assertEqual(governance.main(["--as-of", "2027-01-16"]), 1)
-        self.assertEqual(registry_path.read_bytes(), before)
-        self.assertEqual(map_path.read_bytes(), before_map)
-
     def run_cli(self, arguments):
         output, errors = io.StringIO(), io.StringIO()
         with patch.object(governance, "ROOT", self.root), \
@@ -173,32 +160,15 @@ class GovernanceTests(unittest.TestCase):
             result = governance.main(arguments)
         return result, output.getvalue(), errors.getvalue()
 
-    def test_development_warns_for_all_overdue_controls_without_rewriting(self):
-        control = self.extra_control("deprecated")
-        control.update(maintenance_review=copy.deepcopy(self.registry["controls"][0]["maintenance_review"]),
-                       next_review="2027-01-15")
+    def test_the_command_passes_after_every_review_date_without_rewriting(self):
         registry_path = self.root / "docs/control-registry.json"
         map_path = self.root / "docs/controls.md"
-        registry_path.write_text(json.dumps(self.registry))
-        map_path.write_text(governance.render_map(self.registry))
         before = registry_path.read_bytes(), map_path.read_bytes()
-        result, output, errors = self.run_cli(["--development"])
+        result, _, errors = self.run_cli([])
         self.assertEqual(result, 0, errors)
-        self.assertIn("2027-01-16", output)
-        for control in self.registry["controls"]:
-            if control["status"] in ("active", "deprecated"):
-                self.assertIn(f"Governance warning: {control['id']}: maintenance overdue", errors)
-        self.assertEqual((registry_path.read_bytes(), map_path.read_bytes()), before)
-        for arguments in ([], ["--as-of", "2027-01-16"], ["--write"]):
-            with self.subTest(arguments=arguments):
-                result, _, errors = self.run_cli(arguments)
-                self.assertEqual(result, 1)
-                self.assertIn("Governance failed:", errors)
-                self.assertIn("overdue", errors)
-                self.assertNotIn("Governance warning:", errors)
         self.assertEqual((registry_path.read_bytes(), map_path.read_bytes()), before)
 
-    def test_development_keeps_registry_errors_separate_from_expiry_warnings(self):
+    def test_record_errors_still_fail_after_the_review_date(self):
         original = copy.deepcopy(self.registry)
         cases = [
             (lambda c: c.update(maintenance_review=None), "requires maintenance review"),
@@ -215,47 +185,23 @@ class GovernanceTests(unittest.TestCase):
             with self.subTest(expected=expected):
                 self.registry = copy.deepcopy(original)
                 mutate(self.registry["controls"][0])
-                warnings = []
-                errors = governance.check_registry(self.root, self.registry,
-                                                   as_of=date(2027, 1, 16), warnings=warnings)
+                errors = governance.check_registry(self.root, self.registry, as_of=date(2027, 1, 16))
                 self.assertIn(expected, "\n".join(errors))
-                self.assertNotIn("overdue", "\n".join(errors))
-                if expected != "schema violation":
-                    self.assertTrue(warnings)
-                    self.assertTrue(all("overdue" in warning for warning in warnings))
 
-    def test_development_reports_warnings_alongside_mapping_failure(self):
+    def test_mapping_failure_and_stale_map_still_fail_without_rewriting(self):
         self.replace("docs/engineering.md", "Controls: C-PORTABLE, C-RUNTIME, C-NATIVE, C-USABILITY.",
                      "Controls: C-PORTABLE, C-RUNTIME, C-NATIVE.")
-        result, _, errors = self.run_cli(["--development"])
+        result, _, errors = self.run_cli([])
         self.assertEqual(result, 1)
-        self.assertIn("Governance warning:", errors)
-        self.assertIn("Governance failed:", errors)
         self.assertIn("S-UX", errors)
-
-    def test_development_still_rejects_stale_map_without_rewriting(self):
+        self.replace("docs/engineering.md", "Controls: C-PORTABLE, C-RUNTIME, C-NATIVE.",
+                     "Controls: C-PORTABLE, C-RUNTIME, C-NATIVE, C-USABILITY.")
         map_path = self.root / "docs/controls.md"
         map_path.write_text("obsolete map\n")
-        result, _, errors = self.run_cli(["--development"])
+        result, _, errors = self.run_cli([])
         self.assertEqual(result, 1)
-        self.assertIn("Governance warning:", errors)
         self.assertIn("stale", errors)
         self.assertEqual(map_path.read_text(), "obsolete map\n")
-
-    def test_development_rejects_write_and_forecast(self):
-        for arguments in (["--development", "--write"],
-                          ["--development", "--as-of", "2027-01-16"]):
-            with self.subTest(arguments=arguments), contextlib.redirect_stderr(io.StringIO()):
-                with self.assertRaises(SystemExit) as raised:
-                    governance.main(arguments)
-                self.assertEqual(raised.exception.code, 2)
-
-    def test_forecast_requires_an_iso_calendar_date(self):
-        for value in ("20261017", "2026-W42-6", "2026-02-30"):
-            with self.subTest(value=value), contextlib.redirect_stderr(io.StringIO()):
-                with self.assertRaises(SystemExit) as raised:
-                    governance.main(["--as-of", value])
-                self.assertEqual(raised.exception.code, 2)
 
     def replace(self, name, before, after):
         path = self.root / name

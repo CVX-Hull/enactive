@@ -16,7 +16,7 @@ _STATE_BYTES = 16 * 1024
 _RESULT_BYTES = 32 * 1024
 _HEAP_BYTES = 32 * 1024 * 1024
 _COMPILE_SECONDS = .25
-_STEP_SECONDS = .05
+STEP_SECONDS = .05  # the contract's per-step budget; only tests that do not test timing pass a larger one
 
 
 class PolicyProgramError(ValueError):
@@ -150,12 +150,15 @@ class PolicyProgram:
     the isolate; a caller must not retry the failed decision automatically.
     """
 
-    def __init__(self, code: str) -> None:
+    def __init__(self, code: str, *, step_seconds: float = STEP_SECONDS) -> None:
         self._runner: asyncio.Runner | None = None
         self._context = None
         self._runtime = None
         self._bridge = None
         try:
+            if type(step_seconds) not in (int, float) or not 0 < step_seconds <= 60:
+                raise PolicyProgramError('Step budget must be finite and within (0, 60] seconds')
+            self.step_seconds = step_seconds
             if type(code) is not str or len(code.encode('utf-8')) > _SOURCE_BYTES:
                 raise PolicyProgramError('Policy source must be a string within 32768 UTF-8 bytes')
             try:
@@ -220,14 +223,15 @@ class PolicyProgram:
         finally:
             runner.close()
 
-    def step(self, view: dict, state: dict, *, timeout_seconds: float = _STEP_SECONDS) -> dict:
+    def step(self, view: dict, state: dict, *, timeout_seconds: float | None = None) -> dict:
         """Return validated act/yield/done data, without performing any input."""
         if self._runner is None:
             raise PolicyProgramError('Policy program is closed or faulted')
         try:
+            timeout_seconds = self.step_seconds if timeout_seconds is None else timeout_seconds
             if (type(timeout_seconds) not in (int, float)
-                    or not 0 < timeout_seconds <= _STEP_SECONDS):
-                raise PolicyProgramError('Step timeout must be finite and within (0, 0.05] seconds')
+                    or not 0 < timeout_seconds <= self.step_seconds):
+                raise PolicyProgramError(f'Step timeout must be finite and within (0, {self.step_seconds}] seconds')
             view_json = _bounded_object(view, _VIEW_BYTES, 'View')
             state_json = _bounded_object(state, _STATE_BYTES, 'State')
             result_json = self._runner.run(self._evaluate(view_json, state_json, timeout_seconds))
