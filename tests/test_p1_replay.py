@@ -11,6 +11,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import shutil
 import sqlite3
 import subprocess
 
@@ -577,6 +578,9 @@ def test_run_session_threads_the_cutoff_to_the_projection(tmp_path, monkeypatch)
         raise RuntimeError('stop before the host')
 
     monkeypatch.setattr(curator_session, 'project', projection_stub)
+    # The session's own cleanup unlocks files with macOS's chflags; this test checks only the threading,
+    # so it stays portable (CI runs on Linux).
+    monkeypatch.setattr(curator_session, '_remove', lambda path: shutil.rmtree(path, ignore_errors=True))
     repo = Repository(tmp_path/'k', GAME)
     repo.ensure()
     config = curator_session.SessionConfig(argv=('true',))
