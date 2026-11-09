@@ -1,0 +1,102 @@
+{
+ "frozen": "2026-11-08",
+ "lineages": {
+  "397": {
+   "adjudication": "e4708abbc96101bb27308d9f7d1651a8ecda35992089ec1fa1dd5323e469f434",
+   "fact_chunks": {
+    "sd1a1-001": "08e242a40afb894221c37f29170a1049a4be8573a8a2b07fcd22347422a20e9f",
+    "sd1a1-002": "8fdbc7361cce739f5fee8c56666496991087492763901e2435ed125d3ee6cf5b",
+    "sd1a2-001": "0c9b8e463ecb343f3a7eec0a0dc7bc9c95105ff9510f5c9b368087afa303bae7",
+    "sd1a2-002": "3fcaaeb4cdd8ea949e80a64e5adb23226c716b51cd566672b2d489ed81412465",
+    "sd1a3-001": "fe2fd6981c5cf7790261760fa51046ba0dc1d39186834942757bc40a512717e1",
+    "sd1a3-002": "5132a885d55b48e84b5cee5d1e2235d7eaad6e277045c16ae2b96bd032fc224c",
+    "sd1a4-001": "32dd74a736c8d882f6e409cef017ebc5972391c53f0a6f08641bae813a866317",
+    "sd1a4-002": "7833aaddffe44933974a47e29f4b479846162346d4141992e78f9d129bcc375a",
+    "sd1a5-001": "a5b98a7c6b4063e6b72d005faa551c444ae9d4822a27cf99065a978e3bb9b59f",
+    "sd1a5-002": "f386f8c85c7ad861c5c21509ac8e32a6014b9e270fc84f7bd23c13d180f71e61",
+    "sd1a6-001": "4d235c4795f19953365ce1d9748315cf4d6fb8ad7a74e56222c63c3c4d5268ee",
+    "sd1a6-002": "a62556d721a64cafd8974370c85f71874e59bea6de4863636392f4bc2fd6a66b",
+    "sd1a7-001": "4271f38119b76e0c0a9622cd9f16ea7094b56e6dc9caac7ccb3e39cc9217e3d6",
+    "sd1a7-002": "61976071f03bbc3ba5af99b65d8b7879112bf9899547537814306a6efaef0e44"
+   },
+   "queries": {
+    "sd1a1-001": "f28d51495265e94838ce4fb63ee0df968874232bfa53336e0c9c9c58e4607299",
+    "sd1a1-002": "062b557e26a5ccae45d9e3a1242e4a695142d94163d906569738bacd5ded97d9",
+    "sd1a2-001": "45e4d86f4be45e2b7f4367610dba5304a80f942937db3d25a90b6b6b1904eb39",
+    "sd1a2-002": "732c5a72bf81415daad9eb8b5eb9174d9fd5d0d351e6cafc822a50e30007bf93",
+    "sd1a3-001": "a9721cf810723f4dcbc578a69f1ad2dad9166204810af6ccb39272fae9971275",
+    "sd1a3-002": "32fc84a4a115881748703df5f8a7b346707adfeffab11d7671f52ba588d69d96",
+    "sd1a4-001": "143c860a3b771156ecf084aae488fca207933fde07dcc61bc83319779ea15f4e",
+    "sd1a4-002": "09ce0befa9baf749cbeba73217c5eb922a002dc1edb5f91c84f9d7aadf6c891a",
+    "sd1a5-001": "f9375323c4ed28532ae5dc96d2ce0f639d70ac1f49609c054db548255b02264d",
+    "sd1a5-002": "00e882f1aae00b9b12896def335a58bdcda6e1a394f5075333b5965c558dee84",
+    "sd1a6-001": "f1ac7b431a740d823cb0469e3223603f5aaf5e81452ca79d4d43a1e984408b98",
+    "sd1a6-002": "7ddb5e3c69a7af4bee24b27308282a9511bf882164608f45270b93c3b61f2faf",
+    "sd1a7-001": "0a11aba8c81cf993e8756bb11ad8072042b9ea5815b85e36fe68915183ff165f"
+   }
+  },
+  "aidA5": {
+   "adjudication": null,
+   "fact_chunks": {
+    "aidA5-001": "94f9c1fda35ee7f13b781d94b346b7e217fddc2a9feae8a4f8d87e2af8a6a391",
+    "aidA5-002": "c24fc6440a4d85aa3fa9762aab87aee11741db31b5eed46092fc97c0e0d88ed4"
+   },
+   "queries": {
+    "aidA5-001": "e45ec50118543ddd8701f5ee584c94fd90e90472a39a87927435b4e6abae044c"
+   }
+  },
+  "aidB3": {
+   "adjudication": null,
+   "fact_chunks": {
+    "aidB3-001": "8b5d97173bf9aaaf65a4891c5ff032657d85c1f31e8073f535538e05a8d092ff",
+    "aidB3-002": "59f27caa8e3dec30398e05e93b63258613cacc979222a18bb1d78dc72ace2c90"
+   },
+   "queries": {
+    "aidB3-001": "7a6fe0c11f0c47b9b775965c6348bdba3effc151f5f9589cfd0226a80e68cc7e"
+   }
+  },
+  "aidB9": {
+   "adjudication": null,
+   "fact_chunks": {
+    "aidB9-001": "9c2e53a3b2dc7fd9eb1725847ccd8a6b3440499d9d39a54cefd00af7edfbfb12",
+    "aidB9-002": "4a7552c5438f6b8b58021275b9b85709f10702b82473864fda4bdd0ead891128"
+   },
+   "queries": {
+    "aidB9-001": "78100f1c156ac2358e7c6a7dd8cfea849faedfe9393851a37f7f380ffea640ca"
+   }
+  },
+  "ceil05": {
+   "adjudication": null,
+   "fact_chunks": {
+    "ceil05-001": "c9a5fd93342002c3fc4f87d09b5d1cd3abf3ab62e344290fafae0536ce1b982e",
+    "ceil05-002": "c39b4d14c588717ab585163dd0fd2e5f425984320b067476846867efae866ea1"
+   },
+   "queries": {
+    "ceil05-001": "d1a16dbe652ba70a56879d27f2aa14470dcc6497a6eea7f2ed094472bb142009"
+   }
+  },
+  "ceil07": {
+   "adjudication": null,
+   "fact_chunks": {
+    "ceil07-001": "f4f1b988815935ced68e7d7d1153c0696fe9f9400c3c361d95d21157d0e83c7d",
+    "ceil07-002": "b0f74492601c8c104829c44bdef61d30eef09d01884070b52e695fa17cd9c873"
+   },
+   "queries": {
+    "ceil07-001": "ffc22e43ccb5105ce855cfb2029b40d62bee97095d995791a807d3b13a98a84d"
+   }
+  },
+  "ceil09": {
+   "adjudication": null,
+   "fact_chunks": {
+    "ceil09-001": "539926abfce4c92da9ca6d5d088f0e00314cff8a9a61e67daca64428343528fb",
+    "ceil09-002": "43fc1b80256126cef46512601cdd3d313f5a8add71af574442ff06cbddcfd99f"
+   },
+   "queries": {
+    "ceil09-001": "0dc11afd40493ce5dee207c7b879923725ac6360feb6768ea0a51352d58e53a8"
+   }
+  }
+ },
+ "note": "Both blinded ledgers, frozen for P1's secondary, descriptive figures (owner decision, #490). Each missed the 0.6 recall bar; P1's primary probes are confirmed re-observations. See docs/design/probe-protocol.md.",
+ "protocol": "probe-protocol/1",
+ "schema": "probe-ledger/1"
+}

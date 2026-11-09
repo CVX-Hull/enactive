@@ -1,0 +1,60 @@
+{"id":"p001","same":true,"what":"Overmap view, evac shelter B-19 north of Newcastle, same map and sidebar (B adds a Notes tooltip)","batch":1}
+{"id":"p005","same":false,"what":"Same loading screen art but different status text ('Finalizing Mapgen weights' vs 'Loading files Portal Storms Ignore NPCs')","batch":1}
+{"id":"p009","same":true,"what":"Crafting 'Searched' list of spears with simple knife spear selected and the same recipe panel","batch":1}
+{"id":"p013","same":true,"what":"Crafting menu favorites tab, empty, 0 in category","batch":1}
+{"id":"p017","same":true,"what":"Crafting search list of pointy stick and long pointy stick with the pointy stick recipe selected","batch":1}
+{"id":"p021","same":false,"what":"A lists only 'long pointy stick'; B lists 'long pointy stick' and 'pointy stick'","batch":1}
+{"id":"p025","same":true,"what":"Select tinder dialog for lighting a fire: Food 5 wrappers > protein ration, tinder, wrapper (counts differ; B adds a 'lighting the fire' popup)","batch":1}
+{"id":"p029","same":true,"what":"Select tinder dialog for lighting a fire with the same Food/Spare parts/Containers entries","batch":1}
+{"id":"p033","same":true,"what":"Crafting search list of 18 egg recipes starting with caviar and egg sandwich, same recipe panel","batch":1}
+{"id":"p037","same":true,"what":"Crafting 'Searched' tab, empty, 0 in category","batch":1}
+{"id":"p041","same":true,"what":"Crafting 'Searched' tab, empty, 0 in category","batch":1}
+{"id":"p045","same":false,"what":"Load game menu: A lists only Rossiter (1); B lists Freemont (1) and Rossiter (1)","batch":1}
+{"id":"p049","same":true,"what":"Crafting 'Searched' tab, empty, 0 in category","batch":1}
+{"id":"p053","same":false,"what":"Overmap near evac shelter A-23 with different Notes tooltip text (A green note text, B a different red note)","batch":1}
+{"id":"p057","same":true,"what":"Crafting search list of 13 recipes starting with baked potato, same recipe panel","batch":1}
+{"id":"p002","same":false,"what":"Both are main map views of the shelter area, but the clock, messages, stats and nearby monsters differ.","batch":2}
+{"id":"p006","same":true,"what":"Both are the empty 'Searched' recipe tab, with 0 in category and no recipes.","batch":2}
+{"id":"p010","same":false,"what":"Both are the item-list view, but the lists differ: 21 entries against 19, with different items and distances.","batch":2}
+{"id":"p014","same":true,"what":"Both show the 'simple knife spear' recipe detail with the same components and result panel. Only the 'cotton patch (have N)' count differs (2 against 65).","batch":2}
+{"id":"p018","same":true,"what":"Both show the same overmap view, with the 'evac shelter B-19 north from Newcastle' description and identical map.","batch":2}
+{"id":"p022","same":true,"what":"Both show the same recipe search-help panel with identical examples. Only the typed search text differs (pine needle teapine against rhizome starch).","batch":2}
+{"id":"p026","same":false,"what":"Both are the character info screen, but the encumbrance and warmth values, skill percentages, time, stats and messages differ.","batch":2}
+{"id":"p030","same":true,"what":"Both show the same Cataclysm DDA loading splash. Only the loading progress line differs.","batch":2}
+{"id":"p034","same":true,"what":"Both show the 'simple knife spear' recipe panel with the same recipe and component list. Only the status values differ (crafting slowdown 93% against 99%, time 3h13 against 3h01, cotton patch have 2 against 65).","batch":2}
+{"id":"p038","same":false,"what":"A is a two-pane drop/pickup transfer screen; B is an item list with an item description. They are different screens.","batch":2}
+{"id":"p042","same":false,"what":"Both are the Load menu, but A lists one save (Oakdale) and B lists two (Jauca and Oakdale).","batch":2}
+{"id":"p046","same":true,"what":"Both show the same overmap view, with 'evac shelter B-05 northwest from Codyville Plantation' and the same map. Only the explored-area edges differ slightly.","batch":2}
+{"id":"p050","same":true,"what":"Both are the empty Favorite recipe tab, with 0 in category. Only the highlighted sub-tab differs.","batch":2}
+{"id":"p054","same":true,"what":"Both are the empty Favorite recipe tab, with 0 in category and no recipes.","batch":2}
+{"id":"p058","same":true,"what":"Both show the same overmap view, with 'evac shelter A-23 north from Columbia' and an identical map.","batch":2}
+{"id":"p003","same":false,"what":"A lists one recipe (long pointy stick); B lists two (pointy stick, long pointy stick) with different component state","batch":3}
+{"id":"p007","same":false,"what":"A shows a 10-recipe flour list; B shows a 5-recipe list","batch":3}
+{"id":"p011","same":false,"what":"Both are shelter map views, but the message logs differ (crafting/door vs memorized bow fire drill/pick up)","batch":3}
+{"id":"p015","same":true,"what":"Batch crafting list of clean water 1x-31x with the same recipe details","batch":3}
+{"id":"p019","same":false,"what":"Map views with different message logs; B has a Use which component popup","batch":3}
+{"id":"p023","same":true,"what":"Searched list with the single pine needle tea recipe and the same details","batch":3}
+{"id":"p027","same":false,"what":"Outdoor map views with different message logs and different surroundings","batch":3}
+{"id":"p031","same":true,"what":"The same recipe search help panel with empty results, though the typed query text differs","batch":3}
+{"id":"p035","same":true,"what":"Empty Searched recipe list, 0 in category","batch":3}
+{"id":"p039","same":true,"what":"The same overmap view at evac shelter B-19, same sidebar text, only the cursor marker differs","batch":3}
+{"id":"p043","same":true,"what":"Identical overmap view of forest west from Whitingham","batch":3}
+{"id":"p047","same":false,"what":"Same location but different message logs (pickup of clean water vs cupboard-is-slow messages and the plastic bottles on the floor)","batch":3}
+{"id":"p051","same":true,"what":"Empty Searched recipe list, 0 in category","batch":3}
+{"id":"p055","same":true,"what":"Empty Searched recipe list, 0 in category","batch":3}
+{"id":"p059","same":false,"what":"Different recipe lists (large wooden bowl, wooden bowl, skull bowl vs large wooden club, wooden club)","batch":3}
+{"id":"p004","same":true,"what":"Same overmap view and sidebar for evac shelter B-19; B only adds a hover Notes tooltip","batch":4}
+{"id":"p008","same":false,"what":"Different main-view screens: different time, status and message log","batch":4}
+{"id":"p012","same":false,"what":"Different nearby-items lists (starch first vs plant fiber first, different entries)","batch":4}
+{"id":"p016","same":true,"what":"Same main view with identical message log (nothing to pick up, 40 plant fiber, 1 bindle, door)","batch":4}
+{"id":"p020","same":true,"what":"Same starch recipe crafting screen; only failure chance, time and rhizome count differ","batch":4}
+{"id":"p024","same":false,"what":"Different road scenes, times and messages","batch":4}
+{"id":"p028","same":false,"what":"Different pickup menu contents (7 cotton sheets, nail, sheet, stick vs nail, 2 sheets, stick)","batch":4}
+{"id":"p032","same":true,"what":"Same 'Select tinder to use for lighting a fire' menu with the same entries; only tinder count (12 vs 14) and weight differ","batch":4}
+{"id":"p036","same":false,"what":"Long-string recipe lists differ (4 entries vs 8 including short strings)","batch":4}
+{"id":"p040","same":true,"what":"Identical inventory screen","batch":4}
+{"id":"p044","same":true,"what":"Same empty Searched crafting tab (0 in category)","batch":4}
+{"id":"p048","same":true,"what":"Same empty Favorite crafting tab (0 in category)","batch":4}
+{"id":"p052","same":true,"what":"Same empty Favorite crafting tab (0 in category)","batch":4}
+{"id":"p056","same":false,"what":"Different main-view messages (cupboard smashing vs wooden club crafting) and times","batch":4}
+{"id":"p060","same":false,"what":"Load menu lists Cedar Butte and LaPorte in A but only LaPorte in B","batch":4}
