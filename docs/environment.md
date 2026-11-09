@@ -30,7 +30,7 @@ dated exceptions.
 | `.runtime/evidence/` | The sealed, read-only evidence store, the only copy; [evidence cleanup](operations/evidence-cleanup.md) owns sealing, verification and removal. This clone's local Git configuration records that it holds the store. |
 | `.runtime/archive/` | Files kept because they have no other home, each with a `.sha256` beside it; the dated retirement records name what each holds. |
 | `.runtime/check-logs/`, `.runtime/spectator-shots/` | Each checker run's full command output, and the spectator suites' screenshots (rewritten by each run); routine local output, prunable whenever no check runs. |
-| `dist/` | Git-ignored local export output. It holds a recap video export, which no record cites and the store does not hold. |
+| `dist/` | Git-ignored local export output; seal an export into the evidence store when a record cites it. |
 | `tools/player_host/node_modules/`, `tools/curator_host/node_modules/` | Locked dependencies of the player and curator host adapters; the npm cache stays in `.cache/npm`. No model or API credential belongs here. [Host setup](setup.md#install-the-generic-gameplay-host) and [curator hosts](operations/curator-hosts.md) own install and support limits. |
 | `.codex/`, `.claude/`, `CLAUDE.md`, repository-local Git configuration and hooks | Reviewed project coding-agent tool and permission configuration, and public identity. Generated `.codex/config.toml`, `.mcp.json` and `.claude/settings.local.json` are machine-local and ignored. [Operator permissions](operator-permissions.md) separates rule matching, host activation and gameplay authority; [coding-agent hosts](operations/coding-agents.md) maps each host. |
 
