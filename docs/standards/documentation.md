@@ -76,14 +76,16 @@ separate logical responsibilities from actual process boundaries. Preserve relev
 failure/recovery paths and limits, including uncertainty. Never use color alone
 to convey meaning. Provide a text equivalent and an authoritative contract link.
 
-Use versioned Mermaid sources and generated SVGs, with accessible titles and
-descriptions. Update source, rendering and explanatory text together. Render with
-the pinned local tool; inspect the result at ordinary window width for readable
-labels, clipping and ambiguity. For a changed boundary/flow, an independent reviewer
-checks the visual against the contract and relevant implementation. The lead
-records the inspection in acceptance; neither parsing nor hashes prove meaning.
-Retire or supersede visuals with their parent document. Avoid duplicate copies of
-the same diagram and extra detail that forces the user to reconstruct the big picture.
+Write each diagram as one fenced `mermaid` block in its host page, with `accTitle`
+and `accDescr`; GitHub renders it and the block is the only copy. Update the block
+and its explanatory text together. `tools/documents.py` fails a current page whose
+block lacks a title or description; it neither renders nor judges the diagram. Preview
+a changed diagram on GitHub at ordinary window width for readable labels, clipping and
+ambiguity, as GitHub's Mermaid version, not ours, decides how it draws. For a changed
+boundary/flow, an independent reviewer checks the visual against the contract and
+relevant implementation, and the lead records the inspection in acceptance.
+Retire or supersede visuals with their parent document. Link to one diagram instead of
+copying it, and avoid extra detail that forces the user to reconstruct the big picture.
 
 The user must be able to find purpose, current capabilities/limits, architectural
 rationale, next change/tradeoffs and supporting evidence from the overview and

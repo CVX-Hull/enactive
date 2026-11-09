@@ -103,10 +103,9 @@ class ProfileTests(unittest.TestCase):
     def test_document_scope_matches_checked_markdown_and_regular_assets(self):
         for name in ("README.md", "AGENTS.md", "docs/player-guide.md", "docs/protocol.md",
                      "docs/setup.md", "docs/runbook.md", "docs/engineering.md", "docs/project-management.md",
-                     "docs/research-ci.md", "docs/acceptance/report.json", "docs/assets/example.png",
-                     "docs/diagrams/current.mmd", "docs/diagrams/rendered.json"):
+                     "docs/research-ci.md", "docs/acceptance/report.json", "docs/assets/example.png"):
             with self.subTest(name=name): self.assertTrue(ci.editorial(name))
-        for name in (".github/pull_request_template.md", "elsewhere.md", "docs/diagrams/config.json",
+        for name in (".github/pull_request_template.md", "elsewhere.md", "docs/diagrams/player.svg",
                      "docs/acceptance/run.py", "docs/assets/script.js",
                      ".github/workflows/check.yml"):
             with self.subTest(name=name): self.assertFalse(ci.editorial(name))

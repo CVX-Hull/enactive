@@ -67,10 +67,7 @@ def editorial(path: str) -> bool:
         return True
     if path.startswith("docs/acceptance/") and value.suffix in {".json", *_ASSETS}:
         return True
-    if path.startswith("docs/assets/") and value.suffix in _ASSETS:
-        return True
-    return value.parent == PurePosixPath("docs/diagrams") and (
-        value.suffix in {".mmd", ".svg"} or value.name == "rendered.json")
+    return path.startswith("docs/assets/") and value.suffix in _ASSETS
 
 
 def component(changes: list[Change]) -> str | None:

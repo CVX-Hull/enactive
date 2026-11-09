@@ -63,10 +63,10 @@ control can resume**. Public spectator, CLI and Python operations share this flo
 Boxes are steps, not processes; arrows name outcomes. The uncertain
 path preserves native fallback rather than declaring success.
 
-![Current native manual recovery after a permanent stop. The diagram now shows the current recovery; the Resume step this historical design describes was retired.](../diagrams/native-recovery.svg)
+![Current native manual recovery after a permanent stop. The diagram now shows the current recovery; the Resume step this historical design describes was retired.](https://github.com/CVX-Hull/enactive/blob/458905f0616aa0045b3c4d0ca0ae8c3290116cca/docs/diagrams/native-recovery.svg?raw=true)
 
 In this historical design, the activity and debug branches both returned to observation (the current diagram above no longer shows them). Neither an answer nor
-a dismissal proves task completion. [Editable diagram](../diagrams/native-recovery.mmd).
+a dismissal proves task completion. [Editable diagram](https://github.com/CVX-Hull/enactive/blob/458905f0616aa0045b3c4d0ca0ae8c3290116cca/docs/diagrams/native-recovery.mmd).
 
 ## Boundary identity and scope
 

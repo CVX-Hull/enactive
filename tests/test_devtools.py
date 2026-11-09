@@ -174,7 +174,6 @@ class DevToolTests(unittest.TestCase):
                     targets = ["tests"] if profile == "full" else list(ci.COMPONENT_TESTS[profile])
                     self.assertEqual(len(tests), 1)
                     self.assertEqual(tests[0][-len(targets):], targets)
-                self.assertEqual(ran("tools/diagrams.py"), profile not in structural)
                 self.assertEqual(ran("tests/test_viewer.cjs"), profile not in structural | {"editorial"})
                 for common in ("ruff check", "lint-imports", "tools.documents", "tools.evidence verify",
                                "git diff --check", "git diff --cached --check"):
@@ -183,7 +182,7 @@ class DevToolTests(unittest.TestCase):
                 if profile in {"editorial", *components}:
                     self.assertIn("Full regression" if profile != "editorial" else "full regression", output)
                 if profile == "main":
-                    self.assertIn("Tests, rendered diagrams", output)
+                    self.assertIn("Tests, viewer tests", output)
                 self.assertIn("real gameplay", output)
 
     def test_profiles_reject_fast_combination_and_unknown_names_before_execution(self):

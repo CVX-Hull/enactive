@@ -10,8 +10,8 @@ This is shadow infrastructure for [ADR 009](../decisions/009-curated-player.md)'
 curator. It runs only over sealed traces. The running player does not use it, and
 nothing in the player, the computer, evaluation or the viewer imports it: the
 import contracts in `pyproject.toml` forbid it. The curator itself holds no custody and
-no player access, and reads no evaluation records. P0's
-[outcome](../acceptance/2026-11-08-adr009-p0.md) is recorded. Nothing is adopted.
+no player access, and reads no evaluation records. Nothing here is
+adopted; P0's [outcome](../acceptance/2026-11-08-adr009-p0.md) is recorded separately.
 
 ## Internal responsibilities
 
@@ -37,7 +37,7 @@ no player access, and reads no evaluation records. P0's
 - **The proxy.** It fails closed: missing usage keeps the whole reservation, and a
   charge above its reservation revokes the session. It also sets one session-affinity
   header per session. Prompt caching depends instead on the host keeping each budget note
-  where it was first sent: a note rewritten at the tail kept the cached share at about 3%
+  where it was first sent; a note rewritten at the tail defeats the cache
   ([#489 record](../acceptance/2026-11-08-context-stability-489.md#follow-up-the-cause-found)).
 - **Knowledge and records.** Each run starts its own knowledge repository. Session
   records are kept, and workspaces are deleted.

@@ -18,7 +18,7 @@ Every launch selects one attention policy, recorded in `watch-start.json`:
 
 | Policy | Use | Stop rule added to custody, Pause and uncertain-delivery stops |
 | --- | --- | --- |
-| `best-effort` | Development runs (owner decision D1, [#369](https://github.com/CVX-Hull/enactive/issues/369), 5 November 2026) | None. The gateway offers no operator check. An unnoticed bad loop or death can continue until the original finite limits end the run; the lead cancels on first observed death or replacement. |
+| `best-effort` | Development runs (owner decision D1, [#369](https://github.com/CVX-Hull/enactive/issues/369)) | None. The gateway offers no operator check. An unnoticed bad loop or death can continue until the original finite limits end the run; the lead cancels on first observed death or replacement. |
 | `required` | A frozen test that explicitly requires continuous attention | No completed operator check within 45 seconds stops the run. |
 
 The custody deadline is the independent outer timeout in both policies: the

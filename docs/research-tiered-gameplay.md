@@ -55,14 +55,14 @@ they do not establish that a fixed hierarchy of three model sizes is optimal.
 
 ## Proposed system: who decides and how feedback returns
 
-![Proposed tiered gameplay: the operator directs the strategist; the supervisor delegates bounded skills, checks observations and requests replanning; all actions pass through the existing authority gate.](diagrams/tiered-gameplay.svg)
+![Proposed tiered gameplay: the operator directs the strategist; the supervisor delegates bounded skills, checks observations and requests replanning; all actions pass through the existing authority gate.](https://github.com/CVX-Hull/enactive/blob/9683cc7c0fc7531601ff7b8411c7195f6032f1be/docs/diagrams/tiered-gameplay.svg?raw=true)
 
 Boxes are logical responsibilities, not separate services or model instances.
 Arrows label requests, evidence and control. The supervisor holds the active task
 state and supplies evidence to the strategist and executor. The optional tactical
 model chooses within a bounded skill or returns control; it cannot bypass the
 authority gate. Pause stops new remote dispatch; it still cannot cancel every
-already-running CDDA activity. [Editable source](diagrams/tiered-gameplay.mmd).
+already-running CDDA activity. [Editable source](https://github.com/CVX-Hull/enactive/blob/458905f0616aa0045b3c4d0ca0ae8c3290116cca/docs/diagrams/tiered-gameplay.mmd).
 
 | Responsibility | Decision and cadence | Initial implementation choice |
 | --- | --- | --- |

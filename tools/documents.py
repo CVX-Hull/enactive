@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Document and record checks (C-DOCUMENTS): stewardship metadata, acceptance manifests, evidence schema ids,
-standard/principle/control identifiers and the dated-record indexes. Structure only, no content-truth claims."""
+standard/principle/control identifiers, the Mermaid titles and descriptions of current pages and the dated-record indexes. Structure only, no content-truth claims."""
 from __future__ import annotations
 
 from datetime import date
@@ -202,6 +202,31 @@ def check_metadata(root: Path) -> list[str]:
     return errors
 
 
+MERMAID_BLOCK = re.compile(r"^```mermaid[^\n]*\n(.*?)^```", re.M | re.S)
+ACCESSIBLE = {"accTitle": re.compile(r"^[ \t]*accTitle[ \t]*:[ \t]*\S", re.M),
+              "accDescr": re.compile(r"^[ \t]*accDescr[ \t]*(?::[ \t]*\S|\{\s*[^\s}])", re.M)}
+
+
+def check_diagrams(root: Path) -> list[str]:
+    """Every Mermaid block in an active or proposed page has an accessible title and description.
+    GitHub renders the block; nothing here renders it or judges what it says."""
+    errors = []
+    paths = [*(root / name for name in ROOT_DOCUMENTS), *sorted((root / "docs").rglob("*.md"))]
+    for path in paths:
+        if not path.is_file():
+            continue
+        try:
+            metadata = frontmatter.loads(path.read_text(), handler=frontmatter.YAMLHandler()).metadata
+        except (OSError, ValueError, YAMLError):
+            continue  # check_metadata reports an unreadable page
+        if metadata.get("status") not in ("active", "proposed"):
+            continue
+        for number, block in enumerate(MERMAID_BLOCK.findall(path.read_text()), 1):
+            errors += [f"{path.relative_to(root)}: Mermaid diagram {number} lacks {name}; GitHub shows it to "
+                       "assistive technology" for name, pattern in ACCESSIBLE.items() if not pattern.search(block)]
+    return errors
+
+
 #: Generated indexes of dated records: path -> (title, directory, what the directory holds).
 INDEXES = {
     "docs/acceptance/index.md": ("Acceptance and audit records", "docs/acceptance",
@@ -251,12 +276,12 @@ def main(argv: list[str] | None = None) -> int:
             (ROOT / index).write_text(render_index(ROOT, index))
         print("Generated the dated-record indexes.")
     errors = (check_metadata(ROOT) + check_manifests(ROOT) + check_data(ROOT) + check_identifiers(ROOT)
-              + check_indexes(ROOT))
+              + check_diagrams(ROOT) + check_indexes(ROOT))
     if errors:
         print("Document checks failed:\n" + "\n".join(errors), file=sys.stderr)
         return 1
-    print("Document metadata, acceptance manifests, the data rule, standard and control identifiers and "
-          "record indexes: passed; content truth was not verified.")
+    print("Document metadata, acceptance manifests, the data rule, standard and control identifiers, diagram "
+          "titles and descriptions and record indexes: passed; content truth was not verified.")
     return 0
 
 

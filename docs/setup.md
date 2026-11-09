@@ -112,20 +112,19 @@ explicit project-local paths and refuses to overwrite the output:
 [Player tools](../harness/player_tools.py) own tool arguments; the
 [player guide](player-guide.md) explains use.
 
-## Install and maintain visual documentation tools
+## Install the viewer test browser
 
 ```sh
 npm --userconfig /dev/null --cache "$PWD/.cache/npm" ci --ignore-scripts --no-audit --no-fund
-.venv/bin/python tools/diagrams.py --install-browser
-.venv/bin/python tools/diagrams.py --write
-.venv/bin/python tools/diagrams.py
+node_modules/.bin/puppeteer browsers install chrome
 ```
 
-The npm lock pins the renderer; the explicit browser install keeps downloads and
-profiles under `.cache`. Render/inspect changed diagrams at ordinary window width.
-A denied browser launch is a failed check. Do not use global installs or an
-unpinned `npx` fallback. [Visual requirements](standards/documentation.md#visual-explanations)
-separate parse/render evidence from semantic and independent visual review.
+The npm lock pins Puppeteer; `.puppeteerrc.cjs` keeps the browser download and
+profiles under `.cache`. The viewer and investigation suites launch that browser;
+a denied launch is a failed check. Do not use global installs or an unpinned `npx`
+fallback. Diagrams are Mermaid blocks in their pages and need no local tool:
+[Visual requirements](standards/documentation.md#visual-explanations) say how to
+preview and review them.
 
 ## Explicit native stages
 

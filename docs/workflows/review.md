@@ -67,7 +67,7 @@ The same approach applies to workflow, documentation and controls themselves.
 
 | Change or claim | Minimum relevant feedback | Review / expensive evidence trigger |
 | --- | --- | --- |
-| Editorial: correct text or links without behavior/requirement change | Document/metadata/link checks and diff inspection; render changed visuals | Lead checks meaning; no game/native build or full behavioral rerun solely for wording |
+| Editorial: correct text or links without behavior/requirement change | Document/metadata/link checks and diff inspection; preview changed visuals on GitHub | Lead checks meaning; no game/native build or full behavioral rerun solely for wording |
 | Contained: behavior change within understood existing boundaries | Fast checks and focused positive/negative behavioral cases | Lead reviews implementation against design; consolidate independent review at the coherent integration checkpoint |
 | Boundary: change ownership, input, persistence/schema, permission, dependency or native contract | Brief/alternatives, focused independent architecture/risk review before commitment; affected failure cases and coordinated migration | Review changed contracts against callers; matching native build/affected qualification when native support is claimed; security/product/research lens only when relevant |
 | Outcome: integration, release, new support, performance or learning claim | Independently assessed outcome/evidence against original acceptance | Appropriate exact protected CI profile, full regression for broad source changes before merge, applicable native/usability/held-out lanes and unresolved finding dispositions; merge alone is insufficient |
@@ -116,8 +116,8 @@ supply independent GitHub human approval, and merge or CI success alone cannot e
 GitHub fields and views aid visibility; they do not enforce semantic readiness,
 WIP or acceptance. Main currently requires a PR and the observed Actions `controller` check with
 strict freshness and resolved review threads; merges are squash-only and
-force-push/deletion and actor bypass are disabled. Repository auto-merge is enabled
-(2026-10-31); it merges only when those rules pass. Required human approvals are
+force-push/deletion and actor bypass are disabled. Repository auto-merge is enabled;
+it merges only when those rules pass. Required human approvals are
 zero; unavailable independent human review remains an explicit gap.
 Inspect the active rules and rerun relevant probes after configuration changes. Agent
 review is evidence for lead adjudication, never a fabricated human approval.

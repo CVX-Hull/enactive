@@ -49,7 +49,7 @@ The driver retains any orderly-stop identity across turnover and gates a success
 before MCP/fetch; independent Pause and owned cleanup never wait for a save or reply.
 Do not inject lead tactics or curate memory to manufacture a successful outcome.
 The player must be self-sufficient, because the project will generalize beyond
-this game (owner, 31 October 2026). No lead tactical nudge or game-specific hint
+this game (owner decision). No lead tactical nudge or game-specific hint
 enters any run: not mid-run, not in the frozen context, and not as a labelled
 diagnostic arm. Record interventions, failures and unknowns. [Campaign procedure](campaign-run.md).
 

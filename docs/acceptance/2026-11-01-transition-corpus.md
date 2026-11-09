@@ -40,9 +40,9 @@ pre-registered. The guards held: 37 complete runs, 2,605 transitions, κ 0.96 (A
 collection resumed after run 01's failure on the lead's reading, before the owner was
 consulted. The owner accepted it (see [Deviations and failures](#deviations-and-failures)).
 
-![The #320 method: frozen state, unchanged player, two labellers, a disagreement gate and the frozen analysis.](../diagrams/transition-corpus.svg)
+![The #320 method: frozen state, unchanged player, two labellers, a disagreement gate and the frozen analysis.](https://github.com/CVX-Hull/enactive/blob/e63491e2ac9160708dbddafbff05deedaf1ba58a/docs/diagrams/transition-corpus.svg?raw=true)
 
-[Editable source](../diagrams/transition-corpus.mmd). Evidence summary with the hashed
+[Editable source](https://github.com/CVX-Hull/enactive/blob/e63491e2ac9160708dbddafbff05deedaf1ba58a/docs/diagrams/transition-corpus.mmd). Evidence summary with the hashed
 manifest: [summary.json](assets/corpus-320/summary.json).
 
 ## Design as frozen
@@ -129,9 +129,9 @@ manifest: [summary.json](assets/corpus-320/summary.json).
   - The objectives report's zero-spend calibrations (its tests 1–3), listed as exploratory in
     the protocol, were **not run**: the frozen analysis does not implement them.
 
-![Observed transitions between A1 interface modes, descriptive counts.](../diagrams/corpus-a1-operator.svg)
+![Observed transitions between A1 interface modes, descriptive counts.](https://github.com/CVX-Hull/enactive/blob/e63491e2ac9160708dbddafbff05deedaf1ba58a/docs/diagrams/corpus-a1-operator.svg?raw=true)
 
-[Editable source](../diagrams/corpus-a1-operator.mmd). The map view is the hub: players open
+[Editable source](https://github.com/CVX-Hull/enactive/blob/e63491e2ac9160708dbddafbff05deedaf1ba58a/docs/diagrams/corpus-a1-operator.mmd). The map view is the hub: players open
 menus, dialogue, examine and overmap views from it and return.
 
 ### Worked examples

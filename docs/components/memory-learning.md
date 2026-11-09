@@ -44,7 +44,18 @@ facts are supplied. `step(view,state)` returns act/yield/done and basic controls
 evaluation has no direct effects or host I/O. The runner uses real captures and
 same computer callbacks, up to 64 steps/20seconds under original limits.
 
-![Current logical flow of optional player knowledge and programs: claims and source pixels support decisions, bounded programs propose the same basic controls, and context is handoff data that grants no authority.](../diagrams/player-owned-memory.svg)
+```mermaid
+flowchart TB
+  accTitle: Current optional player knowledge and programs
+  accDescr: Player claims and selected source pixels support decisions, not authority. Explicit append or program save lazily remembers referenced images. Corrections preserve history. Bounded programs propose the same basic controls. Context is immutable data for handoff; actual quiescence and canonical issuance are separate custody checks.
+  E["Actual computer PNG and provenance"] --> P["Player interprets evidence"]
+  P -->|"Explicit supported append"| M["player-memory/2<br/>Fallible claims, Work and corrections"]
+  P -->|"Save player-program/2 and lineage"| R["Bounded local program<br/>program-view/4 without global countdowns"]
+  R -->|"Basic proposals"| C["Same computer port<br/>Original limits and custody"]
+  M -->|"Whole-record bounded context<br/>Explicit omissions"| P
+  M --> H["Immutable handoff knowledge<br/>Grants no authority"]
+  C -->|"Original result and actual pixels"| E
+```
 
 Current. “How do optional knowledge and programs feed the player without gaining
 authority?” Boxes are logical stores and ports; labelled arrows are explicit saves,
@@ -56,7 +67,6 @@ store and act only through an explicit program run; context may return program
 code. Programs only propose basic controls through the
 same computer port under original limits. Bounded whole-record context, with
 explicit omissions, returns to the player and becomes immutable handoff knowledge.
-[Editable source](../diagrams/player-owned-memory.mmd).
 
 Context selects at most32 roots and returns whole records/code within64KiB.
 Oversized/missing material is explicitly omitted with readable IDs, never truncated

@@ -92,6 +92,35 @@ def test_the_cache_diagnosis_figures_match_their_schema():
     assert documents.schema_errors(ROOT, "curator-cache-diagnosis", json.loads(path.read_text()), str(path)) == []
 
 
+def diagram_page(root, status, *lines):
+    page = root / "docs/page.md"
+    page.parent.mkdir(parents=True, exist_ok=True)
+    page.write_text(f"---\nowner: lead\nstatus: {status}\n---\n\n# Page\n\n```mermaid\nflowchart TB\n"
+                    + "".join(f"  {line}\n" for line in lines) + "  A --> B\n```\n")
+
+
+def test_a_current_diagram_needs_a_title_and_a_description(tmp_path):
+    title, description = "accTitle: Who decides", "accDescr: The player decides and the user can stop input."
+    diagram_page(tmp_path, "active", title, description)
+    assert documents.check_diagrams(tmp_path) == []
+    diagram_page(tmp_path, "proposed", description)
+    assert "lacks accTitle" in "\n".join(documents.check_diagrams(tmp_path))
+    diagram_page(tmp_path, "active", title)
+    assert "lacks accDescr" in "\n".join(documents.check_diagrams(tmp_path))
+    diagram_page(tmp_path, "active", "accTitle:", "accDescr: ")  # present but empty
+    assert len(documents.check_diagrams(tmp_path)) == 2
+    diagram_page(tmp_path, "active", title, "accDescr {\n}")  # an empty block form
+    assert "lacks accDescr" in "\n".join(documents.check_diagrams(tmp_path))
+    diagram_page(tmp_path, "active", title, "accDescr {\n  Several lines of description.\n}")
+    assert documents.check_diagrams(tmp_path) == []
+
+
+def test_a_historical_diagram_is_not_checked(tmp_path):
+    diagram_page(tmp_path, "historical")
+    diagram_page(tmp_path, "superseded")
+    assert documents.check_diagrams(tmp_path) == []
+
+
 @pytest.fixture
 def identifier_root(tmp_path):
     copy_files(tmp_path, {"docs/charter.md", "docs/engineering.md", "docs/controls.md"})

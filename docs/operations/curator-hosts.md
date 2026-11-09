@@ -8,8 +8,8 @@ review_trigger: A coding-agent host update, a change to the curator sandbox or p
 
 Host-specific facts for running a coding-agent curator inside the
 [curator sandbox](../research-curator-sandbox.md) (ADR 009, #451). The design and
-research pages stay host-neutral; this operator page names the hosts. Versions on this
-Mac on 8 November 2026: Claude Code 2.1.319 and Codex CLI 0.162.1, on macOS 27.2.
+research pages stay host-neutral; this operator page names the hosts. The host versions checked
+are in the [dated record](../acceptance/2026-11-08-moved-measurements.md#curator-hosts-versions-footprint-and-body-limit).
 
 ## Claude Code (first host)
 
@@ -27,7 +27,7 @@ Mac on 8 November 2026: Claude Code 2.1.319 and Codex CLI 0.162.1, on macOS 27.2
   `scratch/`.** Without it the host opens a shared `/tmp/claude-<uid>`, which also holds
   other sessions' files. The profile refuses that path, and the host exits with `EPERM`.
 
-**Observed under the profile (2026-11-08, $0).** The manual probe
+**Observed under the profile (no spend).** The manual probe
 [`tests/curator_host_probe.py`](../../tests/curator_host_probe.py) ran against a local
 stand-in that answers in the Messages streaming shape. The token counts and price are
 synthetic.
@@ -37,8 +37,8 @@ synthetic.
 - **Bash tool turn.** The stand-in asked for a command that writes `scratch/`, reads
   `.runtime/credentials.json` and lists `~/../..`. The tool result was `written /
   secret-denied / users-denied`.
-- **Footprint.** Each run took 0.23–0.24 s, peaked at about 157 MB and left no
-  survivors.
+- **Footprint.** A run left no survivors. Its time and memory are in
+  [the sandbox research](../research-curator-sandbox.md).
 - **What it sends.** Five beta flags, all dropped by the proxy unless frozen:
   `claude-code-20250219`, `context-management-2025-06-27`, `effort-2025-11-24`,
   `interleaved-thinking-2025-05-14` and `thinking-token-count-2026-05-13`. It also sends
@@ -120,7 +120,7 @@ Node tests: `cd tools/curator_host && npm test`.
 | `opus` | `anthropic/claude-opus-5.5` | `anthropic` (not yet confirmed against the model's endpoint list) | medium | $4 / $20 / $0.20 / $8 (1-hour tier; 5-minute $5) |
 
 Prices are in [`data/curator/openrouter-prices-2026-11-08.json`](../../data/curator/openrouter-prices-2026-11-08.json)
-(`curator-prices/1`), read from OpenRouter's public model list on 8 November 2026. The context window
+(`curator-prices/1`), read from OpenRouter's public model list (the file names the fetch date). The context window
 is 262,144 tokens for both arms, so they see the same capacity as the actor; Terra's higher
 long-prompt tier (above 272,000 tokens) is therefore unreachable. Opus's reasoning is mandatory and
 its listed default effort is high; `--effort` overrides.
@@ -149,9 +149,8 @@ profile:
   `python -I launch.py <node> run.mjs --config FILE`, which relays node's output into the log. A
   sandbox that allowed metadata on its own output file would remove the relay.
 
-**Observed footprint** (2026-11-08, $0, local stand-in with three scripted requests, one frame image
-and one workbench call): about 0.35 s of host time, 93–98 MB peak, 0.13–0.15 s from process start
-to the first model request, no surviving process. The escape suite
+The host's [observed footprint](../acceptance/2026-11-08-moved-measurements.md#curator-hosts-versions-footprint-and-body-limit)
+is recorded; it leaves no surviving process. The escape suite
 (`tests/curator_adversary.py` through `tests/test_curator_sandbox.py`) passes unchanged with these
 roots added to the layout.
 
@@ -167,11 +166,10 @@ evicted frame's source ID so `view_frame` can show it again. The peak trades thr
 - **Body size.** Recorded frames reach about 280 KB, or 375 KB as base64. Sixteen stay under the
   proxy's 8 MiB request limit, while 24 such frames would exceed it and end the session with a 413.
 
-The #454 runs passed 24/12 explicitly. No request in them reached the body limit: their only proxy
-refusals were spend-cap refusals. The #489 check passes 24/12 too, so its cached share compares
-with #454's.
+The #454 runs and the #489 check passed 24/12 explicitly; pass the same window to compare
+cached shares with them ([#489 record](../acceptance/2026-11-08-context-stability-489.md)).
 
-**Cache stability (ADR 009 P1.0).** A prompt cache only helps when each request extends the last
+**Cache stability.** A prompt cache only helps when each request extends the last
 byte for byte, so:
 - **Affinity.** The proxy generates one affinity value per proxy, that is per session, and sets it
   as `x-session-id` on every OpenRouter request. It is independent of the session token, the host's
@@ -180,8 +178,8 @@ byte for byte, so:
   - **Kept in place.** Earlier notes stay in the history, unchanged, where they were first sent. A
     retry resends the same body below the note step, so it adds no note. Each request therefore
     extends the previous one byte for byte,
-    which the provider's cache needs: a note replaced on every request kept the cached share at
-    about 3% ([#489 record](../acceptance/2026-11-08-context-stability-489.md#follow-up-the-cause-found)).
+    which the provider's cache needs; replacing the note on every request defeats it
+    ([#489 record](../acceptance/2026-11-08-context-stability-489.md#follow-up-the-cause-found)).
   - **Time.** The note includes the time used against the wall-clock limit, and warns past half and
     four fifths of it.
   - **Phase.** Only requests and dollars set the phase that refuses reading tools.

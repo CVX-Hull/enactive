@@ -15,7 +15,7 @@ this page supplies background, not current operating instructions.
 
 Research cutoff: **2026-10-18**. This is an evidence review and discussion proposal,
 not an implemented contract or a commitment to training. The current
-[protocol](contracts/injected-planner.md#passive-task-memory) remains authoritative. No gameplay,
+[protocol](https://github.com/CVX-Hull/enactive/blob/394ae28da12359eab778464d051c96a19dd26402/docs/contracts/injected-planner.md#passive-task-memory) remains authoritative. No gameplay,
 weight training, model service, database installation or paid API experiment was
 performed for this review.
 

@@ -82,7 +82,7 @@ adapter only through `player-host/3`. [Adapter](../../tests/test_player_host_ada
 [driver](../../tests/test_campaign_player.py) and [custodian](../../tests/test_campaign_run.py)
 fixtures exercise real maintained libraries with synthetic provider/owned children.
 They add configuration, image, settlement, accounting and cleanup evidence without
-paid inference or game launch. [Actual prior host reports](../work.md#decisive-evidence)
+paid inference or game launch. [Actual prior host reports](../acceptance/index.md)
 retain failures on earlier source. The [production report](../acceptance/2026-10-29-computer-control.md)
 adds bounded actual use, succession and normal lifecycle evidence. Useful cadence,
 general model quality and independent campaign completion remain open.

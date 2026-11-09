@@ -50,32 +50,63 @@ Restart reads no old inbox and reconstructs no authority.
 These three diagrams are current. Boxes are logical states, not processes; labelled
 arrows are the transitions or reads the
 [contract](../contracts/computer-control.md#computer-operations-and-custody) allows.
-The paragraph under each image is its text equivalent.
+The paragraph under each diagram is its text equivalent.
 
-![Current logical request path: the client assigns the original ID, refusal proves no submission only when verified, and admitted or uncertain work is collected without replay.](../diagrams/request-receipts.svg)
+```mermaid
+flowchart TB
+  accTitle: Current original request collection
+  accDescr: The client assigns the request ID before sending. Complete local refusal proves no submission only when established. Admitted or uncertain work retains original collection without replay. Partial or unknown physical delivery permanently stops new input. Read results never renew custody.
+  P["Player chooses basic control or player service"] --> I["Client assigns original operation ID"]
+  I --> W["One current authenticated ingress"]
+  W -->|"Verified no submission"| R["Inspect refusal<br/>New explicit corrected choice allowed"]
+  R --> P
+  W -->|"Admitted or uncertain"| C["Collect exact original computer_result<br/>or player_result"]
+  I -->|"Lost response"| C
+  C -->|"Original receipts and sources"| E["Interpret actual effect<br/>No replay or success inference"]
+  C -->|"Partial or unknown input"| S["Permanent input stop"]
+```
 
 Current. “How is one submitted request collected, and when may the player submit a corrected replacement?”
 Only a verified complete local refusal permits a new corrected choice; admitted or
 uncertain work is collected under its original ID, and partial or unknown input
 stops input permanently. A lost response is collected under the same ID. After
 collection the player interprets the actual effect before its next choice, unless
-input stopped. [Editable source](../diagrams/request-receipts.mmd).
+input stopped.
 
-![Current logical permanent stop: Pause, takeover or uncertain input fence automation; original results stay collectable; native recovery and cleanup restore no authority.](../diagrams/recovery.svg)
+```mermaid
+flowchart TB
+  accTitle: Current permanent stop and original collection
+  accDescr: There is no Resume or phase-based recovery. User Pause, native takeover or uncertain input permanently fences automation. Original results remain collectable without replay. Native manual recovery and exact owned cleanup do not restore authority or certify a save.
+  A["Active mechanical custody"] -->|"User Pause or native takeover"| S["Permanent input stop"]
+  A -->|"Partial or unknown input"| S
+  S -->|"Read exact original ID"| C["Collect receipts and retain uncertainty<br/>Never replay or renew limits"]
+  S -->|"Operator chooses"| N["Ordinary native recovery<br/>Save or quit through visible controls"]
+  C --> E["Exact owned cleanup<br/>Normal exit distinct from forced signals"]
+  N --> E
+  E -->|"Separate explicit admission only"| F["Fresh coherent session<br/>No authority restored from history"]
+```
 
 Current. “What happens after Pause, takeover or uncertain input?” Automation stays
 fenced, original receipts are collected without replay or renewed limits, and any
 further play needs separate explicit admission of a fresh session. The operator may
 instead recover through ordinary native controls; both paths end in exact owned
-cleanup, with normal exit kept distinct from forced signals. [Editable source](../diagrams/recovery.mmd).
+cleanup, with normal exit kept distinct from forced signals.
 
-![Current logical manual recovery: after permanent Pause the operator uses ordinary native controls, and the harness records the intervention without certifying a save.](../diagrams/native-recovery.svg)
+```mermaid
+flowchart TB
+  accTitle: Current native manual recovery after permanent stop
+  accDescr: The harness supplies no activity, menu or debug recovery handler. Pause permanently stops automation but cannot undo events or cancel every game activity. The user may recover the application with native controls; this intervention and its uncertainty remain recorded.
+  P["Independent permanent Pause"] --> S["No further automation<br/>Original receipts retained"]
+  S --> N["Operator uses ordinary native controls<br/>Interpret and interrupt if needed"]
+  N --> V["Observe actual effects<br/>Record intervention and uncertainty"]
+  V --> E["Save or exit if appropriate<br/>No harness success or save certification"]
+  E --> C["Exact owned cleanup and absence evidence"]
+```
 
 Current. “What may an operator do by hand after a permanent stop?” This expands the
 operator branch of the recovery diagram above. Use the game's
 ordinary controls; the harness supplies no recovery handler and certifies neither
 the recovery nor a save. See [Pause procedure](../operations/pause-timeout.md#operator-recovery).
-[Editable source](../diagrams/native-recovery.mmd).
 
 ## Portability and verification
 

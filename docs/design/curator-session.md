@@ -20,8 +20,8 @@ Code: [`harness/curator`](../../harness/curator): `knowledge.py`, `containers.py
 
 ## Layout
 
-The owner chose the knowledge repository's location on 8 November 2026 (ADR 009 open
-decision 5). Everything lives under one project-local root, by default
+The knowledge repository's location is set by
+[ADR 009](../decisions/009-curated-player.md) (open decision 5). Everything lives under one project-local root, by default
 `.runtime/knowledge/`:
 
 | Path | Holds |

@@ -16,9 +16,9 @@ contract changes and merges ([evidence cadence](workflows/evidence-cadence.md)).
 
 | Study | Dated record | Checkpoint |
 | --- | --- | --- |
-| Ceiling benchmark and grounding aids ([#372](https://github.com/CVX-Hull/enactive/issues/372)), 5–6 November 2026 | [Development loop](acceptance/2026-11-06-development-loop.md) | Ceiling median 0.59 in-game hours within a 250-decision allowance; aids A–C rejected |
-| Evaluator re-score and power check ([#383](https://github.com/CVX-Hull/enactive/issues/383)) | [Development loop](acceptance/2026-11-06-development-loop.md#evaluator-re-score-and-power-check-383) | Evaluator matches the hand-scored survival; changes pre-register targeted process metrics |
-| Long-horizon arm ([#382](https://github.com/CVX-Hull/enactive/issues/382)), 7 November 2026 | [Long-horizon arm](acceptance/2026-11-07-long-horizon-382.md) | Two of three lineages Day-viable: a screen, not a qualification |
+| Ceiling benchmark and grounding aids ([#372](https://github.com/CVX-Hull/enactive/issues/372)), 5–6 November 2026 | [Development loop](acceptance/2026-11-06-development-loop.md) | Result and aid decisions in the record |
+| Evaluator re-score and power check ([#383](https://github.com/CVX-Hull/enactive/issues/383)) | [Development loop](acceptance/2026-11-06-development-loop.md#evaluator-re-score-and-power-check-383) | Result and pre-registered process metrics in the record |
+| Long-horizon arm ([#382](https://github.com/CVX-Hull/enactive/issues/382)), 7 November 2026 | [Long-horizon arm](acceptance/2026-11-07-long-horizon-382.md) | Result in the record |
 
 ## Question and decision rule
 
@@ -76,7 +76,7 @@ player's context:
 
 The window stays below OpenRouter's 272,000-token long-prompt threshold, so the
 short-prompt rates apply: $1.00/M input, $1.25/M cache write, $0.05/M cache read
-and $5.00/M output (read from the public model list on 5 November 2026). The
+and $5.00/M output (read from the public model list). The
 validator's worst case is (262,144 × $1.25 + 16,384 × $5.00) / 1M = $0.4096 per
 attempt, or $102.40 per run. Costs are reconciled against OpenRouter's
 per-generation records.

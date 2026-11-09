@@ -65,10 +65,10 @@ because an epoch changed. Service/game restart does not resume tasks from a jour
 
 ### Dedicated player sub-agent
 
-![Current player architecture, which replaced the first-slice arrangement described below: one player interprets pixels, a mechanical custodian sends basic input, and you retain Pause.](../diagrams/player.svg)
+![Current player architecture, which replaced the first-slice arrangement described below: one player interprets pixels, a mechanical custodian sends basic input, and you retain Pause.](https://github.com/CVX-Hull/enactive/blob/faa5256f6a215d0e0565233d5f9f485409a8df22/docs/diagrams/player.svg?raw=true)
 
 Solid arrows show responsibility and feedback, not independent model tiers.
-[Editable diagram](../diagrams/player.mmd). Current behavior is specified in the
+[Editable diagram](https://github.com/CVX-Hull/enactive/blob/faa5256f6a215d0e0565233d5f9f485409a8df22/docs/diagrams/player.mmd). Current behavior is specified in the
 [protocol](../protocol.md#integrated-mission-lifecycle).
 
 The integrated runtime uses one dedicated player sub-agent within the active

@@ -1,9 +1,8 @@
 ---
 owner: lead
-status: active
-date: 2026-11-08
-scope: 'Offline estimate of the prompt-cache and context cost of delivering curated knowledge as snapshot diffs on observation results (ADR 009 D2; #455)'
-review_trigger: A change to the actor's model, route or prices, to the host's context projection, or to how ADR 009 delivers snapshots
+status: historical
+date: '2026-11-08'
+scope: 'Dated offline measurement of the prompt-cache and context cost of delivering curated knowledge as snapshot diffs on observation results (ADR 009 D2; #455)'
 ---
 
 # Snapshot-diff cost (offline estimate)

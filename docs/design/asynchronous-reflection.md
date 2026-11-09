@@ -22,13 +22,13 @@ action. The [current component view](../components/memory-learning.md) and proto
 own the implemented advisory exchange. This page retains broader design proposals;
 it does not define another deployed contract or establish general learning benefit.
 
-![Proposed active-player and background-reflection design with one input writer.](../diagrams/asynchronous-reflection.svg)
+![Proposed active-player and background-reflection design with one input writer.](https://github.com/CVX-Hull/enactive/blob/458905f0616aa0045b3c4d0ca0ae8c3290116cca/docs/diagrams/asynchronous-reflection.svg?raw=true)
 
 Text equivalent: one active player sends skills or direct interaction through the
 existing writer to windowed CDDA. Canonical visible evidence feeds background
 reflection. Source-linked proposals return to the player at decision boundaries;
 only the active player requests input or commits accepted advisory-memory changes.
-User Pause remains independent. [Diagram source](../diagrams/asynchronous-reflection.mmd).
+User Pause remains independent. [Diagram source](https://github.com/CVX-Hull/enactive/blob/458905f0616aa0045b3c4d0ca0ae8c3290116cca/docs/diagrams/asynchronous-reflection.mmd).
 
 ## Fit with the existing system
 
@@ -51,12 +51,12 @@ Current architecture/protocol remain authoritative. This section refines the
 broader proposal below; remaining semantic prioritization/strategic reasoning and
 benefit claims are unqualified. It introduces no extra deployed role or run authorization.
 
-![Proposed decision horizons, one input writer and one optional learner.](../diagrams/multirate-player.svg)
+![Proposed decision horizons, one input writer and one optional learner.](https://github.com/CVX-Hull/enactive/blob/458905f0616aa0045b3c4d0ca0ae8c3290116cca/docs/diagrams/multirate-player.svg?raw=true)
 
 The diagram answers “Which work belongs on the next-action path?” Solid arrows
 carry current intent/feedback; dotted arrows carry fallible background work.
 Its text equivalent is the responsibility table below.
-[Editable diagram](../diagrams/multirate-player.mmd).
+[Editable diagram](https://github.com/CVX-Hull/enactive/blob/458905f0616aa0045b3c4d0ca0ae8c3290116cca/docs/diagrams/multirate-player.mmd).
 
 ### Responsibility before model count
 

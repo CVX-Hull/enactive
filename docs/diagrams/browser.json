@@ -1,5 +1,0 @@
-{
-  "headless": true,
-  "timeout": 20000,
-  "args": ["--disable-breakpad", "--disable-crash-reporter"]
-}
