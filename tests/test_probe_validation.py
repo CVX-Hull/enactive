@@ -1,6 +1,13 @@
 """The #490 recall check: the fixed candidate rule and the captured test, on synthetic hashes and labels."""
+import json
+from pathlib import Path
+import random
+import re
+import sqlite3
+
 import pytest
 
+from tools import p1_analysis
 from tools import probe_validation as validation
 
 FULL = (1 << 256) - 1
@@ -155,3 +162,506 @@ def test_the_tracked_figures_and_ledger_reproduce_from_their_inputs(tmp_path):
     finally:
         validation.ROOT = root
     assert result == json.loads((probes/'validation'/'recall.json').read_text())
+
+
+# ---------------------------------------------------------------------------------------------
+# #178: held-out candidates, confirmation batches, probes, ledgers and the freeze, on synthetic
+# sealed sessions. Frames are empty files; the image hash is patched to a table.
+
+RUNS = {'lh1': ('lh1a1', 'lh1a2'), 'lh2': ('lh2a1',), 'lh3': ('lh3a1',)}
+
+
+class World:
+    pass
+
+
+def build_session(study, run, actors, flags=None):
+    """A sealed session with one operation per frame, one actor directory per chunk; `flags` (source ->
+    changed 0/1) also seals an evaluation store."""
+    session = study/'computer-sessions'/run
+    (session/'sources').mkdir(parents=True)
+    db = sqlite3.connect(session/'session.sqlite3')
+    db.executescript('CREATE TABLE operations(id TEXT, actor TEXT, kind TEXT, input_json TEXT, created_wall REAL);'
+                     'CREATE TABLE native_intents(id TEXT, operation TEXT, source TEXT);'
+                     'CREATE TABLE collections(native_id TEXT, source TEXT);')
+    wall, steps = 0, []
+    for directory, sources in actors.items():
+        actor = f'actor-{run}-{directory}'
+        (session/'actors'/directory).mkdir(parents=True)
+        (session/'actors'/directory/'frozen.json').write_text(json.dumps({'actor_id': actor}))
+        (session/'actors'/directory/'prompt.txt').write_text('prompt')
+        for source in sources:
+            wall += 1
+            db.execute('INSERT INTO operations VALUES (?,?,?,?,?)',
+                       (f'op-{source}', actor, 'input', '[{"type":"key","key":"a"}]', wall))
+            db.execute('INSERT INTO native_intents VALUES (?,?,?)', (f'n-{source}', f'op-{source}', source))
+            (session/'sources'/f'{source}.png').write_bytes(b'x')
+            steps.append((wall, f'op-{source}', actor, 'input', wall, 1000 + wall, source, (flags or {}).get(source)))
+    db.commit()
+    db.close()
+    (session/'manifest.json').write_text(json.dumps({'session': f'sid-{run}'}))
+    if flags is not None:
+        store = study/'evaluations'/f'sid-{run}'/'2-cdda-2.sqlite3'
+        store.parent.mkdir(parents=True)
+        db = sqlite3.connect(store)
+        db.execute('CREATE TABLE steps(seq INTEGER, operation_id TEXT, actor TEXT, kind TEXT, decision INTEGER, '
+                   'game_time INTEGER, source_id TEXT, frame_changed INTEGER)')
+        db.executemany('INSERT INTO steps VALUES (?,?,?,?,?,?,?,?)', steps)
+        db.commit()
+        db.close()
+
+
+@pytest.fixture
+def world(tmp_path, monkeypatch):
+    w = World()
+    w.root, w.out, w.to = tmp_path/'evidence', tmp_path/'held-out', tmp_path/'timelines'
+    study = w.root/validation.HELD_OUT_STUDY
+    rng = random.Random(7)
+    w.hashes, w.frames = {}, {}
+
+    def chunk(run, directory, values):
+        sources = [f's-{run}-{len(w.hashes) + i}' for i in range(len(values))]
+        w.hashes.update(zip(sources, values))
+        w.frames[f'{run}-{directory}'] = sources
+        return sources
+    menu, field = 0, FULL
+    build_session(study, 'lh1a1', {'001': chunk('lh1a1', '001', [menu, field]),
+                                   '002': chunk('lh1a1', '002', [field, flip(menu, 5)])})
+    build_session(study, 'lh1a2', {'001': chunk('lh1a2', '001', [field, flip(menu, 3)])})
+    # lh2: 45 distinct earlier screens, each re-opened once in the second chunk (more than the old sample of 40).
+    earlier = [rng.getrandbits(256) for _ in range(45)]
+    build_session(study, 'lh2a1', {'001': chunk('lh2a1', '001', earlier),
+                                   '002': chunk('lh2a1', '002', [v for k, e in enumerate(earlier)
+                                                                  for v in (rng.getrandbits(256), flip(e, 3))])})
+    # lh3: one chunk, with sealed change flags.
+    values = [rng.getrandbits(256) for _ in range(8)]
+    sources = chunk('lh3a1', '001', values)
+    build_session(study, 'lh3a1', {'001': sources}, flags=dict(zip(sources, [1, 1, 0, 1, 0, 1, 1, 1])))
+    for lineage in RUNS:
+        db = sqlite3.connect(study/f'player-memory-{lineage}.sqlite3')
+        db.execute('CREATE TABLE records(id TEXT, kind TEXT, document TEXT, supersedes TEXT)')
+        db.commit()
+        db.close()
+    monkeypatch.setattr(validation, 'HELD_OUT_RUNS', RUNS)
+    monkeypatch.setattr(validation, 'load', lambda path: path)
+    monkeypatch.setattr(validation, 'dhash', lambda image, size: w.hashes[Path(image).stem])
+    w.secrets = list(w.hashes) + [str(tmp_path), 'SECRET']
+
+    w.judge = tmp_path/'judge'
+
+    def run(*step, judge=None):
+        extra = ['--judge-dir', str(judge or w.judge)] if step[0] == 'held-out-batches' else []
+        return validation.main([*step, '--evidence-root', str(w.root), '--out', str(w.out), *extra])
+    w.run = run
+    return w
+
+
+def quiet(capsys, w):
+    """Everything a held-out command printed is JSON of counts and digests: no frame id, path or judge text."""
+    out = capsys.readouterr().out
+    json.loads(out)
+    for secret in [*w.secrets, *(row['id'] for row in json.loads((w.out/'candidates.json').read_text())['candidates'])]:
+        assert secret not in out
+    return json.loads(out)
+
+
+def candidates_of(w):
+    return json.loads((w.out/'candidates.json').read_text())['candidates']
+
+
+def test_held_out_candidates_are_every_candidate_numbered_in_sort_order(world, capsys):
+    assert world.run('held-out-candidates') == 0
+    assert quiet(capsys, world) == {'lh1': dict(chunks=3, candidates=2), 'lh2': dict(chunks=2, candidates=45),
+                                    'lh3': dict(chunks=1, candidates=0)}
+    data = json.loads((world.out/'candidates.json').read_text())
+    assert data['schema'] == 'p1-held-out-candidates/1'
+    rows = data['candidates']
+    assert len(rows) == 47 > validation.SAMPLE['397']                 # nothing is sampled
+    for lineage in ('lh1', 'lh2'):
+        mine = [r for r in rows if r['lineage'] == lineage]
+        assert [r['id'] for r in mine] == [f'{lineage}-p{n:04d}' for n in range(1, len(mine) + 1)]
+        assert [(r['later_chunk'], r['later']) for r in mine] == sorted((r['later_chunk'], r['later']) for r in mine)
+    assert [r['id'] for r in rows] == sorted(r['id'] for r in rows)
+    assert {r['id'] for r in rows if r['lineage'] == 'lh3'} == set()
+
+
+def test_boundary_is_the_chunk_before_the_later_chunk_across_a_session_change_and_a_handoff(world):
+    world.run('held-out-candidates')
+    lh1 = {r['id']: r for r in candidates_of(world) if r['lineage'] == 'lh1'}
+    handoff, admission = lh1['lh1-p0001'], lh1['lh1-p0002']
+    assert (handoff['boundary'], handoff['earlier_chunk'], handoff['distance']) == (
+        'lh1a1-001>lh1a1-002', 'lh1a1-001', 5)
+    # The later chunk starts a new session; its earlier match is in the chunk before it, not the first one.
+    assert (admission['boundary'], admission['later_chunk'], admission['earlier_chunk'], admission['distance']) == (
+        'lh1a1-002>lh1a2-001', 'lh1a2-001', 'lh1a1-002', 2)
+    assert {r['boundary'] for r in candidates_of(world) if r['lineage'] == 'lh2'} == {'lh2a1-001>lh2a1-002'}
+
+
+def test_candidate_rows_carry_the_hash_the_paths_and_the_seeded_order(world):
+    world.run('held-out-candidates')
+    rows = candidates_of(world)
+    for row in rows:
+        assert re.fullmatch(r'[0-9a-f]{64}', row['earlier_dhash'])
+        assert int(row['earlier_dhash'], 16) == world.hashes[row['earlier']]
+        # Frame paths are relative to the evidence root: nothing tracked names the local home directory.
+        assert not Path(row['earlier_path']).is_absolute() and Path(row['earlier_path']).stem == row['earlier']
+        assert row['later_path'].startswith('372-382-dev-loop/computer-sessions/')
+        assert Path(row['later_path']).stem == row['later'] and (world.root/row['later_path']).is_file()
+        order = random.Random(f'490:{row["later"]}').random() < 0.5
+        assert row['shown'] == (['earlier', 'later'] if order else ['later', 'earlier'])
+    assert {tuple(r['shown']) for r in rows} == {('earlier', 'later'), ('later', 'earlier')}   # both orders occur
+    probes = [dict(r, confirmed=True, informative=True) for r in rows]
+    names = p1_analysis.clusters(probes)                               # parses earlier_dhash with int(x, 16)
+    assert set(names) == {r['id'] for r in rows}
+
+
+def test_held_out_candidates_are_computed_once(world):
+    world.run('held-out-candidates')
+    with pytest.raises(SystemExit, match='computed once'):
+        world.run('held-out-candidates')
+
+
+def expected_brief():
+    text = (validation.ROOT/'docs'/'design'/'p1-study.md').read_text()
+    paragraph = next(p for p in text.split('\n\n') if p.startswith('> **Confirmation.**'))
+    joined = ' '.join(line[1:].strip() for line in paragraph.splitlines())
+    assert joined.startswith('**Confirmation.** ')
+    return joined[len('**Confirmation.** '):]
+
+
+def test_the_confirmation_brief_is_read_verbatim_from_the_pre_registration():
+    brief = validation.confirmation_brief()
+    assert brief == expected_brief()
+    assert brief.startswith('You compare pairs of screenshots for a study.') and '**' not in brief
+    assert 'The file [batch] lists pairs' in brief               # the placeholder is kept for the launcher
+    assert brief.endswith('"informative":true|false,"what":"<one line>"}.')
+    assert 'Scoring' not in brief and '\n' not in brief
+
+
+def test_the_brief_is_refused_when_it_cannot_be_found(tmp_path):
+    doc = tmp_path/'p1-study.md'
+    doc.write_text('> **Scoring.** something\n')
+    with pytest.raises(SystemExit, match='not found'):
+        validation.confirmation_brief(doc)
+
+
+def test_batches_hold_at_most_fifteen_pairs_in_id_order_with_the_brief(world, capsys):
+    world.run('held-out-candidates')
+    capsys.readouterr()
+    assert world.run('held-out-batches') == 0
+    assert quiet(capsys, world) == dict(candidates=47, batches=4)
+    files = sorted((world.out/'batches').glob('confirm-*.json'))
+    assert [f.name for f in files] == [f'confirm-{n:03d}.json' for n in range(1, 5)]
+    rows = {r['id']: r for r in candidates_of(world)}
+    seen = []
+    for path in files:
+        batch = json.loads(path.read_text())
+        assert batch['schema'] == 'p1-held-out-batch/1' and batch['brief'] == expected_brief()
+        assert 0 < len(batch['pairs']) <= 15
+        for pair in batch['pairs']:
+            row = rows[pair['id']]
+            assert set(pair) == {'id', 'A', 'B'} and not Path(pair['A']).is_absolute()
+            assert [pair['A'], pair['B']] == [row[f'{side}_path'] for side in row['shown']]
+        seen += [p['id'] for p in batch['pairs']]
+        # The judge copy has the same brief, ids and pair order, with absolute paths that exist.
+        copy = json.loads((world.judge/path.name).read_text())
+        assert copy['brief'] == batch['brief'] and copy['schema'] == batch['schema']
+        assert [p['id'] for p in copy['pairs']] == [p['id'] for p in batch['pairs']]
+        for tracked, judge_pair in zip(batch['pairs'], copy['pairs']):
+            assert judge_pair['A'] == str(world.root.resolve()/tracked['A'])
+            assert judge_pair['B'] == str(world.root.resolve()/tracked['B'])
+            assert Path(judge_pair['A']).is_file() and Path(judge_pair['B']).is_file()
+    assert seen == sorted(rows) and len(seen) == 47
+    assert len(list(world.judge.glob('confirm-*.json'))) == 4
+    with pytest.raises(SystemExit, match='written once'):
+        world.run('held-out-batches')
+
+
+@pytest.mark.parametrize('place', ['data/evaluation/p1/held-out/judge', 'tools/judge', 'judge'])
+def test_the_judge_directory_may_not_be_inside_the_tracked_tree(world, place):
+    world.run('held-out-candidates')
+    with pytest.raises(SystemExit, match='outside the repository or under .runtime'):
+        world.run('held-out-batches', judge=validation.ROOT/place)
+    assert not (validation.ROOT/place).exists() and not list((world.out/'batches').glob('*'))
+
+
+def test_the_judge_directory_may_be_under_runtime(world):
+    world.run('held-out-candidates')
+    assert validation._check_judge_dir(validation.ROOT/'.runtime'/'judge') == (validation.ROOT/'.runtime'/'judge').resolve()
+    assert validation._check_judge_dir(world.judge) == world.judge.resolve()
+
+
+def test_held_out_batches_needs_a_judge_directory(world):
+    world.run('held-out-candidates')
+    with pytest.raises(SystemExit):
+        validation.main(['held-out-batches', '--evidence-root', str(world.root), '--out', str(world.out)])
+
+
+def test_batches_need_the_candidates(world):
+    with pytest.raises(SystemExit, match='held-out-candidates'):
+        world.run('held-out-batches')
+
+
+def judge(w, same=lambda n: n % 3 != 0, informative=lambda n: n % 2 == 0):
+    """Write a judgment file per batch, in batch order."""
+    (w.out/'judgments').mkdir(exist_ok=True)
+    count = 0
+    for path in sorted((w.out/'batches').glob('confirm-*.json')):
+        lines = []
+        for pair in json.loads(path.read_text())['pairs']:
+            count += 1
+            lines.append(json.dumps(dict(id=pair['id'], same=same(count), informative=informative(count),
+                                         what=f'SECRET text for {pair["id"]}')))
+        (w.out/'judgments'/f'{path.stem}.jsonl').write_text('\n'.join(lines) + '\n')
+
+
+@pytest.fixture
+def judged(world):
+    world.run('held-out-candidates')
+    world.run('held-out-batches')
+    judge(world)
+    return world
+
+
+def test_probes_are_one_p1_row_per_candidate_and_primary_probes_accepts_them(judged, capsys):
+    capsys.readouterr()
+    assert judged.run('held-out-probes') == 0
+    figures = quiet(capsys, judged)
+    rows = [json.loads(line) for line in (judged.out/'probes.jsonl').read_text().splitlines()]
+    assert [r['id'] for r in rows] == [c['id'] for c in candidates_of(judged)]
+    cands = {c['id']: c for c in candidates_of(judged)}
+    for n, row in enumerate(rows, 1):
+        assert set(row) == {'schema', 'id', 'lineage', 'boundary', 'later', 'earlier', 'earlier_dhash', 'confirmed',
+                            'informative', 'what'}
+        assert row['schema'] == 'p1-probes/1' and row['what'] == f'SECRET text for {row["id"]}'
+        assert row['confirmed'] is (n % 3 != 0)
+        assert row['informative'] is (row['confirmed'] and n % 2 == 0)
+        assert row['boundary'] == cands[row['id']]['boundary'] and row['earlier_dhash'] == cands[row['id']]['earlier_dhash']
+    primary = p1_analysis.primary_probes(rows)
+    assert len(primary) == sum(r['informative'] for r in rows) > 0
+    units = p1_analysis.units(primary)
+    assert figures['units'] == len(units)
+    assert figures['clusters'] == len({(u['lineage'], u['cluster']) for u in units})
+    assert figures['cluster_sizes'] == p1_analysis.cluster_sizes(units)
+    assert figures['lineages']['lh1'] == dict(candidates=2, confirmed=sum(r['confirmed'] for r in rows[:2]),
+                                              primary=sum(r['informative'] for r in rows[:2]),
+                                              units=sum(u['lineage'] == 'lh1' for u in units))
+    assert figures['lineages']['lh3'] == dict(candidates=0, confirmed=0, primary=0, units=0)
+    assert figures['probes_sha256'] == validation.file_sha256(judged.out/'probes.jsonl')
+
+
+def edit(w, name, change):
+    path = w.out/'judgments'/name
+    lines = path.read_text().splitlines()
+    result = change(lines)
+    path.write_text('\n'.join(result) + '\n')
+
+
+@pytest.mark.parametrize('change, message', [
+    (lambda lines: lines[1:], 'missing ids'),
+    (lambda lines: [*lines, lines[0]], 'duplicated id'),
+    (lambda lines: [lines[0], lines[0], *lines[2:]], 'duplicated id'),
+    (lambda lines: [json.dumps(dict(json.loads(lines[0]), id='lh9-p0001')), *lines[1:]], 'unknown id'),
+    (lambda lines: [json.dumps(dict(json.loads(lines[0]), same='yes')), *lines[1:]], 'booleans'),
+    (lambda lines: [json.dumps(dict(json.loads(lines[0]), informative=None)), *lines[1:]], 'booleans'),
+    (lambda lines: [json.dumps({k: v for k, v in json.loads(lines[0]).items() if k != 'same'}), *lines[1:]], 'booleans'),
+    (lambda lines: [json.dumps(dict(json.loads(lines[0]), what=3)), *lines[1:]], 'what'),
+    (lambda lines: [lines[1], lines[0], *lines[2:]], 'batch order'),
+    (lambda lines: [*lines[:-1], 'not json'], 'not JSON'),
+])
+def test_probe_rows_are_refused_when_a_judgment_is_wrong(judged, change, message):
+    edit(judged, 'confirm-001.jsonl', change)
+    with pytest.raises(SystemExit, match=message):
+        judged.run('held-out-probes')
+
+
+def test_an_id_from_another_batch_is_unknown_to_this_one(judged):
+    other = json.loads((judged.out/'judgments'/'confirm-002.jsonl').read_text().splitlines()[0])
+    edit(judged, 'confirm-001.jsonl', lambda lines: [json.dumps(other), *lines[1:]])
+    with pytest.raises(SystemExit, match='unknown id'):
+        judged.run('held-out-probes')
+
+
+def test_a_batch_without_output_and_output_without_a_batch_are_refused(judged):
+    (judged.out/'judgments'/'confirm-004.jsonl').rename(judged.out/'judgments'/'confirm-009.jsonl')
+    with pytest.raises(SystemExit, match='confirm-004: the batch has no judgments'):
+        judged.run('held-out-probes')
+    (judged.out/'judgments'/'confirm-009.jsonl').rename(judged.out/'judgments'/'confirm-004.jsonl')
+    (judged.out/'judgments'/'confirm-009.jsonl').write_text('')
+    with pytest.raises(SystemExit, match='without a batch'):
+        judged.run('held-out-probes')
+
+
+def test_timelines_and_the_ledger_plan(judged, capsys):
+    capsys.readouterr()
+    assert judged.run('held-out-timelines', '--to', str(judged.to)) == 0
+    assert quiet(capsys, judged) == {
+        'lh1': dict(annotate=3, queries=2, required_frames=judged_required(judged, 'lh1')),
+        'lh2': dict(annotate=2, queries=1, required_frames=judged_required(judged, 'lh2')),
+        'lh3': dict(annotate=1, queries=0, required_frames=judged_required(judged, 'lh3'))}
+    plan = json.loads((judged.out/'ledger-plan.json').read_text())
+    assert plan['schema'] == 'p1-held-out-ledger-plan/1'
+    lh1 = plan['lineages']['lh1']
+    assert lh1['annotate'] == ['lh1a1-001', 'lh1a1-002', 'lh1a2-001']
+    assert lh1['queries'] == ['lh1a1-001', 'lh1a1-002']                # every chunk before a boundary
+    assert [c['incoming_boundary'] for c in lh1['chunks']] == [None, 'lh1a1-001>lh1a1-002', 'lh1a1-002>lh1a2-001']
+    # A timeline is named by file name, relative to the --to directory.
+    assert all(c['timeline'] == f'{c["chunk"]}.md' and (judged.to/c['timeline']).is_file()
+               for v in plan['lineages'].values() for c in v['chunks'])
+    assert plan['lineages']['lh3']['queries'] == []
+    # lh1 and lh2 have no change flags: every third frame, plus the last five operations.
+    lh2 = {c['chunk']: c for c in plan['lineages']['lh2']['chunks']}
+    frames = judged.frames['lh2a1-002']
+    assert lh2['lh2a1-002']['required_frames'] == list(dict.fromkeys(frames[::3] + frames[-5:]))
+    # lh3's sealed flags are [1, 1, 0, 1, 0, 1, 1, 1]: the changed frames are 0, 1, 3, 5, 6, 7.
+    g = judged.frames['lh3a1-001']
+    assert plan['lineages']['lh3']['chunks'][0]['required_frames'] == [g[0], g[5], g[3], g[4], g[6], g[7]]
+    # The timeline files themselves hold content and are not printed.
+    assert (judged.to/'lh1a1-001.md').read_text().startswith('# lh1a1 actor 001')
+
+
+def judged_required(w, lineage):
+    first = {'lh1': ['lh1a1-001', 'lh1a1-002', 'lh1a2-001'], 'lh2': ['lh2a1-001', 'lh2a1-002'],
+             'lh3': ['lh3a1-001']}[lineage]
+    total = 0
+    for name in first:
+        frames = w.frames[name]
+        if name == 'lh3a1-001':
+            total += len(dict.fromkeys([frames[0], frames[5], *frames[3:]]))
+        else:
+            total += len(dict.fromkeys(frames[::3] + frames[-5:]))
+    return total
+
+
+def test_required_frames_follow_the_coverage_rule():
+    def timeline(rows):
+        table = ''.join(f'| {i} | {i} | +0:00:0{i} | key | {flag} | /x/{src}.png |\n' if src else
+                        f'| {i} | {i} | +0:00:0{i} | key | {flag} |  |\n' for i, (flag, src) in enumerate(rows, 1))
+        return (f'# t\n\n## What this actor received\n\n```\n| 1 | fake | row | key | yes | /x/bogus.png |\n```\n\n'
+                f'## Operations\n\n| seq | decision |\n| ---: | ---: |\n{table}\n## Memory records this actor wrote\n')
+    flagged = [('yes', 'a'), ('no', 'b'), ('yes', 'c'), ('yes', 'd'), ('no', 'e'), ('yes', 'f'), ('yes', 'g'),
+               ('yes', 'h'), ('no', None), ('yes', 'i')]
+    # Changed frames: a c d f g h i, so every third from the first is a, f, i. The last five operations
+    # are f, g, h, one with no frame, and i. A row inside the prompt block is not an operation.
+    assert validation.required_frames(timeline(flagged)) == ['a', 'f', 'i', 'g', 'h']
+    unflagged = [('', c) for c in 'abcdefgh']                        # no change flags: every third frame
+    assert validation.required_frames(timeline(unflagged)) == ['a', 'd', 'g', 'e', 'f', 'h']
+    with pytest.raises(SystemExit, match='Operations'):
+        validation.required_frames('# nothing')
+
+
+def annotate(w):
+    """Valid annotation and query files for every chunk the plan names."""
+    plan = json.loads((w.out/'ledger-plan.json').read_text())
+    for lineage, value in plan['lineages'].items():
+        (w.out/'ledgers'/lineage).mkdir(parents=True, exist_ok=True)
+        (w.out/'queries'/lineage).mkdir(parents=True, exist_ok=True)
+        for index, chunk in enumerate(value['chunks']):
+            viewed = len(chunk['required_frames'])
+            lines = [dict(type='fact', id='F1', statement='s', category='place', observed='text', stored=None)] \
+                if index == 0 else [dict(type='carry', fact='F1', boundary=chunk['incoming_boundary'],
+                                         carried=False, where=None)]
+            (w.out/'ledgers'/lineage/f'{chunk["chunk"]}.jsonl').write_text(
+                '\n'.join(json.dumps(line) for line in [*lines, dict(type='end', frames_viewed=viewed)]) + '\n')
+            if chunk['chunk'] in value['queries']:
+                query = dict(type='query', id='Q1', question='q', answer='a', frame='f-1', category='place')
+                (w.out/'queries'/lineage/f'{chunk["chunk"]}.jsonl').write_text(
+                    '\n'.join(json.dumps(line) for line in [query, dict(type='end', frames_viewed=viewed)]) + '\n')
+
+
+@pytest.fixture
+def ready(judged, capsys):
+    judged.run('held-out-probes')
+    judged.run('held-out-timelines', '--to', str(judged.to))
+    annotate(judged)
+    capsys.readouterr()
+    return judged
+
+
+def test_freeze_digests_every_file_and_prints_only_counts(ready, capsys):
+    assert ready.run('held-out-freeze', '--frozen', '2026-11-10') == 0
+    figures = quiet(capsys, ready)
+    frozen = json.loads((ready.out/'frozen.json').read_text())
+    assert frozen['schema'] == 'p1-held-out-frozen/1' and frozen['frozen'] == '2026-11-10'
+    files = frozen['files']
+    assert {k for k in files if k.startswith('batches/')} == {f'batches/confirm-{n:03d}.json' for n in range(1, 5)}
+    assert {k for k in files if k.startswith('judgments/')} == {f'judgments/confirm-{n:03d}.jsonl' for n in range(1, 5)}
+    assert {k for k in files if not k.startswith(('batches/', 'judgments/', 'ledgers/', 'queries/'))} == {
+        'candidates.json', 'ledger-plan.json', 'probes.jsonl'}
+    assert sum(k.startswith('ledgers/') for k in files) == 6 and sum(k.startswith('queries/') for k in files) == 3
+    for name, digest in files.items():
+        assert validation.file_sha256(ready.out/name) == digest
+    assert figures == dict(frozen_sha256=validation.file_sha256(ready.out/'frozen.json'), files=len(files),
+                           batches=4, ledgers=6, queries=3)
+    with pytest.raises(SystemExit, match='frozen once'):
+        ready.run('held-out-freeze')
+
+
+def test_no_file_under_the_output_root_names_a_local_path(ready):
+    ready.run('held-out-freeze')
+    files = [p for p in ready.out.rglob('*') if p.is_file()]
+    assert len(files) > 20
+    forbidden = {str(ready.root), str(ready.root.resolve()), str(ready.out.parent), str(ready.out.parent.resolve()),
+                 str(Path.home()), str(ready.to)}
+    for path in files:
+        text = path.read_text(encoding='utf-8')
+        assert not any(bad in text for bad in forbidden), path.name
+        assert not re.search(r'"/(Users|home|private|var|tmp)/', text), path.name
+    # The judge copies, which do hold absolute paths, are the only files that name the evidence root.
+    assert str(ready.root.resolve()) in (ready.judge/'confirm-001.json').read_text()
+    assert ready.judge.resolve() not in [p.resolve() for p in ready.out.rglob('*')]
+
+
+def drop(path):
+    return lambda w: (w.out/path).unlink()
+
+
+def rewrite(path, change):
+    def apply(w):
+        file = w.out/path
+        file.write_text('\n'.join(change(file.read_text().splitlines())) + '\n')
+    return apply
+
+
+@pytest.mark.parametrize('damage, message', [
+    (drop('ledgers/lh1/lh1a1-002.jsonl'), 'ledgers: 1 missing'),
+    (drop('queries/lh1/lh1a1-001.jsonl'), 'queries: 1 missing'),
+    (lambda w: (w.out/'queries'/'lh3'/'lh3a1-001.jsonl').write_text('{"type":"end","frames_viewed":9}\n'),
+     'queries: 0 missing, 1 unexpected'),                                           # the last chunk precedes no boundary
+    (lambda w: (w.out/'ledgers'/'lh3'/'extra.jsonl').write_text('{}\n'), 'unexpected'),
+    (drop('ledger-plan.json'), 'Missing ledger-plan.json'),
+    (drop('probes.jsonl'), 'Missing probes.jsonl'),
+    (drop('judgments/confirm-002.jsonl'), 'confirm-002: the batch has no judgments'),
+    (rewrite('probes.jsonl', lambda lines: lines[1:]), 'does not match the batches'),
+    (rewrite('ledgers/lh1/lh1a1-002.jsonl', lambda lines: lines[-1:]), 'without a carry line'),
+    (rewrite('ledgers/lh1/lh1a1-002.jsonl', lambda lines: lines[:-1]), 'missing end line'),
+    (rewrite('ledgers/lh1/lh1a1-001.jsonl', lambda lines: [*lines[:-1], '{"type":"end"}']), 'frames_viewed is below'),
+    (rewrite('ledgers/lh1/lh1a1-001.jsonl', lambda lines: [*lines[:-1], '{"type":"end","frames_viewed":0}']),
+     'frames_viewed is below'),
+    (rewrite('queries/lh1/lh1a1-001.jsonl', lambda lines: lines[:-1]), 'must end with frames_viewed'),
+    (rewrite('queries/lh1/lh1a1-001.jsonl', lambda lines: [lines[0], lines[0], lines[1]]), 'unique id'),
+    (rewrite('queries/lh1/lh1a1-001.jsonl', lambda lines: [lines[0].replace('"answer": "a"', '"answer": ""')
+                                                          .replace('"answer":"a"', '"answer":""'), lines[1]]), 'unique id'),
+    (rewrite('queries/lh1/lh1a1-001.jsonl', lambda lines: [lines[0]] * 41 + [lines[1]]), 'more than 40'),
+])
+def test_freeze_refuses_incompleteness(ready, damage, message):
+    damage(ready)
+    with pytest.raises(SystemExit, match=message):
+        ready.run('held-out-freeze')
+    assert not (ready.out/'frozen.json').exists()
+
+
+def test_freeze_refuses_a_plan_for_other_chunks(ready):
+    plan = json.loads((ready.out/'ledger-plan.json').read_text())
+    plan['lineages']['lh3']['chunks'][0]['chunk'] = 'lh3a1-009'
+    (ready.out/'ledger-plan.json').write_text(json.dumps(plan))
+    with pytest.raises(SystemExit, match='different chunks'):
+        ready.run('held-out-freeze')
+
+
+def test_the_existing_development_commands_still_take_their_old_default_output(monkeypatch, tmp_path, capsys):
+    seen = {}
+    monkeypatch.setattr(validation, 'candidates', lambda evidence, out: seen.update(out=out) or {'lineages': {}})
+    assert validation.main(['candidates', '--evidence-root', str(tmp_path)]) == 0
+    assert seen['out'] == validation.ROOT/'data'/'evaluation'/'probes'/'validation'
+    assert validation.HELD_OUT_DIR == validation.ROOT/'data'/'evaluation'/'p1'/'held-out'
