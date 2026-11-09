@@ -8,7 +8,7 @@
   python -m tools.probe_validation held-out-timelines --to DIR [--evidence-root DIR] [--out ...]
   python -m tools.probe_validation held-out-freeze [--out ...] [--frozen YYYY-MM-DD]
 
-The `held-out-*` steps build #178's held-out probes and ledgers (docs/design/p1-study.md, "Held-out
+The `held-out-*` steps build #178's held-out probes and ledgers (docs/design/p1-study-2.md, "Held-out
 handling"). They print only counts, digests and cluster-size tables, never a frame id, a judge's
 text, a timeline, a fact or a query; the files they write may hold content.
 
@@ -48,7 +48,7 @@ SEED = 490
 STUDIES = {'397': '397-seven-day', '372': '372-382-dev-loop'}
 HELD_OUT = ('lh1', 'lh2', 'lh3')
 
-# #178's held-out probes (docs/design/p1-study.md). Each lineage is one group across its sessions.
+# #178's held-out probes (docs/design/p1-study-2.md). Each lineage is one group across its sessions.
 HELD_OUT_RUNS = p1_analysis.HELD_OUT      # lineage -> its sessions, in order
 HELD_OUT_STUDY = '372-382-dev-loop'
 HELD_OUT_DIR = ROOT/'data'/'evaluation'/'p1'/'held-out'

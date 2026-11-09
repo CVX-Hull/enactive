@@ -99,9 +99,11 @@ package, or **a lineage that ends before 12 boundaries**.
 custody stops, outcome codes, boundary and actor counts, the evaluator's aggregate metrics in the
 run ledger, and the run monitor's parsed answers. Nothing else from lh4.
 
+**#382's D4 check between admissions** (looping, a spend overrun, custody hits) stays with the lead,
+from aggregates only: the evaluator's longest stall, spend against the forecast, custody stops.
+
 **The run monitor.** Every check #397's lead made from frames (a setup restart, continuity at each
-boundary, a death, its D4 pause review) is made instead by a fresh development agent per
-admission, pinned as the judges are, that writes probes for no study and develops no arm. It
+boundary, a death) is made instead by a fresh development agent per admission, pinned as the judges are, that writes probes for no study and develops no arm. It
 writes its answer to a named file and replies only "done". An operator script checks the file
 against the schema and prints only the parsed fields. The operator tool refuses admission N+1
 unless admission N's answer has `continues` true (or null for admission 1), `dead` false and
@@ -118,7 +120,7 @@ unless admission N's answer has `continues` true (or null for admission 1), `dea
 > in a window: an error dialog, a system screen, a full-screen game, or a debug, cheat or editor
 > screen? Do not describe the game or what the character does. Write exactly one JSON line to
 > [answer] and reply only "done":
-> {"continues":true|false|null,"setup_restart":true|false,"dead":true|false,"fault":true|false,"frame":"<source id or null>"}.
+> {"continues":true|false|null,"setup_restart":true|false,"dead":true|false,"fault":true|false,"frames":{"continues":"<source id or null>","setup_restart":"<source id or null>","dead":"<source id or null>","fault":"<source id or null>"}}.
 
 **Waived for lh4 until scoring, and recorded:** #397's day checks (P1 makes no survival claim),
 the lead's per-admission review records, and campaign-admission's finding tables, which cite
@@ -132,8 +134,10 @@ evidence. The record names no game content.
 **(p1-study/2)** In this order, after #522 ends:
 
 1. **The lineage map ($0, one PR under #178), before anything else reads lh4:**
-   - `HELD_OUT` and `HELD_OUT_BOUNDARIES` in `tools/p1_analysis.py` gain `lh4` with its actual
-     admission names and boundary count; p1-study/1's planning keeps `STUDY_1_HELD_OUT`;
+   - `HELD_OUT` in `tools/p1_analysis.py` and the development-refusal tuple in
+     `tools/probe_validation.py` gain `lh4` with its actual admission names. p1-study/1's planning
+     keeps `STUDY_1_HELD_OUT`, and this page's plan keeps `STUDY_1_BOUNDARIES` and its single
+     `--probes` file (#382's), so neither changes;
    - `simulate`, `units`, `rejudge` and `score` take `--probes` once per held-out directory,
      refuse a file whose sha256 differs from its directory's `frozen.json`, and record each file's
      digest in their output; the gate writes to an explicit
@@ -380,7 +384,10 @@ The plan is `python -m tools.p1_analysis plan --probes data/evaluation/p1/held-o
 - **lh4's clustering:** each unit repeats a cluster of an earlier lh4 boundary with probability
   1 − 1/(cluster mean), else is new; the first unit is always new.
 
-Everything else is as p1-study/1's simulation. 2,000 simulations per figure (standard error at most
+Everything else is p1-study/1's simulation: a cluster's delivery rate drawn from #397's
+needed-fact carry rates (#449); a lineage shift with SD 0.10; effect heterogeneity between lineages
+with SD 0.05; variation between B's repeats with SD 0.05; 5% judge error per label; no judge bias;
+the guards and re-judging not simulated. 2,000 simulations per figure (standard error at most
 0.011), each variant with its own seeded stream.
 
 | lh4 boundaries | Cluster mean | P(lh4 under 20 units) | 0 | 0.10 | 0.15 | 0.20 | 0.25 | 0.30 |
@@ -421,13 +428,13 @@ amounts do not move between stages without the owner.
 | --- | --- | ---: | --- |
 | **(p1-study/2)** 0. lh4 | #522 | $80 envelope | The new held-out lineage, then its integration, probes and the gate |
 | 1. Pilot | #372 `aidB3`, `ceil09` (development) | $12 | Per-admission scheduling, the snapshot builder and renderer, cached share and cost per session |
-| 2. Development | #397 `sd1a1`–`sd1a7` | $26 | Debug both arms end to end; descriptive scores against the #490 ledgers; the arm-guessing check; the format check; then freeze the arms |
+| 2. Development | #397 `sd1a1`–`sd1a7` | $26 | Debug both arms end to end; descriptive scores against the #490 ledgers; the arm-guessing check; **(p1-study/2)** the format check; then freeze the arms |
 | 3. Held-out B, repeat 1 | `lh1`–`lh4` | **(p1-study/2)** 1.0× the actor's spend on lh1–lh4: $30.46 plus lh4's actual, fixed when #522 ends | Primary data |
 | 4. Held-out B, repeat 2 | `lh1`–`lh4` | The same | Primary data |
 | Reserve | | $20 | Only to re-run a session lost to an infrastructure failure, once, unchanged, and recorded |
 
-The caps sum to $198.92 plus twice lh4's actual spend: about $299 if lh4 spends $50, and $359 if
-it spends its whole envelope.
+**(p1-study/2)** p1-study/1's "Total $120" row is replaced by this: the caps sum to $198.92 plus
+twice lh4's actual spend, about $299 if lh4 spends $50 and $359 if it spends its whole envelope.
 
 **Stop rules.**
 - **Isolation incident.** Any incident (a sandbox escape, key exposure, a proxy breach or a
@@ -454,18 +461,18 @@ probes, the run monitor, the judges, the auditors and the guesser.
 
 | Item | Basis | Estimate |
 | --- | --- | ---: |
-| lh4 | 6–9 admissions at #382/#397's $5–7 (#382 averaged 1.4 boundaries per admission, #397 1.9) | $30–63 |
+| lh4 | 12 boundaries are 13 chunks: about 7 admissions at #382's 1.86 chunks per admission (#397: 2.0), so 6–8 at $5–7 | $30–56 |
 | Pilot and development | p1-study/1's: #454 terra sessions | $33–36 |
-| Each held-out repeat | 0.61–0.87× the actor's $60–93 on lh1–lh4 (#454) | $37–81 |
-| **Expected total** | | **$137–261** |
+| Each held-out repeat | 0.61–0.87× the actor's $60–87 on lh1–lh4 (#454) | $37–75 |
+| **Expected total** | | **$137–242** |
 
 Development-agent tokens: lh4's probes and ledgers about 3–4M (lh1–lh3's 3.37M for 13 chunks); the
 run monitor under 0.3M; scoring, re-judging, audit and the guess check about 4M.
 
 ## Analysis and reporting
 
-`python -m tools.p1_analysis score --probes <held-out probes> --probes <lh4 probes> --scores <rows>
---hours <hours>` writes `data/evaluation/p1/result.json` (`p1-result/1`).
+`python -m tools.p1_analysis score --probes <held-out probes> --probes <lh4 probes>` **(p1-study/2:
+the second file)** `--scores <rows> --hours <hours>` writes `data/evaluation/p1/result.json` (`p1-result/1`).
 - **Refusals.** It refuses when:
   - a unit is unjudged for some arm or repeat;
   - a label is duplicated;
@@ -512,13 +519,18 @@ Put to the owner with this page:
   whether the actor would have used it.
 - **Visual re-observations only.** Information re-learned through a different screen is not a
   probe.
-- **Four lineages.** The result is descriptive, and the cluster bootstrap understates the
-  uncertainty that comes from having only four lineages. The study detects only large effects
-  (see [Power](#power)).
-- **No emissions.** The held-out lineages predate actor emissions (D10), so the curator lacks the
-  attention signals it would have live.
-- **Assumed rates.** The plan's delivery rates and lh4's clustering are assumptions. The re-run
-  gate replaces the second before replay.
+- **Four lineages (p1-study/2: was three).** The result is descriptive, and the cluster bootstrap
+  understates the uncertainty that comes from having only four lineages. The study detects only
+  large effects (see [Power](#power)).
+- **No emissions.** **(p1-study/2: all four)** held-out lineages predate actor emissions (D10), so
+  the curator lacks the attention signals it would have live.
+- **Assumed rates.** **(p1-study/2: the plan's)** delivery rates and lh4's clustering are
+  assumptions. The re-run gate replaces the second before replay.
+- **(p1-study/2) The lead's prior exposure to lh1–lh3.** The lead operated #382 live on 7 November,
+  before it was held out, and wrote its per-admission review comments on #382. On 9 November,
+  searching #382 for its D4 rule while drafting this page, the lead re-read four of those D4
+  summaries from lh1–lh2 (menu stalls and their length). Neither is probe or ledger content, and
+  the frozen probes were written by blinded agents, but the lead is not naive to those lineages.
 - **(p1-study/2) Two player versions.** lh4's player differs from lh1–lh3's: `player_handoff` is
   always listed, the host warns before it must stop the actor, and notes keep their first-sent
   place (#496). Lineage-level variation is modelled; a systematic change in where handoffs fall is

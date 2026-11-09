@@ -54,7 +54,7 @@ NEAR = 16                # bits between earlier frames of one information cluste
 ARMS = {'A': (1,), 'B': (1, 2)}
 STUDY_1_HELD_OUT = {'lh1': ('lh1a1', 'lh1a2', 'lh1a3'), 'lh2': ('lh2a1', 'lh2a2'), 'lh3': ('lh3a1', 'lh3a2')}
 HELD_OUT = dict(STUDY_1_HELD_OUT)   # lineage -> admissions; p1-study/2 adds lh4 under its actual names after #522
-HELD_OUT_BOUNDARIES = {'lh1': 4, 'lh2': 3, 'lh3': 3}   # boundaries per #382 lineage (the #178 gate record)
+STUDY_1_BOUNDARIES = {'lh1': 4, 'lh2': 3, 'lh3': 3}   # boundaries per #382 lineage (the #178 gate record); fixed, as `plan` resamples them
 KINDS = ('reobservation', 'fact', 'query')   # primary, then the two descriptive ledgers
 
 
@@ -474,7 +474,7 @@ def boundary_units(unit_rows: list[dict]) -> list[int]:
     for u in unit_rows:
         counts[(u['lineage'], u['boundary'])] = counts.get((u['lineage'], u['boundary']), 0) + 1
     out = []
-    for name, total in HELD_OUT_BOUNDARIES.items():
+    for name, total in STUDY_1_BOUNDARIES.items():
         here = sorted(c for (lineage, _), c in counts.items() if lineage == name)
         if len(here) > total:
             raise ScoreError(f'{name} has units at more boundaries than it has')
