@@ -56,7 +56,7 @@ not instructions. These controls are in S-AGENT/S-CODE/S-EVIDENCE and do not dep
 on assuming a particular model's historical benchmark performance remains current.
 
 Implementation scope and alternatives: [brief 001](changes/001-engineering-system.md).
-The control map is generated from its registry; checks test selected violations.
+The controls page is written by hand; checks test selected violations.
 A readable overview and an existing file cannot mechanically prove comprehension
 or procedural accuracy. Those require a real walkthrough and reviewer judgment.
 
@@ -87,8 +87,8 @@ inputs, not experimental evidence that our new process improves productivity.
 | [Mermaid CLI release](https://github.com/mermaid-js/mermaid-cli/releases/tag/12.0.0), release notes and installed package | Browser-backed rendering, embedded fonts and explicit runtime requirements | Pin packages/browser; inspect SVGs and detect stale inputs/artifacts; parser success cannot establish useful meaning |
 | [Python Frontmatter](https://python-frontmatter.readthedocs.io/en/latest/), usage/API | Structured metadata can be parsed with an established library | Use YAML and JSON Schema, leaving project-specific status and reference rules bounded |
 
-Control lifecycle states, the latest-record/history split and the 90-day bound are
-our proportional design choices. No source establishes them as universally optimal.
+Reviewing a control when it fails, is bypassed or costs more than expected, rather than
+on a calendar, is our proportional design choice. No source establishes them as universally optimal.
 Maintenance findings must distinguish a successful negative fixture, a reviewer
 walkthrough and long-term operational effectiveness. The latter remains unmeasured.
 [ADR 004](decisions/004-documentation-controls.md) records tooling costs, alternatives,
@@ -225,7 +225,7 @@ those obligations. Keep human-readable project/component summaries above technic
 selectors. `C-PORTABLE` executes a lane; it is too coarse to represent every
 property a selected suite must verify. Do not create one new control per test.
 
-The pilot should reuse component explanations, the existing registry, GitHub
+The pilot should reuse component explanations, the controls page, GitHub
 work and registered pytest metadata or a single explicit selection manifest.
 Keep one authoritative home for each relationship. Mature
 [pytest markers](https://docs.pytest.org/en/stable/how-to/mark.html),

@@ -12,7 +12,7 @@ import time
 import unittest
 from unittest.mock import patch
 
-from tools import check
+from tools import check, ci
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -117,6 +117,13 @@ class DevToolTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("F821", result.stdout)
         self.assertIn("unknown_value", result.stdout)
+        # The checker relies on Ruff for parse errors (it has no separate compile step).
+        self.write("computer/runtime.py", "def broken(:\n")
+        result = subprocess.run(
+            [sys.executable, "-m", "ruff", "check", "--config", "pyproject.toml",
+             "--no-cache", "harness"], cwd=self.root, capture_output=True, text=True, timeout=30)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("runtime.py", result.stdout)
 
     def test_markdown_reference_links_and_images_are_checked(self):
         for name in check.REQUIRED_DOCS:
@@ -150,38 +157,28 @@ class DevToolTests(unittest.TestCase):
             result = check.main(arguments)
         return result, executed, output.getvalue()
 
-    def test_profiles_keep_exact_test_scope_and_strict_common_checks(self):
-        smoke_cases = ["tests/test_computer_protocol.py", "tests/test_computer_runtime.py",
-                       "tests/test_player_application.py", "tests/test_server.py"]
-        components = {"viewer": ["tests/test_cli.py", *smoke_cases]}
+    def test_each_profile_runs_its_scope_and_reports_only_what_ran(self):
+        # Which lanes each profile runs; the exact commands are the checker's and the manifest's own.
         structural = {"fast", "main"}
+        components = set(ci.COMPONENT_TESTS)
         for arguments, profile in ((["--fast"], "fast"), ([], "full"),
                 *((["--profile", name], name) for name in ("full", "editorial", "main", *components))):
             with self.subTest(arguments=arguments):
                 result, executed, output = self.checker_commands(arguments)
                 self.assertEqual(result, 0)
-                commands = [command for command in executed if "pytest" in command]
-                if profile not in structural | {"editorial"}:
-                    targets = ["tests"] if profile == "full" else components[profile]
-                    self.assertEqual(commands, [[sys.executable, "-m", "pytest", "-q", "-n", "4", "--dist",
-                        "worksteal" if profile == "full" else "loadfile",
-                        "--max-worker-restart=0", "--durations=20", *targets]])
+                ran = lambda text: any(text in " ".join(command) for command in executed)  # noqa: E731
+                tests = [command for command in executed if "pytest" in command]
+                if profile in structural | {"editorial"}:
+                    self.assertEqual(tests, [])
                 else:
-                    self.assertEqual(commands, [])
-                self.assertEqual(any("tools/diagrams.py" in command for command in executed),
-                                 profile not in structural)
-                self.assertEqual(any("tests/test_viewer.cjs" in command for command in executed),
-                                 profile not in structural | {"editorial"})
-                governance_commands = [command for command in executed if "tools/governance.py" in command]
-                self.assertEqual(governance_commands, [[sys.executable, "tools/governance.py"]])
-                self.assertIn([sys.executable, "-m", "ruff", "check", "--config", "pyproject.toml",
-                               "harness", "tools", "tests"], executed)
-                self.assertIn([str(Path(sys.executable).parent / "lint-imports"), "--config",
-                               "pyproject.toml", "--no-cache", "--no-logo"], executed)
-                self.assertIn(["/fixture/node", "--check", "--input-type=module"], executed)
-                self.assertIn([sys.executable, "-m", "tools.documents"], executed)
-                self.assertIn(["git", "diff", "--check"], executed)
-                self.assertIn(["git", "diff", "--cached", "--check"], executed)
+                    targets = ["tests"] if profile == "full" else list(ci.COMPONENT_TESTS[profile])
+                    self.assertEqual(len(tests), 1)
+                    self.assertEqual(tests[0][-len(targets):], targets)
+                self.assertEqual(ran("tools/diagrams.py"), profile not in structural)
+                self.assertEqual(ran("tests/test_viewer.cjs"), profile not in structural | {"editorial"})
+                for common in ("ruff check", "lint-imports", "tools.documents", "tools.evidence verify",
+                               "git diff --check", "git diff --cached --check"):
+                    self.assertTrue(ran(common), common)
                 self.assertEqual("Portable checks passed." in output, profile == "full")
                 if profile in {"editorial", *components}:
                     self.assertIn("Full regression" if profile != "editorial" else "full regression", output)
@@ -327,17 +324,6 @@ class DevToolTests(unittest.TestCase):
         self.assertFalse((self.root / "next").exists())
         self.assertEqual(check._lane_processes, set())
 
-    def test_all_profiles_reject_invalid_python_before_reporting_success(self):
-        self.write("computer/runtime.py", "def broken(:\n")
-        for arguments in (["--fast"], [], ["--profile", "editorial"], ["--profile", "main"],
-                          ["--profile", "viewer"]):
-            output = io.StringIO()
-            with self.subTest(arguments=arguments), patch.object(check, "ROOT", self.root), \
-                    patch.object(check, "run") as commands, redirect_stdout(output), self.assertRaises(SyntaxError):
-                check.main(arguments)
-            commands.assert_not_called()
-            self.assertNotIn("checks passed", output.getvalue())
-
     def test_all_profiles_reject_broken_document_links_before_reporting_success(self):
         for arguments in (["--fast"], [], ["--profile", "editorial"], ["--profile", "main"],
                           ["--profile", "viewer"]):
@@ -348,7 +334,7 @@ class DevToolTests(unittest.TestCase):
                     patch.object(check, "run") as commands, redirect_stdout(output), \
                     self.assertRaisesRegex(ValueError, "Broken local link"):
                 check.main(arguments)
-            self.assertFalse(any("tools/governance.py" in call.args[0] for call in commands.call_args_list))
+            self.assertFalse(any("tools.documents" in call.args[0] for call in commands.call_args_list))
             self.assertNotIn("checks passed", output.getvalue())
 
 

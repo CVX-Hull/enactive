@@ -55,8 +55,8 @@ checkpoints. Prefer updating an existing issue; create a new one only for distin
 owned work. Give each finding an implementation/follow-up, duplicate, deferred or
 rejected disposition with its reason, next action/acceptance and dependencies.
 Link affected design, principles/standards/controls, procedures and evidence;
-update their authoritative sources when applicable, including generated controls
-through the registry. Preserve current-versus-proposed status and unverified lanes.
+update their authoritative sources when applicable, including the controls page.
+Preserve current-versus-proposed status and unverified lanes.
 C-REVIEW checks this coverage and C-MAINTENANCE revisits drift under existing
 triggers. A review finding is not fixed because it was filed, and a document is
 not accurate merely because it has a recent date. This uses GitHub and the current

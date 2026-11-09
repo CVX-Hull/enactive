@@ -55,4 +55,4 @@ Explorers/reviewers never send game inputs.
   independent review and the appropriate protected CI profile before formal acceptance/merge;
   broad source changes require full regression before merge.
   Freeze each finite run and retain failures. Inspect staged changes before commits.
-  Control coverage and gaps are in [the control map](docs/controls.md).
+  Control coverage and gaps are in [the controls page](docs/controls.md).

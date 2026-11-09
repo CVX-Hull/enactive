@@ -71,8 +71,9 @@ architecture/components own current responsibilities and assurance limits;
 [computer-control](contracts/computer-control.md) owns exact current ports;
 schemas/source own their declared executable interface; operations own tasks.
 GitHub owns live work, proposals own unadopted scope, ADRs own dated rationale,
-and acceptance reports own original observations. The control registry/map owns
-control lifecycle, not a second contract or work tracker. The
+and acceptance reports own original observations. The [controls page](controls.md)
+owns what each control stops and where it is enforced, not a second contract or work
+tracker. The
 [authority contract](workflows/authority.md) owns which summaries may restate what.
 
 The [evaluation contract](contracts/evaluation.md) owns the spectator view API.

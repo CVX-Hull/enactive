@@ -19,9 +19,9 @@ labels or ignored failures. Superseded pull request runs are cancelled. `tools/c
 chooses a profile from Git facts and invokes `tools/check.py`; missing or ambiguous
 eligibility selects full, and a checker or execution failure fails the job.
 
-Every hosted profile runs Python syntax, selected Ruff, import contracts, JavaScript
-syntax, document metadata and local links, governance structure, the run ledger,
-evidence verification, generated run tables and whitespace. Local `--fast` runs the
+Every hosted profile runs selected Ruff (including parse errors), import contracts, JavaScript
+syntax, document links and checks (`tools/documents.py`), the run ledger, evidence
+verification, generated run tables and whitespace. Local `--fast` runs the
 same structural checks and nothing else; it is not a hosted profile.
 
 | Profile | Runs on | Additional checks | Supported claim |
@@ -43,8 +43,8 @@ base, with `--no-renames` and NUL-separated paths. Both sides of renames and del
 count, and every changed object must be regular. The five root documents and all
 `docs/**/*.md` qualify, including current guidance and contracts, as do acceptance
 assets and JSON, `docs/assets/` images, and Mermaid sources, SVGs and `rendered.json`
-directly under `docs/diagrams/`. Other Markdown, executable assets, configuration,
-schemas and registry JSON do not. Structural checks cannot prove prose or prompt
+directly under `docs/diagrams/`. Other Markdown, executable assets, configuration
+and schemas do not. Structural checks cannot prove prose or prompt
 semantics: review compares changed guidance with contracts and source and selects any
 needed native or player evidence.
 

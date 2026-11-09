@@ -23,42 +23,23 @@ about when and by whom work proceeds; they live here and in project management.
 Standards specify required properties; contracts/design apply them at a boundary;
 controls provide prevention, detection, review or recovery; evidence records what
 actually happened. These are related responsibilities, not six mandatory documents
-per change. The registry maps P-* → S-* → C-*; it does not own another requirements
-copy. [Documentation organization](../documentation.md) defines artifact roles and
-their lifecycle.
+per change. [Engineering](../engineering.md) maps each standard to its principles and
+controls, once. [Documentation organization](../documentation.md) defines artifact
+roles and their lifecycle.
 
-## Control lifecycle and evidence
+## Control review
 
-The registry owns each control's definition and latest maintenance record. Its
-generated [maintenance table](../controls.md#maintenance) is the review entry point.
-`proposed` means not relied upon; `active` means required in mapped standards;
-`deprecated` means no standard may rely on it while its replacement/removal is
-managed; `retired` preserves rationale/history and has no periodic review duty.
-Only active controls support standards. Activation needs an owner, defined scope,
-mechanism, failure response, limitations, maintenance review and acceptance evidence
-appropriate to its claims. Deprecation/retirement needs rationale and any replacement;
-replace standard mappings in the same change. Replacements cannot point to self or
-form cycles. Changes are reviewed in Git; snapshot checks do not prove who approved
-a transition. Re-activation requires a fresh review rather than reviving an old pass.
-
-Keep three facts distinct: the control exists; it was exercised with a particular
-result; its effectiveness has been assessed within a stated scope. `last_exercise`
-links to a dated execution/review result recording candidate, environment, lane,
-outcome and limits, not merely implementation source. Null means no recorded exercise.
-Maintenance review records findings, effectiveness and cost with evidence; its follow-up links the existing Issue, which owns changing acceptance, allocation and stage.
-Include custom tools/processes and previously rejected reuse options: revisit on
-changed needs, upstream capability/support, repeated defects or excessive upkeep;
-replace or retire redundant machinery rather than accumulating controls. Keep the
-decision with its existing owner and record, not a second maintenance system.
-Effectiveness can be unassessed; a fresh metadata review must not refresh native execution dates.
-Exercise and maintenance review are independent events. Dated reports retain prior
-observations when the latest record changes. A failure remains in history after repair.
-
-Active/deprecated controls record a next review within 90 days of the recorded review.
-A passed date is not a check failure in any profile ([ADR 010](../decisions/010-streamlined-delivery.md)):
-a control is reviewed when it fails, is bypassed, costs more than expected, or its
-boundary changes, and actual affected failures or evidence gaps stop the affected
-work. No check or background job edits dates. Do not advance dates without a review.
+The [controls page](../controls.md) owns what each control stops, where it is
+enforced and its known gap. A control exists only to stop a named failure more
+cheaply than the failure costs ([ADR 010](../decisions/010-streamlined-delivery.md)).
+Review it when it fails, is bypassed, costs more than expected or its boundary
+changes, in the issue that changes it; keep, narrow, replace or retire it from that
+evidence, and change the controls page and the standards that name it together.
+Revisit custom tools and previously rejected reuse options on changed needs, upstream
+support, repeated defects or excessive upkeep, rather than accumulating controls.
+Keep three facts distinct: a control exists; it was exercised with a result, recorded
+in the dated record or PR that ran it; its effectiveness was assessed. A failure stays
+in history after repair; actual affected failures or evidence gaps stop the affected work.
 An exception issue identifies scope, owner, expiry, reason and mitigation; it
 does not silently suppress a failed mechanical gate or override user constraints.
 

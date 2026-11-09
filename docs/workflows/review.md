@@ -106,14 +106,12 @@ limitations are explicit and the lead verifies the candidate. Publish a concise
 outcome/evidence update; carry unresolved work forward explicitly. After each
 milestone, review estimate error, blocked/queue time, rework, escaped defects and
 review burden. Repair stale guidance, tune WIP/decomposition and improve or retire
-costly controls under [C-MAINTENANCE](../controls.md#c-maintenance--drift-recovery-and-retention-review-manual).
+costly controls under C-MAINTENANCE ([controls](../controls.md)).
 Record concrete findings and follow-up owners, not automatic date renewal.
 
-| Principles → standards | Existing controls and enforcement limits |
-| --- | --- |
-| P-REVIEW/P-CHANGE/P-KNOWLEDGE → S-WORK/S-DOCS | C-REVIEW/C-USABILITY/C-GOVERNANCE: briefs, understandable views and current docs; metadata checks cannot prove comprehension or live board accuracy |
-| P-TRUTH/P-KNOWLEDGE/P-REVIEW → S-AGENT | C-REVIEW/C-MAINTENANCE: bounded delegation, lead inspection and capacity review; same-account agents cannot supply independent GitHub human approval |
-| P-TRUTH/P-UNCERTAINTY → S-EVIDENCE/S-DELIVERY | C-PORTABLE/C-NATIVE/C-RELEASE: exact-candidate checks and separate evidence lanes; merge/CI success alone cannot establish Done |
+[Engineering](../engineering.md) maps standards to their controls; the
+[controls page](../controls.md) states each control's limits. Same-account agents cannot
+supply independent GitHub human approval, and merge or CI success alone cannot establish Done.
 
 GitHub fields and views aid visibility; they do not enforce semantic readiness,
 WIP or acceptance. Main currently requires a PR and the observed Actions `controller` check with

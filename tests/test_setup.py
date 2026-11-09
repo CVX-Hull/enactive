@@ -383,15 +383,6 @@ class SetupTests(unittest.TestCase):
             self.assertIn(flag, command)
         self.assertEqual(command[-1], "cataclysm-tiles")
 
-    def test_document_check_rejects_missing_and_escaping_links(self):
-        for name in check.REQUIRED_DOCS:
-            path = self.root / name
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.touch()
-        (self.root / "README.md").write_text("[ok](docs/setup.md) [missing](gone.md) [escape](../elsewhere.md)")
-        errors = check.check_documents(self.root)
-        self.assertEqual(len(errors), 2)
-        self.assertTrue(all("Broken local link" in error for error in errors))
 
 
 if __name__ == "__main__":

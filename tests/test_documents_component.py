@@ -28,7 +28,6 @@ class ComponentDocumentTests(unittest.TestCase):
         (self.root / PAGE).write_text("---\nowner: lead\nstatus: active\nreview_trigger: change\n---\n# Page\n")
         self.assertEqual(documents.check_metadata(self.root), [])
 
-    def test_the_checked_in_player_host_readme_is_covered_and_valid(self):
+    def test_the_player_host_readme_is_a_checked_document(self):
         self.assertIn(PAGE, documents.COMPONENT_DOCUMENTS)
         self.assertTrue((ROOT / PAGE).is_file(), "the player-host README is a required current document")
-        self.assertEqual(documents.check_metadata(ROOT), [])
