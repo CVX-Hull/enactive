@@ -58,7 +58,9 @@ async function host(t, replies, { session = '2'.repeat(32), actorId = '3'.repeat
 const noticePattern = /^Host (context capacity|request allowance|time allowance)/;
 const text = message => typeof message.content === 'string' ? message.content : (message.content ?? []).map(part => part.text ?? '').join('');
 const isNotice = message => message.role === 'user' && noticePattern.test(text(message));
-const withoutTail = payload => (isNotice(payload.messages.at(-1)) ? payload.messages.slice(0, -1) : payload.messages);
+// Notices stay in the history where they were first sent (#489's cache finding), so the whole
+// previous request, notices included, is compared.
+const withoutTail = payload => payload.messages;
 // The serializer sends a tool batch's pixels in one following user message, so evicting every image
 // of a batch removes that message. Eviction changes nothing else: its two footprints are removed
 // here, the carrier message and the marker text appended to a tool result.
@@ -71,8 +73,8 @@ const markers = payload => new Map(withoutTail(payload).filter(message => messag
   .map(message => [message.tool_call_id, message.content]));
 const sentImages = payload => withoutTail(payload).filter(carrier).reduce((sum, message) => sum + message.content.length - 1, 0);
 
-/** The cache contract between consecutive requests: the previous request, minus its transient tail
- * notice, is a byte-for-byte prefix of the next, except that eviction may replace pixels with an
+/** The cache contract between consecutive requests: the whole previous request, its notices
+ * included, is a byte-for-byte prefix of the next, except that eviction may replace pixels with an
  * omission marker, once per image and unchanged afterwards. Everything but `messages` is identical.
  * Returns the omission markers of the last request. */
 function assertStablePrefixes(payloads) {
@@ -87,8 +89,9 @@ function assertStablePrefixes(payloads) {
     // A marker, once written, is byte-identical on every later request; pixels never come back.
     for (const [id, marker] of markers(payloads[i - 1])) assert.equal(markers(payloads[i]).get(id), marker, `marker of ${id} is stable`);
     assert.ok(sentImages(payloads[i]) + markers(payloads[i]).size >= sentImages(payloads[i - 1]) + markers(payloads[i - 1]).size, 'no image vanishes without a marker');
-    // A message that stopped being a tail notice is never left behind in history.
-    assert.ok(withoutTail(payloads[i]).every(message => !noticePattern.test(text(message))), 'no notice is stored in history');
+    // Every notice sent earlier is still there, unchanged (it is part of the compared prefix), and only
+    // a new request adds one: the notice count never falls.
+    assert.ok(payloads[i].messages.filter(isNotice).length >= payloads[i - 1].messages.filter(isNotice).length, 'no notice is dropped');
   }
   return markers(payloads.at(-1));
 }
@@ -131,7 +134,7 @@ test('first request, appends, eviction and a retried request keep a byte-identic
   assert.equal(new Set(captured.map(item => item.headers.get('x-session-id'))).size, 1);
 });
 
-test('the request-limit notice appears at the tail of every request near the limit and is never stored', async t => {
+test('the request-limit notice is added on every request near the limit and kept where it was sent', async t => {
   const configuration = route({ max_requests: 10 });
   const { result, payloads, events } = await host(t, [...Array.from({ length: 9 }, (_, turn) => look(turn + 1)), finish()], { configuration });
   assert.equal(result.ok, true);
@@ -144,9 +147,12 @@ test('the request-limit notice appears at the tail of every request near the lim
   assertStablePrefixes(payloads);
   assert.deepEqual(events.filter(event => event.type === 'tail-notice').map(event => [event.request_id, event.kinds]),
     [['request-9', ['request-limit']], ['request-10', ['request-limit']]]);
-  // The notice names the way out the model has: handoff or finish.
-  assert.match(text(payloads[9].messages.at(-1)), /player_handoff/);
-  assert.match(text(payloads[9].messages.at(-1)), /player_finish/);
+  // The first notice names the way out the model has, handoff or finish; it stays in the context, so a
+  // later one only updates the figure.
+  assert.match(text(payloads[8].messages.at(-1)), /player_handoff/);
+  assert.match(text(payloads[8].messages.at(-1)), /player_finish/);
+  assert.doesNotMatch(text(payloads[9].messages.at(-1)), /player_handoff|player_finish/);
+  assert.equal(payloads[9].messages.filter(isNotice).length, 2, 'both notices are in the last request');
 });
 
 test('the context notice persists on every request once passed and warns before the capacity stop', async t => {

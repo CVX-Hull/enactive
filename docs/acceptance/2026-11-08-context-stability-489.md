@@ -125,6 +125,63 @@ cause.
   and body size, a test gap for the real adapter's instructions, and an over-broad handoff
   description. All three were fixed before the paid check.
 
+## Follow-up: the cause found
+
+Added on 8 November 2026, after the owner's P1 decision to fix caching first. The owner approved
+up to $1.50 for the diagnosis, and it spent **$0.535**. The figures above stand as measured.
+
+**Free checks.** These ruled out the host and narrowed the suspects.
+- **The actor caches.** In the sealed #397 trace, on the same terra route, the actor host
+  cached 89.9% of prompt tokens over 85 requests (`sd1a2`, actor 001). Each request read the
+  whole previous prompt.
+- **The curator's bodies are stable.** Its real request bodies were captured from a capped
+  4-request session ($0.069) through the proxy's own reservation hook. Each request's history
+  was a byte-identical prefix of the next, and every other field was identical. An offline run
+  with parallel tool calls and encrypted reasoning details also showed stable bodies.
+- **Not Pi's breakpoints.** Pi marks Anthropic-style cache breakpoints only on `anthropic/`
+  routes. Terra's route has none.
+
+**Paid replays.** The captured bodies were re-sent through an in-process curator proxy. Each
+sequence ran in fresh cache space (a nonce in the system prompt) with output capped low.
+Cached prompt tokens:
+
+| Variant | Request 2 | Request 3 |
+| --- | ---: | ---: |
+| As sent (budget note rewritten at the tail) | 2,700 | 2,700 |
+| No tail note | **2,845**, all of request 1 | **6,327**, all of request 2 |
+| No `reasoning_details` in history | 2,702 | 2,702 |
+| `service_tier: "default"` | 2,701 | 2,701 |
+| `prompt_cache_key` | 2,701 | 2,701 |
+| **Notes kept where first sent** | **2,881**, all of request 1 | **6,400**, all of request 2 |
+
+An identical body sent twice read 48,945 of its 48,948 prompt tokens on the second send.
+
+**Cause.** This provider reuses a cached request only when a later request extends it. The
+curator ended every request with a budget note that the next request replaced. So no earlier
+request was ever extended, and only the static opening, read from earlier entries, was reused.
+- **The actor.** Its notices were rare, so it was unaffected. But #489's own design,
+  notices that persist once their threshold is passed, would have broken caching for every
+  request after the threshold.
+- **Not the cause.** Session affinity, `service_tier`, `prompt_cache_key` and the encrypted
+  reasoning are not the cause.
+
+**Fix.** Both hosts keep every note and notice in the history, unchanged, at the place where
+it was first sent. A retry resends the same body below that step. Each request then extends
+the previous one byte for byte. The serialization tests of both hosts now assert that the
+whole previous request, notes included, is a prefix of the next.
+
+**Accumulation.** Notes accumulate in the context. In the actor host, only the first notice of
+each kind carries the wrap-up instructions; later ones update the figure. A curator note is
+about 40–80 tokens, so 120 requests add at most about 10k.
+
+**Raw figures.** Every token figure above and the spend are tracked, usage only, in
+[`data/curator/cache-diagnosis-489.json`](../../data/curator/cache-diagnosis-489.json). The charges
+come from the proxy ledgers: $0.0686 for the capped session, $0.4024 for the replays and $0.0639
+for the notes-kept run. The driver scripts and captured bodies were scratch and are not retained.
+
+**Not yet measured.** The fixed hosts have not run a paid session. The P1 pilot measures the
+cached share, as the pre-registration requires.
+
 ## Limitations
 
 - **One session, one route, one model.** The cached share is a single measurement.

@@ -109,8 +109,21 @@ export const WRITE_AT = 0.5;
 export const FINISH_AT = 0.8;
 const READING_TOOLS = new Set(['list_dir', 'read_file', 'view_frame', 'run_workbench']);
 
-/** A transient note for the end of the context: the budget used so far and what to do now. It is
- * appended per request and never stored, so the cached prefix is unchanged. Requests and dollars set
+/** The history with each placed note re-inserted where it was first sent: after the first `at`
+ * messages. `placed` is append-only with non-decreasing `at`, so the result extends the previous
+ * request's messages exactly. */
+export function withPlacedNotes(messages, placed) {
+  const out = [];
+  let next = 0;
+  for (let i = 0; i <= messages.length; i++) {
+    while (next < placed.length && placed[next].at === i) out.push(placed[next++].message);
+    if (i < messages.length) out.push(messages[i]);
+  }
+  return out;
+}
+
+/** The note that ends each request: the budget used so far and what to do now. It stays in the history
+ * where it was first sent (see `withPlacedNotes`), so later requests extend this one. Requests and dollars set
  * the phase (and so the refusal of reading tools); the wall-clock limit only warns, because the host
  * stops when it passes. */
 export function budgetNote({ requests, maxRequests, spent, budget, elapsedSeconds = 0, wallSeconds = Infinity }) {
@@ -152,6 +165,8 @@ export async function runCurator(options) {
   const effort = configuration.effort;
   let agent, fatal, finished, requests = 0, toolCalls = 0, requestId, requestTimer, inFlight = false;
   let rawUsage, httpStatus, errorBody, lastPromptTokens = 0, contextWarning = false, spent = 0;
+  // Notes sent so far, each with the number of history messages it followed (append-only).
+  const placedNotes = [];
   const budget = () => budgetNote({ requests, maxRequests: configuration.max_requests, spent, budget: configuration.budget_usd,
     elapsedSeconds: (performance.now() - started) / 1000, wallSeconds: configuration.wall_seconds });
   const stopped = new AbortController();
@@ -252,15 +267,20 @@ export async function runCurator(options) {
           try {
             if (lastPromptTokens + model.maxTokens >= model.contextWindow) { stop('context-capacity'); return messages; }
             const projection = projectImages(messages, configuration.max_context_images, configuration.context_image_block);
+            // Each request's note stays in the history where it was first sent and is never rewritten, so
+            // every request extends the previous one byte for byte (#489: the provider's cache reuses only
+            // a request that a later one extends; a tail rewritten each request is never reused). A retry
+            // resends the same body below this hook (the fetch wrapper), so it adds no note.
             const notes = [budget().text];
-            // Once past the threshold the warning is on every request (latched), and always at the tail,
-            // so the host's capacity stop never comes without notice and the prefix is not touched.
+            // Once past the threshold the warning is in every new note (latched), so the host's capacity
+            // stop never comes without notice.
             if (lastPromptTokens + model.maxTokens >= model.contextWindow * 0.75) contextWarning = true;
             if (contextWarning) {
               const room = Math.max(0, model.contextWindow - model.maxTokens - lastPromptTokens);
               notes.push(`The context window is nearly full: about ${room} tokens of room remain before the host stops the session. Write any submission or draft now and call finish.`);
             }
-            return [...projection.messages, { role: 'user', timestamp: Date.now(), content: [{ type: 'text', text: notes.join(' ') }] }];
+            placedNotes.push({ at: messages.length, message: { role: 'user', timestamp: Date.now(), content: [{ type: 'text', text: notes.join(' ') }] } });
+            return withPlacedNotes(projection.messages, placedNotes);
           } catch { stop('context-projection-failed'); return messages; }
         },
         finishTurn: () => (fatal || finished ? { action: 'end' } : undefined),

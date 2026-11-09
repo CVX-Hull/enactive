@@ -693,9 +693,14 @@ The P1 go/no-go is decided on that pre-registration.
 1. **Context stability** ([record](../acceptance/2026-11-08-context-stability-489.md)).
    - **Done:** both hosts' requests are byte-stable apart from their tails, proven without
      spend.
-   - **Not fixed: prompt caching.** One paid curator session sent a constant affinity value
-     and still cached only 3.3% of prompt tokens: the static prompt, never the history.
-     Affinity is refuted as the whole cause, and the next checks are recorded.
+   - **Prompt caching: found and fixed in a follow-up.**
+     - **The first paid check.** A session sent a constant affinity value and still cached
+       only 3.3% of prompt tokens: the static prompt, never the history.
+     - **The cause.** Replays of that session's real request bodies found it. The transient
+       budget note at the tail, rewritten on every request, stopped the provider from
+       reusing any earlier request.
+     - **The fix.** Notes and notices now stay in the history where they were first sent.
+       In replays, each request then read the whole previous request from the cache.
 2. **Probe validation** ([record](../acceptance/2026-11-08-probe-validation-490.md)).
    - **Both pre-registered bars were missed:** fact labels 0.51 and queries 0.41.
    - **After a content-matched correction,** the owner made confirmed re-observations P1's
@@ -711,11 +716,13 @@ The P1 go/no-go is decided on that pre-registration.
 
 **The owner's P1 go/no-go (8 November 2026): go, but fix caching first.** P1 runs as
 pre-registered, accepting that it detects only large effects. Prompt caching is fixed
-first, which lowers P1's cost before the pilot:
-1. **A check with no spend.** Per-message digests of the real request bodies, taken at the
-   proxy, show where the cache stops.
-2. **A cache-key change, if the digests point to it.** A `prompt_cache_key`-style change,
-   verified by a small paid check. That check needs its own approval.
+first, which lowers P1's cost before the pilot.
+
+**Caching was fixed, with its cause found as above.**
+- **The cause** came from free checks on the real request bodies, then replays capped at
+  $1.50 by the owner. They spent $0.535.
+- **A cache key was not needed.** `prompt_cache_key` made no difference.
+- **The cached share is not yet measured live.** The pilot measures it.
 
 Then:
 - #178 writes the held-out probes, with no spend;

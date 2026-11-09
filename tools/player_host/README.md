@@ -141,8 +141,10 @@ marker grants no source-read proof or authority. The marker names the frame's
 `source_id` (from its tool result) and says to read it again with `player_source`;
 the player can request the exact source again through its available tools. No tool is called automatically to restore an image.
 
-The request projection adds no standing countdown. Instead a transient tail notice,
-never stored and repeated on every later request once passed, warns before each stop
+The request projection adds no standing countdown. Instead, once a threshold is
+passed, each request adds a notice. The notice stays in the history where it was
+first sent, so every request extends the previous one for the provider's cache. It
+warns before each stop
 the host enforces itself: context capacity, `max_requests` (a tenth of the allowance
 left, at least two and at most half) and the work deadline (a tenth left, at least a
 minute and at most half). See the contract's

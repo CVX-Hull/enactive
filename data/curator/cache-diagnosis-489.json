@@ -1,0 +1,168 @@
+{
+ "date": "2026-11-08",
+ "note": "Usage only, no content. Captured bodies of a capped 4-request terra curator session on #397 sd1a1 were replayed through the curator proxy, each sequence in fresh cache space, output capped at 256 tokens. Figures are the provider-reported prompt, cached and cache-write tokens.",
+ "route": "openai/gpt-6.1-terra via OpenRouter, pinned openai",
+ "schema": "curator-cache-diagnosis/1",
+ "spend_usd": {
+  "baseline_session": 0.0686155,
+  "notes_kept": 0.06390055,
+  "replays": 0.4023835,
+  "total": 0.53489955
+ },
+ "variants": {
+  "cache_key": [
+   {
+    "cache_write": 2882,
+    "cached": 0,
+    "cost": "0.0046555",
+    "prompt": 2885,
+    "status": 200
+   },
+   {
+    "cache_write": 3663,
+    "cached": 2701,
+    "cost": "0.0053718",
+    "prompt": 6367,
+    "status": 200
+   },
+   {
+    "cache_write": 46244,
+    "cached": 2701,
+    "cost": "0.05922305",
+    "prompt": 48948,
+    "status": 200
+   }
+  ],
+  "control": [
+   {
+    "cache_write": 2881,
+    "cached": 0,
+    "cost": "0.00442925",
+    "prompt": 2884,
+    "status": 200
+   },
+   {
+    "cache_write": 3663,
+    "cached": 2700,
+    "cost": "0.00537175",
+    "prompt": 6366,
+    "status": 200
+   },
+   {
+    "cache_write": 46244,
+    "cached": 2700,
+    "cost": "0.058593",
+    "prompt": 48947,
+    "status": 200
+   }
+  ],
+  "identical": [
+   {
+    "cache_write": 48945,
+    "cached": 0,
+    "cost": "0.06180425",
+    "prompt": 48948,
+    "status": 200
+   },
+   {
+    "cache_write": 0,
+    "cached": 48945,
+    "cost": "0.00307525",
+    "prompt": 48948,
+    "status": 200
+   }
+  ],
+  "noreasoning": [
+   {
+    "cache_write": 2883,
+    "cached": 0,
+    "cost": "0.00420675",
+    "prompt": 2886,
+    "status": 200
+   },
+   {
+    "cache_write": 3652,
+    "cached": 2702,
+    "cost": "0.0051481",
+    "prompt": 6357,
+    "status": 200
+   },
+   {
+    "cache_write": 46222,
+    "cached": 2702,
+    "cost": "0.0585056",
+    "prompt": 48927,
+    "status": 200
+   }
+  ],
+  "notail": [
+   {
+    "cache_write": 2845,
+    "cached": 0,
+    "cost": "0.00410425",
+    "prompt": 2848,
+    "status": 200
+   },
+   {
+    "cache_write": 3482,
+    "cached": 2845,
+    "cost": "0.00493775",
+    "prompt": 6330,
+    "status": 200
+   },
+   {
+    "cache_write": 42554,
+    "cached": 6327,
+    "cost": "0.05415685",
+    "prompt": 48884,
+    "status": 200
+   }
+  ],
+  "notes_kept": [
+   {
+    "cache_write": 2881,
+    "cached": 0,
+    "cost": "0.00465925",
+    "prompt": 2884,
+    "status": 200
+   },
+   {
+    "cache_write": 3519,
+    "cached": 2881,
+    "cost": "0.0049908",
+    "prompt": 6403,
+    "status": 200
+   },
+   {
+    "cache_write": 42618,
+    "cached": 6400,
+    "cost": "0.0542505",
+    "prompt": 49021,
+    "status": 200
+   }
+  ],
+  "service_tier": [
+   {
+    "cache_write": 2882,
+    "cached": 0,
+    "cost": "0.0044205",
+    "prompt": 2885,
+    "status": 200
+   },
+   {
+    "cache_write": 3663,
+    "cached": 2701,
+    "cost": "0.0051568",
+    "prompt": 6367,
+    "status": 200
+   },
+   {
+    "cache_write": 46244,
+    "cached": 2701,
+    "cost": "0.05922305",
+    "prompt": 48948,
+    "status": 200
+   }
+  ]
+ }
+}

@@ -223,6 +223,19 @@ function payloadSize(payload) {
 }
 
 const sha256Hex = data => createHash('sha256').update(data).digest('hex');
+/** The history with each placed notice re-inserted where it was first sent: after the first `at`
+ * messages. `placed` is append-only with non-decreasing `at`, so the result extends the previous
+ * request's messages exactly. */
+export function withPlacedNotices(messages, placed) {
+  const out = [];
+  let next = 0;
+  for (let i = 0; i <= messages.length; i++) {
+    while (next < placed.length && placed[next].at === i) out.push(placed[next++].message);
+    if (i < messages.length) out.push(messages[i]);
+  }
+  return out;
+}
+
 /** The provider-affinity value of one mechanical session: a digest of the session identity (not
  * random per request), so every request of every actor in the session carries the same value and a
  * successor reaches the backend that holds the shared system-prompt and tool-table prefix. It is a
@@ -532,6 +545,9 @@ export async function runHost(options) {
   let releaseInitialControl;
   const initialControlReady = new Promise(resolve => { releaseInitialControl = resolve; });
   let contextWarning = false, affinityId;
+  // Notices sent so far, each with the number of history messages it followed (append-only), and
+  // the kinds already announced in full.
+  const placedNotices = [], noticed = new Set();
   // Context manifest state: the latest projection's ordered images, tool-result source
   // identities, and the previous manifest (part keys and omitted indexes) for deltas.
   let contextImages = [], manifestBase = null;
@@ -701,49 +717,66 @@ export async function runHost(options) {
           contextImages = projection.images;
           emit('context-image-projection', {request_id:`request-${requests + 1}`, projection_ms:performance.now() - projectionStarted, ...projection.summary});
           if (projection.summary.blocked) stop('context-image-limit');
-          const estimate = estimateContextTokens(projection.messages);
+          // Notices already sent stay where they were first sent (see below), so they count here.
+          const withNotices = withPlacedNotices(projection.messages, placedNotices);
+          const estimate = estimateContextTokens(withNotices);
           // Reported usage can be missing or exclude serializer overhead. Keep
           // a second text/image heuristic as a conservative independent floor.
-          const heuristic = estimateContextTokens(projection.messages.map(message => message.role === 'assistant'
+          const heuristic = estimateContextTokens(withNotices.map(message => message.role === 'assistant'
             ? {...message, usage:{input:0, output:0, cacheRead:0, cacheWrite:0, totalTokens:0}} : message));
           const tokens = Math.max(estimate.tokens, heuristic.tokens);
           requireThat(Number.isSafeInteger(tokens) && tokens >= 0, 'context-estimate-failed');
           emit('context-estimate', {request_id:`request-${requests + 1}`, tokens, usage_tokens:estimate.usageTokens,
             heuristic_tokens:heuristic.tokens, heuristic:true, exact:false});
           if (tokens + configuration.model.maxTokens >= configuration.model.contextWindow) stop('context-capacity');
-          // Tail notices warn before each stop the host itself will enforce: context capacity, the
-          // request allowance and the work deadline. They are appended to this request only and never
-          // stored, so the serialized prefix is unchanged and the notice persists on every later request
-          // once its threshold is passed (the context one is latched; the others only grow nearer).
+          // Notices warn before each stop the host itself will enforce: context capacity, the request
+          // allowance and the work deadline. Each notice stays in the history where it was first sent
+          // and is never rewritten, so every request extends the previous one byte for byte (#489: the
+          // provider's cache reuses only a request that a later one extends; a tail rewritten each
+          // request is never reused). Once a threshold is passed, every later request adds a new notice
+          // (the context one is latched; the others only grow nearer). The first notice of each kind
+          // says how to wrap up; later ones only update the figure, because they stay in the context.
+          // A retry resends the same body below this hook (the fetch wrapper), so it adds no notice.
+          const at = messages.length;
           const lines = [], kinds = [];
           const wrapUp = control
             ? 'Finish up and use player_finish under the accepted automation control.'
             : mcp.enabled_tools.includes('player_handoff')
               ? 'Request the existing player_handoff with the context you need to retain (if it reports that no successor is available, use player_finish), or use player_finish if you cannot continue.'
               : 'Use player_finish, reporting where play stands.';
+          const first = kind => !noticed.has(kind);
           if (tokens + configuration.context_reserve_tokens >= configuration.model.contextWindow) contextWarning = true;
           if (contextWarning) {
             const room = Math.max(0, configuration.model.contextWindow - configuration.model.maxTokens - tokens);
+            lines.push(first('context-capacity')
+              ? `${control || mcp.enabled_tools.includes('player_handoff')
+                ? `Host context capacity is approaching. ${wrapUp}`
+                : 'Host context capacity is approaching and no successor actor is available. Use player_finish before context runs out, reporting where play stands.'} No compaction or history restoration is available. About ${room} tokens of room remain before the host must stop.`
+              : `Host context capacity: about ${room} tokens of room remain before the host must stop.`);
             kinds.push('context-capacity');
-            lines.push(`${control || mcp.enabled_tools.includes('player_handoff')
-              ? `Host context capacity is approaching. ${wrapUp}`
-              : 'Host context capacity is approaching and no successor actor is available. Use player_finish before context runs out, reporting where play stands.'} No compaction or history restoration is available. About ${room} tokens of room remain before the host must stop.`);
           }
           const requestsLeft = configuration.max_requests - requests;
           if (requestsLeft > 0 && requestsLeft <= requestWarningAt(configuration.max_requests)) {
+            lines.push(first('request-limit')
+              ? `Host request allowance: ${requestsLeft} of ${configuration.max_requests} model requests remain, this one included (a retried request counts again). The host stops when none remain. ${wrapUp}`
+              : `Host request allowance: ${requestsLeft} of ${configuration.max_requests} model requests remain, this one included.`);
             kinds.push('request-limit');
-            lines.push(`Host request allowance: ${requestsLeft} of ${configuration.max_requests} model requests remain, this one included (a retried request counts again). The host stops when none remain. ${wrapUp}`);
           }
           const workLeftMs = totalMs - cleanupBudget - (performance.now() - started);
           if (workLeftMs > 0 && workLeftMs <= wallWarningMs(totalMs - cleanupBudget)) {
+            const left = workLeftMs >= 120_000 ? `${Math.ceil(workLeftMs / 60_000)} minutes` : `${Math.ceil(workLeftMs / 1000)} seconds`;
+            lines.push(first('host-timeout')
+              ? `Host time allowance: about ${left} remain before the host stops. ${wrapUp}`
+              : `Host time allowance: about ${left} remain before the host stops.`);
             kinds.push('host-timeout');
-            lines.push(`Host time allowance: about ${workLeftMs >= 120_000 ? `${Math.ceil(workLeftMs / 60_000)} minutes` : `${Math.ceil(workLeftMs / 1000)} seconds`} remain before the host stops. ${wrapUp}`);
           }
-          if (lines.length === 0) return projection.messages;
+          if (lines.length === 0) return withNotices;
           const notice = {role:'user', timestamp:Date.now(), content:[{type:'text', text:lines.join('\n')}]};
           if (tokens + estimateContextTokens([notice]).tokens + configuration.model.maxTokens >= configuration.model.contextWindow) stop('context-capacity');
+          placedNotices.push({at, message:notice});
+          for (const kind of kinds) noticed.add(kind);
           emit('tail-notice', {request_id:`request-${requests + 1}`, kinds, tokens});
-          return [...projection.messages, notice];
+          return [...withNotices, notice];
         } catch {
           stop('context-projection-failed');
           return messages;
