@@ -176,14 +176,21 @@ def test_the_host_cannot_read_or_write_outside_the_workspace(tmp_path, world):
     assert not Path('/tmp/curator-node-escape').exists()
 
 
-def test_the_readable_tool_roots_hold_no_python_but_the_launcher(tmp_path):
-    tools = shadow.host_tools()
+def test_the_readable_host_files_hold_no_python_but_the_launcher():
     host = shadow.HOST_DIR.resolve()
-    inside = [Path(root) for root in tools['roots'] if Path(root) == host or host in Path(root).parents]
-    assert host not in inside and sorted(p.name for p in inside) == sorted(shadow.HOST_READABLE)
+    inside = [(host/name).resolve() for name in shadow.HOST_READABLE]
+    assert host not in inside and all(host in root.parents for root in inside)
     files = [f for root in inside for f in ([root] if root.is_file() else root.rglob('*'))]
     assert [f for f in files if f.suffix == '.py'] == [host/'launch.py']
     assert not [f for f in files if '__pycache__' in f.parts]
+
+
+@native
+def test_the_sandbox_reads_exactly_the_readable_host_files():
+    tools = shadow.host_tools()  # needs the macOS loader tools to find node's libraries
+    host = shadow.HOST_DIR.resolve()
+    inside = [Path(root) for root in tools['roots'] if Path(root) == host or host in Path(root).parents]
+    assert sorted(p.name for p in inside) == sorted(shadow.HOST_READABLE)
     # No host-package Python besides the launcher is on any root, including a root that contains the package.
     for name in ('shadow.py', 'shadow_report.py', 'providers.py'):
         assert not any(Path(root) == host/name or Path(root) in (host, *host.parents) for root in tools['roots']), name
