@@ -253,3 +253,133 @@ def test_the_tracked_power_simulation_reproduces_and_its_page_figures_match():
     for variant in tracked['probability_of_go'].values():     # every row of the page's power table
         row = ' | '.join(f'{variant[d]:.3f}' for d in ('0.00', '0.10', '0.15', '0.20', '0.25', '0.30'))
         assert row in page.replace('**', ''), f'the power table on the page must render power.json: {row}'
+
+
+# ---------------------------------------------------------------------------------------------
+# p1-study/2: several frozen held-out probes files (lh4 beside lh1-lh3)
+
+def test_lh4_is_not_a_held_out_lineage_until_its_admissions_are_named():
+    assert p1.LH4_ADMISSIONS == () and p1.HELD_OUT == p1.STUDY_1_HELD_OUT and 'lh4' not in p1.HELD_OUT
+    assert p1.STUDY_1_BOUNDARIES == {'lh1': 4, 'lh2': 3, 'lh3': 3}
+
+
+def frozen_dir(directory, rows, *, schema='p1-held-out-frozen/1'):
+    """A held-out directory: `probes.jsonl` and the `frozen.json` that digests it."""
+    directory.mkdir(parents=True)
+    path = directory/'probes.jsonl'
+    path.write_text(''.join(json.dumps(row, sort_keys=True) + '\n' for row in rows))
+    (directory/'frozen.json').write_text(json.dumps(dict(schema=schema, files={'probes.jsonl': p1.file_sha256(path)})))
+    return path
+
+
+@pytest.fixture
+def two_files(tmp_path):
+    rows = spread(probes())
+    return (frozen_dir(tmp_path/'a', [r for r in rows if r['lineage'] == 'lh1']),
+            frozen_dir(tmp_path/'b', [r for r in rows if r['lineage'] == 'lh2']), rows)
+
+
+def printed(capsys):
+    return [json.loads(line) for line in capsys.readouterr().out.splitlines()]
+
+
+def test_several_probes_files_are_concatenated_in_the_order_given(two_files, capsys):
+    first, second, rows = two_files
+    assert p1.main(['units', '--probes', str(first), '--probes', str(second)]) == 0
+    forward = printed(capsys)
+    assert forward == p1.units(p1.primary_probes(rows)) and {u['lineage'] for u in forward} == {'lh1', 'lh2'}
+    assert p1.main(['units', '--probes', str(second), '--probes', str(first)]) == 0
+    assert printed(capsys) == p1.units(p1.primary_probes([r for r in rows if r['lineage'] == 'lh2']
+                                                         + [r for r in rows if r['lineage'] == 'lh1']))
+    assert p1.main(['rejudge', '--probes', str(first), '--probes', str(second)]) == 0
+    assert len(printed(capsys)) == len(p1.rejudge_sample(forward))
+
+
+def test_a_probes_file_that_differs_from_its_frozen_digest_is_refused_naming_only_the_file(two_files, capsys):
+    first, second, rows = two_files
+    second.write_text(second.read_text().replace('"informative": true', '"informative": fals', 1))   # one byte
+    for step in ('units', 'rejudge'):
+        with pytest.raises(SystemExit) as stop:
+            p1.main([step, '--probes', str(first), '--probes', str(second)])
+        message = capsys.readouterr().err
+        assert stop.value.code == 2 and str(second) in message and rows[-1]['id'] not in message
+        assert 'fals' not in message
+    with pytest.raises(SystemExit):
+        p1.main(['simulate', '--probes', str(first), '--probes', str(second)])
+    assert 'not a frozen held-out probes file' in capsys.readouterr().err
+
+
+@pytest.mark.parametrize('damage', ['missing', 'schema', 'other-file', 'unlisted'])
+def test_a_probes_file_needs_a_frozen_json_that_lists_it(two_files, capsys, damage):
+    first, second, _ = two_files
+    frozen = second.parent/'frozen.json'
+    if damage == 'missing':
+        frozen.unlink()
+    elif damage == 'schema':
+        frozen.write_text(frozen.read_text().replace('frozen/1', 'frozen/2'))
+    elif damage == 'other-file':
+        frozen.write_text(json.dumps(dict(schema=p1.FROZEN_SCHEMA, files={'probes.jsonl': p1.file_sha256(first)})))
+    else:
+        frozen.write_text(json.dumps(dict(schema=p1.FROZEN_SCHEMA, files={})))
+    with pytest.raises(SystemExit):
+        p1.main(['units', '--probes', str(first), '--probes', str(second)])
+    assert str(second) in capsys.readouterr().err
+
+
+def test_simulate_records_each_probes_file_and_defaults_by_how_many(two_files, tmp_path, monkeypatch, capsys):
+    first, second, rows = two_files
+    seen = []
+    monkeypatch.setattr(p1, 'simulate', lambda layout=None: seen.append(layout) or {'probability_of_go': {}, 'gate': {}})
+    one, both = tmp_path/'power-held-out.json', tmp_path/'power-held-out-study-2.json'
+    monkeypatch.setattr(p1, 'POWER_STUDY_1', one)
+    monkeypatch.setattr(p1, 'POWER_STUDY_2', both)
+    assert p1.main(['simulate', '--probes', str(first), '--probes', str(second)]) == 0
+    assert both.is_file() and not one.exists()
+    written = json.loads(both.read_text())
+    assert written['probe_files'] == [dict(path=str(first), sha256=p1.file_sha256(first)),
+                                      dict(path=str(second), sha256=p1.file_sha256(second))]
+    assert seen[0] == [(u['lineage'], u['cluster']) for u in p1.units(p1.primary_probes(rows))]
+    both.unlink()
+    assert p1.main(['simulate', '--probes', str(first)]) == 0       # one file: the existing default
+    assert one.is_file() and not both.exists()
+    assert json.loads(one.read_text())['probe_files'] == [dict(path=str(first), sha256=p1.file_sha256(first))]
+
+
+def test_simulate_never_overwrites_study_1s_gate_with_several_files(two_files, tmp_path, monkeypatch, capsys):
+    first, second, _ = two_files
+    monkeypatch.setattr(p1, 'simulate', lambda layout=None: pytest.fail('nothing may run'))
+    gate = tmp_path/'power-held-out.json'
+    monkeypatch.setattr(p1, 'POWER_STUDY_1', gate)
+    with pytest.raises(SystemExit):
+        p1.main(['simulate', '--probes', str(first), '--probes', str(second), '--out', str(gate)])
+    assert 'p1-study/1' in capsys.readouterr().err and not gate.exists()
+
+
+def test_the_repository_relative_path_is_recorded_for_files_inside_the_repository(monkeypatch, tmp_path):
+    path = frozen_dir(tmp_path/'held-out-lh4', spread(probes()))
+    monkeypatch.setattr(p1, 'ROOT', tmp_path.resolve())
+    assert p1.frozen_probes([path])[1] == [dict(path='held-out-lh4/probes.jsonl', sha256=p1.file_sha256(path))]
+
+
+def test_score_takes_several_probes_files_and_records_them(two_files, tmp_path):
+    first, second, rows = two_files
+    unit_rows = p1.units(p1.primary_probes(rows))
+    first_pass = labels(unit_rows, {'A1': 0.3, 'B1': 0.8, 'B2': 0.8})
+    scores = tmp_path/'scores.jsonl'
+    scores.write_text(''.join(json.dumps(r) + '\n' for r in first_pass + rejudged(unit_rows, first_pass) + guards_ok()))
+    hours, out = tmp_path/'hours.json', tmp_path/'result.json'
+    hours.write_text(json.dumps(HOURS))
+    assert p1.main(['score', '--probes', str(first), '--probes', str(second), '--scores', str(scores),
+                    '--hours', str(hours), '--out', str(out)]) == 0
+    result = json.loads(out.read_text())
+    assert result['decision']['go'] is True
+    assert [f['path'] for f in result['probe_files']] == [str(first), str(second)]
+
+
+def test_plan_keeps_exactly_one_probes_file(two_files, capsys):
+    first, second, _ = two_files
+    with pytest.raises(SystemExit):
+        p1.main(['plan', '--probes', str(first), '--probes', str(second)])
+    assert 'exactly one' in capsys.readouterr().err
+    with pytest.raises(SystemExit):
+        p1.main(['plan'])

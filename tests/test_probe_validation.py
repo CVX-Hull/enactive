@@ -666,3 +666,78 @@ def test_the_existing_development_commands_still_take_their_old_default_output(m
     assert validation.main(['candidates', '--evidence-root', str(tmp_path)]) == 0
     assert seen['out'] == validation.ROOT/'data'/'evaluation'/'probes'/'validation'
     assert validation.HELD_OUT_DIR == validation.ROOT/'data'/'evaluation'/'p1'/'held-out'
+
+
+# ---------------------------------------------------------------------------------------------
+# p1-study/2: lh4 is a held-out lineage of study 522-held-out, written beside lh1-lh3's directory.
+
+def test_lh4_is_refused_as_a_development_lineage_and_is_unknown_until_it_has_admissions():
+    assert 'lh4' in validation.HELD_OUT and validation.HELD_OUT_STUDIES['lh4'] == '522-held-out'
+    assert {validation.HELD_OUT_STUDIES[n] for n in ('lh1', 'lh2', 'lh3')} == {'372-382-dev-loop'}
+    assert 'lh4' not in validation.HELD_OUT_RUNS            # p1_analysis.LH4_ADMISSIONS is empty today
+    with pytest.raises(SystemExit, match='lh4'):
+        validation.main(['held-out-candidates', '--lineages', 'lh4'])
+    with pytest.raises(SystemExit, match='not a held-out lineage'):
+        validation.main(['held-out-candidates', '--lineages', 'lh9'])
+    for bad in (['lh1', 'lh1'], []):
+        with pytest.raises(SystemExit):
+            validation.main(['held-out-candidates', '--lineages', *bad])
+
+
+@pytest.fixture
+def lh4(world, monkeypatch, tmp_path):
+    """lh4's two admissions in study 522-held-out, with one re-opened screen; the lh1-lh3 directory and lh4's are tmp."""
+    monkeypatch.setitem(validation.HELD_OUT_RUNS, 'lh4', ('lh4b1', 'lh4b2'))
+    monkeypatch.setitem(p1_analysis.HELD_OUT, 'lh4', ('lh4b1', 'lh4b2'))
+    monkeypatch.setattr(validation, 'HELD_OUT_DIR', tmp_path/'p1'/'held-out')
+    monkeypatch.setattr(validation, 'HELD_OUT_LH4_DIR', tmp_path/'p1'/'held-out-lh4')
+    study = world.root/'522-held-out'
+    for run, values in (('lh4b1', [0, FULL]), ('lh4b2', [FULL, flip(0, 5)])):
+        sources = [f's-{run}-{i}' for i in range(len(values))]
+        world.hashes.update(zip(sources, values))
+        build_session(study, run, {'001': sources})
+    world.secrets += list(world.hashes)
+    world.out = validation.HELD_OUT_LH4_DIR
+    return world
+
+
+def run_lh4(w, *step, extra=()):
+    more = ['--judge-dir', str(w.judge)] if step[0] == 'held-out-batches' else []
+    return validation.main([*step, '--evidence-root', str(w.root), '--lineages', 'lh4', *more, *extra])
+
+
+def test_lh4_reads_its_own_study_and_writes_only_under_held_out_lh4(lh4, capsys):
+    assert run_lh4(lh4, 'held-out-candidates') == 0
+    assert quiet(capsys, lh4) == {'lh4': dict(chunks=2, candidates=1)}
+    assert [c['lineage'] for c in candidates_of(lh4)] == ['lh4']
+    assert candidates_of(lh4)[0]['later_path'].startswith('522-held-out/computer-sessions/lh4b2/')
+    assert run_lh4(lh4, 'held-out-batches') == 0
+    capsys.readouterr()
+    judge(lh4, same=lambda n: True, informative=lambda n: True)
+    assert run_lh4(lh4, 'held-out-probes') == 0
+    assert quiet(capsys, lh4)['lineages'] == {'lh4': dict(candidates=1, confirmed=1, primary=1, units=1)}
+    assert (lh4.out/'probes.jsonl').is_file()
+    assert not validation.HELD_OUT_DIR.exists()          # nothing reaches lh1-lh3's directory
+    assert sorted(p.name for p in validation.HELD_OUT_LH4_DIR.parent.iterdir()) == ['held-out-lh4']
+
+
+def test_lh4_never_goes_in_the_lh1_to_lh3_directory_and_is_never_mixed_without_an_output(lh4, tmp_path):
+    with pytest.raises(SystemExit, match='held-out-lh4'):
+        run_lh4(lh4, 'held-out-candidates', extra=['--out', str(validation.HELD_OUT_DIR)])
+    with pytest.raises(SystemExit, match='kept apart'):
+        validation.main(['held-out-candidates', '--evidence-root', str(lh4.root), '--lineages', 'lh1', 'lh4'])
+    assert not validation.HELD_OUT_DIR.exists() and not validation.HELD_OUT_LH4_DIR.exists()
+    # Mixed with an explicit output, each lineage still reads its own study.
+    mixed = tmp_path/'mixed'
+    assert validation.main(['held-out-candidates', '--evidence-root', str(lh4.root), '--lineages', 'lh3', 'lh4',
+                            '--out', str(mixed)]) == 0
+    assert set(json.loads((mixed/'candidates.json').read_text())['lineages']) == {'lh3', 'lh4'}
+
+
+def test_the_held_out_steps_default_to_lh1_to_lh3_even_when_lh4_is_known(lh4, tmp_path):
+    out = tmp_path/'default'
+    assert validation.main(['held-out-candidates', '--evidence-root', str(lh4.root), '--out', str(out)]) == 0
+    assert set(json.loads((out/'candidates.json').read_text())['lineages']) == {'lh1', 'lh2', 'lh3'}
+    validation.HELD_OUT_DIR.mkdir(parents=True)
+    assert validation.main(['held-out-candidates', '--evidence-root', str(lh4.root)]) == 0
+    assert (validation.HELD_OUT_DIR/'candidates.json').is_file() and not validation.HELD_OUT_LH4_DIR.exists()

@@ -23,6 +23,7 @@ from harness.trace import projection
 from harness.trace.projection import project
 from tests.test_p1_arms import GAME, LAYOUT, fact, make_memory, make_sessions, publish
 from tests.test_trace_projection import make_session, make_store
+from tools import p1_analysis
 from tools.curator_host import p1_arms as arms
 from tools.curator_host import p1_replay as replay
 from tools.curator_host import shadow
@@ -524,8 +525,21 @@ def test_the_lineages_match_the_pre_registration():
     assert (replay.LINEAGES['aidB3'].sessions, replay.LINEAGES['ceil09'].sessions) == (('aidB3',), ('ceil09',))
     assert replay.LINEAGES['lh1'].sessions == ('lh1a1', 'lh1a2', 'lh1a3')
     assert replay.LINEAGES['lh2'].sessions == ('lh2a1', 'lh2a2') and replay.LINEAGES['lh3'].sessions == ('lh3a1', 'lh3a2')
-    assert {n for n, spec in replay.LINEAGES.items() if spec.held_out} == {'lh1', 'lh2', 'lh3'}
+    assert {n for n, spec in replay.LINEAGES.items() if spec.held_out} == {'lh1', 'lh2', 'lh3', 'lh4'}
     assert all(spec.store == f'player-memory-{n}.sqlite3' for n, spec in replay.LINEAGES.items() if n.startswith('lh'))
+    assert replay.LINEAGES['lh4'].directory == '522-held-out'
+    assert replay.LINEAGES['lh4'].sessions == p1_analysis.LH4_ADMISSIONS
+
+
+def test_lh4_cannot_be_selected_until_its_admissions_are_named(monkeypatch):
+    monkeypatch.setitem(replay.LINEAGES, 'lh4', replay.Lineage('522-held-out', (), 'player-memory-lh4.sqlite3', held_out=True))
+    with pytest.raises(replay.ReplayError, match='no admissions yet'):
+        replay.select(['lh4'], None, PRICES)
+    with pytest.raises(replay.ReplayError, match='no admissions yet'):
+        replay.select(['lh1', 'lh4'], None, PRICES)
+    monkeypatch.setitem(replay.LINEAGES, 'lh4', replay.Lineage('522-held-out', ('lh4b1',), 'player-memory-lh4.sqlite3', held_out=True))
+    with pytest.raises(replay.ReplayError, match='--frozen'):   # named, it is held out like lh1-lh3
+        replay.select(['lh4'], None, PRICES)
 
 
 # ------------------------------------------------------------------ the memory cutoff

@@ -10,7 +10,10 @@
 
 The `held-out-*` steps build #178's held-out probes and ledgers (docs/design/p1-study-2.md, "Held-out
 handling"). They print only counts, digests and cluster-size tables, never a frame id, a judge's
-text, a timeline, a fact or a query; the files they write may hold content.
+text, a timeline, a fact or a query; the files they write may hold content. They take
+`--lineages` (default lh1 lh2 lh3, read from study 372-382-dev-loop and written to
+data/evaluation/p1/held-out); `--lineages lh4` reads study 522-held-out and writes
+data/evaluation/p1/held-out-lh4, never the lh1-lh3 directory.
 
 `candidates` applies the rule the protocol fixed in advance ("Recall check against independently
 found re-observations"): over each development lineage's sealed frames it finds new screens after
@@ -22,6 +25,7 @@ at what a frame shows; it compares hashes and counts labels. #382's held-out lin
 from __future__ import annotations
 
 import argparse
+from collections.abc import Sequence
 import datetime
 import json
 import os
@@ -46,12 +50,15 @@ WINDOW = 15              # frame-number window for a captured event
 SAMPLE = {'397': 40, '372': 20}
 SEED = 490
 STUDIES = {'397': '397-seven-day', '372': '372-382-dev-loop'}
-HELD_OUT = ('lh1', 'lh2', 'lh3')
+HELD_OUT = ('lh1', 'lh2', 'lh3', 'lh4')
 
 # #178's held-out probes (docs/design/p1-study-2.md). Each lineage is one group across its sessions.
-HELD_OUT_RUNS = p1_analysis.HELD_OUT      # lineage -> its sessions, in order
+HELD_OUT_RUNS = p1_analysis.HELD_OUT      # lineage -> its sessions, in order (lh4 once #178 names its admissions)
 HELD_OUT_STUDY = '372-382-dev-loop'
+HELD_OUT_STUDIES = {'lh1': HELD_OUT_STUDY, 'lh2': HELD_OUT_STUDY, 'lh3': HELD_OUT_STUDY, 'lh4': '522-held-out'}
+DEFAULT_LINEAGES = ('lh1', 'lh2', 'lh3')  # p1-study/1's lineages: what the held-out steps do without --lineages
 HELD_OUT_DIR = ROOT/'data'/'evaluation'/'p1'/'held-out'
+HELD_OUT_LH4_DIR = ROOT/'data'/'evaluation'/'p1'/'held-out-lh4'
 STUDY_DOC = ROOT/'docs'/'design'/'p1-study-2.md'   # its frozen briefs are p1-study/1's, word for word
 CANDIDATES_SCHEMA = 'p1-held-out-candidates/1'
 BATCH_SCHEMA = 'p1-held-out-batch/1'
@@ -318,9 +325,37 @@ def _jsonl(path: Path) -> list[dict]:
     return rows
 
 
-def _held_out_chunks(evidence: Path, runs: tuple[str, ...]) -> tuple[list, dict[str, int], dict[str, Path]]:
+def held_out_lineages(names: Sequence[str] | None = None) -> list[str]:
+    """The held-out lineages a step covers: `names` (a subset of the known held-out lineages, no repeats) or
+    lh1-lh3. lh4 is known only once #178 has filled `p1_analysis.LH4_ADMISSIONS`."""
+    if names is None:
+        return [name for name in HELD_OUT_RUNS if name in DEFAULT_LINEAGES]
+    names = list(names)
+    for name in names:
+        if name not in HELD_OUT_RUNS:
+            raise SystemExit(f'{name}: not a held-out lineage with admissions (known: {", ".join(HELD_OUT_RUNS)})'
+                             if name in HELD_OUT_STUDIES else f'{name}: not a held-out lineage')
+    if not names or len(set(names)) != len(names):
+        raise SystemExit('name each held-out lineage once')
+    return names
+
+
+def held_out_output(lineages: Sequence[str], out: Path | None) -> Path:
+    """Where a held-out step reads and writes: lh1-lh3's directory as before, lh4's own directory, never lh4
+    in lh1-lh3's, and no default for a mix."""
+    lh4 = 'lh4' in lineages
+    if out is None:
+        if lh4 and len(lineages) > 1:
+            raise SystemExit('lh4 is kept apart from lh1-lh3: name --out to mix them, or run them separately')
+        return HELD_OUT_LH4_DIR if lh4 else HELD_OUT_DIR
+    if lh4 and Path(out).resolve() == HELD_OUT_DIR.resolve():
+        raise SystemExit(f'lh4 never goes in {HELD_OUT_DIR.name}/; use {HELD_OUT_LH4_DIR.name}/')
+    return Path(out)
+
+
+def _held_out_chunks(evidence: Path, runs: tuple[str, ...], lineage: str) -> tuple[list, dict[str, int], dict[str, Path]]:
     """(chunk, run, frames) in session then actor-directory order, every frame's hash and its path."""
-    study = evidence/HELD_OUT_STUDY/'computer-sessions'
+    study = evidence/HELD_OUT_STUDIES[lineage]/'computer-sessions'
     chunks, hashes, paths = [], {}, {}
     for run in runs:
         session = study/run
@@ -336,15 +371,16 @@ def _held_out_chunks(evidence: Path, runs: tuple[str, ...]) -> tuple[list, dict[
     return chunks, hashes, paths
 
 
-def held_out_candidates(evidence: Path, out: Path) -> dict:
+def held_out_candidates(evidence: Path, out: Path, names: Sequence[str] | None = None) -> dict:
     """Every candidate of protocol steps 1-4 over each held-out lineage; no sampling (#178)."""
     target = out/'candidates.json'
     if target.exists():
         raise SystemExit('candidates.json exists: the held-out candidates are computed once')
     evidence = Path(evidence).resolve()
     lineages, rows = {}, []
-    for lineage, runs in HELD_OUT_RUNS.items():
-        chunks, hashes, paths = _held_out_chunks(evidence, runs)
+    for lineage in held_out_lineages(names):
+        runs = HELD_OUT_RUNS[lineage]
+        chunks, hashes, paths = _held_out_chunks(evidence, runs, lineage)
         names = [chunk[0] for chunk in chunks]
         before = dict(zip(names[1:], names))
         found = find_candidates(chunks, hashes)
@@ -495,8 +531,9 @@ def _render(rows: list[dict]) -> str:
     return ''.join(json.dumps(row, sort_keys=True, ensure_ascii=False) + '\n' for row in rows)
 
 
-def held_out_probes(out: Path) -> dict:
+def held_out_probes(out: Path, names: Sequence[str] | None = None) -> dict:
     """Write `probes.jsonl`; report counts, units, clusters and the file's digest."""
+    lineages = held_out_lineages(names)
     rows = derive_probes(out)
     (out/'probes.jsonl').write_text(_render(rows), encoding='utf-8')
     try:
@@ -507,7 +544,7 @@ def held_out_probes(out: Path) -> dict:
     figures = {name: dict(candidates=sum(r['lineage'] == name for r in rows),
                           confirmed=sum(r['lineage'] == name and r['confirmed'] for r in rows),
                           primary=sum(r['lineage'] == name for r in primary),
-                          units=sum(u['lineage'] == name for u in unit_rows)) for name in HELD_OUT_RUNS}
+                          units=sum(u['lineage'] == name for u in unit_rows)) for name in lineages}
     return dict(lineages=figures, units=len(unit_rows),
                 clusters=len({(u['lineage'], u['cluster']) for u in unit_rows}),
                 cluster_sizes=p1_analysis.cluster_sizes(unit_rows),
@@ -547,13 +584,14 @@ def _evaluation_store(study: Path, session: Path) -> Path | None:
     return found[0] if found else None
 
 
-def held_out_timelines(evidence: Path, to: Path, out: Path) -> dict:
+def held_out_timelines(evidence: Path, to: Path, out: Path, names: Sequence[str] | None = None) -> dict:
     """Annotation timelines for every held-out chunk and `ledger-plan.json` (chunks to annotate, chunks that
     get a query writer, required frames)."""
-    study = Path(evidence).resolve()/HELD_OUT_STUDY
     to = Path(to).resolve()
     lineages = {}
-    for lineage, runs in HELD_OUT_RUNS.items():
+    for lineage in held_out_lineages(names):
+        runs = HELD_OUT_RUNS[lineage]
+        study = Path(evidence).resolve()/HELD_OUT_STUDIES[lineage]
         memory = study/f'player-memory-{lineage}.sqlite3'
         chunks = []
         for run in runs:
@@ -666,17 +704,22 @@ def main(argv=None) -> int:
     parser.add_argument('--evidence-root', type=Path,
                         default=Path(os.environ.get('ENACTIVE_EVIDENCE_ROOT', ROOT/'.runtime'/'evidence')))
     parser.add_argument('--out', type=Path, default=None,
-                        help='default data/evaluation/probes/validation, or data/evaluation/p1/held-out for held-out steps')
+                        help='default data/evaluation/probes/validation, or data/evaluation/p1/held-out for held-out '
+                             'steps (held-out-lh4 with --lineages lh4)')
     parser.add_argument('--to', type=Path, help='held-out-timelines: the directory for the annotation timelines')
     parser.add_argument('--judge-dir', type=Path,
                         help='held-out-batches: where the judge copies with absolute frame paths go '
                              '(outside the repository or under .runtime/)')
     parser.add_argument('--frozen', default=None, help='held-out-freeze: the freeze date (default today)')
+    parser.add_argument('--lineages', nargs='+', default=None,
+                        help='held-out steps: the held-out lineages to cover (default lh1 lh2 lh3; lh4 reads '
+                             'study 522-held-out and defaults its output to data/evaluation/p1/held-out-lh4)')
     args = parser.parse_args(argv)
     if args.step in HELD_OUT_STEPS:
-        out = args.out or HELD_OUT_DIR
+        names = held_out_lineages(args.lineages)
+        out = held_out_output(names, args.out)
         if args.step == 'held-out-candidates':
-            result = held_out_candidates(args.evidence_root, out)
+            result = held_out_candidates(args.evidence_root, out, names)
             print(json.dumps({k: dict(chunks=len(v['chunks']), candidates=v['candidates'])
                               for k, v in result['lineages'].items()}))
         elif args.step == 'held-out-batches':
@@ -684,11 +727,11 @@ def main(argv=None) -> int:
                 parser.error('held-out-batches needs --judge-dir')
             print(json.dumps(held_out_batches(out, args.evidence_root, args.judge_dir)))
         elif args.step == 'held-out-probes':
-            print(json.dumps(held_out_probes(out)))
+            print(json.dumps(held_out_probes(out, names)))
         elif args.step == 'held-out-timelines':
             if not args.to:
                 parser.error('held-out-timelines needs --to')
-            print(json.dumps(held_out_timelines(args.evidence_root, args.to, out)))
+            print(json.dumps(held_out_timelines(args.evidence_root, args.to, out, names)))
         else:
             print(json.dumps(held_out_freeze(out, args.frozen or datetime.date.today().isoformat())))
         return 0

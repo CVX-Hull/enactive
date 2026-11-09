@@ -64,7 +64,7 @@ LINEAGES = {
     '372': dict(directory='372-382-dev-loop', sessions=('aidB3', 'ceil09', 'ceil07', 'ceil05', 'aidB9', 'aidA5'),
                 memory='player-memory-{name}.sqlite3'),
 }
-HELD_OUT = re.compile(r'lh[123]')
+HELD_OUT = re.compile(r'lh[1-4]')
 
 
 class ShadowError(ValueError):

@@ -17,7 +17,7 @@ that admission boundary. It records which version each session published
 each recorded schedule, B text the successor would have received. It makes no model call and prints
 only counts.
 
-#382's held-out lineages (lh1, lh2, lh3) are refused by name unless `--frozen` names an
+The held-out lineages (#382's lh1, lh2, lh3 and #522's lh4) are refused by name unless `--frozen` names an
 `p1-arms-frozen/1` file, written by `freeze`, whose every digest matches the current files, whose
 files are all committed and unmodified, and whose commit is HEAD or an ancestor of it.
 """
@@ -44,6 +44,7 @@ from harness.curator.knowledge import KnowledgeError, Repository  # noqa: E402
 from harness.jsonio import file_sha256  # noqa: E402
 from tools.curator_host import p1_arms as arms  # noqa: E402
 from tools.curator_host import shadow  # noqa: E402
+from tools.p1_analysis import LH4_ADMISSIONS  # noqa: E402
 
 FROZEN_SCHEMA = 'p1-arms-frozen/1'
 DELIVERED_SCHEMA = 'p1-delivered/1'
@@ -100,6 +101,8 @@ LINEAGES = {
     'lh1': Lineage(_DEV_LOOP, ('lh1a1', 'lh1a2', 'lh1a3'), 'player-memory-lh1.sqlite3', held_out=True),
     'lh2': Lineage(_DEV_LOOP, ('lh2a1', 'lh2a2'), 'player-memory-lh2.sqlite3', held_out=True),
     'lh3': Lineage(_DEV_LOOP, ('lh3a1', 'lh3a2'), 'player-memory-lh3.sqlite3', held_out=True),
+    # p1-study/2's fourth lineage (#522); its admissions are named by #178 in `tools.p1_analysis.LH4_ADMISSIONS`.
+    'lh4': Lineage('522-held-out', LH4_ADMISSIONS, 'player-memory-lh4.sqlite3', held_out=True),
 }
 
 
@@ -207,9 +210,12 @@ def select(names: Sequence[str], frozen: Path | None, prices: Path) -> list[str]
         raise ReplayError('a lineage can be named once')
     for name in names:
         if name not in LINEAGES:
-            held = ' (a held-out name needs a frozen arms file, and only lh1, lh2 and lh3 exist)' \
+            held = ' (a held-out name needs a frozen arms file, and only lh1, lh2, lh3 and lh4 exist)' \
                 if HELD_OUT_NAME.match(name) else ''
             raise ReplayError(f'unknown lineage {name!r}; choose one of {", ".join(LINEAGES)}{held}')
+        if not LINEAGES[name].sessions:
+            raise ReplayError(f'lineage {name!r} has no admissions yet: #178 names them in '
+                              f'tools.p1_analysis.LH4_ADMISSIONS after #522 ends')
     if any(LINEAGES[name].held_out for name in names):
         verify_frozen(frozen, prices)
     return list(names)
