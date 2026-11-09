@@ -479,6 +479,20 @@
         "runs": ".runtime/curator-shadow"
       },
       "visibility": "private"
+    },
+    "seven-day-recap-video": {
+      "availability": "present",
+      "bytes": 2722183,
+      "cited_by": [
+        "docs/acceptance/2026-11-09-recap-video-and-branches.md"
+      ],
+      "files": 5,
+      "manifest_sha256": "8b1762d2c44909000c8eb18798d9e52c67743ece813b52df800e035c8f0f2a36",
+      "note": "The captioned 60-second recap exported on 19 October 2026 from the first supervised seven-day campaign (docs/acceptance/2026-10-19-seven-day-survival.md): video, captions, thumbnail, export verification and upload description. The only copy; sealed on the owner's decision of 9 November 2026.",
+      "sources": {
+        ".": "dist/seven-day-video"
+      },
+      "visibility": "private"
     }
   }
 }
