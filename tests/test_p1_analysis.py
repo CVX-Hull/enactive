@@ -228,12 +228,18 @@ def test_the_study_2_plan_reproduces_and_its_page_figures_match():
     tracked = json.loads((p1.ROOT/'data'/'evaluation'/'p1'/'power-study-2.json').read_text())
     held_out = p1._lines(p1.ROOT/'data'/'evaluation'/'p1'/'held-out'/'probes.jsonl')
     assert p1.plan(held_out) == tracked
-    assert tracked['gate'] == p1.gate(tracked['probability_of_go'][tracked['planning']])
-    assert all(v['0.30'] == 0 for k, v in tracked['probability_of_go'].items() if k.startswith('lh4_units=16,'))
+    gate = tracked['gate']
+    assert gate == p1.gate(tracked['probability_of_go'][tracked['planning']]) and gate['passes']
+    assert tracked['planning'] == f'lh4_boundaries={p1.PLAN_TARGET}, cluster_mean={p1.PLAN_MEAN}'
     page = (p1.ROOT/'docs'/'design'/'p1-study-2.md').read_text().replace('**', '')
-    for variant in tracked['probability_of_go'].values():     # every row of the page's power table
-        row = ' | '.join(f'{variant[d]:.3f}' for d in ('0.00', '0.10', '0.15', '0.20', '0.25', '0.30'))
+    for key, variant in tracked['probability_of_go'].items():     # every row of the page's power table, by its labels
+        boundaries, mean = (part.split('=')[1] for part in key.split(', '))
+        cells = [boundaries, mean, f"{tracked['lh4_under_min_units'][key]:.3f}"]
+        cells += [f'{variant[d]:.3f}' for d in ('0.00', '0.10', '0.15', '0.20', '0.25', '0.30')]
+        row = '| ' + ' | '.join(cells) + ' |'
         assert row in page, f'the power table on p1-study-2.md must render power-study-2.json: {row}'
+    prose = ' '.join(page.split())
+    assert f"P(go) {gate['at_interest']:.3f} at the effect of interest and {gate['no_effect']:.3f}" in prose
 
 
 def test_the_tracked_power_simulation_reproduces_and_its_page_figures_match():

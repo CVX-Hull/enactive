@@ -322,6 +322,7 @@ def test_held_out_candidates_are_computed_once(world):
 
 
 def expected_brief():
+    # p1-study/1's brief, the one lh1-lh3's judges used: p1-study/2 must keep it word for word.
     text = (validation.ROOT/'docs'/'design'/'p1-study.md').read_text()
     paragraph = next(p for p in text.split('\n\n') if p.startswith('> **Confirmation.**'))
     joined = ' '.join(line[1:].strip() for line in paragraph.splitlines())

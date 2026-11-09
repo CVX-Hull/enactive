@@ -622,7 +622,8 @@ checks its power by simulation before it runs.
 - **Held-out data:** #382's three day-scale lineages, sealed in `372-382-dev-loop`.
   No episode, probe or design choice came from them; this page's problem statement
   counted their records and queries only in aggregates. #178 writes their probes.
-  They predate emissions, which the P1 study records as a limitation.
+  They predate emissions, which the P1 study records as a limitation. P1's second
+  protocol adds one more held-out lineage, `lh4`, run for the study (#522).
 - **#441 is deferred.** On 8 November the owner decided: "I would prefer to do this
   run after we move forward on the ADR we just discussed to be fruitful." Its
   lineages are re-shaped against the design in place when it resumes.
