@@ -14,6 +14,7 @@ states. Records are dated evidence, not current instructions; the
 
 | Date | Record | Scope | Status |
 | --- | --- | --- | --- |
+| 2026-11-08 | [Probe validation (#490)](2026-11-08-probe-validation-490.md) | Blinded probe recall checked against independently found re-observations on #397 and the #372 sample, query probes written and re-checked, a content-matched correction, and the owner decision on P1 probes (#490) | historical |
 | 2026-11-08 | [Probe baseline from sealed traces (#449)](2026-11-08-probe-baseline-449.md) | Probe suite and baseline carry and rediscovery rates from the sealed #397 lineage and a seeded #372 sample, with inter-rater agreement and annotation cost (#449) | historical |
 | 2026-11-08 | [Curator shadow sessions (#454)](2026-11-08-curator-shadow-454.md) | Curator shadow sessions over the sealed #397 lineage and the #372 sample: cost, lag, cold start and gate pass rate for one Pi-based host with two OpenRouter models (#454) | historical |
 | 2026-11-08 | [Context stability and clarity (#489)](2026-11-08-context-stability-489.md) | Request stability and clarity for the actor and curator hosts, the no-spend serialization proof, and one paid curator session checking whether session affinity raises the cached share (#489) | historical |

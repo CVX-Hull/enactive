@@ -164,6 +164,122 @@ chunks from the #397 order. The record compares three things.
 - **New facts**: the lead matches statements across annotators and reports
   matched ÷ union, with the matching shown.
 
+## Recall check against independently found re-observations (#490)
+
+Blinded annotation fully recognised none of the four known #397 episodes. Before arms
+are scored against probes, the protocol's blinded recall is checked against
+re-observations that neither the lead nor the annotators chose.
+
+This rule was fixed on 8 November 2026, before any candidate was computed. The
+evaluator records no rediscovery event, so the candidates come from frames.
+
+1. **Frames.** Each chunk's frames are taken in operation order, as in the timelines.
+2. **Hash.** Each frame gets a 256-bit difference hash (`harness.trace.images.dhash`,
+   size 16).
+3. **A new screen** is a frame at least 64 bits from the previous frame in the same
+   chunk.
+4. **A candidate** is a new screen in chunk c, for c ≥ 1, within 16 bits of some frame
+   from an earlier chunk of the same lineage. Within c, a candidate whose nearest
+   earlier match was already used by a candidate in the previous 20 frames is dropped,
+   so one re-opened screen counts once.
+5. **The sample** is `random.Random(490).sample` of up to 40 candidates from #397 and up
+   to 20 from the #372 sample, in a fixed sorted order. Held-out lineages are never
+   used.
+6. **The judge.** A blinded agent sees only the two frames, in a fresh context. It is
+   not told the game, the study or which frame came first. It answers whether both
+   frames show **the same specific information** (the same list, contents, message or
+   text, not merely the same kind of view) and names it in one line. A "yes" is a
+   confirmed re-observation.
+7. **Captured.** A confirmed pair is captured when the blinded ledger, without the
+   adjudication layer, holds in the later chunk a `rediscovered` or `needed` event:
+   - on a fact observed in an earlier chunk;
+   - citing a frame of the same session whose frame number is within 15 of the later
+     frame's.
+8. **Recall** is captured pairs ÷ confirmed pairs, per lineage and pooled.
+
+**Decision, fixed in advance.** If pooled recall is **0.6 or more**, the fact-label
+protocol stands. Below 0.6, the probes become query-style:
+- for each boundary, one blinded agent writes queries from the predecessor's chunk;
+- a second, in a fresh context, answers them from the successor's received text;
+- the check is re-run on the query probes.
+
+Either way, one fact ledger per development lineage is frozen as the scoring ledger.
+
+**Result (8 November 2026).** Pooled recall was 0.51: 19 of 37 confirmed
+re-observations captured. #397 reached 0.67 and the #372 sample 0.23. That is below the
+bar, so the probes become query-style
+([`data/evaluation/probes/validation/`](../../data/evaluation/probes/validation)).
+
+## Query probes (#490)
+
+Fixed on 8 November 2026, after the recall result and before any query was written.
+
+**Writers.**
+- Every chunk that precedes a boundary gets one blinded writer: #397's `sd1a1-001`
+  through `sd1a7-001`, and each #372 sample run's `-001` chunk.
+- A writer works in a fresh context from the chunk's timeline and frames, under the
+  same frame-coverage rule as annotators.
+- It is not told about the study, the episodes or any other chunk.
+- It writes up to 40 queries, each with the information a later player in the same
+  world might need, such as:
+  - places;
+  - what containers hold;
+  - items lying around;
+  - hazards;
+  - controls and procedures;
+  - the character's state and plans.
+- Each query is answerable from a frame the writer viewed. It carries its answer and
+  that frame:
+  `{"type":"query","id":"Q1","question":"…","answer":"…","frame":"<source id>","category":"…"}`.
+
+**The query set frozen per lineage is the scoring ledger.** An arm is scored by whether
+the text it would put in front of the successor answers each query of the predecessor's
+chunk.
+
+**Re-check, with its bar fixed in advance.** For each confirmed re-observation, a
+blinded judge in a fresh context sees the earlier frame and the queries written for that
+frame's chunk. It decides whether any query's answer states the information the frame
+shows.
+- **Query recall** is covered ÷ confirmed.
+- At 0.6 or more, query probes are adopted.
+- Below 0.6, the record says so, and the probe design goes back to the owner before
+  #491.
+
+**Result (8 November 2026).** 19 writers wrote 649 queries. Query recall was 0.41: 15 of
+37 confirmed re-observations covered, #397 0.50 and the #372 sample 0.23. That is below
+the bar.
+
+**Correction after review (8 November 2026).** Step 7's fact-label rule checks only that
+a need falls near the later frame, not what the fact says. A blinded content check, with
+the same judge model and question as the query re-check, found that only **4 of the 19**
+captured pairs have a nearby fact that states what the earlier frame shows. Content-matched
+figures, post hoc and descriptive only:
+
+| | Fact labels | Queries | Either |
+| --- | ---: | ---: | ---: |
+| All 37 confirmed pairs | 4 (0.11) | 15 (0.41) | 16 (0.43) |
+| 21 informative pairs (no empty menu, search prompt or loading screen) | 4 | 13 (0.62) | 14 (0.67) |
+
+The pre-registered fact figure, 0.51, stands as computed. It does not show that the
+fact ledger records these re-observations, and the two ledgers are not complementary.
+A first version of this result reported a union of 0.68 (0.81 on informative pairs) from
+the uncorrected rule, and the owner's first decision, to score on both ledgers, rested on it.
+
+**The owner's decision, on the corrected figures: confirmed re-observations are P1's
+primary probes.**
+- **Source.** The probes come from the fixed candidate rule (steps 1–4). On held-out data,
+  every candidate is judged, not a sample.
+- **Confirmation.** A blinded judge confirms each one under a tightened rule: a pair that
+  matches only an empty menu, a search prompt or a loading screen is not a re-observation.
+- **Scoring.** At the boundary a pair crosses, a blinded judge decides whether the arm's
+  delivered text states what the earlier frame shows.
+- **Secondary figures.** Both blinded ledgers stay frozen in
+  [`data/evaluation/probes/ledger.json`](../../data/evaluation/probes/ledger.json), with a
+  digest per file. They give descriptive figures: needed-fact recall from the fact
+  ledger, and query coverage.
+
+The P1 pre-registration (#491) fixes these rules. #178 writes the held-out ledgers.
+
 ## Cost
 
 Each chunk's annotator tokens and wall time come from the agent host's own task report.

@@ -1,0 +1,867 @@
+{
+ "lineages": {
+  "372": {
+   "candidates": 25,
+   "sampled": 20
+  },
+  "397": {
+   "candidates": 197,
+   "sampled": 40
+  }
+ },
+ "pairs": [
+  {
+   "distance": 0,
+   "earlier": "f37efc17970589e90aff3c73d3742a89-10249",
+   "earlier_chunk": "sd1a1-002",
+   "id": "p001",
+   "later": "507f7c538191fedb29b11639ed137b70-212",
+   "later_chunk": "sd1a2-001",
+   "lineage": "397",
+   "run": "sd1a2",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "distance": 12,
+   "earlier": "f37efc17970589e90aff3c73d3742a89-16876",
+   "earlier_chunk": "sd1a1-002",
+   "id": "p002",
+   "later": "507f7c538191fedb29b11639ed137b70-873",
+   "later_chunk": "sd1a2-001",
+   "lineage": "397",
+   "run": "sd1a2",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "distance": 11,
+   "earlier": "507f7c538191fedb29b11639ed137b70-3304",
+   "earlier_chunk": "sd1a2-001",
+   "id": "p003",
+   "later": "507f7c538191fedb29b11639ed137b70-4396",
+   "later_chunk": "sd1a2-002",
+   "lineage": "397",
+   "run": "sd1a2",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "distance": 1,
+   "earlier": "f37efc17970589e90aff3c73d3742a89-10249",
+   "earlier_chunk": "sd1a1-002",
+   "id": "p004",
+   "later": "507f7c538191fedb29b11639ed137b70-6481",
+   "later_chunk": "sd1a2-002",
+   "lineage": "397",
+   "run": "sd1a2",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "distance": 6,
+   "earlier": "f37efc17970589e90aff3c73d3742a89-480",
+   "earlier_chunk": "sd1a1-001",
+   "id": "p005",
+   "later": "12ba39c88fbb4da11264b8d2c4634db1-39",
+   "later_chunk": "sd1a3-001",
+   "lineage": "397",
+   "run": "sd1a3",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "distance": 0,
+   "earlier": "f37efc17970589e90aff3c73d3742a89-1674",
+   "earlier_chunk": "sd1a1-001",
+   "id": "p006",
+   "later": "12ba39c88fbb4da11264b8d2c4634db1-6577",
+   "later_chunk": "sd1a3-001",
+   "lineage": "397",
+   "run": "sd1a3",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "distance": 10,
+   "earlier": "507f7c538191fedb29b11639ed137b70-740",
+   "earlier_chunk": "sd1a2-001",
+   "id": "p007",
+   "later": "12ba39c88fbb4da11264b8d2c4634db1-965",
+   "later_chunk": "sd1a3-001",
+   "lineage": "397",
+   "run": "sd1a3",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "distance": 13,
+   "earlier": "12ba39c88fbb4da11264b8d2c4634db1-12986",
+   "earlier_chunk": "sd1a3-002",
+   "id": "p008",
+   "later": "92505965fcbd23adda6919b8a38decc4-1004",
+   "later_chunk": "sd1a4-001",
+   "lineage": "397",
+   "run": "sd1a4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "distance": 13,
+   "earlier": "12ba39c88fbb4da11264b8d2c4634db1-981",
+   "earlier_chunk": "sd1a3-001",
+   "id": "p009",
+   "later": "92505965fcbd23adda6919b8a38decc4-328",
+   "later_chunk": "sd1a4-001",
+   "lineage": "397",
+   "run": "sd1a4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "distance": 10,
+   "earlier": "12ba39c88fbb4da11264b8d2c4634db1-16725",
+   "earlier_chunk": "sd1a3-002",
+   "id": "p010",
+   "later": "92505965fcbd23adda6919b8a38decc4-333",
+   "later_chunk": "sd1a4-001",
+   "lineage": "397",
+   "run": "sd1a4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "distance": 14,
+   "earlier": "12ba39c88fbb4da11264b8d2c4634db1-12631",
+   "earlier_chunk": "sd1a3-002",
+   "id": "p011",
+   "later": "92505965fcbd23adda6919b8a38decc4-524",
+   "later_chunk": "sd1a4-001",
+   "lineage": "397",
+   "run": "sd1a4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "distance": 16,
+   "earlier": "12ba39c88fbb4da11264b8d2c4634db1-6027",
+   "earlier_chunk": "sd1a3-001",
+   "id": "p012",
+   "later": "92505965fcbd23adda6919b8a38decc4-13151",
+   "later_chunk": "sd1a4-002",
+   "lineage": "397",
+   "run": "sd1a4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "distance": 0,
+   "earlier": "f37efc17970589e90aff3c73d3742a89-5326",
+   "earlier_chunk": "sd1a1-001",
+   "id": "p013",
+   "later": "92505965fcbd23adda6919b8a38decc4-3349",
+   "later_chunk": "sd1a4-002",
+   "lineage": "397",
+   "run": "sd1a4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "distance": 0,
+   "earlier": "92505965fcbd23adda6919b8a38decc4-328",
+   "earlier_chunk": "sd1a4-001",
+   "id": "p014",
+   "later": "92505965fcbd23adda6919b8a38decc4-3353",
+   "later_chunk": "sd1a4-002",
+   "lineage": "397",
+   "run": "sd1a4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "distance": 0,
+   "earlier": "507f7c538191fedb29b11639ed137b70-13174",
+   "earlier_chunk": "sd1a2-002",
+   "id": "p015",
+   "later": "92505965fcbd23adda6919b8a38decc4-8074",
+   "later_chunk": "sd1a4-002",
+   "lineage": "397",
+   "run": "sd1a4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "distance": 1,
+   "earlier": "92505965fcbd23adda6919b8a38decc4-14236",
+   "earlier_chunk": "sd1a4-002",
+   "id": "p016",
+   "later": "3c6acb3817ebc5b0fced8f7a122b7bbf-174",
+   "later_chunk": "sd1a5-001",
+   "lineage": "397",
+   "run": "sd1a5",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "distance": 4,
+   "earlier": "507f7c538191fedb29b11639ed137b70-3303",
+   "earlier_chunk": "sd1a2-001",
+   "id": "p017",
+   "later": "3c6acb3817ebc5b0fced8f7a122b7bbf-213",
+   "later_chunk": "sd1a5-001",
+   "lineage": "397",
+   "run": "sd1a5",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "distance": 3,
+   "earlier": "12ba39c88fbb4da11264b8d2c4634db1-13847",
+   "earlier_chunk": "sd1a3-002",
+   "id": "p018",
+   "later": "3c6acb3817ebc5b0fced8f7a122b7bbf-220",
+   "later_chunk": "sd1a5-001",
+   "lineage": "397",
+   "run": "sd1a5",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "distance": 11,
+   "earlier": "92505965fcbd23adda6919b8a38decc4-14179",
+   "earlier_chunk": "sd1a4-002",
+   "id": "p019",
+   "later": "3c6acb3817ebc5b0fced8f7a122b7bbf-723",
+   "later_chunk": "sd1a5-001",
+   "lineage": "397",
+   "run": "sd1a5",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "distance": 0,
+   "earlier": "507f7c538191fedb29b11639ed137b70-9585",
+   "earlier_chunk": "sd1a2-002",
+   "id": "p020",
+   "later": "3c6acb3817ebc5b0fced8f7a122b7bbf-1458",
+   "later_chunk": "sd1a5-002",
+   "lineage": "397",
+   "run": "sd1a5",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "distance": 1,
+   "earlier": "92505965fcbd23adda6919b8a38decc4-10713",
+   "earlier_chunk": "sd1a4-002",
+   "id": "p021",
+   "later": "3c6acb3817ebc5b0fced8f7a122b7bbf-2434",
+   "later_chunk": "sd1a5-002",
+   "lineage": "397",
+   "run": "sd1a5",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "distance": 0,
+   "earlier": "12ba39c88fbb4da11264b8d2c4634db1-12233",
+   "earlier_chunk": "sd1a3-002",
+   "id": "p022",
+   "later": "3c6acb3817ebc5b0fced8f7a122b7bbf-4975",
+   "later_chunk": "sd1a5-002",
+   "lineage": "397",
+   "run": "sd1a5",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "distance": 7,
+   "earlier": "92505965fcbd23adda6919b8a38decc4-12702",
+   "earlier_chunk": "sd1a4-002",
+   "id": "p023",
+   "later": "3c6acb3817ebc5b0fced8f7a122b7bbf-5142",
+   "later_chunk": "sd1a5-002",
+   "lineage": "397",
+   "run": "sd1a5",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "distance": 13,
+   "earlier": "f37efc17970589e90aff3c73d3742a89-11958",
+   "earlier_chunk": "sd1a1-002",
+   "id": "p024",
+   "later": "3c6acb3817ebc5b0fced8f7a122b7bbf-7590",
+   "later_chunk": "sd1a5-002",
+   "lineage": "397",
+   "run": "sd1a5",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "distance": 15,
+   "earlier": "3c6acb3817ebc5b0fced8f7a122b7bbf-9518",
+   "earlier_chunk": "sd1a5-002",
+   "id": "p025",
+   "later": "910bb98c06461865f5a73e3574cdd95a-1250",
+   "later_chunk": "sd1a6-001",
+   "lineage": "397",
+   "run": "sd1a6",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "distance": 6,
+   "earlier": "3c6acb3817ebc5b0fced8f7a122b7bbf-195",
+   "earlier_chunk": "sd1a5-001",
+   "id": "p026",
+   "later": "910bb98c06461865f5a73e3574cdd95a-192",
+   "later_chunk": "sd1a6-001",
+   "lineage": "397",
+   "run": "sd1a6",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "distance": 16,
+   "earlier": "12ba39c88fbb4da11264b8d2c4634db1-17601",
+   "earlier_chunk": "sd1a3-002",
+   "id": "p027",
+   "later": "910bb98c06461865f5a73e3574cdd95a-196",
+   "later_chunk": "sd1a6-001",
+   "lineage": "397",
+   "run": "sd1a6",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "distance": 11,
+   "earlier": "507f7c538191fedb29b11639ed137b70-5838",
+   "earlier_chunk": "sd1a2-002",
+   "id": "p028",
+   "later": "910bb98c06461865f5a73e3574cdd95a-2158",
+   "later_chunk": "sd1a6-001",
+   "lineage": "397",
+   "run": "sd1a6",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "distance": 7,
+   "earlier": "3c6acb3817ebc5b0fced8f7a122b7bbf-9518",
+   "earlier_chunk": "sd1a5-002",
+   "id": "p029",
+   "later": "910bb98c06461865f5a73e3574cdd95a-2572",
+   "later_chunk": "sd1a6-001",
+   "lineage": "397",
+   "run": "sd1a6",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "distance": 1,
+   "earlier": "f37efc17970589e90aff3c73d3742a89-525",
+   "earlier_chunk": "sd1a1-001",
+   "id": "p030",
+   "later": "910bb98c06461865f5a73e3574cdd95a-45",
+   "later_chunk": "sd1a6-001",
+   "lineage": "397",
+   "run": "sd1a6",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "distance": 0,
+   "earlier": "12ba39c88fbb4da11264b8d2c4634db1-12233",
+   "earlier_chunk": "sd1a3-002",
+   "id": "p031",
+   "later": "910bb98c06461865f5a73e3574cdd95a-770",
+   "later_chunk": "sd1a6-001",
+   "lineage": "397",
+   "run": "sd1a6",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "distance": 6,
+   "earlier": "910bb98c06461865f5a73e3574cdd95a-1250",
+   "earlier_chunk": "sd1a6-001",
+   "id": "p032",
+   "later": "910bb98c06461865f5a73e3574cdd95a-3613",
+   "later_chunk": "sd1a6-002",
+   "lineage": "397",
+   "run": "sd1a6",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "distance": 0,
+   "earlier": "910bb98c06461865f5a73e3574cdd95a-750",
+   "earlier_chunk": "sd1a6-001",
+   "id": "p033",
+   "later": "910bb98c06461865f5a73e3574cdd95a-4981",
+   "later_chunk": "sd1a6-002",
+   "lineage": "397",
+   "run": "sd1a6",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "distance": 0,
+   "earlier": "92505965fcbd23adda6919b8a38decc4-328",
+   "earlier_chunk": "sd1a4-001",
+   "id": "p034",
+   "later": "910bb98c06461865f5a73e3574cdd95a-5491",
+   "later_chunk": "sd1a6-002",
+   "lineage": "397",
+   "run": "sd1a6",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "distance": 0,
+   "earlier": "f37efc17970589e90aff3c73d3742a89-1674",
+   "earlier_chunk": "sd1a1-001",
+   "id": "p035",
+   "later": "bf01a9f1ca634ea63144b01cd8debe8d-2722",
+   "later_chunk": "sd1a7-001",
+   "lineage": "397",
+   "run": "sd1a7",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "distance": 8,
+   "earlier": "3c6acb3817ebc5b0fced8f7a122b7bbf-717",
+   "earlier_chunk": "sd1a5-001",
+   "id": "p036",
+   "later": "bf01a9f1ca634ea63144b01cd8debe8d-2738",
+   "later_chunk": "sd1a7-001",
+   "lineage": "397",
+   "run": "sd1a7",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "distance": 0,
+   "earlier": "f37efc17970589e90aff3c73d3742a89-1674",
+   "earlier_chunk": "sd1a1-001",
+   "id": "p037",
+   "later": "bf01a9f1ca634ea63144b01cd8debe8d-5241",
+   "later_chunk": "sd1a7-001",
+   "lineage": "397",
+   "run": "sd1a7",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "distance": 12,
+   "earlier": "12ba39c88fbb4da11264b8d2c4634db1-15919",
+   "earlier_chunk": "sd1a3-002",
+   "id": "p038",
+   "later": "bf01a9f1ca634ea63144b01cd8debe8d-9280",
+   "later_chunk": "sd1a7-001",
+   "lineage": "397",
+   "run": "sd1a7",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "distance": 2,
+   "earlier": "bf01a9f1ca634ea63144b01cd8debe8d-7642",
+   "earlier_chunk": "sd1a7-001",
+   "id": "p039",
+   "later": "bf01a9f1ca634ea63144b01cd8debe8d-9660",
+   "later_chunk": "sd1a7-002",
+   "lineage": "397",
+   "run": "sd1a7",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "distance": 0,
+   "earlier": "bf01a9f1ca634ea63144b01cd8debe8d-8979",
+   "earlier_chunk": "sd1a7-001",
+   "id": "p040",
+   "later": "bf01a9f1ca634ea63144b01cd8debe8d-9775",
+   "later_chunk": "sd1a7-002",
+   "lineage": "397",
+   "run": "sd1a7",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "distance": 0,
+   "earlier": "b328dac77cd4b4f1b5d2ee9a0c82894b-1827",
+   "earlier_chunk": "aidA5-001",
+   "id": "p041",
+   "later": "b328dac77cd4b4f1b5d2ee9a0c82894b-16384",
+   "later_chunk": "aidA5-002",
+   "lineage": "372",
+   "run": "aidA5",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "distance": 16,
+   "earlier": "b328dac77cd4b4f1b5d2ee9a0c82894b-342",
+   "earlier_chunk": "aidA5-001",
+   "id": "p042",
+   "later": "b328dac77cd4b4f1b5d2ee9a0c82894b-17063",
+   "later_chunk": "aidA5-002",
+   "lineage": "372",
+   "run": "aidA5",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "distance": 0,
+   "earlier": "b328dac77cd4b4f1b5d2ee9a0c82894b-2162",
+   "earlier_chunk": "aidA5-001",
+   "id": "p043",
+   "later": "b328dac77cd4b4f1b5d2ee9a0c82894b-2578",
+   "later_chunk": "aidA5-002",
+   "lineage": "372",
+   "run": "aidA5",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "distance": 0,
+   "earlier": "20d51b154e0077ab83109060223075c2-2313",
+   "earlier_chunk": "aidB3-001",
+   "id": "p044",
+   "later": "20d51b154e0077ab83109060223075c2-15914",
+   "later_chunk": "aidB3-002",
+   "lineage": "372",
+   "run": "aidB3",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "distance": 13,
+   "earlier": "20d51b154e0077ab83109060223075c2-473",
+   "earlier_chunk": "aidB3-001",
+   "id": "p045",
+   "later": "20d51b154e0077ab83109060223075c2-16626",
+   "later_chunk": "aidB3-002",
+   "lineage": "372",
+   "run": "aidB3",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "distance": 8,
+   "earlier": "20d51b154e0077ab83109060223075c2-1527",
+   "earlier_chunk": "aidB3-001",
+   "id": "p046",
+   "later": "20d51b154e0077ab83109060223075c2-4444",
+   "later_chunk": "aidB3-002",
+   "lineage": "372",
+   "run": "aidB3",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "distance": 10,
+   "earlier": "20d51b154e0077ab83109060223075c2-2840",
+   "earlier_chunk": "aidB3-001",
+   "id": "p047",
+   "later": "20d51b154e0077ab83109060223075c2-4835",
+   "later_chunk": "aidB3-002",
+   "lineage": "372",
+   "run": "aidB3",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "distance": 2,
+   "earlier": "20d51b154e0077ab83109060223075c2-2305",
+   "earlier_chunk": "aidB3-001",
+   "id": "p048",
+   "later": "20d51b154e0077ab83109060223075c2-5924",
+   "later_chunk": "aidB3-002",
+   "lineage": "372",
+   "run": "aidB3",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "distance": 0,
+   "earlier": "9313a6ff091a1c6bd4e9d30817d792ce-1090",
+   "earlier_chunk": "aidB9-001",
+   "id": "p049",
+   "later": "9313a6ff091a1c6bd4e9d30817d792ce-4275",
+   "later_chunk": "aidB9-002",
+   "lineage": "372",
+   "run": "aidB9",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "distance": 2,
+   "earlier": "2256dc8fbab78519fdea458f3f66315e-995",
+   "earlier_chunk": "ceil05-001",
+   "id": "p050",
+   "later": "2256dc8fbab78519fdea458f3f66315e-2992",
+   "later_chunk": "ceil05-002",
+   "lineage": "372",
+   "run": "ceil05",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "distance": 0,
+   "earlier": "2256dc8fbab78519fdea458f3f66315e-2188",
+   "earlier_chunk": "ceil05-001",
+   "id": "p051",
+   "later": "2256dc8fbab78519fdea458f3f66315e-3006",
+   "later_chunk": "ceil05-002",
+   "lineage": "372",
+   "run": "ceil05",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "distance": 2,
+   "earlier": "2256dc8fbab78519fdea458f3f66315e-995",
+   "earlier_chunk": "ceil05-001",
+   "id": "p052",
+   "later": "2256dc8fbab78519fdea458f3f66315e-4082",
+   "later_chunk": "ceil05-002",
+   "lineage": "372",
+   "run": "ceil05",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "distance": 0,
+   "earlier": "bbef26ac5228651c066afc27a5af5c32-2234",
+   "earlier_chunk": "ceil07-001",
+   "id": "p053",
+   "later": "bbef26ac5228651c066afc27a5af5c32-3016",
+   "later_chunk": "ceil07-002",
+   "lineage": "372",
+   "run": "ceil07",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "distance": 0,
+   "earlier": "bbef26ac5228651c066afc27a5af5c32-1807",
+   "earlier_chunk": "ceil07-001",
+   "id": "p054",
+   "later": "bbef26ac5228651c066afc27a5af5c32-6892",
+   "later_chunk": "ceil07-002",
+   "lineage": "372",
+   "run": "ceil07",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "distance": 0,
+   "earlier": "bbef26ac5228651c066afc27a5af5c32-1810",
+   "earlier_chunk": "ceil07-001",
+   "id": "p055",
+   "later": "bbef26ac5228651c066afc27a5af5c32-6904",
+   "later_chunk": "ceil07-002",
+   "lineage": "372",
+   "run": "ceil07",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "distance": 13,
+   "earlier": "c6c09be0b7d43fba2839147651a4f6a5-2024",
+   "earlier_chunk": "ceil09-001",
+   "id": "p056",
+   "later": "c6c09be0b7d43fba2839147651a4f6a5-2222",
+   "later_chunk": "ceil09-002",
+   "lineage": "372",
+   "run": "ceil09",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "distance": 7,
+   "earlier": "c6c09be0b7d43fba2839147651a4f6a5-2189",
+   "earlier_chunk": "ceil09-001",
+   "id": "p057",
+   "later": "c6c09be0b7d43fba2839147651a4f6a5-2325",
+   "later_chunk": "ceil09-002",
+   "lineage": "372",
+   "run": "ceil09",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "distance": 0,
+   "earlier": "c6c09be0b7d43fba2839147651a4f6a5-733",
+   "earlier_chunk": "ceil09-001",
+   "id": "p058",
+   "later": "c6c09be0b7d43fba2839147651a4f6a5-2331",
+   "later_chunk": "ceil09-002",
+   "lineage": "372",
+   "run": "ceil09",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "distance": 15,
+   "earlier": "c6c09be0b7d43fba2839147651a4f6a5-2074",
+   "earlier_chunk": "ceil09-001",
+   "id": "p059",
+   "later": "c6c09be0b7d43fba2839147651a4f6a5-7266",
+   "later_chunk": "ceil09-002",
+   "lineage": "372",
+   "run": "ceil09",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "distance": 16,
+   "earlier": "c6c09be0b7d43fba2839147651a4f6a5-404",
+   "earlier_chunk": "ceil09-001",
+   "id": "p060",
+   "later": "c6c09be0b7d43fba2839147651a4f6a5-9918",
+   "later_chunk": "ceil09-002",
+   "lineage": "372",
+   "run": "ceil09",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  }
+ ],
+ "rule": {
+  "cluster": 20,
+  "hash_size": 16,
+  "near": 16,
+  "new_screen": 64,
+  "sample": {
+   "372": 20,
+   "397": 40
+  },
+  "seed": 490,
+  "window": 15
+ },
+ "schema": "probe-validation/1"
+}

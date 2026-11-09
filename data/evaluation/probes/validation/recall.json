@@ -1,0 +1,371 @@
+{
+ "decision": "switch to query-style probes",
+ "kind": "recall",
+ "lineages": {
+  "372": {
+   "captured": 3,
+   "confirmed": 13,
+   "judged": 20,
+   "recall": 0.231
+  },
+  "397": {
+   "captured": 16,
+   "confirmed": 24,
+   "judged": 40,
+   "recall": 0.667
+  }
+ },
+ "pairs": [
+  {
+   "captured": true,
+   "confirmed": true,
+   "id": "p001"
+  },
+  {
+   "confirmed": false,
+   "id": "p002"
+  },
+  {
+   "confirmed": false,
+   "id": "p003"
+  },
+  {
+   "captured": false,
+   "confirmed": true,
+   "id": "p004"
+  },
+  {
+   "confirmed": false,
+   "id": "p005"
+  },
+  {
+   "captured": true,
+   "confirmed": true,
+   "id": "p006"
+  },
+  {
+   "confirmed": false,
+   "id": "p007"
+  },
+  {
+   "confirmed": false,
+   "id": "p008"
+  },
+  {
+   "captured": true,
+   "confirmed": true,
+   "id": "p009"
+  },
+  {
+   "confirmed": false,
+   "id": "p010"
+  },
+  {
+   "confirmed": false,
+   "id": "p011"
+  },
+  {
+   "confirmed": false,
+   "id": "p012"
+  },
+  {
+   "captured": true,
+   "confirmed": true,
+   "id": "p013"
+  },
+  {
+   "captured": true,
+   "confirmed": true,
+   "id": "p014"
+  },
+  {
+   "captured": false,
+   "confirmed": true,
+   "id": "p015"
+  },
+  {
+   "captured": false,
+   "confirmed": true,
+   "id": "p016"
+  },
+  {
+   "captured": true,
+   "confirmed": true,
+   "id": "p017"
+  },
+  {
+   "captured": true,
+   "confirmed": true,
+   "id": "p018"
+  },
+  {
+   "confirmed": false,
+   "id": "p019"
+  },
+  {
+   "captured": true,
+   "confirmed": true,
+   "id": "p020"
+  },
+  {
+   "confirmed": false,
+   "id": "p021"
+  },
+  {
+   "captured": false,
+   "confirmed": true,
+   "id": "p022"
+  },
+  {
+   "captured": true,
+   "confirmed": true,
+   "id": "p023"
+  },
+  {
+   "confirmed": false,
+   "id": "p024"
+  },
+  {
+   "captured": true,
+   "confirmed": true,
+   "id": "p025"
+  },
+  {
+   "confirmed": false,
+   "id": "p026"
+  },
+  {
+   "confirmed": false,
+   "id": "p027"
+  },
+  {
+   "confirmed": false,
+   "id": "p028"
+  },
+  {
+   "captured": false,
+   "confirmed": true,
+   "id": "p029"
+  },
+  {
+   "captured": false,
+   "confirmed": true,
+   "id": "p030"
+  },
+  {
+   "captured": true,
+   "confirmed": true,
+   "id": "p031"
+  },
+  {
+   "captured": true,
+   "confirmed": true,
+   "id": "p032"
+  },
+  {
+   "captured": true,
+   "confirmed": true,
+   "id": "p033"
+  },
+  {
+   "captured": true,
+   "confirmed": true,
+   "id": "p034"
+  },
+  {
+   "captured": true,
+   "confirmed": true,
+   "id": "p035"
+  },
+  {
+   "confirmed": false,
+   "id": "p036"
+  },
+  {
+   "captured": false,
+   "confirmed": true,
+   "id": "p037"
+  },
+  {
+   "confirmed": false,
+   "id": "p038"
+  },
+  {
+   "captured": false,
+   "confirmed": true,
+   "id": "p039"
+  },
+  {
+   "captured": true,
+   "confirmed": true,
+   "id": "p040"
+  },
+  {
+   "captured": false,
+   "confirmed": true,
+   "id": "p041"
+  },
+  {
+   "confirmed": false,
+   "id": "p042"
+  },
+  {
+   "captured": false,
+   "confirmed": true,
+   "id": "p043"
+  },
+  {
+   "captured": false,
+   "confirmed": true,
+   "id": "p044"
+  },
+  {
+   "confirmed": false,
+   "id": "p045"
+  },
+  {
+   "captured": false,
+   "confirmed": true,
+   "id": "p046"
+  },
+  {
+   "confirmed": false,
+   "id": "p047"
+  },
+  {
+   "captured": false,
+   "confirmed": true,
+   "id": "p048"
+  },
+  {
+   "captured": true,
+   "confirmed": true,
+   "id": "p049"
+  },
+  {
+   "captured": false,
+   "confirmed": true,
+   "id": "p050"
+  },
+  {
+   "captured": false,
+   "confirmed": true,
+   "id": "p051"
+  },
+  {
+   "captured": false,
+   "confirmed": true,
+   "id": "p052"
+  },
+  {
+   "confirmed": false,
+   "id": "p053"
+  },
+  {
+   "captured": true,
+   "confirmed": true,
+   "id": "p054"
+  },
+  {
+   "captured": true,
+   "confirmed": true,
+   "id": "p055"
+  },
+  {
+   "confirmed": false,
+   "id": "p056"
+  },
+  {
+   "captured": false,
+   "confirmed": true,
+   "id": "p057"
+  },
+  {
+   "captured": false,
+   "confirmed": true,
+   "id": "p058"
+  },
+  {
+   "confirmed": false,
+   "id": "p059"
+  },
+  {
+   "confirmed": false,
+   "id": "p060"
+  }
+ ],
+ "pooled": {
+  "captured": 19,
+  "confirmed": 37,
+  "judged": 60,
+  "recall": 0.514
+ },
+ "query_probes": {
+  "decision": "below the bar: the probe design went back to the owner",
+  "informative": {
+   "confirmed": 21,
+   "fact": 12,
+   "fact_content": 4,
+   "query": 13,
+   "query_recall": 0.619,
+   "union": 17,
+   "union_content": 14,
+   "union_content_recall": 0.667,
+   "union_recall": 0.81
+  },
+  "lineages": {
+   "372": {
+    "confirmed": 13,
+    "fact": 3,
+    "fact_content": 0,
+    "query": 3,
+    "query_recall": 0.231,
+    "union": 5,
+    "union_content": 3,
+    "union_content_recall": 0.231,
+    "union_recall": 0.385
+   },
+   "397": {
+    "confirmed": 24,
+    "fact": 16,
+    "fact_content": 4,
+    "query": 12,
+    "query_recall": 0.5,
+    "union": 20,
+    "union_content": 13,
+    "union_content_recall": 0.542,
+    "union_recall": 0.833
+   }
+  },
+  "pooled": {
+   "confirmed": 37,
+   "fact": 19,
+   "fact_content": 4,
+   "query": 15,
+   "query_recall": 0.405,
+   "union": 25,
+   "union_content": 16,
+   "union_content_recall": 0.432,
+   "union_recall": 0.676
+  },
+  "trivial": [
+   "p006",
+   "p013",
+   "p022",
+   "p030",
+   "p031",
+   "p035",
+   "p037",
+   "p041",
+   "p044",
+   "p048",
+   "p049",
+   "p050",
+   "p051",
+   "p052",
+   "p054",
+   "p055"
+  ]
+ },
+ "schema": "probe-validation/1"
+}

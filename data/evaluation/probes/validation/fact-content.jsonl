@@ -1,0 +1,19 @@
+{"id": "p035", "covered": false, "fact": null, "why": "Frame is an empty recipe search list; F88 is not shown."}
+{"id": "p014", "covered": false, "fact": null, "why": "Frame shows the simple knife spear recipe, not the long pointy stick or cordage facts."}
+{"id": "p009", "covered": false, "fact": null, "why": "Frame shows the simple knife spear recipe; neither long pointy stick nor reload facts appear."}
+{"id": "p049", "covered": false, "fact": null, "why": "Frame is an empty recipe search list, no water info."}
+{"id": "p055", "covered": false, "fact": null, "why": "Frame is an empty recipe search list, no remaining-work info."}
+{"id": "p032", "covered": true, "fact": "F94", "why": "Frame shows tinder selection for lighting a fire with a notched stick and a roughly 7 minute estimate."}
+{"id": "p020", "covered": false, "fact": null, "why": "Frame shows the starch recipe, which no statement describes in this form."}
+{"id": "p013", "covered": false, "fact": null, "why": "Frame is an empty favorites recipe tab."}
+{"id": "p001", "covered": true, "fact": "F8", "why": "Overmap shows the evac shelter with a lake to its west."}
+{"id": "p031", "covered": false, "fact": null, "why": "Frame is the recipe search help prompt, not fried egg requirements."}
+{"id": "p040", "covered": true, "fact": "F57", "why": "Inventory lists worn pair of hand wraps and simple patchwork scarf."}
+{"id": "p018", "covered": false, "fact": null, "why": "Overmap with an unreadable note tooltip; the long sticks pile is not stated."}
+{"id": "p023", "covered": false, "fact": null, "why": "Frame shows the pine needle tea recipe, which no statement covers."}
+{"id": "p054", "covered": false, "fact": null, "why": "Frame is an empty favorites recipe tab."}
+{"id": "p017", "covered": false, "fact": null, "why": "Frame shows the pointy stick recipe, not the long pointy stick or the stick pile."}
+{"id": "p033", "covered": false, "fact": null, "why": "Frame shows the caviar and egg sandwich recipe list, not lake, foraging, fried or boiled egg facts."}
+{"id": "p025", "covered": false, "fact": null, "why": "Frame is a tinder selection prompt for lighting a fire, not the tinder crafting or matchbook fact."}
+{"id": "p006", "covered": false, "fact": null, "why": "Frame is an empty recipe search list; no statement about character or food calories is shown."}
+{"id": "p034", "covered": true, "fact": "F78", "why": "Frame shows the simple knife spear recipe with long pole or stick, knife, cotton patch and string components, about 3 hours, and only 1 short string on hand."}
