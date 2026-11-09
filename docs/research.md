@@ -68,8 +68,8 @@ examines the user's fast, less flagship model direction against current primary
 small-model/tool studies, memory/compaction counterexamples, provider contracts
 and actual player host context growth. It prioritizes sufficient current context,
 examples and mechanical authoring ergonomics with recoverable evidence; neither
-more context nor fewer tokens guarantees useful apparent speed. It informed #251,
-which closed on 26 October 2026; #164 owns the unchanged readiness criteria.
+more context nor fewer tokens guarantees useful apparent speed. It informed #251;
+#164 owns the readiness criteria.
 
 *Historical:* the [October24 multi-rate review](research-multirate-agents.md) checks fresh
 control/skill and contrary memory evidence against Fresh024. It recommends
@@ -118,9 +118,9 @@ The [organic-discovery crosswalk](design/organic-discovery.md#cross-check-agains
 [mixed-input design](design/mixed-input.md) and
 [procedure/reflection boundary](design/procedure-learning.md) already point in
 this direction. Actual campaign002 shows a gap between that intent and execution:
-a zero-input representation error revoked ordinary input. #190 fixed that known
-case, and #176 delivered the computer-control cutover; whole-loop qualification
-remains open under #145 and #164. Changed labels/layouts or
+a zero-input representation error revoked ordinary input (#190 owns that case, and
+#176 the [computer-control boundary](contracts/computer-control.md)); whole-loop
+qualification remains open under #145 and #164. Changed labels/layouts or
 behavior after an arbitrary f(T) are nonstationary conditions, not permission to
 reuse stale coordinates or silently replay an uncertain input. Neither passing
 finite perturbation tests nor one seven-day campaign guarantees success against
