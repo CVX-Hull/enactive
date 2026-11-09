@@ -2,6 +2,15 @@
 
   python -m tools.probe_validation candidates [--evidence-root DIR] [--out data/evaluation/probes/validation]
   python -m tools.probe_validation recall [--out data/evaluation/probes/validation]
+  python -m tools.probe_validation held-out-candidates [--evidence-root DIR] [--out data/evaluation/p1/held-out]
+  python -m tools.probe_validation held-out-batches --judge-dir DIR [--evidence-root DIR] [--out ...]
+  python -m tools.probe_validation held-out-probes [--out ...]
+  python -m tools.probe_validation held-out-timelines --to DIR [--evidence-root DIR] [--out ...]
+  python -m tools.probe_validation held-out-freeze [--out ...] [--frozen YYYY-MM-DD]
+
+The `held-out-*` steps build #178's held-out probes and ledgers (docs/design/p1-study.md, "Held-out
+handling"). They print only counts, digests and cluster-size tables, never a frame id, a judge's
+text, a timeline, a fact or a query; the files they write may hold content.
 
 `candidates` applies the rule the protocol fixed in advance ("Recall check against independently
 found re-observations"): over each development lineage's sealed frames it finds new screens after
@@ -13,15 +22,19 @@ at what a frame shows; it compares hashes and counts labels. #382's held-out lin
 from __future__ import annotations
 
 import argparse
+import datetime
 import json
 import os
 from pathlib import Path
 import random
+import re
 
+from harness.evaluation.core.probes import Lineage, ProbeError
 from harness.jsonio import file_sha256
 from harness.trace.images import dhash, hamming, load
+from tools import p1_analysis
 from tools.probe_baseline import LINEAGES, _lines
-from tools.probe_timeline import connect
+from tools.probe_timeline import connect, write_timelines
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA = 'probe-validation/1'
@@ -34,6 +47,18 @@ SAMPLE = {'397': 40, '372': 20}
 SEED = 490
 STUDIES = {'397': '397-seven-day', '372': '372-382-dev-loop'}
 HELD_OUT = ('lh1', 'lh2', 'lh3')
+
+# #178's held-out probes (docs/design/p1-study.md). Each lineage is one group across its sessions.
+HELD_OUT_RUNS = p1_analysis.HELD_OUT      # lineage -> its sessions, in order
+HELD_OUT_STUDY = '372-382-dev-loop'
+HELD_OUT_DIR = ROOT/'data'/'evaluation'/'p1'/'held-out'
+STUDY_DOC = ROOT/'docs'/'design'/'p1-study.md'
+CANDIDATES_SCHEMA = 'p1-held-out-candidates/1'
+BATCH_SCHEMA = 'p1-held-out-batch/1'
+PLAN_SCHEMA = 'p1-held-out-ledger-plan/1'
+FROZEN_SCHEMA = 'p1-held-out-frozen/1'
+BATCH_SIZE = 15          # pairs per confirmation batch
+MAX_QUERIES = 40         # per chunk (probe-protocol/1, "Query probes")
 
 
 def development() -> dict[str, list[str]]:
@@ -267,13 +292,407 @@ def freeze(probes: Path) -> dict:
     return ledger
 
 
+# ---------------------------------------------------------------------------------------------
+# Held-out probes and ledgers (#178). Nothing below prints a frame id, a judge's text, a timeline,
+# a fact or a query; error messages name files, chunks and line numbers only.
+
+
+def _dump(path: Path, value: object) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(value, indent=1, sort_keys=True, ensure_ascii=False) + '\n', encoding='utf-8')
+
+
+def _jsonl(path: Path) -> list[dict]:
+    """Parse a JSON Lines file whose every line is an object; errors name the file and line only."""
+    rows = []
+    for number, line in enumerate(path.read_text(encoding='utf-8').splitlines(), 1):
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except ValueError:
+            raise SystemExit(f'{path.name}:{number}: not JSON') from None
+        if not isinstance(row, dict):
+            raise SystemExit(f'{path.name}:{number}: not a JSON object')
+        rows.append(row)
+    return rows
+
+
+def _held_out_chunks(evidence: Path, runs: tuple[str, ...]) -> tuple[list, dict[str, int], dict[str, Path]]:
+    """(chunk, run, frames) in session then actor-directory order, every frame's hash and its path."""
+    study = evidence/HELD_OUT_STUDY/'computer-sessions'
+    chunks, hashes, paths = [], {}, {}
+    for run in runs:
+        session = study/run
+        if not session.is_dir():
+            raise SystemExit(f'Missing session: {run}')
+        for directory, frames in chunk_frames(session):
+            chunks.append((f'{run}-{directory}', run, frames))
+            for source in frames:
+                path = session/'sources'/f'{source}.png'
+                if path.is_file():
+                    paths[source] = path
+                    hashes[source] = dhash(load(path), HASH_SIZE)
+    return chunks, hashes, paths
+
+
+def held_out_candidates(evidence: Path, out: Path) -> dict:
+    """Every candidate of protocol steps 1-4 over each held-out lineage; no sampling (#178)."""
+    target = out/'candidates.json'
+    if target.exists():
+        raise SystemExit('candidates.json exists: the held-out candidates are computed once')
+    evidence = Path(evidence).resolve()
+    lineages, rows = {}, []
+    for lineage, runs in HELD_OUT_RUNS.items():
+        chunks, hashes, paths = _held_out_chunks(evidence, runs)
+        names = [chunk[0] for chunk in chunks]
+        before = dict(zip(names[1:], names))
+        found = find_candidates(chunks, hashes)
+        found.sort(key=lambda c: (c['later_chunk'], c['later']))
+        if len(found) >= 10000:
+            raise SystemExit(f'{lineage}: too many candidates for four-digit ids')
+        for number, c in enumerate(found, 1):
+            # The judge sees the two frames in a seeded order, never told which came first (#490).
+            order = random.Random(f'{SEED}:{c["later"]}').random() < 0.5
+            rows.append(dict(id=f'{lineage}-p{number:04d}', lineage=lineage,
+                             boundary=f'{before[c["later_chunk"]]}>{c["later_chunk"]}',
+                             later=c['later'], earlier=c['earlier'], later_chunk=c['later_chunk'],
+                             earlier_chunk=c['earlier_chunk'], distance=c['distance'],
+                             earlier_dhash=f'{hashes[c["earlier"]]:0{HASH_SIZE * HASH_SIZE // 4}x}',
+                             earlier_path=paths[c['earlier']].relative_to(evidence).as_posix(),
+                             later_path=paths[c['later']].relative_to(evidence).as_posix(),
+                             shown=['earlier', 'later'] if order else ['later', 'earlier']))
+        lineages[lineage] = dict(runs=list(runs), chunks=names, candidates=len(found))
+    result = dict(schema=CANDIDATES_SCHEMA, protocol='probe-protocol/1', lineages=lineages, candidates=rows,
+                  rule=dict(hash_size=HASH_SIZE, new_screen=NEW_SCREEN, near=NEAR, cluster=CLUSTER, seed=SEED))
+    _dump(target, result)
+    return result
+
+
+def _load_candidates(out: Path) -> dict:
+    path = out/'candidates.json'
+    if not path.is_file():
+        raise SystemExit('Missing candidates.json: run held-out-candidates first')
+    data = json.loads(path.read_text(encoding='utf-8'))
+    if data.get('schema') != CANDIDATES_SCHEMA:
+        raise SystemExit(f'candidates.json is not {CANDIDATES_SCHEMA}')
+    ids = [row['id'] for row in data['candidates']]
+    if ids != sorted(ids) or len(set(ids)) != len(ids):
+        raise SystemExit('candidates.json ids must be unique and in id order')
+    return data
+
+
+CONFIRMATION_LABEL = '**Confirmation.** '
+
+
+def confirmation_brief(doc: Path = STUDY_DOC) -> str:
+    """The pre-registration's frozen Confirmation brief: the quote lines from `> **Confirmation.**` to the
+    next blank line, joined by single spaces, without the leading label (the brief begins "You compare")."""
+    lines = doc.read_text(encoding='utf-8').splitlines()
+    start = next((i for i, line in enumerate(lines) if line.startswith('> **Confirmation.**')), None)
+    if start is None:
+        raise SystemExit(f'The Confirmation brief was not found in {doc.name}')
+    quote = []
+    for line in lines[start:]:
+        if not line.startswith('>') or not line[1:].strip():
+            break
+        quote.append(line[1:].strip())
+    brief = ' '.join(quote)
+    return brief.removeprefix(CONFIRMATION_LABEL)
+
+
+def _check_judge_dir(judge_dir: Path) -> Path:
+    """The judge copies hold absolute paths, so they stay out of the repository's tracked tree: the directory
+    must be outside the repository or under its `.runtime/`."""
+    resolved = Path(judge_dir).resolve()
+    root = ROOT.resolve()
+    if resolved.is_relative_to(root) and not resolved.is_relative_to(root/'.runtime'):
+        raise SystemExit('the judge directory holds absolute paths: it must be outside the repository or under .runtime/')
+    return resolved
+
+
+def held_out_batches(out: Path, evidence: Path, judge_dir: Path, doc: Path = STUDY_DOC) -> dict[str, int]:
+    """Confirmation batch files of at most BATCH_SIZE pairs, in id order, with the frozen brief.
+
+    The tracked batches in `out` name frames relative to the evidence root. The judge copies in `judge_dir`
+    hold the same ids, brief and pair order with absolute paths."""
+    judge_dir = _check_judge_dir(judge_dir)
+    evidence = Path(evidence).resolve()
+    brief = confirmation_brief(doc)
+    rows = _load_candidates(out)['candidates']
+    directory = out/'batches'
+    if any(directory.glob('confirm-*.json')):
+        raise SystemExit('batches exist: the confirmation batches are written once')
+    for row in rows:
+        for key in ('earlier_path', 'later_path'):
+            if Path(row[key]).is_absolute() or not (evidence/row[key]).is_file():
+                raise SystemExit(f'{row["lineage"]}: a candidate frame is missing under the evidence root, '
+                                 f'or its stored path is absolute')
+    count = 0
+    for start in range(0, len(rows), BATCH_SIZE):
+        count += 1
+        pairs = [dict(id=row['id'], A=row[f'{row["shown"][0]}_path'], B=row[f'{row["shown"][1]}_path'])
+                 for row in rows[start:start + BATCH_SIZE]]
+        name = f'confirm-{count:03d}.json'
+        _dump(directory/name, dict(schema=BATCH_SCHEMA, brief=brief, pairs=pairs))
+        _dump(judge_dir/name, dict(schema=BATCH_SCHEMA, brief=brief, pairs=[
+            dict(id=p['id'], A=str(evidence/p['A']), B=str(evidence/p['B'])) for p in pairs]))
+    return dict(candidates=len(rows), batches=count)
+
+
+def _batch_files(out: Path) -> list[Path]:
+    return sorted((out/'batches').glob('confirm-*.json'))
+
+
+def derive_probes(out: Path) -> list[dict]:
+    """One `p1-probes/1` row per candidate from the judges' files, refusing anything incomplete."""
+    candidates = _load_candidates(out)['candidates']
+    by_id = {row['id']: row for row in candidates}
+    batches = _batch_files(out)
+    if not batches:
+        raise SystemExit('No batches: run held-out-batches first')
+    judged: dict[str, dict] = {}
+    batched: list[str] = []
+    for path in batches:
+        batch = json.loads(path.read_text(encoding='utf-8'))
+        if batch.get('schema') != BATCH_SCHEMA:
+            raise SystemExit(f'{path.name}: not {BATCH_SCHEMA}')
+        wanted = [pair['id'] for pair in batch['pairs']]
+        batched += wanted
+        verdicts = out/'judgments'/f'{path.stem}.jsonl'
+        if not verdicts.is_file():
+            raise SystemExit(f'{path.stem}: the batch has no judgments file')
+        got = []
+        for number, row in enumerate(_jsonl(verdicts), 1):
+            where = f'{verdicts.name}: row {number}'
+            if not isinstance(row.get('id'), str) or row['id'] not in by_id or row['id'] not in wanted:
+                raise SystemExit(f'{where}: unknown id')
+            if row['id'] in judged or row['id'] in got:
+                raise SystemExit(f'{where}: duplicated id')
+            if not (isinstance(row.get('same'), bool) and isinstance(row.get('informative'), bool)):
+                raise SystemExit(f'{where}: same and informative must be booleans')
+            if not isinstance(row.get('what'), str):
+                raise SystemExit(f'{where}: what must be a string')
+            got.append(row['id'])
+            judged[row['id']] = row
+        if len(got) != len(wanted):
+            raise SystemExit(f'{verdicts.name}: missing ids ({len(wanted) - len(got)})')
+        if got != wanted:
+            raise SystemExit(f'{verdicts.name}: not in batch order')
+    stray = {p.name for p in (out/'judgments').glob('*') if p.is_file()} - {f'{b.stem}.jsonl' for b in batches}
+    if stray:
+        raise SystemExit(f'judgments without a batch: {sorted(stray)}')
+    if batched != list(by_id):
+        raise SystemExit('the batches do not cover every candidate exactly once, in id order')
+    return [dict(schema=p1_analysis.PROBES_SCHEMA, id=i, lineage=by_id[i]['lineage'],
+                 boundary=by_id[i]['boundary'], later=by_id[i]['later'], earlier=by_id[i]['earlier'],
+                 earlier_dhash=by_id[i]['earlier_dhash'], confirmed=judged[i]['same'],
+                 informative=judged[i]['same'] and judged[i]['informative'], what=judged[i]['what'])
+            for i in by_id]
+
+
+def _render(rows: list[dict]) -> str:
+    return ''.join(json.dumps(row, sort_keys=True, ensure_ascii=False) + '\n' for row in rows)
+
+
+def held_out_probes(out: Path) -> dict:
+    """Write `probes.jsonl`; report counts, units, clusters and the file's digest."""
+    rows = derive_probes(out)
+    (out/'probes.jsonl').write_text(_render(rows), encoding='utf-8')
+    try:
+        primary = p1_analysis.primary_probes(rows)
+    except p1_analysis.ScoreError:
+        raise SystemExit('probes.jsonl does not satisfy p1-probes/1') from None
+    unit_rows = p1_analysis.units(primary)
+    figures = {name: dict(candidates=sum(r['lineage'] == name for r in rows),
+                          confirmed=sum(r['lineage'] == name and r['confirmed'] for r in rows),
+                          primary=sum(r['lineage'] == name for r in primary),
+                          units=sum(u['lineage'] == name for u in unit_rows)) for name in HELD_OUT_RUNS}
+    return dict(lineages=figures, units=len(unit_rows),
+                clusters=len({(u['lineage'], u['cluster']) for u in unit_rows}),
+                cluster_sizes=p1_analysis.cluster_sizes(unit_rows),
+                probes_sha256=file_sha256(out/'probes.jsonl'))
+
+
+_OPERATION_ROW = re.compile(r'^\| \d+ \|.* \| (yes|no|) \| ([^|]*) \|$')
+
+
+def required_frames(timeline: str) -> list[str]:
+    """Source ids the frame-coverage rule requires for one chunk, read from its generated timeline: every
+    third changed frame from the chunk's first and every frame of its last five operations. Where the
+    timeline has no change flags, every third frame."""
+    if '\n## Operations\n' not in timeline:
+        raise SystemExit('a timeline has no Operations section')
+    section = timeline.split('\n## Operations\n', 1)[1].split('\n## ', 1)[0]
+    rows = []
+    for line in section.splitlines():
+        match = _OPERATION_ROW.match(line)
+        if match:
+            rows.append((match.group(1), Path(match.group(2).strip()).stem if match.group(2).strip() else None))
+    flagged = any(flag for flag, _ in rows)
+    framed = [(flag, source) for flag, source in rows if source]
+    changed = [source for flag, source in framed if flag == 'yes'] if flagged else [source for _, source in framed]
+    last_five = [source for _, source in rows[-5:] if source]
+    return list(dict.fromkeys(changed[::3] + last_five))
+
+
+def _evaluation_store(study: Path, session: Path) -> Path | None:
+    manifest = session/'manifest.json'
+    if not manifest.is_file():
+        raise SystemExit(f'Missing manifest: {session.name}')
+    root = study/'evaluations'/str(json.loads(manifest.read_text(encoding='utf-8')).get('session'))
+    found = sorted(root.glob('*.sqlite3')) if root.is_dir() else []
+    if len(found) > 1:
+        raise SystemExit(f'{session.name}: more than one evaluation store')
+    return found[0] if found else None
+
+
+def held_out_timelines(evidence: Path, to: Path, out: Path) -> dict:
+    """Annotation timelines for every held-out chunk and `ledger-plan.json` (chunks to annotate, chunks that
+    get a query writer, required frames)."""
+    study = Path(evidence).resolve()/HELD_OUT_STUDY
+    to = Path(to).resolve()
+    lineages = {}
+    for lineage, runs in HELD_OUT_RUNS.items():
+        memory = study/f'player-memory-{lineage}.sqlite3'
+        chunks = []
+        for run in runs:
+            session = study/'computer-sessions'/run
+            if not session.is_dir():
+                raise SystemExit(f'Missing session: {run}')
+            for path in write_timelines(session, _evaluation_store(study, session), memory, to):
+                chunks.append((path.stem, path))
+        names = [name for name, _ in chunks]
+        details = []
+        for index, (name, path) in enumerate(chunks):
+            frames = required_frames(path.read_text(encoding='utf-8'))
+            details.append(dict(chunk=name, timeline=path.name, required_frames=frames,
+                                incoming_boundary=f'{names[index - 1]}>{name}' if index else None))
+        lineages[lineage] = dict(annotate=names, queries=names[:-1], chunks=details)
+    known = out/'candidates.json'
+    if known.is_file() and {k: v['chunks'] for k, v in json.loads(known.read_text(encoding='utf-8'))['lineages'].items()} \
+            != {k: v['annotate'] for k, v in lineages.items()}:
+        raise SystemExit('the timelines\' chunks differ from candidates.json')
+    _dump(out/'ledger-plan.json', dict(schema=PLAN_SCHEMA, protocol='probe-protocol/1', lineages=lineages))
+    return {name: dict(annotate=len(v['annotate']), queries=len(v['queries']),
+                       required_frames=sum(len(c['required_frames']) for c in v['chunks']))
+            for name, v in lineages.items()}
+
+
+def _check_ledgers(out: Path, plan: dict) -> dict[str, str]:
+    """Every chunk annotated and valid for its lineage, ending with `frames_viewed`; query files exactly
+    the chunks before a boundary. Returns relative path -> sha256 of the ledger and query files."""
+    wanted_ledgers = {f'ledgers/{lineage}/{c["chunk"]}.jsonl' for lineage, v in plan['lineages'].items()
+                      for c in v['chunks']}
+    wanted_queries = {f'queries/{lineage}/{chunk}.jsonl' for lineage, v in plan['lineages'].items()
+                      for chunk in v['queries']}
+    for kind, wanted in (('ledgers', wanted_ledgers), ('queries', wanted_queries)):
+        have = {p.relative_to(out).as_posix() for p in (out/kind).glob('*/*.jsonl')}
+        if have != wanted:
+            raise SystemExit(f'{kind}: {len(wanted - have)} missing, {len(have - wanted)} unexpected '
+                             f'(first missing {sorted(wanted - have)[:3]})')
+    files: dict[str, str] = {}
+    for lineage, value in plan['lineages'].items():
+        required = {c['chunk']: len(c['required_frames']) for c in value['chunks']}
+        ordered = [(c['chunk'], _jsonl(out/'ledgers'/lineage/f'{c["chunk"]}.jsonl')) for c in value['chunks']]
+        try:
+            parsed = Lineage.from_lines(ordered)
+        except ProbeError as error:
+            raise SystemExit(f'{lineage}: annotation does not validate: {error}') from None
+        for chunk in parsed.chunks:
+            viewed = chunk.frames_viewed
+            if isinstance(viewed, bool) or not isinstance(viewed, int) or viewed < required[chunk.name]:
+                raise SystemExit(f'{chunk.name}: frames_viewed is below the {required[chunk.name]} frames the '
+                                 f'coverage rule requires')
+        if any(row['unlabelled'] for row in parsed.boundary_rows()):
+            raise SystemExit(f'{lineage}: a boundary has live facts without a carry line')
+        for chunk in value['annotate']:
+            files[f'ledgers/{lineage}/{chunk}.jsonl'] = file_sha256(out/'ledgers'/lineage/f'{chunk}.jsonl')
+        for chunk in value['queries']:
+            relative = f'queries/{lineage}/{chunk}.jsonl'
+            lines = _jsonl(out/relative)
+            *queries, end = lines or [{}]
+            if end.get('type') != 'end' or isinstance(end.get('frames_viewed'), bool) \
+                    or not isinstance(end.get('frames_viewed'), int) or end['frames_viewed'] < required[chunk]:
+                raise SystemExit(f'{relative}: must end with frames_viewed covering the {required[chunk]} '
+                                 f'required frames')
+            if len(queries) > MAX_QUERIES:
+                raise SystemExit(f'{relative}: more than {MAX_QUERIES} queries')
+            if len({q.get('id') for q in queries}) != len(queries) or not all(
+                    q.get('type') == 'query' and all(isinstance(q.get(k), str) and q[k]
+                                                     for k in ('id', 'question', 'answer', 'frame', 'category'))
+                    for q in queries):
+                raise SystemExit(f'{relative}: query lines need a unique id, question, answer, frame and category')
+            files[relative] = file_sha256(out/relative)
+    return files
+
+
+def held_out_freeze(out: Path, frozen: str) -> dict:
+    """Digest everything the held-out replay must not change: `frozen.json` (refused if anything is missing)."""
+    target = out/'frozen.json'
+    if target.exists():
+        raise SystemExit('frozen.json exists: the held-out files are frozen once')
+    for name in ('candidates.json', 'ledger-plan.json', 'probes.jsonl'):
+        if not (out/name).is_file():
+            raise SystemExit(f'Missing {name}')
+    plan = json.loads((out/'ledger-plan.json').read_text(encoding='utf-8'))
+    if plan.get('schema') != PLAN_SCHEMA:
+        raise SystemExit(f'ledger-plan.json is not {PLAN_SCHEMA}')
+    known = _load_candidates(out)['lineages']
+    if {k: v['chunks'] for k, v in known.items()} != {k: [c['chunk'] for c in v['chunks']]
+                                                       for k, v in plan['lineages'].items()}:
+        raise SystemExit('ledger-plan.json and candidates.json name different chunks')
+    if (out/'probes.jsonl').read_text(encoding='utf-8') != _render(derive_probes(out)):
+        raise SystemExit('probes.jsonl does not match the batches and judgments')
+    files = _check_ledgers(out, plan)
+    for pattern in ('batches/confirm-*.json', 'judgments/confirm-*.jsonl'):
+        files.update({p.relative_to(out).as_posix(): file_sha256(p) for p in sorted(out.glob(pattern))})
+    for name in ('candidates.json', 'ledger-plan.json', 'probes.jsonl'):
+        files[name] = file_sha256(out/name)
+    document = dict(schema=FROZEN_SCHEMA, protocol='probe-protocol/1', frozen=frozen, files=dict(sorted(files.items())))
+    _dump(target, document)
+    return dict(frozen_sha256=file_sha256(target), files=len(files),
+                batches=len(_batch_files(out)),
+                ledgers=sum(k.startswith('ledgers/') for k in files),
+                queries=sum(k.startswith('queries/') for k in files))
+
+
+HELD_OUT_STEPS = ('held-out-candidates', 'held-out-batches', 'held-out-probes', 'held-out-timelines', 'held-out-freeze')
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('step', choices=('candidates', 'recall', 'freeze'))
+    parser.add_argument('step', choices=('candidates', 'recall', 'freeze', *HELD_OUT_STEPS))
     parser.add_argument('--evidence-root', type=Path,
                         default=Path(os.environ.get('ENACTIVE_EVIDENCE_ROOT', ROOT/'.runtime'/'evidence')))
-    parser.add_argument('--out', type=Path, default=ROOT/'data'/'evaluation'/'probes'/'validation')
+    parser.add_argument('--out', type=Path, default=None,
+                        help='default data/evaluation/probes/validation, or data/evaluation/p1/held-out for held-out steps')
+    parser.add_argument('--to', type=Path, help='held-out-timelines: the directory for the annotation timelines')
+    parser.add_argument('--judge-dir', type=Path,
+                        help='held-out-batches: where the judge copies with absolute frame paths go '
+                             '(outside the repository or under .runtime/)')
+    parser.add_argument('--frozen', default=None, help='held-out-freeze: the freeze date (default today)')
     args = parser.parse_args(argv)
+    if args.step in HELD_OUT_STEPS:
+        out = args.out or HELD_OUT_DIR
+        if args.step == 'held-out-candidates':
+            result = held_out_candidates(args.evidence_root, out)
+            print(json.dumps({k: dict(chunks=len(v['chunks']), candidates=v['candidates'])
+                              for k, v in result['lineages'].items()}))
+        elif args.step == 'held-out-batches':
+            if not args.judge_dir:
+                parser.error('held-out-batches needs --judge-dir')
+            print(json.dumps(held_out_batches(out, args.evidence_root, args.judge_dir)))
+        elif args.step == 'held-out-probes':
+            print(json.dumps(held_out_probes(out)))
+        elif args.step == 'held-out-timelines':
+            if not args.to:
+                parser.error('held-out-timelines needs --to')
+            print(json.dumps(held_out_timelines(args.evidence_root, args.to, out)))
+        else:
+            print(json.dumps(held_out_freeze(out, args.frozen or datetime.date.today().isoformat())))
+        return 0
+    args.out = args.out or ROOT/'data'/'evaluation'/'probes'/'validation'
     if args.step == 'candidates':
         result = candidates(args.evidence_root, args.out)
         print(json.dumps(result['lineages']))
