@@ -37,8 +37,9 @@ table under [Power](#power) renders it.
 
 **Held-out handling.**
 - **Untouched so far.** No episode, probe, prompt, threshold or code choice has come from #382.
-  This page uses only aggregates from the tracked run ledger: in-play hours (24.8, 25.0 and 0.55)
-  and the actor's spend ($30.44 in all). They set the simulation's shape and the stage caps.
+  This page uses only aggregates from the tracked run ledger
+  ([`runs.jsonl`](../../data/evaluation/runs.jsonl), [`run-metrics.jsonl`](../../data/evaluation/run-metrics.jsonl)):
+  in-play hours (24.8, 25.0 and 0.55) and the actor's spend ($30.44 in all). They set the simulation's shape and the stage caps.
 - **#178 writes the held-out probes** with blinded agents, before either arm is replayed on #382:
   - every candidate of the [frozen rule](probe-protocol.md#recall-check-against-independently-found-re-observations-490)
     (steps 1–4), with no sampling;
@@ -62,9 +63,10 @@ table under [Power](#power) renders it.
   before the later frame's chunk.
 - **Information cluster.** Probes within one lineage whose earlier frames are **all** within 16
   difference-hash bits of each other (complete linkage in probe-id order, `clusters`). Nothing
-  chains: #490 found that frames 16 bits apart can show different lists. The same information
-  is often re-observed at several boundaries: in #397's sample, 17 informative probes formed 12
-  clusters. The result reports the distribution of cluster sizes.
+  chains, because frames 16 bits apart can show different lists, and the same information is
+  often re-observed at several boundaries
+  ([probe validation](../acceptance/2026-11-08-probe-validation-490.md)). The result reports the
+  distribution of cluster sizes.
 - **Scoring unit.** One per lineage, boundary and cluster (`units`). Re-observing the same
   information several times after one boundary counts once. Only the unit's probe, the one with
   the lowest id, is judged.
@@ -103,7 +105,7 @@ the text the successor would have received live.
   text is byte-identical, including the outgoing summary, with no arm-specific label.
 - **Rendering.** One renderer gives every item the same typed fields, marked as fallible player
   knowledge. Neither arm's provenance appears in its text.
-- **Cap.** Both arms are capped at **2,000 tokens** (#455's recommended live-diff size). Items past
+- **Cap.** Both arms are capped at **2,000 tokens** ([#455's recommended live-diff size](snapshot-diff-cost.md)). Items past
   the cap are dropped whole. Delivered tokens per arm and boundary are reported, because the cap
   is an upper bound, not a match.
 - **Root validation (#450).** It applies to both arms and changes no replayed text: the held-out
@@ -338,10 +340,9 @@ guesser.
 
 ## Cost estimate
 
-**#489's check changed nothing.** The paid check
-([record](../acceptance/2026-11-08-context-stability-489.md)) found that session affinity leaves
-the cached share at about 3%. The cost per request was about the same as #454's: $0.093 against
-$0.106. Arm B runs per admission, as #454 did, so #454's per-session costs apply directly.
+**Basis.** Arm B runs per admission, as #454 did, so #454's per-session costs apply directly;
+the #489 check's cost per request matches #454's
+([record](../acceptance/2026-11-08-context-stability-489.md)).
 
 | Stage | Basis (#454 terra) | Estimate | Cap |
 | --- | --- | ---: | ---: |
@@ -351,9 +352,10 @@ $0.106. Arm B runs per admission, as #454 did, so #454's per-session costs apply
 | **Expected total** | | **$71–90** | $120 |
 
 **Three uncertainties.**
-- **Memory records.** B now also reads the actor's memory records, which #454's #397 sessions
-  did not.
-- **Session length.** It varies widely: `sd1a1` took 67 requests in #454 and 15 in the #489 check.
+- **Memory records.** B reads the actor's memory records; #454's #397 sessions did not.
+- **Session length.** It varies widely between runs of the same session
+  ([#454](../acceptance/2026-11-08-curator-shadow-454.md),
+  [#489](../acceptance/2026-11-08-context-stability-489.md)).
 - **Development cap.** The development cap is close to its basis. Development data decides
   nothing, so a stop there costs only debugging coverage.
 

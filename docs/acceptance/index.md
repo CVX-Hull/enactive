@@ -14,6 +14,7 @@ states. Records are dated evidence, not current instructions; the
 
 | Date | Record | Scope | Status |
 | --- | --- | --- | --- |
+| 2026-11-09 | [Results moved from current pages](2026-11-09-moved-results.md) | Results and incident observations that current pages held until 9 November 2026 and no other record holds, moved here unchanged when ADR 010 kept current pages free of dated results | historical |
 | 2026-11-08 | [ADR 010 outcome: streamlined delivery](2026-11-08-streamlined-delivery-010.md) | Outcome of ADR 010 (#498): the seven leaves L1-L7, measured CI times before and after, lines removed, deviations and what was deferred | historical |
 | 2026-11-08 | [Retirement of stale resources and second copies, 8 November 2026](2026-11-08-retirement.md) | Removal of stale worktrees, merged branches, second copies of sealed evidence and unused downloads on 8 November 2026, with what was archived first (ADR 010, #501) | historical |
 | 2026-11-08 | [Project simplification, 8 November 2026](2026-11-08-project-simplification.md) | The Enactive Project reduced to four statuses, Priority on leaves and Horizon on outcomes, with every item's earlier field values exported first (ADR 010 L5, #503) | historical |

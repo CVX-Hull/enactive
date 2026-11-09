@@ -23,9 +23,10 @@ contract changes and merges ([evidence cadence](workflows/evidence-cadence.md)).
 ## Question and decision rule
 
 Can a frontier model survive in CDDA through the current pixels-and-keys boundary?
-Earlier cheap-model results cannot answer this: the only multi-day survival
-(19 October) used a frontier coding agent with a game-aware harness, and every
-later run changed both the model class and the boundary.
+Earlier cheap-model results cannot answer this, and neither can the earlier
+multi-day survival, which differs in model class and boundary
+([seven-day record](acceptance/2026-10-19-seven-day-survival.md);
+[its actor and harness](acceptance/2026-11-09-moved-results.md#development-runs-the-earlier-multi-day-survival)).
 
 Five ceiling runs of GPT-6.1 Terra decide the next branch, fixed before any run:
 

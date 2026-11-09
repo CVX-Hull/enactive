@@ -22,7 +22,7 @@ The evaluator reads one run directory read-only:
   manifest once the host records one;
 - the handoff contexts under `contexts/*.json` (`player-handoff-context/1`);
 - `manifest.json` (`campaign-run/5`), including its operator labels, or `campaign-run/4`
-  for the closed set of archived sessions only (see "Rules settled in implementation");
+  for the closed set of archived sessions only (see "Implementation rules");
 - the run's `player-memory/2` store.
 
 Open SQLite read-only (`mode=ro`) with a bounded busy timeout. A missing or unsupported
@@ -77,8 +77,8 @@ Its `metadata.state` is `live` or `final`.
   `continuity` events and the four `lineage.*` metrics (continuity, elapsed time, the day
   check and memory reuse) into every admission's store. Stitching again after re-scoring an
   admission restores them.
-- **Current versions.** Core 2 and CDDA binding 2. Core 2 added the lineage elapsed time,
-  day check and memory reuse; binding 2 added `severe_needs`.
+- **Current versions.** Core 2 and CDDA binding 2. Core 2 includes the lineage elapsed time,
+  day check and memory reuse; binding 2 includes `severe_needs`.
 
 | Table | Columns | Meaning |
 | --- | --- | --- |
@@ -307,7 +307,7 @@ there is no streaming connection.
 - The viewer reads the live run directory and the evaluation root (`.runtime/evaluations`).
 - It writes only the live run's `live` evaluation store.
 
-## Record extensions (version 1 additions, before first delivery)
+## Further record contents (`evaluation-record/1`)
 
 | Table | Columns | Meaning |
 | --- | --- | --- |
@@ -315,11 +315,11 @@ there is no streaming connection.
 | `tool_calls` | `request_id`, `tool_call_id`, `actor`, `decision`, `tool`, `status` (`ok`, `error`, `refused`), `latency_ms`, `result_bytes`, `wall` | One row per tool call, from host `tool-start`, `tool-result` and `tool-refused` |
 | `requests` | `request_id`, `actor`, `wall`, `attempt`, `input_tokens`, `cache_read`, `cache_write`, `output_tokens`, `dollars`, `retry_class`, `omitted_images`, `manifest` | One row per HTTP attempt. `manifest` is `exact` when a `context-manifest` event exists, else `absent`. |
 
-`metrics` gains a `key` column for multi-valued metrics, such as per reader, per
+`metrics` also has a `key` column for multi-valued metrics, such as per reader, per
 percentile, per status or per handoff. The primary key is (`name`, `key`).
 
-**Further additions:**
-- `source` gains `derived` for values computed from other records.
+**Also in the record:**
+- `source` also takes `derived`, for values computed from other records.
 - `survival.game_hours` carries `censor_reason`:
   - `died`;
   - `budget`;
@@ -334,7 +334,7 @@ percentile, per status or per handoff. The primary key is (`name`, `key`).
   It is not a `custody_stop`, which is reserved for partial or unknown delivery and
   custody fences.
 
-### Rules settled in implementation
+### Implementation rules
 
 - **Archived runs.** These readers are the closed-archive case that
   [S-MIGRATION](../standards/migration.md) allows; the `requests.manifest` column applies
@@ -412,13 +412,11 @@ Development-run quantities live as data in git, and pages render or check agains
 | `run-metrics.jsonl` | One [`run-metrics/1`](../../schemas/run-metrics.schema.json) row per session and evaluator core and binding version: the headline metric values, copied verbatim from the evaluation record | `tools/evaluate.py evaluate-table RECORDS --snapshot data/evaluation/run-metrics.jsonl` |
 
 - **Origin.** `record` reads `campaign-run/5` packages only; there is no reader for older
-  manifests. The 37 rows of #372 and #382 come from the retired operator ledgers and
-  receipts; the 30 #372 rows take arm and start from `archive-labels.json` because their
-  manifests are `campaign-run/4`.
+  manifests. Rows whose packages are `campaign-run/4` take arm and start from
+  `archive-labels.json`.
 - **Spend.** `spend_usd` is an upper bound for the admission rule, not an invoice. It is
   `provider_usd` plus `unpriced_attempts` × `unpriced_attempt_usd`. A row with an unknown split
-  holds null in all three fields; today that is only the four #372 pre-loop runs, whose
-  every attempt reported usage, priced at the receipt's configured estimate verbatim
+  holds null in all three fields and `spend_usd` at the receipt's configured estimate verbatim
   (including its floating-point digits).
 - **Rejection.** A row without `schema: dev-run/1`, a schema violation (a label is required),
   a repeated study and run, a repeated session, more unpriced than charged attempts, or an

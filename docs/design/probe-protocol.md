@@ -121,9 +121,9 @@ An annotator views these frames:
 
 Where a timeline has no change flags (sessions whose evaluator records were not sealed),
 "every third changed frame" becomes every third frame. It may view more. Each chunk ends
-with `frames_viewed`. A pilot on `sd1a1-001` before
-this rule viewed 16 of 133 frames and leaned on the player's own records. It is kept as
-a pilot and is not used for the rates.
+with `frames_viewed`. An annotation that views fewer frames than this rule requires is a
+pilot and is not used for the rates (see [the #449 record](../acceptance/2026-11-08-probe-baseline-449.md#how-it-was-done)
+for the one excluded pilot).
 
 ## Adjudication
 
@@ -144,10 +144,9 @@ correction is a new, recorded line with its reason.
 
 **The protocol's own examples carry no evaluation content.** Annotators read the units
 and labels sections, so no example there may name a fact, record ID, boundary or outcome
-from a lineage under study. A change to those sections is reviewed against this rule.
-In the #449 application the examples did name one of the known episodes; the
-[record](../acceptance/2026-11-08-probe-baseline-449.md#deviations-found-in-review) lists
-this as a deviation.
+from a lineage under study. A change to those sections is reviewed against this rule; the
+[#449 record](../acceptance/2026-11-08-probe-baseline-449.md#deviations-found-in-review)
+holds the deviation that motivated it.
 
 **Limitation:** an annotator agent with file tools could still read a document. The
 brief forbids it, but that cannot be enforced, and the record says so.
@@ -165,9 +164,10 @@ chunks from the #397 order. The record compares three things.
 
 ## Recall check against independently found re-observations (#490)
 
-Blinded annotation fully recognised none of the four known #397 episodes. Before arms
-are scored against probes, the protocol's blinded recall is checked against
-re-observations that neither the lead nor the annotators chose.
+Before arms are scored against probes, the protocol's blinded recall is checked against
+re-observations that neither the lead nor the annotators chose. The
+[#449 record](../acceptance/2026-11-08-probe-baseline-449.md#the-four-397-episodes) holds
+the recall of blinded annotation against the four known #397 episodes.
 
 The rule was fixed before any candidate was computed. The evaluator records no
 rediscovery event, so the candidates come from frames.

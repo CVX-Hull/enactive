@@ -122,8 +122,7 @@ blocks of `context_image_block`. When `n` images exceed the peak, the oldest
 batch below, so a large protected batch can leave fewer. Otherwise retained pixels
 cycle between `peak − block + 1` and the peak, and the serialized prefix stays
 byte-stable between evictions, which lets
-provider prefix caches reuse it. Block 1 omits exactly the overflow, the earlier
-rolling policy. Choose the counts per route against the provider's image limit.
+provider prefix caches reuse it. Block 1 omits exactly the overflow (rolling eviction). Choose the counts per route against the provider's image limit.
 The host gives Pi one `sessionId` per mechanical session (a digest of the session
 ID, shared by every actor of the session and recorded as
 `host-start.session_affinity_id`), and Pi sends it as
@@ -263,8 +262,7 @@ failures are terminal. The provider stream's own retries remain disabled, so the
 is no nested retry loop or assistant-turn restart. Error text is neither traced nor
 sent back as model context. Bounded diagnostic identifiers include OpenRouter
 metadata error_type, provider_code, limit_source and reason when present; raw
-metadata, remedy text and provider bodies are excluded. Packages frozen before this
-retry set keep their recorded single-429 behavior as history.
+metadata, remedy text and provider bodies are excluded.
 
 `max_requests` counts each actual provider HTTP fetch attempt, including the retry.
 The host checks and charges immediately before fetching; a refused extra attempt

@@ -95,7 +95,7 @@ still apply.
 | Host | Mechanics |
 | --- | --- |
 | Codex | Run the watch in the turn that waits on CI. |
-| Claude Code | Start the watch with `run_in_background` before ending a turn that waits on CI; its exit notifies the session once. In #383, observed: a `/goal` stop check re-ran each time a turn ended while CI was pending, re-prompting the session every few seconds. In the desktop app, Auto-fix woke the session on CI failures, conflicts and review comments but not on a pass, so a pass relies on the watch or pinned auto-merge. |
+| Claude Code | Start the watch with `run_in_background` before ending a turn that waits on CI; its exit notifies the session once. A `/goal` stop check re-runs each time a turn ends while CI is pending, re-prompting the session. In the desktop app, Auto-fix wakes the session on CI failures, conflicts and review comments but not on a pass, so a pass relies on the watch or pinned auto-merge ([incident](../acceptance/2026-11-09-moved-results.md#coding-agent-hosts-the-383-observation)). |
 
 ## Per-user activation
 

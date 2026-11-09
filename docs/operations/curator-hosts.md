@@ -27,23 +27,24 @@ are in the [dated record](../acceptance/2026-11-08-moved-measurements.md#curator
   `scratch/`.** Without it the host opens a shared `/tmp/claude-<uid>`, which also holds
   other sessions' files. The profile refuses that path, and the host exits with `EPERM`.
 
-**Observed under the profile (no spend).** The manual probe
-[`tests/curator_host_probe.py`](../../tests/curator_host_probe.py) ran against a local
-stand-in that answers in the Messages streaming shape. The token counts and price are
+**Probe under the profile (no spend).** The manual probe
+[`tests/curator_host_probe.py`](../../tests/curator_host_probe.py) runs the host against a
+local stand-in that answers in the Messages streaming shape. The token counts and price are
 synthetic.
-- **One turn.** It completed with one upstream `/v1/messages` streaming request, and
-  the proxy swapped in the key. Afterwards the home held `.claude.json`,
-  `.claude/backups`, `.claude/plugins/store` and `.claude/sessions`.
-- **Bash tool turn.** The stand-in asked for a command that writes `scratch/`, reads
-  `.runtime/credentials.json` and lists `~/../..`. The tool result was `written /
-  secret-denied / users-denied`.
-- **Footprint.** A run left no survivors. Its time and memory are in
-  [the sandbox research](../research-curator-sandbox.md).
-- **What it sends.** Five beta flags, all dropped by the proxy unless frozen:
-  `claude-code-20250219`, `context-management-2025-06-27`, `effort-2025-11-24`,
-  `interleaved-thinking-2025-05-14` and `thinking-token-count-2026-05-13`. It also sends
-  a clearing `context_management` field, which the proxy allows. #454 freezes the beta
-  allowlist after checking each flag against the real API.
+- **One turn.** It sends one upstream `/v1/messages` streaming request, and the proxy swaps
+  in the key.
+- **Bash tool turn.** The stand-in asks for a command that writes `scratch/`, reads
+  `.runtime/credentials.json` and lists `~/../..`; only the write may succeed.
+- **Footprint.** A run leaves no surviving process.
+
+The home contents, tool result, time and memory the probe observed are in
+[the sandbox research](../research-curator-sandbox.md#local-observations) (L13 and L14).
+
+**What the host sends.** Five beta flags, all dropped by the proxy unless frozen:
+`claude-code-20250219`, `context-management-2025-06-27`, `effort-2025-11-24`,
+`interleaved-thinking-2025-05-14` and `thinking-token-count-2026-05-13`. It also sends
+a clearing `context_management` field, which the proxy allows. A beta flag joins the
+proxy's frozen allowlist only after it is checked against the real API (#454).
 
 **Run the probe:**
 
@@ -128,8 +129,8 @@ its listed default effort is high; `--effort` overrides.
 **What differs from the actor's route.** The proxy forwards a fixed field list, so the curator's
 frozen route sets `maxTokensField: max_completion_tokens` (the actor uses `max_tokens`) and the host
 never adds `service_tier` (the actor's host adds `default`). Both are refused by the proxy. Nothing
-else Pi sends was refused: in the tests every request of both arms passed the allowlist and the
-proxy ledger shows no refusal.
+else Pi sends may be refused: the proxy allowlist and the ledger's refusal count are the check
+(the [#454 record](../acceptance/2026-11-08-curator-shadow-454.md#isolation) holds the runs' result).
 
 **Tool roots.** Node is a Homebrew build linked against about twenty kegs through
 `/opt/homebrew/opt/<name>` links. The tool roots are the node keg, each keg its libraries live in
@@ -150,9 +151,9 @@ profile:
   sandbox that allowed metadata on its own output file would remove the relay.
 
 The host's [observed footprint](../acceptance/2026-11-08-moved-measurements.md#curator-hosts-versions-footprint-and-body-limit)
-is recorded; it leaves no surviving process. The escape suite
-(`tests/curator_adversary.py` through `tests/test_curator_sandbox.py`) passes unchanged with these
-roots added to the layout.
+is recorded; it leaves no surviving process. The check is the escape suite
+(`tests/curator_adversary.py` through `tests/test_curator_sandbox.py`) run with these roots in
+the layout; the [#454 record](../acceptance/2026-11-08-curator-shadow-454.md#isolation) holds its last result.
 
 **Image cost in the reservation.** The proxy counts each inline image as a bounded number of input
 tokens (`IMAGE_TOKENS`), not its base64 bytes, at the arm's highest input price, so more images in a
@@ -166,8 +167,9 @@ evicted frame's source ID so `view_frame` can show it again. The peak trades thr
 - **Body size.** Recorded frames reach about 280 KB, or 375 KB as base64. Sixteen stay under the
   proxy's 8 MiB request limit, while 24 such frames would exceed it and end the session with a 413.
 
-The #454 runs and the #489 check passed 24/12 explicitly; pass the same window to compare
-cached shares with them ([#489 record](../acceptance/2026-11-08-context-stability-489.md)).
+To compare cached shares with the [#454](../acceptance/2026-11-08-curator-shadow-454.md) and
+[#489](../acceptance/2026-11-08-context-stability-489.md) records, pass the window they record
+(24 images, evicted 12 at a time) explicitly.
 
 **Cache stability.** A prompt cache only helps when each request extends the last
 byte for byte, so:
@@ -195,8 +197,7 @@ byte for byte, so:
 ## Both hosts
 
 - **Binaries.** Both are single native binaries linking only system libraries:
-  `claude` (307 MB) under `~/.local/share/claude/versions/` and `codex` (235 MB) under
-  the Homebrew Caskroom. The profile allows reads of the one binary each session uses.
+  `claude` under `~/.local/share/claude/versions/` and `codex` under the Homebrew Caskroom. The profile allows reads of the one binary each session uses.
 - **Inner sandboxes stay off.** A nested `sandbox-exec` fails, so the outer profile is
   the only enforcement.
 - **Version drift.** Each session records the host version and binary hash. After any

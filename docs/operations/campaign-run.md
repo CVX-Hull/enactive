@@ -10,8 +10,8 @@ One [campaign custodian](../../tools/campaign_run.py) owns fresh mechanical targ
 store/server lifetime and final cleanup. The [driver](../../tools/campaign_player.py)
 owns the frozen [player host](../contracts/player-host.md)/MCP groups and at most one
 successor. The [package validator](../../tools/campaign_package.py) is authoritative
-for the closed `campaign-run/5` admission. No game-phase/identity admission or semantic mission
-service remains.
+for the closed `campaign-run/5` admission. Admission is that package check alone: it reads
+no game phase or identity, and no semantic mission service exists.
 
 Development runs (`--attention best-effort`) and frozen tests that require
 45-second operator checks (`--attention required`) use
@@ -165,7 +165,7 @@ Before paid play, the lead reads the provider account balance and confirms that
 the auto top-up threshold stays above the realistic actual cost of the planned
 runs. OpenRouter sizes its in-flight hold from the current balance, so a low
 account produces repeated in-flight 402s that one host retry may not outlast
-(#304's play001 ended this way), and an exhausted one returns terminal credit
+(the [#304 record](../acceptance/2026-10-31-capable-player.md) holds an example), and an exhausted one returns terminal credit
 refusals.
 
 Limits: five input files each ≤1MiB; 1–16 initial files; host argv of 1–8 entries,
