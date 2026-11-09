@@ -15,9 +15,9 @@ measure any value of a diff to the actor.
 
 **Data.** The sealed #397 host traces (`397-seven-day`, 14 actors). The 1,978
 `response-complete` events all have usage and use configured-rate costs, one model
-(`openai/gpt-6.1-terra`) and one route. [`tools/diff_cost.py`](../../tools/diff_cost.py)
-derives every number below; re-run it with
-`python tools/diff_cost.py .runtime/evidence/397-seven-day/computer-sessions`. No model
+(`openai/gpt-6.1-terra`) and one route. [`tools/diff_cost.py`](https://github.com/CVX-Hull/enactive/blob/3daeca400f2c46944319cf663a3ad69ae932f82c/tools/diff_cost.py)
+(removed from the tree; kept at that commit) derives every number below; check that commit out and run
+`python tools/diff_cost.py .runtime/evidence/397-seven-day/computer-sessions` to reproduce them. No model
 was called.
 
 **Provenance.** A delegated analysis agent wrote and ran the script. The lead re-ran it

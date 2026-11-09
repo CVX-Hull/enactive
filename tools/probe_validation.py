@@ -18,6 +18,7 @@ import os
 from pathlib import Path
 import random
 
+from harness.jsonio import file_sha256
 from harness.trace.images import dhash, hamming, load
 from tools.probe_baseline import LINEAGES, _lines
 from tools.probe_timeline import connect
@@ -246,23 +247,18 @@ def freeze(probes: Path) -> dict:
     Per development lineage: the fact-label chunks with the unblinded adjudication layer kept as a
     separate file, and the query probes of every chunk that precedes a boundary. P1's primary
     probes are confirmed re-observations; nothing here may change after P1's pre-registration."""
-    import hashlib
-
-    def digest(path: Path) -> str:
-        return hashlib.sha256(path.read_bytes()).hexdigest()
-
     lineages = {}
     for name, chunks in development().items():
         group = '397' if name == '397' else '372'
-        facts = {chunk: digest(probes/name/f'{chunk}.jsonl') for chunk in chunks}
+        facts = {chunk: file_sha256(probes/name/f'{chunk}.jsonl') for chunk in chunks}
         adjudication = probes/name/'adjudication.jsonl'
-        queries = {path.stem: digest(path) for path in sorted((probes/'queries'/group).glob('*.jsonl'))
+        queries = {path.stem: file_sha256(path) for path in sorted((probes/'queries'/group).glob('*.jsonl'))
                    if path.stem in chunks}
         if set(queries) != set(chunks[:-1]):
             raise SystemExit(f'{name}: query files must be exactly the chunks before a boundary; '
                              f'have {sorted(queries)}, want {chunks[:-1]}')
         lineages[name] = dict(fact_chunks=facts, queries=queries,
-                              adjudication=digest(adjudication) if adjudication.is_file() else None)
+                              adjudication=file_sha256(adjudication) if adjudication.is_file() else None)
     ledger = dict(schema=LEDGER_SCHEMA, protocol='probe-protocol/1', frozen='2026-11-08', lineages=lineages,
                   note='Both blinded ledgers, frozen for P1\'s secondary, descriptive figures (owner decision, '
                        '#490). Each missed the 0.6 recall bar; P1\'s primary probes are confirmed '

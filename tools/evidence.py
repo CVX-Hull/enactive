@@ -29,7 +29,9 @@ import shutil
 import subprocess
 import sys
 
-ROOT = Path(__file__).resolve().parents[1]
+from harness.jsonio import file_sha256
+
+ROOT =Path(__file__).resolve().parents[1]
 MANIFESTS = ROOT / 'data' / 'evidence'
 EXPECTED = ('enactive.evidenceStore', 'expected')  # local Git configuration: this clone holds the store
 SCHEMA = 'evidence-index/1'
@@ -68,11 +70,6 @@ def expect_store(root: Path = ROOT) -> None:
 
 def excluded(name: str) -> bool:
     return name in EXCLUDE_NAMES or name.endswith(EXCLUDE_SUFFIXES)
-
-
-def sha256(path: Path) -> str:
-    with path.open('rb') as stream:
-        return hashlib.file_digest(stream, 'sha256').hexdigest()
 
 
 def listing(root: Path) -> list[str]:
@@ -129,7 +126,7 @@ def _copy(source: Path, target: Path, skipped: list[str], origin: Path) -> None:
             raise EvidenceError(f'{target}: two sources map to the same path')
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, target)
-        if sha256(source) != sha256(target):
+        if file_sha256(source) != file_sha256(target):
             raise EvidenceError(f'{source}: copy does not match its source')
     else:
         raise EvidenceError(f'{source}: special files are not evidence')
@@ -183,7 +180,7 @@ def seal(study: str, sources: list[tuple[str, Path, str]], cited_by: list[str], 
         paths = listing(target) if target.is_dir() else []
         if not paths:
             raise EvidenceError(f'{study}: no files to seal')
-        text = ''.join(f'{sha256(target / path)}  {path}\n' for path in paths)
+        text = ''.join(f'{file_sha256(target / path)}  {path}\n' for path in paths)
         manifests.mkdir(parents=True, exist_ok=True)
         manifest.write_bytes(text.encode('utf-8'))
         entry = dict(cited_by=sorted(cited_by), files=len(paths),
@@ -254,7 +251,7 @@ def verify(*, full: bool, store: Path, manifests: Path = MANIFESTS, root: Path =
             errors.append(f'{study}: a sealed file has regained write permission')
             continue
         if full:
-            changed = [p for p in present if sha256(target / p) != manifest[p]]
+            changed = [p for p in present if file_sha256(target / p) != manifest[p]]
             if changed:
                 errors.append(f'{study}: {len(changed)} files changed (first: {changed[0]})')
                 continue

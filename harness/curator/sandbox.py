@@ -233,7 +233,13 @@ def run(argv: list[str], layout: Layout, *, proxy_port: int | None = None, token
         raise SandboxError('Home must be empty at session start')
     env = environment(layout, proxy_port=proxy_port, token=token, extra=extra_env)
     nproc = _user_processes() + limits.processes
-    with tempfile.NamedTemporaryFile('w', suffix='.sb', delete=False) as handle:
+    # The profile lives beside the workspace in the session's state directory, which the profile neither reads nor
+    # writes (only its path is visible as metadata), never in the system temporary directory.
+    profile_dir = layout.workspace.parent
+    if any(profile_dir == Path(root) or Path(root) in profile_dir.parents
+           for root in (*SYSTEM_READ, layout.workspace, layout.home, *layout.tools, *layout.readable, *layout.writable)):
+        raise SandboxError(f'The sandbox profile directory would be reachable from inside the sandbox: {profile_dir}')
+    with tempfile.NamedTemporaryFile('w', dir=profile_dir, prefix='profile-', suffix='.sb', delete=False) as handle:
         handle.write(profile(layout, proxy_port))
     floor = _free_bytes(layout.workspace) - limits.disk_bytes - limits.free_space_margin_bytes
     started = time.monotonic()

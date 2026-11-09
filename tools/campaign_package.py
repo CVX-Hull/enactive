@@ -2,13 +2,13 @@
 from __future__ import annotations
 
 from decimal import Decimal
-import hashlib
 import os
 from pathlib import Path
 import re
 import subprocess
 
 from harness.computer.protocol import ControlError,closed,integer,read_json
+from harness.jsonio import file_sha256
 from harness.prepared_app import game_lock_path
 from tools.configure_player_tools import ROOT,configuration
 
@@ -36,11 +36,6 @@ def labels(value) -> None:
     if value['admission'] is not None:integer(value['admission'],1,10000)
     if (value['lineage'] is None)!=(value['admission'] is None):
         raise ControlError('Lineage and admission position are both set or both null')
-
-
-def _sha256(path: Path) -> str:
-    with path.open('rb') as stream:
-        return hashlib.file_digest(stream,'sha256').hexdigest()
 
 
 def local_file(value: str) -> Path:
@@ -87,15 +82,15 @@ def preflight(directory: Path) -> tuple[dict,dict,dict]:
     if set(profile['files'])!=FILES:raise ControlError('Freeze every selected driver input')
     for name,sha in profile['files'].items():
         path=local_file(str(directory/name))
-        if path.stat().st_size>1048576 or _sha256(path)!=sha:raise ControlError('Frozen driver input differs')
+        if path.stat().st_size>1048576 or file_sha256(path)!=sha:raise ControlError('Frozen driver input differs')
     for name in ('native','library'):
         closed(profile[name],{'path','sha256'})
-        if _sha256(local_file(profile[name]['path']))!=profile[name]['sha256']:
+        if file_sha256(local_file(profile[name]['path']))!=profile[name]['sha256']:
             raise ControlError('Frozen target/adapter bytes differ')
     initial=profile['initial_files']
     if type(initial) is not dict or not 1<=len(initial)<=16:raise ControlError('Freeze bounded initial target files')
     for name,sha in initial.items():
-        if _sha256(local_file(name))!=sha:raise ControlError('Initial target configuration differs')
+        if file_sha256(local_file(name))!=sha:raise ControlError('Initial target configuration differs')
     if any((directory/name).exists() for name in ('started.json','session.sqlite3','native-process.json','actors','contexts')):
         raise ControlError('Selected package has prior/partial application; never reopen it')
     lock=Path(profile['shared_lock']);player=Path(profile['player_store'])

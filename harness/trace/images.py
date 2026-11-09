@@ -3,7 +3,7 @@
 Pure functions over Pillow and numpy: no global state, no network, no writes. Images are
 ``uint8`` RGB arrays of shape ``(height, width, 3)``. Hashes are Python ints of ``size * size`` bits.
 Nothing here decides what distance means "the same screen"; callers measure that
-(see ``tools/phash_measure.py``).
+(see ``tools/phash_measure.py`` at commit e8b062df3275eb128f42f4b84161e651be632d13, removed from the tree).
 """
 from __future__ import annotations
 

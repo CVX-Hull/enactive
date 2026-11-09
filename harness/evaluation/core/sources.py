@@ -11,10 +11,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-import hashlib
 from pathlib import Path
 import sqlite3
 from typing import Iterator
+
+from harness.jsonio import file_sha256
 
 from .records import EvaluationError, loads
 
@@ -366,8 +367,7 @@ def read_run(run_dir: Path, *, after_seq: int | None = None, settled_only: bool 
     def digest(path: Path) -> str:
         if not digests:
             return ''
-        with path.open('rb') as stream:
-            return hashlib.file_digest(stream, 'sha256').hexdigest()
+        return file_sha256(path)
 
     found = {'manifest.json': digest(run_dir / 'manifest.json'), 'session.sqlite3': digest(run_dir / 'session.sqlite3')}
     host: dict[str, tuple[HostEvent, ...]] = {}
