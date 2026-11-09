@@ -10,7 +10,8 @@ import threading
 
 import pytest
 
-from harness.curator.proxy import OPENROUTER, ModelProxy, Price, refusal
+from harness.curator.proxy import ModelProxy, Price, refusal
+from tools.curator_host.providers import ANTHROPIC, OPENROUTER, reported_cost
 
 ROUTE = '/api/v1/chat/completions'
 MODEL = 'vendor/model-a'
@@ -60,12 +61,12 @@ def openrouter(tmp_path, usage, cap='1'):
         server.server_close()
 
 
-def post(port, payload, token):
+def post(port, payload, token, extra=None):
     data = json.dumps(payload).encode()
     connection = http.client.HTTPConnection('127.0.0.1', port, timeout=10)
     connection.request('POST', ROUTE, body=data, headers={'authorization': f'Bearer {token}',
                                                           'content-type': 'application/json',
-                                                          'x-session-id': 'curator-session'})
+                                                          'x-session-id': 'curator-session', **(extra or {})})
     response = connection.getresponse()
     payload = response.read()
     connection.close()
@@ -138,6 +139,22 @@ def test_the_reported_cost_settles_and_the_key_never_leaves_the_proxy(tmp_path):
     assert 'real-router-key' not in ledger and proxy.token not in ledger and proxy.affinity not in ledger
 
 
+def test_version_and_frozen_beta_headers_pass_as_they_always_did(tmp_path):
+    usage = dict(prompt_tokens=10, completion_tokens=2, total_tokens=12, cost=0.0001)
+    with openrouter(tmp_path, usage) as (proxy, port, seen):
+        proxy.betas = frozenset({'allowed-beta'})
+        extra = {'anthropic-version': '2026-10-21', 'anthropic-beta': 'allowed-beta,unlisted-beta', 'x-other': 'no'}
+        assert post(port, body(), proxy.token, extra)[0] == 200
+        sent = {k.lower(): v for k, v in seen[0]['headers'].items()}
+        assert sent['anthropic-version'] == '2026-10-21' and sent['anthropic-beta'] == 'allowed-beta'
+        assert 'x-other' not in sent and sent['accept-encoding'] == 'identity'
+    assert json.loads((tmp_path/'ledger.jsonl').read_text())['dropped_betas'] == ['unlisted-beta']
+
+
+def test_context_management_is_not_an_openrouter_field():
+    assert 'context_management' in refusal(OPENROUTER, body(context_management=dict(edits=[])))
+
+
 def test_one_affinity_value_per_proxy_session_on_every_request(tmp_path):
     usage = dict(prompt_tokens=10, completion_tokens=2, total_tokens=12, cost=0.0001)
     with openrouter(tmp_path, usage) as (proxy, port, seen):
@@ -162,7 +179,7 @@ def test_without_a_reported_cost_tokens_settle_at_the_highest_input_price(tmp_pa
 
 
 def test_inline_images_reserve_a_bounded_token_count_not_their_encoding(tmp_path):
-    from harness.curator.proxy import ANTHROPIC, IMAGE_TOKENS, inline_images
+    from harness.curator.proxy import IMAGE_TOKENS, inline_images
     frame = 'A' * 280_000                                      # a 280 KB base64 frame
     request = body(messages=[dict(role='user', content=[
         dict(type='text', text='look'), dict(type='image_url', image_url=dict(url=f'data:image/png;base64,{frame}')),
@@ -183,7 +200,6 @@ def test_inline_images_reserve_a_bounded_token_count_not_their_encoding(tmp_path
 
 
 def test_a_bring_your_own_key_route_settles_at_the_upstream_charge_too():
-    from harness.curator.proxy import reported_cost
     byok = sse(dict(prompt_tokens=10, completion_tokens=2, cost=0.00001, is_byok=True,
                     cost_details=dict(upstream_inference_cost=0.5)))
     assert reported_cost(byok) == Decimal('0.50001')

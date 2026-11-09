@@ -5,7 +5,7 @@ import json
 
 import pytest
 
-from tools import curator_shadow_report as report
+from tools.curator_host import shadow_report as report
 
 
 def summary(session, cost, wall, accepted=1, submissions=1, state='sealed'):

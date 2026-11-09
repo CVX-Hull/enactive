@@ -61,9 +61,10 @@ synthetic.
   defines a custom `model_providers.<id>.base_url` and the `memories.*` switches.
 - **Unverified.** Whether `project_doc_max_bytes=0` disables instruction files.
 
-**Status.** It has not been run under the profile. The proxy's OpenAI request allowlist
-is not yet checked against a dated source. #454 does both before any spend, using the
-same probe with a Responses-shape stand-in.
+**Status.** It has not been run under the profile, and the proxy has no provider for its
+model API. Before any spend, a provider for that API is added to
+[`tools/curator_host/providers.py`](../../tools/curator_host/providers.py) with its request
+allowlist checked against a dated source, and the same probe runs with a stand-in of its shape.
 
 ## Pi curator host (the P0 shadow host)
 
@@ -71,7 +72,7 @@ The owner chose one host the project controls for #454 (ADR 009 open decision 2)
 models through OpenRouter. [`tools/curator_host`](../../tools/curator_host) is a private Node package
 on `@earendil-works/pi-agent-core` and `pi-ai` 1.4.0, the versions the actor's
 [`tools/player_host`](../../tools/player_host/README.md) uses. It has no MCP, no shell and no
-coding-agent application. [`tools/curator_shadow.py`](../../tools/curator_shadow.py) runs it over
+coding-agent application. [`tools/curator_host/shadow.py`](../../tools/curator_host/shadow.py) runs it over
 sealed traces.
 
 **Install** (project-local, nothing global):
@@ -95,7 +96,7 @@ Node tests: `cd tools/curator_host && npm test`.
   `host-end`. It never carries the token or a header.
 
 **The shadow runner.**
-`.venv/bin/python -m tools.curator_shadow --arm terra|opus --lineage 397|372 [--sessions NAME…] --cap-usd N --out .runtime/curator-shadow/RUN`.
+`.venv/bin/python -m tools.curator_host.shadow --arm terra|opus --lineage 397|372 [--sessions NAME…] --cap-usd N --out .runtime/curator-shadow/RUN`.
 - **Input.** It reads the key only from `OPENROUTER_API_KEY`, and fails without it. `--upstream`
   accepts only OpenRouter or a local http origin. It selects only the sampled sessions (397:
   `sd1a1`–`sd1a7`; 372: `aidB3 ceil09 ceil07 ceil05 aidB9 aidA5`, in that order) and refuses
@@ -132,9 +133,13 @@ proxy ledger shows no refusal.
 
 **Tool roots.** Node is a Homebrew build linked against about twenty kegs through
 `/opt/homebrew/opt/<name>` links. The tool roots are the node keg, each keg its libraries live in
-(read from `otool -L`), `/opt/homebrew/opt` (links only), the host package directory, the directory
-holding the frozen configuration, and the Python base prefix for the workbench. Two facts about
-running node under the profile:
+(read from `otool -L`), `/opt/homebrew/opt` (links only), the directory holding the frozen
+configuration, and the Python base prefix for the workbench. From the host package the roots are
+only `host.mjs`, `run.mjs`, `workspace-tools.mjs`, `prompt.md`, `package.json`, `node_modules` and
+`launch.py` (`HOST_READABLE` in `tools/curator_host/shadow.py`), each as its own root. The runner,
+report, providers and any `__pycache__` beside them are not readable by the curator; `launch.py`
+is the only Python file the sandbox's own argv runs. Two facts about running node under the
+profile:
 - **`OPENSSL_CONF=/dev/null`.** Node reads `/opt/homebrew/etc/openssl@4/openssl.cnf` at start and
   aborts when the profile refuses it. The host speaks plain http to the loopback proxy, so no
   configuration is needed.

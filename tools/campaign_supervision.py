@@ -39,7 +39,7 @@ PAUSE_REPLY = .75
 CLOCK_MAPPING_TOLERANCE = .25
 MARKERS = ('watch-start.json', 'watch-attempts.jsonl', 'watch-terminal.json')
 # Optional, git-ignored map from a credential variable to the operator's own
-# macOS keychain item: {"OPENROUTER_API_KEY": {"keychain_service": "NAME"}}.
+# macOS keychain item: {"<KEY_VARIABLE>": {"keychain_service": "NAME"}}.
 CREDENTIALS = ROOT/'.runtime'/'credentials.json'
 
 

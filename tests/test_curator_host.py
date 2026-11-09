@@ -19,12 +19,13 @@ import pytest
 
 from harness.curator import sandbox
 from harness.curator.knowledge import Repository
-from harness.curator.proxy import OPENROUTER, ModelProxy
+from harness.curator.proxy import ModelProxy
 from harness.curator.session import SessionConfig, run_session
 from tests.curator_stand_in import StandIn
 from tests.test_curator_sandbox import custodian  # noqa: F401 - the escape suite's real listeners
 from tests.test_trace_projection import make_session
-from tools import curator_shadow as shadow
+from tools.curator_host import shadow
+from tools.curator_host.providers import OPENROUTER
 
 ROOT = Path(__file__).resolve().parents[1]
 INSTALLED = (shadow.HOST_DIR/'node_modules').is_dir() and shutil.which('node') is not None
@@ -153,7 +154,7 @@ def test_the_host_cannot_read_or_write_outside_the_workspace(tmp_path, world):
     assert record['published_after'] == 'v0'
     # The refusals above were the host's own. The sandbox refuses the same attempts made by the node process itself.
     probe = ("const fs=require('fs'),r={};"
-             "for(const [k,p] of Object.entries({secret:process.argv[1],cred:process.argv[2]})){try{fs.readFileSync(p);r[k]='read'}catch(e){r[k]=e.code}}"
+             "for(const [k,p] of Object.entries({secret:process.argv[1],cred:process.argv[2],providers:process.argv[3],runner:process.argv[4],host:process.argv[5],prompt:process.argv[6]})){try{fs.readFileSync(p);r[k]='read'}catch(e){r[k]=e.code}}"
              "for(const [k,p] of Object.entries({knowledge:'knowledge/x',trace:'trace/x',tmp:'/tmp/curator-node-escape'})){try{fs.writeFileSync(p,'x');r['w'+k]='wrote'}catch(e){r['w'+k]=e.code}}"
              "try{fs.writeFileSync('scratch/ok','x');r.scratch='wrote'}catch(e){r.scratch=e.code}"
              "console.log('PROBE '+JSON.stringify(r))")
@@ -162,13 +163,37 @@ def test_the_host_cannot_read_or_write_outside_the_workspace(tmp_path, world):
     planted_credentials.parent.mkdir()
     planted_credentials.write_text('{"key": "planted"}')
     probing = SessionConfig(argv=(str(tools['python']), '-I', str(shadow.HOST_DIR/'launch.py'), str(tools['node']), '-e', probe,
-                                  str(secret), str(planted_credentials)),
+                                  str(secret), str(planted_credentials), str(shadow.HOST_DIR/'providers.py'),
+                                  str(shadow.HOST_DIR/'shadow.py'), str(shadow.HOST_DIR/'host.mjs'),
+                                  str(shadow.HOST_DIR/'prompt.md')),
                             tools=tools['roots'], limits=sandbox.Limits(wall_seconds=60), extra_env=tools['env'])
     record = run_session(repo, trace, probing)
     out = (repo.state/'sessions'/record['manifest']['id']/'host-output.log').read_text()
     result = json.loads(out.split('PROBE ')[1].splitlines()[0])
-    assert result == dict(secret='EPERM', cred='EPERM', wknowledge='EPERM', wtrace='EPERM', wtmp='EPERM', scratch='wrote'), out
+    # The host package's Python (providers, runner) is out of the curator's reach; the Node host and prompt are in.
+    assert result == dict(secret='EPERM', cred='EPERM', providers='EPERM', runner='EPERM', host='read', prompt='read',
+                          wknowledge='EPERM', wtrace='EPERM', wtmp='EPERM', scratch='wrote'), out
     assert not Path('/tmp/curator-node-escape').exists()
+
+
+def test_the_readable_host_files_hold_no_python_but_the_launcher():
+    host = shadow.HOST_DIR.resolve()
+    inside = [(host/name).resolve() for name in shadow.HOST_READABLE]
+    assert host not in inside and all(host in root.parents for root in inside)
+    files = [f for root in inside for f in ([root] if root.is_file() else root.rglob('*'))]
+    assert [f for f in files if f.suffix == '.py'] == [host/'launch.py']
+    assert not [f for f in files if '__pycache__' in f.parts]
+
+
+@native
+def test_the_sandbox_reads_exactly_the_readable_host_files():
+    tools = shadow.host_tools()  # needs the macOS loader tools to find node's libraries
+    host = shadow.HOST_DIR.resolve()
+    inside = [Path(root) for root in tools['roots'] if Path(root) == host or host in Path(root).parents]
+    assert sorted(p.name for p in inside) == sorted(shadow.HOST_READABLE)
+    # No host-package Python besides the launcher is on any root, including a root that contains the package.
+    for name in ('shadow.py', 'shadow_report.py', 'providers.py'):
+        assert not any(Path(root) == host/name or Path(root) in (host, *host.parents) for root in tools['roots']), name
 
 
 @native

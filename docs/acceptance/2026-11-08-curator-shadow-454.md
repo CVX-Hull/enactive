@@ -14,7 +14,7 @@ curator sessions replayed over the sealed #397 lineage and #372's sampled develo
 runs. #382's held-out lineages were refused by the runner and never opened. No game ran.
 
 **Where the figures come from.** Every per-session figure is derived by
-[`tools/curator_shadow_report.py`](../../tools/curator_shadow_report.py) into
+[`tools/curator_shadow_report.py`](https://github.com/CVX-Hull/enactive/blob/1bc5d65/tools/curator_shadow_report.py) into
 [`data/curator/shadow-454.json`](../../data/curator/shadow-454.json). Its inputs are:
 - the shadow runner's session summaries, which hold the proxy-settled cost;
 - the tracked run ledger, for the actor's own pace, game hours and spend.

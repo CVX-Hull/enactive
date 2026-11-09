@@ -16,7 +16,8 @@ import tempfile
 import threading
 
 from harness.curator import sandbox
-from harness.curator.proxy import ANTHROPIC, ModelProxy, Price
+from harness.curator.proxy import ModelProxy, Price
+from tools.curator_host.providers import ANTHROPIC
 
 REPLY = 'probe-reply-ok'
 

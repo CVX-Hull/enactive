@@ -7,8 +7,8 @@ What reaches the provider is allowlisted, not filtered:
 - **Route.** Only the provider's model route is forwarded.
 - **Headers.** Only a few headers pass, and beta flags only from a frozen set. Responses
   are always requested uncompressed, so usage stays readable. For a provider with a
-  session-affinity header (OpenRouter's `x-session-id`) the proxy sets one value per proxy,
-  that is per session, on every request; the host's own value is never forwarded.
+  session-affinity header the proxy sets one value per proxy, that is per session, on
+  every request; the host's own value is never forwarded.
 - **Body.** Top-level fields and content blocks are allowlisted. Inline text and base64
   images pass. Fetched or stored sources (URLs, files), documents, provider-run tools
   (server tools, MCP servers, containers), stored provider state and pricing tiers are
@@ -28,9 +28,15 @@ The dollar cap is enforced by reservation:
 
 Every request is appended to the proxy's ledger, without the key or token. Prices are a frozen
 input supplied by the caller (with their source and date), never a default.
+
+This module holds no provider names. A `Provider` carries everything one provider needs (route,
+key header, allowlists, extra request rules, forwarded headers, how usage turns into dollars);
+the host adapter that talks to a provider defines it (`tools/curator_host/providers.py`) and
+passes it in.
 """
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from decimal import Decimal
 import hashlib
@@ -48,7 +54,8 @@ from urllib.parse import urlsplit
 MAX_BODY = 8 << 20
 READ_TIMEOUT = 30
 MAX_CONCURRENT = 8
-FORWARD_HEADERS = frozenset({'content-type', 'accept', 'anthropic-version', 'user-agent'})
+# Headers every provider receives from the host; `Provider.forward_headers` adds its own.
+FORWARD_HEADERS = frozenset({'content-type', 'accept', 'user-agent'})
 
 
 @dataclass(frozen=True)
@@ -64,16 +71,36 @@ class Price:
         return max(self.input, self.cache_write, self.cache_read)
 
 
+def no_refusal(_request: dict) -> str | None:
+    return None
+
+
 @dataclass(frozen=True)
 class Provider:
-    """How one provider authenticates, which request shapes are allowed and where usage is."""
+    """How one provider authenticates, which request shapes are allowed and what a response costs.
+
+    Everything provider-specific is data or a small callable here, so the proxy has no provider branch.
+    """
     name: str
     routes: frozenset[str]
     key_header: str  # 'x-api-key' or 'authorization'
     output_field: str  # body field holding the output-token limit
     fields: frozenset[str]  # allowed top-level body fields
     blocks: frozenset[str]  # allowed content-block types
+    tool_refusal: Callable[[dict], str | None]  # why one `tools` entry is refused, or None
+    cost: Callable[[Price, dict[str, int], bytes], Decimal]  # (price, usage, raw response body) -> dollars
+    request_refusal: Callable[[dict], str | None] = no_refusal  # extra body rules, run after the tool rule
+    forward_headers: frozenset[str] = frozenset()  # lower-case headers forwarded besides FORWARD_HEADERS
+    beta_header: str | None = None  # header listing beta flags; only flags in the proxy's frozen set pass
     affinity_header: str | None = None  # session-affinity header the proxy itself sets, if the provider has one
+
+    def __post_init__(self):
+        # The proxy sets these itself; a provider must not let the host's values through.
+        owned = {'authorization', 'x-api-key', 'content-length', 'accept-encoding', 'transfer-encoding', 'host',
+                 *(h.lower() for h in (self.key_header, self.beta_header, self.affinity_header) if h)}
+        clash = sorted({h.lower() for h in self.forward_headers} & owned)
+        if clash:
+            raise ValueError(f'forward_headers may not carry headers the proxy sets: {", ".join(clash)}')
 
     def auth(self, key: str) -> tuple[str, str]:
         return (self.key_header, key) if self.key_header == 'x-api-key' else ('authorization', f'Bearer {key}')
@@ -82,34 +109,6 @@ class Provider:
         value = headers.get('x-api-key') or ''
         bearer = headers.get('authorization') or ''
         return value or (bearer[7:] if bearer.lower().startswith('bearer ') else '')
-
-
-ANTHROPIC = Provider(
-    'anthropic', frozenset({'/v1/messages'}), 'x-api-key', 'max_tokens',
-    frozenset({'model', 'max_tokens', 'messages', 'system', 'tools', 'tool_choice', 'stream', 'metadata',
-               'stop_sequences', 'thinking', 'output_config', 'cache_control', 'temperature', 'top_p', 'top_k',
-               'context_management'}),
-    frozenset({'text', 'image', 'tool_use', 'tool_result', 'thinking', 'redacted_thinking'}))
-# OpenAI's Responses shapes are not yet verified against a dated primary source; #454 freezes them.
-OPENAI = Provider(
-    'openai', frozenset({'/v1/responses'}), 'authorization', 'max_output_tokens',
-    frozenset({'model', 'input', 'instructions', 'tools', 'tool_choice', 'max_output_tokens', 'stream',
-               'reasoning', 'text', 'parallel_tool_calls', 'store', 'temperature', 'top_p'}),
-    frozenset({'message', 'input_text', 'output_text', 'input_image', 'function_call', 'function_call_output',
-               'reasoning'}))
-# OpenRouter chat completions (#454; ADR 009 open decision 2). Checked on 8 November 2026 against
-# openrouter.ai/docs/api/reference/overview, /docs/use-cases/usage-accounting and /docs/faq:
-# - usage, including `cost`, is always returned, and the base currency is US dollars;
-# - `plugins` (`web` is live web search), `models` and `route` (fallback models), `prompt`, `debug`
-#   and `user` are left out of the allowlist;
-# - `image_url` accepts remote URLs, so only `data:` URLs pass.
-# The fields are those the project's curator host serializer sends for an OpenRouter model.
-OPENROUTER = Provider(
-    'openrouter', frozenset({'/api/v1/chat/completions'}), 'authorization', 'max_completion_tokens',
-    frozenset({'model', 'messages', 'stream', 'stream_options', 'max_completion_tokens', 'temperature', 'top_p',
-               'tools', 'tool_choice', 'reasoning', 'provider', 'store'}),
-    frozenset({'text', 'image_url', 'function', 'reasoning.text', 'reasoning.summary', 'reasoning.encrypted'}),
-    affinity_header='x-session-id')
 
 
 def refusal(provider: Provider, request: object) -> str | None:
@@ -122,16 +121,12 @@ def refusal(provider: Provider, request: object) -> str | None:
     for tool in request.get('tools') or []:
         if not isinstance(tool, dict):
             return 'malformed tool'
-        if provider is ANTHROPIC and ('input_schema' not in tool or tool.get('type') not in (None, 'custom')):
-            return 'only client tools with an input schema are allowed'
-        if provider in (OPENAI, OPENROUTER) and tool.get('type') != 'function':
-            return 'only function tools are allowed'
-    if provider is OPENROUTER:
-        routing = request.get('provider')
-        if routing is not None and not (isinstance(routing, dict) and set(routing) <= ROUTING):
-            return 'provider routing may only order, require or restrict providers'
-        if request.get('store') not in (None, False):
-            return 'provider-side storage is not allowed'
+        reason = provider.tool_refusal(tool)
+        if reason:
+            return reason
+    reason = provider.request_refusal(request)
+    if reason:
+        return reason
     management = request.get('context_management')
     if management is not None:
         # Clearing old tool results or thinking only removes context; server-side compaction
@@ -141,10 +136,6 @@ def refusal(provider: Provider, request: object) -> str | None:
                 not isinstance(e, dict) or not str(e.get('type', '')).startswith(('clear_tool_uses_', 'clear_thinking_'))
                 for e in edits):
             return 'only clearing context edits are allowed'
-    if provider is OPENAI and request.get('store') not in (None, False):
-        return 'provider-side storage is not allowed'
-    if provider is OPENAI and request.get('store') is None:
-        request['store'] = False
     # Walk every nested value of the conversation, except fields that are opaque arguments
     # or schemas rather than content.
     stack = [request.get('messages'), request.get('system'), request.get('input')]
@@ -171,9 +162,9 @@ def refusal(provider: Provider, request: object) -> str | None:
 
 
 # Each inline image reserves this many input tokens instead of its base64 bytes. Providers bill an
-# image by its pixels, not its encoding: Anthropic about width × height / 750 tokens after scaling
-# to at most about 1.15 megapixels (about 1,600 tokens), and OpenAI a bounded tile count. 10,000
-# leaves several times that headroom. A charge above the reservation still revokes the session.
+# image by its pixels, not its encoding, after scaling it to a bounded size (about 1,600 tokens at
+# most for the providers in `tools/curator_host/providers.py`). 10,000 leaves several times that
+# headroom. A charge above the reservation still revokes the session.
 IMAGE_TOKENS = 10_000
 
 
@@ -184,7 +175,7 @@ IMAGE_DATA_URL = re.compile(r'data:image/(png|jpeg|gif|webp);base64,')
 def inline_images(request: object) -> tuple[int, int]:
     """The base64 bytes and count of inline images in an already-allowlisted request body.
 
-    Only image content blocks count: an Anthropic `image` block with a base64 `image/*` source,
+    Only image content blocks count: an `image` block with a base64 `image/*` source,
     or an `image_url`/`input_image` part with a `data:image/...;base64,` URL. The walk skips the
     same opaque fields as `refusal`, so a tool argument or text that merely looks like an image
     is billed by its bytes.
@@ -218,23 +209,20 @@ def inline_images(request: object) -> tuple[int, int]:
     return total, count
 
 
-# OpenRouter provider preferences that only choose among providers for the requested model.
-ROUTING = frozenset({'order', 'only', 'ignore', 'allow_fallbacks', 'require_parameters', 'data_collection', 'zdr'})
-
 # Fields whose values are tool arguments or schemas, not content blocks.
 # `source` is checked where it appears; `cache_control` carries its own unrelated `type`.
 OPAQUE = frozenset({'input', 'arguments', 'input_schema', 'parameters', 'data', 'text', 'thinking', 'signature',
                     'source', 'cache_control'})
 
 
-def usage_of(provider: Provider, body: bytes) -> dict[str, int] | None:
+def usage_of(body: bytes) -> dict[str, int] | None:
     """Token usage from a JSON or server-sent-event response, or None when absent.
 
     Integer counts are kept at their maximum across events; nested cache-creation detail is
     summed into `cache_creation_input_tokens` when the flat total is absent.
     """
     usage: dict[str, int] = {}
-    for found in _usages(body):
+    for found in usage_events(body):
         for key, value in found.items():
             if isinstance(value, int) and not isinstance(value, bool):
                 usage[key] = max(usage.get(key, 0), value)
@@ -245,7 +233,7 @@ def usage_of(provider: Provider, body: bytes) -> dict[str, int] | None:
     return usage or None
 
 
-def _usages(body: bytes):
+def usage_events(body: bytes):
     """Every usage object in a JSON or server-sent-event response body."""
     text = body.decode('utf-8', 'replace')
     documents = [text] if text.lstrip().startswith('{') else [
@@ -263,50 +251,6 @@ def _usages(body: bytes):
             yield found
 
 
-def _amount(value) -> Decimal | None:
-    if isinstance(value, (Decimal, int)) and not isinstance(value, bool) and value >= 0:
-        return Decimal(value)
-    return None
-
-
-def reported_cost(body: bytes) -> Decimal | None:
-    """The whole charge for a request (US dollars), or None when the provider reported none.
-
-    OpenRouter's `usage.cost` is what it bills the account. On a bring-your-own-key route that is
-    only its fee: the provider bills `cost_details.upstream_inference_cost` to the operator's own
-    key. Both are counted, so the cap tracks the real spend on either route.
-    """
-    charges = []
-    for found in _usages(body):
-        cost = _amount(found.get('cost'))
-        details = found.get('cost_details') if isinstance(found.get('cost_details'), dict) else {}
-        upstream = _amount(details.get('upstream_inference_cost'))
-        if cost is None and upstream is None:
-            continue
-        charges.append((cost or Decimal(0)) + (upstream or Decimal(0)) if found.get('is_byok') is True
-                       else max(cost or Decimal(0), upstream or Decimal(0)))
-    return max(charges) if charges else None
-
-
-def cost_of(provider: Provider, price: Price, usage: dict[str, int], body: bytes = b'') -> Decimal:
-    per = Decimal(1_000_000)
-    if provider is OPENROUTER:
-        # The provider's reported charge is authoritative. Without it, all prompt tokens are
-        # charged at the highest input-side price, so cache writes are never undercounted.
-        reported = reported_cost(body)
-        if reported is not None:
-            return reported
-        return (usage.get('prompt_tokens', 0) * price.worst_input
-                + usage.get('completion_tokens', 0) * price.output) / per
-    if provider is ANTHROPIC:
-        return (usage.get('input_tokens', 0) * price.input + usage.get('output_tokens', 0) * price.output
-                + usage.get('cache_creation_input_tokens', 0) * price.cache_write
-                + usage.get('cache_read_input_tokens', 0) * price.cache_read) / per
-    # Cached input is charged at the full input price: conservative until a dated provider source
-    # for cached-token pricing is frozen with the prices.
-    return (usage.get('input_tokens', 0) * price.input + usage.get('output_tokens', 0) * price.output) / per
-
-
 class ModelProxy:
     """One proxy per session. `upstream` is the provider base URL (https in use; http only in tests)."""
 
@@ -321,8 +265,8 @@ class ModelProxy:
         self.provider, self.upstream, self._key = provider, parts, key
         self.prices, self.cap = dict(prices), Decimal(cap_usd)
         self.ledger, self.max_output_tokens, self.betas = ledger, max_output_tokens, frozenset(betas)
-        # When set, every request must carry exactly this provider routing (OpenRouter `provider`),
-        # so a host cannot widen it to fallbacks or other providers.
+        # When set, every request must carry exactly this value in its `provider` field (which of the
+        # provider's backends may serve it), so a host cannot widen it to fallbacks or other backends.
         self.routing = None if routing is None else json.loads(json.dumps(routing))
         self.token = secrets.token_hex(32)
         # One provider session-affinity value for this proxy, hence for the session, so the provider keeps the
@@ -442,7 +386,8 @@ class ModelProxy:
                     output_limit = int(request.get(proxy.provider.output_field) or 0)
                 except (TypeError, ValueError):
                     output_limit = 0
-                betas = [b.strip() for b in (self.headers.get('anthropic-beta') or '').split(',') if b.strip()]
+                listed = self.headers.get(proxy.provider.beta_header) if proxy.provider.beta_header else None
+                betas = [b.strip() for b in (listed or '').split(',') if b.strip()]
                 dropped = sorted(set(betas) - proxy.betas)
                 reservation = proxy._reserve(model if isinstance(model, str) else '', body, output_limit, request)
                 if isinstance(reservation, str):
@@ -453,8 +398,8 @@ class ModelProxy:
                 except Exception as exc:  # noqa: BLE001 - every failure settles below and fails closed
                     error = type(exc).__name__
                 finally:
-                    usage = usage_of(proxy.provider, received) if received else None
-                    actual = None if usage is None else cost_of(proxy.provider, proxy.prices[model], usage, received)
+                    usage = usage_of(received) if received else None
+                    actual = None if usage is None else proxy.provider.cost(proxy.prices[model], usage, received)
                     charge, breach = proxy._settle(reservation, actual, status)
                     proxy._record(path=path, model=model, status=status, reserved=reservation, charged=charge,
                                   usage_missing=actual is None, breach=breach, error=error, dropped_betas=dropped,
@@ -476,9 +421,10 @@ class ModelProxy:
                 up = proxy.upstream
                 connection_type = http.client.HTTPSConnection if up.scheme == 'https' else http.client.HTTPConnection
                 connection = connection_type(up.hostname, up.port, timeout=600)
-                headers = {k: v for k, v in self.headers.items() if k.lower() in FORWARD_HEADERS}
-                if betas:
-                    headers['anthropic-beta'] = ','.join(betas)
+                passed = FORWARD_HEADERS | proxy.provider.forward_headers
+                headers = {k: v for k, v in self.headers.items() if k.lower() in passed}
+                if betas and proxy.provider.beta_header:
+                    headers[proxy.provider.beta_header] = ','.join(betas)
                 name, value = proxy.provider.auth(proxy._key)
                 headers[name] = value
                 if proxy.provider.affinity_header:
