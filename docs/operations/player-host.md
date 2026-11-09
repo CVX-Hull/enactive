@@ -27,8 +27,8 @@ timeout, request cap, credential environment name, image peak, eviction block an
 required `context_reserve_tokens` (at least `maxTokens`, below `contextWindow`).
 Keep the peak within the provider's image limit (30 on DeepInfra). Block 1 evicts
 one image at a time (rolling); a larger block keeps the prompt prefix cacheable
-between evictions. Prefer a block of about half the peak, such as 39/20 (the
-development runs used 39/10), so evictions are rare. Pi sends a per-session
+between evictions. Prefer a block of about half the peak, such as 39/20, so evictions are
+rare (the development runs' settings are in [the benchmark route](../development-runs.md#benchmark)). Pi sends a per-session
 `x-session-id` affinity value on the OpenRouter route; the host's
 [request-stability rules](../contracts/player-host.md#request-stability-and-tail-notices)
 govern the rest.

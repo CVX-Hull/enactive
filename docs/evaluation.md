@@ -73,9 +73,9 @@ fixture boundary only; provider compatibility, grounded proposals and actual
 game usefulness require separate evidence. Host request-limit failure remains a
 failure even if complete bounded assessment evidence was collected.
 
-The [two-case candidate result](acceptance/2026-11-05-recorded-player-assessment.md)
-demonstrates one fresh-host recorded-image continuation and consistent proposed
-controls per case. No proposal was executed; it qualifies no live game effect.
+The [two-case candidate record](acceptance/2026-11-05-recorded-player-assessment.md)
+holds the fresh-host recorded-image continuation result. A recorded assessment qualifies no
+live game effect.
 
 These commands are offline and read-only, writing summaries to stdout:
 

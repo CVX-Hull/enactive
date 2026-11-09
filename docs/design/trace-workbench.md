@@ -77,8 +77,8 @@ source metadata. It is not the player's memory contract. Sealed stores stay read
 the live contract migrates. The reader accepts only `player-memory/2` and never writes
 beside the store: it opens SQLite immutable, and a test proves this on a write-ahead-log
 store. Immutable mode would silently ignore an un-checkpointed log, so a store with a
-non-empty `-wal` is refused rather than read incomplete. On the sealed #397 store it read 11 records,
-0 programs and 61 sources.
+non-empty `-wal` is refused rather than read incomplete. What it read from the sealed #397
+store is in [the moved results](../acceptance/2026-11-09-moved-results.md#trace-workbench-evidence-reader).
 
 ## Workbench
 

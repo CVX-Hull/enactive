@@ -68,8 +68,8 @@ examines the user's fast, less flagship model direction against current primary
 small-model/tool studies, memory/compaction counterexamples, provider contracts
 and actual player host context growth. It prioritizes sufficient current context,
 examples and mechanical authoring ergonomics with recoverable evidence; neither
-more context nor fewer tokens guarantees useful apparent speed. It informed #251;
-#164 owns the readiness criteria.
+more context nor fewer tokens guarantees useful apparent speed. #164 owns the readiness
+criteria.
 
 *Historical:* the [October24 multi-rate review](research-multirate-agents.md) checks fresh
 control/skill and contrary memory evidence against Fresh024. It recommends
@@ -117,8 +117,8 @@ training service or framework follows automatically from the essay.
 The [organic-discovery crosswalk](design/organic-discovery.md#cross-check-against-prior-work),
 [mixed-input design](design/mixed-input.md) and
 [procedure/reflection boundary](design/procedure-learning.md) already point in
-this direction. Actual campaign002 shows a gap between that intent and execution:
-a zero-input representation error revoked ordinary input (#190 owns that case, and
+this direction. The [campaign002 record](acceptance/2026-10-21-independent-seven-day-second-attempt.md)
+holds the gap between that intent and execution (#190 owns that case, and
 #176 the [computer-control boundary](contracts/computer-control.md)); whole-loop
 qualification remains open under #145 and #164. Changed labels/layouts or
 behavior after an arbitrary f(T) are nonstationary conditions, not permission to
@@ -170,8 +170,8 @@ probes. Model-call reduction, responsiveness, and survival are separate metrics.
 ## CDDA and integration evidence
 
 Pinned source: [CleverRaven/Cataclysm-DDA 0.I-1](https://github.com/CleverRaven/Cataclysm-DDA/tree/0.I-1),
-release commit short 7b2efa5. Official asset and checksums are recorded in
-environment.md. Local source inspection is primary evidence for the following:
+release commit short 7b2efa5. Official asset and checksums are pinned in
+[`native/upstream.json`](../native/upstream.json). Local source inspection is primary evidence for the following:
 
 - src/input_context.cpp handle_input: nested input categories and action binding
   resolution. Hooking game::handle_action alone misses menus.
@@ -186,10 +186,8 @@ environment.md. Local source inspection is primary evidence for the following:
 
 ## Reuse candidates rechecked — 2026-10-17
 
-The earlier bare names did not preserve enough provenance to identify precisely
-what was inspected. This comparison replaces that claim with newly checked public
-repositories at exact revisions; it does not retroactively identify the earlier
-unnamed sources. Commit dates below come from GitHub commit metadata.
+The comparison names public repositories at exact revisions, so what was inspected is
+identifiable. Commit dates below come from GitHub commit metadata.
 
 | Candidate / inspected revision | Primary evidence read | Consequence and limit |
 | --- | --- | --- |

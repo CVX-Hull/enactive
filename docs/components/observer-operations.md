@@ -33,8 +33,8 @@ records and can fail without effect. [Architecture](../architecture.md) and
 **Custodian routes.** `GET /api/status` is passive `computer-status/1`;
 `/api/source/ID` serves current session PNGs with retained identity/digest
 verification. A failed spectator image read reports unavailable without calling
-actor-side source-failure fencing; canonical actor/capture/input integrity behavior
-is unchanged. Browser reads do not select a player store or create observations.
+actor-side source-failure fencing, so it never affects actor capture or input integrity.
+Browser reads do not select a player store or create observations.
 `POST /api/pause` accepts `{}` and bypasses actor/executor/DB waits. Its
 `computer-pause/1` response identifies the actual receiving session and original
 stop facts. Authenticated actor tools use `/api/tool`; source reads use

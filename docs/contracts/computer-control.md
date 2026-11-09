@@ -29,14 +29,14 @@ proof profiles and executable old player formats are unsupported. Preserve their
 original artifacts/source as inert history; retain upstream saves unchanged and
 load them only through visible controls. Current player knowledge uses a selected
 `player-memory/2` store, which may span fresh native-child sessions. Its SQLite
-`user_version` is2. Select a fresh store for this migration; unsupported old
-stores refuse without automatic library conversion. The canonical computer
-store and native wire versions are unchanged.
+`user_version` is2. Select a fresh store; unsupported old stores refuse without
+automatic library conversion. The canonical computer store and native wire
+versions are the ones this contract defines.
 
 ## Native channel
 
-Use one inherited nonblocking `AF_UNIX/SOCK_STREAM` socketpair. This removes
-ongoing filesystem IPC/publication from the native event loop, including the
+Use one inherited nonblocking `AF_UNIX/SOCK_STREAM` socketpair. This keeps
+filesystem IPC/publication out of the native event loop, including the
 class of coupling implicated in [#128](https://github.com/CVX-Hull/enactive/issues/128).
 The custodian outside the game owns file/SQLite publication. No native publisher
 thread, detached helper, recovery journal or transport framework is needed.
@@ -312,7 +312,7 @@ unconfirmed evidence cannot erase received confirmation.
 Unsupported/lost responses leave confirmation unknown. Same-session stop facts are
 monotone; an earlier status cannot undo later stop. Old/unidentified requests
 cannot disable a deliberate fresh-session stop. No automatic retry, Resume or
-authority renewal follows. Actor/native stop interfaces remain unchanged.
+authority renewal follows. Pause reasons never reach the actor or native stop interfaces.
 
 ## Reuse and qualification limits
 
@@ -326,7 +326,9 @@ integration cover the demonstrated native-publication/one-writer gap; no framewo
 Pillow is a pinned project-local maintained codec for Python image views, replacing
 an otherwise unnecessary PNG parser. The lead owns this integration; reconsider on
 backend/platform incompatibility or recurring protocol fault. Keep applicable macOS
-build compatibility, remove old game-semantic engine hooks and retire the prototype.
+build compatibility. The pinned upstream source carries no game-semantic engine hooks:
+[`tools/patch_game.py`](../../tools/patch_game.py) applies only the macOS
+deployment-target patch and rejects a source tree holding legacy semantic hooks.
 
 Primary contracts: [socketpair](https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/socketpair.2.html),
 [socket options](https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/getsockopt.2.html),
@@ -335,5 +337,5 @@ Primary contracts: [socketpair](https://developer.apple.com/library/archive/docu
 [RWops buffer lifetime](https://wiki.libsdl.org/SDL2/SDL_RWFromMem),
 [Pillow image operations](https://pillow.readthedocs.io/en/stable/reference/Image.html).
 Native fixtures, source tests and organic gameplay are distinct evidence lanes.
-The cutover does not imply cadence, learning benefit, survival duration, arbitrary
+This contract does not qualify cadence, learning benefit, survival duration, arbitrary
 filesystem resilience, second-game, Unicode/IME or real-human takeover qualification.

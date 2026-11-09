@@ -157,7 +157,7 @@ project userdir. Captures contain the actual default-renderer presentation and
 original geometry/time; repeated pixels remain valid. The native adapter sends
 bounded image bytes over its inherited socket. File publication is outside its
 callbacks; this does not promise resistance to upstream save I/O, PNG CPU or
-arbitrary OS hangs. The original publication-stall cause remains unknown.
+arbitrary OS hangs. The publication-stall cause in [#128](https://github.com/CVX-Hull/enactive/issues/128) remains unknown.
 
 ## Game-family portability
 

@@ -59,13 +59,13 @@ version 2.3.0, under MIT. Its exact runtime requirements and all transitive arti
 hashes are in [requirements.in](requirements.in) and [the shared lock](requirements-dev.lock).
 No third-party package is vendored in Git. Installed distribution metadata was
 checked on 2026-10-20; preserve the original notices when redistributing packages.
-New resolved dependency licenses: MCP/MCP-types, AnyIO, annotated-types, h11,
+Licenses of the SDK's resolved dependencies: MCP/MCP-types, AnyIO, annotated-types, h11,
 Pydantic/Pydantic-core, PyJWT, Truststore and typing-inspection are MIT; CFFI is
 MIT-0; HTTPX2/HTTPCore2, IDNA, pycparser, Starlette, SSE-Starlette and Uvicorn are
 BSD-3-Clause; OpenTelemetry API and python-multipart are Apache-2.0; cryptography
 offers Apache-2.0 OR BSD-3-Clause. The local adapter installs no telemetry exporter
-and disables the SDK's optional telemetry middleware. The existing dependency
-pins were retained; the SDK's transitive packages stay in the project `.venv`.
+and disables the SDK's optional telemetry middleware. The SDK's transitive packages
+stay in the project `.venv`.
 
 ## Optional Pi deciding host
 
@@ -107,13 +107,12 @@ redistributing the wheel. No image codec source is vendored here.
 pytest, pytest-xdist, execnet, pluggy and iniconfig use MIT licenses. Packaging
 uses Apache-2.0 OR BSD-2-Clause. Exact versions and hashes are in the development
 lock; their original notices remain with the project-local installed packages.
-The maintained runner replaces serial unittest discovery without changing the
-unittest assertions; [testing](docs/testing.md) describes selection and limits.
+The maintained runner collects the project's unittest-style tests with their assertions
+unchanged; [testing](docs/testing.md) describes selection and limits.
 
-The retired assurance/impact pilot used pytest-testmon 2.2.0 (MIT) and
-Coverage.py 7.17.0 (Apache-2.0). Its pinned requirements and executable readers
-remain in [the historical source](https://github.com/CVX-Hull/enactive/tree/433ed973afe312d03f777d8b102a0cba528af746/tools).
-Those optional packages are not current dependencies or CI selection.
+pytest-testmon 2.2.0 (MIT) and Coverage.py 7.17.0 (Apache-2.0) are not current
+dependencies or CI selection. The assurance/impact pilot's pinned requirements and
+executable readers exist only in [the historical source](https://github.com/CVX-Hull/enactive/tree/433ed973afe312d03f777d8b102a0cba528af746/tools).
 
 ## Documentation assets and tools
 
@@ -151,7 +150,7 @@ reproducing it needs the OFL text, available at https://openfontlicense.org/.
 
 ## Spectator page libraries
 
-The redesigned spectator page ([ADR 008](docs/decisions/008-evaluation-and-spectator.md))
+The spectator page ([ADR 008](docs/decisions/008-evaluation-and-spectator.md))
 vendors three browser libraries in `web/vendor/` with no build step and no network use at
 run time: Preact 11.2.0 (MIT), htm 3.1.1 (Apache-2.0) and Apache ECharts 5.5.1
 (Apache-2.0). Their tarball URLs, integrity hashes, per-file digests and the one

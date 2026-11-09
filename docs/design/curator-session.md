@@ -95,9 +95,9 @@ session's state directory. It gates each submission in order, updates draft life
 seals the session record and deletes the workspace.
 
 **Collection never follows a link.** The sandbox lets the host replace a writable
-directory itself: in testing, removing `drafts/` and putting a symbolic link in its place
-succeeded. So every collected tree is examined without following links, the writable
-directories included.
+directory itself, for example removing `drafts/` and putting a symbolic link in its place.
+So every collected tree is examined without following links, the writable directories
+included.
 - A writable directory that is no longer a plain directory is not collected.
 - A draft that is, or holds, a link or a special file is refused.
 - Any link or special file under `submissions/` stops all gating for the session.
