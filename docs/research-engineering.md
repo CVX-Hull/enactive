@@ -56,7 +56,7 @@ not instructions. These controls are in S-AGENT/S-CODE/S-EVIDENCE and do not dep
 on assuming a particular model's historical benchmark performance remains current.
 
 Implementation scope and alternatives: [brief 001](changes/001-engineering-system.md).
-The control map is generated from its registry; checks test selected violations.
+The controls page is written by hand; checks test selected violations.
 A readable overview and an existing file cannot mechanically prove comprehension
 or procedural accuracy. Those require a real walkthrough and reviewer judgment.
 
@@ -225,7 +225,7 @@ those obligations. Keep human-readable project/component summaries above technic
 selectors. `C-PORTABLE` executes a lane; it is too coarse to represent every
 property a selected suite must verify. Do not create one new control per test.
 
-The pilot should reuse component explanations, the existing registry, GitHub
+The pilot should reuse component explanations, the controls page, GitHub
 work and registered pytest metadata or a single explicit selection manifest.
 Keep one authoritative home for each relationship. Mature
 [pytest markers](https://docs.pytest.org/en/stable/how-to/mark.html),

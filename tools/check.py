@@ -330,11 +330,7 @@ def _check(argv: list[str] | None = None) -> int:
     import_linter = Path(sys.executable).parent / "lint-imports"
     if not import_linter.is_file():
         raise ValueError(f"Import Linter is missing beside {sys.executable}; use the project .venv with requirements-dev.lock installed (see docs/setup.md)")
-    for directory in ("harness", "tools", "tests"):
-        for path in sorted((ROOT / directory).rglob("*.py")):
-            compile(path.read_bytes(), str(path), "exec")
-    print("Python syntax: passed", flush=True)
-    run([sys.executable, "-m", "ruff", "check", "--config", "pyproject.toml",
+    run([sys.executable, "-m", "ruff", "check", "--config", "pyproject.toml",  # E9 covers syntax errors
          "harness", "tools", "tests"])
     run([str(import_linter), "--config", "pyproject.toml", "--no-cache", "--no-logo"])
     node = shutil.which("node")
@@ -350,7 +346,6 @@ def _check(argv: list[str] | None = None) -> int:
         raise ValueError("\n".join(errors))
     print("Required documents, current Markdown fragments and responsibility navigation: passed", flush=True)
     run([sys.executable, "-m", "tools.documents"])
-    run([sys.executable, "tools/governance.py"])
     run([sys.executable, "-m", "tools.run_ledger", "check"])
     run([sys.executable, "-m", "tools.evidence", "verify"] + ([] if args.fast else ["--full"]))
     from tools.evaluate import has_blocks

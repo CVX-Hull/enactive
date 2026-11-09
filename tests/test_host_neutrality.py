@@ -1,13 +1,11 @@
 """Current design, harness and tooling name no specific player host or coding agent.
 
 Only the adapter, setup and operator pages may name them. Historical and superseded
-records, dated control exercises/reviews and external citations are evidence and
-stay untouched; internal link destinations are paths, not prose.
+records and external citations are evidence and stay untouched; internal link
+destinations are paths, not prose.
 """
-import json
 from pathlib import Path
 import re
-import sys
 
 import frontmatter
 
@@ -27,11 +25,8 @@ ALLOWED = (
     "NOTICE.md",              # third-party attribution
 )
 ROOT_DOCUMENTS = ("README.md", "AGENTS.md", "CONTRIBUTING.md", "SECURITY.md", "NOTICE.md")
-REGISTRY = "docs/control-registry.json"
-# Rendered from the registry, which is checked structurally below, or listing the
-# scopes of historical records verbatim (the dated-record indexes).
-GENERATED = ("docs/controls.md", "docs/acceptance/index.md", "docs/changes/index.md")
-DATED_RECORDS = ("last_exercise", "maintenance_review")
+# The dated-record indexes list the scopes of historical records verbatim.
+GENERATED = ("docs/acceptance/index.md", "docs/changes/index.md")
 
 
 def current(path: Path) -> bool:
@@ -54,17 +49,9 @@ def scope():
             yield relative, path.read_text(encoding="utf-8").splitlines()
 
 
-def registry_lines():
-    """Current control definitions; dated exercises and reviews are preserved evidence."""
-    value = json.loads((ROOT / REGISTRY).read_text(encoding="utf-8"))
-    for control in value["controls"]:
-        current_fields = {key: field for key, field in control.items() if key not in DATED_RECORDS}
-        yield f"{REGISTRY} {control['id']}", json.dumps(current_fields, ensure_ascii=False).split("\\n")
-
-
 def violations():
     found = []
-    for relative, lines in [*scope(), *registry_lines()]:
+    for relative, lines in scope():
         for number, line in enumerate(lines, 1):
             if PRODUCT.search(CITATIONS.sub("", line)):
                 found.append(f"{relative}:{number}: {line.strip()[:160]}")
@@ -82,15 +69,3 @@ def test_checker_sees_names_but_not_citations_or_lowercase_words():
     # Internal link text is prose and still checked; only its destination is a path.
     assert PRODUCT.search(CITATIONS.sub("", "[Pi host](../tools/player_host/README.md)"))
     assert not PRODUCT.search("api pid pip spin")
-
-
-def test_dated_registry_records_are_evidence_but_definitions_are_checked(tmp_path, monkeypatch):
-    registry = dict(controls=[dict(id="C-X", mechanism="generic", maintenance_review=dict(cost="Codex usage"),
-                                   last_exercise=dict(outcome="Pi run"))])
-    (tmp_path / "docs").mkdir()
-    (tmp_path / REGISTRY).write_text(json.dumps(registry))
-    monkeypatch.setattr(sys.modules[__name__], "ROOT", tmp_path)
-    assert list(line for _, lines in registry_lines() for line in lines if PRODUCT.search(line)) == []
-    registry["controls"][0]["mechanism"] = "Codex rules"
-    (tmp_path / REGISTRY).write_text(json.dumps(registry))
-    assert any(PRODUCT.search(line) for _, lines in registry_lines() for line in lines)

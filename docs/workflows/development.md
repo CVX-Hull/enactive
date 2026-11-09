@@ -82,7 +82,7 @@ integration. A run is feedback, not automatically a new iteration or publication
 
 Run `.venv/bin/python tools/check.py --fast` and the focused tests that exercise the
 changed behavior and its consequential failure boundaries. The fast command checks
-syntax/lint, imports, document structure/links, governance and whitespace; it does
+syntax/lint, imports, document structure/links and checks, evidence and whitespace; it does
 not run behavioral tests or render diagrams. The lead names focused commands and
 results in the existing issue/PR or run note. Missing checks are explicit, never
 implied green. A documentation-only correction needs the applicable document checks;

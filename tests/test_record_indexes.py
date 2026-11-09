@@ -1,9 +1,9 @@
-"""Generated dated-record indexes and the control map's routing of dated records to them (S-DOCS, #402)."""
+"""Generated dated-record indexes (S-DOCS, #402)."""
 from __future__ import annotations
 
 from pathlib import Path
 
-from tools import documents, governance
+from tools import documents
 
 
 def record(root: Path, name: str, date: str, scope: str, title: str) -> None:
@@ -48,19 +48,3 @@ def test_an_unquoted_hash_in_front_matter_is_rejected(tmp_path):
         "---\nowner: lead\nstatus: historical\ndate: '2026-01-02'\nscope: Audit #400 of things\n---\n\n# Bare\n")
     assert documents.check_metadata(tmp_path) == [
         "docs/acceptance/2026-01-02-bare.md: quote a front-matter value containing ' #'; YAML reads the rest as a comment"]
-
-
-def test_the_shipped_indexes_are_current_and_exempt_from_the_historical_rule():
-    assert documents.check_indexes(documents.ROOT) == []
-    assert not [e for e in documents.check_metadata(documents.ROOT) if "index.md" in e]
-
-
-def test_control_map_routes_dated_records_to_the_indexes():
-    line = governance.evidence_line(["tools/check.py", "docs/acceptance/2026-01-01-x.md",
-                                     "docs/changes/001-y.md#scope", "docs/testing.md#lanes"])
-    assert line.startswith("[tools/check.py](../tools/check.py), [docs/testing.md#lanes](../docs/testing.md#lanes), ")
-    assert "2 dated records named in the [registry]" in line and "acceptance/2026-01-01-x.md" not in line
-    assert "[registry](control-registry.json)" in governance.evidence_line(["tools/x.py", "docs/acceptance/a.md"])
-    # A control evidenced only by dated records keeps them linked.
-    assert governance.evidence_line(["docs/acceptance/a.md", "docs/changes/b.md"]) == (
-        "[docs/acceptance/a.md](../docs/acceptance/a.md), [docs/changes/b.md](../docs/changes/b.md)")

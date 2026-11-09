@@ -77,6 +77,3 @@ forbidden_modules = ["harness.__main__", "tools"]
 [tool.pytest.ini_options]
 addopts = "--strict-markers"
 testpaths = ["tests"]
-markers = [
-    "assurance_governance: advisory C-GOVERNANCE registry structure in isolated fixtures; no prose-truth or reviewer-performance proof; docs/testing.md#engineering-assurance",
-]

@@ -7,8 +7,9 @@ status: active
 # Engineering standards and workflow
 
 The lead adjudicates design and verification.
-Principles are in the [charter](charter.md); implemented controls and gaps are in
-[controls](controls.md). Each numbered standard below is mandatory in its scope.
+Principles are in the [charter](charter.md); what each control stops, where it is
+enforced and its gap are in [controls](controls.md). Each standard below is mandatory
+in its scope and names its principles and controls here, the one place that maps them.
 An exception needs scope, reason, owner and revisit/expiry in a GitHub issue linked
 to the affected standard; [work](work.md) links the work tracker.
 Exceptions cannot override user instructions or hide failed acceptance.
@@ -31,7 +32,7 @@ Principles: P-CHANGE, P-ISOLATION, P-REVIEW, P-GENERALITY.
 
 - [S-ARCH Explicit architectural boundaries](standards/architecture.md).
 
-Controls: C-BOUNDARY, C-REVIEW, C-GOVERNANCE.
+Controls: C-BOUNDARY, C-REVIEW, C-DOCUMENTS.
 
 ## S-PROTOCOL Command and observation authority
 
@@ -79,7 +80,7 @@ Principles: P-KNOWLEDGE, P-REVIEW, P-CHANGE.
 
 - [S-DOCS Useful maintained documentation](standards/documentation.md).
 
-Controls: C-GOVERNANCE, C-USABILITY, C-REVIEW, C-MAINTENANCE, C-VISUAL.
+Controls: C-DOCUMENTS, C-USABILITY, C-REVIEW, C-MAINTENANCE, C-VISUAL.
 
 ### Visual explanations
 
@@ -99,7 +100,7 @@ Principles: P-CHANGE, P-KNOWLEDGE, P-UNCERTAINTY.
 
 - [S-MIGRATION One current contract, coordinated migration](standards/migration.md).
 
-Controls: C-PORTABLE, C-GOVERNANCE, C-REVIEW, C-RELEASE, C-MAINTENANCE.
+Controls: C-PORTABLE, C-DOCUMENTS, C-REVIEW, C-RELEASE, C-MAINTENANCE.
 
 ## S-EVIDENCE Claims with scoped evidence
 
@@ -107,16 +108,9 @@ Principles: P-TRUTH, P-KNOWLEDGE, P-UNCERTAINTY.
 
 - [S-EVIDENCE Claims with scoped evidence](standards/evidence.md).
 
-Controls: C-GOVERNANCE, C-PORTABLE, C-NATIVE, C-RELEASE, C-MAINTENANCE, C-REVIEW.
+Controls: C-DOCUMENTS, C-PORTABLE, C-NATIVE, C-RELEASE, C-MAINTENANCE, C-REVIEW.
 
 ## Workflow and maintenance
 
-- [Control lifecycle and evidence](standards/authority.md#control-lifecycle-and-evidence).
-
-### Control lifecycle and evidence
-
-Read [Control lifecycle and evidence](standards/authority.md#control-lifecycle-and-evidence).
-
-### Change and review cadence
-
-Read [Change and review cadence](standards/authority.md#change-and-review-cadence).
+- [Control review](standards/authority.md#control-review).
+- [Change and review cadence](standards/authority.md#change-and-review-cadence).

@@ -107,7 +107,7 @@ class ProfileTests(unittest.TestCase):
                      "docs/diagrams/current.mmd", "docs/diagrams/rendered.json"):
             with self.subTest(name=name): self.assertTrue(ci.editorial(name))
         for name in (".github/pull_request_template.md", "elsewhere.md", "docs/diagrams/config.json",
-                     "docs/control-registry.json", "docs/acceptance/run.py", "docs/assets/script.js",
+                     "docs/acceptance/run.py", "docs/assets/script.js",
                      ".github/workflows/check.yml"):
             with self.subTest(name=name): self.assertFalse(ci.editorial(name))
 

@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Validate Markdown stewardship metadata, without making content-truth claims."""
+"""Document and record checks (C-DOCUMENTS): stewardship metadata, acceptance manifests, evidence schema ids,
+standard/principle/control identifiers and the dated-record indexes. Structure only, no content-truth claims."""
 from __future__ import annotations
 
 from datetime import date
-from pathlib import Path
+import json
+from pathlib import Path, PurePosixPath
 import re
 import sys
 
@@ -13,13 +15,130 @@ if __package__ in (None, ""):
 
 try:
     import frontmatter
+    from jsonschema import Draft202012Validator, FormatChecker
     from yaml import YAMLError
 except ImportError as error:
     raise SystemExit("Development dependencies are missing; use .venv/bin/python after installing requirements-dev.lock (see docs/setup.md).") from error
 
-from tools.governance import check_evidence_ids, local_reference, schema_errors
-
 ROOT_DOCUMENTS = ("README.md", "AGENTS.md", "NOTICE.md", "CONTRIBUTING.md", "SECURITY.md")
+STANDARDS = {"S-UX", "S-ARCH", "S-PROTOCOL", "S-CODE", "S-DELIVERY", "S-OPS",
+             "S-AGENT", "S-DOCS", "S-WORK", "S-MIGRATION", "S-EVIDENCE"}
+
+
+def local_reference(root: Path, reference: object, *, exists: bool = True) -> bool:
+    """Repository-relative POSIX paths only; resolve symlinks before containment."""
+    if not isinstance(reference, str) or not reference or "\\" in reference:
+        return False
+    path_text = reference.split("#", 1)[0]
+    path = PurePosixPath(path_text)
+    if not path_text or path.is_absolute() or any(p in (".", "..") for p in path_text.split("/")):
+        return False
+    if ":" in path_text or "?" in path_text:
+        return False
+    target = (root / path).resolve()
+    return target.is_relative_to(root.resolve()) and (not exists or target.is_file())
+
+
+def schema_errors(root: Path, name: str, data: object, label: str) -> list[str]:
+    schema = json.loads((root / "schemas" / f"{name}.schema.json").read_text())
+    Draft202012Validator.check_schema(schema)
+    validator = Draft202012Validator(schema, format_checker=FormatChecker())
+    return [f"{label}: schema violation at {error.json_path}: {error.message}"
+            for error in sorted(validator.iter_errors(data), key=lambda e: str(e.json_path))]
+
+
+def check_identifiers(root: Path) -> list[str]:
+    """The charter's principles are unique; engineering.md has each mandatory standard once, each with one
+    Principles and one Controls line naming known principles and controls; the controls page lists each
+    control once, and every control serves some standard."""
+    errors = []
+    principles = re.findall(r"^## (P-[A-Z]+)\b", (root / "docs/charter.md").read_text(), re.M)
+    if len(principles) != len(set(principles)):
+        errors.append("charter: duplicate principle ID")
+    controls = re.findall(r"^\| (C-[A-Z]+) \|", (root / "docs/controls.md").read_text(), re.M)
+    if len(controls) != len(set(controls)):
+        errors.append("controls: duplicate control ID")
+    engineering = (root / "docs/engineering.md").read_text()
+    sections = {match.group(1): match.group(2)
+                for match in re.finditer(r"^## (S-[A-Z]+)\b(.*?)(?=^## |\Z)", engineering, re.M | re.S)}
+    if len(re.findall(r"^## (S-[A-Z]+)\b", engineering, re.M)) != len(sections) or set(sections) != STANDARDS:
+        errors.append(f"engineering: mandatory standards differ; missing={sorted(STANDARDS - set(sections))}, "
+                      f"unknown={sorted(set(sections) - STANDARDS)}")
+    used = set()
+    for standard, body in sorted(sections.items()):
+        for label, pattern, known in (("Principles", r"P-[A-Z]+", set(principles)), ("Controls", r"C-[A-Z]+", set(controls))):
+            lines = re.findall(rf"^{label}: (.+)$", body, re.M)
+            if len(lines) != 1:
+                errors.append(f"{standard}: needs exactly one {label} line")
+                continue
+            named = re.findall(pattern, lines[0])
+            errors += [f"{standard}: unknown {label.lower()[:-1]} {name}" for name in named if name not in known]
+            if label == "Controls":
+                used.update(named)
+    if unused := sorted(set(controls) - used):
+        errors.append(f"controls: {unused} serve no standard")
+    return errors
+
+
+def check_manifests(root: Path) -> list[str]:
+    """Validate curated acceptance-manifest metadata, not availability, local bytes or gameplay."""
+    errors = []
+    paths = sorted((root / "docs/acceptance").glob("*-manifest.json"))
+    if not paths:
+        return ["acceptance: missing curated manifest"]
+    for path in paths:
+        label = str(path.relative_to(root))
+        try:
+            data = json.loads(path.read_text())
+            invalid = schema_errors(root, "acceptance-manifest", data, label)
+            if invalid:
+                errors.extend(invalid)
+                continue
+            for field in ("report", "upstream_pin"):
+                if not local_reference(root, data[field]):
+                    errors.append(f"{label}: invalid or missing {field} reference")
+            for reference in data["artifacts"]:
+                if "#" in reference or not local_reference(root, reference, exists=False):
+                    errors.append(f"{label}: invalid artifact reference {reference!r}")
+            if data["video"] is not None:
+                interval = data["video"]["capture_interval_ms"]
+                if interval[1] <= interval[0]:
+                    errors.append(f"{label}: video capture interval must end after it starts")
+        except (OSError, ValueError) as error:
+            errors.append(f"{label}: {error}")
+    return errors
+
+
+EVIDENCE_IDS = "schemas/evidence-ids.json"
+# Where a schema id counts as defined: a schema file, a contract, or code.
+DEFINING = ("schemas/*.schema.json", "docs/contracts/*.md", "harness/**/*.py", "tools/**/*.py", "tools/**/*.mjs")
+
+
+def check_evidence_ids(root: Path) -> list[str]:
+    """Every versioned `schema` a tracked evidence JSON declares is defined: named as a whole token by a schema
+    file, contract or code, or listed as a frozen one-off shape in schemas/evidence-ids.json, whose entries must
+    be exact."""
+    registry = json.loads((root / EVIDENCE_IDS).read_text())["ids"]
+    defining = "\n".join(path.read_text(errors="ignore") for pattern in DEFINING for path in root.glob(pattern)
+                         if "node_modules" not in path.parts)
+    declared: dict[str, list[str]] = {}
+    for base in ("docs", "data"):
+        for path in sorted((root / base).rglob("*.json")):
+            try:
+                schema = json.loads(path.read_text()).get("schema")
+            except (ValueError, AttributeError):
+                continue
+            if isinstance(schema, str) and re.fullmatch(r"[a-z0-9][a-z0-9-]*/[0-9]+", schema):
+                declared.setdefault(schema, []).append(str(path.relative_to(root)))
+    named = lambda schema: re.search(rf"(?<![A-Za-z0-9_/-]){re.escape(schema)}(?![0-9])", defining) is not None
+    errors = [f"{files[0]}: schema {schema!r} is defined nowhere; define it or list it in {EVIDENCE_IDS}"
+              for schema, files in sorted(declared.items()) if schema not in registry and not named(schema)]
+    for schema, entry in sorted(registry.items()):
+        if sorted(entry["files"]) != sorted(declared.get(schema, [])):
+            errors.append(f"{EVIDENCE_IDS}: {schema} lists {entry['files']}, but {declared.get(schema, [])} declare it")
+        errors.extend(f"{EVIDENCE_IDS}: {schema} names a missing record {record!r}"
+                      for record in entry["records"] if not local_reference(root, record))
+    return errors
 # Current documents outside the root and docs/ trees; checked wherever they exist.
 COMPONENT_DOCUMENTS = ("tools/player_host/README.md",)
 
@@ -113,11 +232,13 @@ def main(argv: list[str] | None = None) -> int:
         for index in INDEXES:
             (ROOT / index).write_text(render_index(ROOT, index))
         print("Generated the dated-record indexes.")
-    errors = check_metadata(ROOT) + check_evidence_ids(ROOT) + check_indexes(ROOT)
+    errors = (check_metadata(ROOT) + check_manifests(ROOT) + check_evidence_ids(ROOT) + check_identifiers(ROOT)
+              + check_indexes(ROOT))
     if errors:
-        print("Document metadata failed:\n" + "\n".join(errors), file=sys.stderr)
+        print("Document checks failed:\n" + "\n".join(errors), file=sys.stderr)
         return 1
-    print("Document stewardship metadata, evidence schema ids and record indexes: passed; content truth was not verified.")
+    print("Document metadata, acceptance manifests, evidence schema ids, standard and control identifiers and "
+          "record indexes: passed; content truth was not verified.")
     return 0
 
 
