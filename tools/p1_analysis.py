@@ -1,6 +1,7 @@
 """The P1 offline study's frozen analysis (ADR 009; pre-registration in docs/design/p1-study.md, #491).
 
   python -m tools.p1_analysis simulate [--probes <held-out p1-probes/1>] [--out data/evaluation/p1/power.json]
+  python -m tools.p1_analysis plan --probes <#382 held-out p1-probes/1>  # p1-study/2's planning, power-study-2.json
   python -m tools.p1_analysis units --probes <p1-probes/1>      # the probes the judges score
   python -m tools.p1_analysis rejudge --probes <p1-probes/1>    # the items judged a second time
   python -m tools.p1_analysis score --probes <p1-probes/1> --scores <p1-score/1> --hours <JSON> [--out ...]
@@ -453,6 +454,49 @@ def simulate(simulations: int = SIMULATIONS, seed: int = SEED, layout: list[tupl
                 note='Primary criterion only; guards and re-judging are not simulated.')
 
 
+# p1-study/2's planning simulation (docs/design/p1-study-2.md#power): #382's frozen held-out
+# structure plus one new held-out lineage, lh4, of a planned size. Planning only; the gate before
+# held-out replay is `simulate --probes` on all four lineages' actual probes.
+PLAN_SIMULATIONS = 2000
+PLAN_UNITS = (16, 20, 25, 30)           # lh4's scoring units
+PLAN_CLUSTER_MEANS = (1.04, 1.4, 3.0)   # lh1-lh3 as measured; #397's 20% sample; p1-study/1's planning value
+PLAN_MINIMUM, PLAN_MEAN = 20, 1.04      # the planning assumption: the smallest lh4 criterion 3 can use, clustered as lh1-lh3
+
+
+def _new_lineage(rng: random.Random, name: str, count: int, cluster_mean: float) -> list[tuple[str, str]]:
+    """(lineage, cluster) for `count` units of a new lineage: each is new information with
+    probability 1/cluster_mean, otherwise it repeats one of the lineage's earlier clusters."""
+    seen: list[str] = []
+    out = []
+    for _ in range(count):
+        if seen and rng.random() >= 1 / cluster_mean:
+            cluster = rng.choice(seen)
+        else:
+            cluster = f'{name}-{len(seen)}'
+            seen.append(cluster)
+        out.append((name, cluster))
+    return out
+
+
+def plan(held_out: list[dict], simulations: int = PLAN_SIMULATIONS, seed: int = SEED) -> dict:
+    dev = development()
+    base = [(u['lineage'], u['cluster']) for u in units(primary_probes(held_out))]
+    rng = random.Random(seed)
+    variants = {}
+    for mean in PLAN_CLUSTER_MEANS:
+        for count in PLAN_UNITS:
+            variants[f'lh4_units={count}, cluster_mean={mean}'] = {
+                f'{d:.2f}': round(sum(_power(rng, dev, base + _new_lineage(rng, 'lh4', count, mean), None, 0.0, d)
+                                      for _ in range(simulations)) / simulations, 3)
+                for d in DELTAS}
+    planning = f'lh4_units={PLAN_MINIMUM}, cluster_mean={PLAN_MEAN}'
+    return dict(schema=POWER_SCHEMA, seed=seed, simulations=simulations, new_lineage='lh4',
+                held_out=dict(units=len(base), clusters=len(set(base)),
+                              cluster_sizes=cluster_sizes([dict(lineage=n, cluster=c) for n, c in base])),
+                planning=planning, probability_of_go=variants, gate=gate(variants[planning]),
+                note='Planning for p1-study/2; primary criterion only. The gate before replay re-runs on actual probes.')
+
+
 def gate(probabilities: dict[str, float]) -> dict:
     """The gate before spend: rarely a go with no effect, usually a go at the effect of interest."""
     none, interest = probabilities['0.00'], probabilities[f'{INTEREST:.2f}']
@@ -461,7 +505,7 @@ def gate(probabilities: dict[str, float]) -> dict:
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('step', choices=('simulate', 'units', 'rejudge', 'score'))
+    parser.add_argument('step', choices=('simulate', 'plan', 'units', 'rejudge', 'score'))
     parser.add_argument('--probes', type=Path)
     parser.add_argument('--scores', type=Path)
     parser.add_argument('--hours', type=Path, help='JSON object: held-out lineage -> in-play game hours')
@@ -474,6 +518,12 @@ def main(argv=None) -> int:
         result = simulate(layout=layout)
         out = args.out or ROOT/'data'/'evaluation'/'p1'/('power-held-out.json' if layout else 'power.json')
         summary = result['probability_of_go']
+    elif args.step == 'plan':
+        if not args.probes:
+            parser.error('plan needs --probes (the frozen #382 held-out probes)')
+        result = plan(_lines(args.probes))
+        out = args.out or ROOT/'data'/'evaluation'/'p1'/'power-study-2.json'
+        summary = result['gate']
     elif args.step in ('units', 'rejudge'):
         if not args.probes:
             parser.error(f'{args.step} needs --probes')

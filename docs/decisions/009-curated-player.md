@@ -692,6 +692,9 @@ running system.
   lineages give 27 scoring units, far fewer than planned. The owner stopped P1 before any
   spend, and P1 returns to the owner for reshaping
   ([record](../acceptance/2026-11-09-p1-gate-178.md)).
+- **P1 reshaped: one more held-out lineage (9 November 2026).** The owner chose to add one
+  new held-out lineage to #382's frozen probes, behind a re-run power gate
+  ([p1-study/2](../design/p1-study-2.md), #178 and #522).
 
 Every phase replaces its contracts and stores in one migration
 (`player-memory/2` → `/3`, `player-record/1` and `player-program/2` → their
