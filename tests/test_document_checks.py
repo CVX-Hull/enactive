@@ -3,6 +3,7 @@ standard, principle and control identifiers."""
 import copy
 import json
 from pathlib import Path
+import re
 import shutil
 
 import pytest
@@ -119,6 +120,38 @@ def test_every_control_serves_a_standard_and_appears_once(identifier_root):
     (identifier_root / "docs/controls.md").write_text(text + row.replace("C-VISUAL", "C-SPARE") + "\n" + row + "\n")
     errors = "\n".join(documents.check_identifiers(identifier_root))
     assert "duplicate control ID" in errors and "['C-SPARE'] serve no standard" in errors
+
+
+def test_mapping_lines_name_something_once_and_every_principle_is_used(identifier_root):
+    original = (identifier_root / "docs/engineering.md").read_text()
+    cases = (("Controls: C-BOUNDARY, C-REVIEW, C-DOCUMENTS.", "Controls: none yet.", "S-ARCH: its Controls line names none"),
+             ("Principles: P-CHANGE,", "Principles: P-CHANGE, P-CHANGE,", "S-ARCH: its Principles line repeats an ID"))
+    for before, after, expected in cases:
+        (identifier_root / "docs/engineering.md").write_text(original.replace(before, after, 1))
+        assert expected in documents.check_identifiers(identifier_root), expected
+    (identifier_root / "docs/engineering.md").write_text(re.sub(r", P-GENERALITY\b|P-GENERALITY, ", "", original))
+    assert "charter: principles ['P-GENERALITY'] serve no standard" in documents.check_identifiers(identifier_root)
+
+
+def test_local_references_cannot_escape_through_a_symlink(tmp_path):
+    root, outside = tmp_path / "repo", tmp_path / "outside"
+    (root / "docs").mkdir(parents=True)
+    outside.mkdir()
+    (outside / "secret.md").write_text("x")
+    (root / "docs" / "real.md").write_text("x")
+    (root / "docs" / "linked").symlink_to(outside)
+    assert documents.local_reference(root, "docs/real.md")
+    for reference in ("docs/linked/secret.md", "../outside/secret.md", "/etc/passwd", "docs/missing.md", "a\\b"):
+        assert not documents.local_reference(root, reference), reference
+
+
+def test_the_frozen_evidence_id_list_stays_closed_until_the_data_rule_replaces_it():
+    registry = json.loads((ROOT / documents.EVIDENCE_IDS).read_text())["ids"]
+    assert sorted(registry) == [
+        "campaign-evidence-summary/1", "capable-player-304-summary/1", "corpus320-summary/1", "diagnosis-314-summary/1",
+        "effects-298-evidence/1", "grounding-300-evidence/1", "investigation-295-evidence/1", "organic-play-evidence/1",
+        "request-timing-summary/1", "spectator-383-evidence/1", "useful-trials-accounting/1",
+        "visual-player-302-evidence/1"]
 
 
 def test_mandatory_standards_and_single_mapping_lines(identifier_root):

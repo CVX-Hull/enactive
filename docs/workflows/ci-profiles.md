@@ -19,7 +19,7 @@ labels or ignored failures. Superseded pull request runs are cancelled. `tools/c
 chooses a profile from Git facts and invokes `tools/check.py`; missing or ambiguous
 eligibility selects full, and a checker or execution failure fails the job.
 
-Every hosted profile runs selected Ruff (including syntax), import contracts, JavaScript
+Every hosted profile runs selected Ruff (including parse errors), import contracts, JavaScript
 syntax, document links and checks (`tools/documents.py`), the run ledger, evidence
 verification, generated run tables and whitespace. Local `--fast` runs the
 same structural checks and nothing else; it is not a hosted profile.

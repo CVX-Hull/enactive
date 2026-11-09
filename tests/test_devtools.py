@@ -117,6 +117,13 @@ class DevToolTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("F821", result.stdout)
         self.assertIn("unknown_value", result.stdout)
+        # The checker relies on Ruff for parse errors (it has no separate compile step).
+        self.write("computer/runtime.py", "def broken(:\n")
+        result = subprocess.run(
+            [sys.executable, "-m", "ruff", "check", "--config", "pyproject.toml",
+             "--no-cache", "harness"], cwd=self.root, capture_output=True, text=True, timeout=30)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("runtime.py", result.stdout)
 
     def test_markdown_reference_links_and_images_are_checked(self):
         for name in check.REQUIRED_DOCS:

@@ -64,7 +64,7 @@ save, port and build resources before using them.
 
 Update affected contracts, tests and user guidance in the same change. Link to
 authoritative documents rather than copying their full requirements. See the
-[control map](docs/controls.md) for check coverage and gaps.
+[controls page](docs/controls.md) for check coverage and gaps.
 
 ## Submit and review
 

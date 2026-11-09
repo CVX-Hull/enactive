@@ -64,7 +64,7 @@ def check_identifiers(root: Path) -> list[str]:
     if len(re.findall(r"^## (S-[A-Z]+)\b", engineering, re.M)) != len(sections) or set(sections) != STANDARDS:
         errors.append(f"engineering: mandatory standards differ; missing={sorted(STANDARDS - set(sections))}, "
                       f"unknown={sorted(set(sections) - STANDARDS)}")
-    used = set()
+    used: dict[str, set[str]] = {"Principles": set(), "Controls": set()}
     for standard, body in sorted(sections.items()):
         for label, pattern, known in (("Principles", r"P-[A-Z]+", set(principles)), ("Controls", r"C-[A-Z]+", set(controls))):
             lines = re.findall(rf"^{label}: (.+)$", body, re.M)
@@ -72,11 +72,16 @@ def check_identifiers(root: Path) -> list[str]:
                 errors.append(f"{standard}: needs exactly one {label} line")
                 continue
             named = re.findall(pattern, lines[0])
+            if not named:
+                errors.append(f"{standard}: its {label} line names none")
+            if len(named) != len(set(named)):
+                errors.append(f"{standard}: its {label} line repeats an ID")
             errors += [f"{standard}: unknown {label.lower()[:-1]} {name}" for name in named if name not in known]
-            if label == "Controls":
-                used.update(named)
-    if unused := sorted(set(controls) - used):
+            used[label].update(named)
+    if unused := sorted(set(controls) - used["Controls"]):
         errors.append(f"controls: {unused} serve no standard")
+    if unused := sorted(set(principles) - used["Principles"]):
+        errors.append(f"charter: principles {unused} serve no standard")
     return errors
 
 

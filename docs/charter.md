@@ -198,5 +198,5 @@ Translate principles into concrete scenarios and [standards](engineering.md).
 Examples: stale input causes no dispatch; a timeout cannot trigger automatic
 replay; a new contributor can follow setup; the user can find current limitations
 and the next decision from the overview. Controls and their limits are in the
-[control map](controls.md). Principles themselves require reasoned review, not
+[controls page](controls.md). Principles themselves require reasoned review, not
 an assertion that a syntax checker proves them.

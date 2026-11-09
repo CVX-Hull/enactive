@@ -330,7 +330,7 @@ def _check(argv: list[str] | None = None) -> int:
     import_linter = Path(sys.executable).parent / "lint-imports"
     if not import_linter.is_file():
         raise ValueError(f"Import Linter is missing beside {sys.executable}; use the project .venv with requirements-dev.lock installed (see docs/setup.md)")
-    run([sys.executable, "-m", "ruff", "check", "--config", "pyproject.toml",  # E9 covers syntax errors
+    run([sys.executable, "-m", "ruff", "check", "--config", "pyproject.toml",  # E9 covers parse errors
          "harness", "tools", "tests"])
     run([str(import_linter), "--config", "pyproject.toml", "--no-cache", "--no-logo"])
     node = shutil.which("node")
