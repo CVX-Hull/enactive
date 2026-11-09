@@ -110,10 +110,6 @@ lock; their original notices remain with the project-local installed packages.
 The maintained runner collects the project's unittest-style tests with their assertions
 unchanged; [testing](docs/testing.md) describes selection and limits.
 
-pytest-testmon 2.2.0 (MIT) and Coverage.py 7.17.0 (Apache-2.0) are not current
-dependencies or CI selection. The assurance/impact pilot's pinned requirements and
-executable readers exist only in [the historical source](https://github.com/CVX-Hull/enactive/tree/433ed973afe312d03f777d8b102a0cba528af746/tools).
-
 ## Documentation assets and tools
 
 python-frontmatter and PyYAML are MIT licensed; their exact versions and hashes

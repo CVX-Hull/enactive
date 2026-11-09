@@ -69,8 +69,8 @@ allowlist checked against a dated source, and the same probe runs with a stand-i
 
 ## Pi curator host (the P0 shadow host)
 
-The owner chose one host the project controls for #454 (ADR 009 open decision 2), measured with two
-models through OpenRouter. [`tools/curator_host`](../../tools/curator_host) is a private Node package
+The shadow host is one host the project controls (ADR 009 open decision 2), run with two models
+through OpenRouter ([#454 record](../acceptance/2026-11-08-curator-shadow-454.md)). [`tools/curator_host`](../../tools/curator_host) is a private Node package
 on `@earendil-works/pi-agent-core` and `pi-ai` 1.4.0, the versions the actor's
 [`tools/player_host`](../../tools/player_host/README.md) uses. It has no MCP, no shell and no
 coding-agent application. [`tools/curator_host/shadow.py`](../../tools/curator_host/shadow.py) runs it over
@@ -164,8 +164,10 @@ evicted frame's source ID so `view_frame` can show it again. The peak trades thr
 - **Reservation.** Each image reserves `IMAGE_TOKENS` (10,000) at the highest input price, $0.16
   per request at 16 images on terra and $1.28 on Opus, before any text or output. A small session
   cap therefore refuses requests that would really cost cents.
-- **Body size.** Recorded frames reach about 280 KB, or 375 KB as base64. Sixteen stay under the
-  proxy's 8 MiB request limit, while 24 such frames would exceed it and end the session with a 413.
+- **Body size.** The largest frames in the sealed [#397 lineage](../acceptance/2026-11-07-seven-day-397.md)
+  reach about 280 KB, or 375 KB as base64, a design input. Sixteen stay under the proxy's 8 MiB
+  request limit, while 24 such frames would exceed it and end the session with a 413
+  ([#489 record](../acceptance/2026-11-08-context-stability-489.md)).
 
 To compare cached shares with the [#454](../acceptance/2026-11-08-curator-shadow-454.md) and
 [#489](../acceptance/2026-11-08-context-stability-489.md) records, pass the window they record
@@ -192,7 +194,8 @@ byte for byte, so:
     the prefix (notes included), the latest note and eviction.
   - **Proxy test.** `tests/test_curator_openrouter.py` checks the affinity header the proxy sets.
 - **Note size.** Each note is about 40–80 tokens, so 120 requests add up to about 10k tokens,
-  about 4% of the window. Most of it is read from the cache.
+  about 4% of the window, most of it read from the cache
+  ([#489 record](../acceptance/2026-11-08-context-stability-489.md)).
 
 ## Both hosts
 
