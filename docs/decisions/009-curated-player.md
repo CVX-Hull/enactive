@@ -655,8 +655,9 @@ qualifications ([record](../acceptance/2026-11-08-adr009-p0.md)).
 - **Cost.** The shadow cost was measured with prompt caching barely working, so it is
   likely an overestimate.
 
-P1 waits for the owner's go/no-go. Nothing is adopted, and the current contracts still
-govern the running system.
+P1 was approved on the owner's go/no-go, with prompt caching to be fixed first (see
+"P1.0 outcome" below). Nothing is adopted, and the current contracts still govern the
+running system.
 
 **Before P1: a readiness stage, P1.0 (owner decision, 8 November 2026).** It runs no
 study and adopts nothing. It has three leaves:
@@ -706,8 +707,22 @@ The P1 go/no-go is decided on that pre-registration.
    - **The gate before spend passes narrowly, after its target moved.** At the planning
      assumption, false positives are 3.1%. P(go) is 0.81 at an effect of interest of 0.30,
      which was raised from 0.25 after the simulation gave 0.67 there; that change is recorded
-     as a deviation. With three lineages, the study detects only large effects. Whether to
-     accept that or reshape is the owner's go/no-go.
+     as a deviation. With three lineages, the study detects only large effects.
+
+**The owner's P1 go/no-go (8 November 2026): go, but fix caching first.** P1 runs as
+pre-registered, accepting that it detects only large effects. Prompt caching is fixed
+first, which lowers P1's cost before the pilot:
+1. **A check with no spend.** Per-message digests of the real request bodies, taken at the
+   proxy, show where the cache stops.
+2. **A cache-key change, if the digests point to it.** A `prompt_cache_key`-style change,
+   verified by a small paid check. That check needs its own approval.
+
+Then:
+- #178 writes the held-out probes, with no spend;
+- the power gate is re-checked on their actual clusters;
+- the pilot runs.
+
+Every stage keeps the pre-registration's stop rules.
 
 Every phase replaces its contracts and stores in one migration
 (`player-memory/2` → `/3`, `player-record/1` and `player-program/2` → their

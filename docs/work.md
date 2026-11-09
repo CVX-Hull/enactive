@@ -83,7 +83,9 @@ that pre-registration.
   narrowly, after its effect of interest was raised from 0.25 to 0.30, and the study detects
   only large effects.
 
-P1 now waits for the owner's go/no-go.
+**The owner's go/no-go: go, but fix caching first** ([ADR 009](decisions/009-curated-player.md#phases)).
+Prompt caching is diagnosed and fixed first. Then come #178's held-out probes, the held-out
+power re-check and the pilot.
 
 ## Current integrated checkpoint
 
