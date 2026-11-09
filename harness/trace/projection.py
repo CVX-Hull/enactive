@@ -240,7 +240,34 @@ def _tools(host: Path) -> list[dict]:
     return calls
 
 
-def _project_into(sessions: list[Path], out: Path, memory: Path | None) -> dict:
+def _cut(store: dict, until: float | None) -> dict:
+    """The store with only what existed strictly before `until` (wall clock).
+
+    `None` keeps everything. Records and programs need a numeric `created_wall` below the cutoff;
+    a row without one cannot be placed before it, so a cut store drops it. A source is kept when its
+    `metadata.received_wall` is a number below the cutoff. A source without a numeric
+    `received_wall` is kept only when a kept record (`sources`) or program (`source_ids`) cites it."""
+    if until is None:
+        return store
+
+    def number(value: object) -> bool:
+        return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+    def written(row: dict) -> bool:
+        return number(row.get('created_wall')) and row['created_wall'] < until
+
+    records = [r for r in store['records'] if written(r)]
+    programs = [p for p in store['programs'] if written(p)]
+    cited = {s for r in records for s in r.get('sources') or []} | {s for p in programs for s in p.get('source_ids') or []}
+
+    def seen(source: dict) -> bool:
+        wall = (source.get('metadata') or {}).get('received_wall')
+        return wall < until if number(wall) else source['id'] in cited
+
+    return dict(store, records=records, programs=programs, sources=[s for s in store['sources'] if seen(s)])
+
+
+def _project_into(sessions: list[Path], out: Path, memory: Path | None, memory_until: float | None = None) -> dict:
     (out/'frames').mkdir(parents=True)
     hashes: dict[str, str] = {}
 
@@ -304,7 +331,7 @@ def _project_into(sessions: list[Path], out: Path, memory: Path | None) -> dict:
         projected.append(dict(name=session.name, session_id=session_id, actors=actors, handoffs=handoffs))
     if memory is not None:
         try:
-            store = memory_reader.read(memory)
+            store = _cut(memory_reader.read(memory), memory_until)
         except memory_reader.StoreError as exc:
             raise ProjectionError(str(exc)) from exc
         (out/'memory.json').write_text(json.dumps(store, sort_keys=True, ensure_ascii=False, indent=1))
@@ -326,13 +353,15 @@ def guard(out: Path, secrets: set[bytes]) -> None:
                                   'nothing was projected')
 
 
-def project(sessions: list[Path], out: Path, *, memory: Path | None = None) -> dict:
-    """Project sealed sessions into `out` (which must not exist). Returns the manifest."""
+def project(sessions: list[Path], out: Path, *, memory: Path | None = None, memory_until: float | None = None) -> dict:
+    """Project sealed sessions into `out` (which must not exist). Returns the manifest.
+
+    `memory_until` keeps only the memory records, programs and sources written strictly before it."""
     if out.exists():
         raise ProjectionError(f'{out}: projection target must not exist')
     partial = out.with_name(f'.{out.name}.partial-{uuid.uuid4().hex[:8]}')
     try:
-        manifest = _project_into(sessions, partial, memory)
+        manifest = _project_into(sessions, partial, memory, memory_until)
         guard(partial, set().union(*(_secrets(s) for s in sessions)) if sessions else set())
         partial.rename(out)
         return manifest

@@ -166,7 +166,7 @@ def brief(repo: Repository, version: str, trace_manifest: dict, drafts: list[dic
 
 
 def run_session(repo: Repository, trace_sessions: list[Path], config: SessionConfig, *,
-                memory: Path | None = None, session_id: str | None = None) -> dict:
+                memory: Path | None = None, memory_until: float | None = None, session_id: str | None = None) -> dict:
     session_id = session_id or uuid.uuid4().hex[:16]
     repo.state.mkdir(parents=True, exist_ok=True)
     lock = (repo.state/'lock').open('w')
@@ -179,7 +179,7 @@ def run_session(repo: Repository, trace_sessions: list[Path], config: SessionCon
     cleanup: list[str] = []
     try:
         record_dir.mkdir(parents=True)
-        return _run(repo, trace_sessions, config, memory, session_id, record_dir)
+        return _run(repo, trace_sessions, config, memory, memory_until, session_id, record_dir)
     finally:
         for target in (repo.state/'workspaces'/session_id, repo.state/'workspaces'/f'{session_id}.home'):
             try:
@@ -198,7 +198,7 @@ def run_session(repo: Repository, trace_sessions: list[Path], config: SessionCon
 
 
 def _run(repo: Repository, trace_sessions: list[Path], config: SessionConfig, memory: Path | None,
-         session_id: str, record_dir: Path) -> dict:
+         memory_until: float | None, session_id: str, record_dir: Path) -> dict:
     """Prepare, run and close out one session. Any failure seals the record `aborted` with its error."""
     manifest: dict | None = None
     result: sandbox.Result | None = None
@@ -216,7 +216,7 @@ def _run(repo: Repository, trace_sessions: list[Path], config: SessionConfig, me
         home = home.resolve()
         version = repo.published()
         repo.export(version, workspace/'knowledge')
-        trace_manifest = project(trace_sessions, workspace/'trace', memory=memory)
+        trace_manifest = project(trace_sessions, workspace/'trace', memory=memory, memory_until=memory_until)
         window = {Path(name).stem for name in trace_manifest['files'] if name.startswith('frames/')}
         for name in WRITABLE:
             (workspace/name).mkdir()

@@ -270,8 +270,12 @@ def _write(path: Path, value: dict) -> Path:
 
 def run_one(*, arm_name: str, lineage: str, name: str, trace: Path, repo: Repository, memory: Path | None,
             memory_note: str, host: dict, config_path: Path, config_dir: Path, model_config: dict, prices: dict[str, Price],
-            key: str, upstream: str, cap: Decimal, out: Path, wall_seconds: int, max_output_tokens: int) -> dict:
-    """One curator session through its own proxy. Returns the `curator-shadow/1` session summary."""
+            key: str, upstream: str, cap: Decimal, out: Path, wall_seconds: int, max_output_tokens: int,
+            memory_until: float | None = None) -> dict:
+    """One curator session through its own proxy. Returns the `curator-shadow/1` session summary.
+
+    `memory_until` keeps only memory written strictly before it (the P1 replay cuts a lineage store
+    at the next admission's first operation); None passes the whole store."""
     session_dir = out/lineage/name
     session_dir.mkdir(parents=True)
     arm = ARMS[arm_name]
@@ -295,7 +299,8 @@ def run_one(*, arm_name: str, lineage: str, name: str, trace: Path, repo: Reposi
             tools=(*host['roots'], config_dir.resolve()),
             limits=sandbox.Limits(wall_seconds=wall_seconds), proxy=proxy, proxy_port=port,
             extra_env=host['env'], host=host_identity(host, model_config))
-        record = run_session(repo, [trace], config, memory=memory, session_id=f'{name}-{uuid.uuid4().hex[:8]}')
+        record = run_session(repo, [trace], config, memory=memory, memory_until=memory_until,
+                             session_id=f'{name}-{uuid.uuid4().hex[:8]}')
         state = 'completed'
     except Exception as exc:  # noqa: BLE001 - a failed session is a result, not a crash of the run
         state = f'error: {type(exc).__name__}: {exc}'
