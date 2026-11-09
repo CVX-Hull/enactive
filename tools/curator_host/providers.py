@@ -28,19 +28,6 @@ def _anthropic_tool(tool: dict) -> str | None:
     return None
 
 
-def _anthropic_request(request: dict) -> str | None:
-    management = request.get('context_management')
-    if management is not None:
-        # Clearing old tool results or thinking only removes context; server-side compaction
-        # runs extra model work whose billing is not verified, so it is refused.
-        edits = management.get('edits') if isinstance(management, dict) else None
-        if not isinstance(edits, list) or any(
-                not isinstance(e, dict) or not str(e.get('type', '')).startswith(('clear_tool_uses_', 'clear_thinking_'))
-                for e in edits):
-            return 'only clearing context edits are allowed'
-    return None
-
-
 def _anthropic_cost(price: Price, usage: dict[str, int], _body: bytes) -> Decimal:
     return (usage.get('input_tokens', 0) * price.input + usage.get('output_tokens', 0) * price.output
             + usage.get('cache_creation_input_tokens', 0) * price.cache_write
@@ -53,7 +40,7 @@ ANTHROPIC = Provider(
                'stop_sequences', 'thinking', 'output_config', 'cache_control', 'temperature', 'top_p', 'top_k',
                'context_management'}),
     frozenset({'text', 'image', 'tool_use', 'tool_result', 'thinking', 'redacted_thinking'}),
-    tool_refusal=_anthropic_tool, cost=_anthropic_cost, request_refusal=_anthropic_request, **COMMON)
+    tool_refusal=_anthropic_tool, cost=_anthropic_cost, **COMMON)
 
 
 # -- OpenRouter chat completions ---------------------------------------------------------------

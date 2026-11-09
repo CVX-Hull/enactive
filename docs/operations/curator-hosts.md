@@ -133,9 +133,13 @@ proxy ledger shows no refusal.
 
 **Tool roots.** Node is a Homebrew build linked against about twenty kegs through
 `/opt/homebrew/opt/<name>` links. The tool roots are the node keg, each keg its libraries live in
-(read from `otool -L`), `/opt/homebrew/opt` (links only), the host package directory, the directory
-holding the frozen configuration, and the Python base prefix for the workbench. Two facts about
-running node under the profile:
+(read from `otool -L`), `/opt/homebrew/opt` (links only), the directory holding the frozen
+configuration, and the Python base prefix for the workbench. From the host package the roots are
+only `host.mjs`, `run.mjs`, `workspace-tools.mjs`, `prompt.md`, `package.json`, `node_modules` and
+`launch.py` (`HOST_READABLE` in `tools/curator_host/shadow.py`), each as its own root. The runner,
+report, providers and any `__pycache__` beside them are not readable by the curator; `launch.py`
+is the only Python file the sandbox's own argv runs. Two facts about running node under the
+profile:
 - **`OPENSSL_CONF=/dev/null`.** Node reads `/opt/homebrew/etc/openssl@4/openssl.cnf` at start and
   aborts when the profile refuses it. The host speaks plain http to the loopback proxy, so no
   configuration is needed.

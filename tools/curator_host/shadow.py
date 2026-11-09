@@ -45,6 +45,10 @@ SCHEMA = 'curator-shadow/1'
 PRICES_SCHEMA = 'curator-prices/1'
 HOST_SCHEMA = 'curator-host/1'
 HOST_DIR = ROOT/'tools'/'curator_host'
+# The only parts of the host package the sandboxed process may read: the Node host and its
+# dependencies, its prompt, and `launch.py`, the one Python file the sandbox's argv runs. The runner,
+# report and providers beside them stay unreadable to the curator.
+HOST_READABLE = ('host.mjs', 'run.mjs', 'workspace-tools.mjs', 'prompt.md', 'package.json', 'launch.py', 'node_modules')
 DEFAULT_PRICES = ROOT/'data'/'curator'/'openrouter-prices-2026-11-08.json'
 OPENROUTER_ORIGIN = 'https://openrouter.ai'
 GAME = 'cdda'
@@ -197,7 +201,7 @@ def host_tools(extra: tuple[Path, ...] = ()) -> dict:
                           '--ignore-scripts --no-audit --no-fund --prefix tools/curator_host')
     node, node_roots = node_tool_roots()
     python = Path(os.path.realpath(sys.executable))
-    roots = (*node_roots, HOST_DIR.resolve(), Path(sys.base_prefix).resolve(), *extra)
+    roots = (*node_roots, *((HOST_DIR/name).resolve() for name in HOST_READABLE), Path(sys.base_prefix).resolve(), *extra)
     for root in roots:
         refuse_broad_root(root)
     # node reads an OpenSSL configuration file at startup (under Homebrew, outside every root) and

@@ -61,12 +61,12 @@ def openrouter(tmp_path, usage, cap='1'):
         server.server_close()
 
 
-def post(port, payload, token):
+def post(port, payload, token, extra=None):
     data = json.dumps(payload).encode()
     connection = http.client.HTTPConnection('127.0.0.1', port, timeout=10)
     connection.request('POST', ROUTE, body=data, headers={'authorization': f'Bearer {token}',
                                                           'content-type': 'application/json',
-                                                          'x-session-id': 'curator-session'})
+                                                          'x-session-id': 'curator-session', **(extra or {})})
     response = connection.getresponse()
     payload = response.read()
     connection.close()
@@ -137,6 +137,22 @@ def test_the_reported_cost_settles_and_the_key_never_leaves_the_proxy(tmp_path):
         assert seen[0]['path'] == ROUTE
     ledger = (tmp_path/'ledger.jsonl').read_text()
     assert 'real-router-key' not in ledger and proxy.token not in ledger and proxy.affinity not in ledger
+
+
+def test_version_and_frozen_beta_headers_pass_as_they_always_did(tmp_path):
+    usage = dict(prompt_tokens=10, completion_tokens=2, total_tokens=12, cost=0.0001)
+    with openrouter(tmp_path, usage) as (proxy, port, seen):
+        proxy.betas = frozenset({'allowed-beta'})
+        extra = {'anthropic-version': '2026-10-21', 'anthropic-beta': 'allowed-beta,unlisted-beta', 'x-other': 'no'}
+        assert post(port, body(), proxy.token, extra)[0] == 200
+        sent = {k.lower(): v for k, v in seen[0]['headers'].items()}
+        assert sent['anthropic-version'] == '2026-10-21' and sent['anthropic-beta'] == 'allowed-beta'
+        assert 'x-other' not in sent and sent['accept-encoding'] == 'identity'
+    assert json.loads((tmp_path/'ledger.jsonl').read_text())['dropped_betas'] == ['unlisted-beta']
+
+
+def test_context_management_is_not_an_openrouter_field():
+    assert 'context_management' in refusal(OPENROUTER, body(context_management=dict(edits=[])))
 
 
 def test_one_affinity_value_per_proxy_session_on_every_request(tmp_path):

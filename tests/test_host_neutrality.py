@@ -18,7 +18,8 @@ ROOT = Path(__file__).resolve().parents[1]
 PRODUCT = re.compile(r"\bPi\b|pi-player-host|pi-agent-core|pi-ai\b|pi-mcp|earendil|[Cc]odex|CODEX|[Cc]laude|CLAUDE")
 # Provider names and model identifiers (`gpt-4o`, `gemini-pro`, the project's `opus` and `terra` arms).
 # `claude-…` model ids are already caught by PRODUCT.
-PROVIDER = re.compile(r"[Oo]pen[Rr]outer|OPENROUTER|[Aa]nthropic|ANTHROPIC|[Oo]pen[Aa][Ii]|OPENAI|\bgpt-|\bgemini-|\bopus\b|\bterra\b")
+PROVIDER = re.compile(r"[Oo]pen[Rr]outer|OPENROUTER|[Aa]nthropic|ANTHROPIC|[Oo]pen[Aa][Ii]|OPENAI|\b[Gg][Pp][Tt]-|\b[Gg]emini\b"
+                      r"|\b[Oo]pus\b|\b[Tt]erra\b|\bSonnet\b|\bHaiku\b")
 PROVIDER_SCOPE = ("harness/", "tools/")
 # An external citation (title and URL), an internal link destination, or a bare URL.
 CITATIONS = re.compile(r"\[[^\]]*\]\(https?://[^)]*\)|\]\([^)]*\)|https?://\S+")
@@ -49,7 +50,7 @@ def scope():
     paths += sorted((ROOT / "docs").rglob("*.md")) + sorted((ROOT / "docs" / "diagrams").glob("*.mmd"))
     for directory in ("harness", "tools"):
         paths += sorted(p for p in (ROOT / directory).rglob("*")
-                        if p.is_file() and p.suffix in (".py", ".mjs", ".js", ".cjs", ".md", ".json")
+                        if p.is_file() and p.suffix in (".py", ".mjs", ".js", ".cjs", ".md", ".json", ".mm", ".cpp", ".h", ".sh")
                         and "node_modules" not in p.parts and "__pycache__" not in p.parts)
     for path in paths:
         relative = path.relative_to(ROOT).as_posix()
@@ -86,12 +87,13 @@ def test_checker_sees_names_but_not_citations_or_lowercase_words():
 
 
 def test_provider_and_model_names_are_refused_in_harness_and_tools_only():
-    for line in ("OPENROUTER = Provider(", "an Anthropic request", "set openai_key", "model='gpt-4o'", "the opus arm"):
+    for line in ("OPENROUTER = Provider(", "an Anthropic request", "set openai_key", "model='gpt-4o'", "the opus arm",
+                 "Opus 4", "GPT-5", "the Terra arm", "Gemini Pro", "gemini-pro", "Sonnet and Haiku"):
         assert names("harness/curator/proxy.py", line) and names("tools/diff_cost.py", line), line
     # Adapters are exempt from the scan itself; documents, research and tests are out of its scope.
     assert not names("docs/research-curated-programs.md", "OpenAI's agent and Anthropic's agent")
     assert not names("tests/test_curator_openrouter.py", "from tools.curator_host.providers import OPENROUTER")
     # Ordinary words and external citations are not names.
-    assert not names("harness/curator/proxy.py", "a gptq opusculum terrain terrace route")
+    assert not names("harness/curator/proxy.py", "a gptq opusculum terrain terrace route geminian haikus sonnets")
     assert not names("tools/diff_cost.py", "[provider docs](https://openrouter.ai/docs/faq)")
     assert not any(relative.startswith(("tools/curator_host/", "tools/player_host/")) for relative, _ in scope())

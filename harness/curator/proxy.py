@@ -94,6 +94,14 @@ class Provider:
     beta_header: str | None = None  # header listing beta flags; only flags in the proxy's frozen set pass
     affinity_header: str | None = None  # session-affinity header the proxy itself sets, if the provider has one
 
+    def __post_init__(self):
+        # The proxy sets these itself; a provider must not let the host's values through.
+        owned = {'authorization', 'x-api-key', 'content-length', 'accept-encoding', 'transfer-encoding', 'host',
+                 *(h.lower() for h in (self.key_header, self.beta_header, self.affinity_header) if h)}
+        clash = sorted({h.lower() for h in self.forward_headers} & owned)
+        if clash:
+            raise ValueError(f'forward_headers may not carry headers the proxy sets: {", ".join(clash)}')
+
     def auth(self, key: str) -> tuple[str, str]:
         return (self.key_header, key) if self.key_header == 'x-api-key' else ('authorization', f'Bearer {key}')
 
@@ -119,6 +127,15 @@ def refusal(provider: Provider, request: object) -> str | None:
     reason = provider.request_refusal(request)
     if reason:
         return reason
+    management = request.get('context_management')
+    if management is not None:
+        # Clearing old tool results or thinking only removes context; server-side compaction
+        # runs extra model work whose billing is not verified, so it is refused.
+        edits = management.get('edits') if isinstance(management, dict) else None
+        if not isinstance(edits, list) or any(
+                not isinstance(e, dict) or not str(e.get('type', '')).startswith(('clear_tool_uses_', 'clear_thinking_'))
+                for e in edits):
+            return 'only clearing context edits are allowed'
     # Walk every nested value of the conversation, except fields that are opaque arguments
     # or schemas rather than content.
     stack = [request.get('messages'), request.get('system'), request.get('input')]

@@ -223,7 +223,7 @@ def test_tool_output_cannot_fetch_or_store_through_either_provider():
         dict(type='image_url', image_url=dict(url='https://example.com/x.png'))])])
     assert refusal(ANTHROPIC, fetch) and refusal(OPENROUTER, image)
     stored = dict(model='m', max_completion_tokens=10, messages=[], store=True)
-    assert refusal(OPENROUTER, stored) and refusal(ANTHROPIC, dict(stored, store=True))
+    assert refusal(OPENROUTER, stored) == 'provider-side storage is not allowed'
     plain = dict(model='m', max_completion_tokens=10, messages=[dict(role='user', content='hi')])
     assert refusal(OPENROUTER, plain) is None
 
@@ -242,6 +242,29 @@ def test_provider_rules_live_in_the_provider_value():
     price = PRICES['model-a']
     usage = dict(input_tokens=10, output_tokens=2, cache_creation_input_tokens=100, cache_read_input_tokens=1000)
     assert ANTHROPIC.cost(price, usage, b'') == (10 * 3 + 2 * 15 + 100 * Decimal('3.75') + 1000 * Decimal('0.3')) / 1_000_000
+
+
+def test_the_context_management_rule_is_generic_to_every_provider():
+    from harness.curator.proxy import Provider, no_refusal, refusal
+    open_provider = Provider('p', frozenset({'/r'}), 'authorization', 'max_tokens',
+                             frozenset({'model', 'max_tokens', 'messages', 'context_management'}), frozenset(),
+                             tool_refusal=no_refusal, cost=lambda *_: Decimal(0))
+    base = dict(model='m', max_tokens=10, messages=[])
+    assert refusal(open_provider, dict(base, context_management=dict(edits=[dict(type='clear_tool_uses_1')]))) is None
+    for bad in (dict(edits=[dict(type='compact_1')]), dict(edits='x'), 'x'):
+        assert refusal(open_provider, dict(base, context_management=bad)) == 'only clearing context edits are allowed'
+
+
+def test_a_provider_cannot_forward_headers_the_proxy_sets():
+    from harness.curator.proxy import Provider, no_refusal
+    values = dict(name='p', routes=frozenset({'/r'}), key_header='authorization', output_field='max_tokens',
+                  fields=frozenset(), blocks=frozenset(), tool_refusal=no_refusal, cost=lambda *_: Decimal(0))
+    for header in ('authorization', 'X-Api-Key', 'content-length', 'Accept-Encoding', 'transfer-encoding', 'host',
+                   'X-Beta', 'x-affinity', 'x-key'):
+        with pytest.raises(ValueError, match='may not carry'):
+            Provider(**{**values, 'key_header': 'x-key', 'beta_header': 'x-beta', 'affinity_header': 'x-affinity'},
+                     forward_headers=frozenset({header}))
+    assert Provider(**values, forward_headers=frozenset({'anthropic-version'})).forward_headers == {'anthropic-version'}
 
 
 @pytest.mark.skipif(sys.platform != 'darwin' or not Path(sandbox.SANDBOX_EXEC).exists(), reason='Seatbelt lane')
