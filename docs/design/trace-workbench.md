@@ -95,7 +95,8 @@ non-empty `-wal` is refused rather than read incomplete. On the sealed #397 stor
 
 **Perceptual-hash reliability is measured, not assumed** (ADR 009 research question R8;
 its synthesis is #448).
-[`tools/phash_measure.py`](../../tools/phash_measure.py) was run over the sealed #397
+[`tools/phash_measure.py`](https://github.com/CVX-Hull/enactive/blob/e8b062df3275eb128f42f4b84161e651be632d13/tools/phash_measure.py)
+(removed from the tree; kept at that commit) was run over the sealed #397
 frames: 7 sessions, 1,932 frames, 1,925 consecutive pairs, and as many random pairs within
 each session (seed 452).
 

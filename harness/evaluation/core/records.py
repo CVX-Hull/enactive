@@ -9,11 +9,12 @@ Hand-recorded `human` events are never touched by a pass.
 from __future__ import annotations
 
 from dataclasses import dataclass
-import json
 import math
 from pathlib import Path
 import sqlite3
 from typing import Any, Iterable, Sequence
+
+from harness.jsonio import canonical, strict_loads
 
 SCHEMA = 'evaluation-record/1'
 CORE_VERSION = 2
@@ -30,20 +31,7 @@ class EvaluationError(Exception):
 
 
 def dumps(value: object) -> str:
-    return json.dumps(value, sort_keys=True, separators=(',', ':'), ensure_ascii=False, allow_nan=False)
-
-
-def _single_keys(pairs: list[tuple[str, Any]]) -> dict:
-    found: dict[str, Any] = {}
-    for key, value in pairs:
-        if key in found:
-            raise ValueError(f'duplicate key {key!r}')
-        found[key] = value
-    return found
-
-
-def _finite(constant: str) -> Any:
-    raise ValueError(f'non-finite number {constant}')
+    return canonical(value, sort_keys=True)
 
 
 def loads(text: str | bytes | None, where: str = 'evaluation record') -> Any:
@@ -52,7 +40,7 @@ def loads(text: str | bytes | None, where: str = 'evaluation record') -> Any:
     if text is None:
         return None
     try:
-        return json.loads(text, object_pairs_hook=_single_keys, parse_constant=_finite)
+        return strict_loads(text)
     except (ValueError, UnicodeError, RecursionError) as exc:
         raise EvaluationError(f'{where}: malformed JSON ({exc})') from exc
 

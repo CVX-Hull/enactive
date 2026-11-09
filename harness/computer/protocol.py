@@ -4,10 +4,11 @@ from __future__ import annotations
 from typing import Any
 
 from collections.abc import Iterable
-import json
 import math
 from pathlib import Path
 import re
+
+from harness.jsonio import canonical, strict_loads
 
 SCHEMA = "computer-request/3"
 # A request's first command event must be emitted within START_SECONDS. Once one
@@ -30,10 +31,6 @@ class NoDispatch(ControlError):
     """Verified local refusal before publishing this request's input bytes."""
 
 
-def canonical(value: object) -> str:
-    return json.dumps(value, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
-
-
 def read_json(path: Path, maximum: int = 65536) -> Any:
     if path.is_symlink() or not path.is_file() or path.stat().st_size > maximum:
         raise ControlError("Missing or invalid bounded regular artifact")
@@ -45,15 +42,7 @@ def decode_json(data: bytes | str, maximum: int = 65536) -> Any:
     encoded = data.encode('utf-8') if isinstance(data, str) else data
     if len(encoded) > maximum:
         raise ControlError('JSON exceeds its byte bound')
-    def pairs(items):
-        result = {}
-        for key, value in items:
-            if key in result:
-                raise ControlError("Duplicate JSON key")
-            result[key] = value
-        return result
-    return json.loads(encoded, object_pairs_hook=pairs,
-                      parse_constant=lambda value: (_ for _ in ()).throw(ControlError("Nonfinite JSON")))
+    return strict_loads(encoded, ControlError)
 
 
 def closed(value: object, keys: Iterable[str]) -> None:

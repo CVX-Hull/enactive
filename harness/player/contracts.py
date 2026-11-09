@@ -1,13 +1,13 @@
 """Current closed player data; assertions never grant computer custody."""
 from __future__ import annotations
 
-import json
 from typing import Any
 
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import ValidationError
 
 from harness.computer.protocol import validate_actions
+from harness.jsonio import canonical as _canonical, strict_loads
 
 
 class PlayerError(ValueError):
@@ -27,35 +27,26 @@ def _enum(*values: str) -> dict:
 
 
 def json_object(value: Any) -> dict:
-    def pairs(items):
-        result = {}
-        for key, child in items:
-            if key in result:
-                raise PlayerError('Duplicate JSON key')
-            result[key] = child
-        return result
     try:
         if type(value) is dict:
-            value = json.dumps(value, ensure_ascii=False, allow_nan=False, separators=(',', ':'))
+            value = _canonical(value)
         if type(value) not in (str, bytes):
             raise PlayerError('Expected a JSON object')
         encoded = value.encode('utf-8') if type(value) is str else value
         if len(encoded) > 1048576:
             raise PlayerError('JSON exceeds 1 MiB')
-        result = json.loads(encoded, object_pairs_hook=pairs,
-                            parse_constant=lambda _: (_ for _ in ()).throw(PlayerError('Nonfinite JSON')))
+        result = strict_loads(encoded, PlayerError)
         if type(result) is not dict:
             raise PlayerError('Expected a JSON object')
         # JSON escape sequences must also produce valid UTF-8 strings.
-        json.dumps(result, ensure_ascii=False, allow_nan=False).encode('utf-8')
+        _canonical(result).encode('utf-8')
         return result
     except (ValueError, TypeError, UnicodeError, RecursionError) as exc:
         raise PlayerError(f'Invalid player JSON: {exc}') from exc
 
 
 def canonical(value: dict) -> str:
-    return json.dumps(json_object(value), ensure_ascii=False, allow_nan=False,
-                      sort_keys=True, separators=(',', ':'))
+    return _canonical(json_object(value), sort_keys=True)
 
 
 def validate_json(value: dict, schema: dict) -> None:
