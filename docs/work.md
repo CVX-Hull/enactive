@@ -76,6 +76,15 @@ Before P1, the owner set a readiness stage, P1.0, in [ADR 009](decisions/009-cur
 P1, the curator against the simpler working-set arm in offline replay, is decided on
 that pre-registration.
 
+**P1.0 is complete (8 November 2026); the outcome is in ADR 009.**
+- **Context stability.** Requests are stable, but prompt caching is still unfixed.
+- **Probe validation.** Confirmed re-observations are P1's primary probes.
+- **The pre-registration** is [p1-study](design/p1-study.md). Its gate before spend passes
+  narrowly, after its effect of interest was raised from 0.25 to 0.30, and the study detects
+  only large effects.
+
+P1 now waits for the owner's go/no-go.
+
 ## Current integrated checkpoint
 
 The production source has the [computer-control boundary](contracts/computer-control.md):
