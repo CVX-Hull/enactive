@@ -55,6 +55,10 @@ spectator. Its implementation and test plan is
 [#143](https://github.com/CVX-Hull/enactive/issues/143). Current contracts govern
 until a phase is adopted on study evidence.
 
+Process: [ADR 010](decisions/010-streamlined-delivery.md) (8 November 2026) streamlines
+delivery, controls, CI, documentation and evidence storage in seven leaves; the current
+standards govern until each leaf lands.
+
 P0 finished on 8 November 2026 ([record](acceptance/2026-11-08-adr009-p0.md)). It built:
 - the curator sandbox and model proxy;
 - the trace workbench and sidecar containers;
