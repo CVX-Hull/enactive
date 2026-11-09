@@ -105,8 +105,10 @@ handoff successor and a new admission's first actor, with no provider call:
 - **Omission markers** carry the omitted frame's `source_id` (when its tool result
   has one) and name `player_source` as the way to read it again.
 - **Notices** go at the end of the request in which they are first sent, and then stay
-  in the history there unchanged. A retried request reuses the notice it was first
-  sent with. Once a threshold is passed, every later request adds a new notice.
+  in the history there unchanged. A retry resends the same body below the notice step,
+  so it adds no notice. Once a threshold is passed, every later request adds a new
+  notice. Only the first notice of each kind says how to wrap up; later ones only
+  update the figure, because every notice stays in the context.
   Each warns before a stop the
   host itself enforces, naming how to wrap up: the context notice (latched once the
   `context_reserve_tokens` line is crossed, with the tokens of room left before the
@@ -190,7 +192,7 @@ kinds it does not account for, and observers project only known kinds.
 | Event | Contract |
 | --- | --- |
 | `host-start` | Exactly once and first after admitted inputs, with `telemetry_version:3` and `schema:"player-host/3"`. It records `session_affinity_id` (additive, absent before 8 November 2026). |
-| `tail-notice` | One per request that carried a tail notice: `request_id`, `kinds` (`context-capacity`, `request-limit`, `host-timeout`) and the context `tokens` estimate. Additive; the driver ignores it. |
+| `tail-notice` | One per request that added a notice (earlier notices stay in the history without a new event): `request_id`, `kinds` (`context-capacity`, `request-limit`, `host-timeout`) and the context `tokens` estimate. Additive; the driver ignores it. |
 | `request-start` | Every charged HTTP attempt, including retries/failures, numbered contiguously `request-1` onward without exceeding allocation. |
 | `context-manifest` | Exactly one per HTTP attempt, retries included, after that attempt's `request-start` and before its `request-fetch-start`, with the same `request_id`. It is the exact ordered list of parts of the payload actually sent, as digests only, delta-encoded (below). Additive within version 3 under [S-MIGRATION](../standards/migration.md)'s additive-event case: absent from traces recorded before 6 November 2026, which stay readable, and readers report its absence explicitly. |
 | `response-complete` | `usage_available` distinguishes unknown usage; known configured/provider costs remain labelled. |

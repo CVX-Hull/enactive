@@ -166,9 +166,18 @@ request was ever extended, and only the static opening, read from earlier entrie
   reasoning are not the cause.
 
 **Fix.** Both hosts keep every note and notice in the history, unchanged, at the place where
-it was first sent, and a retry reuses its note. Each request then extends the previous one
-byte for byte. The serialization tests of both hosts now assert that the whole previous
-request, notes included, is a prefix of the next.
+it was first sent. A retry resends the same body below that step. Each request then extends
+the previous one byte for byte. The serialization tests of both hosts now assert that the
+whole previous request, notes included, is a prefix of the next.
+
+**Accumulation.** Notes accumulate in the context. In the actor host, only the first notice of
+each kind carries the wrap-up instructions; later ones update the figure. A curator note is
+about 40–80 tokens, so 120 requests add at most about 10k.
+
+**Raw figures.** Every token figure above and the spend are tracked, usage only, in
+[`data/curator/cache-diagnosis-489.json`](../../data/curator/cache-diagnosis-489.json). The charges
+come from the proxy ledgers: $0.0686 for the capped session, $0.4024 for the replays and $0.0639
+for the notes-kept run. The driver scripts and captured bodies were scratch and are not retained.
 
 **Not yet measured.** The fixed hosts have not run a paid session. The P1 pilot measures the
 cached share, as the pre-registration requires.

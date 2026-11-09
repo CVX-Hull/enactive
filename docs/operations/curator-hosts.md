@@ -173,7 +173,8 @@ byte for byte, so:
   own header is never forwarded, and the ledger holds only a short SHA-256 of it (`affinity_sha256`).
 - **Budget note.** Each request ends with a new budget note.
   - **Kept in place.** Earlier notes stay in the history, unchanged, where they were first sent. A
-    retried request reuses its note. Each request therefore extends the previous one byte for byte,
+    retry resends the same body below the note step, so it adds no note. Each request therefore
+    extends the previous one byte for byte,
     which the provider's cache needs: a note replaced on every request kept the cached share at
     about 3% ([#489 record](../acceptance/2026-11-08-context-stability-489.md#follow-up-the-cause-found)).
   - **Time.** The note includes the time used against the wall-clock limit, and warns past half and
@@ -181,9 +182,12 @@ byte for byte, so:
   - **Phase.** Only requests and dollars set the phase that refuses reading tools.
   - **Context.** Once the prompt passes three quarters of the context window, every later note
     includes a context warning with the room left, before the capacity stop.
-- **Proof.** Request-serialization tests in `tools/curator_host/test/host.test.mjs` and
-  `tests/test_curator_openrouter.py` check the prefix (notes included), the latest note, eviction and the header
-  with no provider call.
+- **Proof.** All checks run with no provider call.
+  - **Host tests.** The request-serialization tests in `tools/curator_host/test/host.test.mjs` check
+    the prefix (notes included), the latest note and eviction.
+  - **Proxy test.** `tests/test_curator_openrouter.py` checks the affinity header the proxy sets.
+- **Note size.** Each note is about 40–80 tokens, so 120 requests add up to about 10k tokens,
+  about 4% of the window. Most of it is read from the cache.
 
 ## Both hosts
 

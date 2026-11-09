@@ -147,9 +147,12 @@ test('the request-limit notice is added on every request near the limit and kept
   assertStablePrefixes(payloads);
   assert.deepEqual(events.filter(event => event.type === 'tail-notice').map(event => [event.request_id, event.kinds]),
     [['request-9', ['request-limit']], ['request-10', ['request-limit']]]);
-  // The notice names the way out the model has: handoff or finish.
-  assert.match(text(payloads[9].messages.at(-1)), /player_handoff/);
-  assert.match(text(payloads[9].messages.at(-1)), /player_finish/);
+  // The first notice names the way out the model has, handoff or finish; it stays in the context, so a
+  // later one only updates the figure.
+  assert.match(text(payloads[8].messages.at(-1)), /player_handoff/);
+  assert.match(text(payloads[8].messages.at(-1)), /player_finish/);
+  assert.doesNotMatch(text(payloads[9].messages.at(-1)), /player_handoff|player_finish/);
+  assert.equal(payloads[9].messages.filter(isNotice).length, 2, 'both notices are in the last request');
 });
 
 test('the context notice persists on every request once passed and warns before the capacity stop', async t => {
