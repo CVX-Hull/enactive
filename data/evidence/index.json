@@ -462,6 +462,23 @@
         "operator": ".runtime/worktrees/397/operator"
       },
       "visibility": "private"
+    },
+    "curator-shadow-454": {
+      "availability": "present",
+      "bytes": 1548018,
+      "cited_by": [
+        "docs/acceptance/2026-11-08-adr009-p0.md",
+        "docs/acceptance/2026-11-08-context-stability-489.md",
+        "docs/acceptance/2026-11-08-curator-shadow-454.md"
+      ],
+      "files": 612,
+      "manifest_sha256": "de2256fa10ffa1517b0f6c8127b466985856216a3f29984bba4fec16c272e0d0",
+      "note": "The #454 curator shadow sessions (8 November 2026): per-session summaries and host configurations from tools.curator_shadow for the terra and opus arms on #397 and #372, the pilots, the #489 paid check (check-489-terra) and the caching diagnosis's capped baseline session (diag-cache-baseline); and the knowledge repositories those sessions curated, including the gate-accepted versions. The proxy ledgers' usage and spend figures are tracked in data/curator/. Locks are skipped by rule.",
+      "sources": {
+        "knowledge": ".runtime/knowledge/shadow-454",
+        "runs": ".runtime/curator-shadow"
+      },
+      "visibility": "private"
     }
   }
 }

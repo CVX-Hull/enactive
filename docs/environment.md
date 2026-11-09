@@ -6,80 +6,40 @@ status: active
 
 # Environment ownership and retained evidence
 
-Use [setup](setup.md) for installation, [runbook](operations/evidence-cleanup.md#evidence-retention-and-cleanup)
-for operation/retirement, and the [overview](overview.md) for supported scope.
-This page maps owned resources and exceptional environment changes. Dated reports
-and adjacent private manifests own individual build, run and cleanup receipts;
-this is not a process dashboard or attempt log.
+Use [setup](setup.md) for installation, [evidence cleanup](operations/evidence-cleanup.md#evidence-retention-and-cleanup)
+for retention and removal, and the [overview](overview.md) for supported scope.
+This page maps every owned local resource: what it holds, who writes it and when it
+goes. Dated records own individual build, run and cleanup receipts; the
+[environment history](acceptance/2026-11-08-environment-history.md) holds the earlier
+dated exceptions.
 
 ## Owned resources
 
-| Resource | Authority and maintenance |
+| Resource | What it holds, and its lifecycle |
 | --- | --- |
-| `.venv/`, `.cache/` | Project Python/runtime/development tools and caches; dependency locks and setup own versions/install steps. No global package installation. |
-| `.runtime/Cataclysm.app`, `.runtime/downloads/`, `.runtime/toolchain/` | Prepared Tiles app, pinned downloads and local tooling. Use the wrapper with explicit project userdir and windowed mode. |
-| `.runtime/build-manifest.json` and its owned temporary workspace | Current build provenance, exact source/configuration and ownership marker. The recorded workspace may be outside the checkout because upstream Make does not reliably accept spaces. Verify the marker before removal; do not infer ownership from a path prefix. |
-| `.runtime/user/` | Project configuration and saves. Preserve accepted checkpoints; archive/member-hash verify stale failed/technical worlds before removing active copies. No save editing or restoration to manufacture success. |
-| `.runtime/computer-sessions/`, `.runtime/evaluations/`, `.runtime/bridge/` | Where current runs write frozen admissions, immutable PNGs, original ledgers/host traces and evaluator records; `bridge/game.lock` is the shared game lock. Closed stores never restore authority. |
+| `.venv/`, `.cache/` | Project Python environment, development tools and caches (pip, npm, Ruff, Puppeteer's browser). Dependency locks and setup own versions and install steps. No global package installation. |
+| `.runtime/Cataclysm.app`, `.runtime/downloads/` | The prepared Tiles app and the pinned downloads setup builds it from (`tools/setup.py --download` refetches them). Use the wrapper with an explicit project userdir and windowed mode. |
+| `.runtime/build-manifest.json` and its owned temporary workspace | Current build provenance, exact source and configuration, and the ownership marker. The recorded workspace may be outside the checkout because upstream Make does not reliably accept spaces. Verify the marker before removal; do not infer ownership from a path prefix. |
+| `.runtime/user/` | Project configuration and saves. Preserve accepted checkpoints; archive and member-hash verify stale failed or technical worlds before removing active copies. No save editing or restoration to manufacture success. |
+| `.runtime/computer-sessions/`, `.runtime/evaluations/`, `.runtime/bridge/` | Where current runs write frozen admissions, immutable PNGs, original ledgers and host traces, and evaluator records; `bridge/game.lock` is the shared game lock. Sealed into the evidence store before removal when a record cites them. Closed stores never restore authority. |
+| `.runtime/curator-shadow/`, `.runtime/knowledge/` | Created by [curator shadow sessions](operations/curator-hosts.md): session summaries and host configurations, and the knowledge repositories they curate. Sealed into the evidence store before removal when a record cites them. |
 | `.runtime/computer-builds/` | Owned native adapter builds and their receipts, built fresh per [setup](setup.md). |
-| `.runtime/logs/`, `.runtime/credentials.json`, `.runtime/worktrees/` | The prepared wrapper's game log, the operator credential reference (never a key) and the root for any project-owned worktrees. |
-| `.runtime/evidence/` | The sealed, read-only evidence store; [evidence cleanup](operations/evidence-cleanup.md) owns sealing, verification and removal. |
-| `.runtime/check-logs/`, `.runtime/spectator-shots/` | Each checker run's full command output, and the spectator suites' screenshots (rewritten by each run); routine local output under [evidence cleanup](operations/evidence-cleanup.md). |
-| `tools/player_host/node_modules/` | Locked dependencies of the current player host adapter; npm cache stays in project `.cache/npm`. No model/API credential belongs in this directory. [Host setup](setup.md#install-the-generic-gameplay-host) owns install and support limits. |
-| `.codex/`, `.claude/`, `CLAUDE.md`, repository-local Git configuration/hooks | Reviewed project coding-agent tool/permission configuration and public identity. Generated `.codex/config.toml`, `.mcp.json` and `.claude/settings.local.json` are machine-local and ignored. [Operator permissions](operator-permissions.md) separates rule matching, host activation and gameplay authority; [coding-agent hosts](operations/coding-agents.md) maps each host. |
+| `.runtime/logs/` | The prepared wrapper's game log (`game.log`), and the setup, build and check logs of 17–18 October 2026 that the [7 November retirement](acceptance/2026-11-07-runtime-retirement.md) kept. |
+| `.runtime/credentials.json` | The operator's credential reference: the name of a keychain item or environment variable, never a key. |
+| `.runtime/worktrees/<leaf>` | One worktree per implementation leaf, with its own npm installs ([work items](workflows/work-items.md#ready-brief-and-execution-capacity)). Removed with its local branch when the leaf is Done and `git status` shows nothing uncommitted. |
+| `.runtime/evidence/` | The sealed, read-only evidence store, the only copy; [evidence cleanup](operations/evidence-cleanup.md) owns sealing, verification and removal. This clone's local Git configuration records that it holds the store. |
+| `.runtime/archive/` | Files kept because they have no other home, each with a `.sha256` beside it; the dated retirement records name what each holds. |
+| `.runtime/check-logs/`, `.runtime/spectator-shots/` | Each checker run's full command output, and the spectator suites' screenshots (rewritten by each run); routine local output, prunable whenever no check runs. |
+| `dist/` | Git-ignored local export output. It holds the 19 October 2026 recap video export, which no record cites and the store does not hold. |
+| `tools/player_host/node_modules/`, `tools/curator_host/node_modules/` | Locked dependencies of the player and curator host adapters; the npm cache stays in `.cache/npm`. No model or API credential belongs here. [Host setup](setup.md#install-the-generic-gameplay-host) and [curator hosts](operations/curator-hosts.md) own install and support limits. |
+| `.codex/`, `.claude/`, `CLAUDE.md`, repository-local Git configuration and hooks | Reviewed project coding-agent tool and permission configuration, and public identity. Generated `.codex/config.toml`, `.mcp.json` and `.claude/settings.local.json` are machine-local and ignored. [Operator permissions](operator-permissions.md) separates rule matching, host activation and gameplay authority; [coding-agent hosts](operations/coding-agents.md) maps each host. |
 
-All other run output under `.runtime` up to the 7 November 2026 retirement, cited or not,
-was deleted on the owner's decision; [the retirement record](acceptance/2026-11-07-runtime-retirement.md)
-lists it. A new run writes only to the locations above or to a path its admission names.
+A new run writes only to the locations above or to a path its admission names.
 
 Existing Python, Node, Xcode/Clang, uv and ffmpeg may be reused without modifying
-their installations. New dependencies/caches/outputs remain project-local or in
-explicitly recorded owned temporary builds. No broad Homebrew/cache cleanup,
+their installations. New dependencies, caches and outputs remain project-local or in
+explicitly recorded owned temporary builds. No broad Homebrew or cache cleanup,
 profile edits, unrelated process termination or global service configuration.
 A manifest describes a recorded artifact; inspect live state before cleanup.
-
-## Historical environment exceptions
-
-The [cutover development record](acceptance/2026-10-29-computer-control-development.md)
-retains an accidental browser export to Downloads, subsequently moved into the
-project, and one dependency command whose global cache use cannot be excluded.
-No global package/profile change or cleanup of unowned caches is claimed. The
-current owned source-build manifest and adjacent native build receipts retain
-their exact dirty/clean source provenance; matching input hashes do not rewrite it.
-
-Initial feasibility, before isolation steering, launched the stock game into
-`~/Library/Application Support/Cataclysm/`. Its fresh configuration contained no
-pre-existing saves and was moved intact to the project userdir; absence of the
-global directory was verified then. Subsequent launch uses the prepared wrapper.
-
-Homebrew pkgconf3.0.8 was installed during that initial feasibility work, copied
-locally and uninstalled globally. Homebrew automatically refreshed three tap
-metadata repositories; no existing installed package was upgraded. That metadata
-refresh was retained rather than rolled back into unknown pre-existing state.
-The initial build used existing read-only Homebrew FreeType; the replacement
-recipe uses local headers and the official app's bundled runtime. The historical
-verification checked no remaining global pkgconf/pkg-config or Homebrew runtime
-dependency. These are dated facts, not a fresh machine audit or a claim that no
-external change ever occurred. Per-user coding-agent trust and approval steps are
-recorded in [coding-agent hosts](operations/coding-agents.md#per-user-activation).
-
-## Evidence navigation
-
-The [pre-consolidation environment record](https://github.com/CVX-Hull/enactive/blob/de73b79b28a1aa61f1cb99fbf8642d62bc81d722/docs/environment.md)
-preserves every original setup/build/archive path, hash and cleanup observation.
-Git owns its history; the following existing records own interpretation:
-
-- [Initial MVP](acceptance/2026-10-17-mvp.md), [engineering setup](acceptance/2026-10-17-engineering-system.md)
-  and [consolidated acceptance](acceptance/2026-10-17-completion.md): original installation, reversals and verification.
-- [First supervised survival](acceptance/2026-10-19-seven-day-survival.md): original campaign ending and preserved saves.
-- [Native capture qualification](acceptance/2026-10-22-native-capture-preconditions.md),
-  [local refusal](acceptance/2026-10-22-native-local-refusal.md) and
-  [observation custody](acceptance/2026-10-22-native-observation-custody.md): scoped builds, normal/exceptional endings and technical-world retirement.
-- [Fresh024 closeout](acceptance/2026-10-24-independent-seven-day-twenty-fourth-attempt.md): failed-world archive and adjacent member/restoration manifest (retired with the old run output on 7 November 2026) and unchanged accepted saves.
-- [Acceptance directory](acceptance/) and each admission's private preparation/closure manifests:
-  individual failed campaigns and diagnostics, unknown exit codes and save comparisons.
-
-Private runtime artifacts are ignored by Git and not wholly verified or backed
-up merely because a public page names them. Existing tracked screenshots and
-small evidence payloads remain alongside their reports; no bulk LFS migration,
-new archive service or duplicate history database is justified by their current size.
+Private runtime artifacts are ignored by Git and are verified only where the evidence
+store holds them.

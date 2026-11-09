@@ -1,4 +1,4 @@
-"""C-DOCUMENTS negative cases on isolated fixtures: acceptance manifests, evidence schema ids, and the
+"""C-DOCUMENTS negative cases on isolated fixtures: acceptance manifests, the data rule, and the
 standard, principle and control identifiers."""
 import copy
 import json
@@ -64,33 +64,32 @@ def test_manifest_rejects_invalid_artifact_metadata(manifest_root):
         assert "artifacts" in "\n".join(documents.check_manifests(manifest_root)), (field, value)
 
 
-def test_evidence_schema_ids_must_be_defined_or_listed_exactly(tmp_path):
+def test_the_data_rule_needs_a_reader_and_a_defined_schema(tmp_path):
     root = tmp_path
-    (root / "schemas").mkdir()
-    (root / "docs/acceptance/assets/x").mkdir(parents=True)
-    (root / "docs/acceptance/2026-01-01-x.md").write_text("Record.\n")
-    (root / "docs/contracts").mkdir()
-    (root / "docs/contracts/c.md").write_text("Rows are `known-shape/1`.\n")
-    evidence = root / "docs/acceptance/assets/x/summary.json"
-    registry = root / documents.EVIDENCE_IDS
-    registry.write_text(json.dumps({"ids": {}}))
-    evidence.write_text(json.dumps({"schema": "known-shape/1"}))
-    assert documents.check_evidence_ids(root) == []  # a contract names it
-    evidence.write_text(json.dumps({"schema": "one-off-summary/1"}))
-    assert "defined nowhere" in "\n".join(documents.check_evidence_ids(root))
-    # Only whole tokens in schemas, contracts or code define an id: not a substring, not a run log.
+    for directory in ("schemas", "docs/contracts", "tools", "data/area/runs", "docs/acceptance/assets/x"):
+        (root / directory).mkdir(parents=True)
     (root / "docs/contracts/c.md").write_text("Rows are `known-shape/1`, `big-run/12` and `xrun/1`.\n")
+    (root / "tools/reader.py").write_text("RUNS = ROOT / 'data' / 'area' / 'runs'\nPRICES = 'prices.json'\n")
+    (root / "data/area/runs/r1.jsonl").write_text("{}\n")        # read through its directory
+    (root / "data/area/prices.json").write_text('{"schema": "known-shape/1"}')  # read by name; a contract names it
+    assert documents.check_data(root) == []
+    (root / "data/area/orphan.json").write_text("{}")             # data/area alone is not a reader
+    assert "data/area/orphan.json: no code or test reads it" in "\n".join(documents.check_data(root))
+    (root / "data/area/orphan.json").unlink()
+    # Only whole tokens in schemas, contracts or code define an id: not a substring, not a run log.
     (root / "docs/log.md").write_text("A run/1 happened.\n")
-    for undefined in ("run/1", "shape/1", "big-run/1"):
-        evidence.write_text(json.dumps({"schema": undefined}))
-        assert "defined nowhere" in "\n".join(documents.check_evidence_ids(root)), undefined
-    evidence.write_text(json.dumps({"schema": "one-off-summary/1"}))
-    entry = {"records": ["docs/acceptance/2026-01-01-x.md"], "files": ["docs/acceptance/assets/x/summary.json"]}
-    registry.write_text(json.dumps({"ids": {"one-off-summary/1": entry}}))
-    assert documents.check_evidence_ids(root) == []
-    registry.write_text(json.dumps({"ids": {"one-off-summary/1": entry, "gone/1": entry | {"records": ["docs/none.md"]}}}))
-    errors = "\n".join(documents.check_evidence_ids(root))
-    assert "gone/1 lists" in errors and "missing record" in errors
+    for undefined in ("run/1", "shape/1", "big-run/1", "one-off-summary/1"):
+        (root / "data/area/prices.json").write_text(json.dumps({"schema": undefined}))
+        assert "is defined by no schema file" in "\n".join(documents.check_data(root)), undefined
+    # A dated record's asset is defined by its record.
+    (root / "data/area/prices.json").write_text('{"schema": "known-shape/1"}')
+    (root / "docs/acceptance/assets/x/summary.json").write_text('{"schema": "one-off-summary/1"}')
+    assert documents.check_data(root) == []
+
+
+def test_the_cache_diagnosis_figures_match_their_schema():
+    path = ROOT / "data/curator/cache-diagnosis-489.json"
+    assert documents.schema_errors(ROOT, "curator-cache-diagnosis", json.loads(path.read_text()), str(path)) == []
 
 
 @pytest.fixture
@@ -143,15 +142,6 @@ def test_local_references_cannot_escape_through_a_symlink(tmp_path):
     assert documents.local_reference(root, "docs/real.md")
     for reference in ("docs/linked/secret.md", "../outside/secret.md", "/etc/passwd", "docs/missing.md", "a\\b"):
         assert not documents.local_reference(root, reference), reference
-
-
-def test_the_frozen_evidence_id_list_stays_closed_until_the_data_rule_replaces_it():
-    registry = json.loads((ROOT / documents.EVIDENCE_IDS).read_text())["ids"]
-    assert sorted(registry) == [
-        "campaign-evidence-summary/1", "capable-player-304-summary/1", "corpus320-summary/1", "diagnosis-314-summary/1",
-        "effects-298-evidence/1", "grounding-300-evidence/1", "investigation-295-evidence/1", "organic-play-evidence/1",
-        "request-timing-summary/1", "spectator-383-evidence/1", "useful-trials-accounting/1",
-        "visual-player-302-evidence/1"]
 
 
 def test_mandatory_standards_and_single_mapping_lines(identifier_root):

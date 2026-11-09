@@ -114,35 +114,48 @@ def check_manifests(root: Path) -> list[str]:
     return errors
 
 
-EVIDENCE_IDS = "schemas/evidence-ids.json"
-# Where a schema id counts as defined: a schema file, a contract, or code.
+# Where a schema id counts as defined: a schema file, a contract, or code. Where a data file counts as read: code
+# or a test. Dated record assets (docs/acceptance/assets, docs/assets) are defined by their record and not checked.
 DEFINING = ("schemas/*.schema.json", "docs/contracts/*.md", "harness/**/*.py", "tools/**/*.py", "tools/**/*.mjs")
+READERS = ("harness/**/*.py", "tools/**/*.py", "tools/**/*.mjs", "tests/**/*.py", "tests/**/*.mjs", "tests/**/*.cjs",
+           "web/**/*.js")
 
 
-def check_evidence_ids(root: Path) -> list[str]:
-    """Every versioned `schema` a tracked evidence JSON declares is defined: named as a whole token by a schema
-    file, contract or code, or listed as a frozen one-off shape in schemas/evidence-ids.json, whose entries must
-    be exact."""
-    registry = json.loads((root / EVIDENCE_IDS).read_text())["ids"]
-    defining = "\n".join(path.read_text(errors="ignore") for pattern in DEFINING for path in root.glob(pattern)
-                         if "node_modules" not in path.parts)
-    declared: dict[str, list[str]] = {}
-    for base in ("docs", "data"):
-        for path in sorted((root / base).rglob("*.json")):
-            try:
-                schema = json.loads(path.read_text()).get("schema")
-            except (ValueError, AttributeError):
-                continue
-            if isinstance(schema, str) and re.fullmatch(r"[a-z0-9][a-z0-9-]*/[0-9]+", schema):
-                declared.setdefault(schema, []).append(str(path.relative_to(root)))
-    named = lambda schema: re.search(rf"(?<![A-Za-z0-9_/-]){re.escape(schema)}(?![0-9])", defining) is not None
-    errors = [f"{files[0]}: schema {schema!r} is defined nowhere; define it or list it in {EVIDENCE_IDS}"
-              for schema, files in sorted(declared.items()) if schema not in registry and not named(schema)]
-    for schema, entry in sorted(registry.items()):
-        if sorted(entry["files"]) != sorted(declared.get(schema, [])):
-            errors.append(f"{EVIDENCE_IDS}: {schema} lists {entry['files']}, but {declared.get(schema, [])} declare it")
-        errors.extend(f"{EVIDENCE_IDS}: {schema} names a missing record {record!r}"
-                      for record in entry["records"] if not local_reference(root, record))
+def _text(root: Path, patterns: tuple[str, ...]) -> str:
+    return "\n".join(path.read_text(errors="ignore") for pattern in patterns for path in root.glob(pattern)
+                     if "node_modules" not in path.parts)
+
+
+def check_data(root: Path) -> list[str]:
+    """S-EVIDENCE's data rule. Every file under data/ is read by code or a test: its name appears in a reader, or
+    the whole path of a directory holding it below data/ is a string literal there (`'data/x'`, or the joined
+    segments `'data' / 'x'`), as when code lists that directory. Every
+    versioned `schema` a data/ JSON declares is named as a whole token by a schema file, a contract or code."""
+    data = root / "data"
+    if not data.is_dir():
+        return []
+    readers = joined = _text(root, READERS)
+    segment = re.compile(r"""(['"])([^'"\n]*)\1\s*/\s*(['"])([^'"\n]*)\3""")
+    while (step := segment.sub(r"'\2/\4'", joined)) != joined:  # 'data' / 'x' -> 'data/x'
+        joined = step
+    literals = {a or b for a, b in re.findall(r"""'([^'\n]*)'|"([^"\n]*)\"""", joined)}
+    literals |= {value.rstrip("/") for value in literals}
+    defining = _text(root, DEFINING)
+    errors = []
+    for path in sorted(p for p in data.rglob("*") if p.is_file() and p.name != ".DS_Store"):
+        parts = path.relative_to(root).parts
+        if not (parts[-1] in readers or any("/".join(parts[:i]) in literals for i in range(len(parts) - 1, 1, -1))):
+            errors.append(f"{'/'.join(parts)}: no code or test reads it or its directory; a file only a record "
+                          "uses is that record's asset under docs/acceptance/assets/")
+        if path.suffix != ".json":
+            continue
+        try:
+            schema = json.loads(path.read_text()).get("schema")
+        except (ValueError, AttributeError):
+            continue
+        if (isinstance(schema, str) and re.fullmatch(r"[a-z0-9][a-z0-9-]*/[0-9]+", schema)
+                and not re.search(rf"(?<![A-Za-z0-9_/-]){re.escape(schema)}(?![0-9])", defining)):
+            errors.append(f"{'/'.join(parts)}: schema {schema!r} is defined by no schema file, contract or code")
     return errors
 # Current documents outside the root and docs/ trees; checked wherever they exist.
 COMPONENT_DOCUMENTS = ("tools/player_host/README.md",)
@@ -237,12 +250,12 @@ def main(argv: list[str] | None = None) -> int:
         for index in INDEXES:
             (ROOT / index).write_text(render_index(ROOT, index))
         print("Generated the dated-record indexes.")
-    errors = (check_metadata(ROOT) + check_manifests(ROOT) + check_evidence_ids(ROOT) + check_identifiers(ROOT)
+    errors = (check_metadata(ROOT) + check_manifests(ROOT) + check_data(ROOT) + check_identifiers(ROOT)
               + check_indexes(ROOT))
     if errors:
         print("Document checks failed:\n" + "\n".join(errors), file=sys.stderr)
         return 1
-    print("Document metadata, acceptance manifests, evidence schema ids, standard and control identifiers and "
+    print("Document metadata, acceptance manifests, the data rule, standard and control identifiers and "
           "record indexes: passed; content truth was not verified.")
     return 0
 
