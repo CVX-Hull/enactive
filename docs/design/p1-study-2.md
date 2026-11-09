@@ -1,6 +1,6 @@
 ---
 owner: lead
-status: proposed
+status: active
 date: 2026-11-09
 scope: 'Pre-registration of the reshaped ADR 009 P1 offline study (p1-study/2): p1-study/1''s design with one new held-out lineage, lh4 (#522), added to #382 lh1–lh3 behind a re-run power gate (#178)'
 review_trigger: Any change to the data, the new lineage's rules, the power plan, the stages or caps, the arms, the judges or the decision rule
@@ -27,8 +27,9 @@ are unchanged, and a test checks that the Confirmation brief is p1-study/1's.
 
 **Owner decisions (8 and 9 November 2026), carried over:** a descriptive study with effect-size
 thresholds agreed in advance; terra as the curator model; confirmed re-observations as the primary
-probes. **(p1-study/2)** The envelope and the decisions under [Owner decisions](#owner-decisions)
-are open. Nothing here runs until the owner approves this page.
+probes. **(p1-study/2)** The owner approved this page and decided the questions under
+[Owner decisions](#owner-decisions) on 9 November 2026. lh4 still launches only after the owner
+approves #522's frozen package.
 
 The analysis is [`tools/p1_analysis.py`](../../tools/p1_analysis.py) and its tests are
 [`tests/test_p1_analysis.py`](../../tests/test_p1_analysis.py). The plan is in
@@ -68,7 +69,7 @@ otherwise. Before any spend, #522 posts its frozen addendum: source, binary, ada
 tool digests, and the cumulative-spend check.
 
 - **Source.** The current `main` at #522's freeze, in a clean run worktree, with a fresh adapter
-  build and its native check (an owner decision; the alternative is #397's `db38b30`).
+  build and its native check (owner, 9 November: "Current main").
 - **Start.** S1 Evacuee, no aid, the unchanged player guide; a pristine userdir and a fresh store,
   `player-memory-lh4.sqlite3`. #382's continuation prompt, byte for byte.
 - **Route and limits.** #397's: terra, medium effort, at most 400 charged attempts, 7,200 host
@@ -249,8 +250,8 @@ and every later change is a deviation.
   a tripwire that prints only counts and exception class names. A failure stops the study and goes
   to the owner; nobody debugs it on lh4. The owner may then approve one development admission on
   lh4's source (about $6) to reproduce and fix it on development data.
-- **A's punctuation tell,** if the owner approves the fix: a record whose text ends in `!` or `?`
-  gets no added `.` before its data.
+- **A's punctuation tell** (owner, 9 November: "Fix in stage 2"): a record whose text ends in `!`
+  or `?` gets no added `.` before its data.
 
 ## Judges
 
@@ -505,13 +506,12 @@ the second file)** `--scores <rows> --hours <hours>` writes `data/evaluation/p1/
 
 ## Owner decisions
 
-Put to the owner with this page:
-1. **Approve p1-study/2**, the $80 lh4 envelope and the caps above.
-2. **lh4's source:** the current `main` at the freeze (recommended: the player an adoption would
-   migrate) or #397's `db38b30` (closest to the development data).
-3. **#462's recorded choices** (Deviation 8).
-4. **A's punctuation tell:** fix it in stage 2, before the freeze (recommended), or leave it to the
-   arm-guess check.
+Decided by the owner on 9 November 2026:
+1. **p1-study/2, the $80 lh4 envelope and the caps above:** "Approve".
+2. **lh4's source:** "Current main", at #522's freeze commit (the player an adoption would
+   migrate), not #397's `db38b30`.
+3. **#462's recorded choices** (Deviation 8): "Accept all".
+4. **A's punctuation tell:** "Fix in stage 2", before the arms freeze, recorded as a deviation.
 
 ## Limitations
 
