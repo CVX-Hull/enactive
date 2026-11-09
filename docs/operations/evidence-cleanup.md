@@ -31,9 +31,11 @@ names a manifest line cannot hold and two different origins for one subdir; leav
 nothing behind if it fails; and only removes write permission. A sealed study is never
 rewritten; removing one is an owner decision, recorded by setting its `availability` to
 `removed` and its `removed` field to the date and reason. `tools/evidence.py verify` runs in the fast checks (file set,
-total bytes, no write permission) and the full profile (every hash). A sealed study
-missing from a present store is an error; a fresh clone without the store reports each
-study as not present. The store is the only copy: there is no off-machine backup, and
+total bytes, no write permission) and the full profile (every hash). The store lives in
+the main checkout and every worktree reads it there. A sealed study missing from a
+present store is an error. Once a clone has held the store, its local Git configuration
+records `enactive.evidenceStore=expected`, and a missing store is an error too; a fresh
+clone or CI without the store reports each study as not present. The store is the only copy: there is no off-machine backup, and
 raw evidence is not published (owner decisions, 7 November 2026; restic to object
 storage is the researched option if a backup is chosen). Under
 [#420](https://github.com/CVX-Hull/enactive/issues/420) the older evidence (the

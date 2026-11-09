@@ -12,7 +12,10 @@ seal copies a study's files into the store once, refusing names the manifest for
 copy against its source by hash, writes the manifest and then the index entry, and clears write permission; a
 failed seal leaves nothing behind, and a sealed study is never rewritten. verify checks every present study
 against its manifest (file set and total bytes; every hash with --full). A study missing from a present store
-is an error; a store root that is absent altogether (a fresh clone or CI) is reported as not present.
+is an error. The store lives in the main checkout, which every worktree of the clone shares. When the
+command first finds the store or seals a study, it records in the clone's own Git configuration
+(`enactive.evidenceStore=expected`) that the store belongs here; that setting survives the loss of `.runtime`.
+A missing store is then an error. Without it (a fresh clone or CI), the store is reported as not present.
 """
 from __future__ import annotations
 
@@ -23,11 +26,12 @@ import os
 from pathlib import Path
 import re
 import shutil
+import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-STORE = ROOT / '.runtime' / 'evidence'
 MANIFESTS = ROOT / 'data' / 'evidence'
+EXPECTED = ('enactive.evidenceStore', 'expected')  # local Git configuration: this clone holds the store
 SCHEMA = 'evidence-index/1'
 # Never evidence, at any depth: reproducible game builds, credentials, environments and caches, plus locks.
 EXCLUDE_NAMES = frozenset({'Cataclysm.app', 'credentials.json', '.env', '.venv', '__pycache__', 'node_modules',
@@ -39,6 +43,27 @@ LINE = re.compile(r'([0-9a-f]{64})  ([^\x00-\x20\x7f\\][^\x00-\x1f\x7f\\]*)')
 
 class EvidenceError(ValueError):
     pass
+
+
+def _git(root: Path, *arguments: str) -> subprocess.CompletedProcess:
+    return subprocess.run(['git', '-C', str(root), *arguments], capture_output=True, text=True, timeout=30)
+
+
+def default_store(root: Path = ROOT) -> Path:
+    """The main checkout's store: a worktree's common Git directory is the main checkout's `.git`."""
+    common = _git(root, 'rev-parse', '--path-format=absolute', '--git-common-dir')
+    base = Path(common.stdout.strip()).parent if common.returncode == 0 and common.stdout.strip() else root
+    return base / '.runtime' / 'evidence'
+
+
+def store_expected(root: Path = ROOT) -> bool:
+    return _git(root, 'config', '--local', '--get', EXPECTED[0]).stdout.strip() == EXPECTED[1]
+
+
+def expect_store(root: Path = ROOT) -> None:
+    result = _git(root, 'config', '--local', *EXPECTED)
+    if result.returncode:
+        raise EvidenceError(f'could not record that this clone holds the store: {result.stderr.strip()}')
 
 
 def excluded(name: str) -> bool:
@@ -126,7 +151,7 @@ def _read_only(root: Path) -> None:
 
 
 def seal(study: str, sources: list[tuple[str, Path, str]], cited_by: list[str], note: str, *,
-         store: Path = STORE, manifests: Path = MANIFESTS) -> dict:
+         store: Path, manifests: Path = MANIFESTS) -> dict:
     """Copy each source's children (or the single file) into store/study/SUBDIR, then seal it. Each source is
     (SUBDIR, PATH, ORIGIN), where ORIGIN is a repository-relative description such as `.runtime/x@commit`."""
     if not STUDY.fullmatch(study):
@@ -181,11 +206,11 @@ def seal(study: str, sources: list[tuple[str, Path, str]], cited_by: list[str], 
     return entry | {'excluded': skipped}
 
 
-def verify(*, full: bool, store: Path = STORE, manifests: Path = MANIFESTS,
-           root: Path = ROOT) -> tuple[list[str], list[str]]:
+def verify(*, full: bool, store: Path, manifests: Path = MANIFESTS, root: Path = ROOT,
+           expected: bool = False) -> tuple[list[str], list[str]]:
     """(errors, notes). Each indexed study's manifest must match its recorded hash and its citing records must
     exist; a present study must hold exactly the manifest's files with the indexed total bytes and no write
-    permission, and with --full every file's hash."""
+    permission, and with --full every file's hash. With `expected`, an absent store is an error."""
     errors, notes = [], []
     index = read_index(manifests)
     stray = {p.stem for p in manifests.glob('*.sha256')} - set(index['studies'])
@@ -207,7 +232,11 @@ def verify(*, full: bool, store: Path = STORE, manifests: Path = MANIFESTS,
             continue
         target = store / study
         if not store.is_dir():
-            notes.append(f'{study}: store not present on this checkout ({entry["files"]} files)')
+            if expected:
+                errors.append(f'{study}: the evidence store is missing from {store}, although this clone held it '
+                              f'({EXPECTED[0]}); it was the only copy')
+            else:
+                notes.append(f'{study}: store not present on this checkout ({entry["files"]} files)')
             continue
         if not target.is_dir():
             errors.append(f'{study}: sealed evidence is missing from the store (the store is its only copy)')
@@ -255,9 +284,18 @@ def main(argv: list[str] | None = None) -> int:
                 if not separator or not subdir or not at or not origin or not Path(path).exists():
                     raise EvidenceError(f'--from expects SUBDIR=EXISTING_PATH@ORIGIN, got {item!r}')
                 sources.append((subdir, Path(path).resolve(), origin))
-            print(json.dumps(seal(arguments.study, sources, arguments.cited_by, arguments.note), sort_keys=True))
+            entry = seal(arguments.study, sources, arguments.cited_by, arguments.note, store=default_store())
+            expect_store()
+            print(json.dumps(entry, sort_keys=True))
             return 0
-        errors, notes = verify(full=arguments.full)
+        store, expected = default_store(), store_expected()
+        if store.is_dir() and not expected:
+            try:
+                expect_store()
+            except EvidenceError as error:  # e.g. a sandbox that cannot write the clone's configuration
+                print(f'Evidence: note: {error}; the next run with access records it', file=sys.stderr)
+            expected = True
+        errors, notes = verify(full=arguments.full, store=store, expected=expected)
         for note in notes:
             print(f'Evidence: {note}')
         if errors:

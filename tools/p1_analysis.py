@@ -234,14 +234,18 @@ def lower_bound(lineage, n, a, b, seed: int = SEED, draws: int = BOOTSTRAP) -> f
     return float(np.quantile(delta, LOWER_QUANTILE))
 
 
-def primary(a: dict, bs: list[dict]) -> dict:
+def primary(a: dict, bs: list[dict], *, bound_if_needed: bool = False) -> dict:
     """The pre-registered primary criterion over B's curator repeats, against A.
 
     It holds when:
     - the mean pooled difference (B's repeats averaged per unit) is at least EFFECT;
     - every repeat is above A;
     - every lineage with MIN_UNITS or more units is above A on the mean;
-    - the one-sided 97.5% cluster-bootstrap bound of the mean difference is above 0."""
+    - the one-sided 97.5% cluster-bootstrap bound of the mean difference is above 0.
+
+    With `bound_if_needed`, the bootstrap runs only when the other conditions hold (else
+    `lower_bound` is None). The bootstrap draws from its own fixed seed, so skipping it changes
+    no other value; the power simulation uses this, and scoring always computes the bound."""
     shape = [(u['lineage'], u['cluster']) for u in a['units']]
     if any([(u['lineage'], u['cluster']) for u in b['units']] != shape for b in bs):
         raise ScoreError('arms must be scored on the same units')
@@ -253,10 +257,11 @@ def primary(a: dict, bs: list[dict]) -> dict:
         mask = np.array([x == name for x in lineage])
         if n[mask].sum() >= MIN_UNITS:
             per_lineage[name] = float((sb[mask].sum() - sa[mask].sum()) / n[mask].sum())
-    bound = lower_bound(lineage, n, sa, sb)
+    rest = bool(delta >= EFFECT and all(d > 0 for d in repeats) and per_lineage
+                and all(d > 0 for d in per_lineage.values()))
+    bound = lower_bound(lineage, n, sa, sb) if rest or not bound_if_needed else None
     return dict(delta=float(delta), repeats=repeats, per_lineage=per_lineage, lower_bound=bound,
-                holds=bool(delta >= EFFECT and all(d > 0 for d in repeats) and per_lineage
-                           and all(d > 0 for d in per_lineage.values()) and bound > 0))
+                holds=rest and bound > 0)
 
 
 def guards(a: dict, b: dict) -> dict:
@@ -420,7 +425,7 @@ def _power(rng: random.Random, dev: dict, structure, cluster_mean: float | None,
     for key in ('A1', *(f'B{r}' for r in ARMS['B'])):
         rows = [dict(lineage=name, cluster=c, stated=judged(key, latent[(name, c)][key])) for name, c in layout]
         figs[key] = dict(units=rows, recall=sum(r['stated'] for r in rows) / len(rows))
-    return primary(figs['A1'], [figs[f'B{r}'] for r in ARMS['B']])['holds']
+    return primary(figs['A1'], [figs[f'B{r}'] for r in ARMS['B']], bound_if_needed=True)['holds']
 
 
 def simulate(simulations: int = SIMULATIONS, seed: int = SEED, layout: list[tuple[str, str]] | None = None) -> dict:

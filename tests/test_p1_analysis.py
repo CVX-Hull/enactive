@@ -231,7 +231,7 @@ def test_the_tracked_power_simulation_reproduces_and_its_page_figures_match():
     assert gate['passes'] is (gate['no_effect'] <= 0.05 and gate['at_interest'] >= 0.80)
     planning = tracked['probability_of_go'][tracked['assumptions']['planning']]
     page = (p1.ROOT/'docs'/'design'/'p1-study.md').read_text()
-    assert planning is tracked['probability_of_go'][tracked['assumptions']['planning']]
+    assert (gate['no_effect'], gate['at_interest']) == (planning['0.00'], planning[f'{p1.INTEREST:.2f}'])
     for variant in tracked['probability_of_go'].values():     # every row of the page's power table
         row = ' | '.join(f'{variant[d]:.3f}' for d in ('0.00', '0.10', '0.15', '0.20', '0.25', '0.30'))
         assert row in page.replace('**', ''), f'the power table on the page must render power.json: {row}'

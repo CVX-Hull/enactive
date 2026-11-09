@@ -54,9 +54,9 @@ def schema_errors(root: Path, name: str, data: object, label: str) -> list[str]:
             for error in sorted(validator.iter_errors(data), key=lambda e: str(e.json_path))]
 
 
-def check_lifecycle(root: Path, controls: list[dict], as_of: date, *,
-                    warnings: list[str] | None = None) -> list[str]:
-    """Validate records; an explicit warning sink relaxes only calendar expiry."""
+def check_lifecycle(root: Path, controls: list[dict], as_of: date) -> list[str]:
+    """Validate records. A passed next_review date is not an error: controls are reviewed when they
+    fail, are bypassed or cost more than expected, not on a calendar (ADR 010)."""
     errors = []
     by_id = {control["id"]: control for control in controls}
     for control in controls:
@@ -93,9 +93,6 @@ def check_lifecycle(root: Path, controls: list[dict], as_of: date, *,
                 errors.append(f"{identifier}: {status} requires maintenance review")
             if due is None:
                 errors.append(f"{identifier}: {status} requires next_review")
-            elif as_of > due:
-                overdue = f"{identifier}: maintenance overdue since {due} (as of {as_of})"
-                (errors if warnings is None else warnings).append(overdue)
         if review is not None:
             reviewed = date.fromisoformat(review["date"])
             if due is not None:
@@ -108,12 +105,11 @@ def check_lifecycle(root: Path, controls: list[dict], as_of: date, *,
     return errors
 
 
-def check_registry(root: Path, registry: dict, *, as_of: date | None = None,
-                   warnings: list[str] | None = None) -> list[str]:
+def check_registry(root: Path, registry: dict, *, as_of: date | None = None) -> list[str]:
     errors = schema_errors(root, "control-registry", registry, "registry")
     if errors:
         return errors
-    errors += check_lifecycle(root, registry["controls"], as_of or date.today(), warnings=warnings)
+    errors += check_lifecycle(root, registry["controls"], as_of or date.today())
     principles = re.findall(r"^## (P-[A-Z]+)\b", (root / "docs/charter.md").read_text(), re.M)
     if len(principles) != len(set(principles)):
         errors.append("charter: duplicate principle ID")
@@ -186,10 +182,8 @@ def render_map(registry: dict) -> str:
         identifier = standard["id"]
         lines.append(f"| {identifier} | {', '.join(standard['principles'])} | {', '.join(standard['controls'])} |")
     lines += ["", "## Maintenance", "",
-              "Dates are recorded evidence dates. Normal checks evaluate due dates as of the printed",
-              "evaluation date; they do not renew records. Use `--as-of YYYY-MM-DD` to forecast.",
-              "Active and deprecated controls warn after their due date in `tools/check.py --fast`;",
-              "full checks remain strict. Event triggers can require earlier review.", "",
+              "Dates are recorded evidence dates. A passed next review is not a check failure: a",
+              "control is reviewed when it fails, is bypassed or costs more than expected.", "",
               "| Control | Lifecycle | Last exercise | Maintenance review | Effectiveness | Next review |",
               "| --- | --- | --- | --- | --- | --- |"]
     for control in registry["controls"]:
@@ -305,34 +299,13 @@ def check_evidence_ids(root: Path) -> list[str]:
     return errors
 
 
-def parse_as_of(value: str) -> date:
-    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
-        raise argparse.ArgumentTypeError("expected YYYY-MM-DD")
-    try:
-        return date.fromisoformat(value)
-    except ValueError as error:
-        raise argparse.ArgumentTypeError(str(error)) from error
-
-
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--write", action="store_true", help="regenerate docs/controls.md after validation")
-    parser.add_argument("--as-of", type=parse_as_of, default=None,
-                        help="evaluate maintenance as of YYYY-MM-DD (default: today); never renew records")
-    parser.add_argument("--development", action="store_true",
-                        help="warn on calendar-only maintenance expiry; all other checks remain strict")
     args = parser.parse_args(argv)
-    if args.development and (args.write or args.as_of is not None):
-        parser.error("--development cannot be combined with --write or --as-of")
     try:
-        as_of = args.as_of or date.today()
-        print(f"Maintenance evaluated as of {as_of}.", flush=True)
         registry = json.loads((ROOT / "docs/control-registry.json").read_text())
-        warnings = []
-        errors = check_registry(ROOT, registry, as_of=as_of,
-                                warnings=warnings if args.development else None)
-        for warning in warnings:
-            print(f"Governance warning: {warning}", file=sys.stderr, flush=True)
+        errors = check_registry(ROOT, registry)
         errors += check_manifests(ROOT)
         if not args.write and not errors:
             errors += check_generated(ROOT, registry)

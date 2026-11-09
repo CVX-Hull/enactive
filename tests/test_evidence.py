@@ -98,6 +98,8 @@ def test_a_deleted_study_fails_while_an_absent_store_is_only_a_note(tmp_path):
     seal('s1', [('.', run, 'o')], CITED, 'test', **where)
     assert verify(full=True, store=tmp_path / 'no-store', manifests=where['manifests']) == (
         [], ['s1: store not present on this checkout (4 files)'])
+    errors, _ = verify(full=False, store=tmp_path / 'no-store', manifests=where['manifests'], expected=True)
+    assert len(errors) == 1 and 'missing' in errors[0] and 'only copy' in errors[0]
     evidence._writable(where['store'] / 's1')
     (where['store'] / 's1').rename(tmp_path / 'moved')
     assert verify(full=False, **where)[0] == ['s1: sealed evidence is missing from the store (the store is its only copy)']
@@ -144,6 +146,49 @@ def test_a_failed_seal_leaves_nothing_and_bad_inputs_are_refused(tmp_path):
     (where['manifests'] / 'index.json').write_text(json.dumps({'schema': 'evidence-index/0', 'studies': {}}))
     with pytest.raises(EvidenceError, match='unsupported index version'):
         verify(full=False, **where)
+
+
+def git(cwd, *arguments):
+    return subprocess.run(['git', '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
+                           '-c', 'commit.gpgsign=false', '-c', 'core.hooksPath=/dev/null', *arguments],
+                          cwd=cwd, capture_output=True, text=True, check=True).stdout.strip()
+
+
+def test_the_store_and_its_expectation_belong_to_the_main_checkout_of_a_clone(tmp_path):
+    main = tmp_path / 'main'
+    main.mkdir()
+    git(main, 'init', '-q', '-b', 'main')
+    git(main, 'commit', '-q', '--allow-empty', '-m', 'base')
+    git(main, 'worktree', 'add', '-q', '-b', 'leaf', str(tmp_path / 'leaf'))
+    for checkout in (main, tmp_path / 'leaf'):  # a worktree reads the main checkout's store
+        assert evidence.default_store(checkout).resolve() == (main / '.runtime' / 'evidence').resolve()
+        assert not evidence.store_expected(checkout)
+    evidence.expect_store(tmp_path / 'leaf')
+    assert evidence.store_expected(main) and evidence.store_expected(tmp_path / 'leaf')
+    clone = tmp_path / 'clone'
+    git(tmp_path, 'clone', '-q', str(main), str(clone))
+    assert not evidence.store_expected(clone)  # a fresh clone carries no expectation
+    assert evidence.default_store(tmp_path / 'not-a-repo') == tmp_path / 'not-a-repo' / '.runtime' / 'evidence'
+
+
+def test_the_command_records_a_found_store_then_fails_when_it_goes(tmp_path, monkeypatch, capsys):
+    main = tmp_path / 'main'
+    main.mkdir()
+    git(main, 'init', '-q', '-b', 'main')
+    run, _ = sources(tmp_path)
+    manifests = tmp_path / 'manifests'
+    store = main / '.runtime' / 'evidence'
+    seal('s1', [('.', run, 'o')], CITED, 'test', store=store, manifests=manifests)
+    real_expected, real_expect = evidence.store_expected, evidence.expect_store
+    monkeypatch.setattr(evidence, 'default_store', lambda: store)
+    monkeypatch.setattr(evidence, 'store_expected', lambda: real_expected(main))
+    monkeypatch.setattr(evidence, 'expect_store', lambda: real_expect(main))
+    monkeypatch.setattr(evidence, 'verify', lambda **kw: verify(manifests=manifests, **kw))
+    assert evidence.main(['verify']) == 0 and real_expected(main)  # a found store is recorded
+    evidence._writable(store)
+    store.rename(tmp_path / 'lost')
+    assert evidence.main(['verify']) == 1
+    assert 'the evidence store is missing' in capsys.readouterr().err
 
 
 def test_tracked_manifests_match_their_index():
