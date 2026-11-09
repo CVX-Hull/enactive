@@ -35,8 +35,9 @@ no player access, and reads no evaluation records. P0's
   publishes atomically or not at all.
 - **The proxy.** It fails closed: missing usage keeps the whole reservation, and a
   charge above its reservation revokes the session. It also sets one session-affinity
-  header per session. A paid check found that this alone does not raise the cached share
-  past the static prompt ([#489 record](../acceptance/2026-11-08-context-stability-489.md)).
+  header per session. Prompt caching depends instead on the host keeping each budget note
+  where it was first sent: a note rewritten at the tail kept the cached share at about 3%
+  ([#489 record](../acceptance/2026-11-08-context-stability-489.md#follow-up-the-cause-found)).
 - **Knowledge and records.** Each run starts its own knowledge repository. Session
   records are kept, and workspaces are deleted.
 - **Ownership.** The lead owns this code until P1 assigns it.

@@ -692,9 +692,14 @@ The P1 go/no-go is decided on that pre-registration.
 1. **Context stability** ([record](../acceptance/2026-11-08-context-stability-489.md)).
    - **Done:** both hosts' requests are byte-stable apart from their tails, proven without
      spend.
-   - **Not fixed: prompt caching.** One paid curator session sent a constant affinity value
-     and still cached only 3.3% of prompt tokens: the static prompt, never the history.
-     Affinity is refuted as the whole cause, and the next checks are recorded.
+   - **Prompt caching: found and fixed in a follow-up.**
+     - **The first paid check.** A session sent a constant affinity value and still cached
+       only 3.3% of prompt tokens: the static prompt, never the history.
+     - **The cause.** Replays of that session's real request bodies found it. The transient
+       budget note at the tail, rewritten on every request, stopped the provider from
+       reusing any earlier request.
+     - **The fix.** Notes and notices now stay in the history where they were first sent.
+       In replays, each request then read the whole previous request from the cache.
 2. **Probe validation** ([record](../acceptance/2026-11-08-probe-validation-490.md)).
    - **Both pre-registered bars were missed:** fact labels 0.51 and queries 0.41.
    - **After a content-matched correction,** the owner made confirmed re-observations P1's

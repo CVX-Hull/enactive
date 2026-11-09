@@ -81,8 +81,11 @@ byte for byte. The host therefore keeps these rules, which the offline
 request-serialization tests prove for consecutive requests, a retried request, a
 handoff successor and a new admission's first actor, with no provider call:
 
-- **Prefix.** A request's messages, minus its transient tail notice, begin with the
-  previous request's messages, minus its own. The one earlier rewrite is image
+- **Prefix.** A request's messages begin with all of the previous request's messages,
+  its notices included. The provider's cache reuses a request only when a later one
+  extends it, so a tail that changes on every request is never reused
+  ([#489 record](../acceptance/2026-11-08-context-stability-489.md#follow-up-the-cause-found)).
+  The one earlier rewrite is image
   eviction: whole blocks of the oldest pixels become omission markers, each image
   once, and a marker never changes afterwards. Every other request field (tool table,
   limits, routing) is identical.
@@ -101,8 +104,10 @@ handoff successor and a new admission's first actor, with no provider call:
   one (the adapter reference names them).
 - **Omission markers** carry the omitted frame's `source_id` (when its tool result
   has one) and name `player_source` as the way to read it again.
-- **Tail notices** are appended to one request only, never stored, and stay on
-  every later request once their threshold is passed. Each warns before a stop the
+- **Notices** go at the end of the request in which they are first sent, and then stay
+  in the history there unchanged. A retried request reuses the notice it was first
+  sent with. Once a threshold is passed, every later request adds a new notice.
+  Each warns before a stop the
   host itself enforces, naming how to wrap up: the context notice (latched once the
   `context_reserve_tokens` line is crossed, with the tokens of room left before the
   stop), the request notice (when `requestWarningAt(max_requests)` requests remain,

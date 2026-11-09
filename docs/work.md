@@ -77,7 +77,8 @@ P1, the curator against the simpler working-set arm in offline replay, is decide
 that pre-registration.
 
 **P1.0 is complete (8 November 2026); the outcome is in ADR 009.**
-- **Context stability.** Requests are stable, but prompt caching is still unfixed.
+- **Context stability.** Requests are stable. Prompt caching was fixed in a follow-up: notes
+  stay in the history where they were first sent.
 - **Probe validation.** Confirmed re-observations are P1's primary probes.
 - **The pre-registration** is [p1-study](design/p1-study.md). Its gate before spend passes
   narrowly, after its effect of interest was raised from 0.25 to 0.30, and the study detects

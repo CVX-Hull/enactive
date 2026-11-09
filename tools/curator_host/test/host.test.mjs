@@ -160,8 +160,9 @@ test('every request ends with a budget note, and past four fifths reading tools 
   const lists = events.filter(event => event.type === 'tool-call' && event.name === 'list_dir');
   assert.equal(lists.at(-1).ok, false);
   assert.match(lists.at(-1).error, /budget is nearly spent/);
-  // The note is transient: no earlier note survives in a later request's history.
-  assert.ok(payloads.at(-1).body.messages.slice(0, -1).every(m => !/^Budget:/.test(String(m.content?.[0]?.text ?? m.content ?? ''))));
+  // Every earlier note stays in the history, unchanged, where it was first sent (#489's cache finding).
+  const kept = payloads.at(-1).body.messages.filter(m => /^Budget:/.test(String(m.content?.[0]?.text ?? m.content ?? '')));
+  assert.deepEqual(kept.map(m => JSON.stringify(m)), notes.map(m => JSON.stringify(m)));
 });
 
 test('the dollar budget moves the phase too', async () => {
@@ -225,8 +226,8 @@ const noteOf = body => body.messages.at(-1);
 const MARKED = '\n[Earlier frame image omitted';
 const bodyText = message => typeof message.content === 'string' ? message.content : (message.content ?? []).map(part => part.text ?? '').join('');
 const isCarrier = message => message.role === 'user' && Array.isArray(message.content) && message.content[0]?.text === 'Attached image(s) from tool result:';
-/** Messages without the tail note, the pixel carriers and the omission markers: what eviction never touches. */
-const skeleton = body => body.messages.slice(0, -1).filter(message => !isCarrier(message)).map(message => JSON.stringify(
+/** Messages, notes included, without the pixel carriers and the omission markers: what eviction never touches. */
+const skeleton = body => body.messages.filter(message => !isCarrier(message)).map(message => JSON.stringify(
   message.role === 'tool' && typeof message.content === 'string' && message.content.includes(MARKED)
     ? { ...message, content: message.content.slice(0, message.content.indexOf(MARKED)) } : message));
 const markersOf = body => new Map(body.messages.filter(message => message.role === 'tool' && bodyText(message).includes(MARKED))
@@ -240,9 +241,11 @@ function assertStable(payloads) {
     assert.match(bodyText(noteOf(body)), /^Budget: /, 'the transient note is the tail');
     if (index === 0) continue;
     const before = skeleton(payloads[index - 1].body), now = skeleton(body);
+    // The whole previous request, its note included, is a byte-identical prefix: the provider reuses
+    // a cached request only when a later one extends it (#489), so no note is ever rewritten.
+    if (JSON.stringify(body) === JSON.stringify(payloads[index - 1].body)) continue;   // a retry resends the same body
     assert.deepEqual(now.slice(0, before.length), before, `request ${index + 1}: previous request is a byte-identical prefix`);
     for (const [id, marker] of markersOf(payloads[index - 1].body)) assert.equal(markersOf(body).get(id), marker, 'a marker never changes once written');
-    assert.ok(body.messages.slice(0, -1).every(message => !/^Budget: /.test(bodyText(message))), 'no note is stored in history');
   }
 }
 

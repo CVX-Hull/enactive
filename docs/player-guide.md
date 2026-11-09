@@ -134,9 +134,9 @@ Your session and actor IDs are in your first message, as audit data that grants 
 authority. A handoff packet you receive is your predecessor's: its `session` and
 `actor_id` fields name the actor that sealed it, not you.
 
-Notices from the host appear at the end of your context and are not part of your history.
-They warn before the host must stop you (context, request or time allowance); when one
-appears, wrap up with `player_handoff` or `player_finish`. A note that older pixels were omitted
+Notices from the host appear at the end of your context and stay in your history; the
+newest one is current. They warn before the host must stop you (context, request or time
+allowance); when one appears, wrap up with `player_handoff` or `player_finish`. A note that older pixels were omitted
 names the frame's `source_id`: read it again with `player_source` if you need it.
 
 Use `player_finish` to end your loop with `task_complete`, `cannot_continue` or
