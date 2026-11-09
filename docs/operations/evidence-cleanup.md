@@ -67,8 +67,8 @@ Never delete saves as routine cleanup. For user-directed stale-world cleanup,
 stop the owned game/controller first, identify closed test/failed worlds and
 preserve accepted campaign saves and current reusable checkpoints. Prefer an
 ordinary project-local archive outside `.runtime/user/save/`; verify its contents
-before removing the selected active directories and record the archive location
-and retained worlds in the environment ledger. Keep campaign evidence separately;
+before removing the selected active directories, and record the archive location and
+retained worlds in a dated retirement record. Keep campaign evidence separately;
 retiring a save does not renew a failed mission or establish a normal ending.
 Preserve manifests before removing owned build directories/downloads. Identify
 the exact path from the build manifest and verify its checkout ownership marker;

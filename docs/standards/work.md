@@ -57,8 +57,7 @@ Before merging where issue completion awaits merged-main validation, inspect
 GitHub’s `closingIssuesReferences` and require none under the
 [project workflow](../project-management.md). Negating a closing phrase in prose does
 not prevent automatic closure. Update Issue/Project only after actual validation.
-Before a significant change, write a short [review brief](../changes/001-engineering-system.md)
-covering problem, visible behavior, alternatives, maintenance/reversibility,
+Before a significant change, write a short review brief in its issue or PR covering problem, visible behavior, alternatives, maintenance/reversibility,
 evidence/uncertainty and decision needed. Routine fixes need only a cohesive diff
 and relevant checks. New boundary/guarantee/dependency changes need design review;
 changes to user constraints or substantial new commitments require user input.

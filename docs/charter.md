@@ -24,7 +24,8 @@ User constraints: windowed operation; project-local new dependencies, data and
 caches or explicitly recorded temporary builds; preserve the global environment;
 version control; authentic engine behavior; no hidden state or save editing to
 win a demonstration. Historical environment exceptions remain in the
-[environment ledger](environment.md); they are not precedent for new changes.
+[environment history](acceptance/2026-11-08-environment-history.md); they are not precedent
+for new changes.
 
 Current product constraint: designs must apply across CDDA-class games, not depend
 on this specific Cataclysm implementation. The working scope is turn-based
