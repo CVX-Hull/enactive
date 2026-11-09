@@ -14,8 +14,10 @@ states. Records are dated evidence, not current instructions; the
 
 | Date | Record | Scope | Status |
 | --- | --- | --- | --- |
+| 2026-11-08 | [Retirement of stale resources and second copies, 8 November 2026](2026-11-08-retirement.md) | Removal of stale worktrees, merged branches, second copies of sealed evidence and unused downloads on 8 November 2026, with what was archived first (ADR 010, #501) | historical |
 | 2026-11-08 | [Probe validation (#490)](2026-11-08-probe-validation-490.md) | Blinded probe recall checked against independently found re-observations on #397 and the #372 sample, query probes written and re-checked, a content-matched correction, and the owner decision on P1 probes (#490) | historical |
 | 2026-11-08 | [Probe baseline from sealed traces (#449)](2026-11-08-probe-baseline-449.md) | Probe suite and baseline carry and rediscovery rates from the sealed #397 lineage and a seeded #372 sample, with inter-rater agreement and annotation cost (#449) | historical |
+| 2026-11-08 | [Environment history (moved from the environment page)](2026-11-08-environment-history.md) | Environment exceptions and evidence navigation that the environment page held until 8 November 2026, moved here unchanged when ADR 010 kept current pages free of dated narrative | historical |
 | 2026-11-08 | [Curator shadow sessions (#454)](2026-11-08-curator-shadow-454.md) | Curator shadow sessions over the sealed #397 lineage and the #372 sample: cost, lag, cold start and gate pass rate for one Pi-based host with two OpenRouter models (#454) | historical |
 | 2026-11-08 | [Context stability and clarity (#489)](2026-11-08-context-stability-489.md) | Request stability and clarity for the actor and curator hosts, the no-spend serialization proof, and one paid curator session checking whether session affinity raises the cached share (#489) | historical |
 | 2026-11-08 | [ADR 009 P0: baseline, workbench and frame (#446)](2026-11-08-adr009-p0.md) | ADR 009 P0 (#446): evidence for each leaf and the classification of the P0 adoption condition, before the owner decides P1 | historical |

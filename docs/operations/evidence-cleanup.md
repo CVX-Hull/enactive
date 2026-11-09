@@ -15,7 +15,7 @@ Keep the full live journal, label the snapshot/cutoff, and verify its bytes/hash
 not truncate a journal or overwrite a historical hash to hide later events. A hash
 identifies bytes; it does not prove the depicted behavior without inspection.
 
-**Sealed evidence store (owner decision, 7 November 2026).** Raw run evidence that a
+**Sealed evidence store.** Raw run evidence that a
 dated record cites (packages, frames, traces, evaluator records, memory stores,
 userdirs) is sealed read-only under `.runtime/evidence/<study>/` before the worktree or
 directory that holds it is removed. `python -m tools.evidence seal STUDY --from
@@ -35,22 +35,19 @@ total bytes, no write permission) and the full profile (every hash). The store l
 the main checkout and every worktree reads it there. A sealed study missing from a
 present store is an error. Once a clone has held the store, its local Git configuration
 records `enactive.evidenceStore=expected`, and a missing store is an error too; a fresh
-clone or CI without the store reports each study as not present. The store is the only copy: there is no off-machine backup, and
-raw evidence is not published (owner decisions, 7 November 2026; restic to object
-storage is the researched option if a backup is chosen). Under
-[#420](https://github.com/CVX-Hull/enactive/issues/420) the older evidence (the
-17–18 October rounds, the #164 runs and candidate research of 26 October to 5 November, and the
-#372/#382 operator files) was sealed the same way. Source checkouts inside those folders
-are reproducible from the commit each study's note names, so only their `.runtime`
-evidence was copied; symbolic links are never copied. When a whole folder is sealed or
-reproducible, removing the original is an owner decision. On 7 November 2026 the
-originals `.runtime/iteration164`, the legacy items under `.runtime/evidence` and
-`.runtime/dev-loop` were removed on the owner's decision, after a final `verify --full`.
-Their tracked provenance is the studies' `sources` and notes. The same day, under
-[#425](https://github.com/CVX-Hull/enactive/issues/425), the owner retired all other old
-run output under `.runtime`, cited or not, without sealing it; the
-[retirement record](../acceptance/2026-11-07-runtime-retirement.md) lists every entry, and
-[the environment](../environment.md) lists what remains.
+clone or CI without the store reports each study as not present. The store is the only
+copy: there is no off-machine backup, and raw evidence is not published (owner decisions
+of 7 November 2026, kept by [ADR 010](../decisions/010-streamlined-delivery.md); restic to
+object storage is the researched option if a backup is chosen). A source checkout inside
+a sealed folder is reproducible from the commit the study's note names, so only its
+`.runtime` evidence is copied; symbolic links are never copied.
+
+**Removing an original.** Once every file of an original has been found, by path and
+hash, in a sealed study and `verify --full` passes, the original is a second copy and is
+removed; the study's `sources` and note stay its tracked provenance. Removal of anything
+not held elsewhere is an owner decision. Each removal is listed in a dated retirement
+record in the [acceptance index](../acceptance/index.md); [the environment](../environment.md)
+lists what remains.
 
 Retain curated acceptance artifacts and failure evidence until superseded by
 reviewed equivalent evidence or explicitly selected for removal; if removed,

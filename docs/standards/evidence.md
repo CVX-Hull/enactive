@@ -25,9 +25,10 @@ the original evidence. Development-run quantities go in the tracked
 [run ledger and metrics snapshot](../contracts/evaluation.md#tracked-run-ledger-and-metrics-snapshot),
 and pages render or check against them rather than copy them. Raw run evidence a
 record cites is sealed read-only with tracked hash manifests before the worktree or
-directory holding it is removed ([evidence store](../operations/evidence-cleanup.md)). A tracked evidence JSON
-declares a schema that a schema file, contract or code defines, or one listed as a
-frozen one-off shape in `schemas/evidence-ids.json`; the document check rejects any other.
+directory holding it is removed ([evidence store](../operations/evidence-cleanup.md)). A tracked file under `data/` is read by code or a test, which names it or lists its
+directory; a `schema` id it declares is defined by a schema file, a contract or code. A file
+only a dated record uses is that record's asset under `docs/acceptance/assets/`, defined by
+its record. The document check rejects any other ([ADR 010](../decisions/010-streamlined-delivery.md)).
 
 A hypothesis test or comparison whose result decides a claim, as distinct from
 ordinary development play, records its frozen inputs, analysis and decision
