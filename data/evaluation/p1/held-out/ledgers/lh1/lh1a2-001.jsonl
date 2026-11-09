@@ -1,0 +1,59 @@
+{"type":"carry","fact":"F1","boundary":"lh1a1-002>lh1a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F2","boundary":"lh1a1-002>lh1a2-001","carried":true,"where":"report"}
+{"type":"carry","fact":"F3","boundary":"lh1a1-002>lh1a2-001","carried":true,"where":"report"}
+{"type":"carry","fact":"F4","boundary":"lh1a1-002>lh1a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F5","boundary":"lh1a1-002>lh1a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F6","boundary":"lh1a1-002>lh1a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F7","boundary":"lh1a1-002>lh1a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F8","boundary":"lh1a1-002>lh1a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F9","boundary":"lh1a1-002>lh1a2-001","carried":true,"where":"report"}
+{"type":"carry","fact":"F10","boundary":"lh1a1-002>lh1a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F11","boundary":"lh1a1-002>lh1a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F12","boundary":"lh1a1-002>lh1a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F13","boundary":"lh1a1-002>lh1a2-001","carried":true,"where":"report"}
+{"type":"carry","fact":"F14","boundary":"lh1a1-002>lh1a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F15","boundary":"lh1a1-002>lh1a2-001","carried":true,"where":"report"}
+{"type":"carry","fact":"F16","boundary":"lh1a1-002>lh1a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F17","boundary":"lh1a1-002>lh1a2-001","carried":true,"where":"report"}
+{"type":"carry","fact":"F18","boundary":"lh1a1-002>lh1a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F19","boundary":"lh1a1-002>lh1a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F20","boundary":"lh1a1-002>lh1a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F21","boundary":"lh1a1-002>lh1a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F22","boundary":"lh1a1-002>lh1a2-001","carried":true,"where":"report"}
+{"type":"carry","fact":"F23","boundary":"lh1a1-002>lh1a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F24","boundary":"lh1a1-002>lh1a2-001","carried":true,"where":"report"}
+{"type":"carry","fact":"F25","boundary":"lh1a1-002>lh1a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F26","boundary":"lh1a1-002>lh1a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F27","boundary":"lh1a1-002>lh1a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F28","boundary":"lh1a1-002>lh1a2-001","carried":true,"where":"report"}
+{"type":"carry","fact":"F29","boundary":"lh1a1-002>lh1a2-001","carried":true,"where":"report"}
+{"type":"carry","fact":"F30","boundary":"lh1a1-002>lh1a2-001","carried":true,"where":"report"}
+{"type":"fact","id":"F31","statement":"Standing water stream runs a short walk north-northeast of the shelter field; raw water can be consumed or poured into a container from the flowing shallow water","category":"resource","observed":"41c541423f989262b7eb3427340961fb-2656","stored":null}
+{"type":"fact","id":"F32","statement":"Glass jars lie near the stream: a 3 L glass jar about 22 tiles southeast and 0.5 L glass jars about 30 tiles east of the start spot, plus field stones, sticks, long sticks, tinder and a syringe","category":"item","observed":"41c541423f989262b7eb3427340961fb-2729","stored":null}
+{"type":"fact","id":"F33","statement":"Clean water can be crafted from 1 untreated water using a boiling tool or a nearby fire; batches of up to 12 are possible and 12 portions take about 51 minutes, 1 portion about 5 minutes","category":"procedure","observed":"41c541423f989262b7eb3427340961fb-3937","stored":null}
+{"type":"fact","id":"F34","statement":"A small fire was lit on the pavement in front of the shelter door using burnt small cardboard boxes as fuel; it serves as the nearby fire for boiling water","category":"place","observed":"41c541423f989262b7eb3427340961fb-4787","stored":null}
+{"type":"fact","id":"F35","statement":"The player knows the digging stick recipe and crafted digging sticks (digging 2 tool) from memory","category":"item","observed":"41c541423f989262b7eb3427340961fb-1783","stored":null}
+{"type":"fact","id":"F36","statement":"A clay pot needs 5 lumps of clay, a nearby fire or kiln and a water item; fabrication 2 and missing Pottery proficiency give about 57% minor failure and it cannot be crafted in the dark","category":"procedure","observed":"41c541423f989262b7eb3427340961fb-590","stored":null}
+{"type":"fact","id":"F37","statement":"Clay is obtained through the Extract Clay or mound-of-clay constructions, which need a tool with digging 2 or more","category":"procedure","observed":"41c541423f989262b7eb3427340961fb-1467","stored":null}
+{"type":"fact","id":"F38","statement":"Items on the shelter floor near the door include 2 planks, nut and bolts (3), scrap metal (17) and 3 splintered wood","category":"resource","observed":"41c541423f989262b7eb3427340961fb-1705","stored":null}
+{"type":"fact","id":"F39","statement":"Two portions of clean water were boiled over the pavement fire and poured into the 0.5 L glass jar; the 3 L glass jar was filled with 12 portions of untreated stream water","category":"item","observed":"41c541423f989262b7eb3427340961fb-4239","stored":null}
+{"type":"fact","id":"F40","statement":"After starting the 12-portion clean-water batch at the fire the game stopped presenting new frames, and the batch's completion is not established","category":"other","observed":"41c541423f989262b7eb3427340961fb-5382","stored":null}
+{"type":"event","fact":"F2","event":"used","frame":"41c541423f989262b7eb3427340961fb-19","note":"loaded Morgan Reed from the Stirling City world in the load menu"}
+{"type":"event","fact":"F30","event":"used","frame":"41c541423f989262b7eb3427340961fb-19","note":"loaded the saved Stirling City character from the load menu"}
+{"type":"event","fact":"F17","event":"used","frame":"41c541423f989262b7eb3427340961fb-207","note":"character wields the quarterstaff in the field"}
+{"type":"event","fact":"F22","event":"needed","frame":"41c541423f989262b7eb3427340961fb-207","note":"zombies spotted 60 tiles east and safe mode warning; chose to ignore them"}
+{"type":"event","fact":"F22","event":"needed","frame":"41c541423f989262b7eb3427340961fb-505","note":"checked monster list: fat zombie 33 E, zombie 59 N, before deciding where to go"}
+{"type":"event","fact":"F15","event":"used","frame":"41c541423f989262b7eb3427340961fb-590","note":"searched clay pot recipe for a cooking container as planned"}
+{"type":"event","fact":"F18","event":"used","frame":"41c541423f989262b7eb3427340961fb-717","note":"searched hammer recipes for a tool with hammering to make a metal pot"}
+{"type":"event","fact":"F29","event":"needed","frame":"41c541423f989262b7eb3427340961fb-884","note":"viewed the overmap with Eustis to the north; went to the stream instead of scouting the town"}
+{"type":"event","fact":"F27","event":"rediscovered","frame":"41c541423f989262b7eb3427340961fb-1217","note":"Racheal Burris blocked the way inside the shelter"}
+{"type":"event","fact":"F9","event":"used","frame":"41c541423f989262b7eb3427340961fb-2129","note":"ate a protein ration; 3 left in the bag"}
+{"type":"event","fact":"F8","event":"used","frame":"41c541423f989262b7eb3427340961fb-2129","note":"drank clean water from the carried supply"}
+{"type":"event","fact":"F13","event":"used","frame":"41c541423f989262b7eb3427340961fb-2656","note":"walked from the shelter across the field to the stream"}
+{"type":"event","fact":"F28","event":"needed","frame":"41c541423f989262b7eb3427340961fb-3937","note":"clean water decision: found boiling at a nearby fire as an alternative to the purifier"}
+{"type":"event","fact":"F21","event":"invalidated","frame":"41c541423f989262b7eb3427340961fb-3937","note":"clean water recipe also accepts a boiling tool or nearby fire, not only a purifier"}
+{"type":"event","fact":"F20","event":"used","frame":"41c541423f989262b7eb3427340961fb-3873","note":"lighter offered as a fire starter in the use menu; fire later lit"}
+{"type":"event","fact":"F28","event":"invalidated","frame":"41c541423f989262b7eb3427340961fb-4583","note":"crafted clean water from memory by boiling, so sustainable clean water without a purifier is possible"}
+{"type":"event","fact":"F17","event":"used","frame":"41c541423f989262b7eb3427340961fb-5084","note":"re-wielded the quarterstaff after dropping the plank"}
+{"type":"event","fact":"F3","event":"needed","frame":"41c541423f989262b7eb3427340961fb-5084","note":"multidrop shows the carried 3 small cardboard boxes of protein rations; the cupboard stock was not revisited"}
+{"type":"end","frames_viewed":41}

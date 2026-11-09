@@ -688,6 +688,10 @@ running system.
   detects only large effects. Caching is fixed (the context-stability record has the
   cause and fix). P1 then proceeds through #178's held-out probes, a power re-check on
   their actual clusters and the pilot, each under the pre-registration's stop rules.
+- **P1 stopped at the gate (9 November 2026).** The held-out power re-check failed: #382's
+  lineages give 27 scoring units, far fewer than planned. The owner stopped P1 before any
+  spend, and P1 returns to the owner for reshaping
+  ([record](../acceptance/2026-11-09-p1-gate-178.md)).
 
 Every phase replaces its contracts and stores in one migration
 (`player-memory/2` → `/3`, `player-record/1` and `player-program/2` → their

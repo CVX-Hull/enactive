@@ -1,0 +1,44 @@
+{"type":"carry","fact":"F1","boundary":"lh1a1-001>lh1a1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F2","boundary":"lh1a1-001>lh1a1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F3","boundary":"lh1a1-001>lh1a1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F4","boundary":"lh1a1-001>lh1a1-002","carried":false,"where":null}
+{"type":"carry","fact":"F5","boundary":"lh1a1-001>lh1a1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F6","boundary":"lh1a1-001>lh1a1-002","carried":false,"where":null}
+{"type":"carry","fact":"F7","boundary":"lh1a1-001>lh1a1-002","carried":false,"where":null}
+{"type":"carry","fact":"F8","boundary":"lh1a1-001>lh1a1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F9","boundary":"lh1a1-001>lh1a1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F10","boundary":"lh1a1-001>lh1a1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F11","boundary":"lh1a1-001>lh1a1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F12","boundary":"lh1a1-001>lh1a1-002","carried":false,"where":null}
+{"type":"carry","fact":"F13","boundary":"lh1a1-001>lh1a1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F14","boundary":"lh1a1-001>lh1a1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F15","boundary":"lh1a1-001>lh1a1-002","carried":true,"where":"packet"}
+{"type":"fact","id":"F16","statement":"A dirt patch in the forest a few minutes' walk from the shelter field holds about four long sticks, 19 handfuls of leaves, splintered wood and 5 twigs; a long stick was taken and wielded","category":"resource","observed":"d57d4a91bb624192f18b46cf2e882e9b-3162","stored":null}
+{"type":"fact","id":"F17","statement":"The player crafted a quarterstaff from memory inside the shelter (fabrication reached 2) and now wields it","category":"item","observed":"d57d4a91bb624192f18b46cf2e882e9b-3967","stored":null}
+{"type":"fact","id":"F18","statement":"A cooking pot (aluminum pot) recipe needs a tool with hammering 3, a heat source such as a fire or lighter-fed cooker, and 1 aluminum chunk or 5 scrap aluminum; it cannot be crafted in the dark","category":"procedure","observed":"d57d4a91bb624192f18b46cf2e882e9b-4245","stored":null}
+{"type":"fact","id":"F19","statement":"The shelter door-side lockers hold an emergency jacket, whistle, FEMA pamphlet, flashlight, clean water and a sealed plastic bottle with 2 clean water; the sealed bottle was taken","category":"resource","observed":"d57d4a91bb624192f18b46cf2e882e9b-4386","stored":null}
+{"type":"fact","id":"F20","statement":"The player picked up a lighter with 72 of 100 butane charges near the shelter entrance","category":"item","observed":"d57d4a91bb624192f18b46cf2e882e9b-4767","stored":null}
+{"type":"fact","id":"F21","statement":"Crafting clean water from 1 water needs a charcoal water purifier (12 charges), large charcoal water purifier or water purifier","category":"procedure","observed":"d57d4a91bb624192f18b46cf2e882e9b-4502","stored":null}
+{"type":"fact","id":"F22","statement":"A mixed zombie group (fat, firefighter, zapper, swimmer, decayed) is 46-60 tiles to the northeast and east of the shelter field; a panicked person was bitten by zombies near the shelter door","category":"hazard","observed":"d57d4a91bb624192f18b46cf2e882e9b-4930","stored":null}
+{"type":"fact","id":"F23","statement":"A rotten human corpse with scattered clothes (bra, dress, gloves, fedora) lies about 48 tiles west of the shelter field, with other loose items nearby","category":"place","observed":"d57d4a91bb624192f18b46cf2e882e9b-5316","stored":null}
+{"type":"fact","id":"F24","statement":"A one-hour melee (beginner) practice craft with any weapon raises melee to 1 and teaches the Brawling style; the player did this","category":"self","observed":"d57d4a91bb624192f18b46cf2e882e9b-5752","stored":null}
+{"type":"fact","id":"F25","statement":"The shelter window curtains and rod can be torn down, giving sheets that disassemble into 11 cotton sheets each","category":"resource","observed":"d57d4a91bb624192f18b46cf2e882e9b-7000","stored":null}
+{"type":"fact","id":"F26","statement":"Crafting a bindle from cotton sheets and a stick and disassembling it yields 1 stick and 1 cotton sheet back; the player repeated this several times to pass time","category":"procedure","observed":"d57d4a91bb624192f18b46cf2e882e9b-8315","stored":null}
+{"type":"fact","id":"F27","statement":"NPC Racheal Burris in the shelter is neutral, ignores the player and wields a 4-round semi-auto hunting shotgun","category":"other","observed":"d57d4a91bb624192f18b46cf2e882e9b-10508","stored":null}
+{"type":"fact","id":"F28","statement":"The charcoal water purifier recipe requires a gallon jug, cotton patches and charcoal, so sustainable clean water is unresolved","category":"procedure","observed":"text","stored":null}
+{"type":"fact","id":"F29","statement":"Eustis town lies north-northeast of the field the shelter sits in; the player plans to scout it for a cooking container or gallon jug","category":"plan","observed":"d57d4a91bb624192f18b46cf2e882e9b-11645","stored":null}
+{"type":"fact","id":"F30","statement":"The game was saved and quit; Stirling City (1) appears in the load menu next to Diamond Bluff (1)","category":"other","observed":"d57d4a91bb624192f18b46cf2e882e9b-12142","stored":null}
+{"type":"event","fact":"F14","event":"needed","frame":"d57d4a91bb624192f18b46cf2e882e9b-2509","note":"two fat zombies still reported 60 tiles NW; decided to ignore and continue west"}
+{"type":"event","fact":"F13","event":"used","frame":"d57d4a91bb624192f18b46cf2e882e9b-3967","note":"returned east across field and road to the shelter after collecting a long stick"}
+{"type":"event","fact":"F11","event":"used","frame":"d57d4a91bb624192f18b46cf2e882e9b-3967","note":"crafted the quarterstaff from the long stick using the pocket knife"}
+{"type":"event","fact":"F15","event":"used","frame":"d57d4a91bb624192f18b46cf2e882e9b-3967","note":"plan step of getting a stick and making a quarterstaff completed"}
+{"type":"event","fact":"F15","event":"used","frame":"d57d4a91bb624192f18b46cf2e882e9b-4245","note":"searched pot recipes for a cooking container as planned"}
+{"type":"event","fact":"F6","event":"needed","frame":"d57d4a91bb624192f18b46cf2e882e9b-4502","note":"clean water recipe check; basement toilet water is not clean and needs purification"}
+{"type":"event","fact":"F5","event":"needed","frame":"d57d4a91bb624192f18b46cf2e882e9b-10508","note":"Racheal Burris examined; the inhaler errand was relevant but not pursued"}
+{"type":"event","fact":"F3","event":"rediscovered","frame":"d57d4a91bb624192f18b46cf2e882e9b-8228","note":"inventory view shows two small cardboard boxes of 21 protein rations each beside the cupboard, versus the record's estimate of about 18"}
+{"type":"event","fact":"F9","event":"used","frame":"d57d4a91bb624192f18b46cf2e882e9b-9773","note":"ate a protein ration from the bag; 4 remain"}
+{"type":"event","fact":"F8","event":"used","frame":"d57d4a91bb624192f18b46cf2e882e9b-9773","note":"drank clean water from the starting supply"}
+{"type":"event","fact":"F22","event":"needed","frame":"d57d4a91bb624192f18b46cf2e882e9b-11901","note":"zombies spotted 60 tiles east; safe mode warning ignored and the player stays near the shelter"}
+{"type":"event","fact":"F26","event":"used","frame":"d57d4a91bb624192f18b46cf2e882e9b-8659","note":"repeating bindle disassembly to pass time"}
+{"type":"event","fact":"F25","event":"used","frame":"d57d4a91bb624192f18b46cf2e882e9b-9784","note":"tore down the curtains and rod to gain sheets"}
+{"type":"end","frames_viewed":61}

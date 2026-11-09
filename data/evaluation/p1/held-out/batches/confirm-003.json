@@ -1,0 +1,81 @@
+{
+ "brief": "You compare pairs of screenshots for a study. Read only the file named here and the image files it lists; do not open any other file, run any command other than viewing files, or read documents or issues. The file [batch] lists pairs, each with an `id` and two image paths `A` and `B`. View both images of every pair. For each pair decide: do A and B show the same specific information — the same list of entries, the same container contents, the same message or the same text panel — not merely the same kind of screen? Small differences (a cursor, a highlighted row, a clock, a status value) do not matter. If they do, is that information durable — not an empty list, a search or help prompt, or a loading screen? Output only JSON Lines, one per pair in the given order: {\"id\":\"<id>\",\"same\":true|false,\"informative\":true|false,\"what\":\"<one line>\"}.",
+ "pairs": [
+  {
+   "A": "372-382-dev-loop/computer-sessions/lh1a3/sources/84b0bffaea13006586bde91453b58446-5539.png",
+   "B": "372-382-dev-loop/computer-sessions/lh1a2/sources/41c541423f989262b7eb3427340961fb-2555.png",
+   "id": "lh1-p0031"
+  },
+  {
+   "A": "372-382-dev-loop/computer-sessions/lh1a2/sources/41c541423f989262b7eb3427340961fb-4328.png",
+   "B": "372-382-dev-loop/computer-sessions/lh1a3/sources/84b0bffaea13006586bde91453b58446-6298.png",
+   "id": "lh1-p0032"
+  },
+  {
+   "A": "372-382-dev-loop/computer-sessions/lh1a3/sources/84b0bffaea13006586bde91453b58446-7150.png",
+   "B": "372-382-dev-loop/computer-sessions/lh1a1/sources/d57d4a91bb624192f18b46cf2e882e9b-2118.png",
+   "id": "lh1-p0033"
+  },
+  {
+   "A": "372-382-dev-loop/computer-sessions/lh1a3/sources/84b0bffaea13006586bde91453b58446-7612.png",
+   "B": "372-382-dev-loop/computer-sessions/lh1a2/sources/41c541423f989262b7eb3427340961fb-698.png",
+   "id": "lh1-p0034"
+  },
+  {
+   "A": "372-382-dev-loop/computer-sessions/lh2a1/sources/ac243818c2cb67b937b4e0618b9b708f-12608.png",
+   "B": "372-382-dev-loop/computer-sessions/lh2a1/sources/ac243818c2cb67b937b4e0618b9b708f-1229.png",
+   "id": "lh2-p0001"
+  },
+  {
+   "A": "372-382-dev-loop/computer-sessions/lh2a1/sources/ac243818c2cb67b937b4e0618b9b708f-15302.png",
+   "B": "372-382-dev-loop/computer-sessions/lh2a1/sources/ac243818c2cb67b937b4e0618b9b708f-1229.png",
+   "id": "lh2-p0002"
+  },
+  {
+   "A": "372-382-dev-loop/computer-sessions/lh2a1/sources/ac243818c2cb67b937b4e0618b9b708f-1229.png",
+   "B": "372-382-dev-loop/computer-sessions/lh2a1/sources/ac243818c2cb67b937b4e0618b9b708f-4369.png",
+   "id": "lh2-p0003"
+  },
+  {
+   "A": "372-382-dev-loop/computer-sessions/lh2a1/sources/ac243818c2cb67b937b4e0618b9b708f-6836.png",
+   "B": "372-382-dev-loop/computer-sessions/lh2a1/sources/ac243818c2cb67b937b4e0618b9b708f-1229.png",
+   "id": "lh2-p0004"
+  },
+  {
+   "A": "372-382-dev-loop/computer-sessions/lh2a1/sources/ac243818c2cb67b937b4e0618b9b708f-1229.png",
+   "B": "372-382-dev-loop/computer-sessions/lh2a1/sources/ac243818c2cb67b937b4e0618b9b708f-9061.png",
+   "id": "lh2-p0005"
+  },
+  {
+   "A": "372-382-dev-loop/computer-sessions/lh2a2/sources/4165a6f3f75b042879bf95d1863c0894-1016.png",
+   "B": "372-382-dev-loop/computer-sessions/lh2a1/sources/ac243818c2cb67b937b4e0618b9b708f-12608.png",
+   "id": "lh2-p0006"
+  },
+  {
+   "A": "372-382-dev-loop/computer-sessions/lh2a1/sources/ac243818c2cb67b937b4e0618b9b708f-16138.png",
+   "B": "372-382-dev-loop/computer-sessions/lh2a2/sources/4165a6f3f75b042879bf95d1863c0894-182.png",
+   "id": "lh2-p0007"
+  },
+  {
+   "A": "372-382-dev-loop/computer-sessions/lh2a1/sources/ac243818c2cb67b937b4e0618b9b708f-15354.png",
+   "B": "372-382-dev-loop/computer-sessions/lh2a2/sources/4165a6f3f75b042879bf95d1863c0894-202.png",
+   "id": "lh2-p0008"
+  },
+  {
+   "A": "372-382-dev-loop/computer-sessions/lh2a1/sources/ac243818c2cb67b937b4e0618b9b708f-1240.png",
+   "B": "372-382-dev-loop/computer-sessions/lh2a2/sources/4165a6f3f75b042879bf95d1863c0894-3024.png",
+   "id": "lh2-p0009"
+  },
+  {
+   "A": "372-382-dev-loop/computer-sessions/lh2a1/sources/ac243818c2cb67b937b4e0618b9b708f-1229.png",
+   "B": "372-382-dev-loop/computer-sessions/lh2a2/sources/4165a6f3f75b042879bf95d1863c0894-312.png",
+   "id": "lh2-p0010"
+  },
+  {
+   "A": "372-382-dev-loop/computer-sessions/lh2a1/sources/ac243818c2cb67b937b4e0618b9b708f-305.png",
+   "B": "372-382-dev-loop/computer-sessions/lh2a2/sources/4165a6f3f75b042879bf95d1863c0894-45.png",
+   "id": "lh2-p0011"
+  }
+ ],
+ "schema": "p1-held-out-batch/1"
+}

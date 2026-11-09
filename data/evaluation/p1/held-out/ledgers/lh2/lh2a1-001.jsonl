@@ -1,0 +1,24 @@
+{"type":"fact","id":"F1","statement":"The survivor is Morgan Hale, a male Evacuee in the Brokaw world.","category":"self","observed":"ac243818c2cb67b937b4e0618b9b708f-499","stored":"ec32ca"}
+{"type":"fact","id":"F2","statement":"The survivor starts in evac shelter B-05, where the first Brokaw morning is Spring day 61 at 8:00 AM.","category":"place","observed":"ac243818c2cb67b937b4e0618b9b708f-587","stored":null}
+{"type":"fact","id":"F3","statement":"Odell Hampton, a Chemical Engineer NPC in the shelter, asked the survivor to find him a big American flag.","category":"plan","observed":"ac243818c2cb67b937b4e0618b9b708f-658","stored":null}
+{"type":"fact","id":"F4","statement":"A cupboard in the shelter holds 23 small cardboard boxes of protein ration.","category":"resource","observed":"ac243818c2cb67b937b4e0618b9b708f-914","stored":"ec32ca"}
+{"type":"fact","id":"F5","statement":"The survivor carries 2 small cardboard boxes of protein ration in the messenger bag.","category":"item","observed":"ac243818c2cb67b937b4e0618b9b708f-3794","stored":"ec32ca"}
+{"type":"fact","id":"F6","statement":"The survivor carries a matchbook (20 matches) and a smartphone with a flashlight.","category":"item","observed":"ac243818c2cb67b937b4e0618b9b708f-3794","stored":null}
+{"type":"fact","id":"F7","statement":"A long pointy stick (the first one) is wielded as the survivor's weapon.","category":"item","observed":"ac243818c2cb67b937b4e0618b9b708f-1930","stored":"ec32ca"}
+{"type":"fact","id":"F8","statement":"Long pointy stick is craftable from memory by whittling a long stick with a cutting tool, and long sticks lie on the grass beside the road outside the shelter.","category":"procedure","observed":"ac243818c2cb67b937b4e0618b9b708f-1241","stored":null}
+{"type":"fact","id":"F9","statement":"Smashing a locked door with a wielded stick damages and snaps the stick; shoulder-checking the door with bare fists works instead.","category":"hazard","observed":"ac243818c2cb67b937b4e0618b9b708f-2612","stored":null}
+{"type":"fact","id":"F10","statement":"The roof of the shelter holds a standing water tank, with about 14 litres (56 units) of water.","category":"resource","observed":"ac243818c2cb67b937b4e0618b9b708f-3794","stored":"ec32ca"}
+{"type":"fact","id":"F11","statement":"A locked wooden door in the shelter's southeast corner blocks the way to the roof.","category":"place","observed":"ac243818c2cb67b937b4e0618b9b708f-2386","stored":null}
+{"type":"fact","id":"F12","statement":"The survivor marked the refugee center and the road leading to it on the map after reading the shelter board.","category":"plan","observed":"ac243818c2cb67b937b4e0618b9b708f-2284","stored":null}
+{"type":"fact","id":"F13","statement":"A separate, accidentally started random character (Len Gary, evac shelter A-23) exists in the Jayuya world and is not Morgan.","category":"other","observed":"ac243818c2cb67b937b4e0618b9b708f-181","stored":null}
+{"type":"fact","id":"F14","statement":"The survivor re-crafted an intact long pointy stick and wields it outdoors on the road northwest of the shelter at 8:10:59 AM.","category":"item","observed":"ac243818c2cb67b937b4e0618b9b708f-4120","stored":"ec32ca"}
+{"type":"event","fact":"F4","event":"used","frame":"ac243818c2cb67b937b4e0618b9b708f-914","note":"Picked 2 cardboard boxes of protein ration from the cupboard."}
+{"type":"event","fact":"F4","event":"rediscovered","frame":"ac243818c2cb67b937b4e0618b9b708f-3980","note":"Walking over the cupboard again showed 20 boxes remain."}
+{"type":"event","fact":"F3","event":"rediscovered","frame":"ac243818c2cb67b937b4e0618b9b708f-3980","note":"Odell Hampton seen again in the shelter, with the flag request still open."}
+{"type":"event","fact":"F8","event":"used","frame":"ac243818c2cb67b937b4e0618b9b708f-1930","note":"Crafted a long pointy stick from memory."}
+{"type":"event","fact":"F8","event":"used","frame":"ac243818c2cb67b937b4e0618b9b708f-4106","note":"Rechecked the recipe, with 4 long sticks in hand, to recraft."}
+{"type":"event","fact":"F9","event":"needed","frame":"ac243818c2cb67b937b4e0618b9b708f-3217","note":"Smashed the door with bare shoulder-checks after the stick snapped."}
+{"type":"event","fact":"F7","event":"invalidated","frame":"ac243818c2cb67b937b4e0618b9b708f-2612","note":"The first long pointy stick snapped while smashing the door."}
+{"type":"event","fact":"F11","event":"invalidated","frame":"ac243818c2cb67b937b4e0618b9b708f-3217","note":"The door was smashed open, so the way to the roof is no longer blocked."}
+{"type":"event","fact":"F10","event":"needed","frame":"ac243818c2cb67b937b4e0618b9b708f-3794","note":"Inspected the standing tank on the roof while planning water."}
+{"type":"end","frames_viewed":36}

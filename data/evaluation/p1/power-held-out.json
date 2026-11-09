@@ -1,0 +1,26 @@
+{
+ "cluster_sizes": {
+  "1": 25,
+  "2": 1
+ },
+ "clusters": 26,
+ "gate": {
+  "at_interest": 0.0,
+  "no_effect": 0.0,
+  "passes": false
+ },
+ "probability_of_go": {
+  "held-out structure": {
+   "0.00": 0.0,
+   "0.10": 0.0,
+   "0.15": 0.0,
+   "0.20": 0.0,
+   "0.25": 0.0,
+   "0.30": 0.0
+  }
+ },
+ "schema": "p1-power/1",
+ "seed": 491,
+ "simulations": 5000,
+ "units": 27
+}

@@ -1,0 +1,56 @@
+{"type":"carry","fact":"F1","boundary":"lh2a1-002>lh2a2-001","carried":true,"where":"prompt"}
+{"type":"carry","fact":"F2","boundary":"lh2a1-002>lh2a2-001","carried":true,"where":"prompt"}
+{"type":"carry","fact":"F3","boundary":"lh2a1-002>lh2a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F4","boundary":"lh2a1-002>lh2a2-001","carried":true,"where":"prompt"}
+{"type":"carry","fact":"F5","boundary":"lh2a1-002>lh2a2-001","carried":true,"where":"prompt"}
+{"type":"carry","fact":"F6","boundary":"lh2a1-002>lh2a2-001","carried":true,"where":"prompt"}
+{"type":"carry","fact":"F8","boundary":"lh2a1-002>lh2a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F9","boundary":"lh2a1-002>lh2a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F10","boundary":"lh2a1-002>lh2a2-001","carried":true,"where":"prompt"}
+{"type":"carry","fact":"F12","boundary":"lh2a1-002>lh2a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F13","boundary":"lh2a1-002>lh2a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F14","boundary":"lh2a1-002>lh2a2-001","carried":true,"where":"prompt"}
+{"type":"carry","fact":"F15","boundary":"lh2a1-002>lh2a2-001","carried":true,"where":"prompt"}
+{"type":"carry","fact":"F16","boundary":"lh2a1-002>lh2a2-001","carried":true,"where":"prompt"}
+{"type":"carry","fact":"F17","boundary":"lh2a1-002>lh2a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F18","boundary":"lh2a1-002>lh2a2-001","carried":true,"where":"prompt"}
+{"type":"carry","fact":"F19","boundary":"lh2a1-002>lh2a2-001","carried":true,"where":"prompt"}
+{"type":"carry","fact":"F20","boundary":"lh2a1-002>lh2a2-001","carried":true,"where":"prompt"}
+{"type":"carry","fact":"F21","boundary":"lh2a1-002>lh2a2-001","carried":true,"where":"prompt"}
+{"type":"carry","fact":"F22","boundary":"lh2a1-002>lh2a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F23","boundary":"lh2a1-002>lh2a2-001","carried":true,"where":"prompt"}
+{"type":"carry","fact":"F24","boundary":"lh2a1-002>lh2a2-001","carried":true,"where":"prompt"}
+{"type":"carry","fact":"F25","boundary":"lh2a1-002>lh2a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F26","boundary":"lh2a1-002>lh2a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F27","boundary":"lh2a1-002>lh2a2-001","carried":true,"where":"prompt"}
+{"type":"fact","id":"F28","statement":"A fire brick needs lump of clay, sand, a rock, water and a kiln or nearby fire; it cannot be made now.","category":"procedure","observed":"4165a6f3f75b042879bf95d1863c0894-319","stored":null}
+{"type":"fact","id":"F29","statement":"A basic fishing rod needs a stick, thread or cordage and a fishing hook, none of which the survivor has.","category":"procedure","observed":"4165a6f3f75b042879bf95d1863c0894-579","stored":null}
+{"type":"fact","id":"F30","statement":"The crafting menu has a Practice tab (athletics, melee, dodge, computers and others) that raises skills up to a low cap.","category":"procedure","observed":"4165a6f3f75b042879bf95d1863c0894-1022","stored":null}
+{"type":"fact","id":"F31","statement":"Odell Hampton holds a gallon jug of 240 vegetable cooking oil, fruit juice, sports drink and a throwing axe, and will trade or share items.","category":"resource","observed":"4165a6f3f75b042879bf95d1863c0894-1656","stored":null}
+{"type":"fact","id":"F32","statement":"The survivor carries a gallon jug holding 240 units of vegetable cooking oil (edible, small calories), obtained from Odell.","category":"item","observed":"4165a6f3f75b042879bf95d1863c0894-1978","stored":"8be475"}
+{"type":"fact","id":"F33","statement":"The smartphone plays music through earbuds and drains battery; it was left at 47/56 with music off.","category":"item","observed":"4165a6f3f75b042879bf95d1863c0894-2059","stored":"8be475"}
+{"type":"fact","id":"F34","statement":"Practising athletics in the shelter raised athletics to 2.","category":"self","observed":"4165a6f3f75b042879bf95d1863c0894-2361","stored":"8be475"}
+{"type":"fact","id":"F35","statement":"A wooden spear is craftable from memory with a cutting tool and a long pointy stick, taking about 4 hours.","category":"procedure","observed":"4165a6f3f75b042879bf95d1863c0894-3024","stored":null}
+{"type":"fact","id":"F36","statement":"The survivor crafted a wooden spear and wields it as the weapon.","category":"item","observed":"4165a6f3f75b042879bf95d1863c0894-3325","stored":"2f9ecd"}
+{"type":"fact","id":"F37","statement":"The survivor ate four cheese spreads and a protein ration around 4 PM on day 61 and is satisfied; 5 protein rations remain carried.","category":"self","observed":"4165a6f3f75b042879bf95d1863c0894-3436","stored":"8be475"}
+{"type":"fact","id":"F38","statement":"Fabrication skill is 3 and survival is 0 (3%).","category":"self","observed":"4165a6f3f75b042879bf95d1863c0894-3661","stored":"8be475"}
+{"type":"fact","id":"F39","statement":"Foraging underbrush in the forest west of the shelter mostly finds nothing but yielded 3 fresh plant stalks.","category":"resource","observed":"4165a6f3f75b042879bf95d1863c0894-4343","stored":"8be475"}
+{"type":"fact","id":"F40","statement":"A hickory tree in the forest west of the shelter could be dug up for roots, but nothing can be harvested in the current season.","category":"resource","observed":"4165a6f3f75b042879bf95d1863c0894-4588","stored":null}
+{"type":"fact","id":"F41","statement":"A wooden shovel needs hammering, wood-sawing, cutting and chiseling tools, a plank or stick, a log and thread or nails; the survivor has only a cutting tool.","category":"procedure","observed":"4165a6f3f75b042879bf95d1863c0894-4682","stored":null}
+{"type":"fact","id":"F42","statement":"The survivor's plan is to build sustainable food and water and a safer shelter, as renewable food and ignition are not established.","category":"plan","observed":"text","stored":"2f9ecd"}
+{"type":"fact","id":"F43","statement":"Foraging the underbrush just west of the shelter finds nothing.","category":"resource","observed":"4165a6f3f75b042879bf95d1863c0894-522","stored":null}
+{"type":"event","fact":"F27","event":"used","frame":"4165a6f3f75b042879bf95d1863c0894-3","note":"Loaded Morgan Hale from the Brokaw Load list."}
+{"type":"event","fact":"F2","event":"rediscovered","frame":"4165a6f3f75b042879bf95d1863c0894-182","note":"Back in evac shelter B-05 on spring day 61."}
+{"type":"event","fact":"F24","event":"rediscovered","frame":"4165a6f3f75b042879bf95d1863c0894-182","note":"Log shows fabrication theory 2 and the dropped in-progress carving."}
+{"type":"event","fact":"F14","event":"used","frame":"4165a6f3f75b042879bf95d1863c0894-182","note":"Wields the long pointy stick again."}
+{"type":"event","fact":"F18","event":"used","frame":"4165a6f3f75b042879bf95d1863c0894-307","note":"Inventory shows plastic bottles holding clean water."}
+{"type":"event","fact":"F23","event":"needed","frame":"4165a6f3f75b042879bf95d1863c0894-319","note":"Searched fire recipes while planning ignition and boiling."}
+{"type":"event","fact":"F3","event":"needed","frame":"4165a6f3f75b042879bf95d1863c0894-1652","note":"Odell asks whether the standard was rescued; survivor answers not yet."}
+{"type":"event","fact":"F3","event":"rediscovered","frame":"4165a6f3f75b042879bf95d1863c0894-1652","note":"Odell Hampton's flag request seen again."}
+{"type":"event","fact":"F8","event":"used","frame":"4165a6f3f75b042879bf95d1863c0894-3024","note":"Long pointy sticks in hand feed the wooden spear recipe."}
+{"type":"event","fact":"F14","event":"invalidated","frame":"4165a6f3f75b042879bf95d1863c0894-3325","note":"The wooden spear is wielded in place of the long pointy stick."}
+{"type":"event","fact":"F5","event":"used","frame":"4165a6f3f75b042879bf95d1863c0894-3436","note":"Ate a protein ration from carried stock."}
+{"type":"event","fact":"F1","event":"used","frame":"4165a6f3f75b042879bf95d1863c0894-3661","note":"Character sheet confirms Morgan Hale."}
+{"type":"event","fact":"F24","event":"invalidated","frame":"4165a6f3f75b042879bf95d1863c0894-3661","note":"Fabrication has risen to 3."}
+{"type":"event","fact":"F6","event":"needed","frame":"4165a6f3f75b042879bf95d1863c0894-4682","note":"Matches are available but no fire need arose in this chunk."}
+{"type":"end","frames_viewed":39}

@@ -1,0 +1,36 @@
+{"type":"carry","fact":"F1","boundary":"lh3a1-001>lh3a1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F2","boundary":"lh3a1-001>lh3a1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F3","boundary":"lh3a1-001>lh3a1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F4","boundary":"lh3a1-001>lh3a1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F5","boundary":"lh3a1-001>lh3a1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F6","boundary":"lh3a1-001>lh3a1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F7","boundary":"lh3a1-001>lh3a1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F8","boundary":"lh3a1-001>lh3a1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F9","boundary":"lh3a1-001>lh3a1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F10","boundary":"lh3a1-001>lh3a1-002","carried":false,"where":null}
+{"type":"carry","fact":"F11","boundary":"lh3a1-001>lh3a1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F12","boundary":"lh3a1-001>lh3a1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F13","boundary":"lh3a1-001>lh3a1-002","carried":true,"where":"packet"}
+{"type":"event","fact":"F13","event":"used","frame":"b3a66a845ec306cca70d5caa203ce30e-3849","note":"Searched crafting recipes for a pot, working toward water purification and a cooking vessel"}
+{"type":"event","fact":"F10","event":"needed","frame":"b3a66a845ec306cca70d5caa203ce30e-3849","note":"Looked for a pot recipe because the survivor still has no cooking vessel"}
+{"type":"event","fact":"F8","event":"needed","frame":"b3a66a845ec306cca70d5caa203ce30e-4598","note":"Went looking for rocks and other field items west of the shelter"}
+{"type":"event","fact":"F8","event":"rediscovered","frame":"b3a66a845ec306cca70d5caa203ce30e-4598","note":"The nearby-items list shows rocks, a large rock, flint and murky water to the north again"}
+{"type":"event","fact":"F8","event":"used","frame":"b3a66a845ec306cca70d5caa203ce30e-5006","note":"Picked up a rock from the field"}
+{"type":"event","fact":"F8","event":"used","frame":"b3a66a845ec306cca70d5caa203ce30e-5959","note":"Picked up a large rock from the field"}
+{"type":"event","fact":"F9","event":"used","frame":"b3a66a845ec306cca70d5caa203ce30e-5006","note":"Walks with the long pointy stick wielded"}
+{"type":"event","fact":"F7","event":"needed","frame":"b3a66a845ec306cca70d5caa203ce30e-5362","note":"Clanging at the shelter's east side suggests the hostile group is at the door; Cleora comments on trouble"}
+{"type":"event","fact":"F2","event":"needed","frame":"b3a66a845ec306cca70d5caa203ce30e-6803","note":"Recipe screen says too dark to craft in the dim shelter; the flashlight app was not turned on"}
+{"type":"event","fact":"F11","event":"used","frame":"b3a66a845ec306cca70d5caa203ce30e-8090","note":"Offered the six protein ration wrappers in the trade with Cleora"}
+{"type":"event","fact":"F3","event":"needed","frame":"b3a66a845ec306cca70d5caa203ce30e-8105","note":"Cleora asks whether the dog has been found; the survivor says not yet and moves to trade"}
+{"type":"event","fact":"F5","event":"needed","frame":"b3a66a845ec306cca70d5caa203ce30e-8778","note":"Walked past the shelter cupboard while food was at stake in the trade"}
+{"type":"event","fact":"F5","event":"rediscovered","frame":"b3a66a845ec306cca70d5caa203ce30e-8778","note":"The message log shows 20 small cardboard boxes of protein ration on the cupboard again"}
+{"type":"fact","id":"F14","statement":"A makeshift pot needs one sheet of metal plus a tool with hammering quality 2 or more, takes 1 hour 30 minutes at fabrication 1, and cannot be crafted in the dark","category":"procedure","observed":"b3a66a845ec306cca70d5caa203ce30e-3849","stored":null}
+{"type":"fact","id":"F15","statement":"A makeshift hammer is craftable from a chunk of steel and a stick; a hammering tool is needed for the pot and for polehammer recipes","category":"procedure","observed":"b3a66a845ec306cca70d5caa203ce30e-4065","stored":null}
+{"type":"fact","id":"F16","statement":"The survivor holds six small metal sheets picked up at the shelter after wielding a large rock beside the east side, which fits the sheet metal the makeshift pot needs","category":"resource","observed":"b3a66a845ec306cca70d5caa203ce30e-6916","stored":null}
+{"type":"fact","id":"F17","statement":"A foil cup, made from six aluminum foil with no tool, holds liquid and has level 1 boiling quality, so it can boil water; the survivor has no aluminum foil","category":"procedure","observed":"b3a66a845ec306cca70d5caa203ce30e-6810","stored":null}
+{"type":"fact","id":"F18","statement":"A makeshift funnel for collecting rainwater needs a cutting tool and many plastic bottles, such as 8 plastic bottles or 3 soap bottles, which the survivor does not have","category":"procedure","observed":"b3a66a845ec306cca70d5caa203ce30e-6803","stored":null}
+{"type":"fact","id":"F19","statement":"Cleora Hong trades with the survivor: she sells a medium tin can of canned chicken, aluminum cans, a plastic painkiller bottle, meat pizzas and other food, and will not buy rocks","category":"resource","observed":"b3a66a845ec306cca70d5caa203ce30e-7138","stored":null}
+{"type":"fact","id":"F20","statement":"The shelter's notice board shows a map and address for a nearby refugee center, and the survivor marked the coordinates","category":"place","observed":"b3a66a845ec306cca70d5caa203ce30e-8778","stored":null}
+{"type":"fact","id":"F21","statement":"A pile of junk sits in the shelter basement five tiles north of the stairs, holding a paper wrapper, a FEMA evacuation pamphlet, a glass shard, a plastic knife and a dead flare","category":"resource","observed":"b3a66a845ec306cca70d5caa203ce30e-8650","stored":null}
+{"type":"fact","id":"F22","statement":"A medium tin can of canned chicken from Cleora has level 1 boiling quality, so it can serve as a boiling vessel; it was obtained by trade for the six protein rations, smartphone, matchbook, emergency blanket and jacket","category":"item","observed":"text","stored":null}
+{"type":"end","frames_viewed":38}

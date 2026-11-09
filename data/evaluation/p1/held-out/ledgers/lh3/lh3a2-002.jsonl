@@ -1,0 +1,42 @@
+{"type":"carry","fact":"F1","boundary":"lh3a2-001>lh3a2-002","carried":true,"where":"prompt"}
+{"type":"carry","fact":"F3","boundary":"lh3a2-001>lh3a2-002","carried":false,"where":null}
+{"type":"carry","fact":"F4","boundary":"lh3a2-001>lh3a2-002","carried":false,"where":null}
+{"type":"carry","fact":"F5","boundary":"lh3a2-001>lh3a2-002","carried":true,"where":"prompt"}
+{"type":"carry","fact":"F6","boundary":"lh3a2-001>lh3a2-002","carried":false,"where":null}
+{"type":"carry","fact":"F7","boundary":"lh3a2-001>lh3a2-002","carried":false,"where":null}
+{"type":"carry","fact":"F8","boundary":"lh3a2-001>lh3a2-002","carried":false,"where":null}
+{"type":"carry","fact":"F9","boundary":"lh3a2-001>lh3a2-002","carried":false,"where":null}
+{"type":"carry","fact":"F10","boundary":"lh3a2-001>lh3a2-002","carried":false,"where":null}
+{"type":"carry","fact":"F13","boundary":"lh3a2-001>lh3a2-002","carried":true,"where":"prompt"}
+{"type":"carry","fact":"F14","boundary":"lh3a2-001>lh3a2-002","carried":false,"where":null}
+{"type":"carry","fact":"F15","boundary":"lh3a2-001>lh3a2-002","carried":false,"where":null}
+{"type":"carry","fact":"F16","boundary":"lh3a2-001>lh3a2-002","carried":false,"where":null}
+{"type":"carry","fact":"F17","boundary":"lh3a2-001>lh3a2-002","carried":false,"where":null}
+{"type":"carry","fact":"F18","boundary":"lh3a2-001>lh3a2-002","carried":false,"where":null}
+{"type":"carry","fact":"F19","boundary":"lh3a2-001>lh3a2-002","carried":true,"where":"prompt"}
+{"type":"carry","fact":"F20","boundary":"lh3a2-001>lh3a2-002","carried":true,"where":"prompt"}
+{"type":"carry","fact":"F21","boundary":"lh3a2-001>lh3a2-002","carried":false,"where":null}
+{"type":"carry","fact":"F22","boundary":"lh3a2-001>lh3a2-002","carried":true,"where":"prompt"}
+{"type":"carry","fact":"F23","boundary":"lh3a2-001>lh3a2-002","carried":true,"where":"prompt"}
+{"type":"carry","fact":"F24","boundary":"lh3a2-001>lh3a2-002","carried":false,"where":null}
+{"type":"carry","fact":"F25","boundary":"lh3a2-001>lh3a2-002","carried":true,"where":"prompt"}
+{"type":"carry","fact":"F26","boundary":"lh3a2-001>lh3a2-002","carried":true,"where":"prompt"}
+{"type":"carry","fact":"F27","boundary":"lh3a2-001>lh3a2-002","carried":true,"where":"prompt"}
+{"type":"carry","fact":"F28","boundary":"lh3a2-001>lh3a2-002","carried":true,"where":"prompt"}
+{"type":"event","fact":"F13","event":"used","frame":"349dc4fbc37fd24e1acc756e4355ac66-3850","note":"Searched the overmap for a river while looking for sustainable water"}
+{"type":"event","fact":"F25","event":"rediscovered","frame":"349dc4fbc37fd24e1acc756e4355ac66-3850","note":"River search again returns no results within 900 tiles"}
+{"type":"event","fact":"F25","event":"rediscovered","frame":"349dc4fbc37fd24e1acc756e4355ac66-4834","note":"Pond search again shows the public pond in northeast Meddybemps, 1 of 2 results"}
+{"type":"event","fact":"F26","event":"rediscovered","frame":"349dc4fbc37fd24e1acc756e4355ac66-4601","note":"From the roof, safe mode reports 13 zombies and 14 others about 44-53 tiles east and southeast"}
+{"type":"event","fact":"F18","event":"needed","frame":"349dc4fbc37fd24e1acc756e4355ac66-4717","note":"Looked up the makeshift funnel recipe for rainwater collection"}
+{"type":"event","fact":"F18","event":"rediscovered","frame":"349dc4fbc37fd24e1acc756e4355ac66-4717","note":"Recipe again needs a cutting tool and many plastic bottles, such as 8 plastic bottles of which 5 are held"}
+{"type":"event","fact":"F22","event":"needed","frame":"349dc4fbc37fd24e1acc756e4355ac66-5095","note":"Clean water recipe needs a boiling-1 tool, which the canned chicken tin can would provide"}
+{"type":"event","fact":"F10","event":"needed","frame":"349dc4fbc37fd24e1acc756e4355ac66-5095","note":"Clean water recipe also needs a heat source such as a nearby fire, none available yet"}
+{"type":"event","fact":"F20","event":"rediscovered","frame":"349dc4fbc37fd24e1acc756e4355ac66-5163","note":"Studying the shelter board again shows the refugee center map and coordinates"}
+{"type":"event","fact":"F5","event":"rediscovered","frame":"349dc4fbc37fd24e1acc756e4355ac66-5163","note":"Message log shows 20 small cardboard boxes of protein ration on the cupboard again"}
+{"type":"event","fact":"F5","event":"needed","frame":"349dc4fbc37fd24e1acc756e4355ac66-5163","note":"Now peckish with only 3 rations carried, the cupboard stock is relevant"}
+{"type":"fact","id":"F29","statement":"A locked interior door in the shelter's northwest corner can be broken by bashing, which takes repeated tiring attempts; it opens onto stairs or a ladder leading up to the roof","category":"place","observed":"349dc4fbc37fd24e1acc756e4355ac66-4248","stored":null}
+{"type":"fact","id":"F30","statement":"The shelter roof holds a standing tank of clean water (101 portions, 25.25 L of 300 L) that can be dispensed or drunk from; it is stored there, not carried","category":"resource","observed":"349dc4fbc37fd24e1acc756e4355ac66-4517","stored":null}
+{"type":"fact","id":"F31","statement":"A swamp lies west of Meddybemps, roughly 2 overmap tiles west and 10 north of the shelter; its water and safety are unverified","category":"place","observed":"349dc4fbc37fd24e1acc756e4355ac66-4885","stored":null}
+{"type":"fact","id":"F32","statement":"Clean water is crafted from 1 water with a boiling-quality-1 tool and a heat source in 5 minutes with food handling, and cannot be done in the dark","category":"procedure","observed":"349dc4fbc37fd24e1acc756e4355ac66-5095","stored":null}
+{"type":"fact","id":"F33","statement":"By 8:32 on day 61 the survivor is peckish and overweight, with safe mode on","category":"self","observed":"349dc4fbc37fd24e1acc756e4355ac66-4517","stored":null}
+{"type":"end","frames_viewed":15}
