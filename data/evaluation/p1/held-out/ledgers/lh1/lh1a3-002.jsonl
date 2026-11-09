@@ -1,0 +1,116 @@
+{"type": "carry", "fact": "F1", "boundary": "lh1a3-001>lh1a3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F2", "boundary": "lh1a3-001>lh1a3-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F3", "boundary": "lh1a3-001>lh1a3-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F4", "boundary": "lh1a3-001>lh1a3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F5", "boundary": "lh1a3-001>lh1a3-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F6", "boundary": "lh1a3-001>lh1a3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F7", "boundary": "lh1a3-001>lh1a3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F8", "boundary": "lh1a3-001>lh1a3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F9", "boundary": "lh1a3-001>lh1a3-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F10", "boundary": "lh1a3-001>lh1a3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F11", "boundary": "lh1a3-001>lh1a3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F12", "boundary": "lh1a3-001>lh1a3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F13", "boundary": "lh1a3-001>lh1a3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F14", "boundary": "lh1a3-001>lh1a3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F15", "boundary": "lh1a3-001>lh1a3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F16", "boundary": "lh1a3-001>lh1a3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F17", "boundary": "lh1a3-001>lh1a3-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F18", "boundary": "lh1a3-001>lh1a3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F19", "boundary": "lh1a3-001>lh1a3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F20", "boundary": "lh1a3-001>lh1a3-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F22", "boundary": "lh1a3-001>lh1a3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F23", "boundary": "lh1a3-001>lh1a3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F24", "boundary": "lh1a3-001>lh1a3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F25", "boundary": "lh1a3-001>lh1a3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F26", "boundary": "lh1a3-001>lh1a3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F27", "boundary": "lh1a3-001>lh1a3-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F29", "boundary": "lh1a3-001>lh1a3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F30", "boundary": "lh1a3-001>lh1a3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F31", "boundary": "lh1a3-001>lh1a3-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F32", "boundary": "lh1a3-001>lh1a3-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F33", "boundary": "lh1a3-001>lh1a3-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F34", "boundary": "lh1a3-001>lh1a3-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F35", "boundary": "lh1a3-001>lh1a3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F36", "boundary": "lh1a3-001>lh1a3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F37", "boundary": "lh1a3-001>lh1a3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F38", "boundary": "lh1a3-001>lh1a3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F39", "boundary": "lh1a3-001>lh1a3-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F41", "boundary": "lh1a3-001>lh1a3-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F42", "boundary": "lh1a3-001>lh1a3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F43", "boundary": "lh1a3-001>lh1a3-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F44", "boundary": "lh1a3-001>lh1a3-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F45", "boundary": "lh1a3-001>lh1a3-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F46", "boundary": "lh1a3-001>lh1a3-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F47", "boundary": "lh1a3-001>lh1a3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F48", "boundary": "lh1a3-001>lh1a3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F49", "boundary": "lh1a3-001>lh1a3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F50", "boundary": "lh1a3-001>lh1a3-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F51", "boundary": "lh1a3-001>lh1a3-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F52", "boundary": "lh1a3-001>lh1a3-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F53", "boundary": "lh1a3-001>lh1a3-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F54", "boundary": "lh1a3-001>lh1a3-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F55", "boundary": "lh1a3-001>lh1a3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F56", "boundary": "lh1a3-001>lh1a3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F57", "boundary": "lh1a3-001>lh1a3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F58", "boundary": "lh1a3-001>lh1a3-002", "carried": false, "where": null}
+{"type": "event", "fact": "F2", "event": "needed", "frame": "84b0bffaea13006586bde91453b58446-3330", "note": "character screen shows Morgan Reed, male, quarterstaff wielded"}
+{"type": "event", "fact": "F2", "event": "rediscovered", "frame": "84b0bffaea13006586bde91453b58446-3330", "note": "character screen shows Morgan Reed, male, quarterstaff wielded"}
+{"type": "event", "fact": "F49", "event": "needed", "frame": "84b0bffaea13006586bde91453b58446-3330", "note": "skills panel shows survival 2, food handling 1, fabrication 2, melee 1"}
+{"type": "event", "fact": "F49", "event": "rediscovered", "frame": "84b0bffaea13006586bde91453b58446-3330", "note": "skills panel shows survival 2, food handling 1, fabrication 2, melee 1"}
+{"type": "event", "fact": "F53", "event": "needed", "frame": "84b0bffaea13006586bde91453b58446-3330", "note": "log shows 8 cotton patches recovered and picked back up"}
+{"type": "event", "fact": "F53", "event": "rediscovered", "frame": "84b0bffaea13006586bde91453b58446-3330", "note": "log shows 8 cotton patches recovered and picked back up"}
+{"type": "event", "fact": "F45", "event": "needed", "frame": "84b0bffaea13006586bde91453b58446-3436", "note": "searched recipes for a fish trap again while planning fishing gear"}
+{"type": "event", "fact": "F58", "event": "needed", "frame": "84b0bffaea13006586bde91453b58446-3436", "note": "fish trap search again returns 0 recipes"}
+{"type": "event", "fact": "F58", "event": "rediscovered", "frame": "84b0bffaea13006586bde91453b58446-3436", "note": "fish trap search again returns 0 recipes"}
+{"type": "event", "fact": "F17", "event": "used", "frame": "84b0bffaea13006586bde91453b58446-3445", "note": "walks out of the shelter with the quarterstaff wielded"}
+{"type": "event", "fact": "F13", "event": "used", "frame": "84b0bffaea13006586bde91453b58446-3593", "note": "crosses the field and road toward the stream"}
+{"type": "fact", "id": "F59", "statement": "Cattail plants grow in the shallow stream water; harvesting them yields fresh cattail rhizomes and stalks, and the player collected a large stock", "category": "resource", "observed": "84b0bffaea13006586bde91453b58446-3728", "stored": null}
+{"type": "event", "fact": "F31", "event": "used", "frame": "84b0bffaea13006586bde91453b58446-3728", "note": "goes to the stream and harvests cattails from the water"}
+{"type": "event", "fact": "F9", "event": "needed", "frame": "84b0bffaea13006586bde91453b58446-3894", "note": "inventory shows 3 small cardboard boxes of protein ration in the bag"}
+{"type": "event", "fact": "F9", "event": "rediscovered", "frame": "84b0bffaea13006586bde91453b58446-3894", "note": "inventory shows 3 small cardboard boxes of protein ration in the bag"}
+{"type": "event", "fact": "F41", "event": "needed", "frame": "84b0bffaea13006586bde91453b58446-3894", "note": "inventory shows quarterstaff, messenger bag, sealed bottles of clean water, 3 ration boxes"}
+{"type": "event", "fact": "F41", "event": "rediscovered", "frame": "84b0bffaea13006586bde91453b58446-3894", "note": "inventory shows quarterstaff, messenger bag, sealed bottles of clean water, 3 ration boxes"}
+{"type": "event", "fact": "F39", "event": "needed", "frame": "84b0bffaea13006586bde91453b58446-3898", "note": "item view shows the 0.5 L glass jar carried, holding 2 cattail stalks, with boiling 1 and containing 1 qualities"}
+{"type": "event", "fact": "F39", "event": "rediscovered", "frame": "84b0bffaea13006586bde91453b58446-3898", "note": "item view shows the 0.5 L glass jar carried, holding 2 cattail stalks, with boiling 1 and containing 1 qualities"}
+{"type": "fact", "id": "F60", "statement": "Cattail seeds are crafted from 1 cattail stalk in about 2 minutes (50 percent minor failure) and must be planted in shallow water", "category": "procedure", "observed": "84b0bffaea13006586bde91453b58446-4288", "stored": null}
+{"type": "event", "fact": "F18", "event": "needed", "frame": "84b0bffaea13006586bde91453b58446-4514", "note": "aluminum pot recipe still needs a hammering-3 tool, a heat source and aluminum"}
+{"type": "event", "fact": "F18", "event": "rediscovered", "frame": "84b0bffaea13006586bde91453b58446-4514", "note": "aluminum pot recipe still needs a hammering-3 tool, a heat source and aluminum"}
+{"type": "event", "fact": "F12", "event": "needed", "frame": "84b0bffaea13006586bde91453b58446-4523", "note": "sharpened spear shaft recipe still needs a spear shaft component the player lacks"}
+{"type": "event", "fact": "F12", "event": "rediscovered", "frame": "84b0bffaea13006586bde91453b58446-4523", "note": "sharpened spear shaft recipe still needs a spear shaft component the player lacks"}
+{"type": "event", "fact": "F57", "event": "needed", "frame": "84b0bffaea13006586bde91453b58446-4527", "note": "wooden fishing spear recipe again needs cutting-2, hammering-1, a stick or plank and 4 scrap metal, and yields spear ammo"}
+{"type": "event", "fact": "F57", "event": "rediscovered", "frame": "84b0bffaea13006586bde91453b58446-4527", "note": "wooden fishing spear recipe again needs cutting-2, hammering-1, a stick or plank and 4 scrap metal, and yields spear ammo"}
+{"type": "event", "fact": "F45", "event": "used", "frame": "84b0bffaea13006586bde91453b58446-4527", "note": "continued searching spear and stick recipes as part of the fishing plan"}
+{"type": "fact", "id": "F63", "statement": "A pointy stick needs a cutting-1 tool plus a stick, plank, broom or pool cue (about 49 seconds); a long pointy stick needs a long stick (about 1 minute)", "category": "procedure", "observed": "84b0bffaea13006586bde91453b58446-4537", "stored": null}
+{"type": "event", "fact": "F16", "event": "needed", "frame": "84b0bffaea13006586bde91453b58446-4867", "note": "long pointy stick recipe needs a long stick, which the dirt patch in the forest holds"}
+{"type": "fact", "id": "F67", "statement": "The player dropped his 19 cotton sheets on the road pavement to lighten the load", "category": "item", "observed": "84b0bffaea13006586bde91453b58446-5488", "stored": null}
+{"type": "fact", "id": "F61", "statement": "Cooked cattail stalk needs a cutting-1 tool, a food-cooking tool and a nearby fire; about 21 minutes (43 percent minor failure); it also yields plant fiber", "category": "procedure", "observed": "84b0bffaea13006586bde91453b58446-5583", "stored": null}
+{"type": "event", "fact": "F34", "event": "needed", "frame": "84b0bffaea13006586bde91453b58446-6071", "note": "message says the player no longer has a nearby fire and cannot continue cooking the stalk"}
+{"type": "fact", "id": "F66", "statement": "A fire was lit with the lighter on the yellow road pavement and used to cook cattail stalks", "category": "resource", "observed": "84b0bffaea13006586bde91453b58446-6548", "stored": null}
+{"type": "event", "fact": "F20", "event": "used", "frame": "84b0bffaea13006586bde91453b58446-6548", "note": "lit a fire with the lighter"}
+{"type": "fact", "id": "F62", "statement": "Starch needs 2 cattail rhizomes plus hammering-1, cutting-2 and containing-1 tools; about 40 minutes (37 percent minor failure); batches save time and yield plant fiber", "category": "procedure", "observed": "84b0bffaea13006586bde91453b58446-7154", "stored": null}
+{"type": "fact", "id": "F75", "statement": "Whumps and a smash were heard outside while the player was in the shelter in the late afternoon", "category": "hazard", "observed": "84b0bffaea13006586bde91453b58446-7723", "stored": null}
+{"type": "fact", "id": "F64", "statement": "The player crafted a large wooden bowl from memory in the shelter and carries it as the containing tool for starch", "category": "item", "observed": "84b0bffaea13006586bde91453b58446-7862", "stored": null}
+{"type": "fact", "id": "F65", "statement": "Starch gives about 668 kcal and keeps 3 days; a cattail rhizome gives 250 kcal and a stalk only 18 kcal", "category": "resource", "observed": "84b0bffaea13006586bde91453b58446-8368", "stored": null}
+{"type": "event", "fact": "F38", "event": "needed", "frame": "84b0bffaea13006586bde91453b58446-8603", "note": "shelter floor near the bench now shows 6 nuts and bolts, 6 splintered wood and 24 scrap metal (counts differ from the earlier note)"}
+{"type": "event", "fact": "F38", "event": "rediscovered", "frame": "84b0bffaea13006586bde91453b58446-8603", "note": "shelter floor near the bench now shows 6 nuts and bolts, 6 splintered wood and 24 scrap metal (counts differ from the earlier note)"}
+{"type": "fact", "id": "F68", "statement": "The bench in the shelter is a comfortable place to sleep; the player lay down there at about 7:50 PM and had trouble falling asleep", "category": "place", "observed": "84b0bffaea13006586bde91453b58446-8987", "stored": null}
+{"type": "event", "fact": "F33", "event": "needed", "frame": "84b0bffaea13006586bde91453b58446-9738", "note": "very thirsty in the morning with 7 clean water left; drank carried water rather than boiling more"}
+{"type": "fact", "id": "F69", "statement": "The night left the character chilly; wearing a spare cotton sheet gives warmth", "category": "self", "observed": "84b0bffaea13006586bde91453b58446-9754", "stored": null}
+{"type": "event", "fact": "F41", "event": "used", "frame": "84b0bffaea13006586bde91453b58446-9754", "note": "drank clean water twice and ate starch"}
+{"type": "event", "fact": "F27", "event": "needed", "frame": "84b0bffaea13006586bde91453b58446-9754", "note": "Racheal Burris stands in the shelter, still neutral"}
+{"type": "event", "fact": "F27", "event": "rediscovered", "frame": "84b0bffaea13006586bde91453b58446-9754", "note": "Racheal Burris stands in the shelter, still neutral"}
+{"type": "fact", "id": "F70", "statement": "A second long string lies on the shelter floor east of the north window; the player picked it up", "category": "item", "observed": "84b0bffaea13006586bde91453b58446-9815", "stored": "f0c78e"}
+{"type": "event", "fact": "F42", "event": "needed", "frame": "84b0bffaea13006586bde91453b58446-9815", "note": "digging stick (2) lies on the floor one tile east"}
+{"type": "event", "fact": "F42", "event": "rediscovered", "frame": "84b0bffaea13006586bde91453b58446-9815", "note": "digging stick (2) lies on the floor one tile east"}
+{"type": "event", "fact": "F50", "event": "needed", "frame": "84b0bffaea13006586bde91453b58446-9815", "note": "two blindfolds lie on the floor"}
+{"type": "event", "fact": "F50", "event": "rediscovered", "frame": "84b0bffaea13006586bde91453b58446-9815", "note": "two blindfolds lie on the floor"}
+{"type": "fact", "id": "F76", "statement": "The player holds 210 plant fiber (from starch and cooked stalk byproducts)", "category": "item", "observed": "84b0bffaea13006586bde91453b58446-10671", "stored": null}
+{"type": "event", "fact": "F51", "event": "needed", "frame": "84b0bffaea13006586bde91453b58446-10671", "note": "searched plant fiber while considering long strings, which need 300 plant fiber or thread"}
+{"type": "fact", "id": "F71", "statement": "The player crafted a wooden needle (0/200 thread) from memory and carries it", "category": "item", "observed": "84b0bffaea13006586bde91453b58446-10794", "stored": null}
+{"type": "event", "fact": "F25", "event": "needed", "frame": "84b0bffaea13006586bde91453b58446-11032", "note": "a sheet disassembled into 11 cotton sheets"}
+{"type": "event", "fact": "F25", "event": "rediscovered", "frame": "84b0bffaea13006586bde91453b58446-11032", "note": "a sheet disassembled into 11 cotton sheets"}
+{"type": "fact", "id": "F72", "statement": "The player crafted 8 cattail seeds from memory and carries them", "category": "item", "observed": "84b0bffaea13006586bde91453b58446-11205", "stored": null}
+{"type": "fact", "id": "F73", "statement": "Build Planter needs fabrication 3 (player has 2), hammering-2 and wood-sawing-2 tools, 12 planks, 36 nails, 200 pebbles and 75 soil", "category": "procedure", "observed": "84b0bffaea13006586bde91453b58446-11791", "stored": null}
+{"type": "fact", "id": "F74", "statement": "Plan: renew food by planting the cattail seeds in shallow stream water; planting was not carried out", "category": "plan", "observed": "84b0bffaea13006586bde91453b58446-11791", "stored": null}
+{"type": "event", "fact": "F30", "event": "used", "frame": "84b0bffaea13006586bde91453b58446-12719", "note": "chose Save and Quit and the main menu shows Stirling City (1) in the load list"}
+{"type": "end", "frames_viewed": 68}

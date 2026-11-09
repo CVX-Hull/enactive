@@ -1,0 +1,15 @@
+{"id":"lh1-p0031","same":false,"informative":true,"what":"Map view with different message logs and status panels"}
+{"id":"lh1-p0032","same":false,"informative":true,"what":"Map view with different message logs and status panels"}
+{"id":"lh1-p0033","same":true,"informative":false,"what":"Both empty Searched crafting list, 0 recipes"}
+{"id":"lh1-p0034","same":false,"informative":true,"what":"Crafting search results with different lists (35 vs 25 recipes)"}
+{"id":"lh2-p0001","same":false,"informative":false,"what":"Empty Favorite tab vs empty Searched list"}
+{"id":"lh2-p0002","same":true,"informative":false,"what":"Both empty Searched crafting list"}
+{"id":"lh2-p0003","same":false,"informative":false,"what":"Empty Searched list vs empty Favorite tab"}
+{"id":"lh2-p0004","same":true,"informative":false,"what":"Both empty Searched crafting list"}
+{"id":"lh2-p0005","same":true,"informative":false,"what":"Both empty Searched crafting list"}
+{"id":"lh2-p0006","same":true,"informative":false,"what":"Both empty Favorite recipe tab"}
+{"id":"lh2-p0007","same":true,"informative":true,"what":"Same evac shelter scene with identical message log (fabrication increase, drop carving, wield long pointy stick)"}
+{"id":"lh2-p0008","same":false,"informative":false,"what":"Overmap with search prompt panel vs overmap with destination info panel"}
+{"id":"lh2-p0009","same":false,"informative":true,"what":"Crafting search results: pointy stick list vs wooden spear"}
+{"id":"lh2-p0010","same":true,"informative":false,"what":"Both empty Searched crafting list"}
+{"id":"lh2-p0011","same":true,"informative":false,"what":"Same Cataclysm loading screen, only progress text differs"}

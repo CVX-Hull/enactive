@@ -1,12 +1,15 @@
 ---
 owner: lead
-status: proposed
+status: historical
 date: 2026-11-08
-scope: 'Pre-registration of the ADR 009 P1 offline study: arm A (no curator) against arm B (curator) on #382 held-out lineages, scored on confirmed re-observations (#491)'
-review_trigger: Any change to the arms, probes, judges, metrics, thresholds, analysis script, held-out handling or spend; each is a recorded deviation once the owner approves P1
+scope: 'Pre-registration of the ADR 009 P1 offline study: arm A (no curator) against arm B (curator) on #382 held-out lineages, scored on confirmed re-observations (#491); stopped at its power gate before any replay'
 ---
 
 # P1 offline study: pre-registration
+
+**Outcome.** On 9 November 2026 the held-out power re-check failed its gate, and the owner
+stopped P1 there, before any replay or spend. Nothing below ran past the held-out probes
+([record](../acceptance/2026-11-09-p1-gate-178.md)). A reshaped P1 is a new protocol.
 
 Protocol **p1-study/1**, written 8 November 2026 for [ADR 009](../decisions/009-curated-player.md#phases)
 P1. It decides one question, offline and descriptively:

@@ -1,0 +1,79 @@
+{"type":"carry","fact":"F1","boundary":"lh1a2-001>lh1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F2","boundary":"lh1a2-001>lh1a3-001","carried":true,"where":"report"}
+{"type":"carry","fact":"F3","boundary":"lh1a2-001>lh1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F4","boundary":"lh1a2-001>lh1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F5","boundary":"lh1a2-001>lh1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F6","boundary":"lh1a2-001>lh1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F7","boundary":"lh1a2-001>lh1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F8","boundary":"lh1a2-001>lh1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F9","boundary":"lh1a2-001>lh1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F10","boundary":"lh1a2-001>lh1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F11","boundary":"lh1a2-001>lh1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F12","boundary":"lh1a2-001>lh1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F13","boundary":"lh1a2-001>lh1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F14","boundary":"lh1a2-001>lh1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F15","boundary":"lh1a2-001>lh1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F16","boundary":"lh1a2-001>lh1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F17","boundary":"lh1a2-001>lh1a3-001","carried":true,"where":"report"}
+{"type":"carry","fact":"F18","boundary":"lh1a2-001>lh1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F19","boundary":"lh1a2-001>lh1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F20","boundary":"lh1a2-001>lh1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F22","boundary":"lh1a2-001>lh1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F23","boundary":"lh1a2-001>lh1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F24","boundary":"lh1a2-001>lh1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F25","boundary":"lh1a2-001>lh1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F26","boundary":"lh1a2-001>lh1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F27","boundary":"lh1a2-001>lh1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F29","boundary":"lh1a2-001>lh1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F30","boundary":"lh1a2-001>lh1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F31","boundary":"lh1a2-001>lh1a3-001","carried":true,"where":"report"}
+{"type":"carry","fact":"F32","boundary":"lh1a2-001>lh1a3-001","carried":true,"where":"report"}
+{"type":"carry","fact":"F33","boundary":"lh1a2-001>lh1a3-001","carried":true,"where":"report"}
+{"type":"carry","fact":"F34","boundary":"lh1a2-001>lh1a3-001","carried":true,"where":"report"}
+{"type":"carry","fact":"F35","boundary":"lh1a2-001>lh1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F36","boundary":"lh1a2-001>lh1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F37","boundary":"lh1a2-001>lh1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F38","boundary":"lh1a2-001>lh1a3-001","carried":false,"where":null}
+{"type":"carry","fact":"F39","boundary":"lh1a2-001>lh1a3-001","carried":true,"where":"report"}
+{"type":"carry","fact":"F40","boundary":"lh1a2-001>lh1a3-001","carried":true,"where":"report"}
+{"type":"fact","id":"F41","statement":"Carried inventory at the start of this stretch: quarterstaff wielded, lighter 71/100, pocket knife, smartphone 54/56, three boxes of protein rations in the messenger bag, 8 portions of clean water across several plastic bottles (one holds 2 hot freshly boiled portions), 0.5 L glass jar, matchbook, and no 3 L jar","category":"item","observed":"84b0bffaea13006586bde91453b58446-302","stored":"f0c78e"}
+{"type":"fact","id":"F42","statement":"A digging stick lies on the shelter floor just inside the door","category":"item","observed":"84b0bffaea13006586bde91453b58446-489","stored":null}
+{"type":"fact","id":"F43","statement":"Racheal Burris still asks whether the player found an inhaler; asked to travel together she answers with persuade odds of 18-39 percent and does not agree, ending with 'See you later'","category":"other","observed":"84b0bffaea13006586bde91453b58446-494","stored":null}
+{"type":"fact","id":"F44","statement":"A zombie hunter and two other zombies were spotted 60 tiles west of the shelter field; safe mode warns and the player ignores them","category":"hazard","observed":"84b0bffaea13006586bde91453b58446-1244","stored":"f0c78e"}
+{"type":"fact","id":"F45","statement":"Plan: make fishing gear (improvised fishing hook, string, rod or spear) to fish for sustainable food","category":"plan","observed":"84b0bffaea13006586bde91453b58446-1470","stored":null}
+{"type":"fact","id":"F46","statement":"The player crafted an improvised fishing hook from memory at the shelter door and carries it","category":"item","observed":"84b0bffaea13006586bde91453b58446-1730","stored":null}
+{"type":"fact","id":"F47","statement":"The improvised fishing hook recipe needs a cutting-2 tool plus one bone, stick, plank or splintered wood; about 4 minutes and 27 percent minor failure; it is a component of the basic fishing rod","category":"procedure","observed":"84b0bffaea13006586bde91453b58446-1961","stored":null}
+{"type":"fact","id":"F48","statement":"Cordage and rope recipes are not memorized; at tailoring 0 they carry 72 percent minor and 20 percent catastrophic failure","category":"procedure","observed":"84b0bffaea13006586bde91453b58446-1970","stored":null}
+{"type":"fact","id":"F49","statement":"Character skills: survival 2, food handling 1, fabrication 2, electronics 1, applied science 1, tailoring 0 (77 percent progress); proficiencies Driving, Food Preparation, Carving 5 percent; legs and feet wet","category":"self","observed":"84b0bffaea13006586bde91453b58446-2111","stored":null}
+{"type":"fact","id":"F50","statement":"A blindfold needs only one cotton sheet and no tool, takes about 3 minutes and was crafted as tailoring practice","category":"procedure","observed":"84b0bffaea13006586bde91453b58446-2213","stored":null}
+{"type":"fact","id":"F51","statement":"A long string needs a spinning wheel plus 300 thread or 6 short strings, so it cannot be made now; the player holds one long string","category":"procedure","observed":"84b0bffaea13006586bde91453b58446-2276","stored":null}
+{"type":"fact","id":"F52","statement":"The shelter cupboard holds 20 cotton sheets, a digging stick, a pair of sock mitts and 21 small boxes of protein rations","category":"resource","observed":"84b0bffaea13006586bde91453b58446-2404","stored":"f0c78e"}
+{"type":"fact","id":"F53","statement":"Disassembling one cotton sheet yields 8 cotton patches; the player holds 8 patches","category":"procedure","observed":"84b0bffaea13006586bde91453b58446-3001","stored":null}
+{"type":"fact","id":"F54","statement":"Tailoring reached level 1 after the blindfold and sheet disassembly work","category":"self","observed":"84b0bffaea13006586bde91453b58446-3156","stored":"f0c78e"}
+{"type":"fact","id":"F55","statement":"Thread needs a distaff and spindle plus 3 cotton balls and the Spinning proficiency, taking over an hour; no thread-making tools are available","category":"procedure","observed":"84b0bffaea13006586bde91453b58446-3156","stored":null}
+{"type":"fact","id":"F56","statement":"A fire-hardened wooden spear needs a cutting-2 tool, a nearby fire or torch and one long stick, taking about 1.5 hours","category":"procedure","observed":"84b0bffaea13006586bde91453b58446-3160","stored":null}
+{"type":"fact","id":"F57","statement":"A wooden fishing spear needs a cutting-2 tool, a hammering-1 tool, a stick or plank and 4 scrap metal, and makes 4 spears in about 11 minutes","category":"procedure","observed":"84b0bffaea13006586bde91453b58446-3165","stored":null}
+{"type":"fact","id":"F58","statement":"A recipe search for fish trap returns nothing","category":"procedure","observed":"84b0bffaea13006586bde91453b58446-3169","stored":null}
+{"type":"event","fact":"F2","event":"used","frame":"84b0bffaea13006586bde91453b58446-3","note":"loaded Morgan Reed from the Stirling City load menu"}
+{"type":"event","fact":"F30","event":"used","frame":"84b0bffaea13006586bde91453b58446-3","note":"loaded the saved Stirling City character"}
+{"type":"event","fact":"F39","event":"rediscovered","frame":"84b0bffaea13006586bde91453b58446-230","note":"prompt to pour the hot clean water into a container after loading"}
+{"type":"event","fact":"F33","event":"used","frame":"84b0bffaea13006586bde91453b58446-230","note":"continued boiling clean water at the pavement fire"}
+{"type":"event","fact":"F9","event":"rediscovered","frame":"84b0bffaea13006586bde91453b58446-302","note":"inventory shows three protein ration boxes in the bag"}
+{"type":"event","fact":"F20","event":"rediscovered","frame":"84b0bffaea13006586bde91453b58446-302","note":"lighter still carried at 71 of 100"}
+{"type":"event","fact":"F17","event":"used","frame":"84b0bffaea13006586bde91453b58446-390","note":"walks with the quarterstaff wielded"}
+{"type":"event","fact":"F40","event":"invalidated","frame":"84b0bffaea13006586bde91453b58446-390","note":"game responsive again and the clean water craft completed"}
+{"type":"event","fact":"F35","event":"rediscovered","frame":"84b0bffaea13006586bde91453b58446-489","note":"saw the digging stick on the shelter floor"}
+{"type":"event","fact":"F5","event":"needed","frame":"84b0bffaea13006586bde91453b58446-494","note":"Racheal asked about the inhaler and the player answered not yet"}
+{"type":"event","fact":"F27","event":"rediscovered","frame":"84b0bffaea13006586bde91453b58446-494","note":"talked with Racheal Burris, who stays neutral"}
+{"type":"event","fact":"F29","event":"needed","frame":"84b0bffaea13006586bde91453b58446-653","note":"overmap shows Eustis to the north; player did not go there"}
+{"type":"event","fact":"F31","event":"needed","frame":"84b0bffaea13006586bde91453b58446-653","note":"water visible east of the field on the overmap, relevant to fishing"}
+{"type":"event","fact":"F13","event":"used","frame":"84b0bffaea13006586bde91453b58446-1121","note":"walked west across the field from the shelter"}
+{"type":"event","fact":"F22","event":"needed","frame":"84b0bffaea13006586bde91453b58446-1244","note":"zombie warning; ignored the monsters and turned back"}
+{"type":"event","fact":"F3","event":"rediscovered","frame":"84b0bffaea13006586bde91453b58446-2404","note":"cupboard tile shows 21 boxes of protein rations"}
+{"type":"event","fact":"F35","event":"rediscovered","frame":"84b0bffaea13006586bde91453b58446-2404","note":"a digging stick lay on the cupboard"}
+{"type":"event","fact":"F25","event":"used","frame":"84b0bffaea13006586bde91453b58446-3001","note":"disassembled a cotton sheet into patches"}
+{"type":"event","fact":"F12","event":"rediscovered","frame":"84b0bffaea13006586bde91453b58446-3160","note":"spear recipes viewed again; missing long stick and fire"}
+{"type":"event","fact":"F16","event":"needed","frame":"84b0bffaea13006586bde91453b58446-3160","note":"a long stick is required for the spear and the dirt patch holds long sticks"}
+{"type":"event","fact":"F38","event":"needed","frame":"84b0bffaea13006586bde91453b58446-3165","note":"fishing spear needs 4 scrap metal, which lies on the shelter floor"}
+{"type":"event","fact":"F18","event":"needed","frame":"84b0bffaea13006586bde91453b58446-3165","note":"fishing spear needs a hammering tool"}
+{"type":"end","frames_viewed":30}

@@ -1,0 +1,36 @@
+{"type":"carry","fact":"F1","boundary":"lh2a1-001>lh2a1-002","carried":true,"where":"prompt"}
+{"type":"carry","fact":"F2","boundary":"lh2a1-001>lh2a1-002","carried":true,"where":"prompt"}
+{"type":"carry","fact":"F3","boundary":"lh2a1-001>lh2a1-002","carried":true,"where":"prompt"}
+{"type":"carry","fact":"F4","boundary":"lh2a1-001>lh2a1-002","carried":true,"where":"prompt"}
+{"type":"carry","fact":"F5","boundary":"lh2a1-001>lh2a1-002","carried":true,"where":"prompt"}
+{"type":"carry","fact":"F6","boundary":"lh2a1-001>lh2a1-002","carried":true,"where":"prompt"}
+{"type":"carry","fact":"F8","boundary":"lh2a1-001>lh2a1-002","carried":false,"where":null}
+{"type":"carry","fact":"F9","boundary":"lh2a1-001>lh2a1-002","carried":true,"where":"prompt"}
+{"type":"carry","fact":"F10","boundary":"lh2a1-001>lh2a1-002","carried":true,"where":"prompt"}
+{"type":"carry","fact":"F12","boundary":"lh2a1-001>lh2a1-002","carried":true,"where":"prompt"}
+{"type":"carry","fact":"F13","boundary":"lh2a1-001>lh2a1-002","carried":true,"where":"prompt"}
+{"type":"carry","fact":"F14","boundary":"lh2a1-001>lh2a1-002","carried":true,"where":"prompt"}
+{"type":"fact","id":"F15","statement":"A pond lies northwest of the shelter, beyond the road and a field; its murky water can be scooped into a bottle.","category":"place","observed":"ac243818c2cb67b937b4e0618b9b708f-6784","stored":null}
+{"type":"fact","id":"F16","statement":"Clean water is craftable from memory by boiling one water over a nearby fire or other boiling tool (about 5 minutes).","category":"procedure","observed":"ac243818c2cb67b937b4e0618b9b708f-12556","stored":null}
+{"type":"fact","id":"F17","statement":"A campground north of the shelter has a picnic table area with a small tin can of 8 cheese spreads, smoked meat, a tomato, a lighter, flint, acorns, a short bow and a cigarette pack lying about.","category":"resource","observed":"ac243818c2cb67b937b4e0618b9b708f-12395","stored":null}
+{"type":"fact","id":"F18","statement":"A plastic bottle lay on the grass near the forest northwest of the road; the survivor picked it up and uses it to carry water.","category":"item","observed":"ac243818c2cb67b937b4e0618b9b708f-5998","stored":null}
+{"type":"fact","id":"F19","statement":"A police-barricade roadblock lies on the road north of the shelter, with hostile zombies beyond it.","category":"hazard","observed":"ac243818c2cb67b937b4e0618b9b708f-5030","stored":null}
+{"type":"fact","id":"F20","statement":"A zombie dog roams the open field northwest of the shelter.","category":"hazard","observed":"ac243818c2cb67b937b4e0618b9b708f-8982","stored":null}
+{"type":"fact","id":"F21","statement":"A zombie child wanders near the campground by the road.","category":"hazard","observed":"ac243818c2cb67b937b4e0618b9b708f-12306","stored":null}
+{"type":"fact","id":"F22","statement":"About four wild turkeys roam the forest north of the road.","category":"resource","observed":"ac243818c2cb67b937b4e0618b9b708f-5447","stored":null}
+{"type":"fact","id":"F23","statement":"Pond water can be purified by lighting a fire on the road with matches, burning cardboard and splintered wood, and boiling the water in the small tin can.","category":"procedure","observed":"ac243818c2cb67b937b4e0618b9b708f-14916","stored":null}
+{"type":"fact","id":"F24","statement":"The survivor's fabrication skill reached 2 after practising carving; the in-progress carving was dropped in the shelter.","category":"self","observed":"ac243818c2cb67b937b4e0618b9b708f-16138","stored":null}
+{"type":"fact","id":"F25","statement":"The shelter roof also holds planks, nails and scrap metal beside the snapped stick, which the survivor picked up.","category":"resource","observed":"ac243818c2cb67b937b4e0618b9b708f-7624","stored":null}
+{"type":"fact","id":"F26","statement":"A makeshift hammer needs a tool with hammering, a metal chunk and a stick or plank; a brazier needs sheet metal, so the survivor cannot yet make either.","category":"procedure","observed":"ac243818c2cb67b937b4e0618b9b708f-7213","stored":null}
+{"type":"fact","id":"F27","statement":"The survivor saved and quit; Morgan Hale appears in the Brokaw Load list.","category":"other","observed":"ac243818c2cb67b937b4e0618b9b708f-16261","stored":null}
+{"type":"event","fact":"F14","event":"used","frame":"ac243818c2cb67b937b4e0618b9b708f-4385","note":"Walks outdoors wielding the intact stick."}
+{"type":"event","fact":"F2","event":"rediscovered","frame":"ac243818c2cb67b937b4e0618b9b708f-7504","note":"Back in evac shelter B-05 at 8:37."}
+{"type":"event","fact":"F3","event":"rediscovered","frame":"ac243818c2cb67b937b4e0618b9b708f-7504","note":"Odell Hampton seen again in the shelter."}
+{"type":"event","fact":"F5","event":"used","frame":"ac243818c2cb67b937b4e0618b9b708f-7504","note":"Ate a protein ration from the carried stock."}
+{"type":"event","fact":"F10","event":"needed","frame":"ac243818c2cb67b937b4e0618b9b708f-7624","note":"Inspected the roof tank (56) while needing water."}
+{"type":"event","fact":"F10","event":"used","frame":"ac243818c2cb67b937b4e0618b9b708f-7792","note":"Filled a plastic bottle from the tank, leaving 54."}
+{"type":"event","fact":"F4","event":"needed","frame":"ac243818c2cb67b937b4e0618b9b708f-7910","note":"Pickup menu of the cupboard with 21 boxes."}
+{"type":"event","fact":"F4","event":"rediscovered","frame":"ac243818c2cb67b937b4e0618b9b708f-7910","note":"Cupboard re-opened, showing 21 boxes."}
+{"type":"event","fact":"F4","event":"used","frame":"ac243818c2cb67b937b4e0618b9b708f-8272","note":"Took 5 more protein rations, now 6 carried."}
+{"type":"event","fact":"F6","event":"used","frame":"ac243818c2cb67b937b4e0618b9b708f-14263","note":"Used the matchbook to start a fire."}
+{"type":"end","frames_viewed":67}

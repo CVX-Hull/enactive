@@ -1,0 +1,91 @@
+{"type": "carry", "fact": "F1", "boundary": "lh2a2-001>lh2a2-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F2", "boundary": "lh2a2-001>lh2a2-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F3", "boundary": "lh2a2-001>lh2a2-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F4", "boundary": "lh2a2-001>lh2a2-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F5", "boundary": "lh2a2-001>lh2a2-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F6", "boundary": "lh2a2-001>lh2a2-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F8", "boundary": "lh2a2-001>lh2a2-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F9", "boundary": "lh2a2-001>lh2a2-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F10", "boundary": "lh2a2-001>lh2a2-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F12", "boundary": "lh2a2-001>lh2a2-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F13", "boundary": "lh2a2-001>lh2a2-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F15", "boundary": "lh2a2-001>lh2a2-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F16", "boundary": "lh2a2-001>lh2a2-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F17", "boundary": "lh2a2-001>lh2a2-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F18", "boundary": "lh2a2-001>lh2a2-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F19", "boundary": "lh2a2-001>lh2a2-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F20", "boundary": "lh2a2-001>lh2a2-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F21", "boundary": "lh2a2-001>lh2a2-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F22", "boundary": "lh2a2-001>lh2a2-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F23", "boundary": "lh2a2-001>lh2a2-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F25", "boundary": "lh2a2-001>lh2a2-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F26", "boundary": "lh2a2-001>lh2a2-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F27", "boundary": "lh2a2-001>lh2a2-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F28", "boundary": "lh2a2-001>lh2a2-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F29", "boundary": "lh2a2-001>lh2a2-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F30", "boundary": "lh2a2-001>lh2a2-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F31", "boundary": "lh2a2-001>lh2a2-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F32", "boundary": "lh2a2-001>lh2a2-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F33", "boundary": "lh2a2-001>lh2a2-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F34", "boundary": "lh2a2-001>lh2a2-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F35", "boundary": "lh2a2-001>lh2a2-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F36", "boundary": "lh2a2-001>lh2a2-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F37", "boundary": "lh2a2-001>lh2a2-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F38", "boundary": "lh2a2-001>lh2a2-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F39", "boundary": "lh2a2-001>lh2a2-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F40", "boundary": "lh2a2-001>lh2a2-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F41", "boundary": "lh2a2-001>lh2a2-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F42", "boundary": "lh2a2-001>lh2a2-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F43", "boundary": "lh2a2-001>lh2a2-002", "carried": true, "where": "packet"}
+{"type": "event", "fact": "F36", "event": "used", "frame": "4165a6f3f75b042879bf95d1863c0894-5010", "note": "Wields the wooden spear while foraging in the forest."}
+{"type": "event", "fact": "F40", "event": "rediscovered", "frame": "4165a6f3f75b042879bf95d1863c0894-5010", "note": "Examines the hickory tree again: could dig roots but nothing harvestable this season."}
+{"type": "fact", "id": "F44", "statement": "The shelter floor holds nuts and bolts, splintered wood, scrap metal, a plank, nails, a snapped long pointy stick and the in-progress carving (54%).", "category": "resource", "observed": "4165a6f3f75b042879bf95d1863c0894-5439", "stored": null}
+{"type": "event", "fact": "F25", "event": "rediscovered", "frame": "4165a6f3f75b042879bf95d1863c0894-5439", "note": "Planks, nails, scrap metal and the snapped stick are listed in the shelter."}
+{"type": "event", "fact": "F29", "event": "needed", "frame": "4165a6f3f75b042879bf95d1863c0894-5463", "note": "Rechecks the basic fishing rod recipe needing a stick, cordage and a hook."}
+{"type": "event", "fact": "F2", "event": "rediscovered", "frame": "4165a6f3f75b042879bf95d1863c0894-5478", "note": "Back in evac shelter B-05 at 4:15 PM day 61."}
+{"type": "fact", "id": "F45", "statement": "A fishing hook can be crafted from memory in the shelter and the survivor crafted one.", "category": "procedure", "observed": "4165a6f3f75b042879bf95d1863c0894-5848", "stored": null}
+{"type": "fact", "id": "F46", "statement": "Tearing the curtains and rods off the shelter windows yields long strings; the survivor gathered several.", "category": "resource", "observed": "4165a6f3f75b042879bf95d1863c0894-6049", "stored": null}
+{"type": "event", "fact": "F1", "event": "used", "frame": "4165a6f3f75b042879bf95d1863c0894-15545", "note": "Character sheet confirms Morgan Hale, male."}
+{"type": "event", "fact": "F6", "event": "rediscovered", "frame": "4165a6f3f75b042879bf95d1863c0894-6293", "note": "Inventory shows the matchbook with 19 matches."}
+{"type": "event", "fact": "F18", "event": "used", "frame": "4165a6f3f75b042879bf95d1863c0894-6293", "note": "Two plastic bottles holding clean water are carried."}
+{"type": "event", "fact": "F32", "event": "rediscovered", "frame": "4165a6f3f75b042879bf95d1863c0894-6293", "note": "The gallon jug of 240 vegetable cooking oil is carried."}
+{"type": "event", "fact": "F31", "event": "invalidated", "frame": "4165a6f3f75b042879bf95d1863c0894-6293", "note": "The jug is now in the survivor's inventory, not Odell's."}
+{"type": "event", "fact": "F33", "event": "rediscovered", "frame": "4165a6f3f75b042879bf95d1863c0894-6293", "note": "Smartphone is carried at 47/56 battery."}
+{"type": "event", "fact": "F3", "event": "needed", "frame": "4165a6f3f75b042879bf95d1863c0894-6949", "note": "Odell asks whether the standard was rescued; the survivor says not yet."}
+{"type": "event", "fact": "F3", "event": "rediscovered", "frame": "4165a6f3f75b042879bf95d1863c0894-6949", "note": "Odell's flag request seen again in dialogue."}
+{"type": "fact", "id": "F47", "statement": "A basic fishing rod was crafted from a stick, six long strings and the fishing hook, and wielded in place of the spear.", "category": "item", "observed": "4165a6f3f75b042879bf95d1863c0894-8716", "stored": null}
+{"type": "event", "fact": "F29", "event": "used", "frame": "4165a6f3f75b042879bf95d1863c0894-8716", "note": "Crafts the basic fishing rod with the components now in hand."}
+{"type": "event", "fact": "F20", "event": "needed", "frame": "4165a6f3f75b042879bf95d1863c0894-9189", "note": "Route to the northwest pond crosses the open field where the zombie dog roams."}
+{"type": "event", "fact": "F15", "event": "used", "frame": "4165a6f3f75b042879bf95d1863c0894-9189", "note": "Travels by map route to the pond northwest of the shelter."}
+{"type": "event", "fact": "F15", "event": "rediscovered", "frame": "4165a6f3f75b042879bf95d1863c0894-9609", "note": "Arrives at the pond; lake whitefish visible."}
+{"type": "fact", "id": "F48", "statement": "Attempting to fish at the northwest pond with the rod fails with 'You can't fish there!' although fish are visible.", "category": "other", "observed": "4165a6f3f75b042879bf95d1863c0894-9807", "stored": null}
+{"type": "event", "fact": "F38", "event": "invalidated", "frame": "4165a6f3f75b042879bf95d1863c0894-10319", "note": "Recipe screen shows survival 1, no longer 0."}
+{"type": "event", "fact": "F41", "event": "needed", "frame": "4165a6f3f75b042879bf95d1863c0894-10319", "note": "Searches for a digging tool since the wooden shovel cannot be made."}
+{"type": "fact", "id": "F51", "statement": "A digging stick is craftable with a cutting tool and a stick or plank, taking about an hour.", "category": "procedure", "observed": "4165a6f3f75b042879bf95d1863c0894-10319", "stored": null}
+{"type": "fact", "id": "F49", "statement": "Cattails at the northwest pond can be picked for fresh rhizomes (250 kcal) and stalks (18 kcal); the survivor harvested three rhizomes and eight stalks.", "category": "resource", "observed": "4165a6f3f75b042879bf95d1863c0894-10951", "stored": null}
+{"type": "event", "fact": "F42", "event": "used", "frame": "4165a6f3f75b042879bf95d1863c0894-11216", "note": "Harvests cattail food to build a renewable food source."}
+{"type": "fact", "id": "F50", "statement": "Fresh plant foods such as cattail rhizomes and stalks keep only about 3 days.", "category": "other", "observed": "4165a6f3f75b042879bf95d1863c0894-11688", "stored": null}
+{"type": "event", "fact": "F32", "event": "rediscovered", "frame": "4165a6f3f75b042879bf95d1863c0894-11688", "note": "Food list shows vegetable cooking oil (240)."}
+{"type": "fact", "id": "F59", "statement": "A makeshift hand drill needs a pipe, a hammering tool of 2, a fine hammering tool, a nail and a plank or stick.", "category": "procedure", "observed": "4165a6f3f75b042879bf95d1863c0894-12042", "stored": null}
+{"type": "event", "fact": "F26", "event": "needed", "frame": "4165a6f3f75b042879bf95d1863c0894-12042", "note": "Hand drill recipe requires hammering tools the survivor lacks."}
+{"type": "event", "fact": "F26", "event": "needed", "frame": "4165a6f3f75b042879bf95d1863c0894-12499", "note": "Hammer recipes searched; filing tool and short sledge hammer are missing."}
+{"type": "fact", "id": "F53", "statement": "The survivor slept on a bench in the shelter on the night of day 61 and woke fresh on day 62.", "category": "self", "observed": "4165a6f3f75b042879bf95d1863c0894-13075", "stored": null}
+{"type": "event", "fact": "F5", "event": "used", "frame": "4165a6f3f75b042879bf95d1863c0894-13953", "note": "Ate a protein ration after waking."}
+{"type": "event", "fact": "F10", "event": "rediscovered", "frame": "4165a6f3f75b042879bf95d1863c0894-14193", "note": "Rooftop standing tank shows 54 clean water."}
+{"type": "event", "fact": "F10", "event": "used", "frame": "4165a6f3f75b042879bf95d1863c0894-14336", "note": "Refilled a plastic bottle from the tank, leaving 52."}
+{"type": "event", "fact": "F18", "event": "used", "frame": "4165a6f3f75b042879bf95d1863c0894-14336", "note": "Bottle filled to the brim with clean water."}
+{"type": "event", "fact": "F37", "event": "invalidated", "frame": "4165a6f3f75b042879bf95d1863c0894-14778", "note": "Inventory shows 4 protein rations, not 5."}
+{"type": "event", "fact": "F4", "event": "rediscovered", "frame": "4165a6f3f75b042879bf95d1863c0894-14952", "note": "Stack of 23 protein ration boxes listed on the cupboard beside the survivor."}
+{"type": "event", "fact": "F9", "event": "needed", "frame": "4165a6f3f75b042879bf95d1863c0894-15110", "note": "Swaps from the spear to a stick to smash furniture."}
+{"type": "fact", "id": "F54", "statement": "The shelter floor northwest holds an emergency blanket, emergency jacket, FEMA pamphlet, whistle, plastic cutlery, bottles of clean water, 10 scrap metal and 10 small metal sheets.", "category": "resource", "observed": "4165a6f3f75b042879bf95d1863c0894-15255", "stored": null}
+{"type": "event", "fact": "F26", "event": "needed", "frame": "4165a6f3f75b042879bf95d1863c0894-15255", "note": "Small metal sheets are available for a brazier."}
+{"type": "fact", "id": "F60", "statement": "A chunk of steel needs 5 scrap metal and a forge or acetylene torch with a crucible, which are unavailable.", "category": "procedure", "observed": "4165a6f3f75b042879bf95d1863c0894-15317", "stored": null}
+{"type": "fact", "id": "F55", "statement": "The survivor wears an emergency jacket picked up in the shelter and was chilly before.", "category": "item", "observed": "4165a6f3f75b042879bf95d1863c0894-15545", "stored": null}
+{"type": "fact", "id": "F61", "statement": "The basic fishing rod and digging stick were left on the shelter floor.", "category": "item", "observed": "4165a6f3f75b042879bf95d1863c0894-15545", "stored": null}
+{"type": "fact", "id": "F52", "statement": "Survival skill reached 2.", "category": "self", "observed": "4165a6f3f75b042879bf95d1863c0894-15787", "stored": null}
+{"type": "fact", "id": "F56", "statement": "A bow fire drill can be crafted from memory and was loaded with a notched plank; ignition is untested.", "category": "procedure", "observed": "4165a6f3f75b042879bf95d1863c0894-15988", "stored": null}
+{"type": "fact", "id": "F57", "statement": "Notched planks are made from a plank with a cutting tool; one plank makes four.", "category": "procedure", "observed": "4165a6f3f75b042879bf95d1863c0894-16055", "stored": null}
+{"type": "fact", "id": "F58", "statement": "Tinder can be crafted from cattail stalks or splintered wood.", "category": "procedure", "observed": "text", "stored": null}
+{"type": "event", "fact": "F27", "event": "rediscovered", "frame": "4165a6f3f75b042879bf95d1863c0894-17094", "note": "Main menu shows Brokaw world with its Load option after Save and quit."}
+{"type": "event", "fact": "F13", "event": "rediscovered", "frame": "4165a6f3f75b042879bf95d1863c0894-17094", "note": "Menu lists the separate Jayuya world."}
+{"type":"end","frames_viewed":73}

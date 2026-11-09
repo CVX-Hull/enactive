@@ -1,0 +1,15 @@
+{"id":"lh3-p0001","same":false,"informative":false,"what":"Both empty crafting lists (0 in category); one is the Searched tab only, the other the Favorite tab strip"}
+{"id":"lh3-p0002","same":true,"informative":true,"what":"Crafting menu: baked potato recipe list of 13 with the same recipe details panel (only NEW flags differ)"}
+{"id":"lh3-p0003","same":true,"informative":false,"what":"Crafting search help prompt with example filters (different typed search text)"}
+{"id":"lh3-p0004","same":true,"informative":true,"what":"Forest map with sidebar and message log about crafting the long pointy stick"}
+{"id":"lh3-p0005","same":true,"informative":true,"what":"Overmap view near Meddybemps with the same objective text and key help"}
+{"id":"lh3-p0006","same":true,"informative":false,"what":"Both empty Searched crafting lists with 0 recipes"}
+{"id":"lh3-p0007","same":true,"informative":true,"what":"Same overmap view of the Meddybemps area (A has a no-results popup, distance differs by one tile)"}
+{"id":"lh3-p0008","same":true,"informative":true,"what":"Evac shelter basement map with the same sidebar and message log"}
+{"id":"lh3-p0009","same":true,"informative":true,"what":"Evac shelter A-23 map with the same message log"}
+{"id":"lh3-p0010","same":false,"informative":true,"what":"Item pickup lists differ: 2 items (large rock, rock) versus 10 items including pamphlet, jacket and cutlery"}
+{"id":"lh3-p0011","same":true,"informative":false,"what":"Cataclysm loading splash screen (different loading status text)"}
+{"id":"lh3-p0012","same":true,"informative":true,"what":"Evac shelter A-23 map with the same sidebar and message log (only a cursor differs)"}
+{"id":"lh3-p0013","same":true,"informative":true,"what":"Crafting recipe list makeshift funnel/funnels with the same recipe details panel"}
+{"id":"lh3-p0014","same":true,"informative":false,"what":"Overmap pond search result panel (search prompt, results 1/2)"}
+{"id":"lh3-p0015","same":true,"informative":true,"what":"Crafting recipe list clean water (2) with the same recipe details panel"}

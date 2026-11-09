@@ -1,0 +1,39 @@
+{"type":"carry","fact":"F1","boundary":"lh3a1-002>lh3a2-001","carried":true,"where":"prompt"}
+{"type":"carry","fact":"F2","boundary":"lh3a1-002>lh3a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F3","boundary":"lh3a1-002>lh3a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F4","boundary":"lh3a1-002>lh3a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F5","boundary":"lh3a1-002>lh3a2-001","carried":true,"where":"prompt"}
+{"type":"carry","fact":"F6","boundary":"lh3a1-002>lh3a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F7","boundary":"lh3a1-002>lh3a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F8","boundary":"lh3a1-002>lh3a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F9","boundary":"lh3a1-002>lh3a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F10","boundary":"lh3a1-002>lh3a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F11","boundary":"lh3a1-002>lh3a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F12","boundary":"lh3a1-002>lh3a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F13","boundary":"lh3a1-002>lh3a2-001","carried":true,"where":"prompt"}
+{"type":"carry","fact":"F14","boundary":"lh3a1-002>lh3a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F15","boundary":"lh3a1-002>lh3a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F16","boundary":"lh3a1-002>lh3a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F17","boundary":"lh3a1-002>lh3a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F18","boundary":"lh3a1-002>lh3a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F19","boundary":"lh3a1-002>lh3a2-001","carried":true,"where":"prompt"}
+{"type":"carry","fact":"F20","boundary":"lh3a1-002>lh3a2-001","carried":true,"where":"prompt"}
+{"type":"carry","fact":"F21","boundary":"lh3a1-002>lh3a2-001","carried":false,"where":null}
+{"type":"carry","fact":"F22","boundary":"lh3a1-002>lh3a2-001","carried":true,"where":"prompt"}
+{"type":"event","fact":"F12","event":"invalidated","frame":"349dc4fbc37fd24e1acc756e4355ac66-205","note":"The survivor is now inside the evac shelter on the ground floor, no longer in the forest west of it"}
+{"type":"event","fact":"F2","event":"invalidated","frame":"349dc4fbc37fd24e1acc756e4355ac66-422","note":"The inventory list holds no smartphone; it went to Cleora in the trade"}
+{"type":"event","fact":"F11","event":"invalidated","frame":"349dc4fbc37fd24e1acc756e4355ac66-497","note":"Inventory now shows 3 protein ration wrappers and 5 water bottles, not 6 wrappers and 6 water"}
+{"type":"event","fact":"F22","event":"used","frame":"349dc4fbc37fd24e1acc756e4355ac66-3600","note":"The sealed medium tin can of canned chicken is kept in the inventory as the boiling vessel"}
+{"type":"event","fact":"F13","event":"used","frame":"349dc4fbc37fd24e1acc756e4355ac66-552","note":"Searched the overmap for a pond, then river and swamp, looking for sustainable water"}
+{"type":"event","fact":"F8","event":"needed","frame":"349dc4fbc37fd24e1acc756e4355ac66-552","note":"Water was the goal, and the murky water north of the west field was a candidate, but the search went to the overmap instead"}
+{"type":"event","fact":"F5","event":"needed","frame":"349dc4fbc37fd24e1acc756e4355ac66-736","note":"Food was at stake with only 3 protein rations carried, and the cupboard holds many more"}
+{"type":"event","fact":"F5","event":"rediscovered","frame":"349dc4fbc37fd24e1acc756e4355ac66-736","note":"Item list at the cupboard shows two stacks of 20 small cardboard boxes of protein ration"}
+{"type":"event","fact":"F7","event":"needed","frame":"349dc4fbc37fd24e1acc756e4355ac66-3312","note":"Safe-mode warnings report a feral human and zombies about 58 tiles east while traveling west of the shelter"}
+{"type":"event","fact":"F9","event":"used","frame":"349dc4fbc37fd24e1acc756e4355ac66-3312","note":"Walks the field wielding the long pointy stick"}
+{"type":"fact","id":"F23","statement":"After the trade the survivor carries 3 protein rations in wrappers, 5 sealed plastic bottles of 2 clean water each, two lighters, a pocket knife, a dog whistle, the long pointy stick, 6 small metal sheets, a rock and the canned chicken tin can; weight is normal","category":"self","observed":"349dc4fbc37fd24e1acc756e4355ac66-3600","stored":"329136"}
+{"type":"fact","id":"F24","statement":"A pile on the shelter ground floor beside the stairs holds the traded emergency blanket and jacket, 18 scrap metal, a large rock, a whistle and plastic utensils","category":"resource","observed":"349dc4fbc37fd24e1acc756e4355ac66-497","stored":null}
+{"type":"fact","id":"F25","statement":"The overmap search finds a public pond in the northeast of Meddybemps (two pond results), while a river search returns no results within 900 tiles","category":"place","observed":"349dc4fbc37fd24e1acc756e4355ac66-552","stored":null}
+{"type":"fact","id":"F26","statement":"A tough zombie lies about 60 tiles southwest on the road, and a feral human and others about 58 tiles east, as seen from the road and field west of the shelter","category":"hazard","observed":"349dc4fbc37fd24e1acc756e4355ac66-2952","stored":"329136"}
+{"type":"fact","id":"F27","statement":"An oversized bee, which is much faster than the survivor, a gracken and a wild turkey roam the field west of the shelter about 53 to 56 tiles away and were set to ignore","category":"hazard","observed":"349dc4fbc37fd24e1acc756e4355ac66-2786","stored":null}
+{"type":"fact","id":"F28","statement":"The plan is to establish sustainable clean water and food from the shelter's west door while avoiding nearby hostiles and reassessing the ignored monsters before any travel","category":"plan","observed":"text","stored":"329136"}
+{"type":"end","frames_viewed":24}

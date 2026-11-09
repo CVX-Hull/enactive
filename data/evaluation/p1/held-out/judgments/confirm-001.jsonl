@@ -1,0 +1,15 @@
+{"id":"lh1-p0001","same":true,"informative":false,"what":"Empty Searched crafting tab, 0 recipes"}
+{"id":"lh1-p0002","same":false,"informative":true,"what":"Load menu lists two saves (Diamond Bluff, Stirling City) vs only Diamond Bluff"}
+{"id":"lh1-p0003","same":true,"informative":false,"what":"Empty Favorite crafting tab, 0 recipes"}
+{"id":"lh1-p0004","same":true,"informative":true,"what":"Quarterstaff recipe panel; only long stick availability (missing vs have 1) differs"}
+{"id":"lh1-p0005","same":true,"informative":false,"what":"Empty Searched crafting tab, 0 recipes"}
+{"id":"lh1-p0006","same":true,"informative":false,"what":"Empty Favorite crafting tab, 0 recipes"}
+{"id":"lh1-p0007","same":true,"informative":false,"what":"Empty Searched crafting tab, 0 recipes"}
+{"id":"lh1-p0008","same":true,"informative":false,"what":"Crafting search help prompt with filter examples"}
+{"id":"lh1-p0009","same":true,"informative":true,"what":"Digging stick recipe and result panel; skill level, failure chance and component order differ"}
+{"id":"lh1-p0010","same":true,"informative":true,"what":"Main game view with sidebar stats and message log (zombies spotted); only sound/move values differ"}
+{"id":"lh1-p0011","same":true,"informative":true,"what":"Overmap view near Eustis with evac shelter A-23 description; minor explored-area differences"}
+{"id":"lh1-p0012","same":true,"informative":true,"what":"Overmap view near Eustis, field southwest; only cursor differs"}
+{"id":"lh1-p0013","same":true,"informative":false,"what":"Empty Searched crafting tab, 0 recipes"}
+{"id":"lh1-p0014","same":true,"informative":false,"what":"Empty Searched crafting tab, 0 recipes"}
+{"id":"lh1-p0015","same":true,"informative":true,"what":"Sledge hammer search results (5 recipes) with recipe detail panel; NEW tags and minor stats differ"}
