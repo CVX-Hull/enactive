@@ -8,7 +8,7 @@ token. The key comes from `OPENROUTER_API_KEY`, or else from the operator's keyc
 the git-ignored `.runtime/credentials.json` (the campaign's own `credential()`), and is never
 printed or written.
 
-    python -m tools.curator_shadow --arm terra --lineage 397 --sessions sd1a1 --cap-usd 2 \
+    python -m tools.curator_host.shadow --arm terra --lineage 397 --sessions sd1a1 --cap-usd 2 \
         --out .runtime/curator-shadow/pilot-1
 
 Only the sampled sessions of the two development lineages can be named. #382's held-out lineages
@@ -30,15 +30,16 @@ import sys
 import time
 import uuid
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 if __package__ in (None, ''):
     sys.path.insert(0, str(ROOT))
 
 from harness.curator import sandbox  # noqa: E402
 from harness.curator.knowledge import Repository  # noqa: E402
-from harness.curator.proxy import OPENROUTER, ModelProxy, Price  # noqa: E402
+from harness.curator.proxy import ModelProxy, Price  # noqa: E402
 from harness.curator.session import SessionConfig, run_session  # noqa: E402
 from tools.campaign_supervision import credential  # noqa: E402
+from tools.curator_host.providers import OPENROUTER  # noqa: E402
 
 SCHEMA = 'curator-shadow/1'
 PRICES_SCHEMA = 'curator-prices/1'

@@ -10,7 +10,8 @@ import threading
 
 import pytest
 
-from harness.curator.proxy import OPENROUTER, ModelProxy, Price, refusal
+from harness.curator.proxy import ModelProxy, Price, refusal
+from tools.curator_host.providers import ANTHROPIC, OPENROUTER, reported_cost
 
 ROUTE = '/api/v1/chat/completions'
 MODEL = 'vendor/model-a'
@@ -162,7 +163,7 @@ def test_without_a_reported_cost_tokens_settle_at_the_highest_input_price(tmp_pa
 
 
 def test_inline_images_reserve_a_bounded_token_count_not_their_encoding(tmp_path):
-    from harness.curator.proxy import ANTHROPIC, IMAGE_TOKENS, inline_images
+    from harness.curator.proxy import IMAGE_TOKENS, inline_images
     frame = 'A' * 280_000                                      # a 280 KB base64 frame
     request = body(messages=[dict(role='user', content=[
         dict(type='text', text='look'), dict(type='image_url', image_url=dict(url=f'data:image/png;base64,{frame}')),
@@ -183,7 +184,6 @@ def test_inline_images_reserve_a_bounded_token_count_not_their_encoding(tmp_path
 
 
 def test_a_bring_your_own_key_route_settles_at_the_upstream_charge_too():
-    from harness.curator.proxy import reported_cost
     byok = sse(dict(prompt_tokens=10, completion_tokens=2, cost=0.00001, is_byok=True,
                     cost_details=dict(upstream_inference_cost=0.5)))
     assert reported_cost(byok) == Decimal('0.50001')

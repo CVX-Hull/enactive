@@ -1,8 +1,8 @@
 """Derive #454's shadow measurements from run summaries and the tracked run ledger.
 
-    python -m tools.curator_shadow_report --runs <run dir> [<run dir> ...] --out data/curator/shadow-454.json
+    python -m tools.curator_host.shadow_report --runs <run dir> [<run dir> ...] --out data/curator/shadow-454.json
 
-Each run directory is a `curator_shadow` output (`summary.json` per run, one per session). For every
+Each run directory is a `tools.curator_host.shadow` output (`summary.json` per run, one per session). For every
 session it reports cost, requests, wall time, cold start, submissions and gate verdicts, and puts
 them beside the actor's own figures for the same admission or run from
 `data/evaluation/run-metrics.jsonl`:
@@ -21,7 +21,7 @@ import json
 from pathlib import Path
 import statistics
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 SCHEMA = 'curator-shadow-report/1'
 
 

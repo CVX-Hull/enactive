@@ -19,12 +19,13 @@ import pytest
 
 from harness.curator import sandbox
 from harness.curator.knowledge import Repository
-from harness.curator.proxy import OPENROUTER, ModelProxy
+from harness.curator.proxy import ModelProxy
 from harness.curator.session import SessionConfig, run_session
 from tests.curator_stand_in import StandIn
 from tests.test_curator_sandbox import custodian  # noqa: F401 - the escape suite's real listeners
 from tests.test_trace_projection import make_session
-from tools import curator_shadow as shadow
+from tools.curator_host import shadow
+from tools.curator_host.providers import OPENROUTER
 
 ROOT = Path(__file__).resolve().parents[1]
 INSTALLED = (shadow.HOST_DIR/'node_modules').is_dir() and shutil.which('node') is not None
