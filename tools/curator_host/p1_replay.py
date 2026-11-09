@@ -70,6 +70,8 @@ FROZEN_FILES = ('tools/curator_host/p1_arms.py', 'tools/curator_host/p1_replay.p
                 'harness/curator/sandbox.py', 'harness/curator/proxy.py', 'harness/curator/containers.py',
                 'harness/trace/projection.py', 'harness/trace/memory_reader.py', 'harness/trace/sidecar.py',
                 'harness/trace/stores.py', 'harness/trace/__init__.py', 'harness/curator/__init__.py',
+                # The session copies the whole trace package into the curator's workbench, which runs it.
+                'harness/trace/workbench.py', 'harness/trace/images.py',
                 'harness/jsonio.py', 'tools/probe_timeline.py', 'data/curator/shadow-arms.json', NODE_LOCK)
 HELD_OUT_NAME = re.compile(r'lh[0-9]')
 STAGE = re.compile(r'[a-z0-9][a-z0-9-]{0,63}')
@@ -137,6 +139,8 @@ def freeze(out: Path, prices: Path) -> dict:
     head = _git('rev-parse', 'HEAD')
     if head.returncode != 0:
         raise ReplayError(f'cannot read the current commit: {head.stderr.strip()}')
+    # The recorded commit must hold the frozen bytes: refuse a listed file that is untracked or differs from HEAD.
+    _verify_committed(None, {}, [p for p in paths if p != NODE_LOCK], check_commit=False)
     frozen = dict(schema=FROZEN_SCHEMA, commit=head.stdout.strip(), files={p: file_sha256(_resolve(p)) for p in paths},
                   settings=SETTINGS,
                   note='The P1 arms are fixed: code, prompt, host, renderer, cap, prices and settings. Any later '
@@ -170,11 +174,12 @@ def verify_frozen(path: Path | None, prices: Path) -> None:
     _verify_committed(Path(path), frozen, [name for name in frozen['files'] if name != NODE_LOCK])
 
 
-def _verify_committed(path: Path, frozen: dict, names: list[str]) -> None:
-    """The freeze file and every listed file (the Node install record excepted) are tracked and match
-    HEAD, and HEAD is the frozen commit or descends from it. Digests alone would accept files that
-    were never committed."""
-    targets = [str(Path(path).resolve()), *(str(_resolve(name)) for name in names)]
+def _verify_committed(path: Path | None, frozen: dict, names: list[str], *, check_commit: bool = True) -> None:
+    """The freeze file (when given) and every listed file (the Node install record excepted) are tracked
+    and match HEAD, and HEAD is the frozen commit or descends from it. Digests alone would accept files
+    that were never committed. `freeze` runs it without a freeze file or commit, so the commit it records
+    holds exactly the frozen bytes."""
+    targets = [*([str(Path(path).resolve())] if path is not None else []), *(str(_resolve(name)) for name in names)]
     problems = []
     for target in targets:
         if _git('ls-files', '--error-unmatch', '--', target).returncode != 0:
@@ -185,6 +190,8 @@ def _verify_committed(path: Path, frozen: dict, names: list[str]) -> None:
     if changed.returncode != 0 or changed.stdout.strip():
         listed = ', '.join(changed.stdout.split()) or changed.stderr.strip()
         raise ReplayError(f'the arms are not committed: modified against HEAD: {listed}')
+    if not check_commit:
+        return
     commit = frozen.get('commit')
     if not isinstance(commit, str) or not re.fullmatch(r'[0-9a-f]{40}', commit):
         raise ReplayError('the freeze file records no commit')

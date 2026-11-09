@@ -398,6 +398,10 @@ def test_everything_the_arms_run_is_in_the_frozen_file_list():
                  'harness/curator/__init__.py', 'harness/trace/__init__.py', 'tools/curator_host/package-lock.json',
                  'tools/curator_host/node_modules/.package-lock.json'):
         assert name in replay.FROZEN_FILES, name
+    # the whole curator and trace packages: the session copies the trace package into the workbench
+    tracked = subprocess.run(['git', '-C', str(replay.ROOT), 'ls-files', 'harness/trace', 'harness/curator'],
+                             capture_output=True, text=True, check=True).stdout.split()
+    assert tracked and set(tracked) <= set(replay.FROZEN_FILES), sorted(set(tracked) - set(replay.FROZEN_FILES))
     assert replay.SETTINGS['arm'] == 'terra' and replay.SETTINGS['max_requests'] == 120
     assert (replay.SETTINGS['max_context_images'], replay.SETTINGS['context_image_block'], replay.SETTINGS['cap_tokens'],
             replay.SETTINGS['session_cap_usd']) == (24, 12, 2000, 12)
@@ -457,38 +461,33 @@ def test_any_change_to_a_frozen_file_or_setting_refuses_held_out_names(frozen_re
 
 def test_a_freeze_of_uncommitted_files_is_refused(frozen_repo, monkeypatch):
     repo, _, prices = frozen_repo
-    # modified: the digest matches the working file, which is not what HEAD holds
+    # modified: the recorded commit would not hold the frozen bytes, so the freeze itself is refused
     (repo/'tools/curator_host/p1_arms.py').write_text('# changed, not committed\n')
-    modified = repo/'modified.json'
-    replay.freeze(modified, prices)
-    run_git(repo, 'add', 'modified.json')
-    run_git(repo, 'commit', '-q', '-m', 'freeze of a dirty tree')
     with pytest.raises(replay.ReplayError, match='modified against HEAD: tools/curator_host/p1_arms.py'):
-        replay.select(['lh1'], modified, prices)
+        replay.freeze(repo/'modified.json', prices)
+    assert not (repo/'modified.json').exists()
     run_git(repo, 'checkout', '-q', 'HEAD', '--', 'tools/curator_host/p1_arms.py')
     # untracked listed file
     (repo/'extra.py').write_text('# never added\n')
     monkeypatch.setattr(replay, 'FROZEN_FILES', (*replay.FROZEN_FILES, 'extra.py'))
-    untracked = repo/'untracked.json'
-    replay.freeze(untracked, prices)
-    run_git(repo, 'add', 'untracked.json')
-    run_git(repo, 'commit', '-q', '-m', 'freeze listing an untracked file')
     with pytest.raises(replay.ReplayError, match='extra.py: not tracked by Git'):
-        replay.select(['lh1'], untracked, prices)
+        replay.freeze(repo/'untracked.json', prices)
     monkeypatch.setattr(replay, 'FROZEN_FILES', replay.FROZEN_FILES[:-1])
-    # the freeze file itself untracked
+    # staged but uncommitted changes count as modified too
+    (repo/'harness/jsonio.py').write_text('# staged only\n')
+    run_git(repo, 'add', 'harness/jsonio.py')
+    with pytest.raises(replay.ReplayError, match='modified against HEAD'):
+        replay.freeze(repo/'staged.json', prices)
+    run_git(repo, 'reset', '-q', '--hard', 'HEAD')
+    # a clean freeze whose own file was never committed is refused when used
     loose = repo/'loose.json'
     replay.freeze(loose, prices)
     with pytest.raises(replay.ReplayError, match='loose.json: not tracked by Git'):
         replay.select(['lh1'], loose, prices)
-    # staged but uncommitted changes count as modified too
-    (repo/'harness/jsonio.py').write_text('# staged only\n')
-    run_git(repo, 'add', 'harness/jsonio.py')
-    staged = repo/'staged.json'
-    replay.freeze(staged, prices)
-    run_git(repo, 'add', 'staged.json')
-    with pytest.raises(replay.ReplayError, match='modified against HEAD'):
-        replay.select(['lh1'], staged, prices)
+    # a listed file changed after a committed freeze fails on its digest
+    (repo/'harness/jsonio.py').write_text('# edited after the freeze\n')
+    with pytest.raises(replay.ReplayError, match='changed since the freeze'):
+        replay.select(['lh1'], repo/'data'/'evaluation'/'p1'/'arms-frozen.json', prices)
 
 
 def test_a_freeze_whose_commit_is_not_an_ancestor_of_head_or_is_missing_is_refused(frozen_repo, tmp_path):
