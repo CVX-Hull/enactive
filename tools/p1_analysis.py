@@ -1,26 +1,32 @@
 """The P1 offline study's frozen analysis (ADR 009; pre-registration in docs/design/p1-study.md, #491).
 
-  python -m tools.p1_analysis simulate [--out data/evaluation/p1/power.json]
+  python -m tools.p1_analysis simulate [--probes <held-out p1-probes/1>] [--out data/evaluation/p1/power.json]
+  python -m tools.p1_analysis units --probes <p1-probes/1>      # the probes the judges score
+  python -m tools.p1_analysis rejudge --probes <p1-probes/1>    # the items judged a second time
   python -m tools.p1_analysis score --probes <p1-probes/1> --scores <p1-score/1> --hours <JSON> [--out ...]
 
-`simulate` checks before any spend that the decision rule detects the effect of interest and
-rarely fires without one. Its inputs are development data and aggregates only: #397's sampled
-re-observation candidates and needed-fact carry rates (#449, #490), and each held-out lineage's game
-hours from the tracked run ledger.
+`simulate` checks, before any spend, that the decision rule detects the effect of interest and
+rarely fires without one. Without `--probes` it uses development data and aggregates only: #397's
+sampled re-observation candidates and needed-fact carry rates (#449, #490), and each held-out
+lineage's game hours from the tracked run ledger. With the held-out probe file it uses that file's
+actual unit and cluster structure: the gate before replay.
 
 `score` computes every pre-registered figure and the decision from the confirmed re-observation
-probes, the blinded judges' labels, the false-fact audit and the settled costs. It refuses an
-incomplete study: every primary probe must be judged for every arm and repeat. Nothing here
-judges text; it only counts labels.
+probes, the blinded judges' labels, the seeded re-judging, the false-fact audit and the settled
+costs. It refuses an incomplete study. Nothing here judges text; it only counts labels.
 """
 from __future__ import annotations
 
 import argparse
 import json
+import math
 import random
 from pathlib import Path
 
 import numpy as np
+from scipy.stats import beta
+
+from harness.evaluation.core.probes import kappa
 
 ROOT = Path(__file__).resolve().parents[1]
 PROBES_SCHEMA = 'p1-probes/1'
@@ -28,15 +34,20 @@ SCORE_SCHEMA = 'p1-score/1'
 RESULT_SCHEMA = 'p1-result/1'
 POWER_SCHEMA = 'p1-power/1'
 SEED = 491
+REJUDGE_SEED, REJUDGE_SHARE = 4912, 0.2
 
 # Pre-registered decision rule (docs/design/p1-study.md#decision-rule). Changing one is a deviation.
-EFFECT = 0.15            # pooled re-observation recall, B minus A, in every curator repeat
-MIN_PROBES = 20          # a lineage with at least this many primary probes must show B above A
-BOOTSTRAP = 2000         # boundary resamples within lineage
-LOWER_QUANTILE = 0.05    # the one-sided 95% bound of the pooled difference must exceed 0
-FALSE_FACT_CAP = 0.10    # B's audited false-fact rate, and at most A's plus the margin
+EFFECT = 0.15            # mean pooled unit recall, B minus A
+MIN_UNITS = 20           # a lineage with at least this many units must show B above A
+BOOTSTRAP = 2000         # cluster resamples within lineage
+LOWER_QUANTILE = 0.025   # the one-sided 97.5% bound of the mean difference must exceed 0
+INTEREST = 0.30          # the effect of interest: the gate needs P(go) >= 0.80 there and <= 0.05 at none
+GUESS_LIMIT = 0.60       # an arm-guessing check above this share correct stops scoring (rendering leaks the arm)
+FALSE_FACT_CAP = 0.10    # B's audited false-fact rate (point), its one-sided 95% upper bound,
+FALSE_FACT_BOUND = 0.20  # and at most A's plus the margin
 FALSE_FACT_MARGIN = 0.05
 COST_CAP = 1.0           # curator settled dollars over actor dollars, per repeat
+NEAR = 16                # bits between earlier frames of one information cluster (probe-protocol/1)
 ARMS = {'A': (1,), 'B': (1, 2)}
 HELD_OUT = {'lh1': ('lh1a1', 'lh1a2', 'lh1a3'), 'lh2': ('lh2a1', 'lh2a2'), 'lh3': ('lh3a1', 'lh3a2')}
 KINDS = ('reobservation', 'fact', 'query')   # primary, then the two descriptive ledgers
@@ -55,7 +66,7 @@ def _rate(numerator: float, denominator: float) -> float | None:
 
 
 # ---------------------------------------------------------------------------------------------
-# Scoring
+# Probes, information clusters and scoring units
 
 
 def primary_probes(rows: list[dict]) -> list[dict]:
@@ -67,35 +78,93 @@ def primary_probes(rows: list[dict]) -> list[dict]:
         if row['id'] in seen:
             raise ScoreError(f'probe listed twice: {row["id"]}')
         seen.add(row['id'])
-        if not (isinstance(row['confirmed'], bool) and isinstance(row['informative'], bool)):
-            raise ScoreError(f'confirmed and informative must be true or false: {row}')
+        if not (isinstance(row['confirmed'], bool) and isinstance(row['informative'], bool)
+                and isinstance(row.get('earlier_dhash'), str)):
+            raise ScoreError(f'confirmed, informative and earlier_dhash are required: {row}')
         if row['confirmed'] and row['informative']:
             out.append(row)
     return out
 
 
-def labels(rows: list[dict], rejudged: bool) -> dict[tuple, bool]:
-    """(kind, arm, repeat, item) -> stated. Re-judged labels replace the first ones."""
+def clusters(probes: list[dict]) -> dict[str, str]:
+    """Probe id -> information cluster: earlier frames within NEAR bits, linked, within one lineage."""
+    parent = {p['id']: p['id'] for p in probes}
+
+    def root(i):
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+    by_lineage: dict[str, list[tuple[str, int]]] = {}
+    for p in probes:
+        by_lineage.setdefault(p['lineage'], []).append((p['id'], int(p['earlier_dhash'], 16)))
+    for members in by_lineage.values():
+        for i, (a, ha) in enumerate(members):
+            for b, hb in members[i + 1:]:
+                if (ha ^ hb).bit_count() <= NEAR:
+                    parent[root(a)] = root(b)
+    out = {}
+    for p in probes:
+        out[p['id']] = min((q['id'] for q in probes if root(q['id']) == root(p['id'])))
+    return out
+
+
+def units(probes: list[dict]) -> list[dict]:
+    """One scoring unit per (lineage, boundary, cluster): the same information re-observed several
+    times after one boundary counts once. The unit's probe is the lowest probe id; only it is judged."""
+    cluster = clusters(probes)
+    chosen: dict[tuple, dict] = {}
+    for p in sorted(probes, key=lambda p: p['id']):
+        chosen.setdefault((p['lineage'], p['boundary'], cluster[p['id']]), p)
+    return [dict(lineage=k[0], boundary=k[1], cluster=k[2], probe=p['id']) for k, p in sorted(chosen.items())]
+
+
+def rejudge_sample(unit_rows: list[dict]) -> set[tuple]:
+    """The seeded 20% of primary labels that fresh judges score a second time."""
+    keys = sorted(('reobservation', arm, rep, u['probe']) for u in unit_rows for arm, reps in ARMS.items()
+                  for rep in reps)
+    return set(random.Random(REJUDGE_SEED).sample(keys, math.ceil(REJUDGE_SHARE * len(keys)))) if keys else set()
+
+
+def labels(rows: list[dict]) -> tuple[dict[tuple, bool], dict[tuple, bool]]:
+    """(kind, arm, repeat, item) -> stated, for the first pass and for the re-judging."""
     first, second = {}, {}
     for row in rows:
         if row.get('type') != 'label':
             continue
-        if (row.get('schema') != SCORE_SCHEMA or row['arm'] not in ARMS or row['repeat'] not in ARMS[row['arm']]
-                or row['kind'] not in KINDS or not isinstance(row['stated'], bool)):
+        if (row.get('schema') != SCORE_SCHEMA or row.get('arm') not in ARMS or row.get('repeat') not in ARMS[row['arm']]
+                or row.get('kind') not in KINDS or not isinstance(row.get('stated'), bool)):
             raise ScoreError(f'label row outside the study: {row}')
         key = (row['kind'], row['arm'], row['repeat'], row['item'])
         target = second if row.get('rejudge') else first
         if key in target:
             raise ScoreError(f'item judged twice in one pass: {key}')
         target[key] = row['stated']
-    if second.keys() - first.keys():
-        raise ScoreError(f're-judged items that were never judged: {sorted(second.keys() - first.keys())[:3]}')
-    return {**first, **second} if rejudged else first
+    return first, second
 
 
-def figures(probes: list[dict], hours: dict[str, float], rows: list[dict], rejudged: bool = False) -> dict:
-    stated = labels(rows, rejudged)
-    wanted = {('reobservation', arm, rep, p['id']) for p in probes for arm, reps in ARMS.items() for rep in reps}
+def _validated(rows: list[dict]) -> tuple[list[dict], list[dict]]:
+    audits, costs = [], []
+    for row in rows:
+        if row.get('type') == 'audit':
+            if (row.get('schema') != SCORE_SCHEMA or row.get('arm') not in ARMS or row.get('repeat') not in ARMS[row['arm']]
+                    or not isinstance(row.get('false'), bool) or not isinstance(row.get('item'), str)):
+                raise ScoreError(f'audit row outside the study: {row}')
+            audits.append(row)
+        elif row.get('type') == 'cost':
+            if (row.get('schema') != SCORE_SCHEMA or row.get('repeat') not in ARMS['B'] or row.get('lineage') not in HELD_OUT
+                    or not isinstance(row.get('stopped_by_cap'), bool)
+                    or not all(isinstance(row.get(k), (int, float)) and row[k] >= 0
+                               for k in ('curator_dollars', 'actor_dollars'))):
+                raise ScoreError(f'cost row outside the study: {row}')
+            costs.append(row)
+        elif row.get('type') != 'label':
+            raise ScoreError(f'unknown row type: {row}')
+    return audits, costs
+
+
+def figures(unit_rows: list[dict], hours: dict[str, float], stated: dict[tuple, bool], audits, costs) -> dict:
+    wanted = {('reobservation', arm, rep, u['probe']) for u in unit_rows for arm, reps in ARMS.items() for rep in reps}
     have = {key for key in stated if key[0] == 'reobservation'}
     if wanted != have:
         raise ScoreError(f'primary labels do not cover the study: {len(wanted - have)} missing, '
@@ -104,119 +173,141 @@ def figures(probes: list[dict], hours: dict[str, float], rows: list[dict], rejud
     out = {}
     for arm, reps in ARMS.items():
         for rep in reps:
-            boundary: dict[tuple, dict] = {}
-            for p in probes:
-                entry = boundary.setdefault((p['lineage'], p['boundary']), dict(lineage=p['lineage'], n=0, stated=0))
-                entry['n'] += 1
-                entry['stated'] += stated[('reobservation', arm, rep, p['id'])]
-            rows_b = sorted(boundary.values(), key=lambda r: r['lineage'])
-            n, hit = sum(r['n'] for r in rows_b), sum(r['stated'] for r in rows_b)
+            rows = [dict(lineage=u['lineage'], cluster=u['cluster'], stated=stated[('reobservation', arm, rep, u['probe'])])
+                    for u in unit_rows]
+            n, hit = len(rows), sum(r['stated'] for r in rows)
             secondary = {}
             for kind in KINDS[1:]:
                 judged = [v for (k, a, r, _), v in stated.items() if (k, a, r) == (kind, arm, rep)]
                 secondary[kind] = dict(judged=len(judged), stated=sum(judged), recall=_rate(sum(judged), len(judged)))
-            out[f'{arm}{rep}'] = dict(boundaries=rows_b, probes=n, stated=hit, recall=_rate(hit, n),
+            out[f'{arm}{rep}'] = dict(units=rows, n=n, stated=hit, recall=_rate(hit, n),
                                       undelivered_per_game_hour=_rate(n - hit, total_hours), secondary=secondary)
-    for row in rows:
-        if row.get('type') == 'audit':
-            entry = out[f"{row['arm']}{row['repeat']}"].setdefault('audit', dict(audited=0, false=0))
-            entry['audited'] += 1
-            entry['false'] += row['false'] is True
-        elif row.get('type') == 'cost':
-            entry = out[f"B{row['repeat']}"].setdefault('cost', dict(curator_dollars=0.0, actor_dollars=0.0))
-            entry['curator_dollars'] += row['curator_dollars']
-            entry['actor_dollars'] += row['actor_dollars']
+    for row in audits:
+        entry = out[f"{row['arm']}{row['repeat']}"].setdefault('audit', dict(audited=0, false=0))
+        entry['audited'] += 1
+        entry['false'] += row['false']
+    for row in costs:
+        entry = out[f"B{row['repeat']}"].setdefault('cost', dict(curator_dollars=0.0, actor_dollars=0.0))
+        entry['curator_dollars'] += row['curator_dollars']
+        entry['actor_dollars'] += row['actor_dollars']
     for entry in out.values():
         if 'audit' in entry:
-            entry['audit']['rate'] = _rate(entry['audit']['false'], entry['audit']['audited'])
+            k, n = entry['audit']['false'], entry['audit']['audited']
+            entry['audit'].update(rate=_rate(k, n), upper_95=1.0 if k == n else float(beta.ppf(0.95, k + 1, n - k)))
         if 'cost' in entry:
             entry['cost']['ratio'] = _rate(entry['cost']['curator_dollars'], entry['cost']['actor_dollars'])
     return out
 
 
-def lower_bound(a_rows: list[dict], b_rows: list[dict], seed: int = SEED, draws: int = BOOTSTRAP) -> float:
-    """One-sided 95% bound of pooled B-minus-A recall, resampling boundaries within each lineage."""
+def _clustered(a_units: list[dict], b_units: list[list[dict]]) -> tuple[list[str], np.ndarray, np.ndarray, np.ndarray]:
+    """Per cluster: its lineage, unit count, A's stated count and B's stated count averaged over repeats."""
+    index: dict[tuple, int] = {}
+    for u in a_units:
+        index.setdefault((u['lineage'], u['cluster']), len(index))
+    lineage = [key[0] for key in index]
+    n, a, b = np.zeros(len(index)), np.zeros(len(index)), np.zeros(len(index))
+    for i, u in enumerate(a_units):
+        c = index[(u['lineage'], u['cluster'])]
+        n[c] += 1
+        a[c] += u['stated']
+        b[c] += sum(rows[i]['stated'] for rows in b_units) / len(b_units)
+    return lineage, n, a, b
+
+
+def lower_bound(lineage, n, a, b, seed: int = SEED, draws: int = BOOTSTRAP) -> float:
+    """One-sided 97.5% bound of the pooled difference, resampling information clusters within each lineage."""
     rng = np.random.default_rng(seed)
-    n = np.array([r['n'] for r in a_rows])
-    a, b = np.array([r['stated'] for r in a_rows]), np.array([r['stated'] for r in b_rows])
     groups: dict[str, list[int]] = {}
-    for i, row in enumerate(a_rows):
-        groups.setdefault(row['lineage'], []).append(i)
+    for i, name in enumerate(lineage):
+        groups.setdefault(name, []).append(i)
     picks = np.concatenate([rng.choice(np.array(idx), size=(draws, len(idx))) for idx in groups.values()], axis=1)
-    totals = n[picks].sum(axis=1)
-    delta = (b[picks].sum(axis=1) - a[picks].sum(axis=1)) / np.maximum(totals, 1)
+    delta = (b[picks].sum(axis=1) - a[picks].sum(axis=1)) / np.maximum(n[picks].sum(axis=1), 1)
     return float(np.quantile(delta, LOWER_QUANTILE))
 
 
 def primary(a: dict, bs: list[dict]) -> dict:
     """The pre-registered primary criterion over B's curator repeats, against A.
 
-    B's boundary counts are averaged over its repeats. It holds when:
-    - the mean pooled difference is at least EFFECT;
+    It holds when:
+    - the mean pooled difference (B's repeats averaged per unit) is at least EFFECT;
     - every repeat is above A;
-    - every lineage with MIN_PROBES or more probes is above A on the mean;
-    - the one-sided 95% boundary-bootstrap bound of the mean difference is above 0."""
-    shape = [(r['lineage'], r['n']) for r in a['boundaries']]
-    if any([(r['lineage'], r['n']) for r in b['boundaries']] != shape for b in bs):
-        raise ScoreError('arms must be scored on the same probes')
-    mean = [dict(lineage=r['lineage'], n=r['n'], stated=sum(b['boundaries'][i]['stated'] for b in bs) / len(bs))
-            for i, r in enumerate(a['boundaries'])]
-    total = sum(r['n'] for r in mean)
-    delta = (sum(r['stated'] for r in mean) - sum(r['stated'] for r in a['boundaries'])) / total
+    - every lineage with MIN_UNITS or more units is above A on the mean;
+    - the one-sided 97.5% cluster-bootstrap bound of the mean difference is above 0."""
+    shape = [(u['lineage'], u['cluster']) for u in a['units']]
+    if any([(u['lineage'], u['cluster']) for u in b['units']] != shape for b in bs):
+        raise ScoreError('arms must be scored on the same units')
+    lineage, n, sa, sb = _clustered(a['units'], [b['units'] for b in bs])
+    delta = (sb.sum() - sa.sum()) / n.sum()
     repeats = [b['recall'] - a['recall'] for b in bs]
     per_lineage = {}
-    for name in sorted({r['lineage'] for r in mean}):
-        n = sum(r['n'] for r in mean if r['lineage'] == name)
-        if n >= MIN_PROBES:
-            per_lineage[name] = (sum(r['stated'] for r in mean if r['lineage'] == name)
-                                 - sum(r['stated'] for r in a['boundaries'] if r['lineage'] == name)) / n
-    bound = lower_bound(a['boundaries'], mean)
-    return dict(delta=delta, repeats=repeats, per_lineage=per_lineage, lower_bound=bound,
-                holds=(delta >= EFFECT and all(d > 0 for d in repeats) and bool(per_lineage)
-                       and all(d > 0 for d in per_lineage.values()) and bound > 0))
+    for name in sorted(set(lineage)):
+        mask = np.array([x == name for x in lineage])
+        if n[mask].sum() >= MIN_UNITS:
+            per_lineage[name] = float((sb[mask].sum() - sa[mask].sum()) / n[mask].sum())
+    bound = lower_bound(lineage, n, sa, sb)
+    return dict(delta=float(delta), repeats=repeats, per_lineage=per_lineage, lower_bound=bound,
+                holds=bool(delta >= EFFECT and all(d > 0 for d in repeats) and per_lineage
+                           and all(d > 0 for d in per_lineage.values()) and bound > 0))
 
 
 def guards(a: dict, b: dict) -> dict:
-    audit_a, audit_b = a.get('audit', {}).get('rate'), b.get('audit', {}).get('rate')
+    audit_a, audit_b = a.get('audit'), b.get('audit')
     ratio = b.get('cost', {}).get('ratio')
-    checks = dict(false_facts=audit_a is not None and audit_b is not None and audit_b <= FALSE_FACT_CAP
-                  and audit_b <= audit_a + FALSE_FACT_MARGIN,
+    checks = dict(false_facts=bool(audit_a and audit_b and audit_b['rate'] <= FALSE_FACT_CAP
+                                   and audit_b['upper_95'] <= FALSE_FACT_BOUND
+                                   and audit_b['rate'] <= audit_a['rate'] + FALSE_FACT_MARGIN),
                   cost=ratio is not None and ratio <= COST_CAP)
     return dict(checks=checks, holds=all(checks.values()))
 
 
-def decide(figs: dict, rejudged_figs: dict | None) -> dict:
-    """Go only if the primary criterion holds and survives re-judging, and every guard holds in every repeat."""
+def agreement(first: dict, second: dict) -> dict:
+    pairs = [(first[k], second[k]) for k in sorted(second)]
+    return dict(n=len(pairs), percent=_rate(sum(x == y for x, y in pairs), len(pairs)), kappa=kappa(pairs))
+
+
+def score(probe_rows: list[dict], hours: dict[str, float], rows: list[dict]) -> dict:
+    guesses = [row for row in rows if row.get('type') == 'guess']
+    rows = [row for row in rows if row.get('type') != 'guess']
+    if not guesses or not all(isinstance(g.get('correct'), bool) for g in guesses):
+        raise ScoreError('the arm-guessing check is required before scoring')
+    guessed = sum(g['correct'] for g in guesses) / len(guesses)
+    if guessed > GUESS_LIMIT:
+        raise ScoreError(f'the arm can be guessed from the text ({guessed:.2f} correct); fix the rendering first')
+    audits, costs = _validated(rows)
+    unit_rows = units(primary_probes(probe_rows))
+    base = dict(schema=RESULT_SCHEMA, probes=dict(listed=len(probe_rows), units=len(unit_rows),
+                                                  clusters=len({(u['lineage'], u['cluster']) for u in unit_rows})),
+                thresholds=dict(effect=EFFECT, min_units=MIN_UNITS, lower_quantile=LOWER_QUANTILE, interest=INTEREST,
+                                false_fact_cap=FALSE_FACT_CAP, false_fact_bound=FALSE_FACT_BOUND,
+                                false_fact_margin=FALSE_FACT_MARGIN, cost_cap=COST_CAP))
+    capped = sorted({row['repeat'] for row in costs if row['stopped_by_cap']})
+    if capped:
+        # A held-out repeat that reached its cap has failed the cost guard; its partial labels decide nothing.
+        return dict(base, decision=dict(go=False, outcome=f'guard failed: held-out repeat {capped} reached its cap'))
+    first, second = labels(rows)
+    if set(second) != rejudge_sample(unit_rows):
+        raise ScoreError('re-judged labels must be exactly the seeded sample (tools.p1_analysis rejudge)')
+    figs = figures(unit_rows, hours, first, audits, costs)
+    refigs = figures(unit_rows, hours, {**first, **second}, audits, costs)
     bs = [figs[f'B{rep}'] for rep in ARMS['B']]
     main = primary(figs['A1'], bs)
-    repeats = {rep: guards(figs['A1'], figs[f'B{rep}']) for rep in ARMS['B']}
-    robust = None if rejudged_figs is None else primary(
-        rejudged_figs['A1'], [rejudged_figs[f'B{rep}'] for rep in ARMS['B']])['holds']
-    mean_delta = main['delta']
-    primary_holds = main['holds'] and robust is not False
-    go = primary_holds and all(g['holds'] for g in repeats.values())
+    robust = primary(refigs['A1'], [refigs[f'B{rep}'] for rep in ARMS['B']])['holds']
+    guard = {str(rep): guards(figs['A1'], figs[f'B{rep}']) for rep in ARMS['B']}
+    primary_holds = main['holds'] and robust
+    go = primary_holds and all(g['holds'] for g in guard.values())
     if go:
         outcome = 'go: B delivers more of what the successor re-observed, within every guard'
-    elif mean_delta <= 0:
+    elif main['delta'] <= 0:
         outcome = 'negative: B does not deliver more than A'
     elif primary_holds:
         outcome = 'guard failed: the primary criterion held but a guard did not'
     else:
         outcome = 'inconclusive: B is above A on average but the criterion did not hold'
-    return dict(go=go, outcome=outcome, mean_delta=mean_delta, robust_to_rejudging=robust, primary=main,
-                guards={str(k): v for k, v in repeats.items()})
-
-
-def score(probe_rows: list[dict], hours: dict[str, float], rows: list[dict]) -> dict:
-    probes = primary_probes(probe_rows)
-    figs = figures(probes, hours, rows)
-    rejudged = any(row.get('rejudge') for row in rows if row.get('type') == 'label')
-    rejudged_figs = figures(probes, hours, rows, rejudged=True) if rejudged else None
-    slim = {k: {key: val for key, val in v.items() if key != 'boundaries'} for k, v in figs.items()}
-    return dict(schema=RESULT_SCHEMA, figures=slim, decision=decide(figs, rejudged_figs),
-                probes=dict(listed=len(probe_rows), primary=len(probes)),
-                thresholds=dict(effect=EFFECT, min_probes=MIN_PROBES, lower_quantile=LOWER_QUANTILE,
-                                false_fact_cap=FALSE_FACT_CAP, false_fact_margin=FALSE_FACT_MARGIN, cost_cap=COST_CAP))
+    slim = {k: {key: val for key, val in v.items() if key != 'units'} for k, v in figs.items()}
+    return dict(base, figures=slim, judge_agreement=agreement(first, second),
+                arm_guessing=dict(n=len(guesses), correct=guessed),
+                decision=dict(go=go, outcome=outcome, mean_delta=main['delta'], robust_to_rejudging=robust,
+                              primary=main, guards=guard))
 
 
 # ---------------------------------------------------------------------------------------------
@@ -225,16 +316,18 @@ def score(probe_rows: list[dict], hours: dict[str, float], rows: list[dict]) -> 
 # Assumptions, fixed with the rule (docs/design/p1-study.md#power).
 LINEAGE_SD = 0.10        # lineage-level shift of the delivery rate
 EFFECT_SD = 0.05         # lineage-level heterogeneity of the effect
-REPEAT_SD = 0.05         # boundary-level curator variation between repeats
+REPEAT_SD = 0.05         # cluster-level curator variation between repeats
 FLIP = 0.05              # judge error per label
+CLUSTER_MEAN = 3.0       # planning assumption: units per information cluster (#397's sample: 1.4)
+VARIANTS = ((1.4, 0.0), (3.0, 0.0), (6.0, 0.0), (3.0, 0.05))   # (cluster mean, judge bias toward B)
 DELTAS = (0.0, 0.10, 0.15, 0.20, 0.25, 0.30)
-SIMULATIONS = 2000
+SIMULATIONS = 1000
 DEV_HOURS, DEV_BOUNDARIES, DEV_CANDIDATES = 47.791, 13, 197   # #397 (#449, #490)
 
 
 def development() -> dict:
     """#397's per-boundary sampled candidates and informative-confirmed share (#490), and its
-    needed-fact carry rates (#449) as the stand-in distribution of a boundary's delivery rate."""
+    needed-fact carry rates (#449) as the stand-in distribution of a cluster's delivery rate."""
     probes = ROOT/'data'/'evaluation'/'probes'
     data = json.loads((probes/'validation'/'candidates.json').read_text())
     sampled = [p for p in data['pairs'] if p['lineage'] == '397']
@@ -261,64 +354,103 @@ def held_out_shape() -> dict[str, int]:
             for name, runs in HELD_OUT.items()}
 
 
-def simulate(simulations: int = SIMULATIONS, seed: int = SEED) -> dict:
-    dev, shape = development(), held_out_shape()
+def _generated(rng: random.Random, dev: dict, shape: dict[str, int], cluster_mean: float) -> list[tuple[str, str]]:
+    """(lineage, cluster) per unit: each unit after a boundary is new information with probability
+    1/cluster_mean, otherwise a cluster already seen at an earlier boundary of its lineage."""
+    out = []
+    for name, count in shape.items():
+        seen: list[str] = []
+        for b in range(count):
+            here: set[str] = set()
+            n = sum(rng.random() < dev['informative_share'] for _ in range(rng.choice(dev['candidates_per_boundary'])))
+            for _ in range(n):
+                old = [c for c in seen if c not in here]
+                c = rng.choice(old) if old and rng.random() >= 1 / cluster_mean else f'{name}-{len(seen)}'
+                if c not in seen:
+                    seen.append(c)
+                here.add(c)
+                out.append((name, c))
+    return out
+
+
+def _power(rng: random.Random, dev: dict, structure, cluster_mean: float | None, bias: float, delta: float) -> bool:
+    shape = structure if cluster_mean is not None else None
+    layout = _generated(rng, dev, shape, cluster_mean) if shape is not None else structure
+    if not layout:
+        return False
+    clamp = lambda p: min(1.0, max(0.0, p))  # noqa: E731
+    lineage_shift = {name: (rng.gauss(0, LINEAGE_SD), delta + rng.gauss(0, EFFECT_SD)) for name, _ in layout}
+    latent: dict[tuple, dict] = {}
+    for name, c in layout:
+        if (name, c) not in latent:
+            shift, effect = lineage_shift[name]
+            base = rng.choice(dev['delivery_rates'])
+            latent[(name, c)] = {'A1': rng.random() < clamp(base + shift),
+                                 **{f'B{r}': rng.random() < clamp(base + shift + effect + rng.gauss(0, REPEAT_SD))
+                                    for r in ARMS['B']}}
+
+    def judged(key, truth):
+        label = truth != (rng.random() < FLIP)
+        return label or (key.startswith('B') and rng.random() < bias)
+    figs = {}
+    for key in ('A1', *(f'B{r}' for r in ARMS['B'])):
+        rows = [dict(lineage=name, cluster=c, stated=judged(key, latent[(name, c)][key])) for name, c in layout]
+        figs[key] = dict(units=rows, recall=sum(r['stated'] for r in rows) / len(rows))
+    return primary(figs['A1'], [figs[f'B{r}'] for r in ARMS['B']])['holds']
+
+
+def simulate(simulations: int = SIMULATIONS, seed: int = SEED, layout: list[tuple[str, str]] | None = None) -> dict:
+    dev = development()
     rng = random.Random(seed)
+    if layout is not None:
+        variants = {'held-out structure': {f'{d:.2f}': round(sum(_power(rng, dev, layout, None, 0.0, d)
+                                                                  for _ in range(simulations)) / simulations, 3)
+                                           for d in DELTAS}}
+        return dict(schema=POWER_SCHEMA, seed=seed, simulations=simulations, units=len(layout),
+                    clusters=len(set(layout)), probability_of_go=variants,
+                    gate=gate(variants['held-out structure']))
+    shape = held_out_shape()
+    variants = {}
+    for mean, bias in VARIANTS:
+        variants[f'cluster_mean={mean}, judge_bias={bias}'] = {
+            f'{d:.2f}': round(sum(_power(rng, dev, shape, mean, bias, d) for _ in range(simulations)) / simulations, 3)
+            for d in DELTAS}
+    return dict(schema=POWER_SCHEMA, seed=seed, simulations=simulations, shape=shape, development=dev,
+                assumptions=dict(lineage_sd=LINEAGE_SD, effect_sd=EFFECT_SD, repeat_sd=REPEAT_SD, flip=FLIP,
+                                 planning=f'cluster_mean={CLUSTER_MEAN}, judge_bias=0.0'),
+                probability_of_go=variants, gate=gate(variants[f'cluster_mean={CLUSTER_MEAN}, judge_bias=0.0']),
+                note='Primary criterion only; guards and re-judging are not simulated.')
 
-    def clamp(p):
-        return min(1.0, max(0.0, p))
 
-    def judged(n, p):
-        return sum((rng.random() < p) != (rng.random() < FLIP) for _ in range(n))
-
-    results, probe_counts = {}, []
-    for delta in DELTAS:
-        go = 0
-        for _ in range(simulations):
-            a_rows, b_rows = [], {rep: [] for rep in ARMS['B']}
-            for name, count in shape.items():
-                shift, effect = rng.gauss(0, LINEAGE_SD), delta + rng.gauss(0, EFFECT_SD)
-                for _ in range(count):
-                    n = sum(rng.random() < dev['informative_share'] for _ in range(rng.choice(dev['candidates_per_boundary'])))
-                    if n == 0:
-                        continue
-                    base = rng.choice(dev['delivery_rates'])
-                    a_rows.append(dict(lineage=name, n=n, stated=judged(n, clamp(base + shift))))
-                    for rep in ARMS['B']:
-                        p = clamp(base + shift + effect + rng.gauss(0, REPEAT_SD))
-                        b_rows[rep].append(dict(lineage=name, n=n, stated=judged(n, p)))
-            total = sum(r['n'] for r in a_rows)
-            if delta == 0:
-                probe_counts.append(total)
-            if not total:
-                continue
-
-            def as_figs(rows):
-                return dict(boundaries=rows, recall=sum(r['stated'] for r in rows) / total)
-            go += primary(as_figs(a_rows), [as_figs(b_rows[rep]) for rep in ARMS['B']])['holds']
-        results[f'{delta:.2f}'] = round(go / simulations, 3)
-    counts = sorted(probe_counts)
-    return dict(schema=POWER_SCHEMA, seed=seed, simulations=simulations, shape=shape,
-                development={k: v for k, v in dev.items()},
-                assumptions=dict(lineage_sd=LINEAGE_SD, effect_sd=EFFECT_SD, repeat_sd=REPEAT_SD, flip=FLIP),
-                primary_probes=dict(median=counts[len(counts) // 2], p10=counts[len(counts) // 10],
-                                    p90=counts[len(counts) * 9 // 10]),
-                probability_of_go=results,
-                note='Primary criterion only, in both curator repeats; guards and re-judging are not simulated.')
+def gate(probabilities: dict[str, float]) -> dict:
+    """The gate before spend: rarely a go with no effect, usually a go at the effect of interest."""
+    none, interest = probabilities['0.00'], probabilities[f'{INTEREST:.2f}']
+    return dict(no_effect=none, at_interest=interest, passes=none <= 0.05 and interest >= 0.80)
 
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('step', choices=('simulate', 'score'))
+    parser.add_argument('step', choices=('simulate', 'units', 'rejudge', 'score'))
     parser.add_argument('--probes', type=Path)
     parser.add_argument('--scores', type=Path)
     parser.add_argument('--hours', type=Path, help='JSON object: held-out lineage -> in-play game hours')
     parser.add_argument('--out', type=Path)
     args = parser.parse_args(argv)
     if args.step == 'simulate':
-        result = simulate()
-        out = args.out or ROOT/'data'/'evaluation'/'p1'/'power.json'
+        layout = None
+        if args.probes:
+            layout = [(u['lineage'], u['cluster']) for u in units(primary_probes(_lines(args.probes)))]
+        result = simulate(layout=layout)
+        out = args.out or ROOT/'data'/'evaluation'/'p1'/('power-held-out.json' if layout else 'power.json')
         summary = result['probability_of_go']
+    elif args.step in ('units', 'rejudge'):
+        if not args.probes:
+            parser.error(f'{args.step} needs --probes')
+        unit_rows = units(primary_probes(_lines(args.probes)))
+        for row in (unit_rows if args.step == 'units' else
+                    [dict(kind=k, arm=a, repeat=r, item=i) for k, a, r, i in sorted(rejudge_sample(unit_rows))]):
+            print(json.dumps(row))
+        return 0
     else:
         if not (args.probes and args.scores and args.hours):
             parser.error('score needs --probes, --scores and --hours')
