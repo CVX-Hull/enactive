@@ -164,10 +164,10 @@ evicted frame's source ID so `view_frame` can show it again. The peak trades thr
 - **Reservation.** Each image reserves `IMAGE_TOKENS` (10,000) at the highest input price, $0.16
   per request at 16 images on terra and $1.28 on Opus, before any text or output. A small session
   cap therefore refuses requests that would really cost cents.
-- **Body size.** The largest frames in the sealed [#397 lineage](../acceptance/2026-11-07-seven-day-397.md)
-  reach about 280 KB, or 375 KB as base64, a design input. Sixteen stay under the proxy's 8 MiB
-  request limit, while 24 such frames would exceed it and end the session with a 413
-  ([#489 record](../acceptance/2026-11-08-context-stability-489.md)).
+- **Body size.** The largest of the 1,932 frames in the sealed `397-seven-day` study (the
+  [#397 lineage](../acceptance/2026-11-07-seven-day-397.md)) is 322,175 bytes, or 429,568 as
+  base64, a design input. Sixteen such frames stay under the proxy's 8 MiB request limit
+  (`MAX_BODY`), while 24 would exceed it and the proxy would refuse the request with a 413.
 
 To compare cached shares with the [#454](../acceptance/2026-11-08-curator-shadow-454.md) and
 [#489](../acceptance/2026-11-08-context-stability-489.md) records, pass the window they record

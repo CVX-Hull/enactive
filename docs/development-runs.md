@@ -77,7 +77,7 @@ player's context:
 
 The window stays below OpenRouter's 272,000-token long-prompt threshold, so the
 short-prompt rates apply: $1.00/M input, $1.25/M cache write, $0.05/M cache read
-and $5.00/M output (read from the public model list). The
+and $5.00/M output (read from the public model list on 5 November 2026). The
 validator's worst case is (262,144 × $1.25 + 16,384 × $5.00) / 1M = $0.4096 per
 attempt, or $102.40 per run. Costs are reconciled against OpenRouter's
 per-generation records.
