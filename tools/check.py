@@ -212,6 +212,9 @@ class _Output:
 
 
 _print_lock = threading.Lock()
+#: Commands running in lanes; an interrupt of the checker kills them (see run_lanes).
+_lane_processes: set[subprocess.Popen] = set()
+_lane_lock = threading.Lock()
 
 
 def run(command: list[str], *, lane: str | None = None, **kwargs) -> None:
@@ -223,7 +226,7 @@ def run(command: list[str], *, lane: str | None = None, **kwargs) -> None:
     if not lane:
         print("+ " + " ".join(command), flush=True)
     started = time.perf_counter()
-    path = None
+    path, notes = None, []
     try:
         if "input" in kwargs:  # stdin-fed syntax checks: short, silent on success
             subprocess.run(command, cwd=ROOT, check=True, **kwargs)
@@ -233,6 +236,9 @@ def run(command: list[str], *, lane: str | None = None, **kwargs) -> None:
         with path.open("xb") as log:
             process = subprocess.Popen(command, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                        env=environment, **kwargs)
+            if lane:
+                with _lane_lock:
+                    _lane_processes.add(process)
             output = _Output(process.stdout, log, terminal=lane is None)
             try:
                 returncode = process.wait()
@@ -244,44 +250,62 @@ def run(command: list[str], *, lane: str | None = None, **kwargs) -> None:
                 process.wait()
                 output.finish(0)  # stop the reader before the log closes
                 raise
+            finally:
+                with _lane_lock:
+                    _lane_processes.discard(process)
             if not drained:
                 note = (f"Output pipe still held by a descendant {DRAIN_SECONDS}s after the command exited "
                         f"(status {returncode}); stopped reading.\n")
                 log.write(note.encode())
-                print(note, end="", flush=True)
+                if not lane:  # a lane prints it with the log below
+                    print(note, end="", flush=True)
         if returncode:
-            print(f"{label}Full output of the failed command: {path.relative_to(ROOT)}", flush=True)
+            notes.append(f"{label}Full output of the failed command: {path.relative_to(ROOT)}")
             raise subprocess.CalledProcessError(returncode, command)
         if output.error:
             raise output.error
     finally:
-        elapsed = f"{label}Command elapsed: {time.perf_counter() - started:.2f}s"
-        if lane:
-            with _print_lock:
+        notes.append(f"{label}Command elapsed: {time.perf_counter() - started:.2f}s")
+        with _print_lock:
+            if lane:
                 print(f"{label}+ " + " ".join(command), flush=True)
                 if path is not None and path.is_file():
                     sys.stdout.write(path.read_bytes().decode(errors="replace"))
-                print(elapsed, flush=True)
-        else:
-            print(elapsed, flush=True)
+            for note in notes:
+                print(note, flush=True)
 
 
 def run_lanes(lanes: dict[str, list[list[str]]]) -> None:
-    """Run each lane's commands in order, all lanes at once; fail after every lane ends if any failed."""
+    """Run each lane's commands in order, all lanes at once; fail after every lane ends if any failed.
+
+    An interrupt (or any error) in the checker itself kills every running lane command and starts no
+    further one, then propagates."""
     failures: list[BaseException] = []
+    stopped = threading.Event()
 
     def lane(name: str, commands: list[list[str]]) -> None:
         try:
             for command in commands:
+                if stopped.is_set():
+                    return
                 run(command, lane=name)
         except BaseException as error:  # reported once every lane has ended
             failures.append(error)
 
-    threads = [threading.Thread(target=lane, args=item) for item in lanes.items()]
-    for thread in threads:
-        thread.start()
-    for thread in threads:
-        thread.join()
+    threads = [threading.Thread(target=lane, args=item, daemon=True) for item in lanes.items()]
+    try:
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+    except BaseException:
+        stopped.set()
+        with _lane_lock:
+            for process in list(_lane_processes):
+                process.kill()
+        for thread in threads:
+            thread.join(DRAIN_SECONDS)
+        raise
     if failures:
         raise failures[0]
 
@@ -352,7 +376,7 @@ def _check(argv: list[str] | None = None) -> int:
     if args.fast:
         print("Fast checkpoint checks passed. Behavioral tests, rendered diagrams, native build and real gameplay were not run.")
     elif args.profile == "main":
-        print("Main structural checks passed on the tree its pull request's full run tested. Tests, rendered "
+        print("Main structural checks passed on the tree its pull request's run tested. Tests, rendered "
               "diagrams, native build and real gameplay were not run here.")
     elif args.profile == "editorial":
         print("Editorial checks passed. Runtime tests, viewer tests, full regression, native build and real gameplay were not run.")

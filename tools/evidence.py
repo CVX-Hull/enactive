@@ -290,7 +290,10 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         store, expected = default_store(), store_expected()
         if store.is_dir() and not expected:
-            expect_store()
+            try:
+                expect_store()
+            except EvidenceError as error:  # e.g. a sandbox that cannot write the clone's configuration
+                print(f'Evidence: note: {error}; the next run with access records it', file=sys.stderr)
             expected = True
         errors, notes = verify(full=arguments.full, store=store, expected=expected)
         for note in notes:

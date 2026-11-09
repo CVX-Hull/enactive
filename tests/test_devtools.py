@@ -284,22 +284,48 @@ class DevToolTests(unittest.TestCase):
         self.assertIn("still held by a descendant", log)
 
     def test_lanes_run_at_once_print_whole_outputs_and_fail_after_every_lane_ends(self):
-        def command(text, seconds, status=0):
-            return [sys.executable, "-c", f"import sys, time; print('{text} start'); time.sleep({seconds}); "
-                                          f"print('{text} end'); sys.exit({status})"]
+        # Lane a can only pass its wait while lane b's first command runs: no clock is involved.
+        flag = self.root / "b-started"
+        wait = [sys.executable, "-c", f"import pathlib, sys, time; print('alpha start'); f = pathlib.Path({str(flag)!r})\n"
+                                      "for _ in range(600):\n    if f.exists(): break\n    time.sleep(.05)\n"
+                                      "else: sys.exit(9)\nprint('alpha end'); sys.exit(4)"]
+        mark = [sys.executable, "-c", f"import pathlib, time; print('beta start'); pathlib.Path({str(flag)!r}).touch(); "
+                                      "time.sleep(.3); print('beta end')"]
+        after = [sys.executable, "-c", "print('gamma start'); print('gamma end')"]
         output = io.StringIO()
         with patch.object(check, "ROOT", self.root), patch.object(check, "_log_directory", None), \
                 redirect_stdout(output):
-            started = time.perf_counter()
             with self.assertRaises(subprocess.CalledProcessError) as error:
-                check.run_lanes({"a": [command("alpha", 0.6, 4)], "b": [command("beta", 0.6), command("gamma", 0)]})
-            elapsed = time.perf_counter() - started
-        self.assertEqual(error.exception.returncode, 4)
-        self.assertLess(elapsed, 1.1)  # the lanes overlapped
+                check.run_lanes({"a": [wait], "b": [mark, after]})
+        self.assertEqual(error.exception.returncode, 4)  # 9 would mean the lanes did not overlap
         text = output.getvalue()
         for name in ("alpha", "beta", "gamma"):  # every lane finished, failing lane included
             self.assertIn(f"{name} start\n{name} end\n", text)  # whole, not interleaved
-        self.assertIn("[a] Full output of the failed command", text)
+        header = text.index("[a] + ")
+        self.assertLess(header, text.index("[a] Full output of the failed command"))  # notes follow the log
+
+    def test_an_interrupted_lane_run_kills_its_commands_and_starts_no_more(self):
+        flag = self.root / "started"
+        slow = [sys.executable, "-c", f"import pathlib, time; pathlib.Path({str(flag)!r}).touch(); time.sleep(30)"]
+        never = [sys.executable, "-c", f"import pathlib; pathlib.Path({str(self.root / 'next')!r}).touch()"]
+        real_join, calls = threading.Thread.join, []
+
+        def interrupted_join(thread, timeout=None):
+            if not calls:  # the first wait for the lanes is interrupted, once the command is running
+                calls.append(thread)
+                while not flag.exists():
+                    time.sleep(.02)
+                raise KeyboardInterrupt
+            return real_join(thread, timeout)
+
+        started = time.perf_counter()
+        with patch.object(check, "ROOT", self.root), patch.object(check, "_log_directory", None), \
+                patch.object(threading.Thread, "join", interrupted_join), redirect_stdout(io.StringIO()), \
+                self.assertRaises(KeyboardInterrupt):
+            check.run_lanes({"a": [slow, never]})
+        self.assertLess(time.perf_counter() - started, 20)  # the 30 s command was killed
+        self.assertFalse((self.root / "next").exists())
+        self.assertEqual(check._lane_processes, set())
 
     def test_all_profiles_reject_invalid_python_before_reporting_success(self):
         self.write("computer/runtime.py", "def broken(:\n")

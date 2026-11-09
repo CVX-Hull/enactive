@@ -34,8 +34,9 @@ same structural checks and nothing else; it is not a hosted profile.
 The [testing guide](../testing.md) maps test responsibilities, overlap and upkeep.
 `tools/ci.py` owns the exact source allowlists and test targets; the checker consumes
 that same manifest. Worker crashes fail the run without restart or silent serial
-fallback. The full profile's two lanes run at once and the run fails after both end
-if either failed; each lane's output is printed whole.
+fallback. In the full and viewer profiles, the pytest lane and the browser lane run at
+once and the run fails after both end if either failed; each lane's output is printed
+whole. Interrupting the checker kills both lanes' commands.
 
 **Editorial eligibility.** A complete nonempty Git diff from the pull request's merge
 base, with `--no-renames` and NUL-separated paths. Both sides of renames and deletions
