@@ -41,14 +41,14 @@ claimed from this functional delivery.
 Reader question: **who remembers, who chooses, and who can send input?**
 The existing proposed logical diagram applies to this design:
 
-![Current player-owned memory: the diagram now shows player-memory/2 and player-program/2, which replaced the bounded skills this historical design describes.](../diagrams/player-owned-memory.svg)
+![Current player-owned memory: the diagram now shows player-memory/2 and player-program/2, which replaced the bounded skills this historical design describes.](https://github.com/CVX-Hull/enactive/blob/faa5256f6a215d0e0565233d5f9f485409a8df22/docs/diagrams/player-owned-memory.svg?raw=true)
 
 Boxes are responsibilities, not required model tiers/processes. Solid arrows are
 requests and updates; dashed arrows are returned observations/results. Retained
 memory informs choices but grants no dispatch authority. Text equivalent: the
 player retrieves a bounded state/work packet, selects a skill, receives feedback
 from guarded execution, then updates or corrects its understanding and replans.
-[Editable diagram](../diagrams/player-owned-memory.mmd). The diagram remains
+[Editable diagram](https://github.com/CVX-Hull/enactive/blob/faa5256f6a215d0e0565233d5f9f485409a8df22/docs/diagrams/player-owned-memory.mmd). The diagram remains
 proposed until the corresponding protocol/runtime is delivered.
 
 ## Responsibilities and physical ownership

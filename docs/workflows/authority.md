@@ -6,19 +6,15 @@ status: active
 
 # Authority and review surfaces
 
-The selected public repository is [CVX-Hull/enactive](https://github.com/CVX-Hull/enactive).
-GitHub Issues and the [public Project](https://github.com/users/CVX-Hull/projects/2) own live priorities, stages, owners,
-dependencies, estimates and blockers. Repository docs own durable purpose,
-contracts, procedures, decisions and dated evidence. [Work](../work.md) is the
-navigation entry point; exceptions are issues linked to their affected standard.
-[Enactive migration acceptance](../acceptance/2026-10-18-enactive-migration.md) records
-replacement configuration and enforcement probes; the original
-[public-workflow acceptance](../acceptance/2026-10-17-public-workflow.md) remains
-historical. The [campaign path](../work.md#campaign-delivery-path) links capability
-gates to owned Issues; this contract alone does not prove current settings.
+The public repository is [CVX-Hull/enactive](https://github.com/CVX-Hull/enactive), with
+the [public Project](https://github.com/users/CVX-Hull/projects/2). Which document owns
+which kind of fact is stated once, in the
+[documentation map](../documentation.md#one-authoritative-home-per-kind-of-fact); this page
+owns what each summary may restate and the Project's views. Exceptions are issues linked
+to their affected standard; the [work map](../work.md) is the navigation entry point.
 
 Keep summaries purpose-specific: the overview explains capabilities and limits;
-the work map links the delivery path and decisive evidence; a change brief records
+the work map routes to open outcomes and the evidence index; a change brief records
 design/acceptance decisions. Do not copy Issue status, assignment, estimates,
 next-action queues or CI receipts into those pages. A concise evidence checkpoint
 may link a dated report, but detailed attempt chronology and exact costs belong

@@ -26,12 +26,14 @@ conversion tooling. If conversion cannot preserve meaning, archive the old artif
 and create current state only after resolving its retention and uncertainty duties.
 Rollback deploys a coherent earlier system with its corresponding data migration;
 it never enables mixed versions. Historical reports and archived source remain
-immutable evidence, not supported execution paths. Upstream-owned game saves and
+immutable evidence, not supported execution paths; their content is never edited, but a
+link whose target moved or was removed may be repointed to its new home or to a commit
+permalink of the old file ([ADR 010](../decisions/010-streamlined-delivery.md)). Upstream-owned game saves and
 upstream internals remain CDDA's responsibility: pin the chosen engine and follow
 its supported save procedures; do not edit saves or remove authentic engine behavior.
 
-**Closed archive reads and additive evidence events (owner decision on #403, 7 November
-2026).** The owner scoped this requirement to allow two narrow cases. Because the owner
+**Closed archive reads and additive evidence events (owner decision on #403).** The
+owner scoped this requirement to allow two narrow cases. Because the owner
 set them, the closing rule below still holds: no repository exception can add to them.
 First, the evaluator reads, read-only, the one closed archive of sessions listed in
 `data/evaluation/archive-labels.json`: their `campaign-run/4` manifests and, for those

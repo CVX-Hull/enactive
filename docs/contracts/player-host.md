@@ -58,7 +58,8 @@ than `model.contextWindow`. Unsupported routes, including `/2`, do not execute.
 The driver lowers request maximum to the remaining original allocation. One
 logical request admits at most two charged provider attempts; missing usage is
 unknown and retries never renew limits. The adapter reference defines eligible
-transient refusals. Host seconds and custodian mechanical resources are separate.
+transient refusals. The retry is proven by offline fixtures only; no live 5xx response
+has exercised it ([#308](https://github.com/CVX-Hull/enactive/issues/308)). Host seconds and custodian mechanical resources are separate.
 These operator counts do not enter the assignment, repeated model messages or
 actor tool/program results.
 
@@ -191,10 +192,10 @@ kinds it does not account for, and observers project only known kinds.
 
 | Event | Contract |
 | --- | --- |
-| `host-start` | Exactly once and first after admitted inputs, with `telemetry_version:3` and `schema:"player-host/3"`. It records `session_affinity_id` (additive, absent before 8 November 2026). |
+| `host-start` | Exactly once and first after admitted inputs, with `telemetry_version:3` and `schema:"player-host/3"`. It records `session_affinity_id` (additive, absent from earlier traces). |
 | `tail-notice` | One per request that added a notice (earlier notices stay in the history without a new event): `request_id`, `kinds` (`context-capacity`, `request-limit`, `host-timeout`) and the context `tokens` estimate. Additive; the driver ignores it. |
 | `request-start` | Every charged HTTP attempt, including retries/failures, numbered contiguously `request-1` onward without exceeding allocation. |
-| `context-manifest` | Exactly one per HTTP attempt, retries included, after that attempt's `request-start` and before its `request-fetch-start`, with the same `request_id`. It is the exact ordered list of parts of the payload actually sent, as digests only, delta-encoded (below). Additive within version 3 under [S-MIGRATION](../standards/migration.md)'s additive-event case: absent from traces recorded before 6 November 2026, which stay readable, and readers report its absence explicitly. |
+| `context-manifest` | Exactly one per HTTP attempt, retries included, after that attempt's `request-start` and before its `request-fetch-start`, with the same `request_id`. It is the exact ordered list of parts of the payload actually sent, as digests only, delta-encoded (below). Additive within version 3 under [S-MIGRATION](../standards/migration.md)'s additive-event case: absent from earlier recorded traces, which stay readable, and readers report its absence explicitly. |
 | `response-complete` | `usage_available` distinguishes unknown usage; known configured/provider costs remain labelled. |
 | `player-finish` | At most one direct accepted disposition/report/source references/control identity; mutually exclusive with accepted handoff. |
 | `handoff` | At most one originating actor/session/operation/context/digest issuance with `grants_authority:false`. |

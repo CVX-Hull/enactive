@@ -13,11 +13,31 @@ versions and failure behavior.
 
 ## Scope and responsibilities
 
-![Current logical player and computer responsibilities.](diagrams/player.svg)
+```mermaid
+flowchart TB
+  accTitle: Current player and mechanical computer custody
+  accDescr: Logical responsibilities, not separate required models. The player keeps the user's ongoing objective, interprets images and chooses basic controls. Optional knowledge and programs are fallible. The finite test controller retains quotas outside player context and can request bounded finish-up. Direct finish reports are claims, not save certificates. Independent user Pause and hard limits stop input without a model reply. The game determines effects and saving; no memory or game claim grants custody.
+  U["User<br/>Objective and independent Pause"] --> P["Designated player in selected host<br/>Interpret pixels and choose actions"]
+  M["Optional player knowledge<br/>Claims, Work, corrections and context"] -->|"Fallible evidence"| P
+  P -->|"Basic input or explicit program run"| A["Composition and MCP tools"]
+  A -->|"Same computer port"| C["One mechanical custodian<br/>Original limits and actor capabilities"]
+  A --> R["Bounded local program<br/>Actual image view and optional interpretation"]
+  R -->|"Basic proposals only"| C
+  C -->|"SDL events over inherited socket"| G["Windowed game<br/>Determines outcomes"]
+  G -->|"Actual pixels and delivery receipts"| C
+  C -->|"Original evidence and uncertainty<br/>Actor view excludes global countdowns"| A
+  A --> P
+  T["Finite test controller<br/>Operator quotas and ending reserves"] -->|"Optional bounded finish-up request"| P
+  P -->|"Direct player_finish claim"| T
+  T -->|"Independent hard limits and owned cleanup"| C
+  P -->|"Explicit supported assertions"| M
+  C --> V["Passive spectator<br/>Mechanical status and labelled player claims"]
+  U -->|"Permanent stop, independent of writer"| C
+```
 
 This current diagram answers “Who decides and who can stop input?” Boxes identify
 logical responsibilities; arrows identify requests, results or user control.
-[Editable source](diagrams/player.mmd). Its text equivalent is below.
+Its text equivalent is below.
 
 | Responsibility | Owned state and authority | Component |
 | --- | --- | --- |
@@ -28,7 +48,7 @@ logical responsibilities; arrows identify requests, results or user control.
 | Computer custodian | Exact child/socket/lock handles, serialized operations, original resources and actor capabilities | [Native control](components/native-control.md) |
 | Observer / operator | Supervised control path (status, frame, attention checks, independent permanent Pause with a recorded reason) and an unsupervised read-only viewer of interpretive evaluation | [Observer operations](components/observer-operations.md) |
 | Run evaluator | Offline, versioned interpretive records and metrics with a game binding; never player-visible, gates nothing | [Evaluation contract](contracts/evaluation.md) |
-| Curator shadow (ADR 009 P0, not adopted) | Sealed-trace projection and workbench; sandboxed curator sessions, a key-holding model proxy, a gate-only knowledge repository and drafts; no custody, no player access, never reached by the player | [Curator and trace workbench](components/curator.md) |
+| Curator shadow (ADR 009, not adopted) | Sealed-trace projection and workbench; sandboxed curator sessions, a key-holding model proxy, a gate-only knowledge repository and drafts; no custody, no player access, never reached by the player | [Curator and trace workbench](components/curator.md) |
 | Game | Consumes ordinary SDL input and determines outcomes | Windowed prepared CDDA; no semantic engine bridge |
 
 ## Runtime and state
@@ -87,7 +107,32 @@ the entire basic sequence, reserves original resources and serializes dispatch.
 The adapter reports exact delivery and captures actual presented pixels. Keys and
 text have no image-age, equality or game-phase predicate. Pointer actions bind
 mechanical geometry and a source actually issued to that actor. Delivered input
-is not game success. [Action source](diagrams/action.mmd).
+is not game success.
+
+```mermaid
+sequenceDiagram
+  accTitle: Current basic input and original collection
+  accDescr: The client assigns an original ID before HTTP submission. One writer validates the complete basic sequence and reserves original capacities. The adapter hands SDL events to the game and captures actual pixels. Delivery is not game success. Unknown or partial input permanently stops further input; collection preserves original IDs without replay. Pause bypasses the writer.
+  participant P as Player and client
+  participant C as Mechanical custodian
+  participant N as SDL adapter
+  participant G as Windowed game
+  P->>C: Original ID and basic actions
+  C->>C: Validate sequence and reserve original capacities
+  C->>N: Original native IDs and expiry
+  Note over C,N: Keys and text have no image or game-phase gate<br/>Pointer binds issued-source geometry
+  N->>G: Bounded SDL event handoff
+  G-->>N: Actual presented pixels
+  N-->>C: Exact receipt and capture
+  C-->>P: Projected result, original evidence and source<br/>No global deadline or remaining resources
+  Note over P,G: Delivered is not consumed or successful
+  alt Partial or unknown input
+    C->>C: Permanently stop new input
+    P->>C: Collect original ID
+    C-->>P: Available original receipts, never replay
+  end
+  Note over C,N: Independent user Pause latches before writer waits
+```
 
 ### How do I recover control?
 
@@ -157,7 +202,25 @@ mutate. Only the driver, after canonical issuance/context verification and actua
 old host/MCP group quiescence, can mint a successor under original limits. It
 requires no save, menu or identity check. [Run procedure](operations/campaign-run.md).
 
-![Current logical actor custody, inherited orderly stop and permanent fencing.](diagrams/run-ownership.svg)
+```mermaid
+flowchart TB
+  accTitle: Current actor custody and permanent stop
+  accDescr: One custodian owns original resources and exact target handles. Handoff snapshots context and seals the actor. A successor requires canonical issuance and actual old host and MCP group quiescence under original limits. Pending orderly stop is admission-wide: new handoff is refused, and an already sealed handoff carries the same stop ID to a verified successor gated before MCP or fetch. Direct finish claims do not certify saving. Pause and unknown input permanently stop succession.
+  C["One custodian<br/>Exact target and original limits"] --> A["Active actor capability"]
+  A -->|"Basic input"| W["One serialized mechanical writer"]
+  A -->|"Handoff without uncertainty or pending stop"| H["Persist canonical context<br/>Seal actor"]
+  H --> R["Old actor reads and original collection only"]
+  H --> Q{"Canonical issuance and context<br/>Actual host and MCP quiescence?"}
+  Q -->|"Yes, original resources remain"| N["Fresh successor capability"]
+  T["Admission-wide orderly stop<br/>One retained command ID"] -->|"If handoff already sealed"| B["Successor gate before MCP or fetch<br/>Receive matching inherited control"]
+  N --> B
+  B -->|"No pending stop, or matching control delivered"| A
+  T -->|"Bounded finish-up request"| A
+  A -->|"Direct player_finish"| F["Player report and host settlement<br/>No save or game-success certificate"]
+  Q -->|"No"| S["Stop without succession"]
+  U["User Pause, uncertainty or failed closure"] -->|"Permanent fence"| S
+  W -->|"Exact receipts and actual pixels"| A
+```
 
 This current diagram answers “What permits a successor after handoff or a stop
 request?” Boxes are logical custody/control states; labelled arrows are allowed
@@ -165,8 +228,7 @@ transfers or requests, not separate processes. The driver retains one stop ID;
 an already sealed handoff requires verified old-group quiescence and a successor
 control gate before MCP/fetch. Pause and unknown input prevent succession.
 Direct player finish is a claim, not saving or game acceptance.
-[Editable source](diagrams/run-ownership.mmd) and
-[exact host control](contracts/player-host.md#external-control).
+[Exact host control](contracts/player-host.md#external-control) owns the fields.
 
 ## Coordinated change
 
@@ -205,7 +267,3 @@ The [testing guide](testing.md) selects lanes. [Production outcome evidence](acc
 covers actual basic input, useful stock, conditional scouting, succession and
 Save/new-child reload/normal ending. Source fixtures alone cannot qualify those
 effects; useful cadence, general safe navigation and survival remain separate.
-
-<!-- Anchors that dated records link to. -->
-<a id="passive-skill-verification"></a>
-<a id="passive-task-supervision"></a>

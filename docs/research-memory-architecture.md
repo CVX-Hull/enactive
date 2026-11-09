@@ -62,8 +62,8 @@ Code anchors: [baseline runtime start](https://github.com/CVX-Hull/enactive/blob
 [skill registry](https://github.com/CVX-Hull/enactive/blob/433ed973afe312d03f777d8b102a0cba528af746/harness/gameplay/skills.py). Relevant functions are `_start`,
 `_submit_or_verify`, `TaskMemory.refresh`, `_validate_observation` and `EvidenceStore.historical_facts`;
 source navigation must use actual names when these change. The current
-[operator contract](contracts/mission-admission.md#designated-campaign-operator),
-[passive memory](contracts/injected-planner.md#passive-task-memory) and
+[operator contract](https://github.com/CVX-Hull/enactive/blob/394ae28da12359eab778464d051c96a19dd26402/docs/contracts/mission-admission.md#designated-campaign-operator),
+[passive memory](https://github.com/CVX-Hull/enactive/blob/394ae28da12359eab778464d051c96a19dd26402/docs/contracts/injected-planner.md#passive-task-memory) and
 [monitor proposal](design/outcome-monitoring.md) distinguish these scopes.
 
 ## What the earlier research and real run change
@@ -105,7 +105,7 @@ Reader question: **how does the player remember and act without the lead becomin
 a routine gameplay dependency?** This is a proposed logical view; participants are not
 new processes, databases or model tiers.
 
-![Current player-owned memory: the diagram now shows player-memory/2 and player-program/2, which replaced the semantic skills this historical review discusses.](diagrams/player-owned-memory.svg)
+![Current player-owned memory: the diagram now shows player-memory/2 and player-program/2, which replaced the semantic skills this historical review discusses.](https://github.com/CVX-Hull/enactive/blob/faa5256f6a215d0e0565233d5f9f485409a8df22/docs/diagrams/player-owned-memory.svg?raw=true)
 
 Solid arrows show requests or updates; dashed arrows return observations or results.
 Notes mark the user control and optional improvement boundaries. Text equivalent: retain visible observations and
@@ -114,7 +114,7 @@ the player; execute a semantic skill through the existing current-input gate;
 assess the observed result and replan. User Pause/takeover wins. Optional curation
 proposes evidence-linked lessons; reusable library changes are separately tested
 and reviewed. There is no memory-to-controller permission edge.
-[Editable source](diagrams/player-owned-memory.mmd).
+[Editable source](https://github.com/CVX-Hull/enactive/blob/faa5256f6a215d0e0565233d5f9f485409a8df22/docs/diagrams/player-owned-memory.mmd).
 
 ### Necessary architecture changes
 

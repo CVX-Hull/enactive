@@ -47,7 +47,7 @@ def current(path: Path) -> bool:
 
 def scope():
     paths = [ROOT / name for name in ROOT_DOCUMENTS]
-    paths += sorted((ROOT / "docs").rglob("*.md")) + sorted((ROOT / "docs" / "diagrams").glob("*.mmd"))
+    paths += sorted((ROOT / "docs").rglob("*.md"))
     for directory in ("harness", "tools"):
         paths += sorted(p for p in (ROOT / directory).rglob("*")
                         if p.is_file() and p.suffix in (".py", ".mjs", ".js", ".cjs", ".md", ".json", ".mm", ".cpp", ".h", ".sh")

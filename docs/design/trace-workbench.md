@@ -62,13 +62,12 @@ they grant nothing and are how frames are cited.
 - **Integrity.** A frame whose bytes differ from its sealed hash is refused.
 - **Real lineages.** The sealed #397 lineage and the six sampled #372 runs are
   projected and scanned for every custody token, custodian URL and route value of
-  their actors, plus key-like patterns. On 2026-11-08 there were no hits; #397 alone
-  wrote 1,996 files in 0.8 s. The tests skip when the evidence store is absent;
+  their actors, plus key-like patterns ([result](../acceptance/2026-11-08-moved-measurements.md#trace-workbench-secret-scan-and-perceptual-hashes)).
+  The tests skip when the evidence store is absent;
   `ENACTIVE_EVIDENCE_ROOT` points a worktree at a checkout's store.
 
-The #382 traces were not projected. They are held out, and the owner decided on
-8 November 2026 that #452's secret-scan acceptance covers #397 and #372 instead of #382,
-as the issue text first said.
+The #382 traces are held out and are not projected. #452's secret-scan acceptance
+covers #397 and #372 instead.
 
 ## Evidence reader
 
@@ -95,20 +94,10 @@ non-empty `-wal` is refused rather than read incomplete. On the sealed #397 stor
 
 **Perceptual-hash reliability is measured, not assumed** (ADR 009 research question R8;
 its synthesis is #448).
-[`tools/phash_measure.py`](https://github.com/CVX-Hull/enactive/blob/e8b062df3275eb128f42f4b84161e651be632d13/tools/phash_measure.py)
-(removed from the tree; kept at that commit) was run over the sealed #397
-frames: 7 sessions, 1,932 frames, 1,925 consecutive pairs, and as many random pairs within
-each session (seed 452).
-
-| Pairs | Median distance | p10 | p90 | Within 5 bits | Within 10 bits |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| Consecutive | 20 | 2 | 34 | 17.7% | 28.3% |
-| Random | 29 | 16 | 38 | 0.9% | 2.6% |
-
-Only 2.8% of consecutive pairs were pixel-identical. The two distributions overlap
-heavily, so on these screens a difference hash separates "next frame" from "any frame"
-only weakly. **The workbench reports distances and does not call two frames the same
-screen.** Any threshold has to be calibrated on labelled pairs from development lineages
+On the sealed #397 frames, consecutive and random pairs' difference-hash distances overlap
+heavily, so a difference hash separates "next frame" from "any frame" only weakly
+([measurement](../acceptance/2026-11-08-moved-measurements.md#trace-workbench-secret-scan-and-perceptual-hashes)).
+**The workbench reports distances and does not call two frames the same screen.** Any threshold has to be calibrated on labelled pairs from development lineages
 first, as the research page recommends.
 
 ## Containers and sidecars

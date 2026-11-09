@@ -9,9 +9,8 @@ scope: Proposed direction for an acting player with a coding-agent curator in ep
 # ADR 009 — A curated player: actor, curator, ontology and programs
 
 **Status: proposed, 8 November 2026.** The owner set the direction below in
-discussion on 8 November 2026. Nothing here is adopted. P0, the shadow baseline,
-workbench and frame, is complete, and its [outcome](#phases) is recorded; P1 awaits the
-owner. The
+discussion on 8 November 2026. Nothing here is adopted; the decisions taken on each
+phase are under [phases](#phases). The
 [computer-control contract](../contracts/computer-control.md), the
 [player guide](../player-guide.md) and the current standards govern the running
 system until a phase meets its adoption condition. Each phase is adopted on study
@@ -648,19 +647,13 @@ checks its power by simulation before it runs.
 | **P2: programs and monitor** | Actor-interface programs as passive policies; capability slots with record and replay; supervised runs with preemption and verified risk classes; monitor slot; offline fitting; probation and library statistics; spectator program views | Per package, after the gate before spend | Pre-registered delegation share at matched failure rate; monitor detection on anomalies in recorded program runs |
 | **P3: practice instance** | One-way forks; determinism measurement; live fitting; slot swaps; spectator fork views | Per package | Owner decision first; concurrency guards held |
 
-**P0 outcome (8 November 2026).** P0's adoption condition is met, with two
-qualifications ([record](../acceptance/2026-11-08-adr009-p0.md)).
-- **Episode recall.** The four episodes are failing probes only with the lead's
-  unblinded adjudication layer.
-- **Cost.** The shadow cost was measured with prompt caching barely working, so it is
-  likely an overestimate.
-
-P1 was approved on the owner's go/no-go, with prompt caching to be fixed first (see
-"P1.0 outcome" below). Nothing is adopted, and the current contracts still govern the
+**Decisions taken on the phases (8 November 2026).** Outcomes and figures are in the
+dated records linked here; nothing is adopted, and the current contracts govern the
 running system.
-
-**Before P1: a readiness stage, P1.0 (owner decision, 8 November 2026).** It runs no
-study and adopts nothing. It has three leaves:
+- **P0** met its adoption condition, with qualifications on episode recall and cost
+  ([record](../acceptance/2026-11-08-adr009-p0.md)).
+- **P1.0, a readiness stage before P1,** runs no study and adopts nothing. It has three
+  leaves:
 1. **Context stability and clarity** for both the actor and the curator:
    - one session-affinity value per session;
    - byte-stable system prompts and tool tables;
@@ -687,49 +680,14 @@ study and adopts nothing. It has three leaves:
      because #382's three lineages cannot support a significance test.
    - **Spend:** an envelope of about $120, staged behind a pilot.
 
-The P1 go/no-go is decided on that pre-registration.
-
-**P1.0 outcome (8 November 2026).**
-1. **Context stability** ([record](../acceptance/2026-11-08-context-stability-489.md)).
-   - **Done:** both hosts' requests are byte-stable apart from their tails, proven without
-     spend.
-   - **Prompt caching: found and fixed in a follow-up.**
-     - **The first paid check.** A session sent a constant affinity value and still cached
-       only 3.3% of prompt tokens: the static prompt, never the history.
-     - **The cause.** Replays of that session's real request bodies found it. The transient
-       budget note at the tail, rewritten on every request, stopped the provider from
-       reusing any earlier request.
-     - **The fix.** Notes and notices now stay in the history where they were first sent.
-       In replays, each request then read the whole previous request from the cache.
-2. **Probe validation** ([record](../acceptance/2026-11-08-probe-validation-490.md)).
-   - **Both pre-registered bars were missed:** fact labels 0.51 and queries 0.41.
-   - **After a content-matched correction,** the owner made confirmed re-observations P1's
-     primary probes. The frozen ledgers become secondary.
-3. **The pre-registration** ([p1-study](../design/p1-study.md)) is written and reviewed.
-   - **Arms.** Arm A against arm B, with B run twice and per admission, on #382.
-   - **Rule.** Clustered re-observation units and a conjunctive go rule with guards.
-   - **Spend.** An expected $71–90 within $120.
-   - **The gate before spend passes narrowly, after its target moved.** At the planning
-     assumption, false positives are 3.1%. P(go) is 0.81 at an effect of interest of 0.30,
-     which was raised from 0.25 after the simulation gave 0.67 there; that change is recorded
-     as a deviation. With three lineages, the study detects only large effects.
-
-**The owner's P1 go/no-go (8 November 2026): go, but fix caching first.** P1 runs as
-pre-registered, accepting that it detects only large effects. Prompt caching is fixed
-first, which lowers P1's cost before the pilot.
-
-**Caching was fixed, with its cause found as above.**
-- **The cause** came from free checks on the real request bodies, then replays capped at
-  $1.50 by the owner. They spent $0.535.
-- **A cache key was not needed.** `prompt_cache_key` made no difference.
-- **The cached share is not yet measured live.** The pilot measures it.
-
-Then:
-- #178 writes the held-out probes, with no spend;
-- the power gate is re-checked on their actual clusters;
-- the pilot runs.
-
-Every stage keeps the pre-registration's stop rules.
+- **P1.0's results** are in the [context-stability](../acceptance/2026-11-08-context-stability-489.md)
+  and [probe-validation](../acceptance/2026-11-08-probe-validation-490.md) records and the
+  [P1 pre-registration](../design/p1-study.md). The owner made confirmed re-observations
+  P1's primary probes, with the frozen ledgers secondary.
+- **P1: go, but fix prompt caching first.** P1 runs as pre-registered, accepting that it
+  detects only large effects. Caching is fixed (the context-stability record has the
+  cause and fix). P1 then proceeds through #178's held-out probes, a power re-check on
+  their actual clusters and the pilot, each under the pre-registration's stop rules.
 
 Every phase replaces its contracts and stores in one migration
 (`player-memory/2` → `/3`, `player-record/1` and `player-program/2` → their

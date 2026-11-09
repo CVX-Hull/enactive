@@ -4,8 +4,6 @@ review_trigger: Responsibility, supported behavior, interfaces or qualification 
 status: active
 ---
 
-<a id="bridge-and-guarded-play-contract"></a>
-
 # Computer control and player contract
 
 The exact contracts are [Computer control and player ports](contracts/computer-control.md),
@@ -84,17 +82,3 @@ One designated player, run by the selected player host, owns routine gameplay in
 The lead owns source, frozen admission, review and verification. Explorers and
 reviewers send no game input. Advisers and programs are optional fallible aids;
 the current route has no asynchronous semantic worker or hidden game-state feed.
-
-<!-- Anchors that dated records link to. -->
-<a id="lifecycle-action-preconditions"></a>
-<a id="skill-request-binding-errors"></a>
-<a id="selected-item-inspection-and-activity-composition"></a>
-<a id="certified-request-admission-refusal"></a>
-<a id="ordinary-discovery-and-procedure-data"></a>
-<a id="explicit-operator-recovery"></a>
-<a id="closed-loop-play-and-observations"></a>
-<a id="passive-gameplay-records-and-evidence"></a>
-<a id="passive-task-memory"></a>
-<a id="bounded-injected-planner"></a>
-<a id="passive-bounded-movement-skills"></a>
-<a id="passive-waypoint-supervision"></a>

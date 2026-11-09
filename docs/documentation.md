@@ -12,11 +12,22 @@ owns documentation requirements. The lead maintains navigation with component
 maintainers. Deciding players use the [compact guide](player-guide.md), frozen
 assignment and actual tool schema; routine play does not require engineering history.
 
-![Current review hierarchy from purpose through contract and implementation.](diagrams/architecture-review.svg)
+```mermaid
+flowchart TB
+  accTitle: Current documentation and review hierarchy
+  accDescr: The user reviews purpose, outcomes and tradeoffs before technical detail. The charter and standards constrain project architecture, which links focused component views and then exact contracts and code. An issue scopes a proposed change at the highest affected boundary. Checks and review provide scoped evidence back to the claim. Arrows mean constraint or drill down, not process isolation or serial approval. GitHub owns live work; dated reports retain history.
+  P["Purpose and user constraints<br/>Charter and overview"] -->|"Constrain responsibilities"| A["Project architecture<br/>System map and tradeoffs"]
+  S["Principles and standards<br/>Required qualities and rules"] -->|"Apply at every level"| A
+  A -->|"Zoom into the affected part"| C["Component design<br/>State, interfaces and failure paths"]
+  C -->|"Specify and implement"| I["Exact contracts and code<br/>Schemas, callers and tests"]
+  W["GitHub Issue and PR<br/>Scope and acceptance"] -.->|"Start at highest changed boundary"| A
+  I -->|"Produce scoped evidence"| E["Checks and review<br/>CI, native or outcome evidence as applicable"]
+  E -.->|"Support or reject the claim"| W
+```
 
 This current logical diagram answers “Where should review begin?” Arrows show
 constraint or drill-down; boxes are document roles, not separate processes or
-approval stages. [Editable source](diagrams/architecture-review.mmd).
+approval stages.
 
 ## Read at the level of your question
 
@@ -49,7 +60,9 @@ reader task or boundary benefits; no universal file-size quota applies.
 | `web/` | The spectator page (served by the supervised gateway) and independent user Pause. |
 | `tests/` | Scoped behavioral assertions/doubles and compiled fixtures; actual outcomes are separate evidence. |
 | `docs/components/`, `contracts/`, `standards/`, `workflows/`, `operations/` | Explanation, exact rules, mandatory qualities, decisions and supported tasks. |
-| `docs/acceptance/`, `changes/`, `decisions/` | Dated evidence/rationale under explicit status, not live commands or permission. |
+| `docs/design/` | Designs for proposed or in-progress work (status `proposed` or `active`), and finished designs kept as dated evidence (`historical`). An adopted design's current rules move into components and contracts. |
+| `docs/research*.md` | External evidence and its limits, with a dated research cutoff; [research](research.md) indexes the current pages, and pages whose question is closed are `historical`. |
+| `docs/acceptance/`, `changes/`, `decisions/` | Dated evidence/rationale under explicit status, not live commands or permission. `changes/` holds the change briefs written before ADRs and issues took that role; it receives no new briefs. |
 | Ignored `.runtime/` | Frozen inputs, owned stores/saves and raw evidence; no private maintained source framework. |
 
 ### Follow a concrete reader task
@@ -70,8 +83,11 @@ Charter owns purpose; engineering/standards own mandatory rules;
 architecture/components own current responsibilities and assurance limits;
 [computer-control](contracts/computer-control.md) owns exact current ports;
 schemas/source own their declared executable interface; operations own tasks.
-GitHub owns live work, proposals own unadopted scope, ADRs own dated rationale,
-and acceptance reports own original observations. The [controls page](controls.md)
+GitHub Issues and the linked Project own live priorities, status, owners, blockers
+and exceptions, with [work](work.md) as their navigation page; proposals and designs own
+unadopted scope; ADRs own dated rationale; acceptance reports own original observations;
+research owns external evidence and its limits; setup and the runbook own procedures.
+The [controls page](controls.md)
 owns what each control stops and where it is enforced, not a second contract or work
 tracker. The
 [authority contract](workflows/authority.md) owns which summaries may restate what.
@@ -86,10 +102,13 @@ A timestamp or parser pass does not establish truth. Keep original failures inta
 
 Historical records and superseded pages are evidence, not runnable instructions,
 another supported backend or authority to import old data; they keep their original
-tested scope. This covers acceptance reports, change briefs, superseded ADRs, the
-superseded `contracts/` pages and old executable artifacts. The superseded pages
-stay so that dated records' links and headings resolve; follow their named
-replacement. Only `contracts/` pages with `status: active` are current contracts.
+tested scope. This covers acceptance reports, change briefs, superseded ADRs and old
+executable artifacts. Their content is never edited; when a link target moves or is
+removed, only the link is repointed, to the new home or to a commit permalink of the
+old file. A replaced current page is deleted rather than kept as a superseded copy:
+Git keeps it. Historical records carry no `review_trigger`. Current pages describe the
+current system and are not changelogs: what changed, when and what it replaced belongs
+in Git, PRs and dated records, not in an active page.
 
 Update parent/component/contract/callers/storage/operations together when behavior
 changes. Incorporate adopted design into current pages, transfer remaining work

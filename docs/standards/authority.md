@@ -6,13 +6,9 @@ status: active
 
 # Authority and reading order
 
-The [overview](../overview.md) is the user's starting point; the charter owns purpose,
-constraints and principles. This document owns engineering requirements. Current
-architecture and protocol own system behavior. Setup and runbook own procedures.
-GitHub Issues and the linked Project own active priorities, status, blockers and
-exceptions; work.md is their navigation entry point. Dated acceptance reports
-own historical observations; ADRs own decision rationale; research owns external
-evidence and its limits. AGENTS.md routes agents to the relevant current material.
+The [overview](../overview.md) is the user's starting point and AGENTS.md routes agents
+to the relevant current material. Which document owns which kind of fact is stated once,
+in the [documentation map](../documentation.md#one-authoritative-home-per-kind-of-fact).
 A discrepancy is a defect to resolve, not permission to silently pick a convenient
 source. User instructions take precedence. Proposed/superseded records cannot
 silently change current contracts. Link to authoritative facts instead of copying

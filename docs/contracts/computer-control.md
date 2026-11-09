@@ -6,7 +6,7 @@ status: active
 
 # Computer control and player ports
 
-This is the current source contract, delivered by [#176](https://github.com/CVX-Hull/enactive/issues/176)
+This is the current source contract ([#176](https://github.com/CVX-Hull/enactive/issues/176))
 with one production backend. [ADR006](../decisions/006-computer-control-boundary.md)
 owns the boundary; the [cutover brief](../changes/071-computer-control-cutover.md)
 retains historical rationale. The [production report](../acceptance/2026-10-29-computer-control.md)

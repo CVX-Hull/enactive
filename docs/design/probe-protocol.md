@@ -8,7 +8,7 @@ review_trigger: A change to the labels, the probe rule, the rates, the blinding,
 
 # Probe annotation protocol
 
-Protocol **probe-protocol/1**, written 8 November 2026. It turns a sealed lineage into
+Protocol **probe-protocol/1**. It turns a sealed lineage into
 **probes** of the form "at this boundary, a query about X should surface Y". It also
 yields baseline rates:
 - **carry rate per boundary**: how much of the ledger so far reaches the successor
@@ -96,10 +96,9 @@ these from the labels.
   That defines one probe `(b, F)`: at b, a query about F's subject should surface F.
   It **fails** when F was not carried at b.
 - **Failing probe with cost.** A failing probe whose fact also has a `rediscovered` or
-  `acted_without` event in chunk c, the chunk that needed it. (This text first said "in
-  chunk c or later"; the code and the #449 figures always used chunk c. Corrected after
-  review on 8 November 2026. The wider rule would give 131 rather than 120 for #397's
-  blinded annotation.)
+  `acted_without` event in chunk c, the chunk that needed it, not a later one (the
+  [#449 record](../acceptance/2026-11-08-probe-baseline-449.md#deviations-found-in-review)
+  gives the figures under the wider rule).
 - **Carry rate** at b: carried live facts ÷ live facts. Reported per boundary kind
   (handoff, admission) and pooled. It is also reported over needed facts only. It is
   **cumulative ledger coverage**: a fact lost at one boundary counts as uncarried at
@@ -170,8 +169,8 @@ Blinded annotation fully recognised none of the four known #397 episodes. Before
 are scored against probes, the protocol's blinded recall is checked against
 re-observations that neither the lead nor the annotators chose.
 
-This rule was fixed on 8 November 2026, before any candidate was computed. The
-evaluator records no rediscovery event, so the candidates come from frames.
+The rule was fixed before any candidate was computed. The evaluator records no
+rediscovery event, so the candidates come from frames.
 
 1. **Frames.** Each chunk's frames are taken in operation order, as in the timelines.
 2. **Hash.** Each frame gets a 256-bit difference hash (`harness.trace.images.dhash`,
@@ -205,14 +204,14 @@ protocol stands. Below 0.6, the probes become query-style:
 
 Either way, one fact ledger per development lineage is frozen as the scoring ledger.
 
-**Result (8 November 2026).** Pooled recall was 0.51: 19 of 37 confirmed
-re-observations captured. #397 reached 0.67 and the #372 sample 0.23. That is below the
-bar, so the probes become query-style
-([`data/evaluation/probes/validation/`](../../data/evaluation/probes/validation)).
+The measured recall and its outcome are in
+[the #490 record](../acceptance/2026-11-08-probe-validation-490.md). The query-style
+probes are in
+[`data/evaluation/probes/validation/`](../../data/evaluation/probes/validation).
 
 ## Query probes (#490)
 
-Fixed on 8 November 2026, after the recall result and before any query was written.
+This rule was fixed before any query was written.
 
 **Writers.**
 - Every chunk that precedes a boundary gets one blinded writer: #397's `sd1a1-001`
@@ -245,28 +244,13 @@ shows.
 - Below 0.6, the record says so, and the probe design goes back to the owner before
   #491.
 
-**Result (8 November 2026).** 19 writers wrote 649 queries. Query recall was 0.41: 15 of
-37 confirmed re-observations covered, #397 0.50 and the #372 sample 0.23. That is below
-the bar.
+The query recall, the content-matched figures and the owner's decisions are in
+[the #490 record](../acceptance/2026-11-08-probe-validation-490.md). Step 7's fact-label
+rule checks only that a need falls near the later frame, not what the fact says, so a
+capture under it does not show that the fact ledger records the re-observation. The
+content-matched check uses the same judge model and question as the query re-check.
 
-**Correction after review (8 November 2026).** Step 7's fact-label rule checks only that
-a need falls near the later frame, not what the fact says. A blinded content check, with
-the same judge model and question as the query re-check, found that only **4 of the 19**
-captured pairs have a nearby fact that states what the earlier frame shows. Content-matched
-figures, post hoc and descriptive only:
-
-| | Fact labels | Queries | Either |
-| --- | ---: | ---: | ---: |
-| All 37 confirmed pairs | 4 (0.11) | 15 (0.41) | 16 (0.43) |
-| 21 informative pairs (no empty menu, search prompt or loading screen) | 4 | 13 (0.62) | 14 (0.67) |
-
-The pre-registered fact figure, 0.51, stands as computed. It does not show that the
-fact ledger records these re-observations, and the two ledgers are not complementary.
-A first version of this result reported a union of 0.68 (0.81 on informative pairs) from
-the uncorrected rule, and the owner's first decision, to score on both ledgers, rested on it.
-
-**The owner's decision, on the corrected figures: confirmed re-observations are P1's
-primary probes.**
+**Decision: confirmed re-observations are P1's primary probes.**
 - **Source.** The probes come from the fixed candidate rule (steps 1–4). On held-out data,
   every candidate is judged, not a sample.
 - **Confirmation.** A blinded judge confirms each one under a tightened rule: a pair that

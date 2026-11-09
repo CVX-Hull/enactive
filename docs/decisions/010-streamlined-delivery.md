@@ -1,18 +1,19 @@
 ---
 owner: lead
-review_trigger: An owner decision on an open question below, a leaf's result, or a change to the delivery, control, documentation or evidence rules
-status: proposed
+status: historical
 date: '2026-11-08'
-scope: Proposed simplification of delivery, controls, CI, documentation, evidence storage and local resources after the 8 November 2026 audit; nothing adopted, and current standards govern until each leaf lands
+scope: 'Accepted simplification of delivery, controls, CI, documentation, evidence storage and local resources after the 8 November 2026 audit (#498); delivered in #506-#512'
 ---
 
 # ADR 010 — Streamlined delivery: one home per fact, controls that earn their keep
 
-**Status: proposed, 8 November 2026.** The owner asked for a plan to streamline the
+**Status: adopted, 8 November 2026.** The owner asked for a plan to streamline the
 process and make the project pristine, and for no second copies kept without a reason.
 The owner accepted this direction and settled its four questions the same day
-([owner decisions](#owner-decisions-8-november-2026)). Each leaf below adopts its part
-and amends the current standards when it merges; until then they govern.
+([owner decisions](#owner-decisions-8-november-2026)). All seven leaves landed; the
+current standards, workflows and controls page now carry its rules, and the
+[outcome record](../acceptance/2026-11-08-streamlined-delivery-010.md) holds the measured
+results and deviations. This page is the decision's rationale.
 
 ## Context: what the audit found
 

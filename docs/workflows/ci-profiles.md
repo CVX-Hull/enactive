@@ -6,11 +6,26 @@ status: active
 
 # Protected CI profiles
 
-![Proportional validation on pull requests, structural checks on main.](../diagrams/ci-validation.svg)
+```mermaid
+flowchart TB
+  accTitle: Proportional checks on pull requests, structural checks on main
+  accDescr: Main-targeting pull requests use documentation consistency, explicit component consumer tests, or full portable regression from the complete diff. The required controller reports actual execution and failures block protected merge. Main's ruleset requires the pull request to be up to date with main, so a squash merge gives main the tree the pull request's run tested, and a push to main runs the structural checks only. Native and gameplay acceptance remain separate.
+  P["Main-targeting PR<br/>complete original comparison"] --> E{"Eligible editorial paths?"}
+  E -- Yes --> D["Strict structure and documents"]
+  E -- No --> B{"One explicit component?"}
+  B -- Yes --> T["Consumer and boundary tests<br/>plus viewer logic"]
+  B -- No or unknown --> F["Strict full regression<br/>and viewer tests"]
+  D --> C["Always-present controller<br/>selected failure blocks merge"]
+  F --> C
+  T --> C
+  C --> M["Protected squash merge<br/>head up to date with main"]
+  M --> S["Main push: structural checks<br/>on the tree already tested"]
+  S --> V["Done only for verified scope<br/>report executed and unrun lanes"]
+  V -. "Separate evidence" .-> N["Native behavior and gameplay<br/>require their own acceptance"]
+```
 
 A pull request runs the narrowest closed profile its complete diff qualifies for; a
 push to main runs the structural checks. Native and gameplay outcomes stay separate.
-[Editable source](../diagrams/ci-validation.mmd).
 
 One always-present Actions `controller` job is required by main's ruleset: pull
 requests to main only, strict up-to-date status checks, squash merges and no bypass
@@ -26,10 +41,10 @@ same structural checks and nothing else; it is not a hosted profile.
 
 | Profile | Runs on | Additional checks | Supported claim |
 | --- | --- | --- | --- |
-| Full (also the default local command) | A pull request with any change outside the other profiles | Complete pytest collection on four xdist processes with work stealing and the 20 slowest durations, beside a browser lane: diagram rendering, then the viewer and investigation suites | Full portable regression; native build and gameplay remain separate |
-| Editorial | A pull request changing only eligible documents | Diagram rendering | Document and structural validation only |
+| Full (also the default local command) | A pull request with any change outside the other profiles | Complete pytest collection on four xdist processes with work stealing and the 20 slowest durations, beside a browser lane: the viewer and investigation suites | Full portable regression; native build and gameplay remain separate |
+| Editorial | A pull request changing only eligible documents | None | Document and structural validation only |
 | Viewer | A pull request confined to the viewer allowlist, optionally with eligible documents | Server and fixed boundary smoke on four xdist processes grouped by file, beside the browser lane | Contained viewer and boundary regression; no browser layout or full regression claim |
-| Main | Every push to main | None; tests and diagrams already ran on this tree | The tree main received is the pull request head whose run passed |
+| Main | Every push to main | None; tests already ran on this tree | The tree main received is the pull request head whose run passed |
 
 The [testing guide](../testing.md) maps test responsibilities, overlap and upkeep.
 `tools/ci.py` owns the exact source allowlists and test targets; the checker consumes
@@ -42,8 +57,7 @@ whole. Interrupting the checker kills both lanes' commands.
 base, with `--no-renames` and NUL-separated paths. Both sides of renames and deletions
 count, and every changed object must be regular. The five root documents and all
 `docs/**/*.md` qualify, including current guidance and contracts, as do acceptance
-assets and JSON, `docs/assets/` images, and Mermaid sources, SVGs and `rendered.json`
-directly under `docs/diagrams/`. Other Markdown, executable assets, configuration
+assets and JSON, and `docs/assets/` images. Other Markdown, executable assets, configuration
 and schemas do not. Structural checks cannot prove prose or prompt
 semantics: review compares changed guidance with contracts and source and selects any
 needed native or player evidence.

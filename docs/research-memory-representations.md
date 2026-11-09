@@ -228,18 +228,18 @@ predictions, not LLM summaries, a trained player or survival.
 Reader question: **how can memory and learning help without acquiring action
 authority?** This is a proposed logical view, with the existing execution boundary.
 
-![Proposed memory advice and offline improvement remain separate from the existing controller's action authority.](diagrams/memory-learning-loop.svg)
+![Proposed memory advice and offline improvement remain separate from the existing controller's action authority.](https://github.com/CVX-Hull/enactive/blob/458905f0616aa0045b3c4d0ca0ae8c3290116cca/docs/diagrams/memory-learning-loop.svg?raw=true)
 
 Boxes denote responsibilities, not processes, stores or model tiers. Solid arrows
 show proposed gameplay information and the existing guarded execution path;
-dashed arrows show offline evaluation and review. [Editable source](diagrams/memory-learning-loop.mmd).
+dashed arrows show offline evaluation and review. [Editable source](https://github.com/CVX-Hull/enactive/blob/458905f0616aa0045b3c4d0ca0ae8c3290116cca/docs/diagrams/memory-learning-loop.mmd).
 Text equivalent: visible observations retain origin/scope/time; queries supply
 applicable context or report unknown; the player proposes a bounded plan; only
 the existing supervisor/controller can validate and execute it. An observation
 request still needs that authority. Separately, candidate lessons retain context
 and counterexamples, undergo held-out evaluation, and are rejected/revised or
 reviewed for a later authorized version change. There is no automatic promotion.
-The [current memory contract](contracts/injected-planner.md#passive-task-memory) remains authoritative.
+The [current memory contract](https://github.com/CVX-Hull/enactive/blob/394ae28da12359eab778464d051c96a19dd26402/docs/contracts/injected-planner.md#passive-task-memory) remains authoritative.
 
 The conceptual roles map onto existing types rather than introducing six new
 services: `EvidenceRef`/`Fact` retain observation references; `Interpretation`,

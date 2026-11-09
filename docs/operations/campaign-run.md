@@ -132,8 +132,7 @@ using the frozen route's configured dollar rates. Prospective cumulative
 reservation is the prior baseline plus that amount times `max_http_attempts`; it
 must fit the standing ceiling exactly as frozen.
 
-`prior_reserved_usd` is the **actual spend to date** (owner decision, 31 October
-2026), not the sum of past worst-case reservations. The next package's baseline is
+`prior_reserved_usd` is the **actual spend to date**, not the sum of past worst-case reservations. The next package's baseline is
 this baseline plus each settled run's actual cost, taken as follows:
 - Provider usage or an account reading, using the upper end of any range.
 - On a shared account, the whole account delta over the run, never apportioned
@@ -145,7 +144,8 @@ this baseline plus each settled run's actual cost, taken as follows:
 
 Only the package being admitted reserves its own attempts at the worst case.
 Record the baseline's sources with each package; the current cumulative actual
-spend is in [operator permissions](../operator-permissions.md).
+spend is stated in the latest study record that spent, as
+[operator permissions](../operator-permissions.md) describes, not summed from the run ledger.
 
 A custodian report's `cumulative_conservative_reservation_usd` is the baseline plus
 the run's charged attempts at the worst case; it is never the next baseline. The
@@ -154,9 +154,9 @@ worst case. Receipts through #304 record a cumulative worst-case baseline and la
 ones an actual-cost baseline; do not compare the two across that boundary.
 
 The worst-case figure stays a bound on one package, not spend: it charges every
-attempt as if it filled the whole context window and output limit, which
-overstated actual cost by more than an order of magnitude, about $1066.80 against
-$30–40 billed. Report actual cost first, from provider-reported usage, with missing
+attempt as if it filled the whole context window and output limit, which can overstate
+actual cost by more than an order of magnitude ([an example](../acceptance/2026-11-08-moved-measurements.md#campaign-runs-the-worst-case-bound-against-billed-cost)).
+Report actual cost first, from provider-reported usage, with missing
 usage counted separately. When host traces carry only configured-rate costs (as on #304's
 OpenRouter routes), use provider usage or account readings, and state when the account
 is shared. Present the reservation only as the cap check it is.

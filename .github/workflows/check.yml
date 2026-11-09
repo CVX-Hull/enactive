@@ -34,7 +34,7 @@ jobs:
       - if: steps.validation.outputs.profile != 'main'
         run: npm --userconfig /dev/null --cache "$PWD/.cache/npm" --prefix tools/curator_host ci --ignore-scripts --no-audit --no-fund
       - if: steps.validation.outputs.profile != 'main'
-        run: .venv/bin/python tools/diagrams.py --install-browser
+        run: node_modules/.bin/puppeteer browsers install chrome
       - name: Allow the project Chrome sandbox on this disposable runner
         if: steps.validation.outputs.profile != 'main'
         run: |

@@ -33,12 +33,12 @@ one possible remedy; another observation, a narrower task, a revised plan or an
 operator decision may be more useful. Calling a model again with the same missing
 evidence is not a recovery policy.
 
-![Proposed evidence, outcome report, response policy and authority gate.](../diagrams/outcome-monitoring.svg)
+![Proposed evidence, outcome report, response policy and authority gate.](https://github.com/CVX-Hull/enactive/blob/458905f0616aa0045b3c4d0ca0ae8c3290116cca/docs/diagrams/outcome-monitoring.svg?raw=true)
 
 Boxes are logical responsibilities, not required processes or model tiers. Arrows
 name evidence or candidate flow; the authority gate alone admits an action.
 The text and routing table below are the equivalent explanation, including stops.
-[Editable source](../diagrams/outcome-monitoring.mmd) and
+[Editable source](https://github.com/CVX-Hull/enactive/blob/458905f0616aa0045b3c4d0ca0ae8c3290116cca/docs/diagrams/outcome-monitoring.mmd) and
 [research evidence](../research-outcome-monitoring.md) support review.
 
 This design has three layers:

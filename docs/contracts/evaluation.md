@@ -6,7 +6,7 @@ status: active
 
 # Run evaluation records, metrics and the spectator view
 
-This page owns the current formats delivered in [#383](https://github.com/CVX-Hull/enactive/issues/383).
+This page owns the current formats ([#383](https://github.com/CVX-Hull/enactive/issues/383)).
 [ADR008](../decisions/008-evaluation-and-spectator.md) owns the rationale.
 
 Every value here is **interpretive**. It is derived from recorded evidence, carries its
@@ -270,8 +270,9 @@ of both diagnostics. A metric named a median (the pace and handoff rows) is the 
 median, the mean of the middle pair for an even count. The viewer's explore cohort median,
 IQR and bootstrap intervals are not percentiles of this kind: they use numpy's defaults.
 `host-summary` and `control-summary`
-`p50` values were medians before #404, so on an even count they now are the lower middle
-value, and no other figure changed.
+`p50` values are nearest-rank, so on an even count they are the lower middle value, not
+the mean of the middle pair. Records written before #404 and #418 report those `p50`
+values as true medians; compare them with current ones on that basis.
 
 ## Control path and viewer
 
@@ -410,10 +411,10 @@ Development-run quantities live as data in git, and pages render or check agains
 | `runs.jsonl` | One [`dev-run/1`](../../schemas/dev-run.schema.json) row per admission: study issue, run, hand-table label, arm, start, lineage, admission, session, source commit, UTC end, receipt outcome, charged attempts, wall seconds, and spend as decimal strings | `tools/run_ledger.py record`, from the package's `campaign-run/5` manifest and `campaign-receipt/3` plus the operator's provider reconciliation |
 | `run-metrics.jsonl` | One [`run-metrics/1`](../../schemas/run-metrics.schema.json) row per session and evaluator core and binding version: the headline metric values, copied verbatim from the evaluation record | `tools/evaluate.py evaluate-table RECORDS --snapshot data/evaluation/run-metrics.jsonl` |
 
-- **Origin.** `record` reads `campaign-run/5` packages only. The 37 rows of #372 and #382
-  were backfilled once, offline, from the retired operator ledgers and receipts; the 30 #372
-  rows took arm and start from `archive-labels.json` because their manifests are
-  `campaign-run/4`. That was a migration input, not a supported reader.
+- **Origin.** `record` reads `campaign-run/5` packages only; there is no reader for older
+  manifests. The 37 rows of #372 and #382 come from the retired operator ledgers and
+  receipts; the 30 #372 rows take arm and start from `archive-labels.json` because their
+  manifests are `campaign-run/4`.
 - **Spend.** `spend_usd` is an upper bound for the admission rule, not an invoice. It is
   `provider_usd` plus `unpriced_attempts` × `unpriced_attempt_usd`. A row with an unknown split
   holds null in all three fields; today that is only the four #372 pre-loop runs, whose

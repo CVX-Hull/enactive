@@ -31,7 +31,7 @@ allocation before admission. Reservation is not an invoice. A failed actor canno
 automatically renew resources. User Pause remains permanent for that admission.
 Changes outside the user's authorized scope still require the applicable decision.
 
-**Actual-spend admission (owner decisions of 6 and 7 November 2026).** For each
+**Actual-spend admission.** For each
 envelope listed below, and for no other spend, packages freeze the standing $1,000 as
 their `ceiling_usd` worst-case guard, and the lead admits a run or admission without
 per-run owner approval only while the study's actual provider-reported new spend plus
@@ -43,17 +43,16 @@ owner decision.
 Owner-set envelopes, each within the standing $1,000 cumulative cap:
 
 - The ceiling benchmark and grounding-aid study ([#372](acceptance/2026-11-06-development-loop.md), decision D2)
-  and the long-horizon arm ([#382](acceptance/2026-11-07-long-horizon-382.md), decision D1) each had a $150
+  and the long-horizon arm ([#382](acceptance/2026-11-07-long-horizon-382.md), decision D1) each have a $150
   new-spend envelope. Both are closed, and an unspent remainder is not carried to other work.
-  Cumulative actual spend after them is $377.41.
 - One seven-day development lineage ([#397](https://github.com/CVX-Hull/enactive/issues/397))
-  had a new $150 envelope (decision E1, 7 November 2026). The owner raised it to **$300**
-  during the lineage, after admission 4, when the pace projected the $150 cap before
-  168 h (decision F2, the same day). The cumulative cap is therefore about $677. The
-  owner chose to change the input bridge
-  ([#396](https://github.com/CVX-Hull/enactive/issues/396)) before any admission, and no
-  admission was authorized until that change had landed and the package was frozen
-  and reviewed.
+  has a $300 new-spend envelope (decisions E1 and F2 in
+  [its record](acceptance/2026-11-07-seven-day-397.md)). It is closed: the lineage ended.
+
+Cumulative actual spend against the $1,000 cap is stated in the latest study record that
+spent (currently the [#397 record's spend line](acceptance/2026-11-07-seven-day-397.md));
+the run ledger, `data/evaluation/runs.jsonl`, holds only the #372, #382 and #397 studies,
+and `tools/run_ledger.py totals --study` reports one study's spend and envelope headroom.
 
 ## Engineering decision and merge delegation
 
@@ -68,7 +67,7 @@ still running, queue auto-merge pinned to the validated head (`gh pr merge --aut
 check passes. Agent review stays evidence, not human approval; say so in the pull
 request rather than waiting for one.
 
-**Waiting on CI (owner decision, 7 November 2026).** The lead waits for PR
+**Waiting on CI.** The lead waits for PR
 validation with one `gh pr checks --watch`, and may run it in the background
 ([waiting on CI](operations/coding-agents.md#waiting-on-ci)), instead of re-checking
 by hand. This authorizes the wait only; host tool permissions still apply.
@@ -113,7 +112,7 @@ Ask once per decision and continue independent authorized work. Put every
 approval request through the host's structured question tool where the host has
 one, not only in prose, with the recommended option first
 ([coding-agent hosts](operations/coding-agents.md#owner-approvals) names the tool per
-host; owner guidance, 8 November 2026). Record the agreement and its scope on the
+host). Record the agreement and its scope on the
 owning issue or pull request. Respect host or tool
 permission refusals and report the exact action and stated reason.
 

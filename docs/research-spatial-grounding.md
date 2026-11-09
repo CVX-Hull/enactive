@@ -1,7 +1,8 @@
 ---
 owner: lead
-review_trigger: Spatial context/presentation changes, new contrary evidence or model/vision changes
-status: active
+status: historical
+date: '2026-10-30'
+scope: 'Focused research behind #300, whose spatial-grounding candidate was tested and rejected'
 ---
 
 # Spatial grounding, visual inspection and working state

@@ -62,8 +62,8 @@ compiled interoperability and independent migration review own the boundary.
 ## Engineering assurance
 
 The strict lane includes metadata/local references, document checks, import boundaries,
-syntax/lint, whitespace and diagrams in the declared profile. Metadata, diagram
-hashes and parser success cannot establish content truth. Independent review
+syntax/lint and whitespace in the declared profile. Metadata, diagram titles and
+parser success cannot establish content truth. Independent review
 compares changed claims/flows with actual contracts and source.
 
 ## Review overlap by failure responsibility

@@ -12,7 +12,7 @@ one hand-scored row in its study's dated record (method in
 [development runs](../development-runs.md#recording-a-run)),
 and one comment on its owning issue: source and artifacts, outcome on the frozen
 metric, known costs/unknowns, cleanup disposition and the next owned action
-(owner decision D4, 5 November 2026). Acceptance records and independent review
+(owner decision D4). Acceptance records and independent review
 are for adoption decisions, contract changes and merges.
 Do not copy the entire contract, write a standalone acceptance report, launch
 another review swarm or publish an amendment for every menu error. Retain the raw

@@ -322,7 +322,7 @@ def _check(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     scope = parser.add_mutually_exclusive_group()
     scope.add_argument("--fast", action="store_true",
-                       help="Checkpoint structure/lint checks only; no behavioral tests or diagram rendering")
+                       help="Checkpoint structure/lint checks only; no behavioral or viewer tests")
     scope.add_argument("--profile", choices=("full", "editorial", "main", *COMPONENT_TESTS), default="full",
                        help="Strict validation profile (default: full); main is the structural checks a main "
                             "push runs on the tree its pull request's run already tested")
@@ -356,23 +356,18 @@ def _check(argv: list[str] | None = None) -> int:
     run(["git", "diff", "--check"])
     run(["git", "diff", "--cached", "--check"])
     structural = args.fast or args.profile == "main"
-    if not structural:
-        browser = [[sys.executable, "tools/diagrams.py"]]
-        if args.profile != "editorial":
-            browser += [[node, "tests/test_viewer.cjs"], [node, "tests/test_investigation.cjs"],
-                        [node, "tests/test_investigation_session.cjs"]]
-        lanes = {"browser": browser}
-        if args.profile != "editorial":
-            targets = ("tests",) if args.profile == "full" else COMPONENT_TESTS[args.profile]
-            lanes["pytest"] = [[sys.executable, "-m", "pytest", "-q", "-n", "4",
-                                "--dist", "worksteal" if args.profile == "full" else "loadfile",
-                                "--max-worker-restart=0", "--durations=20", *targets]]
-        run_lanes(lanes)
+    if not structural and args.profile != "editorial":
+        targets = ("tests",) if args.profile == "full" else COMPONENT_TESTS[args.profile]
+        run_lanes({"browser": [[node, "tests/test_viewer.cjs"], [node, "tests/test_investigation.cjs"],
+                               [node, "tests/test_investigation_session.cjs"]],
+                   "pytest": [[sys.executable, "-m", "pytest", "-q", "-n", "4",
+                               "--dist", "worksteal" if args.profile == "full" else "loadfile",
+                               "--max-worker-restart=0", "--durations=20", *targets]]})
     if args.fast:
-        print("Fast checkpoint checks passed. Behavioral tests, rendered diagrams, native build and real gameplay were not run.")
+        print("Fast checkpoint checks passed. Behavioral tests, viewer tests, native build and real gameplay were not run.")
     elif args.profile == "main":
-        print("Main structural checks passed on the tree its pull request's run tested. Tests, rendered "
-              "diagrams, native build and real gameplay were not run here.")
+        print("Main structural checks passed on the tree its pull request's run tested. Tests, viewer "
+              "tests, native build and real gameplay were not run here.")
     elif args.profile == "editorial":
         print("Editorial checks passed. Runtime tests, viewer tests, full regression, native build and real gameplay were not run.")
     elif args.profile in COMPONENT_TESTS:

@@ -47,7 +47,7 @@ observation/control and mechanical custody, delivery, cancellation and resource
 limits. The entire playing system owns game semantics, including menus,
 inventory, activities, identity, save/load, progress and loops. A game-specific
 classification cannot be a prerequisite for basic input. [ADR006](decisions/006-computer-control-boundary.md)
-records the migration and limits; it was delivered on 29 October 2026, and the
+records the migration and limits, and the
 [computer-control contract](contracts/computer-control.md) owns the running behavior.
 
 Current assumptions: one game/controller and one designated deciding player;

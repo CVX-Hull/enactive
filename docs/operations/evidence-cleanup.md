@@ -36,8 +36,8 @@ the main checkout and every worktree reads it there. A sealed study missing from
 present store is an error. Once a clone has held the store, its local Git configuration
 records `enactive.evidenceStore=expected`, and a missing store is an error too; a fresh
 clone or CI without the store reports each study as not present. The store is the only
-copy: there is no off-machine backup, and raw evidence is not published (owner decisions
-of 7 November 2026, kept by [ADR 010](../decisions/010-streamlined-delivery.md); restic to
+copy: there is no off-machine backup, and raw evidence is not published (owner decisions,
+kept by [ADR 010](../decisions/010-streamlined-delivery.md); restic to
 object storage is the researched option if a backup is chosen). A source checkout inside
 a sealed folder is reproducible from the commit the study's note names, so only its
 `.runtime` evidence is copied; symbolic links are never copied.
