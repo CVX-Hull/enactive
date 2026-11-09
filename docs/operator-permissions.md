@@ -48,6 +48,10 @@ Owner-set envelopes, each within the standing $1,000 cumulative cap:
 - One seven-day development lineage ([#397](https://github.com/CVX-Hull/enactive/issues/397))
   has a $300 new-spend envelope (decisions E1 and F2 in
   [its record](acceptance/2026-11-07-seven-day-397.md)). It is closed: the lineage ended.
+- P1's held-out lineage `lh4` ([#522](https://github.com/CVX-Hull/enactive/issues/522)) has an $80
+  new-spend envelope, approved with [p1-study/2](design/p1-study-2.md#running-lh4) on
+  9 November 2026. It opens only after the owner approves #522's frozen package, and it covers
+  no game launch outside that lineage.
 
 Cumulative actual spend against the $1,000 cap is stated in the latest study record that
 spent (currently the [#397 record's spend line](acceptance/2026-11-07-seven-day-397.md));

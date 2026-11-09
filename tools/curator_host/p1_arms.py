@@ -1,4 +1,4 @@
-"""The P1 offline study's arms: working sets, one renderer and the per-admission schedule (docs/design/p1-study.md; #462).
+"""The P1 offline study's arms: working sets, one renderer and the per-admission schedule (docs/design/p1-study-2.md; #462).
 
 At every boundary of a lineage each arm produces the text the successor would have received live:
 

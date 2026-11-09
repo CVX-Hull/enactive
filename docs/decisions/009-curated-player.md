@@ -622,7 +622,8 @@ checks its power by simulation before it runs.
 - **Held-out data:** #382's three day-scale lineages, sealed in `372-382-dev-loop`.
   No episode, probe or design choice came from them; this page's problem statement
   counted their records and queries only in aggregates. #178 writes their probes.
-  They predate emissions, which the P1 study records as a limitation.
+  They predate emissions, which the P1 study records as a limitation. P1's second
+  protocol adds one more held-out lineage, `lh4`, run for the study (#522).
 - **#441 is deferred.** On 8 November the owner decided: "I would prefer to do this
   run after we move forward on the ADR we just discussed to be fruitful." Its
   lineages are re-shaped against the design in place when it resumes.
@@ -692,6 +693,9 @@ running system.
   lineages give 27 scoring units, far fewer than planned. The owner stopped P1 before any
   spend, and P1 returns to the owner for reshaping
   ([record](../acceptance/2026-11-09-p1-gate-178.md)).
+- **P1 reshaped: one more held-out lineage (9 November 2026).** The owner chose to add one
+  new held-out lineage to #382's frozen probes, behind a re-run power gate
+  ([p1-study/2](../design/p1-study-2.md), #178 and #522).
 
 Every phase replaces its contracts and stores in one migration
 (`player-memory/2` → `/3`, `player-record/1` and `player-program/2` → their

@@ -1,0 +1,134 @@
+{
+ "gate": {
+  "at_interest": 0.884,
+  "no_effect": 0.025,
+  "passes": true
+ },
+ "held_out": {
+  "boundaries": 10,
+  "cluster_sizes": {
+   "1": 25,
+   "2": 1
+  },
+  "clusters": 26,
+  "units": 27
+ },
+ "lh4_under_min_units": {
+  "lh4_boundaries=10, cluster_mean=1.04": 0.079,
+  "lh4_boundaries=10, cluster_mean=1.4": 0.084,
+  "lh4_boundaries=10, cluster_mean=3.0": 0.077,
+  "lh4_boundaries=12, cluster_mean=1.04": 0.015,
+  "lh4_boundaries=12, cluster_mean=1.4": 0.015,
+  "lh4_boundaries=12, cluster_mean=3.0": 0.013,
+  "lh4_boundaries=14, cluster_mean=1.04": 0.001,
+  "lh4_boundaries=14, cluster_mean=1.4": 0.003,
+  "lh4_boundaries=14, cluster_mean=3.0": 0.002,
+  "lh4_boundaries=8, cluster_mean=1.04": 0.354,
+  "lh4_boundaries=8, cluster_mean=1.4": 0.365,
+  "lh4_boundaries=8, cluster_mean=3.0": 0.362
+ },
+ "new_lineage": "lh4",
+ "note": "Planning for p1-study/2; primary criterion only. The gate before replay re-runs on actual probes.",
+ "planning": "lh4_boundaries=12, cluster_mean=1.04",
+ "probability_of_go": {
+  "lh4_boundaries=10, cluster_mean=1.04": {
+   "0.00": 0.019,
+   "0.10": 0.163,
+   "0.15": 0.323,
+   "0.20": 0.507,
+   "0.25": 0.668,
+   "0.30": 0.805
+  },
+  "lh4_boundaries=10, cluster_mean=1.4": {
+   "0.00": 0.025,
+   "0.10": 0.155,
+   "0.15": 0.29,
+   "0.20": 0.462,
+   "0.25": 0.625,
+   "0.30": 0.757
+  },
+  "lh4_boundaries=10, cluster_mean=3.0": {
+   "0.00": 0.036,
+   "0.10": 0.175,
+   "0.15": 0.244,
+   "0.20": 0.401,
+   "0.25": 0.539,
+   "0.30": 0.649
+  },
+  "lh4_boundaries=12, cluster_mean=1.04": {
+   "0.00": 0.025,
+   "0.10": 0.18,
+   "0.15": 0.359,
+   "0.20": 0.552,
+   "0.25": 0.75,
+   "0.30": 0.884
+  },
+  "lh4_boundaries=12, cluster_mean=1.4": {
+   "0.00": 0.033,
+   "0.10": 0.18,
+   "0.15": 0.362,
+   "0.20": 0.51,
+   "0.25": 0.682,
+   "0.30": 0.829
+  },
+  "lh4_boundaries=12, cluster_mean=3.0": {
+   "0.00": 0.033,
+   "0.10": 0.185,
+   "0.15": 0.281,
+   "0.20": 0.428,
+   "0.25": 0.558,
+   "0.30": 0.709
+  },
+  "lh4_boundaries=14, cluster_mean=1.04": {
+   "0.00": 0.015,
+   "0.10": 0.178,
+   "0.15": 0.374,
+   "0.20": 0.575,
+   "0.25": 0.775,
+   "0.30": 0.906
+  },
+  "lh4_boundaries=14, cluster_mean=1.4": {
+   "0.00": 0.025,
+   "0.10": 0.176,
+   "0.15": 0.365,
+   "0.20": 0.537,
+   "0.25": 0.716,
+   "0.30": 0.862
+  },
+  "lh4_boundaries=14, cluster_mean=3.0": {
+   "0.00": 0.038,
+   "0.10": 0.171,
+   "0.15": 0.269,
+   "0.20": 0.456,
+   "0.25": 0.58,
+   "0.30": 0.724
+  },
+  "lh4_boundaries=8, cluster_mean=1.04": {
+   "0.00": 0.02,
+   "0.10": 0.12,
+   "0.15": 0.224,
+   "0.20": 0.348,
+   "0.25": 0.458,
+   "0.30": 0.553
+  },
+  "lh4_boundaries=8, cluster_mean=1.4": {
+   "0.00": 0.02,
+   "0.10": 0.121,
+   "0.15": 0.203,
+   "0.20": 0.311,
+   "0.25": 0.421,
+   "0.30": 0.515
+  },
+  "lh4_boundaries=8, cluster_mean=3.0": {
+   "0.00": 0.024,
+   "0.10": 0.113,
+   "0.15": 0.182,
+   "0.20": 0.272,
+   "0.25": 0.365,
+   "0.30": 0.471
+  }
+ },
+ "schema": "p1-power/1",
+ "seed": 491,
+ "simulations": 2000
+}

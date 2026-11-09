@@ -1,4 +1,4 @@
-"""Replay for the P1 offline study: arm B's curator sessions and every arm's delivered text (docs/design/p1-study.md; #462).
+"""Replay for the P1 offline study: arm B's curator sessions and every arm's delivered text (docs/design/p1-study-2.md; #462).
 
     python -m tools.curator_host.p1_replay b --stage pilot --repeat 1 --lineage aidB3 ceil09 --cap-usd 12
     python -m tools.curator_host.p1_replay deliver --lineage 397 --schedule <schedule.json> --out <runtime>/p1-delivered/dev
@@ -144,7 +144,7 @@ def freeze(out: Path, prices: Path) -> dict:
     frozen = dict(schema=FROZEN_SCHEMA, commit=head.stdout.strip(), files={p: file_sha256(_resolve(p)) for p in paths},
                   settings=SETTINGS,
                   note='The P1 arms are fixed: code, prompt, host, renderer, cap, prices and settings. Any later '
-                       'change is a recorded deviation (docs/design/p1-study.md, Freezing).')
+                       'change is a recorded deviation (docs/design/p1-study-2.md, Freezing).')
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(frozen, indent=1, sort_keys=True) + '\n')
     return frozen

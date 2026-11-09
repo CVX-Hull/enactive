@@ -1,6 +1,8 @@
-"""The P1 offline study's frozen analysis (ADR 009; pre-registration in docs/design/p1-study.md, #491).
+"""The P1 offline study's frozen analysis (ADR 009; pre-registration p1-study/2 in docs/design/p1-study-2.md,
+which keeps p1-study/1's rule from docs/design/p1-study.md; #491, #178).
 
   python -m tools.p1_analysis simulate [--probes <held-out p1-probes/1>] [--out data/evaluation/p1/power.json]
+  python -m tools.p1_analysis plan --probes <#382 held-out p1-probes/1>  # p1-study/2's planning, power-study-2.json
   python -m tools.p1_analysis units --probes <p1-probes/1>      # the probes the judges score
   python -m tools.p1_analysis rejudge --probes <p1-probes/1>    # the items judged a second time
   python -m tools.p1_analysis score --probes <p1-probes/1> --scores <p1-score/1> --hours <JSON> [--out ...]
@@ -50,7 +52,9 @@ FALSE_FACT_MARGIN = 0.05
 COST_CAP = 1.0           # curator settled dollars over actor dollars, per repeat
 NEAR = 16                # bits between earlier frames of one information cluster (probe-protocol/1)
 ARMS = {'A': (1,), 'B': (1, 2)}
-HELD_OUT = {'lh1': ('lh1a1', 'lh1a2', 'lh1a3'), 'lh2': ('lh2a1', 'lh2a2'), 'lh3': ('lh3a1', 'lh3a2')}
+STUDY_1_HELD_OUT = {'lh1': ('lh1a1', 'lh1a2', 'lh1a3'), 'lh2': ('lh2a1', 'lh2a2'), 'lh3': ('lh3a1', 'lh3a2')}
+HELD_OUT = dict(STUDY_1_HELD_OUT)   # lineage -> admissions; p1-study/2 adds lh4 under its actual names after #522
+STUDY_1_BOUNDARIES = {'lh1': 4, 'lh2': 3, 'lh3': 3}   # boundaries per #382 lineage (the #178 gate record); fixed, as `plan` resamples them
 KINDS = ('reobservation', 'fact', 'query')   # primary, then the two descriptive ledgers
 
 
@@ -75,13 +79,14 @@ def primary_probes(rows: list[dict]) -> list[dict]:
     seen, out = set(), []
     for row in rows:
         if row.get('schema') != PROBES_SCHEMA or row.get('lineage') not in HELD_OUT:
-            raise ScoreError(f'not a held-out {PROBES_SCHEMA} row: {row}')
+            # Held-out rows carry a judge's description of the frame; errors name only the probe id.
+            raise ScoreError(f'not a held-out {PROBES_SCHEMA} row: {row.get("id")!r}')
         if row['id'] in seen:
             raise ScoreError(f'probe listed twice: {row["id"]}')
         seen.add(row['id'])
         if not (isinstance(row['confirmed'], bool) and isinstance(row['informative'], bool)
                 and isinstance(row.get('earlier_dhash'), str)):
-            raise ScoreError(f'confirmed, informative and earlier_dhash are required: {row}')
+            raise ScoreError(f'confirmed, informative and earlier_dhash are required: {row["id"]!r}')
         if row['confirmed'] and row['informative']:
             out.append(row)
     return out
@@ -380,7 +385,7 @@ def held_out_shape() -> dict[str, int]:
     hours = {row['run']: row['metrics']['survival.game_hours']['hours'] for row in rows}
     per_boundary = DEV_HOURS / DEV_BOUNDARIES
     return {name: max(len(runs) - 1, round(sum(hours[r] for r in runs) / per_boundary))
-            for name, runs in HELD_OUT.items()}
+            for name, runs in STUDY_1_HELD_OUT.items()}   # p1-study/1's planning; lh4 does not change it
 
 
 def _generated(rng: random.Random, dev: dict, shape: dict[str, int], cluster_mean: float) -> list[tuple[str, str]]:
@@ -453,6 +458,75 @@ def simulate(simulations: int = SIMULATIONS, seed: int = SEED, layout: list[tupl
                 note='Primary criterion only; guards and re-judging are not simulated.')
 
 
+# p1-study/2's planning simulation (docs/design/p1-study-2.md#power): #382's frozen held-out
+# structure plus one new held-out lineage, lh4, run to a planned number of boundaries. Planning
+# only; the gate before held-out replay is `simulate --probes` on all four lineages' actual probes.
+PLAN_SIMULATIONS = 2000
+PLAN_BOUNDARIES = (8, 10, 12, 14)       # lh4's boundaries (the stop rule counts these)
+PLAN_CLUSTER_MEANS = (1.04, 1.4, 3.0)   # lh1-lh3 as measured; #397's 20% sample; p1-study/1's planning value
+PLAN_TARGET, PLAN_MEAN = 12, 1.04       # the planning assumption: the size rule's target, clustered as lh1-lh3
+
+
+def boundary_units(unit_rows: list[dict]) -> list[int]:
+    """Scoring units at each #382 boundary, including the boundaries that yielded none: a count
+    per boundary, the only held-out quantity the plan resamples."""
+    counts: dict[tuple, int] = {}
+    for u in unit_rows:
+        counts[(u['lineage'], u['boundary'])] = counts.get((u['lineage'], u['boundary']), 0) + 1
+    out = []
+    for name, total in STUDY_1_BOUNDARIES.items():
+        here = sorted(c for (lineage, _), c in counts.items() if lineage == name)
+        if len(here) > total:
+            raise ScoreError(f'{name} has units at more boundaries than it has')
+        out += [0] * (total - len(here)) + here
+    return out
+
+
+def _new_lineage(rng: random.Random, name: str, per_boundary: list[int], boundaries: int,
+                 cluster_mean: float) -> list[tuple[str, str]]:
+    """(lineage, cluster) per unit of a new lineage with `boundaries` boundaries: each boundary's
+    unit count is drawn from `per_boundary`; each unit is new information with probability
+    1/cluster_mean, otherwise it repeats a cluster of an earlier boundary (as `_generated` does)."""
+    seen: list[str] = []
+    out = []
+    for _ in range(boundaries):
+        here: set[str] = set()
+        for _ in range(rng.choice(per_boundary)):
+            old = [c for c in seen if c not in here]
+            if old and rng.random() >= 1 / cluster_mean:
+                cluster = rng.choice(old)
+            else:
+                cluster = f'{name}-{len(seen)}'
+                seen.append(cluster)
+            here.add(cluster)
+            out.append((name, cluster))
+    return out
+
+
+def plan(held_out: list[dict], simulations: int = PLAN_SIMULATIONS, seed: int = SEED) -> dict:
+    dev = development()
+    unit_rows = units(primary_probes(held_out))
+    base = [(u['lineage'], u['cluster']) for u in unit_rows]
+    per_boundary = boundary_units(unit_rows)
+    variants, short = {}, {}
+    for mean in PLAN_CLUSTER_MEANS:
+        for count in PLAN_BOUNDARIES:
+            key = f'lh4_boundaries={count}, cluster_mean={mean}'
+            rng = random.Random(f'{seed}:{key}')   # one stream per variant: adding a variant moves no figure
+            draws = [_new_lineage(rng, 'lh4', per_boundary, count, mean) for _ in range(simulations)]
+            short[key] = round(sum(len(d) < MIN_UNITS for d in draws) / simulations, 3)
+            variants[key] = {f'{d:.2f}': round(sum(_power(rng, dev, base + draw, None, 0.0, d)
+                                                   for draw in draws) / simulations, 3)
+                             for d in DELTAS}
+    planning = f'lh4_boundaries={PLAN_TARGET}, cluster_mean={PLAN_MEAN}'
+    return dict(schema=POWER_SCHEMA, seed=seed, simulations=simulations, new_lineage='lh4',
+                held_out=dict(units=len(base), clusters=len(set(base)), boundaries=len(per_boundary),
+                              cluster_sizes=cluster_sizes(unit_rows)),
+                planning=planning, probability_of_go=variants, lh4_under_min_units=short,
+                gate=gate(variants[planning]),
+                note='Planning for p1-study/2; primary criterion only. The gate before replay re-runs on actual probes.')
+
+
 def gate(probabilities: dict[str, float]) -> dict:
     """The gate before spend: rarely a go with no effect, usually a go at the effect of interest."""
     none, interest = probabilities['0.00'], probabilities[f'{INTEREST:.2f}']
@@ -461,7 +535,7 @@ def gate(probabilities: dict[str, float]) -> dict:
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('step', choices=('simulate', 'units', 'rejudge', 'score'))
+    parser.add_argument('step', choices=('simulate', 'plan', 'units', 'rejudge', 'score'))
     parser.add_argument('--probes', type=Path)
     parser.add_argument('--scores', type=Path)
     parser.add_argument('--hours', type=Path, help='JSON object: held-out lineage -> in-play game hours')
@@ -474,6 +548,12 @@ def main(argv=None) -> int:
         result = simulate(layout=layout)
         out = args.out or ROOT/'data'/'evaluation'/'p1'/('power-held-out.json' if layout else 'power.json')
         summary = result['probability_of_go']
+    elif args.step == 'plan':
+        if not args.probes:
+            parser.error('plan needs --probes (the frozen #382 held-out probes)')
+        result = plan(_lines(args.probes))
+        out = args.out or ROOT/'data'/'evaluation'/'p1'/'power-study-2.json'
+        summary = result['gate']
     elif args.step in ('units', 'rejudge'):
         if not args.probes:
             parser.error(f'{args.step} needs --probes')
