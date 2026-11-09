@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "curator-cache-diagnosis/1: provider prompt-cache figures from replays of captured curator request bodies",
+  "description": "Usage only, no request content. Each variant is a sequence of replayed requests with the provider-reported prompt, cached and cache-write tokens and the settled cost; spend is reconciled from the proxy ledgers. Written for docs/acceptance/2026-11-08-context-stability-489.md (#488).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "date", "route", "note", "variants", "spend_usd"],
+  "properties": {
+    "schema": {"const": "curator-cache-diagnosis/1"},
+    "date": {"type": "string", "format": "date"},
+    "route": {"type": "string", "minLength": 1},
+    "note": {"type": "string", "minLength": 1},
+    "variants": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "prompt", "cached", "cache_write", "cost"],
+          "properties": {
+            "status": {"type": "integer"},
+            "prompt": {"type": "integer", "minimum": 0},
+            "cached": {"type": "integer", "minimum": 0},
+            "cache_write": {"type": "integer", "minimum": 0},
+            "cost": {"type": "string"}
+          }
+        }
+      }
+    },
+    "spend_usd": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["baseline_session", "replays", "notes_kept", "total"],
+      "properties": {
+        "baseline_session": {"type": "number", "minimum": 0},
+        "replays": {"type": "number", "minimum": 0},
+        "notes_kept": {"type": "number", "minimum": 0},
+        "total": {"type": "number", "minimum": 0}
+      }
+    }
+  }
+}
