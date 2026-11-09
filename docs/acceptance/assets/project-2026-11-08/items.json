@@ -1,0 +1,4583 @@
+{
+ "schema": "project-export/1",
+ "project": "Enactive",
+ "exported": "2026-11-08",
+ "fields": [
+  {
+   "name": "Title",
+   "type": "TITLE",
+   "options": null
+  },
+  {
+   "name": "Assignees",
+   "type": "ASSIGNEES",
+   "options": null
+  },
+  {
+   "name": "Status",
+   "type": "SINGLE_SELECT",
+   "options": [
+    "Backlog",
+    "Ready",
+    "In progress",
+    "Review",
+    "Validation",
+    "Done"
+   ]
+  },
+  {
+   "name": "Labels",
+   "type": "LABELS",
+   "options": null
+  },
+  {
+   "name": "Linked pull requests",
+   "type": "LINKED_PULL_REQUESTS",
+   "options": null
+  },
+  {
+   "name": "Milestone",
+   "type": "MILESTONE",
+   "options": null
+  },
+  {
+   "name": "Repository",
+   "type": "REPOSITORY",
+   "options": null
+  },
+  {
+   "name": "Reviewers",
+   "type": "REVIEWERS",
+   "options": null
+  },
+  {
+   "name": "Parent issue",
+   "type": "PARENT_ISSUE",
+   "options": null
+  },
+  {
+   "name": "Sub-issues progress",
+   "type": "SUB_ISSUES_PROGRESS",
+   "options": null
+  },
+  {
+   "name": "Created",
+   "type": "CREATED",
+   "options": null
+  },
+  {
+   "name": "Updated",
+   "type": "UPDATED",
+   "options": null
+  },
+  {
+   "name": "Closed",
+   "type": "CLOSED",
+   "options": null
+  },
+  {
+   "name": "Horizon",
+   "type": "SINGLE_SELECT",
+   "options": [
+    "Now",
+    "Next",
+    "Later"
+   ]
+  },
+  {
+   "name": "Priority",
+   "type": "SINGLE_SELECT",
+   "options": [
+    "P0",
+    "P1",
+    "P2"
+   ]
+  },
+  {
+   "name": "Size",
+   "type": "SINGLE_SELECT",
+   "options": [
+    "S",
+    "M",
+    "L",
+    "Unknown"
+   ]
+  },
+  {
+   "name": "Confidence",
+   "type": "SINGLE_SELECT",
+   "options": [
+    "Low",
+    "Medium",
+    "High"
+   ]
+  },
+  {
+   "name": "Started",
+   "type": "DATE",
+   "options": null
+  },
+  {
+   "name": "Finished",
+   "type": "DATE",
+   "options": null
+  }
+ ],
+ "items": [
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBhNvU",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 1,
+   "title": "Public repository and sustainable contribution workflow",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/1",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-17",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-17",
+    "Status": "Done",
+    "Title": "Public repository and sustainable contribution workflow"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBhN0Y",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 2,
+   "title": "Implement project management and parallel-worktree guidance",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/2",
+   "fields": {
+    "Confidence": "High",
+    "Finished": "2026-10-17",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Started": "2026-10-17",
+    "Status": "Done",
+    "Title": "Implement project management and parallel-worktree guidance"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBhN48",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 3,
+   "title": "Provide contributor, issue and PR entry points",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/3",
+   "fields": {
+    "Confidence": "High",
+    "Finished": "2026-10-17",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Started": "2026-10-17",
+    "Status": "Done",
+    "Title": "Provide contributor, issue and PR entry points"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBhN9g",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 4,
+   "title": "Verify hosted CI and main-branch protections",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/4",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-17",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-17",
+    "Status": "Done",
+    "Title": "Verify hosted CI and main-branch protections"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBhOCM",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 5,
+   "title": "Reliable interruption and recovery in native gameplay",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/5",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-17",
+    "Horizon": "Next",
+    "Priority": "P1",
+    "Size": "L",
+    "Status": "Done",
+    "Title": "Reliable interruption and recovery in native gameplay"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBhOG8",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 6,
+   "title": "Investigate native interruption and error-screen contracts",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/6",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-17",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Started": "2026-10-17",
+    "Status": "Done",
+    "Title": "Investigate native interruption and error-screen contracts"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBhOKY",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 7,
+   "title": "Implement the accepted native interruption contract",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/7",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-17",
+    "Horizon": "Later",
+    "Priority": "P2",
+    "Size": "L",
+    "Status": "Done",
+    "Title": "Implement the accepted native interruption contract"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBhOM0",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 8,
+   "title": "Demonstrate interruption and recovery in the real game",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/8",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-17",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-17",
+    "Status": "Done",
+    "Title": "Demonstrate interruption and recovery in the real game"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBhOPk",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 9,
+   "title": "Evaluate an automated native regression runner",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/9",
+   "fields": {
+    "Confidence": "Low",
+    "Horizon": "Later",
+    "Priority": "P2",
+    "Size": "Unknown",
+    "Status": "Backlog",
+    "Title": "Evaluate an automated native regression runner"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBhOSs",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 10,
+   "title": "Deliver a watchable seven-day survival campaign",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/10",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-19",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "L",
+    "Started": "2026-10-18",
+    "Status": "Done",
+    "Title": "Deliver a watchable seven-day survival campaign"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBhOaA",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 12,
+   "title": "Reassess broader formatting and type-analysis controls",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/12",
+   "fields": {
+    "Confidence": "Low",
+    "Horizon": "Later",
+    "Priority": "P2",
+    "Size": "Unknown",
+    "Status": "Backlog",
+    "Title": "Reassess broader formatting and type-analysis controls"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBhOc8",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 13,
+   "title": "Review workflow and control effectiveness at the next maintenance boundary",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/13",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-18",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Started": "2026-10-18",
+    "Status": "Done",
+    "Title": "Review workflow and control effectiveness at the next maintenance boundary"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBhlMo",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 17,
+   "title": "Define gameplay slice and tiered execution contracts",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/17",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-17",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Started": "2026-10-17",
+    "Status": "Done",
+    "Title": "Define gameplay slice and tiered execution contracts"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBhlRI",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 18,
+   "title": "Establish gameplay scenarios and complete outcome-cost instrumentation",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/18",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-17",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-17",
+    "Status": "Done",
+    "Title": "Establish gameplay scenarios and complete outcome-cost instrumentation"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBhlWA",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 19,
+   "title": "Close observation gaps for the selected gameplay slice",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/19",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-17",
+    "Horizon": "Next",
+    "Priority": "P1",
+    "Size": "M",
+    "Status": "Done",
+    "Title": "Close observation gaps for the selected gameplay slice"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBhlao",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 20,
+   "title": "Implement versioned bounded skills and honest progress outcomes",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/20",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-17",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-17",
+    "Status": "Done",
+    "Title": "Implement versioned bounded skills and honest progress outcomes"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBhleo",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 21,
+   "title": "Implement provenance-aware gameplay state and evidence memory",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/21",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-17",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-17",
+    "Status": "Done",
+    "Title": "Implement provenance-aware gameplay state and evidence memory"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBhlh4",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 22,
+   "title": "Integrate a feedback-driven planner and deterministic supervisor",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/22",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-18",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "L",
+    "Status": "Done",
+    "Title": "Integrate a feedback-driven planner and deterministic supervisor"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBhll4",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 23,
+   "title": "Expose gameplay goals, progress and corrections in the spectator",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/23",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-18",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-17",
+    "Status": "Done",
+    "Title": "Expose gameplay goals, progress and corrections in the spectator"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBhlu4",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 25,
+   "title": "Decide whether a smaller tactical model earns its complexity",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/25",
+   "fields": {
+    "Confidence": "Medium",
+    "Horizon": "Next",
+    "Priority": "P1",
+    "Size": "S",
+    "Status": "Backlog",
+    "Title": "Decide whether a smaller tactical model earns its complexity"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBhlzc",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 26,
+   "title": "Review gameplay research currency and control effectiveness",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/26",
+   "fields": {
+    "Confidence": "Low",
+    "Horizon": "Later",
+    "Priority": "P2",
+    "Size": "Unknown",
+    "Started": "2026-10-24",
+    "Status": "Backlog",
+    "Title": "Review gameplay research currency and control effectiveness"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBhs6g",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 29,
+   "title": "Identify native input boundaries and invalidate authority across world reloads",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/29",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-17",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-17",
+    "Status": "Done",
+    "Title": "Identify native input boundaries and invalidate authority across world reloads"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBhs9k",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 30,
+   "title": "Implement operator recovery envelopes and engine-confirmed interruption",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/30",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-17",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-17",
+    "Status": "Done",
+    "Title": "Implement operator recovery envelopes and engine-confirmed interruption"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBhtBg",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 31,
+   "title": "Expose scoped recovery controls in the spectator and CLI",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/31",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-17",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-17",
+    "Status": "Done",
+    "Title": "Expose scoped recovery controls in the spectator and CLI"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBhtFM",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 32,
+   "title": "Implement gameplay records and an observation evidence adapter",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/32",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-17",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-17",
+    "Status": "Done",
+    "Title": "Implement gameplay records and an observation evidence adapter"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBhtKc",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 33,
+   "title": "Verify the first gameplay predicates against native visible observations",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/33",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-17",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Started": "2026-10-17",
+    "Status": "Done",
+    "Title": "Verify the first gameplay predicates against native visible observations"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBhtOs",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 34,
+   "title": "Implement the bounded planner port and candidate validation",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/34",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-17",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-17",
+    "Status": "Done",
+    "Title": "Implement the bounded planner port and candidate validation"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBhtTI",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 35,
+   "title": "Implement waypoint supervision with explicit control ownership and feedback",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/35",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-17",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-17",
+    "Status": "Done",
+    "Title": "Implement waypoint supervision with explicit control ownership and feedback"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBhtXI",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 36,
+   "title": "Integrate explicit gameplay start, continuation, stop and status",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/36",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-18",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "L",
+    "Status": "Done",
+    "Title": "Integrate explicit gameplay start, continuation, stop and status"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBinM4",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 41,
+   "title": "Design composable expectations, outcome monitors and escalation contracts",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/41",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-17",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-17",
+    "Status": "Done",
+    "Title": "Design composable expectations, outcome monitors and escalation contracts"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBinR8",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 42,
+   "title": "Implement reusable expectation evaluation and read-only outcome monitoring",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/42",
+   "fields": {
+    "Confidence": "Low",
+    "Horizon": "Next",
+    "Priority": "P2",
+    "Size": "L",
+    "Status": "Backlog",
+    "Title": "Implement reusable expectation evaluation and read-only outcome monitoring"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBjiNo",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 50,
+   "title": "Enforce atomic controller run ownership and operator takeover",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/50",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-17",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-17",
+    "Status": "Done",
+    "Title": "Enforce atomic controller run ownership and operator takeover"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBjr_g",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 52,
+   "title": "Connect the player planning handoff to verified native gameplay",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/52",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-18",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-17",
+    "Status": "Done",
+    "Title": "Connect the player planning handoff to verified native gameplay"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBj1AQ",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 53,
+   "title": "Review completed-leg verification near obstacles",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/53",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-18",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Started": "2026-10-18",
+    "Status": "Done",
+    "Title": "Review completed-leg verification near obstacles"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBkCos",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 56,
+   "title": "Assess waypoint baseline readiness and track execution gaps",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/56",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-18",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Started": "2026-10-18",
+    "Status": "Done",
+    "Title": "Assess waypoint baseline readiness and track execution gaps"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBkPcQ",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 59,
+   "title": "Investigate elegant memory and continual-learning representations with falsifiable simulations",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/59",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-18",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "L",
+    "Started": "2026-10-18",
+    "Status": "Done",
+    "Title": "Investigate elegant memory and continual-learning representations with falsifiable simulations"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBkPdE",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 60,
+   "title": "Compare primary-source memory representations and select falsifiable hypotheses",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/60",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-18",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-18",
+    "Status": "Done",
+    "Title": "Compare primary-source memory representations and select falsifiable hypotheses"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBkPdo",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 61,
+   "title": "Freeze the memory-representation simulation protocol and bounded implementation briefs",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/61",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-18",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Started": "2026-10-18",
+    "Status": "Done",
+    "Title": "Freeze the memory-representation simulation protocol and bounded implementation briefs"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBkPeI",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 62,
+   "title": "Execute reproducible memory and learning representation simulations with ablations",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/62",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-18",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "L",
+    "Started": "2026-10-18",
+    "Status": "Done",
+    "Title": "Execute reproducible memory and learning representation simulations with ablations"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBkPes",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 63,
+   "title": "Adjudicate the memory representation study and publish staged adoption decisions",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/63",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-18",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-18",
+    "Status": "Done",
+    "Title": "Adjudicate the memory representation study and publish staged adoption decisions"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBkVpY",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 65,
+   "title": "Implement lineage, temporal applicability and retirement simulations",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/65",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-18",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-18",
+    "Status": "Done",
+    "Title": "Implement lineage, temporal applicability and retirement simulations"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBkVsw",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 66,
+   "title": "Implement bounded contextual retrieval and compaction comparisons",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/66",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-18",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-18",
+    "Status": "Done",
+    "Title": "Implement bounded contextual retrieval and compaction comparisons"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBkVws",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 67,
+   "title": "Implement uncertainty and sequential-learning simulations with the reproducible runner",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/67",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-18",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-18",
+    "Status": "Done",
+    "Title": "Implement uncertainty and sequential-learning simulations with the reproducible runner"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBna24",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 71,
+   "title": "Establish trace extraction and label readiness for the memory benchmark",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/71",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-19",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Started": "2026-10-19",
+    "Status": "Done",
+    "Title": "Establish trace extraction and label readiness for the memory benchmark"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBnkDI",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 75,
+   "title": "Review workflow and control maintenance at next trigger",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/75",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-24",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "L",
+    "Status": "Done",
+    "Title": "Review workflow and control maintenance at next trigger"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBn40U",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 78,
+   "title": "Prove the first survival loop with existing graphical controls",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/78",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-18",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-18",
+    "Status": "Done",
+    "Title": "Prove the first survival loop with existing graphical controls"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBn430",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 79,
+   "title": "Preserve campaign context and budgets across player handoff and restart",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/79",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-18",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-18",
+    "Status": "Done",
+    "Title": "Preserve campaign context and budgets across player handoff and restart"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBn47I",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 80,
+   "title": "Complete a first-day survival and recovery loop",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/80",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-18",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-18",
+    "Status": "Done",
+    "Title": "Complete a first-day survival and recovery loop"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBn49Q",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 81,
+   "title": "Freeze the seven-day campaign execution protocol",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/81",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-18",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Status": "Done",
+    "Title": "Freeze the seven-day campaign execution protocol"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBn5AU",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 82,
+   "title": "Execute and review the fresh-character seven-day campaign",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/82",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-19",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "L",
+    "Status": "Done",
+    "Title": "Execute and review the fresh-character seven-day campaign"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBn8Qg",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 83,
+   "title": "Establish and exercise the reusable campaign-driven improvement workflow",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/83",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-18",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Started": "2026-10-18",
+    "Status": "Done",
+    "Title": "Establish and exercise the reusable campaign-driven improvement workflow"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBpNms",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 91,
+   "title": "Remove manual intervention from native pickup recovery and verify normal restart",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/91",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-18",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-18",
+    "Status": "Done",
+    "Title": "Remove manual intervention from native pickup recovery and verify normal restart"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBqRnE",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 97,
+   "title": "Verify a dedicated campaign player with explicit takeover",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/97",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-18",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-18",
+    "Status": "Done",
+    "Title": "Verify a dedicated campaign player with explicit takeover"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBqwQc",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 100,
+   "title": "Seven-day run — day 1: Establish supplies and shelter",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/100",
+   "fields": {
+    "Confidence": "High",
+    "Finished": "2026-10-19",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "L",
+    "Status": "Done",
+    "Title": "Seven-day run — day 1: Establish supplies and shelter"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBqwUY",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 101,
+   "title": "Seven-day run — day 2: Review depletion, resupply and rest",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/101",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-19",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Status": "Done",
+    "Title": "Seven-day run — day 2: Review depletion, resupply and rest"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBqwX0",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 102,
+   "title": "Seven-day run — day 3: Sustain needs through useful survival work",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/102",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-19",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-19",
+    "Status": "Done",
+    "Title": "Seven-day run — day 3: Sustain needs through useful survival work"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBqwaU",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 103,
+   "title": "Seven-day run — day 4: Sustain needs after midpoint handoff",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/103",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-19",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-19",
+    "Status": "Done",
+    "Title": "Seven-day run — day 4: Sustain needs after midpoint handoff"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBqwc4",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 104,
+   "title": "Seven-day run — day 5: Adapt to observed supply and threat risks",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/104",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-19",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-19",
+    "Status": "Done",
+    "Title": "Seven-day run — day 5: Adapt to observed supply and threat risks"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBqwgc",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 105,
+   "title": "Seven-day run — day 6: Secure and inspect final-day reserves",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/105",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-19",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Status": "Done",
+    "Title": "Seven-day run — day 6: Secure and inspect final-day reserves"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBqwj8",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 106,
+   "title": "Seven-day run — day 7: Reach and independently verify the seven-day endpoint",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/106",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-19",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Status": "Done",
+    "Title": "Seven-day run — day 7: Reach and independently verify the seven-day endpoint"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBrKHs",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 108,
+   "title": "Expose guarded-walk observations and require reassessment after stops",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/108",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-18",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Status": "Done",
+    "Title": "Expose guarded-walk observations and require reassessment after stops"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBrsPI",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 112,
+   "title": "Cover ordinary survival menus and close unsupported UI autonomously",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/112",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-18",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Status": "Done",
+    "Title": "Cover ordinary survival menus and close unsupported UI autonomously"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBtZ80",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 120,
+   "title": "Support ordinary activity-distraction prompts without user rescue",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/120",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-18",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Started": "2026-10-18",
+    "Status": "Done",
+    "Title": "Support ordinary activity-distraction prompts without user rescue"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBuql0",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 124,
+   "title": "Support ordinary body-status input at its exact native wait",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/124",
+   "fields": {
+    "Confidence": "High",
+    "Finished": "2026-10-19",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Status": "Done",
+    "Title": "Support ordinary body-status input at its exact native wait"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhBwXcs",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 128,
+   "title": "Keep native gameplay responsive when spectator frame publication stalls",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/128",
+   "fields": {
+    "Confidence": "Low",
+    "Horizon": "Later",
+    "Priority": "P2",
+    "Size": "Unknown",
+    "Started": "2026-10-19",
+    "Status": "Backlog",
+    "Title": "Keep native gameplay responsive when spectator frame publication stalls"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhB1r_s",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 129,
+   "title": "Establish potable-water readiness and a viable remaining campaign route",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/129",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-19",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-19",
+    "Status": "Done",
+    "Title": "Establish potable-water readiness and a viable remaining campaign route"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhB_rNg",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 136,
+   "title": "Deliver player-owned campaigns without engineering gameplay assistance",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/136",
+   "fields": {
+    "Confidence": "Low",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "L",
+    "Status": "Backlog",
+    "Title": "Deliver player-owned campaigns without engineering gameplay assistance"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhB_rS4",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 137,
+   "title": "Design the player-owned mission contract and first integrated acceptance",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/137",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-19",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-19",
+    "Status": "Done",
+    "Title": "Design the player-owned mission contract and first integrated acceptance"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhB_rio",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 140,
+   "title": "Give the player durable evidence-linked campaign memory and context replacement",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/140",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-21",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-19",
+    "Status": "Done",
+    "Title": "Give the player durable evidence-linked campaign memory and context replacement"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhB_rmQ",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 141,
+   "title": "Implement bounded skill outcome assessment and player-local recovery",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/141",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-21",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Status": "Done",
+    "Title": "Implement bounded skill outcome assessment and player-local recovery"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhB_rrQ",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 142,
+   "title": "Let the player own mission execution, routine recovery and normal lifecycle",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/142",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-21",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "L",
+    "Started": "2026-10-20",
+    "Status": "Done",
+    "Title": "Let the player own mission execution, routine recovery and normal lifecycle"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhB_rvg",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 143,
+   "title": "Make gameplay observable through connected spectator views",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/143",
+   "fields": {
+    "Confidence": "Low",
+    "Horizon": "Next",
+    "Priority": "P2",
+    "Size": "L",
+    "Status": "Backlog",
+    "Title": "Make gameplay observable through connected spectator views"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhB_r0I",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 144,
+   "title": "Validate an integrated player-owned supply-and-shelter mission",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/144",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-21",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "L",
+    "Status": "Done",
+    "Title": "Validate an integrated player-owned supply-and-shelter mission"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhB_r6s",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 145,
+   "title": "Complete a fresh seven-day campaign without engineering gameplay assistance",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/145",
+   "fields": {
+    "Confidence": "Low",
+    "Horizon": "Next",
+    "Priority": "P1",
+    "Size": "L",
+    "Status": "Backlog",
+    "Title": "Complete a fresh seven-day campaign without engineering gameplay assistance"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhCARps",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 150,
+   "title": "Expose only rendered menu content in native wire4",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/150",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-21",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-19",
+    "Status": "Done",
+    "Title": "Expose only rendered menu content in native wire4"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhCARuU",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 151,
+   "title": "Execute bounded visible menu and item goals with verified results",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/151",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-21",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Status": "Done",
+    "Title": "Execute bounded visible menu and item goals with verified results"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhCAR5w",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 153,
+   "title": "Migrate mission contracts, guarded capabilities and durable execution ledger",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/153",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-21",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-19",
+    "Status": "Done",
+    "Title": "Migrate mission contracts, guarded capabilities and durable execution ledger"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhCAR-k",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 154,
+   "title": "Integrate a single player-owned mission runtime and observer status",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/154",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-21",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Status": "Done",
+    "Title": "Integrate a single player-owned mission runtime and observer status"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhCASCk",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 155,
+   "title": "Let the playing system save, restart, reload and replace its context",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/155",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-21",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Status": "Done",
+    "Title": "Let the playing system save, restart, reload and replace its context"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhCASHg",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 156,
+   "title": "Freeze candidate and finite admission for the independent mission",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/156",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-21",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-20",
+    "Status": "Done",
+    "Title": "Freeze candidate and finite admission for the independent mission"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhCASMs",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 157,
+   "title": "Run and independently assess the player-owned supply-and-shelter mission",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/157",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-21",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Status": "Done",
+    "Title": "Run and independently assess the player-owned supply-and-shelter mission"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhCNHmk",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 159,
+   "title": "Enforce game-time caps across input lanes and permit seven-day closeout headroom",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/159",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-21",
+    "Horizon": "Now",
+    "Size": "M",
+    "Status": "Done",
+    "Title": "Enforce game-time caps across input lanes and permit seven-day closeout headroom"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhCOM3I",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 160,
+   "title": "Reject inconsistent skill bindings before mutating an owned phase",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/160",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-21",
+    "Horizon": "Now",
+    "Size": "S",
+    "Started": "2026-10-20",
+    "Status": "Done",
+    "Title": "Reject inconsistent skill bindings before mutating an owned phase"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhCO6aI",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 161,
+   "title": "Compile gameplay requests from explicit retained context",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/161",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-21",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-20",
+    "Status": "Done",
+    "Title": "Compile gameplay requests from explicit retained context"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhCO6po",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 162,
+   "title": "Assess draft rejection versus runtime authority loss",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/162",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-21",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Status": "Done",
+    "Title": "Assess draft rejection versus runtime authority loss"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhCPdrU",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 163,
+   "title": "Resolve registered dismissal actions in visible menus",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/163",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-21",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Started": "2026-10-20",
+    "Status": "Done",
+    "Title": "Resolve registered dismissal actions in visible menus"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhCQNxQ",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 164,
+   "title": "Qualify useful apparent responsiveness of the complete player",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/164",
+   "fields": {
+    "Confidence": "Low",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "L",
+    "Status": "Backlog",
+    "Title": "Qualify useful apparent responsiveness of the complete player"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhCQR-U",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 165,
+   "title": "Keep coherent unfinished Work retrievable through player handoff",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/165",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-21",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Status": "Done",
+    "Title": "Keep coherent unfinished Work retrievable through player handoff"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhCQSE4",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 166,
+   "title": "Verify routine gameplay executes without automatic approval review",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/166",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-21",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Status": "Done",
+    "Title": "Verify routine gameplay executes without automatic approval review"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhCRHMM",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 167,
+   "title": "Handle owned distraction questions in semantic activity controls",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/167",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-21",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Status": "Done",
+    "Title": "Handle owned distraction questions in semantic activity controls"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhCRlOE",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 168,
+   "title": "Refresh semantic operation checkpoints before near-expiry dispatch",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/168",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-21",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Status": "Done",
+    "Title": "Refresh semantic operation checkpoints before near-expiry dispatch"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhCSA38",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 169,
+   "title": "Formalize development-first delivery and proportionate verification",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/169",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-21",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Status": "Done",
+    "Title": "Formalize development-first delivery and proportionate verification"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhCSA4w",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 170,
+   "title": "Prevent uncommitted world Finish from stranding lifecycle creation",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/170",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-21",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Status": "Done",
+    "Title": "Prevent uncommitted world Finish from stranding lifecycle creation"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhCSHSk",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 171,
+   "title": "Prevent native mouse hover from changing keyboard-driven menu selections",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/171",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-21",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Status": "Done",
+    "Title": "Prevent native mouse hover from changing keyboard-driven menu selections"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhCSO7g",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 172,
+   "title": "Refuse unusable prompt-root allocations before gameplay input",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/172",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-21",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Status": "Done",
+    "Title": "Refuse unusable prompt-root allocations before gameplay input"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhCSRpQ",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 173,
+   "title": "Launch the game without stealing the user’s keyboard focus",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/173",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-21",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Status": "Done",
+    "Title": "Launch the game without stealing the user’s keyboard focus"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhCSp1g",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 174,
+   "title": "Use the bound consume selector for registered inspection",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/174",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-21",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Status": "Done",
+    "Title": "Use the bound consume selector for registered inspection"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhCSxFM",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 176,
+   "title": "Move game semantics into the playing system and retire semantic dispatch",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/176",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-29",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "L",
+    "Status": "Done",
+    "Title": "Move game semantics into the playing system and retire semantic dispatch"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhCSxLU",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 177,
+   "title": "Let the player derive and revise reusable procedures from experience",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/177",
+   "fields": {
+    "Confidence": "Low",
+    "Horizon": "Next",
+    "Priority": "P2",
+    "Size": "L",
+    "Status": "Backlog",
+    "Title": "Let the player derive and revise reusable procedures from experience"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhCS5nY",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 178,
+   "title": "Add a player-owned asynchronous reflection exchange with automatic evidence feedback",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/178",
+   "fields": {
+    "Confidence": "Low",
+    "Horizon": "Next",
+    "Priority": "P1",
+    "Size": "M",
+    "Status": "Backlog",
+    "Title": "Add a player-owned asynchronous reflection exchange with automatic evidence feedback"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhCdNHU",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 179,
+   "title": "Implement bounded procedure revision validation and ancestry projection",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/179",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-24",
+    "Horizon": "Next",
+    "Priority": "P1",
+    "Size": "S",
+    "Status": "Done",
+    "Title": "Implement bounded procedure revision validation and ancestry projection"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhCdQhQ",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 181,
+   "title": "Select and prove basic computer control without game-semantic gates",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/181",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-29",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-29",
+    "Status": "Done",
+    "Title": "Select and prove basic computer control without game-semantic gates"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhCi8gk",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 183,
+   "title": "Reject malformed lifecycle root intent before revoking gameplay authority",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/183",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-25",
+    "Horizon": "Next",
+    "Priority": "P1",
+    "Size": "S",
+    "Status": "Done",
+    "Title": "Reject malformed lifecycle root intent before revoking gameplay authority"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhCjIek",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 185,
+   "title": "Keep advisory job HTTP encoding within the admitted context bound",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/185",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-24",
+    "Horizon": "Next",
+    "Priority": "P1",
+    "Size": "S",
+    "Status": "Done",
+    "Title": "Keep advisory job HTTP encoding within the admitted context bound"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhCjYH8",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 187,
+   "title": "Keep reversible advisory finishing distinct from terminal closure",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/187",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-24",
+    "Horizon": "Next",
+    "Priority": "P1",
+    "Size": "S",
+    "Status": "Done",
+    "Title": "Keep reversible advisory finishing distinct from terminal closure"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhCjk9g",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 188,
+   "title": "Keep historical procedure evidence usable after input authority is revoked",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/188",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-24",
+    "Horizon": "Next",
+    "Priority": "P1",
+    "Size": "S",
+    "Status": "Done",
+    "Title": "Keep historical procedure evidence usable after input authority is revoked"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhCjsdo",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 189,
+   "title": "Decouple lifecycle identity projection from procedure-library construction",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/189",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-24",
+    "Horizon": "Next",
+    "Priority": "P1",
+    "Size": "S",
+    "Status": "Done",
+    "Title": "Decouple lifecycle identity projection from procedure-library construction"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhCj-EU",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 191,
+   "title": "Generalize organic interaction and enforce CDDA-class portability",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/191",
+   "fields": {
+    "Confidence": "Low",
+    "Horizon": "Later",
+    "Priority": "P2",
+    "Size": "L",
+    "Status": "Backlog",
+    "Title": "Generalize organic interaction and enforce CDDA-class portability"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhCj-Fo",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 192,
+   "title": "Keep native request expiry within the original exchange allowance",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/192",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-24",
+    "Horizon": "Next",
+    "Priority": "P1",
+    "Size": "S",
+    "Status": "Done",
+    "Title": "Keep native request expiry within the original exchange allowance"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhDO8NQ",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 198,
+   "title": "Make architecture and documentation reviewable from system to component to code",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/198",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-24",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-24",
+    "Status": "Done",
+    "Title": "Make architecture and documentation reviewable from system to component to code"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhDO8P0",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 199,
+   "title": "Apply proportionate assurance and reconcile governance with GitHub workflow",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/199",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-24",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-24",
+    "Status": "Done",
+    "Title": "Apply proportionate assurance and reconcile governance with GitHub workflow"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhDQwuM",
+   "type": "PULL_REQUEST",
+   "archived": false,
+   "number": 201,
+   "title": "Assess Fresh024 latency and scope execution-first learning",
+   "state": "MERGED",
+   "url": "https://github.com/CVX-Hull/enactive/pull/201",
+   "fields": {
+    "Confidence": "High",
+    "Finished": "2026-10-24",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Started": "2026-10-24",
+    "Status": "Done",
+    "Title": "Assess Fresh024 latency and scope execution-first learning"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhDRj10",
+   "type": "PULL_REQUEST",
+   "archived": false,
+   "number": 202,
+   "title": "Reduce local execution overhead and streamline background learning",
+   "state": "MERGED",
+   "url": "https://github.com/CVX-Hull/enactive/pull/202",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-24",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-24",
+    "Status": "Done",
+    "Title": "Reduce local execution overhead and streamline background learning"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhDR85o",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 203,
+   "title": "Make CI validation proportional to change risk and avoid redundant full runs",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/203",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-24",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-24",
+    "Status": "Done",
+    "Title": "Make CI validation proportional to change risk and avoid redundant full runs"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhDSQGI",
+   "type": "PULL_REQUEST",
+   "archived": false,
+   "number": 204,
+   "title": "Make protected CI proportional to change impact",
+   "state": "MERGED",
+   "url": "https://github.com/CVX-Hull/enactive/pull/204",
+   "fields": {
+    "Finished": "2026-10-24",
+    "Status": "Done",
+    "Title": "Make protected CI proportional to change impact"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhDSWgM",
+   "type": "PULL_REQUEST",
+   "archived": false,
+   "number": 205,
+   "title": "Reduce eviction integration fixture cost without losing its failure boundary",
+   "state": "MERGED",
+   "url": "https://github.com/CVX-Hull/enactive/pull/205",
+   "fields": {
+    "Finished": "2026-10-24",
+    "Status": "Done",
+    "Title": "Reduce eviction integration fixture cost without losing its failure boundary"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhDSfwE",
+   "type": "PULL_REQUEST",
+   "archived": false,
+   "number": 206,
+   "title": "Record proportional CI qualification and measured test cost",
+   "state": "MERGED",
+   "url": "https://github.com/CVX-Hull/enactive/pull/206",
+   "fields": {
+    "Finished": "2026-10-24",
+    "Status": "Done",
+    "Title": "Record proportional CI qualification and measured test cost"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhDSm-g",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 207,
+   "title": "Resolve certified pre-admission refusals without phantom result collection",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/207",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-24",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-24",
+    "Status": "Done",
+    "Title": "Resolve certified pre-admission refusals without phantom result collection"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhDSnAQ",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 208,
+   "title": "Retain correlated settlement timing through existing execution receipts",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/208",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-24",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Started": "2026-10-24",
+    "Status": "Done",
+    "Title": "Retain correlated settlement timing through existing execution receipts"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhDTH6U",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 210,
+   "title": "Align prospective run limits with existing enforced contracts",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/210",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-24",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Started": "2026-10-24",
+    "Status": "Done",
+    "Title": "Align prospective run limits with existing enforced contracts"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhDTZU8",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 211,
+   "title": "Select the next player configuration from grounded bootstrap evidence",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/211",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-24",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-24",
+    "Status": "Done",
+    "Title": "Select the next player configuration from grounded bootstrap evidence"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhDUDrI",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 213,
+   "title": "Adopt outcome-focused iterations and completion-capacity planning",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/213",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-25",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Started": "2026-10-25",
+    "Status": "Done",
+    "Title": "Adopt outcome-focused iterations and completion-capacity planning"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhDUdV0",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 215,
+   "title": "Assess data-grounded independent useful-play readiness",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/215",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-25",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-25",
+    "Status": "Done",
+    "Title": "Assess data-grounded independent useful-play readiness"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhDXdc8",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 219,
+   "title": "Remove technical binding hashes from typed player-context replies",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/219",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-25",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Started": "2026-10-25",
+    "Status": "Done",
+    "Title": "Remove technical binding hashes from typed player-context replies"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhDYejQ",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 222,
+   "title": "Demonstrate a useful learned program beyond travel",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/222",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-26",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-25",
+    "Status": "Done",
+    "Title": "Demonstrate a useful learned program beyond travel"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhDYuIw",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 223,
+   "title": "Reduce CI wait and clarify test responsibilities with proportionate regression scope",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/223",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-25",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-25",
+    "Status": "Done",
+    "Title": "Reduce CI wait and clarify test responsibilities with proportionate regression scope"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhDZMaw",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 225,
+   "title": "Build assurance-trace and test-impact pilots with measured detection and upkeep cost",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/225",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-25",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-25",
+    "Status": "Done",
+    "Title": "Build assurance-trace and test-impact pilots with measured detection and upkeep cost"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhDZW7k",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 227,
+   "title": "Build reviewable assurance-to-test trace with native pytest metadata",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/227",
+   "fields": {
+    "Confidence": "High",
+    "Finished": "2026-10-25",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Started": "2026-10-25",
+    "Status": "Done",
+    "Title": "Build reviewable assurance-to-test trace with native pytest metadata"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhDZW8M",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 228,
+   "title": "Build isolated test-impact and cost experiment with confirmed negative changes",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/228",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-25",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-25",
+    "Status": "Done",
+    "Title": "Build isolated test-impact and cost experiment with confirmed negative changes"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhDaEKQ",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 231,
+   "title": "Roll out responsibility-level risk-to-evidence assurance across Enactive",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/231",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-25",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-25",
+    "Status": "Done",
+    "Title": "Roll out responsibility-level risk-to-evidence assurance across Enactive"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhDaELQ",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 232,
+   "title": "Map component responsibilities to existing controls and scoped evidence",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/232",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-25",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Started": "2026-10-25",
+    "Status": "Done",
+    "Title": "Map component responsibilities to existing controls and scoped evidence"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhDaEMk",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 233,
+   "title": "Extend native pytest assurance metadata at critical boundaries",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/233",
+   "fields": {
+    "Confidence": "High",
+    "Finished": "2026-10-25",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Started": "2026-10-25",
+    "Status": "Done",
+    "Title": "Extend native pytest assurance metadata at critical boundaries"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhDaco4",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 235,
+   "title": "Evaluate a controllable gameplay host through the existing MCP boundary",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/235",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-25",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-25",
+    "Status": "Done",
+    "Title": "Evaluate a controllable gameplay host through the existing MCP boundary"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhDacsk",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 236,
+   "title": "Compare gameplay host and model configurations on useful outcomes",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/236",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-25",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-25",
+    "Status": "Done",
+    "Title": "Compare gameplay host and model configurations on useful outcomes"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhDcAa0",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 240,
+   "title": "Make the generic gameplay harness mandatory",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/240",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-25",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-25",
+    "Status": "Done",
+    "Title": "Make the generic gameplay harness mandatory"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhDlh80",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 251,
+   "title": "Select an economical learned-program authoring and application path",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/251",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-26",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Started": "2026-10-26",
+    "Status": "Done",
+    "Title": "Select an economical learned-program authoring and application path"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhDptAk",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 253,
+   "title": "Clarify memory authoring and assess useful learned execution",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/253",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-26",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Started": "2026-10-26",
+    "Status": "Done",
+    "Title": "Clarify memory authoring and assess useful learned execution"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhDvW3E",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 256,
+   "title": "Assess target selection and stopping guidance for learned programs",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/256",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-26",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-26",
+    "Status": "Done",
+    "Title": "Assess target selection and stopping guidance for learned programs"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhDwHUY",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 258,
+   "title": "Expose the canonical program-result contract in player context",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/258",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-26",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Started": "2026-10-26",
+    "Status": "Done",
+    "Title": "Expose the canonical program-result contract in player context"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhDwqTQ",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 260,
+   "title": "Qualify target and phase decisions under complete player context",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/260",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-26",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-26",
+    "Status": "Done",
+    "Title": "Qualify target and phase decisions under complete player context"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhDxmso",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 262,
+   "title": "Retain completed procedure results for explicit revision",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/262",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-26",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Started": "2026-10-26",
+    "Status": "Done",
+    "Title": "Retain completed procedure results for explicit revision"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhDyEGU",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 264,
+   "title": "Apply an evidence-corrected routine in fresh-player useful play",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/264",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-28",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-26",
+    "Status": "Done",
+    "Title": "Apply an evidence-corrected routine in fresh-player useful play"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhD7Ac8",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 268,
+   "title": "Expose rendered multiselect marks to executable routines",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/268",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-27",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-27",
+    "Status": "Done",
+    "Title": "Expose rendered multiselect marks to executable routines"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhD95kQ",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 270,
+   "title": "Restore historical routine lineage through a provenance-preserving offline import",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/270",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-27",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-27",
+    "Status": "Done",
+    "Title": "Restore historical routine lineage through a provenance-preserving offline import"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhEDkxA",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 274,
+   "title": "Audit gameplay-first delivery and simplify workflow and documentation",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/274",
+   "fields": {
+    "Confidence": "High",
+    "Finished": "2026-10-27",
+    "Horizon": "Now",
+    "Started": "2026-10-27",
+    "Status": "Done",
+    "Title": "Audit gameplay-first delivery and simplify workflow and documentation"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhED5Y0",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 276,
+   "title": "Decompose oversized current contracts for focused reading and review",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/276",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-28",
+    "Horizon": "Next",
+    "Size": "M",
+    "Started": "2026-10-27",
+    "Status": "Done",
+    "Title": "Decompose oversized current contracts for focused reading and review"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhEEYEA",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 277,
+   "title": "Resolve audit findings and consolidate engineering workflow before gameplay",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/277",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-28",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-27",
+    "Status": "Done",
+    "Title": "Resolve audit findings and consolidate engineering workflow before gameplay"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhETGAc",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 280,
+   "title": "Improve player context through useful survival progression",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/280",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-29",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-28",
+    "Status": "Done",
+    "Title": "Improve player context through useful survival progression"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhEYFLY",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 283,
+   "title": "Align the computer-control boundary and reconcile delivery flow",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/283",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-28",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-28",
+    "Status": "Done",
+    "Title": "Align the computer-control boundary and reconcile delivery flow"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhEYFM8",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 284,
+   "title": "Cut over to basic computer control and player-owned semantics",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/284",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-29",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "L",
+    "Status": "Done",
+    "Title": "Cut over to basic computer control and player-owned semantics"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhEez2Q",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 287,
+   "title": "Deliver the sole mechanical computer-control runtime",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/287",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-29",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-29",
+    "Status": "Done",
+    "Title": "Deliver the sole mechanical computer-control runtime"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhEez5o",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 288,
+   "title": "Move player programs and memory onto basic control and validate organic play",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/288",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-29",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-29",
+    "Status": "Done",
+    "Title": "Move player programs and memory onto basic control and validate organic play"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhElwz0",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 290,
+   "title": "Qualify remaining real-host input boundaries",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/290",
+   "fields": {
+    "Confidence": "Low",
+    "Horizon": "Later",
+    "Priority": "P2",
+    "Size": "M",
+    "Status": "Backlog",
+    "Title": "Qualify remaining real-host input boundaries"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhElw9w",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 291,
+   "title": "Assess a representative second real game through the computer port",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/291",
+   "fields": {
+    "Confidence": "Low",
+    "Horizon": "Later",
+    "Priority": "P2",
+    "Size": "Unknown",
+    "Status": "Backlog",
+    "Title": "Assess a representative second real game through the computer port"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhEoofE",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 293,
+   "title": "Watch gameplay and investigate recent activity safely",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/293",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-29",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-29",
+    "Status": "Done",
+    "Title": "Watch gameplay and investigate recent activity safely"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhEouEo",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 294,
+   "title": "Inspect player procedures and memory through linked evidence",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/294",
+   "fields": {
+    "Confidence": "Low",
+    "Horizon": "Later",
+    "Priority": "P2",
+    "Size": "M",
+    "Status": "Backlog",
+    "Title": "Inspect player procedures and memory through linked evidence"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhEouLc",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 295,
+   "title": "Explain gameplay latency and usage through linked analysis",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/295",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-30",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-29",
+    "Status": "Done",
+    "Title": "Explain gameplay latency and usage through linked analysis"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhEwmes",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 298,
+   "title": "Assess observed-effect verification and useful continuation in real gameplay",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/298",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-30",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-30",
+    "Status": "Done",
+    "Title": "Assess observed-effect verification and useful continuation in real gameplay"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhEx1EM",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 300,
+   "title": "Diagnose spatial grounding and test one player repair through useful gameplay",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/300",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-30",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-30",
+    "Status": "Done",
+    "Title": "Diagnose spatial grounding and test one player repair through useful gameplay"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhE37Aw",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 302,
+   "title": "Qualify a fast visual-player configuration through grounding and useful gameplay",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/302",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-30",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-30",
+    "Status": "Done",
+    "Title": "Qualify a fast visual-player configuration through grounding and useful gameplay"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhE6k3o",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 304,
+   "title": "Qualify a capable player through useful gameplay and continuation",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/304",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-31",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-31",
+    "Status": "Done",
+    "Title": "Qualify a capable player through useful gameplay and continuation"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhFCMQs",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 308,
+   "title": "Retry one transient provider failure instead of ending the admission",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/308",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-31",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Started": "2026-10-31",
+    "Status": "Done",
+    "Title": "Retry one transient provider failure instead of ending the admission"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhFCbB4",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 309,
+   "title": "Declare a same-model failover endpoint after a real routing probe",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/309",
+   "fields": {
+    "Confidence": "Low",
+    "Horizon": "Later",
+    "Priority": "P2",
+    "Size": "Unknown",
+    "Status": "Backlog",
+    "Title": "Declare a same-model failover endpoint after a real routing probe"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhFCpFI",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 313,
+   "title": "Keep the image-history window from breaking the prompt cache",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/313",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-10-31",
+    "Horizon": "Next",
+    "Priority": "P2",
+    "Size": "M",
+    "Started": "2026-10-31",
+    "Status": "Done",
+    "Title": "Keep the image-history window from breaking the prompt cache"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhFCpR8",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 314,
+   "title": "Diagnose why grounded players make no retained gain",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/314",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-10-31",
+    "Horizon": "Next",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-31",
+    "Status": "Done",
+    "Title": "Diagnose why grounded players make no retained gain"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhFD6IM",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 319,
+   "title": "Decide the multi-level player architecture and its smallest first slice",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/319",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-11-01",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-31",
+    "Status": "Done",
+    "Title": "Decide the multi-level player architecture and its smallest first slice"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhFFPnw",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 320,
+   "title": "Gather a transition corpus to test structure hypotheses",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/320",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-11-01",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-10-31",
+    "Status": "Done",
+    "Title": "Gather a transition corpus to test structure hypotheses"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhFGtu8",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 326,
+   "title": "First slice of ADR-007: an acting player with an asynchronous subgoal level",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/326",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-11-03",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "L",
+    "Started": "2026-11-01",
+    "Status": "Done",
+    "Title": "First slice of ADR-007: an acting player with an asynchronous subgoal level"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhFG7aM",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 329,
+   "title": "ADR-007 slice: shadow, persistent and probe evidence stages",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/329",
+   "fields": {
+    "Confidence": "Low",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-11-01",
+    "Status": "Done",
+    "Title": "ADR-007 slice: shadow, persistent and probe evidence stages"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhFLmJ4",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 333,
+   "title": "Make the spectator's Watch view honest, accessible and recoverable",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/333",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-11-01",
+    "Horizon": "Now",
+    "Priority": "P2",
+    "Size": "M",
+    "Started": "2026-11-01",
+    "Status": "Done",
+    "Title": "Make the spectator's Watch view honest, accessible and recoverable"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhFLmQ4",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 336,
+   "title": "Speed up investigation of long recorded runs",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/336",
+   "fields": {
+    "Confidence": "Low",
+    "Horizon": "Later",
+    "Priority": "P2",
+    "Size": "M",
+    "Status": "Backlog",
+    "Title": "Speed up investigation of long recorded runs"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhFL6jo",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 338,
+   "title": "Give the spectator a clean, calm, image-first visual design",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/338",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-11-01",
+    "Horizon": "Now",
+    "Priority": "P2",
+    "Size": "M",
+    "Started": "2026-11-01",
+    "Status": "Done",
+    "Title": "Give the spectator a clean, calm, image-first visual design"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhFSAEM",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 347,
+   "title": "Codebook evolution pilot: LLM-proposed, classically gated labels on the #320 corpus",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/347",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-11-07",
+    "Horizon": "Later",
+    "Priority": "P2",
+    "Size": "M",
+    "Started": "2026-11-02",
+    "Status": "Done",
+    "Title": "Codebook evolution pilot: LLM-proposed, classically gated labels on the #320 corpus"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhGLgz0",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 359,
+   "title": "Separate ongoing player objectives from finite test control",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/359",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-11-07",
+    "Horizon": "Later",
+    "Priority": "P2",
+    "Size": "M",
+    "Started": "2026-11-05",
+    "Status": "Done",
+    "Title": "Separate ongoing player objectives from finite test control"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhGSQU0",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 361,
+   "title": "Reuse spectator supervision with the current finite player",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/361",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-11-05",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Started": "2026-11-05",
+    "Status": "Done",
+    "Title": "Reuse spectator supervision with the current finite player"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhGXEW8",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 366,
+   "title": "Assess a visual-player candidate from retained screens",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/366",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-11-05",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Started": "2026-11-05",
+    "Status": "Done",
+    "Title": "Assess a visual-player candidate from retained screens"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhGy518",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 372,
+   "title": "Establish a frontier ceiling through the pixels-and-keys boundary, then test grounding aids",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/372",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-11-06",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-11-06",
+    "Status": "Done",
+    "Title": "Establish a frontier ceiling through the pixels-and-keys boundary, then test grounding aids"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhGy554",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 382,
+   "title": "Proposal: long-horizon Terra arm through chained save/reload admissions",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/382",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-11-07",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-11-07",
+    "Status": "Done",
+    "Title": "Proposal: long-horizon Terra arm through chained save/reload admissions"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhGy5-w",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 383,
+   "title": "Proposal: evaluation framework for runs, components and learning",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/383",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-11-07",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-11-07",
+    "Status": "Done",
+    "Title": "Proposal: evaluation framework for runs, components and learning"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhGy6MI",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 384,
+   "title": "Make the player's intent visible to evaluation",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/384",
+   "fields": {
+    "Confidence": "Medium",
+    "Horizon": "Next",
+    "Priority": "P1",
+    "Size": "L",
+    "Status": "Backlog",
+    "Title": "Make the player's intent visible to evaluation"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhGy6Tk",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 385,
+   "title": "Write evaluation labels from the spectator",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/385",
+   "fields": {
+    "Confidence": "Medium",
+    "Horizon": "Next",
+    "Priority": "P2",
+    "Size": "M",
+    "Status": "Backlog",
+    "Title": "Write evaluation labels from the spectator"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhGy6YQ",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 386,
+   "title": "Model judges for run evaluation",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/386",
+   "fields": {
+    "Confidence": "Low",
+    "Horizon": "Later",
+    "Priority": "P2",
+    "Size": "L",
+    "Status": "Backlog",
+    "Title": "Model judges for run evaluation"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhGy6c4",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 387,
+   "title": "Cross-run channel for player knowledge",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/387",
+   "fields": {
+    "Confidence": "Low",
+    "Horizon": "Next",
+    "Priority": "P1",
+    "Size": "L",
+    "Status": "Backlog",
+    "Title": "Cross-run channel for player knowledge"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhGy6QU",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 388,
+   "title": "Scenario bank from real-play snapshots",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/388",
+   "fields": {
+    "Confidence": "Low",
+    "Horizon": "Later",
+    "Priority": "P2",
+    "Size": "L",
+    "Status": "Backlog",
+    "Title": "Scenario bank from real-play snapshots"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhGy6IQ",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 396,
+   "title": "A game stall between a key's down and up events fences input permanently",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/396",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-11-07",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-11-07",
+    "Status": "Done",
+    "Title": "A game stall between a key's down and up events fences input permanently"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhGy6EY",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 397,
+   "title": "Design the seven-day long-horizon attempt and its cost and latency plan",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/397",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-11-07",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-11-07",
+    "Status": "Done",
+    "Title": "Design the seven-day long-horizon attempt and its cost and latency plan"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhGzAkk",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 400,
+   "title": "Audit docs, design, code, controls and tracker against principles, standards, storage and discoverability",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/400",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-11-07",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-11-07",
+    "Status": "Done",
+    "Title": "Audit docs, design, code, controls and tracker against principles, standards, storage and discoverability"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhGzKts",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 401,
+   "title": "Decide: track run ledgers as schema-checked data and generate the run tables",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/401",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-11-07",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-11-07",
+    "Status": "Done",
+    "Title": "Decide: track run ledgers as schema-checked data and generate the run tables"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhGzKy8",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 402,
+   "title": "Decide: a role rule and a dated-record index for documentation size and discoverability",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/402",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-11-07",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-11-07",
+    "Status": "Done",
+    "Title": "Decide: a role rule and a dated-record index for documentation size and discoverability"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhGzK3c",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 403,
+   "title": "Decide: the evaluator's archive readers and the additive context-manifest event under S-MIGRATION",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/403",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-11-07",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Started": "2026-11-07",
+    "Status": "Done",
+    "Title": "Decide: the evaluator's archive readers and the additive context-manifest event under S-MIGRATION"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhGzK68",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 404,
+   "title": "Consolidate duplicate helpers and the second trace-analysis path (S-CODE reuse)",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/404",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-11-07",
+    "Horizon": "Now",
+    "Priority": "P2",
+    "Size": "M",
+    "Started": "2026-11-07",
+    "Status": "Done",
+    "Title": "Consolidate duplicate helpers and the second trace-analysis path (S-CODE reuse)"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhGzLBI",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 405,
+   "title": "Host or retire orphaned diagrams and list retired contracts in the contract index",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/405",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-11-07",
+    "Horizon": "Now",
+    "Priority": "P2",
+    "Size": "S",
+    "Started": "2026-11-07",
+    "Status": "Done",
+    "Title": "Host or retire orphaned diagrams and list retired contracts in the contract index"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhGzhWY",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 409,
+   "title": "Terminal coverage compares a wall-clock end time to monotonic rows; flaked once on main CI",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/409",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-11-07",
+    "Horizon": "Now",
+    "Priority": "P2",
+    "Size": "S",
+    "Started": "2026-11-07",
+    "Status": "Done",
+    "Title": "Terminal coverage compares a wall-clock end time to monotonic rows; flaked once on main CI"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhGz7Mw",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 414,
+   "title": "Diagram renderer embeds @font-face blocks in a non-deterministic order",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/414",
+   "fields": {
+    "Confidence": "High",
+    "Finished": "2026-11-07",
+    "Horizon": "Now",
+    "Priority": "P2",
+    "Size": "S",
+    "Started": "2026-11-07",
+    "Status": "Done",
+    "Title": "Diagram renderer embeds @font-face blocks in a non-deterministic order"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhG0smk",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 420,
+   "title": "Seal or retire the remaining unindexed evidence under .runtime",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/420",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-11-07",
+    "Horizon": "Now",
+    "Priority": "P2",
+    "Size": "M",
+    "Started": "2026-11-07",
+    "Status": "Done",
+    "Title": "Seal or retire the remaining unindexed evidence under .runtime"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhG02s0",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 421,
+   "title": "Browser suites fail intermittently at the end of the local full profile",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/421",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-11-07",
+    "Horizon": "Now",
+    "Priority": "P2",
+    "Size": "S",
+    "Started": "2026-11-07",
+    "Status": "Done",
+    "Title": "Browser suites fail intermittently at the end of the local full profile"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhG1-qc",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 425,
+   "title": "Seal or retire the cited evidence left outside the store under .runtime",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/425",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-11-07",
+    "Horizon": "Later",
+    "Priority": "P2",
+    "Size": "L",
+    "Started": "2026-11-07",
+    "Status": "Done",
+    "Title": "Seal or retire the cited evidence left outside the store under .runtime"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhG4TO8",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 435,
+   "title": "Spectator: follow the true live run, and a stable feed player",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/435",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-11-07",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-11-07",
+    "Status": "Done",
+    "Title": "Spectator: follow the true live run, and a stable feed player"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhG4eeQ",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 437,
+   "title": "Spectator stream player, Tier 1: wide mode, integer scale, caption, liveness badges, shortcuts",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/437",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-11-07",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-11-07",
+    "Status": "Done",
+    "Title": "Spectator stream player, Tier 1: wide mode, integer scale, caption, liveness badges, shortcuts"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhG5kBc",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 441,
+   "title": "Seven-day screen: two more lineages on the #396 arm (#145)",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/441",
+   "fields": {
+    "Confidence": "Medium",
+    "Horizon": "Later",
+    "Priority": "P1",
+    "Size": "M",
+    "Status": "Backlog",
+    "Title": "Seven-day screen: two more lineages on the #396 arm (#145)"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhG5kC8",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 442,
+   "title": "Cadence plan: route options against #164's criteria ($0)",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/442",
+   "fields": {
+    "Confidence": "Low",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Status": "Backlog",
+    "Title": "Cadence plan: route options against #164's criteria ($0)"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhG_8jo",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 445,
+   "title": "Curated player: implement and qualify ADR 009",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/445",
+   "fields": {
+    "Confidence": "Low",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "L",
+    "Status": "Backlog",
+    "Title": "Curated player: implement and qualify ADR 009"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhG_8sc",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 446,
+   "title": "ADR 009 P0: baseline, workbench and sandbox ($0 gameplay)",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/446",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-11-08",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "L",
+    "Started": "2026-11-08",
+    "Status": "Done",
+    "Title": "ADR 009 P0: baseline, workbench and sandbox ($0 gameplay)"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhG_8xc",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 447,
+   "title": "Research synthesis for ADR 009: memory, belief, ontology and oversight (R1–R4, R14)",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/447",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-11-08",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-11-08",
+    "Status": "Done",
+    "Title": "Research synthesis for ADR 009: memory, belief, ontology and oversight (R1–R4, R14)"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhG_830",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 448,
+   "title": "Research synthesis for ADR 009: programs, supervision, evaluation and study design (R5–R12)",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/448",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-11-08",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-11-08",
+    "Status": "Done",
+    "Title": "Research synthesis for ADR 009: programs, supervision, evaluation and study design (R5–R12)"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhG_8-w",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 449,
+   "title": "Probe suite and baseline rediscovery and carry rates from sealed traces",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/449",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-11-08",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-11-08",
+    "Status": "Done",
+    "Title": "Probe suite and baseline rediscovery and carry rates from sealed traces"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhG_9Fw",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 450,
+   "title": "Reject unknown handoff roots instead of listing them as omissions",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/450",
+   "fields": {
+    "Confidence": "High",
+    "Finished": "2026-11-08",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Started": "2026-11-08",
+    "Status": "Done",
+    "Title": "Reject unknown handoff roots instead of listing them as omissions"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhG_9LA",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 451,
+   "title": "Curator sandbox: enforce ADR 009's isolation boundary with a project-local mechanism (R13)",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/451",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-11-08",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-11-08",
+    "Status": "Done",
+    "Title": "Curator sandbox: enforce ADR 009's isolation boundary with a project-local mechanism (R13)"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhG_9Sk",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 452,
+   "title": "Trace projection and workbench tools over sealed traces",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/452",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-11-08",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-11-08",
+    "Status": "Done",
+    "Title": "Trace projection and workbench tools over sealed traces"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhG_9ZE",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 453,
+   "title": "Knowledge repository, draft containers and a minimal gate (v0)",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/453",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-11-08",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-11-08",
+    "Status": "Done",
+    "Title": "Knowledge repository, draft containers and a minimal gate (v0)"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhG_9hE",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 454,
+   "title": "Curator shadow sessions on sealed traces under two hosts",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/454",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-11-08",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-11-08",
+    "Status": "Done",
+    "Title": "Curator shadow sessions on sealed traces under two hosts"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhG_9o0",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 455,
+   "title": "Measure snapshot-diff cost in cache rewrites and context",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/455",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-11-08",
+    "Horizon": "Now",
+    "Priority": "P2",
+    "Size": "S",
+    "Started": "2026-11-08",
+    "Status": "Done",
+    "Title": "Measure snapshot-diff cost in cache rewrites and context"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhG_9vs",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 456,
+   "title": "Spectator frame for ADR 009 over sealed traces (P0)",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/456",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-11-08",
+    "Horizon": "Now",
+    "Priority": "P2",
+    "Size": "M",
+    "Started": "2026-11-08",
+    "Status": "Done",
+    "Title": "Spectator frame for ADR 009 over sealed traces (P0)"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhG_95E",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 457,
+   "title": "Epistemic core and fact store in the knowledge repository",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/457",
+   "fields": {
+    "Confidence": "Low",
+    "Horizon": "Next",
+    "Priority": "P1",
+    "Size": "M",
+    "Status": "Backlog",
+    "Title": "Epistemic core and fact store in the knowledge repository"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhG_-AY",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 458,
+   "title": "Ontology service and type grooming",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/458",
+   "fields": {
+    "Confidence": "Low",
+    "Horizon": "Next",
+    "Priority": "P1",
+    "Size": "M",
+    "Status": "Backlog",
+    "Title": "Ontology service and type grooming"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhG_-Hk",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 459,
+   "title": "Submission gate v1: prospective gate-owned tests, gate-computed utility, revert and disable",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/459",
+   "fields": {
+    "Confidence": "Low",
+    "Horizon": "Next",
+    "Priority": "P1",
+    "Size": "M",
+    "Status": "Backlog",
+    "Title": "Submission gate v1: prospective gate-owned tests, gate-computed utility, revert and disable"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhG_-M4",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 460,
+   "title": "Curator sessions v1 and the curator-host contract",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/460",
+   "fields": {
+    "Confidence": "Low",
+    "Horizon": "Next",
+    "Priority": "P1",
+    "Size": "M",
+    "Status": "Backlog",
+    "Title": "Curator sessions v1 and the curator-host contract"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhG_-So",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 461,
+   "title": "Snapshot delivery to the actor: typed immutable snapshots, diffs and handoff hints",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/461",
+   "fields": {
+    "Confidence": "Medium",
+    "Horizon": "Next",
+    "Priority": "P1",
+    "Size": "M",
+    "Status": "Backlog",
+    "Title": "Snapshot delivery to the actor: typed immutable snapshots, diffs and handoff hints"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhG_-YY",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 462,
+   "title": "Arm A: handoff root validation plus a pushed working set from existing records",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/462",
+   "fields": {
+    "Confidence": "Medium",
+    "Horizon": "Next",
+    "Priority": "P1",
+    "Size": "S",
+    "Status": "Backlog",
+    "Title": "Arm A: handoff root validation plus a pushed working set from existing records"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhG_-e0",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 463,
+   "title": "Adopt P1: migrate the player contract and align the rules",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/463",
+   "fields": {
+    "Confidence": "Medium",
+    "Horizon": "Next",
+    "Priority": "P1",
+    "Size": "M",
+    "Status": "Backlog",
+    "Title": "Adopt P1: migrate the player contract and align the rules"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhG_-kM",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 464,
+   "title": "Spectator actor, curator, knowledge and draft views (P1)",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/464",
+   "fields": {
+    "Confidence": "Medium",
+    "Horizon": "Next",
+    "Priority": "P2",
+    "Size": "M",
+    "Status": "Backlog",
+    "Title": "Spectator actor, curator, knowledge and draft views (P1)"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhG_-sA",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 465,
+   "title": "player-program/3: passive actor-interface policies with full observation and pinned versions",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/465",
+   "fields": {
+    "Confidence": "Low",
+    "Horizon": "Later",
+    "Priority": "P2",
+    "Size": "M",
+    "Status": "Backlog",
+    "Title": "player-program/3: passive actor-interface policies with full observation and pinned versions"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhG_-zI",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 466,
+   "title": "Capability slots: runner-executed model requests, replay cache per arm, slot benchmarks",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/466",
+   "fields": {
+    "Confidence": "Low",
+    "Horizon": "Later",
+    "Priority": "P2",
+    "Size": "M",
+    "Status": "Backlog",
+    "Title": "Capability slots: runner-executed model requests, replay cache per arm, slot benchmarks"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhG_-7A",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 467,
+   "title": "Supervised asynchronous program runs: custody capability, bounded preemption, stale-frame refusal",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/467",
+   "fields": {
+    "Confidence": "Low",
+    "Horizon": "Later",
+    "Priority": "P2",
+    "Size": "M",
+    "Status": "Backlog",
+    "Title": "Supervised asynchronous program runs: custody capability, bounded preemption, stale-frame refusal"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhG__C8",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 468,
+   "title": "Verified risk classes and the stop-only monitor",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/468",
+   "fields": {
+    "Confidence": "Low",
+    "Horizon": "Later",
+    "Priority": "P2",
+    "Size": "M",
+    "Status": "Backlog",
+    "Title": "Verified risk classes and the stop-only monitor"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhG__Jk",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 469,
+   "title": "Program fitting and curation: offline replay, probation, statistics and retirement",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/469",
+   "fields": {
+    "Confidence": "Low",
+    "Horizon": "Later",
+    "Priority": "P2",
+    "Size": "M",
+    "Status": "Backlog",
+    "Title": "Program fitting and curation: offline replay, probation, statistics and retirement"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhG__QU",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 470,
+   "title": "P2 study and adoption: delegation share at matched failure rate and monitor detection",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/470",
+   "fields": {
+    "Confidence": "Low",
+    "Horizon": "Later",
+    "Priority": "P2",
+    "Size": "M",
+    "Status": "Backlog",
+    "Title": "P2 study and adoption: delegation share at matched failure rate and monitor detection"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhG__YM",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 471,
+   "title": "Spectator program views (P2)",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/471",
+   "fields": {
+    "Confidence": "Medium",
+    "Horizon": "Later",
+    "Priority": "P2",
+    "Size": "S",
+    "Status": "Backlog",
+    "Title": "Spectator program views (P2)"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhG__f8",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 472,
+   "title": "ADR 009 P3: practice instance (owner decision first)",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/472",
+   "fields": {
+    "Confidence": "Low",
+    "Horizon": "Later",
+    "Priority": "P2",
+    "Size": "L",
+    "Status": "Backlog",
+    "Title": "ADR 009 P3: practice instance (owner decision first)"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhG__oA",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 473,
+   "title": "Measure a second game instance's concurrency effects and determinism",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/473",
+   "fields": {
+    "Confidence": "Low",
+    "Horizon": "Later",
+    "Priority": "P2",
+    "Size": "Unknown",
+    "Status": "Backlog",
+    "Title": "Measure a second game instance's concurrency effects and determinism"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhHABys",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 474,
+   "title": "One-way practice forks with a practice-only port",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/474",
+   "fields": {
+    "Confidence": "Low",
+    "Horizon": "Later",
+    "Priority": "P2",
+    "Size": "M",
+    "Status": "Backlog",
+    "Title": "One-way practice forks with a practice-only port"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhHCoOc",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 488,
+   "title": "ADR 009 P1.0: readiness before P1 (context, probes, pre-registration)",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/488",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-11-08",
+    "Horizon": "Now",
+    "Priority": "P0",
+    "Size": "M",
+    "Started": "2026-11-08",
+    "Status": "Done",
+    "Title": "ADR 009 P1.0: readiness before P1 (context, probes, pre-registration)"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhHCoPk",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 489,
+   "title": "P1.0: stable, clear model context for the actor and the curator",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/489",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-11-08",
+    "Horizon": "Now",
+    "Priority": "P0",
+    "Size": "M",
+    "Started": "2026-11-08",
+    "Status": "Done",
+    "Title": "P1.0: stable, clear model context for the actor and the curator"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhHCoRQ",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 490,
+   "title": "P1.0: validate blinded probes and freeze one fact ledger per lineage",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/490",
+   "fields": {
+    "Confidence": "Low",
+    "Finished": "2026-11-08",
+    "Horizon": "Now",
+    "Priority": "P0",
+    "Size": "M",
+    "Started": "2026-11-08",
+    "Status": "Done",
+    "Title": "P1.0: validate blinded probes and freeze one fact ledger per lineage"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhHCoR4",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 491,
+   "title": "P1.0: pre-register the P1 offline study",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/491",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-11-08",
+    "Horizon": "Now",
+    "Priority": "P0",
+    "Size": "M",
+    "Started": "2026-11-08",
+    "Status": "Done",
+    "Title": "P1.0: pre-register the P1 offline study"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhHEm20",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 498,
+   "title": "ADR 010: streamlined delivery",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/498",
+   "fields": {
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Status": "Backlog",
+    "Title": "ADR 010: streamlined delivery"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhHEm4c",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 499,
+   "title": "ADR 010 L1: CI and safety",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/499",
+   "fields": {
+    "Confidence": "High",
+    "Finished": "2026-11-08",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-11-08",
+    "Status": "Done",
+    "Title": "ADR 010 L1: CI and safety"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhHEm6I",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 500,
+   "title": "ADR 010 L2: replace the control registry with a hand-written table",
+   "state": "CLOSED",
+   "url": "https://github.com/CVX-Hull/enactive/issues/500",
+   "fields": {
+    "Confidence": "Medium",
+    "Finished": "2026-11-08",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Started": "2026-11-08",
+    "Status": "Done",
+    "Title": "ADR 010 L2: replace the control registry with a hand-written table"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhHEm7s",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 501,
+   "title": "ADR 010 L3: evidence and data",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/501",
+   "fields": {
+    "Confidence": "High",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Started": "2026-11-08",
+    "Status": "In progress",
+    "Title": "ADR 010 L3: evidence and data"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhHEm9c",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 502,
+   "title": "ADR 010 L4: documentation, one home per fact, native Mermaid",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/502",
+   "fields": {
+    "Confidence": "Medium",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "M",
+    "Status": "Ready",
+    "Title": "ADR 010 L4: documentation, one home per fact, native Mermaid"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhHEm_E",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 503,
+   "title": "ADR 010 L5: delivery rules and Project simplification",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/503",
+   "fields": {
+    "Confidence": "Medium",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Started": "2026-11-08",
+    "Status": "In progress",
+    "Title": "ADR 010 L5: delivery rules and Project simplification"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhHEnAM",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 504,
+   "title": "ADR 010 L6: code hygiene",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/504",
+   "fields": {
+    "Confidence": "High",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Started": "2026-11-08",
+    "Status": "Review",
+    "Title": "ADR 010 L6: code hygiene"
+   }
+  },
+  {
+   "item": "PVTI_lAHOCSR8yM4Bnh3czhHEnCQ",
+   "type": "ISSUE",
+   "archived": false,
+   "number": 505,
+   "title": "ADR 010 L7: provider and model names stay in host adapters",
+   "state": "OPEN",
+   "url": "https://github.com/CVX-Hull/enactive/issues/505",
+   "fields": {
+    "Confidence": "Medium",
+    "Horizon": "Now",
+    "Priority": "P1",
+    "Size": "S",
+    "Started": "2026-11-08",
+    "Status": "In progress",
+    "Title": "ADR 010 L7: provider and model names stay in host adapters"
+   }
+  }
+ ]
+}

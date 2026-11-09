@@ -21,7 +21,7 @@ contracts/state/callers, implementation, tests and operating docs. The
 needs a link and impact statement, not another approval.
 Discuss consequential boundary, dependency or guarantee changes before implementing
 them. Routine fixes need a cohesive diff and relevant checks. Select the
-[assurance tier](docs/project-management.md#risk-based-assurance) by consequence and
+[assurance tier](docs/workflows/review.md#risk-based-assurance) by consequence and
 uncertainty; use cheap feedback throughout and consolidate expensive qualification
 around one coherent outcome.
 
@@ -43,11 +43,11 @@ tests (name those commands/results in the issue or PR):
 .venv/bin/python tools/check.py --fast
 ```
 
-Use [development-first delivery](docs/project-management.md#development-first-delivery)
+Use [development-first delivery](docs/workflows/development.md)
 for finite real development runs before comprehensive qualification. The commit
 hook runs fast checks. At a coherent integration/acceptance checkpoint, resolve
 independent review and require the appropriate successful exact-candidate protected
-CI profile under [the delivery policy](docs/project-management.md#protected-ci-profiles).
+CI profile under [the delivery policy](docs/workflows/ci-profiles.md#protected-ci-profiles).
 Broad source changes require full regression before merge; an existing valid hosted
 full result satisfies that lane without a duplicate local run. The default local
 `.venv/bin/python tools/check.py` remains full. Use [the testing guide](docs/testing.md) to choose focused cases and review overlap.

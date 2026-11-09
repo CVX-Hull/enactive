@@ -29,13 +29,11 @@ Review from that boundary down, using the [risk-based assurance policy](../workf
 The existing Issue/PR is sufficient for a contained change; a consequential change
 links its brief. This impact record is not a second plan or clause-by-clause matrix.
 Issues own scope, acceptance, accountable owner, blockers and exceptions; Project
-Status owns execution stage: Backlog, Ready, In progress, Review, Validation, Done.
-Blocked work retains its stage only while its execution allocation is retained;
-explicitly parked work returns to Backlog with prior stage, owner and resumption
-trigger, preserving original dates/history. Aggregate outcomes do not inherit
-child execution stages. Apply the [live WIP reconciliation](../workflows/work-items.md#ready-brief-and-execution-capacity)
-at selection/discussion/integration/resumption checkpoints; Review and Validation
-require an exact candidate, next action and capacity, not merely outstanding debt.
+Status owns execution stage: Backlog, Ready, In progress, Done
+([work items](../workflows/work-items.md#status-fields-and-dates)). Review and validation
+state lives on the PR. Parked work returns to Backlog with its reason, owner and
+resumption trigger. Aggregate outcomes do not inherit child execution stages. Reconcile
+the Project when selecting work ([capacity](../workflows/work-items.md#ready-brief-and-execution-capacity)).
 Deferred work needs a reason and revisit trigger. Cancelled or duplicate issues
 are closed as not planned and excluded from accepted delivery counts.
 At meaningful discussion, research, review and delivery checkpoints, reconcile
