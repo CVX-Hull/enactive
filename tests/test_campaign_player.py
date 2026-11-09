@@ -11,6 +11,7 @@ import pytest
 
 from harness.computer.protocol import ControlError
 from tools.campaign_player import HostEvents,ending_trigger,finish_interruption,run_hosts
+from tools.configure_player_tools import configuration
 
 
 def test_original_attempts_and_partial_trace_reservation(tmp_path):
@@ -189,10 +190,20 @@ def test_pending_stop_survives_verified_handoff_before_successor_action(tmp_path
     assert result['attempts_charged']==2 and application.runtime.confirm_quiescent.call_count==1
     launched=json.loads((tmp_path/'actors/002/host-process.json').read_text())['argv']
     assert launched[launched.index('--pending-control-id')+1]==first['id']
-    # Only an actor with an available successor is offered the handoff tool.
-    tools=[json.loads((tmp_path/f'actors/{n}/mcp.json').read_text())['enabled_tools'] for n in ('001','002')]
-    assert 'player_handoff' in tools[0] and 'player_handoff' not in tools[1]
-    assert set(tools[0])-set(tools[1])=={'player_handoff'}
+    # Every actor gets the same tool table and system prompt, so their request prefixes are byte-identical;
+    # only the final actor's service refuses a handoff.
+    files=[{name:(tmp_path/f'actors/{n}/{name}').read_bytes() for name in ('mcp.json','context.txt')} for n in ('001','002')]
+    tools=[json.loads(entry['mcp.json'])['enabled_tools'] for entry in files]
+    assert 'player_handoff' in tools[0] and tools[0]==tools[1]
+    assert files[0]['context.txt']==files[1]['context.txt']
+    assert application.final_actor==second['actor_id']
+    # The per-actor audit IDs sit in the first user message, never in the system prompt.
+    prompts=[(tmp_path/f'actors/{n}/prompt.txt').read_text() for n in ('001','002')]
+    for prompt,record in zip(prompts,(first,second)):
+        assert f"Current mechanical session={'b'*32}; your actor={record['actor_id']}; these audit IDs grant no authority." in prompt
+        assert record['actor_id'] not in files[0]['context.txt'].decode()
+    assert 'from your predecessor actor' in prompts[1]
+    assert 'its session and actor_id fields name the previous actor that sealed it, not you' in prompts[1]
 
 
 def test_operator_labels_never_reach_the_player_host(tmp_path):
@@ -225,10 +236,12 @@ def test_operator_labels_never_reach_the_player_host(tmp_path):
     assert application.runtime.add_actor.call_args_list==[((),{}),((),{})]
 
 
-def test_single_host_admission_offers_no_handoff_tool(tmp_path):
+def test_single_host_admission_keeps_the_constant_tool_table_and_marks_its_actor_final(tmp_path):
     profile,route,application=driver_case(tmp_path)
     run_hosts(tmp_path,profile,route,application,'fixture-secret',threading.Event(),time.monotonic()+300)
-    assert 'player_handoff' not in json.loads((tmp_path/'actors/001/mcp.json').read_text())['enabled_tools']
+    assert json.loads((tmp_path/'actors/001/mcp.json').read_text())['enabled_tools']==configuration('x')['enabled_tools']
+    assert 'player_handoff' in json.loads((tmp_path/'actors/001/mcp.json').read_text())['enabled_tools']
+    assert application.final_actor=='a'*32
 
 
 def test_permanent_fence_cannot_be_overwritten_by_later_finish_report(tmp_path):

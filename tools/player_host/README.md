@@ -124,17 +124,30 @@ cycle between `peak − block + 1` and the peak, and the serialized prefix stays
 byte-stable between evictions, which lets
 provider prefix caches reuse it. Block 1 omits exactly the overflow, the earlier
 rolling policy. Choose the counts per route against the provider's image limit.
-Pi's session-affinity header is not sent: OpenRouter ignores sticky routing when a
-manual `provider.order` is pinned, as every OpenRouter route here is. The entire latest assistant tool-call batch is protected,
+The host gives Pi one `sessionId` per mechanical session (a digest of the session
+ID, shared by every actor of the session and recorded as
+`host-start.session_affinity_id`), and Pi sends it as
+`x-session-id` on every OpenRouter request (on a direct `api.openai.com` route Pi
+would also send it as `prompt_cache_key`; none is configured); Pi enables that header for an OpenRouter
+route by itself, so no compat key is needed, and the host fails closed
+(`session-affinity-missing`) if a request would go out without it. Whether OpenRouter
+honours sticky routing with a pinned `provider.order` is unmeasured; the paid
+verification decides. The entire latest assistant tool-call batch is protected,
 including when its final result contains only text. If that group alone exceeds
 the allowance, the host stops before another provider request or request charge.
 Historical omitted image parts become explicit text markers with original message/
 image provenance and hash: pixels were not forwarded in this request, and the
-marker grants no source-read proof or authority. Existing source IDs remain in
-their unmodified text; the player can request the exact source again through its
-available tools. No tool is called automatically to restore an image.
+marker grants no source-read proof or authority. The marker names the frame's
+`source_id` (from its tool result) and says to read it again with `player_source`;
+the player can request the exact source again through its available tools. No tool is called automatically to restore an image.
 
-The request projection adds no HTTP-attempt countdown. The ongoing user objective
+The request projection adds no standing countdown. Instead a transient tail notice,
+never stored and repeated on every later request once passed, warns before each stop
+the host enforces itself: context capacity, `max_requests` (a tenth of the allowance
+left, at least two and at most half) and the work deadline (a tenth left, at least a
+minute and at most half). See the contract's
+[request-stability rules](../../docs/contracts/player-host.md#request-stability-and-tail-notices).
+Every actor shares one system prompt and tool table. The ongoing user objective
 survives actor turnover; experiment quotas, final-actor policy and ending reserves
 stay in operator accounting. MCP's typed actor projection returns
 `player-computer-result/1`, `player-error/2` and `player-transport/2`, without global

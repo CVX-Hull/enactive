@@ -48,7 +48,8 @@ record names it, and it confers no selection.
 Freeze the player guide/current schema and ongoing user objective in context/prompt.
 Keep experiment quotas, ending reserves and host counts in operator files,
 outside the player's supplied prompt/tool/program views. The one deliberate
-final-actor signal is the tool table: an actor with no successor is offered no
+final-actor signal is the refusal of a handoff call: every actor has the same tool
+table, and an actor with no successor is told so only when it calls
 `player_handoff` ([host procedure](player-host.md)). Do not put mutable
 engineering source or hidden game facts into player context.
 

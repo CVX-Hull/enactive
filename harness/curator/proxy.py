@@ -6,7 +6,9 @@ holds only a per-session token the proxy can revoke.
 What reaches the provider is allowlisted, not filtered:
 - **Route.** Only the provider's model route is forwarded.
 - **Headers.** Only a few headers pass, and beta flags only from a frozen set. Responses
-  are always requested uncompressed, so usage stays readable.
+  are always requested uncompressed, so usage stays readable. For a provider with a
+  session-affinity header (OpenRouter's `x-session-id`) the proxy sets one value per proxy,
+  that is per session, on every request; the host's own value is never forwarded.
 - **Body.** Top-level fields and content blocks are allowlisted. Inline text and base64
   images pass. Fetched or stored sources (URLs, files), documents, provider-run tools
   (server tools, MCP servers, containers), stored provider state and pricing tiers are
@@ -31,6 +33,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal
+import hashlib
 import hmac
 import http.client
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -70,6 +73,7 @@ class Provider:
     output_field: str  # body field holding the output-token limit
     fields: frozenset[str]  # allowed top-level body fields
     blocks: frozenset[str]  # allowed content-block types
+    affinity_header: str | None = None  # session-affinity header the proxy itself sets, if the provider has one
 
     def auth(self, key: str) -> tuple[str, str]:
         return (self.key_header, key) if self.key_header == 'x-api-key' else ('authorization', f'Bearer {key}')
@@ -104,7 +108,8 @@ OPENROUTER = Provider(
     'openrouter', frozenset({'/api/v1/chat/completions'}), 'authorization', 'max_completion_tokens',
     frozenset({'model', 'messages', 'stream', 'stream_options', 'max_completion_tokens', 'temperature', 'top_p',
                'tools', 'tool_choice', 'reasoning', 'provider', 'store'}),
-    frozenset({'text', 'image_url', 'function', 'reasoning.text', 'reasoning.summary', 'reasoning.encrypted'}))
+    frozenset({'text', 'image_url', 'function', 'reasoning.text', 'reasoning.summary', 'reasoning.encrypted'}),
+    affinity_header='x-session-id')
 
 
 def refusal(provider: Provider, request: object) -> str | None:
@@ -320,6 +325,11 @@ class ModelProxy:
         # so a host cannot widen it to fallbacks or other providers.
         self.routing = None if routing is None else json.loads(json.dumps(routing))
         self.token = secrets.token_hex(32)
+        # One provider session-affinity value for this proxy, hence for the session, so the provider keeps the
+        # session on one backend and its prompt cache. The proxy sets it; a value from the host is never
+        # forwarded, and it is independent of the token. Only a short digest of it enters the ledger.
+        self.affinity = 'curator-' + secrets.token_hex(16)
+        self.affinity_digest = hashlib.sha256(self.affinity.encode()).hexdigest()[:16]
         self.spent = Decimal(0)
         self.reserved = Decimal(0)
         self.revoked = False
@@ -447,7 +457,8 @@ class ModelProxy:
                     actual = None if usage is None else cost_of(proxy.provider, proxy.prices[model], usage, received)
                     charge, breach = proxy._settle(reservation, actual, status)
                     proxy._record(path=path, model=model, status=status, reserved=reservation, charged=charge,
-                                  usage_missing=actual is None, breach=breach, error=error, dropped_betas=dropped)
+                                  usage_missing=actual is None, breach=breach, error=error, dropped_betas=dropped,
+                                  affinity_sha256=proxy.affinity_digest if proxy.provider.affinity_header else None)
                 if error and not self.started:
                     self.refuse(502, f'upstream failed: {error}')
                 elif self.started and self.client_open and not error:
@@ -470,6 +481,8 @@ class ModelProxy:
                     headers['anthropic-beta'] = ','.join(betas)
                 name, value = proxy.provider.auth(proxy._key)
                 headers[name] = value
+                if proxy.provider.affinity_header:
+                    headers[proxy.provider.affinity_header] = proxy.affinity
                 headers['accept-encoding'] = 'identity'
                 headers['content-length'] = str(len(body))
                 try:

@@ -50,7 +50,7 @@ harness stop rule or permission to replay uncertain input.
 | `player_memory_append/read/query/context` | Store or retrieve fallible claims, Work, decisions, procedures, corrections and candidate advice with sources/support. |
 | `player_program_save/read/run` | Retain immutable JavaScript lineage and run a selected bounded local program through the same basic-control port. |
 | `player_result` | Collect an original memory/program authoring or program-run request after lost transport. |
-| `player_handoff` | Seal this actor with bounded immutable knowledge and unfinished-work summary. Original limits remain. Offered only when a successor is available; check your actual tool list. |
+| `player_handoff` | Seal this actor with bounded immutable knowledge and unfinished-work summary. Original limits remain. Always listed. If it is refused because you are the final actor, nothing changes: write your report and call `player_finish`. Otherwise a call seals you, even when the admission then ends. |
 | `player_finish` | Report task completion, inability to continue, or completion of a directly received external stop request. This player-host tool stops your loop; it does not certify game success or saving. |
 
 The schema is authoritative for closed arguments. Keys use printable ASCII or
@@ -130,6 +130,14 @@ reads/original collection do not permit input or another handoff. The driver mus
 verify your actual host/MCP quiescence and canonical context before a successor.
 No save, menu or identity condition is required for this actor-only transfer.
 User Pause or uncertain input cannot become handoff-resumable.
+Your session and actor IDs are in your first message, as audit data that grants no
+authority. A handoff packet you receive is your predecessor's: its `session` and
+`actor_id` fields name the actor that sealed it, not you.
+
+Notices from the host appear at the end of your context and are not part of your history.
+They warn before the host must stop you (context, request or time allowance); when one
+appears, wrap up with `player_handoff` or `player_finish`. A note that older pixels were omitted
+names the frame's `source_id`: read it again with `player_source` if you need it.
 
 Use `player_finish` to end your loop with `task_complete`, `cannot_continue` or
 `external_stop_complete`, a report, source references and `control_id`. The last

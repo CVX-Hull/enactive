@@ -220,6 +220,20 @@ def test_unknown_envelopes_and_nested_versions_never_pass_through(service):
         actor_result(nested)
 
 
+def test_real_adapter_instructions_are_identical_across_actors_and_name_no_identity():
+    # The host's system prompt embeds these instructions, so per-actor text here would change every
+    # successor's request prefix; the host-side serialization tests use a fixture server instead.
+    seen = []
+    for session, actor in (('a' * 32, 'b' * 32), ('c' * 32, 'd' * 32)):
+        client = SimpleNamespace(config={'session': session, 'actor_id': actor}, call=lambda name, args: None)
+        with patch('harness.player_mcp.Server') as server:
+            make_server(client)
+        text = server.call_args.kwargs['instructions']
+        assert session not in text and actor not in text
+        seen.append(text)
+    assert seen[0] == seen[1]
+
+
 def test_mcp_projects_success_errors_and_unknown_result_without_image_leak(service):
     app, runtime, channel, actor = service
     raw = call(app, actor, 'computer_observe', {})

@@ -20,9 +20,9 @@ export const configuration = () => ({
 });
 
 function sse(calls, usage = { prompt_tokens: 120, completion_tokens: 15, total_tokens: 135, cost: 0.0002,
-  prompt_tokens_details: { cached_tokens: 100 }, completion_tokens_details: { reasoning_tokens: 4 } }) {
+  prompt_tokens_details: { cached_tokens: 100 }, completion_tokens_details: { reasoning_tokens: 4 } }, prefix = 'call') {
   const delta = { role: 'assistant', ...(calls.length ? { tool_calls: calls.map(([name, args], index) => ({
-    index, id: `call-${name}-${index}`, type: 'function', function: { name, arguments: JSON.stringify(args) } })) } : { content: 'done' }) };
+    index, id: `${prefix}-${name}-${index}`, type: 'function', function: { name, arguments: JSON.stringify(args) } })) } : { content: 'done' }) };
   const chunks = [{ id: 'g', model: 'backend', choices: [{ index: 0, delta, finish_reason: null }] },
     { id: 'g', model: 'backend', choices: [{ index: 0, delta: {}, finish_reason: calls.length ? 'tool_calls' : 'stop' }] },
     { id: 'g', model: 'backend', choices: [], usage }];
@@ -218,4 +218,87 @@ test('older frame images are replaced by a marker in whole blocks', () => {
   assert.equal(projected.messages[0].content[0].type, 'text');
   assert.equal(projected.messages[2].content[0].type, 'image');
   assert.equal(messages[0].content[0].type, 'image');
+});
+
+// ---- request serialization (ADR 009 P1.0): what a provider's prompt cache sees, with no provider call ----
+const noteOf = body => body.messages.at(-1);
+const MARKED = '\n[Earlier frame image omitted';
+const bodyText = message => typeof message.content === 'string' ? message.content : (message.content ?? []).map(part => part.text ?? '').join('');
+const isCarrier = message => message.role === 'user' && Array.isArray(message.content) && message.content[0]?.text === 'Attached image(s) from tool result:';
+/** Messages without the tail note, the pixel carriers and the omission markers: what eviction never touches. */
+const skeleton = body => body.messages.slice(0, -1).filter(message => !isCarrier(message)).map(message => JSON.stringify(
+  message.role === 'tool' && typeof message.content === 'string' && message.content.includes(MARKED)
+    ? { ...message, content: message.content.slice(0, message.content.indexOf(MARKED)) } : message));
+const markersOf = body => new Map(body.messages.filter(message => message.role === 'tool' && bodyText(message).includes(MARKED))
+  .map(message => [message.tool_call_id, message.content]));
+
+function assertStable(payloads) {
+  for (const [index, { body }] of payloads.entries()) {
+    assert.equal(JSON.stringify({ ...body, messages: undefined }), JSON.stringify({ ...payloads[0].body, messages: undefined }), `request ${index + 1}: tools and fields are stable`);
+    assert.equal(JSON.stringify(body.messages[0]), JSON.stringify(payloads[0].body.messages[0]), 'system prompt is stable');
+    assert.equal(noteOf(body).role, 'user');
+    assert.match(bodyText(noteOf(body)), /^Budget: /, 'the transient note is the tail');
+    if (index === 0) continue;
+    const before = skeleton(payloads[index - 1].body), now = skeleton(body);
+    assert.deepEqual(now.slice(0, before.length), before, `request ${index + 1}: previous request is a byte-identical prefix`);
+    for (const [id, marker] of markersOf(payloads[index - 1].body)) assert.equal(markersOf(body).get(id), marker, 'a marker never changes once written');
+    assert.ok(body.messages.slice(0, -1).every(message => !/^Budget: /.test(bodyText(message))), 'no note is stored in history');
+  }
+}
+
+test('serialization: appends, eviction, a retry and the tail note keep the prefix byte-identical', async t => {
+  const view = n => () => sse([['view_frame', { frames: ['s-2'] }]], undefined, `v${n}`);
+  const gateway = () => new Response('bad gateway', { status: 502 });
+  const { result, payloads } = await session(t, [view(1), view(2), view(3), view(4), gateway, view(5), view(6), view(7), () => sse([['finish', { summary: 'done' }]])],
+    { configuration: { ...configuration(), max_requests: 12 } });
+  assert.equal(result.ok, true);
+  assert.equal(payloads.length, 9);
+  assertStable(payloads);
+  // The retried attempt resends the body unchanged.
+  assert.equal(JSON.stringify(payloads[4].body), JSON.stringify(payloads[5].body));
+  // Four images are allowed in blocks of two: evictions happened, rarely, and the markers name the frame.
+  const marked = markersOf(payloads.at(-1).body);
+  assert.ok(marked.size >= 2);
+  for (const marker of marked.values()) assert.match(marker, /frame s-2\); call view_frame with frames \["s-2"\] to see it again/);
+});
+
+test('serialization: the context notice persists once passed and precedes the capacity stop', async t => {
+  const usage = tokens => ({ prompt_tokens: tokens, completion_tokens: 10, total_tokens: tokens + 10, cost: 0.0001 });
+  const list = tokens => () => sse([['list_dir', {}]], usage(tokens));
+  // Below the line, then past three quarters of the window, then within one output of the end.
+  const { result, payloads } = await session(t, [list(10_000), list(200_000), list(230_000), list(258_100), list(100)]);
+  assert.equal(result.reason, 'context-capacity');
+  assert.equal(payloads.length, 4, 'the stopped request is never sent');
+  const warned = payloads.map(payload => /nearly full/.test(bodyText(noteOf(payload.body))));
+  assert.deepEqual(warned, [false, false, true, true]);
+  assert.match(bodyText(noteOf(payloads[3].body)), /about \d+ tokens of room remain before the host stops the session/);
+  assertStable(payloads);
+});
+
+test('serialization: the wall-clock limit warns before the stop but never moves the phase', async () => {
+  const { budgetNote, FINISH_AT } = await import('../host.mjs');
+  const half = budgetNote({ requests: 1, maxRequests: 100, spent: 0, budget: 1, elapsedSeconds: 50, wallSeconds: 100 });
+  assert.match(half.text, /50 of 100 s of time used\. More than half the time is used/);
+  const late = budgetNote({ requests: 1, maxRequests: 100, spent: 0, budget: 1, elapsedSeconds: 90, wallSeconds: 100 });
+  assert.match(late.text, /The time is nearly up: the host stops the session/);
+  // Only requests and dollars refuse reading tools; time alone does not.
+  assert.ok(late.share < FINISH_AT);
+  assert.doesNotMatch(late.text, /refused/);
+  assert.doesNotMatch(budgetNote({ requests: 1, maxRequests: 100, spent: 0, budget: 1 }).text, /time used/);
+});
+
+test('serialization: a host never sets an affinity header; the proxy owns it', async t => {
+  const { payloads } = await session(t, [sse([['list_dir', {}]]), sse([['finish', { summary: 'ok' }]])]);
+  for (const payload of payloads) {
+    const headers = new Headers(payload.headers);
+    for (const name of ['x-session-id', 'x-session-affinity', 'x-client-request-id', 'session_id']) assert.equal(headers.has(name), false, name);
+  }
+});
+
+test('serialization: a marker names the frame, and one without a label keeps the older text', () => {
+  const batch = (id, name) => ({ role: 'toolResult', toolCallId: id, content: [{ type: 'text', text: name ? `frame ${name} (3 bytes)` : 'no label' }, { type: 'image', data: 'AA==', mimeType: 'image/png' }] });
+  const projected = projectImages([batch('a', 'sid-1'), batch('b', null), batch('c', 'sid-3')], 1, 2);
+  assert.match(projected.messages[0].content[1].text, /tool call a, frame sid-1\); call view_frame with frames \["sid-1"\]/);
+  assert.equal(projected.messages[1].content[1].text, '[Earlier frame image omitted to bound the request (tool call b); call view_frame again to see it.]');
+  assert.equal(projected.messages[2].content[1].type, 'image');
 });
