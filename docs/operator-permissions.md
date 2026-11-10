@@ -50,12 +50,12 @@ Owner-set envelopes, each within the standing $1,000 cumulative cap:
   [its record](acceptance/2026-11-07-seven-day-397.md)). It is closed: the lineage ended.
 - P1's held-out lineage `lh4` ([#522](https://github.com/CVX-Hull/enactive/issues/522)) has an $80
   new-spend envelope, approved with [p1-study/2](design/p1-study-2.md#running-lh4) on
-  9 November 2026. It opens only after the owner approves #522's frozen package, and it covers
-  no game launch outside that lineage.
+  9 November 2026 ([its record](acceptance/2026-11-09-held-out-lineage-522.md)). It is closed:
+  the lineage ended.
 
 Cumulative actual spend against the $1,000 cap is stated in the latest study record that
-spent (currently the [#397 record's spend line](acceptance/2026-11-07-seven-day-397.md));
-the run ledger, `data/evaluation/runs.jsonl`, holds only the #372, #382 and #397 studies,
+spent (currently the [#522 record's spend line](acceptance/2026-11-09-held-out-lineage-522.md#result));
+the run ledger, `data/evaluation/runs.jsonl`, holds only the #372, #382, #397 and #522 studies,
 and `tools/run_ledger.py totals --study` reports one study's spend and envelope headroom.
 
 ## Engineering decision and merge delegation

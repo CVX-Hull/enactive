@@ -463,6 +463,21 @@
       },
       "visibility": "private"
     },
+    "522-held-out": {
+      "availability": "present",
+      "bytes": 332012959,
+      "cited_by": [
+        "docs/acceptance/2026-11-09-held-out-lineage-522.md"
+      ],
+      "files": 2483,
+      "manifest_sha256": "fbef2143a83dcf884dfe4bbb76a0f08e849152a61525cacbd6feb0bc7c02b3f3",
+      "note": "P1 held-out lineage lh4 (#522, 9 November 2026), held out until P1 scoring: the run worktree's .runtime at 9719946 (the lost lh4a1 package, the seven lh4b1-lh4b7 packages, evaluation records, the lineage userdir and the player-memory-lh4 store, archive-lh4a1 with the lost admission's userdir and empty store, the 522-lh4 adapter build and its native check) and the operator directory (packaging, admission, monitor and report scripts, operator ledgers, admission logs, D4 reviews, run-monitor batches and answers, and raw/ with supervisor and evaluator output). The app copy, credential map and locks are skipped by rule.",
+      "sources": {
+        ".": ".runtime/worktrees/522/source/.runtime@9719946",
+        "operator": ".runtime/worktrees/522/operator"
+      },
+      "visibility": "private"
+    },
     "curator-shadow-454": {
       "availability": "present",
       "bytes": 1548018,
