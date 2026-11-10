@@ -6,6 +6,8 @@ which keeps p1-study/1's rule from docs/design/p1-study.md; #491, #178).
   python -m tools.p1_analysis units --probes <p1-probes/1>...   # the probes the judges score
   python -m tools.p1_analysis rejudge --probes <p1-probes/1>... # the items judged a second time
   python -m tools.p1_analysis score --probes <p1-probes/1>... --scores <p1-score/1> --hours <JSON> [--out ...]
+  python -m tools.p1_analysis batches {scoring,rejudge,audit,guess} ...   # the judges' input batches (tools/p1_batches.py)
+  python -m tools.p1_analysis parse {scoring,rejudge,audit,guess} ...     # their output files -> p1-score/1 rows
 
 `--probes` may be given once per held-out directory (rows are concatenated in the order given) for
 `simulate`, `units`, `rejudge` and `score`. Each file must have a digest in the `frozen.json` beside it
@@ -28,6 +30,7 @@ import argparse
 import json
 import math
 import random
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -579,7 +582,14 @@ def gate(probabilities: dict[str, float]) -> dict:
     return dict(no_effect=none, at_interest=interest, passes=none <= 0.05 and interest >= 0.80)
 
 
+BATCH_STEPS = ('batches', 'parse')   # the judges' input batches and their output files: tools/p1_batches.py
+
+
 def main(argv=None) -> int:
+    given = sys.argv[1:] if argv is None else list(argv)
+    if given[:1] and given[0] in BATCH_STEPS:
+        from tools import p1_batches    # imports this module, so it is loaded only for these steps
+        return p1_batches.main(given)
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('step', choices=('simulate', 'plan', 'units', 'rejudge', 'score'))
     parser.add_argument('--probes', type=Path, action='append',

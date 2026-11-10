@@ -124,6 +124,9 @@ def received_text(boundary: Boundary) -> str:
 class Item:
     kind: str       # for reporting only; never rendered
     statement: str
+    # The source ids the item cites (A: a record's `sources`; B: a fact's `citations`). Metadata for the
+    # false-fact audit (docs/design/p1-study-2.md, Judges); never rendered.
+    cites: tuple[str, ...] = ()
 
 
 _EMPTY = (None, '', [], {})
@@ -175,7 +178,12 @@ def arm_a_items(store: dict, cutoff: float) -> list[Item]:
     written = [r for r in store['records'] if _written_before(r, cutoff)]
     superseded = {r['supersedes'] for r in written if r.get('supersedes')}
     live = sorted((r for r in written if r['id'] not in superseded), key=lambda r: (-r['created_wall'], r['id']))
-    return [Item(kind=r['kind'], statement=record_statement(r)) for r in live]
+    return [Item(kind=r['kind'], statement=record_statement(r), cites=_cites(r.get('sources'))) for r in live]
+
+
+def _cites(value: object) -> tuple[str, ...]:
+    """The cited source ids of a record or fact, in order, repeats removed; anything else cites nothing."""
+    return tuple(dict.fromkeys(v for v in value if isinstance(v, str))) if isinstance(value, list) else ()
 
 
 def _published(fact: dict) -> int:
@@ -188,7 +196,8 @@ def arm_b_items(facts: Sequence[dict], game: str) -> list[Item]:
     live = [f for f in facts if 'superseded_by' not in f and isinstance(f.get('scope'), dict)
             and f['scope'].get('game') == game]
     live.sort(key=lambda f: (-_published(f), str(f.get('id'))))
-    return [Item(kind=str(f.get('type')), statement=f['statement'] if isinstance(f.get('statement'), str) else '')
+    return [Item(kind=str(f.get('type')), statement=f['statement'] if isinstance(f.get('statement'), str) else '',
+                 cites=_cites(f.get('citations')))
             for f in live]
 
 
@@ -231,6 +240,8 @@ class Rendered:
     tokens: int
     items: int                  # delivered
     dropped: int                # cut by the cap, the first that did not fit and every older one
+    # The delivered items in order: each statement as rendered (cleaned) and what it cites. Not rendered.
+    working_set: tuple[Item, ...] = ()
 
 
 def render(items: Sequence[Item], cap: int = CAP_TOKENS) -> Rendered:
@@ -238,16 +249,19 @@ def render(items: Sequence[Item], cap: int = CAP_TOKENS) -> Rendered:
 
     The item's `kind` is not rendered: the two arms' kinds are different vocabularies (a record's
     kind, a curator's fact type), so a label would tell the arms apart."""
-    usable = [statement for statement in (clean(i.statement, STATEMENT_CHARS) for i in items) if statement]
+    usable = [(statement, i) for i in items if (statement := clean(i.statement, STATEMENT_CHARS))]
     lines: list[str] = []
+    kept: list[Item] = []
     text = ''
-    for statement in usable:
+    for statement, item in usable:
         candidate = '\n'.join([HEADER, *lines, f'- {statement}'])
         if tokens(candidate) > cap:
             break
         lines.append(f'- {statement}')
+        kept.append(Item(kind=item.kind, statement=statement, cites=item.cites))
         text = candidate
-    return Rendered(text=text, tokens=tokens(text), items=len(lines), dropped=len(usable) - len(lines))
+    return Rendered(text=text, tokens=tokens(text), items=len(lines), dropped=len(usable) - len(lines),
+                    working_set=tuple(kept))
 
 
 def delivered(received: str, rendered: Rendered) -> str:
