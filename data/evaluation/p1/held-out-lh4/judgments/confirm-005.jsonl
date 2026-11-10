@@ -1,0 +1,15 @@
+{"id":"lh4-p0061","same":false,"informative":true,"what":"Crafting search results differ: digging stick vs large wooden club/wooden club"}
+{"id":"lh4-p0062","same":false,"informative":true,"what":"Map view with different sidebar message logs and character state"}
+{"id":"lh4-p0063","same":true,"informative":true,"what":"Same map view at moonshine still with identical message log (only wind differs)"}
+{"id":"lh4-p0064","same":false,"informative":true,"what":"Nearby items list differs: 12 entries incl. aluminum can vs 11 entries without it"}
+{"id":"lh4-p0065","same":true,"informative":true,"what":"Pickup menu for counter 1E listing only Sew Awesome Monthly"}
+{"id":"lh4-p0066","same":true,"informative":true,"what":"Overmap view with moonshine still description panel"}
+{"id":"lh4-p0067","same":true,"informative":true,"what":"Pickup menu listing nicotine pouch can and radio (off)"}
+{"id":"lh4-p0068","same":true,"informative":true,"what":"Overmap view with radio tower northeast description panel"}
+{"id":"lh4-p0069","same":true,"informative":true,"what":"Overmap view with moonshine still description panel"}
+{"id":"lh4-p0070","same":false,"informative":false,"what":"Loading screens with different loading messages"}
+{"id":"lh4-p0071","same":false,"informative":true,"what":"Map view at moonshine still with different message logs and status"}
+{"id":"lh4-p0072","same":true,"informative":false,"what":"Empty favorites crafting tab (0 in category)"}
+{"id":"lh4-p0073","same":true,"informative":false,"what":"Empty crafting Searched tab (0 in category)"}
+{"id":"lh4-p0074","same":false,"informative":true,"what":"Map view at moonshine still with different message logs and status"}
+{"id":"lh4-p0075","same":true,"informative":true,"what":"Same 21-item nearby items list starting with paper wrapper"}

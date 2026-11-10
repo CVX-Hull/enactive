@@ -1,0 +1,15 @@
+{"id":"lh4-p0076","same":false,"informative":false,"what":"Same map view but different message log contents (crafting water vs picking up/dropping items)"}
+{"id":"lh4-p0077","same":true,"informative":true,"what":"Overmap view with swamp northeast from Freedom, same terrain and help panel"}
+{"id":"lh4-p0078","same":true,"informative":true,"what":"Crafting recipe screen for boiled fiddleheads, same details and result panel"}
+{"id":"lh4-p0079","same":true,"informative":true,"what":"Overmap view with mine entrance northeast from Freedom, same terrain"}
+{"id":"lh4-p0080","same":false,"informative":false,"what":"Multidrop inventory lists with different contents (item counts, bottle contents differ)"}
+{"id":"lh4-p0081","same":true,"informative":true,"what":"Batch crafting list of boiled fiddleheads, same entries and recipe panel; only failure chances and highlight differ"}
+{"id":"lh4-p0082","same":true,"informative":true,"what":"Overmap view with radio tower northeast from Freedom, same terrain"}
+{"id":"lh4-p0083","same":false,"informative":false,"what":"Radio tower local map with different surroundings and different message logs"}
+{"id":"lh4-p0084","same":false,"informative":false,"what":"Nearby items lists differ (11 entries vs 7 entries, different items and distances)"}
+{"id":"lh4-p0085","same":true,"informative":false,"what":"Empty recipe search results (0 in category)"}
+{"id":"lh4-p0086","same":true,"informative":true,"what":"Pickup menu listing the same floor items: long string, 4 nails, 2 sheets, stick"}
+{"id":"lh4-p0087","same":true,"informative":false,"what":"Empty recipe search results (0 in category)"}
+{"id":"lh4-p0088","same":false,"informative":false,"what":"Basic fishing rod recipe with different component requirement states and values"}
+{"id":"lh4-p0089","same":true,"informative":true,"what":"Overmap view with moonshine still northeast from Freedom, same terrain"}
+{"id":"lh4-p0090","same":true,"informative":true,"what":"Same cordage recipe list (23 entries); only highlighted row and side panel selection differ"}

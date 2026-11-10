@@ -1,0 +1,77 @@
+{"type": "carry", "fact": "F1", "boundary": "lh4b2-002>lh4b3-001", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F2", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F3", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F4", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F6", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F7", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F8", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F9", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F10", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F11", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F12", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F13", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F15", "boundary": "lh4b2-002>lh4b3-001", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F16", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F17", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F18", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F19", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F20", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F21", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F22", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F23", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F24", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F25", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F27", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F28", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F29", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F30", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F31", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F32", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F33", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F34", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F35", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F36", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F37", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F38", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F39", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F40", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F41", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F42", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F43", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F44", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F45", "boundary": "lh4b2-002>lh4b3-001", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F46", "boundary": "lh4b2-002>lh4b3-001", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F47", "boundary": "lh4b2-002>lh4b3-001", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F48", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F49", "boundary": "lh4b2-002>lh4b3-001", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F50", "boundary": "lh4b2-002>lh4b3-001", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F51", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F52", "boundary": "lh4b2-002>lh4b3-001", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F53", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F54", "boundary": "lh4b2-002>lh4b3-001", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F55", "boundary": "lh4b2-002>lh4b3-001", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F56", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "carry", "fact": "F57", "boundary": "lh4b2-002>lh4b3-001", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F58", "boundary": "lh4b2-002>lh4b3-001", "carried": false, "where": null}
+{"type": "event", "fact": "F30", "event": "used", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-3", "note": "Loaded Verdon world and Morgan Hale from the load menu"}
+{"type": "event", "fact": "F1", "event": "used", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-5494", "note": "Stats screen shows Morgan Hale, male, 25 years"}
+{"type": "event", "fact": "F47", "event": "used", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-209", "note": "Long pointy stick is wielded"}
+{"type": "event", "fact": "F29", "event": "rediscovered", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-209", "note": "Status shows Overweight at 23.6 lbs"}
+{"type": "event", "fact": "F51", "event": "rediscovered", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-209", "note": "Safe mode shows On"}
+{"type": "event", "fact": "F52", "event": "needed", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-209", "note": "Morgan starts in an Isherwood family farm field"}
+{"type": "event", "fact": "F52", "event": "rediscovered", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-209", "note": "Owner Isherwood family, place farm field"}
+{"type": "event", "fact": "F54", "event": "needed", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-209", "note": "Jesse Isherwood heard saying Goodbye nearby"}
+{"type": "event", "fact": "F54", "event": "rediscovered", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-453", "note": "Jesse Isherwood visible near the horse"}
+{"type": "event", "fact": "F53", "event": "needed", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-2285", "note": "Chickens and a horse seen in the family fields"}
+{"type": "event", "fact": "F53", "event": "rediscovered", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-2285", "note": "Chickens and horse seen near the barn fence"}
+{"type": "event", "fact": "F49", "event": "needed", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-3088", "note": "Searched recipes for fiddlehead, none found"}
+{"type": "event", "fact": "F50", "event": "needed", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-3088", "note": "Looked for a fiddlehead preparation recipe"}
+{"type": "event", "fact": "F15", "event": "used", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-3945", "note": "Foraged forest underbrush looking for food"}
+{"type": "event", "fact": "F15", "event": "needed", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-6618", "note": "Searched recipes again for a food source with no results"}
+{"type": "fact", "id": "F59", "statement": "Foraging through underbrush in the unowned forest east of the Isherwood fields repeatedly finds nothing, and survival skill stays at level 0", "category": "other", "observed": "a0e3e64db5f9bde4ac7446ae5fe58881-3945", "stored": "5f3be2"}
+{"type": "fact", "id": "F60", "statement": "A hickory tree in that forest offers nothing to harvest this season and can only be dug up for roots", "category": "resource", "observed": "a0e3e64db5f9bde4ac7446ae5fe58881-6345", "stored": null}
+{"type": "fact", "id": "F61", "statement": "Acting inside Isherwood land, such as taking or disturbing property, triggers a warning that the family probably will not appreciate it", "category": "hazard", "observed": "a0e3e64db5f9bde4ac7446ae5fe58881-1341", "stored": null}
+{"type": "fact", "id": "F62", "statement": "Blueberry, huckleberry and raspberry bushes grow in the Isherwood fields and the forest east of them and slow movement", "category": "resource", "observed": "a0e3e64db5f9bde4ac7446ae5fe58881-6105", "stored": null}
+{"type": "fact", "id": "F63", "statement": "A pile of rotten and old manure with four more items lies at the Isherwood horse stable", "category": "resource", "observed": "a0e3e64db5f9bde4ac7446ae5fe58881-2652", "stored": null}
+{"type": "fact", "id": "F64", "statement": "Morgan's survival skill is level 0 at 72%, food handling 1 and fabrication 1, carrying 23.6 of 99.2 lbs", "category": "self", "observed": "a0e3e64db5f9bde4ac7446ae5fe58881-5494", "stored": "5f3be2"}
+{"type": "end", "frames_viewed": 32}

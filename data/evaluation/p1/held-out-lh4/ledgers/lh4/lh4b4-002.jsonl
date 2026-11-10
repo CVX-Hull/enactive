@@ -1,0 +1,117 @@
+{"type":"carry","fact":"F1","boundary":"lh4b4-001>lh4b4-002","carried":true,"where":"report"}
+{"type":"carry","fact":"F2","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F3","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F4","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F6","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F7","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F8","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F9","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F10","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F11","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F12","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F13","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F15","boundary":"lh4b4-001>lh4b4-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F16","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F17","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F18","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F19","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F20","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F21","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F22","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F23","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F24","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F25","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F27","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F28","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F29","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F30","boundary":"lh4b4-001>lh4b4-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F31","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F32","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F33","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F34","boundary":"lh4b4-001>lh4b4-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F35","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F36","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F37","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F38","boundary":"lh4b4-001>lh4b4-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F39","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F40","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F41","boundary":"lh4b4-001>lh4b4-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F42","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F43","boundary":"lh4b4-001>lh4b4-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F44","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F45","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F46","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F47","boundary":"lh4b4-001>lh4b4-002","carried":true,"where":"report"}
+{"type":"carry","fact":"F48","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F49","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F50","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F51","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F52","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F53","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F54","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F55","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F56","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F57","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F58","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F59","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F60","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F61","boundary":"lh4b4-001>lh4b4-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F62","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F63","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F65","boundary":"lh4b4-001>lh4b4-002","carried":true,"where":"report"}
+{"type":"carry","fact":"F66","boundary":"lh4b4-001>lh4b4-002","carried":true,"where":"report"}
+{"type":"carry","fact":"F67","boundary":"lh4b4-001>lh4b4-002","carried":true,"where":"report"}
+{"type":"carry","fact":"F68","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F69","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F70","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F71","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F72","boundary":"lh4b4-001>lh4b4-002","carried":true,"where":"report"}
+{"type":"carry","fact":"F73","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F74","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F75","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F76","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F77","boundary":"lh4b4-001>lh4b4-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F78","boundary":"lh4b4-001>lh4b4-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F79","boundary":"lh4b4-001>lh4b4-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F80","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"carry","fact":"F81","boundary":"lh4b4-001>lh4b4-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F82","boundary":"lh4b4-001>lh4b4-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F83","boundary":"lh4b4-001>lh4b4-002","carried":false,"where":null}
+{"type":"event","fact":"F1","event":"rediscovered","frame":"2a960e884129f3b5b383922a0aa60005-6058","note":"Character screen shows Morgan Hale, male, 25 years"}
+{"type":"event","fact":"F67","event":"rediscovered","frame":"2a960e884129f3b5b383922a0aa60005-6058","note":"Survival skill shows level 1 at 86%"}
+{"type":"event","fact":"F39","event":"rediscovered","frame":"2a960e884129f3b5b383922a0aa60005-6302","note":"Clean water recipe shows boiling tool requirement and 13 water nearby"}
+{"type":"event","fact":"F41","event":"rediscovered","frame":"2a960e884129f3b5b383922a0aa60005-6302","note":"Clean water stock of 13 is again visible"}
+{"type":"event","fact":"F72","event":"rediscovered","frame":"2a960e884129f3b5b383922a0aa60005-6353","note":"Murky water (92) from the recess pool is offered to consume or pour"}
+{"type":"event","fact":"F34","event":"used","frame":"2a960e884129f3b5b383922a0aa60005-6625","note":"Aluminum can wielded as a container to pour murky water into"}
+{"type":"event","fact":"F22","event":"needed","frame":"2a960e884129f3b5b383922a0aa60005-6928","note":"Brazier recipe searched while seeking a heat source; a makeshift brazier needs a bucket, hammering tool and nail"}
+{"type":"event","fact":"F77","event":"needed","frame":"2a960e884129f3b5b383922a0aa60005-8003","note":"Construction list searched for pit and fire options while needing a heat source"}
+{"type":"event","fact":"F78","event":"rediscovered","frame":"2a960e884129f3b5b383922a0aa60005-8046","note":"Digging stick recipe shown again, craftable from a stick and cutting tool"}
+{"type":"event","fact":"F51","event":"rediscovered","frame":"2a960e884129f3b5b383922a0aa60005-8999","note":"Zombie miner spotted 60 tiles to the northwest during auto-travel"}
+{"type":"event","fact":"F45","event":"rediscovered","frame":"2a960e884129f3b5b383922a0aa60005-9816","note":"Arrived at the moonshine still hut, a thermometer lies near it"}
+{"type":"event","fact":"F6","event":"rediscovered","frame":"2a960e884129f3b5b383922a0aa60005-10330","note":"Smartphone listed at 52/56 battery"}
+{"type":"event","fact":"F75","event":"rediscovered","frame":"2a960e884129f3b5b383922a0aa60005-10330","note":"Pocket knife listed among tools"}
+{"type":"event","fact":"F38","event":"used","frame":"2a960e884129f3b5b383922a0aa60005-10330","note":"Flint and steel offered as a fire starter in the use menu"}
+{"type":"event","fact":"F49","event":"rediscovered","frame":"2a960e884129f3b5b383922a0aa60005-10330","note":"Three fresh fiddleheads still carried"}
+{"type":"event","fact":"F40","event":"used","frame":"2a960e884129f3b5b383922a0aa60005-11112","note":"Fire lit at the fire ring after crafting tinder"}
+{"type":"event","fact":"F46","event":"rediscovered","frame":"2a960e884129f3b5b383922a0aa60005-11214","note":"Sweet water recipe shows 61 sugar on hand"}
+{"type":"event","fact":"F21","event":"needed","frame":"2a960e884129f3b5b383922a0aa60005-11562","note":"Fish and cooking recipes need a nearby fire or cooker"}
+{"type":"event","fact":"F81","event":"needed","frame":"2a960e884129f3b5b383922a0aa60005-11562","note":"Fishing rod and hook recipes listed while considering fishing"}
+{"type":"event","fact":"F39","event":"used","frame":"2a960e884129f3b5b383922a0aa60005-14991","note":"Clean water crafted from memory beside the fire ring"}
+{"type":"event","fact":"F82","event":"rediscovered","frame":"2a960e884129f3b5b383922a0aa60005-15097","note":"Short cordage piece recipe shown again, needing tanbark, willowbark, straw or a withered plant"}
+{"type":"event","fact":"F43","event":"rediscovered","frame":"2a960e884129f3b5b383922a0aa60005-15097","note":"Cordage pieces are the input listed for a basic fishing rod"}
+{"type":"fact","id":"F84","statement":"Morgan carries a matchbook with 20 matches, an extra fire starter","category":"item","observed":"2a960e884129f3b5b383922a0aa60005-6309","stored":null}
+{"type":"fact","id":"F85","statement":"The moonshine still camp has a fire ring, folding chairs and a shovel lying on the ground west of the hut","category":"place","observed":"2a960e884129f3b5b383922a0aa60005-9816","stored":null}
+{"type":"fact","id":"F86","statement":"A murky water pool of about 200 portions lies within 16 tiles of the moonshine still","category":"resource","observed":"2a960e884129f3b5b383922a0aa60005-9717","stored":null}
+{"type":"fact","id":"F87","statement":"Litter around the moonshine still includes a glass bottle, gallon-sized zipper bags, a plastic bottle, short string, a tin cup and ceramic shards","category":"resource","observed":"2a960e884129f3b5b383922a0aa60005-9717","stored":null}
+{"type":"fact","id":"F88","statement":"Morgan picked up the glass bottle (0.75 L) and four gallon-sized zipper bags (4.5 L each) as liquid containers","category":"item","observed":"2a960e884129f3b5b383922a0aa60005-9816","stored":"fc7f3c"}
+{"type":"fact","id":"F89","statement":"Tinder can be crafted from memory from pine boughs, pinecones or birchbark, and is needed to light flint and steel or matches","category":"procedure","observed":"2a960e884129f3b5b383922a0aa60005-10515","stored":null}
+{"type":"fact","id":"F90","statement":"A fire is burning on the moonshine still's fire ring, lit with tinder and fed with splintered wood, giving a nearby fire for boiling","category":"resource","observed":"2a960e884129f3b5b383922a0aa60005-11112","stored":"fc7f3c"}
+{"type":"fact","id":"F91","statement":"Sweet water takes 1 minute, no tools, one clean water and 10 sugar, giving a drink with up to 216 kcal","category":"procedure","observed":"2a960e884129f3b5b383922a0aa60005-11214","stored":null}
+{"type":"fact","id":"F92","statement":"A stream with ordinary murky water runs through the forest a short walk from the moonshine still","category":"place","observed":"2a960e884129f3b5b383922a0aa60005-12748","stored":"fc7f3c"}
+{"type":"fact","id":"F93","statement":"Twelve splintered wood and a plastic shopping bag with more items lay on the ground near the moonshine still; Morgan picked them up","category":"resource","observed":"2a960e884129f3b5b383922a0aa60005-13550","stored":null}
+{"type":"fact","id":"F94","statement":"Three stream water portions were boiled at the still's fire ring into three hot clean water in the glass bottle","category":"resource","observed":"2a960e884129f3b5b383922a0aa60005-14991","stored":"fc7f3c"}
+{"type":"fact","id":"F95","statement":"A long cordage piece recipe is not memorised (tailoring 0, about 62% minor failure) and a long cordage rope needs an electric spinwheel plus five short ropes","category":"procedure","observed":"2a960e884129f3b5b383922a0aa60005-15089","stored":null}
+{"type":"fact","id":"F96","statement":"Three wild turkeys roam the grass field on the route to the moonshine still","category":"resource","observed":"2a960e884129f3b5b383922a0aa60005-8364","stored":null}
+{"type":"fact","id":"F97","statement":"Dig a Shallow Pit takes 17 minutes and a tool with digging 2 or more, which the digging stick does not meet","category":"procedure","observed":"2a960e884129f3b5b383922a0aa60005-8003","stored":null}
+{"type":"fact","id":"F98","statement":"A makeshift brazier takes 10 minutes, survival 1, a bucket, a hammering tool and a nail or sharp rock","category":"procedure","observed":"2a960e884129f3b5b383922a0aa60005-6928","stored":null}
+{"type":"end","frames_viewed":46}

@@ -1,0 +1,43 @@
+{
+ "cluster_sizes": {
+  "1": 63,
+  "2": 7,
+  "3": 1,
+  "4": 1,
+  "5": 1
+ },
+ "clusters": 73,
+ "gate": {
+  "at_interest": 0.901,
+  "no_effect": 0.022,
+  "passes": true
+ },
+ "probability_of_go": {
+  "held-out structure": {
+   "0.00": 0.022,
+   "0.10": 0.195,
+   "0.15": 0.355,
+   "0.20": 0.574,
+   "0.25": 0.764,
+   "0.30": 0.901
+  }
+ },
+ "probe_files": [
+  {
+   "frozen": "data/evaluation/p1/held-out/frozen.json",
+   "frozen_sha256": "7bfaa78a465a2c0d8a29f1b0f4a3a3e2a3f839b373f0d68b2c5f32903199a90d",
+   "path": "data/evaluation/p1/held-out/probes.jsonl",
+   "sha256": "1e26849bef9454fb5af19ceeb47b9112dd2fe10fc31ba187b90a8a57e1308161"
+  },
+  {
+   "frozen": "data/evaluation/p1/held-out-lh4/frozen.json",
+   "frozen_sha256": "bab54826c07d85a8364d0c047f83a3bb4a695d1e67fc8b5dc3343ec9055f9b6b",
+   "path": "data/evaluation/p1/held-out-lh4/probes.jsonl",
+   "sha256": "26e50a938beff85dc2478b7c400831222250f3e9e6be052da59c1906b9fdcb1b"
+  }
+ ],
+ "schema": "p1-power/1",
+ "seed": 491,
+ "simulations": 5000,
+ "units": 89
+}

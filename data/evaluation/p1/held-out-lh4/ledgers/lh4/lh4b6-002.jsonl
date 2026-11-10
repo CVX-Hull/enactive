@@ -1,0 +1,142 @@
+{"type":"carry","fact":"F1","boundary":"lh4b6-001>lh4b6-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F2","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F3","boundary":"lh4b6-001>lh4b6-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F4","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F6","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F7","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F8","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F9","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F10","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F11","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F12","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F13","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F15","boundary":"lh4b6-001>lh4b6-002","carried":true,"where":"prompt"}
+{"type":"carry","fact":"F16","boundary":"lh4b6-001>lh4b6-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F17","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F18","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F19","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F20","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F21","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F22","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F23","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F24","boundary":"lh4b6-001>lh4b6-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F25","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F28","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F29","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F30","boundary":"lh4b6-001>lh4b6-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F31","boundary":"lh4b6-001>lh4b6-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F32","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F33","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F34","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F35","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F36","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F37","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F38","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F39","boundary":"lh4b6-001>lh4b6-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F40","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F42","boundary":"lh4b6-001>lh4b6-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F43","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F44","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F45","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F46","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F47","boundary":"lh4b6-001>lh4b6-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F48","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F49","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F50","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F51","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F52","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F53","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F54","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F55","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F56","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F58","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F59","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F60","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F61","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F62","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F63","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F65","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F66","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F67","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F68","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F69","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F70","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F71","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F72","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F73","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F74","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F75","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F76","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F77","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F78","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F79","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F80","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F81","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F82","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F83","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F84","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F85","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F86","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F87","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F88","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F89","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F90","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F91","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F92","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F93","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F94","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F95","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F96","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F97","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F98","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F99","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F100","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F101","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F102","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F103","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F104","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F105","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F107","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F108","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F109","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F110","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F111","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F112","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F113","boundary":"lh4b6-001>lh4b6-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F114","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F115","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F117","boundary":"lh4b6-001>lh4b6-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F118","boundary":"lh4b6-001>lh4b6-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F119","boundary":"lh4b6-001>lh4b6-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F120","boundary":"lh4b6-001>lh4b6-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F121","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F122","boundary":"lh4b6-001>lh4b6-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F123","boundary":"lh4b6-001>lh4b6-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F124","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F125","boundary":"lh4b6-001>lh4b6-002","carried":false,"where":null}
+{"type":"carry","fact":"F126","boundary":"lh4b6-001>lh4b6-002","carried":true,"where":"packet"}
+{"type":"event","fact":"F126","event":"rediscovered","frame":"7c6a12a999602a1c0f80bb32ca49567a-6626","note":"Inventory check shows 6 wrapped protein rations and clean water in three containers (2 loose, 2 in sealed bottles, 2 in tupperware)"}
+{"type":"event","fact":"F91","event":"rediscovered","frame":"7c6a12a999602a1c0f80bb32ca49567a-6641","note":"Searching recipes for clean water shows sweet water again: 1 clean water plus 10 sugar, with 61 sugar on hand"}
+{"type":"event","fact":"F122","event":"rediscovered","frame":"7c6a12a999602a1c0f80bb32ca49567a-6794","note":"Walked onto the recess tile and saw 52 murky water, the marked murky water recess"}
+{"type":"event","fact":"F123","event":"needed","frame":"7c6a12a999602a1c0f80bb32ca49567a-7178","note":"Searched recipes for a filter and found none, so murky water could not be purified here; the player went on to the trailhead pump instead"}
+{"type":"event","fact":"F15","event":"used","frame":"7c6a12a999602a1c0f80bb32ca49567a-9770","note":"Travelled by map to the trailhead pump to seek renewable water, consistent with the plan"}
+{"type":"event","fact":"F35","event":"rediscovered","frame":"7c6a12a999602a1c0f80bb32ca49567a-9770","note":"Reached the trailhead and its water pump with a sign beside it"}
+{"type":"event","fact":"F88","event":"used","frame":"7c6a12a999602a1c0f80bb32ca49567a-9969","note":"Poured pump water into the glass bottle and zipper bags picked up earlier as liquid containers"}
+{"type":"event","fact":"F35","event":"used","frame":"7c6a12a999602a1c0f80bb32ca49567a-9969","note":"Drew raw pump water into containers to be boiled later, rather than drinking it raw"}
+{"type":"event","fact":"F109","event":"needed","frame":"7c6a12a999602a1c0f80bb32ca49567a-10135","note":"The trailhead map board is locked and needs something to pick its lock"}
+{"type":"event","fact":"F109","event":"rediscovered","frame":"7c6a12a999602a1c0f80bb32ca49567a-11947","note":"Rechecked the rudimentary lockpick recipe: still needs a metal piece and a wire, none carried, with 62% minor and 27% catastrophic failure"}
+{"type":"event","fact":"F40","event":"used","frame":"7c6a12a999602a1c0f80bb32ca49567a-10877","note":"Dropped splintered wood on the wood stove as tinder and lit a fire"}
+{"type":"event","fact":"F39","event":"used","frame":"7c6a12a999602a1c0f80bb32ca49567a-11419","note":"Boiled raw pump water at the lit stove into 3 hot clean water, then poured it into containers"}
+{"type":"event","fact":"F126","event":"invalidated","frame":"7c6a12a999602a1c0f80bb32ca49567a-12609","note":"After boiling, clean water rose from about 6 to about 9 portions (memory record 1c8c28)"}
+{"type":"event","fact":"F42","event":"rediscovered","frame":"7c6a12a999602a1c0f80bb32ca49567a-13339","note":"Foraged the underbrush in the forest north of the trailhead and found nothing; again at 13344 and 13402"}
+{"type":"fact","id":"F127","statement":"The trailhead has a small log hut with a wood stove, counter and benches beside the pump; splintered wood dropped on the stove and lit with a lighter or flint gives a working fire there for boiling water","category":"place","observed":"7c6a12a999602a1c0f80bb32ca49567a-10877","stored":null}
+{"type":"fact","id":"F128","statement":"A stick lying at the trailhead can be cut up in 2 seconds into 10 splintered wood, which serves as stove fuel and tinder","category":"resource","observed":"7c6a12a999602a1c0f80bb32ca49567a-10648","stored":null}
+{"type":"fact","id":"F129","statement":"The map board at the trailhead is locked and needs a lockpick to open","category":"other","observed":"7c6a12a999602a1c0f80bb32ca49567a-10135","stored":null}
+{"type":"fact","id":"F130","statement":"Signs at the trailhead warn of bear country","category":"hazard","observed":"7c6a12a999602a1c0f80bb32ca49567a-12609","stored":"1c8c28"}
+{"type":"fact","id":"F131","statement":"A hostile zombie technician, slower than the survivor, stands about 59 tiles south-west of the trailhead","category":"hazard","observed":"7c6a12a999602a1c0f80bb32ca49567a-10346","stored":"1c8c28"}
+{"type":"fact","id":"F132","statement":"Two neutral raccoons roam near the trailhead and ignore Morgan","category":"other","observed":"7c6a12a999602a1c0f80bb32ca49567a-9770","stored":null}
+{"type":"fact","id":"F133","statement":"Three portions of raw pump water were boiled on the trailhead stove into hot clean water, crafted from memory in about 20 minutes","category":"resource","observed":"7c6a12a999602a1c0f80bb32ca49567a-12609","stored":"1c8c28"}
+{"type":"fact","id":"F134","statement":"Morgan carries about 9 clean water portions and 6 protein rations after boiling, with water split across a glass bottle, sealed bottles, a tupperware and zipper bags","category":"self","observed":"text","stored":"1c8c28"}
+{"type":"fact","id":"F135","statement":"Morgan has the Unhappy and Gross Food effects at 8:29 on day 62, with survival 1, food handling 2 and fabrication 1","category":"self","observed":"7c6a12a999602a1c0f80bb32ca49567a-13339","stored":null}
+{"type":"fact","id":"F136","statement":"A swamp lies north-west of Freedom, north of the trailhead on the overmap","category":"place","observed":"7c6a12a999602a1c0f80bb32ca49567a-12874","stored":"1c8c28"}
+{"type":"end","frames_viewed":37}
