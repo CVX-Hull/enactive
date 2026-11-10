@@ -514,32 +514,11 @@ JSON Lines to a named file and replies only with a line count, as #178's did.
 > wording where another wording says the same. Output only JSON Lines, one per item in the given
 > order: {"id":"<id>","sentence":"<one sentence>"}.
 
-**Retired by p1-study/3.** No study step uses the two briefs below. They stay on this page only
-until the answer-key batches replace #518's scoring and arm-guess batches, which still read them.
-
-> **Arm guess.** Each text in the file [batch] was produced by one of two systems that summarise
-> what a game player knows. Read only that file. For each text, guess which system produced it,
-> "1" or "2", consistently. Output only JSON Lines: {"id":"<id>","system":"1"|"2"}.
-
-> **Scoring.** You check whether a text states what a screenshot shows. Read only the file named
-> here and the image files it lists; do not open any other file, run any command other than
-> viewing files, or read documents or issues. The file [batch] lists items, each with an `id`,
-> one image path `frame` and a `text`. For each item, view the image and decide: does the text
-> state the specific information this image shows (its list, contents, message, text or map
-> description), so that a reader of the text would already know it? A text that only mentions
-> the same kind of screen or a related topic does not count. Output only JSON Lines, one per item
-> in the given order: {"id":"<id>","stated":true|false,"why":"<one line>"}.
-
 > **Audit.** You check statements against recorded screenshots. Read only the file named here and
 > the timelines and image files it lists. For each item, decide whether any frame listed for it
 > contradicts the statement, or shows it had stopped being true by the last listed frame. Output
 > only JSON Lines: {"id":"<id>","false":true|false,"frame":"<source id or null>","why":"<one
 > line>"}.
-
-**Scoring the arm guess (retired by p1-study/3).** p1-study/2's `arm_guessing` mapped the
-guesser's labels "1" and "2" to arms by whichever mapping scored higher, over exactly 30 guesses,
-15 per arm, with a limit of 21: 2 × P(Binomial(30, ½) ≥ 21) = 0.043. It ran twice on development
-texts and failed both times (27 and 26 of 30).
 
 ## Metrics
 
