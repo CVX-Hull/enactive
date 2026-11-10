@@ -11,7 +11,8 @@ word, and items that carry an opaque `id` and what the brief names) and, apart f
 which maps each opaque id to what only the analysis may know (arm, repeat, probe) and is never given to a
 judge. The judge files hold absolute frame paths, so `--out` must lie under the repository's `.runtime/`. The
 same inputs give byte-identical files. An opaque id is `<letter><8 hex of the build digest>-<counter>`, the
-build digest being a sha256 over the kind and the sorted digests of the inputs, and the key holds each batch
+build digest being a sha256 over the kind, this module's own sha256, the kind's seeds and the sorted digests of
+the inputs, and the key holds each batch
 file's sha256, so output from another build, or for an altered batch file, is refused.
 
 `parse` reads one judge output file per batch (`<batch>.jsonl` in `--answers`, one directory per kind) and
@@ -186,9 +187,22 @@ def _check_out(out: Path) -> Path:
     return resolved
 
 
+def _constants(kind: str) -> dict:
+    """The seeds, limits and packing that shape a kind's batches, read when the digest is made."""
+    shared = dict(batch_size=BATCH_SIZE, packing=PACKING)
+    return dict(shared, **{
+        'scoring': dict(order_seed=SCORING_SEED),
+        'rejudge': dict(order_seed=REJUDGE_ORDER_SEED, sample_seed=analysis.REJUDGE_SEED, share=analysis.REJUDGE_SHARE),
+        'audit': dict(order_seed=AUDIT_ORDER_SEED, draw_seed=AUDIT_SEED, sample=AUDIT_SAMPLE,
+                      drop_unresolved=DROP_UNRESOLVED_CITES),
+        'guess': dict(order_seed=GUESS_SEED, b_repeat=GUESS_B_REPEAT, guesses=analysis.GUESSES)}[kind])
+
+
 def build_digest(kind: str, inputs: Sequence[str]) -> str:
-    """sha256 over the kind and the sorted digests of the inputs (the delivered files and the frozen probes)."""
-    return hashlib.sha256('\n'.join([kind, *sorted(inputs)]).encode()).hexdigest()
+    """sha256 over the kind, this module's own sha256, the kind's seed and packing constants and the sorted digests
+    of the inputs (the delivered files and the frozen probes): a change of code or seed changes every opaque id."""
+    parts = [kind, file_sha256(Path(__file__)), json.dumps(_constants(kind), sort_keys=True), *sorted(inputs)]
+    return hashlib.sha256('\n'.join(parts).encode()).hexdigest()
 
 
 def write_batches(kind: str, out: Path, batches: list[list[dict]], *, seed: int | str, host_version: str,
@@ -280,25 +294,42 @@ def rejudge_batches(frozen: Frozen, delivered: dict, evidence: Path, out: Path, 
 
 
 # ------------------------------------------------------------------ audit batches
-def _resolve_cites(evidence: Path, lineage: str, cites: object) -> tuple[list[tuple[str, str]], int]:
-    """([(source id, absolute path)] sealed in the lineage's sessions, count of cited ids that are not found)."""
+def _resolve_cites(evidence: Path, lineage: str, cites: object) -> tuple[list[tuple[str, str, int]], int]:
+    """([(source id, absolute path, the session's place in the lineage)] sealed in the lineage's sessions, count of
+    cited ids that are not found)."""
     study = evidence/HELD_OUT_STUDIES[lineage]/'computer-sessions'
     found, unresolved = [], 0
     for source in cites if isinstance(cites, list) else []:
         hits = []
         if isinstance(source, str) and _SOURCE_ID.fullmatch(source):
-            hits = [p for run in analysis.HELD_OUT[lineage] if (p := study/run/'sources'/f'{source}.png').is_file()]
+            hits = [(p, place) for place, run in enumerate(analysis.HELD_OUT[lineage])
+                    if (p := study/run/'sources'/f'{source}.png').is_file()]
         if len(hits) > 1:
             raise BatchError(f'{lineage}: a cited frame id is sealed in more than one session')
         if hits:
-            found.append((source, str(hits[0].resolve())))
+            found.append((source, str(hits[0][0].resolve()), hits[0][1]))
         else:
             unresolved += 1
     return found, unresolved
 
 
-def _shown(frames: list[tuple[str, str]]) -> list[dict]:
-    return [dict(source=source, frame=path) for source, path in frames]
+def _capture(source: str) -> int:
+    """The numeric capture id at the end of a source id, `<session>-<capture id>`."""
+    tail = source.rsplit('-', 1)[-1]
+    if not tail.isdigit():
+        raise BatchError('a source id does not end in a numeric capture id')
+    return int(tail)
+
+
+def chronological(cited: list[tuple[str, str, int]], coverage: list[tuple[str, str, int]]) -> list[dict]:
+    """Frames in capture order: by the session's place in the lineage, then by the capture id. A frame that is
+    cited and also a coverage frame appears once, with `cited` true. The Audit brief judges "by the last listed
+    frame", so the last one listed is the latest."""
+    frames: dict[str, tuple] = {}
+    for is_cited, group in ((False, coverage), (True, cited)):
+        for source, path, place in group:
+            frames[source] = (place, _capture(source), source, path, is_cited or (source in frames and frames[source][4]))
+    return [dict(source=source, frame=path, cited=is_cited) for _, _, source, path, is_cited in sorted(frames.values())]
 
 
 def audit_batches(frozen: Frozen, delivered: dict, evidence: Path, out: Path, host_version: str,
@@ -341,9 +372,12 @@ def audit_batches(frozen: Frozen, delivered: dict, evidence: Path, out: Path, ho
             chunk = chunks.get((lineage, predecessor))
             if chunk is None:
                 raise BatchError(f'{lineage}: the predecessor chunk of boundary {boundary} is not in the ledger plan')
-            session = evidence/HELD_OUT_STUDIES[lineage]/'computer-sessions'/predecessor.rsplit('-', 1)[0]
-            coverage = [(s, str((session/'sources'/f'{s}.png').resolve())) for s in chunk['required_frames']]
-            if not all(Path(path).is_file() for _, path in coverage):
+            run = predecessor.rsplit('-', 1)[0]
+            if run not in analysis.HELD_OUT[lineage]:
+                raise BatchError(f'{lineage}: the predecessor chunk of boundary {boundary} is in no session of the lineage')
+            place, session = analysis.HELD_OUT[lineage].index(run), evidence/HELD_OUT_STUDIES[lineage]/'computer-sessions'/run
+            coverage = [(s, str((session/'sources'/f'{s}.png').resolve()), place) for s in chunk['required_frames']]
+            if not all(Path(path).is_file() for _, path, _ in coverage):
                 raise BatchError(f'{lineage}: a coverage frame of a predecessor chunk is missing under the evidence root')
             cited, lost = _resolve_cites(evidence, lineage, item.get('cites'))
             if lost and not DROP_UNRESOLVED_CITES:
@@ -351,11 +385,10 @@ def audit_batches(frozen: Frozen, delivered: dict, evidence: Path, out: Path, ho
             unresolved[f'{arm}{repeat}'] += lost
             entries.append(dict(
                 sort=(arm, repeat, lineage, boundary, position), unit=(arm, repeat, lineage, boundary, position),
-                # The statement as the arm-blind judges see it (one `- ` line), then frames only: the frames it
-                # cites and the predecessor chunk's coverage-rule frames. Never the timeline text, which holds the
-                # predecessor's memory records. No arm, repeat or lineage.
-                public=dict(statement=f'- {item["statement"]}', cited_frames=_shown(cited),
-                            coverage_frames=_shown(coverage)),
+                # The statement as the arm-blind judges see it (one `- ` line), then frames only, in capture order:
+                # the frames it cites and the predecessor chunk's coverage-rule frames. Never the timeline text,
+                # which holds the predecessor's memory records. No arm, repeat or lineage.
+                public=dict(statement=f'- {item["statement"]}', frames=chronological(cited, coverage)),
                 key=dict(arm=arm, repeat=repeat, item=f'{lineage}/{boundary}#{position}')))
     return dict(write_batches('audit', out, pack(entries, AUDIT_ORDER_SEED), seed=AUDIT_ORDER_SEED,
                               host_version=host_version, inputs=inputs,
@@ -367,8 +400,12 @@ def audit_batches(frozen: Frozen, delivered: dict, evidence: Path, out: Path, ho
 def guess_batches(delivered: dict, out: Path, host_version: str, inputs: Sequence[str]) -> dict:
     """Owner decision, 10 November 2026: the 30 texts are every boundary of the delivered development rows given,
     once per arm (A repeat 1 and B repeat GUESS_B_REPEAT), so exactly 15 each; one Random(GUESS_SEED) shuffle
-    of the sorted items; one batch."""
+    of the sorted items; one batch. Development rows only (a held-out lineage is refused), and A and B at the same
+    (lineage, boundary) set."""
     half = analysis.GUESSES // 2
+    held_out = sorted({lineage for lineage, _, _, _ in delivered if lineage in analysis.HELD_OUT})
+    if held_out:
+        raise BatchError(f'the arm-guess check uses development rows only; held-out lineages given: {", ".join(held_out)}')
     chosen = []
     for arm, repeat in (('A', 1), ('B', GUESS_B_REPEAT)):
         rows = [row for key, row in sorted(delivered.items()) if key[2:] == (arm, repeat)]
@@ -377,6 +414,11 @@ def guess_batches(delivered: dict, out: Path, host_version: str, inputs: Sequenc
         if any(not row['complete'] for row in rows):
             raise BatchError(f'delivered texts of {arm}{repeat} are incomplete')
         chosen += [(row['lineage'], row['boundary'], arm, row) for row in rows]
+    where = {arm: {c[:2] for c in chosen if c[2] == arm} for arm in ('A', 'B')}
+    if where['A'] != where['B']:     # both arms at the same boundaries, so the texts differ by arm and nothing else
+        only_a, only_b = sorted(where['A'] - where['B']), sorted(where['B'] - where['A'])
+        raise BatchError(f'A1 and B{GUESS_B_REPEAT} are not at the same boundaries ({len(only_a)} only in A1, e.g. '
+                         f'{only_a[:3]}; {len(only_b)} only in B{GUESS_B_REPEAT}, e.g. {only_b[:3]})')
     chosen.sort(key=lambda c: c[:3])
     random.Random(GUESS_SEED).shuffle(chosen)
     entries = [dict(sort=n, unit=n, public=dict(text=row['text']), key=dict(arm=arm))

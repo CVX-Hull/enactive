@@ -36,8 +36,12 @@ def write_frozen(directory: Path, probes: list[dict], candidates: list[dict], pl
     return directory/'probes.jsonl'
 
 
-def build_world(root: Path, *, items_per_row: int = 3, units: int = 5) -> SimpleNamespace:
-    """Four held-out lineages in two frozen directories, a sealed evidence tree, timelines and a delivery."""
+def build_world(root: Path, *, items_per_row: int = 3, units: int = 5, late: bool = False,
+                required: tuple[int, ...] = (1, 2)) -> SimpleNamespace:
+    """Four held-out lineages in two frozen directories, a sealed evidence tree and a delivery.
+
+    `required` are the capture ids of each chunk's coverage-rule frames, in the plan's order. With `late`, lh1's
+    boundary is between its second and third sessions and its items also cite a frame of the first."""
     rng = random.Random(7)
     evidence = root/'evidence'
     by_directory: dict[str, tuple[list, list, dict]] = {'held-out': ([], [], {}), 'held-out-lh4': ([], [], {})}
@@ -50,7 +54,8 @@ def build_world(root: Path, *, items_per_row: int = 3, units: int = 5) -> Simple
             sources.mkdir(parents=True)
             for n in range(40):
                 (sources/f'{run}-{n}.png').write_bytes(b'png')
-        run0, run1 = runs[0], runs[1]
+        shift = 1 if late and lineage == 'lh1' else 0
+        run0, run1 = runs[shift], runs[shift + 1]
         before, after = f'{run0}-001', f'{run1}-001'
         boundary = f'{before}>{after}'
         probes, candidates = by_directory['held-out-lh4' if lineage == 'lh4' else 'held-out'][:2]
@@ -62,7 +67,7 @@ def build_world(root: Path, *, items_per_row: int = 3, units: int = 5) -> Simple
             candidates.append(dict(id=pid, lineage=lineage,
                                    earlier_path=f'{study}/computer-sessions/{run0}/sources/{run0}-{20 + n}.png'))
         plan = by_directory['held-out-lh4' if lineage == 'lh4' else 'held-out'][2]
-        plan[lineage] = dict(chunks=[dict(chunk=name, timeline=f'{name}.md', required_frames=[f'{name[:-4]}-1', f'{name[:-4]}-2'],
+        plan[lineage] = dict(chunks=[dict(chunk=name, timeline=f'{name}.md', required_frames=[f'{name[:-4]}-{n}' for n in required],
                                           incoming_boundary=incoming) for name, incoming in ((before, None), (after, boundary))])
         received = f'{CANARY_TEXT} received by {after}'
         marker = arms.Boundary(name=boundary, kind='handoff', predecessor=before, successor=after, cutoff=1.0,
@@ -72,7 +77,8 @@ def build_world(root: Path, *, items_per_row: int = 3, units: int = 5) -> Simple
         for arm, repeat in ARM_KEYS:
             word = 'alpha' if arm == 'A' else ('beta' if repeat == 1 else 'gamma')    # the statement never names its arm
             items = [arms.Item('note', f'{lineage} {word} statement {k}',
-                               cites=(f'{run0}-{1 + k % 3}', 'unsealed-frame-9')) for k in range(items_per_row)]
+                               cites=(f'{run0}-{1 + k % 3}', 'unsealed-frame-9', *((f'{runs[0]}-5',) if shift else ())))
+                     for k in range(items_per_row)]
             delivered.append(replay._row(lineage, marker, arm, repeat, received, sha, arms.render(items)))
     rows = by_directory['held-out'][0] + by_directory['held-out-lh4'][0]
     paths = [write_frozen(root/name, *parts) for name, parts in by_directory.items()]
@@ -211,6 +217,35 @@ def test_batches_are_reproducible_byte_for_byte_and_follow_the_seed(world, monke
         assert read_all(build(world, kind, f'{kind}-1')) == read_all(build(world, kind, f'{kind}-2'))
 
 
+@pytest.mark.parametrize('kind, constant', [('scoring', 'SCORING_SEED'), ('scoring', 'BATCH_SIZE'), ('scoring', 'PACKING'),
+                                            ('rejudge', 'REJUDGE_ORDER_SEED'), ('audit', 'AUDIT_ORDER_SEED'),
+                                            ('audit', 'AUDIT_SEED'), ('audit', 'AUDIT_SAMPLE'), ('guess', 'GUESS_SEED'),
+                                            ('guess', 'GUESS_B_REPEAT')])
+def test_the_build_digest_covers_the_kinds_seeds_so_a_changed_seed_changes_every_opaque_id(kind, constant, monkeypatch):
+    before = batches.build_digest(kind, ['a', 'b'])
+    assert batches.build_digest(kind, ['b', 'a']) == before                      # the inputs' order does not matter
+    assert batches.build_digest(kind, ['a']) != before and batches.build_digest('audit' if kind != 'audit' else 'guess',
+                                                                              ['a', 'b']) != before
+    value = getattr(batches, constant)
+    monkeypatch.setattr(batches, constant, value + 1 if isinstance(value, int) else value + '-changed')
+    assert batches.build_digest(kind, ['a', 'b']) != before
+
+
+def test_the_build_digest_covers_the_code_and_a_seed_change_alters_the_ids_with_unchanged_inputs(world, monkeypatch):
+    first = key_of(build(world, 'scoring', 'one'), 'scoring')
+    again = key_of(build(world, 'scoring', 'two'), 'scoring')
+    assert list(first['items']) == list(again['items'])                           # unchanged inputs: the same ids
+    monkeypatch.setattr(batches, 'SCORING_SEED', 4912)
+    changed = key_of(build(world, 'scoring', 'three'), 'scoring')
+    assert changed['build_sha256'] != first['build_sha256'] and not set(changed['items']) & set(first['items'])
+    monkeypatch.setattr(batches, 'SCORING_SEED', 4911)
+    unchanged = batches.build_digest('scoring', ['a'])
+    real = batches.file_sha256
+    monkeypatch.setattr(batches, 'file_sha256',
+                        lambda path: 'code-changed' if Path(path) == Path(batches.__file__) else real(path))
+    assert batches.build_digest('scoring', ['a']) != unchanged                 # the module's own sha256 is an input
+
+
 def test_the_order_is_a_seeded_shuffle_of_the_sorted_items_with_random_4911(world):
     out = build(world, 'scoring')
     key = key_of(out, 'scoring')
@@ -288,7 +323,7 @@ def test_audit_items_show_the_statement_and_frames_only_never_the_timeline_or_th
     for batch in files:
         assert batch['brief'] == batches.frozen_brief('Audit') and set(batch) == {'schema', 'brief', 'items'}
         for item in batch['items']:
-            assert set(item) == {'id', 'statement', 'cited_frames', 'coverage_frames'}    # no timeline file
+            assert set(item) == {'id', 'statement', 'frames'}    # one chronological frame list, no timeline file
             meta = key['items'][item['id']]
             lineage, rest = meta['item'].split('/')
             boundary, position = rest.rsplit('#', 1)
@@ -298,10 +333,12 @@ def test_audit_items_show_the_statement_and_frames_only_never_the_timeline_or_th
             assert item['statement'] in row['text'].splitlines()          # the line as the successor's text has it
             runs = analysis.HELD_OUT[lineage]
             study = world.evidence/HELD_OUT_STUDIES[lineage]/'computer-sessions'/runs[0]/'sources'
-            assert [f['source'] for f in item['cited_frames']] == [shown['cites'][0]]   # the unsealed one is dropped
-            assert all(Path(f['frame']) == (study/f'{f["source"]}.png').resolve() for f in item['cited_frames'])
-            assert [f['source'] for f in item['coverage_frames']] == [f'{runs[0]}-1', f'{runs[0]}-2']   # the predecessor chunk's
-            assert all(Path(f['frame']).is_absolute() and Path(f['frame']).is_file() for f in item['coverage_frames'])
+            cited = shown['cites'][0]       # the unsealed second cite is dropped
+            wanted = sorted({f'{runs[0]}-1', f'{runs[0]}-2', cited}, key=lambda s: int(s.rsplit('-', 1)[1]))
+            assert [f['source'] for f in item['frames']] == wanted         # coverage frames and the cited one, once each
+            assert {f['source'] for f in item['frames'] if f['cited']} == {cited}
+            assert all(set(f) == {'source', 'frame', 'cited'} and Path(f['frame']) == (study/f'{f["source"]}.png').resolve()
+                       and Path(f['frame']).is_absolute() and Path(f['frame']).is_file() for f in item['frames'])
             assert set(meta) == {'arm', 'repeat', 'item'}
             raw = json.dumps(item)
             assert '"arm"' not in raw and '"repeat"' not in raw and 'timeline' not in raw and '.md' not in raw
@@ -329,6 +366,53 @@ def test_audit_refuses_a_missing_arm_an_incomplete_row_and_a_delivery_that_does_
     extra = dict(next(r for r in world.delivered_rows if (r['lineage'], r['arm']) == ('lh1', 'A')), boundary='x>y')
     with pytest.raises(batches.BatchError, match='1 unexpected'):
         batches.audit_batches(frozen, {**delivered, ('lh1', 'x>y', 'A', 1): extra}, evidence, out/'5', HOST, ['x'])
+
+
+def audit_items(out: Path) -> list[tuple[dict, dict]]:
+    key = key_of(out, 'audit')
+    return [(item, key['items'][item['id']]) for batch in batch_files(out, 'audit') for item in batch['items']]
+
+
+def capture(source: str) -> int:
+    return int(source.rsplit('-', 1)[1])
+
+
+def test_audit_frames_are_listed_in_capture_order_so_the_last_listed_is_the_latest(tmp_path):
+    world = build_world(tmp_path, required=(1, 4, 7, 10, 6, 8, 9))     # the plan lists them out of order
+    out = build(world, 'audit')
+    for item, meta in audit_items(out):
+        numbers = [capture(f['source']) for f in item['frames']]
+        assert numbers == sorted(numbers) and len(numbers) == len(set(numbers))
+        assert {1, 4, 6, 7, 8, 9, 10} <= set(numbers)
+        assert numbers[-1] == max(numbers)
+        assert [n for n in numbers if n in (1, 4, 6, 7, 8, 9, 10)] == [1, 4, 6, 7, 8, 9, 10]    # 10 after 9, not after 1
+        assert sum(f['cited'] for f in item['frames']) == 1
+
+
+def test_cited_frames_of_an_earlier_session_come_first(tmp_path):
+    world = build_world(tmp_path, late=True, required=(1, 4, 7, 10, 6, 8, 9))
+    out = build(world, 'audit')
+    late = [item for item, meta in audit_items(out) if meta['item'].startswith('lh1/')]
+    assert late
+    for item in late:
+        sources = [f['source'] for f in item['frames']]
+        assert sources[0] == 'lh1a1-5' and item['frames'][0]['cited'] is True      # the first session's frame
+        assert all(s.startswith('lh1a2-') for s in sources[1:])                    # then the predecessor's own session
+        numbers = [capture(s) for s in sources[1:]]
+        assert numbers == sorted(numbers) and sources[-1] == f'lh1a2-{max(numbers)}'
+        assert Path(item['frames'][0]['frame']).parent.parent.name == 'lh1a1'
+    other = [item for item, meta in audit_items(out) if not meta['item'].startswith('lh1/')]
+    assert other and all(f['source'].startswith(('lh2', 'lh3', 'lh4')) for item in other for f in item['frames'])
+
+
+def test_a_frame_that_is_cited_and_a_coverage_frame_is_listed_once_as_cited_and_a_later_session_sorts_after():
+    coverage = [('s-1', 'p1', 0), ('s-10', 'p10', 0), ('s-9', 'p9', 0), ('s-2', 'p2', 0)]
+    cited = [('s-9', 'p9', 0), ('r-3', 'q3', 1), ('q-3', 'z3', 0)]
+    frames = batches.chronological(cited, coverage)
+    assert [(f['source'], f['cited']) for f in frames] == [('s-1', False), ('s-2', False), ('q-3', True), ('s-9', True),
+                                                           ('s-10', False), ('r-3', True)]
+    with pytest.raises(batches.BatchError, match='numeric capture id'):
+        batches.chronological([('no-digits-x', 'p', 0)], [])
 
 
 # ------------------------------------------------------------------ arm-guess batch
@@ -377,6 +461,41 @@ def test_the_guess_batch_needs_exactly_15_complete_boundaries_per_arm(tmp_path):
     uneven = {k: v for k, v in dev_delivered().items() if k[2:] != ('A', 1) or k[1] != 'b00'}
     with pytest.raises(batches.BatchError, match='A1 has 14 delivered boundaries'):
         batches.guess_batches(uneven, out/'uneven', HOST, ['x'])
+
+
+def test_the_guess_batch_needs_both_arms_at_the_same_boundaries(tmp_path):
+    moved = {}
+    for (lineage, boundary, arm, repeat), row in dev_delivered().items():
+        if (arm, repeat) == ('B', 1):
+            boundary = 'other-' + boundary
+            row = dict(row, boundary=boundary)
+        moved[(lineage, boundary, arm, repeat)] = row
+    with pytest.raises(batches.BatchError, match=r'A1 and B1 are not at the same boundaries \(15 only in A1, e.g. '
+                                                  r"\[\('397', 'b00'\)") as raised:
+        batches.guess_batches(moved, tmp_path/'.runtime'/'disjoint', HOST, ['x'])
+    assert 'text' not in str(raised.value)
+    partly = dict(dev_delivered())
+    row = partly.pop(('397', 'b03', 'B', 1))
+    partly[('397', 'b99', 'B', 1)] = dict(row, boundary='b99')
+    with pytest.raises(batches.BatchError, match=r'1 only in A1, e.g. \[\(\'397\', \'b03\'\)\]; 1 only in B1'):
+        batches.guess_batches(partly, tmp_path/'.runtime'/'partly', HOST, ['x'])
+    assert not (tmp_path/'.runtime'/'disjoint').exists()
+
+
+def test_the_guess_check_refuses_held_out_lineages_naming_only_the_lineage(tmp_path, capsys):
+    held = {(name, b, arm, rep): dict(row, lineage=name)
+            for (_, b, arm, rep), row in dev_delivered().items() for name in ('lh2',)}
+    with pytest.raises(batches.BatchError, match='development rows only; held-out lineages given: lh2') as raised:
+        batches.guess_batches(held, tmp_path/'.runtime'/'held', HOST, ['x'])
+    assert 'text' not in str(raised.value)
+    mixed = {**dev_delivered(), ('lh4', 'b00', 'R', 1): dict(next(iter(dev_delivered().values())), lineage='lh4', arm='R')}
+    with pytest.raises(batches.BatchError, match='held-out lineages given: lh4'):
+        batches.guess_batches(mixed, tmp_path/'.runtime'/'mixed', HOST, ['x'])     # any row, not only A1 and B1
+    delivered = tmp_path/'delivered.jsonl'
+    delivered.write_text(''.join(json.dumps(r) + '\n' for r in held.values()))
+    assert analysis.main(['batches', 'guess', '--delivered', str(delivered), '--out', str(tmp_path/'.runtime'/'cmd'),
+                          '--host-version', HOST]) == 2
+    assert 'held-out lineages given: lh2' in capsys.readouterr().err
 
 
 def test_the_guess_command_needs_only_the_delivery(tmp_path, capsys):
