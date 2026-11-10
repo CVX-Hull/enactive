@@ -199,9 +199,11 @@ def _constants(kind: str) -> dict:
 
 
 def build_digest(kind: str, inputs: Sequence[str]) -> str:
-    """sha256 over the kind, this module's own sha256, the kind's seed and packing constants and the sorted digests
-    of the inputs (the delivered files and the frozen probes): a change of code or seed changes every opaque id."""
-    parts = [kind, file_sha256(Path(__file__)), json.dumps(_constants(kind), sort_keys=True), *sorted(inputs)]
+    """sha256 over the kind, this module's and the analysis module's own sha256 (the latter decides which units and
+    re-judged items exist), the kind's seed and packing constants and the sorted digests of the inputs (the
+    delivered files and the frozen probes): a change of code or seed changes every opaque id."""
+    parts = [kind, file_sha256(Path(__file__)), file_sha256(Path(analysis.__file__)),
+             json.dumps(_constants(kind), sort_keys=True), *sorted(inputs)]
     return hashlib.sha256('\n'.join(parts).encode()).hexdigest()
 
 
