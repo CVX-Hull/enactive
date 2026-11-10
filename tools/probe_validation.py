@@ -8,7 +8,7 @@
   python -m tools.probe_validation held-out-timelines --to DIR [--evidence-root DIR] [--out ...]
   python -m tools.probe_validation held-out-freeze [--out ...] [--frozen YYYY-MM-DD]
 
-The `held-out-*` steps build #178's held-out probes and ledgers (docs/design/p1-study-2.md, "Held-out
+The `held-out-*` steps build #178's held-out probes and ledgers (docs/design/p1-study-3.md, "Held-out
 handling"). They print only counts, digests and cluster-size tables, never a frame id, a judge's
 text, a timeline, a fact or a query; the files they write may hold content. They take
 `--lineages` (default lh1 lh2 lh3, read from study 372-382-dev-loop and written to
@@ -52,14 +52,14 @@ SEED = 490
 STUDIES = {'397': '397-seven-day', '372': '372-382-dev-loop'}
 HELD_OUT = ('lh1', 'lh2', 'lh3', 'lh4')
 
-# #178's held-out probes (docs/design/p1-study-2.md). Each lineage is one group across its sessions.
+# #178's held-out probes (docs/design/p1-study-3.md). Each lineage is one group across its sessions.
 HELD_OUT_RUNS = p1_analysis.HELD_OUT      # lineage -> its sessions, in order (lh4 once #178 names its admissions)
 HELD_OUT_STUDY = '372-382-dev-loop'
 HELD_OUT_STUDIES = {'lh1': HELD_OUT_STUDY, 'lh2': HELD_OUT_STUDY, 'lh3': HELD_OUT_STUDY, 'lh4': '522-held-out'}
 DEFAULT_LINEAGES = ('lh1', 'lh2', 'lh3')  # p1-study/1's lineages: what the held-out steps do without --lineages
 HELD_OUT_DIR = ROOT/'data'/'evaluation'/'p1'/'held-out'
 HELD_OUT_LH4_DIR = ROOT/'data'/'evaluation'/'p1'/'held-out-lh4'
-STUDY_DOC = ROOT/'docs'/'design'/'p1-study-2.md'   # its frozen briefs are p1-study/1's, word for word
+STUDY_DOC = ROOT/'docs'/'design'/'p1-study-3.md'   # its frozen briefs are p1-study/1's, word for word
 CANDIDATES_SCHEMA = 'p1-held-out-candidates/1'
 BATCH_SCHEMA = 'p1-held-out-batch/1'
 PLAN_SCHEMA = 'p1-held-out-ledger-plan/1'

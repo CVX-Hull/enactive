@@ -1,4 +1,4 @@
-"""The P1 offline study's judge batches and their parsing (pre-registration p1-study/2, docs/design/p1-study-2.md, "Judges"; #518).
+"""The P1 offline study's judge batches and their parsing (pre-registration p1-study/3, docs/design/p1-study-3.md, "The measurement chain"; #518).
 
   python -m tools.p1_analysis batches scoring --probes <p1-probes/1>... --delivered <delivered.jsonl>... --out DIR --host-version V
   python -m tools.p1_analysis batches rejudge --probes <p1-probes/1>... --delivered <delivered.jsonl>... --out DIR --host-version V
@@ -39,7 +39,7 @@ from tools import p1_analysis as analysis
 from tools.probe_validation import HELD_OUT_STUDIES
 
 ROOT = analysis.ROOT
-STUDY_DOC = ROOT/'docs'/'design'/'p1-study-2.md'
+STUDY_DOC = ROOT/'docs'/'design'/'p1-study-3.md'
 BATCH_SCHEMA = 'p1-judge-batch/1'
 KEY_SCHEMA = 'p1-judge-key/1'
 DELIVERED_SCHEMA = 'p1-delivered/2'

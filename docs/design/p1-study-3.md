@@ -1,15 +1,15 @@
 ---
 owner: lead
-status: active
-date: 2026-11-09
-scope: 'Pre-registration of the reshaped ADR 009 P1 offline study (p1-study/2): p1-study/1''s design with one new held-out lineage, lh4 (#522), added to #382 lh1–lh3 behind a re-run power gate (#178)'
-review_trigger: Any change to the data, the new lineage's rules, the power plan, the stages or caps, the arms, the judges or the decision rule
+status: proposed
+date: 2026-11-10
+scope: 'Pre-registration of the ADR 009 P1 offline study (p1-study/3): p1-study/2''s data, arms and decision rule, with recall measured by an answer-key chain (question writer, reader, grader) after the arm-guess check failed on development data (#178)'
+review_trigger: Any change to the data, the stages or caps, the arms, the measurement chain or its briefs, or the decision rule
 ---
 
-# P1 offline study, second protocol: pre-registration
+# P1 offline study, third protocol: pre-registration
 
-Protocol **p1-study/2**, written 9 November 2026 for [ADR 009](../decisions/009-curated-player.md#phases)
-P1 (#178). It decides the same question as [p1-study/1](p1-study.md):
+Protocol **p1-study/3**, written 10 November 2026 for [ADR 009](../decisions/009-curated-player.md#phases)
+P1 (#178). It replaces p1-study/2 and decides the same question as [p1-study/1](p1-study.md):
 
 > Does a curator (arm B) put in front of a successor actor more of the information that actor
 > later went back for than the simpler path without one (arm A)?
@@ -20,16 +20,32 @@ scoring units (11, 7 and 9) over 10 boundaries, nearly all singleton clusters. C
 at least one lineage with 20 or more units, so a go was impossible. The owner chose to reshape P1
 by adding one held-out lineage ("Add one held-out lineage", 9 November).
 
-**This page is self-contained.** Units, Probes, Arms, Judges, Metrics, Decision rule, Analysis
-and the stop rules are p1-study/1's text, carried over word for word except where a
-**(p1-study/2)** marker or [Deviations](#deviations-from-p1-study1) says otherwise. The four briefs
-are unchanged, and a test checks that the Confirmation brief is p1-study/1's.
+**Why a third protocol.** p1-study/2 required that a blinded guesser could not tell the two arms'
+texts apart before any scoring. On development data the guesser matched the arms on 27 of 30 texts,
+and on 26 of 30 after arm A's notes were split into lines; the limit is 21
+([#178](https://github.com/CVX-Hull/enactive/issues/178)). The two systems write differently: the
+player's records are terse notes with `key: value` details, and the curator's facts are full
+sentences. No renderer hides that without rewording content. The owner chose to redesign the
+measurement ("Draft p1-study/3", 10 November). **(p1-study/3)** Recall is now measured by a chain
+in which the party that judges never sees an arm's text
+([The measurement chain](#the-measurement-chain)). The data, the arms, the units and the decision
+rule are p1-study/2's. No held-out text had been delivered or scored when this page was written.
+
+**This page is self-contained.** Units, Probes, Arms, Metrics, Decision rule, Analysis and the stop
+rules are p1-study/1's text, carried over word for word except where a **(p1-study/2)** or
+**(p1-study/3)** marker or the two Deviations sections say otherwise. A test checks that the
+Confirmation brief is p1-study/1's.
 
 **Owner decisions (8 and 9 November 2026), carried over:** a descriptive study with effect-size
 thresholds agreed in advance; terra as the curator model; confirmed re-observations as the primary
-probes. **(p1-study/2)** The owner approved this page and decided the questions under
-[Owner decisions](#owner-decisions) on 9 November 2026. lh4 still launches only after the owner
-approves #522's frozen package.
+probes. **(p1-study/2)** The owner approved p1-study/2 and decided the questions under
+[Owner decisions](#owner-decisions) on 9 November 2026. **(p1-study/3)** This page is `proposed`
+until the owner approves it; no held-out replay starts before then.
+
+**What has already run** under p1-study/2 and stands: stage 0 (`lh4`, #522), the probes and the
+power gate on lh1–lh4 ([record](../acceptance/2026-11-10-p1-gate-study-2-178.md)), the pilot
+($3.24) and the development stage ($23.71 over two attempts, the first losing one session to
+provider timeouts).
 
 The analysis is [`tools/p1_analysis.py`](../../tools/p1_analysis.py) and its tests are
 [`tests/test_p1_analysis.py`](../../tests/test_p1_analysis.py). The plan is in
@@ -192,7 +208,7 @@ first, and answers two questions:
    prompt, or a loading screen is not.
 
 A primary probe has both answers "yes". Batches are at most 15 pairs, and the judge is pinned
-under [Judges](#judges).
+under [The measurement chain](#the-measurement-chain).
 
 ## Arms
 
@@ -211,6 +227,9 @@ the text the successor would have received live.
 - **Rendering (p1-study/2).** One renderer (#462) writes every item as one plain statement line
   under one header, with no kind label, marked as fallible player knowledge. A's record folds its
   `data` into its statement. Neither arm's provenance appears in its text.
+- **(p1-study/3) The texts are not indistinguishable,** and nothing here assumes they are. A
+  record is written whole, as p1-study/2 fixed it; the split into lines that was tried on
+  development data is not used.
 - **Cap.** Both arms are capped at **2,000 tokens** ([#455's recommended live-diff size](snapshot-diff-cost.md)),
   **(p1-study/2)** counted as ceil(UTF-8 bytes ÷ 4). Items past the cap are dropped whole.
   Delivered tokens per arm and boundary are reported, because the cap is an upper bound, not a
@@ -253,43 +272,91 @@ and every later change is a deviation.
 - **A's punctuation tell** (owner, 9 November: "Fix in stage 2"): a record whose text ends in `!`
   or `?` gets no added `.` before its data.
 
-## Judges
+## The measurement chain
 
-**Pinning.** Every judge, auditor and guesser is pinned:
+**(p1-study/3)** This section replaces p1-study/2's scoring judge and arm-guessing check.
+
+**Pinning.** Every writer, reader, grader, auditor and guesser is pinned:
 - a development agent, run as a general-purpose subagent of the lead's coding host;
 - the model of the #490 judges (named in [its record](../acceptance/2026-11-08-probe-validation-490.md#how-it-was-done)), at the host's default effort;
 - a fresh context, and only its batch file and the frames that file names.
 
 The host version is recorded with each batch.
 
-**Scoring judge.** It sees a unit's earlier frame and one arm's delivered text: the received text
-plus the working set. Its question: does the text state the specific information this frame
-shows?
-- **Mixing.** Items from A, B1 and B2 are mixed in a seeded order (`Random(4911)`), at most 10 to a
-  batch.
-- **Separation.** No batch holds two texts for the same unit.
-- **Re-judging.** Fresh judges score exactly the seeded 20% sample again
-  (`tools.p1_analysis rejudge`, `Random(4912)`). Scoring refuses any other set. Agreement, percent
-  and Cohen's kappa, is reported as the judges' repeat variance.
+**The principle.** The party that sees an arm's text judges nothing, and the party that judges
+never sees an arm's text. Blinding then holds by construction and does not depend on the two texts
+looking alike.
 
-**Arm-guessing check.** It runs before scoring. A fresh judge sees 30 delivered texts, 15 from A
-and 15 from B in a seeded order, and sorts each into one of two unnamed systems. If its split
-matches the arms on **21 or more** of 30, the rendering leaks the arm. Scoring is then refused
-(`score`) until the rendering is fixed, and the fix is recorded.
+| Step | Sees | Does not see | Writes |
+| --- | --- | --- | --- |
+| 1. Question writer | A unit's earlier frame | Any arm's text | One question and its answer key |
+| 2. Reader | One arm's delivered text and the unit's question | The frame, the key, the other arms | An answer from the text, or "not stated" |
+| 3. Grader | The question, the key and the reader's answer | The frame and every arm's text | Whether the answer gives the key's information |
+
+**1. Question writer.**
+- **One question per scoring unit,** about the specific durable information the unit's earlier
+  frame shows, with a short answer key taken from the frame.
+- **Before any arm exists.** Every held-out unit's question is written and frozen by digest before
+  any held-out replay starts.
+- **Batches** hold at most 10 frames.
+
+**2. Reader.**
+- **Items.** One per unit and text: A, B repeat 1, B repeat 2 and the Reference (the received text
+  alone, a control).
+- **Mixing.** Items are mixed in a seeded order (`Random(4911)`), at most 10 to a batch.
+- **Separation.** No batch holds two texts for the same unit, so a reader cannot carry an answer
+  from one arm to another.
+- **The answer** comes only from the text given. "Not stated" is a valid answer.
+
+**3. Grader.**
+- **Items** are mixed in a seeded order (`Random(4915)`), at most 20 to a batch. The grader is
+  not told which text an answer came from.
+- **Correct** means a person who read only the answer would know what the key says. A missing
+  minor detail does not matter. A missing or contradicted main item does. "Not stated" is never
+  correct.
+
+**A unit is stated for an arm and repeat** when the grader marks that item correct. That label is
+the `stated` of `p1-score/1`, so the decision rule and `score` are unchanged.
+
+**Re-judging.** For exactly the seeded 20% sample (`tools.p1_analysis rejudge`, `Random(4912)`), a
+fresh reader and then a fresh grader repeat steps 2 and 3. Scoring refuses any other set.
+Agreement, percent and Cohen's kappa, is reported as the chain's repeat variance.
+
+**The Reference control.** The Reference goes through steps 2 and 3 like an arm. A unit that is
+correct for the Reference needs no working set: the received text, or general knowledge of the
+game, already answers it. The primary metric still counts every unit, because both arms contain
+the received text. Recall without the Reference-correct units is reported beside it.
+
+**Checks on development data, before the arms freeze.** The whole chain runs on development's
+confirmed, informative re-observations (#490's sample) for A, B and the Reference. It decides
+nothing. Two checks stop the study and go to the owner:
+- **Grader blindness.** A fresh guesser sees 30 reader answers with their questions, 15 written
+  from A's text and 15 from B's (drawn with `Random(4914)`), and sorts each into one of two unnamed
+  systems. A split that matches the arms on **21 or more** of 30 means the answers leak the arm.
+  If development has fewer than 15 such answers per arm, the owner decides how to proceed.
+- **Chain noise.** The seeded 20% re-judging on development must disagree with the first pass on
+  **at most 10%** of labels. The power gate assumes 5% label error; a scratch re-run of the gate's
+  simulation gives P(go) at the 0.30 effect of 0.901 at 5%, 0.827 at 10% and 0.740 at 15% (2,000
+  simulations each), so the gate holds to 10% and fails by 15%.
 
 **False-fact auditor.**
 - **Sample.** For each arm and each repeat, `Random(4913)` draws up to 40 (working-set item,
   boundary) pairs from all delivered items.
-- **What the auditor sees.** The item, rendered as for the arm-blind judges, with:
+- **What the auditor sees.** The item's statement as rendered, with:
   - the frames the item cites;
   - the predecessor chunk's frames under the probe-protocol/1 coverage rule.
 
-  Batches hold at most 10 items, and the auditor is not told the arm.
+  The frames are listed in time order (#518). Batches hold at most 10 items, and the auditor is
+  not told the arm.
 - **Verdict.** An item is **false** when a listed frame contradicts it, or shows it had stopped
   being true before the boundary.
+- **(p1-study/3) Not blind by construction.** The auditor sees an arm's statement and may
+  recognise the arm from its style or from how many frames it cites. Its question is narrower than
+  recall: does a frame contradict this statement? The guard is kept as pre-registered, and the
+  result record states this limit beside it.
 
-**Delivery (p1-study/2).** Every judge, writer, annotator, auditor and guesser writes its JSON Lines
-to a named file and replies only with a line count, as #178's did.
+**Delivery (p1-study/2).** Every writer, reader, grader, annotator, auditor and guesser writes its
+JSON Lines to a named file and replies only with a line count, as #178's did.
 
 **Frozen briefs.**
 
@@ -304,6 +371,38 @@ to a named file and replies only with a line count, as #178's did.
 > only JSON Lines, one per pair in the given order:
 > {"id":"<id>","same":true|false,"informative":true|false,"what":"<one line>"}.
 
+> **Question.** You write one question about each screenshot for a memory study. Read only the
+> file named here and the image files it lists; do not open any other file, run any command other
+> than viewing files, or read documents or issues. The file [batch] lists items, each with an
+> `id` and one image path `frame`. View each image. Write one question whose answer is the
+> specific durable information the image shows (its list, contents, message, text or map
+> description), and give that answer as a short key taken from the image. The question must make
+> sense to someone who has not seen the image, must not give the answer away, and must not be
+> answerable from general knowledge of the game alone. Output only JSON Lines, one per item in the
+> given order: {"id":"<id>","question":"<one question>","key":"<the answer, as the image shows it>"}.
+
+> **Reader.** You answer questions from a text. Read only the file named here; do not open any
+> other file, run any command, or read documents or issues. The file [batch] lists items, each
+> with an `id`, a `text` and a `question`. For each item, answer the question using only what its
+> own text says. Do not use other items, and do not use what you know about the game. If the text
+> does not say, answer "not stated". Output only JSON Lines, one per item in the given order:
+> {"id":"<id>","answer":"<a short answer, or not stated>"}.
+
+> **Grader.** You check answers against an answer key. Read only the file named here; do not open
+> any other file, run any command, or read documents or issues. The file [batch] lists items,
+> each with an `id`, a `question`, a `key` and an `answer`. For each item decide: would a person
+> who read only the answer know what the key says? A missing minor detail does not matter. A
+> missing or contradicted main item does. "not stated" is never correct. Output only JSON Lines,
+> one per item in the given order: {"id":"<id>","correct":true|false,"why":"<one line>"}.
+
+> **Arm guess.** Each item in the file [batch] is a question and the short answer a reader gave
+> from a text that one of two systems produced. Read only that file. For each item, guess which
+> system's text the reader had, "1" or "2", consistently. Output only JSON Lines:
+> {"id":"<id>","system":"1"|"2"}.
+
+**Retired by p1-study/3.** No study step uses the Scoring brief below. It stays on this page only
+until the answer-key batches replace #518's scoring batches, which still read it.
+
 > **Scoring.** You check whether a text states what a screenshot shows. Read only the file named
 > here and the image files it lists; do not open any other file, run any command other than
 > viewing files, or read documents or issues. The file [batch] lists items, each with an `id`,
@@ -313,17 +412,13 @@ to a named file and replies only with a line count, as #178's did.
 > the same kind of screen or a related topic does not count. Output only JSON Lines, one per item
 > in the given order: {"id":"<id>","stated":true|false,"why":"<one line>"}.
 
-> **Arm guess.** Each text in the file [batch] was produced by one of two systems that summarise
-> what a game player knows. Read only that file. For each text, guess which system produced it,
-> "1" or "2", consistently. Output only JSON Lines: {"id":"<id>","system":"1"|"2"}.
-
 > **Audit.** You check statements against recorded screenshots. Read only the file named here and
 > the timelines and image files it lists. For each item, decide whether any frame listed for it
 > contradicts the statement, or shows it had stopped being true by the last listed frame. Output
 > only JSON Lines: {"id":"<id>","false":true|false,"frame":"<source id or null>","why":"<one
 > line>"}.
 
-**Scoring the arm guess.** `arm_guessing` maps the guesser's labels "1" and "2" to arms by whichever
+**Scoring the arm guess (p1-study/3: the grader-blindness check).** `arm_guessing` maps the guesser's labels "1" and "2" to arms by whichever
 mapping scores higher, and requires exactly 30 guesses, 15 per arm. The limit is fixed so that a
 guesser that cannot tell the arms apart reaches it at most 5% of the time, counting the better of
 the two mappings: 2 × P(Binomial(30, ½) ≥ 21) = 0.043.
@@ -334,11 +429,11 @@ All metrics come from `p1-score/1` rows, through `tools/p1_analysis.py score`.
 
 | Metric | Definition | Role |
 | --- | --- | --- |
-| **Re-observation recall** | Units whose information the arm's text states ÷ units, pooled over held-out lineages | **Primary** |
+| **Re-observation recall** | Units whose information the arm's text states ÷ units, pooled over held-out lineages. **(p1-study/3)** A unit is stated when the grader marks the reader's answer from that text correct | **Primary** |
 | Undelivered re-observations per game hour | (Units − stated) ÷ in-play game hours | Reported. ADR 009's rediscovery metric, offline; on fixed units it rescales recall, so it is not a second test |
 | Audited false-fact rate, with its one-sided 95% Clopper–Pearson upper bound | False ÷ audited items, per arm and repeat | Guard |
 | Curator ÷ actor spend | B's proxy-settled dollars ÷ the actor's dollars for the same runs, per repeat | Guard |
-| Judge agreement; arm-guess share; delivered tokens per arm | | Reported |
+| Chain agreement on the re-judged sample; arm-guess share; delivered tokens per arm; **(p1-study/3)** Reference recall, and each arm's recall without the Reference-correct units | | Reported |
 | Needed-fact recall (fact ledger) and query coverage | As frozen in **(p1-study/2)** each held-out directory's ledgers, scored by the same judge | Descriptive |
 | Reference arm; A against reference; handoff and admission boundaries separately; **(p1-study/2)** lh4 against lh1–lh3 | | Descriptive |
 
@@ -358,6 +453,7 @@ The rule was fixed before any held-out data was read, and is coded in `primary`,
 4. **Uncertainty.** The one-sided **97.5%** bound of the mean difference is **above 0**. It comes
    from 2,000 resamples of information clusters within each lineage (seed 491).
 5. **Re-judging.** Criteria 1–4 still hold with the seeded re-judged labels substituted.
+   **(p1-study/3)** A re-judged label comes from a fresh reader and a fresh grader.
 6. **False facts.** In each repeat, B's audited false-fact rate is **at most 0.10**, its upper
    bound is **at most 0.20**, and it is at most A's plus 0.05.
 7. **Cost.** In each repeat, curator spend is **at most 1.0×** the actor's. A held-out repeat that
@@ -437,6 +533,19 @@ amounts do not move between stages without the owner.
 **(p1-study/2)** p1-study/1's "Total $120" row is replaced by this: the caps sum to $198.92 plus
 twice lh4's actual spend, about $299 if lh4 spends $50 and $359 if it spends its whole envelope.
 
+**(p1-study/3) Where the stages stand, and the order from here.** Stages 0, 1 and 2's curator
+sessions are done: `lh4` cost $28.88 (its envelope spent $30.11 with a lost admission), so each
+held-out repeat's cap is **$59.34**. The remaining steps, in order:
+1. The answer-key batches are built and reviewed (a new leaf under #387).
+2. Blinded writers write every held-out unit's question; the questions are frozen by digest.
+3. The chain runs on development data, with its two checks
+   ([The measurement chain](#the-measurement-chain)).
+4. The `lh4` format check runs, and the arms are frozen with A's punctuation fix.
+5. Held-out B repeat 1 (the owner is asked first), then repeat 2, then arm A.
+6. Readers and graders label every unit; re-judging and the audit follow; `score` writes the result.
+
+No step from 2 on spends dollars except step 5.
+
 **Stop rules.**
 - **Isolation incident.** Any incident (a sandbox escape, key exposure, a proxy breach or a
   revocation) stops every stage.
@@ -469,6 +578,10 @@ probes, the run monitor, the judges, the auditors and the guesser.
 
 Development-agent tokens: lh4's probes and ledgers about 3–4M (lh1–lh3's 3.37M for 13 chunks); the
 run monitor under 0.3M; scoring, re-judging, audit and the guess check about 4M.
+
+**(p1-study/3)** The chain replaces the scoring estimate: question writers about 1M (89 units);
+readers about 5M (89 units × four texts, plus the 20% repeat, each item a text of up to about
+3,000 tokens); graders about 1M; the audit and the guess check about 1M. About 8M in all.
 
 ## Analysis and reporting
 
@@ -504,7 +617,34 @@ the second file)** `--scores <rows> --hours <hours>` writes `data/evaluation/p1/
    label, the $12 session cap and the cutoff at the successor's first operation.
 9. **Delivery by file** for every judge-like agent, as #178 already did.
 
+## Deviations from p1-study/2
+
+1. **The measurement.** A question writer, a reader and a grader replace the scoring judge. The
+   unit, the label's meaning (the arm's text states the frame's information) and the decision
+   rule are unchanged.
+2. **The arm-guessing check** on delivered texts is replaced by the grader-blindness check on
+   reader answers. p1-study/2's check ran twice on development data and failed both times (27 and
+   26 of 30).
+3. **Re-judging** repeats the reader and the grader, not one judge.
+4. **The Reference** is read and graded like an arm, as a control.
+5. **A chain-noise check** on development data, with a 10% limit.
+6. **Three new frozen briefs** (Question, Reader, Grader), a reworded Arm guess brief, and the
+   Scoring brief retired. A grader seed, `Random(4915)`.
+7. **The audit** is unchanged and recorded as not blind by construction.
+8. **Owner decisions of 10 November on #518's batch rules** (the arm-guess set, batch order and
+   packing, dropping and counting an unresolved cite) stand where they still apply: the audit's
+   batches and the guess check's order.
+9. **Development ran twice.** The first attempt lost `sd1a1` to provider timeouts; the owner chose
+   one unchanged re-run of the lineage inside the stage's cap.
+10. **A held-out session lost to infrastructure** goes to the owner when it happens; the replay
+    tool re-runs whole lineages only, so the reserve's "one session" cannot be applied literally.
+
 ## Owner decisions
+
+**(p1-study/3)** Put to the owner with this page:
+1. **Approve p1-study/3:** the measurement chain, its briefs and its two development checks.
+2. **One question per unit.** The alternative is up to three, with a unit stated only when all are
+   correct; that is stricter but needs an aggregation rule.
 
 Decided by the owner on 9 November 2026:
 1. **p1-study/2, the $80 lh4 envelope and the caps above:** "Approve".
@@ -537,3 +677,12 @@ Decided by the owner on 9 November 2026:
   not.
 - **(p1-study/2) The design followed a failed gate.** It was reshaped after lh1–lh3's counts were
   seen, but before any outcome.
+- **(p1-study/3) The measurement followed a failed blinding check.** It was redesigned after the
+  development arm-guess results, and after the lead compared the two arms' development texts, but
+  before any held-out text was delivered or scored.
+- **(p1-study/3) One question per unit.** A frame can show more than one question covers; the unit
+  is stated when the reader answers that one question.
+- **(p1-study/3) The reader is a model.** It can miss what a text says, or answer from what it
+  knows of the game despite its brief. The Reference control measures the second; the re-judged
+  sample measures the chain's repeat variance. Both errors apply to both arms.
+- **(p1-study/3) The audit is not blind by construction** (see the False-fact auditor).

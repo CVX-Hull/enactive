@@ -7,7 +7,7 @@ scope: 'P1 held-out lineage lh4 (#522) under p1-study/2: the frozen package, one
 
 # P1 held-out lineage lh4 (#522)
 
-[p1-study/2](../design/p1-study-2.md#running-lh4) adds one held-out lineage, `lh4`, to #382's three.
+[p1-study/2](https://github.com/CVX-Hull/enactive/blob/329810b/docs/design/p1-study-2.md#running-lh4) adds one held-out lineage, `lh4`, to #382's three.
 #522 ran it on 9 November 2026 (local time; the last admissions ended on 10 November UTC). It
 ended by its frozen size rule after seven admissions with **13 boundaries**, above the 12 the rule
 needs. The survivor was alive at the end.

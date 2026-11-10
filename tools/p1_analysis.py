@@ -1,4 +1,4 @@
-"""The P1 offline study's frozen analysis (ADR 009; pre-registration p1-study/2 in docs/design/p1-study-2.md,
+"""The P1 offline study's frozen analysis (ADR 009; pre-registration p1-study/3 in docs/design/p1-study-3.md,
 which keeps p1-study/1's rule from docs/design/p1-study.md; #491, #178).
 
   python -m tools.p1_analysis simulate [--probes <held-out p1-probes/1>]... [--out data/evaluation/p1/power.json]
@@ -505,7 +505,7 @@ def simulate(simulations: int = SIMULATIONS, seed: int = SEED, layout: list[tupl
                 note='Primary criterion only; guards and re-judging are not simulated.')
 
 
-# p1-study/2's planning simulation (docs/design/p1-study-2.md#power): #382's frozen held-out
+# p1-study/2's planning simulation (docs/design/p1-study-3.md#power): #382's frozen held-out
 # structure plus one new held-out lineage, lh4, run to a planned number of boundaries. Planning
 # only; the gate before held-out replay is `simulate --probes` on all four lineages' actual probes.
 PLAN_SIMULATIONS = 2000
