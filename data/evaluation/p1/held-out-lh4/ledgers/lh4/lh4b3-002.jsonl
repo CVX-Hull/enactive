@@ -1,0 +1,103 @@
+{"type": "carry", "fact": "F1", "boundary": "lh4b3-001>lh4b3-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F2", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F3", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F4", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F6", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F7", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F8", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F9", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F10", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F11", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F12", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F13", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F15", "boundary": "lh4b3-001>lh4b3-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F16", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F17", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F18", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F19", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F20", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F21", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F22", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F23", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F24", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F25", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F27", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F28", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F29", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F30", "boundary": "lh4b3-001>lh4b3-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F31", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F32", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F33", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F34", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F35", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F36", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F37", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F38", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F39", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F40", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F41", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F42", "boundary": "lh4b3-001>lh4b3-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F43", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F44", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F45", "boundary": "lh4b3-001>lh4b3-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F46", "boundary": "lh4b3-001>lh4b3-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F47", "boundary": "lh4b3-001>lh4b3-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F48", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F49", "boundary": "lh4b3-001>lh4b3-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F50", "boundary": "lh4b3-001>lh4b3-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F51", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F52", "boundary": "lh4b3-001>lh4b3-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F53", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F54", "boundary": "lh4b3-001>lh4b3-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F55", "boundary": "lh4b3-001>lh4b3-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F56", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F57", "boundary": "lh4b3-001>lh4b3-002", "carried": true, "where": "report"}
+{"type": "carry", "fact": "F58", "boundary": "lh4b3-001>lh4b3-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F59", "boundary": "lh4b3-001>lh4b3-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F60", "boundary": "lh4b3-001>lh4b3-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F61", "boundary": "lh4b3-001>lh4b3-002", "carried": true, "where": "packet"}
+{"type": "carry", "fact": "F62", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F63", "boundary": "lh4b3-001>lh4b3-002", "carried": false, "where": null}
+{"type": "carry", "fact": "F64", "boundary": "lh4b3-001>lh4b3-002", "carried": true, "where": "packet"}
+{"type": "event", "fact": "F1", "event": "used", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-6861", "note": "Stats screen shows Morgan Hale, male, 25"}
+{"type": "event", "fact": "F47", "event": "used", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-6861", "note": "Long pointy stick is wielded"}
+{"type": "event", "fact": "F29", "event": "rediscovered", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-6861", "note": "Status shows Overweight at 23.6 lbs"}
+{"type": "event", "fact": "F51", "event": "rediscovered", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-6861", "note": "Safe mode shows On"}
+{"type": "event", "fact": "F60", "event": "needed", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-6861", "note": "Hickory tree examined while looking for food"}
+{"type": "event", "fact": "F60", "event": "rediscovered", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-6861", "note": "Hickory says nothing can be harvested this season"}
+{"type": "event", "fact": "F53", "event": "rediscovered", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-6995", "note": "A horse is seen to the west of Morgan"}
+{"type": "event", "fact": "F15", "event": "used", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-7254", "note": "Moved and examined the forest looking for food"}
+{"type": "event", "fact": "F59", "event": "needed", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-8117", "note": "Foraging underbrush for food"}
+{"type": "event", "fact": "F59", "event": "rediscovered", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-8117", "note": "Forage again says nothing found"}
+{"type": "event", "fact": "F62", "event": "rediscovered", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-9331", "note": "Moving onto huckleberry bush is slow, and blueberry bush at 9572"}
+{"type": "event", "fact": "F15", "event": "needed", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-9717", "note": "Browsed cooked vegetable recipes for a food route"}
+{"type": "event", "fact": "F21", "event": "rediscovered", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-9717", "note": "Cooking recipe needs a nearby fire or other heat source"}
+{"type": "event", "fact": "F50", "event": "needed", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-9717", "note": "Preparing foraged plants was relevant while checking cooked wild vegetables"}
+{"type": "event", "fact": "F10", "event": "rediscovered", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-10160", "note": "Recipe shows Craftable in the dark: Impossible"}
+{"type": "event", "fact": "F6", "event": "rediscovered", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-11189", "note": "Smartphone listed at 52/56 battery"}
+{"type": "event", "fact": "F46", "event": "rediscovered", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-11189", "note": "Sugar seen in glass and plastic seasoning bottles, 35 and 26"}
+{"type": "event", "fact": "F57", "event": "rediscovered", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-11189", "note": "Inventory shows 3 fiddleheads, sugar, 8 rations and clean water"}
+{"type": "event", "fact": "F38", "event": "rediscovered", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-11189", "note": "Flint and steel still carried"}
+{"type": "event", "fact": "F8", "event": "rediscovered", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-11189", "note": "Sealed bottles of clean water and tupperware still carried"}
+{"type": "event", "fact": "F43", "event": "needed", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-11646", "note": "Fishing hook and rod recipes pointed back to cordage requirements"}
+{"type": "event", "fact": "F43", "event": "rediscovered", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-11682", "note": "Long cordage needs 6 tanbark, willowbark, straw or withered plants and fiber twisting"}
+{"type": "event", "fact": "F24", "event": "rediscovered", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-11665", "note": "Murky water 184 portions seen at the pool"}
+{"type": "event", "fact": "F39", "event": "needed", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-11665", "note": "Murky water needs filtering and sterilizing before drinking"}
+{"type": "event", "fact": "F64", "event": "invalidated", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-11694", "note": "Survival skill rose to level 1"}
+{"type": "event", "fact": "F17", "event": "needed", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-12030", "note": "Maple tree needs a drilling tool to tap"}
+{"type": "event", "fact": "F17", "event": "rediscovered", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-12030", "note": "Maple tree message says a drilling tool is needed"}
+{"type": "event", "fact": "F17", "event": "used", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-12097", "note": "Searched drilling recipes to tap the maple"}
+{"type": "event", "fact": "F10", "event": "rediscovered", "frame": "a0e3e64db5f9bde4ac7446ae5fe58881-12097", "note": "Rock drill shows crafting in the dark impossible"}
+{"type": "fact", "id": "F65", "statement": "Burdock grows in the forest near and east of the Isherwood stable; it can be harvested fresh by hand and eaten raw (51 kcal, enjoyability -12, spoils in about a day)", "category": "resource", "observed": "a0e3e64db5f9bde4ac7446ae5fe58881-8837", "stored": "0b279e"}
+{"type": "fact", "id": "F66", "statement": "Morgan harvested three burdock and ate one, leaving two", "category": "self", "observed": "a0e3e64db5f9bde4ac7446ae5fe58881-10570", "stored": "0b279e"}
+{"type": "fact", "id": "F67", "statement": "Morgan's survival skill reached level 1 at about 9:46", "category": "self", "observed": "a0e3e64db5f9bde4ac7446ae5fe58881-11694", "stored": "0b279e"}
+{"type": "fact", "id": "F68", "statement": "Picking a pine tree yields pine boughs, pinecones and pine resin", "category": "resource", "observed": "a0e3e64db5f9bde4ac7446ae5fe58881-10897", "stored": null}
+{"type": "fact", "id": "F69", "statement": "Harvesting birch trees yields pieces of birchbark; two were gathered", "category": "resource", "observed": "a0e3e64db5f9bde4ac7446ae5fe58881-9572", "stored": null}
+{"type": "fact", "id": "F70", "statement": "A cooked wild vegetables recipe (food handling 1, 34 kcal) needs a heat source such as a nearby fire", "category": "procedure", "observed": "a0e3e64db5f9bde4ac7446ae5fe58881-9717", "stored": null}
+{"type": "fact", "id": "F71", "statement": "An improvised fishing hook takes 5 minutes 52 seconds, a cutting-2 tool and a stick or similar, fabrication 1, with about 55% minor failure; it is needed for a basic fishing rod", "category": "procedure", "observed": "a0e3e64db5f9bde4ac7446ae5fe58881-11646", "stored": null}
+{"type": "fact", "id": "F72", "statement": "A murky water pool of 184 portions lies a few tiles north-west of the burdock grove in the forest east of Isherwood", "category": "place", "observed": "a0e3e64db5f9bde4ac7446ae5fe58881-11665", "stored": "0b279e"}
+{"type": "fact", "id": "F73", "statement": "A maple tree in this forest needs a tool to drill the crust before it can be tapped", "category": "resource", "observed": "a0e3e64db5f9bde4ac7446ae5fe58881-12030", "stored": null}
+{"type": "fact", "id": "F74", "statement": "A primitive rock drill takes 5 minutes 36 seconds, needs a cutting tool and a stick or plank, fabrication 1, and gives rock drilling quality 1; it is not shown to tap maples", "category": "procedure", "observed": "a0e3e64db5f9bde4ac7446ae5fe58881-12097", "stored": null}
+{"type": "fact", "id": "F75", "statement": "Morgan carries a pocket knife, a cutting tool for recipes", "category": "item", "observed": "a0e3e64db5f9bde4ac7446ae5fe58881-11189", "stored": null}
+{"type": "fact", "id": "F76", "statement": "Pine boughs, pinecones and other forest pickings were dropped on a shrub in the burdock grove to cut load", "category": "item", "observed": "a0e3e64db5f9bde4ac7446ae5fe58881-11430", "stored": null}
+{"type": "end", "frames_viewed": 36}

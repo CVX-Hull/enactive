@@ -1,0 +1,37 @@
+{"type":"carry","fact":"F1","boundary":"lh4b1-001>lh4b1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F2","boundary":"lh4b1-001>lh4b1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F3","boundary":"lh4b1-001>lh4b1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F4","boundary":"lh4b1-001>lh4b1-002","carried":false,"where":null}
+{"type":"carry","fact":"F5","boundary":"lh4b1-001>lh4b1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F6","boundary":"lh4b1-001>lh4b1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F7","boundary":"lh4b1-001>lh4b1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F8","boundary":"lh4b1-001>lh4b1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F9","boundary":"lh4b1-001>lh4b1-002","carried":false,"where":null}
+{"type":"carry","fact":"F10","boundary":"lh4b1-001>lh4b1-002","carried":false,"where":null}
+{"type":"carry","fact":"F11","boundary":"lh4b1-001>lh4b1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F12","boundary":"lh4b1-001>lh4b1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F13","boundary":"lh4b1-001>lh4b1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F14","boundary":"lh4b1-001>lh4b1-002","carried":true,"where":"packet"}
+{"type":"carry","fact":"F15","boundary":"lh4b1-001>lh4b1-002","carried":true,"where":"packet"}
+{"type":"fact","id":"F16","statement":"Evac shelter A-23 lies just west of the town of Freedom, with a forest to the north-west","category":"place","observed":"324d5814c4902c09ce18c6bbc8afbcfb-5948","stored":null}
+{"type":"fact","id":"F17","statement":"The forest north-west of the shelter has huckleberry and blueberry bushes, ferns and a maple tree that needs a drilling tool to tap","category":"resource","observed":"324d5814c4902c09ce18c6bbc8afbcfb-6976","stored":null}
+{"type":"fact","id":"F18","statement":"Two hostile triffids are far to the north-west of the forest field (about 58-60 tiles); they are slower than the survivor and paralyse with a sting","category":"hazard","observed":"324d5814c4902c09ce18c6bbc8afbcfb-7811","stored":"505802"}
+{"type":"fact","id":"F19","statement":"Locker 1N in the shelter holds a FEMA pamphlet, plastic fork, knife and spoon and a whistle","category":"resource","observed":"324d5814c4902c09ce18c6bbc8afbcfb-9259","stored":null}
+{"type":"fact","id":"F20","statement":"The smashed north-east locker area has a pipe, 18 scrap metal and 7 small metal sheets on the floor","category":"resource","observed":"324d5814c4902c09ce18c6bbc8afbcfb-9407","stored":"505802"}
+{"type":"fact","id":"F21","statement":"Pot, clay and cooking recipes need a heat source (oven, stove, kiln or a nearby fire) and the clay pellet recipe accepts clean or murky water","category":"procedure","observed":"324d5814c4902c09ce18c6bbc8afbcfb-6486","stored":null}
+{"type":"fact","id":"F22","statement":"A brazier takes 30 minutes, one sheet metal and a tool with hammering 2 or more, at fabrication 1","category":"procedure","observed":"324d5814c4902c09ce18c6bbc8afbcfb-9481","stored":null}
+{"type":"fact","id":"F23","statement":"The field north-west of the shelter has many rocks, sharp rocks, flint and flaking rock lying around","category":"resource","observed":"324d5814c4902c09ce18c6bbc8afbcfb-10310","stored":null}
+{"type":"fact","id":"F24","statement":"Murky water pools lie in the field north-west of the shelter and need purification before drinking","category":"resource","observed":"324d5814c4902c09ce18c6bbc8afbcfb-10310","stored":"505802"}
+{"type":"fact","id":"F25","statement":"A fat zombie and a tough zombie roam the field to the east and south-east of the shelter, and others lurk near western Freedom","category":"hazard","observed":"324d5814c4902c09ce18c6bbc8afbcfb-9830","stored":"505802"}
+{"type":"fact","id":"F26","statement":"A pipe from the destroyed locker was wielded in place of the damaged stick","category":"item","observed":"324d5814c4902c09ce18c6bbc8afbcfb-10765","stored":null}
+{"type":"fact","id":"F27","statement":"A makeshift crowbar was crafted from memory at the shelter's east window and is now wielded","category":"item","observed":"324d5814c4902c09ce18c6bbc8afbcfb-12048","stored":"505802"}
+{"type":"fact","id":"F28","statement":"Six short strings, four nails, two sheets and a stick lie on the shelter floor by the torn-down east window, and the large rock was dropped there","category":"item","observed":"324d5814c4902c09ce18c6bbc8afbcfb-11959","stored":"505802"}
+{"type":"fact","id":"F29","statement":"The survivor is peckish and overweight when heavily loaded","category":"self","observed":"324d5814c4902c09ce18c6bbc8afbcfb-12048","stored":"505802"}
+{"type":"event","fact":"F12","event":"used","frame":"324d5814c4902c09ce18c6bbc8afbcfb-6351","note":"Left the shelter through the open north window"}
+{"type":"event","fact":"F10","event":"needed","frame":"324d5814c4902c09ce18c6bbc8afbcfb-6065","note":"Spear recipe shows crafting in the dark is impossible"}
+{"type":"event","fact":"F10","event":"used","frame":"324d5814c4902c09ce18c6bbc8afbcfb-12048","note":"Crafted the crowbar beside the bright window"}
+{"type":"event","fact":"F15","event":"used","frame":"324d5814c4902c09ce18c6bbc8afbcfb-6486","note":"Searched pot recipes to pursue renewable water and food"}
+{"type":"event","fact":"F14","event":"needed","frame":"324d5814c4902c09ce18c6bbc8afbcfb-6517","note":"Clay recipe lists clean water in hand as a component"}
+{"type":"event","fact":"F3","event":"rediscovered","frame":"324d5814c4902c09ce18c6bbc8afbcfb-9481","note":"Harland is seen again inside the shelter"}
+{"type":"event","fact":"F5","event":"invalidated","frame":"324d5814c4902c09ce18c6bbc8afbcfb-10765","note":"Stick was damaged and the pipe is wielded instead"}
+{"type":"end","frames_viewed":35}

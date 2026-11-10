@@ -1,0 +1,81 @@
+{
+ "brief": "You compare pairs of screenshots for a study. Read only the file named here and the image files it lists; do not open any other file, run any command other than viewing files, or read documents or issues. The file [batch] lists pairs, each with an `id` and two image paths `A` and `B`. View both images of every pair. For each pair decide: do A and B show the same specific information — the same list of entries, the same container contents, the same message or the same text panel — not merely the same kind of screen? Small differences (a cursor, a highlighted row, a clock, a status value) do not matter. If they do, is that information durable — not an empty list, a search or help prompt, or a loading screen? Output only JSON Lines, one per pair in the given order: {\"id\":\"<id>\",\"same\":true|false,\"informative\":true|false,\"what\":\"<one line>\"}.",
+ "pairs": [
+  {
+   "A": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-2696.png",
+   "B": "522-held-out/computer-sessions/lh4b3/sources/a0e3e64db5f9bde4ac7446ae5fe58881-7418.png",
+   "id": "lh4-p0121"
+  },
+  {
+   "A": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-3628.png",
+   "B": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-10793.png",
+   "id": "lh4-p0122"
+  },
+  {
+   "A": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-42.png",
+   "B": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-154.png",
+   "id": "lh4-p0123"
+  },
+  {
+   "A": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-10786.png",
+   "B": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-4275.png",
+   "id": "lh4-p0124"
+  },
+  {
+   "A": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-837.png",
+   "B": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-4342.png",
+   "id": "lh4-p0125"
+  },
+  {
+   "A": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-13119.png",
+   "B": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-471.png",
+   "id": "lh4-p0126"
+  },
+  {
+   "A": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-13124.png",
+   "B": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-476.png",
+   "id": "lh4-p0127"
+  },
+  {
+   "A": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-11490.png",
+   "B": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-4922.png",
+   "id": "lh4-p0128"
+  },
+  {
+   "A": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-12874.png",
+   "B": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-5090.png",
+   "id": "lh4-p0129"
+  },
+  {
+   "A": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-6239.png",
+   "B": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-12174.png",
+   "id": "lh4-p0130"
+  },
+  {
+   "A": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-765.png",
+   "B": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-837.png",
+   "id": "lh4-p0131"
+  },
+  {
+   "A": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-768.png",
+   "B": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-412.png",
+   "id": "lh4-p0132"
+  },
+  {
+   "A": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-772.png",
+   "B": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-1807.png",
+   "id": "lh4-p0133"
+  },
+  {
+   "A": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-8090.png",
+   "B": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-9703.png",
+   "id": "lh4-p0134"
+  },
+  {
+   "A": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-8391.png",
+   "B": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-9758.png",
+   "id": "lh4-p0135"
+  }
+ ],
+ "schema": "p1-held-out-batch/1"
+}

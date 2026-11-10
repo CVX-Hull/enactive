@@ -1,0 +1,15 @@
+{"id":"lh4-p0106","same":false,"informative":false,"what":"Loading screens with different stage text (Overmap terrain vs Monster types)"}
+{"id":"lh4-p0107","same":false,"informative":true,"what":"NPC dialogue with different text (Any luck? vs ask again later)"}
+{"id":"lh4-p0108","same":true,"informative":true,"what":"Crafting recipe screen: clean water, same 2-entry list and recipe panel"}
+{"id":"lh4-p0109","same":true,"informative":true,"what":"Crafting recipe screen: lockpick results, same 3-entry list and recipe panel"}
+{"id":"lh4-p0110","same":true,"informative":false,"what":"Both empty Searched crafting list (0 in category)"}
+{"id":"lh4-p0111","same":true,"informative":true,"what":"Crafting recipe screen: clean water, same list and recipe panel"}
+{"id":"lh4-p0112","same":true,"informative":false,"what":"Both empty Searched crafting list (0 in category)"}
+{"id":"lh4-p0113","same":false,"informative":false,"what":"Empty crafting list vs sweet water recipe list"}
+{"id":"lh4-p0114","same":true,"informative":true,"what":"Overmap with note 'Murky water recess' and same legend, identical"}
+{"id":"lh4-p0115","same":true,"informative":true,"what":"Overmap west of Freedom with note 'Pump and wood stove' tooltip"}
+{"id":"lh4-p0116","same":false,"informative":false,"what":"Game map views with different message logs and scenes"}
+{"id":"lh4-p0117","same":true,"informative":true,"what":"Same forest game screen and message log (sign, saving game, reached destination)"}
+{"id":"lh4-p0118","same":true,"informative":true,"what":"Same inventory list (26.0 lbs, clean water 2, same containers)"}
+{"id":"lh4-p0119","same":true,"informative":true,"what":"Overmap forest west of Freedom with same notes and legend"}
+{"id":"lh4-p0120","same":false,"informative":true,"what":"Multidrop lists differ (bag 23 vs 31 items, clean water 1 vs 2, weights)"}

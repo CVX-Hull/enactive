@@ -1,0 +1,15 @@
+{"id":"lh4-p0031","same":false,"informative":true,"what":"Searched crafting list: 9 entries (casserole, sandwich, improvised hook...) vs 8 entries (no improvised hook)"}
+{"id":"lh4-p0032","same":false,"informative":true,"what":"Crafting recipe list with 1 entry (basic fishing rod) vs 8 entries"}
+{"id":"lh4-p0033","same":true,"informative":false,"what":"Empty favorite recipes tab in both"}
+{"id":"lh4-p0034","same":true,"informative":true,"what":"Same map view with identical sidebar and message log (never mind, hickory tree)"}
+{"id":"lh4-p0035","same":false,"informative":true,"what":"Same area but different message logs (underbrush slow/examine vs forage found nothing)"}
+{"id":"lh4-p0036","same":true,"informative":true,"what":"Same overmap view with keybinding legend, Isherwood Staples"}
+{"id":"lh4-p0037","same":false,"informative":true,"what":"Map view; harvest messages differ (pine bough x7/pinecone x2 vs x4/x3) and weight differs"}
+{"id":"lh4-p0038","same":true,"informative":true,"what":"Same 4-entry polehammer recipe list and recipe detail"}
+{"id":"lh4-p0039","same":true,"informative":true,"what":"Same overmap view with keybinding legend"}
+{"id":"lh4-p0040","same":true,"informative":false,"what":"Empty Searched recipe list (0 in category)"}
+{"id":"lh4-p0041","same":true,"informative":false,"what":"Recipe search help prompt with typed query text"}
+{"id":"lh4-p0042","same":true,"informative":false,"what":"Empty favorite recipes tab"}
+{"id":"lh4-p0043","same":true,"informative":true,"what":"Same clean water recipe list (2 entries) and recipe detail"}
+{"id":"lh4-p0044","same":true,"informative":false,"what":"Empty Searched recipe list"}
+{"id":"lh4-p0045","same":false,"informative":true,"what":"Same map view but different message logs (pine harvest vs burdock/birchbark forage)"}

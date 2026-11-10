@@ -1,0 +1,2576 @@
+{
+ "candidates": [
+  {
+   "boundary": "lh4b1-001>lh4b1-002",
+   "distance": 0,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-1807",
+   "earlier_chunk": "lh4b1-001",
+   "earlier_dhash": "c004c00480008000800080008000800080008000800080008000800009574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-1807.png",
+   "id": "lh4-p0001",
+   "later": "324d5814c4902c09ce18c6bbc8afbcfb-11683",
+   "later_chunk": "lh4b1-002",
+   "later_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-11683.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b1-001>lh4b1-002",
+   "distance": 4,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-2168",
+   "earlier_chunk": "lh4b1-001",
+   "earlier_dhash": "000f020f018c064d164d172d0e0d2e2dbb3d39bf599b59a75d0d1e4f0ccf010d",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-2168.png",
+   "id": "lh4-p0002",
+   "later": "324d5814c4902c09ce18c6bbc8afbcfb-5948",
+   "later_chunk": "lh4b1-002",
+   "later_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-5948.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b1-001>lh4b1-002",
+   "distance": 2,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-1975",
+   "earlier_chunk": "lh4b1-001",
+   "earlier_dhash": "e0048602c5cd47cc53ce598ed80e980080008000800080008000800009574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-1975.png",
+   "id": "lh4-p0003",
+   "later": "324d5814c4902c09ce18c6bbc8afbcfb-6059",
+   "later_chunk": "lh4b1-002",
+   "later_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-6059.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b1-001>lh4b1-002",
+   "distance": 4,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-1982",
+   "earlier_chunk": "lh4b1-001",
+   "earlier_dhash": "000d000d020c018d024d062d073d0f2d2f2d3cbf58bf589b1cb31daf0e2f0e5d",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-1982.png",
+   "id": "lh4-p0004",
+   "later": "324d5814c4902c09ce18c6bbc8afbcfb-6108",
+   "later_chunk": "lh4b1-002",
+   "later_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-6108.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b1-001>lh4b1-002",
+   "distance": 0,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-1807",
+   "earlier_chunk": "lh4b1-001",
+   "earlier_dhash": "c004c00480008000800080008000800080008000800080008000800009574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-1807.png",
+   "id": "lh4-p0005",
+   "later": "324d5814c4902c09ce18c6bbc8afbcfb-6493",
+   "later_chunk": "lh4b1-002",
+   "later_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-6493.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b1-001>lh4b1-002",
+   "distance": 0,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-1807",
+   "earlier_chunk": "lh4b1-001",
+   "earlier_dhash": "c004c00480008000800080008000800080008000800080008000800009574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-1807.png",
+   "id": "lh4-p0006",
+   "later": "324d5814c4902c09ce18c6bbc8afbcfb-9477",
+   "later_chunk": "lh4b1-002",
+   "later_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-9477.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b1-002>lh4b2-001",
+   "distance": 0,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-1807",
+   "earlier_chunk": "lh4b1-001",
+   "earlier_dhash": "c004c00480008000800080008000800080008000800080008000800009574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-1807.png",
+   "id": "lh4-p0007",
+   "later": "93b94e2cf0992beb2d7abcef78aee2b5-1058",
+   "later_chunk": "lh4b2-001",
+   "later_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-1058.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b1-002>lh4b2-001",
+   "distance": 0,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-1807",
+   "earlier_chunk": "lh4b1-001",
+   "earlier_dhash": "c004c00480008000800080008000800080008000800080008000800009574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-1807.png",
+   "id": "lh4-p0008",
+   "later": "93b94e2cf0992beb2d7abcef78aee2b5-10977",
+   "later_chunk": "lh4b2-001",
+   "later_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-10977.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b1-002>lh4b2-001",
+   "distance": 9,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-9485",
+   "earlier_chunk": "lh4b1-002",
+   "earlier_dhash": "0b0f048f0c4c2d2d2d2d0e3d0e0d3e2dbb3db1bf199b59a75d0d1e4f0ccf010d",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-9485.png",
+   "id": "lh4-p0009",
+   "later": "93b94e2cf0992beb2d7abcef78aee2b5-1707",
+   "later_chunk": "lh4b2-001",
+   "later_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-1707.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b1-002>lh4b2-001",
+   "distance": 7,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-8211",
+   "earlier_chunk": "lh4b1-002",
+   "earlier_dhash": "74956c91f149691b6d596c017c2379e3f683f6037c037c016c016c0368036823",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-8211.png",
+   "id": "lh4-p0010",
+   "later": "93b94e2cf0992beb2d7abcef78aee2b5-220",
+   "later_chunk": "lh4b2-001",
+   "later_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-220.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b1-002>lh4b2-001",
+   "distance": 13,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-9485",
+   "earlier_chunk": "lh4b1-002",
+   "earlier_dhash": "0b0f048f0c4c2d2d2d2d0e3d0e0d3e2dbb3db1bf199b59a75d0d1e4f0ccf010d",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-9485.png",
+   "id": "lh4-p0011",
+   "later": "93b94e2cf0992beb2d7abcef78aee2b5-351",
+   "later_chunk": "lh4b2-001",
+   "later_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-351.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b1-002>lh4b2-001",
+   "distance": 1,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-416",
+   "earlier_chunk": "lh4b1-001",
+   "earlier_dhash": "000000e000740074027c033a033c033c023e033e033a10e413c801f0006000e0",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-416.png",
+   "id": "lh4-p0012",
+   "later": "93b94e2cf0992beb2d7abcef78aee2b5-79",
+   "later_chunk": "lh4b2-001",
+   "later_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-79.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b1-002>lh4b2-001",
+   "distance": 4,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-11373",
+   "earlier_chunk": "lh4b1-002",
+   "earlier_dhash": "3575b3749371137b336b526c3264137b936d92659a669b660367e36f92630d63",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-11373.png",
+   "id": "lh4-p0013",
+   "later": "93b94e2cf0992beb2d7abcef78aee2b5-794",
+   "later_chunk": "lh4b2-001",
+   "later_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-794.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b1-002>lh4b2-001",
+   "distance": 2,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-1804",
+   "earlier_chunk": "lh4b1-001",
+   "earlier_dhash": "c4b4cc1480008000800080008000800080008000800080008000800009574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-1804.png",
+   "id": "lh4-p0014",
+   "later": "93b94e2cf0992beb2d7abcef78aee2b5-837",
+   "later_chunk": "lh4b2-001",
+   "later_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-837.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b1-002>lh4b2-001",
+   "distance": 4,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-6486",
+   "earlier_chunk": "lh4b1-002",
+   "earlier_dhash": "e004c608c492c6d2c196c79cde96c792845a805e815a8296a653834e05774957",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-6486.png",
+   "id": "lh4-p0015",
+   "later": "93b94e2cf0992beb2d7abcef78aee2b5-848",
+   "later_chunk": "lh4b2-001",
+   "later_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-848.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b2-001>lh4b2-002",
+   "distance": 0,
+   "earlier": "93b94e2cf0992beb2d7abcef78aee2b5-837",
+   "earlier_chunk": "lh4b2-001",
+   "earlier_dhash": "e4b4ec1480008000800080008000800080008000800080008000800009574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-837.png",
+   "id": "lh4-p0016",
+   "later": "93b94e2cf0992beb2d7abcef78aee2b5-12760",
+   "later_chunk": "lh4b2-002",
+   "later_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-12760.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b2-001>lh4b2-002",
+   "distance": 1,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-6497",
+   "earlier_chunk": "lh4b1-002",
+   "earlier_dhash": "e040c80c899c8724980488e48c748c648ce48d648cf488748d6499e409574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-6497.png",
+   "id": "lh4-p0017",
+   "later": "93b94e2cf0992beb2d7abcef78aee2b5-12772",
+   "later_chunk": "lh4b2-002",
+   "later_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-12772.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b2-001>lh4b2-002",
+   "distance": 0,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-1807",
+   "earlier_chunk": "lh4b1-001",
+   "earlier_dhash": "c004c00480008000800080008000800080008000800080008000800009574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-1807.png",
+   "id": "lh4-p0018",
+   "later": "93b94e2cf0992beb2d7abcef78aee2b5-12952",
+   "later_chunk": "lh4b2-002",
+   "later_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-12952.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b2-001>lh4b2-002",
+   "distance": 2,
+   "earlier": "93b94e2cf0992beb2d7abcef78aee2b5-8334",
+   "earlier_chunk": "lh4b2-001",
+   "earlier_dhash": "240b0b0f380cdc2dc70d819d98cdb24d438d49cf15cf18cf99cd93cf224d220d",
+   "earlier_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-8334.png",
+   "id": "lh4-p0019",
+   "later": "93b94e2cf0992beb2d7abcef78aee2b5-13154",
+   "later_chunk": "lh4b2-002",
+   "later_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-13154.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b2-001>lh4b2-002",
+   "distance": 0,
+   "earlier": "93b94e2cf0992beb2d7abcef78aee2b5-837",
+   "earlier_chunk": "lh4b2-001",
+   "earlier_dhash": "e4b4ec1480008000800080008000800080008000800080008000800009574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-837.png",
+   "id": "lh4-p0020",
+   "later": "93b94e2cf0992beb2d7abcef78aee2b5-14099",
+   "later_chunk": "lh4b2-002",
+   "later_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-14099.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b2-001>lh4b2-002",
+   "distance": 13,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-5274",
+   "earlier_chunk": "lh4b1-001",
+   "earlier_dhash": "d004e408e78287c6a7cea7cc8748820a800c800a800f800e804e800e09474d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-5274.png",
+   "id": "lh4-p0021",
+   "later": "93b94e2cf0992beb2d7abcef78aee2b5-14102",
+   "later_chunk": "lh4b2-002",
+   "later_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-14102.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b2-001>lh4b2-002",
+   "distance": 6,
+   "earlier": "93b94e2cf0992beb2d7abcef78aee2b5-8334",
+   "earlier_chunk": "lh4b2-001",
+   "earlier_dhash": "240b0b0f380cdc2dc70d819d98cdb24d438d49cf15cf18cf99cd93cf224d220d",
+   "earlier_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-8334.png",
+   "id": "lh4-p0022",
+   "later": "93b94e2cf0992beb2d7abcef78aee2b5-14618",
+   "later_chunk": "lh4b2-002",
+   "later_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-14618.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b2-001>lh4b2-002",
+   "distance": 0,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-1807",
+   "earlier_chunk": "lh4b1-001",
+   "earlier_dhash": "c004c00480008000800080008000800080008000800080008000800009574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-1807.png",
+   "id": "lh4-p0023",
+   "later": "93b94e2cf0992beb2d7abcef78aee2b5-15867",
+   "later_chunk": "lh4b2-002",
+   "later_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-15867.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b2-002>lh4b3-001",
+   "distance": 0,
+   "earlier": "93b94e2cf0992beb2d7abcef78aee2b5-837",
+   "earlier_chunk": "lh4b2-001",
+   "earlier_dhash": "e4b4ec1480008000800080008000800080008000800080008000800009574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-837.png",
+   "id": "lh4-p0024",
+   "later": "a0e3e64db5f9bde4ac7446ae5fe58881-3085",
+   "later_chunk": "lh4b3-001",
+   "later_path": "522-held-out/computer-sessions/lh4b3/sources/a0e3e64db5f9bde4ac7446ae5fe58881-3085.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b2-002>lh4b3-001",
+   "distance": 0,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-1807",
+   "earlier_chunk": "lh4b1-001",
+   "earlier_dhash": "c004c00480008000800080008000800080008000800080008000800009574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-1807.png",
+   "id": "lh4-p0025",
+   "later": "a0e3e64db5f9bde4ac7446ae5fe58881-4275",
+   "later_chunk": "lh4b3-001",
+   "later_path": "522-held-out/computer-sessions/lh4b3/sources/a0e3e64db5f9bde4ac7446ae5fe58881-4275.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b2-002>lh4b3-001",
+   "distance": 0,
+   "earlier": "93b94e2cf0992beb2d7abcef78aee2b5-79",
+   "earlier_chunk": "lh4b2-001",
+   "earlier_dhash": "000000e000740074027c033a033c033c023e033e033a10e413c801f000600060",
+   "earlier_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-79.png",
+   "id": "lh4-p0026",
+   "later": "a0e3e64db5f9bde4ac7446ae5fe58881-72",
+   "later_chunk": "lh4b3-001",
+   "later_path": "522-held-out/computer-sessions/lh4b3/sources/a0e3e64db5f9bde4ac7446ae5fe58881-72.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b3-001>lh4b3-002",
+   "distance": 0,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-1807",
+   "earlier_chunk": "lh4b1-001",
+   "earlier_dhash": "c004c00480008000800080008000800080008000800080008000800009574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-1807.png",
+   "id": "lh4-p0027",
+   "later": "a0e3e64db5f9bde4ac7446ae5fe58881-10140",
+   "later_chunk": "lh4b3-002",
+   "later_path": "522-held-out/computer-sessions/lh4b3/sources/a0e3e64db5f9bde4ac7446ae5fe58881-10140.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b3-001>lh4b3-002",
+   "distance": 1,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-6497",
+   "earlier_chunk": "lh4b1-002",
+   "earlier_dhash": "e040c80c899c8724980488e48c748c648ce48d648cf488748d6499e409574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-6497.png",
+   "id": "lh4-p0028",
+   "later": "a0e3e64db5f9bde4ac7446ae5fe58881-10146",
+   "later_chunk": "lh4b3-002",
+   "later_path": "522-held-out/computer-sessions/lh4b3/sources/a0e3e64db5f9bde4ac7446ae5fe58881-10146.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b3-001>lh4b3-002",
+   "distance": 2,
+   "earlier": "93b94e2cf0992beb2d7abcef78aee2b5-15871",
+   "earlier_chunk": "lh4b2-002",
+   "earlier_dhash": "e004c608c49286d28596879c849c879e865a845c815b829ba6528343064f4957",
+   "earlier_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-15871.png",
+   "id": "lh4-p0029",
+   "later": "a0e3e64db5f9bde4ac7446ae5fe58881-10150",
+   "later_chunk": "lh4b3-002",
+   "later_path": "522-held-out/computer-sessions/lh4b3/sources/a0e3e64db5f9bde4ac7446ae5fe58881-10150.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b3-001>lh4b3-002",
+   "distance": 0,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-1807",
+   "earlier_chunk": "lh4b1-001",
+   "earlier_dhash": "c004c00480008000800080008000800080008000800080008000800009574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-1807.png",
+   "id": "lh4-p0030",
+   "later": "a0e3e64db5f9bde4ac7446ae5fe58881-11639",
+   "later_chunk": "lh4b3-002",
+   "later_path": "522-held-out/computer-sessions/lh4b3/sources/a0e3e64db5f9bde4ac7446ae5fe58881-11639.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b3-001>lh4b3-002",
+   "distance": 11,
+   "earlier": "93b94e2cf0992beb2d7abcef78aee2b5-12791",
+   "earlier_chunk": "lh4b2-002",
+   "earlier_dhash": "c004b6087592c1d2c392c69e871c8456829e865a815e824a82ca868607534d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-12791.png",
+   "id": "lh4-p0031",
+   "later": "a0e3e64db5f9bde4ac7446ae5fe58881-11644",
+   "later_chunk": "lh4b3-002",
+   "later_path": "522-held-out/computer-sessions/lh4b3/sources/a0e3e64db5f9bde4ac7446ae5fe58881-11644.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b3-001>lh4b3-002",
+   "distance": 15,
+   "earlier": "93b94e2cf0992beb2d7abcef78aee2b5-12793",
+   "earlier_chunk": "lh4b2-002",
+   "earlier_dhash": "e00486086582c1cac3cec6cc870a84ca864c814a800f800f804e800609434d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-12793.png",
+   "id": "lh4-p0032",
+   "later": "a0e3e64db5f9bde4ac7446ae5fe58881-11672",
+   "later_chunk": "lh4b3-002",
+   "later_path": "522-held-out/computer-sessions/lh4b3/sources/a0e3e64db5f9bde4ac7446ae5fe58881-11672.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b3-001>lh4b3-002",
+   "distance": 0,
+   "earlier": "93b94e2cf0992beb2d7abcef78aee2b5-837",
+   "earlier_chunk": "lh4b2-001",
+   "earlier_dhash": "e4b4ec1480008000800080008000800080008000800080008000800009574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-837.png",
+   "id": "lh4-p0033",
+   "later": "a0e3e64db5f9bde4ac7446ae5fe58881-6863",
+   "later_chunk": "lh4b3-002",
+   "later_path": "522-held-out/computer-sessions/lh4b3/sources/a0e3e64db5f9bde4ac7446ae5fe58881-6863.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b3-001>lh4b3-002",
+   "distance": 0,
+   "earlier": "a0e3e64db5f9bde4ac7446ae5fe58881-6618",
+   "earlier_chunk": "lh4b3-001",
+   "earlier_dhash": "6d152b15af1116db94e9d46d146511efa36d2b613f6633f551e735fbf4f2ea66",
+   "earlier_path": "522-held-out/computer-sessions/lh4b3/sources/a0e3e64db5f9bde4ac7446ae5fe58881-6618.png",
+   "id": "lh4-p0034",
+   "later": "a0e3e64db5f9bde4ac7446ae5fe58881-6869",
+   "later_chunk": "lh4b3-002",
+   "later_path": "522-held-out/computer-sessions/lh4b3/sources/a0e3e64db5f9bde4ac7446ae5fe58881-6869.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b3-001>lh4b3-002",
+   "distance": 6,
+   "earlier": "a0e3e64db5f9bde4ac7446ae5fe58881-5507",
+   "earlier_chunk": "lh4b3-001",
+   "earlier_dhash": "1b752a755a718a7b89e959ed5765df6f9ced39e11b64796775e7e1f7cae6bae6",
+   "earlier_path": "522-held-out/computer-sessions/lh4b3/sources/a0e3e64db5f9bde4ac7446ae5fe58881-5507.png",
+   "id": "lh4-p0035",
+   "later": "a0e3e64db5f9bde4ac7446ae5fe58881-7036",
+   "later_chunk": "lh4b3-002",
+   "later_path": "522-held-out/computer-sessions/lh4b3/sources/a0e3e64db5f9bde4ac7446ae5fe58881-7036.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b3-002>lh4b4-001",
+   "distance": 0,
+   "earlier": "a0e3e64db5f9bde4ac7446ae5fe58881-10359",
+   "earlier_chunk": "lh4b3-002",
+   "earlier_dhash": "492c9c2c372c272d672d632d472d8b2d8b2dc64fc44fd88fd10d220f4c0f800d",
+   "earlier_path": "522-held-out/computer-sessions/lh4b3/sources/a0e3e64db5f9bde4ac7446ae5fe58881-10359.png",
+   "id": "lh4-p0036",
+   "later": "2a960e884129f3b5b383922a0aa60005-1291",
+   "later_chunk": "lh4b4-001",
+   "later_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-1291.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b3-002>lh4b4-001",
+   "distance": 0,
+   "earlier": "a0e3e64db5f9bde4ac7446ae5fe58881-10704",
+   "earlier_chunk": "lh4b3-002",
+   "earlier_dhash": "66f5cef56b792afb79a95d6d7da526ef1e6d1361476435362d675f76976625e6",
+   "earlier_path": "522-held-out/computer-sessions/lh4b3/sources/a0e3e64db5f9bde4ac7446ae5fe58881-10704.png",
+   "id": "lh4-p0037",
+   "later": "2a960e884129f3b5b383922a0aa60005-185",
+   "later_chunk": "lh4b4-001",
+   "later_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-185.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b3-002>lh4b4-001",
+   "distance": 9,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-10935",
+   "earlier_chunk": "lh4b1-002",
+   "earlier_dhash": "d004a60865c287c285ce87ce86cc834c830c814a800e800f804e800e09434d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-10935.png",
+   "id": "lh4-p0038",
+   "later": "2a960e884129f3b5b383922a0aa60005-1859",
+   "later_chunk": "lh4b4-001",
+   "later_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-1859.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b3-002>lh4b4-001",
+   "distance": 0,
+   "earlier": "a0e3e64db5f9bde4ac7446ae5fe58881-10359",
+   "earlier_chunk": "lh4b3-002",
+   "earlier_dhash": "492c9c2c372c272d672d632d472d8b2d8b2dc64fc44fd88fd10d220f4c0f800d",
+   "earlier_path": "522-held-out/computer-sessions/lh4b3/sources/a0e3e64db5f9bde4ac7446ae5fe58881-10359.png",
+   "id": "lh4-p0039",
+   "later": "2a960e884129f3b5b383922a0aa60005-206",
+   "later_chunk": "lh4b4-001",
+   "later_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-206.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b3-002>lh4b4-001",
+   "distance": 0,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-1807",
+   "earlier_chunk": "lh4b1-001",
+   "earlier_dhash": "c004c00480008000800080008000800080008000800080008000800009574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-1807.png",
+   "id": "lh4-p0040",
+   "later": "2a960e884129f3b5b383922a0aa60005-2591",
+   "later_chunk": "lh4b4-001",
+   "later_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-2591.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b3-002>lh4b4-001",
+   "distance": 0,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-6497",
+   "earlier_chunk": "lh4b1-002",
+   "earlier_dhash": "e040c80c899c8724980488e48c748c648ce48d648cf488748d6499e409574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-6497.png",
+   "id": "lh4-p0041",
+   "later": "2a960e884129f3b5b383922a0aa60005-2604",
+   "later_chunk": "lh4b4-001",
+   "later_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-2604.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b3-002>lh4b4-001",
+   "distance": 0,
+   "earlier": "93b94e2cf0992beb2d7abcef78aee2b5-837",
+   "earlier_chunk": "lh4b2-001",
+   "earlier_dhash": "e4b4ec1480008000800080008000800080008000800080008000800009574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-837.png",
+   "id": "lh4-p0042",
+   "later": "2a960e884129f3b5b383922a0aa60005-335",
+   "later_chunk": "lh4b4-001",
+   "later_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-335.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b3-002>lh4b4-001",
+   "distance": 10,
+   "earlier": "93b94e2cf0992beb2d7abcef78aee2b5-840",
+   "earlier_chunk": "lh4b2-001",
+   "earlier_dhash": "e004c608c5c285c687ce86cc86c680ce814a814e846e834aa74a860b19474d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-840.png",
+   "id": "lh4-p0043",
+   "later": "2a960e884129f3b5b383922a0aa60005-338",
+   "later_chunk": "lh4b4-001",
+   "later_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-338.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b3-002>lh4b4-001",
+   "distance": 0,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-1807",
+   "earlier_chunk": "lh4b1-001",
+   "earlier_dhash": "c004c00480008000800080008000800080008000800080008000800009574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-1807.png",
+   "id": "lh4-p0044",
+   "later": "2a960e884129f3b5b383922a0aa60005-342",
+   "later_chunk": "lh4b4-001",
+   "later_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-342.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b3-002>lh4b4-001",
+   "distance": 10,
+   "earlier": "a0e3e64db5f9bde4ac7446ae5fe58881-9572",
+   "earlier_chunk": "lh4b3-002",
+   "earlier_dhash": "bb753af59af9defb9569976d0b65496f866dc5e151e489671b6365e76cf6cae2",
+   "earlier_path": "522-held-out/computer-sessions/lh4b3/sources/a0e3e64db5f9bde4ac7446ae5fe58881-9572.png",
+   "id": "lh4-p0045",
+   "later": "2a960e884129f3b5b383922a0aa60005-457",
+   "later_chunk": "lh4b4-001",
+   "later_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-457.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b3-002>lh4b4-001",
+   "distance": 16,
+   "earlier": "a0e3e64db5f9bde4ac7446ae5fe58881-10359",
+   "earlier_chunk": "lh4b3-002",
+   "earlier_dhash": "492c9c2c372c272d672d632d472d8b2d8b2dc64fc44fd88fd10d220f4c0f800d",
+   "earlier_path": "522-held-out/computer-sessions/lh4b3/sources/a0e3e64db5f9bde4ac7446ae5fe58881-10359.png",
+   "id": "lh4-p0046",
+   "later": "2a960e884129f3b5b383922a0aa60005-4702",
+   "later_chunk": "lh4b4-001",
+   "later_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-4702.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b3-002>lh4b4-001",
+   "distance": 0,
+   "earlier": "93b94e2cf0992beb2d7abcef78aee2b5-79",
+   "earlier_chunk": "lh4b2-001",
+   "earlier_dhash": "000000e000740074027c033a033c033c023e033e033a10e413c801f000600060",
+   "earlier_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-79.png",
+   "id": "lh4-p0047",
+   "later": "2a960e884129f3b5b383922a0aa60005-69",
+   "later_chunk": "lh4b4-001",
+   "later_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-69.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b4-001>lh4b4-002",
+   "distance": 8,
+   "earlier": "93b94e2cf0992beb2d7abcef78aee2b5-11064",
+   "earlier_chunk": "lh4b2-001",
+   "earlier_dhash": "d04dc620c58284c687ce868c8346854e80ca80ce866e866a83ca860b19474d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-11064.png",
+   "id": "lh4-p0048",
+   "later": "2a960e884129f3b5b383922a0aa60005-11199",
+   "later_chunk": "lh4b4-002",
+   "later_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-11199.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b4-001>lh4b4-002",
+   "distance": 15,
+   "earlier": "a0e3e64db5f9bde4ac7446ae5fe58881-11672",
+   "earlier_chunk": "lh4b3-002",
+   "earlier_dhash": "d04de620658285caa7ce86cc870a84ca864c814a800f800f804e800609434d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b3/sources/a0e3e64db5f9bde4ac7446ae5fe58881-11672.png",
+   "id": "lh4-p0049",
+   "later": "2a960e884129f3b5b383922a0aa60005-11548",
+   "later_chunk": "lh4b4-002",
+   "later_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-11548.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b4-001>lh4b4-002",
+   "distance": 3,
+   "earlier": "a0e3e64db5f9bde4ac7446ae5fe58881-6866",
+   "earlier_chunk": "lh4b3-002",
+   "earlier_dhash": "e004c608d5c2d556ccced1cec7cc86ce83ce878e854e834e864c800c09474d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b3/sources/a0e3e64db5f9bde4ac7446ae5fe58881-6866.png",
+   "id": "lh4-p0050",
+   "later": "2a960e884129f3b5b383922a0aa60005-11569",
+   "later_chunk": "lh4b4-002",
+   "later_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-11569.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b4-001>lh4b4-002",
+   "distance": 10,
+   "earlier": "93b94e2cf0992beb2d7abcef78aee2b5-14618",
+   "earlier_chunk": "lh4b2-002",
+   "earlier_dhash": "240b0b0f380cdc2dc70d819d9ccdb24d438d4dcf19cf18cf91cd93cf224d620d",
+   "earlier_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-14618.png",
+   "id": "lh4-p0051",
+   "later": "2a960e884129f3b5b383922a0aa60005-11571",
+   "later_chunk": "lh4b4-002",
+   "later_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-11571.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b4-001>lh4b4-002",
+   "distance": 16,
+   "earlier": "a0e3e64db5f9bde4ac7446ae5fe58881-11189",
+   "earlier_chunk": "lh4b3-002",
+   "earlier_dhash": "e329aa0cb040ba38b918b800b080b2c0b800bb009b00af00f800b800b800e009",
+   "earlier_path": "522-held-out/computer-sessions/lh4b3/sources/a0e3e64db5f9bde4ac7446ae5fe58881-11189.png",
+   "id": "lh4-p0052",
+   "later": "2a960e884129f3b5b383922a0aa60005-14573",
+   "later_chunk": "lh4b4-002",
+   "later_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-14573.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b4-001>lh4b4-002",
+   "distance": 0,
+   "earlier": "93b94e2cf0992beb2d7abcef78aee2b5-11075",
+   "earlier_chunk": "lh4b2-001",
+   "earlier_dhash": "d004c408c7c2a7c6a7cea7cc8346854e80ca80ce826e846aa3ca870b19474d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-11075.png",
+   "id": "lh4-p0053",
+   "later": "2a960e884129f3b5b383922a0aa60005-14586",
+   "later_chunk": "lh4b4-002",
+   "later_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-14586.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b4-001>lh4b4-002",
+   "distance": 8,
+   "earlier": "a0e3e64db5f9bde4ac7446ae5fe58881-11677",
+   "earlier_chunk": "lh4b3-002",
+   "earlier_dhash": "d04da220e0cda4c661c6608658045800580058005800d8008000800009574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b3/sources/a0e3e64db5f9bde4ac7446ae5fe58881-11677.png",
+   "id": "lh4-p0054",
+   "later": "2a960e884129f3b5b383922a0aa60005-15089",
+   "later_chunk": "lh4b4-002",
+   "later_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-15089.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b4-001>lh4b4-002",
+   "distance": 0,
+   "earlier": "2a960e884129f3b5b383922a0aa60005-4702",
+   "earlier_chunk": "lh4b4-001",
+   "earlier_dhash": "c92c162c372c272d632d652d472d8b2d8b2dc64ff44fd88fa10d260f580f000d",
+   "earlier_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-4702.png",
+   "id": "lh4-p0055",
+   "later": "2a960e884129f3b5b383922a0aa60005-6062",
+   "later_chunk": "lh4b4-002",
+   "later_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-6062.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b4-001>lh4b4-002",
+   "distance": 2,
+   "earlier": "93b94e2cf0992beb2d7abcef78aee2b5-840",
+   "earlier_chunk": "lh4b2-001",
+   "earlier_dhash": "e004c608c5c285c687ce86cc86c680ce814a814e846e834aa74a860b19474d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-840.png",
+   "id": "lh4-p0056",
+   "later": "2a960e884129f3b5b383922a0aa60005-6302",
+   "later_chunk": "lh4b4-002",
+   "later_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-6302.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b4-001>lh4b4-002",
+   "distance": 7,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-9481",
+   "earlier_chunk": "lh4b1-002",
+   "earlier_dhash": "e004c608c582e5cec3ccccc2c74e874c840c80088008800c804a800f094f4d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-9481.png",
+   "id": "lh4-p0057",
+   "later": "2a960e884129f3b5b383922a0aa60005-6927",
+   "later_chunk": "lh4b4-002",
+   "later_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-6927.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b4-001>lh4b4-002",
+   "distance": 7,
+   "earlier": "93b94e2cf0992beb2d7abcef78aee2b5-14618",
+   "earlier_chunk": "lh4b2-002",
+   "earlier_dhash": "240b0b0f380cdc2dc70d819d9ccdb24d438d4dcf19cf18cf91cd93cf224d620d",
+   "earlier_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-14618.png",
+   "id": "lh4-p0058",
+   "later": "2a960e884129f3b5b383922a0aa60005-7734",
+   "later_chunk": "lh4b4-002",
+   "later_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-7734.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b4-001>lh4b4-002",
+   "distance": 0,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-1807",
+   "earlier_chunk": "lh4b1-001",
+   "earlier_dhash": "c004c00480008000800080008000800080008000800080008000800009574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-1807.png",
+   "id": "lh4-p0059",
+   "later": "2a960e884129f3b5b383922a0aa60005-8033",
+   "later_chunk": "lh4b4-002",
+   "later_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-8033.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b4-001>lh4b4-002",
+   "distance": 1,
+   "earlier": "93b94e2cf0992beb2d7abcef78aee2b5-12772",
+   "earlier_chunk": "lh4b2-002",
+   "earlier_dhash": "e040c80c899c8724980488e48c748c648ce48d648cf488748d64996409574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-12772.png",
+   "id": "lh4-p0060",
+   "later": "2a960e884129f3b5b383922a0aa60005-8038",
+   "later_chunk": "lh4b4-002",
+   "later_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-8038.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b4-001>lh4b4-002",
+   "distance": 9,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-5274",
+   "earlier_chunk": "lh4b1-001",
+   "earlier_dhash": "d004e408e78287c6a7cea7cc8748820a800c800a800f800e804e800e09474d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-5274.png",
+   "id": "lh4-p0061",
+   "later": "2a960e884129f3b5b383922a0aa60005-8046",
+   "later_chunk": "lh4b4-002",
+   "later_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-8046.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b4-002>lh4b5-001",
+   "distance": 11,
+   "earlier": "93b94e2cf0992beb2d7abcef78aee2b5-9271",
+   "earlier_chunk": "lh4b2-001",
+   "earlier_dhash": "b9754e755a71987bd869526c4666547bf66dd661bd64b167b06fb66fb663b563",
+   "earlier_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-9271.png",
+   "id": "lh4-p0062",
+   "later": "b6b8bd76ad675d57c75a89a01db23461-2262",
+   "later_chunk": "lh4b5-001",
+   "later_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-2262.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b4-002>lh4b5-001",
+   "distance": 0,
+   "earlier": "2a960e884129f3b5b383922a0aa60005-13550",
+   "earlier_chunk": "lh4b4-002",
+   "earlier_dhash": "a8b5cb753a79647ba269a8ec29661aefdeed9ee15664ea66ebfb0b690b664be6",
+   "earlier_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-13550.png",
+   "id": "lh4-p0063",
+   "later": "b6b8bd76ad675d57c75a89a01db23461-230",
+   "later_chunk": "lh4b5-001",
+   "later_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-230.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b4-002>lh4b5-001",
+   "distance": 14,
+   "earlier": "93b94e2cf0992beb2d7abcef78aee2b5-9332",
+   "earlier_chunk": "lh4b2-001",
+   "earlier_dhash": "9cf414f019f4d9d9e5f4a1c0edc06dd025d8a3ecabfc7bf06bf48ed55ad65ad8",
+   "earlier_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-9332.png",
+   "id": "lh4-p0064",
+   "later": "b6b8bd76ad675d57c75a89a01db23461-2337",
+   "later_chunk": "lh4b5-001",
+   "later_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-2337.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b4-002>lh4b5-001",
+   "distance": 9,
+   "earlier": "93b94e2cf0992beb2d7abcef78aee2b5-9618",
+   "earlier_chunk": "lh4b2-001",
+   "earlier_dhash": "29f549f429f1e130f00676e234008000a0008000a0200000b964f767d763bd63",
+   "earlier_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-9618.png",
+   "id": "lh4-p0065",
+   "later": "b6b8bd76ad675d57c75a89a01db23461-2483",
+   "later_chunk": "lh4b5-001",
+   "later_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-2483.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b4-002>lh4b5-001",
+   "distance": 0,
+   "earlier": "2a960e884129f3b5b383922a0aa60005-11571",
+   "earlier_chunk": "lh4b4-002",
+   "earlier_dhash": "240b0b0f380cdc2dc30d839d9acdb24d438d4dcf184f18cf90cd92cf22cd628d",
+   "earlier_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-11571.png",
+   "id": "lh4-p0066",
+   "later": "b6b8bd76ad675d57c75a89a01db23461-252",
+   "later_chunk": "lh4b5-001",
+   "later_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-252.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b4-002>lh4b5-001",
+   "distance": 8,
+   "earlier": "93b94e2cf0992beb2d7abcef78aee2b5-9614",
+   "earlier_chunk": "lh4b2-001",
+   "earlier_dhash": "49f531742371c330700660e236c08000a0808000d4200000d760d7e7bde3b1e3",
+   "earlier_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-9614.png",
+   "id": "lh4-p0067",
+   "later": "b6b8bd76ad675d57c75a89a01db23461-3034",
+   "later_chunk": "lh4b5-001",
+   "later_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-3034.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b4-002>lh4b5-001",
+   "distance": 8,
+   "earlier": "93b94e2cf0992beb2d7abcef78aee2b5-8125",
+   "earlier_chunk": "lh4b2-001",
+   "earlier_dhash": "3e1f638fe1ccc46d592d32cda6ed02ed0c6d0cef28ef11af912dbacfbe8f9a1d",
+   "earlier_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-8125.png",
+   "id": "lh4-p0068",
+   "later": "b6b8bd76ad675d57c75a89a01db23461-3372",
+   "later_chunk": "lh4b5-001",
+   "later_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-3372.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b4-002>lh4b5-001",
+   "distance": 5,
+   "earlier": "2a960e884129f3b5b383922a0aa60005-11571",
+   "earlier_chunk": "lh4b4-002",
+   "earlier_dhash": "240b0b0f380cdc2dc30d839d9acdb24d438d4dcf184f18cf90cd92cf22cd628d",
+   "earlier_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-11571.png",
+   "id": "lh4-p0069",
+   "later": "b6b8bd76ad675d57c75a89a01db23461-3595",
+   "later_chunk": "lh4b5-001",
+   "later_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-3595.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b4-002>lh4b5-001",
+   "distance": 2,
+   "earlier": "93b94e2cf0992beb2d7abcef78aee2b5-79",
+   "earlier_chunk": "lh4b2-001",
+   "earlier_dhash": "000000e000740074027c033a033c033c023e033e033a10e413c801f000600060",
+   "earlier_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-79.png",
+   "id": "lh4-p0070",
+   "later": "b6b8bd76ad675d57c75a89a01db23461-38",
+   "later_chunk": "lh4b5-001",
+   "later_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-38.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b4-002>lh4b5-001",
+   "distance": 5,
+   "earlier": "2a960e884129f3b5b383922a0aa60005-11460",
+   "earlier_chunk": "lh4b4-002",
+   "earlier_dhash": "8a75ca7569f92b7b0369866c16e6767b56ed5f613e646a6fcd63c26f12665ae6",
+   "earlier_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-11460.png",
+   "id": "lh4-p0071",
+   "later": "b6b8bd76ad675d57c75a89a01db23461-3937",
+   "later_chunk": "lh4b5-001",
+   "later_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-3937.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b4-002>lh4b5-001",
+   "distance": 0,
+   "earlier": "93b94e2cf0992beb2d7abcef78aee2b5-837",
+   "earlier_chunk": "lh4b2-001",
+   "earlier_dhash": "e4b4ec1480008000800080008000800080008000800080008000800009574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-837.png",
+   "id": "lh4-p0072",
+   "later": "b6b8bd76ad675d57c75a89a01db23461-409",
+   "later_chunk": "lh4b5-001",
+   "later_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-409.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b4-002>lh4b5-001",
+   "distance": 0,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-1807",
+   "earlier_chunk": "lh4b1-001",
+   "earlier_dhash": "c004c00480008000800080008000800080008000800080008000800009574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-1807.png",
+   "id": "lh4-p0073",
+   "later": "b6b8bd76ad675d57c75a89a01db23461-417",
+   "later_chunk": "lh4b5-001",
+   "later_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-417.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b4-002>lh4b5-001",
+   "distance": 10,
+   "earlier": "2a960e884129f3b5b383922a0aa60005-11382",
+   "earlier_chunk": "lh4b4-002",
+   "earlier_dhash": "67f5b6753679cefb96e9a7ec8de619fb95ed1f610fe456efd26374efc4e6d6e6",
+   "earlier_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-11382.png",
+   "id": "lh4-p0074",
+   "later": "b6b8bd76ad675d57c75a89a01db23461-4212",
+   "later_chunk": "lh4b5-001",
+   "later_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-4212.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b4-002>lh4b5-001",
+   "distance": 0,
+   "earlier": "2a960e884129f3b5b383922a0aa60005-13602",
+   "earlier_chunk": "lh4b4-002",
+   "earlier_dhash": "29b428f0a2d8a0f884f80df44af0caf94adae6fce9dcabf089fc09cc4df809d0",
+   "earlier_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-13602.png",
+   "id": "lh4-p0075",
+   "later": "b6b8bd76ad675d57c75a89a01db23461-429",
+   "later_chunk": "lh4b5-001",
+   "later_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-429.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b4-002>lh4b5-001",
+   "distance": 12,
+   "earlier": "2a960e884129f3b5b383922a0aa60005-14991",
+   "earlier_chunk": "lh4b4-002",
+   "earlier_dhash": "33f593751a794a7b5be9c1ec44e68def54ed4fe14fe66a6d5b7932eb48e74ae6",
+   "earlier_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-14991.png",
+   "id": "lh4-p0076",
+   "later": "b6b8bd76ad675d57c75a89a01db23461-4444",
+   "later_chunk": "lh4b5-001",
+   "later_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-4444.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b4-002>lh4b5-001",
+   "distance": 12,
+   "earlier": "93b94e2cf0992beb2d7abcef78aee2b5-8619",
+   "earlier_chunk": "lh4b2-001",
+   "earlier_dhash": "f08fbc4f862c132d208dce0d979d939d2b9d319f279f459f448ded2fe62f744d",
+   "earlier_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-8619.png",
+   "id": "lh4-p0077",
+   "later": "b6b8bd76ad675d57c75a89a01db23461-450",
+   "later_chunk": "lh4b5-001",
+   "later_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-450.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b4-002>lh4b5-001",
+   "distance": 0,
+   "earlier": "2a960e884129f3b5b383922a0aa60005-11299",
+   "earlier_chunk": "lh4b4-002",
+   "earlier_dhash": "c004ee08679287d2a796a7dea7d4859a869e831a85168093829e8658014f4d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-11299.png",
+   "id": "lh4-p0078",
+   "later": "b6b8bd76ad675d57c75a89a01db23461-4727",
+   "later_chunk": "lh4b5-001",
+   "later_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-4727.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b4-002>lh4b5-001",
+   "distance": 10,
+   "earlier": "93b94e2cf0992beb2d7abcef78aee2b5-8841",
+   "earlier_chunk": "lh4b2-001",
+   "earlier_dhash": "ce2f832f999cb44dc70d49cd09cd35cd92cdb34fa2cf628f669d7b2f3a0fe84d",
+   "earlier_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-8841.png",
+   "id": "lh4-p0079",
+   "later": "b6b8bd76ad675d57c75a89a01db23461-576",
+   "later_chunk": "lh4b5-001",
+   "later_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-576.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b5-001>lh4b5-002",
+   "distance": 6,
+   "earlier": "b6b8bd76ad675d57c75a89a01db23461-4436",
+   "earlier_chunk": "lh4b5-001",
+   "earlier_dhash": "e329ea2cb040bd70bcb0b800b800bac0b2c0b800bb009f00af00b800f800f009",
+   "earlier_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-4436.png",
+   "id": "lh4-p0080",
+   "later": "b6b8bd76ad675d57c75a89a01db23461-10026",
+   "later_chunk": "lh4b5-002",
+   "later_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-10026.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b5-001>lh4b5-002",
+   "distance": 14,
+   "earlier": "b6b8bd76ad675d57c75a89a01db23461-4728",
+   "earlier_chunk": "lh4b5-001",
+   "earlier_dhash": "c004b6083792a7d2a796a7dea7d4a59aa69ea31ab516b093b29eb658314f4d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-4728.png",
+   "id": "lh4-p0081",
+   "later": "b6b8bd76ad675d57c75a89a01db23461-10618",
+   "later_chunk": "lh4b5-002",
+   "later_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-10618.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b5-001>lh4b5-002",
+   "distance": 4,
+   "earlier": "b6b8bd76ad675d57c75a89a01db23461-1682",
+   "earlier_chunk": "lh4b5-001",
+   "earlier_dhash": "3e1f638fe1ccc46d592d32cda6ed00ad0d2d0c6f286f116f912db8cf9e8f9a1d",
+   "earlier_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-1682.png",
+   "id": "lh4-p0082",
+   "later": "b6b8bd76ad675d57c75a89a01db23461-11868",
+   "later_chunk": "lh4b5-002",
+   "later_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-11868.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b5-001>lh4b5-002",
+   "distance": 14,
+   "earlier": "b6b8bd76ad675d57c75a89a01db23461-3217",
+   "earlier_chunk": "lh4b5-001",
+   "earlier_dhash": "9c75c3744b71c97b49696b6c6b666e7bda6d4e61d6643577b763b77d36633763",
+   "earlier_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-3217.png",
+   "id": "lh4-p0083",
+   "later": "b6b8bd76ad675d57c75a89a01db23461-14142",
+   "later_chunk": "lh4b5-002",
+   "later_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-14142.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b5-001>lh4b5-002",
+   "distance": 16,
+   "earlier": "b6b8bd76ad675d57c75a89a01db23461-2337",
+   "earlier_chunk": "lh4b5-001",
+   "earlier_dhash": "9cf414f419d4d9fce5e4a1d0edc06dd025d8a3ecabfc7bf06bdd8ed75adc5ad0",
+   "earlier_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-2337.png",
+   "id": "lh4-p0084",
+   "later": "b6b8bd76ad675d57c75a89a01db23461-14280",
+   "later_chunk": "lh4b5-002",
+   "later_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-14280.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b5-001>lh4b5-002",
+   "distance": 0,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-1807",
+   "earlier_chunk": "lh4b1-001",
+   "earlier_dhash": "c004c00480008000800080008000800080008000800080008000800009574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-1807.png",
+   "id": "lh4-p0085",
+   "later": "b6b8bd76ad675d57c75a89a01db23461-14286",
+   "later_chunk": "lh4b5-002",
+   "later_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-14286.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b5-001>lh4b5-002",
+   "distance": 8,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-11685",
+   "earlier_chunk": "lh4b1-002",
+   "earlier_dhash": "b37593751271b270f80470ea6000ac008000800090200800b2e1b26b8c66e366",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-11685.png",
+   "id": "lh4-p0086",
+   "later": "b6b8bd76ad675d57c75a89a01db23461-20216",
+   "later_chunk": "lh4b5-002",
+   "later_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-20216.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b5-001>lh4b5-002",
+   "distance": 0,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-1807",
+   "earlier_chunk": "lh4b1-001",
+   "earlier_dhash": "c004c00480008000800080008000800080008000800080008000800009574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-1807.png",
+   "id": "lh4-p0087",
+   "later": "b6b8bd76ad675d57c75a89a01db23461-21577",
+   "later_chunk": "lh4b5-002",
+   "later_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-21577.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b5-001>lh4b5-002",
+   "distance": 14,
+   "earlier": "a0e3e64db5f9bde4ac7446ae5fe58881-11672",
+   "earlier_chunk": "lh4b3-002",
+   "earlier_dhash": "d04de620658285caa7ce86cc870a84ca864c814a800f800f804e800609434d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b3/sources/a0e3e64db5f9bde4ac7446ae5fe58881-11672.png",
+   "id": "lh4-p0088",
+   "later": "b6b8bd76ad675d57c75a89a01db23461-21581",
+   "later_chunk": "lh4b5-002",
+   "later_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-21581.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b5-001>lh4b5-002",
+   "distance": 0,
+   "earlier": "2a960e884129f3b5b383922a0aa60005-11571",
+   "earlier_chunk": "lh4b4-002",
+   "earlier_dhash": "240b0b0f380cdc2dc30d839d9acdb24d438d4dcf184f18cf90cd92cf22cd628d",
+   "earlier_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-11571.png",
+   "id": "lh4-p0089",
+   "later": "b6b8bd76ad675d57c75a89a01db23461-6090",
+   "later_chunk": "lh4b5-002",
+   "later_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-6090.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b5-001>lh4b5-002",
+   "distance": 12,
+   "earlier": "b6b8bd76ad675d57c75a89a01db23461-425",
+   "earlier_chunk": "lh4b5-001",
+   "earlier_dhash": "f004a202a08d34c619c6e080600058005800580078005800d800800019574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-425.png",
+   "id": "lh4-p0090",
+   "later": "b6b8bd76ad675d57c75a89a01db23461-6188",
+   "later_chunk": "lh4b5-002",
+   "later_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-6188.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b5-001>lh4b5-002",
+   "distance": 0,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-1807",
+   "earlier_chunk": "lh4b1-001",
+   "earlier_dhash": "c004c00480008000800080008000800080008000800080008000800009574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-1807.png",
+   "id": "lh4-p0091",
+   "later": "b6b8bd76ad675d57c75a89a01db23461-6199",
+   "later_chunk": "lh4b5-002",
+   "later_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-6199.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b5-001>lh4b5-002",
+   "distance": 0,
+   "earlier": "b6b8bd76ad675d57c75a89a01db23461-5344",
+   "earlier_chunk": "lh4b5-001",
+   "earlier_dhash": "c004b608b5d281d2a4da869e84d2879c839c855e801a809a829a864905474d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-5344.png",
+   "id": "lh4-p0092",
+   "later": "b6b8bd76ad675d57c75a89a01db23461-6206",
+   "later_chunk": "lh4b5-002",
+   "later_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-6206.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b5-001>lh4b5-002",
+   "distance": 4,
+   "earlier": "2a960e884129f3b5b383922a0aa60005-11548",
+   "earlier_chunk": "lh4b4-002",
+   "earlier_dhash": "d004e608658285caa7ce86cc870a816a870c864a820f800f804e800609434d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-11548.png",
+   "id": "lh4-p0093",
+   "later": "b6b8bd76ad675d57c75a89a01db23461-6737",
+   "later_chunk": "lh4b5-002",
+   "later_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-6737.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b5-001>lh4b5-002",
+   "distance": 6,
+   "earlier": "93b94e2cf0992beb2d7abcef78aee2b5-13900",
+   "earlier_chunk": "lh4b2-002",
+   "earlier_dhash": "e004ca02d8c9d8cc81cc80808000800080008000800080008000800009574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-13900.png",
+   "id": "lh4-p0094",
+   "later": "b6b8bd76ad675d57c75a89a01db23461-6741",
+   "later_chunk": "lh4b5-002",
+   "later_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-6741.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b5-001>lh4b5-002",
+   "distance": 0,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-1807",
+   "earlier_chunk": "lh4b1-001",
+   "earlier_dhash": "c004c00480008000800080008000800080008000800080008000800009574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-1807.png",
+   "id": "lh4-p0095",
+   "later": "b6b8bd76ad675d57c75a89a01db23461-6746",
+   "later_chunk": "lh4b5-002",
+   "later_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-6746.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b5-001>lh4b5-002",
+   "distance": 7,
+   "earlier": "2a960e884129f3b5b383922a0aa60005-7301",
+   "earlier_chunk": "lh4b4-002",
+   "earlier_dhash": "080d030d388c7c4dcf2dc31d898d924d670d4dcf09cf19cf984d51cfa2cd22cd",
+   "earlier_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-7301.png",
+   "id": "lh4-p0096",
+   "later": "b6b8bd76ad675d57c75a89a01db23461-7339",
+   "later_chunk": "lh4b5-002",
+   "later_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-7339.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b5-001>lh4b5-002",
+   "distance": 0,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-1807",
+   "earlier_chunk": "lh4b1-001",
+   "earlier_dhash": "c004c00480008000800080008000800080008000800080008000800009574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-1807.png",
+   "id": "lh4-p0097",
+   "later": "b6b8bd76ad675d57c75a89a01db23461-8888",
+   "later_chunk": "lh4b5-002",
+   "later_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-8888.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b5-001>lh4b5-002",
+   "distance": 9,
+   "earlier": "b6b8bd76ad675d57c75a89a01db23461-4212",
+   "earlier_chunk": "lh4b5-001",
+   "earlier_dhash": "67f5b6743671cefb96e9a7ed8de619fb9ded1f610fe656e7d26f74e7c4e7d6e6",
+   "earlier_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-4212.png",
+   "id": "lh4-p0098",
+   "later": "b6b8bd76ad675d57c75a89a01db23461-9659",
+   "later_chunk": "lh4b5-002",
+   "later_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-9659.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b5-001>lh4b5-002",
+   "distance": 15,
+   "earlier": "2a960e884129f3b5b383922a0aa60005-11299",
+   "earlier_chunk": "lh4b4-002",
+   "earlier_dhash": "c004ee08679287d2a796a7dea7d4859a869e831a85168093829e8658014f4d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-11299.png",
+   "id": "lh4-p0099",
+   "later": "b6b8bd76ad675d57c75a89a01db23461-9758",
+   "later_chunk": "lh4b5-002",
+   "later_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-9758.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b5-002>lh4b6-001",
+   "distance": 0,
+   "earlier": "93b94e2cf0992beb2d7abcef78aee2b5-837",
+   "earlier_chunk": "lh4b2-001",
+   "earlier_dhash": "e4b4ec1480008000800080008000800080008000800080008000800009574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-837.png",
+   "id": "lh4-p0100",
+   "later": "7c6a12a999602a1c0f80bb32ca49567a-1367",
+   "later_chunk": "lh4b6-001",
+   "later_path": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-1367.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b5-002>lh4b6-001",
+   "distance": 5,
+   "earlier": "b6b8bd76ad675d57c75a89a01db23461-14578",
+   "earlier_chunk": "lh4b5-002",
+   "earlier_dhash": "07630f270e8c0d0c2c4d2e4d0f553e35b8bdb1bf199b59b75d0d1e4f0ccf010d",
+   "earlier_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-14578.png",
+   "id": "lh4-p0101",
+   "later": "7c6a12a999602a1c0f80bb32ca49567a-1375",
+   "later_chunk": "lh4b6-001",
+   "later_path": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-1375.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b5-002>lh4b6-001",
+   "distance": 5,
+   "earlier": "b6b8bd76ad675d57c75a89a01db23461-14578",
+   "earlier_chunk": "lh4b5-002",
+   "earlier_dhash": "07630f270e8c0d0c2c4d2e4d0f553e35b8bdb1bf199b59b75d0d1e4f0ccf010d",
+   "earlier_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-14578.png",
+   "id": "lh4-p0102",
+   "later": "7c6a12a999602a1c0f80bb32ca49567a-215",
+   "later_chunk": "lh4b6-001",
+   "later_path": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-215.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b5-002>lh4b6-001",
+   "distance": 16,
+   "earlier": "b6b8bd76ad675d57c75a89a01db23461-20048",
+   "earlier_chunk": "lh4b5-002",
+   "earlier_dhash": "b37593741371337b1269426c0b669efb9ffd837793669363e26bf2670d67e266",
+   "earlier_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-20048.png",
+   "id": "lh4-p0103",
+   "later": "7c6a12a999602a1c0f80bb32ca49567a-317",
+   "later_chunk": "lh4b6-001",
+   "later_path": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-317.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b5-002>lh4b6-001",
+   "distance": 0,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-1807",
+   "earlier_chunk": "lh4b1-001",
+   "earlier_dhash": "c004c00480008000800080008000800080008000800080008000800009574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-1807.png",
+   "id": "lh4-p0104",
+   "later": "7c6a12a999602a1c0f80bb32ca49567a-3250",
+   "later_chunk": "lh4b6-001",
+   "later_path": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-3250.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b5-002>lh4b6-001",
+   "distance": 0,
+   "earlier": "2a960e884129f3b5b383922a0aa60005-338",
+   "earlier_chunk": "lh4b4-001",
+   "earlier_dhash": "d04dc620c58284c687ce868c86c680ce814a814e846e834aa74a860b19474d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-338.png",
+   "id": "lh4-p0105",
+   "later": "7c6a12a999602a1c0f80bb32ca49567a-6372",
+   "later_chunk": "lh4b6-001",
+   "later_path": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-6372.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b5-002>lh4b6-001",
+   "distance": 0,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-416",
+   "earlier_chunk": "lh4b1-001",
+   "earlier_dhash": "000000e000740074027c033a033c033c023e033e033a10e413c801f0006000e0",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-416.png",
+   "id": "lh4-p0106",
+   "later": "7c6a12a999602a1c0f80bb32ca49567a-72",
+   "later_chunk": "lh4b6-001",
+   "later_path": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-72.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b5-002>lh4b6-001",
+   "distance": 13,
+   "earlier": "93b94e2cf0992beb2d7abcef78aee2b5-1700",
+   "earlier_chunk": "lh4b2-001",
+   "earlier_dhash": "ab75c374ce09cc21d801df01d201d081f671c671d061d001d021d809d263c162",
+   "earlier_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-1700.png",
+   "id": "lh4-p0107",
+   "later": "7c6a12a999602a1c0f80bb32ca49567a-850",
+   "later_chunk": "lh4b6-001",
+   "later_path": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-850.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b6-001>lh4b6-002",
+   "distance": 7,
+   "earlier": "93b94e2cf0992beb2d7abcef78aee2b5-11075",
+   "earlier_chunk": "lh4b2-001",
+   "earlier_dhash": "d004c408c7c2a7c6a7cea7cc8346854e80ca80ce826e846aa3ca870b19474d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-11075.png",
+   "id": "lh4-p0108",
+   "later": "7c6a12a999602a1c0f80bb32ca49567a-10966",
+   "later_chunk": "lh4b6-002",
+   "later_path": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-10966.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b6-001>lh4b6-002",
+   "distance": 10,
+   "earlier": "b6b8bd76ad675d57c75a89a01db23461-14272",
+   "earlier_chunk": "lh4b5-002",
+   "earlier_dhash": "e004a60877c285c285ce85cc868c814c874e800e800e800b804a800809474d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-14272.png",
+   "id": "lh4-p0109",
+   "later": "7c6a12a999602a1c0f80bb32ca49567a-11945",
+   "later_chunk": "lh4b6-002",
+   "later_path": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-11945.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b6-001>lh4b6-002",
+   "distance": 0,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-1807",
+   "earlier_chunk": "lh4b1-001",
+   "earlier_dhash": "c004c00480008000800080008000800080008000800080008000800009574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-1807.png",
+   "id": "lh4-p0110",
+   "later": "7c6a12a999602a1c0f80bb32ca49567a-11955",
+   "later_chunk": "lh4b6-002",
+   "later_path": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-11955.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b6-001>lh4b6-002",
+   "distance": 0,
+   "earlier": "2a960e884129f3b5b383922a0aa60005-338",
+   "earlier_chunk": "lh4b4-001",
+   "earlier_dhash": "d04dc620c58284c687ce868c86c680ce814a814e846e834aa74a860b19474d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-338.png",
+   "id": "lh4-p0111",
+   "later": "7c6a12a999602a1c0f80bb32ca49567a-6631",
+   "later_chunk": "lh4b6-002",
+   "later_path": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-6631.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b6-001>lh4b6-002",
+   "distance": 0,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-1807",
+   "earlier_chunk": "lh4b1-001",
+   "earlier_dhash": "c004c00480008000800080008000800080008000800080008000800009574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-1807.png",
+   "id": "lh4-p0112",
+   "later": "7c6a12a999602a1c0f80bb32ca49567a-6634",
+   "later_chunk": "lh4b6-002",
+   "later_path": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-6634.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b6-001>lh4b6-002",
+   "distance": 0,
+   "earlier": "7c6a12a999602a1c0f80bb32ca49567a-6377",
+   "earlier_chunk": "lh4b6-001",
+   "earlier_dhash": "f04dc420c782e7c6e74aa78a870c836a834e860e800b800a800e800a094b4d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-6377.png",
+   "id": "lh4-p0113",
+   "later": "7c6a12a999602a1c0f80bb32ca49567a-6641",
+   "later_chunk": "lh4b6-002",
+   "later_path": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-6641.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b6-001>lh4b6-002",
+   "distance": 0,
+   "earlier": "7c6a12a999602a1c0f80bb32ca49567a-6229",
+   "earlier_chunk": "lh4b6-001",
+   "earlier_dhash": "0b2c03b407a42f0c2e0d0e2d172d0f0d1f9d589f588f5ccf2cd52f2f0e2f064d",
+   "earlier_path": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-6229.png",
+   "id": "lh4-p0114",
+   "later": "7c6a12a999602a1c0f80bb32ca49567a-6649",
+   "later_chunk": "lh4b6-002",
+   "later_path": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-6649.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b6-002>lh4b7-001",
+   "distance": 13,
+   "earlier": "7c6a12a999602a1c0f80bb32ca49567a-12174",
+   "earlier_chunk": "lh4b6-002",
+   "earlier_dhash": "000d000d005c00bc0176007503750e752e3d59371aeb06cf168506e701670475",
+   "earlier_path": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-12174.png",
+   "id": "lh4-p0115",
+   "later": "29b35709c3b22cffcf27a5c2b4da19b8-1386",
+   "later_chunk": "lh4b7-001",
+   "later_path": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-1386.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b6-002>lh4b7-001",
+   "distance": 10,
+   "earlier": "7c6a12a999602a1c0f80bb32ca49567a-11964",
+   "earlier_chunk": "lh4b6-002",
+   "earlier_dhash": "147596749771dd7bdd69956d9de7de6fdb6d0c69496c256c0d6bcb6769621b66",
+   "earlier_path": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-11964.png",
+   "id": "lh4-p0116",
+   "later": "29b35709c3b22cffcf27a5c2b4da19b8-1894",
+   "later_chunk": "lh4b7-001",
+   "later_path": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-1894.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b6-002>lh4b7-001",
+   "distance": 0,
+   "earlier": "7c6a12a999602a1c0f80bb32ca49567a-12609",
+   "earlier_chunk": "lh4b6-002",
+   "earlier_dhash": "b775b674727156d324c92b8d83a6477f4e6d4e214e646c67e9f5316ba367d366",
+   "earlier_path": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-12609.png",
+   "id": "lh4-p0117",
+   "later": "29b35709c3b22cffcf27a5c2b4da19b8-196",
+   "later_chunk": "lh4b7-001",
+   "later_path": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-196.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b6-002>lh4b7-001",
+   "distance": 11,
+   "earlier": "7c6a12a999602a1c0f80bb32ca49567a-11488",
+   "earlier_chunk": "lh4b6-002",
+   "earlier_dhash": "74916491dd09dca1ee396d196c01fc03ed617aa17b836f81f7817c0174037c27",
+   "earlier_path": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-11488.png",
+   "id": "lh4-p0118",
+   "later": "29b35709c3b22cffcf27a5c2b4da19b8-219",
+   "later_chunk": "lh4b7-001",
+   "later_path": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-219.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b6-002>lh4b7-001",
+   "distance": 11,
+   "earlier": "7c6a12a999602a1c0f80bb32ca49567a-12447",
+   "earlier_chunk": "lh4b6-002",
+   "earlier_dhash": "000c000c000c005c00be0175007507750e750cbf595b12cb06c516c706e70165",
+   "earlier_path": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-12447.png",
+   "id": "lh4-p0119",
+   "later": "29b35709c3b22cffcf27a5c2b4da19b8-221",
+   "later_chunk": "lh4b7-001",
+   "later_path": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-221.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b6-002>lh4b7-001",
+   "distance": 4,
+   "earlier": "7c6a12a999602a1c0f80bb32ca49567a-10786",
+   "earlier_chunk": "lh4b6-002",
+   "earlier_dhash": "e329e22cb090b140bc70bc30b800b800bac0aec0b9009f00af00b800f800f009",
+   "earlier_path": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-10786.png",
+   "id": "lh4-p0120",
+   "later": "29b35709c3b22cffcf27a5c2b4da19b8-2629",
+   "later_chunk": "lh4b7-001",
+   "later_path": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-2629.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b6-002>lh4b7-001",
+   "distance": 0,
+   "earlier": "a0e3e64db5f9bde4ac7446ae5fe58881-7418",
+   "earlier_chunk": "lh4b3-002",
+   "earlier_dhash": "f021fe03dc03ec07dcb9d031d831d831f031f831d839d839d839d939d831dd39",
+   "earlier_path": "522-held-out/computer-sessions/lh4b3/sources/a0e3e64db5f9bde4ac7446ae5fe58881-7418.png",
+   "id": "lh4-p0121",
+   "later": "29b35709c3b22cffcf27a5c2b4da19b8-2696",
+   "later_chunk": "lh4b7-001",
+   "later_path": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-2696.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b6-002>lh4b7-001",
+   "distance": 16,
+   "earlier": "7c6a12a999602a1c0f80bb32ca49567a-10793",
+   "earlier_chunk": "lh4b6-002",
+   "earlier_dhash": "38353b35c6719a7bdb69556d1967dbfbdb6d4b69266c07f7866343fb49724b66",
+   "earlier_path": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-10793.png",
+   "id": "lh4-p0122",
+   "later": "29b35709c3b22cffcf27a5c2b4da19b8-3628",
+   "later_chunk": "lh4b7-001",
+   "later_path": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-3628.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b6-002>lh4b7-001",
+   "distance": 1,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-154",
+   "earlier_chunk": "lh4b1-001",
+   "earlier_dhash": "000000e000740074027c033a033c033c023e033e033a10e412c803f0004000c0",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-154.png",
+   "id": "lh4-p0123",
+   "later": "29b35709c3b22cffcf27a5c2b4da19b8-42",
+   "later_chunk": "lh4b7-001",
+   "later_path": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-42.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b6-002>lh4b7-001",
+   "distance": 11,
+   "earlier": "7c6a12a999602a1c0f80bb32ca49567a-10786",
+   "earlier_chunk": "lh4b6-002",
+   "earlier_dhash": "e329e22cb090b140bc70bc30b800b800bac0aec0b9009f00af00b800f800f009",
+   "earlier_path": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-10786.png",
+   "id": "lh4-p0124",
+   "later": "29b35709c3b22cffcf27a5c2b4da19b8-4275",
+   "later_chunk": "lh4b7-001",
+   "later_path": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-4275.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b6-002>lh4b7-001",
+   "distance": 6,
+   "earlier": "93b94e2cf0992beb2d7abcef78aee2b5-837",
+   "earlier_chunk": "lh4b2-001",
+   "earlier_dhash": "e4b4ec1480008000800080008000800080008000800080008000800009574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-837.png",
+   "id": "lh4-p0125",
+   "later": "29b35709c3b22cffcf27a5c2b4da19b8-4342",
+   "later_chunk": "lh4b7-001",
+   "later_path": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-4342.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b6-002>lh4b7-001",
+   "distance": 0,
+   "earlier": "7c6a12a999602a1c0f80bb32ca49567a-13119",
+   "earlier_chunk": "lh4b6-002",
+   "earlier_dhash": "b69892389730b33e5a6e16e02df0a1f0c3b0a7682f200f202e286c6070e6b166",
+   "earlier_path": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-13119.png",
+   "id": "lh4-p0126",
+   "later": "29b35709c3b22cffcf27a5c2b4da19b8-471",
+   "later_chunk": "lh4b7-001",
+   "later_path": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-471.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b6-002>lh4b7-001",
+   "distance": 4,
+   "earlier": "7c6a12a999602a1c0f80bb32ca49567a-13124",
+   "earlier_chunk": "lh4b6-002",
+   "earlier_dhash": "3635b775b671723b54e92ced2b46a5f7646d4d610e666e676c6b79e739762366",
+   "earlier_path": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-13124.png",
+   "id": "lh4-p0127",
+   "later": "29b35709c3b22cffcf27a5c2b4da19b8-476",
+   "later_chunk": "lh4b7-001",
+   "later_path": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-476.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b6-002>lh4b7-001",
+   "distance": 15,
+   "earlier": "7c6a12a999602a1c0f80bb32ca49567a-11490",
+   "earlier_chunk": "lh4b6-002",
+   "earlier_dhash": "000d000d005c00bc0176007503750e752cbd59171acb06cf168506e701670475",
+   "earlier_path": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-11490.png",
+   "id": "lh4-p0128",
+   "later": "29b35709c3b22cffcf27a5c2b4da19b8-4922",
+   "later_chunk": "lh4b7-001",
+   "later_path": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-4922.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b6-002>lh4b7-001",
+   "distance": 1,
+   "earlier": "7c6a12a999602a1c0f80bb32ca49567a-12874",
+   "earlier_chunk": "lh4b6-002",
+   "earlier_dhash": "000f001f000d000c000d001d005d0dbd0c7504670c672e770cb31b3736c706cd",
+   "earlier_path": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-12874.png",
+   "id": "lh4-p0129",
+   "later": "29b35709c3b22cffcf27a5c2b4da19b8-5090",
+   "later_chunk": "lh4b7-001",
+   "later_path": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-5090.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b6-002>lh4b7-001",
+   "distance": 13,
+   "earlier": "7c6a12a999602a1c0f80bb32ca49567a-12174",
+   "earlier_chunk": "lh4b6-002",
+   "earlier_dhash": "000d000d005c00bc0176007503750e752e3d59371aeb06cf168506e701670475",
+   "earlier_path": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-12174.png",
+   "id": "lh4-p0130",
+   "later": "29b35709c3b22cffcf27a5c2b4da19b8-6239",
+   "later_chunk": "lh4b7-001",
+   "later_path": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-6239.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b6-002>lh4b7-001",
+   "distance": 0,
+   "earlier": "93b94e2cf0992beb2d7abcef78aee2b5-837",
+   "earlier_chunk": "lh4b2-001",
+   "earlier_dhash": "e4b4ec1480008000800080008000800080008000800080008000800009574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b2/sources/93b94e2cf0992beb2d7abcef78aee2b5-837.png",
+   "id": "lh4-p0131",
+   "later": "29b35709c3b22cffcf27a5c2b4da19b8-765",
+   "later_chunk": "lh4b7-001",
+   "later_path": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-765.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b6-002>lh4b7-001",
+   "distance": 14,
+   "earlier": "b6b8bd76ad675d57c75a89a01db23461-412",
+   "earlier_chunk": "lh4b5-001",
+   "earlier_dhash": "c004b6087583c3c3a7cf83cd86cf84cf87d9816d85cb800b814d800909574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-412.png",
+   "id": "lh4-p0132",
+   "later": "29b35709c3b22cffcf27a5c2b4da19b8-768",
+   "later_chunk": "lh4b7-001",
+   "later_path": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-768.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b6-002>lh4b7-001",
+   "distance": 0,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-1807",
+   "earlier_chunk": "lh4b1-001",
+   "earlier_dhash": "c004c00480008000800080008000800080008000800080008000800009574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-1807.png",
+   "id": "lh4-p0133",
+   "later": "29b35709c3b22cffcf27a5c2b4da19b8-772",
+   "later_chunk": "lh4b7-001",
+   "later_path": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-772.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b6-002>lh4b7-001",
+   "distance": 6,
+   "earlier": "7c6a12a999602a1c0f80bb32ca49567a-9703",
+   "earlier_chunk": "lh4b6-002",
+   "earlier_dhash": "767554745c71567b5169956d2667246f9a6d2d712d6cad674b6b18ebad620e66",
+   "earlier_path": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-9703.png",
+   "id": "lh4-p0134",
+   "later": "29b35709c3b22cffcf27a5c2b4da19b8-8090",
+   "later_chunk": "lh4b7-001",
+   "later_path": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-8090.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b6-002>lh4b7-001",
+   "distance": 2,
+   "earlier": "b6b8bd76ad675d57c75a89a01db23461-9758",
+   "earlier_chunk": "lh4b5-002",
+   "earlier_dhash": "d004e608679287d2a796a7dea7d4879a869e879a81168513809e8298024f4d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-9758.png",
+   "id": "lh4-p0135",
+   "later": "29b35709c3b22cffcf27a5c2b4da19b8-8391",
+   "later_chunk": "lh4b7-001",
+   "later_path": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-8391.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b7-001>lh4b7-002",
+   "distance": 12,
+   "earlier": "b6b8bd76ad675d57c75a89a01db23461-18327",
+   "earlier_chunk": "lh4b5-002",
+   "earlier_dhash": "0675c674de09f821d001d001c001d081fe71ce71c061d0015021500964638362",
+   "earlier_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-18327.png",
+   "id": "lh4-p0136",
+   "later": "29b35709c3b22cffcf27a5c2b4da19b8-11541",
+   "later_chunk": "lh4b7-002",
+   "later_path": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-11541.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b7-001>lh4b7-002",
+   "distance": 5,
+   "earlier": "7c6a12a999602a1c0f80bb32ca49567a-502",
+   "earlier_chunk": "lh4b6-001",
+   "earlier_dhash": "221524d484d134db30c938cd24c738db28dd2cd739d605d725d352df42e48020",
+   "earlier_path": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-502.png",
+   "id": "lh4-p0137",
+   "later": "29b35709c3b22cffcf27a5c2b4da19b8-13961",
+   "later_chunk": "lh4b7-002",
+   "later_path": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-13961.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b7-001>lh4b7-002",
+   "distance": 0,
+   "earlier": "7c6a12a999602a1c0f80bb32ca49567a-601",
+   "earlier_chunk": "lh4b6-001",
+   "earlier_dhash": "223024c084d034d030c638d624c038d828d02cc039d005d025d052d042c08060",
+   "earlier_path": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-601.png",
+   "id": "lh4-p0138",
+   "later": "29b35709c3b22cffcf27a5c2b4da19b8-14017",
+   "later_chunk": "lh4b7-002",
+   "later_path": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-14017.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b7-001>lh4b7-002",
+   "distance": 6,
+   "earlier": "7c6a12a999602a1c0f80bb32ca49567a-545",
+   "earlier_chunk": "lh4b6-001",
+   "earlier_dhash": "221524d484d134db34c938cd3b273ecb3ecd380f39de05d739d352df42e48020",
+   "earlier_path": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-545.png",
+   "id": "lh4-p0139",
+   "later": "29b35709c3b22cffcf27a5c2b4da19b8-14036",
+   "later_chunk": "lh4b7-002",
+   "later_path": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-14036.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b7-001>lh4b7-002",
+   "distance": 0,
+   "earlier": "7c6a12a999602a1c0f80bb32ca49567a-606",
+   "earlier_chunk": "lh4b6-001",
+   "earlier_dhash": "1af41cf012d016d01ad012d013c013d01ad83cdc2cdcc270083c006c00780050",
+   "earlier_path": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-606.png",
+   "id": "lh4-p0140",
+   "later": "29b35709c3b22cffcf27a5c2b4da19b8-14206",
+   "later_chunk": "lh4b7-002",
+   "later_path": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-14206.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b7-001>lh4b7-002",
+   "distance": 5,
+   "earlier": "b6b8bd76ad675d57c75a89a01db23461-21581",
+   "earlier_chunk": "lh4b5-002",
+   "earlier_dhash": "d04de420678287caa7cea7cc87ca85ea868c874a840f800f804e800609434d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-21581.png",
+   "id": "lh4-p0141",
+   "later": "29b35709c3b22cffcf27a5c2b4da19b8-16115",
+   "later_chunk": "lh4b7-002",
+   "later_path": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-16115.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b7-001>lh4b7-002",
+   "distance": 13,
+   "earlier": "29b35709c3b22cffcf27a5c2b4da19b8-5090",
+   "earlier_chunk": "lh4b7-001",
+   "earlier_dhash": "000f001f000d000c000d001d005d0dbd0c7504670c672e770cb3193736c706cd",
+   "earlier_path": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-5090.png",
+   "id": "lh4-p0142",
+   "later": "29b35709c3b22cffcf27a5c2b4da19b8-16765",
+   "later_chunk": "lh4b7-002",
+   "later_path": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-16765.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b7-001>lh4b7-002",
+   "distance": 0,
+   "earlier": "324d5814c4902c09ce18c6bbc8afbcfb-1807",
+   "earlier_chunk": "lh4b1-001",
+   "earlier_dhash": "c004c00480008000800080008000800080008000800080008000800009574d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b1/sources/324d5814c4902c09ce18c6bbc8afbcfb-1807.png",
+   "id": "lh4-p0143",
+   "later": "29b35709c3b22cffcf27a5c2b4da19b8-16978",
+   "later_chunk": "lh4b7-002",
+   "later_path": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-16978.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b7-001>lh4b7-002",
+   "distance": 15,
+   "earlier": "7c6a12a999602a1c0f80bb32ca49567a-12874",
+   "earlier_chunk": "lh4b6-002",
+   "earlier_dhash": "000f001f000d000c000d001d005d0dbd0c7504670c672e770cb31b3736c706cd",
+   "earlier_path": "522-held-out/computer-sessions/lh4b6/sources/7c6a12a999602a1c0f80bb32ca49567a-12874.png",
+   "id": "lh4-p0144",
+   "later": "29b35709c3b22cffcf27a5c2b4da19b8-18365",
+   "later_chunk": "lh4b7-002",
+   "later_path": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-18365.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b7-001>lh4b7-002",
+   "distance": 5,
+   "earlier": "b6b8bd76ad675d57c75a89a01db23461-14272",
+   "earlier_chunk": "lh4b5-002",
+   "earlier_dhash": "e004a60877c285c285ce85cc868c814c874e800e800e800b804a800809474d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b5/sources/b6b8bd76ad675d57c75a89a01db23461-14272.png",
+   "id": "lh4-p0145",
+   "later": "29b35709c3b22cffcf27a5c2b4da19b8-19822",
+   "later_chunk": "lh4b7-002",
+   "later_path": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-19822.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b7-001>lh4b7-002",
+   "distance": 1,
+   "earlier": "2a960e884129f3b5b383922a0aa60005-6302",
+   "earlier_chunk": "lh4b4-002",
+   "earlier_dhash": "d004c608c5c285c687ce86cc86c680ce814a814e846e834aa74a860b19474d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-6302.png",
+   "id": "lh4-p0146",
+   "later": "29b35709c3b22cffcf27a5c2b4da19b8-22204",
+   "later_chunk": "lh4b7-002",
+   "later_path": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-22204.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b7-001>lh4b7-002",
+   "distance": 2,
+   "earlier": "2a960e884129f3b5b383922a0aa60005-6927",
+   "earlier_chunk": "lh4b4-002",
+   "earlier_dhash": "f004c608c582a5ce87cc84c2874e874c840c80088008800c804a800f094f4d57",
+   "earlier_path": "522-held-out/computer-sessions/lh4b4/sources/2a960e884129f3b5b383922a0aa60005-6927.png",
+   "id": "lh4-p0147",
+   "later": "29b35709c3b22cffcf27a5c2b4da19b8-22244",
+   "later_chunk": "lh4b7-002",
+   "later_path": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-22244.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  },
+  {
+   "boundary": "lh4b7-001>lh4b7-002",
+   "distance": 1,
+   "earlier": "29b35709c3b22cffcf27a5c2b4da19b8-4922",
+   "earlier_chunk": "lh4b7-001",
+   "earlier_dhash": "000d000d025c04bc14f614f514750e752e3d59171acb06cf168506e701670475",
+   "earlier_path": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-4922.png",
+   "id": "lh4-p0148",
+   "later": "29b35709c3b22cffcf27a5c2b4da19b8-9806",
+   "later_chunk": "lh4b7-002",
+   "later_path": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-9806.png",
+   "lineage": "lh4",
+   "shown": [
+    "earlier",
+    "later"
+   ]
+  },
+  {
+   "boundary": "lh4b7-001>lh4b7-002",
+   "distance": 5,
+   "earlier": "29b35709c3b22cffcf27a5c2b4da19b8-5323",
+   "earlier_chunk": "lh4b7-001",
+   "earlier_dhash": "0763af27ae8cad0c8c4d9f4d27555635b0bdb1bfb59b99b75d0d1e4f0ccf010d",
+   "earlier_path": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-5323.png",
+   "id": "lh4-p0149",
+   "later": "29b35709c3b22cffcf27a5c2b4da19b8-9984",
+   "later_chunk": "lh4b7-002",
+   "later_path": "522-held-out/computer-sessions/lh4b7/sources/29b35709c3b22cffcf27a5c2b4da19b8-9984.png",
+   "lineage": "lh4",
+   "shown": [
+    "later",
+    "earlier"
+   ]
+  }
+ ],
+ "lineages": {
+  "lh4": {
+   "candidates": 149,
+   "chunks": [
+    "lh4b1-001",
+    "lh4b1-002",
+    "lh4b2-001",
+    "lh4b2-002",
+    "lh4b3-001",
+    "lh4b3-002",
+    "lh4b4-001",
+    "lh4b4-002",
+    "lh4b5-001",
+    "lh4b5-002",
+    "lh4b6-001",
+    "lh4b6-002",
+    "lh4b7-001",
+    "lh4b7-002"
+   ],
+   "runs": [
+    "lh4b1",
+    "lh4b2",
+    "lh4b3",
+    "lh4b4",
+    "lh4b5",
+    "lh4b6",
+    "lh4b7"
+   ]
+  }
+ },
+ "protocol": "probe-protocol/1",
+ "rule": {
+  "cluster": 20,
+  "hash_size": 16,
+  "near": 16,
+  "new_screen": 64,
+  "seed": 490
+ },
+ "schema": "p1-held-out-candidates/1"
+}
