@@ -335,54 +335,89 @@ def test_a_probes_file_needs_a_frozen_json_that_lists_it(two_files, capsys, dama
     assert str(second) in capsys.readouterr().err
 
 
-def test_simulate_records_each_probes_file_and_defaults_by_how_many(two_files, tmp_path, monkeypatch, capsys):
+def relabelled(rows, old, new):
+    """The rows of lineage `old`, renamed as lineage `new` (ids and boundaries too)."""
+    return [dict(r, lineage=new, id=r['id'].replace(old, new), boundary=r['boundary'].replace(old, new))
+            for r in rows if r['lineage'] == old]
+
+
+@pytest.fixture
+def four_files(two_files, tmp_path):
+    """One frozen probes file per held-out lineage: lh1, lh2, lh3 and lh4."""
     first, second, rows = two_files
+    third, fourth = relabelled(rows, 'lh1', 'lh3'), relabelled(rows, 'lh2', 'lh4')
+    return [first, second, frozen_dir(tmp_path/'c', third), frozen_dir(tmp_path/'d', fourth)], rows + third + fourth
+
+
+def recorded(path):
+    frozen = path.parent/'frozen.json'
+    return dict(path=str(path), sha256=p1.file_sha256(path), frozen=str(frozen), frozen_sha256=p1.file_sha256(frozen))
+
+
+def flags(paths):
+    return [part for path in paths for part in ('--probes', str(path))]
+
+
+def test_the_gate_file_follows_the_lineages_the_probes_cover(four_files, tmp_path, monkeypatch, capsys):
+    paths, rows = four_files
     seen = []
     monkeypatch.setattr(p1, 'simulate', lambda layout=None: seen.append(layout) or {'probability_of_go': {}, 'gate': {}})
     one, both = tmp_path/'power-held-out.json', tmp_path/'power-held-out-study-2.json'
     monkeypatch.setattr(p1, 'POWER_STUDY_1', one)
     monkeypatch.setattr(p1, 'POWER_STUDY_2', both)
-    assert p1.main(['simulate', '--probes', str(first), '--probes', str(second)]) == 0
+    assert p1.main(['simulate', *flags(paths)]) == 0                 # all four lineages: p1-study/2's gate
     assert both.is_file() and not one.exists()
-    written = json.loads(both.read_text())
-    assert written['probe_files'] == [dict(path=str(first), sha256=p1.file_sha256(first)),
-                                      dict(path=str(second), sha256=p1.file_sha256(second))]
+    assert json.loads(both.read_text())['probe_files'] == [recorded(path) for path in paths]
     assert seen[0] == [(u['lineage'], u['cluster']) for u in p1.units(p1.primary_probes(rows))]
     both.unlink()
-    assert p1.main(['simulate', '--probes', str(first)]) == 0       # one file: the existing default
+    assert p1.main(['simulate', *flags(paths[:3])]) == 0             # lh1-lh3, however many files: p1-study/1's gate
     assert one.is_file() and not both.exists()
-    assert json.loads(one.read_text())['probe_files'] == [dict(path=str(first), sha256=p1.file_sha256(first))]
-
-
-def test_simulate_never_overwrites_study_1s_gate_with_several_files(two_files, tmp_path, monkeypatch, capsys):
-    first, second, _ = two_files
+    assert 'probe_files' not in json.loads(one.read_text())          # its tracked shape is unchanged
+    one.unlink()
     monkeypatch.setattr(p1, 'simulate', lambda layout=None: pytest.fail('nothing may run'))
-    gate = tmp_path/'power-held-out.json'
-    monkeypatch.setattr(p1, 'POWER_STUDY_1', gate)
-    with pytest.raises(SystemExit):
-        p1.main(['simulate', '--probes', str(first), '--probes', str(second), '--out', str(gate)])
-    assert 'p1-study/1' in capsys.readouterr().err and not gate.exists()
+    for arguments, word in ((flags(paths[3:]), 'p1-study/2'),                              # lh4 alone: no default gate
+                            ([*flags(paths[3:]), '--out', str(one)], 'p1-study/1'),         # lh4 never in study 1's file
+                            ([*flags(paths), '--out', str(one)], 'p1-study/1'),
+                            ([*flags(paths[:3]), '--out', str(both)], 'p1-study/2')):       # lh1-lh3 is not study 2's gate
+        with pytest.raises(SystemExit):
+            p1.main(['simulate', *arguments])
+        assert word in capsys.readouterr().err and not one.exists() and not both.exists()
 
 
 def test_the_repository_relative_path_is_recorded_for_files_inside_the_repository(monkeypatch, tmp_path):
     path = frozen_dir(tmp_path/'held-out-lh4', spread(probes()))
     monkeypatch.setattr(p1, 'ROOT', tmp_path.resolve())
-    assert p1.frozen_probes([path])[1] == [dict(path='held-out-lh4/probes.jsonl', sha256=p1.file_sha256(path))]
+    assert p1.frozen_probes([path])[1] == [dict(path='held-out-lh4/probes.jsonl', sha256=p1.file_sha256(path),
+                                                frozen='held-out-lh4/frozen.json',
+                                                frozen_sha256=p1.file_sha256(path.parent/'frozen.json'))]
 
 
-def test_score_takes_several_probes_files_and_records_them(two_files, tmp_path):
-    first, second, rows = two_files
+def test_score_takes_one_frozen_file_per_lineage_and_records_them(four_files, tmp_path, capsys):
+    paths, rows = four_files
     unit_rows = p1.units(p1.primary_probes(rows))
     first_pass = labels(unit_rows, {'A1': 0.3, 'B1': 0.8, 'B2': 0.8})
     scores = tmp_path/'scores.jsonl'
     scores.write_text(''.join(json.dumps(r) + '\n' for r in first_pass + rejudged(unit_rows, first_pass) + guards_ok()))
     hours, out = tmp_path/'hours.json', tmp_path/'result.json'
-    hours.write_text(json.dumps(HOURS))
-    assert p1.main(['score', '--probes', str(first), '--probes', str(second), '--scores', str(scores),
-                    '--hours', str(hours), '--out', str(out)]) == 0
+    hours.write_text(json.dumps(dict(HOURS, lh4=10.0)))
+    common = ['--scores', str(scores), '--hours', str(hours), '--out', str(out)]
+    assert p1.main(['score', *flags(paths), *common]) == 0
     result = json.loads(out.read_text())
     assert result['decision']['go'] is True
-    assert [f['path'] for f in result['probe_files']] == [str(first), str(second)]
+    assert result['probe_files'] == [recorded(path) for path in paths]
+    out.unlink()
+    with pytest.raises(SystemExit):                                   # probes that leave a held-out lineage out
+        p1.main(['score', *flags(paths[:3]), *common])
+    assert 'covering exactly' in capsys.readouterr().err and not out.exists()
+
+
+def test_plan_takes_only_study_1s_lineages(four_files, capsys):
+    paths, rows = four_files
+    with pytest.raises(p1.ScoreError, match='lh4 is simulated'):
+        p1.plan(rows)
+    with pytest.raises(SystemExit):
+        p1.main(['plan', '--probes', str(paths[3])])
+    assert 'lh4 is simulated' in capsys.readouterr().err
 
 
 def test_plan_keeps_exactly_one_probes_file(two_files, capsys):

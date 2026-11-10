@@ -671,7 +671,11 @@ def test_the_existing_development_commands_still_take_their_old_default_output(m
 # ---------------------------------------------------------------------------------------------
 # p1-study/2: lh4 is a held-out lineage of study 522-held-out, written beside lh1-lh3's directory.
 
-def test_lh4_is_refused_as_a_development_lineage_and_is_unknown_until_it_has_admissions(monkeypatch):
+def test_lh4_is_refused_as_a_development_lineage_and_is_unknown_until_it_has_admissions(monkeypatch, tmp_path):
+    # Every refusal below comes before any read; the directories are scratch so a regression could not reach real data.
+    monkeypatch.setattr(validation, 'HELD_OUT_DIR', tmp_path/'p1'/'held-out')
+    monkeypatch.setattr(validation, 'HELD_OUT_LH4_DIR', tmp_path/'p1'/'held-out-lh4')
+    monkeypatch.setenv('ENACTIVE_EVIDENCE_ROOT', str(tmp_path/'no-evidence'))
     assert 'lh4' in validation.HELD_OUT and validation.HELD_OUT_STUDIES['lh4'] == '522-held-out'
     assert {validation.HELD_OUT_STUDIES[n] for n in ('lh1', 'lh2', 'lh3')} == {'372-382-dev-loop'}
     assert validation.HELD_OUT_RUNS['lh4'] == p1_analysis.LH4_ADMISSIONS
@@ -733,6 +737,13 @@ def test_lh4_never_goes_in_the_lh1_to_lh3_directory_and_is_never_mixed_without_a
     assert validation.main(['held-out-candidates', '--evidence-root', str(lh4.root), '--lineages', 'lh3', 'lh4',
                             '--out', str(mixed)]) == 0
     assert set(json.loads((mixed/'candidates.json').read_text())['lineages']) == {'lh3', 'lh4'}
+    # lh4's directory holds lh4 only.
+    for lineages in (['lh3'], ['lh3', 'lh4'], []):
+        with pytest.raises(SystemExit, match='holds lh4 only'):
+            validation.main(['held-out-candidates', '--evidence-root', str(lh4.root),
+                             *(['--lineages', *lineages] if lineages else []),
+                             '--out', str(validation.HELD_OUT_LH4_DIR)])
+    assert not validation.HELD_OUT_LH4_DIR.exists()
 
 
 def test_the_held_out_steps_default_to_lh1_to_lh3_even_when_lh4_is_known(lh4, tmp_path):

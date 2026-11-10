@@ -44,7 +44,6 @@ from harness.curator.knowledge import KnowledgeError, Repository  # noqa: E402
 from harness.jsonio import file_sha256  # noqa: E402
 from tools.curator_host import p1_arms as arms  # noqa: E402
 from tools.curator_host import shadow  # noqa: E402
-from tools.p1_analysis import LH4_ADMISSIONS  # noqa: E402
 
 FROZEN_SCHEMA = 'p1-arms-frozen/1'
 DELIVERED_SCHEMA = 'p1-delivered/1'
@@ -101,8 +100,10 @@ LINEAGES = {
     'lh1': Lineage(_DEV_LOOP, ('lh1a1', 'lh1a2', 'lh1a3'), 'player-memory-lh1.sqlite3', held_out=True),
     'lh2': Lineage(_DEV_LOOP, ('lh2a1', 'lh2a2'), 'player-memory-lh2.sqlite3', held_out=True),
     'lh3': Lineage(_DEV_LOOP, ('lh3a1', 'lh3a2'), 'player-memory-lh3.sqlite3', held_out=True),
-    # p1-study/2's fourth lineage (#522); its admissions are named by #178 in `tools.p1_analysis.LH4_ADMISSIONS`.
-    'lh4': Lineage('522-held-out', LH4_ADMISSIONS, 'player-memory-lh4.sqlite3', held_out=True),
+    # p1-study/2's fourth lineage (#522): its seven restarted admissions, never the lost lh4a1. Written out
+    # here, not imported, so the arms freeze (which digests this file) covers the session list; a test
+    # checks it equals tools.p1_analysis.LH4_ADMISSIONS.
+    'lh4': Lineage('522-held-out', tuple(f'lh4b{n}' for n in range(1, 8)), 'player-memory-lh4.sqlite3', held_out=True),
 }
 
 
@@ -214,8 +215,7 @@ def select(names: Sequence[str], frozen: Path | None, prices: Path) -> list[str]
                 if HELD_OUT_NAME.match(name) else ''
             raise ReplayError(f'unknown lineage {name!r}; choose one of {", ".join(LINEAGES)}{held}')
         if not LINEAGES[name].sessions:
-            raise ReplayError(f'lineage {name!r} has no admissions yet: #178 names them in '
-                              f'tools.p1_analysis.LH4_ADMISSIONS after #522 ends')
+            raise ReplayError(f'lineage {name!r} has no admissions')
     if any(LINEAGES[name].held_out for name in names):
         verify_frozen(frozen, prices)
     return list(names)

@@ -350,6 +350,8 @@ def held_out_output(lineages: Sequence[str], out: Path | None) -> Path:
         return HELD_OUT_LH4_DIR if lh4 else HELD_OUT_DIR
     if lh4 and Path(out).resolve() == HELD_OUT_DIR.resolve():
         raise SystemExit(f'lh4 never goes in {HELD_OUT_DIR.name}/; use {HELD_OUT_LH4_DIR.name}/')
+    if Path(out).resolve() == HELD_OUT_LH4_DIR.resolve() and list(lineages) != ['lh4']:
+        raise SystemExit(f'{HELD_OUT_LH4_DIR.name}/ holds lh4 only; run it with --lineages lh4')
     return Path(out)
 
 

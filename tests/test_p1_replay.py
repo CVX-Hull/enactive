@@ -531,15 +531,13 @@ def test_the_lineages_match_the_pre_registration():
     assert replay.LINEAGES['lh4'].sessions == p1_analysis.LH4_ADMISSIONS
 
 
-def test_lh4_cannot_be_selected_until_its_admissions_are_named(monkeypatch):
-    monkeypatch.setitem(replay.LINEAGES, 'lh4', replay.Lineage('522-held-out', (), 'player-memory-lh4.sqlite3', held_out=True))
-    with pytest.raises(replay.ReplayError, match='no admissions yet'):
+def test_lh4_is_held_out_like_lh1_to_lh3_and_a_lineage_without_admissions_is_refused(monkeypatch):
+    assert replay.LINEAGES['lh4'].sessions == tuple(f'lh4b{n}' for n in range(1, 8))   # written out in the frozen file
+    with pytest.raises(replay.ReplayError, match='--frozen'):
         replay.select(['lh4'], None, PRICES)
-    with pytest.raises(replay.ReplayError, match='no admissions yet'):
-        replay.select(['lh1', 'lh4'], None, PRICES)
-    monkeypatch.setitem(replay.LINEAGES, 'lh4', replay.Lineage('522-held-out', ('lh4b1',), 'player-memory-lh4.sqlite3', held_out=True))
-    with pytest.raises(replay.ReplayError, match='--frozen'):   # named, it is held out like lh1-lh3
-        replay.select(['lh4'], None, PRICES)
+    monkeypatch.setitem(replay.LINEAGES, 'syn', replay.Lineage('syn', (), 'player-memory-syn.sqlite3'))
+    with pytest.raises(replay.ReplayError, match='no admissions'):
+        replay.select(['syn'], None, PRICES)
 
 
 # ------------------------------------------------------------------ the memory cutoff

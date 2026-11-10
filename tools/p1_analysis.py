@@ -102,7 +102,7 @@ def frozen_probes(paths: list[Path]) -> tuple[list[dict], list[dict]]:
         if not path.is_file() or digest is None or file_sha256(path) != digest:
             raise ScoreError(f'{name}: not a frozen held-out probes file (no matching digest in its directory\'s frozen.json)')
         rows += _lines(path)
-        files.append(dict(path=name, sha256=digest))
+        files.append(dict(path=name, sha256=digest, frozen=_relative(frozen), frozen_sha256=file_sha256(frozen)))
     return rows, files
 
 
@@ -548,6 +548,8 @@ def _new_lineage(rng: random.Random, name: str, per_boundary: list[int], boundar
 
 
 def plan(held_out: list[dict], simulations: int = PLAN_SIMULATIONS, seed: int = SEED) -> dict:
+    if any(row.get('lineage') not in STUDY_1_HELD_OUT for row in held_out):
+        raise ScoreError("plan takes only #382's held-out probes (lh1-lh3); lh4 is simulated, never read")
     dev = development()
     unit_rows = units(primary_probes(held_out))
     base = [(u['lineage'], u['cluster']) for u in unit_rows]
@@ -600,23 +602,32 @@ def main(argv=None) -> int:
         layout = None
         if probe_paths:
             layout = [(u['lineage'], u['cluster']) for u in units(primary_probes(probe_rows))]
+        # The gate file is chosen by the lineages the probes cover, never by how many files were given.
+        lineages = {row['lineage'] for row in probe_rows} if probe_paths else set()
+        study_1 = bool(lineages) and lineages <= set(STUDY_1_HELD_OUT)
         if args.out:
             out = args.out
         elif not probe_paths:
             out = ROOT/'data'/'evaluation'/'p1'/'power.json'
         else:
-            out = POWER_STUDY_2 if len(probe_paths) > 1 else POWER_STUDY_1
-        if len(probe_paths) > 1 and out.resolve() == POWER_STUDY_1.resolve():
-            parser.error(f'{_relative(POWER_STUDY_1)} is p1-study/1\'s gate; with several --probes files write '
+            out = POWER_STUDY_1 if study_1 else POWER_STUDY_2
+        if probe_paths and out.resolve() == POWER_STUDY_1.resolve() and not study_1:
+            parser.error(f'{_relative(POWER_STUDY_1)} is p1-study/1\'s gate (lh1-lh3 only); probes covering lh4 write '
                          f'{_relative(POWER_STUDY_2)}')
+        if probe_paths and out.resolve() == POWER_STUDY_2.resolve() and lineages != set(HELD_OUT):
+            parser.error(f'{_relative(POWER_STUDY_2)} is p1-study/2\'s gate: the probes must cover exactly '
+                         f'{", ".join(HELD_OUT)}')
         result = simulate(layout=layout)
-        if probe_files:
+        if probe_files and not study_1:    # p1-study/1's tracked gate output keeps its recorded shape
             result['probe_files'] = probe_files
         summary = result['probability_of_go']
     elif args.step == 'plan':
         if len(probe_paths) != 1:
             parser.error('plan needs exactly one --probes (the frozen #382 held-out probes)')
-        result = plan(probe_rows)
+        try:
+            result = plan(probe_rows)
+        except ScoreError as error:
+            parser.error(str(error))
         out = args.out or ROOT/'data'/'evaluation'/'p1'/'power-study-2.json'
         summary = result['gate']
     elif args.step in ('units', 'rejudge'):
@@ -630,6 +641,8 @@ def main(argv=None) -> int:
     else:
         if not (probe_paths and args.scores and args.hours):
             parser.error('score needs --probes, --scores and --hours')
+        if {row['lineage'] for row in probe_rows} != set(HELD_OUT):
+            parser.error(f'score needs probes covering exactly the held-out lineages: {", ".join(HELD_OUT)}')
         result = dict(score(probe_rows, json.loads(args.hours.read_text()), _lines(args.scores)), probe_files=probe_files)
         out = args.out or ROOT/'data'/'evaluation'/'p1'/'result.json'
         summary = result['decision']['outcome']
