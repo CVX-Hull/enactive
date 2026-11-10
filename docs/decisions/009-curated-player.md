@@ -695,14 +695,14 @@ running system.
   ([record](../acceptance/2026-11-09-p1-gate-178.md)).
 - **P1 reshaped: one more held-out lineage (9 November 2026).** The owner chose to add one
   new held-out lineage to #382's frozen probes, behind a re-run power gate
-  ([p1-study/2](../design/p1-study-3.md), #178 and #522).
+  (p1-study/2, now carried in [p1-study/3](../design/p1-study-3.md); #178 and #522).
 - **The reshaped gate passes (10 November 2026).** `lh4` ended with 13 boundaries and gives 62
   scoring units; on all four lineages P(go) is 0.901 at the 0.30 effect and 0.022 with no
   effect ([record](../acceptance/2026-11-10-p1-gate-study-2-178.md)). The replay stages follow.
 - **The measurement was redesigned (10 November 2026).** p1-study/2's arm-guess check failed
   twice on development data (27 and 26 of 30, limit 21): the two systems write differently, and
   no renderer hides that. The owner chose an answer-key chain in which the grader never sees an
-  arm's text ([p1-study/3](../design/p1-study-3.md), proposed).
+  arm's text ([p1-study/3](../design/p1-study-3.md), approved the same day).
 
 Every phase replaces its contracts and stores in one migration
 (`player-memory/2` → `/3`, `player-record/1` and `player-program/2` → their
