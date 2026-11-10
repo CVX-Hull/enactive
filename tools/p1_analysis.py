@@ -382,7 +382,9 @@ def development() -> dict:
 def held_out_shape() -> dict[str, int]:
     """Boundaries per held-out lineage, from game hours in the tracked run ledger only (aggregates)."""
     rows = [json.loads(line) for line in (ROOT/'data'/'evaluation'/'run-metrics.jsonl').read_text().splitlines()]
-    hours = {row['run']: row['metrics']['survival.game_hours']['hours'] for row in rows}
+    # A run that never reached play (an infrastructure loss) has no game hours and is no admission of a lineage.
+    hours = {row['run']: row['metrics']['survival.game_hours']['hours'] for row in rows
+             if row['metrics'].get('survival.game_hours')}
     per_boundary = DEV_HOURS / DEV_BOUNDARIES
     return {name: max(len(runs) - 1, round(sum(hours[r] for r in runs) / per_boundary))
             for name, runs in STUDY_1_HELD_OUT.items()}   # p1-study/1's planning; lh4 does not change it

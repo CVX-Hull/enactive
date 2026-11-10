@@ -43,7 +43,9 @@ def _lineage(probes: Path, name: str, adjudicated: bool = False) -> Lineage:
 
 def _hours() -> dict[str, float]:
     rows = [json.loads(line) for line in (ROOT/'data'/'evaluation'/'run-metrics.jsonl').read_text().splitlines()]
-    return {row['run']: row['metrics']['survival.game_hours']['hours'] for row in rows}
+    # A run that never reached play (an infrastructure loss) has no game hours.
+    return {row['run']: row['metrics']['survival.game_hours']['hours'] for row in rows
+            if row['metrics'].get('survival.game_hours')}
 
 
 def _costs(probes: Path) -> dict[str, dict]:
