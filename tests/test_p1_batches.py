@@ -613,7 +613,8 @@ def test_the_new_last_line_follows_the_text_on_a_line_of_its_own(received, line,
 
 
 @pytest.mark.parametrize('key, line', [
-    ('bolt,\n saw ;  nail', 'bolt,; saw ; nail'),             # a line break is `; `; other whitespace runs are one space
+    ('bolt,\n saw ;  nail', 'bolt; saw ; nail'),              # a line break is `; `, never doubled; other whitespace runs are one space
+    ('bolt;\nsaw,\n', 'bolt; saw'),
     ('bolt\nsaw\r\nnail', 'bolt; saw; nail'),
     ('\n\n  bolt  \n\n\n saw\n', 'bolt; saw'),                # blank lines and leading or trailing breaks leave no separator
     ('bolt  saw', 'bolt saw'), ('', ''), (' \n ', '')])

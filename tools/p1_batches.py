@@ -554,8 +554,9 @@ def _line(text: str) -> str:
 
 def _key_line(key: str) -> str:
     """A key on one line: its entries on separate lines are joined with `; ` (Owner decision, 10 November 2026), the
-    whitespace within an entry collapses to single spaces and no separator leads or trails."""
-    return '; '.join(entry for entry in (_line(part) for part in re.split(r'[\r\n]+', key)) if entry)
+    whitespace within an entry collapses to single spaces and no separator leads or trails. A comma or semicolon
+    that ends a line is dropped, so the join never doubles a separator (`bolt,` then `saw` is `bolt; saw`)."""
+    return '; '.join(entry for entry in (_line(part).rstrip(',; ') for part in re.split(r'[\r\n]+', key)) if entry)
 
 
 def appended(text: str, line: str) -> str:
