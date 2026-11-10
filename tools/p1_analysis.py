@@ -59,9 +59,10 @@ COST_CAP = 1.0           # curator settled dollars over actor dollars, per repea
 NEAR = 16                # bits between earlier frames of one information cluster (probe-protocol/1)
 ARMS = {'A': (1,), 'B': (1, 2)}
 STUDY_1_HELD_OUT = {'lh1': ('lh1a1', 'lh1a2', 'lh1a3'), 'lh2': ('lh2a1', 'lh2a2'), 'lh3': ('lh3a1', 'lh3a2')}
-# lh4's admissions (study 522-held-out). #178 fills this with the actual `lh4bN` names after #522 ends;
-# until then lh4 is not a held-out lineage anywhere, and HELD_OUT is exactly p1-study/1's.
-LH4_ADMISSIONS: tuple[str, ...] = ()
+# lh4's admissions (study 522-held-out), as #522 ran them: lh4b1-lh4b7. The lost lh4a1 is not part of
+# the lineage (docs/acceptance/2026-11-09-held-out-lineage-522.md). With an empty tuple lh4 would not
+# be a held-out lineage anywhere, and HELD_OUT would be exactly p1-study/1's.
+LH4_ADMISSIONS: tuple[str, ...] = tuple(f'lh4b{n}' for n in range(1, 8))
 HELD_OUT = dict(STUDY_1_HELD_OUT, lh4=LH4_ADMISSIONS) if LH4_ADMISSIONS else dict(STUDY_1_HELD_OUT)   # lineage -> admissions
 STUDY_1_BOUNDARIES = {'lh1': 4, 'lh2': 3, 'lh3': 3}   # boundaries per #382 lineage (the #178 gate record); fixed, as `plan` resamples them
 KINDS = ('reobservation', 'fact', 'query')   # primary, then the two descriptive ledgers
@@ -222,6 +223,8 @@ def figures(unit_rows: list[dict], hours: dict[str, float], stated: dict[tuple, 
     if wanted != have:
         raise ScoreError(f'primary labels do not cover the study: {len(wanted - have)} missing, '
                          f'{len(have - wanted)} unexpected; first missing {sorted(wanted - have)[:3]}')
+    if set(hours) != set(HELD_OUT):
+        raise ScoreError(f'--hours must give in-play game hours for exactly the held-out lineages: {", ".join(HELD_OUT)}')
     total_hours = sum(hours[name] for name in HELD_OUT)
     out = {}
     for arm, reps in ARMS.items():

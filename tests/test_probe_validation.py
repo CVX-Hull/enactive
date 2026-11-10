@@ -671,10 +671,11 @@ def test_the_existing_development_commands_still_take_their_old_default_output(m
 # ---------------------------------------------------------------------------------------------
 # p1-study/2: lh4 is a held-out lineage of study 522-held-out, written beside lh1-lh3's directory.
 
-def test_lh4_is_refused_as_a_development_lineage_and_is_unknown_until_it_has_admissions():
+def test_lh4_is_refused_as_a_development_lineage_and_is_unknown_until_it_has_admissions(monkeypatch):
     assert 'lh4' in validation.HELD_OUT and validation.HELD_OUT_STUDIES['lh4'] == '522-held-out'
     assert {validation.HELD_OUT_STUDIES[n] for n in ('lh1', 'lh2', 'lh3')} == {'372-382-dev-loop'}
-    assert 'lh4' not in validation.HELD_OUT_RUNS            # p1_analysis.LH4_ADMISSIONS is empty today
+    assert validation.HELD_OUT_RUNS['lh4'] == p1_analysis.LH4_ADMISSIONS
+    monkeypatch.delitem(validation.HELD_OUT_RUNS, 'lh4')    # as it was before #522 named its admissions
     with pytest.raises(SystemExit, match='lh4'):
         validation.main(['held-out-candidates', '--lineages', 'lh4'])
     with pytest.raises(SystemExit, match='not a held-out lineage'):

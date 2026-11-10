@@ -5,7 +5,7 @@ import pytest
 
 from tools import p1_analysis as p1
 
-HOURS = {'lh1': 20.0, 'lh2': 20.0, 'lh3': 0.5}
+HOURS = {'lh1': 20.0, 'lh2': 20.0, 'lh3': 0.5, 'lh4': 0.0}   # the synthetic probes sit in lh1-lh3; lh4 adds no hours
 
 
 def probes(per_boundary=6, boundaries=4, informative=True):
@@ -76,6 +76,13 @@ def test_a_clear_gain_within_every_guard_is_a_go():
     assert result['decision']['mean_delta'] == pytest.approx(0.5)
     assert result['judge_agreement']['percent'] == 1.0
     assert result['figures']['A1']['undelivered_per_game_hour'] == pytest.approx(56 / 40.5)
+
+
+def test_score_refuses_hours_that_do_not_name_exactly_the_held_out_lineages():
+    rows, scores = study({'A1': 0.3, 'B1': 0.8, 'B2': 0.8}, extra=guards_ok())
+    for hours in ({k: v for k, v in HOURS.items() if k != 'lh4'}, dict(HOURS, lh5=1.0)):
+        with pytest.raises(p1.ScoreError, match='--hours'):
+            p1.score(rows, hours, scores)
 
 
 @pytest.mark.parametrize('rates, outcome', [
@@ -258,8 +265,10 @@ def test_the_tracked_power_simulation_reproduces_and_its_page_figures_match():
 # ---------------------------------------------------------------------------------------------
 # p1-study/2: several frozen held-out probes files (lh4 beside lh1-lh3)
 
-def test_lh4_is_not_a_held_out_lineage_until_its_admissions_are_named():
-    assert p1.LH4_ADMISSIONS == () and p1.HELD_OUT == p1.STUDY_1_HELD_OUT and 'lh4' not in p1.HELD_OUT
+def test_lh4_is_a_held_out_lineage_of_its_seven_restarted_admissions():
+    assert p1.LH4_ADMISSIONS == ('lh4b1', 'lh4b2', 'lh4b3', 'lh4b4', 'lh4b5', 'lh4b6', 'lh4b7')   # never the lost lh4a1
+    assert p1.HELD_OUT == dict(p1.STUDY_1_HELD_OUT, lh4=p1.LH4_ADMISSIONS)
+    assert p1.STUDY_1_HELD_OUT.keys() == {'lh1', 'lh2', 'lh3'}        # p1-study/1's planning never sees lh4
     assert p1.STUDY_1_BOUNDARIES == {'lh1': 4, 'lh2': 3, 'lh3': 3}
 
 
