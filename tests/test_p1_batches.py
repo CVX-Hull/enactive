@@ -142,8 +142,7 @@ def page_brief(label: str) -> str:
 @pytest.mark.parametrize('label, start, end', [
     ('Scoring', 'You check whether a text states what a screenshot shows.', '{"id":"<id>","stated":true|false,"why":"<one line>"}.'),
     ('Audit', 'You check statements against recorded screenshots.', '"why":"<one line>"}.'),
-    ('Arm guess', 'Each item in the file [batch] is a question and the short answer a reader gave',
-     '{"id":"<id>","system":"1"|"2"}.')])     # p1-study/3: the guesser sees reader answers, not arm texts
+    ('Arm guess', 'Each text in the file [batch] was produced by one of two systems', '{"id":"<id>","system":"1"|"2"}.')])
 def test_the_frozen_briefs_are_the_pre_registrations_text_word_for_word(label, start, end):
     brief = batches.frozen_brief(label)
     assert brief == page_brief(label)
