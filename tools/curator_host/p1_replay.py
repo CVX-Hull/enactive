@@ -13,7 +13,7 @@ next admission's first operation (the whole store for the last admission): the i
 that admission boundary. It records which version each session published
 (`schedule.json`, `p1-schedule/1`), which is all arm B's D2 timing needs.
 
-`deliver` writes `delivered.jsonl` (`p1-delivered/1`): for every boundary the Reference, A and, for
+`deliver` writes `delivered.jsonl` (`p1-delivered/2`): for every boundary the Reference, A and, for
 each recorded schedule, B text the successor would have received. It makes no model call and prints
 only counts.
 
@@ -46,7 +46,7 @@ from tools.curator_host import p1_arms as arms  # noqa: E402
 from tools.curator_host import shadow  # noqa: E402
 
 FROZEN_SCHEMA = 'p1-arms-frozen/1'
-DELIVERED_SCHEMA = 'p1-delivered/1'
+DELIVERED_SCHEMA = 'p1-delivered/2'
 SCHEDULE_SCHEMA = 'p1-schedule/1'
 FROZEN_FILE = ROOT/'data'/'evaluation'/'p1'/'arms-frozen.json'
 HOST_DIR = shadow.HOST_DIR
@@ -373,7 +373,11 @@ def _row(lineage: str, boundary: arms.Boundary, arm: str, repeat: int, received:
     return dict(schema=DELIVERED_SCHEMA, lineage=lineage, boundary=boundary.name, kind=boundary.kind, arm=arm,
                 repeat=repeat, text=text, tokens=rendered.tokens if rendered else 0,
                 items=rendered.items if rendered else 0, dropped=rendered.dropped if rendered else 0,
-                received_sha256=sha, complete=complete)
+                received_sha256=sha, complete=complete,
+                # The delivered items in order, as rendered, with the source ids each cites (for the false-fact
+                # audit). Not part of `text`.
+                working_set=[dict(statement=i.statement, cites=list(i.cites)) for i in rendered.working_set]
+                if rendered else [])
 
 
 def b_complete(schedule: dict, name: str) -> bool:

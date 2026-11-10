@@ -30,7 +30,7 @@ from tools.curator_host import shadow
 
 PRICES = shadow.DEFAULT_PRICES
 ROW_FIELDS = {'schema', 'lineage', 'boundary', 'kind', 'arm', 'repeat', 'text', 'tokens', 'items', 'dropped',
-              'received_sha256', 'complete'}
+              'received_sha256', 'complete', 'working_set'}
 MEMORY = [dict(id='r1', wall=5., text='alpha-note', kind='claim'),
           dict(id='r2', wall=25., text='beta-note', data={'k': 1}),
           dict(id='r3', wall=50., text='gamma-note corrects alpha', kind='correction', supersedes='r1'),
@@ -225,7 +225,7 @@ def test_deliver_writes_every_arm_at_every_boundary_with_the_same_received_text(
     assert code == 0 and json.loads(printed) == {'syn': {'R': 3, 'A': 3, 'B1': 3, 'B2': 3}}
     assert 'note' not in printed and 'curated' not in printed          # counts only, never texts
     rows = rows_of(out)
-    assert len(rows) == 12 and all(set(r) == ROW_FIELDS and r['schema'] == 'p1-delivered/1' for r in rows)
+    assert len(rows) == 12 and all(set(r) == ROW_FIELDS and r['schema'] == 'p1-delivered/2' for r in rows)
     assert all(r['complete'] is True for r in rows)
     names = ['t1-001>t1-002', 't1-002>t2-001', 't2-001>t2-002']
     by = {(r['boundary'], r['arm'], r['repeat']): r for r in rows}
@@ -259,9 +259,21 @@ def test_deliver_applies_arm_a_cutoffs_and_arm_bs_d2_schedule(world, monkeypatch
     for name in (second, third):
         assert tail((name, 'B')).splitlines() == [arms.HEADER, '- curated from t1']
         assert by[(name, 'B')]['items'] == 1
-    blob = json.dumps(list(by.values()))
+    # The citations are non-rendered metadata of `working_set`; nothing but the statements reaches a text.
+    blob = json.dumps([r['text'] for r in by.values()])
     for private in ('curated from t2', 'frame-private-1', 'curator-private', 'src-private-1', 'actor_id', '(claim)', '(observation)'):
         assert private not in blob
+    blob = json.dumps([{k: v for k, v in r.items() if k != 'working_set'} for r in by.values()])
+    for private in ('curated from t2', 'frame-private-1', 'curator-private', 'src-private-1', 'actor_id', '(claim)', '(observation)'):
+        assert private not in blob
+    # the delivered items, in order, with what each cites: A's record sources and B's fact citations
+    assert by[(third, 'A')]['working_set'] == [dict(statement=s, cites=['src-private-1']) for s in
+                                               ('delta-note', 'gamma-note corrects alpha', 'beta-note. k: 1')]
+    assert by[(second, 'B')]['working_set'] == [dict(statement='curated from t1', cites=['frame-private-1'])]
+    assert by[(first, 'R')]['working_set'] == by[(first, 'B')]['working_set'] == []
+    for row in by.values():     # exactly the rendered lines, in order
+        assert [f"- {i['statement']}" for i in row['working_set']] == row['text'].split('\n\n', 1)[-1].splitlines()[1:] \
+            if row['items'] else row['working_set'] == []
     # one renderer: the same header and line format whichever arm produced the item
     assert tail((second, 'A')).splitlines()[0] == tail((second, 'B')).splitlines()[0] == arms.HEADER
 

@@ -209,6 +209,32 @@ def test_the_renderer_gives_both_arms_the_same_lines_under_one_header_with_no_ki
     assert arms.render(with_data).text == arms.render(plain).text == f'{arms.HEADER}\n- the stash is south. x: 1'
 
 
+def test_items_keep_what_they_cite_as_metadata_that_is_never_rendered(tmp_path):
+    from_a = arms.arm_a_items(arms.read_store(make_memory(tmp_path/'m.sqlite3', [
+        dict(id='r1', wall=1., text='the stash is south')])), 9.)
+    from_b = arms.arm_b_items([dict(fact('f1', 'the stash is south'), citations=['frame-b-2', 'frame-b-1', 'frame-b-2'])], GAME)
+    assert from_a[0].cites == ('src-private-1',)                    # a record's `sources`
+    assert from_b[0].cites == ('frame-b-2', 'frame-b-1')            # a fact's `citations`, in order, repeats removed
+    assert arms.arm_b_items([dict(fact('f2', 'no citations'), citations='not a list')], GAME)[0].cites == ()
+    assert Item('note', 'plain').cites == ()
+    a, b = arms.render(from_a), arms.render(from_b)
+    assert a.text == b.text == f'{arms.HEADER}\n- the stash is south'
+    assert 'src-private' not in a.text and 'frame-b' not in b.text
+
+
+def test_render_reports_the_delivered_items_as_rendered_in_order_without_changing_the_text():
+    items = [Item('note', f'{n:02d}' + 'x' * 28, cites=(f'c{n}',)) for n in range(6)] + [Item('note', '  \x00 ')]
+    line = len('- ' + items[0].statement) + 1
+    cap = arms.tokens(arms.HEADER + '\n') + 3 * ((line + 3) // 4)
+    rendered = arms.render(items, cap)
+    assert [(i.statement, i.cites) for i in rendered.working_set] == [(items[n].statement, (f'c{n}',)) for n in range(3)]
+    assert len(rendered.working_set) == rendered.items == 3 and rendered.dropped == 3   # the unprintable one is not counted
+    assert rendered.text.splitlines()[1:] == ['- ' + i.statement for i in rendered.working_set]
+    spaced = arms.render([Item('note', 'a   b\n c', cites=('s',))])
+    assert spaced.working_set == (Item('note', 'a b c', ('s',)),)                       # the statement as the judges see it
+    assert arms.render([]).working_set == () and arms.render([Item('note', 'z' * 9000)]).working_set == ()
+
+
 def test_an_empty_set_has_no_header():
     empty = arms.render([])
     assert (empty.text, empty.tokens, empty.items, empty.dropped) == ('', 0, 0, 0)
