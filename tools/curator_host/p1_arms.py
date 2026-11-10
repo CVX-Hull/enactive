@@ -1,4 +1,4 @@
-"""The P1 offline study's arms: working sets, one renderer and the per-admission schedule (docs/design/p1-study-2.md; #462).
+"""The P1 offline study's arms: working sets, one renderer and the per-admission schedule (docs/design/p1-study-3.md; #462).
 
 At every boundary of a lineage each arm produces the text the successor would have received live:
 
@@ -125,7 +125,7 @@ class Item:
     kind: str       # for reporting only; never rendered
     statement: str
     # The source ids the item cites (A: a record's `sources`; B: a fact's `citations`). Metadata for the
-    # false-fact audit (docs/design/p1-study-2.md, Judges); never rendered.
+    # false-fact audit (docs/design/p1-study-3.md, The measurement chain); never rendered.
     cites: tuple[str, ...] = ()
 
 

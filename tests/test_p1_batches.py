@@ -132,7 +132,7 @@ def batch_files(out: Path, kind: str) -> list[dict]:
 
 # ------------------------------------------------------------------ the frozen briefs
 def page_brief(label: str) -> str:
-    text = (analysis.ROOT/'docs'/'design'/'p1-study-2.md').read_text()
+    text = (analysis.ROOT/'docs'/'design'/'p1-study-3.md').read_text()
     paragraph = next(p for p in text.split('\n\n') if p.startswith(f'> **{label}.**'))
     joined = ' '.join(line[1:].strip() for line in paragraph.splitlines())
     assert joined.startswith(f'**{label}.** ')
@@ -142,7 +142,8 @@ def page_brief(label: str) -> str:
 @pytest.mark.parametrize('label, start, end', [
     ('Scoring', 'You check whether a text states what a screenshot shows.', '{"id":"<id>","stated":true|false,"why":"<one line>"}.'),
     ('Audit', 'You check statements against recorded screenshots.', '"why":"<one line>"}.'),
-    ('Arm guess', 'Each text in the file [batch] was produced by one of two systems', '{"id":"<id>","system":"1"|"2"}.')])
+    ('Arm guess', 'Each item in the file [batch] is a question and the short answer a reader gave',
+     '{"id":"<id>","system":"1"|"2"}.')])     # p1-study/3: the guesser sees reader answers, not arm texts
 def test_the_frozen_briefs_are_the_pre_registrations_text_word_for_word(label, start, end):
     brief = batches.frozen_brief(label)
     assert brief == page_brief(label)
