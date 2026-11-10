@@ -263,6 +263,9 @@ def test_the_runner_refuses_held_out_and_unsampled_names(tmp_path, monkeypatch, 
         message = capsys.readouterr().err
         assert code == 2 and 'curator_shadow:' in message, (lineage, sessions)
         assert not out.exists()
+    for lineage, sessions in (('lh4', None), ('397', ['lh4b1']), ('372', ['lh4b2'])):   # #522's held-out lineage
+        with pytest.raises(shadow.ShadowError, match='held-out'):
+            shadow.select(lineage, sessions)
     assert shadow.select('372', ['aidA5', 'aidB3'])[1] == ['aidB3', 'aidA5']  # lineage order, not request order
     assert shadow.select('397', None)[1] == [f'sd1a{n}' for n in range(1, 8)]
 

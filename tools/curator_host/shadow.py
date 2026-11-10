@@ -11,8 +11,8 @@ printed or written.
     python -m tools.curator_host.shadow --arm terra --lineage 397 --sessions sd1a1 --cap-usd 2 \
         --out .runtime/curator-shadow/pilot-1
 
-Only the sampled sessions of the two development lineages can be named. #382's held-out lineages
-(lh1, lh2, lh3) are refused by name. Summaries are `curator-shadow/1`, one per session and one per
+Only the sampled sessions of the two development lineages can be named. The held-out lineages
+(#382's lh1, lh2 and lh3, and #522's lh4) are refused by name. Summaries are `curator-shadow/1`, one per session and one per
 run. Prices are the frozen `curator-prices/1` file in `data/curator/`.
 """
 from __future__ import annotations
@@ -64,7 +64,7 @@ LINEAGES = {
     '372': dict(directory='372-382-dev-loop', sessions=('aidB3', 'ceil09', 'ceil07', 'ceil05', 'aidB9', 'aidA5'),
                 memory='player-memory-{name}.sqlite3'),
 }
-HELD_OUT = re.compile(r'lh[123]')
+HELD_OUT = re.compile(r'lh[1-4]')
 
 
 class ShadowError(ValueError):
@@ -110,7 +110,7 @@ def select(lineage: str, sessions: list[str] | None) -> tuple[dict, list[str]]:
     """The lineage and its sessions, in lineage order. Held-out and unsampled names are refused."""
     for name in [lineage, *(sessions or [])]:
         if HELD_OUT.search(name):
-            raise ShadowError(f'{name!r} names a held-out lineage (#382); it can never be selected')
+            raise ShadowError(f'{name!r} names a held-out lineage (#382, #522); it can never be selected')
     if lineage not in LINEAGES:
         raise ShadowError(f'unknown lineage {lineage!r}; choose one of {", ".join(LINEAGES)}')
     spec = LINEAGES[lineage]

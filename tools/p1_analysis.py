@@ -1,11 +1,16 @@
 """The P1 offline study's frozen analysis (ADR 009; pre-registration p1-study/2 in docs/design/p1-study-2.md,
 which keeps p1-study/1's rule from docs/design/p1-study.md; #491, #178).
 
-  python -m tools.p1_analysis simulate [--probes <held-out p1-probes/1>] [--out data/evaluation/p1/power.json]
+  python -m tools.p1_analysis simulate [--probes <held-out p1-probes/1>]... [--out data/evaluation/p1/power.json]
   python -m tools.p1_analysis plan --probes <#382 held-out p1-probes/1>  # p1-study/2's planning, power-study-2.json
-  python -m tools.p1_analysis units --probes <p1-probes/1>      # the probes the judges score
-  python -m tools.p1_analysis rejudge --probes <p1-probes/1>    # the items judged a second time
-  python -m tools.p1_analysis score --probes <p1-probes/1> --scores <p1-score/1> --hours <JSON> [--out ...]
+  python -m tools.p1_analysis units --probes <p1-probes/1>...   # the probes the judges score
+  python -m tools.p1_analysis rejudge --probes <p1-probes/1>... # the items judged a second time
+  python -m tools.p1_analysis score --probes <p1-probes/1>... --scores <p1-score/1> --hours <JSON> [--out ...]
+
+`--probes` may be given once per held-out directory (rows are concatenated in the order given) for
+`simulate`, `units`, `rejudge` and `score`. Each file must have a digest in the `frozen.json` beside it
+(`tools.probe_validation held-out-freeze`) and is recorded, with its sha256, under `probe_files`.
+With several files `simulate` writes power-held-out-study-2.json and never p1-study/1's power-held-out.json.
 
 `simulate` checks, before any spend, that the decision rule detects the effect of interest and
 rarely fires without one. Without `--probes` it uses development data and aggregates only: #397's
@@ -29,6 +34,7 @@ import numpy as np
 from scipy.stats import beta, binom
 
 from harness.evaluation.core.probes import kappa
+from harness.jsonio import file_sha256
 
 ROOT = Path(__file__).resolve().parents[1]
 PROBES_SCHEMA = 'p1-probes/1'
@@ -53,7 +59,11 @@ COST_CAP = 1.0           # curator settled dollars over actor dollars, per repea
 NEAR = 16                # bits between earlier frames of one information cluster (probe-protocol/1)
 ARMS = {'A': (1,), 'B': (1, 2)}
 STUDY_1_HELD_OUT = {'lh1': ('lh1a1', 'lh1a2', 'lh1a3'), 'lh2': ('lh2a1', 'lh2a2'), 'lh3': ('lh3a1', 'lh3a2')}
-HELD_OUT = dict(STUDY_1_HELD_OUT)   # lineage -> admissions; p1-study/2 adds lh4 under its actual names after #522
+# lh4's admissions (study 522-held-out), as #522 ran them: lh4b1-lh4b7. The lost lh4a1 is not part of
+# the lineage (docs/acceptance/2026-11-09-held-out-lineage-522.md). With an empty tuple lh4 would not
+# be a held-out lineage anywhere, and HELD_OUT would be exactly p1-study/1's.
+LH4_ADMISSIONS: tuple[str, ...] = tuple(f'lh4b{n}' for n in range(1, 8))
+HELD_OUT = dict(STUDY_1_HELD_OUT, lh4=LH4_ADMISSIONS) if LH4_ADMISSIONS else dict(STUDY_1_HELD_OUT)   # lineage -> admissions
 STUDY_1_BOUNDARIES = {'lh1': 4, 'lh2': 3, 'lh3': 3}   # boundaries per #382 lineage (the #178 gate record); fixed, as `plan` resamples them
 KINDS = ('reobservation', 'fact', 'query')   # primary, then the two descriptive ledgers
 
@@ -64,6 +74,36 @@ class ScoreError(ValueError):
 
 def _lines(path: Path) -> list[dict]:
     return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+
+
+FROZEN_SCHEMA = 'p1-held-out-frozen/1'   # written by tools/probe_validation.py held-out-freeze
+POWER_STUDY_2 = ROOT/'data'/'evaluation'/'p1'/'power-held-out-study-2.json'
+POWER_STUDY_1 = ROOT/'data'/'evaluation'/'p1'/'power-held-out.json'
+
+
+def _relative(path: Path) -> str:
+    path = Path(path).resolve()
+    return path.relative_to(ROOT).as_posix() if path.is_relative_to(ROOT) else str(path)
+
+
+def frozen_probes(paths: list[Path]) -> tuple[list[dict], list[dict]]:
+    """(rows, probe_files): the rows of each held-out probes file, concatenated in the order given, and each
+    file's repository-relative path and sha256. A file is refused unless the `frozen.json` beside it
+    (`p1-held-out-frozen/1`) lists a digest for it that matches. Errors name only the file."""
+    rows, files = [], []
+    for path in map(Path, paths):
+        name = _relative(path)
+        frozen = path.parent/'frozen.json'
+        try:
+            document = json.loads(frozen.read_text())
+            digest = document['files'][path.name] if document.get('schema') == FROZEN_SCHEMA else None
+        except (OSError, ValueError, KeyError, TypeError, AttributeError):
+            digest = None
+        if not path.is_file() or digest is None or file_sha256(path) != digest:
+            raise ScoreError(f'{name}: not a frozen held-out probes file (no matching digest in its directory\'s frozen.json)')
+        rows += _lines(path)
+        files.append(dict(path=name, sha256=digest, frozen=_relative(frozen), frozen_sha256=file_sha256(frozen)))
+    return rows, files
 
 
 def _rate(numerator: float, denominator: float) -> float | None:
@@ -183,6 +223,8 @@ def figures(unit_rows: list[dict], hours: dict[str, float], stated: dict[tuple, 
     if wanted != have:
         raise ScoreError(f'primary labels do not cover the study: {len(wanted - have)} missing, '
                          f'{len(have - wanted)} unexpected; first missing {sorted(wanted - have)[:3]}')
+    if set(hours) != set(HELD_OUT):
+        raise ScoreError(f'--hours must give in-play game hours for exactly the held-out lineages: {", ".join(HELD_OUT)}')
     total_hours = sum(hours[name] for name in HELD_OUT)
     out = {}
     for arm, reps in ARMS.items():
@@ -506,6 +548,8 @@ def _new_lineage(rng: random.Random, name: str, per_boundary: list[int], boundar
 
 
 def plan(held_out: list[dict], simulations: int = PLAN_SIMULATIONS, seed: int = SEED) -> dict:
+    if any(row.get('lineage') not in STUDY_1_HELD_OUT for row in held_out):
+        raise ScoreError("plan takes only #382's held-out probes (lh1-lh3); lh4 is simulated, never read")
     dev = development()
     unit_rows = units(primary_probes(held_out))
     base = [(u['lineage'], u['cluster']) for u in unit_rows]
@@ -538,36 +582,68 @@ def gate(probabilities: dict[str, float]) -> dict:
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('step', choices=('simulate', 'plan', 'units', 'rejudge', 'score'))
-    parser.add_argument('--probes', type=Path)
+    parser.add_argument('--probes', type=Path, action='append',
+                        help='a held-out p1-probes/1 file; simulate, units, rejudge and score take one per held-out '
+                             'directory (each must match its frozen.json), plan takes exactly one')
     parser.add_argument('--scores', type=Path)
     parser.add_argument('--hours', type=Path, help='JSON object: held-out lineage -> in-play game hours')
     parser.add_argument('--out', type=Path)
     args = parser.parse_args(argv)
+    probe_paths = args.probes or []
+    probe_files = None
+    try:
+        if probe_paths and args.step != 'plan':
+            probe_rows, probe_files = frozen_probes(probe_paths)
+        elif probe_paths:
+            probe_rows = _lines(probe_paths[0])
+    except ScoreError as error:
+        parser.error(str(error))
     if args.step == 'simulate':
         layout = None
-        if args.probes:
-            layout = [(u['lineage'], u['cluster']) for u in units(primary_probes(_lines(args.probes)))]
+        if probe_paths:
+            layout = [(u['lineage'], u['cluster']) for u in units(primary_probes(probe_rows))]
+        # The gate file is chosen by the lineages the probes cover, never by how many files were given.
+        lineages = {row['lineage'] for row in probe_rows} if probe_paths else set()
+        study_1 = bool(lineages) and lineages <= set(STUDY_1_HELD_OUT)
+        if args.out:
+            out = args.out
+        elif not probe_paths:
+            out = ROOT/'data'/'evaluation'/'p1'/'power.json'
+        else:
+            out = POWER_STUDY_1 if study_1 else POWER_STUDY_2
+        if probe_paths and out.resolve() == POWER_STUDY_1.resolve() and not study_1:
+            parser.error(f'{_relative(POWER_STUDY_1)} is p1-study/1\'s gate (lh1-lh3 only); probes covering lh4 write '
+                         f'{_relative(POWER_STUDY_2)}')
+        if probe_paths and out.resolve() == POWER_STUDY_2.resolve() and lineages != set(HELD_OUT):
+            parser.error(f'{_relative(POWER_STUDY_2)} is p1-study/2\'s gate: the probes must cover exactly '
+                         f'{", ".join(HELD_OUT)}')
         result = simulate(layout=layout)
-        out = args.out or ROOT/'data'/'evaluation'/'p1'/('power-held-out.json' if layout else 'power.json')
+        if probe_files and not study_1:    # p1-study/1's tracked gate output keeps its recorded shape
+            result['probe_files'] = probe_files
         summary = result['probability_of_go']
     elif args.step == 'plan':
-        if not args.probes:
-            parser.error('plan needs --probes (the frozen #382 held-out probes)')
-        result = plan(_lines(args.probes))
+        if len(probe_paths) != 1:
+            parser.error('plan needs exactly one --probes (the frozen #382 held-out probes)')
+        try:
+            result = plan(probe_rows)
+        except ScoreError as error:
+            parser.error(str(error))
         out = args.out or ROOT/'data'/'evaluation'/'p1'/'power-study-2.json'
         summary = result['gate']
     elif args.step in ('units', 'rejudge'):
-        if not args.probes:
+        if not probe_paths:
             parser.error(f'{args.step} needs --probes')
-        unit_rows = units(primary_probes(_lines(args.probes)))
+        unit_rows = units(primary_probes(probe_rows))
         for row in (unit_rows if args.step == 'units' else
                     [dict(kind=k, arm=a, repeat=r, item=i) for k, a, r, i in sorted(rejudge_sample(unit_rows))]):
             print(json.dumps(row))
         return 0
     else:
-        if not (args.probes and args.scores and args.hours):
+        if not (probe_paths and args.scores and args.hours):
             parser.error('score needs --probes, --scores and --hours')
-        result = score(_lines(args.probes), json.loads(args.hours.read_text()), _lines(args.scores))
+        if {row['lineage'] for row in probe_rows} != set(HELD_OUT):
+            parser.error(f'score needs probes covering exactly the held-out lineages: {", ".join(HELD_OUT)}')
+        result = dict(score(probe_rows, json.loads(args.hours.read_text()), _lines(args.scores)), probe_files=probe_files)
         out = args.out or ROOT/'data'/'evaluation'/'p1'/'result.json'
         summary = result['decision']['outcome']
     out.parent.mkdir(parents=True, exist_ok=True)
