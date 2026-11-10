@@ -9,6 +9,7 @@ from tools import p1_analysis as p1
 HOURS = {'lh1': 20.0, 'lh2': 20.0, 'lh3': 0.5, 'lh4': 0.0}   # the synthetic probes sit in lh1-lh3; lh4 adds no hours
 CONTROL_RATES = {'R1': 0.5, 'PW1': 1.0, 'PP1': 1.0}          # the Reference, and the positive control's two forms
 SCREEN = dict(flagged_twice=0)
+SENTENCES = dict(failed=0)
 
 
 def probes(per_boundary=6, boundaries=4, informative=True):
@@ -47,10 +48,10 @@ def questions_for(unit_rows):
             for u in unit_rows]
 
 
-def scored(rows, scores, *, hours=HOURS, screen=SCREEN, questions=None):
+def scored(rows, scores, *, hours=HOURS, screen=SCREEN, questions=None, sentences=SENTENCES):
     """`score` over the units of `rows`, with a question for each of them unless `questions` says otherwise."""
     unit_rows = p1.units(p1.primary_probes(rows))
-    return p1.score(rows, hours, scores, questions_for(unit_rows) if questions is None else questions, screen)
+    return p1.score(rows, hours, scores, questions_for(unit_rows) if questions is None else questions, screen, sentences)
 
 
 def rejudged(unit_rows, first, flip=lambda row: row['stated']):
@@ -270,12 +271,29 @@ def test_lh4_is_a_held_out_lineage_of_its_seven_restarted_admissions():
     assert p1.STUDY_1_BOUNDARIES == {'lh1': 4, 'lh2': 3, 'lh3': 3}
 
 
-def frozen_dir(directory, rows, *, schema='p1-held-out-frozen/1', name='probes.jsonl'):
-    """A held-out directory: `probes.jsonl` (or another file) and the `frozen.json` that digests it."""
+def frozen_dir(directory, rows, *, schema='p1-held-out-frozen/1', name='probes.jsonl', beside=None):
+    """A held-out directory: `probes.jsonl` (or another file), the files `beside` it (name -> text), and the
+    `frozen.json` that digests them all."""
     directory.mkdir(parents=True)
     path = directory/name
     path.write_text(''.join(json.dumps(row, sort_keys=True) + '\n' for row in rows))
-    (directory/'frozen.json').write_text(json.dumps(dict(schema=schema, files={name: p1.file_sha256(path)})))
+    for other, text in (beside or {}).items():
+        (directory/other).write_text(text)
+    files = {file: p1.file_sha256(directory/file) for file in (name, *(beside or {}))}
+    (directory/'frozen.json').write_text(json.dumps(dict(schema=schema, files=files)))
+    return path
+
+
+def frozen_questions(directory, unit_rows, flagged_twice=0):
+    """(questions file, screen.json) as `questions-freeze` leaves them: a frozen directory with the counts beside the questions."""
+    path = frozen_dir(directory, questions_for(unit_rows), name='questions.jsonl',
+                      beside={'screen.json': json.dumps(dict(questions=3, flagged=flagged_twice, flagged_twice=flagged_twice))})
+    return path, directory/'screen.json'
+
+
+def sentence_counts(tmp_path, failed=0, units=None):
+    path = tmp_path/'sentence-counts.json'
+    path.write_text(json.dumps(dict(units=units, stages=1, rewritten=0, failed=failed) if units is not None else dict(failed=failed)))
     return path
 
 
@@ -398,16 +416,17 @@ def test_score_takes_one_frozen_file_per_lineage_and_records_them(four_files, tm
     scores.write_text(''.join(json.dumps(r) + '\n' for r in first_pass + rejudged(unit_rows, first_pass) + guards_ok()))
     hours, out = tmp_path/'hours.json', tmp_path/'result.json'
     hours.write_text(json.dumps(dict(HOURS, lh4=10.0)))
-    questions = frozen_dir(tmp_path/'questions', questions_for(unit_rows), name='questions.jsonl')
-    screen = tmp_path/'counts.json'
-    screen.write_text(json.dumps(dict(questions=3, flagged=2, flagged_twice=2)))
+    questions, screen = frozen_questions(tmp_path/'questions', unit_rows, flagged_twice=2)
+    counts = sentence_counts(tmp_path, failed=3, units=len(unit_rows))
     common = ['--scores', str(scores), '--hours', str(hours), '--out', str(out), '--questions', str(questions),
-              '--screen', str(screen)]
+              '--screen', str(screen), '--sentences-counts', str(counts)]
     assert p1.main(['score', *flags(paths), *common]) == 0
     result = json.loads(out.read_text())
     assert result['decision']['go'] is True and result['questions_flagged_twice'] == 2
+    assert result['positive_control']['paraphrases_failed_twice'] == 3
     assert result['probe_files'] == [recorded(path) for path in paths]
     assert result['question_file'] == recorded(questions)
+    assert result['screen_file'] == dict(path=str(screen), sha256=p1.file_sha256(screen))
     out.unlink()
     with pytest.raises(SystemExit):                                   # probes that leave a held-out lineage out
         p1.main(['score', *flags(paths[:3]), *common])
@@ -421,20 +440,42 @@ def test_score_refuses_a_questions_file_that_differs_from_its_freeze_or_is_missi
     scores, hours, out = tmp_path/'scores.jsonl', tmp_path/'hours.json', tmp_path/'result.json'
     scores.write_text(''.join(json.dumps(r) + '\n' for r in first_pass + rejudged(unit_rows, first_pass) + guards_ok()))
     hours.write_text(json.dumps(dict(HOURS, lh4=10.0)))
-    questions = frozen_dir(tmp_path/'questions', questions_for(unit_rows), name='questions.jsonl')
-    screen = tmp_path/'counts.json'
-    screen.write_text(json.dumps(dict(flagged_twice=0)))
-    common = ['--scores', str(scores), '--hours', str(hours), '--out', str(out), '--screen', str(screen)]
+    questions, screen = frozen_questions(tmp_path/'questions', unit_rows)
+    counts = sentence_counts(tmp_path)
+    common = ['--scores', str(scores), '--hours', str(hours), '--out', str(out), '--screen', str(screen),
+              '--sentences-counts', str(counts)]
     questions.write_text(questions.read_text().replace('bolt', 'nail'))          # one edit after the freeze
     with pytest.raises(SystemExit):
         p1.main(['score', *flags(paths), *common, '--questions', str(questions)])
     error = capsys.readouterr().err
     assert 'not a frozen questions file' in error and 'nail' not in error and not out.exists()
-    for missing in ('--questions', '--screen'):
+    questions.write_text(questions.read_text().replace('nail', 'bolt'))
+    assert p1.file_sha256(questions) == json.loads((questions.parent/'frozen.json').read_text())['files']['questions.jsonl']
+    # the screen's counts must be the freeze's screen.json: an edited copy, a copy elsewhere and an unlisted one are refused
+    other = tmp_path/'other-screen.json'
+    other.write_text(json.dumps(dict(flagged_twice=0)))
+    edited = tmp_path/'questions'/'screen.json'
+    original = edited.read_text()
+    edited.write_text(json.dumps(dict(flagged_twice=9)))
+    for given in (other, edited):
+        with pytest.raises(SystemExit):
+            p1.main(['score', *flags(paths), *common[:6], '--screen', str(given), '--sentences-counts', str(counts),
+                     '--questions', str(questions)])
+        assert 'not the screen counts the questions were frozen with' in capsys.readouterr().err
+    edited.write_text(original)
+    unlisted, _ = frozen_questions(tmp_path/'plain', unit_rows)
+    frozen = unlisted.parent/'frozen.json'
+    frozen.write_text(json.dumps(dict(schema=p1.FROZEN_SCHEMA, files={'questions.jsonl': p1.file_sha256(unlisted)})))
+    with pytest.raises(SystemExit):
+        p1.main(['score', *flags(paths), *common[:6], '--screen', str(unlisted.parent/'screen.json'),
+                 '--sentences-counts', str(counts), '--questions', str(unlisted)])
+    assert 'not the screen counts the questions were frozen with' in capsys.readouterr().err
+    for missing in ('--questions', '--screen', '--sentences-counts'):
         arguments = [a for i, a in enumerate(common) if a != missing and common[i - 1] != missing]
         with pytest.raises(SystemExit):
-            p1.main(['score', *flags(paths), *arguments, *([] if missing == '--questions' else ['--questions', str(questions)])])
-        assert '--questions and --screen' in capsys.readouterr().err
+            p1.main(['score', *flags(paths), *arguments,
+                     *([] if missing == '--questions' else ['--questions', str(questions)])])
+        assert '--questions, --screen and --sentences-counts' in capsys.readouterr().err
     assert not out.exists()
 
 
@@ -630,3 +671,130 @@ def test_the_questions_must_be_one_p1_question_row_for_each_unit():
     for screen in ({}, dict(flagged_twice=None), dict(flagged_twice=-1), dict(flagged_twice=True), None, [1]):
         with pytest.raises(p1.ScoreError, match='flagged_twice'):
             scored(rows, scores, screen=screen)
+    for counts in ({}, dict(failed=None), dict(failed=-1), dict(failed=True), dict(failed=1.5), None, [1], dict(failed=0, units=1)):
+        with pytest.raises(p1.ScoreError, match='sentences-counts'):
+            scored(rows, scores, sentences=counts)
+
+
+def test_a_flagged_bias_control_is_stated_beside_the_outcome_with_its_direction_and_changes_nothing_else():
+    rows, scores = study({'A1': 0.3, 'B1': 0.8, 'B2': 0.8}, extra=guards_ok())
+    flagged = scored(rows, scores, sentences=dict(failed=4))
+    assert flagged['bias_control']['flag'] is True
+    assert flagged['outcome_note'] == "the received text's answer changed by arm: B above A"    # beside `decision`, not in it
+    assert 'outcome_note' not in flagged['decision'] and flagged['decision']['outcome'].startswith('go:')
+    assert flagged['positive_control']['paraphrases_failed_twice'] == 4
+    assert {'PW', 'PP'} <= set(flagged['positive_control'])
+    quiet_rows, quiet = study({'A1': 0.5, 'B1': 0.5, 'B2': 0.5}, extra=guards_ok())
+    result = scored(quiet_rows, quiet)
+    assert result['bias_control']['flag'] is False and 'outcome_note' not in result
+    assert result['positive_control']['paraphrases_failed_twice'] == 0
+    # A above B is stated as such, and the decision is the same with or without the note
+    reversed_rows, reversed_scores = study({'A1': 0.8, 'B1': 0.3, 'B2': 0.3}, extra=guards_ok())
+    below = scored(reversed_rows, reversed_scores)
+    assert below['outcome_note'] == "the received text's answer changed by arm: A above B"
+    assert below['decision']['outcome'].startswith('negative')
+
+
+# ---------------------------------------------------------------------------------------------
+# The development summary
+
+def dev_label(arm, probe, stated, *, answered=True, rejudge=False, repeat=1):
+    row = dict(type='label', schema=p1.SCORE_SCHEMA, kind='reobservation', arm=arm, repeat=repeat, item=probe,
+               stated=stated, answered=answered)
+    return dict(row, rejudge=True) if rejudge else row
+
+
+def dev_study(n=20, *, a=range(10), b=range(12), reference=range(18), pw=range(20), pp=range(18), flip_a=(), flip_b=(),
+              unanswered=()):
+    """Development labels for `n` units: each arm's or control's stated units, and the re-judged twins of A and B with
+    `flip_*` units changed; the `unanswered` units were mechanically "not stated" in both passes (they must be unstated)."""
+    probes = [f'pair-{i:02d}' for i in range(n)]
+    got = {'A': set(a), 'B': set(b), 'R': set(reference), 'PW': set(pw), 'PP': set(pp)}
+    rows = [dev_label(arm, p, i in hits, answered=not (arm in ('A', 'B') and i in unanswered))
+            for i, p in enumerate(probes) for arm, hits in got.items()]
+    rows += [dev_label(arm, p, (i in got[arm]) != (i in flips), answered=i not in unanswered, rejudge=True)
+             for i, p in enumerate(probes) for arm, flips in (('A', flip_a), ('B', flip_b))]
+    return rows
+
+
+def test_the_development_summary_reports_the_noise_the_sensitivity_and_the_reference():
+    rows = dev_study(flip_a={0, 1}, flip_b={2}, unanswered={19})
+    summary = p1.development_summary(rows)
+    assert summary['units'] == 20
+    noise = summary['noise']
+    assert noise['A'] | {'kappa': None} == dict(labels=20, disagreements=2, d=pytest.approx(0.1), kappa=None,
+                                                answered_either=dict(labels=19, disagreements=2, d=pytest.approx(2 / 19)))
+    assert noise['B']['labels'] == 20 and noise['B']['disagreements'] == 1 and noise['B']['d'] == pytest.approx(0.05)
+    assert noise['B']['answered_either'] == dict(labels=19, disagreements=1, d=pytest.approx(1 / 19))
+    pooled = noise['pooled']
+    assert (pooled['labels'], pooled['disagreements']) == (40, 3) and pooled['d'] == pytest.approx(0.075)
+    assert pooled['answered_either'] == dict(labels=38, disagreements=3, d=pytest.approx(3 / 38))
+    assert pooled['label_error'] == pytest.approx((1 - (1 - 2 * 0.075) ** 0.5) / 2)
+    first, second = p1.labels(rows)
+    assert pooled['kappa'] == pytest.approx(p1.agreement(first, second)['kappa']) and noise['A']['kappa'] is not None
+    assert summary['sensitivity'] == dict(PW=dict(units=20, correct=20, sensitivity=1.0),
+                                          PP=dict(units=20, correct=18, sensitivity=0.9))
+    assert summary['reference'] == dict(units=20, correct=18, recall=0.9)
+    assert summary['recall'] == dict(A=dict(units=20, stated=10, recall=0.5), B=dict(units=20, stated=12, recall=0.6))
+    assert summary['noise_ok'] is True and summary['sensitivity_ok'] is True
+    assert summary['limits'] == dict(noise=0.10, sensitivity=0.85)
+
+
+@pytest.mark.parametrize('flips, noise_ok', [(4, True), (5, False)])      # 4 of 40 is exactly 10%: at most 10% passes
+def test_the_noise_check_is_a_pooled_disagreement_of_at_most_ten_percent(flips, noise_ok):
+    summary = p1.development_summary(dev_study(flip_a=set(range(flips))))
+    assert summary['noise']['pooled']['disagreements'] == flips and summary['noise_ok'] is noise_ok
+
+
+@pytest.mark.parametrize('correct, ok', [(17, True), (16, False), (20, True)])    # 17 of 20 is exactly 85%
+def test_the_sensitivity_check_needs_at_least_85_percent_for_each_form(correct, ok):
+    assert p1.development_summary(dev_study(pp=range(correct)))['sensitivity_ok'] is ok
+    assert p1.development_summary(dev_study(pw=range(correct)))['sensitivity_ok'] is ok
+
+
+def test_the_label_error_is_capped_when_the_disagreement_reaches_a_half():
+    summary = p1.development_summary(dev_study(flip_a=set(range(20)), flip_b=set(range(20))))
+    assert summary['noise']['pooled']['d'] == 1.0 and summary['noise']['pooled']['label_error'] == 0.5
+    assert summary['noise_ok'] is False
+
+
+@pytest.mark.parametrize('mutate, match', [
+    (lambda rows: rows + [dict(rows[0], item='lh1-p0001')], 'held-out lineage'),
+    (lambda rows: rows + [dict(rows[0], item='lh4b3-x')], 'held-out lineage'),
+    (lambda rows: [dict(r, lineage='lh2') if i == 0 else r for i, r in enumerate(rows)], 'held-out lineage'),
+    (lambda rows: [r for r in rows if not (r['arm'] == 'R' and r['item'] == 'pair-03')], '1 missing, 0 unexpected'),
+    (lambda rows: [r for r in rows if r['arm'] != 'PP'], '20 missing'),
+    (lambda rows: [r for r in rows if not (r['arm'] == 'A' and r['item'] == 'pair-03' and not r.get('rejudge'))], '1 missing'),
+    (lambda rows: [r for r in rows if not (r['arm'] == 'B' and r['item'] == 'pair-04' and r.get('rejudge'))], 'must be re-judged'),
+    (lambda rows: [r for r in rows if not r.get('rejudge')], 'must be re-judged'),
+    (lambda rows: rows + [dict(rows[0], repeat=2, arm='B')], r'0 missing, 1 unexpected'),
+    (lambda rows: rows + [dict(rows[0], arm='R', rejudge=True)], r'0 missing, 1 unexpected'),
+    (lambda rows: rows + [dict(rows[0], arm='A')], 'judged twice'),
+    (lambda rows: rows + [dict(type='cost', schema=p1.SCORE_SCHEMA)], 'label rows only'),
+    (lambda rows: [], 'no development labels')])
+def test_the_development_summary_refuses_what_is_not_a_complete_development_chain(mutate, match):
+    with pytest.raises(p1.ScoreError, match=match):
+        p1.development_summary(mutate(dev_study()))
+
+
+def test_the_development_command_writes_and_prints_figures_only_under_the_runtime_directory(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(p1, 'ROOT', tmp_path.resolve())
+    scores = tmp_path/'dev-scores.jsonl'
+    scores.write_text(''.join(json.dumps(r) + '\n' for r in dev_study(flip_a={0})))
+    out = tmp_path/'.runtime'/'development'/'summary.json'
+    assert p1.main(['development', '--scores', str(scores), '--out', str(out)]) == 0
+    printed = json.loads(capsys.readouterr().out)
+    assert printed == json.loads(out.read_text()) == p1.development_summary(dev_study(flip_a={0}))
+    assert 'pair-' not in out.read_text() and printed['noise_ok'] is True
+    for arguments, message in ((['--scores', str(scores), '--out', str(out)], '--out exists'),
+                               (['--scores', str(scores), '--out', str(tmp_path/'elsewhere.json')], 'under the repository'),
+                               (['--out', str(out.with_name('x.json'))], 'needs --scores and --out'),
+                               (['--scores', str(scores)], 'needs --scores and --out')):
+        with pytest.raises(SystemExit):
+            p1.main(['development', *arguments])
+        assert message in capsys.readouterr().err
+    bad = tmp_path/'bad.jsonl'
+    bad.write_text(''.join(json.dumps(r) + '\n' for r in dev_study()[:-1]))
+    with pytest.raises(SystemExit):
+        p1.main(['development', '--scores', str(bad), '--out', str(tmp_path/'.runtime'/'bad.json')])
+    assert 'must be re-judged' in capsys.readouterr().err and not (tmp_path/'.runtime'/'bad.json').exists()

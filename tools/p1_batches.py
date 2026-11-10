@@ -7,13 +7,14 @@ docs/design/p1-study-3.md, "The measurement chain"; #529).
   python -m tools.p1_analysis batches paraphrase --questions Q [--only IDS] --out DIR --host-version V
   python -m tools.p1_analysis batches reader     {--probes ... | --development UNITS} --delivered <p1-delivered/2>...
                                                  --questions Q [--sentences S | --rejudge] --out DIR --host-version V
-  python -m tools.p1_analysis batches grader     --answers <p1-answer/1>... --questions Q --out DIR --host-version V
+  python -m tools.p1_analysis batches grader     --answers <p1-answer/1>... --questions Q [--development UNITS] --out DIR --host-version V
   python -m tools.p1_analysis batches audit      --probes <p1-probes/1>... --delivered <delivered.jsonl>... --out DIR --host-version V
   python -m tools.p1_analysis parse {question,screen,paraphrase,reader,grader,audit} --batches DIR --answers DIR --out FILE
                                                  [--base Q]          # question: the rewrite replaces the flagged rows
+                                                 [--questions Q]     # the others: refused if Q is not the file the batches used
   python -m tools.p1_analysis screen --questions Q [--graded <p1-check/1>] [--previous FLAGGED] --out DIR
   python -m tools.p1_analysis sentences --paraphrases P --checks C [--paraphrases P2 --checks C2] --out DIR
-  python -m tools.p1_analysis questions-freeze --questions Q --frozen DATE
+  python -m tools.p1_analysis questions-freeze --questions Q --frozen DATE --probes <p1-probes/1>... --screen COUNTS
 
 `batches` writes, under `--out`, the judge-facing files `batches/<kind>-NNN.json` (the frozen brief, word for word, and
 items that carry an opaque `id` and what the brief names) and, apart from them, `keys/<kind>.json`, which maps each opaque
@@ -22,7 +23,14 @@ one kind, so every step (a rewrite, the screen's answers, the paraphrase check, 
 The judge files hold absolute frame paths, so `--out` must lie under the repository's `.runtime/`. The same inputs give
 byte-identical files. An opaque id is `<letter><8 hex of the build digest>-<counter>`, the build digest being a sha256 over
 the kind, this module's own sha256, the kind's seeds and the sorted digests of the inputs, and the key holds each batch
-file's sha256, so output from another build, or for an altered batch file, is refused.
+file's sha256, so output from another build, or for an altered batch file, is refused. A key made from a questions file
+records that file's sha256 (`questions_sha256`), and `parse` refuses a questions file (`--base`, `--questions`) that differs.
+
+A questions file is verified against its `frozen.json` wherever one is required: held-out `reader` builds, `grader` builds
+over a reader's answers (unless `--development` names the development units) and `score`. The pre-freeze steps (the
+rewrite, `screen`, `paraphrase`, the paraphrase check's graders) and development runs need none. `questions-freeze` writes
+only under data/evaluation/p1/questions/, for questions that cover exactly the frozen held-out probes' units, and copies the
+screen's counts beside them as `screen.json`, listed in `frozen.json`, which `score --screen` must then match.
 
 `parse` reads one judge output file per batch (`<batch>.jsonl` in `--answers`) and writes the rows the next step takes:
 `p1-question/1` (`questions.jsonl`), `p1-answer/1` (a reader's, the no-text answerer's or a paraphraser's answers),
@@ -48,7 +56,7 @@ from typing import NamedTuple
 
 from harness.jsonio import file_sha256
 from tools import p1_analysis as analysis
-from tools.probe_validation import HELD_OUT_STUDIES
+from tools.probe_validation import HELD_OUT_DIR, HELD_OUT_LH4_DIR, HELD_OUT_STUDIES
 
 ROOT = analysis.ROOT
 STUDY_DOC = ROOT/'docs'/'design'/'p1-study-3.md'
@@ -62,6 +70,8 @@ BATCH_SIZE = 10          # items per question, screen, paraphrase, grader and au
 GRADER_SEED = 4915       # the grader batches' mixed order (Grader)
 AUDIT_SEED = 4913        # the audit's draw of (working-set item, boundary) pairs
 AUDIT_SAMPLE = 40        # per arm and repeat, at most
+QUESTIONS_DIR = ('data', 'evaluation', 'p1', 'questions')   # under the repository root: where a questions freeze may be written
+READER_SEED = 4916       # Owner decision, 10 November 2026: Random(4916) numbers the reader items and names their files, so neither follows the arm
 
 # What the pre-registration leaves open, as the owner decided on 10 November 2026.
 AUDIT_ORDER_SEED = AUDIT_SEED       # Owner decision, 10 November 2026: Random(4913) mixes the three arms' audit pairs into batches
@@ -212,9 +222,17 @@ def frozen_units(frozen: Frozen) -> Units:
     return Units(frozen.units, {u['probe']: earlier.get(u['probe']) for u in frozen.units}, frozen.digests, False)
 
 
+def held_out_names() -> set[str]:
+    """The directory names that mark held-out content: the lineages, their admissions (session directories), the
+    evidence studies they sit in and the tracked held-out directories. Names only; nothing is opened to find them."""
+    return (set(analysis.HELD_OUT) | {run for runs in analysis.HELD_OUT.values() for run in runs}
+            | set(HELD_OUT_STUDIES.values()) | {HELD_OUT_DIR.name, HELD_OUT_LH4_DIR.name})
+
+
 def development_units(path: Path) -> Units:
     """Development units from a JSON Lines file of `probe`, `lineage`, `boundary` and `frame` (the earlier frame's path
-    under the evidence root): the #490 pairs the development check uses. A held-out lineage is refused."""
+    under the evidence root): the #490 pairs the development check uses. A held-out lineage is refused, and so is a frame
+    whose path has a held-out lineage, admission or study directory among its components."""
     units, frames = [], {}
     for number, row in enumerate(_jsonl(path), 1):
         if (not isinstance(row, dict) or set(row) != {'probe', 'lineage', 'boundary', 'frame'}
@@ -222,6 +240,8 @@ def development_units(path: Path) -> Units:
             raise BatchError(f'{Path(path).name}: line {number} is not a development unit (probe, lineage, boundary, frame)')
         if row['lineage'] in analysis.HELD_OUT:
             raise BatchError(f'--development takes development lineages only; {row["lineage"]} is held out')
+        if held_out_names() & set(Path(os.path.normpath(row['frame'])).parts):
+            raise BatchError(f'{Path(path).name}: line {number} has a frame under a held-out session directory')
         if row['probe'] in frames:
             raise BatchError(f'{Path(path).name}: line {number} repeats a probe')
         frames[row['probe']] = row['frame']
@@ -302,7 +322,8 @@ def _constants(kind: str) -> dict:
     shared = dict(batch_size=BATCH_SIZE, packing=PACKING)
     return dict(shared, **{
         'question': {}, 'screen': {}, 'paraphrase': {},
-        'reader': dict(texts=TEXT_ORDER, sample_seed=analysis.REJUDGE_SEED, share=analysis.REJUDGE_SHARE),
+        'reader': dict(texts=TEXT_ORDER, sample_seed=analysis.REJUDGE_SEED, share=analysis.REJUDGE_SHARE,
+                       order_seed=READER_SEED, development_arms=analysis.DEVELOPMENT_ARMS),
         'grader': dict(order_seed=GRADER_SEED, texts=TEXT_ORDER),
         'audit': dict(order_seed=AUDIT_ORDER_SEED, draw_seed=AUDIT_SEED, sample=AUDIT_SAMPLE,
                       drop_unresolved=DROP_UNRESOLVED_CITES)}[kind])
@@ -360,8 +381,14 @@ def _frame(evidence: Path, relative: object) -> str | None:
     return str(path) if path.is_relative_to(evidence) and path.is_file() else None
 
 
+def _recorded(questions_sha256: str | None) -> dict:
+    """What a key records of the questions file its build used: its sha256 (`parse` refuses a different file)."""
+    return {} if questions_sha256 is None else dict(questions_sha256=questions_sha256)
+
+
 def question_batches(study: Units, evidence: Path, out: Path, host_version: str, inputs: Sequence[str],
-                     rewrite: list[str] | None = None, questions: dict[str, dict] | None = None) -> dict:
+                     rewrite: list[str] | None = None, questions: dict[str, dict] | None = None,
+                     questions_sha256: str | None = None) -> dict:
     """One item per unit: its id and its earlier frame; at most 10 to a batch, in probe-id order, no shuffle. A rewrite
     batch is the flagged units only, each with `rejected`, the question that was turned down."""
     wanted = {u['probe'] for u in study.units} if rewrite is None else set(rewrite)
@@ -380,7 +407,7 @@ def question_batches(study: Units, evidence: Path, out: Path, host_version: str,
     if absent:
         raise BatchError(f'cannot build the items: {absent} earlier frames missing under the evidence root')
     return write_batches('question', out, chunks(entries), seed=None, host_version=host_version, inputs=inputs,
-                         extra=dict(rewrite=rewrite is not None))
+                         extra=dict(rewrite=rewrite is not None, **_recorded(questions_sha256)))
 
 
 def _question_entries(questions: dict[str, dict], only: list[str] | None, fields: tuple[str, ...]) -> list[dict]:
@@ -391,20 +418,22 @@ def _question_entries(questions: dict[str, dict], only: list[str] | None, fields
 
 
 def screen_batches(questions: dict[str, dict], only: list[str] | None, out: Path, host_version: str,
-                   inputs: Sequence[str]) -> dict:
+                   inputs: Sequence[str], questions_sha256: str | None = None) -> dict:
     """The no-text answerer's batches: id and question only, at most 10 to a batch, in probe-id order (the Guess brief)."""
     return write_batches('screen', out, chunks(_question_entries(questions, only, ('question',))), seed=None,
-                         host_version=host_version, inputs=inputs)
+                         host_version=host_version, inputs=inputs, extra=_recorded(questions_sha256))
 
 
 def paraphrase_batches(questions: dict[str, dict], only: list[str] | None, out: Path, host_version: str,
-                       inputs: Sequence[str]) -> dict:
+                       inputs: Sequence[str], questions_sha256: str | None = None) -> dict:
     """The paraphrasers' batches: id, question and key, at most 10 to a batch, in probe-id order."""
     return write_batches('paraphrase', out, chunks(_question_entries(questions, only, ('question', 'key'))), seed=None,
-                         host_version=host_version, inputs=inputs)
+                         host_version=host_version, inputs=inputs, extra=_recorded(questions_sha256))
 
 
 # ------------------------------------------------------------------ the mechanical screen
+# Owner decision, 10 November 2026: letters and digits are separate token runs ("abc7" is "abc" and "7"), and a single
+# digit counts as a token.
 _TOKENS = re.compile(r'[^\W\d_]+|\d+')
 
 
@@ -420,6 +449,7 @@ def mechanical_flags(question: str, key: str) -> set[str]:
     flags = set()
     if not key.strip():
         flags.add('empty_key')
+    # Owner decision, 10 November 2026: empty key entries ("a,, b", a trailing comma) are not counted.
     if len([e for e in re.split(r'[,;\r\n]', key) if e.strip()]) > MAX_ENTRIES:
         flags.add('entries')
     if tokens(question) & tokens(key):
@@ -429,6 +459,7 @@ def mechanical_flags(question: str, key: str) -> set[str]:
 
 def not_stated(answer: str) -> bool:
     """An answer that is exactly "not stated", ignoring case, surrounding whitespace and one final full stop."""
+    # Owner decision, 10 November 2026: "not stated" also ignores surrounding whitespace.
     text = answer.strip().lower()
     return (text[:-1] if text.endswith('.') else text) == 'not stated'
 
@@ -490,7 +521,7 @@ def read_answers(paths: Sequence[Path]) -> list[dict]:
 def resolve_sentences(paraphrases: list[list[dict]], checks: list[dict[str, dict]]) -> tuple[list[dict], list[str]]:
     """(sentence rows, ids still failing) from one or two stages of paraphrase and check. A sentence is checked as an
     answer to its question; one marked not correct is rewritten once, from a second batch of exactly those ids, and
-    checked again; one that fails twice is used as it is and counted."""
+    checked again; one that fails twice is used as it is and counted (Owner decision, 10 November 2026)."""
     if not 1 <= len(paraphrases) == len(checks) <= 2:
         raise BatchError('sentences takes one or two pairs of --paraphrases and --checks')
     final: dict[str, dict] = {}
@@ -517,8 +548,14 @@ def read_sentences(path: Path, study: Units) -> dict[str, str]:
 
 # ------------------------------------------------------------------ reader batches
 def _line(text: str) -> str:
-    """One line: runs of whitespace (a key's line breaks included) as single spaces."""
+    """One line: runs of whitespace as single spaces."""
     return ' '.join(text.split())
+
+
+def _key_line(key: str) -> str:
+    """A key on one line: its entries on separate lines are joined with `; ` (Owner decision, 10 November 2026), the
+    whitespace within an entry collapses to single spaces and no separator leads or trails."""
+    return '; '.join(entry for entry in (_line(part) for part in re.split(r'[\r\n]+', key)) if entry)
 
 
 def appended(text: str, line: str) -> str:
@@ -527,24 +564,32 @@ def appended(text: str, line: str) -> str:
 
 
 def reader_batches(study: Units, delivered: dict, questions: dict[str, dict], sentences: dict[str, str] | None,
-                   out: Path, host_version: str, inputs: Sequence[str], rejudge: bool = False) -> dict:
+                   out: Path, host_version: str, inputs: Sequence[str], rejudge: bool = False,
+                   questions_sha256: str | None = None) -> dict:
     """One item per file, each a fresh reader's: `id`, `text` and `question`. Per unit the texts are A repeat 1, B
-    repeats 1 and 2, `R` (the received text alone), `PW` (R with the new last line `- <question> <key>`) and `PP` (R with
-    `- <sentence>`), in probe-id order with no shuffle. A re-judging build has only the seeded sample of A's and B's labels
-    (every one in development)."""
-    sample = analysis.rejudge_sample(study.units, 1.0 if study.development else analysis.REJUDGE_SHARE) if rejudge else None
+    repeats 1 and 2, `R` (the received text alone), `PW` (R with the new last line `- <question> <key>`, the key's
+    entries on separate lines joined with `; `) and `PP` (R with `- <sentence>`). A development unit has B repeat 1 only
+    (`DEVELOPMENT_ARMS`). The items are sorted by probe id, then text (A, B, R, PW, PP), then repeat, and numbered and
+    filed in a Random(READER_SEED) shuffle of that list, so neither the id nor the file name follows the arm. A
+    re-judging build has only the seeded sample of A's and B's labels (every one in development), shuffled with the
+    same seed over its own list."""
+    arms = analysis.DEVELOPMENT_ARMS if study.development else analysis.ARMS
+    study_arms = [(arm, repeat) for arm, reps in arms.items() for repeat in reps]
+    if study.development:      # every A and B label, not a sample (rejudge_sample is the held-out sample's)
+        sample = {(analysis.KIND, arm, repeat, u['probe']) for u in study.units for arm, repeat in study_arms} if rejudge else None
+    else:
+        sample = analysis.rejudge_sample(study.units, analysis.REJUDGE_SHARE) if rejudge else None
     entries, missing, partial = [], 0, 0
     for unit in sorted(study.units, key=lambda u: u['probe']):
         probe, q = unit['probe'], questions[unit['probe']]
         row = lambda arm, repeat: delivered.get((unit['lineage'], unit['boundary'], arm, repeat))  # noqa: E731
-        study_arms = [(arm, repeat) for arm, reps in analysis.ARMS.items() for repeat in reps]
         texts = [(arm, repeat, row(arm, repeat)) for arm, repeat in study_arms
                  if sample is None or (analysis.KIND, arm, repeat, probe) in sample]
         if not rejudge:
             texts.append(('R', 1, row('R', 1)))
             received = row('R', 1)
-            for arm, line in (('PW', f'{q["question"]} {q["key"]}'), ('PP', sentences[probe])):
-                texts.append((arm, 1, None if received is None else dict(received, text=appended(received['text'], _line(line)))))
+            for arm, line in (('PW', _line(f'{_line(q["question"])} {_key_line(q["key"])}')), ('PP', _line(sentences[probe]))):
+                texts.append((arm, 1, None if received is None else dict(received, text=appended(received['text'], line))))
         for arm, repeat, found in texts:
             if found is None:
                 missing += 1
@@ -556,14 +601,16 @@ def reader_batches(study: Units, delivered: dict, questions: dict[str, dict], se
     if missing or partial:
         raise BatchError(f'cannot build the items: {missing} delivered texts missing, {partial} incomplete')
     entries.sort(key=lambda e: e['sort'])
-    return write_batches('reader', out, [[e] for e in entries], seed=None, host_version=host_version, inputs=inputs,
-                         extra=dict(rejudge=rejudge, sample_seed=analysis.REJUDGE_SEED if rejudge else None),
+    random.Random(READER_SEED).shuffle(entries)     # Owner decision, 10 November 2026: ids and file names do not follow the arm
+    return write_batches('reader', out, [[e] for e in entries], seed=READER_SEED, host_version=host_version, inputs=inputs,
+                         extra=dict(rejudge=rejudge, sample_seed=analysis.REJUDGE_SEED if rejudge else None,
+                                    development=study.development, **_recorded(questions_sha256)),
                          variant='rejudge' if rejudge else '')
 
 
 # ------------------------------------------------------------------ grader batches
 def grader_batches(answers: list[dict], questions: dict[str, dict], out: Path, host_version: str,
-                   inputs: Sequence[str]) -> dict:
+                   inputs: Sequence[str], questions_sha256: str | None = None) -> dict:
     """Items `id`, `question`, `key` and `answer`. An answer that is exactly "not stated" never enters a batch: it is
     recorded in the key as incorrect. The rest are sorted by probe, then text (A, B, R, PW, PP), then repeat, mixed with
     Random(GRADER_SEED) and packed first-fit, at most 10 to a batch and no two answers to one probe in a batch."""
@@ -583,7 +630,8 @@ def grader_batches(answers: list[dict], questions: dict[str, dict], out: Path, h
                             public=dict(question=q['question'], key=q['key'], answer=row['answer'])))
     first = answers[0]
     result = write_batches('grader', out, pack(entries, GRADER_SEED), seed=GRADER_SEED, host_version=host_version,
-                           inputs=inputs, extra=dict(source=first['source'], rejudge=first['rejudge'], mechanical=mechanical))
+                           inputs=inputs, extra=dict(source=first['source'], rejudge=first['rejudge'], mechanical=mechanical,
+                                                     **_recorded(questions_sha256)))
     return dict(result, mechanical=len(mechanical))
 
 
@@ -801,11 +849,28 @@ def graded(key: dict, item: dict, correct: bool, answered: bool) -> dict:
     return dict(schema=CHECK_SCHEMA, purpose=key['source'], probe=item['item'], correct=correct, answered=answered)
 
 
-def parse(kind: str, run: Path, answers: Path, base: Path | None = None) -> list[dict]:
+def _check_questions(key: dict, kind: str, path: Path | None) -> None:
+    """A questions file given to `parse` is the one the batches were built from: the key records its sha256."""
+    if path is None:
+        return
+    recorded = key.get('questions_sha256')
+    if recorded is None:
+        raise BatchError(f'the {kind} batches were built without a questions file')
+    if _digest(path) != recorded:
+        raise BatchError(f'{Path(path).name}: not the questions file the {kind} batches were built from (sha256 differs)')
+
+
+def parse(kind: str, run: Path, answers: Path, base: Path | None = None, questions: Path | None = None) -> list[dict]:
     """The rows of one kind's judge output files, refusing anything not exactly as asked. A grader's rows include the
-    mechanical "not stated" labels the key recorded. Question rows with `base` replace the base's rows for those probes."""
+    mechanical "not stated" labels the key recorded. Question rows with `base` (the questions the rewrite was built from)
+    replace the base's rows for those probes; for the other kinds `questions`, if given, must be the file the key records."""
     key = _load_key(run, kind)
     _verify_build(run, key, kind)
+    if kind != 'question' and base is not None:
+        raise BatchError('--base is for the question rewrite; the other kinds take --questions')
+    if kind == 'question' and questions is not None:
+        raise BatchError('the question rewrite takes --base, not --questions')
+    _check_questions(key, kind, base if kind == 'question' else questions)
     expected = {f'{b["name"]}.jsonl': b for b in key['batches']}
     answers = Path(answers)
     if not answers.is_dir():
@@ -872,16 +937,30 @@ def build_command(args: argparse.Namespace) -> dict:
     inputs = [_digest(p) for p in (args.delivered or []) + (args.answers or [])]
     inputs += [_digest(p) for p in (args.questions, args.sentences, args.only, args.rewrite) if p]
     host = args.host_version
+    recorded = _digest(args.questions) if args.questions else None
     if kind == 'audit':
         frozen = Frozen(args.probes or [])
         evidence = Path(args.evidence_root or _evidence_default()).resolve()
         return audit_batches(frozen, read_delivered(args.delivered), evidence, args.out, host, inputs + frozen.digests)
+    if args.development and kind in ('screen', 'paraphrase'):
+        raise BatchError(f'--development is for question, reader and grader builds, not {kind}')
     if kind in ('screen', 'paraphrase', 'grader'):
-        questions = load_questions(args.questions)
         only = read_ids(args.only) if args.only else None
-        if kind == 'grader':
-            return grader_batches(read_answers(args.answers), questions, args.out, host, inputs)
-        return (screen_batches if kind == 'screen' else paraphrase_batches)(questions, only, args.out, host, inputs)
+        if kind != 'grader':    # the pre-freeze steps: no freeze exists yet
+            return (screen_batches if kind == 'screen' else paraphrase_batches)(
+                load_questions(args.questions), only, args.out, host, inputs, recorded)
+        answers = read_answers(args.answers)
+        if not answers:
+            raise BatchError('no answers to grade')
+        study = development_units(args.development) if args.development else None
+        if study is not None:
+            inputs += study.digests
+            if {r['probe'] for r in answers} - {u['probe'] for u in study.units}:
+                raise BatchError('some answers belong to probes outside the development units')
+        # A reader's answers are held-out unless --development says otherwise, and held-out questions must be the
+        # frozen file; the screen's and the paraphrase check's graders run before the freeze.
+        questions = load_questions(args.questions, study, frozen=answers[0]['source'] == 'reader' and study is None)
+        return grader_batches(answers, questions, args.out, host, inputs, recorded)
     study = load_units(args.probes, args.development)
     inputs += study.digests
     if kind == 'question':
@@ -890,16 +969,22 @@ def build_command(args: argparse.Namespace) -> dict:
         if rewrite is not None and not args.questions:
             raise BatchError('a rewrite needs --questions (the flagged questions are the rejected ones)')
         questions = load_questions(args.questions) if args.questions else None
-        return question_batches(study, evidence, args.out, host, inputs, rewrite, questions)
+        return question_batches(study, evidence, args.out, host, inputs, rewrite, questions, recorded)
     delivered = read_delivered(args.delivered)
     held = sorted({lineage for lineage, *_ in delivered if lineage in analysis.HELD_OUT})
     if study.development and held:
         raise BatchError(f'a development run takes development rows only; held-out lineages given: {", ".join(held)}')
+    if study.development:
+        allowed = {(arm, repeat) for arm, reps in analysis.DEVELOPMENT_ARMS.items() for repeat in reps} | {('R', 1)}
+        other = sum(key[2:] not in allowed for key in delivered)
+        if other:
+            raise BatchError(f'a development delivery has A repeat 1, B repeat 1 and the received text only: '
+                             f'{other} delivered rows are unexpected (development has no second B repeat)')
     if bool(args.rejudge) == bool(args.sentences):
         raise BatchError('reader batches need --sentences (the first pass) or --rejudge (the re-judging), not both')
     questions = load_questions(args.questions, study, frozen=True)
     sentences = read_sentences(args.sentences, study) if args.sentences else None
-    return reader_batches(study, delivered, questions, sentences, args.out, host, inputs, bool(args.rejudge))
+    return reader_batches(study, delivered, questions, sentences, args.out, host, inputs, bool(args.rejudge), recorded)
 
 
 def screen_command(args: argparse.Namespace) -> dict:
@@ -919,26 +1004,46 @@ def screen_command(args: argparse.Namespace) -> dict:
 
 def sentences_command(args: argparse.Namespace) -> dict:
     out = _check_out(args.out)
-    _fresh(out/'sentences.jsonl', out/'failed.txt')
+    _fresh(out/'sentences.jsonl', out/'failed.txt', out/'counts.json')
     stages = [read_answers([p]) for p in args.paraphrases or []]
     if any(r['source'] != 'paraphrase' for rows in stages for r in rows):
         raise BatchError('--paraphrases takes the parsed paraphrase answers')
     rows, failing = resolve_sentences(stages, [read_checks(p, 'paraphrase') for p in args.checks or []])
     _write_rows(out/'sentences.jsonl', rows)
     (out/'failed.txt').write_text(''.join(f'{p}\n' for p in failing), encoding='utf-8')
-    return dict(units=len(rows), stages=len(stages), rewritten=len(stages[1]) if len(stages) > 1 else 0, failed=len(failing))
+    counts = dict(units=len(rows), stages=len(stages), rewritten=len(stages[1]) if len(stages) > 1 else 0, failed=len(failing))
+    (out/'counts.json').write_text(_dump(counts), encoding='utf-8')      # `score --sentences-counts` takes this file
+    return counts
 
 
 def freeze_questions(args: argparse.Namespace) -> dict:
-    """`frozen.json` beside a questions file, in the format the probes' freeze uses (`p1-held-out-frozen/1`)."""
+    """`frozen.json` beside a questions file, in the format the probes' freeze uses (`p1-held-out-frozen/1`). The file
+    must lie under data/evaluation/p1/questions/ and cover exactly the units of the frozen held-out probes given; the
+    screen's counts (`flagged_twice`) are copied beside it as `screen.json` and listed in `frozen.json` too."""
     path = Path(args.questions)
-    target = path.parent/'frozen.json'
-    _fresh(target)
-    rows = analysis.question_rows(_jsonl(path))
+    if not path.resolve().is_relative_to(ROOT.joinpath(*QUESTIONS_DIR).resolve()):
+        raise BatchError(f'a questions freeze is written under {"/".join(QUESTIONS_DIR)}/ only')
+    if not args.probes or not args.screen:
+        raise BatchError('questions-freeze needs --probes (the frozen held-out probes) and --screen (the screen\'s counts)')
+    target, screen_target = path.parent/'frozen.json', path.parent/'screen.json'
+    _fresh(target, screen_target)
+    try:
+        counts = json.loads(Path(args.screen).read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        raise BatchError(f'{Path(args.screen).name}: unreadable screen counts') from None
+    if not (isinstance(counts, dict) and analysis._count(counts.get('flagged_twice'))):
+        raise BatchError(f'{Path(args.screen).name}: the screen counts need an integer flagged_twice (the second run\'s)')
+    study = Frozen(args.probes)      # refuses probes that are not frozen or do not cover the held-out lineages
+    try:
+        rows = analysis.question_rows(_jsonl(path), study.units)
+    except analysis.ScoreError as error:
+        raise BatchError(f'{path.name}: {error}') from None
+    screen_target.write_bytes(Path(args.screen).read_bytes())
     document = dict(schema=analysis.FROZEN_SCHEMA, protocol='p1-study/3', frozen=args.frozen,
-                    files={path.name: _digest(path)})
+                    files={path.name: _digest(path), screen_target.name: _digest(screen_target)})
     target.write_text(_dump(document), encoding='utf-8')
-    return dict(questions=len(rows), sha256=document['files'][path.name], frozen_sha256=file_sha256(target))
+    return dict(questions=len(rows), sha256=document['files'][path.name], screen_sha256=document['files'][screen_target.name],
+                frozen_sha256=file_sha256(target))
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -948,9 +1053,11 @@ def main(argv: list[str] | None = None) -> int:
     build = sub.add_parser('batches', help='write the judge batches and their key')
     build.add_argument('kind', choices=tuple(KINDS))
     build.add_argument('--probes', type=Path, action='append', help='a frozen held-out p1-probes/1 file, once per directory')
-    build.add_argument('--development', type=Path, help='development units: JSON Lines of probe, lineage, boundary, frame')
+    build.add_argument('--development', type=Path, help='development units: JSON Lines of probe, lineage, boundary, frame '
+                                                        '(question, reader; grader over a reader\'s development answers, which then needs no freeze)')
     build.add_argument('--delivered', type=Path, action='append', help='a p1-delivered/2 file')
-    build.add_argument('--questions', type=Path, help='the p1-question/1 file (frozen.json beside it for held-out readers)')
+    build.add_argument('--questions', type=Path, help='the p1-question/1 file (frozen.json beside it for held-out readers '
+                                                      'and for graders over a reader\'s held-out answers)')
     build.add_argument('--sentences', type=Path, help='reader: the final p1-sentence/1 file (`sentences`)')
     build.add_argument('--answers', type=Path, action='append', help='grader: a p1-answer/1 file from `parse`')
     build.add_argument('--only', type=Path, help='screen, paraphrase: a file of probe ids, one per line')
@@ -963,7 +1070,8 @@ def main(argv: list[str] | None = None) -> int:
     read.add_argument('kind', choices=tuple(KINDS))
     read.add_argument('--batches', type=Path, required=True, help='the --out of `batches`')
     read.add_argument('--answers', type=Path, required=True, help='the directory of <batch>.jsonl files of this kind')
-    read.add_argument('--base', type=Path, help='question: the questions the rewrite replaces rows of')
+    read.add_argument('--base', type=Path, help='question: the questions the rewrite replaces rows of (the file the batches used)')
+    read.add_argument('--questions', type=Path, help='the other kinds: the questions file the batches used; refused if it differs')
     read.add_argument('--out', type=Path, required=True, help='the rows file to write')
     check = sub.add_parser('screen', help='flag questions: the mechanical rule and the no-text answers (counts only)')
     check.add_argument('--questions', type=Path, required=True)
@@ -974,15 +1082,18 @@ def main(argv: list[str] | None = None) -> int:
     final.add_argument('--paraphrases', type=Path, action='append')
     final.add_argument('--checks', type=Path, action='append')
     final.add_argument('--out', type=Path, required=True, help='a new directory under .runtime/: sentences.jsonl, failed.txt')
-    freeze = sub.add_parser('questions-freeze', help='write frozen.json beside a questions file')
+    freeze = sub.add_parser('questions-freeze', help='write frozen.json beside a questions file under data/evaluation/p1/questions/')
     freeze.add_argument('--questions', type=Path, required=True)
     freeze.add_argument('--frozen', required=True, help='the freeze date, recorded')
+    freeze.add_argument('--probes', type=Path, action='append', help='a frozen held-out p1-probes/1 file, once per directory; '
+                                                                    'the questions must cover exactly their units')
+    freeze.add_argument('--screen', type=Path, help='the screen\'s counts.json (flagged_twice); copied beside the questions as screen.json')
     args = parser.parse_args(argv)
     try:
         if args.command == 'parse':
             if args.out.exists():
                 raise BatchError('--out exists: the rows are written once')
-            rows = parse(args.kind, args.batches, args.answers, args.base)
+            rows = parse(args.kind, args.batches, args.answers, args.base, args.questions)
             result = dict(kind=args.kind, rows=len(rows), rows_sha256=_write_rows(args.out, rows))
         elif args.command == 'screen':
             result = screen_command(args)

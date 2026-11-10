@@ -7,13 +7,16 @@ which keeps p1-study/1's rule from docs/design/p1-study.md; #491, #178).
   python -m tools.p1_analysis units --probes <p1-probes/1>...   # the probes the chain scores
   python -m tools.p1_analysis rejudge --probes <p1-probes/1>... # the items read and graded a second time
   python -m tools.p1_analysis score --probes <p1-probes/1>... --scores <p1-score/1> --hours <JSON>
-                                    --questions <questions.jsonl> --screen <counts.json> [--out ...]
+                                    --questions <questions.jsonl> --screen <screen.json> --sentences-counts <counts.json> [--out ...]
+  python -m tools.p1_analysis development --scores <development p1-score/1 rows> --out <path under .runtime/>
   python -m tools.p1_analysis batches|parse|screen|sentences|questions-freeze ...   # the answer-key chain (tools/p1_batches.py)
 
 `--probes` may be given once per held-out directory (rows are concatenated in the order given) for
 `simulate`, `units`, `rejudge` and `score`. Each file must have a digest in the `frozen.json` beside it
 (`tools.probe_validation held-out-freeze`) and is recorded, with its sha256, under `probe_files`;
-`score --questions` is checked the same way and recorded under `question_file`.
+`score --questions` is checked the same way and recorded under `question_file`, and `score --screen` must be
+the `screen.json` that `questions-freeze` copied beside the questions (recorded under `screen_file`).
+`development` reads the development chain's labels and prints the two development checks' figures, nothing else.
 With several files `simulate` writes power-held-out-study-2.json and never p1-study/1's power-held-out.json.
 
 `simulate` checks, before any spend, that the decision rule detects the effect of interest and
@@ -68,6 +71,9 @@ NEAR = 16                # bits between earlier frames of one information cluste
 ARMS = {'A': (1,), 'B': (1, 2)}
 CONTROLS = ('R', 'PW', 'PP')       # the Reference and the positive control's two forms: repeat 1 each, outside the rule
 ARM_REPEATS = dict(ARMS, **{name: (1,) for name in CONTROLS})
+DEVELOPMENT_ARMS = {'A': (1,), 'B': (1,)}   # a development delivery has A repeat 1 and B repeat 1 only: no second B repeat
+NOISE_LIMIT = 0.10                # development's chain noise: the pooled repeat disagreement d, at most
+SENSITIVITY_FLOOR = 0.85          # development's positive control: each form correct on at least this share of units
 STUDY_1_HELD_OUT = {'lh1': ('lh1a1', 'lh1a2', 'lh1a3'), 'lh2': ('lh2a1', 'lh2a2'), 'lh3': ('lh3a1', 'lh3a2')}
 # lh4's admissions (study 522-held-out), as #522 ran them: lh4b1-lh4b7. The lost lh4a1 is not part of
 # the lineage (docs/acceptance/2026-11-09-held-out-lineage-522.md). With an empty tuple lh4 would not
@@ -122,6 +128,24 @@ def frozen_probes(paths: list[Path]) -> tuple[list[dict], list[dict]]:
         rows += more
         files.append(record)
     return rows, files
+
+
+def frozen_screen(questions: Path, screen: Path) -> dict:
+    """The record of the screen's counts file: `questions-freeze` copied it beside the questions as `screen.json` and
+    listed it in `frozen.json`, and `screen` must be those bytes. Errors name only the file."""
+    frozen = Path(questions).parent/'frozen.json'
+    try:
+        digest = json.loads(frozen.read_text())['files']['screen.json']
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        digest = None
+    if digest is None or not Path(screen).is_file() or file_sha256(screen) != digest:
+        raise ScoreError(f'{_relative(screen)}: not the screen counts the questions were frozen with '
+                         '(no matching screen.json digest in the questions\' frozen.json)')
+    return dict(path=_relative(screen), sha256=digest)
+
+
+def _count(value: object) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and value >= 0
 
 
 def question_rows(rows: list[dict], unit_rows: list[dict] | None = None) -> dict[str, dict]:
@@ -394,8 +418,10 @@ def chain_controls(unit_rows: list[dict], stated: dict[tuple, bool]) -> dict:
                          for arm, reps in ARMS.items() for rep in reps},
         bias_control=dict(
             units=n, difference=difference, applies=applies, limit=BIAS_LIMIT, min_units=BIAS_MIN_UNITS,
+            # Owner decision, 10 November 2026: only-A and only-B are counted per B repeat (A against B1, A against B2).
             only_a={f'B{r}': sum(got('A', 1, p) and not got('B', r, p) for p in right) for r in ARMS['B']},
             only_b={f'B{r}': sum(got('B', r, p) and not got('A', 1, p) for p in right) for r in ARMS['B']},
+            # Owner decision, 10 November 2026: the flag is strictly greater than 0.10 (exactly 0.10 does not flag).
             flag=bool(applies and abs(difference) > BIAS_LIMIT),
             direction=None if not difference else 'B above A' if difference > 0 else 'A above B'),
         positive_control={arm: dict(units=len(probes), correct=sum(got(arm, 1, p) for p in probes),
@@ -403,14 +429,19 @@ def chain_controls(unit_rows: list[dict], stated: dict[tuple, bool]) -> dict:
                           for arm in ('PW', 'PP')})
 
 
+BIAS_NOTE = 'the received text\'s answer changed by arm'    # stated beside the outcome when the bias control flags
+
+
 def score(probe_rows: list[dict], hours: dict[str, float], rows: list[dict], questions: list[dict],
-          screen: dict) -> dict:
+          screen: dict, sentences: dict) -> dict:
     audits, costs = _validated(rows)
     unit_rows = units(primary_probes(probe_rows))
     question_rows(questions, unit_rows)
-    if not (isinstance(screen, dict) and isinstance(screen.get('flagged_twice'), int)
-            and not isinstance(screen['flagged_twice'], bool) and screen['flagged_twice'] >= 0):
+    if not (isinstance(screen, dict) and _count(screen.get('flagged_twice'))):
         raise ScoreError('--screen must be the counts of the screen\'s second run (flagged_twice)')
+    if not (isinstance(sentences, dict) and _count(sentences.get('failed'))
+            and sentences.get('units', len(unit_rows)) == len(unit_rows)):
+        raise ScoreError('--sentences-counts must be the counts of the sentences step, one paraphrase for each unit (failed)')
     base = dict(schema=RESULT_SCHEMA, questions_flagged_twice=screen['flagged_twice'],
                 probes=dict(listed=len(probe_rows), units=len(unit_rows),
                                                   clusters=len({(u['lineage'], u['cluster']) for u in unit_rows}),
@@ -445,9 +476,63 @@ def score(probe_rows: list[dict], hours: dict[str, float], rows: list[dict], que
     else:
         outcome = 'inconclusive: B is above A on average but the criterion did not hold'
     slim = {k: {key: val for key, val in v.items() if key != 'units'} for k, v in figs.items()}
-    return dict(base, figures=slim, judge_agreement=agreement(first, second), **controls,
+    controls['positive_control']['paraphrases_failed_twice'] = sentences['failed']
+    bias = controls['bias_control']
+    # The bias control decides nothing: its flag is stated beside the outcome, whatever the outcome is, and outside
+    # `decision`, which the controls never reach.
+    note = {'outcome_note': f'{BIAS_NOTE}: {bias["direction"]}'} if bias['flag'] else {}
+    return dict(base, figures=slim, judge_agreement=agreement(first, second), **controls, **note,
                 decision=dict(go=go, outcome=outcome, mean_delta=main['delta'], robust_to_rejudging=robust,
                               primary=main, guards=guard))
+
+
+def development_summary(rows: list[dict]) -> dict:
+    """The two development checks' figures from the development chain's `p1-score/1` label rows: every unit's first-pass
+    labels for A and B (repeat 1 each) and the Reference, PW and PP, and a re-judged twin for every A and B label
+    (docs/design/p1-study-3.md, "Checks on development data"). Figures only; it decides nothing."""
+    if any(not isinstance(row, dict) or row.get('type') != 'label' for row in rows):
+        raise ScoreError('development rows are label rows only')
+    names = set(HELD_OUT) | {run for runs in HELD_OUT.values() for run in runs}
+    if any(row.get('lineage') in names or any(isinstance(row.get('item'), str) and row['item'].startswith(f'{name}-')
+                                              for name in names) for row in rows):
+        raise ScoreError('development labels may not belong to a held-out lineage')
+    first, second = labels(rows)
+    probes = sorted({key[3] for key in first})
+    if not probes:
+        raise ScoreError('no development labels')
+    texts = {**DEVELOPMENT_ARMS, **{name: (1,) for name in CONTROLS}}
+    wanted = {(KIND, arm, rep, p) for p in probes for arm, reps in texts.items() for rep in reps}
+    if set(first) != wanted:
+        raise ScoreError(f'development labels must give every unit one label for each of A, B, R, PW and PP: '
+                         f'{len(wanted - set(first))} missing, {len(set(first) - wanted)} unexpected')
+    twins = {key for key in wanted if key[1] in DEVELOPMENT_ARMS}
+    if set(second) != twins:
+        raise ScoreError(f'every A and B label must be re-judged, and nothing else: '
+                         f'{len(twins - set(second))} missing, {len(set(second) - twins)} unexpected')
+
+    def disagreement(arms: tuple[str, ...]) -> dict:     # `agreement` over the arms' re-judged labels, as counts and shares
+        found = agreement(first, second, arms)
+        n, either = found['n'], found['answered_either']
+        wrong = n - round(found['percent'] * n)
+        wrong_either = either['n'] - round(either['percent'] * either['n']) if either['n'] else None
+        return dict(labels=n, disagreements=wrong, d=wrong / n, kappa=found['kappa'],
+                    answered_either=dict(labels=either['n'], disagreements=wrong_either,
+                                         d=None if wrong_either is None else wrong_either / either['n']))
+    noise = {arm: disagreement((arm,)) for arm in DEVELOPMENT_ARMS}
+    noise['pooled'] = disagreement(tuple(DEVELOPMENT_ARMS))
+    d = noise['pooled']['d']
+    # e = (1 - sqrt(1 - 2d)) / 2, the label error that independent errors make of a repeat disagreement d.
+    noise['pooled']['label_error'] = (1 - math.sqrt(max(0.0, 1 - 2 * d))) / 2
+    count = lambda arm: sum(first[(KIND, arm, 1, p)][0] for p in probes)  # noqa: E731
+    n = len(probes)
+    return dict(units=n, noise=noise,
+                sensitivity={arm: dict(units=n, correct=count(arm), sensitivity=count(arm) / n) for arm in ('PW', 'PP')},
+                reference=dict(units=n, correct=count('R'), recall=count('R') / n),
+                recall={arm: dict(units=n, stated=count(arm), recall=count(arm) / n) for arm in DEVELOPMENT_ARMS},
+                limits=dict(noise=NOISE_LIMIT, sensitivity=SENSITIVITY_FLOOR),
+                # Exact integer comparisons (NOISE_LIMIT is 1/10, SENSITIVITY_FLOOR 85/100): d <= 0.10, correct / units >= 0.85.
+                noise_ok=bool(noise['pooled']['disagreements'] * 10 <= noise['pooled']['labels']),
+                sensitivity_ok=bool(all(count(arm) * 100 >= 85 * n for arm in ('PW', 'PP'))))
 
 
 # ---------------------------------------------------------------------------------------------
@@ -665,14 +750,15 @@ def main(argv=None) -> int:
         from tools import p1_batches    # imports this module, so it is loaded only for these steps
         return p1_batches.main(given)
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('step', choices=('simulate', 'plan', 'units', 'rejudge', 'score'))
+    parser.add_argument('step', choices=('simulate', 'plan', 'units', 'rejudge', 'score', 'development'))
     parser.add_argument('--probes', type=Path, action='append',
                         help='a held-out p1-probes/1 file; simulate, units, rejudge and score take one per held-out '
                              'directory (each must match its frozen.json), plan takes exactly one')
     parser.add_argument('--scores', type=Path)
     parser.add_argument('--hours', type=Path, help='JSON object: held-out lineage -> in-play game hours')
     parser.add_argument('--questions', type=Path, help='score: the frozen p1-question/1 file (checked against its frozen.json)')
-    parser.add_argument('--screen', type=Path, help='score: the counts JSON of the question screen\'s second run')
+    parser.add_argument('--screen', type=Path, help='score: the screen.json that questions-freeze copied beside the questions')
+    parser.add_argument('--sentences-counts', type=Path, help='score: the counts.json of the `sentences` step')
     parser.add_argument('--flip', type=float, help=f'simulate: the label error instead of {FLIP}')
     parser.add_argument('--sensitivity', type=float, nargs=2, metavar=('A', 'B'),
                         help='simulate: keep every stated label with this probability, for arm A and for arm B')
@@ -739,19 +825,35 @@ def main(argv=None) -> int:
                     [dict(kind=k, arm=a, repeat=r, item=i) for k, a, r, i in sorted(rejudge_sample(unit_rows))]):
             print(json.dumps(row))
         return 0
+    elif args.step == 'development':
+        if not (args.scores and args.out):
+            parser.error('development needs --scores and --out')
+        if not args.out.resolve().is_relative_to((ROOT/'.runtime').resolve()):
+            parser.error('development --out must be under the repository\'s .runtime/ (its figures stay out of the tracked tree)')
+        if args.out.exists():
+            parser.error('--out exists: the summary is written once')
+        try:
+            result = development_summary(_lines(args.scores))
+        except ScoreError as error:
+            parser.error(str(error))
+        out, summary = args.out, result
     else:
-        if not (probe_paths and args.scores and args.hours and args.questions and args.screen):
-            parser.error('score needs --probes, --scores, --hours, --questions and --screen')
+        if not (probe_paths and args.scores and args.hours and args.questions and args.screen and args.sentences_counts):
+            parser.error('score needs --probes, --scores, --hours, --questions, --screen and --sentences-counts')
         if {row['lineage'] for row in probe_rows} != set(HELD_OUT):
             parser.error(f'score needs probes covering exactly the held-out lineages: {", ".join(HELD_OUT)}')
         try:
             asked, question_file = frozen_file(args.questions, 'questions')
+            screen_file = frozen_screen(args.questions, args.screen)
         except ScoreError as error:
             parser.error(str(error))
         result = dict(score(probe_rows, json.loads(args.hours.read_text()), _lines(args.scores), asked,
-                            json.loads(args.screen.read_text())), probe_files=probe_files, question_file=question_file)
+                            json.loads(args.screen.read_text()), json.loads(args.sentences_counts.read_text())),
+                      probe_files=probe_files, question_file=question_file, screen_file=screen_file)
         out = args.out or ROOT/'data'/'evaluation'/'p1'/'result.json'
         summary = result['decision']['outcome']
+        if 'outcome_note' in result:
+            summary = f'{summary} ({result["outcome_note"]})'
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(result, indent=1, sort_keys=True) + '\n')
     print(json.dumps(summary))

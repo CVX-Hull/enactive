@@ -21,7 +21,9 @@ CANARY_Q = 'QUESTION-ZEBRA'
 CANARY_K = 'KEY-GIRAFFE'
 CANARY_A = 'ANSWER-PELICAN'
 ARM_KEYS = (('A', 1), ('B', 1), ('B', 2))
+DEV_KEYS = (('A', 1), ('B', 1))                 # a development delivery has one B repeat
 TEXTS = (*ARM_KEYS, ('R', 1), ('PW', 1), ('PP', 1))
+QUESTIONS_DIR = ('data', 'evaluation', 'p1', 'questions')   # the only place a questions freeze may be written
 
 
 def spread_hash(rng: random.Random) -> str:
@@ -149,13 +151,31 @@ def question_of(probe: str) -> dict:
                 key=f'{CANARY_K} bolt, saw')
 
 
-def write_questions(world, name: str = 'questions', *, freeze: bool = True, skip: int | None = None) -> Path:
-    """A questions file for every unit (one unit's question left out with `skip`), frozen by the command."""
-    path = world.root/name/'questions.jsonl'
+def screen_counts(world, flagged_twice: int = 0) -> Path:
+    """The screen's counts file: what `screen` wrote, as far as the freeze reads it."""
+    path = world.root/'screen-counts.json'
+    path.write_text(json.dumps(dict(questions=20, flagged=flagged_twice, flagged_twice=flagged_twice)))
+    return path
+
+
+def freeze_args(world, path: Path) -> list:
+    """`questions-freeze` over the held-out world's frozen probes and a screen's counts."""
+    probes = [a for p in world.probes for a in ('--probes', p)]
+    return ['questions-freeze', '--questions', path, '--frozen', '2026-11-11', *probes, '--screen', screen_counts(world)]
+
+
+def write_questions(world, name: str = 'questions', *, freeze: bool | str = True, skip: int | None = None) -> Path:
+    """A questions file for every unit (one unit's question left out with `skip`) under the questions directory,
+    frozen by the command; `freeze='by hand'` writes a `frozen.json` the command would refuse to."""
+    path = world.root.joinpath(*QUESTIONS_DIR)/name/'questions.jsonl'
     if not path.exists():
         write_jsonl(path, [question_of(u['probe']) for n, u in enumerate(world.units) if n != skip])
     if freeze and not (path.parent/'frozen.json').exists():
-        assert cli('questions-freeze', '--questions', path, '--frozen', '2026-11-11') == 0
+        if freeze == 'by hand':
+            (path.parent/'frozen.json').write_text(json.dumps(dict(schema=analysis.FROZEN_SCHEMA,
+                                                                  files={path.name: analysis.file_sha256(path)})))
+        else:
+            assert cli(*freeze_args(world, path)) == 0
     return path
 
 
@@ -325,7 +345,7 @@ def dev_world(root: Path, units: int = 4) -> SimpleNamespace:
         frame.write_bytes(b'png')
         lineage = '397' if n % 2 == 0 else '372'
         rows.append(dict(probe=f'pair-{n:02d}', lineage=lineage, boundary=f'b{n}', frame=f'dev/f{n}.png'))
-        for arm, repeat in (('R', 1), *ARM_KEYS):
+        for arm, repeat in (('R', 1), *DEV_KEYS):       # A repeat 1 and B repeat 1: development has no second B repeat
             delivered.append(dict(schema='p1-delivered/2', lineage=lineage, boundary=f'b{n}', arm=arm, repeat=repeat,
                                   text=f'{arm}{repeat} text {n}', items=0, complete=True))
     return SimpleNamespace(root=root, evidence=root/'evidence', rows=rows, delivered_rows=delivered,
@@ -361,6 +381,17 @@ def test_a_development_units_file_that_is_not_development_units_is_refused(tmp_p
     assert cli('batches', 'question', '--development', bad, '--evidence-root', dev.evidence, '--out', tmp_path/'.runtime'/'o',
                '--host-version', HOST) == 2
     assert message in capsys.readouterr().err
+
+
+@pytest.mark.parametrize('frame', ['lh2a1/sources/lh2a1-5.png', 'x/lh1/f.png', '522-held-out/computer-sessions/lh4b3/sources/f.png',
+                                   'held-out/f.png', 'held-out-lh4/f.png', 'dev/../lh3a2/f.png', 'a/lh4b7/b/f.png'])
+def test_a_development_frame_may_not_lie_under_a_held_out_session_directory(tmp_path, capsys, frame):
+    dev = dev_world(tmp_path)
+    bad = write_jsonl(tmp_path/'bad.jsonl', [dict(dev.rows[0], frame=frame)])
+    assert cli('batches', 'question', '--development', bad, '--evidence-root', dev.evidence, '--out', tmp_path/'.runtime'/'o',
+               '--host-version', HOST) == 2
+    error = capsys.readouterr().err
+    assert 'under a held-out session directory' in error and frame not in error and not (tmp_path/'.runtime'/'o').exists()
 
 
 def test_a_run_takes_the_held_out_probes_or_a_development_file_not_both_and_not_neither(world, tmp_path, capsys):
@@ -519,7 +550,7 @@ def test_sentences_are_rewritten_once_checked_again_and_a_second_failure_is_used
 
 
 # ------------------------------------------------------------------ reader batches
-def test_a_reader_batch_is_one_file_per_item_with_an_id_a_text_and_a_question_in_probe_order(world, capsys):
+def test_a_reader_batch_is_one_file_per_item_with_an_id_a_text_and_a_question_in_a_seeded_shuffle(world, capsys):
     out = reader_build(world)
     summary = json.loads(capsys.readouterr().out.splitlines()[-1])
     files, key = batch_files(out, 'reader'), key_of(out, 'reader')
@@ -545,9 +576,31 @@ def test_a_reader_batch_is_one_file_per_item_with_an_id_a_text_and_a_question_in
         if meta['arm'] in ('A', 'B', 'R'):
             assert CANARY_K not in item['text']                        # a reader never sees the answer key but in PW
         seen.append((meta['item'], meta['arm'], meta['repeat']))
-    assert seen == sorted(seen, key=lambda m: (m[0], batches.TEXT_ORDER.index(m[1]), m[2]))       # no order seed, no shuffle
+    in_order = sorted(seen, key=lambda m: (m[0], batches.TEXT_ORDER.index(m[1]), m[2]))
+    shuffled = list(in_order)
+    random.Random(4916).shuffle(shuffled)                                          # Owner decision, 10 November 2026
+    assert seen == shuffled and seen != in_order and batches.READER_SEED == 4916
     assert set(seen) == {(u['probe'], arm, repeat) for u in world.units for arm, repeat in TEXTS}
-    assert key['rejudge'] is False and key['seed'] is None
+    assert key['rejudge'] is False and key['seed'] == 4916 and key['development'] is False
+    assert key['questions_sha256'] == analysis.file_sha256(write_questions(world))
+
+
+def test_reader_ids_and_file_names_do_not_follow_the_arm_and_are_reproducible(world):
+    out, again = reader_build(world), reader_build(world, 'again')
+    assert read_all(out) == read_all(again)                                        # the same inputs, the same files
+    rank = {'A': 0, 'B': 1, 'R': 2, 'PW': 3, 'PP': 4}
+    arms = [(number(item['id']), meta['arm']) for item, meta in ordered_items(out, 'reader')]
+    assert [n for n, _ in arms] == list(range(1, 121))                              # numbered in the file order
+    runs = [arm for _, arm in arms]
+    assert runs != sorted(runs, key=rank.get)
+    assert len({arm for arm in runs[:10]}) > 1                                      # the first files hold different texts
+    assert key_of(out, 'reader')['seed'] == 4916
+    rejudge = reader_build(world, 'rejudge', rejudge=True)                          # the re-judging has its own list, same seed
+    sample = sorted(analysis.rejudge_sample(world.units))
+    items = [(m['item'], m['arm'], m['repeat']) for _, m in ordered_items(rejudge, 'reader')]
+    expected = sorted(((k[3], k[1], k[2]) for k in sample), key=lambda m: (m[0], batches.TEXT_ORDER.index(m[1]), m[2]))
+    random.Random(4916).shuffle(expected)
+    assert items == expected
 
 
 @pytest.mark.parametrize('received, line, expected', [
@@ -559,13 +612,20 @@ def test_the_new_last_line_follows_the_text_on_a_line_of_its_own(received, line,
     assert batches.appended(received, line) == expected
 
 
-def test_the_word_for_word_line_has_single_spaces_and_one_line_even_when_the_key_has_line_breaks(world):
-    rows = [dict(question_of(u['probe']), question=' Which  list?', key='bolt,\n saw ;  nail') for u in world.units]
-    questions = write_jsonl(world.root/'multi'/'questions.jsonl', rows)
-    assert cli('questions-freeze', '--questions', questions, '--frozen', '2026-11-11') == 0
-    out = reader_build(world, questions=questions)
+@pytest.mark.parametrize('key, line', [
+    ('bolt,\n saw ;  nail', 'bolt,; saw ; nail'),             # a line break is `; `; other whitespace runs are one space
+    ('bolt\nsaw\r\nnail', 'bolt; saw; nail'),
+    ('\n\n  bolt  \n\n\n saw\n', 'bolt; saw'),                # blank lines and leading or trailing breaks leave no separator
+    ('bolt  saw', 'bolt saw'), ('', ''), (' \n ', '')])
+def test_the_word_for_word_line_has_single_spaces_and_one_line_with_the_keys_lines_joined_by_semicolons(world, key, line):
+    rows = [dict(question_of(u['probe']), question=' Which  list?\n', key=key) for u in world.units]
+    path = world.root.joinpath(*QUESTIONS_DIR)/f'multi-{abs(hash(key))}'/'questions.jsonl'
+    write_jsonl(path, rows)
+    assert cli(*freeze_args(world, path)) == 0
+    out = reader_build(world, questions=path)
     texts = [item['text'] for item, meta in ordered_items(out, 'reader') if meta['arm'] == 'PW']
-    assert texts and all(t.endswith('\n- Which list? bolt, saw ; nail') and t.count('\n- ') == 1 for t in texts)
+    expected = f'\n- Which list? {line}'.rstrip(' ')
+    assert texts and all(t.endswith(expected) and t.count('\n- ') == 1 for t in texts)
 
 
 def test_the_reference_text_is_the_received_text_alone_from_its_delivered_row(world):
@@ -594,13 +654,42 @@ def test_held_out_readers_need_the_frozen_questions_and_one_for_every_unit(world
     unfrozen = write_questions(world, 'unfrozen', freeze=False)
     assert run(world, 'reader', tmp_path/'.runtime'/'b', '--questions', unfrozen, '--sentences', write_sentences(world)) == 2
     assert 'not a frozen questions file' in capsys.readouterr().err
-    missing = write_questions(world, 'missing', skip=3)
+    missing = write_questions(world, 'missing', skip=3, freeze='by hand')       # the command would not freeze it
     assert run(world, 'reader', tmp_path/'.runtime'/'c', '--questions', missing, '--sentences', write_sentences(world)) == 2
     assert '1 units have none' in capsys.readouterr().err
-    extra = write_jsonl(world.root/'extra'/'questions.jsonl', [*(question_of(u['probe']) for u in world.units), question_of('zz-p0001')])
-    assert cli('questions-freeze', '--questions', extra, '--frozen', 'x') == 0
+    extra = write_jsonl(world.root.joinpath(*QUESTIONS_DIR)/'extra'/'questions.jsonl',
+                        [*(question_of(u['probe']) for u in world.units), question_of('zz-p0001')])
+    write_questions(world, 'extra', freeze='by hand')
     assert run(world, 'reader', tmp_path/'.runtime'/'d', '--questions', extra, '--sentences', write_sentences(world)) == 2
     assert '1 questions belong to no unit' in capsys.readouterr().err
+
+
+def test_a_held_out_reader_build_still_needs_b_repeat_1_and_2_and_a_development_one_has_only_b_1(world, tmp_path, capsys):
+    questions, sentences = write_questions(world), write_sentences(world)
+    for gone in (('B', 1), ('B', 2)):
+        rows = [r for r in world.delivered_rows if (r['arm'], r['repeat']) != gone]
+        world.delivered.write_text(''.join(json.dumps(r) + '\n' for r in rows))
+        assert run(world, 'reader', tmp_path/'.runtime'/f'held{gone[1]}', '--questions', questions, '--sentences', sentences) == 2
+        assert '20 delivered texts missing' in capsys.readouterr().err               # five units in each of four lineages
+    world.delivered.write_text(''.join(json.dumps(r) + '\n' for r in world.delivered_rows))
+    out = reader_build(world, questions=questions, sentences=sentences)
+    assert {(m['arm'], m['repeat']) for _, m in ordered_items(out, 'reader')} == set(TEXTS)
+
+
+def test_a_development_delivery_with_a_second_b_repeat_is_refused_as_unexpected(tmp_path, capsys):
+    dev = dev_world(tmp_path)
+    questions = dev_questions(dev)
+    sentences = write_jsonl(tmp_path/'dev-sentences.jsonl', [dict(schema=batches.SENTENCE_SCHEMA, probe=r['probe'], sentence='s',
+                                                                  attempts=1, correct=True) for r in dev.rows])
+    common = ['--development', dev.units_file, '--questions', questions, '--host-version', HOST]
+    extra = dict(next(r for r in dev.delivered_rows if (r['arm'], r['repeat']) == ('B', 1)), repeat=2)
+    both = write_jsonl(tmp_path/'both.jsonl', dev.delivered_rows + [extra])
+    for number_, mode in enumerate((['--sentences', sentences], ['--rejudge'])):
+        assert cli('batches', 'reader', *common, '--delivered', both, *mode, '--out', tmp_path/'.runtime'/f'b{number_}') == 2
+        error = capsys.readouterr().err
+        assert '1 delivered rows are unexpected' in error and 'second B repeat' in error
+    assert cli('batches', 'reader', *common, '--delivered', dev.delivered, '--sentences', sentences,
+               '--out', tmp_path/'.runtime'/'ok') == 0
 
 
 def test_reader_builds_refuse_missing_or_incomplete_delivered_texts_without_printing_any(world, tmp_path, capsys):
@@ -636,10 +725,12 @@ def test_a_development_run_reads_every_a_and_b_label_twice_and_needs_no_freeze_o
     first, again = tmp_path/'.runtime'/'first', tmp_path/'.runtime'/'again'
     assert cli('batches', 'reader', *common, '--sentences', sentences, '--out', first) == 0
     assert cli('batches', 'reader', *common, '--rejudge', '--out', again) == 0
-    assert json.loads(capsys.readouterr().out.splitlines()[0])['items'] == 24             # four units, six texts
+    assert json.loads(capsys.readouterr().out.splitlines()[0])['items'] == 20             # four units, five texts: A1, B1, R, PW, PP
     key = key_of(again, 'reader')
+    assert key['development'] is True and len(key['items']) == 8
     assert {(m['item'], m['arm'], m['repeat']) for m in key['items'].values()} == {
-        (r['probe'], arm, repeat) for r in dev.rows for arm, repeat in ARM_KEYS}              # every label, not a sample
+        (r['probe'], arm, repeat) for r in dev.rows for arm, repeat in DEV_KEYS}              # every label, not a sample
+    assert {(m['arm'], m['repeat']) for _, m in ordered_items(first, 'reader')} == {*DEV_KEYS, ('R', 1), ('PW', 1), ('PP', 1)}
     texts = {meta['item']: item['text'] for item, meta in ordered_items(first, 'reader') if (meta['arm'], meta['repeat']) == ('PW', 1)}
     assert texts['pair-01'] == f'R1 text 1\n- {question_of("pair-01")["question"]} {question_of("pair-01")["key"]}'
     held = dev.delivered_rows + [dict(dev.delivered_rows[0], lineage='lh2')]
@@ -667,7 +758,7 @@ def synthetic_grader_inputs(world, *, every=3):
 
 
 def test_grader_batches_hold_graded_answers_only_mixed_with_random_4915_and_packed_first_fit(world, capsys):
-    answers, questions = synthetic_grader_inputs(world), write_questions(world, freeze=False)
+    answers, questions = synthetic_grader_inputs(world), write_questions(world)
     out = grader_build(world, answers, questions)
     summary = json.loads(capsys.readouterr().out.splitlines()[-1])
     key, files = key_of(out, 'grader'), batch_files(out, 'grader')
@@ -704,7 +795,7 @@ def test_grader_batches_hold_graded_answers_only_mixed_with_random_4915_and_pack
 
 
 def test_grader_batches_follow_their_seed_and_are_reproducible(world, monkeypatch):
-    answers, questions = synthetic_grader_inputs(world), write_questions(world, freeze=False)
+    answers, questions = synthetic_grader_inputs(world), write_questions(world)
     one, two = grader_build(world, answers, questions, 'one'), grader_build(world, answers, questions, 'two')
     assert read_all(one) == read_all(two) and read_all(one)
     monkeypatch.setattr(batches, 'GRADER_SEED', 4916)
@@ -718,7 +809,7 @@ def test_grader_batches_follow_their_seed_and_are_reproducible(world, monkeypatc
 
 def test_a_grader_build_with_only_not_stated_answers_has_no_batch_and_still_parses(world, tmp_path):
     answers = reader_answers(world, answer=lambda p, a, r: 'not stated')
-    out = grader_build(world, answers, write_questions(world, freeze=False))
+    out = grader_build(world, answers, write_questions(world))
     assert batch_files(out, 'grader') == [] and key_of(out, 'grader')['items'] == {}
     (tmp_path/'none').mkdir()
     rows = batches.parse('grader', out, tmp_path/'none')
@@ -726,7 +817,7 @@ def test_a_grader_build_with_only_not_stated_answers_has_no_batch_and_still_pars
 
 
 def test_grader_answers_of_one_source_and_pass_for_probes_that_have_a_question_are_the_only_input(world, tmp_path, capsys):
-    questions = write_questions(world, freeze=False)
+    questions = write_questions(world)
     good = reader_answers(world)
     rows = read_jsonl(good)
     cases = {'mixed source': rows + [answer_row('x', 'N', 1, 'a', source='screen')],
@@ -744,7 +835,7 @@ def test_grader_answers_of_one_source_and_pass_for_probes_that_have_a_question_a
 
 
 def test_a_grader_build_over_a_rejudging_readers_answers_labels_its_rows_rejudge(world, tmp_path):
-    questions = write_questions(world, freeze=False)
+    questions = write_questions(world)
     out = grader_build(world, reader_answers(world, rejudge=True), questions)
     key = key_of(out, 'grader')
     assert key['rejudge'] is True and len(key['items']) + len(key['mechanical']) == 12
@@ -896,7 +987,8 @@ def test_a_batch_never_holds_two_answers_to_one_question_even_when_a_unit_would_
 # ------------------------------------------------------------------ the build digest
 @pytest.mark.parametrize('kind, constant', [('grader', 'GRADER_SEED'), ('grader', 'BATCH_SIZE'), ('grader', 'PACKING'),
                                             ('question', 'BATCH_SIZE'), ('screen', 'BATCH_SIZE'), ('paraphrase', 'PACKING'),
-                                            ('reader', 'TEXT_ORDER'), ('audit', 'AUDIT_ORDER_SEED'), ('audit', 'AUDIT_SEED'),
+                                            ('reader', 'TEXT_ORDER'), ('reader', 'READER_SEED'),
+                                            ('audit', 'AUDIT_ORDER_SEED'), ('audit', 'AUDIT_SEED'),
                                             ('audit', 'AUDIT_SAMPLE')])
 def test_the_build_digest_covers_the_kinds_seeds_so_a_changed_seed_changes_every_opaque_id(kind, constant, monkeypatch):
     before = batches.build_digest(kind, ['a', 'b'])
@@ -911,7 +1003,7 @@ def test_the_build_digest_covers_the_kinds_seeds_so_a_changed_seed_changes_every
 
 
 def test_the_build_digest_covers_the_code_and_a_seed_change_alters_the_ids_with_unchanged_inputs(world, monkeypatch):
-    answers, questions = synthetic_grader_inputs(world), write_questions(world, freeze=False)
+    answers, questions = synthetic_grader_inputs(world), write_questions(world)
     first = key_of(grader_build(world, answers, questions, 'one'), 'grader')
     again = key_of(grader_build(world, answers, questions, 'two'), 'grader')
     assert list(first['items']) == list(again['items'])                           # unchanged inputs: the same ids
@@ -988,21 +1080,143 @@ def test_missing_arguments_are_refused_by_kind(world, tmp_path, capsys):
 
 
 # ------------------------------------------------------------------ the questions freeze
-def test_the_questions_freeze_is_the_probes_format_and_is_written_once(world, capsys):
+def test_the_questions_freeze_is_the_probes_format_copies_the_screen_beside_it_and_is_written_once(world, capsys):
     path = write_questions(world, freeze=False)
+    counts = screen_counts(world, 3)
     capsys.readouterr()
-    assert cli('questions-freeze', '--questions', path, '--frozen', '2026-11-11') == 0
+    assert cli(*freeze_args(world, path)) == 0
     printed = json.loads(capsys.readouterr().out)
     document = json.loads((path.parent/'frozen.json').read_text())
+    screen = path.parent/'screen.json'
+    assert screen.read_bytes() == counts.read_bytes()                                   # copied beside the questions
     assert document == dict(schema='p1-held-out-frozen/1', protocol='p1-study/3', frozen='2026-11-11',
-                            files={'questions.jsonl': analysis.file_sha256(path)})
-    assert printed == dict(questions=20, sha256=analysis.file_sha256(path), frozen_sha256=analysis.file_sha256(path.parent/'frozen.json'))
+                            files={'questions.jsonl': analysis.file_sha256(path), 'screen.json': analysis.file_sha256(screen)})
+    assert printed == dict(questions=20, sha256=analysis.file_sha256(path), screen_sha256=analysis.file_sha256(screen),
+                           frozen_sha256=analysis.file_sha256(path.parent/'frozen.json'))
     rows, record = analysis.frozen_file(path, 'questions')               # the same verifier the probes use
     assert len(rows) == 20 and record['sha256'] == analysis.file_sha256(path)
-    assert cli('questions-freeze', '--questions', path, '--frozen', 'x') == 2
-    bad = write_jsonl(world.root/'bad'/'questions.jsonl', [dict(question_of('a'), extra=1)])
-    assert cli('questions-freeze', '--questions', bad, '--frozen', 'x') == 2
-    assert not (bad.parent/'frozen.json').exists()
+    assert analysis.frozen_screen(path, screen)['sha256'] == analysis.file_sha256(screen)
+    assert cli(*freeze_args(world, path)) == 2                                          # written once
+    assert 'written once' in capsys.readouterr().err
+    bad = write_jsonl(world.root.joinpath(*QUESTIONS_DIR)/'bad'/'questions.jsonl', [dict(question_of('a'), extra=1)])
+    assert cli(*freeze_args(world, bad)) == 2
+    assert not (bad.parent/'frozen.json').exists() and not (bad.parent/'screen.json').exists()
+
+
+def test_the_questions_freeze_refuses_a_file_outside_the_questions_directory_and_questions_that_miss_the_units(world, capsys):
+    outside = write_jsonl(world.root/'elsewhere'/'questions.jsonl', [question_of(u['probe']) for u in world.units])
+    assert cli(*freeze_args(world, outside)) == 2
+    assert 'under data/evaluation/p1/questions/ only' in capsys.readouterr().err
+    sibling = write_jsonl(world.root/'data'/'evaluation'/'p1'/'questions-x'/'questions.jsonl', [question_of(u['probe']) for u in world.units])
+    assert cli(*freeze_args(world, sibling)) == 2                                         # a name that only starts like the directory
+    for name, rows, message in (('short', [question_of(u['probe']) for u in world.units][1:], '1 units have none'),
+                                ('extra', [*(question_of(u['probe']) for u in world.units), question_of('zz-p0001')],
+                                 '1 questions belong to no unit')):
+        path = write_jsonl(world.root.joinpath(*QUESTIONS_DIR)/name/'questions.jsonl', rows)
+        assert cli(*freeze_args(world, path)) == 2 and message in capsys.readouterr().err
+        assert not (path.parent/'frozen.json').exists() and not (path.parent/'screen.json').exists()
+    path = write_questions(world, 'whole', freeze=False)
+    probes = [a for p in world.probes[:1] for a in ('--probes', p)]                       # probes that leave a lineage out
+    assert cli('questions-freeze', '--questions', path, '--frozen', 'x', *probes, '--screen', screen_counts(world)) == 2
+    assert 'exactly the held-out lineages' in capsys.readouterr().err
+    assert cli('questions-freeze', '--questions', path, '--frozen', 'x', '--screen', screen_counts(world)) == 2      # no probes
+    assert cli('questions-freeze', '--questions', path, '--frozen', 'x', *[a for p in world.probes for a in ('--probes', p)]) == 2
+    assert 'needs --probes' in capsys.readouterr().err
+    assert not (path.parent/'frozen.json').exists()
+
+
+@pytest.mark.parametrize('content', ['{}', '{"flagged_twice": null}', '{"flagged_twice": -1}', '{"flagged_twice": true}',
+                                     '{"flagged_twice": 1.5}', '[1]', 'not json'])
+def test_the_questions_freeze_needs_the_screens_integer_flagged_twice(world, capsys, content):
+    path = write_questions(world, freeze=False)
+    counts = world.root/'bad-counts.json'
+    counts.write_text(content)
+    probes = [a for p in world.probes for a in ('--probes', p)]
+    assert cli('questions-freeze', '--questions', path, '--frozen', 'x', *probes, '--screen', counts) == 2
+    assert 'bad-counts.json' in capsys.readouterr().err
+    assert not (path.parent/'frozen.json').exists() and not (path.parent/'screen.json').exists()
+
+
+def test_a_grader_build_over_held_out_reader_answers_needs_the_frozen_questions(world, tmp_path, capsys):
+    answers = reader_answers(world)
+    frozen = write_questions(world)
+    assert run(world, 'grader', tmp_path/'.runtime'/'ok', '--answers', answers, '--questions', frozen) == 0
+    unfrozen = write_questions(world, 'unfrozen', freeze=False)
+    edited = write_questions(world, 'edited')
+    edited.write_text(edited.read_text().replace('saw', 'nail'))                  # one edit after the freeze
+    for name, questions in (('unfrozen', unfrozen), ('edited', edited)):
+        capsys.readouterr()
+        assert run(world, 'grader', tmp_path/'.runtime'/name, '--answers', answers, '--questions', questions) == 2
+        error = capsys.readouterr().err
+        assert 'not a frozen questions file' in error and 'nail' not in error and not (tmp_path/'.runtime'/name).exists()
+    # before the freeze the screen's and the paraphrase check's graders take the questions as they are
+    for source, arm in (('screen', 'N'), ('paraphrase', 'S')):
+        rows = [answer_row(u['probe'], arm, 1, f'{CANARY_A} {n}', source=source) for n, u in enumerate(world.units)]
+        assert run(world, 'grader', tmp_path/'.runtime'/f'pre-{source}', '--answers', write_jsonl(tmp_path/f'{source}.jsonl', rows),
+                   '--questions', unfrozen) == 0
+
+
+def test_a_development_grader_build_names_the_development_units_and_needs_no_freeze(tmp_path, capsys):
+    dev = dev_world(tmp_path)
+    questions = dev_questions(dev)                                  # never frozen
+    rows = [answer_row(r['probe'], arm, repeat, f'{CANARY_A} {arm}', rejudge=False) for r in dev.rows for arm, repeat in DEV_KEYS]
+    answers = write_jsonl(tmp_path/'dev-answers.jsonl', rows)
+    common = ['--answers', answers, '--questions', questions, '--host-version', HOST]
+    assert cli('batches', 'grader', *common, '--out', tmp_path/'.runtime'/'plain') == 2          # held-out unless it says otherwise
+    assert 'not a frozen questions file' in capsys.readouterr().err
+    assert cli('batches', 'grader', *common, '--development', dev.units_file, '--out', tmp_path/'.runtime'/'dev') == 0
+    assert key_of(tmp_path/'.runtime'/'dev', 'grader')['questions_sha256'] == analysis.file_sha256(questions)
+    outside = write_jsonl(tmp_path/'outside.jsonl', rows + [answer_row('lh1-p0001', 'A', 1, 'x')])
+    assert cli('batches', 'grader', '--answers', outside, '--questions', questions, '--host-version', HOST,
+               '--development', dev.units_file, '--out', tmp_path/'.runtime'/'out') == 2
+    assert 'outside the development units' in capsys.readouterr().err
+    held = write_jsonl(tmp_path/'held-units.jsonl', [dict(dev.rows[0], lineage='lh1')])
+    assert cli('batches', 'grader', *common, '--development', held, '--out', tmp_path/'.runtime'/'held') == 2
+    assert 'held out' in capsys.readouterr().err
+    for kind in ('screen', 'paraphrase'):
+        assert cli('batches', kind, '--questions', questions, '--development', dev.units_file, '--out', tmp_path/'.runtime'/kind,
+                   '--host-version', HOST) == 2
+        assert 'is for question, reader and grader builds' in capsys.readouterr().err
+
+
+def test_every_key_made_from_a_questions_file_records_its_digest_and_parse_refuses_a_different_file(world, tmp_path):
+    questions, sentences = write_questions(world), write_sentences(world)
+    digest = analysis.file_sha256(questions)
+    other = write_jsonl(world.root/'other-questions.jsonl', [dict(question_of(u['probe']), key='different') for u in world.units])
+    assert analysis.file_sha256(other) != digest
+    made = {'screen': build(world, 'screen', 'screen', '--questions', questions),
+            'paraphrase': build(world, 'paraphrase', 'paraphrase', '--questions', questions),
+            'reader': reader_build(world, questions=questions, sentences=sentences),
+            'grader': grader_build(world, reader_answers(world), questions)}
+    shapes = dict(screen=lambda i, m: dict(id=i, answer='x'), reader=lambda i, m: dict(id=i, answer='x'),
+                  paraphrase=lambda i, m: dict(id=i, sentence='x'), grader=grader_answer)
+    for kind, out in made.items():
+        assert key_of(out, kind)['questions_sha256'] == digest
+        answers = answers_for(out, kind, shapes[kind])
+        assert batches.parse(kind, out, answers, questions=questions)                          # the file the batches used
+        with pytest.raises(batches.BatchError, match=f'not the questions file the {kind} batches were built from'):
+            batches.parse(kind, out, answers, questions=other)
+        with pytest.raises(batches.BatchError, match='the other kinds take --questions'):
+            batches.parse(kind, out, answers, base=questions)
+    rows = tmp_path/'rows.jsonl'
+    assert cli('parse', 'reader', '--batches', made['reader'], '--answers', answers_for(made['reader'], 'reader', shapes['reader'], 'cli'),
+               '--questions', other, '--out', rows) == 2
+    assert not rows.exists()
+    # the question rewrite: `--base` is the file it was built from
+    flagged = tmp_path/'flagged.txt'
+    flagged.write_text(f'{world.units[0]["probe"]}\n')
+    rewrite = build(world, 'question', 'rewrite', '--rewrite', flagged, '--questions', questions)
+    assert key_of(rewrite, 'question')['questions_sha256'] == digest
+    given = answers_for(rewrite, 'question', lambda i, m: dict(id=i, question='A new question?', key='k'))
+    assert len(batches.parse('question', rewrite, given, questions)) == 20
+    with pytest.raises(batches.BatchError, match='not the questions file the question batches were built from'):
+        batches.parse('question', rewrite, given, other)
+    with pytest.raises(batches.BatchError, match='the question rewrite takes --base'):
+        batches.parse('question', rewrite, given, questions=questions)
+    plain = build(world, 'question')                                                           # no questions file used
+    assert 'questions_sha256' not in key_of(plain, 'question')
+    with pytest.raises(batches.BatchError, match='built without a questions file'):
+        batches.parse('question', plain, answers_for(plain, 'question', lambda i, m: dict(id=i, question='q', key='k')), questions)
 
 
 # ------------------------------------------------------------------ parsing
@@ -1024,34 +1238,39 @@ def test_the_whole_chain_round_trips_into_rows_score_accepts(world, tmp_path, ca
     rows = read_jsonl(questions_file)
     assert len(rows) == 20 and all(r['schema'] == 'p1-question/1' and set(r) == {'schema', 'probe', 'question', 'key'} for r in rows)
     assert [r['probe'] for r in rows] == sorted(u['probe'] for u in world.units)
-    frozen = world.root/'questions'/'questions.jsonl'
-    frozen.parent.mkdir()
-    frozen.write_text(questions_file.read_text())
-    assert cli('questions-freeze', '--questions', frozen, '--frozen', '2026-11-11') == 0
-    screening = build(world, 'screen', 'screen', '--questions', frozen)
-    no_text = parsed(screening, 'screen', lambda i, m: dict(id=i, answer='Not stated.'), tmp_path)
+    screening = build(world, 'screen', 'screen', '--questions', questions_file)           # before the freeze: the file as parsed
+    no_text = parsed(screening, 'screen', lambda i, m: dict(id=i, answer='Not stated.'), tmp_path, '--questions', questions_file)
     assert all(r['source'] == 'screen' and r['arm'] == 'N' for r in read_jsonl(no_text))
-    graded_screen = grader_build(world, no_text, frozen, 'grader-screen')
+    graded_screen = grader_build(world, no_text, questions_file, 'grader-screen')
     assert batch_files(graded_screen, 'grader') == []                       # "not stated" never reaches a grader
     (tmp_path/'empty').mkdir()
     checks = tmp_path/'screen-checks.jsonl'
     write_jsonl(checks, batches.parse('grader', graded_screen, tmp_path/'empty'))
     assert all(r['schema'] == 'p1-check/1' and r['purpose'] == 'screen' and r['correct'] is False for r in read_jsonl(checks))
     capsys.readouterr()
-    assert cli('screen', '--questions', frozen, '--graded', checks, '--out', tmp_path/'.runtime'/'screen-1') == 0
+    assert cli('screen', '--questions', questions_file, '--graded', checks, '--out', tmp_path/'.runtime'/'screen-1') == 0
     counts_path = tmp_path/'.runtime'/'screen-1'/'counts.json'
     assert json.loads(capsys.readouterr().out)['flagged_twice'] == 0
     # 2. the paraphrase and its check
-    paraphrase = build(world, 'paraphrase', 'paraphrase', '--questions', frozen)
+    paraphrase = build(world, 'paraphrase', 'paraphrase', '--questions', questions_file)
     sentences_in = parsed(paraphrase, 'paraphrase', lambda i, m: dict(id=i, sentence=f'List {number(i)} holds bolt and saw.'), tmp_path)
-    graded_sentences = grader_build(world, sentences_in, frozen, 'grader-sentences')
-    sentence_checks = parsed(graded_sentences, 'grader', lambda i, m: dict(id=i, correct=True, why=CANARY_WORDS), tmp_path)
+    graded_sentences = grader_build(world, sentences_in, questions_file, 'grader-sentences')
+    sentence_checks = parsed(graded_sentences, 'grader', lambda i, m: dict(id=i, correct=number(i) % 5 != 0, why=CANARY_WORDS), tmp_path)
     assert cli('sentences', '--paraphrases', sentences_in, '--checks', sentence_checks, '--out', tmp_path/'.runtime'/'sentences') == 0
     sentences = tmp_path/'.runtime'/'sentences'/'sentences.jsonl'
     assert len(read_jsonl(sentences)) == 20
+    sentence_counts = json.loads((tmp_path/'.runtime'/'sentences'/'counts.json').read_text())
+    assert sentence_counts == dict(units=20, stages=1, rewritten=0, failed=sum(not r['correct'] for r in read_jsonl(sentence_checks)))
+    # the freeze: the questions beside the screen's counts, under the questions directory
+    frozen = world.root.joinpath(*QUESTIONS_DIR)/'chain'/'questions.jsonl'
+    frozen.parent.mkdir(parents=True)
+    frozen.write_text(questions_file.read_text())
+    probes = [a for p in world.probes for a in ('--probes', p)]
+    assert cli('questions-freeze', '--questions', frozen, '--frozen', '2026-11-11', *probes, '--screen', counts_path) == 0
     # 3. the readers, the graders, then the re-judging
     readers = reader_build(world, questions=frozen, sentences=sentences)
-    answers = parsed(readers, 'reader', lambda i, m: dict(id=i, answer='Not stated' if number(i) % 4 == 0 else 'It says bolt and saw.'), tmp_path)
+    answers = parsed(readers, 'reader', lambda i, m: dict(id=i, answer='Not stated' if number(i) % 4 == 0 else 'It says bolt and saw.'), tmp_path,
+                     '--questions', frozen)
     assert len(read_jsonl(answers)) == 120
     graders = grader_build(world, answers, frozen)
     first = parsed(graders, 'grader', grader_answer, tmp_path)
@@ -1071,15 +1290,16 @@ def test_the_whole_chain_round_trips_into_rows_score_accepts(world, tmp_path, ca
                   stopped_by_cap=False) for r in (1, 2)]
     questions = read_jsonl(frozen)
     result = analysis.score(world.rows, {name: 10.0 for name in LINEAGES}, labels + again + audits + costs, questions,
-                            json.loads(counts_path.read_text()))
+                            json.loads((frozen.parent/'screen.json').read_text()), sentence_counts)
     assert result['probes']['units'] == 20 and result['judge_agreement']['n'] == 12
     assert result['reference']['n'] == 20 and result['positive_control']['PW']['units'] == 20
+    assert result['positive_control']['paraphrases_failed_twice'] == sentence_counts['failed'] == 4
     assert result['questions_flagged_twice'] == 0 and {'A1', 'B1', 'B2'} <= set(result['figures'])
     assert 'arm_guessing' not in result and all('secondary' not in f for f in result['figures'].values())
 
 
 def synthetic_graded_labels(world, tmp_path):
-    answers, questions = synthetic_grader_inputs(world, every=1000), write_questions(world, freeze=False)
+    answers, questions = synthetic_grader_inputs(world, every=1000), write_questions(world)
     return grader_build(world, answers, questions)
 
 
@@ -1173,8 +1393,10 @@ def test_a_rewrite_replaces_the_flagged_rows_of_the_questions_it_is_based_on(wor
     assert all(r == old[r['probe']] for r in rows if r['probe'] not in chosen)
     other = write_jsonl(tmp_path/'other.jsonl', [question_of('zz-p0001')])
     answers = answers_for(out, 'question', lambda i, m: dict(id=i, question='q', key='k'), 'again')
+    with pytest.raises(batches.BatchError, match='not the questions file the question batches were built from'):
+        batches.parse('question', out, answers, other)          # a base the rewrite was not built from
     with pytest.raises(batches.BatchError, match='no question for'):
-        batches.parse('question', out, answers, other)
+        batches._replaced(analysis.question_rows(read_jsonl(write_jsonl(tmp_path/'tiny.jsonl', [question_of('a')]))), other)
 
 
 def test_parsed_answers_carry_their_text_arm_and_repeat_for_the_grader(world, tmp_path):
@@ -1224,7 +1446,7 @@ def test_only_the_audit_may_answer_out_of_order_every_id_exactly_once(world, tmp
 
 
 def test_answers_from_another_build_are_refused(world, tmp_path):
-    questions = write_questions(world, freeze=False)
+    questions = write_questions(world)
     one = grader_build(world, reader_answers(world), questions, 'one')
     changed = [dict(r, answer=r['answer'] + ' changed') if r['arm'] == 'A' else r for r in read_jsonl(world.root/'answers.jsonl')]
     other = write_jsonl(world.root/'other-answers.jsonl', changed)
@@ -1293,4 +1515,4 @@ def test_a_grader_over_the_screens_answers_makes_check_rows_not_score_rows(world
     checks = read_jsonl(parsed(out, 'grader', lambda i, m: dict(id=i, correct=number(i) % 2 == 0, why='x'), tmp_path))
     assert len(checks) == 20 and all(r['schema'] == 'p1-check/1' and r['purpose'] == 'screen' and 'type' not in r for r in checks)
     with pytest.raises(analysis.ScoreError):
-        analysis.score(world.rows, {n: 1.0 for n in LINEAGES}, checks, [], dict(flagged_twice=0))      # never a score input
+        analysis.score(world.rows, {n: 1.0 for n in LINEAGES}, checks, [], dict(flagged_twice=0), dict(failed=0))      # never a score input
