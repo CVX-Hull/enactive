@@ -2,15 +2,17 @@
 
   python -m tools.p1_analysis batches scoring --probes <p1-probes/1>... --delivered <delivered.jsonl>... --out DIR --host-version V
   python -m tools.p1_analysis batches rejudge --probes <p1-probes/1>... --delivered <delivered.jsonl>... --out DIR --host-version V
-  python -m tools.p1_analysis batches audit   --probes <p1-probes/1>... --delivered <delivered.jsonl>... --timelines DIR --out DIR --host-version V
+  python -m tools.p1_analysis batches audit   --probes <p1-probes/1>... --delivered <delivered.jsonl>... --out DIR --host-version V
   python -m tools.p1_analysis batches guess   --delivered <delivered.jsonl>... --out DIR --host-version V
   python -m tools.p1_analysis parse {scoring,rejudge,audit,guess} --batches DIR --answers DIR --out FILE
 
 `batches` writes, under `--out`, the judge-facing files `batches/<kind>-NNN.json` (the frozen brief, word for
 word, and items that carry an opaque `id` and what the brief names) and, apart from them, `keys/<kind>.json`,
 which maps each opaque id to what only the analysis may know (arm, repeat, probe) and is never given to a
-judge. The judge files hold absolute frame paths, so `--out` must lie outside the repository or under
-`.runtime/`. The same inputs give byte-identical files.
+judge. The judge files hold absolute frame paths, so `--out` must lie under the repository's `.runtime/`. The
+same inputs give byte-identical files. An opaque id is `<letter><8 hex of the build digest>-<counter>`, the
+build digest being a sha256 over the kind and the sorted digests of the inputs, and the key holds each batch
+file's sha256, so output from another build, or for an altered batch file, is refused.
 
 `parse` reads one judge output file per batch (`<batch>.jsonl` in `--answers`, one directory per kind) and
 writes the `p1-score/1` rows `tools.p1_analysis score` takes: `label` rows (`rejudge` true for the second
@@ -45,15 +47,13 @@ SCORING_SEED = 4911      # the scoring judges' mixed order (Judges, "Mixing")
 AUDIT_SEED = 4913        # the audit's draw of (working-set item, boundary) pairs (Judges)
 AUDIT_SAMPLE = 40        # per arm and repeat, at most
 
-# OPEN (owner): the pre-registration fixes none of the following; each is the smallest mechanism that
-# lets a batch be built, and each is a decision for the owner.
-REJUDGE_ORDER_SEED = SCORING_SEED   # OPEN (owner): the re-judging batches' order; `Random(4912)` only draws the sample
-AUDIT_ORDER_SEED = AUDIT_SEED       # OPEN (owner): the order that mixes the three arms' audit pairs into batches
-GUESS_SEED = 4914                   # OPEN (owner): the arm-guess draw and order; the page names no seed
-GUESS_B_REPEAT = 1                  # OPEN (owner): which of B's two repeats supplies the guess check's B texts
-GUESS_NEEDS_ITEMS = True            # OPEN (owner): draw only texts with a working set; without one A and B are the same bytes
-DROP_UNRESOLVED_CITES = True        # OPEN (owner): a cited frame that is not sealed is left off the item and counted, not fatal
-PACKING = 'first-fit'               # OPEN (owner): scoring batches fill the earliest batch with room and no text of the same unit
+# What the pre-registration leaves open, as the owner decided on 10 November 2026.
+REJUDGE_ORDER_SEED = SCORING_SEED   # Owner decision, 10 November 2026: the re-judging batches' order is Random(4911); Random(4912) only draws the sample
+AUDIT_ORDER_SEED = AUDIT_SEED       # Owner decision, 10 November 2026: Random(4913) mixes the three arms' audit pairs into batches
+GUESS_SEED = 4914                   # Owner decision, 10 November 2026: one Random(4914) shuffle of the 30 sorted guess items
+GUESS_B_REPEAT = 1                  # Owner decision, 10 November 2026: the guess check uses A repeat 1 and B repeat 1
+DROP_UNRESOLVED_CITES = True        # Owner decision, 10 November 2026: a cited frame that is not sealed is dropped and counted per arm
+PACKING = 'first-fit'               # Owner decision, 10 November 2026: each text goes to the earliest batch with room and no text of its unit
 
 # kind -> file prefix, opaque-id letter and the frozen brief it carries
 KINDS = {'scoring': dict(prefix='score', letter='s', brief='Scoring'),
@@ -132,11 +132,13 @@ class Frozen:
             raise BatchError('--probes is required (once per held-out directory)')
         self.rows: list[dict] = []
         self.where: dict[str, Path] = {}      # lineage -> its probes file
+        self.digests: list[str] = []          # the probes files' and their freezes' sha256, for the build digest
         for path in map(Path, paths):
             try:
-                rows, _ = analysis.frozen_probes([path])
+                rows, files = analysis.frozen_probes([path])
             except analysis.ScoreError as error:
                 raise BatchError(str(error)) from None
+            self.digests += [d for f in files for d in (f['sha256'], f['frozen_sha256'])]
             for row in rows:
                 self.where.setdefault(row.get('lineage'), path)
             self.rows += rows
@@ -177,16 +179,20 @@ def _dump(value: object) -> str:
 
 
 def _check_out(out: Path) -> Path:
-    """The judge files hold absolute paths: outside the repository, or under its `.runtime/`."""
+    """The judge files hold absolute paths: they stay under the repository's `.runtime/` (not tracked)."""
     resolved = Path(out).resolve()
-    root = ROOT.resolve()
-    if resolved.is_relative_to(root) and not resolved.is_relative_to(root/'.runtime'):
-        raise BatchError('--out holds absolute paths: it must be outside the repository or under .runtime/')
+    if not resolved.is_relative_to((ROOT/'.runtime').resolve()):
+        raise BatchError('--out holds absolute paths: it must be under the repository\'s .runtime/')
     return resolved
 
 
+def build_digest(kind: str, inputs: Sequence[str]) -> str:
+    """sha256 over the kind and the sorted digests of the inputs (the delivered files and the frozen probes)."""
+    return hashlib.sha256('\n'.join([kind, *sorted(inputs)]).encode()).hexdigest()
+
+
 def write_batches(kind: str, out: Path, batches: list[list[dict]], *, seed: int | str, host_version: str,
-                  extra: dict | None = None) -> dict:
+                  inputs: Sequence[str], extra: dict | None = None) -> dict:
     """Write the judge files and the key. Each entry has `public` (the item minus its id) and `key`."""
     spec = KINDS[kind]
     out = _check_out(out)
@@ -194,6 +200,7 @@ def write_batches(kind: str, out: Path, batches: list[list[dict]], *, seed: int 
     if key_path.exists() or any((out/'batches').glob(f'{spec["prefix"]}-*.json')):
         raise BatchError(f'{kind} batches exist under the output directory: they are written once')
     brief = frozen_brief(spec['brief'])
+    build = build_digest(kind, inputs)
     names, items, files = [], {}, {}
     counter = 0
     for number, batch in enumerate(batches, 1):
@@ -201,13 +208,14 @@ def write_batches(kind: str, out: Path, batches: list[list[dict]], *, seed: int 
         listed = []
         for entry in batch:
             counter += 1
-            opaque = f'{spec["letter"]}{counter:04d}'
+            opaque = f'{spec["letter"]}{build[:8]}-{counter:04d}'
             listed.append(dict(entry['public'], id=opaque))
             items[opaque] = entry['key']
         names.append(dict(name=name, ids=[i['id'] for i in listed]))
         files[name] = _dump(dict(schema=BATCH_SCHEMA, brief=brief, items=listed))
-    key = _dump(dict(schema=KEY_SCHEMA, kind=kind, seed=seed, host_version=host_version, batches=names, items=items,
-                     **(extra or {})))
+    key = _dump(dict(schema=KEY_SCHEMA, kind=kind, seed=seed, host_version=host_version, build_sha256=build,
+                     batch_files={name: hashlib.sha256(text.encode()).hexdigest() for name, text in files.items()},
+                     batches=names, items=items, **(extra or {})))
     for name, text in files.items():
         (out/'batches').mkdir(parents=True, exist_ok=True)
         (out/'batches'/f'{name}.json').write_text(text, encoding='utf-8')
@@ -256,16 +264,19 @@ def reobservation_entries(frozen: Frozen, delivered: dict, evidence: Path, wante
     return entries
 
 
-def scoring_batches(frozen: Frozen, delivered: dict, evidence: Path, out: Path, host_version: str) -> dict:
+def scoring_batches(frozen: Frozen, delivered: dict, evidence: Path, out: Path, host_version: str,
+                    inputs: Sequence[str]) -> dict:
     entries = reobservation_entries(frozen, delivered, evidence, None)
-    return write_batches('scoring', out, pack(entries, SCORING_SEED), seed=SCORING_SEED, host_version=host_version)
+    return write_batches('scoring', out, pack(entries, SCORING_SEED), seed=SCORING_SEED, host_version=host_version,
+                         inputs=inputs)
 
 
-def rejudge_batches(frozen: Frozen, delivered: dict, evidence: Path, out: Path, host_version: str) -> dict:
+def rejudge_batches(frozen: Frozen, delivered: dict, evidence: Path, out: Path, host_version: str,
+                    inputs: Sequence[str]) -> dict:
     wanted = analysis.rejudge_sample(frozen.units)
     entries = reobservation_entries(frozen, delivered, evidence, wanted)
     return write_batches('rejudge', out, pack(entries, REJUDGE_ORDER_SEED), seed=REJUDGE_ORDER_SEED,
-                         host_version=host_version, extra=dict(sample_seed=analysis.REJUDGE_SEED))
+                         host_version=host_version, inputs=inputs, extra=dict(sample_seed=analysis.REJUDGE_SEED))
 
 
 # ------------------------------------------------------------------ audit batches
@@ -290,35 +301,46 @@ def _shown(frames: list[tuple[str, str]]) -> list[dict]:
     return [dict(source=source, frame=path) for source, path in frames]
 
 
-def audit_batches(frozen: Frozen, delivered: dict, evidence: Path, timelines: Path, out: Path, host_version: str) -> dict:
-    timelines = Path(timelines).resolve()
+def audit_batches(frozen: Frozen, delivered: dict, evidence: Path, out: Path, host_version: str,
+                  inputs: Sequence[str]) -> dict:
     chunks: dict[tuple, dict] = {}
+    planned: set[tuple] = set()      # (lineage, boundary) of every held-out lineage, from the digest-checked plans
     for lineage in frozen.where:
         for entry in frozen.document(lineage, 'ledger-plan.json')['lineages'][lineage]['chunks']:
             chunks[(lineage, entry['chunk'])] = entry
+            if entry.get('incoming_boundary'):
+                planned.add((lineage, entry['incoming_boundary']))
     pairs: dict[tuple, list[tuple]] = {}
+    covered: dict[tuple, set] = {}
     for (lineage, boundary, arm, repeat), row in sorted(delivered.items()):
         if arm == 'R' or lineage not in analysis.HELD_OUT or repeat not in analysis.ARMS.get(arm, ()):
             continue
+        covered.setdefault((arm, repeat), set()).add((lineage, boundary))
         if not row['complete'] or not isinstance(row.get('working_set'), list):
             raise BatchError(f'a delivered row of {lineage} {arm}{repeat} is incomplete or has no working_set')
         pairs.setdefault((arm, repeat), []).extend((lineage, boundary, n) for n in range(len(row['working_set'])))
     if set(pairs) != {(arm, rep) for arm, reps in analysis.ARMS.items() for rep in reps}:
         raise BatchError('the delivered files must hold A1, B1 and B2')
-    entries, unresolved, drawn = [], 0, {}
+    for (arm, repeat), have in sorted(covered.items()):
+        if have != planned:    # every boundary of every held-out lineage, for each arm and repeat
+            lost, extra = sorted(planned - have), sorted(have - planned)
+            raise BatchError(f'{arm}{repeat}: the delivered boundaries differ from the ledger plans '
+                             f'({len(lost)} missing, e.g. {lost[:3]}; {len(extra)} unexpected, e.g. {extra[:3]})')
+    entries, unresolved, drawn = [], {}, {}
     for (arm, repeat), universe in sorted(pairs.items()):
-        # `Random(4913)` draws up to 40 pairs from all of the arm and repeat's delivered items.
+        # Owner decision, 10 November 2026: a fresh Random(4913) for each (arm, repeat), as the page words it
+        # ("For each arm and each repeat, Random(4913) draws"), up to 40 pairs of all the arm and repeat's delivered items.
         sample = random.Random(AUDIT_SEED).sample(universe, min(AUDIT_SAMPLE, len(universe)))
         drawn[f'{arm}{repeat}'] = len(sample)
+        unresolved[f'{arm}{repeat}'] = 0
         for lineage, boundary, position in sample:
             item = delivered[(lineage, boundary, arm, repeat)]['working_set'][position]
             if not isinstance(item, dict) or not isinstance(item.get('statement'), str):
                 raise BatchError(f'a delivered working_set item of {lineage} {arm}{repeat} is malformed')
             predecessor = boundary.split('>')[0]
             chunk = chunks.get((lineage, predecessor))
-            timeline = timelines/chunk['timeline'] if chunk else None
-            if chunk is None or not timeline.is_file():
-                raise BatchError(f'{lineage}: a predecessor chunk has no timeline under --timelines')
+            if chunk is None:
+                raise BatchError(f'{lineage}: the predecessor chunk of boundary {boundary} is not in the ledger plan')
             session = evidence/HELD_OUT_STUDIES[lineage]/'computer-sessions'/predecessor.rsplit('-', 1)[0]
             coverage = [(s, str((session/'sources'/f'{s}.png').resolve())) for s in chunk['required_frames']]
             if not all(Path(path).is_file() for _, path in coverage):
@@ -326,37 +348,40 @@ def audit_batches(frozen: Frozen, delivered: dict, evidence: Path, timelines: Pa
             cited, lost = _resolve_cites(evidence, lineage, item.get('cites'))
             if lost and not DROP_UNRESOLVED_CITES:
                 raise BatchError(f'{lineage}: a cited frame is not sealed')
-            unresolved += lost
+            unresolved[f'{arm}{repeat}'] += lost
             entries.append(dict(
                 sort=(arm, repeat, lineage, boundary, position), unit=(arm, repeat, lineage, boundary, position),
-                # The statement as the arm-blind judges see it (one `- ` line); no arm, repeat or lineage.
-                public=dict(statement=f'- {item["statement"]}', cited_frames=_shown(cited), timeline=str(timeline),
-                            timeline_frames=_shown(coverage)),
-                key=dict(arm=arm, repeat=repeat, item=f'{lineage}/{boundary}#{position}',
-                         frames=sorted({s for s, _ in cited} | {s for s, _ in coverage}))))
+                # The statement as the arm-blind judges see it (one `- ` line), then frames only: the frames it
+                # cites and the predecessor chunk's coverage-rule frames. Never the timeline text, which holds the
+                # predecessor's memory records. No arm, repeat or lineage.
+                public=dict(statement=f'- {item["statement"]}', cited_frames=_shown(cited),
+                            coverage_frames=_shown(coverage)),
+                key=dict(arm=arm, repeat=repeat, item=f'{lineage}/{boundary}#{position}')))
     return dict(write_batches('audit', out, pack(entries, AUDIT_ORDER_SEED), seed=AUDIT_ORDER_SEED,
-                              host_version=host_version, extra=dict(draw_seed=AUDIT_SEED)),
+                              host_version=host_version, inputs=inputs,
+                              extra=dict(draw_seed=AUDIT_SEED, drawn=drawn, unresolved_cites=unresolved)),
                 drawn=drawn, unresolved_cites=unresolved)
 
 
 # ------------------------------------------------------------------ the arm-guess batch
-def guess_batches(delivered: dict, out: Path, host_version: str) -> dict:
-    """30 delivered texts, 15 from A and 15 from B (repeat GUESS_B_REPEAT), drawn and ordered with GUESS_SEED."""
+def guess_batches(delivered: dict, out: Path, host_version: str, inputs: Sequence[str]) -> dict:
+    """Owner decision, 10 November 2026: the 30 texts are every boundary of the delivered development rows given,
+    once per arm (A repeat 1 and B repeat GUESS_B_REPEAT), so exactly 15 each; one Random(GUESS_SEED) shuffle
+    of the sorted items; one batch."""
     half = analysis.GUESSES // 2
-    rng = random.Random(GUESS_SEED)
     chosen = []
     for arm, repeat in (('A', 1), ('B', GUESS_B_REPEAT)):
         rows = [row for key, row in sorted(delivered.items()) if key[2:] == (arm, repeat)]
+        if len(rows) != half:
+            raise BatchError(f'{arm}{repeat} has {len(rows)} delivered boundaries; the check needs exactly {half}')
         if any(not row['complete'] for row in rows):
             raise BatchError(f'delivered texts of {arm}{repeat} are incomplete')
-        rows = [row for row in rows if row['items'] > 0 or not GUESS_NEEDS_ITEMS]
-        if len(rows) < half:
-            raise BatchError(f'{arm}{repeat} has {len(rows)} delivered texts to draw from; the check needs {half}')
-        chosen += [(arm, row) for row in rng.sample(rows, half)]
-    rng.shuffle(chosen)
-    entries = [dict(sort=n, unit=n, public=dict(text=row['text']), key=dict(arm=arm)) for n, (arm, row) in enumerate(chosen)]
-    batches = [entries]    # one batch: a fresh judge sees all 30
-    return write_batches('guess', out, batches, seed=GUESS_SEED, host_version=host_version,
+        chosen += [(row['lineage'], row['boundary'], arm, row) for row in rows]
+    chosen.sort(key=lambda c: c[:3])
+    random.Random(GUESS_SEED).shuffle(chosen)
+    entries = [dict(sort=n, unit=n, public=dict(text=row['text']), key=dict(arm=arm))
+               for n, (_, _, arm, row) in enumerate(chosen)]
+    return write_batches('guess', out, [entries], seed=GUESS_SEED, host_version=host_version, inputs=inputs,
                          extra=dict(b_repeat=GUESS_B_REPEAT))
 
 
@@ -409,34 +434,55 @@ def _answers(path: Path, ids: list[str], key: dict, kind: str) -> dict[str, dict
             if not valid(row[field]):
                 raise BatchError(f'{where}: field {field} (id {row["id"]}) has the wrong type or value')
         if kind == 'audit':
-            allowed = key['items'][row['id']]['frames']
-            if row['frame'] is not None and (not isinstance(row['frame'], str) or row['frame'] not in allowed):
-                raise BatchError(f'{where}: frame (id {row["id"]}) is not null or a frame listed for the item')
+            frame = row['frame']
+            if frame is None or frame == 'null':     # the brief's `<source id or null>`, written either way
+                row['frame'] = None
+            elif not isinstance(frame, str) or _SOURCE_ID.fullmatch(frame) is None:
+                raise BatchError(f'{where}: frame (id {row["id"]}) is not null or a source id')
         got[row['id']] = row
     if len(got) != len(ids):
         missing = [i for i in ids if i not in got]
         raise BatchError(f'{path.name}: {len(missing)} ids missing (first {", ".join(missing[:3])})')
-    if list(got) != ids:
+    # The scoring brief says "one per item in the given order"; the audit and guess briefs ask only for one line per item.
+    if kind in ('scoring', 'rejudge') and list(got) != ids:
         raise BatchError(f'{path.name}: not in batch order')
     return got
+
+
+def _verify_build(run: Path, key: dict, kind: str) -> None:
+    """Every batch file under --batches is the one the key was made for: same files, same sha256."""
+    directory = Path(run)/'batches'
+    digests = key.get('batch_files')
+    if not isinstance(digests, dict) or set(digests) != {b.get('name') for b in key['batches']}:
+        raise BatchError(f'keys/{kind}.json: records no batch file digests')
+    prefix = KINDS[kind]['prefix']
+    present = {p.stem: p for p in directory.glob(f'{prefix}-*.json')} if directory.is_dir() else {}
+    if set(present) != set(digests):
+        raise BatchError(f'batches/ does not hold exactly the {kind} batch files of the key: '
+                         f'{", ".join(sorted(set(present) ^ set(digests)))}')
+    changed = sorted(name for name, path in present.items() if file_sha256(path) != digests[name])
+    if changed:
+        raise BatchError(f'batch files differ from the build the key was made for: {", ".join(changed)}')
 
 
 def parse(kind: str, run: Path, answers: Path) -> list[dict]:
     """The `p1-score/1` rows of one kind's judge output files, refusing anything not exactly as asked."""
     key = _load_key(run, kind)
+    _verify_build(run, key, kind)
     expected = {f'{b["name"]}.jsonl': b for b in key['batches']}
     answers = Path(answers)
     if not answers.is_dir():
         raise BatchError('--answers is not a directory')
-    present = {p.name for p in answers.iterdir()}
+    present = {p.name for p in answers.iterdir() if not p.name.startswith('.')}
     if expected.keys() - present:
         raise BatchError(f'missing batch outputs: {", ".join(sorted(expected.keys() - present))}')
     if present - expected.keys():
         raise BatchError(f'files that belong to no batch: {", ".join(sorted(present - expected.keys()))}')
     rows = []
     for name, batch in expected.items():
-        for opaque, row in _answers(answers/name, batch['ids'], key, kind).items():
-            item = key['items'][opaque]
+        got = _answers(answers/name, batch['ids'], key, kind)
+        for opaque in batch['ids']:     # the key's order, whatever order the audit or guess judge wrote
+            row, item = got[opaque], key['items'][opaque]
             if kind in ('scoring', 'rejudge'):
                 made = dict(type='label', schema=analysis.SCORE_SCHEMA, kind=item['kind'], arm=item['arm'],
                             repeat=item['repeat'], item=item['item'], stated=row['stated'])
@@ -470,8 +516,7 @@ def main(argv: list[str] | None = None) -> int:
     build.add_argument('--probes', type=Path, action='append', help='a frozen held-out p1-probes/1 file, once per directory')
     build.add_argument('--delivered', type=Path, action='append', required=True, help='a p1-delivered/2 file')
     build.add_argument('--evidence-root', type=Path, default=None)
-    build.add_argument('--timelines', type=Path, help='audit: the directory of annotation timelines (held-out-timelines --to)')
-    build.add_argument('--out', type=Path, required=True)
+    build.add_argument('--out', type=Path, required=True, help='a new directory under the repository\'s .runtime/')
     build.add_argument('--host-version', required=True, help='the coding host\'s version, recorded with each batch')
     read = sub.add_parser('parse', help='turn the judges\' output files into p1-score/1 rows')
     read.add_argument('kind', choices=tuple(KINDS))
@@ -488,20 +533,21 @@ def main(argv: list[str] | None = None) -> int:
             args.out.write_text(''.join(json.dumps(r, sort_keys=True, ensure_ascii=False) + '\n' for r in rows), encoding='utf-8')
             print(json.dumps(dict(kind=args.kind, rows=len(rows), rows_sha256=file_sha256(args.out))))
             return 0
+        _check_out(args.out)
         delivered = read_delivered(args.delivered)
         evidence = Path(args.evidence_root or _evidence_default()).resolve()
+        inputs = [file_sha256(path) for path in args.delivered]
         if args.kind == 'guess':
-            result = guess_batches(delivered, args.out, args.host_version)
+            result = guess_batches(delivered, args.out, args.host_version, inputs)
         else:
             frozen = Frozen(args.probes or [])
+            inputs += frozen.digests
             if args.kind == 'scoring':
-                result = scoring_batches(frozen, delivered, evidence, args.out, args.host_version)
+                result = scoring_batches(frozen, delivered, evidence, args.out, args.host_version, inputs)
             elif args.kind == 'rejudge':
-                result = rejudge_batches(frozen, delivered, evidence, args.out, args.host_version)
+                result = rejudge_batches(frozen, delivered, evidence, args.out, args.host_version, inputs)
             else:
-                if not args.timelines:
-                    raise BatchError('audit needs --timelines')
-                result = audit_batches(frozen, delivered, evidence, args.timelines, args.out, args.host_version)
+                result = audit_batches(frozen, delivered, evidence, args.out, args.host_version, inputs)
     except (BatchError, analysis.ScoreError) as error:
         print(f'p1_batches: {error}', file=sys.stderr)
         return 2
