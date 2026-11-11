@@ -68,8 +68,8 @@ def guards_ok(false_b=1):
     return ([dict(type='audit', schema=p1.SCORE_SCHEMA, arm='A', repeat=1, item=f'a{i}', false=False) for i in range(40)]
             + [dict(type='audit', schema=p1.SCORE_SCHEMA, arm='B', repeat=r, item=f'b{i}', false=i < false_b)
                for r in (1, 2) for i in range(40)]
-            + [dict(type='cost', schema=p1.SCORE_SCHEMA, repeat=r, lineage='lh1', curator_dollars=15.0,
-                    actor_dollars=30.0, stopped_by_cap=False) for r in (1, 2)])
+            + [dict(type='cost', schema=p1.SCORE_SCHEMA, repeat=r, lineage=lineage, curator_dollars=3.75,
+                    actor_dollars=7.5, stopped_by_cap=False) for r in (1, 2) for lineage in p1.HELD_OUT])
 
 
 def study(rates, per_boundary=10, extra=(), flip=lambda row: row['stated']):
@@ -153,8 +153,8 @@ def test_a_gain_that_rejudging_removes_is_not_a_go():
 
 @pytest.mark.parametrize('extra, check', [
     (lambda: [r for r in guards_ok() if r['type'] != 'cost']
-     + [dict(type='cost', schema=p1.SCORE_SCHEMA, repeat=r, lineage='lh1', curator_dollars=40.0, actor_dollars=30.0,
-             stopped_by_cap=False) for r in (1, 2)], 'cost'),
+     + [dict(type='cost', schema=p1.SCORE_SCHEMA, repeat=r, lineage=lineage, curator_dollars=10.0, actor_dollars=7.5,
+             stopped_by_cap=False) for r in (1, 2) for lineage in p1.HELD_OUT], 'cost'),
     (lambda: guards_ok(false_b=6), 'false_facts'),                  # 0.15 > 0.10
     (lambda: guards_ok(false_b=4), 'false_facts'),                  # 0.10, but its upper bound is above 0.20
 ])
@@ -173,6 +173,46 @@ def test_a_held_out_repeat_that_reached_its_cap_fails_the_cost_guard_without_sco
     result = scored(rows, capped)       # partial labels: none at all
     assert result['decision']['go'] is False and 'reached its cap' in result['decision']['outcome']
     assert result['questions_flagged_twice'] == 0
+
+
+@pytest.mark.parametrize('damage', ['missing', 'duplicate', 'empty'])
+def test_costs_cover_each_repeat_and_lineage_once(damage):
+    extra = guards_ok()
+    cost = next(row for row in extra if row['type'] == 'cost')
+    if damage == 'missing':
+        extra.remove(cost)
+    elif damage == 'duplicate':
+        extra.append(dict(cost, curator_dollars=0))  # duplicate actor denominator can manufacture a pass
+    else:
+        extra = [row for row in extra if row['type'] != 'cost']
+    rows, scores = study({'A1': 0.3, 'B1': 0.8, 'B2': 0.8}, extra=extra)
+    with pytest.raises(p1.ScoreError, match='cost rows'):
+        scored(rows, scores)
+
+
+@pytest.mark.parametrize('field,value', [('actor_dollars', float('inf')), ('curator_dollars', float('nan')),
+                                        ('actor_dollars', True), ('curator_dollars', -1),
+                                        ('actor_dollars', 10 ** 1000), ('repeat', True)])
+def test_costs_reject_invalid_or_unrepresentable_amounts(field, value):
+    extra = guards_ok()
+    next(row for row in extra if row['type'] == 'cost')[field] = value
+    rows, scores = study({'A1': 0.3, 'B1': 0.8, 'B2': 0.8}, extra=extra)
+    with pytest.raises(p1.ScoreError, match='cost row'):
+        scored(rows, scores)
+
+
+def test_finite_cost_rows_cannot_overflow_the_pooled_denominator():
+    extra = [dict(row, actor_dollars=1e308) if row['type'] == 'cost' else row for row in guards_ok()]
+    rows, scores = study({'A1': 0.3, 'B1': 0.8, 'B2': 0.8}, extra=extra)
+    with pytest.raises(p1.ScoreError, match='cost totals'):
+        scored(rows, scores)
+
+
+def test_a_tiny_positive_denominator_cannot_produce_an_infinite_cost_ratio():
+    extra = [dict(row, actor_dollars=1e-320) if row['type'] == 'cost' else row for row in guards_ok()]
+    rows, scores = study({'A1': 0.3, 'B1': 0.8, 'B2': 0.8}, extra=extra)
+    with pytest.raises(p1.ScoreError, match='cost ratio'):
+        scored(rows, scores)
 
 
 def test_rejudging_must_be_exactly_the_seeded_sample():

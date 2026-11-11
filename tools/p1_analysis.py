@@ -31,7 +31,8 @@ are off by default, and a run that uses either writes only outside `data/`.
 `score` computes every pre-registered figure and the decision from the confirmed re-observation
 probes, the answer-key chain's labels, the seeded re-judging, the false-fact audit and the settled
 costs, and reports the Reference, the bias control and the positive control. It refuses an
-incomplete study. Nothing here judges text; it only counts labels.
+incomplete study, including missing or repeated cost rows for the two repeats and four lineages.
+Amounts and pooled cost totals must be finite and nonnegative. Nothing here judges text; it only counts labels.
 """
 from __future__ import annotations
 
@@ -284,6 +285,7 @@ def _stated(found: dict[tuple, tuple[bool, bool]]) -> dict[tuple, bool]:
 
 def _validated(rows: list[dict]) -> tuple[list[dict], list[dict]]:
     audits, costs = [], []
+    cost_keys = set()
     for row in rows:
         if row.get('type') == 'audit':
             if (row.get('schema') != SCORE_SCHEMA or row.get('arm') not in ARMS or row.get('repeat') not in ARMS[row['arm']]
@@ -291,11 +293,16 @@ def _validated(rows: list[dict]) -> tuple[list[dict], list[dict]]:
                 raise ScoreError(f'audit row outside the study: {row}')
             audits.append(row)
         elif row.get('type') == 'cost':
-            if (row.get('schema') != SCORE_SCHEMA or row.get('repeat') not in ARMS['B'] or row.get('lineage') not in HELD_OUT
+            if (row.get('schema') != SCORE_SCHEMA or type(row.get('repeat')) is not int
+                    or row.get('repeat') not in ARMS['B'] or row.get('lineage') not in HELD_OUT
                     or not isinstance(row.get('stopped_by_cap'), bool)
-                    or not all(isinstance(row.get(k), (int, float)) and row[k] >= 0
+                    or not all(type(row.get(k)) in (int, float) and 0 <= row[k] <= sys.float_info.max and math.isfinite(row[k])
                                for k in ('curator_dollars', 'actor_dollars'))):
                 raise ScoreError(f'cost row outside the study: {row}')
+            key = (row['repeat'], row['lineage'])
+            if key in cost_keys:
+                raise ScoreError(f'cost rows repeat a lineage: {key}')
+            cost_keys.add(key)
             costs.append(row)
         elif row.get('type') != 'label':
             raise ScoreError(f'unknown row type: {row}')
@@ -332,7 +339,11 @@ def figures(unit_rows: list[dict], hours: dict[str, float], stated: dict[tuple, 
             k, n = entry['audit']['false'], entry['audit']['audited']
             entry['audit'].update(rate=_rate(k, n), upper_95=1.0 if k == n else float(beta.ppf(0.95, k + 1, n - k)))
         if 'cost' in entry:
+            if not all(math.isfinite(value) for value in entry['cost'].values()):
+                raise ScoreError('pooled cost totals must be finite')
             entry['cost']['ratio'] = _rate(entry['cost']['curator_dollars'], entry['cost']['actor_dollars'])
+            if entry['cost']['ratio'] is not None and not math.isfinite(entry['cost']['ratio']):
+                raise ScoreError('pooled cost ratio must be finite')
     return out
 
 
@@ -472,6 +483,8 @@ def score(probe_rows: list[dict], hours: dict[str, float], rows: list[dict], que
     if capped:
         # A held-out repeat that reached its cap has failed the cost guard; its partial labels decide nothing.
         return dict(base, decision=dict(go=False, outcome=f'guard failed: held-out repeat {capped} reached its cap'))
+    if {(row['repeat'], row['lineage']) for row in costs} != {(rep, name) for rep in ARMS['B'] for name in HELD_OUT}:
+        raise ScoreError('cost rows must cover each repeat and held-out lineage exactly once')
     first, second = labels(rows)
     stated, restated = _stated(first), _stated(second)
     if set(restated) != rejudge_sample(unit_rows):
