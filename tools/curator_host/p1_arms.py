@@ -157,7 +157,8 @@ def record_statement(record: dict) -> str:
         extra = '' if data in _EMPTY else _prose(data)
     if not (text and extra):
         return text or extra
-    return f'{text}{"" if text.endswith(".") else "."} {extra}'
+    # No added `.` after a sentence end: `!.` or `?.` is a mark only a record could produce (owner, 9 November).
+    return f'{text}{"" if text.endswith((".", "!", "?")) else "."} {extra}'
 
 
 def _written_before(row: dict, cutoff: float) -> bool:

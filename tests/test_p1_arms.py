@@ -149,6 +149,9 @@ def test_a_record_statement_folds_data_into_prose_in_key_order():
     assert statement(dict(text='at the shed', data={'where': 'north', 'count': 3, 'empty': '', 'items': ['a', 'b']})) \
         == 'at the shed. count: 3; items: a, b; where: north'
     assert statement(dict(text='ends here.', data={'k': True})) == 'ends here. k: true'
+    assert statement(dict(text='watch out!', data={'k': 1})) == 'watch out! k: 1'      # no `!.` or `?.`: a tell only A has
+    assert statement(dict(text='which door?', data={'k': 1})) == 'which door? k: 1'
+    assert statement(dict(text='wow! ', data={'k': 1})) == 'wow! k: 1'                 # the text is stripped first
     assert statement(dict(text='nested', data={'o': {'x': 1, 'y': ['p', 'q']}})) == 'nested. o: x 1, y p, q'
     assert statement(dict(text='', data={'only': 'data'})) == 'only: data'
     assert statement(dict(text='plain', data=None)) == 'plain'

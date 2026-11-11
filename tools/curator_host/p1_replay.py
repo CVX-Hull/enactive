@@ -3,6 +3,11 @@
     python -m tools.curator_host.p1_replay b --stage pilot --repeat 1 --lineage aidB3 ceil09 --cap-usd 12
     python -m tools.curator_host.p1_replay deliver --lineage 397 --schedule <schedule.json> --out <runtime>/p1-delivered/dev
     python -m tools.curator_host.p1_replay freeze
+    python -m tools.curator_host.p1_replay check --lineage lh4
+
+`check` is the format check before the freeze: it builds arm A's items and arm B's cut-offs and projects each
+admission's trace, with no curator session, and prints counts or an exception's class name only. It is the one
+command that takes a held-out lineage without `--frozen`.
 
 `b` runs one curator session per admission of each lineage, in order, on a fresh knowledge
 repository, with the pre-registered settings (terra, medium effort, a 24/12 image window, at most
@@ -34,6 +39,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import tempfile
 import time
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -42,6 +48,7 @@ if __package__ in (None, ''):
 
 from harness.curator.knowledge import KnowledgeError, Repository  # noqa: E402
 from harness.jsonio import file_sha256  # noqa: E402
+from harness.trace.projection import project  # noqa: E402
 from tools.curator_host import p1_arms as arms  # noqa: E402
 from tools.curator_host import shadow  # noqa: E402
 
@@ -473,6 +480,42 @@ def deliver(args: argparse.Namespace) -> dict:
     return counts
 
 
+# ------------------------------------------------------------------ the format check
+def format_check(names: Sequence[str], evidence: Path) -> dict:
+    """The format check before the arms freeze (p1-study/3, "Two steps before the freeze"): arm A's items and arm B's
+    per-admission schedule built on each lineage with no curator session, and each admission's trace projected as its
+    curator session would project it. It needs no freeze, so it may run on a held-out lineage, and for that reason
+    it returns counts and, on a failure, the exception's class name only: never a message, a path, a record or a
+    text. It keeps nothing: the projections go to a temporary directory that is removed."""
+    out: dict[str, dict] = {}
+    for name in names:
+        try:
+            spec = LINEAGES[name]
+            sessions = [_trace(evidence, spec, session) for session in spec.sessions]
+            store = arms.read_store(evidence/spec.directory/spec.store)
+            found = arms.boundaries(sessions)
+            cutoffs = arms.curator_cutoffs(sessions)
+            rendered = [arms.render(arms.arm_a_items(store, boundary.cutoff)) for boundary in found]
+            for boundary in found:
+                arms.received_text(boundary)
+            # What each curator session does first: project its admission's trace with the store cut at its cut-off.
+            # The projection goes to a temporary directory that is removed; only its file count leaves.
+            projected = 0
+            with tempfile.TemporaryDirectory(prefix='p1-check-') as scratch:
+                for index, (trace, until) in enumerate(zip(sessions, cutoffs)):
+                    manifest = project([trace], Path(scratch)/f's{index}', memory=evidence/spec.directory/spec.store,
+                                       memory_until=until)
+                    projected += len(manifest['files'])
+            out[name] = dict(ok=True, sessions=len(sessions), boundaries=len(found), projected_files=projected,
+                             admission_boundaries=sum(b.kind == 'admission' for b in found),
+                             cutoffs=sum(c is not None for c in cutoffs), whole_store_sessions=sum(c is None for c in cutoffs),
+                             a_texts=len(rendered), a_texts_with_items=sum(r.items > 0 for r in rendered),
+                             a_texts_cut_by_the_cap=sum(r.dropped > 0 for r in rendered))
+        except Exception as error:   # noqa: BLE001  the class name is all a held-out failure may show
+            out[name] = dict(ok=False, error=type(error).__name__)
+    return out
+
+
 # ------------------------------------------------------------------ command line
 def parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -501,6 +544,11 @@ def parser() -> argparse.ArgumentParser:
     f = sub.add_parser('freeze', help='write the p1-arms-frozen/1 file')
     f.add_argument('--prices', default=str(shadow.DEFAULT_PRICES))
     f.add_argument('--out', type=Path, default=FROZEN_FILE)
+
+    c = sub.add_parser('check', help='the format check: build arm A and the B schedule, print counts only')
+    c.add_argument('--lineage', required=True, nargs='+', choices=sorted(LINEAGES))
+    c.add_argument('--runtime-root', default=str(ROOT/'.runtime'))
+    c.add_argument('--evidence-root', help='default: <runtime-root>/evidence (or ENACTIVE_EVIDENCE_ROOT)')
     return p
 
 
@@ -513,6 +561,10 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if args.evidence_root is None and os.environ.get('ENACTIVE_EVIDENCE_ROOT'):
             args.evidence_root = os.environ['ENACTIVE_EVIDENCE_ROOT']
+        if args.command == 'check':
+            checked = format_check(args.lineage, _evidence(args))
+            print(json.dumps(checked, sort_keys=True))
+            return 0 if all(entry['ok'] for entry in checked.values()) else 1
         if args.command == 'deliver':
             print(json.dumps(deliver(args), sort_keys=True))
             return 0
