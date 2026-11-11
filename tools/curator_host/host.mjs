@@ -13,6 +13,7 @@ const MAX_SUMMARY_CHARS = 2000;
 const NARRATION_BYTES = 1024;
 const RETRY_STATUSES = [502, 503, 504];
 const MAX_RETRY_DELAY_MS = 60_000;
+const SERVICE_TIER = 'default';
 const levels = ['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'];
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const positive = value => Number.isSafeInteger(value) && value > 0;
@@ -71,7 +72,7 @@ export function validateConfiguration(configuration) {
   }
   closed(model.compat, ['supportsDeveloperRole', 'supportsStore', 'supportsUsageInStreaming', 'supportsReasoningEffort',
     'supportsStrictMode', 'maxTokensField', 'thinkingFormat', 'openRouterRouting']);
-  // The proxy forwards only `max_completion_tokens` and no service tier; the actor's `max_tokens` is refused.
+  // The proxy forwards `max_completion_tokens` and requires the default tier; `max_tokens` is refused.
   requireThat(model.compat.maxTokensField === 'max_completion_tokens' && model.compat.thinkingFormat === 'openrouter');
   requireThat(model.compat.supportsStore === false && model.compat.supportsUsageInStreaming === true);
   requireThat(model.compat.supportsReasoningEffort === model.reasoning);
@@ -286,7 +287,7 @@ export async function runCurator(options) {
 
   try {
     requireThat(text(options.systemPrompt) && text(options.brief), 'invalid-input');
-    emit('host-start', { schema: SCHEMA, model: model.id, effort, max_requests: configuration.max_requests,
+    emit('host-start', { schema: SCHEMA, model: model.id, effort, requested_service_tier: SERVICE_TIER, max_requests: configuration.max_requests,
       max_output_tokens: model.maxTokens, context_window: model.contextWindow, request_timeout_seconds: configuration.request_timeout_seconds,
       wall_seconds: configuration.wall_seconds, max_context_images: configuration.max_context_images,
       provider_routing: structuredClone(model.compat.openRouterRouting), tools: tools.map(tool => tool.name) });
@@ -324,6 +325,7 @@ export async function runCurator(options) {
           if (requests >= configuration.max_requests) { stop('request-limit'); return failureStream(streamModel, fatal); }
           try {
             rawUsage = undefined; httpStatus = undefined; providerChunks = 0; sawFinish = false;
+            let generationId;
             clearTimeout(requestTimer);
             requestTimer = setTimeout(() => stop('request-timeout'), configuration.request_timeout_seconds * 1000);
             const signal = AbortSignal.any([streamOptions?.signal, stopped.signal].filter(Boolean));
@@ -373,7 +375,16 @@ export async function runCurator(options) {
             return stream(streamModel, context, { ...streamOptions, apiKey: proxy.token, fetch: observedFetch, env: {}, signal,
               maxRetries: 0, cacheRetention: 'short', maxTokens: model.maxTokens, timeoutMs: configuration.request_timeout_seconds * 1000,
               reasoningEffort: effort === 'off' ? undefined : effort,
+              // Omission can inherit a workspace tier. Use the pinned SDK's payload hook,
+              // as the player host does, so the proxy sees an explicit standard-tier request.
+              onPayload: payload => ({ ...payload, service_tier: SERVICE_TIER }),
               onProviderStreamEvent: chunk => {
+                // Keep the bounded lookup reference before a later stream failure can lose usage.
+                // It supports read-only billing reconciliation; it is never a credential or content.
+                if (!generationId && typeof chunk?.id === 'string' && /^gen-[A-Za-z0-9_-]{1,150}$/.test(chunk.id)) {
+                  generationId = chunk.id;
+                  emit('provider-generation', { request_id: requestId, generation_id: generationId });
+                }
                 providerChunks++;
                 if (chunk?.choices?.[0]?.finish_reason) sawFinish = true;
                 const usage = chunk?.usage ?? chunk?.choices?.[0]?.usage;

@@ -108,14 +108,19 @@ Node tests: `cd tools/curator_host && npm test`.
   JSON/SSE accounting decoder to retain only an allowlisted OpenRouter `error_type` and
   integer error code in the ledger, when available ([documented envelope](https://github.com/OpenRouterTeam/docs/blob/main/api_reference/errors-and-debugging.mdx)).
   These diagnostics do not authorize retries or identify the unknown causes of old failures.
+  The first bounded `gen-` reference in streamed metadata is retained once per request as
+  `provider-generation` for [read-only billing lookup](https://openrouter.ai/docs/api/api-reference/generations/get-generation),
+  even if usage is lost later. The reference is private run metadata, not reported cost or
+  proof of billing settlement; a failure before it arrives can still lack a lookup reference.
   Telemetry never carries the token or a header.
 
 **The shadow runner.**
 `.venv/bin/python -m tools.curator_host.shadow --arm terra|opus --lineage 397|372 [--sessions NAME…] --cap-usd N --out .runtime/curator-shadow/RUN`.
-- **Input.** It reads the key only from `OPENROUTER_API_KEY`, and fails without it. `--upstream`
+- **Input.** It reads `OPENROUTER_API_KEY` or the project credential mapped by the selected
+  runtime's ignored `credentials.json`, and fails if neither resolves. `--upstream`
   accepts only OpenRouter or a local http origin. It selects only the sampled sessions (397:
   `sd1a1`–`sd1a7`; 372: `aidB3 ceil09 ceil07 ceil05 aidB9 aidA5`, in that order) and refuses
-  `lh1`–`lh3` and any other name. A 372 run gets its own sealed memory store; the 397 lineage
+  `lh1`–`lh4` and any other name. A 372 run gets its own sealed memory store; the 397 lineage
   store is not passed, because it would carry later admissions into earlier sessions.
 - **Run.** One `run_session` per session against `.runtime/knowledge/shadow-454/<arm>/<lineage>/`
   (game `cdda`). Each session has its own proxy and token, sized to what the whole-run cap leaves
@@ -123,6 +128,10 @@ Node tests: `cd tools/curator_host && npm test`.
   a breach, accounting remains unsettled after shutdown, or host cleanup is unconfirmed.
   `--stop-on-abort` additionally
   stops on other non-sealed sessions; P1's separate replay always stops on a non-sealed session.
+  P1 latches stop decisions before adding schedule entries and persists them before reporting
+  progress. A failed or interrupted loop records `runner-failed` or `runner-interrupted` unless
+  a higher-priority session stop is already known; it cannot certify the final session as
+  complete merely because its progress output failed.
 - **Output.** `curator-shadow/1` summaries: one per session (`<out>/<lineage>/<session>/summary.json`
   and its `proxy-ledger.jsonl`) and one per run (`<out>/summary.json`). A session summary holds
   wall seconds, host start to first model request, first-request prompt tokens, tokens by kind,
@@ -154,21 +163,36 @@ Node tests: `cd tools/curator_host && npm test`.
 
 **Two arms, one route each.** The route is pinned to one provider with no fallback.
 
-| Arm | OpenRouter model | Pinned provider | Effort | Frozen price per MTok (in / out / cache read / cache write) |
+| Arm | OpenRouter model | Pinned provider | Effort | Recorded base price per MTok (in / out / cache read / cache write) |
 | --- | --- | --- | --- | --- |
 | `terra` | `openai/gpt-6.1-terra` | `openai` (as the actor) | medium | $1 / $5 / $0.05 / $1.25 |
 | `opus` | `anthropic/claude-opus-5.5` | `anthropic` (not yet confirmed against the model's endpoint list) | medium | $4 / $20 / $0.20 / $8 (1-hour tier; 5-minute $5) |
 
 Prices are in [`data/curator/openrouter-prices-2026-11-08.json`](../../data/curator/openrouter-prices-2026-11-08.json)
-(`curator-prices/1`), read from OpenRouter's public model list (the file names the fetch date). The context window
-is 262,144 tokens for both arms, so they see the same capacity as the actor; Terra's higher
-long-prompt tier (above 272,000 tokens) is therefore unreachable. Opus's reasoning is mandatory and
+(`curator-prices/1`), read from OpenRouter's public model list (the file names the fetch date).
+The loader validates finite, nonnegative decimal-string rates and takes each component's maximum
+across the base and recorded long-prompt tiers. For Terra these reservation and missing-cost
+fallback bounds are $2 / $7.50 / $0.10 / $2.50 per MTok. Reported actual fees remain authoritative;
+old receipts are not repriced. Opus's bounds equal its base row. Its reasoning is mandatory and
 its listed default effort is high; `--effort` overrides.
 
+Both arms use a 262,144-token comparison preset. The host checks the previous response's prompt
+usage plus the output allowance before sending the next request; it does not tokenize the newly
+appended messages. A tool result can therefore push one request beyond that preset and Terra's
+272,000-token pricing threshold before the following check stops the session. The bounds include
+that tier; the preset is not a hard pre-request token limit. The file's November 11 correction
+removes the earlier unsupported reachability claim without changing the recorded rates or fetch date.
+
 **What differs from the actor's route.** The proxy forwards a fixed field list, so the curator's
-frozen route sets `maxTokensField: max_completion_tokens` (the actor uses `max_tokens`) and the host
-never adds `service_tier` (the actor's host adds `default`). Both are refused by the proxy. Nothing
-else Pi sends may be refused: the proxy allowlist and the ledger's refusal count are the check
+route sets `maxTokensField: max_completion_tokens` (the actor uses `max_tokens`); the curator proxy
+refuses `max_tokens`. Both hosts explicitly request `service_tier: default`. The curator uses the
+pinned SDK's `onPayload` hook and records `requested_service_tier` at host start; its proxy refuses
+an omitted or different tier. OpenRouter can fill an omitted tier from a
+[workspace default](https://openrouter.ai/docs/guides/features/service-tiers#workspace-default-service-tier),
+so the earlier curator requests' omission does not establish their applied tier. This repair
+requires a new approved runtime freeze before scientific use; historical requests and failures
+  retain their original provenance. Nothing else Pi sends may be refused: the proxy allowlist
+  and the ledger's refusal count are the check
 (the [#454 record](../acceptance/2026-11-08-curator-shadow-454.md#isolation) holds the runs' result).
 
 **Tool roots.** Node is a Homebrew build linked against about twenty kegs through
@@ -200,7 +224,7 @@ request raise the reservation. The host keeps at most `--max-context-images` (de
 request, evicting the oldest in blocks of `--context-image-block` (default 8). Each marker names the
 evicted frame's source ID so `view_frame` can show it again. The peak trades three limits:
 - **Eviction.** It rewrites the prompt prefix, so a wide window keeps it rare.
-- **Reservation.** Each image reserves `IMAGE_TOKENS` (10,000) at the highest input price, $0.16
+- **Reservation.** Each image reserves `IMAGE_TOKENS` (10,000) at the highest input price, $0.40
   per request at 16 images on terra and $1.28 on Opus, before any text or output. A small session
   cap therefore refuses requests that would really cost cents.
 - **Body size.** The largest of the 1,932 frames in the sealed `397-seven-day` study (the

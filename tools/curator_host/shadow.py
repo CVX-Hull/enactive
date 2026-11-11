@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 import json
 import os
 from pathlib import Path
@@ -96,13 +96,34 @@ ARMS = load_arms()
 
 
 def load_prices(path: Path) -> dict[str, Price]:
+    """Conservative per-component bounds across every recorded prompt-length tier."""
     data = json.loads(Path(path).read_text())
     if data.get('schema') != PRICES_SCHEMA:
         raise ShadowError(f'{path}: not a {PRICES_SCHEMA} file')
+    fields = ('input', 'output', 'cache_write', 'cache_read')
+
+    def rates(row):
+        if not isinstance(row, dict) or any(not isinstance(row.get(field), str) for field in fields):
+            raise ShadowError(f'{path}: prices must be decimal strings')
+        try:
+            values = {field: Decimal(row[field]) for field in fields}
+        except InvalidOperation as exc:
+            raise ShadowError(f'{path}: invalid decimal price') from exc
+        if any(not value.is_finite() or value < 0 for value in values.values()):
+            raise ShadowError(f'{path}: prices must be finite and nonnegative')
+        return values
+
     prices = {}
     for model, row in data['models'].items():
-        prices[model] = Price(input=Decimal(row['input']), output=Decimal(row['output']),
-                              cache_write=Decimal(row['cache_write']), cache_read=Decimal(row['cache_read']))
+        bounds = rates(row)
+        if 'long_prompt' in row:
+            tier = row['long_prompt']
+            if (not isinstance(tier, dict) or set(tier) != {*fields, 'min_prompt_tokens'}
+                    or type(tier['min_prompt_tokens']) is not int or tier['min_prompt_tokens'] <= 0):
+                raise ShadowError(f'{path}: invalid long-prompt tier')
+            longer = rates(tier)
+            bounds = {field: max(bounds[field], longer[field]) for field in fields}
+        prices[model] = Price(**bounds)
     return prices
 
 

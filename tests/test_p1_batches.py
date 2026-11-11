@@ -1437,8 +1437,8 @@ def test_the_whole_chain_round_trips_into_rows_score_accepts(world, tmp_path, ca
     assert len(again) == 12 and all(r['rejudge'] is True for r in again)
     # 4. the audit and the cost rows, then the whole study scores
     audits = read_jsonl(parsed(build(world, 'audit'), 'audit', audit_answer, tmp_path))
-    costs = [dict(type='cost', schema=analysis.SCORE_SCHEMA, repeat=r, lineage='lh1', curator_dollars=1.0, actor_dollars=2.0,
-                  stopped_by_cap=False) for r in (1, 2)]
+    costs = [dict(type='cost', schema=analysis.SCORE_SCHEMA, repeat=r, lineage=name, curator_dollars=0.25, actor_dollars=0.5,
+                  stopped_by_cap=False) for r in (1, 2) for name in LINEAGES]
     questions = read_jsonl(frozen)
     result = analysis.score(world.rows, {name: 10.0 for name in LINEAGES}, labels + again + audits + costs, questions,
                             json.loads((frozen.parent/'screen.json').read_text()), sentence_counts)

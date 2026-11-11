@@ -19,7 +19,7 @@ PRICES = {MODEL: Price(input=Decimal(2), output=Decimal(10), cache_write=Decimal
 
 
 def body(**extra):
-    return {**dict(model=MODEL, stream=True, stream_options=dict(include_usage=True), max_completion_tokens=100,
+    return {**dict(model=MODEL, service_tier='default', stream=True, stream_options=dict(include_usage=True), max_completion_tokens=100,
                    messages=[dict(role='user', content='hi')]), **extra}
 
 
@@ -126,6 +126,17 @@ def test_the_shapes_pi_sends_for_an_openrouter_model_pass():
     assert refusal(OPENROUTER, allowed) is None
 
 
+@pytest.mark.parametrize('tier', [None, 'auto', 'priority', 'flex', 'fast', '', {}, True])
+def test_only_an_explicit_default_service_tier_is_allowed(tier):
+    assert refusal(OPENROUTER, body(service_tier=tier)) == 'the default service tier must be explicitly requested'
+
+
+def test_omitting_the_tier_cannot_inherit_a_workspace_default():
+    request = body()
+    del request['service_tier']
+    assert refusal(OPENROUTER, request) == 'the default service tier must be explicitly requested'
+
+
 def test_an_unpriced_or_online_model_is_refused_before_reaching_openrouter(tmp_path):
     usage = dict(prompt_tokens=10, completion_tokens=2, total_tokens=12, cost=0.0001)
     with openrouter(tmp_path, usage) as (proxy, port, seen):
@@ -146,6 +157,7 @@ def test_the_reported_cost_settles_and_the_key_never_leaves_the_proxy(tmp_path):
         # The host's own affinity value ('curator-session') is never forwarded; the proxy's is.
         assert sent['authorization'] == 'Bearer real-router-key' and sent['x-session-id'] == proxy.affinity != 'curator-session'
         assert seen[0]['path'] == ROUTE
+        assert seen[0]['body']['service_tier'] == 'default'
     ledger = (tmp_path/'ledger.jsonl').read_text()
     assert 'real-router-key' not in ledger and proxy.token not in ledger and proxy.affinity not in ledger
 

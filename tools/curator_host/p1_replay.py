@@ -332,6 +332,16 @@ def run_b(args: argparse.Namespace, key: str) -> dict:
                     memory_until=until)
                 spent += Decimal(summary['cost_usd'])
                 state = summary.get('session_state', summary['run_state'])
+                # Latch mandatory stops before adding a completion entry or reporting progress.
+                # SIGINT/broken stdout after the final result must not certify unsettled work.
+                if summary['proxy']['revoked'] or summary['proxy']['breaches']:
+                    run['stopped'] = 'proxy-revoked'
+                elif cap - spent <= 0 or (summary['stopped_by_cap'] and this_cap == remaining):
+                    run['stopped'] = 'cap-reached'   # the stage's cap, not only the session's own
+                elif not summary['proxy']['settled']:
+                    run['stopped'] = 'proxy-unsettled'
+                elif state != 'sealed':
+                    run['stopped'] = 'session-aborted'
                 entry['sessions'].append(dict(session=session, memory_until=until, cap_usd=str(this_cap),
                                               session_state=state, cost_usd=summary['cost_usd'],
                                               published_before=summary['published_before'],
@@ -341,27 +351,24 @@ def run_b(args: argparse.Namespace, key: str) -> dict:
                 run['sessions'].append(dict(lineage=name, trace_session=session, session_state=state,
                                             cost_usd=summary['cost_usd'], accepted=summary.get('accepted'),
                                             rejected=summary.get('rejected')))
+                record()
                 print(f'B{args.repeat} {name} {session}: {state}, {summary.get("requests")} requests, '
                       f'${summary["cost_usd"]}, accepted {summary.get("accepted")}, rejected {summary.get("rejected")}',
                       flush=True)
-                if summary['proxy']['revoked'] or summary['proxy']['breaches']:
-                    run['stopped'] = 'proxy-revoked'
-                elif cap - spent <= 0 or (summary['stopped_by_cap'] and this_cap == remaining):
-                    run['stopped'] = 'cap-reached'   # the stage's cap, not only the session's own
-                elif not summary['proxy']['settled']:
-                    run['stopped'] = 'proxy-unsettled'
-                elif state != 'sealed':
-                    run['stopped'] = 'session-aborted'
-                record()
                 if run['stopped']:
                     break
             if run['stopped']:
                 break
+    except BaseException as error:
+        if run['stopped'] is None:
+            run['stopped'] = 'runner-interrupted' if isinstance(error, KeyboardInterrupt) else 'runner-failed'
+        raise
     finally:
         record()
         planned = sum(len(spec.sessions) for _, spec, _, _, _ in plan)
         run.update(ended_wall=time.time(), total_cost_usd=str(spent), sessions_run=len(run['sessions']),
-                   complete=run['stopped'] is None and len(run['sessions']) == planned)
+                   complete=run['stopped'] is None and len(run['sessions']) == planned
+                   and all(s['session_state'] == 'sealed' for s in run['sessions']))
         _write(out/'summary.json', run)
     return run
 
