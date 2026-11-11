@@ -74,6 +74,9 @@ def test_a_scripted_session_submits_a_fact_and_leaves_a_draft(tmp_path, world):
     repo, trace = world
     record = run_session(repo, trace, host(tmp_path, 'both', SUBMIT + DRAFT))
     assert record['manifest']['lifecycle']['state'] == 'sealed'
+    volume = record['manifest']['provenance']['volume_space']
+    assert volume['floor_bytes'] == volume['initial_free_bytes'] - (2 << 30)
+    assert volume['minimum_free_bytes'] <= min(volume['initial_free_bytes'], volume['last_free_bytes'])
     assert [v['accepted'] for v in record['verdicts']] == [True] and record['published_after'] == 'v1'
     assert [f['statement'] for f in repo.facts('v1')] == ['the cupboard holds bottles']
     assert record['drafts']['created'] == ['plan']

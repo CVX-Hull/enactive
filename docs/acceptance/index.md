@@ -14,6 +14,7 @@ states. Records are dated evidence, not current instructions; the
 
 | Date | Record | Scope | Status |
 | --- | --- | --- | --- |
+| 2026-11-11 | [P1 recovery stopped on the volume-space guard](2026-11-11-p1-storage-stop-178.md) | P1 recovery-5 qualification and storage-guard stop, accounting and cleanup, follow-up robustness repairs, and measurement CLI version policy (#178, #540); no held-out efficacy result | historical |
 | 2026-11-10 | [P1's power gate passes on four held-out lineages (#178)](2026-11-10-p1-gate-study-2-178.md) | ADR 009 P1 offline study, second protocol (p1-study/2): held-out lineage lh4's probes written and frozen, and the power gate re-run on lh1–lh4, which passes (#178) | historical |
 | 2026-11-09 | [Recap video sealed and three branches deleted, 9 November 2026](2026-11-09-recap-video-and-branches.md) | The 19 October seven-day recap video export sealed into the evidence store, and three local branches deleted, on the owner decisions of 9 November 2026 (ADR 010 follow-up, #498) | historical |
 | 2026-11-09 | [P1 stopped at the power gate (#178)](2026-11-09-p1-gate-178.md) | ADR 009 P1 offline study (p1-study/1): the held-out probes on #382 written and frozen, the power re-check on their actual structure failing its gate, and the owner stopping P1 at the gate before any spend (#178) | historical |

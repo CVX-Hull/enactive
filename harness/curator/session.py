@@ -253,6 +253,8 @@ def _run(repo: Repository, trace_sessions: list[Path], config: SessionConfig, me
                                  token=getattr(config.proxy, 'token', None), limits=config.limits,
                                  extra_env=env, stdout=output, stderr=output)
     except KeyboardInterrupt as interrupt:
+        if manifest is not None and hasattr(interrupt, 'curator_volume_space'):
+            manifest['provenance']['volume_space'] = interrupt.curator_volume_space
         # sandbox.run's finally has attempted owned process cleanup. Without its Result, exit and
         # survivor observations remain unknown: retain an abort, gate nothing and preserve SIGINT.
         errors.append('session: KeyboardInterrupt')
@@ -268,6 +270,8 @@ def _run(repo: Repository, trace_sessions: list[Path], config: SessionConfig, me
                 interrupt.add_note(f'Could not retain close-out failure: {type(failure).__name__}')
         raise
     except Exception as exc:  # noqa: BLE001 - every failure is sealed into the record
+        if manifest is not None and hasattr(exc, 'curator_volume_space'):
+            manifest['provenance']['volume_space'] = exc.curator_volume_space
         errors.append(f'session: {_error(exc)}')
     return _close_out(repo, session_id, record_dir, workspace, manifest, result, errors, window, drafts, before)
 
@@ -334,7 +338,8 @@ def _close_out(repo, session_id, record_dir, workspace, manifest, result, errors
                                  survivors=survivors, errors=errors, refused=refused)
     if result is not None:
         manifest['provenance'].update(peak_memory_bytes=result.peak_memory_bytes,
-                                      peak_disk_bytes=result.peak_disk_bytes, seconds=round(result.seconds, 3))
+                                      peak_disk_bytes=result.peak_disk_bytes, seconds=round(result.seconds, 3),
+                                      volume_space=result.volume_space)
     record = dict(manifest=manifest, verdicts=verdicts, drafts=draft_report, published_after=published_after)
     validate(manifest)
     (record_dir/'manifest.json').write_text(json.dumps(manifest, indent=1, sort_keys=True))

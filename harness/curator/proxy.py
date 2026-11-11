@@ -367,6 +367,18 @@ class ModelProxy:
             def log_message(self, *_args):
                 pass
 
+            def handle(self):
+                self.request_active = False
+                try:
+                    super().handle()
+                except ConnectionResetError:
+                    if self.request_active:
+                        raise
+                    # A peer can reset an idle keep-alive socket after its response.
+                    # Active forwarding still drains and settles in handle_post's
+                    # finally; receipt failures and other exceptions stay visible.
+                    self.close_connection = True
+
             def refuse(self, status: int, reason: str, **fields):
                 proxy._record(path=urlsplit(self.path).path, status=status, refused=reason, **fields)
                 data = json.dumps(dict(type='error', error=dict(type='curator_proxy', message=reason))).encode()
@@ -377,16 +389,22 @@ class ModelProxy:
                 self.wfile.write(data)
 
             def do_GET(self):
+                self.request_active = True
                 self.refuse(404, 'route not allowed')
+                self.request_active = False
 
             def do_POST(self):
+                self.request_active = True
                 if not proxy._slots.acquire(blocking=False):
                     self.close_connection = True
-                    return self.refuse(429, 'too many concurrent requests')
+                    self.refuse(429, 'too many concurrent requests')
+                    self.request_active = False
+                    return
                 try:
                     self.handle_post()
                 finally:
                     proxy._slots.release()
+                self.request_active = False
 
             def handle_post(self):
                 path = urlsplit(self.path).path
@@ -491,15 +509,18 @@ class ModelProxy:
                     response = connection.getresponse()
                     self.upstream_status = response.status
                     encoding = (response.getheader('content-encoding') or 'identity').lower()
-                    self.send_response(response.status)
                     self.started = True
-                    for k, v in response.getheaders():
-                        if k.lower() in ('content-type', 'request-id', 'retry-after', 'x-should-retry'):
-                            self.send_header(k, v)
-                    self.send_header('transfer-encoding', 'chunked')
-                    self.end_headers()
-                    received = bytearray()
                     client = True
+                    try:
+                        self.send_response(response.status)
+                        for k, v in response.getheaders():
+                            if k.lower() in ('content-type', 'request-id', 'retry-after', 'x-should-retry'):
+                                self.send_header(k, v)
+                        self.send_header('transfer-encoding', 'chunked')
+                        self.end_headers()
+                    except OSError:
+                        client = False  # Header delivery can fail before the body; still settle upstream usage.
+                    received = bytearray()
                     while chunk := response.read1(65536):
                         if len(received) + len(chunk) > MAX_RESPONSE:
                             raise ResponseTooLarge('upstream response exceeded its byte limit')

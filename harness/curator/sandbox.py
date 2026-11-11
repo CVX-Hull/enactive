@@ -212,6 +212,7 @@ class Result:
     peak_disk_bytes: int
     seconds: float
     survivors: list[int]
+    volume_space: dict
 
 
 def _kill(pids, sig):
@@ -233,33 +234,53 @@ def run(argv: list[str], layout: Layout, *, proxy_port: int | None = None, token
         raise SandboxError('Home must be empty at session start')
     env = environment(layout, proxy_port=proxy_port, token=token, extra=extra_env)
     nproc = _user_processes() + limits.processes
+    started = time.monotonic()
+    volume = dict(initial_free_bytes=None, minimum_free_bytes=None, last_free_bytes=None,
+                  floor_bytes=None, read_error_phase=None, read_error_type=None)
+    try:
+        free = _free_bytes(layout.workspace)
+    except OSError as error:
+        volume.update(read_error_phase='initial', read_error_type=type(error).__name__)
+        return Result(None, 'disk unmeasurable', 0, 0, time.monotonic() - started, [], volume)
+    floor = free - limits.disk_bytes - limits.free_space_margin_bytes
+    volume.update(initial_free_bytes=free, minimum_free_bytes=free, last_free_bytes=free, floor_bytes=floor)
+    # Keep at least the declared margin available even at the relative floor. A
+    # nonpositive floor would otherwise disable the unlinked-file guard entirely.
+    if floor < limits.free_space_margin_bytes:
+        return Result(None, 'insufficient volume free space', 0, 0, time.monotonic() - started, [], volume)
     # The profile lives beside the workspace in the session's state directory, which the profile neither reads nor
     # writes (only its path is visible as metadata), never in the system temporary directory.
     profile_dir = layout.workspace.parent
     if any(profile_dir == Path(root) or Path(root) in profile_dir.parents
            for root in (*SYSTEM_READ, layout.workspace, layout.home, *layout.tools, *layout.readable, *layout.writable)):
         raise SandboxError(f'The sandbox profile directory would be reachable from inside the sandbox: {profile_dir}')
-    with tempfile.NamedTemporaryFile('w', dir=profile_dir, prefix='profile-', suffix='.sb', delete=False) as handle:
-        handle.write(profile(layout, proxy_port))
-    floor = _free_bytes(layout.workspace) - limits.disk_bytes - limits.free_space_margin_bytes
-    started = time.monotonic()
     peak_memory = peak_disk = 0
     stopped = None
     child = None
+    profile_path = None
     pending = None
     try:
-        child = subprocess.Popen([SANDBOX_EXEC, '-f', handle.name, *argv], cwd=layout.workspace, env=env,
+        with tempfile.NamedTemporaryFile('w', dir=profile_dir, prefix='profile-', suffix='.sb', delete=False) as handle:
+            profile_path = handle.name
+            handle.write(profile(layout, proxy_port))
+        child = subprocess.Popen([SANDBOX_EXEC, '-f', profile_path, *argv], cwd=layout.workspace, env=env,
                                  stdin=stdin, stdout=stdout, stderr=stderr, start_new_session=True,
                                  preexec_fn=_limit_child(limits, nproc), close_fds=True)
         while child.poll() is None:
             try:
                 tree = _tree(child.pid)
                 memory, disk = sum(tree.values()), _disk((*layout.writable, layout.home))
-                free = _free_bytes(layout.workspace)
             except Unmeasurable:
                 stopped = 'disk unmeasurable'
                 break
             peak_memory, peak_disk = max(peak_memory, memory), max(peak_disk, disk)
+            try:
+                free = _free_bytes(layout.workspace)
+            except OSError as error:
+                volume.update(read_error_phase='poll', read_error_type=type(error).__name__)
+                stopped = 'disk unmeasurable'
+                break
+            volume.update(last_free_bytes=free, minimum_free_bytes=min(volume['minimum_free_bytes'], free))
             if memory > limits.memory_bytes:
                 stopped = 'memory limit'
             elif disk > limits.disk_bytes:
@@ -277,6 +298,7 @@ def run(argv: list[str], layout: Layout, *, proxy_port: int | None = None, token
             time.sleep(limits.poll_seconds)
     except BaseException as exc:
         pending = exc
+        exc.curator_volume_space = dict(volume)
         raise
     finally:
         # Any supervisor failure still closes the tree before the error propagates.
@@ -286,15 +308,17 @@ def run(argv: list[str], layout: Layout, *, proxy_port: int | None = None, token
         except Exception as exc:  # noqa: BLE001 - attempt profile cleanup and preserve the original failure
             failures.append(('process-tree', exc))
         try:
-            os.unlink(handle.name)
+            if profile_path is not None:
+                os.unlink(profile_path)
         except OSError as exc:
             failures.append(('profile', exc))
         if failures:
             if pending is None:
+                failures[0][1].curator_volume_space = dict(volume)
                 raise failures[0][1]
             for part, failure in failures:
                 pending.add_note(f'Sandbox cleanup failed: {part}/{type(failure).__name__}')
-    return Result(child.returncode, stopped, peak_memory, peak_disk, time.monotonic() - started, survivors)
+    return Result(child.returncode, stopped, peak_memory, peak_disk, time.monotonic() - started, survivors, volume)
 
 
 def _group_alive(pgid: int) -> bool:
