@@ -172,6 +172,41 @@ written. Retain the schedule and individual receipts if finalization is interrup
 synthesize a passing final summary. This does not prevent intentional user interruption or
 make hard termination/disk failure recoverable automatically.
 
+**P1 retained prefixes.** The live schedule contract is `p1-schedule/2`; its readers reject
+`/1`. `migrate-schedule --source-sha256 SHA` performs an explicit offline conversion of
+selected complete historical `/1` evidence into a new `/2` selection. It preserves the
+original file, runtime and assurance: missing historical shutdown metadata does not become
+a new shutdown proof. There is no automatic compatibility path.
+
+`tools.curator_host.p1_replay retain` is the explicit offline import boundary for the original
+historical `/1` storage-loss record, producing a prospective `p1-retained-prefix/1` plan.
+It makes no model call
+and grants no resumption authority: the [P1 protocol](../design/p1-study-3.md) still requires
+an explicit owner amendment before scientific use. The plan binds the source schedule,
+individual summaries/closures/ledgers, session records and input digests, host configurations,
+gate feedback and published Git identities. It accepts only ordered, nonempty sealed prefixes
+with empty draft, archive, staging and workspace state, followed by one unpublished final
+volume-floor loss. A changed file, unsafe closure, another loss class or unsupported plan is
+refused. Source schedules and their stopped flags remain unchanged.
+
+Only after approval, `b --retained-prefix PLAN --retained-sha256 SHA` imports the verified
+published history using local Git clones without hardlinks and copies the exact prefix gate
+feedback. Fresh repositories contain no failed workspace or session/draft history. All
+remaining admissions use fresh workspaces and the ordinary ordering and memory cutoffs;
+the first replacement's brief and trace projection must reproduce their recorded digests
+before its host starts. Model, route, pricing and host-limit templates must match. The new
+remaining cap still changes model-visible budget notes and phase thresholds; this preserves
+knowledge/input continuity, not an identical stochastic rerun or identical resource context.
+
+The physical run summary's `sessions_run`, `total_cost_usd` and cap count only newly executed
+admissions; `retained_sessions` records imports. Its selection schedule covers retained and
+fresh admissions in full order, with explicit source references and `retained_cost_usd`,
+`new_cost_usd` and `new_cap_usd`. Selection totals and its composite cap include the retained
+amounts; they are not additional debits. Research cost inputs count every original ledger
+once plus new execution, not the selection total again. A suffix failure leaves that new
+selection stopped and incomplete; delivery still refuses stopped schedules. This tooling
+does not renew an exhausted allocation, waive an isolation/cap stop or authorize another try.
+
 **Two arms, one route each.** The route is pinned to one provider with no fallback.
 
 | Arm | OpenRouter model | Pinned provider | Effort | Recorded base price per MTok (in / out / cache read / cache write) |

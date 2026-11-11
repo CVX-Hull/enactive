@@ -16,7 +16,7 @@ one whole-stage dollar cap enforced by the proxy. It reuses `tools.curator_host.
 a session is exactly a #454 shadow session whose memory is the lineage store cut strictly before the
 next admission's first operation (the whole store for the last admission): the instant arm A uses at
 that admission boundary. It records which version each session published
-(`schedule.json`, `p1-schedule/1`), which is all arm B's D2 timing needs.
+(`schedule.json`, `p1-schedule/2`), which is all arm B's D2 timing needs.
 
 `deliver` writes `delivered.jsonl` (`p1-delivered/2`): for every boundary the Reference, A and, for
 each recorded schedule, B text the successor would have received. It makes no model call and prints
@@ -50,11 +50,12 @@ from harness.curator.knowledge import KnowledgeError, Repository  # noqa: E402
 from harness.jsonio import file_sha256  # noqa: E402
 from harness.trace.projection import project  # noqa: E402
 from tools.curator_host import p1_arms as arms  # noqa: E402
+from tools.curator_host import p1_retained as retained  # noqa: E402
 from tools.curator_host import shadow  # noqa: E402
 
 FROZEN_SCHEMA = 'p1-arms-frozen/1'
 DELIVERED_SCHEMA = 'p1-delivered/2'
-SCHEDULE_SCHEMA = 'p1-schedule/1'
+SCHEDULE_SCHEMA = retained.SCHEDULE_SCHEMA
 FROZEN_FILE = ROOT/'data'/'evaluation'/'p1'/'arms-frozen.json'
 HOST_DIR = shadow.HOST_DIR
 GAME = shadow.GAME
@@ -69,7 +70,8 @@ NODE_LOCK = 'tools/curator_host/node_modules/.package-lock.json'
 # Every file the arms run: the arms and replay, the shadow runner and host they reuse (prompt, Node
 # host, launcher, providers, locked dependencies), the curator process, gate, repository, sandbox
 # and proxy, and the trace projection and memory reader the curator's inputs come from.
-FROZEN_FILES = ('tools/curator_host/p1_arms.py', 'tools/curator_host/p1_replay.py', 'tools/curator_host/shadow.py',
+FROZEN_FILES = ('tools/curator_host/p1_arms.py', 'tools/curator_host/p1_replay.py', 'tools/curator_host/p1_retained.py',
+                'tools/curator_host/shadow.py',
                 'tools/curator_host/providers.py', 'tools/curator_host/launch.py', 'tools/curator_host/prompt.md',
                 'tools/curator_host/host.mjs', 'tools/curator_host/run.mjs', 'tools/curator_host/workspace-tools.mjs',
                 'tools/curator_host/package.json', 'tools/curator_host/package-lock.json',
@@ -251,10 +253,40 @@ def _trace(evidence: Path, spec: Lineage, name: str) -> Path:
     return trace
 
 
+def model_configuration(prices: dict) -> dict:
+    return shadow.host_configuration(
+        shadow.ARMS[SETTINGS['arm']], prices, effort=SETTINGS['effort'], max_requests=SETTINGS['max_requests'],
+        max_output_tokens=SETTINGS['max_output_tokens'], request_timeout_seconds=SETTINGS['request_timeout_seconds'],
+        wall_seconds=SETTINGS['wall_seconds'] - 30, max_context_images=SETTINGS['max_context_images'],
+        context_image_block=SETTINGS['context_image_block'], workbench_timeout_seconds=60,
+        budget_usd=float(Decimal(str(SETTINGS['session_cap_usd'])) * shadow.HOST_BUDGET_SHARE))
+
+
+def retained_plan(args: argparse.Namespace) -> dict | None:
+    """Reject changed retained evidence before credential retrieval or model dispatch."""
+    path, digest = args.retained_prefix, args.retained_sha256
+    if path is None and digest is None:
+        return None
+    if path is None or digest is None or args.frozen is None:
+        raise ReplayError('retained prefixes need a plan, its approved SHA256 and a frozen arms file')
+    names = select(args.lineage, args.frozen, Path(args.prices))
+    plan = retained.load(path, digest, Path(args.runtime_root).resolve(),
+                         {name: LINEAGES[name].sessions for name in names}, args.repeat, args.frozen)
+    if (plan['model'], plan['effort']) != (shadow.ARMS[SETTINGS['arm']].model, SETTINGS['effort']):
+        raise ReplayError('retained prefix uses another model or effort')
+    if any(seed['game'] != GAME for seed in plan['seeds'].values()):
+        raise ReplayError('retained prefix belongs to another game')
+    recorded = json.loads((Path(args.runtime_root)/plan['host_config']).read_text())
+    if recorded != model_configuration(shadow.load_prices(Path(args.prices))):
+        raise ReplayError('retained model, route, pricing or host configuration differs')
+    return plan
+
+
 def run_b(args: argparse.Namespace, key: str) -> dict:
     """One curator session per admission of each lineage, in order, over one stage cap. Returns the run summary."""
     prices_path = Path(args.prices)
     names = select(args.lineage, args.frozen, prices_path)
+    prefix_plan = retained_plan(args)
     if not STAGE.fullmatch(args.stage):
         raise ReplayError('--stage is a short lowercase label')
     if args.repeat not in (1, 2):
@@ -275,23 +307,26 @@ def run_b(args: argparse.Namespace, key: str) -> dict:
             raise ReplayError(f'{store}: the lineage store is absent')
         sessions = [(session, _trace(evidence, spec, session)) for session in spec.sessions]
         plan.append((name, spec, store, sessions, arms.curator_cutoffs([trace for _, trace in sessions])))
+    if prefix_plan:
+        for name, _, _, sessions, cutoffs in plan:
+            prefix = prefix_plan['prefixes'][name]
+            if any(entry['memory_until'] != cutoffs[index] for index, entry in enumerate(prefix)):
+                raise ReplayError('retained prefix memory cutoffs differ from the frozen inputs')
+            expected = prefix_plan['next_inputs'].get(name)
+            if expected and (expected['session'], expected['memory_until']) != (sessions[len(prefix)][0], cutoffs[len(prefix)]):
+                raise ReplayError('retained next admission differs from the frozen inputs')
     prices = shadow.load_prices(prices_path)
     arm = shadow.ARMS[SETTINGS['arm']]
     if arm.model not in prices:
         raise ReplayError(f'{arm.model} has no frozen price')
     cap = Decimal(str(args.cap_usd))
-    if cap <= 0:
-        raise ReplayError('--cap-usd must be positive')
+    if not cap.is_finite() or cap <= 0:
+        raise ReplayError('--cap-usd must be finite and positive')
     # Every session has the same fixed cap (and so the same host budget) unless the stage has less left,
     # so a session's budget does not depend on the lineage order or the stage cap.
     session_cap = Decimal(str(SETTINGS['session_cap_usd']))
     host = shadow.host_tools()
-    model_config = shadow.host_configuration(
-        arm, prices, effort=SETTINGS['effort'], max_requests=SETTINGS['max_requests'],
-        max_output_tokens=SETTINGS['max_output_tokens'], request_timeout_seconds=SETTINGS['request_timeout_seconds'],
-        wall_seconds=SETTINGS['wall_seconds'] - 30, max_context_images=SETTINGS['max_context_images'],
-        context_image_block=SETTINGS['context_image_block'], workbench_timeout_seconds=60,
-        budget_usd=float(session_cap * shadow.HOST_BUDGET_SHARE))
+    model_config = model_configuration(prices)
     identity = shadow.host_identity(host, model_config)
     out.mkdir(parents=True)
     config_dir = out/'host-config'
@@ -300,28 +335,45 @@ def run_b(args: argparse.Namespace, key: str) -> dict:
     run = dict(schema=shadow.SCHEMA, kind='run', arm=SETTINGS['arm'], model=arm.model, effort=model_config['effort'],
                stage=args.stage, repeat=args.repeat, lineages=names, cap_usd=str(cap), session_cap_usd=str(session_cap),
                upstream=args.upstream, prices=_relative(prices_path), host=identity,
-               started_wall=time.time(), sessions=[], stopped=None)
+               started_wall=time.time(), sessions=[], retained_sessions=0, stopped=None)
     schedule = dict(schema=SCHEDULE_SCHEMA, stage=args.stage, repeat=args.repeat, game=GAME, cap_usd=str(cap),
                     session_cap_usd=str(session_cap), lineage_order=names,
                     knowledge=str(knowledge.relative_to(runtime)), lineages={}, stopped=None)
     spent = Decimal(0)
+    if prefix_plan:
+        run['retained_plan_sha256'] = args.retained_sha256
+        schedule['retained_plan_sha256'] = args.retained_sha256
 
     def record() -> None:
         schedule['stopped'] = run['stopped']
-        schedule['total_cost_usd'] = str(spent)
+        imported = sum((Decimal(entry['cost_usd']) for lineage in schedule['lineages'].values()
+                        for entry in lineage['sessions'] if entry.get('retained_from')), Decimal(0))
+        # Selection totals include retained admissions; the run/proxy cap is new spend only.
+        schedule.update(new_cap_usd=str(cap), cap_usd=str(imported + cap), retained_cost_usd=str(imported),
+                        new_cost_usd=str(spent), total_cost_usd=str(imported + spent))
         _write(out/'schedule.json', schedule)
 
     try:
         for name, spec, store, sessions, cutoffs in plan:
             repo = Repository(knowledge/name, GAME)
-            repo.ensure()
-            entry = schedule['lineages'][name] = dict(sessions=[])
-            for (session, trace), until in zip(sessions, cutoffs):
+            prefix = retained.seed(prefix_plan, name, runtime, repo) if prefix_plan else []
+            if not prefix_plan:
+                repo.ensure()
+            imported = []
+            for saved in prefix:
+                source = runtime/saved['retained_from']['schedule']
+                imported.append(dict(saved, summary=os.path.relpath(source.parent/saved['summary'], out)))
+            entry = schedule['lineages'][name] = dict(sessions=imported)
+            run['retained_sessions'] += len(prefix)
+            for (session, trace), until in list(zip(sessions, cutoffs))[len(prefix):]:
                 remaining = cap - spent
                 if remaining <= 0:
                     run['stopped'] = 'cap-reached'
                     break
                 this_cap = min(session_cap, remaining)
+                expected = prefix_plan['next_inputs'].get(name, {}) if prefix_plan else {}
+                checks = ({key: expected[key] for key in ('brief_sha256', 'trace_manifest_sha256')}
+                          if expected.get('session') == session else {})
                 summary = shadow.run_one(
                     arm_name=SETTINGS['arm'], lineage=name, name=session, trace=trace, repo=repo, memory=store,
                     memory_note=('lineage store before the next admission begins' if until is not None
@@ -329,7 +381,8 @@ def run_b(args: argparse.Namespace, key: str) -> dict:
                     host=host, config_path=config_path, config_dir=config_dir, model_config=model_config, prices=prices,
                     key=key, upstream=args.upstream, cap=this_cap, out=out,
                     wall_seconds=SETTINGS['wall_seconds'], max_output_tokens=SETTINGS['max_output_tokens'],
-                    memory_until=until)
+                    memory_until=until, expected_brief_sha256=checks.get('brief_sha256'),
+                    expected_trace_manifest_sha256=checks.get('trace_manifest_sha256'))
                 spent += Decimal(summary['cost_usd'])
                 state = summary.get('session_state', summary['run_state'])
                 # Latch mandatory stops before adding a completion entry or reporting progress.
@@ -366,9 +419,13 @@ def run_b(args: argparse.Namespace, key: str) -> dict:
     finally:
         record()
         planned = sum(len(spec.sessions) for _, spec, _, _, _ in plan)
+        if prefix_plan:
+            planned -= sum(len(prefix) for prefix in prefix_plan['prefixes'].values())
         run.update(ended_wall=time.time(), total_cost_usd=str(spent), sessions_run=len(run['sessions']),
                    complete=run['stopped'] is None and len(run['sessions']) == planned
-                   and all(s['session_state'] == 'sealed' for s in run['sessions']))
+                   and all(s['session_state'] == 'sealed' for s in run['sessions'])
+                   and all(len(schedule['lineages'].get(name, {}).get('sessions', [])) == len(spec.sessions)
+                           for name, spec, _, _, _ in plan))
         _write(out/'summary.json', run)
     return run
 
@@ -379,9 +436,10 @@ def load_schedule(path: Path) -> dict:
         schedule = json.loads(Path(path).read_text())
     except (OSError, ValueError) as error:
         raise ReplayError(f'{path}: unreadable schedule') from error
-    if not isinstance(schedule, dict) or schedule.get('schema') != SCHEDULE_SCHEMA \
-            or schedule.get('repeat') not in (1, 2) or not isinstance(schedule.get('lineages'), dict):
-        raise ReplayError(f'{path}: not a {SCHEDULE_SCHEMA} file')
+    try:
+        retained.validate_schedule(schedule)
+    except retained.RetainedError as error:
+        raise ReplayError(f'{path}: {error}') from None
     return schedule
 
 
@@ -545,6 +603,22 @@ def parser() -> argparse.ArgumentParser:
     b.add_argument('--lineage', required=True, nargs='+', help=f'one or more of {", ".join(LINEAGES)}')
     b.add_argument('--cap-usd', required=True, type=float, help='whole-stage dollar cap, enforced by the proxy')
     b.add_argument('--upstream', default=shadow.OPENROUTER_ORIGIN, help='OpenRouter, or a local http origin for tests')
+    b.add_argument('--retained-prefix', type=Path, help='an explicitly approved, hash-bound retained-prefix plan')
+    b.add_argument('--retained-sha256', help='the owner-approved SHA256 of --retained-prefix')
+
+    r = sub.add_parser('retain', help='write a prospective storage-loss prefix plan; no model call')
+    common(r)
+    r.add_argument('--lineage', required=True, nargs='+')
+    r.add_argument('--repeat', required=True, type=int, choices=(1, 2))
+    r.add_argument('--schedule', type=Path, required=True)
+    r.add_argument('--out', type=Path, required=True)
+
+    m = sub.add_parser('migrate-schedule', help='explicit offline /1-to-/2 historical selection migration; no model call')
+    common(m)
+    m.add_argument('--lineage', required=True, nargs='+')
+    m.add_argument('--schedule', type=Path, required=True)
+    m.add_argument('--source-sha256', required=True)
+    m.add_argument('--out', type=Path, required=True)
 
     d = sub.add_parser('deliver', help='write delivered.jsonl: the Reference, A and B text at every boundary')
     common(d)
@@ -579,7 +653,22 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == 'deliver':
             print(json.dumps(deliver(args), sort_keys=True))
             return 0
+        if args.command == 'retain':
+            names = select(args.lineage, args.frozen, Path(args.prices))
+            if args.frozen is None:
+                raise ReplayError('a retained plan needs its prospective frozen arms file')
+            print(json.dumps(retained.prepare(args.schedule, Path(args.runtime_root).resolve(),
+                                             {name: LINEAGES[name].sessions for name in names},
+                                             args.repeat, args.frozen, args.out)))
+            return 0
+        if args.command == 'migrate-schedule':
+            names = select(args.lineage, args.frozen, Path(args.prices))
+            print(json.dumps(retained.migrate_schedule(args.schedule, args.source_sha256,
+                                                      Path(args.runtime_root).resolve(),
+                                                      {name: LINEAGES[name].sessions for name in names}, args.out)))
+            return 0
         select(args.lineage, args.frozen, Path(args.prices))  # refuse held-out names before the key is read
+        retained_plan(args)
         if args.upstream != shadow.OPENROUTER_ORIGIN:
             key = shadow.LOOPBACK_KEY  # a local test upstream never receives the operator's key
         else:

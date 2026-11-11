@@ -111,7 +111,7 @@ def test_b_runs_one_session_per_admission_and_records_the_versions_caps_and_cuto
     assert run['complete'] is True and run['stopped'] is None and run['total_cost_usd'] == '2'
     assert run['cap_usd'] == '100.0' and run['session_cap_usd'] == '12' and run['lineages'] == ['syn']
     schedule = json.loads(schedule_of(runtime).read_text())
-    assert schedule['schema'] == 'p1-schedule/1' and schedule['repeat'] == 1 and schedule['knowledge'] == 'knowledge/p1/dev/r1'
+    assert schedule['schema'] == 'p1-schedule/2' and schedule['repeat'] == 1 and schedule['knowledge'] == 'knowledge/p1/dev/r1'
     assert (schedule['cap_usd'], schedule['session_cap_usd'], schedule['lineage_order']) == ('100.0', '12', ['syn'])
     sessions = schedule['lineages']['syn']['sessions']
     assert [(s['session'], s['published_before'], s['published_after'], s['memory_until'], s['cap_usd'], s['session_state'])
@@ -379,7 +379,7 @@ def test_deliver_refuses_an_incomplete_schedule_a_stray_out_and_an_existing_dire
         replay.deliver(deliver_args(runtime, evidence, done))
     bad = runtime/'bad.json'
     bad.write_text('{"schema": "other/1"}')
-    with pytest.raises(replay.ReplayError, match='not a p1-schedule/1'):
+    with pytest.raises(replay.ReplayError, match='not a p1-schedule/2'):
         replay.deliver(deliver_args(runtime, evidence, runtime/'p1-delivered'/'y', bad))
 
 
