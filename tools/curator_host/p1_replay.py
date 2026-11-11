@@ -3,6 +3,11 @@
     python -m tools.curator_host.p1_replay b --stage pilot --repeat 1 --lineage aidB3 ceil09 --cap-usd 12
     python -m tools.curator_host.p1_replay deliver --lineage 397 --schedule <schedule.json> --out <runtime>/p1-delivered/dev
     python -m tools.curator_host.p1_replay freeze
+    python -m tools.curator_host.p1_replay check --lineage lh4
+
+`check` is the format check before the freeze: it builds arm A's items and arm B's cut-offs and projects each
+admission's trace, with no curator session, and prints counts or an exception's class name only. It is the one
+command that takes a held-out lineage without `--frozen`.
 
 `b` runs one curator session per admission of each lineage, in order, on a fresh knowledge
 repository, with the pre-registered settings (terra, medium effort, a 24/12 image window, at most
@@ -34,6 +39,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import tempfile
 import time
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -42,6 +48,7 @@ if __package__ in (None, ''):
 
 from harness.curator.knowledge import KnowledgeError, Repository  # noqa: E402
 from harness.jsonio import file_sha256  # noqa: E402
+from harness.trace.projection import project  # noqa: E402
 from tools.curator_host import p1_arms as arms  # noqa: E402
 from tools.curator_host import shadow  # noqa: E402
 
@@ -476,9 +483,10 @@ def deliver(args: argparse.Namespace) -> dict:
 # ------------------------------------------------------------------ the format check
 def format_check(names: Sequence[str], evidence: Path) -> dict:
     """The format check before the arms freeze (p1-study/3, "Two steps before the freeze"): arm A's items and arm B's
-    per-admission schedule built on each lineage with no curator session. It needs no freeze, so it may run on a
-    held-out lineage, and for that reason it returns counts and, on a failure, the exception's class name only: never
-    a message, a path, a record or a text."""
+    per-admission schedule built on each lineage with no curator session, and each admission's trace projected as its
+    curator session would project it. It needs no freeze, so it may run on a held-out lineage, and for that reason
+    it returns counts and, on a failure, the exception's class name only: never a message, a path, a record or a
+    text. It keeps nothing: the projections go to a temporary directory that is removed."""
     out: dict[str, dict] = {}
     for name in names:
         try:
@@ -490,7 +498,15 @@ def format_check(names: Sequence[str], evidence: Path) -> dict:
             rendered = [arms.render(arms.arm_a_items(store, boundary.cutoff)) for boundary in found]
             for boundary in found:
                 arms.received_text(boundary)
-            out[name] = dict(ok=True, sessions=len(sessions), boundaries=len(found),
+            # What each curator session does first: project its admission's trace with the store cut at its cut-off.
+            # The projection goes to a temporary directory that is removed; only its file count leaves.
+            projected = 0
+            with tempfile.TemporaryDirectory(prefix='p1-check-') as scratch:
+                for index, (trace, until) in enumerate(zip(sessions, cutoffs)):
+                    manifest = project([trace], Path(scratch)/f's{index}', memory=evidence/spec.directory/spec.store,
+                                       memory_until=until)
+                    projected += len(manifest['files'])
+            out[name] = dict(ok=True, sessions=len(sessions), boundaries=len(found), projected_files=projected,
                              admission_boundaries=sum(b.kind == 'admission' for b in found),
                              cutoffs=sum(c is not None for c in cutoffs), whole_store_sessions=sum(c is None for c in cutoffs),
                              a_texts=len(rendered), a_texts_with_items=sum(r.items > 0 for r in rendered),
