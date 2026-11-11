@@ -52,6 +52,8 @@ class SessionConfig:
     proxy_port: int | None = None
     extra_env: dict[str, str] = field(default_factory=dict)
     host: dict = field(default_factory=dict)  # recorded identity: name, version, model
+    expected_brief_sha256: str | None = None
+    expected_trace_manifest_sha256: str | None = None
 
 
 def _remove(path: Path) -> None:
@@ -226,6 +228,12 @@ def _run(repo: Repository, trace_sessions: list[Path], config: SessionConfig, me
         before = drafts.checkout(workspace/'drafts')
         open_drafts = drafts.list()
         (workspace/'brief.md').write_text(brief(repo, version, trace_manifest, open_drafts))
+        if (config.expected_brief_sha256 is not None
+                and _sha(workspace/'brief.md') != config.expected_brief_sha256):
+            raise SessionError('retained-prefix next brief differs from its frozen input')
+        if (config.expected_trace_manifest_sha256 is not None
+                and _sha(workspace/'trace'/'manifest.json') != config.expected_trace_manifest_sha256):
+            raise SessionError('retained-prefix next trace projection differs from its frozen input')
         shutil.copytree(TRACE_PACKAGE, workspace/'workbench'/'harness'/'trace',
                         ignore=shutil.ignore_patterns('__pycache__'))
         (workspace/'workbench'/'harness'/'__init__.py').write_text('')

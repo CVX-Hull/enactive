@@ -292,7 +292,8 @@ def _write(path: Path, value: dict) -> Path:
 def run_one(*, arm_name: str, lineage: str, name: str, trace: Path, repo: Repository, memory: Path | None,
             memory_note: str, host: dict, config_path: Path, config_dir: Path, model_config: dict, prices: dict[str, Price],
             key: str, upstream: str, cap: Decimal, out: Path, wall_seconds: int, max_output_tokens: int,
-            memory_until: float | None = None) -> dict:
+            memory_until: float | None = None, expected_brief_sha256: str | None = None,
+            expected_trace_manifest_sha256: str | None = None) -> dict:
     """One curator session through its own proxy. Returns the `curator-shadow/1` session summary.
 
     `memory_until` keeps only memory written strictly before it (the P1 replay cuts a lineage store
@@ -320,7 +321,9 @@ def run_one(*, arm_name: str, lineage: str, name: str, trace: Path, repo: Reposi
             argv=host_argv(host, session_config),
             tools=(*host['roots'], config_dir.resolve()),
             limits=sandbox.Limits(wall_seconds=wall_seconds), proxy=proxy, proxy_port=port,
-            extra_env=host['env'], host=host_identity(host, model_config))
+            extra_env=host['env'], host=host_identity(host, model_config),
+            expected_brief_sha256=expected_brief_sha256,
+            expected_trace_manifest_sha256=expected_trace_manifest_sha256)
         record = run_session(repo, [trace], config, memory=memory, memory_until=memory_until,
                              session_id=f'{name}-{uuid.uuid4().hex[:8]}')
         state = 'completed'

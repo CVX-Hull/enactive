@@ -5,6 +5,7 @@ trace window. It is a native lane: it skips off macOS, where the sandbox does no
 """
 from __future__ import annotations
 
+from dataclasses import replace
 import json
 import os
 from pathlib import Path
@@ -93,6 +94,26 @@ def test_out_of_window_citations_are_rejected_and_reported_in_the_next_brief(tmp
     assert any('window' in d for d in record['verdicts'][0]['diagnostics'])
     second = run_session(repo, trace, host(tmp_path, 'idle', IDLE))
     assert 'rejected:' in (repo.state/'sessions'/second['manifest']['id']/'brief.md').read_text()
+
+
+@pytest.mark.parametrize('field', ['expected_brief_sha256', 'expected_trace_manifest_sha256'])
+def test_retained_input_assertions_pass_real_hosts_and_block_a_changed_input(tmp_path, world, monkeypatch, field):
+    repo, trace = world
+    config = host(tmp_path, 'retained-idle', IDLE)
+    first = run_session(repo, trace, config)
+    pinned = first['manifest']['pinned']
+    checked = replace(config, expected_brief_sha256=pinned['brief_sha256'],
+                      expected_trace_manifest_sha256=pinned['trace_manifest_sha256'])
+    assert run_session(repo, trace, checked)['manifest']['lifecycle']['state'] == 'sealed'
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError('changed input must not start a host')
+
+    monkeypatch.setattr(sandbox, 'run', forbidden)
+    rejected = run_session(repo, trace, replace(checked, **{field: '0'*64}))
+    assert rejected['manifest']['lifecycle']['state'] == 'aborted'
+    assert any('retained-prefix next' in error for error in rejected['manifest']['lifecycle']['errors'])
+    assert rejected['verdicts'] == [] and repo.published() == 'v0'
 
 
 def test_a_second_submission_on_the_same_base_is_stale(tmp_path, world):
