@@ -177,8 +177,15 @@ test('the context notice persists on every request once passed and warns before 
 test('the time notice warns before the work deadline and does not alter the prefix', async t => {
   assert.equal(wallWarningMs(100_000), 50_000);
   assert.equal(wallWarningMs(3_600_000), 360_000);
-  const slow = async () => { await new Promise(done => setTimeout(done, 2800)); return look(2); };
-  const { payloads, events } = await host(t, [look(1), slow, look(3), finish()], { timeoutSeconds: 6 });
+  // Reach the threshold independently of actual MCP startup and runner load.
+  // Host deadline enforcement has its own controlled-timer assertions.
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  let elapsed = 0;
+  t.mock.method(performance, 'now', () => elapsed);
+  const reachWarning = () => { elapsed = 2800; return look(2); };
+  const { result, payloads, events } = await host(t, [look(1), reachWarning, look(3), finish()], { timeoutSeconds: 6 });
+  assert.equal(result.ok, true);
+  assert.equal(payloads.length, 4);
   const noticed = payloads.map(payload => isNotice(payload.messages.at(-1)) && /^Host time allowance/.test(text(payload.messages.at(-1))));
   assert.equal(noticed[0], false);
   assert.ok(noticed.at(-1), 'the last request warns of the deadline');
