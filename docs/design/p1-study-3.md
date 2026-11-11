@@ -309,6 +309,40 @@ retained; this is an amended study with mixed-source provenance.
   model-visible budget notes can change. A recovered refusal's conservative unpriced proxy
   debit is retained. The result states the amendment and provenance beside its conclusion.
 
+### Approved missing-usage stop exception
+
+On **11 November 2026**, the owner approved one narrow exception to the all-stage stop
+after `held-out-transport-3/r2` aborted its first session, `lh2/lh2a1`. Its final HTTP 200
+response ended in a stream error without token or cost usage; the proxy retained the full
+**$0.84238125** reservation and revoked the session. No proxy breach, refusal or cap
+exhaustion was recorded. The upstream cause is unknown, and the failure may recur.
+The original stop, failed session and receipts remain retained; the exception does not
+reclassify the incident or make its incomplete output usable.
+
+- **One fresh continuation.** After this exception is documented and validated, stage
+  `held-out-continuation-4`, repeat 2, runs fresh whole `lh2`/`lh3`/`lh4`: **11 sessions**.
+  It retains complete original repeat 1 and replacement-1 repeat-2 `lh1`, with the same
+  mixed-source provenance as the transport amendment. No incomplete `lh2` store is reused.
+- **Unchanged freeze and guards.** Runtime source remains `a8c9811`, with canonical arms
+  manifest SHA256 `09f57d021300728c37f85cf6031c9f1c80a653933434879e043cb3109c8c9238`.
+  Model, pinned provider route, effort, prompts, data, questions, scientific briefs,
+  measurement and decision rules stay unchanged. Each session retains its 120 HTTP-attempt
+  and 30-minute limits. The proxy still charges conservative reservations and revokes on
+  HTTP 200 missing usage; this exception neither changes the code nor permits an in-session
+  retry after revocation. All future isolation incidents stop every stage.
+- **Finite allocation.** Maximum new spending is **$31.88**; unused earlier capacity is
+  retired. The failed transport attempt's **$2.23404420** debit, including its unpriced
+  reservation, brings all prior repeat-2 recorded debits to **$15.54548815**. The additional
+  **$11.90480270** unresolved allowance remains separate. Including the new cap gives a
+  conservative allocation of **$59.33029085**, below the unchanged **$59.33655440** recorded
+  actor denominator. These budget quantities are not invoices. Newly identified exposure
+  requires reconciliation; reaching the stage cap fails the cost guard.
+- **Expiry and sequencing.** This authorization covers only this fresh continuation.
+  Another lost session or revocation stops again and requires a new owner decision;
+  nothing renews automatically. Only complete replay permits the remaining A delivery,
+  blinded measurement and scoring in their existing order. The result reports this
+  exception, every failed attempt and the mixed-source limitation beside its conclusion.
+
 ## The measurement chain
 
 **(p1-study/3)** This section replaces p1-study/2's scoring judge and arm-guessing check.
@@ -703,7 +737,9 @@ No step from 2 on spends dollars except step 5.
 
 **Stop rules.**
 - **Isolation incident.** Any incident (a sandbox escape, key exposure, a proxy breach or a
-  revocation) stops every stage.
+  revocation) stops every stage. The [approved missing-usage stop exception](#approved-missing-usage-stop-exception)
+  authorizes only the specified fresh continuation after the retained incident; it does
+  not suppress a new stop.
 - **Stage caps.**
   - A development stage that reaches its cap stops there, and its partial data is reported.
   - A held-out stage that reaches its cap records the cost guard as failed (above). If repeat 1
@@ -834,6 +870,10 @@ the second file)** `--scores <rows> --hours <hours>` **(p1-study/3)** `--questio
     handling for the remaining sessions, retaining the preselected complete realizations
     with mixed-source provenance and all failed expenses. A retry does not renew a session's
     limits; the measurement and decision rule are unchanged.
+19. **Owner-approved exception after a missing-usage revocation.** The
+    [stop exception](#approved-missing-usage-stop-exception) permits one fresh continuation
+    on the unchanged runtime freeze, after retaining the all-stage stop and failed expenses.
+    The strict proxy guard and all future stop rules remain active.
 
 ## Owner decisions
 
@@ -890,6 +930,10 @@ Decided by the owner on **11 November 2026**, before any held-out score:
    (Recommended)". The exact freeze, retained realizations, mixed-source limit and $34.12
    cap are specified in the [amendment](#approved-transport-amendment). The original freeze
    and failures remain retained; another lost session requires a new decision.
+2. **Missing-usage stop exception and final 11 sessions:** "Approve exception and final
+   11 sessions (Recommended)". The [exception](#approved-missing-usage-stop-exception)
+   covers only the specified retained revocation and one fresh whole-lineage continuation,
+   capped at $31.88 on the unchanged runtime freeze. No additional attempt is authorized.
 
 Decided by the owner on 9 November 2026:
 1. **p1-study/2, the $80 lh4 envelope and the caps above:** "Approve".
