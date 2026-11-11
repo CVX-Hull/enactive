@@ -280,13 +280,15 @@ and every later change is a deviation.
 
 **Pinning.** Every question writer, no-text answerer, paraphraser, reader, grader and auditor is
 pinned:
-- a development agent, run as a general-purpose subagent of the lead's coding host. **Readers
-  are the exception (owner, 10 November):** each is a fresh, ephemeral session of the second
-  coding host, named with its version, model and effort in
-  [coding-agent hosts](../operations/coding-agents.md#p1-study-readers). Its working root holds
-  its one item and nothing else, and at most three run at a time. That host reads and writes
-  its files through commands, so the Reader brief's "run any command" cannot hold literally;
-- the model of the #490 judges (named in [its record](../acceptance/2026-11-08-probe-validation-490.md#how-it-was-done)), at the host's default effort (readers: as above);
+- a fresh, ephemeral Codex session, named with its version, model and effort in
+  [coding-agent hosts](../operations/coding-agents.md#p1-study-readers). The owner moved all
+  measurement agents to this host on 10 November, after first moving only readers. Each
+  working directory holds its one batch and prompt; a reader's batch still holds exactly one
+  item. At most three sessions run at a time. The frozen briefs' command prohibition permits
+  the host's mechanical file reads, named-image viewing and writing the named answer file;
+- `gpt-6.1-sol` at high effort, the already selected reader configuration. The original
+  non-reader pin was the #490 judges' Sonnet 5.5; those development results remain retained,
+  and the full development chain runs again before any held-out question is written;
 - a fresh context, and only its batch file and the frames that file names.
 
 The host version is recorded with each batch.
@@ -788,6 +790,9 @@ the second file)** `--scores <rows> --hours <hours>` **(p1-study/3)** `--questio
 15. **Readers run on the second coding host,** not as pinned-model subagents (Owner decision 7).
 16. **The rules found while #529 was built** (Owner decision 6): tokens, the word-for-word line,
     reader numbering with `Random(4916)`, and the minor rules.
+17. **All remaining measurement roles move to Codex** (Owner decision 9), using the existing
+    reader model and effort. The complete development chain is recalibrated before held-out
+    questions; the earlier mixed-host results are retained and do not qualify the new chain.
 
 ## Owner decisions
 
@@ -829,6 +834,15 @@ the second file)** `--scores <rows> --hours <hours>` **(p1-study/3)** `--questio
      Reference got wrong, A 1 and B 2). At those values P(go) is 0.940 at the 0.30 effect and
      0.022 with none. The no-text answerer said "not stated" to all 66 questions over both runs,
      so that half of the screen has not shown it can flag anything.
+9. **All measurement agents on Codex.** The owner said: "There's no quota on claude code at
+   the moment, and historical studies had been done on codex. Run it via Codex instead."
+   The remaining question writers, no-text answerers, paraphrasers, graders and auditors use
+   the same Codex CLI 0.167.0, `gpt-6.1-sol`, high-effort setup as readers. This changes the
+   host, model and fresh-session mechanism, not the frozen briefs, data, arms or decision
+   rule. The full development chain is repeated before held-out questions, preserving both
+   earlier development runs. The prepared nine held-out handouts have no returned answers
+   and are not used until that calibration passes. The attempted Claude launch was refused
+   by automatic approval review before execution; no study content was sent by that attempt.
 
 Decided by the owner on 9 November 2026:
 1. **p1-study/2, the $80 lh4 envelope and the caps above:** "Approve".

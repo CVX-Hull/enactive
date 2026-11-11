@@ -41,7 +41,7 @@ requires the host's structured question tool where one exists.
 | Host | Mechanism |
 | --- | --- |
 | Claude Code | `AskUserQuestion`, one question per decision, recommended option first |
-| Codex | None recorded; ask one explicit question at the end of the turn |
+| Codex | Use the available structured question tool; otherwise ask one explicit question at the end of the turn |
 
 ## Gameplay command allowances
 
@@ -113,19 +113,29 @@ These steps are each user's own and are not tracked or automated here:
 
 ## P1 study readers
 
-The readers of [p1-study/3's measurement chain](../design/p1-study-3.md#the-measurement-chain)
-run on the second coding host (owner, 10 November 2026: "Use codex for this which has a lot of
-credits. But, otherwise, do whatever that's needed. Just ensure we don't trip any rate limits.").
+All agents of [p1-study/3's measurement chain](../design/p1-study-3.md#the-measurement-chain)
+run on Codex. The owner first selected it for readers on 10 November 2026: "Use codex for this
+which has a lot of credits. But, otherwise, do whatever that's needed. Just ensure we don't trip
+any rate limits." Later that day the owner selected it for the remaining agents: "There's no
+quota on claude code at the moment, and historical studies had been done on codex. Run it via
+Codex instead." The full development chain is repeated with this configuration before any
+held-out question is written.
 
-- **Session.** One `codex exec --ephemeral --skip-git-repo-check -s workspace-write` per reader
-  item, with codex-cli 0.167.0, model `gpt-6.1-sol` and `model_reasoning_effort="high"`.
-- **Isolation.** The session's working root is a directory holding its one item file and its
-  prompt. It can write only there; the operator's runner copies the answer out afterwards.
+- **Session.** One `codex exec --ephemeral --skip-git-repo-check -s workspace-write` per batch,
+  with codex-cli 0.167.0, model `gpt-6.1-sol` and `model_reasoning_effort="high"`. A reader batch
+  contains exactly one item; other roles retain their frozen batch sizes.
+- **Isolation.** Each directory contains only the batch and its prompt. The frozen brief
+  restricts reads to that batch and any images it names; the operator copies out the validated
+  answer. Separate directories and fresh contexts isolate payloads, but do not establish an
+  item-only readable filesystem. Keep that assurance limit distinct from observed tool use.
 - **Rate limits.** At most three sessions at once. A failed item is retried up to three times
   with a growing pause, and five failures in a row stop the run.
-- **Other chain agents** (question writers, the no-text answerer, paraphrasers, graders and
-  auditors) are Claude Code general-purpose subagents on the #490 judges' model.
-- **Measured cost.** About 115,000 tokens per reader, mostly cached input; about 60,000 per
-  subagent of the other kind, whatever its task.
+- **Output handling.** Reuse the study parser for every role. Refused output is preserved and
+  gets at most the protocol's one fresh redo; existing invalid output or an interrupted
+  attempt is not silently skipped or renewed. Raw attempt streams are retained before launch,
+  and validated answers are published by same-filesystem atomic replacement.
+- **Measured cost.** Earlier mixed-host development used about 115,000 tokens per Codex reader,
+  mostly cached input, and about 60,000 per Claude Code subagent. Those measurements do not
+  forecast the newly selected all-Codex chain's other roles.
 
 [Operations index](../runbook.md).
