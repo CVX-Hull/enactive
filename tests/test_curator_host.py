@@ -95,7 +95,8 @@ def test_a_scripted_session_runs_through_the_proxy_and_the_sandbox_and_is_gated(
     first = stand_in.requests[0]['body']
     assert first['model'] == 'openai/gpt-6.1-terra' and first['max_completion_tokens'] == 4096
     assert first['provider'] == dict(only=['openai'], order=['openai'], allow_fallbacks=False, require_parameters=True)
-    assert first['reasoning'] == {'effort': 'medium'} and 'service_tier' not in first and 'max_tokens' not in first
+    assert first['reasoning'] == {'effort': 'medium'} and first['service_tier'] == 'default' and 'max_tokens' not in first
+    assert all(request['body']['service_tier'] == 'default' for request in stand_in.requests)
     assert [t['function']['name'] for t in first['tools']] == ['list_dir', 'read_file', 'view_frame', 'write_file', 'run_workbench', 'finish']
     assert 'data:image/png;base64,' in json.dumps(stand_in.requests[2]['body'])
     # Telemetry: every tool outcome, token usage and cost; never the session token or the key.
@@ -107,6 +108,7 @@ def test_a_scripted_session_runs_through_the_proxy_and_the_sandbox_and_is_gated(
     assert [(r['prompt_tokens'], r['completion_tokens'], r['cached_tokens'], r['reasoning_tokens'], r['cost']) for r in ends] == \
         [(1000, 40, 0, 10, 0.0012), (1100, 40, 800, 10, 0.0012), (1200, 40, 800, 10, 0.0012)]
     assert rows[0]['type'] == 'host-start' and rows[-1]['type'] == 'host-end' and rows[-1]['ok'] is True
+    assert rows[0]['requested_service_tier'] == 'default'
     text = (log/'host-output.log').read_text()
     assert proxy.token not in text and KEY not in text
     for artifact in log.rglob('*'):
@@ -333,10 +335,64 @@ def test_the_prompt_states_the_gate_and_carries_no_game_knowledge():
 def test_the_frozen_prices_cover_exactly_the_two_arms():
     assert sorted(PRICES) == sorted(arm.model for arm in shadow.ARMS.values())
     terra, opus = PRICES['openai/gpt-6.1-terra'], PRICES['anthropic/claude-opus-5.5']
-    assert (terra.input, terra.output, terra.cache_read, terra.cache_write) == (Decimal(1), Decimal(5), Decimal('0.05'), Decimal('1.25'))
+    assert (terra.input, terra.output, terra.cache_read, terra.cache_write) == (Decimal(2), Decimal('7.5'), Decimal('0.1'), Decimal('2.5'))
     assert (opus.input, opus.output, opus.cache_read, opus.cache_write) == (Decimal(4), Decimal(20), Decimal('0.2'), Decimal(8))
     data = json.loads(shadow.DEFAULT_PRICES.read_text())
     assert data['source'] == 'https://openrouter.ai/api/v1/models' and data['fetched'] == '2026-11-08'
+
+
+@pytest.mark.parametrize('tier,field,value', [
+    (None, 'input', '-1'), (None, 'output', 'NaN'), (None, 'cache_read', 'Infinity'),
+    (None, 'cache_write', 'invalid'), (None, 'input', 1),
+    ('long_prompt', 'input', '-1'), ('long_prompt', 'output', 'sNaN'),
+    ('long_prompt', 'min_prompt_tokens', True), ('long_prompt', 'min_prompt_tokens', 0),
+    ('long_prompt', 'unexpected', '1'),
+])
+def test_invalid_price_components_and_tiers_are_refused(tmp_path, tier, field, value):
+    data = json.loads(shadow.DEFAULT_PRICES.read_text())
+    row = data['models']['openai/gpt-6.1-terra']
+    (row[tier] if tier else row)[field] = value
+    path = tmp_path/'prices.json'
+    path.write_text(json.dumps(data))
+    with pytest.raises(shadow.ShadowError):
+        shadow.load_prices(path)
+
+
+@pytest.mark.parametrize('tier', [None, [], {}, {'min_prompt_tokens': 272000, 'input': '2'}])
+def test_a_present_long_prompt_tier_must_be_complete(tmp_path, tier):
+    data = json.loads(shadow.DEFAULT_PRICES.read_text())
+    data['models']['openai/gpt-6.1-terra']['long_prompt'] = tier
+    path = tmp_path/'prices.json'
+    path.write_text(json.dumps(data))
+    with pytest.raises(shadow.ShadowError):
+        shadow.load_prices(path)
+
+
+def test_each_price_component_is_bounded_independently(tmp_path):
+    data = json.loads(shadow.DEFAULT_PRICES.read_text())
+    tier = data['models']['openai/gpt-6.1-terra']['long_prompt']
+    tier.update(input='0.5', cache_write='0')
+    path = tmp_path/'prices.json'
+    path.write_text(json.dumps(data))
+    price = shadow.load_prices(path)['openai/gpt-6.1-terra']
+    assert (price.input, price.output, price.cache_read, price.cache_write) == (
+        Decimal(1), Decimal('7.5'), Decimal('0.1'), Decimal('1.25'))
+
+
+def test_long_prompt_prices_bound_reservation_and_fallback_without_repricing_reported_cost(tmp_path):
+    model = 'openai/gpt-6.1-terra'
+    price = PRICES[model]
+    usage = dict(prompt_tokens=280000, completion_tokens=16384)
+    response = json.dumps(dict(usage=usage)).encode()
+    fallback = OPENROUTER.cost(price, usage, response)
+    standard_long_charge = (280000 * Decimal(2) + 16384 * Decimal('7.5')) / Decimal(1000000)
+    assert fallback == Decimal('0.82288') >= standard_long_charge == Decimal('0.68288')
+    proxy = ModelProxy(provider=OPENROUTER, upstream='http://127.0.0.1:1', key=KEY, prices=PRICES,
+                       cap_usd=Decimal(2), ledger=tmp_path/'ledger.jsonl', max_output_tokens=16384)
+    request = json.dumps(dict(messages=[dict(role='user', content='x' * 280000)])).encode()
+    assert proxy._reserve(model, request, 16384) >= fallback
+    # Reported actual fees remain authoritative, even for a base-tier response.
+    assert OPENROUTER.cost(price, usage, json.dumps(dict(usage=dict(usage, cost=0.01))).encode()) == Decimal('0.01')
 
 
 def test_both_arms_configure_a_host_the_proxy_allows():
@@ -436,21 +492,22 @@ def test_an_upstream_retry_veto_survives_the_real_proxy(tmp_path, world):
 
 @native
 def test_the_run_stops_when_the_cap_is_reached(tmp_path, monkeypatch):
-    # Each request reserves its body at the highest input price plus 4,096 output tokens, about $0.03, and settles at
-    # $0.02: against a $0.045 cap the first is admitted and the second refused.
+    # Tier bounds reserve about $0.05 for the first body plus 4,096 output tokens, then settle at
+    # $0.02: against a $0.065 cap the first is admitted and the larger second request refused.
     with StandIn(cost=0.02) as stand_in:
         runtime = tmp_path/'runtime'
         evidence = synthetic_evidence(tmp_path, '397', ('sd1a1', 'sd1a2'))
         monkeypatch.setenv(shadow.KEY_VARIABLE, KEY)
         out = runtime/'curator-shadow'/'cap'
-        code = shadow.main(['--arm', 'terra', '--lineage', '397', '--sessions', 'sd1a1', 'sd1a2', '--cap-usd', '0.045', '--upstream', stand_in.url, '--runtime-root', str(runtime),
+        code = shadow.main(['--arm', 'terra', '--lineage', '397', '--sessions', 'sd1a1', 'sd1a2', '--cap-usd', '0.065', '--upstream', stand_in.url, '--runtime-root', str(runtime),
                             '--evidence-root', str(evidence), '--out', str(out), '--max-output-tokens', '4096', '--wall-seconds', '120'])
     assert code == 0
     run = json.loads((out/'summary.json').read_text())
     first = json.loads((out/'397'/'sd1a1'/'summary.json').read_text())
     assert run['stopped'] == 'cap-reached' and run['sessions_run'] == 1 and not (out/'397'/'sd1a2').exists()
     assert first['stopped_by_cap'] is True and 'spend cap reached' in first['proxy']['refusal_reasons']
-    assert Decimal(run['total_cost_usd']) == Decimal('0.02') <= Decimal('0.045')
+    assert len(stand_in.requests) == 1
+    assert Decimal(run['total_cost_usd']) == Decimal('0.02') <= Decimal('0.065')
     assert first['session_state'] == 'aborted' and first['host_end'] == dict(reason='provider-error', ok=False)
     assert first['model_status'] == [200, 429] and first['published_after'] == 'v0' and first['submissions'] == 0
 

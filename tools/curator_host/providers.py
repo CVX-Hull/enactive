@@ -77,6 +77,8 @@ def _openrouter_tool(tool: dict) -> str | None:
 
 
 def _openrouter_request(request: dict) -> str | None:
+    if request.get('service_tier') != 'default':
+        return 'the default service tier must be explicitly requested'
     routing = request.get('provider')
     if routing is not None and not (isinstance(routing, dict) and set(routing) <= ROUTING):
         return 'provider routing may only order, require or restrict providers'
@@ -162,7 +164,7 @@ def _openrouter_error(body: bytes) -> dict | None:
 OPENROUTER = Provider(
     'openrouter', frozenset({'/api/v1/chat/completions'}), 'authorization', 'max_completion_tokens',
     frozenset({'model', 'messages', 'stream', 'stream_options', 'max_completion_tokens', 'temperature', 'top_p',
-               'tools', 'tool_choice', 'reasoning', 'provider', 'store'}),
+               'tools', 'tool_choice', 'reasoning', 'provider', 'store', 'service_tier'}),
     frozenset({'text', 'image_url', 'function', 'reasoning.text', 'reasoning.summary', 'reasoning.encrypted'}),
     tool_refusal=_openrouter_tool, cost=_openrouter_cost, request_refusal=_openrouter_request,
     affinity_header='x-session-id', response_error=_openrouter_error, **COMMON)

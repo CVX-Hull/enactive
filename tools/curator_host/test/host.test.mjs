@@ -91,11 +91,12 @@ test('a scripted session lists, writes a submission and a draft, views a frame a
   assert.deepEqual(result, { ok: true, reason: 'finished', requests: 3, tool_calls: 6 });
   assert.equal(JSON.parse(await readFile(join(root, 'submissions/s1/submission.json'), 'utf8')).base_version, 'v0');
   assert.equal(await readFile(join(root, 'drafts/idea/notes.md'), 'utf8'), 'unfinished');
-  // The request the proxy sees: allowed fields only, the token as the key, no service tier.
+  // The request the proxy sees: allowed fields only, the token as the key, explicit default tier.
   const body = payloads[0].body;
   assert.equal(payloads[0].url, 'http://127.0.0.1:41999/api/v1/chat/completions');
   assert.equal(body.max_completion_tokens, 4096);
-  for (const forbidden of ['max_tokens', 'service_tier', 'prompt_cache_key', 'user', 'plugins', 'models']) assert.equal(body[forbidden], undefined);
+  for (const forbidden of ['max_tokens', 'prompt_cache_key', 'user', 'plugins', 'models']) assert.equal(body[forbidden], undefined);
+  assert.ok(payloads.every(payload => payload.body.service_tier === 'default'));
   assert.deepEqual(body.reasoning, { effort: 'medium' });
   assert.deepEqual(body.provider, configuration().model.compat.openRouterRouting);
   assert.deepEqual(body.tools.map(tool => tool.function.name),
@@ -110,6 +111,7 @@ test('a scripted session lists, writes a submission and a draft, views a frame a
     ['write_file', true], ['read_file', false], ['finish', true]]);
   assert.ok(calls.every(call => call.bytes > 0 && call.duration_ms >= 0));
   assert.equal(events[0].type, 'host-start');
+  assert.equal(events[0].requested_service_tier, 'default');
   assert.equal(events.at(-1).type, 'host-end');
   assert.ok(!JSON.stringify(events).includes(TOKEN));
   assert.ok(!JSON.stringify(payloads.map(p => p.body)).includes(TOKEN));
@@ -289,6 +291,7 @@ test('429 honors Retry-After seconds and dates before resending identical bytes'
       const { result, payloads, events } = await pending;
       assert.equal(result.ok, true); assert.equal(result.requests, 2);
       assert.equal(payloads[0].raw_body, payloads[1].raw_body);
+      assert.ok(payloads.every(payload => payload.body.service_tier === 'default'));
       assert.equal(events.filter(e => e.type === 'request-end' && e.retry).length, 1);
     } finally { controller.abort(); }
   });
@@ -424,6 +427,21 @@ test('serialization: the context notice persists once passed and precedes the ca
   assert.deepEqual(warned, [false, false, true, true]);
   assert.match(bodyText(noteOf(payloads[3].body)), /about \d+ tokens of room remain before the host stops the session/);
   assertStable(payloads);
+});
+
+test('the context stop uses prior usage, so a legal tool result can enter a higher price tier', async t => {
+  const root = await workspace(t);
+  await writeNodeFile(join(root, 'scratch/large'), 'x'.repeat(112_004));
+  const usage = tokens => ({ prompt_tokens: tokens, completion_tokens: 10, total_tokens: tokens + 10, cost: 0.0001 });
+  const config = configuration();
+  config.model.maxTokens = 16_384;
+  const { result, payloads } = await session(t, [
+    sse([['read_file', { path: 'scratch/large', max_bytes: 112_004 }]], usage(244_000)),
+    sse([['list_dir', {}]], usage(272_001)),
+  ], { cwd: root, configuration: config });
+  assert.equal(result.reason, 'context-capacity');
+  assert.equal(payloads.length, 2, 'the appended tool result is sent before its usage can trigger the stop');
+  assert.ok(JSON.stringify(payloads[1].body.messages).includes('x'.repeat(112_004)));
 });
 
 test('serialization: the wall-clock limit warns before the stop but never moves the phase', async () => {

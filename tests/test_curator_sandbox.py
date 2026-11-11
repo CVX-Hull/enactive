@@ -219,12 +219,12 @@ def test_tool_output_cannot_fetch_or_store_through_either_provider():
     from tools.curator_host.providers import OPENROUTER
     fetch = dict(model='m', max_tokens=10, messages=[dict(role='user', content=[dict(type='tool_result', tool_use_id='t', content=[
         dict(file_url='https://example.com/x.pdf?d=leak')])])])
-    image = dict(model='m', max_completion_tokens=10, messages=[dict(role='tool', tool_call_id='c', content=[
+    image = dict(model='m', service_tier='default', max_completion_tokens=10, messages=[dict(role='tool', tool_call_id='c', content=[
         dict(type='image_url', image_url=dict(url='https://example.com/x.png'))])])
     assert refusal(ANTHROPIC, fetch) and refusal(OPENROUTER, image)
-    stored = dict(model='m', max_completion_tokens=10, messages=[], store=True)
+    stored = dict(model='m', service_tier='default', max_completion_tokens=10, messages=[], store=True)
     assert refusal(OPENROUTER, stored) == 'provider-side storage is not allowed'
-    plain = dict(model='m', max_completion_tokens=10, messages=[dict(role='user', content='hi')])
+    plain = dict(model='m', service_tier='default', max_completion_tokens=10, messages=[dict(role='user', content='hi')])
     assert refusal(OPENROUTER, plain) is None
 
 

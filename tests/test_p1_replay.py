@@ -157,6 +157,36 @@ def test_a_clean_host_with_incomplete_proxy_accounting_stops_the_replay(world, m
     assert not replay.b_complete(replay.load_schedule(schedule_of(runtime)), 'syn')
 
 
+@pytest.mark.parametrize('error', [BrokenPipeError, KeyboardInterrupt])
+@pytest.mark.parametrize('failure,expected', [('abort', 'session-aborted'), ('unsettled', 'proxy-unsettled'),
+                                             ('none', 'runner-failed')])
+def test_final_progress_failure_cannot_certify_incomplete_work(world, monkeypatch, error, failure, expected):
+    runtime, evidence = world
+    fake = FakeCurator(monkeypatch, states={'t2': 'aborted'} if failure == 'abort' else None)
+
+    def final_result(**kwargs):
+        summary = fake.run_one(**kwargs)
+        if kwargs['name'] == 't2' and failure == 'unsettled':
+            summary['proxy']['settled'] = False
+        return summary
+
+    def report(*args, **kwargs):
+        if len(fake.caps) == 2:
+            raise error('synthetic reporting interruption')
+
+    monkeypatch.setattr(shadow, 'run_one', final_result)
+    monkeypatch.setattr(replay, 'print', report, raising=False)
+    with pytest.raises(error):
+        replay.run_b(b_args(runtime, evidence), 'key')
+    if failure == 'none' and error is KeyboardInterrupt:
+        expected = 'runner-interrupted'
+    schedule = replay.load_schedule(schedule_of(runtime))
+    summary = json.loads((schedule_of(runtime).parent/'summary.json').read_text())
+    assert schedule['stopped'] == summary['stopped'] == expected
+    assert summary['sessions_run'] == 2 and summary['total_cost_usd'] == '2' and not summary['complete']
+    assert not replay.b_complete(schedule, 'syn')
+
+
 @pytest.mark.parametrize(('revoked', 'cap', 'settled', 'expected'), [
     (True, False, True, 'proxy-revoked'),
     (False, True, True, 'cap-reached'),
