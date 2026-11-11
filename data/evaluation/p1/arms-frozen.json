@@ -1,5 +1,5 @@
 {
- "commit": "80c1fa92f752736d6a425c714a4568938ac1c139",
+ "commit": "a8c98117389bf0f09d8793ba004b7cc4b114f0c3",
  "files": {
   "data/curator/openrouter-prices-2026-11-08.json": "b05ebe528df6e3745eab4d27b836c43a94317e1511350de6ea4db5960923cc9f",
   "data/curator/shadow-arms.json": "4c67015c6265dff372dca2307e98922823d2b18045765503618af5b7525c27d0",
@@ -7,7 +7,7 @@
   "harness/curator/containers.py": "6d60a7ac36349cfe8a1a65344a14ccc5954f35b2bcccdc3cc1f3543734f30a43",
   "harness/curator/gate.py": "2ccd618ca41974f04b297fc43052db0bc664756c1d82ca434c132667d82e67e9",
   "harness/curator/knowledge.py": "733a77b94335e91a22122ecf2162e46021d6a814e2329a68762888f805ffd0a9",
-  "harness/curator/proxy.py": "72ed4b71e9117094c7cf29b792422cf39080b9d682a1207afb44d72b25f94c54",
+  "harness/curator/proxy.py": "d9f2a1c68cb32e24739d1de7913c168453bee757df6b5e70338170f173483916",
   "harness/curator/sandbox.py": "5a24ed8935433214d9298380a79c87c04a6182e7f3b4f8cd5571b434b525257b",
   "harness/curator/session.py": "2488f29253bc37e8596185c8d67aa2c9a6ead1eb63006109ef8011478983a620",
   "harness/jsonio.py": "da4097909b5a89c8462d8bb7f422fae1c2aa1b52b91776b855cd3a3ccedd846e",
@@ -18,7 +18,7 @@
   "harness/trace/sidecar.py": "768e8e38fcc1f4716c5f63a033f0af02cb72b79301f8a56d1bbb8e5d042a97b8",
   "harness/trace/stores.py": "e69c277731bab6daf0e80d06ec745187de6aa0eed93067411fb73dc188f3e4b4",
   "harness/trace/workbench.py": "5550ee5075cba85be5d31bfaa8ff04154a519bab9b544a3ff40b2e606af8d882",
-  "tools/curator_host/host.mjs": "8167063986b63e37a1ac6767ce6466bab3f18f745d9d48f5e52af32186a57c6d",
+  "tools/curator_host/host.mjs": "0ec793b027a77240f406c8f50d9d76db618e3de3dcddf2e4e20018938b0a0112",
   "tools/curator_host/launch.py": "bf8557822fdc4d832da231b72da7cfca20460263c2fa5c42e9a3ecc6f32d5234",
   "tools/curator_host/node_modules/.package-lock.json": "e402a348d83c8fd6004f687d4504c12a92d5cd712d289a7033abb1f2011b846f",
   "tools/curator_host/p1_arms.py": "5d4d1daffe3a005d441148de83de12a63255ed728d8523eb9a0a0cacf302ff97",

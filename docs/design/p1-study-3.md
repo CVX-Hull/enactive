@@ -263,7 +263,8 @@ the text the successor would have received live.
 
 **Freezing.** After the development stage, the arms are fixed: code, prompt, renderer, cap and host
 settings. They are committed with their digests **(p1-study/2:** `p1_replay freeze`**)** before any held-out replay,
-and every later change is a deviation.
+and every later change is a deviation. The [approved transport amendment](#approved-transport-amendment)
+is the sole exception for the remaining replay.
 
 **(p1-study/2) Two steps before the freeze, in stage 2:**
 - **The format check ($0).** lh4 is recorded on a newer player than every trace the arms were built
@@ -273,6 +274,40 @@ and every later change is a deviation.
   lh4's source (about $6) to reproduce and fix it on development data.
 - **A's punctuation tell** (owner, 9 November: "Fix in stage 2"): a record whose text ends in `!`
   or `?` gets no added `.` before its data.
+
+### Approved transport amendment
+
+The owner approved this amendment on **11 November 2026**, before any held-out score,
+while the lead remained restricted to counts, digests and permitted run-health metadata.
+The original freeze and every failed attempt remain
+retained; this is an amended study with mixed-source provenance.
+
+- **Transport only.** The new freeze pins source `a8c98117389bf0f09d8793ba004b7cc4b114f0c3`
+  ([PR #537](https://github.com/CVX-Hull/enactive/pull/537)). Only the curator host and proxy
+  differ from the original frozen runtime. An upstream 429 with a valid server `Retry-After`
+  of at most 60 seconds may use the existing single retry; a server veto suppresses it.
+  The pinned SDK owns the cancellable wait. Both attempts share the original request,
+  wall and proxy ceilings and resend identical bytes, without a note between them.
+- **Unchanged.** Prompts, model, route, effort, prices, image window, renderer, data, questions,
+  scientific briefs, measurement and decision rules. The original freeze is preserved in
+  Git at `0bc5802` and in retained evidence; the canonical arms manifest records the new freeze.
+- **Retain whole realizations.** Complete repeat 1 and repeat-2 `lh1` remain on source
+  `0bc5802`, selected before scores. Their permitted health metadata shows only successful
+  responses. Fresh repositories rerun **whole `lh2`** and finish `lh3`/`lh4`: **11 sessions**,
+  stage `held-out-transport-3`, repeat 2. Incomplete `lh2` outputs are not used. Use separate
+  maintained lineage deliveries and record each source/freeze and schedule alongside them;
+  no schedule or partial knowledge store is stitched together.
+- **New finite allocation.** The continuation is capped at **$34.12**; unused earlier capacity
+  is retired. All **$13.31144395** prior repeat-2 recorded debits stay in its cost numerator.
+  The additional **$11.90480270** unresolved allowance stays separate from settled debits.
+  With the new cap the conservative allocation is **$59.33624665**, below the unchanged
+  recorded actor denominator **$59.33655440**, counted once. These are budget quantities,
+  not provider invoices. Newly identified exposure needs reconciliation. Reaching the new
+  stage cap fails the cost guard; another lost session returns to the owner.
+- **Limits.** Controlled successful transcripts support branch equivalence, not identical
+  counterfactual real outputs. Recovery adds elapsed time and an HTTP attempt, so later
+  model-visible budget notes can change. A recovered refusal's conservative unpriced proxy
+  debit is retained. The result states the amendment and provenance beside its conclusion.
 
 ## The measurement chain
 
@@ -677,7 +712,8 @@ No step from 2 on spends dollars except step 5.
   - **Cost.** It goes back to the owner if a session costs more than 2× the same session's #454
     cost (`aidB3` $4.76, `ceil09` $5.25).
   - **Output.** It also goes back if any session never writes.
-- **Freeze.** Once held-out replay starts, nothing in the arms changes.
+- **Freeze.** Once held-out replay starts, nothing in the arms changes except the explicitly
+  [approved transport amendment](#approved-transport-amendment); its new freeze precedes reuse.
 - **Gate (p1-study/2).** The re-run gate on lh1–lh4 can stop the study before stage 1.
 - **(p1-study/2) Operator-enforced.** The code does not tie caps to stages (#462's review), so the
   operator passes each stage's cap explicitly and records it with the stage's label, does not
@@ -793,6 +829,11 @@ the second file)** `--scores <rows> --hours <hours>` **(p1-study/3)** `--questio
 17. **All remaining measurement roles move to the reader's host** (Owner decision 9), using the
     existing reader model and effort. The complete development chain is recalibrated before
     held-out questions; the earlier mixed-host results are retained and do not qualify the new chain.
+18. **Owner-approved transport recovery after infrastructure failures.** The
+    [transport amendment](#approved-transport-amendment) replaces only the host/proxy retry
+    handling for the remaining sessions, retaining the preselected complete realizations
+    with mixed-source provenance and all failed expenses. A retry does not renew a session's
+    limits; the measurement and decision rule are unchanged.
 
 ## Owner decisions
 
@@ -843,6 +884,12 @@ the second file)** `--scores <rows> --hours <hours>` **(p1-study/3)** `--questio
    earlier development runs. The prepared nine held-out handouts have no returned answers
    and are not used until that calibration passes. The attempted launch through the previous
    host was refused by automatic approval review before execution; no study content was sent by that attempt.
+
+Decided by the owner on **11 November 2026**, before any held-out score:
+1. **Transport amendment and 11 fresh sessions:** "Approve amendment and 11 sessions
+   (Recommended)". The exact freeze, retained realizations, mixed-source limit and $34.12
+   cap are specified in the [amendment](#approved-transport-amendment). The original freeze
+   and failures remain retained; another lost session requires a new decision.
 
 Decided by the owner on 9 November 2026:
 1. **p1-study/2, the $80 lh4 envelope and the caps above:** "Approve".
