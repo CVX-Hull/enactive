@@ -438,7 +438,7 @@ class ModelProxy:
                     self.send_response(response.status)
                     self.started = True
                     for k, v in response.getheaders():
-                        if k.lower() in ('content-type', 'request-id', 'retry-after'):
+                        if k.lower() in ('content-type', 'request-id', 'retry-after', 'x-should-retry'):
                             self.send_header(k, v)
                     self.send_header('transfer-encoding', 'chunked')
                     self.end_headers()

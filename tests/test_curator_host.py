@@ -389,6 +389,47 @@ def test_a_dry_run_writes_a_complete_summary_per_session_and_per_run(tmp_path, m
 
 
 @native
+def test_an_upstream_429_retry_is_counted_and_recovers_through_the_real_proxy_and_sandbox(tmp_path, world):
+    repo, trace = world
+    with StandIn(mode='rate-limit-once') as stand_in:
+        proxy, config = session_config(tmp_path, stand_in.url)
+        try:
+            record = run_session(repo, trace, config)
+            spent, revoked, breaches = proxy.spent, proxy.revoked, proxy.breaches
+        finally:
+            proxy.close()
+    life = record['manifest']['lifecycle']
+    assert life['state'] == 'sealed' and life['survivors'] == [] and record['published_after'] == 'v1'
+    ledger = shadow._lines(tmp_path/'proxy-ledger.jsonl')
+    assert [r['status'] for r in ledger] == [429, 200, 200, 200]
+    assert ledger[0]['usage_missing'] and Decimal(ledger[0]['charged']) == Decimal(ledger[0]['reserved'])
+    assert spent == sum(Decimal(r['charged']) for r in ledger) and not revoked and breaches == 0
+    assert stand_in.requests[0]['body'] == stand_in.requests[1]['body']
+    log = repo.state/'sessions'/record['manifest']['id']
+    telemetry = shadow.telemetry(events(log))
+    assert telemetry['requests'] == 4 and telemetry['host_end'] == dict(reason='finished', ok=True)
+    assert len([e for e in events(log) if e.get('retry')]) == 1
+
+
+@native
+def test_an_upstream_retry_veto_survives_the_real_proxy(tmp_path, world):
+    repo, trace = world
+    with StandIn(mode='rate-limit-veto') as stand_in:
+        proxy, config = session_config(tmp_path, stand_in.url)
+        try:
+            record = run_session(repo, trace, config)
+        finally:
+            proxy.close()
+    life = record['manifest']['lifecycle']
+    assert life['state'] == 'aborted' and life['survivors'] == [] and record['published_after'] == 'v0'
+    assert len(stand_in.requests) == 1
+    ledger = shadow._lines(tmp_path/'proxy-ledger.jsonl')
+    assert len(ledger) == 1 and ledger[0]['status'] == 429 and ledger[0]['usage_missing']
+    log = repo.state/'sessions'/record['manifest']['id']
+    assert not [e for e in events(log) if e.get('retry')]
+
+
+@native
 def test_the_run_stops_when_the_cap_is_reached(tmp_path, monkeypatch):
     # Each request reserves its body at the highest input price plus 4,096 output tokens, about $0.03, and settles at
     # $0.02: against a $0.045 cap the first is admitted and the second refused.

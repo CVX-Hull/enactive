@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile as writeNodeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { setTimeout as realDelay } from 'node:timers/promises';
 import { projectImages, proxyFrom, runCurator, validateConfiguration } from '../host.mjs';
 import { listDir, readFile as readTool, viewFrame, writeFile as writeTool } from '../workspace-tools.mjs';
 
@@ -45,13 +46,13 @@ async function session(t, replies, overrides = {}) {
   const events = [], payloads = [];
   let index = 0;
   const fetch = async (url, init) => {
-    payloads.push({ url, headers: init.headers, body: JSON.parse(init.body) });
+    payloads.push({ url, headers: init.headers, raw_body: init.body, body: JSON.parse(init.body) });
     const next = replies[index++];
     return typeof next === 'function' ? next(init) : next;
   };
   const result = await runCurator({ configuration: configuration(), systemPrompt: 'frozen prompt', brief: '# Session brief', cwd: root,
     env: { CURATOR_PROXY_URL: 'http://127.0.0.1:41999', CURATOR_PROXY_TOKEN: TOKEN, PATH: '/usr/bin:/bin' }, fetch,
-    onEvent: event => events.push(event), ...overrides });
+    ...overrides, onEvent: event => { events.push(event); overrides.onEvent?.(event); } });
   return { root, events, payloads, result };
 }
 
@@ -203,6 +204,100 @@ test('one retry follows a gateway error, counted as a request', async t => {
   assert.equal(result.ok, true);
   assert.equal(result.requests, 2);
   assert.equal(events.filter(event => event.type === 'request-end' && event.retry).length, 1);
+});
+
+const rateLimit = headers => new Response(JSON.stringify({ error: { code: 429,
+  message: 'credit verification timed out', metadata: { limit_source: 'openrouter_admission_control' } } }),
+{ status: 429, headers });
+async function waitFor(predicate) {
+  const end = performance.now() + 5000;
+  while (!predicate() && performance.now() < end) await realDelay(5);
+  assert.ok(predicate(), 'reach the actual retry stage before advancing its timer');
+  // Let the SDK install its retry timer after the eligible event.
+  await realDelay(5);
+}
+
+test('429 honors Retry-After seconds and dates before resending identical bytes', async t => {
+  for (const date of [false, true]) await t.test(String(date), async sub => {
+    sub.mock.timers.enable({ apis: ['setTimeout'] });
+    sub.mock.method(Date, 'now', () => 1_800_000_000_000);
+    const controller = new AbortController();
+    const after = date ? new Date(Date.now() + 10000).toUTCString() : '10';
+    let eligible = false, second = false;
+    const pending = session(sub, [rateLimit({ 'retry-after': after }), () => {
+      second = true; return sse([['finish', { summary: 'ok' }]]);
+    }], { configuration: { ...configuration(), request_timeout_seconds: 20 }, signal: controller.signal,
+      onEvent: e => { if (e.type === 'request-end' && e.retry) eligible = true; } });
+    try {
+      await waitFor(() => eligible);
+      sub.mock.timers.tick(9999); await realDelay(10);
+      assert.equal(second, false);
+      sub.mock.timers.tick(1);
+      const { result, payloads, events } = await pending;
+      assert.equal(result.ok, true); assert.equal(result.requests, 2);
+      assert.equal(payloads[0].raw_body, payloads[1].raw_body);
+      assert.equal(events.filter(e => e.type === 'request-end' && e.retry).length, 1);
+    } finally { controller.abort(); }
+  });
+});
+
+test('429 without an admissible server delay stays terminal and a repeated 429 gets no third attempt', async t => {
+  for (const headers of [{}, { 'retry-after': '' }, { 'retry-after': 'soon' }, { 'retry-after': '-1' },
+    { 'retry-after': 'Wed, 1' }, { 'retry-after': 'Wed, 1 Jan 2001' },
+    { 'retry-after': 'Wed, 31 Feb 2027 00:00:00 GMT' },
+    { 'retry-after': '61' }, { 'retry-after': '0', 'x-should-retry': 'false' }]) await t.test(JSON.stringify(headers), async sub => {
+    const { result, payloads } = await session(sub, [rateLimit(headers)]);
+    assert.equal(result.reason, 'provider-error'); assert.equal(payloads.length, 1);
+  });
+  const { result, payloads, events } = await session(t, [rateLimit({ 'retry-after': '0' }), rateLimit({ 'retry-after': '0' })]);
+  assert.equal(result.reason, 'provider-error'); assert.equal(result.requests, 2); assert.equal(payloads.length, 2);
+  assert.equal(payloads[0].raw_body, payloads[1].raw_body);
+  assert.equal(events.filter(e => e.type === 'request-end' && e.retry).length, 1);
+});
+
+test('retry backoff retains request, host and cancellation ceilings', async t => {
+  for (const kind of ['request-limit', 'request-timeout', 'host-timeout', 'cancelled']) await t.test(kind, async sub => {
+    sub.mock.timers.enable({ apis: ['setTimeout'] });
+    const controller = new AbortController();
+    let eligible = false;
+    const limits = { ...configuration(), request_timeout_seconds: 20 };
+    if (kind === 'request-limit') limits.max_requests = 1;
+    if (kind === 'request-timeout') limits.request_timeout_seconds = 1;
+    if (kind === 'host-timeout') limits.wall_seconds = 1;
+    const pending = session(sub, [rateLimit({ 'retry-after': '10' })], { configuration: limits, signal: controller.signal,
+      onEvent: e => { if (e.type === 'request-end' && e.retry) eligible = true; } });
+    try {
+      if (kind !== 'request-limit') {
+        await waitFor(() => eligible);
+        if (kind === 'cancelled') controller.abort();
+        else sub.mock.timers.tick(1000);
+      }
+      const { result, payloads } = await pending;
+      assert.equal(result.reason, kind); assert.equal(result.requests, 1); assert.equal(payloads.length, 1);
+    } finally { controller.abort(); }
+  });
+});
+
+test('the original request deadline also covers the second attempt', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const controller = new AbortController();
+  let eligible = false, second = false;
+  const pending = session(t, [rateLimit({ 'retry-after': '0.6' }), init => {
+    second = true;
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => resolve(sse([['finish', { summary: 'too late' }]])), 600);
+      init.signal.addEventListener('abort', () => { clearTimeout(timer); reject(new Error('aborted')); }, { once: true });
+    });
+  }], { configuration: { ...configuration(), request_timeout_seconds: 1 }, signal: controller.signal,
+    onEvent: e => { if (e.type === 'request-end' && e.retry) eligible = true; } });
+  try {
+    await waitFor(() => eligible);
+    t.mock.timers.tick(600); await waitFor(() => second);
+    t.mock.timers.tick(400);
+    const { result, payloads } = await pending;
+    assert.equal(result.reason, 'request-timeout'); assert.equal(result.requests, 2);
+    assert.equal(payloads[0].raw_body, payloads[1].raw_body);
+  } finally { controller.abort(); }
 });
 
 test('ending without finish is a failure', async t => {

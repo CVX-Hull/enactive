@@ -82,7 +82,12 @@ def stream(calls: list[tuple[str, dict]] | None, usage: dict | None, turn: int) 
 
 
 class StandIn:
-    """`mode`: `good` reports usage and cost; `no-usage` omits usage (the proxy then fails closed)."""
+    """`rate-limit-once` refuses the first request with a server retry hint; otherwise `good`.
+
+    `rate-limit-veto` adds the server's no-retry instruction to that refusal.
+
+    `no-usage` omits usage (the proxy then fails closed).
+    """
 
     def __init__(self, mode: str = 'good', cost: float = 0.0012, delay: float = 0.0, attack: str | None = None):
         self.mode, self.cost, self.delay, self.attack = mode, cost, delay, attack
@@ -102,6 +107,17 @@ class StandIn:
                     self.end_headers()
                     return
                 time.sleep(outer.delay)
+                if outer.mode in ('rate-limit-once', 'rate-limit-veto') and len(outer.requests) == 1:
+                    data = json.dumps(dict(error=dict(code=429, message='synthetic admission timeout'))).encode()
+                    self.send_response(429)
+                    self.send_header('content-type', 'application/json')
+                    self.send_header('retry-after', '0')
+                    if outer.mode == 'rate-limit-veto':
+                        self.send_header('x-should-retry', 'false')
+                    self.send_header('content-length', str(len(data)))
+                    self.end_headers()
+                    self.wfile.write(data)
+                    return
                 turn = sum(1 for m in body['messages'] if m.get('role') == 'assistant')
                 usage = None if outer.mode == 'no-usage' else dict(
                     prompt_tokens=1000 + 100 * turn, completion_tokens=40, total_tokens=1040 + 100 * turn, cost=outer.cost,
