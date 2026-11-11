@@ -473,6 +473,33 @@ def deliver(args: argparse.Namespace) -> dict:
     return counts
 
 
+# ------------------------------------------------------------------ the format check
+def format_check(names: Sequence[str], evidence: Path) -> dict:
+    """The format check before the arms freeze (p1-study/3, "Two steps before the freeze"): arm A's items and arm B's
+    per-admission schedule built on each lineage with no curator session. It needs no freeze, so it may run on a
+    held-out lineage, and for that reason it returns counts and, on a failure, the exception's class name only: never
+    a message, a path, a record or a text."""
+    out: dict[str, dict] = {}
+    for name in names:
+        try:
+            spec = LINEAGES[name]
+            sessions = [_trace(evidence, spec, session) for session in spec.sessions]
+            store = arms.read_store(evidence/spec.directory/spec.store)
+            found = arms.boundaries(sessions)
+            cutoffs = arms.curator_cutoffs(sessions)
+            rendered = [arms.render(arms.arm_a_items(store, boundary.cutoff)) for boundary in found]
+            for boundary in found:
+                arms.received_text(boundary)
+            out[name] = dict(ok=True, sessions=len(sessions), boundaries=len(found),
+                             admission_boundaries=sum(b.kind == 'admission' for b in found),
+                             cutoffs=sum(c is not None for c in cutoffs), whole_store_sessions=sum(c is None for c in cutoffs),
+                             a_texts=len(rendered), a_texts_with_items=sum(r.items > 0 for r in rendered),
+                             a_texts_cut_by_the_cap=sum(r.dropped > 0 for r in rendered))
+        except Exception as error:   # noqa: BLE001  the class name is all a held-out failure may show
+            out[name] = dict(ok=False, error=type(error).__name__)
+    return out
+
+
 # ------------------------------------------------------------------ command line
 def parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -501,6 +528,11 @@ def parser() -> argparse.ArgumentParser:
     f = sub.add_parser('freeze', help='write the p1-arms-frozen/1 file')
     f.add_argument('--prices', default=str(shadow.DEFAULT_PRICES))
     f.add_argument('--out', type=Path, default=FROZEN_FILE)
+
+    c = sub.add_parser('check', help='the format check: build arm A and the B schedule, print counts only')
+    c.add_argument('--lineage', required=True, nargs='+', choices=sorted(LINEAGES))
+    c.add_argument('--runtime-root', default=str(ROOT/'.runtime'))
+    c.add_argument('--evidence-root', help='default: <runtime-root>/evidence (or ENACTIVE_EVIDENCE_ROOT)')
     return p
 
 
@@ -513,6 +545,10 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if args.evidence_root is None and os.environ.get('ENACTIVE_EVIDENCE_ROOT'):
             args.evidence_root = os.environ['ENACTIVE_EVIDENCE_ROOT']
+        if args.command == 'check':
+            checked = format_check(args.lineage, _evidence(args))
+            print(json.dumps(checked, sort_keys=True))
+            return 0 if all(entry['ok'] for entry in checked.values()) else 1
         if args.command == 'deliver':
             print(json.dumps(deliver(args), sort_keys=True))
             return 0

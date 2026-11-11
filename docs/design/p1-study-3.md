@@ -268,7 +268,7 @@ and every later change is a deviation.
 **(p1-study/2) Two steps before the freeze, in stage 2:**
 - **The format check ($0).** lh4 is recorded on a newer player than every trace the arms were built
   on. Arm A's items and arm B's per-admission schedule are built on lh4 with no curator session, by
-  a tripwire that prints only counts and exception class names. A failure stops the study and goes
+  a tripwire (`p1_replay check`) that prints only counts and exception class names. A failure stops the study and goes
   to the owner; nobody debugs it on lh4. The owner may then approve one development admission on
   lh4's source (about $6) to reproduce and fix it on development data.
 - **A's punctuation tell** (owner, 9 November: "Fix in stage 2"): a record whose text ends in `!`

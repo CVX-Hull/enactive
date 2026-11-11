@@ -405,6 +405,35 @@ def test_held_out_lineages_are_refused_without_a_freeze(tmp_path, monkeypatch, c
         replay.select(['lh9'], None, PRICES)
 
 
+def test_the_format_check_builds_arm_a_and_the_b_schedule_and_prints_counts_only(world, capsys):
+    runtime, evidence = world
+    assert replay.main(['check', '--lineage', 'syn', '--runtime-root', str(runtime), '--evidence-root', str(evidence)]) == 0
+    printed = capsys.readouterr()
+    checked = json.loads(printed.out)['syn']
+    boundaries = arms.boundaries([evidence/'syn'/'computer-sessions'/name for name in ('t1', 't2')])
+    assert checked['ok'] is True and checked['sessions'] == 2 and checked['boundaries'] == len(boundaries)
+    assert checked['admission_boundaries'] == 1 and checked['cutoffs'] == 1 and checked['whole_store_sessions'] == 1
+    assert checked['a_texts'] == len(boundaries) and 0 < checked['a_texts_with_items'] <= len(boundaries)
+    assert all(isinstance(value, (bool, int)) for value in checked.values())          # counts, nothing read back
+    assert not any(record['text'].split()[0] in printed.out + printed.err for record in MEMORY)
+    assert not runtime.exists()                                                       # no session, no directory
+
+
+def test_the_format_check_needs_no_freeze_and_shows_only_an_exception_class_name(world, monkeypatch, capsys):
+    """It runs on a held-out lineage before the arms freeze, so a failure may show nothing of the lineage."""
+    runtime, evidence = world
+    monkeypatch.setattr(shadow, 'credential', lambda *a, **k: pytest.fail('the key must not be read'))
+    monkeypatch.setitem(replay.LINEAGES, 'syn', replay.Lineage('syn', ('t1', 't2'), 'player-memory-syn.sqlite3', held_out=True))
+    assert replay.main(['check', '--lineage', 'syn', '--runtime-root', str(runtime), '--evidence-root', str(evidence)]) == 0
+    capsys.readouterr()
+    (evidence/'syn'/'player-memory-syn.sqlite3').write_bytes(b'not a database: SECRET-CONTENT')
+    assert replay.main(['check', '--lineage', 'syn', '--runtime-root', str(runtime), '--evidence-root', str(evidence)]) == 1
+    printed = capsys.readouterr()
+    failed = json.loads(printed.out)['syn']
+    assert set(failed) == {'ok', 'error'} and failed['ok'] is False and failed['error'].isidentifier()
+    assert 'SECRET' not in printed.out + printed.err and str(evidence) not in printed.out + printed.err
+
+
 def test_everything_the_arms_run_is_in_the_frozen_file_list():
     for name in ('tools/curator_host/p1_arms.py', 'tools/curator_host/p1_replay.py', 'tools/curator_host/shadow.py',
                  'harness/curator/session.py', 'harness/curator/gate.py', 'harness/trace/projection.py',
