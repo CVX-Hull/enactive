@@ -425,6 +425,94 @@ continuation after explicit approval, protected integration and freeze validatio
   Publish the owner decision, source/tier differences, every failure and expense,
   accounting uncertainty and the amended-study limitation beside any conclusion.
 
+### Owner-gated retained-prefix recovery
+
+**Explicit owner approval is required before merge or dispatch.** This proposal alone
+authorizes no new inference. Record the decision in #178 and execution evidence before
+protected integration and qualified-checkout adoption. It is a narrow exception to the
+all-stage stop from the [recorded storage loss](../acceptance/2026-11-11-p1-storage-stop-178.md),
+not a renewal of the exhausted recovery-5 approval or its retired unused capacity.
+
+- **Exact candidate.** Runtime source is `adc9c8cc292f461fcee36f612db53dc27d9324c8`;
+  canonical arms SHA256 is
+  `bf144eaeae72454da024d6a819600c6e1b30c0e1ac4043fd713ec2864e496daa`.
+  The 31-file freeze adds the retained-prefix tool and changes only the replay,
+  session/shadow input assertions and the reviewed storage/disconnect repairs.
+  Scientific prompts, seven briefs, questions, renderer, data, model/effort/route,
+  prices, image limits and outcome rules remain unchanged. The storage guard stays
+  conservative; its new measurements do not identify the old decline or prevent
+  shared-volume false stops. A disconnected client no longer prevents collecting
+  available upstream usage. Future launches use the maintained in-process stop,
+  without the redundant observer interrupt.
+- **Retained state, fixed before benefit labels.** Preserve original R1 and selected
+  replacement-1 R2 LH1 on their original source. Reuse recovery-5's complete R2 LH2
+  and LH3 and only LH4's sealed `lh4b1`–`lh4b4` prefix: **eight admissions**.
+  The stopped source schedule remains byte-identical, SHA256
+  `025245086d9c19efcd4b49acd66456c32df1ddfe2eb59ef0b3b7adef34fe68b2`.
+  The approved current-plan artifact must be SHA256
+  `5caa17500a7f653a17f4373100e8f407f8afe7813f16d6c6bcb015f020fdcd69`.
+  It binds 68 source files, exact gate feedback, published Git identities and the
+  first replacement's trace/brief digests. No draft, archive, staging or workspace
+  state may remain, and the failed admission must have published nothing. Any
+  changed fingerprint, contradictory authoritative close-out or unavailable proof
+  refuses reuse. This is infrastructure-based retention, not selection by outcomes;
+  the lead remains blind to held-out content and benefit labels.
+- **Fresh state and exactly three new admissions.** After approval, fresh repositories
+  import verified published history using local Git clones without hardlinks, plus
+  byte-identical prefix gate feedback, including accepted and rejected verdicts.
+  No failed workspace, session or draft history is copied. Stage
+  `held-out-recovery-6/r2` executes only fresh `lh4b5`, `lh4b6`, `lh4b7`, in order,
+  under GPT-6.1 Terra/medium through the same pinned OpenRouter–OpenAI route and
+  existing project credential. It sends only the specified archived screenshots,
+  player-memory projection and verified curator knowledge. Before the first new
+  host starts, its brief and trace projection must reproduce the recorded digests.
+  All admissions retain the 120-HTTP-attempt, 30-minute and $12 ceiling; their actual
+  cap is the lesser of $12 and this new stage's remaining allocation. Existing
+  bounded, cancellable 429 recovery stays inside those limits.
+- **Resource context is amended explicitly.** The only new allocation is **$5.50**
+  for all three fresh admissions together, with no additional paid qualification.
+  The first host budget is $4.675 (0.85 share); subsequent budgets shrink with
+  remaining capacity. These differ from the lost admission's original allowance,
+  so budget notes, writing phases and resulting model behavior may differ. Preserve
+  this limitation: knowledge/input continuity is not an identical stochastic rerun
+  or an identical resource context. The offline tests and prior qualification do
+  not guarantee future API availability or successful completion.
+- **One current schedule contract.** Live producers/readers use `p1-schedule/2` and
+  reject `/1`. Explicit offline import converts the original historical R1 and
+  selected R2 LH1 schedules into new `/2` selections, leaving originals untouched
+  and preserving their original runtime and assurance. Their source hashes remain
+  `67d36172d95ae2a0e5a4fab06d6a4c9cb8da2804175221fc2d4ffea484a0feef` and
+  `46af79d28a66cf9380ac08a8b974c2a044d6b07dc02ad3e760985ade96fdec3f`.
+  The prepared migrated hashes are respectively
+  `7d08e1ae34dd268c5b57cddad4b090041242850370efa6198a03e65f3789863f` and
+  `1b024efaacf7818f260dd28e97a2b85d3936db2766e3649dc16e1346d879c781`.
+  The historical stopped record is imported offline into the current prefix plan;
+  live execution validates that approved plan and byte fingerprints, never a legacy
+  schedule decoder. Missing historical shutdown metadata is not retroactive success.
+  Only a fully completed fresh suffix produces a valid composed R2 LH2–LH4 selection.
+  Deliver LH1 and LH2–LH4 separately through the maintained delivery tool; never
+  rewrite an original stopped flag or deliver an incomplete LH4 store.
+- **Costs remain conservative and counted once.** Prior recorded R2 debits, including
+  every failure and qualification, are $41.91254735. Keep the separate $11.90480270
+  unresolved allowance once in R2 LH1 and qualification overhead in R2 LH2.
+  Adding at most $5.50 gives **$59.31735005**, below the unchanged $59.33655440 actor
+  denominator by $0.01920435. The selection's retained totals are already-paid
+  admissions, not a second invoice or extra allocation. Final cost inputs have
+  exactly one row per repeat/lineage, count each original ledger and new execution
+  once, and count the actor denominator once per repeat. Keep provider-reported
+  fees, conservative debits and unresolved exposure distinct. The owner's accepted
+  best-effort mismatch and no-browser direction remain; this is not an invoice bound.
+- **Expiry, stops and remaining stages.** This permits only the specified historical
+  prefix reuse and three-admission attempt after explicit approval. It overrides the
+  earlier whole-lineage-only limitation only here. Any new nonsealed admission,
+  revocation, unsettled accounting or unsafe cleanup stops every stage and needs a
+  new decision; a cap exhaustion retains the frozen cost-guard failure. Nothing
+  renews automatically. Only complete, uncapped, valid selected replay permits A
+  delivery and the existing reading/grading/rejudge/audit/scoring sequence. Positive,
+  negative or inconclusive outcomes and every failed expense remain retained. No
+  result automatically adopts a live curator. Declining leaves P1 incomplete and
+  pending, with no curator-benefit conclusion.
+
 ## The measurement chain
 
 **(p1-study/3)** This section replaces p1-study/2's scoring judge and arm-guessing check.
@@ -795,7 +883,7 @@ amounts do not move between stages without the owner.
 | 2. Development | #397 `sd1a1`–`sd1a7` | $26 | Debug both arms end to end; descriptive scores against the #490 ledgers and the arm-guessing check (**p1-study/3:** both replaced by the chain's development checks); **(p1-study/2)** the format check; then freeze the arms |
 | 3. Held-out B, repeat 1 | `lh1`–`lh4` | **(p1-study/2)** 1.0× the actor's spend on lh1–lh4: $30.46 plus lh4's actual, fixed when #522 ends | Primary data |
 | 4. Held-out B, repeat 2 | `lh1`–`lh4` | The same | Primary data |
-| Reserve | | $20 | Only to re-run a session lost to an infrastructure failure, once, unchanged, and recorded. **(p1-study/3)** The replay tool re-runs whole lineages only, so a lost held-out session goes to the owner |
+| Reserve | | $20 | Only to re-run a session lost to an infrastructure failure, once, unchanged, and recorded. **(p1-study/3)** A lost held-out session goes to the owner; the original replay path re-runs whole lineages. The [owner-gated prefix proposal](#owner-gated-retained-prefix-recovery) is the only specified exception |
 
 **(p1-study/2)** p1-study/1's "Total $120" row is replaced by this: the caps sum to $198.92 plus
 twice lh4's actual spend, about $299 if lh4 spends $50 and $359 if it spends its whole envelope.
@@ -941,8 +1029,10 @@ the second file)** `--scores <rows> --hours <hours>` **(p1-study/3)** `--questio
     decision ("All 15 boundaries per arm") are superseded with what they governed.
 13. **Development ran twice.** The first attempt lost `sd1a1` to provider timeouts; the owner chose
     one unchanged re-run of the lineage inside the stage's cap.
-14. **A held-out session lost to infrastructure** goes to the owner when it happens; the replay
-    tool re-runs whole lineages only, so the reserve's "one session" cannot be applied literally.
+14. **A held-out session lost to infrastructure** goes to the owner when it happens. At the
+    original freeze the tool re-ran whole lineages only, so the reserve's "one session" could
+    not be applied literally. The [owner-gated prefix proposal](#owner-gated-retained-prefix-recovery)
+    is a bounded exception only after its own explicit approval.
 15. **Readers run on the second coding host,** not as pinned-model subagents (Owner decision 7).
 16. **The rules found while #529 was built** (Owner decision 6): tokens, the word-for-word line,
     reader numbering with `Random(4916)`, and the minor rules.
@@ -965,6 +1055,12 @@ the second file)** `--scores <rows> --hours <hours>` **(p1-study/3)** `--questio
     qualification before a conditional whole-lineage continuation, and the
     owner-accepted best-effort cost basis.
     It retains prior realizations, every failure, and all future strict stops.
+
+21. **Owner-gated retained-prefix recovery.** The
+    [proposal](#owner-gated-retained-prefix-recovery) permits only the specified
+    verified eight-admission prefix and three fresh admissions after explicit approval,
+    with a new $5.50 cap, changed budget context and explicit historical-format migration.
+    It changes no benefit question, label, decision threshold or future stop rule.
 
 ## Owner decisions
 
@@ -1032,6 +1128,16 @@ Decided by the owner on **11 November 2026**, before any held-out score:
    debits and the unresolved allowance with explicit uncertainty; do not require browser
    access or call the recorded allocation a proven historical invoice bound. This
    accounting direction does not itself authorize another paid run.
+5. **Qualification and conditional continuation:** “I approve the recovery”, confirmed
+   by “Approve qualification and conditional continuation (Recommended)”. This was
+   one [recovery-5 allocation](#owner-gated-robustness-recovery-amendment), not two;
+   its storage loss grants no renewal.
+6. **Measurement host versions:** “Versions will be subject to update. It should be
+   fine as long as we use the same model.” The owner permits dedicated copies only
+   if useful without overhead, including disk use and tracking. The
+   [host policy](../operations/coding-agents.md#p1-study-readers) uses the ordinary
+   installed CLI, existing provenance and unchanged model/effort, without duplicate
+   binaries or repeated calibration merely for a CLI update.
 
 Decided by the owner on 9 November 2026:
 1. **p1-study/2, the $80 lh4 envelope and the caps above:** "Approve".
