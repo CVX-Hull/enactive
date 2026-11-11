@@ -420,7 +420,8 @@ continuation after explicit approval, protected integration and freeze validatio
 - **Expiry and remaining stages.** The exception covers only the retained final
   missing-usage stop, one qualification and its conditional continuation. Any new
   isolation incident stops every stage. Only complete valid held replay permits
-  A delivery and the frozen Codex reading/grading/rejudge/audit/scoring sequence.
+  A delivery and the frozen reading/grading/rejudge/audit/scoring sequence on the
+  [selected measurement host](../operations/coding-agents.md#p1-study-readers).
   Publish the owner decision, source/tier differences, every failure and expense,
   accounting uncertainty and the amended-study limitation beside any conclusion.
 
