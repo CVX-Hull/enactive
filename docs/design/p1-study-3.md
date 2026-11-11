@@ -280,7 +280,10 @@ and every later change is a deviation.
 
 **Pinning.** Every question writer, no-text answerer, paraphraser, reader, grader and auditor is
 pinned:
-- a development agent, run as a general-purpose subagent of the lead's coding host;
+- a development agent, run as a general-purpose subagent of the lead's coding host. **Readers
+  are the exception (owner, 10 November: "Use codex for this"):** each is a fresh, ephemeral
+  `codex exec` session (codex-cli 0.167.0, `gpt-6.1-sol`, effort high) whose working root holds
+  its one item and nothing else, at most three at a time;
 - the model of the #490 judges (named in [its record](../acceptance/2026-11-08-probe-validation-490.md#how-it-was-done)), at the host's default effort;
 - a fresh context, and only its batch file and the frames that file names.
 
@@ -407,7 +410,7 @@ set) or the working set itself (a stale or contradicting item, or extra entries)
 
 **Checks on development data, before any held-out question is written.** The whole chain,
 including the screen and the positive control, runs on development for A, B and the Reference.
-Its recall figures decide nothing about the arms. Two checks can stop the study.
+Its recall figures decide nothing about the arms. Three checks can stop the study.
 - **Units.** The pairs #490's validation confirmed that are not in its `recall.json`
   `query_probes.trivial` list (21: 17 in #397 and 4 in #372), kept where the pair's later frame
   follows a boundary that has a development B text (a first handoff included; #397 from the
@@ -423,6 +426,11 @@ Its recall figures decide nothing about the arms. Two checks can stop the study.
   0.827 at 10% and 0.740 at 15% (2,000 simulations each; 0.901 at 5% in the committed gate).
 - **Sensitivity.** The positive control must be correct on **at least 85%** of development units
   in each form.
+- **The recall floor (owner, 10 November).** A, B or the Reference must be stated on **at least
+  3 of 20** development units (15%). The first development run scored all three at 0 of 20 and
+  passed the two checks above: its questions asked what a screen showed, which a memory text
+  cannot answer, so every reader said "not stated", in both passes. A chain at its floor cannot
+  show a difference between arms, and neither other check can see that.
 - **Power at the measured values.** The gate's simulation is re-run once on the committed
   gate's layout, with its seed (491) and 5,000 simulations, changed in two ways: the label error
   is e from the pooled d above, and every label that the simulation makes stated is kept with
@@ -481,7 +489,10 @@ JSON Lines to a named file and replies only with a line count, as #178's did.
 > than viewing files, or read documents or issues. The file [batch] lists items, each with an
 > `id` and one image path `frame`. View each image. Write one question whose answer is the
 > specific durable information the image shows (its list, contents, message, text or map
-> description), and give that answer as a short key taken from the image. If the image shows a
+> description), asked about the game world or the player's situation, not about the screen. Do
+> not mention a screen, menu, panel, cursor or a place on screen, or what was shown, listed or
+> highlighted. Someone who knew the fact but never saw this image must be able to answer. Give
+> that answer as a short key taken from the image. If the image shows a
 > list, the key names at most five entries that tell this list from another. An item may also
 > carry `rejected`, an earlier question that was turned down; write a different one. The question must make
 > sense to someone who has not seen the image, must not give the answer away, and must not be
@@ -788,6 +799,17 @@ the second file)** `--scores <rows> --hours <hours>` **(p1-study/3)** `--questio
      a second refusal goes to the owner.
    - **Development units.** #490's 21 pairs give 20 units: one is in `aidA5`, which has no B
      text. Development has one B repeat, so its chain reads A, B repeat 1 and the controls.
+7. **Readers on Codex:** "Use codex for this which has a lot of credits… Just ensure we don't
+   trip any rate limits." A pinned-model subagent cost about 60,000 tokens per item against
+   this page's 20,000; a Codex reader costs about 115,000, mostly cached. Three pilot readers
+   that had run on the pinned model were set aside unused.
+8. **After the first development run** (0 of 20 for A, B and the Reference; 0 of 40
+   disagreements; sensitivity 19 and 20 of 20; 6 questions flagged twice):
+   - **The Question brief:** "Fix the Question brief, re-run". The question is asked about the
+     game world or the player's situation, not the screen. The recall floor is added as a third
+     development check. The development chain runs again.
+   - **The shared-word rule:** "Keep the rule". It flagged 13 of 20 first drafts, mostly on
+     context words.
 
 Decided by the owner on 9 November 2026:
 1. **p1-study/2, the $80 lh4 envelope and the caps above:** "Approve".

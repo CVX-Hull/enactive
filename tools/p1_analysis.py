@@ -75,6 +75,7 @@ ARM_REPEATS = dict(ARMS, **{name: (1,) for name in CONTROLS})
 DEVELOPMENT_ARMS = {'A': (1,), 'B': (1,)}   # a development delivery has A repeat 1 and B repeat 1 only: no second B repeat
 NOISE_LIMIT = 0.10                # development's chain noise: the pooled repeat disagreement d, at most
 SENSITIVITY_FLOOR = 0.85          # development's positive control: each form correct on at least this share of units
+FLOOR_SHARE = 0.15                # development's floor: A, B or the Reference stated on at least this share of units (3 of 20)
 STUDY_1_HELD_OUT = {'lh1': ('lh1a1', 'lh1a2', 'lh1a3'), 'lh2': ('lh2a1', 'lh2a2'), 'lh3': ('lh3a1', 'lh3a2')}
 # lh4's admissions (study 522-held-out), as #522 ran them: lh4b1-lh4b7. The lost lh4a1 is not part of
 # the lineage (docs/acceptance/2026-11-09-held-out-lineage-522.md). With an empty tuple lh4 would not
@@ -551,10 +552,12 @@ def development_summary(rows: list[dict]) -> dict:
                 sensitivity={arm: dict(units=n, correct=count(arm), sensitivity=count(arm) / n) for arm in ('PW', 'PP')},
                 reference=dict(units=n, correct=count('R'), recall=count('R') / n),
                 recall={arm: dict(units=n, stated=count(arm), recall=count(arm) / n) for arm in DEVELOPMENT_ARMS},
-                limits=dict(noise=NOISE_LIMIT, sensitivity=SENSITIVITY_FLOOR),
+                limits=dict(noise=NOISE_LIMIT, sensitivity=SENSITIVITY_FLOOR, floor=FLOOR_SHARE),
                 # Exact integer comparisons (NOISE_LIMIT is 1/10, SENSITIVITY_FLOOR 85/100): d <= 0.10, correct / units >= 0.85.
                 noise_ok=bool(noise['pooled']['disagreements'] * 10 <= noise['pooled']['labels']),
-                sensitivity_ok=bool(all(count(arm) * 100 >= 85 * n for arm in ('PW', 'PP'))))
+                sensitivity_ok=bool(all(count(arm) * 100 >= 85 * n for arm in ('PW', 'PP'))),
+                # The floor (owner, 10 November 2026): A, B or the Reference is stated on at least 3 of 20 units (15%).
+                floor_ok=bool(max(count(arm) for arm in ('A', 'B', 'R')) * 20 >= 3 * n))
 
 
 # ---------------------------------------------------------------------------------------------
