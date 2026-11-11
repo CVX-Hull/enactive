@@ -327,7 +327,9 @@ looking alike.
 - **One item per reader.** Each item goes to a fresh reader with nothing else in its file. Texts
   of one lineage share most of their content, so a reader that saw two of them could carry an
   answer from one arm, or from a later boundary, to another. The reader therefore has no batch
-  order, and p1-study/2's `Random(4911)` is unused.
+  order, and p1-study/2's `Random(4911)` is unused. Items are numbered, and their files named,
+  in a `Random(4916)` shuffle of the list sorted as the grader's is, so that an id does not
+  follow the arm (owner, 10 November: "Shuffle with a new seed").
 - **The answer** comes only from the item's own text, as one plain sentence in the reader's own
   words. "Not stated" is a valid answer.
 
@@ -367,8 +369,9 @@ reader can overlook a line, and the grading is strict. Such misses lower both ar
 shrink B − A, which criterion 1 compares with an absolute 0.15.
 - **Items.** For each unit, the Reference text with one new last line, after everything the
   renderer wrote, in two forms:
-  - **word for word (`PW`):** `- <question> <key>`, with single spaces. It contains the question,
-    so it checks that the chain works at all, not how sensitive it is;
+  - **word for word (`PW`):** `- <question> <key>`, with single spaces; a key's entries on
+    separate lines are joined with `; ` (owner, 10 November). It contains the question, so it
+    checks that the chain works at all, not how sensitive it is;
   - **paraphrased (`PP`):** `- <sentence>`, where a fresh agent wrote the sentence from the
     question and the key (the Paraphrase brief; batches of at most 10 in probe-id order). This
     form is the sensitivity measure.
@@ -514,32 +517,11 @@ JSON Lines to a named file and replies only with a line count, as #178's did.
 > wording where another wording says the same. Output only JSON Lines, one per item in the given
 > order: {"id":"<id>","sentence":"<one sentence>"}.
 
-**Retired by p1-study/3.** No study step uses the two briefs below. They stay on this page only
-until the answer-key batches replace #518's scoring and arm-guess batches, which still read them.
-
-> **Arm guess.** Each text in the file [batch] was produced by one of two systems that summarise
-> what a game player knows. Read only that file. For each text, guess which system produced it,
-> "1" or "2", consistently. Output only JSON Lines: {"id":"<id>","system":"1"|"2"}.
-
-> **Scoring.** You check whether a text states what a screenshot shows. Read only the file named
-> here and the image files it lists; do not open any other file, run any command other than
-> viewing files, or read documents or issues. The file [batch] lists items, each with an `id`,
-> one image path `frame` and a `text`. For each item, view the image and decide: does the text
-> state the specific information this image shows (its list, contents, message, text or map
-> description), so that a reader of the text would already know it? A text that only mentions
-> the same kind of screen or a related topic does not count. Output only JSON Lines, one per item
-> in the given order: {"id":"<id>","stated":true|false,"why":"<one line>"}.
-
 > **Audit.** You check statements against recorded screenshots. Read only the file named here and
 > the timelines and image files it lists. For each item, decide whether any frame listed for it
 > contradicts the statement, or shows it had stopped being true by the last listed frame. Output
 > only JSON Lines: {"id":"<id>","false":true|false,"frame":"<source id or null>","why":"<one
 > line>"}.
-
-**Scoring the arm guess (retired by p1-study/3).** p1-study/2's `arm_guessing` mapped the
-guesser's labels "1" and "2" to arms by whichever mapping scored higher, over exactly 30 guesses,
-15 per arm, with a limit of 21: 2 × P(Binomial(30, ½) ≥ 21) = 0.043. It ran twice on development
-texts and failed both times (27 and 26 of 30).
 
 ## Metrics
 
@@ -654,9 +636,9 @@ twice lh4's actual spend, about $299 if lh4 spends $50 and $359 if it spends its
 **(p1-study/3) Where the stages stand, and the order from here.** Stages 0, 1 and 2's curator
 sessions are done: `lh4` cost $28.88 (its envelope spent $30.11 with a lost admission), so each
 held-out repeat's cap is **$59.34**. The remaining steps, in order:
-1. The answer-key batches are built and reviewed (a new leaf under #387). The leaf also changes
-   `score`: Reference and positive-control rows, the bias control, `--questions` and its digest,
-   and no arm-guessing check. Until it merges, the code implements p1-study/2's scoring.
+1. The answer-key batches are built and reviewed (#529). The leaf also changes `score`:
+   Reference and positive-control rows, the bias control, `--questions` and its digest, and no
+   arm-guessing check.
 2. The chain, with its screen and positive control, runs on development data
    ([The measurement chain](#the-measurement-chain)). Its checks and the re-run power figure go
    to the owner; a failed check stops the study there.
@@ -714,7 +696,7 @@ About 16M in all, with development's run (about 21 units, every label twice) abo
 ## Analysis and reporting
 
 `python -m tools.p1_analysis score --probes <held-out probes> --probes <lh4 probes>` **(p1-study/2:
-the second file)** `--scores <rows> --hours <hours>` **(p1-study/3)** `--questions <questions>` writes `data/evaluation/p1/result.json` (`p1-result/1`).
+the second file)** `--scores <rows> --hours <hours>` **(p1-study/3)** `--questions <questions> --screen <screen counts> --sentences-counts <paraphrase counts>` writes `data/evaluation/p1/result.json` (`p1-result/1`).
 - **Refusals.** It refuses when:
   - a unit is unjudged for some arm or repeat;
   - a label is duplicated;
@@ -793,6 +775,19 @@ the second file)** `--scores <rows> --hours <hours>` **(p1-study/3)** `--questio
 4. **Needed-fact recall and query coverage:** "Drop them", not a second question set.
 5. **Earlier the same day:** the redesign itself ("Draft p1-study/3"), after "Split A's notes
    into lines" did not bring the arm-guess check under its limit.
+6. **Rules this page left open, found while #529 was built** (each a deviation from the page as
+   approved):
+   - **Tokens:** "Split letters from digits". `9mm` gives `9`, which counts, and `mm`, which is
+     too short; a single digit counts; an empty key entry is not counted toward the five.
+   - **The word-for-word line:** "Join with '; '".
+   - **Reader numbering:** "Shuffle with a new seed", `Random(4916)`.
+   - **Minor rules:** "Accept all as built". "Not stated" also ignores surrounding whitespace;
+     the bias flag needs a difference strictly above 0.10; the only-A and only-B counts are
+     given for each B repeat; a paraphrase that fails its check twice is used as it is and
+     counted; an agent whose output is refused has its batch redone once by a fresh agent, and
+     a second refusal goes to the owner.
+   - **Development units.** #490's 21 pairs give 20 units: one is in `aidA5`, which has no B
+     text. Development has one B repeat, so its chain reads A, B repeat 1 and the controls.
 
 Decided by the owner on 9 November 2026:
 1. **p1-study/2, the $80 lh4 envelope and the caps above:** "Approve".

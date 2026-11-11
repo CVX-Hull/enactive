@@ -1,11 +1,14 @@
-"""The P1 study's frozen analysis (#491): units and clusters, completeness, re-judging, the decision rule and guards."""
+"""The P1 study's frozen analysis (#491, #529): units and clusters, completeness, re-judging, the controls, the decision rule and guards."""
 import json
+import re
 
 import pytest
 
 from tools import p1_analysis as p1
 
 HOURS = {'lh1': 20.0, 'lh2': 20.0, 'lh3': 0.5, 'lh4': 0.0}   # the synthetic probes sit in lh1-lh3; lh4 adds no hours
+CONTROL_RATES = {'R1': 0.5, 'PW1': 1.0, 'PP1': 1.0}          # the Reference, and the positive control's two forms
+SCREEN = dict(flagged_twice=0)
 
 
 def probes(per_boundary=6, boundaries=4, informative=True):
@@ -25,17 +28,34 @@ def spread(rows):
 
 
 def labels(unit_rows, rates):
-    """rates: arm+repeat -> share of each boundary's units stated (the first ones in order)."""
+    """rates: arm+repeat (A1, B2, R1, PW1, ...) -> share of each boundary's units stated (the first ones in order)."""
     out = []
     for key, rate in rates.items():
+        arm, repeat = re.fullmatch(r'([A-Z]+)(\d)', key).groups()
         by_boundary = {}
         for u in unit_rows:
             by_boundary.setdefault(u['boundary'], []).append(u)
         for group in by_boundary.values():
             for i, u in enumerate(group):
-                out.append(dict(type='label', schema=p1.SCORE_SCHEMA, kind='reobservation', arm=key[0],
-                                repeat=int(key[1]), item=u['probe'], stated=i < round(rate * len(group))))
+                out.append(dict(type='label', schema=p1.SCORE_SCHEMA, kind='reobservation', arm=arm, repeat=int(repeat),
+                                item=u['probe'], stated=i < round(rate * len(group)), answered=True))
     return out
+
+
+def questions_for(unit_rows):
+    return [dict(schema=p1.QUESTION_SCHEMA, probe=u['probe'], question=f'Which entries are on list {u["probe"]}?', key='bolt, saw')
+            for u in unit_rows]
+
+
+COUNTS_FOR_UNITS = object()     # the default of `scored`: the sentences step's counts for the study's units
+
+
+def scored(rows, scores, *, hours=HOURS, screen=SCREEN, questions=None, sentences=COUNTS_FOR_UNITS):
+    """`score` over the units of `rows`, with a question for each of them unless `questions` says otherwise, and the
+    sentences step's counts for them (no failures) unless `sentences` says otherwise."""
+    unit_rows = p1.units(p1.primary_probes(rows))
+    counts = dict(failed=0, units=len(unit_rows)) if sentences is COUNTS_FOR_UNITS else sentences
+    return p1.score(rows, hours, scores, questions_for(unit_rows) if questions is None else questions, screen, counts)
 
 
 def rejudged(unit_rows, first, flip=lambda row: row['stated']):
@@ -49,40 +69,32 @@ def guards_ok(false_b=1):
             + [dict(type='audit', schema=p1.SCORE_SCHEMA, arm='B', repeat=r, item=f'b{i}', false=i < false_b)
                for r in (1, 2) for i in range(40)]
             + [dict(type='cost', schema=p1.SCORE_SCHEMA, repeat=r, lineage='lh1', curator_dollars=15.0,
-                    actor_dollars=30.0, stopped_by_cap=False) for r in (1, 2)]
-            + guesses(15))
-
-
-def guesses(right):
-    """30 arm guesses, 15 per arm, with `right` of them matching the arm under the label mapping A=1."""
-    rows = [dict(type='guess', arm='A' if i < 15 else 'B') for i in range(30)]
-    for i, row in enumerate(rows):
-        matched = i < right
-        row['guess'] = ('1' if row['arm'] == 'A' else '2') if matched else ('2' if row['arm'] == 'A' else '1')
-    return rows
+                    actor_dollars=30.0, stopped_by_cap=False) for r in (1, 2)])
 
 
 def study(rates, per_boundary=10, extra=(), flip=lambda row: row['stated']):
     rows = spread(probes(per_boundary=per_boundary))
     unit_rows = p1.units(p1.primary_probes(rows))
-    first = labels(unit_rows, rates)
+    first = labels(unit_rows, {**CONTROL_RATES, **rates})
     return rows, first + rejudged(unit_rows, first, flip) + list(extra)
 
 
 def test_a_clear_gain_within_every_guard_is_a_go():
     rows, scores = study({'A1': 0.3, 'B1': 0.8, 'B2': 0.8}, extra=guards_ok())
-    result = p1.score(rows, HOURS, scores)
+    result = scored(rows, scores)
     assert result['decision']['go'] is True, result['decision']
     assert result['decision']['mean_delta'] == pytest.approx(0.5)
     assert result['judge_agreement']['percent'] == 1.0
     assert result['figures']['A1']['undelivered_per_game_hour'] == pytest.approx(56 / 40.5)
+    assert result['questions_flagged_twice'] == 0
+    assert 'arm_guessing' not in result and all('secondary' not in figure for figure in result['figures'].values())
 
 
 def test_score_refuses_hours_that_do_not_name_exactly_the_held_out_lineages():
     rows, scores = study({'A1': 0.3, 'B1': 0.8, 'B2': 0.8}, extra=guards_ok())
     for hours in ({k: v for k, v in HOURS.items() if k != 'lh4'}, dict(HOURS, lh5=1.0)):
         with pytest.raises(p1.ScoreError, match='--hours'):
-            p1.score(rows, hours, scores)
+            scored(rows, scores, hours=hours)
 
 
 @pytest.mark.parametrize('rates, outcome', [
@@ -92,7 +104,7 @@ def test_score_refuses_hours_that_do_not_name_exactly_the_held_out_lineages():
 ])
 def test_no_go_without_a_large_consistent_gain(rates, outcome):
     rows, scores = study(rates, extra=guards_ok())
-    result = p1.score(rows, HOURS, scores)
+    result = scored(rows, scores)
     assert result['decision']['go'] is False
     assert result['decision']['outcome'].startswith(outcome)
 
@@ -100,11 +112,11 @@ def test_no_go_without_a_large_consistent_gain(rates, outcome):
 def test_a_lineage_below_a_blocks_a_go_even_with_a_large_pooled_gain():
     rows = spread(probes(per_boundary=10))
     unit_rows = p1.units(p1.primary_probes(rows))
-    first = labels(unit_rows, {'A1': 0.2, 'B1': 0.9, 'B2': 0.9})
+    first = labels(unit_rows, {**CONTROL_RATES, 'A1': 0.2, 'B1': 0.9, 'B2': 0.9})
     for row in first:          # in lh2, B states nothing A does not
         if row['item'].startswith('lh2') and row['arm'] == 'B':
             row['stated'] = next(r['stated'] for r in first if r['arm'] == 'A' and r['item'] == row['item'])
-    result = p1.score(rows, HOURS, first + rejudged(unit_rows, first) + guards_ok())
+    result = scored(rows, first + rejudged(unit_rows, first) + guards_ok())
     assert result['decision']['primary']['per_lineage']['lh2'] == 0
     assert result['decision']['go'] is False
 
@@ -118,9 +130,10 @@ def test_a_gain_carried_by_one_repeated_cluster_fails_the_cluster_bound():
     assert len(unit_rows) == 48 and len({(u['lineage'], u['cluster']) for u in unit_rows}) == 4
     gain = {u['cluster'] for u in unit_rows if int(u['probe'].split('-')[1]) % 2 == 0}
     first = [dict(type='label', schema=p1.SCORE_SCHEMA, kind='reobservation', arm=arm, repeat=rep, item=u['probe'],
-                  stated=arm == 'B' and u['cluster'] in gain)
+                  stated=arm == 'B' and u['cluster'] in gain, answered=True)
              for u in unit_rows for arm, reps in p1.ARMS.items() for rep in reps]
-    result = p1.score(rows, HOURS, first + rejudged(unit_rows, first) + guards_ok())
+    first += labels(unit_rows, CONTROL_RATES)
+    result = scored(rows, first + rejudged(unit_rows, first) + guards_ok())
     primary = result['decision']['primary']
     # Half the units gained, every lineage above A, both repeats above A: only the cluster bound fails,
     # because resampling two clusters per lineage can draw the one without a gain twice.
@@ -132,7 +145,7 @@ def test_a_gain_that_rejudging_removes_is_not_a_go():
     # A narrow first-pass gain (+0.2) that the seeded re-judging pulls under the threshold.
     rows, scores = study({'A1': 0.3, 'B1': 0.5, 'B2': 0.5}, extra=guards_ok(),
                          flip=lambda row: row['arm'] == 'A')
-    result = p1.score(rows, HOURS, scores)
+    result = scored(rows, scores)
     assert result['decision']['primary']['holds'] is True
     assert result['decision']['robust_to_rejudging'] is False and result['decision']['go'] is False
     assert result['judge_agreement']['percent'] < 1
@@ -147,7 +160,7 @@ def test_a_gain_that_rejudging_removes_is_not_a_go():
 ])
 def test_a_failed_guard_blocks_a_go_and_says_so(extra, check):
     rows, scores = study({'A1': 0.3, 'B1': 0.8, 'B2': 0.8}, extra=extra())
-    result = p1.score(rows, HOURS, scores)
+    result = scored(rows, scores)
     assert result['decision']['go'] is False
     assert result['decision']['outcome'].startswith('guard failed')
     assert result['decision']['guards']['1']['checks'][check] is False
@@ -156,34 +169,24 @@ def test_a_failed_guard_blocks_a_go_and_says_so(extra, check):
 def test_a_held_out_repeat_that_reached_its_cap_fails_the_cost_guard_without_scoring():
     rows = spread(probes())
     capped = [dict(type='cost', schema=p1.SCORE_SCHEMA, repeat=2, lineage='lh2', curator_dollars=31.0,
-                   actor_dollars=30.0, stopped_by_cap=True), *guesses(15)]
-    result = p1.score(rows, HOURS, capped)       # partial labels: none at all
+                   actor_dollars=30.0, stopped_by_cap=True)]
+    result = scored(rows, capped)       # partial labels: none at all
     assert result['decision']['go'] is False and 'reached its cap' in result['decision']['outcome']
+    assert result['questions_flagged_twice'] == 0
 
 
 def test_rejudging_must_be_exactly_the_seeded_sample():
     rows = spread(probes())
     unit_rows = p1.units(p1.primary_probes(rows))
-    first = labels(unit_rows, {'A1': 0.3, 'B1': 0.8, 'B2': 0.8})
+    first = labels(unit_rows, {**CONTROL_RATES, 'A1': 0.3, 'B1': 0.8, 'B2': 0.8})
     with pytest.raises(p1.ScoreError, match='seeded sample'):
-        p1.score(rows, HOURS, first + guards_ok())                               # none
+        scored(rows, first + guards_ok())                                        # none
     partial = rejudged(unit_rows, first)[:-1]
     with pytest.raises(p1.ScoreError, match='seeded sample'):
-        p1.score(rows, HOURS, first + partial + guards_ok())                     # a selected subset
-
-
-def test_the_arm_guessing_check_is_required_and_bounded():
-    rows, scores = study({'A1': 0.3, 'B1': 0.8, 'B2': 0.8}, extra=[r for r in guards_ok() if r['type'] != 'guess'])
-    with pytest.raises(p1.ScoreError, match='arm-guessing'):
-        p1.score(rows, HOURS, scores)                                    # missing
-    with pytest.raises(p1.ScoreError, match='arm-guessing'):
-        p1.score(rows, HOURS, scores + guesses(15)[:-1])                 # not 30, or unbalanced
-    # The limit is the binomial tail under no leak, with the better of two mappings: 21 of 30.
-    assert p1.guess_limit() == 21
-    for right in (21, 9):                                                # either mapping counts
-        with pytest.raises(p1.ScoreError, match='guessed'):
-            p1.score(rows, HOURS, scores + guesses(right))
-    assert p1.score(rows, HOURS, scores + guesses(20))['arm_guessing']['leaks'] is False
+        scored(rows, first + partial + guards_ok())                              # a selected subset
+    control = [dict(r, rejudge=True) for r in first if r['arm'] == 'R'][:1]
+    with pytest.raises(p1.ScoreError, match='seeded sample'):
+        scored(rows, first + rejudged(unit_rows, first) + control + guards_ok())   # a control is never re-judged
 
 
 def test_units_count_one_cluster_once_per_boundary_and_only_confirmed_informative_probes():
@@ -220,15 +223,15 @@ def test_clusters_do_not_chain_frames_that_are_not_all_near_each_other():
 def test_incomplete_or_malformed_rows_are_refused(mutate, match):
     rows = spread(probes())
     unit_rows = p1.units(p1.primary_probes(rows))
-    first = labels(unit_rows, {'A1': 0.5, 'B1': 0.5, 'B2': 0.5})
+    first = labels(unit_rows, {**CONTROL_RATES, 'A1': 0.5, 'B1': 0.5, 'B2': 0.5})
     with pytest.raises(p1.ScoreError, match=match):
-        p1.score(rows, HOURS, mutate(first) + rejudged(unit_rows, first) + guards_ok())
+        scored(rows, mutate(first) + rejudged(unit_rows, first) + guards_ok())
 
 
 def test_development_lineages_are_never_scored():
     rows = [dict(r, lineage='397') for r in probes()]
     with pytest.raises(p1.ScoreError, match='held-out'):
-        p1.score(rows, HOURS, guesses(15))
+        scored(rows, [], questions=[])
 
 
 def test_the_study_2_plan_reproduces_and_its_page_figures_match():
@@ -272,12 +275,38 @@ def test_lh4_is_a_held_out_lineage_of_its_seven_restarted_admissions():
     assert p1.STUDY_1_BOUNDARIES == {'lh1': 4, 'lh2': 3, 'lh3': 3}
 
 
-def frozen_dir(directory, rows, *, schema='p1-held-out-frozen/1'):
-    """A held-out directory: `probes.jsonl` and the `frozen.json` that digests it."""
+def frozen_dir(directory, rows, *, schema='p1-held-out-frozen/1', name='probes.jsonl', beside=None):
+    """A held-out directory: `probes.jsonl` (or another file), the files `beside` it (name -> text), and the
+    `frozen.json` that digests them all."""
     directory.mkdir(parents=True)
-    path = directory/'probes.jsonl'
+    path = directory/name
     path.write_text(''.join(json.dumps(row, sort_keys=True) + '\n' for row in rows))
-    (directory/'frozen.json').write_text(json.dumps(dict(schema=schema, files={'probes.jsonl': p1.file_sha256(path)})))
+    for other, text in (beside or {}).items():
+        (directory/other).write_text(text)
+    files = {file: p1.file_sha256(directory/file) for file in (name, *(beside or {}))}
+    (directory/'frozen.json').write_text(json.dumps(dict(schema=schema, files=files)))
+    return path
+
+
+def frozen_questions(root, unit_rows, flagged_twice=0):
+    """(questions file, screen.json) as `questions-freeze` leaves them under the repository `root`: the one frozen
+    questions file, with the counts beside it."""
+    directory = root/'data'/'evaluation'/'p1'/'questions'
+    questions = questions_for(unit_rows)
+    digest = p1.file_sha256(frozen_dir(directory, questions, name='questions.jsonl'))
+    directory.joinpath('frozen.json').unlink()
+    counts = json.dumps(dict(questions=3, flagged=flagged_twice, flagged_twice=flagged_twice, questions_sha256=digest))
+    (directory/'screen.json').write_text(counts)
+    files = {file: p1.file_sha256(directory/file) for file in ('questions.jsonl', 'screen.json')}
+    (directory/'frozen.json').write_text(json.dumps(dict(schema=p1.FROZEN_SCHEMA, files=files)))
+    return directory/'questions.jsonl', directory/'screen.json'
+
+
+def sentence_counts(tmp_path, questions, failed=0, units=None, **over):
+    """The sentences step's counts for the questions file `questions` (units default to the study's)."""
+    path = tmp_path/'sentence-counts.json'
+    counts = dict(units=units, stages=1, rewritten=0, failed=failed, questions_sha256=p1.file_sha256(questions))
+    path.write_text(json.dumps({k: v for k, v in dict(counts, **over).items() if v is not None}))
     return path
 
 
@@ -351,7 +380,7 @@ def four_files(two_files, tmp_path):
 
 def recorded(path):
     frozen = path.parent/'frozen.json'
-    return dict(path=str(path), sha256=p1.file_sha256(path), frozen=str(frozen), frozen_sha256=p1.file_sha256(frozen))
+    return dict(path=p1._relative(path), sha256=p1.file_sha256(path), frozen=p1._relative(frozen), frozen_sha256=p1.file_sha256(frozen))
 
 
 def flags(paths):
@@ -392,23 +421,115 @@ def test_the_repository_relative_path_is_recorded_for_files_inside_the_repositor
                                                 frozen_sha256=p1.file_sha256(path.parent/'frozen.json'))]
 
 
-def test_score_takes_one_frozen_file_per_lineage_and_records_them(four_files, tmp_path, capsys):
+def test_score_takes_one_frozen_file_per_lineage_and_records_them(four_files, tmp_path, capsys, monkeypatch):
+    monkeypatch.setattr(p1, 'ROOT', tmp_path.resolve())       # the questions are frozen at the repository root's one path
     paths, rows = four_files
     unit_rows = p1.units(p1.primary_probes(rows))
-    first_pass = labels(unit_rows, {'A1': 0.3, 'B1': 0.8, 'B2': 0.8})
+    first_pass = labels(unit_rows, {**CONTROL_RATES, 'A1': 0.3, 'B1': 0.8, 'B2': 0.8})
     scores = tmp_path/'scores.jsonl'
     scores.write_text(''.join(json.dumps(r) + '\n' for r in first_pass + rejudged(unit_rows, first_pass) + guards_ok()))
     hours, out = tmp_path/'hours.json', tmp_path/'result.json'
     hours.write_text(json.dumps(dict(HOURS, lh4=10.0)))
-    common = ['--scores', str(scores), '--hours', str(hours), '--out', str(out)]
+    questions, screen = frozen_questions(tmp_path, unit_rows, flagged_twice=2)
+    counts = sentence_counts(tmp_path, questions, failed=3, units=len(unit_rows))
+    common = ['--scores', str(scores), '--hours', str(hours), '--out', str(out), '--questions', str(questions),
+              '--screen', str(screen), '--sentences-counts', str(counts)]
     assert p1.main(['score', *flags(paths), *common]) == 0
     result = json.loads(out.read_text())
-    assert result['decision']['go'] is True
+    assert result['decision']['go'] is True and result['questions_flagged_twice'] == 2
+    assert result['positive_control']['paraphrases_failed_twice'] == 3
     assert result['probe_files'] == [recorded(path) for path in paths]
+    assert result['question_file'] == recorded(questions)
+    assert result['screen_file'] == dict(path=p1._relative(screen), sha256=p1.file_sha256(screen))
     out.unlink()
     with pytest.raises(SystemExit):                                   # probes that leave a held-out lineage out
         p1.main(['score', *flags(paths[:3]), *common])
     assert 'covering exactly' in capsys.readouterr().err and not out.exists()
+
+
+def test_score_refuses_a_questions_file_that_differs_from_its_freeze_or_is_missing_an_input(four_files, tmp_path, capsys, monkeypatch):
+    monkeypatch.setattr(p1, 'ROOT', tmp_path.resolve())
+    paths, rows = four_files
+    unit_rows = p1.units(p1.primary_probes(rows))
+    first_pass = labels(unit_rows, {**CONTROL_RATES, 'A1': 0.3, 'B1': 0.8, 'B2': 0.8})
+    scores, hours, out = tmp_path/'scores.jsonl', tmp_path/'hours.json', tmp_path/'result.json'
+    scores.write_text(''.join(json.dumps(r) + '\n' for r in first_pass + rejudged(unit_rows, first_pass) + guards_ok()))
+    hours.write_text(json.dumps(dict(HOURS, lh4=10.0)))
+    questions, screen = frozen_questions(tmp_path, unit_rows)
+    counts = sentence_counts(tmp_path, questions, units=len(unit_rows))
+    common = ['--scores', str(scores), '--hours', str(hours), '--out', str(out), '--screen', str(screen),
+              '--sentences-counts', str(counts)]
+    questions.write_text(questions.read_text().replace('bolt', 'nail'))          # one edit after the freeze
+    with pytest.raises(SystemExit):
+        p1.main(['score', *flags(paths), *common, '--questions', str(questions)])
+    error = capsys.readouterr().err
+    assert 'not a frozen questions file' in error and 'nail' not in error and not out.exists()
+    questions.write_text(questions.read_text().replace('nail', 'bolt'))
+    assert p1.file_sha256(questions) == json.loads((questions.parent/'frozen.json').read_text())['files']['questions.jsonl']
+    # the screen's counts must be the freeze's screen.json: an edited copy, a copy elsewhere and an unlisted one are refused
+    other = tmp_path/'other-screen.json'
+    other.write_text(json.dumps(dict(flagged_twice=0)))
+    edited = screen
+    original = edited.read_text()
+    edited.write_text(json.dumps(dict(flagged_twice=9)))
+    for given in (other, edited):
+        with pytest.raises(SystemExit):
+            p1.main(['score', *flags(paths), *common[:6], '--screen', str(given), '--sentences-counts', str(counts),
+                     '--questions', str(questions)])
+        assert 'not the screen counts the questions were frozen with' in capsys.readouterr().err
+    edited.write_text(original)
+    frozen = questions.parent/'frozen.json'                       # a freeze that does not list the screen's counts
+    frozen.write_text(json.dumps(dict(schema=p1.FROZEN_SCHEMA, files={'questions.jsonl': p1.file_sha256(questions)})))
+    with pytest.raises(SystemExit):
+        p1.main(['score', *flags(paths), *common[:6], '--screen', str(screen),
+                 '--sentences-counts', str(counts), '--questions', str(questions)])
+    assert 'not the screen counts the questions were frozen with' in capsys.readouterr().err
+    for missing in ('--questions', '--screen', '--sentences-counts'):
+        arguments = [a for i, a in enumerate(common) if a != missing and common[i - 1] != missing]
+        with pytest.raises(SystemExit):
+            p1.main(['score', *flags(paths), *arguments,
+                     *([] if missing == '--questions' else ['--questions', str(questions)])])
+        assert '--questions, --screen and --sentences-counts' in capsys.readouterr().err
+    assert not out.exists()
+
+
+def test_score_refuses_questions_at_another_path_and_sentence_counts_of_another_questions_file(four_files, tmp_path, capsys, monkeypatch):
+    monkeypatch.setattr(p1, 'ROOT', tmp_path.resolve())
+    paths, rows = four_files
+    unit_rows = p1.units(p1.primary_probes(rows))
+    first_pass = labels(unit_rows, {**CONTROL_RATES, 'A1': 0.3, 'B1': 0.8, 'B2': 0.8})
+    scores, hours, out = tmp_path/'scores.jsonl', tmp_path/'hours.json', tmp_path/'result.json'
+    scores.write_text(''.join(json.dumps(r) + '\n' for r in first_pass + rejudged(unit_rows, first_pass) + guards_ok()))
+    hours.write_text(json.dumps(dict(HOURS, lh4=10.0)))
+    questions, screen = frozen_questions(tmp_path, unit_rows)
+    n = len(unit_rows)
+    common = ['--scores', str(scores), '--hours', str(hours), '--out', str(out), '--screen', str(screen), '--questions', str(questions)]
+
+    def score_with(counts):
+        with pytest.raises(SystemExit):
+            p1.main(['score', *flags(paths), *common, '--sentences-counts', str(counts)])
+        assert not out.exists()
+        return capsys.readouterr().err
+
+    # sentences made from another questions file (a Q0 the questions were rewritten from), or from none the counts name
+    for over in (dict(questions_sha256='c' * 64), dict(questions_sha256=None)):
+        assert 'not of the frozen questions file' in score_with(sentence_counts(tmp_path, questions, units=n, **over))
+    # the counts must give the unit count: it is no longer optional
+    assert 'one paraphrase for each unit' in score_with(sentence_counts(tmp_path, questions))
+    assert 'one paraphrase for each unit' in score_with(sentence_counts(tmp_path, questions, units=n - 1))
+    assert p1.main(['score', *flags(paths), *common, '--sentences-counts', str(sentence_counts(tmp_path, questions, units=n))]) == 0
+    out.unlink()
+    # the freeze verifies in a subdirectory too, but the frozen questions file is exactly one path
+    sub = tmp_path/'data'/'evaluation'/'p1'/'questions'/'sub'
+    sub.mkdir()
+    for name in ('questions.jsonl', 'screen.json', 'frozen.json'):
+        (sub/name).write_bytes((questions.parent/name).read_bytes())
+    assert p1.frozen_file(sub/'questions.jsonl', 'questions')[0]
+    with pytest.raises(SystemExit):
+        p1.main(['score', *flags(paths), '--scores', str(scores), '--hours', str(hours), '--out', str(out), '--screen', str(sub/'screen.json'),
+                 '--questions', str(sub/'questions.jsonl'), '--sentences-counts', str(sentence_counts(tmp_path, questions, units=n))])
+    assert 'the frozen questions file is exactly data/evaluation/p1/questions/questions.jsonl' in capsys.readouterr().err
+    assert not out.exists()
 
 
 def test_plan_takes_only_study_1s_lineages(four_files, capsys):
@@ -427,3 +548,306 @@ def test_plan_keeps_exactly_one_probes_file(two_files, capsys):
     assert 'exactly one' in capsys.readouterr().err
     with pytest.raises(SystemExit):
         p1.main(['plan'])
+
+
+# ---------------------------------------------------------------------------------------------
+# p1-study/3: the sample, the simulation's new parameters, and the controls
+
+def test_the_rejudged_sample_is_what_it_was_before_the_controls_over_a_and_b_keys_only():
+    sample = p1.rejudge_sample([dict(probe=f'lh1-p{n:04d}') for n in range(1, 11)])
+    assert sorted(sample) == [('reobservation', 'A', 1, 'lh1-p0003'), ('reobservation', 'A', 1, 'lh1-p0005'),
+                              ('reobservation', 'A', 1, 'lh1-p0006'), ('reobservation', 'B', 1, 'lh1-p0005'),
+                              ('reobservation', 'B', 2, 'lh1-p0005'), ('reobservation', 'B', 2, 'lh1-p0010')]
+    assert {key[1] for key in sample} == {'A', 'B'} and p1.rejudge_sample([]) == set()
+    every = p1.rejudge_sample([dict(probe=f'p{n}') for n in range(4)], share=1.0)     # development: every A and B label
+    assert len(every) == 12 and {key[1] for key in every} == {'A', 'B'}
+
+
+LAYOUT = [(name, f'{name}-{c}') for name in ('lh1', 'lh2', 'lh3', 'lh4') for c in range(30)]
+PINNED = {'0.00': 0.0, '0.10': 0.08, '0.15': 0.35, '0.20': 0.6, '0.25': 0.8, '0.30': 0.95}    # at 84d61e8, 100 simulations
+
+
+def test_the_simulation_without_the_new_parameters_is_the_one_it_was():
+    result = p1.simulate(simulations=100, layout=LAYOUT)
+    assert result['probability_of_go']['held-out structure'] == PINNED
+    assert result['gate'] == dict(no_effect=0.0, at_interest=0.95, passes=True) and 'varied' not in result
+    assert p1.simulate(simulations=100, layout=LAYOUT, flip=None, sensitivity=None) == result
+    assert p1.simulate(simulations=100, layout=LAYOUT, flip=p1.FLIP)['probability_of_go'] == result['probability_of_go']   # the same stream
+
+
+def test_a_label_error_or_a_sensitivity_lowers_the_power_and_is_recorded():
+    base = p1.simulate(simulations=100, layout=LAYOUT)['probability_of_go']['held-out structure']
+    noisy = p1.simulate(simulations=100, layout=LAYOUT, flip=0.25)
+    assert noisy['varied'] == dict(flip=0.25, sensitivity=None)
+    assert noisy['probability_of_go']['held-out structure']['0.30'] < base['0.30']
+    weak = p1.simulate(simulations=100, layout=LAYOUT, sensitivity=(0.5, 0.5))
+    assert weak['varied'] == dict(flip=p1.FLIP, sensitivity=[0.5, 0.5])
+    assert weak['probability_of_go']['held-out structure']['0.30'] < base['0.30']
+    # a sensitivity that costs B alone lowers B's recall against A's: with nothing kept for B there is no go
+    against_b = p1.simulate(simulations=100, layout=LAYOUT, sensitivity=(1.0, 0.0))
+    assert against_b['probability_of_go']['held-out structure']['0.30'] == 0.0
+
+
+def test_the_simulation_flags_take_values_in_range_and_never_write_a_committed_gate(four_files, tmp_path, monkeypatch, capsys):
+    paths, _ = four_files
+    seen = []
+    monkeypatch.setattr(p1, 'simulate', lambda layout=None, **kw: seen.append(kw) or {'probability_of_go': {}, 'gate': {}})
+    monkeypatch.setattr(p1, 'ROOT', tmp_path.resolve())
+    (tmp_path/'data').mkdir()
+    out = tmp_path/'variant.json'
+    assert p1.main(['simulate', *flags(paths), '--flip', '0.1', '--sensitivity', '0.9', '0.8', '--out', str(out)]) == 0
+    assert seen == [dict(flip=0.1, sensitivity=(0.9, 0.8))] and out.is_file()
+    seen.clear()
+    assert p1.main(['simulate', *flags(paths), '--out', str(tmp_path/'plain.json')]) == 0 and seen == [{}]       # off by default
+    monkeypatch.setattr(p1, 'simulate', lambda layout=None, **kw: pytest.fail('nothing may run'))
+    for arguments in (['--flip', '0.1'],                                                                  # no --out
+                      ['--flip', '0.1', '--out', str(tmp_path/'data'/'p1'/'power-held-out-study-2.json')],      # a gate under data/
+                      ['--sensitivity', '0.9', '0.9', '--out', str(tmp_path/'data'/'x.json')],
+                      ['--flip', '0.7', '--out', str(out)], ['--flip', '-0.1', '--out', str(out)],
+                      ['--sensitivity', '0', '0.9', '--out', str(out)], ['--sensitivity', '1.1', '0.9', '--out', str(out)]):
+        with pytest.raises(SystemExit):
+            p1.main(['simulate', *flags(paths), *arguments])
+        capsys.readouterr()
+    assert not (tmp_path/'data'/'p1').exists() and not (tmp_path/'data'/'x.json').exists()
+
+
+def stated_table(a, b1, b2, reference, pw=(), pp=(), n=24):
+    """Stated labels for probes p00..p{n-1}: each arg is the probes (by number) that arm or control got right."""
+    probes = [f'p{i:02d}' for i in range(n)]
+    got = {'A': a, 'R': reference, 'PW': pw or range(n), 'PP': pp or range(n)}
+    out = {('reobservation', arm, 1, p): i in set(got[arm]) for arm in got for i, p in enumerate(probes)}
+    out.update({('reobservation', 'B', 1, p): i in set(b1) for i, p in enumerate(probes)})
+    out.update({('reobservation', 'B', 2, p): i in set(b2) for i, p in enumerate(probes)})
+    return [dict(probe=p, lineage='lh1', cluster=p, boundary='b') for p in probes], out
+
+
+def test_the_reference_the_bias_control_and_the_positive_control_are_counted_from_first_pass_labels():
+    unit_rows, stated = stated_table(a=range(10), b1=range(5, 17), b2=range(10), reference=range(22), pw=range(24), pp=range(21))
+    figures = p1.chain_controls(unit_rows, stated)
+    assert figures['reference'] == dict(n=24, correct=22, recall=22 / 24)
+    assert figures['bias_control'] == dict(units=22, difference=pytest.approx(1 / 22), applies=True, limit=0.10, min_units=20,
+                                           only_a={'B1': 5, 'B2': 0}, only_b={'B1': 7, 'B2': 0}, flag=False, direction='B above A')
+    assert figures['reference_wrong'] == {'A1': dict(units=2, stated=0, recall=0.0), 'B1': dict(units=2, stated=0, recall=0.0),
+                                          'B2': dict(units=2, stated=0, recall=0.0)}
+    assert figures['positive_control'] == dict(PW=dict(units=24, correct=24, sensitivity=1.0),
+                                               PP=dict(units=24, correct=21, sensitivity=21 / 24))
+
+
+def test_the_bias_flag_needs_a_difference_above_a_tenth_over_twenty_reference_correct_units_and_names_its_direction():
+    cases = [(range(10), range(16), range(16), 22, True, True, 'B above A'),         # +6/22
+             (range(16), range(10), range(10), 22, True, True, 'A above B'),         # -6/22
+             (range(10), range(12), range(10), 22, True, False, 'B above A'),        # +1/22
+             (range(10), range(12), range(12), 20, True, False, 'B above A'),        # exactly +2/20: not above 0.10
+             (range(10), range(16), range(16), 19, False, False, 'B above A')]       # under 20 units: it does not apply
+    for a, b1, b2, correct, applies, flag, direction in cases:
+        unit_rows, stated = stated_table(a=a, b1=b1, b2=b2, reference=range(correct))
+        control = p1.chain_controls(unit_rows, stated)['bias_control']
+        assert (control['applies'], control['flag'], control['direction']) == (applies, flag, direction), (correct, control)
+    unit_rows, stated = stated_table(a=range(10), b1=range(10), b2=range(10), reference=range(22))
+    assert p1.chain_controls(unit_rows, stated)['bias_control']['direction'] is None
+
+
+def test_only_a_and_only_b_are_given_for_each_b_repeat():
+    unit_rows, stated = stated_table(a=range(0, 10), b1=range(5, 12), b2=range(8, 20), reference=range(24))
+    control = p1.chain_controls(unit_rows, stated)['bias_control']
+    assert control['only_a'] == {'B1': 5, 'B2': 8} and control['only_b'] == {'B1': 2, 'B2': 10}
+
+
+@pytest.mark.parametrize('mutate, match', [
+    (lambda stated: {k: v for k, v in stated.items() if k[1:3] != ('R', 1) or k[3] != 'p05'}, '1 missing, 0 unexpected'),
+    (lambda stated: {k: v for k, v in stated.items() if k[1] != 'PP'}, '24 missing'),
+    (lambda stated: {**stated, ('reobservation', 'PW', 1, 'p99'): True}, '0 missing, 1 unexpected'),
+])
+def test_every_unit_needs_a_label_for_each_control_and_no_other(mutate, match):
+    unit_rows, stated = stated_table(a=range(5), b1=range(5), b2=range(5), reference=range(5))
+    with pytest.raises(p1.ScoreError, match=match):
+        p1.chain_controls(unit_rows, mutate(stated))
+
+
+def test_a_missing_reference_label_is_refused_by_score_and_the_controls_stay_out_of_the_decision():
+    rows, scores = study({'A1': 0.3, 'B1': 0.8, 'B2': 0.8}, extra=guards_ok())
+    gone = [r for r in scores if not (r.get('type') == 'label' and r['arm'] == 'R' and r['item'] == 'lh1-0-00')]
+    with pytest.raises(p1.ScoreError, match='Reference and positive-control labels do not cover the study: 1 missing'):
+        scored(rows, gone)
+    odd = study({'A1': 0.3, 'B1': 0.8, 'B2': 0.8, 'R1': 0.0, 'PW1': 0.0, 'PP1': 0.0}, extra=guards_ok())[1]
+    assert scored(rows, odd)['decision'] == scored(rows, scores)['decision']      # the controls never reach the rule
+    result = scored(rows, scores)
+    assert result['reference']['recall'] == 0.5 and result['positive_control']['PP']['sensitivity'] == 1.0
+    assert result['bias_control']['applies'] is True and result['bias_control']['flag'] is True
+    assert result['bias_control']['direction'] == 'B above A' and result['reference_wrong']['A1']['units'] == 40
+    assert result['figures']['A1']['n'] == 80 and 'guards' in result['decision'] and 'R1' not in result['figures']
+
+
+def test_the_chain_agreement_is_reported_as_percent_kappa_and_percent_over_the_items_either_pass_answered():
+    first = {('reobservation', 'A', 1, 'a'): (True, True), ('reobservation', 'A', 1, 'b'): (False, False),
+             ('reobservation', 'B', 1, 'c'): (True, True), ('reobservation', 'B', 2, 'd'): (False, False)}
+    second = {('reobservation', 'A', 1, 'a'): (True, True), ('reobservation', 'A', 1, 'b'): (False, False),
+              ('reobservation', 'B', 1, 'c'): (False, True), ('reobservation', 'B', 2, 'd'): (True, True)}
+    whole = p1.agreement(first, second)
+    assert whole['n'] == 4 and whole['percent'] == 0.5 and whole['kappa'] == pytest.approx(0.0)
+    assert whole['answered_either'] == dict(n=3, percent=pytest.approx(1 / 3))           # b was not answered in either pass
+    by_arm = p1.agreement(first, second, ('B',))
+    assert by_arm['n'] == 2 and by_arm['percent'] == 0.0 and by_arm['answered_either']['n'] == 2
+    assert p1.agreement({}, {}) == dict(n=0, percent=None, kappa=None, answered_either=dict(n=0, percent=None))
+
+
+@pytest.mark.parametrize('change, ok', [
+    ({}, True), (dict(answered=False), True), (dict(arm='PP'), True), (dict(arm='R'), True), (dict(arm='B', repeat=2), True),
+    (dict(stated=...), False), (dict(answered=...), False), (dict(stated='yes'), False), (dict(answered=1), False),
+    (dict(arm='PW', repeat=2), False), (dict(arm='A', repeat=2), False), (dict(kind='fact'), False), (dict(arm='N'), False),
+    (dict(item=3), False)])
+def test_a_label_row_needs_a_boolean_stated_and_answered_and_an_arm_of_the_study_or_a_control(change, ok):
+    base = dict(type='label', schema=p1.SCORE_SCHEMA, kind='reobservation', arm='A', repeat=1, item='x', stated=True, answered=True)
+    made = {k: v for k, v in {**base, **change}.items() if v is not ...}          # `...` removes the field
+    if ok:
+        first, second = p1.labels([made])
+        assert first == {('reobservation', made['arm'], made['repeat'], 'x'): (True, made['answered'])} and second == {}
+    else:
+        with pytest.raises(p1.ScoreError, match='outside the study'):
+            p1.labels([made])
+
+
+def test_the_questions_must_be_one_p1_question_row_for_each_unit():
+    units = [dict(probe='p1'), dict(probe='p2')]
+    good = [dict(schema='p1-question/1', probe=p, question='q?', key='') for p in ('p1', 'p2')]
+    assert set(p1.question_rows(good, units)) == {'p1', 'p2'}
+    for bad, match in ((good[:1], '1 units have none'), (good + [dict(good[0], probe='p3')], '1 questions belong to no unit'),
+                       (good + [good[0]], 'two questions'), ([dict(good[0], schema='p1-question/2'), good[1]], 'not a p1-question/1'),
+                       ([dict(good[0], question=' '), good[1]], 'not a p1-question/1'), ([dict(good[0], extra=1), good[1]], 'not a p1-question/1'),
+                       ([dict(good[0], key=None), good[1]], 'not a p1-question/1'), (['x'], 'not a p1-question/1')):
+        with pytest.raises(p1.ScoreError, match=match) as raised:
+            p1.question_rows(bad, units)
+        assert 'q?' not in str(raised.value)
+    rows, scores = study({'A1': 0.3, 'B1': 0.8, 'B2': 0.8}, extra=guards_ok())
+    with pytest.raises(p1.ScoreError, match='units have none'):
+        scored(rows, scores, questions=questions_for(p1.units(p1.primary_probes(rows)))[1:])
+    for screen in ({}, dict(flagged_twice=None), dict(flagged_twice=-1), dict(flagged_twice=True), None, [1]):
+        with pytest.raises(p1.ScoreError, match='flagged_twice'):
+            scored(rows, scores, screen=screen)
+    for counts in ({}, dict(failed=None), dict(failed=-1), dict(failed=True), dict(failed=1.5), None, [1], dict(failed=0, units=1),
+                   dict(failed=0), dict(failed=0, units=None), dict(failed=0, units=True)):      # `units` is required
+        with pytest.raises(p1.ScoreError, match='sentences-counts'):
+            scored(rows, scores, sentences=counts)
+
+
+def test_a_flagged_bias_control_is_stated_beside_the_outcome_with_its_direction_and_changes_nothing_else():
+    rows, scores = study({'A1': 0.3, 'B1': 0.8, 'B2': 0.8}, extra=guards_ok())
+    flagged = scored(rows, scores, sentences=dict(failed=4, units=len(p1.units(p1.primary_probes(rows)))))
+    assert flagged['bias_control']['flag'] is True
+    assert flagged['outcome_note'] == "the received text's answer changed by arm: B above A"    # beside `decision`, not in it
+    assert 'outcome_note' not in flagged['decision'] and flagged['decision']['outcome'].startswith('go:')
+    assert flagged['positive_control']['paraphrases_failed_twice'] == 4
+    assert {'PW', 'PP'} <= set(flagged['positive_control'])
+    quiet_rows, quiet = study({'A1': 0.5, 'B1': 0.5, 'B2': 0.5}, extra=guards_ok())
+    result = scored(quiet_rows, quiet)
+    assert result['bias_control']['flag'] is False and 'outcome_note' not in result
+    assert result['positive_control']['paraphrases_failed_twice'] == 0
+    # A above B is stated as such, and the decision is the same with or without the note
+    reversed_rows, reversed_scores = study({'A1': 0.8, 'B1': 0.3, 'B2': 0.3}, extra=guards_ok())
+    below = scored(reversed_rows, reversed_scores)
+    assert below['outcome_note'] == "the received text's answer changed by arm: A above B"
+    assert below['decision']['outcome'].startswith('negative')
+
+
+# ---------------------------------------------------------------------------------------------
+# The development summary
+
+def dev_label(arm, probe, stated, *, answered=True, rejudge=False, repeat=1):
+    row = dict(type='label', schema=p1.SCORE_SCHEMA, kind='reobservation', arm=arm, repeat=repeat, item=probe,
+               stated=stated, answered=answered)
+    return dict(row, rejudge=True) if rejudge else row
+
+
+def dev_study(n=20, *, a=range(10), b=range(12), reference=range(18), pw=range(20), pp=range(18), flip_a=(), flip_b=(),
+              unanswered=()):
+    """Development labels for `n` units: each arm's or control's stated units, and the re-judged twins of A and B with
+    `flip_*` units changed; the `unanswered` units were mechanically "not stated" in both passes (they must be unstated)."""
+    probes = [f'pair-{i:02d}' for i in range(n)]
+    got = {'A': set(a), 'B': set(b), 'R': set(reference), 'PW': set(pw), 'PP': set(pp)}
+    rows = [dev_label(arm, p, i in hits, answered=not (arm in ('A', 'B') and i in unanswered))
+            for i, p in enumerate(probes) for arm, hits in got.items()]
+    rows += [dev_label(arm, p, (i in got[arm]) != (i in flips), answered=i not in unanswered, rejudge=True)
+             for i, p in enumerate(probes) for arm, flips in (('A', flip_a), ('B', flip_b))]
+    return rows
+
+
+def test_the_development_summary_reports_the_noise_the_sensitivity_and_the_reference():
+    rows = dev_study(flip_a={0, 1}, flip_b={2}, unanswered={19})
+    summary = p1.development_summary(rows)
+    assert summary['units'] == 20
+    noise = summary['noise']
+    assert noise['A'] | {'kappa': None} == dict(labels=20, disagreements=2, d=pytest.approx(0.1), kappa=None,
+                                                answered_either=dict(labels=19, disagreements=2, d=pytest.approx(2 / 19)))
+    assert noise['B']['labels'] == 20 and noise['B']['disagreements'] == 1 and noise['B']['d'] == pytest.approx(0.05)
+    assert noise['B']['answered_either'] == dict(labels=19, disagreements=1, d=pytest.approx(1 / 19))
+    pooled = noise['pooled']
+    assert (pooled['labels'], pooled['disagreements']) == (40, 3) and pooled['d'] == pytest.approx(0.075)
+    assert pooled['answered_either'] == dict(labels=38, disagreements=3, d=pytest.approx(3 / 38))
+    assert pooled['label_error'] == pytest.approx((1 - (1 - 2 * 0.075) ** 0.5) / 2)
+    first, second = p1.labels(rows)
+    assert pooled['kappa'] == pytest.approx(p1.agreement(first, second)['kappa']) and noise['A']['kappa'] is not None
+    assert summary['sensitivity'] == dict(PW=dict(units=20, correct=20, sensitivity=1.0),
+                                          PP=dict(units=20, correct=18, sensitivity=0.9))
+    assert summary['reference'] == dict(units=20, correct=18, recall=0.9)
+    assert summary['recall'] == dict(A=dict(units=20, stated=10, recall=0.5), B=dict(units=20, stated=12, recall=0.6))
+    assert summary['noise_ok'] is True and summary['sensitivity_ok'] is True
+    assert summary['limits'] == dict(noise=0.10, sensitivity=0.85)
+
+
+@pytest.mark.parametrize('flips, noise_ok', [(4, True), (5, False)])      # 4 of 40 is exactly 10%: at most 10% passes
+def test_the_noise_check_is_a_pooled_disagreement_of_at_most_ten_percent(flips, noise_ok):
+    summary = p1.development_summary(dev_study(flip_a=set(range(flips))))
+    assert summary['noise']['pooled']['disagreements'] == flips and summary['noise_ok'] is noise_ok
+
+
+@pytest.mark.parametrize('correct, ok', [(17, True), (16, False), (20, True)])    # 17 of 20 is exactly 85%
+def test_the_sensitivity_check_needs_at_least_85_percent_for_each_form(correct, ok):
+    assert p1.development_summary(dev_study(pp=range(correct)))['sensitivity_ok'] is ok
+    assert p1.development_summary(dev_study(pw=range(correct)))['sensitivity_ok'] is ok
+
+
+def test_the_label_error_is_capped_when_the_disagreement_reaches_a_half():
+    summary = p1.development_summary(dev_study(flip_a=set(range(20)), flip_b=set(range(20))))
+    assert summary['noise']['pooled']['d'] == 1.0 and summary['noise']['pooled']['label_error'] == 0.5
+    assert summary['noise_ok'] is False
+
+
+@pytest.mark.parametrize('mutate, match', [
+    (lambda rows: rows + [dict(rows[0], item='lh1-p0001')], 'held-out lineage'),
+    (lambda rows: rows + [dict(rows[0], item='lh4b3-x')], 'held-out lineage'),
+    (lambda rows: [r for r in rows if not (r['arm'] == 'R' and r['item'] == 'pair-03')], '1 missing, 0 unexpected'),
+    (lambda rows: [r for r in rows if r['arm'] != 'PP'], '20 missing'),
+    (lambda rows: [r for r in rows if not (r['arm'] == 'A' and r['item'] == 'pair-03' and not r.get('rejudge'))], '1 missing'),
+    (lambda rows: [r for r in rows if not (r['arm'] == 'B' and r['item'] == 'pair-04' and r.get('rejudge'))], 'must be re-judged'),
+    (lambda rows: [r for r in rows if not r.get('rejudge')], 'must be re-judged'),
+    (lambda rows: rows + [dict(rows[0], repeat=2, arm='B')], r'0 missing, 1 unexpected'),
+    (lambda rows: rows + [dict(rows[0], arm='R', rejudge=True)], r'0 missing, 1 unexpected'),
+    (lambda rows: rows + [dict(rows[0], arm='A')], 'judged twice'),
+    (lambda rows: rows + [dict(type='cost', schema=p1.SCORE_SCHEMA)], 'label rows only'),
+    (lambda rows: [], 'no development labels')])
+def test_the_development_summary_refuses_what_is_not_a_complete_development_chain(mutate, match):
+    with pytest.raises(p1.ScoreError, match=match):
+        p1.development_summary(mutate(dev_study()))
+
+
+def test_the_development_command_writes_and_prints_figures_only_under_the_runtime_directory(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(p1, 'ROOT', tmp_path.resolve())
+    scores = tmp_path/'dev-scores.jsonl'
+    scores.write_text(''.join(json.dumps(r) + '\n' for r in dev_study(flip_a={0})))
+    out = tmp_path/'.runtime'/'development'/'summary.json'
+    assert p1.main(['development', '--scores', str(scores), '--out', str(out)]) == 0
+    printed = json.loads(capsys.readouterr().out)
+    assert printed == json.loads(out.read_text()) == p1.development_summary(dev_study(flip_a={0}))
+    assert 'pair-' not in out.read_text() and printed['noise_ok'] is True
+    for arguments, message in ((['--scores', str(scores), '--out', str(out)], '--out exists'),
+                               (['--scores', str(scores), '--out', str(tmp_path/'elsewhere.json')], 'under the repository'),
+                               (['--out', str(out.with_name('x.json'))], 'needs --scores and --out'),
+                               (['--scores', str(scores)], 'needs --scores and --out')):
+        with pytest.raises(SystemExit):
+            p1.main(['development', *arguments])
+        assert message in capsys.readouterr().err
+    bad = tmp_path/'bad.jsonl'
+    bad.write_text(''.join(json.dumps(r) + '\n' for r in dev_study()[:-1]))
+    with pytest.raises(SystemExit):
+        p1.main(['development', '--scores', str(bad), '--out', str(tmp_path/'.runtime'/'bad.json')])
+    assert 'must be re-judged' in capsys.readouterr().err and not (tmp_path/'.runtime'/'bad.json').exists()
