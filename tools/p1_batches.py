@@ -61,7 +61,7 @@ from typing import NamedTuple
 
 from harness.jsonio import file_sha256
 from tools import p1_analysis as analysis
-from tools.probe_validation import HELD_OUT_DIR, HELD_OUT_LH4_DIR, HELD_OUT_STUDIES
+from tools.probe_validation import HELD_OUT_DIR, HELD_OUT_LH4_DIR, HELD_OUT_STUDIES, HELD_OUT_STUDY
 
 ROOT = analysis.ROOT
 STUDY_DOC = ROOT/'docs'/'design'/'p1-study-3.md'
@@ -228,9 +228,11 @@ def frozen_units(frozen: Frozen) -> Units:
 
 def held_out_names() -> set[str]:
     """The directory names that mark held-out content: the lineages, their admissions (session directories), the
-    evidence studies they sit in and the tracked held-out directories. Names only; nothing is opened to find them."""
+    evidence studies that hold only held-out sessions and the tracked held-out directories. `372-382-dev-loop` is not
+    one: it also holds #372's development sessions, and its held-out sessions are caught by their admission names.
+    Names only; nothing is opened to find them."""
     return (set(analysis.HELD_OUT) | {run for runs in analysis.HELD_OUT.values() for run in runs}
-            | set(HELD_OUT_STUDIES.values()) | {HELD_OUT_DIR.name, HELD_OUT_LH4_DIR.name})
+            | (set(HELD_OUT_STUDIES.values()) - {HELD_OUT_STUDY}) | {HELD_OUT_DIR.name, HELD_OUT_LH4_DIR.name})
 
 
 def development_units(path: Path) -> Units:

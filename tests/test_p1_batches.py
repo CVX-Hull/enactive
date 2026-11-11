@@ -400,7 +400,8 @@ def test_a_development_units_file_that_is_not_development_units_is_refused(tmp_p
 
 
 @pytest.mark.parametrize('frame', ['lh2a1/sources/lh2a1-5.png', 'x/lh1/f.png', '522-held-out/computer-sessions/lh4b3/sources/f.png',
-                                   'held-out/f.png', 'held-out-lh4/f.png', 'dev/../lh3a2/f.png', 'a/lh4b7/b/f.png'])
+                                   'held-out/f.png', 'held-out-lh4/f.png', 'dev/../lh3a2/f.png', 'a/lh4b7/b/f.png',
+                                   '372-382-dev-loop/computer-sessions/lh1a1/sources/f.png', '522-held-out/f.png'])
 def test_a_development_frame_may_not_lie_under_a_held_out_session_directory(tmp_path, capsys, frame):
     dev = dev_world(tmp_path)
     bad = write_jsonl(tmp_path/'bad.jsonl', [dict(dev.rows[0], frame=frame)])
@@ -408,6 +409,17 @@ def test_a_development_frame_may_not_lie_under_a_held_out_session_directory(tmp_
                '--host-version', HOST) == 2
     error = capsys.readouterr().err
     assert 'under a held-out session directory' in error and frame not in error and not (tmp_path/'.runtime'/'o').exists()
+
+
+def test_a_development_frame_in_the_study_that_also_holds_held_out_sessions_is_accepted(tmp_path):
+    """#372's development sessions sit in `372-382-dev-loop` beside #382's held-out ones; only the admission names refuse."""
+    dev = dev_world(tmp_path)
+    relative = '372-382-dev-loop/computer-sessions/aidB3/sources/f.png'
+    (dev.evidence/relative).parent.mkdir(parents=True)
+    (dev.evidence/relative).write_bytes(b'png')
+    units = write_jsonl(tmp_path/'mixed.jsonl', [dict(dev.rows[0], frame=relative)])
+    assert cli('batches', 'question', '--development', units, '--evidence-root', dev.evidence, '--out', tmp_path/'.runtime'/'o',
+               '--host-version', HOST) == 0
 
 
 def test_a_run_takes_the_held_out_probes_or_a_development_file_not_both_and_not_neither(world, tmp_path, capsys):
