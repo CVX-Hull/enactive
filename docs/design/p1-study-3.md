@@ -263,8 +263,9 @@ the text the successor would have received live.
 
 **Freezing.** After the development stage, the arms are fixed: code, prompt, renderer, cap and host
 settings. They are committed with their digests **(p1-study/2:** `p1_replay freeze`**)** before any held-out replay,
-and every later change is a deviation. The [approved transport amendment](#approved-transport-amendment)
-is the sole exception for the remaining replay.
+and every later change is a deviation. Only an explicitly owner-approved amendment below may
+change the runtime or resume a stopped study. The [proposed robustness recovery](#proposed-robustness-recovery-amendment)
+is inactive until its own owner decision and protected integration; it grants no authority while proposed.
 
 **(p1-study/2) Two steps before the freeze, in stage 2:**
 - **The format check ($0).** lh4 is recorded on a newer player than every trace the arms were built
@@ -342,6 +343,84 @@ reclassify the incident or make its incomplete output usable.
   nothing renews automatically. Only complete replay permits the remaining A delivery,
   blinded measurement and scoring in their existing order. The result reports this
   exception, every failed attempt and the mixed-source limitation beside its conclusion.
+
+### Proposed robustness recovery amendment
+
+**Pending owner approval; no new run is authorized.** After the final approved
+`held-out-continuation-4/r2` also stopped on HTTP200 missing usage, the owner chose
+**keep P1 pending a recovery proposal** and requested the robustness repairs. The
+original all-stage stop, incidents, incomplete outputs and receipts remain retained.
+This proposal permits only the following fresh qualification and conditional
+continuation after explicit approval, protected integration and freeze validation.
+
+- **Exact runtime.** Adopt merged source `749e7cc6ed2e7d0c2dcd81f1c88918907ec7adb1`
+  and canonical arms manifest SHA256
+  `9c2c8b7919e95797e1369ef497f3f7741a373446a41f3a5f00bca6577d38e164`.
+  PR #541 and PR #542 repair safe diagnostics, malformed/uncertain
+  accounting and receipt shutdown, interruption/cleanup, in-process stops, final
+  reporting, pricing bounds, default-tier selection and bounded private generation
+  references. The scorer also rejects incomplete/duplicate/nonfinite cost inputs;
+  formulas and decision thresholds for valid inputs are unchanged.
+- **Conditions retained and changed.** GPT-6.1 Terra, medium effort, the pinned
+  OpenRouter–OpenAI route, scientific prompts, renderer, image limits, data, questions,
+  seven scientific briefs, measurement and outcome criteria stay fixed. Requests now
+  explicitly use `service_tier: default`; earlier effective tiers are unknown from
+  retained metadata. Reservations/fallback use the recorded base/long-prompt upper
+  rates. Actual reported fees remain authoritative; old receipts are not repriced.
+  Larger reservations and earlier stops can affect later budget notes and completion.
+  This remains an amended comparison with mixed runtime/tier provenance, not proof
+  that either earlier upstream stream failure has been diagnosed or repaired.
+- **One development qualification first.** Run exactly one fresh `ceil09` admission
+  through the maintained P1 runner, stage `recovery-qualification-5`, repeat 2, cap
+  **$12** within the shared new envelope below. It uses its original development
+  screenshots and per-run memory, the normal P1 settings and a fresh knowledge store.
+  It was selected prospectively by permitted pilot health as the longer original
+  pilot admission, without consulting benefit labels. Per-session limits remain
+  **120 HTTP attempts and 30 minutes**, with host budget share 0.85.
+- **Strict readiness gate.** Continue only after a normal process exit, complete
+  schedule/summary with no stop, a sealed uncapped session, fully settled proxy and
+  ledger receipts, zero pending reservations/receipt failures, zero revocations,
+  breaches, refusals or missing usage, every attempt HTTP200 with finite nonnegative
+  reported cost and nonnegative integer prompt/completion counts, and closed owned processes/profiles/workspaces
+  with no survivors. Retain the original pilot gates: at least one submission or
+  draft written, and `ceil09` debit **at most $10.50**. Any failure or unknown returns
+  to the owner without qualification retry or held-out dispatch. A recovered HTTP
+  refusal/transport attempt fails this readiness gate even if the session seals.
+- **One conditional whole-lineage continuation.** Only if qualification passes,
+  stage `held-out-recovery-5`, repeat 2, runs fresh whole `lh2`, `lh3`, `lh4`:
+  **11 sessions**, each with the same 120-attempt/30-minute/$12 session ceiling.
+  Retain complete original R1 and replacement-1 R2 LH1 on their original freeze.
+  Exclude every partial earlier LH2 store; use separate maintained deliveries and
+  record each schedule/source/freeze. Another nonsealed session, revocation,
+  unsettled accounting or unsafe cleanup stops every stage and needs a new owner
+  decision. No lost session is renewed automatically.
+- **One shared new envelope.** Qualification plus conditional held continuation may
+  debit at most **$29.14** combined. Qualification's $12 ceiling is part of it, not
+  additional spending. Only after successful fully settled qualification set the
+  held stage cap to `floor_to_cents(29.14 - qualification_debit)`. A failed
+  qualification retires all unused capacity. Newly identified recorded charges or
+  reserved exposure require reconciliation before dispatch if they break the
+  recorded-cost allocation. A held stage/session cap failure retains its ordinary
+  cost-guard consequences and does not authorize a finishing request.
+- **Best-effort accounting, explicitly accepted by the owner.** The owner directed:
+  “We should not require browser access. Just do best effort cost tracking. We can
+  tolerate some mismatch”. Browser access or an invoice-level historical-tier proof
+  is not a prerequisite. Retained R2 debits **$18.28826995**, the separate unresolved
+  allowance **$11.90480270**, and the new $29.14 envelope sum to **$59.33307265**,
+  below the unchanged recorded actor denominator **$59.33655440**. This is a budget
+  calculation on recorded costs/allowances, not a proven historical invoice bound;
+  actual fees may differ. Count all failures, add the old allowance once to R2 LH1,
+  and add all new qualification overhead to R2 LH2 with a separate source breakdown.
+  The actor denominator is counted once and no qualification playtime/delivery/
+  labels enter the benefit analysis. The cost guard is computed on this disclosed
+  best-effort basis; no unqualified claim about invoice-level spend follows. Future
+  proxy caps, missing-usage revocation and stops remain strict.
+- **Expiry and remaining stages.** The exception covers only the retained final
+  missing-usage stop, one qualification and its conditional continuation. Any new
+  isolation incident stops every stage. Only complete valid held replay permits
+  A delivery and the frozen Codex reading/grading/rejudge/audit/scoring sequence.
+  Publish the owner decision, source/tier differences, every failure and expense,
+  accounting uncertainty and the amended-study limitation beside any conclusion.
 
 ## The measurement chain
 
@@ -739,7 +818,8 @@ No step from 2 on spends dollars except step 5.
 - **Isolation incident.** Any incident (a sandbox escape, key exposure, a proxy breach or a
   revocation) stops every stage. The [approved missing-usage stop exception](#approved-missing-usage-stop-exception)
   authorizes only the specified fresh continuation after the retained incident; it does
-  not suppress a new stop.
+  not suppress a new stop. The [proposed robustness recovery](#proposed-robustness-recovery-amendment)
+  would require its own explicit approval; it is not active authority.
 - **Stage caps.**
   - A development stage that reaches its cap stops there, and its partial data is reported.
   - A held-out stage that reaches its cap records the cost guard as failed (above). If repeat 1
@@ -748,8 +828,9 @@ No step from 2 on spends dollars except step 5.
   - **Cost.** It goes back to the owner if a session costs more than 2× the same session's #454
     cost (`aidB3` $4.76, `ceil09` $5.25).
   - **Output.** It also goes back if any session never writes.
-- **Freeze.** Once held-out replay starts, nothing in the arms changes except the explicitly
-  [approved transport amendment](#approved-transport-amendment); its new freeze precedes reuse.
+- **Freeze.** Once held-out replay starts, nothing in the arms changes without an explicitly
+  owner-approved runtime amendment; its new freeze precedes reuse. The
+  [robustness recovery proposal](#proposed-robustness-recovery-amendment) is inactive until approved.
 - **Gate (p1-study/2).** The re-run gate on lh1–lh4 can stop the study before stage 1.
 - **(p1-study/2) Operator-enforced.** The code does not tie caps to stages (#462's review), so the
   operator passes each stage's cap explicitly and records it with the stage's label, does not
@@ -875,6 +956,12 @@ the second file)** `--scores <rows> --hours <hours>` **(p1-study/3)** `--questio
     on the unchanged runtime freeze, after retaining the all-stage stop and failed expenses.
     The strict proxy guard and all future stop rules remain active.
 
+20. **Proposed robustness recovery, pending approval.** The
+    [proposal](#proposed-robustness-recovery-amendment) would change the runtime and
+    explicit service tier, qualify once on development data before one conditional
+    whole-lineage continuation, and use the owner-accepted best-effort cost basis.
+    It retains prior realizations, every failure, and all future strict stops.
+
 ## Owner decisions
 
 **(p1-study/3)** Decided by the owner on 10 November 2026:
@@ -934,6 +1021,13 @@ Decided by the owner on **11 November 2026**, before any held-out score:
    11 sessions (Recommended)". The [exception](#approved-missing-usage-stop-exception)
    covers only the specified retained revocation and one fresh whole-lineage continuation,
    capped at $31.88 on the unchanged runtime freeze. No additional attempt is authorized.
+3. **Keep P1 pending:** “Keep P1 pending a recovery proposal (Recommended)”. The failed
+   final continuation does not renew spending authority.
+4. **Best-effort cost tracking:** “We should not require browser access. Just do best
+   effort cost tracking. We can tolerate some mismatch”. Retain fees, failed-request
+   debits and the unresolved allowance with explicit uncertainty; do not require browser
+   access or call the recorded allocation a proven historical invoice bound. This
+   accounting direction does not itself authorize another paid run.
 
 Decided by the owner on 9 November 2026:
 1. **p1-study/2, the $80 lh4 envelope and the caps above:** "Approve".
