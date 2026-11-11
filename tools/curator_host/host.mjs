@@ -11,7 +11,6 @@ export const SCHEMA = 'curator-host/1';
 export const CONFIG_LIMIT_BYTES = 65536;
 const MAX_SUMMARY_CHARS = 2000;
 const NARRATION_BYTES = 1024;
-const ERROR_BODY_BYTES = 512;
 const RETRY_STATUSES = [502, 503, 504];
 const MAX_RETRY_DELAY_MS = 60_000;
 const levels = ['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'];
@@ -169,6 +168,26 @@ function narration(content) {
   return { text: bytes.subarray(0, end).toString('utf8'), omitted_bytes: bytes.length - end };
 }
 
+// These are diagnostic signatures from the pinned SDK, never authority to retry or accept a result.
+// The SDK flattens provider errors into arbitrary text; do not emit that text or guess its typed code.
+function requestFailure(message, status, chunks, sawFinish, accountingComplete) {
+  const failed = ['error', 'aborted', 'length'].includes(message.stopReason);
+  if (!failed && accountingComplete) return undefined;
+  const knownFinish = ['stop', 'tool_calls', 'function_call', 'length', 'content_filter', 'error', 'network_error'];
+  const finish = knownFinish.includes(message.rawStopReason) ? message.rawStopReason : null;
+  let kind = 'sdk-stream-error-unknown';
+  if (!failed) kind = 'missing-usage';
+  else if (message.stopReason === 'aborted') kind = 'aborted';
+  else if (message.stopReason === 'length') kind = 'output-limit';
+  else if (status >= 400) kind = 'http-error';
+  else if (message.errorMessage === 'Error reading response: malformed server-sent event JSON.') kind = 'malformed-sse-json';
+  else if (message.errorMessage === 'Stream ended without finish_reason') kind = 'missing-finish-reason';
+  else if (['error', 'content_filter', 'network_error'].includes(finish)) kind = 'provider-finish-error';
+  return { kind, phase: status == null ? 'before-headers' : status >= 400 ? 'http-error'
+    : sawFinish ? 'after-finish' : chunks ? 'streaming' : 'before-first-chunk',
+    chunks, finish_reason: finish, provider_error_type: null };
+}
+
 /** Run one session in `options.cwd`. `options.fetch` lets tests stand in for the proxy. */
 export async function runCurator(options) {
   const configuration = validateConfiguration(options.configuration);
@@ -180,7 +199,7 @@ export async function runCurator(options) {
   const model = { ...configuration.model, api: 'openai-completions', provider: 'openrouter', baseUrl: proxy.baseUrl };
   const effort = configuration.effort;
   let agent, fatal, finished, requests = 0, toolCalls = 0, requestId, requestTimer, inFlight = false;
-  let rawUsage, httpStatus, errorBody, lastPromptTokens = 0, contextWarning = false, spent = 0;
+  let rawUsage, httpStatus, providerChunks = 0, sawFinish = false, lastPromptTokens = 0, contextWarning = false, spent = 0;
   // Notes sent so far, each with the number of history messages it followed (append-only).
   const placedNotes = [];
   const budget = () => budgetNote({ requests, maxRequests: configuration.max_requests, spent, budget: configuration.budget_usd,
@@ -304,7 +323,7 @@ export async function runCurator(options) {
           if (fatal) return failureStream(streamModel, fatal);
           if (requests >= configuration.max_requests) { stop('request-limit'); return failureStream(streamModel, fatal); }
           try {
-            rawUsage = undefined; httpStatus = undefined; errorBody = undefined;
+            rawUsage = undefined; httpStatus = undefined; providerChunks = 0; sawFinish = false;
             clearTimeout(requestTimer);
             requestTimer = setTimeout(() => stop('request-timeout'), configuration.request_timeout_seconds * 1000);
             const signal = AbortSignal.any([streamOptions?.signal, stopped.signal].filter(Boolean));
@@ -313,7 +332,8 @@ export async function runCurator(options) {
               let attempt = 0;
               const retry = (id, headers) => {
                 if (requests >= configuration.max_requests) { stop('request-limit'); throw new HostError(fatal); }
-                emit('request-end', { request_id: id, status: httpStatus ?? null, stop_reason: 'error', retry: true });
+                emit('request-end', { request_id: id, status: httpStatus ?? null, stop_reason: 'error', retry: true,
+                  failure: requestFailure({ stopReason: 'error' }, httpStatus, providerChunks, sawFinish, false) });
                 // Only host-selected classes reach the SDK's abortable wait.
                 const error = new Error('retryable-provider');
                 error.status = undefined;
@@ -327,7 +347,7 @@ export async function runCurator(options) {
                 const payload = JSON.parse(init.body);
                 const id = requestId = `request-${++requests}`;
                 inFlight = true;
-                httpStatus = errorBody = undefined;
+                httpStatus = undefined;
                 emit('request-start', { request_id: id, attempt, payload_bytes: Buffer.byteLength(init.body),
                   message_count: payload.messages?.length ?? 0, image_parts: init.body.split('"type":"image_url"').length - 1 });
                 let response;
@@ -341,7 +361,6 @@ export async function runCurator(options) {
                 }
                 httpStatus = response.status;
                 if (response.status >= 400) {
-                  try { errorBody = (await response.clone().text()).slice(0, ERROR_BODY_BYTES); } catch { errorBody = ''; }
                   const headers = retryHeaders(response);
                   if (attempt === 1 && headers && !signal.aborted && !fatal) {
                     void response.body?.cancel().catch(() => {});
@@ -355,6 +374,8 @@ export async function runCurator(options) {
               maxRetries: 0, cacheRetention: 'short', maxTokens: model.maxTokens, timeoutMs: configuration.request_timeout_seconds * 1000,
               reasoningEffort: effort === 'off' ? undefined : effort,
               onProviderStreamEvent: chunk => {
+                providerChunks++;
+                if (chunk?.choices?.[0]?.finish_reason) sawFinish = true;
                 const usage = chunk?.usage ?? chunk?.choices?.[0]?.usage;
                 if (object(usage)) rawUsage = usage;
               } });
@@ -373,6 +394,8 @@ export async function runCurator(options) {
         if (inFlight) {
           const usage = rawUsage ?? {};
           const number = value => (typeof value === 'number' && Number.isFinite(value) ? value : null);
+          const failure = requestFailure(message, httpStatus, providerChunks, sawFinish,
+            number(usage.prompt_tokens) !== null && number(usage.completion_tokens) !== null && number(usage.cost) !== null);
           lastPromptTokens = number(usage.prompt_tokens) ?? lastPromptTokens;
           spent += number(usage.cost) ?? 0;
           emit('request-end', { request_id: requestId, status: httpStatus ?? null, stop_reason: message.stopReason,
@@ -380,7 +403,7 @@ export async function runCurator(options) {
             prompt_tokens: number(usage.prompt_tokens), completion_tokens: number(usage.completion_tokens),
             cached_tokens: number(usage.prompt_tokens_details?.cached_tokens), cache_write_tokens: number(usage.prompt_tokens_details?.cache_write_tokens),
             reasoning_tokens: number(usage.completion_tokens_details?.reasoning_tokens), cost: number(usage.cost),
-            ...(message.stopReason === 'error' && errorBody ? { error_body: errorBody } : {}) });
+            ...(failure ? { failure } : {}) });
         }
         inFlight = false;
         if (['error', 'aborted', 'length'].includes(message.stopReason) && !fatal) {

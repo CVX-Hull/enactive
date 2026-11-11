@@ -282,7 +282,6 @@ def run_one(*, arm_name: str, lineage: str, name: str, trace: Path, repo: Reposi
     proxy = ModelProxy(provider=OPENROUTER, upstream=upstream, key=key, prices={arm.model: prices[arm.model]},
                        cap_usd=cap, ledger=session_dir/'proxy-ledger.jsonl', max_output_tokens=max_output_tokens,
                        routing=model_config['model']['compat']['openRouterRouting'])
-    port = proxy.start()
     # The host's own budget sits below the proxy cap, so its write and finish phases begin while
     # the proxy still admits requests (the proxy refuses on worst-case reservations, not spend).
     budget = float(cap * HOST_BUDGET_SHARE)
@@ -293,6 +292,8 @@ def run_one(*, arm_name: str, lineage: str, name: str, trace: Path, repo: Reposi
                    started_wall=time.time())
     started = time.monotonic()
     record = None
+    pending = None
+    port = proxy.start()
     try:
         config = SessionConfig(
             argv=host_argv(host, session_config),
@@ -304,12 +305,26 @@ def run_one(*, arm_name: str, lineage: str, name: str, trace: Path, repo: Reposi
         state = 'completed'
     except Exception as exc:  # noqa: BLE001 - a failed session is a result, not a crash of the run
         state = f'error: {type(exc).__name__}: {exc}'
-    wall = time.monotonic() - started
-    revoked, breaches, spent = proxy.revoked, proxy.breaches, proxy.spent
-    proxy.close()
+    except BaseException as exc:
+        pending = exc
+        raise
+    finally:
+        try:
+            closure = proxy.close()
+            _write(session_dir/'proxy-close.json', closure)
+        except Exception as exc:  # noqa: BLE001 - preserve an existing interruption/failure
+            if pending is None:
+                raise
+            pending.add_note(f'Proxy shutdown failed: {type(exc).__name__}')
+            try:
+                _write(session_dir/'cleanup-failed.json', dict(error=type(exc).__name__))
+            except OSError as failure:
+                pending.add_note(f'Could not retain proxy shutdown failure: {type(failure).__name__}')
+        wall = time.monotonic() - started
     ledger = _ledger(session_dir/'proxy-ledger.jsonl')
-    summary.update(run_state=state, wall_seconds=round(wall, 3), cost_usd=str(spent),
-                   proxy=dict(revoked=revoked, breaches=breaches, **ledger), stopped_by_cap=ledger['cap_refused'])
+    summary.update(run_state=state, wall_seconds=round(wall, 3), cost_usd=closure['spent_snapshot_usd'],
+                   proxy={**ledger, **{key: value for key, value in closure.items()
+                                      if key not in ('schema', 'spent_snapshot_usd')}}, stopped_by_cap=ledger['cap_refused'])
     if record is not None:
         life = record['manifest']['lifecycle']
         record_dir = repo.state/'sessions'/record['manifest']['id']
@@ -414,6 +429,12 @@ def run_shadow(args: argparse.Namespace, key: str) -> dict:
             break
         if summary['stopped_by_cap'] or cap - spent <= 0:
             run['stopped'] = 'cap-reached'
+            break
+        if not summary['proxy']['settled']:
+            run['stopped'] = 'proxy-unsettled'
+            break
+        if summary.get('sandbox', {}).get('survivors') != []:
+            run['stopped'] = 'cleanup-unconfirmed'
             break
         if args.stop_on_abort and summary.get('session_state') != 'sealed':
             run['stopped'] = 'session-aborted'

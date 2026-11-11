@@ -8,8 +8,11 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+import signal
+import subprocess
 import sys
 import textwrap
+import time
 
 import pytest
 
@@ -245,3 +248,53 @@ def test_only_one_session_runs_per_repository(tmp_path, world):
         fcntl.flock(held, fcntl.LOCK_EX)
         with pytest.raises(SessionError, match='Another curator session'):
             run_session(repo, trace, host(tmp_path, 'idle', IDLE))
+
+
+def test_actual_sigint_during_native_execution_retains_abort_and_closes_the_owned_host(tmp_path, world):
+    repo, trace = world
+    config = host(tmp_path, 'sigint-host', '''
+        import os, time
+        open('scratch/ready', 'w').write(str(os.getpid()))
+        time.sleep(15)
+    ''')
+    driver = tmp_path/'driver.py'
+    driver.write_text('''
+import json, sys
+from pathlib import Path
+from harness.curator.knowledge import Repository
+from harness.curator.session import SessionConfig, run_session
+from harness.curator.sandbox import Limits
+c = json.loads(Path(sys.argv[1]).read_text())
+run_session(Repository(Path(c['repo']), 'testgame'), [Path(c['trace'])],
+            SessionConfig(argv=tuple(c['argv']), tools=tuple(map(Path, c['tools'])),
+                          limits=Limits(wall_seconds=30)), session_id='sigint')
+''')
+    package = tmp_path/'driver.json'
+    package.write_text(json.dumps(dict(repo=str(repo.path.parent), trace=str(trace[0]), argv=config.argv,
+                                       tools=list(map(str, config.tools)))))
+    ready = repo.state/'workspaces/sigint/scratch/ready'
+    log = tmp_path/'driver.log'
+    with log.open('wb') as output:
+        child = subprocess.Popen([sys.executable, str(driver), str(package)], start_new_session=True,
+                                 stdout=output, stderr=output, cwd=Path(__file__).resolve().parents[1],
+                                 env=dict(PATH=os.environ.get('PATH', '/usr/bin:/bin'),
+                                          PYTHONPATH=str(Path(__file__).resolve().parents[1])))
+        try:
+            deadline = time.monotonic() + 10
+            while not ready.exists() and child.poll() is None and time.monotonic() < deadline:
+                time.sleep(.02)
+            assert ready.exists() and child.poll() is None, log.read_text()
+            host_pid = int(ready.read_text())
+            child.send_signal(signal.SIGINT)
+            assert child.wait(timeout=10) == -signal.SIGINT, log.read_text()
+        finally:
+            if child.poll() is None:
+                sandbox._close(child)
+    record = json.loads((repo.state/'sessions/sigint/close-out.json').read_text())
+    life = record['manifest']['lifecycle']
+    assert life['state'] == 'aborted' and life['returncode'] is None and life['survivors'] is None
+    assert any('KeyboardInterrupt' in error for error in life['errors'])
+    assert not any((repo.state/'workspaces').iterdir())
+    with pytest.raises(ProcessLookupError):
+        os.kill(host_pid, 0)
+    assert run_session(repo, trace, host(tmp_path, 'after-sigint', IDLE))['manifest']['lifecycle']['state'] == 'sealed'

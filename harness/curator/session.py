@@ -250,6 +250,21 @@ def _run(repo: Repository, trace_sessions: list[Path], config: SessionConfig, me
             result = sandbox.run(list(config.argv), layout, proxy_port=config.proxy_port,
                                  token=getattr(config.proxy, 'token', None), limits=config.limits,
                                  extra_env=env, stdout=output, stderr=output)
+    except KeyboardInterrupt as interrupt:
+        # sandbox.run's finally has attempted owned process cleanup. Without its Result, exit and
+        # survivor observations remain unknown: retain an abort, gate nothing and preserve SIGINT.
+        errors.append('session: KeyboardInterrupt')
+        errors.extend(note for note in getattr(interrupt, '__notes__', [])
+                      if note.startswith('Sandbox cleanup failed: '))
+        try:
+            _close_out(repo, session_id, record_dir, workspace, manifest, result, errors, window, drafts, before)
+        except Exception as exc:  # noqa: BLE001 - the original interruption must remain primary
+            interrupt.add_note(f'Interrupted close-out failed: {type(exc).__name__}')
+            try:
+                (record_dir/'close-out-failed.json').write_text(json.dumps(dict(interrupted=True, error=type(exc).__name__)))
+            except OSError as failure:
+                interrupt.add_note(f'Could not retain close-out failure: {type(failure).__name__}')
+        raise
     except Exception as exc:  # noqa: BLE001 - every failure is sealed into the record
         errors.append(f'session: {_error(exc)}')
     return _close_out(repo, session_id, record_dir, workspace, manifest, result, errors, window, drafts, before)
@@ -257,7 +272,7 @@ def _run(repo: Repository, trace_sessions: list[Path], config: SessionConfig, me
 
 def _close_out(repo, session_id, record_dir, workspace, manifest, result, errors, window, drafts, before) -> dict:
     """Keep what is safe to keep, gate it after a clean exit, and seal the record."""
-    survivors = list(result.survivors) if result is not None else []
+    survivors = list(result.survivors) if result is not None else None
     if survivors:
         errors.append(f'close-out: {len(survivors)} host processes survived; nothing was collected')
     aborted = bool(errors) or result is None or result.stopped is not None or result.returncode != 0

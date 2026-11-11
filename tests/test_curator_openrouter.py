@@ -31,7 +31,7 @@ def sse(usage):
 
 
 @contextmanager
-def openrouter(tmp_path, usage, cap='1'):
+def openrouter(tmp_path, usage, cap='1', *, broken=False, entered=None, release=None):
     seen = []
 
     class Handler(BaseHTTPRequestHandler):
@@ -41,12 +41,21 @@ def openrouter(tmp_path, usage, cap='1'):
         def do_POST(self):
             seen.append(dict(path=self.path, headers=dict(self.headers.items()),
                              body=json.loads(self.rfile.read(int(self.headers['content-length'])))))
-            data = sse(usage)
+            if entered is not None:
+                entered.set()
+            if release is not None:
+                assert release.wait(10), 'local response was never released'
+            data = usage if isinstance(usage, bytes) else sse(usage)
             self.send_response(200)
             self.send_header('content-type', 'text/event-stream')
-            self.send_header('content-length', str(len(data)))
+            if broken:
+                self.send_header('transfer-encoding', 'chunked')
+            else:
+                self.send_header('content-length', str(len(data)))
             self.end_headers()
-            self.wfile.write(data)
+            self.wfile.write(b'100\r\nshort' if broken else data)
+            if broken:
+                self.close_connection = True
 
     server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
     threading.Thread(target=server.serve_forever, daemon=True).start()
@@ -67,10 +76,12 @@ def post(port, payload, token, extra=None):
     connection.request('POST', ROUTE, body=data, headers={'authorization': f'Bearer {token}',
                                                           'content-type': 'application/json',
                                                           'x-session-id': 'curator-session', **(extra or {})})
-    response = connection.getresponse()
-    payload = response.read()
-    connection.close()
-    return response.status, payload
+    try:
+        response = connection.getresponse()
+        payload = response.read()
+        return response.status, payload
+    finally:
+        connection.close()
 
 
 REFUSED = {
@@ -205,7 +216,8 @@ def test_a_bring_your_own_key_route_settles_at_the_upstream_charge_too():
     assert reported_cost(byok) == Decimal('0.50001')
     routed = sse(dict(prompt_tokens=10, completion_tokens=2, cost=0.002, cost_details=dict(upstream_inference_cost=0.0019)))
     assert reported_cost(routed) == Decimal('0.002')
-    assert reported_cost(sse(dict(prompt_tokens=1, cost='free', cost_details=dict(upstream_inference_cost=-1)))) is None
+    with pytest.raises(ValueError, match='invalid reported cost'):
+        reported_cost(sse(dict(prompt_tokens=1, cost='free', cost_details=dict(upstream_inference_cost=-1))))
 
 
 def test_only_image_blocks_are_discounted_as_images():
@@ -249,3 +261,190 @@ def test_a_reported_cost_above_the_reservation_revokes_the_session(tmp_path):
         assert post(port, body(), proxy.token)[0] == 200
         assert proxy.breaches == 1 and proxy.revoked
         assert post(port, body(), proxy.token)[0] == 429 and len(seen) == 1
+
+
+@pytest.mark.parametrize(('response', 'accounting_error'), [
+    (b'{"message":"malformed"}', None),
+    (b'{"response":["malformed"]}', None),
+    (b'{"usage":{"cost":1e99999999999999999999999999}}', 'InvalidOperation'),
+    (b'{"usage":{"prompt_tokens":1,"cost":1e1000000}}', 'unrepresentable-cost'),
+    (b'{"usage":{"prompt_tokens":"invalid","completion_tokens":0}}', 'ValueError'),
+    (b'{"usage":{"prompt_tokens":-1,"completion_tokens":0}}', 'ValueError'),
+    (b'{"usage":{"prompt_tokens":true,"completion_tokens":0}}', 'ValueError'),
+    (b'{"usage":{"prompt_tokens":1,"completion_tokens":0,"cost":-1}}', 'ValueError'),
+    (b'{"usage":{"prompt_tokens":1,"completion_tokens":0,"cost":[]}}', 'ValueError'),
+    (b'{"usage":{"prompt_tokens":1,"completion_tokens":0,"cost":0.001,"is_byok":true}}', 'ValueError'),
+])
+def test_malformed_or_unrepresentable_accounting_keeps_the_reservation_and_revokes(tmp_path, response, accounting_error):
+    with openrouter(tmp_path, response) as (proxy, port, seen):
+        assert post(port, body(), proxy.token)[0] == 200
+        row = json.loads(proxy.ledger.read_text())
+        assert row['usage_missing'] and row['charged'] == row['reserved']
+        assert row.get('accounting_error') == accounting_error
+        assert proxy.spent == Decimal(row['reserved']) > 0 and proxy.reserved == 0 and proxy.revoked
+        assert post(port, body(), proxy.token)[0] == 429 and len(seen) == 1
+
+
+@pytest.mark.parametrize(('metadata', 'code', 'expected_type', 'expected_code'), [
+    ({'error_type': 'provider_unavailable', 'raw': 'SECRET raw'}, 502, 'provider_unavailable', 502),
+    ({'error_type': 'SECRET-type'}, True, None, None),
+    (['SECRET malformed metadata'], {'SECRET': 'code'}, None, None),
+])
+def test_stream_error_classification_keeps_only_allowlisted_provider_fields(tmp_path, metadata, code, expected_type, expected_code):
+    response = b'data: ' + json.dumps({'error': {'message': 'SECRET provider text', 'code': code, 'metadata': metadata}}).encode() + b'\n\n'
+    with openrouter(tmp_path, response) as (proxy, port, _seen):
+        assert post(port, body(), proxy.token)[0] == 200
+        row = json.loads(proxy.ledger.read_text())
+        assert row['response_error'] == {'kind': 'provider-error-event', 'error_type': expected_type, 'error_code': expected_code}
+        assert 'SECRET' not in proxy.ledger.read_text()
+        assert proxy.revoked and row['usage_missing'] and row['charged'] == row['reserved']
+
+
+def test_a_truncated_upstream_http200_keeps_its_actual_status_and_conservative_charge(tmp_path):
+    with openrouter(tmp_path, b'', broken=True) as (proxy, port, _seen):
+        with pytest.raises(http.client.IncompleteRead):
+            post(port, body(), proxy.token)
+        row = json.loads(proxy.ledger.read_text())
+        assert row['status'] == 200 and row['error'] == 'IncompleteRead'
+        assert row['charged'] == row['reserved'] and row['usage_missing'] and proxy.revoked
+
+
+def test_an_oversized_response_stops_with_its_reservation_instead_of_growing_the_buffer(tmp_path, monkeypatch):
+    from harness.curator import proxy as proxy_module
+    monkeypatch.setattr(proxy_module, 'MAX_RESPONSE', 64)
+    with openrouter(tmp_path, b'x' * 65) as (proxy, port, _seen):
+        with pytest.raises(http.client.IncompleteRead):
+            post(port, body(), proxy.token)
+        row = json.loads(proxy.ledger.read_text())
+        assert row['status'] == 200 and row['error'] == 'ResponseTooLarge'
+        assert row['usage_missing'] and row['charged'] == row['reserved'] and proxy.revoked
+
+
+@pytest.mark.parametrize('missing', [False, True])
+def test_close_observes_late_settlement_and_real_revocation_without_creating_an_incident(tmp_path, monkeypatch, missing):
+    entered, release, closing = threading.Event(), threading.Event(), threading.Event()
+    usage = {} if missing else dict(prompt_tokens=10, completion_tokens=2, cost=.0001)
+    with openrouter(tmp_path, usage, entered=entered, release=release) as (proxy, port, _seen):
+        results, closures = [], []
+        request = threading.Thread(target=lambda: results.append(post(port, body(), proxy.token)))
+        request.start()
+        closer = None
+        try:
+            assert entered.wait(5)
+            shutdown = proxy._server.shutdown
+
+            def started_close():
+                closing.set()
+                shutdown()
+
+            monkeypatch.setattr(proxy._server, 'shutdown', started_close)
+            closer = threading.Thread(target=lambda: closures.append(proxy.close()))
+            closer.start()
+            assert closing.wait(5) and proxy._closed
+            release.set()
+            request.join(5)
+            closer.join(5)
+            assert not request.is_alive() and not closer.is_alive()
+            closure, row = closures[0], json.loads(proxy.ledger.read_text())
+            assert closure['settled'] and closure['unsettled_requests'] == 0 and Decimal(closure['pending_reserved_usd']) == 0
+            assert closure['revoked'] is missing
+            assert Decimal(closure['spent_snapshot_usd']) == Decimal(row['charged']) > 0
+            assert results[0][0] == 200
+            assert proxy._reserve(MODEL, json.dumps(body()).encode(), 100, body()) == 'session token revoked'
+        finally:
+            release.set()
+            request.join(10)
+            if closer is not None:
+                closer.join(10)
+
+
+@pytest.mark.parametrize('phase', ['upstream', 'ledger'])
+def test_close_timeout_keeps_pending_reservation_or_unwritten_receipt_explicit(tmp_path, monkeypatch, phase):
+    from harness.curator import proxy as proxy_module
+    monkeypatch.setattr(proxy_module, 'CLOSE_TIMEOUT', .01)
+    entered, release = threading.Event(), threading.Event()
+    usage = dict(prompt_tokens=10, completion_tokens=2, cost=.0001)
+    with openrouter(tmp_path, usage, entered=entered if phase == 'upstream' else None,
+                    release=release if phase == 'upstream' else None) as (proxy, port, _seen):
+        if phase == 'ledger':
+            record = proxy._record
+
+            def delayed_record(**fields):
+                entered.set()
+                assert release.wait(10)
+                record(**fields)
+
+            monkeypatch.setattr(proxy, '_record', delayed_record)
+        request = threading.Thread(target=lambda: post(port, body(), proxy.token))
+        request.start()
+        try:
+            assert entered.wait(5)
+            closure = proxy.close()
+            assert not closure['settled'] and closure['unsettled_requests'] == 1
+            assert (Decimal(closure['pending_reserved_usd']) > 0) is (phase == 'upstream')
+            assert closure['receipt_error'] is None and proxy._closed
+        finally:
+            release.set()
+            request.join(10)
+        assert not request.is_alive()
+        assert proxy.close()['settled']  # later reconciliation does not reopen admission or renew the run
+        assert closure['settled'] is False  # the original incomplete receipt is retained
+
+
+def test_a_stall_inside_ledger_open_cannot_block_admission_shutdown_or_its_timeout(tmp_path, monkeypatch):
+    from harness.curator import proxy as proxy_module
+    monkeypatch.setattr(proxy_module, 'CLOSE_TIMEOUT', .01)
+    entered, release, done = threading.Event(), threading.Event(), threading.Event()
+    with openrouter(tmp_path, dict(prompt_tokens=10, completion_tokens=2, cost=.0001)) as (proxy, port, _seen):
+        path = proxy.ledger
+
+        class BlockingLedger:
+            @contextmanager
+            def open(self, *args, **kwargs):
+                with path.open(*args, **kwargs) as stream:
+                    entered.set()
+                    assert release.wait(10)
+                    yield stream
+
+        proxy.ledger = BlockingLedger()
+        closures = []
+
+        def close():
+            try:
+                closures.append(proxy.close())
+            finally:
+                done.set()
+
+        request = threading.Thread(target=lambda: post(port, body(), proxy.token))
+        request.start()
+        closer = None
+        try:
+            assert entered.wait(5)
+            closer = threading.Thread(target=close)
+            closer.start()
+            assert done.wait(3), 'ledger I/O held the admission/accounting lock'
+            assert proxy._closed and not closures[0]['settled'] and closures[0]['unsettled_requests'] == 1
+            assert Decimal(closures[0]['pending_reserved_usd']) == 0  # money settled; its receipt is still blocked
+        finally:
+            release.set()
+            request.join(10)
+            if closer is not None:
+                closer.join(10)
+            proxy.ledger = path
+        assert not request.is_alive() and json.loads(path.read_text())['status'] == 200
+
+
+@pytest.mark.parametrize('failed_method', ['_record', '_settle'])
+def test_accounting_failure_is_latched_after_the_active_request_finishes(tmp_path, monkeypatch, failed_method):
+    usage = dict(prompt_tokens=10, completion_tokens=2, cost=.0001)
+    with openrouter(tmp_path, usage) as (proxy, port, _seen):
+        def fail(*args, **kwargs):
+            raise OSError('fixture receipt failure')
+
+        monkeypatch.setattr(proxy, failed_method, fail)
+        with pytest.raises(http.client.IncompleteRead):
+            post(port, body(), proxy.token)
+        closure = proxy.close()
+        assert not closure['settled'] and closure['unsettled_requests'] == 0
+        assert closure['receipt_error'] == 'OSError' and closure['revoked']
+        assert (Decimal(closure['pending_reserved_usd']) > 0) is (failed_method == '_settle')

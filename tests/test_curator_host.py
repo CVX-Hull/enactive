@@ -371,8 +371,13 @@ def test_a_dry_run_writes_a_complete_summary_per_session_and_per_run(tmp_path, m
     assert session['schema'] == 'curator-shadow/1' and session['kind'] == 'session' and session['session_state'] == 'sealed'
     assert session['cost_usd'] == '0.0036' and session['requests'] == 3 and session['first_request_prompt_tokens'] == 1000
     assert session['tokens'] == dict(prompt=3300, completion=120, cached=1600, cache_write=0, reasoning=30)
-    assert session['proxy'] == dict(revoked=False, breaches=0, entries=3, refusals=0, refusal_reasons=[], forwarded=3,
-                                    cap_refused=False, usage_missing=0)
+    proxy = dict(session['proxy'])
+    assert Decimal(proxy.pop('pending_reserved_usd')) == 0
+    assert proxy == dict(revoked=False, breaches=0, entries=3, refusals=0, refusal_reasons=[], forwarded=3,
+                         cap_refused=False, usage_missing=0, settled=True, unsettled_requests=0, receipt_error=None)
+    closure = json.loads((out/'397/sd1a1/proxy-close.json').read_text())
+    assert closure['schema'] == 'curator-proxy-close/1' and closure['settled']
+    assert closure['spent_snapshot_usd'] == session['cost_usd']
     assert session['stopped_by_cap'] is False and session['submissions'] == 1 and (session['accepted'], session['rejected']) == (1, 0)
     assert session['verdicts'][0]['accepted'] and session['drafts']['created'] == ['notes']
     assert session['tool_calls']['by_name']['write_file'] == 2 and session['tool_calls']['failed'] == 1

@@ -348,6 +348,10 @@ def run_b(args: argparse.Namespace, key: str) -> dict:
                     run['stopped'] = 'proxy-revoked'
                 elif cap - spent <= 0 or (summary['stopped_by_cap'] and this_cap == remaining):
                     run['stopped'] = 'cap-reached'   # the stage's cap, not only the session's own
+                elif not summary['proxy']['settled']:
+                    run['stopped'] = 'proxy-unsettled'
+                elif state != 'sealed':
+                    run['stopped'] = 'session-aborted'
                 record()
                 if run['stopped']:
                     break

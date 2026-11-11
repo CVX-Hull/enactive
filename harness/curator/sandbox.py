@@ -246,6 +246,7 @@ def run(argv: list[str], layout: Layout, *, proxy_port: int | None = None, token
     peak_memory = peak_disk = 0
     stopped = None
     child = None
+    pending = None
     try:
         child = subprocess.Popen([SANDBOX_EXEC, '-f', handle.name, *argv], cwd=layout.workspace, env=env,
                                  stdin=stdin, stdout=stdout, stderr=stderr, start_new_session=True,
@@ -274,10 +275,25 @@ def run(argv: list[str], layout: Layout, *, proxy_port: int | None = None, token
             if stopped:
                 break
             time.sleep(limits.poll_seconds)
+    except BaseException as exc:
+        pending = exc
+        raise
     finally:
         # Any supervisor failure still closes the tree before the error propagates.
-        survivors = _close(child) if child is not None else []
-        os.unlink(handle.name)
+        failures = []
+        try:
+            survivors = _close(child) if child is not None else []
+        except Exception as exc:  # noqa: BLE001 - attempt profile cleanup and preserve the original failure
+            failures.append(('process-tree', exc))
+        try:
+            os.unlink(handle.name)
+        except OSError as exc:
+            failures.append(('profile', exc))
+        if failures:
+            if pending is None:
+                raise failures[0][1]
+            for part, failure in failures:
+                pending.add_note(f'Sandbox cleanup failed: {part}/{type(failure).__name__}')
     return Result(child.returncode, stopped, peak_memory, peak_disk, time.monotonic() - started, survivors)
 
 

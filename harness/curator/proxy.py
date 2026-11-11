@@ -38,7 +38,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from decimal import Decimal
+from decimal import Decimal, DecimalException
 import hashlib
 import hmac
 import http.client
@@ -52,10 +52,16 @@ import time
 from urllib.parse import urlsplit
 
 MAX_BODY = 8 << 20
+MAX_RESPONSE = 32 << 20
 READ_TIMEOUT = 30
+CLOSE_TIMEOUT = 5.0
 MAX_CONCURRENT = 8
 # Headers every provider receives from the host; `Provider.forward_headers` adds its own.
 FORWARD_HEADERS = frozenset({'content-type', 'accept', 'user-agent'})
+
+
+class ResponseTooLarge(ValueError):
+    """An upstream response exceeded the bounded accounting buffer."""
 
 
 @dataclass(frozen=True)
@@ -72,6 +78,10 @@ class Price:
 
 
 def no_refusal(_request: dict) -> str | None:
+    return None
+
+
+def no_response_error(_body: bytes) -> dict | None:
     return None
 
 
@@ -93,6 +103,7 @@ class Provider:
     forward_headers: frozenset[str] = frozenset()  # lower-case headers forwarded besides FORWARD_HEADERS
     beta_header: str | None = None  # header listing beta flags; only flags in the proxy's frozen set pass
     affinity_header: str | None = None  # session-affinity header the proxy itself sets, if the provider has one
+    response_error: Callable[[bytes], dict | None] = no_response_error  # safe provider-specific classifications only
 
     def __post_init__(self):
         # The proxy sets these itself; a provider must not let the host's values through.
@@ -233,8 +244,8 @@ def usage_of(body: bytes) -> dict[str, int] | None:
     return usage or None
 
 
-def usage_events(body: bytes):
-    """Every usage object in a JSON or server-sent-event response body."""
+def response_events(body: bytes):
+    """Decoded JSON objects from the existing JSON/SSE response framing."""
     text = body.decode('utf-8', 'replace')
     documents = [text] if text.lstrip().startswith('{') else [
         line[5:].strip() for line in text.splitlines() if line.startswith('data:')]
@@ -245,10 +256,17 @@ def usage_events(body: bytes):
             continue
         if not isinstance(event, dict):
             continue
-        found = (event.get('usage') or (event.get('message') or {}).get('usage')
-                 or (event.get('response') or {}).get('usage'))
-        if isinstance(found, dict):
-            yield found
+        yield event
+
+
+def usage_events(body: bytes):
+    """Every usage object, refusing malformed container shapes without assuming their types."""
+    for event in response_events(body):
+        for container in (event, event.get('message'), event.get('response')):
+            found = container.get('usage') if isinstance(container, dict) else None
+            if isinstance(found, dict) and found:
+                yield found
+                break
 
 
 class ModelProxy:
@@ -279,6 +297,11 @@ class ModelProxy:
         self.revoked = False
         self.breaches = 0
         self._lock = threading.Lock()
+        self._ledger_lock = threading.Lock()  # blocked disk I/O must not prevent bounded accounting shutdown
+        self._condition = threading.Condition(self._lock)
+        self._closed = False
+        self._active = 0
+        self._receipt_error: str | None = None
         self._slots = threading.BoundedSemaphore(MAX_CONCURRENT)
         self._server: ThreadingHTTPServer | None = None
         self._thread: threading.Thread | None = None
@@ -294,28 +317,39 @@ class ModelProxy:
         input_tokens = len(body) - image_bytes + images * IMAGE_TOKENS
         worst = (input_tokens * price.worst_input + output_limit * price.output) / Decimal(1_000_000)
         with self._lock:
-            if self.revoked:
+            if self.revoked or self._closed:
                 return 'session token revoked'
             if self.spent + self.reserved + worst > self.cap:
                 return 'spend cap reached'
             self.reserved += worst
+            self._active += 1
         return worst
 
-    def _settle(self, reservation: Decimal, actual: Decimal | None, status: int) -> tuple[Decimal, bool]:
+    def _settle(self, reservation: Decimal, actual: Decimal | None, status: int) -> tuple[Decimal, bool, str | None]:
         """Charge the actual cost (or the reservation when unknown). Fail closed on surprises."""
+        accounting_error = None
+        if actual is not None and (not actual.is_finite() or actual < 0):
+            actual, accounting_error = None, 'invalid-cost'
         charge = reservation if actual is None else actual
         breach = actual is not None and actual > reservation
         with self._lock:
+            # Validate the arithmetic before releasing any reservation. Unrepresentable provider
+            # figures are uncertain charges, not permission to continue with a partially updated cap.
+            try:
+                spent = self.spent + charge
+            except DecimalException:
+                charge, accounting_error = reservation, 'unrepresentable-cost'
+                spent = self.spent + charge
             self.reserved -= reservation
-            self.spent += charge
-            if breach or (actual is None and status == 200):
+            self.spent = spent
+            if breach or accounting_error or (actual is None and status == 200):
                 self.revoked = True
             self.breaches += breach
-        return charge, breach
+        return charge, breach, accounting_error
 
     def _record(self, **entry):
         entry['time'] = time.time()
-        with self._lock, self.ledger.open('a') as stream:
+        with self._ledger_lock, self.ledger.open('a') as stream:
             stream.write(json.dumps(entry, default=str, sort_keys=True) + '\n')
 
     def revoke(self):
@@ -393,17 +427,38 @@ class ModelProxy:
                 if isinstance(reservation, str):
                     return self.refuse(429, reservation, model=model)
                 status, received, actual, error = 502, b'', None, None
+                self.upstream_status = None
                 try:
                     status, received = self.forward(path, body, [b for b in betas if b in proxy.betas])
                 except Exception as exc:  # noqa: BLE001 - every failure settles below and fails closed
                     error = type(exc).__name__
+                    status = self.upstream_status or status
                 finally:
-                    usage = usage_of(received) if received else None
-                    actual = None if usage is None else proxy.provider.cost(proxy.prices[model], usage, received)
-                    charge, breach = proxy._settle(reservation, actual, status)
-                    proxy._record(path=path, model=model, status=status, reserved=reservation, charged=charge,
-                                  usage_missing=actual is None, breach=breach, error=error, dropped_betas=dropped,
-                                  affinity_sha256=proxy.affinity_digest if proxy.provider.affinity_header else None)
+                    try:
+                        accounting_error, response_error = None, None
+                        try:
+                            usage = usage_of(received) if received else None
+                            actual = None if usage is None else proxy.provider.cost(proxy.prices[model], usage, received)
+                            response_error = proxy.provider.response_error(received) if received else None
+                        except (ValueError, TypeError, AttributeError, RecursionError, OverflowError, DecimalException) as exc:
+                            actual, accounting_error = None, type(exc).__name__
+                        charge, breach, settlement_error = proxy._settle(reservation, actual, status)
+                        proxy._record(path=path, model=model, status=status, reserved=reservation, charged=charge,
+                                      usage_missing=actual is None or settlement_error is not None,
+                                      breach=breach, error=error, dropped_betas=dropped,
+                                      **(dict(accounting_error=accounting_error or settlement_error)
+                                         if accounting_error or settlement_error else {}),
+                                      **(dict(response_error=response_error) if response_error else {}),
+                                      affinity_sha256=proxy.affinity_digest if proxy.provider.affinity_header else None)
+                    except Exception as exc:  # noqa: BLE001 - an unwritten receipt cannot certify settlement
+                        with proxy._condition:
+                            proxy._receipt_error = type(exc).__name__
+                            proxy.revoked = True
+                        raise
+                    finally:
+                        with proxy._condition:
+                            proxy._active -= 1
+                            proxy._condition.notify_all()
                 if error and not self.started:
                     self.refuse(502, f'upstream failed: {error}')
                 elif self.started and self.client_open and not error:
@@ -434,6 +489,7 @@ class ModelProxy:
                 try:
                     connection.request('POST', path, body=body, headers=headers)
                     response = connection.getresponse()
+                    self.upstream_status = response.status
                     encoding = (response.getheader('content-encoding') or 'identity').lower()
                     self.send_response(response.status)
                     self.started = True
@@ -445,6 +501,8 @@ class ModelProxy:
                     received = bytearray()
                     client = True
                     while chunk := response.read1(65536):
+                        if len(received) + len(chunk) > MAX_RESPONSE:
+                            raise ResponseTooLarge('upstream response exceeded its byte limit')
                         received += chunk
                         if client:
                             try:
@@ -466,9 +524,21 @@ class ModelProxy:
         self._thread.start()
         return self._server.server_port
 
-    def close(self):
-        self.revoke()
+    def close(self) -> dict:
+        """Close admission and boundedly await accounting receipts; do not cancel remote billing.
+
+        Closing is distinct from an incident. An incomplete snapshot is not a final charge and
+        must stop orchestration even if the host exited cleanly. A later handler may still settle.
+        """
+        with self._condition:
+            self._closed = True
         if self._server is not None:
             self._server.shutdown()
             self._server.server_close()
             self._thread.join(5)
+        with self._condition:
+            idle = self._condition.wait_for(lambda: self._active == 0, timeout=CLOSE_TIMEOUT)
+            return dict(schema='curator-proxy-close/1', settled=idle and self.reserved == 0 and self._receipt_error is None,
+                        unsettled_requests=self._active, pending_reserved_usd=str(self.reserved),
+                        spent_snapshot_usd=str(self.spent), revoked=self.revoked, breaches=self.breaches,
+                        receipt_error=self._receipt_error)
