@@ -243,6 +243,20 @@ test('a body failure after a valid finish stays an unknown stream failure', asyn
   assert.ok(!JSON.stringify(events).includes('SECRET'));
 });
 
+test('a generation lookup reference survives a later stream failure without exposing error content', async t => {
+  for (const id of ['gen-fixture_123', 'SECRET not an id', 'gen-' + 'x'.repeat(151)]) await t.test(id.slice(0, 24), async child => {
+    const chunk = { id, choices: [{ index: 0, delta: { role: 'assistant' }, finish_reason: null }] };
+    const data = value => 'data: ' + JSON.stringify(value) + '\n\n';
+    const body = data(chunk) + data(chunk) + data({ error: { message: 'SECRET provider error' } });
+    const { result, events } = await session(child, [new Response(body, { headers: { 'content-type': 'text/event-stream' } })]);
+    assert.equal(result.reason, 'provider-error');
+    const refs = events.filter(event => event.type === 'provider-generation');
+    assert.deepEqual(refs.map(({ request_id, generation_id }) => ({ request_id, generation_id })),
+      id === 'gen-fixture_123' ? [{ request_id: 'request-1', generation_id: id }] : []);
+    assert.ok(!JSON.stringify(events).includes('SECRET'));
+  });
+});
+
 test('a completed response without accounting is explicit without manufacturing usage', async t => {
   const { events, payloads } = await session(t, [sse([['finish', { summary: 'ok' }]], {})]);
   assert.equal(payloads.length, 1);

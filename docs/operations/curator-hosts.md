@@ -108,6 +108,10 @@ Node tests: `cd tools/curator_host && npm test`.
   JSON/SSE accounting decoder to retain only an allowlisted OpenRouter `error_type` and
   integer error code in the ledger, when available ([documented envelope](https://github.com/OpenRouterTeam/docs/blob/main/api_reference/errors-and-debugging.mdx)).
   These diagnostics do not authorize retries or identify the unknown causes of old failures.
+  The first bounded `gen-` reference in streamed metadata is retained once per request as
+  `provider-generation` for [read-only billing lookup](https://openrouter.ai/docs/api/api-reference/generations/get-generation),
+  even if usage is lost later. The reference is private run metadata, not reported cost or
+  proof of billing settlement; a failure before it arrives can still lack a lookup reference.
   Telemetry never carries the token or a header.
 
 **The shadow runner.**

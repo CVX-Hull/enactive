@@ -325,6 +325,7 @@ export async function runCurator(options) {
           if (requests >= configuration.max_requests) { stop('request-limit'); return failureStream(streamModel, fatal); }
           try {
             rawUsage = undefined; httpStatus = undefined; providerChunks = 0; sawFinish = false;
+            let generationId;
             clearTimeout(requestTimer);
             requestTimer = setTimeout(() => stop('request-timeout'), configuration.request_timeout_seconds * 1000);
             const signal = AbortSignal.any([streamOptions?.signal, stopped.signal].filter(Boolean));
@@ -378,6 +379,12 @@ export async function runCurator(options) {
               // as the player host does, so the proxy sees an explicit standard-tier request.
               onPayload: payload => ({ ...payload, service_tier: SERVICE_TIER }),
               onProviderStreamEvent: chunk => {
+                // Keep the bounded lookup reference before a later stream failure can lose usage.
+                // It supports read-only billing reconciliation; it is never a credential or content.
+                if (!generationId && typeof chunk?.id === 'string' && /^gen-[A-Za-z0-9_-]{1,150}$/.test(chunk.id)) {
+                  generationId = chunk.id;
+                  emit('provider-generation', { request_id: requestId, generation_id: generationId });
+                }
                 providerChunks++;
                 if (chunk?.choices?.[0]?.finish_reason) sawFinish = true;
                 const usage = chunk?.usage ?? chunk?.choices?.[0]?.usage;
