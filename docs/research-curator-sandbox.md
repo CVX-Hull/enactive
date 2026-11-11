@@ -129,12 +129,25 @@ outside the workspace or equal to it, and a home inside the workspace.
 The supervisor polls five things and kills the group on a breach:
 - the tree's resident memory;
 - the writable directories' disk use;
-- the volume's free space against a floor (session allowance plus 1 GiB);
+- the volume's free space against its initial reading minus the session allowance and 1 GiB;
 - the tree's process count;
 - wall-clock time.
 
 An unmeasurable tree is a breach. Examples are a mode-000 directory or a path too long
 to examine. A supervisor error still closes the tree before it propagates.
+
+Admission requires that the derived volume floor leave at least the declared free-space
+margin (1 GiB by default). An inadequate initial reading or a failed initial read launches
+no child and creates no profile. Session provenance and shadow summaries record the initial,
+minimum and last observed available bytes, the fixed floor, and a volume-read failure's phase
+and exception type. Unknown readings stay null; an interrupted supervisor retains observations
+where close-out can write them without inventing a process-exit or survivor result.
+Profile creation is inside cleanup protection, including a partial write or validation failure.
+
+The volume reading includes unrelated activity and storage held by unlinked open files. A
+floor crossing does not attribute the decline to the curator or establish a full disk. This
+conservative stop remains necessary for the existing unlinked-file safeguard; diagnostics do
+not eliminate shared-volume false stops or make polling a hard quota.
 
 At close the supervisor signals the group and its descendants. Once the group is gone
 it never looks again, so a reused process ID is never signalled.
@@ -272,7 +285,7 @@ real API.
 | 9 | The first host writes a shared temporary root under `/tmp` unless its temporary-directory variable is set; allowing that path would share state with other sessions | L13 | The runner points the variable at `scratch/` ([curator hosts](operations/curator-hosts.md)); the profile never allows `/tmp` |
 | 10 | The second host was not yet run under the profile, and the OpenAI request allowlist rests on field names not yet checked against a dated source | — | #454 runs the same probe with a Responses-shape stand-in before any spend |
 | 11 | A stream that errors after content may be undercharged if the provider bills partial output | Review L2 | The reservation still bounds each request; #454 compares the ledger with provider-reported cost |
-| 12 | The free-space floor can stop a session falsely when another process writes heavily during it | — | A visible stop, not a hidden failure; it is recorded as the stop reason |
+| 12 | The free-space floor can stop a session falsely when another process writes heavily during it | [P1 storage-stop record](acceptance/2026-11-11-p1-storage-stop-178.md); ownership of the decline remains unknown | Preserve the conservative guard and initial/minimum/last/floor measurements, distinguish volume activity from writable-tree use, and record read failures. The measurements diagnose a stop; they do not establish attribution or prevent this limitation |
 
 ## Coding-agent hosts
 

@@ -6,6 +6,8 @@ from decimal import Decimal
 import http.client
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
+import socket
+import struct
 import threading
 
 import pytest
@@ -447,16 +449,72 @@ def test_a_stall_inside_ledger_open_cannot_block_admission_shutdown_or_its_timeo
 
 
 @pytest.mark.parametrize('failed_method', ['_record', '_settle'])
-def test_accounting_failure_is_latched_after_the_active_request_finishes(tmp_path, monkeypatch, failed_method):
+@pytest.mark.parametrize('error_type', [OSError, ConnectionResetError])
+def test_accounting_failure_is_latched_after_the_active_request_finishes(tmp_path, monkeypatch, capsys,
+                                                                        failed_method, error_type):
     usage = dict(prompt_tokens=10, completion_tokens=2, cost=.0001)
     with openrouter(tmp_path, usage) as (proxy, port, _seen):
         def fail(*args, **kwargs):
-            raise OSError('fixture receipt failure')
+            raise error_type('fixture receipt failure')
 
         monkeypatch.setattr(proxy, failed_method, fail)
         with pytest.raises(http.client.IncompleteRead):
             post(port, body(), proxy.token)
         closure = proxy.close()
         assert not closure['settled'] and closure['unsettled_requests'] == 0
-        assert closure['receipt_error'] == 'OSError' and closure['revoked']
+        assert closure['receipt_error'] == error_type.__name__ and closure['revoked']
         assert (Decimal(closure['pending_reserved_usd']) > 0) is (failed_method == '_settle')
+    assert 'fixture receipt failure' in capsys.readouterr().err  # Active failures are not hidden as idle resets.
+
+
+def reset_connection(connection):
+    connection.sock.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack('ii', 1, 0))
+    connection.close()
+
+
+def test_idle_keepalive_reset_is_quiet_after_its_accounting_is_complete(tmp_path, monkeypatch, capsys):
+    with openrouter(tmp_path, dict(prompt_tokens=10, completion_tokens=2, cost=.0001)) as (proxy, port, _seen):
+        finished = threading.Event()
+        handler = proxy._server.RequestHandlerClass
+        original = handler.handle
+
+        def observe(self):
+            try:
+                original(self)
+            finally:
+                finished.set()
+
+        monkeypatch.setattr(handler, 'handle', observe)
+        connection = http.client.HTTPConnection('127.0.0.1', port, timeout=5)
+        payload = json.dumps(body())
+        connection.request('POST', ROUTE, payload, {'authorization': f'Bearer {proxy.token}',
+                                                 'content-type': 'application/json'})
+        response = connection.getresponse()
+        assert response.status == 200 and response.read()
+        reset_connection(connection)
+        assert finished.wait(5)
+        closure = proxy.close()
+        assert closure['settled'] and not closure['revoked']
+        assert Decimal(closure['spent_snapshot_usd']) == Decimal('.0001')
+        assert len(proxy.ledger.read_text().splitlines()) == 1
+    assert 'ConnectionResetError' not in capsys.readouterr().err
+
+
+def test_client_reset_before_response_headers_still_drains_and_settles(tmp_path):
+    entered, release = threading.Event(), threading.Event()
+    with openrouter(tmp_path, dict(prompt_tokens=10, completion_tokens=2, cost=.0001),
+                    entered=entered, release=release) as (proxy, port, _seen):
+        connection = http.client.HTTPConnection('127.0.0.1', port, timeout=5)
+        connection.request('POST', ROUTE, json.dumps(body()), {'authorization': f'Bearer {proxy.token}',
+                                                           'content-type': 'application/json'})
+        try:
+            assert entered.wait(5)
+            reset_connection(connection)
+        finally:
+            release.set()
+            connection.close()
+        closure = proxy.close()
+        assert closure['settled'] and not closure['revoked']
+        assert Decimal(closure['spent_snapshot_usd']) == Decimal('.0001')
+        row = json.loads(proxy.ledger.read_text())
+        assert row['status'] == 200 and not row['usage_missing'] and not row['breach']

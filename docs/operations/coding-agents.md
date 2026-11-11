@@ -122,7 +122,12 @@ Codex instead." The full development chain is repeated with this configuration b
 held-out question is written.
 
 - **Session.** One `codex exec --ephemeral --skip-git-repo-check -s workspace-write` per batch,
-  with codex-cli 0.167.0, model `gpt-6.1-sol` and `model_reasoning_effort="high"`. A reader batch
+  with the installed Codex CLI, model `gpt-6.1-sol` and `model_reasoning_effort="high"`. Record
+  the actual CLI version in the existing batch provenance. The owner permits CLI updates with
+  the same model; dedicated version copies and global installation changes are unnecessary.
+  Keep the model, effort and scientific briefs fixed. Normal output validation detects incompatible
+  behavior; a CLI update alone requires neither duplicate binaries nor repeated calibration.
+  Stop and repair an incompatible CLI/API boundary instead of silently changing the model. A reader batch
   contains exactly one item; other roles retain their frozen batch sizes.
 - **Isolation.** Each directory contains only the batch and its prompt. The frozen brief
   restricts reads to that batch and any images it names; the operator copies out the validated

@@ -160,6 +160,17 @@ Node tests: `cd tools/curator_host && npm test`.
   reading and keeps the reservation. A bounded shutdown does not cancel remote billing or
   prove every upstream handler finished. Hard termination or failed disk writes can still
   leave unknown exposure; preserve it rather than infer a final invoice.
+- **Client disconnects.** A reset on an idle keep-alive connection ends that handler quietly.
+  Active request/accounting errors remain visible. If response headers cannot reach a client
+  that has gone, the proxy still drains upstream within its existing limits and settles usage;
+  it does not replace available usage with a reservation merely because header delivery failed.
+
+For finite replay, launch the maintained runner directly with durable output files and use its
+in-process admission stop. An observer must drain output rather than send another interrupt on
+a reported nonsealed result: a redundant interrupt can prevent final stage metadata from being
+written. Retain the schedule and individual receipts if finalization is interrupted; never
+synthesize a passing final summary. This does not prevent intentional user interruption or
+make hard termination/disk failure recoverable automatically.
 
 **Two arms, one route each.** The route is pinned to one provider with no fallback.
 

@@ -267,6 +267,100 @@ def test_a_provider_cannot_forward_headers_the_proxy_sets():
     assert Provider(**values, forward_headers=frozenset({'anthropic-version'})).forward_headers == {'anthropic-version'}
 
 
+@pytest.fixture
+def measured_supervisor(tmp_path, monkeypatch):
+    """Exercise the supervisor loop portably; native coverage below uses a real child."""
+    layout = make_layout(tmp_path/'measured')
+    launched = []
+
+    class Child:
+        pid = 1234
+        returncode = None
+
+        def poll(self):
+            return self.returncode
+
+    def launch(*args, **kwargs):
+        child = Child()
+        launched.append(child)
+        return child
+
+    def close(child):
+        child.returncode = -15
+        return []
+
+    monkeypatch.setattr(sandbox, '_user_processes', lambda: 0)
+    monkeypatch.setattr(sandbox.subprocess, 'Popen', launch)
+    monkeypatch.setattr(sandbox, '_tree', lambda pid: {pid: 1})
+    monkeypatch.setattr(sandbox, '_disk', lambda paths: 0)
+    monkeypatch.setattr(sandbox, '_close', close)
+    return layout, launched
+
+
+def test_volume_floor_keeps_exact_boundary_and_records_a_later_unattributed_decline(measured_supervisor, monkeypatch):
+    layout, launched = measured_supervisor
+    readings = iter([10 << 30, 8 << 30, 7 << 30])
+    monkeypatch.setattr(sandbox, '_free_bytes', lambda path: next(readings))
+    result = sandbox.run(['unused'], layout, limits=sandbox.Limits(poll_seconds=.001))
+    assert len(launched) == 1 and result.stopped == 'volume free-space floor' and result.survivors == []
+    assert result.peak_disk_bytes == 0  # A volume decline is not attributed to the named writable tree.
+    assert result.volume_space == dict(initial_free_bytes=10 << 30, minimum_free_bytes=7 << 30,
+                                       last_free_bytes=7 << 30, floor_bytes=8 << 30,
+                                       read_error_phase=None, read_error_type=None)
+    assert not list(layout.workspace.parent.glob('profile-*.sb'))
+
+
+def test_inadequate_initial_headroom_launches_nothing_and_leaves_no_profile(measured_supervisor, monkeypatch):
+    layout, launched = measured_supervisor
+    monkeypatch.setattr(sandbox, '_free_bytes', lambda path: 2 << 30)
+    result = sandbox.run(['unused'], layout)
+    assert not launched and result.returncode is None and result.stopped == 'insufficient volume free space'
+    assert result.volume_space['floor_bytes'] == 0 and result.volume_space['initial_free_bytes'] == 2 << 30
+    assert not list(layout.workspace.parent.glob('profile-*.sb'))
+
+
+@pytest.mark.parametrize('phase', ['initial', 'poll'])
+def test_volume_read_failure_is_retained_without_inventing_a_reading(measured_supervisor, monkeypatch, phase):
+    layout, launched = measured_supervisor
+    calls = 0
+
+    def read(path):
+        nonlocal calls
+        calls += 1
+        if phase == 'poll' and calls == 1:
+            return 10 << 30
+        raise OSError('private filesystem diagnostic must not be copied')
+
+    monkeypatch.setattr(sandbox, '_free_bytes', read)
+    result = sandbox.run(['unused'], layout)
+    assert len(launched) == (phase == 'poll') and result.stopped == 'disk unmeasurable'
+    assert result.volume_space['read_error_phase'] == phase and result.volume_space['read_error_type'] == 'OSError'
+    assert result.volume_space['last_free_bytes'] == (10 << 30 if phase == 'poll' else None)
+    assert result.peak_memory_bytes == (1 if phase == 'poll' else 0)
+    assert result.survivors == [] and not list(layout.workspace.parent.glob('profile-*.sb'))
+
+
+def test_profile_failure_retains_volume_diagnostics_and_cleans_its_partial_file(measured_supervisor, monkeypatch):
+    layout, launched = measured_supervisor
+    monkeypatch.setattr(sandbox, '_free_bytes', lambda path: 10 << 30)
+    with pytest.raises(sandbox.SandboxError) as caught:
+        sandbox.run(['unused'], layout, proxy_port=70000)
+    assert not launched and not list(layout.workspace.parent.glob('profile-*.sb'))
+    assert caught.value.curator_volume_space['floor_bytes'] == 8 << 30
+
+
+@native
+def test_volume_floor_closes_a_real_child_and_retains_the_observed_numbers(tmp_path, monkeypatch):
+    layout = make_layout(tmp_path/'volume-stop')
+    readings = iter([10 << 30, 7 << 30])
+    monkeypatch.setattr(sandbox, '_free_bytes', lambda path: next(readings))
+    result = sandbox.run([str(PYTHON), '-I', '-c', 'import time; time.sleep(30)'], layout,
+                         limits=sandbox.Limits(wall_seconds=5))
+    assert result.stopped == 'volume free-space floor' and result.returncode not in (0, None)
+    assert result.survivors == [] and result.volume_space['last_free_bytes'] == 7 << 30
+    assert not list(layout.workspace.parent.glob('profile-*.sb'))
+
+
 @pytest.mark.skipif(sys.platform != 'darwin' or not Path(sandbox.SANDBOX_EXEC).exists(), reason='Seatbelt lane')
 def test_ordinary_temporary_file_churn_is_not_a_breach(tmp_path):
     layout = make_layout(tmp_path/'s')
