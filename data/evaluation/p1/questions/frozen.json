@@ -1,0 +1,9 @@
+{
+ "files": {
+  "questions.jsonl": "6fce29696ee05c645e7cf859bc865bd7353ebbcd76e0c26c4b0efbdca7397004",
+  "screen.json": "ed437090e93264fc4dc432b4784e8a8b763d6a0b01e705e2feaf095b61e88ca6"
+ },
+ "frozen": "2026-11-10",
+ "protocol": "p1-study/3",
+ "schema": "p1-held-out-frozen/1"
+}

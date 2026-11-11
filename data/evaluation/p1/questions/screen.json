@@ -1,0 +1,12 @@
+{
+ "flagged": 3,
+ "flagged_by": {
+  "empty_key": 0,
+  "entries": 0,
+  "no_text": 0,
+  "token": 3
+ },
+ "flagged_twice": 3,
+ "questions": 33,
+ "questions_sha256": "6fce29696ee05c645e7cf859bc865bd7353ebbcd76e0c26c4b0efbdca7397004"
+}
