@@ -513,6 +513,88 @@ not a renewal of the exhausted recovery-5 approval or its retired unused capacit
   result automatically adopts a live curator. Declining leaves P1 incomplete and
   pending, with no curator-benefit conclusion.
 
+### Owner-gated completion after the cost-guard failure
+
+The owner directed: **“I approve raising the budget. Let's complete this and discuss.”**
+This authorizes preparing a budget increase and completion amendment. The concrete
+**$36 new allocation** below still requires the owner's decision before merge or
+dispatch. It is one fresh attempt, not automatic renewal of recovery-6's retired
+capacity. The [recorded cap failure](../acceptance/2026-11-11-p1-cost-guard-178.md)
+and the original registered no-go remain permanent.
+
+- **Purpose and authority.** Finish the blinded measurement for discussion despite
+  that failed guard. This is an owner-amended descriptive completion, not a passing
+  registered study or a change to its thresholds. Before dispatch, record the exact
+  reviewed source, protected CI/main evidence, owner decision and allocation in #178
+  and execution provenance. No held-out benefit labels have been seen by the lead.
+- **Unchanged runtime and retained inputs.** Use runtime freeze `adc9c8cc292f461fcee36f612db53dc27d9324c8`,
+  canonical arms SHA256 `bf144eaeae72454da024d6a819600c6e1b30c0e1ac4043fd713ec2864e496daa`
+  and the same retained-plan SHA256
+  `5caa17500a7f653a17f4373100e8f407f8afe7813f16d6c6bcb015f020fdcd69`.
+  Revalidate every fingerprint and publication identity. Preserve R1, R2 LH1 and
+  the eight selected sealed admissions from recovery-5; import no failed session,
+  workspace, draft or archive. Recovery-6 remains byte-identical and stopped.
+- **Exactly three fresh admissions.** Fresh stage `held-out-recovery-7/r2` runs only
+  `lh4b5`, `lh4b6`, `lh4b7` in order. The new combined ceiling is **$36**, chosen as
+  three unchanged **$12 per-session ceilings**; no extra qualification is funded.
+  Each session retains 120 HTTP attempts, 30 minutes and the same bounded retry,
+  GPT-6.1 Terra/medium, pinned OpenRouter–OpenAI route, credential, archived
+  screenshots/memory and verified curator knowledge. The host budget is $10.20
+  for each session. The first fresh brief/trace digests must match the approved
+  plan before host launch. The larger resource context changes model-visible
+  budget notes and phases; it is not an identical stochastic rerun.
+- **Failures and spending stay bounded.** Even $12 can lose reservation headroom
+  before actual spending reaches it; the allocation funds attempts, not guaranteed
+  completion or API reliability. Any new nonsealed admission, revocation, unsettled
+  accounting, unsafe cleanup or cap exhaustion stops every further stage without
+  automatic renewal. All fees and conservative debits remain. Unused capacity is
+  retired. No original receipt, stopped flag or assurance is rewritten.
+- **Explicit post-cap stage exception.** Only after all three new admissions finish
+  sealed, uncapped and valid may the existing maintained delivery tools produce
+  complete, disjoint LH1 and LH2–LH4 selections. This is the narrow exception to the
+  previous all-stage stop. Then run the unchanged blinded reader, grader, seeded
+  rejudge and false-fact audit chain on the [selected coding host](../operations/coding-agents.md#p1-study-readers),
+  including Reference/PW/PP controls.
+  Keep the prepared limits: 534 first readers, 54 rejudge readers, at most 60/10
+  grader batches and 120 audit items/12 batches, 670 primary handouts combined,
+  three concurrent sessions, 900 seconds per session, three infrastructure attempts
+  and at most one adjudicated fresh redo of a refused output. Record actual counts,
+  source, ordinary installed CLI version and input/batch hashes before dispatch.
+  Use one existing first reader item to verify its normal parsing path, without an
+  extra compatibility inference. Scientific briefs, questions, controls and seeds
+  remain unchanged; no new global setup or dedicated CLI copies are required.
+- **All costs and the historical failure remain.** Before this attempt, R2 recorded
+  debits are $45.71624000 and its separate old allowance is $11.90480270. Adding at
+  most $36 gives **$93.62104270** of recorded-debit-plus-allowance allocation.
+  Funding does not raise the original **$59.33655440 actor denominator** or erase
+  the failed guard. Keep the allowance once in R2 LH1, qualification once in R2 LH2,
+  and all recovery-7 debits once in R2 LH4. Do not recharge retained admissions.
+  R2 LH4's cost row **must retain `stopped_by_cap: true`**, even if the new composed
+  selection completes uncapped. Best-effort billing uncertainty and the owner's
+  no-browser direction remain; the allocation is not a verified invoice bound.
+- **Separate descriptive reporting.** Frozen `score` and `p1-result/1` retain their
+  cap-failed early return. The maintained `describe-capped` command writes the new
+  evidence purpose `p1-description/1`, using the same complete-data calculations.
+  It requires all eight unique cost rows, complete first/rejudge/control labels and
+  an audit exactly matching the maintained parser's manifest-validated answer files.
+  Generate that complete audit build from these same delivered selections through
+  the maintained seeded builder; record its actual draw/batch counts and key SHA256
+  before any audit dispatch. Reporting requires that pre-dispatch digest and verifies
+  the build binding to the delivered/probe inputs and current analysis/builder bytes.
+  Full sampling is trusted to this maintained, pre-bound build; the reporting command
+  does not independently reconstruct its sample.
+  The existing parser checks exact IDs, batch hashes and frame-ID syntax; this adds
+  no frame-membership claim. A new explicit output is required and cannot resolve
+  to canonical `result.json` or overwrite an artifact. Record analysis-source,
+  score/hour/control and audit input hashes separately from the unchanged runtime
+  freeze. Descriptive figures and threshold diagnostics never produce an alternative
+  go: **`registered_decision.go` remains false** because of the historical cap.
+  The reviewed analysis implementation is bound by SHA256
+  `91546ecfc83f0513b20ed28b17ad05e81de9f0144e4ca0c3e528914349e42393`.
+  Report positive, negative or inconclusive measurements with this resource/context
+  amendment, costs, uncertainty and failed registered guard. No result automatically
+  adopts a live curator.
+
 ## The measurement chain
 
 **(p1-study/3)** This section replaces p1-study/2's scoring judge and arm-guessing check.
@@ -902,6 +984,8 @@ held-out repeat's cap is **$59.34**. The remaining steps, in order:
    frozen by digest.
 5. Held-out B repeat 1 (the owner is asked first), then repeat 2, then arm A.
 6. Readers and graders label every unit; re-judging and the audit follow; `score` writes the result.
+   The [post-cap completion amendment](#owner-gated-completion-after-the-cost-guard-failure)
+   adds separately authorized descriptive reporting while preserving the registered failed guard.
 
 No step from 2 on spends dollars except step 5.
 
@@ -962,6 +1046,15 @@ agents. At that rate the held-out run's 590 readers are about 68M reader tokens.
 
 `python -m tools.p1_analysis score --probes <held-out probes> --probes <lh4 probes>` **(p1-study/2:
 the second file)** `--scores <rows> --hours <hours>` **(p1-study/3)** `--questions <questions> --screen <screen counts> --sentences-counts <paraphrase counts>` writes `data/evaluation/p1/result.json` (`p1-result/1`).
+
+The [post-cap completion amendment](#owner-gated-completion-after-the-cost-guard-failure)
+uses `describe-capped` with the same inputs, plus `--audit-batches <completed audit build>`,
+`--audit-answers <answers>`, `--audit-key-sha256 <digest recorded before dispatch>`,
+each `--delivered <file used by the audit>` and `--out <new descriptive output>`. Its `p1-description/1`
+artifact is separate from the unchanged registered result. It binds the completed audit
+manifest/answers and source/input hashes, refuses partial measurements or altered audit
+rows, and preserves `registered_decision.go: false` even when descriptive diagnostics
+are positive. No current reader/writer or persisted `p1-result/1` contract is replaced.
 - **Refusals.** It refuses when:
   - a unit is unjudged for some arm or repeat;
   - a label is duplicated;
@@ -1062,6 +1155,13 @@ the second file)** `--scores <rows> --hours <hours>` **(p1-study/3)** `--questio
     with a new $5.50 cap, changed budget context and explicit historical-format migration.
     It changes no benefit question, label, decision threshold or future stop rule.
 
+22. **Owner-requested completion after a failed cost guard.** The
+    [amendment](#owner-gated-completion-after-the-cost-guard-failure) proposes a separate
+    $36 allocation and explicit post-cap measurement/reporting exception after the owner's
+    exact decision. The historical cap flag, registered no-go, actor denominator, all
+    costs and benefit thresholds remain. Completed measurements are descriptive, not a
+    retrospective registered pass; future losses still stop without renewal.
+
 ## Owner decisions
 
 **(p1-study/3)** Decided by the owner on 10 November 2026:
@@ -1138,6 +1238,10 @@ Decided by the owner on **11 November 2026**, before any held-out score:
    [host policy](../operations/coding-agents.md#p1-study-readers) uses the ordinary
    installed CLI, existing provenance and unchanged model/effort, without duplicate
    binaries or repeated calibration merely for a CLI update.
+7. **Budget increase in principle:** “I approve raising the budget. Let's complete this
+   and discuss.” This directs a concrete completion amendment after the recorded
+   cost-guard failure. The proposed $36 ceiling and post-cap descriptive stages require
+   an exact decision before merge or dispatch; no new amount was stated in this reply.
 
 Decided by the owner on 9 November 2026:
 1. **p1-study/2, the $80 lh4 envelope and the caps above:** "Approve".
