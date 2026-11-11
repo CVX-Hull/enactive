@@ -58,7 +58,9 @@ def _remove(path: Path) -> None:
     """Delete a tree the curator may have made unreadable, read-only or immutable."""
     def unlock(target: str) -> None:
         try:
-            os.chflags(target, 0, follow_symlinks=False)
+            chflags = getattr(os, 'chflags', None)
+            if chflags is not None:
+                chflags(target, 0, follow_symlinks=False)
         except (OSError, NotImplementedError):
             pass
 

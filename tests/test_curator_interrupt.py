@@ -17,6 +17,17 @@ from tests.test_trace_projection import make_session
 from tools.curator_host import shadow
 
 
+def test_workspace_cleanup_does_not_require_a_fileflags_api(tmp_path, monkeypatch):
+    workspace = tmp_path/'workspace'
+    workspace.mkdir()
+    owned = workspace/'readonly'
+    owned.write_text('fixture')
+    owned.chmod(0o400)
+    monkeypatch.delattr(session.os, 'chflags', raising=False)
+    session._remove(workspace)
+    assert not workspace.exists()
+
+
 @pytest.mark.parametrize('phase', ['prepare', 'run'])
 def test_interruption_seals_abort_and_reraises_before_workspace_and_lock_cleanup(tmp_path, monkeypatch, phase):
     repo = Repository(tmp_path/'knowledge', 'testgame')
