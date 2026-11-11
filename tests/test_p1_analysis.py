@@ -175,6 +175,70 @@ def test_a_held_out_repeat_that_reached_its_cap_fails_the_cost_guard_without_sco
     assert result['questions_flagged_twice'] == 0
 
 
+def described(rows, scores, confirmed_audits=None):
+    unit_rows = p1.units(p1.primary_probes(rows))
+    return p1.describe_capped(rows, HOURS, scores, questions_for(unit_rows), SCREEN,
+                             dict(failed=0, units=len(unit_rows)), confirmed_audits if confirmed_audits is not None
+                             else [r for r in scores if r['type'] == 'audit'])
+
+
+def historical_cap(scores):
+    return [dict(r, stopped_by_cap=True) if r['type'] == 'cost' and (r['repeat'], r['lineage']) == (2, 'lh4')
+            else r for r in scores]
+
+
+def test_complete_description_preserves_cap_failure_even_with_strong_gain_and_passing_numeric_guards():
+    rows, scores = study({'A1': 0.3, 'B1': 0.8, 'B2': 0.8}, extra=guards_ok())
+    expected = scored(rows, scores)
+    capped = historical_cap(scores)
+    result = described(rows, capped)
+    assert result['schema'] == 'p1-description/1' and 'decision' not in result
+    assert result['registered_decision'] == scored(rows, capped)['decision']
+    assert result['registered_decision']['go'] is False and result['historical_capped_repeats'] == [2]
+    assert result['figures'] == expected['figures']
+    assert result['judge_agreement'] == expected['judge_agreement']
+    assert result['benefit_diagnostics']['primary'] == expected['decision']['primary']
+    assert result['benefit_diagnostics']['primary']['holds'] is True
+    assert all(g['holds'] for g in result['benefit_diagnostics']['guards'].values())
+
+
+@pytest.mark.parametrize('damage, message', [
+    ('no-cap', 'historical cap failure'), ('cost', 'cost rows must cover'),
+    ('primary', 'primary labels do not cover'), ('rejudge', 're-judged labels'),
+    ('control', 'Reference and positive-control labels'),
+])
+def test_description_requires_historical_failure_and_complete_measurements(damage, message):
+    rows, scores = study({'A1': 0.3, 'B1': 0.8, 'B2': 0.8}, extra=guards_ok())
+    if damage != 'no-cap':
+        scores = historical_cap(scores)
+    if damage == 'cost':
+        scores.remove(next(r for r in scores if r['type'] == 'cost' and r['lineage'] == 'lh1'))
+    elif damage in ('primary', 'rejudge', 'control'):
+        scores.remove(next(r for r in scores if r['type'] == 'label' and
+                           (r.get('rejudge', False) if damage == 'rejudge' else
+                            not r.get('rejudge', False) and r['arm'] == ('A' if damage == 'primary' else 'PW'))))
+    with pytest.raises(p1.ScoreError, match=message):
+        described(rows, scores)
+
+
+@pytest.mark.parametrize('damage', ['missing', 'duplicate', 'false', 'frame'])
+def test_description_refuses_audit_rows_that_differ_from_manifest_validated_answers(damage):
+    rows, scores = study({'A1': 0.3, 'B1': 0.8, 'B2': 0.8}, extra=guards_ok())
+    scores = historical_cap(scores)
+    confirmed = [dict(r) for r in scores if r['type'] == 'audit']
+    audit = next(r for r in scores if r['type'] == 'audit')
+    if damage == 'missing':
+        scores.remove(audit)
+    elif damage == 'duplicate':
+        scores.append(dict(audit))
+    elif damage == 'false':
+        audit['false'] = not audit['false']
+    else:
+        audit['frame'] = 'different-frame'
+    with pytest.raises(p1.ScoreError, match='exactly match'):
+        described(rows, scores, confirmed)
+
+
 @pytest.mark.parametrize('damage', ['missing', 'duplicate', 'empty'])
 def test_costs_cover_each_repeat_and_lineage_once(damage):
     extra = guards_ok()
@@ -425,6 +489,115 @@ def recorded(path):
 
 def flags(paths):
     return [part for path in paths for part in ('--probes', str(path))]
+
+
+@pytest.fixture
+def description_files(four_files, tmp_path, monkeypatch):
+    from tools import p1_batches as batches
+    monkeypatch.setattr(p1, 'ROOT', tmp_path.resolve())
+    monkeypatch.setattr(batches, 'ROOT', tmp_path.resolve())
+    paths, rows = four_files
+    unit_rows = p1.units(p1.primary_probes(rows))
+    first = labels(unit_rows, {**CONTROL_RATES, 'A1': 0.3, 'B1': 0.8, 'B2': 0.8})
+    extra = guards_ok()
+    audits = [r for r in extra if r['type'] == 'audit']
+    build, answers = tmp_path/'.runtime/audit', tmp_path/'.runtime/audit-answers'
+    entries = [dict(public=dict(statement='synthetic statement', frames=[]),
+                    key={k: r[k] for k in ('arm', 'repeat', 'item')}) for r in audits]
+    delivered = tmp_path/'delivered.jsonl'
+    delivered.write_text('synthetic delivered-file bytes\n')
+    inputs = [p1.file_sha256(delivered), *batches.Frozen(paths).digests]
+    batch_meta = batches.write_batches('audit', build, batches.chunks(entries), seed=4913,
+                                      host_version='synthetic', inputs=inputs)
+    key = json.loads((build/'keys/audit.json').read_text())
+    answers.mkdir()
+    false_by_item = {(r['arm'], r['repeat'], r['item']): r['false'] for r in audits}
+    for batch in key['batches']:
+        result = []
+        for opaque in batch['ids']:
+            item = key['items'][opaque]
+            false = false_by_item[(item['arm'], item['repeat'], item['item'])]
+            result.append(dict(id=opaque, false=false, frame=None, why='synthetic'))
+        (answers/f'{batch["name"]}.jsonl').write_text(''.join(json.dumps(r)+'\n' for r in result))
+    scores = tmp_path/'scores.jsonl'
+    score_rows = first + rejudged(unit_rows, first) + [r for r in extra if r['type'] == 'cost']
+    score_rows += batches.parse('audit', build, answers)
+    scores.write_text(''.join(json.dumps(r)+'\n' for r in historical_cap(score_rows)))
+    questions, screen = frozen_questions(tmp_path, unit_rows)
+    counts = sentence_counts(tmp_path, questions, units=len(unit_rows))
+    hours = tmp_path/'hours.json'
+    hours.write_text(json.dumps(dict(HOURS, lh4=10.0)))
+    args = ['describe-capped', *flags(paths), '--scores', str(scores), '--hours', str(hours),
+            '--questions', str(questions), '--screen', str(screen), '--sentences-counts', str(counts),
+            '--audit-batches', str(build), '--audit-answers', str(answers),
+            '--delivered', str(delivered), '--audit-key-sha256', batch_meta['key_sha256']]
+    return dict(args=args, out=tmp_path/'description.json', build=build, answers=answers, scores=scores,
+                delivered=delivered, canonical=tmp_path/'data/evaluation/p1/result.json')
+
+
+def test_description_cli_checks_actual_audit_manifest_and_records_separate_provenance(description_files):
+    f = description_files
+    assert p1.main([*f['args'], '--out', str(f['out'])]) == 0
+    result = json.loads(f['out'].read_text())
+    assert result['schema'] == p1.DESCRIPTION_SCHEMA and result['registered_decision']['go'] is False
+    assert result['benefit_diagnostics']['primary']['holds'] is True
+    assert result['audit_evidence']['key']['sha256'] == p1.file_sha256(f['build']/'keys/audit.json')
+    assert len(result['audit_evidence']['answers']) == 12
+    assert result['input_files']['scores']['sha256'] == p1.file_sha256(f['scores'])
+    assert result['delivered_files'][0]['sha256'] == p1.file_sha256(f['delivered'])
+    assert set(result['analysis_files']) == {'tools/p1_analysis.py', 'tools/p1_batches.py'}
+    assert not f['canonical'].exists()
+
+
+@pytest.mark.parametrize('damage', ['batch', 'answer'])
+def test_description_cli_refuses_changed_batches_or_incomplete_audit_answers(description_files, damage, capsys):
+    f = description_files
+    if damage == 'batch':
+        path = next((f['build']/'batches').glob('*.json'))
+        path.write_text(path.read_text()+' ')
+    else:
+        path = next(f['answers'].glob('*.jsonl'))
+        path.write_text('\n'.join(path.read_text().splitlines()[1:])+'\n')
+    with pytest.raises(SystemExit):
+        p1.main([*f['args'], '--out', str(f['out'])])
+    assert ('batch files differ' if damage == 'batch' else 'ids missing') in capsys.readouterr().err
+    assert not f['out'].exists()
+
+
+@pytest.mark.parametrize('damage', ['key', 'delivered'])
+def test_description_cli_rejects_modified_manifest_or_audit_from_another_delivery(description_files, damage, capsys):
+    f = description_files
+    path = f['build']/'keys/audit.json' if damage == 'key' else f['delivered']
+    path.write_text(path.read_text()+' ')
+    with pytest.raises(SystemExit):
+        p1.main([*f['args'], '--out', str(f['out'])])
+    assert ('pre-dispatch digest' if damage == 'key' else 'not bound to these delivered/probe') in capsys.readouterr().err
+    assert not f['out'].exists()
+
+
+@pytest.mark.parametrize('destination', ['existing', 'canonical-alias'])
+def test_description_cli_cannot_overwrite_any_output_or_alias_the_canonical_result(description_files, destination, capsys):
+    f = description_files
+    if destination == 'existing':
+        protected = out = f['out']
+    else:
+        protected = f['canonical']
+        out = f['out']
+        out.symlink_to(protected)
+    protected.write_text('preserved result')
+    with pytest.raises(SystemExit):
+        p1.main([*f['args'], '--out', str(out)])
+    assert 'new and distinct' in capsys.readouterr().err
+    assert protected.read_text() == 'preserved result'
+
+
+def test_description_cli_requires_manifest_bindings_and_an_explicit_output(capsys):
+    with pytest.raises(SystemExit):
+        p1.main(['describe-capped'])
+    assert '--audit-key-sha256, --delivered and an explicit new --out' in capsys.readouterr().err
+    with pytest.raises(SystemExit):
+        p1.main(['score', '--audit-batches', 'unused'])
+    assert 'only for describe-capped' in capsys.readouterr().err
 
 
 def test_the_gate_file_follows_the_lineages_the_probes_cover(four_files, tmp_path, monkeypatch, capsys):

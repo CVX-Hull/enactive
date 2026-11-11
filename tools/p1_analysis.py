@@ -9,6 +9,8 @@ which keeps p1-study/1's rule from docs/design/p1-study.md; #491, #178).
   python -m tools.p1_analysis score --probes <p1-probes/1>... --scores <p1-score/1> --hours <JSON>
                                     --questions <questions.jsonl> --screen <screen.json> --sentences-counts <counts.json> [--out ...]
   python -m tools.p1_analysis development --scores <development p1-score/1 rows> --out <path under .runtime/>
+  python -m tools.p1_analysis describe-capped <score inputs> --delivered <delivery>... --audit-batches <audit build>
+                                    --audit-answers <answers> --audit-key-sha256 <pre-dispatch digest> --out <new path>
   python -m tools.p1_analysis batches|parse|screen|sentences|questions-freeze ...   # the answer-key chain (tools/p1_batches.py)
 
 `--probes` may be given once per held-out directory (rows are concatenated in the order given) for
@@ -33,10 +35,17 @@ probes, the answer-key chain's labels, the seeded re-judging, the false-fact aud
 costs, and reports the Reference, the bias control and the positive control. It refuses an
 incomplete study, including missing or repeated cost rows for the two repeats and four lineages.
 Amounts and pooled cost totals must be finite and nonnegative. Nothing here judges text; it only counts labels.
+
+`describe-capped` is a separate owner-amended reporting purpose after a historical cap failure. It requires complete
+measurement inputs and audit rows identical to the maintained parser's manifest-validated answers. The audit key is
+bound to its pre-dispatch digest and the current delivered/probe inputs and builder source. It writes
+`p1-description/1`, preserving the registered no-go while reporting the unchanged descriptive calculations. It never
+writes the canonical result.json, overwrites an output or changes the frozen `score` contract.
 """
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 import json
 import math
 import random
@@ -53,6 +62,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PROBES_SCHEMA = 'p1-probes/1'
 SCORE_SCHEMA = 'p1-score/1'
 RESULT_SCHEMA = 'p1-result/1'
+DESCRIPTION_SCHEMA = 'p1-description/1'
 POWER_SCHEMA = 'p1-power/1'
 SEED = 491
 REJUDGE_SEED, REJUDGE_SHARE = 4912, 0.2
@@ -462,8 +472,8 @@ def chain_controls(unit_rows: list[dict], stated: dict[tuple, bool]) -> dict:
 BIAS_NOTE = 'the received text\'s answer changed by arm'    # stated beside the outcome when the bias control flags
 
 
-def score(probe_rows: list[dict], hours: dict[str, float], rows: list[dict], questions: list[dict],
-          screen: dict, sentences: dict) -> dict:
+def _score_inputs(probe_rows: list[dict], rows: list[dict], questions: list[dict], screen: dict,
+                  sentences: dict) -> tuple:
     audits, costs = _validated(rows)
     unit_rows = units(primary_probes(probe_rows))
     question_rows(questions, unit_rows)
@@ -479,10 +489,12 @@ def score(probe_rows: list[dict], hours: dict[str, float], rows: list[dict], que
                 thresholds=dict(effect=EFFECT, min_units=MIN_UNITS, lower_quantile=LOWER_QUANTILE, interest=INTEREST,
                                 false_fact_cap=FALSE_FACT_CAP, false_fact_bound=FALSE_FACT_BOUND,
                                 false_fact_margin=FALSE_FACT_MARGIN, cost_cap=COST_CAP))
-    capped = sorted({row['repeat'] for row in costs if row['stopped_by_cap']})
-    if capped:
-        # A held-out repeat that reached its cap has failed the cost guard; its partial labels decide nothing.
-        return dict(base, decision=dict(go=False, outcome=f'guard failed: held-out repeat {capped} reached its cap'))
+    return unit_rows, audits, costs, base
+
+
+def _complete_figures(unit_rows: list[dict], hours: dict[str, float], rows: list[dict], audits: list[dict],
+                      costs: list[dict], sentences: dict) -> tuple:
+    """One implementation of the frozen complete-data calculations, independent of reporting purpose."""
     if {(row['repeat'], row['lineage']) for row in costs} != {(rep, name) for rep in ARMS['B'] for name in HELD_OUT}:
         raise ScoreError('cost rows must cover each repeat and held-out lineage exactly once')
     first, second = labels(rows)
@@ -497,6 +509,23 @@ def score(probe_rows: list[dict], hours: dict[str, float], rows: list[dict], que
     main = primary(figs['A1'], bs)
     robust = primary(refigs['A1'], [refigs[f'B{rep}'] for rep in ARMS['B']])['holds']
     guard = {str(rep): guards(figs['A1'], figs[f'B{rep}']) for rep in ARMS['B']}
+    slim = {k: {key: val for key, val in v.items() if key != 'units'} for k, v in figs.items()}
+    controls['positive_control']['paraphrases_failed_twice'] = sentences['failed']
+    bias = controls['bias_control']
+    # The bias control decides nothing: its flag is stated beside the outcome, whatever the outcome is, and outside
+    # `decision`, which the controls never reach.
+    note = {'outcome_note': f'{BIAS_NOTE}: {bias["direction"]}'} if bias['flag'] else {}
+    return dict(figures=slim, judge_agreement=agreement(first, second), **controls, **note), main, robust, guard
+
+
+def score(probe_rows: list[dict], hours: dict[str, float], rows: list[dict], questions: list[dict],
+          screen: dict, sentences: dict) -> dict:
+    unit_rows, audits, costs, base = _score_inputs(probe_rows, rows, questions, screen, sentences)
+    capped = sorted({row['repeat'] for row in costs if row['stopped_by_cap']})
+    if capped:
+        # Preserve the frozen guard-only result: partial labels decide nothing.
+        return dict(base, decision=dict(go=False, outcome=f'guard failed: held-out repeat {capped} reached its cap'))
+    figures_, main, robust, guard = _complete_figures(unit_rows, hours, rows, audits, costs, sentences)
     primary_holds = main['holds'] and robust
     go = primary_holds and all(g['holds'] for g in guard.values())
     if go:
@@ -507,15 +536,27 @@ def score(probe_rows: list[dict], hours: dict[str, float], rows: list[dict], que
         outcome = 'guard failed: the primary criterion held but a guard did not'
     else:
         outcome = 'inconclusive: B is above A on average but the criterion did not hold'
-    slim = {k: {key: val for key, val in v.items() if key != 'units'} for k, v in figs.items()}
-    controls['positive_control']['paraphrases_failed_twice'] = sentences['failed']
-    bias = controls['bias_control']
-    # The bias control decides nothing: its flag is stated beside the outcome, whatever the outcome is, and outside
-    # `decision`, which the controls never reach.
-    note = {'outcome_note': f'{BIAS_NOTE}: {bias["direction"]}'} if bias['flag'] else {}
-    return dict(base, figures=slim, judge_agreement=agreement(first, second), **controls, **note,
-                decision=dict(go=go, outcome=outcome, mean_delta=main['delta'], robust_to_rejudging=robust,
-                              primary=main, guards=guard))
+    return dict(base, **figures_, decision=dict(go=go, outcome=outcome, mean_delta=main['delta'],
+                robust_to_rejudging=robust, primary=main, guards=guard))
+
+
+def describe_capped(probe_rows: list[dict], hours: dict[str, float], rows: list[dict], questions: list[dict],
+                    screen: dict, sentences: dict, confirmed_audits: list[dict]) -> dict:
+    """Describe complete measurements after an owner amendment, preserving the registered cap failure."""
+    unit_rows, audits, costs, base = _score_inputs(probe_rows, rows, questions, screen, sentences)
+    capped = sorted({row['repeat'] for row in costs if row['stopped_by_cap']})
+    if not capped:
+        raise ScoreError('describe-capped requires a recorded historical cap failure')
+    canonical = lambda items: Counter(json.dumps(r, sort_keys=True) for r in items)  # noqa: E731
+    if canonical(audits) != canonical(confirmed_audits):
+        raise ScoreError('audit rows must exactly match the manifest-validated audit answers')
+    figures_, main, robust, guard = _complete_figures(unit_rows, hours, rows, audits, costs, sentences)
+    return dict(base, **figures_, schema=DESCRIPTION_SCHEMA,
+                scope='owner-amended descriptive completion after a historical cap failure',
+                historical_capped_repeats=capped,
+                registered_decision=dict(go=False, outcome=f'guard failed: held-out repeat {capped} reached its cap'),
+                benefit_diagnostics=dict(mean_delta=main['delta'], robust_to_rejudging=robust,
+                                         primary=main, guards=guard))
 
 
 def check_sentences_counts(sentences: object, questions: Path) -> None:
@@ -792,7 +833,7 @@ def main(argv=None) -> int:
         from tools import p1_batches    # imports this module, so it is loaded only for these steps
         return p1_batches.main(given)
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('step', choices=('simulate', 'plan', 'units', 'rejudge', 'score', 'development'))
+    parser.add_argument('step', choices=('simulate', 'plan', 'units', 'rejudge', 'score', 'describe-capped', 'development'))
     parser.add_argument('--probes', type=Path, action='append',
                         help='a held-out p1-probes/1 file; simulate, units, rejudge and score take one per held-out '
                              'directory (each must match its frozen.json), plan takes exactly one')
@@ -801,11 +842,23 @@ def main(argv=None) -> int:
     parser.add_argument('--questions', type=Path, help='score: the frozen p1-question/1 file (checked against its frozen.json)')
     parser.add_argument('--screen', type=Path, help='score: the screen.json that questions-freeze copied beside the questions')
     parser.add_argument('--sentences-counts', type=Path, help='score: the counts.json of the `sentences` step')
+    parser.add_argument('--audit-batches', type=Path, help='describe-capped: the completed audit build')
+    parser.add_argument('--audit-answers', type=Path, help='describe-capped: its completed answer directory')
+    parser.add_argument('--audit-key-sha256', help='describe-capped: the complete audit key digest recorded before dispatch')
+    parser.add_argument('--delivered', type=Path, action='append', help='describe-capped: each delivered file the audit used')
     parser.add_argument('--flip', type=float, help=f'simulate: the label error instead of {FLIP}')
     parser.add_argument('--sensitivity', type=float, nargs=2, metavar=('A', 'B'),
                         help='simulate: keep every stated label with this probability, for arm A and for arm B')
     parser.add_argument('--out', type=Path)
     args = parser.parse_args(argv)
+    if args.step != 'describe-capped' and (args.audit_batches or args.audit_answers or args.audit_key_sha256 or args.delivered):
+        parser.error('--audit-batches, --audit-answers, --audit-key-sha256 and --delivered are only for describe-capped')
+    if args.step == 'describe-capped':
+        if not (args.audit_batches and args.audit_answers and args.audit_key_sha256 and args.delivered and args.out):
+            parser.error('describe-capped needs --audit-batches, --audit-answers, --audit-key-sha256, --delivered '
+                         'and an explicit new --out')
+        if args.out.resolve() == (ROOT/'data/evaluation/p1/result.json').resolve() or args.out.exists():
+            parser.error('describe-capped --out must be new and distinct from the canonical result.json')
     probe_paths = args.probes or []
     probe_files = None
     try:
@@ -881,26 +934,53 @@ def main(argv=None) -> int:
         out, summary = args.out, result
     else:
         if not (probe_paths and args.scores and args.hours and args.questions and args.screen and args.sentences_counts):
-            parser.error('score needs --probes, --scores, --hours, --questions, --screen and --sentences-counts')
+            parser.error(f'{args.step} needs --probes, --scores, --hours, --questions, --screen and --sentences-counts')
         if {row['lineage'] for row in probe_rows} != set(HELD_OUT):
-            parser.error(f'score needs probes covering exactly the held-out lineages: {", ".join(HELD_OUT)}')
+            parser.error(f'{args.step} needs probes covering exactly the held-out lineages: {", ".join(HELD_OUT)}')
         try:
             require_questions_freeze(args.questions)
             asked, question_file = frozen_file(args.questions, 'questions')
             screen_file = frozen_screen(args.questions, args.screen)
             counts = json.loads(args.sentences_counts.read_text())
             check_sentences_counts(counts, args.questions)
-            result = dict(score(probe_rows, json.loads(args.hours.read_text()), _lines(args.scores), asked,
-                                json.loads(args.screen.read_text()), counts),
-                          probe_files=probe_files, question_file=question_file, screen_file=screen_file)
+            inputs = (probe_rows, json.loads(args.hours.read_text()), _lines(args.scores), asked,
+                      json.loads(args.screen.read_text()), counts)
+            if args.step == 'describe-capped':
+                from tools import p1_batches
+                try:
+                    key_path = args.audit_batches/'keys/audit.json'
+                    if p1_batches._digest(key_path) != args.audit_key_sha256:
+                        raise ScoreError('audit key differs from its pre-dispatch digest')
+                    key = p1_batches._load_key(args.audit_batches, 'audit')
+                    audit_inputs = [p1_batches._digest(p) for p in args.delivered] + p1_batches.Frozen(probe_paths).digests
+                    if key.get('build_sha256') != p1_batches.build_digest('audit', audit_inputs):
+                        raise ScoreError('audit build is not bound to these delivered/probe inputs and analysis source')
+                    audit_rows = p1_batches.parse('audit', args.audit_batches, args.audit_answers)
+                except p1_batches.BatchError as error:
+                    raise ScoreError(str(error)) from error
+                result = describe_capped(*inputs, audit_rows)
+                result['audit_evidence'] = dict(
+                    key=dict(path=_relative(args.audit_batches/'keys/audit.json'),
+                             sha256=file_sha256(args.audit_batches/'keys/audit.json')),
+                    answers={p.name: file_sha256(p) for p in sorted(args.audit_answers.glob('*.jsonl'))})
+                result['delivered_files'] = [dict(path=_relative(p), sha256=file_sha256(p)) for p in args.delivered]
+                result['analysis_files'] = {'tools/p1_analysis.py': file_sha256(Path(__file__)),
+                                            'tools/p1_batches.py': file_sha256(Path(p1_batches.__file__))}
+                result['input_files'] = {name: dict(path=_relative(path), sha256=file_sha256(path)) for name, path in
+                                         (('scores', args.scores), ('hours', args.hours),
+                                          ('sentences_counts', args.sentences_counts))}
+            else:
+                result = score(*inputs)
+            result.update(probe_files=probe_files, question_file=question_file, screen_file=screen_file)
         except ScoreError as error:
             parser.error(str(error))
         out = args.out or ROOT/'data'/'evaluation'/'p1'/'result.json'
-        summary = result['decision']['outcome']
+        summary = result['registered_decision' if args.step == 'describe-capped' else 'decision']['outcome']
         if 'outcome_note' in result:
             summary = f'{summary} ({result["outcome_note"]})'
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(result, indent=1, sort_keys=True) + '\n')
+    with out.open('x' if args.step == 'describe-capped' else 'w') as stream:
+        stream.write(json.dumps(result, indent=1, sort_keys=True) + '\n')
     print(json.dumps(summary))
     return 0
 
