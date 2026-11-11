@@ -283,8 +283,9 @@ pinned:
 - a development agent, run as a general-purpose subagent of the lead's coding host. **Readers
   are the exception (owner, 10 November: "Use codex for this"):** each is a fresh, ephemeral
   `codex exec` session (codex-cli 0.167.0, `gpt-6.1-sol`, effort high) whose working root holds
-  its one item and nothing else, at most three at a time;
-- the model of the #490 judges (named in [its record](../acceptance/2026-11-08-probe-validation-490.md#how-it-was-done)), at the host's default effort;
+  its one item and nothing else, at most three at a time. Codex reads and writes its files
+  through commands, so the Reader brief's "run any command" cannot hold literally for it;
+- the model of the #490 judges (named in [its record](../acceptance/2026-11-08-probe-validation-490.md#how-it-was-done)), at the host's default effort (readers: as above);
 - a fresh context, and only its batch file and the frames that file names.
 
 The host version is recorded with each batch.
@@ -441,9 +442,10 @@ Its recall figures decide nothing about the arms. Three checks can stop the stud
 - **A failed check,** or a first figure under 0.80, stops the study and goes to the owner. No
   brief or rule changes after the development run without the owner; any change is a recorded
   deviation and the development chain runs again.
-- **The floor is not the whole bar.** In the committed gate P(go) is 0.764 at an effect of 0.25
-  and 0.901 at 0.30, so the power figure needs a sensitivity of about 0.88 at 5% error. With 21
-  units that is at most two misses; 18 of 21 passes the floor and still goes to the owner. The
+- **The sensitivity floor is not the whole bar.** In the committed gate P(go) is 0.764 at an
+  effect of 0.25 and 0.901 at 0.30, so the power figure needs a sensitivity of about 0.88 at 5%
+  error. With 20 units that is at most two misses; 17 of 20 passes the sensitivity floor and
+  still goes to the owner. The
   simulation's standard error is about 0.006, so a figure within 0.01 of 0.80 is reported as
   borderline.
 - **Limits of these checks.** With about 21 units they can catch a chain that is badly noisy or
@@ -704,6 +706,11 @@ run monitor under 0.3M; scoring, re-judging and the audit about 4M (p1-study/2's
 
 About 16M in all, with development's run (about 21 units, every label twice) about 4M more.
 
+**Measured on development (10 November).** A pinned-model agent costs about 60,000 tokens
+whatever its task, and a Codex reader about 115,000, mostly cached input. The first development
+run used 16.1M Codex tokens for 140 readers and about 1.2M for its other agents. At that rate
+the held-out run's 590 readers are about 68M Codex tokens.
+
 ## Analysis and reporting
 
 `python -m tools.p1_analysis score --probes <held-out probes> --probes <lh4 probes>` **(p1-study/2:
@@ -754,11 +761,13 @@ the second file)** `--scores <rows> --hours <hours>` **(p1-study/3)** `--questio
    `R`. **A positive control** (arms `PW` and `PP`) measures the chain's sensitivity.
 5. **A question screen** (mechanical and no-text) with one rewrite, and a questions freeze that
    `score` checks.
-6. **Two development checks:** every label re-judged, limit 10% disagreement; sensitivity at
-   least 85%. The gate's power is re-run once at the measured values. p1-study/2's power
+6. **Three development checks:** every label re-judged, limit 10% disagreement; sensitivity at
+   least 85%; a recall floor of 3 of 20 units, added after the first development run. The
+   gate's power is re-run once at the measured values. p1-study/2's power
    assumptions were made for a different measurement, and only scratch re-runs cover this one.
 7. **Five new frozen briefs** (Question, Reader, Grader, Guess, Paraphrase); the Scoring and Arm
-   guess briefs retired.
+   guess briefs retired. The Question brief was revised after the first development run, and
+   development ran again (Owner decision 8).
 8. **One item per reader,** each in a fresh context; p1-study/2 packed 10 to a batch in
    `Random(4911)` order and only kept one unit's texts apart. "Not stated" is labelled without
    a grader.
@@ -775,6 +784,9 @@ the second file)** `--scores <rows> --hours <hours>` **(p1-study/3)** `--questio
     one unchanged re-run of the lineage inside the stage's cap.
 14. **A held-out session lost to infrastructure** goes to the owner when it happens; the replay
     tool re-runs whole lineages only, so the reserve's "one session" cannot be applied literally.
+15. **Readers run on Codex,** not as pinned-model subagents (Owner decision 7).
+16. **The rules found while #529 was built** (Owner decision 6): tokens, the word-for-word line,
+    reader numbering with `Random(4916)`, and the minor rules.
 
 ## Owner decisions
 
