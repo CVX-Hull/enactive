@@ -548,7 +548,11 @@ def development_summary(rows: list[dict]) -> dict:
     noise['pooled']['label_error'] = (1 - math.sqrt(max(0.0, 1 - 2 * d))) / 2
     count = lambda arm: sum(first[(KIND, arm, 1, p)][0] for p in probes)  # noqa: E731
     n = len(probes)
-    return dict(units=n, noise=noise,
+    # The floor can pass on units the received text answers, which is the same text in both arms; so the arms' recall
+    # over the units the Reference got wrong is shown beside it (the held-out metric of the same name).
+    wrong = [p for p in probes if not first[(KIND, 'R', 1, p)][0]]
+    beyond = {arm: dict(units=len(wrong), stated=sum(first[(KIND, arm, 1, p)][0] for p in wrong)) for arm in DEVELOPMENT_ARMS}
+    return dict(units=n, noise=noise, reference_wrong=beyond,
                 sensitivity={arm: dict(units=n, correct=count(arm), sensitivity=count(arm) / n) for arm in ('PW', 'PP')},
                 reference=dict(units=n, correct=count('R'), recall=count('R') / n),
                 recall={arm: dict(units=n, stated=count(arm), recall=count(arm) / n) for arm in DEVELOPMENT_ARMS},

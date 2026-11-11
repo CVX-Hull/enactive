@@ -401,7 +401,10 @@ def test_a_development_units_file_that_is_not_development_units_is_refused(tmp_p
 
 @pytest.mark.parametrize('frame', ['lh2a1/sources/lh2a1-5.png', 'x/lh1/f.png', '522-held-out/computer-sessions/lh4b3/sources/f.png',
                                    'held-out/f.png', 'held-out-lh4/f.png', 'dev/../lh3a2/f.png', 'a/lh4b7/b/f.png',
-                                   '372-382-dev-loop/computer-sessions/lh1a1/sources/f.png', '522-held-out/f.png'])
+                                   '372-382-dev-loop/computer-sessions/lh1a1/sources/f.png', '522-held-out/f.png',
+                                   'x/LH1A1/f.png', '372-382-dev-loop/evaluations/s1/f.png', '372-382-dev-loop/f.png',
+                                   '372-382-dev-loop/computer-sessions/other/sources/f.png',
+                                   'x/372-382-dev-loop/computer-sessions/aidB3/sources/f.png'])
 def test_a_development_frame_may_not_lie_under_a_held_out_session_directory(tmp_path, capsys, frame):
     dev = dev_world(tmp_path)
     bad = write_jsonl(tmp_path/'bad.jsonl', [dict(dev.rows[0], frame=frame)])

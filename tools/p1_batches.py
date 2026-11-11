@@ -61,6 +61,7 @@ from typing import NamedTuple
 
 from harness.jsonio import file_sha256
 from tools import p1_analysis as analysis
+from tools import probe_baseline
 from tools.probe_validation import HELD_OUT_DIR, HELD_OUT_LH4_DIR, HELD_OUT_STUDIES, HELD_OUT_STUDY
 
 ROOT = analysis.ROOT
@@ -235,6 +236,22 @@ def held_out_names() -> set[str]:
             | (set(HELD_OUT_STUDIES.values()) - {HELD_OUT_STUDY}) | {HELD_OUT_DIR.name, HELD_OUT_LH4_DIR.name})
 
 
+DEVELOPMENT_372 = frozenset(run for run in probe_baseline.RUNS if run != '397')   # #372's development sessions
+
+
+def held_out_path(parts: Sequence[str]) -> bool:
+    """Whether a frame path (its components under the evidence root) may hold held-out content. A component that is a
+    held-out name, in any letter case (the filesystem may ignore case), refuses it. In `372-382-dev-loop`, which holds
+    #372's development sessions beside #382's held-out ones, only `computer-sessions/<a #372 session>/…` is accepted."""
+    lowered = [part.lower() for part in parts]
+    if {name.lower() for name in held_out_names()} & set(lowered):
+        return True
+    if HELD_OUT_STUDY.lower() in lowered:
+        return not (len(parts) > 3 and lowered[0] == HELD_OUT_STUDY.lower() and parts[1] == 'computer-sessions'
+                    and parts[2] in DEVELOPMENT_372)
+    return False
+
+
 def development_units(path: Path) -> Units:
     """Development units from a JSON Lines file of `probe`, `lineage`, `boundary` and `frame` (the earlier frame's path
     under the evidence root): the #490 pairs the development check uses. A held-out lineage is refused, and so is a frame
@@ -248,7 +265,7 @@ def development_units(path: Path) -> Units:
             raise BatchError(f'--development takes development lineages only; {row["lineage"]} is held out')
         if analysis.held_out_named(row['probe']):
             raise BatchError(f'{Path(path).name}: line {number} has a probe id that names a held-out lineage')
-        if held_out_names() & set(Path(os.path.normpath(row['frame'])).parts):
+        if held_out_path(Path(os.path.normpath(row['frame'])).parts):
             raise BatchError(f'{Path(path).name}: line {number} has a frame under a held-out session directory')
         if row['probe'] in frames:
             raise BatchError(f'{Path(path).name}: line {number} repeats a probe')
@@ -408,6 +425,9 @@ def question_batches(study: Units, evidence: Path, out: Path, host_version: str,
         if unit['probe'] not in wanted:
             continue
         frame = _frame(evidence, study.frames.get(unit['probe']))
+        # A development frame is checked again where it resolves: a link may lead out of the path the units file names.
+        if study.development and frame is not None and held_out_path(Path(frame).relative_to(Path(evidence).resolve()).parts):
+            raise BatchError('a development frame resolves under a held-out session directory')
         absent += frame is None
         public = dict(frame=frame)
         if rewrite is not None:

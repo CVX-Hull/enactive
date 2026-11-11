@@ -791,6 +791,8 @@ def test_the_development_summary_reports_the_noise_the_sensitivity_and_the_refer
     assert summary['reference'] == dict(units=20, correct=18, recall=0.9)
     assert summary['recall'] == dict(A=dict(units=20, stated=10, recall=0.5), B=dict(units=20, stated=12, recall=0.6))
     assert summary['noise_ok'] is True and summary['sensitivity_ok'] is True and summary['floor_ok'] is True
+    # The Reference missed units 18 and 19; A states units 0-9 and B units 0-11, so neither states those two.
+    assert summary['reference_wrong'] == dict(A=dict(units=2, stated=0), B=dict(units=2, stated=0))
     assert summary['limits'] == dict(noise=0.10, sensitivity=0.85, floor=0.15)
 
 

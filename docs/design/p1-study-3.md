@@ -822,6 +822,11 @@ the second file)** `--scores <rows> --hours <hours>` **(p1-study/3)** `--questio
      development check. The development chain runs again.
    - **The shared-word rule:** "Keep the rule". It flagged 13 of 20 first drafts, mostly on
      context words.
+   - **The second development run** passed all three checks: 0 of 40 disagreements; sensitivity
+     19 and 20 of 20; recall 5, 6 and 4 of 20 for A, B and the Reference (on the 16 units the
+     Reference got wrong, A 1 and B 2). At those values P(go) is 0.940 at the 0.30 effect and
+     0.022 with none. The no-text answerer said "not stated" to all 66 questions over both runs,
+     so that half of the screen has not shown it can flag anything.
 
 Decided by the owner on 9 November 2026:
 1. **p1-study/2, the $80 lh4 envelope and the caps above:** "Approve".
