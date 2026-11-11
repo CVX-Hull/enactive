@@ -84,7 +84,7 @@ class FakeCurator:
         facts = repo.facts()
         publish(repo, [*facts, fact(f'f{len(facts) + 1}', f'curated from {kw["name"]}', published_in=f'v{int(before[1:]) + 1}')])
         return dict(run_state='completed', session_state=self.states.get(kw['name'], 'sealed'), cost_usd=self.cost,
-                    published_before=before, stopped_by_cap=False, proxy=dict(revoked=False, breaches=0),
+                    published_before=before, stopped_by_cap=False, proxy=dict(revoked=False, breaches=0, settled=True),
                     accepted=1, rejected=0, requests=3)
 
 
@@ -127,6 +127,54 @@ def test_the_schedule_is_written_after_every_session(world, monkeypatch):
     fake = FakeCurator(monkeypatch)
     replay.run_b(b_args(runtime, evidence), 'key')
     assert fake.on_disk == [None, 1]    # the second session starts with the first already on disk
+
+
+@pytest.mark.parametrize('state', ['aborted', 'error: preparation failed'])
+def test_a_nonsealed_session_stops_before_the_next_admission_or_lineage(world, monkeypatch, state):
+    runtime, evidence = world
+    add_second_lineage(evidence, monkeypatch)
+    fake = FakeCurator(monkeypatch, states={'t1': state})
+    run = replay.run_b(b_args(runtime, evidence, lineage=('syn', 'syn2')), 'key')
+    assert len(fake.cuts) == 1
+    assert run['stopped'] == 'session-aborted' and run['sessions_run'] == 1 and not run['complete']
+    assert json.loads(schedule_of(runtime).read_text())['stopped'] == 'session-aborted'
+    assert not (runtime/'knowledge/p1/dev/r1/syn2').exists()
+
+
+def test_a_clean_host_with_incomplete_proxy_accounting_stops_the_replay(world, monkeypatch):
+    runtime, evidence = world
+    fake = FakeCurator(monkeypatch)
+
+    def unsettled(**kwargs):
+        summary = fake.run_one(**kwargs)
+        summary['proxy']['settled'] = False
+        return summary
+
+    monkeypatch.setattr(shadow, 'run_one', unsettled)
+    run = replay.run_b(b_args(runtime, evidence), 'key')
+    assert len(fake.cuts) == 1 and run['sessions'][0]['session_state'] == 'sealed'
+    assert run['stopped'] == 'proxy-unsettled' and not run['complete']
+    assert not replay.b_complete(replay.load_schedule(schedule_of(runtime)), 'syn')
+
+
+@pytest.mark.parametrize(('revoked', 'cap', 'settled', 'expected'), [
+    (True, False, True, 'proxy-revoked'),
+    (False, True, True, 'cap-reached'),
+    (True, True, False, 'proxy-revoked'),
+    (False, True, False, 'cap-reached'),
+])
+def test_incident_and_cap_stop_reasons_keep_priority_over_abort_or_unsettled(world, monkeypatch, revoked, cap, settled, expected):
+    runtime, evidence = world
+    fake = FakeCurator(monkeypatch, states={'t1': 'aborted'})
+
+    def failed(**kwargs):
+        summary = fake.run_one(**kwargs)
+        summary['proxy'].update(revoked=revoked, settled=settled)
+        return summary
+
+    monkeypatch.setattr(shadow, 'run_one', failed)
+    run = replay.run_b(b_args(runtime, evidence, cap='1' if cap else '100'), 'key')
+    assert run['stopped'] == expected and len(fake.cuts) == 1 and not run['complete']
 
 
 def test_a_session_budget_is_fixed_and_independent_of_lineage_order_and_an_ample_stage_cap(world, monkeypatch):
@@ -311,7 +359,7 @@ def test_an_incomplete_development_repeat_is_delivered_marked_incomplete(world, 
     # 'cap': the last session reaches the stage cap, so every session is listed but the stage stopped
     FakeCurator(monkeypatch, states={'t2': 'aborted'} if how == 'aborted' else None)
     replay.run_b(b_args(runtime, evidence, cap='2' if how == 'cap' else '100'), 'key')
-    assert json.loads(schedule_of(runtime).read_text())['stopped'] == ('cap-reached' if how == 'cap' else None)
+    assert json.loads(schedule_of(runtime).read_text())['stopped'] == ('cap-reached' if how == 'cap' else 'session-aborted')
     out = runtime/'p1-delivered'/'partial'
     replay.deliver(deliver_args(runtime, evidence, out, schedule_of(runtime)))
     rows = rows_of(out)
@@ -328,6 +376,7 @@ def test_a_held_out_lineage_refuses_an_incomplete_repeat(world, monkeypatch):
     with pytest.raises(replay.ReplayError, match='incomplete'):
         replay.lineage_rows('syn', evidence, runtime, [schedule])
     schedule['lineages']['syn']['sessions'][1]['session_state'] = 'sealed'      # sealed and not stopped: delivered
+    schedule['stopped'] = None
     assert {r['complete'] for r in replay.lineage_rows('syn', evidence, runtime, [schedule])} == {True}
 
 

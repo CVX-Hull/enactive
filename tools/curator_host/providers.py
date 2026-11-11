@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from harness.curator.proxy import Price, Provider, usage_events
+from harness.curator.proxy import Price, Provider, response_events, usage_events
 
 PER = Decimal(1_000_000)
 
@@ -28,7 +28,23 @@ def _anthropic_tool(tool: dict) -> str | None:
     return None
 
 
-def _anthropic_cost(price: Price, usage: dict[str, int], _body: bytes) -> Decimal:
+def _checked_token_usage(usage: dict[str, int], body: bytes, required: tuple[str, ...], optional: tuple[str, ...] = ()) -> None:
+    if any(name not in usage for name in required):
+        raise ValueError('required token accounting is missing')
+    for found in usage_events(body):
+        for name in (*required, *optional):
+            if name in found and (not isinstance(found[name], int) or isinstance(found[name], bool) or found[name] < 0):
+                raise ValueError('invalid token accounting')
+        if 'cache_creation' in found and 'cache_creation_input_tokens' not in found:
+            nested = found['cache_creation']
+            if nested is not None and (not isinstance(nested, dict) or any(
+                    not isinstance(value, int) or isinstance(value, bool) or value < 0 for value in nested.values())):
+                raise ValueError('invalid cache token accounting')
+
+
+def _anthropic_cost(price: Price, usage: dict[str, int], body: bytes) -> Decimal:
+    _checked_token_usage(usage, body, ('input_tokens', 'output_tokens'),
+                         ('cache_creation_input_tokens', 'cache_read_input_tokens'))
     return (usage.get('input_tokens', 0) * price.input + usage.get('output_tokens', 0) * price.output
             + usage.get('cache_creation_input_tokens', 0) * price.cache_write
             + usage.get('cache_read_input_tokens', 0) * price.cache_read) / PER
@@ -70,8 +86,10 @@ def _openrouter_request(request: dict) -> str | None:
 
 
 def _amount(value) -> Decimal | None:
-    if isinstance(value, (Decimal, int)) and not isinstance(value, bool) and value >= 0:
-        return Decimal(value)
+    if isinstance(value, (Decimal, int)) and not isinstance(value, bool):
+        amount = Decimal(value)
+        if amount.is_finite() and amount >= 0:
+            return amount
     return None
 
 
@@ -81,12 +99,25 @@ def reported_cost(body: bytes) -> Decimal | None:
     OpenRouter's `usage.cost` is what it bills the account. On a bring-your-own-key route that is
     only its fee: the provider bills `cost_details.upstream_inference_cost` to the operator's own
     key. Both are counted, so the cap tracks the real spend on either route.
+    Null/absent amounts permit token fallback; malformed values or incomplete BYOK charges raise
+    ValueError so the proxy retains the reservation instead of silently treating them as zero.
     """
     charges = []
     for found in usage_events(body):
         cost = _amount(found.get('cost'))
-        details = found.get('cost_details') if isinstance(found.get('cost_details'), dict) else {}
+        if found.get('cost') is not None and cost is None:
+            raise ValueError('invalid reported cost')
+        details = found.get('cost_details')
+        if details is not None and not isinstance(details, dict):
+            raise ValueError('invalid cost details')
+        details = details or {}
         upstream = _amount(details.get('upstream_inference_cost'))
+        if details.get('upstream_inference_cost') is not None and upstream is None:
+            raise ValueError('invalid upstream cost')
+        if found.get('is_byok') is not None and not isinstance(found['is_byok'], bool):
+            raise ValueError('invalid billing route indicator')
+        if found.get('is_byok') is True and (cost is None or upstream is None):
+            raise ValueError('incomplete bring-your-own-key accounting')
         if cost is None and upstream is None:
             continue
         charges.append((cost or Decimal(0)) + (upstream or Decimal(0)) if found.get('is_byok') is True
@@ -100,7 +131,32 @@ def _openrouter_cost(price: Price, usage: dict[str, int], body: bytes) -> Decima
     reported = reported_cost(body)
     if reported is not None:
         return reported
+    _checked_token_usage(usage, body, ('prompt_tokens', 'completion_tokens'))
     return (usage.get('prompt_tokens', 0) * price.worst_input + usage.get('completion_tokens', 0) * price.output) / PER
+
+
+# OpenRouter's canonical error types (errors-and-debugging, checked 11 November 2026).
+# Values are an allowlist: arbitrary messages, metadata and provider-native codes never leave here.
+ERROR_TYPES = frozenset({'context_length_exceeded', 'max_tokens_exceeded', 'token_limit_exceeded', 'string_too_long',
+                         'authentication', 'permission_denied', 'payment_required', 'rate_limit_exceeded',
+                         'provider_overloaded', 'provider_unavailable', 'invalid_request', 'invalid_prompt',
+                         'not_found', 'refusal', 'content_policy_violation', 'invalid_image', 'image_too_large',
+                         'image_too_small', 'server', 'timeout', 'unmapped', 'precondition_failed',
+                         'payload_too_large', 'unprocessable', 'unsupported_image_format', 'image_not_found',
+                         'image_download_failed'})
+
+
+def _openrouter_error(body: bytes) -> dict | None:
+    for event in response_events(body):
+        error = event.get('error')
+        if not isinstance(error, dict):
+            continue
+        metadata = error.get('metadata')
+        kind = metadata.get('error_type') if isinstance(metadata, dict) else None
+        code = error.get('code')
+        return dict(kind='provider-error-event', error_type=kind if isinstance(kind, str) and kind in ERROR_TYPES else None,
+                    error_code=code if isinstance(code, int) and not isinstance(code, bool) and 100 <= code <= 599 else None)
+    return None
 
 
 OPENROUTER = Provider(
@@ -109,4 +165,4 @@ OPENROUTER = Provider(
                'tools', 'tool_choice', 'reasoning', 'provider', 'store'}),
     frozenset({'text', 'image_url', 'function', 'reasoning.text', 'reasoning.summary', 'reasoning.encrypted'}),
     tool_refusal=_openrouter_tool, cost=_openrouter_cost, request_refusal=_openrouter_request,
-    affinity_header='x-session-id', **COMMON)
+    affinity_header='x-session-id', response_error=_openrouter_error, **COMMON)

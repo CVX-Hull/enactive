@@ -31,11 +31,16 @@ adopted; P0's [outcome](../acceptance/2026-11-08-adr009-p0.md) is recorded separ
 
 ## Failure, bounds and ownership
 
-- **Close-out and the gate.** A session that breaches a limit, errs or leaves a
-  surviving process is sealed `aborted`, and nothing it wrote is gated. The gate
-  publishes atomically or not at all.
+- **Close-out and the gate.** Execution failure, unknown cleanup or surviving processes
+  prevents gating. Handled failures record an abort where writable; a later close-out error
+  cannot undo an earlier atomic publication. Each gate publishes atomically or not at all.
 - **The proxy.** It fails closed: missing usage keeps the whole reservation, and a
-  charge above its reservation revokes the session. It also sets one session-affinity
+  charge above its reservation revokes the session. Malformed/unrepresentable accounting
+  cannot release a reservation and leave admission usable. The runner closes admission
+  separately from incident revocation, boundedly awaits settlement and ledger receipts,
+  and stops on explicit unsettled exposure; a clean host exit alone is insufficient.
+  [Shutdown receipts and limits](../operations/curator-hosts.md#pi-curator-host-the-p0-shadow-host)
+  distinguish a spent snapshot from a final charge. It also sets one session-affinity
   header per session. Prompt caching depends instead on the host keeping each budget note
   where it was first sent; a note rewritten at the tail defeats the cache
   ([#489 record](../acceptance/2026-11-08-context-stability-489.md#follow-up-the-cause-found)).

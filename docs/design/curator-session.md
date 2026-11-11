@@ -90,9 +90,11 @@ A draft is a container (`container-manifest/1`, kind `draft`).
 
 ## Session close-out
 
-**On close.** The runner always collects `submissions/` and `drafts/` back to the
-session's state directory. It gates each submission in order, updates draft lifecycles,
-seals the session record and deletes the workspace.
+**On close.** When a sandbox result is available and reports no survivors, the runner
+collects `submissions/` and `drafts/` back to the session's state directory. It gates
+submissions only after a clean exit, updates draft lifecycles, seals the session record
+and deletes the workspace. Without a result it collects nothing; exit/provenance and
+survivors remain unknown (`null`), rather than an invented successful cleanup observation.
 
 **Collection never follows a link.** The sandbox lets the host replace a writable
 directory itself, for example removing `drafts/` and putting a symbolic link in its place.
@@ -117,11 +119,26 @@ tree is walked component by component.
   - all submissions together: 16 MiB;
   - entries per tree: 10,000.
 
-**On abort.** A crash, a breached limit or a failure anywhere in preparation or close-out
-seals the session as `aborted`, with the error in the record. Its drafts are kept and its
-submissions are not gated. If host processes survive the stop, nothing is collected.
+**On abort.** A crash, a breached limit or a handled failure records the session as `aborted`
+where the record is writable. A failure before gating prevents submissions from being gated;
+a later failure cannot undo an earlier atomic publication, whose verdict remains retained.
+After an observed unclean exit, collectable drafts are kept without aging the others.
+If host processes survive the stop or no sandbox result is available, nothing is collected.
 Removing the workspace clears file flags and permissions first. A removal failure is
 recorded in `cleanup-failed.json`, and the lock is always released.
+
+**Interruption during preparation or execution.** `KeyboardInterrupt` attempts an aborted
+close-out before re-raising the original interrupt; it gates nothing without a clean result.
+The sandbox's process-tree cleanup and the outer workspace/lock cleanup still run. If the
+process-tree or profile cleanup fails, the original interrupt propagates with safe failure
+notes retained in the session's errors; unknown cleanup cannot admit another shadow session.
+Both cleanup steps are attempted even when one fails. If the
+interrupted close-out itself fails, `close-out-failed.json` retains the safe error category
+where writable, and the original interrupt remains primary. A forced second interruption,
+hard kill or unwritable record can prevent a terminal receipt; that remains unknown.
+This guarantee does not cover interruption during later collection/gating and cannot undo
+an earlier atomic publication. Proxy shutdown and unsettled accounting are separate
+[runner guards](../operations/curator-hosts.md#pi-curator-host-the-p0-shadow-host).
 
 **One session at a time per repository.** The runner holds an exclusive lock on
 `<game>.state/lock`.

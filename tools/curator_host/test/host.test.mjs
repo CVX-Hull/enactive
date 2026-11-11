@@ -195,7 +195,60 @@ test('a provider refusal ends the session with the status, not a retry loop', as
   assert.equal(payloads.length, 1);
   const end = events.find(event => event.type === 'request-end');
   assert.equal(end.status, 400);
-  assert.match(end.error_body, /fields not allowed/);
+  assert.equal(end.failure.kind, 'http-error');
+  assert.equal(end.failure.phase, 'http-error');
+  assert.ok(!JSON.stringify(events).includes('fields not allowed'));
+});
+
+test('stream failures have bounded diagnostics without provider error text or new retries', async t => {
+  const data = value => `data: ${JSON.stringify(value)}\n\n`;
+  const chunk = { id: 'g', choices: [{ index: 0, delta: {}, finish_reason: null }] };
+  const cases = [
+    ['error-event', data({ error: { message: 'SECRET provider detail', metadata: { error_type: 'SECRET-type' } } }), 'sdk-stream-error-unknown', 'before-first-chunk'],
+    ['malformed', 'data: {SECRET malformed\n\n', 'malformed-sse-json', 'before-first-chunk'],
+    ['eof', data(chunk), 'missing-finish-reason', 'streaming'],
+    ['unknown-finish', data({ id: 'g', choices: [{ index: 0, delta: {}, finish_reason: 'SECRET' }] }) + 'data: [DONE]\n\n', 'sdk-stream-error-unknown', 'after-finish'],
+  ];
+  for (const [name, body, kind, phase] of cases) await t.test(name, async child => {
+    const { result, events, payloads } = await session(child, [new Response(body, { headers: { 'content-type': 'text/event-stream' } })]);
+    assert.equal(result.reason, 'provider-error');
+    assert.equal(payloads.length, 1);
+    const end = events.find(event => event.type === 'request-end');
+    assert.equal(end.status, 200);
+    assert.equal(end.failure.kind, kind);
+    assert.equal(end.failure.phase, phase);
+    assert.equal(end.failure.provider_error_type, null);
+    assert.equal(end.usage_reported, false);
+    assert.ok(!JSON.stringify(events).includes('SECRET'));
+  });
+});
+
+test('a body failure after a valid finish stays an unknown stream failure', async t => {
+  let pulls = 0;
+  const body = new ReadableStream({ pull(controller) {
+    if (pulls++ === 0) controller.enqueue(new TextEncoder().encode('data: ' + JSON.stringify({
+      id: 'g', choices: [{ index: 0, delta: {}, finish_reason: 'stop' }],
+    }) + '\n\n'));
+    else controller.error(new Error('SECRET body failure'));
+  } });
+  const { events, result, payloads } = await session(t, [new Response(body, { headers: { 'content-type': 'text/event-stream' } })]);
+  assert.equal(result.reason, 'provider-error');
+  assert.equal(payloads.length, 1);
+  const end = events.find(event => event.type === 'request-end');
+  assert.equal(end.failure.kind, 'sdk-stream-error-unknown');
+  assert.equal(end.failure.phase, 'after-finish');
+  assert.equal(end.failure.finish_reason, 'stop');
+  assert.ok(!JSON.stringify(events).includes('SECRET'));
+});
+
+test('a completed response without accounting is explicit without manufacturing usage', async t => {
+  const { events, payloads } = await session(t, [sse([['finish', { summary: 'ok' }]], {})]);
+  assert.equal(payloads.length, 1);
+  const end = events.find(event => event.type === 'request-end');
+  assert.equal(end.failure.kind, 'missing-usage');
+  assert.equal(end.failure.phase, 'after-finish');
+  assert.equal(end.prompt_tokens, null);
+  assert.equal(end.cost, null);
 });
 
 test('one retry follows a gateway error, counted as a request', async t => {

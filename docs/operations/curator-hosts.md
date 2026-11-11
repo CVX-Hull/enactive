@@ -101,7 +101,14 @@ Node tests: `cd tools/curator_host && npm test`.
   [server retry instruction](https://openrouter.ai/docs/api_reference/errors-and-debugging#retry-after-header).
 - Telemetry is JSON lines on stdout: `host-start`, `request-start`, `request-end` (tokens, cached,
   reasoning and the provider's reported `cost`), `tool-call` (name, ok, duration, bytes) and
-  `host-end`. It never carries the token or a header.
+  `host-end`. Failed requests add bounded `failure` diagnostics: a known SDK error signature
+  or explicit unknown, stream phase/chunk count and an allowlisted finish reason. Raw HTTP
+  error bodies and SDK/provider error messages are not emitted. The SDK consumes error events
+  before its callback, so the host cannot recover their typed cause. The proxy reuses its
+  JSON/SSE accounting decoder to retain only an allowlisted OpenRouter `error_type` and
+  integer error code in the ledger, when available ([documented envelope](https://github.com/OpenRouterTeam/docs/blob/main/api_reference/errors-and-debugging.mdx)).
+  These diagnostics do not authorize retries or identify the unknown causes of old failures.
+  Telemetry never carries the token or a header.
 
 **The shadow runner.**
 `.venv/bin/python -m tools.curator_host.shadow --arm terra|opus --lineage 397|372 [--sessions NAME…] --cap-usd N --out .runtime/curator-shadow/RUN`.
@@ -113,12 +120,37 @@ Node tests: `cd tools/curator_host && npm test`.
 - **Run.** One `run_session` per session against `.runtime/knowledge/shadow-454/<arm>/<lineage>/`
   (game `cdda`). Each session has its own proxy and token, sized to what the whole-run cap leaves
   (or `--session-cap-usd`). The run stops when the cap is reached, the proxy revokes or records
-  a breach.
+  a breach, accounting remains unsettled after shutdown, or host cleanup is unconfirmed.
+  `--stop-on-abort` additionally
+  stops on other non-sealed sessions; P1's separate replay always stops on a non-sealed session.
 - **Output.** `curator-shadow/1` summaries: one per session (`<out>/<lineage>/<session>/summary.json`
   and its `proxy-ledger.jsonl`) and one per run (`<out>/summary.json`). A session summary holds
   wall seconds, host start to first model request, first-request prompt tokens, tokens by kind,
   proxy-settled cost, requests, tool calls, submissions, verdicts with diagnostics, drafts, the
   record path, the proxy's `revoked` and breaches, and whether the cap stopped it.
+- **Shutdown and uncertain accounting.** Preparation precedes listener startup; a `finally`
+  closes the proxy after execution or interruption. Closing admission is distinct from
+  an incident revocation. Shutdown waits at most five seconds for admitted requests to
+  settle **and append their ledger receipts**, then writes `proxy-close.json`
+  (`curator-proxy-close/1`) beside the session summary, including on an execution interrupt.
+  It records `settled`, outstanding request count/reserved dollars, a spent snapshot,
+  real revocation/breaches and any receipt failure. A missing receipt cannot certify settlement.
+  Both runners stop on incomplete accounting even after a clean host exit. The real session
+  manifest is not rewritten to manufacture an abort. `cost_usd` is nonfinal when `settled`
+  is false; reconcile the original ledger and explicit reserved exposure before another
+  owner decision. Later settlement never renews the stopped run. Older frozen records
+  have their original assurance; missing shutdown metadata is not retroactive success.
+- **Malformed and oversized responses.** Invalid containers, numeric parsing or unrepresentable
+  charges retain a conservative reservation and fail closed. Accounting arithmetic is
+  validated before a reservation is released. Token fallback requires complete nonnegative
+  integer counts; a present malformed charge cannot silently become absent or zero. BYOK
+  charges require both the provider component and the routing fee. Ledger serialization
+  uses a separate lock so a blocked disk write cannot hold admission open or defeat the
+  accounting shutdown timeout. An interrupted upstream HTTP 200 keeps its
+  actual status. The response accounting buffer is capped at 32 MiB; exceeding it aborts
+  reading and keeps the reservation. A bounded shutdown does not cancel remote billing or
+  prove every upstream handler finished. Hard termination or failed disk writes can still
+  leave unknown exposure; preserve it rather than infer a final invoice.
 
 **Two arms, one route each.** The route is pinned to one provider with no fallback.
 
