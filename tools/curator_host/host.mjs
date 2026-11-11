@@ -4,6 +4,7 @@
 import { Agent } from '@earendil-works/pi-agent-core';
 import { Type, AssistantMessageEventStream } from '@earendil-works/pi-ai';
 import { stream } from '@earendil-works/pi-ai/api/openai-completions';
+import { retryProviderRequest } from '@earendil-works/pi-ai/utils/provider-retry';
 import { ToolError, listDir, readFile, runWorkbench, viewFrame, writeFile } from './workspace-tools.mjs';
 
 export const SCHEMA = 'curator-host/1';
@@ -12,6 +13,7 @@ const MAX_SUMMARY_CHARS = 2000;
 const NARRATION_BYTES = 1024;
 const ERROR_BODY_BYTES = 512;
 const RETRY_STATUSES = [502, 503, 504];
+const MAX_RETRY_DELAY_MS = 60_000;
 const levels = ['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'];
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const positive = value => Number.isSafeInteger(value) && value > 0;
@@ -25,6 +27,20 @@ function requireThat(condition, reason = 'invalid-configuration') {
 }
 function closed(value, allowed) {
   requireThat(object(value) && Object.keys(value).every(key => allowed.includes(key)));
+}
+
+function retryHeaders(response) {
+  if (RETRY_STATUSES.includes(response.status)) return new Headers({ 'retry-after': '1' });
+  if (response.status !== 429 || response.headers.get('x-should-retry') === 'false') return null;
+  const after = response.headers.get('retry-after')?.trim();
+  if (!after) return null; // Local proxy budget refusals have no server retry instruction.
+  const seconds = /^\d+(?:\.\d+)?$/.test(after) ? Number(after) : NaN;
+  const date = Date.parse(after);
+  // Date.parse alone accepts incomplete dates such as "Wed, 1".
+  const delay = Number.isFinite(seconds) ? seconds * 1000
+    : Number.isFinite(date) && new Date(date).toUTCString() === after ? date - Date.now() : NaN;
+  if (!Number.isFinite(delay) || delay > MAX_RETRY_DELAY_MS) return null;
+  return new Headers({ 'retry-after': after });
 }
 
 /** The frozen configuration: model, effort and limits. It holds no endpoint, key or header. */
@@ -293,13 +309,25 @@ export async function runCurator(options) {
             requestTimer = setTimeout(() => stop('request-timeout'), configuration.request_timeout_seconds * 1000);
             const signal = AbortSignal.any([streamOptions?.signal, stopped.signal].filter(Boolean));
             const actualFetch = options.fetch ?? globalThis.fetch;
-            const observedFetch = async (url, init) => {
-              for (let attempt = 1; ; attempt++) {
+            const observedFetch = (url, init) => {
+              let attempt = 0;
+              const retry = (id, headers) => {
+                if (requests >= configuration.max_requests) { stop('request-limit'); throw new HostError(fatal); }
+                emit('request-end', { request_id: id, status: httpStatus ?? null, stop_reason: 'error', retry: true });
+                // Only host-selected classes reach the SDK's abortable wait.
+                const error = new Error('retryable-provider');
+                error.status = undefined;
+                error.headers = headers;
+                throw error;
+              };
+              return retryProviderRequest(async () => {
                 signal.throwIfAborted();
                 if (requests >= configuration.max_requests) { stop('request-limit'); throw new HostError(fatal); }
+                attempt++;
                 const payload = JSON.parse(init.body);
                 const id = requestId = `request-${++requests}`;
                 inFlight = true;
+                httpStatus = errorBody = undefined;
                 emit('request-start', { request_id: id, attempt, payload_bytes: Buffer.byteLength(init.body),
                   message_count: payload.messages?.length ?? 0, image_parts: init.body.split('"type":"image_url"').length - 1 });
                 let response;
@@ -307,24 +335,21 @@ export async function runCurator(options) {
                 catch (error) {
                   httpStatus = null;
                   if (attempt === 1 && !signal.aborted && !fatal) {
-                    emit('request-end', { request_id: id, status: null, stop_reason: 'error', retry: true });
-                    await new Promise(done => setTimeout(done, 1000));
-                    continue;
+                    retry(id, new Headers({ 'retry-after': '1' }));
                   }
                   throw error;
                 }
                 httpStatus = response.status;
                 if (response.status >= 400) {
                   try { errorBody = (await response.clone().text()).slice(0, ERROR_BODY_BYTES); } catch { errorBody = ''; }
-                  if (attempt === 1 && RETRY_STATUSES.includes(response.status) && !signal.aborted && !fatal) {
-                    emit('request-end', { request_id: id, status: response.status, stop_reason: 'error', retry: true });
+                  const headers = retryHeaders(response);
+                  if (attempt === 1 && headers && !signal.aborted && !fatal) {
                     void response.body?.cancel().catch(() => {});
-                    await new Promise(done => setTimeout(done, 1000));
-                    continue;
+                    retry(id, headers);
                   }
                 }
                 return response;
-              }
+              }, { maxRetries: 1, maxRetryDelayMs: MAX_RETRY_DELAY_MS, signal });
             };
             return stream(streamModel, context, { ...streamOptions, apiKey: proxy.token, fetch: observedFetch, env: {}, signal,
               maxRetries: 0, cacheRetention: 'short', maxTokens: model.maxTokens, timeoutMs: configuration.request_timeout_seconds * 1000,

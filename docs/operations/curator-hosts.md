@@ -92,6 +92,13 @@ Node tests: `cd tools/curator_host && npm test`.
   The sandbox enforces the same limits, so the host's refusals are a courtesy to the model.
 - The host stops after `finish`, the request limit, a provider error, the wall limit or
   context capacity. A session that ends without `finish` fails.
+- A pre-header transport failure or HTTP 502/503/504 gets at most one retry after one
+  second. HTTP 429 gets that same single retry only with a valid `Retry-After` of at
+  most 60 seconds (seconds or a canonical HTTP date), unless `x-should-retry: false` suppresses
+  it. A proxy budget refusal without that header stays terminal. The pinned SDK owns
+  the cancellable wait; both attempts and backoff share the original request, wall
+  and proxy ceilings. No resources are renewed. OpenRouter documents the
+  [server retry instruction](https://openrouter.ai/docs/api_reference/errors-and-debugging#retry-after-header).
 - Telemetry is JSON lines on stdout: `host-start`, `request-start`, `request-end` (tokens, cached,
   reasoning and the provider's reported `cost`), `tool-call` (name, ok, duration, bytes) and
   `host-end`. It never carries the token or a header.
