@@ -264,8 +264,8 @@ the text the successor would have received live.
 **Freezing.** After the development stage, the arms are fixed: code, prompt, renderer, cap and host
 settings. They are committed with their digests **(p1-study/2:** `p1_replay freeze`**)** before any held-out replay,
 and every later change is a deviation. Only an explicitly owner-approved amendment below may
-change the runtime or resume a stopped study. The [proposed robustness recovery](#proposed-robustness-recovery-amendment)
-is inactive until its own owner decision and protected integration; it grants no authority while proposed.
+change the runtime or resume a stopped study. The [owner-gated robustness recovery](#owner-gated-robustness-recovery-amendment)
+is inactive without its own owner decision and protected integration; a proposal alone grants no authority.
 
 **(p1-study/2) Two steps before the freeze, in stage 2:**
 - **The format check ($0).** lh4 is recorded on a newer player than every trace the arms were built
@@ -344,9 +344,11 @@ reclassify the incident or make its incomplete output usable.
   blinded measurement and scoring in their existing order. The result reports this
   exception, every failed attempt and the mixed-source limitation beside its conclusion.
 
-### Proposed robustness recovery amendment
+### Owner-gated robustness recovery amendment
 
-**Pending owner approval; no new run is authorized.** After the final approved
+**Explicit owner approval is required before merge or dispatch.** This text alone
+grants no run authority. Record the decision in #178 and the execution evidence before
+merging this amendment. After the final approved
 `held-out-continuation-4/r2` also stopped on HTTP200 missing usage, the owner chose
 **keep P1 pending a recovery proposal** and requested the robustness repairs. The
 original all-stage stop, incidents, incomplete outputs and receipts remain retained.
@@ -818,8 +820,8 @@ No step from 2 on spends dollars except step 5.
 - **Isolation incident.** Any incident (a sandbox escape, key exposure, a proxy breach or a
   revocation) stops every stage. The [approved missing-usage stop exception](#approved-missing-usage-stop-exception)
   authorizes only the specified fresh continuation after the retained incident; it does
-  not suppress a new stop. The [proposed robustness recovery](#proposed-robustness-recovery-amendment)
-  would require its own explicit approval; it is not active authority.
+  not suppress a new stop. The [owner-gated robustness recovery](#owner-gated-robustness-recovery-amendment)
+  requires its own explicit approval; the proposal alone grants no authority.
 - **Stage caps.**
   - A development stage that reaches its cap stops there, and its partial data is reported.
   - A held-out stage that reaches its cap records the cost guard as failed (above). If repeat 1
@@ -830,7 +832,7 @@ No step from 2 on spends dollars except step 5.
   - **Output.** It also goes back if any session never writes.
 - **Freeze.** Once held-out replay starts, nothing in the arms changes without an explicitly
   owner-approved runtime amendment; its new freeze precedes reuse. The
-  [robustness recovery proposal](#proposed-robustness-recovery-amendment) is inactive until approved.
+  [robustness recovery proposal](#owner-gated-robustness-recovery-amendment) is inactive until approved.
 - **Gate (p1-study/2).** The re-run gate on lh1–lh4 can stop the study before stage 1.
 - **(p1-study/2) Operator-enforced.** The code does not tie caps to stages (#462's review), so the
   operator passes each stage's cap explicitly and records it with the stage's label, does not
@@ -956,10 +958,11 @@ the second file)** `--scores <rows> --hours <hours>` **(p1-study/3)** `--questio
     on the unchanged runtime freeze, after retaining the all-stage stop and failed expenses.
     The strict proxy guard and all future stop rules remain active.
 
-20. **Proposed robustness recovery, pending approval.** The
-    [proposal](#proposed-robustness-recovery-amendment) would change the runtime and
-    explicit service tier, qualify once on development data before one conditional
-    whole-lineage continuation, and use the owner-accepted best-effort cost basis.
+20. **Owner-gated robustness recovery.** The
+    [amendment](#owner-gated-robustness-recovery-amendment) changes the runtime only after
+    explicit owner approval. It adds an explicit service tier, one development
+    qualification before a conditional whole-lineage continuation, and the
+    owner-accepted best-effort cost basis.
     It retains prior realizations, every failure, and all future strict stops.
 
 ## Owner decisions
