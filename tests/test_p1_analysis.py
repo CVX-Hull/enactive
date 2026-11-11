@@ -790,14 +790,24 @@ def test_the_development_summary_reports_the_noise_the_sensitivity_and_the_refer
                                           PP=dict(units=20, correct=18, sensitivity=0.9))
     assert summary['reference'] == dict(units=20, correct=18, recall=0.9)
     assert summary['recall'] == dict(A=dict(units=20, stated=10, recall=0.5), B=dict(units=20, stated=12, recall=0.6))
-    assert summary['noise_ok'] is True and summary['sensitivity_ok'] is True
-    assert summary['limits'] == dict(noise=0.10, sensitivity=0.85)
+    assert summary['noise_ok'] is True and summary['sensitivity_ok'] is True and summary['floor_ok'] is True
+    # The Reference missed units 18 and 19; A states units 0-9 and B units 0-11, so neither states those two.
+    assert summary['reference_wrong'] == dict(A=dict(units=2, stated=0), B=dict(units=2, stated=0))
+    assert summary['limits'] == dict(noise=0.10, sensitivity=0.85, floor=0.15)
 
 
 @pytest.mark.parametrize('flips, noise_ok', [(4, True), (5, False)])      # 4 of 40 is exactly 10%: at most 10% passes
 def test_the_noise_check_is_a_pooled_disagreement_of_at_most_ten_percent(flips, noise_ok):
     summary = p1.development_summary(dev_study(flip_a=set(range(flips))))
     assert summary['noise']['pooled']['disagreements'] == flips and summary['noise_ok'] is noise_ok
+
+
+@pytest.mark.parametrize('a, b, reference, ok', [(0, 0, 0, False), (2, 2, 2, False), (3, 0, 0, True), (0, 3, 0, True), (0, 0, 3, True)])
+def test_the_floor_check_needs_an_arm_or_the_reference_stated_on_three_of_twenty_units(a, b, reference, ok):
+    """The first development run scored A, B and the Reference at 0 of 20 and passed both other checks (10 November 2026)."""
+    summary = p1.development_summary(dev_study(a=range(a), b=range(b), reference=range(reference)))
+    assert summary['floor_ok'] is ok and summary['limits']['floor'] == 0.15
+    assert summary['noise_ok'] is True and summary['sensitivity_ok'] is True
 
 
 @pytest.mark.parametrize('correct, ok', [(17, True), (16, False), (20, True)])    # 17 of 20 is exactly 85%
