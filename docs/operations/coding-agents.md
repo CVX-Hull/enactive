@@ -111,4 +111,21 @@ These steps are each user's own and are not tracked or automated here:
   trust dialog. It asks once before starting a project `.mcp.json` server. For one
   invocation, pass `--settings .claude/settings.json` and `--mcp-config .mcp.json`.
 
+## P1 study readers
+
+The readers of [p1-study/3's measurement chain](../design/p1-study-3.md#the-measurement-chain)
+run on the second coding host (owner, 10 November 2026: "Use codex for this which has a lot of
+credits. But, otherwise, do whatever that's needed. Just ensure we don't trip any rate limits.").
+
+- **Session.** One `codex exec --ephemeral --skip-git-repo-check -s workspace-write` per reader
+  item, with codex-cli 0.167.0, model `gpt-6.1-sol` and `model_reasoning_effort="high"`.
+- **Isolation.** The session's working root is a directory holding its one item file and its
+  prompt. It can write only there; the operator's runner copies the answer out afterwards.
+- **Rate limits.** At most three sessions at once. A failed item is retried up to three times
+  with a growing pause, and five failures in a row stop the run.
+- **Other chain agents** (question writers, the no-text answerer, paraphrasers, graders and
+  auditors) are Claude Code general-purpose subagents on the #490 judges' model.
+- **Measured cost.** About 115,000 tokens per reader, mostly cached input; about 60,000 per
+  subagent of the other kind, whatever its task.
+
 [Operations index](../runbook.md).

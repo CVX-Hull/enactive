@@ -281,10 +281,11 @@ and every later change is a deviation.
 **Pinning.** Every question writer, no-text answerer, paraphraser, reader, grader and auditor is
 pinned:
 - a development agent, run as a general-purpose subagent of the lead's coding host. **Readers
-  are the exception (owner, 10 November: "Use codex for this"):** each is a fresh, ephemeral
-  `codex exec` session (codex-cli 0.167.0, `gpt-6.1-sol`, effort high) whose working root holds
-  its one item and nothing else, at most three at a time. Codex reads and writes its files
-  through commands, so the Reader brief's "run any command" cannot hold literally for it;
+  are the exception (owner, 10 November):** each is a fresh, ephemeral session of the second
+  coding host, named with its version, model and effort in
+  [coding-agent hosts](../operations/coding-agents.md#p1-study-readers). Its working root holds
+  its one item and nothing else, and at most three run at a time. That host reads and writes
+  its files through commands, so the Reader brief's "run any command" cannot hold literally;
 - the model of the #490 judges (named in [its record](../acceptance/2026-11-08-probe-validation-490.md#how-it-was-done)), at the host's default effort (readers: as above);
 - a fresh context, and only its batch file and the frames that file names.
 
@@ -707,9 +708,9 @@ run monitor under 0.3M; scoring, re-judging and the audit about 4M (p1-study/2's
 About 16M in all, with development's run (about 21 units, every label twice) about 4M more.
 
 **Measured on development (10 November).** A pinned-model agent costs about 60,000 tokens
-whatever its task, and a Codex reader about 115,000, mostly cached input. The first development
-run used 16.1M Codex tokens for 140 readers and about 1.2M for its other agents. At that rate
-the held-out run's 590 readers are about 68M Codex tokens.
+whatever its task, and a reader on the second host about 115,000, mostly cached input. The
+first development run used 16.1M reader tokens for 140 readers and about 1.2M for its other
+agents. At that rate the held-out run's 590 readers are about 68M reader tokens.
 
 ## Analysis and reporting
 
@@ -784,7 +785,7 @@ the second file)** `--scores <rows> --hours <hours>` **(p1-study/3)** `--questio
     one unchanged re-run of the lineage inside the stage's cap.
 14. **A held-out session lost to infrastructure** goes to the owner when it happens; the replay
     tool re-runs whole lineages only, so the reserve's "one session" cannot be applied literally.
-15. **Readers run on Codex,** not as pinned-model subagents (Owner decision 7).
+15. **Readers run on the second coding host,** not as pinned-model subagents (Owner decision 7).
 16. **The rules found while #529 was built** (Owner decision 6): tokens, the word-for-word line,
     reader numbering with `Random(4916)`, and the minor rules.
 
@@ -811,10 +812,11 @@ the second file)** `--scores <rows> --hours <hours>` **(p1-study/3)** `--questio
      a second refusal goes to the owner.
    - **Development units.** #490's 21 pairs give 20 units: one is in `aidA5`, which has no B
      text. Development has one B repeat, so its chain reads A, B repeat 1 and the controls.
-7. **Readers on Codex:** "Use codex for this which has a lot of credits… Just ensure we don't
-   trip any rate limits." A pinned-model subagent cost about 60,000 tokens per item against
-   this page's 20,000; a Codex reader costs about 115,000, mostly cached. Three pilot readers
-   that had run on the pinned model were set aside unused.
+7. **Readers on the second coding host,** with care for its rate limits; the owner's words are
+   quoted in [coding-agent hosts](../operations/coding-agents.md#p1-study-readers). A
+   pinned-model subagent cost about 60,000 tokens per item against this page's 20,000; a reader
+   on the second host costs about 115,000, mostly cached. Three pilot readers that had run on
+   the pinned model were set aside unused.
 8. **After the first development run** (0 of 20 for A, B and the Reference; 0 of 40
    disagreements; sensitivity 19 and 20 of 20; 6 questions flagged twice):
    - **The Question brief:** "Fix the Question brief, re-run". The question is asked about the
