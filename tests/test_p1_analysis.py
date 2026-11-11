@@ -9,7 +9,6 @@ from tools import p1_analysis as p1
 HOURS = {'lh1': 20.0, 'lh2': 20.0, 'lh3': 0.5, 'lh4': 0.0}   # the synthetic probes sit in lh1-lh3; lh4 adds no hours
 CONTROL_RATES = {'R1': 0.5, 'PW1': 1.0, 'PP1': 1.0}          # the Reference, and the positive control's two forms
 SCREEN = dict(flagged_twice=0)
-SENTENCES = dict(failed=0)
 
 
 def probes(per_boundary=6, boundaries=4, informative=True):
@@ -48,10 +47,15 @@ def questions_for(unit_rows):
             for u in unit_rows]
 
 
-def scored(rows, scores, *, hours=HOURS, screen=SCREEN, questions=None, sentences=SENTENCES):
-    """`score` over the units of `rows`, with a question for each of them unless `questions` says otherwise."""
+COUNTS_FOR_UNITS = object()     # the default of `scored`: the sentences step's counts for the study's units
+
+
+def scored(rows, scores, *, hours=HOURS, screen=SCREEN, questions=None, sentences=COUNTS_FOR_UNITS):
+    """`score` over the units of `rows`, with a question for each of them unless `questions` says otherwise, and the
+    sentences step's counts for them (no failures) unless `sentences` says otherwise."""
     unit_rows = p1.units(p1.primary_probes(rows))
-    return p1.score(rows, hours, scores, questions_for(unit_rows) if questions is None else questions, screen, sentences)
+    counts = dict(failed=0, units=len(unit_rows)) if sentences is COUNTS_FOR_UNITS else sentences
+    return p1.score(rows, hours, scores, questions_for(unit_rows) if questions is None else questions, screen, counts)
 
 
 def rejudged(unit_rows, first, flip=lambda row: row['stated']):
@@ -284,16 +288,25 @@ def frozen_dir(directory, rows, *, schema='p1-held-out-frozen/1', name='probes.j
     return path
 
 
-def frozen_questions(directory, unit_rows, flagged_twice=0):
-    """(questions file, screen.json) as `questions-freeze` leaves them: a frozen directory with the counts beside the questions."""
-    path = frozen_dir(directory, questions_for(unit_rows), name='questions.jsonl',
-                      beside={'screen.json': json.dumps(dict(questions=3, flagged=flagged_twice, flagged_twice=flagged_twice))})
-    return path, directory/'screen.json'
+def frozen_questions(root, unit_rows, flagged_twice=0):
+    """(questions file, screen.json) as `questions-freeze` leaves them under the repository `root`: the one frozen
+    questions file, with the counts beside it."""
+    directory = root/'data'/'evaluation'/'p1'/'questions'
+    questions = questions_for(unit_rows)
+    digest = p1.file_sha256(frozen_dir(directory, questions, name='questions.jsonl'))
+    directory.joinpath('frozen.json').unlink()
+    counts = json.dumps(dict(questions=3, flagged=flagged_twice, flagged_twice=flagged_twice, questions_sha256=digest))
+    (directory/'screen.json').write_text(counts)
+    files = {file: p1.file_sha256(directory/file) for file in ('questions.jsonl', 'screen.json')}
+    (directory/'frozen.json').write_text(json.dumps(dict(schema=p1.FROZEN_SCHEMA, files=files)))
+    return directory/'questions.jsonl', directory/'screen.json'
 
 
-def sentence_counts(tmp_path, failed=0, units=None):
+def sentence_counts(tmp_path, questions, failed=0, units=None, **over):
+    """The sentences step's counts for the questions file `questions` (units default to the study's)."""
     path = tmp_path/'sentence-counts.json'
-    path.write_text(json.dumps(dict(units=units, stages=1, rewritten=0, failed=failed) if units is not None else dict(failed=failed)))
+    counts = dict(units=units, stages=1, rewritten=0, failed=failed, questions_sha256=p1.file_sha256(questions))
+    path.write_text(json.dumps({k: v for k, v in dict(counts, **over).items() if v is not None}))
     return path
 
 
@@ -367,7 +380,7 @@ def four_files(two_files, tmp_path):
 
 def recorded(path):
     frozen = path.parent/'frozen.json'
-    return dict(path=str(path), sha256=p1.file_sha256(path), frozen=str(frozen), frozen_sha256=p1.file_sha256(frozen))
+    return dict(path=p1._relative(path), sha256=p1.file_sha256(path), frozen=p1._relative(frozen), frozen_sha256=p1.file_sha256(frozen))
 
 
 def flags(paths):
@@ -408,7 +421,8 @@ def test_the_repository_relative_path_is_recorded_for_files_inside_the_repositor
                                                 frozen_sha256=p1.file_sha256(path.parent/'frozen.json'))]
 
 
-def test_score_takes_one_frozen_file_per_lineage_and_records_them(four_files, tmp_path, capsys):
+def test_score_takes_one_frozen_file_per_lineage_and_records_them(four_files, tmp_path, capsys, monkeypatch):
+    monkeypatch.setattr(p1, 'ROOT', tmp_path.resolve())       # the questions are frozen at the repository root's one path
     paths, rows = four_files
     unit_rows = p1.units(p1.primary_probes(rows))
     first_pass = labels(unit_rows, {**CONTROL_RATES, 'A1': 0.3, 'B1': 0.8, 'B2': 0.8})
@@ -416,8 +430,8 @@ def test_score_takes_one_frozen_file_per_lineage_and_records_them(four_files, tm
     scores.write_text(''.join(json.dumps(r) + '\n' for r in first_pass + rejudged(unit_rows, first_pass) + guards_ok()))
     hours, out = tmp_path/'hours.json', tmp_path/'result.json'
     hours.write_text(json.dumps(dict(HOURS, lh4=10.0)))
-    questions, screen = frozen_questions(tmp_path/'questions', unit_rows, flagged_twice=2)
-    counts = sentence_counts(tmp_path, failed=3, units=len(unit_rows))
+    questions, screen = frozen_questions(tmp_path, unit_rows, flagged_twice=2)
+    counts = sentence_counts(tmp_path, questions, failed=3, units=len(unit_rows))
     common = ['--scores', str(scores), '--hours', str(hours), '--out', str(out), '--questions', str(questions),
               '--screen', str(screen), '--sentences-counts', str(counts)]
     assert p1.main(['score', *flags(paths), *common]) == 0
@@ -426,22 +440,23 @@ def test_score_takes_one_frozen_file_per_lineage_and_records_them(four_files, tm
     assert result['positive_control']['paraphrases_failed_twice'] == 3
     assert result['probe_files'] == [recorded(path) for path in paths]
     assert result['question_file'] == recorded(questions)
-    assert result['screen_file'] == dict(path=str(screen), sha256=p1.file_sha256(screen))
+    assert result['screen_file'] == dict(path=p1._relative(screen), sha256=p1.file_sha256(screen))
     out.unlink()
     with pytest.raises(SystemExit):                                   # probes that leave a held-out lineage out
         p1.main(['score', *flags(paths[:3]), *common])
     assert 'covering exactly' in capsys.readouterr().err and not out.exists()
 
 
-def test_score_refuses_a_questions_file_that_differs_from_its_freeze_or_is_missing_an_input(four_files, tmp_path, capsys):
+def test_score_refuses_a_questions_file_that_differs_from_its_freeze_or_is_missing_an_input(four_files, tmp_path, capsys, monkeypatch):
+    monkeypatch.setattr(p1, 'ROOT', tmp_path.resolve())
     paths, rows = four_files
     unit_rows = p1.units(p1.primary_probes(rows))
     first_pass = labels(unit_rows, {**CONTROL_RATES, 'A1': 0.3, 'B1': 0.8, 'B2': 0.8})
     scores, hours, out = tmp_path/'scores.jsonl', tmp_path/'hours.json', tmp_path/'result.json'
     scores.write_text(''.join(json.dumps(r) + '\n' for r in first_pass + rejudged(unit_rows, first_pass) + guards_ok()))
     hours.write_text(json.dumps(dict(HOURS, lh4=10.0)))
-    questions, screen = frozen_questions(tmp_path/'questions', unit_rows)
-    counts = sentence_counts(tmp_path)
+    questions, screen = frozen_questions(tmp_path, unit_rows)
+    counts = sentence_counts(tmp_path, questions, units=len(unit_rows))
     common = ['--scores', str(scores), '--hours', str(hours), '--out', str(out), '--screen', str(screen),
               '--sentences-counts', str(counts)]
     questions.write_text(questions.read_text().replace('bolt', 'nail'))          # one edit after the freeze
@@ -454,7 +469,7 @@ def test_score_refuses_a_questions_file_that_differs_from_its_freeze_or_is_missi
     # the screen's counts must be the freeze's screen.json: an edited copy, a copy elsewhere and an unlisted one are refused
     other = tmp_path/'other-screen.json'
     other.write_text(json.dumps(dict(flagged_twice=0)))
-    edited = tmp_path/'questions'/'screen.json'
+    edited = screen
     original = edited.read_text()
     edited.write_text(json.dumps(dict(flagged_twice=9)))
     for given in (other, edited):
@@ -463,12 +478,11 @@ def test_score_refuses_a_questions_file_that_differs_from_its_freeze_or_is_missi
                      '--questions', str(questions)])
         assert 'not the screen counts the questions were frozen with' in capsys.readouterr().err
     edited.write_text(original)
-    unlisted, _ = frozen_questions(tmp_path/'plain', unit_rows)
-    frozen = unlisted.parent/'frozen.json'
-    frozen.write_text(json.dumps(dict(schema=p1.FROZEN_SCHEMA, files={'questions.jsonl': p1.file_sha256(unlisted)})))
+    frozen = questions.parent/'frozen.json'                       # a freeze that does not list the screen's counts
+    frozen.write_text(json.dumps(dict(schema=p1.FROZEN_SCHEMA, files={'questions.jsonl': p1.file_sha256(questions)})))
     with pytest.raises(SystemExit):
-        p1.main(['score', *flags(paths), *common[:6], '--screen', str(unlisted.parent/'screen.json'),
-                 '--sentences-counts', str(counts), '--questions', str(unlisted)])
+        p1.main(['score', *flags(paths), *common[:6], '--screen', str(screen),
+                 '--sentences-counts', str(counts), '--questions', str(questions)])
     assert 'not the screen counts the questions were frozen with' in capsys.readouterr().err
     for missing in ('--questions', '--screen', '--sentences-counts'):
         arguments = [a for i, a in enumerate(common) if a != missing and common[i - 1] != missing]
@@ -476,6 +490,45 @@ def test_score_refuses_a_questions_file_that_differs_from_its_freeze_or_is_missi
             p1.main(['score', *flags(paths), *arguments,
                      *([] if missing == '--questions' else ['--questions', str(questions)])])
         assert '--questions, --screen and --sentences-counts' in capsys.readouterr().err
+    assert not out.exists()
+
+
+def test_score_refuses_questions_at_another_path_and_sentence_counts_of_another_questions_file(four_files, tmp_path, capsys, monkeypatch):
+    monkeypatch.setattr(p1, 'ROOT', tmp_path.resolve())
+    paths, rows = four_files
+    unit_rows = p1.units(p1.primary_probes(rows))
+    first_pass = labels(unit_rows, {**CONTROL_RATES, 'A1': 0.3, 'B1': 0.8, 'B2': 0.8})
+    scores, hours, out = tmp_path/'scores.jsonl', tmp_path/'hours.json', tmp_path/'result.json'
+    scores.write_text(''.join(json.dumps(r) + '\n' for r in first_pass + rejudged(unit_rows, first_pass) + guards_ok()))
+    hours.write_text(json.dumps(dict(HOURS, lh4=10.0)))
+    questions, screen = frozen_questions(tmp_path, unit_rows)
+    n = len(unit_rows)
+    common = ['--scores', str(scores), '--hours', str(hours), '--out', str(out), '--screen', str(screen), '--questions', str(questions)]
+
+    def score_with(counts):
+        with pytest.raises(SystemExit):
+            p1.main(['score', *flags(paths), *common, '--sentences-counts', str(counts)])
+        assert not out.exists()
+        return capsys.readouterr().err
+
+    # sentences made from another questions file (a Q0 the questions were rewritten from), or from none the counts name
+    for over in (dict(questions_sha256='c' * 64), dict(questions_sha256=None)):
+        assert 'not of the frozen questions file' in score_with(sentence_counts(tmp_path, questions, units=n, **over))
+    # the counts must give the unit count: it is no longer optional
+    assert 'one paraphrase for each unit' in score_with(sentence_counts(tmp_path, questions))
+    assert 'one paraphrase for each unit' in score_with(sentence_counts(tmp_path, questions, units=n - 1))
+    assert p1.main(['score', *flags(paths), *common, '--sentences-counts', str(sentence_counts(tmp_path, questions, units=n))]) == 0
+    out.unlink()
+    # the freeze verifies in a subdirectory too, but the frozen questions file is exactly one path
+    sub = tmp_path/'data'/'evaluation'/'p1'/'questions'/'sub'
+    sub.mkdir()
+    for name in ('questions.jsonl', 'screen.json', 'frozen.json'):
+        (sub/name).write_bytes((questions.parent/name).read_bytes())
+    assert p1.frozen_file(sub/'questions.jsonl', 'questions')[0]
+    with pytest.raises(SystemExit):
+        p1.main(['score', *flags(paths), '--scores', str(scores), '--hours', str(hours), '--out', str(out), '--screen', str(sub/'screen.json'),
+                 '--questions', str(sub/'questions.jsonl'), '--sentences-counts', str(sentence_counts(tmp_path, questions, units=n))])
+    assert 'the frozen questions file is exactly data/evaluation/p1/questions/questions.jsonl' in capsys.readouterr().err
     assert not out.exists()
 
 
@@ -671,14 +724,15 @@ def test_the_questions_must_be_one_p1_question_row_for_each_unit():
     for screen in ({}, dict(flagged_twice=None), dict(flagged_twice=-1), dict(flagged_twice=True), None, [1]):
         with pytest.raises(p1.ScoreError, match='flagged_twice'):
             scored(rows, scores, screen=screen)
-    for counts in ({}, dict(failed=None), dict(failed=-1), dict(failed=True), dict(failed=1.5), None, [1], dict(failed=0, units=1)):
+    for counts in ({}, dict(failed=None), dict(failed=-1), dict(failed=True), dict(failed=1.5), None, [1], dict(failed=0, units=1),
+                   dict(failed=0), dict(failed=0, units=None), dict(failed=0, units=True)):      # `units` is required
         with pytest.raises(p1.ScoreError, match='sentences-counts'):
             scored(rows, scores, sentences=counts)
 
 
 def test_a_flagged_bias_control_is_stated_beside_the_outcome_with_its_direction_and_changes_nothing_else():
     rows, scores = study({'A1': 0.3, 'B1': 0.8, 'B2': 0.8}, extra=guards_ok())
-    flagged = scored(rows, scores, sentences=dict(failed=4))
+    flagged = scored(rows, scores, sentences=dict(failed=4, units=len(p1.units(p1.primary_probes(rows)))))
     assert flagged['bias_control']['flag'] is True
     assert flagged['outcome_note'] == "the received text's answer changed by arm: B above A"    # beside `decision`, not in it
     assert 'outcome_note' not in flagged['decision'] and flagged['decision']['outcome'].startswith('go:')
@@ -761,7 +815,6 @@ def test_the_label_error_is_capped_when_the_disagreement_reaches_a_half():
 @pytest.mark.parametrize('mutate, match', [
     (lambda rows: rows + [dict(rows[0], item='lh1-p0001')], 'held-out lineage'),
     (lambda rows: rows + [dict(rows[0], item='lh4b3-x')], 'held-out lineage'),
-    (lambda rows: [dict(r, lineage='lh2') if i == 0 else r for i, r in enumerate(rows)], 'held-out lineage'),
     (lambda rows: [r for r in rows if not (r['arm'] == 'R' and r['item'] == 'pair-03')], '1 missing, 0 unexpected'),
     (lambda rows: [r for r in rows if r['arm'] != 'PP'], '20 missing'),
     (lambda rows: [r for r in rows if not (r['arm'] == 'A' and r['item'] == 'pair-03' and not r.get('rejudge'))], '1 missing'),

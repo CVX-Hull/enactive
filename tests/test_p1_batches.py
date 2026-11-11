@@ -2,6 +2,7 @@
 import json
 import random
 import re
+import shutil
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -23,7 +24,9 @@ CANARY_A = 'ANSWER-PELICAN'
 ARM_KEYS = (('A', 1), ('B', 1), ('B', 2))
 DEV_KEYS = (('A', 1), ('B', 1))                 # a development delivery has one B repeat
 TEXTS = (*ARM_KEYS, ('R', 1), ('PW', 1), ('PP', 1))
-QUESTIONS_DIR = ('data', 'evaluation', 'p1', 'questions')   # the only place a questions freeze may be written
+QUESTIONS_DIR = ('data', 'evaluation', 'p1', 'questions')
+QUESTIONS_FILE = (*QUESTIONS_DIR, 'questions.jsonl')         # the only frozen questions file, under a repository root
+OTHER_DIGEST = 'b' * 64                                      # the sha256 of some other questions file
 
 
 def spread_hash(rng: random.Random) -> str:
@@ -151,25 +154,33 @@ def question_of(probe: str) -> dict:
                 key=f'{CANARY_K} bolt, saw')
 
 
-def screen_counts(world, flagged_twice: int = 0) -> Path:
-    """The screen's counts file: what `screen` wrote, as far as the freeze reads it."""
+def screen_counts(world, flagged_twice: int = 0, questions: Path | str | None = None) -> Path:
+    """The screen's counts file: what `screen` wrote, as far as the freeze reads it. `questions` is the file the screen
+    screened (its digest is recorded), or a digest."""
     path = world.root/'screen-counts.json'
-    path.write_text(json.dumps(dict(questions=20, flagged=flagged_twice, flagged_twice=flagged_twice)))
+    digest = questions if isinstance(questions, str) else analysis.file_sha256(questions or world.root.joinpath(*QUESTIONS_FILE))
+    path.write_text(json.dumps(dict(questions=20, flagged=flagged_twice, flagged_twice=flagged_twice, questions_sha256=digest)))
     return path
 
 
-def freeze_args(world, path: Path) -> list:
+def freeze_args(world, path: Path, flagged_twice: int = 0) -> list:
     """`questions-freeze` over the held-out world's frozen probes and a screen's counts."""
     probes = [a for p in world.probes for a in ('--probes', p)]
-    return ['questions-freeze', '--questions', path, '--frozen', '2026-11-11', *probes, '--screen', screen_counts(world)]
+    return ['questions-freeze', '--questions', path, '--frozen', '2026-11-11', *probes, '--screen',
+            screen_counts(world, flagged_twice, path)]
 
 
-def write_questions(world, name: str = 'questions', *, freeze: bool | str = True, skip: int | None = None) -> Path:
-    """A questions file for every unit (one unit's question left out with `skip`) under the questions directory,
-    frozen by the command; `freeze='by hand'` writes a `frozen.json` the command would refuse to."""
-    path = world.root.joinpath(*QUESTIONS_DIR)/name/'questions.jsonl'
+def reset_questions(world) -> None:
+    """Remove the questions directory: the file and whatever the freeze left beside it."""
+    shutil.rmtree(world.root.joinpath(*QUESTIONS_DIR), ignore_errors=True)
+
+
+def write_questions(world, *, freeze: bool | str = True, skip: int | None = None, rows: list | None = None) -> Path:
+    """A questions file for every unit (one unit's question left out with `skip`, or `rows`) at the one frozen path,
+    frozen by the command; `freeze='by hand'` writes a `frozen.json` the command would refuse to. An existing file stays."""
+    path = world.root.joinpath(*QUESTIONS_FILE)
     if not path.exists():
-        write_jsonl(path, [question_of(u['probe']) for n, u in enumerate(world.units) if n != skip])
+        write_jsonl(path, [question_of(u['probe']) for n, u in enumerate(world.units) if n != skip] if rows is None else rows)
     if freeze and not (path.parent/'frozen.json').exists():
         if freeze == 'by hand':
             (path.parent/'frozen.json').write_text(json.dumps(dict(schema=analysis.FROZEN_SCHEMA,
@@ -179,14 +190,17 @@ def write_questions(world, name: str = 'questions', *, freeze: bool | str = True
     return path
 
 
-def write_sentences(world) -> Path:
-    rows = [dict(schema=batches.SENTENCE_SCHEMA, probe=u['probe'], sentence=f'It holds bolt and saw ({n}).', attempts=1, correct=True)
-            for n, u in enumerate(world.units)]
+def write_sentences(world, digest: str | None = None) -> Path:
+    """The sentences of the questions file at the frozen path (not frozen here), or of the file with `digest`."""
+    digest = digest or analysis.file_sha256(write_questions(world, freeze=False))
+    rows = [dict(schema=batches.SENTENCE_SCHEMA, probe=u['probe'], sentence=f'It holds bolt and saw ({n}).', attempts=1, correct=True,
+                 questions_sha256=digest) for n, u in enumerate(world.units)]
     return write_jsonl(world.root/'sentences.jsonl', rows)
 
 
-def answer_row(probe, arm, repeat, answer, *, source='reader', rejudge=False) -> dict:
-    return dict(schema=batches.ANSWER_SCHEMA, source=source, probe=probe, arm=arm, repeat=repeat, rejudge=rejudge, answer=answer)
+def answer_row(probe, arm, repeat, answer, *, source='reader', rejudge=False, digest=None) -> dict:
+    row = dict(schema=batches.ANSWER_SCHEMA, source=source, probe=probe, arm=arm, repeat=repeat, rejudge=rejudge, answer=answer)
+    return dict(row, questions_sha256=digest or OTHER_DIGEST) if source == 'paraphrase' else row
 
 
 def reader_answers(world, answer=lambda probe, arm, repeat: f'{CANARY_A} {arm}{repeat}', rejudge=False) -> Path:
@@ -371,6 +385,8 @@ def test_development_question_batches_read_the_units_file_in_probe_order_without
 
 @pytest.mark.parametrize('mutate, message', [
     (lambda rows: rows + [dict(rows[0], probe='x', lineage='lh2')], 'development lineages only; lh2 is held out'),
+    (lambda rows: rows + [dict(rows[0], probe='lh1-p0001')], 'a probe id that names a held-out lineage'),     # a held-out-looking id
+    (lambda rows: rows + [dict(rows[0], probe='lh4b3-x')], 'a probe id that names a held-out lineage'),
     (lambda rows: rows + [dict(rows[0])], 'repeats a probe'),
     (lambda rows: [{k: v for k, v in rows[0].items() if k != 'frame'}], 'is not a development unit'),
     (lambda rows: [dict(rows[0], frame='')], 'is not a development unit'),
@@ -430,8 +446,9 @@ def test_tokens_are_lower_cased_runs_of_letters_or_digits_of_the_counted_length(
     assert batches.MAX_ENTRIES == 5 and batches.MIN_LETTERS == 4
 
 
-def checks_file(path: Path, purpose: str, correct: dict[str, bool]) -> Path:
-    return write_jsonl(path, [dict(schema=batches.CHECK_SCHEMA, purpose=purpose, probe=p, correct=c, answered=True)
+def checks_file(path: Path, purpose: str, correct: dict[str, bool], digest: str | None = None) -> Path:
+    extra = dict(questions_sha256=digest or OTHER_DIGEST) if purpose == 'paraphrase' else {}
+    return write_jsonl(path, [dict(schema=batches.CHECK_SCHEMA, purpose=purpose, probe=p, correct=c, answered=True, **extra)
                               for p, c in correct.items()])
 
 
@@ -449,7 +466,8 @@ def test_the_screen_flags_by_each_rule_and_prints_counts_only(tmp_path, capsys):
     assert cli('screen', '--questions', questions, '--graded', graded, '--out', out) == 0
     printed = capsys.readouterr().out
     counts = json.loads(printed)
-    assert counts == dict(questions=6, flagged_by=dict(empty_key=1, entries=1, token=2, no_text=2), flagged=5, flagged_twice=None)
+    assert counts == dict(questions=6, flagged_by=dict(empty_key=1, entries=1, token=2, no_text=2), flagged=5, flagged_twice=None,
+                          questions_sha256=analysis.file_sha256(questions))          # the file this run screened
     assert all(word not in printed for word in (CANARY_Q, CANARY_K, 'bolt', 'p0'))
     assert (out/'flagged.txt').read_text() == 'p0\np1\np2\np4\np5\n'      # probe ids only
     assert json.loads((out/'counts.json').read_text()) == counts
@@ -473,6 +491,9 @@ def test_the_second_screen_run_counts_the_questions_flagged_again(tmp_path, caps
     counts = json.loads(capsys.readouterr().out)
     assert counts['questions'] == 5 and counts['flagged_twice'] == counts['flagged'] == 4      # all but p0
     assert (second/'flagged.txt').read_text() == 'p1\np2\np4\np5\n'
+    # the second run's counts carry the digest of the rewritten file it screened, not the first run's
+    assert counts['questions_sha256'] == analysis.file_sha256(rewritten) != analysis.file_sha256(questions)
+    assert json.loads((first/'counts.json').read_text())['questions_sha256'] == analysis.file_sha256(questions)
 
 
 def test_a_first_screen_run_that_flags_nothing_has_nothing_flagged_twice(tmp_path, capsys):
@@ -530,23 +551,51 @@ def test_sentences_are_rewritten_once_checked_again_and_a_second_failure_is_used
     checks1 = checks_file(tmp_path/'c1.jsonl', 'paraphrase', {'p0': True, 'p1': False, 'p2': True, 'p3': False})
     out1 = tmp_path/'.runtime'/'s1'
     assert cli('sentences', '--paraphrases', first, '--checks', checks1, '--out', out1) == 0
-    assert json.loads(capsys.readouterr().out) == dict(units=4, stages=1, rewritten=0, failed=2)
+    assert json.loads(capsys.readouterr().out) == dict(units=4, stages=1, rewritten=0, failed=2, questions_sha256=OTHER_DIGEST)
     assert (out1/'failed.txt').read_text() == 'p1\np3\n'      # the ids for the rewrite batch
     second = write_jsonl(tmp_path/'p2.jsonl', [answer_row(p, 'S', 1, f'second {p}', source='paraphrase') for p in ('p1', 'p3')])
     checks2 = checks_file(tmp_path/'c2.jsonl', 'paraphrase', {'p1': True, 'p3': False})
     out2 = tmp_path/'.runtime'/'s2'
     assert cli('sentences', '--paraphrases', first, '--checks', checks1, '--paraphrases', second, '--checks', checks2,
                '--out', out2) == 0
-    assert json.loads(capsys.readouterr().out) == dict(units=4, stages=2, rewritten=2, failed=1)
+    assert json.loads(capsys.readouterr().out) == dict(units=4, stages=2, rewritten=2, failed=1, questions_sha256=OTHER_DIGEST)
+    assert json.loads((out2/'counts.json').read_text())['questions_sha256'] == OTHER_DIGEST
     rows = {r['probe']: r for r in read_jsonl(out2/'sentences.jsonl')}
     assert {p: (r['sentence'], r['attempts'], r['correct']) for p, r in rows.items()} == {
         'p0': ('first p0', 1, True), 'p1': ('second p1', 2, True), 'p2': ('first p2', 1, True), 'p3': ('second p3', 2, False)}
+    assert {r['questions_sha256'] for r in rows.values()} == {OTHER_DIGEST}              # in every row
     assert (out2/'failed.txt').read_text() == 'p3\n'
     stray = write_jsonl(tmp_path/'p3.jsonl', [answer_row('p0', 'S', 1, 'x', source='paraphrase')])
     for pairs in ([stray, checks_file(tmp_path/'c3.jsonl', 'paraphrase', {'p0': True})],):     # not the failed ids
         assert cli('sentences', '--paraphrases', first, '--checks', checks1, '--paraphrases', pairs[0], '--checks', pairs[1],
                    '--out', tmp_path/'.runtime'/'s3') == 2
     assert cli('sentences', '--paraphrases', first, '--out', tmp_path/'.runtime'/'s4') == 2      # a check for every stage
+
+
+def test_sentences_refuse_paraphrases_and_checks_made_from_different_questions_files(tmp_path, capsys):
+    ids = ['p0', 'p1']
+    first = write_jsonl(tmp_path/'p1.jsonl', [answer_row(p, 'S', 1, f'first {p}', source='paraphrase', digest='a' * 64) for p in ids])
+    checks1 = checks_file(tmp_path/'c1.jsonl', 'paraphrase', {'p0': True, 'p1': False}, 'a' * 64)
+    assert cli('sentences', '--paraphrases', first, '--checks', checks1, '--out', tmp_path/'.runtime'/'ok') == 0
+    capsys.readouterr()
+    stale_checks = checks_file(tmp_path/'c2.jsonl', 'paraphrase', {'p0': True, 'p1': False}, OTHER_DIGEST)     # graded against Q1
+    rewrite = write_jsonl(tmp_path/'p2.jsonl', [answer_row('p1', 'S', 1, 'second p1', source='paraphrase', digest=OTHER_DIGEST)])
+    rewrite_checks = checks_file(tmp_path/'c3.jsonl', 'paraphrase', {'p1': True}, OTHER_DIGEST)
+    for number_, (paraphrases, checks) in enumerate((([first], [stale_checks]),                       # a check of another file
+                                                     ([first, rewrite], [checks1, rewrite_checks]))):   # a rewrite from another file
+        argv = [a for pair in zip(('--paraphrases',) * 2, paraphrases) for a in pair] + [a for pair in zip(('--checks',) * 2, checks)
+                                                                                         for a in pair]
+        out = tmp_path/'.runtime'/f'stale{number_}'
+        assert cli('sentences', *argv, '--out', out) == 2
+        assert 'not all made from one questions file' in capsys.readouterr().err and not out.exists()
+    mixed = write_jsonl(tmp_path/'mixed.jsonl', [answer_row('p0', 'S', 1, 'x', source='paraphrase', digest='a' * 64),
+                                                  answer_row('p1', 'S', 1, 'y', source='paraphrase', digest=OTHER_DIGEST)])
+    assert cli('sentences', '--paraphrases', mixed, '--checks', checks1, '--out', tmp_path/'.runtime'/'mixed') == 2
+    assert 'not all made from one questions file' in capsys.readouterr().err
+    bare = write_jsonl(tmp_path/'bare.jsonl', [{k: v for k, v in answer_row(p, 'S', 1, 'x', source='paraphrase').items()
+                                                 if k != 'questions_sha256'} for p in ids])
+    assert cli('sentences', '--paraphrases', bare, '--checks', checks1, '--out', tmp_path/'.runtime'/'bare') == 2       # no digest at all
+    assert 'not a p1-answer/1 row' in capsys.readouterr().err
 
 
 # ------------------------------------------------------------------ reader batches
@@ -617,12 +666,10 @@ def test_the_new_last_line_follows_the_text_on_a_line_of_its_own(received, line,
     ('bolt;\nsaw,\n', 'bolt; saw'),
     ('bolt\nsaw\r\nnail', 'bolt; saw; nail'),
     ('\n\n  bolt  \n\n\n saw\n', 'bolt; saw'),                # blank lines and leading or trailing breaks leave no separator
+    ('bolt\n; saw', 'bolt; saw'), (',bolt\n;\n;saw;', 'bolt; saw'),   # a line that starts with a separator does not double it
     ('bolt  saw', 'bolt saw'), ('', ''), (' \n ', '')])
 def test_the_word_for_word_line_has_single_spaces_and_one_line_with_the_keys_lines_joined_by_semicolons(world, key, line):
-    rows = [dict(question_of(u['probe']), question=' Which  list?\n', key=key) for u in world.units]
-    path = world.root.joinpath(*QUESTIONS_DIR)/f'multi-{abs(hash(key))}'/'questions.jsonl'
-    write_jsonl(path, rows)
-    assert cli(*freeze_args(world, path)) == 0
+    path = write_questions(world, rows=[dict(question_of(u['probe']), question=' Which  list?\n', key=key) for u in world.units])
     out = reader_build(world, questions=path)
     texts = [item['text'] for item, meta in ordered_items(out, 'reader') if meta['arm'] == 'PW']
     expected = f'\n- Which list? {line}'.rstrip(' ')
@@ -647,22 +694,69 @@ def test_a_reader_build_needs_exactly_one_of_sentences_or_rejudge_and_one_row_pe
     assert f'not one {batches.SENTENCE_SCHEMA} row for each unit' in capsys.readouterr().err
 
 
+def test_a_reader_build_refuses_sentences_made_from_another_questions_file(world, tmp_path, capsys):
+    questions = write_questions(world)
+    stale = write_sentences(world, OTHER_DIGEST)                       # made from questions Q0; the frozen file is Q1
+    out = tmp_path/'.runtime'/'stale'
+    assert run(world, 'reader', out, '--questions', questions, '--sentences', stale) == 2
+    error = capsys.readouterr().err
+    assert 'sentences were not made from the questions file given' in error and 'bolt' not in error and not out.exists()
+    mixed = read_jsonl(write_sentences(world))
+    mixed[3]['questions_sha256'] = OTHER_DIGEST                        # one row from another file
+    assert run(world, 'reader', tmp_path/'.runtime'/'mixed', '--questions', questions,
+               '--sentences', write_jsonl(tmp_path/'mixed.jsonl', mixed)) == 2
+    assert 'sentences were not made from the questions file given' in capsys.readouterr().err
+    old = [{k: v for k, v in row.items() if k != 'questions_sha256'} for row in mixed]       # rows without a digest
+    assert run(world, 'reader', tmp_path/'.runtime'/'old', '--questions', questions,
+               '--sentences', write_jsonl(tmp_path/'old.jsonl', old)) == 2
+    assert f'not one {batches.SENTENCE_SCHEMA} row for each unit' in capsys.readouterr().err
+    assert run(world, 'reader', tmp_path/'.runtime'/'ok', '--questions', questions, '--sentences', write_sentences(world)) == 0
+    # a development reader build checks the same way
+    dev = dev_world(tmp_path/'dev')
+    dev_q = dev_questions(dev)
+    rows = [dict(schema=batches.SENTENCE_SCHEMA, probe=r['probe'], sentence='s', attempts=1, correct=True,
+                 questions_sha256=OTHER_DIGEST) for r in dev.rows]
+    common = ['--development', dev.units_file, '--delivered', dev.delivered, '--questions', dev_q, '--host-version', HOST]
+    assert cli('batches', 'reader', *common, '--sentences', write_jsonl(tmp_path/'dev-stale.jsonl', rows),
+               '--out', tmp_path/'.runtime'/'dev-stale') == 2
+    assert 'sentences were not made from the questions file given' in capsys.readouterr().err
+
+
 def test_held_out_readers_need_the_frozen_questions_and_one_for_every_unit(world, tmp_path, capsys):
     questions = write_questions(world)
+    sentences = write_sentences(world)
     questions.write_text(questions.read_text().replace('bolt', 'nail'))           # differs from its freeze
-    assert run(world, 'reader', tmp_path/'.runtime'/'a', '--questions', questions, '--sentences', write_sentences(world)) == 2
+    assert run(world, 'reader', tmp_path/'.runtime'/'a', '--questions', questions, '--sentences', sentences) == 2
     assert 'not a frozen questions file' in capsys.readouterr().err
-    unfrozen = write_questions(world, 'unfrozen', freeze=False)
+    reset_questions(world)
+    unfrozen = write_questions(world, freeze=False)
     assert run(world, 'reader', tmp_path/'.runtime'/'b', '--questions', unfrozen, '--sentences', write_sentences(world)) == 2
     assert 'not a frozen questions file' in capsys.readouterr().err
-    missing = write_questions(world, 'missing', skip=3, freeze='by hand')       # the command would not freeze it
+    reset_questions(world)
+    missing = write_questions(world, skip=3, freeze='by hand')       # the command would not freeze it
     assert run(world, 'reader', tmp_path/'.runtime'/'c', '--questions', missing, '--sentences', write_sentences(world)) == 2
     assert '1 units have none' in capsys.readouterr().err
-    extra = write_jsonl(world.root.joinpath(*QUESTIONS_DIR)/'extra'/'questions.jsonl',
-                        [*(question_of(u['probe']) for u in world.units), question_of('zz-p0001')])
-    write_questions(world, 'extra', freeze='by hand')
+    reset_questions(world)
+    extra = write_questions(world, freeze='by hand', rows=[*(question_of(u['probe']) for u in world.units), question_of('zz-p0001')])
     assert run(world, 'reader', tmp_path/'.runtime'/'d', '--questions', extra, '--sentences', write_sentences(world)) == 2
     assert '1 questions belong to no unit' in capsys.readouterr().err
+
+
+def test_a_held_out_reader_or_grader_takes_only_the_one_frozen_questions_path(world, tmp_path, capsys):
+    questions = write_questions(world)
+    sub = world.root.joinpath(*QUESTIONS_DIR)/'sub'                    # a frozen copy in a subdirectory: its freeze verifies
+    sub.mkdir()
+    copy = sub/'questions.jsonl'
+    copy.write_bytes(questions.read_bytes())
+    (sub/'frozen.json').write_bytes((questions.parent/'frozen.json').read_bytes())
+    assert analysis.frozen_file(copy, 'questions')[0]                  # the digest check alone would accept it
+    answers = reader_answers(world)
+    assert run(world, 'reader', tmp_path/'.runtime'/'r', '--questions', copy, '--sentences', write_sentences(world)) == 2
+    assert 'the frozen questions file is exactly data/evaluation/p1/questions/questions.jsonl' in capsys.readouterr().err
+    assert run(world, 'grader', tmp_path/'.runtime'/'g', '--answers', answers, '--questions', copy) == 2
+    assert 'the frozen questions file is exactly' in capsys.readouterr().err
+    assert not (tmp_path/'.runtime'/'r').exists() and not (tmp_path/'.runtime'/'g').exists()
+    assert run(world, 'grader', tmp_path/'.runtime'/'ok', '--answers', answers, '--questions', questions) == 0
 
 
 def test_a_held_out_reader_build_still_needs_b_repeat_1_and_2_and_a_development_one_has_only_b_1(world, tmp_path, capsys):
@@ -681,7 +775,8 @@ def test_a_development_delivery_with_a_second_b_repeat_is_refused_as_unexpected(
     dev = dev_world(tmp_path)
     questions = dev_questions(dev)
     sentences = write_jsonl(tmp_path/'dev-sentences.jsonl', [dict(schema=batches.SENTENCE_SCHEMA, probe=r['probe'], sentence='s',
-                                                                  attempts=1, correct=True) for r in dev.rows])
+                                                                  attempts=1, correct=True,
+                                                                  questions_sha256=analysis.file_sha256(questions)) for r in dev.rows])
     common = ['--development', dev.units_file, '--questions', questions, '--host-version', HOST]
     extra = dict(next(r for r in dev.delivered_rows if (r['arm'], r['repeat']) == ('B', 1)), repeat=2)
     both = write_jsonl(tmp_path/'both.jsonl', dev.delivered_rows + [extra])
@@ -721,7 +816,8 @@ def test_a_development_run_reads_every_a_and_b_label_twice_and_needs_no_freeze_o
     dev = dev_world(tmp_path)
     questions = dev_questions(dev)
     sentences = write_jsonl(tmp_path/'dev-sentences.jsonl', [dict(schema=batches.SENTENCE_SCHEMA, probe=r['probe'], sentence='s',
-                                                                  attempts=1, correct=True) for r in dev.rows])
+                                                                  attempts=1, correct=True,
+                                                                  questions_sha256=analysis.file_sha256(questions)) for r in dev.rows])
     common = ['--development', dev.units_file, '--delivered', dev.delivered, '--questions', questions, '--host-version', HOST]
     first, again = tmp_path/'.runtime'/'first', tmp_path/'.runtime'/'again'
     assert cli('batches', 'reader', *common, '--sentences', sentences, '--out', first) == 0
@@ -1082,10 +1178,14 @@ def test_missing_arguments_are_refused_by_kind(world, tmp_path, capsys):
 
 # ------------------------------------------------------------------ the questions freeze
 def test_the_questions_freeze_is_the_probes_format_copies_the_screen_beside_it_and_is_written_once(world, capsys):
+    bad = write_questions(world, freeze=False, rows=[dict(question_of('a'), extra=1)])
+    assert cli(*freeze_args(world, bad)) == 2
+    assert not (bad.parent/'frozen.json').exists() and not (bad.parent/'screen.json').exists()
+    reset_questions(world)
     path = write_questions(world, freeze=False)
     counts = screen_counts(world, 3)
     capsys.readouterr()
-    assert cli(*freeze_args(world, path)) == 0
+    assert cli(*freeze_args(world, path, 3)) == 0
     printed = json.loads(capsys.readouterr().out)
     document = json.loads((path.parent/'frozen.json').read_text())
     screen = path.parent/'screen.json'
@@ -1099,24 +1199,29 @@ def test_the_questions_freeze_is_the_probes_format_copies_the_screen_beside_it_a
     assert analysis.frozen_screen(path, screen)['sha256'] == analysis.file_sha256(screen)
     assert cli(*freeze_args(world, path)) == 2                                          # written once
     assert 'written once' in capsys.readouterr().err
-    bad = write_jsonl(world.root.joinpath(*QUESTIONS_DIR)/'bad'/'questions.jsonl', [dict(question_of('a'), extra=1)])
-    assert cli(*freeze_args(world, bad)) == 2
-    assert not (bad.parent/'frozen.json').exists() and not (bad.parent/'screen.json').exists()
 
 
-def test_the_questions_freeze_refuses_a_file_outside_the_questions_directory_and_questions_that_miss_the_units(world, capsys):
+def test_the_questions_freeze_refuses_any_file_but_the_one_frozen_path_and_questions_that_miss_the_units(world, capsys):
     outside = write_jsonl(world.root/'elsewhere'/'questions.jsonl', [question_of(u['probe']) for u in world.units])
     assert cli(*freeze_args(world, outside)) == 2
-    assert 'under data/evaluation/p1/questions/ only' in capsys.readouterr().err
+    assert 'the frozen questions file is exactly data/evaluation/p1/questions/questions.jsonl' in capsys.readouterr().err
     sibling = write_jsonl(world.root/'data'/'evaluation'/'p1'/'questions-x'/'questions.jsonl', [question_of(u['probe']) for u in world.units])
     assert cli(*freeze_args(world, sibling)) == 2                                         # a name that only starts like the directory
-    for name, rows, message in (('short', [question_of(u['probe']) for u in world.units][1:], '1 units have none'),
-                                ('extra', [*(question_of(u['probe']) for u in world.units), question_of('zz-p0001')],
-                                 '1 questions belong to no unit')):
-        path = write_jsonl(world.root.joinpath(*QUESTIONS_DIR)/name/'questions.jsonl', rows)
+    # a file in a subdirectory of the questions directory, or another file in it, is refused too, and nothing is written
+    for relative in (('sub', 'questions.jsonl'), ('other.jsonl',)):
+        path = write_jsonl(world.root.joinpath(*QUESTIONS_DIR, *relative), [question_of(u['probe']) for u in world.units])
+        assert cli(*freeze_args(world, path)) == 2
+        assert 'the frozen questions file is exactly' in capsys.readouterr().err
+        assert not (path.parent/'frozen.json').exists() and not (path.parent/'screen.json').exists()
+        path.unlink()
+    for rows, message in (([question_of(u['probe']) for u in world.units][1:], '1 units have none'),
+                          ([*(question_of(u['probe']) for u in world.units), question_of('zz-p0001')], '1 questions belong to no unit')):
+        reset_questions(world)
+        path = write_questions(world, freeze=False, rows=rows)
         assert cli(*freeze_args(world, path)) == 2 and message in capsys.readouterr().err
         assert not (path.parent/'frozen.json').exists() and not (path.parent/'screen.json').exists()
-    path = write_questions(world, 'whole', freeze=False)
+    reset_questions(world)
+    path = write_questions(world, freeze=False)
     probes = [a for p in world.probes[:1] for a in ('--probes', p)]                       # probes that leave a lineage out
     assert cli('questions-freeze', '--questions', path, '--frozen', 'x', *probes, '--screen', screen_counts(world)) == 2
     assert 'exactly the held-out lineages' in capsys.readouterr().err
@@ -1124,6 +1229,29 @@ def test_the_questions_freeze_refuses_a_file_outside_the_questions_directory_and
     assert cli('questions-freeze', '--questions', path, '--frozen', 'x', *[a for p in world.probes for a in ('--probes', p)]) == 2
     assert 'needs --probes' in capsys.readouterr().err
     assert not (path.parent/'frozen.json').exists()
+
+
+def test_the_questions_freeze_refuses_screen_counts_of_another_questions_file(world, tmp_path, capsys):
+    first = write_questions(world, freeze=False)
+    probes = [a for p in world.probes for a in ('--probes', p)]
+    base = ['questions-freeze', '--questions', first, '--frozen', 'x', *probes]
+    # the first run screened Q0; a writer rewrote the flagged questions into Q1, which is the file being frozen
+    q0 = analysis.file_sha256(first)
+    rewritten = [dict(question_of(u['probe']), key=f'{CANARY_K} nail, saw') if n == 0 else question_of(u['probe'])
+                 for n, u in enumerate(world.units)]
+    reset_questions(world)
+    second = write_questions(world, freeze=False, rows=rewritten)
+    assert analysis.file_sha256(second) != q0
+    stale = screen_counts(world, 0, q0)                                                    # the second run's counts are of Q1
+    assert cli(*base, '--screen', stale) == 2
+    error = capsys.readouterr().err
+    assert 'not of the questions file being frozen' in error and 'nail' not in error
+    assert not (second.parent/'frozen.json').exists() and not (second.parent/'screen.json').exists()
+    no_digest = world.root/'no-digest.json'
+    no_digest.write_text(json.dumps(dict(questions=20, flagged=0, flagged_twice=0)))        # counts from before this check
+    assert cli(*base, '--screen', no_digest) == 2
+    assert 'not of the questions file being frozen' in capsys.readouterr().err
+    assert cli(*base, '--screen', screen_counts(world, 0, analysis.file_sha256(second))) == 0
 
 
 @pytest.mark.parametrize('content', ['{}', '{"flagged_twice": null}', '{"flagged_twice": -1}', '{"flagged_twice": true}',
@@ -1142,14 +1270,19 @@ def test_a_grader_build_over_held_out_reader_answers_needs_the_frozen_questions(
     answers = reader_answers(world)
     frozen = write_questions(world)
     assert run(world, 'grader', tmp_path/'.runtime'/'ok', '--answers', answers, '--questions', frozen) == 0
-    unfrozen = write_questions(world, 'unfrozen', freeze=False)
-    edited = write_questions(world, 'edited')
-    edited.write_text(edited.read_text().replace('saw', 'nail'))                  # one edit after the freeze
-    for name, questions in (('unfrozen', unfrozen), ('edited', edited)):
-        capsys.readouterr()
-        assert run(world, 'grader', tmp_path/'.runtime'/name, '--answers', answers, '--questions', questions) == 2
-        error = capsys.readouterr().err
-        assert 'not a frozen questions file' in error and 'nail' not in error and not (tmp_path/'.runtime'/name).exists()
+    frozen.write_text(frozen.read_text().replace('saw', 'nail'))                  # one edit after the freeze
+    reset = tmp_path/'unfrozen.jsonl'                                            # and a file that was never frozen
+    reset.write_bytes(frozen.read_bytes())
+    capsys.readouterr()
+    assert run(world, 'grader', tmp_path/'.runtime'/'edited', '--answers', answers, '--questions', frozen) == 2
+    error = capsys.readouterr().err
+    assert 'not a frozen questions file' in error and 'nail' not in error and not (tmp_path/'.runtime'/'edited').exists()
+    assert run(world, 'grader', tmp_path/'.runtime'/'unfrozen', '--answers', answers, '--questions', reset) == 2
+    assert 'the frozen questions file is exactly' in capsys.readouterr().err
+    (frozen.parent/'frozen.json').unlink()
+    assert run(world, 'grader', tmp_path/'.runtime'/'unfrozen2', '--answers', answers, '--questions', frozen) == 2
+    assert 'not a frozen questions file' in capsys.readouterr().err
+    unfrozen = frozen                                                            # at the one path, with no freeze beside it
     # before the freeze the screen's and the paraphrase check's graders take the questions as they are
     for source, arm in (('screen', 'N'), ('paraphrase', 'S')):
         rows = [answer_row(u['probe'], arm, 1, f'{CANARY_A} {n}', source=source) for n, u in enumerate(world.units)]
@@ -1164,7 +1297,7 @@ def test_a_development_grader_build_names_the_development_units_and_needs_no_fre
     answers = write_jsonl(tmp_path/'dev-answers.jsonl', rows)
     common = ['--answers', answers, '--questions', questions, '--host-version', HOST]
     assert cli('batches', 'grader', *common, '--out', tmp_path/'.runtime'/'plain') == 2          # held-out unless it says otherwise
-    assert 'not a frozen questions file' in capsys.readouterr().err
+    assert 'the frozen questions file is exactly' in capsys.readouterr().err
     assert cli('batches', 'grader', *common, '--development', dev.units_file, '--out', tmp_path/'.runtime'/'dev') == 0
     assert key_of(tmp_path/'.runtime'/'dev', 'grader')['questions_sha256'] == analysis.file_sha256(questions)
     outside = write_jsonl(tmp_path/'outside.jsonl', rows + [answer_row('lh1-p0001', 'A', 1, 'x')])
@@ -1261,9 +1394,11 @@ def test_the_whole_chain_round_trips_into_rows_score_accepts(world, tmp_path, ca
     sentences = tmp_path/'.runtime'/'sentences'/'sentences.jsonl'
     assert len(read_jsonl(sentences)) == 20
     sentence_counts = json.loads((tmp_path/'.runtime'/'sentences'/'counts.json').read_text())
-    assert sentence_counts == dict(units=20, stages=1, rewritten=0, failed=sum(not r['correct'] for r in read_jsonl(sentence_checks)))
+    assert sentence_counts == dict(units=20, stages=1, rewritten=0, failed=sum(not r['correct'] for r in read_jsonl(sentence_checks)),
+                                   questions_sha256=analysis.file_sha256(questions_file))
+    assert {r['questions_sha256'] for r in read_jsonl(sentences)} == {analysis.file_sha256(questions_file)}
     # the freeze: the questions beside the screen's counts, under the questions directory
-    frozen = world.root.joinpath(*QUESTIONS_DIR)/'chain'/'questions.jsonl'
+    frozen = world.root.joinpath(*QUESTIONS_FILE)
     frozen.parent.mkdir(parents=True)
     frozen.write_text(questions_file.read_text())
     probes = [a for p in world.probes for a in ('--probes', p)]

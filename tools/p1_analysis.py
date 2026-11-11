@@ -14,8 +14,9 @@ which keeps p1-study/1's rule from docs/design/p1-study.md; #491, #178).
 `--probes` may be given once per held-out directory (rows are concatenated in the order given) for
 `simulate`, `units`, `rejudge` and `score`. Each file must have a digest in the `frozen.json` beside it
 (`tools.probe_validation held-out-freeze`) and is recorded, with its sha256, under `probe_files`;
-`score --questions` is checked the same way and recorded under `question_file`, and `score --screen` must be
-the `screen.json` that `questions-freeze` copied beside the questions (recorded under `screen_file`).
+`score --questions` is checked the same way (and must be exactly data/evaluation/p1/questions/questions.jsonl) and
+recorded under `question_file`, `score --screen` must be the `screen.json` that `questions-freeze` copied beside the
+questions (recorded under `screen_file`), and `score --sentences-counts` must record that questions file's sha256.
 `development` reads the development chain's labels and prints the two development checks' figures, nothing else.
 With several files `simulate` writes power-held-out-study-2.json and never p1-study/1's power-held-out.json.
 
@@ -128,6 +129,23 @@ def frozen_probes(paths: list[Path]) -> tuple[list[dict], list[dict]]:
         rows += more
         files.append(record)
     return rows, files
+
+
+QUESTIONS_FREEZE = ('data', 'evaluation', 'p1', 'questions', 'questions.jsonl')   # under the repository root: the one frozen questions file
+
+
+def require_questions_freeze(path: Path, root: Path | None = None) -> None:
+    """The frozen questions file is exactly `QUESTIONS_FREEZE` under the repository root (`root`, default ROOT), not
+    another file under its directory. Errors name only the expected path."""
+    expected = Path(ROOT if root is None else root).joinpath(*QUESTIONS_FREEZE)
+    if Path(path).resolve() != expected.resolve():
+        raise ScoreError(f'the frozen questions file is exactly {"/".join(QUESTIONS_FREEZE)}')
+
+
+def held_out_named(value: object) -> bool:
+    """An id that starts with a held-out lineage's or admission's name and a hyphen (`lh1-p0001`, `lh4b3-x`)."""
+    names = set(HELD_OUT) | {run for runs in HELD_OUT.values() for run in runs}
+    return isinstance(value, str) and any(value.startswith(f'{name}-') for name in names)
 
 
 def frozen_screen(questions: Path, screen: Path) -> dict:
@@ -439,9 +457,9 @@ def score(probe_rows: list[dict], hours: dict[str, float], rows: list[dict], que
     question_rows(questions, unit_rows)
     if not (isinstance(screen, dict) and _count(screen.get('flagged_twice'))):
         raise ScoreError('--screen must be the counts of the screen\'s second run (flagged_twice)')
-    if not (isinstance(sentences, dict) and _count(sentences.get('failed'))
-            and sentences.get('units', len(unit_rows)) == len(unit_rows)):
-        raise ScoreError('--sentences-counts must be the counts of the sentences step, one paraphrase for each unit (failed)')
+    if not (isinstance(sentences, dict) and _count(sentences.get('failed')) and _count(sentences.get('units'))
+            and sentences['units'] == len(unit_rows)):
+        raise ScoreError('--sentences-counts must be the counts of the sentences step, one paraphrase for each unit (units, failed)')
     base = dict(schema=RESULT_SCHEMA, questions_flagged_twice=screen['flagged_twice'],
                 probes=dict(listed=len(probe_rows), units=len(unit_rows),
                                                   clusters=len({(u['lineage'], u['cluster']) for u in unit_rows}),
@@ -486,15 +504,19 @@ def score(probe_rows: list[dict], hours: dict[str, float], rows: list[dict], que
                               primary=main, guards=guard))
 
 
+def check_sentences_counts(sentences: object, questions: Path) -> None:
+    """The sentences step's counts were made from the frozen questions file: `questions_sha256` is that file's."""
+    if not (isinstance(sentences, dict) and sentences.get('questions_sha256') == file_sha256(questions)):
+        raise ScoreError('--sentences-counts is not of the frozen questions file (its questions_sha256 differs)')
+
+
 def development_summary(rows: list[dict]) -> dict:
     """The two development checks' figures from the development chain's `p1-score/1` label rows: every unit's first-pass
     labels for A and B (repeat 1 each) and the Reference, PW and PP, and a re-judged twin for every A and B label
     (docs/design/p1-study-3.md, "Checks on development data"). Figures only; it decides nothing."""
     if any(not isinstance(row, dict) or row.get('type') != 'label' for row in rows):
         raise ScoreError('development rows are label rows only')
-    names = set(HELD_OUT) | {run for runs in HELD_OUT.values() for run in runs}
-    if any(row.get('lineage') in names or any(isinstance(row.get('item'), str) and row['item'].startswith(f'{name}-')
-                                              for name in names) for row in rows):
+    if any(held_out_named(row.get('item')) for row in rows):
         raise ScoreError('development labels may not belong to a held-out lineage')
     first, second = labels(rows)
     probes = sorted({key[3] for key in first})
@@ -843,13 +865,16 @@ def main(argv=None) -> int:
         if {row['lineage'] for row in probe_rows} != set(HELD_OUT):
             parser.error(f'score needs probes covering exactly the held-out lineages: {", ".join(HELD_OUT)}')
         try:
+            require_questions_freeze(args.questions)
             asked, question_file = frozen_file(args.questions, 'questions')
             screen_file = frozen_screen(args.questions, args.screen)
+            counts = json.loads(args.sentences_counts.read_text())
+            check_sentences_counts(counts, args.questions)
+            result = dict(score(probe_rows, json.loads(args.hours.read_text()), _lines(args.scores), asked,
+                                json.loads(args.screen.read_text()), counts),
+                          probe_files=probe_files, question_file=question_file, screen_file=screen_file)
         except ScoreError as error:
             parser.error(str(error))
-        result = dict(score(probe_rows, json.loads(args.hours.read_text()), _lines(args.scores), asked,
-                            json.loads(args.screen.read_text()), json.loads(args.sentences_counts.read_text())),
-                      probe_files=probe_files, question_file=question_file, screen_file=screen_file)
         out = args.out or ROOT/'data'/'evaluation'/'p1'/'result.json'
         summary = result['decision']['outcome']
         if 'outcome_note' in result:

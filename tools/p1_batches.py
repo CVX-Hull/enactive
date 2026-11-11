@@ -28,9 +28,14 @@ records that file's sha256 (`questions_sha256`), and `parse` refuses a questions
 
 A questions file is verified against its `frozen.json` wherever one is required: held-out `reader` builds, `grader` builds
 over a reader's answers (unless `--development` names the development units) and `score`. The pre-freeze steps (the
-rewrite, `screen`, `paraphrase`, the paraphrase check's graders) and development runs need none. `questions-freeze` writes
-only under data/evaluation/p1/questions/, for questions that cover exactly the frozen held-out probes' units, and copies the
-screen's counts beside them as `screen.json`, listed in `frozen.json`, which `score --screen` must then match.
+rewrite, `screen`, `paraphrase`, the paraphrase check's graders) and development runs need none. The frozen file is
+exactly data/evaluation/p1/questions/questions.jsonl, wherever one is required. `questions-freeze` writes only that, for
+questions that cover exactly the frozen held-out probes' units, and copies the screen's counts beside them as `screen.json`,
+listed in `frozen.json`, which `score --screen` must then match; the counts record the sha256 of the questions file the
+screen's last run screened (`questions_sha256`), which must be the file frozen. The paraphrases and their checks carry
+the sha256 of the questions file their builds used, `sentences` refuses ones that differ and records the one digest in
+every `p1-sentence/1` row and in its `counts.json`, a held-out or development reader build refuses sentences made from
+another questions file, and `score --sentences-counts` must record the frozen file's.
 
 `parse` reads one judge output file per batch (`<batch>.jsonl` in `--answers`) and writes the rows the next step takes:
 `p1-question/1` (`questions.jsonl`), `p1-answer/1` (a reader's, the no-text answerer's or a paraphraser's answers),
@@ -70,7 +75,6 @@ BATCH_SIZE = 10          # items per question, screen, paraphrase, grader and au
 GRADER_SEED = 4915       # the grader batches' mixed order (Grader)
 AUDIT_SEED = 4913        # the audit's draw of (working-set item, boundary) pairs
 AUDIT_SAMPLE = 40        # per arm and repeat, at most
-QUESTIONS_DIR = ('data', 'evaluation', 'p1', 'questions')   # under the repository root: where a questions freeze may be written
 READER_SEED = 4916       # Owner decision, 10 November 2026: Random(4916) numbers the reader items and names their files, so neither follows the arm
 
 # What the pre-registration leaves open, as the owner decided on 10 November 2026.
@@ -240,6 +244,8 @@ def development_units(path: Path) -> Units:
             raise BatchError(f'{Path(path).name}: line {number} is not a development unit (probe, lineage, boundary, frame)')
         if row['lineage'] in analysis.HELD_OUT:
             raise BatchError(f'--development takes development lineages only; {row["lineage"]} is held out')
+        if analysis.held_out_named(row['probe']):
+            raise BatchError(f'{Path(path).name}: line {number} has a probe id that names a held-out lineage')
         if held_out_names() & set(Path(os.path.normpath(row['frame'])).parts):
             raise BatchError(f'{Path(path).name}: line {number} has a frame under a held-out session directory')
         if row['probe'] in frames:
@@ -264,6 +270,7 @@ def load_questions(path: Path, study: Units | None = None, *, frozen: bool = Fal
     run needs no freeze): the file must match the digest in the `frozen.json` beside it."""
     try:
         if frozen and not (study and study.development):
+            analysis.require_questions_freeze(path, ROOT)
             rows, _ = analysis.frozen_file(path, 'questions')
         else:
             rows = _jsonl(path)
@@ -464,13 +471,20 @@ def not_stated(answer: str) -> bool:
     return (text[:-1] if text.endswith('.') else text) == 'not stated'
 
 
+def _is_digest(value: object) -> bool:
+    return isinstance(value, str) and re.fullmatch(r'[0-9a-f]{64}', value) is not None
+
+
 def read_checks(path: Path, purpose: str) -> dict[str, dict]:
-    """Probe id -> `p1-check/1` row of a grader's verdicts on the screen's answers or on a paraphrase check."""
+    """Probe id -> `p1-check/1` row of a grader's verdicts on the screen's answers or on a paraphrase check. A
+    paraphrase check's rows also carry `questions_sha256`, the questions file its grader build used."""
     out = {}
+    extra = {'questions_sha256'} if purpose == 'paraphrase' else set()
     for number, row in enumerate(_jsonl(path), 1):
-        if (not isinstance(row, dict) or set(row) != {'schema', 'purpose', 'probe', 'correct', 'answered'}
+        if (not isinstance(row, dict) or set(row) != {'schema', 'purpose', 'probe', 'correct', 'answered'} | extra
                 or row['schema'] != CHECK_SCHEMA or row['purpose'] != purpose or not isinstance(row['probe'], str)
-                or not isinstance(row['correct'], bool) or not isinstance(row['answered'], bool)):
+                or not isinstance(row['correct'], bool) or not isinstance(row['answered'], bool)
+                or (extra and not _is_digest(row['questions_sha256']))):
             raise BatchError(f'{Path(path).name}: line {number} is not a {CHECK_SCHEMA} {purpose} row')
         if row['probe'] in out:
             raise BatchError(f'{Path(path).name}: line {number} repeats a probe')
@@ -498,11 +512,14 @@ def screen(questions: dict[str, dict], checks: dict[str, dict], previous: list[s
 
 # ------------------------------------------------------------------ paraphrases
 def read_answers(paths: Sequence[Path]) -> list[dict]:
-    """`p1-answer/1` rows of every file given: one source and one pass (first or re-judging) in all of them."""
+    """`p1-answer/1` rows of every file given: one source and one pass (first or re-judging) in all of them. A
+    paraphraser's rows also carry `questions_sha256`, the questions file its build used."""
     rows, seen = [], set()
     for path in map(Path, paths):
         for number, row in enumerate(_jsonl(path), 1):
-            ok = (isinstance(row, dict) and set(row) == {'schema', 'source', 'probe', 'arm', 'repeat', 'rejudge', 'answer'}
+            extra = {'questions_sha256'} if isinstance(row, dict) and row.get('source') == 'paraphrase' else set()
+            ok = (isinstance(row, dict) and set(row) == {'schema', 'source', 'probe', 'arm', 'repeat', 'rejudge', 'answer'} | extra
+                  and (not extra or _is_digest(row['questions_sha256']))
                   and row['schema'] == ANSWER_SCHEMA and row['source'] in tuple(SOURCES) and row['arm'] in SOURCES[row['source']]
                   and isinstance(row['probe'], str) and isinstance(row['answer'], str) and isinstance(row['rejudge'], bool)
                   and row['repeat'] in analysis.ARM_REPEATS.get(row['arm'], (1,)) and not isinstance(row['repeat'], bool))
@@ -521,9 +538,16 @@ def read_answers(paths: Sequence[Path]) -> list[dict]:
 def resolve_sentences(paraphrases: list[list[dict]], checks: list[dict[str, dict]]) -> tuple[list[dict], list[str]]:
     """(sentence rows, ids still failing) from one or two stages of paraphrase and check. A sentence is checked as an
     answer to its question; one marked not correct is rewritten once, from a second batch of exactly those ids, and
-    checked again; one that fails twice is used as it is and counted (Owner decision, 10 November 2026)."""
+    checked again; one that fails twice is used as it is and counted (Owner decision, 10 November 2026). Every
+    paraphrase and every check carries the sha256 of the questions file its build used: they must all be one, which
+    every sentence row then records (`questions_sha256`)."""
     if not 1 <= len(paraphrases) == len(checks) <= 2:
         raise BatchError('sentences takes one or two pairs of --paraphrases and --checks')
+    digests = {r['questions_sha256'] for rows in paraphrases for r in rows} | {
+        v['questions_sha256'] for verdicts in checks for v in verdicts.values()}
+    if len(digests) != 1:
+        raise BatchError('the paraphrases and their checks were not all made from one questions file (sha256 differs)')
+    (digest,) = digests
     final: dict[str, dict] = {}
     failing: list[str] | None = None
     for stage, (rows, verdicts) in enumerate(zip(paraphrases, checks), 1):
@@ -532,17 +556,21 @@ def resolve_sentences(paraphrases: list[list[dict]], checks: list[dict[str, dict
             raise BatchError(f'stage {stage}: the paraphrases, their checks and the ids to rewrite must be the same probes')
         for probe, sentence in got.items():
             final[probe] = dict(schema=SENTENCE_SCHEMA, probe=probe, sentence=sentence, attempts=stage,
-                                correct=verdicts[probe]['correct'])
+                                correct=verdicts[probe]['correct'], questions_sha256=digest)
         failing = sorted(p for p, v in verdicts.items() if not v['correct'])
     return [final[p] for p in sorted(final)], failing or []
 
 
-def read_sentences(path: Path, study: Units) -> dict[str, str]:
+def read_sentences(path: Path, study: Units, questions_sha256: str) -> dict[str, str]:
+    """Probe id -> sentence of a `sentences` file: one row for each unit, made from the questions file whose sha256 is
+    `questions_sha256` (the file the reader build is given)."""
     rows = _jsonl(path)
-    if (not all(isinstance(r, dict) and set(r) == {'schema', 'probe', 'sentence', 'attempts', 'correct'}
+    if (not all(isinstance(r, dict) and set(r) == {'schema', 'probe', 'sentence', 'attempts', 'correct', 'questions_sha256'}
                 and r['schema'] == SENTENCE_SCHEMA and isinstance(r['probe'], str) and isinstance(r['sentence'], str)
                 for r in rows) or sorted(r['probe'] for r in rows) != sorted(u['probe'] for u in study.units)):
         raise BatchError(f'{Path(path).name}: not one {SENTENCE_SCHEMA} row for each unit')
+    if any(r['questions_sha256'] != questions_sha256 for r in rows):
+        raise BatchError(f'{Path(path).name}: the sentences were not made from the questions file given (sha256 differs)')
     return {r['probe']: r['sentence'] for r in rows}
 
 
@@ -555,8 +583,9 @@ def _line(text: str) -> str:
 def _key_line(key: str) -> str:
     """A key on one line: its entries on separate lines are joined with `; ` (Owner decision, 10 November 2026), the
     whitespace within an entry collapses to single spaces and no separator leads or trails. A comma or semicolon
-    that ends a line is dropped, so the join never doubles a separator (`bolt,` then `saw` is `bolt; saw`)."""
-    return '; '.join(entry for entry in (_line(part).rstrip(',; ') for part in re.split(r'[\r\n]+', key)) if entry)
+    that begins or ends a line is dropped, so the join never doubles a separator (`bolt,` then `saw`, or `bolt`
+    then `; saw`, is `bolt; saw`)."""
+    return '; '.join(entry for entry in (_line(part).strip(',; ') for part in re.split(r'[\r\n]+', key)) if entry)
 
 
 def appended(text: str, line: str) -> str:
@@ -831,9 +860,10 @@ def _row(kind: str, key: dict, item: dict, row: dict) -> dict:
         return dict(schema=analysis.QUESTION_SCHEMA, probe=item['item'], question=row['question'], key=row['key'])
     if kind in ('screen', 'paraphrase', 'reader'):
         source = 'reader' if kind == 'reader' else kind
-        return dict(schema=ANSWER_SCHEMA, source=source, probe=item['item'], arm=item.get('arm', SOURCES[source][0]),
+        made = dict(schema=ANSWER_SCHEMA, source=source, probe=item['item'], arm=item.get('arm', SOURCES[source][0]),
                     repeat=item.get('repeat', 1), rejudge=bool(key.get('rejudge')),
                     answer=row['answer'] if kind != 'paraphrase' else row['sentence'])
+        return dict(made, questions_sha256=_recorded_digest(key)) if kind == 'paraphrase' else made
     if kind == 'audit':
         return dict(type='audit', schema=analysis.SCORE_SCHEMA, arm=item['arm'], repeat=item['repeat'],
                     item=item['item'], false=row['false'], frame=row['frame'])
@@ -847,7 +877,15 @@ def graded(key: dict, item: dict, correct: bool, answered: bool) -> dict:
         made = dict(type='label', schema=analysis.SCORE_SCHEMA, kind=analysis.KIND, arm=item['arm'], repeat=item['repeat'],
                     item=item['item'], stated=correct, answered=answered)
         return dict(made, rejudge=True) if key['rejudge'] else made
-    return dict(schema=CHECK_SCHEMA, purpose=key['source'], probe=item['item'], correct=correct, answered=answered)
+    made = dict(schema=CHECK_SCHEMA, purpose=key['source'], probe=item['item'], correct=correct, answered=answered)
+    return dict(made, questions_sha256=_recorded_digest(key)) if key['source'] == 'paraphrase' else made
+
+
+def _recorded_digest(key: dict) -> str:
+    """The questions file's sha256 a key records: the rows a paraphrase build or its check makes carry it."""
+    if not _is_digest(key.get('questions_sha256')):
+        raise BatchError(f'keys/{key.get("kind")}.json: records no questions file digest')
+    return key['questions_sha256']
 
 
 def _check_questions(key: dict, kind: str, path: Path | None) -> None:
@@ -984,7 +1022,7 @@ def build_command(args: argparse.Namespace) -> dict:
     if bool(args.rejudge) == bool(args.sentences):
         raise BatchError('reader batches need --sentences (the first pass) or --rejudge (the re-judging), not both')
     questions = load_questions(args.questions, study, frozen=True)
-    sentences = read_sentences(args.sentences, study) if args.sentences else None
+    sentences = read_sentences(args.sentences, study, recorded) if args.sentences else None
     return reader_batches(study, delivered, questions, sentences, args.out, host, inputs, bool(args.rejudge), recorded)
 
 
@@ -997,6 +1035,7 @@ def screen_command(args: argparse.Namespace) -> dict:
     if checks is None:
         raise BatchError('screen needs --graded (the grader\'s verdicts on the no-text answers)')
     flagged, counts = screen(questions, checks, previous)
+    counts = dict(counts, questions_sha256=_digest(args.questions))      # the questions file this run screened
     out.mkdir(parents=True, exist_ok=True)
     (out/'flagged.txt').write_text(''.join(f'{p}\n' for p in flagged), encoding='utf-8')
     (out/'counts.json').write_text(_dump(counts), encoding='utf-8')
@@ -1012,18 +1051,22 @@ def sentences_command(args: argparse.Namespace) -> dict:
     rows, failing = resolve_sentences(stages, [read_checks(p, 'paraphrase') for p in args.checks or []])
     _write_rows(out/'sentences.jsonl', rows)
     (out/'failed.txt').write_text(''.join(f'{p}\n' for p in failing), encoding='utf-8')
-    counts = dict(units=len(rows), stages=len(stages), rewritten=len(stages[1]) if len(stages) > 1 else 0, failed=len(failing))
+    counts = dict(units=len(rows), stages=len(stages), rewritten=len(stages[1]) if len(stages) > 1 else 0, failed=len(failing),
+                  questions_sha256=rows[0]['questions_sha256'])
     (out/'counts.json').write_text(_dump(counts), encoding='utf-8')      # `score --sentences-counts` takes this file
     return counts
 
 
 def freeze_questions(args: argparse.Namespace) -> dict:
     """`frozen.json` beside a questions file, in the format the probes' freeze uses (`p1-held-out-frozen/1`). The file
-    must lie under data/evaluation/p1/questions/ and cover exactly the units of the frozen held-out probes given; the
-    screen's counts (`flagged_twice`) are copied beside it as `screen.json` and listed in `frozen.json` too."""
+    must be exactly data/evaluation/p1/questions/questions.jsonl and cover exactly the units of the frozen held-out
+    probes given; the screen's counts (`flagged_twice`, and the `questions_sha256` of the file the screen's last run
+    screened, which must be this file's) are copied beside it as `screen.json` and listed in `frozen.json` too."""
     path = Path(args.questions)
-    if not path.resolve().is_relative_to(ROOT.joinpath(*QUESTIONS_DIR).resolve()):
-        raise BatchError(f'a questions freeze is written under {"/".join(QUESTIONS_DIR)}/ only')
+    try:
+        analysis.require_questions_freeze(path, ROOT)
+    except analysis.ScoreError as error:
+        raise BatchError(str(error)) from None
     if not args.probes or not args.screen:
         raise BatchError('questions-freeze needs --probes (the frozen held-out probes) and --screen (the screen\'s counts)')
     target, screen_target = path.parent/'frozen.json', path.parent/'screen.json'
@@ -1034,6 +1077,8 @@ def freeze_questions(args: argparse.Namespace) -> dict:
         raise BatchError(f'{Path(args.screen).name}: unreadable screen counts') from None
     if not (isinstance(counts, dict) and analysis._count(counts.get('flagged_twice'))):
         raise BatchError(f'{Path(args.screen).name}: the screen counts need an integer flagged_twice (the second run\'s)')
+    if counts.get('questions_sha256') != _digest(path):
+        raise BatchError(f'{Path(args.screen).name}: the screen counts are not of the questions file being frozen (questions_sha256 differs)')
     study = Frozen(args.probes)      # refuses probes that are not frozen or do not cover the held-out lineages
     try:
         rows = analysis.question_rows(_jsonl(path), study.units)
@@ -1083,12 +1128,13 @@ def main(argv: list[str] | None = None) -> int:
     final.add_argument('--paraphrases', type=Path, action='append')
     final.add_argument('--checks', type=Path, action='append')
     final.add_argument('--out', type=Path, required=True, help='a new directory under .runtime/: sentences.jsonl, failed.txt')
-    freeze = sub.add_parser('questions-freeze', help='write frozen.json beside a questions file under data/evaluation/p1/questions/')
+    freeze = sub.add_parser('questions-freeze', help='write frozen.json beside data/evaluation/p1/questions/questions.jsonl')
     freeze.add_argument('--questions', type=Path, required=True)
     freeze.add_argument('--frozen', required=True, help='the freeze date, recorded')
     freeze.add_argument('--probes', type=Path, action='append', help='a frozen held-out p1-probes/1 file, once per directory; '
                                                                     'the questions must cover exactly their units')
-    freeze.add_argument('--screen', type=Path, help='the screen\'s counts.json (flagged_twice); copied beside the questions as screen.json')
+    freeze.add_argument('--screen', type=Path, help='the screen\'s last run\'s counts.json (flagged_twice, and the sha256 of the questions '
+                                                    'file it screened, which must be this one); copied beside the questions as screen.json')
     args = parser.parse_args(argv)
     try:
         if args.command == 'parse':
