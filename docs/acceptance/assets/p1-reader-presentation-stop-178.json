@@ -1,0 +1,154 @@
+{
+  "schema": "p1-reader-presentation-stop/1",
+  "status": "owner-stopped-recovery-proposed",
+  "registered_cost_guard_failure_permanent": true,
+  "held_benefit_scores_computed": false,
+  "question_freeze_main": "d2136f7ccd565cf10c145b30873fa9a19a3f39d2",
+  "questions_sha256": "8fa6aec4d19efa9605005075bad8db8d2e72f4a8af04a46b0e03c85797556e66",
+  "stop": {
+    "first_contexts_completed": 534,
+    "original_outputs_admitted": 522,
+    "first_redo_wave_contexts": 3,
+    "valid_redos_admitted": 2,
+    "retained_first_readers": 524,
+    "remaining_first_readers": 10,
+    "second_refusal": "reader-088",
+    "second_refusal_input_characters": 10227,
+    "second_refusal_presented_characters": 10000,
+    "unused_first_redos": 9,
+    "global_actual_contexts": 744,
+    "global_reserved_contexts": 754,
+    "retired_unused_reservations": 10,
+    "global_ceiling": 1000,
+    "later_held_model_stages_dispatched": 0,
+    "owned_group_matches_after_closeout": 0
+  },
+  "private_receipt_sha256": {
+    "second-reader-refusal-stop.json": "414fb27b292dac38f58f5d45aa10fb5bc91beb0443da3b08646253f3d7ef20fe",
+    "read1-first-output-adjudication.json": "ed0a814685f4f7302248dab8a2bf91463af77eda052e98a228e66201e8720b52",
+    "read1-text-all-v4.json": "6d4ff0293a9ffc51a525d27dc4e972247626d39636d5735000da56211401b6c9",
+    "read1-own-event-all.json": "b5a9b5991cb79dad5888253fe25222df3c0ed8d0c693e855026b64b12105ff0a",
+    "read1-io-all.json": "e509a09a13e998e687c15e47b1d1a5b36c3b672d895ffe8d39371f6fc29f13f2",
+    "read1-presentation-supplement-158.json": "13b2cb515ca45f0e161e44bc6211f4c1dc183301d50057d4f69599247ffc0a67",
+    "read1-process-closeout.json": "05a52968606e30c6b73c196a511cbca97b22d5bf7511981ed106ed51f88c5cce",
+    "read1-redo1-wave1-text-v4.json": "6e4139fc6c7bb0029e6621f58584c18ad57c8f11cd7680d9d6fb1929f394a099",
+    "read1-redo1-wave1-own-event.json": "f7baea8429b75daaae5ac23a752f090ed585d4e012fed1aab37aa76bb6bad853",
+    "read1-redo1-wave1-io.json": "00f32090ac483f5a94c884f1762141ee04d89b958af8143647b1c1a74b43926f",
+    "read1-redo1-wave1-process-closeout.json": "0e5deaccbbdd4db66ec5a0d56d096f90626296f57856c81eab215f68d5931f5f"
+  },
+  "proposed_recovery_freeze_sha256": "62b27e516b5264d880c9637aee13a88cceb75192c16cf51e42304c968476ffb5",
+  "proposed_recovery": {
+    "schema": "p1-complete-input-recovery-freeze/1",
+    "created_at": "2026-11-12T07:10:18.357675+00:00",
+    "status": "proposed-unarmed",
+    "owner_approval_required": true,
+    "runtime_commit": "13bb21daddcbfad338499978dcf87881c08239b1",
+    "runtime_tree": "f6fd5252105df339aacec7dd91e343ec4280dcb1",
+    "source_files_sha256": {
+      "tools/coding_host/p1.py": "bd614bf08795839d9db1d4873ed4fe9870ad2387e57c0eeb9c2cca00a336052a",
+      "tools/coding_host/p1_input.py": "25b254501b2a451869ae3a14f577ce384484e4bfa4dd7349b02c690ee24ed0aa",
+      "tools/p1_batches.py": "d81993351bd9c3246e2ba6b591d30c4f5a30022a18ff300731b1255d0a5eaec8",
+      "tools/p1_analysis.py": "91546ecfc83f0513b20ed28b17ad05e81de9f0144e4ca0c3e528914349e42393"
+    },
+    "scientific_briefs_sha256": {
+      "Question": "069381181b5d173c1d9c6031105985274684b380f2cc464059a00266d26488ec",
+      "Guess": "f26ad4ea5da3d8c88ce9bb8ed352d18e1122db62ef9151893d88396c3f7126be",
+      "Paraphrase": "e0558375cac8225e3f37255774e4f1ceb692d536d70f65ccab7a0a2655ca6534",
+      "Reader": "c1a0a8b3c1ceed9a8bc935afc0074612800cefd6343446e90bdccd237308db80",
+      "Grader": "a5003ce07fdeb7050133cd3f9424742ebe37e4b9dac2ad4ef0e1dccf9df1823d",
+      "Audit": "d3f0e4e286c632413357e65c392f689f6748d66e759fa7d47642f98fcb62cb4a"
+    },
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "observed_cli_versions": [
+      "codex-cli 0.167.1"
+    ],
+    "compatible_cli_updates_with_local_rechecking": true,
+    "questions_sha256": "8fa6aec4d19efa9605005075bad8db8d2e72f4a8af04a46b0e03c85797556e66",
+    "handouts": {
+      "h-read1-v2": {
+        "manifest_sha256": "6d8dda23ddef7d1191d72ee9e5dc4c78925ca4d05f6c699fd8034ba7c33ebb3f",
+        "key_sha256": "69bc776604ea1d2f2c7bf33b44ddfff65a56d0edcb0d77e7fe4e5a08b9607b2b",
+        "batches": 10,
+        "images_min": 0,
+        "images_max": 0,
+        "attachment_occurrences": 0,
+        "prompt_bytes_min": 12651,
+        "prompt_bytes_max": 17182,
+        "inference_attempts": 0
+      },
+      "h-read2-v2": {
+        "manifest_sha256": "33c8e50570a43eecc501228507531be8e69f08ae0dd324e65dd4412d9c85673b",
+        "key_sha256": "58fdb879d2741403d52f903a679bfbb225d39c93c77555975ca0bd2d0b16598d",
+        "batches": 54,
+        "images_min": 0,
+        "images_max": 0,
+        "attachment_occurrences": 0,
+        "prompt_bytes_min": 4778,
+        "prompt_bytes_max": 22765,
+        "inference_attempts": 0
+      },
+      "h-audit-v2": {
+        "manifest_sha256": "ef63920b26f512ab571e6429d770c9865c4ef06309631912d244cb45c5f28440",
+        "key_sha256": "7a4ecb424104e0435c09f55bfcf782629662eb090e785c4f279ac45dc44b1e0c",
+        "batches": 11,
+        "images_min": 290,
+        "images_max": 441,
+        "attachment_occurrences": 3766,
+        "prompt_bytes_min": 111762,
+        "prompt_bytes_max": 149583,
+        "inference_attempts": 0
+      }
+    },
+    "prepared_batches": 75,
+    "inference_attempts": 0,
+    "retained_valid_first_readers": 524,
+    "remaining_first_readers": [
+      "reader-088",
+      "reader-347",
+      "reader-357",
+      "reader-372",
+      "reader-383",
+      "reader-406",
+      "reader-466",
+      "reader-473",
+      "reader-502",
+      "reader-509"
+    ],
+    "retained_audit001_key_sha256": "7a4ecb424104e0435c09f55bfcf782629662eb090e785c4f279ac45dc44b1e0c",
+    "global_previous_actual": 744,
+    "global_previous_reserved": 754,
+    "maximum_new_contexts": 145,
+    "maximum_reserved_after_recovery": 899,
+    "unchanged_global_ceiling": 1000,
+    "max_concurrency": 3,
+    "seconds_per_session": 900,
+    "new_openrouter_calls": false,
+    "new_dependencies_binary_copies_or_image_copies": false,
+    "old_development_qualification_retained_with_format_limitation": true,
+    "historical_cost_guard_failure_permanent": true
+  },
+  "validation": {
+    "focused_host_tests_passed": 46,
+    "fast_checks_passed": true,
+    "independent_stop_review": "no defects; mandatory owner gate confirmed",
+    "independent_code_review": "no actionable findings at13bb21d",
+    "local_real_cli_prepared_payloads": 75,
+    "local_qualification_model_calls": 0,
+    "superseded_local_renderer_failure_retained": true,
+    "exact_pr_and_merged_main_ci_required_before_dispatch": true
+  },
+  "costs": {
+    "new_openrouter_calls": 0,
+    "existing_codex_credits_dollar_cost": "unpriced, not zero",
+    "historical_recorded_debits_and_allowance_retained": true,
+    "browser_required": false
+  },
+  "limits": [
+    "Presentation proves neither attention nor provider receipt or OS confinement.",
+    "Existing observer limitation remains: anonymous audit literals were visible during an earlier engineering scrub.",
+    "Old and proposed complete initial-text formats are not certified to have identical response distributions.",
+    "Rejudge variation after the amendment may include delivery-format variation.",
+    "No live adoption or registered pass can follow this record."
+  ]
+}
