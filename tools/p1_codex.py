@@ -2,6 +2,8 @@
 
 A controller hard-kill or a child escaping its process group can evade cleanup.
 This module cannot enforce a budget shared with other handouts or processes.
+Image custody must stay immutable during CLI loading: pre/post hashes do not
+prevent temporary replacement between checks or establish OS confinement.
 """
 import argparse
 from concurrent.futures import ThreadPoolExecutor
@@ -144,6 +146,22 @@ def _cleanup(child):
     child.wait(timeout=5)
 
 
+def _unchanged(out, manifest, name, prepared, manifest_sha256, *, render=False):
+    record = manifest['batches'][name]
+    build = Path(manifest['build'])
+    if (digest((out / 'manifest.json').read_bytes()) != manifest_sha256
+            or manifest['source_files'] != source_receipt()
+            or manifest['executor_sha256'] != digest(Path(__file__).read_bytes())
+            or digest((build / 'keys' / f'{prepared.kind}.json').read_bytes()) != prepared.key_sha256
+            or digest((build / 'batches' / f'{name}.json').read_bytes()) != prepared.batch_sha256
+            or digest(prepared.batch.read_bytes()) != prepared.batch_sha256
+            or (out / 'prompts' / f'{name}.txt').read_text() != prepared.prompt
+            or any(digest(image.path.read_bytes()) != image.sha256 for image in prepared.images)):
+        raise HandoutError('input changed during the pool')
+    if render and json.loads(json.dumps(checked_receipt(prepared))) != record['receipt']:
+        raise HandoutError('rendered input or CLI version changed during the pool')
+
+
 def run(out, max_attempts, workers=1, only=None):
     out = Path(out).resolve()
     runtime = (batches.ROOT / '.runtime').resolve()
@@ -173,6 +191,7 @@ def run(out, max_attempts, workers=1, only=None):
 
 def _run_locked(out, max_attempts, workers, only):
     manifest = json.loads((out / 'manifest.json').read_text())
+    manifest_sha256 = digest((out / 'manifest.json').read_bytes())
     if manifest.get('schema') != 'p1-codex-handout/1':
         raise HandoutError('unsupported handout')
     if manifest.get('source_files') != source_receipt():
@@ -210,8 +229,14 @@ def _run_locked(out, max_attempts, workers, only):
             if latch:
                 latch_stop()
             children = list(active.values())
+        errors = []
         for child in children:
-            _cleanup(child)
+            try:
+                _cleanup(child)
+            except Exception as error:
+                errors.append(type(error).__name__)
+        if errors:
+            raise HandoutError('owned process cleanup failed')
 
     def interrupted(signum, frame):
         stop_all()
@@ -223,7 +248,9 @@ def _run_locked(out, max_attempts, workers, only):
         prepared = checked[name]
         directory = out / 'attempts' / name
         child = None
+        failure_recorded = False
         try:
+            _unchanged(out, manifest, name, prepared, manifest_sha256, render=True)
             with lock:
                 if stop.is_set():
                     return
@@ -251,19 +278,32 @@ def _run_locked(out, max_attempts, workers, only):
                 raise HandoutError('attempt timed out') from None
             if child.returncode != 0:
                 raise HandoutError('attempt failed')
+            _cleanup(child)
+            with lock:
+                active.pop(child.pid, None)
+            child = None
+            _unchanged(out, manifest, name, prepared, manifest_sha256)
             answer = prepared.leaf / 'answer.jsonl'
-            batches._answers(answer, _ids(prepared), {}, prepared.kind)
             candidate = out / 'candidates' / f'{name}.jsonl'
-            with candidate.open('xb') as stream:
-                stream.write(answer.read_bytes())
-            write_json(directory / 'complete.json', dict(candidate_sha256=digest(candidate.read_bytes()),
-                       launched_sha256=digest((directory / 'launched.json').read_bytes())))
+            data = answer.read_bytes()
+            with tempfile.NamedTemporaryFile(dir=out / 'candidates', prefix='.', delete=False) as stream:
+                stream.write(data)
+                staged = Path(stream.name)
+            try:
+                staged.chmod(0o400)
+                batches._answers(staged, _ids(prepared), {}, prepared.kind)
+                os.link(staged, candidate)  # Atomic, exclusive publication of the validated inode.
+                write_json(directory / 'complete.json', dict(candidate_sha256=digest(data),
+                           launched_sha256=digest((directory / 'launched.json').read_bytes())))
+            finally:
+                staged.unlink(missing_ok=True)
             with lock:
                 counts['done'] += 1
         except BaseException:
             with lock:
                 latch_stop()
                 counts['failed'] += 1
+                failure_recorded = True
         finally:
             if child is not None:
                 try:
@@ -271,8 +311,9 @@ def _run_locked(out, max_attempts, workers, only):
                 except BaseException:
                     with lock:
                         latch_stop()
-                        counts['failed'] += 1
-                finally:
+                        if not failure_recorded:
+                            counts['failed'] += 1
+                else:
                     with lock:
                         active.pop(child.pid, None)
 
@@ -281,9 +322,11 @@ def _run_locked(out, max_attempts, workers, only):
         with ThreadPoolExecutor(max_workers=workers) as pool:
             list(pool.map(task, selected))
     finally:
-        stop_all(latch=False)
-        for sig, handler in previous.items():
-            signal.signal(sig, handler)
+        try:
+            stop_all(latch=False)
+        finally:
+            for sig, handler in previous.items():
+                signal.signal(sig, handler)
     return dict(**counts, stopped=stop.is_set())
 
 

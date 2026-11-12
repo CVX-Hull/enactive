@@ -37,6 +37,10 @@ class PreparedInput:
     key_sha256: str
     batch_sha256: str
 
+    def __post_init__(self) -> None:
+        if self.kind not in batches.KINDS or bool(self.images) != (self.kind in ('question', 'audit')):
+            raise InputError('image inputs do not match this role')
+
     def _images_argv(self) -> list[str]:
         return [part for image in self.images for part in ('--image', str(image.path))]
 
@@ -98,9 +102,14 @@ class PreparedInput:
             raise InputError('local Codex version is empty')
         return dict(kind=self.kind, leaf=str(self.leaf), batch=str(self.batch), image_count=len(self.images),
                     images=[dict(path=str(i.path), sha256=i.sha256, associations=i.associations) for i in self.images],
-                    key_sha256=self.key_sha256, batch_sha256=self.batch_sha256, prompt=self.prompt,
-                    prompt_sha256=_sha(self.prompt.encode()), exec_argv=self.exec_argv(),
-                    render_argv=self.render_argv(), cli_version=version)
+                    key_sha256=self.key_sha256, batch_sha256=self.batch_sha256,
+                    prompt_sha256=_sha(self.prompt.encode()),
+                    exec_argv_sha256=_sha(json.dumps(self.exec_argv()).encode()),
+                    source_files={name: _sha(path.read_bytes()) for name, path in
+                                  (('tools/p1_codex_input.py', Path(__file__)),
+                                   ('tools/p1_batches.py', Path(batches.__file__)),
+                                   ('tools/p1_analysis.py', Path(batches.analysis.__file__)))},
+                    cli_version=version, inference_calls=0)
 
 
 def prepare(build: Path, kind: str, batch_name: str, leaf: Path, *, expected_key_sha256: str) -> PreparedInput:
@@ -159,9 +168,16 @@ def prepare(build: Path, kind: str, batch_name: str, leaf: Path, *, expected_key
     copied = leaf / f'{batch_name}.json'
     copied.write_bytes(raw)
     prompt = brief.replace('[batch]', str(copied))
-    prompt += (f'\n\nRead the batch file at {copied}. Use the attached original images in attachment order; '
-               'the batch remains authoritative for each item and its frame order. '
-               'Write your answers as JSON Lines to answer.jsonl in the current directory.')
+    prompt += f'\n\nRead the batch file at {copied}. '
+    if images:
+        prompt += ('Use the attached original images in attachment order; '
+                   'the batch remains authoritative for each item and its frame order. ')
+    prompt += ('Codex host mechanics permit only local file operations needed to read this named batch '
+               + ('and view its named images, ' if images else '')
+               + 'and write the named answer file. Do not read other files, run other commands, '
+               'use the network or spawn agents. '
+               'Write your answers as JSON Lines to answer.jsonl in the current directory. '
+               'Then reply with only the number of lines you wrote.')
     if images:
         prompt += '\nAttachment index (one-based) to original frame path:\n'
         prompt += '\n'.join(f'{index}: {image.path}' for index, image in enumerate(images, 1))

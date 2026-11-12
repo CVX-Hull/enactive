@@ -127,9 +127,22 @@ def test_local_check_only_runs_version_and_debug_and_records_version(setup, monk
     assert receipt['cli_version'] == 'codex synthetic-version' and receipt['key_sha256'] == digest
     assert len(calls) == 2 and calls[1][0][:3] == ['codex', 'debug', 'prompt-input']
     assert all(call[1]['cwd'] == prepared.leaf and call[1]['timeout'] == 30 for call in calls)
-    assert receipt['image_count'] == 1 and receipt['exec_argv'] == prepared.exec_argv()
+    assert receipt['image_count'] == 1 and receipt['inference_calls'] == 0
+    assert receipt['exec_argv_sha256'] == hashlib.sha256(json.dumps(prepared.exec_argv()).encode()).hexdigest()
+    assert set(receipt['source_files']) == {'tools/p1_codex_input.py', 'tools/p1_batches.py', 'tools/p1_analysis.py'}
+    assert 'prompt' not in receipt and 'render_argv' not in receipt
     with pytest.raises(inputs.InputError):
         replace(prepared, images=()).check()
+
+
+def test_role_image_policy_cannot_be_bypassed_by_constructing_a_prepared_input(setup):
+    _, images, _, prepare = setup
+    _, _, visual = prepare('question', [{'frame': str(images[0])}])
+    _, _, textual = prepare('reader', [{'text': 'synthetic fixture'}])
+    with pytest.raises(inputs.InputError):
+        replace(visual, images=())
+    with pytest.raises(inputs.InputError):
+        replace(textual, images=visual.images)
 
 
 @pytest.mark.parametrize('name,content', [('missing.png', None), ('bad.png', b'not png'), ('bad.jpg', b'\x89PNG\r\n\x1a\n')])

@@ -205,3 +205,104 @@ def test_limit_is_fixed_across_healthy_partial_runs(handout, monkeypatch):
     assert len(calls) == 1
     with pytest.raises(runner.HandoutError):
         runner.run(out, 3, only=['question-002'])
+
+
+def test_changed_shared_image_stops_queued_launches_and_publication(handout, monkeypatch):
+    out, _, image, _ = handout
+    class Changed(Child):
+        def communicate(self, prompt, timeout):
+            super().communicate(prompt, timeout)
+            image.write_bytes(image.read_bytes() + b'changed')
+    calls = fakes(monkeypatch, Changed)
+    result = runner.run(out, 3, workers=1)
+    assert len(calls) == 1 and result['stopped'] and not result['done']
+    assert not list((out / 'candidates').iterdir())
+
+
+def test_published_bytes_are_the_snapshot_that_was_validated(handout, monkeypatch):
+    out, _, _, _ = handout
+    fakes(monkeypatch)
+    original = batches._answers
+    validated = []
+    def validate(path, *args):
+        result = original(path, *args)
+        validated.append(Path(path).read_bytes())
+        (out / 'question-001/answer.jsonl').write_text('{}\n')
+        return result
+    monkeypatch.setattr(batches, '_answers', validate)
+    result = runner.run(out, 3, only=['question-001'])
+    assert not result['stopped'] and result['done'] == 1
+    assert (out / 'candidates/question-001.jsonl').read_bytes() == validated[0]
+    assert not list((out / 'candidates').glob('.*'))
+
+
+def test_cleanup_failure_cannot_publish_completion(handout, monkeypatch):
+    out, _, _, _ = handout
+    calls = fakes(monkeypatch)
+    def failed_cleanup(child):
+        raise RuntimeError('synthetic cleanup failure')
+    monkeypatch.setattr(runner, '_cleanup', failed_cleanup)
+    with pytest.raises(runner.HandoutError, match='cleanup'):
+        runner.run(out, 3, workers=1)
+    assert len(calls) == 1 and (out / 'stopped.json').exists()
+    assert not list((out / 'candidates').iterdir())
+    assert not list((out / 'attempts').glob('*/complete.json'))
+
+
+def test_controller_sigterm_closes_an_active_owned_group(handout):
+    import os
+    import signal
+    import sys
+    import textwrap
+
+    out, _, _, _ = handout
+    marker = out / 'fixture-pids.json'
+    script = textwrap.dedent('''
+        import hashlib,json,subprocess,sys
+        from pathlib import Path
+        from tools import p1_batches as b,p1_codex as r,p1_codex_input as i
+        out,marker=map(Path,sys.argv[1:])
+        b.ROOT=out.parent.parent
+        b.frozen_brief=lambda label: f'{label} [batch]'
+        def check(self,timeout=30):
+            return {'cli_version':'version-one','batch_sha256':self.batch_sha256,
+                    'prompt_sha256':hashlib.sha256(self.prompt.encode()).hexdigest()}
+        i.PreparedInput.check=check
+        grand='import signal,time; signal.signal(signal.SIGTERM,signal.SIG_IGN); print("ready",flush=True); time.sleep(120)'
+        fake=('import json,os,subprocess,sys,time; from pathlib import Path; '
+              'sys.stdin.read(); p=subprocess.Popen([sys.executable,"-u","-c",'+repr(grand)+'],stdout=subprocess.PIPE,text=True); '
+              'assert p.stdout.readline().strip()=="ready"; '
+              'Path('+repr(str(marker))+').write_text(json.dumps([os.getpid(),p.pid])); time.sleep(120)')
+        i.PreparedInput.exec_argv=lambda self:[sys.executable,'-u','-c',fake]
+        try:r.run(out,3,only=['question-001'])
+        except KeyboardInterrupt:pass
+    ''')
+    controller = subprocess.Popen([sys.executable, '-c', script, str(out), str(marker)],
+                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                                  start_new_session=True)
+    owned = []
+    try:
+        deadline = time.monotonic() + 15
+        while not marker.exists() and controller.poll() is None and time.monotonic() < deadline:
+            time.sleep(0.05)
+        assert marker.exists(), 'owned fixture did not start'
+        owned = json.loads(marker.read_text())
+        controller.send_signal(signal.SIGTERM)
+        stdout, stderr = controller.communicate(timeout=20)
+        assert controller.returncode == 0, (stdout, stderr)
+        assert (out / 'stopped.json').is_file()
+        assert not list((out / 'candidates').iterdir())
+        for pid in owned:
+            state = subprocess.run(['ps', '-o', 'stat=', '-p', str(pid)], capture_output=True, text=True).stdout.strip()
+            assert not state or state.startswith('Z')
+    finally:
+        if owned:
+            try:
+                os.killpg(owned[0], signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        if controller.poll() is None:
+            os.killpg(controller.pid, signal.SIGKILL)
+            controller.communicate(timeout=5)
+        controller.stdout.close()
+        controller.stderr.close()
