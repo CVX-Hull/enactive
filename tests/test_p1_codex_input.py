@@ -37,10 +37,16 @@ def setup(tmp_path, monkeypatch):
 
 
 def rendered(images, prompt):
-    return [{'type': 'message', 'role': 'user', 'content':
-             [{'type': 'input_text', 'text': prompt}] +
-             [{'type': 'input_image', 'detail': 'high', 'image_url':
-               'data:image/png;base64,' + base64.b64encode(p.read_bytes()).decode()} for p in images]}]
+    content = []
+    for index, path in enumerate(images, 1):
+        content.extend([
+            {'type': 'input_text', 'text': f'<image name=[Image #{index}] path="{path}">'},
+            {'type': 'input_image', 'detail': 'high', 'image_url':
+             'data:image/png;base64,' + base64.b64encode(path.read_bytes()).decode()},
+            {'type': 'input_text', 'text': '</image>'},
+        ])
+    content.append({'type': 'input_text', 'text': prompt})
+    return [{'type': 'message', 'role': 'user', 'content': content}]
 
 
 def test_question_attachments_and_private_files(setup):
@@ -52,7 +58,11 @@ def test_question_attachments_and_private_files(setup):
     assert prepared.batch.read_text() in prepared.prompt
     assert '"synthetic"' not in prepared.prompt
     assert str(prepared.batch) in prepared.prompt
-    assert all(f'{n}: {path}' in prepared.prompt for n, path in enumerate(images, 1))
+    native = rendered(images, prepared.prompt)
+    assert all(f'<image name=[Image #{n}] path="{path}">' in
+               [block.get('text') for block in native[0]['content']]
+               for n, path in enumerate(images, 1))
+    assert prepared.prompt.endswith(prepared.batch.read_text())
     argv = prepared.exec_argv()
     assert [argv[i + 1] for i, x in enumerate(argv) if x == '--image'] == list(map(str, images))
     assert argv[argv.index('-m') + 1] == 'gpt-6.1-sol'
@@ -91,13 +101,36 @@ def test_reader_has_no_images_even_if_text_contains_paths(setup):
 
 
 def test_render_rejects_truncated_wrong_and_reordered_payloads(setup):
+    import copy
     _, images, _, prepare = setup
     _, _, prepared = prepare('question', [{'frame': str(p)} for p in images[:2]])
     broken = rendered(images[:2], prepared.prompt)
     broken[0]['content'][1]['image_url'] = 'data:image/png;base64,iVBOR'
-    for value in (broken, rendered([images[2], images[1]], prepared.prompt), rendered([images[1], images[0]], prepared.prompt)):
+    wrong = rendered(images[:2], prepared.prompt)
+    wrong[0]['content'][1]['image_url'] = rendered([images[2]], prepared.prompt)[0]['content'][1]['image_url']
+    swapped = copy.deepcopy(wrong)
+    swapped[0]['content'][1]['image_url'], swapped[0]['content'][4]['image_url'] = (
+        rendered(images[:2], prepared.prompt)[0]['content'][4]['image_url'],
+        rendered(images[:2], prepared.prompt)[0]['content'][1]['image_url'])
+    for value in (broken, wrong, swapped):
         with pytest.raises(inputs.InputError):
             prepared.verify_render(value)
+
+
+def test_native_image_markers_and_content_order_are_verified(setup):
+    import copy
+    _, images, _, prepare = setup
+    _, _, prepared = prepare('question', [{'frame': str(images[0])}])
+    valid = rendered(images[:1], prepared.prompt)
+    bad_marker = copy.deepcopy(valid)
+    bad_marker[0]['content'][0]['text'] = '<image name=[Image #2] path="foreign.png">'
+    extra_text = copy.deepcopy(valid)
+    extra_text[0]['content'].insert(0, {'type': 'input_text', 'text': 'unrelated data'})
+    wrong_order = copy.deepcopy(valid)
+    wrong_order[0]['content'][0], wrong_order[0]['content'][1] = wrong_order[0]['content'][1], wrong_order[0]['content'][0]
+    for broken in (bad_marker, extra_text, wrong_order):
+        with pytest.raises(inputs.InputError, match='user text'):
+            prepared.verify_render(broken)
 
 
 def test_changed_key_batch_and_existing_leaf_refused(setup):

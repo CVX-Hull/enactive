@@ -135,6 +135,8 @@ held-out question is written.
   Local `codex debug prompt-input` must verify complete count/order/payload hashes before
   inference, including exact initial user text. Every role receives its exact authorized public batch JSON
   in that initial text as well as a copy in its leaf; a Reader batch still contains exactly one item.
+  Verify the native image path/ordinal markers too; they supply attachment association without
+  adding a duplicate path index to the prompt.
   An oversized renderer argument fails closed
   rather than launching without verification. A path string or parser-valid answer is not image-delivery evidence. Keep the
   frozen brief and per-item frame order unchanged; image presentation proves neither
