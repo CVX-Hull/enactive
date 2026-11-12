@@ -15,6 +15,7 @@ states. Records are dated evidence, not current instructions; the
 | Date | Record | Scope | Status |
 | --- | --- | --- | --- |
 | 2026-11-12 | [P1 reader presentation stop](2026-11-12-p1-reader-presentation-stop-178.md) | P1 reader presentation stop, retained candidates and proposed complete-input recovery (#178) | historical |
+| 2026-11-12 | [P1 descriptive completion](2026-11-12-p1-descriptive-completion-178.md) | Completed owner-amended P1 measurement, descriptive comparison and coding-host robustness (#178) | historical |
 | 2026-11-11 | [P1 recovery stopped on the volume-space guard](2026-11-11-p1-storage-stop-178.md) | P1 recovery-5 qualification and storage-guard stop, accounting and cleanup, follow-up robustness repairs, and measurement CLI version policy (#178, #540); no held-out efficacy result | historical |
 | 2026-11-11 | [P1 replay completed; image-input verification stopped measurement](2026-11-11-p1-image-input-stop-178.md) | P1 recovery-7 completion and the pre-scoring discovery of missing Question image input, refused Audit outputs, bounded image-delivery repair and pending measurement correction (#178) | historical |
 | 2026-11-11 | [P1 grounded qualification passed; replacement questions frozen](2026-11-11-p1-grounded-questions-178.md) | P1 grounded development qualification and replacement 89-question freeze for the owner-approved descriptive correction after completed replay (#178) | historical |

@@ -161,8 +161,11 @@ held-out question is written.
   Compatible updates continue when the locally reverified inputs are identical; each attempt
   records the version observed before launch. A version change alone does not repeat a completed
   candidate or require new calibration. Source, model/effort, key, prompt and image checks remain.
-- **Isolation.** Each initial directory contains only the public batch; its prompt is supplied as input. The frozen brief
-  restricts reads to that batch and any images it names; the operator copies out the validated
+- **Isolation.** Each initial directory contains only the public batch; its prompt is supplied as input.
+  External input reads are restricted to that batch and any images it names. The approved
+  writing mechanics include checking the format or line count of the named answer file
+  after the same fresh context has written it; no prior answer or feedback is supplied.
+  Record that output check separately from input reads. The operator copies out the validated
   answer. Separate directories and fresh contexts isolate payloads, but do not establish an
   item-only readable filesystem. Keep that assurance limit distinct from observed tool use.
 - **Rate limits.** At most three sessions at once. The maintained executor makes one attempt
