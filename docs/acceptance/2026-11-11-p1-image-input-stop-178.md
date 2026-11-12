@@ -151,3 +151,23 @@ The next step is the owner's decision on the proposed fresh, image-grounded
 measurement chain. It retains the completed curator replay, frozen units and all
 historical failures; it does not spend more through OpenRouter or relax the cost
 failure. A failed qualification stops rather than tuning on held-out outcomes.
+
+## Sealed evidence and duplicate retirement
+
+The private study is sealed read-only at `.runtime/evidence/p1-image-input-stop-178/`:
+**11,544 files, 159,086,058 bytes**, manifest SHA256
+`bc47a8c2746c8b619c5bd653db3b702be24d61b2894c6a0075746a2223ecd1cd`.
+The tracked [manifest](../../data/evidence/p1-image-input-stop-178.sha256) and
+[evidence index](../../data/evidence/index.json) map source parts and availability.
+All prior campaign seals remain; their images were referenced rather than copied.
+Storage-checkout origins are not execution-source claims: retained stage records
+keep actual freezes and mixed-source lineage.
+
+Full-store hash verification passed. Every original evidence file then matched the
+seal by path and bytes before its duplicate was removed. The
+[retirement receipt](assets/p1-image-evidence-retirement-178.json) lists the twelve
+runtime directories and two checker-log files retired; only non-evidence bytecode
+cache was excluded. Source checkouts, dependencies, saves, prior campaign images
+and canonical tracked question files were not removed. No raw scientific content
+was published. Future correction must read archived inputs from these sealed parts,
+not assume the retired source paths still exist. The store has no off-machine backup.
