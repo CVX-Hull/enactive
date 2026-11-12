@@ -1,0 +1,533 @@
+{
+  "schema": "p1-descriptive-completion/1",
+  "status": "complete-measurement-registered-no-go",
+  "registered_cost_guard_failure_permanent": true,
+  "live_adoption_authorized": false,
+  "owner_approval": "https://github.com/CVX-Hull/enactive/issues/178#issuecomment-6826313984",
+  "source": {
+    "runtime_commit": "13bb21daddcbfad338499978dcf87881c08239b1",
+    "reviewed_head": "c14c59cec313f95b7f53e9d559a19c47cfdbf237",
+    "integration_commit": "19edb7f7622756389b12538516b62727b6de3d31",
+    "reviewed_merged_tree": "15a27e15e624b70f888000082b49460b4a92502d",
+    "scientific_source_files_sha256": {
+      "tools/coding_host/p1.py": "bd614bf08795839d9db1d4873ed4fe9870ad2387e57c0eeb9c2cca00a336052a",
+      "tools/coding_host/p1_input.py": "25b254501b2a451869ae3a14f577ce384484e4bfa4dd7349b02c690ee24ed0aa",
+      "tools/p1_batches.py": "d81993351bd9c3246e2ba6b591d30c4f5a30022a18ff300731b1255d0a5eaec8",
+      "tools/p1_analysis.py": "91546ecfc83f0513b20ed28b17ad05e81de9f0144e4ca0c3e528914349e42393"
+    },
+    "cli_versions": [
+      "codex-cli 0.167.1"
+    ],
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "compatible_installed_cli_updates_allowed_with_input_recheck": true,
+    "dedicated_binary_or_image_copies_created": false
+  },
+  "input_binding": {
+    "questions_sha256": "8fa6aec4d19efa9605005075bad8db8d2e72f4a8af04a46b0e03c85797556e66",
+    "complete_scores_sha256": "f99263fe3805a7bd377736a075c9e458055622e79b8f2bab8562d0a2a9439c94",
+    "pre_score_freeze_sha256": "76103ea917269dd2c4a38a5509da4a13db7f719f0166bbd94516194ac85cee47",
+    "components": [
+      {
+        "file": "first-labels.jsonl",
+        "rows": 534,
+        "sha256": "47e4c797833a0a1275d573f3d0c1e7fb6c1f71e010aa2fe0ce4d3752120b2017"
+      },
+      {
+        "file": "rejudge-labels.jsonl",
+        "rows": 54,
+        "sha256": "0439f7d6fe14c80d77fdf39552c57cc03276131bcdb4343feab54a44cb9ef7da"
+      },
+      {
+        "file": "audit-labels.jsonl",
+        "rows": 120,
+        "sha256": "d4d717fff9da1b79d41da08b523ae072870961a5cceb9837310ee809721dc7ef"
+      },
+      {
+        "file": "costs-recovery-7.jsonl",
+        "rows": 8,
+        "sha256": "76250025d45877bae1fca4041f47a36a0b9421099a5b85482d1e93ad98821bf0"
+      }
+    ],
+    "reader_key_sha256": "69bc776604ea1d2f2c7bf33b44ddfff65a56d0edcb0d77e7fe4e5a08b9607b2b",
+    "first_grader_key_sha256": "c18599c943b41bc5ce183b4c795607943bd29e1a9dfc289f707127d1b0d904ed",
+    "rejudge_key_sha256": "58fdb879d2741403d52f903a679bfbb225d39c93c77555975ca0bd2d0b16598d",
+    "rejudge_grader_key_sha256": "39b8cc05019be99668ddca0ae9ad4e6cb21dca5a8f0e94b074c9f7dfbb51edb1",
+    "audit_key_sha256": "7a4ecb424104e0435c09f55bfcf782629662eb090e785c4f279ac45dc44b1e0c",
+    "retained_audit001_sha256": "f03402b182a1541a8d45e81118726619494688c8788ed6b0d00c8f01581f22c7"
+  },
+  "artifacts": {
+    "registered_result": {
+      "path": "data/evaluation/p1/result.json",
+      "sha256": "700c200426f796d47f702da2578817a23c2f1344ec0f0b59c06b4c94f585feaa"
+    },
+    "descriptive_result": {
+      "path": "data/evaluation/p1/description.json",
+      "sha256": "c302574c3249429a02554fe5d0d7ceedf41dee015c56c7939439ce6ad67dcc46"
+    }
+  },
+  "allocation": {
+    "global_actual": 846,
+    "global_reserved": 856,
+    "global_ceiling": 1000,
+    "recovery_actual_and_reserved": 102,
+    "approved_recovery_maximum": 145,
+    "recovery_unused_retired": 43,
+    "old_unused_retired_still_counted": 10,
+    "max_concurrency": 3,
+    "seconds_per_context": 900,
+    "new_openrouter_calls": 0
+  },
+  "cost_accounting": {
+    "actor_denominator_dollars": 59.3365544,
+    "repeat1_recorded_dollars": 20.2844286,
+    "repeat2_recorded_dollars": 50.8059413,
+    "repeat2_unresolved_allowance_dollars": 11.9048027,
+    "repeat2_conservative_total_dollars": 62.710744,
+    "separate_pilot_development_dollars": 26.9466032,
+    "scope": "Best-effort recorded debits and separate unresolved allowance; not an invoice. Credits/engineering/labor not priced as zero.",
+    "billing_browser_required": false
+  },
+  "supplementary": {
+    "schema": "p1-completion-supplementary-aggregates/1",
+    "scope": "Only predeclared descriptive breakdowns and reported usage; no new decision rule or inferential test",
+    "source_scores_sha256": "f99263fe3805a7bd377736a075c9e458055622e79b8f2bab8562d0a2a9439c94",
+    "descriptive_result_sha256": "c302574c3249429a02554fe5d0d7ceedf41dee015c56c7939439ce6ad67dcc46",
+    "usage": {
+      "corrected_chain_contexts": 846,
+      "with_reported_usage": 846,
+      "reported_tokens": {
+        "input_tokens": 92790125,
+        "cached_input_tokens": 77708672,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 296163,
+        "reasoning_output_tokens": 30679
+      },
+      "contexts_by_stage": {
+        "held": 45,
+        "development": 162,
+        "measurement": 537,
+        "h-first-graders": 25,
+        "h-audit-v2": 11,
+        "h-read1-v2": 10,
+        "h-read2-v2": 54,
+        "h-rejudge-graders": 2
+      },
+      "dollar_cost": "unpriced existing credits, not zero; does not cover whole engineering workflow"
+    },
+    "breakdowns": {
+      "by_lineage": {
+        "lh1": {
+          "units": 11,
+          "A1": {
+            "stated": 2,
+            "recall": 0.18181818181818182
+          },
+          "B1": {
+            "stated": 2,
+            "recall": 0.18181818181818182
+          },
+          "B2": {
+            "stated": 2,
+            "recall": 0.18181818181818182
+          },
+          "R1": {
+            "stated": 2,
+            "recall": 0.18181818181818182
+          }
+        },
+        "lh2": {
+          "units": 7,
+          "A1": {
+            "stated": 2,
+            "recall": 0.2857142857142857
+          },
+          "B1": {
+            "stated": 2,
+            "recall": 0.2857142857142857
+          },
+          "B2": {
+            "stated": 2,
+            "recall": 0.2857142857142857
+          },
+          "R1": {
+            "stated": 2,
+            "recall": 0.2857142857142857
+          }
+        },
+        "lh3": {
+          "units": 9,
+          "A1": {
+            "stated": 3,
+            "recall": 0.3333333333333333
+          },
+          "B1": {
+            "stated": 2,
+            "recall": 0.2222222222222222
+          },
+          "B2": {
+            "stated": 2,
+            "recall": 0.2222222222222222
+          },
+          "R1": {
+            "stated": 2,
+            "recall": 0.2222222222222222
+          }
+        },
+        "lh4": {
+          "units": 62,
+          "A1": {
+            "stated": 11,
+            "recall": 0.1774193548387097
+          },
+          "B1": {
+            "stated": 7,
+            "recall": 0.11290322580645161
+          },
+          "B2": {
+            "stated": 7,
+            "recall": 0.11290322580645161
+          },
+          "R1": {
+            "stated": 6,
+            "recall": 0.0967741935483871
+          }
+        }
+      },
+      "by_boundary_kind": {
+        "admission": {
+          "units": 36,
+          "A1": {
+            "stated": 7,
+            "recall": 0.19444444444444445
+          },
+          "B1": {
+            "stated": 4,
+            "recall": 0.1111111111111111
+          },
+          "B2": {
+            "stated": 4,
+            "recall": 0.1111111111111111
+          },
+          "R1": {
+            "stated": 4,
+            "recall": 0.1111111111111111
+          }
+        },
+        "handoff": {
+          "units": 53,
+          "A1": {
+            "stated": 11,
+            "recall": 0.20754716981132076
+          },
+          "B1": {
+            "stated": 9,
+            "recall": 0.16981132075471697
+          },
+          "B2": {
+            "stated": 9,
+            "recall": 0.16981132075471697
+          },
+          "R1": {
+            "stated": 8,
+            "recall": 0.1509433962264151
+          }
+        }
+      },
+      "lh4_vs_lh1_lh3": {
+        "lh4": {
+          "units": 62,
+          "A1": {
+            "stated": 11,
+            "recall": 0.1774193548387097
+          },
+          "B1": {
+            "stated": 7,
+            "recall": 0.11290322580645161
+          },
+          "B2": {
+            "stated": 7,
+            "recall": 0.11290322580645161
+          },
+          "R1": {
+            "stated": 6,
+            "recall": 0.0967741935483871
+          }
+        },
+        "lh1_lh3": {
+          "units": 27,
+          "A1": {
+            "stated": 7,
+            "recall": 0.25925925925925924
+          },
+          "B1": {
+            "stated": 6,
+            "recall": 0.2222222222222222
+          },
+          "B2": {
+            "stated": 6,
+            "recall": 0.2222222222222222
+          },
+          "R1": {
+            "stated": 6,
+            "recall": 0.2222222222222222
+          }
+        }
+      },
+      "a_against_reference": {
+        "A1": 18,
+        "R1": 12,
+        "units": 89,
+        "difference": 0.06741573033707865
+      }
+    },
+    "working_set_tokens_summary": {
+      "A1": {
+        "boundaries": 23,
+        "total": 27879,
+        "mean": 1212.1304347826087,
+        "median": 1267,
+        "min": 416,
+        "max": 1980
+      },
+      "B1": {
+        "boundaries": 23,
+        "total": 30654,
+        "mean": 1332.7826086956522,
+        "median": 1909,
+        "min": 0,
+        "max": 1999
+      },
+      "B2": {
+        "boundaries": 23,
+        "total": 31264,
+        "mean": 1359.304347826087,
+        "median": 1784,
+        "min": 0,
+        "max": 1999
+      }
+    },
+    "working_set_tokens_by_boundary": [
+      {
+        "lineage": "lh1",
+        "boundary": "lh1a1-001>lh1a1-002",
+        "kind": "handoff",
+        "A1": 416,
+        "B1": 0,
+        "B2": 0
+      },
+      {
+        "lineage": "lh1",
+        "boundary": "lh1a1-002>lh1a2-001",
+        "kind": "admission",
+        "A1": 416,
+        "B1": 1390,
+        "B2": 1174
+      },
+      {
+        "lineage": "lh1",
+        "boundary": "lh1a2-001>lh1a3-001",
+        "kind": "admission",
+        "A1": 416,
+        "B1": 1963,
+        "B2": 1784
+      },
+      {
+        "lineage": "lh1",
+        "boundary": "lh1a3-001>lh1a3-002",
+        "kind": "handoff",
+        "A1": 872,
+        "B1": 1963,
+        "B2": 1784
+      },
+      {
+        "lineage": "lh2",
+        "boundary": "lh2a1-001>lh2a1-002",
+        "kind": "handoff",
+        "A1": 484,
+        "B1": 0,
+        "B2": 0
+      },
+      {
+        "lineage": "lh2",
+        "boundary": "lh2a1-002>lh2a2-001",
+        "kind": "admission",
+        "A1": 484,
+        "B1": 940,
+        "B2": 1044
+      },
+      {
+        "lineage": "lh2",
+        "boundary": "lh2a2-001>lh2a2-002",
+        "kind": "handoff",
+        "A1": 1131,
+        "B1": 940,
+        "B2": 1044
+      },
+      {
+        "lineage": "lh3",
+        "boundary": "lh3a1-001>lh3a1-002",
+        "kind": "handoff",
+        "A1": 524,
+        "B1": 0,
+        "B2": 0
+      },
+      {
+        "lineage": "lh3",
+        "boundary": "lh3a1-002>lh3a2-001",
+        "kind": "admission",
+        "A1": 524,
+        "B1": 737,
+        "B2": 1081
+      },
+      {
+        "lineage": "lh3",
+        "boundary": "lh3a2-001>lh3a2-002",
+        "kind": "handoff",
+        "A1": 939,
+        "B1": 737,
+        "B2": 1081
+      },
+      {
+        "lineage": "lh4",
+        "boundary": "lh4b1-001>lh4b1-002",
+        "kind": "handoff",
+        "A1": 630,
+        "B1": 0,
+        "B2": 0
+      },
+      {
+        "lineage": "lh4",
+        "boundary": "lh4b1-002>lh4b2-001",
+        "kind": "admission",
+        "A1": 1267,
+        "B1": 1145,
+        "B2": 1274
+      },
+      {
+        "lineage": "lh4",
+        "boundary": "lh4b2-001>lh4b2-002",
+        "kind": "handoff",
+        "A1": 1877,
+        "B1": 1145,
+        "B2": 1274
+      },
+      {
+        "lineage": "lh4",
+        "boundary": "lh4b2-002>lh4b3-001",
+        "kind": "admission",
+        "A1": 1980,
+        "B1": 1909,
+        "B2": 1999
+      },
+      {
+        "lineage": "lh4",
+        "boundary": "lh4b3-001>lh4b3-002",
+        "kind": "handoff",
+        "A1": 1717,
+        "B1": 1909,
+        "B2": 1999
+      },
+      {
+        "lineage": "lh4",
+        "boundary": "lh4b3-002>lh4b4-001",
+        "kind": "admission",
+        "A1": 1740,
+        "B1": 1998,
+        "B2": 1971
+      },
+      {
+        "lineage": "lh4",
+        "boundary": "lh4b4-001>lh4b4-002",
+        "kind": "handoff",
+        "A1": 1518,
+        "B1": 1998,
+        "B2": 1971
+      },
+      {
+        "lineage": "lh4",
+        "boundary": "lh4b4-002>lh4b5-001",
+        "kind": "admission",
+        "A1": 1837,
+        "B1": 1962,
+        "B2": 1977
+      },
+      {
+        "lineage": "lh4",
+        "boundary": "lh4b5-001>lh4b5-002",
+        "kind": "handoff",
+        "A1": 1733,
+        "B1": 1962,
+        "B2": 1977
+      },
+      {
+        "lineage": "lh4",
+        "boundary": "lh4b5-002>lh4b6-001",
+        "kind": "admission",
+        "A1": 1733,
+        "B1": 1999,
+        "B2": 1973
+      },
+      {
+        "lineage": "lh4",
+        "boundary": "lh4b6-001>lh4b6-002",
+        "kind": "handoff",
+        "A1": 1960,
+        "B1": 1999,
+        "B2": 1973
+      },
+      {
+        "lineage": "lh4",
+        "boundary": "lh4b6-002>lh4b7-001",
+        "kind": "admission",
+        "A1": 1845,
+        "B1": 1979,
+        "B2": 1942
+      },
+      {
+        "lineage": "lh4",
+        "boundary": "lh4b7-001>lh4b7-002",
+        "kind": "handoff",
+        "A1": 1836,
+        "B1": 1979,
+        "B2": 1942
+      }
+    ],
+    "working_set_token_scope": "Frozen approximation ceil(UTF-8 bytes / 4), not model tokenizer measurements. Produced working-set token field for A/B at each complete boundary. Reference R has no produced working set; its zero token placeholder is not a measurement of received-text length and is excluded."
+  },
+  "output_verification_adjudication": {
+    "case": "Audit005",
+    "purpose": "Own freshly written output line count only; no readback content entered judgments or other input files were read.",
+    "basis": "Approved source prompt and protocol writing mechanics; independent review concurred.",
+    "literal_host_read_whitelist_pass_claimed": false,
+    "wording_conflict": "Host page165 omitted same-context mechanical output checks; clarified after all scientific contexts ended.",
+    "private_adjudication_sha256": "960ed8e9802078e1b8349cfbcff9acb60f962661d7a1776306e564a7a3192cd0"
+  },
+  "private_evidence": {
+    "study": "p1-grounded-completion-178",
+    "seal_status": "sealed-read-only-full-hash-verified",
+    "manifest": "data/evidence/p1-grounded-completion-178.sha256",
+    "manifest_sha256": "281054d18cbe95569bcd1b838505aac716d393708bad8fd8328ebed5ad796798",
+    "files": 10250,
+    "bytes": 65349350,
+    "off_machine_backup": false,
+    "retired_original_files": 10193,
+    "retired_original_bytes": 64885225,
+    "retained_empty_lock_stubs": 26,
+    "worker_checkout": "Retained because app artifact inventory provides no managed worktree ownership; no forced removal."
+  },
+  "limitations": [
+    "mixed presentation and retained old qualification",
+    "rejudge variation includes format variation",
+    "prior observer limits retained; strict observer blindness not claimed",
+    "native own-output linecount verification accepted under approved writing mechanics; literal host whitelist conflict recorded",
+    "no generic JS/Python security, OS confinement, attention or provider-receipt claim",
+    "credits unpriced, billing best effort; no live adoption",
+    "Questions replaced after replay under owner amendment; descriptive-only, not restored pre-registration.",
+    "Audit is not blind by construction; rates apply to sampled item-boundary pairs and include outdated statements.",
+    "Bias control inapplicable: only12 Reference-correct units versus minimum20.",
+    "Judgments are model-based; positive controls and repeated labels do not certify human ground truth.",
+    "Only four independent lineages; within-lineage cluster bootstrap understates between-lineage uncertainty.",
+    "One game, S1 start scenario, actor model and route; pre-emission traces in two player versions. Offline delivery does not establish live actor use."
+  ]
+}

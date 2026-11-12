@@ -1,0 +1,247 @@
+{
+ "analysis_files": {
+  "tools/p1_analysis.py": "91546ecfc83f0513b20ed28b17ad05e81de9f0144e4ca0c3e528914349e42393",
+  "tools/p1_batches.py": "d81993351bd9c3246e2ba6b591d30c4f5a30022a18ff300731b1255d0a5eaec8"
+ },
+ "audit_evidence": {
+  "answers": {
+   "audit-001.jsonl": "f03402b182a1541a8d45e81118726619494688c8788ed6b0d00c8f01581f22c7",
+   "audit-002.jsonl": "2595c6ba68ea86024396b50dfacaf13239501bd31a34a21baa767a9a32c2a744",
+   "audit-003.jsonl": "563261c663605b28bd07df7801c95477587625e5492957d990023c84fab4a594",
+   "audit-004.jsonl": "c75a818ae569b4541970c5bd763fe684e8750961f08dad9bab9ae966d8eee190",
+   "audit-005.jsonl": "fa3bef9b89030331189f848d36ad8085a3f704b3a7fccd62fd59a56c60b536bd",
+   "audit-006.jsonl": "93c9c967a723888fe077bd8b146cb6f754fa1569285b6693f0481c64482a1964",
+   "audit-007.jsonl": "925ddd6e023b3576e7aad253cc359ce8b2db4e706b60a3c64348ed7f45d3f2a8",
+   "audit-008.jsonl": "d5ec1a31ed5eda133e6cfe0f127e4f5e8db73cbb7455c2925af9b663ff6dcbf3",
+   "audit-009.jsonl": "b70874d7bee22996d89fc3d642bf6d9a26cd5caf3336b8f43970afa76f8b1aa2",
+   "audit-010.jsonl": "1101c20aed46802a0bd9a4f80958f62a0874ba5d2dd45415461bda8f11cf0974",
+   "audit-011.jsonl": "ab8980e6c0e5bc9efe5f278fdb6b9667e749c975275b8cca33f08e54b35a36e0",
+   "audit-012.jsonl": "906848b60bf84e03bb1ec9a3f23da8c40382629a9d52a189a887ac3b3527474a"
+  },
+  "key": {
+   "path": ".runtime/evidence/p1-image-input-stop-178/measurement/audit-recovery-7/keys/audit.json",
+   "sha256": "7a4ecb424104e0435c09f55bfcf782629662eb090e785c4f279ac45dc44b1e0c"
+  }
+ },
+ "benefit_diagnostics": {
+  "guards": {
+   "1": {
+    "checks": {
+     "cost": true,
+     "false_facts": true
+    },
+    "holds": true
+   },
+   "2": {
+    "checks": {
+     "cost": false,
+     "false_facts": true
+    },
+    "holds": false
+   }
+  },
+  "mean_delta": -0.056179775280898875,
+  "primary": {
+   "delta": -0.056179775280898875,
+   "holds": false,
+   "lower_bound": -0.11237794275013376,
+   "per_lineage": {
+    "lh4": -0.06451612903225806
+   },
+   "repeats": [
+    -0.056179775280898875,
+    -0.056179775280898875
+   ]
+  },
+  "robust_to_rejudging": false
+ },
+ "bias_control": {
+  "applies": false,
+  "difference": 0.0,
+  "direction": null,
+  "flag": false,
+  "limit": 0.1,
+  "min_units": 20,
+  "only_a": {
+   "B1": 0,
+   "B2": 1
+  },
+  "only_b": {
+   "B1": 0,
+   "B2": 1
+  },
+  "units": 12
+ },
+ "delivered_files": [
+  {
+   "path": ".runtime/evidence/p1-image-input-stop-178/deliveries/held-out-recovery-7-lh1/delivered.jsonl",
+   "sha256": "6e947e0388a6b26ccfb3fd98c4cbd0b11690e0c542dcb351d5608fa326d15e13"
+  },
+  {
+   "path": ".runtime/evidence/p1-image-input-stop-178/deliveries/held-out-recovery-7-lh234/delivered.jsonl",
+   "sha256": "864058f2f78ba16ccd1391ae319aab714345bfda85d7225da5f3418567a9c901"
+  }
+ ],
+ "figures": {
+  "A1": {
+   "audit": {
+    "audited": 40,
+    "false": 29,
+    "rate": 0.725,
+    "upper_95": 0.8374785017112015
+   },
+   "n": 89,
+   "recall": 0.20224719101123595,
+   "stated": 18,
+   "undelivered_per_game_hour": 0.9088613986367079
+  },
+  "B1": {
+   "audit": {
+    "audited": 40,
+    "false": 1,
+    "rate": 0.025,
+    "upper_95": 0.11318836094473754
+   },
+   "cost": {
+    "actor_dollars": 59.3365544,
+    "curator_dollars": 20.284428600000002,
+    "ratio": 0.3418538336968215
+   },
+   "n": 89,
+   "recall": 0.14606741573033707,
+   "stated": 13,
+   "undelivered_per_game_hour": 0.9728657224843634
+  },
+  "B2": {
+   "audit": {
+    "audited": 40,
+    "false": 2,
+    "rate": 0.05,
+    "upper_95": 0.14915196127321298
+   },
+   "cost": {
+    "actor_dollars": 59.3365544,
+    "curator_dollars": 62.71074399999999,
+    "ratio": 1.0568652769632338
+   },
+   "n": 89,
+   "recall": 0.14606741573033707,
+   "stated": 13,
+   "undelivered_per_game_hour": 0.9728657224843634
+  }
+ },
+ "historical_capped_repeats": [
+  2
+ ],
+ "input_files": {
+  "hours": {
+   "path": ".runtime/evidence/p1-image-input-stop-178/measurement/hours.json",
+   "sha256": "654f9a033d3b7b0a78daa73e8118273593e58833a0b5fc8d5ac52ec114700848"
+  },
+  "scores": {
+   "path": ".runtime/worktrees/529-answer-key/.runtime/p1-initial-text-recovery-178/complete-scores.jsonl",
+   "sha256": "f99263fe3805a7bd377736a075c9e458055622e79b8f2bab8562d0a2a9439c94"
+  },
+  "sentences_counts": {
+   "path": ".runtime/p1-grounded-correction-178/held/sent1/counts.json",
+   "sha256": "caf6238f3210e92a6d79dc210d1f2a1fd6eff12b138730303f70b263489f5482"
+  }
+ },
+ "judge_agreement": {
+  "answered_either": {
+   "n": 11,
+   "percent": 1.0
+  },
+  "kappa": 1.0,
+  "n": 54,
+  "percent": 1.0
+ },
+ "positive_control": {
+  "PP": {
+   "correct": 89,
+   "sensitivity": 1.0,
+   "units": 89
+  },
+  "PW": {
+   "correct": 89,
+   "sensitivity": 1.0,
+   "units": 89
+  },
+  "paraphrases_failed_twice": 0
+ },
+ "probe_files": [
+  {
+   "frozen": "data/evaluation/p1/held-out/frozen.json",
+   "frozen_sha256": "7bfaa78a465a2c0d8a29f1b0f4a3a3e2a3f839b373f0d68b2c5f32903199a90d",
+   "path": "data/evaluation/p1/held-out/probes.jsonl",
+   "sha256": "1e26849bef9454fb5af19ceeb47b9112dd2fe10fc31ba187b90a8a57e1308161"
+  },
+  {
+   "frozen": "data/evaluation/p1/held-out-lh4/frozen.json",
+   "frozen_sha256": "bab54826c07d85a8364d0c047f83a3bb4a695d1e67fc8b5dc3343ec9055f9b6b",
+   "path": "data/evaluation/p1/held-out-lh4/probes.jsonl",
+   "sha256": "26e50a938beff85dc2478b7c400831222250f3e9e6be052da59c1906b9fdcb1b"
+  }
+ ],
+ "probes": {
+  "cluster_sizes": {
+   "1": 63,
+   "2": 7,
+   "3": 1,
+   "4": 1,
+   "5": 1
+  },
+  "clusters": 73,
+  "listed": 224,
+  "units": 89
+ },
+ "question_file": {
+  "frozen": "data/evaluation/p1/questions/frozen.json",
+  "frozen_sha256": "d7b7d003b0cbe9a8484486628a9c72f690f717e04fc38c09737586b0b99c4cd5",
+  "path": "data/evaluation/p1/questions/questions.jsonl",
+  "sha256": "8fa6aec4d19efa9605005075bad8db8d2e72f4a8af04a46b0e03c85797556e66"
+ },
+ "questions_flagged_twice": 4,
+ "reference": {
+  "correct": 12,
+  "n": 89,
+  "recall": 0.1348314606741573
+ },
+ "reference_wrong": {
+  "A1": {
+   "recall": 0.09090909090909091,
+   "stated": 7,
+   "units": 77
+  },
+  "B1": {
+   "recall": 0.025974025974025976,
+   "stated": 2,
+   "units": 77
+  },
+  "B2": {
+   "recall": 0.025974025974025976,
+   "stated": 2,
+   "units": 77
+  }
+ },
+ "registered_decision": {
+  "go": false,
+  "outcome": "guard failed: held-out repeat [2] reached its cap"
+ },
+ "schema": "p1-description/1",
+ "scope": "owner-amended descriptive completion after a historical cap failure",
+ "screen_file": {
+  "path": "data/evaluation/p1/questions/screen.json",
+  "sha256": "c95410a23ad6bf88d4411cf37548d2a62abfd7b4be25edc2f527fa4af2a0aa1f"
+ },
+ "thresholds": {
+  "cost_cap": 1.0,
+  "effect": 0.15,
+  "false_fact_bound": 0.2,
+  "false_fact_cap": 0.1,
+  "false_fact_margin": 0.05,
+  "interest": 0.3,
+  "lower_quantile": 0.025,
+  "min_units": 20
+ }
+}

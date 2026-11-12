@@ -52,6 +52,15 @@ The analysis is [`tools/p1_analysis.py`](../../tools/p1_analysis.py) and its tes
 [`data/evaluation/p1/power-study-2.json`](../../data/evaluation/p1/power-study-2.json); a test checks
 that the table under [Power](#power) renders it.
 
+## Completion status (12 November 2026)
+
+The [completed descriptive record](../acceptance/2026-11-12-p1-descriptive-completion-178.md)
+reports all frozen measurements and the retained failures. The registered result
+is permanently **no-go** because repeat 2 reached its historical cap. The
+owner-amended descriptive comparison is complete; it does not authorize adoption
+or another run. Earlier status statements below describe their amendment's
+checkpoint, and the quoted briefs and original decision rules remain unchanged.
+
 ## Data and split
 
 | Use | Lineages | Role |

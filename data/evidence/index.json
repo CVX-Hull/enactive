@@ -495,6 +495,22 @@
       },
       "visibility": "private"
     },
+    "p1-grounded-completion-178": {
+      "availability": "present",
+      "bytes": 65349350,
+      "cited_by": [
+        "docs/acceptance/2026-11-12-p1-descriptive-completion-178.md"
+      ],
+      "files": 10250,
+      "manifest_sha256": "281054d18cbe95569bcd1b838505aac716d393708bad8fd8328ebed5ad796798",
+      "note": "Completed corrected P1 development, question production and descriptive measurement, including all refused/failed attempts, prospective pools, finite review helpers and original diagnostics. Earlier stages retain per-stage freezes (including 9652539); complete-input runtime 13bb21d, reviewed c14c59c, integration 19edb7f. Scientific models are quiescent. No source checkout, binary or duplicate screenshot corpus copied. Original screenshots, replay/cost inputs and retained Audit-001 remain in their earlier sealed families, especially p1-image-input-stop-178. Existing Codex credits are unpriced, not zero cost. Registered cost guard remains failed; descriptive only, no adoption. Private local store only, no off-machine backup. Original byte-verified duplicates are retired under the citing record.",
+      "sources": {
+        "checks": ".runtime/check-logs",
+        "complete-input": ".runtime/worktrees/529-answer-key/.runtime/p1-initial-text-recovery-178@c14c59cec313f95b7f53e9d559a19c47cfdbf237",
+        "correction": ".runtime/p1-grounded-correction-178 (per-stage source freezes retained)"
+      },
+      "visibility": "private"
+    },
     "p1-image-input-stop-178": {
       "availability": "present",
       "bytes": 159086058,

@@ -1,0 +1,54 @@
+{
+ "decision": {
+  "go": false,
+  "outcome": "guard failed: held-out repeat [2] reached its cap"
+ },
+ "probe_files": [
+  {
+   "frozen": "data/evaluation/p1/held-out/frozen.json",
+   "frozen_sha256": "7bfaa78a465a2c0d8a29f1b0f4a3a3e2a3f839b373f0d68b2c5f32903199a90d",
+   "path": "data/evaluation/p1/held-out/probes.jsonl",
+   "sha256": "1e26849bef9454fb5af19ceeb47b9112dd2fe10fc31ba187b90a8a57e1308161"
+  },
+  {
+   "frozen": "data/evaluation/p1/held-out-lh4/frozen.json",
+   "frozen_sha256": "bab54826c07d85a8364d0c047f83a3bb4a695d1e67fc8b5dc3343ec9055f9b6b",
+   "path": "data/evaluation/p1/held-out-lh4/probes.jsonl",
+   "sha256": "26e50a938beff85dc2478b7c400831222250f3e9e6be052da59c1906b9fdcb1b"
+  }
+ ],
+ "probes": {
+  "cluster_sizes": {
+   "1": 63,
+   "2": 7,
+   "3": 1,
+   "4": 1,
+   "5": 1
+  },
+  "clusters": 73,
+  "listed": 224,
+  "units": 89
+ },
+ "question_file": {
+  "frozen": "data/evaluation/p1/questions/frozen.json",
+  "frozen_sha256": "d7b7d003b0cbe9a8484486628a9c72f690f717e04fc38c09737586b0b99c4cd5",
+  "path": "data/evaluation/p1/questions/questions.jsonl",
+  "sha256": "8fa6aec4d19efa9605005075bad8db8d2e72f4a8af04a46b0e03c85797556e66"
+ },
+ "questions_flagged_twice": 4,
+ "schema": "p1-result/1",
+ "screen_file": {
+  "path": "data/evaluation/p1/questions/screen.json",
+  "sha256": "c95410a23ad6bf88d4411cf37548d2a62abfd7b4be25edc2f527fa4af2a0aa1f"
+ },
+ "thresholds": {
+  "cost_cap": 1.0,
+  "effect": 0.15,
+  "false_fact_bound": 0.2,
+  "false_fact_cap": 0.1,
+  "false_fact_margin": 0.05,
+  "interest": 0.3,
+  "lower_quantile": 0.025,
+  "min_units": 20
+ }
+}
