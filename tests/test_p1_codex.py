@@ -378,3 +378,45 @@ def test_interrupt_and_worker_share_one_cleanup_owner(handout, monkeypatch, repe
         interrupter.join(timeout=5)
     assert len(calls) == 1
     assert (out / 'stopped.json').exists()
+
+
+def test_first_interrupt_during_final_cleanup_does_not_reenter(handout):
+    import sys
+    import textwrap
+
+    out, _, _, _ = handout
+    script = textwrap.dedent('''
+        import hashlib,json,os,signal,sys
+        from pathlib import Path
+        from tools import p1_batches as b
+        from tools.coding_host import p1 as r,p1_input as i
+        out=Path(sys.argv[1])
+        b.ROOT=out.parent.parent
+        b.frozen_brief=lambda label: f'{label} [batch]'
+        i.PreparedInput.check=lambda self: {
+            'cli_version':'version-one','batch_sha256':self.batch_sha256,
+            'prompt_sha256':hashlib.sha256(self.prompt.encode()).hexdigest()}
+        class Child:
+            pid=123
+            returncode=0
+            def __init__(self,argv,**kwargs): self.cwd=kwargs['cwd']
+            def communicate(self,prompt,timeout):
+                batch=json.loads((self.cwd/'question-001.json').read_text())
+                (self.cwd/'answer.jsonl').write_text(json.dumps({
+                    'id':batch['items'][0]['id'],'key':'x','question':'x'})+'\\n')
+        r.subprocess.Popen=Child
+        attempts=[]
+        def cleanup(child):
+            attempts.append(child.pid)
+            if len(attempts)<3: raise RuntimeError('synthetic cleanup failure')
+            os.kill(os.getpid(),signal.SIGTERM)
+        r._cleanup=cleanup
+        result=r.run(out,3,only=['question-001'])
+        assert result['stopped'] and result['failed']==1 and result['done']==0
+        assert len(attempts)==3
+        assert not list((out/'candidates').iterdir())
+    ''')
+    completed = subprocess.run([sys.executable, '-c', script, str(out)],
+                               capture_output=True, text=True, timeout=5,
+                               start_new_session=True)
+    assert completed.returncode == 0, completed.stderr

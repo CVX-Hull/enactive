@@ -228,7 +228,7 @@ def _run_locked(out, max_attempts, workers, only):
             raise HandoutError('unused leaf contains unexpected files')
     lock, stop, active = threading.RLock(), threading.Event(), {}
     cleanup_states = {}
-    interrupting = False
+    shutting_down = False
     counts = dict(launched=len(reserved), done=0, skipped=len(completed & set(selected)), failed=0)
 
     def latch_stop():
@@ -247,6 +247,8 @@ def _run_locked(out, max_attempts, workers, only):
                 state['done'] = True
 
     def stop_all(latch=True):
+        nonlocal shutting_down
+        shutting_down = True
         with lock:
             if latch:
                 latch_stop()
@@ -261,10 +263,10 @@ def _run_locked(out, max_attempts, workers, only):
             raise HandoutError('owned process cleanup failed: ' + ', '.join(errors))
 
     def interrupted(signum, frame):
-        nonlocal interrupting
-        if interrupting:
+        if shutting_down:
+            with lock:
+                latch_stop()
             return
-        interrupting = True
         stop_all()
         raise KeyboardInterrupt
 
