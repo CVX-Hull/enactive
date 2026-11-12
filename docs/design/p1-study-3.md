@@ -595,19 +595,32 @@ and the original registered no-go remain permanent.
   amendment, costs, uncertainty and failed registered guard. No result automatically
   adopts a live curator.
 
-## Proposed image-grounding correction
+## Approved image-grounding correction
 
-**Proposed; not approved. No dispatch or question replacement is authorized by this section.**
+**Approved on 11 November 2026.** The
+[owner decision](https://github.com/CVX-Hull/enactive/issues/178#issuecomment-6812762346)
+preceded PR #549's merge and corrective dispatch. It authorizes one corrected
+measurement chain with the limits below, including replacement questions after
+completed curator replay, for descriptive reporting only.
 The [image-input incident](../acceptance/2026-11-11-p1-image-input-stop-178.md)
 invalidates the grounding evidence for the old development and held-out Question
 chains. Neither JSON parsing nor the old calibration qualifies them. The lead has
-not viewed scientific content, labels or efficacy results. The completed curator
-replay remains retained; the original cost guard remains failed permanently.
+not viewed held questions, keys, arm text or efficacy results. An engineering
+scrubber exposed anonymous literals from a retained audit write script; the
+[qualification and freeze record](../acceptance/2026-11-11-p1-grounded-questions-178.md)
+discloses this observer limitation, so strict no-held-literal blindness is not
+claimed. The completed curator replay remains retained; the original cost guard
+remains failed permanently.
 
-The owner must decide before this amendment merges or any corrective model call
-runs: the prior completion approval expressly kept the frozen questions unchanged.
-The proposed correction is a new descriptive measurement purpose, not a retrospective
-registered pass. Approval would authorize the following single bounded chain.
+The prior completion approval expressly kept the frozen questions unchanged;
+the new decision explicitly authorizes their replacement. This is a descriptive
+measurement purpose, not a retrospective registered pass. The fresh development
+qualification passed before replacement generation. Runtime code remains the
+reviewed `96525392f5389d8b15651275c1de6de303ead7f6` version; its hashes and the frozen
+scientific briefs are unchanged. Replacement data is frozen separately at the same
+three canonical paths. The remaining blinded measurement, audit and reporting are
+pending; passing qualification and freezing questions are not an efficacy result.
+The authorized bounded chain is:
 
 1. **Freeze the reviewed correction source.** Record the exact reviewed, CI-passed
    PR head and merged tree, owner decision, selected coding-host version and
