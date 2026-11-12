@@ -36,9 +36,11 @@ def setup(tmp_path, monkeypatch):
     return root, images, make, prepare
 
 
-def rendered(images):
-    return {'content': [{'type': 'input_image', 'detail': 'high', 'image_url':
-                         'data:image/png;base64,' + base64.b64encode(p.read_bytes()).decode()} for p in images]}
+def rendered(images, prompt):
+    return [{'type': 'message', 'role': 'user', 'content':
+             [{'type': 'input_text', 'text': prompt}] +
+             [{'type': 'input_image', 'detail': 'high', 'image_url':
+               'data:image/png;base64,' + base64.b64encode(p.read_bytes()).decode()} for p in images]}]
 
 
 def test_question_attachments_and_private_files(setup):
@@ -53,16 +55,16 @@ def test_question_attachments_and_private_files(setup):
     assert [argv[i + 1] for i, x in enumerate(argv) if x == '--image'] == list(map(str, images))
     assert argv[argv.index('-m') + 1] == 'gpt-6.1-sol'
     assert 'model_reasoning_effort=high' in argv and argv[-1] == '-'
-    prepared.verify_render(rendered(images))
+    prepared.verify_render(rendered(images, prepared.prompt))
     with pytest.raises(inputs.InputError):
-        prepared.verify_render(rendered(images[:-1]))
+        prepared.verify_render(rendered(images[:-1], prepared.prompt))
 
 
 def test_question_attaches_each_item_even_when_frames_repeat(setup):
     _, images, _, prepare = setup
     _, _, prepared = prepare('question', [{'frame': str(images[0])}, {'frame': str(images[0])}])
     assert [i.path for i in prepared.images] == [images[0], images[0]]
-    prepared.verify_render(rendered([images[0], images[0]]))
+    prepared.verify_render(rendered([images[0], images[0]], prepared.prompt))
 
 
 def test_audit_union_preserves_first_appearance_and_associations(setup):
@@ -72,24 +74,24 @@ def test_audit_union_preserves_first_appearance_and_associations(setup):
     _, _, prepared = prepare('audit', [{'frames': [frame(1), frame(0)]}, {'frames': [frame(0), frame(2)]}])
     assert [i.path for i in prepared.images] == [images[1], images[0], images[2]]
     assert len(prepared.images[1].associations) == 2
-    prepared.verify_render(rendered([images[1], images[0], images[2]]))
+    prepared.verify_render(rendered([images[1], images[0], images[2]], prepared.prompt))
 
 
 def test_reader_has_no_images_even_if_text_contains_paths(setup):
     _, images, _, prepare = setup
     _, _, prepared = prepare('reader', [{'text': str(images[0])}])
     assert not prepared.images
-    prepared.verify_render(rendered([]))
+    prepared.verify_render(rendered([], prepared.prompt))
     with pytest.raises(inputs.InputError):
-        prepared.verify_render(rendered(images[:1]))
+        prepared.verify_render(rendered(images[:1], prepared.prompt))
 
 
 def test_render_rejects_truncated_wrong_and_reordered_payloads(setup):
     _, images, _, prepare = setup
     _, _, prepared = prepare('question', [{'frame': str(p)} for p in images[:2]])
-    broken = rendered(images[:2])
-    broken['content'][0]['image_url'] = 'data:image/png;base64,iVBOR'
-    for value in (broken, rendered([images[2], images[1]]), rendered([images[1], images[0]])):
+    broken = rendered(images[:2], prepared.prompt)
+    broken[0]['content'][1]['image_url'] = 'data:image/png;base64,iVBOR'
+    for value in (broken, rendered([images[2], images[1]], prepared.prompt), rendered([images[1], images[0]], prepared.prompt)):
         with pytest.raises(inputs.InputError):
             prepared.verify_render(value)
 
@@ -120,7 +122,7 @@ def test_local_check_only_runs_version_and_debug_and_records_version(setup, monk
     calls = []
     def fake(argv, **kwargs):
         calls.append((argv, kwargs))
-        out = 'codex synthetic-version\n' if argv == ['codex', '--version'] else json.dumps(rendered(images[:1]))
+        out = 'codex synthetic-version\n' if argv == ['codex', '--version'] else json.dumps(rendered(images[:1], prepared.prompt))
         return subprocess.CompletedProcess(argv, 0, out, '')
     monkeypatch.setattr(inputs.subprocess, 'run', fake)
     receipt = prepared.check()
@@ -155,3 +157,38 @@ def test_invalid_image_source_is_rejected(setup, name, content):
     with pytest.raises(inputs.InputError):
         inputs.prepare(build, 'question', 'question-001', root / 'invalid-leaf', expected_key_sha256=digest)
     assert not (root / 'invalid-leaf').exists()
+
+
+def test_reader_initial_text_is_exact_one_public_batch_and_rejects_tamper(setup):
+    _, _, make, _ = setup
+    build, digest = make('reader', [{'text': 'START-' + 'x' * 12000 + '-END'}])
+    prepared = inputs.prepare(build, 'reader', 'reader-001', build.parent / 'reader-leaf', expected_key_sha256=digest)
+    raw = prepared.batch.read_text()
+    assert prepared.prompt.startswith('Reader [batch]')
+    assert prepared.prompt.endswith(raw) and len(raw) > 10000
+    assert 'reader-002' not in prepared.prompt and 'synthetic' not in prepared.prompt
+    assert set(prepared.leaf.iterdir()) == {prepared.batch}
+    prepared.verify_render(rendered([], prepared.prompt))
+    for text in (prepared.prompt[:-1], prepared.prompt.replace('START-', 'CHANGED-', 1), ''):
+        with pytest.raises(inputs.InputError, match='user text'):
+            prepared.verify_render(rendered([], text))
+
+
+def test_reader_rejects_multiple_items(setup):
+    root, _, make, _ = setup
+    build, digest = make('reader', [{'text': 'one'}, {'text': 'two'}])
+    with pytest.raises(inputs.InputError):
+        inputs.prepare(build, 'reader', 'reader-001', root / 'reader-leaf', expected_key_sha256=digest)
+
+
+def test_renderer_argument_limit_fails_closed(setup, monkeypatch):
+    import errno
+    _, _, _, prepare = setup
+    _, _, prepared = prepare('reader', [{'text': 'x' * 12000}])
+    def run(argv, **kwargs):
+        if argv == ['codex', '--version']:
+            return subprocess.CompletedProcess(argv, 0, 'codex test', '')
+        raise OSError(errno.E2BIG, 'argument list too long')
+    monkeypatch.setattr(inputs.subprocess, 'run', run)
+    with pytest.raises(inputs.InputError, match='local Codex input check failed'):
+        prepared.check()

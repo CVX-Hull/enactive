@@ -323,3 +323,21 @@ def test_controller_sigterm_closes_an_active_owned_group(handout):
             controller.communicate(timeout=5)
         controller.stdout.close()
         controller.stderr.close()
+
+
+def test_queued_tasks_do_not_render_after_stop(handout, monkeypatch):
+    out, _, _, _ = handout
+    class Failed(Child):
+        def communicate(self, prompt, timeout):
+            self.returncode = 1
+    calls = fakes(monkeypatch, Failed)
+    original = runner._unchanged
+    rendered = []
+    def track(*args, **kwargs):
+        if kwargs.get('render'):
+            rendered.append(args[2])
+        return original(*args, **kwargs)
+    monkeypatch.setattr(runner, '_unchanged', track)
+    result = runner.run(out, 3, workers=1)
+    assert result['stopped'] and len(calls) == 1
+    assert rendered == ['question-001']

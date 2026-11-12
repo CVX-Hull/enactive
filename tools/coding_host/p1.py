@@ -254,7 +254,7 @@ def _run_locked(out, max_attempts, workers, only):
         raise KeyboardInterrupt
 
     def task(name):
-        if name in completed:
+        if name in completed or stop.is_set():
             return
         prepared = checked[name]
         directory = out / 'attempts' / name

@@ -133,7 +133,9 @@ held-out question is written.
   through `tools.coding_host.p1_input`. Question and Audit sessions receive all exact batch-named
   original PNGs as initial images; Reader, Grader, Guess and Paraphrase sessions receive none.
   Local `codex debug prompt-input` must verify complete count/order/payload hashes before
-  inference. A path string or parser-valid answer is not image-delivery evidence. Keep the
+  inference, including exact initial user text. Reader receives the exact single public batch JSON
+  in that initial text as well as a copy in its leaf; an oversized renderer argument fails closed
+  rather than launching without verification. A path string or parser-valid answer is not image-delivery evidence. Keep the
   frozen brief and per-item frame order unchanged; image presentation proves neither
   attention nor interpretation. Old finite path-only launchers are historical evidence,
   not the supported path for another visual measurement run.
