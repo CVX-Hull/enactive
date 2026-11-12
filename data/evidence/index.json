@@ -495,6 +495,32 @@
       },
       "visibility": "private"
     },
+    "p1-image-input-stop-178": {
+      "availability": "present",
+      "bytes": 159086058,
+      "cited_by": [
+        "docs/acceptance/2026-11-11-p1-image-input-stop-178.md"
+      ],
+      "files": 11544,
+      "manifest_sha256": "bc47a8c2746c8b619c5bd653db3b702be24d61b2894c6a0075746a2223ecd1cd",
+      "note": "Complete private P1 evidence through image-input stop: all curator attempts, knowledge histories, deliveries, development/question/measurement attempts and refusals, one valid Audit redo candidate and local zero-inference repair proofs. Storage-checkout origins are not execution-source claims; actual per-stage freezes and mixed-source provenance remain in retained records. Original campaign images are referenced in prior sealed studies, not copied. Canonical question files remain unchanged in Git; no score or scientific unblinding. No provider credentials or dependencies copied. Proposed corrected measurement is pending owner approval.",
+      "sources": {
+        "curator-runs": ".runtime/curator-shadow/p1@6f257a46133a22be19aae55120a24de2176e0f33",
+        "deliveries": ".runtime/p1-delivered@6f257a46133a22be19aae55120a24de2176e0f33",
+        "development-1": ".runtime/worktrees/529-answer-key/.runtime/p1-dev@f077eca5a0915f416352a046c3476dd5d0823340",
+        "development-2": ".runtime/worktrees/529-answer-key/.runtime/p1-dev2@f077eca5a0915f416352a046c3476dd5d0823340",
+        "development-codex": ".runtime/worktrees/529-answer-key/.runtime/p1-dev3-codex@f077eca5a0915f416352a046c3476dd5d0823340",
+        "earlier-development-guess": ".runtime/worktrees/178-arms-freeze/.runtime/p1-judges@8a26204894c781eaf7d99d2d7fb3e6475967d4f7",
+        "engineering-checks": ".runtime/check-logs@6f257a46133a22be19aae55120a24de2176e0f33",
+        "input-repair-proof": ".runtime/p1-input-repair-proof@6f257a46133a22be19aae55120a24de2176e0f33",
+        "knowledge": ".runtime/knowledge/p1@6f257a46133a22be19aae55120a24de2176e0f33",
+        "measurement": ".runtime/worktrees/529-answer-key/.runtime/p1-held-codex@f077eca5a0915f416352a046c3476dd5d0823340",
+        "operator": ".runtime/p1-judges@6f257a46133a22be19aae55120a24de2176e0f33",
+        "preparation": ".runtime/p1@6f257a46133a22be19aae55120a24de2176e0f33",
+        "unused-held-handouts": ".runtime/worktrees/529-answer-key/.runtime/p1-held@f077eca5a0915f416352a046c3476dd5d0823340"
+      },
+      "visibility": "private"
+    },
     "seven-day-recap-video": {
       "availability": "present",
       "bytes": 2722183,

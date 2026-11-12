@@ -129,7 +129,30 @@ held-out question is written.
   behavior; a CLI update alone requires neither duplicate binaries nor repeated calibration.
   Stop and repair an incompatible CLI/API boundary instead of silently changing the model. A reader batch
   contains exactly one item; other roles retain their frozen batch sizes.
-- **Isolation.** Each directory contains only the batch and its prompt. The frozen brief
+- **Verified input.** The maintained `tools.coding_host.p1` executor prepares role-specific inputs
+  through `tools.coding_host.p1_input`. Question and Audit sessions receive all exact batch-named
+  original PNGs as initial images; Reader, Grader, Guess and Paraphrase sessions receive none.
+  Local `codex debug prompt-input` must verify complete count/order/payload hashes before
+  inference. A path string or parser-valid answer is not image-delivery evidence. Keep the
+  frozen brief and per-item frame order unchanged; image presentation proves neither
+  attention nor interpretation. Old finite path-only launchers are historical evidence,
+  not the supported path for another visual measurement run.
+  Original PNGs must remain under immutable custodian/evidence-store ownership for the
+  whole session. Pre-launch rendering and post-cleanup hashes detect persistent changes;
+  they cannot prevent temporary replacement during CLI loading or prove which pixels a
+  concurrently modified file supplied. No copied-image cache or filesystem-confinement
+  guarantee is added.
+  Prepare with `python -m tools.coding_host.p1 prepare KIND --batches BUILD --expected-key-sha256 SHA --out HANDOUT`;
+  run an authorized finite pool with `python -m tools.coding_host.p1 run HANDOUT --max-attempts N --workers 3`.
+  The first run fixes N, a handout lock prevents concurrent controllers, and a stopped handout
+  cannot renew. Preserve candidates for separate process review before parsing/acceptance.
+  The lead owns the global allocation and runs only one pool at a time; this executor's
+  cap is per handout, not a global account quota. CLI updates require local input rechecking,
+  not duplicate binaries or a silent model change.
+  Compatible updates continue when the locally reverified inputs are identical; each attempt
+  records the version observed before launch. A version change alone does not repeat a completed
+  candidate or require new calibration. Source, model/effort, key, prompt and image checks remain.
+- **Isolation.** Each initial directory contains only the public batch; its prompt is supplied as input. The frozen brief
   restricts reads to that batch and any images it names; the operator copies out the validated
   answer. Separate directories and fresh contexts isolate payloads, but do not establish an
   item-only readable filesystem. Keep that assurance limit distinct from observed tool use.
@@ -138,7 +161,7 @@ held-out question is written.
 - **Output handling.** Reuse the study parser for every role. Refused output is preserved and
   gets at most the protocol's one fresh redo; existing invalid output or an interrupted
   attempt is not silently skipped or renewed. Raw attempt streams are retained before launch,
-  and validated answers are published by same-filesystem atomic replacement.
+  and validated answer bytes are published atomically after owned cleanup.
 - **Measured cost.** Earlier mixed-host development used about 115,000 tokens per Codex reader,
   mostly cached input, and about 60,000 per Claude Code subagent. Those measurements do not
   forecast the newly selected all-Codex chain's other roles.

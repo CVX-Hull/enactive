@@ -1,0 +1,142 @@
+{
+  "schema": "p1-recovery-completion/1",
+  "verified_utc": "2026-11-11T23:37:20.806381+00:00",
+  "stage": "held-out-recovery-7",
+  "repeat": 2,
+  "source": "d6d5104f13e78d42ab84952d606c17a179a9be07",
+  "approval_comment": "https://github.com/CVX-Hull/enactive/issues/178#issuecomment-6809496657",
+  "complete": true,
+  "uncapped": true,
+  "retained_admissions": 8,
+  "fresh_admissions": 3,
+  "new_debit_usd": "5.08970130",
+  "all_http200": 127,
+  "missing_usage": 0,
+  "refusals": 0,
+  "breaches": 0,
+  "sessions": [
+    {
+      "session": "lh4b5",
+      "state": "sealed",
+      "cap_usd": "12",
+      "debit_usd": "1.54580885",
+      "requests": 39,
+      "accepted": 1,
+      "rejected": 0,
+      "sandbox": {
+        "peak_memory_bytes": 371703808,
+        "returncode": 0,
+        "seconds": 277.602,
+        "stopped": null,
+        "survivors": [],
+        "volume_space": {
+          "floor_bytes": 150353412096,
+          "initial_free_bytes": 152500895744,
+          "last_free_bytes": 152602099712,
+          "minimum_free_bytes": 152495685632,
+          "read_error_phase": null,
+          "read_error_type": null
+        }
+      },
+      "proxy_settled": true
+    },
+    {
+      "session": "lh4b6",
+      "state": "sealed",
+      "cap_usd": "12",
+      "debit_usd": "1.88784865",
+      "requests": 48,
+      "accepted": 1,
+      "rejected": 0,
+      "sandbox": {
+        "peak_memory_bytes": 374177792,
+        "returncode": 0,
+        "seconds": 314.478,
+        "stopped": null,
+        "survivors": [],
+        "volume_space": {
+          "floor_bytes": 150472830976,
+          "initial_free_bytes": 152620314624,
+          "last_free_bytes": 152537878528,
+          "minimum_free_bytes": 152508538880,
+          "read_error_phase": null,
+          "read_error_type": null
+        }
+      },
+      "proxy_settled": true
+    },
+    {
+      "session": "lh4b7",
+      "state": "sealed",
+      "cap_usd": "12",
+      "debit_usd": "1.65604380",
+      "requests": 40,
+      "accepted": 1,
+      "rejected": 0,
+      "sandbox": {
+        "peak_memory_bytes": 394821632,
+        "returncode": 0,
+        "seconds": 260.811,
+        "stopped": null,
+        "survivors": [],
+        "volume_space": {
+          "floor_bytes": 150378008576,
+          "initial_free_bytes": 152525492224,
+          "last_free_bytes": 152453373952,
+          "minimum_free_bytes": 152070201344,
+          "read_error_phase": null,
+          "read_error_type": null
+        }
+      },
+      "proxy_settled": true
+    }
+  ],
+  "selection_lineages_complete": [
+    "lh2",
+    "lh3",
+    "lh4"
+  ],
+  "selection_total_debit_usd": "26.17297415",
+  "retired_unused_new_allocation_usd": "30.91029870",
+  "all_R2_recorded_debits_usd": "50.80594130",
+  "old_separate_allowance_usd": "11.90480270",
+  "R2_conservative_total_usd": "62.71074400",
+  "R2_lh4_cost_usd": "19.43635590",
+  "historical_R2_lh4_cap_flag_retained": true,
+  "registered_go_permanently_false": true,
+  "original_retained_fingerprints_valid": true,
+  "owned_state": {
+    "lh2": {
+      "drafts": "absent",
+      "drafts-archive": "absent",
+      "drafts-staging": "absent",
+      "workspaces": "absent"
+    },
+    "lh3": {
+      "drafts": "absent",
+      "drafts-archive": "absent",
+      "drafts-staging": "absent",
+      "workspaces": "absent"
+    },
+    "lh4": {
+      "drafts": "empty",
+      "drafts-archive": "empty",
+      "drafts-staging": "empty",
+      "workspaces": "empty"
+    }
+  },
+  "owned_curator_processes_absent": true,
+  "receipt_hashes": {
+    "curator-shadow/p1/held-out-recovery-7/r2/summary.json": "71bc08d9d28b41e7038710c7fcb6e92e1bb84780b4d9650a08a3f068eee358a1",
+    "curator-shadow/p1/held-out-recovery-7/r2/schedule.json": "242fd5934f8482b87d747b8e553f52a04d244aa685c83b1b8b60bb6a4c09d4ba",
+    "curator-shadow/p1/held-out-recovery-7/r2/lh4/lh4b5/summary.json": "580a48c48dc1a7fc6f6d1a4f9a7b343102893612b97c3a512621eabde73c4a6d",
+    "curator-shadow/p1/held-out-recovery-7/r2/lh4/lh4b5/proxy-ledger.jsonl": "8397f7c9d649127d77d1243b5e18300113348282887e3672223232a827901f00",
+    "curator-shadow/p1/held-out-recovery-7/r2/lh4/lh4b5/proxy-close.json": "7ae58f37103fecca6ebb64c3cefab23a295ea53e9df52c76014217e852060f72",
+    "curator-shadow/p1/held-out-recovery-7/r2/lh4/lh4b6/summary.json": "552f03343ce7cd605a63c63f1a804a3b014ee4d361de259315d6e21dbe7916c2",
+    "curator-shadow/p1/held-out-recovery-7/r2/lh4/lh4b6/proxy-ledger.jsonl": "c02c54b943ebbc8945ed7993b2f796cef4ef93f90ae1e2fc424de5bc2af68bb0",
+    "curator-shadow/p1/held-out-recovery-7/r2/lh4/lh4b6/proxy-close.json": "855d4be80df85ca95afee371cd9c71f72a2d37eceabfe3a7d9df547820ad2467",
+    "curator-shadow/p1/held-out-recovery-7/r2/lh4/lh4b7/summary.json": "a720a9f8566c10c28ccce32fe698cf0ad8662f55ea62c938e059becf0f5c2617",
+    "curator-shadow/p1/held-out-recovery-7/r2/lh4/lh4b7/proxy-ledger.jsonl": "5a9c0081c8916923c216405e5336a6644cc195d7a326269827c5e9d73f033a43",
+    "curator-shadow/p1/held-out-recovery-7/r2/lh4/lh4b7/proxy-close.json": "5092b79096144910a0e44c1c67ed32ea07fcd6eb739a1061136645c44c7af43e"
+  }
+}

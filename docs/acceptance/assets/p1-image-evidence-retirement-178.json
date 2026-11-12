@@ -1,0 +1,29 @@
+{
+  "schema": "p1-evidence-retirement/1",
+  "retired_utc": "2026-11-12T01:37:09.426129+00:00",
+  "sealed_study": "p1-image-input-stop-178",
+  "manifest_sha256": "bc47a8c2746c8b619c5bd653db3b702be24d61b2894c6a0075746a2223ecd1cd",
+  "all_original_evidence_files_verified": 11544,
+  "sealed_bytes": 159086058,
+  "full_store_hash_verification": "passed before removal",
+  "removed_verified_duplicates": [
+    ".runtime/curator-shadow/p1",
+    ".runtime/knowledge/p1",
+    ".runtime/p1-delivered",
+    ".runtime/p1",
+    ".runtime/p1-judges",
+    ".runtime/worktrees/529-answer-key/.runtime/p1-dev",
+    ".runtime/worktrees/529-answer-key/.runtime/p1-dev2",
+    ".runtime/worktrees/529-answer-key/.runtime/p1-dev3-codex",
+    ".runtime/worktrees/529-answer-key/.runtime/p1-held",
+    ".runtime/worktrees/529-answer-key/.runtime/p1-held-codex",
+    ".runtime/worktrees/178-arms-freeze/.runtime/p1-judges",
+    ".runtime/p1-input-repair-proof",
+    ".runtime/check-logs/p1-visual-focused.log",
+    ".runtime/check-logs/p1-visual-final-fast.log"
+  ],
+  "excluded_non_evidence_cache_files_removed": 2,
+  "source_checkouts_and_dependencies_removed": false,
+  "raw_images_and_original_campaign_seals_removed": false,
+  "availability": "present/private in sealed store"
+}

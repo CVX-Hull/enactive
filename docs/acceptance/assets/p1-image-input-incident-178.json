@@ -1,0 +1,54 @@
+{
+  "schema": "p1-image-input-incident/1",
+  "recorded_utc": "2026-11-12T01:05:04.912843+00:00",
+  "status": "all further measurement dispatch stopped; no scoring",
+  "source": "d6d5104f13e78d42ab84952d606c17a179a9be07",
+  "held_question_sessions": 13,
+  "held_initial_items": 89,
+  "held_rewrite_items": 33,
+  "development_question_sessions": 3,
+  "development_initial_items": 20,
+  "development_rewrite_items": 9,
+  "image_exposure": "none: source-bound launcher has no image attachments and all16 traces have no pixel reads/image tools/image payloads",
+  "cli_at_question_stages": "0.167.0",
+  "bound_launcher_sha256": "d8aeaf90218ea4e51c9b0182c134fb1a4500506e8b4b656a7da1ce8b0e59e080",
+  "earlier_confirmation_exposure": "unknown; fifteen batches224pairs448namedPNG paths, no local execution traces located",
+  "conclusion": "Current question/calibration chains lack required screenshot grounding. Original frozen questions and all dependent held measurement remain retained but unqualified and unscored. This is not an assertion that each key is wrong.",
+  "repair_proof": "One permitted audit-001 redo with354 exactoriginalinitialPNG attachments completed; candidate remains unscored and not adopted as final audit. Other11redos unused.",
+  "curator_replay": "complete/retained unchanged; no new curator funding/calls",
+  "owner_gate": "Any replacement of frozen scientific questions requires a new explicit amendment; current completion approval keeps those inputs unchanged.",
+  "audit": {
+    "original_batches": 12,
+    "items": 120,
+    "all_original_outputs_process_refused": true,
+    "successful_original_pngs_by_batch": {
+      "audit-002": 161,
+      "audit-003": 11
+    },
+    "truncated_image_payloads": 72,
+    "first_redo": {
+      "batch": "audit-001",
+      "original_pngs_initially_presented": 354,
+      "candidate_rows": 10,
+      "accepted_for_final_scoring": false,
+      "reported_tokens": 1308614
+    },
+    "unused_audit_redos": 11
+  },
+  "costs": {
+    "new_debit_usd": "5.08970130",
+    "all_R2_recorded_debits_usd": "50.80594130",
+    "old_separate_allowance_usd": "11.90480270",
+    "R2_conservative_total_usd": "62.71074400",
+    "retired_unused_new_allocation_usd": "30.91029870"
+  },
+  "old_questions_sha256": "6fce29696ee05c645e7cf859bc865bd7353ebbcd76e0c26c4b0efbdca7397004",
+  "registered_cost_guard": "failed permanently; no benefit score computed",
+  "repair_local_proof": {
+    "question_original_images": 10,
+    "audit_original_images": 354,
+    "reader_images": 0,
+    "cli": "0.167.1",
+    "inference_calls": 0
+  }
+}

@@ -595,6 +595,104 @@ and the original registered no-go remain permanent.
   amendment, costs, uncertainty and failed registered guard. No result automatically
   adopts a live curator.
 
+## Proposed image-grounding correction
+
+**Proposed; not approved. No dispatch or question replacement is authorized by this section.**
+The [image-input incident](../acceptance/2026-11-11-p1-image-input-stop-178.md)
+invalidates the grounding evidence for the old development and held-out Question
+chains. Neither JSON parsing nor the old calibration qualifies them. The lead has
+not viewed scientific content, labels or efficacy results. The completed curator
+replay remains retained; the original cost guard remains failed permanently.
+
+The owner must decide before this amendment merges or any corrective model call
+runs: the prior completion approval expressly kept the frozen questions unchanged.
+The proposed correction is a new descriptive measurement purpose, not a retrospective
+registered pass. Approval would authorize the following single bounded chain.
+
+1. **Freeze the reviewed correction source.** Record the exact reviewed, CI-passed
+   PR head and merged tree, owner decision, selected coding-host version and
+   input/source digests before dispatch. Keep `gpt-6.1-sol/high`; compatible coding-host
+   updates may continue after local input rechecking, recording each observed version.
+   Use the maintained
+   input boundary and executor: visual roles receive their exact named original
+   PNGs as initial attachments; other roles receive none. Verify count, order and
+   bytes through the selected host's local input renderer before inference, as the
+   [host procedure](../operations/coding-agents.md#p1-study-readers) specifies. No manual image
+   transformation, OCR substitute, extra data, binary copy or global setup.
+2. **One fresh development qualification.** Retain the old 20-unit calibration but
+   mark it unqualified for screenshot grounding. On the same 20 development units
+   and retained A/B/Reference deliveries, regenerate questions with the unchanged
+   Question brief, run the same screen/one rewrite and paraphrase/check procedure,
+   then fresh readers, graders and every development A/B rejudge. No held content
+   enters these agents. The original noise, sensitivity and recall-floor rules and
+   one power recheck at measured values remain. Failure stops for the owner; no
+   prompt, threshold, seed or data tuning, or automatic second qualification.
+3. **Only after qualification passes, replace the held questions.** Use exactly the
+   same frozen 89 units and earlier frames, no resampling and no old questions,
+   keys, answers or arm text in a Question context. Regenerate the screen, its
+   one allowed rewrite and the positive-control sentences/checks. Before modifying
+   the canonical three question files, seal the dependent private attempts and
+   record the old files' Git commit and hashes; Git retains their original bytes.
+   Then use the existing canonical paths and `questions-freeze` on fresh files. Bind the new hashes before
+   any fresh held reader. Report the scientific-input replacement as a deviation.
+   This correction freezes replacement questions **after completed curator replay**,
+   superseding the original before-replay timing requirement only for this descriptive
+   purpose. Replay/arm content and benefit labels are not used to select replacements.
+   No old question-dependent reader, grader, rejudge or control data is reused.
+   The independent Audit exception below is explicit. Earlier probe-Confirmation
+   exposure remains unknown because its execution traces were unavailable; the
+   frozen probes and their membership are unchanged, not retrospectively certified.
+4. **Complete fresh blinded measurement and reporting.** Run the same 534 first
+   readers and 54 seeded rejudge readers, with their graders and Reference/PW/PP
+   controls. The audit is independent of the question file: retain only the valid,
+   image-presented Audit-001 candidate and use the eleven still-unused original
+   batches' one-redo allowances, with exact initial-image delivery and the original
+   pre-bound Audit key. No resampling, prior answers or feedback. The twelve original
+   process-refused Audit outputs stay excluded. Require complete process and parser
+   acceptance before the maintained `score` and separate `describe-capped` report.
+   If source/input binding prevents reuse of the existing Audit build, stop rather
+   than silently resampling or replacing its pre-dispatch key.
+5. **Integrate the new evidence.** Review the exact replacement question freeze and
+   aggregates, retain failures and costs, seal private evidence, and complete
+   protected PR/main validation before acceptance. Publication is limited to the
+   three question-freeze files, source, metadata and aggregate reports. Screenshots,
+   raw host logs and reader/curator content remain private. No live adoption follows.
+
+### Prospective limits
+
+No new OpenRouter/curator call or funding is proposed. The original replay, model,
+route, deliveries, costs, denominator and historical cap flag stay unchanged. The
+selected measurement host uses the existing account/credits; its dollar cost is
+not priced as zero.
+
+| Stage | Maximum new primary handouts |
+| --- | ---: |
+| Development: Question/screen/screen graders/paraphrase/paraphrase graders, four each; 100 readers; 40 rejudges; at most 20/10 reader-grader batches | 190 |
+| Held Question/screen/screen graders/paraphrase/paraphrase graders, eighteen each | 90 |
+| Held first readers/graders and rejudge readers/graders: 534/60/54/10 | 658 |
+| Eleven remaining original Audit redos; no renewal of Audit-001 or an already-used redo | 11 |
+| Total | 949 |
+
+The global ceiling is **1,000 new measurement-host sessions including every infrastructure
+attempt and output redo**, across all these stages; no silent renewal. Keep at most
+three sessions concurrently and 900 seconds per session, with bounded owned cleanup.
+The original per-batch limits remain: at most three infrastructure attempts and one
+adjudicated fresh redo of a refused output; a second refusal goes to the owner.
+The executor itself makes one attempt and never retries a failed handout automatically.
+Every reservation is retained and counts against the global ceiling. The lead counts
+all new-stage reservations before each finite pool and passes an immutable pool cap
+within the remaining allocation; stages do not overlap. A sticky stopped handout
+cannot be resumed by raising its cap or selecting other batches. Any separately
+adjudicated retry uses a fresh handout and retains its original batch identity.
+The upper bounds do not authorize unrelated or compatibility-only inferences.
+
+Another qualification failure, second output refusal, image/source integrity failure,
+unsafe cleanup or exhausted allocation stops the affected chain for an owner decision.
+Passing this corrected chain could support only the already-approved descriptive
+completion. It cannot erase the registered cost-guard failure, claim live gameplay
+benefit or adopt the curator. Declining leaves the replay complete and measurement
+unqualified, with no curator-benefit conclusion.
+
 ## The measurement chain
 
 **(p1-study/3)** This section replaces p1-study/2's scoring judge and arm-guessing check.
@@ -604,8 +702,9 @@ pinned:
 - a fresh, ephemeral session of the selected coding host, with its version, model and effort in
   [coding-agent hosts](../operations/coding-agents.md#p1-study-readers). The owner moved all
   measurement agents to this host on 10 November, after first moving only readers. Each
-  working directory holds its one batch and prompt; a reader's batch still holds exactly one
-  item. At most three sessions run at a time. The frozen briefs' command prohibition permits
+  context receives its own batch and prompt. The executor keeps only the public batch
+  in its initial working directory and passes the prompt as input; a reader's batch
+  still holds exactly one item. At most three sessions run at a time. The frozen briefs' command prohibition permits
   the host's mechanical file reads, named-image viewing and writing the named answer file;
 - the already selected reader configuration, as pinned on the host page. The original
   non-reader pin was the #490 judges' model; those development results remain retained,
