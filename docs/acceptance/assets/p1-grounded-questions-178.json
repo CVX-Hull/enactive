@@ -1,0 +1,405 @@
+{
+  "actual_cli_versions": [
+    "codex-cli 0.167.1"
+  ],
+  "approved_head": "dd65ffcc03b78cf75e973160417b86f3cf328835",
+  "approved_pr": 549,
+  "curator_costs_and_historical_failures_unchanged": true,
+  "date": "2026-11-11",
+  "development": {
+    "actual_contexts": 162,
+    "floor_ok": true,
+    "identical_variant_seeded_result_reused_and_independently_reproduced": true,
+    "independent_gate_review": "no actionable findings; conditions independently reproduced",
+    "noise": {
+      "A": {
+        "answered_either": {
+          "d": 0.2857142857142857,
+          "disagreements": 2,
+          "labels": 7
+        },
+        "d": 0.1,
+        "disagreements": 2,
+        "kappa": 0.7333333333333334,
+        "labels": 20
+      },
+      "B": {
+        "answered_either": {
+          "d": 0.14285714285714285,
+          "disagreements": 1,
+          "labels": 7
+        },
+        "d": 0.05,
+        "disagreements": 1,
+        "kappa": 0.857142857142857,
+        "labels": 20
+      },
+      "pooled": {
+        "answered_either": {
+          "d": 0.21428571428571427,
+          "disagreements": 3,
+          "labels": 14
+        },
+        "d": 0.075,
+        "disagreements": 3,
+        "kappa": 0.7931034482758621,
+        "label_error": 0.039022777135355624,
+        "labels": 40
+      }
+    },
+    "noise_ok": true,
+    "power": {
+      "at_interest": 0.915,
+      "no_effect": 0.025,
+      "passes": true
+    },
+    "power_clusters": 73,
+    "power_label_error": 0.039022777135355624,
+    "power_seed": 491,
+    "power_sensitivity": [
+      1.0,
+      1.0
+    ],
+    "power_simulations": 5000,
+    "power_units": 89,
+    "recall": {
+      "A": {
+        "recall": 0.25,
+        "stated": 5,
+        "units": 20
+      },
+      "B": {
+        "recall": 0.25,
+        "stated": 5,
+        "units": 20
+      }
+    },
+    "reference": {
+      "correct": 3,
+      "recall": 0.15,
+      "units": 20
+    },
+    "reference_wrong": {
+      "A": {
+        "stated": 3,
+        "units": 17
+      },
+      "B": {
+        "stated": 2,
+        "units": 17
+      }
+    },
+    "reservations": 163,
+    "sensitivity": {
+      "PP": {
+        "correct": 20,
+        "sensitivity": 1.0,
+        "units": 20
+      },
+      "PW": {
+        "correct": 20,
+        "sensitivity": 1.0,
+        "units": 20
+      }
+    },
+    "sensitivity_ok": true,
+    "units": 20
+  },
+  "effort": "high",
+  "held_questions": {
+    "clusters": 73,
+    "final_freeze": {
+      "frozen_sha256": "d7b7d003b0cbe9a8484486628a9c72f690f717e04fc38c09737586b0b99c4cd5",
+      "questions": 89,
+      "screen_sha256": "c95410a23ad6bf88d4411cf37548d2a62abfd7b4be25edc2f527fa4af2a0aa1f",
+      "sha256": "8fa6aec4d19efa9605005075bad8db8d2e72f4a8af04a46b0e03c85797556e66"
+    },
+    "first_screen": {
+      "flagged": 35,
+      "flagged_by": {
+        "empty_key": 0,
+        "entries": 0,
+        "no_text": 3,
+        "token": 34
+      },
+      "flagged_twice": null,
+      "questions": 89,
+      "questions_sha256": "aebca55234642219c607e0607d724a4a2df981ce695f6ed9c4ad992f62624cd4"
+    },
+    "four_flagged_twice_questions_retained": true,
+    "freeze_after_completed_replay_explicitly_authorized": true,
+    "frozen_files": {
+      "data/evaluation/p1/questions/frozen.json": "d7b7d003b0cbe9a8484486628a9c72f690f717e04fc38c09737586b0b99c4cd5",
+      "data/evaluation/p1/questions/questions.jsonl": "8fa6aec4d19efa9605005075bad8db8d2e72f4a8af04a46b0e03c85797556e66",
+      "data/evaluation/p1/questions/screen.json": "c95410a23ad6bf88d4411cf37548d2a62abfd7b4be25edc2f527fa4af2a0aa1f"
+    },
+    "held_reader_graders_dispatched": 0,
+    "held_readers_dispatched": 0,
+    "held_rejudges_dispatched": 0,
+    "initial_original_pngs": 89,
+    "no_old_question_answer_arm_or_benefit_data_in_replacement_writers": true,
+    "old_canonical_files": {
+      "data/evaluation/p1/questions/frozen.json": {
+        "git_blob": "ea7d9558734d823e4c4715a5facc427610a25785",
+        "sha256": "1c4d7650e07c27f5a83eefa69a5774ca051769cc01dfbad343c3f803260e540d"
+      },
+      "data/evaluation/p1/questions/questions.jsonl": {
+        "git_blob": "14e73b03462375b7b64a917bc670f8d13b28c8d2",
+        "sha256": "6fce29696ee05c645e7cf859bc865bd7353ebbcd76e0c26c4b0efbdca7397004"
+      },
+      "data/evaluation/p1/questions/screen.json": {
+        "git_blob": "e8f69345d278f799726383afc4d2a650ac518ee7",
+        "sha256": "ed437090e93264fc4dc432b4784e8a8b763d6a0b01e705e2feaf095b61e88ca6"
+      }
+    },
+    "old_canonical_revision": "96525392f5389d8b15651275c1de6de303ead7f6",
+    "paraphrase_validation": {
+      "failed": 0,
+      "questions_sha256": "8fa6aec4d19efa9605005075bad8db8d2e72f4a8af04a46b0e03c85797556e66",
+      "rewritten": 0,
+      "stages": 1,
+      "units": 89
+    },
+    "remaining_audit_redos_dispatched": 0,
+    "second_screen": {
+      "flagged": 4,
+      "flagged_by": {
+        "empty_key": 0,
+        "entries": 0,
+        "no_text": 0,
+        "token": 4
+      },
+      "flagged_twice": 4,
+      "questions": 35,
+      "questions_sha256": "8fa6aec4d19efa9605005075bad8db8d2e72f4a8af04a46b0e03c85797556e66"
+    },
+    "single_rewrite_original_pngs": 35,
+    "units": 89
+  },
+  "limitations": {
+    "bookkeeping": "Pool004 metadata was retrospective after an incorrect expected batch count; executor froze2attempts before1launch; both reservations counted and unusedslotretired.",
+    "observer": "A command-skeleton review exposed anonymous boolean literals from an older retained Audit write script after strings/IDs were masked. No statements, frames, keys, arm mapping or efficacy result were read. Strict no-held-literal observer-blindness is not claimed; independent review found no additional listed stop trigger. Downstream non-influence is operator evidence, not independently proven.",
+    "presentation": "Local image rendering verifies count/order/original bytes; text checks compare retained tool output and source files. This does not establish provider receipt, attention, interpretation, OS confinement or absence of temporary mutation/escaped groups.",
+    "probe_confirmation": "Earlier probe-Confirmation image exposure remains unknown because execution traces were unavailable; probes/membership unchanged.",
+    "reader_preview": "Two of100original development reader object previews omitted their final100/176characters. Refused before grading; exactly one fresh redo each passed;98originals plus2fresh outputs accepted. All40developmentrejudges had full recorded text presentation.",
+    "semantic_key_accuracy": "Image/input provisioning and parsing do not independently certify every question/key interpretation.",
+    "verification_failures": "Private one-off verifier diagnostics, the original refused outputs and the raw PGID-only closeout failure are retained. Later start/executable attribution proved an unrelated OS PID reuse; no signals sent."
+  },
+  "live_adoption": false,
+  "merged_main_structural_ci": 43142937814,
+  "model": "gpt-6.1-sol",
+  "original_cost_guard_failed": true,
+  "owner_decision": "https://github.com/CVX-Hull/enactive/issues/178#issuecomment-6812762346",
+  "permanent_registered_no_go": true,
+  "pr_full_ci": 43138973609,
+  "private_evidence": {
+    "location": ".runtime/p1-grounded-correction-178",
+    "old_unqualified_manifest_sha256": "bc47a8c2746c8b619c5bd653db3b702be24d61b2894c6a0075746a2223ecd1cd",
+    "old_unqualified_seal": ".runtime/evidence/p1-image-input-stop-178",
+    "receipts_sha256": {
+      ".runtime/p1-grounded-correction-178/development-inputs.json": "5c38ee740b4c5ecd68f932ffa178b109c9b200ebe5df9193080fdaed40160ba8",
+      ".runtime/p1-grounded-correction-178/development/process-closeout-attributed.json": "0cc9d97e9d75ef3c6867da6c5da531027bc91a2b2136cacb31227dfc19e30e0e",
+      ".runtime/p1-grounded-correction-178/development/qualification-accepted.json": "2d465c0d663acb3d47ef58048f2bd6649064a7eddb6586a331f85d388829c169",
+      ".runtime/p1-grounded-correction-178/development/qualification-data-gates.json": "9d8a04685e21003bd2513cdb5247313e6dfe611e0646fba68787958f8c3cb029",
+      ".runtime/p1-grounded-correction-178/held/ng1-process-review.json": "b5309fe51bf7caf185dc0fc566e5cd28a9bbae1ff3b8fc95a05e3693b5d65820",
+      ".runtime/p1-grounded-correction-178/held/old-question-retention.json": "3009f9a02ab021163b204974172d4a78bbe9f4b1cd85a27e030dda681b02dc24",
+      ".runtime/p1-grounded-correction-178/held/p1-process-review.json": "80f9d5fb656c56bbdfb3004805fbff51e777da162544d4609bce0ab5df66a022",
+      ".runtime/p1-grounded-correction-178/held/pg1-process-review.json": "a7182df0dac4a1d5d71606e51530d57fefc6f5b3379ad0ecd19065b6618e870f",
+      ".runtime/p1-grounded-correction-178/held/q1-process-review.json": "9a2b57465684d7ac1675b33975d8f4920006b188a196218ad2d01acc24db23a5",
+      ".runtime/p1-grounded-correction-178/held/q2-process-review.json": "4f2ab742fd3100b074635f4ab0f43d781e7b0a1079898379f9070e239c2129d8",
+      ".runtime/p1-grounded-correction-178/held/question-preflight.json": "02dff704933b2915a949bd3691403f87b28ee4720a60cff81df937b8bbfba305",
+      ".runtime/p1-grounded-correction-178/held/questions-freeze.json": "a16726b7156fd1d2f99c467cdd66fe54fe763f2d1ec3197b352210de52eda632",
+      ".runtime/p1-grounded-correction-178/held/s1-process-review.json": "6c26e495fe6b62001fbeb650669f767e67cc6ccd7f5695c441935557ffe10471",
+      ".runtime/p1-grounded-correction-178/held/s2-process-review.json": "4ecd92f73ef932d21f9da66ddff35cddec9e720e9e96d67db2ba84a26dd67ee0",
+      ".runtime/p1-grounded-correction-178/held/sent1/counts.json": "caf6238f3210e92a6d79dc210d1f2a1fd6eff12b138730303f70b263489f5482",
+      ".runtime/p1-grounded-correction-178/observer-limitation-adjudication.json": "fe944d5757512cb9ebd7983acb302dc43d532918a5fd6eb6d84f8fd98d2aae72",
+      ".runtime/p1-grounded-correction-178/owner-decision.json": "6e36709cbeb9432d394db96779c7fb442f8a1b901ea3c84294b8256b4d0b9ed0",
+      ".runtime/p1-grounded-correction-178/pool004-adjudication.json": "ea4538e6ace7f7361d8da1bcb79d796dbd8a4213ca3ed63143c356c82a260750",
+      ".runtime/p1-grounded-correction-178/stage.json": "32afb55065fb804a91f084a42afba210f1657b73a8178a6ca262858a65028037"
+    },
+    "retention": "Project-local private evidence; completed producer artifacts frozen before new reader dispatch. Retain raw failures and outputs; seal and verify the final evidence family before removing its directory. No screenshots, raw host logs, reader/curator content or credentials are published."
+  },
+  "purpose": "Owner-amended descriptive measurement after complete curator replay; no retrospective registered pass or live adoption",
+  "qualification_record": "https://github.com/CVX-Hull/enactive/issues/178#issuecomment-6813803256",
+  "resources": {
+    "actual_contexts": 207,
+    "coding_host_dollars": "existing account/credits; not priced as zero; no invoice reconciled",
+    "concurrency_limit": 3,
+    "distinct_original_png_paths": 99,
+    "global_ceiling": 1000,
+    "max_launch_to_complete_seconds": 57.029852,
+    "no_new_openrouter_or_curator_calls": true,
+    "observed_peak_contexts": 3,
+    "original_png_attachments_in_new_visual_sessions": 151,
+    "phase_overlap": false,
+    "phases": [
+      {
+        "actual": 2,
+        "allocation_sha256": "c7c9182b1043a1d098d85f38e3a5056f6a1f5f6f65dcdfaa9e0eeebc476b160b",
+        "handout_manifest_sha256": "01b594b562c484a2073011eef0f9026c9b6e83c00b96ac3ae60f067763d3a6c6",
+        "phase": "development-question-1",
+        "reserved": 2,
+        "workers": 2
+      },
+      {
+        "actual": 2,
+        "allocation_sha256": "5565f67383f1ae8ad70cbff4e2cd79adb754f5da9f25c9ac48799fbb3e99e4fe",
+        "handout_manifest_sha256": "7a7fc6c14b8e062c3ff5c6c0d8b46136a3331a80efbd245b8fec8a4f0d091f5a",
+        "phase": "development-screen-1",
+        "reserved": 2,
+        "workers": 2
+      },
+      {
+        "actual": 1,
+        "allocation_sha256": "1a40e702daf8461e66fb1293dc71df77bbcfcc5929ba18d33b0bc4ef409b6aad",
+        "handout_manifest_sha256": "4d3f0141fc7018d0494f1f571f40eb0f7eb03bc2cdf460bbe1175475f65e79dc",
+        "phase": "development-screen-grader-1",
+        "reserved": 1,
+        "workers": 1
+      },
+      {
+        "actual": 1,
+        "allocation_sha256": "811323fab63ca52ed796acf3c85dcfe309fe78fe35cdd13757c3cd36fc1b2a1b",
+        "handout_manifest_sha256": "196fab225a92f972b812c8c742fa8a0fe3f60d9633601b471727101e9670752f",
+        "phase": "development-question-rewrite",
+        "reserved": 2,
+        "workers": 2
+      },
+      {
+        "actual": 1,
+        "allocation_sha256": "de87557ff426d314535e4c3688fe309244eaa460fb0858879f6407743e77850c",
+        "handout_manifest_sha256": "0da4eeeb2b383230ebeaa2242d0bead558001f405377e3f3bda25246e1ef24dd",
+        "phase": "development-screen-2",
+        "reserved": 1,
+        "workers": 1
+      },
+      {
+        "actual": 2,
+        "allocation_sha256": "68f39325af7da4687360cf24be120bbdaa9969a3cd7cb5880c1afd949971bae3",
+        "handout_manifest_sha256": "52428858e3a9b803fb33e84bcaaa34dc373ab258a07c3607c977de743a9bab99",
+        "phase": "development-paraphrase-1",
+        "reserved": 2,
+        "workers": 2
+      },
+      {
+        "actual": 2,
+        "allocation_sha256": "2df82ad5811295d1860f566bc7ee3e241c1ae4de51047da0b42cd4ba09b65bdd",
+        "handout_manifest_sha256": "8ea180f557812f9befd4eff78608e08b86ab22f57ef884e3ab0b4d5d6c0c323d",
+        "phase": "development-paraphrase-grader-1",
+        "reserved": 2,
+        "workers": 2
+      },
+      {
+        "actual": 100,
+        "allocation_sha256": "3dab841932371bdde4ee93f763987dd84902a5ad495006e865a3ed7039b3c6d3",
+        "handout_manifest_sha256": "2fcdc8f749def04e2a7c162b8aab5b542a69bbe58af5a1f7d307189b08101a0a",
+        "phase": "development-first-readers",
+        "reserved": 100,
+        "workers": 3
+      },
+      {
+        "actual": 2,
+        "allocation_sha256": "c4b4f4b69d93971273ad3874e52fd9858516e1bf139af11fb5de8e6db3c1e434",
+        "handout_manifest_sha256": "f60f5fc82f4f7f09c82223b8decf5647e721f399f2ee7c1557702634d6807617",
+        "phase": "development-first-readers-process-redo1",
+        "reserved": 2,
+        "workers": 2
+      },
+      {
+        "actual": 7,
+        "allocation_sha256": "4c8b58a54c12e4d588c49ac680aa18dbd61083d99124d9b724309bba45098199",
+        "handout_manifest_sha256": "11c41fd7887222b380137bac1f42eccc2a66332c2bf9ba6d7609f433f0242223",
+        "phase": "development-first-graders",
+        "reserved": 7,
+        "workers": 3
+      },
+      {
+        "actual": 40,
+        "allocation_sha256": "779c83ad4cc5303248b0d41054cba883142f3d6c1d8e9d7b0cb369d37a4406f6",
+        "handout_manifest_sha256": "6a6fd6f7a81d70562e0fe3bcf28e0a32f87472b0a7e5929c79a2573772b81571",
+        "phase": "development-rejudge-readers",
+        "reserved": 40,
+        "workers": 3
+      },
+      {
+        "actual": 2,
+        "allocation_sha256": "f4a1edcd97ad712f6ff571a85c551d11f49d022f3799740f7f0a5ea91b596aa3",
+        "handout_manifest_sha256": "c2572074c05fef1dbf7bba23d9a39da1bb4a98f0bf07d5356eb6461f6489e98a",
+        "phase": "development-rejudge-graders",
+        "reserved": 2,
+        "workers": 2
+      },
+      {
+        "actual": 9,
+        "allocation_sha256": "31e3befc8c495befc89bd924071ba32a90ab9f1da07bb138d02baf726a667162",
+        "handout_manifest_sha256": "9efe74ab9fbdafdd6decf44d50e5552f324281264fe81ac5ee730ef5fa7c2a79",
+        "phase": "held-question-1",
+        "reserved": 9,
+        "workers": 3
+      },
+      {
+        "actual": 9,
+        "allocation_sha256": "f76fa0ac513683a5e6f169a0d0767140ad6bc53fcace60133d99245830cac874",
+        "handout_manifest_sha256": "c354bd31903dc78b586de9387d26a377f13ec6ea831761b35f7ec4026d3dc520",
+        "phase": "held-screen-1",
+        "reserved": 9,
+        "workers": 3
+      },
+      {
+        "actual": 1,
+        "allocation_sha256": "9a92bfcd0819e1a282af790740eda3643b41876135c529ed537f925cdc38d082",
+        "handout_manifest_sha256": "6a5474a4d9abb49625daffd961011bb27921e208b69fbd76578993986c8cee39",
+        "phase": "held-screen-grader-1",
+        "reserved": 1,
+        "workers": 1
+      },
+      {
+        "actual": 4,
+        "allocation_sha256": "de256868aa9382c23c37f1a47255ec77566891971d900a8fa4fbd033602c1360",
+        "handout_manifest_sha256": "e62651623812e4298aa2bfe24d948da1c48436a456f6141fcd1cc6d1df184311",
+        "phase": "held-question-single-rewrite",
+        "reserved": 4,
+        "workers": 3
+      },
+      {
+        "actual": 4,
+        "allocation_sha256": "1afdd004fbeb8aaf4c43b04882f16b2b521d752d11a3c7ac36574b016122c570",
+        "handout_manifest_sha256": "be4b6f5860e707ce41445e076c5b4f383b50026572c5fe090f61495ad4fd0c03",
+        "phase": "held-screen-2",
+        "reserved": 4,
+        "workers": 3
+      },
+      {
+        "actual": 9,
+        "allocation_sha256": "f706820629b5882f1c0e73d299449ed3a5eb5b0f4f58a3d8936ef2846e42a073",
+        "handout_manifest_sha256": "6fde983d2184b1f5b0c288b94db8344f8d407e520fb77da99fba67781c3edeaf",
+        "phase": "held-paraphrase-1",
+        "reserved": 9,
+        "workers": 3
+      },
+      {
+        "actual": 9,
+        "allocation_sha256": "b79e70d649526d4a639c0d1e718b98d5283c2e6c41286b412605714e16e29e7e",
+        "handout_manifest_sha256": "c61fdb48660fe07c31155a899d8c4044385ccfe5b995cad8fff42fab2118865b",
+        "phase": "held-paraphrase-grader-1",
+        "reserved": 9,
+        "workers": 3
+      }
+    ],
+    "remaining_reservation_capacity": 792,
+    "reported_input_plus_output": 20068768,
+    "reported_tokens": {
+      "cached_input_tokens": 17122176,
+      "input_tokens": 19980967,
+      "output_tokens": 87801
+    },
+    "reserved_contexts": 208,
+    "retired_unused_reserved_slot": 1,
+    "seconds_per_session": 900,
+    "unique_ephemeral_threads": 207
+  },
+  "reviewed_and_merged_tree": "e7c09486e6188ba77df9e4326434c7c33e2e30b8",
+  "runtime_code_and_frozen_briefs_unchanged": true,
+  "schema": "p1-grounded-question-freeze/1",
+  "scientific_runtime_source": "96525392f5389d8b15651275c1de6de303ead7f6"
+}

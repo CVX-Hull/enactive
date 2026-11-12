@@ -17,7 +17,7 @@ this input-delivery failure.
 
 The [registered cost guard already failed](2026-11-11-p1-cost-guard-178.md) and stays
 failed. Additional funding or repaired measurement cannot produce a registered go.
-The [proposed correction](../design/p1-study-3.md#proposed-image-grounding-correction)
+The [correction proposal](../design/p1-study-3.md#approved-image-grounding-correction)
 requires a new owner decision because the approved completion kept scientific
 questions unchanged. No further model dispatch or live adoption is authorized by
 this record. [#178](https://github.com/CVX-Hull/enactive/issues/178) owns that decision.

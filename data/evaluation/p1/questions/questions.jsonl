@@ -1,89 +1,89 @@
-{"key": "1 long stick", "probe": "lh1-p0004", "question": "What component is the player missing to craft a quarterstaff?", "schema": "p1-question/1"}
-{"key": "Carving", "probe": "lh1-p0009", "question": "Which proficiency were you missing when preparing to craft a digging stick?", "schema": "p1-question/1"}
-{"key": "60 tiles to the east", "probe": "lh1-p0010", "question": "How far away and in which direction were two zombies spotted from the player?", "schema": "p1-question/1"}
-{"key": "Racheal Burris", "probe": "lh1-p0011", "question": "Whose name was recorded in your note at evac shelter A-23 south from Eustis?", "schema": "p1-question/1"}
-{"key": "Eustis", "probe": "lh1-p0012", "question": "Which town lies northeast of the player's current field?", "schema": "p1-question/1"}
-{"key": "1 plank; 1 short sledge hammer", "probe": "lh1-p0015", "question": "What components were you missing for your planned sledge hammer?", "schema": "p1-question/1"}
-{"key": "tailoring (0/1)", "probe": "lh1-p0019", "question": "How did your tailoring level compare with the level required for making long cordage pieces?", "schema": "p1-question/1"}
-{"key": "clean water (hot) (2)", "probe": "lh1-p0021", "question": "What has the player just finished making at evac shelter A-23, and how much?", "schema": "p1-question/1"}
-{"key": "Your Followers", "probe": "lh1-p0025", "question": "Who owns the cotton sheet the player picked up after crafting a blindfold?", "schema": "p1-question/1"}
-{"key": "Diamond Bluff (1); Stirling City (1)", "probe": "lh1-p0026", "question": "Which two worlds are available for resuming the player's adventures?", "schema": "p1-question/1"}
-{"key": "Racheal Burris", "probe": "lh1-p0027", "question": "Whose location had you marked in the countryside south of Eustis?", "schema": "p1-question/1"}
+{"key": "1 long stick", "probe": "lh1-p0004", "question": "Which component was the player missing to craft a quarterstaff?", "schema": "p1-question/1"}
+{"key": "1 hour and 2 minutes", "probe": "lh1-p0009", "question": "How long would the player need to craft a digging stick with their current skills and conditions?", "schema": "p1-question/1"}
+{"key": "quarterstaff; Brawling", "probe": "lh1-p0010", "question": "What weapon was the player wielding, and what fighting style were they using in the field on spring day 61?", "schema": "p1-question/1"}
+{"key": "Racheal Burris", "probe": "lh1-p0011", "question": "Who was named in the map note at evac shelter A-23 south of Eustis?", "schema": "p1-question/1"}
+{"key": "Forest to the west; river to the east.", "probe": "lh1-p0012", "question": "Which sides of the explored fields south of Eustis were bordered by forest and by the river?", "schema": "p1-question/1"}
+{"key": "1 hour and 59 minutes", "probe": "lh1-p0015", "question": "How long would crafting a sledge hammer take the player with their current skills?", "schema": "p1-question/1"}
+{"key": "tailoring (0/1)", "probe": "lh1-p0019", "question": "What was the player’s tailoring level compared with the level required for long cordage pieces?", "schema": "p1-question/1"}
+{"key": "clean water (hot) (2)", "probe": "lh1-p0021", "question": "What liquid had the player just finished crafting at evac shelter A-23, and in what quantity?", "schema": "p1-question/1"}
+{"key": "1 ++ sheet; 1 long string", "probe": "lh1-p0025", "question": "What items did the player pick up after crafting a blindfold?", "schema": "p1-question/1"}
+{"key": "Diamond Bluff (1); Stirling City (1)", "probe": "lh1-p0026", "question": "Which two worlds each had one saved character?", "schema": "p1-question/1"}
+{"key": "Racheal Burris", "probe": "lh1-p0027", "question": "Who was recorded at evac shelter A-23 south of Eustis?", "schema": "p1-question/1"}
 {"key": "2", "probe": "lh2-p0007", "question": "What level had your theoretical understanding of fabrication reached at evac shelter B-05?", "schema": "p1-question/1"}
-{"key": "119 tiles; 1.77mi", "probe": "lh2-p0013", "question": "How far was your current objective from evac shelter B-05 north of Killington?", "schema": "p1-question/1"}
-{"key": "2 clean water", "probe": "lh2-p0017", "question": "What did your plastic bottle contain after you drained the standing tank on the evacuation shelter roof?", "schema": "p1-question/1"}
-{"key": "wooden spear", "probe": "lh2-p0020", "question": "What weapon were you wielding while exploring the forest on Spring, day 61?", "schema": "p1-question/1"}
-{"key": "1 lump of clay; 5 sand", "probe": "lh2-p0022", "question": "Which components were you missing for making a fire brick?", "schema": "p1-question/1"}
-{"key": "the standard", "probe": "lh2-p0024", "question": "What did Odell Hampton ask whether you had rescued?", "schema": "p1-question/1"}
-{"key": "134 tiles; 2.00mi", "probe": "lh2-p0026", "question": "How far was the pond northwest of Killington from your current objective?", "schema": "p1-question/1"}
-{"key": "clay pot oven; makeshift copper pot; makeshift pot", "probe": "lh3-p0002", "question": "Which cooking equipment did you know how to craft alongside your potato dishes?", "schema": "p1-question/1"}
-{"key": "2 ruby-throated hummingbirds", "probe": "lh3-p0004", "question": "Which birds were nearby when you finished crafting your long pointy stick in the forest?", "schema": "p1-question/1"}
-{"key": "Meddybemps", "probe": "lh3-p0005", "question": "The field you have located is west of which town?", "schema": "p1-question/1"}
-{"key": "374 tiles; 5.58mi", "probe": "lh3-p0007", "question": "How far are you from your current objective?", "schema": "p1-question/1"}
-{"key": "small metal sheets (6)", "probe": "lh3-p0008", "question": "What materials did you pick up in the evacuation shelter, and how many?", "schema": "p1-question/1"}
-{"key": "Bye bye!", "probe": "lh3-p0009", "question": "What farewell did Cleora Hong give you?", "schema": "p1-question/1"}
-{"key": "Cleora Hong", "probe": "lh3-p0012", "question": "Who was nearby while you were inside evac shelter A-23?", "schema": "p1-question/1"}
-{"key": "5", "probe": "lh3-p0013", "question": "How many plastic bottles did you have toward the eight needed to make a makeshift funnel?", "schema": "p1-question/1"}
-{"key": "21.19%", "probe": "lh3-p0015", "question": "What is your minor failure chance when crafting clean water?", "schema": "p1-question/1"}
-{"key": "Harland 'Have-Not' Beebe", "probe": "lh4-p0002", "question": "Who is recorded in your note at evacuation shelter A-23 west of Freedom?", "schema": "p1-question/1"}
-{"key": "1", "probe": "lh4-p0003", "question": "What was your fabrication skill level when you were considering crafting spears?", "schema": "p1-question/1"}
-{"key": "Freedom", "probe": "lh4-p0004", "question": "What is the name of the town whose western outskirts border fields and patches of forest?", "schema": "p1-question/1"}
-{"key": "Harland 'Have-Not' Beebe", "probe": "lh4-p0009", "question": "Whose name have you noted at evac shelter A-23 west of Freedom?", "schema": "p1-question/1"}
-{"key": "flashlight (off); pocket knife; smartphone (UPS) (unbrowsed)", "probe": "lh4-p0010", "question": "Which tools are you carrying?", "schema": "p1-question/1"}
-{"key": "15 minutes", "probe": "lh4-p0015", "question": "How long would it currently take you to make a baked potato?", "schema": "p1-question/1"}
-{"key": "Isherwood Stables", "probe": "lh4-p0019", "question": "What named settlement lies south of the moonshine still in the forest northeast of Freedom?", "schema": "p1-question/1"}
-{"key": "18 seconds", "probe": "lh4-p0029", "question": "How long would it currently take you to prepare fried rice?", "schema": "p1-question/1"}
-{"key": "long pointy stick", "probe": "lh4-p0034", "question": "What weapon are you wielding while exploring the forest on the morning of Spring, day 61?", "schema": "p1-question/1"}
-{"key": "forest", "probe": "lh4-p0036", "question": "What terrain surrounds Isherwood Stables on its northern and eastern sides?", "schema": "p1-question/1"}
-{"key": "Carving", "probe": "lh4-p0038", "question": "Which proficiency are you missing for crafting a homemade polehammer?", "schema": "p1-question/1"}
-{"key": "clean water", "probe": "lh4-p0043", "question": "What drink do you know two recipes for making?", "schema": "p1-question/1"}
-{"key": "5 minutes and 11 seconds", "probe": "lh4-p0048", "question": "How long would it currently take you to make one portion of clean water?", "schema": "p1-question/1"}
-{"key": "5 minutes and 36 seconds", "probe": "lh4-p0049", "question": "How long would it take you to craft a basic fishing rod at your current crafting pace?", "schema": "p1-question/1"}
-{"key": "Garment Closures; Principles of Leatherworking", "probe": "lh4-p0050", "question": "Which proficiencies are you missing for crafting a bookstrap?", "schema": "p1-question/1"}
-{"key": "Freedom", "probe": "lh4-p0051", "question": "Which settlement lies southwest of the moonshine still you located?", "schema": "p1-question/1"}
-{"key": "3", "probe": "lh4-p0053", "question": "How many units of water do you have available as ingredients for making clean water?", "schema": "p1-question/1"}
-{"key": "19.57%", "probe": "lh4-p0054", "question": "What is your current catastrophic failure chance when crafting long cordage pieces?", "schema": "p1-question/1"}
-{"key": "southwest", "probe": "lh4-p0055", "question": "In which direction from Isherwood Stables is Freedom?", "schema": "p1-question/1"}
-{"key": "5 minutes", "probe": "lh4-p0056", "question": "How long would making one portion of clean water take you at your current crafting pace?", "schema": "p1-question/1"}
-{"key": "moonshine still", "probe": "lh4-p0063", "question": "What kind of location have you just reached at 12:12:34 PM on Spring, day 61?", "schema": "p1-question/1"}
-{"key": "Sew Awesome Monthly", "probe": "lh4-p0065", "question": "What magazine can you pick up from the counter one step east of you?", "schema": "p1-question/1"}
-{"key": "moonshine still", "probe": "lh4-p0066", "question": "What production site have you located northeast of Freedom?", "schema": "p1-question/1"}
-{"key": "nicotine pouch can with 11 peppermint flavored nicotine pouches; radio (off) (16/16)", "probe": "lh4-p0067", "question": "What items could you collect from the counter one pace east of you?", "schema": "p1-question/1"}
-{"key": "northeast", "probe": "lh4-p0068", "question": "In which direction from Freedom was the radio tower you located?", "schema": "p1-question/1"}
-{"key": "paper wrapper[2]; foil cup; cigarette butt", "probe": "lh4-p0075", "question": "What discarded items were two paces southwest of you?", "schema": "p1-question/1"}
-{"key": "Freedom", "probe": "lh4-p0077", "question": "Which town lies southwest of Isherwood Stables?", "schema": "p1-question/1"}
-{"key": "16 minutes and 30 seconds", "probe": "lh4-p0078", "question": "How long would it take you to prepare boiled fiddleheads with your current skills?", "schema": "p1-question/1"}
-{"key": "northeast", "probe": "lh4-p0079", "question": "In which direction from Freedom was the mine entrance you located?", "schema": "p1-question/1"}
-{"key": "16 minutes and 30 seconds", "probe": "lh4-p0081", "question": "How long would it take you to prepare one batch of boiled fiddleheads with your current skills?", "schema": "p1-question/1"}
-{"key": "Freedom", "probe": "lh4-p0082", "question": "Which town lay southwest of the radio tower you located?", "schema": "p1-question/1"}
-{"key": "long string; nail (4); sheets (2); stick", "probe": "lh4-p0086", "question": "What items lay on the floor after you tore the curtains and curtain rod off the windowframe?", "schema": "p1-question/1"}
-{"key": "moonshine still", "probe": "lh4-p0089", "question": "What kind of production site lay in the forest north of Sherwood Stables?", "schema": "p1-question/1"}
-{"key": "0", "probe": "lh4-p0090", "question": "What was your tailoring skill level when you considered making short cordage pieces?", "schema": "p1-question/1"}
-{"key": "8 minutes and 48 seconds", "probe": "lh4-p0092", "question": "How long would it take you to prepare dandelion and burdock tea with your current skills?", "schema": "p1-question/1"}
-{"key": "1", "probe": "lh4-p0093", "question": "What was your survival skill level when you planned to make a basic fishing rod?", "schema": "p1-question/1"}
-{"key": "19.57%", "probe": "lh4-p0094", "question": "What was your catastrophic failure chance for making long strings?", "schema": "p1-question/1"}
-{"key": "Freedom", "probe": "lh4-p0096", "question": "Northeast of which town was the forest near Isherwood Stables?", "schema": "p1-question/1"}
-{"key": "44.51%", "probe": "lh4-p0099", "question": "What was your chance of a minor failure when preparing boiled fiddleheads?", "schema": "p1-question/1"}
-{"key": "west", "probe": "lh4-p0101", "question": "In which direction from Freedom is evac shelter A-23?", "schema": "p1-question/1"}
-{"key": "89%", "probe": "lh4-p0105", "question": "To what percentage did morale slow your crafting speed while you were preparing to make clean water?", "schema": "p1-question/1"}
-{"key": "3", "probe": "lh4-p0108", "question": "How many units of untreated water did you have available when preparing to make clean water?", "schema": "p1-question/1"}
-{"key": "Lockpicking; 30 minutes", "probe": "lh4-p0109", "question": "Which proficiency were you missing for crafting an improvised lockpick, and how long would the job take you?", "schema": "p1-question/1"}
-{"key": "5 minutes and 36 seconds", "probe": "lh4-p0111", "question": "How long would crafting one portion of clean water take you with your current abilities?", "schema": "p1-question/1"}
-{"key": "forest", "probe": "lh4-p0114", "question": "What terrain contains the murky water recess you marked west of Freedom?", "schema": "p1-question/1"}
-{"key": "Pump and wood stove", "probe": "lh4-p0115", "question": "What useful facilities have you noted at the trailhead west of Freedom?", "schema": "p1-question/1"}
-{"key": "long pointy stick", "probe": "lh4-p0117", "question": "What weapon were you wielding when you reached your destination in the forest?", "schema": "p1-question/1"}
-{"key": "Sew Awesome Monthly; FEMA evacuation pamphlet", "probe": "lh4-p0118", "question": "Which reading materials are you carrying?", "schema": "p1-question/1"}
-{"key": "forest", "probe": "lh4-p0119", "question": "What terrain lies immediately north of the road bend near the pair of buildings west of Freedom?", "schema": "p1-question/1"}
-{"key": "edible plants, acorns, eggs, and mushrooms", "probe": "lh4-p0126", "question": "What potential foods did you identify in the underbrush at this forest location?", "schema": "p1-question/1"}
-{"key": "swamp", "probe": "lh4-p0129", "question": "What terrain did you locate northwest of Freedom at the northern end of your explored route?", "schema": "p1-question/1"}
-{"key": "Carving", "probe": "lh4-p0132", "question": "Which proficiency did you lack for making an improvised fishing hook?", "schema": "p1-question/1"}
-{"key": "16 minutes and 30 seconds", "probe": "lh4-p0135", "question": "How long would preparing boiled fiddleheads take you with your current skills and proficiencies?", "schema": "p1-question/1"}
-{"key": "Any luck?", "probe": "lh4-p0136", "question": "What did Harland 'Have-Not' Beebe ask you about your progress?", "schema": "p1-question/1"}
-{"key": "Calories intake tracker; Use camera; Store books; Manage files; Play music", "probe": "lh4-p0139", "question": "What are five available uses of your unbrowsed smartphone (UPS)?", "schema": "p1-question/1"}
-{"key": "paper wrapper; glass shard", "probe": "lh4-p0140", "question": "Which two items are lying two steps southwest of you in the evacuation shelter basement?", "schema": "p1-question/1"}
-{"key": "6 minutes and 14 seconds", "probe": "lh4-p0141", "question": "How long would it currently take you to craft a basic fishing rod?", "schema": "p1-question/1"}
-{"key": "Lockpicking", "probe": "lh4-p0145", "question": "Which proficiency did you lack when planning to craft an improvised lockpick?", "schema": "p1-question/1"}
-{"key": "1", "probe": "lh4-p0146", "question": "What is your current food handling skill level as you prepare to make clean water?", "schema": "p1-question/1"}
-{"key": "47.84%", "probe": "lh4-p0147", "question": "What is your chance of a minor failure if you try to craft a brazier now?", "schema": "p1-question/1"}
-{"key": "Pump and wood stove", "probe": "lh4-p0148", "question": "What useful fixtures have you noted at the trailhead west of Freedom?", "schema": "p1-question/1"}
-{"key": "Freedom", "probe": "lh4-p0149", "question": "Which town lies east of evac shelter A-23?", "schema": "p1-question/1"}
+{"key": "Odell Hampton", "probe": "lh2-p0013", "question": "Whose name had been recorded in the map note at evac shelter B-05?", "schema": "p1-question/1"}
+{"key": "plastic bottle", "probe": "lh2-p0017", "question": "Which container did you fill with the last clean water from the standing tank on the evac shelter roof?", "schema": "p1-question/1"}
+{"key": "wooden spear", "probe": "lh2-p0020", "question": "What weapon was the player wielding while exploring the forest at 4:14 PM on spring day 61?", "schema": "p1-question/1"}
+{"key": "fire brick; electric firestarter; firearm repair kit; firecracker; hellfire stew", "probe": "lh2-p0022", "question": "Which recipes were among the eight matches in your crafting search?", "schema": "p1-question/1"}
+{"key": "Odell Hampton", "probe": "lh2-p0024", "question": "Who asked the player whether they had rescued the standard yet?", "schema": "p1-question/1"}
+{"key": "134 tiles, 2.00mi", "probe": "lh2-p0026", "question": "How far was the pond northwest of Killington from your current objective?", "schema": "p1-question/1"}
+{"key": "baked potato; boiled potato; clay pot oven; makeshift copper pot; potassium lye", "probe": "lh3-p0002", "question": "Which recipes were among the thirteen matches in your crafting search?", "schema": "p1-question/1"}
+{"key": "2 ruby-throated hummingbirds", "probe": "lh3-p0004", "question": "What wildlife was nearby after you crafted a long pointy stick in the forest?", "schema": "p1-question/1"}
+{"key": "374 tiles; 5.58mi", "probe": "lh3-p0005", "question": "How far away is the current objective near Meddybemps?", "schema": "p1-question/1"}
+{"key": "Meddybemps", "probe": "lh3-p0007", "question": "Which town is the explored field west of?", "schema": "p1-question/1"}
+{"key": "Cleora Hong", "probe": "lh3-p0008", "question": "Who called out 'Bye bye!' before the player entered the evacuation shelter basement?", "schema": "p1-question/1"}
+{"key": "small metal sheets (6)", "probe": "lh3-p0009", "question": "What material, and how many pieces, did the player pick up at evacuation shelter A-23?", "schema": "p1-question/1"}
+{"key": "long pointy stick", "probe": "lh3-p0012", "question": "What weapon is the player wielding at evacuation shelter A-23 at 8:21:55 AM?", "schema": "p1-question/1"}
+{"key": "5", "probe": "lh3-p0013", "question": "How many plastic bottles did the player have toward the eight needed for a makeshift funnel?", "schema": "p1-question/1"}
+{"key": "6", "probe": "lh3-p0015", "question": "How many units of clean water did the player have nearby when checking the clean-water recipe?", "schema": "p1-question/1"}
+{"key": "Freedom", "probe": "lh4-p0002", "question": "Which town is evacuation shelter A-23 west of?", "schema": "p1-question/1"}
+{"key": "21.19%", "probe": "lh4-p0003", "question": "With the player’s current skills, what minor failure chance applied to spear crafting?", "schema": "p1-question/1"}
+{"key": "forest", "probe": "lh4-p0004", "question": "What terrain lies northwest of Freedom along the player's explored route?", "schema": "p1-question/1"}
+{"key": "Harland 'Have-Not' Beebe", "probe": "lh4-p0009", "question": "Whose name was recorded in the note at evac shelter A-23 west of Freedom?", "schema": "p1-question/1"}
+{"key": "flashlight (off); pocket knife; smartphone (UPS) (unbrowsed)", "probe": "lh4-p0010", "question": "Which tools was the player carrying?", "schema": "p1-question/1"}
+{"key": "15 minutes", "probe": "lh4-p0015", "question": "How long would baking a potato take the player with their current skills and proficiencies?", "schema": "p1-question/1"}
+{"key": "moonshine still", "probe": "lh4-p0019", "question": "What production facility had the player located northeast of Freedom?", "schema": "p1-question/1"}
+{"key": "fried rice; vegetable salad; vegetarian baked beans", "probe": "lh4-p0029", "question": "Which meals had the player found recipes for during their food recipe search?", "schema": "p1-question/1"}
+{"key": "Nothing can be harvested from this plant in current season.", "probe": "lh4-p0034", "question": "What did the player learn when attempting to harvest the hickory tree?", "schema": "p1-question/1"}
+{"key": "North", "probe": "lh4-p0036", "question": "In which direction from Isherwood Stables is the nearby river?", "schema": "p1-question/1"}
+{"key": "Carving", "probe": "lh4-p0038", "question": "Which proficiency did the player lack for crafting a homemade polehammer?", "schema": "p1-question/1"}
+{"key": "21.19%", "probe": "lh4-p0043", "question": "What was the player’s estimated minor failure chance for making clean water?", "schema": "p1-question/1"}
+{"key": "96%", "probe": "lh4-p0048", "question": "To what percentage of normal speed was the player’s crafting slowed by morale while preparing to make clean water?", "schema": "p1-question/1"}
+{"key": "5 minutes and 36 seconds", "probe": "lh4-p0049", "question": "How long would the player need to craft a basic fishing rod at their current crafting speed?", "schema": "p1-question/1"}
+{"key": "Garment Closures; Principles of Leatherworking", "probe": "lh4-p0050", "question": "Which two proficiencies was the player missing for crafting a bookstrap?", "schema": "p1-question/1"}
+{"key": "moonshine still", "probe": "lh4-p0051", "question": "What kind of site had the player located northeast of Freedom?", "schema": "p1-question/1"}
+{"key": "3", "probe": "lh4-p0053", "question": "How many units of water did the player have available as ingredients for making clean water?", "schema": "p1-question/1"}
+{"key": "19.57%", "probe": "lh4-p0054", "question": "At the player’s current tailoring skill, what catastrophic failure chance did crafting long cordage pieces carry?", "schema": "p1-question/1"}
+{"key": "Forest", "probe": "lh4-p0055", "question": "What terrain surrounds Isherwood Stables east of Freedom?", "schema": "p1-question/1"}
+{"key": "10", "probe": "lh4-p0056", "question": "How many units of clean water were already nearby when the player considered making more?", "schema": "p1-question/1"}
+{"key": "moonshine still", "probe": "lh4-p0063", "question": "Where had the player just arrived while wielding a long pointy stick?", "schema": "p1-question/1"}
+{"key": "Sew Awesome Monthly", "probe": "lh4-p0065", "question": "Which magazine was available on the counter one tile east of the player?", "schema": "p1-question/1"}
+{"key": "northeast", "probe": "lh4-p0066", "question": "In which direction from Freedom was the moonshine still the player had located?", "schema": "p1-question/1"}
+{"key": "nicotine pouch can > 11 peppermint flavored nicotine pouches; radio (off) (16/16)", "probe": "lh4-p0067", "question": "What could you collect from the counter one tile east of you?", "schema": "p1-question/1"}
+{"key": "Southeast", "probe": "lh4-p0068", "question": "In which direction from the radio tower northeast of Freedom are Isherwood Stables?", "schema": "p1-question/1"}
+{"key": "paper wrapper[2]; foil cup; cigarette butt", "probe": "lh4-p0075", "question": "Which small objects lay two paces southwest of you near the woodland shelter?", "schema": "p1-question/1"}
+{"key": "swamp", "probe": "lh4-p0077", "question": "Which wet terrain feature had you located northeast of Freedom?", "schema": "p1-question/1"}
+{"key": "16 minutes and 30 seconds", "probe": "lh4-p0078", "question": "How long would preparing one portion of boiled fiddleheads take with your current skills and proficiencies?", "schema": "p1-question/1"}
+{"key": "Freedom", "probe": "lh4-p0079", "question": "Which town lay southwest of the mine entrance you had located?", "schema": "p1-question/1"}
+{"key": "44.51%", "probe": "lh4-p0081", "question": "What was your minor failure chance when attempting to cook boiled fiddleheads?", "schema": "p1-question/1"}
+{"key": "Isherwood Stables", "probe": "lh4-p0082", "question": "What named stables lay southeast of the radio tower near Freedom?", "schema": "p1-question/1"}
+{"key": "long string; nail (4); 2 ++ sheets; stick", "probe": "lh4-p0086", "question": "What materials lay on the floor after you tore down the curtains and curtain rod?", "schema": "p1-question/1"}
+{"key": "moonshine still", "probe": "lh4-p0089", "question": "What production site had you located in the forest northeast of Freedom?", "schema": "p1-question/1"}
+{"key": "62.30%", "probe": "lh4-p0090", "question": "What was your minor failure chance when attempting to craft short cordage pieces?", "schema": "p1-question/1"}
+{"key": "Forager Cooking", "probe": "lh4-p0092", "question": "Which proficiency were you missing for making dandelion and burdock tea?", "schema": "p1-question/1"}
+{"key": "improvised fishing hook", "probe": "lh4-p0093", "question": "Which kind of hook did you already have available for crafting a basic fishing rod?", "schema": "p1-question/1"}
+{"key": "19.57%", "probe": "lh4-p0094", "question": "What catastrophic failure chance did you face when crafting long strings?", "schema": "p1-question/1"}
+{"key": "forest", "probe": "lh4-p0096", "question": "What terrain surrounded Isherwood Stables northeast of Freedom?", "schema": "p1-question/1"}
+{"key": "16 minutes and 30 seconds", "probe": "lh4-p0099", "question": "How long would it take you to make boiled fiddleheads with your current skills and proficiencies?", "schema": "p1-question/1"}
+{"key": "Freedom", "probe": "lh4-p0101", "question": "Which town lay east of evac shelter A-23?", "schema": "p1-question/1"}
+{"key": "5 minutes and 36 seconds", "probe": "lh4-p0105", "question": "How long would it take you to craft one unit of clean water at your current crafting speed?", "schema": "p1-question/1"}
+{"key": "nearby fire", "probe": "lh4-p0108", "question": "What available heat source could you use with your boiling tool to make clean water?", "schema": "p1-question/1"}
+{"key": "Lockpicking", "probe": "lh4-p0109", "question": "Which proficiency were you missing when attempting to make an improvised lockpick?", "schema": "p1-question/1"}
+{"key": "5 minutes and 36 seconds", "probe": "lh4-p0111", "question": "How long would the player need to craft one unit of clean water with their current abilities?", "schema": "p1-question/1"}
+{"key": "west", "probe": "lh4-p0114", "question": "In which direction from Freedom was the forest containing your Murky water recess note?", "schema": "p1-question/1"}
+{"key": "Pump and wood stove", "probe": "lh4-p0115", "question": "What resources did the player note at the trailhead west of Freedom?", "schema": "p1-question/1"}
+{"key": "long pointy stick", "probe": "lh4-p0117", "question": "What were you wielding when you reached your forest destination?", "schema": "p1-question/1"}
+{"key": "Sew Awesome Monthly; FEMA evacuation pamphlet", "probe": "lh4-p0118", "question": "Which reading materials was the player carrying?", "schema": "p1-question/1"}
+{"key": "forest", "probe": "lh4-p0119", "question": "What terrain lies immediately north of the trailhead near the two buildings west of Freedom?", "schema": "p1-question/1"}
+{"key": "edible plants, acorns, eggs, and mushrooms", "probe": "lh4-p0126", "question": "What could the player forage from the underbrush at the forest destination west of Freedom?", "schema": "p1-question/1"}
+{"key": "swamp", "probe": "lh4-p0129", "question": "What wetland terrain had the player located northwest of Freedom?", "schema": "p1-question/1"}
+{"key": "Carving", "probe": "lh4-p0132", "question": "Which proficiency was the player missing for making an improvised fishing hook?", "schema": "p1-question/1"}
+{"key": "16 minutes and 30 seconds", "probe": "lh4-p0135", "question": "How long would the player need to prepare boiled fiddleheads with their current abilities?", "schema": "p1-question/1"}
+{"key": "Any luck?", "probe": "lh4-p0136", "question": "What did Harland 'Have-Not' Beebe ask when you returned to discuss your progress?", "schema": "p1-question/1"}
+{"key": "Calories intake tracker; Use camera; Store books; Manage files; Play music", "probe": "lh4-p0139", "question": "What are five things you could use your smartphone (UPS) for besides its flashlight?", "schema": "p1-question/1"}
+{"key": "paper wrapper; glass shard", "probe": "lh4-p0140", "question": "Which two loose items were two steps southwest of you in the evacuation shelter basement?", "schema": "p1-question/1"}
+{"key": "6 minutes and 14 seconds", "probe": "lh4-p0141", "question": "How long would it take you to craft a basic fishing rod under your current conditions?", "schema": "p1-question/1"}
+{"key": "Lockpicking", "probe": "lh4-p0145", "question": "Which proficiency were you missing when preparing to craft an improvised lockpick?", "schema": "p1-question/1"}
+{"key": "1", "probe": "lh4-p0146", "question": "What was your food handling skill level when you were preparing to make clean water?", "schema": "p1-question/1"}
+{"key": "1", "probe": "lh4-p0147", "question": "What was your fabrication skill level when you were preparing to craft a brazier?", "schema": "p1-question/1"}
+{"key": "Pump and wood stove", "probe": "lh4-p0148", "question": "What useful facilities had you recorded at the trailhead west of Freedom?", "schema": "p1-question/1"}
+{"key": "A-23", "probe": "lh4-p0149", "question": "What was the designation of the evacuation shelter west of Freedom?", "schema": "p1-question/1"}
