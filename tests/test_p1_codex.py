@@ -380,13 +380,14 @@ def test_interrupt_and_worker_share_one_cleanup_owner(handout, monkeypatch, repe
     assert (out / 'stopped.json').exists()
 
 
-def test_first_interrupt_during_final_cleanup_does_not_reenter(handout):
+@pytest.mark.parametrize('nested_signal', [False, True])
+def test_first_interrupt_during_final_cleanup_does_not_reenter(handout, nested_signal):
     import sys
     import textwrap
 
     out, _, _, _ = handout
     script = textwrap.dedent('''
-        import hashlib,json,os,signal,sys
+        import hashlib,json,os,signal,sys,threading
         from pathlib import Path
         from tools import p1_batches as b
         from tools.coding_host import p1 as r,p1_input as i
@@ -406,9 +407,21 @@ def test_first_interrupt_during_final_cleanup_does_not_reenter(handout):
                     'id':batch['items'][0]['id'],'key':'x','question':'x'})+'\\n')
         r.subprocess.Popen=Child
         attempts=[]
+        armed=False
+        original_set=threading.Event.set
+        def set_event(event):
+            global armed
+            if armed and threading.current_thread() is threading.main_thread():
+                armed=False
+                with event._cond:
+                    signal.raise_signal(signal.SIGTERM)
+            original_set(event)
+        threading.Event.set=set_event
         def cleanup(child):
+            global armed
             attempts.append(child.pid)
             if len(attempts)<3: raise RuntimeError('synthetic cleanup failure')
+            armed=sys.argv[2]=='1'
             os.kill(os.getpid(),signal.SIGTERM)
         r._cleanup=cleanup
         result=r.run(out,3,only=['question-001'])
@@ -416,7 +429,7 @@ def test_first_interrupt_during_final_cleanup_does_not_reenter(handout):
         assert len(attempts)==3
         assert not list((out/'candidates').iterdir())
     ''')
-    completed = subprocess.run([sys.executable, '-c', script, str(out)],
+    completed = subprocess.run([sys.executable, '-c', script, str(out), str(int(nested_signal))],
                                capture_output=True, text=True, timeout=5,
                                start_new_session=True)
     assert completed.returncode == 0, completed.stderr

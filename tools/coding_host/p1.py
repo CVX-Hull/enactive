@@ -229,6 +229,7 @@ def _run_locked(out, max_attempts, workers, only):
     lock, stop, active = threading.RLock(), threading.Event(), {}
     cleanup_states = {}
     shutting_down = False
+    handling_signal = False
     counts = dict(launched=len(reserved), done=0, skipped=len(completed & set(selected)), failed=0)
 
     def latch_stop():
@@ -263,6 +264,10 @@ def _run_locked(out, max_attempts, workers, only):
             raise HandoutError('owned process cleanup failed: ' + ', '.join(errors))
 
     def interrupted(signum, frame):
+        nonlocal handling_signal
+        if handling_signal:
+            return
+        handling_signal = True
         if shutting_down:
             with lock:
                 latch_stop()
