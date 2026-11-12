@@ -44,8 +44,8 @@ tests (name those commands/results in the issue or PR):
 ```
 
 Use [development-first delivery](docs/workflows/development.md)
-for finite real development runs before comprehensive qualification. The commit
-hook runs fast checks. At a coherent integration/acceptance checkpoint, resolve
+for finite real development runs before comprehensive qualification. The optional
+commit hook runs the fast checks ([setup](docs/setup.md#common-checks-and-local-hook)). At a coherent integration/acceptance checkpoint, resolve
 independent review and require the appropriate successful exact-candidate protected
 CI profile under [the delivery policy](docs/workflows/ci-profiles.md#protected-ci-profiles).
 Broad source changes require full regression before merge; an existing valid hosted

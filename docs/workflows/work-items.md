@@ -38,8 +38,8 @@ reduce optional scope before weakening required quality or evidence.
 | In progress | Being built, checked, reviewed or validated; the PR shows which |
 | Done | The lead verified acceptance, evidence and documentation on merged main |
 
-- **Priority** on every leaf: P0 urgent constraint or control failure, P1 the next
-  important outcome, P2 useful follow-up. **Horizon** on outcomes only: Now, Next, Later
+- **Priority** on every leaf: *Urgent* for a broken user constraint or a failed
+  control, *Important* for the next outcome, *Follow-up* for useful later work. **Horizon** on outcomes only: Now, Next, Later
   (with a revisit trigger). The Project's views select leaves by Status and outcomes by
   Horizon ([authority and review surfaces](authority.md)).
 - **Dates:** none kept by hand. Cycle time comes from GitHub's own timestamps: a PR

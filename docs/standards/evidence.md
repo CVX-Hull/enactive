@@ -96,4 +96,10 @@ split, its baselines and ablations, and its budget-matching plan. C-REVIEW check
 the pre-registration before spending, and the paragraphs and list above at the
 reporting checkpoint.
 
+**Pilot one unit before spending on the rest.** Before a study or batch spends its
+budget, run one unit end to end and read its trace: confirm that every input the
+protocol names (text, images, files) reached the model, and that the output parses.
+A study's question sessions once ran without their screenshots, and format checks
+did not notice ([record](../acceptance/2026-11-11-p1-image-input-stop-178.md)).
+
 [Standards index](../engineering.md).

@@ -32,10 +32,10 @@ Upstream saves are unchanged. Load them only through visible ordinary applicatio
 controls; the player judges identity/continuity from observations. The harness
 certifies no save and imports no hidden game facts.
 
-Rollback is a coherent earlier source/data deployment after all writers close.
-It never mixes old/new readers, replays uncertain input, restores capabilities
-from storage or renews the original run. Setup build manifests have their own
-version; preserve/refuse unsupported manifests rather than silently convert them.
-[Setup](../setup.md#build-metadata-migration).
+To go back, check out the earlier source after all writers close and start from
+fresh stores as above. Never mix old and new readers, replay uncertain input or
+renew the original run. Setup build manifests have their own version; unsupported
+manifests are refused rather than converted
+([Setup](../setup.md#build-metadata-migration)).
 
 [Operations index](../runbook.md).

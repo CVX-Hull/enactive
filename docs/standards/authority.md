@@ -19,20 +19,53 @@ about when and by whom work proceeds; they live here and in project management.
 Standards specify required properties; contracts/design apply them at a boundary;
 controls provide prevention, detection, review or recovery; evidence records what
 actually happened. These are related responsibilities, not six mandatory documents
-per change. [Engineering](../engineering.md) maps each standard to its principles and
-controls, once. [Documentation organization](../documentation.md) defines artifact
+per change. [Engineering](../engineering.md) lists each standard with the risks it
+addresses. [Documentation organization](../documentation.md) defines artifact
 roles and their lifecycle.
 
 ## Control review
 
-The [controls page](../controls.md) owns what each control stops, where it is
-enforced and its known gap. A control exists only to stop a named failure more
-cheaply than the failure costs ([ADR 010](../decisions/010-streamlined-delivery.md)).
-Review it when it fails, is bypassed, costs more than expected or its boundary
-changes, in the issue that changes it; keep, narrow, replace or retire it from that
-evidence, and change the controls page and the standards that name it together.
+The [risk register](../risks.md) owns the risks the project defends against, judged in
+the charter's [scope of use](../charter.md#scope-of-use-and-what-is-guaranteed). The
+[controls page](../controls.md) owns what is done about each one.
+
+**A control needs a risk and a mechanism.** A control is anything kept to stop a
+failure: a test, a check, a continuous-integration step, a runtime guard, a review, a
+rule in a standard or a step in a procedure. Before one is added or widened, its author
+states three things in the change that adds it:
+
+1. the risk in the register it serves. If no listed risk fits, the register changes
+   first, with a failure scenario that can realistically happen in the scope of use;
+2. how it reduces that risk: what it would catch or prevent, and why that is plausible;
+3. what it costs each time it runs or is followed, and why that is less than the risk.
+
+A control that fits an existing row of the controls page is covered by that row. A new
+kind of control gets a row. Review rejects a control that cannot state all three, and a
+control that defends something the register lists as out of scope. More checking is not
+safer by default: each control is paid for on every change.
+
+**The register is pruned on events, not on a calendar.** Reconsider a control, and the
+risk it cites, when:
+
+- it fails, is bypassed, or costs more than its row says;
+- it has blocked work without preventing a defect;
+- the boundary it guards changes;
+- the charter's scope of use changes;
+- the work it protected is finished, as when a study closes and its tooling and tests
+  have nothing left to protect.
+
+Do this in the issue or pull request that meets the trigger. Keep, narrow, replace or
+remove the control from that evidence, and change the register, the controls page and
+the standards that name the control together. A control whose risk has recorded failure
+evidence is removed only when something cheaper covers the same failure.
 Revisit custom tools and previously rejected reuse options on changed needs, upstream
 support, repeated defects or excessive upkeep, rather than accumulating controls.
+
+`tools/documents.py` fails a control row that names no risk and a risk ID that the
+register does not define. That keeps the two pages from drifting apart
+([R-STALE-DOCS](../risks.md#development-risks)) and costs seconds. It cannot judge
+whether a risk is real or a mechanism works; that is the reviewer's job
+([R-CONTROL-BLOAT](../risks.md#development-risks)). A Low risk may have no control.
 Keep three facts distinct: a control exists; it was exercised with a result, recorded
 in the dated record or PR that ran it; its effectiveness was assessed. A failure stays
 in history after repair; actual affected failures or evidence gaps stop the affected work.
@@ -55,17 +88,9 @@ and selected smoke results must state their narrower executed and unrun lanes.
 On behavior changes, update contract, tests, guide and overview as applicable.
 On failure, classify transport/perception/decision/engine/process, preserve
 provenance, and add a reusable regression or adjust a rule when justified.
-At a release, verify high-risk operating procedures, open exceptions, dependency
-pins and research currency. During active development, review external dependency
-and documentation drift at least every 90 days; when dormant, review before
-resuming. This is a starting policy, not an empirical optimum or an installed
-scheduler. Adjust based on actual drift and review burden. Remove checks that
-cost more than the risk they control, recording the rationale.
-
-Track practical signals in work/release reviews: failed setup/recovery instructions,
-contradictory guidance, repeated questions, escaped defects, false-positive checks,
-review effort and duplicate edits per behavior change. Do not optimize document
-count, lines of code or test count as substitutes for quality. The research basis
-and evidence limits are in [engineering research](../research-engineering.md).
+Review dependency pins and external documentation when resuming after a pause, and
+when an upstream change breaks setup or a run. Do not optimize document count, lines of
+code or test count as substitutes for quality. The research basis and evidence limits
+are in [engineering research](../research-engineering.md).
 
 [Standards index](../engineering.md).

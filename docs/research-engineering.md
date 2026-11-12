@@ -1,14 +1,14 @@
 ---
 owner: maintainer
-review_trigger: Requirements or process change; release or active periodic maintenance
+review_trigger: Requirements or process change, or a decision that depends on a fast-moving source below
 status: active
 ---
 
 # Engineering research and project consequences
 
 Owner: maintainer. Status: evidence synthesis reviewed 2026-10-17.
-Review when requirements/process change, at release, or after 90 days of active
-work for fast-moving sources. Foundational material does not expire solely due
+Review when requirements or process change, and before a decision depends on a
+fast-moving source. Foundational material does not expire solely due
 to age. This records source scope and our inference, not certification or a claim
 that enterprise results predict one small project's productivity.
 
@@ -40,8 +40,8 @@ limitations, rationale, next tradeoff and evidence must be findable from the
 overview and immediate links. This acceptance scenario follows the user's needs;
 it is not a claim that the cited studies validate this specific document design.
 
-The 90-day active-maintenance review and 30-day eligibility for routine unreferenced
-runtime cleanup are initial project policies, not empirical industry optima. No
+The 30-day eligibility for routine unreferenced runtime cleanup is an initial project
+policy, not an empirical industry optimum. No
 source reviewed establishes a universal file/page limit. Split by responsibility,
 reader and lifecycle; watch contradictions, unsuccessful guides and review cost.
 

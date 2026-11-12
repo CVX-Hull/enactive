@@ -51,12 +51,11 @@ in `player-host` telemetry version 3, which the evaluator records as `manifest: 
 and the context view rebuilds as `exact: false`. Anything else, including another
 archive or a changed existing field, needs a new version and a migration as above.
 
-Every affected PR identifies the old and new contracts, migrated callers/data,
-removed paths, rejection tests, deployment order and rollback/retention decision,
-or explains why no migration applies. Existing version guards, schemas and negative
-tests enforce known boundaries. Review checks for unlisted compatibility paths;
-no static control proves their absence across all code. Review this coverage when
-formats, dependencies or controls change and at the normal maintenance checkpoint.
-This user requirement cannot be waived through a repository exception.
+Every affected PR identifies the old and new contracts, the migrated callers and
+data, the removed paths and the rejection tests, or explains why no migration
+applies. Existing version guards, schemas and negative tests enforce known
+boundaries. Review checks for unlisted compatibility paths; no static control proves
+their absence across all code. This user requirement cannot be waived through a
+repository exception.
 
 [Standards index](../engineering.md).

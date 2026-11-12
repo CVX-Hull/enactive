@@ -26,8 +26,7 @@ or proposed material needs a review trigger; historical records need date and
 scope; superseded material needs scope and a repository-relative replacement.
 Proposals are not implemented contracts. Accepted ADRs are dated rationale;
 architecture/protocol remain authoritative about current behavior. Metadata is
-not a claim of accuracy. Review current guidance at C-MAINTENANCE's recorded due
-date and earlier on its page-specific trigger; do not refresh dates without work.
+not a claim of accuracy. Review a current page when its own review trigger fires.
 
 Choose explanations for understanding, procedures for doing, reference for exact
 contracts and walkthroughs for learning. Add these when a real reader need exists;
@@ -67,25 +66,53 @@ remaining actions to GitHub and retain its brief as dated rationale. Partial
 proposals identify their remaining proposal scope. No new attempt paragraph is
 required in current architecture or the overview.
 
+## Names
+
+A name says what the thing is, in words a reader can understand without a lookup
+table. This covers everything the project names: phases, studies, protocols, runs and
+their arms, files, modules, schemas, branches, issue titles, Project field values,
+risks and controls. It guards [R-UNREADABLE-DOCS](../risks.md#development-risks): a
+label such as "P1" tells a reader nothing, and the same label came to mean four
+different things.
+
+- **No bare ordinals or position codes.** Not "P1", "phase 2", "study 3", "arm B" or
+  "L4". Name a phase by what it delivers ("curator and memory"), a study by its
+  question ("curator memory study"), an arm by what differs ("no-curator arm"), a
+  priority by its meaning ("Urgent").
+- **Numbers are for versions, references and dates.** A version follows a descriptive
+  name (`player-host/3`). An issue, pull request or ADR number is a reference; give
+  its title or subject the first time a page uses it. A repeated attempt is numbered
+  after its name ("seven-day campaign, attempt 4").
+- **A kind prefix with a descriptive word is a name.** `P-TRUTH`, `S-DOCS`,
+  `C-RUNTIME` and `R-OVERSPEND` comply: the letter gives the kind (principle,
+  standard, control, risk) and the word says which one. A prefix with a number does not.
+- **Abbreviate only what the page defines** where it is first used.
+- **Branches** are named for what they change, optionally after the issue number:
+  `552-curator-memory-study-report`, not `p1-552`.
+- **Renaming something persisted** (a schema ID, a stored field, a module other code
+  imports) is a migration under [S-MIGRATION](migration.md): every reader and writer
+  changes together and the old name is not kept as an alias.
+
+Historical records keep the labels of their time, because their content is not
+edited. The [name mapping](../acceptance/2026-11-12-control-review-and-names.md#names) translates
+each retired label to its current name. Review (C-REVIEW) rejects a new name that
+breaks this rule; no lexical check is kept, because a pattern cannot tell a version
+from an ordinal.
+
 ## Visual explanations
 
-Each diagram must answer a named reader question at a stated scope, with a title
-and current/proposed/historical status in its host page. Explain element types,
-arrow meanings and abbreviations. Label relationships and authority boundaries;
-separate logical responsibilities from actual process boundaries. Preserve relevant
-failure/recovery paths and limits, including uncertainty. Never use color alone
-to convey meaning. Provide a text equivalent and an authoritative contract link.
+A diagram answers one reader question, stated beside it, at a stated scope. Give it
+a title and a one-paragraph description of what it shows (`accTitle` and `accDescr`
+in the block serve as both), and say what its boxes and arrows mean. Label
+relationships and authority boundaries; separate logical responsibilities from
+actual process boundaries. Link the contract that owns the detail.
 
-Write each diagram as one fenced `mermaid` block in its host page, with `accTitle`
-and `accDescr`; GitHub renders it and the block is the only copy. Update the block
-and its explanatory text together. `tools/documents.py` fails a current page whose
-block lacks a title or description; it neither renders nor judges the diagram. Preview
-a changed diagram on GitHub at ordinary window width for readable labels, clipping and
-ambiguity, as GitHub's Mermaid version, not ours, decides how it draws. For a changed
-boundary/flow, an independent reviewer checks the visual against the contract and
-relevant implementation, and the lead records the inspection in acceptance.
-Retire or supersede visuals with their parent document. Link to one diagram instead of
-copying it, and avoid extra detail that forces the user to reconstruct the big picture.
+Write each diagram as one fenced `mermaid` block in its host page; GitHub renders it
+and the block is the only copy. Update the block and its explanatory text together,
+and preview a changed diagram on GitHub, because GitHub's Mermaid version decides how
+it draws. A diagram of a changed boundary is reviewed with that change, as part of
+its ordinary review. Retire a diagram with its parent page, and link to one diagram
+instead of copying it.
 
 The user must be able to find purpose, current capabilities/limits, architectural
 rationale, next change/tradeoffs and supporting evidence from the overview and

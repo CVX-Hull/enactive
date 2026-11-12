@@ -55,7 +55,7 @@ raw-input fallback, rather than only each adapter's successful path. C-REVIEW
 checks this distinction and C-PORTABLE exercises boundary regressions; actual
 keyboard/mouse capabilities still need their separate C-NATIVE evidence.
 
-Standard and principle/control mapping: [S-ARCH Explicit architectural boundaries](../engineering.md#s-arch-explicit-architectural-boundaries).
+This page is part of [S-ARCH Explicit architectural boundaries](architecture.md).
 
 ## Executable learning and game-family boundaries
 

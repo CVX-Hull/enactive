@@ -48,13 +48,15 @@ or new contrary evidence, not the entire project after each edit. Stop reviewing
 when evidence is adequate for the next stage and material findings are resolved;
 unresolved required checks remain explicit blockers, never a green badge.
 
-Record selection, findings/dispositions and known review effort in the existing
-Issue/PR. At meaningful checkpoints compare useful progress, escaped defects,
-false alarms and review/coordination cost; simplify or strengthen controls from
-those observations. Reuse C-REVIEW, CI and current issue workflow. No new review
-tracker, mandatory per-feature swarm, recurring date reset or routine gameplay
-approval follows. The lead may review the tightly coupled change itself when
-delegating would add little; independent acceptance remains separate.
+Record the selection, findings and dispositions in the existing issue or pull
+request. The lead may review a tightly coupled change itself when delegating would
+add little; independent acceptance remains separate.
+
+**Controls and names.** Review rejects a new or widened control (a test, check,
+guard, gate or procedure step) whose change does not name the
+[risk](../risks.md) it serves, how it reduces that risk and what it costs
+([control rule](../standards/authority.md#control-review)). It also rejects a name
+that does not say what the thing is ([names](../standards/documentation.md#names)).
 
 ## Risk-based assurance
 
@@ -91,35 +93,16 @@ feedback and limited WIP inform this policy; sprint rituals, fixed batch sizes a
 more agents are not requirements. The [research basis](../research-engineering.md#recursive-architecture-and-assurance--2026-10-24)
 distinguishes external guidance from this project's judgment.
 
-At integration use existing command/CI/PR/run receipts to compare useful progress,
-defects caught/escaped, review/rework/waiting effort and cost of checks. Record
-unknowns without inventing measurements. Keep, narrow, replace or retire a control
-from that evidence under C-MAINTENANCE. Do not create another metrics service,
-review queue or per-action gameplay approval. A passed review date fails no check;
-event-triggered review and applicable actual failures/evidence gaps govern the
-affected work.
-
 ## Milestone review and controls
 
 A milestone finishes only when its outcomes and required evidence lanes pass,
 limitations are explicit and the lead verifies the candidate. Publish a concise
-outcome/evidence update; carry unresolved work forward explicitly. After each
-milestone, review estimate error, blocked/queue time, rework, escaped defects and
-review burden. Repair stale guidance, tune WIP/decomposition and improve or retire
-costly controls under C-MAINTENANCE ([controls](../controls.md)).
-Record concrete findings and follow-up owners, not automatic date renewal.
+outcome and evidence update; carry unresolved work forward explicitly. Merge or CI
+success alone does not establish Done.
 
-[Engineering](../engineering.md) maps standards to their controls; the
-[controls page](../controls.md) states each control's limits. Same-account agents cannot
-supply independent GitHub human approval, and merge or CI success alone cannot establish Done.
-
-GitHub fields and views aid visibility; they do not enforce semantic readiness,
-WIP or acceptance. Main currently requires a PR and the observed Actions `controller` check with
-strict freshness and resolved review threads; merges are squash-only and
-force-push/deletion and actor bypass are disabled. Repository auto-merge is enabled;
-it merges only when those rules pass. Required human approvals are
-zero; unavailable independent human review remains an explicit gap.
-Inspect the active rules and rerun relevant probes after configuration changes. Agent
-review is evidence for lead adjudication, never a fabricated human approval.
+The [controls page](../controls.md) states each control's risk, cost and limits, and
+the [control rule](../standards/authority.md#control-review) says when one is
+reconsidered. Main's protection is C-RELEASE on that page. Agent review is evidence
+for the lead's adjudication; it is never reported as a human approval.
 
 [Workflow index](../project-management.md).
