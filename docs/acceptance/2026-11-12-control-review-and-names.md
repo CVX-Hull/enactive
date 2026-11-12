@@ -34,13 +34,15 @@ verdict against the source and the dated records. Its findings changed the resul
 
 ## Owner decisions
 
-The owner answered three questions on 12 November 2026.
+The owner answered four questions on 12 November 2026
+([#553](https://github.com/CVX-Hull/enactive/issues/553#issuecomment-6839216814)).
 
 | Question | Decision |
 | --- | --- |
 | The finished curator-memory study's tooling and tests | "Retire it" |
 | Diagram accessibility metadata and recorded visual review | "Guidance only" |
 | The `required` attention policy | "Remove it" |
+| How the 22 sealed runs whose run-ending record has the earlier shape stay readable once that policy is removed | "Extend the closed archive" |
 
 ## Removed or simplified
 
@@ -48,7 +50,7 @@ The owner answered three questions on 12 November 2026.
 | --- | --- | --- | --- |
 | Tooling and tests of the curator-memory study (#178), with the probe-validation, probe-timeline and shadow-report tools only it used | The study closed with a permanent no-go, so the tests protected nothing. They were 439 of 1,530 collected tests, and one failed whenever a file was added to live curator or trace code | Nothing is needed; the code is recoverable from commit `08c8f7a`, and its tracked data sits beside its records under `assets/` | [#554](https://github.com/CVX-Hull/enactive/pull/554) |
 | Host-neutrality text scan over `docs/design/` | Four pull-request checks from 9 to 12 November failed on a host name in a study design page; none prevented a defect | The scan still covers code and current guidance (R-GAME-COUPLING) | [#554](https://github.com/CVX-Hull/enactive/pull/554) |
-| The `required` attention policy: operator confirmation every 15 seconds, with its gateway checks and tests | Requiring a person to watch a run is outside the scope of use. Development runs already used `best-effort` by owner decision | Per-run limits and the operator's Pause (C-RUN-LIMITS, C-RUNTIME) | The attention-policy change under #553 |
+| The `required` attention policy: operator confirmation every 15 seconds, with its gateway checks and tests | Requiring a person to watch a run is outside the scope of use. Development runs already used `best-effort` by owner decision | Per-run limits and the operator's Pause (C-RUN-LIMITS, C-RUNTIME) | [#558](https://github.com/CVX-Hull/enactive/pull/558) |
 | The standards-to-principles-to-controls identifier matrix in `engineering.md`, and `check_identifiers` | It checked that three lists agreed with each other, not that any control served a risk | Each control row names its risks; a small check fails an unknown risk ID or a control row without one (R-STALE-DOCS) | The register change under #553 |
 | `check_diagrams`, control C-VISUAL, and the recorded independent visual review of each changed diagram | Accessibility conformance is out of scope; no failure is recorded | One paragraph of guidance; a diagram of a changed boundary is reviewed with that change | The register change under #553 |
 | Control C-MAINTENANCE | It bundled an evidence check with a review habit and named no single risk | C-EVIDENCE for the store; the control rule's pruning triggers for the habit | The register change under #553 |
@@ -77,6 +79,20 @@ stated in the controls page.
 One control was added: before a study spends its budget, run one unit end to end and
 read its trace. A study's question sessions had run without their screenshots, and
 format checks did not notice.
+
+## Evidence and limits
+
+- The study retirement's pull-request check passed 969 tests in 241 seconds; the check
+  on the commit before it took about 450 seconds.
+- The attention-policy removal was reviewed independently before merge. The review
+  confirmed that Pause, the custody deadline and cleanup are unchanged, and it ran the
+  real gateway under real supervision with stand-in children. No run with a real game
+  and provider was made after the change; the first such launch is its real-use check.
+- That change touches supervision, the gateway, the evaluator and the spectator page,
+  not the native adapter, so no native acceptance was required.
+- During that review the reviewer's probe script started the real run command twice
+  with a placeholder credential. Both were refused at package validation; no game
+  started and no provider was called.
 
 ## Left for the owner
 
