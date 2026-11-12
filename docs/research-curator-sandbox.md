@@ -42,7 +42,7 @@ Two caveats:
   process count are enforced by a polling supervisor, not by the kernel (L3, L11).
 
 The [risks table](#residual-risks) lists what stays open. Adopting this mechanism for
-live P1 is ADR 009 open decision 6, an owner decision.
+live runs of the curator and memory phase is ADR 009 open decision 6, an owner decision.
 
 ## Brief and sources named
 
@@ -87,7 +87,7 @@ Key: **Y** enforces; **P** partial; **N** no; **–** not established.
 | Footprint | None (built in) | None | None | None; mount visible while attached (L5) | Starts a VM; changes existing `~/.lima`, `~/.colima`, `~/.docker` (L6, S10) | Administrator install under `/usr/local` (S12): excluded by the [environment rule](environment.md) | Part of the host | Part of the host |
 | Status | Deprecated; unsupported by Apple DTS (S5, S6); used by Chromium (S7, stale) and by both hosts (S1, S8) | Current | Current (L4) | `hdiutil create -size` deprecated in favour of `diskutil image` (L5) | Active (S10, S11) | Active; macOS 26+ (S12) | Active | Active |
 
-**Rejected for P0:**
+**Rejected for the baseline and workbench phase:**
 - VMs and containers: VM state under existing per-user directories, or a global
   install. They remain the fallback if Seatbelt is withdrawn or escaped. Apple's
   Virtualization framework is supported and needs no install, but it would mean
@@ -279,13 +279,13 @@ real API.
 | 3 | **Memory, disk total and process count are polled, not kernel-enforced.** Overshoot is bounded by the allocation rate times the 0.1 s poll. Space held by unlinked open files is caught only by the volume free-space floor | L3, L11, review M2 | Supervisor kills on breach; file size (64 MiB) and open files (256) are rlimits. A sparse disk image (L5) would make disk a hard cap and is the first hardening step if #454 shows bursts |
 | 4 | **An orphaned descendant that left the process group** (double fork plus `setsid`) cannot be safely identified at close | L15 | It keeps the inherited profile. Once the workspace is deleted it cannot recreate it, its token is revoked, and it runs at nice 19 under the CPU rlimit. Its memory is unbounded: residual. **Before deletion it can still write the workspace while close-out reads it.** So close-out reads every tree through directory descriptors with `O_NOFOLLOW` at each component, and a swapped link refuses the tree ([curator sessions](design/curator-session.md#session-close-out), #453). Clearing file flags during removal stays path-based, because macOS offers Python no descriptor-relative `chflags`: residual. #454 checks for survivors after every session |
 | 5 | System read surface: `/usr`, `/System`, `/private/etc` (including `passwd`), `/dev`, the hostname and hardware values | L9, S8 | Accepted; nothing project-secret lives there |
-| 6 | Shared kernel: a kernel or Seatbelt bug escapes | S3 | Accepted for P0; escalate to a VM if the owner's threat model requires it |
+| 6 | Shared kernel: a kernel or Seatbelt bug escapes | S3 | Accepted for the baseline and workbench phase; escalate to a VM if the owner's threat model requires it |
 | 7 | The proxy channel carries data out; any local process can reach the proxy port | S3 | Per-session revocable token, model routes only, ledger; trace content is model-visible by design |
 | 8 | Host version drift changes flags and startup behaviour | L13, S4 | Record host version and binary hash per session; re-run the host probe on update |
 | 9 | The first host writes a shared temporary root under `/tmp` unless its temporary-directory variable is set; allowing that path would share state with other sessions | L13 | The runner points the variable at `scratch/` ([curator hosts](operations/curator-hosts.md)); the profile never allows `/tmp` |
 | 10 | The second host was not yet run under the profile, and the OpenAI request allowlist rests on field names not yet checked against a dated source | — | #454 runs the same probe with a Responses-shape stand-in before any spend |
 | 11 | A stream that errors after content may be undercharged if the provider bills partial output | Review L2 | The reservation still bounds each request; #454 compares the ledger with provider-reported cost |
-| 12 | The free-space floor can stop a session falsely when another process writes heavily during it | [P1 storage-stop record](acceptance/2026-11-11-p1-storage-stop-178.md); ownership of the decline remains unknown | Preserve the conservative guard and initial/minimum/last/floor measurements, distinguish volume activity from writable-tree use, and record read failures. The measurements diagnose a stop; they do not establish attribution or prevent this limitation |
+| 12 | The free-space floor can stop a session falsely when another process writes heavily during it | [Curator memory study storage-stop record](acceptance/2026-11-11-p1-storage-stop-178.md); ownership of the decline remains unknown | Preserve the conservative guard and initial/minimum/last/floor measurements, distinguish volume activity from writable-tree use, and record read failures. The measurements diagnose a stop; they do not establish attribution or prevent this limitation |
 
 ## Coding-agent hosts
 

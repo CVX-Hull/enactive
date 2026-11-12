@@ -20,11 +20,14 @@ export function Frame({section}) {
     <div class="s12"><${SubNav} tabs=${ROLES} base="frame" current=${role} label="Roles" /></div>${body}</section>`;
 }
 
+/* A phase is served as its hyphenated name ('curator-and-memory'); the page shows it as words. */
+const phaseName = phase => `the ${phase.replaceAll('-', ' ')} phase`;
+
 /* ---------------------------------------------------------------- health strip */
 function Slot({slot}) {
   if (slot.state === 'not-yet-measured') {
     return html`<div class="hslot pending" data-slot=${slot.id}><span class="name">${slot.label}</span>
-      <span class="val">not yet measured</span><span class="sub">arrives in ${slot.phase}</span></div>`;
+      <span class="val">not yet measured</span><span class="sub">arrives in ${phaseName(slot.phase)}</span></div>`;
   }
   if (slot.state === 'measured') {
     return html`<div class="hslot" data-slot=${slot.id}><span class="name">${slot.label}</span>
@@ -47,14 +50,14 @@ function Health() {
 /* ---------------------------------------------------------------- placeholders */
 // What each role will show and when, from ADR 009 D18 and its phases. Nothing here is data.
 const PLACEHOLDERS = {
-  curator: ['P1', 'Curator', 'A session timeline with lag; each session\'s brief, transcript summary, submissions and gate verdicts; submission diffs; open and stale drafts.'],
-  knowledge: ['P1', 'Knowledge', 'Facts with provenance frames, scope, belief and staleness; what each snapshot showed the actor and when. The ontology browser with versions and grooming history follows the ontology work.'],
-  programs: ['P2', 'Programs', 'The program library with versions and statistics; live delegated runs with their progress; preemptions, yields, monitor flags and stops.'],
+  curator: ['curator-and-memory', 'Curator', 'A session timeline with lag; each session\'s brief, transcript summary, submissions and gate verdicts; submission diffs; open and stale drafts.'],
+  knowledge: ['curator-and-memory', 'Knowledge', 'Facts with provenance frames, scope, belief and staleness; what each snapshot showed the actor and when. The ontology browser with versions and grooming history follows the ontology work.'],
+  programs: ['programs-and-monitor', 'Programs', 'The program library with versions and statistics; live delegated runs with their progress; preemptions, yields, monitor flags and stops.'],
 };
 function Placeholder({role}) {
   const [phase, title, text] = PLACEHOLDERS[role];
-  return html`<${Panel} title=${title} note=${`arrives in ${phase}`} span="s12">
-    <${Insufficient}><b>Arrives in ${phase}.</b> There is no ${title.toLowerCase()} data yet, so this view shows none. ${text}<//><//>`;
+  return html`<${Panel} title=${title} note=${`arrives in ${phaseName(phase)}`} span="s12">
+    <${Insufficient}><b>Arrives in ${phaseName(phase)}.</b> There is no ${title.toLowerCase()} data yet, so this view shows none. ${text}<//><//>`;
 }
 
 /* ---------------------------------------------------------------- actor: the forgetting episodes */
@@ -119,7 +122,7 @@ function Actor() {
   if (!data) return html`<${Panel} title="Actor" span="s12"><${Waiting} store=${store} what="the forgetting episodes" error=${error} /><//>`;
   if (!data.lineages.length) return html`<${Panel} title="Actor" span="s12"><${Insufficient}>No episodes are tracked.<//><//>`;
   return html`<${Panel} title="Actor" note="sealed traces · read-only" span="s12">
-      <${Callout}><b>What this shows.</b> Facts the actor knew and then lost at a handoff, each anchored in the sealed frames where it was observed, needed and acted on without. Open an anchor to see the actor's decision at that frame. The live frame is on <a href="#live">Live</a>; intent, expectation and outcome side by side, citations, hints and the snapshot in use arrive in P1 with required emissions.<//><//>
+      <${Callout}><b>What this shows.</b> Facts the actor knew and then lost at a handoff, each anchored in the sealed frames where it was observed, needed and acted on without. Open an anchor to see the actor's decision at that frame. The live frame is on <a href="#live">Live</a>; intent, expectation and outcome side by side, citations, hints and the snapshot in use arrive in ${phaseName('curator-and-memory')} with required emissions.<//><//>
     ${data.lineages.map(lineage => html`<${Panel} title=${`Lineage ${lineage.lineage}`} note=${`study ${lineage.study}`} span="s12">
       <p class="note">${lineage.note}</p><//>
       ${lineage.episodes.map(episode => html`<${Episode} episode=${episode} />`)}`)}`;

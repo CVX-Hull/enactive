@@ -386,7 +386,7 @@ test('older frame images are replaced by a marker in whole blocks', () => {
   assert.equal(messages[0].content[0].type, 'image');
 });
 
-// ---- request serialization (ADR 009 P1.0): what a provider's prompt cache sees, with no provider call ----
+// ---- request serialization (ADR 009 context-stability readiness stage): what a provider's prompt cache sees, with no provider call ----
 const noteOf = body => body.messages.at(-1);
 const MARKED = '\n[Earlier frame image omitted';
 const bodyText = message => typeof message.content === 'string' ? message.content : (message.content ?? []).map(part => part.text ?? '').join('');

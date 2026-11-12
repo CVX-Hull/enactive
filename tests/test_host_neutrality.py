@@ -34,7 +34,7 @@ PROVIDER_SCOPE = ("harness/", "tools/")
 CITATIONS = re.compile(r"\[[^\]]*\]\(https?://[^)]*\)|\]\([^)]*\)|https?://\S+")
 ALLOWED = (
     "tools/player_host/",     # current adapter
-    "tools/curator_host/",    # the curator's adapter (ADR 009 P0 shadow)
+    "tools/curator_host/",    # the curator's adapter (ADR 009 shadow sessions)
     "docs/operations/",       # operator procedures, including coding-agent hosts
     "docs/setup.md",
     "docs/environment.md",

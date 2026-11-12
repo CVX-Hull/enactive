@@ -9,8 +9,8 @@ scope: Proposed direction for an acting player with a coding-agent curator in ep
 # ADR 009 — A curated player: actor, curator, ontology and programs
 
 **Status: proposed, 8 November 2026.** The owner set the direction below in
-discussion on 8 November 2026. Nothing here is adopted; the decisions taken on each
-phase are under [phases](#phases). The
+discussion on 8 November 2026. Nothing here is adopted; where each phase stands is
+under [phases](#phases). The
 [computer-control contract](../contracts/computer-control.md), the
 [player guide](../player-guide.md) and the current standards govern the running
 system until a phase meets its adoption condition. Each phase is adopted on study
@@ -71,8 +71,8 @@ repeated-gap part of its revisit condition for #178. The outcome also required
 credible audit completion, costs and at least 80% detection, and it warranted a
 single read-only lookup first; a separate adviser needed "evidence of a distinct
 failure the simpler access path cannot address". No episode yet shows that failure.
-This proposal therefore rests on the owner's direction of 8 November, and P1 keeps
-the simpler path as its [baseline arm](#phases).
+This proposal therefore rests on the owner's direction of 8 November, and the curator
+and memory phase keeps the simpler path as its [baseline arm](#phases).
 
 The lineage's death was different: the hazard was carried (record `cb18d4`), and
 the player started a new craft beside a fuelled fire. That is a judgment failure.
@@ -369,8 +369,9 @@ rate is measured on anomalies in recorded program runs, not assumed.
   actor's actual inputs; check declared preconditions and success predicates frame
   by frame. Offline replay cannot evaluate inputs the actor did not send, so it is
   a filter, not proof.
-- **Live:** in P2, supervised use in play under the monitor, with yield on any
-  failed precondition. Practice-instance trials come in P3, if adopted.
+- **Live:** in the programs and monitor phase, supervised use in play under the
+  monitor, with yield on any failed precondition. Practice-instance trials come in the
+  practice instance phase, if adopted.
 - **Probation:** a newly published program stays probationary until scored on trace
   that arrived after its publication.
 - **Library:** per-program invocations, successes, yields, aborts and regressions;
@@ -420,7 +421,7 @@ Each session gets a fresh workspace with the access a coding agent expects:
 - **Cold-start cost** (re-reading the ontology and context each session) is kept
   down by the brief and an index of types and programs that the curator maintains
   in the knowledge repository, published through the gate like everything else.
-  It is measured in the P0 shadow run.
+  It is measured in the baseline and workbench phase's shadow run.
 - **Version 0** of the repository, sessions, drafts and gate (#453) is specified in
   [curator sessions, drafts and gate v0](../design/curator-session.md).
 
@@ -486,7 +487,8 @@ its custody token. The boundary is therefore default-deny:
 Which project-local sandbox mechanism can enforce this was a research question (R13).
 The [curator sandbox](../research-curator-sandbox.md) page records the answer, a
 Seatbelt profile with a supervisor and the proxy (open decision 6), and its residual
-risks. If a later escape-suite run fails, P1 does not run live.
+risks. If a later escape-suite run fails, the curator and memory phase does not run
+live.
 
 The curator runs on a substitutable host, as the actor does under `player-host/3`,
 so the same workspace can run under different coding-agent hosts and models.
@@ -500,7 +502,8 @@ so the same workspace can run under different coding-agent hosts and models.
   ontology change. The lead's probe suite is separate evaluation data and never
   reaches the curator.
 - **Ontology evaluation** with the measures above.
-- **Program fitting:** offline replay, and practice-instance trials if P3 is adopted.
+- **Program fitting:** offline replay, and practice-instance trials if the practice
+  instance phase is adopted.
 - **Slot benchmarks:** candidate bindings scored on recorded cases.
 
 The workbench is game-neutral; recorded cases are per game and lineage. Its first part,
@@ -526,7 +529,7 @@ Candidate kinds:
 | Knowledge snapshot | Repository version, published facts | published → superseded |
 | Program run | Program version, slot bindings, budgets | started → running → yielded, finished or preempted |
 | Slot benchmark | Slot, candidate binding, recorded case set | queued → run → scored |
-| Practice fork (P3) | Boundary save, app copy, runtime root | forked → active → retired |
+| Practice fork (practice instance phase) | Boundary save, app copy, runtime root | forked → active → retired |
 | Actor session | Run package, repository version | the existing `computer-sessions/<id>`, described by a sidecar manifest |
 | Study arm or lineage | Pinned repository version, package, curator binding | frozen → running → closed |
 
@@ -581,10 +584,10 @@ viewer stays read-only; nothing the viewer or evaluator computes reaches the pla
 including the curator (ADR008). The shared manifest lets one generic container list
 and detail view cover most kinds, with a few role-specific panels.
 
-**Phasing:** P0 delivers sidecar manifests over the sealed traces and the new
-frame, which can already show actor sessions and the four forgetting episodes. Each
-later phase ships its views with it, so every view has real data when it ships. The
-P0 frame's routes and payloads are in the
+**Phasing:** the baseline and workbench phase delivers sidecar manifests over the
+sealed traces and the new frame, which can already show actor sessions and the four
+forgetting episodes. Each later phase ships its views with it, so every view has real
+data when it ships. That frame's routes and payloads are in the
 [spectator frame contract](../contracts/evaluation.md#spectator-frame-spectator-frame1).
 
 ## Latency, concurrency and cost
@@ -594,7 +597,7 @@ P0 frame's routes and payloads are in the
 | Actor waits | Curator in its own process, never the application lock; the actor reads published snapshots only | Actor wait per request, against the #164 cadence target |
 | Store contention | SQLite locks a whole database file for each write, and the current store uses the default rollback journal with a 1 s timeout (`harness/player/memory.py:20`). The actor's emissions and hints go to the session store or their own file; published snapshots are read-only to the actor; only the gate writes the knowledge store | Lock waits; failed writes |
 | Curator lag | Sessions triggered by new decisions, hints, boundaries or gate failures; one at a time per repository; lag accepted (D15) | Lag in decisions and game time |
-| Spend | Coding agents read a lot. Shadow measurement on sealed traces before live use, with one controlled host and two models under a $100 P0 cap (open decision 2); for P1, a cap as a fraction of actor spend | $ per game hour (actor $0.80 in #397) |
+| Spend | Coding agents read a lot. Shadow measurement on sealed traces before live use, with one controlled host and two models under a $100 cap for the baseline and workbench phase (open decision 2); for the curator and memory phase, a cap as a fraction of actor spend | $ per game hour (actor $0.80 in #397) |
 | Local CPU | Background priority for curator sessions, workbench runs and practice work | Live input latency and frame timing |
 
 ## Evaluation and studies
@@ -606,24 +609,25 @@ checks its power by simulation before it runs.
 
 - **Unit of analysis.** Each lineage has its own repository fork from a pinned
   start, and caches are per arm, so the lineage stays the independent unit.
-- **P1 is decided offline first.** Memory arms can be compared without changing what
-  the actor did: replay arm A and arm B over the same sealed and baseline traces,
-  and score what each would have put in front of the actor against what the actor
-  later needed. Scoring uses what the actor would have received, not each arm's own
-  query interface. Live lineages then serve as non-inferiority guards (survival,
+- **The curator and memory phase is decided offline first.** Memory arms can be
+  compared without changing what the actor did: replay the no-curator arm and the
+  curator arm over the same sealed and baseline traces, and score what each would have
+  put in front of the actor against what the actor later needed. Scoring uses what the
+  actor would have received, not each arm's own query interface. Live lineages then serve as non-inferiority guards (survival,
   pace, cost) and to observe behaviour, not to carry the primary comparison.
 - **Probes are arm-independent and blinded.** They are written from the baseline
   trace before either arm is replayed, so they cannot depend on the arm. Their
-  annotation cost (fact-level labelling per lineage) is estimated in P0 before any
-  spend; ADR 007's recorder failed on a cost of this kind.
+  annotation cost (fact-level labelling per lineage) is estimated in the baseline and
+  workbench phase before any spend; ADR 007's recorder failed on a cost of this kind.
 - **Development data:** the sealed #397 lineage, including the four episodes above,
   and #372's short development-loop runs. Probes built from them fit and debug the
   system; they decide nothing.
 - **Held-out data:** #382's three day-scale lineages, sealed in `372-382-dev-loop`.
   No episode, probe or design choice came from them; this page's problem statement
-  counted their records and queries only in aggregates. #178 writes their probes.
-  They predate emissions, which the P1 study records as a limitation. P1's second
-  protocol adds one more held-out lineage, `lh4`, run for the study (#522).
+  counted their records and queries only in aggregates. The curator memory study
+  (#178) wrote their probes. They predate emissions, which the study records as a
+  limitation. The study's added-lineage protocol adds a fourth held-out lineage,
+  stored as `lh4` and run for the study (#522).
 - **#441 is deferred.** On 8 November the owner decided: "I would prefer to do this
   run after we move forward on the ADR we just discussed to be fruitful." Its
   lineages are re-shaped against the design in place when it resumes.
@@ -643,66 +647,43 @@ checks its power by simulation before it runs.
 
 | Phase | Scope | Spend | Adoption condition |
 | --- | --- | --- | --- |
-| **P0: baseline, workbench and frame** | Trace tools; probe suite from sealed runs and its annotation cost; baseline rediscovery and carry rates; handoff root validation (reject unknown IDs at handoff, not list them as omissions the successor may never see); snapshot-diff cache cost; draft containers and sidecar manifests over sealed traces; the spectator's new frame; the sandbox mechanism (R13); curator shadow sessions on sealed traces with one controlled host and two models (cost, lag, cold start); the research synthesis | $0 gameplay; research and shadow curator calls only | Workbench reproduces the four episodes as failing probes; shadow cost and lag measured; a sandbox enforcing the [isolation boundary](#isolation) exists |
-| **P1: curator and memory** | Required emissions in every arm (D10). Arm A, the simpler path: root validation plus a pushed working set built from existing records, with no curator. Arm B: the epistemic core, the knowledge repository, curator sessions and the gate, snapshots, `player_hint`, and actor write tools removed. Ablations within B only where power allows. Spectator actor, curator, knowledge and draft views | Offline replay: curator calls only. Live: per package, after the gate before spend | Offline: pre-registered probe and rediscovery metrics, B against A, on replayed traces. Live: non-inferiority guards held |
-| **P2: programs and monitor** | Actor-interface programs as passive policies; capability slots with record and replay; supervised runs with preemption and verified risk classes; monitor slot; offline fitting; probation and library statistics; spectator program views | Per package, after the gate before spend | Pre-registered delegation share at matched failure rate; monitor detection on anomalies in recorded program runs |
-| **P3: practice instance** | One-way forks; determinism measurement; live fitting; slot swaps; spectator fork views | Per package | Owner decision first; concurrency guards held |
+| **Baseline and workbench** | Trace tools; probe suite from sealed runs and its annotation cost; baseline rediscovery and carry rates; handoff root validation (reject unknown IDs at handoff, not list them as omissions the successor may never see); snapshot-diff cache cost; draft containers and sidecar manifests over sealed traces; the spectator's new frame; the sandbox mechanism (R13); curator shadow sessions on sealed traces with one controlled host and two models (cost, lag, cold start); the research synthesis | $0 gameplay; research and shadow curator calls only | Workbench reproduces the four episodes as failing probes; shadow cost and lag measured; a sandbox enforcing the [isolation boundary](#isolation) exists |
+| **Curator and memory** | Required emissions in every arm (D10). The no-curator arm, the simpler path: root validation plus a pushed working set built from existing records. The curator arm: the epistemic core, the knowledge repository, curator sessions and the gate, snapshots, `player_hint`, and actor write tools removed. Ablations within the curator arm only where power allows. Spectator actor, curator, knowledge and draft views | Offline replay: curator calls only. Live: per package, after the gate before spend | Offline: pre-registered probe and rediscovery metrics, the curator arm against the no-curator arm, on replayed traces. Live: non-inferiority guards held |
+| **Programs and monitor** | Actor-interface programs as passive policies; capability slots with record and replay; supervised runs with preemption and verified risk classes; monitor slot; offline fitting; probation and library statistics; spectator program views | Per package, after the gate before spend | Pre-registered delegation share at matched failure rate; monitor detection on anomalies in recorded program runs |
+| **Practice instance** | One-way forks; determinism measurement; live fitting; slot swaps; spectator fork views | Per package | Owner decision first; concurrency guards held |
 
-**Decisions taken on the phases (8 November 2026).** Outcomes and figures are in the
-dated records linked here; nothing is adopted, and the current contracts govern the
-running system.
-- **P0** met its adoption condition, with qualifications on episode recall and cost
+**Where each phase stands.** Nothing is adopted, and the current contracts govern the
+running system. The dated records linked here hold the outcomes, the figures and the
+owner's decisions.
+
+- **Baseline and workbench.** The phase met its adoption condition, with qualifications
+  on episode recall and on the cost measurement
   ([record](../acceptance/2026-11-08-adr009-p0.md)).
-- **P1.0, a readiness stage before P1,** runs no study and adopts nothing. It has three
-  leaves:
-1. **Context stability and clarity** for both the actor and the curator:
-   - one session-affinity value per session;
-   - byte-stable system prompts and tool tables;
-   - rare image eviction;
-   - tail notices that persist;
-   - warnings before forced stops;
-   - source IDs in eviction markers;
-   - labelled predecessor fields in the handoff packet.
-
-   It is proven by a request-serialization test with no spend, and then by one paid
-   curator session with a cap of about $2. The owner allows these changes to the
-   running actor host before P1 adoption, for cache and clarity only, with no change
-   to game semantics. A short actor development run to verify them is a separate
-   gameplay-spend decision.
-2. **Probe validation** on development data. Blinded annotation is checked against
-   episodes found independently, and if recall stays weak the probes become
-   query-style. One fact ledger is frozen per lineage.
-3. **The P1 pre-registration.**
-   - **Arms:** A, with no curator, against B, with the curator.
-   - **Curator model:** terra, the actor's model, fixed.
-   - **Metrics:** probe recall, rediscovery per game hour, cost against actor cost, and
-     an audited false-fact rate.
-   - **Statistics:** a descriptive study with effect-size thresholds agreed in advance,
-     because #382's three lineages cannot support a significance test.
-   - **Spend:** an envelope of about $120, staged behind a pilot.
-
-- **P1.0's results** are in the [context-stability](../acceptance/2026-11-08-context-stability-489.md)
-  and [probe-validation](../acceptance/2026-11-08-probe-validation-490.md) records and the
-  [P1 pre-registration](../design/p1-study.md). The owner made confirmed re-observations
-  P1's primary probes, with the frozen ledgers secondary.
-- **P1: go, but fix prompt caching first.** P1 runs as pre-registered, accepting that it
-  detects only large effects. Caching is fixed (the context-stability record has the
-  cause and fix). P1 then proceeds through #178's held-out probes, a power re-check on
-  their actual clusters and the pilot, each under the pre-registration's stop rules.
-- **P1 stopped at the gate (9 November 2026).** The held-out power re-check failed: #382's
-  lineages give 27 scoring units, far fewer than planned. The owner stopped P1 before any
-  spend, and P1 returns to the owner for reshaping
-  ([record](../acceptance/2026-11-09-p1-gate-178.md)).
-- **P1 reshaped: one more held-out lineage (9 November 2026).** The owner chose to add one
-  new held-out lineage to #382's frozen probes, behind a re-run power gate
-  (p1-study/2, now carried in [p1-study/3](../design/p1-study-3.md); #178 and #522).
-- **The reshaped gate passes (10 November 2026).** `lh4` ended with 13 boundaries and gives 62
-  scoring units; on all four lineages P(go) is 0.901 at the 0.30 effect and 0.022 with no
-  effect ([record](../acceptance/2026-11-10-p1-gate-study-2-178.md)). The replay stages follow.
-- **The measurement was redesigned (10 November 2026).** p1-study/2's arm-guess check failed
-  twice on development data (27 and 26 of 30, limit 21): the two systems write differently, and
-  no renderer hides that. The owner chose an answer-key chain in which the grader never sees an
-  arm's text ([p1-study/3](../design/p1-study-3.md), approved the same day).
+- **Context-stability readiness stage.** This stage prepared the curator and memory
+  phase, ran no study and adopted nothing. It is finished. It made the request
+  contexts of the actor and the curator stable and clear
+  ([record](../acceptance/2026-11-08-context-stability-489.md)), checked the probes
+  against re-observations found independently
+  ([record](../acceptance/2026-11-08-probe-validation-490.md)) and wrote the curator
+  memory study's first protocol. The owner made confirmed re-observations the study's
+  primary probes, with the frozen ledgers secondary.
+- **Curator and memory.** The phase is not adopted. The curator memory study (#178),
+  the offline comparison this phase's adoption condition asks for, closed on
+  12 November 2026 with a permanent registered no-go. Its descriptive result found
+  lower recall for the curator arm, 13 of 89 units in each repeat, than for the
+  no-curator arm, 18 of 89
+  ([completion record](../acceptance/2026-11-12-p1-descriptive-completion-178.md)).
+  The curator stays gated and does not run in live play. Any renewed benefit claim needs
+  a fresh written protocol and an owner decision. The study ran under three protocols:
+  - the [power-gate protocol](../design/p1-study.md), which stopped at its power gate
+    before any spend ([record](../acceptance/2026-11-09-p1-gate-178.md));
+  - the added-lineage protocol, which added a fourth held-out lineage and passed the
+    power gate ([record](../acceptance/2026-11-10-p1-gate-study-2-178.md));
+  - the [answer-key protocol](../design/p1-study-3.md), which kept that data and
+    decision rule and measured recall by an answer-key chain.
+- **Programs and monitor.** The phase has not started.
+- **Practice instance.** The phase has not started, and its adoption waits for an owner
+  decision ([open decision 1](#open-owner-decisions)).
 
 Every phase replaces its contracts and stores in one migration
 (`player-memory/2` → `/3`, `player-record/1` and `player-program/2` → their
@@ -738,20 +719,20 @@ Each change below takes effect only when its phase is adopted (D12).
 
 | Current position | Where | Becomes |
 | --- | --- | --- |
-| "the active player owns planning, ordinary interpretation and its own reflection"; "advisers and programs are optional and only propose"; "no asynchronous learner service … added only if a study shows it improves play"; "one game/controller" | [Charter](../charter.md) current assumptions | The actor owns planning and interpretation of its current screen; the curator owns reflection and curation, adopted on the P1 study; programs act in the actor's place under supervision and yield (P2); one live game plus isolated practice instances (P3). A curator running while no one watches triggers the charter's "recheck … unattended operation", done before P1 runs live |
+| "the active player owns planning, ordinary interpretation and its own reflection"; "advisers and programs are optional and only propose"; "no asynchronous learner service … added only if a study shows it improves play"; "one game/controller" | [Charter](../charter.md) current assumptions | The actor owns planning and interpretation of its current screen; the curator owns reflection and curation, adopted on the curator memory study; programs act in the actor's place under supervision and yield (programs and monitor phase); one live game plus isolated practice instances (practice instance phase). A curator running while no one watches triggers the charter's "recheck … unattended operation", done before the curator and memory phase runs live |
 | "Memory/programs/context are optional fallible player services" | [Player tooling](../standards/player-tooling.md); [architecture](../architecture.md) | Curated memory reaches the actor by snapshot; programs are actor-interface policies; the curator works through a gated workspace |
 | Player-selected optional reflection | [S-PLAYER-INTERFACE](../standards/player-interface.md); [player-interface component](../components/player-interface.md) | Actor plays, reads, emits and hints |
 | The player appends records; actor-written handoff summary | [Memory component](../components/memory-learning.md); [player guide](../player-guide.md); the driver (`tools/campaign_player.py`) | Curator submits; the gate publishes; continuity from snapshots |
-| `player-record/1`, `player-program/2`, `program-view/4`, `player-memory/2`; the custody and program-runner sections | [Computer-control contract](../contracts/computer-control.md); schemas | Their P1 and P2 successors; a resumable program-to-actor handover with a bounded wait |
+| `player-record/1`, `player-program/2`, `program-view/4`, `player-memory/2`; the custody and program-runner sections | [Computer-control contract](../contracts/computer-control.md); schemas | Their successors in the curator and memory phase and the programs and monitor phase; a resumable program-to-actor handover with a bounded wait |
 | `player_handoff` with an actor-written summary; the previous final report in the admission prompt | [Player-host contract](../contracts/player-host.md); the driver | Successors and admissions start from the published snapshot |
-| One actor and no concurrent host; the active actor writes memory; no second game during an admission | [Campaign run](../operations/campaign-run.md); run procedures | A concurrent curator host; isolated practice instances only after P3 |
-| "Optional advisers/programs only propose"; one custodian, "no second writer"; Pause and partial or unknown delivery "cannot become a resumable transfer" | [Mission ownership](../operations/mission-ownership.md) | Programs act in the actor's place under supervision (P2). One input sender at a time, through a new resumable program-to-actor handover; Pause and uncertain delivery stay permanent |
+| One actor and no concurrent host; the active actor writes memory; no second game during an admission | [Campaign run](../operations/campaign-run.md); run procedures | A concurrent curator host; isolated practice instances only after the practice instance phase is adopted |
+| "Optional advisers/programs only propose"; one custodian, "no second writer"; Pause and partial or unknown delivery "cannot become a resumable transfer" | [Mission ownership](../operations/mission-ownership.md) | Programs act in the actor's place under supervision (programs and monitor phase). One input sender at a time, through a new resumable program-to-actor handover; Pause and uncertain delivery stay permanent |
 | A host "hosts one actor" | [Player-host contract](../contracts/player-host.md) | A curator-host contract, or an extension of the player host, so the curator runs on a substitutable host |
 | `harness/player/` has no process, provider or native authority | [Documentation map](../documentation.md); [architecture](../architecture.md) and its components | An owned code location and component pages for the curator process, the gate, the container manager and the sandbox; the player package stays pure |
 | The spectator's view API and the observer's responsibilities | [Evaluation contract](../contracts/evaluation.md); [observer component](../components/observer-operations.md); ADR008's spectator half | Views native to the roles and containers; read-only; Pause unchanged |
 | Owned resources and retention | [Environment](../environment.md); [evidence cleanup](../operations/evidence-cleanup.md) | Knowledge repositories, curator sessions and practice forks as owned, managed containers with retention rules |
 | "no separate always-running strategic agent" | [Multi-rate synthesis](../research-multirate-agents.md) | Pointer to this ADR |
-| #178 closeout: optional, deferred reflection | [ADR 007 outcome](../acceptance/2026-11-03-adr007-status-quo.md) | Only the repeated-gap part of its revisit condition is met; on the owner's direction, #178 becomes P1's study gate |
+| #178 closeout: optional, deferred reflection | [ADR 007 outcome](../acceptance/2026-11-03-adr007-status-quo.md) | Only the repeated-gap part of its revisit condition is met; on the owner's direction, #178 becomes the curator and memory phase's study gate |
 
 **Unchanged and binding:** ADR006 (basic control, one input sender), ADR008
 (evaluator output never reaches the player, including the curator), P-TRUTH, the
@@ -781,19 +762,21 @@ sources only.
 | R13 Agent workspaces and verification gates | How well do coding agents work in sandboxed, ephemeral workspaces? Which project-local sandbox mechanisms exist on this platform? How do agents game pass/fail gates, and which gate designs resist it? What does a session cost in tokens and cold start? | Continuous integration; code review; capability-based security (Dennis and Van Horn 1966); least privilege (Saltzer and Schroeder 1975) |
 | R14 Oversight interfaces | What must a supervisor see to judge a multi-role autonomous system and intervene in time? | Supervisory control (Sheridan); situation awareness (Endsley 1995) |
 
-**Studies on our own data (P0):**
+**Studies on our own data (baseline and workbench phase):**
 - the baseline rediscovery and carry rates on sealed traces;
 - the probe suite and its inter-rater check;
 - emission feasibility (tokens and pace from a short development run);
 - curator shadow sessions on sealed traces with one controlled host and two models
   (open decision 2): cost, lag, cold start and gate pass rate;
-- practice-instance determinism and concurrency (P3, after an owner decision).
+- practice-instance determinism and concurrency (practice instance phase, after an
+  owner decision).
 
 ## Open owner decisions
 
-1. Whether to adopt the practice instance (P3) and its one-way fork rule.
+1. Whether to adopt the practice instance phase and its one-way fork rule.
 2. The curator's spend cap as a fraction of actor spend, and whether its model may
-   differ from the actor's. *For P0, decided 8 November 2026:*
+   differ from the actor's. *For the baseline and workbench phase, decided
+   8 November 2026:*
    - **Cap.** #454's shadow sessions are capped at **$100 in total**, enforced by the
      proxy. They are staged: a short pilot comes first, and the run stops if the cost
      projects past the cap.
@@ -805,17 +788,18 @@ sources only.
    - **Credentials.** The proxy holds the project's existing keychain key and never
      prints it.
 
-   The P1 cap, as a fraction of actor spend, and the P1 model stay open until #454
-   reports.
+   The cap for the curator and memory phase, as a fraction of actor spend, and that
+   phase's model stay open until #454 reports.
 3. *Decided 8 November 2026:* #441 is deferred until this design has moved forward,
-   and P1's held-out data comes from #382 instead (above).
+   and the curator and memory phase's held-out data comes from #382 instead (above).
 4. The belief model, after R3.
 5. *Decided 8 November 2026:* the knowledge repository lives at the project-local
    runtime path `.runtime/knowledge/<game>/`, a separate Git repository sealed into
    the evidence store per study (#453).
 6. *Decided 8 November 2026, after R13:* the sandbox is a project-owned Seatbelt
-   profile with a supervisor and the key-holding model proxy, for P0 shadow runs and,
-   if #454 holds, live P1. The escape suite is re-run after every macOS or host update.
+   profile with a supervisor and the key-holding model proxy, for the baseline and
+   workbench phase's shadow runs and, if #454 holds, live runs of the curator and memory
+   phase. The escape suite is re-run after every macOS or host update.
    Disk becomes a hard cap through a sparse disk image if #454 shows write bursts
    ([curator sandbox](../research-curator-sandbox.md), #451).
 
@@ -823,11 +807,13 @@ sources only.
 
 [#445](https://github.com/CVX-Hull/enactive/issues/445) holds the implementation and test
 plan (phases, critical path, evidence split, test strategy and where each owner decision
-sits). [#446](https://github.com/CVX-Hull/enactive/issues/446) owns P0;
-[#387](https://github.com/CVX-Hull/enactive/issues/387) (cross-run knowledge) owns P1
-memory and the knowledge repository; [#177](https://github.com/CVX-Hull/enactive/issues/177)
-owns P2 programs; [#472](https://github.com/CVX-Hull/enactive/issues/472) owns P3;
-[#178](https://github.com/CVX-Hull/enactive/issues/178) owns the P1 study gate; [#384](https://github.com/CVX-Hull/enactive/issues/384) owns emissions;
+sits). [#446](https://github.com/CVX-Hull/enactive/issues/446) owns the baseline and
+workbench phase; [#387](https://github.com/CVX-Hull/enactive/issues/387) (cross-run
+knowledge) owns the curator and memory phase's memory and the knowledge repository;
+[#177](https://github.com/CVX-Hull/enactive/issues/177) owns the programs of the
+programs and monitor phase; [#472](https://github.com/CVX-Hull/enactive/issues/472)
+owns the practice instance phase;
+[#178](https://github.com/CVX-Hull/enactive/issues/178) owns the curator memory study, the gate for the curator and memory phase; [#384](https://github.com/CVX-Hull/enactive/issues/384) owns emissions;
 [#42](https://github.com/CVX-Hull/enactive/issues/42) owns expectation evaluation;
 [#164](https://github.com/CVX-Hull/enactive/issues/164) owns the cadence target that
 programs serve; [#143](https://github.com/CVX-Hull/enactive/issues/143) owns the

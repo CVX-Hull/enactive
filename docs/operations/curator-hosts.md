@@ -67,7 +67,7 @@ model API. Before any spend, a provider for that API is added to
 [`tools/curator_host/providers.py`](../../tools/curator_host/providers.py) with its request
 allowlist checked against a dated source, and the same probe runs with a stand-in of its shape.
 
-## Pi curator host (the P0 shadow host)
+## Pi curator host (the shadow-session host)
 
 The shadow host is one host the project controls (ADR 009 open decision 2), run with two models
 through OpenRouter ([#454 record](../acceptance/2026-11-08-curator-shadow-454.md)). [`tools/curator_host`](../../tools/curator_host) is a private Node package

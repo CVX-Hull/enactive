@@ -1,17 +1,18 @@
 ---
 owner: lead
-review_trigger: Responsibility, supported behavior, interfaces or qualification change; a P1 decision under ADR 009
+review_trigger: Responsibility, supported behavior, interfaces or qualification change; a decision on ADR 009's curator and memory phase
 status: active
 ---
 
-# Curator and trace workbench (ADR 009 P0)
+# Curator and trace workbench (ADR 009 baseline and workbench phase)
 
 This is shadow infrastructure for [ADR 009](../decisions/009-curated-player.md)'s
 curator. It runs only over sealed traces. The running player does not use it, and
 nothing in the player, the computer, evaluation or the viewer imports it: the
 import contracts in `pyproject.toml` forbid it. The curator itself holds no custody and
 no player access, and reads no evaluation records. Nothing here is
-adopted; P0's [outcome](../acceptance/2026-11-08-adr009-p0.md) is recorded separately.
+adopted; the baseline and workbench phase's
+[outcome](../acceptance/2026-11-08-adr009-p0.md) is recorded separately.
 
 ## Internal responsibilities
 
@@ -39,14 +40,14 @@ adopted; P0's [outcome](../acceptance/2026-11-08-adr009-p0.md) is recorded separ
   cannot release a reservation and leave admission usable. The runner closes admission
   separately from incident revocation, boundedly awaits settlement and ledger receipts,
   and stops on explicit unsettled exposure; a clean host exit alone is insufficient.
-  [Shutdown receipts and limits](../operations/curator-hosts.md#pi-curator-host-the-p0-shadow-host)
+  [Shutdown receipts and limits](../operations/curator-hosts.md#pi-curator-host-the-shadow-session-host)
   distinguish a spent snapshot from a final charge. It also sets one session-affinity
   header per session. Prompt caching depends instead on the host keeping each budget note
   where it was first sent; a note rewritten at the tail defeats the cache
   ([#489 record](../acceptance/2026-11-08-context-stability-489.md#follow-up-the-cause-found)).
 - **Knowledge and records.** Each run starts its own knowledge repository. Session
   records are kept, and workspaces are deleted.
-- **Ownership.** The lead owns this code until P1 assigns it.
+- **Ownership.** The lead owns this code until the curator and memory phase assigns it.
 
 ## Assurance and evidence
 
@@ -58,7 +59,8 @@ adopted; P0's [outcome](../acceptance/2026-11-08-adr009-p0.md) is recorded separ
   - `tests/test_curator_openrouter.py` and `tests/test_curator_host.py`.
 - **Records:** the [probe baseline](../acceptance/2026-11-08-probe-baseline-449.md),
   the [shadow sessions](../acceptance/2026-11-08-curator-shadow-454.md), the
-  [P0 outcome](../acceptance/2026-11-08-adr009-p0.md) and the offline curator-memory
-  study's [completion and registered no-go](../acceptance/2026-11-12-p1-descriptive-completion-178.md).
+  [baseline and workbench phase outcome](../acceptance/2026-11-08-adr009-p0.md) and the
+  curator memory study's
+  [completion and registered no-go](../acceptance/2026-11-12-p1-descriptive-completion-178.md).
 - **CI coverage:** Linux CI runs the portable tests. The Seatbelt-lane tests, sandbox
   and real-host sessions, run only on macOS.

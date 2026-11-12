@@ -173,12 +173,14 @@ Paradigm labels follow S04's grouping as extracted. No cross-product ranking bey
    (a strict LLM judge beat the bank on 3 of 4 agents, a looser one on 1 to 2), while
    an oracle-checked policy beat it on all four. It does *not* show that memory beats
    an empty store, nor that self-judging is useless. The gate's re-observation checks
-   are the available analogue of S01's oracle; test in P0 whether they approximate it.
+   are the available analogue of S01's oracle; test in the baseline and workbench phase
+   whether they approximate it.
 2. Keep every episode retrievable and add a **history-based demotion** (low realized
    utility after repeated retrieval) as a candidate grooming signal; S01 supports it
    modestly (four tasks).
 3. Do **not** claim typed schemas help. Treat the ontology as a hypothesis with a
-   mandatory flat/lexical arm in every P1 comparison (BM25-class retrieval over raw
+   mandatory flat/lexical arm in every comparison of the curator and memory phase
+   (BM25-class retrieval over raw
    episodes plus epistemic-core fields), at matched calls and tokens, where the
    report states the budget beside the outcome whenever it cannot be matched. S04
    supports BM25-class retrieval as a **cheap baseline that heavier designs must beat**
@@ -236,7 +238,8 @@ Paradigm labels follow S04's grouping as extracted. No cross-product ranking bey
    actor never blocked) matches what S04 says is necessary when per-session
    consolidation time can exceed arrival intervals. Keep it, and **adopt S04's
    staleness definition** (sessions or boundaries not yet reflected in the published
-   snapshot) as the lag metric in P0 curator shadow sessions, reporting the
+   snapshot) as the lag metric in the baseline and workbench phase's curator shadow
+   sessions, reporting the
    distribution of curator write time and its tail, not the mean.
 2. Because the ADR makes the next admission wait for a covering snapshot, the cost of
    a slow curator falls on wall-clock only at boundaries; the staleness metric tells
@@ -245,8 +248,8 @@ Paradigm labels follow S04's grouping as extracted. No cross-product ranking bey
 3. Preserve the loser: keep superseded assertions (S12's audit-row idea, already in
    the ADR's "what it supersedes") rather than overwriting.
 4. Weakest area: no measured effect of consolidation on acting-agent task outcomes at
-   matched cost exists in the sources read; treat P0's shadow-session lag/cost study
-   as the first real evidence.
+   matched cost exists in the sources read; treat the baseline and workbench phase's
+   shadow-session lag/cost study as the first real evidence.
 
 ## R3 Belief under conflicting observations (ADR open decision 4)
 
@@ -478,8 +481,8 @@ Paradigm labels follow S04's grouping as extracted. No cross-product ranking bey
 3. Do **not** use an LLM judge for redundancy or merge quality: S19's judges disagreed
    most there. Use the gate's measured retrieval-miss and duplicate/wrong-merge rates.
 4. Compression (MDL), Krippendorff's alpha and Fellegi-Sunter-style identity scores
-   remain secondary diagnostics with **no evidence they predict utility**. P0 should
-   record them alongside utility and report their correlation on the lineage set before
+   remain secondary diagnostics with **no evidence they predict utility**. The baseline
+   and workbench phase should record them alongside utility and report their correlation on the lineage set before
    any is allowed to gate an edit.
 5. Weakest area: no measured evidence on utility versus complexity or on grooming
    (merge/split) for LLM-induced types in agent memory.

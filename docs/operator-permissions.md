@@ -48,8 +48,9 @@ Owner-set envelopes, each within the standing $1,000 cumulative cap:
 - One seven-day development lineage ([#397](https://github.com/CVX-Hull/enactive/issues/397))
   has a $300 new-spend envelope (decisions E1 and F2 in
   [its record](acceptance/2026-11-07-seven-day-397.md)). It is closed: the lineage ended.
-- P1's held-out lineage `lh4` ([#522](https://github.com/CVX-Hull/enactive/issues/522)) has an $80
-  new-spend envelope, approved with [p1-study/2](design/p1-study-3.md#running-lh4) on
+- The curator memory study's fourth held-out lineage, stored as `lh4`
+  ([#522](https://github.com/CVX-Hull/enactive/issues/522)), has an $80 new-spend envelope,
+  approved with the study's [added-lineage protocol](design/p1-study-3.md#running-lh4) on
   9 November 2026 ([its record](acceptance/2026-11-09-held-out-lineage-522.md)). It is closed:
   the lineage ended.
 

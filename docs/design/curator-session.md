@@ -138,7 +138,7 @@ where writable, and the original interrupt remains primary. A forced second inte
 hard kill or unwritable record can prevent a terminal receipt; that remains unknown.
 This guarantee does not cover interruption during later collection/gating and cannot undo
 an earlier atomic publication. Proxy shutdown and unsettled accounting are separate
-[runner guards](../operations/curator-hosts.md#pi-curator-host-the-p0-shadow-host).
+[runner guards](../operations/curator-hosts.md#pi-curator-host-the-shadow-session-host).
 
 **One session at a time per repository.** The runner holds an exclusive lock on
 `<game>.state/lock`.
