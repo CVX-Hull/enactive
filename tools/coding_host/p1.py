@@ -61,7 +61,7 @@ def _same_input_receipt(actual, expected):
             == {k: v for k, v in expected.items() if k != 'cli_version'})
 
 
-def prepare(kind, build, expected_key_sha256, out):
+def prepare(kind, build, expected_key_sha256, out, only=None):
     out, build = Path(out).resolve(), Path(build).resolve()
     runtime = (batches.ROOT / '.runtime').resolve()
     if not out.is_relative_to(runtime) or out == runtime or out.exists():
@@ -72,6 +72,10 @@ def prepare(kind, build, expected_key_sha256, out):
         raise HandoutError('key digest mismatch')
     key = batches._load_key(build, kind)
     batches._verify_build(build, key, kind)
+    names = {entry['name'] for entry in key['batches']}
+    if only is not None and (not only or len(set(only)) != len(only) or not set(only) <= names):
+        raise HandoutError('unknown, empty or duplicate batch selection')
+    selected = names if only is None else set(only)
     out.mkdir(parents=True)
     (out / 'prompts').mkdir()
     (out / 'attempts').mkdir()
@@ -79,6 +83,8 @@ def prepare(kind, build, expected_key_sha256, out):
     records = {}
     for entry in key['batches']:
         name = entry['name']
+        if name not in selected:
+            continue
         prepared = inputs.prepare(build, kind, name, out / name, expected_key_sha256=expected_key_sha256)
         receipt = checked_receipt(prepared)
         prompt_path = out / 'prompts' / f'{name}.txt'
@@ -227,6 +233,9 @@ def _run_locked(out, max_attempts, workers, only):
         if name not in reserved and set(checked[name].leaf.iterdir()) != {checked[name].batch}:
             raise HandoutError('unused leaf contains unexpected files')
     lock, stop, active = threading.RLock(), threading.Event(), {}
+    cleanup_states = {}
+    shutting_down = False
+    handling_signal = False
     counts = dict(launched=len(reserved), done=0, skipped=len(completed & set(selected)), failed=0)
 
     def latch_stop():
@@ -235,7 +244,18 @@ def _run_locked(out, max_attempts, workers, only):
         if not marker.exists():
             write_json(marker, {'stopped': True})
 
+    def close_child(child):
+        # A worker and the controller can observe the same child at shutdown.
+        # Key by the Popen object, rather than a reusable OS process identifier.
+        state = cleanup_states[child]
+        with state['lock']:
+            if not state['done']:
+                _cleanup(child)
+                state['done'] = True
+
     def stop_all(latch=True):
+        nonlocal shutting_down
+        shutting_down = True
         with lock:
             if latch:
                 latch_stop()
@@ -243,18 +263,26 @@ def _run_locked(out, max_attempts, workers, only):
         errors = []
         for child in children:
             try:
-                _cleanup(child)
+                close_child(child)
             except Exception as error:
                 errors.append(type(error).__name__)
         if errors:
-            raise HandoutError('owned process cleanup failed')
+            raise HandoutError('owned process cleanup failed: ' + ', '.join(errors))
 
     def interrupted(signum, frame):
+        nonlocal handling_signal
+        if handling_signal:
+            return
+        handling_signal = True
+        if shutting_down:
+            with lock:
+                latch_stop()
+            return
         stop_all()
         raise KeyboardInterrupt
 
     def task(name):
-        if name in completed:
+        if name in completed or stop.is_set():
             return
         prepared = checked[name]
         directory = out / 'attempts' / name
@@ -272,6 +300,7 @@ def _run_locked(out, max_attempts, workers, only):
                 with (directory / 'stdout.jsonl').open('x') as stdout, (directory / 'stderr.txt').open('x') as stderr:
                     child = subprocess.Popen(prepared.exec_argv(), cwd=prepared.leaf, stdin=subprocess.PIPE,
                                              stdout=stdout, stderr=stderr, text=True, start_new_session=True)
+                    cleanup_states[child] = dict(lock=threading.Lock(), done=False)
                     active[child.pid] = child
                 counts['launched'] += 1
                 write_json(directory / 'launched.json', dict(pid=child.pid, started=time.time(),
@@ -291,7 +320,7 @@ def _run_locked(out, max_attempts, workers, only):
                 raise HandoutError('attempt timed out') from None
             if child.returncode != 0:
                 raise HandoutError('attempt failed')
-            _cleanup(child)
+            close_child(child)
             with lock:
                 active.pop(child.pid, None)
             child = None
@@ -320,7 +349,7 @@ def _run_locked(out, max_attempts, workers, only):
         finally:
             if child is not None:
                 try:
-                    _cleanup(child)
+                    close_child(child)
                 except BaseException:
                     with lock:
                         latch_stop()
@@ -351,6 +380,7 @@ def main(argv=None):
     prep.add_argument('--batches', type=Path, required=True)
     prep.add_argument('--expected-key-sha256', required=True)
     prep.add_argument('--out', type=Path, required=True)
+    prep.add_argument('--only', nargs='+')
     execute = commands.add_parser('run')
     execute.add_argument('handout', type=Path)
     execute.add_argument('--max-attempts', type=int, required=True)
@@ -358,7 +388,7 @@ def main(argv=None):
     execute.add_argument('--only', nargs='+')
     args = parser.parse_args(argv)
     try:
-        result = (prepare(args.kind, args.batches, args.expected_key_sha256, args.out) if args.command == 'prepare'
+        result = (prepare(args.kind, args.batches, args.expected_key_sha256, args.out, args.only) if args.command == 'prepare'
                   else run(args.handout, args.max_attempts, args.workers, args.only))
     except (HandoutError, inputs.InputError, batches.BatchError, OSError, ValueError, KeyError):
         parser.exit(1, 'Handout verification or execution failed.\n')

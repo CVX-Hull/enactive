@@ -56,9 +56,17 @@ class PreparedInput:
 
     def verify_render(self, rendered: object) -> None:
         found = []
+        user_text = []
+        user_types = []
 
         def visit(value: object) -> None:
             if isinstance(value, dict):
+                if value.get('type') == 'message' and value.get('role') == 'user':
+                    blocks = value.get('content')
+                    if not isinstance(blocks, list) or any(not isinstance(block, dict) for block in blocks):
+                        raise InputError('invalid rendered user content')
+                    user_types.append([block.get('type') for block in blocks])
+                    user_text.append([block.get('text') for block in blocks if block.get('type') == 'input_text'])
                 if value.get('type') == 'input_image':
                     found.append(value)
                 for child in value.values():
@@ -68,6 +76,13 @@ class PreparedInput:
                     visit(child)
 
         visit(rendered)
+        expected_text = []
+        for index, image in enumerate(self.images, 1):
+            expected_text.extend([f'<image name=[Image #{index}] path="{image.path}">', '</image>'])
+        expected_text.append(self.prompt)
+        expected_types = ['input_text', 'input_image', 'input_text'] * len(self.images) + ['input_text']
+        if not user_text or user_text[-1] != expected_text or user_types[-1] != expected_types:
+            raise InputError('rendered user text differs from prepared prompt')
         if len(found) != len(self.images):
             raise InputError('rendered image count differs from prepared input')
         for block, expected in zip(found, self.images):
@@ -137,6 +152,7 @@ def prepare(build: Path, kind: str, batch_name: str, leaf: Path, *, expected_key
         brief = batches.frozen_brief(batches.KINDS[kind]['brief'])
         entry = next(b for b in key['batches'] if b['name'] == batch_name)
         if (batch['schema'] != batches.BATCH_SCHEMA or batch['brief'] != brief
+                or (kind == 'reader' and len(batch['items']) != 1)
                 or [item['id'] for item in batch['items']] != entry['ids']
                 or any(item['id'] not in key['items'] for item in batch['items'])):
             raise InputError('batch content does not match its key or frozen brief')
@@ -167,7 +183,7 @@ def prepare(build: Path, kind: str, batch_name: str, leaf: Path, *, expected_key
     leaf.mkdir(parents=True, exist_ok=False)
     copied = leaf / f'{batch_name}.json'
     copied.write_bytes(raw)
-    prompt = brief.replace('[batch]', str(copied))
+    prompt = brief if kind == 'reader' else brief.replace('[batch]', str(copied))
     prompt += f'\n\nRead the batch file at {copied}. '
     if images:
         prompt += ('Use the attached original images in attachment order; '
@@ -178,7 +194,5 @@ def prepare(build: Path, kind: str, batch_name: str, leaf: Path, *, expected_key
                'use the network or spawn agents. '
                'Write your answers as JSON Lines to answer.jsonl in the current directory. '
                'Then reply with only the number of lines you wrote.')
-    if images:
-        prompt += '\nAttachment index (one-based) to original frame path:\n'
-        prompt += '\n'.join(f'{index}: {image.path}' for index, image in enumerate(images, 1))
+    prompt += '\n\nExact public batch JSON follows:\n' + raw.decode('utf-8')
     return PreparedInput(kind, leaf, copied, prompt, images, key_hash, _sha(raw))

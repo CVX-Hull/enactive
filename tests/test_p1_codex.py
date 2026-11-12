@@ -83,6 +83,38 @@ def test_success_sends_exact_prepared_images_and_keeps_candidates_separate(hando
     assert len(calls) == 1
 
 
+def test_prepare_selection_keeps_original_key_ids_and_runs_only_selected(handout, monkeypatch):
+    out, build, _, _ = handout
+    key = build / 'keys/question.json'
+    original = key.read_bytes()
+    selected = out.parent / 'selected'
+    result = runner.prepare('question', build, hashlib.sha256(original).hexdigest(), selected,
+                            only=['question-002'])
+    assert result == {'batches': 1, 'inference_calls': 0}
+    manifest = json.loads((selected / 'manifest.json').read_text())
+    assert list(manifest['batches']) == ['question-002']
+    assert manifest['key_sha256'] == hashlib.sha256(original).hexdigest()
+    assert key.read_bytes() == original
+    assert (selected / 'question-002/question-002.json').read_bytes() == (build / 'batches/question-002.json').read_bytes()
+    assert not (selected / 'question-001').exists() and not (selected / 'question-003').exists()
+    calls = fakes(monkeypatch)
+    assert runner.run(selected, 1)['done'] == 1
+    assert len(calls) == 1 and calls[0].cwd == selected / 'question-002'
+
+
+@pytest.mark.parametrize('only', [[], ['missing'], ['question-002', 'question-002']])
+def test_invalid_prepare_selection_creates_no_handout(handout, monkeypatch, only):
+    out, build, _, _ = handout
+    selected = out.parent / 'invalid-selection'
+    def unexpected_render(prepared):
+        pytest.fail('invalid selection reached local renderer')
+    monkeypatch.setattr(runner, 'checked_receipt', unexpected_render)
+    with pytest.raises(runner.HandoutError, match='selection'):
+        runner.prepare('question', build, hashlib.sha256((build / 'keys/question.json').read_bytes()).hexdigest(),
+                       selected, only=only)
+    assert not selected.exists()
+
+
 @pytest.mark.parametrize('mutation', ['image', 'batch', 'key', 'prompt', 'missing_version', 'source'])
 def test_mutation_blocks_all_launches(handout, monkeypatch, mutation):
     out, build, image, version = handout
@@ -323,3 +355,113 @@ def test_controller_sigterm_closes_an_active_owned_group(handout):
             controller.communicate(timeout=5)
         controller.stdout.close()
         controller.stderr.close()
+
+
+def test_queued_tasks_do_not_render_after_stop(handout, monkeypatch):
+    out, _, _, _ = handout
+    class Failed(Child):
+        def communicate(self, prompt, timeout):
+            self.returncode = 1
+    calls = fakes(monkeypatch, Failed)
+    original = runner._unchanged
+    rendered = []
+    def track(*args, **kwargs):
+        if kwargs.get('render'):
+            rendered.append(args[2])
+        return original(*args, **kwargs)
+    monkeypatch.setattr(runner, '_unchanged', track)
+    result = runner.run(out, 3, workers=1)
+    assert result['stopped'] and len(calls) == 1
+    assert rendered == ['question-001']
+
+
+@pytest.mark.parametrize('repeat_signal', [False, True])
+def test_interrupt_and_worker_share_one_cleanup_owner(handout, monkeypatch, repeat_signal):
+    import os
+    import signal
+
+    out, _, _, _ = handout
+    fakes(monkeypatch)
+    entered, release = threading.Event(), threading.Event()
+    calls = []
+    def cleanup(child):
+        calls.append(child.pid)
+        if len(calls) != 1:
+            raise RuntimeError('concurrent cleanup of the same child')
+        entered.set()
+        assert release.wait(5)
+    monkeypatch.setattr(runner, '_cleanup', cleanup)
+    def interrupt():
+        if entered.wait(5):
+            timer = threading.Timer(0.1, release.set)
+            timer.start()
+            os.kill(os.getpid(), signal.SIGTERM)
+            if repeat_signal:
+                time.sleep(0.02)
+                os.kill(os.getpid(), signal.SIGTERM)
+            timer.join()
+    interrupter = threading.Thread(target=interrupt)
+    interrupter.start()
+    try:
+        with pytest.raises(KeyboardInterrupt):
+            runner.run(out, 3, only=['question-001'])
+    finally:
+        release.set()
+        interrupter.join(timeout=5)
+    assert len(calls) == 1
+    assert (out / 'stopped.json').exists()
+
+
+@pytest.mark.parametrize('nested_signal', [False, True])
+def test_first_interrupt_during_final_cleanup_does_not_reenter(handout, nested_signal):
+    import sys
+    import textwrap
+
+    out, _, _, _ = handout
+    script = textwrap.dedent('''
+        import hashlib,json,os,signal,sys,threading
+        from pathlib import Path
+        from tools import p1_batches as b
+        from tools.coding_host import p1 as r,p1_input as i
+        out=Path(sys.argv[1])
+        b.ROOT=out.parent.parent
+        b.frozen_brief=lambda label: f'{label} [batch]'
+        i.PreparedInput.check=lambda self: {
+            'cli_version':'version-one','batch_sha256':self.batch_sha256,
+            'prompt_sha256':hashlib.sha256(self.prompt.encode()).hexdigest()}
+        class Child:
+            pid=123
+            returncode=0
+            def __init__(self,argv,**kwargs): self.cwd=kwargs['cwd']
+            def communicate(self,prompt,timeout):
+                batch=json.loads((self.cwd/'question-001.json').read_text())
+                (self.cwd/'answer.jsonl').write_text(json.dumps({
+                    'id':batch['items'][0]['id'],'key':'x','question':'x'})+'\\n')
+        r.subprocess.Popen=Child
+        attempts=[]
+        armed=False
+        original_set=threading.Event.set
+        def set_event(event):
+            global armed
+            if armed and threading.current_thread() is threading.main_thread():
+                armed=False
+                with event._cond:
+                    signal.raise_signal(signal.SIGTERM)
+            original_set(event)
+        threading.Event.set=set_event
+        def cleanup(child):
+            global armed
+            attempts.append(child.pid)
+            if len(attempts)<3: raise RuntimeError('synthetic cleanup failure')
+            armed=sys.argv[2]=='1'
+            os.kill(os.getpid(),signal.SIGTERM)
+        r._cleanup=cleanup
+        result=r.run(out,3,only=['question-001'])
+        assert result['stopped'] and result['failed']==1 and result['done']==0
+        assert len(attempts)==3
+        assert not list((out/'candidates').iterdir())
+    ''')
+    completed = subprocess.run([sys.executable, '-c', script, str(out), str(int(nested_signal))],
+                               capture_output=True, text=True, timeout=5,
+                               start_new_session=True)
+    assert completed.returncode == 0, completed.stderr

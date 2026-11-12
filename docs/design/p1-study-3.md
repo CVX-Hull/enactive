@@ -706,6 +706,98 @@ completion. It cannot erase the registered cost-guard failure, claim live gamepl
 benefit or adopt the curator. Declining leaves the replay complete and measurement
 unqualified, with no curator-benefit conclusion.
 
+## Proposed complete-input recovery
+
+**Owner decision required before merge or scientific dispatch.** On 12 November,
+Reader 088's one fresh redo again presented only 10,000 of 10,227 input characters.
+The [second-refusal record](../acceptance/2026-11-12-p1-reader-presentation-stop-178.md)
+retains both outputs unscored, the nine unused first redos and the all-stage stop.
+Independent review confirmed the missing input and mandatory owner gate. This
+proposal does not itself grant another attempt or relax a failed guard.
+
+The proposed runtime is `13bb21daddcbfad338499978dcf87881c08239b1`; immutable recovery
+freeze SHA256 is `62b27e516b5264d880c9637aee13a88cceb75192c16cf51e42304c968476ffb5`.
+The [metadata receipt](../acceptance/assets/p1-reader-presentation-stop-178.json)
+binds its source, original keys and zero-inference input qualification. Exact-head
+review and protected CI must pass, the owner decision must be recorded before
+merge, and reviewed/merged tree equality plus actual-main validation must pass
+before dispatch. Without approval, the chain stays stopped and measurement
+incomplete, with no curator-benefit conclusion.
+
+- **Narrow exception and retained evidence.** Retain the 522 admitted original
+  readers and the two admitted fresh redos, 524 outputs total. Authorize one new
+  attempt of Reader 088 despite its second refusal, and the nine still-unused
+  original first-redo allowances, on the repaired delivery below. Preserve all
+  refused outputs, original stopped handouts, old source and expenses. Retire the
+  nine unused reservations from the stopped redo pool without refunding them from
+  the global bound. No stopped handout resumes, no prior answer or feedback enters
+  a new reader, and no already-admitted reader is repeated.
+- **Complete initial input.** Every remaining role receives its exact authorized
+  public batch JSON as initial text, as well as its file. Reader remains one item
+  with no images. Question/Audit image policy remains exact original PNGs in the
+  frozen order, with unchanged source associations. Verify complete prompt text,
+  native image path/ordinal markers, image count/order/bytes and source/key hashes
+  through the installed local renderer before inference and at launch. Native
+  labels replace the duplicate appended path index. No image transformation, OCR
+  substitute, private-key/sibling input, binary copy, global setup or fallback to
+  unverified path-only delivery is permitted. Selective preparation copies and
+  renders only named original key entries; it never resamples or renames them.
+- **Unchanged scientific inputs.** Keep the 89 units, their frames and question
+  SHA256 `8fa6aec4d19efa9605005075bad8db8d2e72f4a8af04a46b0e03c85797556e66`.
+  Keep quoted briefs, controls, seeds, thresholds, sampling, analysis code and
+  `gpt-6.1-sol/high`. Preserve reader key
+  `69bc776604ea1d2f2c7bf33b44ddfff65a56d0edcb0d77e7fe4e5a08b9607b2b`,
+  rejudge key `58fdb879d2741403d52f903a679bfbb225d39c93c77555975ca0bd2d0b16598d`
+  and pre-bound Audit key
+  `7a4ecb424104e0435c09f55bfcf782629662eb090e785c4f279ac45dc44b1e0c`.
+  No new question generation, control generation, model qualification inference
+  or curator/OpenRouter call is authorized. Compatible installed CLI updates may
+  continue only after local input rechecking, recording each actual version.
+- **Finish the same measurement.** Admit the ten remaining readers using their
+  complete initial-payload receipts and observed operation scope, then combine
+  them with the 524 retained candidates. Parse with the original reader key and
+  current question hash before fresh blinded grading. Run the unchanged 54 seeded
+  rejudge readers and their fresh graders. Retain the independent valid Audit-001
+  candidate and run only Audit-002 through Audit-012, their original unused
+  one-redo allowances, with no resampling or renewal of Audit-001. Only complete
+  process/parser acceptance permits the frozen `score` and separate
+  `describe-capped` reporting. Bind every question-dependent key/parse to the
+  current question digest; old unqualified question-dependent data stays excluded.
+- **Finite context allocation.** At most **145 new contexts on the selected host**,
+  including any
+  infrastructure attempt or output redo, shared across all remaining stages:
+
+  | Stage | Maximum contexts |
+  | --- | ---: |
+  | Remaining first readers | 10 |
+  | First-reader graders | 60 |
+  | Seeded rejudge readers | 54 |
+  | Rejudge graders | 10 |
+  | Remaining original Audit redos | 11 |
+  | Total | 145 |
+
+  The existing bound is 754 reserved / 744 actual contexts, including ten retired
+  unused reservations. Adding at most 145 gives **899 reserved**, within the
+  unchanged **1,000-context global ceiling**. Neither ceiling is reset. Keep at
+  most three concurrent and 900 seconds per context. The lead records each finite
+  pool prospectively within both bounds and runs one pool at a time. Another loss,
+  process refusal, source/input integrity or cleanup failure, or exhausted
+  allocation stops every further stage for the owner, without automatic renewal.
+  Native transport recovery inside a successfully completed bounded context does
+  not create a fresh context or authorize a separate retry.
+- **Mixed presentation and descriptive purpose.** Initial text changes delivery
+  and context formatting after measurement started; it is not an identical
+  stochastic rerun. Retain the valid old-source development qualification without
+  repeating or retuning it, and do not claim presentation-format equivalence.
+  Final rejudge variation may include delivery-format variation and cannot isolate
+  rater-only noise. Preserve source provenance for old and new candidates and
+  these limitations in the report. All historical costs, billing uncertainty and
+  the separate old allowance remain, with best-effort tracking and no browser
+  requirement. Existing host credits are not priced as zero; no new OpenRouter
+  funding is proposed. The registered cost-guard failure remains permanent, all
+  original expenses and failures stay, and this exception can support only
+  descriptive completion for discussion, never a registered pass or live adoption.
+
 ## The measurement chain
 
 **(p1-study/3)** This section replaces p1-study/2's scoring judge and arm-guessing check.
