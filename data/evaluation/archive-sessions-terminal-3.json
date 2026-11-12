@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "note": "Sealed campaign-run/5 sessions whose watch-terminal.json is campaign-watch-terminal/3. The evaluator reads a /3 terminal only for a session listed here (a closed archive reader; owner decision, 12 November 2026, #553). Keyed by session ID; `study` is the sealed evidence study and `run` the run directory name. The list does not grow without an owner decision.",
+  "sessions": {
+    "d57d4a91bb624192f18b46cf2e882e9b": {"study": "372-382-dev-loop", "run": "lh1a1"},
+    "41c541423f989262b7eb3427340961fb": {"study": "372-382-dev-loop", "run": "lh1a2"},
+    "84b0bffaea13006586bde91453b58446": {"study": "372-382-dev-loop", "run": "lh1a3"},
+    "ac243818c2cb67b937b4e0618b9b708f": {"study": "372-382-dev-loop", "run": "lh2a1"},
+    "4165a6f3f75b042879bf95d1863c0894": {"study": "372-382-dev-loop", "run": "lh2a2"},
+    "b3a66a845ec306cca70d5caa203ce30e": {"study": "372-382-dev-loop", "run": "lh3a1"},
+    "349dc4fbc37fd24e1acc756e4355ac66": {"study": "372-382-dev-loop", "run": "lh3a2"},
+    "f37efc17970589e90aff3c73d3742a89": {"study": "397-seven-day", "run": "sd1a1"},
+    "507f7c538191fedb29b11639ed137b70": {"study": "397-seven-day", "run": "sd1a2"},
+    "12ba39c88fbb4da11264b8d2c4634db1": {"study": "397-seven-day", "run": "sd1a3"},
+    "92505965fcbd23adda6919b8a38decc4": {"study": "397-seven-day", "run": "sd1a4"},
+    "3c6acb3817ebc5b0fced8f7a122b7bbf": {"study": "397-seven-day", "run": "sd1a5"},
+    "910bb98c06461865f5a73e3574cdd95a": {"study": "397-seven-day", "run": "sd1a6"},
+    "bf01a9f1ca634ea63144b01cd8debe8d": {"study": "397-seven-day", "run": "sd1a7"},
+    "84a0ef5849d9eda41a3c45babfe0813d": {"study": "522-held-out", "run": "lh4a1"},
+    "324d5814c4902c09ce18c6bbc8afbcfb": {"study": "522-held-out", "run": "lh4b1"},
+    "93b94e2cf0992beb2d7abcef78aee2b5": {"study": "522-held-out", "run": "lh4b2"},
+    "a0e3e64db5f9bde4ac7446ae5fe58881": {"study": "522-held-out", "run": "lh4b3"},
+    "2a960e884129f3b5b383922a0aa60005": {"study": "522-held-out", "run": "lh4b4"},
+    "b6b8bd76ad675d57c75a89a01db23461": {"study": "522-held-out", "run": "lh4b5"},
+    "7c6a12a999602a1c0f80bb32ca49567a": {"study": "522-held-out", "run": "lh4b6"},
+    "29b35709c3b22cffcf27a5c2b4da19b8": {"study": "522-held-out", "run": "lh4b7"}
+  }
+}

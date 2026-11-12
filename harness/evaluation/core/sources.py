@@ -31,6 +31,12 @@ RECEIPT_SCHEMA = 'campaign-receipt/3'
 #: `campaign-watch-terminal/2` is archive-read only (the archived runs predate Pause reasons).
 WATCH_TERMINAL_SCHEMA = 'campaign-watch-terminal/4'
 WATCH_TERMINAL_ARCHIVE_SCHEMA = 'campaign-watch-terminal/2'
+#: `campaign-watch-terminal/3` is archive-read only: the closed set of sealed `campaign-run/5` sessions in
+#: `data/evaluation/archive-sessions-terminal-3.json` (keyed by session ID). Only its `reason` and `pause_reason`
+#: are read; the fields `/4` no longer has are neither read nor reconstructed.
+WATCH_TERMINAL_SEALED_SCHEMA = 'campaign-watch-terminal/3'
+SEALED_TERMINAL_MANIFEST_SCHEMA = 'campaign-run/5'
+SEALED_TERMINAL_SESSIONS = Path(__file__).resolve().parents[3] / 'data' / 'evaluation' / 'archive-sessions-terminal-3.json'
 MEMORY_SCHEMA = 'player-memory/2'
 CONTEXT_SCHEMA = 'player-handoff-context/1'
 BUSY_TIMEOUT_SECONDS = 1.0
@@ -137,6 +143,15 @@ def archive_labels() -> dict[str, dict]:
     value = read_json_file(ARCHIVE_LABELS)
     runs = value.get('runs') if isinstance(value, dict) else None
     return {key: item for key, item in runs.items() if isinstance(item, dict)} if isinstance(runs, dict) else {}
+
+
+def sealed_terminal_sessions() -> dict[str, dict]:
+    """The sealed sessions whose `campaign-watch-terminal/3` terminal is read: session ID to `{study, run}`."""
+    if not SEALED_TERMINAL_SESSIONS.is_file():
+        return {}
+    value = read_json_file(SEALED_TERMINAL_SESSIONS)
+    sessions = value.get('sessions') if isinstance(value, dict) else None
+    return {key: item for key, item in sessions.items() if isinstance(item, dict)} if isinstance(sessions, dict) else {}
 
 
 def _connect_readonly(path: Path) -> sqlite3.Connection:
@@ -335,17 +350,23 @@ def _optional_json(path: Path, schemas: tuple[str, ...]) -> dict | None:
 
 
 def read_end_facts(run_dir: Path, manifest: dict) -> EndFacts:
-    """`receipt.json` (campaign-receipt/3) and `watch-terminal.json` (campaign-watch-terminal/4, or /2 only for
-    an archived session: a `campaign-run/4` manifest listed in the archive labels), when the run has ended.
+    """`receipt.json` (campaign-receipt/3) and `watch-terminal.json` (campaign-watch-terminal/4; /2 only for
+    an archived session: a `campaign-run/4` manifest listed in the archive labels; /3 only for a sealed
+    `campaign-run/5` session listed in the sealed terminal sessions), when the run has ended.
     The owner Pause is the terminal's `reason == 'operator_pause'`."""
-    archived = manifest.get('schema') == ARCHIVE_SCHEMA and manifest.get('session') in archive_labels()
-    terminals = (WATCH_TERMINAL_SCHEMA, WATCH_TERMINAL_ARCHIVE_SCHEMA) if archived else (WATCH_TERMINAL_SCHEMA,)
+    terminals: tuple[str, ...] = (WATCH_TERMINAL_SCHEMA,)
+    if manifest.get('schema') == ARCHIVE_SCHEMA and manifest.get('session') in archive_labels():
+        terminals += (WATCH_TERMINAL_ARCHIVE_SCHEMA,)
+    elif (manifest.get('schema') == SEALED_TERMINAL_MANIFEST_SCHEMA
+            and manifest.get('session') in sealed_terminal_sessions()):
+        terminals += (WATCH_TERMINAL_SEALED_SCHEMA,)
     receipt = _optional_json(run_dir / 'receipt.json', (RECEIPT_SCHEMA,)) or {}
     driver = receipt.get('driver') if isinstance(receipt.get('driver'), dict) else {}
     actors = [a for a in driver.get('actors', ()) if isinstance(a, dict)]
     ending = driver.get('ending_request') if isinstance(driver.get('ending_request'), dict) else {}
     watch = _optional_json(run_dir / 'watch-terminal.json', terminals) or {}
-    reason = watch.get('pause_reason') if watch.get('schema') == WATCH_TERMINAL_SCHEMA else None
+    # `/2` predates Pause reasons; `/3` and `/4` both record `pause_reason`.
+    reason = watch.get('pause_reason') if watch.get('schema') != WATCH_TERMINAL_ARCHIVE_SCHEMA else None
     return EndFacts(receipt.get('outcome') if isinstance(receipt.get('outcome'), str) else None,
         ending.get('trigger') if isinstance(ending.get('trigger'), str) else None,
         tuple(a['settled'] for a in actors if isinstance(a.get('settled'), dict)),

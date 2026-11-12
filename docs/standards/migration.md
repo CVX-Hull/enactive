@@ -35,9 +35,13 @@ its supported save procedures; do not edit saves or remove authentic engine beha
 **Closed archive reads and additive evidence events (owner decision on #403).** The
 owner scoped this requirement to allow two narrow cases. Because the owner
 set them, the closing rule below still holds: no repository exception can add to them.
-First, the evaluator reads, read-only, the one closed archive of sessions listed in
-`data/evaluation/archive-labels.json`: their `campaign-run/4` manifests and, for those
-manifests only, `campaign-watch-terminal/2` terminals. The list never grows, and every
+First, the evaluator reads, read-only, two closed lists of sessions: the sessions in
+`data/evaluation/archive-labels.json`, with their `campaign-run/4` manifests and, for
+those manifests only, `campaign-watch-terminal/2` terminals; and the 22 sealed sessions in
+`data/evaluation/archive-sessions-terminal-3.json`, with their `campaign-watch-terminal/3`
+terminals (owner decision, 12 November 2026,
+[#553](https://github.com/CVX-Hull/enactive/issues/553)). Neither list grows without an
+owner decision, and every
 other old version is an error naming the file and version. The evaluator never admits
 or plays from the archive and never modifies it; it only derives evaluation records.
 Second, an evidence-only event (one that no admission, control or player-visible path

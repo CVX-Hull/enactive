@@ -347,6 +347,12 @@ percentile, per status or per handoff. The primary key is (`name`, `key`).
   - `receipt.json` is read only as `campaign-receipt/3`. `watch-terminal.json` is read as
     `campaign-watch-terminal/4`, or the archived `/2` only beside a listed `/4` manifest
     (archive read only; it has no `pause_reason`). Any other version is an error naming the file and version.
+  - `data/evaluation/archive-sessions-terminal-3.json` lists, by **session ID**, the 22
+    sealed `campaign-run/5` sessions (with their evidence study and run directory) whose
+    terminal is `campaign-watch-terminal/3`. A `/3` terminal is read only for a session
+    listed there, beside its `/5` manifest, and only for its `reason` and `pause_reason`;
+    the fields `/4` no longer has are neither read nor reconstructed. A `/3` terminal for
+    any other session is an error naming the file and version.
 - **Metadata key.** `metadata.last_seq` names the last operation read.
 - **Store replacement.** A `live` store is replaced by any later `final` pass. A `final`
   store needs an explicit replace and is never replaced or continued by a `live` pass.
