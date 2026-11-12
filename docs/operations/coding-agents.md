@@ -129,8 +129,8 @@ held-out question is written.
   behavior; a CLI update alone requires neither duplicate binaries nor repeated calibration.
   Stop and repair an incompatible CLI/API boundary instead of silently changing the model. A reader batch
   contains exactly one item; other roles retain their frozen batch sizes.
-- **Verified input.** The maintained `tools.p1_codex` executor prepares role-specific inputs
-  through `tools.p1_codex_input`. Question and Audit sessions receive all exact batch-named
+- **Verified input.** The maintained `tools.coding_host.p1` executor prepares role-specific inputs
+  through `tools.coding_host.p1_input`. Question and Audit sessions receive all exact batch-named
   original PNGs as initial images; Reader, Grader, Guess and Paraphrase sessions receive none.
   Local `codex debug prompt-input` must verify complete count/order/payload hashes before
   inference. A path string or parser-valid answer is not image-delivery evidence. Keep the
@@ -142,8 +142,8 @@ held-out question is written.
   they cannot prevent temporary replacement during CLI loading or prove which pixels a
   concurrently modified file supplied. No copied-image cache or filesystem-confinement
   guarantee is added.
-  Prepare with `python -m tools.p1_codex prepare KIND --batches BUILD --expected-key-sha256 SHA --out HANDOUT`;
-  run an authorized finite pool with `python -m tools.p1_codex run HANDOUT --max-attempts N --workers 3`.
+  Prepare with `python -m tools.coding_host.p1 prepare KIND --batches BUILD --expected-key-sha256 SHA --out HANDOUT`;
+  run an authorized finite pool with `python -m tools.coding_host.p1 run HANDOUT --max-attempts N --workers 3`.
   The first run fixes N, a handout lock prevents concurrent controllers, and a stopped handout
   cannot renew. Preserve candidates for separate process review before parsing/acceptance.
   The lead owns the global allocation and runs only one pool at a time; this executor's

@@ -106,7 +106,7 @@ class PreparedInput:
                     prompt_sha256=_sha(self.prompt.encode()),
                     exec_argv_sha256=_sha(json.dumps(self.exec_argv()).encode()),
                     source_files={name: _sha(path.read_bytes()) for name, path in
-                                  (('tools/p1_codex_input.py', Path(__file__)),
+                                  (('tools/coding_host/p1_input.py', Path(__file__)),
                                    ('tools/p1_batches.py', Path(batches.__file__)),
                                    ('tools/p1_analysis.py', Path(batches.analysis.__file__)))},
                     cli_version=version, inference_calls=0)

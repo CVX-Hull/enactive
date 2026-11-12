@@ -21,7 +21,7 @@ import threading
 import time
 
 from tools import p1_batches as batches
-from tools import p1_codex_input as inputs
+from tools.coding_host import p1_input as inputs
 
 
 class HandoutError(ValueError):

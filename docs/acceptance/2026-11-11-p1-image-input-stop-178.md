@@ -133,7 +133,7 @@ input/output tokens, including cached tokens and the refused audit attempts;
 this is not a complete study-cost or labor measurement. The remaining eleven redo
 allowances have not been used. No further model call followed the Question finding.
 
-The maintained [input boundary](../../tools/p1_codex_input.py) and bounded executor
+The maintained [input boundary](../../tools/coding_host/p1_input.py) and bounded executor
 replace reliance on agents voluntarily opening image paths. They preserve role
 information boundaries, bind expected key/source/CLI/input hashes, and verify exact
 role-appropriate rendered images before inference. Text-only roles receive none.
@@ -171,3 +171,16 @@ cache was excluded. Source checkouts, dependencies, saves, prior campaign images
 and canonical tracked question files were not removed. No raw scientific content
 was published. Future correction must read archived inputs from these sealed parts,
 not assume the retired source paths still exist. The store has no off-machine backup.
+
+## Protected CI boundary finding
+
+The first [full PR run](https://github.com/CVX-Hull/enactive/actions/runs/43136398358)
+failed the existing host-neutrality check: 1,462 tests passed, one failed, 50 were
+skipped, 232 subtests passed and eight warnings remained. All 29 new executor/input
+tests, including Linux process fixtures, passed. The code had been placed in generic
+tooling and the protocol named CLI-specific commands. The repair moves both adapters
+into the explicit `tools/coding_host/` boundary, migrates every import/command/link
+without compatibility aliases, and keeps implementation details on the host page.
+The guard retains generic tooling/design restrictions and recognizes this named
+adapter boundary beside the existing player and curator adapters. The failed run is
+retained; exact-head protected CI must pass before the owner decision and merge.

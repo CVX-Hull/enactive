@@ -5,7 +5,8 @@ records and external citations are evidence and stay untouched; internal link
 destinations are paths, not prose.
 
 Provider and model names are narrower: they stay out of `harness/` and out of `tools/`
-outside the host adapters (`tools/player_host/`, `tools/curator_host/`). Documents, research
+outside the host adapters (`tools/player_host/`, `tools/curator_host/`,
+`tools/coding_host/`). Documents, research
 pages, ADRs, dated records, data and tests may name them (ADR 010).
 """
 from pathlib import Path
@@ -26,6 +27,7 @@ CITATIONS = re.compile(r"\[[^\]]*\]\(https?://[^)]*\)|\]\([^)]*\)|https?://\S+")
 ALLOWED = (
     "tools/player_host/",     # current adapter
     "tools/curator_host/",    # the curator's adapter (ADR 009 P0 shadow)
+    "tools/coding_host/",     # coding-agent measurement adapters, not player logic
     "docs/operations/",       # operator procedures, including coding-agent hosts
     "docs/setup.md",
     "docs/environment.md",
@@ -96,4 +98,4 @@ def test_provider_and_model_names_are_refused_in_harness_and_tools_only():
     # Ordinary words and external citations are not names.
     assert not names("harness/curator/proxy.py", "a gptq opusculum terrain terrace route geminian haikus sonnets")
     assert not names("tools/diff_cost.py", "[provider docs](https://openrouter.ai/docs/faq)")
-    assert not any(relative.startswith(("tools/curator_host/", "tools/player_host/")) for relative, _ in scope())
+    assert not any(relative.startswith(("tools/curator_host/", "tools/player_host/", "tools/coding_host/")) for relative, _ in scope())

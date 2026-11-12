@@ -610,11 +610,12 @@ The proposed correction is a new descriptive measurement purpose, not a retrospe
 registered pass. Approval would authorize the following single bounded chain.
 
 1. **Freeze the reviewed correction source.** Record the exact reviewed, CI-passed
-   PR head and merged tree, owner decision, ordinary installed Codex version and
+   PR head and merged tree, owner decision, selected coding-host version and
    input/source digests before dispatch. Keep `gpt-6.1-sol/high`. Use the maintained
    input boundary and executor: visual roles receive their exact named original
    PNGs as initial attachments; other roles receive none. Verify count, order and
-   bytes through local `codex debug prompt-input` before inference. No manual image
+   bytes through the selected host's local input renderer before inference, as the
+   [host procedure](../operations/coding-agents.md#p1-study-readers) specifies. No manual image
    transformation, OCR substitute, extra data, binary copy or global setup.
 2. **One fresh development qualification.** Retain the old 20-unit calibration but
    mark it unqualified for screenshot grounding. On the same 20 development units
@@ -658,8 +659,9 @@ registered pass. Approval would authorize the following single bounded chain.
 ### Prospective limits
 
 No new OpenRouter/curator call or funding is proposed. The original replay, model,
-route, deliveries, costs, denominator and historical cap flag stay unchanged. Codex
-uses the existing account/credits; its dollar cost is not priced as zero.
+route, deliveries, costs, denominator and historical cap flag stay unchanged. The
+selected measurement host uses the existing account/credits; its dollar cost is
+not priced as zero.
 
 | Stage | Maximum new primary handouts |
 | --- | ---: |
@@ -669,7 +671,7 @@ uses the existing account/credits; its dollar cost is not priced as zero.
 | Eleven remaining original Audit redos; no renewal of Audit-001 or an already-used redo | 11 |
 | Total | 949 |
 
-The global ceiling is **1,000 new Codex sessions including every infrastructure
+The global ceiling is **1,000 new measurement-host sessions including every infrastructure
 attempt and output redo**, across all these stages; no silent renewal. Keep at most
 three sessions concurrently and 900 seconds per session, with bounded owned cleanup.
 The original per-batch limits remain: at most three infrastructure attempts and one

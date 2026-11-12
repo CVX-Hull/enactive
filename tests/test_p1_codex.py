@@ -8,8 +8,8 @@ import time
 import pytest
 
 from tools import p1_batches as batches
-from tools import p1_codex as runner
-from tools import p1_codex_input as inputs
+from tools.coding_host import p1 as runner
+from tools.coding_host import p1_input as inputs
 
 
 @pytest.fixture
@@ -260,7 +260,8 @@ def test_controller_sigterm_closes_an_active_owned_group(handout):
     script = textwrap.dedent('''
         import hashlib,json,subprocess,sys
         from pathlib import Path
-        from tools import p1_batches as b,p1_codex as r,p1_codex_input as i
+        from tools import p1_batches as b
+        from tools.coding_host import p1 as r,p1_input as i
         out,marker=map(Path,sys.argv[1:])
         b.ROOT=out.parent.parent
         b.frozen_brief=lambda label: f'{label} [batch]'

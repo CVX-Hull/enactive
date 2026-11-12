@@ -7,7 +7,7 @@ from dataclasses import replace
 import pytest
 
 from tools import p1_batches as batches
-from tools import p1_codex_input as inputs
+from tools.coding_host import p1_input as inputs
 
 
 @pytest.fixture
@@ -129,7 +129,7 @@ def test_local_check_only_runs_version_and_debug_and_records_version(setup, monk
     assert all(call[1]['cwd'] == prepared.leaf and call[1]['timeout'] == 30 for call in calls)
     assert receipt['image_count'] == 1 and receipt['inference_calls'] == 0
     assert receipt['exec_argv_sha256'] == hashlib.sha256(json.dumps(prepared.exec_argv()).encode()).hexdigest()
-    assert set(receipt['source_files']) == {'tools/p1_codex_input.py', 'tools/p1_batches.py', 'tools/p1_analysis.py'}
+    assert set(receipt['source_files']) == {'tools/coding_host/p1_input.py', 'tools/p1_batches.py', 'tools/p1_analysis.py'}
     assert 'prompt' not in receipt and 'render_argv' not in receipt
     with pytest.raises(inputs.InputError):
         replace(prepared, images=()).check()
