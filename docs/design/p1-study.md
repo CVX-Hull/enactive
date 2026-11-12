@@ -26,9 +26,9 @@ P1. It decides one question, offline and descriptively:
   ([#490](../acceptance/2026-11-08-probe-validation-490.md#the-owners-decisions)).
 
 Nothing here runs until the owner approves P1. The analysis is
-[`tools/p1_analysis.py`](../../tools/p1_analysis.py), and its tests are
-[`tests/test_p1_analysis.py`](../../tests/test_p1_analysis.py). The power simulation is in
-[`data/evaluation/p1/power.json`](../../data/evaluation/p1/power.json); a test checks that the
+[`tools/p1_analysis.py`](https://github.com/CVX-Hull/enactive/blob/08c8f7aa902a0fe45c3aad22a6b29a41677336fc/tools/p1_analysis.py), and its tests are
+[`tests/test_p1_analysis.py`](https://github.com/CVX-Hull/enactive/blob/08c8f7aa902a0fe45c3aad22a6b29a41677336fc/tests/test_p1_analysis.py). The power simulation is in
+[`data/evaluation/p1/power.json`](../acceptance/assets/curator-memory-study-178/power.json); a test checks that the
 table under [Power](#power) renders it.
 
 ## Data and split
@@ -289,7 +289,7 @@ bias. Each figure below comes from 5,000 simulations, with a standard error of a
   needs the owner's explicit acceptance, recorded as a deviation if the held-out re-check also
   falls short.
 
-**Assumptions** (in [`power.json`](../../data/evaluation/p1/power.json); from development data and
+**Assumptions** (in [`power.json`](../acceptance/assets/curator-memory-study-178/power.json); from development data and
 ledger aggregates only):
 - **Lineage shape.** 7, 7 and 1 boundaries: game hours at #397's 3.7 per boundary, and at least
   one boundary per admission.

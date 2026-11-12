@@ -194,7 +194,7 @@ def test_the_sandbox_reads_exactly_the_readable_host_files():
     inside = [Path(root) for root in tools['roots'] if Path(root) == host or host in Path(root).parents]
     assert sorted(p.name for p in inside) == sorted(shadow.HOST_READABLE)
     # No host-package Python besides the launcher is on any root, including a root that contains the package.
-    for name in ('shadow.py', 'shadow_report.py', 'providers.py'):
+    for name in ('shadow.py', 'providers.py'):
         assert not any(Path(root) == host/name or Path(root) in (host, *host.parents) for root in tools['roots']), name
 
 

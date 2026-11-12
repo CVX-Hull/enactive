@@ -127,11 +127,7 @@ Node tests: `cd tools/curator_host && npm test`.
   (or `--session-cap-usd`). The run stops when the cap is reached, the proxy revokes or records
   a breach, accounting remains unsettled after shutdown, or host cleanup is unconfirmed.
   `--stop-on-abort` additionally
-  stops on other non-sealed sessions; P1's separate replay always stops on a non-sealed session.
-  P1 latches stop decisions before adding schedule entries and persists them before reporting
-  progress. A failed or interrupted loop records `runner-failed` or `runner-interrupted` unless
-  a higher-priority session stop is already known; it cannot certify the final session as
-  complete merely because its progress output failed.
+  stops on other non-sealed sessions.
 - **Output.** `curator-shadow/1` summaries: one per session (`<out>/<lineage>/<session>/summary.json`
   and its `proxy-ledger.jsonl`) and one per run (`<out>/summary.json`). A session summary holds
   wall seconds, host start to first model request, first-request prompt tokens, tokens by kind,
@@ -144,7 +140,7 @@ Node tests: `cd tools/curator_host && npm test`.
   (`curator-proxy-close/1`) beside the session summary, including on an execution interrupt.
   It records `settled`, outstanding request count/reserved dollars, a spent snapshot,
   real revocation/breaches and any receipt failure. A missing receipt cannot certify settlement.
-  Both runners stop on incomplete accounting even after a clean host exit. The real session
+  The runner stops on incomplete accounting even after a clean host exit. The real session
   manifest is not rewritten to manufacture an abort. `cost_usd` is nonfinal when `settled`
   is false; reconcile the original ledger and explicit reserved exposure before another
   owner decision. Later settlement never renews the stopped run. Older frozen records
@@ -164,48 +160,6 @@ Node tests: `cd tools/curator_host && npm test`.
   Active request/accounting errors remain visible. If response headers cannot reach a client
   that has gone, the proxy still drains upstream within its existing limits and settles usage;
   it does not replace available usage with a reservation merely because header delivery failed.
-
-For finite replay, launch the maintained runner directly with durable output files and use its
-in-process admission stop. An observer must drain output rather than send another interrupt on
-a reported nonsealed result: a redundant interrupt can prevent final stage metadata from being
-written. Retain the schedule and individual receipts if finalization is interrupted; never
-synthesize a passing final summary. This does not prevent intentional user interruption or
-make hard termination/disk failure recoverable automatically.
-
-**P1 retained prefixes.** The live schedule contract is `p1-schedule/2`; its readers reject
-`/1`. `migrate-schedule --source-sha256 SHA` performs an explicit offline conversion of
-selected complete historical `/1` evidence into a new `/2` selection. It preserves the
-original file, runtime and assurance: missing historical shutdown metadata does not become
-a new shutdown proof. There is no automatic compatibility path.
-
-`tools.curator_host.p1_replay retain` is the explicit offline import boundary for the original
-historical `/1` storage-loss record, producing a prospective `p1-retained-prefix/1` plan.
-It makes no model call
-and grants no resumption authority: the [P1 protocol](../design/p1-study-3.md) still requires
-an explicit owner amendment before scientific use. The plan binds the source schedule,
-individual summaries/closures/ledgers, session records and input digests, host configurations,
-gate feedback and published Git identities. It accepts only ordered, nonempty sealed prefixes
-with empty draft, archive, staging and workspace state, followed by one unpublished final
-volume-floor loss. A changed file, unsafe closure, another loss class or unsupported plan is
-refused. Source schedules and their stopped flags remain unchanged.
-
-Only after approval, `b --retained-prefix PLAN --retained-sha256 SHA` imports the verified
-published history using local Git clones without hardlinks and copies the exact prefix gate
-feedback. Fresh repositories contain no failed workspace or session/draft history. All
-remaining admissions use fresh workspaces and the ordinary ordering and memory cutoffs;
-the first replacement's brief and trace projection must reproduce their recorded digests
-before its host starts. Model, route, pricing and host-limit templates must match. The new
-remaining cap still changes model-visible budget notes and phase thresholds; this preserves
-knowledge/input continuity, not an identical stochastic rerun or identical resource context.
-
-The physical run summary's `sessions_run`, `total_cost_usd` and cap count only newly executed
-admissions; `retained_sessions` records imports. Its selection schedule covers retained and
-fresh admissions in full order, with explicit source references and `retained_cost_usd`,
-`new_cost_usd` and `new_cap_usd`. Selection totals and its composite cap include the retained
-amounts; they are not additional debits. Research cost inputs count every original ledger
-once plus new execution, not the selection total again. A suffix failure leaves that new
-selection stopped and incomplete; delivery still refuses stopped schedules. This tooling
-does not renew an exhausted allocation, waive an isolation/cap stop or authorize another try.
 
 **Two arms, one route each.** The route is pinned to one provider with no fallback.
 

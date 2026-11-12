@@ -133,7 +133,7 @@ input/output tokens, including cached tokens and the refused audit attempts;
 this is not a complete study-cost or labor measurement. The remaining eleven redo
 allowances have not been used. No further model call followed the Question finding.
 
-The maintained [input boundary](../../tools/coding_host/p1_input.py) and bounded executor
+The maintained [input boundary](https://github.com/CVX-Hull/enactive/blob/08c8f7aa902a0fe45c3aad22a6b29a41677336fc/tools/coding_host/p1_input.py) and bounded executor
 replace reliance on agents voluntarily opening image paths. They preserve role
 information boundaries, bind expected key/source/CLI/input hashes, and verify exact
 role-appropriate rendered images before inference. Text-only roles receive none.
