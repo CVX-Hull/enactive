@@ -763,7 +763,8 @@ incomplete, with no curator-benefit conclusion.
   process/parser acceptance permits the frozen `score` and separate
   `describe-capped` reporting. Bind every question-dependent key/parse to the
   current question digest; old unqualified question-dependent data stays excluded.
-- **Finite context allocation.** At most **145 new Codex contexts**, including any
+- **Finite context allocation.** At most **145 new contexts on the selected host**,
+  including any
   infrastructure attempt or output redo, shared across all remaining stages:
 
   | Stage | Maximum contexts |
@@ -792,7 +793,7 @@ incomplete, with no curator-benefit conclusion.
   rater-only noise. Preserve source provenance for old and new candidates and
   these limitations in the report. All historical costs, billing uncertainty and
   the separate old allowance remain, with best-effort tracking and no browser
-  requirement. Existing Codex credits are not priced as zero; no new OpenRouter
+  requirement. Existing host credits are not priced as zero; no new OpenRouter
   funding is proposed. The registered cost-guard failure remains permanent, all
   original expenses and failures stay, and this exception can support only
   descriptive completion for discussion, never a registered pass or live adoption.

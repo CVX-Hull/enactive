@@ -99,8 +99,12 @@ installed CLI updates remain permitted after local input rechecking; there are n
 new dependencies, dedicated binaries, global profiles or copied-image caches.
 
 Fast checks and all 46 focused host tests passed. Independent code review found
-no actionable issues. The first local visual qualification caught an incorrect
-assumption about native image delimiter text; its failed preparation remains,
+no actionable issues. The first full PR CI run at `08cde1e` passed 1,479 tests and
+232 subtests but failed the host-neutrality test on two host-specific phrases in
+the new study section. Those phrases were corrected without changing allocation,
+model, runtime or scientific rules; the failed run is retained. The first local
+visual qualification caught an incorrect assumption about native image delimiter
+text; its failed preparation remains,
 with zero inference. After repair, actual local rendering qualified all 75 prepared
 payloads: ten remaining readers, 54 seeded rejudges and eleven Audit batches. Audit
 batches have 290–441 original images, 3,766 attachment occurrences in total.
