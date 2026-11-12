@@ -148,6 +148,8 @@ held-out question is written.
   run an authorized finite pool with `python -m tools.coding_host.p1 run HANDOUT --max-attempts N --workers 3`.
   The first run fixes N, a handout lock prevents concurrent controllers, and a stopped handout
   cannot renew. Preserve candidates for separate process review before parsing/acceptance.
+  Worker completion and controller interruption share one cleanup owner per child;
+  repeated interruption does not reenter cleanup. Queued items skip rendering after an observed stop.
   The lead owns the global allocation and runs only one pool at a time; this executor's
   cap is per handout, not a global account quota. CLI updates require local input rechecking,
   not duplicate binaries or a silent model change.
@@ -158,8 +160,10 @@ held-out question is written.
   restricts reads to that batch and any images it names; the operator copies out the validated
   answer. Separate directories and fresh contexts isolate payloads, but do not establish an
   item-only readable filesystem. Keep that assurance limit distinct from observed tool use.
-- **Rate limits.** At most three sessions at once. A failed item is retried up to three times
-  with a growing pause, and five failures in a row stop the run.
+- **Rate limits.** At most three sessions at once. The maintained executor makes one attempt
+  per item and stops on failure. It never automatically retries or renews a stopped handout.
+  Any separately authorized infrastructure retry or output redo uses a fresh handout within
+  the study's original per-item and global limits, retaining the failed attempt.
 - **Output handling.** Reuse the study parser for every role. Refused output is preserved and
   gets at most the protocol's one fresh redo; existing invalid output or an interrupted
   attempt is not silently skipped or renewed. Raw attempt streams are retained before launch,

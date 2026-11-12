@@ -227,6 +227,8 @@ def _run_locked(out, max_attempts, workers, only):
         if name not in reserved and set(checked[name].leaf.iterdir()) != {checked[name].batch}:
             raise HandoutError('unused leaf contains unexpected files')
     lock, stop, active = threading.RLock(), threading.Event(), {}
+    cleanup_states = {}
+    interrupting = False
     counts = dict(launched=len(reserved), done=0, skipped=len(completed & set(selected)), failed=0)
 
     def latch_stop():
@@ -234,6 +236,15 @@ def _run_locked(out, max_attempts, workers, only):
         marker = out / 'stopped.json'
         if not marker.exists():
             write_json(marker, {'stopped': True})
+
+    def close_child(child):
+        # A worker and the controller can observe the same child at shutdown.
+        # Key by the Popen object, rather than a reusable OS process identifier.
+        state = cleanup_states[child]
+        with state['lock']:
+            if not state['done']:
+                _cleanup(child)
+                state['done'] = True
 
     def stop_all(latch=True):
         with lock:
@@ -243,13 +254,17 @@ def _run_locked(out, max_attempts, workers, only):
         errors = []
         for child in children:
             try:
-                _cleanup(child)
+                close_child(child)
             except Exception as error:
                 errors.append(type(error).__name__)
         if errors:
-            raise HandoutError('owned process cleanup failed')
+            raise HandoutError('owned process cleanup failed: ' + ', '.join(errors))
 
     def interrupted(signum, frame):
+        nonlocal interrupting
+        if interrupting:
+            return
+        interrupting = True
         stop_all()
         raise KeyboardInterrupt
 
@@ -272,6 +287,7 @@ def _run_locked(out, max_attempts, workers, only):
                 with (directory / 'stdout.jsonl').open('x') as stdout, (directory / 'stderr.txt').open('x') as stderr:
                     child = subprocess.Popen(prepared.exec_argv(), cwd=prepared.leaf, stdin=subprocess.PIPE,
                                              stdout=stdout, stderr=stderr, text=True, start_new_session=True)
+                    cleanup_states[child] = dict(lock=threading.Lock(), done=False)
                     active[child.pid] = child
                 counts['launched'] += 1
                 write_json(directory / 'launched.json', dict(pid=child.pid, started=time.time(),
@@ -291,7 +307,7 @@ def _run_locked(out, max_attempts, workers, only):
                 raise HandoutError('attempt timed out') from None
             if child.returncode != 0:
                 raise HandoutError('attempt failed')
-            _cleanup(child)
+            close_child(child)
             with lock:
                 active.pop(child.pid, None)
             child = None
@@ -320,7 +336,7 @@ def _run_locked(out, max_attempts, workers, only):
         finally:
             if child is not None:
                 try:
-                    _cleanup(child)
+                    close_child(child)
                 except BaseException:
                     with lock:
                         latch_stop()

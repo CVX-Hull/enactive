@@ -341,3 +341,40 @@ def test_queued_tasks_do_not_render_after_stop(handout, monkeypatch):
     result = runner.run(out, 3, workers=1)
     assert result['stopped'] and len(calls) == 1
     assert rendered == ['question-001']
+
+
+@pytest.mark.parametrize('repeat_signal', [False, True])
+def test_interrupt_and_worker_share_one_cleanup_owner(handout, monkeypatch, repeat_signal):
+    import os
+    import signal
+
+    out, _, _, _ = handout
+    fakes(monkeypatch)
+    entered, release = threading.Event(), threading.Event()
+    calls = []
+    def cleanup(child):
+        calls.append(child.pid)
+        if len(calls) != 1:
+            raise RuntimeError('concurrent cleanup of the same child')
+        entered.set()
+        assert release.wait(5)
+    monkeypatch.setattr(runner, '_cleanup', cleanup)
+    def interrupt():
+        if entered.wait(5):
+            timer = threading.Timer(0.1, release.set)
+            timer.start()
+            os.kill(os.getpid(), signal.SIGTERM)
+            if repeat_signal:
+                time.sleep(0.02)
+                os.kill(os.getpid(), signal.SIGTERM)
+            timer.join()
+    interrupter = threading.Thread(target=interrupt)
+    interrupter.start()
+    try:
+        with pytest.raises(KeyboardInterrupt):
+            runner.run(out, 3, only=['question-001'])
+    finally:
+        release.set()
+        interrupter.join(timeout=5)
+    assert len(calls) == 1
+    assert (out / 'stopped.json').exists()
