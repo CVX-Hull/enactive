@@ -41,7 +41,7 @@ test('Supervise: Pause? conditions, game state and findings carry provenance chi
   assert.doesNotMatch(await text('#findings'), /Images evicted/, 'routine evictions stay on the timeline');
 });
 
-test('Supervise: a finding row is a button that moves the playhead and the strip says check is off', async () => {
+test('Supervise: a finding row is a button that moves the playhead, and return to live restores it', async () => {
   await page.click('#findings li:first-child button');
   await S.settle(page, 400);
   const info = await text('#playinfo');
@@ -192,7 +192,7 @@ test('viewer unavailable greys interpretive panels, says so in the strip and a b
   await fx.viewer('down');
   await waitFor(() => document.getElementById('viewer').classList.contains('down'), null, 9000);
   assert.match(await text('#viewer'), /viewer unavailable/);
-  assert.match(await text('.banner.down'), /Pause and the operator check do not use the viewer/);
+  assert.match(await text('.banner.down'), /The control strip and Pause do not use the viewer/);
   assert.equal(await page.$eval('[data-viewer="down"] .panel', n => getComputedStyle(n).opacity), '0.5');
   assert.match(await page.title(), /viewer unavailable/);
   await fx.viewer('up');

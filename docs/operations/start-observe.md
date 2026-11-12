@@ -11,9 +11,9 @@ current launch command is the [finite campaign custodian](campaign-run.md), whic
 validates `campaign-run/5` before effects. Do not invoke old controller, mission or
 experimental proof commands or launch an unprepared/fullscreen application.
 
-Observe a run through [finite-test supervision](campaign-supervision.md): choose
-`--attention best-effort` for a development run, or `--attention required` for a frozen
-test that needs 45-second operator checks, and open its printed gateway URL. The
+Observe a run through [finite-test supervision](campaign-supervision.md): launch it
+and open its printed gateway URL. Nobody is required to watch; run limits and your
+Pause are what stop a run. The
 gateway serves the page, relays the custodian's status and source reads and owns
 Pause; the custodian serves no page of its own.
 
@@ -38,7 +38,7 @@ interpretation of the live run and of archived runs when you pass
 `--runs DIR` to supervision, each reading labelled with its source and confidence
 ([contract](../contracts/evaluation.md#spectator-view-api-spectator-view1)). Its
 displays inform you and gate nothing; the Pause conditions it computes are advice.
-If the page says **viewer unavailable**, the run, the required checks, the frame and
+If the page says **viewer unavailable**, the run, the frame and
 Pause are unaffected. Read the run directory's `viewer-stderr.txt` for the cause. The
 viewer is not restarted during a run.
 

@@ -13,10 +13,9 @@ successor. The [package validator](../../tools/campaign_package.py) is authorita
 for the closed `campaign-run/5` admission. Admission is that package check alone: it reads
 no game phase or identity, and no semantic mission service exists.
 
-Development runs (`--attention best-effort`) and frozen tests that require
-45-second operator checks (`--attention required`) use
-[the maintained supervisor](campaign-supervision.md) around this same custodian.
-The supervisor owns its wrapper processes and check clocks; native/actor custody
+A run is launched through [the maintained supervisor](campaign-supervision.md),
+which wraps this same custodian.
+The supervisor owns its wrapper processes, the custody deadline and Pause; native/actor custody
 and original package allowances remain here. Its receipt does not accept gameplay.
 
 ## Frozen data

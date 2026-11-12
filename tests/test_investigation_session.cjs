@@ -1,6 +1,6 @@
 // Control strip and its independence from the viewer, against the fixture server: element ids
-// and text formats that tools/campaign_watch_ui.js reads, the real check script, Pause with a
-// reason, the check being live-only, the viewer-unavailable state, CSP, and keyboard timeline.
+// and text formats of the strip, Pause with a reason, the viewer-unavailable state, CSP, and
+// keyboard timeline.
 const {test, before, after, beforeEach, afterEach} = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -11,8 +11,8 @@ const SESSION = 'c6c09be0b7d43fba2839147651a4f6a5';
 let fx, browser, page;
 before(async () => { browser = await S.launch(); });
 after(async () => { if (browser) await browser.close(); });
-async function start(attention = 'required', options = {}) {
-  fx = await S.startFixture(attention);
+async function start(options = {}) {
+  fx = await S.startFixture();
   page = await S.open(browser, `${fx.url}#live`, options);
   await S.ready(page);
 }
@@ -28,12 +28,11 @@ async function until(fn, arg, timeout = 8000) {
   }
 }
 
-test('the control strip keeps the ids and text formats the operator check reads', async () => {
+test('the control strip shows the session, status freshness, source details and a decoded frame', async () => {
   await start();
   const facts = await page.evaluate(() => {
     const read = id => document.getElementById(id);
-    const shell = read('watch-frame-shell');
-    const aside = document.querySelector('aside[aria-label="Operator acknowledgement"]');
+    const shell = read('frame').parentElement;
     return {
       session: read('current-session-full').textContent.trim(),
       freshness: read('control-freshness').textContent,
@@ -43,7 +42,7 @@ test('the control strip keeps the ids and text formats the operator check reads'
       watchHidden: read('watch').hidden,
       frame: {complete: read('frame').complete, width: read('frame').naturalWidth, hidden: read('frame').hidden},
       inStrip: !!shell.closest('header.ctl'),
-      asideBeforeShell: aside && aside.nextElementSibling === shell,
+      noCheckPanel: !document.querySelector('header.ctl aside, #watch-record'),
       shellIsDiv: shell.tagName === 'DIV' && shell.className === 'frame-shell',
       pauseInStrip: !!read('pause').closest('header.ctl'),
     };
@@ -56,10 +55,10 @@ test('the control strip keeps the ids and text formats the operator check reads'
   assert.equal(facts.errorHidden, true);
   assert.equal(facts.watchHidden, false);
   assert.deepEqual(facts.frame, {complete: true, width: 640, hidden: false});
-  assert.ok(facts.inStrip && facts.asideBeforeShell && facts.shellIsDiv && facts.pauseInStrip);
+  assert.ok(facts.inStrip && facts.noCheckPanel && facts.shellIsDiv && facts.pauseInStrip);
   const html = await (await fetch(fx.url)).text();
-  assert.ok(html.includes('<div class="frame-shell" id="watch-frame-shell"'), 'gateway anchor present in the served page');
-  assert.ok(html.includes('<script src="/campaign_watch_ui.js" defer></script></head>'), 'gateway script injected before </head>');
+  assert.equal(html, fs.readFileSync(path.join(__dirname, '../web/index.html'), 'utf8'), 'the page is served unchanged');
+  assert.deepEqual(page.problems, []);
 });
 
 test('the control strip reads only /api/status and /api/source; the viewer never feeds it', async () => {
@@ -73,44 +72,19 @@ test('the control strip reads only /api/status and /api/source; the viewer never
   assert.ok(asked.some(p => p.startsWith('/api/source/')));
 });
 
-test('the real check script records the displayed frame; the status text follows the fixture', async () => {
+test('the strip shows the source the status names; moving the playhead leaves the strip and Pause alone', async () => {
   await start();
-  await page.click('#watch-record');
-  await until(() => /Check 1 accepted/.test(document.getElementById('watch-feedback').textContent));
-  const records = (await fx.state()).records;
-  assert.equal(records.length, 1);
   const status = await (await fetch(`${fx.origin}/api/status`)).json();
-  assert.equal(records[0].session, SESSION);
-  assert.equal(records[0].source, await page.evaluate(() => document.getElementById('source-details').textContent.match(/Source: (\S+)/)[1]));
-  assert.equal(records[0].sha256, status.latest_source.sha256);
-  assert.match(records[0].observed, /^\d{4}-\d\d-\d\dT/);
-});
-
-test('the check is disabled while the playhead is not live and returns with live', async () => {
-  await start();
-  assert.equal(await page.$eval('#watch-record', b => b.disabled), false);
+  const details = await page.evaluate(() => document.getElementById('source-details').textContent);
+  assert.match(details, new RegExp(`^Session: ${SESSION}\\nSource: ${SESSION}-\\d+\\n`));
+  assert.equal(details.match(/SHA-256: ([a-f0-9]{64})/)[1], status.latest_source.sha256);
   await page.focus('#tl');
   await page.keyboard.press('ArrowLeft');
-  await until(() => document.getElementById('watch-record').disabled);
-  assert.match(await text('#statussub'), /check off/i);
-  await page.$eval('#watch-record', b => b.click());   // a script click on a disabled button does nothing
-  await S.settle(page, 300);
-  assert.equal((await fx.state()).records.length, 0);
-  await page.keyboard.press('End');
-  await until(() => !document.getElementById('watch-record').disabled);
-  await page.click('#watch-record');
-  await until(() => /Check 1 accepted/.test(document.getElementById('watch-feedback').textContent));
-});
-
-test('the check does not depend on viewer data: enabled before the viewer lists the live run', async () => {
-  await start();
-  await fx.viewer('nolive');
-  await page.reload({waitUntil: 'load'});
-  await S.settle(page, 2500);
-  assert.equal(await page.$eval('#watch-record', b => b.disabled), false);
-  await page.click('#watch-record');
-  await until(() => /Check \d+ accepted/.test(document.getElementById('watch-feedback').textContent));
-  await fx.viewer('up');
+  await until(() => !/\(live\)/.test(document.getElementById('playinfo').textContent));
+  assert.equal(await page.$eval('#pause', b => b.disabled), false);
+  assert.equal(await page.$eval('#connection', n => n.dataset.state), 'ok');
+  assert.doesNotMatch(await text('#statussub'), /check/i);
+  assert.deepEqual((await fx.state()).pauses, []);
 });
 
 test('the run picker follows a live run listed after first load, until the owner picks a run', async () => {
@@ -219,29 +193,20 @@ test('a Pause that the control path rejects leaves the sheet open with an error 
   assert.equal(await page.$eval('#sheetsubmit', b => b.disabled), false);
 });
 
-test('viewer 503 leaves Pause and the operator check working', async () => {
+test('viewer 503 leaves the control strip and Pause working', async () => {
   await start();
   page.expect503 = true;
   await fx.viewer('down');
   await until(() => document.getElementById('viewer').classList.contains('down'), null, 10000);
   assert.match(await text('#viewer'), /viewer unavailable/);
   assert.equal(await page.$eval('#connection', n => n.dataset.state), 'ok');
-  assert.equal(await page.$eval('#watch-record', b => b.disabled), false, 'check stays enabled');
-  await page.click('#watch-record');
-  await until(() => /Check 1 accepted/.test(document.getElementById('watch-feedback').textContent));
+  await fx.advance(1);   // the strip keeps following new frames from the control path
+  await until(capture => document.getElementById('source-details').textContent.includes(`Capture: ${capture}\n`),
+    1000 + (await fx.state()).visible);
   await page.focus('#pause'); await page.keyboard.press('Enter');
   await page.click('input[value="loop"]'); await page.click('#sheetsubmit');
   await until(() => document.getElementById('sheet').hidden);
   assert.deepEqual((await fx.state()).pauses, [{reason: 'loop'}]);
-});
-
-test('a scrubbed playhead does not strand the check when the viewer goes away', async () => {
-  await start();
-  page.expect503 = true;
-  await page.focus('#tl'); await page.keyboard.press('ArrowLeft');
-  await until(() => document.getElementById('watch-record').disabled);
-  await fx.viewer('down');
-  await until(() => !document.getElementById('watch-record').disabled, null, 10000);
 });
 
 test('first load while the viewer is down: the strip is complete and the page says viewer unavailable', async () => {
@@ -253,8 +218,7 @@ test('first load while the viewer is down: the strip is complete and the page sa
   await until(() => document.getElementById('viewer').classList.contains('down'));
   assert.match(await text('#app'), /Viewer unavailable/);
   assert.equal(await page.$eval('#pause', b => b.disabled), false);
-  await page.click('#watch-record');
-  await until(() => /Check 1 accepted/.test(document.getElementById('watch-feedback').textContent));
+  assert.match(await page.$eval('#source-details', n => n.textContent), new RegExp(`^Session: ${SESSION}\\nSource: `));
   assert.deepEqual(page.problems, []);
 });
 
@@ -267,13 +231,6 @@ test('control status failing shows the error line and keeps Pause', async () => 
   assert.equal(await page.$eval('#connection', n => n.dataset.state), 'error');
   assert.match(await text('#control-freshness'), /^Last status received \S+; current state unknown\./);
   assert.equal(await page.$eval('#pause', b => b.disabled), false);
-});
-
-test('best-effort observation offers no check button and the page stays clean', async () => {
-  await start('best-effort');
-  assert.equal(await page.$('#watch-record'), null);
-  assert.ok(await page.$('aside[aria-label="Operator observation"]'));
-  assert.deepEqual(page.problems, []);
 });
 
 test('the page works under the gateway policy: CSP header present and nothing violates it', async () => {
@@ -293,7 +250,7 @@ test('the page works under the gateway policy: CSP header present and nothing vi
 });
 
 test('phone layout: Pause leads the strip and the Pause? list leads the page', async () => {
-  await start('required', {width: 390, height: 800, mobile: true});
+  await start({width: 390, height: 800, mobile: true});
   const order = await page.evaluate(() => {
     const top = id => document.querySelector(id).getBoundingClientRect().top;
     return {pause: top('#pause'), conds: top('#conds'), state: top('#gamestate'), tl: top('#tl')};
@@ -330,15 +287,14 @@ test('the feed player keeps each frame at its size, never blanks, and holding th
     for (let i = 3; i < data.length; i += 4) if (data[i] !== 0) return true;
     return false;
   }), 'the frame was drawn');
-  // Hold freezes this view only: no Pause or record reaches the control path, and the run keeps going.
+  // Hold freezes this view only: no Pause reaches the control path, and the run keeps going.
   await page.click('#feed-hold');
   const held = (await feed()).meta;
   await fx.advance(2);
   await S.settle(page, 2500);
   assert.equal((await feed()).meta, held);
   assert.match(held, /^held · live/);
-  const state = await fx.state();
-  assert.equal(state.pauses.length + state.records.length, 0);
+  assert.equal((await fx.state()).pauses.length, 0);
   await page.click('#feed-hold');
   await until(previous => document.getElementById('feed-meta').textContent !== previous, held);
   // Fit scales to the column; a recorded step and Live return as expected.
@@ -462,7 +418,7 @@ test('stream player: integer scales, wide layout, caption, liveness badges and s
 });
 
 test('stream player at phone width: wide and 3x scroll inside the player, never the page (#437)', async () => {
-  await start('required', {width: 390, height: 800, mobile: true});
+  await start({width: 390, height: 800, mobile: true});
   await until(() => !document.getElementById('feed').hidden);
   for (const id of ['#feed-wide', '#feed-scale-3']) await page.click(id);
   await until(() => document.getElementById('feed').clientWidth === 1920);

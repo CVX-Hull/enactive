@@ -275,7 +275,7 @@ export function Timeline({summary}) {
   const legend = useMemo(() => legendItems(), [store.themeEpoch]);
   const keys = step && step.keys && step.keys.length ? step.keys.join(' ') : '(observe)';
   const mode = step ? label(step.mode || 'unknown') : '';
-  return html`<${Panel} title="Timeline" note="viewer · click or use ← → to move the playhead; checks re-enable when you return to live" span="s12">
+  return html`<${Panel} title="Timeline" note="viewer · click or use ← → to move the playhead" span="s12">
     <div class="legend" id="tl-legend">${legend.map(([n, c]) => html`<span><i style=${{background: c}}></i>${n}</span>`)}</div>
     ${option ? html`<${Chart} option=${option} epoch=${store.themeEpoch} onReady=${onReady} onKeyDown=${onKeyDown} tabindex="0" className="tl" role="slider"
       label="Timeline of game clock, mode, cache writes with evictions, findings and spend. Left and right arrows move the playhead, End returns to live."

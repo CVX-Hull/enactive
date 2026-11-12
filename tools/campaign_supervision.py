@@ -8,14 +8,11 @@ from __future__ import annotations
 
 import argparse
 from collections.abc import Callable
-from contextlib import ExitStack
-from datetime import datetime
 import hashlib
 import json
 import math
 import os
 from pathlib import Path
-import re
 import select
 import signal
 import socket
@@ -31,13 +28,8 @@ from tools.campaign_player import write_new
 from tools.campaign_watch import PAUSE_RECORDED, UNSPECIFIED
 
 ROOT = Path(__file__).resolve().parents[1]
-WINDOW = 45
-ATTENTION = {'required': WINDOW, 'best-effort': None}
 PAUSE_REPLY = .75
-# Wall-clock stamps are mapped onto the guard's monotonic clock from readiness; drift
-# or steps between wall and monotonic time since then carry bounded skew (seconds).
-CLOCK_MAPPING_TOLERANCE = .25
-MARKERS = ('watch-start.json', 'watch-attempts.jsonl', 'watch-terminal.json')
+MARKERS = ('watch-start.json', 'watch-terminal.json')
 # Optional, git-ignored map from a credential variable to the operator's own
 # macOS keychain item: {"<KEY_VARIABLE>": {"keychain_service": "NAME"}}.
 CREDENTIALS = ROOT/'.runtime'/'credentials.json'
@@ -87,47 +79,15 @@ def finite(value: object) -> bool:
     return type(value) in (int, float) and math.isfinite(value)
 
 
-def cutoff_reason(now: float, last: float | None, custody_end: float,
-                  window: float | None = WINDOW) -> str | None:
-    # A best-effort window (None) keeps only the original custody deadline.
-    if window is not None and last is not None and last + window <= custody_end and now >= last + window:
-        return 'watch_deadline'
-    if now >= custody_end:
-        return 'custody_deadline'
-    return None
-
-
-def verify_row(row: dict, *, session: str, source_commit: str, sequence: int, ready_wall: float,
-               ready_at: float, last: float, now: float, custody_end: float,
-               window: float | None = WINDOW) -> bool:
-    try:
-        stamp = datetime.fromisoformat(row['observed_at'])
-        wall = stamp.timestamp()
-        return (
-            row['schema'] == 'campaign-watch-attempt/1' and row['source_commit'] == source_commit
-            and row['session'] == session and type(row['sequence']) is int and row['sequence'] == sequence
-            and row['phase'] in {'active', 'ending'} and stamp.utcoffset() is not None
-            and all(finite(row[k]) for k in ('start', 'observation', 'recorded_wall'))
-            and re.fullmatch(re.escape(session)+r'-[0-9]+', row['source']) is not None
-            and re.fullmatch(r'[a-f0-9]{64}', row['sha256']) is not None
-            and wall >= ready_wall and abs(ready_at + wall - ready_wall - row['observation']) < CLOCK_MAPPING_TOLERANCE
-            and last < row['observation'] <= row['start'] <= now < row['start'] + 4
-            and row['start'] - row['observation'] <= 12
-            and abs(row['recorded_wall'] - (ready_wall + row['start'] - ready_at)) < 4
-            and cutoff_reason(now, last, custody_end, window) is None
-        )
-    except (KeyError, TypeError, ValueError, OverflowError):
-        return False
-
-
-def terminal_coverage(receipt: dict, *, session: str, source_commit: str, rows: list, ready_wall: float | None,
+def terminal_coverage(receipt: dict, *, session: str, source_commit: str, ready_wall: float | None,
                       ready_at: float | None, started_wall: float, native_pid: int | None,
-                      custody_end: float, window: float | None = WINDOW) -> bool:
+                      custody_end: float) -> bool:
+    """The custodian's receipt is the current one for this owned run and ended before the custody deadline."""
     try:
         cleanup = receipt['cleanup']
         native = cleanup['native']
         if (receipt['schema'] != 'campaign-receipt/3' or receipt['session'] != session
-                or receipt['source_commit'] != source_commit or (window is not None and not rows)
+                or receipt['source_commit'] != source_commit
                 or ready_wall is None
                 or not finite(custody_end)
                 or not all(finite(receipt[k]) for k in ('started_wall', 'ended_wall', 'elapsed_seconds'))
@@ -143,46 +103,33 @@ def terminal_coverage(receipt: dict, *, session: str, source_commit: str, rows: 
                 or type(native['returncode']) is not int
                 or native['process_absent'] is not True or native['group_absent'] is not True):
             return False
-        terminal_at = ready_at + receipt['ended_wall'] - ready_wall
-        # The mapping skew may only relax "terminal after the last accepted check";
-        # the custody and watch deadlines stay strict.
-        after_check = terminal_at + CLOCK_MAPPING_TOLERANCE
-        if window is None:
-            return (not rows or rows[-1]['receipt'] < after_check) and terminal_at < custody_end
-        return rows[-1]['receipt'] < after_check and terminal_at < min(rows[-1]['observation'] + window, custody_end)
+        # Readiness maps the receipt's wall-clock end onto the guard's monotonic clock.
+        return ready_at + receipt['ended_wall'] - ready_wall < custody_end
     except (KeyError, TypeError, ValueError):
         return False
 
 
-def pause_boundary(rows: list, last: float | None, pause_at: float, now: float,
-                   custody_end: float, window: float | None = WINDOW) -> tuple[str | None, float, list]:
-    raced = []
-    while rows and rows[-1]['receipt'] >= pause_at:
-        row = rows.pop()
-        raced.append(row)
-        last = row['prior_observation']
-    deadline = min(last + window, custody_end) if None not in (last, window) else custody_end
-    reason = cutoff_reason(now, last, custody_end, window)
-    grace = 0 if reason else max(0, min(PAUSE_REPLY, deadline-now))
-    return reason, grace, raced
-
-
 def supervise(package: Path, profile: dict, child: subprocess.Popen, gateway: subprocess.Popen,
-              wake: subprocess.Popen, checks: socket.socket, stops: socket.socket,
-              interrupted: Callable[[], bool], result: dict, *, clock=time,
-              window: float | None = WINDOW) -> str:
-    """Guard original clocks using datagrams, independently of the gateway worker."""
+              wake: subprocess.Popen, stops: socket.socket,
+              interrupted: Callable[[], bool], result: dict, *, clock=time) -> str:
+    """Guard the original custody clock and Pause datagrams, independently of the gateway worker."""
     ready, started, receipt = (package/name for name in ('ready.json', 'started.json', 'receipt.json'))
     custody_end = result['started_monotonic'] + profile['wall_seconds']
-    checks.setblocking(False); stops.setblocking(False)
-    last = ready_at = ready_wall = None
+    stops.setblocking(False)
+    ready_at = ready_wall = None
     have_started = False
-    rows = result['accepted']
 
     def receive_stop():
-        fields = stops.recv(128).decode().split(':')
+        try:
+            message = stops.recv(128)
+        except OSError:
+            message = b''
+        if not message:
+            # The gateway closed its end: a dead gateway reads as reset or end of stream, never as a Pause.
+            return 'supervision_lost'
+        fields = message.decode(errors='replace').split(':')
         if fields[0] != 'pause' or len(fields) != 3:
-            return 'acknowledgement_uncertain'
+            return 'invalid_pause_message'
         try:
             pause_at = float(fields[1])
         except ValueError:
@@ -194,16 +141,18 @@ def supervise(package: Path, profile: dict, child: subprocess.Popen, gateway: su
             return 'invalid_pause_reason'
         result['pause_requested'] = pause_at
         result['pause_reason'] = reason
-        reason, grace, raced = pause_boundary(rows, last, pause_at, clock.monotonic(), custody_end, window)
-        result['checks_raced_with_pause'] = raced
-        if reason:
-            return reason
-        if select.select([stops], [], [], grace)[0]:
-            result['pause_reply_forwarded'] = stops.recv(128) == b'pause-replied'
+        now = clock.monotonic()
+        if now >= custody_end:
+            return 'custody_deadline'
+        if select.select([stops], [], [], min(PAUSE_REPLY, custody_end-now))[0]:
+            try:
+                result['pause_reply_forwarded'] = stops.recv(128) == b'pause-replied'
+            except OSError:
+                pass  # The gateway died after sending Pause; the stop stands and no reply was forwarded.
         return 'operator_pause'
 
     while True:
-        # Pause wins a simultaneous terminal/check race and never renews custody.
+        # Pause wins a simultaneous terminal race and never extends custody.
         if select.select([stops], [], [], 0)[0]:
             return receive_stop()
         child_exited = child.poll() is not None
@@ -217,9 +166,9 @@ def supervise(package: Path, profile: dict, child: subprocess.Popen, gateway: su
             report = read_json(receipt, 1048576)
             result['custodian_receipt'] = report
             covered = have_started and terminal_coverage(report, session=profile['session'],
-                source_commit=profile['source_commit'], rows=rows, ready_wall=ready_wall,
+                source_commit=profile['source_commit'], ready_wall=ready_wall,
                 ready_at=ready_at, started_wall=result['started_wall'], native_pid=result.get('native_pid'),
-                custody_end=custody_end, window=window)
+                custody_end=custody_end)
             result['terminal_coverage_verified'] = bool(covered)
             return 'custodian_terminal' if covered else 'terminal_watch_unverified'
         if not have_started and started.is_file():
@@ -264,50 +213,17 @@ def supervise(package: Path, profile: dict, child: subprocess.Popen, gateway: su
                         or not opening['started_wall'] <= wall <= clock.time()):
                     return 'invalid_custodian_ready'
                 ready_wall = wall
-                ready_at = last = clock.monotonic() - (clock.time() - wall)
+                ready_at = clock.monotonic() - (clock.time() - wall)
                 result.update(ready_wall=ready_wall, ready_monotonic=ready_at, native_pid=target['pid'])
                 print(f"Exact spectator ready: {result.get('gateway_url')} ({profile['session']})", flush=True)
-        # A check can arrive while a startup file's buffered write is closing.
-        # Keep it queued until those markers are validated; Pause stays immediate.
-        interest = [stops, checks] if ready_at is not None and not receipt.exists() else [stops]
-        deadline = min(last + window, custody_end) if None not in (last, window) else custody_end
-        available, _, _ = select.select(interest, [], [], max(0, min(.1, deadline-clock.monotonic())))
-        now = clock.monotonic()
-        if stops in available:
+        if select.select([stops], [], [], max(0, min(.1, custody_end-clock.monotonic())))[0]:
             return receive_stop()
-        reason = cutoff_reason(now, last, custody_end, window)
-        if reason:
-            return reason
-        if checks not in available:
-            continue
-        row = json.loads(checks.recv(4096))
-        now = clock.monotonic()
-        if (last is None or receipt.exists() or child.poll() is not None
-                or (rows and rows[-1]['phase'] == 'ending' and row.get('phase') != 'ending')
-                or not verify_row(row, session=profile['session'], source_commit=profile['source_commit'],
-                    sequence=len(rows)+1, ready_wall=ready_wall, ready_at=ready_at, last=last,
-                    now=now, custody_end=custody_end, window=window)):
-            return cutoff_reason(now, last, custody_end, window) or 'invalid_watch_acknowledgement'
-        if select.select([stops], [], [], 0)[0]:
-            return receive_stop()
-        try:
-            checks.send(f"accepted:{row['sequence']}:{row['start']!r}".encode())
-        except OSError:
-            return 'acknowledgement_uncertain'
-        completed = clock.monotonic()
-        if not verify_row(row, session=profile['session'], source_commit=profile['source_commit'],
-                          sequence=len(rows)+1, ready_wall=ready_wall, ready_at=ready_at, last=last,
-                          now=completed, custody_end=custody_end, window=window):
-            return cutoff_reason(completed, last, custody_end, window) or 'invalid_watch_acknowledgement'
-        rows.append(dict(row, receipt=completed, prior_observation=last))
-        last = row['observation']
+        if clock.monotonic() >= custody_end:
+            return 'custody_deadline'
 
 
-def run_supervised(directory: Path, *, attention: str, runs: Path | None = None, popen=subprocess.Popen,
+def run_supervised(directory: Path, *, runs: Path | None = None, popen=subprocess.Popen,
                    clock=time, viewer_port: Callable[[], int] = free_loopback_port) -> dict:
-    if attention not in ATTENTION:
-        raise ValueError('Select an explicit attention policy: '+', '.join(ATTENTION))
-    window = ATTENTION[attention]
     directory = directory.resolve(strict=True)
     if any((directory/name).exists() or (directory/name).is_symlink() for name in MARKERS):
         raise ValueError('Selected package has prior/partial supervision; never rearm it')
@@ -319,35 +235,32 @@ def run_supervised(directory: Path, *, attention: str, runs: Path | None = None,
     with (directory/'manifest.json').open('rb') as stream:
         manifest_sha = hashlib.file_digest(stream, 'sha256').hexdigest()
     port = viewer_port()
-    result = dict(schema='campaign-watch-terminal/3', session=profile['session'],
+    result = dict(schema='campaign-watch-terminal/4', session=profile['session'],
         source_commit=profile['source_commit'], manifest_sha256=manifest_sha,
-        started_wall=clock.time(), started_monotonic=clock.monotonic(), attention=attention,
-        watch_seconds=window,
-        viewer_port=port, accepted=[], children={}, cleanup={}, gateway_url=None, pause_reason=None,
+        started_wall=clock.time(), started_monotonic=clock.monotonic(),
+        viewer_port=port, children={}, cleanup={}, gateway_url=None, pause_reason=None,
         pause_reply_forwarded=False, terminal_coverage_verified=False, reason='startup_failed')
+    # Exclusive reservation before any child. Even a partial reservation is inert forever.
     write_new(directory/'watch-start.json', {**{k: result[k] for k in ('session', 'source_commit',
-        'manifest_sha256', 'started_wall', 'started_monotonic', 'attention', 'watch_seconds', 'viewer_port')},
-        'schema': 'campaign-watch-start/3'})
-    # Reserve every evidence file before any child. Even partial reservation is inert forever.
+        'manifest_sha256', 'started_wall', 'started_monotonic', 'viewer_port')},
+        'schema': 'campaign-watch-start/4'})
     interrupted = False
     previous = {}
     handles = {}
     # The viewer is outside supervision: its exit never counts as loss, so it is kept apart
-    # from `handles`, which the startup wait and guard treat as required children.
+    # from `handles`, which the startup wait and guard treat as supervised children.
     viewer = {}
     def stop(signum, frame):
         nonlocal interrupted
         interrupted = True
         result['signal'] = signal.Signals(signum).name
     try:
-        with (directory/'watch-attempts.jsonl').open('x'):
-            pass
         for sig in (signal.SIGINT, signal.SIGTERM):
             previous[sig] = signal.signal(sig, stop)
         env = dict(PATH=os.environ.get('PATH', '/usr/bin:/bin'), LANG='en_US.UTF-8')
-        with ExitStack() as stack:
-            checks, tx, stops, stop_tx = [stack.enter_context(s) for s in (
-                *socket.socketpair(type=socket.SOCK_DGRAM), *socket.socketpair(type=socket.SOCK_DGRAM))]
+        # One datagram channel from the gateway: its listening port first, then Pause.
+        stops, stop_tx = socket.socketpair(type=socket.SOCK_DGRAM)
+        with stops, stop_tx:
             with (directory/'custodian-stdout.txt').open('xb') as stdout, (directory/'custodian-stderr.txt').open('xb') as stderr:
                 def launch(name, argv, **kwargs):
                     if interrupted:
@@ -376,22 +289,23 @@ def run_supervised(directory: Path, *, attention: str, runs: Path | None = None,
                     result['children']['viewer'] = dict(port=port, supervised=False, launch_error=type(exc).__name__)
                 gateway = launch('gateway', [sys.executable, '-m', 'tools.campaign_watch', str(directory),
                     profile['session'], profile['source_commit'], str(profile['port']), str(child.pid),
-                    str(tx.fileno()), str(stop_tx.fileno()), '--viewer-port', str(port)], cwd=ROOT, env=env,
-                    pass_fds=(tx.fileno(), stop_tx.fileno()), stdout=stdout, stderr=stderr)
-                tx.close(); stop_tx.close()
+                    str(stop_tx.fileno()), '--viewer-port', str(port)], cwd=ROOT, env=env,
+                    pass_fds=(stop_tx.fileno(),), stdout=stdout, stderr=stderr)
+                stop_tx.close()
                 wake = launch('wake', ['/usr/bin/caffeinate', '-di', '-w', str(child.pid)], env=env,
                               stdout=stdout, stderr=stderr)
                 # Bounded startup remains interruptible and observes all owned handles.
                 end = clock.monotonic()+8
-                while not select.select([checks], [], [], .1)[0]:
+                while not select.select([stops], [], [], .1)[0]:
                     if interrupted or any(h.poll() is not None for h in handles.values()) or clock.monotonic() >= end:
                         raise ValueError('Spectator gateway failed to start or launch cancelled')
-                opening = json.loads(checks.recv(4096))
-                if set(opening) != {'port'} or type(opening['port']) is not int or not 1024 <= opening['port'] <= 65535:
+                opening = json.loads(stops.recv(4096))
+                if (type(opening) is not dict or set(opening) != {'port'} or type(opening['port']) is not int
+                        or not 1024 <= opening['port'] <= 65535):
                     raise ValueError('Invalid gateway startup')
                 result['gateway_url'] = f"http://127.0.0.1:{opening['port']}/"
-                result['reason'] = supervise(directory, profile, child, gateway, wake, checks, stops,
-                                             lambda: interrupted, result, clock=clock, window=window)
+                result['reason'] = supervise(directory, profile, child, gateway, wake, stops,
+                                             lambda: interrupted, result, clock=clock)
     except (Exception, KeyboardInterrupt) as exc:
         result['error'] = f'{type(exc).__name__}: {str(exc)[:400]}'
         result['reason'] = 'launch_or_supervision_error'
@@ -443,7 +357,7 @@ def run_supervised(directory: Path, *, attention: str, runs: Path | None = None,
                     error_traceback=traceback.format_exc(limit=8))
         for sig, handler in previous.items():
             signal.signal(sig, handler)
-        # Capture custodian disposition separately even when the watch deadline failed.
+        # Capture custodian disposition separately even when supervision failed.
         if 'custodian' in handles and (directory/'receipt.json').is_file():
             try:
                 final_receipt = read_json(directory/'receipt.json', 1048576)
@@ -478,13 +392,10 @@ def run_supervised(directory: Path, *, attention: str, runs: Path | None = None,
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--run', type=Path, required=True)
-    parser.add_argument('--attention', choices=tuple(ATTENTION), required=True,
-        help='required: stop when no operator check completes within 45 seconds; '
-             'best-effort: checks are optional and only original custody limits, Pause and stops apply')
     parser.add_argument('--runs', type=Path, default=None,
         help='directory of archived run directories for the viewer to list beside the live run')
     options = parser.parse_args(argv)
-    result = run_supervised(options.run, attention=options.attention, runs=options.runs)
+    result = run_supervised(options.run, runs=options.runs)
     print(json.dumps(result))
     return 0 if (result['reason'] == 'custodian_terminal' and result['terminal_coverage_verified']
         and result['cleanup_verified'] and result['manifest_unchanged']

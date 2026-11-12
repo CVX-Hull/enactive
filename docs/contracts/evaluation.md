@@ -278,14 +278,12 @@ values as true medians; compare them with current ones on that basis.
 
 **Control path.** The supervised gateway (`tools/campaign_watch.py`) keeps:
 - Pause;
-- the attention checks;
 - the page origin and static files;
-- the frame and status that the checks read.
+- the frame and status that the control strip shows.
 
-The checks read those only from the custodian's `/api/status` and `/api/source/<id>`
-routes. The check panel's elements keep the identifiers that `tools/campaign_watch_ui.js`
-reads: session, freshness line, source details and frame. A viewer outage therefore
-cannot block a check, a Pause or a run.
+The control strip reads those only from the custodian's `/api/status` and
+`/api/source/<id>` routes: session, freshness line, source details and frame. A viewer
+outage therefore cannot block the strip, a Pause or a run.
 
 **Viewer.** The viewer is a separate read-only loopback process. The gateway forwards
 `/api/view/*` to it under these rules:
@@ -347,8 +345,16 @@ percentile, per status or per handoff. The primary key is (`name`, `key`).
     any other `/4` manifest is an error naming the file and version. The same file holds
     the operator labels.
   - `receipt.json` is read only as `campaign-receipt/3`. `watch-terminal.json` is read as
-    `campaign-watch-terminal/3`, or the archived `/2` only beside a listed `/4` manifest
-    (archive read only; it has no `pause_reason`). Any other version is an error naming the file and version.
+    `campaign-watch-terminal/4`, or the archived `campaign-watch-terminal/2` only beside a
+    listed `campaign-run/4` manifest (archive read only; it has no `pause_reason`). Any
+    other version is an error naming the file and version.
+  - `data/evaluation/archive-sessions-terminal-3.json` lists, by **session ID**, the 22
+    sealed `campaign-run/5` sessions (with their evidence study and run directory) whose
+    terminal is `campaign-watch-terminal/3`. A `campaign-watch-terminal/3` terminal is
+    read only for a session listed there, beside its `campaign-run/5` manifest and
+    naming that same session. The reader takes its `reason` and `pause_reason` and
+    nothing else. Such a terminal for any other session is an error naming the file and
+    version.
 - **Metadata key.** `metadata.last_seq` names the last operation read.
 - **Store replacement.** A `live` store is replaced by any later `final` pass. A `final`
   store needs an explicit replace and is never replaced or continued by a `live` pass.

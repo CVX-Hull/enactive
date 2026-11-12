@@ -46,7 +46,7 @@ Its text equivalent is below.
 | Optional player services | Knowledge, corrections, source provenance, program lineage and bounded context; no custody | [Memory and learning](components/memory-learning.md) |
 | Composition service | Connects player proposals to the computer port; retains service requests and context snapshots | [Execution](components/mission-execution.md) |
 | Computer custodian | Exact child/socket/lock handles, serialized operations, original resources and actor capabilities | [Native control](components/native-control.md) |
-| Observer / operator | Supervised control path (status, frame, attention checks, independent permanent Pause with a recorded reason) and an unsupervised read-only viewer of interpretive evaluation | [Observer operations](components/observer-operations.md) |
+| Observer / operator | Supervised control path (status, frame, independent permanent Pause with a recorded reason) and an unsupervised read-only viewer of interpretive evaluation | [Observer operations](components/observer-operations.md) |
 | Run evaluator | Offline, versioned interpretive records and metrics with a game binding; never player-visible, gates nothing | [Evaluation contract](contracts/evaluation.md) |
 | Curator shadow (ADR 009, not adopted) | Sealed-trace projection and workbench; sandboxed curator sessions, a key-holding model proxy, a gate-only knowledge repository and drafts; no custody, no player access, never reached by the player | [Curator and trace workbench](components/curator.md) |
 | Game | Consumes ordinary SDL input and determines outcomes | Windowed prepared CDDA; no semantic engine bridge |
@@ -85,9 +85,9 @@ MCP projection excludes global deadline/remaining fields while canonical
 operator records retain them. No game-specific save or Quit step gates stopping.
 
 An optional [finite-test supervisor](operations/campaign-supervision.md) wraps
-the custodian with an explicitly selected attention policy: `required` (45-second
-operator checks) or `best-effort` (checks optional; development runs). Its independent
-guardian owns clocks and exact newly launched child groups; a separate gateway
+the custodian. Nobody is required to watch: run limits and the operator's Pause
+stop a run. Its independent
+guardian owns the custody clock and exact newly launched child groups; a separate gateway
 forwards spectator reads and receiver-verified Pause. It adds no player input
 producer or native custody. Supervision, host settlement and game outcomes stay
 separate; source fixtures do not qualify actual play or human attention.

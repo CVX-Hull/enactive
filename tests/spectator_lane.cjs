@@ -1,7 +1,7 @@
 // Graphical lane for the redesigned spectator (#383). Not part of `node --test`.
 // Starts tests/spectator_lane_fixture.py (real control path + real viewer over a replayed run),
-// drives the page in a real browser, records an operator check, kills the viewer, checks that the
-// page reports the outage while the check and Pause keep working, and pauses with a reason.
+// drives the page in a real browser, kills the viewer, checks that the page reports the outage
+// while the control strip and Pause keep working, and pauses with a reason.
 // Usage: node tests/spectator_lane.cjs <fixture dir under .runtime> <archived run> <runs dir> <records> <shots dir>
 'use strict';
 const { spawn } = require('node:child_process');
@@ -28,28 +28,20 @@ const note = (k, v) => { log.push({ step: k, value: v, at: new Date().toISOStrin
   const browser = await puppeteer.launch({ headless: true });
   const errors = [];
   const shoot = async (page, name) => { await page.screenshot({ path: path.join(shots, name + '.png'), fullPage: true }); };
-  // The owner's page: keep the required attention check alive every 30 s while following live.
+  // The owner's page follows live; nothing on it has to be clicked for the run to continue.
   const owner = await browser.newPage();
   owner.on('console', m => { if (m.type() === 'error') errors.push(`owner: ${m.text()}`); });
   await owner.setViewport({ width: 1440, height: 900 });
   await owner.goto(ready.url + '#live', { waitUntil: 'networkidle2' });
+  const strip = () => owner.evaluate(() => { const f = document.getElementById('frame');
+    return { connection: document.getElementById('connection').dataset.state, frame: !!f && !f.hidden && f.complete && f.naturalWidth > 0,
+      pause: !document.getElementById('pause').disabled }; });
   for (let i = 0; i < 60; i++) {   // poll: waitForFunction proved unreliable here
-    if (await owner.evaluate(() => { const b = document.getElementById('watch-record'); const f = document.getElementById('frame');
-      return !!b && !b.disabled && !!f && !f.hidden && f.complete && f.naturalWidth > 0; })) break;
+    const s = await strip();
+    if (s.connection === 'ok' && s.frame) break;
     await sleep(500);
   }
-  await sleep(3000);  // let the gateway's deferred check script attach its handler
-  const check = async label => {
-    await owner.bringToFront();   // the check script requires the frame on a visible page, as for a real owner
-    const before = await owner.$eval('#watch-feedback', e => e.textContent);
-    await owner.click('#watch-record');
-    let text = before;
-    for (let i = 0; i < 20 && (text === before || text.startsWith('Recording')); i++) { await sleep(300); text = await owner.$eval('#watch-feedback', e => e.textContent); }
-    note(label, text);
-  };
-  await check('check-first');
-  let checks = 0;
-  const keepAlive = setInterval(() => { checks += 1; check('check-keepalive-' + checks).catch(e => errors.push('keepalive: ' + e.message)); }, 30000);
+  note('strip-first', await strip());
   try {
     for (const [name, vw, dark] of [['desktop-light', 1440, false], ['desktop-dark', 1440, true], ['phone', 390, false]]) {
       const page = await browser.newPage();
@@ -73,13 +65,12 @@ const note = (k, v) => { log.push({ step: k, value: v, at: new Date().toISOStrin
     const first = await decisions(); await sleep(20000);
     note('live-decisions-over-20s', { before: first, after: await decisions() });
     await shoot(owner, 'owner-live-before-kill');
-    // Kill the viewer; the page must say so, and the check and Pause must still work.
+    // Kill the viewer; the page must say so, and the control strip and Pause must still work.
     process.kill(ready.viewer_pid, 'SIGKILL'); note('viewer-killed', ready.viewer_pid);
     await sleep(8000);
     note('strip-viewer-after-kill', await owner.$eval('#strip-viewer', e => e.textContent));
     await shoot(owner, 'owner-after-viewer-kill');
-    clearInterval(keepAlive);
-    await check('check-after-kill');
+    note('strip-after-kill', await strip());
     // Pause with a reason through the confirmation sheet.
     await owner.focus('#pause'); await owner.keyboard.press('Enter'); await sleep(600);
     await shoot(owner, 'owner-pause-sheet');
@@ -92,7 +83,7 @@ const note = (k, v) => { log.push({ step: k, value: v, at: new Date().toISOStrin
     const code = await new Promise(r => { const t = setTimeout(() => { fs.writeFileSync(path.join(dir, 'finish-fixture'), ''); }, 20000); fixture.on('exit', c => { clearTimeout(t); r(c); }); });
     const result = JSON.parse(fs.readFileSync(path.join(dir, 'fixture-result.json'), 'utf8'));
     note('fixture-exit', code);
-    note('fixture-result', { reason: result.reason, pause_reason: result.pause_reason, accepted: result.accepted.length,
+    note('fixture-result', { reason: result.reason, pause_reason: result.pause_reason,
       viewer_alive_at_end: result.viewer_alive_at_end, synthetic_channel_stopped: result.synthetic_channel_stopped });
     note('console-errors', errors);
     fs.writeFileSync(path.join(shots, 'lane-result.json'), JSON.stringify({ log, errors, result }, null, 1));

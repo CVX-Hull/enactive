@@ -1,27 +1,22 @@
 """Private HTTP worker for campaign_supervision; no provider credentials or game inputs."""
-from datetime import datetime
-from hashlib import file_digest, sha256
+from hashlib import file_digest
 import argparse
 from http.client import HTTPConnection
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
-import os
 from pathlib import Path
 import re
 import socket
 import subprocess
-import sys
 import threading
 import time
 from urllib.parse import urlsplit
 
 from harness.computer.protocol import read_json
 
-UI = Path(__file__).with_name('campaign_watch_ui.js')
 WEB = Path(__file__).resolve().parents[1]/'web'
 PAGES = {'/api/status'}
 MAX_BODY = 4 * 1024 * 1024
-NORMAL_EOF = 'Native receive failed: Native channel EOF'
 # Owner Pause reasons (ADR008 item 5). The reason is recorded; the custodian never sees it. A Pause is
 # never refused over its reason: a missing or unknown one is recorded as `unspecified`.
 PAUSE_REASONS = ('loop', 'fault', 'spend', 'other')
@@ -81,30 +76,24 @@ class ViewerRefused(Exception):
 
 
 def worker(package: Path, session: str, source_commit: str, upstream: int, receiver_pid: int,
-           checks: socket.socket, stops: socket.socket, *, viewer_port: int, web: Path = WEB,
+           stops: socket.socket, *, viewer_port: int, web: Path = WEB,
            receiver_check=bind_pause_receiver, connection_factory=HTTPConnection) -> None:
+    """Serve the page, status, frames and viewer reads, and forward Pause.
+
+    `stops` is the one datagram channel to the guardian: the listening port first, then Pause.
+    """
     if re.fullmatch('[a-f0-9]{32}', session) is None or re.fullmatch('[a-f0-9]{40}', source_commit) is None:
         raise ValueError('Invalid frozen watch binding')
     opening = read_json(package/'watch-start.json')
-    attention = {('required', 45): 'Operator target: check every 15 seconds. Cutoff: 45 seconds.',
-                 ('best-effort', None): 'Best-effort observation: checks are optional; Pause still stops input.'}
-    policy = attention.get((opening.get('attention'), opening.get('watch_seconds')))
-    recording = opening.get('attention') == 'required'
     with (package/'manifest.json').open('rb') as stream:
         manifest_sha256 = file_digest(stream, 'sha256').hexdigest()
-    if (opening.get('schema') != 'campaign-watch-start/3' or opening.get('session') != session
+    if (type(opening) is not dict or opening.get('schema') != 'campaign-watch-start/4'
+            or opening.get('session') != session
             or type(viewer_port) is not int or opening.get('viewer_port') != viewer_port
-            or opening.get('source_commit') != source_commit or policy is None
-            or opening.get('manifest_sha256') != manifest_sha256
-            or not (package/'watch-attempts.jsonl').is_file()
-            or (package/'watch-attempts.jsonl').is_symlink()):
+            or opening.get('source_commit') != source_commit
+            or opening.get('manifest_sha256') != manifest_sha256):
         raise ValueError('Worker has no current exclusively reserved supervision')
     source_pattern = re.compile(re.escape(session)+r'-[0-9]+')
-    accepted = 0
-    lock = threading.Lock()
-    paused = threading.Event()
-    ending_seen = False
-    checks.settimeout(4.5)
     stops.setblocking(False)
     view_slots = threading.BoundedSemaphore(VIEW_SLOTS)
 
@@ -155,12 +144,6 @@ def worker(package: Path, session: str, source_commit: str, upstream: int, recei
         finally:
             connection.close()
 
-    def read_upstream(path):
-        status, data, _ = relay(path)
-        if status != 200:
-            raise ValueError(f'Original spectator returned HTTP {status}')
-        return data
-
     class Handler(BaseHTTPRequestHandler):
         def setup(self):
             super().setup()
@@ -190,8 +173,6 @@ def worker(package: Path, session: str, source_commit: str, upstream: int, recei
         def do_GET(self):
             if not self.scoped():
                 self.send_error(403); return
-            if self.path == '/campaign_watch_ui.js':
-                self.reply(200, UI.read_bytes(), 'text/javascript'); return
             if self.path.startswith('/api/view/'):
                 self.view(); return
             if self.path in PAGES or (self.path.startswith('/api/source/')
@@ -205,23 +186,10 @@ def worker(package: Path, session: str, source_commit: str, upstream: int, recei
                 if found is None:
                     self.send_error(404); return
                 status, (data, media) = 200, found
-            if self.path == '/' and status == 200 and not recording:
-                # Best-effort observation offers no check that could stop a healthy run.
-                markup = f'<aside aria-label="Operator observation"><p>{policy}</p></aside>'.encode()
-                data = data.replace(b'<div class="frame-shell" id="watch-frame-shell"',
-                                    markup+b'<div class="frame-shell" id="watch-frame-shell"', 1)
-            elif self.path == '/' and status == 200:
-                data = data.replace(b'</head>', b'<script src="/campaign_watch_ui.js" defer></script></head>', 1)
-                markup = (f'<aside aria-label="Operator acknowledgement"><button id="watch-record" '
-                    f'type="button" data-next="{accepted+1}">Record operator check</button>'
-                    f'<span id="watch-feedback" role="status">Checks accepted: {accepted}</span>'
-                    f'<p>{policy}</p></aside>').encode()
-                data = data.replace(b'<div class="frame-shell" id="watch-frame-shell"',
-                                    markup+b'<div class="frame-shell" id="watch-frame-shell"', 1)
             self.reply(status, data, media)
 
         def view(self):
-            # Own connection and bounded slots: a slow viewer cannot delay Pause, checks or status.
+            # Own connection and bounded slots: a slow viewer cannot delay Pause or status.
             if VIEW_PATH.fullmatch(self.path) is None or '..' in self.path:
                 self.send_error(404); return
             if not view_slots.acquire(blocking=False):
@@ -247,83 +215,26 @@ def worker(package: Path, session: str, source_commit: str, upstream: int, recei
             return reason if type(reason) is str and reason in PAUSE_REASONS else UNSPECIFIED
 
         def do_POST(self):
-            nonlocal accepted, ending_seen
-            if (not self.scoped(mutation=True) or self.path not in {'/record', '/api/pause'}
-                    or (self.path == '/record' and not recording)
+            if (not self.scoped(mutation=True) or self.path != '/api/pause'
                     or self.headers.get('Content-Type') != 'application/json'):
                 self.send_error(403); return
             try:
-                if self.path == '/api/pause':
-                    reason = self.pause_reason()
-                    # Independent from record lock, including blocked source fetch/guard ACK.
-                    paused.set()
-                    stops.send(f"pause:{time.monotonic()!r}:{reason}".encode())
-                    # The custodian receives the original empty Pause; the reason is not its concern.
-                    status, payload, media = relay(self.path, b'{}')
-                    received = json.loads(payload)
-                    if (status != 200 or received['schema'] != 'computer-pause/1'
-                            or received['session'] != session or received['stop']['stop_requested'] is not True):
-                        raise ValueError('Original Pause reply did not confirm the selected session')
-                    self.reply(status, payload, media); self.wfile.flush()
-                    stops.send(b'pause-replied')
-                    return
-                length = int(self.headers['Content-Length'])
-                if not 0 < length <= 512:
-                    raise ValueError('Unexpected request size')
-                body = self.rfile.read(length)
-                if len(body) != length:
-                    raise ValueError('Incomplete request body')
-                form = json.loads(body)
-                with lock:
-                    if (type(form) is not dict or set(form) != {'sequence', 'session', 'observed', 'source', 'sha256'}
-                            or type(form['sequence']) is not int or form['sequence'] != accepted+1
-                            or form['session'] != session or paused.is_set()):
-                        raise ValueError('Wrong or stopped session, or stale check number')
-                    started = time.monotonic()
-                    stamp = datetime.fromisoformat(form['observed'])
-                    age = time.time()-stamp.timestamp()
-                    if stamp.utcoffset() is None or not 0 <= age <= 12:
-                        raise ValueError('Displayed status is stale or invalid')
-                    source = form['source']
-                    if not source_pattern.fullmatch(source) or not re.fullmatch('[a-f0-9]{64}', form['sha256']):
-                        raise ValueError('Displayed source identity or digest is invalid')
-                    status = json.loads(read_upstream('/api/status'))
-                    native_code, stop = status.get('native_returncode'), status['stop']
-                    ending = type(native_code) is int and native_code == 0
-                    if (status['schema'] != 'computer-status/1' or status['session'] != session or paused.is_set()
-                            or (native_code is not None and not ending) or (ending_seen and not ending)
-                            or type(stop['stop_requested']) is not bool
-                            or (stop['stop_requested'] and not (ending and stop['reason'] == NORMAL_EOF))
-                            or sha256(read_upstream('/api/source/'+source)).hexdigest() != form['sha256']
-                            or paused.is_set()):
-                        raise ValueError('Original target, stop state or displayed PNG could not be verified')
-                    row = dict(schema='campaign-watch-attempt/1', source_commit=source_commit,
-                        sequence=accepted+1, session=session, start=started, observation=started-age,
-                        observed_at=form['observed'], phase='ending' if ending else 'active',
-                        source=source, sha256=form['sha256'], recorded_wall=time.time())
-                    attempts.write(json.dumps(row)+'\n'); attempts.flush(); os.fsync(attempts.fileno())
-                    confirmation = f"accepted:{row['sequence']}:{started!r}".encode()
-                    try:
-                        checks.send(json.dumps(row).encode())
-                        if checks.recv(128) != confirmation or paused.is_set():
-                            raise ValueError('Unmatched or stopped guard confirmation')
-                    except (OSError, ValueError):
-                        already_paused = paused.is_set()
-                        paused.set()
-                        if not already_paused:
-                            stops.send(b'ack-uncertain')
-                        raise
-                    accepted += 1
-                    ending_seen = ending
+                reason = self.pause_reason()
+                stops.send(f"pause:{time.monotonic()!r}:{reason}".encode())
+                # The custodian receives the original empty Pause; the reason is not its concern.
+                status, payload, media = relay(self.path, b'{}')
+                received = json.loads(payload)
+                if (status != 200 or received['schema'] != 'computer-pause/1'
+                        or received['session'] != session or received['stop']['stop_requested'] is not True):
+                    raise ValueError('Original Pause reply did not confirm the selected session')
+                self.reply(status, payload, media); self.wfile.flush()
+                stops.send(b'pause-replied')
             except (KeyError, OSError, TypeError, ValueError, OverflowError, subprocess.TimeoutExpired) as exc:
-                self.reply_json(409, error=str(exc)); return
-            self.reply_json(200, accepted=accepted, source=source)
+                self.reply_json(409, error=str(exc))
 
-    # The supervisor exclusively reserved this file before launch; append attempts only.
-    with (package/'watch-attempts.jsonl').open('a') as attempts:
-        with ThreadingHTTPServer(('127.0.0.1', 0), Handler) as server:
-            checks.send(json.dumps(dict(port=server.server_port)).encode())
-            server.serve_forever()
+    with ThreadingHTTPServer(('127.0.0.1', 0), Handler) as server:
+        stops.send(json.dumps(dict(port=server.server_port)).encode())
+        server.serve_forever()
 
 
 if __name__ == '__main__':
@@ -333,11 +244,9 @@ if __name__ == '__main__':
     parser.add_argument('source_commit')
     parser.add_argument('upstream', type=int)
     parser.add_argument('receiver_pid', type=int)
-    parser.add_argument('checks_fd', type=int)
     parser.add_argument('stops_fd', type=int)
     parser.add_argument('--viewer-port', type=int, required=True)
     parser.add_argument('--web-root', type=Path, default=WEB)
     options = parser.parse_args()
     worker(options.package, options.session, options.source_commit, options.upstream, options.receiver_pid,
-           socket.socket(fileno=options.checks_fd), socket.socket(fileno=options.stops_fd),
-           viewer_port=options.viewer_port, web=options.web_root)
+           socket.socket(fileno=options.stops_fd), viewer_port=options.viewer_port, web=options.web_root)

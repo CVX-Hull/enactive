@@ -10,7 +10,7 @@ The spectator shows actual owned target images, mechanical resources/custody and
 separately labelled player claims. It owns no actor capability. The operator's
 Pause is an independent permanent stop. The spectator is two parts
 ([ADR008](../decisions/008-evaluation-and-spectator.md)): a minimal **control path**
-that keeps Pause and the attention checks, and a **viewer** that shows interpreted
+that keeps Pause, status and the frame, and a **viewer** that shows interpreted
 records and can fail without effect. [Architecture](../architecture.md) and
 [current contract](../contracts/computer-control.md) own system/port guarantees.
 
@@ -19,11 +19,10 @@ records and can fail without effect. [Architecture](../architecture.md) and
 | Part | Owns |
 | --- | --- |
 | [Server](../../harness/server.py) | Selected `127.0.0.1` host/origin checks, bounded JSON, passive `/api/status` and `/api/source/ID` routes, independent Pause and the actor tool routes. It serves no page and no derived view. |
-| [Gateway](../../tools/campaign_watch.py) | The page origin and static files, relayed status and source reads, the check endpoint, Pause with a reason, and bounded forwarding of view reads. Its exit ends supervision, so it stays minimal. |
-| [Check panel script](../../tools/campaign_watch_ui.js) | Reads the displayed session, freshness line, source details and frame on an explicit trusted click. |
+| [Gateway](../../tools/campaign_watch.py) | The page origin and static files, relayed status and source reads, Pause with a reason, and bounded forwarding of view reads. Its exit ends supervision, so it stays minimal. |
 | [Page](../../web/) | Source presentation, labels, resource status, Pause feedback and the viewer's views. Served by the gateway. |
 | Viewer (`harness/viewer`) | Read-only evaluator views of the live run and archived runs ([contract](../contracts/evaluation.md#spectator-view-api-spectator-view1)). A separate process outside supervision. |
-| [Supervisor](../../tools/campaign_supervision.py) | Starts and stops the custodian, gateway, keep-awake and viewer children; the guardian owns check deadlines and the Pause receipt ([procedure](../operations/campaign-supervision.md)). |
+| [Supervisor](../../tools/campaign_supervision.py) | Starts and stops the custodian, gateway, keep-awake and viewer children; the guardian owns the custody deadline and the Pause receipt ([procedure](../operations/campaign-supervision.md)). |
 | [Custodian](../../tools/campaign_run.py) | Frozen admission validation, exact native target, store/server lifetime and final cleanup/accounting receipt. |
 | [Preparation](../../tools/prepare_game.py) | Project-local windowed options, normal mouse input, wrapper/userdir and shared exclusion before changes. |
 | [Build](../../tools/build_computer.py) | Current mechanical SDL adapter/fixture plus source/output provenance; no gameplay claim. |
@@ -42,22 +41,20 @@ stop facts. Authenticated actor tools use `/api/tool`; source reads use
 browser-issued actor handoff exists.
 
 **Gateway.** It binds `127.0.0.1` on a free port, checks `Host` and `Origin`, and
-serves only `index.html`, `web/app/*`, `web/vendor/*` and its own check script, with its
+serves only `index.html`, `web/app/*` and `web/vendor/*`, unchanged, with its
 own security headers (`default-src 'self'`, `nosniff`, `no-store`). It relays only
-`/api/status` and `/api/source/<session>-<n>` from the custodian.
-- **Checks.** Under `--attention required` it injects the check panel before the
-  frame viewport and the check script before `</head>`; under `best-effort` the page
-  has no check and `/record` is refused. A check requires a trusted click, decoded
-  in-viewport pixels, matching session/source/digest, an increasing number and a
-  displayed status at most 12 seconds old. The panel takes the frame and status only
-  from the two relayed routes, so a viewer outage cannot block a check.
+`/api/status` and `/api/source/<session>-<n>` from the custodian, and accepts no
+mutation except Pause.
+- **Watching.** The page asks for no acknowledgement and nobody is required to watch:
+  an unwatched run continues until a run limit or Pause stops it
+  ([procedure](../operations/campaign-supervision.md)). The control strip takes the
+  frame and status only from the two relayed routes, so a viewer outage cannot blank it.
 - **Pause.** The page posts `{"reason": "loop" | "fault" | "spend" | "other"}`; a missing
   or unknown reason is recorded as `unspecified`, and the stop is never refused. The
   gateway sends the guardian the reason with the Pause time,
   then forwards `{}` to the custodian unchanged, after verifying the connected socket
   belongs to the exact custodian child. The reason lands in the watch terminal record
-  (`pause_reason`, null when no owner Pause). Pause never waits for the viewer or a
-  check.
+  (`pause_reason`, null when no owner Pause). Pause never waits for the viewer.
 
 **Failure.** Report stop-requested separately from native-confirmed Pause. A stale
 image or retained launch receipt is historical evidence, not current liveness. Player
@@ -122,15 +119,15 @@ reads only, and leaves the Pause path untouched.
 
 The viewer's exit is never supervision loss: the guardian, startup wait and cleanup
 treat it separately from the custodian, gateway and keep-awake children. The supervisor
-stops it with them at the end and records its pid and port (`campaign-watch-start/3`
-port, `campaign-watch-terminal/3` children). A viewer that cannot start leaves the run
-and its checks unchanged.
+stops it with them at the end and records its pid and port (`campaign-watch-start/4`
+port, `campaign-watch-terminal/4` children). A viewer that cannot start leaves the run
+unchanged.
 
 ## Assurance and evidence
 
 The [testing guide](../testing.md) routes the HTTP boundary, gateway/forwarding,
 guardian and compiled-native tests. Proven by fixture: forwarding refuses HTML, script
-and oversize bodies; a viewer killed mid-run leaves required checks, status and Pause
+and oversize bodies; a viewer killed mid-run leaves status, frames and Pause
 working; Pause with a reason forwards `{}` and records the reason; viewer exit does not
 end supervision. A reference test checks that the player driver and host never name the
 evaluator or viewer.
@@ -141,8 +138,8 @@ Limits:
   the page accepts, but the answer is not proven to come from the viewer.
 - The Pause receiver check is the Mac-specific `lsof` socket binding. It qualifies
   neither another OS nor a hostile local process.
-- A check is evidence that the displayed pixels and status were current at a click.
-  Human attention, physical paint and useful game effects are separate.
+- The page shows retained evidence. Human attention, physical paint and useful game
+  effects are separate, and nothing records whether anyone watched.
 - Actual browser/native visual inspection is separate from parser, hash and HTTP
   checks. [Operations](../runbook.md) route launch, Pause and cleanup; the
   [production report](../acceptance/2026-10-29-computer-control.md) retains

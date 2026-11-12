@@ -11,8 +11,7 @@
 </head>
 <body>
   <!-- Control path. Static markup driven only by app/control.js from /api/status and
-       /api/source/<id>. The gateway injects the operator check before the frame-shell
-       anchor and a script before the head close tag; app/control.js never reads the viewer. -->
+       /api/source/<id>; app/control.js never reads the viewer. -->
   <header class="ctl" aria-label="Control path">
     <div class="wrap" id="watch">
       <button class="pause" id="pause" type="button" aria-describedby="pause-hint">Pause run…<span class="fillbar" id="fillbar"></span></button>
@@ -27,7 +26,7 @@
         <p id="pause-result" class="note" role="status" hidden></p>
       </div>
       <div class="ctl-frame">
-        <div class="frame-shell" id="watch-frame-shell" tabindex="0" role="region" aria-label="Live frame from the control path"><img id="frame" alt="Live game screen from the control path" hidden><span class="frame-note" id="frame-note">No frame yet</span></div>
+        <div class="frame-shell" tabindex="0" role="region" aria-label="Live frame from the control path"><img id="frame" alt="Live game screen from the control path" hidden><span class="frame-note" id="frame-note">No frame yet</span></div>
         <details class="src-details"><summary>Frame source</summary><pre id="source-details">No displayed source.</pre></details>
       </div>
       <div class="ctl-right" id="strip-viewer"></div>

@@ -1,6 +1,5 @@
 """Actual local socket/HTTP fixtures; no real native target or provider calls."""
 from contextlib import contextmanager
-from datetime import datetime, timezone, timedelta
 from hashlib import sha256
 from http.client import HTTPConnection
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -8,7 +7,6 @@ import json
 import os
 from pathlib import Path
 import select
-import shutil
 import signal
 import socket
 import subprocess
@@ -28,7 +26,7 @@ SESSION = 'a'*32
 COMMIT = 'b'*40
 PNG = b'synthetic immutable source bytes'
 INDEX = (b'<html><head></head><body><button id="pause">Pause</button>'
-         b'<div class="frame-shell" id="watch-frame-shell"></div></body></html>')
+         b'<div class="frame-shell"></div></body></html>')
 VIEWER_SCRIPT = (
     'import http.server,sys\n'
     'class H(http.server.BaseHTTPRequestHandler):\n'
@@ -51,7 +49,7 @@ def put(path, value):
 
 
 @contextmanager
-def fixture(tmp_path, *, ready_age=0, receiver_pid=None, attention='required', viewer='thread'):
+def fixture(tmp_path, *, receiver_pid=None, viewer='thread'):
     state = dict(block=False, fetching=threading.Event(), unblock=threading.Event(), paused=False,
                  status_session=SESSION, native=None, reason=None, source_bytes=PNG, pause_body=None,
                  view=dict(status=200, media='application/json', body=b'{"schema":"spectator-view/1"}',
@@ -135,36 +133,31 @@ def fixture(tmp_path, *, ready_age=0, receiver_pid=None, attention='required', v
         port_of_viewer = viewing.server_port
     else:
         port_of_viewer = unused_port()
-    checks, tx = socket.socketpair(type=socket.SOCK_DGRAM)
     stops, stop_tx = socket.socketpair(type=socket.SOCK_DGRAM)
     wall, mono = time.time(), time.monotonic()
     (tmp_path/'manifest.json').write_text('{}')
-    put(tmp_path/'watch-start.json', dict(schema='campaign-watch-start/3', session=SESSION,
-        source_commit=COMMIT, manifest_sha256=sha256(b'{}').hexdigest(), attention=attention,
-        watch_seconds=guard.ATTENTION[attention], viewer_port=port_of_viewer,
-        started_wall=wall-ready_age-.1, started_monotonic=mono-ready_age-.1))
-    (tmp_path/'watch-attempts.jsonl').touch()
+    put(tmp_path/'watch-start.json', dict(schema='campaign-watch-start/4', session=SESSION,
+        source_commit=COMMIT, manifest_sha256=sha256(b'{}').hexdigest(), viewer_port=port_of_viewer,
+        started_wall=wall-.1, started_monotonic=mono-.1))
     put(tmp_path/'started.json', dict(schema='computer-start/1', session=SESSION,
-        started_wall=wall-ready_age-.1, deadline_monotonic=mono-ready_age-.1+60))
+        started_wall=wall-.1, deadline_monotonic=mono-.1+60))
     put(tmp_path/'ready.json', dict(schema='computer-ready/1', session=SESSION, pid=123,
-        ready_wall=wall-ready_age, viewer_url=f'http://127.0.0.1:{server.server_port}/'))
+        ready_wall=wall, viewer_url=f'http://127.0.0.1:{server.server_port}/'))
     process = subprocess.Popen([sys.executable, '-m', 'tools.campaign_watch', str(tmp_path), SESSION,
         COMMIT, str(server.server_port), str(os.getpid() if receiver_pid is None else receiver_pid),
-        str(tx.fileno()), str(stop_tx.fileno()), '--viewer-port', str(port_of_viewer), '--web-root', str(web)],
-        cwd=ROOT, pass_fds=(tx.fileno(), stop_tx.fileno()),
+        str(stop_tx.fileno()), '--viewer-port', str(port_of_viewer), '--web-root', str(web)],
+        cwd=ROOT, pass_fds=(stop_tx.fileno(),),
         start_new_session=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    tx.close(); stop_tx.close()
+    stop_tx.close()
     try:
-        assert select.select([checks], [], [], 5)[0], 'gateway failed to establish local fixture'
-        port = json.loads(checks.recv(4096))['port']
+        assert select.select([stops], [], [], 5)[0], 'gateway failed to establish local fixture'
+        port = json.loads(stops.recv(4096))['port']
         profile = dict(session=SESSION, source_commit=COMMIT, wall_seconds=60, port=server.server_port)
-        result = dict(accepted=[], started_wall=wall-ready_age-.1,
-                      started_monotonic=mono-ready_age-.1, gateway_url=f'http://127.0.0.1:{port}/')
+        result = dict(started_wall=wall-.1, started_monotonic=mono-.1, gateway_url=f'http://127.0.0.1:{port}/')
         live = SimpleNamespace(poll=lambda: None)
         def supervise(child=live):
             result['reason'] = guard.supervise(tmp_path, profile, child, process, live,
-                                              checks, stops, lambda: False, result,
-                                              window=guard.ATTENTION[attention])
+                                              stops, lambda: False, result)
         def reply(path, form=None, origin=True):
             connection = HTTPConnection('127.0.0.1', port, timeout=8)
             try:
@@ -181,7 +174,7 @@ def fixture(tmp_path, *, ready_age=0, receiver_pid=None, attention='required', v
             response, data = reply(path, form, origin)
             return response.status, data
         yield SimpleNamespace(state=state, call=call, reply=reply, supervise=supervise, result=result,
-                              checks=checks, stops=stops, process=process, port=port, profile=profile,
+                              stops=stops, process=process, port=port, profile=profile,
                               viewer_process=viewer_process, web=web)
     finally:
         state['unblock'].set()
@@ -191,44 +184,26 @@ def fixture(tmp_path, *, ready_age=0, receiver_pid=None, attention='required', v
         if viewing is not None:
             viewing.shutdown(); viewing.server_close()
         server.shutdown(); server.server_close(); serving.join(2)
-        checks.close(); stops.close()
+        stops.close()
         stdout, stderr = process.communicate(timeout=2)
         assert process.returncode is not None, (stdout, stderr)
 
 
-def form(sequence=1, **changes):
-    value = dict(session=SESSION, sequence=sequence, observed=datetime.now(timezone.utc).isoformat(),
-                 source=SESSION+'-91', sha256=sha256(PNG).hexdigest())
-    value.update(changes)
-    return value
-
-
-def test_gateway_rejects_stale_wrong_source_session_digest_and_origin(tmp_path):
+def test_gateway_serves_the_page_unchanged_and_accepts_no_mutation_but_pause(tmp_path):
     with fixture(tmp_path) as f:
-        assert f.call('/api/tool', {})[0] == 403
-        assert f.call('/record', form(), origin=False)[0] == 403
-        bad = [dict(session='other'), dict(sequence=2), dict(source='other-1'), dict(sha256='0'*64),
-               dict(observed=(datetime.now(timezone.utc)-timedelta(seconds=13)).isoformat())]
-        for change in bad:
-            assert f.call('/record', form(**change))[0] == 409
-        f.state['status_session'] = 'other'
-        assert f.call('/record', form())[0] == 409
-        assert (tmp_path/'watch-attempts.jsonl').read_text() == ''
         code, page = f.call('/')
-        assert code == 200 and page.index(b'id="pause"') < page.index(b'id="watch-record"')
-        assert page.index(b'id="watch-record"') < page.index(b'id="watch-frame-shell"')
-        assert page.index(b'campaign_watch_ui.js') < page.index(b'</head>')
+        assert code == 200 and page == INDEX
+        for path in ('/api/tool', '/record', '/api/status', '/'):
+            assert f.call(path, {})[0] == 403, path
+        assert f.call('/api/pause', {'reason': 'other'}, origin=False)[0] == 403
+        assert f.call('/campaign_watch_ui.js')[0] == 404
+        assert not f.state['paused'] and not select.select([f.stops], [], [], 0)[0]
+        assert sorted(path.name for path in tmp_path.iterdir() if path.name.startswith('watch-')) == ['watch-start.json']
 
 
-def test_completed_checks_duplicate_rejection_ending_and_pause(tmp_path):
+def test_pause_binds_the_exact_receiver_rather_than_retained_json(tmp_path):
     with fixture(tmp_path) as f:
         thread = threading.Thread(target=f.supervise); thread.start()
-        assert f.call('/record', form())[0] == 200
-        assert f.call('/record', form())[0] == 409
-        f.state.update(native=0, paused=True, reason=watch.NORMAL_EOF)
-        assert f.call('/record', form(2))[0] == 200
-        f.state.update(native=None, paused=False, reason=None)
-        assert f.call('/record', form(3))[0] == 409
         # Exact receiver is this fixture server's process, rather than retained JSON.
         put(tmp_path/'launcher-process.json', dict(pid=1, session='substituted'))
         pause_code = f.call('/api/pause', {'reason': 'other'})[0]
@@ -237,24 +212,6 @@ def test_completed_checks_duplicate_rejection_ending_and_pause(tmp_path):
         assert not thread.is_alive() and f.result['reason'] == 'operator_pause'
         assert f.result.get('pause_reply_forwarded', False) == (sys.platform == 'darwin')
         assert f.state['paused'] == (sys.platform == 'darwin')
-        assert [r['phase'] for r in f.result['accepted']] == ['active', 'ending']
-        assert f.call('/record', form(3))[0] == 409
-
-
-def test_best_effort_gateway_offers_no_check_but_keeps_pause(tmp_path):
-    with fixture(tmp_path, attention='best-effort') as f:
-        thread = threading.Thread(target=f.supervise); thread.start()
-        code, page = f.call('/')
-        assert code == 200 and b'id="pause"' in page and b'watch-record' not in page
-        assert b'campaign_watch_ui.js' not in page and b'Best-effort observation' in page
-        assert f.call('/record', form())[0] == 403
-        assert (tmp_path/'watch-attempts.jsonl').read_text() == ''
-        pause_code = f.call('/api/pause', {'reason': 'other'})[0]
-        assert pause_code == (200 if sys.platform == 'darwin' else 409)
-        thread.join(3)
-        assert not thread.is_alive() and f.result['accepted'] == []
-        if sys.platform == 'darwin':
-            assert f.result['reason'] == 'operator_pause'
 
 
 def test_uncertain_receiver_never_receives_pause_post(tmp_path):
@@ -266,35 +223,28 @@ def test_uncertain_receiver_never_receives_pause_post(tmp_path):
         assert not f.result.get('pause_reply_forwarded', False) and not f.state['paused']
 
 
-def test_blocked_http_cannot_delay_first_check_deadline(tmp_path):
-    with fixture(tmp_path, ready_age=44.5) as f:
+def test_blocked_source_read_cannot_delay_pause(tmp_path):
+    with fixture(tmp_path) as f:
         f.state['block'] = True
         outcome = []
-        request = threading.Thread(target=lambda: outcome.append(f.call('/record', form())[0]))
+        request = threading.Thread(target=lambda: outcome.append(f.call('/api/source/'+SESSION+'-91')[0]))
         thread = threading.Thread(target=f.supervise); thread.start(); request.start()
         assert f.state['fetching'].wait(1)
-        thread.join(2)
-        assert not thread.is_alive() and f.result['reason'] == 'watch_deadline'
-        assert f.result['accepted'] == []
+        began = time.monotonic()
+        assert f.call('/api/pause', {'reason': 'fault'})[0] == (200 if sys.platform == 'darwin' else 409)
+        thread.join(3)
+        assert not thread.is_alive() and f.result['reason'] == 'operator_pause'
+        assert time.monotonic()-began < 1.5 and request.is_alive()
         f.state['unblock'].set()
-        # The worker can complete its attempt after the guard has already stopped;
-        # its missing confirmation is not a renewal.
         request.join(6)
-        assert outcome == [409]
+        assert outcome == [200]
 
 
-def test_partial_or_mismatched_guard_ack_is_never_reported_as_accepted(tmp_path):
-    with fixture(tmp_path) as f:
-        outcome = []
-        request = threading.Thread(target=lambda: outcome.append(f.call('/record', form())[0])); request.start()
-        assert select.select([f.checks], [], [], 2)[0]
-        attempt = json.loads(f.checks.recv(4096))
-        assert attempt['schema'] == 'campaign-watch-attempt/1'
-        f.checks.send(b'accepted:1:partial')
-        request.join(2)
-        assert outcome == [409]
-        assert f.stops.recv(128) == b'ack-uncertain'
-        assert f.call('/record', form())[0] == 409
+def wait_ready(f):
+    deadline = time.monotonic() + 5
+    while 'ready_monotonic' not in f.result and time.monotonic() < deadline:
+        time.sleep(.01)
+    assert 'ready_monotonic' in f.result
 
 
 def test_guard_accepts_generic_terminal_without_claiming_normal_native_exit(tmp_path):
@@ -302,16 +252,9 @@ def test_guard_accepts_generic_terminal_without_claiming_normal_native_exit(tmp_
         ended = threading.Event()
         child = SimpleNamespace(poll=lambda: 0 if ended.is_set() else None)
         thread = threading.Thread(target=lambda: f.supervise(child)); thread.start()
-        assert f.call('/record', form())[0] == 200
-        # The guard appends the row after its acknowledgement reaches the worker.
-        deadline = time.monotonic() + 5
-        while not f.result['accepted'] and time.monotonic() < deadline:
-            time.sleep(.01)
-        assert f.result['accepted']
-        # End deterministically 50 ms after the accepted check on the guard's own wall/monotonic
-        # mapping instead of racing time.time() against the check's receipt.
-        ending_wall = (f.result['ready_wall'] + f.result['accepted'][-1]['receipt']
-                       - f.result['ready_monotonic'] + .05)
+        wait_ready(f)
+        # Nobody acted on the page; the run ends on the guard's own wall/monotonic mapping.
+        ending_wall = f.result['ready_wall'] + .05
         report = dict(schema='campaign-receipt/3', session=SESSION, source_commit=COMMIT,
             started_wall=f.result['started_wall'], ended_wall=ending_wall,
             elapsed_seconds=ending_wall-f.result['started_wall'],
@@ -329,33 +272,18 @@ def test_guard_accepts_generic_terminal_without_claiming_normal_native_exit(tmp_
 
 
 @pytest.mark.parametrize('marker', ['started.json', 'ready.json'])
-@pytest.mark.parametrize('delay_confirmation', [False, True])
-def test_current_marker_writer_can_finish_after_exposing_its_path(tmp_path, marker, delay_confirmation):
+def test_current_marker_writer_can_finish_after_exposing_its_path(tmp_path, marker):
     with fixture(tmp_path) as f:
         path = tmp_path/marker
         payload = path.read_text()
         path.unlink()  # Only this synthetic fixture, before the guard starts.
-        forwarded, release = threading.Event(), threading.Event()
         errors = []
-        class DelayedConfirmation:
-            def fileno(self):return f.checks.fileno()
-            def setblocking(self, value):f.checks.setblocking(value)
-            def recv(self, size):return f.checks.recv(size)
-            def send(self, data):
-                count = f.checks.send(data)
-                forwarded.set()
-                if not release.wait(3):raise TimeoutError('Fixture did not release confirmation completion')
-                return count
         def supervise():
             try:
-                live = SimpleNamespace(poll=lambda: None)
-                f.result['reason'] = guard.supervise(tmp_path, f.profile, live, f.process, live,
-                    DelayedConfirmation() if delay_confirmation else f.checks,
-                    f.stops, lambda: False, f.result)
+                f.supervise()
             except BaseException as exc:
                 errors.append(repr(exc))
         thread = threading.Thread(target=supervise)
-        pause = None
         try:
             with path.open('x') as writer:
                 # Match the real producers' visible pathname before buffered close.
@@ -363,43 +291,16 @@ def test_current_marker_writer_can_finish_after_exposing_its_path(tmp_path, mark
                 threading.Event().wait(.15)
                 assert thread.is_alive() and 'reason' not in f.result
                 writer.write(payload)
-            response = f.call('/record', form())
-            assert response[0] == 200, (response, f.result)
-            assert json.loads(response[1])['accepted'] == 1
-            if delay_confirmation:
-                # HTTP success can precede the guardian's post-send sample.
-                # The worker can reply after receiving bytes, before the sender
-                # resumes to publish its fixture barrier. Synchronize on that
-                # barrier before checking the deliberately held completion.
-                assert forwarded.wait(2), 'Guard did not enter the confirmation barrier'
-                assert not f.result['accepted']
-                pause = threading.Thread(target=lambda: f.call('/api/pause', {'reason': 'other'}))
-                pause.start()
-                assert select.select([f.stops], [], [], 2)[0], 'Pause was not queued'
-                release.set()
-            else:
-                f.call('/api/pause', {'reason': 'other'})
+            wait_ready(f)
+            assert thread.is_alive() and 'reason' not in f.result
+            f.call('/api/pause', {'reason': 'other'})
             thread.join(3)
-            if pause is not None:pause.join(3)
             assert not thread.is_alive() and not errors and f.result['reason'] == 'operator_pause'
-            raced = f.result.get('checks_raced_with_pause', [])
-            assert [r['sequence'] for r in f.result['accepted']+raced] == [1]
-            assert all(r['receipt'] < f.result['pause_requested'] for r in f.result['accepted'])
-            assert all(r['receipt'] >= f.result['pause_requested'] for r in raced)
-            if delay_confirmation:
-                assert not pause.is_alive() and not f.result['accepted'] and len(raced) == 1
+            assert f.result['ready_monotonic'] <= f.result['pause_requested']
         finally:
-            release.set()
-            if thread.is_alive() and pause is None:
+            if thread.is_alive():
                 f.call('/api/pause', {'reason': 'other'})
             thread.join(3)
-            if pause is not None:pause.join(3)
-
-
-def test_ui_behavior_is_included_in_python_suite():
-    result = subprocess.run([shutil.which('node') or 'node', '--test', str(ROOT/'tests/test_campaign_watch.cjs')],
-                            cwd=ROOT, capture_output=True, text=True, timeout=20)
-    assert result.returncode == 0, result.stdout+result.stderr
 
 
 def test_receiver_check_binds_exact_connected_socket_and_handle_pid(monkeypatch):
@@ -417,18 +318,23 @@ def test_receiver_check_binds_exact_connected_socket_and_handle_pid(monkeypatch)
         watch.bind_pause_receiver(connection, 12346, 1234)
 
 
-@pytest.mark.parametrize('schema, attention, seconds, port', [
-    ('campaign-watch-start/1', 'required', 45, 5000), ('campaign-watch-start/2', 'required', 45, 5000),
-    ('campaign-watch-start/3', 'best-effort', 45, 5000), ('campaign-watch-start/3', 'required', None, 5000),
-    ('campaign-watch-start/3', None, 45, 5000), ('campaign-watch-start/3', 'required', 45, 5001)])
-def test_gateway_refuses_inconsistent_or_old_attention_policy(tmp_path, schema, attention, seconds, port):
+@pytest.mark.parametrize('change', [
+    dict(schema='campaign-watch-start/1'), dict(schema='campaign-watch-start/2'),
+    dict(schema='campaign-watch-start/3'),
+    dict(schema='campaign-watch-start/3', attention='best-effort', watch_seconds=None),
+    dict(schema='campaign-watch-start/3', attention='required', watch_seconds=45),
+    dict(schema='campaign-watch-start/5'), dict(schema=None), dict(viewer_port=5001), dict(session='c'*32),
+    dict(source_commit='d'*40), dict(manifest_sha256=sha256(b'{"other":1}').hexdigest())])
+def test_gateway_refuses_old_or_mismatched_watch_start(tmp_path, change):
     (tmp_path/'manifest.json').write_text('{}')
-    (tmp_path/'watch-attempts.jsonl').touch()
-    put(tmp_path/'watch-start.json', dict(schema=schema, session=SESSION, source_commit=COMMIT,
-        manifest_sha256=sha256(b'{}').hexdigest(), attention=attention, watch_seconds=seconds, viewer_port=port))
-    checks, tx = socket.socketpair(type=socket.SOCK_DGRAM)
-    with checks, tx, pytest.raises(ValueError, match='exclusively reserved'):
-        watch.worker(tmp_path, SESSION, COMMIT, 1, 1, checks, tx, viewer_port=5000)
+    opening = dict(schema='campaign-watch-start/4', session=SESSION, source_commit=COMMIT,
+                   manifest_sha256=sha256(b'{}').hexdigest(), viewer_port=5000)
+    put(tmp_path/'watch-start.json', {**opening, **change})
+    stops, tx = socket.socketpair(type=socket.SOCK_DGRAM)
+    with stops, tx:
+        with pytest.raises(ValueError, match='exclusively reserved'):
+            watch.worker(tmp_path, SESSION, COMMIT, 1, 1, tx, viewer_port=5000)
+        assert not select.select([stops], [], [], 0)[0]  # no listening port was announced
 
 
 def test_pause_forwards_empty_object_and_reports_the_reason_to_the_guard(tmp_path):
@@ -533,20 +439,19 @@ def test_forwarding_only_takes_view_routes(tmp_path, path):
         assert f.state['view']['paths'] == []
 
 
-def test_unreachable_viewer_is_unavailable_and_never_blocks_pause_status_or_checks(tmp_path):
+def test_unreachable_viewer_is_unavailable_and_never_blocks_pause_status_or_frames(tmp_path):
     with fixture(tmp_path, viewer='absent') as f:
         thread = threading.Thread(target=f.supervise); thread.start()
         code, data = f.call('/api/view/runs')
         assert code == 503 and json.loads(data) == {'viewer': 'unavailable'}
         assert f.call('/api/status')[0] == 200
-        assert f.call('/record', form())[0] == 200
+        assert f.call('/api/source/'+SESSION+'-91') == (200, PNG)
         assert f.call('/api/pause', {'reason': 'fault'})[0] == (200 if sys.platform == 'darwin' else 409)
         thread.join(3)
         assert not thread.is_alive() and f.result['reason'] == 'operator_pause'
-        assert [r['phase'] for r in f.result['accepted']] == ['active']
 
 
-def test_killed_viewer_mid_run_leaves_required_checks_and_pause_working(tmp_path):
+def test_killed_viewer_mid_run_leaves_status_frames_and_pause_working(tmp_path):
     with fixture(tmp_path, viewer='process') as f:
         thread = threading.Thread(target=f.supervise); thread.start()
         deadline = time.monotonic()+5
@@ -556,20 +461,19 @@ def test_killed_viewer_mid_run_leaves_required_checks_and_pause_working(tmp_path
                 break
             time.sleep(.05)
         assert code == 200 and json.loads(data)['schema'] == 'spectator-view/1'
-        assert f.call('/record', form())[0] == 200
         os.killpg(f.viewer_process.pid, signal.SIGKILL)
         f.viewer_process.wait(3)
         assert json.loads(f.call('/api/view/runs')[1]) == {'viewer': 'unavailable'}
         assert thread.is_alive() and 'reason' not in f.result
-        assert f.call('/record', form(2))[0] == 200
+        assert f.call('/api/source/'+SESSION+'-91') == (200, PNG)
         assert f.call('/api/status')[0] == 200
         assert f.call('/api/pause', {'reason': 'loop'})[0] == (200 if sys.platform == 'darwin' else 409)
         thread.join(3)
         assert not thread.is_alive() and f.result['reason'] == 'operator_pause'
-        assert len(f.result['accepted']) == 2 and f.result['pause_reason'] == 'loop'
+        assert f.result['pause_reason'] == 'loop'
 
 
-def test_slow_viewer_times_out_without_delaying_pause_or_checks(tmp_path):
+def test_slow_viewer_times_out_without_delaying_pause_or_status(tmp_path):
     with fixture(tmp_path) as f:
         f.state['view'].update(delay=4)
         outcome = []
@@ -579,7 +483,7 @@ def test_slow_viewer_times_out_without_delaying_pause_or_checks(tmp_path):
         time.sleep(.3)
         thread = threading.Thread(target=f.supervise); thread.start()
         began = time.monotonic()
-        assert f.call('/record', form())[0] == 200
+        assert f.call('/api/source/'+SESSION+'-91') == (200, PNG)
         assert f.call('/api/status')[0] == 200
         assert f.call('/api/pause', {'reason': 'other'})[0] == (200 if sys.platform == 'darwin' else 409)
         assert time.monotonic()-began < 1.5
@@ -614,11 +518,3 @@ def test_gateway_serves_only_the_page_app_and_vendor_files_with_media_types(tmp_
                      '/api/investigation', '/app/../private/secret.js', '/app/%2e%2e/private/secret.js',
                      '/app//main.js', '/../outside.js']:
             assert f.call(path)[0] in (403, 404), path
-
-
-def test_repository_page_keeps_the_anchors_the_gateway_injects_around():
-    page = (ROOT/'web'/'index.html').read_text()
-    assert page.count('<div class="frame-shell" id="watch-frame-shell"') == 1 and page.count('</head>') == 1
-    for identifier in ('current-session-full', 'control-freshness', 'source-details', 'frame', 'watch',
-                       'connection', 'status-error'):
-        assert f'id="{identifier}"' in page, identifier

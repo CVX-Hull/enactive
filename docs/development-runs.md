@@ -73,7 +73,7 @@ player's context:
 | Context | 262,144-token window, 16,384 output tokens, 32,768 reserve (successor handoff when reached); 39 images, evicted in blocks of 10 |
 | Requests | 250 charged HTTP attempts including retries, across at most 2 hosts |
 | Time | 7,200 host seconds; 7,800 custodian seconds |
-| Supervision | `--attention best-effort` |
+| Supervision | [Supervised launch](operations/campaign-supervision.md); nobody is required to watch |
 
 The window stays below OpenRouter's 272,000-token long-prompt threshold, so the
 short-prompt rates apply: $1.00/M input, $1.25/M cache write, $0.05/M cache read

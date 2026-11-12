@@ -1,5 +1,5 @@
-// Spectator page: the interpretive viewer UI. The control strip (Pause, status, frame and the
-// operator check) is static markup driven by control.js and does not depend on this module.
+// Spectator page: the interpretive viewer UI. The control strip (Pause, status and frame)
+// is static markup driven by control.js and does not depend on this module.
 import {html, render, useState, useEffect, Pv, fmtMoney, runName} from './ui.js';
 import {store, useStore, startPolling, selectRun, liveRun, selectedRun} from './data.js';
 import {Supervise} from './supervise.js';
@@ -26,7 +26,7 @@ function useRoute() {
 function Banner() {
   if (store.viewerOk) return null;
   return html`<div class="banner down" role="status"><span class="state alert">viewer unavailable</span>
-    <span>Interpretive panels show the last data received, greyed, or wait for the viewer. The control strip, Pause and the operator check do not use the viewer and are unaffected.</span></div>`;
+    <span>Interpretive panels show the last data received, greyed, or wait for the viewer. The control strip and Pause do not use the viewer and are unaffected.</span></div>`;
 }
 
 function App() {
