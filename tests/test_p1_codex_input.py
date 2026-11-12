@@ -49,6 +49,8 @@ def test_question_attachments_and_private_files(setup):
     assert [i.path for i in prepared.images] == images
     assert set(prepared.leaf.iterdir()) == {prepared.batch}
     assert prepared.batch.read_bytes() == (build / 'batches' / 'question-001.json').read_bytes()
+    assert prepared.batch.read_text() in prepared.prompt
+    assert '"synthetic"' not in prepared.prompt
     assert str(prepared.batch) in prepared.prompt
     assert all(f'{n}: {path}' in prepared.prompt for n, path in enumerate(images, 1))
     argv = prepared.exec_argv()
@@ -74,6 +76,8 @@ def test_audit_union_preserves_first_appearance_and_associations(setup):
     _, _, prepared = prepare('audit', [{'frames': [frame(1), frame(0)]}, {'frames': [frame(0), frame(2)]}])
     assert [i.path for i in prepared.images] == [images[1], images[0], images[2]]
     assert len(prepared.images[1].associations) == 2
+    assert prepared.batch.read_text() in prepared.prompt
+    assert '"synthetic"' not in prepared.prompt
     prepared.verify_render(rendered([images[1], images[0], images[2]], prepared.prompt))
 
 
@@ -179,6 +183,18 @@ def test_reader_rejects_multiple_items(setup):
     build, digest = make('reader', [{'text': 'one'}, {'text': 'two'}])
     with pytest.raises(inputs.InputError):
         inputs.prepare(build, 'reader', 'reader-001', root / 'reader-leaf', expected_key_sha256=digest)
+
+
+@pytest.mark.parametrize('kind', ['screen', 'paraphrase', 'grader'])
+def test_other_text_roles_receive_exact_public_batch_without_private_key(setup, kind):
+    root, _, make, _ = setup
+    build, digest = make(kind, [{'text': 'visible data'}])
+    name = batches.KINDS[kind]['prefix'] + '-001'
+    prepared = inputs.prepare(build, kind, name, root / f'initial-{kind}', expected_key_sha256=digest)
+    assert prepared.prompt.endswith(prepared.batch.read_text())
+    assert not prepared.images and '"synthetic"' not in prepared.prompt
+    assert batches.KINDS[kind]['prefix'] + '-002' not in prepared.prompt
+    prepared.verify_render(rendered([], prepared.prompt))
 
 
 def test_renderer_argument_limit_fails_closed(setup, monkeypatch):

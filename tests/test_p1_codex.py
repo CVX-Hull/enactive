@@ -83,6 +83,38 @@ def test_success_sends_exact_prepared_images_and_keeps_candidates_separate(hando
     assert len(calls) == 1
 
 
+def test_prepare_selection_keeps_original_key_ids_and_runs_only_selected(handout, monkeypatch):
+    out, build, _, _ = handout
+    key = build / 'keys/question.json'
+    original = key.read_bytes()
+    selected = out.parent / 'selected'
+    result = runner.prepare('question', build, hashlib.sha256(original).hexdigest(), selected,
+                            only=['question-002'])
+    assert result == {'batches': 1, 'inference_calls': 0}
+    manifest = json.loads((selected / 'manifest.json').read_text())
+    assert list(manifest['batches']) == ['question-002']
+    assert manifest['key_sha256'] == hashlib.sha256(original).hexdigest()
+    assert key.read_bytes() == original
+    assert (selected / 'question-002/question-002.json').read_bytes() == (build / 'batches/question-002.json').read_bytes()
+    assert not (selected / 'question-001').exists() and not (selected / 'question-003').exists()
+    calls = fakes(monkeypatch)
+    assert runner.run(selected, 1)['done'] == 1
+    assert len(calls) == 1 and calls[0].cwd == selected / 'question-002'
+
+
+@pytest.mark.parametrize('only', [[], ['missing'], ['question-002', 'question-002']])
+def test_invalid_prepare_selection_creates_no_handout(handout, monkeypatch, only):
+    out, build, _, _ = handout
+    selected = out.parent / 'invalid-selection'
+    def unexpected_render(prepared):
+        pytest.fail('invalid selection reached local renderer')
+    monkeypatch.setattr(runner, 'checked_receipt', unexpected_render)
+    with pytest.raises(runner.HandoutError, match='selection'):
+        runner.prepare('question', build, hashlib.sha256((build / 'keys/question.json').read_bytes()).hexdigest(),
+                       selected, only=only)
+    assert not selected.exists()
+
+
 @pytest.mark.parametrize('mutation', ['image', 'batch', 'key', 'prompt', 'missing_version', 'source'])
 def test_mutation_blocks_all_launches(handout, monkeypatch, mutation):
     out, build, image, version = handout

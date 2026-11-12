@@ -185,8 +185,7 @@ def prepare(build: Path, kind: str, batch_name: str, leaf: Path, *, expected_key
                'use the network or spawn agents. '
                'Write your answers as JSON Lines to answer.jsonl in the current directory. '
                'Then reply with only the number of lines you wrote.')
-    if kind == 'reader':
-        prompt += '\n\nExact public batch JSON follows:\n' + raw.decode('utf-8')
+    prompt += '\n\nExact public batch JSON follows:\n' + raw.decode('utf-8')
     if images:
         prompt += '\nAttachment index (one-based) to original frame path:\n'
         prompt += '\n'.join(f'{index}: {image.path}' for index, image in enumerate(images, 1))

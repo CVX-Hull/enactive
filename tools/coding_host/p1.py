@@ -61,7 +61,7 @@ def _same_input_receipt(actual, expected):
             == {k: v for k, v in expected.items() if k != 'cli_version'})
 
 
-def prepare(kind, build, expected_key_sha256, out):
+def prepare(kind, build, expected_key_sha256, out, only=None):
     out, build = Path(out).resolve(), Path(build).resolve()
     runtime = (batches.ROOT / '.runtime').resolve()
     if not out.is_relative_to(runtime) or out == runtime or out.exists():
@@ -72,6 +72,10 @@ def prepare(kind, build, expected_key_sha256, out):
         raise HandoutError('key digest mismatch')
     key = batches._load_key(build, kind)
     batches._verify_build(build, key, kind)
+    names = {entry['name'] for entry in key['batches']}
+    if only is not None and (not only or len(set(only)) != len(only) or not set(only) <= names):
+        raise HandoutError('unknown, empty or duplicate batch selection')
+    selected = names if only is None else set(only)
     out.mkdir(parents=True)
     (out / 'prompts').mkdir()
     (out / 'attempts').mkdir()
@@ -79,6 +83,8 @@ def prepare(kind, build, expected_key_sha256, out):
     records = {}
     for entry in key['batches']:
         name = entry['name']
+        if name not in selected:
+            continue
         prepared = inputs.prepare(build, kind, name, out / name, expected_key_sha256=expected_key_sha256)
         receipt = checked_receipt(prepared)
         prompt_path = out / 'prompts' / f'{name}.txt'
@@ -374,6 +380,7 @@ def main(argv=None):
     prep.add_argument('--batches', type=Path, required=True)
     prep.add_argument('--expected-key-sha256', required=True)
     prep.add_argument('--out', type=Path, required=True)
+    prep.add_argument('--only', nargs='+')
     execute = commands.add_parser('run')
     execute.add_argument('handout', type=Path)
     execute.add_argument('--max-attempts', type=int, required=True)
@@ -381,7 +388,7 @@ def main(argv=None):
     execute.add_argument('--only', nargs='+')
     args = parser.parse_args(argv)
     try:
-        result = (prepare(args.kind, args.batches, args.expected_key_sha256, args.out) if args.command == 'prepare'
+        result = (prepare(args.kind, args.batches, args.expected_key_sha256, args.out, args.only) if args.command == 'prepare'
                   else run(args.handout, args.max_attempts, args.workers, args.only))
     except (HandoutError, inputs.InputError, batches.BatchError, OSError, ValueError, KeyError):
         parser.exit(1, 'Handout verification or execution failed.\n')

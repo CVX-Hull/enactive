@@ -133,8 +133,9 @@ held-out question is written.
   through `tools.coding_host.p1_input`. Question and Audit sessions receive all exact batch-named
   original PNGs as initial images; Reader, Grader, Guess and Paraphrase sessions receive none.
   Local `codex debug prompt-input` must verify complete count/order/payload hashes before
-  inference, including exact initial user text. Reader receives the exact single public batch JSON
-  in that initial text as well as a copy in its leaf; an oversized renderer argument fails closed
+  inference, including exact initial user text. Every role receives its exact authorized public batch JSON
+  in that initial text as well as a copy in its leaf; a Reader batch still contains exactly one item.
+  An oversized renderer argument fails closed
   rather than launching without verification. A path string or parser-valid answer is not image-delivery evidence. Keep the
   frozen brief and per-item frame order unchanged; image presentation proves neither
   attention nor interpretation. Old finite path-only launchers are historical evidence,
@@ -145,7 +146,9 @@ held-out question is written.
   concurrently modified file supplied. No copied-image cache or filesystem-confinement
   guarantee is added.
   Prepare with `python -m tools.coding_host.p1 prepare KIND --batches BUILD --expected-key-sha256 SHA --out HANDOUT`;
-  run an authorized finite pool with `python -m tools.coding_host.p1 run HANDOUT --max-attempts N --workers 3`.
+  use `--only BATCH...` to prepare a declared subset of the original key without resampling or
+  copying/rendering unused batches. Unknown, empty or duplicate selections are refused before preparation.
+  Run an authorized finite pool with `python -m tools.coding_host.p1 run HANDOUT --max-attempts N --workers 3`.
   The first run fixes N, a handout lock prevents concurrent controllers, and a stopped handout
   cannot renew. Preserve candidates for separate process review before parsing/acceptance.
   Worker completion and controller interruption share one cleanup owner per child;
