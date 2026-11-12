@@ -7,9 +7,9 @@ const SERVER = path.join(__dirname, 'server.py');
 // Screenshots stay project-local and git-ignored unless SPECTATOR_SHOTS names another directory.
 const SHOTS = process.env.SPECTATOR_SHOTS || path.join(__dirname, '..', '..', '..', '.runtime', 'spectator-shots');
 
-function startFixture(attention = 'required') {
+function startFixture() {
   return new Promise((resolve, reject) => {
-    const child = spawn(process.env.PYTHON || 'python3', ['-I', SERVER, '--attention', attention], {stdio: ['ignore', 'pipe', 'inherit']});
+    const child = spawn(process.env.PYTHON || 'python3', ['-I', SERVER], {stdio: ['ignore', 'pipe', 'inherit']});
     let buffer = '';
     const timer = setTimeout(() => { child.kill(); reject(new Error('fixture server did not start')); }, 8000);
     child.stdout.on('data', chunk => {

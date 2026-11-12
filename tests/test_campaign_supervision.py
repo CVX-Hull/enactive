@@ -1,5 +1,4 @@
 """Synthetic supervision evidence; no game, provider, or human timing qualification."""
-from datetime import datetime, timezone
 import json
 import os
 import signal
@@ -17,35 +16,11 @@ SESSION = 'a' * 32
 COMMIT = 'b' * 40
 
 
-def row(**changes):
-    return dict(schema='campaign-watch-attempt/1', source_commit=COMMIT,
-        session=SESSION, sequence=1, observed_at=datetime.fromtimestamp(1040, timezone.utc).isoformat(),
-        observation=140, start=144, phase='active', source=SESSION+'-1', sha256='c'*64,
-        recorded_wall=1044, **changes)
-
-
-def test_retained_exact_deadline_and_pause_boundaries():
-    scope = dict(session=SESSION, source_commit=COMMIT, sequence=1, ready_wall=1000,
-                 ready_at=100, last=100, custody_end=250)
-    assert guard.verify_row(row(), now=144.999, **scope)
-    for now in (145, 145.001):
-        assert not guard.verify_row(row(), now=now, **scope)
-    assert guard.cutoff_reason(145, 100, 250) == 'watch_deadline'
-    assert guard.cutoff_reason(140, 100, 140) == 'custody_deadline'
-    raced = dict(receipt=144.996, prior_observation=100, observation=144.95)
-    rows = [raced]
-    reason, grace, discarded = guard.pause_boundary(rows, 144.95, 144.995, 144.998, 250)
-    assert reason is None and 0 < grace < .003 and discarded == [raced] and rows == []
-    assert guard.pause_boundary([], 100, 144.999, 145, 250) == ('watch_deadline', 0, [])
-
-
-@pytest.mark.parametrize('change', [dict(schema='old'), dict(source_commit='x'), dict(session='x'),
-    dict(sequence=2), dict(source='other-1'), dict(sha256='wrong'), dict(observation=float('nan')),
-    dict(observed_at='1970-01-01T00:16:45'), dict(start=140), dict(phase='unknown')])
-def test_guard_rejects_substitution_or_invalid_clocks(change):
-    value = row(); value.update(change)
-    assert not guard.verify_row(value, session=SESSION, source_commit=COMMIT, sequence=1,
-        ready_wall=1000, ready_at=100, last=100, custody_end=250, now=144.999)
+def markers(directory, *, deadline=200):
+    (directory/'started.json').write_text(json.dumps(dict(schema='computer-start/1', session=SESSION,
+        started_wall=1000, deadline_monotonic=deadline)))
+    (directory/'ready.json').write_text(json.dumps(dict(schema='computer-ready/1', session=SESSION,
+        ready_wall=1000, pid=99, viewer_url='http://127.0.0.1:12345/')))
 
 
 def receipt(**changes):
@@ -59,61 +34,33 @@ def receipt(**changes):
     return value
 
 
-def test_terminal_requires_check_and_current_bound_cleanup_receipt():
-    rows = [dict(row(), observation=105, receipt=106, prior_observation=100)]
-    scope = dict(session=SESSION, source_commit=COMMIT, rows=rows, ready_wall=1000,
+def test_terminal_requires_current_bound_cleanup_receipt_before_the_custody_deadline():
+    # Readiness maps wall 1000 to monotonic 100, so a receipt ending at wall W maps to 100 + (W - 1000).
+    scope = dict(session=SESSION, source_commit=COMMIT, ready_wall=1000,
                  ready_at=100, started_wall=999, native_pid=99, custody_end=120)
     assert guard.terminal_coverage(receipt(), **scope)
-    assert not guard.terminal_coverage(receipt(), **dict(scope, rows=[]))
     for change in (dict(schema='campaign-receipt/2'), dict(source_commit='other'), dict(session='other'),
                    dict(native_absence_verified=False), dict(deciding_hosts_quiescent=False),
                    dict(input_authority_revoked=False), dict(cleanup={}), dict(ended_wall=float('inf')),
                    dict(ended_wall=1050, elapsed_seconds=50), dict(started_wall=900)):
         assert not guard.terminal_coverage(receipt(**change), **scope)
     assert not guard.terminal_coverage(receipt(), **dict(scope, native_pid=100))
+    assert not guard.terminal_coverage(receipt(), **dict(scope, ready_wall=None, ready_at=None))
+    assert not guard.terminal_coverage(receipt(), **dict(scope, custody_end=float('nan')))
+    # The custody deadline (mapped 120) is strict.
+    assert guard.terminal_coverage(receipt(ended_wall=1019.99, elapsed_seconds=19.99), **scope)
     for wall in (1020, 1020.05):
         assert not guard.terminal_coverage(receipt(ended_wall=wall, elapsed_seconds=wall-1000), **scope)
 
 
-@pytest.mark.parametrize('window', [guard.WINDOW, None])
-def test_terminal_ordering_tolerates_clock_mapping_skew_but_not_deadlines(window):
-    # The last accepted check was received at monotonic 106; readiness maps wall 1000 to 100,
-    # so a receipt ending at wall W is mapped to monotonic 100 + (W - 1000).
-    rows = [dict(row(), observation=105, receipt=106, prior_observation=100)]
-    scope = dict(session=SESSION, source_commit=COMMIT, rows=rows, ready_wall=1000,
-                 ready_at=100, started_wall=999, native_pid=99, custody_end=120, window=window)
-    def covered(ended_wall):
-        return guard.terminal_coverage(receipt(ended_wall=ended_wall, elapsed_seconds=ended_wall-1000), **scope)
-    assert covered(1006)  # exactly at the check
-    # A few milliseconds of mapping skew puts the end before the check; strict ordering would reject it.
-    assert 100 + (1005.995 - 1000) < rows[-1]['receipt']
-    assert covered(1005.995)
-    assert covered(1005.8)  # inside the named tolerance
-    assert guard.CLOCK_MAPPING_TOLERANCE == .25
-    # Beyond the tolerance the end is not after the last accepted check.
-    for ended_wall in (1005.7, 1005):
-        assert not covered(ended_wall)
-    # The tolerance never relaxes the custody deadline (mapped 120).
-    assert covered(1019.99)
-    for ended_wall in (1020, 1020.25):
-        assert not covered(ended_wall)
-
-
-def test_windowed_terminal_keeps_strict_watch_deadline():
-    rows = [dict(row(), observation=105, receipt=106, prior_observation=100)]
-    scope = dict(session=SESSION, source_commit=COMMIT, rows=rows, ready_wall=1000,
-                 ready_at=100, started_wall=999, native_pid=99, custody_end=500)
-    for ended_wall, expected in ((1049.99, True), (1050, False), (1050.2, False)):  # 105 + WINDOW = 150
-        assert guard.terminal_coverage(receipt(ended_wall=ended_wall, elapsed_seconds=ended_wall-1000),
-                                       **scope) is expected
-
-
-def test_partial_watch_marker_is_never_rearmed(tmp_path, monkeypatch):
-    (tmp_path/'watch-attempts.jsonl').write_text('partial')
+@pytest.mark.parametrize('marker', guard.MARKERS)
+def test_partial_watch_marker_is_never_rearmed(tmp_path, monkeypatch, marker):
+    (tmp_path/marker).write_text('partial')
     monkeypatch.setattr(guard, 'preflight', lambda _: ({}, {}, {}))
     with pytest.raises(ValueError, match='prior/partial'):
-        guard.run_supervised(tmp_path, attention='best-effort')
-    assert (tmp_path/'watch-attempts.jsonl').read_text() == 'partial'
+        guard.run_supervised(tmp_path)
+    assert (tmp_path/marker).read_text() == 'partial'
+    assert sorted(path.name for path in tmp_path.iterdir()) == [marker]
 
 
 def test_credential_prefers_environment_then_mapped_keychain_item(tmp_path):
@@ -168,148 +115,82 @@ def test_missing_keychain_item_is_named_without_any_value(tmp_path, result):
         guard.credential('KEY', environ={}, mapping=mapping, run=lambda *a, **k: result)
 
 
-def test_attention_policy_must_be_explicit(tmp_path):
-    with pytest.raises(ValueError, match='explicit attention policy'):
-        guard.run_supervised(tmp_path, attention='none')
-    assert not (tmp_path/'watch-start.json').exists()
-
-
-def test_best_effort_keeps_custody_but_drops_watch_deadline():
-    # Without a window, a long absence of checks never stops input; custody still does.
-    assert guard.cutoff_reason(10_000, 100, 20_000, None) is None
-    assert guard.cutoff_reason(20_000, 100, 20_000, None) == 'custody_deadline'
-    assert guard.cutoff_reason(20_000, None, 20_000, None) == 'custody_deadline'
-    assert guard.pause_boundary([], 100, 10_000, 10_000, 20_000, None) == (None, guard.PAUSE_REPLY, [])
-    assert guard.pause_boundary([], 100, 20_000, 20_000, 20_000, None) == ('custody_deadline', 0, [])
-
-
-def test_best_effort_terminal_coverage_needs_no_check_but_keeps_receipt_and_custody():
-    scope = dict(session=SESSION, source_commit=COMMIT, rows=[], ready_wall=1000,
-                 ready_at=100, started_wall=999, native_pid=99, custody_end=200, window=None)
-    late = receipt(ended_wall=1090, elapsed_seconds=90)  # 80 s after readiness, no checks.
-    assert guard.terminal_coverage(late, **scope)
-    assert not guard.terminal_coverage(late, **dict(scope, window=guard.WINDOW))
-    assert not guard.terminal_coverage(receipt(ended_wall=1100, elapsed_seconds=100), **scope)
-    assert not guard.terminal_coverage(receipt(source_commit='other'), **scope)
-    assert not guard.terminal_coverage(late, **dict(scope, native_pid=100))
-
-
-def test_best_effort_supervision_runs_past_45_seconds_until_custodian_terminal(tmp_path):
-    checks, sender = socket.socketpair(type=socket.SOCK_DGRAM)
+def test_unwatched_supervision_runs_until_the_custodian_terminal(tmp_path):
     stops, stop_sender = socket.socketpair(type=socket.SOCK_DGRAM)
     now = [100.0]
     clock = SimpleNamespace(monotonic=lambda: now[0], time=lambda: now[0]+900)
-    (tmp_path/'started.json').write_text(json.dumps(dict(schema='computer-start/1', session=SESSION,
-        started_wall=1000, deadline_monotonic=200)))
-    (tmp_path/'ready.json').write_text(json.dumps(dict(schema='computer-ready/1', session=SESSION,
-        ready_wall=1000, pid=99, viewer_url='http://127.0.0.1:12345/')))
+    markers(tmp_path)
     polls = [0]
     def poll():
         polls[0] += 1
-        now[0] = 100 + polls[0]*10  # Ten seconds per poll, far beyond 45 s without checks.
+        now[0] = 100 + polls[0]*10  # Ten seconds per poll with no operator action at all.
         if now[0] < 190:
             return None
         (tmp_path/'receipt.json').write_text(json.dumps(receipt(ended_wall=1085, elapsed_seconds=85)))
         return 0
-    result = dict(accepted=[], started_wall=999, started_monotonic=99)
+    result = dict(started_wall=999, started_monotonic=99)
     live = SimpleNamespace(poll=lambda: None)
-    with checks, sender, stops, stop_sender:
+    with stops, stop_sender:
         reason = guard.supervise(tmp_path,
             dict(session=SESSION, source_commit=COMMIT, wall_seconds=101, port=12345),
-            SimpleNamespace(poll=poll), live, live, checks, stops, lambda: False, result,
-            clock=clock, window=None)
+            SimpleNamespace(poll=poll), live, live, stops, lambda: False, result, clock=clock)
     assert reason == 'custodian_terminal' and result['terminal_coverage_verified']
-    assert result['accepted'] == []
+    assert 'pause_reason' not in result and result['native_pid'] == 99
 
 
 @pytest.mark.parametrize('late', [0, .05])
 def test_terminal_exit_does_not_bypass_original_custody_cutoff(tmp_path, late):
-    checks, sender = socket.socketpair(type=socket.SOCK_DGRAM)
     stops, stop_sender = socket.socketpair(type=socket.SOCK_DGRAM)
-    result = dict(accepted=[], started_wall=999, started_monotonic=99)
+    result = dict(started_wall=999, started_monotonic=99)
     now = [144.5]
     clock = SimpleNamespace(monotonic=lambda: now[0], time=lambda: now[0]+900)
-    (tmp_path/'started.json').write_text(json.dumps(dict(schema='computer-start/1', session=SESSION,
-        started_wall=1000, deadline_monotonic=160)))
-    (tmp_path/'ready.json').write_text(json.dumps(dict(schema='computer-ready/1', session=SESSION,
-        ready_wall=1000, pid=99, viewer_url='http://127.0.0.1:12345/')))
-    sender.send(json.dumps(row()).encode())
+    markers(tmp_path, deadline=160)
     def poll():
-        if not result['accepted']:
+        if 'ready_monotonic' not in result:
             return None
         now[0] = 160.1
         (tmp_path/'receipt.json').write_text(json.dumps(receipt(ended_wall=1060+late,
             elapsed_seconds=60+late)))
         return 0
     live = SimpleNamespace(poll=lambda: None)
-    with checks, sender, stops, stop_sender:
+    with stops, stop_sender:
         reason = guard.supervise(tmp_path,
             dict(session=SESSION, source_commit=COMMIT, wall_seconds=60, port=12345),
-            SimpleNamespace(poll=poll), live, live, checks, stops, lambda: False, result, clock=clock)
+            SimpleNamespace(poll=poll), live, live, stops, lambda: False, result, clock=clock)
     assert reason == 'terminal_watch_unverified' and not result['terminal_coverage_verified']
     assert result['custodian_receipt']['native_absence_verified']  # Cleanup remains a separate fact.
 
 
-@pytest.mark.parametrize('completed', [144.997, 145, 145.1])
-def test_confirmation_completion_obeys_cutoff_and_pause_rollback(tmp_path, completed):
-    checks, sender = socket.socketpair(type=socket.SOCK_DGRAM)
+@pytest.mark.parametrize('pause', [False, True])
+def test_custody_deadline_stops_a_live_run_and_a_late_pause_never_extends_it(tmp_path, pause):
     stops, stop_sender = socket.socketpair(type=socket.SOCK_DGRAM)
+    result = dict(started_wall=999, started_monotonic=99)
     now = [144.5]
-    class ScheduledConfirmation:
-        def fileno(self):return checks.fileno()
-        def setblocking(self, value):checks.setblocking(value)
-        def recv(self, size):return checks.recv(size)
-        def send(self, data):
-            # Pause arrives after the final pre-send poll but before completion.
-            stop_sender.send(b'pause:144.995:other');stop_sender.send(b'pause-replied')
-            count = checks.send(data)
-            now[0] = completed
-            return count
     clock = SimpleNamespace(monotonic=lambda: now[0], time=lambda: now[0]+900)
-    (tmp_path/'started.json').write_text(json.dumps(dict(schema='computer-start/1', session=SESSION,
-        started_wall=1000, deadline_monotonic=200)))
-    (tmp_path/'ready.json').write_text(json.dumps(dict(schema='computer-ready/1', session=SESSION,
-        ready_wall=1000, pid=99, viewer_url='http://127.0.0.1:12345/')))
-    sender.send(json.dumps(row()).encode())
-    result = dict(accepted=[], started_wall=999, started_monotonic=99)
-    live = SimpleNamespace(poll=lambda: None)
-    with checks, sender, stops, stop_sender:
+    markers(tmp_path, deadline=160)
+    def poll():
+        if 'ready_monotonic' in result:
+            now[0] = 160  # Equality is already too late.
+            if pause and not polls:
+                stop_sender.send(b'pause:159.9:loop'); stop_sender.send(b'pause-replied')
+            polls.append(1)
+        return None
+    polls = []
+    with stops, stop_sender:
         reason = guard.supervise(tmp_path,
-            dict(session=SESSION, source_commit=COMMIT, wall_seconds=100, port=12345),
-            live, live, live, ScheduledConfirmation(), stops, lambda: False, result, clock=clock)
-    assert result['accepted'] == []
-    if completed < 145:
-        assert reason == 'operator_pause' and result['pause_reason'] == 'other'
-        assert len(result['checks_raced_with_pause']) == 1
-        assert result['checks_raced_with_pause'][0]['receipt'] == completed
-    else:
-        assert reason == 'watch_deadline'
-
-
-def test_guard_does_not_renew_without_completed_confirmation(tmp_path):
-    # A disconnected check socket fails the guard confirmation; no accepted row survives.
-    checks, sender = socket.socketpair(type=socket.SOCK_DGRAM)
-    stops, stop_sender = socket.socketpair(type=socket.SOCK_DGRAM)
-    live = SimpleNamespace(poll=lambda: None)
-    profile = dict(session=SESSION, source_commit=COMMIT, wall_seconds=100, port=12345)
-    clock = SimpleNamespace(monotonic=lambda: 144.5, time=lambda: 1044.5)
-    (tmp_path/'started.json').write_text(json.dumps(dict(schema='computer-start/1', session=SESSION,
-        started_wall=1000, deadline_monotonic=200)))
-    (tmp_path/'ready.json').write_text(json.dumps(dict(schema='computer-ready/1', session=SESSION,
-        ready_wall=1000, pid=99, viewer_url='http://127.0.0.1:12345/')))
-    sender.send(json.dumps(row()).encode()); sender.close()
-    result = dict(accepted=[], started_wall=999, started_monotonic=99)
-    with checks, stops, stop_sender:
-        reason = guard.supervise(tmp_path, profile, live, live, live, checks, stops,
-                                 lambda: False, result, clock=clock)
-    assert reason == 'acknowledgement_uncertain' and result['accepted'] == []
+            dict(session=SESSION, source_commit=COMMIT, wall_seconds=60, port=12345),
+            SimpleNamespace(poll=poll), SimpleNamespace(poll=lambda: None), SimpleNamespace(poll=lambda: None),
+            stops, lambda: False, result, clock=clock)
+    assert reason == 'custody_deadline' and 'terminal_coverage_verified' not in result
+    assert result.get('pause_reason') == ('loop' if pause else None)
+    assert 'pause_reply_forwarded' not in result
 
 
 def gateway_command(argv):
     code = ('import socket,sys,time,json; '
         's=socket.socket(fileno=int(sys.argv[1])); '
         's.send(json.dumps({"port":12346}).encode()); time.sleep(20)')
-    return [sys.executable, '-c', code, argv[argv.index('--viewer-port')-2]]
+    return [sys.executable, '-c', code, argv[argv.index('--viewer-port')-1]]
 
 
 @pytest.mark.parametrize('fail_at', [0, 1, 2, 3, None])
@@ -324,8 +205,9 @@ def test_startup_failures_and_signal_close_only_created_groups(tmp_path, monkeyp
         index = len(calls)
         calls.append((argv, kwargs))
         opening = json.loads((tmp_path/'watch-start.json').read_text())
-        assert opening['schema'] == 'campaign-watch-start/3' and opening['viewer_port'] == 54321
-        assert (opening['attention'], opening['watch_seconds']) == ('required', 45)
+        assert opening['schema'] == 'campaign-watch-start/4' and opening['viewer_port'] == 54321
+        assert set(opening) == {'schema', 'session', 'source_commit', 'manifest_sha256', 'started_wall',
+                                'started_monotonic', 'viewer_port'}
         if index == fail_at:
             raise OSError('synthetic spawn failure')
         if '--viewer-port' in argv:
@@ -338,11 +220,11 @@ def test_startup_failures_and_signal_close_only_created_groups(tmp_path, monkeyp
     def supervision(*args, **kwargs):
         # Exercise the installed real SIGTERM handler after all children exist.
         os.kill(os.getpid(), signal.SIGTERM)
-        assert args[7]()
+        assert args[6]()
         return 'supervision_lost'
     monkeypatch.setattr(guard, 'supervise', supervision)
     original = signal.getsignal(signal.SIGTERM)
-    result = guard.run_supervised(tmp_path, attention='required', popen=launch, viewer_port=lambda: 54321)
+    result = guard.run_supervised(tmp_path, popen=launch, viewer_port=lambda: 54321)
     assert signal.getsignal(signal.SIGTERM) == original
     assert all(child.poll() is not None for child in launched)
     assert result['cleanup_verified'] and not result['terminal_coverage_verified']
@@ -350,7 +232,9 @@ def test_startup_failures_and_signal_close_only_created_groups(tmp_path, monkeyp
     # A viewer that cannot start never costs the run its supervision; any other launch failure does.
     fatal = fail_at in (0, 2, 3)
     assert result['reason'] == ('launch_or_supervision_error' if fatal else 'supervision_lost')
-    assert result['schema'] == 'campaign-watch-terminal/3' and result['pause_reason'] is None
+    assert result['schema'] == 'campaign-watch-terminal/4' and result['pause_reason'] is None
+    assert not {'attention', 'watch_seconds', 'accepted'} & set(result)
+    assert not (tmp_path/'watch-attempts.jsonl').exists()
     order = ['custodian', 'viewer', 'gateway', 'wake']
     expected = set(order) if fail_at in (None, 1) else set(order[:fail_at])
     assert result['children'].keys() == expected
@@ -365,7 +249,8 @@ def test_startup_failures_and_signal_close_only_created_groups(tmp_path, monkeyp
         assert result['signal'] == 'SIGTERM'
         gateway = calls[2][0]
         assert gateway[gateway.index('--viewer-port')+1] == '54321'
-        assert gateway[gateway.index('--viewer-port')-3] == str(launched[0].pid)
+        assert gateway[gateway.index('--viewer-port')-2] == str(launched[0].pid)
+        assert calls[2][1]['pass_fds'] == (int(gateway[gateway.index('--viewer-port')-1]),)
     if fail_at != 0:
         argv = calls[1][0]
         assert argv[1:3] == ['-m', 'harness.viewer'] and argv[argv.index('--port')+1] == '54321'
@@ -377,7 +262,7 @@ def test_startup_failures_and_signal_close_only_created_groups(tmp_path, monkeyp
     terminal = json.loads((tmp_path/'watch-terminal.json').read_text())
     assert terminal == result
     with pytest.raises(ValueError, match='prior/partial'):
-        guard.run_supervised(tmp_path, attention='required', popen=launch, viewer_port=lambda: 54321)
+        guard.run_supervised(tmp_path, popen=launch, viewer_port=lambda: 54321)
 
 
 def test_viewer_exit_never_counts_as_supervision_loss(tmp_path, monkeypatch):
@@ -407,7 +292,7 @@ def test_viewer_exit_never_counts_as_supervision_loss(tmp_path, monkeypatch):
         outcome['others_alive'] = all(h.poll() is None for n, h in launched.items() if n != 'viewer')
         return 'custodian_terminal'
     monkeypatch.setattr(guard, 'supervise', supervision)
-    result = guard.run_supervised(tmp_path, attention='best-effort', popen=launch, runs=tmp_path/'archive')
+    result = guard.run_supervised(tmp_path, popen=launch, runs=tmp_path/'archive')
     assert outcome == dict(viewer_exited=True, others_alive=True)
     assert result['reason'] == 'custodian_terminal' and 'error' not in result
     assert result['cleanup_verified'] and result['children']['viewer']['supervised'] is False
@@ -416,16 +301,15 @@ def test_viewer_exit_never_counts_as_supervision_loss(tmp_path, monkeypatch):
 
 
 def stops_case(message, tmp_path):
-    checks, sender = socket.socketpair(type=socket.SOCK_DGRAM)
     stops, stop_sender = socket.socketpair(type=socket.SOCK_DGRAM)
     live = SimpleNamespace(poll=lambda: None)
     now = time.monotonic()
-    result = dict(accepted=[], started_wall=999, started_monotonic=now-10)
-    with checks, sender, stops, stop_sender:
+    result = dict(started_wall=999, started_monotonic=now-10)
+    with stops, stop_sender:
         stop_sender.send(message.format(at=now-1).encode())
         stop_sender.send(b'pause-replied')
         reason = guard.supervise(tmp_path, dict(session=SESSION, source_commit=COMMIT, wall_seconds=100),
-                                 live, live, live, checks, stops, lambda: False, result)
+                                 live, live, live, stops, lambda: False, result)
     return reason, result
 
 
@@ -437,10 +321,10 @@ def test_guard_records_the_owner_pause_reason(tmp_path, reason):
 
 
 @pytest.mark.parametrize('message, expected', [
-    ('pause:{at!r}', 'acknowledgement_uncertain'), ('pause:{at!r}:loop:x', 'acknowledgement_uncertain'),
+    ('pause:{at!r}', 'invalid_pause_message'), ('pause:{at!r}:loop:x', 'invalid_pause_message'),
     ('pause:{at!r}:boredom', 'invalid_pause_reason'),
     ('pause:nan:loop', 'invalid_pause_clock'), ('pause:abc:loop', 'invalid_pause_clock'),
-    ('ack-uncertain', 'acknowledgement_uncertain')])
+    ('resume:{at!r}:loop', 'invalid_pause_message'), ('{{"port": 12346}}', 'invalid_pause_message')])
 def test_guard_refuses_unknown_or_malformed_pause_messages(tmp_path, message, expected):
     outcome, result = stops_case(message, tmp_path)
     assert outcome == expected and 'pause_reason' not in result
@@ -452,15 +336,14 @@ def test_guard_records_a_missing_pause_reason_as_unspecified(tmp_path):
     assert result['pause_reply_forwarded'] is True
 
 
-def test_terminal_without_first_check_never_certifies_coverage(tmp_path):
+def test_terminal_before_start_and_ready_markers_never_certifies_coverage(tmp_path):
     (tmp_path/'receipt.json').write_text(json.dumps(receipt()))
-    checks, sender = socket.socketpair(type=socket.SOCK_DGRAM)
     stops, stop_sender = socket.socketpair(type=socket.SOCK_DGRAM)
-    result = dict(accepted=[], started_wall=999, started_monotonic=99)
+    result = dict(started_wall=999, started_monotonic=99)
     live = SimpleNamespace(poll=lambda: None)
-    with checks, sender, stops, stop_sender:
+    with stops, stop_sender:
         reason = guard.supervise(tmp_path, dict(session=SESSION, source_commit=COMMIT, wall_seconds=100),
-            SimpleNamespace(poll=lambda: 0), live, live, checks, stops, lambda: False, result)
+            SimpleNamespace(poll=lambda: 0), live, live, stops, lambda: False, result)
     assert reason == 'terminal_watch_unverified'
     assert result['terminal_coverage_verified'] is False
 
@@ -483,29 +366,27 @@ def test_start_ready_substitution_never_extends_custody(tmp_path, marker, change
         if name == marker:
             value.update(change)
         (tmp_path/name).write_text(json.dumps(value))
-    checks, sender = socket.socketpair(type=socket.SOCK_DGRAM)
     stops, stop_sender = socket.socketpair(type=socket.SOCK_DGRAM)
     live = SimpleNamespace(poll=lambda: None)
-    with checks, sender, stops, stop_sender:
+    with stops, stop_sender:
         actual = guard.supervise(tmp_path,
             dict(session=SESSION, source_commit=COMMIT, wall_seconds=100, port=12345),
-            live, live, live, checks, stops, lambda: False,
-            dict(accepted=[], started_wall=999, started_monotonic=99),
+            live, live, live, stops, lambda: False,
+            dict(started_wall=999, started_monotonic=99),
             clock=SimpleNamespace(monotonic=lambda: 144.5, time=lambda: 1044.5))
     assert actual == reason
 
 
 @pytest.mark.parametrize('lost', ['gateway', 'wake', 'signal'])
 def test_guard_detects_independent_supervision_loss(tmp_path, lost):
-    checks, sender = socket.socketpair(type=socket.SOCK_DGRAM)
     stops, stop_sender = socket.socketpair(type=socket.SOCK_DGRAM)
     live = SimpleNamespace(poll=lambda: None)
     dead = SimpleNamespace(poll=lambda: 1)
-    with checks, sender, stops, stop_sender:
+    with stops, stop_sender:
         reason = guard.supervise(tmp_path, dict(wall_seconds=60), live,
             dead if lost == 'gateway' else live, dead if lost == 'wake' else live,
-            checks, stops, lambda: lost == 'signal',
-            dict(accepted=[], started_wall=999, started_monotonic=99))
+            stops, lambda: lost == 'signal',
+            dict(started_wall=999, started_monotonic=99))
     assert reason == 'supervision_lost'
 
 
@@ -524,7 +405,7 @@ def test_final_substitution_and_cleanup_failure_cannot_certify_success(tmp_path,
         handle = subprocess.Popen(command, **kwargs); handles.append(handle)
         return handle
     def supervision(*args, **kwargs):
-        result = args[8]
+        result = args[7]
         result['terminal_coverage_verified'] = True
         result['custodian_receipt'] = receipt()
         report = receipt(source_commit='substituted') if substitution == 'receipt' else receipt()
@@ -541,7 +422,7 @@ def test_final_substitution_and_cleanup_failure_cannot_certify_success(tmp_path,
             raise PermissionError('synthetic denied cleanup verification after actual fixture cleanup')
         return actual
     monkeypatch.setattr(guard, 'close_group', close)
-    result = guard.run_supervised(tmp_path, attention='required', popen=launch)
+    result = guard.run_supervised(tmp_path, popen=launch)
     assert len(closed) == 4 and all(h.poll() is not None for h in handles)
     if substitution == 'cleanup':
         assert not result['cleanup_verified']

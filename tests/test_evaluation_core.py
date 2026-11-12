@@ -1367,9 +1367,9 @@ def ended_run(directory: Path, *, finish: list[dict] = (), controls: list[dict] 
     ('handoff', dict(settled=dict(ok=True, reason='handoff')), 'budget'),
     ('infra', dict(settled=dict(ok=False, reason='provider-error')), 'infrastructure'),
     ('custody', dict(status='unknown', receipt='unknown'), 'custody'),
-    ('pause', dict(files={'watch-terminal.json': dict(schema='campaign-watch-terminal/3', reason='operator_pause',
+    ('pause', dict(files={'watch-terminal.json': dict(schema='campaign-watch-terminal/4', reason='operator_pause',
         pause_reason='spend')}), 'owner_pause'),
-    ('not-paused', dict(files={'watch-terminal.json': dict(schema='campaign-watch-terminal/3', reason='custodian_terminal',
+    ('not-paused', dict(files={'watch-terminal.json': dict(schema='campaign-watch-terminal/4', reason='custodian_terminal',
         pause_reason=None)}), None),
     ('receipt', dict(files={'receipt.json': dict(schema='campaign-receipt/3', outcome='incomplete',
         driver=dict(ending_request=dict(trigger='http_attempts')))}), 'budget'),
@@ -1391,7 +1391,7 @@ def test_end_facts_read_only_the_supported_receipt_and_terminal_versions(tmp_pat
     directory = tmp_path / 'end'
     directory.mkdir()
     terminal = directory / 'watch-terminal.json'
-    terminal.write_text(json.dumps(dict(schema='campaign-watch-terminal/3', reason='operator_pause', pause_reason='loop')))
+    terminal.write_text(json.dumps(dict(schema='campaign-watch-terminal/4', reason='operator_pause', pause_reason='loop')))
     facts = read_end_facts(directory, current)
     assert facts.paused is True and facts.pause_reason == 'loop'
     # The archived /2 terminal is read for the Pause only, and only for an archived session; it has no reason of its own.
@@ -1402,10 +1402,10 @@ def test_end_facts_read_only_the_supported_receipt_and_terminal_versions(tmp_pat
         with pytest.raises(EvaluationError, match=r'watch-terminal\.json.*campaign-watch-terminal/2'):
             read_end_facts(directory, manifest)
     # No other shape counts as a Pause: not the old nested field, nor a forwarded reply on its own.
-    terminal.write_text(json.dumps(dict(schema='campaign-watch-terminal/3', reason='custodian_terminal',
+    terminal.write_text(json.dumps(dict(schema='campaign-watch-terminal/4', reason='custodian_terminal',
         pause=dict(reason='loop'), pause_reply_forwarded=True, pause_reason=None)))
     assert read_end_facts(directory, current).paused is False
-    for found in ('campaign-watch-terminal/1', 'campaign-watch-terminal/4', None):
+    for found in ('campaign-watch-terminal/1', 'campaign-watch-terminal/3', 'campaign-watch-terminal/5', None):
         terminal.write_text(json.dumps(dict(schema=found, reason='operator_pause')))
         for manifest in (current, archived):
             with pytest.raises(EvaluationError, match=rf'watch-terminal\.json.*{found}'):

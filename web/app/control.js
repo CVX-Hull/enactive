@@ -1,8 +1,7 @@
 // Control strip. Vanilla DOM, no framework, no viewer: it reads only the custodian's
 // /api/status and /api/source/<id> (through the supervised gateway) and posts Pause.
 // A viewer or framework failure therefore cannot change what this file shows or does.
-// The page and tools/campaign_watch_ui.js (the operator check) agree on these element
-// ids and text formats; see docs/contracts/evaluation.md "Control path and viewer".
+// See docs/contracts/evaluation.md "Control path and viewer".
 const $ = id => document.getElementById(id);
 const POLL_MS = 1000;
 const TIMEOUT_MS = 2500;
@@ -39,8 +38,6 @@ let receivedAt = null;      // browser time of the last good status
 let shown = null;           // {key, source} of the decoded frame in #frame
 let frameGeneration = 0;
 let loadingKey = null;     // a source being fetched; a slow fetch must not be restarted by every poll
-let live = true;            // from the page's playhead; the operator check needs live
-let playheadNote = false;
 
 const short = id => (id.length > 12 ? `${id.slice(0, 8)}…` : id);
 const val = x => (x === null || x === undefined ? 'unreported' : String(x));
@@ -76,7 +73,6 @@ function renderSub() {
     const host = latest.host;
     if (host) parts.push(el('span', '', `${val(host.model)} · ${val(host.requests_total)}/${val(host.max_requests_total)} requests`));
   }
-  if (!live) parts.push(el('span', 'state watch', 'check off · inspecting history'));
   sub.replaceChildren(...parts);
 }
 
@@ -200,31 +196,6 @@ document.addEventListener('enactive:hello', () => {
   if (latest) emit('enactive:control', {ok: $('connection').dataset.state === 'ok', status: latest, receivedAt});
   if (shown) emit('enactive:frame', {url: shown.url, source: shown.source});
 });
-
-/* ------------------------------------------------------------------ operator check: live only */
-function checkButton() { return document.getElementById('watch-record'); }
-function applyCheck() {
-  const button = checkButton();
-  if (!button) return;
-  if (!live) {
-    button.dataset.playheadLock = '1';
-    if (!button.disabled) button.disabled = true;
-    button.title = 'Disabled while the playhead is not live: return to live to record a check';
-  } else if (button.dataset.playheadLock) {
-    delete button.dataset.playheadLock;
-    button.disabled = false;
-    button.removeAttribute('title');
-  }
-}
-document.addEventListener('enactive:playhead', event => {
-  live = event.detail.live !== false;
-  applyCheck(); renderSub();
-});
-if (checkButton()) {
-  // The check script re-enables its button after each attempt; keep it off while not live.
-  new MutationObserver(() => { if (!live && !checkButton().disabled) applyCheck(); })
-    .observe(checkButton(), {attributes: true, attributeFilter: ['disabled']});
-}
 
 /* ------------------------------------------------------------------ Pause: hold to confirm, then a sheet */
 const pause = $('pause');

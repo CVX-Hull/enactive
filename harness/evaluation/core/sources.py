@@ -29,7 +29,7 @@ ARCHIVE_SCHEMA = 'campaign-run/4'
 ARCHIVE_LABELS = Path(__file__).resolve().parents[3] / 'data' / 'evaluation' / 'archive-labels.json'
 RECEIPT_SCHEMA = 'campaign-receipt/3'
 #: `campaign-watch-terminal/2` is archive-read only (the archived runs predate Pause reasons).
-WATCH_TERMINAL_SCHEMA = 'campaign-watch-terminal/3'
+WATCH_TERMINAL_SCHEMA = 'campaign-watch-terminal/4'
 WATCH_TERMINAL_ARCHIVE_SCHEMA = 'campaign-watch-terminal/2'
 MEMORY_SCHEMA = 'player-memory/2'
 CONTEXT_SCHEMA = 'player-handoff-context/1'
@@ -335,7 +335,7 @@ def _optional_json(path: Path, schemas: tuple[str, ...]) -> dict | None:
 
 
 def read_end_facts(run_dir: Path, manifest: dict) -> EndFacts:
-    """`receipt.json` (campaign-receipt/3) and `watch-terminal.json` (campaign-watch-terminal/3, or /2 only for
+    """`receipt.json` (campaign-receipt/3) and `watch-terminal.json` (campaign-watch-terminal/4, or /2 only for
     an archived session: a `campaign-run/4` manifest listed in the archive labels), when the run has ended.
     The owner Pause is the terminal's `reason == 'operator_pause'`."""
     archived = manifest.get('schema') == ARCHIVE_SCHEMA and manifest.get('session') in archive_labels()

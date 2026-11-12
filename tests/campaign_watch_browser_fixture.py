@@ -1,7 +1,7 @@
 """Real spectator/gateway UI over labelled synthetic pixels; no game or provider.
 
 This test-only manifest cannot pass the production campaign package validator.
-The rehearsal exercises an explicit browser click and Pause, not native effects.
+The rehearsal exercises the page and an explicit browser Pause, not native effects.
 """
 from __future__ import annotations
 
@@ -66,11 +66,9 @@ def main(argv=None) -> int:
         probe.bind(('127.0.0.1', 0))
         # No viewer runs in this fixture, so the page shows its viewer-unavailable state.
         viewer_port = probe.getsockname()[1]
-    write('watch-start.json', dict(schema='campaign-watch-start/3', session=SESSION,
+    write('watch-start.json', dict(schema='campaign-watch-start/4', session=SESSION,
         source_commit=source, manifest_sha256=hashlib.sha256(manifest).hexdigest(),
-        attention='required', watch_seconds=45, viewer_port=viewer_port,
-        started_wall=wall, started_monotonic=mono))
-    (directory/'watch-attempts.jsonl').touch()
+        viewer_port=viewer_port, started_wall=wall, started_monotonic=mono))
     write('started.json', dict(schema='computer-start/1', session=SESSION,
                               started_wall=wall, deadline_monotonic=mono+180))
     channel = FixturePixels()
@@ -82,25 +80,24 @@ def main(argv=None) -> int:
     server, server_thread = serve(app, 0)
     write('ready.json', dict(schema='computer-ready/1', session=SESSION, pid=123,
         ready_wall=time.time(), viewer_url=f'http://127.0.0.1:{server.server_port}/'))
-    checks, tx = socket.socketpair(type=socket.SOCK_DGRAM)
     stops, stop_tx = socket.socketpair(type=socket.SOCK_DGRAM)
     gateway = None; guardian = None; closing = threading.Event()
     result = dict(scope='Real browser/service UI; synthetic pixels, no game/provider',
-        accepted=[], started_wall=wall, started_monotonic=mono)
+        started_wall=wall, started_monotonic=mono)
     try:
         gateway = subprocess.Popen([sys.executable, '-m', 'tools.campaign_watch', str(directory),
-            SESSION, source, str(server.server_port), str(os.getpid()), str(tx.fileno()), str(stop_tx.fileno()),
+            SESSION, source, str(server.server_port), str(os.getpid()), str(stop_tx.fileno()),
             '--viewer-port', str(viewer_port)],
-            cwd=ROOT, start_new_session=True, pass_fds=(tx.fileno(), stop_tx.fileno()),
+            cwd=ROOT, start_new_session=True, pass_fds=(stop_tx.fileno(),),
             env=dict(PATH=os.environ.get('PATH', '/usr/bin:/bin'), LANG='en_US.UTF-8'))
-        tx.close(); stop_tx.close()
-        if not select.select([checks], [], [], 5)[0]:raise ValueError('Fixture gateway did not start')
-        port = json.loads(checks.recv(4096))['port']
+        stop_tx.close()
+        if not select.select([stops], [], [], 5)[0]:raise ValueError('Fixture gateway did not start')
+        port = json.loads(stops.recv(4096))['port']
         result['gateway_url'] = f'http://127.0.0.1:{port}/'
         profile = dict(session=SESSION, source_commit=source, wall_seconds=180, port=server.server_port)
         live = SimpleNamespace(poll=lambda: None)
         def guard():
-            result['reason'] = supervise(directory, profile, live, gateway, live, checks, stops,
+            result['reason'] = supervise(directory, profile, live, gateway, live, stops,
                                          closing.is_set, result)
         guardian = threading.Thread(target=guard, daemon=True); guardian.start()
         write('fixture-ready.json', dict(url=result['gateway_url'], scope=result['scope'],
@@ -122,7 +119,7 @@ def main(argv=None) -> int:
         server.shutdown(); server.server_close(); server_thread.join(2)
         result['service_thread_absent'] = not server_thread.is_alive()
         runtime.close(); memory.close()
-        for link in (checks, tx, stops, stop_tx):link.close()
+        for link in (stops, stop_tx):link.close()
         write('fixture-result.json', result)
     return 0 if (result.get('reason') == 'operator_pause' and result['synthetic_channel_stopped']
         and result['guardian_absent'] and result['service_thread_absent']

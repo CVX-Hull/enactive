@@ -11,8 +11,7 @@
 </head>
 <body>
   <!-- Control path. Static markup driven only by app/control.js from /api/status and
-       /api/source/<id>. The gateway injects the operator check before the frame-shell
-       anchor and a script before the head close tag; app/control.js never reads the viewer. -->
+       /api/source/<id>; app/control.js never reads the viewer. -->
   <header class="ctl" aria-label="Control path">
     <div class="wrap" id="watch">
       <button class="pause" id="pause" type="button" aria-describedby="pause-hint">Pause run…<span class="fillbar" id="fillbar"></span></button>

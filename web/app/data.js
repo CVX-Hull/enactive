@@ -1,7 +1,7 @@
 // Viewer data: a tiny store, the only place that fetches /api/view/*, and the pollers.
 // Any 503, timeout or network error from a viewer route means "viewer unavailable":
 // interpretive panels grey out and the strip says so. Nothing here touches the control
-// strip, Pause or the operator check (those live in control.js).
+// strip or Pause (those live in control.js).
 import {useState, useEffect} from './ui.js';
 
 const VIEW_TIMEOUT_MS = 4000;
@@ -177,9 +177,7 @@ export function runStart() {
 }
 export const liveRun =() => (store.runs || []).find(r => r.state === 'live') || null;
 export const selectedRun = () => (store.runs || []).find(r => r.run === store.runId) || null;
-/** False only while the owner has moved the playhead into history. The operator check depends on the
- *  control path, never on viewer data: a viewer that is down, slow, or has not yet listed the live run
- *  must not disable it (ADR008 item 5). */
+/** False only while the owner has moved the playhead into history; an unavailable viewer counts as live. */
 export function isLive() {
   if (!store.viewerOk) return true;
   return store.cursor === null;
@@ -201,13 +199,7 @@ export function setCursorIndex(index) {
 }
 export function goLive() { set({cursor: null}); announce(); }
 
-let lastLive = null;
 export function announce() {
-  const live = isLive();
-  if (live !== lastLive) {
-    lastLive = live;
-    document.dispatchEvent(new CustomEvent('enactive:playhead', {detail: {live}}));
-  }
   const s = store.summary;
   const facts = s ? `Decision ${s.decisions ?? '?'}, $${Number(s.dollars ?? 0).toFixed(2)} spent.` : '';
   document.dispatchEvent(new CustomEvent('enactive:facts', {detail: {text: store.viewerOk ? facts : ''}}));

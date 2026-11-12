@@ -4,7 +4,7 @@ The custodian, server, gateway and supervisor are the production modules, servin
 synthetic pixels (no game, provider or player). The viewer reads a copy of an archived run that
 `tests/spectator_replay.py` advances at its original pace, so the page shows a moving run. Stop
 the fixture by Pause or by creating `finish-fixture` in its directory. Kill the viewer at any
-time to check that Pause and the attention check keep working.
+time to check that the control strip and Pause keep working.
 """
 from __future__ import annotations
 
@@ -76,10 +76,9 @@ def main(argv=None) -> int:
         stdout=open(directory/'viewer-stdout.txt', 'w'), stderr=open(directory/'viewer-stderr.txt', 'w'),
         start_new_session=True)
     wall, mono = time.time(), time.monotonic()
-    write('watch-start.json', dict(schema='campaign-watch-start/3', session=SESSION, source_commit=source,
-        manifest_sha256=hashlib.sha256(manifest).hexdigest(), attention='required', watch_seconds=45,
+    write('watch-start.json', dict(schema='campaign-watch-start/4', session=SESSION, source_commit=source,
+        manifest_sha256=hashlib.sha256(manifest).hexdigest(),
         viewer_port=viewer_port, started_wall=wall, started_monotonic=mono))
-    (directory/'watch-attempts.jsonl').touch()
     write('started.json', dict(schema='computer-start/1', session=SESSION, started_wall=wall,
                               deadline_monotonic=mono+options.seconds))
     channel = FixturePixels()
@@ -91,25 +90,24 @@ def main(argv=None) -> int:
     server, server_thread = serve(app, 0)
     write('ready.json', dict(schema='computer-ready/1', session=SESSION, pid=123, ready_wall=time.time(),
         viewer_url=f'http://127.0.0.1:{server.server_port}/'))
-    checks, tx = socket.socketpair(type=socket.SOCK_DGRAM)
     stops, stop_tx = socket.socketpair(type=socket.SOCK_DGRAM)
     gateway = None; guardian = None; closing = threading.Event()
     result = dict(scope='Real control path and viewer; synthetic custodian pixels; replayed viewer run',
-        accepted=[], started_wall=wall, started_monotonic=mono, viewer_pid=viewer.pid, viewer_port=viewer_port)
+        started_wall=wall, started_monotonic=mono, viewer_pid=viewer.pid, viewer_port=viewer_port)
     try:
         gateway = subprocess.Popen([sys.executable, '-m', 'tools.campaign_watch', str(directory), SESSION, source,
-            str(server.server_port), str(os.getpid()), str(tx.fileno()), str(stop_tx.fileno()),
+            str(server.server_port), str(os.getpid()), str(stop_tx.fileno()),
             '--viewer-port', str(viewer_port)], cwd=ROOT, start_new_session=True,
-            pass_fds=(tx.fileno(), stop_tx.fileno()),
+            pass_fds=(stop_tx.fileno(),),
             env=dict(PATH=os.environ.get('PATH', '/usr/bin:/bin'), LANG='en_US.UTF-8'))
-        tx.close(); stop_tx.close()
-        if not select.select([checks], [], [], 5)[0]: raise ValueError('Fixture gateway did not start')
-        port = json.loads(checks.recv(4096))['port']
+        stop_tx.close()
+        if not select.select([stops], [], [], 5)[0]: raise ValueError('Fixture gateway did not start')
+        port = json.loads(stops.recv(4096))['port']
         result['gateway_url'] = f'http://127.0.0.1:{port}/'
         profile = dict(session=SESSION, source_commit=source, wall_seconds=options.seconds, port=server.server_port)
         live = SimpleNamespace(poll=lambda: None)
         def guard():
-            result['reason'] = supervise(directory, profile, live, gateway, live, checks, stops, closing.is_set, result)
+            result['reason'] = supervise(directory, profile, live, gateway, live, stops, closing.is_set, result)
         guardian = threading.Thread(target=guard, daemon=True); guardian.start()
         write('fixture-ready.json', dict(url=result['gateway_url'], scope=result['scope'], viewer_pid=viewer.pid,
                                         viewer_port=viewer_port, gateway_pid=gateway.pid, replay=str(replayed)))
@@ -134,7 +132,7 @@ def main(argv=None) -> int:
         result['synthetic_channel_stopped'] = channel.stopped.is_set()
         server.shutdown(); server.server_close(); server_thread.join(2)
         runtime.close(); memory.close()
-        for link in (checks, tx, stops, stop_tx): link.close()
+        for link in (stops, stop_tx): link.close()
         terminal = directory/'watch-terminal.json'
         if terminal.exists(): result['pause_reason'] = json.loads(terminal.read_text()).get('pause_reason')
         write('fixture-result.json', result)
