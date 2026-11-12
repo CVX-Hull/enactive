@@ -53,6 +53,14 @@ def checked_receipt(prepared):
             if key not in ('prompt', 'exec_argv', 'render_argv')}
 
 
+def _same_input_receipt(actual, expected):
+    """CLI updates are allowed; the reverified scientific inputs must stay identical."""
+    if any(not isinstance(r.get('cli_version'), str) or not r['cli_version'] for r in (actual, expected)):
+        return False
+    return (json.loads(json.dumps({k: v for k, v in actual.items() if k != 'cli_version'}))
+            == {k: v for k, v in expected.items() if k != 'cli_version'})
+
+
 def prepare(kind, build, expected_key_sha256, out):
     out, build = Path(out).resolve(), Path(build).resolve()
     runtime = (batches.ROOT / '.runtime').resolve()
@@ -100,8 +108,8 @@ def _reconstruct(out, manifest, name):
             raise HandoutError('handout input differs from the verified build')
         prepared = replace(fresh, leaf=leaf, batch=batch, prompt=expected_prompt)
         receipt = checked_receipt(prepared)
-        if json.loads(json.dumps(receipt)) != record['receipt']:
-            raise HandoutError('local input receipt or CLI version changed')
+        if not _same_input_receipt(receipt, record['receipt']):
+            raise HandoutError('local input receipt changed')
         return prepared
     finally:
         shutil.rmtree(temporary)
@@ -158,8 +166,11 @@ def _unchanged(out, manifest, name, prepared, manifest_sha256, *, render=False):
             or (out / 'prompts' / f'{name}.txt').read_text() != prepared.prompt
             or any(digest(image.path.read_bytes()) != image.sha256 for image in prepared.images)):
         raise HandoutError('input changed during the pool')
-    if render and json.loads(json.dumps(checked_receipt(prepared))) != record['receipt']:
-        raise HandoutError('rendered input or CLI version changed during the pool')
+    if render:
+        receipt = checked_receipt(prepared)
+        if not _same_input_receipt(receipt, record['receipt']):
+            raise HandoutError('rendered input changed during the pool')
+        return receipt
 
 
 def run(out, max_attempts, workers=1, only=None):
@@ -250,7 +261,7 @@ def _run_locked(out, max_attempts, workers, only):
         child = None
         failure_recorded = False
         try:
-            _unchanged(out, manifest, name, prepared, manifest_sha256, render=True)
+            input_receipt = _unchanged(out, manifest, name, prepared, manifest_sha256, render=True)
             with lock:
                 if stop.is_set():
                     return
@@ -265,6 +276,8 @@ def _run_locked(out, max_attempts, workers, only):
                 counts['launched'] += 1
                 write_json(directory / 'launched.json', dict(pid=child.pid, started=time.time(),
                            manifest_sha256=digest((out / 'manifest.json').read_bytes()),
+                           checked_cli_version=input_receipt['cli_version'],
+                           input_receipt_sha256=digest(json.dumps(input_receipt, sort_keys=True).encode()),
                            prompt_sha256=digest(prepared.prompt.encode()),
                            argv_sha256=digest(json.dumps(prepared.exec_argv()).encode())))
             try:

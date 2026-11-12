@@ -149,6 +149,9 @@ held-out question is written.
   The lead owns the global allocation and runs only one pool at a time; this executor's
   cap is per handout, not a global account quota. CLI updates require local input rechecking,
   not duplicate binaries or a silent model change.
+  Compatible updates continue when the locally reverified inputs are identical; each attempt
+  records the version observed before launch. A version change alone does not repeat a completed
+  candidate or require new calibration. Source, model/effort, key, prompt and image checks remain.
 - **Isolation.** Each initial directory contains only the public batch; its prompt is supplied as input. The frozen brief
   restricts reads to that batch and any images it names; the operator copies out the validated
   answer. Separate directories and fresh contexts isolate payloads, but do not establish an

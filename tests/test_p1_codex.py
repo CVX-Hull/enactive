@@ -83,7 +83,7 @@ def test_success_sends_exact_prepared_images_and_keeps_candidates_separate(hando
     assert len(calls) == 1
 
 
-@pytest.mark.parametrize('mutation', ['image', 'batch', 'key', 'prompt', 'version', 'source'])
+@pytest.mark.parametrize('mutation', ['image', 'batch', 'key', 'prompt', 'missing_version', 'source'])
 def test_mutation_blocks_all_launches(handout, monkeypatch, mutation):
     out, build, image, version = handout
     calls = fakes(monkeypatch)
@@ -96,8 +96,11 @@ def test_mutation_blocks_all_launches(handout, monkeypatch, mutation):
         key.write_text(key.read_text() + ' ')
     elif mutation == 'prompt':
         (out / 'prompts/question-001.txt').write_text('changed')
-    elif mutation == 'version':
-        version[0] = 'version-two'
+    elif mutation == 'missing_version':
+        path = out / 'manifest.json'
+        data = json.loads(path.read_text())
+        del data['batches']['question-001']['receipt']['cli_version']
+        path.write_text(json.dumps(data))
     else:
         manifest = out / 'manifest.json'
         data = json.loads(manifest.read_text())
@@ -106,6 +109,19 @@ def test_mutation_blocks_all_launches(handout, monkeypatch, mutation):
     with pytest.raises((runner.HandoutError, inputs.InputError, batches.BatchError, OSError)):
         runner.run(out, 3)
     assert calls == []
+
+
+def test_compatible_cli_update_is_reverified_and_recorded_without_repeating_candidates(handout, monkeypatch):
+    out, _, _, version = handout
+    calls = fakes(monkeypatch)
+    assert runner.run(out, 3, only=['question-001'])['done'] == 1
+    version[0] = 'version-two'
+    result = runner.run(out, 3)
+    assert result['done'] == 2 and result['skipped'] == 1 and not result['stopped']
+    assert len(calls) == 3
+    assert json.loads((out / 'attempts/question-001/launched.json').read_text())['checked_cli_version'] == 'version-one'
+    assert json.loads((out / 'attempts/question-002/launched.json').read_text())['checked_cli_version'] == 'version-two'
+    assert json.loads((out / 'manifest.json').read_text())['batches']['question-002']['receipt']['cli_version'] == 'version-one'
 
 
 def test_partial_or_wrong_output_stops_and_cannot_resume(handout, monkeypatch):

@@ -184,3 +184,9 @@ without compatibility aliases, and keeps implementation details on the host page
 The guard retains generic tooling/design restrictions and recognizes this named
 adapter boundary beside the existing player and curator adapters. The failed run is
 retained; exact-head protected CI must pass before the owner decision and merge.
+
+Compatible CLI updates are accepted after exact local input re-verification, with the
+observed version and receipt digest recorded per attempt. Code/model/effort, key,
+prompt and image bindings remain; a missing version is rejected. Completed candidates
+are not rerun merely because the installed CLI changed. This applies the owner's
+version direction without a binary copy or repeated calibration.

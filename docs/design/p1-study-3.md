@@ -611,7 +611,9 @@ registered pass. Approval would authorize the following single bounded chain.
 
 1. **Freeze the reviewed correction source.** Record the exact reviewed, CI-passed
    PR head and merged tree, owner decision, selected coding-host version and
-   input/source digests before dispatch. Keep `gpt-6.1-sol/high`. Use the maintained
+   input/source digests before dispatch. Keep `gpt-6.1-sol/high`; compatible coding-host
+   updates may continue after local input rechecking, recording each observed version.
+   Use the maintained
    input boundary and executor: visual roles receive their exact named original
    PNGs as initial attachments; other roles receive none. Verify count, order and
    bytes through the selected host's local input renderer before inference, as the
