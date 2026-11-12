@@ -27,7 +27,7 @@ adopted; P0's [outcome](../acceptance/2026-11-08-adr009-p0.md) is recorded separ
 | [Knowledge repository](../../harness/curator/knowledge.py), [gate](../../harness/curator/gate.py) | One Git repository per game. Only gate v0 commits to it, and it checks form, base version, scope and provenance. [Design](../design/curator-session.md) |
 | [Drafts](../../harness/curator/containers.py), [sessions](../../harness/curator/session.py) | The draft lifecycle (open, stale, abandoned, promoted) and one ephemeral sandboxed session per run, with a close-out that never follows a link |
 | [Curator host](../../tools/curator_host) (an adapter) | Workspace-only tools, budget phases and a frozen prompt with no game knowledge. [Operations](../operations/curator-hosts.md) |
-| [Shadow runner](../../tools/curator_host/shadow.py), [report](../../tools/curator_host/shadow_report.py) | Replays the #397 and #372 development lineages (never #382's held-out lineages) under a dollar cap, and derives the measurements |
+| [Shadow runner](../../tools/curator_host/shadow.py) | Replays the #397 and #372 development lineages (never #382's held-out lineages) under a dollar cap |
 
 ## Failure, bounds and ownership
 
@@ -55,10 +55,10 @@ adopted; P0's [outcome](../acceptance/2026-11-08-adr009-p0.md) is recorded separ
   - `tests/test_curator_sandbox.py`, the escape suite against the real listeners
     (macOS lane);
   - `tests/test_curator_gate.py` and `tests/test_curator_session.py`;
-  - `tests/test_curator_openrouter.py`, `tests/test_curator_host.py` and
-    `tests/test_curator_shadow_report.py`.
+  - `tests/test_curator_openrouter.py` and `tests/test_curator_host.py`.
 - **Records:** the [probe baseline](../acceptance/2026-11-08-probe-baseline-449.md),
-  the [shadow sessions](../acceptance/2026-11-08-curator-shadow-454.md) and the
-  [P0 outcome](../acceptance/2026-11-08-adr009-p0.md).
+  the [shadow sessions](../acceptance/2026-11-08-curator-shadow-454.md), the
+  [P0 outcome](../acceptance/2026-11-08-adr009-p0.md) and the offline curator-memory
+  study's [completion and registered no-go](../acceptance/2026-11-12-p1-descriptive-completion-178.md).
 - **CI coverage:** Linux CI runs the portable tests. The Seatbelt-lane tests, sandbox
   and real-host sessions, run only on macOS.

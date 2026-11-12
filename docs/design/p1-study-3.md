@@ -1,9 +1,8 @@
 ---
 owner: lead
-status: active
+status: historical
 date: 2026-11-10
 scope: 'Pre-registration of the ADR 009 P1 offline study (p1-study/3): p1-study/2''s data, arms and decision rule, with recall measured by an answer-key chain (question writer, reader, grader) after the arm-guess check failed on development data (#178)'
-review_trigger: Any change to the data, the stages or caps, the arms, the measurement chain or its briefs, or the decision rule
 ---
 
 # P1 offline study, third protocol: pre-registration
@@ -47,9 +46,9 @@ power gate on lh1–lh4 ([record](../acceptance/2026-11-10-p1-gate-study-2-178.m
 ($3.24) and the development stage ($23.71 over two attempts, the first losing one session to
 provider timeouts).
 
-The analysis is [`tools/p1_analysis.py`](../../tools/p1_analysis.py) and its tests are
-[`tests/test_p1_analysis.py`](../../tests/test_p1_analysis.py). The plan is in
-[`data/evaluation/p1/power-study-2.json`](../../data/evaluation/p1/power-study-2.json); a test checks
+The analysis is [`tools/p1_analysis.py`](https://github.com/CVX-Hull/enactive/blob/08c8f7aa902a0fe45c3aad22a6b29a41677336fc/tools/p1_analysis.py) and its tests are
+[`tests/test_p1_analysis.py`](https://github.com/CVX-Hull/enactive/blob/08c8f7aa902a0fe45c3aad22a6b29a41677336fc/tests/test_p1_analysis.py). The plan is in
+[`data/evaluation/p1/power-study-2.json`](../acceptance/assets/curator-memory-study-178/power-study-2.json); a test checks
 that the table under [Power](#power) renders it.
 
 ## Completion status (12 November 2026)
@@ -70,7 +69,7 @@ checkpoint, and the quoted briefs and original decision rules remain unchanged.
 
 **Held-out handling.**
 - **lh1–lh3.** Their probes and ledgers are frozen as #178 wrote them
-  ([`frozen.json`](../../data/evaluation/p1/held-out/frozen.json)) and are reused unchanged. The
+  ([`frozen.json`](../acceptance/assets/curator-memory-study-178/held-out/frozen.json)) and are reused unchanged. The
   lead has read only their counts, digests and cluster structure.
 - **(p1-study/2) lh4 is held out before it starts.** Until scoring, the lead and any operator read
   only counts, digests, cluster structure and the run-health aggregates listed under
@@ -430,7 +429,7 @@ continuation after explicit approval, protected integration and freeze validatio
   missing-usage stop, one qualification and its conditional continuation. Any new
   isolation incident stops every stage. Only complete valid held replay permits
   A delivery and the frozen reading/grading/rejudge/audit/scoring sequence on the
-  [selected measurement host](../operations/coding-agents.md#p1-study-readers).
+  [selected measurement host](https://github.com/CVX-Hull/enactive/blob/08c8f7aa902a0fe45c3aad22a6b29a41677336fc/docs/operations/coding-agents.md#p1-study-readers).
   Publish the owner decision, source/tier differences, every failure and expense,
   accounting uncertainty and the amended-study limitation beside any conclusion.
 
@@ -562,7 +561,7 @@ and the original registered no-go remain permanent.
   sealed, uncapped and valid may the existing maintained delivery tools produce
   complete, disjoint LH1 and LH2–LH4 selections. This is the narrow exception to the
   previous all-stage stop. Then run the unchanged blinded reader, grader, seeded
-  rejudge and false-fact audit chain on the [selected coding host](../operations/coding-agents.md#p1-study-readers),
+  rejudge and false-fact audit chain on the [selected coding host](https://github.com/CVX-Hull/enactive/blob/08c8f7aa902a0fe45c3aad22a6b29a41677336fc/docs/operations/coding-agents.md#p1-study-readers),
   including Reference/PW/PP controls.
   Keep the prepared limits: 534 first readers, 54 rejudge readers, at most 60/10
   grader batches and 120 audit items/12 batches, 670 primary handouts combined,
@@ -639,7 +638,7 @@ The authorized bounded chain is:
    input boundary and executor: visual roles receive their exact named original
    PNGs as initial attachments; other roles receive none. Verify count, order and
    bytes through the selected host's local input renderer before inference, as the
-   [host procedure](../operations/coding-agents.md#p1-study-readers) specifies. No manual image
+   [host procedure](https://github.com/CVX-Hull/enactive/blob/08c8f7aa902a0fe45c3aad22a6b29a41677336fc/docs/operations/coding-agents.md#p1-study-readers) specifies. No manual image
    transformation, OCR substitute, extra data, binary copy or global setup.
 2. **One fresh development qualification.** Retain the old 20-unit calibration but
    mark it unqualified for screenshot grounding. On the same 20 development units
@@ -814,7 +813,7 @@ incomplete, with no curator-benefit conclusion.
 **Pinning.** Every question writer, no-text answerer, paraphraser, reader, grader and auditor is
 pinned:
 - a fresh, ephemeral session of the selected coding host, with its version, model and effort in
-  [coding-agent hosts](../operations/coding-agents.md#p1-study-readers). The owner moved all
+  [coding-agent hosts](https://github.com/CVX-Hull/enactive/blob/08c8f7aa902a0fe45c3aad22a6b29a41677336fc/docs/operations/coding-agents.md#p1-study-readers). The owner moved all
   measurement agents to this host on 10 November, after first moving only readers. Each
   context receives its own batch and prompt. The executor keeps only the public batch
   in its initial working directory and passes the prompt as input; a reader's batch
@@ -1399,7 +1398,7 @@ are positive. No current reader/writer or persisted `p1-result/1` contract is re
    - **Development units.** #490's 21 pairs give 20 units: one is in `aidA5`, which has no B
      text. Development has one B repeat, so its chain reads A, B repeat 1 and the controls.
 7. **Readers on the second coding host,** with care for its rate limits; the owner's words are
-   quoted in [coding-agent hosts](../operations/coding-agents.md#p1-study-readers). A
+   quoted in [coding-agent hosts](https://github.com/CVX-Hull/enactive/blob/08c8f7aa902a0fe45c3aad22a6b29a41677336fc/docs/operations/coding-agents.md#p1-study-readers). A
    pinned-model subagent cost about 60,000 tokens per item against this page's 20,000; a reader
    on the second host costs about 115,000, mostly cached. Three pilot readers that had run on
    the pinned model were set aside unused.
@@ -1417,7 +1416,7 @@ are positive. No current reader/writer or persisted `p1-result/1` contract is re
      so that half of the screen has not shown it can flag anything.
 9. **All measurement agents on the reader's host.** The owner selected this change because of
    quota availability; the exact decision and host, version, model and effort are recorded in
-   [coding-agent hosts](../operations/coding-agents.md#p1-study-readers). The remaining question
+   [coding-agent hosts](https://github.com/CVX-Hull/enactive/blob/08c8f7aa902a0fe45c3aad22a6b29a41677336fc/docs/operations/coding-agents.md#p1-study-readers). The remaining question
    writers, no-text answerers, paraphrasers, graders and auditors use the same setup as readers.
    This changes the host, model and fresh-session mechanism, not the frozen briefs, data, arms or decision
    rule. The full development chain is repeated before held-out questions, preserving both
@@ -1448,7 +1447,7 @@ Decided by the owner on **11 November 2026**, before any held-out score:
 6. **Measurement host versions:** “Versions will be subject to update. It should be
    fine as long as we use the same model.” The owner permits dedicated copies only
    if useful without overhead, including disk use and tracking. The
-   [host policy](../operations/coding-agents.md#p1-study-readers) uses the ordinary
+   [host policy](https://github.com/CVX-Hull/enactive/blob/08c8f7aa902a0fe45c3aad22a6b29a41677336fc/docs/operations/coding-agents.md#p1-study-readers) uses the ordinary
    installed CLI, existing provenance and unchanged model/effort, without duplicate
    binaries or repeated calibration merely for a CLI update.
 7. **Budget increase in principle:** “I approve raising the budget. Let's complete this

@@ -1,13 +1,21 @@
-"""Current design, harness and tooling name no specific player host or coding agent.
+"""Current guidance, harness and tooling name no specific player host or coding agent.
 
-Only the adapter, setup and operator pages may name them. Historical and superseded
-records and external citations are evidence and stay untouched; internal link
-destinations are paths, not prose.
+Scanned for host and agent names:
+- the root documents (`ROOT_DOCUMENTS`);
+- every `docs/**/*.md` page whose status is neither historical nor superseded, except
+  `docs/design/` (`UNSCANNED`), the adapter, setup and operator pages (`ALLOWED`) and the
+  generated dated-record indexes (`GENERATED`);
+- source, configuration and Markdown files under `harness/` and `tools/`, except the host
+  adapters `tools/player_host/` and `tools/curator_host/` and installed packages.
 
-Provider and model names are narrower: they stay out of `harness/` and out of `tools/`
-outside the host adapters (`tools/player_host/`, `tools/curator_host/`,
-`tools/coding_host/`). Documents, research
-pages, ADRs, dated records, data and tests may name them (ADR 010).
+Not scanned: `docs/design/` (design and study pages name the hosts they measure),
+historical and superseded records, and every other tree (`data/`, `schemas/`, `tests/`,
+`web/`). External citations and internal link destinations are removed from a line
+before it is checked; internal link text is prose and is checked.
+
+Provider and model names are narrower: they are refused only in the scanned `harness/`
+and `tools/` files. Documents, research pages, ADRs, dated records, data and tests may
+name them (ADR 010).
 """
 from pathlib import Path
 import re
@@ -27,7 +35,6 @@ CITATIONS = re.compile(r"\[[^\]]*\]\(https?://[^)]*\)|\]\([^)]*\)|https?://\S+")
 ALLOWED = (
     "tools/player_host/",     # current adapter
     "tools/curator_host/",    # the curator's adapter (ADR 009 P0 shadow)
-    "tools/coding_host/",     # coding-agent measurement adapters, not player logic
     "docs/operations/",       # operator procedures, including coding-agent hosts
     "docs/setup.md",
     "docs/environment.md",
@@ -38,6 +45,8 @@ ALLOWED = (
 ROOT_DOCUMENTS = ("README.md", "AGENTS.md", "CONTRIBUTING.md", "SECURITY.md", "NOTICE.md")
 # The dated-record indexes list the scopes of historical records verbatim.
 GENERATED = ("docs/acceptance/index.md", "docs/changes/index.md")
+# Design and study pages name the hosts they measure; their prose is not scanned.
+UNSCANNED = ("docs/design/",)
 
 
 def current(path: Path) -> bool:
@@ -56,7 +65,7 @@ def scope():
                         and "node_modules" not in p.parts and "__pycache__" not in p.parts)
     for path in paths:
         relative = path.relative_to(ROOT).as_posix()
-        if (not relative.startswith(ALLOWED) and relative not in ALLOWED + GENERATED and current(path)):
+        if (not relative.startswith(ALLOWED + UNSCANNED) and relative not in ALLOWED + GENERATED and current(path)):
             yield relative, path.read_text(encoding="utf-8").splitlines()
 
 
@@ -75,8 +84,15 @@ def violations():
     return found
 
 
-def test_current_design_and_tooling_are_host_neutral():
+def test_current_guidance_and_tooling_are_host_neutral():
     assert violations() == []
+
+
+def test_the_scan_covers_code_and_current_guidance_but_not_design_pages():
+    scanned = {relative for relative, _ in scope()}
+    assert not any(relative.startswith("docs/design/") for relative in scanned)
+    assert {"AGENTS.md", "docs/architecture.md", "docs/contracts/player-host.md",
+            "harness/player_tools.py", "tools/check.py"} <= scanned
 
 
 def test_checker_sees_names_but_not_citations_or_lowercase_words():
@@ -98,4 +114,4 @@ def test_provider_and_model_names_are_refused_in_harness_and_tools_only():
     # Ordinary words and external citations are not names.
     assert not names("harness/curator/proxy.py", "a gptq opusculum terrain terrace route geminian haikus sonnets")
     assert not names("tools/diff_cost.py", "[provider docs](https://openrouter.ai/docs/faq)")
-    assert not any(relative.startswith(("tools/curator_host/", "tools/player_host/", "tools/coding_host/")) for relative, _ in scope())
+    assert not any(relative.startswith(("tools/curator_host/", "tools/player_host/")) for relative, _ in scope())

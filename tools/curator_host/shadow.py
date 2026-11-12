@@ -296,8 +296,7 @@ def run_one(*, arm_name: str, lineage: str, name: str, trace: Path, repo: Reposi
             expected_trace_manifest_sha256: str | None = None) -> dict:
     """One curator session through its own proxy. Returns the `curator-shadow/1` session summary.
 
-    `memory_until` keeps only memory written strictly before it (the P1 replay cuts a lineage store
-    at the next admission's first operation); None passes the whole store."""
+    `memory_until` keeps only memory written strictly before it; None passes the whole store."""
     session_dir = out/lineage/name
     session_dir.mkdir(parents=True)
     arm = ARMS[arm_name]

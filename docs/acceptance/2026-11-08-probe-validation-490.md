@@ -19,9 +19,9 @@ was computed: `c856008`, before the candidates, and `bb029f7`, before the querie
 protocol text was frozen. The analysis code was first committed with the first result, in
 `bb029f7`.
 
-**Reproduction.** [`tools/probe_validation.py`](../../tools/probe_validation.py)
+**Reproduction.** [`tools/probe_validation.py`](https://github.com/CVX-Hull/enactive/blob/08c8f7aa902a0fe45c3aad22a6b29a41677336fc/tools/probe_validation.py)
 reproduces every figure from the tracked files in
-[`data/evaluation/probes/validation/`](../../data/evaluation/probes/validation), and a test
+[`data/evaluation/probes/validation/`](assets/probe-validation-490/validation), and a test
 pins the tracked `recall.json` and `ledger.json` to their inputs.
 
 ## How it was done
@@ -98,7 +98,7 @@ against 0.6.
      and loading screens.
    - **Scoring.** By a blinded content-match judge, at the boundary each pair crosses.
    - **Secondary figures.** Both blinded ledgers stay frozen in
-     [`data/evaluation/probes/ledger.json`](../../data/evaluation/probes/ledger.json),
+     [`data/evaluation/probes/ledger.json`](assets/probe-validation-490/ledger.json),
      with a digest for every fact chunk, the adjudication layer and every query file.
      They yield descriptive figures.
 
@@ -121,7 +121,7 @@ against 0.6.
   a different model from the coverage judges. Its tokens are not counted, and its partial
   output was discarded.
 - **Detail.** Per-unit figures are in
-  [`costs.jsonl`](../../data/evaluation/probes/validation/costs.jsonl).
+  [`costs.jsonl`](assets/probe-validation-490/validation/costs.jsonl).
 
 ## Deviations
 

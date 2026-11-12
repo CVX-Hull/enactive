@@ -18,8 +18,8 @@ fewer contradicted or outdated B items: **1/40 and 2/40**, against A's **29/40**
 This is an observed retention/staleness tradeoff in the amended offline corpus,
 not evidence that B meets the frozen benefit criterion.
 
-The exact frozen [`p1-result/1` result](../../data/evaluation/p1/result.json) is
-guard-only. The separate [`p1-description/1` report](../../data/evaluation/p1/description.json)
+The exact frozen [`p1-result/1` result](assets/curator-memory-study-178/result.json) is
+guard-only. The separate [`p1-description/1` report](assets/curator-memory-study-178/description.json)
 contains the complete, unchanged descriptive calculations. The
 [metadata and supplementary aggregates](assets/p1-descriptive-completion-178.json)
 define `p1-descriptive-completion/1`: source/input hashes, context accounting,

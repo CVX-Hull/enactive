@@ -37,7 +37,7 @@ All 207 new scientific contexts used ordinary installed Codex CLI 0.167.1,
 `gpt-6.1-sol/high`, fresh ephemeral sessions, at most three concurrent and 900 seconds
 per session. No dedicated binary copy, global installation/profile change or new
 OpenRouter/curator call was needed. Compatible CLI updates remain subject to the
-[local input recheck](../operations/coding-agents.md#p1-study-readers), with the same
+[local input recheck](https://github.com/CVX-Hull/enactive/blob/08c8f7aa902a0fe45c3aad22a6b29a41677336fc/docs/operations/coding-agents.md#p1-study-readers), with the same
 model and effort, not a silent model substitution or repeated completed candidate.
 The current checkout is explicitly trusted; no stale local/global project MCP
 autoload entry remains. A new engineering player MCP entry still requires a valid

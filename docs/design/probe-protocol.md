@@ -207,7 +207,7 @@ Either way, one fact ledger per development lineage is frozen as the scoring led
 The measured recall and its outcome are in
 [the #490 record](../acceptance/2026-11-08-probe-validation-490.md). The query-style
 probes are in
-[`data/evaluation/probes/validation/`](../../data/evaluation/probes/validation).
+[`docs/acceptance/assets/probe-validation-490/`](../acceptance/assets/probe-validation-490).
 
 ## Query probes (#490)
 
@@ -258,7 +258,7 @@ content-matched check uses the same judge model and question as the query re-che
 - **Scoring.** At the boundary a pair crosses, a blinded judge decides whether the arm's
   delivered text states what the earlier frame shows.
 - **Secondary figures.** Both blinded ledgers stay frozen in
-  [`data/evaluation/probes/ledger.json`](../../data/evaluation/probes/ledger.json), with a
+  [`ledger.json`](../acceptance/assets/probe-validation-490/ledger.json), with a
   digest per file. They give descriptive figures: needed-fact recall from the fact
   ledger, and query coverage.
 
