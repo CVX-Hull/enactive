@@ -26,7 +26,7 @@ project userdir, fresh package and actual spectator images.
 
 [Finite-test supervision](operations/campaign-supervision.md) adds Pause, an
 independent custody deadline and owned wrapper cleanup. Nobody is required to watch a
-run. Its counts stay outside the player context.
+run. It runs outside the player context.
 
 ## Pause, timeout and recovery
 

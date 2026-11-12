@@ -300,6 +300,50 @@ def test_viewer_exit_never_counts_as_supervision_loss(tmp_path, monkeypatch):
     assert result['cleanup']['viewer']['process_absent']
 
 
+@pytest.mark.parametrize('first', [b'pause:1.0:loop', b'{"port": 80}', b'[]', b'not json', None])
+def test_gateway_startup_accepts_only_a_listening_port_announcement(tmp_path, monkeypatch, first):
+    profile = dict(session=SESSION, source_commit=COMMIT, wall_seconds=60, port=12345)
+    monkeypatch.setattr(guard, 'preflight', lambda _: (profile, {'api_key_env': 'WATCH_TEST_KEY'}, {}))
+    monkeypatch.setenv('WATCH_TEST_KEY', 'synthetic-not-a-provider-key')
+    (tmp_path/'manifest.json').write_text('{}')
+    launched = []
+    def launch(argv, **kwargs):
+        if '--viewer-port' not in argv:
+            command = [sys.executable, '-c', 'import time; time.sleep(20)']
+        elif first is None:
+            command = [sys.executable, '-c', 'pass']  # The gateway exits at once without announcing a port.
+        else:
+            code = ('import socket,sys,time; socket.socket(fileno=int(sys.argv[1])).send(sys.argv[2].encode()); '
+                    'time.sleep(20)')
+            command = [sys.executable, '-c', code, argv[argv.index('--viewer-port')-1], first.decode()]
+        launched.append(subprocess.Popen(command, **kwargs))
+        return launched[-1]
+    supervised = []
+    monkeypatch.setattr(guard, 'supervise', lambda *args, **kwargs: supervised.append(args) or 'custodian_terminal')
+    result = guard.run_supervised(tmp_path, popen=launch, viewer_port=lambda: 54321)
+    assert result['reason'] == 'launch_or_supervision_error' and not supervised
+    assert result['gateway_url'] is None and 'pause_requested' not in result and result['pause_reason'] is None
+    assert result['cleanup_verified'] and not result['terminal_coverage_verified']
+    assert len(launched) == 4 and all(child.poll() is not None for child in launched)
+    assert json.loads((tmp_path/'watch-terminal.json').read_text()) == result
+
+
+@pytest.mark.parametrize('gateway_reports_dead', [False, True])
+def test_a_gateway_that_closed_its_end_is_supervision_loss_never_a_pause(tmp_path, gateway_reports_dead):
+    stops, peer = socket.socketpair(type=socket.SOCK_DGRAM)
+    peer.close()  # Really closed: on macOS the guard's read then raises ConnectionResetError.
+    live = SimpleNamespace(poll=lambda: None)
+    polls = []
+    def poll():
+        polls.append(1)
+        return 1 if gateway_reports_dead or len(polls) > 1 else None
+    result = dict(started_wall=999, started_monotonic=time.monotonic())
+    with stops:
+        reason = guard.supervise(tmp_path, dict(session=SESSION, source_commit=COMMIT, wall_seconds=60),
+                                 live, SimpleNamespace(poll=poll), live, stops, lambda: False, result)
+    assert reason == 'supervision_lost' and 'pause_reason' not in result and 'pause_requested' not in result
+
+
 def stops_case(message, tmp_path):
     stops, stop_sender = socket.socketpair(type=socket.SOCK_DGRAM)
     live = SimpleNamespace(poll=lambda: None)

@@ -120,7 +120,14 @@ def supervise(package: Path, profile: dict, child: subprocess.Popen, gateway: su
     have_started = False
 
     def receive_stop():
-        fields = stops.recv(128).decode().split(':')
+        try:
+            message = stops.recv(128)
+        except OSError:
+            message = b''
+        if not message:
+            # The gateway closed its end: a dead gateway reads as reset or end of stream, never as a Pause.
+            return 'supervision_lost'
+        fields = message.decode(errors='replace').split(':')
         if fields[0] != 'pause' or len(fields) != 3:
             return 'invalid_pause_message'
         try:
@@ -138,7 +145,10 @@ def supervise(package: Path, profile: dict, child: subprocess.Popen, gateway: su
         if now >= custody_end:
             return 'custody_deadline'
         if select.select([stops], [], [], min(PAUSE_REPLY, custody_end-now))[0]:
-            result['pause_reply_forwarded'] = stops.recv(128) == b'pause-replied'
+            try:
+                result['pause_reply_forwarded'] = stops.recv(128) == b'pause-replied'
+            except OSError:
+                pass  # The gateway died after sending Pause; the stop stands and no reply was forwarded.
         return 'operator_pause'
 
     while True:

@@ -32,7 +32,7 @@ test('the control strip shows the session, status freshness, source details and 
   await start();
   const facts = await page.evaluate(() => {
     const read = id => document.getElementById(id);
-    const shell = read('watch-frame-shell');
+    const shell = read('frame').parentElement;
     return {
       session: read('current-session-full').textContent.trim(),
       freshness: read('control-freshness').textContent,

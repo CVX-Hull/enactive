@@ -26,7 +26,7 @@ SESSION = 'a'*32
 COMMIT = 'b'*40
 PNG = b'synthetic immutable source bytes'
 INDEX = (b'<html><head></head><body><button id="pause">Pause</button>'
-         b'<div class="frame-shell" id="watch-frame-shell"></div></body></html>')
+         b'<div class="frame-shell"></div></body></html>')
 VIEWER_SCRIPT = (
     'import http.server,sys\n'
     'class H(http.server.BaseHTTPRequestHandler):\n'

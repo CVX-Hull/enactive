@@ -1438,11 +1438,18 @@ def test_a_listed_sealed_session_reads_its_v3_terminal_and_no_other_session_does
     directory.mkdir()
     terminal = directory / 'watch-terminal.json'
     # A /3 terminal as it was written: only its reason and Pause reason are read.
-    terminal.write_text(json.dumps(dict(schema='campaign-watch-terminal/3', reason='operator_pause', pause_reason='spend',
-        attention='best-effort', watch_seconds=None, accepted=[])))
+    written = dict(schema='campaign-watch-terminal/3', session=SESSION, reason='operator_pause', pause_reason='spend',
+                   attention='best-effort', watch_seconds=None, accepted=[])
+    terminal.write_text(json.dumps(written))
     facts = sources.read_end_facts(directory, listed)
     assert facts.paused is True and facts.pause_reason == 'spend'
     assert not {'attention', 'watch_seconds', 'accepted'} & set(vars(facts))
+    # A listed session's terminal must be its own: another session's, or none, is refused.
+    for other in ('f' * 32, None):
+        terminal.write_text(json.dumps(dict(written, session=other)))
+        with pytest.raises(EvaluationError, match=r'watch-terminal\.json.*campaign-watch-terminal/3 session.*differs'):
+            sources.read_end_facts(directory, listed)
+    terminal.write_text(json.dumps(written))
     # Not listed, or listed but beside a campaign-run/4 manifest: the same refusal as any other old version.
     for manifest in (dict(listed, session='f' * 32), dict(schema='campaign-run/4', session=SESSION)):
         with pytest.raises(EvaluationError, match=r'watch-terminal\.json.*unsupported version.*campaign-watch-terminal/3'):
@@ -1455,7 +1462,8 @@ def test_a_listed_sealed_session_reads_its_v3_terminal_and_no_other_session_does
     assert sources.read_end_facts(directory, listed).pause_reason == 'loop'
     # Through the pipeline: the listed run evaluates, the same run unlisted is an error.
     run = ended_run(tmp_path / 'sealed', files={'watch-terminal.json': dict(
-        schema='campaign-watch-terminal/3', reason='operator_pause', pause_reason='fault', attention='best-effort')})
+        schema='campaign-watch-terminal/3', session=SESSION, reason='operator_pause', pause_reason='fault',
+        attention='best-effort')})
     path = evaluate(run, FakeBinding(), tmp_path / 'evals', created_wall=1.0)
     assert survival_of(path)['censor_reason'] == 'owner_pause'
     listing.write_text(json.dumps(dict(version=1, sessions={})))

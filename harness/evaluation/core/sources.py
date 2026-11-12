@@ -32,8 +32,8 @@ RECEIPT_SCHEMA = 'campaign-receipt/3'
 WATCH_TERMINAL_SCHEMA = 'campaign-watch-terminal/4'
 WATCH_TERMINAL_ARCHIVE_SCHEMA = 'campaign-watch-terminal/2'
 #: `campaign-watch-terminal/3` is archive-read only: the closed set of sealed `campaign-run/5` sessions in
-#: `data/evaluation/archive-sessions-terminal-3.json` (keyed by session ID). Only its `reason` and `pause_reason`
-#: are read; the fields `/4` no longer has are neither read nor reconstructed.
+#: `data/evaluation/archive-sessions-terminal-3.json` (keyed by session ID). The reader checks its `session` and
+#: reads its `reason` and `pause_reason`, and nothing else.
 WATCH_TERMINAL_SEALED_SCHEMA = 'campaign-watch-terminal/3'
 SEALED_TERMINAL_MANIFEST_SCHEMA = 'campaign-run/5'
 SEALED_TERMINAL_SESSIONS = Path(__file__).resolve().parents[3] / 'data' / 'evaluation' / 'archive-sessions-terminal-3.json'
@@ -365,6 +365,9 @@ def read_end_facts(run_dir: Path, manifest: dict) -> EndFacts:
     actors = [a for a in driver.get('actors', ()) if isinstance(a, dict)]
     ending = driver.get('ending_request') if isinstance(driver.get('ending_request'), dict) else {}
     watch = _optional_json(run_dir / 'watch-terminal.json', terminals) or {}
+    if watch.get('schema') == WATCH_TERMINAL_SEALED_SCHEMA and watch.get('session') != manifest.get('session'):
+        raise EvaluationError(f'{run_dir / "watch-terminal.json"}: {WATCH_TERMINAL_SEALED_SCHEMA} session '
+            f'{watch.get("session")!r} differs from the manifest session {manifest.get("session")!r}')
     # `/2` predates Pause reasons; `/3` and `/4` both record `pause_reason`.
     reason = watch.get('pause_reason') if watch.get('schema') != WATCH_TERMINAL_ARCHIVE_SCHEMA else None
     return EndFacts(receipt.get('outcome') if isinstance(receipt.get('outcome'), str) else None,
