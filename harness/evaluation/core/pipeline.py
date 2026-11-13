@@ -30,7 +30,7 @@ from .metrics import compute_metrics
 from .lineage import DAY_METRIC, ELAPSED_METRIC, MEMORY_METRIC, METRIC as LINEAGE_METRIC
 LINEAGE_METRICS = (LINEAGE_METRIC, ELAPSED_METRIC, DAY_METRIC, MEMORY_METRIC)
 from .records import EvaluationError, MetricRow, ReadingRow, RecordWriter, StepRow, record_path
-from .sources import ARCHIVE_SCHEMA, RunInputs, archive_labels, read_run
+from .sources import MANIFEST_SCHEMA, RunInputs, archive_entry, read_run
 
 
 def _frame_matches(png: Path, sha256: str | None) -> bool:
@@ -153,9 +153,10 @@ def evaluate(run_dir: Path, binding: Binding, root: Path, memory_store: Path | N
     inputs = read_run(run_dir, memory_path=memory_store, digests=state == 'final')
     final = record_path(Path(root), inputs.session, binding.binding_id, binding.binding_version)
     facts = host_facts(inputs.actors, inputs.host)
-    if labels is None and inputs.manifest.get('schema') == ARCHIVE_SCHEMA:  # an archived run's labels are keyed by session
-        listed = archive_labels().get(inputs.session) or {}
-        labels = {key: listed.get(key) for key in LABEL_KEYS}
+    if labels is None and inputs.manifest.get('schema') != MANIFEST_SCHEMA:  # an archived manifest's labels are the index's
+        entry = archive_entry(inputs.manifest)
+        if entry is not None and entry.labels is not None:
+            labels = {key: entry.labels.get(key) for key in LABEL_KEYS}
     if arm is not None and labels is None:
         labels = dict(arm=arm)
     base = dict(core_version=CORE_VERSION, binding_id=binding.binding_id, binding_version=binding.binding_version,

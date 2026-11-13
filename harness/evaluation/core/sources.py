@@ -21,22 +21,12 @@ from .records import EvaluationError, loads
 
 SESSION_SCHEMA = 'computer-session/1'
 OPERATION_SCHEMA = 'computer-operation/1'
+#: The current versions. Any other version of these records is an error naming the file and version, except where
+#: the closed archive index below lists that exact version for that session.
 HOST_SCHEMA = 'player-host/3'
-#: `campaign-run/5` adds the operator labels. `campaign-run/4` is archive-read only: the closed set of development-loop
-#: sessions in `data/evaluation/archive-labels.json` (keyed by session ID), which also holds their operator labels.
-MANIFEST_SCHEMAS = ('campaign-run/4', 'campaign-run/5')
-ARCHIVE_SCHEMA = 'campaign-run/4'
-ARCHIVE_LABELS = Path(__file__).resolve().parents[3] / 'data' / 'evaluation' / 'archive-labels.json'
+MANIFEST_SCHEMA = 'campaign-run/5'
 RECEIPT_SCHEMA = 'campaign-receipt/3'
-#: `campaign-watch-terminal/2` is archive-read only (the archived runs predate Pause reasons).
 WATCH_TERMINAL_SCHEMA = 'campaign-watch-terminal/4'
-WATCH_TERMINAL_ARCHIVE_SCHEMA = 'campaign-watch-terminal/2'
-#: `campaign-watch-terminal/3` is archive-read only: the closed set of sealed `campaign-run/5` sessions in
-#: `data/evaluation/archive-sessions-terminal-3.json` (keyed by session ID). The reader checks its `session` and
-#: reads its `reason` and `pause_reason`, and nothing else.
-WATCH_TERMINAL_SEALED_SCHEMA = 'campaign-watch-terminal/3'
-SEALED_TERMINAL_MANIFEST_SCHEMA = 'campaign-run/5'
-SEALED_TERMINAL_SESSIONS = Path(__file__).resolve().parents[3] / 'data' / 'evaluation' / 'archive-sessions-terminal-3.json'
 MEMORY_SCHEMA = 'player-memory/2'
 CONTEXT_SCHEMA = 'player-handoff-context/1'
 BUSY_TIMEOUT_SECONDS = 1.0
@@ -44,6 +34,69 @@ BUSY_TIMEOUT_SECONDS = 1.0
 MAX_JSON_FILE_BYTES = 16 * 1024 * 1024
 MAX_HOST_LINE_BYTES = 64 * 1024 * 1024
 MAX_HOST_EVENTS = 2_000_000
+
+#: The closed archive index (S-MIGRATION, closed archive reads): the sealed sessions the evaluator reads, keyed by
+#: session ID, each with the record versions its files carry and, for the `campaign-run/4` sessions, the operator
+#: labels their manifests predate. The index is closed; adding a session is an owner decision.
+#:
+#: An entry's presence does not by itself make an old version readable. The reader accepts an old version of a
+#: record only where the index lists that exact version for that session; a version that is current is read as
+#: current, whether or not the session is listed.
+ARCHIVE_INDEX = Path(__file__).resolve().parents[3] / 'data' / 'evaluation' / 'archive-sessions.json'
+ARCHIVE_INDEX_SCHEMA = 'archive-sessions/1'
+#: What `versions` names in an index entry: the manifest, the receipt, the receipt's driver record, the host traces
+#: with their telemetry version, and the run-ending record (`watch-terminal.json`).
+ARCHIVE_VERSION_KEYS = ('manifest', 'receipt', 'driver', 'host', 'host_telemetry', 'run_ending')
+
+
+@dataclass(frozen=True)
+class ArchiveCombination:
+    """One accepted set of record versions. `fields` names, for each record whose version here is not the current
+    one, the fields read from it; `labels` says whether its entries carry the operator labels."""
+
+    versions: dict
+    fields: dict[str, tuple[str, ...]]
+    labels: bool = False
+
+
+#: Every accepted combination: exactly the three the sealed store holds. An index entry with any other is an error
+#: at load. The run-ending fields are applied by `read_end_facts`, which takes nothing else from an old terminal.
+#: An old manifest is returned whole, as a current one is; its fields here are the ones `read_run`,
+#: `facts.run_facts` and the viewer take from a manifest.
+ARCHIVE_COMBINATIONS = (
+    # The 30 development-loop sessions. Their manifests predate the operator labels, which the index holds, and
+    # their terminals predate Pause reasons.
+    ArchiveCombination(
+        dict(manifest='campaign-run/4', receipt='campaign-receipt/3', driver='player-driver/3', host='player-host/3',
+             host_telemetry=3, run_ending='campaign-watch-terminal/2'),
+        dict(manifest=('schema', 'session', 'player_store', 'source_commit', 'effort', 'files', 'accounting', 'limits',
+                       'ending_reserve', 'wall_seconds', 'host_seconds', 'max_hosts', 'max_http_attempts'),
+             run_ending=('reason',)),
+        labels=True),
+    # The 22 sessions whose terminal is one version old. `session` is checked against the manifest's.
+    ArchiveCombination(
+        dict(manifest='campaign-run/5', receipt='campaign-receipt/3', driver='player-driver/3', host='player-host/3',
+             host_telemetry=3, run_ending='campaign-watch-terminal/3'),
+        dict(run_ending=('session', 'reason', 'pause_reason'))),
+    # The two sessions whose records are all current: nothing is read from them as an old version.
+    ArchiveCombination(
+        dict(manifest='campaign-run/5', receipt='campaign-receipt/3', driver='player-driver/3', host='player-host/3',
+             host_telemetry=3, run_ending='campaign-watch-terminal/4'),
+        {}),
+)
+#: The manifest versions `read_manifest` names when it refuses one: the archived ones, then the current one.
+MANIFEST_SCHEMAS = (*sorted({c.versions['manifest'] for c in ARCHIVE_COMBINATIONS} - {MANIFEST_SCHEMA}), MANIFEST_SCHEMA)
+
+
+@dataclass(frozen=True)
+class ArchiveSession:
+    """One entry of the archive index."""
+
+    session: str
+    study: str
+    run: str
+    combination: ArchiveCombination
+    labels: dict | None
 
 
 @dataclass(frozen=True)
@@ -130,28 +183,41 @@ def read_manifest(run_dir: Path) -> dict:
     if not isinstance(value, dict) or value.get('schema') not in MANIFEST_SCHEMAS:
         found = value.get('schema') if isinstance(value, dict) else None
         raise EvaluationError(f'{path}: unsupported manifest version {found!r}; expected one of {", ".join(MANIFEST_SCHEMAS)}')
-    if value['schema'] == ARCHIVE_SCHEMA and value.get('session') not in archive_labels():
-        raise EvaluationError(f'{path}: {ARCHIVE_SCHEMA} is read only for the archived sessions listed in '
-            f'{ARCHIVE_LABELS.name}; session {value.get("session")!r} is not listed')
+    if value['schema'] != MANIFEST_SCHEMA and archive_entry(value) is None:
+        raise EvaluationError(f'{path}: {value["schema"]} is read only for the sealed sessions that '
+            f'{ARCHIVE_INDEX.name} lists with that version; session {value.get("session")!r} is not listed')
     return value
 
 
-def archive_labels() -> dict[str, dict]:
-    """The archived campaign-run/4 sessions: session ID to `{run, arm, start, scenario, lineage, admission}`."""
-    if not ARCHIVE_LABELS.is_file():
-        return {}
-    value = read_json_file(ARCHIVE_LABELS)
-    runs = value.get('runs') if isinstance(value, dict) else None
-    return {key: item for key, item in runs.items() if isinstance(item, dict)} if isinstance(runs, dict) else {}
+def archive_sessions() -> dict[str, ArchiveSession]:
+    """The closed archive index, by session ID. The whole index is checked on every load: an entry whose versions
+    are not one of `ARCHIVE_COMBINATIONS`, or whose shape is not that combination's, is an error naming the index."""
+    path = ARCHIVE_INDEX
+    if not path.is_file():
+        raise EvaluationError(f'{path}: missing archive index')
+    value = read_json_file(path)
+    found = value.get('schema') if isinstance(value, dict) else None
+    if found != ARCHIVE_INDEX_SCHEMA or not isinstance(value.get('sessions'), dict):
+        raise EvaluationError(f'{path}: unsupported archive index version {found!r}; expected {ARCHIVE_INDEX_SCHEMA}')
+    sessions = {}
+    for session, entry in value['sessions'].items():
+        versions = entry.get('versions') if isinstance(entry, dict) else None
+        combination = next((c for c in ARCHIVE_COMBINATIONS if c.versions == versions), None)
+        if combination is None:
+            raise EvaluationError(f'{path}: session {session!r} records a version combination that is not accepted: {versions!r}')
+        expected = {'study', 'run', 'versions'} | ({'labels'} if combination.labels else set())
+        if (set(entry) != expected or not isinstance(entry['study'], str) or not isinstance(entry['run'], str)
+                or not isinstance(entry.get('labels', {}), dict)):
+            raise EvaluationError(f'{path}: session {session!r} must hold exactly {", ".join(sorted(expected))}')
+        sessions[session] = ArchiveSession(session, entry['study'], entry['run'], combination, entry.get('labels'))
+    return sessions
 
 
-def sealed_terminal_sessions() -> dict[str, dict]:
-    """The sealed sessions whose `campaign-watch-terminal/3` terminal is read: session ID to `{study, run}`."""
-    if not SEALED_TERMINAL_SESSIONS.is_file():
-        return {}
-    value = read_json_file(SEALED_TERMINAL_SESSIONS)
-    sessions = value.get('sessions') if isinstance(value, dict) else None
-    return {key: item for key, item in sessions.items() if isinstance(item, dict)} if isinstance(sessions, dict) else {}
+def archive_entry(manifest: dict) -> ArchiveSession | None:
+    """The index entry of this manifest's session, when the index lists exactly this manifest version for it."""
+    session = manifest.get('session')
+    entry = archive_sessions().get(session) if isinstance(session, str) else None
+    return entry if entry is not None and entry.combination.versions['manifest'] == manifest.get('schema') else None
 
 
 def _connect_readonly(path: Path) -> sqlite3.Connection:
@@ -350,26 +416,26 @@ def _optional_json(path: Path, schemas: tuple[str, ...]) -> dict | None:
 
 
 def read_end_facts(run_dir: Path, manifest: dict) -> EndFacts:
-    """`receipt.json` (campaign-receipt/3) and `watch-terminal.json` (campaign-watch-terminal/4; /2 only for
-    an archived session: a `campaign-run/4` manifest listed in the archive labels; /3 only for a sealed
-    `campaign-run/5` session listed in the sealed terminal sessions), when the run has ended.
-    The owner Pause is the terminal's `reason == 'operator_pause'`."""
+    """`receipt.json` (campaign-receipt/3) and `watch-terminal.json` (campaign-watch-terminal/4), when the run has
+    ended. An older terminal is read only for a session the archive index lists with this manifest's version and
+    that terminal version, and then only the fields its combination names: a `session`, when named, must be the
+    manifest's. The owner Pause is the terminal's `reason == 'operator_pause'`."""
     terminals: tuple[str, ...] = (WATCH_TERMINAL_SCHEMA,)
-    if manifest.get('schema') == ARCHIVE_SCHEMA and manifest.get('session') in archive_labels():
-        terminals += (WATCH_TERMINAL_ARCHIVE_SCHEMA,)
-    elif (manifest.get('schema') == SEALED_TERMINAL_MANIFEST_SCHEMA
-            and manifest.get('session') in sealed_terminal_sessions()):
-        terminals += (WATCH_TERMINAL_SEALED_SCHEMA,)
+    entry = archive_entry(manifest)
+    if entry is not None and entry.combination.versions['run_ending'] != WATCH_TERMINAL_SCHEMA:
+        terminals += (entry.combination.versions['run_ending'],)
     receipt = _optional_json(run_dir / 'receipt.json', (RECEIPT_SCHEMA,)) or {}
     driver = receipt.get('driver') if isinstance(receipt.get('driver'), dict) else {}
     actors = [a for a in driver.get('actors', ()) if isinstance(a, dict)]
     ending = driver.get('ending_request') if isinstance(driver.get('ending_request'), dict) else {}
     watch = _optional_json(run_dir / 'watch-terminal.json', terminals) or {}
-    if watch.get('schema') == WATCH_TERMINAL_SEALED_SCHEMA and watch.get('session') != manifest.get('session'):
-        raise EvaluationError(f'{run_dir / "watch-terminal.json"}: {WATCH_TERMINAL_SEALED_SCHEMA} session '
-            f'{watch.get("session")!r} differs from the manifest session {manifest.get("session")!r}')
-    # `/2` predates Pause reasons; `/3` and `/4` both record `pause_reason`.
-    reason = watch.get('pause_reason') if watch.get('schema') != WATCH_TERMINAL_ARCHIVE_SCHEMA else None
+    if watch and watch['schema'] != WATCH_TERMINAL_SCHEMA:
+        fields = entry.combination.fields['run_ending']
+        if 'session' in fields and watch.get('session') != manifest.get('session'):
+            raise EvaluationError(f'{run_dir / "watch-terminal.json"}: {watch["schema"]} session '
+                f'{watch.get("session")!r} differs from the manifest session {manifest.get("session")!r}')
+        watch = {key: watch.get(key) for key in fields}
+    reason = watch.get('pause_reason')
     return EndFacts(receipt.get('outcome') if isinstance(receipt.get('outcome'), str) else None,
         ending.get('trigger') if isinstance(ending.get('trigger'), str) else None,
         tuple(a['settled'] for a in actors if isinstance(a.get('settled'), dict)),

@@ -337,24 +337,37 @@ percentile, per status or per handoff. The primary key is (`name`, `key`).
 - **Archived runs.** These readers are the closed-archive case that
   [S-MIGRATION](../standards/migration.md) allows; the `requests.manifest` column applies
   its additive-event case to `context-manifest`.
-  - The evaluator also reads archived `campaign-run/4` manifests, as a closed archive
-    reader. This reads historical evidence; it is not an admission, and admission still
-    requires `/5`.
-  - `data/evaluation/archive-labels.json` is keyed by **session ID** (the run directory
-    name is a field). A `/4` manifest is accepted only for a session listed there, and
-    any other `/4` manifest is an error naming the file and version. The same file holds
-    the operator labels.
-  - `receipt.json` is read only as `campaign-receipt/3`. `watch-terminal.json` is read as
-    `campaign-watch-terminal/4`, or the archived `campaign-watch-terminal/2` only beside a
-    listed `campaign-run/4` manifest (archive read only; it has no `pause_reason`). Any
-    other version is an error naming the file and version.
-  - `data/evaluation/archive-sessions-terminal-3.json` lists, by **session ID**, the 22
-    sealed `campaign-run/5` sessions (with their evidence study and run directory) whose
-    terminal is `campaign-watch-terminal/3`. A `campaign-watch-terminal/3` terminal is
-    read only for a session listed there, beside its `campaign-run/5` manifest and
-    naming that same session. The reader takes its `reason` and `pause_reason` and
-    nothing else. Such a terminal for any other session is an error naming the file and
-    version.
+  - **The index.** `data/evaluation/archive-sessions.json` (`archive-sessions/1`) is the
+    one closed index of the sealed sessions the evaluator reads, keyed by **session ID**.
+    Each entry gives the sealed evidence `study`, the `run` directory name and `versions`:
+    the versions that session's files carry for its manifest, its receipt, the receipt's
+    driver record, its host traces with their telemetry version, and its run-ending record
+    (`watch-terminal.json`). The entries of `campaign-run/4` sessions also hold the
+    operator `labels`, which those manifests predate.
+  - **What an entry allows.** An entry does not by itself make an old version readable.
+    A record in its current version is read as current for any session, listed or not. A
+    record in an older version is read only for a session the index lists with exactly
+    that version, beside a manifest in the version the index lists for that session. Any
+    other old version is an error naming the file and version. This reads historical
+    evidence; it is not an admission, and admission still requires `campaign-run/5`.
+  - **The three combinations.** The index holds exactly three combinations of versions.
+    All three carry `campaign-receipt/3`, `player-driver/3` and `player-host/3` with
+    telemetry version 3, which are current. For each record that is not current, the
+    fields used are fixed:
+    - 30 sessions with a `campaign-run/4` manifest and a `campaign-watch-terminal/2`
+      run-ending record. From the manifest: `schema`, `session`, `player_store`,
+      `source_commit`, `effort`, `files`, `accounting`, `limits`, `ending_reserve`,
+      `wall_seconds`, `host_seconds`, `max_hosts` and `max_http_attempts`; the operator
+      labels come from the index. From the run-ending record: `reason` only (it has no
+      `pause_reason`).
+    - 22 sessions with a `campaign-run/5` manifest and a `campaign-watch-terminal/3`
+      run-ending record. From the run-ending record: `reason` and `pause_reason`, and
+      its `session`, which must be the manifest's.
+    - 2 sessions with a `campaign-run/5` manifest and a `campaign-watch-terminal/4`
+      run-ending record. Every record is current, so nothing is read as an old version.
+  - **Refusals.** `receipt.json` is read only as `campaign-receipt/3`. An index entry
+    with any other combination of versions, an index in another version and a missing
+    index are each an error naming the index, and nothing is read through it.
 - **Metadata key.** `metadata.last_seq` names the last operation read.
 - **Store replacement.** A `live` store is replaced by any later `final` pass. A `final`
   store needs an explicit replace and is never replaced or continued by a `live` pass.
@@ -418,8 +431,8 @@ Development-run quantities live as data in git, and pages render them or cite th
 | `run-metrics.jsonl` | One [`run-metrics/1`](../../schemas/run-metrics.schema.json) row per session and evaluator core and binding version: the headline metric values, copied verbatim from the evaluation record | `tools/evaluate.py evaluate-table RECORDS --snapshot data/evaluation/run-metrics.jsonl` |
 
 - **Origin.** `record` reads `campaign-run/5` packages only; there is no reader for older
-  manifests. Rows whose packages are `campaign-run/4` take arm and start from
-  `archive-labels.json`.
+  manifests. Rows whose packages are `campaign-run/4` take arm and start from the labels
+  in the archive index, `archive-sessions.json`.
 - **Spend.** `spend_usd` is an upper bound for the admission rule, not an invoice. It is
   `provider_usd` plus `unpriced_attempts` × `unpriced_attempt_usd`. A row with an unknown split
   holds null in all three fields and `spend_usd` at the receipt's configured estimate verbatim
