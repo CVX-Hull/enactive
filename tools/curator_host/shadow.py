@@ -479,6 +479,9 @@ def run_shadow(args: argparse.Namespace, key: str) -> dict:
         knowledge = Path(args.knowledge_root).resolve()
         if runtime/'knowledge' not in knowledge.parents or not (knowledge/GAME/'.git').is_dir():
             raise ShadowError(f'--knowledge-root must be an existing repository root inside {runtime/"knowledge"}')
+        if (knowledge.parent.name, knowledge.name) != (args.arm, args.lineage):
+            raise ShadowError(f'--knowledge-root {knowledge} belongs to arm {knowledge.parent.name!r}, lineage '
+                              f'{knowledge.name!r}; this run is arm {args.arm!r}, lineage {args.lineage!r}')
     elif knowledge.exists():
         raise ShadowError(f'{knowledge} exists; every run starts a fresh knowledge repository')
     out.mkdir(parents=True)

@@ -561,6 +561,17 @@ def test_a_double_cap_rerun_applies_twice_the_cap_on_the_repository_it_continues
     assert bad == 2
 
 
+def test_a_continued_repository_must_belong_to_the_arm_and_lineage_of_the_run(tmp_path, monkeypatch, capsys):
+    one = [dict(session='sd1a1', actor='001', first=1, last=4)]
+    runtime = tmp_path/'runtime'
+    for arm, lineage in (('opus', '397'), ('terra', '372')):  # a real repository, of the wrong arm or lineage
+        root = runtime/'knowledge'/'shadow-454'/'earlier'/arm/lineage
+        Repository(root, 'cdda').ensure()
+        code, out, _ = run_windows(tmp_path, 'http://127.0.0.1:9', one, monkeypatch, '--knowledge-root', str(root),
+                                   out_name=f'wrong-{arm}-{lineage}')
+        assert code == 2 and f'arm {arm!r}, lineage {lineage!r}' in capsys.readouterr().err and not out.exists()
+
+
 @native
 def test_an_upstream_429_retry_is_counted_and_recovers_through_the_real_proxy_and_sandbox(tmp_path, world):
     repo, trace = world

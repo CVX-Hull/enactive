@@ -199,21 +199,6 @@ def malformed_cases():
         'extra change field': [{**good, 'more': 1}],
         'unknown op': [{'op': 'delete_fact', 'id': 'f1'}],
         'wrong fact schema': [{'op': 'add_fact', 'fact': {**fact(), 'schema': 'curator-fact/3'}}],
-        'the previous fact contract': [{'op': 'add_fact', 'fact': {**fact(), 'schema': 'curator-fact/1'}}],
-        'no subject': [{'op': 'add_fact', 'fact': {k: v for k, v in fact().items() if k != 'subject'}}],
-        'blank subject': [{'op': 'add_fact', 'fact': fact(subject='  ')}],
-        'subject not text': [{'op': 'add_fact', 'fact': fact(subject=['a thing'])}],
-        'no kind': [{'op': 'add_fact', 'fact': {k: v for k, v in fact().items() if k != 'kind'}}],
-        'unknown kind': [{'op': 'add_fact', 'fact': fact(kind='rumour')}],
-        'kind not text': [{'op': 'add_fact', 'fact': fact(kind=['hazard'])}],
-        'no place': [{'op': 'add_fact', 'fact': {k: v for k, v in fact().items() if k != 'place'}}],
-        'place not text': [{'op': 'add_fact', 'fact': fact(place=3)}],
-        'game time not text': [{'op': 'add_fact', 'fact': fact(game_time=None)}],
-        'goods without a place': [{'op': 'add_fact', 'fact': fact(kind='place_with_goods', game_time='day 1')}],
-        'goods without a time': [{'op': 'add_fact', 'fact': fact(kind='place_with_goods', place='north of the start')}],
-        'hazard without a place': [{'op': 'add_fact', 'fact': fact(kind='hazard', game_time='day 1')}],
-        'hazard with a blank time': [{'op': 'add_fact', 'fact': fact(kind='hazard', place='x', game_time=' ')}],
-        'a coverage stamp in a fact': [{'op': 'add_fact', 'fact': fact(coverage=COVERAGE)}],
         'empty citations': [{'op': 'add_fact', 'fact': fact(citations=())}],
         'scope not object': [{'op': 'add_fact', 'fact': {**fact(), 'scope': 'cdda'}}],
         'extra type field': [{'op': 'add_type', 'type': {**kind(), 'x': 1}}],
@@ -526,6 +511,79 @@ def test_the_draft_digest_separates_names_from_contents(tmp_path):
     (two / 'a').write_bytes(b'1')
     (two / 'b').write_bytes(b'2')
     assert containers._digest(one) != containers._digest(two)
+
+
+def without(item: dict, key: str) -> dict:
+    return {k: v for k, v in item.items() if k != key}
+
+
+FACT_RULES = {
+    'no subject': (without(fact(), 'subject'), "missing field 'subject'"),
+    'blank subject': (fact(subject='  '), 'subject must be a non-empty string'),
+    'empty subject': (fact(subject=''), 'subject must be a non-empty string'),
+    'subject not text': (fact(subject=['a thing']), 'subject must be a non-empty string'),
+    'no kind': (without(fact(), 'kind'), "missing field 'kind'"),
+    'unknown kind': (fact(kind='rumour'), 'kind must be one of place_with_goods, hazard, open_commitment, how_it_works'),
+    'kind not text': (fact(kind=['hazard']), 'kind must be one of'),
+    'the previous fact contract': ({**fact(), 'schema': 'curator-fact/1'}, "schema must be 'curator-fact/2'"),
+    'no place': (without(fact(), 'place'), "missing field 'place'"),
+    'place not text': (fact(place=3), 'place must be a string'),
+    'no game time': (without(fact(), 'game_time'), "missing field 'game_time'"),
+    'game time not text': (fact(game_time=None), 'game_time must be a string'),
+    'goods with no place': (fact(kind='place_with_goods', game_time='day 1'),
+                            "place must not be empty for kind 'place_with_goods'"),
+    'goods with a blank place': (fact(kind='place_with_goods', place='  ', game_time='day 1'),
+                                 "place must not be empty for kind 'place_with_goods'"),
+    'goods with no time': (fact(kind='place_with_goods', place='north of the start'),
+                           "game_time must not be empty for kind 'place_with_goods'"),
+    'hazard with no place': (fact(kind='hazard', game_time='day 1'), "place must not be empty for kind 'hazard'"),
+    'hazard with a blank time': (fact(kind='hazard', place='x', game_time=' '),
+                                 "game_time must not be empty for kind 'hazard'"),
+    'a coverage key in a fact': (fact(coverage=COVERAGE), "unexpected field 'coverage'"),
+}
+
+
+@pytest.mark.parametrize('name', list(FACT_RULES))
+def test_each_fact_rule_rejects_with_its_own_diagnostic_at_the_well_formed_stage(tmp_path, name):
+    repo = make_repo(tmp_path)
+    before = snapshot(repo)
+    bad, expected = FACT_RULES[name]
+    # The type is added in the same submission, so nothing but the rule under test can reject it.
+    verdict = run(repo, submission(tmp_path, [{'op': 'add_type', 'type': kind()}, {'op': 'add_fact', 'fact': bad}]))
+    assert not verdict['accepted']
+    assert len(verdict['diagnostics']) == 1 and expected in verdict['diagnostics'][0], verdict['diagnostics']
+    assert 'unknown type' not in ' '.join(verdict['diagnostics'])
+    assert snapshot(repo) == before
+
+
+@pytest.mark.parametrize('fact_kind', ['how_it_works', 'open_commitment'])
+@pytest.mark.parametrize('place, game_time', [('', ''), ('  ', ' '), ('the north gate', 'day 3 14:00')])
+def test_blank_place_and_game_time_are_accepted_for_the_two_unplaced_kinds(tmp_path, fact_kind, place, game_time):
+    repo = make_repo(tmp_path)
+    item = fact(kind=fact_kind, place=place, game_time=game_time)
+    verdict = run(repo, submission(tmp_path, [{'op': 'add_type', 'type': kind()}, {'op': 'add_fact', 'fact': item}]))
+    assert verdict['accepted'], verdict['diagnostics']
+
+
+def old_contract_repository(tmp_path):
+    repo = make_repo(tmp_path)
+    old = {'schema': 'curator-fact/1', 'id': 'old', 'type': 'mechanic', 'statement': 's', 'scope': {'game': 'cdda'},
+           'citations': ['frame-1'], 'published_in': 'v1', 'session': 'x'}
+    repo.commit({'facts.jsonl': (json.dumps(old) + '\n').encode(),
+                 'ontology/types.json': (json.dumps([kind()]) + '\n').encode()}, 'Publish v1')
+    return repo
+
+
+@pytest.mark.parametrize('change', [
+    lambda: {'op': 'supersede_fact', 'id': 'old', 'fact': fact('new')},
+    lambda: {'op': 'add_fact', 'fact': fact('new')}])
+def test_the_gate_does_not_publish_into_a_repository_holding_facts_of_another_contract(tmp_path, change):
+    repo = old_contract_repository(tmp_path)
+    before = snapshot(repo)
+    verdict = run(repo, submission(tmp_path, [change()], base_version='v1'))
+    assert not verdict['accepted'] and len(verdict['diagnostics']) == 1
+    assert "published facts ['old'] are not curator-fact/2" in verdict['diagnostics'][0]
+    assert snapshot(repo) == before and repo.published() == 'v1'
 
 
 def test_the_gate_accepts_each_fact_kind_with_its_place_rules(tmp_path):

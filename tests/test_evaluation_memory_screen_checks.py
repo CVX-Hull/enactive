@@ -226,6 +226,47 @@ def test_brief_gate_renders_text_and_json_and_refuses_bad_patterns(tmp_path, cap
             brief_gate(repository, patterns(tmp_path, *bad))
 
 
+def test_a_fact_that_matches_two_labels_is_shared_and_counts_for_neither(tmp_path):
+    repository = places(tmp_path / 'k',
+        place_fact('wide', 'water tank and rod', 'on the roof'),
+        place_fact('tank-only', 'water tank', 'on the roof'))
+    path = patterns(tmp_path, dict(label='tank', subject='tank', place='roof'), dict(label='rod', subject='rod', place='roof'))
+    report = brief_gate(repository, path)
+    tank, rod = report['labels']
+    assert [m['id'] for m in tank['matches']] == ['tank-only'] and [m['id'] for m in tank['shared']] == ['wide']
+    assert rod['matches'] == [] and [m['id'] for m in rod['shared']] == ['wide']
+    assert report['shared'] == [dict(id='wide', labels=['tank', 'rod'])]
+    assert (report['labels_with_a_match'], report['labels_total']) == (1, 2)  # the rod passes on nothing but the shared fact
+
+
+@pytest.mark.parametrize('field', ['subject', 'place'])
+@pytest.mark.parametrize('empty', ['', '.*', 'x*', '(a|)', '^', r'\b?'])
+def test_a_pattern_that_matches_the_empty_string_is_refused(tmp_path, field, empty):
+    repository = places(tmp_path / 'k', place_fact('a', 'tank', 'roof'))
+    row = dict(label='x', subject='tank', place='roof') | {field: empty}
+    with pytest.raises(StoreError):
+        brief_gate(repository, patterns(tmp_path, row))
+
+
+def test_brief_gate_reads_a_named_version_and_prints_the_version_it_read(tmp_path, capsys):
+    repository = Repository(tmp_path / 'k', 'cdda')
+    repository.ensure()
+    repository.commit({'facts.jsonl': lines(place_fact('first', 'tank', 'roof'))}, 'Publish v1')
+    repository.commit({'facts.jsonl': lines(place_fact('first', 'tank', 'roof'), place_fact('second', 'tank', 'roof 2'))},
+        'Publish v2')
+    path = patterns(tmp_path, dict(label='tank', subject='tank', place='roof'))
+    assert [m['id'] for m in brief_gate(repository.path, path)['labels'][0]['matches']] == ['first', 'second']
+    older = brief_gate(repository.path, path, 'v1')
+    assert older['version'] == 'v1' and [m['id'] for m in older['labels'][0]['matches']] == ['first']
+    assert brief_gate(repository.path, path, 'v0')['labels_with_a_match'] == 0
+    with pytest.raises(StoreError, match='v9'):
+        brief_gate(repository.path, path, 'v9')
+    assert main(['brief-gate', str(repository.path), '--patterns', str(path), '--version', 'v1']) == 0
+    assert 'version read: v1' in capsys.readouterr().out
+    assert main(['brief-gate', str(repository.path), '--patterns', str(path)]) == 0
+    assert 'version read: v2' in capsys.readouterr().out
+
+
 def test_brief_gate_reads_a_store_of_the_old_contract_without_matching_and_changes_nothing(tmp_path):
     repository = knowledge(tmp_path / 'k', 'tank-frame')  # curator-fact/1 facts, as in the sealed stores
     before = sorted(p.relative_to(repository).as_posix() for p in repository.rglob('*') if p.is_file())

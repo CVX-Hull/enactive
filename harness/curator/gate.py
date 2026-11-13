@@ -264,7 +264,12 @@ def gate(repo: Repository, submission_dir: Path, *, session_id: str,
     try:
         if data is not None:
             current = repo.published()
-            if data['base_version'] != current:
+            foreign = sorted(str(item.get('id')) for item in repo.facts() if item.get('schema') != FACT)
+            if foreign:
+                # One current contract: a store that holds facts of another contract is not published into.
+                diagnostics.append(f'publication refused: published facts {foreign[:5]} are not {FACT}; '
+                                   'start a new repository')
+            elif data['base_version'] != current:
                 diagnostics.append(f'stale base: submission is based on {data["base_version"]}'
                                    f' but the published version is {current}')
             else:
