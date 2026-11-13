@@ -186,7 +186,8 @@ def copy_frame(frame: Frame, directory: Path, name: str) -> dict:
     target = directory / 'frames' / f'{name}.png'
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(frame.path, target)
-    return dict(frame=name, file=f'frames/{name}.png', sha256=file_sha256(target), inputs_before=list(frame.inputs))
+    return dict(frame=name, file=f'frames/{name}.png', sha256=file_sha256(target),
+        inputs_before=[describe([batch]) for batch in frame.inputs])
 
 
 def seal_packet(directory: Path, manifest: dict, instructions: str) -> tuple[str, int]:
@@ -235,7 +236,8 @@ another session and nothing you may know about this game session from elsewhere.
 
 - `manifest.json` lists this packet's frames in the order they were recorded. Each entry has the frame's ID
   (`frame`), its image (`file`) and `inputs_before`: the inputs sent to the game between this packet's previous
-  frame and this one, oldest first. Each inner list is one batch of inputs.
+  frame and this one, oldest first. Each entry is one batch of inputs: keys by name, typed text in quotes and
+  `×N` for a repeat.
 - `frames/<frame ID>.png` is the screen as it was captured.
 
 The frames are every third changed screen of one recorded stretch of play, so steps between them are missing.
@@ -398,7 +400,8 @@ Use only the files in this directory: no other file and nothing you may know abo
 - `manifest.json` lists the frames of one stretch of recorded play, in order. Each entry has the frame's ID
   (`frame`), its image (`file`), `decision` (which of the stretch's decisions returned it, counted from 1) and
   `inputs_before`: the inputs the player sent between this packet's previous frame and this one, oldest first.
-  `decisions` is how many decisions the stretch has.
+  Each entry is one batch of inputs: keys by name, typed text in quotes and `×N` for a repeat. `decisions` is how
+  many decisions the stretch has.
 - `frames/<frame ID>.png` is the screen as it was captured. The frames are every third changed screen, so steps
   between them are missing.
 - `items.json` lists the known items: places with goods that the player's earlier play had already shown, each
@@ -832,7 +835,7 @@ class LabelStore:
             for row in read_json(directory / 'manifest.json')['frames']:
                 self.files[f"/frame/{index}/{row['frame']}.png"] = directory / row['file']
                 frames.append(dict(name=row['frame'], image=f"/frame/{index}/{row['frame']}.png",
-                    decision=row['decision'], inputs=describe(row['inputs_before'])))
+                    decision=row['decision'], inputs=' · '.join(row['inputs_before'])))
             with Image.open(self.files[f'/item/{index}.png']) as shown:  # the page reserves each image's space with it
                 aspect = f'{shown.width} / {shown.height}'
             self.pairs.append(dict(index=index, start=pair['start'], item=pair['item'], decisions=packet['decisions'],
@@ -1180,7 +1183,9 @@ def render_simulation(report: dict) -> str:
     lines.append(f"smallest starts per arm that detect a halving with probability at least {search['target']}, for "
         f"{search['touched']:g} items touched, missed share {search['missed']:g}, judge error {search['wrong']:g}; scanned "
         f"{search['minimum']} to {search['scanned'][-1]['starts']} of a ceiling of {search['ceiling']}; "
-        f"${search['price_per_start_usd']:.2f} a start, curator sessions not included:")
+        f"${search['price_per_start_usd']:.2f} a start, curator sessions not included; a rate near the target has a "
+        f"standard error of about {math.sqrt(search['target'] * (1 - search['target']) / report['sims']):.3f}, and the "
+        "first size to reach it can be a start or two early (raise --sims to tighten):")
     for level, title in (('at_0_05', 'at 0.05'), ('at_0_025', "at Holm's first step, 0.025")):
         found = search['smallest'][level]
         if found is None:

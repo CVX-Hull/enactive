@@ -145,7 +145,7 @@ def test_annotate_packets_take_every_third_changed_frame_with_the_inputs_before_
     kept = manifest['frames']
     assert kept[0]['frame'] == f'{A}-1' and len(kept[0]['inputs_before']) == 1
     # every input since the packet's previous frame is carried, also those of frames left out
-    assert [action['key'] for batch in kept[1]['inputs_before'] for action in batch] == ['k2', 'k3', 'k4', 'k6']
+    assert kept[1]['inputs_before'] == ['k2', 'k3', 'k4', 'k6']  # one entry per batch of inputs
     assert (first / 'frames' / f'{A}-1.png').read_bytes() == png(1)
     everything = b''.join(p.read_bytes() for p in (run / 'annotate').rglob('*') if p.is_file())
     assert b'SECRET' not in everything  # no player record and no final report
