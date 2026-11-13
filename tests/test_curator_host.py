@@ -11,6 +11,7 @@ from decimal import Decimal
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -322,7 +323,7 @@ def test_the_hosts_node_unit_tests_pass():
 
 def test_the_prompt_states_the_gate_and_carries_no_game_knowledge():
     prompt = (shadow.HOST_DIR/'prompt.md').read_text()
-    for needed in ('curator-submission/1', 'curator-fact/1', 'curator-type/1', 'add_fact', 'supersede_fact', 'add_type', 'base_version',
+    for needed in ('curator-submission/1', 'curator-fact/2', 'curator-type/1', 'add_fact', 'supersede_fact', 'add_type', 'base_version',
                    'from_drafts', 'submissions/', 'drafts/', 'scratch/', 'view_frame', 'run_workbench', 'finish', '256 KiB', '200'):
         assert needed in prompt, needed
     # P-GENERALITY and the blinding of #449 probes: nothing about the game, its items or the recorded runs.
@@ -330,6 +331,15 @@ def test_the_prompt_states_the_gate_and_carries_no_game_knowledge():
     for forbidden in ('cdda', 'cataclysm', 'dark days', 'zombie', 'survivor', 'evacuee', 'scenario', 'seven-day', '397', '372', '382',
                       'terra', 'opus', 'probe set', 'held-out', 'sd1a', 'lh1'):
         assert forbidden not in lowered, forbidden
+    # The brief gate is honest only if the prompt names none of the four facts it looks for (#460).
+    assert not re.search(r'\b(tanks?|rations?|rods?|batter(y|ies)|roofs?)\b', lowered)
+
+
+def test_the_prompt_defines_the_four_fact_kinds_and_the_new_fields():
+    prompt = (shadow.HOST_DIR/'prompt.md').read_text()
+    for needed in ('place_with_goods', 'hazard', 'open_commitment', 'how_it_works', '`subject`', '`place`', '`game_time`',
+                   'one fact per item', 'coverage.json'):
+        assert needed in prompt, needed
 
 
 def test_the_frozen_prices_cover_exactly_the_two_arms():

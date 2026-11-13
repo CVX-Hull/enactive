@@ -21,6 +21,7 @@ from __future__ import annotations
 import argparse
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -39,6 +40,7 @@ from harness.curator import sandbox  # noqa: E402
 from harness.curator.knowledge import Repository  # noqa: E402
 from harness.curator.proxy import ModelProxy, Price  # noqa: E402
 from harness.curator.session import SessionConfig, run_session  # noqa: E402
+from harness.curator.window import FULL, Window, WindowError  # noqa: E402
 from tools.campaign_supervision import credential  # noqa: E402
 from tools.curator_host.providers import OPENROUTER  # noqa: E402
 
@@ -144,6 +146,54 @@ def select(lineage: str, sessions: list[str] | None) -> tuple[dict, list[str]]:
             raise ShadowError('a session can be named once')
         return spec, [name for name in spec['sessions'] if name in sessions]
     return spec, list(spec['sessions'])
+
+
+def read_windows(args: argparse.Namespace) -> list[Window] | None:
+    """The windows to run, in the order given, or None for whole admissions. Two ways to write the same list:
+    a JSON file of `{session, actor, first, last[, game_time]}` rows, or a plan of equal windows of one actor."""
+    if args.windows_file and args.window_plan:
+        raise ShadowError('--windows-file and --window-plan are two ways to write the same list; give one')
+    if not (args.windows_file or args.window_plan):
+        return None
+    if args.sessions:
+        raise ShadowError('windows and --sessions are two ways to choose what to run; give one')
+    try:
+        if args.windows_file:
+            rows = json.loads(Path(args.windows_file).read_text())
+            if not isinstance(rows, list) or not rows:
+                raise ShadowError(f'{args.windows_file}: a non-empty JSON list of windows')
+            return [Window.read(row) for row in rows]
+        session, actor, start, size, count = args.window_plan
+        start, size, count = int(start), int(size), int(count)
+        if min(start, size, count) < 1:
+            raise ShadowError('--window-plan START, SIZE and COUNT are positive integers')
+        return [Window(session, actor, start + number * size, start + (number + 1) * size - 1)
+                for number in range(count)]
+    except (ValueError, WindowError) as error:
+        if isinstance(error, ShadowError):
+            raise
+        raise ShadowError(f'windows: {error}') from error
+
+
+def windows_digest(windows: list[Window]) -> str:
+    """The frozen identity of a list of windows: sha256 of its canonical JSON."""
+    rows = json.dumps([w.record() for w in windows], sort_keys=True, separators=(',', ':'))
+    return hashlib.sha256(rows.encode()).hexdigest()
+
+
+def select_units(lineage: str, sessions: list[str] | None, windows: list[Window] | None) -> tuple[dict, list[tuple[str, str, Window]]]:
+    """What to run, in order, as (label, trace session, window). Whole admissions are units with the full window,
+    so both go through one path. The same refusals apply to the session each window names."""
+    if windows is None:
+        spec, names = select(lineage, sessions)
+        return spec, [(name, name, FULL) for name in names]
+    if any(window.full for window in windows):
+        raise ShadowError('a window names a session and an actor')
+    spec, _ = select(lineage, sorted({window.session for window in windows}))
+    units = [(f'{w.session}-{w.actor}-{w.first}-{w.last}', w.session, w) for w in windows]
+    if len({label for label, _, _ in units}) != len(units):
+        raise ShadowError('a window can be listed once')
+    return spec, units
 
 
 def host_configuration(arm: Arm, prices: dict[str, Price], *, effort: str, max_requests: int, max_output_tokens: int,
@@ -278,7 +328,9 @@ def telemetry(rows: list[dict]) -> dict:
 def _ledger(path: Path) -> dict:
     rows = _lines(path)
     refusals = [r for r in rows if r.get('refused')]
-    return dict(entries=len(rows), refusals=len(refusals), refusal_reasons=sorted({r['refused'] for r in refusals}),
+    money = lambda key: [Decimal(str(r[key])) for r in rows if r.get(key) is not None]  # noqa: E731
+    return dict(entries=len(rows), charged_usd=str(sum(money('charged'), Decimal(0))),
+                max_reserved_usd=str(max(money('reserved'), default=Decimal(0))), refusals=len(refusals), refusal_reasons=sorted({r['refused'] for r in refusals}),
                 forwarded=sum(1 for r in rows if not r.get('refused')),
                 cap_refused=any(r.get('refused') == 'spend cap reached' for r in refusals),
                 usage_missing=sum(1 for r in rows if r.get('usage_missing')))
@@ -292,7 +344,8 @@ def _write(path: Path, value: dict) -> Path:
 
 def run_one(*, arm_name: str, lineage: str, name: str, trace: Path, repo: Repository, memory: Path | None,
             memory_note: str, host: dict, config_path: Path, config_dir: Path, model_config: dict, prices: dict[str, Price],
-            key: str, upstream: str, cap: Decimal, out: Path, wall_seconds: int, max_output_tokens: int) -> dict:
+            key: str, upstream: str, cap: Decimal, out: Path, wall_seconds: int, max_output_tokens: int,
+            window: Window = FULL) -> dict:
     """One curator session through its own proxy. Returns the `curator-shadow/1` session summary."""
     session_dir = out/lineage/name
     session_dir.mkdir(parents=True)
@@ -305,7 +358,8 @@ def run_one(*, arm_name: str, lineage: str, name: str, trace: Path, repo: Reposi
     budget = float(cap * HOST_BUDGET_SHARE)
     session_config = _write(config_dir/f'{name}.json', dict(model_config, budget_usd=budget))
     summary = dict(schema=SCHEMA, kind='session', arm=arm_name, model=arm.model, effort=model_config['effort'],
-                   lineage=lineage, trace_session=name, memory=dict(passed=memory is not None, note=memory_note),
+                   lineage=lineage, trace_session=name, window=window.record() or None,
+                   memory=dict(passed=memory is not None, note=memory_note),
                    cap_usd=str(cap), host_budget_usd=budget, published_before=repo.published(),
                    started_wall=time.time())
     started = time.monotonic()
@@ -318,7 +372,7 @@ def run_one(*, arm_name: str, lineage: str, name: str, trace: Path, repo: Reposi
             tools=(*host['roots'], config_dir.resolve()),
             limits=sandbox.Limits(wall_seconds=wall_seconds), proxy=proxy, proxy_port=port,
             extra_env=host['env'], host=host_identity(host, model_config))
-        record = run_session(repo, [trace], config, memory=memory, session_id=f'{name}-{uuid.uuid4().hex[:8]}')
+        record = run_session(repo, [trace], config, window=window, memory=memory, session_id=f'{name}-{uuid.uuid4().hex[:8]}')
         state = 'completed'
     except Exception as exc:  # noqa: BLE001 - a failed session is a result, not a crash of the run
         state = f'error: {type(exc).__name__}: {exc}'
@@ -349,6 +403,7 @@ def run_one(*, arm_name: str, lineage: str, name: str, trace: Path, repo: Reposi
         drafts = record['drafts']
         summary.update(
             session_id=record['manifest']['id'], record=str(record_dir), session_state=life['state'],
+            coverage=record['manifest']['inputs'].get('coverage'),
             sandbox=dict(stopped=life.get('stopped'), returncode=life.get('returncode'), survivors=life.get('survivors'),
                          seconds=record['manifest']['provenance'].get('seconds'),
                          peak_memory_bytes=record['manifest']['provenance'].get('peak_memory_bytes')),
@@ -373,7 +428,9 @@ def host_identity(host: dict, model_config: dict) -> dict:
 
 
 def run_shadow(args: argparse.Namespace, key: str) -> dict:
-    spec, names = select(args.lineage, args.sessions)
+    windows = read_windows(args)
+    spec, units = select_units(args.lineage, args.sessions, windows)
+    names = [label for label, _, _ in units]
     runtime = Path(args.runtime_root).resolve()
     out = Path(args.out).resolve()
     if runtime/'curator-shadow' not in out.parents:
@@ -385,7 +442,7 @@ def run_shadow(args: argparse.Namespace, key: str) -> dict:
         raise ShadowError('--upstream may only be OpenRouter or a local http origin (for tests)')
     evidence = Path(args.evidence_root) if args.evidence_root else runtime/'evidence'
     traces = {}
-    for name in names:
+    for name in dict.fromkeys(session for _, session, _ in units):
         trace = evidence/spec['directory']/'computer-sessions'/name
         if not (trace/'session.sqlite3').is_file():
             raise ShadowError(f'{trace} is not a sealed session')
@@ -398,6 +455,11 @@ def run_shadow(args: argparse.Namespace, key: str) -> dict:
     if cap <= 0:
         raise ShadowError('--cap-usd must be positive')
     session_cap = Decimal(str(args.session_cap_usd)) if args.session_cap_usd else None
+    if args.double_session_cap:
+        # One named session, once, with twice the cap it reached. Nothing retries by itself.
+        if len(units) != 1 or session_cap is None:
+            raise ShadowError('--double-session-cap re-runs exactly one named session or window and needs --session-cap-usd')
+        session_cap *= 2
     host = host_tools()
     model_config = host_configuration(
         arm, prices, effort=args.effort or arm.effort, max_requests=args.max_requests,
@@ -406,8 +468,14 @@ def run_shadow(args: argparse.Namespace, key: str) -> dict:
         context_image_block=args.context_image_block, workbench_timeout_seconds=60, budget_usd=float(cap))
     # Each run starts its own knowledge repository, named by its output directory, so no run can
     # replay a trace against knowledge that later sessions built.
+    # `--knowledge-root` continues an earlier run's repository instead (for the one re-run of a session that
+    # reached its cap); the version it holds before the first session is recorded in the summary.
     knowledge = runtime/'knowledge'/'shadow-454'/out.name/args.arm/args.lineage
-    if knowledge.exists():
+    if args.knowledge_root:
+        knowledge = Path(args.knowledge_root).resolve()
+        if runtime/'knowledge' not in knowledge.parents or not (knowledge/GAME/'.git').is_dir():
+            raise ShadowError(f'--knowledge-root must be an existing repository root inside {runtime/"knowledge"}')
+    elif knowledge.exists():
         raise ShadowError(f'{knowledge} exists; every run starts a fresh knowledge repository')
     out.mkdir(parents=True)
     config_dir = out/'host-config'
@@ -417,29 +485,38 @@ def run_shadow(args: argparse.Namespace, key: str) -> dict:
     repo.ensure()
     run = dict(schema=SCHEMA, kind='run', arm=args.arm, model=arm.model, effort=model_config['effort'],
                lineage=args.lineage, sessions_planned=names, cap_usd=str(cap), session_cap_usd=str(session_cap) if session_cap else None,
+               session_cap_doubled=bool(args.double_session_cap), knowledge_root=str(knowledge),
+               published_before_run=repo.published(),
+               windows=[w.record() for w in windows] if windows else None,
+               windows_sha256=windows_digest(windows) if windows else None,
                upstream=upstream, prices=str(Path(args.prices).relative_to(ROOT)) if Path(args.prices).is_relative_to(ROOT)
                else str(args.prices), knowledge=str(repo.path), host=host_identity(host, model_config),
                started_wall=time.time(), sessions=[], stopped=None)
     spent = Decimal(0)
-    for name in names:
+    for name, session, window in units:
         remaining = cap - spent
         if remaining <= 0:
             run['stopped'] = 'cap-reached'
             break
         memory, note = None, 'no sealed per-session memory store for this lineage (the lineage store would carry later sessions)'
-        if spec['memory']:
+        if window.record():
+            note = 'a window never reads the sealed memory store (it holds records from outside the range)'
+        elif spec['memory']:
             candidate = evidence/spec['directory']/spec['memory'].format(name=name)
             memory, note = (candidate, 'per-run sealed player-memory/2 store') if candidate.is_file() else (None, 'store absent')
-        summary = run_one(arm_name=args.arm, lineage=args.lineage, name=name, trace=traces[name], repo=repo, memory=memory,
+        summary = run_one(arm_name=args.arm, lineage=args.lineage, name=name, trace=traces[session], repo=repo, memory=memory,
                           memory_note=note, host=host, config_path=config_path, config_dir=config_dir, model_config=model_config,
                           prices=prices, key=key, upstream=upstream, cap=min(remaining, session_cap or remaining), out=out,
-                          wall_seconds=args.wall_seconds, max_output_tokens=args.max_output_tokens)
+                          wall_seconds=args.wall_seconds, max_output_tokens=args.max_output_tokens, window=window)
         spent += Decimal(summary['cost_usd'])
-        run['sessions'].append(dict(trace_session=name, summary=str((out/args.lineage/name/'summary.json').relative_to(out)),
+        run['sessions'].append(dict(label=name, trace_session=session, window=window.record() or None, summary=str((out/args.lineage/name/'summary.json').relative_to(out)),
                                     session_state=summary.get('session_state', summary['run_state']), cost_usd=summary['cost_usd'],
+                                    ledger_charged_usd=summary['proxy']['charged_usd'], wall_seconds=summary['wall_seconds'],
+                                    stopped_by_cap=summary['stopped_by_cap'], cap_usd=summary['cap_usd'],
                                     accepted=summary.get('accepted'), rejected=summary.get('rejected')))
         print(f'{args.arm} {args.lineage} {name}: {summary.get("session_state", summary["run_state"])}, '
-              f'{summary.get("requests")} requests, ${summary["cost_usd"]}, accepted {summary.get("accepted")}, '
+              f'{summary.get("requests")} requests, ${summary["cost_usd"]}, {summary["wall_seconds"]} s, '
+              f'accepted {summary.get("accepted")}, '
               f'rejected {summary.get("rejected")}', flush=True)
         if summary['proxy']['revoked'] or summary['proxy']['breaches']:
             run['stopped'] = 'proxy-revoked'
@@ -485,6 +562,15 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument('--max-context-images', type=int, default=16)
     p.add_argument('--context-image-block', type=int, default=8)
     p.add_argument('--stop-on-abort', action='store_true')
+    p.add_argument('--windows-file', help='JSON list of {session, actor, first, last[, game_time]}: one session over each '
+                   'window (one actor, steps first to last inclusive), in this order against one repository, instead of '
+                   'whole admissions')
+    p.add_argument('--window-plan', nargs=5, metavar=('SESSION', 'ACTOR', 'START', 'SIZE', 'COUNT'),
+                   help='the same list as COUNT consecutive windows of SIZE steps of one actor from step START')
+    p.add_argument('--knowledge-root', help='continue the knowledge repository of an earlier run (its `knowledge_root`) '
+                   'instead of starting a fresh one; for the single re-run of a session that reached its cap')
+    p.add_argument('--double-session-cap', action='store_true',
+                   help='run the one named session or window once more with twice --session-cap-usd')
     return p
 
 
@@ -493,7 +579,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.evidence_root is None and os.environ.get('ENACTIVE_EVIDENCE_ROOT'):
         args.evidence_root = os.environ['ENACTIVE_EVIDENCE_ROOT']
     try:
-        select(args.lineage, args.sessions)  # refuse held-out and unsampled names before anything else
+        select_units(args.lineage, args.sessions, read_windows(args))  # refuse held-out and unsampled names before anything else
         # The campaign's own resolution: the variable, else the operator's keychain item mapped in
         # the git-ignored .runtime/credentials.json. The value goes only to the proxy.
         # The map lives beside the runtime this run uses, not beside this code: from a worktree,
