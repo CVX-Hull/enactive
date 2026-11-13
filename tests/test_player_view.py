@@ -16,7 +16,7 @@ from harness.player.contracts import PlayerError, canonical
 from harness.player.memory import Memory
 from harness.player.programs import ProgramRepository, ProgramRunner
 from harness.player_mcp import make_server
-from harness.player_view import UnsupportedResult, actor_error, actor_result
+from harness.player_view import UnsupportedResult, actor_error, actor_result, short_result
 from test_computer_runtime import make_runtime, key
 from test_player_context import program
 from test_player_memory import record
@@ -48,7 +48,7 @@ def test_direct_collection_handoff_and_accounting_stay_original(service):
     original = copy.deepcopy(raw)
     counts = runtime.store.counts()
     view = actor_result(raw)
-    assert view['schema'] == 'player-computer-result/1'
+    assert view['schema'] == 'player-computer-operation/1'
     assert 'remaining' not in view and 'deadline_monotonic' not in view
     assert view['receipts'] == original['receipts']
     assert view['source'] == original['source']
@@ -94,7 +94,7 @@ def test_nested_program_result_collection_and_opaque_authored_data(service):
     collected = call(app, actor, 'player_result', {'operation_id': identity})
     result = actor_result(collected)
     assert result['value'] == view
-    assert result['collected_operations'][0]['schema'] == 'player-computer-result/1'
+    assert result['collected_operations'][0]['schema'] == 'player-computer-operation/1'
     assert 'remaining' not in result['collected_operations'][0]
     assert collected['collected_operations'][0]['remaining']
     assert runtime.store.counts() == counts
@@ -247,7 +247,8 @@ def test_mcp_projects_success_errors_and_unknown_result_without_image_leak(servi
     async def invoke():
         return await callback(None, types.CallToolRequestParams(name='computer_observe', arguments={}))
     result = anyio.run(invoke)
-    assert json.loads(result.content[0].text) == actor_result(raw)
+    assert json.loads(result.content[0].text) == short_result(actor_result(raw))
+    assert result.structured_content == actor_result(raw)
     assert result.content[1].mime_type == 'image/png'
     raw['schema'] = 'computer-operation/99'
     result = anyio.run(invoke)
@@ -266,6 +267,101 @@ def test_mcp_projects_success_errors_and_unknown_result_without_image_leak(servi
     client.call = lambda name, args: (_ for _ in ()).throw(RuntimeError('987654 left'))
     result = anyio.run(invoke)
     assert result.is_error and '987654' not in result.content[0].text
+
+
+def mcp_call(client, name, args=None):
+    """One call through the real adapter callback, with a stand-in for the HTTP client."""
+    with patch('harness.player_mcp.Server') as server:
+        make_server(client)
+        callback = server.call_args.kwargs['on_call_tool']
+    async def invoke():
+        return await callback(None, types.CallToolRequestParams(name=name, arguments=args or {}))
+    return anyio.run(invoke)
+
+
+def test_short_result_of_a_completed_input_with_a_frame_and_the_full_record_kept(service):
+    app, runtime, channel, actor = service
+    raw = call(app, actor, 'computer_input', {'actions': [key()]})
+    client = SimpleNamespace(config={}, call=lambda name, args: (copy.deepcopy(raw), channel.png, False))
+    result = mcp_call(client, 'computer_input', {'actions': [key()]})
+    shown = json.loads(result.content[0].text)
+    assert shown == dict(schema='player-computer-result/2', status='completed',
+                         source_id=raw['source']['source_id'], width=4, height=4)
+    full = actor_result(raw)
+    assert result.structured_content == full and full['schema'] == 'player-computer-operation/1'
+    assert len(result.content[0].text) * 8 < len(canonical(full))
+    assert [part.type for part in result.content] == ['text', 'image']
+    # The session database keeps the original receipts, and the call changed nothing in it.
+    stored = runtime.store.operation(raw['operation_id'])
+    assert stored == raw and stored['receipts'][0]['schema'] == 'computer-receipt/2'
+    assert actor_result(stored)['receipts'] == result.structured_content['receipts']
+    # The host and the trace read the full record; none of it is in what the model reads.
+    for field in ('session', 'actor_id', 'receipts', 'created_wall', 'kind', 'operation_id'):
+        assert field not in shown
+
+
+def test_short_result_of_an_input_with_no_frame_and_of_an_observe(service):
+    app, runtime, channel, actor = service
+    raw = call(app, actor, 'computer_input', {'actions': [key()]})
+    bare = dict(raw, source=None)
+    result = mcp_call(SimpleNamespace(config={}, call=lambda name, args: (bare, None, False)), 'computer_input')
+    assert json.loads(result.content[0].text) == dict(schema='player-computer-result/2', status='completed')
+    assert [part.type for part in result.content] == ['text']
+    assert result.structured_content == actor_result(bare)
+    seen = call(app, actor, 'computer_observe', {})
+    result = mcp_call(SimpleNamespace(config={}, call=lambda name, args: (seen, channel.png, False)), 'computer_observe')
+    assert json.loads(result.content[0].text) == dict(schema='player-computer-result/2', status='completed',
+        source_id=seen['source']['source_id'], width=4, height=4)
+    assert result.structured_content == actor_result(seen)
+    unread = dict(seen, image_unavailable=True, image_limit_bytes=1, image_note='Full source remains retained')
+    result = mcp_call(SimpleNamespace(config={}, call=lambda name, args: (unread, None, False)), 'computer_observe')
+    assert json.loads(result.content[0].text)['image_unavailable'] is True
+
+
+def test_short_result_of_a_partial_or_unknown_delivery_names_the_operation_and_the_next_step(service):
+    app, runtime, channel, actor = service
+    channel.unknown = True
+    raw = call(app, actor, 'computer_input', {'actions': [key()]})
+    assert raw['status'] == 'unknown'
+    for status in ('unknown', 'partial'):
+        record = dict(raw, status=status)
+        result = mcp_call(SimpleNamespace(config={}, call=lambda name, args: (record, None, False)), 'computer_input')
+        shown = json.loads(result.content[0].text)
+        assert shown['status'] == status and shown['operation_id'] == raw['operation_id']
+        assert 'never replayed' in shown['reason'] and 'computer_result' in shown['reason']
+        assert 'receipts' not in shown and 'session' not in shown and 'actor_id' not in shown
+        assert result.structured_content['receipts'] == actor_result(record)['receipts']
+    pending = dict(raw, status='pending', source=None)
+    shown = short_result(actor_result(pending))
+    assert shown['operation_id'] == raw['operation_id'] and 'computer_result' in shown['reason']
+    refused = short_result(actor_result(dict(raw, status='refused', reason='Unsupported basic key')))
+    assert refused['status'] == 'refused' and refused['reason'] == 'Unsupported basic key'
+    assert 'operation_id' not in refused
+
+
+def test_computer_result_returns_the_full_record_and_every_other_result_is_unchanged(service):
+    app, runtime, channel, actor = service
+    raw = call(app, actor, 'computer_input', {'actions': [key()]})
+    collected = call(app, actor, 'computer_result', {'operation_id': raw['operation_id']})
+    result = mcp_call(SimpleNamespace(config={}, call=lambda name, args: (collected, channel.png, False)),
+                      'computer_result', {'operation_id': raw['operation_id']})
+    assert json.loads(result.content[0].text) == actor_result(collected)
+    assert json.loads(result.content[0].text)['receipts'] and result.structured_content is None
+    handoff = call(app, actor, 'player_handoff', {'ids': [], 'summary': 'unfinished'})
+    result = mcp_call(SimpleNamespace(config={}, call=lambda name, args: (handoff, None, False)), 'player_handoff')
+    assert json.loads(result.content[0].text) == dict(schema='player-computer-result/2', status='sealed')
+    assert result.structured_content['handoff'] == handoff['handoff']
+    query = dict(schema='player-query/1', records=[], grants_authority=False)
+    result = mcp_call(SimpleNamespace(config={}, call=lambda name, args: (query, None, False)), 'player_memory_query')
+    assert json.loads(result.content[0].text) == query and result.structured_content is None
+
+
+def test_an_old_result_version_is_not_a_current_operation_record(service):
+    app, runtime, channel, actor = service
+    with pytest.raises(UnsupportedResult):
+        short_result(dict(actor_result(call(app, actor, 'computer_observe', {})), schema='player-computer-result/1'))
+    with pytest.raises(UnsupportedResult):
+        short_result(call(app, actor, 'computer_observe', {}))
 
 
 def test_old_store_and_executable_formats_reject_before_port_effects(tmp_path):

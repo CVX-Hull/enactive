@@ -17,7 +17,7 @@ from PIL import Image
 import pytest
 
 from harness.trace import memory_reader
-from harness.trace.projection import ProjectionError, project
+from harness.trace.projection import ProjectionError, _result, project
 
 ROOT = Path(__file__).resolve().parents[1]
 # A worktree has no evidence store; ENACTIVE_EVIDENCE_ROOT points at a checkout's sealed store.
@@ -113,6 +113,17 @@ def test_projection_keeps_what_the_actor_saw_and_drops_every_secret(tmp_path):
 
 def no_output(tmp_path) -> bool:
     return not (tmp_path/'trace').exists() and not list(tmp_path.glob('.trace.partial-*'))
+
+
+def test_a_short_result_projects_its_operation_and_frame_from_the_full_record_beside_it():
+    frame = f'{"a"*32}-3'
+    shown = dict(schema='player-computer-result/2', status='completed', source_id=frame, width=4, height=4)
+    record = dict(schema='player-computer-operation/1', operation_id='op2', status='completed', token=TOKEN,
+                  source=dict(source_id=frame), receipts=[dict(reason=TOKEN)])
+    outcome = _result(dict(isError=False, content=[dict(type='text', text=json.dumps(shown))], structuredContent=record))
+    assert outcome == dict(error=False, schema='player-computer-operation/1', operation_id='op2',
+                           status='completed', source_id=frame)
+    assert TOKEN not in json.dumps(outcome)
 
 
 def test_a_frame_that_differs_from_its_sealed_hash_is_refused_and_leaves_nothing(tmp_path):

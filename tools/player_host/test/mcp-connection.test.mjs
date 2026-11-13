@@ -71,15 +71,24 @@ test('production MCP preserves actual source JSON and PNG through Pi while event
       bodies.push(init.body);payloads.push(JSON.parse(init.body));
       if(payloads.length===1)return reply(null,[['computer_observe',{}]]);
       if(payloads.length===2) {
-        const operation=JSON.parse(events.find(e=>e.type==='tool-result').result.content[0].text);
-        return reply(null,[['player_source',{source_id:operation.source.source_id}]],true,undefined,'read');
+        const shown=JSON.parse(events.find(e=>e.type==='tool-result').result.content[0].text);
+        return reply(null,[['player_source',{source_id:shown.source_id}]],true,undefined,'read');
       }
       return reply();
     },onEvent:e=>events.push(e)});
   assert.equal(result.ok,true);assert.equal(payloads.length,3);
   assertRequestMetadata(events,bodies);
-  const original=JSON.parse(events.find(e=>e.type==='tool-result').result.content[0].text);
-  assert.equal(original.schema,'player-computer-result/1');assert.equal(original.status,'completed');
+  const observed=events.find(e=>e.type==='tool-result');
+  // The model reads the short result; the trace holds the full operation record beside it.
+  const original=observed.result.structuredContent;
+  assert.deepEqual(JSON.parse(observed.result.content[0].text),{schema:'player-computer-result/2',status:'completed',
+    source_id:original.source.source_id,width:4,height:4});
+  const toolMessage=payloads[1].messages.find(message=>message.role==='tool');
+  const sentText=typeof toolMessage.content==='string'?toolMessage.content:toolMessage.content.filter(part=>part.type==='text').map(part=>part.text).join('');
+  assert.equal(sentText,observed.result.content[0].text);
+  assert.ok(!sentText.includes('receipts')&&!sentText.includes('actor_id'));
+  assert.equal(original.schema,'player-computer-operation/1');assert.equal(original.status,'completed');
+  assert.ok(original.receipts.length>0&&original.receipts[0].schema==='computer-receipt/2');
   assert.equal(original.source.schema,'computer-source/1');
   assert.equal(original.source.width,4);assert.equal(original.source.height,4);
   const images=payloads[2].messages.flatMap(message=>Array.isArray(message.content)?message.content:[])
@@ -107,8 +116,10 @@ test('production MCP sealed handoff settles after earlier ordinary tool without 
   assert.deepEqual(result,{ok:true,reason:'handoff',requests:1,finalText:'',control_id:null});
   assertRequestMetadata(events,bodies);
   assert.deepEqual(events.filter(e=>e.type==='tool-start').map(e=>e.tool),['computer_observe','player_handoff']);
-  const value=JSON.parse(events.find(e=>e.type==='tool-result'&&e.tool==='player_handoff').result.content[0].text);
-  assert.equal(value.schema,'player-computer-result/1');assert.equal(value.status,'sealed');
+  const sealed=events.find(e=>e.type==='tool-result'&&e.tool==='player_handoff').result;
+  assert.deepEqual(JSON.parse(sealed.content[0].text),{schema:'player-computer-result/2',status:'sealed'});
+  const value=sealed.structuredContent;
+  assert.equal(value.schema,'player-computer-operation/1');assert.equal(value.status,'sealed');
   assert.equal(value.handoff.schema,'player-handoff/1');assert.equal(value.handoff.grants_authority,false);
   const event=events.find(e=>e.type==='handoff');
   assert.equal(event.handoff_id,value.operation_id);assert.equal(event.session,value.session);

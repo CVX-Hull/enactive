@@ -107,11 +107,17 @@ def reconstruct_context(run_dir: Path, actor: str, events: Sequence[HostEvent], 
             parts.append(dict(index=len(parts), role='tool', kind='tool_result_text',
                 bytes=sum(len(t.encode('utf-8')) for t in texts), sha256=None, tool_call_id=call_id, tool=event.fields.get('tool')))
             source_id = None
+            values = []
             for text in texts:
                 try:
-                    source = json.loads(text).get('source')
-                except (ValueError, AttributeError):
+                    values.append(json.loads(text))
+                except ValueError:
                     continue
+            structured = (event.fields.get('result') or {}).get('structuredContent')
+            if isinstance(structured, dict):  # a computer result the model read short; its full record holds the frame
+                values.append(structured)
+            for value in values:
+                source = value.get('source') if isinstance(value, dict) else None
                 if isinstance(source, dict) and isinstance(source.get('source_id'), str):
                     source_id = source['source_id']
             for item in content:
