@@ -329,9 +329,12 @@ The actor alone cost $0.53 to $1.04 per game hour in the recorded lineages.
 - **Against.** It replaces the player host's whole context model and discards the
   in-context continuity the current player relies on within an admission. The one
   source is directional at ten games per condition.
-- **Cost and cadence.** Smaller prompts would be cheaper and faster per decision, but
-  each loses the provider's prompt cache; unmeasured.
-- **Not recommended now**: a rebuild whose benefit rests on one small study.
+- **Cost and cadence.** Prompt size is the largest recorded driver of response time
+  (see [memory and response time](#memory-and-response-time)), so this is the option
+  with the most to gain there. Each rebuilt prompt loses the provider's prompt cache;
+  the cost is unmeasured.
+- **Not recommended first**: a rebuild whose memory benefit rests on one small study,
+  and which is only safe once memory carries what the context no longer holds.
 
 ### 7. Compact the conversation instead of handing off
 
@@ -341,8 +344,10 @@ The actor alone cost $0.53 to $1.04 per game hour in the recorded lineages.
 - **Against.** A summary written by the model is what a handoff already carries, and
   handoffs kept 0.62. It does not help across admissions or days. The host lists
   compaction as unsupported.
-- **Not recommended as the memory design**; it could be revisited as a replacement for
-  handoffs.
+- **Cost and cadence.** It keeps the prompt small, which the recorded response times
+  favour (see [memory and response time](#memory-and-response-time)).
+- **Not recommended as the memory design**; it is a way to bound the context once
+  memory works.
 
 ## Recommendation
 
@@ -366,7 +371,33 @@ actor does not maintain the store. Option 2 keeps the actor as the writer becaus
 tested alternative writes better. If the owner holds to D1, the first step is option 3
 over a curator-written store, at the curator's cost.
 
-Options 6 and 7 are recorded and set aside.
+Options 6 and 7 are not the memory design, and they are not closed. They are the ways
+to keep the prompt small, and they depend on memory working first.
+
+## Memory and response time
+
+Computed by the lead on 13 November 2026 from the 1,978 responses in the sealed host
+traces of the seven-day lineage, as the time from `request-start` to
+`response-complete`, grouped by prompt tokens (input plus cache read plus cache write):
+
+| Prompt tokens | Responses | Median | 95th percentile |
+| --- | ---: | ---: | ---: |
+| Under 20,000 | 160 | 2.7 s | 5.3 s |
+| 20,000 to 60,000 | 386 | 5.1 s | 8.0 s |
+| 60,000 to 100,000 | 514 | 6.9 s | 11.4 s |
+| 100,000 to 150,000 | 421 | 7.7 s | 11.7 s |
+| Over 150,000 | 497 | 9.0 s | 14.0 s |
+
+- **The player's context is its memory today, and it is also what makes it slow.** An
+  actor is fastest when its context is nearly empty, which is when it knows least.
+- **This is one lineage on one route, and prompt size is confounded** with how far into
+  an admission the actor is and how many images it holds.
+- **It changes what working memory is worth.** If stored facts reach the actor without
+  the whole conversation, the context can be kept small, by option 6 or 7. That is the
+  largest recorded lever on the responsiveness criteria
+  ([#164](https://github.com/CVX-Hull/enactive/issues/164),
+  [#442](https://github.com/CVX-Hull/enactive/issues/442)). Without working memory,
+  shrinking the context throws away what the player knows.
 
 ## The experiment that could decide it
 
