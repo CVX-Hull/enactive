@@ -190,11 +190,17 @@ frames show.
 - **Record.** Each verdict is a `judge` event: start, item, label, cited frames, judge
   and packet hash ([#386](https://github.com/CVX-Hull/enactive/issues/386)).
 - **Calibration, in the measure gate.** The owner labels 20 pairs of item and
-  admission, drawn at random from all pairs, "not engaged" included. The lead presents
-  them on one page: each pair shows its frames and the item, and each label is one
-  click. The owner opens no file and types nothing. The judge is used
-  only if the two judges agree on at least 80% with κ of at least 0.6, and the
-  adjudicated label matches the owner's on at least 18 of 20.
+  stretch, drawn at random from all pairs, "not engaged" included, and 10 more drawn at
+  random from the pairs any judge labelled straight, missed or cannot tell. The lead
+  presents all 30 on one page, in one sequence that does not say which group a pair is
+  from: each pair shows its frames and the item, and each label is one click. The owner
+  opens no file and types nothing. After the owner's first click the page shows the
+  judges' labels, notes and cited frames, and the owner keeps or changes the label.
+  Only first clicks count below. The judge is used only if the two judges agree on at
+  least 80% with κ of at least 0.6, and the adjudicated label matches the owner's on at
+  least 18 of the random 20. The error on touched items, which the sizing uses, comes
+  from every owner-labelled pair that the owner or the judges called straight or
+  missed.
 
 ### Decision rule
 
