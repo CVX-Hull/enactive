@@ -1505,7 +1505,11 @@ async function submit(body) {
   window.scrollTo(0, 0);
 }
 
-function step(by) { at = Math.max(0, Math.min(state.total, at + by)); render(); window.scrollTo(0, 0); }
+function step(by) {
+  at = Math.max(0, Math.min(state.total, at + by));
+  if (at >= state.total && !state.pass_two) at = firstOpen();  // past the end in pass one: the first unanswered pair
+  render(); window.scrollTo(0, 0);
+}
 
 el('back').onclick = () => step(-1);
 el('done-back').onclick = () => step(-1);
