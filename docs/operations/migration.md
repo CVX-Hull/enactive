@@ -20,7 +20,7 @@ Before changing a deployment:
 5. Select a fresh `player-memory/2` store (`user_version=2`); it can span fresh native-child sessions. Old player stores and executable libraries are refused before native launch, with no conversion or old-view reader.
 6. Requalify the affected native/gameplay boundary. Earlier test/demo results remain bound to their source and cannot qualify the replacement.
 
-Current actor consumers use `player-computer-result/1`, `player-error/2` and
+Current actor consumers use `player-computer-result/2`, `player-computer-operation/1`, `player-error/2` and
 `player-transport/2`, and programs use `player-program/2` with required
 `view_schema:"program-view/4"`. Host/control/telemetry and all finite-package
 callers move together with `player-host/4`, telemetry4, `campaign-run/6`,
