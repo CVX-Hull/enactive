@@ -9,8 +9,12 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 permissions:
   contents: read
+# Each lane is its own job on its own runner. Every lane job always runs: it selects the profile for itself,
+# installs only what its part of that profile needs, and its last step reports that it has nothing to do when
+# the profile does not use the lane. No lane job carries a job-level condition, so a skipped lane is never
+# legitimate. `controller` is the one check main's ruleset requires; docs/workflows/ci-profiles.md has the rules.
 jobs:
-  controller:
+  structure-and-python:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -29,14 +33,67 @@ jobs:
       - run: python -m venv .venv
       - run: .venv/bin/python -m pip install --cache-dir .cache/pip --require-hashes -r requirements-dev.lock
       - run: npm --userconfig /dev/null --cache "$PWD/.cache/npm" ci --ignore-scripts --no-audit --no-fund
-      - if: steps.validation.outputs.profile != 'main'
+      # Two Python test files skip their cases when a host's packages are missing, so every profile that runs
+      # tests installs both hosts.
+      - if: steps.validation.outputs.profile != 'main' && steps.validation.outputs.profile != 'editorial'
         run: npm --userconfig /dev/null --cache "$PWD/.cache/npm" --prefix tools/player_host ci --ignore-scripts --no-audit --no-fund
-      - if: steps.validation.outputs.profile != 'main'
+      - if: steps.validation.outputs.profile != 'main' && steps.validation.outputs.profile != 'editorial'
         run: npm --userconfig /dev/null --cache "$PWD/.cache/npm" --prefix tools/curator_host ci --ignore-scripts --no-audit --no-fund
-      - if: steps.validation.outputs.profile != 'main'
+      - name: Run the structure-and-python lane of the ${{ steps.validation.outputs.profile }} profile
+        env:
+          VALIDATION_PROFILE: ${{ steps.validation.outputs.profile }}
+        run: .venv/bin/python tools/check.py --profile "$VALIDATION_PROFILE" --lane structure-and-python
+  adapter:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.14'
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+      - name: Select strict validation profile
+        id: validation
+        run: python tools/ci.py
+      - run: python -m venv .venv
+      - if: steps.validation.outputs.profile == 'full'
+        run: .venv/bin/python -m pip install --cache-dir .cache/pip --require-hashes -r requirements-dev.lock
+      - if: steps.validation.outputs.profile == 'full'
+        run: npm --userconfig /dev/null --cache "$PWD/.cache/npm" --prefix tools/player_host ci --ignore-scripts --no-audit --no-fund
+      - name: Run the adapter lane of the ${{ steps.validation.outputs.profile }} profile
+        env:
+          VALIDATION_PROFILE: ${{ steps.validation.outputs.profile }}
+        run: .venv/bin/python tools/check.py --profile "$VALIDATION_PROFILE" --lane adapter
+  browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [test_viewer, test_investigation, test_investigation_session]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.14'
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+      - name: Select strict validation profile
+        id: validation
+        run: python tools/ci.py
+      - if: steps.validation.outputs.profile != 'main' && steps.validation.outputs.profile != 'editorial'
+        run: npm --userconfig /dev/null --cache "$PWD/.cache/npm" ci --ignore-scripts --no-audit --no-fund
+      - if: steps.validation.outputs.profile != 'main' && steps.validation.outputs.profile != 'editorial'
         run: node_modules/.bin/puppeteer browsers install chrome
       - name: Allow the project Chrome sandbox on this disposable runner
-        if: steps.validation.outputs.profile != 'main'
+        if: steps.validation.outputs.profile != 'main' && steps.validation.outputs.profile != 'editorial'
         run: |
           chrome_path=$(node --input-type=module -e "import puppeteer from 'puppeteer'; process.stdout.write(await puppeteer.executablePath())")
           test -x "$chrome_path"
@@ -49,7 +106,25 @@ jobs:
           }
           EOF
           sudo apparmor_parser -r /etc/apparmor.d/cdda-project-chrome
-      - name: Run strict ${{ steps.validation.outputs.profile }} validation
+      # The suites and their fixture server need Node and the standard library only, and the checker loads
+      # without the lockfile, so this lane runs it on the runner's Python and creates no environment.
+      - name: Run the browser lane of the ${{ steps.validation.outputs.profile }} profile
         env:
           VALIDATION_PROFILE: ${{ steps.validation.outputs.profile }}
-        run: .venv/bin/python tools/check.py --profile "$VALIDATION_PROFILE"
+          BROWSER_SUITE: ${{ matrix.suite }}
+        run: python tools/check.py --profile "$VALIDATION_PROFILE" --lane browser --suite "$BROWSER_SUITE"
+  controller:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    needs: [structure-and-python, adapter, browser]
+    # Exactly always(): GitHub counts a skipped job as passing a required check, and a job is skipped when one
+    # it needs fails or the run is cancelled. Under a weaker condition this job would be skipped, and so green,
+    # exactly when a lane did not succeed.
+    if: always()
+    steps:
+      - name: Every lane succeeded
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "lane results: $RESULTS"
+          test "$RESULTS" = "success success success"

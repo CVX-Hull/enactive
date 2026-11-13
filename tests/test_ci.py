@@ -2,6 +2,7 @@
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import tempfile
 import unittest
@@ -167,37 +168,121 @@ class ProfileTests(unittest.TestCase):
                          {"README.md", "docs/research-line\nbreak.md"})
 
 
+_PROFILE = "steps.validation.outputs.profile"
+_IS = re.compile(rf"{re.escape(_PROFILE)} == '([a-z]+)'(?: \|\| {re.escape(_PROFILE)} == '([a-z]+)')*")
+_IS_NOT = re.compile(rf"{re.escape(_PROFILE)} != '([a-z]+)'(?: && {re.escape(_PROFILE)} != '([a-z]+)')*")
+
+
+def runs_in(step: dict, profile: str) -> bool:
+    """Whether a workflow step runs for a profile. A step condition may only list profiles it runs in
+    (`== 'a' || == 'b'`) or profiles it does not run in (`!= 'a' && != 'b'`)."""
+    condition = step.get("if")
+    if condition is None:
+        return True
+    named = set(re.findall(r"'([a-z]+)'", condition))
+    if _IS.fullmatch(condition):
+        return profile in named
+    if _IS_NOT.fullmatch(condition):
+        return profile not in named
+    raise AssertionError(f"Unsupported step condition: {condition}")
+
+
 class WorkflowPolicyTests(unittest.TestCase):
-    def test_required_workflow_establishes_the_selector_platform_assumptions(self):
+    """The required check stays truthful when its work is spread over several jobs (R-WRONG-MERGE)."""
+
+    def setUp(self):
         root = Path(__file__).resolve().parents[1]
         # BaseLoader retains Actions' `on` key without YAML1.1 boolean coercion;
         # actionlint validates Actions syntax. These are our policy invariants.
-        value = yaml.load((root / ci.WORKFLOW).read_text(), Loader=yaml.BaseLoader)
-        self.assertEqual(value["on"]["pull_request"], dict(branches=["main"]))
-        self.assertEqual(value["on"]["push"], dict(branches=["main"]))
-        self.assertEqual(set(value["jobs"]), {"controller"})
-        job = value["jobs"]["controller"]
-        self.assertNotIn("if", job)
-        self.assertNotIn("continue-on-error", job)
-        steps = job["steps"]
-        self.assertTrue(all("continue-on-error" not in step for step in steps))
-        checkout = next(step for step in steps if step.get("uses", "").startswith("actions/checkout@"))
-        self.assertEqual(checkout["with"]["fetch-depth"], "0")
-        self.assertNotIn("ref", checkout["with"])
-        selector = next(step for step in steps if step.get("id") == "validation")
-        self.assertEqual(selector["run"], "python tools/ci.py")
-        checks = next(step for step in steps if "VALIDATION_PROFILE" in step.get("env", {}))
-        self.assertEqual(checks["name"], "Run strict ${{ steps.validation.outputs.profile }} validation")
-        self.assertEqual(checks["env"]["VALIDATION_PROFILE"], "${{ steps.validation.outputs.profile }}")
-        self.assertIn('--profile "$VALIDATION_PROFILE"', checks["run"])
-        self.assertNotIn("if", checks)
-        # Only installs that the structural main profile does not use may be skipped, never a check.
-        skipped = [step for step in steps if "if" in step]
-        self.assertTrue(skipped)
-        for step in skipped:
-            self.assertEqual(step["if"], "steps.validation.outputs.profile != 'main'")
-            self.assertNotIn("check.py", step.get("run", ""))
-        self.assertEqual(value["permissions"], {"contents": "read"})
+        self.workflow = yaml.load((root / ci.WORKFLOW).read_text(), Loader=yaml.BaseLoader)
+        self.jobs = self.workflow["jobs"]
+        self.profiles = ("full", "editorial", "main", *ci.COMPONENT_TESTS)
+
+    def installs(self, lane, text):
+        steps = [step for step in self.jobs[lane]["steps"] if text in step.get("run", "") + step.get("name", "")]
+        self.assertEqual(len(steps), 1, (lane, text))
+        return steps[0]
+
+    def test_triggers_permissions_and_the_job_set(self):
+        self.assertEqual(self.workflow["on"]["pull_request"], dict(branches=["main"]))
+        self.assertEqual(self.workflow["on"]["push"], dict(branches=["main"]))
+        self.assertEqual(self.workflow["permissions"], {"contents": "read"})
+        self.assertEqual(set(self.jobs), {*ci.LANES, "controller"})
+        self.assertEqual(set(ci.PROFILE_LANES), set(self.profiles))  # a profile without a row is refused
+        for name, job in self.jobs.items():
+            with self.subTest(job=name):
+                self.assertIn("timeout-minutes", job)
+                self.assertNotIn("continue-on-error", job)
+                self.assertTrue(all("continue-on-error" not in step for step in job["steps"]))
+
+    def test_controller_always_runs_and_passes_only_if_every_other_job_succeeded(self):
+        controller = self.jobs["controller"]
+        self.assertEqual(set(controller["needs"]), set(self.jobs) - {"controller"})
+        # A skipped job satisfies a required check, and anything weaker than always() skips this one
+        # when a lane fails or the run is cancelled.
+        self.assertEqual(controller["if"], "always()")
+        self.assertEqual(len(controller["steps"]), 1)  # no checkout or setup that could fail first
+        step = controller["steps"][0]
+        self.assertNotIn("if", step)
+        self.assertNotIn("uses", step)
+        self.assertEqual(step["env"], {"RESULTS": "${{ join(needs.*.result, ' ') }}"})
+        # Run the step itself: it passes only for one success per needed job, and for nothing else.
+        lanes = len(controller["needs"])
+        cases = {" ".join(["success"] * lanes): 0, " ".join(["success"] * (lanes - 1) + ["failure"]): 1,
+                 " ".join(["success"] * (lanes - 1) + ["cancelled"]): 1, " ".join(["success"] * (lanes - 1) + ["skipped"]): 1,
+                 " ".join(["success"] * (lanes - 1)): 1, " ".join(["success"] * (lanes + 1)): 1, "": 1, "   ": 1}
+        for results, expected in cases.items():
+            with self.subTest(results=results):
+                done = subprocess.run(["bash", "-eo", "pipefail", "-c", step["run"]], env={"RESULTS": results, "PATH": os.environ["PATH"]},
+                                      capture_output=True, timeout=30)
+                self.assertEqual(min(done.returncode, 1), expected)
+
+    def test_every_lane_job_always_runs_selects_the_profile_and_runs_its_lane(self):
+        for lane in ci.LANES:
+            with self.subTest(lane=lane):
+                job = self.jobs[lane]
+                self.assertNotIn("if", job)  # a lane with nothing to do says so; it is never skipped
+                self.assertNotIn("needs", job)
+                steps = job["steps"]
+                checkout = steps[0]
+                self.assertTrue(checkout["uses"].startswith("actions/checkout@"))
+                self.assertEqual(checkout["with"], {"fetch-depth": "0"})  # the selector compares complete history
+                selector = next(step for step in steps if step.get("id") == "validation")
+                self.assertEqual(selector["run"], "python tools/ci.py")
+                self.assertNotIn("if", selector)
+                checks = steps[-1]
+                self.assertEqual(checks["env"]["VALIDATION_PROFILE"], "${{ steps.validation.outputs.profile }}")
+                self.assertIn(f'tools/check.py --profile "$VALIDATION_PROFILE" --lane {lane}', checks["run"])
+                self.assertNotIn("if", checks)
+                self.assertEqual([step for step in steps if "check.py" in step.get("run", "")], [checks])
+                for step in steps:  # only the selected profile decides what a lane installs
+                    for profile in self.profiles:
+                        runs_in(step, profile)
+        browser = self.jobs["browser"]
+        self.assertEqual(browser["strategy"], {"fail-fast": "false", "matrix": {"suite": list(ci.BROWSER_SUITES)}})
+        self.assertEqual(browser["steps"][-1]["env"]["BROWSER_SUITE"], "${{ matrix.suite }}")
+        self.assertIn('--suite "$BROWSER_SUITE"', browser["steps"][-1]["run"])
+
+    def test_a_lane_installs_what_its_work_needs_in_every_profile_that_gives_it_work(self):
+        lockfile, root_packages = "--require-hashes -r requirements-dev.lock", '.cache/npm" ci --ignore-scripts'
+        needs = {
+            "structure-and-python": (lockfile, root_packages),
+            "adapter": (lockfile, "--prefix tools/player_host ci --ignore-scripts"),
+            "browser": (root_packages, "puppeteer browsers install chrome", "Allow the project Chrome sandbox"),
+        }
+        for lane, texts in needs.items():
+            for profile in self.profiles:
+                if lane in ci.PROFILE_LANES[profile]:
+                    for text in texts:
+                        with self.subTest(lane=lane, profile=profile, install=text):
+                            self.assertTrue(runs_in(self.installs(lane, text), profile))
+        # Two Python test files skip their cases without a host's packages; a lane that left an install
+        # out would pass while running fewer tests.
+        for profile in ("full", *ci.COMPONENT_TESTS):
+            for host in ("player_host", "curator_host"):
+                with self.subTest(profile=profile, host=host):
+                    install = self.installs("structure-and-python", f"--prefix tools/{host} ci --ignore-scripts")
+                    self.assertTrue(runs_in(install, profile))
 
 
 if __name__ == "__main__":

@@ -175,6 +175,8 @@ hashes in `build.json`. It is not a gameplay pass. Launch only through the froze
 play. The default is full portable regression. Protected profiles and selection
 are owned by [CI policy](workflows/ci-profiles.md#protected-ci-profiles), with exact
 membership in [tools/ci.py](../tools/ci.py). [Testing](testing.md) explains scope.
+The hosted check runs a profile as separate lane jobs; `--lane` runs one lane's part
+locally and is not a full pass.
 Checks do not compile the adapter or qualify actual game behavior.
 
 The optional `.githooks/pre-commit` runs the fast lane when explicitly enabled

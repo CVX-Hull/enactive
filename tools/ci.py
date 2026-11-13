@@ -59,6 +59,21 @@ COMPONENT_PATHS = {
 COMPONENT_TESTS = {
     "viewer": ("tests/test_cli.py", *SMOKE_TESTS),
 }
+# The hosted check runs each lane as its own job. Every lane job always runs and selects the profile for
+# itself; a lane the profile does not list reports that it has nothing to do. A profile without a row is
+# refused, never treated as needing no lane. The checker (`tools/check.py --lane`) and the workflow test
+# read this table.
+PROFILE_LANES = {
+    "full": ("structure-and-python", "adapter", "browser"),
+    "viewer": ("structure-and-python", "browser"),
+    "editorial": ("structure-and-python",),
+    "main": ("structure-and-python",),
+}
+LANES = PROFILE_LANES["full"]
+# The adapter lane runs exactly these files; the Python lane of the full profile runs every other test.
+ADAPTER_TESTS = ("tests/test_player_host_adapter.py",)
+# The browser lane's scripts, `tests/NAME.cjs`; the hosted job runs one per runner.
+BROWSER_SUITES = ("test_viewer", "test_investigation", "test_investigation_session")
 
 
 def editorial(path: str) -> bool:

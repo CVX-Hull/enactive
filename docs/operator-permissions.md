@@ -66,17 +66,21 @@ to merge: design within the charter, delegation, commits, branches, pull request
 and merging. Merge once the [formal acceptance checkpoint](workflows/development.md)
 holds: the exact candidate's protected `controller` profile passed (full regression
 for broad source changes), independent review findings are dispositioned and any
-required native or gameplay evidence is recorded. When only the required check is
+required native or gameplay evidence is recorded. When only the check is
 still running, queue auto-merge pinned to the validated head (`gh pr merge --auto
---squash --match-head-commit SHA`); main protection then merges it only if that
-check passes. The SHA given to `--match-head-commit` is the commit the review named,
+--squash --match-head-commit SHA`); main protection then merges it only if the
+required `controller` check passes, and `controller` reports only after every other
+job of the check has ended. The SHA given to `--match-head-commit` is the commit the review named,
 not merely the head the check ran on: an approved text once failed to reach the pushed
 branch, and its first draft merged instead
 ([#530](https://github.com/CVX-Hull/enactive/pull/530)). Agent review stays evidence,
 not human approval; say so in the pull request rather than waiting for one.
 
 **Waiting on CI.** The lead waits for PR
-validation with one `gh pr checks --watch`, and may run it in the background
+validation with one watch command, `gh run watch` on the pull request's run, until
+`controller` has reported
+([procedure](workflows/development.md#minimum-checks-and-escalation)). The lead may
+run it in the background
 ([waiting on CI](operations/coding-agents.md#waiting-on-ci)), instead of re-checking
 by hand. This authorizes the wait only; host tool permissions still apply.
 
