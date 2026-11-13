@@ -39,11 +39,10 @@ exceptions that have no parent on GitHub:
   automated native regression runner, broader formatting and type analysis, and the
   currency of the gameplay research.
 
-Open questions about controls are tracked in
-[#556](https://github.com/CVX-Hull/enactive/issues/556) (remaining control candidates)
-and [#557](https://github.com/CVX-Hull/enactive/issues/557) (what is left of the
-pull-request check's cost, which runs as [parallel jobs](workflows/ci-profiles.md)).
-The [risk register](risks.md) and [controls](controls.md) own the current answers.
+One question about controls is open:
+[#556](https://github.com/CVX-Hull/enactive/issues/556) asks how the curator should
+charge a failed request, and is decided with the curator's design. The
+[risk register](risks.md) and [controls](controls.md) own the current answers.
 
 Current contracts govern the running system; a proposed ADR changes nothing until a
 phase is adopted on study evidence.
