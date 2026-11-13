@@ -123,7 +123,7 @@ Node tests: `cd tools/curator_host && npm test`.
   `sd1a1`–`sd1a7`; 372: `aidB3 ceil09 ceil07 ceil05 aidB9 aidA5`, in that order) and refuses
   the four held-out lineages, stored as `lh1`–`lh4`, and any other name. A 372 run gets its own sealed memory store; the 397 lineage
   store is not passed, because it would carry later admissions into earlier sessions.
-- **Run.** One `run_session` per session against `.runtime/knowledge/shadow-454/<arm>/<lineage>/`
+- **Run.** One `run_session` per session against `.runtime/knowledge/shadow-454/<out name>/<arm>/<lineage>/`
   (game `cdda`). Each session has its own proxy and token, sized to what the whole-run cap leaves
   (or `--session-cap-usd`). The run stops when the cap is reached, the proxy revokes or records
   a breach, accounting remains unsettled after shutdown, or host cleanup is unconfirmed.
@@ -143,7 +143,17 @@ Node tests: `cd tools/curator_host && npm test`.
   one session once more at twice the cap; `--knowledge-root DIR` (an earlier run's `knowledge_root`,
   inside `<runtime>/knowledge/`) continues its repository instead of a fresh one, so the re-run or the
   windows still to run start from the store as it stood. The summary records
-  `published_before_run`, `session_cap_doubled` and `knowledge_root`.
+  `published_before_run`, `session_cap_doubled` and `knowledge_root`. The repository must lie
+  under `<runtime>/knowledge/` (after links and `..` are resolved) and be of the same arm and
+  lineage as the run (its path ends `<arm>/<lineage>`).
+- **The cap flags hold per invocation.** `--cap-usd` limits one invocation, and `--session-cap-usd`
+  must be positive. A step that takes several invocations (a re-run, then the sessions still to
+  run) passes `--cap-usd` as the step's stop minus the proxy ledger's total so far across its
+  earlier invocations (the `total_cost_usd` of each run summary), not the full stop.
+- **`--stop-on-reject`** stops the run when the gate rejects a session's submission, since a
+  rejected submission loses that session's facts (`stopped: submission-rejected`).
+- **The prompt is recorded.** `prompt_sha256` (of `prompt.md`) is in the run summary's `host`
+  and in each session manifest's `pinned.host`.
 - **Output.** `curator-shadow/1` summaries: one per session (`<out>/<lineage>/<session>/summary.json`
   and its `proxy-ledger.jsonl`) and one per run (`<out>/summary.json`). A session summary holds
   wall seconds, host start to first model request, first-request prompt tokens, tokens by kind,

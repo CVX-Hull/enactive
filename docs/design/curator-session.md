@@ -70,13 +70,17 @@ A submission is a directory `submissions/<id>/` with `submission.json`:
   - The curator's prompt defines each kind and says nothing about any particular game.
     A store published under `curator-fact/1` is not edited; the readers that open sealed
     stores (`tools.memory_screen_checks store`) read Git objects, not the gate, and still
-    work on them.
+    work on them. The gate also refuses to publish into a repository whose published facts are
+    not all `curator-fact/2` (a supersede of a `/1` fact included): there is no mixed store.
 - **Type** (`curator-type/1`): `name`, `description` and `fields`.
 
 ## Windows of decisions and the coverage stamp
 
 A session reads either whole admissions or a **window**: one actor of one sealed
 session and a range of its steps (`seq` in `steps.jsonl`, first and last inclusive).
+A window counts steps, which are the actor's computer operations; it does not count
+provider requests, and an actor may make requests that produce no step. The session and
+actor names are `[A-Za-z0-9_-]+`; the steps are integers.
 Both take one path, [`harness/curator/window.py`](../../harness/curator/window.py): the
 projection is written whole and `restrict` narrows it in place; with the full window
 (`Window()`) it changes nothing, and whole-admission traces and briefs are unchanged.
@@ -98,7 +102,7 @@ projection is written whole and `restrict` narrows it in place; with the full wi
   gate refuses a citation of one.
 - **Coverage stamp.** The runner derives `curator-coverage/1` from the window: `session`,
   `actor`, `last_step` (the last step read) and `game_time` (optional text the runner
-  supplies in the window). The gate passes it in with every publication and writes it
+  supplies in the window). The session passes the stamp to the gate with every submission it gates, and the gate writes it
   as `coverage.json` beside `facts.jsonl`, so each tagged version records what it covers.
   A whole-admission session stamps its session names with no actor or last step. The
   curator never writes it: a submission carrying `coverage` is rejected as an unexpected
