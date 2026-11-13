@@ -43,7 +43,8 @@ losses of the seven-day lineage, and can its cut work at the curator's speed?
 - The exact tokens of a turn with short results. The simulation takes it as a parameter,
   950 by default. The short results as built give a fitted 857, not a count
   ([the re-run](#with-the-short-results-as-built)): with it, short results and a larger
-  image block alone keep 94.9% of requests under 60,000 tokens, and the cut adds little.
+  image block alone keep 94.9% of requests under 60,000 tokens with no briefing, and
+  71.6% with a 13,000-token briefing.
 - The curator's lag during play, and whether a session at a handoff or during play
   would write the facts a whole-admission session wrote. No such session has been run.
 - Whether a player acts on a fact that a briefing puts in front of it. The replay shows
@@ -384,8 +385,16 @@ is still a fitted figure and not a count. The command adds `--turn-tokens 857
 - **Short results and a larger image block do most of the work.** With no cut, 94.9% of
   requests stay under 60,000 tokens and the cache writes are 0.188 of the recorded
   total.
-- **The cut adds little on top.** At a lag of 10 it lowers the median prompt by about
+- **The cut adds less on top.** At a lag of 10 it lowers the median prompt by about
   12,000 tokens and the cache writes from 0.188 to 0.123 of the recorded total.
+- **A briefing changes both rows.** With `--briefing-tokens 13000` added, no cut keeps
+  71.6% of requests under 60,000 tokens with cache writes at 0.240 of the recorded
+  total; a lag of 10 keeps all of them under 60,000 at 0.136.
+- **Where the bytes come from.** The before and after sizes are the measurement in pull
+  request 608, which rebuilt each recorded `computer_input` result of the lineage with
+  the merged `short_result` function; its independent review reproduced them. That
+  sample is the 1,915 results with a frame record; the lineage holds 1,923 `tool-result`
+  events for `computer_input`.
 
 ## What this means for the screen's protocol
 
