@@ -1,9 +1,9 @@
 ---
 owner: lead
-status: proposed
+status: active
 date: '2026-11-13'
 scope: 'Protocol for testing memory in play (#590): three gates that cost little and are decisive, and a comparison of short starts from a copy of the held-out lineage''s saved game whose size is not requested until the gates have measured what it depends on. Arms, the first store, the start, the measure and its judge, the decision rule, a simulation of what the measure can detect, the interface the build shares, cost and stop rules. Nothing here is approved, built or run'
-review_trigger: An owner decision on the list in this note, a gate in it that fails, or a change to the context design it tests
+review_trigger: A gate in this note reports, the comparison is sized, or the context design it tests changes
 ---
 
 # Memory screen: protocol
@@ -41,7 +41,11 @@ review_trigger: An owner decision on the list in this note, a gate in it that fa
   comparison can, and what to do in its place.
 - **Not requested now.** The first store for the held-out lineage, any game launch, and
   the comparison's envelope.
-- **Owner decisions needed.** Four, under [owner decisions](#owner-decisions).
+- **Owner decisions.** The four questions under [owner decisions](#owner-decisions) are
+  answered in the [owner decision log](../decisions/owner-decisions.md): both paid gates
+  are approved inside one \$65 envelope, the cut stays out of the first comparison, and
+  the owner labels the judge's calibration set. This note is the working description
+  of the gates.
 
 Terms are in the [glossary](../glossary.md). A **start** is one run of one actor from
 the copied saved game. A **known item** is one entry in the frozen list described under
@@ -186,7 +190,9 @@ frames show.
 - **Record.** Each verdict is a `judge` event: start, item, label, cited frames, judge
   and packet hash ([#386](https://github.com/CVX-Hull/enactive/issues/386)).
 - **Calibration, in the measure gate.** The owner labels 20 pairs of item and
-  admission, drawn at random from all pairs, "not engaged" included. The judge is used
+  admission, drawn at random from all pairs, "not engaged" included. The lead presents
+  them on one page: each pair shows its frames and the item, and each label is one
+  click. The owner opens no file and types nothing. The judge is used
   only if the two judges agree on at least 80% with κ of at least 0.6, and the
   adjudicated label matches the owner's on at least 18 of 20.
 
@@ -305,6 +311,9 @@ file, so they can be built side by side.
   spends, and its report against them afterwards.
 
 ## Owner decisions
+
+These four questions were put to the owner with the recommendations shown. The answers
+are rows in the [owner decision log](../decisions/owner-decisions.md).
 
 1. **The brief gate.** Run it, stopping at \$45. *Recommended: yes. The free checks
    point at the brief as what failed, and nothing else is worth building if it cannot
