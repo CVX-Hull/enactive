@@ -511,11 +511,11 @@ def run_shadow(args: argparse.Namespace, key: str) -> dict:
         spent += Decimal(summary['cost_usd'])
         run['sessions'].append(dict(label=name, trace_session=session, window=window.record() or None, summary=str((out/args.lineage/name/'summary.json').relative_to(out)),
                                     session_state=summary.get('session_state', summary['run_state']), cost_usd=summary['cost_usd'],
-                                    ledger_charged_usd=summary['proxy']['charged_usd'], wall_seconds=summary['wall_seconds'],
-                                    stopped_by_cap=summary['stopped_by_cap'], cap_usd=summary['cap_usd'],
+                                    ledger_charged_usd=summary['proxy'].get('charged_usd'), wall_seconds=summary.get('wall_seconds'),
+                                    stopped_by_cap=summary['stopped_by_cap'], cap_usd=summary.get('cap_usd'),
                                     accepted=summary.get('accepted'), rejected=summary.get('rejected')))
         print(f'{args.arm} {args.lineage} {name}: {summary.get("session_state", summary["run_state"])}, '
-              f'{summary.get("requests")} requests, ${summary["cost_usd"]}, {summary["wall_seconds"]} s, '
+              f'{summary.get("requests")} requests, ${summary["cost_usd"]}, {summary.get("wall_seconds")} s, '
               f'accepted {summary.get("accepted")}, '
               f'rejected {summary.get("rejected")}', flush=True)
         if summary['proxy']['revoked'] or summary['proxy']['breaches']:

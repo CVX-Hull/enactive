@@ -23,6 +23,7 @@ from harness.curator.knowledge import Repository
 from harness.curator.proxy import ModelProxy
 from harness.curator.session import SessionConfig, run_session
 from tests.curator_stand_in import StandIn
+from tests.curator_trace import make_long_session
 from tests.test_curator_sandbox import custodian  # noqa: F401 - the escape suite's real listeners
 from tests.test_trace_projection import make_session
 from tools.curator_host import shadow
@@ -338,7 +339,7 @@ def test_the_prompt_states_the_gate_and_carries_no_game_knowledge():
 def test_the_prompt_defines_the_four_fact_kinds_and_the_new_fields():
     prompt = (shadow.HOST_DIR/'prompt.md').read_text()
     for needed in ('place_with_goods', 'hazard', 'open_commitment', 'how_it_works', '`subject`', '`place`', '`game_time`',
-                   'one fact per item', 'coverage.json'):
+                   'One fact per item', 'coverage.json'):
         assert needed in prompt, needed
 
 
@@ -420,7 +421,7 @@ def test_both_arms_configure_a_host_the_proxy_allows():
             assert done.stdout.strip() == 'valid', done.stderr
 
 
-SUMMARY_FIELDS = {'schema', 'kind', 'arm', 'model', 'effort', 'lineage', 'trace_session', 'memory', 'cap_usd', 'started_wall',
+SUMMARY_FIELDS = {'window', 'coverage', 'schema', 'kind', 'arm', 'model', 'effort', 'lineage', 'trace_session', 'memory', 'cap_usd', 'started_wall',
                   'run_state', 'wall_seconds', 'cost_usd', 'proxy', 'stopped_by_cap', 'session_id', 'record', 'session_state',
                   'sandbox', 'errors', 'refused', 'submissions', 'accepted', 'rejected', 'verdicts', 'drafts', 'published_after',
                   'requests', 'time_to_first_request_seconds', 'first_request_prompt_tokens', 'tokens', 'host_reported_cost_usd',
@@ -439,6 +440,7 @@ def test_a_dry_run_writes_a_complete_summary_per_session_and_per_run(tmp_path, m
     assert session['tokens'] == dict(prompt=3300, completion=120, cached=1600, cache_write=0, reasoning=30)
     proxy = dict(session['proxy'])
     assert Decimal(proxy.pop('pending_reserved_usd')) == 0
+    assert Decimal(proxy.pop('max_reserved_usd')) > 0 and proxy.pop('charged_usd') == '0.0036'
     assert proxy == dict(revoked=False, breaches=0, entries=3, refusals=0, refusal_reasons=[], forwarded=3,
                          cap_refused=False, usage_missing=0, settled=True, unsettled_requests=0, receipt_error=None)
     closure = json.loads((out/'397/sd1a1/proxy-close.json').read_text())
@@ -457,6 +459,106 @@ def test_a_dry_run_writes_a_complete_summary_per_session_and_per_run(tmp_path, m
     assert json.loads((out/'397'/'sd1a1'/'summary.json').read_text())['published_before'] == 'v0'
     assert KEY not in ''.join(p.read_text(errors='replace') for p in out.rglob('*') if p.is_file())
     assert [r['status'] for r in shadow._lines(out/'397'/'sd1a1'/'proxy-ledger.jsonl')] == [200, 200, 200]
+
+
+def run_windows(tmp_path, upstream, windows, monkeypatch, *extra, out_name='windows', steps=12):
+    runtime = tmp_path/'runtime'
+    evidence = tmp_path/'evidence'
+    if not (evidence/shadow.LINEAGES['397']['directory']).exists():
+        make_long_session(evidence/shadow.LINEAGES['397']['directory']/'computer-sessions', 'sd1a1', steps=steps)
+    monkeypatch.setenv(shadow.KEY_VARIABLE, KEY)
+    listing = tmp_path/'windows.json'
+    listing.write_text(json.dumps(windows))
+    out = runtime/'curator-shadow'/out_name
+    code = shadow.main(['--arm', 'terra', '--lineage', '397', '--windows-file', str(listing), '--cap-usd', '1',
+                        '--upstream', upstream, '--runtime-root', str(runtime), '--evidence-root', str(evidence),
+                        '--out', str(out), '--max-output-tokens', '4096', '--wall-seconds', '120', *extra])
+    return code, out, runtime
+
+
+@native
+def test_a_window_run_goes_through_the_stand_in_one_window_after_another_on_one_repository(tmp_path, monkeypatch):
+    windows = [dict(session='sd1a1', actor='001', first=1, last=4, game_time='day 1 08:00'),
+               dict(session='sd1a1', actor='001', first=5, last=8)]
+    with StandIn() as stand_in:
+        code, out, runtime = run_windows(tmp_path, stand_in.url, windows, monkeypatch)
+    assert code == 0
+    first = json.loads((out/'397'/'sd1a1-001-1-4'/'summary.json').read_text())
+    second = json.loads((out/'397'/'sd1a1-001-5-8'/'summary.json').read_text())
+    assert first['window'] == dict(session='sd1a1', actor='001', first=1, last=4, game_time='day 1 08:00')
+    assert first['session_state'] == 'sealed' and (first['accepted'], first['rejected']) == (1, 0)
+    assert first['coverage'] == dict(schema='curator-coverage/1', session='sd1a1', actor='001', last_step=4,
+                                     game_time='day 1 08:00')
+    assert first['published_before'] == 'v0' and second['published_before'] == 'v1'  # the store as the last left it
+    assert second['coverage']['last_step'] == 8 and second['coverage']['game_time'] is None
+    assert (second['accepted'], second['rejected']) == (0, 1)  # the stand-in repeats its fact id: the gate refuses it
+    for summary in (first, second):
+        assert summary['cost_usd'] == '0.0036' and summary['wall_seconds'] > 0 and summary['memory']['passed'] is False
+    run = json.loads((out/'summary.json').read_text())
+    assert run['complete'] is True and run['sessions_planned'] == ['sd1a1-001-1-4', 'sd1a1-001-5-8']
+    assert run['windows'] == windows or [dict(w, game_time=w.get('game_time')) for w in windows] == run['windows']
+    assert run['windows_sha256'] == shadow.windows_digest([shadow.Window.read(w) for w in windows])
+    assert [(s['label'], s['cost_usd'], s['ledger_charged_usd'], s['stopped_by_cap']) for s in run['sessions']] == [
+        ('sd1a1-001-1-4', '0.0036', '0.0036', False), ('sd1a1-001-5-8', '0.0036', '0.0036', False)]
+    assert all(s['wall_seconds'] > 0 for s in run['sessions']) and run['total_cost_usd'] == '0.0072'
+    repo = Repository(runtime/'knowledge'/'shadow-454'/'windows'/'terra'/'397', 'cdda')
+    assert repo.published() == 'v1' and [f['id'] for f in repo.facts()] == ['f1']
+
+
+def test_windows_are_one_list_written_two_ways_and_selected_with_the_runners_refusals(tmp_path):
+    from argparse import Namespace
+    plan = Namespace(windows_file=None, window_plan=['sd1a1', '001', '1', '20', '10'], sessions=None)
+    windows = shadow.read_windows(plan)
+    assert [(w.first, w.last) for w in windows] == [(n * 20 + 1, n * 20 + 20) for n in range(10)]
+    listing = tmp_path/'w.json'
+    listing.write_text(json.dumps([w.record() for w in windows]))
+    assert shadow.read_windows(Namespace(windows_file=str(listing), window_plan=None, sessions=None)) == windows
+    assert shadow.windows_digest(windows) == shadow.windows_digest(shadow.read_windows(Namespace(
+        windows_file=str(listing), window_plan=None, sessions=None)))
+    spec, units = shadow.select_units('397', None, windows)
+    assert spec is shadow.LINEAGES['397'] and units[0] == ('sd1a1-001-1-20', 'sd1a1', windows[0]) and len(units) == 10
+    assert shadow.read_windows(Namespace(windows_file=None, window_plan=None, sessions=None)) is None
+    for bad in (Namespace(windows_file=str(listing), window_plan=['sd1a1', '001', '1', '20', '2'], sessions=None),
+                Namespace(windows_file=None, window_plan=['sd1a1', '001', '1', '20', '2'], sessions=['sd1a1']),
+                Namespace(windows_file=None, window_plan=['sd1a1', '001', '0', '20', '2'], sessions=None),
+                Namespace(windows_file=None, window_plan=['sd1a1', '001', 'x', '20', '2'], sessions=None)):
+        with pytest.raises(shadow.ShadowError):
+            shadow.read_windows(bad)
+    for held_out in ('lh1a1', 'lh4b1', 'sd1a9'):
+        with pytest.raises(shadow.ShadowError):
+            shadow.select_units('397', None, [shadow.Window(held_out, '001', 1, 2)])
+    with pytest.raises(shadow.ShadowError, match='listed once'):
+        shadow.select_units('397', None, [shadow.Window('sd1a1', '001', 1, 2)]*2)
+
+
+def test_a_double_cap_run_names_one_session_and_needs_the_cap_it_doubles(tmp_path, monkeypatch, capsys):
+    one = [dict(session='sd1a1', actor='001', first=1, last=4)]
+    two = one + [dict(session='sd1a1', actor='001', first=5, last=8)]
+    for windows, extra in ((two, ['--session-cap-usd', '0.5', '--double-session-cap']), (one, ['--double-session-cap'])):
+        code, out, _ = run_windows(tmp_path, 'http://127.0.0.1:9', windows, monkeypatch, *extra)
+        assert code == 2 and 'double-session-cap' in capsys.readouterr().err and not out.exists()
+
+
+@native
+def test_a_double_cap_rerun_applies_twice_the_cap_on_the_repository_it_continues(tmp_path, monkeypatch):
+    one = [dict(session='sd1a1', actor='001', first=1, last=4)]
+    with StandIn() as stand_in:
+        code, out, runtime = run_windows(tmp_path, stand_in.url, one, monkeypatch, '--session-cap-usd', '0.25',
+                                         out_name='first')
+        assert code == 0
+        root = runtime/'knowledge'/'shadow-454'/'first'/'terra'/'397'
+        again, redo, _ = run_windows(tmp_path, stand_in.url, one, monkeypatch, '--session-cap-usd', '0.25',
+                                     '--double-session-cap', '--knowledge-root', str(root), out_name='redo')
+    assert again == 0
+    first, second = (json.loads((path/'summary.json').read_text()) for path in (out, redo))
+    assert (first['session_cap_usd'], first['session_cap_doubled'], first['published_before_run']) == ('0.25', False, 'v0')
+    assert (second['session_cap_usd'], second['session_cap_doubled'], second['published_before_run']) == ('0.50', True, 'v1')
+    assert json.loads((redo/'397'/'sd1a1-001-1-4'/'summary.json').read_text())['cap_usd'] == '0.50'
+    assert second['knowledge_root'] == str(root.resolve())
+    assert not (runtime/'knowledge'/'shadow-454'/'redo').exists()  # no fresh repository was made for the re-run
+    bad, _, _ = run_windows(tmp_path, 'http://127.0.0.1:9', one, monkeypatch, '--knowledge-root',
+                            str(tmp_path/'elsewhere'), out_name='elsewhere')
+    assert bad == 2
 
 
 @native
@@ -502,14 +604,14 @@ def test_an_upstream_retry_veto_survives_the_real_proxy(tmp_path, world):
 
 @native
 def test_the_run_stops_when_the_cap_is_reached(tmp_path, monkeypatch):
-    # Tier bounds reserve about $0.05 for the first body plus 4,096 output tokens, then settle at
-    # $0.02: against a $0.065 cap the first is admitted and the larger second request refused.
+    # Tier bounds reserve about $0.06 for the first body plus 4,096 output tokens, then settle at
+    # $0.02: against a $0.075 cap the first is admitted and the larger second request refused.
     with StandIn(cost=0.02) as stand_in:
         runtime = tmp_path/'runtime'
         evidence = synthetic_evidence(tmp_path, '397', ('sd1a1', 'sd1a2'))
         monkeypatch.setenv(shadow.KEY_VARIABLE, KEY)
         out = runtime/'curator-shadow'/'cap'
-        code = shadow.main(['--arm', 'terra', '--lineage', '397', '--sessions', 'sd1a1', 'sd1a2', '--cap-usd', '0.065', '--upstream', stand_in.url, '--runtime-root', str(runtime),
+        code = shadow.main(['--arm', 'terra', '--lineage', '397', '--sessions', 'sd1a1', 'sd1a2', '--cap-usd', '0.075', '--upstream', stand_in.url, '--runtime-root', str(runtime),
                             '--evidence-root', str(evidence), '--out', str(out), '--max-output-tokens', '4096', '--wall-seconds', '120'])
     assert code == 0
     run = json.loads((out/'summary.json').read_text())
@@ -517,7 +619,7 @@ def test_the_run_stops_when_the_cap_is_reached(tmp_path, monkeypatch):
     assert run['stopped'] == 'cap-reached' and run['sessions_run'] == 1 and not (out/'397'/'sd1a2').exists()
     assert first['stopped_by_cap'] is True and 'spend cap reached' in first['proxy']['refusal_reasons']
     assert len(stand_in.requests) == 1
-    assert Decimal(run['total_cost_usd']) == Decimal('0.02') <= Decimal('0.065')
+    assert Decimal(run['total_cost_usd']) == Decimal('0.02') <= Decimal('0.075')
     assert first['session_state'] == 'aborted' and first['host_end'] == dict(reason='provider-error', ok=False)
     assert first['model_status'] == [200, 429] and first['published_after'] == 'v0' and first['submissions'] == 0
 
