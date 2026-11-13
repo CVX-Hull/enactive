@@ -1,16 +1,15 @@
 name: Portable controller checks
+# MEASUREMENT ONLY (#557): three lanes as separate jobs. This branch is never merged.
 on:
   pull_request:
     branches: [main]
-  push:
-    branches: [main]
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
-  controller:
+  structure-and-python:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -23,20 +22,48 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22'
-      - name: Select strict validation profile
-        id: validation
-        run: python tools/ci.py
       - run: python -m venv .venv
       - run: .venv/bin/python -m pip install --cache-dir .cache/pip --require-hashes -r requirements-dev.lock
       - run: npm --userconfig /dev/null --cache "$PWD/.cache/npm" ci --ignore-scripts --no-audit --no-fund
-      - if: steps.validation.outputs.profile != 'main'
-        run: npm --userconfig /dev/null --cache "$PWD/.cache/npm" --prefix tools/player_host ci --ignore-scripts --no-audit --no-fund
-      - if: steps.validation.outputs.profile != 'main'
-        run: npm --userconfig /dev/null --cache "$PWD/.cache/npm" --prefix tools/curator_host ci --ignore-scripts --no-audit --no-fund
-      - if: steps.validation.outputs.profile != 'main'
-        run: node_modules/.bin/puppeteer browsers install chrome
+      - run: npm --userconfig /dev/null --cache "$PWD/.cache/npm" --prefix tools/player_host ci --ignore-scripts --no-audit --no-fund
+      - run: npm --userconfig /dev/null --cache "$PWD/.cache/npm" --prefix tools/curator_host ci --ignore-scripts --no-audit --no-fund
+      - name: Structural checks
+        run: .venv/bin/python tools/check.py --profile main
+      - name: Python tests without the adapter suite
+        run: >
+          .venv/bin/python -m pytest -q -n 4 --dist worksteal --max-worker-restart=0 --durations=10 tests
+          --deselect tests/test_player_host_adapter.py::PlayerHostAdapterTests::test_adapter_sdk_and_subprocess_units
+          --deselect tests/test_ci.py::WorkflowPolicyTests::test_required_workflow_establishes_the_selector_platform_assumptions
+  adapter:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.14'
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+      - run: python -m venv .venv
+      - run: .venv/bin/python -m pip install --cache-dir .cache/pip --require-hashes -r requirements-dev.lock
+      - run: npm --userconfig /dev/null --cache "$PWD/.cache/npm" --prefix tools/player_host ci --ignore-scripts --no-audit --no-fund
+      - name: Player-host adapter suite
+        run: .venv/bin/python -m pytest -q --durations=3 tests/test_player_host_adapter.py
+  browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.14'
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+      - run: npm --userconfig /dev/null --cache "$PWD/.cache/npm" ci --ignore-scripts --no-audit --no-fund
+      - run: node_modules/.bin/puppeteer browsers install chrome
       - name: Allow the project Chrome sandbox on this disposable runner
-        if: steps.validation.outputs.profile != 'main'
         run: |
           chrome_path=$(node --input-type=module -e "import puppeteer from 'puppeteer'; process.stdout.write(await puppeteer.executablePath())")
           test -x "$chrome_path"
@@ -49,7 +76,19 @@ jobs:
           }
           EOF
           sudo apparmor_parser -r /etc/apparmor.d/cdda-project-chrome
-      - name: Run strict ${{ steps.validation.outputs.profile }} validation
+      - run: node tests/test_viewer.cjs
+      - run: node tests/test_investigation.cjs
+      - run: node tests/test_investigation_session.cjs
+  controller:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    needs: [structure-and-python, adapter, browser]
+    if: always()
+    steps:
+      - name: Every lane succeeded
         env:
-          VALIDATION_PROFILE: ${{ steps.validation.outputs.profile }}
-        run: .venv/bin/python tools/check.py --profile "$VALIDATION_PROFILE"
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "lane results: $RESULTS"
+          for result in $RESULTS; do test "$result" = success; done
+          test -n "$RESULTS"
