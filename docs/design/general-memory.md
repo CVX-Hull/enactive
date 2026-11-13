@@ -137,7 +137,12 @@ changes two things.
    screen and the index, and answers with up to a few fact ids and a line each, or with
    nothing. It runs beside the player and never blocks it; its answer is added as a notice
    to the next request after it finishes, and stays in the history, so the cache holds.
-   A reminder may arrive a decision or two late.
+   A reminder may arrive a decision or two late. Like the briefing, it is labelled as
+   fallible knowledge, not instructions, as ADR 009 requires.
+
+**Curator sessions during play** stay in the design as the owner decided ("Yes, priced
+first"). Reminders do not depend on them: the recall model reads the published store,
+whatever version it is. Sessions during play make the store more current.
 
 **What it costs.**
 
@@ -254,8 +259,9 @@ If the owner decides as recommended, [player-context.md](player-context.md) chan
    replays (decision 6).
 2. **Store growth.** Consolidation sessions between admissions, and no hard cap until
    growth after consolidation shows one is needed. *Recommended: yes*, as the 13 November
-   decision on caps asks. The alternative, a byte budget the gate enforces now, reverses
-   that decision.
+   decision on caps asks. Cost: one more curator session per admission, inferred at the
+   gate's \$1.16 to \$4.19 a session. The alternative, a byte budget the gate enforces now,
+   reverses that decision.
 3. **Delivery.** The full items chosen by a recall model at each actor's start, built
    first; reminders during play built next, behind a measurement of their silence and
    use. *Recommended: yes.* Cost: \$0 to build; in play, inferred at about two thirds to
