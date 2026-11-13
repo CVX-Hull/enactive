@@ -29,8 +29,8 @@ review_trigger: The owner decides the questions below, or a measurement contradi
      checked answers on 2 of 12. Which is nearer the truth on engagement is not known.
 - **What is wrong with what we built.** Its code names no game, but its schema and
   instructions assume places and goods: required places and game times, a fixed
-  `place_with_goods` kind, judge labels about going to a place. The format was tuned on
-  the four facts the gate then checked. The rows are added to the architecture's
+  `place_with_goods` kind, judge labels about going to a place. The format was designed
+  around places and goods after the four losses, though the brief named none of them. The rows are added to the architecture's
   [current coupling](../architecture.md#game-family-portability) table.
 - **Proposal.**
   1. **Format.** Drop the fixed kinds and the required place and time; keep ADR 009's
@@ -144,11 +144,14 @@ changes two things.
 - **Prompt.** Reminders stay, so each adds its tokens to every later request in that
   actor. The recall model's silence keeps that small; the first development play
   measures it.
-- **Dollars.** One recall request costs about what a curator request does, about \$0.02 at
-  the pilot's rates (\$2.34 over 112 requests). At one every five decisions that is about
-  \$0.004 a decision, against about \$0.006 a decision of play with a bounded prompt
-  ([context design](player-context.md)): an inferred increase of about two thirds. A
-  smaller model would cost less; which one is good enough is measured.
+- **Dollars, inferred.** If a recall request costs what a curator request does, about
+  \$0.02 at the pilot's rates (\$2.34 over 112 requests), one every five decisions is about
+  \$0.004 a decision. Play with a bounded prompt costs about \$0.006 a decision by the
+  [context design](player-context.md)'s figure, and \$0.003 to \$0.004 in the pilot's
+  windows under 60,000 tokens. So recall adds about two thirds to about the same as play.
+  A recall request reads one screen and an index, against a curator's frames and files,
+  so it may cost less; a smaller model would cost less again. The first development play
+  measures it.
 - **Risk.** In the closest outside study a proactive memory agent beside an actor raised
   task success by 2.5 to 8 points, and an untrained small one lowered it. Every reminder
   and every silence is logged and judged.
@@ -182,14 +185,17 @@ provider; the coding host's capacity is its cost.
 
 ### Does memory help? Withholding within each start
 
-- **Design.** In each start a random half of the store's subjects (drawn per start, seed
+- **Design.** In each start a random half of the store's units (drawn per start, seed
   recorded) is withheld: their facts are left out of the full items, the index and the
-  reminders. Facts about one subject, and supersede chains, are withheld together.
+  reminders. A unit is a subject, where facts have one; otherwise a supersede chain, or a
+  single fact. The consolidation before the start merges subject names, so one thing is
+  one unit.
 - **Outcome.** For every fact, over the whole start: was it found again, acted against,
   or acted in line with? Whether a fact "became relevant" is judged only as a secondary
   measure, because delivering a fact can create the need for it.
-- **Blind judging.** The judges and the owner see packets with the briefing and reminders
-  removed, so they cannot tell a delivered fact from a withheld one.
+- **Blind judging.** For this measure the judges and the owner see frames and inputs
+  only: the briefing, the reminders and the player's own `intent` and `cites`, which can
+  name delivered facts, are removed. Only the use labels read them.
 - **What it estimates.** The effect of delivering a fact while half the store is
   delivered. It cannot see a harm to play as a whole, such as a distracting reminder;
   that is seen in the use labels and in time spent per decision.
@@ -252,8 +258,9 @@ If the owner decides as recommended, [player-context.md](player-context.md) chan
    that decision.
 3. **Delivery.** The full items chosen by a recall model at each actor's start, built
    first; reminders during play built next, behind a measurement of their silence and
-   use. *Recommended: yes.* Cost: \$0 to build; in play, inferred at about two thirds of
-   the cost of play at one recall request every five decisions, less with a smaller model.
+   use. *Recommended: yes.* Cost: \$0 to build; in play, inferred at about two thirds to
+   about the same as the cost of play at one recall request every five decisions, less
+   with a smaller model.
 4. **The cut.** The pilot has reported, and the protocol left the cut to be decided then.
    *Recommended: not yet.* Delivery at the moment of need may matter more than holding the
    prompt under 60,000 tokens, and it is measured first. Cost: \$0 now.
