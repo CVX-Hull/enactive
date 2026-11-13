@@ -28,7 +28,7 @@ Open questions about controls and their cost are tracked in
 [#555](https://github.com/CVX-Hull/enactive/issues/555) (how spend is capped),
 [#556](https://github.com/CVX-Hull/enactive/issues/556) (remaining control candidates)
 and [#557](https://github.com/CVX-Hull/enactive/issues/557) (the cost of the
-pull-request check); the [risk register](risks.md) and [controls](controls.md) own the
+pull-request check, with a [proposal to run its lanes as parallel jobs](design/parallel-check-jobs.md)); the [risk register](risks.md) and [controls](controls.md) own the
 current answers.
 
 Current contracts govern the running system; a proposed ADR changes nothing until a
