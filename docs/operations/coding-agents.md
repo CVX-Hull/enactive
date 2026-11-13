@@ -45,21 +45,25 @@ its argument; its final message is the hand-back, verified like any other.
 
 | Role | Codex (`codex exec`) | Antigravity (`agy`) |
 | --- | --- | --- |
-| Reviewer | `codex exec -s read-only -C WORKTREE -o OUT -` | `agy -p BRIEF --mode plan` from the worktree |
-| Worker | `codex exec -s workspace-write -C WORKTREE -o OUT -` | `agy -p BRIEF --mode accept-edits --sandbox` from the worktree |
+| Reviewer | `codex exec -s read-only -C WORKTREE -o OUT -` | `agy --mode plan -p BRIEF` from the worktree |
+| Worker | `codex exec -s workspace-write -C WORKTREE -o OUT -` | `agy --mode accept-edits --sandbox -p BRIEF` from the worktree |
 
 - **Commits.** Codex's `workspace-write` sandbox cannot write the main checkout's
   `.git`, which a worktree shares, and has no network. A worker on either host
-  leaves its changes uncommitted; the lead inspects and commits them.
-- **Environment.** Start it from a shell that holds no provider credential or session
-  token. Its brief names the project's paths only.
+  leaves its changes uncommitted, and the lead inspects and commits them, as the
+  lead already does before every commit.
+- **Commands.** Antigravity's print mode refuses any shell command it was not
+  granted, so a reviewer's brief carries the diff and the command output it needs.
+- **Credentials.** The shell that starts either tool holds no provider credential
+  ([R-KEY-LEAK](../risks.md)): the tool reads its whole environment, and that would
+  hand a key to a third provider. Cost: none beyond starting it from a clean shell.
 - **Outside the project** each tool keeps its own sessions and logs under its home
-  configuration directory, as it does when used by hand. The project changes no
-  configuration of either.
+  configuration directory, as it does when used by hand
+  ([R-HOST-CHANGE](../risks.md)); the project changes no configuration of either.
 
 ## Environment facts for agents
 
-These hold in every checkout and worktree, on both hosts.
+These hold in every checkout and worktree, on every host.
 
 - **Python** is `.venv/bin/python` of the main checkout. There is no `python` on the
   path, and a worktree has no `.venv` of its own. From a worktree, run it by its path:
@@ -79,7 +83,8 @@ These hold in every checkout and worktree, on both hosts.
   does not change it.
 - **Pull requests** use the repository's template, reference issues with `Refs`, and
   say that agent review is not human approval. A worker does not merge.
-- **Nothing outside the project.** No global installs, no home-directory files. Scratch
+- **Nothing outside the project.** No global installs, and no home-directory files
+  written by the task (a host's own sessions and logs are the host's). Scratch
   files go in the host's scratch directory, not in the checkout.
 - **Only the lead, or an operator the lead designates,** launches the game, uses the
   provider key or spends ([S-AGENT](../standards/agents.md#delegated-campaign-operation)).
@@ -96,7 +101,7 @@ requires the host's structured question tool where one exists.
 
 ## Gameplay command allowances
 
-Both hosts allow exactly the stable prefixes `.venv/bin/python -m harness status`,
+Both lead hosts, Codex and Claude Code, allow exactly the stable prefixes `.venv/bin/python -m harness status`,
 `… pause` and `… run` without a prompt; every other command keeps the host's
 default approval. [Operator permissions](../operator-permissions.md) explains why a
 match is not filesystem confinement, source pinning, credential loading or
