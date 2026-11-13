@@ -1,9 +1,9 @@
 ---
 owner: lead
-status: proposed
+status: active
 date: '2026-11-13'
 scope: 'Design of the playing model''s context (#591): what is always in front of the player, what the curator publishes and when it is delivered, and how the context stays small enough to be fast; five options compared on what the player knows, response time and cost, from the sealed traces, the audit of memory reads (#594), the trace reader''s figures (#592) and dated outside sources; the contract question for stated intent on tool calls (#384); the migration that follows; owner decisions. No run, game launch or model call was made'
-review_trigger: An owner decision on the list in this note, a measurement of any estimate marked as such here, or a change to the player host contract's context rules
+review_trigger: A measurement of any estimate marked as such here, the memory screen's result, or the adoption migration that builds the briefing and the cut
 ---
 
 # The player's context: delivery of curated knowledge and a bounded prompt
@@ -48,7 +48,9 @@ review_trigger: An owner decision on the list in this note, a measurement of any
   recorded run tests either. The
   [memory screen](https://github.com/CVX-Hull/enactive/issues/590) is where they are
   measured.
-- **Owner decisions needed.** Four, listed under [owner decisions](#owner-decisions).
+- **Owner decisions.** The four questions under [owner decisions](#owner-decisions) are
+  answered in the [owner decision log](../decisions/owner-decisions.md). This note is
+  the working description of the design the memory screen tests.
 
 Terms are in the [glossary](../glossary.md). A **request** is one call to the model; it
 returns one tool call. A **turn** is a tool call with its result. The **window** is the
@@ -395,6 +397,9 @@ nothing.
    holds, and the count of things found again.
 
 ## Owner decisions
+
+These four questions were put to the owner with the recommendations shown. The answers
+are rows in the [owner decision log](../decisions/owner-decisions.md).
 
 1. **Direction.** Adopt the three layers as the design the memory screen tests.
    *Recommended: yes.*
