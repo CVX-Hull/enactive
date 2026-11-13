@@ -26,35 +26,59 @@ this page are frozen on the branch `memory-screen-gates` before the first sessio
 | --- | --- | --- |
 | Protocol | `docs/design/memory-screen-protocol.md` at `9d30790` | `9aae71f86f2e4d5ad10b64cca3e018206a57a34472ebc7a0ea7432f26568de40` |
 | Curator brief | `tools/curator_host/prompt.md` | `c5ca0ce7cc1c191360669b908e67e0d0c80471bf906ec77acbed6ef894360a6b` |
-| Windows | `docs/acceptance/assets/2026-11-13-session-price-pilot-windows.json` | `8e6aff8f15755095196df4e01c87150aa9d9554a04385094dde9ca261413f597` |
+| Windows | `docs/acceptance/assets/2026-11-13-session-price-pilot-windows.json` | `4c189e3dbddf53754e231795b6fa654858346191bda7c09f22e13906adf6280f` |
 | Arm and prices | as in the brief gate's record | |
 
 - **Windows.** Ten consecutive windows of the last admission, `sd1a7`, which no gate
-  session read: its first actor's steps 1 to 158 in windows of 20 (the eighth is 18
-  steps, the actor's end), then its second actor's steps 1 to 40. A window counts the
-  actor's steps, its operations, not provider requests.
-- **The store.** A copy of the brief gate's repository at `v6`, made before any pilot
-  session, at `.runtime/knowledge/shadow-454/pilot-from-gate/terra/397/`. The gate's own
-  repository is left as its check read it. Each window continues the store the previous
-  one left.
+  session read. Its first actor has 156 operations (158 provider requests) and its
+  second 53 (55 requests). The windows are the first actor's operations 1 to 156 in
+  twenties (the eighth is 141 to 156, 16 operations, the actor's end), then the second
+  actor's 1 to 40. A window counts operations, not requests; here 20 operations are
+  about 20 to 21 requests, so a window is close to the protocol's 20 new decisions.
+- **The runner's hash of a windows list** is of its canonical JSON, not of the file.
+  The first window's file gives `b5fd5c53…` and the other nine's `c4006a23…`; each
+  run's `summary.json` records it as `windows_sha256`.
+- **No window gives a game time**, so each coverage stamp records it as null.
+- **The store.** A copy of the brief gate's repository at `v6` (commit `d9ebd5f`, with
+  the open draft `remaining-loot`), made before any pilot session, at
+  `.runtime/knowledge/shadow-454/pilot-from-gate/terra/397/`. The gate's own repository
+  is left as its check read it. Each window continues the store the previous one left.
 - **Limits.** 120 requests, 1,800 s wall clock, 32,768 output tokens, 16 context images
   in blocks of 8, as for the gate.
-- **Session cap.** \$6. The gate's largest single reservation was \$2.22, so the cap holds
-  two. A session that reaches its cap is re-run once at \$12; a second cap stops the
-  pilot. A session that ends with no accepted submission for another reason is re-run
-  once; a second such end stops the pilot.
-- **Run cap.** \$20 for one invocation; a re-run invocation gets \$20 less the ledger
-  total so far.
+- **Session cap.** \$8. The gate's largest single reservation was \$2.22. At \$8 the host
+  tells the curator to write at \$3.40, refuses reading at \$5.44, and the proxy refuses
+  a request from about \$5.78 spent, so the host's writing-only phase comes before the
+  proxy's refusal.
+
+### Stops, re-runs and continuing
+
+- **What counts as a price sample.** Every session that seals counts, including one
+  that finishes with no submission because its window had nothing new to store. Such
+  a session is not re-run.
+- **A session that does not seal or whose submission is rejected** stops the run
+  (`--stop-on-abort`, `--stop-on-reject`). If the cause was its \$8 cap, it is re-run
+  once at \$16 with `--double-session-cap`; otherwise it is re-run once as it was. A
+  second stop of the same window ends the pilot.
+- **A session cut by the \$20 stop**, whose cap was below \$8 because less remained, is
+  reported as cut, is not re-run and is not counted as a price sample.
+- **Continuing after a stop.** A re-run is one invocation with the one window. The
+  windows after it follow in another invocation that takes the frozen list's remaining
+  entries in order, unchanged, on the same `--knowledge-root`, with a new `--out`.
+- **`REMAINING`** is \$20 less the sum of `charged` over every `proxy-ledger.jsonl` under
+  the pilot's output directories, less any `pending_reserved_usd` in a
+  `proxy-close.json`.
 - **The first window runs alone** and is read before the other nine.
+
+Commands, from the main checkout:
 
 ```bash
 .venv/bin/python -m tools.curator_host.shadow --arm terra --lineage 397 \
-  --windows-file WINDOW_ONE --cap-usd 20 --session-cap-usd 6 --max-output-tokens 32768 \
+  --windows-file WINDOW_ONE --cap-usd 20 --session-cap-usd 8 --max-output-tokens 32768 \
   --stop-on-reject --stop-on-abort \
   --knowledge-root .runtime/knowledge/shadow-454/pilot-from-gate/terra/397 \
   --out .runtime/curator-shadow/pilot-first
 .venv/bin/python -m tools.curator_host.shadow --arm terra --lineage 397 \
-  --windows-file WINDOWS_TWO_TO_TEN --cap-usd REMAINING --session-cap-usd 6 \
+  --windows-file WINDOWS_TWO_TO_TEN --cap-usd REMAINING --session-cap-usd 8 \
   --max-output-tokens 32768 --stop-on-reject --stop-on-abort \
   --knowledge-root .runtime/knowledge/shadow-454/pilot-from-gate/terra/397 \
   --out .runtime/curator-shadow/pilot-rest
@@ -65,4 +89,7 @@ nine, split without change.
 
 ## Deviations
 
-None so far.
+- **The frozen inputs were revised before spending** after the pre-spend review: the
+  eighth window's end (158 was a request count; the actor has 156 operations), the
+  session cap (\$6 would have let the proxy refuse before the host's writing-only
+  phase), and the rules for sessions with no submission, cut sessions and continuing.
