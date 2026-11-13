@@ -96,7 +96,8 @@ def annotated(tmp_path: Path) -> tuple[Path, Path]:
     for name, packets in ANNOTATIONS.items():
         for packet, entries in packets.items():
             save(run / 'annotations' / name / f'{packet}.json', dict(packet=packet, entries=entries))
-    return run, save(tmp_path / 'matches.json', dict(matches=MATCHES))
+    # `groups` is the lead's own note; any top-level key but `matches` is ignored
+    return run, save(tmp_path / 'matches.json', dict(matches=MATCHES, groups=[dict(name='garage', entries=3)]))
 
 
 def gate(tmp_path: Path) -> Path:
@@ -180,13 +181,18 @@ def test_an_item_only_one_annotator_listed_is_dropped_and_the_list_is_frozen(tmp
     assert (run / items[0]['first_frame_file']).read_bytes() == png(1)
     with pytest.raises(MeasureError, match='frozen'):
         build_items(run, ['ann-a', 'ann-b'], matches)
+    other, matches = annotated(tmp_path / 'by-command')
+    assert main(['items', str(other), '--annotators', 'ann-a', 'ann-b', '--matches', str(matches)]) == 0
+    out = capsys.readouterr().out  # one place seen in two packets: allowed, and printed
+    assert 'item-01 holds 2 entries of ann-a: packet-01#1 packet-02#1' in out and out.count(' holds ') == 1
     (run / 'items.json').write_text((run / 'items.json').read_text().replace('Pond', 'Lake'))
     with pytest.raises(MeasureError, match='recorded hash'):
         load_items(run)
 
 
 @pytest.mark.parametrize('matches, message', [([['packet-01#9', 'packet-01#1']], 'must pair an entry'),
-    ([['packet-01#1']], 'must pair an entry'), ('none', 'expected')])
+    ([['packet-01#1']], 'must pair an entry'), ([[['packet-01#1'], 'packet-01#1']], 'must pair an entry'),
+    ('none', 'expected'), ([], 'at least one match')])
 def test_matches_that_name_no_entry_are_refused(tmp_path, matches, message):
     run, _ = annotated(tmp_path)
     with pytest.raises(MeasureError, match=message):
@@ -215,7 +221,9 @@ def test_judge_packets_cut_stretches_shuffle_names_and_hold_frames_and_items_onl
         assert manifest['short'] == packet['short'] and manifest['labels'] == list(judge.LABELS)
         assert [row['frame'] for row in manifest['frames']] == list(packet['frames'])
         names = sorted(str(p.relative_to(directory)) for p in directory.rglob('*') if p.is_file())
-        assert names == sorted(['manifest.json', 'instructions.md', 'items.json', *(f'frames/{f}.png' for f in packet['frames'])])
+        assert names == sorted(['manifest.json', 'instructions.md', 'items.json', 'items/item-01.png', 'items/item-02.png',
+            *(f'frames/{f}.png' for f in packet['frames'])])
+        assert (directory / 'items' / 'item-01.png').read_bytes() == png(1)  # the frame the owner's page shows for it
         text = b''.join((directory / name).read_bytes() for name in ('manifest.json', 'instructions.md', 'items.json'))
         for hidden in (b'run-e', b'run-f', b'eeeeeeee', b'ffffffff', b'aaaaaaaa', b'ann-a', b'SECRET', b'mapping', b'arm'):
             assert hidden not in text.replace(b'harm', b'')  # no admission, source ID, annotator, record or arm
@@ -228,14 +236,60 @@ def test_judge_packets_cut_stretches_shuffle_names_and_hold_frames_and_items_onl
         judge_packets(run, [tmp_path / 'evidence' / 'run-e'])
 
 
-def test_item_frames_are_added_only_when_asked(tmp_path):
+def test_judge_packets_are_written_in_shuffled_name_order(tmp_path, monkeypatch):
+    made, real = [], memory_measure.seal_packet
+    monkeypatch.setattr(memory_measure, 'seal_packet', lambda directory, *rest: made.append(directory.name) or real(directory, *rest))
+    run = gate(tmp_path)
+    written = [name for name in made if not name.startswith('packet-')]  # the annotators' packets are named packet-NN
+    lineage = [packet['packet'] for packet in json.loads((run / 'private' / 'judge-mapping.json').read_text())['packets']]
+    assert written == sorted(lineage) and written != lineage  # the mapping keeps lineage order; the disk does not
+
+
+def test_item_frames_are_in_the_packet_unless_left_out(tmp_path):
     run, matches = annotated(tmp_path)
     build_items(run, ['ann-a', 'ann-b'], matches)
-    mapping = judge_packets(run, [admission(tmp_path / 'evidence', 'run-g', 'g', [1, 2])], item_frames=True, seed=1)
+    late = admission(tmp_path / 'evidence', 'run-g', 'g', [1, 2])
+    assert main(['packets', 'judge', str(run), '--runs', str(late), '--seed', '1', '--no-item-frames']) == 0
+    mapping = json.loads((run / 'private' / 'judge-mapping.json').read_text())
     directory = run / 'judge-packets' / mapping['packets'][0]['packet']
-    assert (directory / 'items' / 'item-01.png').read_bytes() == png(1)
+    assert mapping['item_frames'] is False and not (directory / 'items').exists()
+    assert not any(name.startswith('items/') for name in json.loads((directory / 'manifest.json').read_text())['files'])
+    assert mapping['packets'][0]['short'] and 'first showed each item' not in (directory / 'instructions.md').read_text()
+    other, matches = annotated(tmp_path / 'default')
+    build_items(other, ['ann-a', 'ann-b'], matches)
+    assert main(['packets', 'judge', str(other), '--runs', str(late), '--seed', '1']) == 0
+    directory = next((other / 'judge-packets').iterdir())
     assert 'items/item-02.png' in json.loads((directory / 'manifest.json').read_text())['files']
-    assert mapping['packets'][0]['short'] and 'first showed each item' in (directory / 'instructions.md').read_text()
+    assert 'first showed each item' in (directory / 'instructions.md').read_text()
+
+
+def test_the_held_out_lineage_is_refused(tmp_path, capsys):
+    held = admission(tmp_path / '522-held-out' / 'computer-sessions', 'run-h', 'h', [1, 2])
+    with pytest.raises(MeasureError, match='held-out lineage is not read'):
+        recorded_frames([held])
+    run = tmp_path / 'memory-measure' / 'gate'
+    assert main(['packets', 'annotate', str(run), '--runs', str(held)]) == 2 and not run.exists()
+    assert 'held-out' in capsys.readouterr().err
+
+
+@pytest.mark.parametrize('value', [[1, 2], dict(packet=['x'], answers=[]), dict(packet='PACKET', answers='none'),
+    dict(packet='PACKET', answers=[dict(item=['item-01'], label='missed')]), dict(packet='PACKET', answers=[['item-01', 'missed']])])
+def test_json_of_another_shape_is_refused_without_a_traceback(tmp_path, capsys, value):
+    run = gate(tmp_path)
+    packet = json.loads((run / 'private' / 'judge-mapping.json').read_text())['packets'][0]['packet']
+    answer = save(tmp_path / 'answer.json', json.loads(json.dumps(value).replace('PACKET', packet)))
+    assert main(['events', str(run), '--judge', 'judge-a', '--model', 'model-x', str(answer)]) == 2
+    assert capsys.readouterr().err.startswith('memory_measure: ') and not (run / 'events').exists()
+
+
+def test_a_tool_file_of_another_shape_is_refused_without_a_traceback(tmp_path, capsys):
+    run = gate(tmp_path)
+    save(run / 'adjudicated.json', [])
+    assert main(['measure', str(run)]) == 2
+    assert 'does not have the expected shape' in capsys.readouterr().err
+    save(run / 'sample.json', dict(pairs='none'))
+    assert main(['label-server', str(run), '--port', '0']) == 2
+    assert 'does not have the expected shape' in capsys.readouterr().err
 
 
 def test_events_are_validated_judge_events_under_the_run_directory(tmp_path):
@@ -615,7 +669,8 @@ const answer = () => els.choices.children[0].onclick();
     close();
     const closed = els.zoom.hidden === true;
     await answer(); await settle(); // the second click of a double-click lands on an answer button
-    out[name] = {opened, closed, recorded: posts.length};
+    els['item-image'].onclick();    // or on a screen beneath, which must not reopen the view
+    out[name] = {opened, closed, recorded: posts.length, reopened: els.zoom.hidden === false};
   }
   now += 401;
   await answer(); await settle();
@@ -635,8 +690,8 @@ def test_closing_the_enlarged_view_rearms_the_click_guard(tmp_path):
         capture_output=True, text=True, timeout=60)
     assert done.returncode == 0, done.stderr
     out = json.loads(done.stdout)
-    assert out == dict({name: dict(opened=True, closed=True, recorded=0) for name in ('close', 'image', 'backdrop', 'escape')},
-        after=1)  # nothing is recorded until 400 ms after the view closed
+    assert out == dict({name: dict(opened=True, closed=True, recorded=0, reopened=False)
+        for name in ('close', 'image', 'backdrop', 'escape')}, after=1)  # nothing is recorded until 400 ms after the view closed
     # the view is hidden in two places only: when a pair is drawn, and in the one closing function
     assert memory_measure.PAGE.count("el('zoom').hidden = true") == 2 and memory_measure.PAGE.count('closeZoom') == 5
 

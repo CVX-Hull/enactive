@@ -8,7 +8,7 @@ written there and nowhere else. ADMISSION is a sealed run directory (it holds `a
   python -m tools.memory_measure packets annotate RUN --runs ADMISSION... [--every 3] [--frames-per-packet 60]
   python -m tools.memory_measure items RUN --annotators A B --list
   python -m tools.memory_measure items RUN --annotators A B --matches FILE
-  python -m tools.memory_measure packets judge RUN --runs ADMISSION... [--stretch 200] [--every 3] [--seed N] [--item-frames]
+  python -m tools.memory_measure packets judge RUN --runs ADMISSION... [--stretch 200] [--every 3] [--seed N] [--no-item-frames]
   python -m tools.memory_measure sample RUN [--count 20] [--seed N]
   python -m tools.memory_measure label-server RUN [--port 8765]
   python -m tools.memory_measure events RUN --judge NAME --model MODEL ANSWER.json...
@@ -20,15 +20,17 @@ What RUN holds:
   annotate/packets.json, annotate/<packet>/     frames for the two annotators: manifest.json, instructions.md, frames/
   annotations/<annotator>/<packet>.json         each annotator's answer per packet (the lead saves them)
   items.json, items.json.sha256                 the known-item list, frozen: never overwritten
-  judge-packets/<shuffled name>/                one stretch for a judge: manifest.json, instructions.md, items.json, frames/
+  judge-packets/<shuffled name>/                one stretch for a judge: manifest.json, instructions.md, items.json,
+                                                frames/ and items/ (each item's first frame, unless --no-item-frames)
   private/judge-mapping.json                    shuffled name -> admission, decisions and source IDs; never in a packet
   sample.json, labels.json                      the calibration pairs and the owner's labels
   events/<judge>.jsonl                          judge-events/1 (harness/evaluation/core/judge.py)
   agreement.json, adjudicated.json, measure.json
 
-A frame is "changed" when `harness.trace.images.region_diff` over the whole image finds a pixel that differs from
-the frame before it; a packet takes every third changed frame, the first included, with every input sent since
-the packet's previous frame. Packets hold frames and inputs only: no store, no player record, no report, no
+A frame is "changed" when `harness.trace.images.region_diff` over the whole image finds a pixel whose largest
+channel difference from the frame before it exceeds 16 of 255, that function's threshold; a fainter change does not
+count. A packet takes every third changed frame, the first included, with every input sent since the packet's
+previous frame. `--runs` refuses a path under the held-out lineage's evidence, `522-held-out`. Packets hold frames and inputs only: no store, no player record, no report, no
 briefing and no arm name. A judge packet's frames and directory carry shuffled names.
 """
 from __future__ import annotations
@@ -145,6 +147,9 @@ class Frame:
 def recorded_frames(runs: Sequence[Path], min_changed: float = 0.0) -> tuple[dict[str, list[Frame]], dict[str, int]]:
     """Each admission's frames in the order its calls returned them, marked changed or not, and its decision count.
     Only tool calls are read: a frame's source ID, the request that returned it and the inputs of `computer_input`."""
+    for directory in runs:
+        if HELD_OUT in Path(directory).resolve().parts:
+            raise MeasureError(f'{directory}: the held-out lineage is not read for the measure gate')
     lineage, _ = read_lineage(runs)
     frames: dict[str, list[Frame]] = {}
     decisions: dict[str, int] = {}
@@ -340,9 +345,10 @@ def build_items(run: Path, annotators: Sequence[str], matches: Path) -> dict:
     index = read_json(run / 'annotate' / 'packets.json')
     listed = {name: read_annotations(run, name, index) for name in annotators}
     pairs = read_json(matches)
-    pairs = pairs.get('matches') if isinstance(pairs, dict) else None
-    if not isinstance(pairs, list):
-        raise MeasureError(f'{matches}: expected {{"matches": [["<{first} entry>", "<{second} entry>"], ...]}}')
+    pairs = pairs.get('matches') if isinstance(pairs, dict) else None  # any other top-level key is the lead's own and ignored
+    if not isinstance(pairs, list) or not pairs:
+        raise MeasureError(f'{matches}: expected {{"matches": [["<{first} entry>", "<{second} entry>"], ...]}} with at '
+            'least one match')
     parent: dict[tuple[str, str], tuple[str, str]] = {}
 
     def root(node: tuple[str, str]) -> tuple[str, str]:
@@ -351,7 +357,8 @@ def build_items(run: Path, annotators: Sequence[str], matches: Path) -> dict:
         return node
 
     for number, pair in enumerate(pairs, 1):
-        if not isinstance(pair, list) or len(pair) != 2 or pair[0] not in listed[first] or pair[1] not in listed[second]:
+        if not isinstance(pair, list) or len(pair) != 2 or not all(isinstance(entry, str) for entry in pair) \
+                or pair[0] not in listed[first] or pair[1] not in listed[second]:
             raise MeasureError(f'{matches}: match {number} must pair an entry of {first} with an entry of {second}: {pair!r}')
         parent[root((first, pair[0]))] = root((second, pair[1]))
     position = {frame: at for at, frame in enumerate(f for packet in index['packets'] for f in packet['frames'])}
@@ -441,7 +448,9 @@ One JSON document of this shape, and nothing else. Answer every item in `items.j
 
 
 def judge_packets(run: Path, runs: Sequence[Path], stretch: int = 200, every: int = 3, min_changed: float = 0.0,
-                  seed: int | None = None, item_frames: bool = False) -> dict:
+                  seed: int | None = None, item_frames: bool = True) -> dict:
+    """One packet per stretch. Each item's first frame is in the packet unless `item_frames` is off, so the judge
+    sees the same evidence for an item as the owner's page shows."""
     if stretch < 1 or every < 1:
         raise MeasureError('--stretch and --every must be at least 1')
     items, items_sha = load_items(run)
@@ -455,34 +464,38 @@ def judge_packets(run: Path, runs: Sequence[Path], stretch: int = 200, every: in
         items=[dict(id=item['id'], place=item['place'], what=item['what']) for item in items])
     instructions = JUDGE_INSTRUCTIONS.replace('ITEM_FRAMES\n', '- `items/<item id>.png` is the earlier frame that '
         'first showed each item.\n\n' if item_frames else '\n')
-    packets, names = [], set()
-    with Building(run / 'judge-packets') as out:
-        for admission, found in frames.items():
-            for first in range(1, decisions[admission] + 1, stretch):
-                last = min(first + stretch - 1, decisions[admission])
-                kept = every_nth_changed([frame for frame in found if first <= frame.decision <= last], every)
+    stretches: dict[str, tuple] = {}  # shuffled name -> admission, first and last decision, frames; in lineage order
+    for admission, found in frames.items():
+        for first in range(1, decisions[admission] + 1, stretch):
+            last = min(first + stretch - 1, decisions[admission])
+            name = f's{rng.getrandbits(40):010x}'
+            while name in stretches:
                 name = f's{rng.getrandbits(40):010x}'
-                while name in names:
-                    name = f's{rng.getrandbits(40):010x}'
-                names.add(name)
-                directory = out / name
-                directory.mkdir()
-                rows, sources = [], {}
-                for number, frame in enumerate(kept, 1):
-                    row = copy_frame(frame, directory, f'f{number:03d}')
-                    rows.append(dict(row, decision=frame.decision - first + 1))
-                    sources[row['frame']] = frame.source
-                write_json(directory / 'items.json', shown, once=True)
-                for item in items if item_frames else ():
-                    (directory / 'items').mkdir(exist_ok=True)
-                    shutil.copyfile(run / item['first_frame_file'], directory / 'items' / f"{item['id']}.png")
-                count = last - first + 1
-                sha, size = seal_packet(directory, dict(schema='judge-packet/1', packet=name, decisions=count,
-                    short=count < stretch, labels=list(LABELS), items_sha256=items_sha, frames=rows), instructions)
-                packets.append(dict(packet=name, start=f'{admission}:{first}-{last}', admission=admission, first=first,
-                    last=last, decisions=count, short=count < stretch, sha256=sha, bytes=size, frames=sources))
+            stretches[name] = (admission, first, last,
+                every_nth_changed([frame for frame in found if first <= frame.decision <= last], every))
+    packets = {}
+    with Building(run / 'judge-packets') as out:
+        # Written in the order of the shuffled names, so creation times and directory order say nothing of the lineage.
+        for name in sorted(stretches):
+            admission, first, last, kept = stretches[name]
+            directory = out / name
+            directory.mkdir()
+            rows, sources = [], {}
+            for number, frame in enumerate(kept, 1):
+                row = copy_frame(frame, directory, f'f{number:03d}')
+                rows.append(dict(row, decision=frame.decision - first + 1))
+                sources[row['frame']] = frame.source
+            write_json(directory / 'items.json', shown, once=True)
+            for item in items if item_frames else ():
+                (directory / 'items').mkdir(exist_ok=True)
+                shutil.copyfile(run / item['first_frame_file'], directory / 'items' / f"{item['id']}.png")
+            count = last - first + 1
+            sha, size = seal_packet(directory, dict(schema='judge-packet/1', packet=name, decisions=count,
+                short=count < stretch, labels=list(LABELS), items_sha256=items_sha, frames=rows), instructions)
+            packets[name] = dict(packet=name, start=f'{admission}:{first}-{last}', admission=admission, first=first,
+                last=last, decisions=count, short=count < stretch, sha256=sha, bytes=size, frames=sources)
         mapping = dict(schema='judge-mapping/1', seed=seed, stretch=stretch, every=every, min_changed=min_changed,
-            item_frames=item_frames, items_sha256=items_sha, packets=packets)
+            item_frames=item_frames, items_sha256=items_sha, packets=[packets[name] for name in stretches])
         write_json(mapping_path, mapping, once=True)
     return mapping
 
@@ -515,7 +528,8 @@ def judge_events(run: Path, name: str, model: str, answers: Sequence[Path]) -> l
     events, done = [], set()
     for path in answers:
         value = read_json(path)
-        packet = packets.get(value.get('packet')) if isinstance(value, dict) else None
+        named = value.get('packet') if isinstance(value, dict) else None
+        packet = packets.get(named) if isinstance(named, str) else None
         if packet is None or not isinstance(value.get('answers'), list):
             raise MeasureError(f'{path}: expected {{"packet": "<a packet of this run>", "answers": [...]}}')
         if packet['packet'] in done:
@@ -525,8 +539,8 @@ def judge_events(run: Path, name: str, model: str, answers: Sequence[Path]) -> l
         if not manifest.is_file() or file_sha256(manifest) != packet['sha256']:
             raise MeasureError(f"{path}: packet {packet['packet']} is not the packet that was made")
         rows = value['answers']
-        if any(not isinstance(row, dict) for row in rows):
-            raise MeasureError(f'{path}: every answer is an object')
+        if any(not isinstance(row, dict) or not isinstance(row.get('item'), str) for row in rows):
+            raise MeasureError(f'{path}: every answer is an object that names its item')
         counts = Counter(row.get('item') for row in rows)
         problems = [f'no answer for {identity}' for identity in wanted if not counts[identity]]
         problems += [f'{identity} answered {count} times' for identity, count in counts.items() if count > 1]
@@ -1128,7 +1142,8 @@ function showZoom() {
   el('zoom').hidden = false;
 }
 
-function openZoom(list, index) { zoomed = list; zoomAt = index; showZoom(); }
+// Guarded like the answers: the second click of a double-click on Close lands on a screen beneath and must not reopen the view.
+function openZoom(list, index) { if (Date.now() < ready) return; zoomed = list; zoomAt = index; showZoom(); }
 
 // Every way of closing the enlarged view comes here. The answer buttons lie under it, so the guard is re-armed:
 // the second click of a double-click on Close, the backdrop or the image must not record a label.
@@ -1362,11 +1377,14 @@ def main(argv=None) -> int:
         else:
             command.add_argument('--stretch', type=int, default=200, help='decisions per stretch')
             command.add_argument('--seed', type=int)
-            command.add_argument('--item-frames', action='store_true', help='also give the judge each item\'s first frame')
+            command.add_argument('--no-item-frames', dest='item_frames', action='store_false',
+                help='leave each item\'s first frame out of the packet (by default the judge gets it, as the owner does)')
     items = commands.add_parser('items', help='the known-item list from two annotators and the lead\'s matches')
     items.add_argument('run', type=Path)
     items.add_argument('--annotators', nargs=2, required=True, metavar=('A', 'B'))
-    items.add_argument('--matches', type=Path, help='{"matches": [["<A entry>", "<B entry>"], ...]}')
+    items.add_argument('--matches', type=Path, help='{"matches": [["<A entry>", "<B entry>"], ...]}: at least one match; '
+        'an entry may appear in several matches (one place seen in several packets); any other top-level key, such as '
+        'the lead\'s own "groups", is accepted and ignored')
     items.add_argument('--list', action='store_true', help='print every entry with its ID and write nothing')
     events = commands.add_parser('events', help='validate one judge\'s answers and write its judge events')
     events.add_argument('run', type=Path)
@@ -1443,6 +1461,11 @@ def main(argv=None) -> int:
             print(f"{len(value['items'])} known items in {run / 'items.json'}, sha256 {value['sha256']}")
             for name, count in value['counts'].items():
                 print(f"  {name}: {count['entries']} entries, {count['in_an_item']} in an item, {count['dropped']} dropped")
+            for item in value['items']:  # allowed: one place seen in several packets; printed so that it is seen
+                for name, entries in item['listed'].items():
+                    if len(entries) > 1:
+                        print(f"  {item['id']} holds {len(entries)} entries of {name}: "
+                            + ' '.join(entry['entry'] for entry in entries))
         elif args.command == 'events':
             written = judge_events(run, args.judge, args.model, args.answers)
             counts = Counter(event.label for event in written)
@@ -1469,6 +1492,11 @@ def main(argv=None) -> int:
             print(json.dumps(report, indent=1) if args.json else render_measure(report))
     except (MeasureError, EvaluationError, FileExistsError) as error:
         print(f'memory_measure: {error}', file=sys.stderr)
+        return 2
+    except (KeyError, TypeError, AttributeError, IndexError) as error:
+        # A file of the run directory that is valid JSON of another shape: refuse it by name of the fault, no traceback.
+        print(f'memory_measure: a file this command reads does not have the expected shape ({type(error).__name__}: '
+            f'{error})', file=sys.stderr)
         return 2
     return 0
 

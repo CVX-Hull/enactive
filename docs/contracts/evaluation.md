@@ -489,9 +489,14 @@ validates the format; `python -m tools.memory_measure` writes and reads it.
 | `judge`, `model` | The judge's name and the model the lead pinned for it |
 | `packet`, `packet_sha256` | The shuffled name of the packet the judge was given and the SHA-256 of its manifest, which lists every file's hash |
 
-**Isolation.** Packets, answers, events and the statistics made from them stay under
-`.runtime/memory-measure/<run>/`; the tool refuses any other directory. An evaluation
-record holds no judge event, so the viewer cannot serve one. The curator's trace is
+**Isolation.** The tool writes packets, events and the statistics made from them only
+into its run directory, and it refuses a run directory whose parent is not named
+`memory-measure`; by convention that is `.runtime/memory-measure/<run>/`. It does not
+check where the lead saves a judge's answers, and it does not keep a judge from the
+mapping of shuffled packet names to admissions, which sits in the run directory's
+`private/` folder: the lead gives a judge its packet directory and nothing else. It
+refuses to read the held-out lineage's evidence. An evaluation record holds no judge
+event, so the viewer cannot serve one. The curator's trace is
 projected by allowlist from named session directories, a run package freezes a closed set
 of files, and the import contracts forbid the player, the curator and the trace projection
 from importing evaluation code or tools. The owner's labelling page reads the sample and
