@@ -12,6 +12,7 @@ Enactive lets a designated agent play CDDA-class survival/roguelike games from
 visible computer observations while a user watches and can stop automation.
 The [charter](charter.md) owns purpose and constraints. CDDA is the first actual
 target; no second game or unattended survival service is qualified.
+The [glossary](glossary.md) defines the project's terms.
 
 The current source uses a basic computer-control boundary. The harness provides
 actual PNGs, mechanical window geometry, key/text/pointer/wait, exact operation
