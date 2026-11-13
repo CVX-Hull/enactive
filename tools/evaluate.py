@@ -16,8 +16,8 @@ under --root with the named game binding; it reuses the host and control summari
 latency and delivery counts. evaluate-runs does the same for every run directory (one that
 holds a manifest.json) below one directory, taking each run's memory store from --memory-dir
 (player-memory-<run>.sqlite3) or its manifest, and the operator labels of an archived
-campaign-run/4 run from data/evaluation/archive-labels.json (keyed by session ID, and the only
-campaign-run/4 sessions the evaluator reads). evaluate-lineage takes one lineage's admission run
+campaign-run/4 run from the closed archive index data/evaluation/archive-sessions.json (keyed by session
+ID; it lists the only campaign-run/4 sessions the evaluator reads). evaluate-lineage takes one lineage's admission run
 directories in order, scores any without a record as evaluate-run does, and writes the lineage's
 continuity rows into each record. evaluate-compare reads evaluation
 records and prints Kaplan-Meier curves, restricted mean survival to --horizon hours, bootstrap
