@@ -1,6 +1,6 @@
 ---
 owner: lead
-review_trigger: A phase's study result, an owner decision on an open question below, or a change to the host, memory, program, computer-control, evaluation or spectator contracts
+review_trigger: A change to the direction this ADR proposes, or the adoption of one of its phases
 status: proposed
 date: '2026-11-08'
 scope: Proposed direction for an acting player with a coding-agent curator in ephemeral sessions, a player-fitted ontology in one knowledge repository per game, programs on the actor's interface, managed containers and a spectator native to the design; nothing adopted, and current contracts govern the running system
@@ -10,7 +10,7 @@ scope: Proposed direction for an acting player with a coding-agent curator in ep
 
 **Status: proposed, 8 November 2026.** The owner set the direction below in
 discussion on 8 November 2026. Nothing here is adopted; where each phase stands is
-under [phases](#phases). The
+tracked in [#445](https://github.com/CVX-Hull/enactive/issues/445). The
 [computer-control contract](../contracts/computer-control.md), the
 [player guide](../player-guide.md) and the current standards govern the running
 system until a phase meets its adoption condition. Each phase is adopted on study
@@ -652,43 +652,24 @@ checks its power by simulation before it runs.
 | **Programs and monitor** | Actor-interface programs as passive policies; capability slots with record and replay; supervised runs with preemption and verified risk classes; monitor slot; offline fitting; probation and library statistics; spectator program views | Per package, after the gate before spend | Pre-registered delegation share at matched failure rate; monitor detection on anomalies in recorded program runs |
 | **Practice instance** | One-way forks; determinism measurement; live fitting; slot swaps; spectator fork views | Per package | Owner decision first; concurrency guards held |
 
-**Where each phase stands.** Nothing is adopted, and the current contracts govern the
-running system. The dated records linked here hold the outcomes, the figures and the
-owner's decisions.
+**Standing is not kept here.** Nothing in this ADR is adopted, and the current
+contracts govern the running system. Where each phase stands is in
+[#445](https://github.com/CVX-Hull/enactive/issues/445) and the Project; the owner's
+decisions are in the [owner decision log](owner-decisions.md). Evidence recorded for
+the phases:
 
-- **Baseline and workbench.** The phase met its adoption condition, with qualifications
-  on episode recall and on the cost measurement
-  ([record](../acceptance/2026-11-08-adr009-p0.md)).
-- **Context-stability readiness stage.** This stage prepared the curator and memory
-  phase, ran no study and adopted nothing. It is finished. It made the request
-  contexts of the actor and the curator stable and clear
-  ([record](../acceptance/2026-11-08-context-stability-489.md)), checked the probes
-  against re-observations found independently
-  ([record](../acceptance/2026-11-08-probe-validation-490.md)) and wrote the curator
-  memory study's first protocol. The owner made confirmed re-observations the study's
-  primary probes, with the frozen ledgers secondary.
-- **Curator and memory.** The phase is not adopted. The curator memory study (#178),
-  the offline comparison this phase's adoption condition asks for, closed on
-  12 November 2026 with a permanent registered no-go. Its descriptive result found
-  lower recall for the curator arm, 13 of 89 units in each repeat, than for the
-  no-curator arm, 18 of 89
-  ([completion record](../acceptance/2026-11-12-p1-descriptive-completion-178.md)).
-  The curator stays gated and does not run in live play. Any renewed benefit claim needs
-  a fresh written protocol and an owner decision. On 13 November 2026 the owner kept
-  the dedicated curator as the writer of the store, asked for a redesigned prompt and
-  context, and chose a \$0 protocol for a live memory screen as the next step
-  ([decisions](../acceptance/2026-11-13-memory-and-cadence-decisions.md),
-  [memory note](../design/long-horizon-memory.md)); the phase is still not adopted.
-  The study ran under three protocols:
-  - the [power-gate protocol](../design/p1-study.md), which stopped at its power gate
-    before any spend ([record](../acceptance/2026-11-09-p1-gate-178.md));
-  - the added-lineage protocol, which added a fourth held-out lineage and passed the
-    power gate ([record](../acceptance/2026-11-10-p1-gate-study-2-178.md));
-  - the [answer-key protocol](../design/p1-study-3.md), which kept that data and
-    decision rule and measured recall by an answer-key chain.
-- **Programs and monitor.** The phase has not started.
-- **Practice instance.** The phase has not started, and its adoption waits for an owner
-  decision ([open decision 1](#open-owner-decisions)).
+- **Baseline and workbench:** the [phase record](../acceptance/2026-11-08-adr009-p0.md).
+- **Curator and memory:** its preparation
+  ([context stability](../acceptance/2026-11-08-context-stability-489.md),
+  [probe validation](../acceptance/2026-11-08-probe-validation-490.md)); the curator
+  memory study's protocols
+  ([power gate](../design/p1-study.md), [answer key](../design/p1-study-3.md)), its
+  gate records ([first](../acceptance/2026-11-09-p1-gate-178.md),
+  [with the added lineage](../acceptance/2026-11-10-p1-gate-study-2-178.md)) and its
+  [completion record](../acceptance/2026-11-12-p1-descriptive-completion-178.md); the
+  [memory note](../design/long-horizon-memory.md).
+- **Programs and monitor**, **practice instance:** none. The practice instance needs an
+  owner decision first ([open decision 1](#open-owner-decisions)).
 
 Every phase replaces its contracts and stores in one migration
 (`player-memory/2` → `/3`, `player-record/1` and `player-program/2` → their

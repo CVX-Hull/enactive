@@ -55,16 +55,46 @@ summaries through ordinary Git edits; retain dated evidence and owned action ite
 Use the [documentation roles and lifecycle](../documentation.md) when deciding where
 an artifact belongs. Dated acceptance/audit records are historical, even when their
 observations remain relevant; the existing metadata check enforces that narrow
-role rule. Active pages hold method, contracts and current state, not dated run
-records: run outcomes and result tables, dated owner decisions and admission
-procedures go in a dated acceptance record, and the active page keeps the method,
-one line per checkpoint and a link. Per-run quantities live in tracked data
-(S-EVIDENCE), and generated indexes list every dated acceptance record and change
-brief from its front matter, with a staleness check. C-REVIEW applies this rule to
-changed pages. Incorporate adopted design into current architecture/contracts, transfer
-remaining actions to GitHub and retain its brief as dated rationale. Partial
-proposals identify their remaining proposal scope. No new attempt paragraph is
-required in current architecture or the overview.
+role rule. Per-run quantities live in tracked data (S-EVIDENCE), and generated indexes
+list every dated acceptance record and change brief from its front matter, with a
+staleness check. Incorporate adopted design into current architecture/contracts,
+transfer remaining actions to GitHub and retain its brief as dated rationale. Partial
+proposals identify their remaining proposal scope.
+
+## Current pages, records and decisions
+
+Each kind of fact has one home, listed in the
+[documentation map](../documentation.md#one-authoritative-home-per-kind-of-fact), so
+that a reader finds the current rule without reading history
+([R-UNREADABLE-DOCS and R-STALE-DOCS](../risks.md#development-risks)). The cost is one
+log row per owner decision and a reviewer's attention to tense; no check enforces it.
+
+- **Current pages** state rules, contracts and procedures as they are. A date appears
+  only where a reader needs it now: beside a measured figure, a pinned version or a
+  source. Where a rule rests on a decision or a result, the page links the log row or
+  the record once.
+- **A dated record is for evidence a diff cannot hold**: a run, a measurement, a study
+  result, or the evidence that an issue's outcome is met. A change whose only evidence
+  is its diff and its checks gets no record: its pull request states what changed, why
+  and which checks ran, which is what S-EVIDENCE asks to be recorded. Related results
+  in one piece of work share one record.
+- **The owner decision log** is the one list of owner decisions: date, question, the
+  owner's words, what it settles, and a link to the evidence. A decision is added in
+  the change that acts on it, or in a change of its own when it alters nothing else
+  (an approval of spend, a limit set outside the repository). An issue or pull request
+  may also carry the agreement; the log row is what current pages cite. A later
+  decision that replaces an earlier one marks the earlier row replaced; rows are not
+  deleted.
+- **An ADR states a decision and its reasons and then stops changing.** It does not
+  track the standing of the work it proposes. A design note is `proposed` until its
+  owner decisions are made and `historical` after; what was adopted moves into
+  components and contracts.
+- **An issue has one current description**, replaced when things change
+  ([work items](../workflows/work-items.md#status-fields-and-dates)). GitHub keeps its
+  edit history.
+
+Records and briefs that existed when this rule was adopted, on 13 November 2026, stay
+as they are; they are not edited to fit it. C-REVIEW applies it to changed pages.
 
 ## Names
 

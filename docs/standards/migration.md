@@ -38,12 +38,10 @@ set them, the closing rule below still holds: no repository exception can add to
 First, the evaluator reads, read-only, old record versions only for the sealed sessions
 in one closed index, `data/evaluation/archive-sessions.json`, and for each session only
 the versions the index records for it. The index is closed and never grows. Adding a
-session is a new owner decision, recorded in this standard. The decisions are: the 30
-older development-loop sessions ([#403](https://github.com/CVX-Hull/enactive/issues/403));
-the 22 sessions whose run-ending record is `campaign-watch-terminal/3` (12 November 2026,
-[#553](https://github.com/CVX-Hull/enactive/issues/553)); and the single index, which
-holds those 52 sessions and the two sealed sessions of the supervised launch check
-(12 November 2026, [#555](https://github.com/CVX-Hull/enactive/issues/555)). All 54
+session is a new owner decision, a row in the
+[owner decision log](../decisions/owner-decisions.md). The index holds 54 sessions: 30
+older development-loop sessions, 22 whose run-ending record is
+`campaign-watch-terminal/3`, and the two of the supervised launch check. All 54
 predate the dollar limit, so each is read in the versions the index records for it.
 Every other old version is an error naming the file and version. The evaluator never admits
 or plays from the archive and never modifies it; it only derives evaluation records.

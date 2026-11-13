@@ -9,7 +9,9 @@ status: active
 The public repository is [CVX-Hull/enactive](https://github.com/CVX-Hull/enactive), with
 the [public Project](https://github.com/users/CVX-Hull/projects/2). Which document owns
 which kind of fact is stated once, in the
-[documentation map](../documentation.md#one-authoritative-home-per-kind-of-fact); this page
+[documentation map](../documentation.md#one-authoritative-home-per-kind-of-fact), and
+[S-DOCS](../standards/documentation.md#current-pages-records-and-decisions) gives the
+rules that follow; this page
 owns what each summary may restate and the Project's views. Exceptions are issues linked
 to their affected standard; the [work map](../work.md) is the navigation entry point.
 
