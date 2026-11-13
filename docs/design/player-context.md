@@ -241,11 +241,15 @@ Three layers. Each can be built and judged alone, in this order.
 
 - **Mechanism.** The first message of every actor, at an admission and at a handoff alike,
   carries a briefing built by software from the latest published snapshot:
-  - **in full**: open commitments, known hazards, the places with goods, and what the
-    player has learned about how the game works;
-  - **as an index**: one line for every other item, with its identifier, subject, place
-    and game time;
-  - **a stamp**: the decision and game time the snapshot covers.
+  - **in full**: the facts a recall model chooses for this actor from the mission, the
+    previous final report and the store's index
+    ([general memory](general-memory.md#2-delivery-making-the-player-use-memory));
+  - **as an index**: one line for every other fact, with its identifier, subject and
+    order of sighting;
+  - **a stamp**: the decision the snapshot covers.
+- **Reminders during play.** After the briefing is built, a recall model may add short
+  reminders as notices that stay in the history
+  ([general memory](general-memory.md#2-delivery-making-the-player-use-memory)).
 - **Reading more.** `player_memory_read` returns an item by the identifier on its index
   line. `player_memory_query` gains search by text. Both read the curator's store.
 - **Between briefings.** When a newer snapshot is published, the next request carries the
@@ -303,8 +307,10 @@ Three layers. Each can be built and judged alone, in this order.
   a cut is made only if it frees at least ten turns, and both marks are counted above
   the briefing's size. Without the first, a curator about 39 decisions behind makes the
   host rewrite the window at most requests.
-- **The cut is not in the memory screen's first comparison** and is not built until the
-  session price pilot reports ([protocol](memory-screen-protocol.md#the-cut-and-curator-sessions-during-play)).
+- **The cut is not built.** The session price pilot reported a median of \$0.20 and 99 s
+  for 20 decisions, with coverage trailing play by about 23 decisions; the owner decided
+  on 13 November 2026 to build delivery first and decide the cut after it is measured
+  ([record](../acceptance/2026-11-13-session-price-pilot.md)).
 - **Coverage is not recorded today.** A curator session records the frames of the window
   it was given, not the last decision its published facts reflect. The stamp is new.
 - **Risk.** The player loses the thread of what it was doing. Two things carry it: the
@@ -315,13 +321,12 @@ Three layers. Each can be built and judged alone, in this order.
 
 | Requirement | Why |
 | --- | --- |
-| One fact per item, with game time and place as the player would write them. The curator's fact format has neither field today | Compound records cannot be kept current, and the index line needs a subject and a place |
-| Kinds: place with goods; hazard; open commitment; how the game works | They go out of date at different rates, and only the first three change which items are shown in full |
+| Facts in the game-neutral format `curator-fact/3`: free text with a type, citations, an optional subject and the order of sighting; retire and merge operations ([general memory](general-memory.md#1-the-fact-format-and-the-curator)) | Compound records cannot be kept current; a fixed set of kinds or a required place assumes one genre of game |
+| A grooming session between admissions that reorganizes the whole store and ranks it | The store otherwise grows without bound: 279 records after about 1,900 decisions |
 | A coverage stamp on every snapshot: the last decision it has read | The cut rule depends on it |
 | A session at each admission boundary; the next admission waits for it | The game is saved and closed there, so waiting costs no play |
 | A session at each handoff; the successor does not wait | It starts with the latest snapshot and its predecessor's summary as a labelled hint, and gets the difference when the session publishes |
 | A session during play whenever the decisions not yet covered pass a trigger | So that cuts can proceed. The curator does not run in live play today. How short such a session can be, and what it costs, decide whether the cut holds its marks |
-| A brief aimed at places and goods | The study's curator answered few questions about screens seen again |
 | A failed request charged at zero when the provider refused it | Done ([#556](https://github.com/CVX-Hull/enactive/issues/556)) |
 
 **A first store for a game already in progress** comes from curator sessions over that
