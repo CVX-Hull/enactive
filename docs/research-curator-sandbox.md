@@ -126,28 +126,21 @@ outside the workspace or equal to it, and a home inside the workspace.
   user;
 - at nice 19, in its own process group.
 
-The supervisor polls five things and kills the group on a breach:
+The supervisor polls four things and kills the group on a breach:
 - the tree's resident memory;
 - the writable directories' disk use;
-- the volume's free space against its initial reading minus the session allowance and 1 GiB;
 - the tree's process count;
 - wall-clock time.
 
 An unmeasurable tree is a breach. Examples are a mode-000 directory or a path too long
 to examine. A supervisor error still closes the tree before it propagates.
 
-Admission requires that the derived volume floor leave at least the declared free-space
-margin (1 GiB by default). An inadequate initial reading or a failed initial read launches
-no child and creates no profile. Session provenance and shadow summaries record the initial,
-minimum and last observed available bytes, the fixed floor, and a volume-read failure's phase
-and exception type. Unknown readings stay null; an interrupted supervisor retains observations
-where close-out can write them without inventing a process-exit or survivor result.
 Profile creation is inside cleanup protection, including a partial write or validation failure.
 
-The volume reading includes unrelated activity and storage held by unlinked open files. A
-floor crossing does not attribute the decline to the curator or establish a full disk. This
-conservative stop remains necessary for the existing unlinked-file safeguard; diagnostics do
-not eliminate shared-volume false stops or make polling a hard quota.
+The disk total covers the files linked under the writable directories and the fresh home.
+The supervisor does not read the volume's free space: other programs' disk use neither
+stops a session nor is bounded by it, and polling is not a hard quota
+([what is bounded](operations/curator-hosts.md#what-the-sandbox-bounds)).
 
 At close the supervisor signals the group and its descendants. Once the group is gone
 it never looks again, so a reused process ID is never signalled.
@@ -251,8 +244,8 @@ the two at the end.
 **Left open:**
 - **L2.** A stream that ends in an error after content may be undercharged, depending
   on how the provider bills partial output. This is risk 11.
-- **Unlinked open files** are caught only by the volume floor, not the per-session
-  count. This is part of risk 3.
+- **Unlinked open files** are not counted in the per-session total; only the per-file
+  and open-file limits bound them. This is part of risk 3.
 
 **Verification pass.** The same reviewer re-ran its probes against the fixes. Eight of
 eleven findings were fixed outright. H1 was partial, as the cap caveat above records.
@@ -276,7 +269,7 @@ real API.
 |---|---|---|---|
 | 1 | Seatbelt is deprecated and unsupported; an OS update may break or widen the profile | S5, S6, S7 | Re-run the escape suite after every macOS or host update and record host versions per session; the VM fallback stays documented |
 | 2 | **Same-user argv is readable** (`KERN_PROCARGS2`), even with process information limited to self and a named kernel-value list; environments were not readable | L12 | No credential may travel in argv. Today the token is in `actor.json` and the key in the environment (`tools/campaign_player.py`). The #454 run checks live argv for the session's secrets |
-| 3 | **Memory, disk total and process count are polled, not kernel-enforced.** Overshoot is bounded by the allocation rate times the 0.1 s poll. Space held by unlinked open files is caught only by the volume free-space floor | L3, L11, review M2 | Supervisor kills on breach; file size (64 MiB) and open files (256) are rlimits. A sparse disk image (L5) would make disk a hard cap and is the first hardening step if #454 shows bursts |
+| 3 | **Memory, disk total and process count are polled, not kernel-enforced.** Overshoot is bounded by the allocation rate times the 0.1 s poll. Files deleted while still open are not counted in the disk total; only the per-file and open-file limits bound them | L3, L11, review M2 | Supervisor kills on breach; file size (64 MiB) and open files (256) are rlimits. A sparse disk image (L5) would make disk a hard cap and is the first hardening step if #454 shows bursts |
 | 4 | **An orphaned descendant that left the process group** (double fork plus `setsid`) cannot be safely identified at close | L15 | It keeps the inherited profile. Once the workspace is deleted it cannot recreate it, its token is revoked, and it runs at nice 19 under the CPU rlimit. Its memory is unbounded: residual. **Before deletion it can still write the workspace while close-out reads it.** So close-out reads every tree through directory descriptors with `O_NOFOLLOW` at each component, and a swapped link refuses the tree ([curator sessions](design/curator-session.md#session-close-out), #453). Clearing file flags during removal stays path-based, because macOS offers Python no descriptor-relative `chflags`: residual. #454 checks for survivors after every session |
 | 5 | System read surface: `/usr`, `/System`, `/private/etc` (including `passwd`), `/dev`, the hostname and hardware values | L9, S8 | Accepted; nothing project-secret lives there |
 | 6 | Shared kernel: a kernel or Seatbelt bug escapes | S3 | Accepted for the baseline and workbench phase; escalate to a VM if the owner's threat model requires it |
@@ -285,7 +278,6 @@ real API.
 | 9 | The first host writes a shared temporary root under `/tmp` unless its temporary-directory variable is set; allowing that path would share state with other sessions | L13 | The runner points the variable at `scratch/` ([curator hosts](operations/curator-hosts.md)); the profile never allows `/tmp` |
 | 10 | The second host was not yet run under the profile, and the OpenAI request allowlist rests on field names not yet checked against a dated source | — | #454 runs the same probe with a Responses-shape stand-in before any spend |
 | 11 | A stream that errors after content may be undercharged if the provider bills partial output | Review L2 | The reservation still bounds each request; #454 compares the ledger with provider-reported cost |
-| 12 | The free-space floor can stop a session falsely when another process writes heavily during it | [Curator memory study storage-stop record](acceptance/2026-11-11-p1-storage-stop-178.md); ownership of the decline remains unknown | Preserve the conservative guard and initial/minimum/last/floor measurements, distinguish volume activity from writable-tree use, and record read failures. The measurements diagnose a stop; they do not establish attribution or prevent this limitation |
 
 ## Coding-agent hosts
 
