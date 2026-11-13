@@ -14,6 +14,7 @@ states. Records are dated evidence, not current instructions; the
 
 | Date | Record | Scope | Status |
 | --- | --- | --- | --- |
+| 2026-11-12 | [Supervised launch check after the attention-policy removal, 12 November 2026](2026-11-12-supervised-launch-check-558.md) | Two short supervised runs with the real game and a real model on main d71ced0, checking launch, the run-ending record, operator Pause from the spectator page, cleanup and evaluator reading after the attention policy was removed (#558, #553); no gameplay quality claim | historical |
 | 2026-11-12 | [P1 reader presentation stop](2026-11-12-p1-reader-presentation-stop-178.md) | P1 reader presentation stop, retained candidates and proposed complete-input recovery (#178) | historical |
 | 2026-11-12 | [P1 descriptive completion](2026-11-12-p1-descriptive-completion-178.md) | Completed owner-amended P1 measurement, descriptive comparison and coding-host robustness (#178) | historical |
 | 2026-11-12 | [Control review against the scope of use, and descriptive names, 12 November 2026](2026-11-12-control-review-and-names.md) | Review of every control against the charter's scope of use on 12 November 2026: the controls removed or simplified and why, the controls kept after challenge, the owner decisions taken and left open, the workspace cleanup, and the mapping from retired ordinal labels to descriptive names (#553) | historical |
