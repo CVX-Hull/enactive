@@ -495,6 +495,24 @@
       },
       "visibility": "private"
     },
+    "memory-screen-gates-460-386": {
+      "availability": "present",
+      "bytes": 117383888,
+      "cited_by": [
+        "docs/acceptance/2026-11-13-curator-brief-gate.md",
+        "docs/acceptance/2026-11-13-memory-measure-gate.md",
+        "docs/acceptance/2026-11-13-session-price-pilot.md"
+      ],
+      "files": 1283,
+      "manifest_sha256": "df451736b54669ac3fe246c970a41eabf428c05dc84015186e782747670b7093",
+      "note": "The memory screen's three gates of 13 November 2026 (#460, #386): curator session outputs and proxy ledgers of the brief gate and the session price pilot, their knowledge repositories (the gate's store at v6 and the pilot's copy through v16), and the measure gate's run directory (annotator and judge packets, answers, judge events, the frozen known-item list, the calibration samples and the owner's labels). Code is reproducible from a4810c9; the provider key and node modules were not copied.",
+      "sources": {
+        "curator-shadow": ".runtime/curator-shadow@a4810c9",
+        "knowledge": ".runtime/knowledge/shadow-454@a4810c9",
+        "memory-measure": ".runtime/memory-measure/seven-day-measure-gate@a4810c9"
+      },
+      "visibility": "private"
+    },
     "p1-grounded-completion-178": {
       "availability": "present",
       "bytes": 65349350,
