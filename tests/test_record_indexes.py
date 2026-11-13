@@ -56,11 +56,13 @@ def test_new_records_and_proposed_designs_open_with_at_a_glance(tmp_path):
     missing = f"the first section after the title must be '## At a glance' ({documents.REVIEWER_RULE})"
     # Not first, a deeper heading, or inside a code fence: none of these opens the page.
     for body in ("Body.", "## Method\n\nText.\n\n## At a glance\n\nLate.", "### At a glance\n\nDeeper.",
-                 "```text\n## At a glance\n```\n\n## Method\n\nText."):
+                 "```text\n## At a glance\n```\n\n## Method\n\nText.",
+                 "~~~\n## At a glance\n~~~\n\n## Method\n\nText."):
         record(root, "2026-11-14-after.md", "2026-11-14", "After the rule", "After", body=body)
         assert documents.check_metadata(root) == [f"docs/acceptance/2026-11-14-after.md: {missing}"], body
     record(root, "2026-11-14-after.md", "2026-11-14", "After the rule", "After",
-           body="Lead paragraph.\n\n## At a glance\n\nThe answer.\n\n## Method\n\nText.")
+           body="Lead paragraph.\n\n- a list item with an example:\n\n  ```text\n## Not a heading\n  ```\n\n"
+                "## At a glance\n\nThe answer.\n\n## Method\n\nText.")
     assert documents.check_metadata(root) == []
     design = root / "docs/design/note.md"
     design.write_text("---\nowner: lead\nstatus: proposed\nreview_trigger: x\n---\n\n# Note\n\nBody.\n")

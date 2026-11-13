@@ -65,8 +65,8 @@ reduce optional scope before weakening required quality or evidence.
 
 ## Ready brief and execution capacity
 
-An issue's description has these parts, each a line or a short list; the issue form
-asks for them in this order:
+The issue form collects a proposal. Once an issue is groomed, its description has
+these parts, each a line or a short list:
 
 1. **Current state**: what is built, what is decided, what is next.
 2. **Outcome** for an outcome, **Problem** for a leaf.

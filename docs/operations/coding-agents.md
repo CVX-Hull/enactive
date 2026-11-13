@@ -38,11 +38,12 @@ not in this repository.
 These hold in every checkout and worktree, on both hosts.
 
 - **Python** is `.venv/bin/python` of the main checkout. There is no `python` on the
-  path. A worktree has no `.venv` of its own; `tools/check.py` and the commit hook find
-  the main checkout's.
-- **Checks.** `.venv/bin/python tools/check.py --fast` before a commit; the hook runs
-  it with `--quiet` and prints one summary line, or the failing command's output. The
-  hook is never bypassed.
+  path, and a worktree has no `.venv` of its own. From a worktree, run it by its path:
+  `"$(git rev-parse --git-common-dir)/../.venv/bin/python"`.
+- **Checks.** Run `tools/check.py --fast` with that Python before a commit. The commit
+  hook finds the main checkout's `.venv` by itself, runs the same check with `--quiet`
+  and prints one summary line, or the failing command's output. The hook is never
+  bypassed.
 - **Worktrees** are project-local and git-ignored. The lead creates one under
   `.runtime/worktrees/<leaf>`; Claude Code's worktree isolation creates its own under
   `.claude/worktrees/`. Either is acceptable. A worktree that runs the adapter tests

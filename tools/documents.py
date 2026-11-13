@@ -188,7 +188,7 @@ def opens_at_a_glance(text: str) -> bool:
     """True when the first second-level heading outside a code fence is the At a glance section."""
     fenced = False
     for line in text.splitlines():
-        if line.startswith("```"):
+        if line.lstrip().startswith(("```", "~~~")):
             fenced = not fenced
         elif not fenced and line.startswith("## "):
             return line.rstrip() == AT_A_GLANCE

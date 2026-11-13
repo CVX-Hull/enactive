@@ -141,7 +141,9 @@ rules that follow from this table.
    [owner decision log](decisions/owner-decisions.md), in the change that acts on the
    decision or in a change of its own when nothing else changes, and link the log from
    the page that states the resulting rule. The same change marks a design note or a
-   research page the decision settles `historical`.
+   research page the decision settles `historical` (a design note that is now the
+   working description of something being built becomes `active` instead), and moves a
+   research page to the historical table of the [research index](research.md).
 3. **Is it evidence from a run, a measurement, a study or a review?** Write one dated
    record, `docs/acceptance/YYYY-MM-DD-what-it-is.md`, with front matter `owner`,
    `status: historical`, `kind`, `date` and `scope`, opening with "At a glance", then
