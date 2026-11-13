@@ -1,7 +1,7 @@
 ---
 owner: lead
 status: historical
-kind: run
+kind: study
 date: '2026-11-13'
 scope: 'The brief gate of the memory screen (#460, protocol of 13 November 2026): the curator, with a brief for places and goods and the fact format curator-fact/2, run over the seven-day lineage''s admissions sd1a1 to sd1a6 on the actor''s model, and its store checked against frozen patterns for the four lost facts. Curator sessions only; no game launch'
 ---
@@ -17,10 +17,15 @@ scope: 'The brief gate of the memory screen (#460, protocol of 13 November 2026)
   had held one of the four.
 - **Cost.** \$15.86 of the \$45 stop, over six sessions and 258 requests. No session
   reached its cap, aborted or was rejected; nothing was re-run.
-- **The store is large.** After six admissions it holds 195 facts in 102,594 bytes,
-  124 of them places with goods. Delivered whole, that is about 33,500 tokens at the
-  measured 0.327 tokens per byte, against the 13,000-token briefing the protocol's
-  simulation assumed.
+- **The store is large.** After six admissions `facts.jsonl` holds 195 records in
+  102,594 bytes: 172 current, 124 of them places with goods. The subject, place, time and
+  text of the current facts come to 33,839 bytes, about 11,100 tokens at 0.327 tokens a
+  byte (a rate fitted on tool-result text). The recorded store the protocol's
+  simulation sized its briefing from was 36,947 bytes, so the store is 2.8 times larger.
+- **Not known.** Whether a player given these facts uses them; that is what the
+  comparison would test.
+- **Owner decision.** None from this gate; it opens the session price pilot.
+- **Spend.** \$15.86 of the \$65 envelope.
 - **Pass rule.** At least three of the four lost facts are stored as `place_with_goods`
   facts whose `subject` and `place` match the frozen patterns, each confirmed by a
   clean-context reviewer who answers the question frozen below. Otherwise the gate
@@ -130,6 +135,10 @@ settled, with no pending reservation. Both runs recorded the brief's hash `c5ca0
 The recorded shadow run, with the earlier brief, spent \$22.32 on the same six
 admissions and published 71 facts by its sixth version.
 
+The largest reservations, \$1.73 to \$2.22, were above the frozen estimate of \$1.6 to
+\$1.8 in five of six sessions. The \$12 cap still held five of the largest, and the
+proxy's refusal point, about \$9.78, still came after the host's reading stop at \$8.16.
+
 ### The check
 
 `brief-gate` on version `v6`, patterns `c04751ad…`:
@@ -137,9 +146,9 @@ admissions and published 71 facts by its sixth version.
 | Lost fact | Matching fact | `subject` / `place` | Reviewer |
 | --- | --- | --- | --- |
 | Roof tank | `b19-roof-tank` | standing tank of clean water / Evac shelter B-19 roof, near the roof ladder | Yes. The frame shows the tank's menu, 18 L of 300 L, on the shelter's roof at day 62, 8:51 |
-| Ration boxes | `b19-pantry-boxes`, `b19-pantry-protein` | small cardboard box of rations / cupboard along the east side of the main room | Yes, both. The frames show "20 small cardboard boxes > protein ration" in a cupboard. The third match, `shelter-detergent-box`, is boxes of detergent and does not qualify |
-| Fishing rod | `shelter-rod` | basic fishing rod / main room near the northwestern benches | Yes. The rod lies on the floor between the benches, listed 6 tiles away, not carried |
-| Battery | `shelter-battery` | light battery / southern locker along the east side of the main room | Yes. The battery is listed 1 tile east, on the southernmost of three lockers |
+| Ration boxes | `b19-pantry-boxes`, `b19-pantry-protein` | small cardboard box of rations, and protein ration in pantry boxes / Evac shelter B-19, cupboard along the east side of the main room | Yes, both. The frames show "20 small cardboard boxes > protein ration" in a cupboard. The third match, `shelter-detergent-box`, is boxes of detergent and does not qualify |
+| Fishing rod | `shelter-rod` | basic fishing rod / Evac shelter B-19, main room near the northwestern benches | Yes. The rod lies on the floor between the benches, listed 6 tiles away, not carried |
+| Battery | `shelter-battery` | light battery / Evac shelter B-19, southern locker along the east side of the main room | Yes. The battery is listed 1 tile east, on the southernmost of three lockers |
 
 The reviewer saw only the six facts and their cited frames, and was not told the result
 wanted. Its doubts, none of which changes an answer:
@@ -149,6 +158,10 @@ wanted. Its doubts, none of which changes an answer:
 - One ration fact calls the boxes "separate from the locker rations", which its own
   frames do not show.
 - The detergent fact's cupboard is a different, southern one.
+
+The rod's place pattern, `shelter|floor|ground`, matched on "Evac shelter B-19", which
+every fact about the shelter carries, so it did not discriminate; the reviewer's reading
+carries that row.
 
 ### Reading the first session
 

@@ -112,10 +112,10 @@ Ten curator sessions, each over a sealed window of 20 new decisions of the seven
 lineage with the store as it stood, and no game running. It reports dollars and seconds
 per session.
 
-- **What is known now.** A session over a whole admission took a median of 189 s. Its
-  mean cost was \$3.28 and its median \$2.54. If a session over 20 decisions cost a
-  third of that, ten sessions in a 200-decision start would cost about \$12 against
-  about \$3.30 for the play itself.
+- **Measured.** Ten sessions over windows of 20 decisions cost a median of \$0.20 and
+  took a median of 99 s, \$2.34 in all against \$2.98 for the recorded play in the same
+  windows. Where the player's prompt was under 80,000 tokens a session cost two to
+  three times its window of play ([record](../acceptance/2026-11-13-session-price-pilot.md)).
 - **What it settles.** Whether the cut, which needs the curator within about 24
   decisions of play, is affordable at all.
 
@@ -253,9 +253,9 @@ The comparison has neither. This departs from "test all three", for these reason
   requests under 60,000 tokens with cache writes at 0.240 of the recorded total. A cut
   with the curator ten decisions behind keeps all of them under 60,000 at 0.136. With no
   briefing the figures are 94.9% and 0.188 against 100% and 0.123.
-- **The saving has a price that is not yet measured**, and the estimate above puts it
-  at several times the cost of the play it speeds up. The session price pilot measures
-  it.
+- **The saving has a measured price.** The session price pilot found about \$0.20 a
+  session and a trail of 8 to 40 decisions, about 23 on average, at the edge of what
+  the cut needs ([record](../acceptance/2026-11-13-session-price-pilot.md)).
 - **The rule needs two additions before it is built**: a minimum number of turns a cut
   must free, and marks that include the briefing.
 
