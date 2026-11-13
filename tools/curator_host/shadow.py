@@ -467,12 +467,6 @@ def run_shadow(args: argparse.Namespace, key: str) -> dict:
         if len(units) != 1 or session_cap is None:
             raise ShadowError('--double-session-cap re-runs exactly one named session or window and needs --session-cap-usd')
         session_cap *= 2
-    host = host_tools()
-    model_config = host_configuration(
-        arm, prices, effort=args.effort or arm.effort, max_requests=args.max_requests,
-        max_output_tokens=args.max_output_tokens, request_timeout_seconds=args.request_timeout_seconds,
-        wall_seconds=args.wall_seconds - 30, max_context_images=args.max_context_images,
-        context_image_block=args.context_image_block, workbench_timeout_seconds=60, budget_usd=float(cap))
     # Each run starts its own knowledge repository, named by its output directory, so no run can
     # replay a trace against knowledge that later sessions built.
     # `--knowledge-root` continues an earlier run's repository instead (for the one re-run of a session that
@@ -487,6 +481,12 @@ def run_shadow(args: argparse.Namespace, key: str) -> dict:
                               f'{knowledge.name!r}; this run is arm {args.arm!r}, lineage {args.lineage!r}')
     elif knowledge.exists():
         raise ShadowError(f'{knowledge} exists; every run starts a fresh knowledge repository')
+    host = host_tools()  # after every refusal above, so a refused run needs no host tools
+    model_config = host_configuration(
+        arm, prices, effort=args.effort or arm.effort, max_requests=args.max_requests,
+        max_output_tokens=args.max_output_tokens, request_timeout_seconds=args.request_timeout_seconds,
+        wall_seconds=args.wall_seconds - 30, max_context_images=args.max_context_images,
+        context_image_block=args.context_image_block, workbench_timeout_seconds=60, budget_usd=float(cap))
     out.mkdir(parents=True)
     config_dir = out/'host-config'
     config_dir.mkdir()
