@@ -22,7 +22,7 @@ function reply(content = 'finished', calls = [], withUsage = true, reasoning, ca
   if (!calls.length && content !== null) calls = [['player_finish',{disposition:'task_complete',report:content.slice(0,8192),source_ids:[],control_id:null}]];
   const delta = {role:'assistant', ...(content === null ? {} : {content}), ...(reasoning ? {reasoning_content:reasoning} : {}), ...(calls.length ? {tool_calls:calls.map(([name,args],index)=>({index,id:`${callPrefix}-${index}`,type:'function',function:{name,arguments:JSON.stringify(args)}}))} : {})};
   const chunks = [{id:'fixture-response',model:'fixture-backend',choices:[{index:0,delta,finish_reason:null}]},
-    {id:'fixture-response',model:'fixture-backend',choices:[{index:0,delta:{},finish_reason:calls.length?'tool_calls':'stop'}],...(withUsage ? {usage:{prompt_tokens:11,completion_tokens:5,total_tokens:16}} : {})}];
+    {id:'fixture-response',model:'fixture-backend',choices:[{index:0,delta:{},finish_reason:calls.length?'tool_calls':'stop'}],...(withUsage ? {usage:withUsage === true ? {prompt_tokens:11,completion_tokens:5,total_tokens:16} : withUsage} : {})}];
   return new Response(chunks.map(chunk=>'data: '+JSON.stringify(chunk)+'\n\n').join('')+'data: [DONE]\n\n', {headers:{'content-type':'text/event-stream'}});
 }
 function rateLimit(error = {type:'rate_limit_error', message:'Rate limit exceeded'}, headers = {}) {

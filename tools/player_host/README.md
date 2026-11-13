@@ -386,12 +386,37 @@ error body, before Pi parses it. `response-backend` reports the backend model ID
 from parsed provider chunks. `response-complete` reports the Pi model/provider,
 terminal stop reason and available usage. Missing provider usage is `usage:null`
 with `usage_available:false`; a reported complete input/output count enables
-normalized usage, with `cost_source` distinguishing provider totals from configured
-rate estimates. HTTP refusal status is retained before SDK rejection. `tool-result`
+normalized usage. Its `usage.cost` is Pi's estimate from the route's configured rates,
+which `cost_source:"configured-rates"` says; Pi discards any cost the provider reports.
+
+`response-complete.reported_cost_usd` (additive in version 3, absent from traces before
+12 November 2026, where it means not recorded) is the cost the provider itself reported
+for that response, read from the same raw usage record of the stream. It is evidence
+only: the host, the driver and the evaluator do not read it, and the run behaves the
+same with or without it. The rule is the curator's
+(`tools/curator_host/providers.py`, `reported_cost`), and both hosts' tests run the
+usage records in `tests/fixtures/provider-usage-cost.json`:
+
+- A route that is not on the caller's own provider key counts the larger of `cost` and
+  `cost_details.upstream_inference_cost`. On the pinned route the two were equal in the
+  [pilot of 12 November 2026](../../docs/acceptance/2026-11-12-provider-cost-pilot-555.md).
+- An own-key route (`is_byok` true) counts their sum, the fee plus the upstream cost.
+- If a response carries several usage records, the largest counts.
+- A response with no cost, or with a malformed one (negative, non-finite, not a number,
+  an own-key record missing either amount, or one malformed record among several), has
+  `reported_cost_usd:null`. Missing cost stays unknown; it is never estimated. Token
+  counts are not needed for a cost, and a cost is not needed for `usage_available`.
+- The value is a plain decimal string in US dollars, such as `"0.0001893"`: no exponent,
+  no trailing zeros, `"0"` for zero. Each JSON number is turned once into the shortest
+  decimal that reads back as the same number, which is the provider's own digits for up
+  to 15 significant digits, and sums and comparisons use integers, so no floating-point
+  arithmetic touches the amount.
+
+HTTP refusal status is retained before SDK rejection. `tool-result`
 text and structured data retain operation/source joins, with image references in
 place of bytes. `tool-refused`, `abort` and `settled` retain refusal and failure outcomes. An eligible first attempt has a transport-derived
 `response-complete` with its `http_status` (null for a pre-header rejection), error
-stop reason and unknown usage; the final attempt is completed by the SDK assistant
+stop reason, unknown usage and a null reported cost; the final attempt is completed by the SDK assistant
 message. Backoff aborts and excessive-delay refusals do not duplicate that first
 receipt. `provider-retry` marks eligibility with its `retry_class` and the
 configured delay ceiling, then a second-attempt start with the preceding request ID; monotonic intervals expose actual waiting without
