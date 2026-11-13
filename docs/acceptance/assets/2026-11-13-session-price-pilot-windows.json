@@ -1,0 +1,12 @@
+[
+ {"session": "sd1a7", "actor": "001", "first": 1, "last": 20},
+ {"session": "sd1a7", "actor": "001", "first": 21, "last": 40},
+ {"session": "sd1a7", "actor": "001", "first": 41, "last": 60},
+ {"session": "sd1a7", "actor": "001", "first": 61, "last": 80},
+ {"session": "sd1a7", "actor": "001", "first": 81, "last": 100},
+ {"session": "sd1a7", "actor": "001", "first": 101, "last": 120},
+ {"session": "sd1a7", "actor": "001", "first": 121, "last": 140},
+ {"session": "sd1a7", "actor": "001", "first": 141, "last": 156},
+ {"session": "sd1a7", "actor": "002", "first": 1, "last": 20},
+ {"session": "sd1a7", "actor": "002", "first": 21, "last": 40}
+]

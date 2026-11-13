@@ -44,13 +44,13 @@ that envelope. The lead records each run's spend in its run-ledger row and stops
 the owner when the envelope is reached. `tools/run_ledger.py totals` applies the rule.
 A new envelope needs its own owner decision.
 
-**One envelope is open: \$65 for the memory screen's gates (study 590).** It covers
-curator sessions only, with no game launch: up to \$45 for the brief gate and up to \$20
-for the session price pilot ([protocol](design/memory-screen-protocol.md#cost-and-stop-rules)).
-Curator spend is not in the run ledger; the gate's record takes it from the curator
-proxy's ledger. The four earlier envelopes, for the development loop (study 372),
-the long-horizon arm (382), the seven-day lineage (397) and the held-out lineage (522),
-are closed, and an
+**No envelope is open.** The five envelopes, for the development loop (study 372),
+the long-horizon arm (382), the seven-day lineage (397), the held-out lineage (522)
+and the memory screen's gates (590), are closed. The last was \$65 for curator sessions
+only: it spent \$15.86 on the [brief gate](acceptance/2026-11-13-curator-brief-gate.md)
+and \$2.34 on the [session price pilot](acceptance/2026-11-13-session-price-pilot.md),
+\$18.20 in all, taken from the curator proxy's ledger because curator spend is not in
+the run ledger. An
 unspent remainder is not carried to other work. Each envelope and the decision that set
 it is a row in the [owner decision log](decisions/owner-decisions.md). The run ledger,
 `data/evaluation/runs.jsonl`, holds those studies' runs, and

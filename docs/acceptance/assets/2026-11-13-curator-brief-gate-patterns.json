@@ -1,0 +1,6 @@
+[
+ {"label": "tank", "subject": "tank|clean water", "place": "roof"},
+ {"label": "rations", "subject": "ration|cardboard box", "place": "cupboard|cabinet"},
+ {"label": "rod", "subject": "fishing rod", "place": "shelter|floor|ground"},
+ {"label": "batteries", "subject": "batter", "place": "locker"}
+]
