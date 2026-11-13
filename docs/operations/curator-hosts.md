@@ -181,8 +181,8 @@ Both arms use a 262,144-token comparison preset. The host checks the previous re
 usage plus the output allowance before sending the next request; it does not tokenize the newly
 appended messages. A tool result can therefore push one request beyond that preset and Terra's
 272,000-token pricing threshold before the following check stops the session. The bounds include
-that tier; the preset is not a hard pre-request token limit. The file's November 11 correction
-removes the earlier unsupported reachability claim without changing the recorded rates or fetch date.
+that tier; the preset is not a hard pre-request token limit. The price file's `long_prompt_note`
+states the same beside the rates.
 
 **What differs from the actor's route.** The proxy forwards a fixed field list, so the curator's
 route sets `maxTokensField: max_completion_tokens` (the actor uses `max_tokens`); the curator proxy
@@ -190,10 +190,11 @@ refuses `max_tokens`. Both hosts explicitly request `service_tier: default`. The
 pinned SDK's `onPayload` hook and records `requested_service_tier` at host start; its proxy refuses
 an omitted or different tier. OpenRouter can fill an omitted tier from a
 [workspace default](https://openrouter.ai/docs/guides/features/service-tiers#workspace-default-service-tier),
-so the earlier curator requests' omission does not establish their applied tier. This repair
-requires a new approved runtime freeze before scientific use; historical requests and failures
-  retain their original provenance. Nothing else Pi sends may be refused: the proxy allowlist
-  and the ledger's refusal count are the check
+so a request that omitted the tier does not establish its applied tier. Requests and failures
+recorded without the explicit tier retain their original provenance
+([recovery amendment of the curator memory study](../design/p1-study-3.md#owner-gated-robustness-recovery-amendment)),
+and scientific use requires an approved runtime freeze that includes the explicit tier.
+Nothing else Pi sends may be refused: the proxy allowlist and the ledger's refusal count are the check
 (the [#454 record](../acceptance/2026-11-08-curator-shadow-454.md#isolation) holds the runs' result).
 
 **Tool roots.** Node is a Homebrew build linked against about twenty kegs through

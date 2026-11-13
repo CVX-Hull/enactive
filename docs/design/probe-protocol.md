@@ -1,9 +1,8 @@
 ---
 owner: lead
-status: active
+status: historical
 date: 2026-11-08
 scope: 'Fact-level probe annotation over sealed traces for ADR 009 offline evaluation (#449), reused by #178 for held-out probes'
-review_trigger: A change to the labels, the probe rule, the rates, the blinding, the sampling or the annotator brief
 ---
 
 # Probe annotation protocol
